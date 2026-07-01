@@ -160,8 +160,12 @@ Example config:
 }
 ```
 
-`ark-check` uses the TypeScript AST for imports and string intent references.
-It is intentionally not a full type-aware semantic analyzer.
+`ark-check` resolves imports through the TypeScript module resolver against your
+`tsconfig.json` — relative, path-alias (e.g. `@infra/db`), and package imports — plus
+string intent references. Pass `--tsconfig <path>` to point at a specific config
+(otherwise the nearest `tsconfig.json` from `--root` is used). It resolves modules the way
+your build does, but is intentionally not yet a full type-graph analyzer (cross-layer
+type-only references beyond the import specifier are out of scope).
 
 Use the optional ESLint plugin for fast local feedback:
 

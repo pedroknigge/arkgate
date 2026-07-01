@@ -2,6 +2,30 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 0.7.0 — 2026-07-01
+
+### Changed — `ark-check` resolves all imports, not just relative ones
+
+`ark-check` previously resolved only relative (`./`, `../`) import specifiers, so
+path-alias and package imports — the majority in real TypeScript repos — were invisible
+to it. It now resolves every import specifier through the TypeScript module resolver
+(`ts.resolveModuleName`) using the project's `tsconfig.json`, so:
+
+- **tsconfig path aliases** (e.g. `@domain/*`, `@infra/db`) resolve to their real files and
+  cross-layer violations through aliases are now caught.
+- **package/absolute imports** resolve via node resolution; external `node_modules` and
+  `.d.ts`-only targets are correctly ignored.
+- **relative imports** keep working exactly as before.
+
+New `--tsconfig <path>` flag (defaults to the nearest `tsconfig.json` from `--root`). When
+no tsconfig is found, aliases are unavailable but relative/package imports still resolve.
+Layer identity is still derived from file location (glob `patterns`), per the audit's
+"derive layer from code, not just the intent-name prefix" recommendation.
+
+This closes the top-ranked remaining gap from both the v0.5 strategic audit and the
+external v0.6 review: the honest chokepoint for TypeScript architecture enforcement is the
+CI merge gate, and it must see the imports that actually exist.
+
 ## 0.6.0 — 2026-07-01
 
 ### Added — runtime enforcement of observed layer flows

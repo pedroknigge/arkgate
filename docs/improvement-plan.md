@@ -338,14 +338,33 @@ publish (`EventBus.registerEventFlow`) but read *only* by the drift report — n
 enforcement path. Runtime "layer governance" therefore checked the declared model, not the
 running system. v0.6 makes the flagship claim literal using data already in hand.
 
-Remaining high-value hardening after v0.6:
+## v0.7 Implementation Status (2026-07-01)
+
+Static enforcement — ranked #1 by both the strategic audit and the external v0.6 review —
+is now real:
+
+| Capability | Status |
+|------------|--------|
+| `ark-check` resolves imports via the TypeScript module resolver (`ts.resolveModuleName`) | ✅ |
+| tsconfig path-alias imports (`@domain/*`, `@infra/db`) resolved and checked | ✅ |
+| Package/absolute imports resolved; `node_modules` and `.d.ts` targets ignored | ✅ |
+| `--tsconfig` flag; auto-discovers nearest `tsconfig.json` from `--root` | ✅ |
+| Relative imports keep working (no regression) | ✅ |
+| Alias-import fixture test proving the previously-invisible violation is caught | ✅ |
+
+**Why this mattered:** `ark-check` previously resolved only relative specifiers, so
+path-alias and package imports — the majority in real repos — were invisible. The honest
+architecture chokepoint in TypeScript is the CI merge gate, and it now sees the imports that
+actually exist.
+
+Remaining high-value hardening after v0.7:
 
 | Gap | Priority | Notes |
 |-----|----------|-------|
-| Mandatory CI chokepoint | High | Promote `ark-check` from opt-in script to a merge gate backed by a real `ts.Program` (resolve alias/package/absolute imports, not just relative) |
+| Wire `ark-check` as a mandatory gate | High | Add it to CI (Ark's own and the docs' recommended setup) so a violation blocks merge, not just prints |
 | Write-path gate for AI agents | High | Ship an MCP server (manifest as resource + `validate` tool bound to `PreToolUse` on Write/Edit) so generated code is checked before it lands |
-| Layer identity from code, not name prefix | High | Derive layer from file location/imports; treat the intent-name prefix as a cross-check and flag mismatches |
-| Type-aware semantic analyzer | High | ESLint and `ark-check` are useful heuristics, not a full program graph — ship as opt-in `ark-tsmorph` behind the `AIGateExtension` seam |
+| Full type-graph analysis | Medium | `ark-check` resolves imports but not cross-layer *type-only* references / re-export chains; ship as opt-in `ark-tsmorph` behind the `AIGateExtension` seam |
+| Reduce EventBus surface | Medium | EventBus now carries publish, interceptors, and observed-flow enforcement; extract cohesive helpers to keep it navigable |
 | Durable adapters | High | Outbox, audit, workflow, and read model stores still need production adapters |
 | Directed message bus | Medium | Useful for workflow/job commands, but should not blur Domain Events |
 | Queue/backpressure runtime | Medium | Keep core thin unless queue semantics become central to Ark's governance model |

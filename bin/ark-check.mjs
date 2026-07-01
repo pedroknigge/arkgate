@@ -34,12 +34,13 @@ const DEFAULT_INTENT_PREFIXES = [
 ];
 
 function parseArgs(argv) {
-  const args = { root: process.cwd(), config: 'ark.config.json', json: false };
+  const args = { root: process.cwd(), config: 'ark.config.json', tsconfig: undefined, json: false };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--json') args.json = true;
     else if (arg === '--root') args.root = path.resolve(argv[++i]);
     else if (arg === '--config') args.config = argv[++i];
+    else if (arg === '--tsconfig') args.tsconfig = argv[++i];
     else if (arg === '--help' || arg === '-h') args.help = true;
   }
   return args;
@@ -47,7 +48,12 @@ function parseArgs(argv) {
 
 function usage() {
   return [
-    'Usage: ark-check --root <project> --config <ark.config.json> [--json]',
+    'Usage: ark-check --root <project> --config <ark.config.json> [--tsconfig <tsconfig.json>] [--json]',
+    '',
+    'Resolves relative, tsconfig path-alias, and package imports via the TypeScript',
+    'module resolver, then checks each resolved cross-layer import against the rules.',
+    'If no tsconfig is found, path aliases are unavailable but relative/package imports',
+    'still resolve.',
     '',
     'Config shape:',
     '{',
@@ -128,19 +134,46 @@ function isBlocked(rules, from, to) {
   return rules.find((rule) => !rule.allowed && rule.from === from && rule.to === to);
 }
 
-function resolveRelativeImport(root, fromFile, specifier) {
-  if (!specifier.startsWith('.')) return undefined;
-  const base = path.resolve(path.dirname(fromFile), specifier);
-  const candidates = [
-    base,
-    `${base}.ts`,
-    `${base}.tsx`,
-    `${base}.mts`,
-    `${base}.cts`,
-    path.join(base, 'index.ts'),
-    path.join(base, 'index.tsx'),
-  ];
-  return candidates.find((candidate) => fs.existsSync(candidate) && candidate.startsWith(root));
+function createModuleResolutionHost(ts) {
+  return {
+    fileExists: (f) => ts.sys.fileExists(f),
+    readFile: (f) => ts.sys.readFile(f),
+    directoryExists: ts.sys.directoryExists ? (d) => ts.sys.directoryExists(d) : undefined,
+    getCurrentDirectory: () => ts.sys.getCurrentDirectory(),
+    getDirectories: ts.sys.getDirectories ? (d) => ts.sys.getDirectories(d) : undefined,
+    realpath: ts.sys.realpath ? (p) => ts.sys.realpath(p) : undefined,
+    useCaseSensitiveFileNames: ts.sys.useCaseSensitiveFileNames,
+  };
+}
+
+function loadCompilerOptions(ts, root, tsconfigArg) {
+  const configPath = tsconfigArg
+    ? path.isAbsolute(tsconfigArg)
+      ? tsconfigArg
+      : path.join(root, tsconfigArg)
+    : ts.findConfigFile(root, ts.sys.fileExists, 'tsconfig.json');
+  if (!configPath || !fs.existsSync(configPath)) return {};
+  const read = ts.readConfigFile(configPath, ts.sys.readFile);
+  if (read.error) return {};
+  const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, path.dirname(configPath));
+  return parsed.options;
+}
+
+/**
+ * Resolve any import specifier (relative, tsconfig path-alias, or package) to an
+ * in-project source file using TypeScript's module resolver. Returns undefined for
+ * unresolved, external (node_modules), declaration-only, or out-of-root targets.
+ */
+function resolveImport(ts, specifier, containingFile, options, host, root) {
+  const res = ts.resolveModuleName(specifier, containingFile, options, host);
+  const file = res.resolvedModule?.resolvedFileName;
+  if (!file) return undefined;
+  const abs = path.resolve(file);
+  if (abs.includes(`${path.sep}node_modules${path.sep}`)) return undefined;
+  if (abs.endsWith('.d.ts')) return undefined;
+  const absRoot = path.resolve(root);
+  if (abs !== absRoot && !abs.startsWith(absRoot + path.sep)) return undefined;
+  return abs;
 }
 
 function lineOf(sourceFile, pos) {
@@ -175,6 +208,8 @@ async function main() {
 
   const root = args.root;
   const config = readConfig(root, args.config);
+  const compilerOptions = loadCompilerOptions(ts, root, args.tsconfig);
+  const moduleHost = createModuleResolutionHost(ts);
   const files = config.include.flatMap((entry) => walk(path.join(root, entry)));
   const violations = [];
 
@@ -188,7 +223,7 @@ async function main() {
       if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
         const specifier = textOfModuleSpecifier(node);
         if (specifier) {
-          const target = resolveRelativeImport(root, file, specifier);
+          const target = resolveImport(ts, specifier, file, compilerOptions, moduleHost, root);
           const targetLayer = target ? layerForFile(root, target, config.layers) : undefined;
           const rule = targetLayer ? isBlocked(config.rules, sourceLayer, targetLayer) : undefined;
           if (rule) {

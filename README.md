@@ -6,7 +6,7 @@ Published package name: `ark-runtime-kernel`.
 
 Ark exists so architecture is not only a documented intention, but an actively protected runtime property. It helps teams define, enforce, and observe architectural boundaries while a system is running, especially in codebases where changes are frequent and part of the code may be generated or modified by AI agents.
 
-> **Current status:** v0.6.0 strict in-process governance kernel plus CI checks. v0.6 adds **runtime enforcement of observed layer flows**: strict kernels now check the real producer→event flow of every published event against the 11-layer profile and reject (or flag) events that cross a forbidden boundary — enforcement over what the system *did*, not only over what was *declared*. Ark also includes an 11-layer architecture profile, native audit/history, workflow/saga support, projection/read-model utilities, event contracts, event interceptors, a basic outbox store, observed-vs-declared observability reports, a test harness, layer-aware AI code checks, an AST-based `ark-check` CLI, an `ark-runtime-kernel/eslint` plugin, and `createStrictArkKernel()` for stricter runtime wiring. Ark is still not a database, distributed queue, type-aware semantic analyzer, or OpenTelemetry implementation.
+> **Current status:** v0.7.0 strict in-process governance kernel plus CI checks. v0.7 upgrades the `ark-check` CI gate to resolve **all** import specifiers — relative, tsconfig path-aliases, and packages — via the TypeScript module resolver, so cross-layer imports through aliases (the majority in real repos) are finally caught, not just relative ones. v0.6 added **runtime enforcement of observed layer flows**: strict kernels check the real producer→event flow of every published event against the 11-layer profile and reject (or flag) events that cross a forbidden boundary — enforcement over what the system *did*, not only over what was *declared*. Ark also includes an 11-layer architecture profile, native audit/history, workflow/saga support, projection/read-model utilities, event contracts, event interceptors, a basic outbox store, observed-vs-declared observability reports, a test harness, layer-aware AI code checks, an AST-based `ark-check` CLI, an `ark-runtime-kernel/eslint` plugin, and `createStrictArkKernel()` for stricter runtime wiring. Ark is still not a database, distributed queue, type-aware semantic analyzer, or OpenTelemetry implementation.
 
 ## The Problem
 
@@ -59,7 +59,8 @@ Ark governs the **event/intent runtime** it mediates, and the rest of the codeba
 
 - **Hard-failed at runtime** (on the governed publish path): unregistered/misnamed intents, unknown event sources, event-contract breaches, hard policy violations, and — new in v0.6 — observed producer→event flows that cross a forbidden layer boundary.
 - **Observable** (recorded, not blocked): soft policy/layer violations and declared-vs-observed drift via `ark.observability.report()`.
-- **Out of runtime scope** (covered only by `ark-check`/ESLint in CI, if wired): direct cross-layer imports, direct DB/HTTP calls, and any coupling that never transits the event bus.
+- **Covered at CI (not runtime)** via `ark-check` / ESLint, if wired: direct cross-layer imports — now resolved through your `tsconfig` (relative, path-alias, and package imports), so most real cross-layer imports are caught at merge time.
+- **Still out of scope entirely**: direct DB/HTTP calls and coupling that neither transits the event bus nor appears as an import (e.g. runtime DI wiring, reflection).
 
 Ark is unavoidable **only on the paths you route through it**. Treat it as the runtime kernel for your event/intent layer plus a machine-readable architectural contract (`createArkManifest()`) that CI and AI agents enforce against — not as an OS-style choke point over all code.
 
@@ -185,7 +186,7 @@ For CI, use `ark-check` with an explicit layer configuration:
 npx ark-check --root . --config ark.config.json
 ```
 
-`ark-check` requires TypeScript to be available in the consuming project. It parses source with the TypeScript AST and currently checks relative imports plus string intent references. It is not a full semantic type checker.
+`ark-check` requires TypeScript to be available in the consuming project. It parses source with the TypeScript AST and resolves imports through the TypeScript module resolver against your `tsconfig.json` — relative, path-alias, and package imports — plus string intent references. It resolves modules the way your build does, but does not yet perform full type-graph/symbol analysis (e.g. cross-layer *type-only* references beyond the import specifier).
 
 For editor/CI linting, use the optional ESLint subpath:
 
