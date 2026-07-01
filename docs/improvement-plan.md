@@ -122,7 +122,7 @@
 
 ## Medium Impact / Medium Effort
 
-*Valuable for v0.2; can defer if time-constrained.*
+*Remaining items for v0.3+; v0.2 shipped the enforcement-critical work.*
 
 ### M1. Saga compensation test + minimal state exposure
 
@@ -136,11 +136,10 @@
 **Change:** Add `MetadataRegistry.toJSON()`; optional `EntityMeta.emits?: string[]` / `consumes?: string[]` intent name lists.  
 **Effort:** ~2 hours.
 
-### M3. Runtime intent registration validation on publish
+### M3. Runtime intent registration validation on publish ✅ shipped in v0.2
 
 **Finding:** §3 — Raw events bypass registry.  
-**Change:** `EventBusOptions.validateIntents?: boolean` + optional `registry?: IntentRegistry` — reject publish if intent name not registered.  
-**Effort:** ~1 hour.
+**Change shipped:** `EventBusOptions.strictRegistry` defaults to true when `intentRegistry` is provided and rejects unregistered publish/subscribe paths. Runtime naming validation is available via `validateIntentNaming`.
 
 ### M4. Subscriber index by intent name
 
@@ -205,7 +204,7 @@ Phase 2 — Enforcement & Observability (H4 → H6 → H7)
 Phase 3 — Agent Surface (H5 → M5)
   Complete AI gate, write agent guide
 
-Phase 4 — Polish (M1–M4, L1–L5)
+Phase 4 — Polish (remaining M1, M2, M4, L1–L5)
   As time permits
 ```
 
@@ -239,7 +238,7 @@ Phase 4 — Polish (M1–M4, L1–L5)
 
 ## Implementation Status (2026-07-01)
 
-**High-tier items H1–H7: shipped.** See `docs/final-summary.md` for details.
+**High-tier items H1–H7 plus v0.2 enforcement/package hardening: shipped.** See `docs/final-summary.md` for details.
 
 | ID | Status |
 |----|--------|
@@ -250,7 +249,8 @@ Phase 4 — Polish (M1–M4, L1–L5)
 | H5 AICodeGate structured violations | ✅ |
 | H6 bounded history + TraceRecord | ✅ |
 | H7 layer policies | ✅ |
+| V2 strict registry publish/subscribe validation | ✅ |
+| V2 stricter `IntentName` typing | ✅ |
+| V2 npm scripts and pack workflow | ✅ |
 
-**Medium/Low tier:** deferred — see sections above.
-
-**Process note:** The harness executed High-tier implementation in a single pass (plan risk §54–55) because interactive approval blocking was unavailable. Medium/Low items remain in this document for a future pass.
+**Medium/Low tier:** remaining non-blocking items are M1, M2, M4, and L1–L5.
