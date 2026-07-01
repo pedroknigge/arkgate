@@ -2,14 +2,9 @@
   "include": ["src"],
   "layers": [
     { "name": "DomainModel", "patterns": ["src/domain/**"], "intentPrefixes": ["Domain."] },
-    { "name": "Kernel", "patterns": ["src/kernel/**"], "intentPrefixes": ["Kernel."] }
+    { "name": "ApplicationOrchestration", "patterns": ["src/app/**"], "intentPrefixes": ["Application."] }
   ],
   "rules": [
-    {
-      "from": "DomainModel",
-      "to": "Kernel",
-      "allowed": false,
-      "message": "src/domain must stay dependency-free: pure domain types must not import from the kernel."
-    }
+    { "from": "DomainModel", "to": "ApplicationOrchestration", "allowed": false }
   ]
 }

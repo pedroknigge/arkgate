@@ -39,6 +39,28 @@ export const DEFAULT_INTENT_PREFIXES = [
 
 const _regexpCache = new Map();
 
+function escapeLiteral(ch) {
+  return /[.*+?^${}()|[\]\\]/.test(ch) ? `\\${ch}` : ch;
+}
+
+/** True only when every `{` has a matching `}` (ignoring backslash-escaped braces). */
+function bracesBalanced(glob) {
+  let depth = 0;
+  for (let i = 0; i < glob.length; i += 1) {
+    const c = glob[i];
+    if (c === '\\') {
+      i += 1; // skip the escaped character
+      continue;
+    }
+    if (c === '{') depth += 1;
+    else if (c === '}') {
+      depth -= 1;
+      if (depth < 0) return false;
+    }
+  }
+  return depth === 0;
+}
+
 /**
  * Convert an ark.config.json layer glob pattern to an anchored RegExp (compiled once per
  * pattern, then cached).
@@ -48,18 +70,25 @@ const _regexpCache = new Map();
  * because the second step re-matches the star inside the substitution the first step just
  * inserted. That made "src/kernel/**" stop matching nested paths, silently unclassifying
  * every file in a subdirectory. Scanning one character at a time also lets us support
- * brace alternation ("*.{ts,tsx}") instead of treating the braces as literals.
+ * brace alternation ("*.{ts,tsx}") and backslash escapes ("\\{" → literal brace).
+ *
+ * Brace alternation is only enabled when braces are balanced; an unbalanced brace (a config
+ * typo) is treated as a literal so the gate never crashes on `new RegExp`.
  */
 export function globToRegExp(pattern) {
   const cached = _regexpCache.get(pattern);
   if (cached) return cached;
 
   const glob = pattern.split(path.sep).join('/');
+  const useBraces = bracesBalanced(glob);
   let out = '';
   let braceDepth = 0;
   for (let i = 0; i < glob.length; i += 1) {
     const c = glob[i];
-    if (c === '*') {
+    if (c === '\\' && i + 1 < glob.length) {
+      out += escapeLiteral(glob[i + 1]); // backslash escapes the next char to a literal
+      i += 1;
+    } else if (c === '*') {
       if (glob[i + 1] === '*') {
         if (glob[i + 2] === '/') {
           out += '(?:.*/)?'; // `**/` matches zero or more path segments
@@ -73,18 +102,16 @@ export function globToRegExp(pattern) {
       }
     } else if (c === '?') {
       out += '[^/]';
-    } else if (c === '{') {
+    } else if (c === '{' && useBraces) {
       out += '(?:';
       braceDepth += 1;
-    } else if (c === '}' && braceDepth > 0) {
+    } else if (c === '}' && useBraces && braceDepth > 0) {
       out += ')';
       braceDepth -= 1;
-    } else if (c === ',' && braceDepth > 0) {
+    } else if (c === ',' && useBraces && braceDepth > 0) {
       out += '|';
-    } else if ('.+^$()|[]\\'.includes(c)) {
-      out += `\\${c}`;
     } else {
-      out += c;
+      out += escapeLiteral(c);
     }
   }
   const re = new RegExp(`^${out}$`);

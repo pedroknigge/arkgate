@@ -202,6 +202,57 @@ describe('ark-check CLI', () => {
     expect(result.ok).toBe(true);
   });
 
+  it('does NOT flag imports that resolve outside the project root', () => {
+    const base = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-check-oor-'));
+    const root = path.join(base, 'proj');
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(base, 'outside'), { recursive: true });
+    fs.writeFileSync(path.join(base, 'outside/helper.ts'), 'export const h = {};');
+    fs.writeFileSync(
+      path.join(root, 'src/domain/order.ts'),
+      "import { h } from '../../../outside/helper';\nexport const v = h;\n"
+    );
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          { name: 'DomainModel', patterns: ['src/domain/**'], intentPrefixes: ['Domain.'] },
+          { name: 'Anything', patterns: ['**'], intentPrefixes: [] },
+        ],
+        rules: [{ from: 'DomainModel', to: 'Anything', allowed: false }],
+      })
+    );
+
+    const result = runArkCheck(root);
+    // A target above --root is not part of this project and must not be classified.
+    expect(result.ok).toBe(true);
+  });
+
+  it('classifies intent references via DEFAULT prefixes/rules when the config declares none', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-check-defpref-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'src/domain/order.ts'),
+      "export const ref = 'Adapter.Persistence.Save';\n"
+    );
+    // Layer has a file pattern but no intentPrefixes and the config has no rules — both
+    // must fall back to the built-in defaults (previously the fallback silently no-op'd).
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+      })
+    );
+
+    const result = runArkCheck(root);
+    expect(result.ok).toBe(false);
+    expect(result.violations.some((v) => v.ruleId === 'LAYER_INTENT_REFERENCE_VIOLATION')).toBe(
+      true
+    );
+  });
+
   it('resolves extensionless relative imports whose target is a .mts file', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-check-mts-'));
     fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });

@@ -79,11 +79,18 @@ function normalize(value) {
 }
 
 function layerForIntent(intent, layers) {
-  const configured = layers
-    .flatMap((layer) =>
-      (layer.intentPrefixes ?? []).map((prefix) => ({ layer: layer.name, prefix }))
-    );
-  const candidates = configured.length > 0 ? configured : DEFAULT_INTENT_PREFIXES;
+  const configured = layers.flatMap((layer) =>
+    (layer.intentPrefixes ?? []).map((prefix) => ({ layer: layer.name, prefix }))
+  );
+  // DEFAULT_INTENT_PREFIXES entries are { layer, prefixes: [...] } — flatten to the same
+  // { layer, prefix } shape so the fallback actually matches (a prior bug read `.prefix`
+  // off the plural-array entries, so the default fallback silently classified nothing).
+  const candidates =
+    configured.length > 0
+      ? configured
+      : DEFAULT_INTENT_PREFIXES.flatMap((entry) =>
+          entry.prefixes.map((prefix) => ({ layer: entry.layer, prefix }))
+        );
   return candidates.find((item) => intent.startsWith(item.prefix))?.layer;
 }
 
@@ -156,11 +163,12 @@ function resolveRelativeFallback(fromFile, specifier) {
  * file using TypeScript's module resolver, returning the resolved file (or undefined for
  * unresolved / declaration-only targets).
  *
- * Third-party dependencies are excluded by testing for a `node_modules` segment in the
- * target's path RELATIVE TO ROOT — not as an absolute substring (which wrongly discarded
- * a whole project living under a node_modules segment) and not via a hard root boundary
- * (which wrongly discarded monorepo sibling packages a config may govern). This also keeps
- * a broad catch-all pattern (e.g. `**` / `**​/*.ts`) from false-flagging vendored code.
+ * ark-check governs one project rooted at --root. A resolved target is skipped when its
+ * path RELATIVE TO ROOT either escapes the root (leading `..`) or contains a `node_modules`
+ * segment. Using the root-relative path (not an absolute substring) means a project that
+ * itself lives under a node_modules segment is still governed, while a broad catch-all
+ * pattern (`**`) can't false-flag vendored deps or files outside the project. For monorepos,
+ * run ark-check per package rather than reaching across package roots.
  */
 function resolveImport(ts, specifier, containingFile, options, host, root) {
   const res = ts.resolveModuleName(specifier, containingFile, options, host);
@@ -171,7 +179,8 @@ function resolveImport(ts, specifier, containingFile, options, host, root) {
   if (!file) return undefined;
   if (file.endsWith('.d.ts')) return undefined;
   const abs = path.resolve(file);
-  if (path.relative(root, abs).split(path.sep).includes('node_modules')) return undefined;
+  const segments = path.relative(root, abs).split(path.sep);
+  if (segments[0] === '..' || segments.includes('node_modules')) return undefined;
   return abs;
 }
 

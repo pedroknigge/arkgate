@@ -97,8 +97,9 @@ async function main() {
     };
   if (!config.layers || config.layers.length === 0) {
     process.stderr.write(
-      '[ark-mcp] warning: no layers configured; layer-reference checks are disabled ' +
-        '(only forbidden-pattern and intent-allowlist checks run).\n'
+      '[ark-mcp] warning: no layers configured — file→layer inference from config patterns ' +
+        'is unavailable, so layer-reference checks run only when the caller passes an explicit ' +
+        '"layer" (checked against the default 11-layer profile).\n'
     );
   }
 

@@ -38,7 +38,7 @@ describe('createArkManifest', () => {
     const json = manifest.toJSON();
 
     expect(json.schemaVersion).toBe('1.0');
-    expect(json.version).toBe('0.8.2');
+    expect(json.version).toBe('0.8.3');
     expect(json.intents).toHaveLength(2);
     expect(json.policies[0].id).toBe('positive-amount');
     expect(json.links).toBeDefined();

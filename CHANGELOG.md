@@ -2,6 +2,28 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 0.8.3 — 2026-07-01
+
+### Fixed — third code-review pass (glob robustness + latent fallback bug)
+
+- **Unbalanced-brace crash.** A glob with an unbalanced `{` produced an invalid regex, so
+  `new RegExp` threw — crashing the CI gate (exit 2) and every MCP `validate_code` call.
+  `globToRegExp` now only treats braces as alternation when they're balanced, otherwise
+  literal; it also honors backslash-escaped braces (`\{` → literal).
+- **`layerForIntent` default fallback (latent since v0.4).** The `DEFAULT_INTENT_PREFIXES`
+  fallback read `item.prefix` (singular) off `{ layer, prefixes: [...] }` entries, so it
+  matched nothing — a project with layers but no `intentPrefixes` got no intent-reference
+  enforcement in CI while the MCP gate blocked the same reference. Now flattened to the
+  right shape; the two gates agree.
+- **Out-of-root over-reach.** After dropping the hard root boundary in 0.8.1, a relative
+  import escaping `--root` (`../../…`) could be classified by a catch-all pattern and
+  false-flagged. `resolveImport` now skips targets whose root-relative path leads with `..`
+  (and still skips `node_modules` segments) — projects under a `node_modules` segment stay
+  governed; monorepos should run ark-check per package.
+- **Accurate MCP warning.** The "no layers configured" stderr note no longer claims layer
+  checks are disabled; with no config layers the gate uses the default 11-layer profile and
+  layer-reference checks still run when the caller passes an explicit `layer`.
+
 ## 0.8.2 — 2026-07-01
 
 ### Fixed — second code-review pass (parity + glob correctness)
