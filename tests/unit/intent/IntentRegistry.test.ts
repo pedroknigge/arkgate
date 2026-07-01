@@ -63,11 +63,11 @@ describe('IntentRegistry (Iteration 1)', () => {
 
   it('clear() empties the registry', () => {
     const registry = createIntentRegistry();
-    registry.define<'Test.Clear', {}>('Test.Clear');
+    registry.define<'Domain.Test.Clear', {}>('Domain.Test.Clear');
 
     registry.clear();
 
     expect(registry.list().length).toBe(0);
-    expect(registry.has('Test.Clear')).toBe(false);
+    expect(registry.has('Domain.Test.Clear')).toBe(false);
   });
 });

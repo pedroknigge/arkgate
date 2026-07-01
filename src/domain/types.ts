@@ -14,8 +14,7 @@ export type IntentName =
   | `Domain.${string}`
   | `Application.${string}`
   | `Adapter.${string}`
-  | `Workflow.${string}`
-  | (string & {}); // compile-time escape hatch; use validateIntentName() + strictRegistry at runtime
+  | `Workflow.${string}`;
 
 export type CorrelationId = string;
 

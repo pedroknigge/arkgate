@@ -16,9 +16,9 @@ import type { DomainEvent } from '../../domain/types';
  */
 export interface DefineIntentOptions {
   /** Other intents this one depends on (semantic names) */
-  dependsOn?: string[];
+  dependsOn?: IntentName[];
   /** Intents that this one produces / triggers */
-  produces?: string[];
+  produces?: IntentName[];
 }
 
 /**
