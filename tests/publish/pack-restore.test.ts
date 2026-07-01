@@ -7,7 +7,15 @@ import os from 'os';
 const root = process.cwd();
 
 function run(cmd: string) {
-  return execSync(cmd, { cwd: root, stdio: 'pipe', encoding: 'utf8' });
+  return execSync(cmd, {
+    cwd: root,
+    stdio: 'pipe',
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      npm_config_cache: path.join(os.tmpdir(), 'ark-npm-cache'),
+    },
+  });
 }
 
 describe('publish manifest model (dev-first workflow)', () => {
@@ -37,14 +45,14 @@ describe('publish manifest model (dev-first workflow)', () => {
     expect(rootP.devDependencies).toBeDefined();
   });
 
-  it('package.publish.json has no devDeps (publish template)', () => {
+  it('package.publish.json documents the minimal publish manifest', () => {
     const p = JSON.parse(fs.readFileSync(path.join(root, 'package.publish.json'), 'utf8'));
     expect(p.devDependencies).toBeUndefined();
     expect(p.scripts.build).toBe('tsup');
   });
 
-  it('npm pack via prepack produces tgz with stripped manifest', () => {
-    run('node scripts/dev-teardown.cjs');
+  it('plain npm pack succeeds from the dev manifest with zero runtime deps', () => {
+    run('node scripts/dev-setup.cjs');
     run(`npm pack --pack-destination ${tgzDir} --silent`);
 
     const files = fs.readdirSync(tgzDir).filter((f) => f.endsWith('.tgz'));
@@ -58,18 +66,17 @@ describe('publish manifest model (dev-first workflow)', () => {
     const inner = JSON.parse(
       fs.readFileSync(path.join(extract, 'package', 'package.json'), 'utf8')
     );
-    const pub = JSON.parse(fs.readFileSync(path.join(root, 'package.publish.json'), 'utf8'));
-
-    expect(inner.devDependencies).toBeUndefined();
-    expect(inner.scripts.build).toBe('tsup');
-    expect(inner.name).toBe(pub.name);
-    expect(inner.exports).toEqual(pub.exports);
+    expect(inner.dependencies).toEqual({});
+    expect(inner.scripts.test).toBe('vitest');
+    expect(inner.scripts.typecheck).toBe('tsc --noEmit');
+    expect(inner.scripts.prepack).toBe('npm run build');
+    expect(inner.scripts.postpack).toBeUndefined();
   });
 
   it('dev-setup.cjs restores devDeps from stripped state', () => {
     const stripped = {
       name: 'ark',
-      version: '0.1.0',
+      version: '0.2.0',
       scripts: { build: 'tsup' },
       dependencies: {},
       files: ['dist'],

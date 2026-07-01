@@ -4,7 +4,7 @@
 
 Ark provides **intent naming**, **policy enforcement**, **event bus observability**, **dependency graphs**, and **agent-oriented contract export**. It helps teams (and AI codegen tools) keep architecture explicit and enforceable — it does **not** implement CQRS read/write models or a full hexagonal runtime.
 
-> **Current Status:** v0.1 governance toolkit — production-usable with strict wiring; not a full architectural runtime.
+> **Current Status:** v0.2 governance kernel — production-usable with strict registry wiring; not a CQRS framework or full hexagonal runtime.
 
 ## Philosophy
 

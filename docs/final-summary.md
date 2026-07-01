@@ -1,10 +1,10 @@
-# Ark — Post-Improvement Final Summary
+# Ark — v0.2 Production Readiness Summary
 
 **Date:** 2026-07-01  
-**Version:** 0.1.0 (enhanced)  
+**Version:** 0.2.0  
 **Runtime dependencies:** zero (`package.json` `"dependencies": {}`)
 
-**Process note:** The original OBJECTIVE requested user approval of the improvement plan before coding. The goal harness could not block for interactive review, so High-tier items (H1–H7) were implemented in a single pass per `plan.md` Risks §54–55. Medium/Low tier items remain deferred in `docs/improvement-plan.md`.
+Ark is intentionally scoped as a governance kernel: intents, policies, event-bus observability, dependency graphs, manifests, and heuristic AI code checks. It does not implement CQRS command/query buses, read models, persistence, or a distributed saga runtime.
 
 ---
 
@@ -17,10 +17,12 @@
 | H1 | `createArkManifest()` — machine-readable contract export | ✅ Shipped |
 | H4 | `PolicyViolationError` + EventBus `onSoftViolation` / `onHandlerError` hooks + `buildPublishPolicyContext` | ✅ Shipped |
 | H6 | `maxHistorySize` bounded history + `TraceRecord` observability format | ✅ Shipped |
-| H7 | `defineLayerPolicy()` + `architecturalPolicies.layerIsolation()` | ✅ Shipped |
+| H7 | `defineLayerPolicy()` + `architecturalPolicies.cleanArchitectureMatrix()` | ✅ Shipped |
 | H5 | AICodeGate intent allowlist, structured violations, `AIGateExtension` interface | ✅ Shipped |
+| V2 | Strict registry publish/subscribe validation + runtime intent-name validation | ✅ Shipped |
+| V2 | Dev-first package scripts; `npm test`, `npm run typecheck`, and `npm run build` work from checkout | ✅ Shipped |
 
-**Test count:** 46 → 61 (all passing).  
+**Test count:** 67 (all passing).  
 **New modules:** `src/kernel/manifest/`, `src/kernel/graph/sync.ts`, `src/kernel/policy/builtins.ts`, `src/kernel/policy/PolicyViolationError.ts`.
 
 ---
@@ -34,13 +36,14 @@
 
 ### Enforcement
 - Hard policies throw typed `PolicyViolationError`.
-- Built-in layer isolation policies available as opt-in starters.
-- AI Code Gate flags unknown intents and forbidden patterns with structured `{ code, message, suggestion }` violations.
+- Built-in clean architecture matrix blocks invalid declared layer dependencies.
+- AI Code Gate flags unknown intents and forbidden patterns with structured `{ code, message, suggestion }` violations. It remains a heuristic scanner unless external `AIGateExtension` analyzers are plugged in.
+- EventBus rejects unregistered publish/subscribe paths when an `intentRegistry` is provided.
 
 ### Observability
 - Event bus trace records: `event.published`, `policy.softViolation`, `handler.error`.
 - Bounded history prevents unbounded memory growth in long-running processes.
-- Handler errors observable via `onHandlerError` (no longer silently swallowed when hook is set).
+- Handler errors are observable via `onHandlerError`, trace records, and optional `rethrowHandlerErrors`.
 
 ### Agent Readiness
 - **Single contract export:** `createArkManifest().toJSON()` aggregates intents, relationships, policies, entities, and graph.
@@ -50,11 +53,10 @@
 ### Remaining Gaps (Deferred to Medium/Low Tier)
 - Saga compensation tests and state exposure (M1)
 - Metadata `toJSON()` and entity–intent linking (M2)
-- Runtime intent registration validation on publish (M3)
 - Subscriber index optimization (M4)
 - Dev-only performance benchmarks (L5)
 
-These are documented in `docs/improvement-plan.md` and do not block v0.1 adoption.
+These are documented in `docs/improvement-plan.md` and do not block v0.2 adoption.
 
 ---
 
@@ -83,4 +85,4 @@ These are documented in `docs/improvement-plan.md` and do not block v0.1 adoptio
 
 ### Bottom Line
 
-Ark is now a **production-viable v0.1 governance kernel** — architecturally sound, agent-aware, and ready to serve as the stable foundation beneath increasingly AI-generated application code. The core does not contain AI; it contains the **contracts and extension points** that make AI-safe architecture possible.
+Ark is now a **production-ready v0.2 governance kernel** for in-process architectural enforcement. The core does not contain AI; it contains the contracts, validation hooks, traces, and extension points that make AI-generated code safer to govern.

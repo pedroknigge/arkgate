@@ -1,6 +1,6 @@
 {
   "name": "ark",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Architectural Runtime Kernel — governance for Hexagonal + Event-Driven + DDD systems",
   "type": "module",
   "main": "./dist/index.cjs",

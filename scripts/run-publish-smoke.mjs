@@ -35,8 +35,8 @@ const repeat = process.argv.includes('--repeat');
 const logName = repeat ? 'consumer-run2.log' : 'consumer-run.log';
 const logPath = path.join(SCRATCH, logName);
 
-// Always ensure we are in full dev state before packing (self-healing / robustness)
-run('node scripts/postpack-restore.cjs');
+// Always ensure we are in full dev state before packing.
+run('node scripts/dev-setup.cjs');
 
 console.log('[run-publish-smoke] packing...');
 run(`npm pack --pack-destination ${SCRATCH} --silent`);

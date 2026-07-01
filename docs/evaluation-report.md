@@ -1,5 +1,7 @@
 # Ark Library — Evaluation Report
 
+> Historical note: this report evaluated the original v0.1 state. v0.2 addressed the major enforcement, manifest, packaging, and documentation issues identified here; see `docs/final-summary.md` for current status.
+
 **Evaluator role:** Staff Engineer (Architectural Runtime Kernel)  
 **Date:** 2026-07-01  
 **Version evaluated:** `0.1.0`  

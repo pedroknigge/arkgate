@@ -100,7 +100,7 @@ Implement these interfaces in **external** packages — not inside the Ark core:
 | `Policy` | Custom architectural rules via `definePolicy()` |
 | `LayerFlowRule` | Layer isolation via `defineLayerPolicy()` |
 
-Preset: `architecturalPolicies.layerIsolation()` forbids Domain→Adapter dependencies.
+Preset: `architecturalPolicies.cleanArchitectureMatrix()` forbids invalid declared dependencies such as Domain→Adapter, Domain→Application, Adapter→Application, and Adapter→Domain. `layerIsolation()` is kept as a compatibility alias.
 
 ## Recommended Agent Workflow
 

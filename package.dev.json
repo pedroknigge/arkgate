@@ -1,6 +1,6 @@
 {
   "name": "ark",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Architectural Runtime Kernel — governance for Hexagonal + Event-Driven + DDD systems",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -25,10 +25,7 @@
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "prebuild": "node scripts/dev-setup.cjs",
-    "postbuild": "node scripts/dev-teardown.cjs",
-    "prepack": "node scripts/prepack-clean.cjs",
-    "postpack": "node scripts/postpack-restore.cjs"
+    "prepack": "npm run build"
   },
   "dependencies": {},
   "devDependencies": {
