@@ -225,6 +225,41 @@ Implement these interfaces in **external** packages — not inside the Ark core:
 
 Preset: `elevenLayerProfile` plus `defineArchitectureProfilePolicy()` forbids invalid declared dependencies across the 11-layer profile. `architecturalPolicies.cleanArchitectureMatrix()` remains available for the older four-prefix model.
 
+## Write-Path Gate (MCP)
+
+The strongest place to constrain an AI agent is the moment it writes a file, not after.
+`ark-mcp` exposes Ark over MCP (zero dependencies, JSON-RPC over stdio) so a host can gate
+the write path:
+
+```bash
+npx ark-mcp --root . --config ark.config.json [--manifest ark.manifest.json]
+```
+
+- **Resource `ark://manifest`** — contract discovery. Serve your exported
+  `ark.manifest().toJSON()` via `--manifest`, or omit it to get the 11-layer profile
+  (layers + rules) as the default contract.
+- **Tool `validate_code`** — args `{ source, layer?, filePath? }`. Runs `createAICodeGate`
+  against the profile and (when a manifest is provided) the registered intent allowlist.
+  Returns `{ valid, violations, layer }`; `isError` is `true` when invalid. If `layer` is
+  omitted it is inferred from `filePath` via the config's layer patterns.
+
+Bind the tool to your runtime's pre-write hook so invalid code never lands. Claude Code
+example (`.claude/settings.json`):
+
+```json
+{
+  "mcpServers": { "ark": { "command": "npx", "args": ["ark-mcp", "--root", "."] } },
+  "hooks": {
+    "PreToolUse": [
+      { "matcher": "Write|Edit", "hooks": [{ "type": "mcp", "tool": "ark.validate_code" }] }
+    ]
+  }
+}
+```
+
+This makes the manifest + AI gate an enforced checkpoint rather than a library the agent
+must remember to call.
+
 ## Recommended Agent Workflow
 
 1. **Read** manifest via `ark.manifest().toJSON()`

@@ -357,13 +357,28 @@ path-alias and package imports — the majority in real repos — were invisible
 architecture chokepoint in TypeScript is the CI merge gate, and it now sees the imports that
 actually exist.
 
-Remaining high-value hardening after v0.7:
+## v0.8 Implementation Status (2026-07-01)
+
+The two "kernel-earning" chokepoints from the audit are now in place:
+
+| Capability | Status |
+|------------|--------|
+| Mandatory CI gate: `.github/workflows/ci.yml` runs `ark-check` and blocks merge on violations | ✅ |
+| Ark dogfoods itself via `ark.config.json` (`src/domain/**` must not import the kernel) | ✅ |
+| AI write-path gate: `ark-mcp` MCP server (zero-dep, JSON-RPC/stdio) | ✅ |
+| MCP resource `ark://manifest` (contract discovery) + tool `validate_code` (block on invalid) | ✅ |
+| `PreToolUse` wiring documented for Claude Code | ✅ |
+| MCP server exercised end-to-end over stdio in tests (handshake, tools, resource) | ✅ |
+
+**Why this mattered:** unavoidability in TypeScript is achieved at the merge gate and at the
+agent's write-path tool call — not at event-publish inside a library. v0.8 occupies both.
+
+Remaining high-value hardening after v0.8:
 
 | Gap | Priority | Notes |
 |-----|----------|-------|
-| Wire `ark-check` as a mandatory gate | High | Add it to CI (Ark's own and the docs' recommended setup) so a violation blocks merge, not just prints |
-| Write-path gate for AI agents | High | Ship an MCP server (manifest as resource + `validate` tool bound to `PreToolUse` on Write/Edit) so generated code is checked before it lands |
 | Full type-graph analysis | Medium | `ark-check` resolves imports but not cross-layer *type-only* references / re-export chains; ship as opt-in `ark-tsmorph` behind the `AIGateExtension` seam |
+| Strengthen `validate_code` beyond heuristics | Medium | The MCP gate reuses the regex/prefix `AICodeGate`; back it with the `ark-check` AST resolver so it derives layer from path and resists self-attestation |
 | Reduce EventBus surface | Medium | EventBus now carries publish, interceptors, and observed-flow enforcement; extract cohesive helpers to keep it navigable |
 | Durable adapters | High | Outbox, audit, workflow, and read model stores still need production adapters |
 | Directed message bus | Medium | Useful for workflow/job commands, but should not blur Domain Events |

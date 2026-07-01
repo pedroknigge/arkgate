@@ -1,6 +1,6 @@
 {
   "name": "ark-runtime-kernel",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Architectural Runtime Kernel — governance for Hexagonal + Event-Driven + DDD systems",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -19,7 +19,8 @@
     }
   },
   "bin": {
-    "ark-check": "./bin/ark-check.mjs"
+    "ark-check": "./bin/ark-check.mjs",
+    "ark-mcp": "./bin/ark-mcp.mjs"
   },
   "files": [
     "bin",

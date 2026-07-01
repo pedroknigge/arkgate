@@ -6,7 +6,7 @@ Published package name: `ark-runtime-kernel`.
 
 Ark exists so architecture is not only a documented intention, but an actively protected runtime property. It helps teams define, enforce, and observe architectural boundaries while a system is running, especially in codebases where changes are frequent and part of the code may be generated or modified by AI agents.
 
-> **Current status:** v0.7.0 strict in-process governance kernel plus CI checks. v0.7 upgrades the `ark-check` CI gate to resolve **all** import specifiers — relative, tsconfig path-aliases, and packages — via the TypeScript module resolver, so cross-layer imports through aliases (the majority in real repos) are finally caught, not just relative ones. v0.6 added **runtime enforcement of observed layer flows**: strict kernels check the real producer→event flow of every published event against the 11-layer profile and reject (or flag) events that cross a forbidden boundary — enforcement over what the system *did*, not only over what was *declared*. Ark also includes an 11-layer architecture profile, native audit/history, workflow/saga support, projection/read-model utilities, event contracts, event interceptors, a basic outbox store, observed-vs-declared observability reports, a test harness, layer-aware AI code checks, an AST-based `ark-check` CLI, an `ark-runtime-kernel/eslint` plugin, and `createStrictArkKernel()` for stricter runtime wiring. Ark is still not a database, distributed queue, type-aware semantic analyzer, or OpenTelemetry implementation.
+> **Current status:** v0.8.0 strict in-process governance kernel plus enforced CI and AI write-path gates. v0.8 makes enforcement unavoidable at the two points that matter: a **mandatory CI gate** (`ark-check` runs in GitHub Actions and blocks the merge on any layer violation; Ark now dogfoods itself via `ark.config.json`) and an **AI write-path gate** — a zero-dependency `ark-mcp` MCP server whose `validate_code` tool binds to `PreToolUse` on Write/Edit so architecturally-invalid generated code is blocked before it lands. v0.7 upgraded `ark-check` to resolve **all** import specifiers (relative, tsconfig path-aliases, packages) via the TypeScript module resolver. v0.6 added **runtime enforcement of observed layer flows**: strict kernels check the real producer→event flow of every published event against the 11-layer profile and reject (or flag) events that cross a forbidden boundary — enforcement over what the system *did*, not only over what was *declared*. Ark also includes an 11-layer architecture profile, native audit/history, workflow/saga support, projection/read-model utilities, event contracts, event interceptors, a basic outbox store, observed-vs-declared observability reports, a test harness, layer-aware AI code checks, an AST-based `ark-check` CLI, an `ark-runtime-kernel/eslint` plugin, and `createStrictArkKernel()` for stricter runtime wiring. Ark is still not a database, distributed queue, type-aware semantic analyzer, or OpenTelemetry implementation.
 
 ## The Problem
 
@@ -200,6 +200,47 @@ export default [
 ```
 
 The bundled rules are intentionally narrow: `ark/no-domain-infra-imports`, `ark/no-raw-event-publish`, and `ark/require-publish-source`.
+
+### AI write-path gate (`ark-mcp`)
+
+`ark-check` and the ESLint plugin catch violations at CI. The write-path gate catches them
+one step earlier — at the moment an agent writes a file — by exposing Ark over MCP:
+
+```bash
+npx ark-mcp --root . --config ark.config.json [--manifest ark.manifest.json]
+```
+
+The server (zero dependencies, JSON-RPC over stdio) provides:
+
+- resource `ark://manifest` — the architectural contract (layers + rules, or your project
+  manifest) for agents to read before generating code.
+- tool `validate_code` — validates a source snippet against the architecture and returns
+  `{ valid, violations }` (with `isError` set when invalid).
+
+Bind `validate_code` to your agent runtime's pre-write hook so invalid generated code is
+blocked before it lands. Example Claude Code hook (`.claude/settings.json`) that validates
+every Write/Edit through the running MCP tool:
+
+```json
+{
+  "mcpServers": { "ark": { "command": "npx", "args": ["ark-mcp", "--root", "."] } },
+  "hooks": {
+    "PreToolUse": [
+      { "matcher": "Write|Edit", "hooks": [{ "type": "mcp", "tool": "ark.validate_code" }] }
+    ]
+  }
+}
+```
+
+### Mandatory CI gate
+
+Run `ark-check` in CI so a layer violation blocks the merge (it exits non-zero on any
+violation). Ark ships a reference workflow in `.github/workflows/ci.yml` and dogfoods itself
+via `ark.config.json`:
+
+```bash
+npm run check:architecture   # node bin/ark-check.mjs --root . --config ark.config.json
+```
 
 ## Design Constraints
 
