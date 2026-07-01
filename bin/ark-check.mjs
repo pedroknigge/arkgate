@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import { layerForFile, looksLikeIntent } from './ark-shared.mjs';
 
 const DEFAULT_RULES = [
   { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
@@ -103,24 +104,6 @@ function normalize(value) {
   return value.split(path.sep).join('/');
 }
 
-function patternToRegExp(pattern) {
-  const escaped = normalize(pattern)
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*\*/g, '.*')
-    .replace(/\*/g, '[^/]*');
-  return new RegExp(`^${escaped}$`);
-}
-
-function layerForFile(root, file, layers) {
-  const rel = normalize(path.relative(root, file));
-  for (const layer of layers) {
-    for (const pattern of layer.patterns ?? []) {
-      if (patternToRegExp(pattern).test(rel)) return layer.name;
-    }
-  }
-  return undefined;
-}
-
 function layerForIntent(intent, layers) {
   const configured = layers
     .flatMap((layer) =>
@@ -160,20 +143,50 @@ function loadCompilerOptions(ts, root, tsconfigArg) {
 }
 
 /**
- * Resolve any import specifier (relative, tsconfig path-alias, or package) to an
- * in-project source file using TypeScript's module resolver. Returns undefined for
- * unresolved, external (node_modules), declaration-only, or out-of-root targets.
+ * Fallback resolver for extensionless relative imports whose on-disk target uses an
+ * extension `ts.resolveModuleName` won't resolve without a matching tsconfig
+ * (notably `.mts`/`.cts`). Mirrors the classic candidate list.
  */
-function resolveImport(ts, specifier, containingFile, options, host, root) {
+function resolveRelativeFallback(fromFile, specifier) {
+  const base = path.resolve(path.dirname(fromFile), specifier);
+  const candidates = [
+    base,
+    `${base}.ts`,
+    `${base}.tsx`,
+    `${base}.mts`,
+    `${base}.cts`,
+    `${base}.js`,
+    `${base}.jsx`,
+    `${base}.mjs`,
+    `${base}.cjs`,
+    path.join(base, 'index.ts'),
+    path.join(base, 'index.tsx'),
+    path.join(base, 'index.mts'),
+    path.join(base, 'index.cts'),
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate));
+}
+
+/**
+ * Resolve any import specifier (relative, tsconfig path-alias, or package) to a source
+ * file using TypeScript's module resolver, returning the resolved file (or undefined for
+ * unresolved / declaration-only targets).
+ *
+ * We intentionally do NOT filter by node_modules or by root here: the configured layer
+ * patterns are the single authority on what is governed (layerForFile returns undefined
+ * for anything they don't match, which naturally excludes third-party deps). A path
+ * substring test wrongly discarded projects living under a node_modules segment, and a
+ * hard root boundary wrongly discarded monorepo sibling packages a config may govern.
+ */
+function resolveImport(ts, specifier, containingFile, options, host) {
   const res = ts.resolveModuleName(specifier, containingFile, options, host);
-  const file = res.resolvedModule?.resolvedFileName;
+  let file = res.resolvedModule?.resolvedFileName;
+  if (!file && specifier.startsWith('.')) {
+    file = resolveRelativeFallback(containingFile, specifier);
+  }
   if (!file) return undefined;
-  const abs = path.resolve(file);
-  if (abs.includes(`${path.sep}node_modules${path.sep}`)) return undefined;
-  if (abs.endsWith('.d.ts')) return undefined;
-  const absRoot = path.resolve(root);
-  if (abs !== absRoot && !abs.startsWith(absRoot + path.sep)) return undefined;
-  return abs;
+  if (file.endsWith('.d.ts')) return undefined;
+  return path.resolve(file);
 }
 
 function lineOf(sourceFile, pos) {
@@ -184,10 +197,6 @@ function textOfModuleSpecifier(node) {
   return node.moduleSpecifier && typeof node.moduleSpecifier.text === 'string'
     ? node.moduleSpecifier.text
     : undefined;
-}
-
-function looksLikeIntent(value) {
-  return /^(Domain|Application|Adapter|Workflow|Job|Presentation|Reporting|Metadata|Security|Audit|Observability|Kernel)\.[A-Za-z0-9_.]+$/.test(value);
 }
 
 async function main() {
@@ -223,7 +232,7 @@ async function main() {
       if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
         const specifier = textOfModuleSpecifier(node);
         if (specifier) {
-          const target = resolveImport(ts, specifier, file, compilerOptions, moduleHost, root);
+          const target = resolveImport(ts, specifier, file, compilerOptions, moduleHost);
           const targetLayer = target ? layerForFile(root, target, config.layers) : undefined;
           const rule = targetLayer ? isBlocked(config.rules, sourceLayer, targetLayer) : undefined;
           if (rule) {

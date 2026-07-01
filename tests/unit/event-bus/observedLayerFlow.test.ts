@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ObservedLayerFlowViolationError,
   createAuditTrail,
+  createDependencyGraph,
   createEventBus,
   createIntentRegistry,
   createStrictArkKernel,
@@ -103,6 +104,33 @@ describe('Observed layer-flow enforcement', () => {
     });
     expect(bus.getHistory()).toHaveLength(1);
     expect(bus.getTrace().some((t) => t.type === 'layer.observedViolation')).toBe(false);
+  });
+
+  it('hard mode leaves NO observed edge in the graph for a rejected flow', async () => {
+    const registry = createIntentRegistry();
+    const OrderPlaced = registry.define<'Domain.Order.Placed', { id: string }>(
+      'Domain.Order.Placed'
+    );
+    registry.define('Adapter.Persistence.OrderRepo');
+    const graph = createDependencyGraph();
+    const bus = createEventBus({
+      intentRegistry: registry,
+      dependencyGraph: graph,
+      architectureProfile: elevenLayerProfile,
+      enforceObservedLayerFlow: 'hard',
+      requireKnownSource: true,
+      strictRegistry: true,
+    });
+
+    await expect(
+      bus.publish(OrderPlaced, { id: 'o1' }, { source: 'Adapter.Persistence.OrderRepo' })
+    ).rejects.toThrow(ObservedLayerFlowViolationError);
+
+    // A rejected event must not pollute the dependency graph (drift/manifest source).
+    const phantom = graph
+      .getEdges()
+      .some((e) => e.from === 'Adapter.Persistence.OrderRepo' && e.to === 'Domain.Order.Placed');
+    expect(phantom).toBe(false);
   });
 
   it('createStrictArkKernel enforces observed layer flows (hard) by default', async () => {

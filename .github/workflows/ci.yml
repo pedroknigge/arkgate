@@ -1,10 +1,10 @@
 name: CI
 
+# Gate every push and every pull request regardless of base branch — a branch-filtered
+# gate silently skips PRs whose base is not main (release/integration/stacked branches).
 on:
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
 
 jobs:
   build:

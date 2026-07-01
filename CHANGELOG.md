@@ -2,6 +2,37 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 0.8.1 — 2026-07-01
+
+### Fixed — enforcement-defeating bugs found in the v0.8 code review
+
+A workflow-backed review of v0.6–v0.8 surfaced a cluster of bugs that silently defeated the
+very gates they added. All fixed with regression tests (including a nested-directory fixture
+so the gate can never be vacuously green again):
+
+- **Broken `**` glob (critical).** A chained `.replace()` corrupted `**` into `.[^/]*`, so
+  `src/kernel/**` stopped matching nested paths — every file in a subdirectory was silently
+  unclassified and skipped. This neutered both `ark-check` (CI) and `ark-mcp` layer
+  inference for any real project. Fixed with a single-pass glob compiler shared by both
+  CLIs (`bin/ark-shared.mjs`), removing the duplicated (and independently buggy) copies.
+- **`ark-check` import filters.** Replaced the `node_modules` path-substring test (which
+  discarded an entire project living under a `node_modules` segment) with TS's own
+  `isExternalLibraryImport` flag; removed the out-of-root filter so monorepo cross-package
+  imports are governed; restored `.mts`/`.cts` extensionless resolution via a relative
+  fallback.
+- **`ark-mcp` write-path gate.** It now builds the enforcement profile from the project's
+  `ark.config.json` (layer names **and** rules), so it agrees with `ark-check` instead of
+  always using the built-in `elevenLayerProfile` — projects with custom layer names/rules
+  were getting zero layer enforcement. Malformed config now throws instead of silently
+  falling back to a no-op; empty-layer configs warn on stderr. Manifest resource reflects
+  the effective profile. Guarded a null-intent crash and gave a clear message on broken
+  builds. Notifications never receive a response.
+- **EventBus phantom edge.** In `enforceObservedLayerFlow: 'hard'`, a rejected event no
+  longer records an `observed` graph edge (the check now runs before `registerEventFlow`),
+  so drift/manifest/observability reports don't show flows that never happened.
+- **CI gate coverage.** The workflow now triggers on every push and pull request, not only
+  those based on `main`, so non-main PR topologies can't bypass the gate.
+
 ## 0.8.0 — 2026-07-01
 
 ### Added — mandatory CI architecture gate + AI write-path gate (MCP)

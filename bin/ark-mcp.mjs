@@ -19,23 +19,40 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
+import { layerForFile } from './ark-shared.mjs';
 
 function parseArgs(argv) {
-  const args = { root: process.cwd(), config: 'ark.config.json', manifest: undefined };
+  const args = {
+    root: process.cwd(),
+    config: 'ark.config.json',
+    configExplicit: false,
+    manifest: undefined,
+  };
   for (let i = 2; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--root') args.root = path.resolve(argv[++i]);
-    else if (a === '--config') args.config = argv[++i];
-    else if (a === '--manifest') args.manifest = argv[++i];
+    else if (a === '--config') {
+      args.config = argv[++i];
+      args.configExplicit = true;
+    } else if (a === '--manifest') args.manifest = argv[++i];
   }
   return args;
 }
 
-function readJson(file) {
+/**
+ * Read a JSON file. Missing files return undefined unless `required` (so the caller can
+ * fall back), but malformed JSON always throws — silently swallowing a syntax error would
+ * turn the layer gate into a no-op that reports every write as valid.
+ */
+function readJson(file, { required } = {}) {
+  if (!fs.existsSync(file)) {
+    if (required) throw new Error(`File not found: ${file}`);
+    return undefined;
+  }
   try {
     return JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch {
-    return undefined;
+  } catch (err) {
+    throw new Error(`Failed to parse ${file}: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
 
@@ -44,26 +61,9 @@ function resolveInRoot(root, maybePath) {
   return path.isAbsolute(maybePath) ? maybePath : path.join(root, maybePath);
 }
 
-function globToRegExp(pattern) {
-  const escaped = pattern
-    .split(path.sep)
-    .join('/')
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*\*/g, '.*')
-    .replace(/\*/g, '[^/]*');
-  return new RegExp(`^${escaped}$`);
-}
-
 function inferLayer(filePath, config, root) {
   if (!filePath) return undefined;
-  const abs = path.isAbsolute(filePath) ? filePath : path.join(root, filePath);
-  const rel = path.relative(root, abs).split(path.sep).join('/');
-  for (const layer of config.layers ?? []) {
-    for (const pattern of layer.patterns ?? []) {
-      if (globToRegExp(pattern).test(rel)) return layer.name;
-    }
-  }
-  return undefined;
+  return layerForFile(root, filePath, config.layers);
 }
 
 async function loadArk() {
@@ -73,7 +73,15 @@ async function loadArk() {
       'ark-mcp requires the built library at dist/index.js. Run "npm run build" first.'
     );
   }
-  return import(url.href);
+  try {
+    return await import(url.href);
+  } catch (err) {
+    throw new Error(
+      `ark-mcp failed to load dist/index.js (rebuild with "npm run build"): ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+  }
 }
 
 async function main() {
@@ -81,16 +89,43 @@ async function main() {
   const ark = await loadArk();
 
   const configPath = resolveInRoot(args.root, args.config);
-  const config = (configPath && readJson(configPath)) || { include: ['src'], layers: [], rules: [] };
+  const config =
+    (configPath ? readJson(configPath, { required: args.configExplicit }) : undefined) ?? {
+      include: ['src'],
+      layers: [],
+      rules: [],
+    };
+  if (!config.layers || config.layers.length === 0) {
+    process.stderr.write(
+      '[ark-mcp] warning: no layers configured; layer-reference checks are disabled ' +
+        '(only forbidden-pattern and intent-allowlist checks run).\n'
+    );
+  }
+
   const manifestPath = resolveInRoot(args.root, args.manifest);
-  const projectManifest = manifestPath ? readJson(manifestPath) : undefined;
+  const projectManifest = manifestPath ? readJson(manifestPath, { required: true }) : undefined;
 
   const intents = Array.isArray(projectManifest?.intents)
-    ? projectManifest.intents.map((i) => (typeof i === 'string' ? i : i.name)).filter(Boolean)
+    ? projectManifest.intents.map((i) => (typeof i === 'string' ? i : i?.name)).filter(Boolean)
     : [];
 
+  // Build the enforcement profile from the PROJECT's config so validate_code uses the same
+  // layer names and rules as ark-check (CI). Falling back to elevenLayerProfile only when
+  // the project declares no layers keeps a sensible default contract.
+  const profile =
+    config.layers && config.layers.length > 0
+      ? ark.createArchitectureProfile({
+          name: 'project',
+          layers: config.layers.map((layer) => ({
+            name: layer.name,
+            prefixes: layer.intentPrefixes ?? [],
+          })),
+          rules: config.rules ?? [],
+        })
+      : ark.elevenLayerProfile;
+
   const gate = ark.createAICodeGate({
-    architectureProfile: ark.elevenLayerProfile,
+    architectureProfile: profile,
     intents,
     enforceIntentAllowlist: intents.length > 0,
   });
@@ -139,9 +174,13 @@ async function main() {
 
   function manifestText() {
     if (projectManifest) return JSON.stringify(projectManifest, null, 2);
-    const profile = ark.elevenLayerProfile;
     return JSON.stringify(
-      { source: 'elevenLayerProfile', name: profile.name, layers: profile.layers, rules: profile.rules },
+      {
+        source: profile === ark.elevenLayerProfile ? 'elevenLayerProfile' : 'project',
+        name: profile.name,
+        layers: profile.layers,
+        rules: profile.rules,
+      },
       null,
       2
     );
@@ -169,7 +208,10 @@ async function main() {
 
   function handle(msg) {
     const { id, method, params } = msg;
-    const isNotification = !('id' in msg);
+
+    // Notifications carry no id and MUST never receive a response (JSON-RPC 2.0).
+    // The only notification we care about is notifications/initialized (a no-op here).
+    if (!('id' in msg)) return;
 
     switch (method) {
       case 'initialize':
@@ -179,8 +221,6 @@ async function main() {
           serverInfo: SERVER_INFO,
         });
         return;
-      case 'notifications/initialized':
-        return; // notification, no response
       case 'ping':
         reply(id, {});
         return;
@@ -207,7 +247,7 @@ async function main() {
         });
         return;
       default:
-        if (!isNotification) fail(id, -32601, `Method not found: ${method}`);
+        fail(id, -32601, `Method not found: ${method}`);
     }
   }
 

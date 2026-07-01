@@ -277,8 +277,10 @@ export class EventBusImpl<Context = unknown> implements EventBus {
     this.assertContractAllowed(event as DomainEvent);
     event = await this.applyInterceptors(event as DomainEvent<N, P>);
     this.assertContractAllowed(event as DomainEvent);
-    this.dependencyGraph?.registerEventFlow(event.metadata.source, event.intent);
+    // Enforce BEFORE recording the observed edge: in hard mode a rejected flow must not
+    // leave a phantom edge in the graph that pollutes drift/manifest/observability reports.
     await this.assertObservedLayerFlowAllowed(event as DomainEvent);
+    this.dependencyGraph?.registerEventFlow(event.metadata.source, event.intent);
 
     const matching = [...(this.subscriptionsByIntent.get(event.intent) ?? [])];
 
