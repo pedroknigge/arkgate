@@ -1,5 +1,8 @@
 # Ark - Architectural Runtime Kernel
 
+[![CI](https://github.com/pedroknigge/ark/actions/workflows/ci.yml/badge.svg)](https://github.com/pedroknigge/ark/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **Make your architecture a machine-readable contract that AI agents and CI must obey — enforced when code is written, when it merges, and while it runs.**
 
 Published package name: `ark-runtime-kernel`. Zero runtime dependencies.
