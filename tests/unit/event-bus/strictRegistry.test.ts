@@ -8,6 +8,7 @@ import {
   UnregisteredIntentError,
   InvalidIntentNameError,
   LayerPolicyContextError,
+  SourceMetadataOverrideError,
 } from '../../../src/index';
 
 describe('EventBus strict registry enforcement', () => {
@@ -104,5 +105,37 @@ describe('EventBus strict registry enforcement', () => {
 
     expect(bus.getTrace().some((record) => record.type === 'event.rawPublish')).toBe(true);
     expect(await auditTrail.query({ type: 'event.rawPublish' })).toHaveLength(1);
+  });
+
+  it('creates source-bound publishers that stamp metadata.source', async () => {
+    const registry = createIntentRegistry();
+    const OrderPlaced = registry.define<'Domain.Order.Placed', { id: string }>(
+      'Domain.Order.Placed'
+    );
+    registry.define('Application.PlaceOrder');
+    const bus = createEventBus({
+      intentRegistry: registry,
+      requireKnownSource: true,
+    });
+
+    const publisher = bus.createPublisher('Application.PlaceOrder');
+    await publisher.publish(OrderPlaced, { id: 'o1' });
+
+    expect(bus.getHistory()[0].event.metadata.source).toBe('Application.PlaceOrder');
+  });
+
+  it('rejects source overrides from source-bound publishers', async () => {
+    const registry = createIntentRegistry();
+    const OrderPlaced = registry.define<'Domain.Order.Placed', { id: string }>(
+      'Domain.Order.Placed'
+    );
+    registry.define('Application.PlaceOrder');
+    registry.define('Application.OtherUseCase');
+    const bus = createEventBus({ intentRegistry: registry });
+    const publisher = bus.createPublisher('Application.PlaceOrder');
+
+    await expect(
+      publisher.publish(OrderPlaced, { id: 'o1' }, { source: 'Application.OtherUseCase' })
+    ).rejects.toThrow(SourceMetadataOverrideError);
   });
 });

@@ -18,5 +18,6 @@ export {
   LayerPolicyContextError,
   EventContractViolationError,
   UnknownEventSourceError,
+  SourceMetadataOverrideError,
   ObservedLayerFlowViolationError,
 } from './errors';

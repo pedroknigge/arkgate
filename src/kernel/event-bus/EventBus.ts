@@ -20,6 +20,7 @@ import type {
   EventInterceptor,
   EventInterceptionInfo,
   EventPayloadPatch,
+  EventPublisher,
   IntentCreator,
   ObservedLayerFlowMode,
   PublishedEventRecord,
@@ -48,6 +49,7 @@ import {
   EventContractViolationError,
   UnknownEventSourceError,
   ObservedLayerFlowViolationError,
+  SourceMetadataOverrideError,
 } from './errors';
 
 interface InternalSubscription {
@@ -370,6 +372,32 @@ export class EventBusImpl<Context = unknown> implements EventBus {
         event as DomainEvent
       );
     }
+  }
+
+  createPublisher<N extends IntentName, P>(
+    source: N | IntentCreator<N, P>
+  ): EventPublisher {
+    const sourceName =
+      typeof source === 'string' ? source : (source as IntentCreator<N, P>).name;
+
+    this.assertIntentAllowed(sourceName);
+
+    return {
+      source: sourceName,
+      publish: async <EventName extends IntentName, Payload>(
+        intent: IntentCreator<EventName, Payload>,
+        payload: Payload,
+        metadata: Partial<EventMetadata> = {}
+      ) => {
+        if (metadata.source && metadata.source !== sourceName) {
+          throw new SourceMetadataOverrideError(sourceName, metadata.source);
+        }
+        await this.publish(intent, payload, {
+          ...metadata,
+          source: sourceName,
+        });
+      },
+    };
   }
 
   subscribe<N extends IntentName, P>(

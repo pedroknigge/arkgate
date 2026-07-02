@@ -8,7 +8,9 @@ import type { MetadataRegistry } from '../metadata';
 import type { ObservabilityReporter } from '../observability';
 import type { Policy, PolicyEngine } from '../policy';
 import type { ProjectionRegistry } from '../projections';
-import type { EventBus, ObservedLayerFlowMode } from '../event-bus';
+import type { EventBus, EventPublisher, ObservedLayerFlowMode } from '../event-bus';
+import type { IntentCreator } from '../intent';
+import type { IntentName } from '../../domain/types';
 import type { OutboxStore } from '../outbox';
 import type { WorkflowEngine } from '../workflow';
 
@@ -26,6 +28,9 @@ export interface ArkKernel {
   eventBus: EventBus;
   workflowEngine: WorkflowEngine;
   observability: ObservabilityReporter;
+  publisher<N extends IntentName, P>(
+    source: N | IntentCreator<N, P>
+  ): EventPublisher;
   syncGraph(): void;
   manifest(): ArkManifest;
 }

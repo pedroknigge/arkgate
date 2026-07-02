@@ -88,6 +88,9 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
     eventBus,
     workflowEngine,
     observability,
+    publisher(source) {
+      return eventBus.createPublisher(source);
+    },
     syncGraph,
     manifest() {
       syncGraph();

@@ -156,15 +156,12 @@ ark.eventBus.subscribe(OrderPlaced, (event) => {
   console.log('Placed:', event.payload.orderId);
 });
 
-await ark.eventBus.publish(
-  OrderPlaced,
-  { orderId: 'o1', amount: 99 },
-  {
-    source: 'Application.PlaceOrder',
-    eventVersion: '1',
-    correlationId: 'corr-1',
-  }
-);
+const placeOrderPublisher = ark.publisher('Application.PlaceOrder');
+
+await placeOrderPublisher.publish(OrderPlaced, { orderId: 'o1', amount: 99 }, {
+  eventVersion: '1',
+  correlationId: 'corr-1',
+});
 
 console.log(await ark.projections.getState('OrderReadModel'));
 console.log(await ark.auditTrail.query({ correlationId: 'corr-1' }));
@@ -174,6 +171,23 @@ console.log(JSON.stringify(ark.manifest().toJSON(), null, 2));
 ```
 
 See `examples/basic/` for a runnable version.
+
+### Source-bound publishers
+
+Strict kernels still accept direct `eventBus.publish(...)` for compatibility, but the
+recommended path is a source-bound publisher:
+
+```ts
+const publisher = ark.publisher('Application.PlaceOrder');
+
+await publisher.publish(OrderPlaced, { orderId: 'o1', amount: 99 }, {
+  eventVersion: '1',
+});
+```
+
+The publisher stamps `metadata.source` internally and rejects attempts to override it with
+another source. This reduces source spoofing on the governed runtime path; static checks
+still help catch suspicious manual source literals in direct publish calls.
 
 ## AI-Augmented Development
 

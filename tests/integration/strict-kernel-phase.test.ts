@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   EventContractViolationError,
+  SourceMetadataOverrideError,
   UnknownEventSourceError,
   createArkKernel,
   createLenientArkKernel,
@@ -76,5 +77,35 @@ describe('Strict Ark kernel phase hardening', () => {
     expect(await ark.outbox.list('pending')).toHaveLength(1);
     expect(await ark.auditTrail.query({ type: 'event.published' })).toHaveLength(1);
     expect(ark.manifest().toJSON().eventContracts).toHaveLength(1);
+  });
+
+  it('exposes source-bound publishers from the strict kernel', async () => {
+    const ark = createArkKernel();
+    const OrderPlaced = ark.registry.define<'Domain.Order.Placed', { id: string }>(
+      'Domain.Order.Placed'
+    );
+    ark.registry.define('Application.PlaceOrder', {
+      produces: ['Domain.Order.Placed'],
+    });
+    ark.registry.define('Application.OtherUseCase');
+    ark.eventContracts.register({
+      intent: 'Domain.Order.Placed',
+      version: '1',
+      schema: { id: { type: 'string', required: true } },
+    });
+
+    const publisher = ark.publisher('Application.PlaceOrder');
+    await publisher.publish(OrderPlaced, { id: 'o1' }, { eventVersion: '1' });
+
+    expect(ark.eventBus.getHistory()[0].event.metadata.source).toBe(
+      'Application.PlaceOrder'
+    );
+
+    await expect(
+      publisher.publish(OrderPlaced, { id: 'o2' }, {
+        eventVersion: '1',
+        source: 'Application.OtherUseCase',
+      })
+    ).rejects.toThrow(SourceMetadataOverrideError);
   });
 });

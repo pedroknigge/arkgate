@@ -45,8 +45,9 @@ database access, and unclassified files remain outside runtime control.
 ## Important Limits
 
 - Runtime governance applies only to code that calls Ark's EventBus.
-- `metadata.source` is still caller-provided data. Ark verifies that the source is
-  registered, but it does not yet prove that the publishing module is truly that source.
+- Direct `eventBus.publish(...)` still accepts caller-provided `metadata.source`. Ark now
+  provides source-bound publishers that stamp source internally and reject overrides, but
+  teams must adopt that API on the governed path.
 - `ark-check` covers configured import/export edges and intent references. It is not yet a
   full call-graph, DI, type-symbol, or package-boundary analyzer.
 - AICodeGate is still heuristic and source-string based.
@@ -92,6 +93,7 @@ mechanism in complex systems.
 Recommended production posture:
 
 - use `createArkKernel()` or `createStrictArkKernel()`;
+- prefer `ark.publisher(sourceIntent).publish(...)` over direct publish calls;
 - register all producer and event intents;
 - register event contracts;
 - run `ark-check` in CI;

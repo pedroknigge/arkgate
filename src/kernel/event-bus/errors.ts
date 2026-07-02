@@ -66,6 +66,20 @@ export class UnknownEventSourceError extends Error {
   }
 }
 
+export class SourceMetadataOverrideError extends Error {
+  readonly boundSource: string;
+  readonly attemptedSource: string;
+
+  constructor(boundSource: string, attemptedSource: string) {
+    super(
+      `Source-bound publisher for "${boundSource}" cannot publish with metadata.source "${attemptedSource}". Create a publisher for the intended source instead.`
+    );
+    this.name = 'SourceMetadataOverrideError';
+    this.boundSource = boundSource;
+    this.attemptedSource = attemptedSource;
+  }
+}
+
 /**
  * Thrown when the OBSERVED producer→event flow crosses a forbidden layer boundary
  * under `enforceObservedLayerFlow: 'hard'`. Unlike declared-model policy errors, this

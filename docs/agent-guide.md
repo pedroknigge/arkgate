@@ -79,11 +79,16 @@ ark.eventContracts.register({
   },
 });
 
-await ark.eventBus.publish(OrderPlaced, { orderId: 'o1', amount: 99 }, {
-  source: 'Application.PlaceOrder',
+const publisher = ark.publisher('Application.PlaceOrder');
+
+await publisher.publish(OrderPlaced, { orderId: 'o1', amount: 99 }, {
   eventVersion: '1',
 });
 ```
+
+Agents should prefer `ark.publisher(sourceIntent).publish(...)` over direct
+`eventBus.publish(...)`. Source-bound publishers stamp `metadata.source` internally and
+reject attempts to override it with a different source.
 
 Interceptors may enrich event payloads, but they must remain add-only:
 

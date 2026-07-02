@@ -14,6 +14,14 @@ All notable changes to `ark-runtime-kernel` are documented here.
 - `ark-check` now flags source intent literals whose resolved layer does not match the
   publishing file's configured layer.
 
+### Added — source-bound publishers
+
+- Event buses now expose `createPublisher(sourceIntent)` to create a source-bound
+  publishing capability.
+- Ark kernels expose `ark.publisher(sourceIntent)` as the recommended strict runtime path.
+- Source-bound publishers stamp `metadata.source` internally and throw
+  `SourceMetadataOverrideError` when callers try to publish as a different source.
+
 ## 1.0.0 — 2026-07-01
 
 ### Changed — strict runtime baseline and governance roadmap

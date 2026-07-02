@@ -191,6 +191,15 @@ export interface PublishedEventRecord {
   subscribersNotified: number;
 }
 
+export interface EventPublisher {
+  readonly source: string;
+  publish<N extends IntentName, P>(
+    intent: IntentCreator<N, P>,
+    payload: P,
+    metadata?: Partial<EventMetadata>
+  ): Promise<void>;
+}
+
 /**
  * The public EventBus interface.
  */
@@ -204,6 +213,14 @@ export interface EventBus {
     payloadOrMeta?: P | Partial<EventMetadata>,
     metadata?: Partial<EventMetadata>
   ): Promise<void>;
+
+  /**
+   * Create a source-bound publisher capability. The returned publisher stamps
+   * metadata.source internally and rejects attempts to publish as another source.
+   */
+  createPublisher<N extends IntentName, P>(
+    source: N | IntentCreator<N, P>
+  ): EventPublisher;
 
   /**
    * Subscribe to events for a specific intent (by name or creator).
