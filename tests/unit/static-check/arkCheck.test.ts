@@ -35,6 +35,43 @@ const TWO_LAYER_CONFIG = JSON.stringify({
 });
 
 describe('ark-check CLI', () => {
+  it('prints a starter 11-layer config', () => {
+    const output = execFileSync('node', [
+      path.resolve('bin/ark-check.mjs'),
+      '--print-config',
+      'eleven-layer',
+    ], { encoding: 'utf8', stdio: 'pipe' });
+
+    const config = JSON.parse(output);
+    expect(config.include).toEqual(['src']);
+    expect(config.layers).toHaveLength(11);
+    expect(config.layers[0]).toMatchObject({
+      name: 'DomainModel',
+      patterns: ['src/domain/**'],
+      intentPrefixes: ['Domain.'],
+      optional: true,
+    });
+    expect(config.rules.length).toBeGreaterThan(100);
+  });
+
+  it('does not warn when generated optional layer patterns are unused', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-check-generated-config-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/domain/order.ts'), 'export const ok = true;\n');
+    const config = JSON.parse(execFileSync('node', [
+      path.resolve('bin/ark-check.mjs'),
+      '--print-config',
+      'eleven-layer',
+    ], { encoding: 'utf8', stdio: 'pipe' }));
+    fs.writeFileSync(path.join(root, 'ark.config.json'), JSON.stringify(config));
+
+    const result = runArkCheck(root);
+    expect(result.ok).toBe(true);
+    expect(result.warnings.map((w) => w.ruleId)).not.toContain(
+      'CONFIG_LAYER_PATTERN_NO_MATCHES'
+    );
+  });
+
   it('detects layer import violations using TypeScript AST', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-check-test-'));
     fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });

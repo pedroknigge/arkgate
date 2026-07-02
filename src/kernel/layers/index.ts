@@ -1,2 +1,6 @@
 export * from './types';
-export { createArchitectureProfile, elevenLayerProfile } from './ArchitectureProfile';
+export {
+  createArchitectureProfile,
+  createElevenLayerArkConfig,
+  elevenLayerProfile,
+} from './ArchitectureProfile';

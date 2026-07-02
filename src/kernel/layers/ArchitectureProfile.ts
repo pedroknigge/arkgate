@@ -2,6 +2,8 @@ import type {
   ArchitectureLayer,
   ArchitectureProfile,
   ArchitectureRule,
+  ArkCheckConfig,
+  CreateElevenLayerArkConfigOptions,
   CreateArchitectureProfileOptions,
 } from './types';
 
@@ -144,3 +146,42 @@ export const elevenLayerProfile = createArchitectureProfile({
     elevenLayerAllowedFlows
   ),
 });
+
+const defaultElevenLayerDirectories: Record<string, string[]> = {
+  DomainModel: ['domain'],
+  ApplicationOrchestration: ['application', 'app'],
+  PersistenceAdapters: [
+    'adapters/persistence',
+    'adapters/repository',
+    'repositories',
+    'infra/persistence',
+  ],
+  IntegrationAdapters: ['adapters/integration', 'adapters/external', 'integrations'],
+  WorkflowSagaEngine: ['workflows', 'sagas'],
+  BackgroundJobsScheduling: ['jobs', 'schedules'],
+  PresentationAdapters: ['presentation', 'adapters/presentation', 'adapters/api'],
+  ReportingReadModels: ['reporting', 'read-models', 'projections'],
+  ExtensibilityMetadata: ['metadata', 'extensions'],
+  SecurityAuditObservability: ['security', 'audit', 'observability'],
+  Kernel: ['kernel'],
+};
+
+export function createElevenLayerArkConfig(
+  options: CreateElevenLayerArkConfigOptions = {}
+): ArkCheckConfig {
+  const rootDir = options.rootDir ?? 'src';
+  const optional = options.optionalLayers ?? true;
+
+  return {
+    include: options.include ?? [rootDir],
+    layers: elevenLayerProfile.layers.map((layer) => ({
+      name: layer.name,
+      patterns: (defaultElevenLayerDirectories[layer.name] ?? [layer.name]).map(
+        (directory) => `${rootDir}/${directory}/**`
+      ),
+      intentPrefixes: layer.prefixes,
+      optional,
+    })),
+    rules: [...elevenLayerProfile.rules],
+  };
+}

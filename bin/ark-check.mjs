@@ -4,6 +4,7 @@ import path from 'node:path';
 import {
   DEFAULT_INTENT_PREFIXES,
   DEFAULT_RULES,
+  createElevenLayerConfig,
   globToRegExp,
   layerForFile,
   looksLikeIntent,
@@ -15,6 +16,7 @@ function parseArgs(argv) {
     root: process.cwd(),
     config: 'ark.config.json',
     manifest: undefined,
+    printConfig: undefined,
     tsconfig: undefined,
     json: false,
     strictConfig: false,
@@ -26,6 +28,7 @@ function parseArgs(argv) {
     else if (arg === '--root') args.root = path.resolve(argv[++i]);
     else if (arg === '--config') args.config = argv[++i];
     else if (arg === '--manifest') args.manifest = argv[++i];
+    else if (arg === '--print-config') args.printConfig = argv[++i];
     else if (arg === '--tsconfig') args.tsconfig = argv[++i];
     else if (arg === '--help' || arg === '-h') args.help = true;
   }
@@ -35,6 +38,7 @@ function parseArgs(argv) {
 function usage() {
   return [
     'Usage: ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--json]',
+    '       ark-check --print-config eleven-layer',
     '',
     'Resolves relative, tsconfig path-alias, and package imports via the TypeScript',
     'module resolver, then checks each resolved cross-layer import against the rules.',
@@ -52,6 +56,9 @@ function usage() {
     '',
     'Config warnings are advisory by default and are included in JSON output.',
     'Use --strict-config to make config warnings fail the check.',
+    '',
+    'Generate a starter 11-layer config:',
+    '  ark-check --print-config eleven-layer > ark.config.json',
   ].join('\n');
 }
 
@@ -212,7 +219,7 @@ function collectConfigWarnings(root, config, files, rules, manifest) {
         const rel = normalize(path.relative(root, file));
         return re.test(rel);
       });
-      if (!matched) {
+      if (!matched && !layer.optional) {
         warnings.push(
           configWarning(
             'CONFIG_LAYER_PATTERN_NO_MATCHES',
@@ -480,6 +487,15 @@ async function main() {
   const args = parseArgs(process.argv);
   if (args.help) {
     console.log(usage());
+    return;
+  }
+  if (args.printConfig) {
+    if (args.printConfig !== 'eleven-layer') {
+      console.error(`Unknown config profile: ${args.printConfig}`);
+      process.exitCode = 2;
+      return;
+    }
+    console.log(JSON.stringify(createElevenLayerConfig(), null, 2));
     return;
   }
 

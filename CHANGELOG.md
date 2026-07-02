@@ -22,6 +22,14 @@ All notable changes to `ark-runtime-kernel` are documented here.
 - Source-bound publishers stamp `metadata.source` internally and throw
   `SourceMetadataOverrideError` when callers try to publish as a different source.
 
+### Added — operational 11-layer profile config
+
+- Added `createElevenLayerArkConfig()` to generate an `ark-check` configuration from the
+  built-in runtime 11-layer profile.
+- Added `ark-check --print-config eleven-layer` for CLI bootstrap of `ark.config.json`.
+- Generated layers are optional by default so teams can adopt the full profile
+  incrementally without warnings for unused folders.
+
 ## 1.0.0 — 2026-07-01
 
 ### Changed — strict runtime baseline and governance roadmap

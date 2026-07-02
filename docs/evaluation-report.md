@@ -31,6 +31,8 @@ database access, and unclassified files remain outside runtime control.
   - add-only interceptor results;
   - observed layer flow before graph/history/outbox/subscriber side effects.
 - The 11-layer profile is a strict cross-layer deny matrix with explicit allowed flows.
+- The 11-layer profile can generate a starter `ark.config.json` through
+  `createElevenLayerArkConfig()` or `ark-check --print-config eleven-layer`.
 - `ark-check` uses the TypeScript AST and TypeScript module resolution for static import
   checks and intent-reference checks.
 - `ark-check` can consume manifest architecture rules/prefixes.
@@ -106,7 +108,8 @@ Recommended production posture:
 1. Keep documentation aligned with code defaults and limits.
 2. Expand `ark-check` into the main static governance engine.
 3. Add source-authenticity APIs so publishers cannot freely spoof `metadata.source`.
-4. Make the 11-layer profile operational through config generation/sync.
+4. Continue improving profile synchronization for existing projects beyond the current
+   generated starter config.
 5. Replace AICodeGate heuristics with AST-backed shared analyzer behavior.
 6. Add deeper ports/adapters governance.
 7. Strengthen event contracts and production storage recipes.

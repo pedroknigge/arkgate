@@ -20,6 +20,25 @@ export const DEFAULT_INTENT_PREFIXES = [
   { layer: 'Kernel', prefixes: ['Kernel.'] },
 ];
 
+export const DEFAULT_LAYER_DIRECTORIES = {
+  DomainModel: ['domain'],
+  ApplicationOrchestration: ['application', 'app'],
+  PersistenceAdapters: [
+    'adapters/persistence',
+    'adapters/repository',
+    'repositories',
+    'infra/persistence',
+  ],
+  IntegrationAdapters: ['adapters/integration', 'adapters/external', 'integrations'],
+  WorkflowSagaEngine: ['workflows', 'sagas'],
+  BackgroundJobsScheduling: ['jobs', 'schedules'],
+  PresentationAdapters: ['presentation', 'adapters/presentation', 'adapters/api'],
+  ReportingReadModels: ['reporting', 'read-models', 'projections'],
+  ExtensibilityMetadata: ['metadata', 'extensions'],
+  SecurityAuditObservability: ['security', 'audit', 'observability'],
+  Kernel: ['kernel'],
+};
+
 const DEFAULT_ALLOWED_FLOWS = [
   { from: 'PresentationAdapters', to: 'ApplicationOrchestration' },
   { from: 'ApplicationOrchestration', to: 'DomainModel' },
@@ -49,6 +68,23 @@ export const DEFAULT_RULES = createStrictDenyRules(
   DEFAULT_INTENT_PREFIXES,
   DEFAULT_ALLOWED_FLOWS
 );
+
+export function createElevenLayerConfig(options = {}) {
+  const rootDir = options.rootDir ?? 'src';
+  const optional = options.optionalLayers ?? true;
+  return {
+    include: options.include ?? [rootDir],
+    layers: DEFAULT_INTENT_PREFIXES.map((entry) => ({
+      name: entry.layer,
+      patterns: (DEFAULT_LAYER_DIRECTORIES[entry.layer] ?? [entry.layer]).map(
+        (directory) => `${rootDir}/${directory}/**`
+      ),
+      intentPrefixes: entry.prefixes,
+      optional,
+    })),
+    rules: DEFAULT_RULES,
+  };
+}
 
 const _regexpCache = new Map();
 

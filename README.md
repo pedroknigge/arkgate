@@ -201,6 +201,12 @@ For CI, use `ark-check` with an explicit layer configuration:
 npx ark-check --root . --config ark.config.json
 ```
 
+To bootstrap the built-in 11-layer profile as an `ark.config.json`:
+
+```bash
+npx ark-check --print-config eleven-layer > ark.config.json
+```
+
 `ark-check` requires TypeScript to be available in the consuming project. It parses source with the TypeScript AST and resolves imports through the TypeScript module resolver against your `tsconfig.json` — relative, path-alias, package imports, dynamic `import()`, and `require()` — plus string intent references. It also flags raw `publish()` calls, publish calls missing `metadata.source`, and source intent literals whose layer does not match the publishing file. It resolves modules the way your build does, but does not yet perform full type-graph/symbol analysis (e.g. cross-layer *type-only* references beyond the import specifier).
 
 `ark-check --json` includes `warnings` for governance coverage risks such as missing layers, unclassified included files, layer patterns that match no files, and rules that reference unknown layers. These warnings do not fail the check by default; pass `--strict-config` to make them fail CI.

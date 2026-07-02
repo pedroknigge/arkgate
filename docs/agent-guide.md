@@ -133,6 +133,12 @@ Use `ark-check` in CI for repository-level checks that need real file paths:
 npx ark-check --root . --config ark.config.json
 ```
 
+Agents can ask for a starter 11-layer config instead of inventing layer mappings:
+
+```bash
+npx ark-check --print-config eleven-layer
+```
+
 Example config:
 
 ```json

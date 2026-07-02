@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   PolicyEngine,
+  createElevenLayerArkConfig,
   defineArchitectureProfilePolicy,
   elevenLayerProfile,
 } from '../../../src/index';
@@ -53,5 +54,25 @@ describe('Architecture profiles', () => {
           !rule.allowed
       )
     ).toBe(true);
+  });
+
+  it('generates an ark-check config from the 11-layer runtime profile', () => {
+    const config = createElevenLayerArkConfig();
+
+    expect(config.include).toEqual(['src']);
+    expect(config.layers).toHaveLength(11);
+    expect(config.rules).toEqual(elevenLayerProfile.rules);
+    expect(config.layers[0]).toMatchObject({
+      name: 'DomainModel',
+      patterns: ['src/domain/**'],
+      intentPrefixes: ['Domain.'],
+      optional: true,
+    });
+    expect(
+      config.layers.find((layer) => layer.name === 'ApplicationOrchestration')?.patterns
+    ).toContain('src/app/**');
+    expect(
+      config.layers.find((layer) => layer.name === 'SecurityAuditObservability')?.patterns
+    ).toContain('src/observability/**');
   });
 });

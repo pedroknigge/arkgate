@@ -31,3 +31,26 @@ export interface CreateArchitectureProfileOptions {
   layers: ArchitectureLayer[];
   rules?: ArchitectureRule[];
 }
+
+export interface ArchitectureLayerConfig {
+  name: string;
+  patterns: string[];
+  intentPrefixes: string[];
+  /** Optional layers do not warn when their patterns match no files. */
+  optional?: boolean;
+}
+
+export interface ArkCheckConfig {
+  include: string[];
+  layers: ArchitectureLayerConfig[];
+  rules: ArchitectureRule[];
+}
+
+export interface CreateElevenLayerArkConfigOptions {
+  /** Source root used in generated file patterns. Default: "src". */
+  rootDir?: string;
+  /** Include entries for ark-check. Default: [rootDir]. */
+  include?: string[];
+  /** Mark generated layers optional. Default: true. */
+  optionalLayers?: boolean;
+}

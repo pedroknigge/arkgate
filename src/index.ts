@@ -176,11 +176,15 @@ export {
 
 export {
   createArchitectureProfile,
+  createElevenLayerArkConfig,
   elevenLayerProfile,
   type ArchitectureLayer,
+  type ArchitectureLayerConfig,
   type ArchitectureProfile,
   type ArchitectureRule,
+  type ArkCheckConfig,
   type CreateArchitectureProfileOptions,
+  type CreateElevenLayerArkConfigOptions,
 } from './kernel/layers';
 
 // =============================================================================
