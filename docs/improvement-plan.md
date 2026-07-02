@@ -1,5 +1,7 @@
 # Ark Governance Roadmap
 
+> **v1.0.0 Release-time Snapshot / Assessment** (2026-07-01). This document reflects the roadmap and baseline view captured at v1.0.0 release. Multiple phases (including static governance, source-bound publishers, AI gate AST parity, and profile support) were delivered as part of reaching the v1.0.0 baseline.
+
 **Date:** 2026-07-01  
 **Current version:** 1.0.0  
 **Purpose:** Move Ark from a strong event/intent governance kernel plus partial static checks
@@ -23,6 +25,8 @@ The main remaining gap is scope: Ark strongly governs the paths routed through i
 direct calls, dependency injection, raw infrastructure access, external brokers, and
 unclassified files remain outside runtime control unless static governance or project
 conventions cover them.
+
+v1.0.0 shipped the Phase 1–3 core items plus partial 4/5: strict-by-default kernels (`createArkKernel`, `createStrictArkKernel`), source-bound `publisher()`, expanded `ark-check` (TS-resolved imports including dynamic/require, raw publish flagging, source metadata enforcement, layer mismatch, config warnings with --strict-config), 11-layer profile + generators, AICodeGate AST publish checks when TS passed, MCP hook parity, and port/adapter metadata.
 
 ## Seven-Phase Plan
 
@@ -90,16 +94,14 @@ Goal: improve operational readiness without pretending Ark is durable infrastruc
   workflow snapshots.
 - Mark in-memory stores clearly as development/test defaults.
 
-## Release Targets
+## Release Targets (v1.0.0 baseline view, updated for shipped reality)
 
-| Version | Focus |
-|---------|-------|
-| 1.0.x | Phase 1: docs, warnings, and configuration validation |
-| 1.1 | Phase 2: broader static governance |
-| 1.2 | Phase 3: source authenticity |
-| 1.3 | Phases 4-5: profile operations and AI/MCP parity |
-| 1.4 | Phase 6: ports and adapters governance |
-| 1.5 | Phase 7: production hardening |
+| Version | Focus | Status at v1.0 |
+|---------|-------|----------------|
+| 1.0.0 | Phase 1 (operational honesty, config validation + --strict-config + warnings) + Phase 2 (ark-check broader static: dynamic imports/require, raw publish, missing source, source-layer mismatch, intent refs) + Phase 3 (source-bound publishers + SourceMetadataOverrideError) + Phase 4/5 partial (operational 11-layer profile + `createElevenLayerArkConfig` + `--print-config`, AICodeGate AST-backed publish checks + MCP parity) + basic ports/adapters metadata | Shipped (see Current Baseline) |
+| 1.x+ | Phase 6 full (ports/adapters governance) + Phase 7 (production hardening stores/recipes, deeper contracts) + remaining monorepo / deeper static / durability work | Future |
+
+Many Phase 2–5 items advanced into the v1.0.0 release. The "remaining gap" is still scope (not everything is routed through Ark).
 
 ## Non-Goals
 
