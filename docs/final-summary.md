@@ -1,5 +1,7 @@
 # Ark - v0.5 Production Readiness Summary
 
+> **v1.0.0 Release-time Snapshot / Assessment** (2026-07-01). This is a historical readiness summary from the v0.5 phase, preserved as captured at v1.0 release time.
+
 **Date:** 2026-07-01
 **Version:** 0.5.0
 **Package name:** `ark-runtime-kernel`

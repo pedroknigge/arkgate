@@ -132,7 +132,7 @@ Passing the `typescript` module enables built-in AST checks for raw publish call
 `metadata.source`, and source-layer mismatches. `ark-mcp` enables these checks
 automatically when TypeScript is available.
 
-Violation codes: `FORBIDDEN_PATTERN`, `FORBIDDEN_SUBSTRING`, `POLICY_VIOLATION`, `UNKNOWN_INTENT`, `LAYER_REFERENCE_VIOLATION`, `EXTENSION_ERROR`.
+Violation codes (from `createAICodeGate`): `RAW_EVENT_PUBLISH`, `PUBLISH_MISSING_SOURCE`, `PUBLISH_SOURCE_LAYER_MISMATCH`, `FORBIDDEN_PATTERN`, `FORBIDDEN_SUBSTRING`, `FORBIDDEN_IMPORT`, `POLICY_VIOLATION`, `UNKNOWN_INTENT`, `LAYER_REFERENCE_VIOLATION`, `EXTENSION_ERROR`, `AST_ANALYZER_ERROR`.
 
 Use `ark-check` in CI for repository-level checks that need real file paths:
 
@@ -249,6 +249,10 @@ Implement these interfaces in **external** packages — not inside the Ark core:
 | `Policy` | Custom architectural rules via `definePolicy()` |
 | `LayerFlowRule` | Layer isolation via `defineLayerPolicy()` |
 | `WorkflowStore` | Persist workflow snapshots outside memory |
+| `ReadModelStore` | Persist projection/read-model state outside memory |
+| `AuditStore` | Persist audit records outside memory |
+| `OutboxStore` | Persist event outbox records outside memory |
+| `EventInterceptor` | Add-only event enrichment before delivery |
 
 ## Ports and Adapters
 
@@ -270,10 +274,6 @@ createAdapter(PaymentGateway, stripeAdapter, {
 
 `createAdapter` rejects adapter names/intents not listed in `allowedAdapters`; use
 `checkAdapterGovernance(adapter)` when a tool needs a non-throwing result.
-| `ReadModelStore` | Persist projection/read-model state outside memory |
-| `AuditStore` | Persist audit records outside memory |
-| `OutboxStore` | Persist event outbox records outside memory |
-| `EventInterceptor` | Add-only event enrichment before delivery |
 
 Preset: `elevenLayerProfile` plus `defineArchitectureProfilePolicy()` forbids invalid declared dependencies across the 11-layer profile. `architecturalPolicies.cleanArchitectureMatrix()` remains available for the older four-prefix model.
 

@@ -1,5 +1,7 @@
 # Ark System Readiness Assessment
 
+> **v1.0.0 Release-time Snapshot / Assessment** (2026-07-01). System readiness view at v1.0.0 release.
+
 **Date:** 2026-07-01
 **Version:** 1.0.0
 **Package:** `ark-runtime-kernel`

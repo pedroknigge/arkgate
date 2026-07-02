@@ -1,5 +1,7 @@
 # Ark Library Evaluation Report
 
+> **v1.0.0 Release-time Snapshot / Assessment** (2026-07-01). Historical evaluation report captured at the v1.0.0 release.
+
 **Evaluator:** Direct code analysis  
 **Date:** 2026-07-01  
 **Version analyzed:** 1.0.0 (`ark-runtime-kernel`)  
