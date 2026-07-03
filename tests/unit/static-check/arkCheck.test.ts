@@ -215,6 +215,113 @@ describe('ark-check --install-agent-gates', () => {
     expect(yarnWorkflow).toContain('yarn ark-check --root . --config ark.config.json --strict-config');
     expect(yarnWorkflow).not.toContain('npm ci');
   });
+
+  it('includes --require-gates in the generated CI workflow command', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-require-'));
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+
+    const result = runInstallAgentGates(root);
+    expect(result.status).toBe(0);
+    const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
+    expect(workflow).toContain('--strict-config --require-gates');
+  });
+
+  it('writes only base + selected tool templates with --tools', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-tools-'));
+
+    const result = runInstallAgentGates(root, ['--tools', 'claude']);
+    expect(result.status).toBe(0);
+    // Base gates are always written.
+    expect(fs.existsSync(path.join(root, 'AGENTS.md'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.mcp.json'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.github/workflows/ark-check.yml'))).toBe(true);
+    // Selected tool.
+    expect(fs.existsSync(path.join(root, '.claude/settings.json'))).toBe(true);
+    // Unselected tools are skipped.
+    expect(fs.existsSync(path.join(root, '.cursor/mcp.json'))).toBe(false);
+    expect(fs.existsSync(path.join(root, '.cursor/rules/ark.mdc'))).toBe(false);
+    expect(fs.existsSync(path.join(root, 'docs/ark-codex-config.toml'))).toBe(false);
+  });
+
+  it('auto-detects tools from existing .cursor/ directory', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-detect-'));
+    fs.mkdirSync(path.join(root, '.cursor'), { recursive: true });
+
+    const result = runInstallAgentGates(root);
+    expect(result.status).toBe(0);
+    expect(fs.existsSync(path.join(root, '.cursor/rules/ark.mdc'))).toBe(true);
+    // .claude was not present, so it is not written.
+    expect(fs.existsSync(path.join(root, '.claude/settings.json'))).toBe(false);
+  });
+
+  it('keeps the agent contract in sync between AGENTS.md and the Cursor rule', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-sync-'));
+
+    const result = runInstallAgentGates(root, ['--tools', 'cursor']);
+    expect(result.status).toBe(0);
+    const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
+    const rule = fs.readFileSync(path.join(root, '.cursor/rules/ark.mdc'), 'utf8');
+    const command = 'npx ark-check --root . --config ark.config.json --strict-config';
+    // The canonical command appears in both derived files.
+    expect(agents).toContain(command);
+    expect(rule).toContain(command);
+    // Both reference the same manifest resource.
+    expect(agents).toContain('ark://manifest');
+    expect(rule).toContain('ark://manifest');
+  });
+});
+
+describe('ark-check --require-gates', () => {
+  it('fails when required gate files are missing', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-require-missing-'));
+
+    let status = 0;
+    let stdout = '';
+    try {
+      stdout = execFileSync(
+        'node',
+        [path.resolve('bin/ark-check.mjs'), '--root', root, '--require-gates', '--json'],
+        { encoding: 'utf8', stdio: 'pipe' }
+      );
+    } catch (error) {
+      const e = error as { status: number; stdout: string };
+      status = e.status;
+      stdout = e.stdout ?? '';
+    }
+
+    expect(status).toBe(1);
+    const payload = JSON.parse(stdout) as { ok: boolean; error: string; missing: string[] };
+    expect(payload.ok).toBe(false);
+    expect(payload.error).toBe('missing-gates');
+    expect(payload.missing).toContain('AGENTS.md');
+    expect(payload.missing).toContain('.mcp.json');
+    expect(payload.missing).toContain('.github/workflows/ark-check.yml');
+  });
+
+  it('passes once gates are installed', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-require-present-'));
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+    const install = runInstallAgentGates(root);
+    expect(install.status).toBe(0);
+
+    // Human mode: a clear "gates present" line, exit 0.
+    const human = execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--require-gates'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    expect(human).toContain('Ark gates present');
+
+    // JSON mode: require-gates stays quiet on success so the architecture check
+    // owns the single JSON payload (no colliding objects).
+    const json = execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--require-gates', '--json'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    const payload = JSON.parse(json) as { ok: boolean };
+    expect(payload.ok).toBe(true);
+  });
 });
 
 describe('ark init', () => {

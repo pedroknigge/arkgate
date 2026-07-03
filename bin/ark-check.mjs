@@ -21,8 +21,10 @@ function parseArgs(argv) {
     tsconfig: undefined,
     json: false,
     strictConfig: false,
+    requireGates: false,
     init: false,
     installAgentGates: false,
+    tools: undefined,
     force: false,
     baseline: undefined,
     updateBaseline: false,
@@ -31,8 +33,16 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === '--json') args.json = true;
     else if (arg === '--strict-config') args.strictConfig = true;
+    else if (arg === '--require-gates') args.requireGates = true;
     else if (arg === '--init') args.init = true;
     else if (arg === '--install-agent-gates') args.installAgentGates = true;
+    else if (arg === '--tools') {
+      const next = argv[++i];
+      args.tools = (next ?? '')
+        .split(',')
+        .map((tool) => tool.trim().toLowerCase())
+        .filter(Boolean);
+    }
     else if (arg === '--force') args.force = true;
     else if (arg === '--baseline' || arg === '--update-baseline') {
       if (arg === '--update-baseline') args.updateBaseline = true;
@@ -52,9 +62,9 @@ function parseArgs(argv) {
 
 function usage() {
   return [
-    'Usage: ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--json] [--baseline [file]]',
+    'Usage: ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--require-gates] [--json] [--baseline [file]]',
     '       ark-check --init [--force]',
-    '       ark-check --install-agent-gates [--force]',
+    '       ark-check --install-agent-gates [--tools claude,cursor,codex] [--force]',
     '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
     '       ark-check --print-config eleven-layer',
     '',
@@ -83,6 +93,15 @@ function usage() {
     'Config warnings are advisory by default and are included in JSON output.',
     'Use --strict-config to make config warnings fail the check.',
     '',
+    '--require-gates fails the check when AGENTS.md, .mcp.json, or the generated CI',
+    'workflow is missing, so "installed but never configured" is a red CI. Combine it',
+    'with --strict-config to enforce gate presence and architecture in one run.',
+    '',
+    '--install-agent-gates writes AGENTS.md, .mcp.json, and the CI workflow for every',
+    'project, plus tool-specific templates. Pass --tools claude,cursor,codex to pick',
+    'which tool configs to write; otherwise they are auto-detected from .claude/ and',
+    '.cursor/ (all are written when nothing is detected).',
+    '',
     'Generate a starter 11-layer config:',
     '  ark-check --print-config eleven-layer > ark.config.json',
     '',
@@ -104,6 +123,18 @@ function readPackageJson(root) {
 function hasCheckArchitectureScript(root) {
   const pkg = readPackageJson(root);
   return Boolean(pkg?.scripts?.['check:architecture']);
+}
+
+const REQUIRED_GATE_FILES = [
+  'AGENTS.md',
+  '.mcp.json',
+  '.github/workflows/ark-check.yml',
+];
+
+function missingGates(root) {
+  return REQUIRED_GATE_FILES.filter(
+    (relativePath) => !fs.existsSync(path.join(root, relativePath))
+  );
 }
 
 function checkArchitectureScriptSnippet() {
@@ -241,7 +272,7 @@ function writeTemplate(root, relativePath, content, force) {
   }
   ensureDirForFile(fullPath);
   fs.writeFileSync(fullPath, content);
-  return { relativePath, status: fs.existsSync(fullPath) ? 'written' : 'written' };
+  return { relativePath, status: fs.existsSync(fullPath) ? 'written' : 'failed' };
 }
 
 function packageManager(root) {
@@ -250,7 +281,7 @@ function packageManager(root) {
       cache: 'pnpm',
       setup: ['corepack enable'],
       install: 'pnpm install --frozen-lockfile',
-      run: 'pnpm exec ark-check --root . --config ark.config.json --strict-config',
+      run: 'pnpm exec ark-check --root . --config ark.config.json --strict-config --require-gates',
     };
   }
   if (fs.existsSync(path.join(root, 'yarn.lock'))) {
@@ -258,27 +289,42 @@ function packageManager(root) {
       cache: 'yarn',
       setup: ['corepack enable'],
       install: 'yarn install --frozen-lockfile',
-      run: 'yarn ark-check --root . --config ark.config.json --strict-config',
+      run: 'yarn ark-check --root . --config ark.config.json --strict-config --require-gates',
     };
   }
   return {
     cache: 'npm',
     setup: [],
     install: fs.existsSync(path.join(root, 'package-lock.json')) ? 'npm ci' : 'npm install',
-    run: 'npx ark-check --root . --config ark.config.json --strict-config',
+    run: 'npx ark-check --root . --config ark.config.json --strict-config --require-gates',
   };
 }
 
+const ARK_CHECK_COMMAND = 'npx ark-check --root . --config ark.config.json --strict-config';
+
+// Canonical agent contract. AGENTS.md and the Cursor rule both derive from this
+// single source so the steps can never drift out of sync between the two files.
+const AGENT_CONTRACT = {
+  manifestResource: 'ark://manifest',
+  steps: [
+    `Read the Ark contract from \`ark://manifest\` when the MCP server is available.`,
+    `Keep source files inside the layer boundaries declared in \`ark.config.json\`.`,
+    `Do not bypass Ark publishers, event contracts, or source metadata for runtime mutations.`,
+    `After edits, run \`${ARK_CHECK_COMMAND}\`.`,
+    `If Ark reports violations, fix the architecture instead of weakening the gate.`,
+  ],
+  // Cursor-only guidance: the write-time validate_code tool is available in
+  // Cursor's runtime but has no equivalent in a plain AGENTS.md read.
+  cursorValidateStep: `Validate the full post-edit file content with the \`validate_code\` tool before writing whenever your runtime supports it.`,
+};
+
 function agentInstructions() {
+  const steps = AGENT_CONTRACT.steps.map((step, index) => `${index + 1}. ${step}`).join('\n');
   return `# Ark Enforcement
 
 Before editing TypeScript or JavaScript source files:
 
-1. Read the Ark contract from \`ark://manifest\` when the MCP server is available.
-2. Keep source files inside the layer boundaries declared in \`ark.config.json\`.
-3. Do not bypass Ark publishers, event contracts, or source metadata for runtime mutations.
-4. After edits, run \`npx ark-check --root . --config ark.config.json --strict-config\`.
-5. If Ark reports violations, fix the architecture instead of weakening the gate.
+${steps}
 
 The project is only considered Ark-enforced when the write gate, CI gate, and runtime path all pass.
 `;
@@ -310,13 +356,12 @@ alwaysApply: true
 ---
 
 Before writing or editing TypeScript or JavaScript source files, read the
-\`ark://manifest\` resource from the \`ark\` MCP server when available.
+\`${AGENT_CONTRACT.manifestResource}\` resource from the \`ark\` MCP server when available.
 
-Validate the full post-edit file content with the \`validate_code\` tool before
-writing whenever your runtime supports it. After edits, run:
+${AGENT_CONTRACT.cursorValidateStep} After edits, run:
 
 \`\`\`bash
-npx ark-check --root . --config ark.config.json --strict-config
+${ARK_CHECK_COMMAND}
 \`\`\`
 
 If Ark reports violations, fix the architecture instead of bypassing the gate.
@@ -365,19 +410,46 @@ function claudeSettings() {
   }, null, 2)}\n`;
 }
 
+function resolveTools(args) {
+  if (args.tools && args.tools.length > 0) {
+    return new Set(args.tools);
+  }
+  const root = args.root;
+  const detected = new Set();
+  if (fs.existsSync(path.join(root, '.claude'))) detected.add('claude');
+  if (fs.existsSync(path.join(root, '.cursor'))) detected.add('cursor');
+  if (fs.existsSync(path.join(root, '.codex'))) {
+    detected.add('codex');
+  }
+  // No signal at all: fall back to writing every tool's templates so a fresh
+  // project still gets a complete, reviewable starter set.
+  if (detected.size === 0) {
+    return new Set(['claude', 'cursor', 'codex']);
+  }
+  return detected;
+}
+
 function runInstallAgentGates(args) {
   const root = args.root;
   const pm = packageManager(root);
   const hasCheckScript = hasCheckArchitectureScript(root);
+  const tools = resolveTools(args);
   const templates = [
+    // Base gates: tool-agnostic contract + CI backstop, always written.
     ['AGENTS.md', agentInstructions()],
     ['.mcp.json', mcpJson()],
-    ['.cursor/mcp.json', mcpJson()],
-    ['.cursor/rules/ark.mdc', cursorRule()],
-    ['.claude/settings.json', claudeSettings()],
     ['.github/workflows/ark-check.yml', githubWorkflow(pm)],
-    ['docs/ark-codex-config.toml', codexTomlSnippet()],
   ];
+  if (tools.has('cursor')) {
+    templates.push(['.cursor/mcp.json', mcpJson()]);
+    templates.push(['.cursor/rules/ark.mdc', cursorRule()]);
+  }
+  if (tools.has('claude')) {
+    templates.push(['.claude/settings.json', claudeSettings()]);
+  }
+  if (tools.has('codex')) {
+    templates.push(['docs/ark-codex-config.toml', codexTomlSnippet()]);
+  }
 
   const results = templates.map(([relativePath, content]) =>
     writeTemplate(root, relativePath, content, args.force)
@@ -385,8 +457,15 @@ function runInstallAgentGates(args) {
 
   console.log('Ark agent gate templates:');
   for (const result of results) {
-    const marker = result.status === 'written' ? 'wrote' : 'skipped';
+    const marker =
+      result.status === 'written' ? 'wrote' : result.status === 'failed' ? 'FAILED' : 'skipped';
     console.log(`  ${marker.padEnd(7)} ${result.relativePath}`);
+  }
+  const failed = results.filter((result) => result.status === 'failed');
+  if (failed.length > 0) {
+    console.error(`\nFailed to write ${failed.length} template(s).`);
+    process.exitCode = 1;
+    return;
   }
   console.log('');
   console.log('Next steps:');
@@ -878,6 +957,35 @@ async function main() {
     }
     console.log(JSON.stringify(createElevenLayerConfig(), null, 2));
     return;
+  }
+
+  if (args.requireGates) {
+    const missing = missingGates(args.root);
+    if (missing.length > 0) {
+      const payload = {
+        ok: false,
+        error: 'missing-gates',
+        missing,
+      };
+      if (args.json) {
+        console.log(JSON.stringify(payload, null, 2));
+      } else {
+        console.error('Ark gates are not installed. Missing:');
+        for (const relativePath of missing) {
+          console.error(`  - ${relativePath}`);
+        }
+        console.error('\nRun `npx ark init` (or `ark-check --install-agent-gates`) to configure enforcement.');
+      }
+      process.exitCode = 1;
+      return;
+    }
+    // Gates present. This is a precondition, not a standalone report: stay quiet
+    // in --json mode so the architecture check below owns the single JSON output.
+    // When --require-gates is the only intent (no config/architecture run needed),
+    // callers still get a clear signal from the exit code and the human-mode line.
+    if (!args.json) {
+      console.log('Ark gates present: ' + REQUIRED_GATE_FILES.join(', '));
+    }
   }
 
   let ts;
