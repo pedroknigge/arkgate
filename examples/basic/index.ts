@@ -18,7 +18,7 @@ import {
   createSaga,
   createAICodeGate,
   architecturalPolicies,
-  // cleanArchitectureMatrix is the full layer preset
+  // cleanArchitectureMatrix covers the older four-prefix model; the full 11-layer preset is elevenLayerProfile
   PolicyEngine,
 } from '../../src/index';
 
