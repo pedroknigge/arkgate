@@ -24,6 +24,7 @@
     }
   },
   "bin": {
+    "ark": "bin/ark.mjs",
     "ark-check": "bin/ark-check.mjs",
     "ark-mcp": "bin/ark-mcp.mjs"
   },
@@ -31,6 +32,7 @@
   "files": [
     "bin",
     "dist",
+    "docs",
     "server.json",
     "README.md",
     "LICENSE"
@@ -43,6 +45,7 @@
     "typecheck": "tsc --noEmit",
     "check:architecture": "node bin/ark-check.mjs --root . --config ark.config.json --strict-config",
     "clean": "rm -rf dist",
+    "postinstall": "node bin/ark-postinstall.mjs",
     "release:npm": "node scripts/release-npm.mjs",
     "prepack": "npm run build"
   },

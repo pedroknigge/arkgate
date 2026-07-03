@@ -22,6 +22,7 @@ function parseArgs(argv) {
     json: false,
     strictConfig: false,
     init: false,
+    installAgentGates: false,
     force: false,
     baseline: undefined,
     updateBaseline: false,
@@ -31,6 +32,7 @@ function parseArgs(argv) {
     if (arg === '--json') args.json = true;
     else if (arg === '--strict-config') args.strictConfig = true;
     else if (arg === '--init') args.init = true;
+    else if (arg === '--install-agent-gates') args.installAgentGates = true;
     else if (arg === '--force') args.force = true;
     else if (arg === '--baseline' || arg === '--update-baseline') {
       if (arg === '--update-baseline') args.updateBaseline = true;
@@ -52,6 +54,7 @@ function usage() {
   return [
     'Usage: ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--json] [--baseline [file]]',
     '       ark-check --init [--force]',
+    '       ark-check --install-agent-gates [--force]',
     '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
     '       ark-check --print-config eleven-layer',
     '',
@@ -82,6 +85,9 @@ function usage() {
     '',
     'Generate a starter 11-layer config:',
     '  ark-check --print-config eleven-layer > ark.config.json',
+    '',
+    'Install agent + CI enforcement templates:',
+    '  ark-check --install-agent-gates',
   ].join('\n');
 }
 
@@ -203,6 +209,170 @@ function runInit(args) {
   console.log('  1. CI gate:        npx ark-check --root . --config ark.config.json --strict-config');
   console.log('  2. AI write gate:  npx ark-mcp --root . --config ark.config.json');
   console.log('     (bind its validate_code tool to your agent\'s pre-write hook — see README)');
+}
+
+function ensureDirForFile(file) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+}
+
+function writeTemplate(root, relativePath, content, force) {
+  const fullPath = path.join(root, relativePath);
+  if (fs.existsSync(fullPath) && !force) {
+    return { relativePath, status: 'skipped' };
+  }
+  ensureDirForFile(fullPath);
+  fs.writeFileSync(fullPath, content);
+  return { relativePath, status: fs.existsSync(fullPath) ? 'written' : 'written' };
+}
+
+function packageManager(root) {
+  if (fs.existsSync(path.join(root, 'pnpm-lock.yaml'))) {
+    return {
+      cache: 'pnpm',
+      setup: ['corepack enable'],
+      install: 'pnpm install --frozen-lockfile',
+      run: 'pnpm exec ark-check --root . --config ark.config.json --strict-config',
+    };
+  }
+  if (fs.existsSync(path.join(root, 'yarn.lock'))) {
+    return {
+      cache: 'yarn',
+      setup: ['corepack enable'],
+      install: 'yarn install --frozen-lockfile',
+      run: 'yarn ark-check --root . --config ark.config.json --strict-config',
+    };
+  }
+  return {
+    cache: 'npm',
+    setup: [],
+    install: fs.existsSync(path.join(root, 'package-lock.json')) ? 'npm ci' : 'npm install',
+    run: 'npx ark-check --root . --config ark.config.json --strict-config',
+  };
+}
+
+function agentInstructions() {
+  return `# Ark Enforcement
+
+Before editing TypeScript or JavaScript source files:
+
+1. Read the Ark contract from \`ark://manifest\` when the MCP server is available.
+2. Keep source files inside the layer boundaries declared in \`ark.config.json\`.
+3. Do not bypass Ark publishers, event contracts, or source metadata for runtime mutations.
+4. After edits, run \`npx ark-check --root . --config ark.config.json --strict-config\`.
+5. If Ark reports violations, fix the architecture instead of weakening the gate.
+
+The project is only considered Ark-enforced when the write gate, CI gate, and runtime path all pass.
+`;
+}
+
+function mcpJson() {
+  return `${JSON.stringify({
+    mcpServers: {
+      ark: {
+        type: 'stdio',
+        command: 'npx',
+        args: ['ark-mcp', '--root', '.', '--config', 'ark.config.json'],
+      },
+    },
+  }, null, 2)}\n`;
+}
+
+function codexTomlSnippet() {
+  return `[mcp_servers.ark]
+command = "npx"
+args = ["ark-mcp", "--root", ".", "--config", "ark.config.json"]
+`;
+}
+
+function cursorRule() {
+  return `---
+description: Ark architecture contract
+alwaysApply: true
+---
+
+Before writing or editing TypeScript or JavaScript source files, read the
+\`ark://manifest\` resource from the \`ark\` MCP server when available.
+
+Validate the full post-edit file content with the \`validate_code\` tool before
+writing whenever your runtime supports it. After edits, run:
+
+\`\`\`bash
+npx ark-check --root . --config ark.config.json --strict-config
+\`\`\`
+
+If Ark reports violations, fix the architecture instead of bypassing the gate.
+`;
+}
+
+function githubWorkflow(pm) {
+  const setupSteps = pm.setup.map((command) => `      - run: ${command}`).join('\n');
+  return `name: Ark architecture gate
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  ark-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: ${pm.cache}
+${setupSteps ? `${setupSteps}\n` : ''}      - run: ${pm.install}
+      - run: ${pm.run}
+`;
+}
+
+function claudeSettings() {
+  return `${JSON.stringify({
+    hooks: {
+      PreToolUse: [
+        {
+          matcher: 'Write|Edit|MultiEdit',
+          hooks: [
+            {
+              type: 'command',
+              command:
+                'npx ark-mcp --hook --root "$CLAUDE_PROJECT_DIR" --config ark.config.json',
+            },
+          ],
+        },
+      ],
+    },
+  }, null, 2)}\n`;
+}
+
+function runInstallAgentGates(args) {
+  const root = args.root;
+  const pm = packageManager(root);
+  const templates = [
+    ['AGENTS.md', agentInstructions()],
+    ['.mcp.json', mcpJson()],
+    ['.cursor/mcp.json', mcpJson()],
+    ['.cursor/rules/ark.mdc', cursorRule()],
+    ['.claude/settings.json', claudeSettings()],
+    ['.github/workflows/ark-check.yml', githubWorkflow(pm)],
+    ['docs/ark-codex-config.toml', codexTomlSnippet()],
+  ];
+
+  const results = templates.map(([relativePath, content]) =>
+    writeTemplate(root, relativePath, content, args.force)
+  );
+
+  console.log('Ark agent gate templates:');
+  for (const result of results) {
+    const marker = result.status === 'written' ? 'wrote' : 'skipped';
+    console.log(`  ${marker.padEnd(7)} ${result.relativePath}`);
+  }
+  console.log('');
+  console.log('Next steps:');
+  console.log('  1. Review the generated files and commit the ones that match your tools.');
+  console.log('  2. Run: npx ark-check --root . --config ark.config.json --strict-config');
+  console.log('  3. Wire Codex manually from docs/ark-codex-config.toml if your host uses ~/.codex/config.toml.');
 }
 
 function readManifest(root, manifestPath) {
@@ -668,6 +838,10 @@ async function main() {
   }
   if (args.init) {
     runInit(args);
+    return;
+  }
+  if (args.installAgentGates) {
+    runInstallAgentGates(args);
     return;
   }
   if (args.printConfig) {

@@ -48,6 +48,34 @@ function runInit(root: string, extraArgs: string[] = []) {
   }
 }
 
+function runInstallAgentGates(root: string, extraArgs: string[] = []) {
+  try {
+    const stdout = execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--install-agent-gates', '--root', root, ...extraArgs],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    return { status: 0, stdout, stderr: '' };
+  } catch (error) {
+    const e = error as { status: number; stdout: string; stderr: string };
+    return { status: e.status, stdout: e.stdout ?? '', stderr: e.stderr ?? '' };
+  }
+}
+
+function runArkInit(root: string, extraArgs: string[] = []) {
+  try {
+    const stdout = execFileSync(
+      'node',
+      [path.resolve('bin/ark.mjs'), 'init', '--root', root, ...extraArgs],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    return { status: 0, stdout, stderr: '' };
+  } catch (error) {
+    const e = error as { status: number; stdout: string; stderr: string };
+    return { status: e.status, stdout: e.stdout ?? '', stderr: e.stderr ?? '' };
+  }
+}
+
 describe('ark-check --init', () => {
   it('detects existing layer directories and writes a config that passes strict check', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-init-'));
@@ -113,6 +141,106 @@ describe('ark-check --init', () => {
     const init = runInit(root);
     expect(init.status).toBe(0);
     expect(init.stdout).toContain('lib');
+  });
+});
+
+describe('ark-check --install-agent-gates', () => {
+  it('writes starter agent and CI gate templates without requiring an existing config', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-'));
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+
+    const result = runInstallAgentGates(root);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('AGENTS.md');
+    expect(result.stdout).toContain('.github/workflows/ark-check.yml');
+
+    expect(fs.existsSync(path.join(root, 'AGENTS.md'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.mcp.json'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.claude/settings.json'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.cursor/mcp.json'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.cursor/rules/ark.mdc'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.github/workflows/ark-check.yml'))).toBe(true);
+    expect(fs.existsSync(path.join(root, 'docs/ark-codex-config.toml'))).toBe(true);
+
+    const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
+    expect(agents).toContain('ark://manifest');
+    expect(agents).toContain('ark-check --root . --config ark.config.json --strict-config');
+
+    const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
+    expect(workflow).toContain('npx ark-check --root . --config ark.config.json --strict-config');
+  });
+
+  it('skips existing files unless --force is passed', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-force-'));
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), 'custom instructions\n');
+
+    const skipped = runInstallAgentGates(root);
+    expect(skipped.status).toBe(0);
+    expect(skipped.stdout).toContain('skipped AGENTS.md');
+    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toBe('custom instructions\n');
+
+    const forced = runInstallAgentGates(root, ['--force']);
+    expect(forced.status).toBe(0);
+    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('Ark Enforcement');
+  });
+
+  it('generates package-manager-consistent GitHub workflows', () => {
+    const pnpmRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-pnpm-'));
+    fs.writeFileSync(path.join(pnpmRoot, 'pnpm-lock.yaml'), '\n');
+
+    const pnpm = runInstallAgentGates(pnpmRoot);
+    expect(pnpm.status).toBe(0);
+    const pnpmWorkflow = fs.readFileSync(
+      path.join(pnpmRoot, '.github/workflows/ark-check.yml'),
+      'utf8'
+    );
+    expect(pnpmWorkflow).toContain('cache: pnpm');
+    expect(pnpmWorkflow).toContain('corepack enable');
+    expect(pnpmWorkflow).toContain('pnpm install --frozen-lockfile');
+    expect(pnpmWorkflow).toContain('pnpm exec ark-check --root . --config ark.config.json --strict-config');
+    expect(pnpmWorkflow).not.toContain('npm ci');
+
+    const yarnRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-yarn-'));
+    fs.writeFileSync(path.join(yarnRoot, 'yarn.lock'), '\n');
+
+    const yarn = runInstallAgentGates(yarnRoot);
+    expect(yarn.status).toBe(0);
+    const yarnWorkflow = fs.readFileSync(
+      path.join(yarnRoot, '.github/workflows/ark-check.yml'),
+      'utf8'
+    );
+    expect(yarnWorkflow).toContain('cache: yarn');
+    expect(yarnWorkflow).toContain('corepack enable');
+    expect(yarnWorkflow).toContain('yarn install --frozen-lockfile');
+    expect(yarnWorkflow).toContain('yarn ark-check --root . --config ark.config.json --strict-config');
+    expect(yarnWorkflow).not.toContain('npm ci');
+  });
+});
+
+describe('ark init', () => {
+  it('runs the explicit non-interactive setup without using postinstall prompts', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-init-cli-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/domain/order.ts'), 'export const order = true;\n');
+
+    const result = runArkInit(root, ['--yes']);
+    expect(result.status).toBe(0);
+    expect(fs.existsSync(path.join(root, 'ark.config.json'))).toBe(true);
+    expect(fs.existsSync(path.join(root, 'AGENTS.md'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.github/workflows/ark-check.yml'))).toBe(true);
+    expect(result.stdout).toContain('Ark agent gate templates');
+    expect(result.stdout).toContain('Ark check passed');
+  });
+
+  it('postinstall only prints the explicit init command', () => {
+    const output = execFileSync('node', [path.resolve('bin/ark-postinstall.mjs')], {
+      encoding: 'utf8',
+      stdio: 'pipe',
+    });
+
+    expect(output).toContain('Ark installed, but not enforced yet.');
+    expect(output).toContain('npx ark init');
+    expect(output).toContain('npx ark init --yes');
   });
 });
 

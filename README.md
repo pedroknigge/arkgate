@@ -30,7 +30,7 @@ No code changes. No new runtime. Just a config and a CI line.
 
 ```bash
 npm install -D ark-runtime-kernel typescript
-npx ark-check --init          # infers layers from your existing folders → ark.config.json
+npx ark init                  # asks before generating config, agent gates, and CI templates
 npx ark-check                 # done: cross-layer imports now fail the check
 ```
 
@@ -57,6 +57,19 @@ Then gate your agents (Claude Code shown; [Cursor / Codex / others](docs/ai-gate
 ```
 
 > The same `ark.config.json` powers every gate.
+
+Or generate the starter agent and CI gate files:
+
+```bash
+npx ark-check --install-agent-gates
+```
+
+This writes opt-in templates for MCP discovery, Claude/Cursor rules, Codex config notes,
+GitHub Actions, and agent instructions. Existing files are skipped unless you pass
+`--force`.
+
+The package `postinstall` only prints the next command; it never prompts or writes files
+during `npm install`. Use `npx ark init --yes` for non-interactive setup.
 
 ## Why Ark (and not just a linter)?
 
