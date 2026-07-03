@@ -71,6 +71,34 @@ GitHub Actions, and agent instructions. Existing files are skipped unless you pa
 The package `postinstall` only prints the next command; it never prompts or writes files
 during `npm install`. Use `npx ark init --yes` for non-interactive setup.
 
+### Updating Ark
+
+For projects that already use Ark:
+
+```bash
+npm install -D ark-runtime-kernel@latest
+npm run check:architecture
+```
+
+This updates the local `ark`, `ark-check`, and `ark-mcp` binaries used by npm scripts
+and CI. The lockfile controls the version CI gets, so commit the updated
+`package-lock.json`, `pnpm-lock.yaml`, or `yarn.lock`.
+
+Generated setup files are intentionally not rewritten during package updates:
+`AGENTS.md`, MCP config, Claude/Cursor settings, Codex notes, and GitHub Actions
+templates stay under your project's control. To add any new starter templates:
+
+```bash
+npx ark-check --install-agent-gates
+```
+
+Existing files are skipped. To regenerate them from the latest templates, review
+your local changes first, then run:
+
+```bash
+npx ark-check --install-agent-gates --force
+```
+
 ## Why Ark (and not just a linter)?
 
 If you only need import-boundary linting in CI, [dependency-cruiser](https://github.com/sverweij/dependency-cruiser), [eslint-plugin-boundaries](https://github.com/javierbrea/eslint-plugin-boundaries), and Nx module boundaries are solid tools. Ark's reason to exist is the **write-time, agent-native half** they don't cover:
