@@ -63,6 +63,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pedroknigge/ark.git"
+    "url": "git+https://github.com/pedroknigge/ark-runtime-kernel.git"
   }
 }

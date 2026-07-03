@@ -5,7 +5,7 @@
 **Make your architecture a machine-readable, enforceable contract** —<br/>
 respected by AI agents at write time, CI at merge time, and the runtime itself.
 
-[![CI](https://github.com/pedroknigge/ark/actions/workflows/ci.yml/badge.svg)](https://github.com/pedroknigge/ark/actions/workflows/ci.yml)
+[![CI](https://github.com/pedroknigge/ark-runtime-kernel/actions/workflows/ci.yml/badge.svg)](https://github.com/pedroknigge/ark-runtime-kernel/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/ark-runtime-kernel?color=cb3837&label=npm)](https://www.npmjs.com/package/ark-runtime-kernel)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Node](https://img.shields.io/badge/node-%3E%3D18-339933?logo=node.js)
