@@ -4,6 +4,26 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+const root = process.cwd();
+let mcpRuntimeDir: string | undefined;
+let mcpBin = path.join(root, 'bin', 'ark-mcp.mjs');
+
+function prepareMcpRuntime() {
+  if (mcpRuntimeDir) return;
+
+  execSync('npm run build', { stdio: 'ignore' });
+
+  mcpRuntimeDir = fs.mkdtempSync(path.join(root, '.ark-mcp-runtime-'));
+  fs.cpSync(path.join(root, 'bin'), path.join(mcpRuntimeDir, 'bin'), { recursive: true });
+  fs.cpSync(path.join(root, 'dist'), path.join(mcpRuntimeDir, 'dist'), { recursive: true });
+  mcpBin = path.join(mcpRuntimeDir, 'bin', 'ark-mcp.mjs');
+}
+
+afterAll(() => {
+  if (!mcpRuntimeDir) return;
+  fs.rmSync(mcpRuntimeDir, { recursive: true, force: true });
+});
+
 /**
  * Drives the ark-mcp server over stdio with real JSON-RPC messages. Requires the built
  * dist (the server imports the compiled library), so we build once up front. The server
@@ -12,7 +32,7 @@ import path from 'node:path';
  * profile + rules (not the built-in elevenLayerProfile) and resolves nested paths.
  */
 function createClient(root: string, extraArgs: string[] = []) {
-  const proc = spawn('node', [path.resolve('bin/ark-mcp.mjs'), '--root', root, ...extraArgs], {
+  const proc = spawn('node', [mcpBin, '--root', root, ...extraArgs], {
     stdio: ['pipe', 'pipe', 'pipe'],
   }) as ChildProcessWithoutNullStreams;
 
@@ -59,7 +79,7 @@ describe('ark-mcp server (write-path gate)', () => {
   let client: ReturnType<typeof createClient>;
 
   beforeAll(() => {
-    execSync('npm run build', { stdio: 'ignore' });
+    prepareMcpRuntime();
 
     projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-mcp-proj-'));
     fs.writeFileSync(
@@ -267,7 +287,7 @@ describe('ark-mcp server (write-path gate)', () => {
 function runHook(root: string, payload: unknown) {
   const result = spawnSync(
     'node',
-    [path.resolve('bin/ark-mcp.mjs'), '--hook', '--root', root],
+    [mcpBin, '--hook', '--root', root],
     {
       input: typeof payload === 'string' ? payload : JSON.stringify(payload),
       encoding: 'utf8',
@@ -280,6 +300,8 @@ describe('ark-mcp --hook (PreToolUse gate)', () => {
   let root: string;
 
   beforeAll(() => {
+    prepareMcpRuntime();
+
     root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-hook-'));
     fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
     fs.writeFileSync(path.join(root, 'src/domain/order.ts'), 'export const a = 1;\n');
