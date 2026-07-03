@@ -8,6 +8,29 @@ Everything below uses the same `ark.config.json` as `ark-check` (CI) — one con
 npx ark-check --init
 ```
 
+For guided setup with prompts, use:
+
+```bash
+npx ark init
+```
+
+For non-interactive defaults, use:
+
+```bash
+npx ark init --yes
+```
+
+You can also generate only the starter gate files for common agent runtimes and CI:
+
+```bash
+npx ark-check --install-agent-gates
+```
+
+The command writes templates for `.mcp.json`, Claude hooks, Cursor MCP/rules,
+GitHub Actions, `AGENTS.md`, and a Codex TOML snippet under `docs/`. It skips
+existing files unless you pass `--force`, so review and commit only the templates
+that match your project.
+
 ## Claude Code — hook (recommended, hard block)
 
 `ark-mcp --hook` is a one-shot PreToolUse gate: it reads the hook payload from stdin, computes the **post-edit** file content, validates it, and exits `2` (block, violations on stderr) or `0` (allow). The agent sees the violations and self-corrects.
