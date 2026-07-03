@@ -72,12 +72,13 @@ export const DEFAULT_RULES = createStrictDenyRules(
 export function createElevenLayerConfig(options = {}) {
   const rootDir = options.rootDir ?? 'src';
   const optional = options.optionalLayers ?? true;
+  const prefix = rootDir === '.' ? '' : `${rootDir}/`;
   return {
     include: options.include ?? [rootDir],
     layers: DEFAULT_INTENT_PREFIXES.map((entry) => ({
       name: entry.layer,
       patterns: (DEFAULT_LAYER_DIRECTORIES[entry.layer] ?? [entry.layer]).map(
-        (directory) => `${rootDir}/${directory}/**`
+        (directory) => `${prefix}${directory}/**`
       ),
       intentPrefixes: entry.prefixes,
       optional,

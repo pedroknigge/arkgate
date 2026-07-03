@@ -34,6 +34,15 @@ npx ark init                  # asks before generating config, agent gates, and 
 npx ark-check                 # done: cross-layer imports now fail the check
 ```
 
+`ark init` detects your existing layer directories and suggests the missing ones from
+Ark's default 11-layer profile (with their conventional directories), so you see the
+full division before deciding what to adopt. On an empty project it generates the
+complete profile with every layer optional: the check passes immediately, and each
+layer starts being enforced as soon as its directory gains source files. Agents get
+the same guidance — the `ark://manifest` resource includes `suggestedLayers`, and the
+generated `AGENTS.md` carries the placement table, so an agent asked for a saga or a
+background job knows where it belongs before writing it.
+
 Adopting on a codebase that already has violations? Freeze them and ratchet down:
 
 ```bash

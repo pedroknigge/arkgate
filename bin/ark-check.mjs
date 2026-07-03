@@ -222,33 +222,45 @@ function runInit(args) {
   }
 
   const { srcDir, config } = detectConfig(args.root);
-  if (config.layers.length === 0) {
-    console.error(
-      [
-        'No conventional layer directories found (looked for src/domain, src/application,',
-        'src/adapters/persistence, ...). Generate the full template instead and adapt the',
-        'patterns to your layout:',
-        '  ark-check --print-config eleven-layer > ark.config.json',
-      ].join('\n')
-    );
-    process.exitCode = 1;
-    return;
-  }
+  const greenfield = config.layers.length === 0;
+  const finalConfig = greenfield ? createElevenLayerConfig({ rootDir: srcDir }) : config;
 
-  fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+  fs.writeFileSync(configPath, `${JSON.stringify(finalConfig, null, 2)}\n`);
 
   console.log(`Wrote ${configPath}`);
   console.log('');
-  console.log('Detected layers:');
-  for (const layer of config.layers) {
-    console.log(`  ${layer.name}: ${layer.patterns.join(', ')}`);
-  }
-  const uncovered = uncoveredDirectories(args.root, srcDir, config.layers);
-  if (uncovered.length > 0) {
-    console.log('');
-    console.log(
-      `Not covered by any layer (add patterns for these or they stay ungoverned): ${uncovered.join(', ')}`
-    );
+  if (greenfield) {
+    console.log('No conventional layer directories found — generated the full 11-layer starter');
+    console.log('profile instead. Every layer is marked optional, so the strict check passes now');
+    console.log('and each layer starts being enforced as soon as its directory gains source files:');
+    for (const layer of finalConfig.layers) {
+      console.log(`  ${layer.name}: ${layer.patterns.join(', ')}`);
+    }
+  } else {
+    console.log('Detected layers:');
+    for (const layer of finalConfig.layers) {
+      console.log(`  ${layer.name}: ${layer.patterns.join(', ')}`);
+    }
+    const detected = new Set(finalConfig.layers.map((layer) => layer.name));
+    const suggested = DEFAULT_INTENT_PREFIXES.filter((entry) => !detected.has(entry.layer));
+    if (suggested.length > 0) {
+      console.log('');
+      console.log('Suggested layers from the 11-layer profile (not detected — conventional');
+      console.log('directories shown; create one and re-run --init, or add the layer by hand):');
+      for (const entry of suggested) {
+        const dirs = (DEFAULT_LAYER_DIRECTORIES[entry.layer] ?? [])
+          .map((directory) => `${srcDir}/${directory}`)
+          .join(', ');
+        console.log(`  ${entry.layer}: ${dirs}`);
+      }
+    }
+    const uncovered = uncoveredDirectories(args.root, srcDir, finalConfig.layers);
+    if (uncovered.length > 0) {
+      console.log('');
+      console.log(
+        `Not covered by any layer (add patterns for these or they stay ungoverned): ${uncovered.join(', ')}`
+      );
+    }
   }
   console.log('');
   console.log('Next steps:');
@@ -322,6 +334,18 @@ const AGENT_CONTRACT = {
   cursorValidateStep: `Validate the full post-edit file content with the \`validate_code\` tool before writing whenever your runtime supports it.`,
 };
 
+function layerPlacementTable() {
+  const rows = DEFAULT_INTENT_PREFIXES.map((entry) => {
+    const dirs = (DEFAULT_LAYER_DIRECTORIES[entry.layer] ?? [])
+      .map((directory) => `\`${directory}/\``)
+      .join(', ');
+    return `| ${entry.layer} | ${dirs} | ${entry.prefixes.map((p) => `\`${p}\``).join(', ')} |`;
+  }).join('\n');
+  return `| Layer | Conventional directories (under the source root) | Intent prefixes |
+|-------|---------------------------------------------------|-----------------|
+${rows}`;
+}
+
 function agentInstructions() {
   const steps = AGENT_CONTRACT.steps.map((step, index) => `${index + 1}. ${step}`).join('\n');
   return `# Ark Enforcement
@@ -329,6 +353,15 @@ function agentInstructions() {
 Before editing TypeScript or JavaScript source files:
 
 ${steps}
+
+## Where new code belongs
+
+\`ark.config.json\` is authoritative for this project. When creating a NEW kind of code
+that no existing layer covers (a saga, a background job, a read model, ...), use the
+default 11-layer placement below and add the layer to \`ark.config.json\` — do not invent
+an ungoverned location:
+
+${layerPlacementTable()}
 
 The project is only considered Ark-enforced when the write gate, CI gate, and runtime path all pass.
 `;

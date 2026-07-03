@@ -181,6 +181,13 @@ describe('ark-mcp server (write-path gate)', () => {
     expect(contract.rules.some((r: { from: string; to: string }) => r.from === 'core' && r.to === 'app')).toBe(
       true
     );
+    // Undeclared default layers come back as placement suggestions for the agent.
+    const suggested = contract.suggestedLayers.map((s: { layer: string }) => s.layer);
+    expect(suggested).toContain('WorkflowSagaEngine');
+    expect(
+      contract.suggestedLayers.find((s: { layer: string }) => s.layer === 'WorkflowSagaEngine')
+        .conventionalDirectories
+    ).toEqual(['workflows', 'sagas']);
   });
 
   it('never responds to a notification (no id ever emitted)', async () => {
@@ -236,6 +243,8 @@ describe('ark-mcp server (write-path gate)', () => {
       const contract = JSON.parse(res.result.contents[0].text);
       expect(contract.source).toBe('strictDefaultElevenLayerProfile');
       expect(contract.layers).toHaveLength(11);
+      // All 11 layers are active — nothing left to suggest.
+      expect(contract.suggestedLayers).toBeUndefined();
     } finally {
       defaultClient.close();
     }

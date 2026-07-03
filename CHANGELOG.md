@@ -4,6 +4,21 @@ All notable changes to `ark-runtime-kernel` are documented here.
 
 ## 1.3.0 — 2026-07-03
 
+### Added — the 11-layer division is now suggested, to humans and agents
+
+- `ark-check --init` on a project with no conventional layer directories now generates
+  the complete 11-layer starter profile (all layers `optional`) instead of failing:
+  the strict check passes immediately and each layer starts being enforced as soon as
+  its directory gains source files.
+- `ark-check --init` on a partially-layered project prints the undetected profile
+  layers with their conventional directories, so the full division is visible before
+  deciding what to adopt.
+- The `ark://manifest` MCP resource now includes `suggestedLayers` (undeclared default
+  layers with intent prefixes and conventional directories), so agents know where a
+  new saga, job, or read model belongs before improvising an ungoverned location.
+- The generated `AGENTS.md` includes a "Where new code belongs" placement table for
+  the same purpose in runtimes without MCP.
+
 ### Added — gate presence enforcement (`ark-check --require-gates`)
 
 - `ark-check --require-gates` fails the check when `AGENTS.md`, `.mcp.json`, or the

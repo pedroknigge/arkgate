@@ -277,6 +277,15 @@ createAdapter(PaymentGateway, stripeAdapter, {
 
 Preset: `elevenLayerProfile` plus `defineArchitectureProfilePolicy()` forbids invalid declared dependencies across the 11-layer profile. `architecturalPolicies.cleanArchitectureMatrix()` remains available for the older four-prefix model.
 
+Runtime support depth varies by design. Layers with dedicated kernel modules:
+DomainModel/ApplicationOrchestration (intents, policies), WorkflowSagaEngine
+(workflow engine), PersistenceAdapters (adapters, outbox), ReportingReadModels
+(projections), ExtensibilityMetadata (metadata registry), SecurityAuditObservability
+(audit trail, drift reporter), Kernel (event bus, graph, manifest).
+PresentationAdapters, IntegrationAdapters, and BackgroundJobsScheduling are
+**boundary-only on purpose**: Ark governs what they may import and publish, but does
+not replace your web framework, HTTP clients, or job scheduler.
+
 ## Write-Path Gate (MCP)
 
 The strongest place to constrain an AI agent is the moment it writes a file, not after.

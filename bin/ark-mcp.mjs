@@ -25,7 +25,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
-import { DEFAULT_INTENT_PREFIXES, DEFAULT_RULES, layerForFile } from './ark-shared.mjs';
+import {
+  DEFAULT_INTENT_PREFIXES,
+  DEFAULT_LAYER_DIRECTORIES,
+  DEFAULT_RULES,
+  layerForFile,
+} from './ark-shared.mjs';
 
 function parseArgs(argv) {
   const args = {
@@ -297,6 +302,18 @@ async function main() {
     },
   ];
 
+  // Layers from the 11-layer profile that this project has NOT declared, with their
+  // conventional directories: tells the agent where a new kind of code (a saga, a job,
+  // a read model, ...) belongs BEFORE it improvises a location the gate can't govern.
+  function suggestedLayers() {
+    const active = new Set(profile.layers.map((layer) => layer.name));
+    return DEFAULT_INTENT_PREFIXES.filter((entry) => !active.has(entry.layer)).map((entry) => ({
+      layer: entry.layer,
+      intentPrefixes: entry.prefixes,
+      conventionalDirectories: DEFAULT_LAYER_DIRECTORIES[entry.layer] ?? [],
+    }));
+  }
+
   function manifestText() {
     if (projectManifest) {
       return JSON.stringify(
@@ -305,12 +322,23 @@ async function main() {
         2
       );
     }
+    const suggestions = suggestedLayers();
     return JSON.stringify(
       {
         source: profile === ark.elevenLayerProfile ? 'strictDefaultElevenLayerProfile' : 'project',
         name: profile.name,
         layers: profile.layers,
         rules: profile.rules,
+        ...(suggestions.length > 0
+          ? {
+              suggestedLayers: suggestions,
+              suggestedLayersNote:
+                'Layers from the default 11-layer profile this project has not declared. ' +
+                'When creating a NEW kind of code that fits one of these, place it in a ' +
+                'conventional directory and add the layer to ark.config.json instead of ' +
+                'inventing an ungoverned location.',
+            }
+          : {}),
       },
       null,
       2

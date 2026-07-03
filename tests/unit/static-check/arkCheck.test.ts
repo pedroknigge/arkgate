@@ -120,15 +120,52 @@ describe('ark-check --init', () => {
     expect(config.layers.map((l: { name: string }) => l.name)).toEqual(['DomainModel']);
   });
 
-  it('fails honestly when no conventional layer directories exist', () => {
+  it('generates the full 11-layer starter profile when no conventional directories exist', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-init-none-'));
-    fs.mkdirSync(path.join(root, 'lib'), { recursive: true });
-    fs.writeFileSync(path.join(root, 'lib/util.ts'), 'export const a = 1;\n');
 
     const init = runInit(root);
-    expect(init.status).toBe(1);
-    expect(init.stderr).toContain('--print-config eleven-layer');
-    expect(fs.existsSync(path.join(root, 'ark.config.json'))).toBe(false);
+    expect(init.status).toBe(0);
+    expect(init.stdout).toContain('11-layer starter');
+
+    const config = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
+    expect(config.layers).toHaveLength(11);
+    // Every layer is optional so the strict check passes before any directory exists.
+    expect(config.layers.every((l: { optional: boolean }) => l.optional)).toBe(true);
+    const result = runArkCheck(root, ['--strict-config']);
+    expect(result.ok).toBe(true);
+
+    // Files outside every conventional directory still surface the honest warning.
+    fs.mkdirSync(path.join(root, 'lib'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'lib/util.ts'), 'export const a = 1;\n');
+    const withStray = runArkCheck(root, ['--strict-config']);
+    expect(withStray.ok).toBe(false);
+    expect(withStray.warnings.some((w) => w.ruleId === 'CONFIG_UNCLASSIFIED_FILES')).toBe(true);
+
+    // Code inside a conventional directory is governed immediately: a domain file
+    // referencing a persistence intent must fail the strict check.
+    fs.mkdirSync(path.join(root, 'domain'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'domain/order.ts'),
+      "export const ref = 'Adapter.Persistence.Save';\n"
+    );
+    fs.rmSync(path.join(root, 'lib'), { recursive: true });
+    const governed = runArkCheck(root, ['--strict-config']);
+    expect(governed.ok).toBe(false);
+    expect(governed.violations.length).toBeGreaterThan(0);
+  });
+
+  it('suggests the undetected 11-layer profile layers with their conventional directories', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-init-suggest-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/domain/order.ts'), 'export const a = 1;\n');
+
+    const init = runInit(root);
+    expect(init.status).toBe(0);
+    expect(init.stdout).toContain('Suggested layers');
+    expect(init.stdout).toContain('WorkflowSagaEngine: src/workflows, src/sagas');
+    expect(init.stdout).toContain('BackgroundJobsScheduling: src/jobs, src/schedules');
+    // Detected layers must not be re-suggested.
+    expect(init.stdout).not.toMatch(/Suggested layers[\s\S]*DomainModel:/);
   });
 
   it('reports top-level directories left uncovered by the detected layers', () => {
@@ -164,6 +201,9 @@ describe('ark-check --install-agent-gates', () => {
 
     const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
     expect(agents).toContain('ark://manifest');
+    // The placement table teaches agents where every default layer's code belongs.
+    expect(agents).toContain('Where new code belongs');
+    expect(agents).toContain('| WorkflowSagaEngine | `workflows/`, `sagas/` |');
     expect(agents).toContain('ark-check --root . --config ark.config.json --strict-config');
 
     const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
