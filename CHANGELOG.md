@@ -2,6 +2,27 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.5.0 — 2026-07-04
+
+### Added — ark-check scan cache
+
+- `ark-check` caches per-file scan results in `node_modules/.cache/ark-check.json`,
+  keyed by each file's mtime+size and the config/manifest contents. Only unchanged
+  files skip the TypeScript parse; import edges are ALWAYS re-resolved against the
+  live filesystem, so the cache can never hide a violation introduced by adding,
+  moving, or deleting other files. `--no-cache` disables it.
+
+### Added — monorepo per-package tsconfig resolution
+
+- Without `--tsconfig`, `ark-check` now resolves each file's path aliases against the
+  NEAREST `tsconfig.json` above it (like `tsc`), so a monorepo can run under a single
+  `--root` with per-package alias maps. `--tsconfig` still forces one config for all files.
+
+### Deprecations (removal planned for 2.0)
+
+- `AIGateViolation.code` (`src/kernel/ai-gate/types.ts`) — use `ruleId`.
+- `layeredArchitectureRules()` (`src/kernel/policy/builtins.ts`) — use `cleanArchitectureMatrix()`.
+
 ## 1.4.0 — 2026-07-03
 
 ### Changed — the write gate now ratchets like the CI gate

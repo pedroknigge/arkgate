@@ -1103,3 +1103,123 @@ describe('ark-check --install-agent-gates instruction-tier tools', () => {
     expect(fs.existsSync(path.join(root, RULE_FILES.copilot))).toBe(false);
   });
 });
+
+describe('ark-check scan cache', () => {
+  function violatingRoot() {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-check-cache-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/infra'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/infra/db.ts'), 'export const db = {};');
+    fs.writeFileSync(
+      path.join(root, 'src/domain/order.ts'),
+      "import { db } from '../infra/db';\nexport const order = db;\n"
+    );
+    fs.writeFileSync(path.join(root, 'ark.config.json'), TWO_LAYER_CONFIG);
+    return root;
+  }
+
+  const cachePath = (root: string) => path.join(root, 'node_modules', '.cache', 'ark-check.json');
+
+  it('writes a cache and reports identical violations on a cached second run', () => {
+    const root = violatingRoot();
+    const first = runArkCheck(root);
+    expect(fs.existsSync(cachePath(root))).toBe(true);
+    const second = runArkCheck(root);
+    expect(second).toEqual(first);
+    expect(second.violations[0].ruleId).toBe('LAYER_IMPORT_VIOLATION');
+  });
+
+  it('invalidates a cached file when its content changes', () => {
+    const root = violatingRoot();
+    expect(runArkCheck(root).ok).toBe(false);
+    // Remove the violating import (different size, so the cache key must change).
+    fs.writeFileSync(path.join(root, 'src/domain/order.ts'), 'export const order = 1;\n');
+    expect(runArkCheck(root).ok).toBe(true);
+  });
+
+  it('re-resolves import edges on cache hits: a new target file surfaces a violation without touching the importer', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-check-cache-edge-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'src/domain/order.ts'),
+      "import { db } from '../infra/db';\nexport const order = db;\n"
+    );
+    fs.writeFileSync(path.join(root, 'ark.config.json'), TWO_LAYER_CONFIG);
+
+    // Target doesn't exist yet — unresolved edge, no violation, cache written.
+    expect(runArkCheck(root).ok).toBe(true);
+
+    // Create the forbidden target; the importer is untouched (cache hit) but the edge
+    // must re-resolve and now report the violation.
+    fs.mkdirSync(path.join(root, 'src/infra'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/infra/db.ts'), 'export const db = {};');
+    const result = runArkCheck(root);
+    expect(result.ok).toBe(false);
+    expect(result.violations[0].ruleId).toBe('LAYER_IMPORT_VIOLATION');
+  });
+
+  it('invalidates the whole cache when the config changes', () => {
+    const root = violatingRoot();
+    expect(runArkCheck(root).ok).toBe(false);
+    // Allow the edge — same files, new config: every cached content check must be redone.
+    const relaxed = JSON.parse(TWO_LAYER_CONFIG);
+    relaxed.rules = [];
+    fs.writeFileSync(path.join(root, 'ark.config.json'), JSON.stringify(relaxed));
+    expect(runArkCheck(root).ok).toBe(true);
+  });
+
+  it('--no-cache neither reads nor writes the cache file', () => {
+    const root = violatingRoot();
+    const result = runArkCheck(root, ['--no-cache']);
+    expect(result.ok).toBe(false);
+    expect(fs.existsSync(cachePath(root))).toBe(false);
+  });
+});
+
+describe('ark-check monorepo tsconfig resolution', () => {
+  it('resolves the same alias through each package\'s nearest tsconfig', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-check-monorepo-'));
+    const config = {
+      include: ['packages'],
+      layers: [
+        { name: 'DomainModel', patterns: ['packages/*/src/domain/**'], intentPrefixes: ['Domain.'] },
+        { name: 'PersistenceAdapters', patterns: ['packages/*/src/infra/**'], intentPrefixes: ['Adapter.Persistence.'] },
+      ],
+      rules: [{ from: 'DomainModel', to: 'PersistenceAdapters', allowed: false }],
+    };
+    fs.writeFileSync(path.join(root, 'ark.config.json'), JSON.stringify(config));
+
+    // Package a: '@aliased' maps into its own infra layer → violation.
+    fs.mkdirSync(path.join(root, 'packages/a/src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'packages/a/src/infra'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'packages/a/src/infra/store.ts'), 'export const store = {};');
+    fs.writeFileSync(
+      path.join(root, 'packages/a/src/domain/order.ts'),
+      "import { store } from '@aliased';\nexport const order = store;\n"
+    );
+    fs.writeFileSync(
+      path.join(root, 'packages/a/tsconfig.json'),
+      JSON.stringify({ compilerOptions: { baseUrl: '.', paths: { '@aliased': ['src/infra/store.ts'] } } })
+    );
+
+    // Package b: the SAME alias points at an unclassified file → no violation. With a
+    // single root tsconfig this distinction would be impossible.
+    fs.mkdirSync(path.join(root, 'packages/b/src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'packages/b/src/shared'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'packages/b/src/shared/store.ts'), 'export const store = {};');
+    fs.writeFileSync(
+      path.join(root, 'packages/b/src/domain/order.ts'),
+      "import { store } from '@aliased';\nexport const order = store;\n"
+    );
+    fs.writeFileSync(
+      path.join(root, 'packages/b/tsconfig.json'),
+      JSON.stringify({ compilerOptions: { baseUrl: '.', paths: { '@aliased': ['src/shared/store.ts'] } } })
+    );
+
+    const result = runArkCheck(root);
+    expect(result.ok).toBe(false);
+    const layerViolations = result.violations.filter((v) => v.ruleId === 'LAYER_IMPORT_VIOLATION');
+    expect(layerViolations).toHaveLength(1);
+    expect((layerViolations[0] as { file?: string }).file).toBe('packages/a/src/domain/order.ts');
+  });
+});

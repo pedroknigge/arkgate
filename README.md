@@ -205,6 +205,16 @@ npx ark-check --baseline                                          # ratchet mode
 - Missing / mismatched publish `source` metadata
 - Forbidden ambient globals per layer (`fetch`, `Date.now`, `Math.random`, ...) — see below
 
+**Fast on repeat runs, monorepo-ready:**
+
+- Per-file scan cache in `node_modules/.cache/ark-check.json` (keyed by mtime+size and
+  the config/manifest contents). Unchanged files skip the TypeScript parse; import edges
+  are always re-resolved against the live filesystem, so the cache can never hide a new
+  violation. Disable with `--no-cache`.
+- Path aliases resolve against the **nearest** `tsconfig.json` above each source file
+  (like `tsc`), so a monorepo with per-package alias maps runs under a single `--root`.
+  Pass `--tsconfig <path>` to force one config for every file.
+
 Violations come with the layer edge, the resolved target, and a fix hint:
 
 ```

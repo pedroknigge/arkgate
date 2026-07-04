@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -30,6 +31,7 @@ function parseArgs(argv) {
     force: false,
     baseline: undefined,
     updateBaseline: false,
+    noCache: false,
   };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -53,6 +55,7 @@ function parseArgs(argv) {
       }
     }
     else if (arg === '--force') args.force = true;
+    else if (arg === '--no-cache') args.noCache = true;
     else if (arg === '--baseline' || arg === '--update-baseline') {
       if (arg === '--update-baseline') args.updateBaseline = true;
       // optional path value: consume the next arg only when it isn't another flag
@@ -71,7 +74,7 @@ function parseArgs(argv) {
 
 function usage() {
   return [
-    'Usage: ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--require-gates] [--json] [--baseline [file]]',
+    'Usage: ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--require-gates] [--json] [--baseline [file]] [--no-cache]',
     '       ark-check --init [--force]',
     '       ark-check --install-agent-gates [--tools claude,cursor,codex] [--force]',
     '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
@@ -91,8 +94,14 @@ function usage() {
     '',
     'Resolves relative, tsconfig path-alias, and package imports via the TypeScript',
     'module resolver, then checks each resolved cross-layer import against the rules.',
-    'If no tsconfig is found, path aliases are unavailable but relative/package imports',
-    'still resolve.',
+    'Path aliases resolve against the NEAREST tsconfig.json above each source file, so',
+    'monorepo packages with per-package configs work under a single --root. Pass',
+    '--tsconfig to force one config for every file. If no tsconfig is found, path',
+    'aliases are unavailable but relative/package imports still resolve.',
+    '',
+    'Parsed files are cached in node_modules/.cache/ark-check.json (keyed by mtime+size',
+    'and the config/manifest contents); import edges are always re-resolved against the',
+    'live filesystem, so the cache can never hide a new violation. --no-cache disables it.',
     '',
     'Config shape:',
     '{',
@@ -836,17 +845,89 @@ function createModuleResolutionHost(ts) {
   };
 }
 
-function loadCompilerOptions(ts, root, tsconfigArg) {
-  const configPath = tsconfigArg
-    ? path.isAbsolute(tsconfigArg)
-      ? tsconfigArg
-      : path.join(root, tsconfigArg)
-    : ts.findConfigFile(root, ts.sys.fileExists, 'tsconfig.json');
-  if (!configPath || !fs.existsSync(configPath)) return {};
+function parseTsconfig(ts, configPath) {
   const read = ts.readConfigFile(configPath, ts.sys.readFile);
   if (read.error) return {};
   const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, path.dirname(configPath));
   return parsed.options;
+}
+
+/**
+ * Compiler options for a given source file. With --tsconfig every file uses that one
+ * config; otherwise each file uses the NEAREST tsconfig.json above it (like tsc does),
+ * so monorepo packages with per-package path aliases resolve correctly under one --root.
+ */
+function createCompilerOptionsLookup(ts, root, tsconfigArg) {
+  if (tsconfigArg) {
+    const configPath = path.isAbsolute(tsconfigArg) ? tsconfigArg : path.join(root, tsconfigArg);
+    const options = fs.existsSync(configPath) ? parseTsconfig(ts, configPath) : {};
+    return () => options;
+  }
+  const byDir = new Map();
+  const byConfig = new Map();
+  return (file) => {
+    const dir = path.dirname(file);
+    if (byDir.has(dir)) return byDir.get(dir);
+    const configPath = ts.findConfigFile(dir, ts.sys.fileExists, 'tsconfig.json');
+    let options = {};
+    if (configPath) {
+      if (!byConfig.has(configPath)) byConfig.set(configPath, parseTsconfig(ts, configPath));
+      options = byConfig.get(configPath);
+    }
+    byDir.set(dir, options);
+    return options;
+  };
+}
+
+/**
+ * Per-file scan cache. A cache entry stores the parsed file's content-derived results:
+ * content violations (forbidden globals, publish checks, intent references) and the list
+ * of module-edge specifiers. Edges are NEVER cached as violations — they are re-resolved
+ * against the live filesystem every run, because resolution depends on files and tsconfigs
+ * outside the cached file. The whole cache is keyed by the config+manifest contents, so
+ * any rule change invalidates everything.
+ */
+function scanCachePath(root) {
+  return path.join(root, 'node_modules', '.cache', 'ark-check.json');
+}
+
+function scanCacheKey(root, args) {
+  const read = (p) => {
+    try {
+      return fs.readFileSync(p, 'utf8');
+    } catch {
+      return '';
+    }
+  };
+  const configPath = path.isAbsolute(args.config) ? args.config : path.join(root, args.config);
+  const manifestPath = args.manifest
+    ? path.isAbsolute(args.manifest)
+      ? args.manifest
+      : path.join(root, args.manifest)
+    : undefined;
+  return crypto
+    .createHash('sha1')
+    .update(`ark-check-cache-v1\0${read(configPath)}\0${manifestPath ? read(manifestPath) : ''}`)
+    .digest('hex');
+}
+
+function loadScanCache(root, key) {
+  try {
+    const data = JSON.parse(fs.readFileSync(scanCachePath(root), 'utf8'));
+    return data.key === key && data.files && typeof data.files === 'object' ? data.files : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function saveScanCache(root, key, files) {
+  try {
+    const target = scanCachePath(root);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, JSON.stringify({ key, files }));
+  } catch {
+    // cache is best-effort: read-only filesystems just re-parse every run
+  }
 }
 
 /**
@@ -893,8 +974,9 @@ function resolveRelativeFallback(fromFile, specifier) {
  * path RELATIVE TO ROOT either escapes the root (leading `..`) or contains a `node_modules`
  * segment. Using the root-relative path (not an absolute substring) means a project that
  * itself lives under a node_modules segment is still governed, while a broad catch-all
- * pattern (`**`) can't false-flag vendored deps or files outside the project. For monorepos,
- * run ark-check per package rather than reaching across package roots.
+ * pattern (`**`) can't false-flag vendored deps or files outside the project. Monorepos can
+ * run under a single --root (per-package tsconfigs are honored via the nearest-tsconfig
+ * lookup); edges that resolve outside the root are still skipped.
  */
 function resolveImport(ts, specifier, containingFile, options, host, root) {
   const res = ts.resolveModuleName(specifier, containingFile, options, host);
@@ -1160,17 +1242,23 @@ async function main() {
   const manifest = readManifest(root, args.manifest);
   const rules = manifest?.architecture?.rules ?? config.rules;
   const manifestIntentLayers = intentLayersFromManifest(manifest);
-  const compilerOptions = loadCompilerOptions(ts, root, args.tsconfig);
+  const compilerOptionsFor = createCompilerOptionsLookup(ts, root, args.tsconfig);
   const moduleHost = createModuleResolutionHost(ts);
   const files = config.include.flatMap((entry) => walk(path.join(root, entry)));
   const violations = [];
   const warnings = collectConfigWarnings(root, config, files, rules, manifest);
+  const cacheKey = args.noCache ? undefined : scanCacheKey(root, args);
+  const cachedFiles = cacheKey ? loadScanCache(root, cacheKey) : undefined;
+  const nextCacheFiles = {};
 
-  for (const file of files) {
+  // Parses one file and returns its cacheable scan result: violations derived purely from
+  // the file's content (+config/manifest, hashed into the cache key) and the module-edge
+  // specifiers found, which the driver loop below resolves fresh on every run.
+  function scanSourceFile(file, sourceLayer) {
     const source = fs.readFileSync(file, 'utf8');
     const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
-    const sourceLayer = layerForFile(root, file, config.layers);
-    if (!sourceLayer) continue;
+    const violations = [];
+    const edges = [];
 
     const layerConfig = config.layers.find((layer) => layer.name === sourceLayer);
     const forbiddenGlobals = Array.isArray(layerConfig?.forbiddenGlobals)
@@ -1188,22 +1276,7 @@ async function main() {
     }
 
     const checkModuleEdge = (specifier, node, kind) => {
-      const target = resolveImport(ts, specifier, file, compilerOptions, moduleHost, root);
-      const targetLayer = target ? layerForFile(root, target, config.layers) : undefined;
-      const rule = targetLayer ? isBlocked(rules, sourceLayer, targetLayer) : undefined;
-      if (rule) {
-        violations.push({
-          ruleId: 'LAYER_IMPORT_VIOLATION',
-          file: normalize(path.relative(root, file)),
-          line: lineOf(sourceFile, node.getStart(sourceFile)),
-          fromLayer: sourceLayer,
-          toLayer: targetLayer,
-          target: normalize(path.relative(root, target)),
-          message:
-            rule.message ??
-            `${sourceLayer} must not ${kind} ${targetLayer}.`,
-        });
-      }
+      edges.push({ specifier, line: lineOf(sourceFile, node.getStart(sourceFile)), kind });
     };
 
     const visit = (node) => {
@@ -1290,7 +1363,42 @@ async function main() {
       ts.forEachChild(node, visit);
     };
     visit(sourceFile);
+    return { contentViolations: violations, edges };
   }
+
+  for (const file of files) {
+    const sourceLayer = layerForFile(root, file, config.layers);
+    if (!sourceLayer) continue;
+    const relFile = normalize(path.relative(root, file));
+    const stat = fs.statSync(file);
+    const fileKey = `${stat.mtimeMs}:${stat.size}`;
+    const cached = cachedFiles?.[relFile];
+    const entry =
+      cached && cached.fileKey === fileKey
+        ? cached
+        : { fileKey, ...scanSourceFile(file, sourceLayer) };
+    nextCacheFiles[relFile] = entry;
+
+    violations.push(...entry.contentViolations);
+    for (const edge of entry.edges) {
+      const target = resolveImport(ts, edge.specifier, file, compilerOptionsFor(file), moduleHost, root);
+      const targetLayer = target ? layerForFile(root, target, config.layers) : undefined;
+      const rule = targetLayer ? isBlocked(rules, sourceLayer, targetLayer) : undefined;
+      if (rule) {
+        violations.push({
+          ruleId: 'LAYER_IMPORT_VIOLATION',
+          file: relFile,
+          line: edge.line,
+          fromLayer: sourceLayer,
+          toLayer: targetLayer,
+          target: normalize(path.relative(root, target)),
+          message: rule.message ?? `${sourceLayer} must not ${edge.kind} ${targetLayer}.`,
+        });
+      }
+    }
+  }
+
+  if (cacheKey) saveScanCache(root, cacheKey, nextCacheFiles);
 
   if (args.updateBaseline) {
     const { fullPath, count } = writeBaseline(root, args.baseline, violations);

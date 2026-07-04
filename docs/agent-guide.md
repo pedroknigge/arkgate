@@ -188,10 +188,15 @@ Example config:
 `tsconfig.json` — relative, path-alias (e.g. `@infra/db`), package imports, dynamic
 `import()`, and `require()` — plus string intent references. It also flags raw
 `publish()` calls, publish calls without `metadata.source`, and source intent literals
-whose resolved layer differs from the publishing file layer. Pass `--tsconfig <path>` to point at a specific config
-(otherwise the nearest `tsconfig.json` from `--root` is used). It resolves modules the way
-your build does, but is intentionally not yet a full type-graph analyzer (cross-layer
-type-only references beyond the import specifier are out of scope).
+whose resolved layer differs from the publishing file layer. Pass `--tsconfig <path>` to force one config
+for every file; otherwise each source file uses the nearest `tsconfig.json` above it (like
+`tsc`), so monorepos with per-package alias maps work under a single `--root`. It resolves
+modules the way your build does, but is intentionally not yet a full type-graph analyzer
+(cross-layer type-only references beyond the import specifier are out of scope).
+
+Repeat runs are cached in `node_modules/.cache/ark-check.json` — unchanged files skip the
+parse, while import edges always re-resolve against the live filesystem so the cache can
+never hide a new violation. `--no-cache` disables it.
 
 `ark-check --json` also reports `warnings` for incomplete governance coverage: missing
 layers, unclassified included files, unmatched layer patterns, duplicate layers, and rules
