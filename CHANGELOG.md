@@ -2,6 +2,27 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## Unreleased
+
+### Added — forbidden ambient globals per layer (`forbiddenGlobals`)
+
+- Layers in `ark.config.json` can declare `forbiddenGlobals` (e.g.
+  `["fetch", "process", "Date.now", "Math.random"]`). Import rules can't see code that
+  reaches for an ambient global; this closes that hole for domain purity.
+- Enforced identically at all three moments: `ark-check` reports `FORBIDDEN_GLOBAL`
+  in CI (baseline-ratchet compatible), the `ark-mcp` write gate blocks the write, and
+  the new `ark/no-forbidden-globals` ESLint rule gives in-editor feedback (scope it to
+  layer directories via `files`; it takes a `{ globals: [...] }` option).
+- Detection is positional, not scope-aware: dotted entries (`"Date.now"`) flag that
+  property access; bare entries (`"console"`) flag member access, calls, and
+  constructions. Types, import names, and shadowed locals are never flagged.
+- `ark init` and `ark-check --init` seed the DomainModel layer with
+  `["fetch", "process", "Date.now", "Math.random"]`.
+- The `ark://manifest` MCP resource now exposes the configured `forbiddenGlobals`
+  map so agents see the constraint before generating code.
+- `createAICodeGate` accepts a `forbiddenGlobals` option (layer → globals), checked
+  when a `typescript` module is provided.
+
 ## 1.3.0 — 2026-07-03
 
 ### Added — the 11-layer division is now suggested, to humans and agents

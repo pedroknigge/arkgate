@@ -133,8 +133,8 @@ If you only need import-boundary linting in CI, [dependency-cruiser](https://git
 
 | Gate         | Tool          | When it runs                  | What it enforces                              |
 |--------------|---------------|-------------------------------|-----------------------------------------------|
-| **Write**    | `ark-mcp`     | Agent PreToolUse (Write/Edit) | Layer rules, unknown intents, forbidden patterns |
-| **Merge**    | `ark-check`   | CI (GitHub Actions etc.)      | Cross-layer imports + intent references (real TS resolver) |
+| **Write**    | `ark-mcp`     | Agent PreToolUse (Write/Edit) | Layer rules, unknown intents, forbidden patterns + globals |
+| **Merge**    | `ark-check`   | CI (GitHub Actions etc.)      | Cross-layer imports + intent references (real TS resolver) + forbidden globals |
 | **Runtime**  | `createArkKernel()` | Running process (opt-in) | Intent registry, event contracts, observed layer flow, policies |
 
 ## The AI Write Gate
@@ -161,6 +161,7 @@ npx ark-check --baseline                                          # ratchet mode
 - String intent references across forbidden layers
 - Raw `publish()` calls that bypass registered intent creators
 - Missing / mismatched publish `source` metadata
+- Forbidden ambient globals per layer (`fetch`, `Date.now`, `Math.random`, ...) — see below
 
 Violations come with the layer edge, the resolved target, and a fix hint:
 
@@ -170,6 +171,35 @@ Violations come with the layer edge, the resolved target, and a fix hint:
   DomainModel must not import PersistenceAdapters.
   fix: Depend on a port/interface owned by an inner layer instead, or move this code.
 ```
+
+### Domain purity: `forbiddenGlobals`
+
+Import rules can't catch code that reaches for an ambient global — an agent can call
+`fetch()` or `Date.now()` in your domain layer without importing anything. Declare the
+globals a layer must not touch and both the write gate and CI enforce it:
+
+```jsonc
+// ark.config.json
+{
+  "name": "DomainModel",
+  "patterns": ["src/domain/**"],
+  "intentPrefixes": ["Domain."],
+  "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"]
+}
+```
+
+```
+✖ FORBIDDEN_GLOBAL  src/domain/order.ts:12
+  DomainModel must not use the ambient global "Date.now".
+  fix: Inject the capability through a port (e.g. a Clock, IdGenerator, or HttpPort).
+```
+
+Entries are either dotted (`"Date.now"` flags exactly that property access) or bare
+(`"console"` flags `console.*`, `fetch(...)`, `new WebSocket(...)`). Detection is
+positional, not scope-aware: mentions in types or import names are never flagged.
+`npx ark init` seeds the domain layer with `["fetch", "process", "Date.now", "Math.random"]`
+(a pure domain does no I/O and is deterministic); add `"console"` or any other global per
+project. Violations participate in the `--baseline` ratchet like every other rule.
 
 ### GitHub Action
 
@@ -189,7 +219,15 @@ import ark from 'ark-runtime-kernel/eslint';
 export default [ark.configs.recommended];
 ```
 
-Rules: `ark/no-domain-infra-imports`, `ark/no-raw-event-publish`, `ark/require-publish-source`.
+Rules: `ark/no-domain-infra-imports`, `ark/no-raw-event-publish`, `ark/require-publish-source`,
+`ark/no-forbidden-globals` (not in `recommended` — scope it to your layer directories):
+
+```js
+{
+  files: ['src/domain/**'],
+  rules: { 'ark/no-forbidden-globals': ['error', { globals: ['fetch', 'process', 'Date.now', 'Math.random'] }] },
+}
+```
 
 ## The Runtime Kernel (opt-in)
 

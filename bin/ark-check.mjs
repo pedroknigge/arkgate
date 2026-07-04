@@ -2,9 +2,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
   DEFAULT_INTENT_PREFIXES,
   DEFAULT_LAYER_DIRECTORIES,
   DEFAULT_RULES,
+  collectForbiddenGlobalUses,
   createElevenLayerConfig,
   globToRegExp,
   layerForFile,
@@ -96,7 +98,8 @@ function usage() {
     '{',
     '  "include": ["src"],',
     '  "layers": [',
-    '    { "name": "DomainModel", "patterns": ["src/domain/**"], "intentPrefixes": ["Domain."] }',
+    '    { "name": "DomainModel", "patterns": ["src/domain/**"], "intentPrefixes": ["Domain."],',
+    '      "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"] }',
     '  ],',
     '  "rules": [{ "from": "DomainModel", "to": "PersistenceAdapters", "allowed": false }]',
     '}',
@@ -192,6 +195,9 @@ function detectConfig(root) {
       name: entry.layer,
       patterns: directories.map((directory) => `${normalize(path.join(srcDir, directory))}/**`),
       intentPrefixes: entry.prefixes,
+      ...(entry.layer === 'DomainModel'
+        ? { forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS }
+        : {}),
     });
   }
 
@@ -652,6 +658,20 @@ function collectConfigWarnings(root, config, files, rules, manifest) {
     if (seenLayers.has(layer.name)) duplicateLayers.add(layer.name);
     seenLayers.add(layer.name);
 
+    if (
+      layer.forbiddenGlobals !== undefined &&
+      (!Array.isArray(layer.forbiddenGlobals) ||
+        layer.forbiddenGlobals.some((entry) => typeof entry !== 'string'))
+    ) {
+      warnings.push(
+        configWarning(
+          'CONFIG_INVALID_FORBIDDEN_GLOBALS',
+          `Layer "${layer.name}" has an invalid forbiddenGlobals value; expected an array of strings (e.g. ["fetch", "Date.now"]). The entry is ignored.`,
+          { layer: layer.name }
+        )
+      );
+    }
+
     const patterns = Array.isArray(layer.patterns) ? layer.patterns : [];
     if (patterns.length === 0) {
       warnings.push(
@@ -981,6 +1001,8 @@ const FIX_HINTS = {
     'Add metadata.source (the publishing intent name) to the publish call.',
   PUBLISH_SOURCE_LAYER_MISMATCH:
     'Use a source intent that belongs to the same layer as the publishing file, or move the file.',
+  FORBIDDEN_GLOBAL:
+    'Inject the capability through a port (e.g. a Clock, IdGenerator, or HttpPort) instead of reaching for the ambient global.',
 };
 
 function printViolation(violation) {
@@ -1092,6 +1114,21 @@ async function main() {
     const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
     const sourceLayer = layerForFile(root, file, config.layers);
     if (!sourceLayer) continue;
+
+    const layerConfig = config.layers.find((layer) => layer.name === sourceLayer);
+    const forbiddenGlobals = Array.isArray(layerConfig?.forbiddenGlobals)
+      ? layerConfig.forbiddenGlobals.filter((entry) => typeof entry === 'string')
+      : [];
+    for (const use of collectForbiddenGlobalUses(ts, sourceFile, forbiddenGlobals)) {
+      violations.push({
+        ruleId: 'FORBIDDEN_GLOBAL',
+        file: normalize(path.relative(root, file)),
+        line: lineOf(sourceFile, use.node.getStart(sourceFile)),
+        fromLayer: sourceLayer,
+        target: use.name,
+        message: `${sourceLayer} must not use the ambient global "${use.name}".`,
+      });
+    }
 
     const checkModuleEdge = (specifier, node, kind) => {
       const target = resolveImport(ts, specifier, file, compilerOptions, moduleHost, root);

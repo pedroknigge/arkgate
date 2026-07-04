@@ -248,11 +248,28 @@ async function main() {
     });
   }
 
+  // Layer → forbidden ambient globals, straight from ark.config.json. Enforced by the
+  // gate only when the target file's layer is known (same data ark-check enforces in CI).
+  const forbiddenGlobals = Object.fromEntries(
+    configLayers
+      .filter(
+        (layer) =>
+          layer.name &&
+          Array.isArray(layer.forbiddenGlobals) &&
+          layer.forbiddenGlobals.some((entry) => typeof entry === 'string')
+      )
+      .map((layer) => [
+        layer.name,
+        layer.forbiddenGlobals.filter((entry) => typeof entry === 'string'),
+      ])
+  );
+
   const gate = ark.createAICodeGate({
     architectureProfile: profile,
     intents,
     enforceIntentAllowlist: intents.length > 0,
     typescript: ts,
+    forbiddenGlobals,
   });
 
   if (args.hook) {
@@ -342,6 +359,7 @@ async function main() {
         name: profile.name,
         layers: profile.layers,
         rules: profile.rules,
+        ...(Object.keys(forbiddenGlobals).length > 0 ? { forbiddenGlobals } : {}),
         ...(suggestions.length > 0
           ? {
               suggestedLayers: suggestions,

@@ -69,6 +69,13 @@ export const DEFAULT_RULES = createStrictDenyRules(
   DEFAULT_ALLOWED_FLOWS
 );
 
+/**
+ * Default ambient globals forbidden in the domain layer: a pure domain does no I/O and is
+ * deterministic. `console` is deliberately omitted (too common during adoption); add it per
+ * project via the layer's `forbiddenGlobals` in ark.config.json.
+ */
+export const DEFAULT_DOMAIN_FORBIDDEN_GLOBALS = ['fetch', 'process', 'Date.now', 'Math.random'];
+
 export function createElevenLayerConfig(options = {}) {
   const rootDir = options.rootDir ?? 'src';
   const optional = options.optionalLayers ?? true;
@@ -82,9 +89,53 @@ export function createElevenLayerConfig(options = {}) {
       ),
       intentPrefixes: entry.prefixes,
       optional,
+      ...(entry.layer === 'DomainModel'
+        ? { forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS }
+        : {}),
     })),
     rules: DEFAULT_RULES,
   };
+}
+
+/**
+ * Find uses of forbidden ambient globals in a TypeScript source file.
+ *
+ * Detection is deliberately positional, not scope-aware (kept in sync with
+ * `collectForbiddenGlobalUses` in src/kernel/ai-gate/AICodeGate.ts — the CLIs must not
+ * import from dist):
+ *   - a dotted entry ("Date.now") flags `Date.now` property accesses
+ *   - a bare entry ("console", "fetch") flags property accesses on it (`console.log`),
+ *     direct calls (`fetch(...)`), and constructions (`new WebSocket(...)`)
+ * Bare identifier mentions in other positions (types, shadowed locals, import names) are
+ * NOT flagged, trading a little recall for near-zero false positives without a type checker.
+ *
+ * Returns [{ name, node }] where `name` is the matched forbidden entry.
+ */
+export function collectForbiddenGlobalUses(ts, sourceFile, forbidden) {
+  const entries = new Set(forbidden ?? []);
+  if (entries.size === 0) return [];
+  const uses = [];
+
+  const visit = (node) => {
+    if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.expression)) {
+      const dotted = `${node.expression.text}.${node.name.text}`;
+      if (entries.has(dotted)) {
+        uses.push({ name: dotted, node });
+      } else if (entries.has(node.expression.text)) {
+        uses.push({ name: node.expression.text, node });
+      }
+    } else if (
+      (ts.isCallExpression(node) || ts.isNewExpression(node)) &&
+      node.expression &&
+      ts.isIdentifier(node.expression) &&
+      entries.has(node.expression.text)
+    ) {
+      uses.push({ name: node.expression.text, node });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return uses;
 }
 
 const _regexpCache = new Map();

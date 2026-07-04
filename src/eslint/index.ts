@@ -1,6 +1,7 @@
 type RuleContext = {
   report(descriptor: Record<string, unknown>): void;
   getFilename?: () => string;
+  options?: unknown[];
 };
 
 type RuleListener = Record<string, (node: AstNode) => void>;
@@ -11,6 +12,7 @@ type AstNode = {
   value?: unknown;
   source?: AstNode;
   callee?: AstNode;
+  object?: AstNode;
   property?: AstNode;
   key?: AstNode;
   arguments?: AstNode[];
@@ -168,10 +170,62 @@ export const requirePublishSource: ArkRule = {
   },
 };
 
+const DEFAULT_FORBIDDEN_GLOBALS = ['fetch', 'process', 'Date.now', 'Math.random'];
+
+export const noForbiddenGlobals: ArkRule = {
+  meta: {
+    type: 'problem',
+    docs: {
+      description:
+        'Disallow ambient globals (e.g. fetch, Date.now) in architecture-governed code; scope the rule to layer directories via ESLint "files" patterns.',
+    },
+    messages: {
+      forbiddenGlobal: 'Ambient global "{{name}}" is forbidden here; inject the capability through a port instead.',
+    },
+    schema: [
+      {
+        type: 'object',
+        properties: {
+          globals: { type: 'array', items: { type: 'string' } },
+        },
+        additionalProperties: false,
+      },
+    ],
+  },
+  create(context) {
+    const option = context.options?.[0] as { globals?: string[] } | undefined;
+    const globals = new Set(option?.globals ?? DEFAULT_FORBIDDEN_GLOBALS);
+    const report = (node: AstNode, name: string) =>
+      context.report({ node, messageId: 'forbiddenGlobal', data: { name } });
+
+    return {
+      // Same positional detection as ark-check's FORBIDDEN_GLOBAL: property accesses on a
+      // forbidden base (console.log, Date.now), direct calls, and constructions. Bare
+      // identifier mentions elsewhere are not flagged (avoids shadowed-local false positives).
+      MemberExpression(node) {
+        const base = node.object?.type === 'Identifier' ? node.object.name : undefined;
+        if (!base) return;
+        const dotted = `${base}.${propertyName(node.property) ?? ''}`;
+        if (globals.has(dotted)) report(node, dotted);
+        else if (globals.has(base)) report(node, base);
+      },
+      CallExpression(node) {
+        const callee = node.callee?.type === 'Identifier' ? node.callee.name : undefined;
+        if (callee && globals.has(callee)) report(node, callee);
+      },
+      NewExpression(node) {
+        const callee = node.callee?.type === 'Identifier' ? node.callee.name : undefined;
+        if (callee && globals.has(callee)) report(node, callee);
+      },
+    };
+  },
+};
+
 const rules = {
   'no-domain-infra-imports': noDomainInfraImports,
   'no-raw-event-publish': noRawEventPublish,
   'require-publish-source': requirePublishSource,
+  'no-forbidden-globals': noForbiddenGlobals,
 };
 
 const plugin: ArkEslintPlugin = { rules };

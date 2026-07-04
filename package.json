@@ -82,7 +82,13 @@
     "ai-agents",
     "mcp",
     "lint",
-    "architecture-fitness"
+    "architecture-fitness",
+    "architecture-enforcement",
+    "import-rules",
+    "dependency-rules",
+    "boundaries",
+    "layered-architecture",
+    "ai-code-gate"
   ],
   "license": "MIT",
   "repository": {

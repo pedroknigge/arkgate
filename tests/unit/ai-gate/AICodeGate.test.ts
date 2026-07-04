@@ -150,3 +150,38 @@ describe('AI Code Gate (basic)', () => {
     expect(res.valid).toBe(true);
   });
 });
+
+describe('AI Code Gate forbiddenGlobals', () => {
+  const gate = createAICodeGate({
+    typescript: ts,
+    forbiddenGlobals: { DomainModel: ['fetch', 'Date.now', 'console'] },
+  });
+
+  it('flags forbidden ambient globals when the context layer declares them', () => {
+    const res = gate.validate(
+      'export const at = Date.now();\nconsole.log(at);\nfetch("/api");\n',
+      { layer: 'DomainModel', filePath: 'src/domain/order.ts' }
+    );
+    expect(res.valid).toBe(false);
+    const globals = res.violations.filter((v) => v.ruleId === 'FORBIDDEN_GLOBAL');
+    expect(globals.map((v) => v.target).sort()).toEqual(['Date.now', 'console', 'fetch']);
+    expect(globals.every((v) => v.fromLayer === 'DomainModel')).toBe(true);
+  });
+
+  it('does not flag other layers, shadow-like decoys, or when typescript is absent', () => {
+    expect(
+      gate.validate('export const at = Date.now();', { layer: 'ApplicationOrchestration' }).valid
+    ).toBe(true);
+    expect(
+      gate.validate('const decoy = { now: () => 1 };\nexport const ok = decoy.now();', {
+        layer: 'DomainModel',
+      }).valid
+    ).toBe(true);
+    const noTs = createAICodeGate({ forbiddenGlobals: { DomainModel: ['fetch'] } });
+    expect(gateValid(noTs, 'fetch("/api");')).toBe(true);
+  });
+});
+
+function gateValid(g: ReturnType<typeof createAICodeGate>, source: string) {
+  return g.validate(source, { layer: 'DomainModel' }).valid;
+}
