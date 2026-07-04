@@ -48,6 +48,12 @@ export interface AICodeGateOptions<Context = AICodeGateContext> {
    * for publish misuse without taking a runtime dependency on TypeScript.
    */
   typescript?: unknown;
+  /**
+   * Ambient globals forbidden per layer (layer name → entries such as "fetch" or
+   * "Date.now"). Checked only when `typescript` is provided and context.layer resolves
+   * to a listed layer — mirrors ark-check's FORBIDDEN_GLOBAL rule.
+   */
+  forbiddenGlobals?: Record<string, string[]>;
 }
 
 function violation(
@@ -230,6 +236,54 @@ function tsPublishSourceLiteral(ts: any, node: any): string | undefined {
     tsStringLiteralText(ts, tsObjectPropertyValue(ts, secondArg, 'source')) ??
     tsStringLiteralText(ts, tsObjectPropertyValue(ts, thirdArg, 'source'))
   );
+}
+
+/**
+ * Find uses of forbidden ambient globals. Positional, not scope-aware — kept in sync with
+ * `collectForbiddenGlobalUses` in bin/ark-shared.mjs (the CLIs run standalone and must not
+ * import from dist): dotted entries ("Date.now") flag that property access; bare entries
+ * ("console", "fetch") flag property accesses on them, direct calls, and constructions.
+ */
+function analyzeForbiddenGlobals(
+  ts: any,
+  source: string,
+  filePath: string | undefined,
+  layer: string,
+  forbidden: string[]
+): AICodeGateViolation[] {
+  const entries = new Set(forbidden);
+  if (entries.size === 0) return [];
+  const sourceFile = ts.createSourceFile('generated.ts', source, ts.ScriptTarget.Latest, true);
+  const violations: AICodeGateViolation[] = [];
+  const flag = (name: string, node: any) =>
+    violations.push(
+      violation('FORBIDDEN_GLOBAL', `${layer} must not use the ambient global "${name}".`, {
+        line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
+        filePath,
+        target: name,
+        fromLayer: layer,
+        suggestion:
+          'Inject the capability through a port (e.g. a Clock, IdGenerator, or HttpPort) instead of reaching for the ambient global.',
+      })
+    );
+
+  const visit = (node: any) => {
+    if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.expression)) {
+      const dotted = `${node.expression.text}.${node.name.text}`;
+      if (entries.has(dotted)) flag(dotted, node);
+      else if (entries.has(node.expression.text)) flag(node.expression.text, node);
+    } else if (
+      (ts.isCallExpression(node) || ts.isNewExpression(node)) &&
+      node.expression &&
+      ts.isIdentifier(node.expression) &&
+      entries.has(node.expression.text)
+    ) {
+      flag(node.expression.text, node);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return violations;
 }
 
 function analyzePublishAst<Context>(
@@ -461,6 +515,27 @@ export function createAICodeGate<Context = AICodeGateContext>(
               )
             );
           }
+        }
+      }
+
+      if (options.typescript && contextLayer && options.forbiddenGlobals?.[contextLayer]?.length) {
+        try {
+          violations.push(
+            ...analyzeForbiddenGlobals(
+              options.typescript,
+              source,
+              filePath,
+              contextLayer,
+              options.forbiddenGlobals[contextLayer]
+            )
+          );
+        } catch (err) {
+          violations.push(
+            violation(
+              'AST_ANALYZER_ERROR',
+              `TypeScript AST analyzer failed: ${err instanceof Error ? err.message : String(err)}`
+            )
+          );
         }
       }
 

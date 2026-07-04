@@ -401,3 +401,57 @@ describe('ark-mcp --hook (PreToolUse gate)', () => {
     expect(result.status).toBe(0);
   });
 });
+
+describe('ark-mcp --session-context (SessionStart injection)', () => {
+  beforeAll(() => {
+    prepareMcpRuntime();
+  });
+
+  function runSessionContext(root: string) {
+    const result = spawnSync(
+      'node',
+      [mcpBin, '--session-context', '--root', root, '--config', 'ark.config.json'],
+      { encoding: 'utf8' }
+    );
+    return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+  }
+
+  it('prints layers, forbidden globals, baseline state, and the check command', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-session-'));
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          {
+            name: 'DomainModel',
+            patterns: ['src/domain/**'],
+            intentPrefixes: ['Domain.'],
+            forbiddenGlobals: ['fetch', 'Date.now'],
+          },
+        ],
+        rules: [{ from: 'DomainModel', to: 'Kernel', allowed: false }],
+      })
+    );
+    fs.writeFileSync(
+      path.join(root, '.ark-baseline.json'),
+      JSON.stringify({ version: 1, violations: ['a|b|c', 'd|e|f'] })
+    );
+
+    const result = runSessionContext(root);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('DomainModel: src/domain/**');
+    expect(result.stdout).toContain('forbidden globals: fetch, Date.now');
+    expect(result.stdout).toContain('1 denied layer edge(s)');
+    expect(result.stdout).toContain('2 frozen violation(s)');
+    expect(result.stdout).toContain('npx ark-check --root . --config ark.config.json --strict-config');
+  });
+
+  it('is a silent no-op in a project without ark.config.json (safe for global hooks)', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-session-none-'));
+    const result = runSessionContext(root);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toBe('');
+  });
+});

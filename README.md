@@ -3,7 +3,9 @@
 # 🏛️ Ark — Architectural Runtime Kernel
 
 **Stop AI agents (and humans) from quietly breaking your architecture.**<br/>
-One machine-readable contract — enforced at write time, merge time, and (optionally) runtime.
+One machine-readable contract — enforced at write time, merge time, and (optionally) runtime.<br/>
+Ships a complete 11-layer architecture you can adopt one layer at a time.
+Gates **Claude Code, Cursor, and Codex** natively — plus rule files for Windsurf, Cline, Copilot, Kiro, and Gemini CLI.
 
 [![CI](https://github.com/pedroknigge/ark-runtime-kernel/actions/workflows/ci.yml/badge.svg)](https://github.com/pedroknigge/ark-runtime-kernel/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/ark-runtime-kernel?color=cb3837&label=npm)](https://www.npmjs.com/package/ark-runtime-kernel)
@@ -12,7 +14,7 @@ One machine-readable contract — enforced at write time, merge time, and (optio
 ![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white)
 ![Zero deps](https://img.shields.io/badge/dependencies-0-success)
 
-[2-Minute Setup](#2-minute-setup) · [Why Ark](#why-ark-and-not-just-a-linter) · [AI Write Gate](#the-ai-write-gate) · [CI Gate](#ark-check--the-ci-gate) · [Runtime Kernel](#the-runtime-kernel-opt-in) · [Docs](#documentation)
+[2-Minute Setup](#2-minute-setup) · [Why Ark](#why-ark-and-not-just-a-linter) · [11 Layers](#batteries-included-the-11-layer-profile-all-optional) · [AI Write Gate](#the-ai-write-gate) · [CI Gate](#ark-check--the-ci-gate) · [Runtime Kernel](#the-runtime-kernel-opt-in) · [Docs](#documentation)
 
 </div>
 
@@ -124,6 +126,8 @@ If you only need import-boundary linting in CI, [dependency-cruiser](https://git
 | Cross-layer import checks in CI         | ✅ (TS resolver) | ✅ | ✅ | ✅ |
 | Blocks AI agents **before** code lands (MCP + hook) | ✅ | ❌ | ❌ | ❌ |
 | Machine-readable contract for agents (`ark://manifest`) | ✅ | ❌ | ❌ | ❌ |
+| Injects the contract into agent context at session start | ✅ | ❌ | ❌ | ❌ |
+| Forbidden ambient globals per layer (`Date.now` in domain, ...) | ✅ | ❌ | ➖ (generic ESLint) | ❌ |
 | Event/intent governance (who may publish what) | ✅ | ❌ | ❌ | ❌ |
 | Baseline ratchet for existing codebases | ✅ | ❌ | ➖ (via ESLint) | ❌ |
 | Optional runtime enforcement            | ✅ | ❌ | ❌ | ❌ |
@@ -133,19 +137,57 @@ If you only need import-boundary linting in CI, [dependency-cruiser](https://git
 
 | Gate         | Tool          | When it runs                  | What it enforces                              |
 |--------------|---------------|-------------------------------|-----------------------------------------------|
-| **Write**    | `ark-mcp`     | Agent PreToolUse (Write/Edit) | Layer rules, unknown intents, forbidden patterns |
-| **Merge**    | `ark-check`   | CI (GitHub Actions etc.)      | Cross-layer imports + intent references (real TS resolver) |
+| **Write**    | `ark-mcp`     | Agent PreToolUse (Write/Edit) | Layer rules, unknown intents, forbidden patterns + globals |
+| **Merge**    | `ark-check`   | CI (GitHub Actions etc.)      | Cross-layer imports + intent references (real TS resolver) + forbidden globals |
 | **Runtime**  | `createArkKernel()` | Running process (opt-in) | Intent registry, event contracts, observed layer flow, policies |
+
+## Batteries included: the 11-layer profile (all optional)
+
+You don't have to design a layer model before adopting Ark — it ships a complete,
+production-shaped division for Hexagonal + Event-Driven + DDD systems. Every layer is
+**optional by design**: on a fresh project the strict check passes immediately, and each
+layer starts being enforced the moment its directory gains source files. Adopt two
+layers or all eleven; `ark.config.json` is always authoritative and you can rename,
+remove, or re-map any of it.
+
+| Layer | Conventional directories | Intent prefixes |
+|-------|--------------------------|-----------------|
+| DomainModel | `domain/` | `Domain.` |
+| ApplicationOrchestration | `application/`, `app/` | `Application.` |
+| PersistenceAdapters | `adapters/persistence/`, `repositories/`, ... | `Adapter.Persistence.`, `Adapter.Repository.` |
+| IntegrationAdapters | `adapters/integration/`, `integrations/`, ... | `Adapter.Integration.`, `Adapter.External.` |
+| WorkflowSagaEngine | `workflows/`, `sagas/` | `Workflow.` |
+| BackgroundJobsScheduling | `jobs/`, `schedules/` | `Job.` |
+| PresentationAdapters | `presentation/`, `adapters/api/`, ... | `Presentation.`, `Adapter.Api.`, ... |
+| ReportingReadModels | `reporting/`, `read-models/`, `projections/` | `Reporting.` |
+| ExtensibilityMetadata | `metadata/`, `extensions/` | `Metadata.` |
+| SecurityAuditObservability | `security/`, `audit/`, `observability/` | `Security.`, `Audit.`, `Observability.` |
+| Kernel | `kernel/` | `Kernel.` |
+
+The default rule matrix is strict-deny: only the classic flows are open
+(Presentation→Application, Application→Domain, Workflow→Application/Domain,
+Jobs→Application) and everything else is a violation until you allow it explicitly.
+The profile isn't just for the linter — agents get it too: `ark://manifest` lists the
+layers your project hasn't adopted yet as `suggestedLayers`, so when an agent needs to
+create its first saga or background job, it puts it in the conventional place and adds
+the layer to the config instead of inventing an ungoverned location.
+
+```bash
+npx ark-check --print-config eleven-layer > ark.config.json   # the full profile, ready to edit
+```
 
 ## The AI Write Gate
 
 `ark-mcp` is a zero-dependency MCP server + one-shot hook:
 
 - **`ark-mcp --hook`** — PreToolUse gate: computes the **post-edit** file content, validates it against your layers, exits 2 with the violations when the write must be blocked. The agent self-corrects.
+- **`ark-mcp --session-context`** — SessionStart injection: prints a compact contract summary (layers, forbidden globals, baseline state) into the agent's context, so it knows the architecture from the first token instead of learning by rejection. Silent no-op outside Ark projects, so it can't leak into other repos.
 - **`validate_code` tool** — on-demand validation of a snippet, for runtimes without hooks.
-- **`ark://manifest` resource** — the architecture as JSON, so agents read the rules *before* generating code instead of learning by rejection.
+- **`ark://manifest` resource** — the architecture as JSON, so agents read the rules *before* generating code.
 
-Copy-paste setups for **Claude Code, Cursor, and OpenAI Codex**: [docs/ai-gates.md](docs/ai-gates.md).
+Copy-paste setups for **Claude Code, Cursor, and OpenAI Codex**, plus instruction-tier
+rule files for **Windsurf, Cline, GitHub Copilot, and Kiro** (Gemini CLI reads the
+generated `AGENTS.md` directly): [docs/ai-gates.md](docs/ai-gates.md).
 
 ## `ark-check` — The CI Gate
 
@@ -161,6 +203,7 @@ npx ark-check --baseline                                          # ratchet mode
 - String intent references across forbidden layers
 - Raw `publish()` calls that bypass registered intent creators
 - Missing / mismatched publish `source` metadata
+- Forbidden ambient globals per layer (`fetch`, `Date.now`, `Math.random`, ...) — see below
 
 Violations come with the layer edge, the resolved target, and a fix hint:
 
@@ -170,6 +213,35 @@ Violations come with the layer edge, the resolved target, and a fix hint:
   DomainModel must not import PersistenceAdapters.
   fix: Depend on a port/interface owned by an inner layer instead, or move this code.
 ```
+
+### Domain purity: `forbiddenGlobals`
+
+Import rules can't catch code that reaches for an ambient global — an agent can call
+`fetch()` or `Date.now()` in your domain layer without importing anything. Declare the
+globals a layer must not touch and both the write gate and CI enforce it:
+
+```jsonc
+// ark.config.json
+{
+  "name": "DomainModel",
+  "patterns": ["src/domain/**"],
+  "intentPrefixes": ["Domain."],
+  "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"]
+}
+```
+
+```
+✖ FORBIDDEN_GLOBAL  src/domain/order.ts:12
+  DomainModel must not use the ambient global "Date.now".
+  fix: Inject the capability through a port (e.g. a Clock, IdGenerator, or HttpPort).
+```
+
+Entries are either dotted (`"Date.now"` flags exactly that property access) or bare
+(`"console"` flags `console.*`, `fetch(...)`, `new WebSocket(...)`). Detection is
+positional, not scope-aware: mentions in types or import names are never flagged.
+`npx ark init` seeds the domain layer with `["fetch", "process", "Date.now", "Math.random"]`
+(a pure domain does no I/O and is deterministic); add `"console"` or any other global per
+project. Violations participate in the `--baseline` ratchet like every other rule.
 
 ### GitHub Action
 
@@ -189,7 +261,15 @@ import ark from 'ark-runtime-kernel/eslint';
 export default [ark.configs.recommended];
 ```
 
-Rules: `ark/no-domain-infra-imports`, `ark/no-raw-event-publish`, `ark/require-publish-source`.
+Rules: `ark/no-domain-infra-imports`, `ark/no-raw-event-publish`, `ark/require-publish-source`,
+`ark/no-forbidden-globals` (not in `recommended` — scope it to your layer directories):
+
+```js
+{
+  files: ['src/domain/**'],
+  rules: { 'ark/no-forbidden-globals': ['error', { globals: ['fetch', 'process', 'Date.now', 'Math.random'] }] },
+}
+```
 
 ## The Runtime Kernel (opt-in)
 

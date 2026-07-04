@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/bin/ark-mcp.mjs\" --session-context --root \"$CLAUDE_PROJECT_DIR\" --config ark.config.json"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/bin/ark-mcp.mjs\" --hook --root \"$CLAUDE_PROJECT_DIR\" --config ark.config.json"
+          }
+        ]
+      }
+    ]
+  }
+}

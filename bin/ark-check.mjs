@@ -2,9 +2,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
   DEFAULT_INTENT_PREFIXES,
   DEFAULT_LAYER_DIRECTORIES,
   DEFAULT_RULES,
+  collectForbiddenGlobalUses,
   createElevenLayerConfig,
   globToRegExp,
   layerForFile,
@@ -96,7 +98,8 @@ function usage() {
     '{',
     '  "include": ["src"],',
     '  "layers": [',
-    '    { "name": "DomainModel", "patterns": ["src/domain/**"], "intentPrefixes": ["Domain."] }',
+    '    { "name": "DomainModel", "patterns": ["src/domain/**"], "intentPrefixes": ["Domain."],',
+    '      "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"] }',
     '  ],',
     '  "rules": [{ "from": "DomainModel", "to": "PersistenceAdapters", "allowed": false }]',
     '}',
@@ -109,9 +112,13 @@ function usage() {
     'with --strict-config to enforce gate presence and architecture in one run.',
     '',
     '--install-agent-gates writes AGENTS.md, .mcp.json, and the CI workflow for every',
-    'project, plus tool-specific templates. Pass --tools claude,cursor,codex to pick',
-    'which tool configs to write; otherwise they are auto-detected from .claude/, .cursor/,',
-    'and .codex/ (all are written when nothing is detected).',
+    'project, plus tool-specific templates. Known tools: claude, cursor, codex (full',
+    'MCP/hook gates) and windsurf, cline, copilot, kiro (instruction-tier rule files',
+    'derived from the same contract; Gemini CLI needs no template — it reads AGENTS.md).',
+    'Pass --tools to pick which tool configs to write; otherwise they are auto-detected',
+    'from their config directories (.claude/, .cursor/, .codex/, .windsurf/, .clinerules/,',
+    '.kiro/; copilot is explicit-only). claude+cursor+codex are written when nothing is',
+    'detected.',
     '',
     'Generate a starter 11-layer config:',
     '  ark-check --print-config eleven-layer > ark.config.json',
@@ -192,6 +199,9 @@ function detectConfig(root) {
       name: entry.layer,
       patterns: directories.map((directory) => `${normalize(path.join(srcDir, directory))}/**`),
       intentPrefixes: entry.prefixes,
+      ...(entry.layer === 'DomainModel'
+        ? { forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS }
+        : {}),
     });
   }
 
@@ -415,6 +425,25 @@ args = ["ark-mcp", "--root", ".", "--config", "ark.config.json"]
 `;
 }
 
+/**
+ * Compact always-on rule for instruction-tier hosts (Windsurf, Cline, GitHub Copilot,
+ * Kiro, ...): agents that read a project rule file but have no MCP tools or hooks.
+ * Derived from the same AGENT_CONTRACT as AGENTS.md and the Cursor rule so the steps
+ * can never drift; points at AGENTS.md for the full placement table.
+ */
+function instructionRule() {
+  const steps = AGENT_CONTRACT.steps.map((step, index) => `${index + 1}. ${step}`).join('\n');
+  return `# Ark architecture contract
+
+This project's architecture is governed by Ark (\`ark.config.json\` is authoritative).
+Before writing or editing TypeScript or JavaScript source files:
+
+${steps}
+
+See \`AGENTS.md\` for the full contract and the layer placement table.
+`;
+}
+
 function cursorRule() {
   return `---
 description: Ark architecture contract
@@ -460,6 +489,20 @@ ${setupSteps ? `${setupSteps}\n` : ''}      - run: ${pm.install}
 function claudeSettings() {
   return `${JSON.stringify({
     hooks: {
+      // Inject the contract at session start so the agent knows the architecture from
+      // the first token. Project-scoped by design; --session-context is also a silent
+      // no-op when no ark.config.json exists, so it can never leak into other projects.
+      SessionStart: [
+        {
+          hooks: [
+            {
+              type: 'command',
+              command:
+                'npx ark-mcp --session-context --root "$CLAUDE_PROJECT_DIR" --config ark.config.json',
+            },
+          ],
+        },
+      ],
       PreToolUse: [
         {
           matcher: 'Write|Edit|MultiEdit',
@@ -484,10 +527,13 @@ function resolveTools(args) {
   const detected = new Set();
   if (fs.existsSync(path.join(root, '.claude'))) detected.add('claude');
   if (fs.existsSync(path.join(root, '.cursor'))) detected.add('cursor');
-  if (fs.existsSync(path.join(root, '.codex'))) {
-    detected.add('codex');
-  }
-  // No signal at all: fall back to writing every tool's templates so a fresh
+  if (fs.existsSync(path.join(root, '.codex'))) detected.add('codex');
+  if (fs.existsSync(path.join(root, '.windsurf'))) detected.add('windsurf');
+  if (fs.existsSync(path.join(root, '.clinerules'))) detected.add('cline');
+  if (fs.existsSync(path.join(root, '.kiro'))) detected.add('kiro');
+  // copilot has no reliable directory signal (.github exists in most repos),
+  // so it is explicit-only via --tools.
+  // No signal at all: fall back to writing the primary tools' templates so a fresh
   // project still gets a complete, reviewable starter set.
   if (detected.size === 0) {
     return new Set(['claude', 'cursor', 'codex']);
@@ -495,7 +541,7 @@ function resolveTools(args) {
   return detected;
 }
 
-const KNOWN_TOOLS = ['claude', 'cursor', 'codex'];
+const KNOWN_TOOLS = ['claude', 'cursor', 'codex', 'windsurf', 'cline', 'copilot', 'kiro'];
 
 function runInstallAgentGates(args) {
   const root = args.root;
@@ -528,6 +574,19 @@ function runInstallAgentGates(args) {
   }
   if (tools.has('codex')) {
     templates.push(['docs/ark-codex-config.toml', codexTomlSnippet()]);
+  }
+  // Instruction-tier hosts: one shared rule text, host-specific path.
+  if (tools.has('windsurf')) {
+    templates.push(['.windsurf/rules/ark.md', instructionRule()]);
+  }
+  if (tools.has('cline')) {
+    templates.push(['.clinerules/ark.md', instructionRule()]);
+  }
+  if (tools.has('copilot')) {
+    templates.push(['.github/copilot-instructions.md', instructionRule()]);
+  }
+  if (tools.has('kiro')) {
+    templates.push(['.kiro/steering/ark.md', instructionRule()]);
   }
 
   const results = templates.map(([relativePath, content]) =>
@@ -651,6 +710,20 @@ function collectConfigWarnings(root, config, files, rules, manifest) {
     }
     if (seenLayers.has(layer.name)) duplicateLayers.add(layer.name);
     seenLayers.add(layer.name);
+
+    if (
+      layer.forbiddenGlobals !== undefined &&
+      (!Array.isArray(layer.forbiddenGlobals) ||
+        layer.forbiddenGlobals.some((entry) => typeof entry !== 'string'))
+    ) {
+      warnings.push(
+        configWarning(
+          'CONFIG_INVALID_FORBIDDEN_GLOBALS',
+          `Layer "${layer.name}" has an invalid forbiddenGlobals value; expected an array of strings (e.g. ["fetch", "Date.now"]). The entry is ignored.`,
+          { layer: layer.name }
+        )
+      );
+    }
 
     const patterns = Array.isArray(layer.patterns) ? layer.patterns : [];
     if (patterns.length === 0) {
@@ -981,6 +1054,8 @@ const FIX_HINTS = {
     'Add metadata.source (the publishing intent name) to the publish call.',
   PUBLISH_SOURCE_LAYER_MISMATCH:
     'Use a source intent that belongs to the same layer as the publishing file, or move the file.',
+  FORBIDDEN_GLOBAL:
+    'Inject the capability through a port (e.g. a Clock, IdGenerator, or HttpPort) instead of reaching for the ambient global.',
 };
 
 function printViolation(violation) {
@@ -1092,6 +1167,21 @@ async function main() {
     const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
     const sourceLayer = layerForFile(root, file, config.layers);
     if (!sourceLayer) continue;
+
+    const layerConfig = config.layers.find((layer) => layer.name === sourceLayer);
+    const forbiddenGlobals = Array.isArray(layerConfig?.forbiddenGlobals)
+      ? layerConfig.forbiddenGlobals.filter((entry) => typeof entry === 'string')
+      : [];
+    for (const use of collectForbiddenGlobalUses(ts, sourceFile, forbiddenGlobals)) {
+      violations.push({
+        ruleId: 'FORBIDDEN_GLOBAL',
+        file: normalize(path.relative(root, file)),
+        line: lineOf(sourceFile, use.node.getStart(sourceFile)),
+        fromLayer: sourceLayer,
+        target: use.name,
+        message: `${sourceLayer} must not use the ambient global "${use.name}".`,
+      });
+    }
 
     const checkModuleEdge = (specifier, node, kind) => {
       const target = resolveImport(ts, specifier, file, compilerOptions, moduleHost, root);

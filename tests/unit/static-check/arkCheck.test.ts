@@ -989,3 +989,117 @@ describe('ark-check --baseline', () => {
     expect(result.staleBaselineKeys).toBeGreaterThan(0);
   });
 });
+
+describe('ark-check forbiddenGlobals', () => {
+  const CONFIG = JSON.stringify({
+    include: ['src'],
+    layers: [
+      {
+        name: 'DomainModel',
+        patterns: ['src/domain/**'],
+        intentPrefixes: ['Domain.'],
+        forbiddenGlobals: ['fetch', 'Date.now', 'console'],
+      },
+      { name: 'PersistenceAdapters', patterns: ['src/infra/**'], intentPrefixes: ['Adapter.Persistence.'] },
+    ],
+    rules: [],
+  });
+
+  function project(domainSource: string) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-fg-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/infra'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'ark.config.json'), CONFIG);
+    fs.writeFileSync(path.join(root, 'src/domain/order.ts'), domainSource);
+    fs.writeFileSync(path.join(root, 'src/infra/repo.ts'), 'export const t = Date.now();\n');
+    return root;
+  }
+
+  it('flags dotted and bare forbidden globals in the configured layer only', () => {
+    const root = project(
+      [
+        'export function place() {',
+        '  console.log(Date.now());',
+        '  return fetch("/api");',
+        '}',
+        'const decoy = { now: () => 1 };',
+        'export const ok = decoy.now(); // not the global',
+      ].join('\n')
+    );
+    const result = runArkCheck(root) as unknown as {
+      ok: boolean;
+      violations: Array<{ ruleId: string; target?: string; file: string }>;
+    };
+    expect(result.ok).toBe(false);
+    const globals = result.violations.filter((v) => v.ruleId === 'FORBIDDEN_GLOBAL');
+    expect(globals.map((v) => v.target).sort()).toEqual(['Date.now', 'console', 'fetch']);
+    // src/infra uses Date.now too, but its layer declares no forbiddenGlobals.
+    expect(globals.every((v) => v.file === 'src/domain/order.ts')).toBe(true);
+  });
+
+  it('passes clean domain code and warns on a malformed forbiddenGlobals value', () => {
+    const root = project('export const order = 1;\n');
+    expect(runArkCheck(root).ok).toBe(true);
+
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      CONFIG.replace(JSON.stringify(['fetch', 'Date.now', 'console']), '"fetch"')
+    );
+    const result = runArkCheck(root);
+    expect(result.warnings.some((w) => w.ruleId === 'CONFIG_INVALID_FORBIDDEN_GLOBALS')).toBe(true);
+    // Malformed entry is ignored, not enforced and not crashing.
+    expect(result.violations.filter((v) => v.ruleId === 'FORBIDDEN_GLOBAL')).toEqual([]);
+  });
+
+  it('supports baselining FORBIDDEN_GLOBAL violations', () => {
+    const root = project('export const at = Date.now();\n');
+    execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    expect(runArkCheck(root, ['--baseline']).ok).toBe(true);
+  });
+});
+
+describe('ark-check --install-agent-gates instruction-tier tools', () => {
+  const RULE_FILES: Record<string, string> = {
+    windsurf: '.windsurf/rules/ark.md',
+    cline: '.clinerules/ark.md',
+    copilot: '.github/copilot-instructions.md',
+    kiro: '.kiro/steering/ark.md',
+  };
+
+  it('writes the shared instruction rule for explicitly selected tools', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-gates-tier-'));
+    const result = runInstallAgentGates(root, ['--tools', 'windsurf,cline,copilot,kiro']);
+    expect(result.status).toBe(0);
+
+    const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
+    for (const file of Object.values(RULE_FILES)) {
+      const rule = fs.readFileSync(path.join(root, file), 'utf8');
+      // Same canonical contract: check command and manifest resource cannot drift.
+      expect(rule).toContain('npx ark-check --root . --config ark.config.json --strict-config');
+      expect(rule).toContain('ark://manifest');
+      expect(agents).toContain('ark://manifest');
+    }
+    // Full-gate tools were not selected.
+    expect(fs.existsSync(path.join(root, '.claude/settings.json'))).toBe(false);
+    expect(fs.existsSync(path.join(root, '.cursor/rules/ark.mdc'))).toBe(false);
+  });
+
+  it('auto-detects windsurf, cline, and kiro from their config directories', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-gates-tier-detect-'));
+    fs.mkdirSync(path.join(root, '.windsurf'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.clinerules'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.kiro'), { recursive: true });
+
+    const result = runInstallAgentGates(root);
+    expect(result.status).toBe(0);
+    expect(fs.existsSync(path.join(root, RULE_FILES.windsurf))).toBe(true);
+    expect(fs.existsSync(path.join(root, RULE_FILES.cline))).toBe(true);
+    expect(fs.existsSync(path.join(root, RULE_FILES.kiro))).toBe(true);
+    // copilot has no directory signal and must stay explicit-only.
+    expect(fs.existsSync(path.join(root, RULE_FILES.copilot))).toBe(false);
+  });
+});

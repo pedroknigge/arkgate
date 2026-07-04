@@ -7,6 +7,7 @@ import {
   definePolicy,
   syncRegistryToGraph,
   createArkManifest,
+  version,
 } from '../../../src/index';
 
 describe('createArkManifest', () => {
@@ -38,7 +39,7 @@ describe('createArkManifest', () => {
     const json = manifest.toJSON();
 
     expect(json.schemaVersion).toBe('1.0');
-    expect(json.version).toBe('1.3.0');
+    expect(json.version).toBe(version);
     expect(json.intents).toHaveLength(2);
     expect(json.policies[0].id).toBe('positive-amount');
     expect(json.links).toBeDefined();
