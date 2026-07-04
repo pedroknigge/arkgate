@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "ark": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "bin/ark-mcp.mjs",
+        "--root",
+        ".",
+        "--config",
+        "ark.config.json"
+      ]
+    }
+  }
+}
