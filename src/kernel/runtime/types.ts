@@ -49,6 +49,11 @@ export interface CreateArkKernelOptions {
   outbox?: OutboxStore;
   metadata?: MetadataRegistry;
   projections?: ProjectionRegistry;
+  /**
+   * Cap for in-memory event history, trace, and audit records.
+   * Defaults to DEFAULT_MAX_HISTORY_SIZE (1000); oldest records are evicted
+   * first. Pass Infinity for unbounded retention (pre-1.6 behavior).
+   */
   maxHistorySize?: number;
   autoApplyProjections?: boolean;
   strictEventContracts?: boolean;

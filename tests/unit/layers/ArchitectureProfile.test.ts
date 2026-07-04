@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   PolicyEngine,
+  createArchitectureProfile,
   createElevenLayerArkConfig,
   defineArchitectureProfilePolicy,
   elevenLayerProfile,
@@ -54,6 +55,26 @@ describe('Architecture profiles', () => {
           !rule.allowed
       )
     ).toBe(true);
+  });
+
+  it('resolves layers through a custom match function, which wins over prefixes', () => {
+    const profile = createArchitectureProfile({
+      name: 'custom',
+      layers: [
+        {
+          name: 'ReadModels',
+          prefixes: [],
+          match: (name) => name.endsWith('.View'),
+        },
+        { name: 'DomainModel', prefixes: ['Domain'] },
+      ],
+    });
+
+    expect(profile.resolveLayer('Orders.Summary.View')).toBe('ReadModels');
+    // match wins even when a prefix also applies
+    expect(profile.resolveLayer('Domain.Order.View')).toBe('ReadModels');
+    expect(profile.resolveLayer('Domain.Order.Placed')).toBe('DomainModel');
+    expect(profile.resolveLayer('Unmapped.Thing')).toBeUndefined();
   });
 
   it('generates an ark-check config from the 11-layer runtime profile', () => {

@@ -2,6 +2,22 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.6.0 — 2026-07-04
+
+### Changed — bounded in-memory retention by default
+
+- `createArkKernel` now defaults `maxHistorySize` to `DEFAULT_MAX_HISTORY_SIZE`
+  (1000), capping event history, trace, and audit records with oldest-first
+  eviction. Previously these grew without bound in long-running processes.
+  Pass `maxHistorySize: Infinity` to restore the old unbounded behavior.
+
+### Added — custom layer matchers
+
+- `ArchitectureLayer` accepts an optional `match: (name) => boolean` for teams
+  whose intent names don't follow prefix conventions. Matchers are checked
+  before prefixes, in layer declaration order, and can be combined with or
+  replace `prefixes` (use `prefixes: []` for match-only layers).
+
 ## 1.5.0 — 2026-07-04
 
 ### Added — ark-check scan cache

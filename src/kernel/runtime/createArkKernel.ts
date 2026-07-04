@@ -16,6 +16,13 @@ import { createProjectionRegistry } from '../projections';
 import { createWorkflowEngine } from '../workflow';
 import type { ArkKernel, CreateArkKernelOptions } from './types';
 
+/**
+ * Default cap for in-memory history, trace, and audit records. Without a cap a
+ * long-running process grows without bound on every publish. Pass
+ * `maxHistorySize: Infinity` to explicitly opt back into unbounded retention.
+ */
+export const DEFAULT_MAX_HISTORY_SIZE = 1000;
+
 let kernelSequence = 0;
 
 function nextKernelInstanceId(): string {
@@ -27,10 +34,11 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
   const strict = options.strict ?? true;
   const instanceId = options.instanceId ?? nextKernelInstanceId();
   const profile = options.profile ?? elevenLayerProfile;
+  const maxHistorySize = options.maxHistorySize ?? DEFAULT_MAX_HISTORY_SIZE;
   const registry = createIntentRegistry();
   const graph = createDependencyGraph();
   const metadata = options.metadata ?? createMetadataRegistry();
-  const auditTrail = options.auditTrail ?? createAuditTrail({ maxRecords: options.maxHistorySize });
+  const auditTrail = options.auditTrail ?? createAuditTrail({ maxRecords: maxHistorySize });
   const eventContracts = options.eventContracts ?? createEventContractRegistry();
   const outbox = options.outbox ?? new InMemoryOutboxStore();
   const projections =
@@ -59,7 +67,7 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
       options.enforceObservedLayerFlow ?? (strict ? 'hard' : 'off'),
     outbox,
     instanceId,
-    maxHistorySize: options.maxHistorySize,
+    maxHistorySize,
     onPublish: options.autoApplyProjections === false
       ? undefined
       : async (event) => {

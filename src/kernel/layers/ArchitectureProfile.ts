@@ -54,9 +54,13 @@ export function createArchitectureProfile(
     layers,
     rules,
     resolveLayer(name: string): string | undefined {
-      return sortedLayers.find((layer) =>
-        layer.prefixes.some((prefix) => name.startsWith(prefix))
-      )?.name;
+      // Explicit matchers win over prefix conventions, in declaration order.
+      return (
+        layers.find((layer) => layer.match?.(name))?.name ??
+        sortedLayers.find((layer) =>
+          layer.prefixes.some((prefix) => name.startsWith(prefix))
+        )?.name
+      );
     },
   };
 }

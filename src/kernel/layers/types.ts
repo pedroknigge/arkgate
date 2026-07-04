@@ -8,6 +8,12 @@
 export interface ArchitectureLayer {
   name: string;
   prefixes: string[];
+  /**
+   * Custom matcher for teams whose intent names don't follow prefix conventions.
+   * Checked before any prefix matching, in layer declaration order. A layer may
+   * use `match` alone (with `prefixes: []`), prefixes alone, or both.
+   */
+  match?: (name: string) => boolean;
   description?: string;
   order?: number;
 }

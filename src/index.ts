@@ -289,6 +289,7 @@ export {
 // =============================================================================
 
 export {
+  DEFAULT_MAX_HISTORY_SIZE,
   createArkKernel,
   createLenientArkKernel,
   createStrictArkKernel,
