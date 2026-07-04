@@ -1008,7 +1008,7 @@ function publishHasSource(ts, node) {
   );
 }
 
-// ponytail: baseline keys exclude the line number so unrelated edits that shift lines
+// Baseline keys exclude the line number so unrelated edits that shift lines
 // don't resurrect frozen violations; the trade-off is that N identical violations in one
 // file collapse to one key.
 function baselineKey(violation) {

@@ -26,7 +26,7 @@ export function withDistLock<T>(fn: () => T): T {
       } catch {
         continue; // lock vanished between attempts — retry immediately
       }
-      execSync('sleep 0.1'); // ponytail: shell sleep; swap for Atomics.wait if it shows up in profiles
+      execSync('sleep 0.1'); // shell sleep; swap for Atomics.wait if it shows up in profiles
     }
   }
   try {
