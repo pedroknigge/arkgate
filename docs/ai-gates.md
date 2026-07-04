@@ -39,6 +39,11 @@ writes code; that is the fast path to avoiding architecture drift during generat
 
 `ark-mcp --hook` is a one-shot PreToolUse gate: it reads the hook payload from stdin, computes the **post-edit** file content, validates it, and exits `2` (block, violations on stderr) or `0` (allow). The agent sees the violations and self-corrects.
 
+Like `ark-check --baseline`, the hook ratchets: an edit is blocked only when it **adds**
+violations relative to the file's current on-disk state, so files with pre-existing
+(baselined) violations stay editable — they just can't get worse. New files block on
+every violation.
+
 Add to your project's `.claude/settings.json`:
 
 ```json

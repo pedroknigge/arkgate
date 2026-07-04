@@ -529,7 +529,11 @@ function resolveTools(args) {
   if (fs.existsSync(path.join(root, '.cursor'))) detected.add('cursor');
   if (fs.existsSync(path.join(root, '.codex'))) detected.add('codex');
   if (fs.existsSync(path.join(root, '.windsurf'))) detected.add('windsurf');
-  if (fs.existsSync(path.join(root, '.clinerules'))) detected.add('cline');
+  // .clinerules can also be a single FILE (older Cline convention); only a directory
+  // can receive .clinerules/ark.md, so a file must not trigger detection.
+  if (fs.statSync(path.join(root, '.clinerules'), { throwIfNoEntry: false })?.isDirectory()) {
+    detected.add('cline');
+  }
   if (fs.existsSync(path.join(root, '.kiro'))) detected.add('kiro');
   // copilot has no reliable directory signal (.github exists in most repos),
   // so it is explicit-only via --tools.

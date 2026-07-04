@@ -4,6 +4,14 @@ All notable changes to `ark-runtime-kernel` are documented here.
 
 ## 1.4.0 — 2026-07-03
 
+### Changed — the write gate now ratchets like the CI gate
+
+- `ark-mcp --hook` blocks an edit only when it ADDS violations relative to the file's
+  current on-disk state. Previously any pre-existing violation (frozen in a baseline or
+  predating Ark adoption) made every subsequent edit to that file un-writable while CI
+  passed — with the new auto-seeded `forbiddenGlobals`, that would have hit ordinary
+  brownfield upgrades. New files still block on every violation.
+
 ### Added — SessionStart contract injection (`ark-mcp --session-context`)
 
 - `ark-mcp --session-context` prints a compact contract summary — layers, forbidden

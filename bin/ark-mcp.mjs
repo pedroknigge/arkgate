@@ -175,7 +175,27 @@ function runHook(gate, config, args) {
   const result = gate.validate(source, { layer, filePath });
   if (result.valid) return;
 
-  const lines = result.violations.map(
+  // Ratchet semantics (same philosophy as ark-check --baseline): an edit is blocked only
+  // when it ADDS violations relative to the file's current on-disk state. Otherwise a
+  // pre-existing violation — frozen in a baseline or predating Ark adoption — would make
+  // every subsequent edit to that file un-writable while CI passes. Keys ignore line
+  // numbers (edits shift them) and collapse duplicates, mirroring ark-check's baselineKey.
+  const violationKey = (violation) => `${violation.ruleId}|${violation.target ?? violation.message}`;
+  let existingKeys = new Set();
+  try {
+    const current = fs.readFileSync(filePath, 'utf8');
+    existingKeys = new Set(
+      gate.validate(current, { layer, filePath }).violations.map(violationKey)
+    );
+  } catch {
+    // New file: nothing pre-exists, every violation is new.
+  }
+  const newViolations = result.violations.filter(
+    (violation) => !existingKeys.has(violationKey(violation))
+  );
+  if (newViolations.length === 0) return;
+
+  const lines = newViolations.map(
     (violation) =>
       `- [${violation.ruleId}] ${violation.message}${violation.line ? ` (line ${violation.line})` : ''}`
   );
@@ -216,8 +236,13 @@ function printSessionContext(config, profile, forbiddenGlobals, args) {
     `Rules: ${denied} denied layer edge(s). Full contract: ark://manifest MCP resource.`
   );
 
-  const baselinePath = path.join(args.root, '.ark-baseline.json');
-  const baseline = readJson(baselinePath);
+  // Advisory output: a malformed baseline must not abort the summary.
+  let baseline;
+  try {
+    baseline = readJson(path.join(args.root, '.ark-baseline.json'));
+  } catch {
+    baseline = undefined;
+  }
   if (Array.isArray(baseline?.violations)) {
     lines.push(
       `Baseline: ${baseline.violations.length} frozen violation(s) — only NEW violations fail; do not add to them.`

@@ -455,3 +455,79 @@ describe('ark-mcp --session-context (SessionStart injection)', () => {
     expect(result.stderr).toBe('');
   });
 });
+
+describe('ark-mcp --hook ratchet (pre-existing violations do not block edits)', () => {
+  let root: string;
+
+  beforeAll(() => {
+    prepareMcpRuntime();
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-hook-ratchet-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          {
+            name: 'DomainModel',
+            patterns: ['src/domain/**'],
+            intentPrefixes: ['Domain.'],
+            forbiddenGlobals: ['Date.now', 'fetch'],
+          },
+        ],
+        rules: [],
+      })
+    );
+    // Brownfield file: the violation predates the edit (frozen in a baseline).
+    fs.writeFileSync(
+      path.join(root, 'src/domain/legacy.ts'),
+      'export const at = Date.now();\n'
+    );
+  });
+
+  function hook(payload: unknown) {
+    const result = spawnSync('node', [mcpBin, '--hook', '--root', root], {
+      input: JSON.stringify(payload),
+      encoding: 'utf8',
+    });
+    return { status: result.status, stderr: result.stderr };
+  }
+
+  it('allows an edit that does not add violations to a file with frozen ones', () => {
+    const result = hook({
+      tool_name: 'Edit',
+      tool_input: {
+        file_path: path.join(root, 'src/domain/legacy.ts'),
+        old_string: 'export const at',
+        new_string: 'export const touched = 1;\nexport const at',
+      },
+    });
+    expect(result.status).toBe(0);
+  });
+
+  it('blocks an edit that ADDS a new violation, reporting only the new one', () => {
+    const result = hook({
+      tool_name: 'Edit',
+      tool_input: {
+        file_path: path.join(root, 'src/domain/legacy.ts'),
+        old_string: 'export const at = Date.now();',
+        new_string: 'export const at = Date.now();\nexport const r = fetch("/api");',
+      },
+    });
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('fetch');
+    expect(result.stderr).not.toContain('Date.now');
+  });
+
+  it('still blocks all violations in a brand-new file', () => {
+    const result = hook({
+      tool_name: 'Write',
+      tool_input: {
+        file_path: path.join(root, 'src/domain/fresh.ts'),
+        content: 'export const at = Date.now();\n',
+      },
+    });
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('Date.now');
+  });
+});
