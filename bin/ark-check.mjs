@@ -753,14 +753,29 @@ function readManifest(root, manifestPath) {
   return readJson(fullPath);
 }
 
+const SOURCE_FILE_NAME = /\.[cm]?[tj]sx?$/;
+
+function isGovernableSourceFile(name) {
+  return SOURCE_FILE_NAME.test(name) && !name.endsWith('.d.ts');
+}
+
 function walk(dir, files = []) {
-  if (!fs.existsSync(dir)) return files;
+  const stat = fs.statSync(dir, { throwIfNoEntry: false });
+  if (!stat) return files;
+  // An `include` entry may be a single file (e.g. a root-level "middleware.ts"),
+  // not just a directory — govern it directly instead of trying to scandir it
+  // (which threw ENOTDIR). The extension filter still applies.
+  if (stat.isFile()) {
+    if (isGovernableSourceFile(path.basename(dir))) files.push(dir);
+    return files;
+  }
+  if (!stat.isDirectory()) return files;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       if (entry.name === 'node_modules' || entry.name === 'dist') continue;
       walk(full, files);
-    } else if (/\.[cm]?[tj]sx?$/.test(entry.name) && !entry.name.endsWith('.d.ts')) {
+    } else if (isGovernableSourceFile(entry.name)) {
       files.push(full);
     }
   }

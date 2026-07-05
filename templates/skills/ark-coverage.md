@@ -14,6 +14,9 @@ from files, and end with a ranked report.
 - Gather inputs yourself: `ark.config.json`, `package.json`, `.ark-baseline.json`,
   `.mcp.json`, `AGENTS.md`, agent config dirs (`.claude/`, `.cursor/`, `.codex/`,
   `.windsurf/`, `.clinerules/`, `.kiro/`, `.github/`), CI workflows, and the source tree.
+  Read files with the Read tool and use targeted commands — do NOT `cat` whole
+  configs or dump the full source tree to the terminal; the report is the output,
+  not the raw files. Keep discovery quiet so the run stays readable.
 - This skill makes no changes to project files by default: produce the report,
   then offer to apply the top recommendations. Do not modify files unless the
   user then says yes. (Running `ark-check` may write its own scan cache under

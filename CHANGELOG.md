@@ -2,6 +2,28 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.7.4 — 2026-07-05
+
+### Fixed — `include` accepts single files, not just directories
+
+- `ark-check` walked every `include` entry with `scandir`, so listing a
+  root-level source file (e.g. Next.js `middleware.ts`, `instrumentation.ts`)
+  crashed with `ENOTDIR: not a directory`. `walk()` now governs a file entry
+  directly (subject to the same source-extension filter) and still recurses into
+  directory entries. This makes `/ark-coverage`'s "govern middleware.ts"
+  recommendation actually applicable.
+
+### Changed — skill polish
+
+- `/ark-coverage` now instructs reading files with the Read tool and targeted
+  commands instead of `cat`-ing whole configs to the terminal, so the audit run
+  stays readable.
+- `/ark-place` and `/ark-contract` document their no-argument path: when invoked
+  with nothing to place / no change described, print the placement map or the
+  contract snapshot + evolution options (derived from the live config) and ask,
+  instead of erroring or guessing. Makes the helpful behavior guaranteed, not
+  emergent.
+
 ## 1.7.3 — 2026-07-05
 
 ### Fixed — /ark-upgrade now checks the registry, and the package ships its CHANGELOG

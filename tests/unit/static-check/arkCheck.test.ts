@@ -492,6 +492,53 @@ describe('ark init', () => {
   });
 });
 
+describe('ark-check include accepts single files', () => {
+  const FILE_INCLUDE_LAYERS = [
+    { name: 'PresentationAdapters', patterns: ['middleware.ts'], intentPrefixes: ['Presentation.'] },
+    { name: 'PersistenceAdapters', patterns: ['lib/**'], intentPrefixes: ['Adapter.Persistence.'] },
+  ];
+  const FILE_INCLUDE_RULES = [
+    { from: 'PresentationAdapters', to: 'PersistenceAdapters', allowed: false },
+  ];
+
+  function seed(root: string, include: string[]) {
+    fs.mkdirSync(path.join(root, 'lib'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'lib/svc.ts'), 'export const a = 1;\n');
+    // A root-level file (like Next.js middleware.ts) that references a denied layer.
+    fs.writeFileSync(
+      path.join(root, 'middleware.ts'),
+      "export const ref = 'Adapter.Persistence.Save';\n"
+    );
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({ include, layers: FILE_INCLUDE_LAYERS, rules: FILE_INCLUDE_RULES })
+    );
+  }
+
+  it('governs a root-level file listed in include (no ENOTDIR crash)', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-include-file-'));
+    seed(root, ['lib', 'middleware.ts']);
+
+    const result = runArkCheck(root, ['--strict-config']) as {
+      ok: boolean;
+      violations: Array<{ ruleId: string; file?: string }>;
+    };
+    // The file was scanned: its cross-layer reference is caught (previously the
+    // bare file path threw "ENOTDIR: not a directory, scandir .../middleware.ts").
+    expect(result.violations.some((v) => v.file?.includes('middleware.ts'))).toBe(true);
+  });
+
+  it('does not scan the root file when it is not in include', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-include-file-off-'));
+    seed(root, ['lib']);
+
+    const result = runArkCheck(root, ['--strict-config']) as {
+      violations: Array<{ file?: string }>;
+    };
+    expect(result.violations.some((v) => v.file?.includes('middleware.ts'))).toBe(false);
+  });
+});
+
 describe('ark-check skill-gap advisory', () => {
   function runRaw(root: string) {
     let output = '';

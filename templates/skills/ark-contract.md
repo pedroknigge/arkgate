@@ -10,6 +10,16 @@ You are editing `ark.config.json` — the machine-readable contract every gate
 and humans are allowed to write, so the bar is: smallest change, validated,
 explained.
 
+**No change described?** If invoked with no specific edit, don't guess and don't
+edit anything — the intent is the user's to give. Take the snapshot (step 1) and
+present the evolution options grounded in THIS contract: adopt a `suggestedLayers`
+layer, tighten a permitted/implicit edge to denied, add `forbiddenGlobals` to a
+pure layer, or move a file between layers. While reading the config, surface any
+real classification inconsistency you notice (e.g. an HTTP-client file sitting in
+a non-integration layer via a fallback pattern) with a recommendation. Then ask
+which change to make. Reading the contract to produce that is real work, not a
+stalling question.
+
 ## Steps
 
 1. **Snapshot first** — run `npx ark-check --root . --config ark.config.json

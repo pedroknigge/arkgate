@@ -10,6 +10,14 @@ event handler, a repository, an HTTP client, a use case, a projection, …).
 Your job: name the layer it belongs to, the directory, the naming convention,
 and — if they asked to build it — scaffold it there correctly.
 
+**No artifact given?** If the skill is invoked with nothing to place, don't error
+and don't guess — the artifact is the one thing only the user knows. Read the
+contract (step 1) and print the placement map from it: one row per declared layer
+with what belongs there, its directory, and which layers it may/may not import,
+plus the not-yet-adopted `suggestedLayers` as a footnote. Then ask what they want
+to place. That map is derived entirely from the repo, so producing it is real work,
+not a stalling question.
+
 ## Steps
 
 1. **Read the contract, not your intuition.** Load `ark.config.json` and, if
