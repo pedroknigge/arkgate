@@ -2,6 +2,38 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.7.6 — 2026-07-05
+
+_From downstream consumer feedback after a real upgrade + CI-failure session._
+
+### Changed — generated CI follows the project's Node version
+
+- The generated GitHub workflow hard-coded `node-version: 20`. If a developer's
+  local npm is newer than the npm that Node ships (e.g. Node 24 / npm 11), CI's
+  `npm ci` fails with "missing from lock file" — the lockfile was written by a
+  newer npm — a red CI unrelated to architecture that blocks the gate before
+  `ark-check` even runs. The workflow now picks the Node version in order:
+  `node-version-file: .nvmrc`/`.node-version` when the project pins one (CI locks
+  to the dev's exact toolchain), else the major from `package.json` `engines.node`,
+  else a current-LTS default (bumped `20` → `22`; defaulting high avoids the
+  "CI npm older than the lockfile" class). Survives regeneration like `--baseline`.
+
+### Changed — CI steps are named so install failures read correctly
+
+- The generated workflow's steps were unnamed, so an `npm ci` failure surfaced
+  under the "Ark architecture gate" job with no clear cause — it looked like an
+  architecture violation when it was a dependency/lockfile problem. Steps are now
+  named (`Checkout`, `Setup Node`, `Install dependencies`, `Ark architecture
+  check`), so a red lands on `Install dependencies` and points at the real cause.
+
+### Changed — `--install-agent-gates` says WHY a skill was skipped
+
+- A skipped skill printed a bare `skipped <path>`, indistinguishable from "up to
+  date". Skipped skills are now annotated `(up to date)` or `(stale: <old> <
+  <current>)`, and a trailing note gives the exact safe refresh command
+  (`--install-agent-gates --skills-only --force`) — so the user isn't left
+  guessing or reaching for a bare `--force` that would clobber customized gates.
+
 ## 1.7.5 — 2026-07-05
 
 ### Added — outdated-skill detection (version-stamped skills)

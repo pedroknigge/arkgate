@@ -295,6 +295,60 @@ describe('ark-check --install-agent-gates', () => {
     expect(workflow).toContain('--strict-config --require-gates');
   });
 
+  it('follows the project Node pin (.nvmrc) in the generated CI workflow', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-node-'));
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+    fs.writeFileSync(path.join(root, '.nvmrc'), '24\n');
+
+    const result = runInstallAgentGates(root);
+    expect(result.status).toBe(0);
+    const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
+    // CI uses the project's declared Node so its npm matches the dev's and the
+    // lockfile reconciles (prevents the "missing from lock file" npm ci failure).
+    expect(workflow).toContain('node-version-file: .nvmrc');
+    expect(workflow).not.toContain('node-version: 20');
+  });
+
+  it('uses engines.node from package.json when there is no .nvmrc', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-node-engines-'));
+    fs.writeFileSync(
+      path.join(root, 'package.json'),
+      JSON.stringify({ name: 'x', engines: { node: '>=22.0.0' } })
+    );
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+
+    const result = runInstallAgentGates(root);
+    expect(result.status).toBe(0);
+    const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
+    expect(workflow).toContain("node-version: '22'");
+  });
+
+  it('falls back to a current-LTS Node when the project declares none', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-node-default-'));
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+
+    const result = runInstallAgentGates(root);
+    expect(result.status).toBe(0);
+    const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
+    // A current LTS, not the oldest supported — defaulting high avoids the
+    // "CI npm older than the lockfile's npm" failure class.
+    expect(workflow).toContain("node-version: '22'");
+    expect(workflow).not.toContain('node-version: 20');
+  });
+
+  it('names the CI steps so an install failure does not read as an architecture failure', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-steps-'));
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+
+    const result = runInstallAgentGates(root);
+    expect(result.status).toBe(0);
+    const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
+    // The failing step surfaces as "Install dependencies", not an unnamed step
+    // under the "Ark architecture gate" job (which misleads about the cause).
+    expect(workflow).toContain('name: Install dependencies');
+    expect(workflow).toContain('name: Ark architecture check');
+  });
+
   it('keeps --baseline in the generated CI workflow when a baseline exists', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-baseline-'));
     fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');

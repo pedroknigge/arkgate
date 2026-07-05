@@ -490,8 +490,43 @@ If Ark reports violations, fix the architecture instead of bypassing the gate.
 `;
 }
 
-function githubWorkflow(pm) {
+// Default CI Node when the project declares nothing. A current LTS, NOT the
+// oldest supported: the npm-ci-lockfile-mismatch failure only happens when CI's
+// npm is OLDER than the npm that wrote the lockfile, so defaulting high is safer.
+const DEFAULT_CI_NODE_VERSION = '22';
+
+// Decide the Node the generated CI should use, preferring the project's own
+// declaration so CI's npm matches the dev's (a mismatch makes `npm ci` fail with
+// "missing from lock file" — a red gate unrelated to architecture). In order:
+//   1. .nvmrc / .node-version → setup-node's node-version-file (exact, best)
+//   2. package.json engines.node → its concrete major
+//   3. a current-LTS default
+function detectCiNode(root) {
+  for (const file of ['.nvmrc', '.node-version']) {
+    if (fs.existsSync(path.join(root, file))) return { kind: 'file', value: file };
+  }
+  const enginesNode = readPackageJson(root)?.engines?.node;
+  if (typeof enginesNode === 'string') {
+    const major = enginesNode.match(/\d+/)?.[0];
+    if (major) return { kind: 'version', value: major };
+  }
+  return { kind: 'default', value: DEFAULT_CI_NODE_VERSION };
+}
+
+function githubWorkflow(pm, ciNode) {
   const setupSteps = pm.setup.map((command) => `      - run: ${command}`).join('\n');
+  // node-version-file keeps CI locked to the dev's exact toolchain; an explicit
+  // version comes from engines.node; the default carries a hint for the mismatch
+  // symptom since we can't know which npm wrote the lockfile.
+  const nodeSetup =
+    ciNode.kind === 'file'
+      ? `          node-version-file: ${ciNode.value}`
+      : ciNode.kind === 'version'
+        ? `          node-version: '${ciNode.value}'`
+        : `          # If the install step fails with "missing from lock file" / lockfile out
+          # of sync, your local package manager is newer than this Node's — add a
+          # .nvmrc with your Node version so CI matches the dev environment.
+          node-version: '${ciNode.value}'`;
   return `name: Ark architecture gate
 
 on:
@@ -503,13 +538,17 @@ jobs:
   ark-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+${nodeSetup}
           cache: ${pm.cache}
-${setupSteps ? `${setupSteps}\n` : ''}      - run: ${pm.install}
-      - run: ${pm.run}
+${setupSteps ? `${setupSteps}\n` : ''}      - name: Install dependencies
+        run: ${pm.install}
+      - name: Ark architecture check
+        run: ${pm.run}
 `;
 }
 
@@ -761,7 +800,10 @@ function runInstallAgentGates(args) {
     // Base gates: tool-agnostic contract + CI backstop, always written.
     templates.push(['AGENTS.md', agentInstructions()]);
     templates.push(['.mcp.json', mcpJson()]);
-    templates.push(['.github/workflows/ark-check.yml', githubWorkflow(pm)]);
+    templates.push([
+      '.github/workflows/ark-check.yml',
+      githubWorkflow(pm, detectCiNode(root)),
+    ]);
     if (tools.has('cursor')) {
       templates.push(['.cursor/mcp.json', mcpJson()]);
       templates.push(['.cursor/rules/ark.mdc', cursorRule()]);
@@ -792,11 +834,14 @@ function runInstallAgentGates(args) {
   // user edits to the body.
   const version = arkPackageVersion();
   const skills = skillTemplates().map(([name, content]) => [name, stampSkill(content, version)]);
+  const skillPaths = new Set();
   for (const tool of tools) {
     const target = SKILL_TOOL_TARGETS[tool];
     if (!target) continue;
     for (const [name, content] of skills) {
-      templates.push([target(name), content]);
+      const relativePath = target(name);
+      skillPaths.add(relativePath);
+      templates.push([relativePath, content]);
     }
   }
 
@@ -805,10 +850,30 @@ function runInstallAgentGates(args) {
   );
 
   console.log('Ark agent gate templates:');
+  let staleSkipped = 0;
   for (const result of results) {
     const marker =
       result.status === 'written' ? 'wrote' : result.status === 'failed' ? 'FAILED' : 'skipped';
-    console.log(`  ${marker.padEnd(7)} ${result.relativePath}`);
+    // A skipped skill reads as "you're fine" — but it may be a version behind.
+    // Say which, so the user isn't left guessing (and knows the safe refresh cmd).
+    let note = '';
+    if (result.status === 'skipped' && skillPaths.has(result.relativePath) && version) {
+      const installed = installedSkillVersion(path.join(root, result.relativePath));
+      if (installed === null || isVersionOlder(installed, version)) {
+        staleSkipped += 1;
+        note = `  (stale: ${installed ?? 'no stamp'} < ${version})`;
+      } else {
+        note = '  (up to date)';
+      }
+    }
+    console.log(`  ${marker.padEnd(7)} ${result.relativePath}${note}`);
+  }
+  if (staleSkipped > 0 && !args.skillsOnly) {
+    console.log('');
+    console.log(
+      `  ${staleSkipped} skill(s) are outdated but were left untouched. Refresh them with:`
+    );
+    console.log('    npx ark-check --install-agent-gates --skills-only --force');
   }
   const failed = results.filter((result) => result.status === 'failed');
   if (failed.length > 0) {

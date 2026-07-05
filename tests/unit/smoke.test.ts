@@ -4,7 +4,7 @@ import { version } from '../../src/index';
 
 describe('Ark bootstrap (smoke)', () => {
   it('exposes a semantic version', () => {
-    expect(version).toBe('1.7.5');
+    expect(version).toBe('1.7.6');
   });
 
   it('keeps package.json, package-lock.json, and server.json versions in sync with src/version', () => {
