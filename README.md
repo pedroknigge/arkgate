@@ -78,8 +78,34 @@ npx ark-check --install-agent-gates
 ```
 
 This writes opt-in templates for MCP discovery, Claude/Cursor rules, Codex config notes,
-GitHub Actions, and agent instructions. Existing files are skipped unless you pass
-`--force`.
+GitHub Actions, and agent instructions — plus the **`/ark-*` skills** (below) in each
+detected tool's command location. Existing files are skipped unless you pass `--force`.
+
+### The /ark-* skills
+
+Eight autonomous slash commands, installed for every agent CLI detected in the repo
+(Claude Code skills, Cursor commands, Codex prompts, Windsurf/Cline workflows; Copilot
+prompt files via `--tools copilot`, since `.github/` isn't a reliable signal). Each one gathers everything it needs from the repo, takes
+sensible defaults instead of asking, finishes with a strict `ark-check`, and explains
+itself in plain language — useful whether you know hexagonal architecture cold or are
+just trying to keep your code clean:
+
+| Skill | What invoking it does |
+|-------|-----------------------|
+| `/ark-coverage` | Audits which Ark capabilities this project is NOT using and ranks the gaps with the exact command to close each |
+| `/ark-fix` | Resolves current violations at the root cause (ports, moves) — never by weakening the contract |
+| `/ark-adopt` | Onboards an existing codebase: config, gates for every CLI, baseline freeze, ratchet plan |
+| `/ark-place` | Answers "where does this new code go?" from the contract, and scaffolds it there |
+| `/ark-contract` | Evolves `ark.config.json` safely, with before/after violation impact |
+| `/ark-explain` | Plain-language tour of this project's architecture and why each rule exists |
+| `/ark-runtime` | Migrates hand-rolled event buses/outboxes/sagas to the runtime kernel |
+| `/ark-upgrade` | After a package update, refreshes gates + skills across all detected CLIs |
+
+> Codex reads slash-command prompts from `~/.codex/prompts`, not the repo, so the
+> generated `.codex/prompts/*.md` need a one-time copy there:
+> `mkdir -p ~/.codex/prompts && cp .codex/prompts/*.md ~/.codex/prompts/`. The
+> installer prints this step, and `/ark-adopt` / `/ark-upgrade` offer to run it
+> for you. Every other host loads the skills from the repo path directly.
 
 The package `postinstall` only prints the next command; it never prompts or writes files
 during `npm install`. Use `npx ark init --yes` for non-interactive setup.

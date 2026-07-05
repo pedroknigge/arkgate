@@ -1,6 +1,6 @@
 {
   "name": "ark-runtime-kernel",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Architectural Runtime Kernel — governance for Hexagonal + Event-Driven + DDD systems",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -33,6 +33,7 @@
     "bin",
     "dist",
     "docs",
+    "templates",
     "server.json",
     "README.md",
     "LICENSE"

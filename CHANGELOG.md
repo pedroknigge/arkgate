@@ -2,6 +2,36 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.7.0 — 2026-07-05
+
+### Added — /ark-* agent skills, installed for every detected CLI
+
+- New `templates/skills/` set of eight autonomous slash-command skills:
+  `ark-coverage` (audit which Ark capabilities the project is NOT using, ranked
+  with the exact command to enable each), `ark-fix` (resolve violations at the
+  root cause — ports/moves, never weaken the contract), `ark-adopt` (baseline
+  freeze + ratchet onboarding), `ark-place` ("where does X go?" answered from
+  the contract), `ark-contract` (safe `ark.config.json` evolution), `ark-explain`
+  (plain-language architecture tour for newcomers), `ark-runtime` (migrate
+  hand-rolled event bus/outbox/sagas to the runtime kernel), and `ark-upgrade`
+  (refresh gates + skills after a package update).
+- `ark-check --install-agent-gates` now installs the skills into each detected
+  tool's command location: `.claude/skills/<name>/SKILL.md`,
+  `.cursor/commands/`, `.codex/prompts/`, `.windsurf/workflows/`, and
+  `.clinerules/workflows/` (plus `.github/prompts/` for Copilot, which is
+  explicit-only via `--tools copilot`). Kiro has no command mechanism, so it
+  keeps only its steering rule file. One canonical markdown per skill; existing
+  files are never overwritten without `--force`, so re-running after an update
+  only adds what's missing.
+- The skills are written to work unattended: they gather everything from the
+  repo, take documented defaults instead of asking, finish with a strict
+  `ark-check`, and report what they did — usable both by advanced users and by
+  developers new to architecture governance (plain-language explanations are
+  part of each skill's contract).
+- Postinstall message now tells existing Ark projects to re-run
+  `npx ark-check --install-agent-gates` after updating, so new templates and
+  skills reach every configured agent CLI, not just one.
+
 ## 1.6.0 — 2026-07-04
 
 ### Changed — bounded in-memory retention by default

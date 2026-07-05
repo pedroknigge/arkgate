@@ -2,6 +2,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
   DEFAULT_INTENT_PREFIXES,
@@ -124,6 +125,12 @@ function usage() {
     'project, plus tool-specific templates. Known tools: claude, cursor, codex (full',
     'MCP/hook gates) and windsurf, cline, copilot, kiro (instruction-tier rule files',
     'derived from the same contract; Gemini CLI needs no template — it reads AGENTS.md).',
+    'It also installs the /ark-* skills shipped in templates/skills/ into each',
+    'detected tool\'s command location (.claude/skills/, .cursor/commands/,',
+    '.codex/prompts/, .windsurf/workflows/, .clinerules/workflows/, .github/prompts/).',
+    'Kiro has no command mechanism and receives only its steering rule. Existing',
+    'files are never overwritten without --force, so re-running after an update',
+    'only adds what is missing.',
     'Pass --tools to pick which tool configs to write; otherwise they are auto-detected',
     'from their config directories (.claude/, .cursor/, .codex/, .windsurf/, .clinerules/,',
     '.kiro/; copilot is explicit-only). claude+cursor+codex are written when nothing is',
@@ -556,6 +563,45 @@ function resolveTools(args) {
 
 const KNOWN_TOOLS = ['claude', 'cursor', 'codex', 'windsurf', 'cline', 'copilot', 'kiro'];
 
+// One canonical markdown per skill (templates/skills/*.md, shipped in the npm
+// package); installed into each tool's slash-command location. The YAML
+// frontmatter (name/description) is understood or harmlessly ignored by every
+// host. Kiro has no command mechanism — its steering rule file is the only gate.
+const SKILL_TOOL_TARGETS = {
+  claude: (name) => `.claude/skills/${name}/SKILL.md`,
+  cursor: (name) => `.cursor/commands/${name}.md`,
+  codex: (name) => `.codex/prompts/${name}.md`,
+  windsurf: (name) => `.windsurf/workflows/${name}.md`,
+  cline: (name) => `.clinerules/workflows/${name}.md`,
+  copilot: (name) => `.github/prompts/${name}.prompt.md`,
+};
+
+function skillTemplates() {
+  const dir = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '..',
+    'templates',
+    'skills'
+  );
+  // A missing/mispackaged templates dir would otherwise install zero skills with
+  // exit 0 — warn so a packaging regression (e.g. "templates" dropped from the
+  // package.json files array) is visible instead of a silent no-op.
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    console.error(
+      `Warning: skill templates directory not found (${dir}); no /ark-* skills installed.`
+    );
+    return [];
+  }
+  return entries
+    .filter((entry) => entry.isFile() && /^[a-z0-9-]+\.md$/.test(entry.name))
+    .map((entry) => entry.name)
+    .sort()
+    .map((name) => [path.basename(name, '.md'), fs.readFileSync(path.join(dir, name), 'utf8')]);
+}
+
 function runInstallAgentGates(args) {
   const root = args.root;
   if (args.tools) {
@@ -601,6 +647,15 @@ function runInstallAgentGates(args) {
   if (tools.has('kiro')) {
     templates.push(['.kiro/steering/ark.md', instructionRule()]);
   }
+  // /ark-* skills for every detected tool that supports project-level commands.
+  const skills = skillTemplates();
+  for (const tool of tools) {
+    const target = SKILL_TOOL_TARGETS[tool];
+    if (!target) continue;
+    for (const [name, content] of skills) {
+      templates.push([target(name), content]);
+    }
+  }
 
   const results = templates.map(([relativePath, content]) =>
     writeTemplate(root, relativePath, content, args.force)
@@ -628,6 +683,13 @@ function runInstallAgentGates(args) {
     console.log('  4. If you use Codex in this project, wire it now so `ark://manifest` is available from the first edit.');
   } else {
     console.log('  3. If you use Codex in this project, wire it now so `ark://manifest` is available from the first edit.');
+  }
+  if (tools.has('codex') && skills.length > 0) {
+    console.log('');
+    console.log('  Codex loads slash-command prompts from $CODEX_HOME/prompts (~/.codex/prompts),');
+    console.log('  not the repo, so the /ark-* skills need one copy there to work in Codex:');
+    console.log('    mkdir -p ~/.codex/prompts && cp .codex/prompts/*.md ~/.codex/prompts/');
+    console.log('  (Safe to run now — agents driving this setup should offer to do it.)');
   }
 }
 

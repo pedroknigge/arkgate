@@ -312,6 +312,75 @@ describe('ark-check --install-agent-gates', () => {
     expect(fs.existsSync(path.join(root, 'docs/ark-codex-config.toml'))).toBe(false);
   });
 
+  it('installs the /ark-* skills into each detected tool command location', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-skills-'));
+
+    const result = runInstallAgentGates(root, ['--tools', 'claude,cursor,codex,windsurf,cline,copilot']);
+    expect(result.status).toBe(0);
+
+    const skillNames = fs
+      .readdirSync(path.resolve('templates/skills'))
+      .filter((file) => file.endsWith('.md'))
+      .map((file) => file.replace(/\.md$/, ''));
+    expect(skillNames).toContain('ark-coverage');
+    expect(skillNames.length).toBeGreaterThanOrEqual(8);
+
+    for (const name of skillNames) {
+      expect(fs.existsSync(path.join(root, `.claude/skills/${name}/SKILL.md`))).toBe(true);
+      expect(fs.existsSync(path.join(root, `.cursor/commands/${name}.md`))).toBe(true);
+      expect(fs.existsSync(path.join(root, `.codex/prompts/${name}.md`))).toBe(true);
+      expect(fs.existsSync(path.join(root, `.windsurf/workflows/${name}.md`))).toBe(true);
+      expect(fs.existsSync(path.join(root, `.clinerules/workflows/${name}.md`))).toBe(true);
+      expect(fs.existsSync(path.join(root, `.github/prompts/${name}.prompt.md`))).toBe(true);
+    }
+
+    const claudeSkill = fs.readFileSync(
+      path.join(root, '.claude/skills/ark-coverage/SKILL.md'),
+      'utf8'
+    );
+    expect(claudeSkill).toContain('name: ark-coverage');
+    // Same canonical content for every host.
+    expect(fs.readFileSync(path.join(root, '.cursor/commands/ark-coverage.md'), 'utf8')).toBe(
+      claudeSkill
+    );
+  });
+
+  it('does not install skills for unselected tools', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-skills-scope-'));
+
+    const result = runInstallAgentGates(root, ['--tools', 'claude']);
+    expect(result.status).toBe(0);
+    expect(fs.existsSync(path.join(root, '.claude/skills/ark-fix/SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.cursor/commands'))).toBe(false);
+    expect(fs.existsSync(path.join(root, '.codex'))).toBe(false);
+  });
+
+  it('preserves existing skill files unless --force is passed', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-skills-force-'));
+    const target = path.join(root, '.claude/skills/ark-coverage/SKILL.md');
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, 'customized\n');
+
+    const skipped = runInstallAgentGates(root, ['--tools', 'claude']);
+    expect(skipped.status).toBe(0);
+    expect(fs.readFileSync(target, 'utf8')).toBe('customized\n');
+
+    const forced = runInstallAgentGates(root, ['--tools', 'claude', '--force']);
+    expect(forced.status).toBe(0);
+    expect(fs.readFileSync(target, 'utf8')).toContain('name: ark-coverage');
+  });
+
+  it('writes no skill files for kiro (steering rule only)', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-kiro-'));
+
+    const result = runInstallAgentGates(root, ['--tools', 'kiro']);
+    expect(result.status).toBe(0);
+    // Kiro's gate is its steering rule; it has no command/skill mechanism.
+    expect(fs.existsSync(path.join(root, '.kiro/steering/ark.md'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.kiro/skills'))).toBe(false);
+    expect(fs.existsSync(path.join(root, '.kiro/workflows'))).toBe(false);
+  });
+
   it('auto-detects tools from existing .cursor/ directory', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-detect-'));
     fs.mkdirSync(path.join(root, '.cursor'), { recursive: true });
@@ -408,7 +477,7 @@ describe('ark init', () => {
     expect(result.stdout).toContain('Ark check passed');
   });
 
-  it('postinstall only prints the explicit init command', () => {
+  it('postinstall prints the init command and the gate/skill refresh hint', () => {
     const output = execFileSync('node', [path.resolve('bin/ark-postinstall.mjs')], {
       encoding: 'utf8',
       stdio: 'pipe',
@@ -417,6 +486,9 @@ describe('ark init', () => {
     expect(output).toContain('Ark installed, but not enforced yet.');
     expect(output).toContain('npx ark init');
     expect(output).toContain('npx ark init --yes');
+    // Existing projects updating the package need the refresh hint so new
+    // templates + skills reach every configured agent CLI.
+    expect(output).toContain('npx ark-check --install-agent-gates');
   });
 });
 
