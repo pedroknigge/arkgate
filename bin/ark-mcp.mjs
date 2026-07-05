@@ -199,10 +199,17 @@ function runHook(gate, config, args) {
     (violation) =>
       `- [${violation.ruleId}] ${violation.message}${violation.line ? ` (line ${violation.line})` : ''}`
   );
+  // Surface the per-violation fix hints (the gate carries them in `suggestion`,
+  // but the hook was dropping them). Dedupe so two infra violations sharing one
+  // hint — e.g. the mayImportInfrastructure escape hatch — print it once.
+  const suggestions = [
+    ...new Set(newViolations.map((violation) => violation.suggestion).filter(Boolean)),
+  ];
   process.stderr.write(
     [
       `Ark architecture gate blocked this write to ${rel}${layer ? ` (layer: ${layer})` : ''}:`,
       ...lines,
+      ...(suggestions.length > 0 ? ['fix:', ...suggestions.map((s) => `  ${s}`)] : []),
       'Fix the violations and retry. The architecture contract is available as the ark://manifest MCP resource.',
     ].join('\n') + '\n'
   );

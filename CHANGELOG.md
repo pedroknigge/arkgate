@@ -2,6 +2,33 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.7.2 — 2026-07-05
+
+### Changed — blocked infra imports point at the exemption
+
+- When the write-gate blocks an infrastructure import and the file has a known
+  layer, the fix hint now names the escape hatch: mark the layer in
+  `ark.config.json` with `"mayImportInfrastructure": true` (or name it with an
+  infra token). Previously the message only said "remove the import", so a
+  legitimately-infra layer with an unconventional name looked like a hard block
+  and required reading internals to discover the exemption. Zero-config
+  projects (no layer context) keep the plain hint — the flag doesn't apply there.
+- The PreToolUse hook (`ark-mcp --hook`) now prints the gate's fix hints under a
+  `fix:` block. It was building the block message from the rule id and message
+  only, silently dropping every `suggestion` — so the port/adapter guidance and
+  the new infra-layer escape hatch never reached the agent. Hints are deduped.
+
+### Added — `ark-check` surfaces uninstalled skills
+
+- A normal `ark-check` run now advises when a project that has adopted Ark agent
+  gates (`AGENTS.md` present) is missing `/ark-*` skills this version ships for a
+  detected tool (`.claude/`, `.cursor/`, `.codex/`, `.windsurf/`, `.clinerules/`),
+  pointing at `--install-agent-gates`. The `--json` output gains a `skillGaps`
+  field. Rationale: the postinstall message was the only discovery path for new
+  skills, and modern npm blocks postinstall scripts by default — so the most
+  careful users (and CI) never saw it. `ark-check` runs everywhere, so the notice
+  now actually lands. Advisory only; never affects the exit code.
+
 ## 1.7.1 — 2026-07-05
 
 ### Fixed — write-gate infra heuristics now respect the layer's role

@@ -418,6 +418,14 @@ export function createAICodeGate<Context = AICodeGateContext>(
       const exemptFromInfraHeuristics =
         contextLayer !== undefined &&
         (explicitInfraLayers.has(contextLayer) || layerHasInfrastructureRole(contextLayer));
+
+      // When the file has a known layer, the fix might be "this layer IS infra" —
+      // point at the exemption so an unconventionally-named infra layer self-serves
+      // instead of looking like a hard block.
+      const infraLayerEscapeHatch =
+        contextLayer !== undefined
+          ? ` If "${contextLayer}" is an infrastructure layer, mark it in ark.config.json with "mayImportInfrastructure": true (or name it with an infra token like Adapters/Persistence/Repository).`
+          : '';
       const forbidden = exemptFromInfraHeuristics
         ? userForbidden
         : [...userForbidden, ...builtinInfraPatterns];
@@ -430,7 +438,9 @@ export function createAICodeGate<Context = AICodeGateContext>(
               violation('FORBIDDEN_PATTERN', `Forbidden pattern matched: ${pat}`, {
                 line: match.index === undefined ? undefined : lineOf(source, match.index),
                 filePath,
-                suggestion: 'Remove infrastructure imports from domain/application layers.',
+                suggestion:
+                  'Remove infrastructure imports from domain/application layers.' +
+                  infraLayerEscapeHatch,
               })
             );
           }
@@ -458,7 +468,9 @@ export function createAICodeGate<Context = AICodeGateContext>(
               source: specifier.value,
               target: specifier.value,
               filePath,
-              suggestion: 'Route infrastructure access through an allowed adapter or port boundary.',
+              suggestion:
+                'Route infrastructure access through an allowed adapter or port boundary.' +
+                infraLayerEscapeHatch,
               details: { importKind: specifier.kind },
             }
           )

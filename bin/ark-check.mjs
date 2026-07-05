@@ -602,6 +602,55 @@ function skillTemplates() {
     .map((name) => [path.basename(name, '.md'), fs.readFileSync(path.join(dir, name), 'utf8')]);
 }
 
+// Skill names only, silent on a missing templates dir — for the freshness
+// advisory below, which must not print packaging warnings on every check run.
+function skillTemplateNames() {
+  const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'skills');
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  return entries
+    .filter((entry) => entry.isFile() && /^[a-z0-9-]+\.md$/.test(entry.name))
+    .map((entry) => path.basename(entry.name, '.md'));
+}
+
+// A normal ark-check run is the reliable discovery point for new /ark-* skills:
+// the postinstall message that advertises them is blocked by modern npm's
+// script-approval policy, so the most careful users never see it. When a project
+// has adopted Ark agent gates (AGENTS.md present) but a detected tool is missing
+// skills this version ships, surface it here so agents and CI actually notice.
+// Advisory only — never affects the exit code. Copilot has no reliable directory
+// signal, so it is not auto-detected (explicit --tools only), matching resolveTools.
+function detectSkillGaps(root) {
+  if (!fs.existsSync(path.join(root, 'AGENTS.md'))) return [];
+  // The Ark source tree keeps the skill templates at templates/skills/ — it's the
+  // producer, not a consumer, so it must not nag itself to "install" its own skills.
+  if (fs.existsSync(path.join(root, 'templates', 'skills'))) return [];
+  const skillNames = skillTemplateNames();
+  if (skillNames.length === 0) return [];
+  const detected = [];
+  if (fs.existsSync(path.join(root, '.claude'))) detected.push('claude');
+  if (fs.existsSync(path.join(root, '.cursor'))) detected.push('cursor');
+  if (fs.existsSync(path.join(root, '.codex'))) detected.push('codex');
+  if (fs.existsSync(path.join(root, '.windsurf'))) detected.push('windsurf');
+  if (fs.statSync(path.join(root, '.clinerules'), { throwIfNoEntry: false })?.isDirectory()) {
+    detected.push('cline');
+  }
+  const gaps = [];
+  for (const tool of detected) {
+    const target = SKILL_TOOL_TARGETS[tool];
+    if (!target) continue;
+    const missing = skillNames.filter(
+      (name) => !fs.existsSync(path.join(root, target(name)))
+    );
+    if (missing.length > 0) gaps.push({ tool, missing: missing.length });
+  }
+  return gaps;
+}
+
 function runInstallAgentGates(args) {
   const root = args.root;
   if (args.tools) {
@@ -1492,6 +1541,7 @@ async function main() {
   }
 
   const ok = activeViolations.length === 0 && (!args.strictConfig || warnings.length === 0);
+  const skillGaps = detectSkillGaps(root);
 
   if (args.json) {
     console.log(JSON.stringify({
@@ -1500,6 +1550,7 @@ async function main() {
       suppressedViolations: suppressed.length,
       staleBaselineKeys,
       warnings,
+      ...(skillGaps.length > 0 ? { skillGaps } : {}),
     }, null, 2));
   } else {
     for (const warning of warnings) {
@@ -1533,6 +1584,17 @@ async function main() {
     } else {
       console.error(
         `${color.red('✖')} ${activeViolations.length} violation(s).${baselineNote}`
+      );
+    }
+
+    if (skillGaps.length > 0) {
+      const total = skillGaps.reduce((sum, gap) => sum + gap.missing, 0);
+      const tools = skillGaps.map((gap) => gap.tool).join(', ');
+      console.log(
+        color.dim(
+          `${total} /ark-* skill(s) not installed for ${tools} (this Ark version ships them). ` +
+            `Install: npx ark-check --install-agent-gates`
+        )
       );
     }
   }

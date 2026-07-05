@@ -83,6 +83,21 @@ describe('AI Code Gate (basic)', () => {
     expect(res.violations.some((v) => v.ruleId === 'FORBIDDEN_PATTERN')).toBe(true);
   });
 
+  it('points a blocked infra import at the mayImportInfrastructure escape hatch', () => {
+    const gate = createAICodeGate();
+    // Unconventionally-named layer, not flagged → still blocked, but the hint
+    // must tell the user how to exempt it (the confusion that motivated this).
+    const res = gate.validate(infraImport, { layer: 'Storage' });
+    const hinted = res.violations.find(
+      (v) => v.ruleId === 'FORBIDDEN_PATTERN' || v.ruleId === 'FORBIDDEN_IMPORT'
+    );
+    expect(hinted?.suggestion).toContain('mayImportInfrastructure');
+    expect(hinted?.suggestion).toContain('Storage');
+    // Zero-config (no layer) keeps the plain hint — the flag doesn't apply there.
+    const noLayer = gate.validate(infraImport).violations.find((v) => v.suggestion);
+    expect(noLayer?.suggestion).not.toContain('mayImportInfrastructure');
+  });
+
   it('exempts an unconventionally-named layer flagged via infrastructureLayers', () => {
     const src = [infraImport, ormImport].join('\n');
     // "Storage" has no conventional infra token, so it needs the explicit opt-in

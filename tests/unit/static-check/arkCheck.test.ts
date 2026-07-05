@@ -492,6 +492,61 @@ describe('ark init', () => {
   });
 });
 
+describe('ark-check skill-gap advisory', () => {
+  function runRaw(root: string) {
+    let output = '';
+    try {
+      output = execFileSync(
+        'node',
+        [path.resolve('bin/ark-check.mjs'), '--root', root, '--json'],
+        { encoding: 'utf8', stdio: 'pipe' }
+      );
+    } catch (error) {
+      output = (error as { stdout: string }).stdout;
+    }
+    return JSON.parse(output) as { skillGaps?: Array<{ tool: string; missing: number }> };
+  }
+
+  function seedProject(root: string) {
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/domain/order.ts'), 'export const a = 1;\n');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({ include: ['src'], layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }], rules: [] })
+    );
+  }
+
+  it('reports missing /ark-* skills for a gated project that lacks them', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-skillgap-'));
+    seedProject(root);
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), 'ark contract\n'); // adopted gates
+    fs.mkdirSync(path.join(root, '.claude'), { recursive: true }); // tool detected, no skills
+
+    const result = runRaw(root);
+    expect(result.skillGaps?.some((g) => g.tool === 'claude' && g.missing > 0)).toBe(true);
+  });
+
+  it('stays silent once the skills are installed', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-skillgap-ok-'));
+    seedProject(root);
+    execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--install-agent-gates', '--root', root, '--tools', 'claude'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    const result = runRaw(root);
+    expect(result.skillGaps).toBeUndefined();
+  });
+
+  it('does not nag a project that never adopted agent gates (no AGENTS.md)', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-skillgap-none-'));
+    seedProject(root);
+    fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+    const result = runRaw(root);
+    expect(result.skillGaps).toBeUndefined();
+  });
+});
+
 describe('ark-check CLI', () => {
   it('prints a starter 11-layer config', () => {
     const output = execFileSync('node', [

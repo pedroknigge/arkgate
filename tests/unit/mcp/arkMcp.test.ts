@@ -344,6 +344,10 @@ describe('ark-mcp --hook (PreToolUse gate)', () => {
     expect(result.status).toBe(2);
     expect(result.stderr).toContain('FORBIDDEN_IMPORT');
     expect(result.stderr).toContain('DomainModel');
+    // The hook surfaces the gate's fix hints (previously dropped) and points a
+    // would-be infra layer at the exemption.
+    expect(result.stderr).toContain('fix:');
+    expect(result.stderr).toContain('mayImportInfrastructure');
   });
 
   it('allows a clean Write (exit 0)', () => {
