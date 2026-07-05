@@ -2426,7 +2426,7 @@ async function main() {
       console.log(
         color.dim(
           `/ark-* skills in ${codexPromptsDir()} are behind this Ark (${parts.join(', ')}). ` +
-            `Codex loads them from there, not the repo. Refresh: npx ark-check --install-agent-gates --codex-home --force`
+            `Codex loads them from there, not the repo. Refresh: npx ark-check --install-agent-gates --skills-only --codex-home --force`
         )
       );
     }

@@ -42,9 +42,11 @@ checks the registry itself — don't assume the copy in `node_modules` is curren
    explicit approval.
    If you use Codex, its prompts live in `$CODEX_HOME/prompts` (`~/.codex/prompts`),
    not the repo, so a repo refresh never updates them. Refresh them there too:
-   `npx ark-check --install-agent-gates --codex-home --force`. This writes to the
-   user's home dir — say so. (A normal `ark-check` now flags stale Codex-home skills
-   when copies exist, so you don't have to remember.)
+   `npx ark-check --install-agent-gates --skills-only --codex-home --force`. Keep
+   `--skills-only` — without it, `--force` also rewrites customized gate files
+   (AGENTS.md, CI, settings). This writes to the user's home dir — say so. (A normal
+   `ark-check` now flags stale Codex-home skills when copies exist, so you don't have
+   to remember.)
 4. **Re-verify** — `npx ark-check --root . --config ark.config.json
    --strict-config` (with `--baseline .ark-baseline.json` if present). A new
    version may detect violations the old one missed: if new violations appear,

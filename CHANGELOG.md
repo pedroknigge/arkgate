@@ -2,6 +2,18 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.8.3 — 2026-07-05
+
+### Fixed — Codex-home refresh guidance no longer clobbers customized gate files
+
+- 1.8.2's stale-skill advisory and the `/ark-upgrade` skill recommended
+  `--install-agent-gates --codex-home --force`. Without `--skills-only`, that `--force`
+  also rewrites customized gate files (AGENTS.md, CI workflow, settings, rules) — the exact
+  clobbering `--skills-only` exists to prevent. Both now recommend
+  `--install-agent-gates --skills-only --codex-home --force`, which refreshes the repo skills
+  and the Codex-home prompts while leaving customized gate files untouched. The flag behavior
+  is unchanged; only the recommended command (and skill guidance) is corrected.
+
 ## 1.8.2 — 2026-07-05
 
 ### Added — refresh `/ark-*` skills in the Codex home dir

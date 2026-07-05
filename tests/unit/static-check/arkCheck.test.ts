@@ -1650,6 +1650,15 @@ describe('ark-check monorepo tsconfig resolution', () => {
     );
     const result = JSON.parse(out) as { codexHomeGap?: { missing: number; stale: number } };
     expect(result.codexHomeGap?.stale).toBeGreaterThanOrEqual(1);
+
+    // The refresh it recommends must keep --skills-only, or --force also clobbers
+    // customized gate files (AGENTS.md, CI, settings).
+    const human = execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json'],
+      { encoding: 'utf8', stdio: 'pipe', env: { ...process.env, CODEX_HOME: codexHome } }
+    );
+    expect(human).toContain('--skills-only --codex-home --force');
   });
 
   it('does not flag the Codex home when no ark skills live there', () => {
