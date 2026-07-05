@@ -40,11 +40,11 @@ checks the registry itself — don't assume the copy in `node_modules` is curren
    losing customizations. If the changelog says a GATE file changed, report the
    diff and let the user decide; never rewrite settings/CI/AGENTS.md without
    explicit approval.
-   If Codex is among the tools and any `.codex/prompts/*.md` were added or
-   changed, they only take effect once copied to `~/.codex/prompts` (Codex reads
-   prompts from there, not the repo). Offer to copy them yourself —
-   `mkdir -p ~/.codex/prompts && cp .codex/prompts/*.md ~/.codex/prompts/` — and
-   tell the user (it writes to their home dir, not the repo).
+   If you use Codex, its prompts live in `$CODEX_HOME/prompts` (`~/.codex/prompts`),
+   not the repo, so a repo refresh never updates them. Refresh them there too:
+   `npx ark-check --install-agent-gates --codex-home --force`. This writes to the
+   user's home dir — say so. (A normal `ark-check` now flags stale Codex-home skills
+   when copies exist, so you don't have to remember.)
 4. **Re-verify** — `npx ark-check --root . --config ark.config.json
    --strict-config` (with `--baseline .ark-baseline.json` if present). A new
    version may detect violations the old one missed: if new violations appear,

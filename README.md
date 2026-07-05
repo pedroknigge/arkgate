@@ -233,9 +233,13 @@ npx ark-check --report ark-report.html                            # visual archi
 ```
 
 `--report [file.html]` writes a self-contained HTML report (no external assets, works
-offline) — the layer map, a who-may-import-whom matrix, current violations with fix hints,
-and which gates are live. The visual sibling of `/ark-explain`; a handy artifact to attach
-to a PR or share when onboarding.
+offline). It shows the layers ordered innermost → outermost with each one's purpose and a
+real example file, the dependency direction (what each layer may import) plus the precise
+matrix, current violations grouped with fix hints, and which gates are live (naming the
+files it found). Give a layer an optional `"description"` in `ark.config.json` and it shows
+up as its purpose — the named presets seed these for you. The visual sibling of
+`/ark-explain`; a handy artifact to attach to a PR or share when onboarding. It's a
+generated file — add it to `.gitignore` (ark-check reminds you) rather than committing it.
 
 **What it catches (via real TypeScript module resolution — path aliases included):**
 
@@ -315,6 +319,41 @@ in so a persistence file isn't blocked for doing its job:
 The pure core (domain/application) stays protected; `forbiddenPatterns` you add yourself
 apply in every layer regardless. `ark-check` (CI) is unaffected — it already judges imports
 by your layer rules, not this heuristic.
+
+### Architectural security invariants
+
+Ark is not a security scanner — it won't find injection bugs, leaked secrets, or vulnerable
+dependencies (reach for Semgrep, gitleaks, and `npm audit` for those). But several security
+properties are *architectural invariants*: they hold only if certain code lives in certain
+layers and never reaches for certain capabilities. Those are exactly what AI-generated code
+breaks and what a line-level linter can't see — and they're just layer rules plus
+`forbiddenGlobals`:
+
+- **Confine secret/env access to one layer.** `process.env` scattered across the codebase is
+  how secrets leak into logs, clients, and error messages. Forbid `process` in every pure
+  layer, and give env/config its own layer that's *allowed* to touch it — everything else must
+  receive config as an argument:
+
+  ```jsonc
+  // Pure layers forbid it…
+  { "name": "DomainModel", "patterns": ["src/domain/**"],
+    "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"] }
+  // …one config layer owns it. Nothing may import outward into it by accident,
+  // and it's the only place process.env appears.
+  { "name": "RuntimeConfiguration", "patterns": ["src/**/config/**", "src/env.ts"] }
+  ```
+
+- **Confine outbound network to adapters (no SSRF from the core).** Forbid `fetch` everywhere
+  except the integration layer, so a use case or domain rule can't be tricked into calling an
+  attacker-controlled URL. Outbound calls go through an injected client owned by the adapter.
+
+- **No weak randomness in the core.** `Math.random` is not cryptographically secure; minting
+  IDs, tokens, or nonces with it is a classic vulnerability. Forbidding it in the domain forces
+  those through an injected `IdGenerator`/`TokenService` you can point at a secure source.
+
+The write gate blocks these as an agent types them; CI blocks them at merge; the `--baseline`
+ratchet lets you adopt them on an existing codebase without a big-bang fix. None of this
+replaces a real security review — it removes the *architectural* footguns before they ship.
 
 ### GitHub Action
 

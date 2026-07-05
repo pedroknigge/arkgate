@@ -46,3 +46,4 @@ this project's real files as examples, no unexplained jargon.
 - For a general tour, offer the visual version: `npx ark-check --report
   ark-report.html` writes a self-contained HTML report (layer map, import
   matrix, violations, live gates) — a shareable artifact for a PR or onboarding.
+  It's generated output: suggest adding it to `.gitignore`, not committing it.

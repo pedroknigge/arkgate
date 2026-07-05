@@ -1615,4 +1615,75 @@ describe('ark-check monorepo tsconfig resolution', () => {
     expect(init.stderr).toContain('Unknown preset');
     expect(fs.existsSync(path.join(root, 'ark.config.json'))).toBe(false);
   });
+
+  it('--codex-home installs the /ark-* skills into $CODEX_HOME/prompts', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-cxh-'));
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# AGENTS\n');
+    const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-cxhome-'));
+    execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--install-agent-gates', '--root', root, '--tools', 'claude', '--codex-home'],
+      { encoding: 'utf8', stdio: 'pipe', env: { ...process.env, CODEX_HOME: codexHome } }
+    );
+    const fixSkill = path.join(codexHome, 'prompts', 'ark-fix.md');
+    expect(fs.existsSync(fixSkill)).toBe(true);
+    expect(fs.readFileSync(fixSkill, 'utf8')).toMatch(/^arkVersion:/m);
+  });
+
+  it('flags stale /ark-* skills in the Codex home prompts dir', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-cxg-'));
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# AGENTS\n');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({ include: ['src'], layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }], rules: [] })
+    );
+    const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-cxghome-'));
+    fs.mkdirSync(path.join(codexHome, 'prompts'), { recursive: true });
+    fs.writeFileSync(
+      path.join(codexHome, 'prompts', 'ark-fix.md'),
+      '---\nname: ark-fix\narkVersion: 1.0.0\n---\nbody\n'
+    );
+    const out = execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--json'],
+      { encoding: 'utf8', stdio: 'pipe', env: { ...process.env, CODEX_HOME: codexHome } }
+    );
+    const result = JSON.parse(out) as { codexHomeGap?: { missing: number; stale: number } };
+    expect(result.codexHomeGap?.stale).toBeGreaterThanOrEqual(1);
+  });
+
+  it('does not flag the Codex home when no ark skills live there', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-cxn-'));
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# AGENTS\n');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({ include: ['src'], layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }], rules: [] })
+    );
+    const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-cxnhome-')); // empty, no prompts/ark-*
+    const out = execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--json'],
+      { encoding: 'utf8', stdio: 'pipe', env: { ...process.env, CODEX_HOME: codexHome } }
+    );
+    expect((JSON.parse(out) as { codexHomeGap?: unknown }).codexHomeGap).toBeUndefined();
+  });
+
+  it('the HTML report shows layer purpose and a readable dependency direction', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-report2-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/domain/x.ts'), 'export const x = 1;\n');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [{ name: 'DomainModel', description: 'Pure business rules.', patterns: ['src/domain/**'] }],
+        rules: [],
+      })
+    );
+    runArkCheck(root, ['--report', 'r.html']);
+    const html = fs.readFileSync(path.join(root, 'r.html'), 'utf8');
+    expect(html).toContain('Pure business rules.'); // Purpose column, from the layer `description`
+    expect(html).toContain('Dependency direction'); // readable per-layer view
+    expect(html).toContain('nothing (pure core)'); // a lone layer imports nothing
+  });
 });

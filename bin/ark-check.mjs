@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -59,6 +60,7 @@ function parseArgs(argv) {
     }
     else if (arg === '--force') args.force = true;
     else if (arg === '--skills-only') args.skillsOnly = true;
+    else if (arg === '--codex-home') args.codexHome = true;
     else if (arg === '--no-cache') args.noCache = true;
     else if (arg === '--report') {
       const next = argv[i + 1];
@@ -84,7 +86,7 @@ function usage() {
   return [
     'Usage: ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--require-gates] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
     '       ark-check --init [--preset hexagonal|layered|feature-sliced] [--force]',
-    '       ark-check --install-agent-gates [--tools claude,cursor,codex] [--skills-only] [--force]',
+    '       ark-check --install-agent-gates [--tools claude,cursor,codex] [--skills-only] [--codex-home] [--force]',
     '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
     '       ark-check --print-config eleven-layer',
     '',
@@ -280,18 +282,26 @@ const ARCHITECTURE_PRESETS = {
     layers: [
       {
         name: 'DomainModel',
+        description: 'Pure business rules and entities. No I/O, no framework, no ambient globals.',
         patterns: ['src/**/domain/**'],
         forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
         optional: true,
       },
-      { name: 'ApplicationOrchestration', patterns: ['src/**/application/**'], optional: true },
+      {
+        name: 'ApplicationOrchestration',
+        description: 'Use cases that coordinate the domain through ports. No I/O of its own.',
+        patterns: ['src/**/application/**'],
+        optional: true,
+      },
       {
         name: 'PresentationAdapters',
+        description: 'Entrypoints — HTTP routes, controllers, UI. Drives use cases.',
         patterns: ['src/**/presentation/**', 'src/**/controllers/**', 'src/**/interface-adapters/**', 'src/**/http/**'],
         optional: true,
       },
       {
         name: 'PersistenceAdapters',
+        description: 'Implements ports with real infrastructure: DB, external APIs, filesystem.',
         patterns: ['src/**/infrastructure/**', 'src/**/adapters/**', 'src/**/persistence/**', 'src/**/repositories/**'],
         optional: true,
       },
@@ -313,22 +323,26 @@ const ARCHITECTURE_PRESETS = {
     layers: [
       {
         name: 'PresentationAdapters',
+        description: 'UI and API entrypoints.',
         patterns: ['src/**/presentation/**', 'src/**/controllers/**', 'src/**/ui/**', 'src/**/http/**'],
         optional: true,
       },
       {
         name: 'ApplicationOrchestration',
+        description: 'Business services and use-case coordination.',
         patterns: ['src/**/application/**', 'src/**/services/**'],
         optional: true,
       },
       {
         name: 'DomainModel',
+        description: 'Pure business rules and entities. No I/O, no framework, no ambient globals.',
         patterns: ['src/**/domain/**'],
         forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
         optional: true,
       },
       {
         name: 'PersistenceAdapters',
+        description: 'Data access and infrastructure.',
         patterns: ['src/**/persistence/**', 'src/**/data/**', 'src/**/repositories/**', 'src/**/infrastructure/**'],
         optional: true,
       },
@@ -342,10 +356,19 @@ const ARCHITECTURE_PRESETS = {
   }),
   'feature-sliced': () => {
     const order = ['App', 'Pages', 'Widgets', 'Features', 'Entities', 'Shared'];
+    const purpose = {
+      App: 'App-wide setup, providers, and routing.',
+      Pages: 'Route-level compositions.',
+      Widgets: 'Self-contained UI blocks composed from features and entities.',
+      Features: 'User-facing feature units.',
+      Entities: 'Business entities with their UI and logic.',
+      Shared: 'Reusable primitives with no business knowledge.',
+    };
     return {
       include: ['src'],
       layers: order.map((name) => ({
         name,
+        description: purpose[name],
         patterns: [`src/${name.toLowerCase()}/**`],
         optional: true,
       })),
@@ -862,6 +885,39 @@ function skillTemplateNames() {
 // skills this version ships, surface it here so agents and CI actually notice.
 // Advisory only — never affects the exit code. Copilot has no reliable directory
 // signal, so it is not auto-detected (explicit --tools only), matching resolveTools.
+// Where Codex loads slash-command prompts from. Codex reads $CODEX_HOME/prompts
+// (defaulting to ~/.codex/prompts), NOT the repo — so home copies of the /ark-*
+// skills drift out of date when a repo refresh only touches in-repo tool dirs.
+function codexPromptsDir() {
+  const base = process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
+  return path.join(base, 'prompts');
+}
+
+// Detects stale/missing /ark-* skills in the Codex home prompts dir. Only nags
+// when at least one ark-* prompt already lives there (evidence Codex was set up
+// for this user) — never introduces Codex to someone who doesn't use it. Same
+// guards as detectSkillGaps (adopted repo, not the Ark source tree).
+function detectCodexHomeGap(root) {
+  if (!fs.existsSync(path.join(root, 'AGENTS.md'))) return null;
+  if (fs.existsSync(path.join(root, 'templates', 'skills'))) return null;
+  const skillNames = skillTemplateNames();
+  if (skillNames.length === 0) return null;
+  const dir = codexPromptsDir();
+  if (!fs.existsSync(dir)) return null;
+  const present = skillNames.filter((name) => fs.existsSync(path.join(dir, `${name}.md`)));
+  if (present.length === 0) return null; // Codex home never set up for Ark — don't nag.
+  const version = arkPackageVersion();
+  const missing = skillNames.length - present.length;
+  let stale = 0;
+  if (version) {
+    for (const name of present) {
+      const installed = installedSkillVersion(path.join(dir, `${name}.md`));
+      if (installed === null || isVersionOlder(installed, version)) stale += 1;
+    }
+  }
+  return missing > 0 || stale > 0 ? { missing, stale } : null;
+}
+
 function detectSkillGaps(root) {
   if (!fs.existsSync(path.join(root, 'AGENTS.md'))) return [];
   // The Ark source tree keeps the skill templates at templates/skills/ — it's the
@@ -1001,7 +1057,48 @@ function runInstallAgentGates(args) {
     );
     console.log('    npx ark-check --install-agent-gates --skills-only --force');
   }
-  const failed = results.filter((result) => result.status === 'failed');
+
+  // --codex-home writes the canonical skills straight to $CODEX_HOME/prompts.
+  // Codex reads prompts from there (not the repo), so this is the only way to
+  // refresh them for a repo that isn't itself configured for Codex. It writes to
+  // the user's home dir, hence explicit opt-in rather than part of a normal run.
+  const homeResults = [];
+  if (args.codexHome) {
+    const dir = codexPromptsDir();
+    console.log('');
+    console.log(`Codex home skills (${dir}):`);
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch (error) {
+      console.error(`  FAILED to create ${dir} (${error.message})`);
+      homeResults.push({ status: 'failed' });
+    }
+    if (homeResults.length === 0) {
+      for (const [name, content] of skills) {
+        const file = path.join(dir, `${name}.md`);
+        if (fs.existsSync(file) && !args.force) {
+          const installed = installedSkillVersion(file);
+          const behind = installed === null || (version && isVersionOlder(installed, version));
+          const note = behind
+            ? `  (stale: ${installed ?? 'no stamp'} < ${version}; use --force)`
+            : '  (up to date)';
+          console.log(`  ${'skipped'.padEnd(7)} ${name}.md${note}`);
+          homeResults.push({ status: 'skipped' });
+          continue;
+        }
+        try {
+          fs.writeFileSync(file, content);
+          console.log(`  ${'wrote'.padEnd(7)} ${name}.md`);
+          homeResults.push({ status: 'written' });
+        } catch (error) {
+          console.log(`  ${'FAILED'.padEnd(7)} ${name}.md (${error.message})`);
+          homeResults.push({ status: 'failed' });
+        }
+      }
+    }
+  }
+
+  const failed = [...results, ...homeResults].filter((result) => result.status === 'failed');
   if (failed.length > 0) {
     console.error(`\nFailed to write ${failed.length} template(s).`);
     process.exitCode = 1;
@@ -1018,12 +1115,16 @@ function runInstallAgentGates(args) {
   } else {
     console.log('  3. If you use Codex in this project, wire it now so `ark://manifest` is available from the first edit.');
   }
-  if (tools.has('codex') && skills.length > 0) {
+  if ((tools.has('codex') || args.codexHome) && skills.length > 0) {
     console.log('');
-    console.log('  Codex loads slash-command prompts from $CODEX_HOME/prompts (~/.codex/prompts),');
-    console.log('  not the repo, so the /ark-* skills need one copy there to work in Codex:');
-    console.log('    mkdir -p ~/.codex/prompts && cp .codex/prompts/*.md ~/.codex/prompts/');
-    console.log('  (Safe to run now — agents driving this setup should offer to do it.)');
+    if (args.codexHome) {
+      console.log(`  Refreshed the /ark-* skills in ${codexPromptsDir()} — Codex loads them from there.`);
+    } else {
+      console.log('  Codex loads slash-command prompts from $CODEX_HOME/prompts (~/.codex/prompts),');
+      console.log('  not the repo. Install the /ark-* skills there with:');
+      console.log('    npx ark-check --install-agent-gates --codex-home');
+      console.log('  (writes to your home dir; agents driving this setup should offer to run it).');
+    }
   }
 }
 
@@ -1636,25 +1737,26 @@ function detectEnforcement(root) {
   };
   const workflowsMentionArk = () => {
     const dir = path.join(root, '.github', 'workflows');
-    if (!fs.existsSync(dir)) return false;
-    return fs
+    if (!fs.existsSync(dir)) return null;
+    const hit = fs
       .readdirSync(dir)
       .filter((f) => /\.ya?ml$/.test(f))
-      .some((f) => fileIncludes(path.join('.github', 'workflows', f), 'ark-check'));
+      .find((f) => fileIncludes(path.join('.github', 'workflows', f), 'ark-check'));
+    return hit ? `.github/workflows/${hit}` : null;
   };
-  const eslintConfigured = ['eslint.config.mjs', 'eslint.config.js', 'eslint.config.cjs', '.eslintrc.json', '.eslintrc.cjs'].some(
+  const eslintFile = ['eslint.config.mjs', 'eslint.config.js', 'eslint.config.cjs', '.eslintrc.json', '.eslintrc.cjs'].find(
     (f) => has(f) && fileIncludes(f, 'ark-runtime-kernel')
   );
+  const writeGateFile =
+    (fileIncludes('.claude/settings.json', 'ark-mcp') && '.claude/settings.json') ||
+    (has('.cursor/mcp.json') && '.cursor/mcp.json') ||
+    null;
   return [
-    {
-      name: 'Write gate',
-      on: fileIncludes('.claude/settings.json', 'ark-mcp') || has('.cursor/mcp.json'),
-      what: 'blocks a bad edit as you type (PreToolUse hook / MCP)',
-    },
-    { name: 'ESLint', on: eslintConfigured, what: 'flags violations in your editor' },
-    { name: 'CI check', on: workflowsMentionArk(), what: 'blocks the merge if the architecture breaks' },
-    { name: 'Baseline', on: has('.ark-baseline.json'), what: 'old violations frozen; new ones fail' },
-  ];
+    { name: 'Write gate', where: writeGateFile, what: 'blocks a bad edit as you type (PreToolUse hook / MCP)' },
+    { name: 'ESLint', where: eslintFile || null, what: 'flags violations in your editor' },
+    { name: 'CI check', where: workflowsMentionArk(), what: 'blocks the merge if the architecture breaks' },
+    { name: 'Baseline', where: has('.ark-baseline.json') ? '.ark-baseline.json' : null, what: 'old violations frozen; new ones fail' },
+  ].map((e) => ({ ...e, on: !!e.where }));
 }
 
 function htmlEscape(value) {
@@ -1669,9 +1771,10 @@ function htmlEscape(value) {
 // who-may-import-whom matrix, current violations with fix hints, and which
 // gates are live. No external assets (CSP-safe, works offline). This is the
 // visual sibling of `/ark-explain` — an artifact for PRs and onboarding.
-function renderHtmlReport({ root, config, exampleByLayer, violations, warnings, ok, suppressed }) {
+function renderHtmlReport({ root, config, exampleByLayer, violations, ok, suppressed, version, configPath, generatedAt }) {
   const layers = Array.isArray(config.layers) ? config.layers : [];
   const rules = Array.isArray(config.rules) ? config.rules : [];
+  const esc = htmlEscape;
   const project = (() => {
     try {
       return readJson(path.join(root, 'package.json')).name || path.basename(root);
@@ -1679,68 +1782,131 @@ function renderHtmlReport({ root, config, exampleByLayer, violations, warnings, 
       return path.basename(root);
     }
   })();
-  const esc = htmlEscape;
 
-  const layerRows = layers
+  const findRule = (from, to) => rules.find((r) => r.from === from && r.to === to);
+  const deniedOut = (name) => rules.filter((r) => r.from === name && r.allowed === false).length;
+  // Innermost first: the more layers a layer is forbidden from importing, the
+  // deeper it sits (a pure core denies everything; an entrypoint denies little).
+  const ordered = [...layers].sort((a, b) => deniedOut(b.name) - deniedOut(a.name) || a.name.localeCompare(b.name));
+
+  const deniedCount = rules.filter((r) => r.allowed === false).length;
+  const allowedCount = rules.filter((r) => r.allowed === true).length;
+  const guarded = layers.filter((l) => Array.isArray(l.forbiddenGlobals) && l.forbiddenGlobals.length).length;
+  const enforcement = detectEnforcement(root);
+  const gatesOn = enforcement.filter((e) => e.on).length;
+  const status = ok ? 'PASS' : 'FAIL';
+
+  const chip = (label, value) => `<span class="chip"><b>${value}</b> ${esc(label)}</span>`;
+  const stats = [
+    chip('layers', layers.length),
+    chip('rules denied', deniedCount),
+    chip('allowed', allowedCount),
+    chip('layers guard globals', guarded),
+    chip('gates live', `${gatesOn}/${enforcement.length}`),
+    chip('violations', violations.length),
+    ...(suppressed ? [chip('frozen by baseline', suppressed)] : []),
+  ].join('');
+
+  // Layers table — ordered inner→outer, with purpose (optional `description`),
+  // config tags, folders, and a real example file.
+  const layerRows = ordered
     .map((layer) => {
-      const globals = Array.isArray(layer.forbiddenGlobals) && layer.forbiddenGlobals.length
-        ? `<span class="tag">no ${layer.forbiddenGlobals.map(esc).join(', ')}</span>`
-        : '';
+      const tags = [
+        Array.isArray(layer.forbiddenGlobals) && layer.forbiddenGlobals.length
+          ? `<span class="tag">no ${layer.forbiddenGlobals.map(esc).join(', ')}</span>`
+          : '',
+        layer.mayImportInfrastructure ? '<span class="tag">may import infra</span>' : '',
+        Array.isArray(layer.intentPrefixes) && layer.intentPrefixes.length
+          ? `<span class="tag">${layer.intentPrefixes.map(esc).join(' ')}</span>`
+          : '',
+      ].join(' ');
       const example = exampleByLayer.get(layer.name);
       return `<tr>
-        <td class="ln">${esc(layer.name)} ${globals}</td>
+        <td class="ln">${esc(layer.name)}<div class="tags">${tags}</div></td>
+        <td>${layer.description ? esc(layer.description) : '<span class="dim">—</span>'}</td>
         <td><code>${(layer.patterns || []).map(esc).join('<br>') || '—'}</code></td>
         <td>${example ? `<code>${esc(example)}</code>` : '<span class="dim">no files yet</span>'}</td>
       </tr>`;
     })
     .join('\n');
 
-  // Matrix: for each from→to pair, denied (explicit allowed:false), allowed
-  // (explicit allowed:true), or implicit (no rule = ungoverned).
-  const findRule = (from, to) => rules.find((r) => r.from === from && r.to === to);
-  const matrixHead = layers.map((l) => `<th class="rot"><span>${esc(l.name)}</span></th>`).join('');
-  const matrixBody = layers
+  // Readable dependency direction: each layer inner→outer with the layers it may
+  // import. This is the "get it at a glance" view; the precise grid follows.
+  const flowRows = ordered
+    .map((layer) => {
+      const targets = ordered
+        .filter((other) => other.name !== layer.name)
+        .filter((other) => {
+          const rule = findRule(layer.name, other.name);
+          return !(rule && rule.allowed === false);
+        })
+        .map((other) => `<span class="chip">${esc(other.name)}</span>`)
+        .join('');
+      return `<div class="flow"><span class="flow-name">${esc(layer.name)}</span>
+        <span class="flow-arrow">may import →</span>
+        <span class="flow-targets">${targets || '<span class="dim">nothing (pure core)</span>'}</span></div>`;
+    })
+    .join('\n');
+
+  // Precise matrix (kept, in a <details> so it doesn't dominate the page).
+  const matrixHead = ordered.map((l) => `<th class="rot"><span>${esc(l.name)}</span></th>`).join('');
+  const matrixBody = ordered
     .map((from) => {
-      const cells = layers
+      const cells = ordered
         .map((to) => {
           if (from.name === to.name) return '<td class="self">·</td>';
           const rule = findRule(from.name, to.name);
-          if (!rule) return '<td class="implicit" title="no rule (implicitly allowed)"></td>';
+          if (!rule) return '<td class="implicit" title="no rule (implicitly allowed)">·</td>';
           return rule.allowed
             ? '<td class="allow" title="allowed">✓</td>'
-            : '<td class="deny" title="denied">✕</td>';
+            : `<td class="deny" title="${esc(rule.message || 'denied')}">✕</td>`;
         })
         .join('');
       return `<tr><th class="rowlbl">${esc(from.name)}</th>${cells}</tr>`;
     })
     .join('\n');
 
-  const violationRows = violations.length
-    ? violations
-        .map((v) => {
-          const hint = FIX_HINTS[v.ruleId];
-          const edge = v.fromLayer && v.toLayer ? `${esc(v.fromLayer)} → ${esc(v.toLayer)}` : '';
-          return `<li>
-            <div class="vhead"><span class="rule">${esc(v.ruleId)}</span> <code>${esc(v.file)}:${v.line}</code></div>
-            ${edge ? `<div class="edge">${edge}${v.target ? ` <span class="dim">(${esc(v.target)})</span>` : ''}</div>` : ''}
-            <div class="msg">${esc(v.message)}</div>
+  // Violations grouped by rule so a big report stays scannable.
+  const byRule = new Map();
+  for (const v of violations) {
+    if (!byRule.has(v.ruleId)) byRule.set(v.ruleId, []);
+    byRule.get(v.ruleId).push(v);
+  }
+  const violationBlocks = violations.length
+    ? [...byRule.entries()]
+        .map(([ruleId, items]) => {
+          const hint = FIX_HINTS[ruleId];
+          const rows = items
+            .map((v) => {
+              const edge = v.fromLayer && v.toLayer ? `${esc(v.fromLayer)} → ${esc(v.toLayer)}` : '';
+              return `<li>
+                <code>${esc(v.file)}:${v.line}</code>
+                ${edge ? `<span class="edge">${edge}${v.target ? ` <span class="dim">(${esc(v.target)})</span>` : ''}</span>` : ''}
+                <div class="msg">${esc(v.message)}</div>
+              </li>`;
+            })
+            .join('\n');
+          return `<div class="vgroup">
+            <div class="vghead"><span class="rule">${esc(ruleId)}</span> <span class="dim">${items.length}</span></div>
+            <ul class="vitems">${rows}</ul>
             ${hint ? `<div class="fix">fix: ${esc(hint)}</div>` : ''}
-          </li>`;
+          </div>`;
         })
         .join('\n')
-    : '<li class="clean">No active violations. The architecture matches the contract.</li>';
+    : '<div class="clean">No active violations. The architecture matches the contract.</div>';
 
-  const enforcementRows = detectEnforcement(root)
+  const enforcementRows = enforcement
     .map(
       (e) =>
-        `<li class="${e.on ? 'on' : 'off'}"><span class="dot"></span><b>${esc(e.name)}</b> — ${esc(e.what)}</li>`
+        `<li class="${e.on ? 'on' : 'off'}"><span class="dot"></span><b>${esc(e.name)}</b> — ${esc(e.what)}` +
+        (e.where ? ` <code>${esc(e.where)}</code>` : ' <span class="dim">not configured</span>') +
+        `</li>`
     )
     .join('\n');
 
-  const suppressedNote = suppressed
-    ? `<span class="dim">${suppressed} frozen by baseline</span>`
-    : '';
-  const status = ok ? 'PASS' : 'FAIL';
+  const meta = [version ? `ark-check v${esc(version)}` : '', generatedAt ? esc(generatedAt) : '', configPath ? `config: ${esc(configPath)}` : '']
+    .filter(Boolean)
+    .join(' · ');
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -1757,72 +1923,93 @@ function renderHtmlReport({ root, config, exampleByLayer, violations, warnings, 
   body { margin:0; padding:2rem 1.25rem 4rem; background:var(--bg); color:var(--ink);
     font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
   .wrap { max-width:980px; margin:0 auto; }
-  h1 { font-size:1.5rem; margin:0 0 .25rem; }
-  h2 { font-size:1.05rem; margin:2.25rem 0 .75rem; }
-  .sub { color:var(--dim); margin:0 0 1.5rem; }
+  h1 { font-size:1.5rem; margin:0 0 .3rem; }
+  h2 { font-size:1.05rem; margin:2.25rem 0 .35rem; }
+  .hint { color:var(--dim); font-size:.85rem; margin:.1rem 0 .85rem; }
+  .meta { color:var(--dim); font-size:.82rem; margin:0 0 1.1rem; }
   .badge { display:inline-block; padding:.15em .6em; border-radius:999px; font-weight:700;
-    font-size:.8rem; letter-spacing:.03em; }
+    font-size:.8rem; letter-spacing:.03em; vertical-align:middle; }
   .PASS { background:color-mix(in srgb,var(--green) 20%,transparent); color:var(--green); }
   .FAIL { background:color-mix(in srgb,var(--red) 20%,transparent); color:var(--red); }
   .dim { color:var(--dim); }
   code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.86em; }
+  .stats { display:flex; flex-wrap:wrap; gap:.4rem; margin:0 0 .5rem; }
+  .stats .chip b { color:var(--ink); }
+  .chip { display:inline-block; padding:.12em .55em; border:1px solid var(--line); border-radius:6px;
+    font-size:.78rem; color:var(--dim); background:var(--panel); }
   table { width:100%; border-collapse:collapse; }
-  .layers td, .layers th { text-align:left; padding:.55rem .6rem; border-bottom:1px solid var(--line);
-    vertical-align:top; }
-  .layers th { color:var(--dim); font-weight:600; font-size:.8rem; text-transform:uppercase; letter-spacing:.04em; }
+  .layers td, .layers th { text-align:left; padding:.6rem .6rem; border-bottom:1px solid var(--line); vertical-align:top; }
+  .layers th { color:var(--dim); font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.04em; }
   .ln { font-weight:600; white-space:nowrap; }
-  .tag { display:inline-block; margin-left:.35rem; padding:.05em .45em; border:1px solid var(--line);
-    border-radius:5px; font-size:.7rem; color:var(--dim); }
-  .matrix-scroll { overflow-x:auto; }
+  .tags { margin-top:.25rem; display:flex; flex-direction:column; gap:.2rem; align-items:flex-start; white-space:normal; }
+  .tag { display:inline-block; padding:.05em .45em; border:1px solid var(--line); border-radius:5px;
+    font-size:.68rem; color:var(--dim); font-weight:500; }
+  .flow { display:flex; gap:.5rem; align-items:baseline; padding:.4rem 0; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .flow-name { font-weight:600; min-width:13rem; }
+  .flow-arrow { color:var(--dim); font-size:.8rem; }
+  .flow-targets { display:flex; flex-wrap:wrap; gap:.3rem; }
+  details { margin-top:.75rem; }
+  summary { cursor:pointer; color:var(--accent); font-size:.9rem; }
+  .matrix-scroll { overflow-x:auto; margin-top:.75rem; }
   .matrix { border-collapse:collapse; font-size:.82rem; }
   .matrix th, .matrix td { border:1px solid var(--line); }
   .matrix td { width:2.1rem; height:2.1rem; text-align:center; font-weight:700; }
   .matrix .rowlbl { text-align:right; padding:0 .6rem; color:var(--dim); font-weight:600; white-space:nowrap; }
-  .matrix .rot { height:8.5rem; vertical-align:bottom; padding:.3rem; }
-  .matrix .rot span { writing-mode:vertical-rl; transform:rotate(180deg); color:var(--dim);
-    font-weight:600; white-space:nowrap; }
+  .matrix .rot { height:9rem; vertical-align:bottom; padding:.3rem; }
+  .matrix .rot span { writing-mode:vertical-rl; transform:rotate(180deg); color:var(--dim); font-weight:600; white-space:nowrap; }
   .allow { color:var(--green); background:color-mix(in srgb,var(--green) 12%,transparent); }
   .deny { color:var(--red); background:color-mix(in srgb,var(--red) 12%,transparent); }
-  .implicit { background:transparent; }
+  .implicit { color:var(--dim); }
   .self { color:var(--line); }
   .legend { color:var(--dim); font-size:.82rem; margin:.6rem 0 0; }
-  .legend b { font-weight:700; }
-  ul.viol, ul.enf { list-style:none; padding:0; margin:0; }
-  ul.viol li { background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--red);
+  .vgroup { background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--red);
     border-radius:8px; padding:.7rem .85rem; margin-bottom:.6rem; }
-  ul.viol li.clean { border-left-color:var(--green); color:var(--dim); }
-  .vhead { display:flex; gap:.6rem; align-items:baseline; flex-wrap:wrap; }
-  .rule { font-weight:700; font-size:.78rem; color:var(--red); letter-spacing:.02em; }
-  .edge { color:var(--accent); font-weight:600; margin-top:.15rem; }
-  .msg { margin-top:.25rem; }
-  .fix { margin-top:.3rem; color:var(--dim); font-size:.88rem; }
-  ul.enf li { display:flex; align-items:center; gap:.55rem; padding:.35rem 0; }
+  .vghead { display:flex; gap:.5rem; align-items:baseline; }
+  .rule { font-weight:700; font-size:.8rem; color:var(--red); letter-spacing:.02em; }
+  .vitems { list-style:none; padding:0; margin:.4rem 0 0; }
+  .vitems li { padding:.3rem 0; border-top:1px solid var(--line); }
+  .vitems li:first-child { border-top:none; }
+  .edge { color:var(--accent); font-weight:600; margin-left:.4rem; }
+  .msg { margin-top:.15rem; }
+  .fix { margin-top:.4rem; color:var(--dim); font-size:.88rem; }
+  .clean { background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--green);
+    border-radius:8px; padding:.7rem .85rem; color:var(--dim); }
+  ul.enf { list-style:none; padding:0; margin:0; }
+  ul.enf li { display:flex; align-items:center; gap:.55rem; padding:.35rem 0; flex-wrap:wrap; }
   ul.enf .dot { width:.6rem; height:.6rem; border-radius:50%; flex:0 0 auto; background:var(--line); }
   ul.enf li.on .dot { background:var(--green); }
   ul.enf li.off { color:var(--dim); }
   .cmds { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:.85rem 1rem; }
   .cmds code { display:block; padding:.15rem 0; }
+  footer { margin-top:2.5rem; padding-top:1rem; border-top:1px solid var(--line); color:var(--dim); font-size:.8rem; }
+  @media print { body { padding:0; } details { open:true; } .chip,.tag { border-color:#ccc; } }
 </style></head>
 <body><div class="wrap">
   <h1>${esc(project)} <span class="badge ${status}">${status}</span></h1>
-  <p class="sub">Ark architecture report · ${layers.length} layers · ${violations.length} active violation(s) ${suppressedNote}</p>
+  <div class="stats">${stats}</div>
+  <p class="meta">${meta}</p>
 
   <h2>Layers</h2>
+  <p class="hint">Ordered innermost (most restricted) → outermost (entrypoints).</p>
   <table class="layers">
-    <tr><th>Layer</th><th>Folders</th><th>Example file</th></tr>
-    ${layerRows || '<tr><td colspan="3" class="dim">No layers configured.</td></tr>'}
+    <tr><th>Layer</th><th>Purpose</th><th>Folders</th><th>Example file</th></tr>
+    ${layerRows || '<tr><td colspan="4" class="dim">No layers configured.</td></tr>'}
   </table>
 
-  <h2>Who may import whom</h2>
-  <div class="matrix-scroll"><table class="matrix">
-    <tr><th></th>${matrixHead}</tr>
-    ${matrixBody}
-  </table></div>
-  <p class="legend">Row imports column. <b class="allow" style="background:none">✓</b> allowed ·
-    <b class="deny" style="background:none">✕</b> denied · blank = no rule (implicitly allowed) · · = self.</p>
+  <h2>Dependency direction</h2>
+  <p class="hint">Inner layers stay ignorant of outer ones. Each layer may import only what's listed.</p>
+  ${flowRows || '<p class="dim">No layers configured.</p>'}
+  <details>
+    <summary>Full matrix (precise ✓ / ✕ grid)</summary>
+    <div class="matrix-scroll"><table class="matrix">
+      <tr><th></th>${matrixHead}</tr>
+      ${matrixBody}
+    </table></div>
+    <p class="legend">Row imports column. ✓ allowed · ✕ denied (hover for the reason) · · = no explicit rule / self.</p>
+  </details>
 
   <h2>Violations</h2>
-  <ul class="viol">${violationRows}</ul>
+  ${violationBlocks}
 
   <h2>Enforcement points</h2>
   <ul class="enf">${enforcementRows}</ul>
@@ -1832,6 +2019,8 @@ function renderHtmlReport({ root, config, exampleByLayer, violations, warnings, 
     <code>npx ark-check --root . --config ark.config.json --strict-config</code>
     <code>/ark-place "&lt;what you're building&gt;"</code>
   </div>
+
+  <footer>Generated by ${meta || 'ark-check'}. A generated artifact — regenerate with <code>ark-check --report</code>; gitignore it rather than committing.</footer>
 </div></body></html>
 `;
 }
@@ -2118,6 +2307,7 @@ async function main() {
 
   const ok = activeViolations.length === 0 && (!args.strictConfig || warnings.length === 0);
   const skillGaps = detectSkillGaps(root);
+  const codexHomeGap = detectCodexHomeGap(root);
 
   if (args.report) {
     const exampleByLayer = new Map();
@@ -2132,14 +2322,30 @@ async function main() {
       config,
       exampleByLayer,
       violations: activeViolations,
-      warnings,
       ok,
       suppressed: suppressed.length,
+      version: arkPackageVersion(),
+      configPath: args.config,
+      generatedAt: new Date().toISOString().slice(0, 10),
     });
     const reportPath = path.isAbsolute(args.report) ? args.report : path.join(root, args.report);
     fs.writeFileSync(reportPath, html);
     if (!args.json) {
-      console.log(`${color.green('✎')} Wrote HTML report: ${path.relative(root, reportPath) || reportPath}`);
+      const rel = path.relative(root, reportPath) || reportPath;
+      console.log(`${color.green('✎')} Wrote HTML report: ${rel}`);
+      // The report is a generated artifact. Nudge toward .gitignore so it doesn't
+      // get swept into a commit (only when a .gitignore exists and misses it).
+      const gitignore = path.join(root, '.gitignore');
+      const base = path.basename(reportPath);
+      if (!path.isAbsolute(args.report) && fs.existsSync(gitignore)) {
+        const ignored = fs
+          .readFileSync(gitignore, 'utf8')
+          .split('\n')
+          .some((line) => line.trim() === base || line.trim() === `/${base}` || line.trim() === args.report);
+        if (!ignored) {
+          console.log(color.dim(`  (generated artifact — add "${base}" to .gitignore so it isn't committed)`));
+        }
+      }
     }
   }
 
@@ -2151,6 +2357,7 @@ async function main() {
       staleBaselineKeys,
       warnings,
       ...(skillGaps.length > 0 ? { skillGaps } : {}),
+      ...(codexHomeGap ? { codexHomeGap } : {}),
     }, null, 2));
   } else {
     for (const warning of warnings) {
@@ -2210,6 +2417,18 @@ async function main() {
           )
         );
       }
+    }
+
+    if (codexHomeGap) {
+      const parts = [];
+      if (codexHomeGap.missing > 0) parts.push(`${codexHomeGap.missing} missing`);
+      if (codexHomeGap.stale > 0) parts.push(`${codexHomeGap.stale} outdated`);
+      console.log(
+        color.dim(
+          `/ark-* skills in ${codexPromptsDir()} are behind this Ark (${parts.join(', ')}). ` +
+            `Codex loads them from there, not the repo. Refresh: npx ark-check --install-agent-gates --codex-home --force`
+        )
+      );
     }
   }
 

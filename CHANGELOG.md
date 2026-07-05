@@ -2,6 +2,36 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.8.2 — 2026-07-05
+
+### Added — refresh `/ark-*` skills in the Codex home dir
+
+- Codex loads slash-command prompts from `$CODEX_HOME/prompts` (`~/.codex/prompts`), not the
+  repo, so a repo refresh never updated them and they silently drifted behind. New:
+  `ark-check --install-agent-gates --codex-home` writes the skills there directly (works even
+  when the repo has no `.codex/`), and a normal `ark-check` now flags stale/missing skills in
+  the Codex home dir by their `arkVersion` stamp — but only when copies already exist, so it
+  never introduces Codex to someone who doesn't use it. `--json` gains `codexHomeGap`.
+
+### Improved — richer, clearer HTML report
+
+- `--report` was reworked: layers are ordered innermost → outermost with a **purpose** column
+  and per-layer tags; a readable **dependency-direction** view (what each layer may import)
+  sits above the precise matrix (now in a collapsible `<details>`); violations are grouped by
+  rule with a fix hint each; enforcement points name the file they found; and a stats band and
+  footer show layer/rule counts, gate coverage, the Ark version, and the config path.
+- Layers accept an optional `"description"` in `ark.config.json`, surfaced as the report's
+  purpose column. The named presets seed sensible descriptions so `ark init --preset` produces
+  a self-documenting config.
+- After writing a report, ark-check reminds you to add it to `.gitignore` (only when a
+  `.gitignore` exists and doesn't already list it) — it's a generated artifact.
+
+### Docs — architectural security invariants
+
+- New README section on using layer rules + `forbiddenGlobals` to enforce security invariants
+  that are architectural (confining secret/env access, outbound network, and weak randomness to
+  the right layers) — without pretending to be a security scanner.
+
 ## 1.8.1 — 2026-07-05
 
 ### Changed — tighter `/ark-*` skill descriptions

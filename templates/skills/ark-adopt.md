@@ -30,11 +30,10 @@ there is a written plan to burn them down. Work autonomously.
    Kiro, which has no command mechanism and gets only its steering rule file.
    Then tell the user to update the CI workflow / `check:architecture` script to
    pass `--baseline .ark-baseline.json` if a baseline was created.
-   If Codex is among the tools, the generated `.codex/prompts/*.md` won't load
-   until they're in `~/.codex/prompts` (Codex reads prompts from there, not the
-   repo). Offer to copy them yourself so the skills work immediately:
-   `mkdir -p ~/.codex/prompts && cp .codex/prompts/*.md ~/.codex/prompts/`, and
-   tell the user you did it (it writes to their home dir, not the repo).
+   If you use Codex, its prompts load from `$CODEX_HOME/prompts` (`~/.codex/prompts`),
+   not the repo, so install the skills there too so they work immediately:
+   `npx ark-check --install-agent-gates --codex-home`. Tell the user — it writes to
+   their home dir, not the repo.
 5. **Ratchet plan** — group the frozen violations by root cause (same illegal
    edge, same file pair) and write a short prioritized burn-down list into the
    report: which cluster to fix first (biggest cluster or the one on the most
