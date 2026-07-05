@@ -41,6 +41,7 @@ function parseArgs(argv) {
     else if (arg === '--strict-config') args.strictConfig = true;
     else if (arg === '--require-gates') args.requireGates = true;
     else if (arg === '--init') args.init = true;
+    else if (arg === '--preset') args.preset = argv[++i];
     else if (arg === '--install-agent-gates') args.installAgentGates = true;
     else if (arg === '--tools') {
       // Consume the next arg only when it isn't another flag (same rule as --baseline),
@@ -59,6 +60,10 @@ function parseArgs(argv) {
     else if (arg === '--force') args.force = true;
     else if (arg === '--skills-only') args.skillsOnly = true;
     else if (arg === '--no-cache') args.noCache = true;
+    else if (arg === '--report') {
+      const next = argv[i + 1];
+      args.report = next && !next.startsWith('-') ? argv[++i] : 'ark-report.html';
+    }
     else if (arg === '--baseline' || arg === '--update-baseline') {
       if (arg === '--update-baseline') args.updateBaseline = true;
       // optional path value: consume the next arg only when it isn't another flag
@@ -77,8 +82,8 @@ function parseArgs(argv) {
 
 function usage() {
   return [
-    'Usage: ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--require-gates] [--json] [--baseline [file]] [--no-cache]',
-    '       ark-check --init [--force]',
+    'Usage: ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--require-gates] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
+    '       ark-check --init [--preset hexagonal|layered|feature-sliced] [--force]',
     '       ark-check --install-agent-gates [--tools claude,cursor,codex] [--skills-only] [--force]',
     '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
     '       ark-check --print-config eleven-layer',
@@ -253,6 +258,114 @@ function uncoveredDirectories(root, srcDir, layers) {
     });
 }
 
+// Deny every "upward" edge for an ordered layer list (index 0 = outermost/top,
+// which may import everything below it). Inner/lower layers must not import outer
+// ones — the shared shape behind linear layered and feature-sliced layouts.
+function denyUpward(names) {
+  const rules = [];
+  for (let i = 0; i < names.length; i += 1) {
+    for (let j = i + 1; j < names.length; j += 1) {
+      rules.push({ from: names[j], to: names[i], allowed: false });
+    }
+  }
+  return rules;
+}
+
+// Named starter configs. Globs use `**` so they fit both flat (src/domain/**) and
+// modular (src/modules/x/domain/**) layouts. Every layer is optional, so the strict
+// check passes on a greenfield repo and each layer switches on as its dir gains files.
+const ARCHITECTURE_PRESETS = {
+  hexagonal: () => ({
+    include: ['src'],
+    layers: [
+      {
+        name: 'DomainModel',
+        patterns: ['src/**/domain/**'],
+        forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
+        optional: true,
+      },
+      { name: 'ApplicationOrchestration', patterns: ['src/**/application/**'], optional: true },
+      {
+        name: 'PresentationAdapters',
+        patterns: ['src/**/presentation/**', 'src/**/controllers/**', 'src/**/interface-adapters/**', 'src/**/http/**'],
+        optional: true,
+      },
+      {
+        name: 'PersistenceAdapters',
+        patterns: ['src/**/infrastructure/**', 'src/**/adapters/**', 'src/**/persistence/**', 'src/**/repositories/**'],
+        optional: true,
+      },
+    ],
+    rules: [
+      { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
+      { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
+      { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
+      { from: 'ApplicationOrchestration', to: 'PersistenceAdapters', allowed: false },
+      { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
+      { from: 'PresentationAdapters', to: 'PersistenceAdapters', allowed: false },
+      { from: 'PresentationAdapters', to: 'DomainModel', allowed: false },
+      { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
+      { from: 'PersistenceAdapters', to: 'PresentationAdapters', allowed: false },
+    ],
+  }),
+  layered: () => ({
+    include: ['src'],
+    layers: [
+      {
+        name: 'PresentationAdapters',
+        patterns: ['src/**/presentation/**', 'src/**/controllers/**', 'src/**/ui/**', 'src/**/http/**'],
+        optional: true,
+      },
+      {
+        name: 'ApplicationOrchestration',
+        patterns: ['src/**/application/**', 'src/**/services/**'],
+        optional: true,
+      },
+      {
+        name: 'DomainModel',
+        patterns: ['src/**/domain/**'],
+        forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
+        optional: true,
+      },
+      {
+        name: 'PersistenceAdapters',
+        patterns: ['src/**/persistence/**', 'src/**/data/**', 'src/**/repositories/**', 'src/**/infrastructure/**'],
+        optional: true,
+      },
+    ],
+    rules: denyUpward([
+      'PresentationAdapters',
+      'ApplicationOrchestration',
+      'DomainModel',
+      'PersistenceAdapters',
+    ]),
+  }),
+  'feature-sliced': () => {
+    const order = ['App', 'Pages', 'Widgets', 'Features', 'Entities', 'Shared'];
+    return {
+      include: ['src'],
+      layers: order.map((name) => ({
+        name,
+        patterns: [`src/${name.toLowerCase()}/**`],
+        optional: true,
+      })),
+      rules: denyUpward(order),
+    };
+  },
+};
+
+function printInitNextSteps(root) {
+  console.log('');
+  console.log('Next steps:');
+  console.log('  1. CI gate:        npx ark-check --root . --config ark.config.json --strict-config');
+  console.log('  2. AI write gate:  npx ark-mcp --root . --config ark.config.json');
+  console.log('     (bind its validate_code tool to your agent\'s pre-write hook — see README)');
+  if (!hasCheckArchitectureScript(root)) {
+    console.log('  3. Add the npm alias if you want `npm run check:architecture`:');
+    console.log(`     ${checkArchitectureScriptSnippet()}`);
+  }
+}
+
 function runInit(args) {
   const configPath = path.isAbsolute(args.config)
     ? args.config
@@ -261,6 +374,27 @@ function runInit(args) {
   if (fs.existsSync(configPath) && !args.force) {
     console.error(`${configPath} already exists. Re-run with --force to overwrite it.`);
     process.exitCode = 2;
+    return;
+  }
+
+  if (args.preset) {
+    const factory = ARCHITECTURE_PRESETS[args.preset];
+    if (!factory) {
+      console.error(
+        `Unknown preset "${args.preset}". Valid presets: ${Object.keys(ARCHITECTURE_PRESETS).join(', ')}.`
+      );
+      process.exitCode = 2;
+      return;
+    }
+    const finalConfig = factory();
+    fs.writeFileSync(configPath, `${JSON.stringify(finalConfig, null, 2)}\n`);
+    console.log(`Wrote ${configPath} (${args.preset} preset)`);
+    console.log('');
+    console.log('Layers (every layer optional, so the strict check passes before the directories exist):');
+    for (const layer of finalConfig.layers) {
+      console.log(`  ${layer.name}: ${layer.patterns.join(', ')}`);
+    }
+    printInitNextSteps(args.root);
     return;
   }
 
@@ -321,15 +455,7 @@ function runInit(args) {
       );
     }
   }
-  console.log('');
-  console.log('Next steps:');
-  console.log('  1. CI gate:        npx ark-check --root . --config ark.config.json --strict-config');
-  console.log('  2. AI write gate:  npx ark-mcp --root . --config ark.config.json');
-  console.log('     (bind its validate_code tool to your agent\'s pre-write hook — see README)');
-  if (!hasCheckArchitectureScript(args.root)) {
-    console.log('  3. Add the npm alias if you want `npm run check:architecture`:');
-    console.log(`     ${checkArchitectureScriptSnippet()}`);
-  }
+  printInitNextSteps(args.root);
 }
 
 function ensureDirForFile(file) {
@@ -1427,6 +1553,8 @@ const FIX_HINTS = {
     'Use a source intent that belongs to the same layer as the publishing file, or move the file.',
   FORBIDDEN_GLOBAL:
     'Inject the capability through a port (e.g. a Clock, IdGenerator, or HttpPort) instead of reaching for the ambient global.',
+  CIRCULAR_DEPENDENCY:
+    'Break the cycle: extract the shared code into a module both sides import, invert one edge behind a port/interface, or merge the files if they are really one unit.',
 };
 
 function printViolation(violation) {
@@ -1440,6 +1568,272 @@ function printViolation(violation) {
   const hint = FIX_HINTS[violation.ruleId];
   if (hint) console.error(`  ${color.dim(`fix: ${hint}`)}`);
   console.error('');
+}
+
+// Finds strongly-connected components in the resolved import graph. Any component
+// with more than one file is a set of files that transitively import each other —
+// a circular dependency. One violation per component keeps the output minimal and
+// the baseline key stable (anchored at the alphabetically-first member).
+function detectCycles(graph) {
+  let index = 0;
+  const indices = new Map();
+  const low = new Map();
+  const onStack = new Set();
+  const stack = [];
+  const components = [];
+
+  // ponytail: recursive Tarjan; make it iterative only if a real repo blows the stack.
+  const strongconnect = (v) => {
+    indices.set(v, index);
+    low.set(v, index);
+    index += 1;
+    stack.push(v);
+    onStack.add(v);
+    for (const w of [...(graph.get(v) ?? [])].sort()) {
+      if (!graph.has(w)) continue;
+      if (!indices.has(w)) {
+        strongconnect(w);
+        low.set(v, Math.min(low.get(v), low.get(w)));
+      } else if (onStack.has(w)) {
+        low.set(v, Math.min(low.get(v), indices.get(w)));
+      }
+    }
+    if (low.get(v) === indices.get(v)) {
+      const comp = [];
+      let w;
+      do {
+        w = stack.pop();
+        onStack.delete(w);
+        comp.push(w);
+      } while (w !== v);
+      if (comp.length > 1) components.push(comp.sort());
+    }
+  };
+
+  for (const v of [...graph.keys()].sort()) {
+    if (!indices.has(v)) strongconnect(v);
+  }
+
+  return components
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map((members) => ({
+      ruleId: 'CIRCULAR_DEPENDENCY',
+      file: members[0],
+      line: 1,
+      target: members.join(' → '),
+      message: `Circular dependency among ${members.length} files: ${members.join(' → ')} → ${members[0]}.`,
+    }));
+}
+
+function detectEnforcement(root) {
+  const has = (rel) => fs.existsSync(path.join(root, rel));
+  const fileIncludes = (rel, needle) => {
+    try {
+      return fs.readFileSync(path.join(root, rel), 'utf8').includes(needle);
+    } catch {
+      return false;
+    }
+  };
+  const workflowsMentionArk = () => {
+    const dir = path.join(root, '.github', 'workflows');
+    if (!fs.existsSync(dir)) return false;
+    return fs
+      .readdirSync(dir)
+      .filter((f) => /\.ya?ml$/.test(f))
+      .some((f) => fileIncludes(path.join('.github', 'workflows', f), 'ark-check'));
+  };
+  const eslintConfigured = ['eslint.config.mjs', 'eslint.config.js', 'eslint.config.cjs', '.eslintrc.json', '.eslintrc.cjs'].some(
+    (f) => has(f) && fileIncludes(f, 'ark-runtime-kernel')
+  );
+  return [
+    {
+      name: 'Write gate',
+      on: fileIncludes('.claude/settings.json', 'ark-mcp') || has('.cursor/mcp.json'),
+      what: 'blocks a bad edit as you type (PreToolUse hook / MCP)',
+    },
+    { name: 'ESLint', on: eslintConfigured, what: 'flags violations in your editor' },
+    { name: 'CI check', on: workflowsMentionArk(), what: 'blocks the merge if the architecture breaks' },
+    { name: 'Baseline', on: has('.ark-baseline.json'), what: 'old violations frozen; new ones fail' },
+  ];
+}
+
+function htmlEscape(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Renders a self-contained HTML architecture report: the layer map, the
+// who-may-import-whom matrix, current violations with fix hints, and which
+// gates are live. No external assets (CSP-safe, works offline). This is the
+// visual sibling of `/ark-explain` — an artifact for PRs and onboarding.
+function renderHtmlReport({ root, config, exampleByLayer, violations, warnings, ok, suppressed }) {
+  const layers = Array.isArray(config.layers) ? config.layers : [];
+  const rules = Array.isArray(config.rules) ? config.rules : [];
+  const project = (() => {
+    try {
+      return readJson(path.join(root, 'package.json')).name || path.basename(root);
+    } catch {
+      return path.basename(root);
+    }
+  })();
+  const esc = htmlEscape;
+
+  const layerRows = layers
+    .map((layer) => {
+      const globals = Array.isArray(layer.forbiddenGlobals) && layer.forbiddenGlobals.length
+        ? `<span class="tag">no ${layer.forbiddenGlobals.map(esc).join(', ')}</span>`
+        : '';
+      const example = exampleByLayer.get(layer.name);
+      return `<tr>
+        <td class="ln">${esc(layer.name)} ${globals}</td>
+        <td><code>${(layer.patterns || []).map(esc).join('<br>') || '—'}</code></td>
+        <td>${example ? `<code>${esc(example)}</code>` : '<span class="dim">no files yet</span>'}</td>
+      </tr>`;
+    })
+    .join('\n');
+
+  // Matrix: for each from→to pair, denied (explicit allowed:false), allowed
+  // (explicit allowed:true), or implicit (no rule = ungoverned).
+  const findRule = (from, to) => rules.find((r) => r.from === from && r.to === to);
+  const matrixHead = layers.map((l) => `<th class="rot"><span>${esc(l.name)}</span></th>`).join('');
+  const matrixBody = layers
+    .map((from) => {
+      const cells = layers
+        .map((to) => {
+          if (from.name === to.name) return '<td class="self">·</td>';
+          const rule = findRule(from.name, to.name);
+          if (!rule) return '<td class="implicit" title="no rule (implicitly allowed)"></td>';
+          return rule.allowed
+            ? '<td class="allow" title="allowed">✓</td>'
+            : '<td class="deny" title="denied">✕</td>';
+        })
+        .join('');
+      return `<tr><th class="rowlbl">${esc(from.name)}</th>${cells}</tr>`;
+    })
+    .join('\n');
+
+  const violationRows = violations.length
+    ? violations
+        .map((v) => {
+          const hint = FIX_HINTS[v.ruleId];
+          const edge = v.fromLayer && v.toLayer ? `${esc(v.fromLayer)} → ${esc(v.toLayer)}` : '';
+          return `<li>
+            <div class="vhead"><span class="rule">${esc(v.ruleId)}</span> <code>${esc(v.file)}:${v.line}</code></div>
+            ${edge ? `<div class="edge">${edge}${v.target ? ` <span class="dim">(${esc(v.target)})</span>` : ''}</div>` : ''}
+            <div class="msg">${esc(v.message)}</div>
+            ${hint ? `<div class="fix">fix: ${esc(hint)}</div>` : ''}
+          </li>`;
+        })
+        .join('\n')
+    : '<li class="clean">No active violations. The architecture matches the contract.</li>';
+
+  const enforcementRows = detectEnforcement(root)
+    .map(
+      (e) =>
+        `<li class="${e.on ? 'on' : 'off'}"><span class="dot"></span><b>${esc(e.name)}</b> — ${esc(e.what)}</li>`
+    )
+    .join('\n');
+
+  const suppressedNote = suppressed
+    ? `<span class="dim">${suppressed} frozen by baseline</span>`
+    : '';
+  const status = ok ? 'PASS' : 'FAIL';
+
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ark architecture — ${esc(project)}</title>
+<style>
+  :root { --bg:#0d0f12; --panel:#15181d; --ink:#e6e8ea; --dim:#8b929c; --line:#262b32;
+    --green:#4ade80; --red:#f87171; --accent:#7dd3fc; }
+  @media (prefers-color-scheme: light) {
+    :root { --bg:#f7f8fa; --panel:#fff; --ink:#1a1d21; --dim:#697079; --line:#e2e5ea;
+      --green:#16a34a; --red:#dc2626; --accent:#0369a1; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:2rem 1.25rem 4rem; background:var(--bg); color:var(--ink);
+    font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  .wrap { max-width:980px; margin:0 auto; }
+  h1 { font-size:1.5rem; margin:0 0 .25rem; }
+  h2 { font-size:1.05rem; margin:2.25rem 0 .75rem; }
+  .sub { color:var(--dim); margin:0 0 1.5rem; }
+  .badge { display:inline-block; padding:.15em .6em; border-radius:999px; font-weight:700;
+    font-size:.8rem; letter-spacing:.03em; }
+  .PASS { background:color-mix(in srgb,var(--green) 20%,transparent); color:var(--green); }
+  .FAIL { background:color-mix(in srgb,var(--red) 20%,transparent); color:var(--red); }
+  .dim { color:var(--dim); }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.86em; }
+  table { width:100%; border-collapse:collapse; }
+  .layers td, .layers th { text-align:left; padding:.55rem .6rem; border-bottom:1px solid var(--line);
+    vertical-align:top; }
+  .layers th { color:var(--dim); font-weight:600; font-size:.8rem; text-transform:uppercase; letter-spacing:.04em; }
+  .ln { font-weight:600; white-space:nowrap; }
+  .tag { display:inline-block; margin-left:.35rem; padding:.05em .45em; border:1px solid var(--line);
+    border-radius:5px; font-size:.7rem; color:var(--dim); }
+  .matrix-scroll { overflow-x:auto; }
+  .matrix { border-collapse:collapse; font-size:.82rem; }
+  .matrix th, .matrix td { border:1px solid var(--line); }
+  .matrix td { width:2.1rem; height:2.1rem; text-align:center; font-weight:700; }
+  .matrix .rowlbl { text-align:right; padding:0 .6rem; color:var(--dim); font-weight:600; white-space:nowrap; }
+  .matrix .rot { height:8.5rem; vertical-align:bottom; padding:.3rem; }
+  .matrix .rot span { writing-mode:vertical-rl; transform:rotate(180deg); color:var(--dim);
+    font-weight:600; white-space:nowrap; }
+  .allow { color:var(--green); background:color-mix(in srgb,var(--green) 12%,transparent); }
+  .deny { color:var(--red); background:color-mix(in srgb,var(--red) 12%,transparent); }
+  .implicit { background:transparent; }
+  .self { color:var(--line); }
+  .legend { color:var(--dim); font-size:.82rem; margin:.6rem 0 0; }
+  .legend b { font-weight:700; }
+  ul.viol, ul.enf { list-style:none; padding:0; margin:0; }
+  ul.viol li { background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--red);
+    border-radius:8px; padding:.7rem .85rem; margin-bottom:.6rem; }
+  ul.viol li.clean { border-left-color:var(--green); color:var(--dim); }
+  .vhead { display:flex; gap:.6rem; align-items:baseline; flex-wrap:wrap; }
+  .rule { font-weight:700; font-size:.78rem; color:var(--red); letter-spacing:.02em; }
+  .edge { color:var(--accent); font-weight:600; margin-top:.15rem; }
+  .msg { margin-top:.25rem; }
+  .fix { margin-top:.3rem; color:var(--dim); font-size:.88rem; }
+  ul.enf li { display:flex; align-items:center; gap:.55rem; padding:.35rem 0; }
+  ul.enf .dot { width:.6rem; height:.6rem; border-radius:50%; flex:0 0 auto; background:var(--line); }
+  ul.enf li.on .dot { background:var(--green); }
+  ul.enf li.off { color:var(--dim); }
+  .cmds { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:.85rem 1rem; }
+  .cmds code { display:block; padding:.15rem 0; }
+</style></head>
+<body><div class="wrap">
+  <h1>${esc(project)} <span class="badge ${status}">${status}</span></h1>
+  <p class="sub">Ark architecture report · ${layers.length} layers · ${violations.length} active violation(s) ${suppressedNote}</p>
+
+  <h2>Layers</h2>
+  <table class="layers">
+    <tr><th>Layer</th><th>Folders</th><th>Example file</th></tr>
+    ${layerRows || '<tr><td colspan="3" class="dim">No layers configured.</td></tr>'}
+  </table>
+
+  <h2>Who may import whom</h2>
+  <div class="matrix-scroll"><table class="matrix">
+    <tr><th></th>${matrixHead}</tr>
+    ${matrixBody}
+  </table></div>
+  <p class="legend">Row imports column. <b class="allow" style="background:none">✓</b> allowed ·
+    <b class="deny" style="background:none">✕</b> denied · blank = no rule (implicitly allowed) · · = self.</p>
+
+  <h2>Violations</h2>
+  <ul class="viol">${violationRows}</ul>
+
+  <h2>Enforcement points</h2>
+  <ul class="enf">${enforcementRows}</ul>
+
+  <h2>Commands to remember</h2>
+  <div class="cmds">
+    <code>npx ark-check --root . --config ark.config.json --strict-config</code>
+    <code>/ark-place "&lt;what you're building&gt;"</code>
+  </div>
+</div></body></html>
+`;
 }
 
 function moduleSpecifierFromCall(ts, node) {
@@ -1651,10 +2045,12 @@ async function main() {
     return { contentViolations: violations, edges };
   }
 
+  const importGraph = new Map();
   for (const file of files) {
     const sourceLayer = layerForFile(root, file, config.layers);
     if (!sourceLayer) continue;
     const relFile = normalize(path.relative(root, file));
+    if (!importGraph.has(relFile)) importGraph.set(relFile, new Set());
     const stat = fs.statSync(file);
     const fileKey = `${stat.mtimeMs}:${stat.size}`;
     const cached = cachedFiles?.[relFile];
@@ -1668,6 +2064,10 @@ async function main() {
     for (const edge of entry.edges) {
       const target = resolveImport(ts, edge.specifier, file, compilerOptionsFor(file), moduleHost, root);
       const targetLayer = target ? layerForFile(root, target, config.layers) : undefined;
+      if (target && targetLayer) {
+        const relTarget = normalize(path.relative(root, target));
+        if (relTarget !== relFile) importGraph.get(relFile).add(relTarget);
+      }
       const rule = targetLayer ? isBlocked(rules, sourceLayer, targetLayer) : undefined;
       if (rule) {
         violations.push({
@@ -1684,6 +2084,8 @@ async function main() {
   }
 
   if (cacheKey) saveScanCache(root, cacheKey, nextCacheFiles);
+
+  violations.push(...detectCycles(importGraph));
 
   if (args.updateBaseline) {
     const { fullPath, count } = writeBaseline(root, args.baseline, violations);
@@ -1716,6 +2118,30 @@ async function main() {
 
   const ok = activeViolations.length === 0 && (!args.strictConfig || warnings.length === 0);
   const skillGaps = detectSkillGaps(root);
+
+  if (args.report) {
+    const exampleByLayer = new Map();
+    for (const file of files) {
+      const layer = layerForFile(root, file, config.layers);
+      if (layer && !exampleByLayer.has(layer)) {
+        exampleByLayer.set(layer, normalize(path.relative(root, file)));
+      }
+    }
+    const html = renderHtmlReport({
+      root,
+      config,
+      exampleByLayer,
+      violations: activeViolations,
+      warnings,
+      ok,
+      suppressed: suppressed.length,
+    });
+    const reportPath = path.isAbsolute(args.report) ? args.report : path.join(root, args.report);
+    fs.writeFileSync(reportPath, html);
+    if (!args.json) {
+      console.log(`${color.green('✎')} Wrote HTML report: ${path.relative(root, reportPath) || reportPath}`);
+    }
+  }
 
   if (args.json) {
     console.log(JSON.stringify({

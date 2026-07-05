@@ -1,0 +1,5 @@
+{
+  "description": "A domain entity reaches for the Date.now() ambient global (forbidden in DomainModel).",
+  "expectedFix": "Inject a Clock port (or accept the timestamp as a parameter) instead of calling Date.now() inside the domain.",
+  "mustKeep": ["src/domain/invoice.ts"]
+}

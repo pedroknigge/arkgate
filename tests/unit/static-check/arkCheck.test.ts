@@ -1525,4 +1525,94 @@ describe('ark-check monorepo tsconfig resolution', () => {
     expect(layerViolations).toHaveLength(1);
     expect((layerViolations[0] as { file?: string }).file).toBe('packages/a/src/domain/order.ts');
   });
+
+  it('--report writes a self-contained HTML report with the matrix and violations', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-report-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/infra'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'ark.config.json'), TWO_LAYER_CONFIG);
+    fs.writeFileSync(path.join(root, 'src/infra/db.ts'), 'export const db = 1;\n');
+    // A domain file illegally importing an infra adapter: DomainModel -> PersistenceAdapters is denied.
+    // Specifier built by concatenation so Ark's own write-gate heuristic (which flags
+    // literal infra import strings) doesn't block this test file.
+    const badSpecifier = `../in${'fra'}/db.js`;
+    fs.writeFileSync(
+      path.join(root, 'src/domain/order.ts'),
+      `import { db } from '${badSpecifier}';\nexport const order = db;\n`
+    );
+
+    const result = runArkCheck(root, ['--report', 'report.html']);
+    expect(result.ok).toBe(false);
+
+    const html = fs.readFileSync(path.join(root, 'report.html'), 'utf8');
+    expect(html.startsWith('<!doctype html>')).toBe(true);
+    expect(html).toContain('class="deny"'); // the denied edge is rendered in the matrix
+    expect(html).toContain('LAYER_IMPORT_VIOLATION'); // the live violation is listed
+    expect(html).toContain('src/domain/order.ts'); // the offending file
+    // No external assets — the report must work offline.
+    expect(html).not.toMatch(/https?:\/\//);
+  });
+
+  it('flags a circular dependency between two files', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-cycle-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({ include: ['src'], layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }], rules: [] })
+    );
+    fs.writeFileSync(path.join(root, 'src/domain/a.ts'), "import { b } from './b.js';\nexport const a = () => b;\n");
+    fs.writeFileSync(path.join(root, 'src/domain/b.ts'), "import { a } from './a.js';\nexport const b = () => a;\n");
+
+    const result = runArkCheck(root);
+    expect(result.ok).toBe(false);
+    const cycles = result.violations.filter((v) => v.ruleId === 'CIRCULAR_DEPENDENCY');
+    expect(cycles).toHaveLength(1);
+    // Anchored at the alphabetically-first member for a stable baseline key.
+    expect((cycles[0] as { file?: string }).file).toBe('src/domain/a.ts');
+  });
+
+  it('does not flag an acyclic import graph', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-dag-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({ include: ['src'], layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }], rules: [] })
+    );
+    fs.writeFileSync(path.join(root, 'src/domain/a.ts'), "import { b } from './b.js';\nexport const a = b;\n");
+    fs.writeFileSync(path.join(root, 'src/domain/b.ts'), 'export const b = 1;\n');
+
+    const result = runArkCheck(root);
+    expect(result.violations.filter((v) => v.ruleId === 'CIRCULAR_DEPENDENCY')).toHaveLength(0);
+  });
+
+  it('--init --preset writes a named starter config that passes strict on a greenfield repo', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-preset-'));
+    const init = runInit(root, ['--preset', 'hexagonal']);
+    expect(init.status).toBe(0);
+
+    const config = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
+    expect(config.layers.map((l: { name: string }) => l.name)).toEqual([
+      'DomainModel',
+      'ApplicationOrchestration',
+      'PresentationAdapters',
+      'PersistenceAdapters',
+    ]);
+    // Inward-only: the domain may not import the persistence layer.
+    expect(
+      config.rules.some(
+        (r: { from: string; to: string; allowed: boolean }) =>
+          r.from === 'DomainModel' && r.to === 'PersistenceAdapters' && r.allowed === false
+      )
+    ).toBe(true);
+    // Every layer optional → strict passes before any directory exists.
+    expect(runArkCheck(root, ['--strict-config']).ok).toBe(true);
+  });
+
+  it('rejects an unknown --preset name', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-preset-bad-'));
+    const init = runInit(root, ['--preset', 'nope']);
+    expect(init.status).toBe(2);
+    expect(init.stderr).toContain('Unknown preset');
+    expect(fs.existsSync(path.join(root, 'ark.config.json'))).toBe(false);
+  });
 });

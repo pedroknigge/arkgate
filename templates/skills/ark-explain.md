@@ -43,3 +43,6 @@ this project's real files as examples, no unexplained jargon.
 - End with the two commands worth memorizing: the strict check from
   `package.json` (or `npx ark-check --root . --config ark.config.json
   --strict-config`) and `/ark-place` for "where does new code go".
+- For a general tour, offer the visual version: `npx ark-check --report
+  ark-report.html` writes a self-contained HTML report (layer map, import
+  matrix, violations, live gates) — a shareable artifact for a PR or onboarding.

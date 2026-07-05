@@ -2,6 +2,41 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.8.0 — 2026-07-05
+
+### Added — circular dependency detection
+
+- `ark-check` now reports `CIRCULAR_DEPENDENCY`: files that transitively import each
+  other. The check runs over the import graph Ark already resolves, so it costs
+  almost nothing. One violation per cycle (anchored at the alphabetically-first
+  member, so the baseline key is stable), with a fix hint. Cycles participate in the
+  `--baseline` ratchet like every other rule and appear in the HTML report.
+
+### Added — named architecture presets
+
+- `ark init --preset hexagonal|layered|feature-sliced` writes a canonical
+  `ark.config.json` for a known architecture instead of relying on directory
+  detection. Globs use `**` so they fit flat (`src/domain/**`) and modular
+  (`src/modules/x/domain/**`) layouts; every layer is `optional`, so the strict check
+  passes on a greenfield repo and each layer switches on as its directory gains files.
+  `hexagonal` inverts the domain→persistence dependency; `layered` is a relaxed n-tier
+  stack; `feature-sliced` is the FSD import ladder.
+
+### Added — HTML architecture report
+
+- `ark-check --report [file.html]` writes a self-contained HTML report (no external
+  assets, works offline, light/dark): the layer map with a real example file per
+  layer, a who-may-import-whom matrix, current violations with fix hints, and which
+  gates are live. A shareable artifact for PRs and onboarding.
+
+### Added — agent-behavior eval harness
+
+- `eval/` (dev-only, not shipped in the npm package): runs a live coding agent against
+  seeded architecture violations using Ark's own gate messages, and grades whether the
+  agent resolves the violation *without weakening the contract* (editing config,
+  baseline, CI, or deleting the feature counts as a failure). Run with
+  `npm run eval:agent`.
+
 ## 1.7.6 — 2026-07-05
 
 _From downstream consumer feedback after a real upgrade + CI-failure session._

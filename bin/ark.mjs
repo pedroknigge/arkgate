@@ -24,6 +24,7 @@ function parseArgs(argv) {
     else if (arg === '--yes' || arg === '-y') args.yes = true;
     else if (arg === '--force') args.force = true;
     else if (arg === '--no-strict') args.strict = false;
+    else if (arg === '--preset') args.preset = argv[++i];
     else if (arg === '--help' || arg === '-h') args.help = true;
   }
 
@@ -32,7 +33,7 @@ function parseArgs(argv) {
 
 function usage() {
   return `Usage:
-  ark init [--root <project>] [--yes] [--force] [--no-strict]
+  ark init [--root <project>] [--preset hexagonal|layered|feature-sliced] [--yes] [--force] [--no-strict]
 
 Commands:
   init   Configure Ark project enforcement with explicit prompts.
@@ -41,6 +42,7 @@ Options:
   --yes       Non-interactive defaults: create config if needed, install gate templates, run strict check.
   --force     Allow generated files to overwrite existing files.
   --no-strict Skip the final strict ark-check run.
+  --preset    Start from a named architecture (hexagonal, layered, feature-sliced) instead of detection.
 `;
 }
 
@@ -79,6 +81,7 @@ async function init(args) {
 
     if (shouldInit) {
       const initArgs = ['--root', root, '--init'];
+      if (args.preset) initArgs.push('--preset', args.preset);
       if (args.force) initArgs.push('--force');
       const status = runArkCheck(initArgs, { cwd: root });
       if (status !== 0) return status;

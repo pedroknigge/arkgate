@@ -38,7 +38,15 @@ npx ark-check                 # done: cross-layer imports now fail the check
 
 `ark init` detects your existing layer directories and suggests the missing ones from
 Ark's default 11-layer profile (with their conventional directories), so you see the
-full division before deciding what to adopt. On an empty project it generates the
+full division before deciding what to adopt. Know the shape you want up front? Start
+from a named preset instead of detection:
+
+```bash
+npx ark init --preset hexagonal        # or: layered, feature-sliced
+```
+
+Each preset writes a canonical `ark.config.json` (inward-only dependency rules, all
+layers optional) so a fresh project is governed from the first commit. On an empty project it generates the
 complete profile with every layer optional: the check passes immediately, and each
 layer starts being enforced as soon as its directory gains source files. Agents get
 the same guidance — the `ark://manifest` resource includes `suggestedLayers`, and the
@@ -221,12 +229,19 @@ generated `AGENTS.md` directly): [docs/ai-gates.md](docs/ai-gates.md).
 npx ark-check --root . --config ark.config.json --strict-config   # fail on coverage gaps too
 npx ark-check --json                                              # machine-readable
 npx ark-check --baseline                                          # ratchet mode
+npx ark-check --report ark-report.html                            # visual architecture report
 ```
+
+`--report [file.html]` writes a self-contained HTML report (no external assets, works
+offline) — the layer map, a who-may-import-whom matrix, current violations with fix hints,
+and which gates are live. The visual sibling of `/ark-explain`; a handy artifact to attach
+to a PR or share when onboarding.
 
 **What it catches (via real TypeScript module resolution — path aliases included):**
 
 - Import/export violations (relative, aliases, packages, dynamic `import()`, `require`)
 - String intent references across forbidden layers
+- Circular dependencies (cycles in the resolved import graph)
 - Raw `publish()` calls that bypass registered intent creators
 - Missing / mismatched publish `source` metadata
 - Forbidden ambient globals per layer (`fetch`, `Date.now`, `Math.random`, ...) — see below

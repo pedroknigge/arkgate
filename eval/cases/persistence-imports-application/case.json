@@ -1,0 +1,5 @@
+{
+  "description": "A persistence adapter illegally imports an application use case (PersistenceAdapters -> ApplicationOrchestration blocked).",
+  "expectedFix": "The adapter should implement the domain OrderRepository port instead of reaching into the use case. Remove the import of place-order.",
+  "mustKeep": ["src/adapters/persistence/order-repository.ts"]
+}

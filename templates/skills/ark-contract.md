@@ -52,9 +52,8 @@ contract to produce that is real work, not a stalling question.
 3. **Validate** — `npx ark-check --root . --config ark.config.json
    --strict-config` (strict makes config warnings fail; that's intended here).
 4. **Diff the impact** — compare violations before/after. New violations from a
-   tightening are expected: list them and fix them now if the set is small. If
-   it's large, freezing them in the baseline is a valid stopgap but requires
-   explicit user approval (it silences the new violations).
+   tightening are expected: list them and fix them now if the set is small; if
+   it's large, the baseline stopgap from step 2 applies (approval required).
 
 ## Operating rules
 

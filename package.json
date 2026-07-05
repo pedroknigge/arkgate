@@ -1,6 +1,6 @@
 {
   "name": "ark-runtime-kernel",
-  "version": "1.7.6",
+  "version": "1.8.0",
   "description": "Architectural Runtime Kernel — governance for Hexagonal + Event-Driven + DDD systems",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -46,6 +46,7 @@
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit",
     "check:architecture": "node bin/ark-check.mjs --root . --config ark.config.json --strict-config",
+    "eval:agent": "node eval/run.mjs",
     "clean": "rm -rf dist",
     "postinstall": "node bin/ark-postinstall.mjs",
     "release:npm": "node scripts/release-npm.mjs",

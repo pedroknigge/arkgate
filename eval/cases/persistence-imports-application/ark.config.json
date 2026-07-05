@@ -1,0 +1,14 @@
+{
+  "include": ["src"],
+  "layers": [
+    { "name": "DomainModel", "patterns": ["src/domain/**"], "intentPrefixes": ["Domain."] },
+    { "name": "ApplicationOrchestration", "patterns": ["src/application/**"], "intentPrefixes": ["Application."] },
+    { "name": "PersistenceAdapters", "patterns": ["src/adapters/persistence/**"], "intentPrefixes": ["Adapter.Persistence."] }
+  ],
+  "rules": [
+    { "from": "DomainModel", "to": "ApplicationOrchestration", "allowed": false },
+    { "from": "DomainModel", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "ApplicationOrchestration", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "PersistenceAdapters", "to": "ApplicationOrchestration", "allowed": false }
+  ]
+}
