@@ -1889,9 +1889,13 @@ function scanCacheKey(root, args) {
       ? args.manifest
       : path.join(root, args.manifest)
     : undefined;
+  // Bump this schema tag whenever the cached scan shape changes, so a warm cache from an
+  // older Ark can't feed stale entries to new logic. v2: violation/edge records gained the
+  // `typeOnly` field — a v1 cache would otherwise report every violation as a value edge
+  // after upgrade until files changed. The tag invalidates every existing cache exactly once.
   return crypto
     .createHash('sha1')
-    .update(`ark-check-cache-v1\0${read(configPath)}\0${manifestPath ? read(manifestPath) : ''}`)
+    .update(`ark-check-cache-v2\0${read(configPath)}\0${manifestPath ? read(manifestPath) : ''}`)
     .digest('hex');
 }
 
