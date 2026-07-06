@@ -32,11 +32,16 @@
   "files": [
     "bin",
     "dist",
-    "docs",
+    "docs/agent-guide.md",
+    "docs/ai-gates.md",
+    "docs/ark-check-example.json",
+    "docs/assets",
+    "docs/production-hardening.md",
     "templates",
     "server.json",
     "README.md",
     "CHANGELOG.md",
+    "SECURITY.md",
     "LICENSE"
   ],
   "scripts": {
