@@ -21,6 +21,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Security audit
+        run: npm run security:audit
+
       - name: Typecheck
         run: npm run typecheck
 

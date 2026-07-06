@@ -45,6 +45,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit",
+    "security:audit": "npm audit --omit=dev --audit-level=high",
     "check:architecture": "node bin/ark-check.mjs --root . --config ark.config.json --strict-config",
     "eval:agent": "node eval/run.mjs",
     "clean": "rm -rf dist",
