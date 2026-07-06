@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll } from 'vitest';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -7,8 +7,8 @@ import { withDistLock } from '../helpers/distLock';
 
 const root = process.cwd();
 
-function run(cmd: string) {
-  return execSync(cmd, {
+function run(command: string, args: string[] = []) {
+  return execFileSync(command, args, {
     cwd: root,
     stdio: 'pipe',
     encoding: 'utf8',
@@ -40,7 +40,7 @@ describe('publish manifest', () => {
 
   it('npm pack ships bin + dist with zero runtime deps', () => {
     // prepack rebuilds dist/, which races with the MCP suite's build — serialize.
-    withDistLock(() => run(`npm pack --pack-destination ${tmp} --silent`));
+    withDistLock(() => run('npm', ['pack', '--pack-destination', tmp, '--silent']));
 
     const files = fs.readdirSync(tmp).filter((f) => f.endsWith('.tgz'));
     expect(files.length).toBe(1);
@@ -48,7 +48,7 @@ describe('publish manifest', () => {
 
     const extract = path.join(tmp, 'extract');
     fs.mkdirSync(extract, { recursive: true });
-    execSync(`tar -xzf ${tgzPath} -C ${extract}`, { stdio: 'pipe' });
+    execFileSync('tar', ['-xzf', tgzPath, '-C', extract], { stdio: 'pipe' });
 
     const inner = JSON.parse(
       fs.readFileSync(path.join(extract, 'package', 'package.json'), 'utf8')

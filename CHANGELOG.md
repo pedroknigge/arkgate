@@ -19,6 +19,9 @@ All notable changes to `ark-runtime-kernel` are documented here.
 
 - Added a dedicated `Security` workflow with CodeQL, Dependabot dependency review on
   pull requests, and Semgrep CE scanning on push, PR, schedule, and manual dispatch.
+- Fixed the CodeQL alerts surfaced by that workflow: removed vulnerable built-in regex
+  heuristics from the AI write gate and replaced shell-interpolated pack test commands
+  with argument-vector process execution.
 
 ### Added — runtime profile from `ark.config.json`
 

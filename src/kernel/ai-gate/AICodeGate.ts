@@ -395,14 +395,6 @@ export function createAICodeGate<Context = AICodeGateContext>(
   );
 
   const userForbidden = options.forbiddenPatterns || [];
-  // Built-in infra-import heuristics — the gate's only import-path boundary
-  // check (layer-reference checks resolve intent NAMES, not import paths).
-  // Suppressed for layers whose role IS infrastructure; see layerHasInfrastructureRole.
-  const builtinInfraPatterns = [
-    /from ['"].*\/(infra|adapters|persistence|db)/i,
-    /import .* from ['"].*(sequelize|prisma|typeorm|mongoose|knex)/i,
-  ];
-
   const explicitInfraLayers = new Set(options.infrastructureLayers ?? []);
   const enforceAllowlist = options.enforceIntentAllowlist ?? intentNames.size > 0;
 
@@ -426,13 +418,11 @@ export function createAICodeGate<Context = AICodeGateContext>(
         contextLayer !== undefined
           ? ` If "${contextLayer}" is an infrastructure layer, mark it in ark.config.json with "mayImportInfrastructure": true (or name it with an infra token like Adapters/Persistence/Repository).`
           : '';
-      const forbidden = exemptFromInfraHeuristics
-        ? userForbidden
-        : [...userForbidden, ...builtinInfraPatterns];
-
-      for (const pat of forbidden) {
+      for (const pat of userForbidden) {
         if (pat instanceof RegExp) {
-          const match = source.match(pat);
+          pat.lastIndex = 0;
+          const match = pat.exec(source);
+          pat.lastIndex = 0;
           if (match) {
             violations.push(
               violation('FORBIDDEN_PATTERN', `Forbidden pattern matched: ${pat}`, {
