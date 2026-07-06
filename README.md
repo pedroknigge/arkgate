@@ -5,6 +5,7 @@
 **Your AI writes most of the code now. Ark makes sure it can't quietly break your architecture.**<br/>
 One machine-readable contract — enforced the moment code is written, again at merge, and (optionally) at runtime.<br/>
 Agents don't just get blocked: Ark gives them **tools** to ask where code belongs and a contract they read *before* generating.<br/>
+Adopting on a messy, pre-existing codebase? Ark tells you the truth — the share of code it actually governs, and which violations are real debt vs. a wrong contract — and guides the cleanup in order, instead of freezing everything green.<br/>
 Ships a complete 11-layer architecture you adopt one layer at a time. Native for **Claude Code, Cursor, and Codex** — plus rule files for Windsurf, Cline, Copilot, Kiro, Roo Code, Continue, and Gemini CLI.
 
 [![CI](https://github.com/pedroknigge/ark-runtime-kernel/actions/workflows/ci.yml/badge.svg)](https://github.com/pedroknigge/ark-runtime-kernel/actions/workflows/ci.yml)
@@ -15,7 +16,7 @@ Ships a complete 11-layer architecture you adopt one layer at a time. Native for
 ![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white)
 ![Zero deps](https://img.shields.io/badge/dependencies-0-success)
 
-[2-Minute Setup](#2-minute-setup) · [Why Ark](#why-ark-and-not-just-a-linter) · [11 Layers](#batteries-included-the-11-layer-profile-all-optional) · [Agent Gates + Tools](#the-ai-write-gate) · [CI Gate](#ark-check--the-ci-gate) · [Runtime Kernel](#the-runtime-kernel-opt-in) · [Docs](#documentation)
+[2-Minute Setup](#2-minute-setup) · [Why Ark](#why-ark-and-not-just-a-linter) · [11 Layers](#batteries-included-the-11-layer-profile-all-optional) · [Brownfield Adoption](#adopting-an-existing-codebase-honestly) · [Agent Gates + Tools](#the-ai-write-gate) · [CI Gate](#ark-check--the-ci-gate) · [Runtime Kernel](#the-runtime-kernel-opt-in) · [Docs](#documentation)
 
 </div>
 
@@ -37,10 +38,11 @@ npx ark init                  # asks before generating config, agent gates, and 
 npx ark-check                 # done: cross-layer imports now fail the check
 ```
 
-`ark init` detects your existing layer directories and suggests the missing ones from
-Ark's default 11-layer profile (with their conventional directories), so you see the
-full division before deciding what to adopt. Know the shape you want up front? Start
-from a named preset instead of detection:
+`ark init` detects your existing layer directories, **proposes a canonical layer for every
+ungoverned directory** (harvested from the 11-layer profile and the presets — directories it
+doesn't recognize are flagged for you to classify, never guessed), and suggests the profile
+layers you haven't adopted, so you see the full division before deciding what to adopt. Know
+the shape you want up front? Start from a named preset instead of detection:
 
 ```bash
 npx ark init --preset hexagonal        # or: layered, feature-sliced, monorepo
@@ -66,6 +68,11 @@ Adopting on a codebase that already has violations? Freeze them and ratchet down
 npx ark-check --update-baseline   # writes .ark-baseline.json — commit it
 npx ark-check --baseline          # only NEW violations fail from now on
 ```
+
+If almost all the violations are a **single layer edge**, `--update-baseline` refuses to
+freeze and tells you why: that pattern is usually a wrong contract, not debt (e.g. every
+route reaching a framework through its sanctioned entrypoint). Fix the contract first —
+freezing it would bury the bug as "debt". Pass `--force` to freeze anyway.
 
 Then gate your agents (Claude Code shown; [Cursor / Codex / others](docs/ai-gates.md)). If you use
 Codex in an Ark project, register the MCP server early so `ark://manifest` is available during
@@ -95,6 +102,8 @@ npx ark-check --install-agent-gates
 This writes opt-in templates for MCP discovery, Claude/Cursor rules, Codex config notes,
 GitHub Actions, and agent instructions — plus the **`/ark-*` skills** (below) in each
 detected tool's command location. Existing files are skipped unless you pass `--force`.
+Every command Ark writes into these files follows your **package manager** — `pnpm exec`,
+`yarn`, or `npx` — so a pnpm-only or yarn repo is never handed an `npx` instruction.
 
 ### The /ark-* skills
 
@@ -107,9 +116,9 @@ just trying to keep your code clean:
 
 | Skill | What invoking it does |
 |-------|-----------------------|
-| `/ark-coverage` | Audits which Ark capabilities this project is NOT using and ranks the gaps with the exact command to close each |
-| `/ark-fix` | Resolves current violations at the root cause (ports, moves) — never by weakening the contract |
-| `/ark-adopt` | Onboards an existing codebase: config, gates for every CLI, baseline freeze, ratchet plan |
+| `/ark-coverage` | Reports the governed %, proposes a layer for every ungoverned directory, and ranks unused Ark capabilities |
+| `/ark-fix` | Resolves violations at the root cause (ports, moves, type relocations) — value coupling before type-only, never by weakening the contract |
+| `/ark-adopt` | Onboards an existing codebase the right way: diagnose → fix the contract → classify the tree → freeze only real debt, with the framework-border principle |
 | `/ark-place` | Answers "where does this new code go?" from the contract, and scaffolds it there |
 | `/ark-contract` | Evolves `ark.config.json` safely, with before/after violation impact |
 | `/ark-explain` | Plain-language tour of this project's architecture and why each rule exists |
@@ -218,6 +227,39 @@ the layer to the config instead of inventing an ungoverned location.
 npx ark-check --print-config eleven-layer > ark.config.json   # the full profile, ready to edit
 ```
 
+## Adopting an existing codebase (honestly)
+
+Most architecture tools assume you already have clean layers. Ark's job on a messy,
+pre-existing repo is different: **tell the truth about what it governs, and guide the cleanup
+in order — never a false-green.**
+
+- **Honest coverage.** `ark-check --coverage` leads with `Governed: N%` — the share of your
+  source Ark actually enforces rules on. If a config governs a minority of the tree, a passing
+  check means almost nothing, and Ark says so out loud. For every ungoverned directory it
+  proposes a canonical layer (from the 11-layer profile + presets) or flags it as yours to
+  classify. `governed` and `suggestions` ship in `--coverage --json`.
+
+- **Diagnose before you freeze.** A full check ranks violations by layer edge and target
+  subtree — the burn-down order — and reports it as `summary` in `--json`. When one edge
+  dominates, that's the signal the *contract* is wrong, not the code, so `--update-baseline`
+  refuses a lopsided freeze instead of burying a config bug as "debt".
+
+- **Real coupling vs. type placement.** Each import violation is tagged `typeOnly`. An
+  `import type` erases at compile time — it's no runtime coupling, usually just a type in the
+  wrong layer (a cheap move). The summary splits `valueCount` (fix first) from `typeOnlyCount`,
+  so you attack real coupling before cosmetics.
+
+- **Protect the border around a framework, not its internals.** Using a DI/kernel framework
+  (dcouplr, NestJS, a custom kernel)? Don't try to govern its inside. Declare its **public
+  surface** as one layer (the entrypoints app code is meant to import) and treat the rest as a
+  black box. Overlapping globs resolve most-specific-first, so a `kernel/app/**` surface layer
+  wins over a `kernel/**` catch-all regardless of declaration order — allow the edge into the
+  surface, deny it into the internals. That facade split is how Ark stays compatible with any
+  runtime instead of duplicating the framework's own wiring.
+
+The `/ark-adopt` skill runs this whole flow autonomously: config → diagnose → fix the contract
+→ classify the tree → freeze only genuine debt, with a ranked burn-down plan.
+
 ## The AI Write Gate
 
 Most tools tell the agent the rules *after* it breaks them. Ark hands the agent the
@@ -251,7 +293,7 @@ Gemini CLI**: [docs/ai-gates.md](docs/ai-gates.md).
 npx ark-check --root . --config ark.config.json --strict-config   # fail on coverage gaps too
 npx ark-check --json                                              # machine-readable
 npx ark-check --baseline                                          # ratchet mode
-npx ark-check --coverage                                          # per-layer file counts + ungoverned files
+npx ark-check --coverage                                          # Governed: N% + per-directory layer proposals
 npx ark-check --report ark-report.html                            # visual architecture report
 ```
 
@@ -510,4 +552,4 @@ MIT © Pedro Knigge
 
 ---
 
-**Ark doesn't generate architecture. It protects the architecture you already have — at the exact moments it matters most.**
+**Ark doesn't generate architecture. It protects the architecture you have, helps you organize the one you don't yet — and tells you the truth about the difference.**
