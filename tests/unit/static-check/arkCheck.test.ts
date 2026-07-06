@@ -1977,6 +1977,42 @@ describe('ark-check violation diagnosis', () => {
     expect(result.summary.edges[0].count).toBe(12);
   });
 
+  it('tags type-only import violations separately from value (runtime) ones', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-typeonly-'));
+    fs.mkdirSync(path.join(root, 'src/app'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/kernel'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'src/kernel/api.ts'),
+      'export const api = 1;\nexport type Api = number;\n'
+    );
+    fs.writeFileSync(
+      path.join(root, 'src/app/value.ts'),
+      "import { api } from '../kernel/api';\nexport const r = api;\n"
+    );
+    fs.writeFileSync(
+      path.join(root, 'src/app/types.ts'),
+      "import type { Api } from '../kernel/api';\nexport const x: Api = 1;\n"
+    );
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          { name: 'AppOrchestration', patterns: ['src/app/**'] },
+          { name: 'Kernel', patterns: ['src/kernel/**'] },
+        ],
+        rules: [{ from: 'AppOrchestration', to: 'Kernel', allowed: false }],
+      })
+    );
+    const result: any = runArkCheck(root);
+    expect(result.violations).toHaveLength(2);
+    expect(result.summary.valueCount).toBe(1);
+    expect(result.summary.typeOnlyCount).toBe(1);
+    expect(result.violations.find((v: any) => v.file === 'src/app/types.ts').typeOnly).toBe(true);
+    // Value violations stay untagged (real runtime coupling).
+    expect(result.violations.find((v: any) => v.file === 'src/app/value.ts').typeOnly).toBeUndefined();
+  });
+
   it('refuses to freeze a lopsided violation set unless --force is passed', () => {
     const root = concentratedProject();
     let stderr = '';
@@ -2004,6 +2040,69 @@ describe('ark-check violation diagnosis', () => {
     );
     expect(forced).toContain('frozen violation key');
     expect(fs.existsSync(path.join(root, '.ark-baseline.json'))).toBe(true);
+  });
+});
+
+describe('ark-check overlapping-glob layer resolution', () => {
+  it('classifies a file by the most specific pattern regardless of layer order', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-facade-'));
+    fs.mkdirSync(path.join(root, 'src/app'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/kernel/app'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/kernel/internal'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/kernel/app/surface.ts'), 'export const s = 1;');
+    fs.writeFileSync(path.join(root, 'src/kernel/internal/guts.ts'), 'export const g = 1;');
+    // Catch-all KernelInternal declared BEFORE the specific KernelApi — the facade must
+    // still win: a facade split can't depend on the author ordering layers correctly.
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          { name: 'AppOrchestration', patterns: ['src/app/**'] },
+          { name: 'KernelInternal', patterns: ['src/kernel/**'] },
+          { name: 'KernelApi', patterns: ['src/kernel/app/**'] },
+        ],
+        rules: [{ from: 'AppOrchestration', to: 'KernelInternal', allowed: false }],
+      })
+    );
+    fs.writeFileSync(
+      path.join(root, 'src/app/uses-surface.ts'),
+      "import { s } from '../kernel/app/surface';\nexport const r = s;\n"
+    );
+    fs.writeFileSync(
+      path.join(root, 'src/app/uses-guts.ts'),
+      "import { g } from '../kernel/internal/guts';\nexport const r2 = g;\n"
+    );
+    const result = runArkCheck(root);
+    // Only the internals reach-around violates; importing the surface is allowed even
+    // though KernelApi is declared last.
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0].file).toBe('src/app/uses-guts.ts');
+    const cov: any = coverageJson(root);
+    const byName = Object.fromEntries(cov.coverage.layers.map((l: any) => [l.name, l.files]));
+    expect(byName.KernelApi).toBe(1);
+    expect(byName.KernelInternal).toBe(1);
+  });
+
+  it('warns when two layers match a file at equal specificity (ambiguous order-dependence)', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-ambig-'));
+    fs.mkdirSync(path.join(root, 'src/shared'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/shared/x.ts'), 'export const x = 1;');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          { name: 'A', patterns: ['src/shared/**'] },
+          { name: 'B', patterns: ['src/shared/**'] },
+        ],
+        rules: [],
+      })
+    );
+    const result = runArkCheck(root);
+    expect(result.warnings.map((w: { ruleId: string }) => w.ruleId)).toContain(
+      'CONFIG_AMBIGUOUS_LAYERS'
+    );
   });
 });
 

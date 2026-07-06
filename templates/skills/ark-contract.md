@@ -44,6 +44,13 @@ contract to produce that is real work, not a stalling question.
      This legalizes the intended dependency while still forbidding reach-arounds — it
      collapses a wall of false positives to ~0. This is how Ark stays compatible with a
      DI framework: it guards the border, not the framework's insides.
+     The surface patterns overlap the internal catch-all, and that is fine: ark-check
+     resolves the MOST SPECIFIC pattern per file, so `kernel/app/**` wins over
+     `kernel/**` regardless of layer order. Where app code today reaches into internals
+     for a legitimate entrypoint, do NOT rewrite every call site: add a barrel module
+     inside the surface layer (e.g. `src/kernel/app/facade.ts`) that re-exports exactly
+     those entrypoints, then repoint the reach-around imports to the barrel. It is
+     behavior-preserving (verify with `tsc --noEmit`) and the imports are now legal.
    - **forbiddenGlobals**: adding one to a domain layer may reveal existing
      violations — run the check, and if there are hits, fix them (`/ark-fix`
      patterns). If they are too numerous to fix now, freezing them in the

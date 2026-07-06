@@ -18,6 +18,7 @@ import {
   installDevHint,
   layerForFile,
   looksLikeIntent,
+  patternSpecificity,
   resolveIntentLayer,
 } from './ark-shared.mjs';
 
@@ -1762,6 +1763,43 @@ function collectConfigWarnings(root, config, files, rules, manifest) {
     }
   }
 
+  // Ambiguous overlap: a file matched by two different layers at the SAME top specificity.
+  // layerForFile breaks the tie by declaration order, but the config is genuinely undecided
+  // (unlike a facade split, where the surface pattern is strictly more specific and wins
+  // cleanly). Surface the layer pairs so the author disambiguates instead of relying on order.
+  const ambiguousPairs = new Set();
+  if (layers.length > 1) {
+    for (const file of files) {
+      const rel = normalize(path.relative(root, file));
+      let topScore = -1;
+      let topLayers = [];
+      for (const layer of layers) {
+        for (const pattern of layer.patterns ?? []) {
+          if (!globToRegExp(pattern).test(rel)) continue;
+          const score = patternSpecificity(pattern);
+          if (score > topScore) {
+            topScore = score;
+            topLayers = [layer.name];
+          } else if (score === topScore && !topLayers.includes(layer.name)) {
+            topLayers.push(layer.name);
+          }
+        }
+      }
+      if (topLayers.length > 1) {
+        ambiguousPairs.add([...topLayers].sort().join(' + '));
+      }
+    }
+  }
+  if (ambiguousPairs.size > 0) {
+    warnings.push(
+      configWarning(
+        'CONFIG_AMBIGUOUS_LAYERS',
+        `Some files match multiple layers at equal specificity; classification falls back to declaration order. Disambiguate the overlapping patterns: ${[...ambiguousPairs].join(', ')}.`,
+        { pairs: [...ambiguousPairs] }
+      )
+    );
+  }
+
   const unclassified = files.filter((file) => !layerForFile(root, file, layers));
   if (unclassified.length > 0) {
     warnings.push(
@@ -1946,6 +1984,33 @@ function textOfModuleSpecifier(node) {
   return node.moduleSpecifier && typeof node.moduleSpecifier.text === 'string'
     ? node.moduleSpecifier.text
     : undefined;
+}
+
+// True when an import/export edge carries ONLY types (`import type …`, or a named import
+// where every binding is `type`-qualified). Type-only edges are erased at compile time —
+// they create no runtime coupling, only a design/type-placement dependency — so callers can
+// rank them below real value imports in a burn-down. A side-effect import (`import "x"`) or
+// any default/namespace/value binding is NOT type-only.
+function isTypeOnlyModuleReference(ts, node) {
+  if (ts.isImportDeclaration(node)) {
+    const clause = node.importClause;
+    if (!clause) return false; // side-effect import — runtime edge
+    if (clause.isTypeOnly) return true; // `import type …`
+    const named = clause.namedBindings;
+    if (named && ts.isNamedImports(named) && named.elements.length > 0) {
+      return named.elements.every((element) => element.isTypeOnly);
+    }
+    return false; // default or namespace binding of a value
+  }
+  if (ts.isExportDeclaration(node)) {
+    if (node.isTypeOnly) return true;
+    const clause = node.exportClause;
+    if (clause && ts.isNamedExports(clause) && clause.elements.length > 0) {
+      return clause.elements.every((element) => element.isTypeOnly);
+    }
+    return false;
+  }
+  return false;
 }
 
 function propertyName(ts, node) {
@@ -2134,10 +2199,13 @@ function violationTargetSubtree(violation) {
 
 function summarizeViolations(violations) {
   const byEdge = new Map();
+  let typeOnly = 0;
   for (const violation of violations) {
+    if (violation.typeOnly) typeOnly += 1;
     const key = violationEdge(violation);
-    const entry = byEdge.get(key) ?? { edge: key, count: 0, targets: new Map() };
+    const entry = byEdge.get(key) ?? { edge: key, count: 0, typeOnly: 0, targets: new Map() };
     entry.count += 1;
+    if (violation.typeOnly) entry.typeOnly += 1;
     const subtree = violationTargetSubtree(violation);
     if (subtree) entry.targets.set(subtree, (entry.targets.get(subtree) ?? 0) + 1);
     byEdge.set(key, entry);
@@ -2146,6 +2214,7 @@ function summarizeViolations(violations) {
     .map((entry) => ({
       edge: entry.edge,
       count: entry.count,
+      typeOnly: entry.typeOnly,
       topTargets: [...entry.targets.entries()]
         .sort((a, b) => b[1] - a[1])
         .slice(0, 4)
@@ -2157,6 +2226,10 @@ function summarizeViolations(violations) {
   const dominantShare = total > 0 && dominant ? dominant.count / total : 0;
   return {
     total,
+    // Value edges are real runtime coupling; type-only edges (erased at compile time) are
+    // just type placement — fix the value ones first, the type-only ones move with the type.
+    valueCount: total - typeOnly,
+    typeOnlyCount: typeOnly,
     edges,
     dominant: dominant ? dominant.edge : undefined,
     dominantShare,
@@ -2168,9 +2241,15 @@ function printViolationBreakdown(summary, { toStderr = false } = {}) {
   const out = toStderr ? (line) => console.error(line) : (line) => console.log(line);
   out('');
   out(`Violation breakdown — ${summary.total} across ${summary.edges.length} edge(s), largest first:`);
+  if (summary.typeOnlyCount > 0) {
+    out(
+      `  ${summary.valueCount} value (runtime coupling — fix first) · ${summary.typeOnlyCount} type-only (type placement — moves with the type)`
+    );
+  }
   for (const edge of summary.edges) {
     const pct = Math.round((edge.count / summary.total) * 100);
-    out(`  ${String(edge.count).padStart(5)}  ${edge.edge}  (${pct}%)`);
+    const typeNote = edge.typeOnly > 0 ? `, ${edge.typeOnly} type-only` : '';
+    out(`  ${String(edge.count).padStart(5)}  ${edge.edge}  (${pct}%${typeNote})`);
     for (const target of edge.topTargets) {
       out(`         ↳ ${target.count}× into ${target.dir}/`);
     }
@@ -2778,15 +2857,20 @@ async function main() {
       });
     }
 
-    const checkModuleEdge = (specifier, node, kind) => {
-      edges.push({ specifier, line: lineOf(sourceFile, node.getStart(sourceFile)), kind });
+    const checkModuleEdge = (specifier, node, kind, typeOnly = false) => {
+      edges.push({ specifier, line: lineOf(sourceFile, node.getStart(sourceFile)), kind, typeOnly });
     };
 
     const visit = (node) => {
       if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
         const specifier = textOfModuleSpecifier(node);
         if (specifier) {
-          checkModuleEdge(specifier, node, ts.isImportDeclaration(node) ? 'import' : 'export');
+          checkModuleEdge(
+            specifier,
+            node,
+            ts.isImportDeclaration(node) ? 'import' : 'export',
+            isTypeOnlyModuleReference(ts, node)
+          );
         }
       }
 
@@ -2901,6 +2985,7 @@ async function main() {
           fromLayer: sourceLayer,
           toLayer: targetLayer,
           target: normalize(path.relative(root, target)),
+          ...(edge.typeOnly ? { typeOnly: true } : {}),
           message: rule.message ?? `${sourceLayer} must not ${edge.kind} ${targetLayer}.`,
         });
       }

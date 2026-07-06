@@ -221,16 +221,42 @@ export function globToRegExp(pattern) {
   return re;
 }
 
-/** Resolve a file's architecture layer from ark.config.json layer glob patterns. */
+// Specificity score for a layer glob: more literal path segments before the first wildcard
+// wins, then longer literal text. So `src/kernel/app/**` (3 literal segments) beats
+// `src/kernel/**` (2), and an exact file like `src/kernel/events.ts` beats both. This is what
+// makes a facade split (a KernelApi surface layer overlapping a KernelInternal catch-all)
+// resolve to the surface REGARDLESS of layer declaration order — the intuitive result.
+export function patternSpecificity(pattern) {
+  const glob = String(pattern).split(path.sep).join('/');
+  const beforeWildcard = glob.split('*')[0];
+  const literalSegments = beforeWildcard.split('/').filter(Boolean).length;
+  const literalLength = glob.replace(/\*/g, '').length;
+  return literalSegments * 10000 + literalLength;
+}
+
+/**
+ * Resolve a file's architecture layer from ark.config.json layer glob patterns. When more
+ * than one layer matches (overlapping globs, e.g. a facade split), the MOST SPECIFIC pattern
+ * wins; ties break by declaration order (first wins). Order-independent for non-ambiguous
+ * overlaps, so a config author can't silently break a facade by listing the catch-all first.
+ */
 export function layerForFile(root, file, layers) {
   const abs = path.isAbsolute(file) ? file : path.resolve(root, file);
   const rel = path.relative(root, abs).split(path.sep).join('/');
+  let bestName;
+  let bestScore = -1;
   for (const layer of layers ?? []) {
     for (const pattern of layer.patterns ?? []) {
-      if (globToRegExp(pattern).test(rel)) return layer.name;
+      if (globToRegExp(pattern).test(rel)) {
+        const score = patternSpecificity(pattern);
+        if (score > bestScore) {
+          bestScore = score;
+          bestName = layer.name;
+        }
+      }
     }
   }
-  return undefined;
+  return bestName;
 }
 
 function normalizePrefix(prefix) {

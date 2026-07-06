@@ -20,6 +20,10 @@ paste output you can generate yourself.
   or a layer needs splitting into a public surface + internals. Stop and hand off to
   `/ark-contract`; don't port-and-adapter your way through hundreds of false
   positives. Fix code only for the genuine, scattered minority.
+- **Fix value edges before type-only ones.** `summary` splits `valueCount` (real
+  runtime coupling) from `typeOnlyCount` (`import type …` — erased at compile time, no
+  runtime dependency). Prioritize the value edges; a `typeOnly: true` violation almost
+  always just means a type lives in the wrong layer (see the type-only pattern below).
 - **Never weaken the gate.** Do not edit `ark.config.json`, add allowed edges,
   delete rules, or regenerate the baseline to make a violation disappear. The fix
   lives in the code. If you become convinced the contract itself is wrong, stop
@@ -43,6 +47,18 @@ paste output you can generate yourself.
   with the impure implementation outside the domain, and pass it in.
 - **Intent prefix mismatch**: rename the intent to the layer's declared prefix,
   or move the handler to the layer that owns that prefix.
+- **Type-only inversion** (a lower layer `import type`s something from an upper layer,
+  e.g. a domain module importing a type that happens to live in a UI hook): move the
+  TYPE down to the layer that owns it (e.g. `src/lib/<domain>/types.ts`), and re-export
+  it from the original module for back-compat (`export type { X } from "@/lib/<domain>/types"`)
+  so no consumer breaks. This is the highest-volume, safest adoption fix — verify with
+  `tsc --noEmit`. It often also breaks a circular dependency that ran through the hook.
+  Two cases where the move is NOT mechanical — stop and flag instead of forcing it:
+  (a) the type extends a persistence/ORM row (e.g. a Drizzle schema type) — moving it to a
+  domain layer would couple domain→Persistence (the write gate will block it), so it needs a
+  domain-owned type or port, not a move; (b) the source file mixes the type with runtime
+  logic (stubs, helpers, mock builders) — split the types into their own module first, then
+  move.
 
 Fix ALL reported violations that share a root cause in one pass — one port in a
 shared module beats N per-file patches. Match the codebase's existing naming and
