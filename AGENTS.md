@@ -30,3 +30,15 @@ except `ark-mcp` loading the built library; shared CLI logic lives in `bin/ark-s
 deliberately duplicated from the library where noted in comments.
 
 The project is only considered Ark-enforced when the write gate, CI gate, and runtime path all pass.
+
+## Repo hygiene before handoff
+
+Before considering repository work complete, verify the public repo is clean:
+
+1. Latest GitHub Actions checks for the pushed head SHA are passing.
+2. GitHub Dependabot has no open vulnerability or malware alerts.
+3. There are no open bot PRs, especially Dependabot PRs, left untriaged.
+4. The local working tree is clean and aligned with `origin/main`.
+
+If GitHub cannot be reached, report that the repo-hygiene check is unverified instead
+of assuming it is clean.
