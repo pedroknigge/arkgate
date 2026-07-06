@@ -63,6 +63,15 @@ export interface AICodeGateOptions<Context = AICodeGateContext> {
    * opt in explicitly. User-supplied `forbiddenPatterns` still apply everywhere.
    */
   infrastructureLayers?: string[];
+  /**
+   * Resolve an import specifier to the architecture layer of its TARGET file, if that target
+   * is governed by a declared layer (else undefined). When provided, the gate lets the
+   * layer RULES decide a governed edge instead of the infrastructure path-heuristic — so the
+   * write gate honors `ark.config.json` exactly like `ark-check`, and the heuristic only
+   * applies to ungoverned targets (external packages, paths no layer covers). The caller
+   * (ark-mcp) supplies this using the config's layer globs + tsconfig path aliases.
+   */
+  resolveImportLayer?: (specifier: string, fromFilePath?: string) => string | undefined;
 }
 
 function violation(
@@ -444,7 +453,48 @@ export function createAICodeGate<Context = AICodeGateContext>(
         }
       }
 
-      for (const specifier of exemptFromInfraHeuristics ? [] : extractModuleSpecifiers(source)) {
+      for (const specifier of extractModuleSpecifiers(source)) {
+        // Contract first: if the import target resolves to a declared layer, the layer RULES
+        // decide — not the path heuristic. This keeps the write gate consistent with ark-check
+        // (`ark.config.json` is authoritative), so an edge the config allows — e.g. a route
+        // calling a repository, or a repository importing the DB — is never blocked here just
+        // because the specifier contains an "infra" token.
+        // A resolvable CROSS-layer edge is governed by the config's rules — the contract
+        // decides, and the infra path-heuristic doesn't apply. (Same-layer or unclassified
+        // targets aren't a cross-layer edge, so they still fall through to the heuristic —
+        // e.g. a core file reaching `./infra/db` that lives in the same layer.)
+        const targetLayer = options.resolveImportLayer?.(specifier.value, filePath);
+        if (targetLayer && contextLayer && targetLayer !== contextLayer) {
+          const blocked = options.architectureProfile?.rules.find(
+            (rule) => !rule.allowed && rule.from === contextLayer && rule.to === targetLayer
+          );
+          if (blocked) {
+            violations.push(
+              violation(
+                'LAYER_IMPORT_VIOLATION',
+                blocked.message ??
+                  `Layer "${contextLayer}" must not import "${targetLayer}".`,
+                {
+                  line: lineOf(source, specifier.index),
+                  source: specifier.value,
+                  target: specifier.value,
+                  filePath,
+                  fromLayer: contextLayer,
+                  toLayer: targetLayer,
+                  suggestion:
+                    'Depend on a port/interface owned by an inner layer instead, or move this ' +
+                    'code to a layer allowed to make this import.',
+                  details: { importKind: specifier.kind },
+                }
+              )
+            );
+          }
+          continue;
+        }
+
+        // Ungoverned / same-layer target: fall back to the infra path-heuristic — unless this
+        // source layer is exempt from it.
+        if (exemptFromInfraHeuristics) continue;
         if (!hasInfrastructureToken(specifier.value) && !isKnownInfrastructurePackage(specifier.value)) {
           continue;
         }

@@ -633,3 +633,76 @@ describe('ark-mcp --hook ratchet (pre-existing violations do not block edits)', 
     expect(result.stderr).toContain('Date.now');
   });
 });
+
+describe('ark-mcp write gate — contract-first layer resolution (Option A)', () => {
+  let root: string;
+  let client: ReturnType<typeof createClient>;
+
+  beforeAll(() => {
+    prepareMcpRuntime();
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-mcp-optA-'));
+    fs.mkdirSync(path.join(root, 'src/app'), { recursive: true });
+    // tsconfig path alias so the gate resolves `@/…` targets to a layer (like a real repo).
+    fs.writeFileSync(
+      path.join(root, 'tsconfig.json'),
+      JSON.stringify({ compilerOptions: { baseUrl: '.', paths: { '@/*': ['./src/*'] } } })
+    );
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          { name: 'App', patterns: ['src/app/**'] },
+          { name: 'Data', patterns: ['src/lib/repositories/**'] },
+          { name: 'Db', patterns: ['src/lib/db/**'] },
+        ],
+        // App may call repositories (no rule = allowed) but not the raw DB.
+        rules: [{ from: 'App', to: 'Db', allowed: false }],
+      })
+    );
+    client = createClient(root);
+  }, 120000);
+
+  afterAll(() => client?.close());
+
+  const validate = (source: string, filePath: string) =>
+    client.request('tools/call', {
+      name: 'validate_code',
+      arguments: { source, filePath },
+    });
+
+  it('ALLOWS a governed edge the rules permit, despite an infra token (App → repository)', async () => {
+    // The specifier contains the "repositories" infra token, but App → Data has no deny rule,
+    // so the contract permits it — no mayImportInfrastructure flag needed. (Pre-Option-A the
+    // path-heuristic blocked this.)
+    const res = await validate(
+      "import { getOrders } from '@/lib/repositories/orders';\nexport const r = getOrders;\n",
+      'src/app/orders/route.ts'
+    );
+    expect(res.result.isError).toBe(false);
+    expect(JSON.parse(res.result.content[0].text).valid).toBe(true);
+  });
+
+  it('BLOCKS a denied edge as LAYER_IMPORT_VIOLATION (App → raw DB)', async () => {
+    const res = await validate(
+      "import { sqlClient } from '@/lib/db';\nexport const r = sqlClient;\n",
+      'src/app/orders/route.ts'
+    );
+    expect(res.result.isError).toBe(true);
+    const body = JSON.parse(res.result.content[0].text);
+    expect(body.valid).toBe(false);
+    expect(body.violations.map((v: { ruleId: string }) => v.ruleId)).toContain(
+      'LAYER_IMPORT_VIOLATION'
+    );
+  });
+
+  it('still BLOCKS an ungoverned infra target via the heuristic (bare ORM package)', async () => {
+    const res = await validate(
+      "import { PrismaClient } from 'prisma';\nexport const c = PrismaClient;\n",
+      'src/app/orders/route.ts'
+    );
+    expect(res.result.isError).toBe(true);
+    const body = JSON.parse(res.result.content[0].text);
+    expect(body.violations.map((v: { ruleId: string }) => v.ruleId)).toContain('FORBIDDEN_IMPORT');
+  });
+});
