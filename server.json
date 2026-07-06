@@ -6,12 +6,12 @@
     "url": "https://github.com/pedroknigge/ark-runtime-kernel",
     "source": "github"
   },
-  "version": "1.8.3",
+  "version": "1.9.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "ark-runtime-kernel",
-      "version": "1.8.3",
+      "version": "1.9.0",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"

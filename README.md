@@ -2,10 +2,10 @@
 
 # 🏛️ Ark — Architectural Runtime Kernel
 
-**Stop AI agents (and humans) from quietly breaking your architecture.**<br/>
-One machine-readable contract — enforced at write time, merge time, and (optionally) runtime.<br/>
-Ships a complete 11-layer architecture you can adopt one layer at a time.
-Gates **Claude Code, Cursor, and Codex** natively — plus rule files for Windsurf, Cline, Copilot, Kiro, and Gemini CLI.
+**Your AI writes most of the code now. Ark makes sure it can't quietly break your architecture.**<br/>
+One machine-readable contract — enforced the moment code is written, again at merge, and (optionally) at runtime.<br/>
+Agents don't just get blocked: Ark gives them **tools** to ask where code belongs and a contract they read *before* generating.<br/>
+Ships a complete 11-layer architecture you adopt one layer at a time. Native for **Claude Code, Cursor, and Codex** — plus rule files for Windsurf, Cline, Copilot, Kiro, Roo Code, Continue, and Gemini CLI.
 
 [![CI](https://github.com/pedroknigge/ark-runtime-kernel/actions/workflows/ci.yml/badge.svg)](https://github.com/pedroknigge/ark-runtime-kernel/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/ark-runtime-kernel?color=cb3837&label=npm)](https://www.npmjs.com/package/ark-runtime-kernel)
@@ -14,7 +14,7 @@ Gates **Claude Code, Cursor, and Codex** natively — plus rule files for Windsu
 ![TypeScript](https://img.shields.io/badge/TypeScript-first-3178c6?logo=typescript&logoColor=white)
 ![Zero deps](https://img.shields.io/badge/dependencies-0-success)
 
-[2-Minute Setup](#2-minute-setup) · [Why Ark](#why-ark-and-not-just-a-linter) · [11 Layers](#batteries-included-the-11-layer-profile-all-optional) · [AI Write Gate](#the-ai-write-gate) · [CI Gate](#ark-check--the-ci-gate) · [Runtime Kernel](#the-runtime-kernel-opt-in) · [Docs](#documentation)
+[2-Minute Setup](#2-minute-setup) · [Why Ark](#why-ark-and-not-just-a-linter) · [11 Layers](#batteries-included-the-11-layer-profile-all-optional) · [Agent Gates + Tools](#the-ai-write-gate) · [CI Gate](#ark-check--the-ci-gate) · [Runtime Kernel](#the-runtime-kernel-opt-in) · [Docs](#documentation)
 
 </div>
 
@@ -42,8 +42,14 @@ full division before deciding what to adopt. Know the shape you want up front? S
 from a named preset instead of detection:
 
 ```bash
-npx ark init --preset hexagonal        # or: layered, feature-sliced
+npx ark init --preset hexagonal        # or: layered, feature-sliced, monorepo
 ```
+
+Workspace monorepos (npm/yarn/pnpm/bun) are **auto-detected** — `ark init` reads your
+`workspaces` (or `pnpm-workspace.yaml`) and writes a cross-package profile anchored at
+the real workspace roots instead of the `src/**` starter, so `packages/*/domain` and
+`apps/*/domain` are governed by one contract. Check what each layer actually matches
+with `npx ark-check --coverage`.
 
 Each preset writes a canonical `ark.config.json` (inward-only dependency rules, all
 layers optional) so a fresh project is governed from the first commit. On an empty project it generates the
@@ -160,6 +166,7 @@ If you only need import-boundary linting in CI, [dependency-cruiser](https://git
 | Cross-layer import checks in CI         | ✅ (TS resolver) | ✅ | ✅ | ✅ |
 | Blocks AI agents **before** code lands (MCP + hook) | ✅ | ❌ | ❌ | ❌ |
 | Machine-readable contract for agents (`ark://manifest`) | ✅ | ❌ | ❌ | ❌ |
+| MCP tools the agent calls to place code correctly (`ark_place`, …) | ✅ | ❌ | ❌ | ❌ |
 | Injects the contract into agent context at session start | ✅ | ❌ | ❌ | ❌ |
 | Forbidden ambient globals per layer (`Date.now` in domain, ...) | ✅ | ❌ | ➖ (generic ESLint) | ❌ |
 | Event/intent governance (who may publish what) | ✅ | ❌ | ❌ | ❌ |
@@ -212,16 +219,26 @@ npx ark-check --print-config eleven-layer > ark.config.json   # the full profile
 
 ## The AI Write Gate
 
-`ark-mcp` is a zero-dependency MCP server + one-shot hook:
+Most tools tell the agent the rules *after* it breaks them. Ark hands the agent the
+contract up front **and a toolkit to stay inside it** — so generated code lands right the
+first time, with no review round-trip. `ark-mcp` is a zero-dependency MCP server + one-shot hook.
 
-- **`ark-mcp --hook`** — PreToolUse gate: computes the **post-edit** file content, validates it against your layers, exits 2 with the violations when the write must be blocked. The agent self-corrects.
+**Enforcement — the wrong code never lands:**
+
+- **`ark-mcp --hook`** — PreToolUse gate: computes the **post-edit** file content, validates it against your layers, exits 2 with the violations when the write must be blocked. The agent reads the reason and self-corrects.
 - **`ark-mcp --session-context`** — SessionStart injection: prints a compact contract summary (layers, forbidden globals, baseline state) into the agent's context, so it knows the architecture from the first token instead of learning by rejection. Silent no-op outside Ark projects, so it can't leak into other repos.
-- **`validate_code` tool** — on-demand validation of a snippet, for runtimes without hooks.
-- **`ark://manifest` resource** — the architecture as JSON, so agents read the rules *before* generating code.
+
+**Tools the agent calls proactively** — they appear in its tool list automatically, so it queries the contract instead of guessing (no skill or doc-reading needed):
+
+- **`ark_place`** — *"where does this file go?"* → its layer, forbidden globals, and which layers it may / must not import. The agent asks **before** writing.
+- **`validate_code`** — validate a snippet on demand, for runtimes without hooks.
+- **`ark_check`** — the full architecture check as structured JSON (baseline-aware).
+- **`ark_coverage`** — per-layer file counts + the full list of ungoverned files.
+- **`ark://manifest`** (resource) — the whole contract as JSON, read *before* generating code.
 
 Copy-paste setups for **Claude Code, Cursor, and OpenAI Codex**, plus instruction-tier
-rule files for **Windsurf, Cline, GitHub Copilot, and Kiro** (Gemini CLI reads the
-generated `AGENTS.md` directly): [docs/ai-gates.md](docs/ai-gates.md).
+rule files for **Windsurf, Cline, GitHub Copilot, Kiro, Roo Code, Continue, and
+Gemini CLI**: [docs/ai-gates.md](docs/ai-gates.md).
 
 ## `ark-check` — The CI Gate
 
@@ -229,6 +246,7 @@ generated `AGENTS.md` directly): [docs/ai-gates.md](docs/ai-gates.md).
 npx ark-check --root . --config ark.config.json --strict-config   # fail on coverage gaps too
 npx ark-check --json                                              # machine-readable
 npx ark-check --baseline                                          # ratchet mode
+npx ark-check --coverage                                          # per-layer file counts + ungoverned files
 npx ark-check --report ark-report.html                            # visual architecture report
 ```
 

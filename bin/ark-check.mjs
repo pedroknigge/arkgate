@@ -35,6 +35,7 @@ function parseArgs(argv) {
     baseline: undefined,
     updateBaseline: false,
     noCache: false,
+    coverage: false,
   };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -60,6 +61,7 @@ function parseArgs(argv) {
     }
     else if (arg === '--force') args.force = true;
     else if (arg === '--skills-only') args.skillsOnly = true;
+    else if (arg === '--coverage') args.coverage = true;
     else if (arg === '--codex-home') args.codexHome = true;
     else if (arg === '--no-cache') args.noCache = true;
     else if (arg === '--report') {
@@ -85,7 +87,8 @@ function parseArgs(argv) {
 function usage() {
   return [
     'Usage: ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--require-gates] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
-    '       ark-check --init [--preset hexagonal|layered|feature-sliced] [--force]',
+    '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
+    '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo] [--force]',
     '       ark-check --install-agent-gates [--tools claude,cursor,codex] [--skills-only] [--codex-home] [--force]',
     '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
     '       ark-check --print-config eleven-layer',
@@ -132,20 +135,20 @@ function usage() {
     '',
     '--install-agent-gates writes AGENTS.md, .mcp.json, and the CI workflow for every',
     'project, plus tool-specific templates. Known tools: claude, cursor, codex (full',
-    'MCP/hook gates) and windsurf, cline, copilot, kiro (instruction-tier rule files',
-    'derived from the same contract; Gemini CLI needs no template — it reads AGENTS.md).',
+    'MCP/hook gates) and windsurf, cline, copilot, kiro, roo, continue, gemini',
+    '(instruction-tier rule files derived from the same contract).',
     'It also installs the /ark-* skills shipped in templates/skills/ into each',
     'detected tool\'s command location (.claude/skills/, .cursor/commands/,',
     '.codex/prompts/, .windsurf/workflows/, .clinerules/workflows/, .github/prompts/).',
-    'Kiro has no command mechanism and receives only its steering rule. Existing',
-    'files are never overwritten without --force, so re-running after an update',
-    'only adds what is missing. --skills-only restricts the write to just the',
-    '/ark-* skills (safe to --force-refresh — it leaves a customized AGENTS.md,',
+    'Kiro, Roo, Continue, and Gemini have no command mechanism and receive only their',
+    'rule file. Existing files are never overwritten without --force, so re-running',
+    'after an update only adds what is missing. --skills-only restricts the write to',
+    'just the /ark-* skills (safe to --force-refresh — it leaves a customized AGENTS.md,',
     'settings, and CI workflow untouched).',
     'Pass --tools to pick which tool configs to write; otherwise they are auto-detected',
     'from their config directories (.claude/, .cursor/, .codex/, .windsurf/, .clinerules/,',
-    '.kiro/; copilot is explicit-only). claude+cursor+codex are written when nothing is',
-    'detected.',
+    '.kiro/, .roo/, .continue/, .gemini/; copilot is explicit-only). claude+cursor+codex',
+    'are written when nothing is detected.',
     '',
     'Generate a starter 11-layer config:',
     '  ark-check --print-config eleven-layer > ark.config.json',
@@ -258,6 +261,40 @@ function uncoveredDirectories(root, srcDir, layers) {
         layer.patterns.some((pattern) => pattern.startsWith(prefix))
       );
     });
+}
+
+// Reads workspace globs from package.json (npm/yarn/bun `workspaces`, array or
+// `{ packages: [] }`) and pnpm-workspace.yaml, returning the distinct base directories
+// (the glob prefix before the first `*`), e.g. "packages/*" -> "packages". Empty when
+// the project declares no workspaces — the signal that says "this is a monorepo".
+function detectWorkspaces(root) {
+  const dirs = new Set();
+  const addGlob = (glob) => {
+    if (typeof glob !== 'string') return;
+    const beforeStar = glob.split('*')[0].replace(/\/+$/, '');
+    if (beforeStar && beforeStar !== '.') dirs.add(normalize(beforeStar));
+  };
+  const pkg = readPackageJson(root);
+  const ws = Array.isArray(pkg?.workspaces) ? pkg.workspaces : pkg?.workspaces?.packages;
+  if (Array.isArray(ws)) ws.forEach(addGlob);
+  const pnpmFile = path.join(root, 'pnpm-workspace.yaml');
+  if (fs.existsSync(pnpmFile)) {
+    // Minimal read (no YAML dep): collect list items under the top-level `packages:` key
+    // ONLY. pnpm files also carry other list-valued keys (onlyBuiltDependencies, catalog,
+    // …) whose items are NOT workspace globs — a key-agnostic scan would pull those in.
+    let inPackages = false;
+    for (const line of fs.readFileSync(pnpmFile, 'utf8').split('\n')) {
+      const keyMatch = line.match(/^([A-Za-z0-9_-]+):/); // top-level key (no indentation)
+      if (keyMatch) {
+        inPackages = keyMatch[1] === 'packages';
+        continue;
+      }
+      if (!inPackages) continue;
+      const item = line.match(/^\s+-\s*['"]?([^'"#]+?)['"]?\s*$/); // indented list item
+      if (item) addGlob(item[1].trim());
+    }
+  }
+  return [...dirs];
 }
 
 // Deny every "upward" edge for an ordered layer list (index 0 = outermost/top,
@@ -375,6 +412,48 @@ const ARCHITECTURE_PRESETS = {
       rules: denyUpward(order),
     };
   },
+  // Cross-package profile for workspace monorepos. Patterns match by directory NAME
+  // anywhere in the tree (`**/domain/**` hits packages/x/domain AND apps/y/src/domain),
+  // so one profile governs every package. include defaults to the detected workspace
+  // roots (falls back to packages+apps). Naming varies by repo — adjust and re-check.
+  monorepo: (includeDirs) => ({
+    include: includeDirs && includeDirs.length > 0 ? includeDirs : ['packages', 'apps'],
+    layers: [
+      {
+        name: 'DomainModel',
+        description: 'Pure business rules and entities, in any package. No I/O, no framework, no ambient globals.',
+        patterns: ['**/domain/**', '**/entities/**'],
+        forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
+        optional: true,
+      },
+      {
+        name: 'ApplicationOrchestration',
+        description: 'Use cases and services that coordinate the domain through ports.',
+        patterns: ['**/application/**', '**/use-cases/**', '**/services/**'],
+        optional: true,
+      },
+      {
+        name: 'PresentationAdapters',
+        description: 'Entrypoints — HTTP routes, controllers, UI, framework app/pages dirs.',
+        patterns: ['**/app/**', '**/pages/**', '**/components/**', '**/controllers/**', '**/http/**', '**/routes/**'],
+        optional: true,
+      },
+      {
+        name: 'PersistenceAdapters',
+        description: 'Implements ports with real infrastructure: DB, external APIs, filesystem.',
+        patterns: ['**/infrastructure/**', '**/adapters/**', '**/persistence/**', '**/repositories/**'],
+        optional: true,
+      },
+    ],
+    rules: [
+      { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
+      { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
+      { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
+      { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
+      { from: 'PresentationAdapters', to: 'PersistenceAdapters', allowed: false },
+      { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
+    ],
+  }),
 };
 
 function printInitNextSteps(root) {
@@ -409,7 +488,7 @@ function runInit(args) {
       process.exitCode = 2;
       return;
     }
-    const finalConfig = factory();
+    const finalConfig = factory(detectWorkspaces(args.root));
     fs.writeFileSync(configPath, `${JSON.stringify(finalConfig, null, 2)}\n`);
     console.log(`Wrote ${configPath} (${args.preset} preset)`);
     console.log('');
@@ -417,24 +496,47 @@ function runInit(args) {
     for (const layer of finalConfig.layers) {
       console.log(`  ${layer.name}: ${layer.patterns.join(', ')}`);
     }
+    if (args.preset === 'monorepo') {
+      console.log('');
+      console.log(`include: ${finalConfig.include.join(', ')} — patterns match by directory name in any`);
+      console.log('package; adjust to your naming, then verify: npx ark-check --coverage');
+    }
     printInitNextSteps(args.root);
     return;
   }
 
   const { srcDir, config } = detectConfig(args.root);
   const greenfield = config.layers.length === 0;
+  // When no conventional src/ layout is found, a `workspaces` declaration means this is a
+  // monorepo — the src/** 11-layer starter would match nothing there, so use the
+  // cross-package monorepo profile anchored at the real workspace roots instead.
+  const workspaces = greenfield ? detectWorkspaces(args.root) : [];
+  const mode = !greenfield ? 'detected' : workspaces.length > 0 ? 'monorepo' : 'greenfield';
   // Greenfield: anchor the starter profile at src/ (the convention a fresh project will
   // scaffold under) even when src/ doesn't exist yet — the layers are optional, so the
   // check passes today and governance switches on the moment src/domain/ etc. appear.
-  const finalConfig = greenfield
-    ? createElevenLayerConfig({ rootDir: srcDir === '.' ? 'src' : srcDir })
-    : config;
+  const finalConfig =
+    mode === 'detected'
+      ? config
+      : mode === 'monorepo'
+        ? ARCHITECTURE_PRESETS.monorepo(workspaces)
+        : createElevenLayerConfig({ rootDir: srcDir === '.' ? 'src' : srcDir });
 
   fs.writeFileSync(configPath, `${JSON.stringify(finalConfig, null, 2)}\n`);
 
   console.log(`Wrote ${configPath}`);
   console.log('');
-  if (greenfield) {
+  if (mode === 'monorepo') {
+    console.log(`Monorepo detected (workspaces: ${workspaces.join(', ')}). Generated a cross-package`);
+    console.log('profile matching domain/application/presentation/persistence directories in any');
+    console.log('package. Every layer is optional, so the strict check passes now and each switches');
+    console.log('on as matching directories gain files. Adjust patterns to your naming if they differ:');
+    for (const layer of finalConfig.layers) {
+      console.log(`  ${layer.name}: ${layer.patterns.join(', ')}`);
+    }
+    console.log('');
+    console.log('Verify what each layer actually governs: npx ark-check --coverage');
+  } else if (mode === 'greenfield') {
     console.log('No conventional layer directories found — generated the full 11-layer starter');
     console.log('profile instead. Every layer is marked optional, so the strict check passes now');
     console.log('and each layer starts being enforced as soon as its directory gains source files:');
@@ -736,7 +838,7 @@ function claudeSettings() {
 
 function resolveTools(args) {
   if (args.tools && args.tools.length > 0) {
-    return new Set(args.tools);
+    return { tools: new Set(args.tools), source: 'explicit' };
   }
   const root = args.root;
   const detected = new Set();
@@ -750,17 +852,31 @@ function resolveTools(args) {
     detected.add('cline');
   }
   if (fs.existsSync(path.join(root, '.kiro'))) detected.add('kiro');
+  if (fs.existsSync(path.join(root, '.roo'))) detected.add('roo');
+  if (fs.existsSync(path.join(root, '.continue'))) detected.add('continue');
+  if (fs.existsSync(path.join(root, '.gemini'))) detected.add('gemini');
   // copilot has no reliable directory signal (.github exists in most repos),
   // so it is explicit-only via --tools.
   // No signal at all: fall back to writing the primary tools' templates so a fresh
   // project still gets a complete, reviewable starter set.
   if (detected.size === 0) {
-    return new Set(['claude', 'cursor', 'codex']);
+    return { tools: new Set(['claude', 'cursor', 'codex']), source: 'default' };
   }
-  return detected;
+  return { tools: detected, source: 'detected' };
 }
 
-const KNOWN_TOOLS = ['claude', 'cursor', 'codex', 'windsurf', 'cline', 'copilot', 'kiro'];
+const KNOWN_TOOLS = [
+  'claude',
+  'cursor',
+  'codex',
+  'windsurf',
+  'cline',
+  'copilot',
+  'kiro',
+  'roo',
+  'continue',
+  'gemini',
+];
 
 // One canonical markdown per skill (templates/skills/*.md, shipped in the npm
 // package); installed into each tool's slash-command location. The YAML
@@ -972,7 +1088,14 @@ function runInstallAgentGates(args) {
   }
   const pm = packageManager(root);
   const hasCheckScript = hasCheckArchitectureScript(root);
-  const tools = resolveTools(args);
+  const { tools, source } = resolveTools(args);
+  const toolSource =
+    source === 'explicit'
+      ? 'from --tools'
+      : source === 'detected'
+        ? 'auto-detected from config dirs'
+        : 'default set — no agent config dirs found';
+  console.log(`Agent gates for: ${[...tools].sort().join(', ')} (${toolSource})`);
   const templates = [];
   // --skills-only refreshes just the canonical /ark-* skills, which are safe to
   // overwrite (they track the package). The gate/instruction files (AGENTS.md,
@@ -1008,6 +1131,17 @@ function runInstallAgentGates(args) {
     }
     if (tools.has('kiro')) {
       templates.push(['.kiro/steering/ark.md', instructionRule()]);
+    }
+    if (tools.has('roo')) {
+      templates.push(['.roo/rules/ark.md', instructionRule()]);
+    }
+    if (tools.has('continue')) {
+      templates.push(['.continue/rules/ark.md', instructionRule()]);
+    }
+    // Gemini CLI reads GEMINI.md as its primary project context (it also reads
+    // AGENTS.md, but GEMINI.md wins when both are present), so the rule lives there.
+    if (tools.has('gemini')) {
+      templates.push(['GEMINI.md', instructionRule()]);
     }
   }
   // /ark-* skills for every detected tool that supports project-level commands.
@@ -2043,6 +2177,82 @@ function moduleSpecifierFromCall(ts, node) {
   return undefined;
 }
 
+// --coverage: a standalone visibility report (never changes the exit code). Answers
+// "which files does each layer actually govern, and what is slipping through?" — the
+// data the /ark-coverage skill otherwise has to hand-roll with find/readdir walks.
+function runCoverage(root, config, files, rules, asJson) {
+  const layers = config.layers ?? [];
+  const counts = new Map(layers.map((layer) => [layer.name, 0]));
+  const unclassified = [];
+  for (const file of files) {
+    const layer = layerForFile(root, file, layers);
+    if (layer && counts.has(layer)) counts.set(layer, counts.get(layer) + 1);
+    else unclassified.push(normalize(path.relative(root, file)));
+  }
+  unclassified.sort();
+  const layerRows = layers.map((layer) => ({
+    name: layer.name,
+    patterns: layer.patterns ?? [],
+    files: counts.get(layer.name) ?? 0,
+  }));
+  // A layer whose patterns match zero files is dead config — it enforces nothing, and
+  // usually means the patterns are wrong (the #1 monorepo mistake). Surface it.
+  const emptyLayers = layerRows.filter((row) => row.files === 0).map((row) => row.name);
+  // Rule coverage (skill checklist item 9): a layer with no rule edge can import anything.
+  const layersWithoutRules = layerRows
+    .map((row) => row.name)
+    .filter((name) => !rules.some((rule) => rule.from === name || rule.to === name));
+
+  if (asJson) {
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          coverage: {
+            include: config.include ?? [],
+            totalFiles: files.length,
+            layers: layerRows,
+            unclassified: { count: unclassified.length, files: unclassified },
+            emptyLayers,
+            layersWithoutRules,
+          },
+        },
+        null,
+        2
+      )
+    );
+    return;
+  }
+
+  const nameWidth = Math.max(
+    'Layer'.length,
+    '(unclassified)'.length,
+    ...layerRows.map((row) => row.name.length)
+  );
+  const pad = (value) => value.padEnd(nameWidth);
+  console.log(`Ark coverage (include: ${(config.include ?? []).join(', ') || '.'}):`);
+  console.log('');
+  console.log(`  ${pad('Layer')}  Files`);
+  for (const row of layerRows) {
+    const flag = row.files === 0 ? '   (pattern matches nothing)' : '';
+    console.log(`  ${pad(row.name)}  ${String(row.files).padStart(5)}${flag}`);
+  }
+  console.log(`  ${pad('(unclassified)')}  ${String(unclassified.length).padStart(5)}`);
+  console.log('');
+  console.log(
+    `${files.length} source file(s) in scope; ${unclassified.length} not matched by any layer.`
+  );
+  if (unclassified.length > 0) {
+    console.log('');
+    console.log('Unclassified — import rules are NOT enforced for these (add a layer pattern):');
+    for (const file of unclassified) console.log(`  ${file}`);
+  }
+  if (layersWithoutRules.length > 0) {
+    console.log('');
+    console.log(`Layers with no rule edge (can import anything): ${layersWithoutRules.join(', ')}`);
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv);
   if (args.help) {
@@ -2096,6 +2306,19 @@ async function main() {
     }
   }
 
+  const root = args.root;
+  const config = readConfig(root, args.config);
+  const manifest = readManifest(root, args.manifest);
+  const rules = manifest?.architecture?.rules ?? config.rules;
+  const files = config.include.flatMap((entry) => walk(path.join(root, entry)));
+
+  // --coverage is a pure glob/report view (no TypeScript resolver), so serve it BEFORE the
+  // TS import: the report must work — and exit 0 — even when typescript isn't installed.
+  if (args.coverage) {
+    runCoverage(root, config, files, rules, args.json);
+    return;
+  }
+
   let ts;
   try {
     ts = await import('typescript');
@@ -2105,14 +2328,10 @@ async function main() {
     return;
   }
 
-  const root = args.root;
-  const config = readConfig(root, args.config);
-  const manifest = readManifest(root, args.manifest);
-  const rules = manifest?.architecture?.rules ?? config.rules;
   const manifestIntentLayers = intentLayersFromManifest(manifest);
   const compilerOptionsFor = createCompilerOptionsLookup(ts, root, args.tsconfig);
   const moduleHost = createModuleResolutionHost(ts);
-  const files = config.include.flatMap((entry) => walk(path.join(root, entry)));
+
   const violations = [];
   const warnings = collectConfigWarnings(root, config, files, rules, manifest);
   const cacheKey = args.noCache ? undefined : scanCacheKey(root, args);

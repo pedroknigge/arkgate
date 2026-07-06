@@ -116,10 +116,15 @@ prints nothing and exits 0, so non-Ark projects are untouched.
 
 ## Claude Code — MCP server (contract discovery + on-demand validation)
 
-The MCP server exposes two things agents can use proactively:
+The MCP server exposes a resource and four tools agents can use proactively:
 
 - **`ark://manifest`** (resource) — the machine-readable architecture contract (layers + rules), so the agent can read the architecture before generating code.
-- **`validate_code`** (tool) — validates a snippet against the architecture on demand.
+- **`validate_code`** (tool) — validates a snippet against the architecture on demand (the write-path gate).
+- **`ark_place`** (tool) — given a target file path, returns its layer, forbidden globals, and which layers it may / must not import. Call it *before* writing a new file so generated code lands in a governed location.
+- **`ark_check`** (tool) — runs the full architecture check and returns structured violations (applies the baseline automatically when one exists).
+- **`ark_coverage`** (tool) — per-layer file counts, the full unclassified-file list, and layers whose patterns match nothing.
+
+Tools appear in the agent's tool list automatically — no skill or doc-reading needed — so the agent can query the contract instead of shelling out and parsing.
 
 ```bash
 claude mcp add ark -- npx ark-mcp --root . --config ark.config.json
@@ -188,14 +193,15 @@ Same model as Cursor: MCP for discovery/validation, `ark-check` in CI as the har
 For Ark projects, register the MCP server as soon as the repo is adopted so the agent
 has the contract available from the first edit.
 
-## Instruction-tier agents: Windsurf, Cline, GitHub Copilot, Kiro, Gemini CLI
+## Instruction-tier agents: Windsurf, Cline, Copilot, Kiro, Roo Code, Continue, Gemini CLI
 
 Agents without MCP or hook support still follow the contract through an always-on
 project rule file. `ark-check --install-agent-gates` generates them (auto-detected
-from `.windsurf/`, `.clinerules/`, `.kiro/`; Copilot is explicit-only):
+from `.windsurf/`, `.clinerules/`, `.kiro/`, `.roo/`, `.continue/`, `.gemini/`;
+Copilot is explicit-only):
 
 ```bash
-npx ark-check --install-agent-gates --tools windsurf,cline,copilot,kiro
+npx ark-check --install-agent-gates --tools windsurf,cline,copilot,kiro,roo,continue,gemini
 ```
 
 | Tool | File written |
@@ -204,7 +210,9 @@ npx ark-check --install-agent-gates --tools windsurf,cline,copilot,kiro
 | Cline | `.clinerules/ark.md` |
 | GitHub Copilot | `.github/copilot-instructions.md` |
 | Kiro | `.kiro/steering/ark.md` |
-| Gemini CLI | none needed — it reads the generated `AGENTS.md` |
+| Roo Code | `.roo/rules/ark.md` |
+| Continue | `.continue/rules/ark.md` |
+| Gemini CLI | `GEMINI.md` (its primary context file; also reads `AGENTS.md`) |
 
 All of them derive from the same contract as `AGENTS.md` and the Cursor rule, so the
 steps cannot drift. These are advisory (the agent reads rules; nothing blocks the
@@ -220,14 +228,45 @@ If your runtime can run a shell command before file writes and pass the tool pay
 
 ## ESLint (editor feedback)
 
-For in-editor red squiggles on layer violations, add the ESLint plugin:
+For in-editor red squiggles on layer violations, add the ESLint plugin. It ships a
+flat-config preset you can spread directly:
 
 ```js
-// eslint.config.js
+// eslint.config.js  (flat config)
 import ark from 'ark-runtime-kernel/eslint';
 
-export default [ark.configs.recommended];
+export default [
+  ark.configs.recommended,   // ark/no-domain-infra-imports, no-raw-event-publish, require-publish-source
+];
 ```
+
+`recommended` deliberately omits **`ark/no-forbidden-globals`** (domain purity: no
+`fetch`, `Date.now`, `Math.random`, …). That rule is only correct when scoped to your
+domain directories — a global block would flag legitimate infrastructure code. Add it
+as its own block with a `files` glob matching your `DomainModel` layer:
+
+```js
+import ark from 'ark-runtime-kernel/eslint';
+
+export default [
+  ark.configs.recommended,
+  {
+    files: ['packages/*/domain/**', 'src/**/domain/**'],  // your DomainModel layer paths
+    plugins: { ark },
+    rules: {
+      'ark/no-forbidden-globals': [
+        'error',
+        { globals: ['fetch', 'process', 'Date.now', 'Math.random'] },  // match ark.config.json
+      ],
+    },
+  },
+];
+```
+
+Rule ids are `ark/<kebab-name>`. Keep the `globals` list in sync with the
+`forbiddenGlobals` on your `DomainModel` layer in `ark.config.json` so the editor and
+`ark-check` agree. All four rules are exported individually too (`ark.rules`) if you
+prefer to wire them by hand.
 
 ## CI backstop
 

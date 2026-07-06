@@ -76,6 +76,16 @@ function runArkInit(root: string, extraArgs: string[] = []) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function coverageJson(root: string): any {
+  const out = execFileSync(
+    'node',
+    [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--coverage', '--json'],
+    { encoding: 'utf8', stdio: 'pipe' }
+  );
+  return JSON.parse(out);
+}
+
 describe('ark-check --init', () => {
   it('detects existing layer directories and writes a config that passes strict check', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-init-'));
@@ -1371,11 +1381,17 @@ describe('ark-check --install-agent-gates instruction-tier tools', () => {
     cline: '.clinerules/ark.md',
     copilot: '.github/copilot-instructions.md',
     kiro: '.kiro/steering/ark.md',
+    roo: '.roo/rules/ark.md',
+    continue: '.continue/rules/ark.md',
+    gemini: 'GEMINI.md',
   };
 
   it('writes the shared instruction rule for explicitly selected tools', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-gates-tier-'));
-    const result = runInstallAgentGates(root, ['--tools', 'windsurf,cline,copilot,kiro']);
+    const result = runInstallAgentGates(root, [
+      '--tools',
+      'windsurf,cline,copilot,kiro,roo,continue,gemini',
+    ]);
     expect(result.status).toBe(0);
 
     const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
@@ -1389,19 +1405,28 @@ describe('ark-check --install-agent-gates instruction-tier tools', () => {
     // Full-gate tools were not selected.
     expect(fs.existsSync(path.join(root, '.claude/settings.json'))).toBe(false);
     expect(fs.existsSync(path.join(root, '.cursor/rules/ark.mdc'))).toBe(false);
+    // Rule-only tools get no /ark-* skill files (like kiro).
+    expect(fs.existsSync(path.join(root, '.roo/rules/ark-fix.md'))).toBe(false);
+    expect(fs.existsSync(path.join(root, '.continue/rules/ark-fix.md'))).toBe(false);
   });
 
-  it('auto-detects windsurf, cline, and kiro from their config directories', () => {
+  it('auto-detects instruction-tier tools from their config directories', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-gates-tier-detect-'));
     fs.mkdirSync(path.join(root, '.windsurf'), { recursive: true });
     fs.mkdirSync(path.join(root, '.clinerules'), { recursive: true });
     fs.mkdirSync(path.join(root, '.kiro'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.roo'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.continue'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.gemini'), { recursive: true });
 
     const result = runInstallAgentGates(root);
     expect(result.status).toBe(0);
     expect(fs.existsSync(path.join(root, RULE_FILES.windsurf))).toBe(true);
     expect(fs.existsSync(path.join(root, RULE_FILES.cline))).toBe(true);
     expect(fs.existsSync(path.join(root, RULE_FILES.kiro))).toBe(true);
+    expect(fs.existsSync(path.join(root, RULE_FILES.roo))).toBe(true);
+    expect(fs.existsSync(path.join(root, RULE_FILES.continue))).toBe(true);
+    expect(fs.existsSync(path.join(root, RULE_FILES.gemini))).toBe(true);
     // copilot has no directory signal and must stay explicit-only.
     expect(fs.existsSync(path.join(root, RULE_FILES.copilot))).toBe(false);
   });
@@ -1694,5 +1719,98 @@ describe('ark-check monorepo tsconfig resolution', () => {
     expect(html).toContain('Pure business rules.'); // Purpose column, from the layer `description`
     expect(html).toContain('Dependency direction'); // readable per-layer view
     expect(html).toContain('nothing (pure core)'); // a lone layer imports nothing
+  });
+});
+
+describe('ark-check --coverage', () => {
+  it('reports per-layer counts, the FULL unclassified list, and empty layers', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-coverage-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/loose'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/domain/a.ts'), 'export const a = 1;');
+    fs.writeFileSync(path.join(root, 'src/domain/b.ts'), 'export const b = 2;');
+    fs.writeFileSync(path.join(root, 'src/loose/c.ts'), 'export const c = 3;'); // unclassified
+    fs.writeFileSync(path.join(root, 'ark.config.json'), TWO_LAYER_CONFIG);
+
+    const result = coverageJson(root);
+    expect(result.ok).toBe(true);
+    const byName = Object.fromEntries(
+      result.coverage.layers.map((l: { name: string; files: number }) => [l.name, l.files])
+    );
+    expect(byName.DomainModel).toBe(2);
+    expect(byName.PersistenceAdapters).toBe(0); // src/infra never created
+    expect(result.coverage.emptyLayers).toContain('PersistenceAdapters');
+    // Full list, not the 5-sample cap of the CONFIG_UNCLASSIFIED_FILES warning.
+    expect(result.coverage.unclassified.files).toEqual(['src/loose/c.ts']);
+    expect(result.coverage.unclassified.count).toBe(1);
+  });
+
+  it('is report-only: exit 0 even when files are unclassified', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-coverage-exit-'));
+    fs.mkdirSync(path.join(root, 'src/loose'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/loose/c.ts'), 'export const c = 3;');
+    fs.writeFileSync(path.join(root, 'ark.config.json'), TWO_LAYER_CONFIG);
+    // execFileSync throws on non-zero exit; not throwing IS the exit-0 assertion.
+    const out = execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--coverage'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    expect(out).toContain('Unclassified');
+  });
+});
+
+describe('ark-check --init monorepo detection', () => {
+  it('auto-detects package.json workspaces and writes a cross-package profile', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-init-mono-'));
+    fs.writeFileSync(
+      path.join(root, 'package.json'),
+      JSON.stringify({ name: 'm', workspaces: ['packages/*', 'apps/*'] })
+    );
+    fs.mkdirSync(path.join(root, 'packages/domain/src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'packages/domain/src/order.ts'), 'export const o = 1;');
+
+    const init = runInit(root);
+    expect(init.status).toBe(0);
+    expect(init.stdout).toContain('Monorepo detected');
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
+    expect(cfg.include).toEqual(['packages', 'apps']);
+    expect(cfg.layers.map((l: { name: string }) => l.name)).toContain('DomainModel');
+    // The domain package file is actually classified as DomainModel by the **/domain/** glob.
+    const cov = coverageJson(root);
+    const domain = cov.coverage.layers.find((l: { name: string }) => l.name === 'DomainModel');
+    expect(domain.files).toBe(1);
+    expect(cov.coverage.unclassified.count).toBe(0);
+  });
+
+  it('reads pnpm-workspace.yaml packages: only, ignoring other list keys', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-init-pnpm-'));
+    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'm' }));
+    // onlyBuiltDependencies is a real pnpm list key whose items are NOT workspace globs;
+    // a key-agnostic parser would wrongly pull esbuild/@parcel/watcher into `include`.
+    fs.writeFileSync(
+      path.join(root, 'pnpm-workspace.yaml'),
+      "packages:\n  - 'libs/*'\n  - 'services/*'\nonlyBuiltDependencies:\n  - esbuild\n  - '@parcel/watcher'\n"
+    );
+
+    const init = runInit(root);
+    expect(init.status).toBe(0);
+    expect(init.stdout).toContain('Monorepo detected');
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
+    expect(cfg.include).toEqual(['libs', 'services']);
+  });
+
+  it('--preset monorepo works explicitly and falls back to packages+apps', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-preset-mono-'));
+    const init = runInit(root, ['--preset', 'monorepo']);
+    expect(init.status).toBe(0);
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
+    expect(cfg.include).toEqual(['packages', 'apps']);
+    expect(cfg.layers.map((l: { name: string }) => l.name)).toEqual([
+      'DomainModel',
+      'ApplicationOrchestration',
+      'PresentationAdapters',
+      'PersistenceAdapters',
+    ]);
   });
 });

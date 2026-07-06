@@ -2,6 +2,53 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.9.0 — 2026-07-05
+
+### Added — read-side MCP tools for AI agents
+
+The MCP server (`ark-mcp`) now exposes three read-side tools alongside `validate_code`,
+so an agent can query the contract instead of shelling out and parsing:
+
+- **`ark_place`** — given a target file path, returns its layer, forbidden globals, and
+  which layers it may / must not import. Call it before writing a new file so generated
+  code lands in a governed location. Computed in-process from the contract.
+- **`ark_check`** — the full architecture check as structured JSON (baseline-aware; a
+  `strict` argument toggles config-warning failures).
+- **`ark_coverage`** — per-layer file counts, the full list of unclassified (ungoverned)
+  files, layers whose patterns match nothing, and layers with no rule edge.
+
+`ark_check` and `ark_coverage` reuse the canonical `ark-check` engine (no duplicated
+logic). Tools appear in the agent's tool list automatically — no skill or doc-reading
+needed. `/ark-place` and `/ark-coverage` skills now reference the tools (with a CLI fallback).
+
+### Added — `ark-check --coverage`
+
+New report mode: per-layer matched-file counts plus the **full** unclassified-file list
+(vs the 5-sample cap on the config warning), `emptyLayers` (patterns matching nothing),
+and `layersWithoutRules`. Human-readable, or `--json`. Report-only — always exits 0.
+
+### Added — monorepo-aware `ark init`
+
+`ark init` now auto-detects workspace monorepos (npm/yarn/bun `workspaces` and
+`pnpm-workspace.yaml`) and writes a cross-package profile anchored at the real workspace
+roots, instead of the `src/**` 11-layer starter that matches nothing in a monorepo. A
+new `--preset monorepo` does the same explicitly; its layer patterns match by directory
+name in any package (`**/domain/**`, …).
+
+### Added — three more agent gates
+
+`--install-agent-gates` now knows **Roo Code** (`.roo/rules/ark.md`), **Continue**
+(`.continue/rules/ark.md`), and **Gemini CLI** (`GEMINI.md`), auto-detected from their
+config dirs — instruction-tier rule files derived from the same contract. `ark init`
+gained a `--tools` passthrough, and gate installation now prints which tools it targeted
+and why (detected / from --tools / default).
+
+### Added — ESLint flat-config recipe
+
+`docs/ai-gates.md` now documents `ark.configs.recommended` plus a domain-scoped block for
+`ark/no-forbidden-globals` (which `recommended` deliberately omits, since it needs
+per-path scoping).
+
 ## 1.8.3 — 2026-07-05
 
 ### Fixed — Codex-home refresh guidance no longer clobbers customized gate files

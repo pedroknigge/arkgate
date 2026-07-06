@@ -25,6 +25,7 @@ function parseArgs(argv) {
     else if (arg === '--force') args.force = true;
     else if (arg === '--no-strict') args.strict = false;
     else if (arg === '--preset') args.preset = argv[++i];
+    else if (arg === '--tools') args.tools = argv[++i];
     else if (arg === '--help' || arg === '-h') args.help = true;
   }
 
@@ -33,7 +34,7 @@ function parseArgs(argv) {
 
 function usage() {
   return `Usage:
-  ark init [--root <project>] [--preset hexagonal|layered|feature-sliced] [--yes] [--force] [--no-strict]
+  ark init [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo] [--tools <list>] [--yes] [--force] [--no-strict]
 
 Commands:
   init   Configure Ark project enforcement with explicit prompts.
@@ -42,7 +43,10 @@ Options:
   --yes       Non-interactive defaults: create config if needed, install gate templates, run strict check.
   --force     Allow generated files to overwrite existing files.
   --no-strict Skip the final strict ark-check run.
-  --preset    Start from a named architecture (hexagonal, layered, feature-sliced) instead of detection.
+  --preset    Start from a named architecture (hexagonal, layered, feature-sliced, monorepo) instead of detection.
+              (Workspace monorepos are auto-detected even without --preset.)
+  --tools     Comma-separated agents to gate (claude,cursor,codex,windsurf,cline,copilot,kiro,roo,continue,gemini).
+              Omit to auto-detect from each tool's config dir, falling back to claude+cursor+codex.
 `;
 }
 
@@ -92,6 +96,7 @@ async function init(args) {
     const installGates = args.yes || await askYesNo(rl, 'Configure agent and CI gate templates?', true);
     if (installGates) {
       const gateArgs = ['--root', root, '--install-agent-gates'];
+      if (args.tools) gateArgs.push('--tools', args.tools);
       if (args.force) gateArgs.push('--force');
       const status = runArkCheck(gateArgs, { cwd: root });
       if (status !== 0) return status;

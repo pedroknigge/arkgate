@@ -406,6 +406,104 @@ describe('ark-mcp --hook (PreToolUse gate)', () => {
   });
 });
 
+describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () => {
+  let projectRoot: string;
+  let client: ReturnType<typeof createClient>;
+
+  beforeAll(() => {
+    prepareMcpRuntime();
+    projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-mcp-read-'));
+    fs.writeFileSync(
+      path.join(projectRoot, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          {
+            name: 'DomainModel',
+            patterns: ['src/domain/**'],
+            forbiddenGlobals: ['Date.now'],
+          },
+          { name: 'PersistenceAdapters', patterns: ['src/infra/**'] },
+        ],
+        rules: [{ from: 'DomainModel', to: 'PersistenceAdapters', allowed: false }],
+      })
+    );
+    fs.mkdirSync(path.join(projectRoot, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(projectRoot, 'src/loose'), { recursive: true });
+    fs.writeFileSync(path.join(projectRoot, 'src/domain/order.ts'), 'export const o = 1;\n');
+    fs.writeFileSync(path.join(projectRoot, 'src/loose/x.ts'), 'export const x = 1;\n'); // unclassified
+    client = createClient(projectRoot, ['--config', 'ark.config.json']);
+  }, 120000);
+
+  afterAll(() => client?.close());
+
+  it('lists all four tools', async () => {
+    const res = await client.request('tools/list');
+    expect(res.result.tools.map((t: { name: string }) => t.name)).toEqual([
+      'validate_code',
+      'ark_check',
+      'ark_coverage',
+      'ark_place',
+    ]);
+  });
+
+  it('ark_coverage returns per-layer counts and the full unclassified list', async () => {
+    const res = await client.request('tools/call', { name: 'ark_coverage', arguments: {} });
+    expect(res.result.isError).toBe(false);
+    const cov = JSON.parse(res.result.content[0].text).coverage;
+    const byName = Object.fromEntries(cov.layers.map((l: { name: string; files: number }) => [l.name, l.files]));
+    expect(byName.DomainModel).toBe(1);
+    expect(cov.emptyLayers).toContain('PersistenceAdapters');
+    expect(cov.unclassified.files).toEqual(['src/loose/x.ts']);
+  });
+
+  it('ark_check returns structured results; strict flag controls config-warning failure', async () => {
+    // No import violations exist, but the loose/ file is unclassified — under the default
+    // strict mode that config warning fails the check; strict:false ignores warnings.
+    const strict = await client.request('tools/call', { name: 'ark_check', arguments: {} });
+    const strictPayload = JSON.parse(strict.result.content[0].text);
+    expect(strictPayload.ok).toBe(false);
+    expect(strict.result.isError).toBe(true);
+    expect(strictPayload.violations ?? []).toHaveLength(0); // it's a config warning, not a violation
+
+    const loose = await client.request('tools/call', {
+      name: 'ark_check',
+      arguments: { strict: false },
+    });
+    const loosePayload = JSON.parse(loose.result.content[0].text);
+    expect(loosePayload.ok).toBe(true);
+    expect(loose.result.isError).toBe(false);
+  });
+
+  it('ark_place resolves the layer, forbidden globals, and denied import targets', async () => {
+    const res = await client.request('tools/call', {
+      name: 'ark_place',
+      arguments: { filePath: 'src/domain/new-thing.ts' },
+    });
+    const payload = JSON.parse(res.result.content[0].text);
+    expect(payload.layer).toBe('DomainModel');
+    expect(payload.forbiddenGlobals).toContain('Date.now');
+    expect(payload.mustNotImport).toContain('PersistenceAdapters');
+    expect(payload.mayImport).not.toContain('PersistenceAdapters');
+  });
+
+  it('ark_place flags an ungoverned path with placement suggestions', async () => {
+    const res = await client.request('tools/call', {
+      name: 'ark_place',
+      arguments: { filePath: 'scripts/build.ts' },
+    });
+    const payload = JSON.parse(res.result.content[0].text);
+    expect(payload.layer).toBeNull();
+    expect(payload.governed).toBe(false);
+    expect(Array.isArray(payload.suggestedLayers)).toBe(true);
+  });
+
+  it('rejects an unknown tool name', async () => {
+    const res = await client.request('tools/call', { name: 'nope', arguments: {} });
+    expect(res.error.code).toBe(-32602);
+  });
+});
+
 describe('ark-mcp --session-context (SessionStart injection)', () => {
   beforeAll(() => {
     prepareMcpRuntime();

@@ -46,13 +46,16 @@ from files, and end with a ranked report.
 7. **Domain purity** — do domain-model layers declare `forbiddenGlobals`
    (e.g. `fetch`, `process`, `Date.now`, `Math.random`)? If domain code calls these
    directly, recommend adding the guard.
-8. **Layer coverage** — compare `ark.config.json` layers against directories that
-   actually exist under `include`. Directories with source files but no matching
-   layer pattern are ungoverned code. Also surface `suggestedLayers` from the
-   `ark://manifest` MCP resource (they map to existing dirs not yet adopted).
-9. **Rule coverage** — layers with no `rules` edges at all can import anything;
-   flag layer pairs with no explicit rule where the dependency direction is obvious
-   (e.g. domain → adapters should be denied).
+8. **Layer coverage** — call the **`ark_coverage`** MCP tool if the `ark` server is
+   available, else run `npx ark-check --root . --config ark.config.json --coverage --json`.
+   It returns, per layer, how many files it actually governs, the FULL list of
+   `unclassified` files (ungoverned source no pattern matches), and `emptyLayers`
+   (patterns that match nothing — usually wrong globs, the #1 monorepo mistake). Do
+   NOT hand-roll this with `find`/`readdir`. Also surface `suggestedLayers` from the
+   `ark://manifest` MCP resource (dirs not yet adopted).
+9. **Rule coverage** — the same `--coverage --json` output lists `layersWithoutRules`:
+   layers with no rule edge at all can import anything. Flag those where the
+   dependency direction is obvious (e.g. domain → adapters should be denied).
 10. **Runtime kernel** — does the app hand-roll things the kernel ships? Grep for
     homemade event buses, outbox tables, audit logs, workflow/saga orchestration,
     projections. If found, point to the matching `ark-runtime-kernel` module

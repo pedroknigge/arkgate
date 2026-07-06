@@ -30,6 +30,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import {
   DEFAULT_INTENT_PREFIXES,
   DEFAULT_LAYER_DIRECTORIES,
@@ -407,6 +409,54 @@ async function main() {
         required: ['source'],
       },
     },
+    {
+      name: 'ark_check',
+      description:
+        'Run the full Ark architecture check on the project and return structured results ' +
+        '(layer-import violations, forbidden globals, circular deps, config warnings). Use ' +
+        'this to answer "is the architecture currently valid?" instead of shelling out to ' +
+        'ark-check. Applies the baseline automatically when one exists. isError when not ok.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          strict: {
+            type: 'boolean',
+            description: 'Fail on config warnings too (--strict-config). Default true.',
+          },
+          baseline: {
+            type: 'boolean',
+            description:
+              'Suppress pre-frozen violations via .ark-baseline.json. Default: auto (on when the file exists).',
+          },
+        },
+      },
+    },
+    {
+      name: 'ark_coverage',
+      description:
+        'Report what each layer actually governs: per-layer file counts, the FULL list of ' +
+        'unclassified (ungoverned) files, layers whose patterns match nothing, and layers ' +
+        'with no rule edge. Use this to audit config coverage instead of hand-rolling ' +
+        'find/readdir. Report only — never an error.',
+      inputSchema: { type: 'object', properties: {} },
+    },
+    {
+      name: 'ark_place',
+      description:
+        'Given a target file path, return which layer it belongs to, which layers it may and ' +
+        'must NOT import, and its forbidden globals — so generated code lands in a governed ' +
+        'location with the right dependencies. Call this BEFORE writing a new file.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          filePath: {
+            type: 'string',
+            description: 'Path (relative to project root or absolute) of the file to place.',
+          },
+        },
+        required: ['filePath'],
+      },
+    },
   ];
 
   const RESOURCES = [
@@ -493,6 +543,142 @@ async function main() {
     };
   }
 
+  // ark_check / ark_coverage reuse the canonical CLI engine (TS resolver, baseline,
+  // Tarjan cycle detection) by shelling out to the sibling ark-check.mjs with --json —
+  // no second copy of the check logic to drift. These are occasional agent queries, not
+  // a hot path, so the per-call spawn cost is irrelevant.
+  const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
+  function runArkCheckJson(extraArgs) {
+    // Forward --manifest so ark_check judges against the same rules the write-gate uses
+    // (a manifest-driven project's rules live there, not in ark.config.json).
+    const manifestArgs = args.manifest ? ['--manifest', args.manifest] : [];
+    const result = spawnSync(
+      process.execPath,
+      [arkCheckBin, '--root', args.root, '--config', args.config, ...manifestArgs, '--json', ...extraArgs],
+      { encoding: 'utf8' }
+    );
+    const stdout = result.stdout ?? '';
+    try {
+      return { data: JSON.parse(stdout), raw: stdout };
+    } catch {
+      return { data: null, raw: stdout || result.stderr || 'ark-check produced no output' };
+    }
+  }
+
+  function runCheckTool(params) {
+    const strict = params?.arguments?.strict !== false; // default true
+    const baselineArg = params?.arguments?.baseline;
+    const baselineExists = fs.existsSync(path.join(args.root, '.ark-baseline.json'));
+    const useBaseline = baselineArg === undefined ? baselineExists : Boolean(baselineArg);
+    const extra = [];
+    if (strict) extra.push('--strict-config');
+    if (useBaseline) extra.push('--baseline');
+    const { data, raw } = runArkCheckJson(extra);
+    if (!data) {
+      return { content: [{ type: 'text', text: `ark-check produced no JSON:\n${raw}` }], isError: true };
+    }
+    return {
+      content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+      isError: data.ok === false,
+    };
+  }
+
+  function runCoverageTool() {
+    const { data, raw } = runArkCheckJson(['--coverage']);
+    if (!data) {
+      return {
+        content: [{ type: 'text', text: `ark-check --coverage produced no JSON:\n${raw}` }],
+        isError: true,
+      };
+    }
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }], isError: false };
+  }
+
+  // Deterministic placement guidance (in-process; no TS resolver needed): which layer a
+  // path falls in, and — from the same rules ark-check enforces (default allow, explicit
+  // `allowed:false` denies) — which layers it may and must not import.
+  function runPlace(params) {
+    const filePath = params?.arguments?.filePath;
+    if (typeof filePath !== 'string' || !filePath) {
+      return { content: [{ type: 'text', text: 'Missing required "filePath" argument.' }], isError: true };
+    }
+    const layerName = inferLayer(filePath, config, args.root);
+    if (!layerName) {
+      // Two distinct reasons the path matched no layer: either this project declares no
+      // path-based layers at all (the gate still enforces the default 11-layer profile by
+      // intent-name PREFIX — placement just can't be inferred from the path), or it does
+      // declare layers and this path falls outside all of them (genuinely ungoverned).
+      const noLayers = configLayers.length === 0;
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(
+              {
+                filePath,
+                layer: null,
+                governed: noLayers, // default-profile intent rules still apply when no layers configured
+                message: noLayers
+                  ? 'This project declares no path-based layers in ark.config.json, so a ' +
+                    'layer cannot be inferred from the path. The gate still enforces the ' +
+                    'default 11-layer profile by intent-name prefix — read ark://manifest ' +
+                    'for the layers and validate the actual snippet with validate_code.'
+                  : 'No layer pattern matches this path — code here is UNGOVERNED (no import ' +
+                    'rules enforced). Place it under a directory a layer in ark.config.json ' +
+                    'matches, or add a layer. See suggestedLayers for conventional homes.',
+                suggestedLayers: suggestedLayers(),
+              },
+              null,
+              2
+            ),
+          },
+        ],
+        isError: false,
+      };
+    }
+    const layerMeta = configLayers.find((layer) => layer.name === layerName);
+    const rules = config.rules ?? DEFAULT_RULES;
+    const otherNames = configLayers.map((layer) => layer.name).filter((name) => name !== layerName);
+    const mustNotImport = otherNames.filter((to) =>
+      rules.some((rule) => !rule.allowed && rule.from === layerName && rule.to === to)
+    );
+    const mayImport = otherNames.filter((name) => !mustNotImport.includes(name));
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(
+            {
+              filePath,
+              layer: layerName,
+              governed: true,
+              description: layerMeta?.description,
+              forbiddenGlobals: layerMeta?.forbiddenGlobals ?? [],
+              ...(layerMeta?.mayImportInfrastructure
+                ? { mayImportInfrastructure: true }
+                : {}),
+              mayImport,
+              mustNotImport,
+              note:
+                'mayImport = layers with no explicit deny (default is allow). Respect ' +
+                'forbiddenGlobals, then verify the actual snippet with validate_code.',
+            },
+            null,
+            2
+          ),
+        },
+      ],
+      isError: false,
+    };
+  }
+
+  const TOOL_HANDLERS = {
+    validate_code: runValidate,
+    ark_check: runCheckTool,
+    ark_coverage: runCoverageTool,
+    ark_place: runPlace,
+  };
+
   const send = (msg) => process.stdout.write(`${JSON.stringify(msg)}\n`);
   const reply = (id, result) => send({ jsonrpc: '2.0', id, result });
   const fail = (id, code, message) => send({ jsonrpc: '2.0', id, error: { code, message } });
@@ -518,13 +704,15 @@ async function main() {
       case 'tools/list':
         reply(id, { tools: TOOLS });
         return;
-      case 'tools/call':
-        if (params?.name !== 'validate_code') {
+      case 'tools/call': {
+        const handler = TOOL_HANDLERS[params?.name];
+        if (!handler) {
           fail(id, -32602, `Unknown tool: ${params?.name}`);
           return;
         }
-        reply(id, runValidate(params));
+        reply(id, handler(params));
         return;
+      }
       case 'resources/list':
         reply(id, { resources: RESOURCES });
         return;
