@@ -66,14 +66,23 @@
       "optional": true
     }
   },
+  "overrides": {
+    "vite": "6.4.3",
+    "tsup": {
+      "esbuild": "0.28.1"
+    },
+    "bundle-require": {
+      "esbuild": "0.28.1"
+    }
+  },
   "devDependencies": {
-    "@nestjs/common": "^10.4.22",
+    "@nestjs/common": "^11.1.27",
     "@types/node": "^20.14.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "tsup": "^8.1.0",
     "typescript": "^5.5.3",
-    "vitest": "^1.6.0"
+    "vitest": "^3.2.6"
   },
   "engines": {
     "node": ">=18"
