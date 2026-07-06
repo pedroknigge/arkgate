@@ -528,7 +528,7 @@ describe('ark-check --require-gates', () => {
     expect(payload.error).toBe('missing-gates');
     expect(payload.missing).toContain('AGENTS.md');
     expect(payload.missing).toContain('.mcp.json');
-    expect(payload.missing).toContain('.github/workflows/ark-check.yml');
+    expect(payload.missing).toContain('.github/workflows/*.yml running ark-check');
   });
 
   it('passes once gates are installed', () => {
@@ -554,6 +554,35 @@ describe('ark-check --require-gates', () => {
     );
     const payload = JSON.parse(json) as { ok: boolean };
     expect(payload.ok).toBe(true);
+  });
+
+  it('accepts a custom CI workflow that runs the architecture check', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-require-custom-ci-'));
+    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), 'Ark instructions\n');
+    fs.writeFileSync(path.join(root, '.mcp.json'), '{"mcpServers":{}}\n');
+    fs.writeFileSync(
+      path.join(root, '.github/workflows/ci.yml'),
+      [
+        'name: CI',
+        'on: [pull_request]',
+        'jobs:',
+        '  test:',
+        '    runs-on: ubuntu-latest',
+        '    steps:',
+        '      - run: npm run check:architecture',
+        '',
+      ].join('\n')
+    );
+
+    const json = execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--require-gates', '--json'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    const payload = JSON.parse(json) as { ok: boolean; error?: string };
+    expect(payload.ok).toBe(true);
+    expect(payload.error).toBeUndefined();
   });
 });
 

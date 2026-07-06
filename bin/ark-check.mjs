@@ -176,13 +176,31 @@ function hasCheckArchitectureScript(root) {
 const REQUIRED_GATE_FILES = [
   'AGENTS.md',
   '.mcp.json',
-  '.github/workflows/ark-check.yml',
 ];
+const REQUIRED_GATE_WORKFLOW = '.github/workflows/*.yml running ark-check';
+
+function hasArkWorkflow(root) {
+  const workflowsDir = path.join(root, '.github', 'workflows');
+  if (!fs.existsSync(workflowsDir)) return false;
+  return fs
+    .readdirSync(workflowsDir)
+    .filter((file) => /\.ya?ml$/i.test(file))
+    .some((file) => {
+      try {
+        const content = fs.readFileSync(path.join(workflowsDir, file), 'utf8');
+        return /\bark-check\b/.test(content) || /\bcheck:architecture\b/.test(content);
+      } catch {
+        return false;
+      }
+    });
+}
 
 function missingGates(root) {
-  return REQUIRED_GATE_FILES.filter(
+  const missing = REQUIRED_GATE_FILES.filter(
     (relativePath) => !fs.existsSync(path.join(root, relativePath))
   );
+  if (!hasArkWorkflow(root)) missing.push(REQUIRED_GATE_WORKFLOW);
+  return missing;
 }
 
 function checkArchitectureScriptSnippet() {
