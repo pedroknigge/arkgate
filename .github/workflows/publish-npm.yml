@@ -71,7 +71,21 @@ jobs:
           set -euo pipefail
           package="$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).name")"
           version="$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version")"
-          tarball_url="$(npm view "$package@$version" dist.tarball)"
+          # The just-published version can 404 for a short window while npm's read
+          # replicas catch up with the write. Poll until the tarball URL resolves
+          # (up to ~2.5 min) instead of failing the release on a propagation lag.
+          tarball_url=""
+          for attempt in $(seq 1 30); do
+            if tarball_url="$(npm view "$package@$version" dist.tarball 2>/dev/null)" && [ -n "$tarball_url" ]; then
+              break
+            fi
+            echo "npm has not surfaced $package@$version yet (attempt $attempt); retrying in 5s..."
+            sleep 5
+          done
+          if [ -z "$tarball_url" ]; then
+            echo "::error::npm never surfaced $package@$version tarball; publish likely succeeded — upload the checksum manually."
+            exit 1
+          fi
           tarball="$package-$version.tgz"
           curl -fsSL "$tarball_url" -o "$tarball"
           shasum -a 256 "$tarball" > "$tarball.sha256"
