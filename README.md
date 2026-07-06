@@ -539,6 +539,7 @@ export class PlaceOrderService {
 ## Documentation
 
 - [AI Gates](docs/ai-gates.md) — copy-paste setups for Claude Code, Cursor, Codex, and any hook-capable runtime
+- [Brownfield Adoption](docs/brownfield-adoption.md) — the burn-down playbook for a large existing codebase (diagnose → classify → facade split → freeze only real debt)
 - [Agent Integration Guide](docs/agent-guide.md) — manifest discovery and validation flows for agents
 - [Production Hardening](docs/production-hardening.md) — durable store interfaces (`AuditStore`, `OutboxStore`, …)
 - [Example Config](docs/ark-check-example.json) — a hand-curated `ark.config.json`

@@ -59,6 +59,20 @@ paste output you can generate yourself.
   domain-owned type or port, not a move; (b) the source file mixes the type with runtime
   logic (stubs, helpers, mock builders) — split the types into their own module first, then
   move.
+- **Raw infrastructure access in an orchestration/UI layer** (a route/handler or component
+  that runs SQL or imports the DB client directly — e.g. `sqlClient\`SELECT …\`` or
+  `import { db } from "@/lib/db"` inside `src/app/**`): this is the value-import counterpart
+  to the type-only inversion, and the biggest brownfield cluster. Relocate the data-access
+  VERBATIM into a repository/adapter layer: add a business-named method to the repository
+  (`ordersRepository.listOpen(projectId)`) containing the SAME query byte-for-byte, and have
+  the route call it. Same SQL = same behavior by construction — do NOT rewrite the query
+  (`tsc` can't prove two queries return the same rows; a reworded `WHERE` silently changes
+  results). Prefer extending an existing domain repository over creating a new one. Two
+  cautions: (a) this edits the data layer, which many repos reserve to core maintainers —
+  if a `CLAUDE.md`/CODEOWNERS rule restricts it, migrate one route as a demonstrated pattern
+  and hand the bulk to a maintainer rather than sweeping hundreds autonomously; (b) a route
+  with interleaved transactions / 10+ queries is not a pure relocation — flag it for review.
+  See the brownfield burn-down playbook (`docs/brownfield-adoption.md`) for the full sequence.
 
 Fix ALL reported violations that share a root cause in one pass — one port in a
 shared module beats N per-file patches. Match the codebase's existing naming and
