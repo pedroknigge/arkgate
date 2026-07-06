@@ -49,12 +49,11 @@ The "gate → guide" reorientation. Seven improvements across `bin/*` + skills +
 - **Write-gate ↔ CI contract parity** — the top open decision. See below. Medium-high
   effort (touches the compiled kernel), medium risk (write-gate core). High value:
   restores "`ark.config.json` is authoritative" across both gates.
-- **Config doctor** — `ark-check --doctor`: one view folding governed %, unclassified,
-  empty layers, weak rule coverage, installed gates, installed skills, baseline health.
-  Most of the data already exists (coverage + summary + skill-gap detection); this is
-  assembly + presentation. Low-medium effort, high UX value. **Add a check for stale command
-  runners in gate files** (round 8): flag `.claude/settings.json` / `.mcp.json` / CI that
-  invoke `npx` in a pnpm/yarn repo, with the exact `pnpm exec` fix.
+- **Config doctor** — ✅ BUILT (unreleased, 1.13.0 candidate). `ark-check --doctor` folds
+  governed %, ungoverned dirs, empty layers, weak rule coverage, the violation summary
+  (value/type-only + concentration), installed gates, installed skills, baseline health, and
+  stale command runners into one view, each with the exact fix command + a ranked "Top
+  actions" list. `--doctor --json` for tooling. The stale-runner check (round 8) is included.
 - **Command migration on upgrade** — Phase 1 made *emitted* commands package-manager-aware,
   but `--install-agent-gates` and `/ark-upgrade` preserve existing gate files, so a repo that
   adopted before 1.11.0 keeps stale `npx` in settings.json / .mcp.json / CI; the only refresh

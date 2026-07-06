@@ -1980,6 +1980,24 @@ describe('ark-check --coverage', () => {
     expect(byDir['src/hooks'].layer).toBeUndefined();
   });
 
+  it('--doctor reports a consolidated health view', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-doctor-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/infra'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/infra/db.ts'), 'export const db = 1;\n');
+    fs.writeFileSync(
+      path.join(root, 'src/domain/order.ts'),
+      "import { db } from '../infra/db';\nexport const o = db;\n"
+    );
+    fs.writeFileSync(path.join(root, 'ark.config.json'), TWO_LAYER_CONFIG);
+
+    const doctor = (runArkCheck(root, ['--doctor']) as unknown as { doctor: any }).doctor;
+    expect(doctor.governed.percent).toBe(100); // both files classified by the two layers
+    expect(doctor.violations.total).toBeGreaterThanOrEqual(1); // domain → persistence import
+    expect(doctor.baseline.exists).toBe(false);
+    expect(doctor.gatesMissing.length).toBeGreaterThan(0); // no gates installed here
+  });
+
   it('is report-only: exit 0 even when files are unclassified', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-coverage-exit-'));
     fs.mkdirSync(path.join(root, 'src/loose'), { recursive: true });

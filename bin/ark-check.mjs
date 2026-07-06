@@ -42,6 +42,7 @@ function parseArgs(argv) {
     noCache: false,
     coverage: false,
     migrateCommands: false,
+    doctor: false,
   };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -68,6 +69,7 @@ function parseArgs(argv) {
     else if (arg === '--force') args.force = true;
     else if (arg === '--skills-only') args.skillsOnly = true;
     else if (arg === '--coverage') args.coverage = true;
+    else if (arg === '--doctor') args.doctor = true;
     else if (arg === '--codex-home') args.codexHome = true;
     else if (arg === '--migrate-commands') args.migrateCommands = true;
     else if (arg === '--no-cache') args.noCache = true;
@@ -2751,7 +2753,10 @@ function moduleSpecifierFromCall(ts, node) {
 // --coverage: a standalone visibility report (never changes the exit code). Answers
 // "which files does each layer actually govern, and what is slipping through?" — the
 // data the /ark-coverage skill otherwise has to hand-roll with find/readdir walks.
-function runCoverage(root, config, files, rules, asJson) {
+// Pure coverage computation (glob-only, no TypeScript): the object both `--coverage` and
+// `--doctor` render. `governed` is the headline honesty number — the share of in-scope code
+// Ark actually enforces rules on; `suggestions` proposes a layer for each ungoverned dir.
+function computeCoverage(root, config, files, rules) {
   const layers = config.layers ?? [];
   const counts = new Map(layers.map((layer) => [layer.name, 0]));
   const unclassified = [];
@@ -2766,48 +2771,35 @@ function runCoverage(root, config, files, rules, asJson) {
     patterns: layer.patterns ?? [],
     files: counts.get(layer.name) ?? 0,
   }));
-  // A layer whose patterns match zero files is dead config — it enforces nothing, and
-  // usually means the patterns are wrong (the #1 monorepo mistake). Surface it.
+  // A layer whose patterns match zero files is dead config — it enforces nothing, usually a
+  // wrong glob (the #1 monorepo mistake). A layer with no rule edge can import anything.
   const emptyLayers = layerRows.filter((row) => row.files === 0).map((row) => row.name);
-  // Rule coverage (skill checklist item 9): a layer with no rule edge can import anything.
   const layersWithoutRules = layerRows
     .map((row) => row.name)
     .filter((name) => !rules.some((rule) => rule.from === name || rule.to === name));
-
-  // The headline honesty number: what share of the in-scope code Ark actually governs. A
-  // green check over a low fraction is the false-green trap this report exists to expose.
   const classifiedFiles = files.length - unclassified.length;
   const fraction = files.length > 0 ? classifiedFiles / files.length : 1;
-  const governed = {
-    classifiedFiles,
+  return {
+    include: config.include ?? [],
     totalFiles: files.length,
-    percent: Math.round(fraction * 100),
+    governed: { classifiedFiles, totalFiles: files.length, percent: Math.round(fraction * 100) },
+    layers: layerRows,
+    unclassified: { count: unclassified.length, files: unclassified },
+    suggestions: buildUnclassifiedSuggestions(unclassified),
+    emptyLayers,
+    layersWithoutRules,
   };
-  // Per-directory proposals for the ungoverned files, sourced from the 11 layers + presets.
-  const suggestions = buildUnclassifiedSuggestions(unclassified);
+}
 
+function runCoverage(root, config, files, rules, asJson) {
+  const cov = computeCoverage(root, config, files, rules);
   if (asJson) {
-    console.log(
-      JSON.stringify(
-        {
-          ok: true,
-          coverage: {
-            include: config.include ?? [],
-            totalFiles: files.length,
-            governed,
-            layers: layerRows,
-            unclassified: { count: unclassified.length, files: unclassified },
-            suggestions,
-            emptyLayers,
-            layersWithoutRules,
-          },
-        },
-        null,
-        2
-      )
-    );
+    console.log(JSON.stringify({ ok: true, coverage: cov }, null, 2));
     return;
   }
+  const { governed, layers: layerRows, suggestions, layersWithoutRules } = cov;
+  const classifiedFiles = governed.classifiedFiles;
+  const unclassified = cov.unclassified.files;
 
   const nameWidth = Math.max(
     'Layer'.length,
@@ -2854,6 +2846,146 @@ function runCoverage(root, config, files, rules, asJson) {
   if (layersWithoutRules.length > 0) {
     console.log('');
     console.log(`Layers with no rule edge (can import anything): ${layersWithoutRules.join(', ')}`);
+  }
+}
+
+// --doctor: one consolidated health view — coverage, violations, gates, skills, baseline,
+// and command runners — each with the exact command to fix it. Folds the data the other
+// modes already produce so a team sees "what state is my Ark adoption in?" at a glance.
+function runDoctor(root, config, files, rules, violations, asJson) {
+  const cov = computeCoverage(root, config, files, rules);
+  const summary = summarizeViolations(violations);
+  const gatesMissing = missingGates(root);
+  const skillGaps = detectSkillGaps(root);
+  const staleRunners = staleRunnerGateFiles(root);
+  const baseline = readBaseline(root, '.ark-baseline.json');
+  const currentKeys = new Set(violations.map(baselineKey));
+  const suppressed = baseline.exists
+    ? violations.filter((v) => baseline.keys.has(baselineKey(v))).length
+    : 0;
+  const staleBaseline = baseline.exists
+    ? [...baseline.keys].filter((key) => !currentKeys.has(key)).length
+    : 0;
+  const activeCount = violations.length - suppressed;
+  const missingSkills = skillGaps.reduce((sum, gap) => sum + gap.missing, 0);
+  const staleSkills = skillGaps.reduce((sum, gap) => sum + gap.stale, 0);
+
+  if (asJson) {
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          doctor: {
+            governed: cov.governed,
+            emptyLayers: cov.emptyLayers,
+            layersWithoutRules: cov.layersWithoutRules,
+            ungovernedDirs: cov.suggestions.length,
+            violations: {
+              total: violations.length,
+              active: activeCount,
+              suppressed,
+              value: summary.valueCount,
+              typeOnly: summary.typeOnlyCount,
+              concentrated: summary.concentrated,
+              dominant: summary.dominant,
+              topEdges: summary.edges.slice(0, 5),
+            },
+            baseline: {
+              exists: baseline.exists,
+              frozen: baseline.exists ? baseline.keys.size : 0,
+              stale: staleBaseline,
+            },
+            gatesMissing,
+            skillGaps,
+            staleRunnerFiles: staleRunners,
+          },
+        },
+        null,
+        2
+      )
+    );
+    return;
+  }
+
+  const ok = color.green('✓');
+  const warn = color.yellow('!');
+  const bad = color.red('✗');
+  const actions = [];
+  const line = (mark, text) => console.log(`  ${mark} ${text}`);
+
+  console.log(color.bold(`Ark doctor — ${path.basename(path.resolve(root)) || '.'}`));
+
+  console.log('');
+  console.log(color.bold('Coverage'));
+  const govMark = cov.governed.percent >= 80 ? ok : cov.governed.percent >= 50 ? warn : bad;
+  line(govMark, `Governed: ${cov.governed.percent}% (${cov.governed.classifiedFiles}/${cov.governed.totalFiles} files)`);
+  if (cov.suggestions.length > 0) {
+    line(warn, `${cov.suggestions.length} ungoverned director(y/ies) — proposals: ${arkCommand(root, 'ark-check', '--coverage')}`);
+    actions.push('classify the ungoverned directories (/ark-contract)');
+  }
+  if (cov.emptyLayers.length > 0) line(warn, `Empty layers (pattern matches nothing): ${cov.emptyLayers.join(', ')}`);
+  if (cov.layersWithoutRules.length > 0) line(warn, `Layers with no rule edge: ${cov.layersWithoutRules.join(', ')}`);
+  if (cov.suggestions.length === 0 && cov.emptyLayers.length === 0) line(ok, 'Every layer classifies files; no empty layers');
+
+  console.log('');
+  console.log(color.bold('Violations'));
+  if (violations.length === 0) {
+    line(ok, 'None — the code matches the contract');
+  } else {
+    const typeNote = summary.typeOnlyCount > 0 ? ` (${summary.valueCount} value · ${summary.typeOnlyCount} type-only)` : '';
+    const supNote = suppressed > 0 ? `, ${suppressed} frozen` : '';
+    line(
+      activeCount > 0 ? warn : ok,
+      `${violations.length} total${typeNote}${supNote}${activeCount > 0 ? ` — ${activeCount} NOT baselined` : ''}`
+    );
+    for (const edge of summary.edges.slice(0, 3)) line(' ', color.dim(`${edge.count}  ${edge.edge}`));
+    if (summary.concentrated) {
+      line(warn, color.dim(`${Math.round(summary.dominantShare * 100)}% on one edge (${summary.dominant}) — likely a contract fix, not debt`));
+    }
+    if (activeCount > 0) actions.push('resolve or freeze the non-baselined violations (/ark-fix)');
+  }
+
+  console.log('');
+  console.log(color.bold('Gates & skills'));
+  if (gatesMissing.length === 0) line(ok, 'Gate files present (AGENTS.md, .mcp.json, CI, write gate)');
+  else {
+    line(bad, `Missing gates: ${gatesMissing.join(', ')}`);
+    actions.push(`install gates (${arkCommand(root, 'ark-check', '--install-agent-gates')})`);
+  }
+  if (missingSkills + staleSkills === 0) line(ok, '/ark-* skills current for detected tools');
+  else {
+    line(warn, `${missingSkills} missing / ${staleSkills} outdated /ark-* skill(s) for ${skillGaps.map((g) => g.tool).join(', ')}`);
+    actions.push('refresh /ark-* skills (--install-agent-gates --skills-only --force)');
+  }
+
+  console.log('');
+  console.log(color.bold('Baseline'));
+  if (!baseline.exists) {
+    line(violations.length > 0 ? warn : ok, violations.length > 0 ? 'No baseline — adopting a dirty repo? freeze with --update-baseline' : 'No baseline (nothing to freeze)');
+  } else {
+    // Baseline keys are line-agnostic, so N keys can suppress ≥N violations — label as keys
+    // to avoid an apparent mismatch with the "frozen" violation count above.
+    line(ok, `${baseline.keys.size} frozen key(s)`);
+    if (staleBaseline > 0) {
+      line(warn, `${staleBaseline} stale entr(y/ies) no longer occur — tighten with --update-baseline`);
+      actions.push('tighten the baseline (--update-baseline)');
+    }
+  }
+
+  console.log('');
+  console.log(color.bold('Command runners'));
+  if (staleRunners.length === 0) line(ok, 'Emitted commands match the package manager');
+  else {
+    line(warn, `Stale runner in ${staleRunners.join(', ')}`);
+    actions.push(`migrate command runners (${arkCommand(root, 'ark-check', '--install-agent-gates --migrate-commands')})`);
+  }
+
+  console.log('');
+  if (actions.length === 0) {
+    console.log(color.green('✔ Healthy — nothing to do.'));
+  } else {
+    console.log(color.bold(`Top actions (${actions.length}):`));
+    actions.forEach((action, index) => console.log(`  ${index + 1}. ${action}`));
   }
 }
 
@@ -3104,6 +3236,11 @@ async function main() {
   if (cacheKey) saveScanCache(root, cacheKey, nextCacheFiles);
 
   violations.push(...detectCycles(importGraph));
+
+  if (args.doctor) {
+    runDoctor(root, config, files, rules, violations, args.json);
+    return;
+  }
 
   if (args.updateBaseline) {
     const summary = summarizeViolations(violations);
