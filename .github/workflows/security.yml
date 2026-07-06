@@ -50,4 +50,4 @@ jobs:
       - name: Install Semgrep
         run: python3 -m pip install --user semgrep==1.168.0
 
-      - run: python3 -m semgrep scan --config auto --error .
+      - run: ~/.local/bin/semgrep scan --config p/ci --error .
