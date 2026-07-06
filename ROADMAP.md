@@ -1,36 +1,61 @@
 # Ark Roadmap
 
-Direction: **the differentiated product is the static/agent side** — one machine-readable architecture contract (`ark.config.json`) enforced at write time (AI agents), merge time (CI), and optionally at runtime. The runtime kernel is an opt-in layer, not the pitch.
+Ark is an AI architecture gate for TypeScript: one machine-readable architecture
+contract, enforced when agents write code and again before code merges.
 
-## Shipped
+The runtime kernel remains optional. The public product focus is the static and
+agent-native gate: `ark-check`, `ark-mcp`, `ark://manifest`, and the `/ark-*`
+workflows that help agents place code correctly.
 
-- `ark-check` — CI gate with real TypeScript module resolution, `--init` config inference, `--strict-config` coverage enforcement, `--baseline` ratchet for existing codebases
-- `ark-mcp` — MCP server (`validate_code` tool + `ark://manifest` resource) and `--hook` one-shot PreToolUse gate for Claude Code
-- ESLint plugin (`ark-runtime-kernel/eslint`)
-- Runtime kernel: intent registry, strict event bus, event contracts (own schema + Standard Schema validators), policies, observed layer flow, projections, manifest, audit/outbox/workflow interfaces with in-memory defaults
-- NestJS adapter (`ark-runtime-kernel/nestjs`)
-- GitHub Action (`action.yml`) with PR comments
-- `examples/hexagonal-order-api/` — clonable hexagonal API governed by all three gates, with a "break it on purpose" walkthrough
-- Zero runtime dependencies throughout
+## Now
+
+- **Trust hardening**: add npm provenance, signed release tags, `SECURITY.md`, security
+  scanning in CI, and clearer release verification notes.
+- **Write-gate parity**: make the AI write gate and CI gate agree more closely on
+  layer-boundary violations, especially cross-layer imports.
+- **Config-to-runtime bridge**: expose helpers so teams that opt into runtime enforcement
+  can derive the runtime architecture profile from the same `ark.config.json`.
+- **Gate detection polish**: make `ark-check --require-gates` recognize any workflow that
+  runs Ark, not only the generated workflow filename.
+- **Public demos**: publish short demos for agent self-correction, brownfield baselines,
+  and `ark_place` guided feature generation.
 
 ## Next
 
-- [ ] **MCP registry presence** — publish `server.json` to the official MCP registry so agents discover the gate
-- [ ] **Example gallery** — more clonable examples beyond `examples/hexagonal-order-api` (NestJS app, monorepo)
-- [ ] **`ark-check --fix` exploration** — auto-move misplaced files / rewrite imports where unambiguous
-- [ ] **Revisit default rule matrix** — `PersistenceAdapters → DomainModel` is blocked by default, but hexagonal adapters typically import domain types; needs a decision + migration note
-- [ ] **Watch mode** — `ark-check --watch` for editor-adjacent feedback without ESLint
-- [ ] **Docs site** — move long-form docs off the README
+- **Comparative evals**: benchmark agent-generated changes with and without Ark on a
+  governed TypeScript repo, tracking architecture violations and time-to-fix.
+- **Example gallery**: add clonable examples for NestJS, monorepos, Next.js/API apps, and
+  brownfield adoption with a baseline.
+- **Config doctor**: add one command that explains governed files, unclassified files,
+  empty layers, weak rule coverage, installed gates, installed skills, and baseline
+  health.
+- **Watch mode**: add `ark-check --watch` for editor-adjacent feedback without requiring
+  ESLint.
+- **ESLint parity**: keep editor feedback aligned with `ark-check` where practical, while
+  documenting CI as the authoritative gate.
 
-## Later / undecided
+## Later
 
-- Split the runtime kernel into a separate package so the gates ship dependency-free and tiny
-- Adapters for more frameworks (Fastify plugin, Next.js)
-- Cross-package governance for monorepos (today: run per package)
+- **Runtime package split**: decide whether the optional runtime kernel should become a
+  separate package once the static and agent gate are more mature.
+- **Docs site**: move long-form documentation out of the README into a focused docs site.
+- **MCP registry presence**: publish `server.json` to the official MCP registry so agents
+  can discover Ark more easily.
+- **Framework adapters**: add adapters only when examples justify them. Fastify and
+  Next.js are candidates; Ark should stay an architecture governance tool, not an app
+  framework.
+- **Team policy packs**: provide proven starter configs for hexagonal, layered,
+  feature-sliced, and monorepo projects.
 
-## Not planned
+## Not Planned
 
-- **Reimplementing workflow orchestrators** (Temporal, Restate, …). The in-memory audit/outbox/projection/workflow stores are development defaults, not production infrastructure — implement the store interfaces (see [docs/production-hardening.md](docs/production-hardening.md)) against your own durable systems.
-- **Runtime dependencies.** Zero is a hard rule.
+- Reimplementing workflow orchestrators such as Temporal or Restate.
+- Adding runtime dependencies to the core static gates.
+- Becoming a web framework, job runner, ORM abstraction, or deployment platform.
 
-Have an opinion on any of these? Open an issue.
+## Principles
+
+- One contract should drive write-time, merge-time, and optional runtime enforcement.
+- CI remains the authoritative static check.
+- Agent tooling should help generated code self-correct before review.
+- Runtime features should stay optional and clearly documented as advanced usage.
