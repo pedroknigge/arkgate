@@ -64,6 +64,15 @@ The "gate → guide" reorientation. Seven improvements across `bin/*` + skills +
   not only the generated filename. Small.
 - **Watch mode** — `ark-check --watch`. Medium.
 - **ESLint parity** — keep the plugin aligned with `ark-check`. Ongoing.
+- **Brownfield burn-down playbooks + a matching `/ark-fix` fix-class.** Field adoption
+  produced a hand-written route→repository migration runbook (verbatim SQL relocation:
+  raw `sqlClient`/`db` in a route → a repository method; the route orchestrates, the repo
+  does data-access; same SQL bytes = same behavior). This recurs for any brownfield repo
+  with a data layer. Ship it generically: (a) an example-gallery playbook (route→repository
+  + the facade split), and (b) an `/ark-fix` fix-class — "raw infrastructure access in an
+  orchestration/UI layer → relocate it verbatim into a repository/adapter layer" — the
+  value-import counterpart to the type-only inversion pattern already in the skill. Low
+  effort, high adoption value.
 
 ### P3 — later
 
@@ -144,6 +153,24 @@ work below. Full detail in agent memory (`ark-project-state`).
   tail: verbatim relocation is mechanical+safe but the repository-organization choice (focused
   per-route repo vs extend domain repos vs few read-repos per domain) affects all 285 and is
   Pedro's call.
+
+- **Round 6 (repository migration continues, "extend existing domain repos").** Pattern
+  generalizes: 6 routes migrated total (verbatim SQL relocation into existing domain repos),
+  baseline 340 → 334, tsc + gate green, zero schema changes. Confirms the durable enabler
+  (`mayImportInfrastructure` on DataAccess/Persistence/App). Reality of the tail: ~282
+  App→Persistence + 46 UI→data left — mechanical but a long grind, with a handful of complex
+  routes (10+ queries/transactions, e.g. `budget-accounts`) that are NOT verbatim relocation
+  and need per-route judgment. Reinforces P2 (fix-class hinting: show the burn-down's shape —
+  mechanical vs judgment vs big-rock). Validates the product stance: Ark's job ends at
+  diagnose + provide the pattern; the repetitive grind is the team's (or a codemod/agent
+  loop), not Ark's to auto-run.
+
+- **Round 7 (leave a template).** The agent distilled the migration into a route→repository
+  runbook committed in the amarilla worktree. That runbook is a reusable brownfield artifact,
+  not amarilla-specific — captured as the "brownfield burn-down playbooks + `/ark-fix`
+  fix-class" backlog item above. Adoption on amarilla ended at: 762 → 334 violations, gate
+  green with `--strict-config`, zero DB/schema changes, 4 commits in the (discardable)
+  worktree; the ~282+46 tail left as documented grind for a maintainer.
 
 ## Notes
 
