@@ -29,9 +29,9 @@ jobs:
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
-          node-version: 20
+          node-version: 24
           registry-url: https://registry.npmjs.org
-          cache: npm
+          package-manager-cache: false
 
       - run: npm ci
 
@@ -64,8 +64,6 @@ jobs:
       - name: Publish with npm provenance
         if: ${{ !inputs.dry_run }}
         run: npm run release:npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Upload npm tarball checksum
         if: ${{ !inputs.dry_run }}
