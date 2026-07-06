@@ -310,6 +310,7 @@ npx ark-check --root . --config ark.config.json --strict-config   # fail on cove
 npx ark-check --json                                              # machine-readable
 npx ark-check --baseline                                          # ratchet mode
 npx ark-check --coverage                                          # Governed: N% + per-directory layer proposals
+npx ark-check --doctor                                            # consolidated health view + ranked top actions
 npx ark-check --report ark-report.html                            # visual architecture report
 ```
 

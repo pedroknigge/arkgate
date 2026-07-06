@@ -10,7 +10,8 @@ Last updated: 2026-07-06.
 | Version | Theme | Status | Gate to ship |
 |---------|-------|--------|--------------|
 | **1.11.0** | Organize, don't false-green | **PUBLISHED 2026-07-06** (npm + GitHub + MCP registry) | — |
-| **1.12.0** | Write-gate ↔ CI parity (Option A) + upgrade command migration | **Shipping** (`3c7604f` + `ec0d21e`) | Validated vs a real repo; releasing |
+| **1.12.0** | Write-gate ↔ CI parity (Option A) + upgrade command migration | **PUBLISHED 2026-07-06** (npm + GitHub + MCP registry) | — |
+| **1.13.0** | Config doctor + brownfield playbook / `/ark-fix` infra-relocation + pnpm cooling-off note | **Shipping** (`10c219b` + `255c108` + `ac2f55b`) | Releasing |
 | ongoing | Trust hardening | Partial (provenance + trusted publishing done) | Can ride any release |
 
 Decision (user, 2026-07-06): **hold the 1.11.0 minor** until we gather a couple more

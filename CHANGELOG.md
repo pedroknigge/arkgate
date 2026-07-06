@@ -2,6 +2,27 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.13.0 — 2026-07-06
+
+### Added
+
+- **`ark-check --doctor`** — one consolidated adoption health view: governed %, ungoverned
+  directories, empty layers, weak rule coverage, the violation summary (value vs type-only +
+  concentration verdict), installed gates, installed skills, baseline health, and stale command
+  runners — each with the exact fix command, plus a ranked "Top actions" list. `--doctor --json`
+  for tooling.
+- **Brownfield burn-down playbook** ([docs/brownfield-adoption.md](docs/brownfield-adoption.md))
+  — the end-to-end sequence for a large pre-existing codebase (diagnose → classify → facade
+  split → freeze only real debt → burn down), plus a matching `/ark-fix` fix class for
+  relocating raw infrastructure access (SQL or a DB client imported into a route) **verbatim**
+  into a repository/adapter — the value-import counterpart to the type-only inversion pattern.
+
+### Changed
+
+- `/ark-upgrade` now handles the pnpm `minimumReleaseAge` cooling-off: when a freshly-cut
+  version is inside the window, add it to `minimumReleaseAgeExclude` before installing so a
+  loose-mode `pnpm add` can't leave a lockfile that `--frozen-lockfile` (CI) rejects.
+
 ## 1.12.0 — 2026-07-06
 
 Makes `ark.config.json` authoritative on BOTH gates, and closes the upgrade gap where the
