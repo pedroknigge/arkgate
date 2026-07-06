@@ -28,7 +28,9 @@ a private security contact without including exploit details.
 Ark releases are GitHub-first:
 
 1. Changes land on GitHub and must pass CI plus the dedicated security workflow.
-2. A GitHub Release is created from a signed annotated `vX.Y.Z` tag.
+2. A GitHub Release is created from an annotated `vX.Y.Z` tag. Signed tags are
+   supported and can be made mandatory by setting `ARK_REQUIRE_SIGNED_RELEASE_TAG=true`
+   in the publish workflow once release signing is configured.
 3. The manual `Publish npm` workflow verifies the tag, requires the GitHub Release to
    exist, reruns release checks, publishes npm with provenance, and uploads a SHA-256
    checksum for the npm tarball to the GitHub Release.

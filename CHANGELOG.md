@@ -11,7 +11,8 @@ All notable changes to `ark-runtime-kernel` are documented here.
   verification suite, publishes to npm with provenance, and uploads the npm tarball
   SHA-256 checksum back to the GitHub Release.
 - Added `scripts/verify-release-tag.mjs` so release automation fails before npm when
-  the tag does not match `package.json`, is not annotated, or is not verified by GitHub.
+  the tag does not match `package.json` or is not annotated; signed-tag enforcement can
+  be enabled with `ARK_REQUIRE_SIGNED_RELEASE_TAG=true` once release signing is configured.
 - Local `npm run release:npm` now defaults to dry-run/local verification. Real local
   publish requires `--allow-local`; the normal release path is GitHub Actions provenance.
 

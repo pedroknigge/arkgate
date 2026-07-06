@@ -20,8 +20,19 @@ if (!tag) {
 }
 
 const expectedTag = `v${pkg.version}`;
+const requireSignedTag = process.env.ARK_REQUIRE_SIGNED_RELEASE_TAG === 'true';
 if (tag !== expectedTag) {
   fail(`tag ${tag} does not match package version ${pkg.version}; expected ${expectedTag}`);
+}
+
+function handleUnsignedTag(message) {
+  if (requireSignedTag) {
+    fail(message);
+  }
+  console.warn(
+    `[verify-release-tag] ${message}; continuing because ` +
+      'ARK_REQUIRE_SIGNED_RELEASE_TAG is not true'
+  );
 }
 
 async function readGitHubJson(url, token) {
@@ -58,13 +69,14 @@ async function verifyWithGitHub() {
   const verification = tagObject.verification;
 
   if (!verification?.verified) {
-    fail(
+    handleUnsignedTag(
       `tag ${tag} is not verified by GitHub` +
         (verification?.reason ? ` (${verification.reason})` : '')
     );
+  } else {
+    console.log(`[verify-release-tag] verified signed annotated tag ${tag}`);
   }
 
-  console.log(`[verify-release-tag] verified signed annotated tag ${tag}`);
   return true;
 }
 
@@ -78,11 +90,15 @@ function verifyWithLocalGit() {
     fail(`tag ${tag} is not an annotated tag`);
   }
 
-  execFileSync('git', ['tag', '-v', tag], {
-    cwd: root,
-    stdio: 'inherit',
-  });
-  console.log(`[verify-release-tag] verified signed annotated tag ${tag}`);
+  try {
+    execFileSync('git', ['tag', '-v', tag], {
+      cwd: root,
+      stdio: 'inherit',
+    });
+    console.log(`[verify-release-tag] verified signed annotated tag ${tag}`);
+  } catch {
+    handleUnsignedTag(`tag ${tag} is not signed or cannot be verified locally`);
+  }
 }
 
 if (!(await verifyWithGitHub())) {

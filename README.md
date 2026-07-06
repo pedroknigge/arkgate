@@ -495,7 +495,8 @@ npm run check:architecture # Ark gates itself in CI
 Release is GitHub-first, npm second:
 
 1. Land the upgrade on GitHub and wait for CI + Security to pass.
-2. Create a signed annotated tag (`vX.Y.Z`) and a GitHub Release for it.
+2. Create an annotated tag (`vX.Y.Z`) and a GitHub Release for it. Prefer a signed tag;
+   set `ARK_REQUIRE_SIGNED_RELEASE_TAG=true` in the publish workflow once signing is configured.
 3. Run the manual **Publish npm** workflow with `dry_run: true`.
 4. If that passes, rerun **Publish npm** with `dry_run: false`.
 
