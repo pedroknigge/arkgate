@@ -36,6 +36,7 @@ import {
   DEFAULT_INTENT_PREFIXES,
   DEFAULT_LAYER_DIRECTORIES,
   DEFAULT_RULES,
+  arkCommand,
   layerForFile,
 } from './ark-shared.mjs';
 
@@ -258,7 +259,9 @@ function printSessionContext(config, profile, forbiddenGlobals, args) {
     );
   }
 
-  lines.push('After edits run: npx ark-check --root . --config ark.config.json --strict-config');
+  lines.push(
+    `After edits run: ${arkCommand(args.root, 'ark-check', '--root . --config ark.config.json --strict-config')}`
+  );
   lines.push('If Ark reports violations, fix the architecture instead of weakening the gate.');
   process.stdout.write(`${lines.join('\n')}\n`);
 }

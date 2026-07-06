@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 
 /**
@@ -268,4 +269,45 @@ const INTENT_NAME =
 
 export function looksLikeIntent(value) {
   return INTENT_NAME.test(value);
+}
+
+/**
+ * The command prefix that runs an INSTALLED package binary, matched to the project's
+ * package manager (detected from its lockfile). `npx` is the fallback for npm / unknown.
+ *
+ * This is the single source of truth that makes every command Ark EMITS — the AGENTS.md
+ * contract, .mcp.json, the Claude/Codex hooks, the check:architecture script, the
+ * SessionStart summary and every console hint — respect a pnpm-only or yarn repo instead
+ * of hardcoding `npx`. (A "pnpm only, never npx" repo treats an emitted `npx` as a policy
+ * violation.) `packageManager()` in ark-check.mjs builds the CI-workflow variant on the
+ * same detection.
+ */
+export function execRunner(root) {
+  if (fs.existsSync(path.join(root, 'pnpm-lock.yaml'))) return 'pnpm exec';
+  if (fs.existsSync(path.join(root, 'yarn.lock'))) return 'yarn';
+  return 'npx';
+}
+
+/** Full runnable command string for an installed Ark binary, package-manager aware. */
+export function arkCommand(root, bin, argsStr = '') {
+  return `${execRunner(root)} ${bin}${argsStr ? ` ${argsStr}` : ''}`;
+}
+
+/**
+ * Split { command, args } form for JSON/TOML configs (.mcp.json, config.toml) that spawn
+ * the binary directly. `pnpm exec ark-mcp` becomes command "pnpm" + args ["exec","ark-mcp",…]
+ * so the runner is a real argv[0], not a space-joined string a shell would mis-split.
+ */
+export function execCommandParts(root, bin, binArgs = []) {
+  const runner = execRunner(root);
+  if (runner === 'pnpm exec') return { command: 'pnpm', args: ['exec', bin, ...binArgs] };
+  if (runner === 'yarn') return { command: 'yarn', args: [bin, ...binArgs] };
+  return { command: 'npx', args: [bin, ...binArgs] };
+}
+
+/** Package-manager aware "install a dev dependency" hint (e.g. for a missing typescript). */
+export function installDevHint(root, pkg) {
+  if (fs.existsSync(path.join(root, 'pnpm-lock.yaml'))) return `pnpm add -D ${pkg}`;
+  if (fs.existsSync(path.join(root, 'yarn.lock'))) return `yarn add -D ${pkg}`;
+  return `npm install -D ${pkg}`;
 }

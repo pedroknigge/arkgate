@@ -207,6 +207,33 @@ describe('ark-check --init', () => {
     expect(init.stdout).not.toMatch(/Suggested layers[\s\S]*DomainModel:/);
   });
 
+  it('proposes canonical layers for ungoverned dirs and flags the unrecognized ones', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-init-propose-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/components'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/services'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/lib/repositories'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/lib/db'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/hooks'), { recursive: true });
+    for (const d of ['domain', 'components', 'services', 'lib/repositories', 'lib/db', 'hooks']) {
+      fs.writeFileSync(path.join(root, `src/${d}/f.ts`), 'export const x = 1;');
+    }
+
+    const init = runInit(root);
+    expect(init.status).toBe(0);
+    // Ungoverned code is called out loudly, not left silently behind a green check.
+    expect(init.stdout).toContain('Ark enforces NOTHING here');
+    // Recognized dirs get a concrete proposal from the canonical sources.
+    expect(init.stdout).toContain('src/components/ → PresentationAdapters');
+    expect(init.stdout).toContain('src/services/ → ApplicationOrchestration');
+    expect(init.stdout).toContain('src/lib/repositories/ → PersistenceAdapters');
+    // Unrecognized dirs are the user's call — never guessed.
+    expect(init.stdout).toMatch(/Not recognized[\s\S]*src\/hooks/);
+    expect(init.stdout).toMatch(/Not recognized[\s\S]*src\/lib\/db/);
+    // A best-fit starter model is offered as a shortcut.
+    expect(init.stdout).toContain('Closest starter model:');
+  });
+
   it('reports top-level directories left uncovered by the detected layers', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-init-uncovered-'));
     fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
@@ -293,6 +320,61 @@ describe('ark-check --install-agent-gates', () => {
     expect(yarnWorkflow).toContain('yarn install --frozen-lockfile');
     expect(yarnWorkflow).toContain('yarn ark-check --root . --config ark.config.json --strict-config');
     expect(yarnWorkflow).not.toContain('npm ci');
+  });
+
+  it('emits package-manager-aware commands in the agent gates, not just the CI workflow', () => {
+    // Regression: AGENTS.md, .mcp.json, the Claude hooks, the Cursor rule and the Codex
+    // config used to hardcode `npx`, which a "pnpm only, never npx" repo treats as a
+    // policy violation. They must follow the detected package manager like the workflow.
+    const pnpmRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-gates-pnpm-cmd-'));
+    fs.writeFileSync(path.join(pnpmRoot, 'pnpm-lock.yaml'), '\n');
+    const pnpm = runInstallAgentGates(pnpmRoot, ['--tools', 'claude,cursor,codex']);
+    expect(pnpm.status).toBe(0);
+
+    const agents = fs.readFileSync(path.join(pnpmRoot, 'AGENTS.md'), 'utf8');
+    expect(agents).toContain('pnpm exec ark-check --root . --config ark.config.json --strict-config');
+    expect(agents).not.toContain('npx ark');
+
+    const mcp = fs.readFileSync(path.join(pnpmRoot, '.mcp.json'), 'utf8');
+    expect(mcp).toContain('"command": "pnpm"');
+    expect(mcp).not.toContain('"command": "npx"');
+
+    const settings = fs.readFileSync(path.join(pnpmRoot, '.claude/settings.json'), 'utf8');
+    expect(settings).toContain('pnpm exec ark-mcp --session-context');
+    expect(settings).not.toContain('npx ark-mcp');
+
+    const cursor = fs.readFileSync(path.join(pnpmRoot, '.cursor/rules/ark.mdc'), 'utf8');
+    expect(cursor).toContain('pnpm exec ark-check');
+
+    const codexToml = fs.readFileSync(path.join(pnpmRoot, 'docs/ark-codex-config.toml'), 'utf8');
+    expect(codexToml).toContain('command = "pnpm"');
+
+    // yarn follows too; npm (default) still says npx — unchanged behavior.
+    const yarnRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-gates-yarn-cmd-'));
+    fs.writeFileSync(path.join(yarnRoot, 'yarn.lock'), '\n');
+    expect(runInstallAgentGates(yarnRoot, ['--tools', 'claude']).status).toBe(0);
+    const yarnAgents = fs.readFileSync(path.join(yarnRoot, 'AGENTS.md'), 'utf8');
+    expect(yarnAgents).toContain('yarn ark-check --root . --config ark.config.json --strict-config');
+    expect(yarnAgents).not.toContain('npx ark');
+
+    const npmRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-gates-npm-cmd-'));
+    fs.writeFileSync(path.join(npmRoot, 'package-lock.json'), '{}\n');
+    expect(runInstallAgentGates(npmRoot, ['--tools', 'claude']).status).toBe(0);
+    const npmAgents = fs.readFileSync(path.join(npmRoot, 'AGENTS.md'), 'utf8');
+    expect(npmAgents).toContain('npx ark-check --root . --config ark.config.json --strict-config');
+  });
+
+  it('postinstall hints follow the package manager of INIT_CWD', () => {
+    const pnpmRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-postinstall-pnpm-'));
+    fs.writeFileSync(path.join(pnpmRoot, 'pnpm-lock.yaml'), '\n');
+    const output = execFileSync('node', [path.resolve('bin/ark-postinstall.mjs')], {
+      encoding: 'utf8',
+      stdio: 'pipe',
+      env: { ...process.env, INIT_CWD: pnpmRoot },
+    });
+    expect(output).toContain('pnpm exec ark init');
+    expect(output).toContain('pnpm exec ark-check --install-agent-gates');
+    expect(output).not.toContain('npx ');
   });
 
   it('includes --require-gates in the generated CI workflow command', () => {
@@ -1812,6 +1894,35 @@ describe('ark-check --coverage', () => {
     expect(result.coverage.unclassified.count).toBe(1);
   });
 
+  it('reports the governed fraction and proposes a canonical layer for ungoverned dirs', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-coverage-suggest-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/components'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/lib/repositories'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/hooks'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/domain/a.ts'), 'export const a = 1;');
+    fs.writeFileSync(path.join(root, 'src/components/b.ts'), 'export const b = 1;');
+    fs.writeFileSync(path.join(root, 'src/lib/repositories/c.ts'), 'export const c = 1;');
+    fs.writeFileSync(path.join(root, 'src/hooks/d.ts'), 'export const d = 1;');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({ include: ['src'], layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }], rules: [] })
+    );
+
+    const result = coverageJson(root);
+    // 1 of 4 files governed — the headline honesty number.
+    expect(result.coverage.governed).toEqual({ classifiedFiles: 1, totalFiles: 4, percent: 25 });
+    const byDir = Object.fromEntries(
+      result.coverage.suggestions.map((s: { dir: string }) => [s.dir, s])
+    );
+    // Recognized dirs get a canonical layer sourced from the 11 layers + presets.
+    expect(byDir['src/components'].layer).toBe('PresentationAdapters');
+    expect(byDir['src/lib/repositories'].layer).toBe('PersistenceAdapters');
+    // Unrecognized dirs are flagged, never guessed.
+    expect(byDir['src/hooks'].unrecognized).toBe(true);
+    expect(byDir['src/hooks'].layer).toBeUndefined();
+  });
+
   it('is report-only: exit 0 even when files are unclassified', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-coverage-exit-'));
     fs.mkdirSync(path.join(root, 'src/loose'), { recursive: true });
@@ -1823,7 +1934,76 @@ describe('ark-check --coverage', () => {
       [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--coverage'],
       { encoding: 'utf8', stdio: 'pipe' }
     );
-    expect(out).toContain('Unclassified');
+    expect(out).toContain('Governed:');
+    // Ungoverned code is surfaced with a per-directory proposal, not hidden behind green.
+    expect(out).toContain('src/loose');
+  });
+});
+
+describe('ark-check violation diagnosis', () => {
+  // 12 files on one edge (App→Kernel) — the "every route imports the kernel" pattern that
+  // is almost always a contract bug, not 12 pieces of debt.
+  function concentratedProject() {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-diagnose-'));
+    fs.mkdirSync(path.join(root, 'src/app'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/kernel'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/kernel/api.ts'), 'export const api = 1;\n');
+    for (let i = 0; i < 12; i += 1) {
+      fs.writeFileSync(
+        path.join(root, `src/app/route${i}.ts`),
+        "import { api } from '../kernel/api';\nexport const r = api;\n"
+      );
+    }
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          { name: 'AppOrchestration', patterns: ['src/app/**'] },
+          { name: 'Kernel', patterns: ['src/kernel/**'] },
+        ],
+        rules: [{ from: 'AppOrchestration', to: 'Kernel', allowed: false }],
+      })
+    );
+    return root;
+  }
+
+  it('ranks violations by edge and flags a concentrated edge in --json', () => {
+    const result: any = runArkCheck(concentratedProject());
+    expect(result.ok).toBe(false);
+    expect(result.summary.total).toBe(12);
+    expect(result.summary.dominant).toBe('AppOrchestration → Kernel');
+    expect(result.summary.concentrated).toBe(true);
+    expect(result.summary.edges[0].count).toBe(12);
+  });
+
+  it('refuses to freeze a lopsided violation set unless --force is passed', () => {
+    const root = concentratedProject();
+    let stderr = '';
+    let threw = false;
+    try {
+      execFileSync('node', [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline'], {
+        encoding: 'utf8',
+        stdio: 'pipe',
+      });
+    } catch (error) {
+      threw = true;
+      stderr = (error as { stderr: string }).stderr;
+    }
+    // Blocked: non-zero exit, no baseline written, contract-fix guidance instead.
+    expect(threw).toBe(true);
+    expect(stderr).toContain('Refusing to freeze');
+    expect(stderr).toContain('single edge');
+    expect(fs.existsSync(path.join(root, '.ark-baseline.json'))).toBe(false);
+
+    // --force freezes anyway (the escape hatch).
+    const forced = execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline', '--force'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    expect(forced).toContain('frozen violation key');
+    expect(fs.existsSync(path.join(root, '.ark-baseline.json'))).toBe(true);
   });
 });
 

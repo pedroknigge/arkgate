@@ -28,10 +28,10 @@ checks the registry itself — don't assume the copy in `node_modules` is curren
    anything, the repo must do about it. If the file is absent (older releases
    didn't ship it), fall back to `npm view ark-runtime-kernel@<version> ...` or
    the GitHub release notes — say which source you used.
-3. **Refresh templates** — run `npx ark-check --install-agent-gates`. Without
+3. **Refresh templates** — run `ark-check --install-agent-gates`. Without
    `--force` it only writes missing files (new skills, new tool templates) and
    skips existing ones. To pick up NEW versions of the `/ark-*` skills that a
-   package update shipped, run `npx ark-check --install-agent-gates --skills-only
+   package update shipped, run `ark-check --install-agent-gates --skills-only
    --force`: `--skills-only` scopes the overwrite to the canonical skills and
    leaves the gate files alone. Do NOT run a bare `--install-agent-gates --force`
    to refresh skills — it also overwrites `AGENTS.md` (often customized with the
@@ -42,12 +42,12 @@ checks the registry itself — don't assume the copy in `node_modules` is curren
    explicit approval.
    If you use Codex, its prompts live in `$CODEX_HOME/prompts` (`~/.codex/prompts`),
    not the repo, so a repo refresh never updates them. Refresh them there too:
-   `npx ark-check --install-agent-gates --skills-only --codex-home --force`. Keep
+   `ark-check --install-agent-gates --skills-only --codex-home --force`. Keep
    `--skills-only` — without it, `--force` also rewrites customized gate files
    (AGENTS.md, CI, settings). This writes to the user's home dir — say so. (A normal
    `ark-check` now flags stale Codex-home skills when copies exist, so you don't have
    to remember.)
-4. **Re-verify** — `npx ark-check --root . --config ark.config.json
+4. **Re-verify** — `ark-check --root . --config ark.config.json
    --strict-config` (with `--baseline .ark-baseline.json` if present). A new
    version may detect violations the old one missed: if new violations appear,
    apply `/ark-fix` reasoning to resolve them. If they are too numerous to fix

@@ -11,9 +11,15 @@ paste output you can generate yourself.
 
 ## Operating rules
 
-- First action: run `npx ark-check --root . --config ark.config.json --json`
+- First action: run `ark-check --root . --config ark.config.json --json`
   (add `--baseline .ark-baseline.json` if that file exists) to get the current
   violation list. If the user quoted a specific gate block, start from that one.
+- **Check `summary` before fixing code.** If `summary.concentrated` is true — most
+  violations are ONE edge — the fix is almost certainly the CONTRACT, not N code
+  changes: app-land is reaching a framework/kernel through a sanctioned entrypoint,
+  or a layer needs splitting into a public surface + internals. Stop and hand off to
+  `/ark-contract`; don't port-and-adapter your way through hundreds of false
+  positives. Fix code only for the genuine, scattered minority.
 - **Never weaken the gate.** Do not edit `ark.config.json`, add allowed edges,
   delete rules, or regenerate the baseline to make a violation disappear. The fix
   lives in the code. If you become convinced the contract itself is wrong, stop
@@ -44,7 +50,7 @@ port conventions before inventing new ones.
 
 ## Verify and report
 
-After edits, run `npx ark-check --root . --config ark.config.json --strict-config`
+After edits, run `ark-check --root . --config ark.config.json --strict-config`
 (plus the project's test command if one exists in `package.json`). If the check
 still fails, keep fixing — do not end the turn with a red check unless you are
 blocked on a genuine contract question.

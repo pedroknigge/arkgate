@@ -52,6 +52,6 @@ kernel, one feature at a time.
 
 ## Verify and report
 
-Run the project's tests plus `npx ark-check --root . --config ark.config.json
+Run the project's tests plus `ark-check --root . --config ark.config.json
 --strict-config`. Report: what was migrated, lines deleted vs added, remaining
 candidates ranked, and any behavior differences (e.g. bounded history).

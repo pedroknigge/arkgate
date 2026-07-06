@@ -55,6 +55,6 @@ not a stalling question.
 
 ## Verify and report
 
-If you created files, run `npx ark-check --root . --config ark.config.json
+If you created files, run `ark-check --root . --config ark.config.json
 --strict-config` and make it pass. Report: placement + why, files created (if
 any), and the import rules the new code must respect going forward.

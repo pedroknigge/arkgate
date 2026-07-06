@@ -23,7 +23,7 @@ contract to produce that is real work, not a stalling question.
 
 ## Steps
 
-1. **Snapshot first** — run `npx ark-check --root . --config ark.config.json
+1. **Snapshot first** — run `ark-check --root . --config ark.config.json
    --json` and save the result. You must be able to show what the change
    legalized or newly forbids.
 2. **Make the smallest edit** that achieves the user's intent:
@@ -34,6 +34,16 @@ contract to produce that is real work, not a stalling question.
    - **New rule**: prefer adding a DENIED edge (tightening). For an ALLOWED
      edge (loosening), first check whether any current code depends on it — if
      nothing needs it, don't add it (a permission nobody uses is future debt).
+   - **Split a layer into a public surface + internals (the facade fix)**: when a
+     check's `summary` shows most violations are ONE edge into a layer (e.g. all of
+     app-land importing a kernel/framework), the contract — not the code — is wrong.
+     Split the target layer in two: a `<Layer>Api` layer whose patterns cover the
+     sanctioned entrypoints app code is meant to import (the target subtrees the
+     breakdown points at, e.g. `kernel/app/**`, `kernel/events.ts`), and keep the rest
+     as `<Layer>Internal`. Allow the edge into the surface, deny it into internals.
+     This legalizes the intended dependency while still forbidding reach-arounds — it
+     collapses a wall of false positives to ~0. This is how Ark stays compatible with a
+     DI framework: it guards the border, not the framework's insides.
    - **forbiddenGlobals**: adding one to a domain layer may reveal existing
      violations — run the check, and if there are hits, fix them (`/ark-fix`
      patterns). If they are too numerous to fix now, freezing them in the
@@ -49,7 +59,7 @@ contract to produce that is real work, not a stalling question.
      that's a refactor (split the file so the pure part moves), not a config
      edit. Say so instead of recommending the move; don't discover it only after
      editing the config.
-3. **Validate** — `npx ark-check --root . --config ark.config.json
+3. **Validate** — `ark-check --root . --config ark.config.json
    --strict-config` (strict makes config warnings fail; that's intended here).
 4. **Diff the impact** — compare violations before/after. New violations from a
    tightening are expected: list them and fix them now if the set is small; if
@@ -64,7 +74,7 @@ contract to produce that is real work, not a stalling question.
 - Keep rules explicit: when adding a layer, state in the report which edges you
   denied and why, so a novice reading it learns the dependency direction.
 - Update generated rule files if the contract summary embedded in them changed:
-  re-run `npx ark-check --install-agent-gates` (no `--force`; mention any
+  re-run `ark-check --install-agent-gates` (no `--force`; mention any
   skipped-because-customized files).
 
 ## Verify and report

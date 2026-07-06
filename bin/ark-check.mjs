@@ -9,9 +9,13 @@ import {
   DEFAULT_INTENT_PREFIXES,
   DEFAULT_LAYER_DIRECTORIES,
   DEFAULT_RULES,
+  arkCommand,
   collectForbiddenGlobalUses,
   createElevenLayerConfig,
+  execCommandParts,
+  execRunner,
   globToRegExp,
+  installDevHint,
   layerForFile,
   looksLikeIntent,
   resolveIntentLayer,
@@ -203,10 +207,11 @@ function missingGates(root) {
   return missing;
 }
 
-function checkArchitectureScriptSnippet() {
-  // npx resolves the installed package binary; `node bin/ark-check.mjs` only works
-  // inside Ark's own repo.
-  return '"check:architecture": "npx ark-check --root . --config ark.config.json --strict-config"';
+function checkArchitectureScriptSnippet(root) {
+  // The package manager's runner resolves the installed binary; `node bin/ark-check.mjs`
+  // only works inside Ark's own repo. Package-manager aware so a pnpm/yarn repo isn't
+  // handed an `npx` alias that violates its "never npx" policy.
+  return `"check:architecture": "${arkCheckCommand(root)}"`;
 }
 
 function readConfig(root, configPath) {
@@ -474,15 +479,161 @@ const ARCHITECTURE_PRESETS = {
   }),
 };
 
+// ── Layer suggestion engine ──────────────────────────────────────────────────
+// Everything here is HARVESTED from Ark's own canonical sources — the 11-layer defaults
+// (DEFAULT_LAYER_DIRECTORIES) and the named presets — so a suggestion can never drift from
+// what the gate actually enforces. No ad-hoc directory heuristics: a directory Ark doesn't
+// already know about is reported as "unrecognized — you classify", never guessed. This is
+// what lets `init`/`--coverage` PROPOSE where ungoverned code belongs instead of silently
+// leaving the majority of a repo ungoverned behind a false-green check.
+const CANONICAL_LAYER_NAMES = new Set(DEFAULT_INTENT_PREFIXES.map((entry) => entry.layer));
+
+function dirSegmentsFromGlob(pattern) {
+  return String(pattern)
+    .split('/')
+    .filter((segment) => segment && !segment.includes('*'));
+}
+
+let _layerByDir;
+// Map<dirBasename, string[] layers>. A basename mapping to >1 layer (e.g. `app` — Application
+// orchestration in the 11-layer defaults, but Presentation in the monorepo/Next preset) is
+// genuinely ambiguous; every candidate is surfaced rather than silently picked.
+function layerByDir() {
+  if (_layerByDir) return _layerByDir;
+  const map = new Map();
+  const add = (segment, layer) => {
+    if (!segment) return;
+    const existing = map.get(segment) ?? [];
+    if (!existing.includes(layer)) existing.push(layer);
+    map.set(segment, existing);
+  };
+  for (const [layer, dirs] of Object.entries(DEFAULT_LAYER_DIRECTORIES)) {
+    for (const dir of dirs) add(dirSegmentsFromGlob(dir).pop(), layer);
+  }
+  // The canonical-named presets reuse the 11 layer names, so their directory synonyms
+  // (services→Application, components/pages→Presentation, data/infrastructure→Persistence…)
+  // map cleanly onto the same taxonomy. feature-sliced uses a different vocabulary
+  // (Widgets/Entities/…) that doesn't reduce to the 11, so it's covered by model-fit, not here.
+  for (const preset of ['hexagonal', 'layered', 'monorepo']) {
+    for (const layer of ARCHITECTURE_PRESETS[preset]([]).layers) {
+      if (!CANONICAL_LAYER_NAMES.has(layer.name)) continue;
+      for (const pattern of layer.patterns ?? []) {
+        add(dirSegmentsFromGlob(pattern).pop(), layer.name);
+      }
+    }
+  }
+  _layerByDir = map;
+  return map;
+}
+
+// Suggest a canonical layer for a directory by its basename. null when Ark doesn't recognize
+// it (the honest "you classify this" case), else { layer, alternatives }.
+function suggestLayerForDir(name) {
+  const layers = layerByDir().get(name);
+  if (!layers || layers.length === 0) return null;
+  return { layer: layers[0], alternatives: layers.slice(1) };
+}
+
+// Suggest a layer for a directory PATH by finding the deepest segment Ark recognizes, so
+// `src/lib/repositories` proposes PersistenceAdapters even though `lib` itself is unknown.
+function suggestLayerForPath(relDir) {
+  const segments = relDir.split('/').filter(Boolean);
+  for (let i = segments.length - 1; i >= 0; i -= 1) {
+    const hit = suggestLayerForDir(segments[i]);
+    if (hit) return { ...hit, matchedDir: segments[i] };
+  }
+  return null;
+}
+
+// Which starter model does this set of directory basenames most resemble? Scored purely by
+// how many of the repo's directories each preset's patterns recognize — a hint toward
+// `ark init --preset <name>`. null when nothing lines up.
+function detectBestFitModel(dirBasenames) {
+  const present = new Set(dirBasenames);
+  const scored = ['hexagonal', 'layered', 'feature-sliced', 'monorepo'].map((name) => {
+    const segments = new Set();
+    for (const layer of ARCHITECTURE_PRESETS[name]([]).layers) {
+      for (const pattern of layer.patterns ?? []) {
+        const seg = dirSegmentsFromGlob(pattern).pop();
+        if (seg) segments.add(seg);
+      }
+    }
+    let hits = 0;
+    for (const dir of present) if (segments.has(dir)) hits += 1;
+    return { name, hits };
+  });
+  scored.sort((a, b) => b.hits - a.hits);
+  return scored[0].hits > 0 ? scored[0] : null;
+}
+
+// Group ungoverned files by their parent directory and attach a proposed layer (or the
+// honest "unrecognized"). The single source the coverage report and init both format.
+function buildUnclassifiedSuggestions(unclassifiedRelFiles) {
+  const byDir = new Map();
+  for (const rel of unclassifiedRelFiles) {
+    const dir = rel.split('/').slice(0, -1).join('/') || '.';
+    byDir.set(dir, (byDir.get(dir) ?? 0) + 1);
+  }
+  return [...byDir.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([dir, files]) => {
+    const hit = suggestLayerForPath(dir);
+    return hit
+      ? {
+          dir,
+          files,
+          layer: hit.layer,
+          ...(hit.alternatives.length > 0 ? { alternatives: hit.alternatives } : {}),
+        }
+      : { dir, files, unrecognized: true };
+  });
+}
+
+// For `init`: propose a layer for every ungoverned top-level directory, descending one level
+// into unrecognized ones so `lib/repositories`, `lib/db` etc. still get a concrete proposal
+// instead of a blanket "lib is ungoverned".
+function proposeForUncovered(root, srcDir, layers) {
+  const proposals = [];
+  for (const top of uncoveredDirectories(root, srcDir, layers)) {
+    const direct = suggestLayerForDir(top);
+    if (direct) {
+      proposals.push({ dir: `${srcDir}/${top}`, ...direct });
+      continue;
+    }
+    let children = [];
+    try {
+      children = fs
+        .readdirSync(path.join(root, srcDir, top), { withFileTypes: true })
+        .filter((e) => e.isDirectory() && e.name !== 'node_modules' && !e.name.startsWith('.'))
+        .map((e) => e.name);
+    } catch {
+      /* not a readable directory — treat as unrecognized below */
+    }
+    if (children.length > 0) {
+      // Descend: propose per child so a mixed `lib/` yields lib/repositories → Persistence
+      // AND flags lib/db as unrecognized, instead of dropping the parts Ark can't place.
+      for (const child of children) {
+        const hit = suggestLayerForDir(child);
+        proposals.push(
+          hit
+            ? { dir: `${srcDir}/${top}/${child}`, ...hit }
+            : { dir: `${srcDir}/${top}/${child}`, unrecognized: true }
+        );
+      }
+    } else {
+      proposals.push({ dir: `${srcDir}/${top}`, unrecognized: true });
+    }
+  }
+  return proposals;
+}
+
 function printInitNextSteps(root) {
   console.log('');
   console.log('Next steps:');
-  console.log('  1. CI gate:        npx ark-check --root . --config ark.config.json --strict-config');
-  console.log('  2. AI write gate:  npx ark-mcp --root . --config ark.config.json');
+  console.log(`  1. CI gate:        ${arkCheckCommand(root)}`);
+  console.log(`  2. AI write gate:  ${arkCommand(root, 'ark-mcp', '--root . --config ark.config.json')}`);
   console.log('     (bind its validate_code tool to your agent\'s pre-write hook — see README)');
   if (!hasCheckArchitectureScript(root)) {
-    console.log('  3. Add the npm alias if you want `npm run check:architecture`:');
-    console.log(`     ${checkArchitectureScriptSnippet()}`);
+    console.log('  3. Add the package.json alias if you want `run check:architecture`:');
+    console.log(`     ${checkArchitectureScriptSnippet(root)}`);
   }
 }
 
@@ -517,7 +668,7 @@ function runInit(args) {
     if (args.preset === 'monorepo') {
       console.log('');
       console.log(`include: ${finalConfig.include.join(', ')} — patterns match by directory name in any`);
-      console.log('package; adjust to your naming, then verify: npx ark-check --coverage');
+      console.log(`package; adjust to your naming, then verify: ${arkCommand(args.root, 'ark-check', '--coverage')}`);
     }
     printInitNextSteps(args.root);
     return;
@@ -553,7 +704,7 @@ function runInit(args) {
       console.log(`  ${layer.name}: ${layer.patterns.join(', ')}`);
     }
     console.log('');
-    console.log('Verify what each layer actually governs: npx ark-check --coverage');
+    console.log(`Verify what each layer actually governs: ${arkCommand(args.root, 'ark-check', '--coverage')}`);
   } else if (mode === 'greenfield') {
     console.log('No conventional layer directories found — generated the full 11-layer starter');
     console.log('profile instead. Every layer is marked optional, so the strict check passes now');
@@ -590,12 +741,35 @@ function runInit(args) {
         console.log(`  ${entry.layer}: ${dirs}`);
       }
     }
-    const uncovered = uncoveredDirectories(args.root, srcDir, finalConfig.layers);
-    if (uncovered.length > 0) {
+    const proposals = proposeForUncovered(args.root, srcDir, finalConfig.layers);
+    if (proposals.length > 0) {
+      const recognized = proposals.filter((p) => !p.unrecognized);
+      const unrecognized = proposals.filter((p) => p.unrecognized);
       console.log('');
-      console.log(
-        `Not covered by any layer (add patterns for these or they stay ungoverned): ${uncovered.join(', ')}`
+      console.log('Ungoverned directories — Ark enforces NOTHING here until they are classified.');
+      console.log('A green check ignores this code; it is not "clean", it is unchecked.');
+      if (recognized.length > 0) {
+        console.log('');
+        console.log('Proposed layer for each (from the 11-layer profile + presets — apply via /ark-contract):');
+        for (const p of recognized) {
+          const alt = p.alternatives?.length ? ` (or ${p.alternatives.join(' / ')} — confirm)` : '';
+          console.log(`  ${p.dir}/ → ${p.layer}${alt}`);
+        }
+      }
+      if (unrecognized.length > 0) {
+        console.log('');
+        console.log(`Not recognized — you decide the layer: ${unrecognized.map((p) => p.dir).join(', ')}`);
+      }
+      const fit = detectBestFitModel(
+        [
+          ...finalConfig.layers.flatMap((l) => (l.patterns ?? []).map((p) => dirSegmentsFromGlob(p).pop())),
+          ...proposals.map((p) => p.dir.split('/').pop()),
+        ].filter(Boolean)
       );
+      if (fit) {
+        console.log('');
+        console.log(`Closest starter model: ${fit.name} — \`ark init --preset ${fit.name} --force\` to start from its rule set.`);
+      }
     }
   }
   printInitNextSteps(args.root);
@@ -651,17 +825,24 @@ function packageManager(root) {
   };
 }
 
-const ARK_CHECK_COMMAND = 'npx ark-check --root . --config ark.config.json --strict-config';
+// The args every emitted `ark-check` command carries. The runner prefix (npx / pnpm exec /
+// yarn) is added per project by arkCheckCommand so a pnpm-only repo never gets an `npx`
+// instruction — see execRunner() in ark-shared.mjs.
+const CHECK_ARGS = '--root . --config ark.config.json --strict-config';
+function arkCheckCommand(root) {
+  return arkCommand(root, 'ark-check', CHECK_ARGS);
+}
 
-// Canonical agent contract. AGENTS.md and the Cursor rule both derive from this
-// single source so the steps can never drift out of sync between the two files.
+// Canonical agent contract. AGENTS.md and the Cursor rule both derive from this single
+// source so the steps can never drift out of sync between the two files. `steps(checkCommand)`
+// is a builder because the check command's runner prefix varies with the package manager.
 const AGENT_CONTRACT = {
   manifestResource: 'ark://manifest',
-  steps: [
+  steps: (checkCommand) => [
     `Read the Ark contract from \`ark://manifest\` when the MCP server is available.`,
     `Keep source files inside the layer boundaries declared in \`ark.config.json\`.`,
     `Do not bypass Ark publishers, event contracts, or source metadata for runtime mutations.`,
-    `After edits, run \`${ARK_CHECK_COMMAND}\`.`,
+    `After edits, run \`${checkCommand}\`.`,
     `If Ark reports violations, fix the architecture instead of weakening the gate.`,
   ],
   // Cursor-only guidance: the write-time validate_code tool is available in
@@ -681,8 +862,10 @@ function layerPlacementTable() {
 ${rows}`;
 }
 
-function agentInstructions() {
-  const steps = AGENT_CONTRACT.steps.map((step, index) => `${index + 1}. ${step}`).join('\n');
+function agentInstructions(root) {
+  const steps = AGENT_CONTRACT.steps(arkCheckCommand(root))
+    .map((step, index) => `${index + 1}. ${step}`)
+    .join('\n');
   return `# Ark Enforcement
 
 Before editing TypeScript or JavaScript source files:
@@ -702,13 +885,12 @@ The project is only considered Ark-enforced when the write gate, CI gate, and ru
 `;
 }
 
-function mcpJson() {
+function mcpJson(root) {
   return `${JSON.stringify({
     mcpServers: {
       ark: {
         type: 'stdio',
-        command: 'npx',
-        args: ['ark-mcp', '--root', '.', '--config', 'ark.config.json'],
+        ...execCommandParts(root, 'ark-mcp', ['--root', '.', '--config', 'ark.config.json']),
       },
     },
   }, null, 2)}\n`;
@@ -718,14 +900,21 @@ function mcpJson() {
 // block (with absolute paths) into ~/.codex/config.toml. This copy is a reference only, so
 // it flags the two gotchas of hand-editing the global config: absolute paths (config.toml is
 // loaded without the project as cwd) and the required restart.
-function codexTomlSnippet() {
+function codexTomlSnippet(root) {
+  const { command, args } = execCommandParts(root, 'ark-mcp', [
+    '--root',
+    '/absolute/path/to/project',
+    '--config',
+    '/absolute/path/to/project/ark.config.json',
+  ]);
+  const argsToml = args.map((value) => `"${value}"`).join(', ');
   return `# Add to ~/.codex/config.toml (or $CODEX_HOME/config.toml), then RESTART Codex —
 # it does not hot-load MCP servers. Use ABSOLUTE paths: config.toml is global, so
 # "." would resolve against Codex's launch dir, not this project. Prefer:
 #   ark-check --install-agent-gates --tools codex   (auto-merges the absolute paths)
 [mcp_servers.ark]
-command = "npx"
-args = ["ark-mcp", "--root", "/absolute/path/to/project", "--config", "/absolute/path/to/project/ark.config.json"]
+command = "${command}"
+args = [${argsToml}]
 `;
 }
 
@@ -735,8 +924,10 @@ args = ["ark-mcp", "--root", "/absolute/path/to/project", "--config", "/absolute
  * Derived from the same AGENT_CONTRACT as AGENTS.md and the Cursor rule so the steps
  * can never drift; points at AGENTS.md for the full placement table.
  */
-function instructionRule() {
-  const steps = AGENT_CONTRACT.steps.map((step, index) => `${index + 1}. ${step}`).join('\n');
+function instructionRule(root) {
+  const steps = AGENT_CONTRACT.steps(arkCheckCommand(root))
+    .map((step, index) => `${index + 1}. ${step}`)
+    .join('\n');
   return `# Ark architecture contract
 
 This project's architecture is governed by Ark (\`ark.config.json\` is authoritative).
@@ -748,7 +939,7 @@ See \`AGENTS.md\` for the full contract and the layer placement table.
 `;
 }
 
-function cursorRule() {
+function cursorRule(root) {
   return `---
 description: Ark architecture contract
 alwaysApply: true
@@ -760,7 +951,7 @@ Before writing or editing TypeScript or JavaScript source files, read the
 ${AGENT_CONTRACT.cursorValidateStep} After edits, run:
 
 \`\`\`bash
-${ARK_CHECK_COMMAND}
+${arkCheckCommand(root)}
 \`\`\`
 
 If Ark reports violations, fix the architecture instead of bypassing the gate.
@@ -829,7 +1020,8 @@ ${setupSteps ? `${setupSteps}\n` : ''}      - name: Install dependencies
 `;
 }
 
-function claudeSettings() {
+function claudeSettings(root) {
+  const runner = execRunner(root);
   return `${JSON.stringify({
     hooks: {
       // Inject the contract at session start so the agent knows the architecture from
@@ -840,8 +1032,7 @@ function claudeSettings() {
           hooks: [
             {
               type: 'command',
-              command:
-                'npx ark-mcp --session-context --root "$CLAUDE_PROJECT_DIR" --config ark.config.json',
+              command: `${runner} ark-mcp --session-context --root "$CLAUDE_PROJECT_DIR" --config ark.config.json`,
             },
           ],
         },
@@ -852,8 +1043,7 @@ function claudeSettings() {
           hooks: [
             {
               type: 'command',
-              command:
-                'npx ark-mcp --hook --root "$CLAUDE_PROJECT_DIR" --config ark.config.json',
+              command: `${runner} ark-mcp --hook --root "$CLAUDE_PROJECT_DIR" --config ark.config.json`,
             },
           ],
         },
@@ -1060,9 +1250,16 @@ function wireCodexMcp(root, force) {
   const esc = (s) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const absRoot = path.resolve(root);
   const absConfig = path.join(absRoot, 'ark.config.json');
+  const { command, args } = execCommandParts(root, 'ark-mcp', [
+    '--root',
+    esc(absRoot),
+    '--config',
+    esc(absConfig),
+  ]);
+  const argsToml = args.map((value) => `"${value}"`).join(', ');
   const block = `[mcp_servers.ark]
-command = "npx"
-args = ["ark-mcp", "--root", "${esc(absRoot)}", "--config", "${esc(absConfig)}"]`;
+command = "${command}"
+args = [${argsToml}]`;
   let existing = '';
   try {
     if (fs.existsSync(file)) existing = fs.readFileSync(file, 'utf8');
@@ -1184,45 +1381,45 @@ function runInstallAgentGates(args) {
   // `--force` clobbers them — this is the safe way to pick up new skill versions.
   if (!args.skillsOnly) {
     // Base gates: tool-agnostic contract + CI backstop, always written.
-    templates.push(['AGENTS.md', agentInstructions()]);
-    templates.push(['.mcp.json', mcpJson()]);
+    templates.push(['AGENTS.md', agentInstructions(root)]);
+    templates.push(['.mcp.json', mcpJson(root)]);
     templates.push([
       '.github/workflows/ark-check.yml',
       githubWorkflow(pm, detectCiNode(root)),
     ]);
     if (tools.has('cursor')) {
-      templates.push(['.cursor/mcp.json', mcpJson()]);
-      templates.push(['.cursor/rules/ark.mdc', cursorRule()]);
+      templates.push(['.cursor/mcp.json', mcpJson(root)]);
+      templates.push(['.cursor/rules/ark.mdc', cursorRule(root)]);
     }
     if (tools.has('claude')) {
-      templates.push(['.claude/settings.json', claudeSettings()]);
+      templates.push(['.claude/settings.json', claudeSettings(root)]);
     }
     if (tools.has('codex')) {
-      templates.push(['docs/ark-codex-config.toml', codexTomlSnippet()]);
+      templates.push(['docs/ark-codex-config.toml', codexTomlSnippet(root)]);
     }
     // Instruction-tier hosts: one shared rule text, host-specific path.
     if (tools.has('windsurf')) {
-      templates.push(['.windsurf/rules/ark.md', instructionRule()]);
+      templates.push(['.windsurf/rules/ark.md', instructionRule(root)]);
     }
     if (tools.has('cline')) {
-      templates.push(['.clinerules/ark.md', instructionRule()]);
+      templates.push(['.clinerules/ark.md', instructionRule(root)]);
     }
     if (tools.has('copilot')) {
-      templates.push(['.github/copilot-instructions.md', instructionRule()]);
+      templates.push(['.github/copilot-instructions.md', instructionRule(root)]);
     }
     if (tools.has('kiro')) {
-      templates.push(['.kiro/steering/ark.md', instructionRule()]);
+      templates.push(['.kiro/steering/ark.md', instructionRule(root)]);
     }
     if (tools.has('roo')) {
-      templates.push(['.roo/rules/ark.md', instructionRule()]);
+      templates.push(['.roo/rules/ark.md', instructionRule(root)]);
     }
     if (tools.has('continue')) {
-      templates.push(['.continue/rules/ark.md', instructionRule()]);
+      templates.push(['.continue/rules/ark.md', instructionRule(root)]);
     }
     // Gemini CLI reads GEMINI.md as its primary project context (it also reads
     // AGENTS.md, but GEMINI.md wins when both are present), so the rule lives there.
     if (tools.has('gemini')) {
-      templates.push(['GEMINI.md', instructionRule()]);
+      templates.push(['GEMINI.md', instructionRule(root)]);
     }
   }
   // /ark-* skills for every detected tool that supports project-level commands.
@@ -1270,7 +1467,7 @@ function runInstallAgentGates(args) {
     console.log(
       `  ${staleSkipped} skill(s) are outdated but were left untouched. Refresh them with:`
     );
-    console.log('    npx ark-check --install-agent-gates --skills-only --force');
+    console.log(`    ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --force')}`);
   }
 
   // --codex-home writes the canonical skills straight to $CODEX_HOME/prompts.
@@ -1344,10 +1541,10 @@ function runInstallAgentGates(args) {
   console.log('');
   console.log('Next steps:');
   console.log('  1. Review the generated files and commit the ones that match your tools.');
-  console.log('  2. Run: npx ark-check --root . --config ark.config.json --strict-config');
+  console.log(`  2. Run: ${arkCheckCommand(root)}`);
   if (!hasCheckScript) {
-    console.log('  3. Add the npm alias if you want `npm run check:architecture`:');
-    console.log(`     ${checkArchitectureScriptSnippet()}`);
+    console.log('  3. Add the package.json alias if you want `run check:architecture`:');
+    console.log(`     ${checkArchitectureScriptSnippet(root)}`);
   }
   if ((tools.has('codex') || args.codexHome)) {
     console.log('');
@@ -1359,7 +1556,7 @@ function runInstallAgentGates(args) {
     } else if (skills.length > 0) {
       console.log('  Codex loads slash-command prompts from $CODEX_HOME/prompts (~/.codex/prompts),');
       console.log('  not the repo. Install the /ark-* skills there with:');
-      console.log('    npx ark-check --install-agent-gates --codex-home');
+      console.log(`    ${arkCommand(root, 'ark-check', '--install-agent-gates --codex-home')}`);
       console.log('  (writes to your home dir; agents driving this setup should offer to run it).');
     }
   }
@@ -1908,6 +2105,89 @@ function printViolation(violation) {
   console.error('');
 }
 
+// ── Violation diagnosis ──────────────────────────────────────────────────────
+// Groups violations by their layer EDGE (and target subtree) so a wall of N violations reads
+// as "M distinct problems, ranked by size" — the burn-down order. The killer signal: when
+// one edge dominates, the CONTRACT is usually wrong, not the code (e.g. every API route
+// importing the kernel through a sanctioned entrypoint). Freezing that as "debt" buries a
+// config fix behind a baseline, so --update-baseline refuses a lopsided freeze (see guard).
+const CONCENTRATION_MIN_VIOLATIONS = 10;
+const CONCENTRATION_SHARE = 0.9;
+
+function violationEdge(violation) {
+  if (violation.ruleId === 'CIRCULAR_DEPENDENCY') return 'circular dependency';
+  if (violation.ruleId === 'FORBIDDEN_GLOBAL') return `${violation.fromLayer ?? '?'} → ambient global`;
+  if (violation.fromLayer && violation.toLayer) return `${violation.fromLayer} → ${violation.toLayer}`;
+  return violation.ruleId;
+}
+
+// The directory the offending import lands in — the signal for "where does this edge go?".
+// For a LAYER_IMPORT_VIOLATION the target is a resolved file path; cluster by its dir prefix
+// so `kernel/internal/x` and `kernel/internal/y` collapse to one "into kernel/internal/".
+function violationTargetSubtree(violation) {
+  if (!violation.target || typeof violation.target !== 'string' || !violation.target.includes('/')) {
+    return undefined;
+  }
+  const segments = violation.target.split('/');
+  return segments.slice(0, Math.min(3, segments.length - 1)).join('/');
+}
+
+function summarizeViolations(violations) {
+  const byEdge = new Map();
+  for (const violation of violations) {
+    const key = violationEdge(violation);
+    const entry = byEdge.get(key) ?? { edge: key, count: 0, targets: new Map() };
+    entry.count += 1;
+    const subtree = violationTargetSubtree(violation);
+    if (subtree) entry.targets.set(subtree, (entry.targets.get(subtree) ?? 0) + 1);
+    byEdge.set(key, entry);
+  }
+  const edges = [...byEdge.values()]
+    .map((entry) => ({
+      edge: entry.edge,
+      count: entry.count,
+      topTargets: [...entry.targets.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 4)
+        .map(([dir, count]) => ({ dir, count })),
+    }))
+    .sort((a, b) => b.count - a.count);
+  const total = violations.length;
+  const dominant = edges[0];
+  const dominantShare = total > 0 && dominant ? dominant.count / total : 0;
+  return {
+    total,
+    edges,
+    dominant: dominant ? dominant.edge : undefined,
+    dominantShare,
+    concentrated: total >= CONCENTRATION_MIN_VIOLATIONS && dominantShare >= CONCENTRATION_SHARE,
+  };
+}
+
+function printViolationBreakdown(summary, { toStderr = false } = {}) {
+  const out = toStderr ? (line) => console.error(line) : (line) => console.log(line);
+  out('');
+  out(`Violation breakdown — ${summary.total} across ${summary.edges.length} edge(s), largest first:`);
+  for (const edge of summary.edges) {
+    const pct = Math.round((edge.count / summary.total) * 100);
+    out(`  ${String(edge.count).padStart(5)}  ${edge.edge}  (${pct}%)`);
+    for (const target of edge.topTargets) {
+      out(`         ↳ ${target.count}× into ${target.dir}/`);
+    }
+  }
+  if (summary.concentrated) {
+    out('');
+    out(`⚠ ${Math.round(summary.dominantShare * 100)}% of violations are a SINGLE edge: ${summary.dominant}.`);
+    out('  That usually means the CONTRACT is wrong, not the code — e.g. app-land reaching a');
+    out('  framework/kernel through a sanctioned entrypoint. Before treating it as debt:');
+    out('    • If the edge is intended, allow it — or split the target layer into a public');
+    out('      surface app-land may import + internals it may not (see the target dirs above');
+    out('      to find the surface). Do it via /ark-contract.');
+    out('    • Only the minority hitting real internals is genuine debt for /ark-fix.');
+    out(`  Fixing the contract clears ~${summary.edges[0].count} of ${summary.total} at once.`);
+  }
+}
+
 // Finds strongly-connected components in the resolved import graph. Any component
 // with more than one file is a set of files that transitively import each other —
 // a circular dependency. One violation per component keeps the output minimal and
@@ -2253,7 +2533,7 @@ function renderHtmlReport({ root, config, exampleByLayer, violations, ok, suppre
 
   <h2>Commands to remember</h2>
   <div class="cmds">
-    <code>npx ark-check --root . --config ark.config.json --strict-config</code>
+    <code>${arkCheckCommand(root)}</code>
     <code>/ark-place "&lt;what you're building&gt;"</code>
   </div>
 
@@ -2306,6 +2586,18 @@ function runCoverage(root, config, files, rules, asJson) {
     .map((row) => row.name)
     .filter((name) => !rules.some((rule) => rule.from === name || rule.to === name));
 
+  // The headline honesty number: what share of the in-scope code Ark actually governs. A
+  // green check over a low fraction is the false-green trap this report exists to expose.
+  const classifiedFiles = files.length - unclassified.length;
+  const fraction = files.length > 0 ? classifiedFiles / files.length : 1;
+  const governed = {
+    classifiedFiles,
+    totalFiles: files.length,
+    percent: Math.round(fraction * 100),
+  };
+  // Per-directory proposals for the ungoverned files, sourced from the 11 layers + presets.
+  const suggestions = buildUnclassifiedSuggestions(unclassified);
+
   if (asJson) {
     console.log(
       JSON.stringify(
@@ -2314,8 +2606,10 @@ function runCoverage(root, config, files, rules, asJson) {
           coverage: {
             include: config.include ?? [],
             totalFiles: files.length,
+            governed,
             layers: layerRows,
             unclassified: { count: unclassified.length, files: unclassified },
+            suggestions,
             emptyLayers,
             layersWithoutRules,
           },
@@ -2345,10 +2639,29 @@ function runCoverage(root, config, files, rules, asJson) {
   console.log(
     `${files.length} source file(s) in scope; ${unclassified.length} not matched by any layer.`
   );
-  if (unclassified.length > 0) {
+  console.log(`Governed: ${governed.percent}% (${classifiedFiles}/${files.length} files).`);
+  if (files.length > 0 && governed.percent < 50) {
     console.log('');
-    console.log('Unclassified — import rules are NOT enforced for these (add a layer pattern):');
-    for (const file of unclassified) console.log(`  ${file}`);
+    console.log(
+      `⚠ Ark governs a MINORITY of your code (${governed.percent}%). A green check here does NOT`
+    );
+    console.log('  mean the codebase is checked — the rest is ungoverned. Classify the directories');
+    console.log('  below to actually cover it.');
+  }
+  if (suggestions.length > 0) {
+    console.log('');
+    console.log('Ungoverned directories (proposed layer — from the 11-layer profile + presets):');
+    for (const s of suggestions) {
+      const count = `(${s.files})`.padStart(6);
+      if (s.unrecognized) {
+        console.log(`  ${count}  ${s.dir}/  — unrecognized, you classify`);
+      } else {
+        const alt = s.alternatives ? ` (or ${s.alternatives.join(' / ')})` : '';
+        console.log(`  ${count}  ${s.dir}/  → ${s.layer}${alt}`);
+      }
+    }
+    console.log('');
+    console.log('Apply these via /ark-contract (adds the layer patterns to ark.config.json).');
   }
   if (layersWithoutRules.length > 0) {
     console.log('');
@@ -2395,7 +2708,7 @@ async function main() {
         for (const relativePath of missing) {
           console.error(`  - ${relativePath}`);
         }
-        console.error('\nRun `npx ark init` (or `ark-check --install-agent-gates`) to configure enforcement.');
+        console.error(`\nRun \`${arkCommand(args.root, 'ark', 'init')}\` (or \`ark-check --install-agent-gates\`) to configure enforcement.`);
       }
       process.exitCode = 1;
       return;
@@ -2426,7 +2739,7 @@ async function main() {
   try {
     ts = await import('typescript');
   } catch {
-    console.error('ark-check requires TypeScript. Install it with: npm install -D typescript');
+    console.error(`ark-check requires TypeScript. Install it with: ${installDevHint(root, 'typescript')}`);
     process.exitCode = 2;
     return;
   }
@@ -2599,9 +2912,24 @@ async function main() {
   violations.push(...detectCycles(importGraph));
 
   if (args.updateBaseline) {
+    const summary = summarizeViolations(violations);
+    // Bloquear y avisar: a lopsided freeze buries a likely contract bug as "debt". Refuse it
+    // (unless --force), diagnose, and point at the contract fix instead of the baseline.
+    if (summary.concentrated && !args.force) {
+      console.error(
+        `Refusing to freeze ${summary.total} violations: ${Math.round(summary.dominantShare * 100)}% are a single edge (${summary.dominant}).`
+      );
+      printViolationBreakdown(summary, { toStderr: true });
+      console.error('');
+      console.error('Freezing this would bury a likely CONTRACT bug as "debt". Fix the contract');
+      console.error('first (/ark-contract), then re-run. To freeze anyway: --update-baseline --force.');
+      process.exitCode = 2;
+      return;
+    }
     const { fullPath, count } = writeBaseline(root, args.baseline, violations);
     console.log(`Wrote ${fullPath} with ${count} frozen violation key(s).`);
     console.log('Commit it and gate CI with: ark-check --baseline (only NEW violations fail).');
+    if (summary.total > 0) printViolationBreakdown(summary);
     return;
   }
 
@@ -2678,6 +3006,7 @@ async function main() {
       suppressedViolations: suppressed.length,
       staleBaselineKeys,
       warnings,
+      ...(activeViolations.length > 0 ? { summary: summarizeViolations(activeViolations) } : {}),
       ...(skillGaps.length > 0 ? { skillGaps } : {}),
       ...(codexHomeGap ? { codexHomeGap } : {}),
     }, null, 2));
@@ -2716,6 +3045,12 @@ async function main() {
       );
     }
 
+    // On a large violation set, print the ranked edge breakdown so the wall of failures reads
+    // as an ordered burn-down (and flags a concentrated edge as a likely contract bug).
+    if (activeViolations.length >= CONCENTRATION_MIN_VIOLATIONS) {
+      printViolationBreakdown(summarizeViolations(activeViolations), { toStderr: true });
+    }
+
     if (skillGaps.length > 0) {
       const missingTotal = skillGaps.reduce((sum, gap) => sum + gap.missing, 0);
       const staleTotal = skillGaps.reduce((sum, gap) => sum + gap.stale, 0);
@@ -2724,7 +3059,7 @@ async function main() {
         console.log(
           color.dim(
             `${missingTotal} /ark-* skill(s) not installed for ${tools} (this Ark version ships them). ` +
-              `Install: npx ark-check --install-agent-gates`
+              `Install: ${arkCommand(root, 'ark-check', '--install-agent-gates')}`
           )
         );
       }
@@ -2735,7 +3070,7 @@ async function main() {
         console.log(
           color.dim(
             `${staleTotal} /ark-* skill(s) outdated for ${tools} (this Ark ships newer versions). ` +
-              `Refresh: npx ark-check --install-agent-gates --skills-only --force`
+              `Refresh: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --force')}`
           )
         );
       }
@@ -2748,7 +3083,7 @@ async function main() {
       console.log(
         color.dim(
           `/ark-* skills in ${codexPromptsDir()} are behind this Ark (${parts.join(', ')}). ` +
-            `Codex loads them from there, not the repo. Refresh: npx ark-check --install-agent-gates --skills-only --codex-home --force`
+            `Codex loads them from there, not the repo. Refresh: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --codex-home --force')}`
         )
       );
     }

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import readline from 'node:readline/promises';
+import { arkCommand } from './ark-shared.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
@@ -111,7 +112,9 @@ async function init(args) {
       );
     }
 
-    console.log('Ark init complete. Run `npx ark-check --root . --config ark.config.json --strict-config` before merging.');
+    console.log(
+      `Ark init complete. Run \`${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config')}\` before merging.`
+    );
     return 0;
   } finally {
     rl?.close();
