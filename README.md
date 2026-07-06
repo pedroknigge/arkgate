@@ -167,6 +167,17 @@ your local changes first, then run:
 npx ark-check --install-agent-gates --force
 ```
 
+Adopted Ark before its emitted commands became package-manager-aware, on a pnpm or yarn
+repo? Your existing gate files may still invoke `npx`. Rewrite **only** the command runner —
+no `--force` clobber, every customization preserved — with:
+
+```bash
+npx ark-check --install-agent-gates --migrate-commands
+```
+
+A normal `ark-check` flags this when it detects a runner that doesn't match your package
+manager.
+
 ## Why Ark (and not just a linter)?
 
 If you only need import-boundary linting in CI, [dependency-cruiser](https://github.com/sverweij/dependency-cruiser), [eslint-plugin-boundaries](https://github.com/javierbrea/eslint-plugin-boundaries), and Nx module boundaries are solid tools. Ark's reason to exist is the **write-time, agent-native half** they don't cover:
@@ -188,7 +199,7 @@ If you only need import-boundary linting in CI, [dependency-cruiser](https://git
 
 | Gate         | Tool          | When it runs                  | What it enforces                              |
 |--------------|---------------|-------------------------------|-----------------------------------------------|
-| **Write**    | `ark-mcp`     | Agent PreToolUse (Write/Edit) | Fast post-edit file checks, layer placement, intent refs, forbidden patterns + globals |
+| **Write**    | `ark-mcp`     | Agent PreToolUse (Write/Edit) | The SAME layer rules as CI (contract-first), placement, intent refs, forbidden globals; an infra heuristic only for ungoverned targets |
 | **Merge**    | `ark-check`   | CI (GitHub Actions etc.)      | Cross-layer imports + intent references (real TS resolver) + forbidden globals |
 | **Runtime**  | `createArkKernel()` | Running process (opt-in) | Intent registry, event contracts, observed layer flow, policies |
 
@@ -270,6 +281,11 @@ first time, with no review round-trip. `ark-mcp` is a zero-dependency MCP server
 
 - **`ark-mcp --hook`** — PreToolUse gate: computes the **post-edit** file content, validates it against your layers, exits 2 with the violations when the write must be blocked. The agent reads the reason and self-corrects.
 - **`ark-mcp --session-context`** — SessionStart injection: prints a compact contract summary (layers, forbidden globals, baseline state) into the agent's context, so it knows the architecture from the first token instead of learning by rejection. Silent no-op outside Ark projects, so it can't leak into other repos.
+
+A resolvable cross-layer import is judged by your layer **rules** — exactly as `ark-check`
+judges it — so the two gates can't disagree on a governed edge: `ark.config.json` is
+authoritative on both. (A route calling a repository or a repository importing the DB is
+allowed by the contract with no special flag; a denied edge is a `LAYER_IMPORT_VIOLATION`.)
 
 Honest boundary: the write gate is the fast, agent-facing guard. The merge gate
 (`ark-check`) is the authoritative check for the full TypeScript import graph, path aliases,
@@ -365,12 +381,17 @@ project. Violations participate in the `--baseline` ratchet like every other rul
 
 ### Infrastructure layers: `mayImportInfrastructure`
 
-The write gate keeps a zero-config heuristic that blocks obvious infrastructure imports
-(`/infra`, `/adapters`, `/persistence`, `/db`, and ORMs like Prisma/TypeORM) so an agent
-can't quietly wire the database into your pure core. It skips this for layers whose name
-already signals an infra role (`PersistenceAdapters`, `FrameworkAdapters`, …) — those are
-*supposed* to touch infrastructure. If your infra layer has an unconventional name, opt it
-in so a persistence file isn't blocked for doing its job:
+When an import resolves to a declared layer, the write gate judges it by your layer **rules**
+— exactly like `ark-check` — so an edge the contract allows (a route calling a repository, a
+repository importing the DB) is never blocked, and a denied edge is a `LAYER_IMPORT_VIOLATION`.
+The heuristic below is a fallback only for **ungoverned** targets: an external package, or a
+path no declared layer covers.
+
+For those, the write gate blocks obvious infrastructure imports (`/infra`, `/adapters`,
+`/persistence`, `/db`, and ORMs like Prisma/TypeORM) so an agent can't quietly wire a database
+package into your pure core. It skips this for layers whose name already signals an infra role
+(`PersistenceAdapters`, `FrameworkAdapters`, …). If an infra layer has an unconventional name
+and you rely on this heuristic rather than explicit rules, opt it in:
 
 ```jsonc
 // ark.config.json

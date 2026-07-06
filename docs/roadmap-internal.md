@@ -9,8 +9,8 @@ Last updated: 2026-07-06.
 
 | Version | Theme | Status | Gate to ship |
 |---------|-------|--------|--------------|
-| **1.11.0** | Organize, don't false-green | **Code done on `main`, unpushed** (`d62af5f` + `31f5659`) | Brownfield validation + user go-ahead. No code blockers. |
-| **1.12.0** | Write-gate ↔ CI contract parity | Not started; needs a design decision | Decision on Option A vs B (below) + kernel change + validation |
+| **1.11.0** | Organize, don't false-green | **PUBLISHED 2026-07-06** (npm + GitHub + MCP registry) | — |
+| **1.12.0** | Write-gate ↔ CI parity (Option A) + upgrade command migration | **Shipping** (`3c7604f` + `ec0d21e`) | Validated vs a real repo; releasing |
 | ongoing | Trust hardening | Partial (provenance + trusted publishing done) | Can ride any release |
 
 Decision (user, 2026-07-06): **hold the 1.11.0 minor** until we gather a couple more
@@ -52,7 +52,15 @@ The "gate → guide" reorientation. Seven improvements across `bin/*` + skills +
 - **Config doctor** — `ark-check --doctor`: one view folding governed %, unclassified,
   empty layers, weak rule coverage, installed gates, installed skills, baseline health.
   Most of the data already exists (coverage + summary + skill-gap detection); this is
-  assembly + presentation. Low-medium effort, high UX value.
+  assembly + presentation. Low-medium effort, high UX value. **Add a check for stale command
+  runners in gate files** (round 8): flag `.claude/settings.json` / `.mcp.json` / CI that
+  invoke `npx` in a pnpm/yarn repo, with the exact `pnpm exec` fix.
+- **Command migration on upgrade** — Phase 1 made *emitted* commands package-manager-aware,
+  but `--install-agent-gates` and `/ark-upgrade` preserve existing gate files, so a repo that
+  adopted before 1.11.0 keeps stale `npx` in settings.json / .mcp.json / CI; the only refresh
+  is `--force`, which clobbers customizations. Add a targeted, non-clobbering rewrite (e.g.
+  `--install-agent-gates --migrate-commands`) that updates only the runner in the command
+  strings. Small; closes the round-8 gap.
 
 ### P2 — opportunistic
 
@@ -171,6 +179,18 @@ work below. Full detail in agent memory (`ark-project-state`).
   fix-class" backlog item above. Adoption on amarilla ended at: 762 → 334 violations, gate
   green with `--strict-config`, zero DB/schema changes, 4 commits in the (discardable)
   worktree; the ~282+46 tail left as documented grind for a maintainer.
+
+- **Round 8 (FIRST feedback against the real published 1.11.0 — `/ark-upgrade` 1.10.1→1.11.0
+  + `/ark-coverage` on amarilla).** Strong validation in the wild: the scan-cache fix worked
+  (typeOnly repopulated on upgrade — the "326→334" recount is that, not new debt); `--coverage`
+  showed `Governed: 100%`, the type-only split (50 type-only of the 334), and the concentration
+  verdict (App→Persistence 84%, `concentrated:false`); the facade split resolved via
+  most-specific globs. All 1.11.0 diagnostics produced the intended output on a 2255-file repo.
+  ONE real gap → backlog above: `.claude/settings.json`'s write-gate hook still calls
+  `npx ark-mcp` because `/ark-upgrade` preserves existing gate files (only `--skills-only`
+  refresh), so pre-1.11.0 adopters keep the stale runner with no clean migration path. Minor,
+  not ARK: the consumer hit its own pnpm `minimumReleaseAge` cooling-off on the same-day publish
+  (the agent bypassed via `node …/bin/ark-check.mjs`).
 
 ## Notes
 

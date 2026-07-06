@@ -2,6 +2,33 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.12.0 — 2026-07-06
+
+Makes `ark.config.json` authoritative on BOTH gates, and closes the upgrade gap where the
+package-manager-aware commands didn't reach a repo's existing gate files.
+
+### Changed
+
+- **The AI write gate honors the contract over its infra heuristic.** A cross-layer import
+  that resolves to a declared layer is now judged by the config's layer RULES — exactly like
+  `ark-check` — so the write gate and CI can't disagree on a governed edge. An edge the
+  contract allows (a route calling a repository, a repository importing the DB) is no longer
+  blocked, and a denied edge is reported as `LAYER_IMPORT_VIOLATION`. The infrastructure
+  path-heuristic (and `mayImportInfrastructure`) now applies only to **ungoverned** targets —
+  external packages, or paths no declared layer covers. `ark-mcp` resolves the target layer
+  from the config's layer globs + tsconfig path aliases (a barrel import is classified by its
+  directory). Backward-compatible: with no resolver supplied, the gate's behavior is unchanged.
+
+### Added
+
+- **`ark-check --install-agent-gates --migrate-commands`** — rewrites only the Ark command
+  runner (`npx` / `pnpm exec` / `yarn`) in existing gate files (`.claude/settings.json`,
+  `.mcp.json`, `AGENTS.md`, rule files, the `check:architecture` script) to match the
+  project's package manager, preserving every customization (no `--force` clobber). For repos
+  that adopted Ark before its emitted commands became package-manager-aware. A normal
+  `ark-check` now advises when a gate file's runner doesn't match the package manager, and
+  `/ark-upgrade` runs the migration as part of its refresh flow.
+
 ## 1.11.0 — 2026-07-06
 
 Sharpens Ark from "enforce a clean architecture" to **helping a team organize a messy,
