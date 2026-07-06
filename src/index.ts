@@ -1,7 +1,8 @@
 /**
- * Ark — Architectural Runtime Kernel
+ * Ark — AI Architecture Gate for TypeScript
  *
- * A zero-dependency governance kernel for Hexagonal + Event-Driven + DDD systems.
+ * A zero-dependency architecture gate for TypeScript repos, agents, CI, and
+ * optional runtime enforcement.
  *
  * @packageDocumentation
  */
@@ -176,6 +177,7 @@ export {
 
 export {
   createArchitectureProfile,
+  createArchitectureProfileFromArkConfig,
   createElevenLayerArkConfig,
   elevenLayerProfile,
   type ArchitectureLayer,
@@ -183,6 +185,7 @@ export {
   type ArchitectureProfile,
   type ArchitectureRule,
   type ArkCheckConfig,
+  type CreateArchitectureProfileFromArkConfigOptions,
   type CreateArchitectureProfileOptions,
   type CreateElevenLayerArkConfigOptions,
 } from './kernel/layers';
@@ -291,8 +294,13 @@ export {
 export {
   DEFAULT_MAX_HISTORY_SIZE,
   createArkKernel,
+  createArkKernelFromConfig,
   createLenientArkKernel,
+  createLenientArkKernelFromConfig,
   createStrictArkKernel,
+  createStrictArkKernelFromConfig,
+  type ArkKernelConfig,
   type ArkKernel,
+  type CreateArkKernelFromConfigOptions,
   type CreateArkKernelOptions,
 } from './kernel/runtime';

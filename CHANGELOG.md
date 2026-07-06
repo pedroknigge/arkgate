@@ -2,6 +2,40 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.10.0 — 2026-07-06
+
+### Added — GitHub-first release hardening
+
+- Added a manual `Publish npm` GitHub workflow that verifies a signed annotated
+  `vX.Y.Z` tag, requires the GitHub Release to exist first, runs the full release
+  verification suite, publishes to npm with provenance, and uploads the npm tarball
+  SHA-256 checksum back to the GitHub Release.
+- Added `scripts/verify-release-tag.mjs` so release automation fails before npm when
+  the tag does not match `package.json`, is not annotated, or is not verified by GitHub.
+- Local `npm run release:npm` now defaults to dry-run/local verification. Real local
+  publish requires `--allow-local`; the normal release path is GitHub Actions provenance.
+
+### Added — security scanning gates
+
+- Added a dedicated `Security` workflow with CodeQL, Dependabot dependency review on
+  pull requests, and Semgrep CE scanning on push, PR, schedule, and manual dispatch.
+
+### Added — runtime profile from `ark.config.json`
+
+- Added `createArchitectureProfileFromArkConfig` plus `createArkKernelFromConfig`,
+  `createStrictArkKernelFromConfig`, and `createLenientArkKernelFromConfig` so runtime
+  observed layer-flow enforcement can use the same layer prefixes and rules as the
+  static architecture gate.
+- `ArchitectureLayerConfig.intentPrefixes` is now optional in the public type, matching
+  real Ark configs where file-only layers do not participate in runtime intent naming.
+
+### Changed — packaging polish
+
+- Repositioned package metadata and README around Ark as an AI architecture gate for
+  TypeScript, with the runtime presented as optional.
+- Removed the CJS build warning for the ESLint subpath while preserving its existing
+  default and named exports.
+
 ## 1.9.1 — 2026-07-06
 
 ### Fixed — custom CI workflows count as installed gates

@@ -38,18 +38,27 @@ export interface CreateArchitectureProfileOptions {
   rules?: ArchitectureRule[];
 }
 
+export interface CreateArchitectureProfileFromArkConfigOptions {
+  /** Runtime profile name. Default: config.name or "ark.config.json". */
+  name?: string;
+}
+
 export interface ArchitectureLayerConfig {
   name: string;
   patterns: string[];
-  intentPrefixes: string[];
+  intentPrefixes?: string[];
+  description?: string;
+  forbiddenGlobals?: string[];
+  mayImportInfrastructure?: boolean;
   /** Optional layers do not warn when their patterns match no files. */
   optional?: boolean;
 }
 
 export interface ArkCheckConfig {
+  name?: string;
   include: string[];
   layers: ArchitectureLayerConfig[];
-  rules: ArchitectureRule[];
+  rules?: ArchitectureRule[];
 }
 
 export interface CreateElevenLayerArkConfigOptions {

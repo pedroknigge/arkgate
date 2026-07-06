@@ -1,0 +1,80 @@
+name: Publish npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish, for example v1.10.0.
+        required: true
+        type: string
+      dry_run:
+        description: Verify and pack without publishing to npm.
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - run: npm ci
+
+      - name: Verify release tag
+        run: node scripts/verify-release-tag.mjs "${{ inputs.tag }}"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Require GitHub release first
+        run: gh release view "${{ inputs.tag }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Verify package is still unpublished
+        run: |
+          set -euo pipefail
+          package="$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).name")"
+          version="$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version")"
+          if npm view "$package@$version" version >/dev/null 2>&1; then
+            echo "$package@$version is already published" >&2
+            exit 1
+          fi
+
+      - name: Release dry run
+        if: ${{ inputs.dry_run }}
+        run: npm run release:npm -- --dry
+
+      - name: Publish with npm provenance
+        if: ${{ !inputs.dry_run }}
+        run: npm run release:npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Upload npm tarball checksum
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          package="$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).name")"
+          version="$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version")"
+          tarball_url="$(npm view "$package@$version" dist.tarball)"
+          tarball="$package-$version.tgz"
+          curl -fsSL "$tarball_url" -o "$tarball"
+          shasum -a 256 "$tarball" > "$tarball.sha256"
+          gh release upload "${{ inputs.tag }}" "$tarball.sha256" --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}

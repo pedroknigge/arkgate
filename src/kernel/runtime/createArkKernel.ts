@@ -3,7 +3,10 @@ import { createEventBus } from '../event-bus';
 import { createEventContractRegistry } from '../event-contracts';
 import { createDependencyGraph, syncRegistryToGraph } from '../graph';
 import { createIntentRegistry } from '../intent';
-import { elevenLayerProfile } from '../layers';
+import {
+  createArchitectureProfileFromArkConfig,
+  elevenLayerProfile,
+} from '../layers';
 import { createArkManifest } from '../manifest';
 import { createMetadataRegistry } from '../metadata';
 import { createObservabilityReporter } from '../observability';
@@ -14,7 +17,12 @@ import {
 } from '../policy';
 import { createProjectionRegistry } from '../projections';
 import { createWorkflowEngine } from '../workflow';
-import type { ArkKernel, CreateArkKernelOptions } from './types';
+import type {
+  ArkKernel,
+  ArkKernelConfig,
+  CreateArkKernelFromConfigOptions,
+  CreateArkKernelOptions,
+} from './types';
 
 /**
  * Default cap for in-memory history, trace, and audit records. Without a cap a
@@ -126,6 +134,38 @@ export function createStrictArkKernel(
     requireKnownSource: options.requireKnownSource ?? true,
     enforceObservedLayerFlow: options.enforceObservedLayerFlow ?? 'hard',
   });
+}
+
+function createOptionsFromConfig(
+  config: ArkKernelConfig,
+  options: CreateArkKernelFromConfigOptions = {}
+): CreateArkKernelOptions {
+  const { profileName, ...kernelOptions } = options;
+  return {
+    ...kernelOptions,
+    profile: createArchitectureProfileFromArkConfig(config, { name: profileName }),
+  };
+}
+
+export function createArkKernelFromConfig(
+  config: ArkKernelConfig,
+  options: CreateArkKernelFromConfigOptions = {}
+): ArkKernel {
+  return createArkKernel(createOptionsFromConfig(config, options));
+}
+
+export function createStrictArkKernelFromConfig(
+  config: ArkKernelConfig,
+  options: CreateArkKernelFromConfigOptions = {}
+): ArkKernel {
+  return createStrictArkKernel(createOptionsFromConfig(config, options));
+}
+
+export function createLenientArkKernelFromConfig(
+  config: ArkKernelConfig,
+  options: CreateArkKernelFromConfigOptions = {}
+): ArkKernel {
+  return createLenientArkKernel(createOptionsFromConfig(config, options));
 }
 
 export function createLenientArkKernel(

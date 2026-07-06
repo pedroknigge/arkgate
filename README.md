@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🏛️ Ark — Architectural Runtime Kernel
+# Ark — AI Architecture Gate for TypeScript
 
 **Your AI writes most of the code now. Ark makes sure it can't quietly break your architecture.**<br/>
 One machine-readable contract — enforced the moment code is written, again at merge, and (optionally) at runtime.<br/>
@@ -8,6 +8,7 @@ Agents don't just get blocked: Ark gives them **tools** to ask where code belong
 Ships a complete 11-layer architecture you adopt one layer at a time. Native for **Claude Code, Cursor, and Codex** — plus rule files for Windsurf, Cline, Copilot, Kiro, Roo Code, Continue, and Gemini CLI.
 
 [![CI](https://github.com/pedroknigge/ark-runtime-kernel/actions/workflows/ci.yml/badge.svg)](https://github.com/pedroknigge/ark-runtime-kernel/actions/workflows/ci.yml)
+[![Security](https://github.com/pedroknigge/ark-runtime-kernel/actions/workflows/security.yml/badge.svg)](https://github.com/pedroknigge/ark-runtime-kernel/actions/workflows/security.yml)
 [![npm](https://img.shields.io/npm/v/ark-runtime-kernel?color=cb3837&label=npm)](https://www.npmjs.com/package/ark-runtime-kernel)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Node](https://img.shields.io/badge/node-%3E%3D18-339933?logo=node.js)
@@ -178,7 +179,7 @@ If you only need import-boundary linting in CI, [dependency-cruiser](https://git
 
 | Gate         | Tool          | When it runs                  | What it enforces                              |
 |--------------|---------------|-------------------------------|-----------------------------------------------|
-| **Write**    | `ark-mcp`     | Agent PreToolUse (Write/Edit) | Layer rules, unknown intents, forbidden patterns + globals |
+| **Write**    | `ark-mcp`     | Agent PreToolUse (Write/Edit) | Fast post-edit file checks, layer placement, intent refs, forbidden patterns + globals |
 | **Merge**    | `ark-check`   | CI (GitHub Actions etc.)      | Cross-layer imports + intent references (real TS resolver) + forbidden globals |
 | **Runtime**  | `createArkKernel()` | Running process (opt-in) | Intent registry, event contracts, observed layer flow, policies |
 
@@ -227,6 +228,10 @@ first time, with no review round-trip. `ark-mcp` is a zero-dependency MCP server
 
 - **`ark-mcp --hook`** — PreToolUse gate: computes the **post-edit** file content, validates it against your layers, exits 2 with the violations when the write must be blocked. The agent reads the reason and self-corrects.
 - **`ark-mcp --session-context`** — SessionStart injection: prints a compact contract summary (layers, forbidden globals, baseline state) into the agent's context, so it knows the architecture from the first token instead of learning by rejection. Silent no-op outside Ark projects, so it can't leak into other repos.
+
+Honest boundary: the write gate is the fast, agent-facing guard. The merge gate
+(`ark-check`) is the authoritative check for the full TypeScript import graph, path aliases,
+cycles, and baseline ratchets. Use both; the same `ark.config.json` drives them.
 
 **Tools the agent calls proactively** — they appear in its tool list automatically, so it queries the contract instead of guessing (no skill or doc-reading needed):
 
@@ -406,9 +411,11 @@ Rules: `ark/no-domain-infra-imports`, `ark/no-raw-event-publish`, `ark/require-p
 The gates above need **zero changes to your code**. When you also want *runtime* guarantees — registered intents only, payload contracts, observed producer→event layer flows — route your events through the kernel:
 
 ```ts
-import { createArkKernel } from 'ark-runtime-kernel';
+import { readFileSync } from 'node:fs';
+import { createStrictArkKernelFromConfig } from 'ark-runtime-kernel';
 
-const ark = createArkKernel(); // strict defaults
+const arkConfig = JSON.parse(readFileSync('ark.config.json', 'utf8'));
+const ark = createStrictArkKernelFromConfig(arkConfig); // strict defaults, your rules
 
 const OrderPlaced = ark.registry.define<
   'Domain.Order.OrderPlaced',
@@ -445,7 +452,7 @@ await publisher.publish(OrderPlaced, { orderId: 'o1', amount: 129 }, { eventVers
 ark.manifest().toJSON(); // the complete machine-readable contract
 ```
 
-What it gives you: intent registry with produces/dependsOn, strict event bus (registered intents only, known sources), event contracts, hard/soft policies, observed layer-flow enforcement (`'hard' | 'soft' | 'off'`), projections, observability/drift reports, and pluggable audit/outbox/workflow interfaces (in-memory defaults — see [production hardening](docs/production-hardening.md)).
+What it gives you: intent registry with produces/dependsOn, strict event bus (registered intents only, known sources), event contracts, hard/soft policies, observed layer-flow enforcement (`'hard' | 'soft' | 'off'`) using your `ark.config.json` prefixes and rules, projections, observability/drift reports, and pluggable audit/outbox/workflow interfaces (in-memory defaults — see [production hardening](docs/production-hardening.md)).
 
 **Honest scope:** runtime enforcement covers governed paths only — what you route through Ark. Everything else is covered by the static gates.
 
@@ -485,7 +492,16 @@ npm run typecheck
 npm run check:architecture # Ark gates itself in CI
 ```
 
-Release: `npm run release:npm` (verifies typecheck + tests + architecture gate, then publishes; `-- --dry` for a dry run).
+Release is GitHub-first, npm second:
+
+1. Land the upgrade on GitHub and wait for CI + Security to pass.
+2. Create a signed annotated tag (`vX.Y.Z`) and a GitHub Release for it.
+3. Run the manual **Publish npm** workflow with `dry_run: true`.
+4. If that passes, rerun **Publish npm** with `dry_run: false`.
+
+Local verification: `npm run release:npm -- --dry`. Local real publish requires
+`-- --allow-local` and should be used only as an emergency path because it cannot attach
+GitHub Actions npm provenance.
 
 ## License
 

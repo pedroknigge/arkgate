@@ -1,7 +1,7 @@
 {
   "name": "ark-runtime-kernel",
-  "version": "1.9.1",
-  "description": "Architectural Runtime Kernel — governance for Hexagonal + Event-Driven + DDD systems",
+  "version": "1.10.0",
+  "description": "AI architecture gate for TypeScript repos, agents, and CI",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -112,5 +112,8 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pedroknigge/ark-runtime-kernel.git"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

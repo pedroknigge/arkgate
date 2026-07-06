@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_MAX_HISTORY_SIZE,
+  ObservedLayerFlowViolationError,
   createLenientArkKernel,
+  createStrictArkKernelFromConfig,
   createStrictArkKernel,
 } from '../../../src/index';
 
@@ -77,5 +79,53 @@ describe('createArkKernel presets', () => {
     const b = createStrictArkKernel();
     expect(a.instanceId).not.toBe(b.instanceId);
     expect(a.profile.layers).toHaveLength(11);
+  });
+
+  it('derives runtime layer enforcement from an ark-check config', async () => {
+    const ark = createStrictArkKernelFromConfig(
+      {
+        include: ['src'],
+        layers: [
+          {
+            name: 'DomainModel',
+            patterns: ['src/domain/**'],
+            intentPrefixes: ['Domain.'],
+          },
+          {
+            name: 'ApplicationOrchestration',
+            patterns: ['src/app/**'],
+            intentPrefixes: ['Application.'],
+          },
+          {
+            name: 'Tooling',
+            patterns: ['src/eslint/**'],
+          },
+        ],
+        rules: [
+          {
+            from: 'ApplicationOrchestration',
+            to: 'DomainModel',
+            allowed: false,
+          },
+        ],
+      },
+      { strictEventContracts: false }
+    );
+
+    expect(ark.profile.name).toBe('ark.config.json');
+    expect(ark.profile.resolveLayer('Domain.Order.Placed')).toBe('DomainModel');
+    expect(ark.profile.resolveLayer('Application.PlaceOrder')).toBe(
+      'ApplicationOrchestration'
+    );
+    expect(ark.profile.resolveLayer('Tooling.Rule')).toBeUndefined();
+
+    const OrderPlaced = ark.registry.define<'Domain.Order.Placed', { id: string }>(
+      'Domain.Order.Placed'
+    );
+    ark.registry.define('Application.PlaceOrder', { produces: ['Domain.Order.Placed'] });
+
+    await expect(
+      ark.publisher('Application.PlaceOrder').publish(OrderPlaced, { id: 'o1' })
+    ).rejects.toBeInstanceOf(ObservedLayerFlowViolationError);
   });
 });

@@ -3,6 +3,7 @@ import type {
   ArchitectureProfile,
   ArchitectureRule,
   ArkCheckConfig,
+  CreateArchitectureProfileFromArkConfigOptions,
   CreateElevenLayerArkConfigOptions,
   CreateArchitectureProfileOptions,
 } from './types';
@@ -12,8 +13,12 @@ function normalizePrefix(prefix: string): string {
 }
 
 function byLongestPrefix(a: ArchitectureLayer, b: ArchitectureLayer): number {
-  const maxA = Math.max(...a.prefixes.map((p) => p.length));
-  const maxB = Math.max(...b.prefixes.map((p) => p.length));
+  const maxA = a.prefixes.length
+    ? Math.max(...a.prefixes.map((p) => p.length))
+    : 0;
+  const maxB = b.prefixes.length
+    ? Math.max(...b.prefixes.map((p) => p.length))
+    : 0;
   return maxB - maxA;
 }
 
@@ -63,6 +68,22 @@ export function createArchitectureProfile(
       );
     },
   };
+}
+
+export function createArchitectureProfileFromArkConfig(
+  config: ArkCheckConfig,
+  options: CreateArchitectureProfileFromArkConfigOptions = {}
+): ArchitectureProfile {
+  return createArchitectureProfile({
+    name: options.name ?? config.name ?? 'ark.config.json',
+    layers: config.layers.map((layer, index) => ({
+      name: layer.name,
+      prefixes: layer.intentPrefixes ?? [],
+      description: layer.description,
+      order: index + 1,
+    })),
+    rules: config.rules ?? [],
+  });
 }
 
 const elevenLayerProfileLayers: ArchitectureLayer[] = [
