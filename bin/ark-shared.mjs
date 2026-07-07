@@ -425,7 +425,7 @@ export function detectWorkspaces(root) {
 }
 
 function isSourceFile(name) {
-  return /\.(tsx?|mts|cts)$/i.test(name);
+  return /\.(tsx?|jsx?|mjsx?|cjsx?|mts|cts)$/i.test(name);
 }
 
 function walkSourceFiles(dir, files = [], depth = 0) {
@@ -491,23 +491,40 @@ export function collectRepoShapeSignals(root) {
   const pkg = readPackageJson(root);
   const workspaceDirs = detectWorkspaces(root);
   const workspaces = workspaceDirs.length > 0;
-  const srcDirs = ['src', 'lib', 'packages', 'apps'].filter((d) => fs.existsSync(path.join(root, d)));
+  const srcDirs = ['src', 'lib', 'api', 'packages', 'apps'].filter((d) =>
+    fs.existsSync(path.join(root, d))
+  );
   const scanRoots = srcDirs.length > 0 ? srcDirs.map((d) => path.join(root, d)) : [root];
   const sourceFiles = scanRoots.flatMap((dir) => walkSourceFiles(dir));
   const sourceFileCount = sourceFiles.length;
   const tinyTree = sourceFileCount < 3;
+
+  const deps = { ...(pkg?.dependencies ?? {}), ...(pkg?.devDependencies ?? {}) };
+  const hasUiFramework = Object.keys(deps).some((name) =>
+    /^(react|react-dom|vue|svelte|preact|solid-js)$/i.test(name.split('/')[0])
+  );
+  const srcUiFiles = sourceFiles.filter((file) => {
+    const rel = path.relative(root, file).split(path.sep).join('/');
+    return rel.startsWith('src/') && /\.(tsx|jsx)$/i.test(file);
+  });
 
   const topNames = new Set(srcDirs.flatMap((d) => listTopLevelDirNames(root, d)));
   const ui =
     dirExistsAnywhere(root, UI_DIR_NAMES) ||
     countTsxFiles(sourceFiles) >= 2 ||
     topNames.has('components') ||
-    topNames.has('pages');
+    topNames.has('pages') ||
+    (hasUiFramework && srcUiFiles.length >= 1);
   const apiSurface =
     dirExistsAnywhere(root, API_DIR_NAMES) ||
     topNames.has('routes') ||
     topNames.has('controllers');
-  const persistence = dirExistsAnywhere(root, PERSISTENCE_DIR_NAMES);
+  const persistenceFromDeps = Object.keys(deps).some((name) =>
+    /^(prisma|drizzle-orm|typeorm|@libsql\/client|@supabase\/supabase-js|mongodb|pg|mysql2|better-sqlite3|knex)$/i.test(
+      name
+    )
+  );
+  const persistence = dirExistsAnywhere(root, PERSISTENCE_DIR_NAMES) || persistenceFromDeps;
   const jobs = dirExistsAnywhere(root, JOB_DIR_NAMES);
   const workflows = dirExistsAnywhere(root, WORKFLOW_DIR_NAMES);
   const integration = dirExistsAnywhere(root, INTEGRATION_DIR_NAMES);
@@ -541,7 +558,8 @@ export function collectRepoShapeSignals(root) {
   const uiOnly = ui && !persistence && !apiSurface && !jobs;
   const libraryOnly = library && !cli;
 
-  const deps = { ...(pkg?.dependencies ?? {}), ...(pkg?.devDependencies ?? {}) };
+  const fullStackProduct = ui && apiSurface && persistence;
+
   const toolHints = Object.keys(deps).filter((name) =>
     /^(next|@nestjs|express|fastify|hono|prisma|drizzle|typeorm|supabase|react|vue|svelte)$/i.test(
       name.split('/')[0]
@@ -571,6 +589,8 @@ export function collectRepoShapeSignals(root) {
     domainHeavy,
     uiOnly,
     featureSlicedLayout,
+    fullStackProduct,
+    persistenceFromDeps,
     toolHints,
   };
 }
@@ -596,6 +616,8 @@ const SIGNAL_WHY = {
   application: () => 'application or services directory present',
   domainHeavy: () => 'both domain and application directories present',
   uiOnly: () => 'UI without persistence, API, or jobs',
+  fullStackProduct: () => 'UI, API handlers, and persistence dependencies together',
+  persistenceFromDeps: () => 'database client library in package.json dependencies',
 };
 
 const NEGATIVE_SIGNAL_WHY = {
@@ -785,8 +807,11 @@ export function buildArchitectureRecommendation(root, options = {}) {
       cli: signals.cli,
       library: signals.library,
       tinyTree: signals.tinyTree,
+      fullStackProduct: signals.fullStackProduct,
+      persistenceFromDeps: signals.persistenceFromDeps,
     },
-    firstCommand: `${arkCommand(root, 'ark', `init --preset ${result.preset} --yes`)}`,
+    initCommand: `${arkCommand(root, 'ark', `init --archetype ${result.archetype} --yes`)}`,
+    firstCommand: `${arkCommand(root, 'ark', `init --archetype ${result.archetype} --yes`)}`,
     checkCommand: arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config'),
   };
 }

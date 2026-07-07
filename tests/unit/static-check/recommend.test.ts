@@ -226,3 +226,33 @@ describe('whyFromMatchedSignals', () => {
     expect(rec.why).toEqual(whyFromMatchedSignals(signals, rec.matchedSignals));
   });
 });
+
+describe('collectRepoShapeSignals — JavaScript / serverless layouts', () => {
+  it('counts .js/.jsx under src, lib, and api and recommends crud-product for full-stack SPA', () => {
+    const root = mkTempDir('ark-rec-js-fullstack-');
+    writeJson(path.join(root, 'package.json'), {
+      name: 'dashboard',
+      version: '0.1.0',
+      dependencies: {
+        react: '^19.0.0',
+        '@libsql/client': '^0.17.0',
+      },
+    });
+    writeFile(path.join(root, 'src', 'main.jsx'), 'export const App = () => null;\n');
+    writeFile(path.join(root, 'api', 'dashboard-data.js'), 'export default async function handler() {}\n');
+    writeFile(path.join(root, 'lib', 'turso.js'), 'export const db = {};\n');
+    writeFile(path.join(root, 'lib', 'auth.js'), 'export function auth() {}\n');
+
+    const signals = collectRepoShapeSignals(root);
+    expect(signals.sourceFileCount).toBeGreaterThanOrEqual(4);
+    expect(signals.tinyTree).toBe(false);
+    expect(signals.ui).toBe(true);
+    expect(signals.apiSurface).toBe(true);
+    expect(signals.persistence).toBe(true);
+    expect(signals.fullStackProduct).toBe(true);
+
+    const rec = runRecommendJson(root);
+    expect(rec.archetype).toBe('crud-product');
+    expect(rec.firstCommand).toContain('init --archetype crud-product');
+  });
+});

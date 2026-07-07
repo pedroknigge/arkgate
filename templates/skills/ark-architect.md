@@ -43,6 +43,9 @@ package manager (`pnpm exec`, `yarn`, `npx`) — match the lockfile.
 4. **Scaffold phase 1** — create conventional directories from the preset/playbook
    (`src/domain`, `src/application`, …). Add a one-line README per folder explaining
    what belongs there. Match the nearest sibling file style if code already exists.
+   Flat layouts (`src/` + `lib/` + `api/` at the repo root) are common in Vite and
+   serverless projects — use `/ark-contract` to map them to layers instead of forcing
+   everything under `src/**/domain/**` only.
 
 5. **Install gates** when the user uses AI coding tools and gates are missing:
    `ark-check --install-agent-gates`.

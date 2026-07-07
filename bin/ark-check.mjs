@@ -3056,7 +3056,7 @@ function runDoctor(root, config, files, rules, violations, asJson, options = {})
     if (recommendation?.archetype) {
       line(ok, `Quick setup: ${arkCommand(root, 'ark', `init --archetype ${recommendation.archetype} --yes`)}`);
     }
-    actions.unshift('run ark-check --recommend (or /ark-architect when available) to choose your application shape');
+    actions.unshift('run ark-check --recommend or /ark-architect to choose your application shape');
   }
 
   console.log('');

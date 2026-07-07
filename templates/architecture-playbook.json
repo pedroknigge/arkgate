@@ -32,6 +32,7 @@
       "detectionSignals": {
         "ui": 5,
         "persistence": 5,
+        "fullStackProduct": 4,
         "domain": 1
       },
       "negativeSignals": {

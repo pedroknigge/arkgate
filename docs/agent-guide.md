@@ -35,7 +35,7 @@ npx ark-check --recommend --json
 
 `--recommend` does not require `ark.config.json`. It exits `0` and prints a progressive
 adoption plan: archetype id, preset, `confidence`, `runnerUp`, `why` (shape signals),
-`adoptInOrder.phase1`, `firstCommand` (`ark init --preset …`), and `checkCommand`.
+`adoptInOrder.phase1`, `firstCommand` (`ark init --archetype …`), and `checkCommand`.
 
 Human output highlights phase-1 layers and the analogy; JSON is the stable contract for
 MCP `ark_recommend` and the `/ark-architect` skill.
