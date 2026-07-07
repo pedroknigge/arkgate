@@ -160,6 +160,8 @@ describe('Phase B — watch mode', () => {
   it('starts watching and re-runs check when a governed file changes', async () => {
     const root = mkTemp('ark-phaseb-watch-');
     fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/infra'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/infra/db.ts'), 'export const db = 1;\n');
     fs.writeFileSync(path.join(root, 'src/domain/order.ts'), 'export const a = 1;\n');
     fs.writeFileSync(path.join(root, 'ark.config.json'), TWO_LAYER_CONFIG);
 
@@ -169,21 +171,22 @@ describe('Phase B — watch mode', () => {
       { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] }
     );
 
-    const lines: string[] = [];
-    child.stdout?.on('data', (chunk: Buffer) => lines.push(chunk.toString()));
-    child.stderr?.on('data', (chunk: Buffer) => lines.push(chunk.toString()));
+    const chunks: string[] = [];
+    child.stdout?.on('data', (chunk: Buffer) => chunks.push(chunk.toString()));
+    child.stderr?.on('data', (chunk: Buffer) => chunks.push(chunk.toString()));
 
     await new Promise((r) => setTimeout(r, 400));
-    expect(lines.join('')).toContain('Watching governed paths');
+    const beforeTouch = chunks.join('');
+    expect(beforeTouch).toContain('Watching governed paths');
 
     const target = path.join(root, 'src/domain/order.ts');
-    const before = fs.readFileSync(target, 'utf8');
-    fs.writeFileSync(target, `${before}\nexport const touched = true;\n`);
+    fs.writeFileSync(target, "import { db } from '../infra/db';\nexport const a = db;\n");
 
     await new Promise((r) => setTimeout(r, 900));
     child.kill('SIGTERM');
 
-    const joined = lines.join('');
-    expect(joined.length).toBeGreaterThan(0);
+    const afterTouch = chunks.join('');
+    expect(afterTouch.length).toBeGreaterThan(beforeTouch.length);
+    expect(afterTouch).toMatch(/violation|LAYER_IMPORT|✖/i);
   }, 10_000);
 });
