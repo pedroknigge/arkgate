@@ -2,6 +2,51 @@
 
 This guide describes how AI agents and codegen tools can safely interact with Ark.
 
+## Architecture playbook and `ark-check --recommend`
+
+Before generating project structure, agents should read the **tool-agnostic application
+shape** that fits the repository — not a vendor stack label. Ark ships a versioned playbook
+at `templates/architecture-playbook.json` (also in the npm package under `templates/`).
+
+Each of the ten archetypes (`crud-product`, `api-backend`, `frontend-surface`,
+`library-sdk`, `cli-utility`, `worker-pipeline`, `event-coordinator`,
+`integration-bridge`, `multi-app-workspace`, `prototype-spike`) maps to:
+
+- a named Ark preset (`hexagonal`, `layered`, `feature-sliced`, or `monorepo`),
+- phased 11-layer adoption (phase 1–3),
+- plain-language analogy and anti-patterns,
+- optional book references for depth only.
+
+Scoring is **deterministic**: repo shape signals (workspaces, UI dirs, API surface,
+persistence, jobs, workflows, CLI `bin`, source-file count, …) are matched against the
+playbook. Framework packages may appear as secondary `toolHints` in JSON output — never as
+the primary archetype id.
+
+### Terminal
+
+```bash
+npx ark-check --recommend
+npx ark-check --recommend --json
+```
+
+`--recommend` does not require `ark.config.json`. It exits `0` and prints a progressive
+adoption plan: archetype id, preset, `confidence`, `runnerUp`, `why` (shape signals),
+`adoptInOrder.phase1`, `firstCommand` (`ark init --preset …`), and `checkCommand`.
+
+Human output highlights phase-1 layers and the analogy; JSON is the stable contract for
+future MCP `ark_recommend` (Phase C) and the `/ark-architect` skill.
+
+### Agent workflow (before codegen)
+
+1. Run `ark-check --recommend --json` (or call the shared scorer via MCP once shipped).
+2. Read `archetype`, `preset`, and `adoptInOrder.phase1` — scaffold only those directories first.
+3. Run `ark init --preset <preset> --yes` when no `ark.config.json` exists.
+4. Use `/ark-place` or `ark_place` for individual files after the contract exists.
+5. Verify with `ark-check --root . --config ark.config.json --strict-config`.
+
+Do not invent layers outside the 11-layer profile or named presets. Unrecognized
+directories (`utils/`, `lib/`) must be classified explicitly via `/ark-contract`.
+
 ## Contract Discovery
 
 Prefer `createStrictArkKernel()` for strict projects. It wires the registry, graph,

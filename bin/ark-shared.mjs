@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Default layer rule matrix + intent-prefix map, shared by both CLIs and by the ark-mcp
@@ -336,4 +337,461 @@ export function installDevHint(root, pkg) {
   if (fs.existsSync(path.join(root, 'pnpm-lock.yaml'))) return `pnpm add -D ${pkg}`;
   if (fs.existsSync(path.join(root, 'yarn.lock'))) return `yarn add -D ${pkg}`;
   return `npm install -D ${pkg}`;
+}
+
+const ARCHETYPE_IDS = [
+  'crud-product',
+  'api-backend',
+  'frontend-surface',
+  'library-sdk',
+  'cli-utility',
+  'worker-pipeline',
+  'event-coordinator',
+  'integration-bridge',
+  'multi-app-workspace',
+  'prototype-spike',
+];
+
+const UI_DIR_NAMES = new Set([
+  'components',
+  'pages',
+  'app',
+  'ui',
+  'presentation',
+  'views',
+  'widgets',
+]);
+const API_DIR_NAMES = new Set(['routes', 'controllers', 'http', 'api', 'handlers', 'server']);
+const PERSISTENCE_DIR_NAMES = new Set([
+  'persistence',
+  'repositories',
+  'repository',
+  'data',
+  'infrastructure',
+  'adapters',
+  'db',
+]);
+const JOB_DIR_NAMES = new Set(['jobs', 'workers', 'worker', 'cron', 'schedules', 'queues']);
+const WORKFLOW_DIR_NAMES = new Set(['workflows', 'sagas', 'saga']);
+const INTEGRATION_DIR_NAMES = new Set([
+  'integrations',
+  'integration',
+  'webhooks',
+  'sync',
+  'external',
+]);
+const FSD_DIR_NAMES = new Set(['app', 'pages', 'features', 'entities', 'shared', 'widgets']);
+
+function normalizeRel(value) {
+  return value.split(path.sep).join('/');
+}
+
+function readPackageJson(root) {
+  const file = path.join(root, 'package.json');
+  if (!fs.existsSync(file)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+/** Workspace roots from package.json workspaces and pnpm-workspace.yaml (no YAML dependency). */
+export function detectWorkspaces(root) {
+  const dirs = new Set();
+  const addGlob = (glob) => {
+    if (typeof glob !== 'string') return;
+    const beforeStar = glob.split('*')[0].replace(/\/+$/, '');
+    if (beforeStar && beforeStar !== '.') dirs.add(normalizeRel(beforeStar));
+  };
+  const pkg = readPackageJson(root);
+  const ws = Array.isArray(pkg?.workspaces) ? pkg.workspaces : pkg?.workspaces?.packages;
+  if (Array.isArray(ws)) ws.forEach(addGlob);
+  const pnpmFile = path.join(root, 'pnpm-workspace.yaml');
+  if (fs.existsSync(pnpmFile)) {
+    let inPackages = false;
+    for (const line of fs.readFileSync(pnpmFile, 'utf8').split('\n')) {
+      const keyMatch = line.match(/^([A-Za-z0-9_-]+):/);
+      if (keyMatch) {
+        inPackages = keyMatch[1] === 'packages';
+        continue;
+      }
+      if (!inPackages) continue;
+      const item = line.match(/^\s+-\s*['"]?([^'"#]+?)['"]?\s*$/);
+      if (item) addGlob(item[1].trim());
+    }
+  }
+  return [...dirs];
+}
+
+function isSourceFile(name) {
+  return /\.(tsx?|mts|cts)$/i.test(name);
+}
+
+function walkSourceFiles(dir, files = [], depth = 0) {
+  if (depth > 12) return files;
+  const stat = fs.statSync(dir, { throwIfNoEntry: false });
+  if (!stat) return files;
+  if (stat.isFile()) {
+    if (isSourceFile(path.basename(dir))) files.push(dir);
+    return files;
+  }
+  if (!stat.isDirectory()) return files;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git') continue;
+    walkSourceFiles(path.join(dir, entry.name), files, depth + 1);
+  }
+  return files;
+}
+
+function listTopLevelDirNames(root, baseDir) {
+  const base = path.join(root, baseDir);
+  if (!fs.existsSync(base)) return [];
+  return fs
+    .readdirSync(base, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && !e.name.startsWith('.') && e.name !== 'node_modules')
+    .map((e) => e.name);
+}
+
+function dirExistsAnywhere(root, names) {
+  const queue = ['.'];
+  const seen = new Set();
+  while (queue.length > 0) {
+    const rel = queue.shift();
+    if (seen.has(rel)) continue;
+    seen.add(rel);
+    const abs = path.join(root, rel);
+    if (!fs.existsSync(abs)) continue;
+    let entries;
+    try {
+      entries = fs.readdirSync(abs, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git') continue;
+      if (names.has(entry.name)) return true;
+      const child = rel === '.' ? entry.name : `${rel}/${entry.name}`;
+      if (child.split('/').length < 8) queue.push(child);
+    }
+  }
+  return false;
+}
+
+function countTsxFiles(files) {
+  return files.filter((f) => /\.(tsx|jsx)$/i.test(f)).length;
+}
+
+/**
+ * Collect deterministic repo shape signals for architecture archetype scoring.
+ * Vendor packages may appear in toolHints only — never as the primary label.
+ */
+export function collectRepoShapeSignals(root) {
+  const pkg = readPackageJson(root);
+  const workspaceDirs = detectWorkspaces(root);
+  const workspaces = workspaceDirs.length > 0;
+  const srcDirs = ['src', 'lib', 'packages', 'apps'].filter((d) => fs.existsSync(path.join(root, d)));
+  const scanRoots = srcDirs.length > 0 ? srcDirs.map((d) => path.join(root, d)) : [root];
+  const sourceFiles = scanRoots.flatMap((dir) => walkSourceFiles(dir));
+  const sourceFileCount = sourceFiles.length;
+  const tinyTree = sourceFileCount < 3;
+
+  const topNames = new Set(srcDirs.flatMap((d) => listTopLevelDirNames(root, d)));
+  const ui =
+    dirExistsAnywhere(root, UI_DIR_NAMES) ||
+    countTsxFiles(sourceFiles) >= 2 ||
+    topNames.has('components') ||
+    topNames.has('pages');
+  const apiSurface =
+    dirExistsAnywhere(root, API_DIR_NAMES) ||
+    topNames.has('routes') ||
+    topNames.has('controllers');
+  const persistence = dirExistsAnywhere(root, PERSISTENCE_DIR_NAMES);
+  const jobs = dirExistsAnywhere(root, JOB_DIR_NAMES);
+  const workflows = dirExistsAnywhere(root, WORKFLOW_DIR_NAMES);
+  const integration = dirExistsAnywhere(root, INTEGRATION_DIR_NAMES);
+  const domain = dirExistsAnywhere(root, new Set(['domain'])) || topNames.has('domain');
+  const application =
+    dirExistsAnywhere(root, new Set(['application', 'app', 'services'])) ||
+    topNames.has('application');
+  const featureSlicedLayout =
+    fs.existsSync(path.join(root, 'src')) &&
+    ['app', 'pages', 'features', 'entities', 'shared'].some((name) =>
+      fs.existsSync(path.join(root, 'src', name))
+    );
+
+  const hasBin = Boolean(pkg?.bin);
+  const hasExports = Boolean(pkg?.exports);
+  const hasMain = Boolean(pkg?.main || pkg?.module);
+  const library =
+    !hasBin &&
+    (hasExports || hasMain || pkg?.type === 'module') &&
+    !ui &&
+    sourceFileCount > 0 &&
+    sourceFileCount < 80;
+  const cli = hasBin;
+
+  const tsxCount = countTsxFiles(sourceFiles);
+  const uiHeavy = ui && tsxCount >= 3;
+  const apiSurfaceOnly = apiSurface && !uiHeavy;
+  const persistenceHeavy = persistence && sourceFileCount >= 8;
+  const domainHeavy = domain && application;
+  const jobsOnly = jobs && !ui && !apiSurface;
+  const uiOnly = ui && !persistence && !apiSurface && !jobs;
+  const libraryOnly = library && !cli;
+
+  const deps = { ...(pkg?.dependencies ?? {}), ...(pkg?.devDependencies ?? {}) };
+  const toolHints = Object.keys(deps).filter((name) =>
+    /^(next|@nestjs|express|fastify|hono|prisma|drizzle|typeorm|supabase|react|vue|svelte)$/i.test(
+      name.split('/')[0]
+    )
+  );
+
+  const why = [];
+  if (workspaces) why.push(`workspace roots declared (${workspaceDirs.join(', ')})`);
+  if (tinyTree) why.push(`few source files (${sourceFileCount})`);
+  if (ui) why.push('UI directories or multiple TSX files present');
+  if (apiSurface) why.push('API/route/controller directories present');
+  if (persistence) why.push('persistence or data-access directories present');
+  if (jobs) why.push('jobs/workers/schedules directories present');
+  if (workflows) why.push('workflows or sagas directories present');
+  if (integration) why.push('integration/webhook/sync directories present');
+  if (cli) why.push('package.json declares a bin entry');
+  if (library) why.push('publishable package shape (exports/main, no CLI bin)');
+  if (featureSlicedLayout) why.push('feature-sliced directory layout under src/');
+  if (domain) why.push('domain directory present');
+  if (application) why.push('application or services directory present');
+
+  return {
+    workspaces,
+    workspaceDirs,
+    ui,
+    uiHeavy,
+    apiSurface,
+    apiSurfaceOnly,
+    persistence,
+    persistenceHeavy,
+    jobs,
+    jobsOnly,
+    workflows,
+    integration,
+    cli,
+    library,
+    libraryOnly,
+    tinyTree,
+    sourceFileCount,
+    domain,
+    application,
+    domainHeavy,
+    uiOnly,
+    featureSlicedLayout,
+    toolHints,
+    why,
+  };
+}
+
+export function defaultPlaybookPath() {
+  return path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '..',
+    'templates',
+    'architecture-playbook.json'
+  );
+}
+
+export function loadArchitecturePlaybook(playbookPath = defaultPlaybookPath()) {
+  const raw = fs.readFileSync(playbookPath, 'utf8');
+  const playbook = JSON.parse(raw);
+  const ids = Object.keys(playbook.archetypes ?? {});
+  if (ids.length !== ARCHETYPE_IDS.length) {
+    throw new Error(
+      `architecture-playbook.json must define exactly ${ARCHETYPE_IDS.length} archetypes (found ${ids.length})`
+    );
+  }
+  for (const id of ARCHETYPE_IDS) {
+    if (!playbook.archetypes[id]) {
+      throw new Error(`architecture-playbook.json missing archetype: ${id}`);
+    }
+  }
+  return playbook;
+}
+
+function resolvePreset(archetypeDef, signals) {
+  const alt = archetypeDef.presetAlternatives?.['feature-sliced'];
+  if (alt?.whenSignal && signals[alt.whenSignal]) return 'feature-sliced';
+  return archetypeDef.preset;
+}
+
+/**
+ * Score playbook archetypes against collected repo shape signals.
+ * Returns sorted matches (highest score first) with confidence in [0, 1].
+ */
+export function scoreArchetypes(signals, playbook) {
+  const scored = [];
+  for (const [id, def] of Object.entries(playbook.archetypes)) {
+    let score = 0;
+    const matched = [];
+    for (const [signal, weight] of Object.entries(def.detectionSignals ?? {})) {
+      if (signals[signal]) {
+        score += Number(weight);
+        matched.push(signal);
+      }
+    }
+    for (const [signal, weight] of Object.entries(def.negativeSignals ?? {})) {
+      if (signals[signal]) {
+        score -= Number(weight);
+        matched.push(`!${signal}`);
+      }
+    }
+    const maxPositive = Object.values(def.detectionSignals ?? {}).reduce(
+      (sum, w) => sum + Number(w),
+      0
+    );
+    scored.push({
+      id,
+      label: def.label,
+      preset: resolvePreset(def, signals),
+      score,
+      maxPositive: maxPositive || 1,
+      matched,
+      phases: def.phases,
+      analogy: def.analogy,
+      antiPatterns: def.antiPatterns ?? [],
+      books: def.books ?? [],
+    });
+  }
+  scored.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+
+  const top = scored[0];
+  const second = scored[1];
+  if (!top || top.score <= 0) {
+    const spike = scored.find((entry) => entry.id === 'prototype-spike');
+    const fallback = spike ?? top;
+    const confidence = signals.tinyTree ? 0.55 : 0.35;
+    return {
+      ranked: scored,
+      archetype: fallback.id,
+      label: fallback.label,
+      preset: fallback.preset,
+      confidence,
+      phases: fallback.phases,
+      analogy: fallback.analogy,
+      antiPatterns: fallback.antiPatterns,
+      books: fallback.books,
+      matched: fallback.matched,
+      runnerUp: second && second.id !== fallback.id ? { id: second.id, score: second.score } : { id: 'crud-product', score: 0 },
+    };
+  }
+
+  const rawConfidence = top.score / top.maxPositive;
+  const margin =
+    second && second.score > 0 ? (top.score - second.score) / Math.max(top.score, 1) : 0.25;
+  const confidence = Math.min(1, Math.max(0.1, rawConfidence * 0.7 + margin * 0.3));
+
+  return {
+    ranked: scored,
+    archetype: top.id,
+    label: top.label,
+    preset: top.preset,
+    confidence: Math.round(confidence * 1000) / 1000,
+    phases: top.phases,
+    analogy: top.analogy,
+    antiPatterns: top.antiPatterns,
+    books: top.books,
+    matched: top.matched,
+    runnerUp: second
+      ? { id: second.id, label: second.label, score: second.score, preset: second.preset }
+      : { id: 'prototype-spike', score: 0 },
+  };
+}
+
+export function buildArchitectureRecommendation(root, options = {}) {
+  const playbookPath = options.playbookPath ?? defaultPlaybookPath();
+  const playbook = loadArchitecturePlaybook(playbookPath);
+  const signals = collectRepoShapeSignals(root);
+  const result = scoreArchetypes(signals, playbook);
+
+  const adoptInOrder = {
+    phase1: result.phases?.['1'] ?? [],
+    phase2: result.phases?.['2'] ?? [],
+    phase3: result.phases?.['3'] ?? [],
+  };
+
+  return {
+    ok: true,
+    playbookVersion: playbook.version,
+    archetype: result.archetype,
+    label: result.label,
+    preset: result.preset,
+    confidence: result.confidence,
+    phases: result.phases,
+    adoptInOrder,
+    analogy: result.analogy,
+    antiPatterns: result.antiPatterns,
+    books: result.books,
+    why: signals.why,
+    matchedSignals: result.matched,
+    runnerUp: result.runnerUp,
+    toolHints: signals.toolHints,
+    signals: {
+      sourceFileCount: signals.sourceFileCount,
+      workspaces: signals.workspaces,
+      ui: signals.ui,
+      apiSurface: signals.apiSurface,
+      persistence: signals.persistence,
+      jobs: signals.jobs,
+      workflows: signals.workflows,
+      integration: signals.integration,
+      cli: signals.cli,
+      library: signals.library,
+      tinyTree: signals.tinyTree,
+    },
+    firstCommand: `${arkCommand(root, 'ark', `init --preset ${result.preset} --yes`)}`,
+    checkCommand: arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config'),
+  };
+}
+
+export function formatArchitectureRecommendationHuman(recommendation) {
+  const lines = [];
+  lines.push('Ark architecture recommendation (application shape, not vendor stack)');
+  lines.push('');
+  lines.push(`Archetype: ${recommendation.archetype} — ${recommendation.label}`);
+  lines.push(`Preset: ${recommendation.preset} (confidence ${recommendation.confidence})`);
+  if (recommendation.runnerUp?.id) {
+    lines.push(
+      `Runner-up: ${recommendation.runnerUp.id}${recommendation.runnerUp.label ? ` (${recommendation.runnerUp.label})` : ''}`
+    );
+  }
+  lines.push('');
+  lines.push('Phase 1 layers (start here):');
+  for (const layer of recommendation.adoptInOrder.phase1) {
+    lines.push(`  - ${layer}`);
+  }
+  if (recommendation.adoptInOrder.phase2?.length) {
+    lines.push('Phase 2 (when you add integrations or similar):');
+    for (const layer of recommendation.adoptInOrder.phase2) {
+      lines.push(`  - ${layer}`);
+    }
+  }
+  lines.push('');
+  lines.push(`Analogy: ${recommendation.analogy}`);
+  if (recommendation.why?.length) {
+    lines.push('');
+    lines.push('Why (repo shape signals):');
+    for (const item of recommendation.why) {
+      lines.push(`  - ${item}`);
+    }
+  }
+  if (recommendation.antiPatterns?.length) {
+    lines.push('');
+    lines.push('Avoid:');
+    for (const item of recommendation.antiPatterns) {
+      lines.push(`  - ${item}`);
+    }
+  }
+  lines.push('');
+  lines.push(`Next: ${recommendation.firstCommand}`);
+  lines.push(`Then: ${recommendation.checkCommand}`);
+  return lines.join('\n');
 }

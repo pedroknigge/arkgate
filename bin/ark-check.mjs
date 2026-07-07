@@ -11,9 +11,11 @@ import {
   DEFAULT_RULES,
   arkCommand,
   collectForbiddenGlobalUses,
+  buildArchitectureRecommendation,
   createElevenLayerConfig,
   execCommandParts,
   execRunner,
+  formatArchitectureRecommendationHuman,
   globToRegExp,
   installDevHint,
   layerForFile,
@@ -43,6 +45,7 @@ function parseArgs(argv) {
     coverage: false,
     migrateCommands: false,
     doctor: false,
+    recommend: false,
   };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -70,6 +73,7 @@ function parseArgs(argv) {
     else if (arg === '--skills-only') args.skillsOnly = true;
     else if (arg === '--coverage') args.coverage = true;
     else if (arg === '--doctor') args.doctor = true;
+    else if (arg === '--recommend') args.recommend = true;
     else if (arg === '--codex-home') args.codexHome = true;
     else if (arg === '--migrate-commands') args.migrateCommands = true;
     else if (arg === '--no-cache') args.noCache = true;
@@ -97,6 +101,7 @@ function usage() {
   return [
     'Usage: ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--require-gates] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
     '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
+    '       ark-check --recommend [--json]         tool-agnostic architecture plan from templates/architecture-playbook.json (exit 0)',
     '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo] [--force]',
     '       ark-check --install-agent-gates [--tools claude,cursor,codex] [--skills-only] [--codex-home] [--force]',
     '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
@@ -3010,6 +3015,26 @@ async function main() {
       return;
     }
     console.log(JSON.stringify(createElevenLayerConfig(), null, 2));
+    return;
+  }
+
+  if (args.recommend) {
+    try {
+      const recommendation = buildArchitectureRecommendation(args.root);
+      if (args.json) {
+        console.log(JSON.stringify(recommendation, null, 2));
+      } else {
+        console.log(formatArchitectureRecommendationHuman(recommendation));
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (args.json) {
+        console.log(JSON.stringify({ ok: false, error: message }, null, 2));
+      } else {
+        console.error(`ark-check --recommend failed: ${message}`);
+      }
+      process.exitCode = 2;
+    }
     return;
   }
 
