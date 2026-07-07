@@ -272,7 +272,10 @@ scaffold — for users who are not professional developers.
 
 ## Implementation phases
 
-### Phase A — Foundation (Next, P0)
+All phases A–E are **shipped** in `ark-runtime-kernel` 1.13.x+. Locale packs and a
+deployed docs site remain future work.
+
+### Phase A — Foundation (shipped)
 
 | Task | Owner surface | Notes |
 |------|---------------|-------|
@@ -284,7 +287,7 @@ scaffold — for users who are not professional developers.
 
 **Exit:** `ark-check --recommend` prints correct archetype for 5 fixture repos.
 
-### Phase B — Enthusiast terminal UX (Next, P1)
+### Phase B — Enthusiast terminal UX (shipped)
 
 | Task | Owner surface | Notes |
 |------|---------------|-------|
@@ -296,7 +299,7 @@ scaffold — for users who are not professional developers.
 
 **Exit:** Non-dev can run `ark init` interactively and get a passing strict check.
 
-### Phase C — Agent layer (Next, P1)
+### Phase C — Agent layer (shipped)
 
 | Task | Owner surface | Notes |
 |------|---------------|-------|
@@ -307,7 +310,7 @@ scaffold — for users who are not professional developers.
 
 **Exit:** `/ark-architect` on empty repo → phase-1 scaffold + doctor healthy.
 
-### Phase D — Proof and gallery (Next, P2)
+### Phase D — Proof and gallery (shipped)
 
 | Task | Owner surface | Notes |
 |------|---------------|-------|
@@ -318,14 +321,14 @@ scaffold — for users who are not professional developers.
 
 **Exit:** Three high-signal demos shipped (per internal success criteria).
 
-### Phase E — Later
+### Phase E — Enthusiast docs and policy packs (shipped)
 
 | Task | Notes |
 |------|-------|
-| Docs site track "Ark for enthusiasts" | Diátaxis tutorial |
-| Team policy packs with `enthusiast` variant | Shorter layer descriptions |
-| `ark-adoption-plan.json` artifact in repo | Optional committed plan |
-| Optional locale packs (non-English) | English canonical source only; translations layered on top |
+| Diátaxis track "Ark for enthusiasts" | `docs/enthusiast/` (in-repo; not a deployed site) |
+| Enthusiast policy packs | `templates/policy-packs/enthusiast-*.json`; `--apply-policy-pack` |
+| `ark-adoption-plan.json` | `ark-check --recommend --write-plan` |
+| Optional locale packs (non-English) | **Not shipped** — English canonical only |
 
 ---
 
@@ -363,12 +366,12 @@ flowchart TD
 
 Aligned with internal roadmap:
 
-- [ ] `--recommend` and `ark_recommend` ship in npm package
-- [ ] `/ark-architect` installed by default with other skills
-- [ ] One public demo: enthusiast describes app → correct structure → agent respects gates
-- [ ] Eval enthusiast cases in CI optional job (nightly)
-- [ ] README links to this plan and archetype table
-- [ ] No ad-hoc layer suggestions outside playbook/presets
+- [x] `--recommend` and `ark_recommend` ship in npm package
+- [x] `/ark-architect` installed by default with other skills
+- [x] One public demo: enthusiast describes app → correct structure → agent respects gates
+- [x] Eval enthusiast cases in CI optional job (nightly)
+- [x] README links to this plan and archetype table
+- [x] No ad-hoc layer suggestions outside playbook/presets
 
 ---
 

@@ -15,9 +15,13 @@ import {
   DEFAULT_RULES,
   arkCommand,
   collectForbiddenGlobalUses,
+  ADOPTION_PLAN_FILENAME,
   buildArchitectureRecommendation,
   createElevenLayerConfig,
   enrichViolationWithFixClass,
+  listPolicyPackIds,
+  loadPolicyPackMeta,
+  writeAdoptionPlan,
   execCommandParts,
   execRunner,
   formatArchitectureRecommendationHuman,
@@ -52,6 +56,9 @@ function parseArgs(argv) {
     migrateCommands: false,
     doctor: false,
     recommend: false,
+    writePlan: false,
+    listPolicyPacks: false,
+    applyPolicyPack: undefined,
     watch: false,
     beginner: false,
   };
@@ -82,6 +89,9 @@ function parseArgs(argv) {
     else if (arg === '--coverage') args.coverage = true;
     else if (arg === '--doctor') args.doctor = true;
     else if (arg === '--recommend') args.recommend = true;
+    else if (arg === '--write-plan') args.writePlan = true;
+    else if (arg === '--list-policy-packs') args.listPolicyPacks = true;
+    else if (arg === '--apply-policy-pack') args.applyPolicyPack = argv[++i];
     else if (arg === '--watch') args.watch = true;
     else if (arg === '--beginner') args.beginner = true;
     else if (arg === '--codex-home') args.codexHome = true;
@@ -112,7 +122,9 @@ function usage() {
   return [
     'Usage: ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--require-gates] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
     '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
-    '       ark-check --recommend [--json]         tool-agnostic architecture plan from templates/architecture-playbook.json (exit 0)',
+    '       ark-check --recommend [--json] [--write-plan]  application-shape plan; --write-plan emits ark-adoption-plan.json',
+    '       ark-check --list-policy-packs            enthusiast preset configs (hexagonal, layered, feature-sliced, monorepo)',
+    '       ark-check --apply-policy-pack <id> [--force]  write ark.config.json from templates/policy-packs/ (uses preset factory)',
     '       ark-check --watch                      re-run the check when governed files change (debounced)',
     '       ark-check --report [file.html] [--beginner]  HTML report; --beginner simplifies onboarding view',
     '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo] [--force]',
@@ -657,6 +669,96 @@ function printInitNextSteps(root) {
   if (!hasCheckArchitectureScript(root)) {
     console.log('  3. Add the package.json alias if you want `run check:architecture`:');
     console.log(`     ${checkArchitectureScriptSnippet(root)}`);
+  }
+}
+
+function buildConfigFromPolicyPack(packId, root) {
+  const pack = loadPolicyPackMeta(packId);
+  const factory = ARCHITECTURE_PRESETS[pack.preset];
+  if (!factory) {
+    throw new Error(
+      `Policy pack "${packId}" references unknown preset "${pack.preset}".`
+    );
+  }
+  const workspaces = pack.preset === 'monorepo' ? detectWorkspaces(root) : [];
+  const config = factory(workspaces);
+  if (pack.layerDescriptions) {
+    for (const layer of config.layers) {
+      const enthusiast = pack.layerDescriptions[layer.name];
+      if (enthusiast) layer.description = enthusiast;
+    }
+  }
+  return { pack, config };
+}
+
+function runListPolicyPacks(args) {
+  const ids = listPolicyPackIds();
+  if (args.json) {
+    const packs = ids.map((id) => {
+      const meta = loadPolicyPackMeta(id);
+      return {
+        id: meta.id,
+        preset: meta.preset,
+        variant: meta.variant,
+        label: meta.label,
+        summary: meta.summary,
+        phases: meta.phases,
+      };
+    });
+    console.log(JSON.stringify({ ok: true, packs }, null, 2));
+    return;
+  }
+  console.log('Enthusiast policy packs (apply with --apply-policy-pack <id>):');
+  for (const id of ids) {
+    const meta = loadPolicyPackMeta(id);
+    console.log(`  ${meta.id} — ${meta.label} (preset: ${meta.preset})`);
+    if (meta.summary) console.log(`    ${meta.summary}`);
+  }
+}
+
+function runApplyPolicyPack(args) {
+  const configPath = path.isAbsolute(args.config)
+    ? args.config
+    : path.join(args.root, args.config);
+
+  if (fs.existsSync(configPath) && !args.force) {
+    console.error(
+      `${configPath} already exists. Re-run with --force to overwrite, or use /ark-contract to evolve it.`
+    );
+    process.exitCode = 2;
+    return;
+  }
+
+  try {
+    const { pack, config } = buildConfigFromPolicyPack(args.applyPolicyPack, args.root);
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    if (args.json) {
+      console.log(
+        JSON.stringify(
+          {
+            ok: true,
+            pack: pack.id,
+            preset: pack.preset,
+            configPath,
+            phases: pack.phases,
+          },
+          null,
+          2
+        )
+      );
+    } else {
+      console.log(`Wrote ${configPath} (${pack.label})`);
+      console.log(`Preset: ${pack.preset}. Phase 1: ${(pack.phases?.['1'] ?? []).join(', ')}`);
+      console.log(`Verify: ${arkCommand(args.root, 'ark-check', '--root . --config ark.config.json --strict-config')}`);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (args.json) {
+      console.log(JSON.stringify({ ok: false, error: message }, null, 2));
+    } else {
+      console.error(message);
+    }
+    process.exitCode = 2;
   }
 }
 
@@ -3145,13 +3247,43 @@ async function main() {
     return;
   }
 
+  if (args.listPolicyPacks) {
+    runListPolicyPacks(args);
+    return;
+  }
+
+  if (args.applyPolicyPack) {
+    runApplyPolicyPack(args);
+    return;
+  }
+
   if (args.recommend) {
     try {
       const recommendation = buildArchitectureRecommendation(args.root);
+      let planWritten;
+      if (args.writePlan) {
+        const result = writeAdoptionPlan(args.root, recommendation);
+        planWritten = result.path;
+      }
       if (args.json) {
-        console.log(JSON.stringify(recommendation, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              ...recommendation,
+              ...(planWritten
+                ? { adoptionPlanPath: path.relative(args.root, planWritten) || ADOPTION_PLAN_FILENAME }
+                : {}),
+            },
+            null,
+            2
+          )
+        );
       } else {
         console.log(formatArchitectureRecommendationHuman(recommendation));
+        if (planWritten) {
+          console.log('');
+          console.log(`Wrote ${path.relative(args.root, planWritten) || ADOPTION_PLAN_FILENAME}`);
+        }
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

@@ -33,6 +33,8 @@
     "bin",
     "dist",
     "docs/agent-guide.md",
+    "docs/enthusiast",
+    "docs/demos",
     "docs/ai-gates.md",
     "docs/ark-check-example.json",
     "docs/assets",

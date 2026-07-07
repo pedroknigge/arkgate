@@ -55,3 +55,9 @@ this project's real files as examples, no unexplained jargon.
   ark-report.html` writes a self-contained HTML report (layer map, import
   matrix, violations, live gates) — a shareable artifact for a PR or onboarding.
   It's generated output: suggest adding it to `.gitignore`, not committing it.
+
+## Related onboarding
+
+- New builders: point to `/ark-architect`, `ark-check --recommend`, and `docs/enthusiast/README.md`.
+- Violation JSON fields `fixClass`, `effort`, `enthusiastHint` explain fixes in plain English.
+- Brownfield adoption: `/ark-adopt` and `docs/brownfield-adoption.md` — different job than explaining an existing contract.

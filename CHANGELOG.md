@@ -2,6 +2,19 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## Unreleased — architect onboarding Phases A–E
+
+### Added
+
+- **`templates/architecture-playbook.json`** — ten tool-agnostic application archetypes.
+- **`ark-check --recommend`** (+ `--json`, **`--write-plan`** → `ark-adoption-plan.json`).
+- **`ark init` enthusiast wizard** and **`ark init --archetype <id> --yes`**.
+- **MCP `ark_recommend`**, skill **`/ark-architect`**, session-context enthusiast hint.
+- **Terminal UX**: doctor "New here?", fix-class / `enthusiastHint`, `--watch`, `--report --beginner`.
+- **Example gallery** (`examples/*-starter/`), comparative eval (30 prompts), three public demo scripts.
+- **Enthusiast policy packs** — `ark-check --list-policy-packs`, `--apply-policy-pack enthusiast-<preset>`.
+- **Diátaxis enthusiast track** — `docs/enthusiast/`.
+
 ## 1.13.0 — 2026-07-06
 
 ### Added

@@ -1,0 +1,18 @@
+{
+  "id": "enthusiast-monorepo",
+  "preset": "monorepo",
+  "variant": "enthusiast",
+  "label": "Monorepo — enthusiast",
+  "summary": "Several apps and packages in one repo. Match domain/application/presentation/persistence folder names in any package.",
+  "phases": {
+    "1": ["DomainModel", "ApplicationOrchestration"],
+    "2": ["PresentationAdapters", "PersistenceAdapters"],
+    "3": ["IntegrationAdapters"]
+  },
+  "layerDescriptions": {
+    "DomainModel": "Shared business types in packages — no I/O.",
+    "ApplicationOrchestration": "Shared use cases and services across apps.",
+    "PresentationAdapters": "Per-app entrypoints (pages, routes, components).",
+    "PersistenceAdapters": "Per-app or shared adapters for storage and APIs."
+  }
+}

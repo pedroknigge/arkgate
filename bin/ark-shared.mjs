@@ -979,3 +979,82 @@ export function formatArchitectureRecommendationHuman(recommendation) {
   lines.push(`Then: ${recommendation.checkCommand}`);
   return lines.join('\n');
 }
+
+export const ADOPTION_PLAN_FILENAME = 'ark-adoption-plan.json';
+
+const GALLERY_STARTER_BY_ARCHETYPE = {
+  'crud-product': 'examples/crud-product-starter/',
+  'api-backend': 'examples/api-backend-starter/',
+  'worker-pipeline': 'examples/worker-pipeline-starter/',
+  'multi-app-workspace': 'examples/multi-app-workspace-starter/',
+};
+
+/** Machine-readable adoption record for optional commit (Phase E). */
+export function buildAdoptionPlanDocument(recommendation) {
+  const preset = recommendation.preset;
+  const policyPackId =
+    preset === 'hexagonal' ||
+    preset === 'layered' ||
+    preset === 'feature-sliced' ||
+    preset === 'monorepo'
+      ? `enthusiast-${preset}`
+      : null;
+
+  return {
+    version: '1',
+    generatedAt: new Date().toISOString(),
+    playbookVersion: recommendation.playbookVersion,
+    archetype: recommendation.archetype,
+    label: recommendation.label,
+    preset: recommendation.preset,
+    confidence: recommendation.confidence,
+    adoptInOrder: recommendation.adoptInOrder,
+    analogy: recommendation.analogy,
+    antiPatterns: recommendation.antiPatterns ?? [],
+    books: recommendation.books ?? [],
+    why: recommendation.why ?? [],
+    runnerUp: recommendation.runnerUp,
+    firstCommand: recommendation.firstCommand,
+    checkCommand: recommendation.checkCommand,
+    galleryStarter: GALLERY_STARTER_BY_ARCHETYPE[recommendation.archetype] ?? null,
+    policyPack: policyPackId,
+    writePlanCommand: 'ark-check --recommend --write-plan',
+  };
+}
+
+/** Write ark-adoption-plan.json; never weakens the gate — JSON only. */
+export function writeAdoptionPlan(root, recommendation, filename = ADOPTION_PLAN_FILENAME) {
+  const document = buildAdoptionPlanDocument(recommendation);
+  const outPath = path.join(root, filename);
+  fs.writeFileSync(outPath, `${JSON.stringify(document, null, 2)}\n`);
+  return { path: outPath, document };
+}
+
+const __arkSharedDir = path.dirname(fileURLToPath(import.meta.url));
+
+export function defaultPolicyPacksPath() {
+  return path.resolve(__arkSharedDir, '../templates/policy-packs');
+}
+
+export function listPolicyPackIds(packsPath = defaultPolicyPacksPath()) {
+  if (!fs.existsSync(packsPath)) return [];
+  return fs
+    .readdirSync(packsPath)
+    .filter((name) => name.endsWith('.json'))
+    .map((name) => name.replace(/\.json$/, ''))
+    .sort();
+}
+
+export function loadPolicyPackMeta(packId, packsPath = defaultPolicyPacksPath()) {
+  const filePath = path.join(packsPath, `${packId}.json`);
+  if (!fs.existsSync(filePath)) {
+    throw new Error(
+      `Unknown policy pack "${packId}". Valid packs: ${listPolicyPackIds(packsPath).join(', ') || '(none)'}`
+    );
+  }
+  const pack = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  if (!pack.id || !pack.preset) {
+    throw new Error(`Policy pack ${filePath} must define "id" and "preset"`);
+  }
+  return pack;
+}

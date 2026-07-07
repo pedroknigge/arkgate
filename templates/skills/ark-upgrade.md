@@ -80,6 +80,11 @@ checks the registry itself — don't assume the copy in `node_modules` is curren
 - Stop only if the changelog documents a breaking config change with two valid
   migration paths — then present both with a recommendation.
 
+## Related onboarding
+
+- After upgrade, re-run `ark-check --doctor` — `/ark-architect` and `ark-check --recommend` ship with the package.
+- Refresh gates: `ark-check --install-agent-gates --force --skills-only` if skills are stale.
+
 ## Verify and report
 
 End with a passing check. Report: latest published version, old → new version

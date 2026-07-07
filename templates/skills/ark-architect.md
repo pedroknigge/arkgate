@@ -36,7 +36,9 @@ package manager (`pnpm exec`, `yarn`, `npx`) — match the lockfile.
    UI and stored data"), not the framework. One analogy. List **phase-1 layers only**.
 
 3. **Map to Ark** — if `ark.config.json` is missing, run
-   `ark init --archetype <archetype> --yes` (maps playbook id → preset + gates).
+   `ark init --archetype <archetype> --yes` (maps playbook id → preset + gates),
+   or `ark-check --apply-policy-pack enthusiast-<preset>` for the enthusiast variant.
+   Optional team record: `ark-check --recommend --write-plan` → `ark-adoption-plan.json`.
    If a config already exists, use `/ark-contract` to align it — do not regenerate
    unasked.
 
@@ -69,8 +71,9 @@ package manager (`pnpm exec`, `yarn`, `npx`) — match the lockfile.
      | `worker-pipeline` | `examples/worker-pipeline-starter/` |
      | `multi-app-workspace` | `examples/multi-app-workspace-starter/` |
 
-     Say they can copy that folder as a baseline. For a runnable API with break
-     exercises, mention `examples/hexagonal-order-api/` instead.
+     Say they can copy that folder as a baseline (`npm install && npm run check`).
+     For a runnable API with break exercises, mention `examples/hexagonal-order-api/`.
+     Full enthusiast track: `docs/enthusiast/README.md`.
 
 ## Operating rules
 

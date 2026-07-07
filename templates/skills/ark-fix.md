@@ -78,6 +78,12 @@ Fix ALL reported violations that share a root cause in one pass — one port in 
 shared module beats N per-file patches. Match the codebase's existing naming and
 port conventions before inventing new ones.
 
+## Related onboarding
+
+- Prefer `fixClass` / `enthusiastHint` from `ark-check --json` when present.
+- Brownfield burn-down: `/ark-adopt` first; demo `docs/demos/02-brownfield-baseline-adoption.md`.
+- Greenfield: `/ark-architect` prevents many violations before they exist.
+
 ## Verify and report
 
 After edits, run `ark-check --root . --config ark.config.json --strict-config`

@@ -75,16 +75,44 @@ New to Ark? Run /ark-architect or: ark-check --recommend
 The `/ark-architect` skill ships in `templates/skills/ark-architect.md` and installs
 via `ark-check --install-agent-gates`.
 
+### Adoption plan artifact (Phase E)
+
+```bash
+npx ark-check --recommend --write-plan
+# writes ark-adoption-plan.json (optional commit; never weakens the gate)
+```
+
+Includes `archetype`, `preset`, `adoptInOrder`, `galleryStarter`, and suggested
+`policyPack` (`enthusiast-<preset>`).
+
+### Enthusiast policy packs (Phase E)
+
+```bash
+npx ark-check --list-policy-packs
+npx ark-check --apply-policy-pack enthusiast-hexagonal   # or layered, feature-sliced, monorepo
+```
+
+Packs delegate to the same preset factories as `ark init --preset`; layer
+descriptions are shorter enthusiast copy. Metadata: `templates/policy-packs/`.
+
+### Enthusiast documentation track
+
+Diátaxis pages under [docs/enthusiast/](enthusiast/README.md) — tutorial, how-to,
+reference, and explanation for the full path (recommend → init → gallery → gates → verify).
+
 ### Agent workflow (before codegen)
 
 1. Run `ark-check --recommend --json` or MCP `ark_recommend`.
 2. Read `archetype`, `preset`, and `adoptInOrder.phase1` — scaffold only those directories first.
-3. Run `ark init --archetype <id> --yes` (or `ark init --preset <preset> --yes`) when no `ark.config.json` exists.
-4. Use `/ark-place` or `ark_place` for individual files after the contract exists.
-5. Verify with `ark-check --root . --config ark.config.json --strict-config`.
+3. Run `ark init --archetype <id> --yes`, `--apply-policy-pack enthusiast-<preset>`, or `ark init --preset <preset> --yes` when no `ark.config.json` exists.
+4. Optional: `--write-plan` for `ark-adoption-plan.json`; copy a gallery starter from `examples/README.md`.
+5. Use `/ark-place` or `ark_place` for individual files after the contract exists.
+6. Verify with `ark-check --root . --config ark.config.json --strict-config`.
 
 Do not invent layers outside the 11-layer profile or named presets. Unrecognized
 directories (`utils/`, `lib/`) must be classified explicitly via `/ark-contract`.
+
+**Brownfield** (existing messy repo): use `/ark-adopt` and [brownfield-adoption.md](brownfield-adoption.md), not `/ark-architect`.
 
 ## Contract Discovery
 
