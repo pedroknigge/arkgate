@@ -156,6 +156,22 @@ describe('Phase B — beginner HTML report', () => {
   });
 });
 
+async function waitForOutput(
+  chunks: string[],
+  pattern: string | RegExp,
+  timeoutMs = 8000
+) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const text = chunks.join('');
+    const matched =
+      typeof pattern === 'string' ? text.includes(pattern) : pattern.test(text);
+    if (matched) return text;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error(`Timed out waiting for output: ${pattern}`);
+}
+
 describe('Phase B — watch mode', () => {
   it('starts watching and re-runs check when a governed file changes', async () => {
     const root = mkTemp('ark-phaseb-watch-');
@@ -175,18 +191,14 @@ describe('Phase B — watch mode', () => {
     child.stdout?.on('data', (chunk: Buffer) => chunks.push(chunk.toString()));
     child.stderr?.on('data', (chunk: Buffer) => chunks.push(chunk.toString()));
 
-    await new Promise((r) => setTimeout(r, 400));
-    const beforeTouch = chunks.join('');
-    expect(beforeTouch).toContain('Watching governed paths');
+    const beforeTouch = await waitForOutput(chunks, 'Watching governed paths');
 
     const target = path.join(root, 'src/domain/order.ts');
     fs.writeFileSync(target, "import { db } from '../infra/db';\nexport const a = db;\n");
 
-    await new Promise((r) => setTimeout(r, 900));
+    const afterTouch = await waitForOutput(chunks, /violation|LAYER_IMPORT|✖/i, 10_000);
     child.kill('SIGTERM');
 
-    const afterTouch = chunks.join('');
     expect(afterTouch.length).toBeGreaterThan(beforeTouch.length);
-    expect(afterTouch).toMatch(/violation|LAYER_IMPORT|✖/i);
-  }, 10_000);
+  }, 20_000);
 });
