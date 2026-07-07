@@ -372,6 +372,10 @@ Aligned with internal roadmap:
 - [x] Eval enthusiast cases in CI optional job (nightly)
 - [x] README links to this plan and archetype table
 - [x] No ad-hoc layer suggestions outside playbook/presets
+- [x] `ark-check --recommend --write-plan` emits `ark-adoption-plan.json` (phases, matchedSignals, galleryStarter, policyPack)
+- [x] Enthusiast policy packs (`enthusiast-*`) apply via `--apply-policy-pack` and pass strict-config on greenfield
+- [x] Diátaxis enthusiast track under `docs/enthusiast/` (tutorial, how-to, reference, explanation)
+- [x] All nine `/ark-*` skills reference architect onboarding vs brownfield flows
 
 ---
 

@@ -45,11 +45,26 @@ describe('Phase E — ark-adoption-plan.json', () => {
     expect(doc.adoptInOrder.phase1.length).toBeGreaterThan(0);
     expect(doc.version).toBe('1');
     expect(doc.policyPack).toMatch(/^enthusiast-/);
+    expect(doc.phases?.['1']?.length).toBeGreaterThan(0);
+    expect(Array.isArray(doc.matchedSignals)).toBe(true);
+  });
+
+  it('buildAdoptionPlanDocument maps gallery archetypes to examples/*-starter/', () => {
+    const rec = buildArchitectureRecommendation(
+      path.join(REPO, 'examples/crud-product-starter')
+    );
+    const doc = buildAdoptionPlanDocument(rec);
+    expect(doc.archetype).toBe('crud-product');
+    expect(doc.galleryStarter).toBe('examples/crud-product-starter/');
   });
 
   it('--recommend --write-plan writes valid ark-adoption-plan.json', () => {
     const root = mkTemp('ark-phasee-write-');
-    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'greenfield' }));
+    fs.mkdirSync(path.join(root, 'src/app'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'package.json'),
+      JSON.stringify({ name: 'greenfield', dependencies: { next: '14.0.0', react: '18.0.0' } })
+    );
 
     runArkCheck(root, ['--recommend', '--write-plan', '--json']);
     const planPath = path.join(root, ADOPTION_PLAN_FILENAME);
@@ -58,11 +73,21 @@ describe('Phase E — ark-adoption-plan.json', () => {
     const plan = JSON.parse(fs.readFileSync(planPath, 'utf8')) as {
       archetype: string;
       preset: string;
+      phases: Record<string, string[]>;
+      matchedSignals: string[];
       adoptInOrder: { phase1: string[] };
+      galleryStarter: string | null;
+      policyPack: string | null;
     };
     expect(plan.archetype).toBeTruthy();
     expect(plan.preset).toBeTruthy();
     expect(plan.adoptInOrder.phase1.length).toBeGreaterThan(0);
+    expect(plan.phases['1'].length).toBeGreaterThan(0);
+    expect(Array.isArray(plan.matchedSignals)).toBe(true);
+    expect(
+      plan.galleryStarter === null || (typeof plan.galleryStarter === 'string' && plan.galleryStarter.startsWith('examples/'))
+    ).toBe(true);
+    expect(typeof plan.policyPack === 'string' && plan.policyPack.startsWith('enthusiast-')).toBe(true);
   });
 });
 

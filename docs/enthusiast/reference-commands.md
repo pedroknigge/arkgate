@@ -13,9 +13,10 @@ MCP: `ark_recommend` — same JSON body.
 `ark-adoption-plan.json` — optional committed record. Fields:
 
 - `archetype`, `preset`, `confidence`
-- `adoptInOrder.phase1|phase2|phase3`
+- `phases` (`1` | `2` | `3` layer lists) and `adoptInOrder.phase1|phase2|phase3`
+- `matchedSignals` — shape signals that drove the score
 - `analogy`, `antiPatterns`, `why`
-- `firstCommand`, `checkCommand`
+- `initCommand`, `firstCommand`, `recommendCommand`, `checkCommand`
 - `galleryStarter`, `policyPack`
 
 Never weakens the gate; JSON only.
