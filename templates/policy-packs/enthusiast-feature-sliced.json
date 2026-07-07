@@ -1,0 +1,20 @@
+{
+  "id": "enthusiast-feature-sliced",
+  "preset": "feature-sliced",
+  "variant": "enthusiast",
+  "label": "Feature-sliced — enthusiast",
+  "summary": "Organize by feature slices (App → Pages → Features → Entities → Shared). Start with App, Pages, and Features.",
+  "phases": {
+    "1": ["App", "Pages", "Features", "Shared"],
+    "2": ["Entities"],
+    "3": ["Widgets"]
+  },
+  "layerDescriptions": {
+    "App": "App shell — providers, routing, global styles.",
+    "Pages": "Full screens composed from features.",
+    "Widgets": "Large UI blocks built from features and entities.",
+    "Features": "User-facing actions (login, checkout, …).",
+    "Entities": "Business nouns shared across features.",
+    "Shared": "Buttons, utils, and UI kit with no business knowledge."
+  }
+}

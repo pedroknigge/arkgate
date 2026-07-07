@@ -1,0 +1,8 @@
+{
+  "include": ["src"],
+  "layers": [
+    { "name": "PresentationAdapters", "patterns": ["src/**/http/**"], "optional": true },
+    { "name": "PersistenceAdapters", "patterns": ["src/**/adapters/**"], "optional": true }
+  ],
+  "rules": [{ "from": "PresentationAdapters", "to": "PersistenceAdapters", "allowed": false }]
+}

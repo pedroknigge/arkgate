@@ -1,0 +1,12 @@
+{
+  "include": ["apps", "packages"],
+  "layers": [
+    { "name": "DomainModel", "patterns": ["**/domain/**"], "optional": true },
+    { "name": "ApplicationOrchestration", "patterns": ["**/application/**"], "optional": true },
+    { "name": "PresentationAdapters", "patterns": ["**/pages/**"], "optional": true }
+  ],
+  "rules": [
+    { "from": "PresentationAdapters", "to": "DomainModel", "allowed": false },
+    { "from": "ApplicationOrchestration", "to": "PresentationAdapters", "allowed": false }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "include": ["src"],
+  "layers": [
+    { "name": "BackgroundJobsScheduling", "patterns": ["src/**/jobs/**"], "optional": true },
+    { "name": "PersistenceAdapters", "patterns": ["src/**/adapters/**"], "optional": true }
+  ],
+  "rules": [{ "from": "BackgroundJobsScheduling", "to": "PersistenceAdapters", "allowed": false }]
+}

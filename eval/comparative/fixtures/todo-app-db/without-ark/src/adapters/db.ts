@@ -1,0 +1,1 @@
+export const db = { query: async () => [] as { title: string }[] };

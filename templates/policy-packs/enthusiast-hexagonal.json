@@ -1,0 +1,18 @@
+{
+  "id": "enthusiast-hexagonal",
+  "preset": "hexagonal",
+  "variant": "enthusiast",
+  "label": "Hexagonal — enthusiast",
+  "summary": "Start with domain, application, presentation, and persistence. Add integrations and workflows when you need them.",
+  "phases": {
+    "1": ["DomainModel", "ApplicationOrchestration", "PresentationAdapters", "PersistenceAdapters"],
+    "2": ["IntegrationAdapters"],
+    "3": ["WorkflowSagaEngine", "BackgroundJobsScheduling"]
+  },
+  "layerDescriptions": {
+    "DomainModel": "Recipes — pure business rules and ports. No database, HTTP, or ambient globals.",
+    "ApplicationOrchestration": "Kitchen coordinator — use cases that call domain through ports only.",
+    "PresentationAdapters": "Waiters — UI, routes, and controllers that drive use cases.",
+    "PersistenceAdapters": "Suppliers — database, files, and external APIs implementing ports."
+  }
+}

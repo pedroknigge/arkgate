@@ -2,6 +2,26 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.14.0 — 2026-07-07
+
+Architect onboarding Phases A–E: enthusiast-first path from application shape to gated adoption.
+
+### Added
+
+- **`templates/architecture-playbook.json`** — ten tool-agnostic application archetypes.
+- **`ark-check --recommend`** (+ `--json`, **`--write-plan`** → `ark-adoption-plan.json`).
+- **`ark init` enthusiast wizard** and **`ark init --archetype <id> --yes`**.
+- **MCP `ark_recommend`**, skill **`/ark-architect`**, session-context enthusiast hint.
+- **Terminal UX**: doctor "New here?", fix-class / `enthusiastHint`, `--watch`, `--report --beginner`.
+- **Example gallery** (`examples/*-starter/`), comparative eval (30 prompts), nightly workflow, three public demo scripts.
+- **Enthusiast policy packs** — `ark-check --list-policy-packs`, `--apply-policy-pack enthusiast-<preset>`.
+- **Diátaxis enthusiast track** — `docs/enthusiast/`.
+
+### Fixed
+
+- **`collectRepoShapeSignals`** — skip unreadable directories instead of crashing `--recommend`.
+- **Policy pack ids** — reject path-like ids; only canonical `templates/policy-packs/` entries apply.
+
 ## 1.13.0 — 2026-07-06
 
 ### Added

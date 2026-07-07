@@ -1,0 +1,13 @@
+{
+  "name": "ark-gallery-crud-product-starter",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Phase-1 scaffold for a product with UI and stored data (crud-product archetype)",
+  "type": "module",
+  "scripts": {
+    "check": "ark-check --root . --config ark.config.json --strict-config"
+  },
+  "devDependencies": {
+    "ark-runtime-kernel": "^1.14.0"
+  }
+}

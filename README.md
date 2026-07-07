@@ -48,6 +48,19 @@ the shape you want up front? Start from a named preset instead of detection:
 npx ark init --preset hexagonal        # or: layered, feature-sliced, monorepo
 ```
 
+**New project, not sure which preset?** Describe what you want to build — Ark maps it to
+an application shape (archetype), not a vendor stack:
+
+```bash
+npx ark-check --recommend              # plain-language plan + phase-1 layers
+npx ark init --archetype crud-product --yes   # or run /ark-architect in your agent
+npx ark-check --recommend --write-plan # optional ark-adoption-plan.json for the team
+```
+
+Enthusiast policy packs (`enthusiast-hexagonal`, `enthusiast-layered`, …) write the same
+presets with shorter layer copy: `npx ark-check --list-policy-packs`. Gallery starters live
+under [examples/](examples/README.md); the full Diátaxis track is [docs/enthusiast/](docs/enthusiast/README.md).
+
 Workspace monorepos (npm/yarn/pnpm/bun) are **auto-detected** — `ark init` reads your
 `workspaces` (or `pnpm-workspace.yaml`) and writes a cross-package profile anchored at
 the real workspace roots instead of the `src/**` starter, so `packages/*/domain` and
@@ -107,7 +120,7 @@ Every command Ark writes into these files follows your **package manager** — `
 
 ### The /ark-* skills
 
-Eight autonomous slash commands, installed for every agent CLI detected in the repo
+Nine autonomous slash commands, installed for every agent CLI detected in the repo
 (Claude Code skills, Cursor commands, Codex prompts, Windsurf/Cline workflows; Copilot
 prompt files via `--tools copilot`, since `.github/` isn't a reliable signal). Each one gathers everything it needs from the repo, takes
 sensible defaults instead of asking, finishes with a strict `ark-check`, and explains
@@ -116,6 +129,7 @@ just trying to keep your code clean:
 
 | Skill | What invoking it does |
 |-------|-----------------------|
+| `/ark-architect` | **Greenfield first** — picks your application shape from the playbook, scaffolds phase-1 layers, and points to gallery starters |
 | `/ark-coverage` | Reports the governed %, proposes a layer for every ungoverned directory, and ranks unused Ark capabilities |
 | `/ark-fix` | Resolves violations at the root cause (ports, moves, type relocations) — value coupling before type-only, never by weakening the contract |
 | `/ark-adopt` | Onboards an existing codebase the right way: diagnose → fix the contract → classify the tree → freeze only real debt, with the framework-border principle |
@@ -539,12 +553,15 @@ export class PlaceOrderService {
 
 ## Documentation
 
+- [Ark for enthusiasts](docs/enthusiast/README.md) — Diátaxis track: recommend → init → gallery → gates (Phases A–E)
+- [Architect onboarding plan](docs/architect-onboarding-plan.md) — archetype table, phases, and success criteria
 - [AI Gates](docs/ai-gates.md) — copy-paste setups for Claude Code, Cursor, Codex, and any hook-capable runtime
 - [Brownfield Adoption](docs/brownfield-adoption.md) — the burn-down playbook for a large existing codebase (diagnose → classify → facade split → freeze only real debt)
-- [Agent Integration Guide](docs/agent-guide.md) — manifest discovery and validation flows for agents
+- [Agent Integration Guide](docs/agent-guide.md) — manifest discovery, `--recommend`, policy packs, and validation flows
 - [Production Hardening](docs/production-hardening.md) — durable store interfaces (`AuditStore`, `OutboxStore`, …)
 - [Example Config](docs/ark-check-example.json) — a hand-curated `ark.config.json`
-- [Runnable Examples](examples/) — including `examples/hexagonal-order-api/`, a full hexagonal API you can break on purpose
+- [Runnable Examples](examples/) — gallery starters per archetype plus `hexagonal-order-api/` break exercises
+- [Public demos](docs/demos/) — write-gate self-correction, brownfield baseline, [architect → ark_place](marketing/demo-architect-place-funnel.md)
 - [Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
 
 ## Development

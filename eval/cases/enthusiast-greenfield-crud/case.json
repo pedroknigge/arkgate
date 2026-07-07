@@ -1,0 +1,6 @@
+{
+  "description": "Enthusiast greenfield CRUD: architect eval — agent should adopt crud-product shape with domain free of DB imports.",
+  "expectedFix": "Run /ark-architect or ark init --archetype crud-product --yes; scaffold phase-1 dirs; domain must not import persistence.",
+  "skipHarness": true,
+  "prompt": "Build a todo app with a database"
+}

@@ -2,6 +2,118 @@
 
 This guide describes how AI agents and codegen tools can safely interact with Ark.
 
+## Architecture playbook and `ark-check --recommend`
+
+Before generating project structure, agents should read the **tool-agnostic application
+shape** that fits the repository — not a vendor stack label. Ark ships a versioned playbook
+at `templates/architecture-playbook.json` (also in the npm package under `templates/`).
+
+Each of the ten archetypes (`crud-product`, `api-backend`, `frontend-surface`,
+`library-sdk`, `cli-utility`, `worker-pipeline`, `event-coordinator`,
+`integration-bridge`, `multi-app-workspace`, `prototype-spike`) maps to:
+
+- a named Ark preset (`hexagonal`, `layered`, `feature-sliced`, or `monorepo`),
+- phased 11-layer adoption (phase 1–3),
+- plain-language analogy and anti-patterns,
+- optional book references for depth only.
+
+Scoring is **deterministic**: repo shape signals (workspaces, UI dirs, API surface,
+persistence, jobs, workflows, CLI `bin`, source-file count, …) are matched against the
+playbook. Framework packages may appear as secondary `toolHints` in JSON output — never as
+the primary archetype id.
+
+All playbook labels, analogies, anti-patterns, and `--recommend` prose are **English**
+(`locale: "en"` in the playbook). Agents should present them as-is unless a future locale
+pack is explicitly loaded.
+
+### Terminal
+
+```bash
+npx ark-check --recommend
+npx ark-check --recommend --json
+```
+
+`--recommend` does not require `ark.config.json`. It exits `0` and prints a progressive
+adoption plan: archetype id, preset, `confidence`, `runnerUp`, `why` (shape signals),
+`adoptInOrder.phase1`, `firstCommand` (`ark init --archetype …`), and `checkCommand`.
+
+Human output highlights phase-1 layers and the analogy; JSON is the stable contract for
+MCP `ark_recommend` and the `/ark-architect` skill.
+
+### Terminal onboarding (Phase B)
+
+```bash
+npx ark init --archetype crud-product --yes   # non-interactive: shape → preset → gates → strict check
+npx ark init                                    # TTY wizard: pick application shape (1–8), not a framework
+npx ark-check --doctor                          # includes "New here?" when coverage is low or config is fresh
+npx ark-check --report beginner.html --beginner # simplified HTML for enthusiasts
+npx ark-check --watch                           # debounced re-check when governed files change
+```
+
+`ark init --archetype <id>` maps playbook ids to named presets (`hexagonal`, `layered`,
+`feature-sliced`, `monorepo`). With `--yes` and no archetype, Ark auto-selects from
+`--recommend` scoring.
+
+`ark-check --json` violations include enthusiast-oriented fields when present:
+`fixClass` (e.g. `port-inversion`, `file-move`), `effort` (`small` | `medium`), and
+`enthusiastHint` (plain English). `--doctor --json` exposes `doctor.newHere` with
+`recommendCommand` and `initCommand` when the nudge applies.
+
+### MCP `ark_recommend` and `/ark-architect` (Phase C)
+
+The `ark-mcp` server exposes **`ark_recommend`** — same JSON as
+`ark-check --recommend --json`. Call it (or invoke `/ark-architect`) before
+generating project structure on greenfield or early-adoption repos.
+
+`ark-mcp --session-context` appends a one-line enthusiast hint when governed
+coverage is low or the config is fresh:
+
+```
+New to Ark? Run /ark-architect or: ark-check --recommend
+```
+
+The `/ark-architect` skill ships in `templates/skills/ark-architect.md` and installs
+via `ark-check --install-agent-gates`.
+
+### Adoption plan artifact (Phase E)
+
+```bash
+npx ark-check --recommend --write-plan
+# writes ark-adoption-plan.json (optional commit; never weakens the gate)
+```
+
+Includes `archetype`, `preset`, `adoptInOrder`, `galleryStarter`, and suggested
+`policyPack` (`enthusiast-<preset>`).
+
+### Enthusiast policy packs (Phase E)
+
+```bash
+npx ark-check --list-policy-packs
+npx ark-check --apply-policy-pack enthusiast-hexagonal   # or layered, feature-sliced, monorepo
+```
+
+Packs delegate to the same preset factories as `ark init --preset`; layer
+descriptions are shorter enthusiast copy. Metadata: `templates/policy-packs/`.
+
+### Enthusiast documentation track
+
+Diátaxis pages under [docs/enthusiast/](enthusiast/README.md) — tutorial, how-to,
+reference, and explanation for the full path (recommend → init → gallery → gates → verify).
+
+### Agent workflow (before codegen)
+
+1. Run `ark-check --recommend --json` or MCP `ark_recommend`.
+2. Read `archetype`, `preset`, and `adoptInOrder.phase1` — scaffold only those directories first.
+3. Run `ark init --archetype <id> --yes`, `--apply-policy-pack enthusiast-<preset>`, or `ark init --preset <preset> --yes` when no `ark.config.json` exists.
+4. Optional: `--write-plan` for `ark-adoption-plan.json`; copy a gallery starter from `examples/README.md`.
+5. Use `/ark-place` or `ark_place` for individual files after the contract exists.
+6. Verify with `ark-check --root . --config ark.config.json --strict-config`.
+
+Do not invent layers outside the 11-layer profile or named presets. Unrecognized
+directories (`utils/`, `lib/`) must be classified explicitly via `/ark-contract`.
+
+**Brownfield** (existing messy repo): use `/ark-adopt` and [brownfield-adoption.md](brownfield-adoption.md), not `/ark-architect`.
+
 ## Contract Discovery
 
 Prefer `createStrictArkKernel()` for strict projects. It wires the registry, graph,
@@ -304,6 +416,8 @@ npx ark-mcp --root . --config ark.config.json [--manifest ark.manifest.json]
 - **Resource `ark://manifest`** — contract discovery. Serve your exported
   `ark.manifest().toJSON()` via `--manifest`, or omit it to get the 11-layer profile
   (layers + rules) as the default contract.
+- **Tool `ark_recommend`** — no args. Returns the deterministic application-shape plan
+  (archetype, preset, phased adoption, analogy). Same as `ark-check --recommend --json`.
 - **Tool `validate_code`** — args `{ source, layer?, filePath? }`. Runs `createAICodeGate`
   against the profile and (when a manifest is provided) the registered intent allowlist.
   Returns `{ valid, violations, layer }`; `isError` is `true` when invalid. If `layer` is

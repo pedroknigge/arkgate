@@ -1,0 +1,18 @@
+{
+  "id": "enthusiast-layered",
+  "preset": "layered",
+  "variant": "enthusiast",
+  "label": "Layered — enthusiast",
+  "summary": "Classic top-down layers: presentation → application → domain, with persistence at the bottom.",
+  "phases": {
+    "1": ["PresentationAdapters", "ApplicationOrchestration", "DomainModel", "PersistenceAdapters"],
+    "2": ["IntegrationAdapters"],
+    "3": ["BackgroundJobsScheduling"]
+  },
+  "layerDescriptions": {
+    "PresentationAdapters": "What users see and click — pages, components, HTTP handlers.",
+    "ApplicationOrchestration": "Business services and use-case coordination.",
+    "DomainModel": "Core rules and types — no I/O.",
+    "PersistenceAdapters": "Data access and infrastructure implementations."
+  }
+}

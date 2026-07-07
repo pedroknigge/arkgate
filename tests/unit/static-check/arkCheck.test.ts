@@ -741,9 +741,11 @@ describe('ark init', () => {
   });
 
   it('postinstall prints the init command and the gate/skill refresh hint', () => {
+    const npmRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-postinstall-npm-'));
     const output = execFileSync('node', [path.resolve('bin/ark-postinstall.mjs')], {
       encoding: 'utf8',
       stdio: 'pipe',
+      env: { ...process.env, INIT_CWD: npmRoot },
     });
 
     expect(output).toContain('Ark installed, but not enforced yet.');

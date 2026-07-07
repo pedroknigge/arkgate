@@ -17,6 +17,7 @@ coverage/
 
 # Ark agent-eval generated report
 eval/report.json
+eval/comparative-report.json
 
 # internal product planning
 docs/internal-roadmap.md

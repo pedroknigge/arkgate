@@ -1,0 +1,327 @@
+{
+  "version": "1",
+  "locale": "en",
+  "localeNote": "Canonical user-facing copy is English. Future translations must not alter archetype ids, preset names, or layer names.",
+  "frontendSurfacePresetRule": "feature-sliced when src/app, src/pages, src/features, src/entities, or src/shared exists; otherwise layered",
+  "archetypes": {
+    "crud-product": {
+      "label": "Product with UI and stored data",
+      "preset": "hexagonal",
+      "phases": {
+        "1": [
+          "DomainModel",
+          "ApplicationOrchestration",
+          "PresentationAdapters",
+          "PersistenceAdapters"
+        ],
+        "2": ["IntegrationAdapters"],
+        "3": ["WorkflowSagaEngine", "BackgroundJobsScheduling"]
+      },
+      "analogy": "A restaurant: recipes (domain), kitchen coordinator (application), waiters (presentation), suppliers (adapters).",
+      "antiPatterns": [
+        "Database client or ORM imports inside domain/",
+        "HTTP or fetch calls inside business rules"
+      ],
+      "books": [
+        {
+          "title": "Clean Architecture",
+          "author": "Martin",
+          "for": "why business rules stay independent of UI and database"
+        }
+      ],
+      "detectionSignals": {
+        "ui": 5,
+        "persistence": 5,
+        "fullStackProduct": 4,
+        "domain": 1
+      },
+      "negativeSignals": {
+        "workspaces": 4,
+        "cli": 5,
+        "jobsOnly": 3,
+        "tinyTree": 2
+      }
+    },
+    "api-backend": {
+      "label": "API server without UI in this repository",
+      "preset": "hexagonal",
+      "phases": {
+        "1": [
+          "DomainModel",
+          "ApplicationOrchestration",
+          "PresentationAdapters",
+          "PersistenceAdapters"
+        ],
+        "2": ["IntegrationAdapters"],
+        "3": ["SecurityAuditObservability"]
+      },
+      "analogy": "A kitchen that only serves through a window: rules and coordination inside, orders in and out through adapters.",
+      "antiPatterns": [
+        "SQL or ORM calls mixed into route handlers without a repository layer",
+        "Domain rules that know HTTP status codes"
+      ],
+      "books": [
+        {
+          "title": "Implementing Domain-Driven Design",
+          "author": "Vernon",
+          "for": "application services and repository boundaries"
+        }
+      ],
+      "detectionSignals": {
+        "apiSurface": 6,
+        "persistence": 4,
+        "application": 2
+      },
+      "negativeSignals": {
+        "uiHeavy": 5,
+        "workspaces": 3,
+        "cli": 5,
+        "tinyTree": 2
+      }
+    },
+    "frontend-surface": {
+      "label": "UI-focused repository; backend lives elsewhere or is thin",
+      "preset": "layered",
+      "presetAlternatives": {
+        "feature-sliced": {
+          "whenSignal": "featureSlicedLayout"
+        }
+      },
+      "phases": {
+        "1": ["PresentationAdapters", "ApplicationOrchestration"],
+        "2": ["DomainModel"],
+        "3": ["IntegrationAdapters"]
+      },
+      "analogy": "A storefront display: what users see and click; inventory and payments happen behind the counter elsewhere.",
+      "antiPatterns": [
+        "Embedding database access in UI components",
+        "Business rules scattered across page files"
+      ],
+      "books": [
+        {
+          "title": "Feature-Sliced Design",
+          "author": "FSD community",
+          "for": "scaling a large UI codebase by feature slices"
+        }
+      ],
+      "detectionSignals": {
+        "ui": 6,
+        "featureSlicedLayout": 4
+      },
+      "negativeSignals": {
+        "persistence": 5,
+        "apiSurfaceOnly": 3,
+        "workspaces": 2,
+        "cli": 5,
+        "tinyTree": 1
+      }
+    },
+    "library-sdk": {
+      "label": "Publishable package others import",
+      "preset": "layered",
+      "phases": {
+        "1": ["DomainModel", "ApplicationOrchestration"],
+        "2": ["PersistenceAdapters"],
+        "3": ["IntegrationAdapters"]
+      },
+      "analogy": "A toolbox: clear public tools on top, internal parts hidden, no storefront of its own.",
+      "antiPatterns": [
+        "Leaking framework-specific types as the only public API",
+        "Hidden global state initialized on import"
+      ],
+      "books": [
+        {
+          "title": "Clean Architecture",
+          "author": "Martin",
+          "for": "stable boundaries for reusable modules"
+        }
+      ],
+      "detectionSignals": {
+        "library": 8,
+        "domain": 1
+      },
+      "negativeSignals": {
+        "ui": 4,
+        "cli": 3,
+        "workspaces": 3,
+        "persistenceHeavy": 2
+      }
+    },
+    "cli-utility": {
+      "label": "Command-line tool",
+      "preset": "layered",
+      "phases": {
+        "1": ["ApplicationOrchestration"],
+        "2": ["PersistenceAdapters"],
+        "3": ["IntegrationAdapters"]
+      },
+      "analogy": "A vending machine panel: commands in, results out; storage and network are plug-ins behind the panel.",
+      "antiPatterns": [
+        "Business logic tangled with argv parsing and console output",
+        "Direct filesystem or network calls without a testable core"
+      ],
+      "books": [
+        {
+          "title": "Clean Architecture",
+          "author": "Martin",
+          "for": "separating use cases from delivery mechanisms"
+        }
+      ],
+      "detectionSignals": {
+        "cli": 10
+      },
+      "negativeSignals": {
+        "ui": 4,
+        "workspaces": 3,
+        "libraryOnly": 2
+      }
+    },
+    "worker-pipeline": {
+      "label": "Background jobs and queues without a user-facing UI",
+      "preset": "hexagonal",
+      "phases": {
+        "1": ["ApplicationOrchestration", "PersistenceAdapters", "BackgroundJobsScheduling"],
+        "2": ["IntegrationAdapters"],
+        "3": ["ReportingReadModels"]
+      },
+      "analogy": "A night shift factory line: triggers arrive, work gets done, results stored — no shop floor for customers.",
+      "antiPatterns": [
+        "Job handlers that duplicate use-case logic from HTTP routes",
+        "Unbounded retries without idempotency at the domain boundary"
+      ],
+      "books": [
+        {
+          "title": "Building Microservices",
+          "author": "Newman",
+          "for": "async processing and integration boundaries"
+        }
+      ],
+      "detectionSignals": {
+        "jobs": 8,
+        "persistence": 2
+      },
+      "negativeSignals": {
+        "uiHeavy": 5,
+        "cli": 3,
+        "workspaces": 2
+      }
+    },
+    "event-coordinator": {
+      "label": "Long-running or multi-step business processes",
+      "preset": "hexagonal",
+      "phases": {
+        "1": ["DomainModel", "ApplicationOrchestration", "WorkflowSagaEngine"],
+        "2": ["IntegrationAdapters", "PersistenceAdapters"],
+        "3": ["ReportingReadModels"]
+      },
+      "analogy": "A wedding planner: many steps, compensations when something fails, state tracked across days.",
+      "antiPatterns": [
+        "Saga logic spread across unrelated HTTP handlers",
+        "Missing compensation when an external step fails"
+      ],
+      "books": [
+        {
+          "title": "Implementing Domain-Driven Design",
+          "author": "Vernon",
+          "for": "sagas and process managers"
+        }
+      ],
+      "detectionSignals": {
+        "workflows": 10,
+        "domain": 2
+      },
+      "negativeSignals": {
+        "cli": 4,
+        "tinyTree": 2,
+        "uiOnly": 3
+      }
+    },
+    "integration-bridge": {
+      "label": "Connects external systems with thin domain logic",
+      "preset": "hexagonal",
+      "phases": {
+        "1": ["IntegrationAdapters", "ApplicationOrchestration"],
+        "2": ["PersistenceAdapters"],
+        "3": ["BackgroundJobsScheduling"]
+      },
+      "analogy": "A translator at a border: messages in, messages out, minimal local rules.",
+      "antiPatterns": [
+        "Copy-paste integration code per webhook instead of shared adapters",
+        "Secrets and env access outside a dedicated config surface"
+      ],
+      "books": [
+        {
+          "title": "Building Microservices",
+          "author": "Newman",
+          "for": "integration patterns and boundaries"
+        }
+      ],
+      "detectionSignals": {
+        "integration": 8,
+        "apiSurface": 2
+      },
+      "negativeSignals": {
+        "uiHeavy": 4,
+        "domainHeavy": 3,
+        "workspaces": 2
+      }
+    },
+    "multi-app-workspace": {
+      "label": "Several deployable units in one repository",
+      "preset": "monorepo",
+      "phases": {
+        "1": ["DomainModel", "ApplicationOrchestration"],
+        "2": ["PresentationAdapters", "PersistenceAdapters"],
+        "3": ["IntegrationAdapters"]
+      },
+      "analogy": "A mall with separate shops sharing a parking lot: each app is a tenant, shared packages are utilities.",
+      "antiPatterns": [
+        "One package importing another app's internal directories",
+        "A single catch-all layer that hides cross-package coupling"
+      ],
+      "books": [
+        {
+          "title": "Monorepo.tools",
+          "author": "community",
+          "for": "workspace layout and dependency boundaries"
+        }
+      ],
+      "detectionSignals": {
+        "workspaces": 10
+      },
+      "negativeSignals": {
+        "cli": 2,
+        "tinyTree": 3
+      }
+    },
+    "prototype-spike": {
+      "label": "Fast experiment or learning project",
+      "preset": "layered",
+      "phases": {
+        "1": ["ApplicationOrchestration", "PersistenceAdapters"],
+        "2": ["DomainModel", "PresentationAdapters"],
+        "3": ["IntegrationAdapters"]
+      },
+      "analogy": "A sketch before the painting: enough structure to learn, expand when the idea stabilizes.",
+      "antiPatterns": [
+        "Adopting every layer on day one before the product shape is known",
+        "Skipping governance entirely because the repo is small"
+      ],
+      "books": [
+        {
+          "title": "Clean Architecture",
+          "author": "Martin",
+          "for": "growing structure as complexity appears"
+        }
+      ],
+      "detectionSignals": {
+        "tinyTree": 8
+      },
+      "negativeSignals": {
+        "workspaces": 5,
+        "workflows": 4,
+        "jobs": 3
+      }
+    }
+  }
+}

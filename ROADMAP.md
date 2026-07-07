@@ -15,6 +15,10 @@ A gate that freezes every violation and reports green, or that silently governs 
 fraction of the tree, looks safe while checking almost nothing — worse than no gate.
 The tool should tell the truth about what it governs and guide the cleanup in order.
 
+A second focus is now explicit: **enthusiast-first onboarding** — users who build with
+AI but are not professional developers need a plain-language path from "what I want to
+build" to the right preset and layers, before the write gate can help them.
+
 Four principles drive this:
 
 - **Honesty over green.** Report the governed fraction, separate real debt from false
@@ -31,87 +35,62 @@ Four principles drive this:
 - **Suggestions come from Ark's own canonical sources.** Layer proposals are harvested
   from the 11-layer profile and the named presets — never an ad-hoc heuristic. A
   directory Ark does not recognize is flagged for the user to classify, never guessed.
+  **Architecture archetypes** (application shape, not vendor stack) are curated in
+  `templates/architecture-playbook.json` and map to those same presets and layers.
+
+Full implementation plan: [docs/architect-onboarding-plan.md](docs/architect-onboarding-plan.md).
+Enthusiast doc track: [docs/enthusiast/README.md](docs/enthusiast/README.md).
 
 ## Recently shipped
 
-- **Package-manager-aware commands.** Every command Ark emits — the AGENTS.md
-  contract, `.mcp.json`, the Claude/Codex hooks, the `check:architecture` script, the
-  postinstall hints — follows the project's package manager (`pnpm exec` / `yarn` /
-  `npx`), not just the CI workflow.
-- **`init` proposes, coverage stops lying.** `--init` proposes a canonical layer for
-  every ungoverned directory (from the 11 layers + presets; unrecognized dirs flagged).
-  `--coverage` leads with `Governed: N%`, warns loudly when Ark governs a minority, and
-  groups ungoverned directories with proposals.
-- **Violation diagnosis.** `ark-check` groups violations by edge and target subtree,
-  ranked, with a concentration verdict. `--update-baseline` refuses a lopsided freeze
-  unless `--force`, pointing at the facade fix instead of the baseline.
-- **Type-only vs value violations.** Each import violation is tagged `typeOnly`; the
-  summary splits real runtime coupling (fix first) from type placement (moves with the
-  type).
-- **Facade splits are order-independent.** A file resolves to the most specific matching
-  layer pattern, so a public-surface layer wins over a catch-all regardless of layer
-  order.
-- **Skills reoriented to organize.** `/ark-adopt`, `/ark-coverage`, `/ark-fix`,
-  `/ark-contract`, and `/ark-explain` teach the border principle, the facade split, and
-  the type-only fix pattern, and consume the new diagnosis output.
-- **The write gate honors the contract over its infra heuristic.** A resolvable cross-layer
-  import is judged by the config's layer rules — like `ark-check` — so both gates agree on a
-  governed edge, and `mayImportInfrastructure` is no longer needed for declared data layers.
-- **`--install-agent-gates --migrate-commands`.** Rewrites only the command runner in existing
-  gate files to match the package manager, preserving customizations — for repos that adopted
-  before the emitted commands became package-manager-aware.
-- **`ark-check --doctor`.** One consolidated health view — coverage, violations, gates, skills,
-  baseline, command runners — each with its fix, plus a ranked "Top actions" list.
-- **Brownfield burn-down playbook** ([docs/brownfield-adoption.md](docs/brownfield-adoption.md))
-  plus an `/ark-fix` fix class for relocating raw infrastructure access (SQL/DB in a route)
-  verbatim into a repository/adapter.
+### Core gates and brownfield
+
+- **Package-manager-aware commands.** Every command Ark emits follows the project's
+  package manager (`pnpm exec` / `yarn` / `npx`).
+- **`init` proposes, coverage stops lying.** `--init` and `--coverage` with governed %
+  and ungoverned directory proposals.
+- **Violation diagnosis**, type-only tagging, facade splits, write-gate contract parity.
+- **`ark-check --doctor`**, brownfield burn-down playbook, `/ark-fix` infra relocation.
+
+### Architect onboarding (Phases A–E)
+
+- **`templates/architecture-playbook.json`** — ten tool-agnostic archetypes.
+- **`ark-check --recommend`** (+ `--json`, **`--write-plan`** → `ark-adoption-plan.json`).
+- **`ark init` enthusiast wizard** and **`ark init --archetype <id> --yes`**.
+- **MCP `ark_recommend`**, skill **`/ark-architect`**, session-context enthusiast hint.
+- **Terminal UX**: doctor "New here?", fix-class / `enthusiastHint`, `--watch`, `--report --beginner`.
+- **Example gallery**: `examples/*-starter/` (four archetypes) + comparative eval (30 prompts).
+- **Public demos**: write-gate self-correction, brownfield baseline, architect → `ark_place` funnel.
+- **Enthusiast policy packs**: `enthusiast-hexagonal|layered|feature-sliced|monorepo` via
+  `--list-policy-packs` / `--apply-policy-pack`.
+- **Diátaxis enthusiast track**: `docs/enthusiast/` (tutorial, how-to, reference, explanation).
 
 ## Now
 
 - **Trust hardening**: npm provenance, signed release tags, `SECURITY.md`, CI security
   scanning, clearer release verification.
-- **Public demos**: agent self-correction, brownfield baseline adoption, and `ark_place`
-  guided feature generation.
 - **ESLint parity**: keep the editor plugin aligned with `ark-check` so violations surface as
   you type, with CI as the authoritative gate.
 
-## Next
-
-- **Fix-class hinting.** Beyond value-vs-type-only, flag "big rock" data-layer migrations
-  (raw SQL → repositories, verified against real data) vs cheap mechanical fixes in the
-  burn-down.
-- **Comparative evals**: agent-generated changes with and without Ark on a governed repo,
-  tracking violations and time-to-fix.
-- **Example gallery**: clonable examples for NestJS, monorepos, and Next.js/API apps (the
-  brownfield facade split is already written up in the playbook above).
-- **Watch mode**: `ark-check --watch` for editor-adjacent feedback without ESLint.
-
 ## Later
 
+- **Deployed docs site** (VitePress / GitHub Pages) — content already lives in-repo under `docs/`.
+- **Optional locale packs** for wizard and `/ark-architect` (English remains canonical).
 - **Runtime package split**: decide whether the optional runtime kernel becomes a separate
   package once the static and agent gate are more mature.
-- **Docs site**: move long-form documentation out of the README into a focused docs site.
 - **Framework adapters**: only when examples justify them; Ark stays a governance tool, not
   an app framework.
-- **Team policy packs**: proven starter configs for hexagonal, layered, feature-sliced, and
-  monorepo projects — plus a "framework border" pack encoding the surface/internals split.
 
 ## Not Planned
 
 - Reimplementing workflow orchestrators such as Temporal or Restate.
 - Adding runtime dependencies to the core static gates.
 - Becoming a web framework, job runner, ORM abstraction, or deployment platform.
-- Ad-hoc layer heuristics: suggestions must trace to the canonical profile/presets.
+- Ad-hoc layer heuristics: suggestions must trace to the canonical profile/presets or the
+  architecture playbook.
 
-## Principles
+## How to contribute
 
-- One contract drives write-time, merge-time, and optional runtime enforcement — and the
-  contract is authoritative; a gate should not silently contradict it.
-- Honesty over green: never report a passing check that ignores most of the code or freezes
-  false positives as debt.
-- Protect the border around a framework, not its internals.
-- Diagnose and classify before freezing; freeze only genuine debt.
-- CI remains the authoritative static check.
-- Agent tooling should help generated code self-correct — and help a team organize a messy
-  codebase — before review.
-- Runtime features stay optional and clearly documented as advanced usage.
+Issues and PRs welcome on [GitHub](https://github.com/pedroknigge/ark-runtime-kernel).
+For enthusiast onboarding feedback, reference the archetype id and `ark-check --recommend --json`
+output when reporting misfires.

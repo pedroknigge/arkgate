@@ -53,6 +53,14 @@ not a stalling question.
   `src/domain` because it's a business rule that shouldn't know about the
   database") — assume the user may be new to layered architecture.
 
+## Related onboarding
+
+- Run **after** shape adoption: `/ark-architect` or `ark init --archetype` on greenfield;
+  `/ark-adopt` on brownfield.
+- `ark-check --recommend` / MCP `ark_recommend` picks phase-1 dirs; gallery starters in
+  `examples/*-starter/` show correct placement per archetype.
+- Demo funnel: `marketing/demo-architect-place-funnel.md`.
+
 ## Verify and report
 
 If you created files, run `ark-check --root . --config ark.config.json

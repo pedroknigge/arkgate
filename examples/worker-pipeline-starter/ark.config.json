@@ -1,0 +1,44 @@
+{
+  "include": ["src"],
+  "layers": [
+    {
+      "name": "DomainModel",
+      "description": "Ports and job payload types shared by application and adapters.",
+      "patterns": ["src/**/domain/**"],
+      "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"],
+      "optional": true
+    },
+    {
+      "name": "ApplicationOrchestration",
+      "description": "Use cases and job handlers that coordinate work through ports.",
+      "patterns": ["src/**/application/**"],
+      "optional": true
+    },
+    {
+      "name": "PersistenceAdapters",
+      "description": "Stores job state, outbox rows, and external I/O.",
+      "patterns": [
+        "src/**/adapters/**",
+        "src/**/persistence/**",
+        "src/**/infrastructure/**"
+      ],
+      "optional": true
+    },
+    {
+      "name": "BackgroundJobsScheduling",
+      "description": "Cron entries, queue consumers, and schedulers.",
+      "patterns": ["src/**/jobs/**", "src/**/workers/**", "src/**/schedules/**"],
+      "optional": true
+    }
+  ],
+  "rules": [
+    { "from": "DomainModel", "to": "ApplicationOrchestration", "allowed": false },
+    { "from": "DomainModel", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "DomainModel", "to": "BackgroundJobsScheduling", "allowed": false },
+    { "from": "ApplicationOrchestration", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "ApplicationOrchestration", "to": "BackgroundJobsScheduling", "allowed": false },
+    { "from": "BackgroundJobsScheduling", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "PersistenceAdapters", "to": "ApplicationOrchestration", "allowed": false },
+    { "from": "PersistenceAdapters", "to": "BackgroundJobsScheduling", "allowed": false }
+  ]
+}

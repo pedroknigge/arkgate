@@ -1,0 +1,50 @@
+{
+  "include": ["apps", "packages"],
+  "layers": [
+    {
+      "name": "DomainModel",
+      "description": "Pure business rules and entities, in any package.",
+      "patterns": ["**/domain/**", "**/entities/**"],
+      "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"],
+      "optional": true
+    },
+    {
+      "name": "ApplicationOrchestration",
+      "description": "Use cases and services that coordinate the domain through ports.",
+      "patterns": ["**/application/**", "**/use-cases/**", "**/services/**"],
+      "optional": true
+    },
+    {
+      "name": "PresentationAdapters",
+      "description": "UI and HTTP entrypoints in deployable apps.",
+      "patterns": [
+        "**/app/**",
+        "**/pages/**",
+        "**/components/**",
+        "**/controllers/**",
+        "**/http/**",
+        "**/routes/**"
+      ],
+      "optional": true
+    },
+    {
+      "name": "PersistenceAdapters",
+      "description": "Database and infrastructure implementations.",
+      "patterns": [
+        "**/infrastructure/**",
+        "**/adapters/**",
+        "**/persistence/**",
+        "**/repositories/**"
+      ],
+      "optional": true
+    }
+  ],
+  "rules": [
+    { "from": "DomainModel", "to": "ApplicationOrchestration", "allowed": false },
+    { "from": "DomainModel", "to": "PresentationAdapters", "allowed": false },
+    { "from": "DomainModel", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "ApplicationOrchestration", "to": "PresentationAdapters", "allowed": false },
+    { "from": "PresentationAdapters", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "PersistenceAdapters", "to": "ApplicationOrchestration", "allowed": false }
+  ]
+}

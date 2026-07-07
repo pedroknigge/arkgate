@@ -1,0 +1,8 @@
+{
+  "include": ["src"],
+  "layers": [
+    { "name": "PresentationAdapters", "patterns": ["src/**/presentation/**"], "optional": true },
+    { "name": "DomainModel", "patterns": ["src/**/domain/**"], "optional": true }
+  ],
+  "rules": [{ "from": "PresentationAdapters", "to": "DomainModel", "allowed": false }]
+}

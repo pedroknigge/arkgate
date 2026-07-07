@@ -87,6 +87,13 @@ duplicates the framework's own wiring and fights it.
 - Don't overwrite customized files (`--force`) unless asked. Don't adopt the runtime
   kernel here (that's `/ark-runtime`) — a repo with its own DI framework should keep it.
 
+## Related onboarding
+
+- **This skill is for brownfield** — existing messy repos. Do **not** use `/ark-architect` here.
+- Greenfield users: `/ark-architect`, `ark-check --recommend`, gallery starters (`examples/README.md`).
+- Demo: `docs/demos/02-brownfield-baseline-adoption.md`. Playbook: `docs/brownfield-adoption.md`.
+- Violation JSON may include `fixClass`, `effort`, `enthusiastHint` for burn-down ordering.
+
 ## Verify and report
 
 Finish with `ark-check --root . --config ark.config.json --strict-config

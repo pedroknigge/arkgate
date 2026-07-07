@@ -1,0 +1,1 @@
+export type { Team } from '../domain/team.js';

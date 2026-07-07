@@ -50,6 +50,11 @@ kernel, one feature at a time.
   saved in the same transaction as your data, then published — so you never
   publish something that didn't commit").
 
+## Related onboarding
+
+- Adopt static gates and application shape **first** (`/ark-architect`, `/ark-adopt`).
+- Runtime kernel is optional and separate from enthusiast onboarding.
+
 ## Verify and report
 
 Run the project's tests plus `ark-check --root . --config ark.config.json

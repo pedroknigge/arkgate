@@ -45,6 +45,35 @@ Config via env:
 
 Writes `eval/report.json`; exits non-zero if any case is not `PASS`.
 
+## Comparative eval (with-Ark vs without-Ark)
+
+Measures enthusiast prompts under two conditions: codegen **without** layer gates vs
+**with** Ark (`ark.config.json`, write-gate, `/ark-architect`). Default CI uses
+**static oracle mode** — deterministic, no live agent:
+
+```bash
+node eval/comparative-run.mjs
+# -> eval/comparative-report.json (30 prompts)
+```
+
+- Prompt bank: `eval/comparative/prompts.json`
+- Fixture pairs: `eval/comparative/fixtures/<id>/{with-ark,without-ark}/`
+- Five fixture-backed prompts are verified with real `ark-check` runs; the rest ship
+  curated oracle metrics for reporting.
+
+Optional live-agent comparative runs: nightly workflow `.github/workflows/eval-nightly.yml`
+(best-effort; not gating default `npm test`).
+
+### Enthusiast cases with `skipHarness`
+
+Cases such as `enthusiast-greenfield-crud` document architect onboarding funnels but
+skip the live agent harness (`skipHarness: true`). `eval/run.mjs` reports `SKIPPED`, not
+`ERROR`:
+
+```bash
+ARK_EVAL_CASE=enthusiast-greenfield-crud node eval/run.mjs
+```
+
 ## Adding a case
 
 A case is a directory under `cases/` containing a violating mini-project plus a

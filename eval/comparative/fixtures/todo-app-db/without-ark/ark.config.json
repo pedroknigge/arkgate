@@ -1,0 +1,8 @@
+{
+  "include": ["src"],
+  "layers": [
+    { "name": "DomainModel", "patterns": ["src/**/domain/**"], "optional": true },
+    { "name": "PersistenceAdapters", "patterns": ["src/**/adapters/**"], "optional": true }
+  ],
+  "rules": [{ "from": "DomainModel", "to": "PersistenceAdapters", "allowed": false }]
+}

@@ -9,6 +9,14 @@ You are auditing this project's use of the `ark-runtime-kernel` package. Work
 autonomously: read everything from the repo, never ask questions you can answer
 from files, and end with a ranked report.
 
+## Related onboarding
+
+- **Greenfield** (new or empty repo): low `governed.percent` → suggest `/ark-architect` or
+  `ark-check --recommend`; `ark-check --doctor` includes a "New here?" nudge with
+  `recommendCommand` / `initCommand`. Enthusiast track: `docs/enthusiast/how-to-agent-gates.md`.
+- **Brownfield** (existing messy repo): use `/ark-adopt` and `docs/brownfield-adoption.md` —
+  diagnose → classify → freeze only real debt. Do **not** send brownfield users to `/ark-architect`.
+
 ## Operating rules
 
 - Gather inputs yourself: `ark.config.json`, `package.json`, `.ark-baseline.json`,

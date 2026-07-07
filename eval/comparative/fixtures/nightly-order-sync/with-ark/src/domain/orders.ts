@@ -1,0 +1,1 @@
+export type OrderStore = { pull(): Promise<number> };

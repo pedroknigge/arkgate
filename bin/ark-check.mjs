@@ -1,9 +1,13 @@
 #!/usr/bin/env node
+import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+const __arkCheckCli = fileURLToPath(import.meta.url);
+
 import {
   DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
   DEFAULT_INTENT_PREFIXES,
@@ -11,15 +15,23 @@ import {
   DEFAULT_RULES,
   arkCommand,
   collectForbiddenGlobalUses,
+  ADOPTION_PLAN_FILENAME,
+  buildArchitectureRecommendation,
   createElevenLayerConfig,
+  enrichViolationWithFixClass,
+  listPolicyPackIds,
+  loadPolicyPackMeta,
+  writeAdoptionPlan,
   execCommandParts,
   execRunner,
+  formatArchitectureRecommendationHuman,
   globToRegExp,
   installDevHint,
   layerForFile,
   looksLikeIntent,
   patternSpecificity,
   resolveIntentLayer,
+  shouldShowNewHereNudge,
 } from './ark-shared.mjs';
 
 function parseArgs(argv) {
@@ -43,6 +55,12 @@ function parseArgs(argv) {
     coverage: false,
     migrateCommands: false,
     doctor: false,
+    recommend: false,
+    writePlan: false,
+    listPolicyPacks: false,
+    applyPolicyPack: undefined,
+    watch: false,
+    beginner: false,
   };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -70,6 +88,12 @@ function parseArgs(argv) {
     else if (arg === '--skills-only') args.skillsOnly = true;
     else if (arg === '--coverage') args.coverage = true;
     else if (arg === '--doctor') args.doctor = true;
+    else if (arg === '--recommend') args.recommend = true;
+    else if (arg === '--write-plan') args.writePlan = true;
+    else if (arg === '--list-policy-packs') args.listPolicyPacks = true;
+    else if (arg === '--apply-policy-pack') args.applyPolicyPack = argv[++i];
+    else if (arg === '--watch') args.watch = true;
+    else if (arg === '--beginner') args.beginner = true;
     else if (arg === '--codex-home') args.codexHome = true;
     else if (arg === '--migrate-commands') args.migrateCommands = true;
     else if (arg === '--no-cache') args.noCache = true;
@@ -97,6 +121,11 @@ function usage() {
   return [
     'Usage: ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--require-gates] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
     '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
+    '       ark-check --recommend [--json] [--write-plan]  application-shape plan; --write-plan emits ark-adoption-plan.json',
+    '       ark-check --list-policy-packs            enthusiast preset configs (hexagonal, layered, feature-sliced, monorepo)',
+    '       ark-check --apply-policy-pack <id> [--force]  write ark.config.json from templates/policy-packs/ (uses preset factory)',
+    '       ark-check --watch                      re-run the check when governed files change (debounced)',
+    '       ark-check --report [file.html] [--beginner]  HTML report; --beginner simplifies onboarding view',
     '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo] [--force]',
     '       ark-check --install-agent-gates [--tools claude,cursor,codex] [--skills-only] [--codex-home] [--force]',
     '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
@@ -639,6 +668,96 @@ function printInitNextSteps(root) {
   if (!hasCheckArchitectureScript(root)) {
     console.log('  3. Add the package.json alias if you want `run check:architecture`:');
     console.log(`     ${checkArchitectureScriptSnippet(root)}`);
+  }
+}
+
+function buildConfigFromPolicyPack(packId, root) {
+  const pack = loadPolicyPackMeta(packId);
+  const factory = ARCHITECTURE_PRESETS[pack.preset];
+  if (!factory) {
+    throw new Error(
+      `Policy pack "${packId}" references unknown preset "${pack.preset}".`
+    );
+  }
+  const workspaces = pack.preset === 'monorepo' ? detectWorkspaces(root) : [];
+  const config = factory(workspaces);
+  if (pack.layerDescriptions) {
+    for (const layer of config.layers) {
+      const enthusiast = pack.layerDescriptions[layer.name];
+      if (enthusiast) layer.description = enthusiast;
+    }
+  }
+  return { pack, config };
+}
+
+function runListPolicyPacks(args) {
+  const ids = listPolicyPackIds();
+  if (args.json) {
+    const packs = ids.map((id) => {
+      const meta = loadPolicyPackMeta(id);
+      return {
+        id: meta.id,
+        preset: meta.preset,
+        variant: meta.variant,
+        label: meta.label,
+        summary: meta.summary,
+        phases: meta.phases,
+      };
+    });
+    console.log(JSON.stringify({ ok: true, packs }, null, 2));
+    return;
+  }
+  console.log('Enthusiast policy packs (apply with --apply-policy-pack <id>):');
+  for (const id of ids) {
+    const meta = loadPolicyPackMeta(id);
+    console.log(`  ${meta.id} — ${meta.label} (preset: ${meta.preset})`);
+    if (meta.summary) console.log(`    ${meta.summary}`);
+  }
+}
+
+function runApplyPolicyPack(args) {
+  const configPath = path.isAbsolute(args.config)
+    ? args.config
+    : path.join(args.root, args.config);
+
+  if (fs.existsSync(configPath) && !args.force) {
+    console.error(
+      `${configPath} already exists. Re-run with --force to overwrite, or use /ark-contract to evolve it.`
+    );
+    process.exitCode = 2;
+    return;
+  }
+
+  try {
+    const { pack, config } = buildConfigFromPolicyPack(args.applyPolicyPack, args.root);
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    if (args.json) {
+      console.log(
+        JSON.stringify(
+          {
+            ok: true,
+            pack: pack.id,
+            preset: pack.preset,
+            configPath,
+            phases: pack.phases,
+          },
+          null,
+          2
+        )
+      );
+    } else {
+      console.log(`Wrote ${configPath} (${pack.label})`);
+      console.log(`Preset: ${pack.preset}. Phase 1: ${(pack.phases?.['1'] ?? []).join(', ')}`);
+      console.log(`Verify: ${arkCommand(args.root, 'ark-check', '--root . --config ark.config.json --strict-config')}`);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (args.json) {
+      console.log(JSON.stringify({ ok: false, error: message }, null, 2));
+    } else {
+      console.error(message);
+    }
+    process.exitCode = 2;
   }
 }
 
@@ -2474,6 +2593,82 @@ function htmlEscape(value) {
     .replace(/"/g, '&quot;');
 }
 
+// Simplified onboarding report: compact diagram, placement table, short violation list.
+function renderBeginnerHtmlReport({ root, config, violations, ok, version, configPath, generatedAt }) {
+  const layers = Array.isArray(config.layers) ? config.layers : [];
+  const esc = htmlEscape;
+  const project = (() => {
+    try {
+      return readJson(path.join(root, 'package.json')).name || path.basename(root);
+    } catch {
+      return path.basename(root);
+    }
+  })();
+  const status = ok ? 'PASS' : 'FAIL';
+  const phase1 = layers.slice(0, 4);
+  const diagram = phase1
+    .map((layer, index) => `${index + 1}. ${layer.name}`)
+    .join('  →  ') || 'Add layers in ark.config.json';
+
+  const placementRows = layers
+    .map((layer) => {
+      const purpose = layer.description || 'See ark.config.json';
+      const folders = (layer.patterns || []).join(', ') || '—';
+      return `<tr><td><strong>${esc(layer.name)}</strong></td><td>${esc(purpose)}</td><td><code>${esc(folders)}</code></td></tr>`;
+    })
+    .join('\n');
+
+  const violationRows = violations.length
+    ? violations
+        .slice(0, 12)
+        .map((v) => {
+          const enriched = enrichViolationWithFixClass(v);
+          return `<li><code>${esc(v.file)}:${v.line}</code> — ${esc(enriched.enthusiastHint ?? v.message)}</li>`;
+        })
+        .join('\n')
+    : '<li class="dim">No active violations — architecture matches the contract.</li>';
+
+  const meta = [version ? `ark-check v${esc(version)}` : '', generatedAt ? esc(generatedAt) : '']
+    .filter(Boolean)
+    .join(' · ');
+
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ark beginner guide — ${esc(project)}</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 2rem; line-height: 1.5; max-width: 720px; }
+  h1 { font-size: 1.4rem; }
+  .badge { padding: .2em .6em; border-radius: 999px; font-weight: 700; font-size: .85rem; }
+  .PASS { background: #dcfce7; color: #166534; }
+  .FAIL { background: #fee2e2; color: #991b1b; }
+  .diagram { background: #f4f4f5; padding: 1rem; border-radius: 8px; font-family: monospace; margin: 1rem 0; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { text-align: left; padding: .5rem; border-bottom: 1px solid #e4e4e7; vertical-align: top; }
+  th { font-size: .75rem; text-transform: uppercase; color: #71717a; }
+  ul { padding-left: 1.2rem; }
+  .dim { color: #71717a; }
+  footer { margin-top: 2rem; font-size: .85rem; color: #71717a; }
+</style></head>
+<body>
+  <h1>${esc(project)} <span class="badge ${status}">${status}</span></h1>
+  <p class="dim">Beginner architecture guide · ${meta}</p>
+  <h2>How layers flow (inner → outer)</h2>
+  <div class="diagram">${esc(diagram)}</div>
+  <p>Business rules live in inner layers; UI and databases live in outer adapter layers. Inner code must not import outer code.</p>
+  <h2>Where code goes</h2>
+  <table>
+    <tr><th>Layer</th><th>Purpose</th><th>Typical folders</th></tr>
+    ${placementRows || '<tr><td colspan="3">No layers configured.</td></tr>'}
+  </table>
+  <h2>What to fix first</h2>
+  <ul>${violationRows}</ul>
+  <h2>Next steps</h2>
+  <p><code>${arkCheckCommand(root)}</code></p>
+  <p><code>${arkCommand(root, 'ark-check', '--recommend')}</code></p>
+  <footer>Generated by ark-check --report --beginner. Config: ${esc(configPath)}</footer>
+</body></html>`;
+}
+
 // Renders a self-contained HTML architecture report: the layer map, the
 // who-may-import-whom matrix, current violations with fix hints, and which
 // gates are live. No external assets (CSP-safe, works offline). This is the
@@ -2852,9 +3047,20 @@ function runCoverage(root, config, files, rules, asJson) {
 // --doctor: one consolidated health view — coverage, violations, gates, skills, baseline,
 // and command runners — each with the exact command to fix it. Folds the data the other
 // modes already produce so a team sees "what state is my Ark adoption in?" at a glance.
-function runDoctor(root, config, files, rules, violations, asJson) {
+function runDoctor(root, config, files, rules, violations, asJson, options = {}) {
   const cov = computeCoverage(root, config, files, rules);
   const summary = summarizeViolations(violations);
+  const configPath = options.configPath ?? path.join(root, 'ark.config.json');
+  const configMissing = options.configMissing ?? !fs.existsSync(configPath);
+  const showNewHere = shouldShowNewHereNudge(root, configPath, cov.governed.percent, configMissing);
+  let recommendation;
+  if (showNewHere) {
+    try {
+      recommendation = buildArchitectureRecommendation(root);
+    } catch {
+      recommendation = undefined;
+    }
+  }
   const gatesMissing = missingGates(root);
   const skillGaps = detectSkillGaps(root);
   const staleRunners = staleRunnerGateFiles(root);
@@ -2898,6 +3104,18 @@ function runDoctor(root, config, files, rules, violations, asJson) {
             gatesMissing,
             skillGaps,
             staleRunnerFiles: staleRunners,
+            newHere: showNewHere
+              ? {
+                  show: true,
+                  archetype: recommendation?.archetype,
+                  label: recommendation?.label,
+                  preset: recommendation?.preset,
+                  recommendCommand: arkCommand(root, 'ark-check', '--recommend'),
+                  initCommand: recommendation?.archetype
+                    ? arkCommand(root, 'ark', `init --archetype ${recommendation.archetype} --yes`)
+                    : undefined,
+                }
+              : { show: false },
           },
         },
         null,
@@ -2926,6 +3144,21 @@ function runDoctor(root, config, files, rules, violations, asJson) {
   if (cov.emptyLayers.length > 0) line(warn, `Empty layers (pattern matches nothing): ${cov.emptyLayers.join(', ')}`);
   if (cov.layersWithoutRules.length > 0) line(warn, `Layers with no rule edge: ${cov.layersWithoutRules.join(', ')}`);
   if (cov.suggestions.length === 0 && cov.emptyLayers.length === 0) line(ok, 'Every layer classifies files; no empty layers');
+
+  if (showNewHere) {
+    console.log('');
+    console.log(color.bold('New here?'));
+    if (recommendation) {
+      line(warn, `Suggested application shape: ${recommendation.archetype} — ${recommendation.label} (preset ${recommendation.preset})`);
+    } else {
+      line(warn, 'Low governed coverage or fresh config — pick an application shape before adding code.');
+    }
+    line(ok, `See the plan: ${arkCommand(root, 'ark-check', '--recommend')}`);
+    if (recommendation?.archetype) {
+      line(ok, `Quick setup: ${arkCommand(root, 'ark', `init --archetype ${recommendation.archetype} --yes`)}`);
+    }
+    actions.unshift('run ark-check --recommend or /ark-architect to choose your application shape');
+  }
 
   console.log('');
   console.log(color.bold('Violations'));
@@ -3010,6 +3243,56 @@ async function main() {
       return;
     }
     console.log(JSON.stringify(createElevenLayerConfig(), null, 2));
+    return;
+  }
+
+  if (args.listPolicyPacks) {
+    runListPolicyPacks(args);
+    return;
+  }
+
+  if (args.applyPolicyPack) {
+    runApplyPolicyPack(args);
+    return;
+  }
+
+  if (args.recommend) {
+    try {
+      const recommendation = buildArchitectureRecommendation(args.root);
+      let planWritten;
+      if (args.writePlan) {
+        const result = writeAdoptionPlan(args.root, recommendation);
+        planWritten = result.path;
+      }
+      if (args.json) {
+        console.log(
+          JSON.stringify(
+            {
+              ...recommendation,
+              ...(planWritten
+                ? { adoptionPlanPath: path.relative(args.root, planWritten) || ADOPTION_PLAN_FILENAME }
+                : {}),
+            },
+            null,
+            2
+          )
+        );
+      } else {
+        console.log(formatArchitectureRecommendationHuman(recommendation));
+        if (planWritten) {
+          console.log('');
+          console.log(`Wrote ${path.relative(args.root, planWritten) || ADOPTION_PLAN_FILENAME}`);
+        }
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (args.json) {
+        console.log(JSON.stringify({ ok: false, error: message }, null, 2));
+      } else {
+        console.error(`ark-check --recommend failed: ${message}`);
+      }
+      process.exitCode = 2;
+    }
     return;
   }
 
@@ -3238,7 +3521,10 @@ async function main() {
   violations.push(...detectCycles(importGraph));
 
   if (args.doctor) {
-    runDoctor(root, config, files, rules, violations, args.json);
+    runDoctor(root, config, files, rules, violations, args.json, {
+      configPath: path.isAbsolute(args.config) ? args.config : path.join(root, args.config),
+      configMissing: !fs.existsSync(path.isAbsolute(args.config) ? args.config : path.join(root, args.config)),
+    });
     return;
   }
 
@@ -3298,7 +3584,7 @@ async function main() {
         exampleByLayer.set(layer, normalize(path.relative(root, file)));
       }
     }
-    const html = renderHtmlReport({
+    const reportPayload = {
       root,
       config,
       exampleByLayer,
@@ -3308,7 +3594,10 @@ async function main() {
       version: arkPackageVersion(),
       configPath: args.config,
       generatedAt: new Date().toISOString().slice(0, 10),
-    });
+    };
+    const html = args.beginner
+      ? renderBeginnerHtmlReport(reportPayload)
+      : renderHtmlReport(reportPayload);
     const reportPath = path.isAbsolute(args.report) ? args.report : path.join(root, args.report);
     fs.writeFileSync(reportPath, html);
     if (!args.json) {
@@ -3333,7 +3622,7 @@ async function main() {
   if (args.json) {
     console.log(JSON.stringify({
       ok,
-      violations: activeViolations,
+      violations: activeViolations.map(enrichViolationWithFixClass),
       suppressedViolations: suppressed.length,
       staleBaselineKeys,
       warnings,
@@ -3430,7 +3719,50 @@ async function main() {
     }
   }
 
+  if (args.watch) {
+    await runWatchMode(args);
+    return;
+  }
+
   process.exitCode = ok ? 0 : 1;
+}
+
+async function runWatchMode(args) {
+  const argv = process.argv.slice(2).filter((token) => token !== '--watch');
+  let debounce;
+  const rerun = () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => {
+      const result = spawnSync(process.execPath, [__arkCheckCli, ...argv], {
+        cwd: args.root,
+        stdio: 'inherit',
+        env: process.env,
+      });
+      process.exitCode = result.status ?? 1;
+    }, 300);
+  };
+
+  let config;
+  try {
+    config = readConfig(args.root, args.config);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 2;
+    return;
+  }
+
+  for (const entry of config.include ?? []) {
+    const target = path.join(args.root, entry);
+    if (!fs.existsSync(target)) continue;
+    try {
+      fs.watch(target, { recursive: true }, rerun);
+    } catch {
+      fs.watch(target, rerun);
+    }
+  }
+
+  console.log(color.dim('Watching governed paths for changes… (Ctrl+C to stop)'));
+  await new Promise(() => {});
 }
 
 main().catch((error) => {

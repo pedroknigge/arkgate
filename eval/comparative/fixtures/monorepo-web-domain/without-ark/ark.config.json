@@ -1,0 +1,8 @@
+{
+  "include": ["apps", "packages"],
+  "layers": [
+    { "name": "PresentationAdapters", "patterns": ["**/pages/**"], "optional": true },
+    { "name": "PersistenceAdapters", "patterns": ["**/adapters/**"], "optional": true }
+  ],
+  "rules": [{ "from": "PresentationAdapters", "to": "PersistenceAdapters", "allowed": false }]
+}

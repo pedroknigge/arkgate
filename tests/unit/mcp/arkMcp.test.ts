@@ -437,13 +437,14 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
 
   afterAll(() => client?.close());
 
-  it('lists all four tools', async () => {
+  it('lists all read-side and recommend tools', async () => {
     const res = await client.request('tools/list');
     expect(res.result.tools.map((t: { name: string }) => t.name)).toEqual([
       'validate_code',
       'ark_check',
       'ark_coverage',
       'ark_place',
+      'ark_recommend',
     ]);
   });
 

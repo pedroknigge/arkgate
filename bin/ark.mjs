@@ -4,7 +4,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import readline from 'node:readline/promises';
-import { arkCommand } from './ark-shared.mjs';
+import {
+  arkCommand,
+  buildArchitectureRecommendation,
+  INIT_WIZARD_CHOICES,
+  isValidArchetypeId,
+  mapWizardChoiceToArchetype,
+  resolveArchetypePreset,
+} from './ark-shared.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
@@ -26,6 +33,7 @@ function parseArgs(argv) {
     else if (arg === '--force') args.force = true;
     else if (arg === '--no-strict') args.strict = false;
     else if (arg === '--preset') args.preset = argv[++i];
+    else if (arg === '--archetype') args.archetype = argv[++i];
     else if (arg === '--tools') args.tools = argv[++i];
     else if (arg === '--help' || arg === '-h') args.help = true;
   }
@@ -35,7 +43,8 @@ function parseArgs(argv) {
 
 function usage() {
   return `Usage:
-  ark init [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo] [--tools <list>] [--yes] [--force] [--no-strict]
+  ark init [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo]
+           [--archetype <playbook-id>] [--tools <list>] [--yes] [--force] [--no-strict]
 
 Commands:
   init   Configure Ark project enforcement with explicit prompts.
@@ -44,10 +53,14 @@ Options:
   --yes       Non-interactive defaults: create config if needed, install gate templates, run strict check.
   --force     Allow generated files to overwrite existing files.
   --no-strict Skip the final strict ark-check run.
-  --preset    Start from a named architecture (hexagonal, layered, feature-sliced, monorepo) instead of detection.
-              (Workspace monorepos are auto-detected even without --preset.)
+  --preset    Start from a named architecture preset instead of detection.
+  --archetype Application shape from templates/architecture-playbook.json (maps to the matching preset).
+              Valid ids: crud-product, api-backend, frontend-surface, library-sdk, cli-utility,
+              worker-pipeline, event-coordinator, integration-bridge, multi-app-workspace, prototype-spike.
   --tools     Comma-separated agents to gate (claude,cursor,codex,windsurf,cline,copilot,kiro,roo,continue,gemini).
               Omit to auto-detect from each tool's config dir, falling back to claude+cursor+codex.
+
+Interactive mode (TTY, no --yes): asks what application shape you are building and maps it to a preset.
 `;
 }
 
@@ -60,6 +73,10 @@ function runArkCheck(args, options = {}) {
   return result.status ?? 1;
 }
 
+function isInteractiveTty() {
+  return Boolean(process.stdin.isTTY && process.stdout.isTTY);
+}
+
 async function askYesNo(rl, question, defaultYes = true) {
   const suffix = defaultYes ? ' [Y/n] ' : ' [y/N] ';
   const answer = (await rl.question(`${question}${suffix}`)).trim().toLowerCase();
@@ -67,14 +84,73 @@ async function askYesNo(rl, question, defaultYes = true) {
   return answer === 'y' || answer === 'yes';
 }
 
+async function resolveArchetypeInteractive(rl, root) {
+  console.log('');
+  console.log('What are you building? (application shape — not a framework name)');
+  for (const choice of INIT_WIZARD_CHOICES) {
+    console.log(`  ${choice.key}. ${choice.label}`);
+  }
+  const answer = (await rl.question('Choose 1–8 [8]: ')).trim() || '8';
+  const mapped = mapWizardChoiceToArchetype(answer);
+  if (!mapped) {
+    console.log('Unrecognized choice — analyzing the repo instead.');
+    return resolveArchetypeFromRecommend(root);
+  }
+  if (mapped === 'auto') {
+    return resolveArchetypeFromRecommend(root);
+  }
+  return mapped;
+}
+
+function resolveArchetypeFromRecommend(root) {
+  const rec = buildArchitectureRecommendation(root);
+  console.log(`Suggested shape: ${rec.archetype} — ${rec.label} (confidence ${rec.confidence})`);
+  return rec.archetype;
+}
+
+function resolveInitPreset(args) {
+  if (args.preset) return { preset: args.preset, archetype: args.archetype };
+  if (args.archetype) {
+    if (!isValidArchetypeId(args.archetype)) {
+      throw new Error(
+        `Unknown archetype "${args.archetype}". Run ark-check --recommend to see a suggested shape.`
+      );
+    }
+    const resolved = resolveArchetypePreset(args.archetype);
+    return { preset: resolved.preset, archetype: resolved.archetype, label: resolved.label };
+  }
+  return null;
+}
+
 async function init(args) {
   const root = args.root;
   const configPath = path.join(root, 'ark.config.json');
-  const rl = args.yes
-    ? null
-    : readline.createInterface({ input: process.stdin, output: process.stdout });
+  const interactive = !args.yes && isInteractiveTty();
+  const rl = interactive
+    ? readline.createInterface({ input: process.stdin, output: process.stdout })
+    : null;
 
   try {
+    let archetype = args.archetype;
+    let preset = args.preset;
+
+    if (interactive && !preset && !archetype) {
+      archetype = await resolveArchetypeInteractive(rl, root);
+    }
+
+    if (!preset && archetype) {
+      const resolved = resolveArchetypePreset(archetype);
+      preset = resolved.preset;
+      console.log(`Using archetype ${archetype} → preset ${preset} (${resolved.label})`);
+    } else if (!preset && !interactive && !args.yes) {
+      // non-TTY without --yes/--preset/--archetype: fall back to detection init
+    } else if (!preset && args.yes && !archetype) {
+      const rec = buildArchitectureRecommendation(root);
+      preset = rec.preset;
+      archetype = rec.archetype;
+      console.log(`Auto-selected archetype ${archetype} → preset ${preset}`);
+    }
+
     let shouldInit = !fs.existsSync(configPath);
     if (fs.existsSync(configPath)) {
       shouldInit = args.force
@@ -86,7 +162,7 @@ async function init(args) {
 
     if (shouldInit) {
       const initArgs = ['--root', root, '--init'];
-      if (args.preset) initArgs.push('--preset', args.preset);
+      if (preset) initArgs.push('--preset', preset);
       if (args.force) initArgs.push('--force');
       const status = runArkCheck(initArgs, { cwd: root });
       if (status !== 0) return status;
@@ -94,7 +170,7 @@ async function init(args) {
       console.log('Skipped ark.config.json generation.');
     }
 
-    const installGates = args.yes || await askYesNo(rl, 'Configure agent and CI gate templates?', true);
+    const installGates = args.yes || (await askYesNo(rl, 'Configure agent and CI gate templates?', true));
     if (installGates) {
       const gateArgs = ['--root', root, '--install-agent-gates'];
       if (args.tools) gateArgs.push('--tools', args.tools);
@@ -104,7 +180,7 @@ async function init(args) {
     }
 
     const runStrict =
-      args.strict && (args.yes || await askYesNo(rl, 'Run strict architecture check now?', true));
+      args.strict && (args.yes || (await askYesNo(rl, 'Run strict architecture check now?', true)));
     if (runStrict) {
       return runArkCheck(
         ['--root', root, '--config', 'ark.config.json', '--strict-config'],
@@ -115,6 +191,9 @@ async function init(args) {
     console.log(
       `Ark init complete. Run \`${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config')}\` before merging.`
     );
+    if (archetype) {
+      console.log(`Shape: ${archetype}. Plan: ${arkCommand(root, 'ark-check', '--recommend')}`);
+    }
     return 0;
   } finally {
     rl?.close();
@@ -129,7 +208,12 @@ async function main() {
   }
 
   if (args.command === 'init') {
-    return init(args);
+    try {
+      return await init(args);
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      return 2;
+    }
   }
 
   console.error(`Unknown command: ${args.command}`);

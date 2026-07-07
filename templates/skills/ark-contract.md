@@ -72,6 +72,13 @@ contract to produce that is real work, not a stalling question.
    tightening are expected: list them and fix them now if the set is small; if
    it's large, the baseline stopgap from step 2 applies (approval required).
 
+## Related onboarding
+
+- Greenfield: adopt shape first via `/ark-architect`, `ark init --archetype`, or
+  `ark-check --apply-policy-pack enthusiast-<preset>`.
+- `ark-check --recommend --write-plan` may suggest a `policyPack` in `ark-adoption-plan.json`.
+- Brownfield: prefer `/ark-adopt` before large contract edits.
+
 ## Operating rules
 
 - **Loosening the contract to silence a violation is refused by default.** If

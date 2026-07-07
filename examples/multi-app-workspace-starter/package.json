@@ -1,0 +1,14 @@
+{
+  "name": "ark-gallery-multi-app-workspace-starter",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Phase-1 scaffold for several apps in one repository (multi-app-workspace archetype)",
+  "workspaces": ["apps/*", "packages/*"],
+  "type": "module",
+  "scripts": {
+    "check": "ark-check --root . --config ark.config.json --strict-config"
+  },
+  "devDependencies": {
+    "ark-runtime-kernel": "^1.14.0"
+  }
+}

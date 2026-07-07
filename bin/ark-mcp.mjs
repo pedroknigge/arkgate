@@ -13,6 +13,8 @@
  *                                 manifest file when --manifest is provided)
  *   - tool      validate_code   — runs Ark's AI code gate on a source snippet; returns
  *                                 { valid, violations } and sets isError when invalid
+ *   - tool      ark_recommend   — deterministic application-shape plan (same as
+ *                                 ark-check --recommend --json)
  *
  * Usage: ark-mcp [--root <dir>] [--config ark.config.json] [--manifest <manifest.json>]
  *        ark-mcp --hook [--root <dir>] [--config ark.config.json]
@@ -38,7 +40,10 @@ import {
   DEFAULT_RULES,
   arkCommand,
   layerForFile,
+  shouldShowNewHereNudge,
 } from './ark-shared.mjs';
+
+const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 
 function parseArgs(argv) {
   const args = {
@@ -286,12 +291,27 @@ function runHook(gate, config, args) {
   process.exitCode = 2;
 }
 
+function runArkCheckJsonFromRoot(root, config, extraArgs, manifest) {
+  const manifestArgs = manifest ? ['--manifest', manifest] : [];
+  const result = spawnSync(
+    process.execPath,
+    [arkCheckBin, '--root', root, '--config', config, ...manifestArgs, '--json', ...extraArgs],
+    { encoding: 'utf8' }
+  );
+  const stdout = result.stdout ?? '';
+  try {
+    return { data: JSON.parse(stdout), raw: stdout };
+  } catch {
+    return { data: null, raw: stdout || result.stderr || 'ark-check produced no output' };
+  }
+}
+
 /**
  * One-shot SessionStart context: a compact summary of the contract on stdout so the
  * agent starts the session already knowing the architecture. Advisory — never blocks
  * and never exits non-zero for missing optional inputs (e.g. no baseline file).
  */
-function printSessionContext(config, profile, forbiddenGlobals, args) {
+function printSessionContext(config, profile, forbiddenGlobals, args, configPath) {
   const lines = ['Ark architecture contract governs this project (ark.config.json is authoritative).'];
 
   const configLayers = Array.isArray(config.layers) ? config.layers : [];
@@ -330,6 +350,14 @@ function printSessionContext(config, profile, forbiddenGlobals, args) {
     `After edits run: ${arkCommand(args.root, 'ark-check', '--root . --config ark.config.json --strict-config')}`
   );
   lines.push('If Ark reports violations, fix the architecture instead of weakening the gate.');
+
+  const { data: coverage } = runArkCheckJsonFromRoot(args.root, args.config, ['--coverage'], undefined);
+  const governedPercent = coverage?.coverage?.governed?.percent ?? coverage?.governed?.percent;
+  if (shouldShowNewHereNudge(args.root, configPath, governedPercent, false)) {
+    lines.push('');
+    lines.push('New to Ark? Run /ark-architect or: ark-check --recommend');
+  }
+
   process.stdout.write(`${lines.join('\n')}\n`);
 }
 
@@ -449,7 +477,7 @@ async function main() {
   }
 
   if (args.sessionContext) {
-    printSessionContext(config, profile, forbiddenGlobals, args);
+    printSessionContext(config, profile, forbiddenGlobals, args, configPath);
     return;
   }
 
@@ -529,6 +557,15 @@ async function main() {
         },
         required: ['filePath'],
       },
+    },
+    {
+      name: 'ark_recommend',
+      description:
+        'Score this repository against templates/architecture-playbook.json and return the ' +
+        'tool-agnostic application shape to adopt (archetype, preset, phased layer plan, ' +
+        'analogy, anti-patterns). Same structured output as ark-check --recommend --json. ' +
+        'Call BEFORE generating project structure on greenfield or early-adoption repos.',
+      inputSchema: { type: 'object', properties: {} },
     },
   ];
 
@@ -620,22 +657,8 @@ async function main() {
   // Tarjan cycle detection) by shelling out to the sibling ark-check.mjs with --json —
   // no second copy of the check logic to drift. These are occasional agent queries, not
   // a hot path, so the per-call spawn cost is irrelevant.
-  const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
   function runArkCheckJson(extraArgs) {
-    // Forward --manifest so ark_check judges against the same rules the write-gate uses
-    // (a manifest-driven project's rules live there, not in ark.config.json).
-    const manifestArgs = args.manifest ? ['--manifest', args.manifest] : [];
-    const result = spawnSync(
-      process.execPath,
-      [arkCheckBin, '--root', args.root, '--config', args.config, ...manifestArgs, '--json', ...extraArgs],
-      { encoding: 'utf8' }
-    );
-    const stdout = result.stdout ?? '';
-    try {
-      return { data: JSON.parse(stdout), raw: stdout };
-    } catch {
-      return { data: null, raw: stdout || result.stderr || 'ark-check produced no output' };
-    }
+    return runArkCheckJsonFromRoot(args.root, args.config, extraArgs, args.manifest);
   }
 
   function runCheckTool(params) {
@@ -665,6 +688,20 @@ async function main() {
       };
     }
     return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }], isError: false };
+  }
+
+  function runRecommendTool() {
+    const { data, raw } = runArkCheckJson(['--recommend']);
+    if (!data) {
+      return {
+        content: [{ type: 'text', text: `ark-check --recommend produced no JSON:\n${raw}` }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+      isError: data.ok === false,
+    };
   }
 
   // Deterministic placement guidance (in-process; no TS resolver needed): which layer a
@@ -750,6 +787,7 @@ async function main() {
     ark_check: runCheckTool,
     ark_coverage: runCoverageTool,
     ark_place: runPlace,
+    ark_recommend: runRecommendTool,
   };
 
   const send = (msg) => process.stdout.write(`${JSON.stringify(msg)}\n`);

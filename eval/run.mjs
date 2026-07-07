@@ -186,6 +186,11 @@ function main() {
   for (const name of cases) {
     const caseSrc = path.join(CASES_DIR, name);
     const caseDef = JSON.parse(fs.readFileSync(path.join(caseSrc, 'case.json'), 'utf8'));
+    if (caseDef.skipHarness) {
+      results.push({ name, verdict: 'SKIPPED', why: caseDef.description || 'architect eval — manual' });
+      console.log(`• ${name}: SKIPPED — ${caseDef.description || 'skipHarness'}\n`);
+      continue;
+    }
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), `ark-eval-${name}-`));
     copyDir(caseSrc, tmp);
     fs.rmSync(path.join(tmp, 'case.json'), { force: true }); // don't leak the answer key

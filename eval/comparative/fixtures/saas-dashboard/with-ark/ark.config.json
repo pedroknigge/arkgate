@@ -1,0 +1,12 @@
+{
+  "include": ["src"],
+  "layers": [
+    { "name": "DomainModel", "patterns": ["src/**/domain/**"], "optional": true },
+    { "name": "ApplicationOrchestration", "patterns": ["src/**/application/**"], "optional": true },
+    { "name": "PresentationAdapters", "patterns": ["src/**/presentation/**"], "optional": true }
+  ],
+  "rules": [
+    { "from": "PresentationAdapters", "to": "DomainModel", "allowed": false },
+    { "from": "ApplicationOrchestration", "to": "PresentationAdapters", "allowed": false }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "include": ["src"],
+  "layers": [
+    {
+      "name": "DomainModel",
+      "description": "Pure business rules and entities. No I/O, no framework, no ambient globals.",
+      "patterns": ["src/**/domain/**"],
+      "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"],
+      "optional": true
+    },
+    {
+      "name": "ApplicationOrchestration",
+      "description": "Use cases that coordinate the domain through ports. No I/O of its own.",
+      "patterns": ["src/**/application/**"],
+      "optional": true
+    },
+    {
+      "name": "PresentationAdapters",
+      "description": "Entrypoints — HTTP routes, controllers, UI. Drives use cases.",
+      "patterns": [
+        "src/**/presentation/**",
+        "src/**/controllers/**",
+        "src/**/interface-adapters/**",
+        "src/**/http/**"
+      ],
+      "optional": true
+    },
+    {
+      "name": "PersistenceAdapters",
+      "description": "Implements ports with real infrastructure: DB, external APIs, filesystem.",
+      "patterns": [
+        "src/**/infrastructure/**",
+        "src/**/adapters/**",
+        "src/**/persistence/**",
+        "src/**/repositories/**"
+      ],
+      "optional": true
+    }
+  ],
+  "rules": [
+    { "from": "DomainModel", "to": "ApplicationOrchestration", "allowed": false },
+    { "from": "DomainModel", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "DomainModel", "to": "PresentationAdapters", "allowed": false },
+    { "from": "ApplicationOrchestration", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "ApplicationOrchestration", "to": "PresentationAdapters", "allowed": false },
+    { "from": "PresentationAdapters", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "PresentationAdapters", "to": "DomainModel", "allowed": false },
+    { "from": "PersistenceAdapters", "to": "ApplicationOrchestration", "allowed": false },
+    { "from": "PersistenceAdapters", "to": "PresentationAdapters", "allowed": false }
+  ]
+}
