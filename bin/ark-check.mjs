@@ -100,7 +100,6 @@ function parseArgs(argv) {
     else if (arg === '--report') {
       const next = argv[i + 1];
       args.report = next && !next.startsWith('-') ? argv[++i] : 'ark-report.html';
-      if (String(args.report).toLowerCase().includes('beginner')) args.beginner = true;
     }
     else if (arg === '--baseline' || arg === '--update-baseline') {
       if (arg === '--update-baseline') args.updateBaseline = true;

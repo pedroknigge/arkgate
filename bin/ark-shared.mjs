@@ -437,7 +437,13 @@ function walkSourceFiles(dir, files = [], depth = 0) {
     return files;
   }
   if (!stat.isDirectory()) return files;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return files;
+  }
+  for (const entry of entries) {
     if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git') continue;
     walkSourceFiles(path.join(dir, entry.name), files, depth + 1);
   }
@@ -447,10 +453,14 @@ function walkSourceFiles(dir, files = [], depth = 0) {
 function listTopLevelDirNames(root, baseDir) {
   const base = path.join(root, baseDir);
   if (!fs.existsSync(base)) return [];
-  return fs
-    .readdirSync(base, { withFileTypes: true })
-    .filter((e) => e.isDirectory() && !e.name.startsWith('.') && e.name !== 'node_modules')
-    .map((e) => e.name);
+  try {
+    return fs
+      .readdirSync(base, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && !e.name.startsWith('.') && e.name !== 'node_modules')
+      .map((e) => e.name);
+  } catch {
+    return [];
+  }
 }
 
 function dirExistsAnywhere(root, names) {
@@ -1051,10 +1061,28 @@ export function listPolicyPackIds(packsPath = defaultPolicyPacksPath()) {
 }
 
 export function loadPolicyPackMeta(packId, packsPath = defaultPolicyPacksPath()) {
+  if (typeof packId !== 'string' || !packId.length) {
+    throw new Error('Policy pack id is required');
+  }
+  if (!/^[a-z][a-z0-9-]*$/.test(packId)) {
+    throw new Error(
+      `Invalid policy pack id "${packId}". Valid packs: ${listPolicyPackIds(packsPath).join(', ') || '(none)'}`
+    );
+  }
+  const ids = listPolicyPackIds(packsPath);
+  if (!ids.includes(packId)) {
+    throw new Error(
+      `Unknown policy pack "${packId}". Valid packs: ${ids.join(', ') || '(none)'}`
+    );
+  }
   const filePath = path.join(packsPath, `${packId}.json`);
+  const resolved = path.resolve(filePath);
+  if (!resolved.startsWith(`${path.resolve(packsPath)}${path.sep}`)) {
+    throw new Error(`Invalid policy pack id "${packId}"`);
+  }
   if (!fs.existsSync(filePath)) {
     throw new Error(
-      `Unknown policy pack "${packId}". Valid packs: ${listPolicyPackIds(packsPath).join(', ') || '(none)'}`
+      `Unknown policy pack "${packId}". Valid packs: ${ids.join(', ') || '(none)'}`
     );
   }
   const pack = JSON.parse(fs.readFileSync(filePath, 'utf8'));

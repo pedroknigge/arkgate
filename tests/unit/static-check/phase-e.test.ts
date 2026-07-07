@@ -92,6 +92,11 @@ describe('Phase E — ark-adoption-plan.json', () => {
 });
 
 describe('Phase E — enthusiast policy packs', () => {
+  it('rejects path-like policy pack ids', () => {
+    expect(() => loadPolicyPackMeta('../enthusiast-hexagonal')).toThrow(/Invalid|Unknown/);
+    expect(() => loadPolicyPackMeta('enthusiast-hexagonal/evil')).toThrow(/Invalid|Unknown/);
+  });
+
   it('lists four enthusiast packs in templates/policy-packs', () => {
     const ids = listPolicyPackIds();
     for (const id of POLICY_PACK_IDS) {
