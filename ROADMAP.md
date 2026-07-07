@@ -15,6 +15,10 @@ A gate that freezes every violation and reports green, or that silently governs 
 fraction of the tree, looks safe while checking almost nothing — worse than no gate.
 The tool should tell the truth about what it governs and guide the cleanup in order.
 
+A second focus is now explicit: **enthusiast-first onboarding** — users who build with
+AI but are not professional developers need a plain-language path from "what I want to
+build" to the right preset and layers, before the write gate can help them.
+
 Four principles drive this:
 
 - **Honesty over green.** Report the governed fraction, separate real debt from false
@@ -31,6 +35,10 @@ Four principles drive this:
 - **Suggestions come from Ark's own canonical sources.** Layer proposals are harvested
   from the 11-layer profile and the named presets — never an ad-hoc heuristic. A
   directory Ark does not recognize is flagged for the user to classify, never guessed.
+  **Architecture archetypes** (application shape, not vendor stack) are curated in
+  `templates/architecture-playbook.json` and map to those same presets and layers.
+
+Full implementation plan: [docs/architect-onboarding-plan.md](docs/architect-onboarding-plan.md).
 
 ## Recently shipped
 
@@ -77,31 +85,75 @@ Four principles drive this:
 
 ## Next
 
-- **Fix-class hinting.** Beyond value-vs-type-only, flag "big rock" data-layer migrations
-  (raw SQL → repositories, verified against real data) vs cheap mechanical fixes in the
-  burn-down.
+### Architect onboarding (enthusiast-first)
+
+- **`templates/architecture-playbook.json`**: versioned, tool-agnostic application
+  archetypes (`crud-product`, `api-backend`, `frontend-surface`, `library-sdk`,
+  `cli-utility`, `worker-pipeline`, `event-coordinator`, `integration-bridge`,
+  `multi-app-workspace`, `prototype-spike`). Each maps to a named preset and phased
+  11-layer adoption. Vendor packages are detection signals only, not archetype names.
+- **`ark-check --recommend`**: deterministic terminal command (+ `--json`) that scores
+  the repo against the playbook and prints a progressive adoption plan (phase 1–3
+  layers, analogy, anti-patterns, optional book references for depth).
+- **`ark init` enthusiast wizard**: interactive TTY flow for non-developers; non-interactive
+  `ark init --archetype <id> --yes`. Asks what application *shape* is being built, not
+  which framework was installed.
+- **Skill `/ark-architect`**: autonomous agent workflow — detect archetype, explain in
+  plain language, scaffold phase-1 directories, run `ark init` / `/ark-contract`, install
+  gates, verify with `--doctor` and `--coverage`. Complements `/ark-explain` (teaches
+  existing contract) and `/ark-place` (one artifact).
+- **MCP tool `ark_recommend`**: same structured output as `--recommend --json` for agents
+  to call before generating project structure.
+- **`ark-check --doctor` "New here?" section**: points newcomers to `--recommend` or
+  `/ark-architect` when governed coverage is low or the config is new.
+- **`ark-mcp --session-context` enthusiast hint**: one-line pointer when adoption is
+  early (`governed.percent` low or fresh config).
+
+### Terminal and CI quality
+
+- **Fix-class hinting.** Beyond value-vs-type-only, tag violations with `fixClass`
+  (`port-inversion`, `file-move`, `data-layer-migration`, …), `effort`, and
+  `enthusiastHint` — plain-language fix guidance in `--json` output.
+- **Watch mode**: `ark-check --watch` for editor-adjacent feedback without ESLint.
+- **`ark-check --report` beginner mode**: simplified HTML (3-box diagram, placement
+  table, fewer matrices) for onboarding and PR attachments.
+
+### Proof and examples
+
 - **Comparative evals**: agent-generated changes with and without Ark on a governed repo,
   tracking violations and time-to-fix.
-- **Example gallery**: clonable examples for NestJS, monorepos, and Next.js/API apps (the
-  brownfield facade split is already written up in the playbook above).
-- **Watch mode**: `ark-check --watch` for editor-adjacent feedback without ESLint.
+- **Enthusiast eval cases**: greenfield CRUD prompts, wrong-layer self-correction, and
+  `CHEATED` detection when agents weaken the contract.
+- **Example gallery**: clonable starters per archetype (`crud-product`, `api-backend`,
+  `worker-pipeline`, `multi-app-workspace`) with one-page enthusiast READMEs; keep
+  `hexagonal-order-api` as the intentional break example.
+- **Public demo #3**: enthusiast describes an app → `/ark-architect` → correct phase-1
+  structure → agent builds a feature without infrastructure in domain.
 
 ## Later
 
+- **Docs site**: move long-form documentation out of the README; include an "Ark for
+  enthusiasts" tutorial track (Diátaxis).
+- **Team policy packs**: proven starter configs for hexagonal, layered, feature-sliced,
+  and monorepo projects — plus a "framework border" pack and an **enthusiast** variant
+  (shorter layer descriptions, progressive phases baked in).
+- **`ark-adoption-plan.json`**: optional committed artifact emitted by `--recommend
+  --write-plan` for teams that want a machine-readable adoption record.
+- **i18n for wizard and `/ark-architect`**: Spanish first if community demand warrants it.
 - **Runtime package split**: decide whether the optional runtime kernel becomes a separate
   package once the static and agent gate are more mature.
-- **Docs site**: move long-form documentation out of the README into a focused docs site.
 - **Framework adapters**: only when examples justify them; Ark stays a governance tool, not
   an app framework.
-- **Team policy packs**: proven starter configs for hexagonal, layered, feature-sliced, and
-  monorepo projects — plus a "framework border" pack encoding the surface/internals split.
 
 ## Not Planned
 
 - Reimplementing workflow orchestrators such as Temporal or Restate.
 - Adding runtime dependencies to the core static gates.
 - Becoming a web framework, job runner, ORM abstraction, or deployment platform.
-- Ad-hoc layer heuristics: suggestions must trace to the canonical profile/presets.
+- Ad-hoc layer heuristics: suggestions must trace to the canonical profile/presets or the
+  architecture playbook.
+- Vendor-named archetypes ("Next.js app", "NestJS API") as first-class taxonomy — tools may
+  inform detection confidence only.
 
 ## Principles
 
@@ -115,3 +167,7 @@ Four principles drive this:
 - Agent tooling should help generated code self-correct — and help a team organize a messy
   codebase — before review.
 - Runtime features stay optional and clearly documented as advanced usage.
+- **Archetypes describe application shape; vendors are hints.** Onboarding narrates in plain
+  language; structure always maps to Ark presets and the 11-layer profile.
+- **Progressive adoption:** phase 1 is the smallest honest layer set; advanced layers unlock
+  when the user describes the capability (integrations, jobs, sagas), not when a tool is detected.
