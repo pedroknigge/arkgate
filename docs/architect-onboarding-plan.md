@@ -1,4 +1,4 @@
-# Ark Architect Onboarding — Plan integral
+# Ark Architect Onboarding — Implementation plan
 
 This document is the implementation plan for **enthusiast-first architecture guidance**:
 helping people who are not professional developers choose and adopt a sound structure
@@ -52,6 +52,9 @@ to presets and layers Ark already owns.
    references are optional depth, not prerequisites.
 5. **Honesty over green applies to onboarding too.** If the repo is empty, say the check
    passes because nothing exists yet — not because architecture is "done".
+6. **English-only user copy.** All playbook strings, `--recommend` output, wizard prompts,
+   and `/ark-architect` skill narration ship in English. Translations are a later, explicit
+   opt-in — never mixed into the canonical JSON or CLI defaults.
 
 ---
 
@@ -322,7 +325,7 @@ scaffold — for users who are not professional developers.
 | Docs site track "Ark for enthusiasts" | Diátaxis tutorial |
 | Team policy packs with `enthusiast` variant | Shorter layer descriptions |
 | `ark-adoption-plan.json` artifact in repo | Optional committed plan |
-| i18n for wizard + skill (ES first) | Community demand |
+| Optional locale packs (non-English) | English canonical source only; translations layered on top |
 
 ---
 

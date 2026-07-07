@@ -139,7 +139,8 @@ Full implementation plan: [docs/architect-onboarding-plan.md](docs/architect-onb
   (shorter layer descriptions, progressive phases baked in).
 - **`ark-adoption-plan.json`**: optional committed artifact emitted by `--recommend
   --write-plan` for teams that want a machine-readable adoption record.
-- **i18n for wizard and `/ark-architect`**: Spanish first if community demand warrants it.
+- **Optional locale packs** for wizard and `/ark-architect`**: English remains canonical;
+  translations ship as separate packs when community demand warrants it.
 - **Runtime package split**: decide whether the optional runtime kernel becomes a separate
   package once the static and agent gate are more mature.
 - **Framework adapters**: only when examples justify them; Ark stays a governance tool, not
@@ -171,3 +172,5 @@ Full implementation plan: [docs/architect-onboarding-plan.md](docs/architect-onb
   language; structure always maps to Ark presets and the 11-layer profile.
 - **Progressive adoption:** phase 1 is the smallest honest layer set; advanced layers unlock
   when the user describes the capability (integrations, jobs, sagas), not when a tool is detected.
+- **English-only user copy:** playbook, `--recommend`, wizard, and enthusiast skills ship in
+  English; locale packs are additive later, not mixed into canonical templates.

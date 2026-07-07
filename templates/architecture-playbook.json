@@ -1,5 +1,7 @@
 {
   "version": "1",
+  "locale": "en",
+  "localeNote": "Canonical user-facing copy is English. Future translations must not alter archetype ids, preset names, or layer names.",
   "frontendSurfacePresetRule": "feature-sliced when src/app, src/pages, src/features, src/entities, or src/shared exists; otherwise layered",
   "archetypes": {
     "crud-product": {

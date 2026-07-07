@@ -22,6 +22,10 @@ persistence, jobs, workflows, CLI `bin`, source-file count, …) are matched aga
 playbook. Framework packages may appear as secondary `toolHints` in JSON output — never as
 the primary archetype id.
 
+All playbook labels, analogies, anti-patterns, and `--recommend` prose are **English**
+(`locale: "en"` in the playbook). Agents should present them as-is unless a future locale
+pack is explicitly loaded.
+
 ### Terminal
 
 ```bash
