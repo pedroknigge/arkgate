@@ -156,6 +156,31 @@ describe('Phase B — beginner HTML report', () => {
   });
 });
 
+describe('HTML showcase report', () => {
+  it('writes a full visual report with score, coverage, and map sections', () => {
+    const root = mkTemp('ark-report-showcase-');
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/infra'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/domain/order.ts'), 'export const a = 1;\n');
+    fs.writeFileSync(path.join(root, 'src/infra/db.ts'), 'export const db = 1;\n');
+    fs.writeFileSync(path.join(root, 'package.json'), '{"name":"showcase-app"}\n');
+    fs.writeFileSync(path.join(root, 'ark.config.json'), TWO_LAYER_CONFIG);
+
+    const reportPath = path.join(root, 'ark-report.html');
+    runArkCheckRaw(root, ['--config', 'ark.config.json', '--report', reportPath]);
+
+    const html = fs.readFileSync(reportPath, 'utf8');
+    expect(html).toContain('Ark architecture report');
+    expect(html).toContain('showcase-app');
+    expect(html).toContain('Ark score');
+    expect(html).toContain('Architecture map');
+    expect(html).toContain('Files per layer');
+    expect(html).toContain('Governed');
+    expect(html).toContain('/ark-explain');
+    expect(html).toContain('DomainModel');
+  });
+});
+
 async function waitForOutput(
   chunks: string[],
   pattern: string | RegExp,

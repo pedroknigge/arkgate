@@ -128,6 +128,7 @@ npx ark start                         # guided setup + plan
 npx ark-check --doctor                # health + operating mode
 npx ark-check --plan                  # safe-to-auto-fix vs your call
 npx ark-check --coverage              # Governed: N%
+npx ark-check --report ark-report.html  # showcase HTML (visual /ark-explain)
 npx ark-check --baseline              # only NEW violations fail
 npx ark upgrade                       # update package + refresh gates/skills
 ```

@@ -2857,11 +2857,25 @@ function renderBeginnerHtmlReport({ root, config, violations, ok, version, confi
 </body></html>`;
 }
 
-// Renders a self-contained HTML architecture report: the layer map, the
-// who-may-import-whom matrix, current violations with fix hints, and which
-// gates are live. No external assets (CSP-safe, works offline). This is the
-// visual sibling of `/ark-explain` — an artifact for PRs and onboarding.
-function renderHtmlReport({ root, config, exampleByLayer, violations, ok, suppressed, version, configPath, generatedAt }) {
+/**
+ * Showcase HTML architecture report — the visual product of `/ark-explain` + ark-check.
+ * Self-contained (no CDN), print-friendly, works offline. Designed to look great on a
+ * fully governed repo (100% coverage, clean gates) and still be useful when debt remains.
+ */
+function renderHtmlReport({
+  root,
+  config,
+  exampleByLayer,
+  fileCountByLayer,
+  coverage,
+  violations,
+  ok,
+  suppressed,
+  version,
+  configPath,
+  generatedAt,
+  skillGaps = [],
+}) {
   const layers = Array.isArray(config.layers) ? config.layers : [];
   const rules = Array.isArray(config.rules) ? config.rules : [];
   const esc = htmlEscape;
@@ -2875,53 +2889,158 @@ function renderHtmlReport({ root, config, exampleByLayer, violations, ok, suppre
 
   const findRule = (from, to) => rules.find((r) => r.from === from && r.to === to);
   const deniedOut = (name) => rules.filter((r) => r.from === name && r.allowed === false).length;
-  // Innermost first: the more layers a layer is forbidden from importing, the
-  // deeper it sits (a pure core denies everything; an entrypoint denies little).
-  const ordered = [...layers].sort((a, b) => deniedOut(b.name) - deniedOut(a.name) || a.name.localeCompare(b.name));
+  // Innermost first: more outbound denies → deeper (pure core).
+  const ordered = [...layers].sort(
+    (a, b) => deniedOut(b.name) - deniedOut(a.name) || a.name.localeCompare(b.name)
+  );
 
   const deniedCount = rules.filter((r) => r.allowed === false).length;
   const allowedCount = rules.filter((r) => r.allowed === true).length;
-  const guarded = layers.filter((l) => Array.isArray(l.forbiddenGlobals) && l.forbiddenGlobals.length).length;
+  const guarded = layers.filter(
+    (l) => Array.isArray(l.forbiddenGlobals) && l.forbiddenGlobals.length
+  ).length;
   const enforcement = detectEnforcement(root);
   const gatesOn = enforcement.filter((e) => e.on).length;
   const status = ok ? 'PASS' : 'FAIL';
 
-  const chip = (label, value) => `<span class="chip"><b>${value}</b> ${esc(label)}</span>`;
-  const stats = [
-    chip('layers', layers.length),
-    chip('rules denied', deniedCount),
-    chip('allowed', allowedCount),
-    chip('layers guard globals', guarded),
-    chip('gates live', `${gatesOn}/${enforcement.length}`),
-    chip('violations', violations.length),
-    ...(suppressed ? [chip('frozen by baseline', suppressed)] : []),
-  ].join('');
+  const governedPercent = coverage?.governed?.percent ?? null;
+  const totalFiles = coverage?.governed?.totalFiles ?? 0;
+  const classifiedFiles = coverage?.governed?.classifiedFiles ?? 0;
+  const mode = resolveOperatingMode({
+    governedPercent,
+    planMet: ok && violations.length === 0 && (governedPercent == null || governedPercent >= 50),
+    mature: totalFiles >= 150,
+  });
+  const modeLabel = { suggest: 'SUGGEST', adapt: 'ADAPT', enforce: 'ENFORCE' }[mode] || mode.toUpperCase();
+  const modeBlurb = {
+    suggest: 'Starter shape — expand layers as the codebase grows.',
+    adapt: 'Contract is live; raise governed coverage or match real folders.',
+    enforce: 'Contract governs the tree. Gates can honestly hold the line.',
+  }[mode];
 
-  // Layers table — ordered inner→outer, with purpose (optional `description`),
-  // config tags, folders, and a real example file.
+  // Composite architecture score 0–100 (showcase number, not a CI gate).
+  const scoreCoverage = governedPercent == null ? 50 : governedPercent;
+  const scoreClean =
+    violations.length === 0 ? 100 : Math.max(0, 100 - Math.min(100, violations.length * 4));
+  const scoreGates = enforcement.length ? Math.round((gatesOn / enforcement.length) * 100) : 40;
+  const scoreRules = layers.length
+    ? Math.min(100, Math.round((deniedCount / Math.max(1, layers.length * (layers.length - 1))) * 120))
+    : 0;
+  const score = Math.round(
+    scoreCoverage * 0.4 + scoreClean * 0.3 + scoreGates * 0.2 + scoreRules * 0.1
+  );
+  const scoreTone = score >= 90 ? 'elite' : score >= 70 ? 'strong' : score >= 50 ? 'ok' : 'weak';
+  const scoreCaption =
+    score >= 90
+      ? 'World-class architecture fitness'
+      : score >= 70
+        ? 'Solid architecture discipline'
+        : score >= 50
+          ? 'Useful guardrails — room to grow'
+          : 'Early stage — keep adopting layers';
+
+  const counts = fileCountByLayer instanceof Map ? fileCountByLayer : new Map();
+  const maxFiles = Math.max(1, ...ordered.map((l) => counts.get(l.name) || 0));
+
+  // Concentric “onion” SVG — outer entrypoints, pure core in the center.
+  const palette = [
+    '#38bdf8',
+    '#818cf8',
+    '#a78bfa',
+    '#e879f9',
+    '#fb7185',
+    '#fb923c',
+    '#fbbf24',
+    '#a3e635',
+    '#34d399',
+    '#2dd4bf',
+    '#22d3ee',
+    '#60a5fa',
+  ];
+  // ordered is inner→outer; reverse for drawing outer rings first
+  const outerFirst = [...ordered].reverse();
+  const n = outerFirst.length || 1;
+  const cx = 200;
+  const cy = 200;
+  const rMax = 185;
+  const rMin = 28;
+  const rings = outerFirst
+    .map((layer, i) => {
+      const t0 = i / n;
+      const t1 = (i + 1) / n;
+      const rOuter = rMax - t0 * (rMax - rMin);
+      const rInner = rMax - t1 * (rMax - rMin);
+      const color = palette[i % palette.length];
+      const files = counts.get(layer.name) || 0;
+      // Donut sector as full ring (annulus) via two arcs
+      const ringPath = (() => {
+        if (rInner <= 0.5) {
+          return `<circle cx="${cx}" cy="${cy}" r="${rOuter}" fill="${color}" fill-opacity="0.22" stroke="${color}" stroke-width="1.2"/>`;
+        }
+        return `<circle cx="${cx}" cy="${cy}" r="${(rOuter + rInner) / 2}" fill="none" stroke="${color}" stroke-width="${Math.max(6, rOuter - rInner - 2)}" stroke-opacity="0.85"/>`;
+      })();
+      const labelR = (rOuter + rInner) / 2;
+      const labelY = cy - labelR + (i === n - 1 ? 0 : 0);
+      // Labels stacked on the right of the diagram for readability
+      return { layer, color, files, ringPath, labelR, i };
+    })
+    .map((item, idx, arr) => {
+      const legendY = 28 + idx * 22;
+      return `${item.ringPath}
+        <circle cx="430" cy="${legendY}" r="5" fill="${item.color}"/>
+        <text x="442" y="${legendY + 4}" class="svg-lbl">${esc(item.layer.name)} · ${item.files}</text>`;
+    })
+    .join('\n');
+  const coreLabel =
+    ordered.length > 0
+      ? `<text x="${cx}" y="${cy + 4}" text-anchor="middle" class="svg-core">${esc(ordered[0].name)}</text>`
+      : '';
+  const onionSvg = `<svg viewBox="0 0 560 400" class="onion" role="img" aria-label="Architecture layers from outer adapters to inner core">
+    <rect x="0" y="0" width="560" height="400" fill="transparent"/>
+    ${rings}
+    ${coreLabel}
+    <text x="${cx}" y="388" text-anchor="middle" class="svg-cap">outer adapters → pure core</text>
+  </svg>`;
+
+  // Coverage bars
+  const barRows = ordered
+    .map((layer) => {
+      const files = counts.get(layer.name) || 0;
+      const pct = Math.round((files / maxFiles) * 100);
+      const example = exampleByLayer?.get?.(layer.name);
+      return `<div class="bar-row">
+        <div class="bar-name">${esc(layer.name)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <div class="bar-n">${files}</div>
+        <div class="bar-ex">${example ? `<code>${esc(example)}</code>` : '<span class="dim">—</span>'}</div>
+      </div>`;
+    })
+    .join('\n');
+
   const layerRows = ordered
     .map((layer) => {
       const tags = [
         Array.isArray(layer.forbiddenGlobals) && layer.forbiddenGlobals.length
-          ? `<span class="tag">no ${layer.forbiddenGlobals.map(esc).join(', ')}</span>`
+          ? `<span class="tag warn">no ${layer.forbiddenGlobals.map(esc).join(', ')}</span>`
           : '',
         layer.mayImportInfrastructure ? '<span class="tag">may import infra</span>' : '',
         Array.isArray(layer.intentPrefixes) && layer.intentPrefixes.length
           ? `<span class="tag">${layer.intentPrefixes.map(esc).join(' ')}</span>`
           : '',
+        layer.optional ? '<span class="tag dim-tag">optional</span>' : '',
       ].join(' ');
-      const example = exampleByLayer.get(layer.name);
+      const example = exampleByLayer?.get?.(layer.name);
+      const files = counts.get(layer.name) || 0;
       return `<tr>
         <td class="ln">${esc(layer.name)}<div class="tags">${tags}</div></td>
         <td>${layer.description ? esc(layer.description) : '<span class="dim">—</span>'}</td>
-        <td><code>${(layer.patterns || []).map(esc).join('<br>') || '—'}</code></td>
+        <td class="num">${files}</td>
+        <td><code class="pat">${(layer.patterns || []).map(esc).join('<br>') || '—'}</code></td>
         <td>${example ? `<code>${esc(example)}</code>` : '<span class="dim">no files yet</span>'}</td>
       </tr>`;
     })
     .join('\n');
 
-  // Readable dependency direction: each layer inner→outer with the layers it may
-  // import. This is the "get it at a glance" view; the precise grid follows.
   const flowRows = ordered
     .map((layer) => {
       const targets = ordered
@@ -2930,7 +3049,7 @@ function renderHtmlReport({ root, config, exampleByLayer, violations, ok, suppre
           const rule = findRule(layer.name, other.name);
           return !(rule && rule.allowed === false);
         })
-        .map((other) => `<span class="chip">${esc(other.name)}</span>`)
+        .map((other) => `<span class="chip ok">${esc(other.name)}</span>`)
         .join('');
       return `<div class="flow"><span class="flow-name">${esc(layer.name)}</span>
         <span class="flow-arrow">may import →</span>
@@ -2938,7 +3057,6 @@ function renderHtmlReport({ root, config, exampleByLayer, violations, ok, suppre
     })
     .join('\n');
 
-  // Precise matrix (kept, in a <details> so it doesn't dominate the page).
   const matrixHead = ordered.map((l) => `<th class="rot"><span>${esc(l.name)}</span></th>`).join('');
   const matrixBody = ordered
     .map((from) => {
@@ -2956,7 +3074,6 @@ function renderHtmlReport({ root, config, exampleByLayer, violations, ok, suppre
     })
     .join('\n');
 
-  // Violations grouped by rule so a big report stays scannable.
   const byRule = new Map();
   for (const v of violations) {
     if (!byRule.has(v.ruleId)) byRule.set(v.ruleId, []);
@@ -2968,11 +3085,13 @@ function renderHtmlReport({ root, config, exampleByLayer, violations, ok, suppre
           const hint = FIX_HINTS[ruleId];
           const rows = items
             .map((v) => {
-              const edge = v.fromLayer && v.toLayer ? `${esc(v.fromLayer)} → ${esc(v.toLayer)}` : '';
+              const edge =
+                v.fromLayer && v.toLayer ? `${esc(v.fromLayer)} → ${esc(v.toLayer)}` : '';
+              const enriched = enrichViolationWithFixClass(v);
               return `<li>
                 <code>${esc(v.file)}:${v.line}</code>
                 ${edge ? `<span class="edge">${edge}${v.target ? ` <span class="dim">(${esc(v.target)})</span>` : ''}</span>` : ''}
-                <div class="msg">${esc(v.message)}</div>
+                <div class="msg">${esc(enriched.enthusiastHint || v.message)}</div>
               </li>`;
             })
             .join('\n');
@@ -2983,134 +3102,279 @@ function renderHtmlReport({ root, config, exampleByLayer, violations, ok, suppre
           </div>`;
         })
         .join('\n')
-    : '<div class="clean">No active violations. The architecture matches the contract.</div>';
+    : `<div class="clean hero-clean">
+        <div class="clean-title">Architecture matches the contract</div>
+        <div class="clean-body">No active violations${suppressed ? ` · ${suppressed} frozen by baseline` : ''}. This is what “honest green” looks like when coverage is real.</div>
+      </div>`;
 
   const enforcementRows = enforcement
     .map(
       (e) =>
-        `<li class="${e.on ? 'on' : 'off'}"><span class="dot"></span><b>${esc(e.name)}</b> — ${esc(e.what)}` +
-        (e.where ? ` <code>${esc(e.where)}</code>` : ' <span class="dim">not configured</span>') +
-        `</li>`
+        `<div class="gate ${e.on ? 'on' : 'off'}">
+          <span class="dot"></span>
+          <div><b>${esc(e.name)}</b><div class="gdesc">${esc(e.what)}</div>
+          ${e.where ? `<code>${esc(e.where)}</code>` : '<span class="dim">not configured</span>'}</div>
+        </div>`
     )
     .join('\n');
 
-  const meta = [version ? `ark-check v${esc(version)}` : '', generatedAt ? esc(generatedAt) : '', configPath ? `config: ${esc(configPath)}` : '']
+  const skillsNote =
+    skillGaps.length === 0
+      ? '<div class="pill good">Agent skills current for detected tools</div>'
+      : `<div class="pill warn">${skillGaps.length} skill gap(s) — run ark upgrade / --install-agent-gates</div>`;
+
+  const meta = [
+    version ? `ark-check v${esc(version)}` : '',
+    generatedAt ? esc(generatedAt) : '',
+    configPath ? `config: ${esc(configPath)}` : '',
+  ]
     .filter(Boolean)
     .join(' · ');
+
+  const govLabel =
+    governedPercent == null ? '—' : `${governedPercent}% (${classifiedFiles}/${totalFiles})`;
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ark architecture — ${esc(project)}</title>
+<title>Ark · ${esc(project)}</title>
 <style>
-  :root { --bg:#0d0f12; --panel:#15181d; --ink:#e6e8ea; --dim:#8b929c; --line:#262b32;
-    --green:#4ade80; --red:#f87171; --accent:#7dd3fc; }
-  @media (prefers-color-scheme: light) {
-    :root { --bg:#f7f8fa; --panel:#fff; --ink:#1a1d21; --dim:#697079; --line:#e2e5ea;
-      --green:#16a34a; --red:#dc2626; --accent:#0369a1; }
+  :root {
+    --bg: #07090d; --panel: #10141b; --panel2: #161b24; --ink: #eef1f5; --dim: #8b93a0;
+    --line: #243041; --green: #34d399; --red: #f87171; --accent: #38bdf8; --gold: #fbbf24;
+    --violet: #a78bfa; --radius: 14px;
   }
-  * { box-sizing:border-box; }
-  body { margin:0; padding:2rem 1.25rem 4rem; background:var(--bg); color:var(--ink);
-    font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
-  .wrap { max-width:980px; margin:0 auto; }
-  h1 { font-size:1.5rem; margin:0 0 .3rem; }
-  h2 { font-size:1.05rem; margin:2.25rem 0 .35rem; }
-  .hint { color:var(--dim); font-size:.85rem; margin:.1rem 0 .85rem; }
-  .meta { color:var(--dim); font-size:.82rem; margin:0 0 1.1rem; }
-  .badge { display:inline-block; padding:.15em .6em; border-radius:999px; font-weight:700;
-    font-size:.8rem; letter-spacing:.03em; vertical-align:middle; }
-  .PASS { background:color-mix(in srgb,var(--green) 20%,transparent); color:var(--green); }
-  .FAIL { background:color-mix(in srgb,var(--red) 20%,transparent); color:var(--red); }
-  .dim { color:var(--dim); }
-  code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.86em; }
-  .stats { display:flex; flex-wrap:wrap; gap:.4rem; margin:0 0 .5rem; }
-  .stats .chip b { color:var(--ink); }
-  .chip { display:inline-block; padding:.12em .55em; border:1px solid var(--line); border-radius:6px;
-    font-size:.78rem; color:var(--dim); background:var(--panel); }
-  table { width:100%; border-collapse:collapse; }
-  .layers td, .layers th { text-align:left; padding:.6rem .6rem; border-bottom:1px solid var(--line); vertical-align:top; }
-  .layers th { color:var(--dim); font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.04em; }
-  .ln { font-weight:600; white-space:nowrap; }
-  .tags { margin-top:.25rem; display:flex; flex-direction:column; gap:.2rem; align-items:flex-start; white-space:normal; }
-  .tag { display:inline-block; padding:.05em .45em; border:1px solid var(--line); border-radius:5px;
-    font-size:.68rem; color:var(--dim); font-weight:500; }
-  .flow { display:flex; gap:.5rem; align-items:baseline; padding:.4rem 0; border-bottom:1px solid var(--line); flex-wrap:wrap; }
-  .flow-name { font-weight:600; min-width:13rem; }
-  .flow-arrow { color:var(--dim); font-size:.8rem; }
-  .flow-targets { display:flex; flex-wrap:wrap; gap:.3rem; }
-  details { margin-top:.75rem; }
-  summary { cursor:pointer; color:var(--accent); font-size:.9rem; }
-  .matrix-scroll { overflow-x:auto; margin-top:.75rem; }
-  .matrix { border-collapse:collapse; font-size:.82rem; }
-  .matrix th, .matrix td { border:1px solid var(--line); }
-  .matrix td { width:2.1rem; height:2.1rem; text-align:center; font-weight:700; }
-  .matrix .rowlbl { text-align:right; padding:0 .6rem; color:var(--dim); font-weight:600; white-space:nowrap; }
-  .matrix .rot { height:9rem; vertical-align:bottom; padding:.3rem; }
-  .matrix .rot span { writing-mode:vertical-rl; transform:rotate(180deg); color:var(--dim); font-weight:600; white-space:nowrap; }
-  .allow { color:var(--green); background:color-mix(in srgb,var(--green) 12%,transparent); }
-  .deny { color:var(--red); background:color-mix(in srgb,var(--red) 12%,transparent); }
-  .implicit { color:var(--dim); }
-  .self { color:var(--line); }
-  .legend { color:var(--dim); font-size:.82rem; margin:.6rem 0 0; }
-  .vgroup { background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--red);
-    border-radius:8px; padding:.7rem .85rem; margin-bottom:.6rem; }
-  .vghead { display:flex; gap:.5rem; align-items:baseline; }
-  .rule { font-weight:700; font-size:.8rem; color:var(--red); letter-spacing:.02em; }
-  .vitems { list-style:none; padding:0; margin:.4rem 0 0; }
-  .vitems li { padding:.3rem 0; border-top:1px solid var(--line); }
-  .vitems li:first-child { border-top:none; }
-  .edge { color:var(--accent); font-weight:600; margin-left:.4rem; }
-  .msg { margin-top:.15rem; }
-  .fix { margin-top:.4rem; color:var(--dim); font-size:.88rem; }
-  .clean { background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--green);
-    border-radius:8px; padding:.7rem .85rem; color:var(--dim); }
-  ul.enf { list-style:none; padding:0; margin:0; }
-  ul.enf li { display:flex; align-items:center; gap:.55rem; padding:.35rem 0; flex-wrap:wrap; }
-  ul.enf .dot { width:.6rem; height:.6rem; border-radius:50%; flex:0 0 auto; background:var(--line); }
-  ul.enf li.on .dot { background:var(--green); }
-  ul.enf li.off { color:var(--dim); }
-  .cmds { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:.85rem 1rem; }
-  .cmds code { display:block; padding:.15rem 0; }
-  footer { margin-top:2.5rem; padding-top:1rem; border-top:1px solid var(--line); color:var(--dim); font-size:.8rem; }
-  @media print { body { padding:0; } details { open:true; } .chip,.tag { border-color:#ccc; } }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f4f6f9; --panel: #fff; --panel2: #f8fafc; --ink: #0f172a; --dim: #64748b;
+      --line: #e2e8f0; --green: #059669; --red: #dc2626; --accent: #0284c7; --gold: #d97706;
+      --violet: #7c3aed;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0 0 4rem;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, color-mix(in srgb, var(--violet) 14%, transparent), transparent 55%),
+      var(--bg);
+    color: var(--ink);
+    font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 2rem 1.25rem; }
+  .hero {
+    display: grid; grid-template-columns: 1.4fr 0.9fr; gap: 1.25rem; align-items: stretch;
+    margin-bottom: 1.5rem;
+  }
+  @media (max-width: 820px) { .hero { grid-template-columns: 1fr; } }
+  .card {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, #fff 4%), var(--panel));
+    border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 1.15rem 1.25rem; box-shadow: 0 20px 50px rgba(0,0,0,.18);
+  }
+  h1 { font-size: 1.65rem; margin: 0 0 .35rem; letter-spacing: -0.02em; }
+  h2 { font-size: 1.05rem; margin: 0 0 .35rem; letter-spacing: -0.01em; }
+  h3 { font-size: .92rem; margin: 1rem 0 .4rem; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+  .lede { color: var(--dim); margin: 0 0 1rem; max-width: 42rem; }
+  .meta { color: var(--dim); font-size: .8rem; margin: .75rem 0 0; }
+  .badge, .pill {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .2em .65em; border-radius: 999px; font-weight: 700; font-size: .78rem;
+    letter-spacing: .03em; border: 1px solid transparent;
+  }
+  .PASS { background: color-mix(in srgb, var(--green) 18%, transparent); color: var(--green); border-color: color-mix(in srgb, var(--green) 35%, transparent); }
+  .FAIL { background: color-mix(in srgb, var(--red) 18%, transparent); color: var(--red); border-color: color-mix(in srgb, var(--red) 35%, transparent); }
+  .mode { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+  .pill.good { background: color-mix(in srgb, var(--green) 14%, transparent); color: var(--green); }
+  .pill.warn { background: color-mix(in srgb, var(--gold) 16%, transparent); color: var(--gold); }
+  .score-card { display: flex; flex-direction: column; justify-content: center; text-align: center; min-height: 100%; }
+  .score-ring {
+    --p: ${score};
+    width: 148px; height: 148px; margin: .25rem auto 0.85rem;
+    border-radius: 50%;
+    background:
+      radial-gradient(var(--panel) 58%, transparent 59%),
+      conic-gradient(var(--accent) calc(var(--p) * 1%), var(--line) 0);
+    display: grid; place-items: center;
+  }
+  .score-ring.elite { background:
+      radial-gradient(var(--panel) 58%, transparent 59%),
+      conic-gradient(var(--green) calc(var(--p) * 1%), var(--line) 0); }
+  .score-ring.strong { background:
+      radial-gradient(var(--panel) 58%, transparent 59%),
+      conic-gradient(var(--accent) calc(var(--p) * 1%), var(--line) 0); }
+  .score-ring.ok { background:
+      radial-gradient(var(--panel) 58%, transparent 59%),
+      conic-gradient(var(--gold) calc(var(--p) * 1%), var(--line) 0); }
+  .score-ring.weak { background:
+      radial-gradient(var(--panel) 58%, transparent 59%),
+      conic-gradient(var(--red) calc(var(--p) * 1%), var(--line) 0); }
+  .score-n { font-size: 2.1rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+  .score-cap { color: var(--dim); font-size: .85rem; margin: 0; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: .65rem; margin: 1rem 0 0; }
+  @media (max-width: 720px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+  .kpi { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: .7rem .8rem; }
+  .kpi b { display: block; font-size: 1.25rem; letter-spacing: -0.02em; }
+  .kpi span { color: var(--dim); font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; }
+  .section { margin-top: 1.35rem; }
+  .grid-2 { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 1rem; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+  .onion { width: 100%; height: auto; display: block; }
+  .svg-lbl { fill: var(--dim); font-size: 11px; font-family: ui-sans-serif, system-ui, sans-serif; }
+  .svg-core { fill: var(--ink); font-size: 11px; font-weight: 700; font-family: ui-sans-serif, system-ui, sans-serif; }
+  .svg-cap { fill: var(--dim); font-size: 11px; font-family: ui-sans-serif, system-ui, sans-serif; }
+  .bar-row { display: grid; grid-template-columns: 10.5rem 1fr 2.2rem minmax(0, 1fr); gap: .55rem; align-items: center; padding: .28rem 0; border-bottom: 1px solid var(--line); }
+  .bar-name { font-weight: 600; font-size: .86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--violet)); border-radius: 99px; }
+  .bar-n { text-align: right; font-variant-numeric: tabular-nums; color: var(--dim); font-size: .85rem; }
+  .bar-ex { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dim { color: var(--dim); }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .84em; }
+  code.pat { font-size: .78em; color: var(--dim); }
+  table { width: 100%; border-collapse: collapse; }
+  .layers td, .layers th { text-align: left; padding: .65rem .55rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .layers th { color: var(--dim); font-weight: 600; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; }
+  .ln { font-weight: 650; }
+  .num { font-variant-numeric: tabular-nums; font-weight: 650; }
+  .tags { margin-top: .3rem; display: flex; flex-wrap: wrap; gap: .25rem; }
+  .tag { display: inline-block; padding: .08em .45em; border: 1px solid var(--line); border-radius: 6px; font-size: .68rem; color: var(--dim); }
+  .tag.warn { border-color: color-mix(in srgb, var(--gold) 40%, var(--line)); color: var(--gold); }
+  .dim-tag { opacity: .75; }
+  .flow { display: flex; gap: .5rem; align-items: baseline; padding: .45rem 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .flow-name { font-weight: 650; min-width: 12rem; }
+  .flow-arrow { color: var(--dim); font-size: .8rem; }
+  .flow-targets { display: flex; flex-wrap: wrap; gap: .3rem; }
+  .chip { display: inline-block; padding: .12em .5em; border: 1px solid var(--line); border-radius: 6px; font-size: .76rem; color: var(--dim); background: var(--panel2); }
+  .chip.ok { color: var(--ink); border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
+  details { margin-top: .85rem; }
+  summary { cursor: pointer; color: var(--accent); font-size: .9rem; }
+  .matrix-scroll { overflow-x: auto; margin-top: .75rem; }
+  .matrix { border-collapse: collapse; font-size: .8rem; }
+  .matrix th, .matrix td { border: 1px solid var(--line); }
+  .matrix td { width: 2rem; height: 2rem; text-align: center; font-weight: 700; }
+  .matrix .rowlbl { text-align: right; padding: 0 .55rem; color: var(--dim); font-weight: 600; white-space: nowrap; }
+  .matrix .rot { height: 8.5rem; vertical-align: bottom; padding: .25rem; }
+  .matrix .rot span { writing-mode: vertical-rl; transform: rotate(180deg); color: var(--dim); font-weight: 600; white-space: nowrap; }
+  .allow { color: var(--green); background: color-mix(in srgb, var(--green) 12%, transparent); }
+  .deny { color: var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); }
+  .implicit { color: var(--dim); }
+  .self { color: var(--line); }
+  .legend { color: var(--dim); font-size: .8rem; margin: .55rem 0 0; }
+  .gates { display: grid; grid-template-columns: repeat(2, 1fr); gap: .65rem; }
+  @media (max-width: 700px) { .gates { grid-template-columns: 1fr; } }
+  .gate { display: flex; gap: .65rem; align-items: flex-start; padding: .75rem .8rem; border-radius: 12px; border: 1px solid var(--line); background: var(--panel2); }
+  .gate .dot { width: .65rem; height: .65rem; border-radius: 50%; margin-top: .35rem; background: var(--line); flex: 0 0 auto; }
+  .gate.on .dot { background: var(--green); box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 20%, transparent); }
+  .gate.off { opacity: .72; }
+  .gdesc { color: var(--dim); font-size: .85rem; margin: .1rem 0 .25rem; }
+  .vgroup { background: var(--panel2); border: 1px solid var(--line); border-left: 3px solid var(--red); border-radius: 10px; padding: .75rem .9rem; margin-bottom: .6rem; }
+  .vghead { display: flex; gap: .5rem; align-items: baseline; }
+  .rule { font-weight: 700; font-size: .8rem; color: var(--red); }
+  .vitems { list-style: none; padding: 0; margin: .4rem 0 0; }
+  .vitems li { padding: .35rem 0; border-top: 1px solid var(--line); }
+  .vitems li:first-child { border-top: none; }
+  .edge { color: var(--accent); font-weight: 650; margin-left: .35rem; }
+  .fix { margin-top: .4rem; color: var(--dim); font-size: .86rem; }
+  .clean, .hero-clean { background: var(--panel2); border: 1px solid var(--line); border-left: 3px solid var(--green); border-radius: 12px; padding: 1rem 1.1rem; }
+  .clean-title { font-weight: 750; color: var(--green); margin-bottom: .25rem; }
+  .clean-body { color: var(--dim); }
+  .cmds { display: grid; gap: .35rem; background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: .9rem 1rem; }
+  .cmds code { display: block; padding: .15rem 0; overflow-x: auto; }
+  footer { margin-top: 2.25rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--dim); font-size: .8rem; }
+  .brand { display: inline-flex; align-items: center; gap: .4rem; color: var(--dim); font-size: .78rem; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; margin-bottom: .55rem; }
+  .brand i { width: .55rem; height: .55rem; border-radius: 2px; background: linear-gradient(135deg, var(--accent), var(--violet)); display: inline-block; }
+  @media print {
+    body { background: #fff; color: #111; padding: 0; }
+    .card, .kpi, .gate, .cmds, .clean, .vgroup { box-shadow: none; break-inside: avoid; }
+    details { open: true; }
+  }
 </style></head>
 <body><div class="wrap">
-  <h1>${esc(project)} <span class="badge ${status}">${status}</span></h1>
-  <div class="stats">${stats}</div>
-  <p class="meta">${meta}</p>
-
-  <h2>Layers</h2>
-  <p class="hint">Ordered innermost (most restricted) → outermost (entrypoints).</p>
-  <table class="layers">
-    <tr><th>Layer</th><th>Purpose</th><th>Folders</th><th>Example file</th></tr>
-    ${layerRows || '<tr><td colspan="4" class="dim">No layers configured.</td></tr>'}
-  </table>
-
-  <h2>Dependency direction</h2>
-  <p class="hint">Inner layers stay ignorant of outer ones. Each layer may import only what's listed.</p>
-  ${flowRows || '<p class="dim">No layers configured.</p>'}
-  <details>
-    <summary>Full matrix (precise ✓ / ✕ grid)</summary>
-    <div class="matrix-scroll"><table class="matrix">
-      <tr><th></th>${matrixHead}</tr>
-      ${matrixBody}
-    </table></div>
-    <p class="legend">Row imports column. ✓ allowed · ✕ denied (hover for the reason) · · = no explicit rule / self.</p>
-  </details>
-
-  <h2>Violations</h2>
-  ${violationBlocks}
-
-  <h2>Enforcement points</h2>
-  <ul class="enf">${enforcementRows}</ul>
-
-  <h2>Commands to remember</h2>
-  <div class="cmds">
-    <code>${arkCheckCommand(root)}</code>
-    <code>/ark-place "&lt;what you're building&gt;"</code>
+  <div class="hero">
+    <div class="card">
+      <div class="brand"><i></i> Ark architecture report</div>
+      <h1>${esc(project)} <span class="badge ${status}">${status}</span> <span class="badge mode">${esc(modeLabel)}</span></h1>
+      <p class="lede">${esc(modeBlurb)} One machine-readable contract · write gate · CI · optional runtime.</p>
+      <div class="kpis">
+        <div class="kpi"><b>${esc(govLabel)}</b><span>Governed</span></div>
+        <div class="kpi"><b>${layers.length}</b><span>Layers</span></div>
+        <div class="kpi"><b>${gatesOn}/${enforcement.length}</b><span>Gates live</span></div>
+        <div class="kpi"><b>${violations.length}${suppressed ? ` · ${suppressed}Δ` : ''}</b><span>Violations${suppressed ? ' · frozen' : ''}</span></div>
+      </div>
+      <p class="meta">${meta}</p>
+      ${skillsNote}
+    </div>
+    <div class="card score-card">
+      <div class="score-ring ${scoreTone}"><div><div class="score-n">${score}</div><div class="dim" style="font-size:.72rem;letter-spacing:.08em;text-transform:uppercase">Ark score</div></div></div>
+      <p class="score-cap">${esc(scoreCaption)}</p>
+      <p class="meta" style="margin-top:.65rem">Coverage ${scoreCoverage} · Clean ${scoreClean} · Gates ${scoreGates} · Rules ${scoreRules}</p>
+    </div>
   </div>
 
-  <footer>Generated by ${meta || 'ark-check'}. A generated artifact — regenerate with <code>ark-check --report</code>; gitignore it rather than committing.</footer>
+  <div class="section grid-2">
+    <div class="card">
+      <h2>Architecture map</h2>
+      <p class="dim" style="margin:.15rem 0 0.75rem;font-size:.88rem">Outer rings = entrypoints & adapters. Center = purest core.</p>
+      ${onionSvg}
+    </div>
+    <div class="card">
+      <h2>Files per layer</h2>
+      <p class="dim" style="margin:.15rem 0 0.75rem;font-size:.88rem">${classifiedFiles} classified · ${totalFiles} in scope${coverage?.unclassified?.count ? ` · ${coverage.unclassified.count} unclassified` : ''}</p>
+      ${barRows || '<p class="dim">No layer file counts.</p>'}
+    </div>
+  </div>
+
+  <div class="section card">
+    <h2>Layers</h2>
+    <p class="dim" style="margin:.15rem 0 .75rem;font-size:.88rem">Innermost (most restricted) → outermost (entrypoints). Forbidden globals protect pure cores.</p>
+    <table class="layers">
+      <tr><th>Layer</th><th>Purpose</th><th>Files</th><th>Patterns</th><th>Example</th></tr>
+      ${layerRows || '<tr><td colspan="5" class="dim">No layers configured.</td></tr>'}
+    </table>
+  </div>
+
+  <div class="section card">
+    <h2>Dependency direction</h2>
+    <p class="dim" style="margin:.15rem 0 .75rem;font-size:.88rem">Inner layers stay ignorant of outer ones. Each row lists what it may import.</p>
+    ${flowRows || '<p class="dim">No layers configured.</p>'}
+    <details>
+      <summary>Full matrix (precise ✓ / ✕ grid)</summary>
+      <div class="matrix-scroll"><table class="matrix">
+        <tr><th></th>${matrixHead}</tr>
+        ${matrixBody}
+      </table></div>
+      <p class="legend">Row imports column. ✓ allowed · ✕ denied · · = no explicit rule / self. Denied edges: ${deniedCount} · explicit allows: ${allowedCount} · purity-guarded layers: ${guarded}</p>
+    </details>
+  </div>
+
+  <div class="section card">
+    <h2>Violations</h2>
+    ${violationBlocks}
+  </div>
+
+  <div class="section card">
+    <h2>Enforcement points</h2>
+    <p class="dim" style="margin:.15rem 0 .85rem;font-size:.88rem">Write-time · merge-time · editor · ratchet. Same contract everywhere.</p>
+    <div class="gates">${enforcementRows}</div>
+  </div>
+
+  <div class="section card">
+    <h2>Commands worth memorizing</h2>
+    <div class="cmds">
+      <code>${arkCheckCommand(root)}</code>
+      <code>${arkCommand(root, 'ark-check', '--coverage')}</code>
+      <code>${arkCommand(root, 'ark-check', '--plan')}</code>
+      <code>${arkCommand(root, 'ark-check', '--report ark-report.html')}</code>
+      <code>/ark-place "&lt;what you're building&gt;"</code>
+      <code>/ark-explain</code>
+    </div>
+  </div>
+
+  <footer>
+    Generated by ${meta || 'ark-check'} · visual twin of <code>/ark-explain</code>.
+    Regenerate with <code>ark-check --report</code>; add the file to <code>.gitignore</code> rather than committing it.
+  </footer>
 </div></body></html>
 `;
 }
@@ -3911,22 +4175,29 @@ async function main() {
 
   if (args.report) {
     const exampleByLayer = new Map();
+    const fileCountByLayer = new Map();
     for (const file of files) {
       const layer = layerForFile(root, file, config.layers);
-      if (layer && !exampleByLayer.has(layer)) {
+      if (!layer) continue;
+      fileCountByLayer.set(layer, (fileCountByLayer.get(layer) || 0) + 1);
+      if (!exampleByLayer.has(layer)) {
         exampleByLayer.set(layer, normalize(path.relative(root, file)));
       }
     }
+    const coverage = computeCoverage(root, config, files, rules);
     const reportPayload = {
       root,
       config,
       exampleByLayer,
+      fileCountByLayer,
+      coverage,
       violations: activeViolations,
       ok,
       suppressed: suppressed.length,
       version: arkPackageVersion(),
       configPath: args.config,
       generatedAt: new Date().toISOString().slice(0, 10),
+      skillGaps,
     };
     const html = args.beginner
       ? renderBeginnerHtmlReport(reportPayload)

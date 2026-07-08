@@ -1,63 +1,68 @@
 ---
 name: ark-explain
-description: Explain this project's architecture in plain language — the layers, why each import rule exists, and what to do when the gate blocks you.
+description: Explain this project's architecture in plain language and generate the showcase HTML report — layers, rules, coverage, gates, and why the contract exists.
 ---
 
 # /ark-explain — Understand this project's architecture
 
-The user wants to understand the architecture, a specific rule, or why the
-gate just blocked them. Your job is to teach, not to lecture: plain language,
-this project's real files as examples, no unexplained jargon.
+The user wants to understand the architecture, a specific rule, or why the gate blocked them.
+Your job is to **teach with this repo's real data** and leave a shareable visual artifact.
 
-## Steps
+## Always do this first (showcase report)
 
-1. **Load the real contract**: `ark.config.json`, the `ark://manifest` MCP
-   resource if available, and `AGENTS.md`. Everything you explain must come
-   from these plus the actual source tree — not from generic architecture
-   theory.
+1. Run the full HTML report (uses the real contract + coverage + gates):
+
+   ```bash
+   npx ark-check --root . --config ark.config.json --report ark-report.html
+   ```
+
+   Prefer the project's package-manager runner if gates already emit one
+   (`pnpm … exec ark-check` / `yarn` / `npx`).
+
+2. Tell the user the path to `ark-report.html` and that they can open it in a browser.
+   Mention it is a **generated artifact** — suggest adding `ark-report.html` to `.gitignore`
+   if it is not already ignored.
+
+3. Optionally also run:
+
+   ```bash
+   npx ark-check --coverage
+   npx ark-check --doctor
+   ```
+
+   so your spoken explanation matches the report's governed% and operating mode
+   (SUGGEST / ADAPT / ENFORCE).
+
+The HTML report is the visual twin of this skill: architecture map, files per layer,
+dependency direction, matrix, violations, enforcement points, and an Ark fitness score.
+
+## Spoken / written explanation
+
+1. **Load the real contract**: `ark.config.json`, `ark://manifest` if available, `AGENTS.md`.
 2. **If asked generally** ("explain the architecture"), produce a guided tour:
-   - Each layer: name, its directory, one sentence of purpose, and ONE real
-     file from this repo as an example.
-   - The dependency direction in one diagram (ASCII arrows are fine): who may
-     import whom, who may not.
-   - The enforcement points: write gate (blocks bad edits as you type),
-     `ark-check` in CI (blocks bad merges), ESLint (in-editor), baseline
-     (old violations frozen, new ones blocked) — one sentence each, only the
-     ones actually configured in this repo.
-   - How much is actually governed: run `ark-check --coverage` and report
-     `governed.percent`. Be honest — if it's low, say a green check only covers
-     that fraction; the rest is unchecked, not verified clean.
-   - If the repo uses a DI/kernel framework (dcouplr, NestJS, a custom kernel),
-     explain the border principle: Ark guards the boundary AROUND it — a declared
-     public surface app code may import — and treats the framework's internals as a
-     black box it does not police. That's why the contract has a `*Api`/`*Internal`
-     split, if it does.
-3. **If asked about a specific rule or block** ("why can't domain import the
-   repo?"), answer with: the rule from the config, the practical consequence it
-   prevents (couple the business rules to the database and you can't test or
-   swap either), and the sanctioned way to do what they wanted (usually a port —
-   define the interface where you need it, implement it where the capability
-   lives; offer `/ark-fix` to do it).
-4. **If asked "what's a port/adapter/saga/projection/outbox"**, define it in
-   two sentences with a this-repo example if one exists, or the conventional
-   directory it would live in if not.
+   - Operating mode + governed% (honest: low coverage means green checks almost nothing).
+   - Each major layer: name, purpose, one real file from this repo, file count if known.
+   - Dependency direction in one short diagram (ASCII is fine).
+   - Enforcement points that are actually on: write gate, CI, ESLint, baseline.
+   - If a DI/kernel framework border exists, explain public surface vs internals.
+3. **If asked about a specific rule or block**, answer with: the rule, the consequence it
+   prevents, and the sanctioned fix (usually a port) — offer `/ark-fix`.
+4. **If asked "what's a port/adapter/saga…"**, two sentences + this-repo example or conventional path.
 
 ## Operating rules
 
-- Read-only: this skill never edits files.
-- Calibrate depth to the question — a one-rule question gets a paragraph, not
-  the full tour.
+- Prefer generating the HTML report even when the question is narrow — then zoom the prose.
+- Read-only for source code: this skill does not refactor product files (writing the report
+  HTML is fine).
+- Calibrate depth: one-rule questions get a paragraph; full tours get structure + report.
 - Every jargon term gets a one-line plain definition on first use.
-- End with the two commands worth memorizing: the strict check from
-  `package.json` (or `ark-check --root . --config ark.config.json
-  --strict-config`) and `/ark-place` for "where does new code go".
-- For a general tour, offer the visual version: `ark-check --report
-  ark-report.html` writes a self-contained HTML report (layer map, import
-  matrix, violations, live gates) — a shareable artifact for a PR or onboarding.
-  It's generated output: suggest adding it to `.gitignore`, not committing it.
+- End with:
+  - the strict check from `package.json` (or `ark-check --root . --config ark.config.json --strict-config`)
+  - `/ark-place` for "where does new code go?"
+  - the path to `ark-report.html`
 
-## Related onboarding
+## Related
 
-- New builders: point to `/ark-architect`, `ark-check --recommend`, and `docs/enthusiast/README.md`.
-- Violation JSON fields `fixClass`, `effort`, `enthusiastHint` explain fixes in plain English.
-- Brownfield adoption: `/ark-adopt` and `docs/brownfield-adoption.md` — different job than explaining an existing contract.
+- Onboarding: `/ark-architect`, `ark-check --recommend`, `docs/enthusiast/README.md`
+- Brownfield: `/ark-adopt`, `docs/brownfield-adoption.md`
+- Autopilot: `/ark-autopilot` after the user understands the contract
