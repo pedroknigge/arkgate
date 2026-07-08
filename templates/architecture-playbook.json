@@ -70,13 +70,16 @@
       "detectionSignals": {
         "apiSurface": 6,
         "persistence": 4,
-        "application": 2
+        "application": 2,
+        "nestFramework": 8,
+        "expressLike": 8
       },
       "negativeSignals": {
         "uiHeavy": 5,
         "workspaces": 3,
         "cli": 5,
-        "tinyTree": 2
+        "tinyTree": 2,
+        "nextFramework": 4
       }
     },
     "frontend-surface": {
@@ -106,14 +109,16 @@
       ],
       "detectionSignals": {
         "ui": 6,
-        "featureSlicedLayout": 4
+        "featureSlicedLayout": 4,
+        "nextFramework": 5
       },
       "negativeSignals": {
         "persistence": 5,
         "apiSurfaceOnly": 3,
         "workspaces": 2,
         "cli": 5,
-        "tinyTree": 1
+        "tinyTree": 1,
+        "nestFramework": 6
       }
     },
     "library-sdk": {
@@ -144,7 +149,10 @@
         "ui": 4,
         "cli": 3,
         "workspaces": 3,
-        "persistenceHeavy": 2
+        "persistenceHeavy": 2,
+        "nestFramework": 8,
+        "nextFramework": 8,
+        "apiSurface": 4
       }
     },
     "cli-utility": {
@@ -173,7 +181,11 @@
       "negativeSignals": {
         "ui": 4,
         "workspaces": 3,
-        "libraryOnly": 2
+        "libraryOnly": 2,
+        "apiSurface": 6,
+        "expressLike": 6,
+        "nestFramework": 8,
+        "nextFramework": 8
       }
     },
     "worker-pipeline": {

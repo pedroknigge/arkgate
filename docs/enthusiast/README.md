@@ -5,6 +5,20 @@ developers. This track follows [Diátaxis](https://diataxis.fr/): tutorial, how-
 reference, and explanation — each page links to canonical sources instead of
 duplicating the full [architect onboarding plan](../architect-onboarding-plan.md).
 
+## How Ark talks to you (2.0)
+
+**Entry style** — who is driving: *newbie* (`ark start` / `/ark-autopilot`) vs *expert* (individual commands).
+
+**Operating mode** — what Ark is doing right now (one contract underneath):
+
+| Mode | Meaning |
+|------|---------|
+| **Suggest** | Propose an application shape and install a starter contract. |
+| **Adapt** | Match the contract to your real layout / raise governed coverage. |
+| **Enforce** | The contract actually governs your code; gates hold the line. |
+
+`ark start` and `ark-check --plan` will not claim "everything is guarded" while governed coverage is near zero. On Nest/Next/express starters, init also merges **framework filename conventions** into the layer globs so day-one coverage is real.
+
 ## Start here
 
 | Type | Document | You will… |

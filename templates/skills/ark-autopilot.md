@@ -13,9 +13,9 @@ non-developer from "I have a project" to "governed, cleaned up, and enforced fro
 `mechanical-safe` changes are auto-applied (validated, with rollback); everything `judgment` is
 PROPOSED for a human decision. Code only — never DB/schema, never weakening the gate.
 
-## Two tiers, one contract
+## Two entry styles, three operating modes, one contract
 
-Pick the tier from who's driving; both run on the same `ark.config.json` and the same gates.
+**Who is driving** (entry style):
 
 - **Newbie (default here):** run the WHOLE flow with plain-language explanations and an
   approval prompt before anything non-trivial. The user never needs to know a preset or a rule
@@ -23,6 +23,16 @@ Pick the tier from who's driving; both run on the same `ark.config.json` and the
 - **Expert:** skip the autopilot and use the pieces directly — `ark init` / `/ark-contract` to
   shape the contract, `ark-check --plan` to see the work, `/ark-fix` for targeted fixes,
   `ark-check --strict-config` as the gate. Point them there and stop.
+
+**What Ark is doing right now** (operating mode — read from `ark start` / `--plan` / `--coverage`):
+
+- **Suggest** — thin or greenfield project: propose an application shape and install a starter contract.
+- **Adapt** — brownfield or low `governed%`: match the contract to the real layout, raise coverage,
+  freeze only real debt. A clean plan with ~0% governed is **not** done — route to `--coverage` / `/ark-adopt`.
+- **Enforce** — `goal.met` is true *and* governed coverage is meaningful: write gate + CI hold the line.
+
+Never tell a user "your architecture is guarded" while `--plan` reports `goal.met: false` or
+`governedPercent` is low.
 
 ## Flow (newbie tier)
 

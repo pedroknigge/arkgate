@@ -303,7 +303,7 @@ describe('ark-check --install-agent-gates', () => {
     expect(pnpmWorkflow).toContain('cache: pnpm');
     expect(pnpmWorkflow).toContain('corepack enable');
     expect(pnpmWorkflow).toContain('pnpm install --frozen-lockfile');
-    expect(pnpmWorkflow).toContain('pnpm exec ark-check --root . --config ark.config.json --strict-config');
+    expect(pnpmWorkflow).toContain('pnpm --config.verify-deps-before-run=false exec ark-check --root . --config ark.config.json --strict-config');
     expect(pnpmWorkflow).not.toContain('npm ci');
 
     const yarnRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-yarn-'));
@@ -332,7 +332,7 @@ describe('ark-check --install-agent-gates', () => {
     expect(pnpm.status).toBe(0);
 
     const agents = fs.readFileSync(path.join(pnpmRoot, 'AGENTS.md'), 'utf8');
-    expect(agents).toContain('pnpm exec ark-check --root . --config ark.config.json --strict-config');
+    expect(agents).toContain('pnpm --config.verify-deps-before-run=false exec ark-check --root . --config ark.config.json --strict-config');
     expect(agents).not.toContain('npx ark');
 
     const mcp = fs.readFileSync(path.join(pnpmRoot, '.mcp.json'), 'utf8');
@@ -340,11 +340,11 @@ describe('ark-check --install-agent-gates', () => {
     expect(mcp).not.toContain('"command": "npx"');
 
     const settings = fs.readFileSync(path.join(pnpmRoot, '.claude/settings.json'), 'utf8');
-    expect(settings).toContain('pnpm exec ark-mcp --session-context');
+    expect(settings).toContain('pnpm --config.verify-deps-before-run=false exec ark-mcp --session-context');
     expect(settings).not.toContain('npx ark-mcp');
 
     const cursor = fs.readFileSync(path.join(pnpmRoot, '.cursor/rules/ark.mdc'), 'utf8');
-    expect(cursor).toContain('pnpm exec ark-check');
+    expect(cursor).toContain('pnpm --config.verify-deps-before-run=false exec ark-check');
 
     const codexToml = fs.readFileSync(path.join(pnpmRoot, 'docs/ark-codex-config.toml'), 'utf8');
     expect(codexToml).toContain('command = "pnpm"');
@@ -374,7 +374,7 @@ describe('ark-check --install-agent-gates', () => {
     const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
     // package-lock.json wins the tie → npx, not `pnpm exec` (which would break `npm run`).
     expect(agents).toContain('npx ark-check');
-    expect(agents).not.toContain('pnpm exec ark-check');
+    expect(agents).not.toContain('pnpm --config.verify-deps-before-run=false exec ark-check');
     // Generated CI must agree with the emitted commands.
     const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
     expect(workflow).toContain('npx ark-check');
@@ -391,7 +391,7 @@ describe('ark-check --install-agent-gates', () => {
     fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
     expect(runInstallAgentGates(root, ['--tools', 'claude']).status).toBe(0);
     const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
-    expect(agents).toContain('pnpm exec ark-check');
+    expect(agents).toContain('pnpm --config.verify-deps-before-run=false exec ark-check');
     expect(agents).not.toContain('npx ark-check');
   });
 
@@ -451,15 +451,19 @@ describe('ark-check --install-agent-gates', () => {
     expect(res.status).toBe(0);
 
     const settings = fs.readFileSync(path.join(root, '.claude/settings.json'), 'utf8');
-    expect(settings).toContain('pnpm exec ark-mcp --hook');
+    expect(settings).toContain('pnpm --config.verify-deps-before-run=false exec ark-mcp --hook');
     expect(settings).not.toContain('npx ark-mcp');
     expect(JSON.parse(settings)._custom).toBe('keep me'); // customization preserved
 
     const mcp = JSON.parse(fs.readFileSync(path.join(root, '.mcp.json'), 'utf8'));
     expect(mcp.mcpServers.ark.command).toBe('pnpm');
-    expect(mcp.mcpServers.ark.args.slice(0, 2)).toEqual(['exec', 'ark-mcp']);
+    expect(mcp.mcpServers.ark.args.slice(0, 3)).toEqual([
+      '--config.verify-deps-before-run=false',
+      'exec',
+      'ark-mcp',
+    ]);
 
-    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('pnpm exec ark-check');
+    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('pnpm --config.verify-deps-before-run=false exec ark-check');
     expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).not.toContain('npx ark-check');
   });
 
@@ -837,7 +841,8 @@ describe('ark init', () => {
     // Plain-language shape, the plan, and a wrap-up — no skill names required.
     expect(out).toContain('Your project looks like');
     expect(out).toContain('Your architecture plan');
-    expect(out).toContain('Done — Ark now guards your architecture');
+    // Three modes (suggest / adapt / enforce) — honest wrap-up, never a false "guards everything".
+    expect(out).toMatch(/Done — Ark is in (SUGGEST|ADAPT|ENFORCE) mode/);
     // It actually set things up — and left the gates active so it "stays that way"
     // (the enforcement handoff): config, agent contract, and the CI gate.
     expect(fs.existsSync(path.join(root, 'ark.config.json'))).toBe(true);
@@ -1836,6 +1841,87 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
     expect(plan.goal.activeViolations).toBe(0);
     expect(plan.goal.met).toBe(true);
     expect(plan.steps).toHaveLength(0);
+  });
+
+  it('does not mark goal.met when zero violations but governed coverage is low (false-green)', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-plan-lowgov-'));
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    // Contract only matches domain/**, but files live flat under src/ → 0% governed.
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+        rules: [],
+      })
+    );
+    fs.writeFileSync(path.join(root, 'src/app.service.ts'), 'export const x = 1;\n');
+    const parsed = runPlanJson(root);
+    expect(parsed.plan.goal.activeViolations).toBe(0);
+    expect(parsed.plan.goal.governedPercent).toBe(0);
+    expect(parsed.plan.goal.met).toBe(false);
+    expect(parsed.ok).toBe(false);
+    expect(parsed.plan.goal.statement).toMatch(/governs only 0%/i);
+  });
+});
+
+describe('framework layout overlays (Nest / Next)', () => {
+  it('Nest flat starter: hexagonal preset + overlay governs controller/service/module/main', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-nest-overlay-'));
+    fs.writeFileSync(
+      path.join(root, 'package.json'),
+      JSON.stringify({
+        name: 'nest-app',
+        dependencies: { '@nestjs/common': '^11', '@nestjs/core': '^11' },
+      })
+    );
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/app.controller.ts'), 'export class AppController {}\n');
+    fs.writeFileSync(path.join(root, 'src/app.service.ts'), 'export class AppService {}\n');
+    fs.writeFileSync(path.join(root, 'src/app.module.ts'), 'export class AppModule {}\n');
+    fs.writeFileSync(path.join(root, 'src/main.ts'), 'export async function bootstrap() {}\n');
+
+    execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--init', '--preset', 'hexagonal', '--force'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    const config = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
+    expect(config.frameworkOverlay).toMatch(/nestjs/);
+    const cov = JSON.parse(
+      execFileSync(
+        'node',
+        [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--coverage', '--json'],
+        { encoding: 'utf8' }
+      )
+    );
+    expect(cov.coverage.governed.percent).toBeGreaterThanOrEqual(75);
+  });
+
+  it('Next app router files are classified under presentation after layered init', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-next-overlay-'));
+    fs.writeFileSync(
+      path.join(root, 'package.json'),
+      JSON.stringify({ name: 'next-app', dependencies: { next: '14.0.0', react: '18.0.0' } })
+    );
+    fs.mkdirSync(path.join(root, 'src/app'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/components'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/app/page.tsx'), 'export default function Page() { return null }\n');
+    fs.writeFileSync(path.join(root, 'src/components/Button.tsx'), 'export const Button = () => null\n');
+
+    execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--init', '--preset', 'layered', '--force'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    const cov = JSON.parse(
+      execFileSync(
+        'node',
+        [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--coverage', '--json'],
+        { encoding: 'utf8' }
+      )
+    );
+    expect(cov.coverage.governed.percent).toBeGreaterThanOrEqual(50);
   });
 });
 

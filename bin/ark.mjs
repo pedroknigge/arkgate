@@ -13,6 +13,7 @@ import {
   isValidArchetypeId,
   mapWizardChoiceToArchetype,
   resolveArchetypePreset,
+  resolveOperatingMode,
 } from './ark-shared.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -351,15 +352,66 @@ async function start(args) {
     console.log('Your architecture plan:');
     runArkCheck(['--root', root, '--config', 'ark.config.json', '--plan'], { cwd: root });
 
-    // 5) Plain-language wrap-up.
+    // Capture plan JSON for an honest wrap-up (governed% + goal.met) without re-printing.
+    const planCapture = spawnSync(
+      process.execPath,
+      [arkCheck, '--root', root, '--config', 'ark.config.json', '--plan', '--json'],
+      { cwd: root, encoding: 'utf8' }
+    );
+    let planOk = true;
+    let governedPercent = null;
+    let mode = 'enforce'; // suggest | adapt | enforce
+    try {
+      const parsed = JSON.parse(planCapture.stdout || '{}');
+      planOk = parsed.ok === true && parsed.plan?.goal?.met === true;
+      governedPercent = parsed.plan?.goal?.governedPercent ?? null;
+      mode = resolveOperatingMode({
+        governedPercent,
+        planMet: parsed.plan?.goal?.met === true,
+        mature: Boolean(rec?.mature),
+      });
+      // Fresh greenfield with good coverage but no real tree yet → suggest, not enforce theatre.
+      if (mode === 'enforce' && rec && !rec.mature && (governedPercent ?? 0) < 80) {
+        mode = 'suggest';
+      }
+    } catch {
+      // If capture fails, stay conservative: don't claim full enforcement.
+      mode = 'adapt';
+      planOk = false;
+    }
+
+    // 5) Plain-language wrap-up — three operating modes, one contract.
+    // suggest = greenfield shape proposal; adapt = match real layout / raise coverage;
+    // enforce = contract actually governs code and gates stay on.
     console.log('');
-    console.log('Done — Ark now guards your architecture as you and your AI agents write code.');
-    console.log('What happens now:');
-    console.log('  • Every edit is checked against the plan above (in CI and, if wired, at write time).');
-    console.log('  • Want the plan actually carried out? Run /ark-autopilot in your agent — it applies');
-    console.log('    the safe fixes (validated) and proposes the rest, in a discardable worktree.');
+    if (mode === 'enforce' && planOk) {
+      console.log('Done — Ark is in ENFORCE mode: your contract governs the code and the gates stay on.');
+      console.log('What happens now:');
+      console.log('  • Every edit is checked (in CI and, if wired, at write time).');
+      console.log('  • Carry out remaining plan steps with /ark-autopilot (safe auto + your approvals).');
+    } else if (mode === 'suggest') {
+      console.log('Done — Ark is in SUGGEST mode: a starting shape is installed; enforcement grows as you add layers.');
+      console.log('What happens now:');
+      console.log('  • Gates are on for whatever the contract already matches.');
+      console.log('  • Expand coverage as you create real layer folders (see the plan above).');
+      if (governedPercent != null) {
+        console.log(`  • Right now Ark governs ~${governedPercent}% of in-scope files — low is normal on a fresh scaffold.`);
+      }
+      console.log('  • When you want the agent to drive the plan: /ark-autopilot');
+    } else {
+      console.log('Done — Ark is in ADAPT mode: config is in place, but the contract still needs to match your real layout.');
+      console.log('What happens now:');
+      if (governedPercent != null) {
+        console.log(
+          `  • Governed coverage is ~${governedPercent}% — a "clean" plan with low coverage checks almost nothing.`
+        );
+      }
+      console.log(`  • See what is unmatched:  ${arkCommand(root, 'ark-check', '--coverage')}`);
+      console.log('  • On a mature repo, prefer /ark-adopt over forcing a starter preset.');
+      console.log('  • Drive fixes with /ark-autopilot once the contract matches; until then ENFORCE is not honest.');
+    }
     console.log(`  • Re-run the plan anytime:   ${arkCommand(root, 'ark-check', '--plan')}`);
-    console.log(`  • Check the whole project:   ${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config')}`);
+    console.log(`  • Full project check:        ${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config')}`);
     console.log(`  • Update Ark later:          ${arkCommand(root, 'ark', 'upgrade')}`);
     return 0;
   } finally {

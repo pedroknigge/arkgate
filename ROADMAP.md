@@ -14,7 +14,7 @@ Ark's arc has three stages: **Gate → Guide → Co-pilot.**
 - **Gate** (shipped): catch violations at write time and before merge; one contract.
 - **Guide** (shipped, 1.11–1.14): stop false-greens, recommend an application shape,
   write an adoption plan, route mature repos to honest adoption.
-- **Co-pilot** (where we're going): take a non-developer from *"I have a project"* to
+- **Co-pilot** (**ships in 2.0.0**): take a non-developer from *"I have a project"* to
   *"my architecture is sound and stays that way"* — with an agent doing the work and
   Ark keeping it honest.
 
@@ -23,23 +23,29 @@ language; the user accepts; an agent — driven by Ark's plan — proposes the f
 changes, sequences them into a roadmap, and improves the architecture incrementally,
 running `ark-check` after every step and enforcing the contract from then on.
 
-Two tiers, one contract underneath:
+Two entry styles, **three operating modes**, one contract underneath:
 
-- **Newbie** gets the whole loop — Ark proposes, plans, applies the safe changes, and
+- **Newbie entry** gets the whole loop — Ark proposes, plans, applies the safe changes, and
   enforces. They never need to know "hexagonal" or "layer glob" to benefit.
-- **Expert** takes only the parts they want — adjust the contract, run the gate — and
+- **Expert entry** takes only the parts they want — adjust the contract, run the gate — and
   ignores the autopilot.
+
+Operating modes (what Ark is doing right now, not who you are):
+
+- **Suggest** — greenfield / thin tree: propose an application shape and install a starter contract.
+- **Adapt** — brownfield or low governed%: match the contract to real layout, raise coverage, freeze only real debt.
+- **Enforce** — contract actually governs code; write gate + CI hold the line. A clean plan with ~0% governed is *not* enforce.
 
 Honesty scales into autonomy: Ark never auto-applies a change it can't validate, never
 reports green while skipping work, and always shows what it did automatically vs what it
 is proposing vs what it deferred for a human decision. Judgment-heavy refactors
 ("big rocks") are always proposed, never silently applied.
 
-**Status: the co-pilot ships in 2.0.0.** Its primitives are built on the three every modern
-agent harness uses — **plan** (`ark-check --plan`), **goal** (the plan's `goal` block),
-**loop** (`/ark-loop`) — composed by **`ark start`** (guided setup) and **`/ark-autopilot`**
-(the end-to-end flow, two tiers). What remains is depth: broadening what's safe to auto-apply,
-proven by evals.
+**Status: 2.0.0 = co-pilot milestone + field-hardened honesty.** Primitives — **plan**
+(`ark-check --plan`), **goal** (plan `goal` block, including governed%), **loop**
+(`/ark-loop`) — composed by **`ark start`** and **`/ark-autopilot`**. Field hardening closes
+false-greens, detects Nest/Next/express, overlays real globs, and uses a pnpm-safe runner.
+What remains after 2.0 is **depth** (broader mechanical-safe, evals), not new primitives.
 
 ## Direction
 
@@ -132,13 +138,22 @@ Enthusiast doc track: [docs/enthusiast/README.md](docs/enthusiast/README.md).
   rest, never weakening the gate.
 - **`/ark-autopilot`** (Phase I) — the end-to-end co-pilot: set up → plan → drive the fixes →
   enforce, in plain language with approvals, over two tiers (newbie/expert) on one contract.
-  **This completes the co-pilot milestone (2.0.0).** See [docs/co-pilot-plan.md](docs/co-pilot-plan.md)
-  and the demo [docs/demos/03-copilot-autopilot.md](docs/demos/03-copilot-autopilot.md).
+- **Proof** (Phase J) — classifier-precision corpus, demo
+  [docs/demos/03-copilot-autopilot.md](docs/demos/03-copilot-autopilot.md), enforcement-handoff test.
+- **Field-hardened honesty** (2.0 must-have, not optional polish):
+  - `goal.met` only when violations are clear **and** governed coverage is meaningful;
+  - **suggest / adapt / enforce** modes on `ark start`, `--plan`, `--doctor`;
+  - shape signals ignore `.github` / other dot-dirs;
+  - Nest / Next / express / library **layout overlays** on init so starters get real governed%;
+  - pnpm runner skips the deps-status gate that breaks real apps (`ERR_PNPM_IGNORED_BUILDS`);
+  - TypeScript resolved from the project; `--plan` still reports coverage honesty without TS.
+
+**This is the co-pilot milestone (2.0.0).** Spec: [docs/co-pilot-plan.md](docs/co-pilot-plan.md).
+Maintainer freeze list: [docs/roadmap-internal.md](docs/roadmap-internal.md).
 
 ## Now — after the co-pilot milestone (2.0.0)
 
-The co-pilot's primitives are complete (plan · goal · loop · autopilot). Next is depth and
-trust, not new primitives:
+Primitives and field honesty are complete. Next is depth and trust:
 
 - **Broaden `mechanical-safe`.** Add file relocation and verbatim infra relocation to the
   auto-appliable class — each only once evals prove it behavior-preserving. Grow the classifier
@@ -147,6 +162,8 @@ trust, not new primitives:
   co-pilot that edits your repo has to be verifiably trustworthy.
 - **ESLint parity**: keep the editor plugin aligned with `ark-check` so violations surface as
   you type, with CI as the authoritative gate.
+- **More framework packs** (optional): explicit Nest/Next enthusiast policy packs if overlays
+  need project-specific tuning beyond filename conventions.
 
 ## Later
 

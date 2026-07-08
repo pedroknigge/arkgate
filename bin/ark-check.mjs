@@ -13,6 +13,7 @@ import {
   DEFAULT_INTENT_PREFIXES,
   DEFAULT_LAYER_DIRECTORIES,
   DEFAULT_RULES,
+  applyFrameworkLayoutOverlays,
   arkCommand,
   collectForbiddenGlobalUses,
   ADOPTION_PLAN_FILENAME,
@@ -34,6 +35,7 @@ import {
   looksLikeIntent,
   patternSpecificity,
   resolveIntentLayer,
+  resolveOperatingMode,
   shouldShowNewHereNudge,
 } from './ark-shared.mjs';
 
@@ -383,93 +385,128 @@ function denyUpward(names) {
 // motivated `exclude`. Carve those out of every wildcard preset layer by default; a config
 // author who really does keep app code under kernel/ can drop the exclude.
 const FRAMEWORK_INTERNAL_EXCLUDE = ['**/kernel/**'];
+function presetWithOverlays(baseConfig, root) {
+  if (!root) return baseConfig;
+  return applyFrameworkLayoutOverlays(baseConfig, root);
+}
+
 const ARCHITECTURE_PRESETS = {
-  hexagonal: () => ({
-    include: ['src'],
-    layers: [
+  // Second arg `root` is optional — when provided (init/start on a real repo), framework
+  // filename conventions (Nest/Next/express) are overlaid so starters get real governed%.
+  hexagonal: (_workspaces, root) =>
+    presetWithOverlays(
       {
-        name: 'DomainModel',
-        description: 'Pure business rules and entities. No I/O, no framework, no ambient globals.',
-        patterns: ['src/**/domain/**'],
-        exclude: FRAMEWORK_INTERNAL_EXCLUDE,
-        forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
-        optional: true,
+        include: ['src'],
+        layers: [
+          {
+            name: 'DomainModel',
+            description: 'Pure business rules and entities. No I/O, no framework, no ambient globals.',
+            patterns: ['src/**/domain/**'],
+            exclude: FRAMEWORK_INTERNAL_EXCLUDE,
+            forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
+            optional: true,
+          },
+          {
+            name: 'ApplicationOrchestration',
+            description: 'Use cases that coordinate the domain through ports. No I/O of its own.',
+            patterns: ['src/**/application/**'],
+            exclude: FRAMEWORK_INTERNAL_EXCLUDE,
+            optional: true,
+          },
+          {
+            name: 'PresentationAdapters',
+            description: 'Entrypoints — HTTP routes, controllers, UI. Drives use cases.',
+            patterns: [
+              'src/**/presentation/**',
+              'src/**/controllers/**',
+              'src/**/interface-adapters/**',
+              'src/**/http/**',
+            ],
+            exclude: FRAMEWORK_INTERNAL_EXCLUDE,
+            optional: true,
+          },
+          {
+            name: 'PersistenceAdapters',
+            description: 'Implements ports with real infrastructure: DB, external APIs, filesystem.',
+            patterns: [
+              'src/**/infrastructure/**',
+              'src/**/adapters/**',
+              'src/**/persistence/**',
+              'src/**/repositories/**',
+            ],
+            exclude: FRAMEWORK_INTERNAL_EXCLUDE,
+            optional: true,
+          },
+        ],
+        rules: [
+          { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
+          { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
+          { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
+          { from: 'ApplicationOrchestration', to: 'PersistenceAdapters', allowed: false },
+          { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
+          { from: 'PresentationAdapters', to: 'PersistenceAdapters', allowed: false },
+          { from: 'PresentationAdapters', to: 'DomainModel', allowed: false },
+          { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
+          { from: 'PersistenceAdapters', to: 'PresentationAdapters', allowed: false },
+        ],
       },
+      root
+    ),
+  layered: (_workspaces, root) =>
+    presetWithOverlays(
       {
-        name: 'ApplicationOrchestration',
-        description: 'Use cases that coordinate the domain through ports. No I/O of its own.',
-        patterns: ['src/**/application/**'],
-        exclude: FRAMEWORK_INTERNAL_EXCLUDE,
-        optional: true,
+        include: ['src'],
+        layers: [
+          {
+            name: 'PresentationAdapters',
+            description: 'UI and API entrypoints.',
+            patterns: [
+              'src/**/presentation/**',
+              'src/**/controllers/**',
+              'src/**/ui/**',
+              'src/**/http/**',
+            ],
+            exclude: FRAMEWORK_INTERNAL_EXCLUDE,
+            optional: true,
+          },
+          {
+            name: 'ApplicationOrchestration',
+            description: 'Business services and use-case coordination.',
+            patterns: ['src/**/application/**', 'src/**/services/**'],
+            exclude: FRAMEWORK_INTERNAL_EXCLUDE,
+            optional: true,
+          },
+          {
+            name: 'DomainModel',
+            description: 'Pure business rules and entities. No I/O, no framework, no ambient globals.',
+            patterns: ['src/**/domain/**'],
+            exclude: FRAMEWORK_INTERNAL_EXCLUDE,
+            forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
+            optional: true,
+          },
+          {
+            name: 'PersistenceAdapters',
+            description: 'Data access and infrastructure.',
+            patterns: [
+              'src/**/persistence/**',
+              'src/**/data/**',
+              'src/**/repositories/**',
+              'src/**/infrastructure/**',
+            ],
+            exclude: FRAMEWORK_INTERNAL_EXCLUDE,
+            optional: true,
+          },
+        ],
+        rules: denyUpward([
+          'PresentationAdapters',
+          'ApplicationOrchestration',
+          'DomainModel',
+          'PersistenceAdapters',
+        ]),
       },
-      {
-        name: 'PresentationAdapters',
-        description: 'Entrypoints — HTTP routes, controllers, UI. Drives use cases.',
-        patterns: ['src/**/presentation/**', 'src/**/controllers/**', 'src/**/interface-adapters/**', 'src/**/http/**'],
-        exclude: FRAMEWORK_INTERNAL_EXCLUDE,
-        optional: true,
-      },
-      {
-        name: 'PersistenceAdapters',
-        description: 'Implements ports with real infrastructure: DB, external APIs, filesystem.',
-        patterns: ['src/**/infrastructure/**', 'src/**/adapters/**', 'src/**/persistence/**', 'src/**/repositories/**'],
-        exclude: FRAMEWORK_INTERNAL_EXCLUDE,
-        optional: true,
-      },
-    ],
-    rules: [
-      { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
-      { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
-      { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
-      { from: 'ApplicationOrchestration', to: 'PersistenceAdapters', allowed: false },
-      { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
-      { from: 'PresentationAdapters', to: 'PersistenceAdapters', allowed: false },
-      { from: 'PresentationAdapters', to: 'DomainModel', allowed: false },
-      { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
-      { from: 'PersistenceAdapters', to: 'PresentationAdapters', allowed: false },
-    ],
-  }),
-  layered: () => ({
-    include: ['src'],
-    layers: [
-      {
-        name: 'PresentationAdapters',
-        description: 'UI and API entrypoints.',
-        patterns: ['src/**/presentation/**', 'src/**/controllers/**', 'src/**/ui/**', 'src/**/http/**'],
-        exclude: FRAMEWORK_INTERNAL_EXCLUDE,
-        optional: true,
-      },
-      {
-        name: 'ApplicationOrchestration',
-        description: 'Business services and use-case coordination.',
-        patterns: ['src/**/application/**', 'src/**/services/**'],
-        exclude: FRAMEWORK_INTERNAL_EXCLUDE,
-        optional: true,
-      },
-      {
-        name: 'DomainModel',
-        description: 'Pure business rules and entities. No I/O, no framework, no ambient globals.',
-        patterns: ['src/**/domain/**'],
-        exclude: FRAMEWORK_INTERNAL_EXCLUDE,
-        forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
-        optional: true,
-      },
-      {
-        name: 'PersistenceAdapters',
-        description: 'Data access and infrastructure.',
-        patterns: ['src/**/persistence/**', 'src/**/data/**', 'src/**/repositories/**', 'src/**/infrastructure/**'],
-        exclude: FRAMEWORK_INTERNAL_EXCLUDE,
-        optional: true,
-      },
-    ],
-    rules: denyUpward([
-      'PresentationAdapters',
-      'ApplicationOrchestration',
-      'DomainModel',
-      'PersistenceAdapters',
-    ]),
-  }),
-  'feature-sliced': () => {
+      root
+    ),
+  'feature-sliced': (_workspaces, root) => {
     const order = ['App', 'Pages', 'Widgets', 'Features', 'Entities', 'Shared'];
     const purpose = {
       App: 'App-wide setup, providers, and routing.',
@@ -479,59 +516,79 @@ const ARCHITECTURE_PRESETS = {
       Entities: 'Business entities with their UI and logic.',
       Shared: 'Reusable primitives with no business knowledge.',
     };
-    return {
-      include: ['src'],
-      layers: order.map((name) => ({
-        name,
-        description: purpose[name],
-        patterns: [`src/${name.toLowerCase()}/**`],
-        optional: true,
-      })),
-      rules: denyUpward(order),
-    };
+    return presetWithOverlays(
+      {
+        include: ['src'],
+        layers: order.map((name) => ({
+          name,
+          description: purpose[name],
+          patterns: [`src/${name.toLowerCase()}/**`],
+          optional: true,
+        })),
+        rules: denyUpward(order),
+      },
+      root
+    );
   },
   // Cross-package profile for workspace monorepos. Patterns match by directory NAME
   // anywhere in the tree (`**/domain/**` hits packages/x/domain AND apps/y/src/domain),
   // so one profile governs every package. include defaults to the detected workspace
   // roots (falls back to packages+apps). Naming varies by repo — adjust and re-check.
-  monorepo: (includeDirs) => ({
-    include: includeDirs && includeDirs.length > 0 ? includeDirs : ['packages', 'apps'],
-    layers: [
+  monorepo: (includeDirs, root) =>
+    presetWithOverlays(
       {
-        name: 'DomainModel',
-        description: 'Pure business rules and entities, in any package. No I/O, no framework, no ambient globals.',
-        patterns: ['**/domain/**', '**/entities/**'],
-        forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
-        optional: true,
+        include: includeDirs && includeDirs.length > 0 ? includeDirs : ['packages', 'apps'],
+        layers: [
+          {
+            name: 'DomainModel',
+            description:
+              'Pure business rules and entities, in any package. No I/O, no framework, no ambient globals.',
+            patterns: ['**/domain/**', '**/entities/**'],
+            forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
+            optional: true,
+          },
+          {
+            name: 'ApplicationOrchestration',
+            description: 'Use cases and services that coordinate the domain through ports.',
+            patterns: ['**/application/**', '**/use-cases/**', '**/services/**'],
+            optional: true,
+          },
+          {
+            name: 'PresentationAdapters',
+            description: 'Entrypoints — HTTP routes, controllers, UI, framework app/pages dirs.',
+            patterns: [
+              '**/app/**',
+              '**/pages/**',
+              '**/components/**',
+              '**/controllers/**',
+              '**/http/**',
+              '**/routes/**',
+            ],
+            optional: true,
+          },
+          {
+            name: 'PersistenceAdapters',
+            description: 'Implements ports with real infrastructure: DB, external APIs, filesystem.',
+            patterns: [
+              '**/infrastructure/**',
+              '**/adapters/**',
+              '**/persistence/**',
+              '**/repositories/**',
+            ],
+            optional: true,
+          },
+        ],
+        rules: [
+          { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
+          { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
+          { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
+          { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
+          { from: 'PresentationAdapters', to: 'PersistenceAdapters', allowed: false },
+          { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
+        ],
       },
-      {
-        name: 'ApplicationOrchestration',
-        description: 'Use cases and services that coordinate the domain through ports.',
-        patterns: ['**/application/**', '**/use-cases/**', '**/services/**'],
-        optional: true,
-      },
-      {
-        name: 'PresentationAdapters',
-        description: 'Entrypoints — HTTP routes, controllers, UI, framework app/pages dirs.',
-        patterns: ['**/app/**', '**/pages/**', '**/components/**', '**/controllers/**', '**/http/**', '**/routes/**'],
-        optional: true,
-      },
-      {
-        name: 'PersistenceAdapters',
-        description: 'Implements ports with real infrastructure: DB, external APIs, filesystem.',
-        patterns: ['**/infrastructure/**', '**/adapters/**', '**/persistence/**', '**/repositories/**'],
-        optional: true,
-      },
-    ],
-    rules: [
-      { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
-      { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
-      { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
-      { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
-      { from: 'PresentationAdapters', to: 'PersistenceAdapters', allowed: false },
-      { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
-    ],
-  }),
+      root
+    ),
 };
 
 // ── Layer suggestion engine ──────────────────────────────────────────────────
@@ -701,7 +758,7 @@ function buildConfigFromPolicyPack(packId, root) {
     );
   }
   const workspaces = pack.preset === 'monorepo' ? detectWorkspaces(root) : [];
-  const config = factory(workspaces);
+  const config = factory(workspaces, root);
   if (pack.layerDescriptions) {
     for (const layer of config.layers) {
       const enthusiast = pack.layerDescriptions[layer.name];
@@ -842,9 +899,14 @@ function runInit(args) {
       process.exitCode = 2;
       return;
     }
-    const finalConfig = factory(detectWorkspaces(args.root));
+    const finalConfig = factory(detectWorkspaces(args.root), args.root);
     fs.writeFileSync(configPath, `${JSON.stringify(finalConfig, null, 2)}\n`);
     console.log(`Wrote ${configPath} (${args.preset} preset)`);
+    if (finalConfig.frameworkOverlay) {
+      console.log(
+        `Framework layout overlay applied: ${finalConfig.frameworkOverlay} (filename conventions merged into layer globs).`
+      );
+    }
     console.log('');
     console.log('Layers (every layer optional, so the strict check passes before the directories exist):');
     for (const layer of finalConfig.layers) {
@@ -870,12 +932,16 @@ function runInit(args) {
   // Greenfield: anchor the starter profile at src/ (the convention a fresh project will
   // scaffold under) even when src/ doesn't exist yet — the layers are optional, so the
   // check passes today and governance switches on the moment src/domain/ etc. appear.
+  // Detected configs also get framework overlays so Nest/Next flat files are classified.
   const finalConfig =
     mode === 'detected'
-      ? config
+      ? applyFrameworkLayoutOverlays(config, args.root)
       : mode === 'monorepo'
-        ? ARCHITECTURE_PRESETS.monorepo(workspaces)
-        : createElevenLayerConfig({ rootDir: srcDir === '.' ? 'src' : srcDir });
+        ? ARCHITECTURE_PRESETS.monorepo(workspaces, args.root)
+        : createElevenLayerConfig({
+            rootDir: srcDir === '.' ? 'src' : srcDir,
+            root: args.root,
+          });
 
   fs.writeFileSync(configPath, `${JSON.stringify(finalConfig, null, 2)}\n`);
 
@@ -980,6 +1046,32 @@ function writeTemplate(root, relativePath, content, force) {
   }
 }
 
+/**
+ * Load the TypeScript module the project would resolve, falling back to Ark's dependency
+ * and finally a bare dynamic import. Returns null when nothing is available.
+ */
+async function loadTypeScript(root) {
+  try {
+    const { createRequire } = await import('node:module');
+    const req = createRequire(path.join(root, 'package.json'));
+    return req('typescript');
+  } catch {
+    /* try next */
+  }
+  try {
+    const { createRequire } = await import('node:module');
+    const req = createRequire(__arkCheckCli);
+    return req('typescript');
+  } catch {
+    /* try next */
+  }
+  try {
+    return await import('typescript');
+  } catch {
+    return null;
+  }
+}
+
 function packageManager(root) {
   // If the project already froze violations in a baseline, the generated CI must
   // keep the ratchet — otherwise regenerating the workflow (especially with
@@ -996,7 +1088,8 @@ function packageManager(root) {
       cache: 'pnpm',
       setup: ['corepack enable'],
       install: 'pnpm install --frozen-lockfile',
-      run: `pnpm exec ark-check ${checkArgs}`,
+      // Same runner as execRunner(): skip pnpm's verify-deps gate (ERR_PNPM_IGNORED_BUILDS).
+      run: `pnpm --config.verify-deps-before-run=false exec ark-check ${checkArgs}`,
     };
   }
   if (pm === 'yarn') {
@@ -1556,7 +1649,9 @@ const COMMAND_GATE_TEXT_FILES = [
 ];
 const COMMAND_GATE_JSON_FILES = ['.mcp.json', '.cursor/mcp.json'];
 // The runner token immediately before an ark command in a text command string.
-const RUNNER_BEFORE_ARK = /\b(?:npx|pnpm exec|yarn)(?= (?:ark-check|ark-mcp|ark)\b)/g;
+// Matches npm/yarn runners and both pnpm forms (legacy `pnpm exec` + verify-deps-safe form).
+const RUNNER_BEFORE_ARK =
+  /\b(?:npx|pnpm --config\.verify-deps-before-run=false exec|pnpm exec|yarn)(?= (?:ark-check|ark-mcp|ark)\b)/g;
 
 // Gate files whose Ark command runner doesn't match this project's package manager — the
 // advisory (and --migrate-commands) target. Returns [] for npm/unknown projects (npx is right)
@@ -3143,7 +3238,10 @@ function runCoverage(root, config, files, rules, asJson) {
 // Co-pilot Phase F — turn active violations into a classified, ordered remediation PLAN with an
 // embedded GOAL. This is the `plan` primitive the future apply-loop (Phase H, `loop`) consumes
 // and the autopilot (Phase I) drives toward the `goal`. Read-only: it changes no files.
-function buildRemediationPlan(root, activeViolations) {
+function buildRemediationPlan(root, activeViolations, governedPercent = null) {
+  // A plan with 0 violations but ~0% governed is a FALSE green: nothing is actually being
+  // checked. Treat a low-coverage clean plan as "not done — classify your code first."
+  const governedLow = governedPercent != null && governedPercent < 50;
   const steps = activeViolations.map((v, index) => {
     const verdict = classifyRemediation(v);
     return {
@@ -3172,11 +3270,16 @@ function buildRemediationPlan(root, activeViolations) {
     version: '1',
     goal: {
       statement:
-        activeViolations.length === 0
-          ? 'No active violations — the architecture already meets its contract.'
-          : `Resolve ${activeViolations.length} architecture violation(s) without weakening the contract.`,
-      // The loop's termination signal (Phase H): true when there's nothing left to remediate.
-      met: activeViolations.length === 0,
+        activeViolations.length > 0
+          ? `Resolve ${activeViolations.length} architecture violation(s) without weakening the contract.`
+          : governedLow
+            ? `No violations — but Ark governs only ${governedPercent}% of your code, so this "clean" result checks almost nothing. Classify the rest (ark-check --coverage, then /ark-adopt) so it's actually enforced.`
+            : 'No active violations — the architecture already meets its contract.',
+      // The loop's termination signal (Phase H): nothing left to remediate AND the contract
+      // actually governs the code. A clean-but-ungoverned plan is not "met" — there's real
+      // adoption work to do first.
+      met: activeViolations.length === 0 && !governedLow,
+      ...(governedPercent != null ? { governedPercent } : {}),
       activeViolations: activeViolations.length,
       autoApplicable: counts.mechanicalSafe,
       needsDecision: counts.judgment,
@@ -3189,16 +3292,25 @@ function buildRemediationPlan(root, activeViolations) {
 
 // `--plan`: print the classified remediation plan. Dual-focus output — a one-line headline
 // anyone can read, then the per-step detail a developer acts on. Read-only.
-function runPlan(root, activeViolations, asJson) {
-  const plan = buildRemediationPlan(root, activeViolations);
+function runPlan(root, activeViolations, asJson, governedPercent = null) {
+  const plan = buildRemediationPlan(root, activeViolations, governedPercent);
+  // Honesty: a zero-violation plan with almost nothing governed is NOT "ok".
+  const planOk = plan.goal.met === true;
   if (asJson) {
-    console.log(JSON.stringify({ ok: activeViolations.length === 0, plan }, null, 2));
-    return;
+    console.log(JSON.stringify({ ok: planOk, plan }, null, 2));
+    return plan;
   }
   console.log(color.bold(`Ark plan — ${path.basename(path.resolve(root)) || '.'}`));
   console.log('');
   console.log(plan.goal.statement);
-  if (activeViolations.length === 0) return;
+  if (governedPercent != null) {
+    const pctLabel =
+      governedPercent < 50
+        ? color.yellow(`Governed: ${governedPercent}% of in-scope files`)
+        : color.dim(`Governed: ${governedPercent}% of in-scope files`);
+    console.log(pctLabel);
+  }
+  if (activeViolations.length === 0) return plan;
   console.log('');
   console.log(
     `  ${color.green(`${plan.counts.mechanicalSafe} safe to auto-apply`)} · ` +
@@ -3222,6 +3334,7 @@ function runPlan(root, activeViolations, asJson) {
       'Plan only — no files changed. "auto" = an agent can safely apply it; "decide" = your call.'
     )
   );
+  return plan;
 }
 
 function runDoctor(root, config, files, rules, violations, asJson, options = {}) {
@@ -3259,6 +3372,11 @@ function runDoctor(root, config, files, rules, violations, asJson, options = {})
         {
           ok: true,
           doctor: {
+            operatingMode: resolveOperatingMode({
+              governedPercent: cov.governed.percent,
+              planMet: activeCount === 0 && cov.governed.percent >= 50,
+              mature: cov.governed.totalFiles >= 150,
+            }),
             governed: cov.governed,
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
@@ -3309,6 +3427,21 @@ function runDoctor(root, config, files, rules, violations, asJson, options = {})
   const line = (mark, text) => console.log(`  ${mark} ${text}`);
 
   console.log(color.bold(`Ark doctor — ${path.basename(path.resolve(root)) || '.'}`));
+
+  const mode = resolveOperatingMode({
+    governedPercent: cov.governed.percent,
+    planMet: activeCount === 0 && cov.governed.percent >= 50,
+    mature: cov.governed.totalFiles >= 150,
+  });
+  console.log('');
+  console.log(color.bold('Operating mode'));
+  const modeMark = mode === 'enforce' ? ok : mode === 'adapt' ? warn : warn;
+  const modeHelp = {
+    suggest: 'starter shape / thin tree — expand layers as you grow',
+    adapt: 'contract still needs to match real layout or raise coverage',
+    enforce: 'contract governs enough code; gates can honestly hold the line',
+  };
+  line(modeMark, `${mode.toUpperCase()} — ${modeHelp[mode]}`);
 
   console.log('');
   console.log(color.bold('Coverage'));
@@ -3519,10 +3652,22 @@ async function main() {
     return;
   }
 
-  let ts;
-  try {
-    ts = await import('typescript');
-  } catch {
+  // Resolve TypeScript from the project first, then Ark's own install, then bare import.
+  // --plan can still run honestly (coverage + empty violations) when TS is missing.
+  const ts = await loadTypeScript(root);
+  if (!ts) {
+    if (args.plan) {
+      const cov = computeCoverage(root, config, files, rules);
+      if (!args.json) {
+        console.log(
+          color.yellow(
+            `TypeScript not found — plan shows coverage honesty only (no import graph). Install with: ${installDevHint(root, 'typescript')}`
+          )
+        );
+      }
+      runPlan(root, [], args.json, cov.governed.percent);
+      return;
+    }
     console.error(`ark-check requires TypeScript. Install it with: ${installDevHint(root, 'typescript')}`);
     process.exitCode = 2;
     return;
@@ -3756,7 +3901,8 @@ async function main() {
   const ok = activeViolations.length === 0 && (!args.strictConfig || warnings.length === 0);
 
   if (args.plan) {
-    runPlan(root, activeViolations, args.json);
+    const cov = computeCoverage(root, config, files, rules);
+    runPlan(root, activeViolations, args.json, cov.governed.percent);
     return;
   }
 

@@ -82,7 +82,7 @@ export function createElevenLayerConfig(options = {}) {
   const rootDir = options.rootDir ?? 'src';
   const optional = options.optionalLayers ?? true;
   const prefix = rootDir === '.' ? '' : `${rootDir}/`;
-  return {
+  const config = {
     include: options.include ?? [rootDir],
     layers: DEFAULT_INTENT_PREFIXES.map((entry) => ({
       name: entry.layer,
@@ -97,6 +97,221 @@ export function createElevenLayerConfig(options = {}) {
     })),
     rules: DEFAULT_RULES,
   };
+  // When a project root is known, overlay Nest/Next/express filename conventions so a
+  // flat framework starter is governed on day one (not "0% governed / false green").
+  if (options.root) return applyFrameworkLayoutOverlays(config, options.root);
+  return config;
+}
+
+/**
+ * Merge unique glob patterns onto a named layer (create the layer if missing).
+ * More-specific file globs (*.controller.ts) win over broad dirs via layerForFile scoring.
+ */
+function mergeLayerPatterns(config, layerName, patterns, extras = {}) {
+  if (!patterns?.length) return;
+  const layers = config.layers ?? (config.layers = []);
+  let layer = layers.find((entry) => entry.name === layerName);
+  if (!layer) {
+    layer = { name: layerName, patterns: [], optional: true, ...extras };
+    layers.push(layer);
+  }
+  const set = new Set(layer.patterns ?? []);
+  for (const pattern of patterns) set.add(pattern);
+  layer.patterns = [...set];
+  for (const [key, value] of Object.entries(extras)) {
+    if (layer[key] === undefined) layer[key] = value;
+  }
+}
+
+/**
+ * Framework-aware layout overlays. Detection uses collectRepoShapeSignals (deps + filenames).
+ * Pure additive: never removes existing preset patterns. Goal: Nest/Next/express starters
+ * reach meaningful governed% under hexagonal/layered without a hand-written adopt pass.
+ */
+export function applyFrameworkLayoutOverlays(config, root) {
+  if (!config || !root) return config;
+  let signals;
+  try {
+    signals = collectRepoShapeSignals(root);
+  } catch {
+    return config;
+  }
+
+  const next = {
+    ...config,
+    layers: (config.layers ?? []).map((layer) => ({
+      ...layer,
+      patterns: [...(layer.patterns ?? [])],
+      ...(layer.exclude ? { exclude: [...layer.exclude] } : {}),
+    })),
+    rules: [...(config.rules ?? [])],
+    include: [...(config.include ?? ['src'])],
+  };
+
+  // Ensure include covers where framework code actually lives.
+  const ensureInclude = (dir) => {
+    if (!next.include.includes(dir) && fs.existsSync(path.join(root, dir))) {
+      next.include.push(dir);
+    }
+  };
+
+  if (signals.nestFramework) {
+    ensureInclude('src');
+    // Nest flat + modular conventions (controllers/services next to modules).
+    mergeLayerPatterns(next, 'PresentationAdapters', [
+      'src/**/*.controller.ts',
+      'src/**/*.controller.js',
+      'src/**/*.gateway.ts',
+      'src/**/*.resolver.ts',
+      'src/**/*.module.ts',
+      'src/**/main.ts',
+      'src/**/main.js',
+    ]);
+    mergeLayerPatterns(next, 'ApplicationOrchestration', [
+      'src/**/*.service.ts',
+      'src/**/*.service.js',
+      'src/**/*.provider.ts',
+      'src/**/*.interceptor.ts',
+      'src/**/*.guard.ts',
+      'src/**/*.pipe.ts',
+      'src/**/*.use-case.ts',
+      'src/**/*.usecase.ts',
+    ]);
+    mergeLayerPatterns(next, 'DomainModel', [
+      'src/**/*.entity.ts',
+      'src/**/*.vo.ts',
+      'src/**/*.value-object.ts',
+      'src/**/*.aggregate.ts',
+      'src/**/entities/**',
+      'src/**/domain/**',
+    ]);
+    mergeLayerPatterns(next, 'PersistenceAdapters', [
+      'src/**/*.repository.ts',
+      'src/**/*.repository.js',
+      'src/**/repositories/**',
+      'src/**/persistence/**',
+      'src/**/infra/**',
+      'src/**/infrastructure/**',
+    ]);
+    next.frameworkOverlay = 'nestjs';
+  }
+
+  if (signals.nextFramework || (signals.ui && signals.toolHints?.includes('next'))) {
+    ensureInclude('src');
+    ensureInclude('app');
+    ensureInclude('pages');
+    mergeLayerPatterns(next, 'PresentationAdapters', [
+      'src/app/**',
+      'src/pages/**',
+      'src/components/**',
+      'src/layouts/**',
+      'src/ui/**',
+      'app/**',
+      'pages/**',
+      'components/**',
+      'src/**/page.tsx',
+      'src/**/page.ts',
+      'src/**/layout.tsx',
+      'src/**/layout.ts',
+      'src/**/loading.tsx',
+      'src/**/error.tsx',
+      'src/**/route.ts',
+      'src/**/route.tsx',
+    ]);
+    mergeLayerPatterns(next, 'ApplicationOrchestration', [
+      'src/features/**',
+      'src/server/**',
+      'src/services/**',
+      'src/use-cases/**',
+      'src/lib/**',
+      'src/actions/**',
+      'src/**/actions.ts',
+      'src/**/actions.tsx',
+    ]);
+    mergeLayerPatterns(next, 'DomainModel', [
+      'src/domain/**',
+      'src/entities/**',
+      'src/**/model/**',
+      'src/**/models/**',
+    ]);
+    mergeLayerPatterns(next, 'PersistenceAdapters', [
+      'src/db/**',
+      'src/data/**',
+      'src/repositories/**',
+      'src/persistence/**',
+      'src/infrastructure/**',
+      'src/lib/db/**',
+      'src/lib/prisma/**',
+      'src/server/db/**',
+    ]);
+    next.frameworkOverlay = next.frameworkOverlay
+      ? `${next.frameworkOverlay}+next`
+      : 'next';
+  }
+
+  if (signals.expressLike && !signals.nestFramework) {
+    ensureInclude('src');
+    mergeLayerPatterns(next, 'PresentationAdapters', [
+      'src/**/routes/**',
+      'src/**/controllers/**',
+      'src/**/http/**',
+      'src/**/api/**',
+      'src/**/middlewares/**',
+      'src/**/middleware/**',
+      'src/**/app.ts',
+      'src/**/app.js',
+      'src/**/server.ts',
+      'src/**/server.js',
+      'src/index.ts',
+      'src/index.js',
+    ]);
+    mergeLayerPatterns(next, 'ApplicationOrchestration', [
+      'src/**/services/**',
+      'src/**/use-cases/**',
+      'src/**/usecases/**',
+      'src/**/controllers/**', // thin express controllers often mix app logic
+    ]);
+    mergeLayerPatterns(next, 'DomainModel', [
+      'src/**/domain/**',
+      'src/**/entities/**',
+      'src/**/models/**',
+    ]);
+    mergeLayerPatterns(next, 'PersistenceAdapters', [
+      'src/**/repositories/**',
+      'src/**/persistence/**',
+      'src/**/infrastructure/**',
+      'src/**/db/**',
+      'src/**/data/**',
+    ]);
+    next.frameworkOverlay = next.frameworkOverlay
+      ? `${next.frameworkOverlay}+express`
+      : 'express';
+  }
+
+  // Pure library: keep domain/application as the public surface under src/.
+  if (signals.libraryOnly && !signals.nestFramework && !signals.nextFramework) {
+    ensureInclude('src');
+    ensureInclude('lib');
+    mergeLayerPatterns(next, 'DomainModel', ['src/**/*.ts', 'src/**/*.tsx', 'lib/**/*.ts']);
+    // Prefer domain over application for a single-folder lib: only domain if no split.
+    next.frameworkOverlay = next.frameworkOverlay
+      ? `${next.frameworkOverlay}+library`
+      : 'library';
+  }
+
+  return next;
+}
+
+/**
+ * Operating mode for the co-pilot surfaces (not "who the user is"):
+ *   suggest | adapt | enforce
+ */
+export function resolveOperatingMode({ governedPercent = null, planMet = null, mature = false } = {}) {
+  if (planMet === true && (governedPercent == null || governedPercent >= 50)) return 'enforce';
+  if (governedPercent != null && governedPercent < 50) return 'adapt';
+  if (mature) return 'adapt';
+  if (governedPercent != null && governedPercent >= 50 && planMet === false) return 'adapt';
+  return 'suggest';
 }
 
 /**
@@ -423,7 +638,11 @@ export function detectPackageManager(root) {
   return locks[0]; // pnpm over yarn when only those two collide
 }
 
-const RUNNER_BY_PM = { pnpm: 'pnpm exec', yarn: 'yarn', npm: 'npx' };
+// pnpm 10+ `pnpm exec` runs a deps-status pre-check that fails with ERR_PNPM_IGNORED_BUILDS
+// when the repo has un-approved native build scripts (sharp, esbuild, tailwind oxide, …) —
+// the common state of real pnpm apps. Skip that gate so Ark's emitted commands still run.
+const PNPM_EXEC = 'pnpm --config.verify-deps-before-run=false exec';
+const RUNNER_BY_PM = { pnpm: PNPM_EXEC, yarn: 'yarn', npm: 'npx' };
 
 /**
  * The command prefix that runs an INSTALLED package binary, matched to the project's
@@ -452,7 +671,12 @@ export function arkCommand(root, bin, argsStr = '') {
  */
 export function execCommandParts(root, bin, binArgs = []) {
   const runner = execRunner(root);
-  if (runner === 'pnpm exec') return { command: 'pnpm', args: ['exec', bin, ...binArgs] };
+  if (runner === PNPM_EXEC || runner.startsWith('pnpm ')) {
+    return {
+      command: 'pnpm',
+      args: ['--config.verify-deps-before-run=false', 'exec', bin, ...binArgs],
+    };
+  }
   if (runner === 'yarn') return { command: 'yarn', args: [bin, ...binArgs] };
   return { command: 'npx', args: [bin, ...binArgs] };
 }
@@ -570,7 +794,11 @@ function walkSourceFiles(dir, files = [], depth = 0) {
     return files;
   }
   for (const entry of entries) {
-    if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git') continue;
+    // Skip node_modules/dist and ALL dot-directories (.github, .next, .claude, .cursor, …):
+    // they aren't application source, and counting them skews the shape signals — e.g. a
+    // `.github/workflows/` CI dir must not read as an app "workflows"/saga signal, and Ark's
+    // own installed `.claude`/`.codex` dirs must not perturb a re-run's recommendation.
+    if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name.startsWith('.')) continue;
     walkSourceFiles(path.join(dir, entry.name), files, depth + 1);
   }
   return files;
@@ -606,7 +834,9 @@ function dirExistsAnywhere(root, names) {
     }
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
-      if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git') continue;
+      // Skip node_modules/dist and ALL dot-dirs so `.github/workflows/` (CI YAML) can't be read
+      // as an app "workflows"/saga signal, and Ark's own `.claude`/`.codex` don't self-perturb.
+      if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name.startsWith('.')) continue;
       if (names.has(entry.name)) return true;
       const child = rel === '.' ? entry.name : `${rel}/${entry.name}`;
       if (child.split('/').length < 8) queue.push(child);
@@ -645,16 +875,39 @@ export function collectRepoShapeSignals(root) {
   });
 
   const topNames = new Set(srcDirs.flatMap((d) => listTopLevelDirNames(root, d)));
+  // Framework / filename signals — strong enough that a tiny Nest starter is not a "prototype".
+  const nestFramework =
+    Object.keys(deps).some((name) => name.startsWith('@nestjs/')) ||
+    sourceFiles.some((file) =>
+      /\.(controller|module|service|guard|interceptor|pipe)\.ts$/i.test(file)
+    );
+  const nextFramework =
+    Boolean(deps.next) ||
+    sourceFiles.some((file) => {
+      const rel = path.relative(root, file).split(path.sep).join('/');
+      return (
+        /(^|\/)next\.config\./.test(rel) ||
+        /(^|\/)app\/.*\/page\.(t|j)sx?$/.test(rel) ||
+        /(^|\/)pages\/.+\.(t|j)sx?$/.test(rel)
+      );
+    });
+  const expressLike = Object.keys(deps).some((name) =>
+    /^(express|fastify|hono|koa|@hapi\/hako|restify)$/i.test(name)
+  );
+
   const ui =
     dirExistsAnywhere(root, UI_DIR_NAMES) ||
     countTsxFiles(sourceFiles) >= 2 ||
     topNames.has('components') ||
     topNames.has('pages') ||
+    nextFramework ||
     (hasUiFramework && srcUiFiles.length >= 1);
   const apiSurface =
     dirExistsAnywhere(root, API_DIR_NAMES) ||
     topNames.has('routes') ||
-    topNames.has('controllers');
+    topNames.has('controllers') ||
+    nestFramework ||
+    expressLike;
   const persistenceFromDeps = Object.keys(deps).some((name) =>
     /^(prisma|drizzle-orm|typeorm|@libsql\/client|@supabase\/supabase-js|mongodb|pg|mysql2|better-sqlite3|knex)$/i.test(
       name
@@ -662,12 +915,14 @@ export function collectRepoShapeSignals(root) {
   );
   const persistence = dirExistsAnywhere(root, PERSISTENCE_DIR_NAMES) || persistenceFromDeps;
   const jobs = dirExistsAnywhere(root, JOB_DIR_NAMES);
+  // App saga/workflow code only — CI under .github is skipped by walk/dirExists (dot-dirs).
   const workflows = dirExistsAnywhere(root, WORKFLOW_DIR_NAMES);
   const integration = dirExistsAnywhere(root, INTEGRATION_DIR_NAMES);
   const domain = dirExistsAnywhere(root, new Set(['domain'])) || topNames.has('domain');
   const application =
     dirExistsAnywhere(root, new Set(['application', 'app', 'services'])) ||
-    topNames.has('application');
+    topNames.has('application') ||
+    nestFramework;
   const featureSlicedLayout =
     fs.existsSync(path.join(root, 'src')) &&
     ['app', 'pages', 'features', 'entities', 'shared'].some((name) =>
@@ -677,10 +932,15 @@ export function collectRepoShapeSignals(root) {
   const hasBin = Boolean(pkg?.bin);
   const hasExports = Boolean(pkg?.exports);
   const hasMain = Boolean(pkg?.main || pkg?.module);
+  // A Nest/Next/express app is never a library-sdk, even if it has "main".
   const library =
     !hasBin &&
+    !nestFramework &&
+    !nextFramework &&
+    !expressLike &&
     (hasExports || hasMain || pkg?.type === 'module') &&
     !ui &&
+    !apiSurface &&
     sourceFileCount > 0 &&
     sourceFileCount < 80;
   const cli = hasBin;
@@ -701,6 +961,10 @@ export function collectRepoShapeSignals(root) {
       name.split('/')[0]
     )
   );
+  if (nestFramework && !toolHints.some((h) => h.startsWith('@nestjs') || h === 'nestjs')) {
+    toolHints.push('@nestjs/*');
+  }
+  if (nextFramework && !toolHints.includes('next')) toolHints.push('next');
 
   return {
     workspaces,
@@ -727,6 +991,9 @@ export function collectRepoShapeSignals(root) {
     featureSlicedLayout,
     fullStackProduct,
     persistenceFromDeps,
+    nestFramework,
+    nextFramework,
+    expressLike,
     toolHints,
   };
 }
@@ -754,6 +1021,9 @@ const SIGNAL_WHY = {
   uiOnly: () => 'UI without persistence, API, or jobs',
   fullStackProduct: () => 'UI, API handlers, and persistence dependencies together',
   persistenceFromDeps: () => 'database client library in package.json dependencies',
+  nestFramework: () => 'NestJS modules/controllers/services (or @nestjs/* deps)',
+  nextFramework: () => 'Next.js app/pages router or next dependency',
+  expressLike: () => 'HTTP framework dependency (express/fastify/hono/…)',
 };
 
 const NEGATIVE_SIGNAL_WHY = {
@@ -949,6 +1219,9 @@ export function buildArchitectureRecommendation(root, options = {}) {
       tinyTree: signals.tinyTree,
       fullStackProduct: signals.fullStackProduct,
       persistenceFromDeps: signals.persistenceFromDeps,
+      nestFramework: signals.nestFramework,
+      nextFramework: signals.nextFramework,
+      expressLike: signals.expressLike,
     },
     // A repo past this size is not greenfield: `ark init` would scaffold a starter that governs
     // a thin slice and can mis-flag framework internals, so steer these to the adoption flow.

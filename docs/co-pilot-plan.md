@@ -1,8 +1,9 @@
 # Ark Co-pilot — Implementation plan (next big release)
 
-Status: **planning** (opened 2026-07-08). Target milestone: **Co-pilot**. The enablers ship
-incrementally as 1.x minors; the milestone is declared when the end-to-end loop works for a
-non-developer. Versioning note in the last section.
+Status: **ships as 2.0.0** — milestone complete (I+J) **and** field-hardening is **in scope for
+the same major** (honesty, framework overlays, modes, pnpm-safe runner). Enablers F–H shipped as
+1.x minors; I+J + field-hardening land as 2.0.0. See freeze checklist in
+[`roadmap-internal.md`](roadmap-internal.md).
 
 This is the "thick" plan for the third stage of Ark's arc — **Gate → Guide → Co-pilot** —
 decomposing the [North Star](../ROADMAP.md#north-star--an-architecture-co-pilot-for-everyone)
@@ -22,8 +23,8 @@ The co-pilot is built from the three primitives every modern agent harness relie
 - **loop** — apply → validate → keep-or-rollback, iterated over the plan until the goal holds.
   Lands in Phase H (the worktree-safe apply loop), driven by the autopilot in Phase I.
 
-Progress: **plan ✅ (F) · goal ✅ (F) · loop ✅ (H) · autopilot ✅ (I) · proof ✅ (J)** — the
-co-pilot milestone ships as **2.0.0**.
+Progress: **plan ✅ (F) · goal ✅ (F) · loop ✅ (H) · autopilot ✅ (I) · proof ✅ (J) ·
+field-honesty ✅ (2.0)** — the co-pilot milestone ships as **2.0.0**.
 
 ## Problem statement
 
@@ -46,11 +47,12 @@ loses trust the first time it auto-lands a bad edit.
 1. **One command takes a newcomer from "I have a project" to "governed and green"** —
    propose → accept → plan → apply the safe changes → approve the rest → enforce, in plain
    language, with an agent doing the edits and Ark deciding what may land.
-2. **Two tiers, one contract.** Newbie gets the full loop; expert keeps the manual skills +
-   gate. Same `ark.config.json`, same gates underneath.
+2. **Two entry styles × three operating modes × one contract.** Newbie gets the full loop;
+   expert keeps the manual skills + gate. Modes: **suggest** (shape), **adapt** (coverage /
+   real layout), **enforce** (gates honestly hold). Same `ark.config.json` underneath.
 3. **Autonomy that is safe, reversible, and honest.** Nothing auto-applies unless the gate
    can validate it behavior-preserving; big rocks are always proposed; the run always shows
-   auto-done vs proposed vs deferred and never reports green while skipping work.
+   auto-done vs proposed vs deferred; `goal.met` is false while governed coverage is near zero.
 4. **Ark orchestrates and validates; it does not become a codemod engine.** The agent writes
    edits; Ark classifies, sequences, validates, and enforces.
 
@@ -159,9 +161,15 @@ Each phase ships independently and leaves the product strictly better.
 - **Phase J — Proof + handoff (D7, D8). ✅ SHIPPED (2.0.0).** Classifier-precision corpus test
   (zero false-`mechanical-safe`), the end-to-end demo, and the enforcement-handoff test.
 
-**Milestone reached — the co-pilot ships as 2.0.0.** Remaining work is depth, not primitives:
-broaden the `mechanical-safe` class (file relocation, verbatim infra relocation) as evals prove
-each safe, and grow the classifier corpus from real runs.
+**Milestone reached — the co-pilot ships as 2.0.0**, including field-hardening:
+
+- governed% honesty in `--plan` / `ark start` / `--doctor` (suggest · adapt · enforce)
+- framework layout overlays (Nest / Next / express / library) on init
+- shape-signal hygiene (no `.github` contamination)
+- pnpm verify-deps-safe runner; TypeScript resolve + plan without hard-fail
+
+Remaining work is **depth, not primitives**: broaden `mechanical-safe` (file relocation,
+verbatim infra relocation) as evals prove each safe; grow the classifier corpus from real runs.
 
 ## Dependency graph
 
@@ -198,12 +206,14 @@ Mirrors `docs/internal-roadmap.md` → "Success Criteria For The Co-pilot":
 - The apply loop is safe and reversible (worktree, gate-validated, rollback, code-only).
 - A non-developer completes the loop end to end on a real repo, no architecture vocabulary
   required to succeed.
-- Honesty holds under autonomy (auto-done vs proposed vs deferred always shown).
+- Honesty holds under autonomy (auto-done vs proposed vs deferred always shown; no false-green
+  at ~0% governed).
 - The expert path is undiminished (manual skills + gate identical; autopilot is opt-in).
+- Field matrix on diverse public starters: meaningful governed%, correct archetypes, no
+  recommend self-perturbation from Ark's own CI files.
 
 ## Versioning
 
-The enablers are backward-compatible and opt-in, so each ships as a **1.x minor** (F, G, H …).
-The **Co-pilot milestone** is a marketing/release moment, not necessarily a major bump. A 2.0
-is only warranted if it coincides with the planned deprecations (`AIGateViolation.code` →
-`ruleId`, `layeredArchitectureRules()` → `cleanArchitectureMatrix`) — decide then, with Pedro.
+Enablers F–H shipped as **1.x minors**. **2.0.0** is the co-pilot **milestone major** (I+J +
+field-hardening) — **not** an API break. Deprecated aliases stay for now. Deprecation removal
+is a later major once consumers confirm unused.
