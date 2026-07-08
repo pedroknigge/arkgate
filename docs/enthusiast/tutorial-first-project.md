@@ -82,5 +82,5 @@ into `domain/`.
 ## Next steps
 
 - [How to pick your shape](how-to-pick-shape.md)
-- [Public demo: architect → ark_place](../../marketing/demo-architect-place-funnel.md)
+- [Public demos](../demos/)
 - [Brownfield adoption](../brownfield-adoption.md) if you already have code

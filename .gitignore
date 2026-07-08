@@ -10,14 +10,26 @@ dist/
 .env
 .env.local
 
-# test
+# test / tooling
 coverage/
 *.tsbuildinfo
 .gstack/
 
-# Ark agent-eval generated report
+# Ark agent-eval generated reports (fixtures stay tracked)
 eval/report.json
 eval/comparative-report.json
 
-# internal product planning
+# ---------------------------------------------------------------------------
+# Private product development — NEVER GitHub, NEVER npm
+# Plans, freeze checklists, marketing funnels, local field notes.
+# See internal/README.md
+# ---------------------------------------------------------------------------
+internal/
 docs/internal-roadmap.md
+docs/roadmap-internal.md
+docs/co-pilot-plan.md
+docs/architect-onboarding-plan.md
+marketing/
+
+# Local pack artifacts
+*.tgz

@@ -161,7 +161,7 @@ NestJS: `ark-runtime-kernel/nestjs` (optional peer `@nestjs/common`).
 | New builders (plain language) | [docs/enthusiast/](docs/enthusiast/README.md) |
 | Wire Claude / Cursor / Codex | [docs/ai-gates.md](docs/ai-gates.md) |
 | Messy existing repo | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
-| Co-pilot design (plan · goal · loop) | [docs/co-pilot-plan.md](docs/co-pilot-plan.md) |
+| Agent / MCP tools | [docs/agent-guide.md](docs/agent-guide.md) |
 | Demos | [docs/demos/](docs/demos/) |
 | Examples | [examples/](examples/README.md) |
 | Roadmap | [ROADMAP.md](ROADMAP.md) · [Changelog](CHANGELOG.md) |

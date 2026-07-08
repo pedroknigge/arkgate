@@ -2,8 +2,7 @@
 
 Plain-language onboarding for builders who use AI agents but are not professional
 developers. This track follows [Diátaxis](https://diataxis.fr/): tutorial, how-to,
-reference, and explanation — each page links to canonical sources instead of
-duplicating the full [architect onboarding plan](../architect-onboarding-plan.md).
+reference, and explanation.
 
 ## How Ark talks to you (2.0)
 
@@ -38,8 +37,6 @@ Reproducible scripts — no video required:
 
 - [Write-gate self-correction](../demos/01-write-gate-self-correction.md)
 - [Brownfield baseline adoption](../demos/02-brownfield-baseline-adoption.md)
-- [Architect → ark_place funnel](../../marketing/demo-architect-place-funnel.md)
-
 ## Gallery starters
 
 | Archetype | Directory |
@@ -61,5 +58,5 @@ Deep teaching example (runnable API + break exercises): [hexagonal-order-api](..
 ## Related
 
 - [Agent integration guide](../agent-guide.md)
-- [Architect onboarding plan](../architect-onboarding-plan.md) (implementation spec)
+- [Public demos](../demos/)
 - [Examples index](../../examples/README.md)

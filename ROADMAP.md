@@ -85,8 +85,8 @@ Five principles drive this:
   gate-verifiable changes are auto-applied; anything requiring judgment is proposed for a
   human yes/no. The agent does the edits; Ark decides whether they're allowed to land.
 
-Full implementation plan: [docs/architect-onboarding-plan.md](docs/architect-onboarding-plan.md).
-Enthusiast doc track: [docs/enthusiast/README.md](docs/enthusiast/README.md).
+Public onboarding for builders: [docs/enthusiast/README.md](docs/enthusiast/README.md).
+(Maintainer implementation notes live outside the public tree — see `internal/` locally.)
 
 ## Recently shipped
 
@@ -107,7 +107,7 @@ Enthusiast doc track: [docs/enthusiast/README.md](docs/enthusiast/README.md).
 - **MCP `ark_recommend`**, skill **`/ark-architect`**, session-context enthusiast hint.
 - **Terminal UX**: doctor "New here?", fix-class / `enthusiastHint`, `--watch`, `--report --beginner`.
 - **Example gallery**: `examples/*-starter/` (four archetypes) + comparative eval (30 prompts).
-- **Public demos**: write-gate self-correction, brownfield baseline, architect → `ark_place` funnel.
+- **Public demos**: write-gate self-correction, brownfield baseline, co-pilot autopilot.
 - **Enthusiast policy packs**: `enthusiast-hexagonal|layered|feature-sliced|monorepo` via
   `--list-policy-packs` / `--apply-policy-pack`.
 - **Diátaxis enthusiast track**: `docs/enthusiast/` (tutorial, how-to, reference, explanation).
@@ -148,8 +148,7 @@ Enthusiast doc track: [docs/enthusiast/README.md](docs/enthusiast/README.md).
   - pnpm runner skips the deps-status gate that breaks real apps (`ERR_PNPM_IGNORED_BUILDS`);
   - TypeScript resolved from the project; `--plan` still reports coverage honesty without TS.
 
-**This is the co-pilot milestone (2.0.0).** Spec: [docs/co-pilot-plan.md](docs/co-pilot-plan.md).
-Maintainer freeze list: [docs/roadmap-internal.md](docs/roadmap-internal.md).
+**This is the co-pilot milestone (2.0.0).** User-facing demos: [docs/demos/](docs/demos/).
 
 ## Now — after the co-pilot milestone (2.0.0)
 
@@ -157,7 +156,7 @@ Primitives and field honesty are complete. Next is depth and trust:
 
 - **Broaden `mechanical-safe`.** Add file relocation and verbatim infra relocation to the
   auto-appliable class — each only once evals prove it behavior-preserving. Grow the classifier
-  corpus from real runs. Full plan: [docs/co-pilot-plan.md](docs/co-pilot-plan.md).
+  corpus from real runs.
 - **Trust hardening**: npm provenance (done), signed release tags, CI security scanning — a
   co-pilot that edits your repo has to be verifiably trustworthy.
 - **ESLint parity**: keep the editor plugin aligned with `ark-check` so violations surface as

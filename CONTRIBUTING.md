@@ -17,14 +17,22 @@ npm run check:architecture   # Ark dogfoods itself
 
 Node >= 18. Zero runtime dependencies is a hard constraint: anything under `dependencies` in `package.json` will be rejected. Optional integrations (like the NestJS adapter) use optional `peerDependencies` + devDependencies only.
 
-## Project layout
+## Project layout (public GitHub tree)
 
-- `src/kernel/` — the runtime kernel (registry, event bus, contracts, policies, projections, …)
-- `src/eslint/` — ESLint plugin
-- `src/nestjs/` — NestJS adapter (optional peer dep)
-- `bin/ark-check.mjs` — CI gate (static analysis with the TypeScript resolver)
-- `bin/ark-mcp.mjs` — AI write-path gate (MCP server + `--hook` one-shot mode)
-- `tests/` — vitest suites mirroring `src/` plus CLI/integration tests
+- `src/kernel/` — optional runtime kernel (registry, event bus, contracts, …)
+- `src/eslint/` · `src/nestjs/` — optional adapters
+- `bin/` — `ark`, `ark-check`, `ark-mcp` (product CLIs)
+- `templates/` — playbook, policy packs, agent skills (shipped on npm)
+- `docs/` — **user-facing** docs only (enthusiast track, ai-gates, demos, …)
+- `examples/` · `tests/` · `eval/` — examples and quality harnesses
+- `ROADMAP.md` — public product roadmap
+
+### What is *not* on GitHub / npm
+
+Maintainer-only planning, freeze checklists, marketing funnels, and local field notes live in
+a local **`internal/`** directory (gitignored). Do not commit it. The npm package is further
+restricted by the `"files"` list in `package.json` — only `bin`, `dist`, `templates`, and a
+docs subset ship to consumers.
 
 ## Rules of the road
 

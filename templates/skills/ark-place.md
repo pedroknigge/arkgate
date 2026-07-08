@@ -59,7 +59,7 @@ not a stalling question.
   `/ark-adopt` on brownfield.
 - `ark-check --recommend` / MCP `ark_recommend` picks phase-1 dirs; gallery starters in
   `examples/*-starter/` show correct placement per archetype.
-- Demo funnel: `marketing/demo-architect-place-funnel.md`.
+- Related demos: `docs/demos/` (write-gate self-correction, brownfield, autopilot).
 
 ## Verify and report
 
