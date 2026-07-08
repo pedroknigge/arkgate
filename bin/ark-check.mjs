@@ -2588,10 +2588,12 @@ function isTypeOnlyModuleReference(ts, node) {
 }
 
 /**
- * True when a module's public surface is types-only (export type / interface / type-only
- * re-exports). Conservative: any ambiguous `export { X }` without the type keyword, export *,
- * value declarations, or default export → false (stay judgment). Used so a value-syntax
- * import of a pure-type module can be classed mechanical-safe (convert to import type).
+ * True when a module is a pure type-surface file: only type/interface exports and
+ * type-only imports. Conservative false (→ judgment) when:
+ * - any top-level runtime statement (value decls, expression stmts, side-effect imports)
+ * - ambiguous `export { X }` without type keyword, export *, default/export=
+ * Used so static value-syntax `import { T }` of a pure-type module can be mechanical-safe
+ * (convert to `import type`). Never trust this for require()/import() edges.
  */
 function sourceFileExportsOnlyTypes(ts, sourceFile) {
   let sawTypeExport = false;
@@ -2600,6 +2602,14 @@ function sourceFileExportsOnlyTypes(ts, sourceFile) {
     node.modifiers.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
 
   for (const stmt of sourceFile.statements) {
+    // Type-only imports OK; value or side-effect imports mean runtime load of deps.
+    if (ts.isImportDeclaration(stmt)) {
+      if (!isTypeOnlyModuleReference(ts, stmt)) return false;
+      continue;
+    }
+    if (typeof ts.isImportEqualsDeclaration === 'function' && ts.isImportEqualsDeclaration(stmt)) {
+      return false;
+    }
     if (ts.isExportDeclaration(stmt)) {
       if (stmt.isTypeOnly) {
         sawTypeExport = true;
@@ -2623,8 +2633,8 @@ function sourceFileExportsOnlyTypes(ts, sourceFile) {
       if (hasExportModifier(stmt)) sawTypeExport = true;
       continue;
     }
-    // Any other exported value form (const/fn/class/enum/namespace) → not type-only.
-    if (hasExportModifier(stmt)) return false;
+    // Any other top-level statement (const/fn/class/enum, console.log, if, …) is runtime.
+    return false;
   }
   return sawTypeExport;
 }
@@ -4919,8 +4929,12 @@ async function main() {
       if (rule) {
         const relTarget = normalize(path.relative(root, target));
         // After pass 1 every in-scope target is in nextCacheFiles. Missing → not type-only.
+        // targetTypeOnlyExports only for static import/export declarations — never require()
+        // or dynamic import(), which always load the module at runtime (side effects matter).
         const targetCached = nextCacheFiles[relTarget];
-        const targetTypeOnlyExports = Boolean(targetCached?.exportsOnlyTypes) && !edge.typeOnly;
+        const staticEdge = edge.kind === 'import' || edge.kind === 'export';
+        const targetTypeOnlyExports =
+          staticEdge && Boolean(targetCached?.exportsOnlyTypes) && !edge.typeOnly;
         violations.push({
           ruleId: 'LAYER_IMPORT_VIOLATION',
           file: relFile,
@@ -4930,6 +4944,7 @@ async function main() {
           target: relTarget,
           ...(edge.typeOnly ? { typeOnly: true } : {}),
           ...(targetTypeOnlyExports ? { targetTypeOnlyExports: true } : {}),
+          ...(edge.kind ? { edgeKind: edge.kind } : {}),
           message: rule.message ?? `${sourceLayer} must not ${edge.kind} ${targetLayer}.`,
         });
       }

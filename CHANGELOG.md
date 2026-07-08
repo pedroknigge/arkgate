@@ -6,14 +6,13 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ### Added — co-pilot P0 depth (mechanical-safe expansion)
 
-- **Second `mechanical-safe` class:** value-syntax imports of modules that **only export
-  types** (`export type` / `interface`). Flagged as `targetTypeOnlyExports` on the violation;
-  plan classifies them like type-only imports (convert to `import type` + place type). Mixed
-  value+type targets stay **judgment** (zero false-safe bias).
+- **Second `mechanical-safe` class:** static value-syntax imports of **pure type-only modules**
+  (only `export type` / `interface` + type-only imports; **no** top-level runtime statements).
+  Flagged `targetTypeOnlyExports` → convert to `import type`. Mixed modules, side-effecting
+  type files, `require()` / dynamic `import()` stay **judgment** (zero false-safe).
 - **Scan cache v3** carries per-file `exportsOnlyTypes` (two-pass scan so targets resolve).
-- **Classifier corpus** extended: type-only import + pure-type target = 2 auto steps; value
-  import / forbidden global / cycles remain judgment. Unit test of `classifyRemediation` pure
-  function included.
+- **Classifier corpus** extended: type-only + pure-type static import = 2 auto steps; value
+  import, side-effect target, require/dynamic, forbidden global, cycles remain judgment.
 
 ## 2.1.1 — 2026-07-08
 

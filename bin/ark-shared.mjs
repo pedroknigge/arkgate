@@ -560,15 +560,24 @@ export function classifyRemediation(violation) {
           'Type-only import (erased at runtime): move the type to the layer that owns it and re-export for back-compat. Behavior-preserving, and the gate verifies it.',
       };
     }
-    // Target module only has type/interface exports (no value surface). The value-syntax
-    // import cannot create runtime coupling once converted to `import type` — still
-    // mechanical-safe. Mixed-export targets stay judgment (ambiguous without checker).
+    // Target module is a pure type-surface file AND the edge is a static import/export
+    // (flag only set on those edges). Value-syntax `import { T }` → convert to import type.
+    // require()/import() never get this flag (runtime load). Mixed modules stay judgment.
     if (violation.targetTypeOnlyExports) {
+      const kind = violation.edgeKind;
+      if (kind === 'require' || kind === 'dynamic-import') {
+        return {
+          class: 'judgment',
+          confidence: 0.75,
+          rationale:
+            'Runtime module load (require/import()) of a type-only module still executes the target file — not auto-safe; rewrite to a static import type if appropriate.',
+        };
+      }
       return {
         class: 'mechanical-safe',
         confidence: 0.85,
         rationale:
-          'Import targets a module that only exports types: convert to `import type` (erased at runtime) and place the type in a shared/owning layer. No runtime coupling; gate verifies.',
+          'Static import targets a pure type-only module: convert to `import type` (erased at runtime) and place the type in a shared/owning layer. No runtime coupling; gate verifies.',
       };
     }
     return {

@@ -1833,6 +1833,25 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
       path.join(root, 'src/ui/type-target.ts'),
       "import { Id } from '../data/types-only';\nexport type T = Id;\n"
     );
+    // judgment: type-only *exports* but top-level runtime side effect — not pure type module
+    fs.writeFileSync(
+      path.join(root, 'src/data/types-with-side-effect.ts'),
+      "console.log('boot');\nexport type Side = string;\n"
+    );
+    fs.writeFileSync(
+      path.join(root, 'src/ui/side-effect-target.ts'),
+      "import { Side } from '../data/types-with-side-effect';\nexport type S = Side;\n"
+    );
+    // judgment: require() of pure-type module (runtime load — never auto)
+    fs.writeFileSync(
+      path.join(root, 'src/ui/require-type.ts'),
+      "const m = require('../data/types-only');\nexport type Rq = typeof m;\n"
+    );
+    // judgment: dynamic import() of pure-type module
+    fs.writeFileSync(
+      path.join(root, 'src/ui/dynamic-type.ts'),
+      "export async function load() {\n  const m = await import('../data/types-only');\n  return m;\n}\n"
+    );
     // judgment: value import of a value export across a denied edge
     fs.writeFileSync(path.join(root, 'src/ui/value.ts'), "import { q } from '../data/x';\nexport const z = q;\n");
     // judgment: forbidden ambient global in a pure layer
@@ -1845,15 +1864,26 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
     // Invariant: every mechanical-safe step is a type-surface LAYER_IMPORT_VIOLATION only.
     for (const step of plan.steps.filter((s) => s.class === 'mechanical-safe')) {
       expect(step.ruleId).toBe('LAYER_IMPORT_VIOLATION');
-      const s = step as { typeOnly?: boolean; targetTypeOnlyExports?: boolean };
+      const s = step as { typeOnly?: boolean; targetTypeOnlyExports?: boolean; edgeKind?: string };
       expect(Boolean(s.typeOnly || s.targetTypeOnlyExports)).toBe(true);
+      // never auto-class runtime module loads
+      expect(s.edgeKind === 'require' || s.edgeKind === 'dynamic-import').toBe(false);
     }
-    // The value import, the forbidden global, and the cycle are all judgment — never auto.
+    // The value import, side-effect target, require, dynamic import, forbidden global, cycle
+    // are all judgment — never auto.
+    const judgmentFiles = plan.steps
+      .filter((s) => s.class === 'judgment')
+      .map((s) => (s as { file?: string }).file);
+    expect(judgmentFiles).toContain('src/ui/value.ts');
+    expect(judgmentFiles).toContain('src/ui/side-effect-target.ts');
+    expect(judgmentFiles).toContain('src/ui/require-type.ts');
+    expect(judgmentFiles).toContain('src/ui/dynamic-type.ts');
+    expect(judgmentFiles).toContain('src/domain/global.ts');
     const judgmentRules = plan.steps.filter((s) => s.class === 'judgment').map((s) => s.ruleId);
     expect(judgmentRules).toContain('FORBIDDEN_GLOBAL');
     expect(judgmentRules).toContain('CIRCULAR_DEPENDENCY');
-    expect(judgmentRules).toContain('LAYER_IMPORT_VIOLATION'); // the value import of q
-    // Exactly two auto-applicable steps (import type + pure-type target).
+    expect(judgmentRules).toContain('LAYER_IMPORT_VIOLATION');
+    // Exactly two auto-applicable steps (import type + pure-type static value-syntax).
     expect(plan.counts.mechanicalSafe).toBe(2);
     const autoFiles = plan.steps
       .filter((s) => s.class === 'mechanical-safe')
@@ -1870,6 +1900,21 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
     expect(
       classifyRemediation({ ruleId: 'LAYER_IMPORT_VIOLATION', targetTypeOnlyExports: true }).class
     ).toBe('mechanical-safe');
+    // Defense-in-depth: even if flag leaked, require/dynamic stay judgment
+    expect(
+      classifyRemediation({
+        ruleId: 'LAYER_IMPORT_VIOLATION',
+        targetTypeOnlyExports: true,
+        edgeKind: 'require',
+      }).class
+    ).toBe('judgment');
+    expect(
+      classifyRemediation({
+        ruleId: 'LAYER_IMPORT_VIOLATION',
+        targetTypeOnlyExports: true,
+        edgeKind: 'dynamic-import',
+      }).class
+    ).toBe('judgment');
     expect(classifyRemediation({ ruleId: 'LAYER_IMPORT_VIOLATION' }).class).toBe('judgment');
     expect(classifyRemediation({ ruleId: 'FORBIDDEN_GLOBAL' }).class).toBe('judgment');
     expect(classifyRemediation({ ruleId: 'CIRCULAR_DEPENDENCY' }).class).toBe('judgment');
