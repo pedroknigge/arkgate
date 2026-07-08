@@ -108,6 +108,8 @@ function parseArgs(argv) {
       const next = argv[i + 1];
       args.report = next && !next.startsWith('-') ? argv[++i] : 'ark-report.html';
     }
+    else if (arg === '--reset-origin') args.resetOrigin = true;
+    else if (arg === '--no-archive') args.noArchive = true;
     else if (arg === '--baseline' || arg === '--update-baseline') {
       if (arg === '--update-baseline') args.updateBaseline = true;
       // optional path value: consume the next arg only when it isn't another flag
@@ -133,7 +135,8 @@ function usage() {
     '       ark-check --list-policy-packs            enthusiast preset configs (hexagonal, layered, feature-sliced, monorepo)',
     '       ark-check --apply-policy-pack <id> [--force]  write ark.config.json from templates/policy-packs/ (uses preset factory)',
     '       ark-check --watch                      re-run the check when governed files change (debounced)',
-    '       ark-check --report [file.html] [--beginner]  HTML report; --beginner simplifies onboarding view',
+    '       ark-check --report [file.html] [--beginner] [--reset-origin] [--no-archive]',
+    '           HTML report + snapshots under .ark/reports/ (origin once, latest each run, history JSON)',
     '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo] [--force]',
     '       ark-check --install-agent-gates [--tools claude,cursor,codex] [--skills-only] [--codex-home] [--force]',
     '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
@@ -2781,6 +2784,226 @@ function htmlEscape(value) {
     .replace(/"/g, '&quot;');
 }
 
+/** Directory for origin / latest / history architecture report snapshots. */
+const ARK_REPORTS_DIR = path.join('.ark', 'reports');
+const ARK_REPORT_HISTORY_MAX = 20;
+
+function reportsDir(root) {
+  return path.join(root, ARK_REPORTS_DIR);
+}
+
+/**
+ * Compact metrics snapshot — machine-readable so future reports can diff against origin.
+ * Intentionally small (not the full HTML). Layer file counts included for evolution.
+ */
+function buildReportSnapshot({
+  root,
+  config,
+  coverage,
+  violations,
+  ok,
+  suppressed,
+  version,
+  fileCountByLayer,
+  enforcement,
+  score,
+  mode,
+}) {
+  const layers = Array.isArray(config?.layers) ? config.layers : [];
+  const rules = Array.isArray(config?.rules) ? config.rules : [];
+  const counts = {};
+  if (fileCountByLayer instanceof Map) {
+    for (const [name, n] of fileCountByLayer) counts[name] = n;
+  }
+  const gatesOn = (enforcement || []).filter((e) => e.on).length;
+  return {
+    version: 1,
+    kind: 'ark-architecture-snapshot',
+    generatedAt: new Date().toISOString(),
+    arkVersion: version ?? null,
+    project: (() => {
+      try {
+        return readJson(path.join(root, 'package.json')).name || path.basename(root);
+      } catch {
+        return path.basename(root);
+      }
+    })(),
+    ok: Boolean(ok),
+    mode: mode ?? null,
+    score: score ?? null,
+    governedPercent: coverage?.governed?.percent ?? null,
+    classifiedFiles: coverage?.governed?.classifiedFiles ?? 0,
+    totalFiles: coverage?.governed?.totalFiles ?? 0,
+    unclassifiedFiles: coverage?.unclassified?.count ?? 0,
+    layerCount: layers.length,
+    denyRules: rules.filter((r) => r.allowed === false).length,
+    allowRules: rules.filter((r) => r.allowed === true).length,
+    activeViolations: Array.isArray(violations) ? violations.length : 0,
+    typeOnlyViolations: Array.isArray(violations)
+      ? violations.filter((v) => v.typeOnly).length
+      : 0,
+    valueViolations: Array.isArray(violations)
+      ? violations.filter((v) => !v.typeOnly).length
+      : 0,
+    suppressed: suppressed ?? 0,
+    gatesOn,
+    gatesTotal: (enforcement || []).length,
+    layerFiles: counts,
+  };
+}
+
+function readJsonSafe(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function deltaField(current, origin, key) {
+  const a = current?.[key];
+  const b = origin?.[key];
+  if (typeof a !== 'number' || typeof b !== 'number') return null;
+  return a - b;
+}
+
+/**
+ * Persist origin (once), latest, optional history; return { origin, createdOrigin }.
+ */
+/** Shared fitness numbers for HTML report + machine-readable snapshots. */
+function computeReportFitness({ coverage, violations, ok, enforcement, config }) {
+  const layers = Array.isArray(config?.layers) ? config.layers : [];
+  const rules = Array.isArray(config?.rules) ? config.rules : [];
+  const deniedCount = rules.filter((r) => r.allowed === false).length;
+  const gatesOn = (enforcement || []).filter((e) => e.on).length;
+  const governedPercent = coverage?.governed?.percent ?? null;
+  const totalFiles = coverage?.governed?.totalFiles ?? 0;
+  const classifiedFiles = coverage?.governed?.classifiedFiles ?? 0;
+  const mode = resolveOperatingMode({
+    governedPercent,
+    planMet: ok && (violations?.length ?? 0) === 0 && (governedPercent == null || governedPercent >= 50),
+    mature: totalFiles >= 150,
+  });
+  const modeLabel = { suggest: 'SUGGEST', adapt: 'ADAPT', enforce: 'ENFORCE' }[mode] || String(mode).toUpperCase();
+  const modeBlurb = {
+    suggest: 'Starter shape — expand layers as the codebase grows.',
+    adapt: 'Contract is live; raise governed coverage or match real folders.',
+    enforce: 'Contract governs the tree. Gates can honestly hold the line.',
+  }[mode];
+  const scoreCoverage = governedPercent == null ? 50 : governedPercent;
+  const scoreClean =
+    (violations?.length ?? 0) === 0
+      ? 100
+      : Math.max(0, 100 - Math.min(100, violations.length * 4));
+  const scoreGates = enforcement?.length
+    ? Math.round((gatesOn / enforcement.length) * 100)
+    : 40;
+  const scoreRules = layers.length
+    ? Math.min(
+        100,
+        Math.round((deniedCount / Math.max(1, layers.length * (layers.length - 1))) * 120)
+      )
+    : 0;
+  const score = Math.round(
+    scoreCoverage * 0.4 + scoreClean * 0.3 + scoreGates * 0.2 + scoreRules * 0.1
+  );
+  const scoreTone = score >= 90 ? 'elite' : score >= 70 ? 'strong' : score >= 50 ? 'ok' : 'weak';
+  const scoreCaption =
+    score >= 90
+      ? 'World-class architecture fitness'
+      : score >= 70
+        ? 'Solid architecture discipline'
+        : score >= 50
+          ? 'Useful guardrails — room to grow'
+          : 'Early stage — keep adopting layers';
+  return {
+    governedPercent,
+    totalFiles,
+    classifiedFiles,
+    mode,
+    modeLabel,
+    modeBlurb,
+    score,
+    scoreCoverage,
+    scoreClean,
+    scoreGates,
+    scoreRules,
+    scoreTone,
+    scoreCaption,
+    gatesOn,
+    deniedCount,
+  };
+}
+
+function formatDelta(n, opts = {}) {
+  if (n == null || Number.isNaN(n)) return '—';
+  if (n === 0) return '0';
+  const sign = n > 0 ? '+' : '';
+  const suffix = opts.suffix ?? '';
+  return `${sign}${n}${suffix}`;
+}
+
+function archiveReportSnapshots(root, { html, snapshot, resetOrigin = false, noArchive = false }) {
+  const dir = reportsDir(root);
+  const historyDir = path.join(dir, 'history');
+  fs.mkdirSync(historyDir, { recursive: true });
+
+  const originJson = path.join(dir, 'origin.json');
+  const originHtml = path.join(dir, 'origin.html');
+  const latestJson = path.join(dir, 'latest.json');
+  const latestHtml = path.join(dir, 'latest.html');
+
+  let origin = readJsonSafe(originJson);
+  let createdOrigin = false;
+  if (!origin || resetOrigin) {
+    fs.writeFileSync(originJson, `${JSON.stringify(snapshot, null, 2)}\n`);
+    fs.writeFileSync(originHtml, html);
+    origin = snapshot;
+    createdOrigin = true;
+  }
+
+  fs.writeFileSync(latestJson, `${JSON.stringify(snapshot, null, 2)}\n`);
+  fs.writeFileSync(latestHtml, html);
+
+  if (!noArchive) {
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    fs.writeFileSync(path.join(historyDir, `${stamp}.json`), `${JSON.stringify(snapshot, null, 2)}\n`);
+    // Cap history: keep newest ARK_REPORT_HISTORY_MAX JSON files.
+    try {
+      const files = fs
+        .readdirSync(historyDir)
+        .filter((f) => f.endsWith('.json'))
+        .map((f) => ({ f, t: fs.statSync(path.join(historyDir, f)).mtimeMs }))
+        .sort((a, b) => b.t - a.t);
+      for (const old of files.slice(ARK_REPORT_HISTORY_MAX)) {
+        fs.unlinkSync(path.join(historyDir, old.f));
+      }
+    } catch {
+      /* ignore prune errors */
+    }
+  }
+
+  // Ensure .ark/ is gitignored when a .gitignore exists.
+  const gitignore = path.join(root, '.gitignore');
+  if (fs.existsSync(gitignore)) {
+    const text = fs.readFileSync(gitignore, 'utf8');
+    const hasArk =
+      text.split('\n').some((line) => {
+        const t = line.trim();
+        return t === '.ark/' || t === '.ark' || t === '/.ark/' || t === '**/.ark/';
+      });
+    if (!hasArk) {
+      const suffix = text.endsWith('\n') || text.length === 0 ? '' : '\n';
+      fs.writeFileSync(
+        gitignore,
+        `${text}${suffix}\n# Ark generated reports / local state\n.ark/\n`
+      );
+    }
+  }
+
+  return { origin, createdOrigin, dir, originJson, latestHtml };
+}
+
 // Simplified onboarding report: compact diagram, placement table, short violation list.
 function renderBeginnerHtmlReport({ root, config, violations, ok, version, configPath, generatedAt }) {
   const layers = Array.isArray(config.layers) ? config.layers : [];
@@ -2875,6 +3098,9 @@ function renderHtmlReport({
   configPath,
   generatedAt,
   skillGaps = [],
+  originSnapshot = null,
+  currentSnapshot = null,
+  originJustCreated = false,
 }) {
   const layers = Array.isArray(config.layers) ? config.layers : [];
   const rules = Array.isArray(config.rules) ? config.rules : [];
@@ -2903,41 +3129,28 @@ function renderHtmlReport({
   const gatesOn = enforcement.filter((e) => e.on).length;
   const status = ok ? 'PASS' : 'FAIL';
 
-  const governedPercent = coverage?.governed?.percent ?? null;
-  const totalFiles = coverage?.governed?.totalFiles ?? 0;
-  const classifiedFiles = coverage?.governed?.classifiedFiles ?? 0;
-  const mode = resolveOperatingMode({
-    governedPercent,
-    planMet: ok && violations.length === 0 && (governedPercent == null || governedPercent >= 50),
-    mature: totalFiles >= 150,
+  const fitness = computeReportFitness({
+    coverage,
+    violations,
+    ok,
+    enforcement,
+    config,
   });
-  const modeLabel = { suggest: 'SUGGEST', adapt: 'ADAPT', enforce: 'ENFORCE' }[mode] || mode.toUpperCase();
-  const modeBlurb = {
-    suggest: 'Starter shape — expand layers as the codebase grows.',
-    adapt: 'Contract is live; raise governed coverage or match real folders.',
-    enforce: 'Contract governs the tree. Gates can honestly hold the line.',
-  }[mode];
-
-  // Composite architecture score 0–100 (showcase number, not a CI gate).
-  const scoreCoverage = governedPercent == null ? 50 : governedPercent;
-  const scoreClean =
-    violations.length === 0 ? 100 : Math.max(0, 100 - Math.min(100, violations.length * 4));
-  const scoreGates = enforcement.length ? Math.round((gatesOn / enforcement.length) * 100) : 40;
-  const scoreRules = layers.length
-    ? Math.min(100, Math.round((deniedCount / Math.max(1, layers.length * (layers.length - 1))) * 120))
-    : 0;
-  const score = Math.round(
-    scoreCoverage * 0.4 + scoreClean * 0.3 + scoreGates * 0.2 + scoreRules * 0.1
-  );
-  const scoreTone = score >= 90 ? 'elite' : score >= 70 ? 'strong' : score >= 50 ? 'ok' : 'weak';
-  const scoreCaption =
-    score >= 90
-      ? 'World-class architecture fitness'
-      : score >= 70
-        ? 'Solid architecture discipline'
-        : score >= 50
-          ? 'Useful guardrails — room to grow'
-          : 'Early stage — keep adopting layers';
+  const {
+    governedPercent,
+    totalFiles,
+    classifiedFiles,
+    mode,
+    modeLabel,
+    modeBlurb,
+    score,
+    scoreCoverage,
+    scoreClean,
+    scoreGates,
+    scoreRules,
+    scoreTone,
+    scoreCaption,
+  } = fitness;
 
   // ── Senior diagnostics (coupling, purity, contract density) ──────────────
   const layerNames = ordered.map((l) => l.name);
@@ -3412,6 +3625,10 @@ function renderHtmlReport({
   .senior-list { margin: .2rem 0 0; padding-left: 1.1rem; color: var(--ink); }
   .senior-list li { margin: .2rem 0; }
   .senior-list .edge { margin-left: 0; }
+  .delta.up { color: var(--green); font-weight: 700; }
+  .delta.down { color: var(--red); font-weight: 700; }
+  .delta.flat { color: var(--dim); }
+  .evolve { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
   @media print {
     body { background: #fff; color: #111; padding: 0; }
     .card, .kpi, .gate, .cmds, .clean, .vgroup { box-shadow: none; break-inside: avoid; }
@@ -3486,6 +3703,96 @@ function renderHtmlReport({
     <p class="dim" style="margin:.15rem 0 .85rem;font-size:.88rem">Write-time · merge-time · editor · ratchet. Same contract everywhere.</p>
     <div class="gates">${enforcementRows}</div>
   </div>
+
+  ${(() => {
+    if (!currentSnapshot) return '';
+    // First report: originSnapshot is null at render time (written to disk just after).
+    if (originJustCreated || !originSnapshot) {
+      return `<div class="section card evolve">
+        <h2>Origin baseline captured</h2>
+        <p class="dim" style="margin:.2rem 0 0;font-size:.9rem">
+          This is the <b>first</b> architecture snapshot for this project
+          (<code>.ark/reports/origin.json</code> + <code>origin.html</code>).
+          Future reports will show deltas against this starting point so you can prove evolution.
+        </p>
+      </div>`;
+    }
+    const rows = [
+      ['Ark score', originSnapshot.score, currentSnapshot.score, ''],
+      ['Governed %', originSnapshot.governedPercent, currentSnapshot.governedPercent, 'pp'],
+      ['Files in scope', originSnapshot.totalFiles, currentSnapshot.totalFiles, ''],
+      ['Classified files', originSnapshot.classifiedFiles, currentSnapshot.classifiedFiles, ''],
+      ['Active violations', originSnapshot.activeViolations, currentSnapshot.activeViolations, ''],
+      ['Value violations', originSnapshot.valueViolations, currentSnapshot.valueViolations, ''],
+      ['Type-only violations', originSnapshot.typeOnlyViolations, currentSnapshot.typeOnlyViolations, ''],
+      ['Layers', originSnapshot.layerCount, currentSnapshot.layerCount, ''],
+      ['Deny rules', originSnapshot.denyRules, currentSnapshot.denyRules, ''],
+      ['Gates live', originSnapshot.gatesOn, currentSnapshot.gatesOn, ''],
+    ];
+    const originDate = (originSnapshot.generatedAt || '').slice(0, 10) || 'origin';
+    const nowDate = (currentSnapshot.generatedAt || '').slice(0, 10) || 'now';
+    const tr = rows
+      .map(([label, from, to, unit]) => {
+        const d =
+          typeof from === 'number' && typeof to === 'number' ? to - from : null;
+        const good =
+          label.includes('violation') || label.includes('Violation')
+            ? d != null && d <= 0
+            : label.includes('Governed') || label.includes('score') || label.includes('Classified') || label.includes('Gates')
+              ? d != null && d >= 0
+              : null;
+        const cls =
+          d == null || d === 0 ? 'flat' : good === true ? 'up' : good === false ? 'down' : 'flat';
+        const delta =
+          d == null
+            ? '—'
+            : unit === 'pp'
+              ? formatDelta(Math.round(d * 10) / 10, { suffix: ' pp' })
+              : formatDelta(d);
+        return `<tr>
+          <td>${esc(label)}</td>
+          <td class="num">${from ?? '—'}</td>
+          <td class="num">${to ?? '—'}</td>
+          <td class="num delta ${cls}">${esc(delta)}</td>
+        </tr>`;
+      })
+      .join('\n');
+    // Layer file deltas
+    const originLayers = originSnapshot.layerFiles || {};
+    const currentLayers = currentSnapshot.layerFiles || {};
+    const layerKeys = [...new Set([...Object.keys(originLayers), ...Object.keys(currentLayers)])].sort();
+    const layerTr = layerKeys
+      .map((name) => {
+        const from = originLayers[name] || 0;
+        const to = currentLayers[name] || 0;
+        const d = to - from;
+        const cls = d === 0 ? 'flat' : d > 0 ? 'up' : 'down';
+        return `<tr>
+          <td class="ln">${esc(name)}</td>
+          <td class="num">${from}</td>
+          <td class="num">${to}</td>
+          <td class="num delta ${cls}">${esc(formatDelta(d))}</td>
+        </tr>`;
+      })
+      .join('\n');
+    return `<div class="section card evolve">
+      <h2>Evolution vs origin</h2>
+      <p class="dim" style="margin:.15rem 0 .75rem;font-size:.88rem">
+        Origin snapshot <code>${esc(originDate)}</code> → this report <code>${esc(nowDate)}</code>
+        · frozen at <code>.ark/reports/origin.*</code> · reopen origin HTML anytime for the starting picture.
+      </p>
+      <table class="layers">
+        <tr><th>Metric</th><th>Origin</th><th>Now</th><th>Δ</th></tr>
+        ${tr}
+      </table>
+      <h3>Files per layer</h3>
+      <table class="layers">
+        <tr><th>Layer</th><th>Origin</th><th>Now</th><th>Δ</th></tr>
+        ${layerTr || '<tr><td colspan="4" class="dim">No layer file data in snapshots.</td></tr>'}
+      </table>
+      <p class="legend">Green Δ = improvement for that metric (↑ coverage/score/gates, ↓ violations). History JSON under <code>.ark/reports/history/</code> (last ${ARK_REPORT_HISTORY_MAX}).</p>
+    </div>`;
+  })()}
 
   <div class="section card senior">
     <h2>Senior diagnostics</h2>
@@ -4470,6 +4777,31 @@ async function main() {
       }
     }
     const coverage = computeCoverage(root, config, files, rules);
+    const enforcementForReport = detectEnforcement(root);
+    const fitness = computeReportFitness({
+      coverage,
+      violations: activeViolations,
+      ok,
+      enforcement: enforcementForReport,
+      config,
+    });
+    const currentSnapshot = buildReportSnapshot({
+      root,
+      config,
+      coverage,
+      violations: activeViolations,
+      ok,
+      suppressed: suppressed.length,
+      version: arkPackageVersion(),
+      fileCountByLayer,
+      enforcement: enforcementForReport,
+      score: fitness.score,
+      mode: fitness.mode,
+    });
+    // Origin is read before archive so the HTML can show "just created" vs deltas.
+    const existingOrigin = args.resetOrigin
+      ? null
+      : readJsonSafe(path.join(reportsDir(root), 'origin.json'));
     const reportPayload = {
       root,
       config,
@@ -4483,26 +4815,58 @@ async function main() {
       configPath: args.config,
       generatedAt: new Date().toISOString().slice(0, 10),
       skillGaps,
+      originSnapshot: existingOrigin,
+      currentSnapshot,
+      originJustCreated: !existingOrigin,
     };
     const html = args.beginner
       ? renderBeginnerHtmlReport(reportPayload)
       : renderHtmlReport(reportPayload);
     const reportPath = path.isAbsolute(args.report) ? args.report : path.join(root, args.report);
     fs.writeFileSync(reportPath, html);
+
+    const archive = archiveReportSnapshots(root, {
+      html,
+      snapshot: currentSnapshot,
+      resetOrigin: Boolean(args.resetOrigin),
+      noArchive: Boolean(args.noArchive),
+    });
     if (!args.json) {
       const rel = path.relative(root, reportPath) || reportPath;
       console.log(`${color.green('✎')} Wrote HTML report: ${rel}`);
-      // The report is a generated artifact. Nudge toward .gitignore so it doesn't
-      // get swept into a commit (only when a .gitignore exists and misses it).
+      if (archive.createdOrigin) {
+        console.log(
+          `${color.green('✎')} Origin snapshot saved (first report): ${path.relative(root, archive.originJson) || archive.originJson}`
+        );
+        console.log(
+          color.dim('  Future reports will show evolution vs this starting point (.ark/reports/).')
+        );
+      } else {
+        console.log(
+          color.dim(
+            `  Snapshots: .ark/reports/latest.* (origin frozen${args.resetOrigin ? ' — reset this run' : ''})`
+          )
+        );
+      }
+      // Nudge .gitignore for loose report files (origin/latest already under .ark/).
       const gitignore = path.join(root, '.gitignore');
       const base = path.basename(reportPath);
       if (!path.isAbsolute(args.report) && fs.existsSync(gitignore)) {
         const ignored = fs
           .readFileSync(gitignore, 'utf8')
           .split('\n')
-          .some((line) => line.trim() === base || line.trim() === `/${base}` || line.trim() === args.report);
+          .some(
+            (line) =>
+              line.trim() === base ||
+              line.trim() === `/${base}` ||
+              line.trim() === args.report ||
+              line.trim() === '.ark/' ||
+              line.trim() === '.ark'
+          );
         if (!ignored) {
-          console.log(color.dim(`  (generated artifact — add "${base}" to .gitignore so it isn't committed)`));
+          console.log(
+            color.dim(`  (generated artifact — prefer .ark/reports/; add "${base}" or ".ark/" to .gitignore)`)
+          );
         }
       }
     }

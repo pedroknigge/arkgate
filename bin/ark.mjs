@@ -413,6 +413,15 @@ async function start(args) {
     console.log(`  • Re-run the plan anytime:   ${arkCommand(root, 'ark-check', '--plan')}`);
     console.log(`  • Full project check:        ${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config')}`);
     console.log(`  • Update Ark later:          ${arkCommand(root, 'ark', 'upgrade')}`);
+
+    // 6) First architecture report — freezes an origin snapshot under .ark/reports/
+    // so later --report runs can show evolution. Idempotent: origin is written only once.
+    console.log('');
+    console.log('Capturing architecture report (origin snapshot on first run)…');
+    runArkCheck(
+      ['--root', root, '--config', 'ark.config.json', '--report', 'ark-report.html'],
+      { cwd: root }
+    );
     return 0;
   } finally {
     rl?.close();

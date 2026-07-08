@@ -19,9 +19,17 @@ Your job is to **teach with this repo's real data** and leave a shareable visual
    Prefer the project's package-manager runner if gates already emit one
    (`pnpm … exec ark-check` / `yarn` / `npx`).
 
-2. Tell the user the path to `ark-report.html` and that they can open it in a browser.
-   Mention it is a **generated artifact** — suggest adding `ark-report.html` to `.gitignore`
-   if it is not already ignored.
+   This also maintains snapshots under **`.ark/reports/`**:
+   - `origin.json` / `origin.html` — frozen **first** report (start of the journey)
+   - `latest.json` / `latest.html` — every run
+   - `history/*.json` — last ~20 machine-readable points for later tooling
+
+   If origin already exists, the HTML includes **Evolution vs origin** (score, governed%,
+   violations, files per layer). Do not delete origin unless the user explicitly wants a
+   new baseline (`--reset-origin`).
+
+2. Tell the user the path to `ark-report.html` and `.ark/reports/origin.html`.
+   Mention `.ark/` should stay gitignored (Ark appends that on first report when possible).
 
 3. Optionally also run:
 
