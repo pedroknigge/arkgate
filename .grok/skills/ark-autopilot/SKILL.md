@@ -1,6 +1,7 @@
 ---
 name: ark-autopilot
 description: The end-to-end architecture co-pilot for non-developers. One flow: look at the project, set up the guardrails, then drive the plan to a clean architecture — auto-applying the safe fixes and proposing the rest, always validated by ark-check, never weakening the gate. Composes setup + plan + the apply loop. Autonomous within those limits.
+arkVersion: 2.0.1
 ---
 
 # /ark-autopilot — Get to a sound architecture, end to end

@@ -1,24 +1,32 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.pedroknigge/ark",
-  "description": "Architecture write-gate for AI agents: blocks code that violates your Hexagonal/DDD layer rules.",
+  "description": "Architecture co-pilot for AI TypeScript (write gate, CI, plan/loop)",
   "repository": {
     "url": "https://github.com/pedroknigge/ark-runtime-kernel",
     "source": "github"
   },
-  "version": "2.0.0",
+  "version": "2.0.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "ark-runtime-kernel",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"
       },
       "packageArguments": [
-        { "type": "positional", "value": "ark-mcp" },
-        { "type": "named", "name": "--root", "value": ".", "description": "Project root" },
+        {
+          "type": "positional",
+          "value": "ark-mcp"
+        },
+        {
+          "type": "named",
+          "name": "--root",
+          "value": ".",
+          "description": "Project root"
+        },
         {
           "type": "named",
           "name": "--config",

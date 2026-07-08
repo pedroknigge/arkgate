@@ -12,7 +12,7 @@ plan out — applying the safe fixes and proposing the rest, always validated by
 ## Prerequisites
 
 - Ark built or installed from this repository
-- An agent CLI (Claude, Cursor, Codex, …) for the `/ark-autopilot` and `/ark-loop` steps
+- An agent CLI (Claude, Cursor, Codex, Grok, …) for the `/ark-autopilot` and `/ark-loop` steps
 
 ## Steps
 

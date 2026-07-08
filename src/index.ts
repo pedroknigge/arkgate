@@ -1,8 +1,8 @@
 /**
- * Ark — AI Architecture Gate for TypeScript
+ * Ark — Architecture Co-pilot for AI TypeScript
  *
- * A zero-dependency architecture gate for TypeScript repos, agents, CI, and
- * optional runtime enforcement.
+ * Zero-dependency write gate + CI gate + co-pilot (plan / goal / loop) for
+ * TypeScript repos and agents. Optional runtime kernel is not the product.
  *
  * @packageDocumentation
  */

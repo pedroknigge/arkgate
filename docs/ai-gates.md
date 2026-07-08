@@ -1,6 +1,9 @@
 # Gating AI Agents with Ark
 
-The write-path gate is what makes Ark different from every other architecture linter: generated code is validated against your architecture **before it lands on disk**, not after the PR is red.
+**Ark** is the architecture co-pilot for AI TypeScript (write gate · CI · plan/loop).
+The write-path gate is what makes it different from every other architecture linter:
+generated code is validated against your architecture **before it lands on disk**, not
+after the PR is red.
 
 Everything below uses the same `ark.config.json` as `ark-check` (CI) — one contract, enforced everywhere. Generate it once:
 
@@ -27,13 +30,14 @@ npx ark-check --install-agent-gates
 ```
 
 The command writes templates for `.mcp.json`, Claude hooks, Cursor MCP/rules,
-GitHub Actions, `AGENTS.md`, and a Codex TOML snippet under `docs/`. It skips
-existing files unless you pass `--force`, so review and commit only the templates
-that match your project.
+GitHub Actions, `AGENTS.md`, a Codex TOML snippet under `docs/`, and (when
+selected) Grok Build project files under `.grok/`. It skips existing files unless
+you pass `--force`, so review and commit only the templates that match your project.
 
-If your project uses Codex, treat the MCP registration as part of the default setup,
-not an optional extra. Ark works best when Codex can read `ark://manifest` before it
-writes code; that is the fast path to avoiding architecture drift during generation.
+If your project uses Codex or Grok, treat MCP registration as part of the default
+setup, not an optional extra. Ark works best when the agent can read `ark://manifest`
+before it writes code; that is the fast path to avoiding architecture drift during
+generation.
 
 ## Claude Code — hook (recommended, hard block)
 
@@ -193,6 +197,53 @@ Same model as Cursor: MCP for discovery/validation, `ark-check` in CI as the har
 For Ark projects, register the MCP server as soon as the repo is adopted so the agent
 has the contract available from the first edit.
 
+`ark-check --install-agent-gates --tools codex` auto-merges absolute paths into
+`~/.codex/config.toml` and can install `/ark-*` prompts with `--codex-home`.
+
+## Grok Build (xAI)
+
+Grok reads project rules from **`AGENTS.md`**, project MCP from **`.grok/config.toml`**
+(and repo-root `.mcp.json`), skills from **`.grok/skills/<name>/SKILL.md`**, and
+hooks from **`.grok/hooks/*.json`**.
+
+Install everything Ark needs for Grok:
+
+```bash
+npx ark-check --install-agent-gates --tools grok
+```
+
+That writes:
+
+| Path | Role |
+|------|------|
+| `.grok/config.toml` | `[mcp_servers.ark]` → `ark-mcp` (relative `--root .`) |
+| `.grok/hooks/ark-write-gate.json` | SessionStart context + PreToolUse write gate |
+| `.grok/skills/ark-*/SKILL.md` | All `/ark-*` skills (slash-invocable) |
+| `AGENTS.md` + `.mcp.json` + CI | Shared with other hosts |
+
+Grok also loads Claude/Cursor MCP and skill paths when compat is enabled, so a repo
+already wired for Claude often “just works” in Grok — but the native `.grok/*` layout
+is the supported, commit-friendly path.
+
+**Write gate:** Grok’s PreToolUse uses camelCase payloads (`toolName` / `toolInput`)
+and may call `write` / `search_replace`. `ark-mcp --hook` accepts both Claude and Grok
+shapes and returns a Grok-compatible `{ "decision": "deny", "reason": "…" }` on stdout
+when it blocks.
+
+**Trust:** the first time you open a project with hooks, run `/hooks-trust` (or
+`grok --trust`) so project hooks and local MCP are allowed.
+
+Manual MCP only:
+
+```toml
+# .grok/config.toml  (or: grok mcp add --scope project ark -- npx ark-mcp --root . --config ark.config.json)
+[mcp_servers.ark]
+command = "npx"
+args = ["ark-mcp", "--root", ".", "--config", "ark.config.json"]
+```
+
+Then restart Grok or refresh via `/mcps`. Pair with CI `ark-check` as the hard merge gate.
+
 ## Instruction-tier agents: Windsurf, Cline, Copilot, Kiro, Roo Code, Continue, Gemini CLI
 
 Agents without MCP or hook support still follow the contract through an always-on
@@ -220,10 +271,12 @@ write) — keep `ark-check` in CI as the hard gate.
 
 ## Any other agent runtime with shell hooks
 
-If your runtime can run a shell command before file writes and pass the tool payload on stdin (Claude Code's PreToolUse contract), `ark-mcp --hook` works as-is. The contract:
+If your runtime can run a shell command before file writes and pass the tool payload on stdin (Claude Code or Grok PreToolUse contracts), `ark-mcp --hook` works as-is. The contract:
 
-- stdin: JSON `{ "tool_name": "Write|Edit|MultiEdit", "tool_input": { "file_path": ..., ... } }`
+- stdin (Claude): JSON `{ "tool_name": "Write|Edit|MultiEdit", "tool_input": { "file_path": ..., ... } }`
+- stdin (Grok): JSON `{ "toolName": "write|search_replace|…", "toolInput": { "file_path": ..., ... } }` (also accepts Claude names)
 - exit `0` → allow; exit `2` → block, human-readable violations on stderr
+- Grok payloads also get `{ "decision": "deny", "reason": "…" }` on stdout when blocked
 - plumbing problems (no stdin, non-source files, files outside `--root`) never block
 
 ## ESLint (editor feedback)

@@ -1,6 +1,7 @@
 ---
 name: ark-loop
 description: Drive Ark's remediation plan to a clean architecture — a safe, reversible apply loop. Auto-applies only the changes Ark classes mechanical-safe (validating each with ark-check and rolling back regressions), proposes the judgment ones for your decision, and never weakens the gate. Autonomous within those limits.
+arkVersion: 2.0.1
 ---
 
 # /ark-loop — Drive the plan to a clean architecture (safely)

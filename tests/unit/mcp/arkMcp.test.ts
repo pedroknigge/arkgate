@@ -302,16 +302,17 @@ describe('ark-mcp server (write-path gate)', () => {
  * violations on stderr blocks the write, exit 0 allows it. Plumbing failures must
  * fail open (never block the agent on gate errors).
  */
-function runHook(root: string, payload: unknown) {
+function runHook(root: string, payload: unknown, env?: NodeJS.ProcessEnv) {
   const result = spawnSync(
     'node',
     [mcpBin, '--hook', '--root', root],
     {
       input: typeof payload === 'string' ? payload : JSON.stringify(payload),
       encoding: 'utf8',
+      env: env ? { ...process.env, ...env } : process.env,
     }
   );
-  return { status: result.status, stderr: result.stderr };
+  return { status: result.status, stderr: result.stderr, stdout: result.stdout };
 }
 
 describe('ark-mcp --hook (PreToolUse gate)', () => {
@@ -346,7 +347,7 @@ describe('ark-mcp --hook (PreToolUse gate)', () => {
     expect(result.stderr).toContain('DomainModel');
     // The hook surfaces the gate's fix hints (previously dropped) and points a
     // would-be infra layer at the exemption.
-    expect(result.stderr).toContain('fix:');
+    expect(result.stderr).toContain('Fix:');
     expect(result.stderr).toContain('mayImportInfrastructure');
   });
 
@@ -403,6 +404,34 @@ describe('ark-mcp --hook (PreToolUse gate)', () => {
       },
     });
     expect(result.status).toBe(0);
+  });
+
+  it('accepts Grok Build camelCase write payloads and emits deny JSON', () => {
+    const result = runHook(root, {
+      toolName: 'write',
+      toolInput: {
+        file_path: path.join(root, 'src/domain/customer.ts'),
+        content: "import { PrismaClient } from 'prisma';\nexport const repo = new PrismaClient();\n",
+      },
+    });
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('FORBIDDEN_IMPORT');
+    const decision = JSON.parse(result.stdout.trim());
+    expect(decision.decision).toBe('deny');
+    expect(decision.reason).toContain('FORBIDDEN_IMPORT');
+  });
+
+  it('accepts Grok search_replace as Edit', () => {
+    const result = runHook(root, {
+      toolName: 'search_replace',
+      toolInput: {
+        file_path: path.join(root, 'src/domain/order.ts'),
+        old_string: 'export const a = 1;',
+        new_string: "import { db } from 'typeorm';\nexport const a = db;",
+      },
+    });
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('typeorm');
   });
 });
 

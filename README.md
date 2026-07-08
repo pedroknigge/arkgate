@@ -1,11 +1,11 @@
 <div align="center">
 
-# Ark
+# Ark — Architecture Co-pilot for AI TypeScript
 
-**Architecture guardrails for TypeScript projects that use AI agents.**
+**Write gate · CI gate · co-pilot** for TypeScript projects that use AI agents.
 
-Your AI writes most of the code. Ark makes sure that code still lands in the right place —
-and that a “green” check means something real.
+Your AI writes most of the code. Ark keeps that code inside an architecture you can trust —
+and makes sure a “green” check means something real.
 
 [![CI](https://github.com/pedroknigge/ark-runtime-kernel/actions/workflows/ci.yml/badge.svg)](https://github.com/pedroknigge/ark-runtime-kernel/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/ark-runtime-kernel?color=cb3837&label=npm)](https://www.npmjs.com/package/ark-runtime-kernel)
@@ -29,8 +29,9 @@ Ark is a **machine-readable architecture contract** for TypeScript, enforced in 
 
 One file drives all of it: **`ark.config.json`**.
 
-It is **not** a web framework, ORM, or job runner. It is also more than a boundary linter:
-agents get tools (`ark_place`, …) and a contract they can read *before* generating code.
+It is **not** a web framework, ORM, or job runner — and the optional runtime kernel is not
+the product. The product is the **agent-native architecture gate** (write path + CI + plan/loop)
+plus tools agents can read *before* generating code (`ark_place`, `ark://manifest`, …).
 
 ![Write gate: agent blocked, then self-corrects](docs/assets/ark-write-gate.svg)
 
@@ -72,7 +73,7 @@ npm install -D ark-runtime-kernel typescript
 npx ark start          # look at the project → setup → plan (plain language)
 ```
 
-Then, in your agent (Claude / Cursor / Codex / …):
+Then, in your agent (Claude / Cursor / Codex / **Grok** / …):
 
 ```text
 /ark-autopilot
@@ -93,6 +94,33 @@ Works with **npm, pnpm, and yarn**. No install lifecycle scripts (safe for harde
 
 ---
 
+## Agent skills (`/ark-*`)
+
+Install with agent gates:
+
+```bash
+npx ark-check --install-agent-gates
+# or pick hosts: --tools claude,cursor,codex,grok
+```
+
+| Skill | What it does |
+|-------|----------------|
+| **`/ark-autopilot`** | End-to-end co-pilot: setup → plan → safe auto-fixes → propose the rest → leave gates on |
+| **`/ark-loop`** | Drive the remediation plan in a discardable worktree; only `mechanical-safe` steps auto-apply |
+| **`/ark-architect`** | Greenfield: pick application shape, phase-1 layers, scaffold, verify honestly |
+| **`/ark-adopt`** | Brownfield: match contract to reality, raise coverage, freeze only real debt |
+| **`/ark-contract`** | Safely edit `ark.config.json` (smallest change, strict re-check) |
+| **`/ark-place`** | Where does this new artifact go? Layer, path, naming — then scaffold |
+| **`/ark-fix`** | Fix violations at the source (no disable comments, no gate weakening) |
+| **`/ark-explain`** | Explain the current contract, coverage, and report in plain language |
+| **`/ark-coverage`** | Audit which Ark capabilities you are not using yet |
+| **`/ark-runtime`** | Opt-in: migrate hand-rolled bus/outbox/sagas onto the runtime kernel |
+| **`/ark-upgrade`** | Bump the package and refresh gates + skills for every agent host |
+
+Supported agent hosts for full MCP/hook gates: **Claude Code**, **Cursor**, **OpenAI Codex**, **Grok Build**. Instruction-tier hosts (Windsurf, Cline, Copilot, …) get rule files. See [docs/ai-gates.md](docs/ai-gates.md).
+
+---
+
 ## How it works (short)
 
 ```
@@ -106,7 +134,7 @@ ark.config.json
 - **Presets:** hexagonal, layered, feature-sliced, monorepo (all layers optional).
 - **Frameworks:** Nest / Next / express / library layouts get sensible globs on init so day-one coverage is real.
 - **Brownfield:** baseline ratchet, refuse to freeze a wrong contract, `/ark-adopt` for mature trees.
-- **Agents:** skills like `/ark-place`, `/ark-fix`, `/ark-loop`, `/ark-autopilot` — see [docs/ai-gates.md](docs/ai-gates.md).
+- **Agents:** skills above install into Claude / Cursor / Codex / Grok command locations.
 
 ### Why not only ESLint / dependency-cruiser / Nx?
 
@@ -128,6 +156,7 @@ npx ark start                         # guided setup + plan
 npx ark-check --doctor                # health + operating mode
 npx ark-check --plan                  # safe-to-auto-fix vs your call
 npx ark-check --coverage              # Governed: N%
+npx ark-check --report ark-report.html  # showcase HTML + origin/latest snapshots
 npx ark-check --baseline              # only NEW violations fail
 npx ark upgrade                       # update package + refresh gates/skills
 ```
@@ -159,7 +188,7 @@ NestJS: `ark-runtime-kernel/nestjs` (optional peer `@nestjs/common`).
 | Audience | Link |
 |----------|------|
 | New builders (plain language) | [docs/enthusiast/](docs/enthusiast/README.md) |
-| Wire Claude / Cursor / Codex | [docs/ai-gates.md](docs/ai-gates.md) |
+| Wire Claude / Cursor / Codex / Grok | [docs/ai-gates.md](docs/ai-gates.md) |
 | Messy existing repo | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Agent / MCP tools | [docs/agent-guide.md](docs/agent-guide.md) |
 | Demos | [docs/demos/](docs/demos/) |
@@ -177,7 +206,11 @@ npm run typecheck
 npm run check:architecture   # Ark gates itself
 ```
 
-Package: **`ark-runtime-kernel`** on npm · Node ≥ 18 · **MIT**.
+**npm package name (historical):** `ark-runtime-kernel` — install path and GitHub repo stay
+on that name for now. Product name is **Ark** (architecture co-pilot / gate). A clearer
+package name is planned for a future major; this line is not the product identity.
+
+Node ≥ 18 · **MIT**.
 
 ---
 

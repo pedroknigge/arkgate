@@ -564,7 +564,10 @@ describe('ark-check --install-agent-gates', () => {
   it('installs the /ark-* skills into each detected tool command location', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-skills-'));
 
-    const result = runInstallAgentGates(root, ['--tools', 'claude,cursor,codex,windsurf,cline,copilot']);
+    const result = runInstallAgentGates(root, [
+      '--tools',
+      'claude,cursor,codex,grok,windsurf,cline,copilot',
+    ]);
     expect(result.status).toBe(0);
 
     const skillNames = fs
@@ -578,10 +581,17 @@ describe('ark-check --install-agent-gates', () => {
       expect(fs.existsSync(path.join(root, `.claude/skills/${name}/SKILL.md`))).toBe(true);
       expect(fs.existsSync(path.join(root, `.cursor/commands/${name}.md`))).toBe(true);
       expect(fs.existsSync(path.join(root, `.codex/prompts/${name}.md`))).toBe(true);
+      expect(fs.existsSync(path.join(root, `.grok/skills/${name}/SKILL.md`))).toBe(true);
       expect(fs.existsSync(path.join(root, `.windsurf/workflows/${name}.md`))).toBe(true);
       expect(fs.existsSync(path.join(root, `.clinerules/workflows/${name}.md`))).toBe(true);
       expect(fs.existsSync(path.join(root, `.github/prompts/${name}.prompt.md`))).toBe(true);
     }
+
+    expect(fs.existsSync(path.join(root, '.grok/config.toml'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.grok/hooks/ark-write-gate.json'))).toBe(true);
+    expect(fs.readFileSync(path.join(root, '.grok/config.toml'), 'utf8')).toContain(
+      '[mcp_servers.ark]'
+    );
 
     const claudeSkill = fs.readFileSync(
       path.join(root, '.claude/skills/ark-coverage/SKILL.md'),
@@ -1841,6 +1851,27 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
     expect(plan.goal.activeViolations).toBe(0);
     expect(plan.goal.met).toBe(true);
     expect(plan.steps).toHaveLength(0);
+  });
+
+  it('does not mark goal.met when include matches zero source files (empty-scope false green)', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-plan-empty-'));
+    fs.mkdirSync(path.join(root, 'apps/web/src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'apps/web/src/page.ts'), 'export const p = 1;\n');
+    // Contract looks only at src/ — monorepo code lives under apps/ → 0 files in scope.
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/**'] }],
+        rules: [],
+      })
+    );
+    const parsed = runPlanJson(root);
+    expect(parsed.plan.goal.totalFiles).toBe(0);
+    expect(parsed.plan.goal.emptyScope).toBe(true);
+    expect(parsed.plan.goal.met).toBe(false);
+    expect(parsed.ok).toBe(false);
+    expect(parsed.plan.goal.statement).toMatch(/No source files matched|checks nothing/i);
   });
 
   it('does not mark goal.met when zero violations but governed coverage is low (false-green)', () => {

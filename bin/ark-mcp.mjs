@@ -190,6 +190,35 @@ async function loadOptionalTypeScript() {
 const SOURCE_FILE = /\.[cm]?[jt]sx?$/;
 
 /**
+ * Normalize agent PreToolUse payloads.
+ * Claude Code: { tool_name, tool_input: { file_path, content | old_string/new_string } }
+ * Grok Build:  { toolName, toolInput:  { file_path, content | old_string/new_string } }
+ *              (aliases Write/Edit/MultiEdit → write/search_replace; matcher keeps both)
+ */
+function normalizeHookPayload(payload) {
+  const rawName = payload?.tool_name ?? payload?.toolName ?? '';
+  const toolInput = payload?.tool_input ?? payload?.toolInput ?? {};
+  const nameMap = {
+    Write: 'Write',
+    write: 'Write',
+    Edit: 'Edit',
+    search_replace: 'Edit',
+    MultiEdit: 'MultiEdit',
+  };
+  const toolName = nameMap[rawName] ?? rawName;
+  const filePath =
+    toolInput.file_path ?? toolInput.filePath ?? toolInput.path ?? toolInput.target_file;
+  return {
+    toolName,
+    toolInput: { ...toolInput, file_path: filePath },
+    // Grok-style camelCase (or GROK_HOOK_EVENT) → also emit deny JSON on stdout.
+    grokStyle:
+      Boolean(process.env.GROK_HOOK_EVENT) ||
+      (payload != null && typeof payload === 'object' && 'toolName' in payload),
+  };
+}
+
+/**
  * Compute the file content a Write/Edit/MultiEdit is about to produce. Edits are applied
  * to the CURRENT on-disk file so the gate judges the real post-edit state, not the edit
  * snippet out of context. Replacement uses a function argument so `$&`-style sequences in
@@ -220,9 +249,10 @@ function proposedSource(toolName, toolInput) {
 }
 
 /**
- * One-shot PreToolUse gate (Claude Code hook contract): payload on stdin, exit 2 +
- * violations on stderr to block, exit 0 to allow. Gate plumbing problems (no stdin,
- * malformed JSON, non-file tools, non-source files) never block the agent.
+ * One-shot PreToolUse gate (Claude Code + Grok Build hook contracts): payload on stdin,
+ * exit 2 + violations on stderr to block, exit 0 to allow. Grok also receives a deny
+ * decision JSON on stdout. Gate plumbing problems (no stdin, malformed JSON, non-file
+ * tools, non-source files) never block the agent.
  */
 function runHook(gate, config, args) {
   let payload;
@@ -232,8 +262,7 @@ function runHook(gate, config, args) {
     return;
   }
 
-  const toolName = payload?.tool_name;
-  const toolInput = payload?.tool_input ?? {};
+  const { toolName, toolInput, grokStyle } = normalizeHookPayload(payload);
   const filePath = toolInput.file_path;
   if (!['Write', 'Edit', 'MultiEdit'].includes(toolName)) return;
   if (typeof filePath !== 'string' || !SOURCE_FILE.test(filePath) || filePath.endsWith('.d.ts')) {
@@ -280,14 +309,17 @@ function runHook(gate, config, args) {
   const suggestions = [
     ...new Set(newViolations.map((violation) => violation.suggestion).filter(Boolean)),
   ];
-  process.stderr.write(
-    [
-      `Ark architecture gate blocked this write to ${rel}${layer ? ` (layer: ${layer})` : ''}:`,
-      ...lines,
-      ...(suggestions.length > 0 ? ['fix:', ...suggestions.map((s) => `  ${s}`)] : []),
-      'Fix the violations and retry. The architecture contract is available as the ark://manifest MCP resource.',
-    ].join('\n') + '\n'
-  );
+  const message = [
+    `Ark architecture gate blocked this write to ${rel}${layer ? ` (layer: ${layer})` : ''}:`,
+    ...lines,
+    ...(suggestions.length > 0 ? ['Fix:', ...suggestions.map((s) => `  ${s}`)] : []),
+    'Fix the violations and retry. The architecture contract is available as the ark://manifest MCP resource.',
+  ].join('\n');
+  process.stderr.write(message + '\n');
+  // Grok Build honors { decision: "deny" } on stdout (exit 2 alone is also deny).
+  if (grokStyle) {
+    process.stdout.write(JSON.stringify({ decision: 'deny', reason: message }) + '\n');
+  }
   process.exitCode = 2;
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "ark-runtime-kernel",
-  "version": "2.0.0",
-  "description": "AI architecture gate for TypeScript repos, agents, and CI",
+  "version": "2.0.1",
+  "description": "Architecture co-pilot for AI TypeScript: write gate, CI gate, plan/loop (package name ark-runtime-kernel is historical)",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

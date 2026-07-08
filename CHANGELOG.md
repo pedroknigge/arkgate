@@ -2,6 +2,33 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 2.0.1 — 2026-07-08
+
+Docs + agent-host polish on top of the 2.0.0 co-pilot release.
+
+### Added
+
+- **Grok Build as a first-class agent host** — `ark-check --install-agent-gates --tools grok`
+  writes `.grok/config.toml` (MCP), `.grok/hooks/ark-write-gate.json` (SessionStart + PreToolUse),
+  and `/ark-*` skills under `.grok/skills/<name>/SKILL.md`. Auto-detected from a project `.grok/` dir.
+- **`ark-mcp --hook` Grok payloads** — accepts camelCase `toolName`/`toolInput` and
+  `write`/`search_replace`; emits `{ "decision": "deny", "reason": "…" }` on stdout for Grok.
+- **README skill inventory** — table of all eleven `/ark-*` skills with a one-line summary each.
+
+### Documentation / positioning
+
+- Public title and framing: **Ark — Architecture Co-pilot for AI TypeScript** (write gate · CI ·
+  co-pilot). npm name `ark-runtime-kernel` called out as historical; product is not the optional
+  runtime kernel.
+- [docs/ai-gates.md](docs/ai-gates.md), [docs/agent-guide.md](docs/agent-guide.md), enthusiast
+  how-to, demos, roadmaps, and hexagonal example updated for Grok + skill list.
+
+### Also in this train (from the showcase field branch)
+
+- Showcase HTML architecture report + origin/latest/history snapshots under `.ark/reports/`
+- Autopilot before/after report steps; empty-scope false-green fix; monorepo/start TS7 hardening
+- Unit/e2e `*.spec.ts` / `*.test.ts` excluded from architecture scope
+
 ## 2.0.0 — 2026-07-08
 
 **The architecture co-pilot.** This major completes the Gate → Guide → **Co-pilot** arc: Ark can

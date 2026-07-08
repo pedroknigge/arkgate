@@ -2,14 +2,21 @@
 
 ```bash
 npx ark-check --install-agent-gates
-npx ark-check --install-agent-gates --tools claude,cursor,codex
+npx ark-check --install-agent-gates --tools claude,cursor,codex,grok
 ```
 
 Installs:
 
-- Write-gate hook configuration
-- MCP server entry (`.mcp.json` or equivalent)
-- `/ark-*` skills including **`/ark-architect`**
+- Write-gate hook configuration (Claude / Grok PreToolUse; Cursor advisory + MCP)
+- MCP server entry (`.mcp.json`, Cursor/Codex/Grok equivalents)
+- `/ark-*` skills including **`/ark-architect`** and **`/ark-autopilot`**
+
+| Host | Extra paths |
+|------|-------------|
+| Claude Code | `.claude/settings.json`, `.claude/skills/` |
+| Cursor | `.cursor/mcp.json`, `.cursor/rules/ark.mdc`, `.cursor/commands/` |
+| Codex | `docs/ark-codex-config.toml` + home MCP/prompts |
+| **Grok Build** | `.grok/config.toml`, `.grok/hooks/`, `.grok/skills/` |
 
 ## Session hint
 

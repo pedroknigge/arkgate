@@ -1,4 +1,4 @@
-# Ark for enthusiasts — documentation track
+# Ark — Architecture Co-pilot (enthusiast track)
 
 Plain-language onboarding for builders who use AI agents but are not professional
 developers. This track follows [Diátaxis](https://diataxis.fr/): tutorial, how-to,

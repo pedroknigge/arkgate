@@ -105,4 +105,12 @@ Expose the same rules to coding agents so illegal code is rejected *before* it i
 npx ark-mcp --root . --config ark.config.json
 ```
 
-Register it as an MCP server in your agent (e.g. `claude mcp add ark -- npx ark-mcp --root . --config ark.config.json`) and bind its `validate_code` tool to the agent's pre-write hook. See the [AI gates guide](../../docs/ai-gates.md).
+Register it as an MCP server in your agent and bind the write gate:
+
+```bash
+# Claude / Cursor / Codex / Grok (and CI templates) in one shot:
+npx ark-check --install-agent-gates --tools claude,cursor,codex,grok
+# or Claude only: claude mcp add ark -- npx ark-mcp --root . --config ark.config.json
+```
+
+See the [AI gates guide](../../docs/ai-gates.md) (includes Grok Build `.grok/` layout).

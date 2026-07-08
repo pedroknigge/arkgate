@@ -1,9 +1,13 @@
 # Ark Roadmap
 
-Ark is an AI architecture gate for TypeScript: one machine-readable architecture
-contract, enforced when agents write code and again before code merges.
+**Product:** Ark — Architecture Co-pilot for AI TypeScript  
+**npm / repo (historical name):** `ark-runtime-kernel` (a clearer package name is planned;
+this roadmap describes the product, not the old “runtime kernel” framing).
 
-The runtime kernel remains optional. The public product focus is the static and
+Ark is an **AI architecture gate + co-pilot** for TypeScript: one machine-readable
+architecture contract, enforced when agents write code and again before code merges.
+
+The optional runtime kernel is not the product. The public focus is the static and
 agent-native gate: `ark-check`, `ark-mcp`, `ark://manifest`, and the `/ark-*`
 workflows that help agents place code correctly.
 
@@ -41,11 +45,13 @@ reports green while skipping work, and always shows what it did automatically vs
 is proposing vs what it deferred for a human decision. Judgment-heavy refactors
 ("big rocks") are always proposed, never silently applied.
 
-**Status: 2.0.0 = co-pilot milestone + field-hardened honesty.** Primitives — **plan**
-(`ark-check --plan`), **goal** (plan `goal` block, including governed%), **loop**
-(`/ark-loop`) — composed by **`ark start`** and **`/ark-autopilot`**. Field hardening closes
-false-greens, detects Nest/Next/express, overlays real globs, and uses a pnpm-safe runner.
-What remains after 2.0 is **depth** (broader mechanical-safe, evals), not new primitives.
+**Status: 2.0.0 shipped = co-pilot milestone + field-hardened honesty; 2.0.1 = report + host polish.**
+Primitives — **plan** (`ark-check --plan`), **goal** (plan `goal` block, including governed%),
+**loop** (`/ark-loop`) — composed by **`ark start`** and **`/ark-autopilot`**. Field hardening
+closes false-greens, detects Nest/Next/express, overlays real globs, and uses a pnpm-safe runner.
+**2.0.1** adds the showcase HTML report (origin/latest/history), documents all eleven `/ark-*`
+skills, and treats **Grok Build** as a first-class agent host next to Claude, Cursor, and Codex.
+What remains after 2.0.x is **depth** (broader mechanical-safe, evals), not new primitives.
 
 ## Direction
 
@@ -150,9 +156,24 @@ Public onboarding for builders: [docs/enthusiast/README.md](docs/enthusiast/READ
 
 **This is the co-pilot milestone (2.0.0).** User-facing demos: [docs/demos/](docs/demos/).
 
-## Now — after the co-pilot milestone (2.0.0)
+### 2.0.1 — report showcase + Grok host (shipped / shipping)
 
-Primitives and field honesty are complete. Next is depth and trust:
+- **Showcase HTML report** — score, onion map, senior diagnostics, left-aligned dependency
+  matrix; `--report` writes origin/latest snapshots and history under `.ark/reports/`.
+- **Autopilot report steps** — before/after architecture reports in the co-pilot loop.
+- **Agent skill inventory** — all eleven `/ark-*` skills listed in the main README with
+  one-line summaries (autopilot, loop, architect, adopt, contract, place, fix, explain,
+  coverage, runtime, upgrade).
+- **Grok Build** first-class host: `--install-agent-gates --tools grok` → `.grok/config.toml`
+  (MCP), `.grok/hooks/` (write gate + session context), `.grok/skills/`; `ark-mcp --hook`
+  accepts Claude and Grok PreToolUse payloads.
+- **Field fixes** riding the same train: empty-scope false-green, TypeScript 7 host, monorepo
+  start, exclude `*.spec.ts` / `*.test.ts` from architecture scope.
+
+## Now — after 2.0.x
+
+Primitives, field honesty, report UX, and multi-host install (Claude / Cursor / Codex / Grok)
+are complete. Next is depth and trust:
 
 - **Broaden `mechanical-safe`.** Add file relocation and verbatim infra relocation to the
   auto-appliable class — each only once evals prove it behavior-preserving. Grow the classifier
@@ -163,6 +184,8 @@ Primitives and field honesty are complete. Next is depth and trust:
   you type, with CI as the authoritative gate.
 - **More framework packs** (optional): explicit Nest/Next enthusiast policy packs if overlays
   need project-specific tuning beyond filename conventions.
+- **Agent-host DX** (optional): Codex multi-project MCP without last-wins home rewrite;
+  Grok multi-turn headless reliability is host-side, not Ark.
 
 ## Later
 

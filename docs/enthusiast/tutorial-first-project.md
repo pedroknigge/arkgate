@@ -61,7 +61,7 @@ Or copy a [gallery starter](../enthusiast/how-to-gallery-starter.md) and run `np
 npx ark-check --install-agent-gates
 ```
 
-This installs `/ark-architect`, `/ark-place`, and the other `/ark-*` skills for your editor.
+This installs `/ark-architect`, `/ark-place`, `/ark-autopilot`, and the other `/ark-*` skills for Claude, Cursor, Codex, Grok, and other detected hosts.
 
 ## 6. Verify honestly
 

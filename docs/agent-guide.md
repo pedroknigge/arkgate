@@ -1,6 +1,7 @@
 # Ark — Agent Integration Guide
 
-This guide describes how AI agents and codegen tools can safely interact with Ark.
+**Ark — Architecture Co-pilot for AI TypeScript.** This guide describes how AI agents
+and codegen tools can safely interact with the write gate, MCP tools, and `/ark-*` skills.
 
 ## Architecture playbook and `ark-check --recommend`
 
@@ -113,6 +114,23 @@ Do not invent layers outside the 11-layer profile or named presets. Unrecognized
 directories (`utils/`, `lib/`) must be classified explicitly via `/ark-contract`.
 
 **Brownfield** (existing messy repo): use `/ark-adopt` and [brownfield-adoption.md](brownfield-adoption.md), not `/ark-architect`.
+
+## Supported agent hosts
+
+Wire write-gate + MCP + `/ark-*` skills with:
+
+```bash
+npx ark-check --install-agent-gates --tools claude,cursor,codex,grok
+```
+
+| Host | Write gate | MCP | Skills path |
+|------|------------|-----|-------------|
+| Claude Code | PreToolUse hook | `.mcp.json` / `claude mcp add` | `.claude/skills/<name>/SKILL.md` |
+| Cursor | Advisory (rules + MCP) | `.cursor/mcp.json` | `.cursor/commands/` |
+| OpenAI Codex | MCP + CI | `~/.codex/config.toml` | `$CODEX_HOME/prompts` (`--codex-home`) |
+| **Grok Build** | PreToolUse hook (`.grok/hooks/`) | `.grok/config.toml` + `.mcp.json` | `.grok/skills/<name>/SKILL.md` |
+
+Full copy-paste setups: [ai-gates.md](ai-gates.md). Skill inventory: main [README](../README.md#agent-skills-ark-).
 
 ## Contract Discovery
 
