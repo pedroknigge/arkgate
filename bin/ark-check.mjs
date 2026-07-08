@@ -3344,13 +3344,42 @@ function renderHtmlReport({
   .chip.ok { color: var(--ink); border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
   details { margin-top: .85rem; }
   summary { cursor: pointer; color: var(--accent); font-size: .9rem; }
-  .matrix-scroll { overflow-x: auto; margin-top: .75rem; }
-  .matrix { border-collapse: collapse; font-size: .8rem; }
+  /* Matrix must NOT inherit global table{width:100%} — that bloated the label column
+     and shoved every cell to the right. Keep it compact and left-aligned. */
+  .matrix-scroll {
+    overflow-x: auto; margin-top: .75rem; max-width: 100%;
+    text-align: left; -webkit-overflow-scrolling: touch;
+  }
+  .matrix {
+    width: max-content; max-width: none; border-collapse: collapse;
+    font-size: .8rem; margin: 0; table-layout: fixed;
+  }
   .matrix th, .matrix td { border: 1px solid var(--line); }
-  .matrix td { width: 2rem; height: 2rem; text-align: center; font-weight: 700; }
-  .matrix .rowlbl { text-align: right; padding: 0 .55rem; color: var(--dim); font-weight: 600; white-space: nowrap; }
-  .matrix .rot { height: 8.5rem; vertical-align: bottom; padding: .25rem; }
-  .matrix .rot span { writing-mode: vertical-rl; transform: rotate(180deg); color: var(--dim); font-weight: 600; white-space: nowrap; }
+  .matrix td {
+    width: 2.05rem; min-width: 2.05rem; max-width: 2.05rem;
+    height: 2.05rem; text-align: center; font-weight: 700; padding: 0;
+  }
+  .matrix .rowlbl {
+    text-align: left; padding: 0 .75rem 0 .35rem; color: var(--dim);
+    font-weight: 600; white-space: nowrap; width: auto; min-width: 9.5rem;
+    max-width: none; position: sticky; left: 0; z-index: 1;
+    background: var(--panel); box-shadow: 4px 0 8px -4px rgba(0,0,0,.25);
+  }
+  .matrix thead th:first-child,
+  .matrix tr th.rowlbl { background: var(--panel); }
+  .matrix .corner {
+    position: sticky; left: 0; z-index: 2; background: var(--panel);
+    min-width: 9.5rem; box-shadow: 4px 0 8px -4px rgba(0,0,0,.25);
+  }
+  .matrix .rot {
+    height: 9.5rem; vertical-align: bottom; padding: .2rem .15rem;
+    width: 2.05rem; min-width: 2.05rem; max-width: 2.05rem;
+  }
+  .matrix .rot span {
+    writing-mode: vertical-rl; transform: rotate(180deg); color: var(--dim);
+    font-weight: 600; white-space: nowrap; display: inline-block; max-height: 9rem;
+    overflow: hidden; text-overflow: ellipsis;
+  }
   .allow { color: var(--green); background: color-mix(in srgb, var(--green) 12%, transparent); }
   .deny { color: var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); }
   .implicit { color: var(--dim); }
@@ -3437,13 +3466,13 @@ function renderHtmlReport({
     <h2>Dependency direction</h2>
     <p class="dim" style="margin:.15rem 0 .75rem;font-size:.88rem">Inner layers stay ignorant of outer ones. Each row lists what it may import.</p>
     ${flowRows || '<p class="dim">No layers configured.</p>'}
-    <details>
+    <details open>
       <summary>Full matrix (precise ✓ / ✕ grid)</summary>
       <div class="matrix-scroll"><table class="matrix">
-        <tr><th></th>${matrixHead}</tr>
-        ${matrixBody}
+        <thead><tr><th class="corner"></th>${matrixHead}</tr></thead>
+        <tbody>${matrixBody}</tbody>
       </table></div>
-      <p class="legend">Row imports column. ✓ allowed · ✕ denied · · = no explicit rule / self. Denied edges: ${deniedCount} · explicit allows: ${allowedCount} · purity-guarded layers: ${guarded}</p>
+      <p class="legend">Row imports column (left → top). ✓ allowed · ✕ denied · · = no explicit rule / self. Denied edges: ${deniedCount} · explicit allows: ${allowedCount} · purity-guarded layers: ${guarded}</p>
     </details>
   </div>
 
