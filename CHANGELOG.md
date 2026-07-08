@@ -2,7 +2,7 @@
 
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here.
 
-## Unreleased
+## 2.2.0 — 2026-07-08
 
 ### Added — co-pilot P0 depth (mechanical-safe expansion)
 
