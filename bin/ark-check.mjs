@@ -22,11 +22,13 @@ import {
   listPolicyPackIds,
   loadPolicyPackMeta,
   writeAdoptionPlan,
+  detectPackageManager,
   execCommandParts,
   execRunner,
   formatArchitectureRecommendationHuman,
   globToRegExp,
   installDevHint,
+  presentLockfiles,
   layerForFile,
   looksLikeIntent,
   patternSpecificity,
@@ -982,7 +984,10 @@ function packageManager(root) {
     ? ' --baseline .ark-baseline.json'
     : '';
   const checkArgs = `--root . --config ark.config.json --strict-config${baselineFlag} --require-gates`;
-  if (fs.existsSync(path.join(root, 'pnpm-lock.yaml'))) {
+  // Same detection as every emitted command (execRunner): honors the packageManager field and
+  // won't let a stray pnpm-lock.yaml hijack an npm project (package-lock.json wins the tie).
+  const pm = detectPackageManager(root);
+  if (pm === 'pnpm') {
     return {
       cache: 'pnpm',
       setup: ['corepack enable'],
@@ -990,7 +995,7 @@ function packageManager(root) {
       run: `pnpm exec ark-check ${checkArgs}`,
     };
   }
-  if (fs.existsSync(path.join(root, 'yarn.lock'))) {
+  if (pm === 'yarn') {
     return {
       cache: 'yarn',
       setup: ['corepack enable'],
@@ -1585,6 +1590,27 @@ function staleRunnerGateFiles(root) {
   return stale;
 }
 
+// When more than one lockfile is present the project is ambiguous. detectPackageManager()
+// resolves it (package-lock.json wins so a stray pnpm-lock.yaml can't hijack an npm project),
+// but the user should know it happened and how to make it explicit — otherwise a leftover
+// lockfile silently steers which runner every emitted command uses.
+function warnLockfileConflict(root) {
+  const locks = presentLockfiles(root);
+  if (locks.length <= 1) return;
+  const chosen = detectPackageManager(root);
+  const files = { pnpm: 'pnpm-lock.yaml', yarn: 'yarn.lock', npm: 'package-lock.json' };
+  console.log('');
+  console.log(
+    `Note: multiple lockfiles present (${locks.map((pm) => files[pm]).join(', ')}). Treating this`
+  );
+  console.log(
+    `as a ${chosen} project — Ark commands use "${execRunner(root)}". If that's wrong, set`
+  );
+  console.log(
+    '"packageManager" in package.json (e.g. "pnpm@9") to declare it, or remove the stray lockfile.'
+  );
+}
+
 // --migrate-commands: rewrite ONLY the Ark command runner in existing gate files to the
 // project's package manager (no --force clobber). Closes the upgrade gap where a repo that
 // adopted before the package-manager-aware templates keeps a stale `npx`.
@@ -1633,6 +1659,7 @@ function runMigrateCommands(root) {
     for (const rel of changed) console.log(`  updated ${rel}`);
     console.log('  (only the command runner changed; customized content is untouched.)');
   }
+  warnLockfileConflict(root);
 }
 
 function runInstallAgentGates(args) {
@@ -1848,6 +1875,7 @@ function runInstallAgentGates(args) {
       console.log('  (writes to your home dir; agents driving this setup should offer to run it).');
     }
   }
+  warnLockfileConflict(root);
 }
 
 function readManifest(root, manifestPath) {

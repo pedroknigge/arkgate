@@ -310,9 +310,62 @@ export function looksLikeIntent(value) {
   return INTENT_NAME.test(value);
 }
 
+/** The three package managers Ark emits commands for. */
+const LOCKFILES = { pnpm: 'pnpm-lock.yaml', yarn: 'yarn.lock', npm: 'package-lock.json' };
+
+/**
+ * The Corepack `packageManager` field (and the newer `devEngines.packageManager`) is the
+ * project's OWN authoritative statement of its package manager. When present it wins over any
+ * lockfile guess. Returns 'pnpm' | 'yarn' | 'npm' | undefined.
+ */
+function declaredPackageManager(root) {
+  let pkg;
+  try {
+    pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  } catch {
+    return undefined;
+  }
+  const raw =
+    (typeof pkg.packageManager === 'string' ? pkg.packageManager.split('@')[0] : undefined) ??
+    (typeof pkg.devEngines?.packageManager?.name === 'string'
+      ? pkg.devEngines.packageManager.name
+      : undefined);
+  const name = raw?.trim().toLowerCase();
+  return name === 'pnpm' || name === 'yarn' || name === 'npm' ? name : undefined;
+}
+
+/** Lockfiles present in the project root, in { pnpm, yarn, npm } key order. */
+export function presentLockfiles(root) {
+  return Object.entries(LOCKFILES)
+    .filter(([, file]) => fs.existsSync(path.join(root, file)))
+    .map(([pm]) => pm);
+}
+
+/**
+ * Detect the project's package manager: 'pnpm' | 'yarn' | 'npm'.
+ *
+ * Priority: (1) the `packageManager` / `devEngines` field (the project's own declaration);
+ * (2) a single lockfile; (3) on CONFLICT (more than one lockfile and no declaration) prefer
+ * npm whenever a package-lock.json is present. Rationale: `npx` runs fine inside a pnpm/yarn
+ * repo, but `pnpm exec` / `yarn` in an npm repo BREAKS (frozen-lockfile / no-TTY / a spurious
+ * pnpm-lock). So a stray pnpm-lock.yaml left in an npm project must NOT hijack it into pnpm —
+ * package-lock.json wins the tie, and the field is the escape hatch for a genuine pnpm repo
+ * that still carries a package-lock.json. Falls back to npm when nothing is detectable.
+ */
+export function detectPackageManager(root) {
+  const declared = declaredPackageManager(root);
+  if (declared) return declared;
+  const locks = presentLockfiles(root);
+  if (locks.length <= 1) return locks[0] ?? 'npm';
+  if (locks.includes('npm')) return 'npm';
+  return locks[0]; // pnpm over yarn when only those two collide
+}
+
+const RUNNER_BY_PM = { pnpm: 'pnpm exec', yarn: 'yarn', npm: 'npx' };
+
 /**
  * The command prefix that runs an INSTALLED package binary, matched to the project's
- * package manager (detected from its lockfile). `npx` is the fallback for npm / unknown.
+ * package manager. `npx` is used for npm and as the safe fallback.
  *
  * This is the single source of truth that makes every command Ark EMITS — the AGENTS.md
  * contract, .mcp.json, the Claude/Codex hooks, the check:architecture script, the
@@ -322,9 +375,7 @@ export function looksLikeIntent(value) {
  * same detection.
  */
 export function execRunner(root) {
-  if (fs.existsSync(path.join(root, 'pnpm-lock.yaml'))) return 'pnpm exec';
-  if (fs.existsSync(path.join(root, 'yarn.lock'))) return 'yarn';
-  return 'npx';
+  return RUNNER_BY_PM[detectPackageManager(root)];
 }
 
 /** Full runnable command string for an installed Ark binary, package-manager aware. */
@@ -346,8 +397,9 @@ export function execCommandParts(root, bin, binArgs = []) {
 
 /** Package-manager aware "install a dev dependency" hint (e.g. for a missing typescript). */
 export function installDevHint(root, pkg) {
-  if (fs.existsSync(path.join(root, 'pnpm-lock.yaml'))) return `pnpm add -D ${pkg}`;
-  if (fs.existsSync(path.join(root, 'yarn.lock'))) return `yarn add -D ${pkg}`;
+  const pm = detectPackageManager(root);
+  if (pm === 'pnpm') return `pnpm add -D ${pkg}`;
+  if (pm === 'yarn') return `yarn add -D ${pkg}`;
   return `npm install -D ${pkg}`;
 }
 
