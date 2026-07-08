@@ -32,6 +32,22 @@ The agent doesn't just get blocked — it gets the violation as feedback, reads 
 
 No code changes. No new runtime. Just a config and a CI line.
 
+**New here? One command does it all:**
+
+```bash
+npm install -D ark-runtime-kernel typescript
+npx ark start                 # looks at your project, suggests a shape in plain language,
+                              # sets up the guardrails, and shows you a plan — nothing else changed
+```
+
+`ark start` is the guided front door: it explains what your project looks like in everyday
+terms, sets up the config + agent/CI gates for you, and finishes with a plan of what (if
+anything) needs attention — grouped into _safe to auto-fix_ vs _your call_. You never need to
+know a preset or a skill name. On an established codebase it adopts your real structure instead
+of imposing one. Re-run it or the plan anytime.
+
+### Prefer more control? The manual path
+
 ```bash
 npm install -D ark-runtime-kernel typescript
 npx ark init                  # asks before generating config, agent gates, and CI templates
