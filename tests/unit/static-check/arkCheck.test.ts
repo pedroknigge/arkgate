@@ -817,6 +817,47 @@ describe('ark init', () => {
     expect(run(['bogus']).status).toBe(2);
   });
 
+  it('`ark start --yes` guides setup end to end: shape → config + gates → plan', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-start-'));
+    fs.writeFileSync(path.join(root, 'package.json'), '{"name":"fresh"}\n');
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    let out = '';
+    let status = 0;
+    try {
+      out = execFileSync('node', [path.resolve('bin/ark.mjs'), 'start', '--yes', '--root', root], {
+        encoding: 'utf8',
+        stdio: 'pipe',
+      });
+    } catch (error) {
+      const e = error as { status: number; stdout: string };
+      out = e.stdout ?? '';
+      status = e.status;
+    }
+    expect(status).toBe(0);
+    // Plain-language shape, the plan, and a wrap-up — no skill names required.
+    expect(out).toContain('Your project looks like');
+    expect(out).toContain('Your architecture plan');
+    expect(out).toContain('Done — Ark now guards your architecture');
+    // It actually set things up.
+    expect(fs.existsSync(path.join(root, 'ark.config.json'))).toBe(true);
+    expect(fs.existsSync(path.join(root, 'AGENTS.md'))).toBe(true);
+  });
+
+  it('`ark start` adopts an established codebase (detection, not a wildcard preset)', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-start-mature-'));
+    fs.writeFileSync(path.join(root, 'package.json'), '{"name":"big"}\n');
+    fs.mkdirSync(path.join(root, 'src/app'), { recursive: true });
+    for (let i = 0; i < 160; i += 1) {
+      fs.writeFileSync(path.join(root, `src/app/p${i}.tsx`), `export const a${i} = ${i};\n`);
+    }
+    const out = execFileSync('node', [path.resolve('bin/ark.mjs'), 'start', '--yes', '--root', root], {
+      encoding: 'utf8',
+      stdio: 'pipe',
+    });
+    expect(out).toContain('established codebase');
+    expect(out).toContain('ADOPT');
+  });
+
   it('`ark upgrade --no-install` refreshes gates, migrates runners, and verifies in one command', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-upgrade-'));
     fs.writeFileSync(path.join(root, 'package.json'), '{"name":"demo"}\n');

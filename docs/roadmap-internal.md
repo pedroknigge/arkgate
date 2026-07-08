@@ -16,8 +16,9 @@ Last updated: 2026-07-08.
 | **1.15.0** | Brownfield install hardening + layer `exclude` | **PUBLISHED 2026-07-08** (3 channels) | — |
 | **1.15.1** | PM-detection fix (stray lockfile no longer hijacks npm) | **PUBLISHED 2026-07-08** (3 channels) | — |
 | **1.16.0** | `ark upgrade` — one command to update Ark | **PUBLISHED 2026-07-08** (3 channels) | — |
-| **1.17.0** | Co-pilot **Phase F** — `ark-check --plan` (classifier + plan/goal primitives) | **On branch** `feat/co-pilot-phase-f-plan`; release prepared, awaiting confirm | Awaiting go-ahead |
-| **next** | Co-pilot **Phase G** (guided entry) or **Phase H** (worktree-safe apply loop = the `loop` primitive) | Planned | Per-phase |
+| **1.17.0** | Co-pilot **Phase F** — `ark-check --plan` (classifier + plan/goal primitives) | **PUBLISHED 2026-07-08** (npm+GitHub; MCP by user) | — |
+| **1.18.0** | Co-pilot **Phase G** — `ark start` (guided entry + plain language) | **On branch** `feat/co-pilot-phase-g-start`; release prepared, awaiting confirm | Awaiting go-ahead |
+| **next** | Co-pilot **Phase H** — worktree-safe apply loop = the `loop` primitive | Planned | Per-phase |
 | ongoing | Trust hardening | Partial (provenance + trusted publishing done) | Can ride any release |
 
 Delivery method (user goal, 2026-07-08): build the co-pilot **phase by phase**, incorporating the

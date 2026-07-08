@@ -1,6 +1,6 @@
 {
   "name": "ark-runtime-kernel",
-  "version": "1.17.0",
+  "version": "1.18.0",
   "description": "AI architecture gate for TypeScript repos, agents, and CI",
   "type": "module",
   "main": "./dist/index.cjs",

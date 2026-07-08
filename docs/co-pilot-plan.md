@@ -114,9 +114,9 @@ Useful immediately (shows the burn-down's shape) even before any autonomy exists
   auto-first, wrapped in a `goal` block; `--doctor` points at it. Report-only. The classifier
   (`classifyRemediation`) is shared in `ark-shared.mjs` so the CLI, the MCP gate, and the
   future apply-loop classify identically.
-- **D2 — Guided single entry point.** One flow (`ark start` / `/ark`) chaining recommend →
-  confirm-in-plain-language → init → write-plan, so a newcomer never types a skill name.
-  Reuses the mature-repo routing shipped in 1.15.0.
+- **D2 — Guided single entry point. ✅ SHIPPED (1.18.0).** `ark start` chains recommend →
+  confirm-in-plain-language → init (preset for greenfield, detection for an established repo) →
+  `--plan`, so a newcomer never types a skill name. `--yes` for non-interactive.
 - **D3 — Worktree-safe apply loop.** A runner that, given a classified plan, spins a discardable
   worktree, applies one step, runs `ark-check`, keeps on green / rolls back on failure or
   regression, and surfaces a diff. Code-only guard (refuses non-code paths).
@@ -126,8 +126,9 @@ Useful immediately (shows the burn-down's shape) even before any autonomy exists
   and reports progress. Composes D1–D3.
 - **D5 — Tiered UX.** `--mode newbie|expert` (or detection). Newbie = autopilot with approvals +
   plain language; expert = current manual skills + gate. Same contract/gates.
-- **D6 — Plain-language layer.** A rendering pass that states every proposal/diff/result in
-  outcome terms first. Shared by D2, D4, D5.
+- **D6 — Plain-language layer. ◑ STARTED (1.18.0).** `ark start` and `--plan` state the shape,
+  each step, and the result in outcome terms first. Generalized into a shared renderer with the
+  autopilot (D4/D5).
 - **D7 — Enforcement handoff verification.** Confirm the newbie path leaves gates installed and
   active (CI + write-gate + hooks) with zero extra steps — the "and stays that way" half.
 - **D8 — Proof: a non-dev completes the loop.** A recorded end-to-end run on a real repo
@@ -143,9 +144,9 @@ Each phase ships independently and leaves the product strictly better.
   report-only, no autonomy yet. Immediate value — it shows mechanical vs judgment vs deferred
   before any apply loop exists. Remaining for the milestone: measure classifier precision on an
   eval corpus (near-zero false-`mechanical-safe`) once the apply loop can exercise it.
-- **Phase G — Guided entry + plain language (D2, D6).** The newcomer funnel, still
-  propose-only. Acceptance: a first-time user reaches a written plan without knowing a skill
-  name; every step explained in outcome terms.
+- **Phase G — Guided entry + plain language (D2, D6). ✅ SHIPPED (1.18.0).** `ark start`: the
+  newcomer funnel, still propose-only. A first-time user reaches a written plan without knowing
+  a preset or skill name; the shape, steps, and result are framed in outcome terms.
 - **Phase H — Apply loop (D3).** Worktree-safe, single-step, validated, reversible; not yet
   auto-driven. Acceptance: applying a `mechanical-safe` item validates and keeps; a regressing
   edit rolls back; non-code paths refused.

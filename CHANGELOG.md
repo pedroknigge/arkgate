@@ -2,6 +2,22 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.18.0 — 2026-07-08
+
+Co-pilot Phase G — a guided front door for newcomers (`ark start`).
+
+### Added
+
+- **`ark start`** — one guided command that takes a newcomer from "I have a project" to
+  "governed, with a plan," in plain language and without knowing any preset or skill name. It
+  looks at the repo and describes the shape in everyday terms, sets up the config + agent/CI
+  gates, and finishes with the classified plan (`safe to auto-fix` vs `your call`) plus plain
+  next steps. On an established codebase (≥150 files) it adopts your real structure via
+  detection instead of imposing a preset; on a fresh project it uses the recommended shape.
+  Interactive by default; `--yes` runs non-interactively. It only orchestrates existing steps
+  (recommend → init → `--plan`) and changes no source code. This is the co-pilot's guided-entry
+  and plain-language layer (Phase G).
+
 ## 1.17.0 — 2026-07-08
 
 Co-pilot Phase F — a classified remediation plan (the `plan` + `goal` primitives).

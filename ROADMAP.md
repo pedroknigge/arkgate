@@ -113,12 +113,16 @@ Enthusiast doc track: [docs/enthusiast/README.md](docs/enthusiast/README.md).
   `packageManager` field wins; a stray lockfile can't hijack an npm project).
 - CLI polish: `ark --help` exits 0; generated CI enables corepack before `setup-node`.
 
-### Co-pilot — Phase F (plan + goal primitives)
+### Co-pilot — Phases F & G
 
-- **`ark-check --plan`** — the classified remediation plan: every violation tagged
+- **`ark-check --plan`** (Phase F) — the classified remediation plan: every violation tagged
   `mechanical-safe` (safe to auto-apply) / `judgment` (your call) / `deferred`, ordered
   auto-first, wrapped in a `goal` block. Report-only; it's the **plan** primitive the coming
-  apply-loop consumes. See [docs/co-pilot-plan.md](docs/co-pilot-plan.md).
+  apply-loop consumes.
+- **`ark start`** (Phase G) — the guided front door: looks at your project, describes the shape
+  in plain language, sets up config + gates, and shows the plan. No preset or skill name needed;
+  adopts an established codebase instead of imposing a shape. See
+  [docs/co-pilot-plan.md](docs/co-pilot-plan.md).
 
 ## Now — co-pilot enablers
 
@@ -128,8 +132,6 @@ on its own; together they compose the autonomous loop.
 - **Worktree-safe apply loop.** Execute plan steps in a discardable git worktree, one small
   change at a time, `ark-check` after each, roll back a step that fails or regresses, and
   surface a diff for approval. Never touches non-code (no DB/schema migrations).
-- **Guided single entry point.** One flow (recommend → confirm in plain language → init →
-  write-plan) so a newcomer never has to know the individual skill names.
 - **Trust hardening**: npm provenance, signed release tags, CI security scanning — a co-pilot
   that edits your repo has to be verifiably trustworthy.
 - **ESLint parity**: keep the editor plugin aligned with `ark-check` so violations surface as

@@ -50,11 +50,14 @@ function parseArgs(argv) {
 
 function usage() {
   return `Usage:
+  ark start   [--root <project>] [--yes]
   ark init    [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo]
               [--archetype <playbook-id>] [--tools <list>] [--yes] [--force] [--no-strict]
   ark upgrade [--root <project>] [--no-install] [--no-strict]
 
 Commands:
+  start     New here? The guided setup. Looks at your project, suggests a shape in
+            plain language, sets up the guardrails, and shows a plan — no code changed.
   init      Configure Ark project enforcement with explicit prompts.
   upgrade   One command to update Ark: bump the package to @latest, refresh gate
             templates + /ark-* skills (and Codex home prompts), migrate command
@@ -280,11 +283,102 @@ async function init(args) {
   }
 }
 
+// `ark start` — the guided entry point (co-pilot Phase G). One command takes a newcomer from
+// "I have a project" to "governed, with a plan" in plain language, without knowing any skill
+// names: look at the code → suggest a shape → set up the guardrails → show the plan. It only
+// orchestrates existing steps (recommend → init → --plan) and frames each in outcome terms.
+async function start(args) {
+  const root = args.root;
+  const interactive = !args.yes && isInteractiveTty();
+  const rl = interactive
+    ? readline.createInterface({ input: process.stdin, output: process.stdout })
+    : null;
+
+  try {
+    console.log("Let's set up Ark for your project.");
+    console.log(
+      "I'll look at your code, suggest a shape, set up the guardrails, and show you a plan."
+    );
+    console.log('Nothing in your code is changed — this only adds Ark configuration.');
+
+    // 1) Look at the project.
+    let rec;
+    try {
+      rec = buildArchitectureRecommendation(root);
+    } catch {
+      rec = undefined;
+    }
+
+    // 2) Suggest a shape, in plain language, and confirm.
+    let archetype = rec?.archetype;
+    if (rec) {
+      console.log('');
+      console.log(`Your project looks like: ${rec.label}.`);
+      if (rec.analogy) console.log(`In plain terms — ${rec.analogy}`);
+      if (rec.mature) {
+        console.log('');
+        console.log(
+          `This is an established codebase (${rec.signals?.sourceFileCount} files), so Ark will ADOPT it:`
+        );
+        console.log('match the contract to how your code is already organized, and flag only genuine issues.');
+      }
+      const proceed = args.yes || (await askYesNo(rl, '\nSet Ark up for this shape?', true));
+      if (!proceed) {
+        archetype = interactive ? await resolveArchetypeInteractive(rl, root) : rec.archetype;
+      }
+    } else if (interactive) {
+      archetype = await resolveArchetypeInteractive(rl, root);
+    }
+
+    // 3) Set up config + gates. Greenfield → the shape's preset; an established repo → detection,
+    // so the contract anchors to the directories you already have instead of aspirational globs.
+    console.log('');
+    console.log('Setting up Ark…');
+    const configPath = path.join(root, 'ark.config.json');
+    if (!fs.existsSync(configPath)) {
+      const initArgs = ['--root', root, '--init'];
+      const preset = archetype ? resolveArchetypePreset(archetype).preset : undefined;
+      if (!rec?.mature && preset) initArgs.push('--preset', preset);
+      const status = runArkCheck(initArgs, { cwd: root });
+      if (status !== 0) return status;
+    } else {
+      console.log('  Found an existing ark.config.json — keeping it.');
+    }
+    runArkCheck(['--root', root, '--install-agent-gates'], { cwd: root });
+
+    // 4) Show the plan: what's safe to auto-fix vs what needs a decision.
+    console.log('');
+    console.log('Your architecture plan:');
+    runArkCheck(['--root', root, '--config', 'ark.config.json', '--plan'], { cwd: root });
+
+    // 5) Plain-language wrap-up.
+    console.log('');
+    console.log('Done — Ark now guards your architecture as you and your AI agents write code.');
+    console.log('What happens now:');
+    console.log('  • Every edit is checked against the plan above (in CI and, if wired, at write time).');
+    console.log(`  • Re-run the plan anytime:   ${arkCommand(root, 'ark-check', '--plan')}`);
+    console.log(`  • Check the whole project:   ${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config')}`);
+    console.log(`  • Update Ark later:          ${arkCommand(root, 'ark', 'upgrade')}`);
+    return 0;
+  } finally {
+    rl?.close();
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv);
   if (args.help || !args.command) {
     console.log(usage());
     return 0;
+  }
+
+  if (args.command === 'start') {
+    try {
+      return await start(args);
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      return 2;
+    }
   }
 
   if (args.command === 'init') {
