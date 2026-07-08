@@ -178,6 +178,10 @@ describe('HTML showcase report', () => {
     expect(html).toContain('Governed');
     expect(html).toContain('/ark-explain');
     expect(html).toContain('DomainModel');
+    expect(html).toContain('Senior diagnostics');
+    expect(html).toContain('Layer coupling');
+    expect(html).toContain('Contract density');
+    expect(html).toContain('Score model');
   });
 });
 

@@ -2939,6 +2939,101 @@ function renderHtmlReport({
           ? 'Useful guardrails — room to grow'
           : 'Early stage — keep adopting layers';
 
+  // ── Senior diagnostics (coupling, purity, contract density) ──────────────
+  const layerNames = ordered.map((l) => l.name);
+  const pairCount = Math.max(1, layers.length * Math.max(0, layers.length - 1));
+  const denyRatio = Math.round((deniedCount / pairCount) * 1000) / 10;
+  const fanOut = new Map(layerNames.map((n) => [n, 0]));
+  const fanIn = new Map(layerNames.map((n) => [n, 0]));
+  for (const from of layerNames) {
+    for (const to of layerNames) {
+      if (from === to) continue;
+      const rule = findRule(from, to);
+      const denied = rule && rule.allowed === false;
+      if (!denied) {
+        fanOut.set(from, (fanOut.get(from) || 0) + 1);
+        fanIn.set(to, (fanIn.get(to) || 0) + 1);
+      }
+    }
+  }
+  const couplingRows = ordered
+    .map((layer) => {
+      const fo = fanOut.get(layer.name) || 0;
+      const fi = fanIn.get(layer.name) || 0;
+      const files = (fileCountByLayer instanceof Map ? fileCountByLayer.get(layer.name) : 0) || 0;
+      const density = files > 0 ? Math.round((fo / files) * 100) / 100 : fo;
+      return { name: layer.name, fo, fi, files, density, denyOut: deniedOut(layer.name) };
+    })
+    .sort((a, b) => b.fo - a.fo || b.fi - a.fi);
+
+  const purityLayers = ordered.filter(
+    (l) => Array.isArray(l.forbiddenGlobals) && l.forbiddenGlobals.length
+  );
+  const infraLayers = ordered.filter((l) => l.mayImportInfrastructure);
+  const excludeLayers = ordered.filter((l) => Array.isArray(l.exclude) && l.exclude.length);
+  const intentMap = ordered
+    .filter((l) => Array.isArray(l.intentPrefixes) && l.intentPrefixes.length)
+    .map((l) => ({ name: l.name, prefixes: l.intentPrefixes }));
+
+  const emptyLayers = coverage?.emptyLayers ?? [];
+  const layersWithoutRules = coverage?.layersWithoutRules ?? [];
+  const unclassifiedCount = coverage?.unclassified?.count ?? 0;
+  const includeRoots = Array.isArray(config.include) ? config.include : [];
+
+  const typeOnlyN = violations.filter((v) => v.typeOnly).length;
+  const valueN = violations.length - typeOnlyN;
+  const byEdge = new Map();
+  for (const v of violations) {
+    if (!v.fromLayer || !v.toLayer) continue;
+    const key = `${v.fromLayer} → ${v.toLayer}`;
+    byEdge.set(key, (byEdge.get(key) || 0) + 1);
+  }
+  const topEdges = [...byEdge.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  let packageManagerLabel = 'npm';
+  try {
+    packageManagerLabel = detectPackageManager(root);
+  } catch {
+    /* ignore */
+  }
+
+  const baselinePath = path.join(root, '.ark-baseline.json');
+  let baselineKeys = 0;
+  if (fs.existsSync(baselinePath)) {
+    try {
+      const raw = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
+      baselineKeys = Array.isArray(raw?.violations)
+        ? raw.violations.length
+        : Array.isArray(raw)
+          ? raw.length
+          : typeof raw === 'object' && raw
+            ? Object.keys(raw).length
+            : 0;
+    } catch {
+      baselineKeys = suppressed || 0;
+    }
+  }
+
+  // Pattern specificity hotspots: very broad globs (**/ or bare *) vs file-precise.
+  const broadPatterns = [];
+  const precisePatterns = [];
+  for (const layer of ordered) {
+    for (const pattern of layer.patterns || []) {
+      const p = String(pattern);
+      const scoreP = patternSpecificity(p);
+      if (p.includes('**') && p.split('/').filter(Boolean).length <= 2) {
+        broadPatterns.push({ layer: layer.name, pattern: p, score: scoreP });
+      }
+      if (!p.includes('*') || /\.[a-zA-Z0-9]+$/.test(p.replace(/\*$/, ''))) {
+        if (p.includes('.') && !p.endsWith('/**')) {
+          precisePatterns.push({ layer: layer.name, pattern: p, score: scoreP });
+        }
+      }
+    }
+  }
+  broadPatterns.sort((a, b) => a.score - b.score);
+  precisePatterns.sort((a, b) => b.score - a.score);
+
   const counts = fileCountByLayer instanceof Map ? fileCountByLayer : new Map();
   const maxFiles = Math.max(1, ...ordered.map((l) => counts.get(l.name) || 0));
 
@@ -3284,6 +3379,10 @@ function renderHtmlReport({
   footer { margin-top: 2.25rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--dim); font-size: .8rem; }
   .brand { display: inline-flex; align-items: center; gap: .4rem; color: var(--dim); font-size: .78rem; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; margin-bottom: .55rem; }
   .brand i { width: .55rem; height: .55rem; border-radius: 2px; background: linear-gradient(135deg, var(--accent), var(--violet)); display: inline-block; }
+  .senior h3 { margin-top: 1.25rem; }
+  .senior-list { margin: .2rem 0 0; padding-left: 1.1rem; color: var(--ink); }
+  .senior-list li { margin: .2rem 0; }
+  .senior-list .edge { margin-left: 0; }
   @media print {
     body { background: #fff; color: #111; padding: 0; }
     .card, .kpi, .gate, .cmds, .clean, .vgroup { box-shadow: none; break-inside: avoid; }
@@ -3359,12 +3458,169 @@ function renderHtmlReport({
     <div class="gates">${enforcementRows}</div>
   </div>
 
+  <div class="section card senior">
+    <h2>Senior diagnostics</h2>
+    <p class="dim" style="margin:.15rem 0 .85rem;font-size:.88rem">
+      Coupling, purity surface, contract density, and config forensics — for tech leads reviewing the fitness of the gate itself.
+    </p>
+
+    <h3>Contract density</h3>
+    <div class="kpis" style="margin-top:.35rem">
+      <div class="kpi"><b>${denyRatio}%</b><span>Edges denied</span></div>
+      <div class="kpi"><b>${deniedCount}</b><span>Deny rules</span></div>
+      <div class="kpi"><b>${allowedCount}</b><span>Explicit allows</span></div>
+      <div class="kpi"><b>${pairCount}</b><span>Directed pairs</span></div>
+    </div>
+    <p class="dim" style="margin:.55rem 0 0;font-size:.84rem">
+      Deny ratio = denied ÷ (layers × (layers−1)). High ratio = strict inward architecture.
+      Package manager detected: <code>${esc(packageManagerLabel)}</code>
+      · include roots: <code>${includeRoots.map(esc).join('</code>, <code>') || '—'}</code>
+      ${emptyLayers.length ? ` · empty layers: <code>${emptyLayers.map(esc).join(', ')}</code>` : ''}
+      ${layersWithoutRules.length ? ` · layers with no rule edge: <code>${layersWithoutRules.map(esc).join(', ')}</code>` : ''}
+      ${unclassifiedCount ? ` · unclassified files: <b>${unclassifiedCount}</b>` : ''}
+    </p>
+
+    <h3>Layer coupling (allowed import graph)</h3>
+    <p class="dim" style="margin:.1rem 0 .55rem;font-size:.84rem">
+      Fan-out = layers this layer may import · Fan-in = layers that may import it · based on non-denied edges (implicit allow counts as open).
+    </p>
+    <table class="layers">
+      <tr><th>Layer</th><th>Files</th><th>Fan-out</th><th>Fan-in</th><th>Deny-out</th><th>FO/files</th></tr>
+      ${couplingRows
+        .map(
+          (r) => `<tr>
+          <td class="ln">${esc(r.name)}</td>
+          <td class="num">${r.files}</td>
+          <td class="num">${r.fo}</td>
+          <td class="num">${r.fi}</td>
+          <td class="num">${r.denyOut}</td>
+          <td class="num">${r.density}</td>
+        </tr>`
+        )
+        .join('\n')}
+    </table>
+    <p class="legend">High fan-out on a large presentation layer is normal. High fan-out on a “domain” layer is a smell — the core is leaking outward privileges.</p>
+
+    <h3>Purity &amp; infrastructure surface</h3>
+    <div class="grid-2" style="margin-top:.5rem">
+      <div>
+        <div class="pill ${purityLayers.length ? 'good' : 'warn'}" style="margin-bottom:.55rem">
+          ${purityLayers.length} purity-guarded layer(s)
+        </div>
+        ${
+          purityLayers.length
+            ? `<ul class="senior-list">${purityLayers
+                .map(
+                  (l) =>
+                    `<li><b>${esc(l.name)}</b> forbids <code>${(l.forbiddenGlobals || []).map(esc).join('</code>, <code>')}</code></li>`
+                )
+                .join('')}</ul>`
+            : '<p class="dim">No <code>forbiddenGlobals</code> — ambient I/O can still leak into pure cores.</p>'
+        }
+      </div>
+      <div>
+        <div class="pill ${infraLayers.length ? 'good' : 'warn'}" style="margin-bottom:.55rem">
+          ${infraLayers.length} infra-capable layer(s)
+        </div>
+        ${
+          infraLayers.length
+            ? `<ul class="senior-list">${infraLayers
+                .map((l) => `<li><b>${esc(l.name)}</b> <span class="tag">mayImportInfrastructure</span></li>`)
+                .join('')}</ul>`
+            : '<p class="dim">No layer opts into infrastructure imports via <code>mayImportInfrastructure</code> (write-gate heuristic still applies to ungoverned targets).</p>'
+        }
+        ${
+          excludeLayers.length
+            ? `<p class="dim" style="margin-top:.65rem">Exclude globs (facade / kernel carve-outs):</p>
+               <ul class="senior-list">${excludeLayers
+                 .map(
+                   (l) =>
+                     `<li><b>${esc(l.name)}</b> · <code>${(l.exclude || []).map(esc).join('</code>, <code>')}</code></li>`
+                 )
+                 .join('')}</ul>`
+            : ''
+        }
+      </div>
+    </div>
+
+    <h3>Intent prefixes</h3>
+    ${
+      intentMap.length
+        ? `<table class="layers"><tr><th>Layer</th><th>Prefixes</th></tr>
+          ${intentMap
+            .map(
+              (row) =>
+                `<tr><td class="ln">${esc(row.name)}</td><td><code>${row.prefixes.map(esc).join('</code> <code>')}</code></td></tr>`
+            )
+            .join('\n')}</table>`
+        : '<p class="dim">No <code>intentPrefixes</code> on layers — runtime intent governance and string-intent checks have less to bind to.</p>'
+    }
+
+    <h3>Pattern forensics</h3>
+    <div class="grid-2" style="margin-top:.45rem">
+      <div>
+        <p class="dim" style="margin:0 0 .4rem;font-size:.84rem">Broadest globs (watch for over-governance / false layer hits)</p>
+        ${
+          broadPatterns.length
+            ? `<ul class="senior-list">${broadPatterns
+                .slice(0, 8)
+                .map(
+                  (p) =>
+                    `<li><b>${esc(p.layer)}</b> · <code>${esc(p.pattern)}</code> <span class="dim">spec ${p.score}</span></li>`
+                )
+                .join('')}</ul>`
+            : '<p class="dim">No ultra-broad patterns detected.</p>'
+        }
+      </div>
+      <div>
+        <p class="dim" style="margin:0 0 .4rem;font-size:.84rem">Most precise patterns (file-level overlays, facades)</p>
+        ${
+          precisePatterns.length
+            ? `<ul class="senior-list">${precisePatterns
+                .slice(0, 8)
+                .map(
+                  (p) =>
+                    `<li><b>${esc(p.layer)}</b> · <code>${esc(p.pattern)}</code> <span class="dim">spec ${p.score}</span></li>`
+                )
+                .join('')}</ul>`
+            : '<p class="dim">No file-level patterns — only directory globs.</p>'
+        }
+      </div>
+    </div>
+
+    <h3>Debt &amp; violation taxonomy</h3>
+    <div class="kpis" style="margin-top:.35rem">
+      <div class="kpi"><b>${violations.length}</b><span>Active</span></div>
+      <div class="kpi"><b>${valueN}</b><span>Value edges</span></div>
+      <div class="kpi"><b>${typeOnlyN}</b><span>Type-only</span></div>
+      <div class="kpi"><b>${suppressed || baselineKeys}</b><span>Baseline keys</span></div>
+    </div>
+    ${
+      topEdges.length
+        ? `<p class="dim" style="margin:.55rem 0 .35rem;font-size:.84rem">Hottest active edges</p>
+           <ul class="senior-list">${topEdges
+             .map(([edge, n]) => `<li><span class="edge">${esc(edge)}</span> · <b>${n}</b></li>`)
+             .join('')}</ul>`
+        : '<p class="dim" style="margin-top:.55rem">No active edge concentration — either clean or all debt is baselined.</p>'
+    }
+
+    <details style="margin-top:1rem">
+      <summary>Score model (transparent)</summary>
+      <p class="legend">
+        Ark score = 0.4×coverage + 0.3×clean + 0.2×gates + 0.1×rule-density.
+        Coverage=${scoreCoverage}, clean=${scoreClean}, gates=${scoreGates}, rules=${scoreRules} → <b>${score}</b>.
+        This is a fitness signal for humans, not a CI gate.
+      </p>
+    </details>
+  </div>
+
   <div class="section card">
     <h2>Commands worth memorizing</h2>
     <div class="cmds">
       <code>${arkCheckCommand(root)}</code>
       <code>${arkCommand(root, 'ark-check', '--coverage')}</code>
       <code>${arkCommand(root, 'ark-check', '--plan')}</code>
+      <code>${arkCommand(root, 'ark-check', '--doctor')}</code>
       <code>${arkCommand(root, 'ark-check', '--report ark-report.html')}</code>
       <code>/ark-place "&lt;what you're building&gt;"</code>
       <code>/ark-explain</code>

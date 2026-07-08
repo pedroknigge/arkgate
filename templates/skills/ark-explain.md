@@ -34,7 +34,9 @@ Your job is to **teach with this repo's real data** and leave a shareable visual
    (SUGGEST / ADAPT / ENFORCE).
 
 The HTML report is the visual twin of this skill: architecture map, files per layer,
-dependency direction, matrix, violations, enforcement points, and an Ark fitness score.
+dependency direction, matrix, violations, enforcement points, Ark fitness score, and a
+**Senior diagnostics** block (coupling fan-in/out, deny density, purity surface, pattern
+forensics, baseline taxonomy) for tech leads.
 
 ## Spoken / written explanation
 
