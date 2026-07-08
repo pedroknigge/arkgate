@@ -22,6 +22,7 @@ import {
   listPolicyPackIds,
   loadPolicyPackMeta,
   writeAdoptionPlan,
+  classifyRemediation,
   detectPackageManager,
   execCommandParts,
   execRunner,
@@ -57,6 +58,7 @@ function parseArgs(argv) {
     coverage: false,
     migrateCommands: false,
     doctor: false,
+    plan: false,
     recommend: false,
     writePlan: false,
     listPolicyPacks: false,
@@ -90,6 +92,7 @@ function parseArgs(argv) {
     else if (arg === '--skills-only') args.skillsOnly = true;
     else if (arg === '--coverage') args.coverage = true;
     else if (arg === '--doctor') args.doctor = true;
+    else if (arg === '--plan') args.plan = true;
     else if (arg === '--recommend') args.recommend = true;
     else if (arg === '--write-plan') args.writePlan = true;
     else if (arg === '--list-policy-packs') args.listPolicyPacks = true;
@@ -123,6 +126,7 @@ function usage() {
   return [
     'Usage: ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--require-gates] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
     '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
+    '       ark-check --plan [--json]              classified remediation plan (mechanical-safe / judgment / deferred) + goal; report only',
     '       ark-check --recommend [--json] [--write-plan]  application-shape plan; --write-plan emits ark-adoption-plan.json',
     '       ark-check --list-policy-packs            enthusiast preset configs (hexagonal, layered, feature-sliced, monorepo)',
     '       ark-check --apply-policy-pack <id> [--force]  write ark.config.json from templates/policy-packs/ (uses preset factory)',
@@ -3136,6 +3140,88 @@ function runCoverage(root, config, files, rules, asJson) {
 // --doctor: one consolidated health view — coverage, violations, gates, skills, baseline,
 // and command runners — each with the exact command to fix it. Folds the data the other
 // modes already produce so a team sees "what state is my Ark adoption in?" at a glance.
+// Co-pilot Phase F — turn active violations into a classified, ordered remediation PLAN with an
+// embedded GOAL. This is the `plan` primitive the future apply-loop (Phase H, `loop`) consumes
+// and the autopilot (Phase I) drives toward the `goal`. Read-only: it changes no files.
+function buildRemediationPlan(root, activeViolations) {
+  const steps = activeViolations.map((v, index) => {
+    const verdict = classifyRemediation(v);
+    return {
+      id: `${v.ruleId}:${v.file}:${v.line ?? 0}:${index}`,
+      class: verdict.class,
+      confidence: verdict.confidence,
+      rationale: verdict.rationale,
+      ruleId: v.ruleId,
+      edge: violationEdge(v),
+      file: v.file,
+      ...(v.line ? { line: v.line } : {}),
+      ...(v.target ? { target: v.target } : {}),
+      ...(v.typeOnly ? { typeOnly: true } : {}),
+    };
+  });
+  // Order: auto-applicable first (quick, safe wins), then human decisions, then deferred.
+  const rank = { 'mechanical-safe': 0, judgment: 1, deferred: 2 };
+  steps.sort((a, b) => rank[a.class] - rank[b.class]);
+  const countOf = (cls) => steps.filter((s) => s.class === cls).length;
+  const counts = {
+    mechanicalSafe: countOf('mechanical-safe'),
+    judgment: countOf('judgment'),
+    deferred: countOf('deferred'),
+  };
+  return {
+    version: '1',
+    goal: {
+      statement:
+        activeViolations.length === 0
+          ? 'No active violations — the architecture already meets its contract.'
+          : `Resolve ${activeViolations.length} architecture violation(s) without weakening the contract.`,
+      activeViolations: activeViolations.length,
+      autoApplicable: counts.mechanicalSafe,
+      needsDecision: counts.judgment,
+      deferred: counts.deferred,
+    },
+    counts,
+    steps,
+  };
+}
+
+// `--plan`: print the classified remediation plan. Dual-focus output — a one-line headline
+// anyone can read, then the per-step detail a developer acts on. Read-only.
+function runPlan(root, activeViolations, asJson) {
+  const plan = buildRemediationPlan(root, activeViolations);
+  if (asJson) {
+    console.log(JSON.stringify({ ok: activeViolations.length === 0, plan }, null, 2));
+    return;
+  }
+  console.log(color.bold(`Ark plan — ${path.basename(path.resolve(root)) || '.'}`));
+  console.log('');
+  console.log(plan.goal.statement);
+  if (activeViolations.length === 0) return;
+  console.log('');
+  console.log(
+    `  ${color.green(`${plan.counts.mechanicalSafe} safe to auto-apply`)} · ` +
+      `${color.yellow(`${plan.counts.judgment} need your decision`)} · ` +
+      `${color.dim(`${plan.counts.deferred} deferred`)}`
+  );
+  console.log('');
+  const tag = {
+    'mechanical-safe': color.green('auto  '),
+    judgment: color.yellow('decide'),
+    deferred: color.dim('defer '),
+  };
+  for (const step of plan.steps) {
+    const where = `${step.file}${step.line ? `:${step.line}` : ''}`;
+    console.log(`  [${tag[step.class]}] ${step.edge}  ${color.dim(where)}`);
+    console.log(color.dim(`           ${step.rationale}`));
+  }
+  console.log('');
+  console.log(
+    color.dim(
+      'Plan only — no files changed. "auto" = an agent can safely apply it; "decide" = your call.'
+    )
+  );
+}
+
 function runDoctor(root, config, files, rules, violations, asJson, options = {}) {
   const cov = computeCoverage(root, config, files, rules);
   const summary = summarizeViolations(violations);
@@ -3264,7 +3350,11 @@ function runDoctor(root, config, files, rules, violations, asJson, options = {})
     if (summary.concentrated) {
       line(warn, color.dim(`${Math.round(summary.dominantShare * 100)}% on one edge (${summary.dominant}) — likely a contract fix, not debt`));
     }
-    if (activeCount > 0) actions.push('resolve or freeze the non-baselined violations (/ark-fix)');
+    if (activeCount > 0) {
+      actions.push(
+        `resolve the non-baselined violations — see the classified plan (${arkCommand(root, 'ark-check', '--plan')}), then /ark-fix`
+      );
+    }
   }
 
   console.log('');
@@ -3662,6 +3752,12 @@ async function main() {
   }
 
   const ok = activeViolations.length === 0 && (!args.strictConfig || warnings.length === 0);
+
+  if (args.plan) {
+    runPlan(root, activeViolations, args.json);
+    return;
+  }
+
   const skillGaps = detectSkillGaps(root);
   const codexHomeGap = detectCodexHomeGap(root);
 

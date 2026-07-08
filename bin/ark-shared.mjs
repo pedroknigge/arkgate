@@ -310,6 +310,68 @@ export function looksLikeIntent(value) {
   return INTENT_NAME.test(value);
 }
 
+/**
+ * Co-pilot Phase F — the work classifier. Every architecture violation is remediated in one of
+ * three ways, and this is the TRUST BOUNDARY that decides what an agent may auto-apply:
+ *
+ *   - 'mechanical-safe' : behavior-preserving AND gate-verifiable → an agent may auto-apply it.
+ *   - 'judgment'        : real coupling or a design choice → Ark PROPOSES it, a human decides.
+ *   - 'deferred'        : not enough signal to place it → a human should look first.
+ *
+ * Deliberately biased toward 'judgment': a false 'mechanical-safe' that auto-lands a bad edit
+ * is the failure mode that sinks trust, so only the provably-safe type-only move earns 'auto'.
+ * Pure function of one violation object ({ ruleId, typeOnly, ... }) so the CLI, the MCP gate,
+ * and (later) the apply-loop all classify identically. Returns { class, confidence, rationale }.
+ */
+export const REMEDIATION_CLASSES = ['mechanical-safe', 'judgment', 'deferred'];
+
+export function classifyRemediation(violation) {
+  const ruleId = violation?.ruleId;
+  if (ruleId === 'LAYER_IMPORT_VIOLATION') {
+    if (violation.typeOnly) {
+      return {
+        class: 'mechanical-safe',
+        confidence: 0.9,
+        rationale:
+          'Type-only import (erased at runtime): move the type to the layer that owns it and re-export for back-compat. Behavior-preserving, and the gate verifies it.',
+      };
+    }
+    return {
+      class: 'judgment',
+      confidence: 0.7,
+      rationale:
+        'Value import — real runtime coupling. Relocating it (e.g. a route reaching the DB → a repository) is a refactor whose organization is a human choice.',
+    };
+  }
+  if (ruleId === 'FORBIDDEN_GLOBAL') {
+    return {
+      class: 'judgment',
+      confidence: 0.8,
+      rationale:
+        'Ambient global in a pure layer: inject the capability through a port (Clock, Config, Http). Introducing the port is a design decision.',
+    };
+  }
+  if (ruleId === 'CIRCULAR_DEPENDENCY') {
+    return {
+      class: 'judgment',
+      confidence: 0.7,
+      rationale: 'Dependency cycle: breaking it means deciding which side owns the shared abstraction.',
+    };
+  }
+  if (typeof ruleId === 'string' && ruleId.length > 0) {
+    return {
+      class: 'judgment',
+      confidence: 0.6,
+      rationale: 'Needs a human decision on how to satisfy the contract without weakening the gate.',
+    };
+  }
+  return {
+    class: 'deferred',
+    confidence: 0.3,
+    rationale: 'Unrecognized violation shape — a human should look before anything is changed.',
+  };
+}
+
 /** The three package managers Ark emits commands for. */
 const LOCKFILES = { pnpm: 'pnpm-lock.yaml', yarn: 'yarn.lock', npm: 'package-lock.json' };
 

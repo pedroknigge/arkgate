@@ -108,17 +108,23 @@ Enthusiast doc track: [docs/enthusiast/README.md](docs/enthusiast/README.md).
   established codebase to the adoption flow instead of a thin, false-red starter.
 - **Layer `exclude` globs** — carve framework internals out of a broad pattern; resolved in
   the one matcher shared by both gates, so CI and the write gate classify identically.
+- **`ark upgrade`** — one command to update the package, refresh gates + skills (and Codex
+  home), migrate command runners, and re-check. Robust package-manager detection (the
+  `packageManager` field wins; a stray lockfile can't hijack an npm project).
 - CLI polish: `ark --help` exits 0; generated CI enables corepack before `setup-node`.
+
+### Co-pilot — Phase F (plan + goal primitives)
+
+- **`ark-check --plan`** — the classified remediation plan: every violation tagged
+  `mechanical-safe` (safe to auto-apply) / `judgment` (your call) / `deferred`, ordered
+  auto-first, wrapped in a `goal` block. Report-only; it's the **plan** primitive the coming
+  apply-loop consumes. See [docs/co-pilot-plan.md](docs/co-pilot-plan.md).
 
 ## Now — co-pilot enablers
 
 These are the building blocks that turn "Guide" into "Co-pilot." Each ships and is useful
 on its own; together they compose the autonomous loop.
 
-- **Work classification for safe autonomy.** Tag every planned change as mechanical
-  (auto-applicable: type-only move, file relocation, verbatim infra relocation) vs
-  judgment/"big rock" (repository-organization choices, cross-module refactors). This is
-  the gate between what an agent may apply automatically and what it must propose.
 - **Worktree-safe apply loop.** Execute plan steps in a discardable git worktree, one small
   change at a time, `ark-check` after each, roll back a step that fails or regresses, and
   surface a diff for approval. Never touches non-code (no DB/schema migrations).

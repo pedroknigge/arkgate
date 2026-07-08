@@ -1654,6 +1654,97 @@ describe('ark-check forbiddenGlobals', () => {
   });
 });
 
+describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
+  function mixedViolationProject() {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-plan-'));
+    fs.mkdirSync(path.join(root, 'src/ui'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/data'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          { name: 'UI', patterns: ['src/ui/**'] },
+          { name: 'Data', patterns: ['src/data/**'] },
+          { name: 'DomainModel', patterns: ['src/domain/**'], forbiddenGlobals: ['process'] },
+        ],
+        rules: [{ from: 'UI', to: 'Data', allowed: false }],
+      })
+    );
+    fs.writeFileSync(path.join(root, 'src/data/x.ts'), 'export const q = 1;\nexport type Row = { id: string };\n');
+    fs.writeFileSync(path.join(root, 'src/ui/a.ts'), "import type { Row } from '../data/x';\nexport type R = Row;\n");
+    fs.writeFileSync(path.join(root, 'src/ui/b.ts'), "import { q } from '../data/x';\nexport const z = q;\n");
+    fs.writeFileSync(path.join(root, 'src/domain/d.ts'), 'export const p = process.env.X;\n');
+    return root;
+  }
+
+  function runPlanJson(root: string) {
+    const raw = execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--plan', '--json'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    return JSON.parse(raw) as {
+      plan: {
+        goal: { activeViolations: number; autoApplicable: number; needsDecision: number };
+        counts: { mechanicalSafe: number; judgment: number; deferred: number };
+        steps: Array<{ class: string; ruleId: string; confidence: number; rationale: string }>;
+      };
+    };
+  }
+
+  it('classifies a type-only import as mechanical-safe and value/global as judgment', () => {
+    const { plan } = runPlanJson(mixedViolationProject());
+    expect(plan.goal.activeViolations).toBe(3);
+    expect(plan.counts.mechanicalSafe).toBe(1);
+    expect(plan.counts.judgment).toBe(2);
+    // The one auto-applicable step is the type-only import move.
+    const auto = plan.steps.filter((s) => s.class === 'mechanical-safe');
+    expect(auto).toHaveLength(1);
+    expect(auto[0].ruleId).toBe('LAYER_IMPORT_VIOLATION');
+    // Every step carries a confidence and a rationale.
+    expect(plan.steps.every((s) => s.confidence > 0 && s.rationale.length > 0)).toBe(true);
+    // Ordered auto-first.
+    expect(plan.steps[0].class).toBe('mechanical-safe');
+  });
+
+  it('is report-only (exit 0) and changes no files', () => {
+    const root = mixedViolationProject();
+    const before = fs.readFileSync(path.join(root, 'src/ui/a.ts'), 'utf8');
+    let status = 0;
+    let out = '';
+    try {
+      out = execFileSync(
+        'node',
+        [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--plan'],
+        { encoding: 'utf8', stdio: 'pipe' }
+      );
+    } catch (error) {
+      const e = error as { status: number; stdout: string };
+      status = e.status;
+      out = e.stdout ?? '';
+    }
+    expect(status).toBe(0);
+    expect(out).toContain('safe to auto-apply');
+    expect(out).toContain('Plan only — no files changed');
+    expect(fs.readFileSync(path.join(root, 'src/ui/a.ts'), 'utf8')).toBe(before);
+  });
+
+  it('reports a clean goal when there are no violations', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-plan-clean-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({ include: ['src'], layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }], rules: [] })
+    );
+    fs.writeFileSync(path.join(root, 'src/domain/d.ts'), 'export const ok = 1;\n');
+    const { plan } = runPlanJson(root);
+    expect(plan.goal.activeViolations).toBe(0);
+    expect(plan.steps).toHaveLength(0);
+  });
+});
+
 describe('ark-check layer exclude', () => {
   // A broad domain glob that also carves out framework internals via `exclude`.
   const CONFIG = JSON.stringify({

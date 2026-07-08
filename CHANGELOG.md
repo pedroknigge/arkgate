@@ -2,6 +2,22 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.17.0 — 2026-07-08
+
+Co-pilot Phase F — a classified remediation plan (the `plan` + `goal` primitives).
+
+### Added
+
+- **`ark-check --plan [--json]`** — reads your active violations and sorts each into
+  `mechanical-safe` (behavior-preserving and gate-verifiable — safe for an agent to auto-apply),
+  `judgment` (real coupling or a design choice — Ark proposes, you decide), or `deferred`, with a
+  `confidence` and a plain-language `rationale`, ordered auto-first, wrapped in a `goal` block
+  (active violations → 0 without weakening the contract). Report-only — it changes no files.
+  This is the **plan** primitive of Ark's co-pilot; the coming worktree-safe apply-loop consumes
+  it. The classifier (`classifyRemediation`) is shared in `ark-shared.mjs` so the CLI, the MCP
+  gate, and the future loop classify identically. `--doctor` now points at it. The v1 classifier
+  is biased toward `judgment` — only a provably-safe type-only import move earns `mechanical-safe`.
+
 ## 1.16.0 — 2026-07-08
 
 One command to update Ark.

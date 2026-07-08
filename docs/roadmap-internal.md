@@ -13,15 +13,19 @@ Last updated: 2026-07-08.
 | **1.12.0** | Write-gate ↔ CI parity (Option A) + upgrade command migration | **PUBLISHED** | — |
 | **1.13.0** | Config doctor + brownfield playbook / `/ark-fix` infra-relocation | **PUBLISHED 2026-07-06** | — |
 | **1.14.0** | Architect onboarding Phases A–E (recommend/plan/wizard/gallery) | **PUBLISHED 2026-07-07** | — |
-| **1.15.0** | Brownfield install hardening + layer `exclude` | **PUBLISHED 2026-07-08** (npm ✅ provenance; GitHub release ✅; MCP registry pending user `mcp-publisher login`) | — |
-| **next big** | **Co-pilot** milestone — see `docs/co-pilot-plan.md` | Planning; enablers ship as 1.x minors (Phase F first) | Per-phase |
+| **1.15.0** | Brownfield install hardening + layer `exclude` | **PUBLISHED 2026-07-08** (3 channels) | — |
+| **1.15.1** | PM-detection fix (stray lockfile no longer hijacks npm) | **PUBLISHED 2026-07-08** (3 channels) | — |
+| **1.16.0** | `ark upgrade` — one command to update Ark | **PUBLISHED 2026-07-08** (3 channels) | — |
+| **1.17.0** | Co-pilot **Phase F** — `ark-check --plan` (classifier + plan/goal primitives) | **On branch** `feat/co-pilot-phase-f-plan`; release prepared, awaiting confirm | Awaiting go-ahead |
+| **next** | Co-pilot **Phase G** (guided entry) or **Phase H** (worktree-safe apply loop = the `loop` primitive) | Planned | Per-phase |
 | ongoing | Trust hardening | Partial (provenance + trusted publishing done) | Can ride any release |
 
-Decision (user, 2026-07-08): 1.15.0 shipped as a minor with all the brownfield/​exclude work
-(PR #7 merged). Next: build the **co-pilot** (North Star) — full thick plan in
-`docs/co-pilot-plan.md`. **Start with Phase F (work classifier)** — the load-bearing trust
-boundary; ships as a minor and is useful in `--doctor`/`/ark-fix` before any autonomy exists.
-Process note stands: batch more per release to avoid tripping consumers' pnpm cooling-off.
+Delivery method (user goal, 2026-07-08): build the co-pilot **phase by phase**, incorporating the
+harness primitives **plan / loop / goal**. At the end of EACH phase: present what shipped, bring
+ALL docs up to date with a **dual focus** (super-simple first, then advanced), prepare the release,
+and **await confirmation** before the actual publish. Phase F delivered plan ✅ + goal ✅ (loop
+comes in Phase H). Full thick plan: `docs/co-pilot-plan.md`. Process note stands: batch more per
+release to avoid tripping consumers' pnpm cooling-off.
 
 ## North Star — the autonomy vision (owner: Pedro, 2026-07-08)
 
@@ -46,11 +50,11 @@ are proposed, never auto-applied.
    entry point so a newcomer never types a skill name; mature-repo routing (just added).
 2. **Accept → plan/roadmap.** EXISTS: `ark init --archetype`, `--write-plan` →
    `ark-adoption-plan.json` (phases 1/2/3), `/ark-adopt`. Solid.
-3. **Work classification for safe autonomy (KEY ENABLER, was P2 "fix-class hinting").**
-   NEEDED: tag every planned change mechanical/auto-applicable (type-only move, file
-   relocation, verbatim infra relocation) vs judgment/big-rock. This is the gate deciding
-   what an agent may apply automatically. Promoted from opportunistic to core — the whole
-   autonomy story hinges on it being trustworthy.
+3. **Work classification for safe autonomy (KEY ENABLER). ✅ SHIPPED in Phase F / 1.17.0.**
+   `ark-check --plan` tags each active violation mechanical-safe / judgment / deferred with
+   confidence + rationale, ordered auto-first, in a goal block. `classifyRemediation` is shared
+   in ark-shared.mjs. v1 anchor: only a type-only import move is `mechanical-safe` (biased to
+   `judgment`). Remaining: broaden safe classes + measure precision once the apply loop exists.
 4. **Worktree-safe apply loop.** PARTIAL: round-5 established worktree safety (code-only,
    discardable, no schema/DDL). NEEDED: the loop that applies one step, runs `ark-check`,
    rolls back on failure/regression, and surfaces a diff for approval.

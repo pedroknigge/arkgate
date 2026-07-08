@@ -350,8 +350,44 @@ npx ark-check --json                                              # machine-read
 npx ark-check --baseline                                          # ratchet mode
 npx ark-check --coverage                                          # Governed: N% + per-directory layer proposals
 npx ark-check --doctor                                            # consolidated health view + ranked top actions
+npx ark-check --plan                                              # classified fix plan: what's safe to auto-fix vs your call
 npx ark-check --report ark-report.html                            # visual architecture report
 ```
+
+### `--plan` — what to fix, and what's safe to auto-fix
+
+**Simple:** run `npx ark-check --plan`. It reads your violations and sorts each one into
+_"safe to auto-apply"_ (an agent can fix it for you), _"needs your decision"_ (Ark proposes
+it, you choose), or _"deferred"_. You get a plain-language list and a one-line goal — and it
+changes nothing, so it's safe to run anytime.
+
+<details>
+<summary>For developers</summary>
+
+`--plan` classifies every active violation into `mechanical-safe` (behavior-preserving and
+gate-verifiable — e.g. a type-only import moved to its owning layer + a re-export), `judgment`
+(real coupling or a design choice — value imports, a forbidden global that needs a port, a
+cycle), or `deferred` (unrecognized). The classifier is deliberately biased toward `judgment`:
+only the provably-safe move earns `mechanical-safe`, because a false "safe" that auto-lands a
+bad edit is the failure mode that erodes trust.
+
+`--plan --json` emits `{ ok, plan }` where `plan` is:
+
+```jsonc
+{
+  "version": "1",
+  "goal": { "statement": "...", "activeViolations": 3, "autoApplicable": 1, "needsDecision": 2, "deferred": 0 },
+  "counts": { "mechanicalSafe": 1, "judgment": 2, "deferred": 0 },
+  "steps": [ { "id": "...", "class": "mechanical-safe", "confidence": 0.9, "rationale": "...", "ruleId": "LAYER_IMPORT_VIOLATION", "edge": "UI → Data", "file": "...", "line": 1, "typeOnly": true } ]
+}
+```
+
+This is the **plan** primitive of Ark's co-pilot (the `goal` block is its target). It is
+report-only today; a later release adds the validated apply-loop that consumes it. Baselined
+violations are excluded — a plan only lists what's still open. See
+[docs/co-pilot-plan.md](docs/co-pilot-plan.md).
+
+</details>
 
 `--report [file.html]` writes a self-contained HTML report (no external assets, works
 offline). It shows the layers ordered innermost → outermost with each one's purpose and a

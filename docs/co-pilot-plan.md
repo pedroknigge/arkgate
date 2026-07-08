@@ -9,6 +9,21 @@ decomposing the [North Star](../ROADMAP.md#north-star--an-architecture-co-pilot-
 into buildable deliverables. It is to the co-pilot what
 [`architect-onboarding-plan.md`](architect-onboarding-plan.md) was to onboarding.
 
+## Harness primitives: plan, loop, goal
+
+The co-pilot is built from the three primitives every modern agent harness relies on:
+
+- **plan** — a structured, ordered list of steps toward a target. Shipped in Phase F as the
+  classified remediation plan (`ark-check --plan`), each step tagged mechanical-safe / judgment
+  / deferred.
+- **goal** — the target condition the work drives toward and the honesty backstop for "done".
+  Shipped embedded in the plan's `goal` block (active violations → 0 without weakening the
+  contract); enforced continuously by `ark-check`.
+- **loop** — apply → validate → keep-or-rollback, iterated over the plan until the goal holds.
+  Lands in Phase H (the worktree-safe apply loop), driven by the autopilot in Phase I.
+
+Progress: **plan ✅ · goal ✅ (Phase F) · loop ⏳ (Phase H)**.
+
 ## Problem statement
 
 Ark today is a tool an expert (or an expert-driven agent) drives by hand: run `--recommend`,
@@ -94,9 +109,11 @@ Useful immediately (shows the burn-down's shape) even before any autonomy exists
 
 ## Deliverables
 
-- **D1 — Work classifier.** `ark-check` tags each planned change `mechanical-safe | judgment |
-  deferred` with confidence + rationale; `ark-adoption-plan.json` and `--doctor` carry it.
-  *(The prerequisite. Ships and is useful on its own.)*
+- **D1 — Work classifier. ✅ SHIPPED (1.17.0).** `ark-check --plan [--json]` tags each active
+  violation `mechanical-safe | judgment | deferred` with confidence + rationale, ordered
+  auto-first, wrapped in a `goal` block; `--doctor` points at it. Report-only. The classifier
+  (`classifyRemediation`) is shared in `ark-shared.mjs` so the CLI, the MCP gate, and the
+  future apply-loop classify identically.
 - **D2 — Guided single entry point.** One flow (`ark start` / `/ark`) chaining recommend →
   confirm-in-plain-language → init → write-plan, so a newcomer never types a skill name.
   Reuses the mature-repo routing shipped in 1.15.0.
@@ -121,9 +138,11 @@ Useful immediately (shows the burn-down's shape) even before any autonomy exists
 
 Each phase ships independently and leaves the product strictly better.
 
-- **Phase F — Classifier (D1).** No autonomy yet. Immediate value in `--doctor`/`/ark-fix`
-  (shows mechanical vs judgment vs deferred). Acceptance: classifier precision on the eval
-  corpus with a near-zero false-`mechanical-safe` rate; plan + doctor carry the class.
+- **Phase F — Classifier (D1). ✅ SHIPPED (1.17.0).** Delivers the `plan` + `goal` primitives:
+  `ark-check --plan` emits the classified, ordered remediation plan with an embedded goal;
+  report-only, no autonomy yet. Immediate value — it shows mechanical vs judgment vs deferred
+  before any apply loop exists. Remaining for the milestone: measure classifier precision on an
+  eval corpus (near-zero false-`mechanical-safe`) once the apply loop can exercise it.
 - **Phase G — Guided entry + plain language (D2, D6).** The newcomer funnel, still
   propose-only. Acceptance: a first-time user reaches a written plan without knowing a skill
   name; every step explained in outcome terms.
