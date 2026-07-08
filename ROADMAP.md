@@ -113,25 +113,23 @@ Enthusiast doc track: [docs/enthusiast/README.md](docs/enthusiast/README.md).
   `packageManager` field wins; a stray lockfile can't hijack an npm project).
 - CLI polish: `ark --help` exits 0; generated CI enables corepack before `setup-node`.
 
-### Co-pilot — Phases F & G
+### Co-pilot — Phases F, G & H (plan · goal · loop)
 
 - **`ark-check --plan`** (Phase F) — the classified remediation plan: every violation tagged
   `mechanical-safe` (safe to auto-apply) / `judgment` (your call) / `deferred`, ordered
-  auto-first, wrapped in a `goal` block. Report-only; it's the **plan** primitive the coming
-  apply-loop consumes.
+  auto-first, wrapped in a `goal` block. Report-only. The **plan** + **goal** primitives.
 - **`ark start`** (Phase G) — the guided front door: looks at your project, describes the shape
   in plain language, sets up config + gates, and shows the plan. No preset or skill name needed;
-  adopts an established codebase instead of imposing a shape. See
-  [docs/co-pilot-plan.md](docs/co-pilot-plan.md).
+  adopts an established codebase instead of imposing a shape.
+- **`/ark-loop`** (Phase H) — the **loop** primitive: drives the plan to a clean architecture in
+  a discardable worktree, auto-applying the safe fixes (validate-or-rollback) and proposing the
+  rest, never weakening the gate. See [docs/co-pilot-plan.md](docs/co-pilot-plan.md).
 
 ## Now — co-pilot enablers
 
 These are the building blocks that turn "Guide" into "Co-pilot." Each ships and is useful
 on its own; together they compose the autonomous loop.
 
-- **Worktree-safe apply loop.** Execute plan steps in a discardable git worktree, one small
-  change at a time, `ark-check` after each, roll back a step that fails or regresses, and
-  surface a diff for approval. Never touches non-code (no DB/schema migrations).
 - **Trust hardening**: npm provenance, signed release tags, CI security scanning — a co-pilot
   that edits your repo has to be verifiably trustworthy.
 - **ESLint parity**: keep the editor plugin aligned with `ark-check` so violations surface as

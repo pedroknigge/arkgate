@@ -17,8 +17,9 @@ Last updated: 2026-07-08.
 | **1.15.1** | PM-detection fix (stray lockfile no longer hijacks npm) | **PUBLISHED 2026-07-08** (3 channels) | — |
 | **1.16.0** | `ark upgrade` — one command to update Ark | **PUBLISHED 2026-07-08** (3 channels) | — |
 | **1.17.0** | Co-pilot **Phase F** — `ark-check --plan` (classifier + plan/goal primitives) | **PUBLISHED 2026-07-08** (npm+GitHub; MCP by user) | — |
-| **1.18.0** | Co-pilot **Phase G** — `ark start` (guided entry + plain language) | **On branch** `feat/co-pilot-phase-g-start`; release prepared, awaiting confirm | Awaiting go-ahead |
-| **next** | Co-pilot **Phase H** — worktree-safe apply loop = the `loop` primitive | Planned | Per-phase |
+| **1.18.0** | Co-pilot **Phase G** — `ark start` (guided entry + plain language) | **PUBLISHED 2026-07-08** (3 channels) | — |
+| **1.19.0** | Co-pilot **Phase H** — `/ark-loop` (worktree-safe apply loop = the `loop` primitive) + `goal.met` | **On branch** `feat/co-pilot-phase-h-loop`; release prepared, awaiting confirm | Awaiting go-ahead |
+| **next** | Co-pilot **Phase I** — autopilot (compose F+G+H) + tiers (newbie/expert); then **Phase J** (proof + classifier-precision evals) | Planned | Per-phase |
 | ongoing | Trust hardening | Partial (provenance + trusted publishing done) | Can ride any release |
 
 Delivery method (user goal, 2026-07-08): build the co-pilot **phase by phase**, incorporating the
@@ -56,9 +57,10 @@ are proposed, never auto-applied.
    confidence + rationale, ordered auto-first, in a goal block. `classifyRemediation` is shared
    in ark-shared.mjs. v1 anchor: only a type-only import move is `mechanical-safe` (biased to
    `judgment`). Remaining: broaden safe classes + measure precision once the apply loop exists.
-4. **Worktree-safe apply loop.** PARTIAL: round-5 established worktree safety (code-only,
-   discardable, no schema/DDL). NEEDED: the loop that applies one step, runs `ark-check`,
-   rolls back on failure/regression, and surfaces a diff for approval.
+4. **Worktree-safe apply loop. ✅ SHIPPED in Phase H / 1.19.0** as the `/ark-loop` skill
+   (agent-driven, by principle — Ark validates, doesn't codemod): discardable worktree, apply
+   one `mechanical-safe` step → `ark-check` → keep/rollback, propose `judgment` steps, loop to
+   `goal.met` or no-progress. `goal.met` added to `--plan`. Code-only; big rocks proposed.
 5. **The autopilot orchestration.** NEEDED: an agent-driven skill/workflow reading
    `ark-adoption-plan.json`, driving phases — auto-apply the safe class (validated), present
    judgment items for yes/no, re-run the gate, explain in plain language. Composes 1–4.

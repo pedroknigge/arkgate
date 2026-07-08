@@ -2,6 +2,22 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.19.0 — 2026-07-08
+
+Co-pilot Phase H — the safe apply loop (the `loop` primitive).
+
+### Added
+
+- **`/ark-loop` skill** — drives the remediation plan toward the goal, one step at a time, in a
+  discardable git worktree: auto-applies only the changes Ark classed `mechanical-safe`
+  (validating each with `ark-check` and rolling back any regression), PROPOSES the `judgment`
+  ones for a human decision, and never weakens the gate. Loops until the goal is met or a round
+  makes no progress, then reports what was auto-applied vs proposed vs deferred. Honors the
+  principle: the agent edits, Ark validates — code only, never DB/schema. Installed for every
+  detected agent CLI like the other `/ark-*` skills.
+- **`goal.met`** in `ark-check --plan --json` — the loop's termination signal (true when there
+  are no active violations left).
+
 ## 1.18.0 — 2026-07-08
 
 Co-pilot Phase G — a guided front door for newcomers (`ark start`).

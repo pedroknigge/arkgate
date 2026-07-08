@@ -1728,7 +1728,7 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
     );
     return JSON.parse(raw) as {
       plan: {
-        goal: { activeViolations: number; autoApplicable: number; needsDecision: number };
+        goal: { met: boolean; activeViolations: number; autoApplicable: number; needsDecision: number };
         counts: { mechanicalSafe: number; judgment: number; deferred: number };
         steps: Array<{ class: string; ruleId: string; confidence: number; rationale: string }>;
       };
@@ -1738,6 +1738,7 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
   it('classifies a type-only import as mechanical-safe and value/global as judgment', () => {
     const { plan } = runPlanJson(mixedViolationProject());
     expect(plan.goal.activeViolations).toBe(3);
+    expect(plan.goal.met).toBe(false);
     expect(plan.counts.mechanicalSafe).toBe(1);
     expect(plan.counts.judgment).toBe(2);
     // The one auto-applicable step is the type-only import move.
@@ -1782,6 +1783,7 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
     fs.writeFileSync(path.join(root, 'src/domain/d.ts'), 'export const ok = 1;\n');
     const { plan } = runPlanJson(root);
     expect(plan.goal.activeViolations).toBe(0);
+    expect(plan.goal.met).toBe(true);
     expect(plan.steps).toHaveLength(0);
   });
 });

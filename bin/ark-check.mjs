@@ -3175,6 +3175,8 @@ function buildRemediationPlan(root, activeViolations) {
         activeViolations.length === 0
           ? 'No active violations — the architecture already meets its contract.'
           : `Resolve ${activeViolations.length} architecture violation(s) without weakening the contract.`,
+      // The loop's termination signal (Phase H): true when there's nothing left to remediate.
+      met: activeViolations.length === 0,
       activeViolations: activeViolations.length,
       autoApplicable: counts.mechanicalSafe,
       needsDecision: counts.judgment,

@@ -148,6 +148,7 @@ just trying to keep your code clean:
 | `/ark-architect` | **Greenfield first** — picks your application shape from the playbook, scaffolds phase-1 layers, and points to gallery starters |
 | `/ark-coverage` | Reports the governed %, proposes a layer for every ungoverned directory, and ranks unused Ark capabilities |
 | `/ark-fix` | Resolves violations at the root cause (ports, moves, type relocations) — value coupling before type-only, never by weakening the contract |
+| `/ark-loop` | Drives the plan to a clean architecture: auto-applies the _safe_ fixes (validating each, rolling back regressions) and proposes the rest — in a discardable worktree, never weakening the gate |
 | `/ark-adopt` | Onboards an existing codebase the right way: diagnose → fix the contract → classify the tree → freeze only real debt, with the framework-border principle |
 | `/ark-place` | Answers "where does this new code go?" from the contract, and scaffolds it there |
 | `/ark-contract` | Evolves `ark.config.json` safely, with before/after violation impact |

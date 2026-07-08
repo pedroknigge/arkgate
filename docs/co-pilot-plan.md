@@ -22,7 +22,8 @@ The co-pilot is built from the three primitives every modern agent harness relie
 - **loop** — apply → validate → keep-or-rollback, iterated over the plan until the goal holds.
   Lands in Phase H (the worktree-safe apply loop), driven by the autopilot in Phase I.
 
-Progress: **plan ✅ · goal ✅ (Phase F) · loop ⏳ (Phase H)**.
+Progress: **plan ✅ (F) · goal ✅ (F) · loop ✅ (H, `/ark-loop`)**. Next: compose them into
+the autopilot (Phase I).
 
 ## Problem statement
 
@@ -117,9 +118,11 @@ Useful immediately (shows the burn-down's shape) even before any autonomy exists
 - **D2 — Guided single entry point. ✅ SHIPPED (1.18.0).** `ark start` chains recommend →
   confirm-in-plain-language → init (preset for greenfield, detection for an established repo) →
   `--plan`, so a newcomer never types a skill name. `--yes` for non-interactive.
-- **D3 — Worktree-safe apply loop.** A runner that, given a classified plan, spins a discardable
-  worktree, applies one step, runs `ark-check`, keeps on green / rolls back on failure or
-  regression, and surfaces a diff. Code-only guard (refuses non-code paths).
+- **D3 — Worktree-safe apply loop. ✅ SHIPPED (1.19.0).** The `/ark-loop` skill drives the plan
+  in a discardable worktree, applies one `mechanical-safe` step, validates with `ark-check`,
+  keeps on green / rolls back on regression, proposes `judgment` steps, and loops until
+  `goal.met` or no-progress. Agent edits, Ark validates — code only. `goal.met` in `--plan`
+  is the termination signal. (An agent-driven skill rather than a CLI codemod, by principle.)
 - **D4 — Autopilot orchestration.** An agent-driven skill/workflow (`/ark-autopilot`) that reads
   the classified plan and drives phases: auto-applies `mechanical-safe` (via D3, validated),
   presents `judgment` items as plain-language proposals + diff for yes/no, re-runs the gate,
@@ -147,9 +150,9 @@ Each phase ships independently and leaves the product strictly better.
 - **Phase G — Guided entry + plain language (D2, D6). ✅ SHIPPED (1.18.0).** `ark start`: the
   newcomer funnel, still propose-only. A first-time user reaches a written plan without knowing
   a preset or skill name; the shape, steps, and result are framed in outcome terms.
-- **Phase H — Apply loop (D3).** Worktree-safe, single-step, validated, reversible; not yet
-  auto-driven. Acceptance: applying a `mechanical-safe` item validates and keeps; a regressing
-  edit rolls back; non-code paths refused.
+- **Phase H — Apply loop (D3). ✅ SHIPPED (1.19.0).** `/ark-loop`: worktree-safe, single-step,
+  validated, reversible. Applies `mechanical-safe` items (validate-or-rollback), proposes
+  `judgment` ones, loops to `goal.met` or no-progress. Delivers the `loop` primitive.
 - **Phase I — Autopilot (D4, D5).** Compose F–H into the end-to-end loop with tiers.
   Acceptance: newbie mode auto-applies the safe class (validated), proposes the rest, ends with
   gates green; expert mode unchanged.
