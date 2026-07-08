@@ -406,6 +406,59 @@ describe('ark-mcp --hook (PreToolUse gate)', () => {
   });
 });
 
+// The write gate resolves a file's layer with the same `layerForFile` as ark-check, so
+// `exclude` must behave identically here: an excluded subtree is ungoverned and its
+// forbiddenGlobals do not apply — the two enforcement paths never diverge.
+describe('ark-mcp --hook layer exclude parity', () => {
+  let root: string;
+
+  beforeAll(() => {
+    prepareMcpRuntime();
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-hook-exclude-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/kernel/domain'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          {
+            name: 'DomainModel',
+            patterns: ['src/**/domain/**'],
+            exclude: ['**/kernel/**'],
+            intentPrefixes: ['Domain.'],
+            forbiddenGlobals: ['process'],
+          },
+        ],
+        rules: [],
+      })
+    );
+  });
+
+  it('blocks a forbidden global in governed app-domain code', () => {
+    const result = runHook(root, {
+      tool_name: 'Write',
+      tool_input: {
+        file_path: path.join(root, 'src/domain/order.ts'),
+        content: 'export const x = process.env.A;\n',
+      },
+    });
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('FORBIDDEN_GLOBAL');
+  });
+
+  it('allows the same code in an excluded framework-internal subtree', () => {
+    const result = runHook(root, {
+      tool_name: 'Write',
+      tool_input: {
+        file_path: path.join(root, 'src/kernel/domain/wiring.ts'),
+        content: 'export const p = process.env.B;\n',
+      },
+    });
+    expect(result.status).toBe(0);
+  });
+});
+
 describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () => {
   let projectRoot: string;
   let client: ReturnType<typeof createClient>;

@@ -18,7 +18,7 @@ const arkCheck = path.join(here, 'ark-check.mjs');
 
 function parseArgs(argv) {
   const args = {
-    command: argv[2],
+    command: undefined,
     root: process.cwd(),
     yes: false,
     force: false,
@@ -26,7 +26,9 @@ function parseArgs(argv) {
     help: false,
   };
 
-  for (let i = 3; i < argv.length; i += 1) {
+  // Scan from the first user token (index 2) so a leading flag like `ark --help` is
+  // recognized: the command is the first NON-dash argument, not blindly argv[2].
+  for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--root') args.root = path.resolve(argv[++i]);
     else if (arg === '--yes' || arg === '-y') args.yes = true;
@@ -35,7 +37,8 @@ function parseArgs(argv) {
     else if (arg === '--preset') args.preset = argv[++i];
     else if (arg === '--archetype') args.archetype = argv[++i];
     else if (arg === '--tools') args.tools = argv[++i];
-    else if (arg === '--help' || arg === '-h') args.help = true;
+    else if (arg === '--help' || arg === '-h' || arg === 'help') args.help = true;
+    else if (!arg.startsWith('-') && args.command === undefined) args.command = arg;
   }
 
   return args;

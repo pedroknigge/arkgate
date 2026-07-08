@@ -145,8 +145,10 @@ just trying to keep your code clean:
 > installer prints this step, and `/ark-adopt` / `/ark-upgrade` offer to run it
 > for you. Every other host loads the skills from the repo path directly.
 
-The package `postinstall` only prints the next command; it never prompts or writes files
-during `npm install`. Use `npx ark init --yes` for non-interactive setup.
+Ark ships **no install lifecycle scripts** — `npm install` (or `pnpm`/`yarn`) never runs
+Ark code, so hardened repos that block build scripts install it cleanly with zero prompts.
+Configure enforcement explicitly afterwards: `npx ark init` (or `npx ark init --yes` for
+non-interactive setup).
 
 ### Updating Ark
 
@@ -251,6 +253,14 @@ the layer to the config instead of inventing an ungoverned location.
 ```bash
 npx ark-check --print-config eleven-layer > ark.config.json   # the full profile, ready to edit
 ```
+
+A layer may also declare **`exclude`** — glob(s) carved out of it. A file matching any
+`exclude` glob is not governed by that layer even when a `patterns` glob matches, so a broad
+pattern can opt subtrees out without listing every include. This is how the starter presets
+keep a wildcard like `src/**/domain/**` from mis-flagging framework internals under
+`src/kernel/domain/` (`"exclude": ["**/kernel/**"]`). Excluding a file also removes it from
+that layer's rules and `forbiddenGlobals`, and both gates classify identically — so the CI
+check and the write-time gate never disagree about what `exclude` covers.
 
 ## Adopting an existing codebase (honestly)
 

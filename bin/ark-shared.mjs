@@ -240,6 +240,15 @@ export function patternSpecificity(pattern) {
  * than one layer matches (overlapping globs, e.g. a facade split), the MOST SPECIFIC pattern
  * wins; ties break by declaration order (first wins). Order-independent for non-ambiguous
  * overlaps, so a config author can't silently break a facade by listing the catch-all first.
+ *
+ * A layer may also declare `exclude` globs. A file matching ANY exclude glob is NOT a
+ * candidate for that layer even if a `patterns` glob matches — this lets a broad pattern
+ * (e.g. `src/**​/domain/**`) carve out subtrees it should not govern (framework internals
+ * like `**​/kernel/**`) without enumerating every include. Excluding a file from its layer
+ * also removes it from that layer's rule and `forbiddenGlobals` enforcement, since both key
+ * off this classification — which is exactly how a broad domain glob stops mis-flagging
+ * `src/kernel/domain` as impure domain code. This is the single file→layer matcher shared by
+ * the ark-check CI gate and the ark-mcp write gate, so `exclude` behaves identically in both.
  */
 export function layerForFile(root, file, layers) {
   const abs = path.isAbsolute(file) ? file : path.resolve(root, file);
@@ -247,6 +256,9 @@ export function layerForFile(root, file, layers) {
   let bestName;
   let bestScore = -1;
   for (const layer of layers ?? []) {
+    if ((layer.exclude ?? []).some((pattern) => globToRegExp(pattern).test(rel))) {
+      continue;
+    }
     for (const pattern of layer.patterns ?? []) {
       if (globToRegExp(pattern).test(rel)) {
         const score = patternSpecificity(pattern);
@@ -777,6 +789,10 @@ export function scoreArchetypes(signals, playbook) {
   };
 }
 
+// Source-file count above which a repo is treated as an established codebase rather than a
+// fresh project — the boundary between the `ark init` starter flow and the /ark-adopt flow.
+export const MATURE_REPO_FILE_THRESHOLD = 150;
+
 export function buildArchitectureRecommendation(root, options = {}) {
   const playbookPath = options.playbookPath ?? defaultPlaybookPath();
   const playbook = loadArchitecturePlaybook(playbookPath);
@@ -820,8 +836,12 @@ export function buildArchitectureRecommendation(root, options = {}) {
       fullStackProduct: signals.fullStackProduct,
       persistenceFromDeps: signals.persistenceFromDeps,
     },
+    // A repo past this size is not greenfield: `ark init` would scaffold a starter that governs
+    // a thin slice and can mis-flag framework internals, so steer these to the adoption flow.
+    mature: signals.sourceFileCount >= MATURE_REPO_FILE_THRESHOLD,
     initCommand: `${arkCommand(root, 'ark', `init --archetype ${result.archetype} --yes`)}`,
     firstCommand: `${arkCommand(root, 'ark', `init --archetype ${result.archetype} --yes`)}`,
+    adoptCommand: arkCommand(root, 'ark-check', '--recommend --write-plan'),
     recommendCommand: arkCommand(root, 'ark-check', '--recommend'),
     checkCommand: arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config'),
   };
@@ -986,8 +1006,19 @@ export function formatArchitectureRecommendationHuman(recommendation) {
     }
   }
   lines.push('');
-  lines.push(`Next: ${recommendation.firstCommand}`);
-  lines.push(`Then: ${recommendation.checkCommand}`);
+  if (recommendation.mature) {
+    // Established codebase: `ark init` would scaffold a thin/mis-scoped starter. Route to the
+    // adoption flow, which aligns the contract to the repo's real structure with judgment.
+    lines.push(
+      `This is an established codebase (${recommendation.signals?.sourceFileCount} source files) — use the adoption flow,`
+    );
+    lines.push('not the greenfield starter, so the contract matches your real structure:');
+    lines.push(`Next: ${recommendation.adoptCommand}`);
+    lines.push('Then: run /ark-adopt in your agent (re-scope layers to reality, freeze real debt only)');
+  } else {
+    lines.push(`Next: ${recommendation.firstCommand}`);
+    lines.push(`Then: ${recommendation.checkCommand}`);
+  }
   return lines.join('\n');
 }
 
@@ -1027,8 +1058,10 @@ export function buildAdoptionPlanDocument(recommendation) {
     books: recommendation.books ?? [],
     why: recommendation.why ?? [],
     runnerUp: recommendation.runnerUp,
+    mature: recommendation.mature ?? false,
     initCommand: recommendation.initCommand,
     firstCommand: recommendation.firstCommand,
+    adoptCommand: recommendation.adoptCommand,
     checkCommand: recommendation.checkCommand,
     recommendCommand: recommendation.recommendCommand,
     galleryStarter: GALLERY_STARTER_BY_ARCHETYPE[recommendation.archetype] ?? null,
