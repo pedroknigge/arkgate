@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import readline from 'node:readline/promises';
 import {
   arkCommand,
   buildArchitectureRecommendation,
+  detectPackageManager,
   INIT_WIZARD_CHOICES,
   isValidArchetypeId,
   mapWizardChoiceToArchetype,
@@ -23,6 +25,7 @@ function parseArgs(argv) {
     yes: false,
     force: false,
     strict: true,
+    install: true,
     help: false,
   };
 
@@ -34,6 +37,7 @@ function parseArgs(argv) {
     else if (arg === '--yes' || arg === '-y') args.yes = true;
     else if (arg === '--force') args.force = true;
     else if (arg === '--no-strict') args.strict = false;
+    else if (arg === '--no-install') args.install = false;
     else if (arg === '--preset') args.preset = argv[++i];
     else if (arg === '--archetype') args.archetype = argv[++i];
     else if (arg === '--tools') args.tools = argv[++i];
@@ -46,25 +50,98 @@ function parseArgs(argv) {
 
 function usage() {
   return `Usage:
-  ark init [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo]
-           [--archetype <playbook-id>] [--tools <list>] [--yes] [--force] [--no-strict]
+  ark init    [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo]
+              [--archetype <playbook-id>] [--tools <list>] [--yes] [--force] [--no-strict]
+  ark upgrade [--root <project>] [--no-install] [--no-strict]
 
 Commands:
-  init   Configure Ark project enforcement with explicit prompts.
+  init      Configure Ark project enforcement with explicit prompts.
+  upgrade   One command to update Ark: bump the package to @latest, refresh gate
+            templates + /ark-* skills (and Codex home prompts), migrate command
+            runners to this project's package manager, then run the strict check.
+            (alias: ark update)
 
 Options:
-  --yes       Non-interactive defaults: create config if needed, install gate templates, run strict check.
-  --force     Allow generated files to overwrite existing files.
-  --no-strict Skip the final strict ark-check run.
-  --preset    Start from a named architecture preset instead of detection.
-  --archetype Application shape from templates/architecture-playbook.json (maps to the matching preset).
-              Valid ids: crud-product, api-backend, frontend-surface, library-sdk, cli-utility,
-              worker-pipeline, event-coordinator, integration-bridge, multi-app-workspace, prototype-spike.
-  --tools     Comma-separated agents to gate (claude,cursor,codex,windsurf,cline,copilot,kiro,roo,continue,gemini).
-              Omit to auto-detect from each tool's config dir, falling back to claude+cursor+codex.
+  --yes        Non-interactive defaults: create config if needed, install gate templates, run strict check.
+  --force      Allow generated files to overwrite existing files.
+  --no-strict  Skip the final strict ark-check run.
+  --no-install (upgrade) Refresh gates/skills only; don't reinstall the package.
+  --preset     Start from a named architecture preset instead of detection.
+  --archetype  Application shape from templates/architecture-playbook.json (maps to the matching preset).
+               Valid ids: crud-product, api-backend, frontend-surface, library-sdk, cli-utility,
+               worker-pipeline, event-coordinator, integration-bridge, multi-app-workspace, prototype-spike.
+  --tools      Comma-separated agents to gate (claude,cursor,codex,windsurf,cline,copilot,kiro,roo,continue,gemini).
+               Omit to auto-detect from each tool's config dir, falling back to claude+cursor+codex.
 
 Interactive mode (TTY, no --yes): asks what application shape you are building and maps it to a preset.
 `;
+}
+
+// The package-manager command that adds ark-runtime-kernel@latest as a dev dependency.
+function packageInstallArgv(root) {
+  const spec = 'ark-runtime-kernel@latest';
+  const pm = detectPackageManager(root);
+  if (pm === 'pnpm') return ['pnpm', ['add', '-D', spec]];
+  if (pm === 'yarn') return ['yarn', ['add', '-D', spec]];
+  return ['npm', ['install', '-D', spec]];
+}
+
+function runCommand(command, commandArgs, cwd) {
+  const result = spawnSync(command, commandArgs, { cwd, stdio: 'inherit', encoding: 'utf8' });
+  return result.status ?? 1;
+}
+
+// `ark upgrade`: the one command that replaces the "install @latest && install-agent-gates
+// --skills-only --force && ... --codex-home --force && ... --migrate-commands && check" chain.
+// Each step reruns ark-check as a fresh process, so the refresh runs from the freshly-installed
+// version, not this (now-older) process.
+async function upgrade(args) {
+  const root = args.root;
+  console.log('Ark upgrade — updating the package, gates, skills, and command runners.');
+
+  if (args.install) {
+    const [command, commandArgs] = packageInstallArgv(root);
+    console.log(`\n1/4  Updating the package: ${command} ${commandArgs.join(' ')}`);
+    const status = runCommand(command, commandArgs, root);
+    if (status !== 0) {
+      console.error(
+        `\nPackage update failed (exit ${status}). Fix the install and re-run, or use ` +
+          '`ark upgrade --no-install` to refresh gates/skills against the installed version.'
+      );
+      return status;
+    }
+  } else {
+    console.log('\n1/4  Skipping package install (--no-install).');
+  }
+
+  console.log('\n2/4  Refreshing agent gates + /ark-* skills…');
+  let status = runArkCheck(['--root', root, '--install-agent-gates'], { cwd: root });
+  if (status !== 0) return status;
+
+  // Codex loads slash-command prompts from ~/.codex/prompts, not the repo — refresh those too
+  // when a Codex home exists, so nothing is left stale. Non-fatal: a permission error there
+  // (e.g. a sandbox) shouldn't fail the whole upgrade.
+  if (fs.existsSync(path.join(os.homedir(), '.codex'))) {
+    console.log('\n     Refreshing Codex home prompts (~/.codex)…');
+    runArkCheck(
+      ['--root', root, '--install-agent-gates', '--skills-only', '--codex-home', '--force'],
+      { cwd: root }
+    );
+  }
+
+  console.log('\n3/4  Migrating command runners to this project’s package manager…');
+  status = runArkCheck(['--root', root, '--install-agent-gates', '--migrate-commands'], { cwd: root });
+  if (status !== 0) return status;
+
+  if (!args.strict) {
+    console.log('\n4/4  Skipping the strict check (--no-strict). Upgrade complete.');
+    return 0;
+  }
+  console.log('\n4/4  Verifying architecture…');
+  return runArkCheck(
+    ['--root', root, '--config', 'ark.config.json', '--strict-config'],
+    { cwd: root }
+  );
 }
 
 function runArkCheck(args, options = {}) {
@@ -213,6 +290,15 @@ async function main() {
   if (args.command === 'init') {
     try {
       return await init(args);
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      return 2;
+    }
+  }
+
+  if (args.command === 'upgrade' || args.command === 'update') {
+    try {
+      return await upgrade(args);
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));
       return 2;

@@ -817,6 +817,44 @@ describe('ark init', () => {
     expect(run(['bogus']).status).toBe(2);
   });
 
+  it('`ark upgrade --no-install` refreshes gates, migrates runners, and verifies in one command', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-upgrade-'));
+    fs.writeFileSync(path.join(root, 'package.json'), '{"name":"demo"}\n');
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/domain/**'], optional: true }],
+        rules: [],
+      })
+    );
+    let out = '';
+    let status = 0;
+    try {
+      out = execFileSync('node', [path.resolve('bin/ark.mjs'), 'upgrade', '--no-install', '--root', root], {
+        encoding: 'utf8',
+        stdio: 'pipe',
+      });
+    } catch (error) {
+      const e = error as { status: number; stdout: string };
+      out = e.stdout ?? '';
+      status = e.status;
+    }
+    expect(status).toBe(0);
+    // One command runs the whole sequence.
+    expect(out).toContain('Refreshing agent gates');
+    expect(out).toContain('Migrated the Ark command runner');
+    expect(out).toContain('Ark check passed');
+    // `update` is an accepted alias for `upgrade`.
+    const alias = execFileSync(
+      'node',
+      [path.resolve('bin/ark.mjs'), 'update', '--no-install', '--no-strict', '--root', root],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    expect(alias).toContain('Ark upgrade —');
+  });
+
   it('generated CI enables corepack before actions/setup-node so pnpm cache resolves', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-ci-order-'));
     fs.writeFileSync(path.join(root, 'pnpm-lock.yaml'), '\n');

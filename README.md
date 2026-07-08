@@ -152,7 +152,20 @@ non-interactive setup).
 
 ### Updating Ark
 
-For projects that already use Ark:
+For projects that already use Ark, one command does everything:
+
+```bash
+npx ark upgrade
+```
+
+It updates the package to `@latest`, refreshes the gate templates and `/ark-*` skills
+(and Codex home prompts if present), migrates command runners to your project's package
+manager, and runs the strict check — replacing the multi-step chain below. Use
+`ark upgrade --no-install` to refresh gates/skills against the already-installed version,
+or `--no-strict` to skip the final check. `ark update` is an alias.
+
+<details>
+<summary>Prefer to run the steps yourself?</summary>
 
 ```bash
 npm install -D ark-runtime-kernel@latest
@@ -164,6 +177,8 @@ This updates the local `ark`, `ark-check`, and `ark-mcp` binaries used by npm sc
 and CI. `npm run check:architecture` is the recommended alias, but it is optional:
 the direct `npx ark-check --root . --config ark.config.json --strict-config` command
 is the real check and works even if the alias has not been added yet.
+
+</details>
 
 The lockfile controls the version CI gets, so commit the updated `package-lock.json`,
 `pnpm-lock.yaml`, or `yarn.lock`.
