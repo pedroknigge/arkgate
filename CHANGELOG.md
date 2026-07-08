@@ -2,6 +2,15 @@
 
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here.
 
+## 2.1.1 — 2026-07-08
+
+### Documentation
+
+- **Migration guide** for the ~4.5k installs still on `ark-runtime-kernel`:
+  [docs/migrate-from-ark-runtime-kernel.md](docs/migrate-from-ark-runtime-kernel.md)
+  + README section *Upgrading from ark-runtime-kernel?*
+- `/ark-upgrade` skill points rename-aware projects at `arkgate`.
+
 ## 2.1.0 — 2026-07-08
 
 **Identity: ArkGate.** Same product and codebase; honest package name.
@@ -19,13 +28,15 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ### Migration
 
+Full guide: [docs/migrate-from-ark-runtime-kernel.md](docs/migrate-from-ark-runtime-kernel.md).
+
 ```bash
-npm uninstall ark-runtime-kernel
-npm install -D arkgate typescript
-# bins: npx arkgate-check …  (or still npx ark-check …)
+npm uninstall ark-runtime-kernel && npm install -D arkgate
+npx arkgate-check --install-agent-gates --force
+# bins: npx arkgate-check …  (aliases ark-check / ark-mcp still work)
 ```
 
-Predecessor package will be **deprecated** on npm with a pointer here after publish.
+Predecessor `ark-runtime-kernel` is **deprecated** on npm → use `arkgate`.
 
 ## 2.0.1 — 2026-07-08
 

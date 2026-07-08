@@ -1,6 +1,6 @@
 {
   "name": "arkgate",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "ArkGate — architecture co-pilot for AI TypeScript (write gate, CI gate, plan/loop)",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -40,6 +40,7 @@
     "docs/enthusiast",
     "docs/demos",
     "docs/ai-gates.md",
+    "docs/migrate-from-ark-runtime-kernel.md",
     "docs/ark-check-example.json",
     "docs/assets",
     "docs/brownfield-adoption.md",

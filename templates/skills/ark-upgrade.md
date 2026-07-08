@@ -3,11 +3,20 @@ name: ark-upgrade
 description: Update arkgate to the latest published version, then refresh gates and /ark-* skills for every agent CLI and re-verify the architecture check. Autonomous.
 ---
 
-# /ark-upgrade — Update Ark and refresh its gates
+# /ark-upgrade — Update ArkGate and refresh its gates
 
 Update the `arkgate` dependency to the latest published version and
 bring the repo's generated artifacts and gates in line with it. This skill
 checks the registry itself — don't assume the copy in `node_modules` is current.
+
+**Still on `ark-runtime-kernel`?** Migrate first (same product, new package name):
+
+```bash
+npm uninstall ark-runtime-kernel && npm install -D arkgate
+npx arkgate-check --install-agent-gates --force
+```
+
+Guide: `docs/migrate-from-ark-runtime-kernel.md` in the package (or on GitHub).
 
 ## Fast path
 
@@ -15,7 +24,8 @@ One command does the whole flow — update the package, refresh gates + `/ark-*`
 (and Codex home prompts), migrate command runners, and run the strict check:
 
 ```
-ark upgrade
+arkgate upgrade
+# (alias: ark upgrade)
 ```
 
 Use it when the user just wants the update done. Run the detailed steps below instead when

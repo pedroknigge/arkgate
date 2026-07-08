@@ -66,6 +66,20 @@ Three **operating modes** (not “user types”) on the same contract:
 
 ---
 
+## Upgrading from `ark-runtime-kernel`?
+
+**Same product**, new package name. Config and `/ark-*` skills stay.
+
+```bash
+npm uninstall ark-runtime-kernel && npm install -D arkgate
+npx arkgate-check --install-agent-gates --force
+npx arkgate-check --doctor
+```
+
+Full checklist (CI, MCP, Codex, imports): **[docs/migrate-from-ark-runtime-kernel.md](docs/migrate-from-ark-runtime-kernel.md)**.
+
+---
+
 ## Start in one minute
 
 ```bash
