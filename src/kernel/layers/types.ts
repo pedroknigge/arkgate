@@ -46,6 +46,14 @@ export interface CreateArchitectureProfileFromArkConfigOptions {
 export interface ArchitectureLayerConfig {
   name: string;
   patterns: string[];
+  /**
+   * Glob(s) carved out of this layer. A file matching any `exclude` glob is not governed by
+   * this layer even when a `patterns` glob matches — so a broad pattern like
+   * `src/**​/domain/**` can opt framework internals (`**​/kernel/**`) out of domain-purity
+   * rules without listing every include. Excluding a file also removes it from this layer's
+   * rule and `forbiddenGlobals` enforcement, since both key off layer classification.
+   */
+  exclude?: string[];
   intentPrefixes?: string[];
   description?: string;
   forbiddenGlobals?: string[];

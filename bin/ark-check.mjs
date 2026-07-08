@@ -370,6 +370,13 @@ function denyUpward(names) {
 // Named starter configs. Globs use `**` so they fit both flat (src/domain/**) and
 // modular (src/modules/x/domain/**) layouts. Every layer is optional, so the strict
 // check passes on a greenfield repo and each layer switches on as its dir gains files.
+//
+// Framework internals live under conventional names like `kernel/` and are NOT application
+// architecture — a broad `src/**/domain/**` would otherwise swallow `src/kernel/domain`
+// (DI/runtime wiring) and fire domain-purity rules on it, the false-positive class that
+// motivated `exclude`. Carve those out of every wildcard preset layer by default; a config
+// author who really does keep app code under kernel/ can drop the exclude.
+const FRAMEWORK_INTERNAL_EXCLUDE = ['**/kernel/**'];
 const ARCHITECTURE_PRESETS = {
   hexagonal: () => ({
     include: ['src'],
@@ -378,6 +385,7 @@ const ARCHITECTURE_PRESETS = {
         name: 'DomainModel',
         description: 'Pure business rules and entities. No I/O, no framework, no ambient globals.',
         patterns: ['src/**/domain/**'],
+        exclude: FRAMEWORK_INTERNAL_EXCLUDE,
         forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
         optional: true,
       },
@@ -385,18 +393,21 @@ const ARCHITECTURE_PRESETS = {
         name: 'ApplicationOrchestration',
         description: 'Use cases that coordinate the domain through ports. No I/O of its own.',
         patterns: ['src/**/application/**'],
+        exclude: FRAMEWORK_INTERNAL_EXCLUDE,
         optional: true,
       },
       {
         name: 'PresentationAdapters',
         description: 'Entrypoints — HTTP routes, controllers, UI. Drives use cases.',
         patterns: ['src/**/presentation/**', 'src/**/controllers/**', 'src/**/interface-adapters/**', 'src/**/http/**'],
+        exclude: FRAMEWORK_INTERNAL_EXCLUDE,
         optional: true,
       },
       {
         name: 'PersistenceAdapters',
         description: 'Implements ports with real infrastructure: DB, external APIs, filesystem.',
         patterns: ['src/**/infrastructure/**', 'src/**/adapters/**', 'src/**/persistence/**', 'src/**/repositories/**'],
+        exclude: FRAMEWORK_INTERNAL_EXCLUDE,
         optional: true,
       },
     ],
@@ -419,18 +430,21 @@ const ARCHITECTURE_PRESETS = {
         name: 'PresentationAdapters',
         description: 'UI and API entrypoints.',
         patterns: ['src/**/presentation/**', 'src/**/controllers/**', 'src/**/ui/**', 'src/**/http/**'],
+        exclude: FRAMEWORK_INTERNAL_EXCLUDE,
         optional: true,
       },
       {
         name: 'ApplicationOrchestration',
         description: 'Business services and use-case coordination.',
         patterns: ['src/**/application/**', 'src/**/services/**'],
+        exclude: FRAMEWORK_INTERNAL_EXCLUDE,
         optional: true,
       },
       {
         name: 'DomainModel',
         description: 'Pure business rules and entities. No I/O, no framework, no ambient globals.',
         patterns: ['src/**/domain/**'],
+        exclude: FRAMEWORK_INTERNAL_EXCLUDE,
         forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
         optional: true,
       },
@@ -438,6 +452,7 @@ const ARCHITECTURE_PRESETS = {
         name: 'PersistenceAdapters',
         description: 'Data access and infrastructure.',
         patterns: ['src/**/persistence/**', 'src/**/data/**', 'src/**/repositories/**', 'src/**/infrastructure/**'],
+        exclude: FRAMEWORK_INTERNAL_EXCLUDE,
         optional: true,
       },
     ],
@@ -761,6 +776,46 @@ function runApplyPolicyPack(args) {
   }
 }
 
+// A repo this size is not greenfield; a "starter" contract needs judgment `ark init` can't apply.
+const BROWNFIELD_FILE_THRESHOLD = 150;
+// Below this, the starter governs too thin a slice to be the real contract.
+const THIN_COVERAGE_PERCENT = 50;
+
+// `ark init` scaffolds a starter contract from conventional directory names (preset wildcards
+// or convention detection). On a MATURE repo that pattern breaks down two ways: (1) most code
+// lives in directories that don't match DDD names, so the starter governs a thin slice and a
+// green check really means "unchecked"; (2) a broad glob like `src/**/domain/**` can swallow
+// framework internals (e.g. src/kernel/domain) and fire domain-purity rules on them — 17
+// violations that are a contract mismatch, not real debt. Both are exactly what the adoption
+// flow (/ark-adopt) exists to resolve with structure-aware judgment. Detect the case and route
+// there instead of leaving the user with a thin or false-red gate. Returns true if it warned.
+function maybeWarnBrownfield(root, config) {
+  let files;
+  try {
+    files = (config.include ?? []).flatMap((entry) => walk(path.join(root, entry)));
+  } catch {
+    return false;
+  }
+  if (files.length < BROWNFIELD_FILE_THRESHOLD) return false;
+  const cov = computeCoverage(root, config, files, config.rules ?? []);
+  if (cov.governed.percent >= THIN_COVERAGE_PERCENT) return false;
+  console.log('');
+  console.log(
+    `Heads up — this looks like an existing codebase (${files.length} source files), and this`
+  );
+  console.log(
+    `starter contract governs only ${cov.governed.percent}% of it (${cov.governed.classifiedFiles}/${files.length} files).`
+  );
+  console.log('`ark init` scaffolds from conventional directory names; on a mature repo that is');
+  console.log('usually a thin slice, and a broad domain glob can mis-flag framework internals as');
+  console.log('impure domain code (a contract mismatch, not real debt). For a contract aligned to');
+  console.log('your actual structure — governing more, with only genuine debt frozen — run adoption:');
+  console.log(`  ${arkCommand(root, 'ark-check', '--recommend --write-plan')}   # plan + ark-adoption-plan.json`);
+  console.log('  then run /ark-adopt in your agent   # re-scope layers to reality, freeze real debt only');
+  console.log(`Inspect what is governed right now: ${arkCommand(root, 'ark-check', '--coverage')}`);
+  return true;
+}
+
 function runInit(args) {
   const configPath = path.isAbsolute(args.config)
     ? args.config
@@ -794,6 +849,7 @@ function runInit(args) {
       console.log(`include: ${finalConfig.include.join(', ')} — patterns match by directory name in any`);
       console.log(`package; adjust to your naming, then verify: ${arkCommand(args.root, 'ark-check', '--coverage')}`);
     }
+    maybeWarnBrownfield(args.root, finalConfig);
     printInitNextSteps(args.root);
     return;
   }
@@ -896,6 +952,7 @@ function runInit(args) {
       }
     }
   }
+  maybeWarnBrownfield(args.root, finalConfig);
   printInitNextSteps(args.root);
 }
 
@@ -1106,6 +1163,9 @@ function detectCiNode(root) {
 }
 
 function githubWorkflow(pm, ciNode) {
+  // pnpm/yarn setup (corepack enable) MUST run before actions/setup-node so the package
+  // manager is on PATH when setup-node's `cache: pnpm|yarn` tries to resolve the store —
+  // otherwise the cache step fails on a fresh runner ("Unable to locate executable file: pnpm").
   const setupSteps = pm.setup.map((command) => `      - run: ${command}`).join('\n');
   // node-version-file keeps CI locked to the dev's exact toolchain; an explicit
   // version comes from engines.node; the default carries a hint for the mismatch
@@ -1132,12 +1192,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup Node
+${setupSteps ? `${setupSteps}\n` : ''}      - name: Setup Node
         uses: actions/setup-node@v4
         with:
 ${nodeSetup}
           cache: ${pm.cache}
-${setupSteps ? `${setupSteps}\n` : ''}      - name: Install dependencies
+      - name: Install dependencies
         run: ${pm.install}
       - name: Ark architecture check
         run: ${pm.run}
@@ -1334,10 +1394,11 @@ function skillTemplateNames() {
     .map((entry) => path.basename(entry.name, '.md'));
 }
 
-// A normal ark-check run is the reliable discovery point for new /ark-* skills:
-// the postinstall message that advertises them is blocked by modern npm's
-// script-approval policy, so the most careful users never see it. When a project
-// has adopted Ark agent gates (AGENTS.md present) but a detected tool is missing
+// A normal ark-check run is the reliable discovery point for new /ark-* skills.
+// Ark ships no install lifecycle script (a postinstall banner would be blocked by
+// modern package managers' script-approval policy anyway, so careful users never
+// saw it — and it broke hardened installs). When a project has adopted Ark agent
+// gates (AGENTS.md present) but a detected tool is missing
 // skills this version ships, surface it here so agents and CI actually notice.
 // Advisory only — never affects the exit code. Copilot has no reliable directory
 // signal, so it is not auto-detected (explicit --tools only), matching resolveTools.

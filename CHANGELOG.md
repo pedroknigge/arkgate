@@ -2,6 +2,40 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.15.0 — 2026-07-08
+
+Brownfield install & onboarding hardening + layer `exclude` — from a real install session
+on a mature repo.
+
+### Changed
+
+- **No install lifecycle scripts.** Removed the `postinstall` banner (and `bin/ark-postinstall.mjs`).
+  It was a pure `console.log`, but its mere presence tripped pnpm's build-script approval gate;
+  in a hardened repo (blocked build scripts + `minimumReleaseAge`) that left `pnpm install` at
+  exit 1 and could take down a dev server. Ark now installs with zero prompts and never runs code
+  on install. The "run `ark init`" guidance lives in the README and npm page instead.
+- **`ark init` / `ark-check --recommend` route mature repos to adoption.** On an established
+  codebase (≥150 source files) where a starter contract governs a thin slice, both now steer to
+  `ark-check --recommend --write-plan` + `/ark-adopt` — which align the contract to the repo's
+  real structure — instead of leaving a thin or false-red gate from aspirational DDD wildcards.
+
+### Fixed
+
+- **`ark --help` / `ark -h` / `ark help`** now print usage and exit 0 (a flag in the command
+  position was reported as `Unknown command: --help`).
+- **Generated CI** enables corepack **before** `actions/setup-node`, so `cache: pnpm|yarn` can
+  resolve the package manager on a fresh runner instead of failing.
+
+### Added
+
+- **Layer `exclude` globs.** A layer may declare `exclude: [...]` to carve subtrees out of a
+  broad `patterns` glob. An excluded file is ungoverned by that layer — removed from its rules
+  and `forbiddenGlobals` too. Resolved in the single `layerForFile` matcher shared by the
+  ark-check CI gate and the ark-mcp write gate, so both classify identically. The wildcard
+  starter presets (hexagonal, layered) now ship `"exclude": ["**/kernel/**"]` on every layer,
+  so `src/**/domain/**` no longer mis-flags framework internals under `src/kernel/domain/`.
+- **`"./package.json"` export** — tooling can read the installed version without an exports error.
+
 ## 1.14.0 — 2026-07-07
 
 Architect onboarding Phases A–E: enthusiast-first path from application shape to gated adoption.

@@ -3,20 +3,75 @@
 Tactical, prioritized work queue. Complements the product-facing `ROADMAP.md`.
 This is where release sequencing, open decisions, and the discovery log live.
 
-Last updated: 2026-07-06.
+Last updated: 2026-07-08.
 
 ## Release train
 
 | Version | Theme | Status | Gate to ship |
 |---------|-------|--------|--------------|
-| **1.11.0** | Organize, don't false-green | **PUBLISHED 2026-07-06** (npm + GitHub + MCP registry) | — |
-| **1.12.0** | Write-gate ↔ CI parity (Option A) + upgrade command migration | **PUBLISHED 2026-07-06** (npm + GitHub + MCP registry) | — |
-| **1.13.0** | Config doctor + brownfield playbook / `/ark-fix` infra-relocation + pnpm cooling-off note | **Shipping** (`10c219b` + `255c108` + `ac2f55b`) | Releasing |
+| **1.11.0** | Organize, don't false-green | **PUBLISHED** (npm + GitHub + MCP registry) | — |
+| **1.12.0** | Write-gate ↔ CI parity (Option A) + upgrade command migration | **PUBLISHED** | — |
+| **1.13.0** | Config doctor + brownfield playbook / `/ark-fix` infra-relocation | **PUBLISHED 2026-07-06** | — |
+| **1.14.0** | Architect onboarding Phases A–E (recommend/plan/wizard/gallery) | **PUBLISHED 2026-07-07** | — |
+| **next** | Brownfield install hardening + layer `exclude` | **On branch** `feat/brownfield-install-hardening-and-exclude` (`79e28df`); committed, unreleased | Batch with more before release |
 | ongoing | Trust hardening | Partial (provenance + trusted publishing done) | Can ride any release |
 
-Decision (user, 2026-07-06): **hold the 1.11.0 minor** until we gather a couple more
-real implementation feedback rounds. Do not run the release (bump ×5 + CHANGELOG +
-`Publish npm`) until asked.
+Decision (user, 2026-07-08): the strategic direction is the **co-pilot vision** below.
+Continue batching feedback-driven fixes on branches; do not run the release (bump ×5 +
+CHANGELOG + `Publish npm`) until asked. Process note stands: batch more per release to
+avoid tripping consumers' pnpm cooling-off with same-day publishes.
+
+## North Star — the autonomy vision (owner: Pedro, 2026-07-08)
+
+**The dream, verbatim in intent:** a random, non-developer user installs Ark; Ark analyzes
+the project and proposes a pattern; the user accepts; Ark (driving an agent for everything)
+proposes the full set of changes, builds the plan + roadmap, and progressively improves the
+whole project's architecture, using `ark-check` to validate as it goes. Ark **proposes,
+adjusts, and then enforces**. A newbie benefits from the whole loop; an advanced user takes
+only enforcement + adjustment.
+
+**Arc:** Gate (v1) → Guide (1.11–1.14) → **Co-pilot** (this vision). The reframe: Ark stops
+being a tool an expert drives and becomes the thing that drives the agent, with the gate as
+the honesty backstop. This does NOT contradict the round-6 stance ("Ark's job ends at
+diagnose + provide the pattern; the grind is the team's") — it *productizes* the agent loop
+that a human previously ran by hand, and keeps the hard line that judgment-heavy big rocks
+are proposed, never auto-applied.
+
+**Decomposition — what exists vs what's needed (build order):**
+
+1. **Analyze + propose (plain language).** EXISTS: `ark-check --recommend` (archetype
+   detection + confidence), `/ark-architect`, enthusiast analogies. GAP: a single guided
+   entry point so a newcomer never types a skill name; mature-repo routing (just added).
+2. **Accept → plan/roadmap.** EXISTS: `ark init --archetype`, `--write-plan` →
+   `ark-adoption-plan.json` (phases 1/2/3), `/ark-adopt`. Solid.
+3. **Work classification for safe autonomy (KEY ENABLER, was P2 "fix-class hinting").**
+   NEEDED: tag every planned change mechanical/auto-applicable (type-only move, file
+   relocation, verbatim infra relocation) vs judgment/big-rock. This is the gate deciding
+   what an agent may apply automatically. Promoted from opportunistic to core — the whole
+   autonomy story hinges on it being trustworthy.
+4. **Worktree-safe apply loop.** PARTIAL: round-5 established worktree safety (code-only,
+   discardable, no schema/DDL). NEEDED: the loop that applies one step, runs `ark-check`,
+   rolls back on failure/regression, and surfaces a diff for approval.
+5. **The autopilot orchestration.** NEEDED: an agent-driven skill/workflow reading
+   `ark-adoption-plan.json`, driving phases — auto-apply the safe class (validated), present
+   judgment items for yes/no, re-run the gate, explain in plain language. Composes 1–4.
+6. **Tiered UX.** NEEDED: newbie mode (full autopilot with approvals) vs expert mode
+   (manual skills + gate), same contract + gates underneath. Likely a mode flag / detection.
+7. **Enforcement handoff.** EXISTS: gates install during init (CI + write-gate + hooks), so
+   "and stays that way" is already true once the loop ends. Verify the newbie path leaves
+   them installed and active without extra steps.
+8. **Honesty in autonomy (principle, not a feature).** Never auto-apply what the gate can't
+   validate; never green while auto-skipping; always show auto-done vs proposed vs deferred.
+
+**Sequencing recommendation:** #3 (classification) and #4 (apply loop) are the load-bearing
+prerequisites and are independently shippable/testable. #5 (autopilot) and #6 (tiers) sit on
+top. #1's guided entry point is cheap and can land early to smooth the newbie funnel. Ship
+#3 first — it's the trust boundary everything else depends on and gives immediate value in
+`--doctor`/`/ark-fix` even before autonomy exists.
+
+**Risks / guardrails to hold:** don't become a codemod/AST engine (agent edits, Ark
+validates); big rocks stay human-approved; code-only, never DB/schema; the classification's
+false-"safe" rate is the thing that can sink trust — bias it toward "propose" when unsure.
 
 ## What's in 1.11.0 (already committed, unpushed)
 
@@ -64,10 +119,11 @@ The "gate → guide" reorientation. Seven improvements across `bin/*` + skills +
 
 ### P2 — opportunistic
 
-- **Fix-class hinting** — cross the `typeOnly` tag with an infra-role target to flag "likely
-  a data-layer migration (big rock)" vs "mechanical (type move / file relocation)." Low
-  effort. Low-confidence value: the value/type split + edge size already make big rocks
-  obvious. Build only if a real burn-down asks for it.
+- **Fix-class hinting → PROMOTED to co-pilot enabler #3** (see North Star). Cross the
+  `typeOnly` tag with an infra-role target to classify mechanical (type move / file
+  relocation / verbatim infra relocation) vs judgment/big-rock. No longer opportunistic:
+  it's the trust boundary for what an agent may auto-apply. Bias toward "propose" when
+  unsure — a false "safe" that auto-lands a bad edit is the failure mode that sinks trust.
 - **Gate detection polish** — `--require-gates` should recognize any workflow that runs Ark,
   not only the generated filename. Small.
 - **Watch mode** — `ark-check --watch`. Medium.
@@ -202,7 +258,28 @@ work below. Full detail in agent memory (`ark-project-state`).
   **Process note:** publishing several versions the same day repeatedly trips consumers'
   cooling-off — once the feedback-driven iteration settles, batch more per release to reduce it.
 
+- **Round 10 (install session on a mature repo, 2026-07-08 — motivated the current branch).**
+  A competent agent installed published `1.14.0` into a large pnpm/Next worktree and hit
+  avoidable friction, ending with a broken dev server and a false-red gate. Findings, each now
+  fixed on `feat/brownfield-install-hardening-and-exclude` (`79e28df`):
+  - The `postinstall` banner (pure `console.log`) tripped pnpm's build-script approval gate;
+    in a hardened repo (`allowBuilds` + `minimumReleaseAge`) it left `pnpm install` at exit 1,
+    which Next 16 runs as a pre-check → **dev server down**. Removed the postinstall entirely.
+  - `ark init --archetype event-coordinator` on the 2262-file repo produced 17 `FORBIDDEN_GLOBAL`
+    false positives: the hexagonal preset's `src/**/domain/**` wildcard matched `src/kernel/domain`
+    (framework DI wiring reading `process.env`) and governed only 6%. The tool's own "100% one
+    edge → contract is wrong" diagnostic fired correctly, but the first run was still red+useless.
+    Fixed two ways: (a) **layer `exclude`** — presets ship `"exclude":["**/kernel/**"]`, resolved
+    in the shared `layerForFile` so both gates agree; (b) **mature-repo routing** — `ark init` and
+    `--recommend` now steer ≥150-file repos to `/ark-adopt` instead of a wildcard starter.
+  - Minor polish: `ark --help` said "Unknown command"; generated CI set `cache: pnpm` before
+    `corepack enable`; `require('ark-runtime-kernel/package.json')` failed (no exports entry).
+  Confirms the product stance and the North Star: on a real brownfield repo, no preset/heuristic
+  produces a good contract — adoption needs judgment, so route there loudly rather than fake it.
+  This session also recorded the **co-pilot vision** (North Star section above).
+
 ## Notes
 
-- All feedback repos run `1.10.x`. To measure the pending improvements, ship or pack-test.
-- Two commits sit on `main` unpushed. Keep accumulating; do not release without go-ahead.
+- Feedback repos historically ran `1.10.x`; round 10 is the first against `1.14.0`.
+- Work now lands on feature branches (PR flow), not accumulated on `main`. Current unreleased
+  work: `feat/brownfield-install-hardening-and-exclude`. Do not release without go-ahead.

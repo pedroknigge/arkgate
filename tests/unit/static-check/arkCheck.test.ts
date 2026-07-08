@@ -364,19 +364,6 @@ describe('ark-check --install-agent-gates', () => {
     expect(npmAgents).toContain('npx ark-check --root . --config ark.config.json --strict-config');
   });
 
-  it('postinstall hints follow the package manager of INIT_CWD', () => {
-    const pnpmRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-postinstall-pnpm-'));
-    fs.writeFileSync(path.join(pnpmRoot, 'pnpm-lock.yaml'), '\n');
-    const output = execFileSync('node', [path.resolve('bin/ark-postinstall.mjs')], {
-      encoding: 'utf8',
-      stdio: 'pipe',
-      env: { ...process.env, INIT_CWD: pnpmRoot },
-    });
-    expect(output).toContain('pnpm exec ark init');
-    expect(output).toContain('pnpm exec ark-check --install-agent-gates');
-    expect(output).not.toContain('npx ');
-  });
-
   it('migrates a stale command runner in existing gate files without clobbering them', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-migrate-'));
     fs.writeFileSync(path.join(root, 'pnpm-lock.yaml'), '\n');
@@ -726,7 +713,7 @@ describe('ark-check --require-gates', () => {
 });
 
 describe('ark init', () => {
-  it('runs the explicit non-interactive setup without using postinstall prompts', () => {
+  it('runs the explicit non-interactive setup end to end (no install lifecycle script)', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-init-cli-'));
     fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
     fs.writeFileSync(path.join(root, 'src/domain/order.ts'), 'export const order = true;\n');
@@ -740,20 +727,62 @@ describe('ark init', () => {
     expect(result.stdout).toContain('Ark check passed');
   });
 
-  it('postinstall prints the init command and the gate/skill refresh hint', () => {
-    const npmRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-postinstall-npm-'));
-    const output = execFileSync('node', [path.resolve('bin/ark-postinstall.mjs')], {
-      encoding: 'utf8',
-      stdio: 'pipe',
-      env: { ...process.env, INIT_CWD: npmRoot },
-    });
+  it('routes a mature repo to the adoption flow when a preset starter governs a thin slice', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-brownfield-'));
+    // A mature Next.js-shaped repo: lots of files, but only a framework `kernel/domain`
+    // matches the hexagonal wildcards — the exact case that yields a thin, mis-scoped starter.
+    fs.mkdirSync(path.join(root, 'src/app'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/kernel/domain'), { recursive: true });
+    for (let i = 0; i < 160; i += 1) {
+      fs.writeFileSync(path.join(root, `src/app/p${i}.tsx`), `export const a${i} = ${i};\n`);
+    }
+    fs.writeFileSync(path.join(root, 'src/kernel/domain/contracts.ts'), 'export const x = 1;\n');
 
-    expect(output).toContain('Ark installed, but not enforced yet.');
-    expect(output).toContain('npx ark init');
-    expect(output).toContain('npx ark init --yes');
-    // Existing projects updating the package need the refresh hint so new
-    // templates + skills reach every configured agent CLI.
-    expect(output).toContain('npx ark-check --install-agent-gates');
+    const init = runInit(root, ['--preset', 'hexagonal']);
+    expect(init.status).toBe(0);
+    expect(init.stdout).toContain('existing codebase');
+    expect(init.stdout).toContain('--recommend --write-plan');
+    expect(init.stdout).toContain('/ark-adopt');
+  });
+
+  it('does NOT show the adoption notice on a small greenfield repo', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-greenfield-notice-'));
+    const init = runInit(root, ['--preset', 'hexagonal']);
+    expect(init.status).toBe(0);
+    expect(init.stdout).not.toContain('existing codebase');
+  });
+
+  it('`ark --help` / `ark help` print usage and exit 0 (flag in the command position)', () => {
+    const run = (args: string[]) => {
+      try {
+        const stdout = execFileSync('node', [path.resolve('bin/ark.mjs'), ...args], {
+          encoding: 'utf8',
+          stdio: 'pipe',
+        });
+        return { status: 0, stdout };
+      } catch (error) {
+        const e = error as { status: number; stdout: string };
+        return { status: e.status, stdout: e.stdout ?? '' };
+      }
+    };
+    for (const args of [['--help'], ['-h'], ['help']]) {
+      const res = run(args);
+      expect(res.status, `ark ${args.join(' ')}`).toBe(0);
+      expect(res.stdout).toContain('Usage:');
+      expect(res.stdout).not.toContain('Unknown command');
+    }
+    // A genuinely unknown command still errors.
+    expect(run(['bogus']).status).toBe(2);
+  });
+
+  it('generated CI enables corepack before actions/setup-node so pnpm cache resolves', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-ci-order-'));
+    fs.writeFileSync(path.join(root, 'pnpm-lock.yaml'), '\n');
+    expect(runInstallAgentGates(root, ['--tools', 'claude']).status).toBe(0);
+    const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
+    expect(workflow).toContain('corepack enable');
+    // corepack must be enabled BEFORE setup-node, or `cache: pnpm` fails on a fresh runner.
+    expect(workflow.indexOf('corepack enable')).toBeLessThan(workflow.indexOf('actions/setup-node'));
   });
 });
 
@@ -1545,6 +1574,66 @@ describe('ark-check forbiddenGlobals', () => {
   });
 });
 
+describe('ark-check layer exclude', () => {
+  // A broad domain glob that also carves out framework internals via `exclude`.
+  const CONFIG = JSON.stringify({
+    include: ['src'],
+    layers: [
+      {
+        name: 'DomainModel',
+        patterns: ['src/**/domain/**'],
+        exclude: ['**/kernel/**'],
+        intentPrefixes: ['Domain.'],
+        forbiddenGlobals: ['process'],
+      },
+    ],
+    rules: [],
+  });
+
+  function project() {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-exclude-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/kernel/domain'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'ark.config.json'), CONFIG);
+    // Real app domain code reaching for `process` is a genuine violation.
+    fs.writeFileSync(path.join(root, 'src/domain/order.ts'), 'export const x = process.env.A;\n');
+    // Framework internals under kernel/domain also touch `process`, but are excluded.
+    fs.writeFileSync(
+      path.join(root, 'src/kernel/domain/wiring.ts'),
+      'export const p = process.env.B;\n'
+    );
+    return root;
+  }
+
+  it('excludes a carved-out subtree from the layer, its rules, and forbiddenGlobals', () => {
+    const root = project();
+    const result = runArkCheck(root) as unknown as {
+      ok: boolean;
+      violations: Array<{ ruleId: string; file: string }>;
+    };
+    const globals = result.violations.filter((v) => v.ruleId === 'FORBIDDEN_GLOBAL');
+    // Only the genuine app-domain file is flagged; the excluded kernel file is not.
+    expect(globals.map((v) => v.file)).toEqual(['src/domain/order.ts']);
+  });
+
+  it('reports the excluded file as ungoverned in coverage (not classified into the layer)', () => {
+    const root = project();
+    const raw = execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--coverage', '--json'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    const { coverage } = JSON.parse(raw) as {
+      coverage: {
+        unclassified: { files: string[] };
+        layers: Array<{ name: string; files: number }>;
+      };
+    };
+    expect(coverage.unclassified.files).toContain('src/kernel/domain/wiring.ts');
+    expect(coverage.layers.find((l) => l.name === 'DomainModel')?.files).toBe(1);
+  });
+});
+
 describe('ark-check --install-agent-gates instruction-tier tools', () => {
   const RULE_FILES: Record<string, string> = {
     windsurf: '.windsurf/rules/ark.md',
@@ -1792,6 +1881,11 @@ describe('ark-check monorepo tsconfig resolution', () => {
       'PresentationAdapters',
       'PersistenceAdapters',
     ]);
+    // Wildcard preset layers carve out framework internals so a broad `src/**/domain/**`
+    // can't mis-flag `src/kernel/domain` — every layer ships the default exclude.
+    for (const layer of config.layers) {
+      expect(layer.exclude).toContain('**/kernel/**');
+    }
     // Inward-only: the domain may not import the persistence layer.
     expect(
       config.rules.some(

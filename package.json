@@ -1,6 +1,6 @@
 {
   "name": "ark-runtime-kernel",
-  "version": "1.14.0",
+  "version": "1.15.0",
   "description": "AI architecture gate for TypeScript repos, agents, and CI",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -21,7 +21,8 @@
       "types": "./dist/nestjs/index.d.ts",
       "import": "./dist/nestjs/index.js",
       "require": "./dist/nestjs/index.cjs"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "bin": {
     "ark": "bin/ark.mjs",
@@ -58,7 +59,6 @@
     "eval:agent": "node eval/run.mjs",
     "eval:comparative": "node eval/comparative-run.mjs",
     "clean": "rm -rf dist",
-    "postinstall": "node bin/ark-postinstall.mjs",
     "release:npm": "node scripts/release-npm.mjs",
     "prepack": "npm run build"
   },
