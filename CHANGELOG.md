@@ -2,6 +2,20 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.16.0 — 2026-07-08
+
+One command to update Ark.
+
+### Added
+
+- **`ark upgrade`** (alias **`ark update`**) — a single command that replaces the multi-step
+  update chain: bumps the package to `@latest` (via the detected package manager), refreshes
+  gate templates + `/ark-*` skills (and Codex home prompts when `~/.codex` exists), migrates
+  command runners to the project's package manager, and runs the strict architecture check.
+  `--no-install` refreshes gates/skills against the installed version; `--no-strict` skips the
+  final check. Each step reruns as a fresh process, so the refresh runs from the freshly
+  installed version. The `/ark-upgrade` skill and README now point at it.
+
 ## 1.15.1 — 2026-07-08
 
 Fix package-manager detection so a stray lockfile can't hijack a project's commands.

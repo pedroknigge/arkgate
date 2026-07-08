@@ -9,6 +9,19 @@ Update the `ark-runtime-kernel` dependency to the latest published version and
 bring the repo's generated artifacts and gates in line with it. This skill
 checks the registry itself — don't assume the copy in `node_modules` is current.
 
+## Fast path
+
+One command does the whole flow — update the package, refresh gates + `/ark-*` skills
+(and Codex home prompts), migrate command runners, and run the strict check:
+
+```
+ark upgrade
+```
+
+Use it when the user just wants the update done. Run the detailed steps below instead when
+you need to inspect the changelog first, handle a pnpm cooling-off window, or the one-liner
+reports a problem to triage.
+
 ## Steps
 
 1. **Check the registry, then update.** Compare the installed version
