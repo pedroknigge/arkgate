@@ -13,13 +13,15 @@ Last updated: 2026-07-08.
 | **1.12.0** | Write-gate ↔ CI parity (Option A) + upgrade command migration | **PUBLISHED** | — |
 | **1.13.0** | Config doctor + brownfield playbook / `/ark-fix` infra-relocation | **PUBLISHED 2026-07-06** | — |
 | **1.14.0** | Architect onboarding Phases A–E (recommend/plan/wizard/gallery) | **PUBLISHED 2026-07-07** | — |
-| **next** | Brownfield install hardening + layer `exclude` | **On branch** `feat/brownfield-install-hardening-and-exclude` (`79e28df`); committed, unreleased | Batch with more before release |
+| **1.15.0** | Brownfield install hardening + layer `exclude` | **PUBLISHED 2026-07-08** (npm ✅ provenance; GitHub release ✅; MCP registry pending user `mcp-publisher login`) | — |
+| **next big** | **Co-pilot** milestone — see `docs/co-pilot-plan.md` | Planning; enablers ship as 1.x minors (Phase F first) | Per-phase |
 | ongoing | Trust hardening | Partial (provenance + trusted publishing done) | Can ride any release |
 
-Decision (user, 2026-07-08): the strategic direction is the **co-pilot vision** below.
-Continue batching feedback-driven fixes on branches; do not run the release (bump ×5 +
-CHANGELOG + `Publish npm`) until asked. Process note stands: batch more per release to
-avoid tripping consumers' pnpm cooling-off with same-day publishes.
+Decision (user, 2026-07-08): 1.15.0 shipped as a minor with all the brownfield/​exclude work
+(PR #7 merged). Next: build the **co-pilot** (North Star) — full thick plan in
+`docs/co-pilot-plan.md`. **Start with Phase F (work classifier)** — the load-bearing trust
+boundary; ships as a minor and is useful in `--doctor`/`/ark-fix` before any autonomy exists.
+Process note stands: batch more per release to avoid tripping consumers' pnpm cooling-off.
 
 ## North Star — the autonomy vision (owner: Pedro, 2026-07-08)
 

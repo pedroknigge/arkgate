@@ -131,6 +131,8 @@ on its own; together they compose the autonomous loop.
 
 ## Later — full co-pilot
 
+Full implementation plan: [docs/co-pilot-plan.md](docs/co-pilot-plan.md).
+
 - **The autopilot orchestration.** An agent-driven skill/workflow that reads
   `ark-adoption-plan.json` and drives the phases: auto-applies the safe class (validated),
   presents judgment items for a yes/no, re-runs the gate, and explains each step in plain
