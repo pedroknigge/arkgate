@@ -166,7 +166,7 @@ CI (example):
 
 ```yaml
 - run: npx arkgate-check --root . --config ark.config.json --strict-config
-# or: uses: pedroknigge/arkgate@main   # Action still on this repo until rename
+# or: uses: pedroknigge/arkgate@main
 ```
 
 ---
