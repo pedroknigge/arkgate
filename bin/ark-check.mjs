@@ -2018,8 +2018,28 @@ function readManifest(root, manifestPath) {
 
 const SOURCE_FILE_NAME = /\.[cm]?[tj]sx?$/;
 
+/** Unit/e2e test files are not architecture surface — agents and Nest put them next
+ *  to production code (*.spec.ts). Counting them as ungoverned forces false
+ *  CONFIG_UNCLASSIFIED_FILES under --strict-config on every starter. */
+const TEST_FILE_NAME =
+  /\.(spec|test)\.(tsx?|jsx?|mts|cts)$/i;
+
 function isGovernableSourceFile(name) {
-  return SOURCE_FILE_NAME.test(name) && !name.endsWith('.d.ts');
+  return SOURCE_FILE_NAME.test(name) && !name.endsWith('.d.ts') && !TEST_FILE_NAME.test(name);
+}
+
+function isSkippedSourceDir(name) {
+  return (
+    name === 'node_modules' ||
+    name === 'dist' ||
+    name === 'coverage' ||
+    name === '__tests__' ||
+    name === '__mocks__' ||
+    name === 'e2e' ||
+    // Top-level style Nest/Jest folders (not "testing" helpers inside src)
+    name === 'test' ||
+    name === 'tests'
+  );
 }
 
 function walk(dir, files = []) {
@@ -2036,7 +2056,7 @@ function walk(dir, files = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name === 'node_modules' || entry.name === 'dist') continue;
+      if (isSkippedSourceDir(entry.name)) continue;
       walk(full, files);
     } else if (isGovernableSourceFile(entry.name)) {
       files.push(full);
