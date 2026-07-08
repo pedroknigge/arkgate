@@ -61,25 +61,28 @@ jobs:
         if: ${{ inputs.dry_run }}
         run: npm run release:npm -- --dry
 
-      # New package names cannot use Trusted Publishing until the package exists on npm
-      # and this repo is listed as a trusted publisher. For the first `arkgate` publish,
-      # set repository secret NPM_TOKEN (Automation, publish) and re-run this workflow.
-      # After the package exists, configure Trusted Publishing on npmjs.com for `arkgate`
-      # and prefer OIDC (leave NPM_TOKEN empty).
-      - name: Publish with NPM_TOKEN (new package or emergency)
-        if: ${{ !inputs.dry_run && secrets.NPM_TOKEN != '' }}
-        run: |
-          set -euo pipefail
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> "$GITHUB_WORKSPACE/.npmrc"
-          # First publish of a new name: provenance optional; allow non-GHA path flag
-          # still runs verify suite via release-npm.mjs
-          npm publish --access public --provenance
+      # Do not use `secrets.*` in `if:` (invalid in workflow_dispatch expressions).
+      # Prefer NPM_TOKEN when set (first publish of a new package name, or emergency).
+      # Otherwise use Trusted Publishing via OIDC (npm run release:npm).
+      - name: Publish to npm
+        if: ${{ !inputs.dry_run }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish with npm provenance (OIDC trusted publishing)
-        if: ${{ !inputs.dry_run && secrets.NPM_TOKEN == '' }}
-        run: npm run release:npm
+        run: |
+          set -euo pipefail
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "Publishing with NPM_TOKEN (Automation token)…"
+            echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> "$GITHUB_WORKSPACE/.npmrc"
+            # Still run full verify suite, then publish with token.
+            npm run typecheck
+            npx vitest run
+            npm run security:audit
+            npm run check:architecture
+            npm publish --access public --provenance
+          else
+            echo "No NPM_TOKEN secret — publishing with OIDC trusted publishing…"
+            npm run release:npm
+          fi
 
       - name: Upload npm tarball checksum
         if: ${{ !inputs.dry_run }}
