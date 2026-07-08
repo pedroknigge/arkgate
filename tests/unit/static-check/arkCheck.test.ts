@@ -364,6 +364,48 @@ describe('ark-check --install-agent-gates', () => {
     expect(npmAgents).toContain('npx ark-check --root . --config ark.config.json --strict-config');
   });
 
+  it('does not let a stray pnpm-lock.yaml hijack an npm project into pnpm', () => {
+    // npm project (package-lock.json) that also carries a leftover pnpm-lock.yaml.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-pm-conflict-'));
+    fs.writeFileSync(path.join(root, 'package.json'), '{"name":"x"}\n');
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+    fs.writeFileSync(path.join(root, 'pnpm-lock.yaml'), 'lockfileVersion: 5.4\n');
+    expect(runInstallAgentGates(root, ['--tools', 'claude']).status).toBe(0);
+    const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
+    // package-lock.json wins the tie → npx, not `pnpm exec` (which would break `npm run`).
+    expect(agents).toContain('npx ark-check');
+    expect(agents).not.toContain('pnpm exec ark-check');
+    // Generated CI must agree with the emitted commands.
+    const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
+    expect(workflow).toContain('npx ark-check');
+    expect(workflow).not.toContain('pnpm install --frozen-lockfile');
+  });
+
+  it('honors the packageManager field over a conflicting lockfile', () => {
+    // A genuine pnpm repo that still carries a package-lock.json declares itself via the field.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-pm-field-'));
+    fs.writeFileSync(
+      path.join(root, 'package.json'),
+      '{"name":"x","packageManager":"pnpm@9.1.0"}\n'
+    );
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+    expect(runInstallAgentGates(root, ['--tools', 'claude']).status).toBe(0);
+    const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
+    expect(agents).toContain('pnpm exec ark-check');
+    expect(agents).not.toContain('npx ark-check');
+  });
+
+  it('migrate-commands warns when multiple lockfiles are present', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-pm-warn-'));
+    fs.writeFileSync(path.join(root, 'package.json'), '{"name":"x"}\n');
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+    fs.writeFileSync(path.join(root, 'pnpm-lock.yaml'), 'lockfileVersion: 5.4\n');
+    const res = runInstallAgentGates(root, ['--migrate-commands']);
+    expect(res.status).toBe(0);
+    expect(res.stdout).toContain('multiple lockfiles present');
+    expect(res.stdout).toContain('npx');
+  });
+
   it('migrates a stale command runner in existing gate files without clobbering them', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-migrate-'));
     fs.writeFileSync(path.join(root, 'pnpm-lock.yaml'), '\n');

@@ -2,6 +2,25 @@
 
 All notable changes to `ark-runtime-kernel` are documented here.
 
+## 1.15.1 — 2026-07-08
+
+Fix package-manager detection so a stray lockfile can't hijack a project's commands.
+
+### Fixed
+
+- **A leftover `pnpm-lock.yaml` (or `yarn.lock`) no longer hijacks an npm project.** Detection
+  now honors the `package.json` `packageManager` field first, and on a lockfile conflict a
+  present `package-lock.json` wins — because `npx` runs fine in a pnpm/yarn repo, but
+  `pnpm exec` / `yarn` in an npm repo breaks (`ERR_PNPM_OUTDATED_LOCKFILE`,
+  `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`, a spurious pnpm lock). Previously any
+  `pnpm-lock.yaml` was preferred over `package-lock.json`, so `--migrate-commands` rewrote the
+  `check:architecture` script (and every emitted command) to `pnpm exec`, and `npm run
+  check:architecture` then failed. All emitted commands, the CI workflow, the install hints,
+  and the stale-runner advisory share the one detector.
+- **Multiple-lockfile warning.** `--install-agent-gates` and `--migrate-commands` now say which
+  package manager they picked when more than one lockfile is present, and how to override it
+  (set `packageManager`, or remove the stray lockfile).
+
 ## 1.15.0 — 2026-07-08
 
 Brownfield install & onboarding hardening + layer `exclude` — from a real install session
