@@ -306,7 +306,14 @@ export function applyFrameworkLayoutOverlays(config, root) {
  * Operating mode for the co-pilot surfaces (not "who the user is"):
  *   suggest | adapt | enforce
  */
-export function resolveOperatingMode({ governedPercent = null, planMet = null, mature = false } = {}) {
+export function resolveOperatingMode({
+  governedPercent = null,
+  planMet = null,
+  mature = false,
+  totalFiles = null,
+} = {}) {
+  // Zero files in scope is never ENFORCE — the contract is not looking at any code.
+  if (totalFiles === 0) return 'adapt';
   if (planMet === true && (governedPercent == null || governedPercent >= 50)) return 'enforce';
   if (governedPercent != null && governedPercent < 50) return 'adapt';
   if (mature) return 'adapt';

@@ -1843,6 +1843,27 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
     expect(plan.steps).toHaveLength(0);
   });
 
+  it('does not mark goal.met when include matches zero source files (empty-scope false green)', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-plan-empty-'));
+    fs.mkdirSync(path.join(root, 'apps/web/src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'apps/web/src/page.ts'), 'export const p = 1;\n');
+    // Contract looks only at src/ — monorepo code lives under apps/ → 0 files in scope.
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/**'] }],
+        rules: [],
+      })
+    );
+    const parsed = runPlanJson(root);
+    expect(parsed.plan.goal.totalFiles).toBe(0);
+    expect(parsed.plan.goal.emptyScope).toBe(true);
+    expect(parsed.plan.goal.met).toBe(false);
+    expect(parsed.ok).toBe(false);
+    expect(parsed.plan.goal.statement).toMatch(/No source files matched|checks nothing/i);
+  });
+
   it('does not mark goal.met when zero violations but governed coverage is low (false-green)', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-plan-lowgov-'));
     fs.mkdirSync(path.join(root, 'src'), { recursive: true });

@@ -1050,29 +1050,54 @@ function writeTemplate(root, relativePath, content, force) {
 }
 
 /**
- * Load the TypeScript module the project would resolve, falling back to Ark's dependency
- * and finally a bare dynamic import. Returns null when nothing is available.
+ * Normalize a required/imported TypeScript module. TS 5.x exposes `sys` on the root
+ * export; TS 7+ (and some ESM interop shapes) may not — those are unusable for ark-check's
+ * module resolution host, so we reject them and fall through to Ark's own TypeScript.
+ */
+function usableTypescript(mod) {
+  if (!mod) return null;
+  const ts = mod.default && mod.sys == null ? mod.default : mod;
+  if (ts && typeof ts === 'object' && ts.sys && typeof ts.sys.fileExists === 'function') {
+    return ts;
+  }
+  return null;
+}
+
+/**
+ * Load a TypeScript module with a working `sys`. Prefer the project's install when it is
+ * API-compatible; otherwise Ark's dependency (or a bare import). Returns null only when
+ * nothing usable is available.
  */
 async function loadTypeScript(root) {
+  const loaders = [];
   try {
     const { createRequire } = await import('node:module');
     const req = createRequire(path.join(root, 'package.json'));
-    return req('typescript');
+    loaders.push(() => req('typescript'));
   } catch {
-    /* try next */
+    /* project has no package.json resolvable tree */
   }
   try {
     const { createRequire } = await import('node:module');
     const req = createRequire(__arkCheckCli);
-    return req('typescript');
+    loaders.push(() => req('typescript'));
   } catch {
-    /* try next */
+    /* ark install tree unavailable */
   }
-  try {
-    return await import('typescript');
-  } catch {
-    return null;
+  loaders.push(async () => {
+    const m = await import('typescript');
+    return m;
+  });
+
+  for (const load of loaders) {
+    try {
+      const ts = usableTypescript(await load());
+      if (ts) return ts;
+    } catch {
+      /* try next loader */
+    }
   }
+  return null;
 }
 
 function packageManager(root) {
@@ -2235,21 +2260,67 @@ function collectConfigWarnings(root, config, files, rules, manifest) {
 }
 
 function createModuleResolutionHost(ts) {
+  const sys = ts?.sys;
+  const fileExists = (f) => {
+    if (sys?.fileExists) return sys.fileExists(f);
+    return fs.existsSync(f);
+  };
+  const readFile = (f) => {
+    if (sys?.readFile) return sys.readFile(f);
+    try {
+      return fs.readFileSync(f, 'utf8');
+    } catch {
+      return undefined;
+    }
+  };
+  const directoryExists = (d) => {
+    if (sys?.directoryExists) return sys.directoryExists(d);
+    try {
+      return fs.statSync(d).isDirectory();
+    } catch {
+      return false;
+    }
+  };
   return {
-    fileExists: (f) => ts.sys.fileExists(f),
-    readFile: (f) => ts.sys.readFile(f),
-    directoryExists: ts.sys.directoryExists ? (d) => ts.sys.directoryExists(d) : undefined,
-    getCurrentDirectory: () => ts.sys.getCurrentDirectory(),
-    getDirectories: ts.sys.getDirectories ? (d) => ts.sys.getDirectories(d) : undefined,
-    realpath: ts.sys.realpath ? (p) => ts.sys.realpath(p) : undefined,
-    useCaseSensitiveFileNames: ts.sys.useCaseSensitiveFileNames,
+    fileExists,
+    readFile,
+    directoryExists,
+    getCurrentDirectory: () =>
+      sys?.getCurrentDirectory ? sys.getCurrentDirectory() : process.cwd(),
+    getDirectories: (d) => {
+      if (sys?.getDirectories) return sys.getDirectories(d);
+      try {
+        return fs
+          .readdirSync(d, { withFileTypes: true })
+          .filter((e) => e.isDirectory())
+          .map((e) => e.name);
+      } catch {
+        return [];
+      }
+    },
+    realpath: sys?.realpath ? (p) => sys.realpath(p) : undefined,
+    useCaseSensitiveFileNames: sys?.useCaseSensitiveFileNames ?? true,
   };
 }
 
 function parseTsconfig(ts, configPath) {
-  const read = ts.readConfigFile(configPath, ts.sys.readFile);
+  const host = createModuleResolutionHost(ts);
+  const read = ts.readConfigFile(configPath, host.readFile);
   if (read.error) return {};
-  const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, path.dirname(configPath));
+  // parseJsonConfigFileContent wants a ParseConfigHost-like object; our resolution host
+  // is enough for option extraction.
+  const parsed = ts.parseJsonConfigFileContent(
+    read.config,
+    {
+      useCaseSensitiveFileNames: host.useCaseSensitiveFileNames,
+      readDirectory: ts.sys?.readDirectory
+        ? (...args) => ts.sys.readDirectory(...args)
+        : () => [],
+      fileExists: host.fileExists,
+      readFile: host.readFile,
+    },
+    path.dirname(configPath)
+  );
   return parsed.options;
 }
 
@@ -2880,9 +2951,14 @@ function computeReportFitness({ coverage, violations, ok, enforcement, config })
   const totalFiles = coverage?.governed?.totalFiles ?? 0;
   const classifiedFiles = coverage?.governed?.classifiedFiles ?? 0;
   const mode = resolveOperatingMode({
-    governedPercent,
-    planMet: ok && (violations?.length ?? 0) === 0 && (governedPercent == null || governedPercent >= 50),
+    governedPercent: totalFiles === 0 ? 0 : governedPercent,
+    planMet:
+      ok &&
+      (violations?.length ?? 0) === 0 &&
+      totalFiles > 0 &&
+      (governedPercent == null || governedPercent >= 50),
     mature: totalFiles >= 150,
+    totalFiles,
   });
   const modeLabel = { suggest: 'SUGGEST', adapt: 'ADAPT', enforce: 'ENFORCE' }[mode] || String(mode).toUpperCase();
   const modeBlurb = {
@@ -4017,10 +4093,13 @@ function computeCoverage(root, config, files, rules) {
     .map((row) => row.name)
     .filter((name) => !rules.some((rule) => rule.from === name || rule.to === name));
   const classifiedFiles = files.length - unclassified.length;
-  const fraction = files.length > 0 ? classifiedFiles / files.length : 1;
+  // Empty scope is NOT "100% governed" — that was a false-green for monorepos/mis-includes
+  // (0/0 → ENFORCE). Zero files means the contract is not checking anything yet.
+  const fraction = files.length > 0 ? classifiedFiles / files.length : 0;
   return {
     include: config.include ?? [],
     totalFiles: files.length,
+    emptyScope: files.length === 0,
     governed: { classifiedFiles, totalFiles: files.length, percent: Math.round(fraction * 100) },
     layers: layerRows,
     unclassified: { count: unclassified.length, files: unclassified },
@@ -4094,10 +4173,12 @@ function runCoverage(root, config, files, rules, asJson) {
 // Co-pilot Phase F — turn active violations into a classified, ordered remediation PLAN with an
 // embedded GOAL. This is the `plan` primitive the future apply-loop (Phase H, `loop`) consumes
 // and the autopilot (Phase I) drives toward the `goal`. Read-only: it changes no files.
-function buildRemediationPlan(root, activeViolations, governedPercent = null) {
-  // A plan with 0 violations but ~0% governed is a FALSE green: nothing is actually being
-  // checked. Treat a low-coverage clean plan as "not done — classify your code first."
+function buildRemediationPlan(root, activeViolations, governedPercent = null, totalFiles = null) {
+  // A plan with 0 violations but ~0% governed (or ZERO files in scope) is a FALSE green:
+  // nothing is actually being checked. Treat as "not done — classify / fix include first."
   const governedLow = governedPercent != null && governedPercent < 50;
+  const emptyScope = totalFiles === 0;
+  const notHonestlyEnforced = governedLow || emptyScope;
   const steps = activeViolations.map((v, index) => {
     const verdict = classifyRemediation(v);
     return {
@@ -4128,14 +4209,17 @@ function buildRemediationPlan(root, activeViolations, governedPercent = null) {
       statement:
         activeViolations.length > 0
           ? `Resolve ${activeViolations.length} architecture violation(s) without weakening the contract.`
-          : governedLow
-            ? `No violations — but Ark governs only ${governedPercent}% of your code, so this "clean" result checks almost nothing. Classify the rest (ark-check --coverage, then /ark-adopt) so it's actually enforced.`
-            : 'No active violations — the architecture already meets its contract.',
+          : emptyScope
+            ? 'No source files matched the contract include paths — this "clean" result checks nothing. Fix include/layers (monorepo → apps/packages, or /ark-adopt) so Ark has real code to govern.'
+            : governedLow
+              ? `No violations — but Ark governs only ${governedPercent}% of your code, so this "clean" result checks almost nothing. Classify the rest (ark-check --coverage, then /ark-adopt) so it's actually enforced.`
+              : 'No active violations — the architecture already meets its contract.',
       // The loop's termination signal (Phase H): nothing left to remediate AND the contract
-      // actually governs the code. A clean-but-ungoverned plan is not "met" — there's real
-      // adoption work to do first.
-      met: activeViolations.length === 0 && !governedLow,
+      // actually governs real code. Empty scope or low coverage is not "met".
+      met: activeViolations.length === 0 && !notHonestlyEnforced,
       ...(governedPercent != null ? { governedPercent } : {}),
+      ...(totalFiles != null ? { totalFiles } : {}),
+      ...(emptyScope ? { emptyScope: true } : {}),
       activeViolations: activeViolations.length,
       autoApplicable: counts.mechanicalSafe,
       needsDecision: counts.judgment,
@@ -4148,8 +4232,8 @@ function buildRemediationPlan(root, activeViolations, governedPercent = null) {
 
 // `--plan`: print the classified remediation plan. Dual-focus output — a one-line headline
 // anyone can read, then the per-step detail a developer acts on. Read-only.
-function runPlan(root, activeViolations, asJson, governedPercent = null) {
-  const plan = buildRemediationPlan(root, activeViolations, governedPercent);
+function runPlan(root, activeViolations, asJson, governedPercent = null, totalFiles = null) {
+  const plan = buildRemediationPlan(root, activeViolations, governedPercent, totalFiles);
   // Honesty: a zero-violation plan with almost nothing governed is NOT "ok".
   const planOk = plan.goal.met === true;
   if (asJson) {
@@ -4284,9 +4368,11 @@ function runDoctor(root, config, files, rules, violations, asJson, options = {})
 
   console.log(color.bold(`Ark doctor — ${path.basename(path.resolve(root)) || '.'}`));
 
+  const emptyScope = cov.governed.totalFiles === 0;
   const mode = resolveOperatingMode({
-    governedPercent: cov.governed.percent,
-    planMet: activeCount === 0 && cov.governed.percent >= 50,
+    governedPercent: emptyScope ? 0 : cov.governed.percent,
+    planMet:
+      activeCount === 0 && !emptyScope && cov.governed.percent >= 50,
     mature: cov.governed.totalFiles >= 150,
   });
   console.log('');
@@ -4298,10 +4384,21 @@ function runDoctor(root, config, files, rules, violations, asJson, options = {})
     enforce: 'contract governs enough code; gates can honestly hold the line',
   };
   line(modeMark, `${mode.toUpperCase()} — ${modeHelp[mode]}`);
+  if (emptyScope) {
+    line(
+      bad,
+      'Empty scope: include paths match 0 source files — a green check is meaningless until include/layers match the tree (monorepo → apps/packages, or /ark-adopt).'
+    );
+  }
 
   console.log('');
   console.log(color.bold('Coverage'));
-  const govMark = cov.governed.percent >= 80 ? ok : cov.governed.percent >= 50 ? warn : bad;
+  const govMark =
+    emptyScope || cov.governed.percent < 50
+      ? bad
+      : cov.governed.percent >= 80
+        ? ok
+        : warn;
   line(govMark, `Governed: ${cov.governed.percent}% (${cov.governed.classifiedFiles}/${cov.governed.totalFiles} files)`);
   if (cov.suggestions.length > 0) {
     line(warn, `${cov.suggestions.length} ungoverned director(y/ies) — proposals: ${arkCommand(root, 'ark-check', '--coverage')}`);
@@ -4521,7 +4618,7 @@ async function main() {
           )
         );
       }
-      runPlan(root, [], args.json, cov.governed.percent);
+      runPlan(root, [], args.json, cov.governed.percent, cov.governed.totalFiles);
       return;
     }
     console.error(`ark-check requires TypeScript. Install it with: ${installDevHint(root, 'typescript')}`);
@@ -4758,7 +4855,7 @@ async function main() {
 
   if (args.plan) {
     const cov = computeCoverage(root, config, files, rules);
-    runPlan(root, activeViolations, args.json, cov.governed.percent);
+    runPlan(root, activeViolations, args.json, cov.governed.percent, cov.governed.totalFiles);
     return;
   }
 

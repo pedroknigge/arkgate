@@ -9,6 +9,7 @@ import {
   arkCommand,
   buildArchitectureRecommendation,
   detectPackageManager,
+  detectWorkspaces,
   INIT_WIZARD_CHOICES,
   isValidArchetypeId,
   mapWizardChoiceToArchetype,
@@ -339,7 +340,19 @@ async function start(args) {
     if (!fs.existsSync(configPath)) {
       const initArgs = ['--root', root, '--init'];
       const preset = archetype ? resolveArchetypePreset(archetype).preset : undefined;
-      if (!rec?.mature && preset) initArgs.push('--preset', preset);
+      const workspaces = detectWorkspaces(root);
+      const looksLikeMonorepo =
+        workspaces.length > 0 ||
+        fs.existsSync(path.join(root, 'apps')) ||
+        fs.existsSync(path.join(root, 'packages'));
+      // Mature multi-package trees must NOT get a thin src/** starter (0 files → false green).
+      // Prefer the monorepo preset so include roots match apps/packages/tooling.
+      if (looksLikeMonorepo && (rec?.mature || workspaces.length > 0)) {
+        initArgs.push('--preset', 'monorepo');
+        console.log('  Multi-package layout detected — using monorepo profile.');
+      } else if (!rec?.mature && preset) {
+        initArgs.push('--preset', preset);
+      }
       const status = runArkCheck(initArgs, { cwd: root });
       if (status !== 0) return status;
     } else {
@@ -365,14 +378,22 @@ async function start(args) {
       const parsed = JSON.parse(planCapture.stdout || '{}');
       planOk = parsed.ok === true && parsed.plan?.goal?.met === true;
       governedPercent = parsed.plan?.goal?.governedPercent ?? null;
+      const totalFiles = parsed.plan?.goal?.totalFiles ?? null;
       mode = resolveOperatingMode({
-        governedPercent,
+        governedPercent:
+          totalFiles === 0 ? 0 : governedPercent,
         planMet: parsed.plan?.goal?.met === true,
         mature: Boolean(rec?.mature),
+        totalFiles,
       });
       // Fresh greenfield with good coverage but no real tree yet → suggest, not enforce theatre.
       if (mode === 'enforce' && rec && !rec.mature && (governedPercent ?? 0) < 80) {
         mode = 'suggest';
+      }
+      // Empty scope from plan JSON is always adapt.
+      if (parsed.plan?.goal?.emptyScope || totalFiles === 0) {
+        mode = 'adapt';
+        planOk = false;
       }
     } catch {
       // If capture fails, stay conservative: don't claim full enforcement.
