@@ -36,3 +36,4 @@ marketing/
 
 # Ark generated reports / local state
 .ark/
+.tmp-*

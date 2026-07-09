@@ -10,6 +10,8 @@ import {
   buildArchitectureRecommendation,
   detectPackageManager,
   detectWorkspaces,
+  resolveIncludeRoots,
+  detectTsPackageRoots,
   INIT_WIZARD_CHOICES,
   isValidArchetypeId,
   mapWizardChoiceToArchetype,
@@ -345,21 +347,30 @@ async function start(args) {
     if (!fs.existsSync(configPath)) {
       const initArgs = ['--root', root, '--init'];
       const preset = archetype ? resolveArchetypePreset(archetype).preset : undefined;
+      const includeRoots = resolveIncludeRoots(root);
+      const tsPackages = detectTsPackageRoots(root);
       const workspaces = detectWorkspaces(root);
       const looksLikeMonorepo =
+        includeRoots.length > 0 ||
+        tsPackages.length > 0 ||
         workspaces.length > 0 ||
         fs.existsSync(path.join(root, 'rush.json')) ||
         fs.existsSync(path.join(root, 'pnpm-workspace.yaml')) ||
         fs.existsSync(path.join(root, 'lerna.json')) ||
         fs.existsSync(path.join(root, 'apps')) ||
         fs.existsSync(path.join(root, 'packages'));
-      // Mature multi-package trees must NOT get a thin src/** starter (0 files → false green).
-      // Prefer the monorepo preset so include roots match apps/packages/plugins/services/….
-      if (looksLikeMonorepo && (rec?.mature || workspaces.length > 0)) {
-        initArgs.push('--preset', 'monorepo');
+      // Mature multi-package / nested-TS trees must NOT get a thin src/** starter (0 files).
+      if (looksLikeMonorepo && (rec?.mature || includeRoots.length > 0 || tsPackages.length > 0)) {
+        // UI-heavy TS packages (Remotion/Vite) prefer ui-surface patterns when recommend says so.
+        const useUi =
+          rec?.preset === 'feature-sliced' ||
+          rec?.archetype === 'frontend-surface' ||
+          (tsPackages.length > 0 && includeRoots.length === 0 && !rec?.mature);
+        initArgs.push('--preset', useUi && tsPackages.length <= 3 ? 'ui-surface' : 'monorepo');
+        const shown = includeRoots.length > 0 ? includeRoots : tsPackages;
         console.log(
-          workspaces.length > 0
-            ? `  Multi-package layout detected — monorepo profile (include: ${workspaces.join(', ')}).`
+          shown.length > 0
+            ? `  Multi-package / TS package layout detected — profile include: ${shown.join(', ')}.`
             : '  Multi-package layout detected — using monorepo profile.'
         );
       } else if (!rec?.mature && preset) {

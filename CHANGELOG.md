@@ -4,6 +4,19 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased — 2.6.1
 
+### Added — product priorities P0–P2
+
+- **Empty-scope honesty:** plan `goal.met` false + `emptyScope`; doctor adoption gap `empty-scope`.
+- **Auto-include TS packages:** `detectTsPackageRoots` / `resolveIncludeRoots` for polyglot and nested packages; monorepo/ui-surface presets use them.
+- **AGENTS non-clobber:** `--force` never overwrites non-Ark `AGENTS.md` (merge or keep).
+- **Contract adopt:** `--suggest-include`, `--adopt-contract [--write]` expands include + UI patterns before violation loops.
+- **UI surface preset:** `--init --preset ui-surface` (hooks/lib/routes/components).
+- **MCP:** `ark_place` accepts description-only; `ark_suggest_include` tool; clearer errors.
+- **Recommend thin-TS:** confidence capped + `thinTsSurface` when few/no TS files.
+- **Codex multi-project:** secondary `[mcp_servers.ark_<slug>]` when primary points at another permanent root.
+- **Deploy-path monorepo:** package-level lint/typecheck scripts counted.
+- **Soft cycles:** `cyclePolicy: "soft" | "off" | "strict"` (default strict).
+
 ### Added — deploy-path adoption (universal)
 
 - **`collectAdoptionGaps` / `--doctor`:** detects when a **production build host** will run

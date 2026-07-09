@@ -26,11 +26,15 @@ duplicates the framework's own wiring and fights it.
 
 ## Steps
 
-1. **Config** — if `ark.config.json` is missing, run `ark-check --init`. It detects
-   the layer directories that exist, writes a config for them, and PROPOSES a layer
-   for every ungoverned directory (sourced from the 11-layer profile + presets),
-   flagging the ones it cannot place. If a config exists, keep it — don't regenerate
-   unasked.
+1. **Config** — if `ark.config.json` is missing, run `ark-check --init` (or
+   `--init --preset monorepo` / `ui-surface` when the tree is multi-package / UI-first).
+   Prefer:
+   ```bash
+   npx ark-check --suggest-include --json
+   npx ark-check --adopt-contract --write
+   ```
+   to expand include roots (nested TS packages) and UI patterns before anything else.
+   If a config exists, keep it — don't regenerate unasked.
 
 2. **Check + DIAGNOSE — before you freeze anything** — run
    `ark-check --root . --config ark.config.json --json` and read `summary`: it groups

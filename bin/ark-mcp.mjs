@@ -41,6 +41,9 @@ import {
   arkCommand,
   layerForFile,
   shouldShowNewHereNudge,
+  detectWorkspaces,
+  detectTsPackageRoots,
+  resolveIncludeRoots,
 } from './ark-shared.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
@@ -576,9 +579,9 @@ async function main() {
     {
       name: 'ark_place',
       description:
-        'Given a target file path, return which layer it belongs to, which layers it may and ' +
-        'must NOT import, and its forbidden globals — so generated code lands in a governed ' +
-        'location with the right dependencies. Call this BEFORE writing a new file.',
+        'Place a file in the architecture: pass filePath (preferred) and/or description. ' +
+        'Returns layer, mayImport / mustNotImport, forbiddenGlobals. Call BEFORE writing a new file. ' +
+        'If only description is given, returns a conventional path proposal under a governed layer.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -586,8 +589,12 @@ async function main() {
             type: 'string',
             description: 'Path (relative to project root or absolute) of the file to place.',
           },
+          description: {
+            type: 'string',
+            description:
+              'What you are building (e.g. "Remotion caption overlay"). Used when filePath is omitted to propose a path.',
+          },
         },
-        required: ['filePath'],
       },
     },
     {
@@ -597,6 +604,14 @@ async function main() {
         'tool-agnostic application shape to adopt (archetype, preset, phased layer plan, ' +
         'analogy, anti-patterns). Same structured output as ark-check --recommend --json. ' +
         'Call BEFORE generating project structure on greenfield or early-adoption repos.',
+      inputSchema: { type: 'object', properties: {} },
+    },
+    {
+      name: 'ark_suggest_include',
+      description:
+        'Propose ark.config.json include roots from workspaces and nested TypeScript packages ' +
+        '(polyglot-safe). Same idea as ark-check --suggest-include. Use when coverage is empty ' +
+        'or the contract misses package roots.',
       inputSchema: { type: 'object', properties: {} },
     },
   ];
@@ -741,8 +756,52 @@ async function main() {
   // `allowed:false` denies) — which layers it may and must not import.
   function runPlace(params) {
     const filePath = params?.arguments?.filePath;
+    const description = params?.arguments?.description;
+    if ((typeof filePath !== 'string' || !filePath) && typeof description === 'string' && description.trim()) {
+      // Description-only: propose a governed path under PresentationAdapters (UI default).
+      const slug = description
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 48) || 'component';
+      const proposedPath = `src/components/${slug}.tsx`;
+      const layerName = inferLayer(proposedPath, config, args.root) || 'PresentationAdapters';
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(
+              {
+                filePath: proposedPath,
+                proposed: true,
+                description: description.trim(),
+                layer: layerName,
+                governed: Boolean(inferLayer(proposedPath, config, args.root)),
+                note:
+                  'filePath was omitted — proposed a conventional path from description. ' +
+                  'Pass filePath explicitly for authoritative placement. Then validate_code the snippet.',
+              },
+              null,
+              2
+            ),
+          },
+        ],
+        isError: false,
+      };
+    }
     if (typeof filePath !== 'string' || !filePath) {
-      return { content: [{ type: 'text', text: 'Missing required "filePath" argument.' }], isError: true };
+      return {
+        content: [
+          {
+            type: 'text',
+            text:
+              'ark_place needs filePath and/or description. ' +
+              'Example: { "filePath": "src/components/Foo.tsx" } or { "description": "caption overlay UI component" }.',
+          },
+        ],
+        isError: true,
+      };
     }
     const layerName = inferLayer(filePath, config, args.root);
     if (!layerName) {
@@ -814,12 +873,50 @@ async function main() {
     };
   }
 
+  function runSuggestIncludeTool() {
+    try {
+      const workspaces = detectWorkspaces(args.root);
+      const tsPackages = detectTsPackageRoots(args.root);
+      const suggestedInclude = resolveIncludeRoots(args.root);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(
+              {
+                ok: true,
+                workspaces,
+                tsPackages,
+                suggestedInclude:
+                  suggestedInclude.length > 0
+                    ? suggestedInclude
+                    : tsPackages.length > 0
+                      ? tsPackages
+                      : ['src'],
+                next: 'npx ark-check --adopt-contract --write',
+              },
+              null,
+              2
+            ),
+          },
+        ],
+        isError: false,
+      };
+    } catch (error) {
+      return {
+        content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
+        isError: true,
+      };
+    }
+  }
+
   const TOOL_HANDLERS = {
     validate_code: runValidate,
     ark_check: runCheckTool,
     ark_coverage: runCoverageTool,
     ark_place: runPlace,
     ark_recommend: runRecommendTool,
+    ark_suggest_include: runSuggestIncludeTool,
   };
 
   const send = (msg) => process.stdout.write(`${JSON.stringify(msg)}\n`);

@@ -6,6 +6,7 @@ import {
   createElevenLayerConfig,
   DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
   DEFAULT_INTENT_PREFIXES,
+  resolveIncludeRoots,
 } from '../ark-shared.mjs';
 
 export function denyUpward(names) {
@@ -177,16 +178,23 @@ export const ARCHITECTURE_PRESETS = {
   // anywhere in the tree (`**/domain/**` hits packages/x/domain AND apps/y/src/domain),
   // so one profile governs every package. include defaults to the detected workspace
   // roots (falls back to packages+apps). Naming varies by repo — adjust and re-check.
-  monorepo: (includeDirs, root) =>
-    presetWithOverlays(
+  monorepo: (includeDirs, root) => {
+    let include =
+      includeDirs && includeDirs.length > 0 ? [...includeDirs] : [];
+    if (root) {
+      const resolved = resolveIncludeRoots(root);
+      if (resolved.length > 0) include = resolved;
+    }
+    if (include.length === 0) include = ['packages', 'apps'];
+    return presetWithOverlays(
       {
-        include: includeDirs && includeDirs.length > 0 ? includeDirs : ['packages', 'apps'],
+        include,
         layers: [
           {
             name: 'DomainModel',
             description:
               'Pure business rules and entities, in any package. No I/O, no framework, no ambient globals.',
-            patterns: ['**/domain/**', '**/entities/**'],
+            patterns: ['**/domain/**', '**/entities/**', '**/types.ts', '**/cinematic/types.ts'],
             forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
             optional: true,
           },
@@ -206,6 +214,8 @@ export const ARCHITECTURE_PRESETS = {
               '**/controllers/**',
               '**/http/**',
               '**/routes/**',
+              '**/hooks/**',
+              '**/lib/**',
             ],
             optional: true,
           },
@@ -228,6 +238,64 @@ export const ARCHITECTURE_PRESETS = {
           { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
           { from: 'PresentationAdapters', to: 'PersistenceAdapters', allowed: false },
           { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
+        ],
+      },
+      root
+    );
+  },
+
+  /**
+   * UI / Vite / Remotion-style surface: presentation-heavy trees with hooks, lib, routes,
+   * components. Use when the TS surface is mostly UI (no deep domain folders yet).
+   */
+  'ui-surface': (_workspaces, root) =>
+    presetWithOverlays(
+      {
+        include: (() => {
+          if (!root) return ['src'];
+          try {
+            const roots = resolveIncludeRoots(root);
+            return roots.length > 0 ? roots : ['src'];
+          } catch {
+            return ['src'];
+          }
+        })(),
+        layers: [
+          {
+            name: 'DomainModel',
+            description: 'Shared types and pure view-models (optional on UI-first trees).',
+            patterns: ['**/domain/**', '**/types.ts', '**/cinematic/types.ts'],
+            exclude: FRAMEWORK_INTERNAL_EXCLUDE,
+            forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
+            optional: true,
+          },
+          {
+            name: 'PresentationAdapters',
+            description: 'UI, routes, hooks, components, compositions.',
+            patterns: [
+              '**/src/**',
+              '**/components/**',
+              '**/hooks/**',
+              '**/lib/**',
+              '**/routes/**',
+              '**/app/**',
+              '**/pages/**',
+            ],
+            exclude: FRAMEWORK_INTERNAL_EXCLUDE,
+            optional: true,
+          },
+          {
+            name: 'PersistenceAdapters',
+            description: 'Client data access and external API adapters (when present).',
+            patterns: ['**/infrastructure/**', '**/adapters/**', '**/repositories/**'],
+            exclude: FRAMEWORK_INTERNAL_EXCLUDE,
+            optional: true,
+          },
+        ],
+        rules: [
+          { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
+          { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
+          { from: 'PresentationAdapters', to: 'PersistenceAdapters', allowed: false },
         ],
       },
       root

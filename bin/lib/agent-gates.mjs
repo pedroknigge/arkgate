@@ -83,9 +83,48 @@ export function ensureDirForFile(file) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
 }
 
+/**
+ * True when AGENTS.md is wholly Ark-owned (header is Ark Enforcement).
+ * Project guides that merely append an Ark section must remain non-Ark so --force
+ * never wipes them.
+ */
+export function isArkAgentsContent(text) {
+  if (typeof text !== 'string' || !text.trim()) return false;
+  const head = text.trimStart().slice(0, 120);
+  return /^#\s*Ark(Gate)?\s+Enforcement\b/.test(head);
+}
+
 export function writeTemplate(root, relativePath, content, force) {
   const fullPath = path.join(root, relativePath);
-  if (fs.existsSync(fullPath) && !force) {
+  if (relativePath === 'AGENTS.md' && fs.existsSync(fullPath)) {
+    let existing = '';
+    try {
+      existing = fs.readFileSync(fullPath, 'utf8');
+    } catch {
+      existing = '';
+    }
+    if (existing && !isArkAgentsContent(existing)) {
+      // Never clobber a project-owned AGENTS.md — even with --force.
+      // If Ark section not present yet, merge once; subsequent runs leave it alone.
+      const hasArkSection =
+        /#\s*Ark(Gate)?\s+Enforcement\b/.test(existing) ||
+        /ark\.config\.json is authoritative/i.test(existing);
+      if (force && isArkAgentsContent(content) && !hasArkSection) {
+        try {
+          const merged = `${existing.replace(/\s*$/, '')}\n\n---\n\n${content}`;
+          ensureDirForFile(fullPath);
+          fs.writeFileSync(fullPath, merged);
+          return { relativePath, status: 'merged' };
+        } catch {
+          return { relativePath, status: 'failed' };
+        }
+      }
+      return { relativePath, status: 'skipped-non-ark' };
+    }
+    if (!force && isArkAgentsContent(existing)) {
+      return { relativePath, status: 'skipped' };
+    }
+  } else if (fs.existsSync(fullPath) && !force) {
     return { relativePath, status: 'skipped' };
   }
   try {
@@ -741,7 +780,8 @@ export function wireCodexMcp(root, force) {
     esc(absConfig),
   ]);
   const argsToml = args.map((value) => `"${value}"`).join(', ');
-  const block = `[mcp_servers.ark]
+  const makeBlock = (table) =>
+    `[mcp_servers.${table}]
 command = "${command}"
 args = [${argsToml}]`;
   let existing = '';
@@ -752,11 +792,58 @@ args = [${argsToml}]`;
   }
   const tableRe = /(^|\n)\[mcp_servers\.ark\][^\n]*\n(?:(?!\[)[^\n]*\n?)*/;
   const hasTable = tableRe.test(existing);
+  const existingRoot = hasTable ? extractCodexArkRootFromToml(existing) : null;
+  let differentProject = false;
+  try {
+    differentProject = Boolean(
+      existingRoot && path.resolve(existingRoot) !== absRoot
+    );
+  } catch {
+    differentProject = Boolean(existingRoot);
+  }
   // Fail-closed: rewrite temp/upgrade roots and dual/wrong bins even without --force.
   const mustRewrite = hasTable && codexArkBlockNeedsRewrite(existing, absRoot);
+
+  // Multi-project: another project's [mcp_servers.ark] is present. Without --force,
+  // add a project-scoped table so we do not steal the primary binding.
+  if (hasTable && differentProject && !force && !mustRewrite) {
+    const slug =
+      path
+        .basename(absRoot)
+        .replace(/[^a-zA-Z0-9_-]/g, '_')
+        .slice(0, 48) || 'project';
+    const table = `ark_${slug}`;
+    const multiRe = new RegExp(
+      `(^|\\n)\\[mcp_servers\\.${table.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\][^\\n]*\\n(?:(?!\\[)[^\\n]*\\n?)*`
+    );
+    const block = makeBlock(table);
+    let next;
+    if (multiRe.test(existing)) {
+      next = existing.replace(multiRe, (match) => `${match.startsWith('\n') ? '\n' : ''}${block}\n`);
+    } else {
+      const sep =
+        existing.length === 0
+          ? ''
+          : existing.endsWith('\n\n')
+            ? ''
+            : existing.endsWith('\n')
+              ? '\n'
+              : '\n\n';
+      next = `${existing}${sep}${block}\n`;
+    }
+    try {
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, next);
+    } catch (error) {
+      return { status: 'failed', file, message: error.message };
+    }
+    return { status: 'written-multi', file, table, primaryUnchanged: true };
+  }
+
   if (hasTable && !force && !mustRewrite) {
     return { status: 'skipped', file };
   }
+  const block = makeBlock('ark');
   let next;
   if (hasTable) {
     next = existing.replace(tableRe, (match) => `${match.startsWith('\n') ? '\n' : ''}${block}\n`);
@@ -961,12 +1048,21 @@ export function codexArkBlockHasPreferredBin(tomlText) {
   return bins.length === 1 && bins[0] === PREFERRED_MCP_BIN;
 }
 
+/**
+ * True when the primary [mcp_servers.ark] block is broken (temp root / dual bin)
+ * and should be rewritten fail-closed. Different permanent project roots are NOT
+ * "broken" — multi-project wiring uses a secondary table instead.
+ */
 export function codexArkBlockNeedsRewrite(tomlText, absRoot) {
   if (!tomlText || !tomlText.includes('[mcp_servers.ark]')) return true;
   const rootArg = extractCodexArkRootFromToml(tomlText);
   if (!rootArg || isTempOrUpgradeRoot(rootArg)) return true;
+  // Permanent different project: multi-project path handles this (do not steal primary).
   try {
-    if (path.resolve(rootArg) !== path.resolve(absRoot)) return true;
+    if (path.resolve(rootArg) !== path.resolve(absRoot)) {
+      if (!isTempOrUpgradeRoot(rootArg)) return false;
+      return true;
+    }
   } catch {
     return true;
   }
@@ -1018,18 +1114,65 @@ export function detectDeployPathQuality(root) {
   // Next still typechecks during build even when eslint.ignoreDuringBuilds is true.
   const embedsTypecheckInBuild = engines.includes('next') || engines.includes('nuxt');
 
-  const hasLintScript = Boolean(
-    (typeof scripts.lint === 'string' && scripts.lint.trim()) ||
-      (typeof scripts.eslint === 'string' && scripts.eslint.trim()) ||
-      (typeof scripts['lint:ci'] === 'string' && scripts['lint:ci'].trim()) ||
-      (typeof scripts['check:lint'] === 'string' && scripts['check:lint'].trim())
-  );
-  const hasTypecheckScript = Boolean(
-    (typeof scripts.typecheck === 'string' && scripts.typecheck.trim()) ||
-      (typeof scripts['type-check'] === 'string' && scripts['type-check'].trim()) ||
-      (typeof scripts['check:types'] === 'string' && scripts['check:types'].trim()) ||
-      (typeof scripts.tsc === 'string' && /\btsc\b/.test(scripts.tsc))
-  );
+  const scriptHasLint = (s) =>
+    Boolean(
+      s &&
+        ((typeof s.lint === 'string' && s.lint.trim()) ||
+          (typeof s.eslint === 'string' && s.eslint.trim()) ||
+          (typeof s['lint:ci'] === 'string' && s['lint:ci'].trim()) ||
+          (typeof s['check:lint'] === 'string' && s['check:lint'].trim()))
+    );
+  const scriptHasTypecheck = (s) =>
+    Boolean(
+      s &&
+        ((typeof s.typecheck === 'string' && s.typecheck.trim()) ||
+          (typeof s['type-check'] === 'string' && s['type-check'].trim()) ||
+          (typeof s['check:types'] === 'string' && s['check:types'].trim()) ||
+          (typeof s.tsc === 'string' && /\btsc\b/.test(s.tsc)))
+    );
+
+  let hasLintScript = scriptHasLint(scripts);
+  let hasTypecheckScript = scriptHasTypecheck(scripts);
+  const packageLintScripts = [];
+  // Monorepo: package-level scripts count (apps/web, packages/ui, …).
+  try {
+    for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+      if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+      const candidates = [path.join(root, entry.name)];
+      // one more level: packages/foo
+      try {
+        for (const child of fs.readdirSync(path.join(root, entry.name), { withFileTypes: true })) {
+          if (child.isDirectory() && !child.name.startsWith('.')) {
+            candidates.push(path.join(root, entry.name, child.name));
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      for (const dir of candidates) {
+        const pj = path.join(dir, 'package.json');
+        if (!fs.existsSync(pj)) continue;
+        try {
+          const nested = JSON.parse(fs.readFileSync(pj, 'utf8'));
+          const ns = nested.scripts && typeof nested.scripts === 'object' ? nested.scripts : {};
+          if (scriptHasLint(ns)) {
+            hasLintScript = true;
+            packageLintScripts.push(path.relative(root, dir).split(path.sep).join('/'));
+          }
+          if (scriptHasTypecheck(ns)) hasTypecheckScript = true;
+          const nd = {
+            ...(nested.dependencies || {}),
+            ...(nested.devDependencies || {}),
+          };
+          if (nd.next && !engines.includes('next')) engines.push('next');
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  } catch {
+    /* ignore */
+  }
 
   const ciTexts = collectCiWorkflowTexts(root);
   const ciJoined = ciTexts.join('\n');
@@ -1041,7 +1184,10 @@ export function detectDeployPathQuality(root) {
       /\bbun\s+run\s+lint\b/i.test(ciJoined) ||
       /\beslint\b/i.test(ciJoined) ||
       /\blint:ci\b/i.test(ciJoined) ||
-      /\bcheck:lint\b/i.test(ciJoined));
+      /\bcheck:lint\b/i.test(ciJoined) ||
+      // package-level: working-directory + lint, or path/filter lint
+      (packageLintScripts.length > 0 &&
+        packageLintScripts.some((p) => ciJoined.includes(p) && /lint/i.test(ciJoined))));
   const ciRunsTypecheck =
     ciTexts.length > 0 &&
     (/\btypecheck\b/i.test(ciJoined) ||
@@ -1059,6 +1205,7 @@ export function detectDeployPathQuality(root) {
     ciRunsTypecheck,
     eslintIgnoreDuringBuilds,
     hasCiWorkflows: ciTexts.length > 0,
+    packageLintScripts,
   };
 }
 
@@ -1376,6 +1523,17 @@ export function collectAdoptionGaps(root, config, coverage) {
     }
   }
 
+  // --- Empty scope: contract matches no TS/JS ---
+  if (!isProducer && (coverage?.governed?.totalFiles ?? coverage?.totalFiles) === 0) {
+    gaps.push({
+      id: 'empty-scope',
+      severity: 'warn',
+      message:
+        'Empty scope: include paths match 0 TypeScript/JS files — checks are not governing this tree',
+      fix: `${arkCommand(root, 'ark-check', '--suggest-include')} then ${arkCommand(root, 'ark-check', '--adopt-contract --write')}`,
+    });
+  }
+
   // --- Deploy-path quality (ESLint/types that production build hosts run) ---
   // Universal: any Next/CRA/Nuxt (etc.) consumer. Not architecture — still adoption.
   // Skip pure library producer (this monorepo) to avoid self-noise.
@@ -1672,7 +1830,15 @@ export function runInstallAgentGates(args) {
   let staleSkipped = 0;
   for (const result of results) {
     const marker =
-      result.status === 'written' ? 'wrote' : result.status === 'failed' ? 'FAILED' : 'skipped';
+      result.status === 'written'
+        ? 'wrote'
+        : result.status === 'merged'
+          ? 'merged'
+          : result.status === 'skipped-non-ark'
+            ? 'kept'
+            : result.status === 'failed'
+              ? 'FAILED'
+              : 'skipped';
     // A skipped skill reads as "you're fine" — but it may be a version behind.
     // Say which, so the user isn't left guessing (and knows the safe refresh cmd).
     let note = '';
@@ -1745,7 +1911,11 @@ export function runInstallAgentGates(args) {
     codexMcp = wireCodexMcp(root, args.force);
     console.log('');
     console.log(`Codex MCP registration (${codexMcp.file}):`);
-    if (codexMcp.status === 'skipped') {
+    if (codexMcp.status === 'written-multi') {
+      console.log(
+        `  ${'wrote'.padEnd(7)} [mcp_servers.${codexMcp.table}] (multi-project — primary [mcp_servers.ark] left unchanged; --force rebinds primary)`
+      );
+    } else if (codexMcp.status === 'skipped') {
       console.log(`  ${'skipped'.padEnd(7)} [mcp_servers.ark] already present (use --force to overwrite)`);
     } else if (codexMcp.status === 'failed') {
       console.log(`  ${'FAILED'.padEnd(7)} [mcp_servers.ark] (${codexMcp.message})`);

@@ -26,6 +26,8 @@ import {
   classifyRemediation,
   detectPackageManager,
   detectWorkspaces,
+  detectTsPackageRoots,
+  resolveIncludeRoots,
   execCommandParts,
   execRunner,
   formatArchitectureRecommendationHuman,
@@ -170,6 +172,9 @@ function parseArgs(argv) {
     else if (arg === '--write-plan') args.writePlan = true;
     else if (arg === '--list-policy-packs') args.listPolicyPacks = true;
     else if (arg === '--apply-policy-pack') args.applyPolicyPack = argv[++i];
+    else if (arg === '--suggest-include') args.suggestInclude = true;
+    else if (arg === '--adopt-contract') args.adoptContract = true;
+    else if (arg === '--write') args.write = true;
     else if (arg === '--watch') args.watch = true;
     else if (arg === '--beginner') args.beginner = true;
     else if (arg === '--codex-home') args.codexHome = true;
@@ -215,8 +220,10 @@ function usage() {
     '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
     '       ark-check --plan [--json]              classified remediation plan (mechanical-safe / judgment / deferred) + goal; report only',
     '       ark-check --recommend [--json] [--write-plan]  application-shape plan; --write-plan emits ark-adoption-plan.json',
-    '       ark-check --list-policy-packs            enthusiast preset configs (hexagonal, layered, feature-sliced, monorepo)',
+    '       ark-check --list-policy-packs            enthusiast preset configs (hexagonal, layered, feature-sliced, monorepo, ui-surface)',
     '       ark-check --apply-policy-pack <id> [--force]  write ark.config.json from templates/policy-packs/ (uses preset factory)',
+    '       ark-check --suggest-include [--json]   propose include roots (TS packages / workspaces)',
+    '       ark-check --adopt-contract [--write]   expand include + UI patterns from ungoverned dirs (contract adopt)',
     '       ark-check --watch                      re-run the check when governed files change (debounced)',
     '       ark-check --report [file.html] [--beginner] [--reset-origin] [--no-archive]',
     '           HTML report + snapshots under .ark/reports/ (origin once, latest each run, history JSON)',
@@ -309,6 +316,9 @@ function readConfig(root, configPath) {
     include: raw.include ?? ['src'],
     layers: raw.layers ?? [],
     rules: raw.rules ?? DEFAULT_RULES,
+    ...(raw.exclude ? { exclude: raw.exclude } : {}),
+    ...(raw.excludeGenerated !== undefined ? { excludeGenerated: raw.excludeGenerated } : {}),
+    ...(raw.cyclePolicy ? { cyclePolicy: raw.cyclePolicy } : {}),
   };
 }
 
@@ -427,7 +437,10 @@ function buildConfigFromPolicyPack(packId, root) {
       `Policy pack "${packId}" references unknown preset "${pack.preset}".`
     );
   }
-  const workspaces = pack.preset === 'monorepo' ? detectWorkspaces(root) : [];
+  const workspaces =
+    pack.preset === 'monorepo' || pack.preset === 'ui-surface'
+      ? resolveIncludeRoots(root)
+      : [];
   const config = factory(workspaces, root);
   if (pack.layerDescriptions) {
     for (const layer of config.layers) {
@@ -549,6 +562,144 @@ function maybeWarnBrownfield(root, config) {
   return true;
 }
 
+/** Propose include roots (workspaces + nested TS packages) — contract-adopt primitive. */
+function runSuggestInclude(args) {
+  const root = args.root;
+  const workspaces = detectWorkspaces(root);
+  const tsPackages = detectTsPackageRoots(root);
+  const include = resolveIncludeRoots(root);
+  const payload = {
+    ok: true,
+    workspaces,
+    tsPackages,
+    suggestedInclude: include.length > 0 ? include : tsPackages.length > 0 ? tsPackages : ['src'],
+    note:
+      include.length === 0 && tsPackages.length === 0
+        ? 'No TS packages or workspaces found — default suggestion is src/ (create it or pass include by hand).'
+        : 'Use these paths as ark.config.json "include". Prefer --adopt-contract --write to expand patterns too.',
+  };
+  if (args.json) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+  console.log(color.bold('Suggested include roots'));
+  console.log(`  workspaces: ${workspaces.join(', ') || '(none)'}`);
+  console.log(`  tsPackages: ${tsPackages.join(', ') || '(none)'}`);
+  console.log(`  suggestedInclude: ${payload.suggestedInclude.join(', ')}`);
+  console.log(color.dim(payload.note));
+}
+
+/**
+ * Contract-adopt: expand include + presentation patterns from ungoverned proposals.
+ * Read-only unless --write. Does not weaken rules or baseline violations.
+ */
+function runAdoptContract(args) {
+  const root = args.root;
+  const configPath = path.isAbsolute(args.config)
+    ? args.config
+    : path.join(root, args.config);
+  let config;
+  try {
+    config = fs.existsSync(configPath)
+      ? readConfig(root, args.config)
+      : {
+          include: ['src'],
+          layers: ARCHITECTURE_PRESETS['ui-surface']([], root).layers,
+          rules: ARCHITECTURE_PRESETS['ui-surface']([], root).rules,
+        };
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 2;
+    return;
+  }
+  const suggestedInclude = resolveIncludeRoots(root);
+  const tsPackages = detectTsPackageRoots(root);
+  const nextInclude = [
+    ...new Set([
+      ...(config.include || []),
+      ...(suggestedInclude.length > 0 ? suggestedInclude : tsPackages),
+    ]),
+  ].filter(Boolean);
+  const files = collectGovernedFiles(root, { ...config, include: nextInclude.length ? nextInclude : config.include });
+  const cov = computeCoverage(root, { ...config, include: nextInclude.length ? nextInclude : config.include }, files, config.rules || []);
+  const uiPatterns = [
+    '**/components/**',
+    '**/hooks/**',
+    '**/lib/**',
+    '**/routes/**',
+    '**/app/**',
+    '**/pages/**',
+  ];
+  const layers = (config.layers || []).map((layer) => {
+    if (layer.name !== 'PresentationAdapters') return layer;
+    const patterns = [...new Set([...(layer.patterns || []), ...uiPatterns])];
+    return { ...layer, patterns };
+  });
+  // If no PresentationAdapters layer, leave layers as-is (don't invent full profile).
+  const proposal = {
+    ok: true,
+    before: {
+      include: config.include || [],
+      governedPercent: null,
+      totalFiles: null,
+    },
+    after: {
+      include: nextInclude.length > 0 ? nextInclude : config.include,
+      presentationPatterns: uiPatterns,
+      totalFiles: cov.totalFiles,
+      governedPercent: cov.governed.percent,
+      unclassified: cov.unclassified.count,
+    },
+    wrote: false,
+  };
+  // Compute before coverage for honesty.
+  try {
+    const beforeFiles = collectGovernedFiles(root, config);
+    const beforeCov = computeCoverage(root, config, beforeFiles, config.rules || []);
+    proposal.before.totalFiles = beforeCov.totalFiles;
+    proposal.before.governedPercent = beforeCov.governed.percent;
+  } catch {
+    /* ignore */
+  }
+
+  if (args.write) {
+    const next = {
+      ...config,
+      include: proposal.after.include,
+      layers,
+    };
+    fs.writeFileSync(configPath, `${JSON.stringify(next, null, 2)}\n`);
+    proposal.wrote = true;
+  }
+
+  if (args.json) {
+    console.log(JSON.stringify(proposal, null, 2));
+    return;
+  }
+  console.log(color.bold('Contract adopt (coverage first)'));
+  console.log(
+    `  before: include=[${(proposal.before.include || []).join(', ')}] governed=${proposal.before.governedPercent ?? '?'}% files=${proposal.before.totalFiles ?? '?'}`
+  );
+  console.log(
+    `  after:  include=[${(proposal.after.include || []).join(', ')}] governed=${proposal.after.governedPercent}% files=${proposal.after.totalFiles} unclassified=${proposal.after.unclassified}`
+  );
+  console.log(`  presentation patterns += ${uiPatterns.join(', ')}`);
+  if (proposal.wrote) {
+    console.log(color.green(`  wrote ${path.relative(root, configPath) || args.config}`));
+    console.log(color.dim(`  Next: ${arkCommand(root, 'ark-check', '--coverage')} then --plan`));
+  } else {
+    console.log(color.dim('  Dry-run only. Re-run with --write to apply (does not weaken rules).'));
+  }
+  if ((proposal.after.totalFiles ?? 0) === 0) {
+    console.log(
+      color.yellow(
+        '  Empty scope remains — no TS packages found. Point include at your package roots manually.'
+      )
+    );
+    process.exitCode = 1;
+  }
+}
+
 function runInit(args) {
   const configPath = path.isAbsolute(args.config)
     ? args.config
@@ -569,7 +720,12 @@ function runInit(args) {
       process.exitCode = 2;
       return;
     }
-    const finalConfig = factory(detectWorkspaces(args.root), args.root);
+    const finalConfig = factory(
+      args.preset === 'monorepo' || args.preset === 'ui-surface'
+        ? resolveIncludeRoots(args.root)
+        : detectWorkspaces(args.root),
+      args.root
+    );
     fs.writeFileSync(configPath, `${JSON.stringify(finalConfig, null, 2)}\n`);
     console.log(`Wrote ${configPath} (${args.preset} preset)`);
     if (finalConfig.frameworkOverlay) {
@@ -597,8 +753,14 @@ function runInit(args) {
   // When no conventional src/ layout is found, a `workspaces` declaration means this is a
   // monorepo — the src/** 11-layer starter would match nothing there, so use the
   // cross-package monorepo profile anchored at the real workspace roots instead.
-  const workspaces = greenfield ? detectWorkspaces(args.root) : [];
-  const mode = !greenfield ? 'detected' : workspaces.length > 0 ? 'monorepo' : 'greenfield';
+  const includeRoots = greenfield ? resolveIncludeRoots(args.root) : [];
+  const tsPackages = greenfield ? detectTsPackageRoots(args.root) : [];
+  // Prefer monorepo/ui when nested TS packages exist without a conventional src layout.
+  const mode = !greenfield
+    ? 'detected'
+    : includeRoots.length > 0 || tsPackages.length > 0
+      ? 'monorepo'
+      : 'greenfield';
   // Greenfield: anchor the starter profile at src/ (the convention a fresh project will
   // scaffold under) even when src/ doesn't exist yet — the layers are optional, so the
   // check passes today and governance switches on the moment src/domain/ etc. appear.
@@ -607,7 +769,10 @@ function runInit(args) {
     mode === 'detected'
       ? applyFrameworkLayoutOverlays(config, args.root)
       : mode === 'monorepo'
-        ? ARCHITECTURE_PRESETS.monorepo(workspaces, args.root)
+        ? ARCHITECTURE_PRESETS.monorepo(
+            includeRoots.length > 0 ? includeRoots : tsPackages,
+            args.root
+          )
         : createElevenLayerConfig({
             rootDir: srcDir === '.' ? 'src' : srcDir,
             root: args.root,
@@ -618,10 +783,11 @@ function runInit(args) {
   console.log(`Wrote ${configPath}`);
   console.log('');
   if (mode === 'monorepo') {
-    console.log(`Monorepo detected (workspaces: ${workspaces.join(', ')}). Generated a cross-package`);
-    console.log('profile matching domain/application/presentation/persistence directories in any');
-    console.log('package. Every layer is optional, so the strict check passes now and each switches');
-    console.log('on as matching directories gain files. Adjust patterns to your naming if they differ:');
+    const roots = finalConfig.include?.join(', ') || '(none)';
+    console.log(`Multi-package / TS package surface detected (include: ${roots}). Generated a`);
+    console.log('cross-package profile matching domain/application/presentation/persistence dirs');
+    console.log('in any package. Every layer is optional, so the strict check passes now and each');
+    console.log('switches on as matching directories gain files. Adjust patterns to your naming:');
     for (const layer of finalConfig.layers) {
       console.log(`  ${layer.name}: ${layer.patterns.join(', ')}`);
     }
@@ -1492,6 +1658,16 @@ async function main() {
     return;
   }
 
+  if (args.suggestInclude) {
+    runSuggestInclude(args);
+    return;
+  }
+
+  if (args.adoptContract) {
+    runAdoptContract(args);
+    return;
+  }
+
   if (args.recommend) {
     try {
       const recommendation = buildArchitectureRecommendation(args.root);
@@ -1810,7 +1986,23 @@ async function main() {
 
   if (cacheKey) saveScanCache(root, cacheKey, nextCacheFiles);
 
-  violations.push(...detectCycles(importGraph));
+  // cyclePolicy: strict (default) | soft (report as warnings) | off
+  const cyclePolicy = String(config.cyclePolicy || 'strict').toLowerCase();
+  if (cyclePolicy !== 'off') {
+    const cycles = detectCycles(importGraph);
+    if (cyclePolicy === 'soft' || cyclePolicy === 'framework-soft') {
+      for (const c of cycles) {
+        warnings.push({
+          ruleId: 'CIRCULAR_DEPENDENCY',
+          message: `${c.message} (soft cycle policy — warning only; set cyclePolicy: "strict" to fail)`,
+          file: c.file,
+          target: c.target,
+        });
+      }
+    } else {
+      violations.push(...cycles);
+    }
+  }
 
   if (args.doctor) {
     runDoctor(root, config, files, rules, violations, args.json, {

@@ -838,6 +838,107 @@ function dirContainsPackageJson(dir, maxDepth) {
   return false;
 }
 
+const SKIP_DIR_NAMES = new Set([
+  'node_modules',
+  'dist',
+  'build',
+  'coverage',
+  '.git',
+  '.next',
+  '.turbo',
+  '.cache',
+  'vendor',
+  '__pycache__',
+]);
+
+function dirHasTsSources(dir, maxDepth) {
+  try {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isFile() && /\.(tsx?|jsx?|mts|cts)$/i.test(entry.name)) return true;
+      if (!entry.isDirectory()) continue;
+      if (SKIP_DIR_NAMES.has(entry.name) || entry.name.startsWith('.')) continue;
+      if (maxDepth > 0 && dirHasTsSources(path.join(dir, entry.name), maxDepth - 1)) return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+/**
+ * Discover package roots that contain TypeScript/JS sources (polyglot-safe).
+ * Returns relative paths (e.g. remotion-composer, packages/ui). Caps depth/count
+ * to avoid scanning huge trees. Universal — no project-specific names.
+ */
+export function detectTsPackageRoots(root, options = {}) {
+  const maxDepth = options.maxDepth ?? 3;
+  const maxRoots = options.maxRoots ?? 40;
+  const found = [];
+
+  const visit = (abs, rel, depth) => {
+    if (found.length >= maxRoots || depth > maxDepth) return;
+    let entries;
+    try {
+      entries = fs.readdirSync(abs, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    const hasPkg = entries.some((e) => e.isFile() && e.name === 'package.json');
+    if (hasPkg && rel && dirHasTsSources(abs, 3)) {
+      found.push(rel.split(path.sep).join('/'));
+      // Do not descend into nested packages under an already-selected package root
+      // unless maxDepth allows and we want monorepo packages/* children — still scan children
+      // for nested packages (packages/foo).
+    }
+    if (depth >= maxDepth) return;
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (SKIP_DIR_NAMES.has(entry.name) || entry.name.startsWith('.')) continue;
+      // Skip agent skill asset trees (not app code).
+      if (entry.name === 'skills' || entry.name === 'templates' || entry.name === 'fixtures') continue;
+      const childRel = rel ? `${rel}/${entry.name}` : entry.name;
+      visit(path.join(abs, entry.name), childRel, depth + 1);
+    }
+  };
+
+  visit(root, '', 0);
+  // Also treat root itself if it has package.json + TS
+  if (fs.existsSync(path.join(root, 'package.json')) && dirHasTsSources(root, 2)) {
+    if (!found.includes('.')) {
+      // Prefer explicit '.' only when no nested packages found
+      if (found.length === 0) found.push('.');
+    }
+  }
+  return [...new Set(found)].sort();
+}
+
+/**
+ * Merge workspace globs with TS package roots. If workspaces alone would miss
+ * all TS (or are empty), fill from detectTsPackageRoots.
+ */
+export function resolveIncludeRoots(root) {
+  const workspaces = detectWorkspaces(root);
+  const tsRoots = detectTsPackageRoots(root);
+  if (workspaces.length === 0) {
+    if (tsRoots.length > 0) return tsRoots.filter((r) => r !== '.');
+    return [];
+  }
+  // Workspaces present: keep them, add TS package roots not covered by a workspace prefix
+  const merged = new Set(workspaces);
+  for (const tr of tsRoots) {
+    if (tr === '.') continue;
+    const covered = workspaces.some(
+      (w) => tr === w || tr.startsWith(`${w}/`) || w.startsWith(`${tr}/`)
+    );
+    if (!covered) merged.add(tr.split('/')[0]); // top segment if nested
+    // Prefer full package path when it's a direct child
+    if (!tr.includes('/') || workspaces.includes(tr.split('/')[0])) {
+      if (fs.existsSync(path.join(root, tr, 'package.json'))) merged.add(tr);
+    }
+  }
+  return [...merged];
+}
+
 function isSourceFile(name) {
   return /\.(tsx?|jsx?|mjsx?|cjsx?|mts|cts)$/i.test(name);
 }
@@ -1218,7 +1319,15 @@ export function scoreArchetypes(signals, playbook) {
   const rawConfidence = top.score / top.maxPositive;
   const margin =
     second && second.score > 0 ? (top.score - second.score) / Math.max(top.score, 1) : 0.25;
-  const confidence = Math.min(1, Math.max(0.1, rawConfidence * 0.7 + margin * 0.3));
+  let confidence = Math.min(1, Math.max(0.1, rawConfidence * 0.7 + margin * 0.3));
+  // Thin / zero TS surface: never present a high-confidence archetype as the sole answer.
+  const thinTs =
+    !signals.sourceFileCount ||
+    signals.sourceFileCount < 8 ||
+    signals.tinyTree;
+  if (thinTs) {
+    confidence = Math.min(confidence, 0.28);
+  }
 
   return {
     ranked: scored,
@@ -1226,6 +1335,13 @@ export function scoreArchetypes(signals, playbook) {
     label: top.label,
     preset: top.preset,
     confidence: Math.round(confidence * 1000) / 1000,
+    ...(thinTs
+      ? {
+          thinTsSurface: true,
+          caution:
+            'TypeScript/JS surface is thin or missing — treat the archetype as a weak hint. Prefer ark-check --suggest-include / --adopt-contract on the real package roots before scaffolding.',
+        }
+      : {}),
     phases: top.phases,
     analogy: top.analogy,
     antiPatterns: top.antiPatterns,
@@ -1260,6 +1376,7 @@ export function buildArchitectureRecommendation(root, options = {}) {
     label: result.label,
     preset: result.preset,
     confidence: result.confidence,
+    ...(result.thinTsSurface ? { thinTsSurface: true, caution: result.caution } : {}),
     phases: result.phases,
     adoptInOrder,
     analogy: result.analogy,
@@ -1425,6 +1542,13 @@ export function formatArchitectureRecommendationHuman(recommendation) {
   lines.push('');
   lines.push(`Archetype: ${recommendation.archetype} — ${recommendation.label}`);
   lines.push(`Preset: ${recommendation.preset} (confidence ${recommendation.confidence})`);
+  if (recommendation.thinTsSurface) {
+    lines.push('');
+    lines.push(
+      `⚠ Thin TypeScript surface (${recommendation.signals?.sourceFileCount ?? 0} files) — confidence is capped. Do not treat this as a firm shape.`
+    );
+    if (recommendation.caution) lines.push(recommendation.caution);
+  }
   if (recommendation.runnerUp?.id) {
     lines.push(
       `Runner-up: ${recommendation.runnerUp.id}${recommendation.runnerUp.label ? ` (${recommendation.runnerUp.label})` : ''}`

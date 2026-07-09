@@ -53,22 +53,32 @@ Never tell a user "your architecture is guarded" while `--plan` reports `goal.me
    - Open / point the user at `ark-report.html` (and `.ark/reports/origin.html` when first created).
    - This is the “before” picture the autopilot will improve against.
 
-3. **Show the plan.** Run `ark-check --plan` and explain it in outcome terms: how many fixes are
+3. **Contract adopt first when coverage is empty or thin.** Run `ark-check --plan --json`.
+   If `goal.emptyScope` is true, `goal.met` is false with low `governedPercent`, or
+   `totalFiles` is 0 — **do not** treat the tree as done. Run:
+   ```bash
+   npx ark-check --suggest-include --json
+   npx ark-check --adopt-contract --write   # expands include + UI patterns; never weakens rules
+   npx ark-check --coverage
+   ```
+   Only after in-scope files are non-zero and governed% is meaningful, continue.
+
+4. **Show the plan.** Run `ark-check --plan` and explain it in outcome terms: how many fixes are
    _safe to auto-apply_ vs _need your decision_ vs _deferred_, and what the goal is (a clean,
    enforced architecture). Safe auto steps are only the three `mechanical-safe` kinds:
    type-only type move, pure-type **file** relocate, and converting static imports of pure-type
    modules to `import type` (see `/ark-loop`). Confirm before changing anything.
 
-4. **Drive the loop.** Hand off to **`/ark-loop`**: in a discardable git worktree, auto-apply
+5. **Drive the loop.** Hand off to **`/ark-loop`**: in a discardable git worktree, auto-apply
    the `mechanical-safe` steps one at a time (match each `remediationKind`; validate with
    `ark-check`, roll back regressions), and PROPOSE each `judgment` step in plain language for
    a yes/no. Loop until the plan's `goal.met` is true or a round makes no progress.
 
-5. **Confirm it stays clean.** Verify the gates are installed and active so the architecture is
+6. **Confirm it stays clean.** Verify the gates are installed and active so the architecture is
    enforced from now on (in CI, and at write time if the MCP hook is wired) — the
    "and stays that way" half of the promise. Run the final `ark-check --strict-config`.
 
-6. **Close with the after report + evolution.** Run again:
+7. **Close with the after report + evolution.** Run again:
 
    ```bash
    npx ark-check --root . --config ark.config.json --report ark-report.html
@@ -80,10 +90,10 @@ Never tell a user "your architecture is guarded" while `--plan` reports `goal.me
    - `.ark/reports/origin.html` — **before** (frozen)
    - `.ark/reports/history/` — optional JSON trail
 
-7. **Report honestly, in plain language.** Summarize what was auto-applied, what you proposed
+8. **Report honestly, in plain language.** Summarize what was auto-applied, what you proposed
    and the user decided, and what's deferred (and why). Tie the narrative to the before/after
    report numbers. Show the diff. Only merge the worktree back after the user reviews. Never
-   report "done / clean" while steps were skipped.
+   report "done / clean" while steps were skipped or while `goal.emptyScope` / low governed%.
 
 ## Operating rules
 

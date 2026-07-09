@@ -84,6 +84,35 @@ detect, for **any** consumer repo (framework signals only — deps, scripts, CI 
 Respects `eslint.ignoreDuringBuilds: true` in `next.config.*`. Recommended pre-merge
 order (universal): `lint` → `typecheck` → `arkgate-check` / `check:architecture` → `build`.
 
+### Empty scope, include roots, and contract adopt
+
+When `include` matches **zero** TS/JS files, plan/doctor treat that as **not done**
+(`goal.emptyScope`, adoption gap `empty-scope`) — never “clean architecture.”
+
+```bash
+npx ark-check --suggest-include --json    # workspaces + nested package.json+TS roots
+npx ark-check --adopt-contract --write  # expand include + UI patterns (no rule weakening)
+npx ark-check --coverage
+```
+
+Polyglot repos: Ark only governs TypeScript/JS. Point include at package roots that have sources.
+
+### Presets
+
+- `hexagonal` / `layered` / `feature-sliced` / `monorepo` / **`ui-surface`** (UI/Vite/Remotion-style hooks+lib+routes+components)
+
+### Cycle policy
+
+```json
+{ "cyclePolicy": "strict" }
+```
+
+- `strict` (default): value cycles fail the check  
+- `soft` / `framework-soft`: value cycles are **warnings** only  
+- `off`: skip cycle detection  
+
+Type-only edges never form cycles (codegen-safe).
+
 ### Generated files and type-only cycles
 
 By default Ark **does not scan** common codegen paths:

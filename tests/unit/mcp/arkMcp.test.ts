@@ -527,6 +527,7 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
       'ark_coverage',
       'ark_place',
       'ark_recommend',
+      'ark_suggest_include',
     ]);
   });
 
