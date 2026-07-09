@@ -18,6 +18,11 @@ function cloneRecord(record: OutboxRecord): OutboxRecord {
   };
 }
 
+/**
+ * Reference in-process outbox. **Not production durability** — state is lost on
+ * process exit. Use only for tests/demos/local single-process work; inject a durable
+ * `OutboxStore` in production (see `docs/production-hardening.md`).
+ */
 export class InMemoryOutboxStore implements OutboxStore {
   private readonly records = new Map<string, OutboxRecord>();
 

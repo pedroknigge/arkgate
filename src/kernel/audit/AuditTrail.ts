@@ -24,6 +24,11 @@ function matchesQuery(record: AuditRecord, query: AuditQuery): boolean {
   return true;
 }
 
+/**
+ * Reference in-process audit store. **Not production durability** — records do not
+ * survive process restarts. For production, inject an `AuditStore` that writes to your
+ * durable log/DB (see `docs/production-hardening.md`).
+ */
 export class InMemoryAuditStore implements AuditStore {
   private readonly records: AuditRecord[] = [];
 
@@ -75,6 +80,10 @@ export class AuditTrailImpl implements AuditTrail {
   }
 }
 
+/**
+ * Create an audit trail. Defaults to `InMemoryAuditStore` (**not** production durability).
+ * Pass `options.store` for a durable backend.
+ */
 export function createAuditTrail(options: CreateAuditTrailOptions = {}): AuditTrail {
   return new AuditTrailImpl(
     options.store ?? new InMemoryAuditStore(options.maxRecords)

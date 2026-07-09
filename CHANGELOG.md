@@ -10,7 +10,12 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
   `src/kernel/event-bus/` (`payloadPatch`, `publishGuards`, `publishInterceptors`,
   `observedLayerFlow`, `publishPolicy`, `publishRecording`). `EventBus.ts` is
   orchestration + public surface only. **`createEventBus` API and enforcement order
-  unchanged.**
+  unchanged.** Snapshot of subscribers still taken before policy hooks.
+- **R9 — Runtime durability stance:** built-in stores are documented as **reference
+  InMemory-only** (not production durability) in README, `docs/production-hardening.md`,
+  `docs/package-surface.md`, and JSDoc on `OutboxStore` / `AuditStore` /
+  `ReadModelStore` / `WorkflowStore` (+ InMemory implementations). No durable adapter
+  shipped — inject your own for production.
 
 ## 2.8.0 — 2026-07-09
 

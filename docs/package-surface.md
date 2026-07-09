@@ -26,7 +26,7 @@ Gates need **no application code imports**. Most projects only use the CLI + MCP
 
 | Surface | Import path | Notes |
 |---------|-------------|--------|
-| **Runtime kernel** | **`arkgate/runtime`** (preferred) | Event bus, intents, policies, sagas, outbox, projections, `createArkKernel` / strict helpers. Optional. Not required for architecture enforcement. |
+| **Runtime kernel** | **`arkgate/runtime`** (preferred) | Event bus, intents, policies, sagas, outbox, projections, `createArkKernel` / strict helpers. Optional. Not required for architecture enforcement. Built-in stores are **InMemory reference only** (not production durability) — see [production-hardening.md](./production-hardening.md). |
 | **Root package barrel** | `arkgate` | Still re-exports the runtime kernel for **compatibility**. Prefer `arkgate/runtime` for new code. Root may be thinned in a future **major**. |
 | **NestJS adapter** | `arkgate/nestjs` | Optional peer `@nestjs/common`. Wires a kernel into Nest DI. |
 

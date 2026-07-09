@@ -7,6 +7,10 @@ import type {
   ReadModelStore,
 } from './types';
 
+/**
+ * Reference in-process read-model store. **Not production durability.**
+ * See `docs/production-hardening.md`.
+ */
 export class InMemoryReadModelStore implements ReadModelStore {
   private readonly states = new Map<string, unknown>();
 

@@ -3,11 +3,17 @@
 The optional runtime kernel is imported from **`arkgate/runtime`** (preferred). See
 [package-surface.md](package-surface.md).
 
-Ark's built-in stores are intentionally in-memory defaults. They are appropriate for tests,
-local development, examples, and single-process demos. Production systems should provide
+## Durability stance (R9)
+
+**ArkGate does not ship production-durable adapters.** Built-in stores are **reference
+InMemory-only** — appropriate for tests, local development, examples, and single-process
+demos. They lose all state on process restart. Production systems **must** inject their
+own implementations of the store interfaces (or accept that data is ephemeral).
+
+Ark's built-in stores are intentionally in-memory defaults. Production systems should provide
 stores that match their durability, ordering, retention, and operational requirements.
 
-## In-Memory Defaults
+## In-Memory Defaults (reference only — not production durability)
 
 These defaults do not survive process restarts:
 
@@ -16,7 +22,8 @@ These defaults do not survive process restarts:
 - `InMemoryReadModelStore`
 - `InMemoryWorkflowStore`
 
-Use them only when losing state is acceptable.
+Use them only when losing state is acceptable. JSDoc on `OutboxStore`, `AuditStore`,
+`ReadModelStore`, and `WorkflowStore` restates this stance at the type level.
 
 ## Production Store Checklist
 

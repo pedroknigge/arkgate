@@ -81,7 +81,7 @@ Only after A is stable enough that gate work isn’t blocked.
 | # | Status | Item | Why now | Definition of Done |
 |---|--------|------|---------|-------------------|
 | **R8** | `done` | **EventBus decomposition** | 872 LOC god object; high regression risk | Publish pipeline split into cohesive modules (e.g. intercept → contract → observed-flow → policy → history/outbox). Public `createEventBus` API unchanged. Integration tests for order of enforcement still pass. **Done:** stages in `payloadPatch`, `publishGuards`, `publishInterceptors`, `observedLayerFlow`, `publishPolicy`, `publishRecording`; `EventBus.ts` orchestration-only; public API stable. |
-| **R9** | `todo` | **Runtime durability stance** | Only InMemory stores exist | Either (a) one reference durable adapter (e.g. file/SQLite) for outbox **or** audit with tests, **or** (b) explicit “reference InMemory-only; not production durability” in README + JSDoc on store interfaces. Prefer (b) unless demand pulls (a). |
+| **R9** | `done` | **Runtime durability stance** | Only InMemory stores exist | Either (a) one reference durable adapter (e.g. file/SQLite) for outbox **or** audit with tests, **or** (b) explicit “reference InMemory-only; not production durability” in README + JSDoc on store interfaces. Prefer (b) unless demand pulls (a). **Done:** (b) — JSDoc on store interfaces + InMemory classes; README + package-surface + production-hardening R9 stance; unit test locks the shipped wording. |
 
 ### Track D — Growth (not prerequisites)
 
@@ -124,9 +124,10 @@ Session 5 → R5  labeled eval corpus (≥15 cases + static precheck)  ✅ done
 Session 6 → R6  broaden mechanical-safe (import-type-of-type-exports) ✅ done
 Session 7 → R7  Codex multi-project MCP DX (secondary table + doctor)  ✅ done
 Session 8 → R8  EventBus publish pipeline decomposition               ✅ done
+Session 9 → R9  runtime durability stance (InMemory reference honesty) ✅ done
 ```
 
-Next: **R9** (runtime durability stance).
+Next: Track D growth items (R10+) when demand pulls — R1–R9 foundation complete.
 
 ---
 

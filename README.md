@@ -231,6 +231,14 @@ in this major; prefer `arkgate/runtime` for new code.
 
 NestJS: `arkgate/nestjs` (optional peer `@nestjs/common`).
 
+### Durability stance (built-in stores)
+
+The kernel’s default stores (`InMemoryOutboxStore`, `InMemoryAuditStore`,
+`InMemoryReadModelStore`, `InMemoryWorkflowStore`) are **reference in-memory only**:
+fine for tests, demos, and single-process local work — they **do not** survive restarts
+and are **not** production durability. Implement the store interfaces (or inject your own)
+for real systems. Details: [docs/production-hardening.md](docs/production-hardening.md).
+
 ---
 
 ## Documentation
