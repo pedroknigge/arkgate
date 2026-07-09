@@ -153,20 +153,30 @@ export const ARCHITECTURE_PRESETS = {
   'feature-sliced': (_workspaces, root) => {
     const order = ['App', 'Pages', 'Widgets', 'Features', 'Entities', 'Shared'];
     const purpose = {
-      App: 'App-wide setup, providers, and routing.',
-      Pages: 'Route-level compositions.',
+      App: 'App-wide setup, providers, and routing (FSD app/ + Next app router when co-located under src/app).',
+      Pages: 'Route-level compositions (FSD pages/ and Next pages router).',
       Widgets: 'Self-contained UI blocks composed from features and entities.',
       Features: 'User-facing feature units.',
       Entities: 'Business entities with their UI and logic.',
       Shared: 'Reusable primitives with no business knowledge.',
     };
+    // Prefer src/<layer>/** (canonical FSD). Also accept package-root <layer>/** for
+    // monorepo packages that hoist FSD segments without an extra src/ prefix.
+    // Do NOT use bare **/app/** — too greedy for Nest/Next monorepos (use monorepo preset).
+    const fsdPatterns = (dir) => {
+      const base = [`src/${dir}/**`, `${dir}/**`];
+      // Next App Router often lives at repo-root app/ while FSD uses src/app — same layer.
+      if (dir === 'app') return [...base, 'src/app/**', 'app/**'];
+      if (dir === 'pages') return [...base, 'src/pages/**', 'pages/**'];
+      return base;
+    };
     return presetWithOverlays(
       {
-        include: ['src'],
+        include: ['src', 'app', 'pages'],
         layers: order.map((name) => ({
           name,
           description: purpose[name],
-          patterns: [`src/${name.toLowerCase()}/**`],
+          patterns: fsdPatterns(name.toLowerCase()),
           optional: true,
         })),
         rules: denyUpward(order),
@@ -185,7 +195,8 @@ export const ARCHITECTURE_PRESETS = {
       const resolved = resolveIncludeRoots(root);
       if (resolved.length > 0) include = resolved;
     }
-    if (include.length === 0) include = ['packages', 'apps'];
+    // Turborepo: apps/ + packages/; Nx enterprise: apps/ + libs/ (+ packages/).
+    if (include.length === 0) include = ['packages', 'apps', 'libs'];
     return presetWithOverlays(
       {
         include,
@@ -564,6 +575,10 @@ export const ARCHITECTURE_PRESETS = {
       root
     ),
 };
+
+// Aliases: Clean / Onion map to the hexagonal factory (same matrix + globs). Avoid dual maintenance.
+ARCHITECTURE_PRESETS['clean-architecture'] = ARCHITECTURE_PRESETS.hexagonal;
+ARCHITECTURE_PRESETS['onion-architecture'] = ARCHITECTURE_PRESETS.hexagonal;
 
 /** Stable public preset keys (CLI help, score fit, docs). Order is display order. */
 export const ARCHITECTURE_PRESET_NAMES = Object.keys(ARCHITECTURE_PRESETS);

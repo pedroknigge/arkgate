@@ -1197,6 +1197,22 @@ export function collectRepoShapeSignals(root) {
   }
   if (nextFramework && !toolHints.includes('next')) toolHints.push('next');
 
+  // Turborepo / Nx markers (monorepo tooling — maps to monorepo preset, not separate engines).
+  const monorepoTooling = [];
+  if (fs.existsSync(path.join(root, 'turbo.json'))) monorepoTooling.push('turborepo');
+  if (
+    fs.existsSync(path.join(root, 'nx.json')) ||
+    fs.existsSync(path.join(root, 'workspace.json'))
+  ) {
+    monorepoTooling.push('nx');
+  }
+  if (monorepoTooling.includes('turborepo') && !toolHints.includes('turborepo')) {
+    toolHints.push('turborepo');
+  }
+  if (monorepoTooling.includes('nx') && !toolHints.includes('nx')) {
+    toolHints.push('nx');
+  }
+
   return {
     workspaces,
     workspaceDirs,
@@ -1222,6 +1238,8 @@ export function collectRepoShapeSignals(root) {
     featureSlicedLayout,
     verticalSliceLayout,
     dddBoundedContextsLayout,
+    // null when absent so scoreArchetypes `if (signals.x)` is false for empty tooling
+    monorepoTooling: monorepoTooling.length > 0 ? monorepoTooling : null,
     fullStackProduct,
     persistenceFromDeps,
     nestFramework,
@@ -1252,6 +1270,10 @@ const SIGNAL_WHY = {
     'vertical-slice layout (src/features + shared/lib, without FSD entities/widgets)',
   dddBoundedContextsLayout: () =>
     'DDD bounded contexts under src/contexts or src/bounded-contexts',
+  monorepoTooling: (signals) =>
+    signals.monorepoTooling?.length
+      ? `monorepo tooling detected (${signals.monorepoTooling.join(', ')})`
+      : 'monorepo tooling markers present',
   domain: () => 'domain directory present',
   application: () => 'application or services directory present',
   domainHeavy: () => 'both domain and application directories present',
@@ -1441,6 +1463,9 @@ export function buildArchitectureRecommendation(root, options = {}) {
     phase3: result.phases?.['3'] ?? [],
   };
 
+  const galleryStarter = GALLERY_STARTER_BY_ARCHETYPE[result.archetype] ?? null;
+  const policyPackId = policyPackIdForPreset(result.preset);
+
   return {
     ok: true,
     playbookVersion: playbook.version,
@@ -1458,6 +1483,8 @@ export function buildArchitectureRecommendation(root, options = {}) {
     matchedSignals: result.matched,
     runnerUp: result.runnerUp,
     toolHints: signals.toolHints,
+    galleryStarter,
+    policyPack: policyPackId,
     signals: {
       sourceFileCount: signals.sourceFileCount,
       workspaces: signals.workspaces,
@@ -1475,6 +1502,9 @@ export function buildArchitectureRecommendation(root, options = {}) {
       nestFramework: signals.nestFramework,
       nextFramework: signals.nextFramework,
       expressLike: signals.expressLike,
+      verticalSliceLayout: signals.verticalSliceLayout,
+      dddBoundedContextsLayout: signals.dddBoundedContextsLayout,
+      monorepoTooling: signals.monorepoTooling,
     },
     // A repo past this size is not greenfield: `ark init` would scaffold a starter that governs
     // a thin slice and can mis-flag framework internals, so steer these to the adoption flow.
@@ -1496,7 +1526,9 @@ export const INIT_WIZARD_CHOICES = [
   { key: '5', archetype: 'worker-pipeline', label: 'Background jobs or workers' },
   { key: '6', archetype: 'multi-app-workspace', label: 'Several apps in one repository' },
   { key: '7', archetype: 'prototype-spike', label: 'A quick experiment or learning project' },
-  { key: '8', archetype: 'auto', label: 'Analyze my repo and suggest (recommended if unsure)' },
+  { key: '8', archetype: 'vertical-slice-product', label: 'Feature-first slices (vertical slice)' },
+  { key: '9', archetype: 'ddd-bounded-contexts', label: 'Multiple business domains (bounded contexts)' },
+  { key: 'a', archetype: 'auto', label: 'Analyze my repo and suggest (recommended if unsure)' },
 ];
 
 export function isValidArchetypeId(id) {
@@ -1551,6 +1583,12 @@ export function formatArchitectureRecommendationHuman(recommendation) {
   lines.push('');
   lines.push(`Archetype: ${recommendation.archetype} — ${recommendation.label}`);
   lines.push(`Preset: ${recommendation.preset} (confidence ${recommendation.confidence})`);
+  if (recommendation.galleryStarter) {
+    lines.push(`Gallery starter: ${recommendation.galleryStarter}`);
+  }
+  if (recommendation.policyPack) {
+    lines.push(`Policy pack: ark-check --apply-policy-pack ${recommendation.policyPack}`);
+  }
   if (recommendation.thinTsSurface) {
     lines.push('');
     lines.push(
@@ -1618,19 +1656,33 @@ const GALLERY_STARTER_BY_ARCHETYPE = {
   'ddd-bounded-contexts': 'examples/ddd-context-starter/',
 };
 
-/** Machine-readable adoption record for optional commit (Phase E). */
-export function buildAdoptionPlanDocument(recommendation) {
-  const preset = recommendation.preset;
-  const policyPackId =
+/** Enthusiast pack id for a named preset, or null when none ships. */
+export function policyPackIdForPreset(preset) {
+  if (
     preset === 'hexagonal' ||
     preset === 'layered' ||
     preset === 'feature-sliced' ||
     preset === 'monorepo' ||
     preset === 'vertical-slice' ||
     preset === 'ddd-bounded-contexts' ||
-    preset === 'ui-surface'
-      ? `enthusiast-${preset}`
-      : null;
+    preset === 'ui-surface' ||
+    preset === 'clean-architecture' ||
+    preset === 'onion-architecture'
+  ) {
+    // clean/onion alias packs → hexagonal enthusiast pack
+    const packPreset =
+      preset === 'clean-architecture' || preset === 'onion-architecture'
+        ? 'hexagonal'
+        : preset;
+    return `enthusiast-${packPreset}`;
+  }
+  return null;
+}
+
+/** Machine-readable adoption record for optional commit (Phase E). */
+export function buildAdoptionPlanDocument(recommendation) {
+  const preset = recommendation.preset;
+  const policyPackId = recommendation.policyPack ?? policyPackIdForPreset(preset);
 
   return {
     version: '1',

@@ -111,6 +111,11 @@ Ship one id at a time. Engine honesty before marketing new shapes.
 | **S1** | `done` | **Skills know new presets** | architect/place/fix/adopt/autopilot updated for VS + DDD. |
 | **S3** | `done` | **`/ark-think` host skill** | templates/skills/ark-think.md — reasoning only, no package LLM. |
 | **S5** | `done` | **Eval corpus peerIsolation** | `vertical-slice-cross-feature` case + `cross-slice-boundary` fixClass. |
+| **S2** | `done` | **Recommend / doctor copy** | galleryStarter + policyPack on recommend/doctor; wizard VS/DDD. |
+| **P5** | `done` | **Monorepo depth** | apps/packages/libs include; turbo/nx signals; docs. |
+| **P6** | `done` | **FSD + Next honesty** | Broader feature-sliced path patterns + docs. |
+| **P7** | `done` | **Clean/Onion aliases** | `clean-architecture` / `onion-architecture` → hexagonal. |
+| **P8** | `done` | **Nest modular guidance** | Docs + doctor tip; hexagonal/ddd mapping. |
 
 ### Later / only if demand pulls
 

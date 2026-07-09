@@ -299,7 +299,8 @@
         }
       ],
       "detectionSignals": {
-        "workspaces": 10
+        "workspaces": 10,
+        "monorepoTooling": 4
       },
       "negativeSignals": {
         "cli": 2,

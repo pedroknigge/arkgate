@@ -173,7 +173,7 @@ ark.config.json
       └─► Runtime kernel (opt-in)   — only if you call it
 ```
 
-- **Presets:** hexagonal, layered, feature-sliced, monorepo, ui-surface, vertical-slice, ddd-bounded-contexts (layers start optional; doctor suggests tightening populated cores). Cross-slice / cross-context bans use optional `peerIsolation` rules.
+- **Presets:** hexagonal, layered, feature-sliced, monorepo, ui-surface, vertical-slice, ddd-bounded-contexts (+ aliases clean-architecture / onion-architecture). Layers start optional; doctor suggests tightening populated cores. Cross-slice / cross-context bans use optional `peerIsolation` rules.
 - **Frameworks:** Nest / Next / express / library layouts get sensible globs on init so day-one coverage is real.
 - **Brownfield:** baseline ratchet, refuse to freeze a wrong contract, `/ark-adopt` for mature trees.
 - **Agents:** skills install into Claude / Cursor / Codex / Grok; `ark start` freezes an origin report under `.ark/reports/`.

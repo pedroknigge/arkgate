@@ -26,6 +26,13 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
   new host-only `/ark-think` skill (no package LLM).
 - **Eval corpus (S5):** `eval/cases/vertical-slice-cross-feature` labeled peerIsolation case
   (`cross-slice-boundary` fixClass, judgment).
+- **S2 recommend/doctor:** JSON/human output includes `galleryStarter` + `policyPack`; wizard
+  choices for vertical-slice and DDD; doctor new-here lines for Nest modular and monorepo tooling.
+- **P5 monorepo depth:** default include falls back to `packages`/`apps`/`libs`; detect
+  `turbo.json` / `nx.json`; playbook boosts multi-app-workspace on monorepo tooling.
+- **P6 FSD patterns:** feature-sliced accepts `src/<layer>/**` and root `<layer>/**` (app/pages).
+- **P7 aliases:** `clean-architecture` and `onion-architecture` → hexagonal factory.
+- **P8 Nest guidance:** agent-guide + doctor tip (hexagonal vs ddd-bounded-contexts).
 
 ## 2.8.3 — 2026-07-09
 

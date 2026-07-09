@@ -209,7 +209,7 @@ function usage() {
     '       ark-check --watch                      re-run the check when governed files change (debounced)',
     '       ark-check --report [file.html] [--beginner] [--reset-origin] [--no-archive]',
     '           HTML report + snapshots under .ark/reports/ (origin once, latest each run, history JSON)',
-    '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts] [--force]',
+    '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture] [--force]',
     '       ark-check --install-agent-gates [--tools claude,cursor,codex,grok] [--skills-only] [--codex-home] [--force]',
     '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
     '       ark-check --print-config eleven-layer',

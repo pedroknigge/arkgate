@@ -330,6 +330,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
                   archetype: recommendation?.archetype,
                   label: recommendation?.label,
                   preset: recommendation?.preset,
+                  galleryStarter: recommendation?.galleryStarter,
+                  policyPack: recommendation?.policyPack,
                   recommendCommand: arkCommand(root, 'ark-check', '--recommend'),
                   initCommand: recommendation?.archetype
                     ? arkCommand(root, 'ark', `init --archetype ${recommendation.archetype} --yes`)
@@ -409,6 +411,24 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     console.log(color.bold('New here?'));
     if (recommendation) {
       line(warn, `Suggested application shape: ${recommendation.archetype} — ${recommendation.label} (preset ${recommendation.preset})`);
+      if (recommendation.galleryStarter) {
+        line(ok, `Gallery starter: ${recommendation.galleryStarter}`);
+      }
+      if (recommendation.policyPack) {
+        line(ok, `Policy pack: ${arkCommand(root, 'ark-check', `--apply-policy-pack ${recommendation.policyPack}`)}`);
+      }
+      if (recommendation.signals?.nestFramework) {
+        line(
+          ok,
+          'Nest modular monolith → prefer hexagonal (or ddd-bounded-contexts if you have src/contexts/*)'
+        );
+      }
+      if (recommendation.signals?.monorepoTooling?.length) {
+        line(
+          ok,
+          `Monorepo tooling (${recommendation.signals.monorepoTooling.join(', ')}) → preset monorepo (apps/packages/libs)`
+        );
+      }
     } else {
       line(warn, 'Low governed coverage or fresh config — pick an application shape before adding code.');
     }

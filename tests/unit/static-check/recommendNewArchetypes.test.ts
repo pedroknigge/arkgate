@@ -36,6 +36,8 @@ describe('recommend new archetypes', async () => {
     const rec = shared.buildArchitectureRecommendation(tmp);
     expect(rec.archetype).toBe('vertical-slice-product');
     expect(rec.preset).toBe('vertical-slice');
+    expect(rec.galleryStarter).toBe('examples/vertical-slice-starter/');
+    expect(rec.policyPack).toBe('enthusiast-vertical-slice');
   });
 
   it('prefers ddd-bounded-contexts when src/contexts exists', () => {
@@ -47,5 +49,7 @@ describe('recommend new archetypes', async () => {
     const rec = shared.buildArchitectureRecommendation(tmp);
     expect(rec.archetype).toBe('ddd-bounded-contexts');
     expect(rec.preset).toBe('ddd-bounded-contexts');
+    expect(rec.galleryStarter).toBe('examples/ddd-context-starter/');
+    expect(rec.policyPack).toBe('enthusiast-ddd-bounded-contexts');
   });
 });

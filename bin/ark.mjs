@@ -55,7 +55,7 @@ function parseArgs(argv) {
 function usage() {
   return `Usage:
   ark start   [--root <project>] [--yes]
-  ark init    [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts]
+  ark init    [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture]
               [--archetype <playbook-id>] [--tools <list>] [--yes] [--force] [--no-strict]
   ark upgrade [--root <project>] [--no-install] [--no-strict]
 

@@ -342,6 +342,31 @@ Use `ark-check` in CI for repository-level checks that need real file paths:
 npx ark-check --root . --config ark.config.json
 ```
 
+### Monorepo tooling (Turborepo / Nx)
+
+Use **`ark init --preset monorepo`** (or archetype `multi-app-workspace`). Ark does **not**
+reimplement the Nx project graph. It maps conventional trees:
+
+| Tooling | Typical roots | Ark `include` fallback |
+|---------|---------------|------------------------|
+| Turborepo | `apps/`, `packages/` | `packages`, `apps`, `libs` |
+| Nx | `apps/`, `libs/` | same |
+
+Layers still match by folder **name** (`**/domain/**`, `**/application/**`, …) across packages.
+Doctor surfaces `turbo.json` / `nx.json` as monorepo tooling hints.
+
+### Nest modular monolith
+
+Prefer **`hexagonal`** with Nest filename overlays (`*.controller.ts` / services). If you
+literally have `src/contexts/*` bounded contexts, use **`ddd-bounded-contexts`**. Do not
+invent a separate Nest-only engine — modules map to `src/**/domain/**` style globs already.
+
+### Clean / Onion aliases
+
+`ark init --preset clean-architecture` and `--preset onion-architecture` are **aliases** of
+`hexagonal` (same layer matrix). Prefer the hexagonal name in docs; aliases exist for
+discoverability.
+
 ### Peer isolation (cross-slice bans)
 
 Classic rules deny **layer A → layer B**. Same-layer imports were always allowed.
