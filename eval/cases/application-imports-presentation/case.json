@@ -1,0 +1,9 @@
+{
+  "description": "Application orchestration imports a presentation helper (inner → outer blocked).",
+  "expectedFix": "Presentation should call application; invert so application returns data and presentation renders it.",
+  "mustKeep": ["src/application/list-orders.ts"],
+  "theme": "wrong-layer",
+  "expectedRuleId": "LAYER_IMPORT_VIOLATION",
+  "expectedFixClass": "port-inversion",
+  "expectedRemediationClass": "judgment"
+}

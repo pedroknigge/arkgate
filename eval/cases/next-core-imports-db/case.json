@@ -1,0 +1,9 @@
+{
+  "description": "Next src/core/** application bag illegally imports src/db persistence.",
+  "expectedFix": "Inject a repository port into the core client, or move DB access behind an adapter called from a allowed edge — do not import src/db from src/core.",
+  "mustKeep": ["src/core/api/client.ts"],
+  "theme": "next-core-bag",
+  "expectedRuleId": "LAYER_IMPORT_VIOLATION",
+  "expectedFixClass": "port-inversion",
+  "expectedRemediationClass": "judgment"
+}

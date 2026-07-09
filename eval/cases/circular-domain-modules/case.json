@@ -1,0 +1,9 @@
+{
+  "description": "Two domain modules import each other (circular dependency).",
+  "expectedFix": "Extract shared code, invert one edge behind a port, or merge if they are one unit — do not silence the cycle rule.",
+  "mustKeep": ["src/domain/a.ts", "src/domain/b.ts"],
+  "theme": "circular-dependency",
+  "expectedRuleId": "CIRCULAR_DEPENDENCY",
+  "expectedFixClass": "break-cycle",
+  "expectedRemediationClass": "judgment"
+}

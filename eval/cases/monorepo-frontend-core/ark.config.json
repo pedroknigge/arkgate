@@ -1,0 +1,44 @@
+{
+  "include": ["frontend"],
+  "frameworkOverlay": "next",
+  "layers": [
+    {
+      "name": "PresentationAdapters",
+      "patterns": [
+        "frontend/src/app/**",
+        "frontend/src/components/**",
+        "**/src/app/**"
+      ],
+      "intentPrefixes": ["Presentation."]
+    },
+    {
+      "name": "ApplicationOrchestration",
+      "patterns": [
+        "frontend/src/core/**",
+        "**/core/**",
+        "frontend/src/lib/**"
+      ],
+      "intentPrefixes": ["Application."]
+    },
+    {
+      "name": "DomainModel",
+      "patterns": ["frontend/src/domain/**", "packages/domain/**"],
+      "intentPrefixes": ["Domain."]
+    },
+    {
+      "name": "PersistenceAdapters",
+      "patterns": [
+        "frontend/src/db/**",
+        "frontend/src/data/**",
+        "**/repositories/**"
+      ],
+      "intentPrefixes": ["Adapter.Persistence."]
+    }
+  ],
+  "rules": [
+    { "from": "DomainModel", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "ApplicationOrchestration", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "PresentationAdapters", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "PersistenceAdapters", "to": "ApplicationOrchestration", "allowed": false }
+  ]
+}

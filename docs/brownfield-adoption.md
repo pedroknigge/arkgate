@@ -71,6 +71,13 @@ violations — the ratchet only moves toward zero.
 - **Value import of pure type module** (`targetTypeOnlyExports` — plan:
   `import-type-from-pure-type-module`): convert static import to `import type`. Not safe for
   `require()` / dynamic `import()`.
+- **Named type exports from mixed modules** (`namedBindingsTypeOnly` — plan:
+  `import-type-of-type-exports`): value-syntax `import { Row }` / `export { Row }` where every
+  binding is an `export type` / `interface` on the target — convert to `import type` /
+  `export type`. Still **judgment** when any binding is a value, dual-space name
+  (`export type Foo` + `export const Foo`), the target has top-level side effects (including
+  impure value-export initializers like `export const db = connect()`), or the edge is
+  `require` / dynamic `import()`.
 - **Raw infrastructure access** (value coupling — always **judgment**): relocate data-access
   **verbatim** into a repository/adapter. Same query bytes = same behavior; do NOT rewrite the
   query. If CODEOWNERS reserves the data layer, migrate one route as a pattern and hand bulk

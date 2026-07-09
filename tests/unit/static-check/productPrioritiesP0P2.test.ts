@@ -325,11 +325,51 @@ describe('P2 soft cycles + codex multi', () => {
       expect(['written', 'updated']).toContain(r1.status);
       const r2 = wireCodexMcp(rootB, false);
       expect(r2.status).toBe('written-multi');
+      expect(r2.primaryUnchanged).toBe(true);
       const toml = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
       expect(toml).toContain('[mcp_servers.ark]');
-      expect(toml).toMatch(/\[mcp_servers\.ark_/);
+      expect(toml).toMatch(/\[mcp_servers\.ark_proj-b_[a-f0-9]{8}\]/);
       expect(toml).toContain(path.resolve(rootA));
       expect(toml).toContain(path.resolve(rootB));
+      // Primary still A (no silent last-wins steal)
+      const primaryBlock = toml.match(/\[mcp_servers\.ark\][\s\S]*?(?=\n\[|$)/)?.[0] ?? '';
+      expect(primaryBlock).toContain(path.resolve(rootA));
+      expect(primaryBlock).not.toContain(path.resolve(rootB));
+      // Idempotent secondary re-install (same disambiguated table)
+      const r2b = wireCodexMcp(rootB, false);
+      expect(r2b.status).toBe('written-multi');
+      const toml2 = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
+      expect([...toml2.matchAll(/\[mcp_servers\.ark_proj-b_[a-f0-9]{8}\]/g)].length).toBe(1);
+    } finally {
+      if (prev === undefined) delete process.env.CODEX_HOME;
+      else process.env.CODEX_HOME = prev;
+      fs.rmSync(base, { recursive: true, force: true });
+    }
+  });
+
+  it('wireCodexMcp --force rebinds primary to B without leaving temp roots', () => {
+    const base = path.join(process.cwd(), '.tmp-p0p2-codex-force');
+    fs.rmSync(base, { recursive: true, force: true });
+    const rootA = path.join(base, 'proj-a');
+    const rootB = path.join(base, 'proj-b');
+    const codexHome = path.join(base, 'codex-home');
+    fs.mkdirSync(rootA, { recursive: true });
+    fs.mkdirSync(rootB, { recursive: true });
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.writeFileSync(path.join(rootA, 'ark.config.json'), '{}');
+    fs.writeFileSync(path.join(rootB, 'ark.config.json'), '{}');
+    const prev = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = codexHome;
+    try {
+      wireCodexMcp(rootA, true);
+      wireCodexMcp(rootB, false);
+      const forced = wireCodexMcp(rootB, true);
+      expect(['updated', 'written']).toContain(forced.status);
+      const toml = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
+      const primaryBlock = toml.match(/\[mcp_servers\.ark\][\s\S]*?(?=\n\[|$)/)?.[0] ?? '';
+      expect(primaryBlock).toContain(path.resolve(rootB));
+      expect(primaryBlock).toContain('arkgate-mcp');
+      expect(primaryBlock).not.toMatch(/ark-upgrade-tmp|\/var\/folders\//);
     } finally {
       if (prev === undefined) delete process.env.CODEX_HOME;
       else process.env.CODEX_HOME = prev;

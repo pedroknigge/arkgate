@@ -1,0 +1,8 @@
+{
+  "include": ["src"],
+  "layers": [
+    { "name": "UI", "patterns": ["src/ui/**"] },
+    { "name": "Data", "patterns": ["src/data/**"] }
+  ],
+  "rules": [{ "from": "UI", "to": "Data", "allowed": false }]
+}

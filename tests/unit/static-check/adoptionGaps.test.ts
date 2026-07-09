@@ -179,6 +179,95 @@ args = ["ark-mcp", "--root", "/var/folders/xx/ark-upgrade-tmp123", "--config", "
     expect(bins.includes('ark-mcp') && bins.includes('arkgate-mcp')).toBe(false);
   });
 
+  it('R7 doctor flags multi-project when Codex primary is another permanent project', () => {
+    // Non-temp paths so primary A is permanent (not fail-closed rewrite).
+    const base = path.join(process.cwd(), '.tmp-r7-codex-doctor');
+    fs.rmSync(base, { recursive: true, force: true });
+    temps.push(base);
+    const rootA = path.join(base, 'proj-a');
+    const rootB = path.join(base, 'proj-b');
+    const codexHome = path.join(base, 'codex-home');
+    for (const r of [rootA, rootB]) {
+      fs.mkdirSync(path.join(r, 'src/domain'), { recursive: true });
+      fs.mkdirSync(path.join(r, 'src/app'), { recursive: true });
+      fs.mkdirSync(path.join(r, 'src/application'), { recursive: true });
+      fs.mkdirSync(path.join(r, 'src/infra'), { recursive: true });
+      writeTwoLayerOptional(r);
+      fs.writeFileSync(path.join(r, 'AGENTS.md'), '# agent\n');
+      fs.writeFileSync(path.join(r, 'package.json'), '{"name":"r7-fixture"}\n');
+    }
+    fs.mkdirSync(codexHome, { recursive: true });
+    const absA = path.resolve(rootA);
+    const absB = path.resolve(rootB);
+    // Primary bound to A only — B not yet scoped
+    fs.writeFileSync(
+      path.join(codexHome, 'config.toml'),
+      `[mcp_servers.ark]
+command = "npx"
+args = ["arkgate-mcp", "--root", "${absA}", "--config", "${absA}/ark.config.json"]
+`
+    );
+
+    const before = runCheck(
+      rootB,
+      ['--config', 'ark.config.json', '--doctor', '--json', '--no-cache'],
+      { CODEX_HOME: codexHome }
+    );
+    expect(before.status).toBe(0);
+    const beforeJ = JSON.parse(before.stdout);
+    const beforeIds = (beforeJ.doctor.adoption.gaps as Array<{ id: string; fix?: string }>).map(
+      (g) => g.id
+    );
+    expect(beforeIds).toContain('codex-home-multi-project');
+    expect(beforeJ.doctor.adoption.codexHome?.multiProject).toBe(true);
+    expect(beforeJ.doctor.adoption.codexHome?.wrongRoot).toBe(true);
+    expect(beforeJ.doctor.adoption.codexHome?.needsRewrite).toBe(false);
+    const multiGap = (beforeJ.doctor.adoption.gaps as Array<{ id: string; fix?: string; severity?: string }>).find(
+      (g) => g.id === 'codex-home-multi-project'
+    );
+    expect(multiGap?.severity).toBe('warn');
+    expect(multiGap?.fix).toMatch(/install-agent-gates/);
+    expect(before.stdout + before.stderr).not.toMatch(/codex-home-mcp/); // not the temp-rewrite gap
+
+    // Install secondary for B without force
+    const install = runCheck(
+      rootB,
+      ['--install-agent-gates', '--tools', 'codex'],
+      { CODEX_HOME: codexHome }
+    );
+    expect(install.status).toBe(0);
+    const toml = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
+    expect(toml).toContain(absA);
+    expect(toml).toContain(absB);
+    expect(toml).toMatch(/\[mcp_servers\.ark_proj-b_[a-f0-9]{8}\]/);
+    const primary = toml.match(/\[mcp_servers\.ark\][\s\S]*?(?=\n\[|$)/)?.[0] ?? '';
+    expect(primary).toContain(absA);
+    expect(primary).not.toContain(absB);
+
+    // Doctor after secondary: still multi-project, info + scopedTable
+    const after = runCheck(
+      rootB,
+      ['--config', 'ark.config.json', '--doctor', '--json', '--no-cache'],
+      { CODEX_HOME: codexHome }
+    );
+    expect(after.status).toBe(0);
+    const afterJ = JSON.parse(after.stdout);
+    const afterGap = (afterJ.doctor.adoption.gaps as Array<{ id: string; severity?: string }>).find(
+      (g) => g.id === 'codex-home-multi-project'
+    );
+    expect(afterGap).toBeTruthy();
+    expect(afterGap?.severity).toBe('info');
+    expect(afterJ.doctor.adoption.codexHome?.scopedTable).toMatch(/^ark_/);
+
+    // Human doctor mentions multi-project
+    const human = runCheck(
+      rootB,
+      ['--config', 'ark.config.json', '--doctor', '--no-cache'],
+      { CODEX_HOME: codexHome }
+    );
+    expect(human.stdout).toMatch(/Codex primary|multi-project|another project/i);
+  });
+
   it('doctor flags missing lint script when Next production build embeds ESLint (universal deploy-path)', () => {
     const root = mk();
     writeTwoLayerOptional(root);

@@ -1,0 +1,10 @@
+{
+  "description": "Pure type-only source file with a type-only cross-layer edge (mechanical-safe file relocate).",
+  "expectedFix": "Relocate the pure type alias file to the owning/shared layer (or extract the type there).",
+  "mustKeep": ["src/ui/alias.ts"],
+  "theme": "pure-type-relocate",
+  "expectedRuleId": "LAYER_IMPORT_VIOLATION",
+  "expectedFixClass": "file-move",
+  "expectedRemediationClass": "mechanical-safe",
+  "expectedRemediationKind": "pure-type-file-relocate"
+}

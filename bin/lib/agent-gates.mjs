@@ -3,7 +3,6 @@
  */
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -23,6 +22,40 @@ import {
   createElevenLayerConfig,
   applyFrameworkLayoutOverlays
 } from '../ark-shared.mjs';
+import {
+  assessCodexHomeMcp,
+  codexArkBlockHasPreferredBin,
+  codexArkBlockNeedsRewrite,
+  codexConfigPath,
+  codexPrimaryTable,
+  codexProjectSlug,
+  codexPromptsDir,
+  codexScopedTableForRoot,
+  extractCodexArkRootFromToml,
+  extractCodexRootFromBlock,
+  isTempOrUpgradeRoot,
+  listCodexArkServerTables,
+  upsertCodexMcpTable,
+  wireCodexMcp,
+} from './codex-home.mjs';
+
+// Re-export Codex home API for existing consumers (ark-check, tests).
+export {
+  assessCodexHomeMcp,
+  codexArkBlockHasPreferredBin,
+  codexArkBlockNeedsRewrite,
+  codexConfigPath,
+  codexPrimaryTable,
+  codexProjectSlug,
+  codexPromptsDir,
+  codexScopedTableForRoot,
+  extractCodexArkRootFromToml,
+  extractCodexRootFromBlock,
+  isTempOrUpgradeRoot,
+  listCodexArkServerTables,
+  upsertCodexMcpTable,
+  wireCodexMcp,
+};
 
 /** Package root (parent of bin/). All modules live under bin/lib/. */
 const __packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -762,136 +795,6 @@ export function skillTemplateNames() {
 // skills this version ships, surface it here so agents and CI actually notice.
 // Advisory only — never affects the exit code. Copilot has no reliable directory
 // signal, so it is not auto-detected (explicit --tools only), matching resolveTools.
-// Where Codex loads slash-command prompts from. Codex reads $CODEX_HOME/prompts
-// (defaulting to ~/.codex/prompts), NOT the repo — so home copies of the /ark-*
-// skills drift out of date when a repo refresh only touches in-repo tool dirs.
-export function codexPromptsDir() {
-  const base = process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
-  return path.join(base, 'prompts');
-}
-
-// Where Codex reads its MCP server registrations. Unlike Claude (.claude/settings.json)
-// and Cursor (.cursor/mcp.json), Codex loads MCP servers only from $CODEX_HOME/config.toml
-// (~/.codex/config.toml) — never from .mcp.json — so wiring Codex means editing the user's
-// home config, not a repo file.
-export function codexConfigPath() {
-  const base = process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
-  return path.join(base, 'config.toml');
-}
-
-// Merge the [mcp_servers.ark] table into Codex's config.toml so `ark://manifest` and the
-// AI write gate are live from the first edit — the piece that was previously only shipped as
-// a copy-me sample in docs/ark-codex-config.toml. Idempotent: an existing ark table is left
-// untouched unless `force` replaces it; other content in the file is preserved. Returns a
-// status for the install summary. The table match runs from the [mcp_servers.ark] header to
-// the line before the next top-level table header (a line starting with `[`) or EOF.
-//
-// Unlike .mcp.json / .cursor/mcp.json (loaded relative to the project), config.toml is a
-// GLOBAL file — Codex launches it without the project as cwd — so `--root .` would resolve
-// against the wrong directory. The paths must be absolute, and TOML string values need the
-// backslashes/quotes escaped (matters on Windows and for repo paths containing quotes).
-export function wireCodexMcp(root, force) {
-  const file = codexConfigPath();
-  const esc = (s) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  const absRoot = path.resolve(root);
-  const absConfig = path.join(absRoot, 'ark.config.json');
-  // Preferred product bin; absolute --root so Codex (cwd ≠ project) resolves correctly.
-  const preferredBin = 'arkgate-mcp';
-  const { command, args } = execCommandParts(root, preferredBin, [
-    '--root',
-    esc(absRoot),
-    '--config',
-    esc(absConfig),
-  ]);
-  const argsToml = args.map((value) => `"${value}"`).join(', ');
-  const makeBlock = (table) =>
-    `[mcp_servers.${table}]
-command = "${command}"
-args = [${argsToml}]`;
-  let existing = '';
-  try {
-    if (fs.existsSync(file)) existing = fs.readFileSync(file, 'utf8');
-  } catch (error) {
-    return { status: 'failed', file, message: error.message };
-  }
-  const tableRe = /(^|\n)\[mcp_servers\.ark\][^\n]*\n(?:(?!\[)[^\n]*\n?)*/;
-  const hasTable = tableRe.test(existing);
-  const existingRoot = hasTable ? extractCodexArkRootFromToml(existing) : null;
-  let differentProject = false;
-  try {
-    differentProject = Boolean(
-      existingRoot && path.resolve(existingRoot) !== absRoot
-    );
-  } catch {
-    differentProject = Boolean(existingRoot);
-  }
-  // Fail-closed: rewrite temp/upgrade roots and dual/wrong bins even without --force.
-  const mustRewrite = hasTable && codexArkBlockNeedsRewrite(existing, absRoot);
-
-  // Multi-project: another project's [mcp_servers.ark] is present. Without --force,
-  // add a project-scoped table so we do not steal the primary binding.
-  if (hasTable && differentProject && !force && !mustRewrite) {
-    const slug =
-      path
-        .basename(absRoot)
-        .replace(/[^a-zA-Z0-9_-]/g, '_')
-        .slice(0, 48) || 'project';
-    const table = `ark_${slug}`;
-    const multiRe = new RegExp(
-      `(^|\\n)\\[mcp_servers\\.${table.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\][^\\n]*\\n(?:(?!\\[)[^\\n]*\\n?)*`
-    );
-    const block = makeBlock(table);
-    let next;
-    if (multiRe.test(existing)) {
-      next = existing.replace(multiRe, (match) => `${match.startsWith('\n') ? '\n' : ''}${block}\n`);
-    } else {
-      const sep =
-        existing.length === 0
-          ? ''
-          : existing.endsWith('\n\n')
-            ? ''
-            : existing.endsWith('\n')
-              ? '\n'
-              : '\n\n';
-      next = `${existing}${sep}${block}\n`;
-    }
-    try {
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, next);
-    } catch (error) {
-      return { status: 'failed', file, message: error.message };
-    }
-    return { status: 'written-multi', file, table, primaryUnchanged: true };
-  }
-
-  if (hasTable && !force && !mustRewrite) {
-    return { status: 'skipped', file };
-  }
-  const block = makeBlock('ark');
-  let next;
-  if (hasTable) {
-    next = existing.replace(tableRe, (match) => `${match.startsWith('\n') ? '\n' : ''}${block}\n`);
-  } else {
-    const sep = existing.length === 0 ? '' : existing.endsWith('\n\n') ? '' : existing.endsWith('\n') ? '\n' : '\n\n';
-    next = `${existing}${sep}${block}\n`;
-  }
-  try {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, next);
-  } catch (error) {
-    return { status: 'failed', file, message: error.message };
-  }
-  return {
-    status: hasTable ? 'updated' : 'written',
-    file,
-    ...(mustRewrite && !force ? { reason: 'temp-or-stale-root' } : {}),
-  };
-}
-
-// Detects stale/missing /ark-* skills in the Codex home prompts dir. Only nags
-// when at least one ark-* prompt already lives there (evidence Codex was set up
-// for this user) — never introduces Codex to someone who doesn't use it. Same
-// guards as detectSkillGaps (adopted repo, not the Ark source tree).
 export function detectCodexHomeGap(root) {
   if (!fs.existsSync(path.join(root, 'AGENTS.md'))) return null;
   if (fs.existsSync(path.join(root, 'templates', 'skills'))) return null;
@@ -1026,73 +929,6 @@ const CORE_LAYER_NAMES = new Set([
   'PresentationAdapters',
   'PersistenceAdapters',
 ]);
-
-/** Temp / upgrade sandbox roots must never remain as Codex MCP --root. */
-export function isTempOrUpgradeRoot(p) {
-  if (!p || typeof p !== 'string') return false;
-  const n = p.replace(/\\/g, '/');
-  return (
-    /\/var\/folders\//i.test(n) ||
-    /\/tmp\//i.test(n) ||
-    /\/Temp\//i.test(n) ||
-    /ark-upgrade/i.test(n) ||
-    /\/T\/(?:ark-|grok-)/i.test(n) ||
-    /[\\/]AppData[\\/]Local[\\/]Temp[\\/]/i.test(n)
-  );
-}
-
-/** Extract --root value from Codex [mcp_servers.ark] args array text. */
-export function extractCodexArkRootFromToml(tomlText) {
-  if (!tomlText || typeof tomlText !== 'string') return null;
-  const start = tomlText.search(/(^|\n)\[mcp_servers\.ark\]/);
-  if (start < 0) return null;
-  const rest = tomlText.slice(start);
-  const endMatch = rest.slice(1).search(/\n\[/);
-  const block = endMatch >= 0 ? rest.slice(0, endMatch + 1) : rest;
-  // args = ["arkgate-mcp", "--root", "/abs/path", ...]
-  const rootIdx = block.search(/"--root"\s*,\s*"/);
-  if (rootIdx < 0) {
-    // alternate: --root as adjacent string after any bin
-    const m = block.match(/"--root"\s*,\s*"([^"]+)"/);
-    return m ? m[1] : null;
-  }
-  const m = block.slice(rootIdx).match(/"--root"\s*,\s*"([^"]+)"/);
-  return m ? m[1] : null;
-}
-
-export function codexArkBlockHasPreferredBin(tomlText) {
-  if (!tomlText) return false;
-  const start = tomlText.search(/(^|\n)\[mcp_servers\.ark\]/);
-  if (start < 0) return false;
-  const rest = tomlText.slice(start);
-  const endMatch = rest.slice(1).search(/\n\[/);
-  const block = endMatch >= 0 ? rest.slice(0, endMatch + 1) : rest;
-  const bins = [...block.matchAll(/"(arkgate-mcp|ark-mcp)"/g)].map((m) => m[1]);
-  if (bins.length > 1) return false;
-  return bins.length === 1 && bins[0] === PREFERRED_MCP_BIN;
-}
-
-/**
- * True when the primary [mcp_servers.ark] block is broken (temp root / dual bin)
- * and should be rewritten fail-closed. Different permanent project roots are NOT
- * "broken" — multi-project wiring uses a secondary table instead.
- */
-export function codexArkBlockNeedsRewrite(tomlText, absRoot) {
-  if (!tomlText || !tomlText.includes('[mcp_servers.ark]')) return true;
-  const rootArg = extractCodexArkRootFromToml(tomlText);
-  if (!rootArg || isTempOrUpgradeRoot(rootArg)) return true;
-  // Permanent different project: multi-project path handles this (do not steal primary).
-  try {
-    if (path.resolve(rootArg) !== path.resolve(absRoot)) {
-      if (!isTempOrUpgradeRoot(rootArg)) return false;
-      return true;
-    }
-  } catch {
-    return true;
-  }
-  if (!codexArkBlockHasPreferredBin(tomlText)) return true;
-  return false;
-}
 
 /**
  * Production deploy path quality (universal — any consumer repo).
@@ -1383,7 +1219,7 @@ export function collectAdoptionGaps(root, config, coverage) {
     }
   }
 
-  // --- Codex home MCP (temp path / wrong root / dual bin) ---
+  // --- Codex home MCP (temp path / wrong root / multi-project) ---
   let codexHome = null;
   if (adopted && !isProducer) {
     const codexFile = codexConfigPath();
@@ -1394,39 +1230,23 @@ export function collectAdoptionGaps(root, config, coverage) {
       toml = '';
     }
     if (toml.includes('[mcp_servers.ark]')) {
-      const rootArg = extractCodexArkRootFromToml(toml);
-      const absRoot = path.resolve(root);
-      const temp = isTempOrUpgradeRoot(rootArg);
-      let wrongRoot = false;
-      try {
-        wrongRoot = rootArg ? path.resolve(rootArg) !== absRoot : true;
-      } catch {
-        wrongRoot = true;
-      }
-      const preferredBin = codexArkBlockHasPreferredBin(toml);
-      const needsRewrite = codexArkBlockNeedsRewrite(toml, absRoot);
+      const assessed = assessCodexHomeMcp(toml, root);
       codexHome = {
         file: codexFile,
-        root: rootArg,
-        tempPath: temp,
-        wrongRoot,
-        preferredBin,
-        needsRewrite,
+        root: assessed.root,
+        tempPath: assessed.tempPath,
+        wrongRoot: assessed.wrongRoot,
+        preferredBin: assessed.preferredBin,
+        needsRewrite: assessed.needsRewrite,
+        multiProject: assessed.multiProject,
+        scopedTable: assessed.scopedTable,
       };
-      if (needsRewrite) {
+      if (assessed.gap) {
         gaps.push({
-          id: 'codex-home-mcp',
-          severity: temp || wrongRoot ? 'warn' : 'info',
-          message: temp
-            ? `Codex home MCP --root points at a temp/upgrade path (${rootArg})`
-            : wrongRoot
-              ? `Codex home MCP --root is not this project (${rootArg || 'missing'} ≠ ${absRoot})`
-              : `Codex home MCP should use a single ${PREFERRED_MCP_BIN} bin with absolute project paths`,
-          fix: arkCommand(
-            root,
-            'ark-check',
-            '--install-agent-gates --codex-home --force'
-          ),
+          id: assessed.gap.id,
+          severity: assessed.gap.severity,
+          message: assessed.gap.message,
+          fix: arkCommand(root, 'ark-check', assessed.gap.fixArgs),
         });
       }
     }

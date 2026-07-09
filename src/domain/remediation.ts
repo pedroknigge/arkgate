@@ -18,7 +18,30 @@ export const REMEDIATION_CLASSES: readonly RemediationClass[] = [
 export type RemediationKind =
   | 'pure-type-file-relocate'
   | 'type-only-import-move'
-  | 'import-type-from-pure-type-module';
+  | 'import-type-from-pure-type-module'
+  /** R6: named bindings are type-only exports of (possibly mixed) target — convert to import/export type. */
+  | 'import-type-of-type-exports';
+
+/** All remediationKinds that may return class: mechanical-safe (ordered for docs/tests). */
+export const MECHANICAL_SAFE_KINDS: readonly RemediationKind[] = [
+  'pure-type-file-relocate',
+  'type-only-import-move',
+  'import-type-from-pure-type-module',
+  'import-type-of-type-exports',
+] as const;
+
+/** fixClass values from enrichViolationWithFixClass (eval corpus / reports). */
+export const KNOWN_FIX_CLASSES = [
+  'file-move',
+  'port-inversion',
+  'inject-port',
+  'registered-intent',
+  'add-source-metadata',
+  'fix-source-layer',
+  'intent-relocation',
+  'break-cycle',
+  'review-contract',
+] as const;
 
 export type RemediationVerdict = {
   class: RemediationClass;
@@ -33,6 +56,8 @@ export type ArkViolationLike = {
   typeOnly?: boolean;
   sourcePureTypeModule?: boolean;
   targetTypeOnlyExports?: boolean;
+  /** True when every named binding on a static import/export is a type-only export of the target. */
+  namedBindingsTypeOnly?: boolean;
   edgeKind?: string;
   fromLayer?: string;
   toLayer?: string;
@@ -55,6 +80,16 @@ export type EnrichedViolation<T extends ArkViolationLike = ArkViolationLike> = T
 export function classifyRemediation(violation: ArkViolationLike | null | undefined): RemediationVerdict {
   const ruleId = violation?.ruleId;
   if (ruleId === 'LAYER_IMPORT_VIOLATION') {
+    // Single invariant: runtime module loads are never mechanical-safe.
+    const edgeKind = violation?.edgeKind;
+    if (edgeKind === 'require' || edgeKind === 'dynamic-import') {
+      return {
+        class: 'judgment',
+        confidence: 0.75,
+        rationale:
+          'Runtime module load (require/import()) still executes the target file — not auto-safe; rewrite to a static import type if appropriate.',
+      };
+    }
     if (violation?.typeOnly && violation?.sourcePureTypeModule) {
       return {
         class: 'mechanical-safe',
@@ -74,21 +109,23 @@ export function classifyRemediation(violation: ArkViolationLike | null | undefin
       };
     }
     if (violation?.targetTypeOnlyExports) {
-      const kind = violation.edgeKind;
-      if (kind === 'require' || kind === 'dynamic-import') {
-        return {
-          class: 'judgment',
-          confidence: 0.75,
-          rationale:
-            'Runtime module load (require/import()) of a type-only module still executes the target file — not auto-safe; rewrite to a static import type if appropriate.',
-        };
-      }
       return {
         class: 'mechanical-safe',
         confidence: 0.85,
         remediationKind: 'import-type-from-pure-type-module',
         rationale:
           'Static import targets a pure type-only module: convert to `import type` (erased at runtime) and place the type in a shared/owning layer. No runtime coupling; gate verifies.',
+      };
+    }
+    // R6: value-syntax named import/export of type-only exports from a mixed module.
+    // Only set when scan proves no dual-space value export and no top-level side effects.
+    if (violation?.namedBindingsTypeOnly) {
+      return {
+        class: 'mechanical-safe',
+        confidence: 0.86,
+        remediationKind: 'import-type-of-type-exports',
+        rationale:
+          'Named bindings are type-only exports of the target module (even if the file also exports values): convert to `import type` / `export type` (erased at runtime). Gate verifies.',
       };
     }
     return {
@@ -136,12 +173,14 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
   const enriched = { ...violation } as EnrichedViolation<T>;
   switch (violation.ruleId) {
     case 'LAYER_IMPORT_VIOLATION':
-      if (violation.typeOnly || violation.targetTypeOnlyExports) {
+      if (violation.typeOnly || violation.targetTypeOnlyExports || violation.namedBindingsTypeOnly) {
         enriched.fixClass = 'file-move';
         enriched.effort = 'small';
-        enriched.enthusiastHint = violation.targetTypeOnlyExports
-          ? 'The imported module only exports types — use `import type` and place the type in a layer both sides may share.'
-          : 'This is a type-only import — move the type to a layer both sides may share, or relocate the file to match its role.';
+        enriched.enthusiastHint = violation.namedBindingsTypeOnly
+          ? 'Those named imports are type-only exports of the target — use `import type { … }` (or `export type { … }`) so the edge is erased at runtime.'
+          : violation.targetTypeOnlyExports
+            ? 'The imported module only exports types — use `import type` and place the type in a layer both sides may share.'
+            : 'This is a type-only import — move the type to a layer both sides may share, or relocate the file to match its role.';
       } else {
         enriched.fixClass = 'port-inversion';
         enriched.effort = 'medium';

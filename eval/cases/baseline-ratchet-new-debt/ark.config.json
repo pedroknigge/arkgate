@@ -1,0 +1,8 @@
+{
+  "include": ["src"],
+  "layers": [
+    { "name": "DomainModel", "patterns": ["src/domain/**"], "intentPrefixes": ["Domain."] },
+    { "name": "PersistenceAdapters", "patterns": ["src/infra/**"], "intentPrefixes": ["Adapter.Persistence."] }
+  ],
+  "rules": [{ "from": "DomainModel", "to": "PersistenceAdapters", "allowed": false }]
+}

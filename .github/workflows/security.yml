@@ -22,6 +22,9 @@ jobs:
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: moderate
+          # Fixture manifests under eval/cases declare framework names only for
+          # detection/corpus layout — they are never installed or published.
+          exclude-paths: eval/cases/**
 
   codeql:
     name: CodeQL

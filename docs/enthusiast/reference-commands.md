@@ -51,7 +51,7 @@ arkgate-check --watch
 
 | `class` | Agent may auto-apply? | Examples (`remediationKind`) |
 |---------|----------------------|------------------------------|
-| `mechanical-safe` | Yes (validate + rollback) | `type-only-import-move`, `pure-type-file-relocate`, `import-type-from-pure-type-module` |
+| `mechanical-safe` | Yes (validate + rollback) | `type-only-import-move`, `pure-type-file-relocate`, `import-type-from-pure-type-module`, `import-type-of-type-exports` |
 | `judgment` | No — propose | value imports, ports, infra relocate, cycles |
 | `deferred` | No | unclear shape |
 
@@ -62,4 +62,4 @@ When present on violations:
 - `fixClass` — e.g. `port-inversion`, `file-move`
 - `effort` — `small` | `medium`
 - `enthusiastHint` — plain English fix guidance
-- plan enrichment: `class`, `remediationKind`, `typeOnly`, `sourcePureTypeModule`, `targetTypeOnlyExports`
+- plan enrichment: `class`, `remediationKind`, `typeOnly`, `sourcePureTypeModule`, `targetTypeOnlyExports`, `namedBindingsTypeOnly`

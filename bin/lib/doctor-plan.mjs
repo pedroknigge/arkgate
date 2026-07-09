@@ -162,6 +162,8 @@ export function buildRemediationPlan(root, activeViolations, governedPercent = n
       ...(v.typeOnly ? { typeOnly: true } : {}),
       ...(v.targetTypeOnlyExports ? { targetTypeOnlyExports: true } : {}),
       ...(v.sourcePureTypeModule ? { sourcePureTypeModule: true } : {}),
+      ...(v.namedBindingsTypeOnly ? { namedBindingsTypeOnly: true } : {}),
+      ...(v.edgeKind ? { edgeKind: v.edgeKind } : {}),
       ...(verdict.remediationKind ? { remediationKind: verdict.remediationKind } : {}),
     };
   });

@@ -83,11 +83,41 @@ A case is a directory under `cases/` containing a violating mini-project plus a
 {
   "description": "one line shown in the report",
   "expectedFix": "note for humans reading the report (not shown to the agent)",
-  "mustKeep": ["src/path/that/must/survive.ts"]
+  "mustKeep": ["src/path/that/must/survive.ts"],
+  "theme": "wrong-layer",
+  "expectedRuleId": "LAYER_IMPORT_VIOLATION",
+  "expectedFixClass": "port-inversion",
+  "expectedRemediationClass": "judgment",
+  "expectedRemediationKind": "type-only-import-move"
 }
 ```
+
+| Field | Required | Meaning |
+|-------|----------|---------|
+| `description` | yes | One line in the report |
+| `expectedFix` | yes | Human answer key (never shown to the agent) |
+| `mustKeep` | recommended | Paths that must survive a real agent fix |
+| `theme` | yes (R5) | Scenario bucket for corpus coverage |
+| `expectedFixClass` | yes (R5) | Domain `fixClass` vocabulary (`file-move`, `port-inversion`, `inject-port`, `break-cycle`, …) |
+| `expectedRemediationClass` | yes (R5) | `mechanical-safe` \| `judgment` \| `deferred` |
+| `expectedRemediationKind` | when mechanical-safe | e.g. `type-only-import-move`, `pure-type-file-relocate`, `import-type-of-type-exports` |
+| `expectedRuleId` | recommended | Primary `ruleId` the fixture is meant to trigger |
+| `skipHarness` | optional | Skip live agent; still counted in static corpus |
 
 The fixture must actually violate (`ark-check` exits 1) or the runner reports
 `ERROR` and skips it. `mustKeep` files are checked to be present and non-trivial
 after the run, so "delete the file" doesn't count as a fix. `case.json` is
 stripped from the copy before the agent sees it — no answer key leaks.
+
+### Static corpus check (CI, no agent)
+
+```bash
+npm run eval:corpus
+# or: node eval/validate-corpus.mjs
+```
+
+Asserts ≥15 cases, required R5 themes, label schema, and that every non-`skipHarness`
+fixture fails real `ark-check` with violations. Wired into default CI via unit test
+`tests/unit/static-check/evalCorpus.test.ts` and the `eval:corpus` script. Live
+`npm run eval:agent` remains optional/nightly and must not gate green CI when no agent
+is present.

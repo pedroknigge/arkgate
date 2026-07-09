@@ -1,0 +1,9 @@
+{
+  "description": "Nest overlay layout: domain entity imports a repository (DomainModel → PersistenceAdapters).",
+  "expectedFix": "Define a port on the entity/domain side and inject the repository from an outer Nest provider — do not construct OrderRepository inside the entity.",
+  "mustKeep": ["src/order.entity.ts"],
+  "theme": "nest-overlay",
+  "expectedRuleId": "LAYER_IMPORT_VIOLATION",
+  "expectedFixClass": "port-inversion",
+  "expectedRemediationClass": "judgment"
+}

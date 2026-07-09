@@ -1,0 +1,9 @@
+{
+  "description": "Monorepo frontend/: application bag under frontend/src/core imports frontend/src/db.",
+  "expectedFix": "Invert the dependency: core uses a port; the db adapter implements it from the outside.",
+  "mustKeep": ["frontend/src/core/threads/api.ts"],
+  "theme": "monorepo-frontend",
+  "expectedRuleId": "LAYER_IMPORT_VIOLATION",
+  "expectedFixClass": "port-inversion",
+  "expectedRemediationClass": "judgment"
+}

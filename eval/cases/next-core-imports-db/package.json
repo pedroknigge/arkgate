@@ -1,0 +1,8 @@
+{
+  "name": "next-core-eval",
+  "private": true,
+  "dependencies": {
+    "next": "15.5.20",
+    "react": "19.0.0"
+  }
+}

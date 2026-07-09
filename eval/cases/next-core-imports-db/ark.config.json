@@ -1,0 +1,34 @@
+{
+  "include": ["src"],
+  "frameworkOverlay": "next",
+  "layers": [
+    {
+      "name": "PresentationAdapters",
+      "patterns": ["src/app/**", "src/components/**", "src/**/page.tsx"],
+      "intentPrefixes": ["Presentation."]
+    },
+    {
+      "name": "ApplicationOrchestration",
+      "patterns": ["src/core/**", "**/core/**", "src/lib/**"],
+      "intentPrefixes": ["Application."]
+    },
+    {
+      "name": "DomainModel",
+      "patterns": ["src/domain/**"],
+      "intentPrefixes": ["Domain."]
+    },
+    {
+      "name": "PersistenceAdapters",
+      "patterns": ["src/db/**", "src/data/**", "src/repositories/**"],
+      "intentPrefixes": ["Adapter.Persistence."]
+    }
+  ],
+  "rules": [
+    { "from": "DomainModel", "to": "ApplicationOrchestration", "allowed": false },
+    { "from": "DomainModel", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "ApplicationOrchestration", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "PresentationAdapters", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "PersistenceAdapters", "to": "ApplicationOrchestration", "allowed": false }
+  ],
+  "exclude": ["**/public/**", "**/*.config.js"]
+}

@@ -15,12 +15,15 @@ import {
   isPublishCall,
   lineOf,
   moduleSpecifierFromCall,
+  namedModuleBindings,
   objectHasProperty,
   publishHasSource,
   publishSourceLiteral,
   sourceFileExportsOnlyTypes,
+  sourceFileHasTopLevelSideEffects,
   stringLiteralText,
   textOfModuleSpecifier,
+  typeOnlyExportNames,
 } from './ast-scan.mjs';
 import {
   intentLayersFromManifest,
@@ -64,11 +67,13 @@ export function scanSourceFile(ts, root, config, rules, manifestIntentLayers, fi
   }
 
   const checkModuleEdge = (specifier, node, kind, typeOnly = false) => {
+    const namedBindings = namedModuleBindings(ts, node);
     edges.push({
       specifier,
       line: lineOf(sourceFile, node.getStart(sourceFile)),
       kind,
       typeOnly,
+      ...(namedBindings ? { namedBindings } : {}),
     });
   };
 
@@ -165,6 +170,8 @@ export function scanSourceFile(ts, root, config, rules, manifestIntentLayers, fi
     contentViolations: violations,
     edges,
     exportsOnlyTypes: sourceFileExportsOnlyTypes(ts, sourceFile),
+    typeOnlyExportNames: typeOnlyExportNames(ts, sourceFile),
+    hasTopLevelSideEffects: sourceFileHasTopLevelSideEffects(ts, sourceFile),
   };
 }
 
@@ -238,6 +245,18 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
         const targetTypeOnlyExports =
           staticEdge && Boolean(targetCached?.exportsOnlyTypes) && !edge.typeOnly;
         const sourcePureTypeModule = Boolean(entry.exportsOnlyTypes);
+        // R6: every named binding is a type-only export of the target (mixed modules OK).
+        // Conservative: no dual-space value names, no top-level side effects on target
+        // (import type would skip evaluation), no default/namespace/side-effect/export*.
+        const targetTypeNames = new Set(targetCached?.typeOnlyExportNames || []);
+        const named = edge.namedBindings;
+        const namedBindingsTypeOnly =
+          staticEdge &&
+          Array.isArray(named) &&
+          named.length > 0 &&
+          targetTypeNames.size > 0 &&
+          !targetCached?.hasTopLevelSideEffects &&
+          named.every((n) => targetTypeNames.has(n));
         violations.push({
           ruleId: 'LAYER_IMPORT_VIOLATION',
           file: relFile,
@@ -248,6 +267,7 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
           ...(edge.typeOnly ? { typeOnly: true } : {}),
           ...(targetTypeOnlyExports ? { targetTypeOnlyExports: true } : {}),
           ...(sourcePureTypeModule ? { sourcePureTypeModule: true } : {}),
+          ...(namedBindingsTypeOnly ? { namedBindingsTypeOnly: true } : {}),
           ...(edge.kind ? { edgeKind: edge.kind } : {}),
           message: rule.message ?? `${sourceLayer} must not ${edge.kind} ${targetLayer}.`,
         });

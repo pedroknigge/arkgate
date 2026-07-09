@@ -70,9 +70,9 @@ These fix the scorecard risks that slow every later feature.
 
 | # | Status | Item | Why now | Definition of Done |
 |---|--------|------|---------|-------------------|
-| **R5** | `todo` | **Grow labeled eval corpus** | Classifier + autopilot need more than a handful of cases | ≥ **15** eval cases under `eval/cases/` covering: type-only move, Nest overlay, Next `core/**` bag, monorepo `frontend/`, wrong-layer, domain forbidden global, baseline ratchet, pure-type relocate. `npm run eval:agent` (or documented subset) runs in CI or nightly without flaking. Each case has expected fixClass / pass-fail label. |
-| **R6** | `todo` | **Broaden `mechanical-safe` (eval-gated)** | Co-pilot pays only when safe auto-depth grows without lying | New mechanical-safe kinds only land with labeled evals and **zero false mechanical-safe** on the corpus. Still deferred without static proof: verbatim infra relocation of value modules. Bias unchanged: false “safe” &gt; extra human approval. |
-| **R7** | `todo` | **Codex multi-project MCP DX** | Home config last-wins breaks multi-repo agents | Documented + implemented path so multi-project Codex (or equivalent host) does not silently overwrite MCP/gates. Doctor flags the bad state. Regression test or fixture for the config shape. |
+| **R5** | `done` | **Grow labeled eval corpus** | Classifier + autopilot need more than a handful of cases | ≥ **15** eval cases under `eval/cases/` covering: type-only move, Nest overlay, Next `core/**` bag, monorepo `frontend/`, wrong-layer, domain forbidden global, baseline ratchet, pure-type relocate. `npm run eval:agent` (or documented subset) runs in CI or nightly without flaking. Each case has expected fixClass / pass-fail label. **Done:** 16 cases; `npm run eval:corpus` + `evalCorpus.test.ts`; live agent optional/nightly. |
+| **R6** | `done` | **Broaden `mechanical-safe` (eval-gated)** | Co-pilot pays only when safe auto-depth grows without lying | New mechanical-safe kinds only land with labeled evals and **zero false mechanical-safe** on the corpus. Still deferred without static proof: verbatim infra relocation of value modules. Bias unchanged: false “safe” &gt; extra human approval. **Done:** fourth kind `import-type-of-type-exports` (`namedBindingsTypeOnly`); labeled case + precision corpus; value/require/dynamic/mixed-value stay judgment. |
+| **R7** | `done` | **Codex multi-project MCP DX** | Home config last-wins breaks multi-repo agents | Documented + implemented path so multi-project Codex (or equivalent host) does not silently overwrite MCP/gates. Doctor flags the bad state. Regression test or fixture for the config shape. **Done:** secondary `ark_<slug>` without `--force`; doctor gap `codex-home-multi-project`; docs absolute-path multi-project section; force rebinds primary. |
 
 ### Track C — Runtime honesty (opt-in kernel)
 
@@ -120,9 +120,12 @@ Session 1 → R1  layerMatch single source + CI drift guard  ✅ done
 Session 2 → R2  package surface policy + runtime subpath           ✅ done
 Session 3 → R3  ark-check entry orchestration-only split           ✅ done
 Session 4 → R4  typed pure core (remediation + baselineKey)        ✅ done
+Session 5 → R5  labeled eval corpus (≥15 cases + static precheck)  ✅ done
+Session 6 → R6  broaden mechanical-safe (import-type-of-type-exports) ✅ done
+Session 7 → R7  Codex multi-project MCP DX (secondary table + doctor)  ✅ done
 ```
 
-Next: **R5** (eval corpus). Then R6 for co-pilot depth.
+Next: **R8** (EventBus decomposition) when Track C starts — or R9 durability stance.
 
 ---
 
@@ -154,7 +157,7 @@ Next: **R5** (eval corpus). Then R6 for co-pilot depth.
 - Write gate + CI + optional runtime; minimal runtime deps (`typescript` JS-API host)  
 - Governed %, baselines, concentration guards, layer `exclude`, mature-repo routing  
 - Framework overlays (Nest/Next/express/library), **TypeScript 5 / 6 / 7** matrix  
-- Mechanical-safe: type-only edges · pure-type file relocate · `import type` of pure-type modules  
+- Mechanical-safe: type-only edges · pure-type file relocate · `import type` of pure-type modules · **R6** named type-exports from mixed modules (`import-type-of-type-exports`)  
 - Playbook, `--recommend`, enthusiast track, policy packs, gallery starters  
 - `--plan` · `start` · autopilot/loop skills · HTML report + origin under `.ark/reports/`  
 - Hosts: Claude Code · Cursor · Codex · Grok Build · `/ark-*` skills  
@@ -168,6 +171,9 @@ Next: **R5** (eval corpus). Then R6 for co-pilot depth.
 - **R2:** `docs/package-surface.md` + preferred subpath **`arkgate/runtime`** (root re-exports kernel for compat)  
 - **R3:** `ark-check` entry orchestration-only; scan pipeline in `bin/lib/{scan-files,config-warnings,ts-resolve,ast-scan,graph-cycles,architecture-scan}.mjs`  
 - **R4:** typed pure core — `src/domain/{remediation,baselineKey,layerMatch}.ts` → generated CLI load paths + `check:cli-pure`  
+- **R5:** labeled eval corpus — 16 cases under `eval/cases/`; `npm run eval:corpus` + unit test; live agent optional  
+- **R6:** fourth mechanical-safe kind `import-type-of-type-exports`; dual-space + side-effect targets stay judgment  
+- **R7:** Codex multi-project MCP — `bin/lib/codex-home.mjs`; hashed secondary slug; doctor gap  
 
 
 

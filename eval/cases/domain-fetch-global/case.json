@@ -1,0 +1,9 @@
+{
+  "description": "Domain uses ambient fetch() (forbidden global).",
+  "expectedFix": "Inject an HttpPort (or accept a fetcher) instead of calling fetch inside the domain.",
+  "mustKeep": ["src/domain/remote.ts"],
+  "theme": "domain-forbidden-global",
+  "expectedRuleId": "FORBIDDEN_GLOBAL",
+  "expectedFixClass": "inject-port",
+  "expectedRemediationClass": "judgment"
+}

@@ -1,0 +1,13 @@
+{
+  "include": ["src"],
+  "layers": [
+    { "name": "DomainModel", "patterns": ["src/domain/**"], "intentPrefixes": ["Domain."] },
+    { "name": "ApplicationOrchestration", "patterns": ["src/application/**"], "intentPrefixes": ["Application."] },
+    { "name": "PresentationAdapters", "patterns": ["src/presentation/**"], "intentPrefixes": ["Presentation."] }
+  ],
+  "rules": [
+    { "from": "DomainModel", "to": "ApplicationOrchestration", "allowed": false },
+    { "from": "DomainModel", "to": "PresentationAdapters", "allowed": false },
+    { "from": "ApplicationOrchestration", "to": "PresentationAdapters", "allowed": false }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "include": ["src"],
+  "layers": [
+    {
+      "name": "DomainModel",
+      "patterns": ["src/domain/**"],
+      "intentPrefixes": ["Domain."],
+      "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"]
+    }
+  ],
+  "rules": []
+}

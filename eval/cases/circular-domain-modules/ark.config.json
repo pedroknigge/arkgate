@@ -1,0 +1,7 @@
+{
+  "include": ["src"],
+  "layers": [
+    { "name": "DomainModel", "patterns": ["src/domain/**"], "intentPrefixes": ["Domain."] }
+  ],
+  "rules": []
+}

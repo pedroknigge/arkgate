@@ -1858,10 +1858,11 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
   });
 
   it('classifier precision: a labeled corpus classifies correctly with zero false mechanical-safe', () => {
-    // Phase J + P0 depth: labeled corpus. Classifier must (a) match every label and
-    // (b) NEVER mark judgment cases mechanical-safe. Safe surface (only):
+    // Phase J + P0 + R6: labeled corpus. Classifier must (a) match every label and
+    // (b) NEVER mark judgment cases mechanical-safe. Safe surface:
     //   - type-only import/export edges
     //   - value-syntax import of a module that exports only types (targetTypeOnlyExports)
+    //   - value-syntax named import of type-only exports from a mixed module (namedBindingsTypeOnly)
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-precision-'));
     fs.mkdirSync(path.join(root, 'src/ui'), { recursive: true });
     fs.mkdirSync(path.join(root, 'src/data'), { recursive: true });
@@ -1898,7 +1899,12 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
       path.join(root, 'src/ui/type-target.ts'),
       "import { Id } from '../data/types-only';\nexport type T = Id;\n"
     );
-    // judgment: type-only *exports* but top-level runtime side effect — not pure type module
+    // mechanical-safe (3 / R6): value-syntax named import of a type-only export from mixed module
+    fs.writeFileSync(
+      path.join(root, 'src/ui/mixed-type-name.ts'),
+      "import { Row } from '../data/x';\nexport function label(row: Row): string {\n  return row.id;\n}\n"
+    );
+    // judgment: type name from a module with top-level side effects — import type would skip boot
     fs.writeFileSync(
       path.join(root, 'src/data/types-with-side-effect.ts'),
       "console.log('boot');\nexport type Side = string;\n"
@@ -1906,6 +1912,24 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
     fs.writeFileSync(
       path.join(root, 'src/ui/side-effect-target.ts'),
       "import { Side } from '../data/types-with-side-effect';\nexport type S = Side;\n"
+    );
+    // judgment: impure value-export initializer (not just expression statements)
+    fs.writeFileSync(
+      path.join(root, 'src/data/with-init-effect.ts'),
+      "export const db = console.log('connect');\nexport type Row = { id: string };\n"
+    );
+    fs.writeFileSync(
+      path.join(root, 'src/ui/init-effect-target.ts'),
+      "import { Row } from '../data/with-init-effect';\nexport function f(r: Row) {\n  return r.id;\n}\n"
+    );
+    // judgment: non-exported impure initializer still runs on module load
+    fs.writeFileSync(
+      path.join(root, 'src/data/with-local-init-effect.ts'),
+      "const boot = console.log('boot');\nexport type LocalRow = { id: string };\nexport const k = 1;\n"
+    );
+    fs.writeFileSync(
+      path.join(root, 'src/ui/local-init-effect-target.ts'),
+      "import { LocalRow } from '../data/with-local-init-effect';\nexport function g(r: LocalRow) {\n  return r.id;\n}\n"
     );
     // judgment: require() of pure-type module (runtime load — never auto)
     fs.writeFileSync(
@@ -1919,6 +1943,21 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
     );
     // judgment: value import of a value export across a denied edge
     fs.writeFileSync(path.join(root, 'src/ui/value.ts'), "import { q } from '../data/x';\nexport const z = q;\n");
+    // judgment: mixed import that includes a value binding (must NOT be auto even if types present)
+    fs.writeFileSync(
+      path.join(root, 'src/ui/mixed-value.ts'),
+      "import { Row, q } from '../data/x';\nexport const z = q;\nexport type R = Row;\n"
+    );
+    // judgment (R6 dual-space): export type Foo + export const Foo — import { Foo } used as value
+    // must NEVER be mechanical-safe (converting to import type would drop the runtime binding).
+    fs.writeFileSync(
+      path.join(root, 'src/data/dual-space.ts'),
+      "export type Foo = string;\nexport const Foo = 'runtime';\n"
+    );
+    fs.writeFileSync(
+      path.join(root, 'src/ui/dual-space-value.ts'),
+      "import { Foo } from '../data/dual-space';\nexport const v = Foo;\n"
+    );
     // judgment: forbidden ambient global in a pure layer
     fs.writeFileSync(path.join(root, 'src/domain/global.ts'), 'export const p = process.env.X;\n');
     // judgment: circular dependency
@@ -1929,18 +1968,26 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
     // Invariant: every mechanical-safe step is a type-surface LAYER_IMPORT_VIOLATION only.
     for (const step of plan.steps.filter((s) => s.class === 'mechanical-safe')) {
       expect(step.ruleId).toBe('LAYER_IMPORT_VIOLATION');
-      const s = step as { typeOnly?: boolean; targetTypeOnlyExports?: boolean; edgeKind?: string };
-      expect(Boolean(s.typeOnly || s.targetTypeOnlyExports)).toBe(true);
+      const s = step as {
+        typeOnly?: boolean;
+        targetTypeOnlyExports?: boolean;
+        namedBindingsTypeOnly?: boolean;
+        edgeKind?: string;
+      };
+      expect(Boolean(s.typeOnly || s.targetTypeOnlyExports || s.namedBindingsTypeOnly)).toBe(true);
       // never auto-class runtime module loads
       expect(s.edgeKind === 'require' || s.edgeKind === 'dynamic-import').toBe(false);
     }
-    // The value import, side-effect target, require, dynamic import, forbidden global, cycle
-    // are all judgment — never auto.
+    // Value, mixed value+type, dual-space, side-effect targets, require, dynamic, global, cycle — never auto.
     const judgmentFiles = plan.steps
       .filter((s) => s.class === 'judgment')
       .map((s) => (s as { file?: string }).file);
     expect(judgmentFiles).toContain('src/ui/value.ts');
+    expect(judgmentFiles).toContain('src/ui/mixed-value.ts');
+    expect(judgmentFiles).toContain('src/ui/dual-space-value.ts');
     expect(judgmentFiles).toContain('src/ui/side-effect-target.ts');
+    expect(judgmentFiles).toContain('src/ui/init-effect-target.ts');
+    expect(judgmentFiles).toContain('src/ui/local-init-effect-target.ts');
     expect(judgmentFiles).toContain('src/ui/require-type.ts');
     expect(judgmentFiles).toContain('src/ui/dynamic-type.ts');
     expect(judgmentFiles).toContain('src/domain/global.ts');
@@ -1948,13 +1995,15 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
     expect(judgmentRules).toContain('FORBIDDEN_GLOBAL');
     expect(judgmentRules).toContain('CIRCULAR_DEPENDENCY');
     expect(judgmentRules).toContain('LAYER_IMPORT_VIOLATION');
-    // Exactly two auto-applicable steps (import type + pure-type static value-syntax).
-    expect(plan.counts.mechanicalSafe).toBe(2);
+    // Three auto-applicable steps (import type file, pure-type target, mixed type name).
+    expect(plan.counts.mechanicalSafe).toBe(3);
     const autoFiles = plan.steps
       .filter((s) => s.class === 'mechanical-safe')
       .map((s) => (s as { file?: string }).file)
       .sort();
-    expect(autoFiles).toEqual(['src/ui/type-target.ts', 'src/ui/type.ts'].sort());
+    expect(autoFiles).toEqual(
+      ['src/ui/mixed-type-name.ts', 'src/ui/type-target.ts', 'src/ui/type.ts'].sort()
+    );
     const pureFileStep = plan.steps.find(
       (s) => (s as { file?: string }).file === 'src/ui/type.ts' && s.class === 'mechanical-safe'
     ) as { remediationKind?: string; sourcePureTypeModule?: boolean };
@@ -1964,6 +2013,11 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
       (s) => (s as { file?: string }).file === 'src/ui/type-target.ts'
     ) as { remediationKind?: string };
     expect(typeTarget?.remediationKind).toBe('import-type-from-pure-type-module');
+    const mixedType = plan.steps.find(
+      (s) => (s as { file?: string }).file === 'src/ui/mixed-type-name.ts'
+    ) as { remediationKind?: string; namedBindingsTypeOnly?: boolean };
+    expect(mixedType?.namedBindingsTypeOnly).toBe(true);
+    expect(mixedType?.remediationKind).toBe('import-type-of-type-exports');
   });
 
   it('classifyRemediation pure unit: only type-surface layer imports are mechanical-safe', async () => {

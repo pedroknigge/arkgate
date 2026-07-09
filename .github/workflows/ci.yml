@@ -37,6 +37,7 @@ jobs:
 
       - name: Test
         run: npm run test:run
+        # Includes evalCorpus.test.ts (spawns npm run eval:corpus) — no separate step
 
       - name: Build
         run: npm run build

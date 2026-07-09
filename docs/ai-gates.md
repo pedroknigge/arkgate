@@ -189,20 +189,54 @@ Your hard backstop in Cursor is CI: `ark-check` fails the PR on anything that sl
 
 Recommended for Ark projects.
 
-`~/.codex/config.toml`:
+Unlike Claude/Cursor (project-local MCP files), **Codex loads MCP servers only from
+`$CODEX_HOME/config.toml`** (default `~/.codex/config.toml`) — a **global** home file.
+Hand-editing with relative `--root .` is wrong: Codex does not use the project as cwd, so
+`.` resolves against the launch directory. Prefer absolute paths, or let Ark write them:
+
+```bash
+npx ark-check --install-agent-gates --tools codex
+# optional: install /ark-* slash prompts into $CODEX_HOME/prompts
+npx ark-check --install-agent-gates --codex-home
+```
+
+Example shape (absolute paths — also what install writes):
 
 ```toml
 [mcp_servers.ark]
 command = "npx"
-args = ["ark-mcp", "--root", ".", "--config", "ark.config.json"]
+args = ["arkgate-mcp", "--root", "/absolute/path/to/project", "--config", "/absolute/path/to/project/ark.config.json"]
 ```
 
-Same model as Cursor: MCP for discovery/validation, `ark-check` in CI as the hard gate.
-For Ark projects, register the MCP server as soon as the repo is adopted so the agent
-has the contract available from the first edit.
+Then **restart Codex** — it does not hot-load MCP servers. Expect resource `ark://manifest`
+and tools `validate_code`, `ark_check`, `ark_coverage`, `ark_place`.
 
-`ark-check --install-agent-gates --tools codex` auto-merges absolute paths into
-`~/.codex/config.toml` and can install `/ark-*` prompts with `--codex-home`.
+Same model as Cursor for enforcement: MCP for discovery/validation, `ark-check` in CI as
+the hard gate. Register the MCP server as soon as the repo is adopted.
+
+### Multi-project Codex (home config last-wins)
+
+`[mcp_servers.ark]` is a **single primary** binding. If project A is already registered and
+you install gates for project B **without** `--force`, Ark does **not** silently steal
+primary A. It writes a **scoped secondary** table:
+
+```toml
+[mcp_servers.ark]            # primary — still project A
+# ...
+
+[mcp_servers.ark_proj-b_a1b2c3d4]  # secondary — basename + path hash (no slug collisions)
+# absolute --root for B
+```
+
+| Goal | Command |
+|------|---------|
+| Add B without moving primary | `ark-check --install-agent-gates --tools codex` (no `--force`) |
+| Make B the primary binding | `ark-check --install-agent-gates --tools codex --force` |
+| Doctor: primary points at another permanent project | gap id `codex-home-multi-project` (warn if no secondary yet; info if scoped table already present) |
+
+`ark-check --doctor` surfaces the multi-project state so you are not left thinking B owns
+`ark://manifest` when only a secondary table exists. Temp/upgrade primary roots are still
+rewritten fail-closed (not multi-project).
 
 ## Grok Build (xAI)
 

@@ -1,0 +1,10 @@
+{
+  "description": "Value-syntax import of a pure type-only module across a denied edge (convert to import type).",
+  "expectedFix": "Change to import type { Id } and place the type in a shared/owning layer if needed.",
+  "mustKeep": ["src/ui/uses-id.ts", "src/data/types-only.ts"],
+  "theme": "pure-type-relocate",
+  "expectedRuleId": "LAYER_IMPORT_VIOLATION",
+  "expectedFixClass": "file-move",
+  "expectedRemediationClass": "mechanical-safe",
+  "expectedRemediationKind": "import-type-from-pure-type-module"
+}

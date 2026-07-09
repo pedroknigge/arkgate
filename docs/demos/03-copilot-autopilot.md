@@ -40,8 +40,9 @@ npx ark-check --plan --json     # { ok, plan: { goal, counts, steps } }
 ```
 
 Each step is tagged `mechanical-safe` / `judgment` / `deferred` with a `confidence`,
-`rationale`, and often `remediationKind`. Only three kinds are auto-safe: type-only type move,
-pure-type **file** relocate, and `import type` of pure-type modules. `goal.met` is true only when
+`rationale`, and often `remediationKind`. Auto-safe kinds: type-only type move, pure-type **file**
+relocate, `import type` of pure-type modules, and named type-export imports from mixed modules
+(`import-type-of-type-exports`). `goal.met` is true only when
 there are no active violations **and** governed coverage is meaningful — so a clean plan that
 checks almost nothing is not "done."
 

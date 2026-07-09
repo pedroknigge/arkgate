@@ -1,0 +1,10 @@
+{
+  "description": "Type-only import across a denied UI→Data edge (mechanical-safe type-only move).",
+  "expectedFix": "Move the Row type to a layer both sides may share, or re-export from an allowed owner; keep import type.",
+  "mustKeep": ["src/ui/type-edge.ts"],
+  "theme": "type-only-move",
+  "expectedRuleId": "LAYER_IMPORT_VIOLATION",
+  "expectedFixClass": "file-move",
+  "expectedRemediationClass": "mechanical-safe",
+  "expectedRemediationKind": "type-only-import-move"
+}

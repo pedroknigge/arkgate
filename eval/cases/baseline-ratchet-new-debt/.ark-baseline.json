@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "note": "Frozen ark-check violations. Only NEW violations fail --baseline runs. Regenerate with: ark-check --update-baseline",
+  "violations": [
+    "LAYER_IMPORT_VIOLATION|src/domain/order.ts|DomainModel|PersistenceAdapters|src/infra/db.ts"
+  ]
+}

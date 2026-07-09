@@ -18,6 +18,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Eval corpus (static labels + ark-check)
+        run: npm run eval:corpus
+
       - name: Comparative eval (static oracle)
         run: node eval/comparative-run.mjs
 

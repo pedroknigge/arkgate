@@ -1,6 +1,6 @@
 {
   "name": "arkgate",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "description": "ArkGate — architecture co-pilot for AI TypeScript (write gate, CI gate, plan/loop)",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -75,6 +75,7 @@
     "check:cli-pure": "node scripts/generate-cli-pure.mjs --check",
     "test:ts-compat": "node scripts/ts-compat-matrix.mjs 5.9.3 && node scripts/ts-compat-matrix.mjs 6.0.3 && node scripts/ts-compat-matrix.mjs 7.0.2",
     "eval:agent": "node eval/run.mjs",
+    "eval:corpus": "node eval/validate-corpus.mjs",
     "eval:comparative": "node eval/comparative-run.mjs",
     "clean": "rm -rf dist",
     "release:npm": "node scripts/release-npm.mjs",
