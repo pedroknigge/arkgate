@@ -64,6 +64,26 @@ npx ark-check --watch                           # debounced re-check when govern
 `enthusiastHint` (plain English). `--doctor --json` exposes `doctor.newHere` with
 `recommendCommand` and `initCommand` when the nudge applies.
 
+### Deploy-path quality (lint/types before the host build)
+
+Some frameworks run **ESLint and/or typecheck inside the production build** (Next.js by
+default: “Linting and checking validity of types”). Architecture can be green while the
+**deploy host** is the first place a `no-explicit-any` or unused-import error appears.
+
+Ark does **not** reimplement general ESLint rules. `--doctor` / adoption gaps **do**
+detect, for **any** consumer repo (framework signals only — deps, scripts, CI files):
+
+| Gap id | When |
+|--------|------|
+| `deploy-path-lint-script-missing` | Build embeds ESLint; no `lint` / `eslint` script |
+| `deploy-path-lint-not-in-ci` | Lint script exists; CI workflows never run it |
+| `deploy-path-lint-no-ci` | Build embeds ESLint; no CI workflows at all |
+| `deploy-path-typecheck-script-missing` | Build typechecks; no `typecheck` script |
+| `deploy-path-typecheck-not-in-ci` | Typecheck script exists; CI never runs it |
+
+Respects `eslint.ignoreDuringBuilds: true` in `next.config.*`. Recommended pre-merge
+order (universal): `lint` → `typecheck` → `arkgate-check` / `check:architecture` → `build`.
+
 ### MCP `ark_recommend` and `/ark-architect` (Phase C)
 
 The `ark-mcp` server exposes **`ark_recommend`** — same JSON as

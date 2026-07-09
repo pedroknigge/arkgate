@@ -2,6 +2,21 @@
 
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here.
 
+## Unreleased — 2.6.1
+
+### Added — deploy-path adoption (universal)
+
+- **`collectAdoptionGaps` / `--doctor`:** detects when a **production build host** will run
+  ESLint or typecheck as part of `build` (Next.js by default; CRA; Nuxt when ESLint is present)
+  and flags gaps that make the deploy host the first fail:
+  - no package.json `lint` / typecheck script
+  - CI workflows exist but never run lint / typecheck
+  - no CI at all while the framework embeds lint
+- Respects `eslint.ignoreDuringBuilds: true` in `next.config.*` (no false lint embed).
+- Signals are framework/deps/scripts only — **not** project-specific.
+- Ark still does **not** reimplement `no-unused-vars` / `no-explicit-any`; it ensures the
+  same checks run **before** the deploy host.
+
 ## 2.6.0 — 2026-07-09
 
 ### Changed — maintainability hygiene (#11 / #12)

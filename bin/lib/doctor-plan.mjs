@@ -466,7 +466,10 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   console.log('');
   console.log(color.bold('Adoption (separate from fitness score)'));
   if (adoption.gaps.length === 0 && !adoption.layerBalance) {
-    line(ok, 'Hosts, MCP argv, core optionality, origin report, and baseline policy look complete');
+    line(
+      ok,
+      'Hosts, MCP argv, core optionality, origin report, baseline policy, and deploy-path lint/types look complete'
+    );
   } else {
     for (const gap of adoption.gaps) {
       const mark = gap.severity === 'warn' ? warn : gap.severity === 'info' ? warn : bad;

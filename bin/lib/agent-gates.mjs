@@ -956,8 +956,163 @@ export function codexArkBlockNeedsRewrite(tomlText, absRoot) {
 }
 
 /**
+ * Production deploy path quality (universal — any consumer repo).
+ * Detects when the production build host runs ESLint / typecheck as part of
+ * `build` (e.g. Next.js "Linting and checking validity of types") so failures
+ * surface first on Vercel/Netlify/etc. unless CI/pre-merge runs the same checks.
+ * Framework signals only (deps + scripts + config) — never project-specific.
+ *
+ * @returns {{
+ *   embedsLintInBuild: boolean,
+ *   embedsTypecheckInBuild: boolean,
+ *   engines: string[],
+ *   hasLintScript: boolean,
+ *   hasTypecheckScript: boolean,
+ *   ciRunsLint: boolean,
+ *   ciRunsTypecheck: boolean,
+ *   eslintIgnoreDuringBuilds: boolean,
+ * }}
+ */
+export function detectDeployPathQuality(root) {
+  const pkg = readPackageJson(root) || {};
+  const deps = {
+    ...(pkg.dependencies && typeof pkg.dependencies === 'object' ? pkg.dependencies : {}),
+    ...(pkg.devDependencies && typeof pkg.devDependencies === 'object' ? pkg.devDependencies : {}),
+    ...(pkg.peerDependencies && typeof pkg.peerDependencies === 'object' ? pkg.peerDependencies : {}),
+  };
+  const scripts =
+    pkg.scripts && typeof pkg.scripts === 'object' ? pkg.scripts : {};
+  const buildScript = typeof scripts.build === 'string' ? scripts.build : '';
+
+  const engines = [];
+  // Next.js production build runs ESLint + typecheck by default (unless opted out).
+  if (deps.next || /\bnext\s+build\b/.test(buildScript)) engines.push('next');
+  // Nuxt 3+ can lint via modules; only flag when build clearly invokes nuxt build + eslint tooling present.
+  if ((deps.nuxt || deps['nuxt3'] || /\bnuxt\s+build\b/.test(buildScript)) && (deps.eslint || hasEslintConfig(root))) {
+    engines.push('nuxt');
+  }
+  // Create React App historically failed build on ESLint errors.
+  if (deps['react-scripts'] || /\breact-scripts\s+build\b/.test(buildScript)) engines.push('cra');
+
+  const eslintIgnoreDuringBuilds = engines.includes('next') && nextIgnoresEslintDuringBuilds(root);
+  const embedsLintInBuild = engines.length > 0 && !eslintIgnoreDuringBuilds;
+  // Next still typechecks during build even when eslint.ignoreDuringBuilds is true.
+  const embedsTypecheckInBuild = engines.includes('next') || engines.includes('nuxt');
+
+  const hasLintScript = Boolean(
+    (typeof scripts.lint === 'string' && scripts.lint.trim()) ||
+      (typeof scripts.eslint === 'string' && scripts.eslint.trim()) ||
+      (typeof scripts['lint:ci'] === 'string' && scripts['lint:ci'].trim()) ||
+      (typeof scripts['check:lint'] === 'string' && scripts['check:lint'].trim())
+  );
+  const hasTypecheckScript = Boolean(
+    (typeof scripts.typecheck === 'string' && scripts.typecheck.trim()) ||
+      (typeof scripts['type-check'] === 'string' && scripts['type-check'].trim()) ||
+      (typeof scripts['check:types'] === 'string' && scripts['check:types'].trim()) ||
+      (typeof scripts.tsc === 'string' && /\btsc\b/.test(scripts.tsc))
+  );
+
+  const ciTexts = collectCiWorkflowTexts(root);
+  const ciJoined = ciTexts.join('\n');
+  const ciRunsLint =
+    ciTexts.length > 0 &&
+    (/\bnpm\s+run\s+lint\b/i.test(ciJoined) ||
+      /\bpnpm\s+(?:run\s+)?lint\b/i.test(ciJoined) ||
+      /\byarn\s+(?:run\s+)?lint\b/i.test(ciJoined) ||
+      /\bbun\s+run\s+lint\b/i.test(ciJoined) ||
+      /\beslint\b/i.test(ciJoined) ||
+      /\blint:ci\b/i.test(ciJoined) ||
+      /\bcheck:lint\b/i.test(ciJoined));
+  const ciRunsTypecheck =
+    ciTexts.length > 0 &&
+    (/\btypecheck\b/i.test(ciJoined) ||
+      /\btype-check\b/i.test(ciJoined) ||
+      /\bcheck:types\b/i.test(ciJoined) ||
+      /\btsc\s+--noEmit\b/i.test(ciJoined));
+
+  return {
+    embedsLintInBuild,
+    embedsTypecheckInBuild,
+    engines,
+    hasLintScript,
+    hasTypecheckScript,
+    ciRunsLint,
+    ciRunsTypecheck,
+    eslintIgnoreDuringBuilds,
+    hasCiWorkflows: ciTexts.length > 0,
+  };
+}
+
+function hasEslintConfig(root) {
+  return [
+    'eslint.config.mjs',
+    'eslint.config.js',
+    'eslint.config.cjs',
+    'eslint.config.ts',
+    '.eslintrc.json',
+    '.eslintrc.cjs',
+    '.eslintrc.js',
+    '.eslintrc.yml',
+    '.eslintrc.yaml',
+  ].some((f) => fs.existsSync(path.join(root, f)));
+}
+
+/** next.config.* eslint.ignoreDuringBuilds: true → production build will not fail on ESLint. */
+function nextIgnoresEslintDuringBuilds(root) {
+  const names = [
+    'next.config.ts',
+    'next.config.mts',
+    'next.config.js',
+    'next.config.mjs',
+    'next.config.cjs',
+  ];
+  for (const name of names) {
+    const file = path.join(root, name);
+    if (!fs.existsSync(file)) continue;
+    try {
+      const text = fs.readFileSync(file, 'utf8');
+      // Common patterns: ignoreDuringBuilds: true | ignoreDuringBuilds: true,
+      if (/ignoreDuringBuilds\s*:\s*true/.test(text)) return true;
+    } catch {
+      /* ignore */
+    }
+  }
+  return false;
+}
+
+function collectCiWorkflowTexts(root) {
+  const texts = [];
+  const pushFile = (rel) => {
+    try {
+      const full = path.join(root, rel);
+      if (fs.existsSync(full) && fs.statSync(full).isFile()) {
+        texts.push(fs.readFileSync(full, 'utf8'));
+      }
+    } catch {
+      /* ignore */
+    }
+  };
+  pushFile('.gitlab-ci.yml');
+  pushFile('bitbucket-pipelines.yml');
+  pushFile('azure-pipelines.yml');
+  pushFile('.circleci/config.yml');
+  const wfDir = path.join(root, '.github', 'workflows');
+  try {
+    if (fs.existsSync(wfDir)) {
+      for (const f of fs.readdirSync(wfDir)) {
+        if (!/\.ya?ml$/i.test(f)) continue;
+        pushFile(path.join('.github', 'workflows', f));
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return texts;
+}
+
+/**
  * Adoption completeness (separate from 0–100 fitness). Pure-ish: filesystem + config.
- * @returns {{ gaps: object[], hosts: object[], mcp: object, codexHome: object|null, coreOptional: object[], originReport: object, baseline: object, layerBalance: object|null }}
+ * @returns {{ gaps: object[], hosts: object[], mcp: object, codexHome: object|null, coreOptional: object[], originReport: object, baseline: object, layerBalance: object|null, deployPath: object|null }}
  */
 export function collectAdoptionGaps(root, config, coverage) {
   const gaps = [];
@@ -1202,6 +1357,68 @@ export function collectAdoptionGaps(root, config, coverage) {
     }
   }
 
+  // --- Deploy-path quality (ESLint/types that production build hosts run) ---
+  // Universal: any Next/CRA/Nuxt (etc.) consumer. Not architecture — still adoption.
+  // Skip pure library producer (this monorepo) to avoid self-noise.
+  let deployPath = null;
+  if (!isProducer) {
+    deployPath = detectDeployPathQuality(root);
+    const eng =
+      deployPath.engines.length > 0 ? deployPath.engines.join('/') : 'production';
+    if (deployPath.embedsLintInBuild && !deployPath.hasLintScript) {
+      gaps.push({
+        id: 'deploy-path-lint-script-missing',
+        severity: 'warn',
+        message: `${eng} production build runs ESLint — no package.json lint script, so failures often surface first on the deploy host`,
+        fix: 'Add a package.json "lint" script (e.g. eslint .) matching production ESLint config; run it in CI and before merge',
+      });
+    } else if (
+      deployPath.embedsLintInBuild &&
+      deployPath.hasLintScript &&
+      deployPath.hasCiWorkflows &&
+      !deployPath.ciRunsLint
+    ) {
+      gaps.push({
+        id: 'deploy-path-lint-not-in-ci',
+        severity: 'warn',
+        message: `${eng} production build runs ESLint — CI workflows exist but do not run lint, so deploy hosts may be the first fail`,
+        fix: 'Add a CI step that runs your package.json lint script (npm run lint / pnpm lint / yarn lint) and require it before deploy',
+      });
+    } else if (
+      deployPath.embedsLintInBuild &&
+      deployPath.hasLintScript &&
+      !deployPath.hasCiWorkflows
+    ) {
+      gaps.push({
+        id: 'deploy-path-lint-no-ci',
+        severity: 'info',
+        message: `${eng} production build runs ESLint — no CI workflows detected; push-to-host builds may be the first lint fail`,
+        fix: 'Add CI (or a pre-push hook) that runs lint before the deploy host builds; keep branch protection required when using GitHub',
+      });
+    }
+
+    if (deployPath.embedsTypecheckInBuild && !deployPath.hasTypecheckScript) {
+      gaps.push({
+        id: 'deploy-path-typecheck-script-missing',
+        severity: 'info',
+        message: `${eng} production build typechecks — no package.json typecheck script for local/CI parity`,
+        fix: 'Add "typecheck": "tsc --noEmit" (or framework equivalent) and run it in CI alongside lint',
+      });
+    } else if (
+      deployPath.embedsTypecheckInBuild &&
+      deployPath.hasTypecheckScript &&
+      deployPath.hasCiWorkflows &&
+      !deployPath.ciRunsTypecheck
+    ) {
+      gaps.push({
+        id: 'deploy-path-typecheck-not-in-ci',
+        severity: 'info',
+        message: `${eng} production build typechecks — CI does not run typecheck; type errors may appear first on the deploy host`,
+        fix: 'Add a CI step for npm run typecheck (or your typecheck script) and require it before deploy',
+      });
+    }
+  }
+
   return {
     gaps,
     hosts,
@@ -1211,6 +1428,7 @@ export function collectAdoptionGaps(root, config, coverage) {
     originReport,
     baseline,
     layerBalance,
+    deployPath,
   };
 }
 

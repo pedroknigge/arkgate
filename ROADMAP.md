@@ -136,6 +136,9 @@ Ordered by leverage for the dual audience:
 
 ### P2 — growth surfaces (not prerequisites)
 
+12b. ~~**Deploy-path adoption (lint/types before host build)**~~ → **shipped (2.6.1 train)** —
+    doctor flags Next/CRA/Nuxt-style “ESLint/typecheck in production build” without a local/CI
+    parity path (universal signals; does not reimplement ESLint rules).  
 13. Deployed docs site (content already under `docs/`).  
 14. Optional locale packs (English canonical).  
 15. Optional split of runtime API into a secondary package.  

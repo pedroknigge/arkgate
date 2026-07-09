@@ -179,6 +179,78 @@ args = ["ark-mcp", "--root", "/var/folders/xx/ark-upgrade-tmp123", "--config", "
     expect(bins.includes('ark-mcp') && bins.includes('arkgate-mcp')).toBe(false);
   });
 
+  it('doctor flags missing lint script when Next production build embeds ESLint (universal deploy-path)', () => {
+    const root = mk();
+    writeTwoLayerOptional(root);
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# agent\n');
+    fs.writeFileSync(
+      path.join(root, 'package.json'),
+      JSON.stringify({
+        name: 'next-app-fixture',
+        scripts: { build: 'next build' },
+        dependencies: { next: '15.0.0', react: '19.0.0' },
+      })
+    );
+    fs.writeFileSync(path.join(root, 'next.config.mjs'), 'export default {};\n');
+
+    const r = runCheck(root, ['--config', 'ark.config.json', '--doctor', '--json', '--no-cache']);
+    expect(r.status).toBe(0);
+    const out = JSON.parse(r.stdout);
+    const ids = (out.doctor.adoption.gaps as Array<{ id: string }>).map((g) => g.id);
+    expect(ids).toContain('deploy-path-lint-script-missing');
+    expect(out.doctor.adoption.deployPath?.embedsLintInBuild).toBe(true);
+    expect(out.doctor.adoption.deployPath?.engines).toContain('next');
+  });
+
+  it('doctor flags lint not in CI when Next app has lint script but workflows skip it', () => {
+    const root = mk();
+    writeTwoLayerOptional(root);
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# agent\n');
+    fs.writeFileSync(
+      path.join(root, 'package.json'),
+      JSON.stringify({
+        name: 'next-ci-fixture',
+        scripts: { build: 'next build', lint: 'eslint .' },
+        dependencies: { next: '15.0.0' },
+      })
+    );
+    fs.mkdirSync(path.join(root, '.github', 'workflows'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.github', 'workflows', 'ci.yml'),
+      'name: CI\non: push\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npm run build\n'
+    );
+
+    const r = runCheck(root, ['--config', 'ark.config.json', '--doctor', '--json', '--no-cache']);
+    expect(r.status).toBe(0);
+    const out = JSON.parse(r.stdout);
+    const ids = (out.doctor.adoption.gaps as Array<{ id: string }>).map((g) => g.id);
+    expect(ids).toContain('deploy-path-lint-not-in-ci');
+  });
+
+  it('does not flag deploy-path lint when ignoreDuringBuilds is true', () => {
+    const root = mk();
+    writeTwoLayerOptional(root);
+    fs.writeFileSync(
+      path.join(root, 'package.json'),
+      JSON.stringify({
+        name: 'next-ignore-eslint',
+        scripts: { build: 'next build' },
+        dependencies: { next: '15.0.0' },
+      })
+    );
+    fs.writeFileSync(
+      path.join(root, 'next.config.mjs'),
+      'export default { eslint: { ignoreDuringBuilds: true } };\n'
+    );
+
+    const r = runCheck(root, ['--config', 'ark.config.json', '--doctor', '--json', '--no-cache']);
+    expect(r.status).toBe(0);
+    const out = JSON.parse(r.stdout);
+    const ids = (out.doctor.adoption.gaps as Array<{ id: string }>).map((g) => g.id);
+    expect(ids).not.toContain('deploy-path-lint-script-missing');
+    expect(out.doctor.adoption.deployPath?.embedsLintInBuild).toBe(false);
+  });
+
   it('HTML report includes Adoption section distinct from fitness score', () => {
     const root = mk();
     writeTwoLayerOptional(root);
