@@ -15,6 +15,8 @@
  *                                 { valid, violations, autoPatch? } and sets isError when invalid.
  *                                 autoPatch (W1) is a gate-revalidated rewrite for mechanical-safe
  *                                 import-type kinds only; discarded if post-patch still invalid.
+ *   - tool      ark_prepare_write — W2: place + constrain + validate + autoPatch + judgmentBrief
+ *                                 + contentHash (composes ark_place + write gate; not a second contract).
  *   - tool      ark_recommend   — deterministic application-shape plan (same as
  *                                 ark-check --recommend --json)
  *
@@ -49,6 +51,7 @@ import {
 } from './ark-shared.mjs';
 import { createImportTargetResolver } from './lib/import-resolve.mjs';
 import { validateWithAutoPatch, resolveImportFileAbs } from './lib/auto-patch.mjs';
+import { composePrepareWrite } from './lib/prepare-write.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 
@@ -552,7 +555,8 @@ async function main() {
       description:
         'Place a file in the architecture: pass filePath (preferred) and/or description. ' +
         'Returns layer, mayImport / mustNotImport, forbiddenGlobals. Call BEFORE writing a new file. ' +
-        'If only description is given, returns a conventional path proposal under a governed layer.',
+        'If only description is given, returns a conventional path proposal under a governed layer. ' +
+        'Prefer ark_prepare_write when you already have the source snippet (place+validate+autoPatch in one call).',
       inputSchema: {
         type: 'object',
         properties: {
@@ -566,6 +570,34 @@ async function main() {
               'What you are building (e.g. "Remotion caption overlay"). Used when filePath is omitted to propose a path.',
           },
         },
+      },
+    },
+    {
+      name: 'ark_prepare_write',
+      description:
+        'Prepare a write against the architecture contract: place (filePath and/or description) + ' +
+        'constrain (layer, mayImport, mustNotImport, forbiddenGlobals) + validate source + optional ' +
+        'mechanical-safe autoPatch + judgmentBrief when judgment is needed + contentHash for host commit. ' +
+        'Composes ark_place + write-gate — call BEFORE Write/Edit when you have the snippet. ' +
+        'Returns { filePath, layer, valid, violations?, autoPatch?, judgmentBrief?, contentHash, ... }.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          source: { type: 'string', description: 'Full source text about to be written.' },
+          filePath: {
+            type: 'string',
+            description: 'Target path (preferred). Used for layer inference and autoPatch resolution.',
+          },
+          description: {
+            type: 'string',
+            description: 'When filePath omitted: propose a conventional path from this description.',
+          },
+          layer: {
+            type: 'string',
+            description: 'Optional explicit layer override (otherwise inferred from filePath).',
+          },
+        },
+        required: ['source'],
       },
     },
     {
@@ -750,11 +782,8 @@ async function main() {
   // Deterministic placement guidance (in-process; no TS resolver needed): which layer a
   // path falls in, and — from the same rules ark-check enforces (default allow, explicit
   // `allowed:false` denies) — which layers it may and must not import.
-  function runPlace(params) {
-    const filePath = params?.arguments?.filePath;
-    const description = params?.arguments?.description;
+  function placeResult(filePath, description) {
     if ((typeof filePath !== 'string' || !filePath) && typeof description === 'string' && description.trim()) {
-      // Description-only: propose a governed path under PresentationAdapters (UI default).
       const slug = description
         .trim()
         .toLowerCase()
@@ -764,73 +793,39 @@ async function main() {
       const proposedPath = `src/components/${slug}.tsx`;
       const layerName = inferLayer(proposedPath, config, args.root) || 'PresentationAdapters';
       return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(
-              {
-                filePath: proposedPath,
-                proposed: true,
-                description: description.trim(),
-                layer: layerName,
-                governed: Boolean(inferLayer(proposedPath, config, args.root)),
-                note:
-                  'filePath was omitted — proposed a conventional path from description. ' +
-                  'Pass filePath explicitly for authoritative placement. Then validate_code the snippet.',
-              },
-              null,
-              2
-            ),
-          },
-        ],
-        isError: false,
+        filePath: proposedPath,
+        proposed: true,
+        description: description.trim(),
+        layer: layerName,
+        governed: Boolean(inferLayer(proposedPath, config, args.root)),
+        note:
+          'filePath was omitted — proposed a conventional path from description. ' +
+          'Pass filePath explicitly for authoritative placement.',
       };
     }
     if (typeof filePath !== 'string' || !filePath) {
       return {
-        content: [
-          {
-            type: 'text',
-            text:
-              'ark_place needs filePath and/or description. ' +
-              'Example: { "filePath": "src/components/Foo.tsx" } or { "description": "caption overlay UI component" }.',
-          },
-        ],
-        isError: true,
+        error:
+          'Needs filePath and/or description. ' +
+          'Example: { "filePath": "src/components/Foo.tsx" } or { "description": "caption overlay UI component" }.',
       };
     }
     const layerName = inferLayer(filePath, config, args.root);
     if (!layerName) {
-      // Two distinct reasons the path matched no layer: either this project declares no
-      // path-based layers at all (the gate still enforces the default 11-layer profile by
-      // intent-name PREFIX — placement just can't be inferred from the path), or it does
-      // declare layers and this path falls outside all of them (genuinely ungoverned).
       const noLayers = configLayers.length === 0;
       return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(
-              {
-                filePath,
-                layer: null,
-                governed: noLayers, // default-profile intent rules still apply when no layers configured
-                message: noLayers
-                  ? 'This project declares no path-based layers in ark.config.json, so a ' +
-                    'layer cannot be inferred from the path. The gate still enforces the ' +
-                    'default 11-layer profile by intent-name prefix — read ark://manifest ' +
-                    'for the layers and validate the actual snippet with validate_code.'
-                  : 'No layer pattern matches this path — code here is UNGOVERNED (no import ' +
-                    'rules enforced). Place it under a directory a layer in ark.config.json ' +
-                    'matches, or add a layer. See suggestedLayers for conventional homes.',
-                suggestedLayers: suggestedLayers(),
-              },
-              null,
-              2
-            ),
-          },
-        ],
-        isError: false,
+        filePath,
+        layer: null,
+        governed: noLayers,
+        message: noLayers
+          ? 'This project declares no path-based layers in ark.config.json, so a ' +
+            'layer cannot be inferred from the path. The gate still enforces the ' +
+            'default 11-layer profile by intent-name prefix — read ark://manifest ' +
+            'for the layers and validate the actual snippet with validate_code.'
+          : 'No layer pattern matches this path — code here is UNGOVERNED (no import ' +
+            'rules enforced). Place it under a directory a layer in ark.config.json ' +
+            'matches, or add a layer. See suggestedLayers for conventional homes.',
+        suggestedLayers: suggestedLayers(),
       };
     }
     const layerMeta = configLayers.find((layer) => layer.name === layerName);
@@ -841,31 +836,87 @@ async function main() {
     );
     const mayImport = otherNames.filter((name) => !mustNotImport.includes(name));
     return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(
-            {
-              filePath,
-              layer: layerName,
-              governed: true,
-              description: layerMeta?.description,
-              forbiddenGlobals: layerMeta?.forbiddenGlobals ?? [],
-              ...(layerMeta?.mayImportInfrastructure
-                ? { mayImportInfrastructure: true }
-                : {}),
-              mayImport,
-              mustNotImport,
-              note:
-                'mayImport = layers with no explicit deny (default is allow). Respect ' +
-                'forbiddenGlobals, then verify the actual snippet with validate_code.',
-            },
-            null,
-            2
-          ),
-        },
-      ],
+      filePath,
+      layer: layerName,
+      governed: true,
+      description: layerMeta?.description,
+      forbiddenGlobals: layerMeta?.forbiddenGlobals ?? [],
+      ...(layerMeta?.mayImportInfrastructure ? { mayImportInfrastructure: true } : {}),
+      mayImport,
+      mustNotImport,
+      note:
+        'mayImport = layers with no explicit deny (default is allow). Respect ' +
+        'forbiddenGlobals, then verify the actual snippet with validate_code or ark_prepare_write.',
+    };
+  }
+
+  function runPlace(params) {
+    const placement = placeResult(params?.arguments?.filePath, params?.arguments?.description);
+    if (placement.error) {
+      return {
+        content: [{ type: 'text', text: `ark_place: ${placement.error}` }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: 'text', text: JSON.stringify(placement, null, 2) }],
       isError: false,
+    };
+  }
+
+  /**
+   * W2: place + constrain + validate + autoPatch + judgmentBrief + contentHash.
+   * Composes ark_place + write-boundary gate — not a second contract.
+   */
+  function runPrepareWrite(params) {
+    const source = params?.arguments?.source;
+    const filePath = params?.arguments?.filePath;
+    const description = params?.arguments?.description;
+    if (typeof source !== 'string') {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'ark_prepare_write requires "source" (string). Optional: filePath, description.',
+          },
+        ],
+        isError: true,
+      };
+    }
+    const placement = placeResult(filePath, description);
+    if (placement.error) {
+      return {
+        content: [{ type: 'text', text: `ark_prepare_write: ${placement.error}` }],
+        isError: true,
+      };
+    }
+    const layer =
+      placement.layer ||
+      params?.arguments?.layer ||
+      inferLayer(placement.filePath, config, args.root);
+    const validateOnce = (src) =>
+      gate.validate(src, {
+        layer,
+        filePath: placement.filePath,
+      });
+    const result = composePrepareWrite({
+      source,
+      placement: { ...placement, layer },
+      root: args.root,
+      ts,
+      validate: validateOnce,
+      resolveTargetAbs: resolveImportFileAbs,
+    });
+    if (!result.ok) {
+      return {
+        content: [{ type: 'text', text: result.error || 'prepare_write failed' }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+      // isError when invalid and no autoPatch — host must decide; autoPatch is recoverable
+      isError: result.valid === false && !result.autoPatch,
     };
   }
 
@@ -911,6 +962,7 @@ async function main() {
     ark_check: runCheckTool,
     ark_coverage: runCoverageTool,
     ark_place: runPlace,
+    ark_prepare_write: runPrepareWrite,
     ark_recommend: runRecommendTool,
     ark_suggest_include: runSuggestIncludeTool,
   };

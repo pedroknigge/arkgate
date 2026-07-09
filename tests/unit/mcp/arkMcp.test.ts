@@ -118,6 +118,11 @@ describe('ark-mcp server (write-path gate)', () => {
     expect(res.result.tools.map((t: { name: string }) => t.name)).toContain('validate_code');
   });
 
+  it('lists the ark_prepare_write tool (W2)', async () => {
+    const res = await client.request('tools/list');
+    expect(res.result.tools.map((t: { name: string }) => t.name)).toContain('ark_prepare_write');
+  });
+
   it('flags a forbidden infra import (isError + valid:false)', async () => {
     const res = await client.request('tools/call', {
       name: 'validate_code',
@@ -140,6 +145,71 @@ describe('ark-mcp server (write-path gate)', () => {
     });
     expect(res.result.isError).toBe(false);
     expect(JSON.parse(res.result.content[0].text).valid).toBe(true);
+  });
+
+  it('W2: ark_prepare_write composes place + validate + autoPatch + contentHash', async () => {
+    const prepRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-mcp-prepare-'));
+    fs.writeFileSync(
+      path.join(prepRoot, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          {
+            name: 'DomainModel',
+            patterns: ['src/domain/**'],
+            intentPrefixes: ['Domain.'],
+            forbiddenGlobals: ['fetch'],
+          },
+          {
+            name: 'PersistenceAdapters',
+            patterns: ['src/infra/**'],
+            intentPrefixes: ['Adapter.Persistence.'],
+          },
+        ],
+        rules: [{ from: 'DomainModel', to: 'PersistenceAdapters', allowed: false }],
+      })
+    );
+    fs.mkdirSync(path.join(prepRoot, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(prepRoot, 'src/infra'), { recursive: true });
+    fs.writeFileSync(
+      path.join(prepRoot, 'src/infra/types-only.ts'),
+      'export type Row = { id: string };\nexport interface Item { n: number }\n'
+    );
+    const c = createClient(prepRoot);
+    try {
+      await c.request('initialize', { protocolVersion: '2024-11-05' });
+      const res = await c.request('tools/call', {
+        name: 'ark_prepare_write',
+        arguments: {
+          source:
+            "import { Row } from '../infra/types-only';\nexport function id(r: Row): string { return r.id; }\n",
+          filePath: 'src/domain/use.ts',
+        },
+      });
+      const payload = JSON.parse(res.result.content[0].text);
+      expect(payload.filePath).toBe('src/domain/use.ts');
+      expect(payload.layer).toBe('DomainModel');
+      expect(payload.mustNotImport).toContain('PersistenceAdapters');
+      expect(payload.forbiddenGlobals).toContain('fetch');
+      expect(payload.contentHash).toMatch(/^sha256:/);
+      expect(payload.valid).toBe(false);
+      expect(payload.autoPatch?.valid).toBe(true);
+      expect(payload.autoPatch?.source).toMatch(/import\s+type/);
+      // clean snippet → valid
+      const clean = await c.request('tools/call', {
+        name: 'ark_prepare_write',
+        arguments: {
+          source: 'export type Id = string;\n',
+          filePath: 'src/domain/id.ts',
+        },
+      });
+      const cleanPayload = JSON.parse(clean.result.content[0].text);
+      expect(cleanPayload.valid).toBe(true);
+      expect(clean.result.isError).toBe(false);
+    } finally {
+      c.close();
+      fs.rmSync(prepRoot, { recursive: true, force: true });
+    }
   });
 
   it('W1: validate_code returns autoPatch for import-type mechanical-safe rewrite', async () => {
@@ -589,6 +659,7 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
       'ark_check',
       'ark_coverage',
       'ark_place',
+      'ark_prepare_write',
       'ark_recommend',
       'ark_suggest_include',
     ]);

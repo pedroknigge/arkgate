@@ -6,6 +6,9 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ### Added
 
+- **W2 `ark_prepare_write` MCP tool:** place + constrain + validate + optional autoPatch +
+  judgmentBrief + contentHash in one call (`bin/lib/prepare-write.mjs`). Composes
+  `ark_place` + write gate — not a second contract.
 - **W1 write-boundary autoPatch:** `validate_code` and PreToolUse `--hook` may return
   additive `autoPatch: { source, remediationKind, confidence, valid }` for mechanical-safe
   **import type** rewrites (`import-type-from-pure-type-module`, `import-type-of-type-exports`).

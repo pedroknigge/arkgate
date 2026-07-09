@@ -127,8 +127,8 @@ prints nothing and exits 0, so non-Ark projects are untouched.
 The MCP server exposes a resource and four tools agents can use proactively:
 
 - **`ark://manifest`** (resource) — the machine-readable architecture contract (layers + rules), so the agent can read the architecture before generating code.
-- **`validate_code`** (tool) — validates a snippet against the architecture on demand (the write-path gate).
-- **`ark_place`** (tool) — given a target file path, returns its layer, forbidden globals, and which layers it may / must not import. Call it *before* writing a new file so generated code lands in a governed location.
+- **`validate_code`** (tool) — validates a snippet against the architecture on demand (the write-path gate). May return additive **`autoPatch`** (W1) for mechanical-safe import-type rewrites.
+- **`ark_prepare_write`** (tool) — **W2:** place + constrain + validate + optional autoPatch + judgmentBrief + contentHash in one call (composes `ark_place` + write gate).- **`ark_place`** (tool) — given a target file path, returns its layer, forbidden globals, and which layers it may / must not import. Call it *before* writing a new file so generated code lands in a governed location.
 - **`ark_check`** (tool) — runs the full architecture check and returns structured violations (applies the baseline automatically when one exists).
 - **`ark_coverage`** (tool) — per-layer file counts, the full unclassified-file list, and layers whose patterns match nothing.
 
