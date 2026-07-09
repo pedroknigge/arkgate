@@ -2684,10 +2684,13 @@ describe('ark-check monorepo tsconfig resolution', () => {
       'PresentationAdapters',
       'PersistenceAdapters',
     ]);
-    // Wildcard preset layers carve out framework internals so a broad `src/**/domain/**`
-    // can't mis-flag `src/kernel/domain` — every layer ships the default exclude.
+    // Wildcard preset layers carve out product framework `src/kernel/**` so a broad
+    // `src/**/domain/**` can't mis-flag framework domain code — without carving out
+    // legitimate SharedKernel paths like `src/shared/kernel/**` (not `**/kernel/**`).
     for (const layer of config.layers) {
-      expect(layer.exclude).toContain('**/kernel/**');
+      expect(layer.exclude).toEqual(
+        expect.arrayContaining(['src/kernel/**', '**/src/kernel/**'])
+      );
     }
     // Inward-only: the domain may not import the persistence layer.
     expect(
@@ -3126,12 +3129,13 @@ describe('ark-check --init monorepo detection', () => {
     expect(cfg.include).toEqual(['libs', 'services']);
   });
 
-  it('--preset monorepo works explicitly and falls back to packages+apps', () => {
+  it('--preset monorepo works explicitly and falls back to packages+apps+libs', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-preset-mono-'));
     const init = runInit(root, ['--preset', 'monorepo']);
     expect(init.status).toBe(0);
     const cfg = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
-    expect(cfg.include).toEqual(['packages', 'apps']);
+    // Turborepo apps/packages + Nx libs when no workspace roots are detected.
+    expect(cfg.include).toEqual(['packages', 'apps', 'libs']);
     expect(cfg.layers.map((l: { name: string }) => l.name)).toEqual([
       'DomainModel',
       'ApplicationOrchestration',
