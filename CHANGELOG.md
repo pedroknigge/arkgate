@@ -2,7 +2,10 @@
 
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here.
 
-## Unreleased
+## 2.8.1 — 2026-07-09
+
+Runtime honesty release (roadmap **R8–R9**): EventBus publish pipeline decomposition and
+explicit InMemory durability stance. **No intentional CLI flag or JSON shape breaks.**
 
 ### Changed
 
