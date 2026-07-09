@@ -118,6 +118,40 @@ describe('ui-surface / Next data-client classification', () => {
     expect(presentation.patterns).not.toContain('**/src/**');
     expect(presentation.patterns).not.toContain('**/lib/**');
   });
+
+  it('classifies Next middleware and Next 16 proxy.ts as Presentation (not ungoverned)', () => {
+    const root = mkTemp('ark-next-proxy-');
+    writeTree(root, {
+      'package.json': JSON.stringify({
+        name: 'next-proxy-host',
+        version: '0.1.0',
+        dependencies: { next: '16.1.6', react: '19.0.0' },
+      }),
+      'src/app/page.tsx': 'export default function Page() { return null }\n',
+      'src/proxy.ts':
+        'import type { NextRequest } from "next/server";\nexport default async function middleware(_req: NextRequest) { return null }\n',
+      'src/middleware.ts':
+        'import type { NextRequest } from "next/server";\nexport function middleware(_req: NextRequest) { return null }\n',
+    });
+
+    const base = ARCHITECTURE_PRESETS['ui-surface']([], root);
+    const config = applyFrameworkLayoutOverlays(base, root);
+    expect(layerForFile(root, path.join(root, 'src/proxy.ts'), config.layers)).toBe(
+      'PresentationAdapters'
+    );
+    expect(layerForFile(root, path.join(root, 'src/middleware.ts'), config.layers)).toBe(
+      'PresentationAdapters'
+    );
+    const presentation = config.layers.find((l: { name: string }) => l.name === 'PresentationAdapters');
+    expect(presentation.patterns).toEqual(
+      expect.arrayContaining(['src/proxy.ts', 'src/middleware.ts', 'proxy.ts', 'middleware.ts'])
+    );
+
+    // Re-apply must stay single "next" (not next+next)
+    const twice = applyFrameworkLayoutOverlays(config, root);
+    expect(twice.frameworkOverlay).toBe('next');
+    expect(String(twice.frameworkOverlay)).not.toContain('next+next');
+  });
 });
 
 describe('githubWorkflow quality scripts', () => {

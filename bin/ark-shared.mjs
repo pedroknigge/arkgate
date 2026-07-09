@@ -217,6 +217,15 @@ export function applyFrameworkLayoutOverlays(config, root) {
       'src/**/error.tsx',
       'src/**/route.ts',
       'src/**/route.tsx',
+      // Next middleware edge entry (classic + Next 16 proxy rename)
+      'src/middleware.ts',
+      'src/middleware.js',
+      'middleware.ts',
+      'middleware.js',
+      'src/proxy.ts',
+      'src/proxy.js',
+      'proxy.ts',
+      'proxy.js',
     ]);
     mergeLayerPatterns(next, 'ApplicationOrchestration', [
       'src/features/**',
@@ -277,9 +286,12 @@ export function applyFrameworkLayoutOverlays(config, root) {
       '**/scripts/**',
     ];
     next.exclude = [...new Set([...(next.exclude ?? []), ...nextExcludes])];
-    next.frameworkOverlay = next.frameworkOverlay
-      ? `${next.frameworkOverlay}+next`
-      : 'next';
+    // Idempotent: re-applying overlays (e.g. re-init / re-start) must not yield "next+next".
+    if (!String(next.frameworkOverlay || '').split('+').includes('next')) {
+      next.frameworkOverlay = next.frameworkOverlay
+        ? `${next.frameworkOverlay}+next`
+        : 'next';
+    }
   }
 
   if (signals.expressLike && !signals.nestFramework) {

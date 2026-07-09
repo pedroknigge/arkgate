@@ -18,6 +18,11 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
   GitHub Actions workflow runs them before ark-check (closes deploy-path gaps for Next hosts).
 - **`ark start` wrap-up mode:** prefers `ark-check --doctor` `operatingMode` over plan-only
   `resolveOperatingMode` (default **adapt**, double-lock against false **ENFORCE**).
+- **Next middleware / proxy:** ui-surface + Next overlay classify `src/proxy.ts`, root
+  `proxy.ts`, and classic `middleware.ts` as **Presentation** (Next 16 rename no longer
+  leaves the edge entry ungoverned).
+- **Idempotent Next overlay:** re-applying framework overlays no longer yields
+  `frameworkOverlay: "next+next"`.
 
 ## 2.8.1 — 2026-07-09
 
