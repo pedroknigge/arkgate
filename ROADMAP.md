@@ -11,17 +11,26 @@ runtime API may exist; it is not the wedge.
 **npm:** [`arkgate`](https://www.npmjs.com/package/arkgate) (product **ArkGate**; formerly `ark-runtime-kernel`).  
 **Product shape:** write gate (`arkgate-mcp`) · CI gate (`arkgate-check`) · plan / goal / loop · agent skills.
 
-**How to use this file:** implement **one item at a time**, in order (R1 → R2 → …). Do not start
-the next item until the current item’s **Definition of Done** is green. Shipped history and
-identity stay below for context.
+**How to use this file:** implement **one item at a time**, in order (**W1 → W2 → …**). Do not start
+the next item until the current item’s **Definition of Done** is green. Finished foundation work
+lives under [Shipped](#shipped-context); do not treat completed tracks as “next.”
 
 ---
 
 ## North star
 
-**Gate → Guide → Co-pilot** (shipped through 2.0.x+).
+**Shipped:** **Gate → Guide → Co-pilot** (through 2.x — write gate, CI, plan/loop/autopilot, honest coverage).
 
-One contract, two entries:
+**Next product arc:** **Constrained write → Verified repair**
+
+| Stage | Meaning |
+|-------|---------|
+| **Constrained write** | The write path places, constrains the legal surface, and **auto-repairs only mechanical-safe** violations *at the boundary* (not reject-and-retry forever). |
+| **Verified repair** | Proven, narrow structural transforms (e.g. port-proof extraction) may become mechanical-safe **only** with static proof + labeled evals — never a general codemod engine. |
+
+The bottleneck is no longer “do we have a gate?” — it is the **agent write loop**: draft → block → re-reason → sometimes cheat the contract. The product multiplies when that loop collapses to **prepare → (autoPatch \| judgmentBrief) → commit**.
+
+One contract, two entries (unchanged):
 
 | Entry | Who | Path |
 |-------|-----|------|
@@ -34,19 +43,23 @@ Three **operating modes** (status lights — not settings):
 - **Adapt** — raise governed coverage / match real layout; freeze only real debt  
 - **Enforce** — gates honestly hold; clean plan with ~0% governed is *not* enforce  
 
-**Hard lines (never planned):** codemod engine; auto-applying judgment-heavy “big rocks”;
-false-green “healthy” with no real coverage.
+### Hard lines (never planned)
+
+- **No general codemod / AST-rewrite engine** — agents edit; the gate decides what may land.  
+- **No silent auto-apply of judgment-heavy refactors** (“big rocks” always proposed).  
+- **No false-green “healthy”** with no real governed coverage.  
+- **False mechanical-safe worse than extra human approval** — precision corpus stays at **0** false-safe.
 
 ### Audience strategy (natural path)
 
 1. **Now** — best architecture gate + co-pilot for **TypeScript + AI agents**.  
-2. **Next** — deeper safe autonomy + evals (newbies don’t stall; experts don’t distrust).  
-3. **Then** — teams (CI, baselines, reports, light ownership).  
+2. **Next (this backlog)** — **Write Protocol**: constrain + auto-repair safe writes; measure loop cost (turns / tokens / CHEATED).  
+3. **Then** — verified structural transforms only when proof + evals allow; teams (baseline UX, reports).  
 4. **Later** — org-scale monorepo / control-plane only if demand pulls.  
 5. **Identity** — **ArkGate / `arkgate` locked** (predecessor package deprecated).
 
 We do **not** optimize first for “Meta/Google monorepo platform.” We optimize for **agents that
-write TS in real product repos**.
+write TS in real product repos** — fewer wasted turns, fewer contract bypasses, honest green.
 
 ---
 
@@ -56,102 +69,65 @@ Status legend: `todo` · `doing` · `done`
 
 Work in this order. Each item is a shippable slice (PR-sized or small PR stack).
 
-### Track A — Path-hot debt (foundation)
+### Track W — Constrained write → verified repair (**active**)
 
-These fix the scorecard risks that slow every later feature.
-
-| # | Status | Item | Why now | Definition of Done |
-|---|--------|------|---------|-------------------|
-| **R1** | `done` | **Single source of truth for layer globs** | Dual impl (`bin/ark-layer-match.mjs` + `src/domain/layerMatch.ts`) is parity-tested but not one source — every matcher fix risks drift | One canonical module; the other is **generated** or compiled from it. CI fails if they diverge without regenerate. Parity tests stay as safety net. Docs no longer claim “two handwritten SoTs”. |
-| **R2** | `done` | **Package surface = product wedge** | Main export still looks like a runtime kernel; docs say gates are the product | Stable surface policy written (CLI flags JSON, MCP tools, `ark.config` schema = stable; kernel runtime = opt-in). Prefer subpath `arkgate/runtime` (or thin main + re-export path). README “Optional runtime” links the subpath. No breaking remove of root re-exports in the same minor without deprecation notice. |
-| **R3** | `done` | **`ark-check` entry slim-down (phase 2)** | 2.6 split extracted libs; entry still ~2.4k LOC | `bin/ark-check.mjs` is orchestration only (parse args → load config → run scan → present). Scan graph, rule runners, and report wiring live in `bin/lib/*` modules **each &lt; ~500 LOC**. Existing CLI flags and JSON shapes unchanged. Full `test:run` + `check:architecture` green. |
-| **R4** | `done` | **Typed pure core for CLI pure functions** | Gate value lives in untyped `.mjs`; hard to refactor safely | At least: layer match (R1), violation enrich/classify, and one more pure helper are TypeScript (or generated from TS) with unit tests **without** full process spawn. Zero new production deps. |
-
-### Track B — Co-pilot quality (product depth)
+Primary bet after Gate → Guide → Co-pilot. Reuse `classifyRemediation` and existing
+mechanical-safe kinds; do **not** invent a general codemod. Expand safe kinds only after W1–W3
+instrument the write boundary and loop metrics.
 
 | # | Status | Item | Why now | Definition of Done |
 |---|--------|------|---------|-------------------|
-| **R5** | `done` | **Grow labeled eval corpus** | Classifier + autopilot need more than a handful of cases | ≥ **15** eval cases under `eval/cases/` covering: type-only move, Nest overlay, Next `core/**` bag, monorepo `frontend/`, wrong-layer, domain forbidden global, baseline ratchet, pure-type relocate. `npm run eval:agent` (or documented subset) runs in CI or nightly without flaking. Each case has expected fixClass / pass-fail label. **Done:** 16 cases; `npm run eval:corpus` + `evalCorpus.test.ts`; live agent optional/nightly. |
-| **R6** | `done` | **Broaden `mechanical-safe` (eval-gated)** | Co-pilot pays only when safe auto-depth grows without lying | New mechanical-safe kinds only land with labeled evals and **zero false mechanical-safe** on the corpus. Still deferred without static proof: verbatim infra relocation of value modules. Bias unchanged: false “safe” &gt; extra human approval. **Done:** fourth kind `import-type-of-type-exports` (`namedBindingsTypeOnly`); labeled case + precision corpus; value/require/dynamic/mixed-value stay judgment. |
-| **R7** | `done` | **Codex multi-project MCP DX** | Home config last-wins breaks multi-repo agents | Documented + implemented path so multi-project Codex (or equivalent host) does not silently overwrite MCP/gates. Doctor flags the bad state. Regression test or fixture for the config shape. **Done:** secondary `ark_<slug>` without `--force`; doctor gap `codex-home-multi-project`; docs absolute-path multi-project section; force rebinds primary. |
+| **W1** | `todo` | **Write-boundary autoPatch for existing mechanical-safe kinds** | Safe fixes already classified in `--plan` almost never run at PreToolUse / `validate_code` — agents re-draft instead | `validate_code` and/or hook path can return an **`autoPatch`** (patched source + `remediationKind` + confidence) for the four shipped mechanical-safe kinds only (`type-only-import-move`, `pure-type-file-relocate`, `import-type-from-pure-type-module`, `import-type-of-type-exports`). Post-patch validation is green or the patch is discarded. Labeled precision corpus: **0 false mechanical-safe**. JSON additive fields OK within major. |
+| **W2** | `todo` | **`ark_prepare_write` (place + constrain + validate + autoPatch)** | Agents invent path and content before learning the legal surface | MCP tool (and documented CLI/hook shape if needed) accepts `filePath?` / `description?` / `source` and returns path, layer, mayImport / mustNotImport / forbiddenGlobals, `valid`, optional `autoPatch`, optional `judgmentBrief` (fixClass + one decision), optional content identity for host commit. Composes existing `ark_place` + gate + classifier — not a second contract. Unit/integration tests on real entry points. |
+| **W3** | `todo` | **Loop-cost eval harness (turns / tokens / CHEATED)** | Comparative eval measures tree quality, not cost of self-correction | Live or fixture-measured harness records at least **turns-to-green**, optional tokens-to-green, and **CHEATED** for a documented case set (type-only + one judgment case). Report artifact under `eval/` (or documented path). CI may keep static oracle; live agent remains optional/nightly. README or `eval/README.md` documents how to run. Baseline numbers captured once so later W items can show ÷10 targets. |
+| **W4** | `todo` | **Opt-in hook “repair” payload for hosts** | Exit-2 reject alone forces full re-reason on hosts that could re-inject a patch | Documented opt-in mode: on deny, emit structured repair hint / `autoPatch` (e.g. Grok-style JSON or stderr contract) **without** silently writing the file. Default remains hard block. Host install templates mention the mode. Regression test for payload shape. |
+| **W5** | `todo` | **Doctor / adoption: prepare-write awareness** | Enforce mode should show whether the write path is reject-only or repair-capable | `ark-check --doctor` (JSON stable additive) surfaces whether agent gates / MCP expose prepare-write or autoPatch capabilities (or a clear “reject-only” gap). Docs one-liner for leads. |
+| **W6** | `todo` | **Verified structural transform (port-proof) — eval-gated only** | Brownfield judgment debt (`port-inversion` / inject-port) is the second-order burn-down; must not ship without proof | At most **one** narrow transform (e.g. verbatim infra call extraction to adapter + port inject) classified mechanical-safe **only if**: static proof of behavior preservation, post-gate green, labeled eval cases, **0 false-safe** on full precision corpus. Value/require/dynamic/mixed without proof stay **judgment**. No general codemod engine. **Do not start until W1–W3 are done** (or explicitly skipped with a written reason in the PR). |
 
-### Track C — Runtime honesty (opt-in kernel)
+**Order rule:** W1 → W2 → W3 first (write boundary + measurement). W4–W5 can parallelize after W2. **W6 only after W1–W3.**
 
-Only after A is stable enough that gate work isn’t blocked.
+---
 
-| # | Status | Item | Why now | Definition of Done |
-|---|--------|------|---------|-------------------|
-| **R8** | `done` | **EventBus decomposition** | 872 LOC god object; high regression risk | Publish pipeline split into cohesive modules (e.g. intercept → contract → observed-flow → policy → history/outbox). Public `createEventBus` API unchanged. Integration tests for order of enforcement still pass. **Done:** stages in `payloadPatch`, `publishGuards`, `publishInterceptors`, `observedLayerFlow`, `publishPolicy`, `publishRecording`; `EventBus.ts` orchestration-only; public API stable. |
-| **R9** | `done` | **Runtime durability stance** | Only InMemory stores exist | Either (a) one reference durable adapter (e.g. file/SQLite) for outbox **or** audit with tests, **or** (b) explicit “reference InMemory-only; not production durability” in README + JSDoc on store interfaces. Prefer (b) unless demand pulls (a). **Done:** (b) — JSDoc on store interfaces + InMemory classes; README + package-surface + production-hardening R9 stance; unit test locks the shipped wording. |
+### Track D — Growth (demand-driven — **not** the next product bet)
 
-### Track D — Growth (not prerequisites)
-
-Start only when R1–R7 are done or explicitly skipped with a written reason.
+These stay useful; they are **not** a substitute for Track W.
 
 | # | Status | Item | Definition of Done |
 |---|--------|------|-------------------|
-| **R10** | `done` | **Product site** | Public product site live at [arkgate.online](https://www.arkgate.online/) (flow + promise). In-repo `docs/` remains the package/agent canonical reference; optional full Diataxis site is demand-driven. |
 | **R11** | `todo` | **Team baseline burn-down UX** | Report/export shows baseline debt trend; package-scoped debt optional. |
 | **R12** | `todo` | **Framework policy packs** | Only if filename overlays prove insufficient in field; otherwise skip. |
 | **R13** | `todo` | **TS 7.1+ programmatic API** | When Microsoft ships stable API: extend `usableTypescript`, keep matrix green. |
 | **R14** | `todo` | **Optional locale packs** | English remains canonical; extra locales optional. |
-| **R15** | `todo` | **Secondary package for runtime** | Only if R2 subpath is not enough for consumers who want zero kernel in tree. |
-
-### Track P — Architecture presets & pattern depth (from field research)
-
-**Status: complete (P0–P8 + S1–S5).** Ship one id at a time was honored; engine honesty before marketing new shapes.
-
-| # | Status | Item | Definition of Done |
-|---|--------|------|-------------------|
-| **P0** | `done` | **Peer / slice isolation rule** | Opt-in `peerIsolation` on same-layer deny rules; CI + ESLint + write-gate; unit + fixture tests; remediation judgment-only. |
-| **P1** | `done` | **Preset registry hygiene** | Document all public preset keys (`ui-surface` included); CLI help + scorePresetFit stay in sync with `ARCHITECTURE_PRESETS`. |
-| **P2** | `done` | **`vertical-slice` preset** | Features / Shared / Lib / App + peerIsolation; `ark init --preset vertical-slice`. |
-| **P3** | `done` | **VS playbook + pack + starter** | Archetype signals, enthusiast pack, optional gallery starter green under strict-config. |
-| **P4** | `done` | **`ddd-bounded-contexts` preset** | contexts/*/domain\|application\|infra + shared kernel; inter-context via peerIsolation. |
-| **S1** | `done` | **Skills know new presets** | architect/place/fix/adopt/autopilot updated for VS + DDD. |
-| **S3** | `done` | **`/ark-think` host skill** | templates/skills/ark-think.md — reasoning only, no package LLM. |
-| **S5** | `done` | **Eval corpus peerIsolation** | `vertical-slice-cross-feature` case + `cross-slice-boundary` fixClass. |
-| **S2** | `done` | **Recommend / doctor copy** | galleryStarter + policyPack on recommend/doctor; wizard VS/DDD. |
-| **P5** | `done` | **Monorepo depth** | apps/packages/libs include; turbo/nx signals; docs. |
-| **P6** | `done` | **FSD + Next honesty** | Broader feature-sliced path patterns + docs. |
-| **P7** | `done` | **Clean/Onion aliases** | `clean-architecture` / `onion-architecture` → hexagonal. |
-| **P8** | `done` | **Nest modular guidance** | Docs + doctor tip; hexagonal/ddd mapping. |
-
-**Demand-deferred (do not invent scope):** P9 Next colocation thin preset · P10 CQRS folder
-patterns on DDD pack · P11 multi-tenant policy notes. Pull only with field evidence.
+| **R15** | `todo` | **Secondary package for runtime** | Only if `arkgate/runtime` subpath is not enough for consumers who want zero kernel in tree. |
 
 ### Later / only if demand pulls
 
 - Incremental checks + ownership-aware contracts for huge monorepos  
 - Deeper agent control plane (org policy inheritance, audit bus)  
 - Polyglot — only if the TS agent wedge is solid  
+- Full Diataxis docs site (in-repo `docs/` + [arkgate.online](https://www.arkgate.online/) remain canonical until demand pulls)
 
 ---
 
 ## Implementation rules (every item)
 
-1. **One item at a time** — branch/PR title includes the id (`R3: slim ark-check entry`).  
-2. **Tests first or with** — behavior change without tests is incomplete. CLI: real binary + temp fixtures.  
+1. **One item at a time** — branch/PR title includes the id (`W1: write-boundary autoPatch`).  
+2. **Tests first or with** — behavior change without tests is incomplete. CLI/MCP: real entry + fixtures.  
 3. **Dogfood** — `npm run test:run`, `npm run typecheck`, `npm run check:architecture` green before merge.  
-4. **No hard-line breaks** — no codemod engine; no silent judgment auto-apply; no false-green health.  
+4. **No hard-line breaks** — no general codemod engine; no silent judgment auto-apply; no false-green health.  
 5. **Changelog** — user-visible changes under `CHANGELOG.md` Unreleased or next version.  
-6. **Status** — set the item to `doing` when started, `done` when DoD is met (and strike through the row if you prefer).  
+6. **Status** — set the item to `doing` when started, `done` when DoD is met.  
 
-### Suggested first three sessions
+### Suggested next sessions
 
 ```text
-Session 1 → R1  layerMatch single source + CI drift guard  ✅ done
-Session 2 → R2  package surface policy + runtime subpath           ✅ done
-Session 3 → R3  ark-check entry orchestration-only split           ✅ done
-Session 4 → R4  typed pure core (remediation + baselineKey)        ✅ done
-Session 5 → R5  labeled eval corpus (≥15 cases + static precheck)  ✅ done
-Session 6 → R6  broaden mechanical-safe (import-type-of-type-exports) ✅ done
-Session 7 → R7  Codex multi-project MCP DX (secondary table + doctor)  ✅ done
-Session 8 → R8  EventBus publish pipeline decomposition               ✅ done
-Session 9 → R9  runtime durability stance (InMemory reference honesty) ✅ done
+Session → W1  write-boundary autoPatch (4 mechanical-safe kinds)
+Session → W2  ark_prepare_write (place + constrain + validate + patch)
+Session → W3  loop-cost eval (turns / tokens / CHEATED)
+Session → W4  opt-in hook repair payload
+Session → W5  doctor prepare-write awareness
+Session → W6  verified port-proof transform (only after W1–W3)
 ```
-
-Next: Track D growth items (R10+) when demand pulls — R1–R9 foundation complete.
 
 ---
 
@@ -161,51 +137,65 @@ Next: Track D growth items (R10+) when demand pulls — R1–R9 foundation compl
 |----------|--------|
 | Newbie | Completes `start` → autopilot without learning “hexagonal”; no false “you’re done” |
 | Expert | Trusts deny reasons; baseline/coverage honesty; no gate bypass culture |
-| Team | CI red on real debt only; governed% trends up; agents self-correct on write |
+| Team | CI red on real debt only; governed% trends up; agents self-correct on write **with fewer turns** |
 | Package | Name and docs describe gate/co-pilot — never “runtime kernel” as the product |
 
-### Operational KPIs (track as work lands)
+### Operational KPIs (Track W)
 
 | KPI | Intent |
 |-----|--------|
-| **False mechanical-safe rate** | Must stay **0** on labeled corpus when R6 lands |
-| **Eval case count** | Grow with R5; don’t ship new safe kinds without cases |
-| **`ark-check.mjs` LOC** | Budget after R3: treat re-bloat past ~500 orchestration LOC as a regression |
-| **Layer matcher drift** | After R1: CI red if dual artifacts diverge |
+| **False mechanical-safe rate** | Must stay **0** on labeled precision corpus |
+| **Turns-to-green** (eval) | Median agent turns to clear a gated violation — target **÷10** vs baseline after W1–W3 |
+| **Tokens-to-green** (optional) | Correction cost under gate — target large reduction when autoPatch applies |
+| **CHEATED rate** | Contract/baseline/config edits to silence the gate — drive toward **0** on corpus |
+| **autoPatch applicability** | Share of write-gate failures in fixtures that receive a valid patch (grows with W1, not with lying) |
+| **Eval case count** | New safe kinds only with labeled cases (W6 included) |
 | **Time-to-Enforce** (optional) | Fixture greenfield/brownfield: steps from `start` to doctor Enforce |
+
+Foundation KPIs still hold: layer-matcher drift guard (R1), no `ark-check` entry re-bloat past orchestration budget (R3).
 
 ---
 
 ## Shipped (context)
+
+Completed work stays here for history. **Do not implement these as “next.”**
 
 ### Through 2.0.x — Gate, guide, co-pilot
 
 - Write gate + CI + optional runtime; minimal runtime deps (`typescript` JS-API host)  
 - Governed %, baselines, concentration guards, layer `exclude`, mature-repo routing  
 - Framework overlays (Nest/Next/express/library), **TypeScript 5 / 6 / 7** matrix  
-- Mechanical-safe: type-only edges · pure-type file relocate · `import type` of pure-type modules · **R6** named type-exports from mixed modules (`import-type-of-type-exports`)  
+- Mechanical-safe: type-only edges · pure-type file relocate · `import type` of pure-type modules · named type-exports from mixed modules (`import-type-of-type-exports`)  
 - Playbook, `--recommend`, enthusiast track, policy packs, gallery starters  
 - `--plan` · `start` · autopilot/loop skills · HTML report + origin under `.ark/reports/`  
 - Hosts: Claude Code · Cursor · Codex · Grok Build · `/ark-*` skills  
 
-### 2.4.x – 2.6.x highlights
+### Foundation tracks R1–R9 (all done)
+
+| # | Item |
+|---|------|
+| **R1** | Single source of truth for layer globs (`src/domain/layerMatch.ts` → generated CLI + drift CI) |
+| **R2** | Package surface = product wedge (`docs/package-surface.md`, preferred `arkgate/runtime`) |
+| **R3** | `ark-check` entry orchestration-only; scan in `bin/lib/*` |
+| **R4** | Typed pure core (remediation, baselineKey, layerMatch) + `check:cli-pure` |
+| **R5** | Labeled eval corpus (≥15 cases; 16 shipped) |
+| **R6** | Fourth mechanical-safe kind `import-type-of-type-exports` |
+| **R7** | Codex multi-project MCP DX + doctor gap |
+| **R8** | EventBus publish pipeline decomposition |
+| **R9** | Runtime durability stance (InMemory reference honesty) |
+| **R10** | Product site [arkgate.online](https://www.arkgate.online/) |
+
+### Track P — Architecture presets & pattern depth (complete)
+
+Peer isolation, vertical-slice + DDD presets, monorepo depth, FSD/Next honesty, clean/onion aliases, Nest modular guidance, skills + recommend/doctor copy, peerIsolation eval case. Demand-deferred only: thin Next colocation preset, CQRS folder patterns, multi-tenant policy notes — pull with field evidence.
+
+### 2.4.x – 2.9.x highlights
 
 - Adoption completeness (doctor hosts/MCP/codex/origin)  
 - ESLint plugin parity with CI (`arkgate/eslint`)  
 - Identity cutover to **ArkGate / `arkgate`**  
-- `bin/lib/*` modularization (phase 1); **R1:** canonical `src/domain/layerMatch.ts` → generated `bin/ark-layer-match.mjs` + `check:layer-match` drift guard  
-- **R2:** `docs/package-surface.md` + preferred subpath **`arkgate/runtime`** (root re-exports kernel for compat)  
-- **R3:** `ark-check` entry orchestration-only; scan pipeline in `bin/lib/{scan-files,config-warnings,ts-resolve,ast-scan,graph-cycles,architecture-scan}.mjs`  
-- **R4:** typed pure core — `src/domain/{remediation,baselineKey,layerMatch}.ts` → generated CLI load paths + `check:cli-pure`  
-- **R5:** labeled eval corpus — 16 cases under `eval/cases/`; `npm run eval:corpus` + unit test; live agent optional  
-- **R6:** fourth mechanical-safe kind `import-type-of-type-exports`; dual-space + side-effect targets stay judgment  
-- **R7:** Codex multi-project MCP — `bin/lib/codex-home.mjs`; hashed secondary slug; doctor gap  
-
-
-
-
-- Deploy-path adoption gaps (lint/types before host build)  
-- One-flow UX: `start` → `/ark-autopilot` → `doctor`; Next/monorepo honesty (2.6.1)  
+- One-flow UX: `start` → `/ark-autopilot` → `doctor`  
+- Deploy-path adoption gaps; Next/monorepo honesty  
 
 ### Trust (partial)
 
@@ -238,8 +228,10 @@ Same codebase; not a greenfield rewrite.
 - Growing production deps beyond the intentional TypeScript gate host  
 - Becoming a web framework, job runner, ORM, or deploy platform  
 - Ad-hoc layer guesses outside playbook/presets  
-- **Codemod/AST-rewrite engine** — agents edit; the gate decides what lands  
+- **General codemod/AST-rewrite engine** — agents edit; the gate decides what lands  
 - **Silent auto-apply of judgment refactors**  
+- **Runtime kernel as the product** — optional `arkgate/runtime` only  
+- **Org control-plane / FAANG monorepo platform** as the immediate epic  
 
 ---
 
@@ -250,4 +242,4 @@ Issues and PRs: [github.com/pedroknigge/arkgate](https://github.com/pedroknigge/
 
 For onboarding misfires, include archetype id and `ark-check --recommend --json`.
 
-**Start implementation at R1.** Mark status in this file when you pick up or finish an item.
+**Start implementation at W1.** Mark status in this file when you pick up or finish an item.
