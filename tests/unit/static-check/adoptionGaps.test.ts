@@ -1,0 +1,220 @@
+import { describe, it, expect, afterEach } from 'vitest';
+import { execFileSync, spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+const CHECK = path.resolve('bin/ark-check.mjs');
+const REPO = path.resolve('.');
+
+function runCheck(root: string, extra: string[], env: NodeJS.ProcessEnv = {}) {
+  return spawnSync(process.execPath, [CHECK, '--root', root, ...extra], {
+    encoding: 'utf8',
+    env: { ...process.env, ...env },
+  });
+}
+
+function writeTwoLayerOptional(root: string) {
+  fs.writeFileSync(
+    path.join(root, 'ark.config.json'),
+    JSON.stringify(
+      {
+        include: ['src'],
+        layers: [
+          {
+            name: 'DomainModel',
+            patterns: ['src/domain/**'],
+            optional: true,
+            forbiddenGlobals: ['fetch'],
+          },
+          {
+            name: 'PresentationAdapters',
+            patterns: ['src/app/**'],
+            optional: true,
+          },
+          {
+            name: 'ApplicationOrchestration',
+            patterns: ['src/application/**'],
+            optional: true,
+          },
+          {
+            name: 'PersistenceAdapters',
+            patterns: ['src/infra/**'],
+            optional: true,
+          },
+        ],
+        rules: [
+          { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
+          { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
+          { from: 'ApplicationOrchestration', to: 'DomainModel', allowed: true },
+          { from: 'PresentationAdapters', to: 'ApplicationOrchestration', allowed: true },
+          { from: 'PersistenceAdapters', to: 'DomainModel', allowed: true },
+        ],
+      },
+      null,
+      2
+    )
+  );
+  fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'src/app'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'src/application'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'src/infra'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'src/domain/user.ts'), 'export type User = { id: string };\n');
+  fs.writeFileSync(path.join(root, 'src/app/page.ts'), 'export const page = 1;\n');
+  fs.writeFileSync(path.join(root, 'src/application/use.ts'), 'export const use = 1;\n');
+  fs.writeFileSync(path.join(root, 'src/infra/db.ts'), 'export const db = 1;\n');
+  // Extra presentation files for layer-balance educational signal
+  for (let i = 0; i < 20; i++) {
+    fs.writeFileSync(path.join(root, `src/app/view${i}.ts`), `export const v${i} = ${i};\n`);
+  }
+}
+
+describe('adoption gaps (doctor + codex-home + report)', () => {
+  const temps: string[] = [];
+  afterEach(() => {
+    for (const t of temps) {
+      try {
+        fs.rmSync(t, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
+    }
+    temps.length = 0;
+  });
+
+  function mk() {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-adopt-'));
+    temps.push(root);
+    return root;
+  }
+
+  it('doctor --json reports dual-bin MCP, host gap, and optional-but-populated cores', () => {
+    const root = mk();
+    writeTwoLayerOptional(root);
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# agent\n');
+    fs.writeFileSync(path.join(root, 'package.json'), '{"name":"adopt-fixture"}\n');
+    // Dual bin MCP
+    fs.writeFileSync(
+      path.join(root, '.mcp.json'),
+      JSON.stringify({
+        mcpServers: {
+          ark: {
+            type: 'stdio',
+            command: 'npx',
+            args: ['ark-mcp', 'arkgate-mcp', '--root', '.', '--config', 'ark.config.json'],
+          },
+        },
+      })
+    );
+    // Incomplete Grok host
+    fs.mkdirSync(path.join(root, '.grok'), { recursive: true });
+
+    const r = runCheck(root, ['--config', 'ark.config.json', '--doctor', '--json', '--no-cache']);
+    expect(r.status).toBe(0);
+    const out = JSON.parse(r.stdout);
+    expect(out.doctor?.adoption).toBeDefined();
+    const ids = (out.doctor.adoption.gaps as Array<{ id: string }>).map((g) => g.id);
+    expect(ids).toContain('mcp-dual-bin');
+    expect(ids.some((id) => id.startsWith('host-grok'))).toBe(true);
+    expect(ids.some((id) => id.startsWith('core-optional-'))).toBe(true);
+    expect(out.doctor.adoption.coreOptional.length).toBeGreaterThan(0);
+    expect(out.doctor.adoption.mcp.ok).toBe(false);
+  });
+
+  it('doctor human output names dual-bin and Fix: migrate-commands', () => {
+    const root = mk();
+    writeTwoLayerOptional(root);
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# agent\n');
+    fs.writeFileSync(
+      path.join(root, '.mcp.json'),
+      JSON.stringify({
+        mcpServers: {
+          ark: {
+            type: 'stdio',
+            command: 'npx',
+            args: ['ark-mcp', 'arkgate-mcp', '--root', '.', '--config', 'ark.config.json'],
+          },
+        },
+      })
+    );
+    const r = runCheck(root, ['--config', 'ark.config.json', '--doctor', '--no-cache']);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/Adoption/i);
+    expect(r.stdout).toMatch(/ark-mcp\/arkgate-mcp|dual|more than one/i);
+    expect(r.stdout).toMatch(/migrate-commands/);
+  });
+
+  it('codex-home rewrites temp ark-upgrade root to absolute project + arkgate-mcp without --force', () => {
+    const root = mk();
+    writeTwoLayerOptional(root);
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# agent\n');
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+
+    const fakeCodex = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-codex-home-'));
+    temps.push(fakeCodex);
+    const configToml = path.join(fakeCodex, 'config.toml');
+    const absRoot = path.resolve(root);
+    fs.writeFileSync(
+      configToml,
+      `[mcp_servers.ark]
+command = "npx"
+args = ["ark-mcp", "--root", "/var/folders/xx/ark-upgrade-tmp123", "--config", "/var/folders/xx/ark-upgrade-tmp123/ark.config.json"]
+`
+    );
+
+    const r = runCheck(
+      root,
+      ['--install-agent-gates', '--codex-home', '--tools', 'codex'],
+      { CODEX_HOME: fakeCodex }
+    );
+    expect(r.status).toBe(0);
+    const toml = fs.readFileSync(configToml, 'utf8');
+    expect(toml).toContain('arkgate-mcp');
+    expect(toml).toContain(absRoot);
+    expect(toml).not.toMatch(/ark-upgrade-tmp/);
+    expect(toml).not.toMatch(/\/var\/folders\/xx/);
+    // single preferred bin
+    const bins = [...toml.matchAll(/"(arkgate-mcp|ark-mcp)"/g)].map((m) => m[1]);
+    expect(bins.filter((b) => b === 'arkgate-mcp' || b === 'ark-mcp').length).toBeGreaterThanOrEqual(1);
+    expect(bins.includes('ark-mcp') && bins.includes('arkgate-mcp')).toBe(false);
+  });
+
+  it('HTML report includes Adoption section distinct from fitness score', () => {
+    const root = mk();
+    writeTwoLayerOptional(root);
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# agent\n');
+    fs.writeFileSync(
+      path.join(root, '.mcp.json'),
+      JSON.stringify({
+        mcpServers: {
+          ark: {
+            type: 'stdio',
+            command: 'npx',
+            args: ['arkgate-mcp', '--root', '.', '--config', 'ark.config.json'],
+          },
+        },
+      })
+    );
+    const report = path.join(root, 'out-report.html');
+    const r = runCheck(root, [
+      '--config',
+      'ark.config.json',
+      '--report',
+      report,
+      '--no-cache',
+    ]);
+    expect(r.status).toBe(0);
+    const html = fs.readFileSync(report, 'utf8');
+    expect(html).toMatch(/id="adoption"|<h2>Adoption<\/h2>/);
+    expect(html).toMatch(/fitness score|Ark score/i);
+    expect(html).toMatch(/Layer balance \(educational\)|presentation-heavy|educational/i);
+  });
+
+  it('structural adoption template ships in the package templates tree', () => {
+    const tmpl = path.join(REPO, 'templates/tests/ark-adoption-gaps.test.ts');
+    expect(fs.existsSync(tmpl)).toBe(true);
+    const text = fs.readFileSync(tmpl, 'utf8');
+    expect(text).toMatch(/arkgate-mcp/);
+    expect(text).toMatch(/dual/);
+  });
+});

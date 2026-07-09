@@ -33,6 +33,11 @@ npx arkgate-check --install-agent-gates --migrate-commands
 
 `ark upgrade` already runs migrate-commands; re-run it if an older 2.x left dual names.
 
+**Adoption completeness:** run `npx arkgate-check --doctor` (or `--doctor --json`) and
+read the **Adoption** section — host gaps, Codex home temp paths, optional-but-populated
+core layers, missing origin snapshot, baseline policy. Fix commands are printed per gap.
+HTML reports include the same Adoption card (separate from the 0–100 fitness score).
+
 ## Fast path
 
 One command does the whole flow — update the package, refresh gates + `/ark-*` skills

@@ -4,7 +4,21 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## 2.4.0 — 2026-07-08
 
-### Fixed — MCP dual-bin on upgrade (field: PREDIAL WEB 2.1→2.2)
+### Added — Adoption completeness (P0–P2)
+
+- **`collectAdoptionGaps`** shared classifier: incomplete agent hosts (detected dirs
+  without skills/hooks), dual-bin MCP argv, Codex home temp/wrong root, core layers
+  still `optional` while populated, missing origin report, baseline policy signal.
+- **`--doctor` / `--doctor --json`**: Adoption section + `doctor.adoption` JSON (separate
+  from fitness score); fix commands on each gap.
+- **Codex home fail-closed:** `wireCodexMcp` rewrites temp/`ark-upgrade` roots and stale
+  bins to absolute project root + single `arkgate-mcp` even without `--force`.
+- **P1:** `ark start` / `ark init` nudge origin report + doctor; HTML report **Adoption**
+  card (hosts, MCP, origin, core optionality, baseline) distinct from score ring.
+- **P2:** Educational presentation-heavy / thin-domain note in senior diagnostics;
+  `templates/tests/ark-adoption-gaps.test.ts` structural template for consumers.
+
+### Fixed — MCP dual-bin on upgrade
 
 - **`--migrate-commands`** stripped only `ark-mcp` then re-prepended a bin while
   `arkgate-mcp` could remain → `args: ["ark-mcp","arkgate-mcp",…]` broke stdio MCP.

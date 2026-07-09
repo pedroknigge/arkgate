@@ -123,11 +123,12 @@ async function upgrade(args) {
   let status = runArkCheck(['--root', root, '--install-agent-gates'], { cwd: root });
   if (status !== 0) return status;
 
-  // Codex loads slash-command prompts from ~/.codex/prompts, not the repo — refresh those too
-  // when a Codex home exists, so nothing is left stale. Non-fatal: a permission error there
-  // (e.g. a sandbox) shouldn't fail the whole upgrade.
-  if (fs.existsSync(path.join(os.homedir(), '.codex'))) {
-    console.log('\n     Refreshing Codex home prompts (~/.codex)…');
+  // Codex loads slash-command prompts from $CODEX_HOME/prompts, not the repo — refresh those
+  // when a Codex home exists. --force rewrites temp/upgrade MCP roots to this project + arkgate-mcp.
+  // Non-fatal: a permission error (e.g. sandbox) shouldn't fail the whole upgrade.
+  const codexHomeBase = process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
+  if (fs.existsSync(codexHomeBase)) {
+    console.log(`\n     Refreshing Codex home (${codexHomeBase})…`);
     runArkCheck(
       ['--root', root, '--install-agent-gates', '--skills-only', '--codex-home', '--force'],
       { cwd: root }
@@ -279,6 +280,10 @@ async function init(args) {
     if (archetype) {
       console.log(`Shape: ${archetype}. Plan: ${arkCommand(root, 'ark-check', '--recommend')}`);
     }
+    console.log(
+      `Freeze day-one architecture snapshot: ${arkCommand(root, 'ark-check', '--report ark-report.html')} (writes .ark/reports/origin.* once).`
+    );
+    console.log(`Adoption health: ${arkCommand(root, 'ark-check', '--doctor')}`);
     return 0;
   } finally {
     rl?.close();
@@ -433,7 +438,17 @@ async function start(args) {
     }
     console.log(`  • Re-run the plan anytime:   ${arkCommand(root, 'ark-check', '--plan')}`);
     console.log(`  • Full project check:        ${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config')}`);
+    console.log(`  • Adoption health:           ${arkCommand(root, 'ark-check', '--doctor')}`);
     console.log(`  • Update Ark later:          ${arkCommand(root, 'ark', 'upgrade')}`);
+    if (fs.existsSync(path.join(root, '.ark-baseline.json'))) {
+      console.log(
+        '  • Baseline file present — keep empty for ratchet-from-clean, or freeze debt with --update-baseline.'
+      );
+    } else {
+      console.log(
+        '  • No baseline yet (fine on clean trees). Adopting dirty code? freeze with --update-baseline.'
+      );
+    }
 
     // 6) First architecture report — freezes an origin snapshot under .ark/reports/
     // so later --report runs can show evolution. Idempotent: origin is written only once.

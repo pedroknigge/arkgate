@@ -1665,7 +1665,9 @@ function wireCodexMcp(root, force) {
   const esc = (s) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const absRoot = path.resolve(root);
   const absConfig = path.join(absRoot, 'ark.config.json');
-  const { command, args } = execCommandParts(root, PREFERRED_MCP_BIN, [
+  // Preferred product bin; absolute --root so Codex (cwd ≠ project) resolves correctly.
+  const preferredBin = 'arkgate-mcp';
+  const { command, args } = execCommandParts(root, preferredBin, [
     '--root',
     esc(absRoot),
     '--config',
@@ -1683,7 +1685,9 @@ args = [${argsToml}]`;
   }
   const tableRe = /(^|\n)\[mcp_servers\.ark\][^\n]*\n(?:(?!\[)[^\n]*\n?)*/;
   const hasTable = tableRe.test(existing);
-  if (hasTable && !force) {
+  // Fail-closed: rewrite temp/upgrade roots and dual/wrong bins even without --force.
+  const mustRewrite = hasTable && codexArkBlockNeedsRewrite(existing, absRoot);
+  if (hasTable && !force && !mustRewrite) {
     return { status: 'skipped', file };
   }
   let next;
@@ -1699,7 +1703,11 @@ args = [${argsToml}]`;
   } catch (error) {
     return { status: 'failed', file, message: error.message };
   }
-  return { status: hasTable ? 'updated' : 'written', file };
+  return {
+    status: hasTable ? 'updated' : 'written',
+    file,
+    ...(mustRewrite && !force ? { reason: 'temp-or-stale-root' } : {}),
+  };
 }
 
 // Detects stale/missing /ark-* skills in the Codex home prompts dir. Only nags
@@ -1831,6 +1839,331 @@ function brokenMcpGateFiles(root) {
     if (ark && mcpArgsHaveDuplicateBins(ark.args)) bad.push(rel);
   }
   return bad;
+}
+
+/** Core layers whose optionality matters once they match files (presets share these names). */
+const CORE_LAYER_NAMES = new Set([
+  'DomainModel',
+  'ApplicationOrchestration',
+  'PresentationAdapters',
+  'PersistenceAdapters',
+]);
+
+/** Temp / upgrade sandbox roots must never remain as Codex MCP --root. */
+function isTempOrUpgradeRoot(p) {
+  if (!p || typeof p !== 'string') return false;
+  const n = p.replace(/\\/g, '/');
+  return (
+    /\/var\/folders\//i.test(n) ||
+    /\/tmp\//i.test(n) ||
+    /\/Temp\//i.test(n) ||
+    /ark-upgrade/i.test(n) ||
+    /\/T\/(?:ark-|grok-)/i.test(n) ||
+    /[\\/]AppData[\\/]Local[\\/]Temp[\\/]/i.test(n)
+  );
+}
+
+/** Extract --root value from Codex [mcp_servers.ark] args array text. */
+function extractCodexArkRootFromToml(tomlText) {
+  if (!tomlText || typeof tomlText !== 'string') return null;
+  const start = tomlText.search(/(^|\n)\[mcp_servers\.ark\]/);
+  if (start < 0) return null;
+  const rest = tomlText.slice(start);
+  const endMatch = rest.slice(1).search(/\n\[/);
+  const block = endMatch >= 0 ? rest.slice(0, endMatch + 1) : rest;
+  // args = ["arkgate-mcp", "--root", "/abs/path", ...]
+  const rootIdx = block.search(/"--root"\s*,\s*"/);
+  if (rootIdx < 0) {
+    // alternate: --root as adjacent string after any bin
+    const m = block.match(/"--root"\s*,\s*"([^"]+)"/);
+    return m ? m[1] : null;
+  }
+  const m = block.slice(rootIdx).match(/"--root"\s*,\s*"([^"]+)"/);
+  return m ? m[1] : null;
+}
+
+function codexArkBlockHasPreferredBin(tomlText) {
+  if (!tomlText) return false;
+  const start = tomlText.search(/(^|\n)\[mcp_servers\.ark\]/);
+  if (start < 0) return false;
+  const rest = tomlText.slice(start);
+  const endMatch = rest.slice(1).search(/\n\[/);
+  const block = endMatch >= 0 ? rest.slice(0, endMatch + 1) : rest;
+  const bins = [...block.matchAll(/"(arkgate-mcp|ark-mcp)"/g)].map((m) => m[1]);
+  if (bins.length > 1) return false;
+  return bins.length === 1 && bins[0] === PREFERRED_MCP_BIN;
+}
+
+function codexArkBlockNeedsRewrite(tomlText, absRoot) {
+  if (!tomlText || !tomlText.includes('[mcp_servers.ark]')) return true;
+  const rootArg = extractCodexArkRootFromToml(tomlText);
+  if (!rootArg || isTempOrUpgradeRoot(rootArg)) return true;
+  try {
+    if (path.resolve(rootArg) !== path.resolve(absRoot)) return true;
+  } catch {
+    return true;
+  }
+  if (!codexArkBlockHasPreferredBin(tomlText)) return true;
+  return false;
+}
+
+/**
+ * Adoption completeness (separate from 0–100 fitness). Pure-ish: filesystem + config.
+ * @returns {{ gaps: object[], hosts: object[], mcp: object, codexHome: object|null, coreOptional: object[], originReport: object, baseline: object, layerBalance: object|null }}
+ */
+function collectAdoptionGaps(root, config, coverage) {
+  const gaps = [];
+  const adopted = fs.existsSync(path.join(root, 'AGENTS.md'));
+  const isProducer = fs.existsSync(path.join(root, 'templates', 'skills'));
+
+  // --- Repo MCP dual-bin ---
+  const dualMcp = brokenMcpGateFiles(root);
+  const mcp = {
+    dualBinFiles: dualMcp,
+    ok: dualMcp.length === 0,
+  };
+  if (dualMcp.length > 0) {
+    gaps.push({
+      id: 'mcp-dual-bin',
+      severity: 'warn',
+      message: `Broken MCP argv in ${dualMcp.join(', ')}: more than one of ark-mcp/arkgate-mcp`,
+      fix: arkCommand(root, 'ark-check', '--install-agent-gates --migrate-commands'),
+    });
+  }
+
+  // --- Host completeness (only when project already adopted gates) ---
+  const hosts = [];
+  if (adopted && !isProducer) {
+    const skillNames = skillTemplateNames();
+    const hostChecks = [
+      {
+        host: 'grok',
+        dir: '.grok',
+        skill: (n) => path.join(root, '.grok', 'skills', n, 'SKILL.md'),
+        extras: [
+          ['.grok/hooks/ark-write-gate.json', 'write-gate hook'],
+          ['.grok/config.toml', 'project MCP config'],
+        ],
+        toolsFlag: 'grok',
+      },
+      {
+        host: 'claude',
+        dir: '.claude',
+        skill: (n) => path.join(root, '.claude', 'skills', n, 'SKILL.md'),
+        extras: [['.claude/settings.json', 'settings/hooks']],
+        toolsFlag: 'claude',
+      },
+      {
+        host: 'cursor',
+        dir: '.cursor',
+        skill: (n) => path.join(root, '.cursor', 'commands', `${n}.md`),
+        extras: [['.cursor/mcp.json', 'MCP config']],
+        toolsFlag: 'cursor',
+      },
+    ];
+    for (const h of hostChecks) {
+      if (!fs.existsSync(path.join(root, h.dir))) continue;
+      const missingSkills = skillNames.filter((n) => !fs.existsSync(h.skill(n)));
+      const missingExtras = h.extras.filter(([rel]) => !fs.existsSync(path.join(root, rel)));
+      const complete = missingSkills.length === 0 && missingExtras.length === 0;
+      hosts.push({
+        host: h.host,
+        present: true,
+        complete,
+        missingSkills: missingSkills.length,
+        missingExtras: missingExtras.map(([, label]) => label),
+      });
+      if (!complete) {
+        gaps.push({
+          id: `host-${h.host}-incomplete`,
+          severity: 'warn',
+          message: `${h.host} dir present but incomplete (${missingSkills.length} skill(s) missing${
+            missingExtras.length ? `; missing ${missingExtras.map(([, l]) => l).join(', ')}` : ''
+          })`,
+          fix: arkCommand(
+            root,
+            'ark-check',
+            `--install-agent-gates --tools ${h.toolsFlag} --force`
+          ),
+        });
+      }
+    }
+  }
+
+  // --- Codex home MCP (temp path / wrong root / dual bin) ---
+  let codexHome = null;
+  if (adopted && !isProducer) {
+    const codexFile = codexConfigPath();
+    let toml = '';
+    try {
+      if (fs.existsSync(codexFile)) toml = fs.readFileSync(codexFile, 'utf8');
+    } catch {
+      toml = '';
+    }
+    if (toml.includes('[mcp_servers.ark]')) {
+      const rootArg = extractCodexArkRootFromToml(toml);
+      const absRoot = path.resolve(root);
+      const temp = isTempOrUpgradeRoot(rootArg);
+      let wrongRoot = false;
+      try {
+        wrongRoot = rootArg ? path.resolve(rootArg) !== absRoot : true;
+      } catch {
+        wrongRoot = true;
+      }
+      const preferredBin = codexArkBlockHasPreferredBin(toml);
+      const needsRewrite = codexArkBlockNeedsRewrite(toml, absRoot);
+      codexHome = {
+        file: codexFile,
+        root: rootArg,
+        tempPath: temp,
+        wrongRoot,
+        preferredBin,
+        needsRewrite,
+      };
+      if (needsRewrite) {
+        gaps.push({
+          id: 'codex-home-mcp',
+          severity: temp || wrongRoot ? 'warn' : 'info',
+          message: temp
+            ? `Codex home MCP --root points at a temp/upgrade path (${rootArg})`
+            : wrongRoot
+              ? `Codex home MCP --root is not this project (${rootArg || 'missing'} ≠ ${absRoot})`
+              : `Codex home MCP should use a single ${PREFERRED_MCP_BIN} bin with absolute project paths`,
+          fix: arkCommand(
+            root,
+            'ark-check',
+            '--install-agent-gates --codex-home --force'
+          ),
+        });
+      }
+    }
+  }
+
+  // --- Core layers optional but populated ---
+  const coreOptional = [];
+  const layerRows = coverage?.layers ?? [];
+  const countByName = new Map(layerRows.map((r) => [r.name, r.files]));
+  for (const layer of config?.layers ?? []) {
+    if (!CORE_LAYER_NAMES.has(layer.name)) continue;
+    if (layer.optional !== true) continue;
+    const files = countByName.get(layer.name) ?? 0;
+    if (files > 0) {
+      coreOptional.push({ layer: layer.name, files });
+      gaps.push({
+        id: `core-optional-${layer.name}`,
+        severity: 'info',
+        message: `Core layer ${layer.name} has ${files} file(s) but is still optional: true — contract is weaker than the tree`,
+        fix: `Edit ark.config.json: remove optional on ${layer.name} (or set false), then ${arkCommand(root, 'ark-check', '--strict-config')}`,
+      });
+    }
+  }
+
+  // --- Origin report ---
+  const originJson = path.join(root, '.ark', 'reports', 'origin.json');
+  const originReport = {
+    present: fs.existsSync(originJson),
+    path: '.ark/reports/origin.json',
+  };
+  if (adopted && !originReport.present && (coverage?.governed?.percent ?? 0) >= 50) {
+    gaps.push({
+      id: 'origin-report-missing',
+      severity: 'info',
+      message: 'No origin architecture snapshot under .ark/reports/ yet',
+      fix: arkCommand(root, 'ark-check', '--report ark-report.html'),
+    });
+  }
+
+  // --- Baseline policy ---
+  const baselinePath = path.join(root, '.ark-baseline.json');
+  const baselineExists = fs.existsSync(baselinePath);
+  let frozenKeys = 0;
+  if (baselineExists) {
+    try {
+      const raw = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
+      frozenKeys = Array.isArray(raw.violations) ? raw.violations.length : 0;
+    } catch {
+      frozenKeys = 0;
+    }
+  }
+  let primaryPathUsesBaseline = false;
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+    const scripts = pkg.scripts && typeof pkg.scripts === 'object' ? pkg.scripts : {};
+    primaryPathUsesBaseline = Object.values(scripts).some(
+      (s) => typeof s === 'string' && s.includes('--baseline')
+    );
+  } catch {
+    /* no package.json */
+  }
+  if (!primaryPathUsesBaseline) {
+    try {
+      const wfDir = path.join(root, '.github', 'workflows');
+      if (fs.existsSync(wfDir)) {
+        for (const f of fs.readdirSync(wfDir)) {
+          if (!/\.ya?ml$/i.test(f)) continue;
+          const text = fs.readFileSync(path.join(wfDir, f), 'utf8');
+          if (text.includes('--baseline') && (text.includes('ark-check') || text.includes('arkgate-check'))) {
+            primaryPathUsesBaseline = true;
+            break;
+          }
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  const baseline = {
+    exists: baselineExists,
+    frozenKeys,
+    primaryPathUsesBaseline,
+    signal: baselineExists
+      ? frozenKeys === 0
+        ? 'keep-empty'
+        : 'active-ratchet'
+      : 'absent',
+  };
+  if (adopted && baselineExists && frozenKeys === 0 && !primaryPathUsesBaseline) {
+    gaps.push({
+      id: 'baseline-unused',
+      severity: 'info',
+      message:
+        'Empty .ark-baseline.json exists but primary scripts/CI do not pass --baseline (policy unclear)',
+      fix: 'Either add --baseline .ark-baseline.json to check:architecture / CI, or remove the unused baseline file',
+    });
+  }
+
+  // --- Educational layer balance (not a violation) ---
+  let layerBalance = null;
+  const total = layerRows.reduce((s, r) => s + (r.files || 0), 0);
+  if (total >= 20) {
+    const presentation = layerRows.find((r) => r.name === 'PresentationAdapters');
+    const domain = layerRows.find((r) => r.name === 'DomainModel');
+    if (presentation && domain) {
+      const pShare = presentation.files / total;
+      const dShare = domain.files / total;
+      if (pShare >= 0.5 && dShare < 0.1) {
+        layerBalance = {
+          kind: 'presentation-heavy-thin-domain',
+          presentationFiles: presentation.files,
+          domainFiles: domain.files,
+          totalFiles: total,
+          educational:
+            'Presentation holds most of the tree while DomainModel is thin — common for UI apps; consider extracting domain types/use-cases as the product grows. Educational only (not a gate failure).',
+        };
+      }
+    }
+  }
+
+  return {
+    gaps,
+    hosts,
+    mcp,
+    codexHome,
+    coreOptional,
+    originReport,
+    baseline,
+    layerBalance,
+  };
 }
 
 // Gate files whose Ark command runner doesn't match this project's package manager — the
@@ -3415,6 +3748,7 @@ function renderHtmlReport({
   originSnapshot = null,
   currentSnapshot = null,
   originJustCreated = false,
+  adoption = null,
 }) {
   const layers = Array.isArray(config.layers) ? config.layers : [];
   const rules = Array.isArray(config.rules) ? config.rules : [];
@@ -3465,6 +3799,8 @@ function renderHtmlReport({
     scoreTone,
     scoreCaption,
   } = fitness;
+
+  const adoptionView = adoption || collectAdoptionGaps(root, config, coverage);
 
   // ── Senior diagnostics (coupling, purity, contract density) ──────────────
   const layerNames = ordered.map((l) => l.name);
@@ -3971,6 +4307,45 @@ function renderHtmlReport({
     </div>
   </div>
 
+  <div class="section card" id="adoption">
+    <h2>Adoption</h2>
+    <p class="dim" style="margin:.15rem 0 .75rem;font-size:.88rem">
+      Co-pilot completeness — separate from the 0–100 fitness score above. Hosts, MCP health, origin snapshot, core optionality, baseline policy.
+    </p>
+    <div class="kpis" style="margin-bottom:.75rem">
+      <div class="kpi"><b>${adoptionView.gaps.length === 0 ? 'OK' : adoptionView.gaps.length}</b><span>${adoptionView.gaps.length === 0 ? 'No adoption gaps' : 'Adoption gap(s)'}</span></div>
+      <div class="kpi"><b>${adoptionView.originReport.present ? 'yes' : 'no'}</b><span>Origin report</span></div>
+      <div class="kpi"><b>${esc(adoptionView.baseline.signal)}</b><span>Baseline policy</span></div>
+      <div class="kpi"><b>${adoptionView.mcp.ok ? 'ok' : 'fix'}</b><span>Repo MCP argv</span></div>
+    </div>
+    ${
+      adoptionView.gaps.length
+        ? `<ul class="senior-list">${adoptionView.gaps
+            .map(
+              (g) =>
+                `<li><b>${esc(g.id)}</b> — ${esc(g.message)}${
+                  g.fix ? `<br/><code>${esc(g.fix)}</code>` : ''
+                }</li>`
+            )
+            .join('')}</ul>`
+        : '<p class="clean-body">No adoption gaps detected for hosts, MCP, core optionality, or origin.</p>'
+    }
+    ${
+      adoptionView.coreOptional.length
+        ? `<p class="dim" style="margin-top:.65rem">Optional-but-populated cores: <code>${adoptionView.coreOptional
+            .map((c) => `${esc(c.layer)} (${c.files})`)
+            .join('</code>, <code>')}</code></p>`
+        : ''
+    }
+    ${
+      adoptionView.hosts.length
+        ? `<p class="dim" style="margin-top:.4rem">Hosts: ${adoptionView.hosts
+            .map((h) => `${esc(h.host)}${h.complete ? ' ✓' : ' incomplete'}`)
+            .join(' · ')}</p>`
+        : ''
+    }
+  </div>
+
   <div class="section grid-2">
     <div class="card">
       <h2>Architecture map</h2>
@@ -4204,6 +4579,14 @@ function renderHtmlReport({
             )
             .join('\n')}</table>`
         : '<p class="dim">No <code>intentPrefixes</code> on layers — runtime intent governance and string-intent checks have less to bind to.</p>'
+    }
+
+    <h3>Layer balance (educational)</h3>
+    ${
+      adoptionView.layerBalance
+        ? `<p class="dim" style="margin:.1rem 0 .55rem;font-size:.88rem">${esc(adoptionView.layerBalance.educational)}</p>
+           <p class="meta">PresentationAdapters ${adoptionView.layerBalance.presentationFiles} · DomainModel ${adoptionView.layerBalance.domainFiles} · total ${adoptionView.layerBalance.totalFiles}</p>`
+        : '<p class="dim" style="margin:.1rem 0 .55rem;font-size:.88rem">No presentation-heavy / thin-domain imbalance flagged (educational only when Presentation ≥50% and Domain &lt;10% of files).</p>'
     }
 
     <h3>Pattern forensics</h3>
@@ -4535,6 +4918,7 @@ function runDoctor(root, config, files, rules, violations, asJson, options = {})
   const gatesMissing = missingGates(root);
   const skillGaps = detectSkillGaps(root);
   const staleRunners = staleRunnerGateFiles(root);
+  const adoption = collectAdoptionGaps(root, config, cov);
   const baseline = readBaseline(root, '.ark-baseline.json');
   const currentKeys = new Set(violations.map(baselineKey));
   const suppressed = baseline.exists
@@ -4576,10 +4960,12 @@ function runDoctor(root, config, files, rules, violations, asJson, options = {})
               exists: baseline.exists,
               frozen: baseline.exists ? baseline.keys.size : 0,
               stale: staleBaseline,
+              policy: adoption.baseline,
             },
             gatesMissing,
             skillGaps,
             staleRunnerFiles: staleRunners,
+            adoption,
             newHere: showNewHere
               ? {
                   show: true,
@@ -4719,6 +5105,37 @@ function runDoctor(root, config, files, rules, violations, asJson, options = {})
   else {
     line(warn, `Stale runner in ${staleRunners.join(', ')}`);
     actions.push(`migrate command runners (${arkCommand(root, 'ark-check', '--install-agent-gates --migrate-commands')})`);
+  }
+
+  // Adoption completeness (hosts, MCP health, codex home, core optionality, origin, baseline policy)
+  console.log('');
+  console.log(color.bold('Adoption (separate from fitness score)'));
+  if (adoption.gaps.length === 0 && !adoption.layerBalance) {
+    line(ok, 'Hosts, MCP argv, core optionality, origin report, and baseline policy look complete');
+  } else {
+    for (const gap of adoption.gaps) {
+      const mark = gap.severity === 'warn' ? warn : gap.severity === 'info' ? warn : bad;
+      line(mark, gap.message);
+      if (gap.fix) line(' ', color.dim(`Fix: ${gap.fix}`));
+      actions.push(gap.fix || gap.message);
+    }
+    if (adoption.layerBalance) {
+      line(warn, color.dim(adoption.layerBalance.educational));
+    }
+  }
+  if (adoption.baseline) {
+    line(
+      ' ',
+      color.dim(
+        `Baseline policy: ${adoption.baseline.signal}` +
+          (adoption.baseline.primaryPathUsesBaseline
+            ? ' · primary path uses --baseline'
+            : ' · primary path does not use --baseline')
+      )
+    );
+  }
+  if (adoption.originReport.present) {
+    line(ok, 'Origin architecture snapshot present (.ark/reports/origin.json)');
   }
 
   console.log('');
