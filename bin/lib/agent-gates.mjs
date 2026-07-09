@@ -471,7 +471,8 @@ export function agentInstructions(root) {
 4. After ordinary feature edits: run \`${checkCmd}\`. On violations → **\`/ark-fix\`** (or
    \`/ark-place\` for new files, \`/ark-contract\` only if the contract itself is wrong).
 
-Other \`/ark-*\` skills are optional escapes (adopt, coverage, runtime, …), not required steps.
+Other \`/ark-*\` skills are optional escapes (explore, adopt, coverage, think, runtime, …), not required steps.
+Skills are **dual-engine**: deterministic CLI sensors + exploratory read of *this* repo — not JSON-only wrappers.
 
 ## Before editing TypeScript or JavaScript source files
 

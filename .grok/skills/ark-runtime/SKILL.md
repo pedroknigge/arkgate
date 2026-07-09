@@ -1,7 +1,7 @@
 ---
 name: ark-runtime
 description: Replace hand-rolled infra with the Ark runtime kernel — event bus, outbox, audit, sagas, projections, policies, NestJS. Finds candidates, wires one, verifies.
-arkVersion: 2.9.0
+arkVersion: 2.9.1
 ---
 
 # /ark-runtime — Adopt the runtime kernel (opt-in features)

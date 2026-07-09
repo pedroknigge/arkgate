@@ -1,7 +1,7 @@
 ---
 name: ark-upgrade
 description: Update arkgate to the latest published version, then refresh gates and /ark-* skills for every agent CLI and re-verify the architecture check. Autonomous.
-arkVersion: 2.9.0
+arkVersion: 2.9.1
 ---
 
 # /ark-upgrade — Update ArkGate and refresh its gates

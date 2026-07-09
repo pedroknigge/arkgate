@@ -4,6 +4,20 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+### Added
+
+- **`/ark-explore` skill:** exploratory architecture reconnaissance — product map, entry
+  points, coupling hotspots, false-green risk, ranked *suggestions* (not only residual
+  violations). CLI remains a sensor; host agent reads the real tree.
+
+### Changed
+
+- **Skills dual-engine (deterministic + exploratory):** `/ark-autopilot`, `/ark-coverage`,
+  `/ark-adopt`, `/ark-think`, `/ark-loop`, and `/ark-fix` require a real source/product
+  pass (paths opened, suggestive bets) in addition to plan/coverage/doctor sensors. Plan
+  empty ≠ architecture healthy without explore. Refresh installed skills with
+  `ark-check --install-agent-gates --skills-only --force`.
+
 ## 2.9.1 — 2026-07-09
 
 Field-install honesty: non-TTY start, baseline→CI sync, pin, false-green soft block, Grok defaults.

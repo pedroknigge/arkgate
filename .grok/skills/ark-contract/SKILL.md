@@ -1,7 +1,7 @@
 ---
 name: ark-contract
 description: Safely edit ark.config.json (layers, rules, forbiddenGlobals, intent prefixes) and land business rules into the Ark manifest. Validated with strict ark-check. Deep source evidence required.
-arkVersion: 2.9.0
+arkVersion: 2.9.1
 ---
 
 # /ark-contract — Change the architecture contract (safely)

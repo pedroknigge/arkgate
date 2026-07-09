@@ -1,7 +1,7 @@
 ---
 name: ark-loop
-description: Drive ark-check --plan to zero active violations. Auto-apply only mechanical-safe kinds; design judgment fixes from real source. CLI is the validator — you edit code.
-arkVersion: 2.9.0
+description: Drive ark-check --plan to zero active violations. Read real source, auto-apply only mechanical-safe kinds, design judgment from the product tree. CLI validates — you edit code.
+arkVersion: 2.9.1
 ---
 
 # /ark-loop — Apply the plan safely
@@ -9,12 +9,24 @@ arkVersion: 2.9.0
 Read Ark’s classified **plan**, work toward **goal.met**, one small step at a time,
 validating every change with `ark-check` and rolling back regressions.
 
+Deterministic kinds stay **tight**. Your job is still **exploratory on the files**: open
+importers/targets, see if the plan step is a symptom of wrong shape / false Domain / I/O
+under Application — escalate to `/ark-contract` or `/ark-explore` when the wall is structural.
+
 
 ## Related onboarding
 
 - **Greenfield:** `/ark-architect` or `ark-check --recommend` / `ark start`.
 - **Brownfield:** `/ark-adopt` — match contract to reality; do not force a starter preset.
+- **Map / opportunities:** `/ark-explore`.
 - **Default path:** `ark start` → `/ark-autopilot` → `ark-check --doctor`.
+
+## Dual engine (mandatory)
+
+| Engine | Role |
+|--------|------|
+| **Deterministic** | Only the four `mechanical-safe` kinds auto-apply; plan tags; gate re-check |
+| **Exploratory** | Read sources; detect concentrated edges / false-green / wrong layer home before grinding |
 
 ## Anti-wrapper rule (mandatory)
 
@@ -22,9 +34,10 @@ validating every change with `ark-check` and rolling back regressions.
 
 **Required:**
 1. `--plan --json` as sensor.
-2. For each step you touch: **read** `file` and `target` source.
+2. For each step you touch: **read** `file` and `target` source (and enough callers to know the edge).
 3. **“Así te lo re-soluciono”** — exact edit before applying.
 4. After each apply: full gate re-run; rollback if targeted violation remains or new ones appear.
+5. If one edge dominates or empty cores + I/O under Application → **stop grinding**, hand to `/ark-contract` / `/ark-adopt` with code evidence.
 
 ## mechanical-safe only (auto)
 

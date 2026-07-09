@@ -1,18 +1,28 @@
 ---
 name: ark-fix
-description: Resolve Ark architecture violations at the root cause — ports, adapters, moves, intent/manifest alignment. Never weaken the contract. Read the real code; CLI only validates.
-arkVersion: 2.9.0
+description: Resolve Ark architecture violations at the root cause — read importers and product context, design ports/adapters/moves/intent alignment. Never weaken the contract. CLI only validates.
+arkVersion: 2.9.1
 ---
 
 # /ark-fix — Fix architecture violations at the root
 
 You fix violations Ark reports. Prefer structural fixes over silencing the gate.
+**Read the surrounding product code** (callers, package role, feature ownership) — not only
+the two files on the violation edge.
 
+
+## Dual engine (mandatory)
+
+| Engine | Role |
+|--------|------|
+| **Deterministic** | Violation list, plan kinds, post-edit `ark-check` |
+| **Exploratory** | Why this edge exists in *this* product; better home; manifiesto if the rule is business |
 
 ## Related onboarding
 
 - **Greenfield:** `/ark-architect` or `ark-check --recommend` / `ark start`.
 - **Brownfield:** `/ark-adopt` — match contract to reality; do not force a starter preset.
+- **Map first:** `/ark-explore` when the violation is one of many structural smells.
 - **peerIsolation / cross-slice:** always **judgment** — extract to shared, events/ports, or redesign ownership. Never auto-apply cross-feature or cross-context moves.
 - **`vertical-slice` ownership:** feature code stays under `src/features/<slice>/…` (no sibling-slice imports); shared primitives in `src/shared/`; infra in `src/lib/`; shell in `src/app/`. Cross-feature edges are peerIsolation — extract shared or use events/ports.
 - **`ddd-bounded-contexts` ownership:** code under `src/contexts/<context>/{domain,application,infrastructure,presentation}/`; shared kernel only under `src/shared/kernel/`. Cross-context imports (same or cross technical layer) are peerIsolation — integrate via application APIs/events, not peer technical layers.

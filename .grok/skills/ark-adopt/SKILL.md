@@ -1,19 +1,27 @@
 ---
 name: ark-adopt
-description: Brownfield onboarding — match contract to real code, classify ungoverned dirs, mine loose business rules into the Ark manifest/intents, freeze only real debt. Deep source analysis required.
-arkVersion: 2.9.0
+description: Brownfield onboarding — exploratory match of contract to real product code, classify ungoverned dirs, mine business rules into the manifest, freeze only real debt. Deep source analysis required.
+arkVersion: 2.9.1
 ---
 
 # /ark-adopt — Bring Ark into an existing codebase
 
-Goal: contract reflects reality, most code governed, only genuine debt frozen with a burn-down.
-A green check over a wrong contract is a **false green**.
+Goal: contract reflects **product reality**, most code governed, only genuine debt frozen
+with a burn-down. A green check over a wrong contract is a **false green**.
 
+
+## Dual engine (mandatory)
+
+| Engine | Role |
+|--------|------|
+| **Deterministic** | coverage, doctor, baseline, strict-config after edits |
+| **Exploratory** | walk the real monorepo/app layout; reclassify; mine rules; suggest shape |
 
 ## Related onboarding
 
 - **Greenfield:** `/ark-architect` or `ark-check --recommend` / `ark start`.
 - **Brownfield:** `/ark-adopt` — match contract to reality; do not force a starter preset.
+- **Deep map only:** `/ark-explore`.
 - **Default path:** `ark start` → `/ark-autopilot` → `ark-check --doctor`.
 
 ## Anti-wrapper rule (mandatory)
@@ -22,9 +30,12 @@ A green check over a wrong contract is a **false green**.
 
 **Required:**
 1. CLI sensor: `--coverage --json`, check `--json` (`summary`), doctor.
-2. **Read real source** in largest ungoverned dirs and top import edges (min **10 files**).
-3. **“Así te lo re-soluciono”** — concrete layer globs, file moves, and manifest/intent proposals.
-4. Never freeze a concentrated edge without investigating contract smell.
+2. **Product map** — what ships, which apps/packages, entry routes/CLIs.
+3. **Read real source** in largest ungoverned dirs and top import edges (min **12 files**
+   across **≥4 dirs**).
+4. **“Así te lo re-soluciono”** — concrete layer globs, file moves, manifest/intent proposals.
+5. **Suggestive burn-down** — ranked next steps after adopt (not only “baseline done”).
+6. Never freeze a concentrated edge without investigating contract smell / false-green.
 
 ## Guiding principle
 
@@ -38,7 +49,9 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    If `src/contexts` or `src/bounded-contexts` exists, prefer `ddd-bounded-contexts`.
 2. **Check + diagnose** — `summary.concentrated` / dominant edge → fix contract first, don’t freeze.
    Cross-slice / cross-context `peerIsolation` hits are judgment: extract shared or events.
-3. **Classify ungoverned** — use coverage `suggestions`; add layers/patterns via `/ark-contract`.
+   Empty Domain/Persistence + I/O under Application → false-green; reclassify before ENFORCE theatre.
+3. **Classify ungoverned** — use coverage `suggestions` **plus** dirs you discovered by reading;
+   add layers/patterns via `/ark-contract`.
 4. **Mine business rules → manifiesto** (model job — this is why the skill exists):
    - Scan for loose domain: validators, pricing/policy functions, `can*`/`calculate*`, magic business constants, publish/intent strings, logic in UI/hooks that belongs in Domain.
    - Propose: Domain files, `intentPrefixes`, intent names (`Domain.*` / `Application.*`), kernel `defineIntent` stubs if runtime is used.
@@ -46,7 +59,7 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    - Deliver section **“Así te lo re-soluciono en el manifiesto”** with before/after contract snippets.
 5. **Freeze only real debt** — `--update-baseline` (zero debt → **no empty baseline file** left behind).
 6. **Gates + skills** — `--install-agent-gates` (CI monorepo-aware when `frontend/package.json` exists).
-7. **Ratchet plan** — ranked edges + which are false positives avoided.
+7. **Ratchet + opportunity plan** — ranked residual edges + **explore-style bets** (what to improve next week).
 
 ## Operating modes
 
@@ -55,10 +68,10 @@ Explain modes as **detected stages** (Setup / Align / Guard), not user settings.
 ## Verify
 
 `ark-check --root . --config ark.config.json --strict-config` (+ baseline only if non-empty file retained).
-Report: governed% before/after, files written, frozen count, false positives avoided, manifest/intent proposals applied or deferred.
+Report: governed% before/after, files written, frozen count, false positives avoided, manifest/intent proposals applied or deferred, **top opportunities still open**.
 
 ## Never
 
 - Freeze false positives to get green.
 - Force runtime kernel over existing Nest/DI.
-- Claim Enforce while governed% is low or core bags ungoverned.
+- Claim Enforce while governed% is low, cores empty with I/O in Application, or core bags ungoverned.
