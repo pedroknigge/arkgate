@@ -2,7 +2,30 @@
 
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here.
 
-## Unreleased
+## 2.8.0 — 2026-07-09
+
+Co-pilot quality release (roadmap **R5–R7**): labeled eval corpus, fourth mechanical-safe kind,
+and Codex multi-project MCP without silent primary overwrite. **No intentional CLI flag or JSON
+shape breaks** for the gate/co-pilot path.
+
+### Added
+
+- **R5 — labeled eval corpus:** 16 cases under `eval/cases/` (themes + labels).
+  `npm run eval:corpus` / `evalCorpus.test.ts` gate without a live agent.
+- **R6 — `import-type-of-type-exports`:** named type-only exports from mixed modules →
+  `import type` / `export type`. Dual-space names and targets with top-level side effects stay
+  **judgment**. Scan flags `namedBindingsTypeOnly` (+ `hasTopLevelSideEffects`).
+- **R7 — Codex multi-project MCP DX:** no silent primary steal; scoped
+  `[mcp_servers.ark_<slug>_<hash>]`; doctor gap `codex-home-multi-project`. Codex home logic in
+  `bin/lib/codex-home.mjs`.
+
+### Changed
+
+- Scan cache schema **v5** (typeOnlyExportNames, namedBindings, hasTopLevelSideEffects).
+- Classifier: single early judgment for `require` / `dynamic-import` on layer edges.
+- R6 honesty: impure value-export initializers (`export const db = connect()`) count as
+  top-level side effects — named type imports of those modules stay **judgment**.
+- Codex home: single `upsertCodexMcpTable` path for primary and secondary MCP tables.
 
 ## 2.7.0 — 2026-07-09
 
