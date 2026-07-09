@@ -117,6 +117,9 @@ Start only when R1–R7 are done or explicitly skipped with a written reason.
 | **P7** | `done` | **Clean/Onion aliases** | `clean-architecture` / `onion-architecture` → hexagonal. |
 | **P8** | `done` | **Nest modular guidance** | Docs + doctor tip; hexagonal/ddd mapping. |
 
+**Demand-deferred (do not invent scope):** P9 Next colocation thin preset · P10 CQRS folder
+patterns on DDD pack · P11 multi-tenant policy notes. Pull only with field evidence.
+
 ### Later / only if demand pulls
 
 - Incremental checks + ownership-aware contracts for huge monorepos  
