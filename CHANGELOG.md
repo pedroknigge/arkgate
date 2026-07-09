@@ -2,7 +2,7 @@
 
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here.
 
-## Unreleased — 2.6.0
+## 2.6.0 — 2026-07-09
 
 ### Changed — maintainability hygiene (#11 / #12)
 

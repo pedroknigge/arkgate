@@ -128,9 +128,9 @@ Ordered by leverage for the dual audience:
 
 ### Next iteration — maintainability debt (post-2.5.0)
 
-11. ~~**Split / modularize `bin/ark-check.mjs`**~~ → **shipped (2.6 train)** — `bin/lib/` modules:
+11. ~~**Split / modularize `bin/ark-check.mjs`**~~ → **shipped in 2.6.0** — `bin/lib/` modules:
     `agent-gates`, `html-report`, `doctor-plan`, `violations`; entry `ark-check.mjs` is the scan/CLI shell.  
-12. ~~**Single source of truth for layer globs**~~ → **shipped (2.6 train)** — pure matcher in
+12. ~~**Single source of truth for layer globs**~~ → **shipped in 2.6.0** — pure matcher in
     `bin/ark-layer-match.mjs` (CLI) + `src/domain/layerMatch.ts` (eslint); Tooling may import DomainModel;
     parity tests lock both implementations.
 
