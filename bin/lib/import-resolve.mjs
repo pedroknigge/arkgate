@@ -23,7 +23,10 @@ export function readTsconfigAliases(ts, root) {
     const aliases = [];
     for (const [pattern, targets] of Object.entries(opts.paths || {})) {
       if (!Array.isArray(targets) || targets.length === 0) continue;
-      aliases.push({ from: pattern.replace(/\*$/, ''), to: String(targets[0]).replace(/\*$/, '') });
+      // Catch-all `*` → empty prefix would match every specifier; skip it.
+      const from = pattern.replace(/\*$/, '');
+      if (!from) continue;
+      aliases.push({ from, to: String(targets[0]).replace(/\*$/, '') });
     }
     aliases.sort((a, b) => b.from.length - a.from.length);
     return { baseUrl, aliases };
@@ -128,9 +131,3 @@ export function createImportTargetResolver(ts, root, config) {
   };
 }
 
-/** Back-compat: specifier → layer only. */
-export function createImportLayerResolver(ts, root, config) {
-  const resolve = createImportTargetResolver(ts, root, config);
-  if (!resolve) return undefined;
-  return (specifier, fromFilePath) => resolve(specifier, fromFilePath)?.layer;
-}

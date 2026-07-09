@@ -137,7 +137,8 @@ export function layerForRelativePath(relPath, layers) {
 }
 /**
  * Extract the slice id under a known folder name.
- * `src/features/auth/api.ts` + folders `["features"]` → `"auth"`.
+ * Includes the parent folder so `features/auth` ≠ `modules/auth`.
+ * `src/features/auth/api.ts` + folders `["features"]` → `"features/auth"`.
  */
 export function sliceIdForPath(relPath, sliceFolders) {
     if (!sliceFolders?.length)
@@ -148,7 +149,7 @@ export function sliceIdForPath(relPath, sliceFolders) {
     const folders = new Set(sliceFolders.map((s) => String(s).toLowerCase()));
     for (let i = 0; i < parts.length - 1; i += 1) {
         if (folders.has(parts[i].toLowerCase())) {
-            return parts[i + 1];
+            return `${parts[i]}/${parts[i + 1]}`;
         }
     }
     return undefined;

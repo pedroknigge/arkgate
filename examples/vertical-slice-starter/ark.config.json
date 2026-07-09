@@ -71,6 +71,11 @@
       "message": "Features must not import other feature slices. Extract shared code to Shared/Lib or coordinate via events."
     },
     {
+      "from": "Features",
+      "to": "App",
+      "allowed": false
+    },
+    {
       "from": "Shared",
       "to": "Features",
       "allowed": false

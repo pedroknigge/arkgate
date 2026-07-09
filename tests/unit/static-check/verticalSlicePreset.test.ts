@@ -48,11 +48,12 @@ describe('vertical-slice preset', async () => {
     ).toBe(false);
   });
 
-  it('allows Features → Shared and Features → Lib; denies Shared → Features', () => {
+  it('allows Features → Shared and Features → Lib; denies Shared → Features and Features → App', () => {
     const cfg = ARCHITECTURE_PRESETS['vertical-slice']([]);
     expect(isEdgeDenied(cfg.rules, 'Features', 'Shared')).toBe(false);
     expect(isEdgeDenied(cfg.rules, 'Features', 'Lib')).toBe(false);
     expect(isEdgeDenied(cfg.rules, 'Shared', 'Features')).toBe(true);
     expect(isEdgeDenied(cfg.rules, 'Lib', 'Features')).toBe(true);
+    expect(isEdgeDenied(cfg.rules, 'Features', 'App')).toBe(true);
   });
 });

@@ -17,19 +17,20 @@ export type LayerConfig = {
 /**
  * Layer-to-layer dependency rule from ark.config.json.
  *
- * - Classic: `{ from, to, allowed: false }` denies any import from `from` → `to`.
- * - Same-layer was historically always allowed (from===to short-circuit).
- * - Opt-in `peerIsolation: true` on a same-layer deny rule blocks only
- *   **cross-slice** edges (e.g. features/auth → features/payments) while allowing
- *   same-slice imports. Requires fromPath/toPath at check time.
+ * - Classic: `{ from, to, allowed: false }` denies **cross-layer** edges only.
+ *   Same-layer is always allowed without peerIsolation (historical short-circuit).
+ * - `peerIsolation: true` + `allowed: false`: deny only when slice ids differ
+ *   (same **or** cross layer). Same-slice → allow. Needs fromPath/toPath; missing
+ *   paths/slices → fail-open.
  */
 export type EdgeRule = {
   from: string;
   to: string;
   allowed?: boolean;
   /**
-   * When true with `allowed: false` and from===to: deny only when importer and
-   * importee sit under different slice folders (see sliceFolders / pattern infer).
+   * When true with `allowed: false`: deny only when importer and importee resolve
+   * to different slice ids (parent/name, e.g. features/auth). Works same-layer
+   * and cross-layer. See findDeniedEdgeRule.
    */
   peerIsolation?: boolean;
   /**
@@ -180,7 +181,8 @@ export function layerForRelativePath(
 
 /**
  * Extract the slice id under a known folder name.
- * `src/features/auth/api.ts` + folders `["features"]` → `"auth"`.
+ * Includes the parent folder so `features/auth` ≠ `modules/auth`.
+ * `src/features/auth/api.ts` + folders `["features"]` → `"features/auth"`.
  */
 export function sliceIdForPath(
   relPath: string,
@@ -193,7 +195,7 @@ export function sliceIdForPath(
   const folders = new Set(sliceFolders.map((s) => String(s).toLowerCase()));
   for (let i = 0; i < parts.length - 1; i += 1) {
     if (folders.has(parts[i].toLowerCase())) {
-      return parts[i + 1];
+      return `${parts[i]}/${parts[i + 1]}`;
     }
   }
   return undefined;

@@ -39,10 +39,14 @@ const peerRules = [
 ];
 
 describe('sliceIdForPath / inferSliceFoldersFromPatterns', () => {
-  it('extracts slice under features/', () => {
-    expect(sliceIdForPath('src/features/auth/api.ts', ['features'])).toBe('auth');
+  it('extracts slice under features/ (parent/name so features/auth ≠ modules/auth)', () => {
+    expect(sliceIdForPath('src/features/auth/api.ts', ['features'])).toBe('features/auth');
     expect(sliceIdForPath('src/features/payments/hooks/usePay.ts', ['features'])).toBe(
-      'payments'
+      'features/payments'
+    );
+    expect(sliceIdForPath('src/modules/auth/x.ts', ['features', 'modules'])).toBe('modules/auth');
+    expect(sliceIdForPath('src/features/auth/x.ts', ['features', 'modules'])).toBe(
+      'features/auth'
     );
   });
 
@@ -190,6 +194,26 @@ describe('peerIsolation edge rules', () => {
     });
     expect(hit?.message).toBe('No cross-feature imports');
     expect(hit?.peerIsolation).toBe(true);
+  });
+
+  it('features/auth is not the same slice as modules/auth', () => {
+    const rules = [
+      {
+        from: 'Features',
+        to: 'Features',
+        allowed: false as const,
+        peerIsolation: true,
+        sliceFolders: ['features', 'modules'],
+      },
+    ];
+    const layers = [{ name: 'Features', patterns: ['src/features/**', 'src/modules/**'] }];
+    expect(
+      isEdgeDenied(rules, 'Features', 'Features', {
+        fromPath: 'src/features/auth/a.ts',
+        toPath: 'src/modules/auth/b.ts',
+        layers,
+      })
+    ).toBe(true);
   });
 });
 

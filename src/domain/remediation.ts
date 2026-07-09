@@ -59,7 +59,7 @@ export type ArkViolationLike = {
   targetTypeOnlyExports?: boolean;
   /** True when every named binding on a static import/export is a type-only export of the target. */
   namedBindingsTypeOnly?: boolean;
-  /** Same-layer cross-slice violation (peerIsolation rule). Always judgment. */
+  /** Cross-slice / cross-context peerIsolation violation. Always judgment. */
   peerIsolation?: boolean;
   edgeKind?: string;
   fromLayer?: string;

@@ -449,12 +449,14 @@ export const ARCHITECTURE_PRESETS = {
             message:
               'Features must not import other feature slices. Extract shared code to Shared/Lib or coordinate via events.',
           },
+          // Features must not pull in the composition root (re-coupling via App).
+          { from: 'Features', to: 'App', allowed: false },
           { from: 'Shared', to: 'Features', allowed: false },
           { from: 'Shared', to: 'App', allowed: false },
           { from: 'Lib', to: 'Features', allowed: false },
           { from: 'Lib', to: 'Shared', allowed: false },
           { from: 'Lib', to: 'App', allowed: false },
-          // App may compose Features + Shared + Lib (no explicit deny).
+          // App may compose Features + Shared + Lib (no deny).
           // Features may import Shared + Lib (no deny).
         ],
       },

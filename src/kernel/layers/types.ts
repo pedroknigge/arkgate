@@ -24,8 +24,8 @@ export interface ArchitectureRule {
   allowed: boolean;
   message?: string;
   /**
-   * Same-layer only: deny imports across different slices (e.g. features/a → features/b).
-   * Requires path resolution at check time (write-gate / CI).
+   * When true with allowed:false: deny only when slice ids differ (same or cross layer).
+   * Requires path resolution at check time (write-gate / CI). Matches domain EdgeRule.
    */
   peerIsolation?: boolean;
   /** Parent folder names that own the slice id as the next path segment. */
