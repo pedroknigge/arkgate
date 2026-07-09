@@ -26,7 +26,6 @@ import {
   formatArchitectureRecommendationHuman,
   installDevHint,
   layerForFile,
-  planPopulatedCoreRatchet,
 } from './ark-shared.mjs';
 
 import {
@@ -61,6 +60,7 @@ import {
   runPlan,
   runDoctor,
 } from './lib/doctor-plan.mjs';
+import { runRatchetCores } from './lib/core-ratchet.mjs';
 import {
   baselineKey,
   readBaseline,
@@ -205,7 +205,7 @@ function usage() {
     '       ark-check --apply-policy-pack <id> [--force]  write ark.config.json from templates/policy-packs/ (uses preset factory)',
     '       ark-check --suggest-include [--json]   propose include roots (TS packages / workspaces)',
     '       ark-check --adopt-contract [--write]   expand include + UI patterns from ungoverned dirs (contract adopt)',
-    '       ark-check --ratchet-cores              when architecture is green, set optional:false on populated core layers only',
+    '       ark-check --ratchet-cores              when raw graph is green (0 violations; baseline ignored), set optional:false on populated cores only (writes ark.config.json)',
     '       ark-check --watch                      re-run the check when governed files change (debounced)',
     '       ark-check --report [file.html] [--beginner] [--reset-origin] [--no-archive]',
     '           HTML report + snapshots under .ark/reports/ (origin once, latest each run, history JSON)',
@@ -865,94 +865,6 @@ const color = {
   bold: (s) => (useColor ? `\x1b[1m${s}\x1b[0m` : s),
 };
 
-/**
- * When the architecture is green, ratchet populated core layers from optional→required
- * so doctor can honestly report ENFORCE. Empty cores stay optional.
- */
-function runRatchetCores(root, config, files, rules, violations, args) {
-  const cov = computeCoverage(root, config, files, rules);
-  const activeCount = Array.isArray(violations) ? violations.length : 0;
-  const configPath = path.isAbsolute(args.config)
-    ? args.config
-    : path.join(root, args.config || 'ark.config.json');
-
-  const refuse = (code, message, extra = {}) => {
-    if (args.json) {
-      console.log(JSON.stringify({ ok: false, error: message, ...extra }, null, 2));
-    } else {
-      console.error(message);
-    }
-    process.exitCode = code;
-  };
-
-  if (activeCount > 0) {
-    refuse(
-      2,
-      `Refusing --ratchet-cores: ${activeCount} active architecture violation(s). Resolve them first (ark-check --plan), then re-run.`,
-      { activeViolations: activeCount, governed: cov.governed }
-    );
-    return;
-  }
-  if (cov.totalFiles === 0 || (cov.governed?.percent ?? 0) < 50) {
-    refuse(
-      2,
-      `Refusing --ratchet-cores: governed coverage is too low (${cov.governed?.percent ?? 0}% of ${cov.totalFiles} files). Classify ungoverned code first.`,
-      { governed: cov.governed }
-    );
-    return;
-  }
-
-  const plan = planPopulatedCoreRatchet(config, cov.layers);
-  if (!plan.changed) {
-    const payload = {
-      ok: true,
-      changed: false,
-      message: 'No optional core layers with files — nothing to ratchet.',
-      alreadyStrict: plan.alreadyStrict,
-      stillOptionalEmpty: plan.stillOptionalEmpty,
-      governed: cov.governed,
-    };
-    if (args.json) console.log(JSON.stringify(payload, null, 2));
-    else {
-      console.log(payload.message);
-      if (plan.stillOptionalEmpty.length > 0) {
-        console.log(
-          `Still optional (empty patterns): ${plan.stillOptionalEmpty.join(', ')}`
-        );
-      }
-    }
-    return;
-  }
-
-  fs.writeFileSync(configPath, `${JSON.stringify(plan.config, null, 2)}\n`);
-  const payload = {
-    ok: true,
-    changed: true,
-    configPath: displayPathFromRoot(root, configPath),
-    ratcheted: plan.ratcheted,
-    stillOptionalEmpty: plan.stillOptionalEmpty,
-    governed: cov.governed,
-    next: arkCommand(root, 'ark-check', '--doctor'),
-  };
-  if (args.json) {
-    console.log(JSON.stringify(payload, null, 2));
-  } else {
-    console.log(
-      `Ratcheted ${plan.ratcheted.length} core layer(s) to optional: false (populated only):`
-    );
-    for (const row of plan.ratcheted) {
-      console.log(`  ${row.layer} (${row.files} file(s))`);
-    }
-    if (plan.stillOptionalEmpty.length > 0) {
-      console.log(
-        `Left optional (empty patterns — avoid false ENFORCE): ${plan.stillOptionalEmpty.join(', ')}`
-      );
-    }
-    console.log(`Wrote ${displayPathFromRoot(root, configPath)}`);
-    console.log(`Confirm: ${payload.next}`);
-  }
-}
-
 async function main() {
   const args = parseArgs(process.argv);
   if (args.version) {
@@ -1138,7 +1050,7 @@ async function main() {
   }
 
   if (args.ratchetCores) {
-    runRatchetCores(root, config, files, rules, violations, args);
+    runRatchetCores(root, config, files, rules, violations, args, { displayPathFromRoot });
     return;
   }
 

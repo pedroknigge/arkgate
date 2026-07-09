@@ -348,61 +348,6 @@ export function applyFrameworkLayoutOverlays(config, root) {
 }
 
 /**
- * Core layers whose optionality matters once they match files (presets share these names).
- * Used by doctor adoption gaps and `--ratchet-cores`.
- */
-export const CORE_LAYER_NAMES = new Set([
-  'DomainModel',
-  'ApplicationOrchestration',
-  'PresentationAdapters',
-  'PersistenceAdapters',
-]);
-
-/**
- * Plan a ratchet of optional→required for core layers that already match files.
- * Empty cores stay optional (avoids false ENFORCE theatre). Pure — does not write disk.
- *
- * @param {object} config ark.config.json shape
- * @param {{ name: string, files: number }[]} layerRows coverage layer rows
- * @returns {{
- *   ratcheted: { layer: string, files: number }[],
- *   alreadyStrict: { layer: string, files: number }[],
- *   stillOptionalEmpty: string[],
- *   config: object,
- *   changed: boolean,
- * }}
- */
-export function planPopulatedCoreRatchet(config, layerRows = []) {
-  const countByName = new Map(
-    (Array.isArray(layerRows) ? layerRows : []).map((row) => [row.name, Number(row.files) || 0])
-  );
-  const ratcheted = [];
-  const alreadyStrict = [];
-  const stillOptionalEmpty = [];
-  const nextLayers = (config?.layers ?? []).map((layer) => {
-    if (!CORE_LAYER_NAMES.has(layer.name)) return layer;
-    const files = countByName.get(layer.name) ?? 0;
-    if (layer.optional !== true) {
-      if (files > 0) alreadyStrict.push({ layer: layer.name, files });
-      return layer;
-    }
-    if (files <= 0) {
-      stillOptionalEmpty.push(layer.name);
-      return layer;
-    }
-    ratcheted.push({ layer: layer.name, files });
-    return { ...layer, optional: false };
-  });
-  return {
-    ratcheted,
-    alreadyStrict,
-    stillOptionalEmpty,
-    config: { ...(config ?? {}), layers: nextLayers },
-    changed: ratcheted.length > 0,
-  };
-}
-
-/**
  * Operating mode for the co-pilot surfaces (not "who the user is"):
  *   suggest | adapt | enforce
  *

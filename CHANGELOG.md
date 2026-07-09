@@ -18,6 +18,9 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 - **Repo hygiene:** scrub named field-probe host identities from docs, comments, tests, and
   historical changelog wording; fixtures stay framework-generic (Nest/Next only).
+- **Maintainability:** `--ratchet-cores` lives in `bin/lib/core-ratchet.mjs` (not the ark-check
+  entry); typecheck detection uses shared `packageScriptsHaveTypecheck` (not full deploy-path
+  scan); typecheck bootstrap is skipped under `--skills-only`.
 
 ## 2.8.2 — 2026-07-09
 

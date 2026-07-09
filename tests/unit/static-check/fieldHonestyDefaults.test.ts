@@ -15,8 +15,8 @@ import {
   resolveOperatingMode,
   collectRepoShapeSignals,
   applyFrameworkLayoutOverlays,
-  planPopulatedCoreRatchet,
 } from '../../../bin/ark-shared.mjs';
+import { planPopulatedCoreRatchet } from '../../../bin/lib/core-ratchet.mjs';
 import { ARCHITECTURE_PRESETS } from '../../../bin/lib/presets.mjs';
 import { layerForFile } from '../../../bin/ark-layer-match.mjs';
 import {
