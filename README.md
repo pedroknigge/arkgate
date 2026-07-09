@@ -2,10 +2,10 @@
 
 # ArkGate — Architecture Co-pilot for AI TypeScript
 
-**Write gate · CI gate · co-pilot** for TypeScript projects that use AI agents.
+**One contract. One gate. One co-pilot.**
 
-Your AI writes most of the code. **ArkGate** keeps that code inside an architecture you can
-trust — and makes sure a “green” check means something real.
+Your AI writes most of the code. ArkGate keeps that code inside an architecture you can trust —
+and makes sure a “green” check means something real.
 
 [![CI](https://github.com/pedroknigge/arkgate/actions/workflows/ci.yml/badge.svg)](https://github.com/pedroknigge/arkgate/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/arkgate?color=cb3837&label=npm)](https://www.npmjs.com/package/arkgate)
@@ -17,21 +17,42 @@ trust — and makes sure a “green” check means something real.
 
 ---
 
-## What it is
+## The only flow (humans and agents)
 
-**ArkGate** is a **machine-readable architecture contract** for TypeScript, enforced in three places:
+If you remember nothing else:
 
-| When | Tool | What happens |
-|------|------|----------------|
-| **While the AI writes** | `arkgate-mcp` (write gate) | Blocks bad edits; agent self-corrects |
-| **Before merge** | `arkgate-check` (CI) | Full TypeScript import graph + rules |
-| **At runtime** *(optional)* | `createArkKernel()` | Event/intent governance if you opt in |
+```text
+1.  npx arkgate start          ← install shape + gates + origin report
+2.  /ark-autopilot             ← in your agent: adopt, fix, leave gates on
+3.  npx arkgate-check --doctor ← “where am I?” anytime (one status screen)
+```
 
-One file drives all of it: **`ark.config.json`**.
+| Stuck on… | Do this |
+|-----------|---------|
+| Gate failed after an edit | `/ark-fix` |
+| “Where does this new file go?” | `/ark-place` |
+| Contract globs / layers wrong | `/ark-contract` |
+| New ArkGate version | `/ark-upgrade` |
 
-It is **not** a web framework, ORM, or job runner — and the optional runtime kernel is not
-the product. The product is the **agent-native architecture gate** (write path + CI + plan/loop)
-plus tools agents can read *before* generating code (`ark_place`, `ark://manifest`, …).
+**Everything else is optional.** You do not need to learn “modes”, 11 skills, or the runtime
+kernel to get value. Agents that are unsure should **only** run `/ark-autopilot` (or the three
+commands above).
+
+---
+
+## What it is (30 seconds)
+
+**ArkGate** = a machine-readable architecture file (`ark.config.json`) enforced in two places
+you always care about:
+
+| When | Tool |
+|------|------|
+| **While the AI writes** | `arkgate-mcp` write gate (blocks bad edits) |
+| **Before merge** | `arkgate-check` CI |
+
+Optional later: runtime kernel (`createArkKernel`) if you want event/intent governance.
+
+It is **not** a web framework, ORM, or job runner.
 
 ![Write gate: agent blocked, then self-corrects](docs/assets/ark-write-gate.svg)
 
@@ -39,31 +60,30 @@ plus tools agents can read *before* generating code (`ark_place`, `ark://manifes
 
 ## Who it’s for
 
-| You are… | You want… | Start with |
-|----------|-----------|------------|
-| **Builder with AI** (not necessarily an architect) | Order without learning “hexagonal” first | `npx arkgate start` → `/ark-autopilot` |
-| **Engineer / tech lead** | A strict contract, CI, baselines, precise control | `ark init` + `ark-check` + write gate |
-| **Team on a messy repo** | Truth about coverage + a cleanup path, not a false green | `ark-check --coverage` → `/ark-adopt` |
+Same start for almost everyone: **`npx arkgate start` → `/ark-autopilot`**.
 
-**Not for:** projects with no TypeScript, people who only want a one-off lint rule and no agent workflow, or anyone looking for an app framework.
+| You are… | Same start, then… |
+|----------|-------------------|
+| Builder with AI | Stay on autopilot until doctor is happy |
+| Tech lead on a messy monorepo | Autopilot (or deeper `/ark-adopt` if you want a focused brownfield pass) |
+| Power user | Same flow; use `ark-check --plan` / `--coverage` when you want the raw sensor |
+
+**Not for:** no TypeScript, “just one lint rule”, or looking for an app framework.
 
 ---
 
-## What you get (in plain language)
+## Status, not settings (“modes”)
 
-1. **A shape** — Ark looks at your repo (Nest, Next, API, library, …) and suggests how to organize it.
-2. **Guardrails** — config + agent gates + CI so new code can’t quietly break layers.
-3. **A plan** — what’s safe for an agent to fix vs what needs your decision (`mechanical-safe` vs judgment).
-4. **Honesty** — if Ark only governs 10% of the tree, it says so. “Clean” with almost no coverage is not success.
-5. **Adoption health** — `arkgate-check --doctor` checks co-pilot completeness (hosts, MCP argv, Codex home, core-layer optionality, origin report) **separately** from the 0–100 fitness score.
+`ark-check --doctor` may say **Suggest / Adapt / Enforce**. That is a **status light**, not a
+mode you configure:
 
-Three **operating modes** (not “user types”) on the same contract:
+| Light | Means | Your move |
+|-------|--------|-----------|
+| **Suggest** | New/thin project | Finish `start` + autopilot |
+| **Adapt** | Not fully protected yet | Keep autopilot / adopt until clean |
+| **Enforce** | Gates can honestly protect you | Build features; fix with `/ark-fix` if blocked |
 
-| Mode | Meaning |
-|------|---------|
-| **Suggest** | Install a starting shape |
-| **Adapt** | Match the contract to real folders / raise coverage |
-| **Enforce** | Gates actually protect you |
+You **arrive** at Enforce. You never “turn on Enforce”.
 
 ---
 
@@ -85,58 +105,61 @@ Full checklist (CI, MCP, Codex, imports): **[docs/migrate-from-ark-runtime-kerne
 
 ```bash
 npm install -D arkgate typescript
-npx arkgate start          # look at the project → setup → plan (plain language)
-# (aliases: ark start / ark-check / ark-mcp still work)
+npx arkgate start                 # setup + origin report
+# in agent:
+#   /ark-autopilot
+npx arkgate-check --doctor        # status light + next action
 ```
 
-Then, in your agent (Claude / Cursor / Codex / **Grok** / …):
+Aliases `ark` / `ark-check` / `ark-mcp` still work. **npm / pnpm / yarn**. No install lifecycle scripts.
 
-```text
-/ark-autopilot
-```
+<details>
+<summary>What <code>/ark-autopilot</code> does under the hood (optional detail)</summary>
 
-That is the **co-pilot**: set up → plan → apply safe fixes (validated, reversible) → propose the rest → leave gates on.
+1. Setup if needed (`ark start`).
+2. Origin architecture report (before picture in `.ark/reports/`).
+3. Adoption: match contract to real folders, raise governed %.
+4. Plan + safe auto-fixes; judgment when you ask for full apply.
+5. Gates on + after report (evolution vs origin).
 
-**Prefer manual control?**
+</details>
+
+<details>
+<summary>Manual / power-user CLI only</summary>
 
 ```bash
-npx arkgate init              # config + gates
-npx arkgate-check             # CI gate
-npx arkgate-check --plan      # classified fix list
+npx arkgate init
+npx arkgate-check
+npx arkgate-check --plan
 npx arkgate-check --coverage
 ```
 
-Works with **npm, pnpm, and yarn**. No install lifecycle scripts (safe for hardened CI).
+</details>
 
 ---
 
-## Agent skills (`/ark-*`)
+## Other skills (only when you need them)
 
-Install with agent gates:
+Install once: `npx arkgate-check --install-agent-gates`  
+(`--tools claude,cursor,codex,grok` to pick hosts.)
 
-```bash
-npx arkgate-check --install-agent-gates
-# or pick hosts: --tools claude,cursor,codex,grok
-```
+**Default is always `/ark-autopilot`.** The rest are escapes, not a second curriculum:
 
-| Skill | What it does |
-|-------|----------------|
-| **`/ark-autopilot`** | End-to-end co-pilot: setup → plan → safe auto-fixes → propose the rest → leave gates on |
-| **`/ark-loop`** | Drive the plan in a worktree; auto-apply only `mechanical-safe` (type-only move, pure-type file relocate, `import type` of pure-type modules) |
-| **`/ark-architect`** | Greenfield: pick application shape, phase-1 layers, scaffold, verify honestly |
-| **`/ark-adopt`** | Brownfield: match contract to reality, raise coverage, freeze only real debt |
-| **`/ark-contract`** | Safely edit `ark.config.json` (smallest change, strict re-check) |
-| **`/ark-place`** | Where does this new artifact go? Layer, path, naming — then scaffold |
-| **`/ark-fix`** | Fix violations at the source (no disable comments, no gate weakening) |
-| **`/ark-explain`** | Explain the current contract, coverage, and report in plain language |
-| **`/ark-coverage`** | Audit which Ark capabilities you are not using yet |
-| **`/ark-runtime`** | Opt-in: migrate hand-rolled bus/outbox/sagas onto the runtime kernel |
-| **`/ark-upgrade`** | Bump the package and refresh gates + skills for every agent host (also normalizes MCP bins + Codex home) |
+| Need | Skill |
+|------|--------|
+| Only the apply loop (plan already exists) | `/ark-loop` |
+| Empty greenfield shape/scaffold | `/ark-architect` |
+| Deep brownfield / manifest mining alone | `/ark-adopt` |
+| New file placement | `/ark-place` |
+| Gate violation on a change | `/ark-fix` |
+| Edit `ark.config.json` safely | `/ark-contract` |
+| Plain-language tour of the report | `/ark-explain` |
+| Deep “what am I not using?” audit | `/ark-coverage` |
+| Migrate hand-rolled bus/outbox (TS) | `/ark-runtime` |
+| Bump ArkGate + refresh all agent hosts | `/ark-upgrade` |
 
-Supported agent hosts for full MCP/hook gates: **Claude Code**, **Cursor**, **OpenAI Codex**, **Grok Build**. Instruction-tier hosts (Windsurf, Cline, Copilot, …) get rule files. See [docs/ai-gates.md](docs/ai-gates.md).
-
-After upgrade, run **`npx arkgate-check --doctor`**: it flags incomplete hosts, dual `ark-mcp`/`arkgate-mcp` args, Codex home pointing at a temp path, core layers still `optional` while populated, and a missing origin report.
-
+Hosts with full MCP/hooks: **Claude Code**, **Cursor**, **Codex**, **Grok Build**.  
+More: [docs/ai-gates.md](docs/ai-gates.md). Health: **`npx arkgate-check --doctor`**.
 ---
 
 ## How it works (short)

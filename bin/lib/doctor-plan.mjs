@@ -351,11 +351,15 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   });
   console.log('');
   console.log(color.bold('Operating mode'));
+  // Modes are detected states, not user-picked settings. Plain-language "what you do next".
   const modeMark = mode === 'enforce' ? ok : mode === 'adapt' ? warn : warn;
   const modeHelp = {
-    suggest: 'starter shape / thin tree — expand layers as you grow',
-    adapt: 'contract still needs to match real layout or raise coverage',
-    enforce: 'contract governs enough code; gates can honestly hold the line',
+    suggest:
+      'Setup — Ark proposes a starting architecture shape. You do not pick this mode; it means the tree is thin or new. Next: accept the shape (ark start / ark init) and add real layers as you grow.',
+    adapt:
+      'Align — contract and folders still disagree, or coverage is weak / debt is open. You do not pick this mode. Next: classify ungoverned dirs (/ark-contract, /ark-adopt), run the plan (/ark-autopilot or /ark-loop). Gates do not fully protect you yet.',
+    enforce:
+      'Guard — contract governs enough real code and edges are clean enough for gates to protect you. You do not pick this mode; you arrived here. Next: keep CI/write gates on; only NEW violations should fail.',
   };
   line(modeMark, `${mode.toUpperCase()} — ${modeHelp[mode]}`);
   if (emptyScope) {

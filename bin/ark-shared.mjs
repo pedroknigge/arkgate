@@ -224,6 +224,10 @@ export function applyFrameworkLayoutOverlays(config, root) {
       'src/services/**',
       'src/use-cases/**',
       'src/lib/**',
+      // Common Next "app core" bags (API clients, hooks, auth, stores) — not UI routes.
+      // Without these, monorepos like */src/core/** stay ungoverned and produce false greens.
+      'src/core/**',
+      '**/core/**',
       'src/actions/**',
       'src/**/actions.ts',
       'src/**/actions.tsx',
@@ -244,6 +248,20 @@ export function applyFrameworkLayoutOverlays(config, root) {
       'src/lib/prisma/**',
       'src/server/db/**',
     ]);
+    // Demo assets, generated public output, and tool configs are not architecture surface.
+    const nextExcludes = [
+      '**/public/**',
+      '**/*.config.js',
+      '**/*.config.ts',
+      '**/*.config.mjs',
+      '**/playwright*.ts',
+      '**/eslint.config.*',
+      '**/postcss.config.*',
+      '**/prettier.config.*',
+      '**/rstest.config.*',
+      '**/scripts/**',
+    ];
+    next.exclude = [...new Set([...(next.exclude ?? []), ...nextExcludes])];
     next.frameworkOverlay = next.frameworkOverlay
       ? `${next.frameworkOverlay}+next`
       : 'next';
@@ -1015,6 +1033,47 @@ function countTsxFiles(files) {
 }
 
 /**
+ * Merge root + nested package.json dependencies (frontend/, packages/*, apps/*, …).
+ * Hosts that only put `arkgate` at the monorepo root and Next under frontend/ must
+ * still detect nextFramework so layout overlays (src/core/**) apply on day one.
+ */
+export function collectAggregatedDeps(root) {
+  const deps = {};
+  const mergePkg = (pkg) => {
+    if (!pkg || typeof pkg !== 'object') return;
+    for (const key of ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']) {
+      const block = pkg[key];
+      if (block && typeof block === 'object') Object.assign(deps, block);
+    }
+  };
+  mergePkg(readPackageJson(root));
+  let entries = [];
+  try {
+    entries = fs.readdirSync(root, { withFileTypes: true });
+  } catch {
+    return deps;
+  }
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+    const childRoot = path.join(root, entry.name);
+    mergePkg(readPackageJson(childRoot));
+    // One level under conventional multi-package roots
+    if (['packages', 'apps', 'services', 'plugins', 'packages-internal'].includes(entry.name)) {
+      try {
+        for (const sub of fs.readdirSync(childRoot, { withFileTypes: true })) {
+          if (sub.isDirectory() && !sub.name.startsWith('.')) {
+            mergePkg(readPackageJson(path.join(childRoot, sub.name)));
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  return deps;
+}
+
+/**
  * Collect deterministic repo shape signals for architecture archetype scoring.
  * Vendor packages may appear in toolHints only — never as the primary label.
  */
@@ -1022,7 +1081,20 @@ export function collectRepoShapeSignals(root) {
   const pkg = readPackageJson(root);
   const workspaceDirs = detectWorkspaces(root);
   const workspaces = workspaceDirs.length > 0;
-  const srcDirs = ['src', 'lib', 'api', 'packages', 'apps'].filter((d) =>
+  // Include frontend/web/client — common Next monorepo app folders (deer-flow-style).
+  const candidateScanDirs = [
+    'src',
+    'lib',
+    'api',
+    'packages',
+    'apps',
+    'frontend',
+    'web',
+    'client',
+    'app',
+    ...workspaceDirs,
+  ];
+  const srcDirs = [...new Set(candidateScanDirs)].filter((d) =>
     fs.existsSync(path.join(root, d))
   );
   const scanRoots = srcDirs.length > 0 ? srcDirs.map((d) => path.join(root, d)) : [root];
@@ -1030,13 +1102,14 @@ export function collectRepoShapeSignals(root) {
   const sourceFileCount = sourceFiles.length;
   const tinyTree = sourceFileCount < 3;
 
-  const deps = { ...(pkg?.dependencies ?? {}), ...(pkg?.devDependencies ?? {}) };
+  // Nested package.json deps (not root-only) — critical for monorepo Next under frontend/
+  const deps = collectAggregatedDeps(root);
   const hasUiFramework = Object.keys(deps).some((name) =>
     /^(react|react-dom|vue|svelte|preact|solid-js)$/i.test(name.split('/')[0])
   );
   const srcUiFiles = sourceFiles.filter((file) => {
     const rel = path.relative(root, file).split(path.sep).join('/');
-    return rel.startsWith('src/') && /\.(tsx|jsx)$/i.test(file);
+    return (rel.includes('/src/') || rel.startsWith('src/')) && /\.(tsx|jsx)$/i.test(file);
   });
 
   const topNames = new Set(srcDirs.flatMap((d) => listTopLevelDirNames(root, d)));
@@ -1052,7 +1125,8 @@ export function collectRepoShapeSignals(root) {
       const rel = path.relative(root, file).split(path.sep).join('/');
       return (
         /(^|\/)next\.config\./.test(rel) ||
-        /(^|\/)app\/.*\/page\.(t|j)sx?$/.test(rel) ||
+        // app/page.tsx OR app/dashboard/page.tsx (middle segment optional)
+        /(^|\/)app\/(?:.*\/)?page\.(t|j)sx?$/.test(rel) ||
         /(^|\/)pages\/.+\.(t|j)sx?$/.test(rel)
       );
     });

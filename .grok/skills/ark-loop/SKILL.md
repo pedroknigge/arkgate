@@ -1,80 +1,57 @@
 ---
 name: ark-loop
-description: Drive Ark's remediation plan to a clean architecture — a safe, reversible apply loop. Auto-applies only the changes Ark classes mechanical-safe (validating each with ark-check and rolling back regressions), proposes the judgment ones for your decision, and never weakens the gate. Autonomous within those limits.
-arkVersion: 2.4.0
+description: Drive ark-check --plan to zero active violations. Auto-apply only mechanical-safe kinds; design judgment fixes from real source. CLI is the validator — you edit code.
 ---
 
-# /ark-loop — Drive the plan to a clean architecture (safely)
+# /ark-loop — Apply the plan safely
 
-This is the co-pilot's **loop** primitive: read Ark's classified **plan**, work toward the
-**goal** (zero active violations without weakening the contract), one small step at a time,
-validating every change with `ark-check` and rolling back anything that fails or regresses.
+Read Ark’s classified **plan**, work toward **goal.met**, one small step at a time,
+validating every change with `ark-check` and rolling back regressions.
 
-**The rule that makes this safe:** you (the agent) make edits; **Ark decides whether they're
-allowed to land.** Only changes Ark classed `mechanical-safe` are auto-applied. Everything
-`judgment` is PROPOSED for a human decision — never applied silently. Code only: never touch
-DB schemas, migrations, or generated files.
 
-If Ark isn't set up yet, run `ark start` (or `ark-check --recommend` then `ark init`) first.
+## Related onboarding
+
+- **Greenfield:** `/ark-architect` or `ark-check --recommend` / `ark start`.
+- **Brownfield:** `/ark-adopt` — match contract to reality; do not force a starter preset.
+- **Default path:** `ark start` → `/ark-autopilot` → `ark-check --doctor`.
+
+## Anti-wrapper rule (mandatory)
+
+**Forbidden:** re-printing plan JSON without opening sources, or inventing new “safe” kinds.
+
+**Required:**
+1. `--plan --json` as sensor.
+2. For each step you touch: **read** `file` and `target` source.
+3. **“Así te lo re-soluciono”** — exact edit before applying.
+4. After each apply: full gate re-run; rollback if targeted violation remains or new ones appear.
+
+## mechanical-safe only (auto)
+
+| `remediationKind` | What to do |
+|-------------------|------------|
+| `type-only-import-move` | Move type to owning layer; re-export for back-compat |
+| `pure-type-file-relocate` | Relocate pure-type file to owning layer (or rename out of false Domain globs) |
+| `import-type-from-pure-type-module` | Convert value import of pure-type module to `import type` |
+
+Never auto: value imports, dynamic import/require, mixed modules, forbidden globals, cycles, infra moves.
 
 ## Steps
 
-1. **Read the plan.** Run `ark-check --plan --json` (add `--baseline .ark-baseline.json` if the
-   repo uses a baseline). It returns `goal` (with `met`, `activeViolations`, `autoApplicable`,
-   `needsDecision`, `deferred`) and `steps[]`, each tagged `class` (`mechanical-safe` /
-   `judgment` / `deferred`) with a `confidence`, plain-language `rationale`, and often
-   `remediationKind`. If `goal.met` is already true, report "nothing to do" and stop.
-
-   **`mechanical-safe` kinds you may auto-apply** (zero false-safe — never invent others):
-
-   | `remediationKind` | What to do |
-   |-------------------|------------|
-   | `type-only-import-move` | Edge is already `import type` / type-only: move the **type** to the owning layer + re-export for back-compat |
-   | `pure-type-file-relocate` | Whole **source file** is pure type-surface (`sourcePureTypeModule`) + type-only edge: relocate the file (or extract types) to the owning layer |
-   | `import-type-from-pure-type-module` | Static value-syntax import of a pure type-only **target** module (`targetTypeOnlyExports`): convert to `import type` (and place type if needed) |
-
-   Still **judgment** (never auto): value imports, `require()` / dynamic `import()`, mixed modules with side effects, forbidden globals, cycles, verbatim infra relocation.
-
-2. **Work in a discardable git worktree.** Create one (`git worktree add`) so the entire run is
-   reversible and never disturbs the user's working tree. Do all edits there. Nothing is
-   permanent until the user reviews the final diff.
-
-3. **Apply the `mechanical-safe` steps, one at a time, validated.** Match the step's
-   `remediationKind` (table above) — do not expand the edit into a broader refactor:
-   - Record the current active-violation count from the plan.
-   - Make the edit at the SOURCE (fix the placement; don't add an `ark-*-disable` or edit the
-     baseline/config to hide it).
-   - Re-run the gate: `ark-check --root . --config ark.config.json --strict-config`
-     (or `ark-check --baseline` in ratchet repos). **Keep** the change only if the targeted
-     violation is gone AND no NEW violation appeared. Otherwise **roll it back**
-     (`git checkout -- <files>`) and mark the step deferred with a one-line reason.
-
-4. **Propose the `judgment` steps — do not auto-apply.** For each, present in plain language:
-   what it is, the `rationale`, and a concrete proposed approach (e.g. "move this data access
-   into a repository," "inject a Clock port"). Apply only the ones the user approves, each with
-   the same validate-or-rollback discipline. Repository organization and cross-module refactors
-   are the user's call.
-
-5. **Loop until dry.** Re-read `ark-check --plan --json` after a round — fixing one edge can
-   change others. Repeat step 3 while new `mechanical-safe` steps appear and progress is being
-   made. Stop when `goal.met` is true, or when a round applies nothing new (no-progress), or
-   when only `judgment`/`deferred` steps remain.
-
-6. **Report honestly.** Show the final diff and a summary: what was AUTO-APPLIED (validated),
-   what is PROPOSED (awaiting your decision), and what was DEFERRED (and why). Never report a
-   clean/green result while steps were skipped. Only merge the worktree back after the user
-   reviews. When invoked from **`/ark-autopilot`**, the parent skill already owns the
-   before/after HTML reports (`--report` + `.ark/reports/` origin/latest). If you are running
-   standalone and the user wants a visual close-out, end with
-   `ark-check --report ark-report.html` so evolution vs origin is updated.
+1. **Plan** — `ark-check --plan --json` (+ `--baseline` if used). If `goal.met`, stop.
+2. **Worktree** — prefer discardable git worktree.
+3. **Apply mechanical-safe** one-by-one with validate/rollback.
+4. **Judgment** — propose with source-based design; apply only if user approved (or parent autopilot said full apply).
+5. **Re-plan** after each round until dry, `goal.met`, or only judgment left without approval.
+6. **Report** — auto-applied / proposed / deferred with paths; never claim clean if skipped.
 
 ## Operating rules
 
-- Never weaken the gate to make the loop finish: no disabling rules, editing
-  `ark.config.json` to allow a bad edge, or baselining a fresh violation. Fix the code, or
-  propose a contract change via `/ark-contract` with its before/after impact.
-- If most violations concentrate on one edge, that's a contract smell, not N fixes — stop the
-  loop and hand off to `/ark-contract` (a broad `--plan` will show the concentration).
-- `mechanical-safe` is deliberately narrow. When unsure whether a change preserves behavior,
-  treat it as `judgment` and propose it. A wrong auto-apply costs more than an extra click.
-- Verify with the gate, not by eye: a step counts as done only when `ark-check` confirms it.
+- Never weaken the gate (no rule disables, no fresh baselining of new debt).
+- Concentrated single edge → stop and hand to `/ark-contract` with code evidence.
+- When unsure behavior preservation → judgment, not mechanical-safe.
+
+## Done criteria
+
+- Gate confirms each kept edit.
+- Honest residual list with **Así te lo re-soluciono** for anything left.
+- If residual steps hide domain/business rules in the wrong layer, call out **manifiesto** work (`intentPrefixes` / Domain placement) via `/ark-contract` or `/ark-adopt`.

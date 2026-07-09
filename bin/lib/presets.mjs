@@ -194,7 +194,9 @@ export const ARCHITECTURE_PRESETS = {
             name: 'DomainModel',
             description:
               'Pure business rules and entities, in any package. No I/O, no framework, no ambient globals.',
-            patterns: ['**/domain/**', '**/entities/**', '**/types.ts', '**/cinematic/types.ts'],
+            // Domain by intentional folders only — NOT bare **/types.ts (that mis-classifies
+            // application bags like frontend/src/core/**/types.ts as Domain and creates false edges).
+            patterns: ['**/domain/**', '**/entities/**', '**/cinematic/types.ts'],
             forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
             optional: true,
           },
@@ -264,7 +266,8 @@ export const ARCHITECTURE_PRESETS = {
           {
             name: 'DomainModel',
             description: 'Shared types and pure view-models (optional on UI-first trees).',
-            patterns: ['**/domain/**', '**/types.ts', '**/cinematic/types.ts'],
+            // Avoid bare **/types.ts — see monorepo DomainModel note (false Domain on core/**/types.ts).
+            patterns: ['**/domain/**', '**/cinematic/types.ts'],
             exclude: FRAMEWORK_INTERNAL_EXCLUDE,
             forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
             optional: true,

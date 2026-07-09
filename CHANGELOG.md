@@ -2,52 +2,66 @@
 
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here.
 
-## Unreleased — 2.6.1
+## 2.6.1 — 2026-07-09
 
-### Added — product priorities P0–P2
+Field-test release: Next/monorepo honesty (deer-flow-style hosts), simplified **one-flow** UX for
+humans and autonomous agents, and skills that require real source remediation—not CLI paraphrase.
 
-- **Empty-scope honesty:** plan `goal.met` false + `emptyScope`; doctor adoption gap `empty-scope`.
-- **Auto-include TS packages:** `detectTsPackageRoots` / `resolveIncludeRoots` for polyglot and nested packages; monorepo/ui-surface presets use them.
-- **AGENTS non-clobber:** `--force` never overwrites non-Ark `AGENTS.md` (merge or keep).
-- **Contract adopt:** `--suggest-include`, `--adopt-contract [--write]` expands include + UI patterns before violation loops.
-- **UI surface preset:** `--init --preset ui-surface` (hooks/lib/routes/components).
-- **MCP:** `ark_place` accepts description-only; `ark_suggest_include` tool; clearer errors.
-- **Recommend thin-TS:** confidence capped + `thinTsSurface` when few/no TS files.
-- **Codex multi-project:** secondary `[mcp_servers.ark_<slug>]` when primary points at another permanent root.
-- **Deploy-path monorepo:** package-level lint/typecheck scripts counted.
-- **Soft cycles:** `cyclePolicy: "soft" | "off" | "strict"` (default strict). Soft cycles are
-  advisory (`failsStrict: false`) and do **not** fail `--strict-config` / `check:architecture`.
+### Fixed — false greens & strict CI noise (Next / monorepo)
 
-### Added — deploy-path adoption (universal)
+- **Next application bag:** framework overlay classifies `src/core/**` and `**/core/**` as
+  ApplicationOrchestration so monorepos like `frontend/src/core` are governed on day one
+  (not left as dark matter under a “clean” plan).
+- **Nested Next detection:** `collectAggregatedDeps` + scan of `frontend/`/`web`/`client` so
+  `next` only under `frontend/package.json` (root arkgate-only) still enables the Next overlay
+  and `app/page.tsx` path matching (middle segment optional).
+- **Next noise excludes:** public assets, tool configs, and scripts are excluded by default on
+  Next detection so demo JS does not pollute coverage.
+- **Domain `**/types.ts` trap removed** from monorepo and ui-surface presets. Bare
+  `core/**/types.ts` no longer becomes Domain and invents Domain→Application edges.
+- **`CONFIG_LAYER_PATTERN_NO_MATCHES` is advisory** (`failsStrict: false`). Dead preset globs
+  (`app/**`, `src/layouts/**` when `include` is `frontend`) no longer fail `--strict-config`
+  alone while architecture edges are clean.
+- **Empty baseline policy:** `--update-baseline` with zero violations **deletes** an existing
+  empty `.ark-baseline.json` instead of leaving an orphan “is the ratchet on?” file.
+- **Monorepo CI install:** generated workflow `npm install` also installs `frontend/` when
+  `frontend/package.json` exists (root-only arkgate + app under frontend).
 
-- **`collectAdoptionGaps` / `--doctor`:** detects when a **production build host** will run
-  ESLint or typecheck as part of `build` (Next.js by default; CRA; Nuxt when ESLint is present)
-  and flags gaps that make the deploy host the first fail:
-  - no package.json `lint` / typecheck script
-  - CI workflows exist but never run lint / typecheck
-  - no CI at all while the framework embeds lint
-- Respects `eslint.ignoreDuringBuilds: true` in `next.config.*` (no false lint embed).
-- Signals are framework/deps/scripts only — **not** project-specific.
-- Ark still does **not** reimplement `no-unused-vars` / `no-explicit-any`; it ensures the
-  same checks run **before** the deploy host.
+### Changed — one-flow UX (humans + agents)
 
-### Fixed — field test on large monorepos (e.g. Rush)
+- **README:** leads with **The only flow** — `ark start` → `/ark-autopilot` → `doctor`. Skills
+  are escapes, not a flat curriculum. Operating modes documented as **status lights**, not
+  settings.
+- **`ark start` wrap-up:** always ends with the three next steps (agent autopilot, doctor,
+  strict check) instead of a long mode-specific essay.
+- **Generated `AGENTS.md`:** “Default agent flow (if unsure, do only this)” — autopilot first;
+  other `/ark-*` skills are optional escapes.
+- **Doctor operating mode copy:** plain-language Setup / Align / Guard and “you do not pick
+  this mode”.
 
-- **`detectWorkspaces`:** Rush `rush.json` (JSONC), Lerna, and conventional multi-package
-  roots (`packages`, `plugins`, `services`, `server`, …) when no npm/pnpm workspaces field.
-  Monorepo preset `include` no longer collapses to only `packages`+`apps`.
-- **`ark start --tools`:** forwards `--tools` / `--force` to `--install-agent-gates`
-  (was always default tool set).
-- **`normalizeToolsList`:** safe comma-split for tools args (never `new Set("codex,grok")`
-  character-splitting).
+### Changed — skills (deep co-pilot, not CLI wrappers)
 
-### Fixed — codegen / type-only cycles (universal)
+Templates under `templates/skills/` (and project `.grok/skills` copies) for at least:
 
-- **Cycle graph uses value edges only:** `import type` / type-only module references no
-  longer create `CIRCULAR_DEPENDENCY` (fixes false cycles from router codegen
-  `import type` back-edges). Real value cycles still fail.
-- **Default scan skip for generated sources:** `**/*.gen.ts(x)` and `**/*.generated.ts(x)`.
-  Opt out with `"excludeGenerated": false`. Add more via top-level `"exclude": [...]`.
+`ark-coverage`, `ark-autopilot`, `ark-loop`, `ark-adopt`, `ark-fix`, `ark-contract`
+
+- **Anti-wrapper rule:** must read real source; CLI is a sensor.
+- **“Así te lo re-soluciono”** remediation deliverable (file-level plans).
+- **Adopt / contract:** mine loose business rules into the Ark **manifest** (layers,
+  `intentPrefixes`, Domain placement, intent naming)—not config vibes only.
+
+### Tests
+
+- Fixture-style unit tests drive real `bin/ark-check.mjs`: Next core governance; deer-flow-like
+  monorepo (`frontend` + `core/**/types.ts` not Domain); strict-config with dead globs;
+  empty baseline removal.
+
+### Also in 2.6.1 train (from Unreleased product priorities)
+
+- Empty-scope honesty, auto-include TS packages, AGENTS non-clobber, `--adopt-contract`,
+  UI surface preset, MCP place/suggest-include, Codex multi-project, deploy-path adoption
+  gaps, soft cycle policy, Rush/Lerna monorepo roots, type-only cycle graph, default skip
+  `*.gen.ts` / `*.generated.ts`.
 
 ## 2.6.0 — 2026-07-09
 

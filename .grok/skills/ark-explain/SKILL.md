@@ -1,7 +1,6 @@
 ---
 name: ark-explain
 description: Explain this project's architecture in plain language and generate the showcase HTML report — layers, rules, coverage, gates, and why the contract exists.
-arkVersion: 2.4.0
 ---
 
 # /ark-explain — Understand this project's architecture

@@ -1,7 +1,6 @@
 ---
 name: ark-place
 description: "Where does new code go? Names the layer, directory, and naming for a new artifact from the contract, and scaffolds it there. Autonomous."
-arkVersion: 2.4.0
 ---
 
 # /ark-place — Where does this code go?

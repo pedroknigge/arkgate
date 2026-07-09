@@ -913,15 +913,18 @@ describe('ark init', () => {
     // Plain-language shape, the plan, and a wrap-up — no skill names required.
     expect(out).toContain('Your project looks like');
     expect(out).toContain('Your architecture plan');
-    // Three modes (suggest / adapt / enforce) — honest wrap-up, never a false "guards everything".
-    expect(out).toMatch(/Done — Ark is in (SUGGEST|ADAPT|ENFORCE) mode/);
+    // Status light (suggest / adapt / enforce) — honest wrap-up, never a false "guards everything".
+    expect(out).toMatch(/Done — status: (SUGGEST|ADAPT|ENFORCE)/);
+    // One-flow handoff: agent autopilot + doctor.
+    expect(out).toContain('Next (the only flow you need)');
+    expect(out).toContain('/ark-autopilot');
+    expect(out).toMatch(/--doctor/);
     // It actually set things up — and left the gates active so it "stays that way"
     // (the enforcement handoff): config, agent contract, and the CI gate.
     expect(fs.existsSync(path.join(root, 'ark.config.json'))).toBe(true);
     expect(fs.existsSync(path.join(root, 'AGENTS.md'))).toBe(true);
     expect(fs.existsSync(path.join(root, '.github/workflows/ark-check.yml'))).toBe(true);
-    // The newcomer is pointed at the autopilot to actually carry the plan out.
-    expect(out).toContain('/ark-autopilot');
+    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('Default agent flow');
   });
 
   it('`ark start` adopts an established codebase (detection, not a wildcard preset)', () => {
@@ -2114,6 +2117,152 @@ describe('framework layout overlays (Nest / Next)', () => {
       )
     );
     expect(cov.coverage.governed.percent).toBeGreaterThanOrEqual(50);
+  });
+
+  it('Next src/core application bag is governed (not left unclassified)', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-next-core-'));
+    fs.writeFileSync(
+      path.join(root, 'package.json'),
+      JSON.stringify({ name: 'next-core-app', dependencies: { next: '15.0.0', react: '19.0.0' } })
+    );
+    fs.mkdirSync(path.join(root, 'src/app'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/core/api'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'public/demo'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/app/page.tsx'), 'export default function Page() { return null }\n');
+    fs.writeFileSync(path.join(root, 'src/core/api/client.ts'), 'export const api = {}\n');
+    fs.writeFileSync(path.join(root, 'public/demo/script.js'), 'console.log(1)\n');
+    fs.writeFileSync(path.join(root, 'next.config.js'), 'module.exports = {}\n');
+
+    execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--init', '--preset', 'layered', '--force'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    const config = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
+    expect(config.frameworkOverlay).toMatch(/next/);
+    const appLayer = config.layers.find((l: { name: string }) => l.name === 'ApplicationOrchestration');
+    expect(appLayer?.patterns?.some((p: string) => p.includes('core'))).toBe(true);
+    const cov = JSON.parse(
+      execFileSync(
+        'node',
+        [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--coverage', '--json'],
+        { encoding: 'utf8' }
+      )
+    );
+    // page + core/api governed; public demo + next.config excluded from scope noise
+    expect(cov.coverage.governed.percent).toBeGreaterThanOrEqual(90);
+    const appFiles = cov.coverage.layers.find((l: { name: string }) => l.name === 'ApplicationOrchestration')?.files ?? 0;
+    expect(appFiles).toBeGreaterThanOrEqual(1);
+  });
+
+  it('deer-flow-style monorepo: frontend/src/core + types.ts is Application not Domain', () => {
+    // Real host shape: root package is arkgate-only (no next); Next lives under frontend/.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-df-mono-'));
+    fs.writeFileSync(
+      path.join(root, 'package.json'),
+      JSON.stringify({ name: 'deer-flow-like', private: true, dependencies: {} })
+    );
+    fs.mkdirSync(path.join(root, 'frontend/src/app'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'frontend/src/core/threads'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'frontend/src/components'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'frontend/package.json'),
+      JSON.stringify({ name: 'frontend', dependencies: { next: '15.0.0', react: '19.0.0' } })
+    );
+    fs.writeFileSync(path.join(root, 'frontend/src/app/page.tsx'), 'export default function Page() { return null }\n');
+    fs.writeFileSync(
+      path.join(root, 'frontend/src/core/threads/types.ts'),
+      'export type Goal = { objective: string };\n'
+    );
+    fs.writeFileSync(path.join(root, 'frontend/src/core/threads/api.ts'), 'export const list = () => [];\n');
+    fs.writeFileSync(path.join(root, 'frontend/src/components/Box.tsx'), 'export const Box = () => null;\n');
+
+    execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--init', '--preset', 'monorepo', '--force'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    const config = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
+    // Next overlay must fire from frontend/package.json next, not root deps
+    expect(config.frameworkOverlay).toMatch(/next/);
+    const appLayer = config.layers.find((l: { name: string }) => l.name === 'ApplicationOrchestration');
+    expect(appLayer?.patterns?.some((p: string) => p.includes('core'))).toBe(true);
+    const domain = config.layers.find((l: { name: string }) => l.name === 'DomainModel');
+    expect(domain?.patterns?.some((p: string) => p === '**/types.ts')).toBeFalsy();
+
+    const cov = JSON.parse(
+      execFileSync(
+        'node',
+        [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--coverage', '--json'],
+        { encoding: 'utf8' }
+      )
+    );
+    expect(cov.coverage.governed.percent).toBeGreaterThanOrEqual(80);
+    // core/threads/{types,api}.ts must be Application (core bag), not ungoverned / Domain
+    const domainFiles = cov.coverage.layers.find((l: { name: string }) => l.name === 'DomainModel')?.files ?? 0;
+    const appFiles = cov.coverage.layers.find((l: { name: string }) => l.name === 'ApplicationOrchestration')?.files ?? 0;
+    expect(appFiles).toBeGreaterThanOrEqual(2);
+    expect(domainFiles).toBe(0);
+    expect(cov.coverage.unclassified?.count ?? 0).toBe(0);
+
+    // Non-optional layer with a dead glob (monorepo presets ship many of these once optional is cleared):
+    // must not fail --strict-config solely on CONFIG_LAYER_PATTERN_NO_MATCHES.
+    config.layers = config.layers.map((l: { name: string; optional?: boolean; patterns?: string[] }) => {
+      if (l.name === 'PresentationAdapters') {
+        return {
+          ...l,
+          optional: false,
+          patterns: [...(l.patterns || []), 'src/layouts/**', 'app/**'],
+        };
+      }
+      if (l.name === 'ApplicationOrchestration' || l.name === 'DomainModel') {
+        return { ...l, optional: false };
+      }
+      return l;
+    });
+    fs.writeFileSync(path.join(root, 'ark.config.json'), JSON.stringify(config, null, 2));
+
+    const strict = execFileSync(
+      'node',
+      [
+        path.resolve('bin/ark-check.mjs'),
+        '--root',
+        root,
+        '--config',
+        'ark.config.json',
+        '--strict-config',
+        '--json',
+      ],
+      { encoding: 'utf8' }
+    );
+    const strictJson = JSON.parse(strict);
+    expect(strictJson.ok).toBe(true);
+    const patternNoise = (strictJson.warnings || []).filter(
+      (w: { ruleId?: string; failsStrict?: boolean }) => w.ruleId === 'CONFIG_LAYER_PATTERN_NO_MATCHES'
+    );
+    expect(patternNoise.length).toBeGreaterThan(0);
+    expect(patternNoise.every((w: { failsStrict?: boolean }) => w.failsStrict === false)).toBe(true);
+  });
+
+  it('update-baseline with zero violations removes empty baseline file', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-baseline-empty-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/domain/a.ts'), 'export const a = 1;\n');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/domain/**'], optional: false }],
+        rules: [],
+      })
+    );
+    fs.writeFileSync(path.join(root, '.ark-baseline.json'), JSON.stringify({ version: 1, keys: [] }));
+    execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--update-baseline'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    expect(fs.existsSync(path.join(root, '.ark-baseline.json'))).toBe(false);
   });
 });
 

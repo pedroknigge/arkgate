@@ -429,49 +429,36 @@ async function start(args) {
       planOk = false;
     }
 
-    // 5) Plain-language wrap-up — three operating modes, one contract.
-    // suggest = greenfield shape proposal; adapt = match real layout / raise coverage;
-    // enforce = contract actually governs code and gates stay on.
+    // 5) Plain-language wrap-up — one next step, status light only.
+    // Modes are detected (Suggest/Adapt/Enforce), not user-picked settings.
     console.log('');
     if (mode === 'enforce' && planOk) {
-      console.log('Done — Ark is in ENFORCE mode: your contract governs the code and the gates stay on.');
+      console.log('Done — status: ENFORCE (gates can honestly protect you).');
       console.log('What happens now:');
       console.log('  • Every edit is checked (in CI and, if wired, at write time).');
-      console.log('  • Carry out remaining plan steps with /ark-autopilot (safe auto + your approvals).');
     } else if (mode === 'suggest') {
-      console.log('Done — Ark is in SUGGEST mode: a starting shape is installed; enforcement grows as you add layers.');
+      console.log('Done — status: SUGGEST (starting shape installed; expand as you grow).');
       console.log('What happens now:');
-      console.log('  • Gates are on for whatever the contract already matches.');
-      console.log('  • Expand coverage as you create real layer folders (see the plan above).');
       if (governedPercent != null) {
-        console.log(`  • Right now Ark governs ~${governedPercent}% of in-scope files — low is normal on a fresh scaffold.`);
+        console.log(`  • Ark governs ~${governedPercent}% of in-scope files — low is normal on a fresh scaffold.`);
       }
-      console.log('  • When you want the agent to drive the plan: /ark-autopilot');
     } else {
-      console.log('Done — Ark is in ADAPT mode: config is in place, but the contract still needs to match your real layout.');
+      console.log('Done — status: ADAPT (contract still aligning with your real layout).');
       console.log('What happens now:');
       if (governedPercent != null) {
         console.log(
-          `  • Governed coverage is ~${governedPercent}% — a "clean" plan with low coverage checks almost nothing.`
+          `  • Governed ~${governedPercent}% — a "clean" plan with low coverage checks almost nothing.`
         );
       }
-      console.log(`  • See what is unmatched:  ${arkCommand(root, 'ark-check', '--coverage')}`);
-      console.log('  • On a mature repo, prefer /ark-adopt over forcing a starter preset.');
-      console.log('  • Drive fixes with /ark-autopilot once the contract matches; until then ENFORCE is not honest.');
     }
-    console.log(`  • Re-run the plan anytime:   ${arkCommand(root, 'ark-check', '--plan')}`);
-    console.log(`  • Full project check:        ${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config')}`);
-    console.log(`  • Adoption health:           ${arkCommand(root, 'ark-check', '--doctor')}`);
-    console.log(`  • Update Ark later:          ${arkCommand(root, 'ark', 'upgrade')}`);
-    if (fs.existsSync(path.join(root, '.ark-baseline.json'))) {
-      console.log(
-        '  • Baseline file present — keep empty for ratchet-from-clean, or freeze debt with --update-baseline.'
-      );
-    } else {
-      console.log(
-        '  • No baseline yet (fine on clean trees). Adopting dirty code? freeze with --update-baseline.'
-      );
-    }
+    console.log('');
+    console.log('Next (the only flow you need):');
+    console.log('  1. In your agent:  /ark-autopilot');
+    console.log('     → origin report, adoption, plan, safe fixes, leave gates on.');
+    console.log(`  2. Status anytime: ${arkCommand(root, 'ark-check', '--doctor')}`);
+    console.log(`  3. After edits:    ${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config')}`);
+    console.log('');
+    console.log('Optional later: --plan · --coverage · /ark-fix · /ark-place · ark upgrade');
 
     // 6) First architecture report — freezes an origin snapshot under .ark/reports/
     // so later --report runs can show evolution. Idempotent: origin is written only once.

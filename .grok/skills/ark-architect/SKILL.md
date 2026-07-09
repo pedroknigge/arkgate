@@ -1,7 +1,6 @@
 ---
 name: ark-architect
 description: Choose the application shape, adopt phase-1 layers, scaffold directories, and verify honestly — for enthusiasts before codegen. Autonomous.
-arkVersion: 2.4.0
 ---
 
 # /ark-architect — Choose your application shape and adopt Ark

@@ -263,10 +263,18 @@ export function packageManager(root) {
       run: `yarn ark-check ${checkArgs}`,
     };
   }
+  // Monorepo hosts (e.g. Next app under frontend/) often have a root package.json only for
+  // arkgate while real app deps live in frontend/package.json. Install both so CI can resolve
+  // the tree; ark-check itself only needs the root arkgate install.
+  const frontendPkg = fs.existsSync(path.join(root, 'frontend', 'package.json'));
+  const rootInstall = fs.existsSync(path.join(root, 'package-lock.json')) ? 'npm ci' : 'npm install';
+  const install = frontendPkg
+    ? `${rootInstall} && (cd frontend && ${fs.existsSync(path.join(root, 'frontend', 'package-lock.json')) ? 'npm ci' : 'npm install'})`
+    : rootInstall;
   return {
     cache: 'npm',
     setup: [],
-    install: fs.existsSync(path.join(root, 'package-lock.json')) ? 'npm ci' : 'npm install',
+    install,
     run: `npx ark-check ${checkArgs}`,
   };
 }
@@ -307,12 +315,27 @@ ${rows}`;
 }
 
 export function agentInstructions(root) {
-  const steps = AGENT_CONTRACT.steps(arkCheckCommand(root))
+  const checkCmd = arkCheckCommand(root);
+  const startCmd = arkCommand(root, 'ark', 'start');
+  const doctorCmd = arkCommand(root, 'ark-check', '--doctor');
+  const steps = AGENT_CONTRACT.steps(checkCmd)
     .map((step, index) => `${index + 1}. ${step}`)
     .join('\n');
   return `# Ark Enforcement
 
-Before editing TypeScript or JavaScript source files:
+## Default agent flow (if unsure, do only this)
+
+1. If \`ark.config.json\` is missing: run \`${startCmd}\` once.
+2. For adoption / cleanup / “make architecture sound”: run the **\`/ark-autopilot\`** skill
+   (origin report → adopt → plan → safe fixes → gates). Do **not** invent a parallel workflow
+   from the long skill list.
+3. Status anytime: \`${doctorCmd}\` (status light + next action — not a mode picker).
+4. After ordinary feature edits: run \`${checkCmd}\`. On violations → **\`/ark-fix\`** (or
+   \`/ark-place\` for new files, \`/ark-contract\` only if the contract itself is wrong).
+
+Other \`/ark-*\` skills are optional escapes (adopt, coverage, runtime, …), not required steps.
+
+## Before editing TypeScript or JavaScript source files
 
 ${steps}
 
@@ -325,7 +348,8 @@ an ungoverned location:
 
 ${layerPlacementTable()}
 
-The project is only considered Ark-enforced when the write gate, CI gate, and runtime path all pass.
+The project is only considered Ark-enforced when the write gate and CI gate pass
+(runtime path only if this project opted into the kernel).
 `;
 }
 

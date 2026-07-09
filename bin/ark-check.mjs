@@ -1050,11 +1050,16 @@ function collectConfigWarnings(root, config, files, rules, manifest) {
         return re.test(rel);
       });
       if (!matched && !layer.optional) {
+        // Advisory only under --strict-config: monorepo/Next presets ship many optional-looking
+        // globs (e.g. src/layouts/**, app/**) that never match when include is ["frontend"].
+        // Failing the release gate on dead preset globs caused false CI red while architecture
+        // edges were clean (deer-flow host validation). Real safety is import violations +
+        // CONFIG_UNCLASSIFIED_FILES / invalid patterns.
         warnings.push(
           configWarning(
             'CONFIG_LAYER_PATTERN_NO_MATCHES',
             `Layer "${layer.name}" pattern "${pattern}" matched no included files.`,
-            { layer: layer.name, pattern }
+            { layer: layer.name, pattern, failsStrict: false }
           )
         );
       }
@@ -2028,6 +2033,24 @@ async function main() {
       console.error('Freezing this would bury a likely CONTRACT bug as "debt". Fix the contract');
       console.error('first (/ark-contract), then re-run. To freeze anyway: --update-baseline --force.');
       process.exitCode = 2;
+      return;
+    }
+    const baselineName = args.baseline || '.ark-baseline.json';
+    const fullBaselinePath = path.isAbsolute(baselineName)
+      ? baselineName
+      : path.join(root, baselineName);
+    // Zero debt: do not leave an empty baseline file (unclear policy — "is ratchet on?").
+    // Delete any existing empty/orphan baseline so doctor/CI stay honest.
+    if (violations.length === 0) {
+      if (fs.existsSync(fullBaselinePath)) {
+        fs.unlinkSync(fullBaselinePath);
+        console.log(
+          `No violations to freeze — removed empty baseline ${fullBaselinePath} (zero debt; no ratchet file needed).`
+        );
+      } else {
+        console.log('No violations to freeze — baseline not written (zero debt).');
+      }
+      console.log('Gate with: ark-check --root . --config ark.config.json --strict-config');
       return;
     }
     const { fullPath, count } = writeBaseline(root, args.baseline, violations);

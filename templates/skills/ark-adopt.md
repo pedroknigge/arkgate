@@ -1,107 +1,59 @@
 ---
 name: ark-adopt
-description: Onboard an existing codebase onto Ark — get the contract to reflect reality, classify ungoverned code, then freeze only genuine debt with a plan. Autonomous.
+description: Brownfield onboarding — match contract to real code, classify ungoverned dirs, mine loose business rules into the Ark manifest/intents, freeze only real debt. Deep source analysis required.
 ---
 
 # /ark-adopt — Bring Ark into an existing codebase
 
-You are onboarding this repository onto Ark. The goal is NOT "make the check
-green" — it is to leave the project with a contract that reflects its real
-architecture, most of the code actually governed, and only genuine debt frozen
-with a plan to burn it down. A green check over a wrong contract or an ungoverned
-tree is a FALSE green — worse than no gate, because it looks safe. Work autonomously.
+Goal: contract reflects reality, most code governed, only genuine debt frozen with a burn-down.
+A green check over a wrong contract is a **false green**.
 
-Commands below are written as `ark-check` / `ark`; run each through the project's
-package manager — `pnpm exec ark-check …` in a pnpm repo, `yarn ark-check …` in a
-yarn repo, `npx ark-check …` under npm. Match the lockfile; never hardcode `npx` in
-a pnpm/yarn repo (AGENTS.md shows the exact runner for this project).
-
-## The guiding principle
-
-**Ark protects the boundary AROUND a framework, not its internals.** If the repo
-uses a DI/kernel framework (dcouplr, NestJS, a custom kernel), do NOT try to govern
-its inside — declare its PUBLIC SURFACE (the entrypoints app code is meant to
-import) as one layer and treat the rest as a black box. Governing the internals
-duplicates the framework's own wiring and fights it.
-
-## Steps
-
-1. **Config** — if `ark.config.json` is missing, run `ark-check --init` (or
-   `--init --preset monorepo` / `ui-surface` when the tree is multi-package / UI-first).
-   Prefer:
-   ```bash
-   npx ark-check --suggest-include --json
-   npx ark-check --adopt-contract --write
-   ```
-   to expand include roots (nested TS packages) and UI patterns before anything else.
-   If a config exists, keep it — don't regenerate unasked.
-
-2. **Check + DIAGNOSE — before you freeze anything** — run
-   `ark-check --root . --config ark.config.json --json` and read `summary`: it groups
-   violations by edge, ranked. The critical signal is `summary.concentrated` /
-   `dominantShare`: **when most violations are a single edge, the CONTRACT is almost
-   always wrong, not the code.** (Real case: hundreds of API routes "violating"
-   app→kernel because the framework's own `defineRoute` is the sanctioned entrypoint
-   — false positives, not debt.) Investigate the dominant edge:
-   - App-land reaching a framework/kernel through a legitimate entrypoint → fix the
-     contract (step 3), do NOT freeze it.
-   - Unrelated layers genuinely importing each other → real debt for the baseline.
-
-3. **Make the contract reflect reality (via /ark-contract) BEFORE freezing:**
-   - **Classify the ungoverned tree.** Run `ark-check --coverage --json`; read
-     `governed.percent` and `suggestions`. If Ark governs a minority of the code, a
-     green check means almost nothing. Add the proposed layers for the recognized
-     directories; decide a layer for the ones flagged "unrecognized". Get `governed`
-     high before trusting any check.
-   - **Fix a concentrated edge at its source.** If the dominant edge is intended,
-     either allow it or — better — split the target layer into a PUBLIC SURFACE (the
-     entrypoints app code may import) and INTERNALS (denied). The breakdown's target
-     subtrees show where the surface is. This facade split turns a wall of false
-     positives into ~0 while still forbidding reach-arounds into internals.
-   Re-run the check; the remainder should now be the genuine minority.
-
-4. **Freeze the genuine debt** — run `ark-check --update-baseline`. If the set is
-   still lopsided on one edge, Ark REFUSES and tells you the contract still looks
-   wrong — heed it and return to step 3; do NOT `--force` past it just to get green.
-   On success it writes `.ark-baseline.json`; tell the user to commit it (don't commit
-   for them). From now `ark-check --baseline` fails only on NEW violations — the
-   ratchet only moves toward zero (fixing a frozen violation shrinks the baseline).
-
-5. **Gates + skills everywhere** — run `ark-check --install-agent-gates`. It
-   auto-detects the agent CLIs in the repo and writes the write gate, rule files,
-   package-manager-aware CI workflow, and the `/ark-*` skills for each (Kiro gets
-   only its steering rule; Copilot only via `--tools copilot`). If a baseline was
-   created, the generated CI already carries `--baseline`. For Codex, prompts load
-   from `$CODEX_HOME/prompts`, not the repo — install there too with
-   `ark-check --install-agent-gates --codex-home` (writes to their home dir; say so).
-
-6. **Ratchet plan** — from `summary.edges` (ranked), write a short prioritized
-   burn-down: which edge/cluster to fix first (biggest, or the one on the
-   most actively-edited files per `git log`), that `/ark-fix` resolves each, and
-   which items are real debt vs. deferred contract decisions.
-
-## Operating rules
-
-- Explain each step's WHY in one plain sentence — this is often the user's first
-  contact with Ark. Define jargon inline ("baseline = the list of violations that
-  existed before Ark, frozen so they don't block you while you fix them over time").
-- Do NOT chase green by freezing false positives or loosening the contract blindly.
-  The order is: contract reflects reality → classify → freeze only what's left.
-  Getting to green the wrong way is the exact failure this skill exists to prevent.
-- Don't overwrite customized files (`--force`) unless asked. Don't adopt the runtime
-  kernel here (that's `/ark-runtime`) — a repo with its own DI framework should keep it.
 
 ## Related onboarding
 
-- **This skill is for brownfield** — existing messy repos. Do **not** use `/ark-architect` here.
-- Greenfield users: `/ark-architect`, `ark-check --recommend`, gallery starters (`examples/README.md`).
-- Demo: `docs/demos/02-brownfield-baseline-adoption.md`. Playbook: `docs/brownfield-adoption.md`.
-- Violation JSON may include `fixClass`, `effort`, `enthusiastHint` for burn-down ordering.
+- **Greenfield:** `/ark-architect` or `ark-check --recommend` / `ark start`.
+- **Brownfield:** `/ark-adopt` — match contract to reality; do not force a starter preset.
+- **Default path:** `ark start` → `/ark-autopilot` → `ark-check --doctor`.
 
-## Verify and report
+## Anti-wrapper rule (mandatory)
 
-Finish with `ark-check --root . --config ark.config.json --strict-config
---baseline .ark-baseline.json` (omit `--baseline` if none) — it must pass. Report:
-governed % before/after, files written, violations frozen (and how many false
-positives you AVOIDED freezing by fixing the contract), the ratchet plan, and the
-commands the team needs (`check`, `/ark-fix`, `/ark-coverage`).
+**Forbidden:** only running `--init` / `--update-baseline` / coverage JSON without reading the tree.
+
+**Required:**
+1. CLI sensor: `--coverage --json`, check `--json` (`summary`), doctor.
+2. **Read real source** in largest ungoverned dirs and top import edges (min **10 files**).
+3. **“Así te lo re-soluciono”** — concrete layer globs, file moves, and manifest/intent proposals.
+4. Never freeze a concentrated edge without investigating contract smell.
+
+## Guiding principle
+
+Ark protects the **boundary around** a framework, not its internals. Nest/DI public surface = one layer; internals black box.
+
+## Steps
+
+1. **Config** — missing → `ark-check --init` (detection). Keep existing unless asked to regenerate.
+2. **Check + diagnose** — `summary.concentrated` / dominant edge → fix contract first, don’t freeze.
+3. **Classify ungoverned** — use coverage `suggestions`; add layers/patterns via `/ark-contract`.
+4. **Mine business rules → manifiesto** (model job — this is why the skill exists):
+   - Scan for loose domain: validators, pricing/policy functions, `can*`/`calculate*`, magic business constants, publish/intent strings, logic in UI/hooks that belongs in Domain.
+   - Propose: Domain files, `intentPrefixes`, intent names (`Domain.*` / `Application.*`), kernel `defineIntent` stubs if runtime is used.
+   - Apply config through `/ark-contract` discipline; move pure rules into Domain when safe; validate with ark-check.
+   - Deliver section **“Así te lo re-soluciono en el manifiesto”** with before/after contract snippets.
+5. **Freeze only real debt** — `--update-baseline` (zero debt → **no empty baseline file** left behind).
+6. **Gates + skills** — `--install-agent-gates` (CI monorepo-aware when `frontend/package.json` exists).
+7. **Ratchet plan** — ranked edges + which are false positives avoided.
+
+## Operating modes
+
+Explain modes as **detected stages** (Setup / Align / Guard), not user settings.
+
+## Verify
+
+`ark-check --root . --config ark.config.json --strict-config` (+ baseline only if non-empty file retained).
+Report: governed% before/after, files written, frozen count, false positives avoided, manifest/intent proposals applied or deferred.
+
+## Never
+
+- Freeze false positives to get green.
+- Force runtime kernel over existing Nest/DI.
+- Claim Enforce while governed% is low or core bags ungoverned.
