@@ -517,9 +517,28 @@ export function grokHooks(root) {
   }, null, 2)}\n`;
 }
 
+/** Normalize --tools from array or comma-separated string (never character-split a string). */
+export function normalizeToolsList(tools) {
+  if (tools == null) return [];
+  if (Array.isArray(tools)) {
+    return tools
+      .flatMap((t) => String(t).split(','))
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
+  }
+  if (typeof tools === 'string') {
+    return tools
+      .split(',')
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
+  }
+  return [];
+}
+
 export function resolveTools(args) {
-  if (args.tools && args.tools.length > 0) {
-    return { tools: new Set(args.tools), source: 'explicit' };
+  const explicit = normalizeToolsList(args.tools);
+  if (explicit.length > 0) {
+    return { tools: new Set(explicit), source: 'explicit' };
   }
   const root = args.root;
   const detected = new Set();
@@ -1553,9 +1572,11 @@ export function runInstallAgentGates(args) {
     runMigrateCommands(root);
     return;
   }
-  if (args.tools) {
-    const unknown = args.tools.filter((tool) => !KNOWN_TOOLS.includes(tool));
-    if (args.tools.length === 0 || unknown.length > 0) {
+  if (args.tools != null) {
+    const list = normalizeToolsList(args.tools);
+    args.tools = list;
+    const unknown = list.filter((tool) => !KNOWN_TOOLS.includes(tool));
+    if (list.length === 0 || unknown.length > 0) {
       console.error(
         `--tools expects a comma-separated subset of: ${KNOWN_TOOLS.join(', ')}` +
           (unknown.length > 0 ? ` (unknown: ${unknown.join(', ')})` : '')

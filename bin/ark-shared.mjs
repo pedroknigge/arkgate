@@ -719,7 +719,15 @@ function readPackageJson(root) {
   }
 }
 
-/** Workspace roots from package.json workspaces and pnpm-workspace.yaml (no YAML dependency). */
+/**
+ * Workspace / multi-package roots for monorepo include.
+ * Sources (universal — no project-specific names):
+ * 1. package.json workspaces + pnpm-workspace.yaml
+ * 2. rush.json projectFolder top segments (JSONC-tolerant)
+ * 3. lerna.json packages globs
+ * 4. If still empty: conventional multi-package top-level dirs that exist and
+ *    contain at least one package.json (packages, apps, plugins, services, …)
+ */
 export function detectWorkspaces(root) {
   const dirs = new Set();
   const addGlob = (glob) => {
@@ -727,9 +735,16 @@ export function detectWorkspaces(root) {
     const beforeStar = glob.split('*')[0].replace(/\/+$/, '');
     if (beforeStar && beforeStar !== '.') dirs.add(normalizeRel(beforeStar));
   };
+  const addTop = (rel) => {
+    if (typeof rel !== 'string') return;
+    const top = rel.split(/[/\\]/).filter(Boolean)[0];
+    if (top && top !== '.') dirs.add(normalizeRel(top));
+  };
+
   const pkg = readPackageJson(root);
   const ws = Array.isArray(pkg?.workspaces) ? pkg.workspaces : pkg?.workspaces?.packages;
   if (Array.isArray(ws)) ws.forEach(addGlob);
+
   const pnpmFile = path.join(root, 'pnpm-workspace.yaml');
   if (fs.existsSync(pnpmFile)) {
     let inPackages = false;
@@ -744,7 +759,80 @@ export function detectWorkspaces(root) {
       if (item) addGlob(item[1].trim());
     }
   }
+
+  // Rush monorepos often have no root package.json workspaces — only rush.json.
+  const rushFile = path.join(root, 'rush.json');
+  if (fs.existsSync(rushFile)) {
+    try {
+      let text = fs.readFileSync(rushFile, 'utf8');
+      text = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      const rush = JSON.parse(text);
+      for (const project of rush.projects || []) {
+        if (typeof project?.projectFolder === 'string') addTop(project.projectFolder);
+      }
+    } catch {
+      /* ignore malformed rush.json */
+    }
+  }
+
+  // Lerna packages globs.
+  const lernaFile = path.join(root, 'lerna.json');
+  if (fs.existsSync(lernaFile)) {
+    try {
+      const lerna = JSON.parse(fs.readFileSync(lernaFile, 'utf8'));
+      if (Array.isArray(lerna.packages)) lerna.packages.forEach(addGlob);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // Conventional multi-package roots when no explicit workspace manifest listed roots.
+  if (dirs.size === 0) {
+    const conventional = [
+      'packages',
+      'apps',
+      'plugins',
+      'services',
+      'server',
+      'servers',
+      'server-plugins',
+      'libs',
+      'lib',
+      'modules',
+      'foundations',
+      'pods',
+      'models',
+      'clients',
+      'sdks',
+      'tools',
+      'tooling',
+      'desktop',
+      'common',
+    ];
+    for (const name of conventional) {
+      const abs = path.join(root, name);
+      if (!fs.existsSync(abs) || !fs.statSync(abs).isDirectory()) continue;
+      if (dirContainsPackageJson(abs, 2)) dirs.add(name);
+    }
+  }
+
   return [...dirs];
+}
+
+/** True if dir (or a child within maxDepth) has a package.json — multi-package root signal. */
+function dirContainsPackageJson(dir, maxDepth) {
+  try {
+    if (fs.existsSync(path.join(dir, 'package.json'))) return true;
+    if (maxDepth <= 0) return false;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+      if (dirContainsPackageJson(path.join(dir, entry.name), maxDepth - 1)) return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
 }
 
 function isSourceFile(name) {

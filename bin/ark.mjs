@@ -348,13 +348,20 @@ async function start(args) {
       const workspaces = detectWorkspaces(root);
       const looksLikeMonorepo =
         workspaces.length > 0 ||
+        fs.existsSync(path.join(root, 'rush.json')) ||
+        fs.existsSync(path.join(root, 'pnpm-workspace.yaml')) ||
+        fs.existsSync(path.join(root, 'lerna.json')) ||
         fs.existsSync(path.join(root, 'apps')) ||
         fs.existsSync(path.join(root, 'packages'));
       // Mature multi-package trees must NOT get a thin src/** starter (0 files → false green).
-      // Prefer the monorepo preset so include roots match apps/packages/tooling.
+      // Prefer the monorepo preset so include roots match apps/packages/plugins/services/….
       if (looksLikeMonorepo && (rec?.mature || workspaces.length > 0)) {
         initArgs.push('--preset', 'monorepo');
-        console.log('  Multi-package layout detected — using monorepo profile.');
+        console.log(
+          workspaces.length > 0
+            ? `  Multi-package layout detected — monorepo profile (include: ${workspaces.join(', ')}).`
+            : '  Multi-package layout detected — using monorepo profile.'
+        );
       } else if (!rec?.mature && preset) {
         initArgs.push('--preset', preset);
       }
@@ -363,7 +370,12 @@ async function start(args) {
     } else {
       console.log('  Found an existing ark.config.json — keeping it.');
     }
-    runArkCheck(['--root', root, '--install-agent-gates'], { cwd: root });
+    {
+      const gateArgs = ['--root', root, '--install-agent-gates'];
+      if (args.tools) gateArgs.push('--tools', args.tools);
+      if (args.force) gateArgs.push('--force');
+      runArkCheck(gateArgs, { cwd: root });
+    }
 
     // 4) Show the plan: what's safe to auto-fix vs what needs a decision.
     console.log('');

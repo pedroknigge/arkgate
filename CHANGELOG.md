@@ -17,6 +17,16 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 - Ark still does **not** reimplement `no-unused-vars` / `no-explicit-any`; it ensures the
   same checks run **before** the deploy host.
 
+### Fixed — field test on large monorepos (e.g. Rush)
+
+- **`detectWorkspaces`:** Rush `rush.json` (JSONC), Lerna, and conventional multi-package
+  roots (`packages`, `plugins`, `services`, `server`, …) when no npm/pnpm workspaces field.
+  Monorepo preset `include` no longer collapses to only `packages`+`apps`.
+- **`ark start --tools`:** forwards `--tools` / `--force` to `--install-agent-gates`
+  (was always default tool set).
+- **`normalizeToolsList`:** safe comma-split for tools args (never `new Set("codex,grok")`
+  character-splitting).
+
 ## 2.6.0 — 2026-07-09
 
 ### Changed — maintainability hygiene (#11 / #12)

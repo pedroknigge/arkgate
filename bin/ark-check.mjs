@@ -25,6 +25,7 @@ import {
   writeAdoptionPlan,
   classifyRemediation,
   detectPackageManager,
+  detectWorkspaces,
   execCommandParts,
   execRunner,
   formatArchitectureRecommendationHuman,
@@ -362,39 +363,8 @@ function uncoveredDirectories(root, srcDir, layers) {
     });
 }
 
-// Reads workspace globs from package.json (npm/yarn/bun `workspaces`, array or
-// `{ packages: [] }`) and pnpm-workspace.yaml, returning the distinct base directories
-// (the glob prefix before the first `*`), e.g. "packages/*" -> "packages". Empty when
-// the project declares no workspaces — the signal that says "this is a monorepo".
-function detectWorkspaces(root) {
-  const dirs = new Set();
-  const addGlob = (glob) => {
-    if (typeof glob !== 'string') return;
-    const beforeStar = glob.split('*')[0].replace(/\/+$/, '');
-    if (beforeStar && beforeStar !== '.') dirs.add(normalize(beforeStar));
-  };
-  const pkg = readPackageJson(root);
-  const ws = Array.isArray(pkg?.workspaces) ? pkg.workspaces : pkg?.workspaces?.packages;
-  if (Array.isArray(ws)) ws.forEach(addGlob);
-  const pnpmFile = path.join(root, 'pnpm-workspace.yaml');
-  if (fs.existsSync(pnpmFile)) {
-    // Minimal read (no YAML dep): collect list items under the top-level `packages:` key
-    // ONLY. pnpm files also carry other list-valued keys (onlyBuiltDependencies, catalog,
-    // …) whose items are NOT workspace globs — a key-agnostic scan would pull those in.
-    let inPackages = false;
-    for (const line of fs.readFileSync(pnpmFile, 'utf8').split('\n')) {
-      const keyMatch = line.match(/^([A-Za-z0-9_-]+):/); // top-level key (no indentation)
-      if (keyMatch) {
-        inPackages = keyMatch[1] === 'packages';
-        continue;
-      }
-      if (!inPackages) continue;
-      const item = line.match(/^\s+-\s*['"]?([^'"#]+?)['"]?\s*$/); // indented list item
-      if (item) addGlob(item[1].trim());
-    }
-  }
-  return [...dirs];
-}
+// detectWorkspaces: shared implementation in ark-shared.mjs (npm/pnpm/rush/lerna +
+// conventional multi-package roots).
 
 // Deny every "upward" edge for an ordered layer list (index 0 = outermost/top,
 // which may import everything below it). Inner/lower layers must not import outer
