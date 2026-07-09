@@ -99,7 +99,7 @@ Start only when R1–R7 are done or explicitly skipped with a written reason.
 
 ### Track P — Architecture presets & pattern depth (from field research)
 
-Ship one id at a time. Engine honesty before marketing new shapes.
+**Status: complete (P0–P8 + S1–S5).** Ship one id at a time was honored; engine honesty before marketing new shapes.
 
 | # | Status | Item | Definition of Done |
 |---|--------|------|-------------------|
