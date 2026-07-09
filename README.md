@@ -53,8 +53,9 @@ plus tools agents can read *before* generating code (`ark_place`, `ark://manifes
 
 1. **A shape** — Ark looks at your repo (Nest, Next, API, library, …) and suggests how to organize it.
 2. **Guardrails** — config + agent gates + CI so new code can’t quietly break layers.
-3. **A plan** — what’s safe for an agent to fix vs what needs your decision.
+3. **A plan** — what’s safe for an agent to fix vs what needs your decision (`mechanical-safe` vs judgment).
 4. **Honesty** — if Ark only governs 10% of the tree, it says so. “Clean” with almost no coverage is not success.
+5. **Adoption health** — `arkgate-check --doctor` checks co-pilot completeness (hosts, MCP argv, Codex home, core-layer optionality, origin report) **separately** from the 0–100 fitness score.
 
 Three **operating modes** (not “user types”) on the same contract:
 
@@ -130,9 +131,11 @@ npx arkgate-check --install-agent-gates
 | **`/ark-explain`** | Explain the current contract, coverage, and report in plain language |
 | **`/ark-coverage`** | Audit which Ark capabilities you are not using yet |
 | **`/ark-runtime`** | Opt-in: migrate hand-rolled bus/outbox/sagas onto the runtime kernel |
-| **`/ark-upgrade`** | Bump the package and refresh gates + skills for every agent host |
+| **`/ark-upgrade`** | Bump the package and refresh gates + skills for every agent host (also normalizes MCP bins + Codex home) |
 
 Supported agent hosts for full MCP/hook gates: **Claude Code**, **Cursor**, **OpenAI Codex**, **Grok Build**. Instruction-tier hosts (Windsurf, Cline, Copilot, …) get rule files. See [docs/ai-gates.md](docs/ai-gates.md).
+
+After upgrade, run **`npx arkgate-check --doctor`**: it flags incomplete hosts, dual `ark-mcp`/`arkgate-mcp` args, Codex home pointing at a temp path, core layers still `optional` while populated, and a missing origin report.
 
 ---
 
@@ -141,15 +144,16 @@ Supported agent hosts for full MCP/hook gates: **Claude Code**, **Cursor**, **Op
 ```
 ark.config.json
       │
-      ├─► Write gate (ark-mcp)     — agent PreToolUse / MCP tools
-      ├─► CI gate (ark-check)      — PR / main
-      └─► Runtime kernel (opt-in)  — only if you call it
+      ├─► Write gate (arkgate-mcp)  — agent PreToolUse / MCP tools
+      ├─► CI gate (arkgate-check)   — PR / main
+      └─► Runtime kernel (opt-in)   — only if you call it
 ```
 
-- **Presets:** hexagonal, layered, feature-sliced, monorepo (all layers optional).
+- **Presets:** hexagonal, layered, feature-sliced, monorepo (layers start optional; doctor suggests tightening populated cores).
 - **Frameworks:** Nest / Next / express / library layouts get sensible globs on init so day-one coverage is real.
 - **Brownfield:** baseline ratchet, refuse to freeze a wrong contract, `/ark-adopt` for mature trees.
-- **Agents:** skills above install into Claude / Cursor / Codex / Grok command locations.
+- **Agents:** skills install into Claude / Cursor / Codex / Grok; `ark start` freezes an origin report under `.ark/reports/`.
+- **TypeScript:** project compilers 5.x / 6.x / 7.x — gate falls back to a nested JS-API TypeScript when TS 7’s main export is version-only ([docs/typescript-support.md](docs/typescript-support.md)).
 
 ### Why not only ESLint / dependency-cruiser / Nx?
 
@@ -162,19 +166,21 @@ ark.config.json
 | Honest governed % + adoption path | ✅ | ❌ |
 | Classified plan (`mechanical-safe` / judgment) | ✅ | ❌ |
 | TypeScript 5 / 6 / 7 project compilers | ✅ | varies |
+| Adoption scorecard (hosts / MCP / origin) | ✅ | ❌ |
 
 ---
 
 ## Common commands
 
 ```bash
-npx arkgate start                         # guided setup + plan
-npx arkgate-check --doctor                # health + operating mode
+npx arkgate start                         # guided setup + plan + origin report
+npx arkgate-check --doctor                # health + Adoption gaps (not just fitness)
+npx arkgate-check --doctor --json         # machine-readable doctor.adoption
 npx arkgate-check --plan                  # safe-to-auto-fix vs your call
 npx arkgate-check --coverage              # Governed: N%
-npx arkgate-check --report ark-report.html  # showcase HTML + origin/latest snapshots
+npx arkgate-check --report ark-report.html  # showcase HTML + Adoption card + origin/latest
 npx arkgate-check --baseline              # only NEW violations fail
-npx arkgate upgrade                       # update package + refresh gates/skills
+npx arkgate upgrade                       # package + gates/skills + MCP/Codex normalize
 ```
 
 CI (example):
@@ -206,6 +212,7 @@ NestJS: `arkgate/nestjs` (optional peer `@nestjs/common`).
 | New builders (plain language) | [docs/enthusiast/](docs/enthusiast/README.md) |
 | Wire Claude / Cursor / Codex / Grok | [docs/ai-gates.md](docs/ai-gates.md) |
 | **TypeScript 5 / 6 / 7 support** | [docs/typescript-support.md](docs/typescript-support.md) |
+| Migrate from `ark-runtime-kernel` | [docs/migrate-from-ark-runtime-kernel.md](docs/migrate-from-ark-runtime-kernel.md) |
 | Messy existing repo | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Agent / MCP tools | [docs/agent-guide.md](docs/agent-guide.md) |
 | Demos | [docs/demos/](docs/demos/) |
@@ -225,7 +232,8 @@ npm run check:architecture   # Ark gates itself
 
 **npm:** [`arkgate`](https://www.npmjs.com/package/arkgate) · formerly `ark-runtime-kernel`  
 **Product:** **ArkGate** — architecture co-pilot / gate for AI TypeScript (not a runtime kernel).  
-CLI: `arkgate` · `arkgate-check` · `arkgate-mcp` (aliases `ark` / `ark-check` / `ark-mcp` still work).
+CLI: `arkgate` · `arkgate-check` · `arkgate-mcp` (aliases `ark` / `ark-check` / `ark-mcp` still work for one major).  
+MCP registry: `io.github.pedroknigge/arkgate`.
 
 Node ≥ 18 · **MIT**.
 
