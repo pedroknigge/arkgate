@@ -4,6 +4,11 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+## 2.9.2 — 2026-07-09
+
+Skill surface hardening: dual-engine, explore, STOP handoffs, AGENTS routing, subagent fan-out.
+**No intentional CLI flag or JSON shape breaks.**
+
 ### Added
 
 - **`/ark-explore` skill:** exploratory architecture reconnaissance — product map, entry
