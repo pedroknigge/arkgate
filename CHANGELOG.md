@@ -4,6 +4,12 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+## 2.8.2 — 2026-07-09
+
+Field-honesty patch (Next/UI host probe): no Nest false positives, no false ENFORCE on
+ui-surface bags, honest `ark start` mode, Next proxy/middleware classification.
+**No intentional CLI flag or JSON shape breaks.**
+
 ### Fixed
 
 - **Nest detection false positive:** bare `*.service.ts` / similar names no longer set
