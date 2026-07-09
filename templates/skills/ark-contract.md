@@ -9,6 +9,15 @@ The **one sanctioned way** to change layers/rules/`intentPrefixes`/includes.
 Also used to **land mined business rules** into the executable manifest (`ark.config.json` + intent naming that `ark://manifest` exposes).
 
 
+## Dual engine (mandatory)
+
+| Engine | Role |
+|--------|------|
+| **Deterministic** | CLI / MCP / contract sensors — exit codes, plan kinds, coverage numbers, install status |
+| **Exploratory** | You open **this** repo's real files and product surface before concluding |
+
+The CLI is a **sensor**, never the whole job. Claiming done without the exploratory bar for this skill is **incomplete**.
+
 ## Related onboarding
 
 - **Greenfield:** `/ark-architect` or `ark-check --recommend` / `ark start`.
@@ -50,8 +59,27 @@ Also used to **land mined business rules** into the executable manifest (`ark.co
 
 Contract edits are most common in **Align (Adapt)**. In **Guard (Enforce)**, treat edits as high-risk product decisions.
 
+## Critical handoffs
+
+- After contract is honest but residual violations remain: **STOP — do not continue this skill as complete.** **STOP — bulk residual debt: invoke /ark-loop or /ark-autopilot** instead of ad-hoc multi-file grinding without a plan.
+- New artifact home after reclassify: **STOP — do not continue this skill as complete.** **STOP — new file placement: invoke /ark-place** when the user needs a new artifact home.
+
 ## Done
 
 - Diff of `ark.config.json` explained in plain language.
 - **Así te lo re-soluciono en el manifiesto** when intents/Domain were part of the request.
 - Strict check result captured.
+
+## Completion contract (skill incomplete if missing)
+
+End with **exactly** these headings (markdown `###`):
+
+### Completion
+- **Sensor:** commands/tools run
+- **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
+- **Result:** one-line outcome
+- **Handoff:** `/ark-…` / CLI / `none`
+- **Incomplete?** `no` | `yes — <what is missing>`
+
+If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
+**Skill incomplete if missing** any of the bullets above.

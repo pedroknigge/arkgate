@@ -12,6 +12,15 @@ policy engine, workflow/saga coordination, projections, observability hooks,
 and NestJS adapters. This skill migrates hand-rolled versions of those to the
 kernel, one feature at a time.
 
+## Dual engine (mandatory)
+
+| Engine | Role |
+|--------|------|
+| **Deterministic** | CLI / MCP / contract sensors — exit codes, plan kinds, coverage numbers, install status |
+| **Exploratory** | You open **this** repo's real files and product surface before concluding |
+
+The CLI is a **sensor**, never the whole job. Claiming done without the exploratory bar for this skill is **incomplete**.
+
 ## Steps
 
 1. **Inventory** — grep the codebase for hand-rolled equivalents:
@@ -41,6 +50,11 @@ kernel, one feature at a time.
    something the inventory only *suspects* is dead (a misclassified load-bearing
    emitter must not be removed on a guess).
 
+## Critical handoffs
+
+- No static gates yet: **STOP — do not continue this skill as complete.** Run `/ark-architect` or `/ark-adopt` first.
+- Inventory finds nothing: stop; do not introduce kernel speculatively.
+
 ## Operating rules
 
 - If the inventory finds NO hand-rolled equivalents, say so and stop — do not
@@ -61,3 +75,17 @@ kernel, one feature at a time.
 Run the project's tests plus `ark-check --root . --config ark.config.json
 --strict-config`. Report: what was migrated, lines deleted vs added, remaining
 candidates ranked, and any behavior differences (e.g. bounded history).
+
+## Completion contract (skill incomplete if missing)
+
+End with **exactly** these headings (markdown `###`):
+
+### Completion
+- **Sensor:** commands/tools run
+- **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
+- **Result:** one-line outcome
+- **Handoff:** `/ark-…` / CLI / `none`
+- **Incomplete?** `no` | `yes — <what is missing>`
+
+If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
+**Skill incomplete if missing** any of the bullets above.

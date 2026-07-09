@@ -49,7 +49,9 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    If `src/contexts` or `src/bounded-contexts` exists, prefer `ddd-bounded-contexts`.
 2. **Check + diagnose** — `summary.concentrated` / dominant edge → fix contract first, don’t freeze.
    Cross-slice / cross-context `peerIsolation` hits are judgment: extract shared or events.
-   Empty Domain/Persistence + I/O under Application → false-green; reclassify before ENFORCE theatre.
+   If one edge dominates residual debt: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
+   Empty Domain/Persistence + I/O under Application → false-green.
+   **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
 3. **Classify ungoverned** — use coverage `suggestions` **plus** dirs you discovered by reading;
    add layers/patterns via `/ark-contract`.
 4. **Mine business rules → manifiesto** (model job — this is why the skill exists):
@@ -75,3 +77,17 @@ Report: governed% before/after, files written, frozen count, false positives avo
 - Freeze false positives to get green.
 - Force runtime kernel over existing Nest/DI.
 - Claim Enforce while governed% is low, cores empty with I/O in Application, or core bags ungoverned.
+
+## Completion contract (skill incomplete if missing)
+
+End with **exactly** these headings (markdown `###`):
+
+### Completion
+- **Sensor:** commands/tools run
+- **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
+- **Result:** one-line outcome
+- **Handoff:** `/ark-…` / CLI / `none`
+- **Incomplete?** `no` | `yes — <what is missing>`
+
+If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
+**Skill incomplete if missing** any of the bullets above.

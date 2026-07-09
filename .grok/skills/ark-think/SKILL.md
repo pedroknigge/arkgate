@@ -45,6 +45,7 @@ Never reason only from abstract hexagons. Open real modules before recommending 
    judgment auto-apply, codemod engines, or skipping write-gate/CI.
 7. **Hand off** — placement `/ark-place`; config `/ark-contract`; bulk debt `/ark-loop` /
    `/ark-autopilot`; map-only `/ark-explore`; violations `/ark-fix`.
+   When the user needs action not advice: **STOP — do not continue this skill as complete** — invoke the handoff skill.
 
 ## Output format
 
@@ -60,3 +61,17 @@ Never reason only from abstract hexagons. Open real modules before recommending 
 - Brownfield: `/ark-adopt`
 - Full recon: `/ark-explore`
 - Explain existing: `/ark-explain`
+
+## Completion contract (skill incomplete if missing)
+
+End with **exactly** these headings (markdown `###`):
+
+### Completion
+- **Sensor:** commands/tools run
+- **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
+- **Result:** one-line outcome
+- **Handoff:** `/ark-…` / CLI / `none`
+- **Incomplete?** `no` | `yes — <what is missing>`
+
+If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
+**Skill incomplete if missing** any of the bullets above.

@@ -9,13 +9,19 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 - **`/ark-explore` skill:** exploratory architecture reconnaissance — product map, entry
   points, coupling hotspots, false-green risk, ranked *suggestions* (not only residual
   violations). CLI remains a sensor; host agent reads the real tree.
+- **Skill completion contract:** every `/ark-*` template ends with fixed
+  `### Completion` fields (Sensor / Opened / Result / Handoff / Incomplete?) —
+  **skill incomplete if missing**.
+- **Hard STOP handoffs:** critical paths (false-green, concentrated edge, bulk debt,
+  wrong skill) use `STOP — do not continue this skill as complete` + named next skill.
+- **AGENTS skill routing table:** trigger → skill map in generated `AGENTS.md` while
+  keeping `/ark-autopilot` as the default when unsure.
 
 ### Changed
 
-- **Skills dual-engine (deterministic + exploratory):** `/ark-autopilot`, `/ark-coverage`,
-  `/ark-adopt`, `/ark-think`, `/ark-loop`, and `/ark-fix` require a real source/product
-  pass (paths opened, suggestive bets) in addition to plan/coverage/doctor sensors. Plan
-  empty ≠ architecture healthy without explore. Refresh installed skills with
+- **Skills dual-engine (deterministic + exploratory):** **all** shipped skill templates
+  require dual-engine behavior (CLI sensor + real source/product pass where applicable).
+  Plan empty ≠ architecture healthy without explore. Refresh installed skills with
   `ark-check --install-agent-gates --skills-only --force`.
 
 ## 2.9.1 — 2026-07-09

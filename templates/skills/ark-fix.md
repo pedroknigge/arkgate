@@ -33,7 +33,10 @@ the two files on the violation edge.
 
 **Required:**
 1. Run `ark-check` as **sensor** (and `--plan --json` if multi-step) — CLI validates; you remediate.
-2. **Read** each violated file and its import target.
+2. **Read** each violated file and its import target (plus callers that explain product role).
+   If the wall is a concentrated contract smell: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
+   If false-green cores: **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
+   If many residuals: **STOP — do not continue this skill as complete.** **STOP — bulk residual debt: invoke /ark-loop or /ark-autopilot** instead of ad-hoc multi-file grinding without a plan.
 3. **“Así te lo re-soluciono”** — concrete change before editing.
 4. After edits: `ark-check --strict-config` (and baseline if configured).
 
@@ -66,3 +69,17 @@ If the “fix” is really a missing business intent or Domain home for a rule:
 
 - Targeted violations gone; no new ones.
 - Report: what moved, what was intentional default, what needs user decision.
+
+## Completion contract (skill incomplete if missing)
+
+End with **exactly** these headings (markdown `###`):
+
+### Completion
+- **Sensor:** commands/tools run
+- **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
+- **Result:** one-line outcome
+- **Handoff:** `/ark-…` / CLI / `none`
+- **Incomplete?** `no` | `yes — <what is missing>`
+
+If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
+**Skill incomplete if missing** any of the bullets above.

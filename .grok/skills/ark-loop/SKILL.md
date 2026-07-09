@@ -37,7 +37,8 @@ under Application — escalate to `/ark-contract` or `/ark-explore` when the wal
 2. For each step you touch: **read** `file` and `target` source (and enough callers to know the edge).
 3. **“Así te lo re-soluciono”** — exact edit before applying.
 4. After each apply: full gate re-run; rollback if targeted violation remains or new ones appear.
-5. If one edge dominates or empty cores + I/O under Application → **stop grinding**, hand to `/ark-contract` / `/ark-adopt` with code evidence.
+5. If one edge dominates: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
+6. If empty cores + I/O under Application: **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
 
 ## mechanical-safe only (auto)
 
@@ -70,3 +71,17 @@ Never auto: value imports (including mixed bindings with values), dynamic import
 - Gate confirms each kept edit.
 - Honest residual list with **Así te lo re-soluciono** for anything left.
 - If residual steps hide domain/business rules in the wrong layer, call out **manifiesto** work (`intentPrefixes` / Domain placement) via `/ark-contract` or `/ark-adopt`.
+
+## Completion contract (skill incomplete if missing)
+
+End with **exactly** these headings (markdown `###`):
+
+### Completion
+- **Sensor:** commands/tools run
+- **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
+- **Result:** one-line outcome
+- **Handoff:** `/ark-…` / CLI / `none`
+- **Incomplete?** `no` | `yes — <what is missing>`
+
+If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
+**Skill incomplete if missing** any of the bullets above.

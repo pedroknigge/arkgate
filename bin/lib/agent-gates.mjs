@@ -471,8 +471,26 @@ export function agentInstructions(root) {
 4. After ordinary feature edits: run \`${checkCmd}\`. On violations → **\`/ark-fix\`** (or
    \`/ark-place\` for new files, \`/ark-contract\` only if the contract itself is wrong).
 
-Other \`/ark-*\` skills are optional escapes (explore, adopt, coverage, think, runtime, …), not required steps.
 Skills are **dual-engine**: deterministic CLI sensors + exploratory read of *this* repo — not JSON-only wrappers.
+When a skill says **STOP — do not continue this skill as complete**, stop and invoke the named handoff skill.
+
+## Skill routing (triggers → skill)
+
+| When | Invoke |
+|------|--------|
+| Unsure / make architecture sound | **/ark-autopilot** (default) |
+| Need map / opportunities only (no apply) | \`/ark-explore\` |
+| Greenfield shape / empty tree | \`/ark-architect\` |
+| Brownfield / wrong contract / false-green | \`/ark-adopt\` then \`/ark-contract\` if globs wrong |
+| Edit \`ark.config.json\` layers/rules/intents | \`/ark-contract\` |
+| New file “where does this go?” | \`/ark-place\` |
+| Gate violation on a change | \`/ark-fix\` |
+| Drive plan to goal.met | \`/ark-loop\` |
+| Deep coverage + ranked audit | \`/ark-coverage\` |
+| Design trade-offs (no package LLM) | \`/ark-think\` |
+| Explain / HTML report tour | \`/ark-explain\` |
+| Bump arkgate + refresh hosts | \`/ark-upgrade\` |
+| Optional runtime kernel migrate | \`/ark-runtime\` |
 
 ## Before editing TypeScript or JavaScript source files
 

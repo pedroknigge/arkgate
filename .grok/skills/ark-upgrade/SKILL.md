@@ -39,6 +39,15 @@ read the **Adoption** section — host gaps, Codex home temp paths, optional-but
 core layers, missing origin snapshot, baseline policy. Fix commands are printed per gap.
 HTML reports include the same Adoption card (separate from the 0–100 fitness score).
 
+## Dual engine (mandatory)
+
+| Engine | Role |
+|--------|------|
+| **Deterministic** | CLI / MCP / contract sensors — exit codes, plan kinds, coverage numbers, install status |
+| **Exploratory** | You open **this** repo's real files and product surface before concluding |
+
+The CLI is a **sensor**, never the whole job. Claiming done without the exploratory bar for this skill is **incomplete**.
+
 ## Fast path
 
 One command does the whole flow — update the package, refresh gates + `/ark-*` skills
@@ -114,7 +123,8 @@ npx arkgate-check --install-agent-gates --skills-only --force
 4. **Re-verify** — `ark-check --root . --config ark.config.json
    --strict-config` (with `--baseline .ark-baseline.json` if present). A new
    version may detect violations the old one missed: if new violations appear,
-   apply `/ark-fix` reasoning to resolve them. If they are too numerous to fix
+   **STOP — do not continue this skill as complete.** **STOP — bulk residual debt: invoke /ark-loop or /ark-autopilot**
+   (or `/ark-fix` for a small set). If they are too numerous to fix
    now, freezing them in the baseline (`--update-baseline`) is a valid stopgap
    but it silences NEW violations, so it requires explicit user approval first
    — never regenerate the baseline on your own to get a green check.
@@ -143,3 +153,17 @@ End with a passing check. Report: latest published version, old → new version
 (or "already latest"), changelog entries that mattered here (plain language),
 files written/refreshed per tool, skipped customized files needing a manual
 look, and the final check status.
+
+## Completion contract (skill incomplete if missing)
+
+End with **exactly** these headings (markdown `###`):
+
+### Completion
+- **Sensor:** commands/tools run
+- **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
+- **Result:** one-line outcome
+- **Handoff:** `/ark-…` / CLI / `none`
+- **Incomplete?** `no` | `yes — <what is missing>`
+
+If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
+**Skill incomplete if missing** any of the bullets above.

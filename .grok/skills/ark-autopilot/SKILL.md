@@ -44,8 +44,8 @@ Do this even if the plan is non-empty — plan lists *violations*, not *product 
 3. **Lived layout** — which dirs are really Domain / Application / I/O / UI vs what globs claim.
 4. **False-green soft block** — doctor / coverage: empty Domain/Persistence while Application
    globs still cover I/O (`airtable`, `supabase`, `prisma`, `drizzle`, `repositories`, …).
-   Doctor gap id: `contract-false-green-io-under-application`. If so → **`/ark-adopt`** or
-   **`/ark-contract` first**; do not claim ENFORCE from type-only cleanup.
+   Doctor gap id: `contract-false-green-io-under-application`. If so:
+   **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
 5. **Suggestive top bets** — 2–5 opportunities ranked (shape, extract, manifiesto, gates/DX),
    separate from mechanical-safe steps. User may defer; still list them.
 
@@ -67,7 +67,8 @@ For a full reconnaissance report, run or fold in `/ark-explore`.
 2. **Origin report** — `ark-check --report ark-report.html` (do not `--reset-origin` unless asked).
 3. **Plan + code read** — `--plan --json`; read each step’s source/target; group by edge.
    Treat `peerIsolation` / cross-slice steps as **judgment** (never mechanical-safe).
-4. **Concentrated edge?** — if one edge dominates, route to `/ark-contract` with a **source-based** diagnosis (not freeze).
+4. **Concentrated edge?** — if one edge dominates:
+   **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
 5. **Worktree preferred** — discardable git worktree when possible.
 6. **Mechanical-safe** — only kinds from `/ark-loop` table; one step, validate, rollback.
 7. **Judgment** — default: propose with full “así te lo re-soluciono”. If user authorized full apply: implement the designed fix, validate, rollback on fail.
@@ -92,3 +93,17 @@ For a full reconnaissance report, run or fold in `/ark-explore`.
 - Every applied step validated by real `ark-check`.
 - Final plan `goal.met` true **or** remaining steps listed with file-level proposals and why blocked.
 - Report cites paths you changed, open **opportunities**, and report HTML paths.
+
+## Completion contract (skill incomplete if missing)
+
+End with **exactly** these headings (markdown `###`):
+
+### Completion
+- **Sensor:** commands/tools run
+- **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
+- **Result:** one-line outcome
+- **Handoff:** `/ark-…` / CLI / `none`
+- **Incomplete?** `no` | `yes — <what is missing>`
+
+If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
+**Skill incomplete if missing** any of the bullets above.

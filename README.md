@@ -144,7 +144,10 @@ npx arkgate-check --coverage
 Install once: `npx arkgate-check --install-agent-gates`  
 (`--tools claude,cursor,codex,grok` to pick hosts.)
 
-**Default is always `/ark-autopilot`.** The rest are escapes, not a second curriculum:
+**Default is always `/ark-autopilot`.** The rest are escapes, not a second curriculum.
+Generated `AGENTS.md` includes a **skill routing table** (trigger → skill). Skills are
+**dual-engine** (CLI sensor + read real source) and end with a fixed **completion contract**;
+critical handoffs say **STOP** and name the next skill (hosts must follow — markdown cannot chain calls).
 
 | Need | Skill |
 |------|--------|

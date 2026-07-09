@@ -19,6 +19,15 @@ plus the not-yet-adopted `suggestedLayers` as a footnote. Then ask what they wan
 to place. That map is derived entirely from the repo, so producing it is real work,
 not a stalling question.
 
+## Dual engine (mandatory)
+
+| Engine | Role |
+|--------|------|
+| **Deterministic** | CLI / MCP / contract sensors — exit codes, plan kinds, coverage numbers, install status |
+| **Exploratory** | You open **this** repo's real files and product surface before concluding |
+
+The CLI is a **sensor**, never the whole job. Claiming done without the exploratory bar for this skill is **incomplete**.
+
 ## Steps
 
 1. **Read the contract, not your intuition.** If the `ark` MCP server is available,
@@ -52,6 +61,11 @@ not a stalling question.
 5. **If asked to create it**: scaffold the file(s) in place, following the
    nearest existing sibling's style, and any port/adapter split the rules force.
 
+## Critical handoffs
+
+- If the user needs bulk adoption / wrong contract, not a single artifact: **STOP — do not continue this skill as complete.** **STOP — wrong skill: invoke /ark-adopt or /ark-contract** instead of ad-hoc multi-file grinding without a plan.
+- If contract lacks a home for the artifact: **STOP — do not continue this skill as complete.** Adopt the layer via `/ark-contract` first.
+
 ## Operating rules
 
 - Never ask "which layer do you prefer?" — the contract decides; you translate.
@@ -74,3 +88,17 @@ not a stalling question.
 If you created files, run `ark-check --root . --config ark.config.json
 --strict-config` and make it pass. Report: placement + why, files created (if
 any), and the import rules the new code must respect going forward.
+
+## Completion contract (skill incomplete if missing)
+
+End with **exactly** these headings (markdown `###`):
+
+### Completion
+- **Sensor:** commands/tools run
+- **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
+- **Result:** one-line outcome
+- **Handoff:** `/ark-…` / CLI / `none`
+- **Incomplete?** `no` | `yes — <what is missing>`
+
+If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
+**Skill incomplete if missing** any of the bullets above.

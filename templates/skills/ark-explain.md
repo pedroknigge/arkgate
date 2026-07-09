@@ -8,6 +8,15 @@ description: Explain this project's architecture in plain language and generate 
 The user wants to understand the architecture, a specific rule, or why the gate blocked them.
 Your job is to **teach with this repo's real data** and leave a shareable visual artifact.
 
+## Dual engine (mandatory)
+
+| Engine | Role |
+|--------|------|
+| **Deterministic** | CLI / MCP / contract sensors — exit codes, plan kinds, coverage numbers, install status |
+| **Exploratory** | You open **this** repo's real files and product surface before concluding |
+
+The CLI is a **sensor**, never the whole job. Claiming done without the exploratory bar for this skill is **incomplete**.
+
 ## Always do this first (showcase report)
 
 1. Run the full HTML report (uses the real contract + coverage + gates):
@@ -62,7 +71,9 @@ else is judgment/deferred and must not be auto-applied.
    - Enforcement points that are actually on: write gate, CI, ESLint, baseline.
    - If a DI/kernel framework border exists, explain public surface vs internals.
 3. **If asked about a specific rule or block**, answer with: the rule, the consequence it
-   prevents, and the sanctioned fix (usually a port) — offer `/ark-fix`.
+   prevents, and the sanctioned fix (usually a port). If they want it fixed now:
+   **STOP — do not continue this skill as complete.** **STOP — fix requested: invoke /ark-fix.**
+   This skill stays read-only.
 4. **If asked "what's a port/adapter/saga…"**, two sentences + this-repo example or conventional path.
 
 ## Operating rules
@@ -82,3 +93,17 @@ else is judgment/deferred and must not be auto-applied.
 - Onboarding: `/ark-architect`, `ark-check --recommend`, `docs/enthusiast/README.md`
 - Brownfield: `/ark-adopt`, `docs/brownfield-adoption.md`
 - Autopilot: `/ark-autopilot` after the user understands the contract
+
+## Completion contract (skill incomplete if missing)
+
+End with **exactly** these headings (markdown `###`):
+
+### Completion
+- **Sensor:** commands/tools run
+- **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
+- **Result:** one-line outcome
+- **Handoff:** `/ark-…` / CLI / `none`
+- **Incomplete?** `no` | `yes — <what is missing>`
+
+If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
+**Skill incomplete if missing** any of the bullets above.

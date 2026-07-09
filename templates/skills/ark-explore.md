@@ -69,6 +69,8 @@ For each opportunity: **impact × effort × enforceability** (can the gate hold 
 Kinds: `risk` | `false-green` | `debt` | `opportunity` | `shape` | `manifiesto` | `agent-dx`
 
 5. **Top 3 bets** — if the user says “go”, which skill runs first and why.
+   On false-green dominant: **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
+   On concentrated edge dominant: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
 6. **Deterministic residue** — if plan has steps, point to `/ark-loop` / `/ark-fix` without claiming they are the whole architecture story.
 
 ## Done criteria
@@ -77,3 +79,17 @@ Kinds: `risk` | `false-green` | `debt` | `opportunity` | `shape` | `manifiesto` 
 - At least **3 suggestive** rows (not only “fix violation X”).
 - Clear handoff: `/ark-adopt` | `/ark-contract` | `/ark-autopilot` | `/ark-loop` | stop.
 - No gate weakening; no false ENFORCE claim.
+
+## Completion contract (skill incomplete if missing)
+
+End with **exactly** these headings (markdown `###`):
+
+### Completion
+- **Sensor:** commands/tools run
+- **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
+- **Result:** one-line outcome
+- **Handoff:** `/ark-…` / CLI / `none`
+- **Incomplete?** `no` | `yes — <what is missing>`
+
+If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
+**Skill incomplete if missing** any of the bullets above.

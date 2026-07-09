@@ -62,6 +62,8 @@ or false-green doctor gaps are open.
 7. **Governed%** + unclassified + `suggestions` from `--coverage --json`.
 8. Concentrated edges in check `summary` → contract smell, not N freezes.
 9. `layersWithoutRules` + empty cores with I/O under Application (false-green).
+    On false-green: **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
+    On one-edge wall: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
 10. Runtime kernel / Nest only if deps prove it — never force-fit Next+Python.
 
 ## Deep code pass (exploratory — the model job)
@@ -93,3 +95,17 @@ Kinds: `debt` | `false-green` | `shape` | `manifiesto` | `gates` | `opportunity`
 - At least one **Así te lo re-soluciono** block with real paths.
 - At least **two** exploratory suggestions (not only CLI residual debt).
 - CLI numbers used as evidence, not as the whole report.
+
+## Completion contract (skill incomplete if missing)
+
+End with **exactly** these headings (markdown `###`):
+
+### Completion
+- **Sensor:** commands/tools run
+- **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
+- **Result:** one-line outcome
+- **Handoff:** `/ark-…` / CLI / `none`
+- **Incomplete?** `no` | `yes — <what is missing>`
+
+If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
+**Skill incomplete if missing** any of the bullets above.
