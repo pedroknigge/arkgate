@@ -188,14 +188,22 @@ export async function loadTypeScript(root) {
   return null;
 }
 
-export function packageManager(root) {
-  // If the project already froze violations in a baseline, the generated CI must
-  // keep the ratchet — otherwise regenerating the workflow (especially with
-  // --force) silently drops --baseline and CI starts failing on frozen violations.
+/**
+ * Args for every emitted `ark-check` (AGENTS.md, package.json, Cursor rule, CI).
+ * If `.ark-baseline.json` exists, include `--baseline` so agent/local/CI paths
+ * match the ratchet — otherwise agents re-fail on frozen debt (field-test bug).
+ */
+export function checkArgsForRoot(root, { requireGates = false } = {}) {
   const baselineFlag = fs.existsSync(path.join(root, '.ark-baseline.json'))
     ? ' --baseline .ark-baseline.json'
     : '';
-  const checkArgs = `--root . --config ark.config.json --strict-config${baselineFlag} --require-gates`;
+  const gatesFlag = requireGates ? ' --require-gates' : '';
+  return `--root . --config ark.config.json --strict-config${baselineFlag}${gatesFlag}`;
+}
+
+export function packageManager(root) {
+  // CI always require-gates; baseline follows checkArgsForRoot.
+  const checkArgs = checkArgsForRoot(root, { requireGates: true });
   // Same detection as every emitted command (execRunner): honors the packageManager field and
   // won't let a stray pnpm-lock.yaml hijack an npm project (package-lock.json wins the tie).
   const pm = detectPackageManager(root);
@@ -224,12 +232,10 @@ export function packageManager(root) {
   };
 }
 
-// The args every emitted `ark-check` command carries. The runner prefix (npx / pnpm exec /
-// yarn) is added per project by arkCheckCommand so a pnpm-only repo never gets an `npx`
-// instruction — see execRunner() in ark-shared.mjs.
-const CHECK_ARGS = '--root . --config ark.config.json --strict-config';
+// The runner prefix (npx / pnpm exec / yarn) is added per project by arkCheckCommand
+// so a pnpm-only repo never gets an `npx` instruction — see execRunner() in ark-shared.mjs.
 export function arkCheckCommand(root) {
-  return arkCommand(root, 'ark-check', CHECK_ARGS);
+  return arkCommand(root, 'ark-check', checkArgsForRoot(root));
 }
 
 // Canonical agent contract. AGENTS.md and the Cursor rule both derive from this single
@@ -473,11 +479,15 @@ args = [${argsToml}]
 `;
 }
 
-// Grok Build hooks: same arkgate-mcp contracts as Claude. Grok sets CLAUDE_PROJECT_DIR as
-// an alias for GROK_WORKSPACE_ROOT. Matcher keeps Claude names (Write|Edit|MultiEdit)
-// and Grok natives (write|search_replace) — Grok aliases both directions.
+// Grok Build hooks: same arkgate-mcp contracts as Claude. Grok sets both
+// GROK_WORKSPACE_ROOT and CLAUDE_PROJECT_DIR (Claude-compatible alias). Prefer
+// GROK_* with fallback so hooks still work if only one is present.
+// Matcher keeps Claude names (Write|Edit|MultiEdit) and Grok natives
+// (write|search_replace) — Grok aliases both directions.
 export function grokHooks(root) {
   const runner = execRunner(root);
+  // Nested defaults: Grok native → Claude alias → project cwd (hook cwd is the workspace).
+  const grokRoot = '${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}';
   return `${JSON.stringify({
     hooks: {
       SessionStart: [
@@ -486,7 +496,7 @@ export function grokHooks(root) {
             {
               type: 'command',
               timeout: 30,
-              command: `${runner} ${PREFERRED_MCP_BIN} --session-context --root "$CLAUDE_PROJECT_DIR" --config ark.config.json`,
+              command: `${runner} ${PREFERRED_MCP_BIN} --session-context --root "${grokRoot}" --config ark.config.json`,
             },
           ],
         },
@@ -498,7 +508,7 @@ export function grokHooks(root) {
             {
               type: 'command',
               timeout: 30,
-              command: `${runner} ${PREFERRED_MCP_BIN} --hook --root "$CLAUDE_PROJECT_DIR" --config ark.config.json`,
+              command: `${runner} ${PREFERRED_MCP_BIN} --hook --root "${grokRoot}" --config ark.config.json`,
             },
           ],
         },

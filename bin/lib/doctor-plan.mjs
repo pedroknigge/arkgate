@@ -400,7 +400,15 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   console.log('');
   console.log(color.bold('Violations'));
   if (violations.length === 0) {
-    line(ok, 'None — the code matches the contract');
+    // Avoid false confidence when the contract barely covers the tree.
+    if (emptyScope || cov.governed.percent < 50) {
+      line(
+        warn,
+        'No active violations — coverage is still thin, so green is not yet honest enforcement'
+      );
+    } else {
+      line(ok, 'None — the code matches the contract');
+    }
   } else {
     const typeNote = summary.typeOnlyCount > 0 ? ` (${summary.valueCount} value · ${summary.typeOnlyCount} type-only)` : '';
     const supNote = suppressed > 0 ? `, ${suppressed} frozen` : '';

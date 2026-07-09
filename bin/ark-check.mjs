@@ -134,6 +134,8 @@ function parseArgs(argv) {
     applyPolicyPack: undefined,
     watch: false,
     beginner: false,
+    version: false,
+    help: false,
   };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -189,13 +191,25 @@ function parseArgs(argv) {
     else if (arg === '--print-config') args.printConfig = argv[++i];
     else if (arg === '--tsconfig') args.tsconfig = argv[++i];
     else if (arg === '--help' || arg === '-h') args.help = true;
+    else if (arg === '--version' || arg === '-V') args.version = true;
   }
   return args;
 }
 
+/** Path shown to humans: project-relative when inside root, absolute otherwise (no `../../..`). */
+function displayPathFromRoot(root, absPath) {
+  const rel = path.relative(root, absPath);
+  if (!rel || rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) {
+    return absPath;
+  }
+  return rel.split(path.sep).join('/');
+}
+
 function usage() {
   return [
-    'Usage: ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--require-gates] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
+    'Usage: arkgate-check | ark-check  (identical bins; product name ArkGate)',
+    '       ark-check --version',
+    '       ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--require-gates] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
     '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
     '       ark-check --plan [--json]              classified remediation plan (mechanical-safe / judgment / deferred) + goal; report only',
     '       ark-check --recommend [--json] [--write-plan]  application-shape plan; --write-plan emits ark-adoption-plan.json',
@@ -1459,6 +1473,10 @@ function moduleSpecifierFromCall(ts, node) {
 
 async function main() {
   const args = parseArgs(process.argv);
+  if (args.version) {
+    console.log(arkPackageVersion());
+    process.exit(0);
+  }
   if (args.help) {
     console.log(usage());
     return;
@@ -1937,11 +1955,10 @@ async function main() {
       noArchive: Boolean(args.noArchive),
     });
     if (!args.json) {
-      const rel = path.relative(root, reportPath) || reportPath;
-      console.log(`${color.green('✎')} Wrote HTML report: ${rel}`);
+      console.log(`${color.green('✎')} Wrote HTML report: ${displayPathFromRoot(root, reportPath)}`);
       if (archive.createdOrigin) {
         console.log(
-          `${color.green('✎')} Origin snapshot saved (first report): ${path.relative(root, archive.originJson) || archive.originJson}`
+          `${color.green('✎')} Origin snapshot saved (first report): ${displayPathFromRoot(root, archive.originJson)}`
         );
         console.log(
           color.dim('  Future reports will show evolution vs this starting point (.ark/reports/).')

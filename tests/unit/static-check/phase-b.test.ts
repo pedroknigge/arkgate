@@ -102,6 +102,23 @@ describe('Phase B — doctor New here?', () => {
     expect(shouldShowNewHereNudge(root, configPath, 30, false)).toBe(true);
     expect(shouldShowNewHereNudge(root, configPath, 90, false)).toBe(false);
   });
+
+  it('does not claim honest green when coverage is thin and there are no violations', () => {
+    const root = mkTemp('ark-phaseb-thin-');
+    fs.mkdirSync(path.join(root, 'src/components'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/components/ui.ts'), 'export const x = 1;\n');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/domain/**'], optional: true }],
+        rules: [],
+      })
+    );
+    const out = runArkCheckRaw(root, ['--doctor', '--config', 'ark.config.json']);
+    expect(out).toMatch(/coverage is still thin|not yet honest enforcement/i);
+    expect(out).not.toContain('None — the code matches the contract');
+  });
 });
 
 describe('Phase B — violation fix-class JSON', () => {
@@ -187,6 +204,19 @@ describe('HTML showcase report', () => {
     expect(fs.existsSync(path.join(root, '.ark/reports/origin.json'))).toBe(true);
     expect(fs.existsSync(path.join(root, '.ark/reports/latest.json'))).toBe(true);
     expect(fs.readFileSync(path.join(root, '.gitignore'), 'utf8')).toContain('.ark/');
+  });
+
+  it('prints absolute report path when the file is outside the project root', () => {
+    const root = mkTemp('ark-report-abs-');
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/domain/order.ts'), 'export const a = 1;\n');
+    fs.writeFileSync(path.join(root, 'ark.config.json'), TWO_LAYER_CONFIG);
+    const outside = path.join(os.tmpdir(), `ark-out-report-${Date.now()}.html`);
+    const out = runArkCheckRaw(root, ['--config', 'ark.config.json', '--report', outside]);
+    expect(out).toContain(`Wrote HTML report: ${outside}`);
+    expect(out).not.toMatch(/Wrote HTML report: \.\.\//);
+    expect(fs.existsSync(outside)).toBe(true);
+    fs.unlinkSync(outside);
   });
 
   it('freezes origin and shows evolution deltas on later reports', () => {

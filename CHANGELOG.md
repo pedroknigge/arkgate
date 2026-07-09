@@ -14,6 +14,20 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
   `tests/unit/static-check/layerMatchParity.test.ts` locks both implementations.
 - Dual-driver ESLint/CI tests retained.
 
+### Fixed — field test (Codex + Grok on random repos)
+
+- **`--report` path display:** absolute report paths no longer print as brittle
+  `../../../../tmp/...` relatives; paths outside the project root print absolute.
+- **`ark-check --help`:** documents dual bins `arkgate-check | ark-check`.
+- **`ark-check --version` / `-V`:** prints package version (no longer runs a full check).
+- **Doctor thin-coverage honesty:** when there are zero violations but governed &lt; 50%
+  (or empty scope), doctor no longer claims “code matches the contract”; it warns that
+  green is not yet honest enforcement.
+- **Grok write-gate hooks:** root env
+  `${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}` (Grok → Claude alias → cwd).
+- **AGENTS / package / Cursor check command:** if `.ark-baseline.json` exists, emitted
+  `ark-check` commands include `--baseline .ark-baseline.json` (same ratchet as CI).
+
 ## 2.5.0 — 2026-07-09
 
 ### Added — ESLint ↔ CI layer parity
