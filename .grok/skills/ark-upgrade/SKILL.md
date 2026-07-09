@@ -48,6 +48,14 @@ HTML reports include the same Adoption card (separate from the 0–100 fitness s
 
 The CLI is a **sensor**, never the whole job. Claiming done without the exploratory bar for this skill is **incomplete**.
 
+
+## Subagent fan-out (optional, host-dependent)
+
+If the host supports **parallel subagents** and the task splits cleanly (e.g. multiple
+dirs to sample), fan out read-only scouts; otherwise **fall back to sequential**.
+Parent merges and still emits the **### Completion** contract. Never parallel-write
+the same files or weaken the gate.
+
 ## Fast path
 
 One command does the whole flow — update the package, refresh gates + `/ark-*` skills

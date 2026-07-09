@@ -21,6 +21,14 @@ kernel, one feature at a time.
 
 The CLI is a **sensor**, never the whole job. Claiming done without the exploratory bar for this skill is **incomplete**.
 
+
+## Subagent fan-out (optional, host-dependent)
+
+If the host supports **parallel subagents** and the task splits cleanly (e.g. multiple
+dirs to sample), fan out read-only scouts; otherwise **fall back to sequential**.
+Parent merges and still emits the **### Completion** contract. Never parallel-write
+the same files or weaken the gate.
+
 ## Steps
 
 1. **Inventory** — grep the codebase for hand-rolled equivalents:

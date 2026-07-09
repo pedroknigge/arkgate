@@ -16,6 +16,9 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
   wrong skill) use `STOP — do not continue this skill as complete` + named next skill.
 - **AGENTS skill routing table:** trigger → skill map in generated `AGENTS.md` while
   keeping `/ark-autopilot` as the default when unsure.
+- **Subagent fan-out protocol:** every `/ark-*` skill documents optional **parallel
+  subagents** when the host supports them (disjoint read-only scopes + parent merge);
+  otherwise **fall back to sequential**. AGENTS.md repeats the rule.
 
 ### Changed
 

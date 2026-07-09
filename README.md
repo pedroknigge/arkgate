@@ -148,6 +148,8 @@ Install once: `npx arkgate-check --install-agent-gates`
 Generated `AGENTS.md` includes a **skill routing table** (trigger → skill). Skills are
 **dual-engine** (CLI sensor + read real source) and end with a fixed **completion contract**;
 critical handoffs say **STOP** and name the next skill (hosts must follow — markdown cannot chain calls).
+When the host allows it, skills may **fan out parallel subagents** (disjoint scopes);
+otherwise they **fall back to sequential**.
 
 | Need | Skill |
 |------|--------|

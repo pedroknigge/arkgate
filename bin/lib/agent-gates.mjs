@@ -474,6 +474,12 @@ export function agentInstructions(root) {
 Skills are **dual-engine**: deterministic CLI sensors + exploratory read of *this* repo — not JSON-only wrappers.
 When a skill says **STOP — do not continue this skill as complete**, stop and invoke the named handoff skill.
 
+### Subagent fan-out
+If the host supports **parallel subagents**, skills may ask you to fan out **read-only**
+scouts (disjoint path scopes) and merge in the parent. If the host does **not**,
+**fall back to sequential** — one cluster/step at a time. Never parallel-write the same
+files; never weaken the gate via subagents.
+
 ## Skill routing (triggers → skill)
 
 | When | Invoke |

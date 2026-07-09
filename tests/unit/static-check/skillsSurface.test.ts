@@ -88,6 +88,14 @@ describe('skill dual-engine + completion contract', () => {
       expect(body, name).toMatch(/STOP — false-green:|STOP — concentrated edge:/);
     }
   });
+
+  it('every skill documents subagent fan-out with sequential fallback', () => {
+    for (const name of EXPECTED_SKILLS) {
+      const body = fs.readFileSync(path.join(SKILLS_DIR, `${name}.md`), 'utf8');
+      expect(body, name).toContain('## Subagent fan-out (optional, host-dependent)');
+      expect(body.toLowerCase(), name).toMatch(/fall back to sequential/);
+    }
+  });
 });
 
 describe('agentInstructions routing table', () => {
@@ -103,5 +111,7 @@ describe('agentInstructions routing table', () => {
     expect(text).toContain('dual-engine');
     // default when unsure stays autopilot
     expect(text).toMatch(/if unsure[\s\S]*\/ark-autopilot/i);
+    expect(text).toMatch(/Subagent fan-out/i);
+    expect(text.toLowerCase()).toMatch(/fall back to sequential/);
   });
 });

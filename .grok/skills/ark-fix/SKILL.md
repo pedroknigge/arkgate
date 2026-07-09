@@ -18,6 +18,24 @@ the two files on the violation edge.
 | **Deterministic** | Violation list, plan kinds, post-edit `ark-check` |
 | **Exploratory** | Why this edge exists in *this* product; better home; manifiesto if the rule is business |
 
+
+## Subagent fan-out (optional, host-dependent)
+
+When the user asks to go faster **or** the work naturally splits (multiple packages,
+feature dirs, plan clusters), you **may** dispatch **subagents**:
+
+| Host capability | Behavior |
+|-----------------|----------|
+| **Parallel subagents supported** (e.g. multi-agent / `spawn_subagent` / concurrent Agent tools) | Launch **2–N** agents in **one wave** with **disjoint path scopes**. Prefer **read-only** explore agents for mapping; at most **one writer** unless the host gives isolated worktrees. Parent merges findings, then runs `ark-check` once. |
+| **Not supported** (single agent only) | **Fall back to sequential** — same checklist, one cluster/step at a time. Never claim parallel work you did not run. |
+
+**Rules:**
+1. Give each subagent a **tight brief**: paths in scope, sensor commands allowed, deliverable shape (paths opened + findings JSON or bullets).
+2. **No shared mutable files** across parallel writers.
+3. STOP handoffs and dual-engine rules still apply in every agent.
+4. Parent owns the **### Completion** block (union of **Opened**, single **Handoff**).
+5. Do **not** use subagents to weaken the gate or invent `mechanical-safe` kinds.
+
 ## Related onboarding
 
 - **Greenfield:** `/ark-architect` or `ark-check --recommend` / `ark start`.
