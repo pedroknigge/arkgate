@@ -3,7 +3,7 @@
  *
  * ```ts
  * import { ArkModule, InjectArk } from 'arkgate/nestjs';
- * import type { ArkKernel } from 'arkgate';
+ * import type { ArkKernel } from 'arkgate/runtime';
  *
  * @Module({ imports: [ArkModule.forRoot()] })
  * export class AppModule {}

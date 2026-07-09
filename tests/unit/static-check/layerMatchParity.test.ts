@@ -1,6 +1,6 @@
 /**
- * Structural single-source lock: bin/ark-layer-match.mjs (CLI) and
- * src/domain/layerMatch.ts (library/eslint) must agree on classification.
+ * Safety net: domain canonical (TS) and CLI derived (generated ESM) must agree.
+ * Drift of the generated file is enforced separately by `npm run check:layer-match`.
  */
 import { describe, it, expect } from 'vitest';
 import path from 'node:path';
@@ -17,7 +17,7 @@ import {
 
 const binUrl = pathToFileURL(path.resolve('bin/ark-layer-match.mjs')).href;
 
-describe('layer-match parity (domain TS ↔ bin ESM)', async () => {
+describe('layer-match parity (domain TS ↔ generated bin ESM)', async () => {
   const bin = await import(binUrl);
 
   const layers = [

@@ -5,6 +5,10 @@
  * TypeScript repos and agents. Optional runtime kernel is not the product.
  * npm package: `arkgate` (formerly `ark-runtime-kernel`).
  *
+ * **Runtime kernel (opt-in):** prefer `import { … } from 'arkgate/runtime'`.
+ * This root barrel still re-exports kernel symbols for compatibility within
+ * this major — see `docs/package-surface.md`.
+ *
  * @packageDocumentation
  */
 

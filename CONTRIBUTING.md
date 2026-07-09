@@ -13,7 +13,16 @@ npx vitest run       # full test suite (npm test starts watch mode)
 npm run typecheck
 npx arkgate-check --root . --config ark.config.json --strict-config
 npm run check:architecture   # ArkGate dogfoods itself
+npm run check:layer-match    # derived bin/ark-layer-match.mjs must match domain source
+npm run check:cli-pure       # remediation + baselineKey derived helpers in sync
 npm run test:ts-compat       # consumer matrix TS 5.9 / 6.0 / 7.0 (optional, slower)
+```
+
+After editing pure Domain algorithms, regenerate CLI artifacts:
+
+```bash
+npm run generate:layer-match   # src/domain/layerMatch.ts
+npm run generate:cli-pure      # src/domain/remediation.ts + baselineKey.ts
 ```
 
 Node >= 18. **Runtime dependencies stay minimal:** only `typescript` (JS-API host for the gate when the project ships TypeScript 7’s version-only main export). Do not add other production deps without discussion. NestJS and similar stay optional `peerDependencies` + devDependencies.

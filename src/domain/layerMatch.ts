@@ -1,8 +1,10 @@
 /**
  * Pure layer-glob matching for ark.config.json.
- * Single TypeScript source of truth for the library (eslint / kernel consumers).
- * CLI re-exports the identical algorithm from `bin/ark-layer-match.mjs` — keep in
- * lockstep via tests/unit/static-check/layerMatchParity.test.ts.
+ *
+ * **Canonical algorithm** for CLI, ESLint, and library consumers.
+ * The CLI load path uses the generated `bin/ark-layer-match.mjs`
+ * (`npm run generate:layer-match` / `npm run check:layer-match`).
+ * Behavioral parity tests remain a safety net.
  */
 
 export type LayerConfig = {
@@ -18,6 +20,32 @@ const regexpCache = new Map<string, RegExp>();
 
 function escapeLiteral(ch: string): string {
   return /[.*+?^${}()|[\]\\]/.test(ch) ? `\\${ch}` : ch;
+}
+
+/**
+ * Normalize path separators to `/` without destroying glob escape sequences.
+ * `src\domain\x` → `src/domain/x` (Windows paths); `src/\{legacy\}/**` keeps `\{` / `\}`.
+ * A plain `pattern.split('\\').join('/')` would eat those escapes.
+ */
+function normalizeGlobSeparators(pattern: string): string {
+  let out = '';
+  for (let i = 0; i < pattern.length; i += 1) {
+    const c = pattern[i];
+    if (c === '\\' && i + 1 < pattern.length) {
+      const next = pattern[i + 1];
+      // Keep escapes for glob metacharacters (and escaped backslash).
+      if ('*?{}[],'.includes(next) || next === '\\') {
+        out += '\\' + next;
+        i += 1;
+        continue;
+      }
+      // Otherwise treat `\` as a path separator (Windows).
+      out += '/';
+      continue;
+    }
+    out += c;
+  }
+  return out;
 }
 
 function bracesBalanced(glob: string): boolean {
@@ -41,7 +69,7 @@ export function globToRegExp(pattern: string): RegExp {
   const cached = regexpCache.get(pattern);
   if (cached) return cached;
 
-  const glob = pattern.split('\\').join('/');
+  const glob = normalizeGlobSeparators(pattern);
   const useBraces = bracesBalanced(glob);
   let out = '';
   let braceDepth = 0;
@@ -82,7 +110,7 @@ export function globToRegExp(pattern: string): RegExp {
 }
 
 export function patternSpecificity(pattern: string): number {
-  const glob = String(pattern).split('\\').join('/');
+  const glob = normalizeGlobSeparators(String(pattern));
   const beforeWildcard = glob.split('*')[0];
   const literalSegments = beforeWildcard.split('/').filter(Boolean).length;
   const literalLength = glob.replace(/\*/g, '').length;
@@ -93,7 +121,8 @@ export function layerForRelativePath(
   relPath: string,
   layers: LayerConfig[] | undefined
 ): string | undefined {
-  const rel = String(relPath).split('\\').join('/');
+  // File paths (not globs): any OS separator → posix relative.
+  const rel = String(relPath).split(/[/\\]/).join('/');
   let bestName: string | undefined;
   let bestScore = -1;
   for (const layer of layers ?? []) {
@@ -123,7 +152,7 @@ export function isEdgeDenied(
   return hit?.allowed === false;
 }
 
-/** Codegen globs skipped by default scan — keep in lockstep with bin/ark-layer-match.mjs. */
+/** Codegen globs skipped by default scan (emitted into the CLI derived matcher). */
 export const DEFAULT_GENERATED_FILE_GLOBS = [
   '**/*.gen.ts',
   '**/*.gen.tsx',

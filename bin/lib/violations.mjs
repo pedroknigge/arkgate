@@ -10,15 +10,9 @@ const color = {
   bold: (s) => (useColor ? `\x1b[1m${s}\x1b[0m` : s),
 };
 
-export function baselineKey(violation) {
-  return [
-    violation.ruleId,
-    violation.file,
-    violation.fromLayer ?? '',
-    violation.toLayer ?? '',
-    violation.target ?? '',
-  ].join('|');
-}
+/** Canonical: src/domain/baselineKey.ts → bin/lib/baseline-key.mjs (R4). */
+import { baselineKey } from './baseline-key.mjs';
+export { baselineKey };
 
 export function readBaseline(root, baselinePath) {
   const fullPath = path.isAbsolute(baselinePath) ? baselinePath : path.join(root, baselinePath);

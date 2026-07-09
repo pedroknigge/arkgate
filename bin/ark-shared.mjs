@@ -380,7 +380,7 @@ export function collectForbiddenGlobalUses(ts, sourceFile, forbidden) {
   return uses;
 }
 
-// Layer glob matching — single source of truth in ark-layer-match.mjs (also used by ESLint).
+// Layer glob matching — generated from canonical src/domain/layerMatch.ts (see generate:layer-match).
 export {
   globToRegExp,
   patternSpecificity,
@@ -431,102 +431,15 @@ export function looksLikeIntent(value) {
 }
 
 /**
- * Co-pilot Phase F — the work classifier. Every architecture violation is remediated in one of
- * three ways, and this is the TRUST BOUNDARY that decides what an agent may auto-apply:
- *
- *   - 'mechanical-safe' : behavior-preserving AND gate-verifiable → an agent may auto-apply it.
- *   - 'judgment'        : real coupling or a design choice → Ark PROPOSES it, a human decides.
- *   - 'deferred'        : not enough signal to place it → a human should look first.
- *
- * Deliberately biased toward 'judgment': a false 'mechanical-safe' that auto-lands a bad edit
- * is the failure mode that sinks trust. Only statically-provable type-surface fixes earn 'auto':
- *   (1) whole source file is pure type-surface + type-only edge → relocate the file
- *   (2) import/export already marked type-only → move/re-export the type
- *   (3) static value-syntax import of a pure type-only *target* module → import type
- * Pure function of one violation object so CLI, MCP, and apply-loop classify identically.
- * Returns { class, confidence, rationale, remediationKind? }.
+ * Co-pilot Phase F — work classifier + fix-class enrich (R4).
+ * Canonical TypeScript: src/domain/remediation.ts
+ * Generated CLI load path: bin/lib/remediation.mjs (`npm run generate:cli-pure`).
  */
-export const REMEDIATION_CLASSES = ['mechanical-safe', 'judgment', 'deferred'];
-
-export function classifyRemediation(violation) {
-  const ruleId = violation?.ruleId;
-  if (ruleId === 'LAYER_IMPORT_VIOLATION') {
-    // Pure type-only *source file* with a type-only edge: relocating the whole file is
-    // behavior-preserving (no runtime body). Distinct from a single import-type move.
-    if (violation.typeOnly && violation.sourcePureTypeModule) {
-      return {
-        class: 'mechanical-safe',
-        confidence: 0.88,
-        remediationKind: 'pure-type-file-relocate',
-        rationale:
-          'Whole source file is type-only surface (no runtime statements) with a type-only cross-layer edge: relocate the file to the owning layer (or extract the type there). Behavior-preserving; gate verifies.',
-      };
-    }
-    if (violation.typeOnly) {
-      return {
-        class: 'mechanical-safe',
-        confidence: 0.9,
-        remediationKind: 'type-only-import-move',
-        rationale:
-          'Type-only import (erased at runtime): move the type to the layer that owns it and re-export for back-compat. Behavior-preserving, and the gate verifies it.',
-      };
-    }
-    // Target module is a pure type-surface file AND the edge is a static import/export
-    // (flag only set on those edges). Value-syntax `import { T }` → convert to import type.
-    // require()/import() never get this flag (runtime load). Mixed modules stay judgment.
-    if (violation.targetTypeOnlyExports) {
-      const kind = violation.edgeKind;
-      if (kind === 'require' || kind === 'dynamic-import') {
-        return {
-          class: 'judgment',
-          confidence: 0.75,
-          rationale:
-            'Runtime module load (require/import()) of a type-only module still executes the target file — not auto-safe; rewrite to a static import type if appropriate.',
-        };
-      }
-      return {
-        class: 'mechanical-safe',
-        confidence: 0.85,
-        remediationKind: 'import-type-from-pure-type-module',
-        rationale:
-          'Static import targets a pure type-only module: convert to `import type` (erased at runtime) and place the type in a shared/owning layer. No runtime coupling; gate verifies.',
-      };
-    }
-    return {
-      class: 'judgment',
-      confidence: 0.7,
-      rationale:
-        'Value import — real runtime coupling. Relocating it (e.g. a route reaching the DB → a repository) is a refactor whose organization is a human choice.',
-    };
-  }
-  if (ruleId === 'FORBIDDEN_GLOBAL') {
-    return {
-      class: 'judgment',
-      confidence: 0.8,
-      rationale:
-        'Ambient global in a pure layer: inject the capability through a port (Clock, Config, Http). Introducing the port is a design decision.',
-    };
-  }
-  if (ruleId === 'CIRCULAR_DEPENDENCY') {
-    return {
-      class: 'judgment',
-      confidence: 0.7,
-      rationale: 'Dependency cycle: breaking it means deciding which side owns the shared abstraction.',
-    };
-  }
-  if (typeof ruleId === 'string' && ruleId.length > 0) {
-    return {
-      class: 'judgment',
-      confidence: 0.6,
-      rationale: 'Needs a human decision on how to satisfy the contract without weakening the gate.',
-    };
-  }
-  return {
-    class: 'deferred',
-    confidence: 0.3,
-    rationale: 'Unrecognized violation shape — a human should look before anything is changed.',
-  };
-}
+export {
+  REMEDIATION_CLASSES,
+  classifyRemediation,
+  enrichViolationWithFixClass,
+} from './lib/remediation.mjs';
 
 /**
  * Normalize a required/imported TypeScript module for ark-check's host.
@@ -1545,69 +1458,6 @@ export function shouldShowNewHereNudge(root, configPath, governedPercent, config
     }
   }
   return false;
-}
-
-/**
- * Deterministic fix-class labels for JSON output (English, shared with future skills).
- */
-export function enrichViolationWithFixClass(violation) {
-  const enriched = { ...violation };
-  switch (violation.ruleId) {
-    case 'LAYER_IMPORT_VIOLATION':
-      if (violation.typeOnly || violation.targetTypeOnlyExports) {
-        enriched.fixClass = 'file-move';
-        enriched.effort = 'small';
-        enriched.enthusiastHint = violation.targetTypeOnlyExports
-          ? 'The imported module only exports types — use `import type` and place the type in a layer both sides may share.'
-          : 'This is a type-only import — move the type to a layer both sides may share, or relocate the file to match its role.';
-      } else {
-        enriched.fixClass = 'port-inversion';
-        enriched.effort = 'medium';
-        enriched.enthusiastHint = `${violation.fromLayer ?? 'This layer'} must not import ${violation.toLayer ?? 'that layer'} directly. Define an interface (port) where you need the capability and inject the implementation from the outer layer.`;
-      }
-      break;
-    case 'FORBIDDEN_GLOBAL':
-      enriched.fixClass = 'inject-port';
-      enriched.effort = 'small';
-      enriched.enthusiastHint = `Do not call "${violation.target ?? 'that global'}" here. Pass the capability in through a small interface (for example a Clock, HttpPort, or Config provider).`;
-      break;
-    case 'RAW_EVENT_PUBLISH':
-      enriched.fixClass = 'registered-intent';
-      enriched.effort = 'small';
-      enriched.enthusiastHint =
-        'Register the event intent first, then publish through the creator returned by the registry — not a raw string or object.';
-      break;
-    case 'PUBLISH_MISSING_SOURCE':
-      enriched.fixClass = 'add-source-metadata';
-      enriched.effort = 'small';
-      enriched.enthusiastHint =
-        'Add metadata.source to the publish call so Ark knows which layer is publishing the event.';
-      break;
-    case 'PUBLISH_SOURCE_LAYER_MISMATCH':
-      enriched.fixClass = 'fix-source-layer';
-      enriched.effort = 'small';
-      enriched.enthusiastHint =
-        'Use a source intent that belongs to the same layer as this file, or move the publish call to the layer that owns the source.';
-      break;
-    case 'LAYER_INTENT_REFERENCE_VIOLATION':
-      enriched.fixClass = 'intent-relocation';
-      enriched.effort = 'small';
-      enriched.enthusiastHint =
-        'Reference that intent from a layer allowed to know about it — usually an adapter or application layer, not the domain core.';
-      break;
-    case 'CIRCULAR_DEPENDENCY':
-      enriched.fixClass = 'break-cycle';
-      enriched.effort = 'medium';
-      enriched.enthusiastHint =
-        'Two modules import each other in a loop. Extract shared code, invert one dependency behind a port, or merge them if they are really one unit.';
-      break;
-    default:
-      enriched.fixClass = 'review-contract';
-      enriched.effort = 'small';
-      enriched.enthusiastHint =
-        'Read the violation message and the layer rules in ark.config.json, then adjust imports or move code to the correct layer.';
-  }
-  return enriched;
 }
 
 export function formatArchitectureRecommendationHuman(recommendation) {

@@ -1,6 +1,6 @@
 {
   "name": "arkgate",
-  "version": "2.6.1",
+  "version": "2.7.0",
   "description": "ArkGate — architecture co-pilot for AI TypeScript (write gate, CI gate, plan/loop)",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -11,6 +11,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./runtime": {
+      "types": "./dist/runtime/index.d.ts",
+      "import": "./dist/runtime/index.js",
+      "require": "./dist/runtime/index.cjs"
     },
     "./eslint": {
       "types": "./dist/eslint/index.d.ts",
@@ -46,6 +51,7 @@
     "docs/ark-check-example.json",
     "docs/assets",
     "docs/brownfield-adoption.md",
+    "docs/package-surface.md",
     "docs/production-hardening.md",
     "tests/fixtures/ts-consumer",
     "templates",
@@ -63,6 +69,10 @@
     "typecheck": "tsc --noEmit",
     "security:audit": "npm audit --omit=dev --audit-level=high",
     "check:architecture": "node bin/ark-check.mjs --root . --config ark.config.json --strict-config",
+    "generate:layer-match": "node scripts/generate-layer-match.mjs",
+    "check:layer-match": "node scripts/generate-layer-match.mjs --check",
+    "generate:cli-pure": "node scripts/generate-cli-pure.mjs",
+    "check:cli-pure": "node scripts/generate-cli-pure.mjs --check",
     "test:ts-compat": "node scripts/ts-compat-matrix.mjs 5.9.3 && node scripts/ts-compat-matrix.mjs 6.0.3 && node scripts/ts-compat-matrix.mjs 7.0.2",
     "eval:agent": "node eval/run.mjs",
     "eval:comparative": "node eval/comparative-run.mjs",

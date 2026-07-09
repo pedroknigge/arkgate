@@ -218,12 +218,16 @@ CI (example):
 
 ## Optional: runtime kernel
 
-Gates need **no app code changes**. If you also want runtime intent/event contracts:
+Gates need **no app code changes**. If you also want runtime intent/event contracts,
+use the **opt-in** subpath (preferred):
 
 ```ts
-import { createStrictArkKernelFromConfig } from 'arkgate';
-// see docs/production-hardening.md and package exports
+import { createStrictArkKernelFromConfig } from 'arkgate/runtime';
+// see docs/production-hardening.md and docs/package-surface.md
 ```
+
+Root `import { … } from 'arkgate'` still re-exports kernel symbols for compatibility
+in this major; prefer `arkgate/runtime` for new code.
 
 NestJS: `arkgate/nestjs` (optional peer `@nestjs/common`).
 
@@ -234,6 +238,7 @@ NestJS: `arkgate/nestjs` (optional peer `@nestjs/common`).
 | Audience | Link |
 |----------|------|
 | New builders (plain language) | [docs/enthusiast/](docs/enthusiast/README.md) |
+| **Package surface (stable vs opt-in)** | [docs/package-surface.md](docs/package-surface.md) |
 | Wire Claude / Cursor / Codex / Grok + **ESLint (CI-parity)** | [docs/ai-gates.md](docs/ai-gates.md) |
 | **TypeScript 5 / 6 / 7 support** | [docs/typescript-support.md](docs/typescript-support.md) |
 | Migrate from `ark-runtime-kernel` | [docs/migrate-from-ark-runtime-kernel.md](docs/migrate-from-ark-runtime-kernel.md) |

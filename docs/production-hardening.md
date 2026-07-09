@@ -1,5 +1,8 @@
 # Production Hardening
 
+The optional runtime kernel is imported from **`arkgate/runtime`** (preferred). See
+[package-surface.md](package-surface.md).
+
 Ark's built-in stores are intentionally in-memory defaults. They are appropriate for tests,
 local development, examples, and single-process demos. Production systems should provide
 stores that match their durability, ordering, retention, and operational requirements.

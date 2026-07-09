@@ -27,6 +27,14 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # R1: bin/ark-layer-match.mjs must be regenerated from src/domain/layerMatch.ts
+      - name: Layer-match derived artifact (drift guard)
+        run: npm run check:layer-match
+
+      # R4: remediation + baselineKey pure helpers generated from Domain TS
+      - name: CLI pure helpers derived artifacts (drift guard)
+        run: npm run check:cli-pure
+
       - name: Test
         run: npm run test:run
 

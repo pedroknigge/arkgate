@@ -21,14 +21,21 @@ Before editing TypeScript or JavaScript source files:
 | Layer | Directories | Notes |
 |-------|-------------|-------|
 | DomainModel | `src/domain/` | Pure types and invariants. `fetch`, `process`, `Date.now`, `Math.random` are forbidden globals here — inject a port instead. |
-| Kernel | `src/kernel/`, `src/index.ts`, `src/version.ts` | The library itself. May depend on DomainModel only. |
+| Kernel | `src/kernel/`, `src/runtime/`, `src/index.ts`, `src/version.ts` | The library itself (+ `arkgate/runtime` entry). May depend on DomainModel only. |
 | Tooling | `src/eslint/` | ESLint plugin. May import **DomainModel only** (pure layer-match helpers). Not Kernel. |
 | FrameworkAdapters | `src/nestjs/` | Optional NestJS integration. May depend on Kernel only. |
 
 The CLIs (`bin/*.mjs`, `bin/lib/*.mjs`) run standalone and must not import from `src/`
 or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
-`bin/ark-shared.mjs` and `bin/ark-layer-match.mjs` (layer globs; Domain twin in
-`src/domain/layerMatch.ts` for eslint). Deliberate algorithm parity is locked by tests.
+`bin/ark-shared.mjs`. **Pure Domain algorithms** (edit TS, then regenerate CLI artifacts):
+
+| Canonical | Generated | Commands |
+|-----------|-----------|----------|
+| `src/domain/layerMatch.ts` | `bin/ark-layer-match.mjs` | `generate:layer-match` / `check:layer-match` |
+| `src/domain/remediation.ts` | `bin/lib/remediation.mjs` | `generate:cli-pure` / `check:cli-pure` |
+| `src/domain/baselineKey.ts` | `bin/lib/baseline-key.mjs` | (same `cli-pure` scripts) |
+
+Parity/drift tests + CI enforce generated files stay in sync.
 
 The project is only considered Ark-enforced when the write gate, CI gate, and runtime path all pass.
 

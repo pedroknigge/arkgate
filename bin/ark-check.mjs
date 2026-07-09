@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import crypto from 'node:crypto';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -15,7 +13,6 @@ import {
   DEFAULT_RULES,
   applyFrameworkLayoutOverlays,
   arkCommand,
-  collectForbiddenGlobalUses,
   ADOPTION_PLAN_FILENAME,
   buildArchitectureRecommendation,
   createElevenLayerConfig,
@@ -23,47 +20,27 @@ import {
   listPolicyPackIds,
   loadPolicyPackMeta,
   writeAdoptionPlan,
-  classifyRemediation,
-  detectPackageManager,
   detectWorkspaces,
   detectTsPackageRoots,
   resolveIncludeRoots,
-  execCommandParts,
-  execRunner,
   formatArchitectureRecommendationHuman,
-  globToRegExp,
   installDevHint,
-  isScanExcludedRelative,
-  presentLockfiles,
   layerForFile,
-  looksLikeIntent,
-  patternSpecificity,
-  resolveIntentLayer,
-  resolveOperatingMode,
-  shouldShowNewHereNudge,
-  usableTypescript,
-  typescriptUsabilityHint,
 } from './ark-shared.mjs';
 
 import {
   runInstallAgentGates,
-  runMigrateCommands,
   loadTypeScript,
-  collectAdoptionGaps,
   detectSkillGaps,
   detectCodexHomeGap,
   missingGates,
   staleRunnerGateFiles,
   brokenMcpGateFiles,
   readJson,
-  readPackageJson,
   hasCheckArchitectureScript,
-  hasArkWorkflow,
   checkArchitectureScriptSnippet,
   arkCheckCommand,
   arkPackageVersion,
-  agentInstructions,
-  packageManager,
   REQUIRED_GATE_FILES,
   codexPromptsDir,
 } from './lib/agent-gates.mjs';
@@ -82,32 +59,34 @@ import {
   runCoverage,
   runPlan,
   runDoctor,
-  buildRemediationPlan,
 } from './lib/doctor-plan.mjs';
 import {
   baselineKey,
   readBaseline,
   summarizeViolations,
-  violationEdge,
   writeBaseline,
   printViolation,
   printViolationBreakdown,
   CONCENTRATION_MIN_VIOLATIONS,
 } from './lib/violations.mjs';
 import {
-  buildUnclassifiedSuggestions,
   suggestLayerForDir,
-  suggestLayerForPath,
   detectBestFitModel,
   dirSegmentsFromGlob,
 } from './lib/suggestions.mjs';
 import {
   ARCHITECTURE_PRESETS,
-  CANONICAL_LAYER_NAMES,
-  denyUpward,
-  presetWithOverlays,
-  FRAMEWORK_INTERNAL_EXCLUDE,
 } from './lib/presets.mjs';
+
+import {
+  collectGovernedFiles,
+  normalize,
+  walk,
+} from './lib/scan-files.mjs';
+import {
+  configWarning,
+} from './lib/config-warnings.mjs';
+import { runArchitectureScan } from './lib/architecture-scan.mjs';
 
 
 function parseArgs(argv) {
@@ -298,7 +277,6 @@ function usage() {
     '  ark-check --install-agent-gates',
   ].join('\n');
 }
-
 
 function readConfig(root, configPath) {
   const fullPath = path.isAbsolute(configPath)
@@ -864,7 +842,6 @@ function runInit(args) {
   printInitNextSteps(args.root);
 }
 
-
 function readManifest(root, manifestPath) {
   if (!manifestPath) return undefined;
   const fullPath = path.isAbsolute(manifestPath)
@@ -876,667 +853,6 @@ function readManifest(root, manifestPath) {
   return readJson(fullPath);
 }
 
-const SOURCE_FILE_NAME = /\.[cm]?[tj]sx?$/;
-
-/** Unit/e2e test files are not architecture surface — agents and Nest put them next
- *  to production code (*.spec.ts). Counting them as ungoverned forces false
- *  CONFIG_UNCLASSIFIED_FILES under --strict-config on every starter. */
-const TEST_FILE_NAME =
-  /\.(spec|test)\.(tsx?|jsx?|mts|cts)$/i;
-
-function isGovernableSourceFile(name) {
-  return SOURCE_FILE_NAME.test(name) && !name.endsWith('.d.ts') && !TEST_FILE_NAME.test(name);
-}
-
-function isSkippedSourceDir(name) {
-  return (
-    name === 'node_modules' ||
-    name === 'dist' ||
-    name === 'coverage' ||
-    name === '__tests__' ||
-    name === '__mocks__' ||
-    name === 'e2e' ||
-    // Top-level style Nest/Jest folders (not "testing" helpers inside src)
-    name === 'test' ||
-    name === 'tests'
-  );
-}
-
-function walk(dir, files = []) {
-  const stat = fs.statSync(dir, { throwIfNoEntry: false });
-  if (!stat) return files;
-  // An `include` entry may be a single file (e.g. a root-level "middleware.ts"),
-  // not just a directory — govern it directly instead of trying to scandir it
-  // (which threw ENOTDIR). The extension filter still applies.
-  if (stat.isFile()) {
-    if (isGovernableSourceFile(path.basename(dir))) files.push(dir);
-    return files;
-  }
-  if (!stat.isDirectory()) return files;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (isSkippedSourceDir(entry.name)) continue;
-      walk(full, files);
-    } else if (isGovernableSourceFile(entry.name)) {
-      files.push(full);
-    }
-  }
-  return files;
-}
-
-/** Walk include roots then drop codegen / config.exclude (universal scan filter). */
-function collectGovernedFiles(root, config) {
-  const raw = (config.include ?? []).flatMap((entry) => walk(path.join(root, entry)));
-  return raw.filter((abs) => {
-    const rel = normalize(path.relative(root, abs));
-    return !isScanExcludedRelative(rel, config);
-  });
-}
-
-function normalize(value) {
-  return value.split(path.sep).join('/');
-}
-
-function intentLayersFromManifest(manifest) {
-  const layers = manifest?.architecture?.layers;
-  if (!Array.isArray(layers)) return undefined;
-  return layers
-    .filter((layer) => Array.isArray(layer.prefixes) && layer.prefixes.length > 0)
-    .map((layer) => ({ name: layer.name, prefixes: layer.prefixes }));
-}
-
-function layerForIntent(intent, layers, manifestIntentLayers) {
-  // Use only layers that declare intent prefixes; fall back to the built-in defaults when
-  // none do (mirrors the write-gate). resolveIntentLayer applies the library's exact
-  // longest-prefix + trailing-dot semantics so CI and the MCP gate classify identically.
-  const configured =
-    manifestIntentLayers ??
-    layers
-      .filter((layer) => (layer.intentPrefixes ?? []).length > 0)
-      .map((layer) => ({ name: layer.name, prefixes: layer.intentPrefixes }));
-  const source =
-    configured.length > 0
-      ? configured
-      : DEFAULT_INTENT_PREFIXES.map((entry) => ({ name: entry.layer, prefixes: entry.prefixes }));
-  return resolveIntentLayer(intent, source);
-}
-
-function isBlocked(rules, from, to) {
-  return rules.find((rule) => !rule.allowed && rule.from === from && rule.to === to);
-}
-
-function configWarning(ruleId, message, extra = {}) {
-  return { ruleId, message, ...extra };
-}
-
-function collectConfigWarnings(root, config, files, rules, manifest) {
-  const warnings = [];
-  const layers = Array.isArray(config.layers) ? config.layers : [];
-  const manifestLayers = Array.isArray(manifest?.architecture?.layers)
-    ? manifest.architecture.layers
-    : [];
-  const knownLayers = new Set([
-    ...layers.map((layer) => layer.name).filter(Boolean),
-    ...manifestLayers.map((layer) => layer.name).filter(Boolean),
-  ]);
-
-  if (layers.length === 0) {
-    warnings.push(
-      configWarning(
-        'CONFIG_NO_LAYERS',
-        'No file layers are configured; ark-check cannot classify files for import-boundary enforcement.'
-      )
-    );
-  }
-
-  const seenLayers = new Set();
-  const duplicateLayers = new Set();
-  for (const layer of layers) {
-    if (!layer.name) {
-      warnings.push(
-        configWarning('CONFIG_LAYER_WITHOUT_NAME', 'A configured layer is missing a name.')
-      );
-      continue;
-    }
-    if (seenLayers.has(layer.name)) duplicateLayers.add(layer.name);
-    seenLayers.add(layer.name);
-
-    if (
-      layer.forbiddenGlobals !== undefined &&
-      (!Array.isArray(layer.forbiddenGlobals) ||
-        layer.forbiddenGlobals.some((entry) => typeof entry !== 'string'))
-    ) {
-      warnings.push(
-        configWarning(
-          'CONFIG_INVALID_FORBIDDEN_GLOBALS',
-          `Layer "${layer.name}" has an invalid forbiddenGlobals value; expected an array of strings (e.g. ["fetch", "Date.now"]). The entry is ignored.`,
-          { layer: layer.name }
-        )
-      );
-    }
-
-    const patterns = Array.isArray(layer.patterns) ? layer.patterns : [];
-    if (patterns.length === 0) {
-      warnings.push(
-        configWarning(
-          'CONFIG_LAYER_WITHOUT_PATTERNS',
-          `Layer "${layer.name}" has no file patterns and will never classify files.`,
-          { layer: layer.name }
-        )
-      );
-      continue;
-    }
-
-    for (const pattern of patterns) {
-      let re;
-      try {
-        re = globToRegExp(pattern);
-      } catch (err) {
-        warnings.push(
-          configWarning(
-            'CONFIG_INVALID_LAYER_PATTERN',
-            `Layer "${layer.name}" has an invalid pattern "${pattern}": ${
-              err instanceof Error ? err.message : String(err)
-            }`,
-            { layer: layer.name, pattern }
-          )
-        );
-        continue;
-      }
-
-      const matched = files.some((file) => {
-        const rel = normalize(path.relative(root, file));
-        return re.test(rel);
-      });
-      if (!matched && !layer.optional) {
-        // Advisory only under --strict-config: monorepo/Next presets ship many optional-looking
-        // globs (e.g. src/layouts/**, app/**) that never match when include is ["frontend"].
-        // Failing the release gate on dead preset globs caused false CI red while architecture
-        // edges were clean (deer-flow host validation). Real safety is import violations +
-        // CONFIG_UNCLASSIFIED_FILES / invalid patterns.
-        warnings.push(
-          configWarning(
-            'CONFIG_LAYER_PATTERN_NO_MATCHES',
-            `Layer "${layer.name}" pattern "${pattern}" matched no included files.`,
-            { layer: layer.name, pattern, failsStrict: false }
-          )
-        );
-      }
-    }
-  }
-
-  for (const name of duplicateLayers) {
-    warnings.push(
-      configWarning(
-        'CONFIG_DUPLICATE_LAYER',
-        `Layer "${name}" is configured more than once.`,
-        { layer: name }
-      )
-    );
-  }
-
-  if (knownLayers.size > 0) {
-    for (const rule of rules ?? []) {
-      if (rule.from && !knownLayers.has(rule.from)) {
-        warnings.push(
-          configWarning(
-            'CONFIG_RULE_UNKNOWN_FROM_LAYER',
-            `Rule references unknown source layer "${rule.from}".`,
-            { fromLayer: rule.from, toLayer: rule.to }
-          )
-        );
-      }
-      if (rule.to && !knownLayers.has(rule.to)) {
-        warnings.push(
-          configWarning(
-            'CONFIG_RULE_UNKNOWN_TO_LAYER',
-            `Rule references unknown target layer "${rule.to}".`,
-            { fromLayer: rule.from, toLayer: rule.to }
-          )
-        );
-      }
-    }
-  }
-
-  // Ambiguous overlap: a file matched by two different layers at the SAME top specificity.
-  // layerForFile breaks the tie by declaration order, but the config is genuinely undecided
-  // (unlike a facade split, where the surface pattern is strictly more specific and wins
-  // cleanly). Surface the layer pairs so the author disambiguates instead of relying on order.
-  const ambiguousPairs = new Set();
-  if (layers.length > 1) {
-    for (const file of files) {
-      const rel = normalize(path.relative(root, file));
-      let topScore = -1;
-      let topLayers = [];
-      for (const layer of layers) {
-        for (const pattern of layer.patterns ?? []) {
-          if (!globToRegExp(pattern).test(rel)) continue;
-          const score = patternSpecificity(pattern);
-          if (score > topScore) {
-            topScore = score;
-            topLayers = [layer.name];
-          } else if (score === topScore && !topLayers.includes(layer.name)) {
-            topLayers.push(layer.name);
-          }
-        }
-      }
-      if (topLayers.length > 1) {
-        ambiguousPairs.add([...topLayers].sort().join(' + '));
-      }
-    }
-  }
-  if (ambiguousPairs.size > 0) {
-    warnings.push(
-      configWarning(
-        'CONFIG_AMBIGUOUS_LAYERS',
-        `Some files match multiple layers at equal specificity; classification falls back to declaration order. Disambiguate the overlapping patterns: ${[...ambiguousPairs].join(', ')}.`,
-        { pairs: [...ambiguousPairs] }
-      )
-    );
-  }
-
-  const unclassified = files.filter((file) => !layerForFile(root, file, layers));
-  if (unclassified.length > 0) {
-    warnings.push(
-      configWarning(
-        'CONFIG_UNCLASSIFIED_FILES',
-        `${unclassified.length} included source file(s) are not matched by any configured layer; ark-check will not enforce import rules for those source files.`,
-        {
-          count: unclassified.length,
-          samples: unclassified.slice(0, 5).map((file) => normalize(path.relative(root, file))),
-        }
-      )
-    );
-  }
-
-  return warnings;
-}
-
-function createModuleResolutionHost(ts) {
-  const sys = ts?.sys;
-  const fileExists = (f) => {
-    if (sys?.fileExists) return sys.fileExists(f);
-    return fs.existsSync(f);
-  };
-  const readFile = (f) => {
-    if (sys?.readFile) return sys.readFile(f);
-    try {
-      return fs.readFileSync(f, 'utf8');
-    } catch {
-      return undefined;
-    }
-  };
-  const directoryExists = (d) => {
-    if (sys?.directoryExists) return sys.directoryExists(d);
-    try {
-      return fs.statSync(d).isDirectory();
-    } catch {
-      return false;
-    }
-  };
-  return {
-    fileExists,
-    readFile,
-    directoryExists,
-    getCurrentDirectory: () =>
-      sys?.getCurrentDirectory ? sys.getCurrentDirectory() : process.cwd(),
-    getDirectories: (d) => {
-      if (sys?.getDirectories) return sys.getDirectories(d);
-      try {
-        return fs
-          .readdirSync(d, { withFileTypes: true })
-          .filter((e) => e.isDirectory())
-          .map((e) => e.name);
-      } catch {
-        return [];
-      }
-    },
-    realpath: sys?.realpath ? (p) => sys.realpath(p) : undefined,
-    useCaseSensitiveFileNames: sys?.useCaseSensitiveFileNames ?? true,
-  };
-}
-
-function parseTsconfig(ts, configPath) {
-  const host = createModuleResolutionHost(ts);
-  const read = ts.readConfigFile(configPath, host.readFile);
-  if (read.error) return {};
-  // parseJsonConfigFileContent wants a ParseConfigHost-like object; our resolution host
-  // is enough for option extraction.
-  const parsed = ts.parseJsonConfigFileContent(
-    read.config,
-    {
-      useCaseSensitiveFileNames: host.useCaseSensitiveFileNames,
-      readDirectory: ts.sys?.readDirectory
-        ? (...args) => ts.sys.readDirectory(...args)
-        : () => [],
-      fileExists: host.fileExists,
-      readFile: host.readFile,
-    },
-    path.dirname(configPath)
-  );
-  return parsed.options;
-}
-
-/**
- * Compiler options for a given source file. With --tsconfig every file uses that one
- * config; otherwise each file uses the NEAREST tsconfig.json above it (like tsc does),
- * so monorepo packages with per-package path aliases resolve correctly under one --root.
- */
-function createCompilerOptionsLookup(ts, root, tsconfigArg) {
-  if (tsconfigArg) {
-    const configPath = path.isAbsolute(tsconfigArg) ? tsconfigArg : path.join(root, tsconfigArg);
-    const options = fs.existsSync(configPath) ? parseTsconfig(ts, configPath) : {};
-    return () => options;
-  }
-  const byDir = new Map();
-  const byConfig = new Map();
-  return (file) => {
-    const dir = path.dirname(file);
-    if (byDir.has(dir)) return byDir.get(dir);
-    const configPath = ts.findConfigFile(dir, ts.sys.fileExists, 'tsconfig.json');
-    let options = {};
-    if (configPath) {
-      if (!byConfig.has(configPath)) byConfig.set(configPath, parseTsconfig(ts, configPath));
-      options = byConfig.get(configPath);
-    }
-    byDir.set(dir, options);
-    return options;
-  };
-}
-
-/**
- * Per-file scan cache. A cache entry stores the parsed file's content-derived results:
- * content violations (forbidden globals, publish checks, intent references) and the list
- * of module-edge specifiers. Edges are NEVER cached as violations — they are re-resolved
- * against the live filesystem every run, because resolution depends on files and tsconfigs
- * outside the cached file. The whole cache is keyed by the config+manifest contents, so
- * any rule change invalidates everything.
- */
-function scanCachePath(root) {
-  return path.join(root, 'node_modules', '.cache', 'ark-check.json');
-}
-
-function scanCacheKey(root, args) {
-  const read = (p) => {
-    try {
-      return fs.readFileSync(p, 'utf8');
-    } catch {
-      return '';
-    }
-  };
-  const configPath = path.isAbsolute(args.config) ? args.config : path.join(root, args.config);
-  const manifestPath = args.manifest
-    ? path.isAbsolute(args.manifest)
-      ? args.manifest
-      : path.join(root, args.manifest)
-    : undefined;
-  // Bump this schema tag whenever the cached scan shape changes, so a warm cache from an
-  // older Ark can't feed stale entries to new logic. v2: typeOnly on edges. v3: per-file
-  // exportsOnlyTypes (target-module type-only export detection for plan classifier).
-  return crypto
-    .createHash('sha1')
-    .update(`ark-check-cache-v3\0${read(configPath)}\0${manifestPath ? read(manifestPath) : ''}`)
-    .digest('hex');
-}
-
-function loadScanCache(root, key) {
-  try {
-    const data = JSON.parse(fs.readFileSync(scanCachePath(root), 'utf8'));
-    return data.key === key && data.files && typeof data.files === 'object' ? data.files : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function saveScanCache(root, key, files) {
-  try {
-    const target = scanCachePath(root);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(target, JSON.stringify({ key, files }));
-  } catch {
-    // cache is best-effort: read-only filesystems just re-parse every run
-  }
-}
-
-/**
- * Fallback resolver for extensionless relative imports whose on-disk target uses an
- * extension `ts.resolveModuleName` won't resolve without a matching tsconfig
- * (notably `.mts`/`.cts`). Mirrors the classic candidate list.
- */
-function isFile(candidate) {
-  try {
-    return fs.statSync(candidate).isFile();
-  } catch {
-    return false;
-  }
-}
-
-function resolveRelativeFallback(fromFile, specifier) {
-  const base = path.resolve(path.dirname(fromFile), specifier);
-  const candidates = [
-    base, // only used when the specifier already carries an extension (isFile filters dirs)
-    `${base}.ts`,
-    `${base}.tsx`,
-    `${base}.mts`,
-    `${base}.cts`,
-    `${base}.js`,
-    `${base}.jsx`,
-    `${base}.mjs`,
-    `${base}.cjs`,
-    path.join(base, 'index.ts'),
-    path.join(base, 'index.tsx'),
-    path.join(base, 'index.mts'),
-    path.join(base, 'index.cts'),
-  ];
-  // isFile (not existsSync) so a directory named like the specifier never shadows the
-  // real module file — e.g. `./foo` must not resolve to a `foo/` directory before `foo.mts`.
-  return candidates.find(isFile);
-}
-
-/**
- * Resolve any import specifier (relative, tsconfig path-alias, or package) to a source
- * file using TypeScript's module resolver, returning the resolved file (or undefined for
- * unresolved / declaration-only targets).
- *
- * ark-check governs one project rooted at --root. A resolved target is skipped when its
- * path RELATIVE TO ROOT either escapes the root (leading `..`) or contains a `node_modules`
- * segment. Using the root-relative path (not an absolute substring) means a project that
- * itself lives under a node_modules segment is still governed, while a broad catch-all
- * pattern (`**`) can't false-flag vendored deps or files outside the project. Monorepos can
- * run under a single --root (per-package tsconfigs are honored via the nearest-tsconfig
- * lookup); edges that resolve outside the root are still skipped.
- */
-function resolveImport(ts, specifier, containingFile, options, host, root) {
-  const res = ts.resolveModuleName(specifier, containingFile, options, host);
-  let file = res.resolvedModule?.resolvedFileName;
-  if (!file && specifier.startsWith('.')) {
-    file = resolveRelativeFallback(containingFile, specifier);
-  }
-  if (!file) return undefined;
-  if (file.endsWith('.d.ts')) return undefined;
-  const abs = path.resolve(file);
-  const segments = path.relative(root, abs).split(path.sep);
-  if (segments[0] === '..' || segments.includes('node_modules')) return undefined;
-  return abs;
-}
-
-function lineOf(sourceFile, pos) {
-  return sourceFile.getLineAndCharacterOfPosition(pos).line + 1;
-}
-
-function textOfModuleSpecifier(node) {
-  return node.moduleSpecifier && typeof node.moduleSpecifier.text === 'string'
-    ? node.moduleSpecifier.text
-    : undefined;
-}
-
-// True when an import/export edge carries ONLY types (`import type …`, or a named import
-// where every binding is `type`-qualified). Type-only edges are erased at compile time —
-// they create no runtime coupling, only a design/type-placement dependency — so callers can
-// rank them below real value imports in a burn-down. A side-effect import (`import "x"`) or
-// any default/namespace/value binding is NOT type-only.
-function isTypeOnlyModuleReference(ts, node) {
-  if (ts.isImportDeclaration(node)) {
-    const clause = node.importClause;
-    if (!clause) return false; // side-effect import — runtime edge
-    if (clause.isTypeOnly) return true; // `import type …`
-    const named = clause.namedBindings;
-    if (named && ts.isNamedImports(named) && named.elements.length > 0) {
-      return named.elements.every((element) => element.isTypeOnly);
-    }
-    return false; // default or namespace binding of a value
-  }
-  if (ts.isExportDeclaration(node)) {
-    if (node.isTypeOnly) return true;
-    const clause = node.exportClause;
-    if (clause && ts.isNamedExports(clause) && clause.elements.length > 0) {
-      return clause.elements.every((element) => element.isTypeOnly);
-    }
-    return false;
-  }
-  return false;
-}
-
-/**
- * True when a module is a pure type-surface file: only type/interface exports and
- * type-only imports. Conservative false (→ judgment) when:
- * - any top-level runtime statement (value decls, expression stmts, side-effect imports)
- * - ambiguous `export { X }` without type keyword, export *, default/export=
- * Used so static value-syntax `import { T }` of a pure-type module can be mechanical-safe
- * (convert to `import type`). Never trust this for require()/import() edges.
- */
-function sourceFileExportsOnlyTypes(ts, sourceFile) {
-  let sawTypeExport = false;
-  const hasExportModifier = (node) =>
-    Array.isArray(node.modifiers) &&
-    node.modifiers.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
-
-  for (const stmt of sourceFile.statements) {
-    // Type-only imports OK; value or side-effect imports mean runtime load of deps.
-    if (ts.isImportDeclaration(stmt)) {
-      if (!isTypeOnlyModuleReference(ts, stmt)) return false;
-      continue;
-    }
-    if (typeof ts.isImportEqualsDeclaration === 'function' && ts.isImportEqualsDeclaration(stmt)) {
-      return false;
-    }
-    if (ts.isExportDeclaration(stmt)) {
-      if (stmt.isTypeOnly) {
-        sawTypeExport = true;
-        continue;
-      }
-      // export * from '…' can re-export values — not provably type-only.
-      if (!stmt.exportClause) return false;
-      if (ts.isNamespaceExport(stmt.exportClause)) return false;
-      if (ts.isNamedExports(stmt.exportClause)) {
-        if (stmt.exportClause.elements.length === 0) return false;
-        for (const el of stmt.exportClause.elements) {
-          if (!el.isTypeOnly) return false; // bare `export { X }` — ambiguous without checker
-        }
-        sawTypeExport = true;
-        continue;
-      }
-      return false;
-    }
-    if (ts.isExportAssignment(stmt)) return false; // export = / export default expr
-    if (ts.isTypeAliasDeclaration(stmt) || ts.isInterfaceDeclaration(stmt)) {
-      if (hasExportModifier(stmt)) sawTypeExport = true;
-      continue;
-    }
-    // Any other top-level statement (const/fn/class/enum, console.log, if, …) is runtime.
-    return false;
-  }
-  return sawTypeExport;
-}
-
-function propertyName(ts, node) {
-  if (!node) return undefined;
-  if (ts.isIdentifier(node) || ts.isStringLiteralLike(node)) return node.text;
-  return undefined;
-}
-
-function objectProperty(ts, node, name) {
-  if (!node || !ts.isObjectLiteralExpression(node)) return undefined;
-  return node.properties.find((property) => {
-    if (!ts.isPropertyAssignment(property) && !ts.isShorthandPropertyAssignment(property)) {
-      return false;
-    }
-    return propertyName(ts, property.name) === name;
-  });
-}
-
-function objectHasProperty(ts, node, name) {
-  return objectProperty(ts, node, name) !== undefined;
-}
-
-function objectPropertyValue(ts, node, name) {
-  const property = objectProperty(ts, node, name);
-  return property && ts.isPropertyAssignment(property)
-    ? property.initializer
-    : undefined;
-}
-
-function objectHasMetadataSource(ts, node) {
-  const metadata = objectPropertyValue(ts, node, 'metadata');
-  return objectHasProperty(ts, metadata, 'source');
-}
-
-function stringLiteralText(ts, node) {
-  return node && ts.isStringLiteralLike(node) ? node.text : undefined;
-}
-
-function isPublishCall(ts, node) {
-  if (!ts.isCallExpression(node)) return false;
-  const expression = node.expression;
-  if (ts.isPropertyAccessExpression(expression)) {
-    return expression.name.text === 'publish';
-  }
-  return ts.isIdentifier(expression) && expression.text === 'publish';
-}
-
-function looksLikeIntentCreatorExpression(ts, node) {
-  if (!node) return false;
-  if (ts.isIdentifier(node)) {
-    return /^[A-Z]/.test(node.text);
-  }
-  if (ts.isPropertyAccessExpression(node)) {
-    return looksLikeIntentCreatorExpression(ts, node.name);
-  }
-  return false;
-}
-
-function isArkPublishCandidate(ts, node) {
-  if (!ts.isCallExpression(node)) return false;
-  const firstArg = node.arguments[0];
-  const rawIntent = stringLiteralText(ts, firstArg);
-  return (
-    (rawIntent !== undefined && looksLikeIntent(rawIntent)) ||
-    objectHasProperty(ts, firstArg, 'intent') ||
-    looksLikeIntentCreatorExpression(ts, firstArg)
-  );
-}
-
-function publishSourceLiteral(ts, node) {
-  if (!ts.isCallExpression(node)) return undefined;
-  const [firstArg, secondArg, thirdArg] = node.arguments;
-  const rawMetadata = objectPropertyValue(ts, firstArg, 'metadata');
-  return (
-    stringLiteralText(ts, objectPropertyValue(ts, rawMetadata, 'source')) ??
-    stringLiteralText(ts, objectPropertyValue(ts, secondArg, 'source')) ??
-    stringLiteralText(ts, objectPropertyValue(ts, thirdArg, 'source'))
-  );
-}
-
-function publishHasSource(ts, node) {
-  if (!ts.isCallExpression(node)) return false;
-  const [firstArg, secondArg, thirdArg] = node.arguments;
-  return (
-    objectHasMetadataSource(ts, firstArg) ||
-    objectHasProperty(ts, secondArg, 'source') ||
-    objectHasProperty(ts, thirdArg, 'source')
-  );
-}
 const useColor = process.stderr.isTTY && !process.env.NO_COLOR;
 const color = {
   red: (s) => (useColor ? `\x1b[31m${s}\x1b[0m` : s),
@@ -1545,85 +861,6 @@ const color = {
   dim: (s) => (useColor ? `\x1b[2m${s}\x1b[0m` : s),
   bold: (s) => (useColor ? `\x1b[1m${s}\x1b[0m` : s),
 };
-
-function detectCycles(graph) {
-  let index = 0;
-  const indices = new Map();
-  const low = new Map();
-  const onStack = new Set();
-  const stack = [];
-  const components = [];
-
-  // ponytail: recursive Tarjan; make it iterative only if a real repo blows the stack.
-  const strongconnect = (v) => {
-    indices.set(v, index);
-    low.set(v, index);
-    index += 1;
-    stack.push(v);
-    onStack.add(v);
-    for (const w of [...(graph.get(v) ?? [])].sort()) {
-      if (!graph.has(w)) continue;
-      if (!indices.has(w)) {
-        strongconnect(w);
-        low.set(v, Math.min(low.get(v), low.get(w)));
-      } else if (onStack.has(w)) {
-        low.set(v, Math.min(low.get(v), indices.get(w)));
-      }
-    }
-    if (low.get(v) === indices.get(v)) {
-      const comp = [];
-      let w;
-      do {
-        w = stack.pop();
-        onStack.delete(w);
-        comp.push(w);
-      } while (w !== v);
-      if (comp.length > 1) components.push(comp.sort());
-    }
-  };
-
-  for (const v of [...graph.keys()].sort()) {
-    if (!indices.has(v)) strongconnect(v);
-  }
-
-  return components
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map((members) => ({
-      ruleId: 'CIRCULAR_DEPENDENCY',
-      file: members[0],
-      line: 1,
-      target: members.join(' → '),
-      message: `Circular dependency among ${members.length} files: ${members.join(' → ')} → ${members[0]}.`,
-      // Graph is value/runtime edges only (type-only imports omitted).
-      cycleKind: 'value',
-    }));
-}
-
-
-function moduleSpecifierFromCall(ts, node) {
-  if (!ts.isCallExpression(node)) return undefined;
-
-  if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
-    const first = node.arguments[0];
-    const value = stringLiteralText(ts, first);
-    return value ? { value, kind: 'dynamic-import' } : undefined;
-  }
-
-  if (ts.isIdentifier(node.expression) && node.expression.text === 'require') {
-    const first = node.arguments[0];
-    const value = stringLiteralText(ts, first);
-    return value ? { value, kind: 'require' } : undefined;
-  }
-
-  return undefined;
-}
-
-// --coverage: a standalone visibility report (never changes the exit code). Answers
-// "which files does each layer actually govern, and what is slipping through?" — the
-// data the /ark-coverage skill otherwise has to hand-roll with find/readdir walks.
-// Pure coverage computation (glob-only, no TypeScript): the object both `--coverage` and
-// `--doctor` render. `governed` is the headline honesty number — the share of in-scope code
-// Ark actually enforces rules on; `suggestions` proposes a layer for each ungoverned dir.
 
 async function main() {
   const args = parseArgs(process.argv);
@@ -1791,226 +1028,15 @@ async function main() {
     );
   }
 
-  const manifestIntentLayers = intentLayersFromManifest(manifest);
-  const compilerOptionsFor = createCompilerOptionsLookup(ts, root, args.tsconfig);
-  const moduleHost = createModuleResolutionHost(ts);
-
-  const violations = [];
-  const warnings = collectConfigWarnings(root, config, files, rules, manifest);
-  const cacheKey = args.noCache ? undefined : scanCacheKey(root, args);
-  const cachedFiles = cacheKey ? loadScanCache(root, cacheKey) : undefined;
-  const nextCacheFiles = {};
-
-  // Parses one file and returns its cacheable scan result: violations derived purely from
-  // the file's content (+config/manifest, hashed into the cache key) and the module-edge
-  // specifiers found, which the driver loop below resolves fresh on every run.
-  function scanSourceFile(file, sourceLayer) {
-    const source = fs.readFileSync(file, 'utf8');
-    const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
-    const violations = [];
-    const edges = [];
-
-    const layerConfig = config.layers.find((layer) => layer.name === sourceLayer);
-    const forbiddenGlobals = Array.isArray(layerConfig?.forbiddenGlobals)
-      ? layerConfig.forbiddenGlobals.filter((entry) => typeof entry === 'string')
-      : [];
-    for (const use of collectForbiddenGlobalUses(ts, sourceFile, forbiddenGlobals)) {
-      violations.push({
-        ruleId: 'FORBIDDEN_GLOBAL',
-        file: normalize(path.relative(root, file)),
-        line: lineOf(sourceFile, use.node.getStart(sourceFile)),
-        fromLayer: sourceLayer,
-        target: use.name,
-        message: `${sourceLayer} must not use the ambient global "${use.name}".`,
-      });
-    }
-
-    const checkModuleEdge = (specifier, node, kind, typeOnly = false) => {
-      edges.push({ specifier, line: lineOf(sourceFile, node.getStart(sourceFile)), kind, typeOnly });
-    };
-
-    const visit = (node) => {
-      if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
-        const specifier = textOfModuleSpecifier(node);
-        if (specifier) {
-          checkModuleEdge(
-            specifier,
-            node,
-            ts.isImportDeclaration(node) ? 'import' : 'export',
-            isTypeOnlyModuleReference(ts, node)
-          );
-        }
-      }
-
-      if (ts.isCallExpression(node)) {
-        const moduleCall = moduleSpecifierFromCall(ts, node);
-        if (moduleCall) {
-          checkModuleEdge(moduleCall.value, node, moduleCall.kind);
-        }
-
-        if (isPublishCall(ts, node)) {
-          const firstArg = node.arguments[0];
-          const rawIntent = stringLiteralText(ts, firstArg);
-          if (
-            (rawIntent && looksLikeIntent(rawIntent)) ||
-            objectHasProperty(ts, firstArg, 'intent')
-          ) {
-            violations.push({
-              ruleId: 'RAW_EVENT_PUBLISH',
-              file: normalize(path.relative(root, file)),
-              line: lineOf(sourceFile, node.getStart(sourceFile)),
-              message:
-                'Publish through a registered intent creator; raw event objects or intent strings bypass Ark contracts and tooling.',
-            });
-          }
-
-          if (isArkPublishCandidate(ts, node) && !publishHasSource(ts, node)) {
-            violations.push({
-              ruleId: 'PUBLISH_MISSING_SOURCE',
-              file: normalize(path.relative(root, file)),
-              line: lineOf(sourceFile, node.getStart(sourceFile)),
-              fromLayer: sourceLayer,
-              message: 'Strict Ark publish calls must include metadata.source.',
-            });
-          }
-
-          const sourceIntent = publishSourceLiteral(ts, node);
-          if (sourceIntent && looksLikeIntent(sourceIntent)) {
-            const sourceIntentLayer = layerForIntent(
-              sourceIntent,
-              config.layers,
-              manifestIntentLayers
-            );
-            if (sourceIntentLayer && sourceIntentLayer !== sourceLayer) {
-              violations.push({
-                ruleId: 'PUBLISH_SOURCE_LAYER_MISMATCH',
-                file: normalize(path.relative(root, file)),
-                line: lineOf(sourceFile, node.getStart(sourceFile)),
-                fromLayer: sourceLayer,
-                toLayer: sourceIntentLayer,
-                target: sourceIntent,
-                message:
-                  `Publish source "${sourceIntent}" resolves to ${sourceIntentLayer}, but the publishing file is classified as ${sourceLayer}.`,
-              });
-            }
-          }
-        }
-      }
-
-      if (ts.isStringLiteralLike(node) && looksLikeIntent(node.text)) {
-        const targetLayer = layerForIntent(node.text, config.layers, manifestIntentLayers);
-        const rule = targetLayer ? isBlocked(rules, sourceLayer, targetLayer) : undefined;
-        if (rule) {
-          violations.push({
-            ruleId: 'LAYER_INTENT_REFERENCE_VIOLATION',
-            file: normalize(path.relative(root, file)),
-            line: lineOf(sourceFile, node.getStart(sourceFile)),
-            fromLayer: sourceLayer,
-            toLayer: targetLayer,
-            target: node.text,
-            message:
-              rule.message ??
-              `${sourceLayer} must not reference ${targetLayer} intent ${node.text}.`,
-          });
-        }
-      }
-
-      ts.forEachChild(node, visit);
-    };
-    visit(sourceFile);
-    return {
-      contentViolations: violations,
-      edges,
-      exportsOnlyTypes: sourceFileExportsOnlyTypes(ts, sourceFile),
-    };
-  }
-
-  // Pass 1: scan every governed file into nextCacheFiles (needs complete map before
-  // targetTypeOnlyExports can be resolved for import edges).
-  const importGraph = new Map();
-  const scanned = []; // { file, sourceLayer, relFile, entry }
-  for (const file of files) {
-    const sourceLayer = layerForFile(root, file, config.layers);
-    if (!sourceLayer) continue;
-    const relFile = normalize(path.relative(root, file));
-    if (!importGraph.has(relFile)) importGraph.set(relFile, new Set());
-    const stat = fs.statSync(file);
-    const fileKey = `${stat.mtimeMs}:${stat.size}`;
-    const cached = cachedFiles?.[relFile];
-    const entry =
-      cached && cached.fileKey === fileKey
-        ? cached
-        : { fileKey, ...scanSourceFile(file, sourceLayer) };
-    nextCacheFiles[relFile] = entry;
-    scanned.push({ file, sourceLayer, relFile, entry });
-  }
-
-  // Pass 2: content violations + layer edges (with target type-export surface).
-  for (const { file, sourceLayer, relFile, entry } of scanned) {
-    violations.push(...entry.contentViolations);
-    for (const edge of entry.edges) {
-      const target = resolveImport(ts, edge.specifier, file, compilerOptionsFor(file), moduleHost, root);
-      const targetLayer = target ? layerForFile(root, target, config.layers) : undefined;
-      if (target && targetLayer) {
-        const relTarget = normalize(path.relative(root, target));
-        // Cycle graph is runtime coupling only. Type-only imports are erased by TS and
-        // must not form CIRCULAR_DEPENDENCY (e.g. codegen `import type` back-edges).
-        if (relTarget !== relFile && !edge.typeOnly) {
-          importGraph.get(relFile).add(relTarget);
-        }
-      }
-      const rule = targetLayer ? isBlocked(rules, sourceLayer, targetLayer) : undefined;
-      if (rule) {
-        const relTarget = normalize(path.relative(root, target));
-        // After pass 1 every in-scope target is in nextCacheFiles. Missing → not type-only.
-        // targetTypeOnlyExports only for static import/export declarations — never require()
-        // or dynamic import(), which always load the module at runtime (side effects matter).
-        const targetCached = nextCacheFiles[relTarget];
-        const staticEdge = edge.kind === 'import' || edge.kind === 'export';
-        const targetTypeOnlyExports =
-          staticEdge && Boolean(targetCached?.exportsOnlyTypes) && !edge.typeOnly;
-        // Importer is itself a pure type-surface file (no runtime body) — enables
-        // pure-type-file-relocate classification when the edge is type-only.
-        const sourcePureTypeModule = Boolean(entry.exportsOnlyTypes);
-        violations.push({
-          ruleId: 'LAYER_IMPORT_VIOLATION',
-          file: relFile,
-          line: edge.line,
-          fromLayer: sourceLayer,
-          toLayer: targetLayer,
-          target: relTarget,
-          ...(edge.typeOnly ? { typeOnly: true } : {}),
-          ...(targetTypeOnlyExports ? { targetTypeOnlyExports: true } : {}),
-          ...(sourcePureTypeModule ? { sourcePureTypeModule: true } : {}),
-          ...(edge.kind ? { edgeKind: edge.kind } : {}),
-          message: rule.message ?? `${sourceLayer} must not ${edge.kind} ${targetLayer}.`,
-        });
-      }
-    }
-  }
-
-  if (cacheKey) saveScanCache(root, cacheKey, nextCacheFiles);
-
-  // cyclePolicy: strict (default) | soft (advisory only, never fails --strict-config) | off
-  const cyclePolicy = String(config.cyclePolicy || 'strict').toLowerCase();
-  if (cyclePolicy !== 'off') {
-    const cycles = detectCycles(importGraph);
-    if (cyclePolicy === 'soft' || cyclePolicy === 'framework-soft') {
-      for (const c of cycles) {
-        // failsStrict: false — soft cycles must NOT trip --strict-config / check:architecture.
-        // Only CONFIG_* (and similar) warnings fail under --strict-config.
-        warnings.push({
-          ruleId: 'CIRCULAR_DEPENDENCY',
-          message: `${c.message} (soft cycle policy — advisory only; set cyclePolicy: "strict" to fail the check)`,
-          file: c.file,
-          target: c.target,
-          failsStrict: false,
-        });
-      }
-    } else {
-      violations.push(...cycles);
-    }
-  }
+  const { violations, warnings } = runArchitectureScan({
+    root,
+    config,
+    manifest,
+    rules,
+    files,
+    ts,
+    args,
+  });
 
   if (args.doctor) {
     runDoctor(root, config, files, rules, violations, args.json, {

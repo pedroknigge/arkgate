@@ -209,7 +209,7 @@ projections, metadata, workflow engine, and 11-layer architecture profile:
 ```ts
 import {
   createStrictArkKernel,
-} from 'arkgate';
+} from 'arkgate/runtime';
 
 const ark = createStrictArkKernel();
 // ... define intents, event contracts, metadata, projections, and workflows through ark.*
@@ -218,6 +218,9 @@ const contract = ark.manifest().toJSON();
 // contract.intents, policies, entities, graph, architecture, eventContracts,
 // contract.observability, projections
 ```
+
+Prefer `arkgate/runtime` for the optional kernel (root `arkgate` still re-exports for
+compat). Package surface policy: [package-surface.md](package-surface.md).
 
 Agents should read `contract` and `ark.observability.report()` before generating or modifying code.
 

@@ -9,7 +9,12 @@
     },
     {
       "name": "Kernel",
-      "patterns": ["src/kernel/**", "src/index.ts", "src/version.ts"],
+      "patterns": [
+        "src/kernel/**",
+        "src/runtime/**",
+        "src/index.ts",
+        "src/version.ts"
+      ],
       "intentPrefixes": ["Kernel."]
     },
     {

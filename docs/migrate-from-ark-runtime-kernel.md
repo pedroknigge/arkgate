@@ -131,7 +131,8 @@ Or edit `.grok/config.toml` → `args` use `arkgate-mcp`.
 
 ```diff
 - import { createStrictArkKernelFromConfig } from 'ark-runtime-kernel';
-+ import { createStrictArkKernelFromConfig } from 'arkgate';
++ import { createStrictArkKernelFromConfig } from 'arkgate/runtime';
+  // root `arkgate` still re-exports kernel symbols this major (compat)
 
 - import { ArkModule } from 'ark-runtime-kernel/nestjs';
 + import { ArkModule } from 'arkgate/nestjs';
@@ -140,7 +141,8 @@ Or edit `.grok/config.toml` → `args` use `arkgate-mcp`.
 + import ark from 'arkgate/eslint';
 ```
 
-If you only used the CLI + MCP (most projects), **no import changes**.
+If you only used the CLI + MCP (most projects), **no import changes**.  
+Surface policy: [package-surface.md](package-surface.md).
 
 ---
 

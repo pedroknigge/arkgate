@@ -3,8 +3,9 @@
  *
  * Layer / import / forbidden-globals rules load `ark.config.json` from the linted
  * project (walk-up from the file) and use the same glob specificity + edge semantics
- * as ark-check. Matching primitives come from `bin/ark-layer-match.mjs` (bundled) so
- * CLI and editor share one implementation — no Kernel imports.
+ * as ark-check. Matching primitives come from the canonical
+ * `src/domain/layerMatch.ts` (CLI loads the generated `bin/ark-layer-match.mjs`) —
+ * no Kernel imports.
  */
 import fs from 'node:fs';
 import path from 'node:path';

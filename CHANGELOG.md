@@ -2,6 +2,42 @@
 
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here.
 
+## Unreleased
+
+## 2.7.0 — 2026-07-09
+
+Maintainability release (roadmap **R1–R4**): single-source layer matching, package surface policy,
+`ark-check` orchestration split, and typed pure CLI helpers. **No intentional CLI flag or JSON
+shape breaks** for the gate/co-pilot path.
+
+### Added
+
+- **`arkgate/runtime`** package subpath (ESM/CJS + types) — preferred entry for the optional
+  runtime kernel. Root `arkgate` still re-exports kernel symbols for this major (compat).
+- **`docs/package-surface.md`** — stable surfaces (CLI JSON, MCP, `ark.config`) vs opt-in runtime.
+- **Generated pure CLI helpers:** `bin/lib/remediation.mjs`, `bin/lib/baseline-key.mjs` from
+  Domain TS (`npm run generate:cli-pure` / `check:cli-pure`).
+- **`ark-check` scan pipeline modules** under `bin/lib/`: `scan-files`, `config-warnings`,
+  `ts-resolve`, `ast-scan`, `graph-cycles`, `architecture-scan`.
+
+### Changed
+
+- **R1 — layer globs SoT:** canonical `src/domain/layerMatch.ts` → generated
+  `bin/ark-layer-match.mjs`; `npm run check:layer-match` drift guard in CI.
+  `normalizeGlobSeparators` keeps Windows path seps without eating glob escapes.
+- **R2 — package surface = product wedge:** README / agent-guide / migrate / production-hardening
+  recommend `arkgate/runtime` for kernel usage.
+- **R3 — `ark-check` entry slim-down:** entry is orchestration-only (~2.4k → ~1.4k LOC);
+  `runArchitectureScan` owns the check pipeline. Flags and JSON shapes unchanged.
+- **R4 — typed pure core:** `classifyRemediation`, `enrichViolationWithFixClass`, and
+  `baselineKey` live in `src/domain/*` with generated CLI load paths; unit tests import Domain
+  sources without spawning the CLI.
+
+### Docs / CI
+
+- CI steps for layer-match and cli-pure drift guards.
+- CONTRIBUTING / AGENTS: regenerate commands after editing pure Domain algorithms.
+
 ## 2.6.1 — 2026-07-09
 
 Field-test release: Next/monorepo honesty (deer-flow-style hosts), simplified **one-flow** UX for
