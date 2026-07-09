@@ -126,12 +126,26 @@ Ordered by leverage for the dual audience:
 9. Adopt TS 7.1+ stable programmatic API when Microsoft ships it (extend `usableTypescript`).  
 10. ~~Adoption completeness (doctor hosts/MCP/codex/origin)~~ → **shipped 2.4.0**.  
 
+### Next iteration — maintainability debt (post-2.5.0)
+
+Tracked from pre-publish audit; **not** release blockers. Do these before another large feature surface:
+
+11. **Split / modularize `bin/ark-check.mjs` (~5.8k lines)** — extract report HTML, doctor/adoption,
+    install-agent-gates, migrate-commands, and scan loop into focused modules under `bin/` (or a
+    non-exported `bin/lib/`). Keep CLI behavior identical; add smoke tests per surface. Goal:
+    safer changes and faster reviews without a greenfield rewrite.  
+12. **Single source of truth for layer globs (ESLint vs CLI)** — today `src/eslint` duplicates
+    `globToRegExp` / `layerForFile` / edge deny from `bin/ark-shared.mjs` so Tooling never imports
+    Kernel/CLI. Next: extract **pure** matching into a layer-legal home both can use (or generate
+    eslint helpers from shared pure tests) so dual-driver parity is structural, not copy-paste.
+    Dual-driver tests stay the gate either way.
+
 ### P2 — growth surfaces (not prerequisites)
 
-9. Deployed docs site (content already under `docs/`).  
-10. Optional locale packs (English canonical).  
-11. Optional split of runtime API into a secondary package.  
-12. Team features: stronger report/export, baseline burn-down UX, package-scoped debt.  
+13. Deployed docs site (content already under `docs/`).  
+14. Optional locale packs (English canonical).  
+15. Optional split of runtime API into a secondary package.  
+16. Team features: stronger report/export, baseline burn-down UX, package-scoped debt.  
 
 ### Later / only if pulled by demand
 
