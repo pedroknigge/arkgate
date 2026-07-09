@@ -4,6 +4,11 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+## 2.8.3 — 2026-07-09
+
+Field residuals + official site: core ratchet to honest ENFORCE, typecheck bootstrap,
+host-token scrub, arkgate.online homepage. **No intentional CLI flag or JSON shape breaks.**
+
 ### Added
 
 - **`--ratchet-cores`:** when architecture is green (0 active violations, governed ≥ 50%),
@@ -24,6 +29,7 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 - **Maintainability:** `--ratchet-cores` lives in `bin/lib/core-ratchet.mjs` (not the ark-check
   entry); typecheck detection uses shared `packageScriptsHaveTypecheck` (not full deploy-path
   scan); typecheck bootstrap is skipped under `--skills-only`.
+
 
 ## 2.8.2 — 2026-07-09
 
