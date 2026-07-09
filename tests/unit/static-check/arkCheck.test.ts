@@ -2401,6 +2401,63 @@ describe('ark-check monorepo tsconfig resolution', () => {
     expect((cycles[0] as { file?: string }).file).toBe('src/domain/a.ts');
   });
 
+  it('does not flag a cycle closed only by import type (codegen-style back-edge)', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-type-cycle-'));
+    fs.mkdirSync(path.join(root, 'src/app'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        // Keep gen file in scope so the type-only edge is evaluated (not scan-excluded).
+        excludeGenerated: false,
+        layers: [{ name: 'PresentationAdapters', patterns: ['src/app/**'] }],
+        rules: [],
+      })
+    );
+    // Value edge: router → gen; type-only edge: gen → router (TanStack-style).
+    fs.writeFileSync(
+      path.join(root, 'src/app/router.ts'),
+      "import { routeTree } from './routeTree.gen.js';\nexport function getRouter() { return routeTree; }\n"
+    );
+    fs.writeFileSync(
+      path.join(root, 'src/app/routeTree.gen.ts'),
+      "import type { getRouter } from './router.js';\nexport const routeTree = {} as { router: typeof getRouter };\n"
+    );
+
+    const result = runArkCheck(root);
+    expect(result.violations.filter((v) => v.ruleId === 'CIRCULAR_DEPENDENCY')).toHaveLength(0);
+  });
+
+  it('skips *.gen.ts from the scan by default (still flags value cycles among hand-written files)', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-gen-skip-'));
+    fs.mkdirSync(path.join(root, 'src/app'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [{ name: 'PresentationAdapters', patterns: ['src/app/**'] }],
+        rules: [],
+      })
+    );
+    fs.writeFileSync(
+      path.join(root, 'src/app/router.ts'),
+      "import { routeTree } from './routeTree.gen.js';\nexport const r = routeTree;\n"
+    );
+    fs.writeFileSync(
+      path.join(root, 'src/app/routeTree.gen.ts'),
+      "import type { r } from './router.js';\nexport const routeTree = {} as { r: typeof r };\n"
+    );
+
+    const cov = runArkCheck(root, ['--coverage']) as {
+      coverage?: { totalFiles?: number; governed?: { totalFiles?: number } };
+    };
+    // Only hand-written router is in scope; gen file is scan-excluded.
+    expect(cov.coverage?.totalFiles ?? cov.coverage?.governed?.totalFiles).toBe(1);
+
+    const result = runArkCheck(root);
+    expect(result.violations.filter((v) => v.ruleId === 'CIRCULAR_DEPENDENCY')).toHaveLength(0);
+  });
+
   it('does not flag an acyclic import graph', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-dag-'));
     fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });

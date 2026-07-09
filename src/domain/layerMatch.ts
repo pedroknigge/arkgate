@@ -122,3 +122,33 @@ export function isEdgeDenied(
   const hit = (rules ?? []).find((r) => r.from === from && r.to === to);
   return hit?.allowed === false;
 }
+
+/** Codegen globs skipped by default scan — keep in lockstep with bin/ark-layer-match.mjs. */
+export const DEFAULT_GENERATED_FILE_GLOBS = [
+  '**/*.gen.ts',
+  '**/*.gen.tsx',
+  '**/*.generated.ts',
+  '**/*.generated.tsx',
+];
+
+export type ScanExcludeConfig = {
+  exclude?: string[];
+  excludeGenerated?: boolean;
+};
+
+export function scanExcludePatterns(config?: ScanExcludeConfig | null): string[] {
+  const custom = Array.isArray(config?.exclude)
+    ? config!.exclude!.filter((p) => typeof p === 'string')
+    : [];
+  const generated =
+    config?.excludeGenerated === false ? [] : DEFAULT_GENERATED_FILE_GLOBS;
+  return [...generated, ...custom];
+}
+
+export function isScanExcludedRelative(
+  relPath: string,
+  config?: ScanExcludeConfig | null
+): boolean {
+  const rel = String(relPath).split(/[/\\]/).join('/');
+  return scanExcludePatterns(config).some((pattern) => globToRegExp(pattern).test(rel));
+}

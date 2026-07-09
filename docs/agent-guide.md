@@ -84,6 +84,20 @@ detect, for **any** consumer repo (framework signals only — deps, scripts, CI 
 Respects `eslint.ignoreDuringBuilds: true` in `next.config.*`. Recommended pre-merge
 order (universal): `lint` → `typecheck` → `arkgate-check` / `check:architecture` → `build`.
 
+### Generated files and type-only cycles
+
+By default Ark **does not scan** common codegen paths:
+
+- `**/*.gen.ts`, `**/*.gen.tsx`
+- `**/*.generated.ts`, `**/*.generated.tsx`
+
+Override with `"excludeGenerated": false` or extend with top-level `"exclude": ["**/vendor/**"]`
+in `ark.config.json`.
+
+**Circular dependencies** are computed on **value/runtime** import edges only. A cycle
+closed solely by `import type` (common with generated route trees) is **not** reported as
+`CIRCULAR_DEPENDENCY`. Value cycles still fail.
+
 ### MCP `ark_recommend` and `/ark-architect` (Phase C)
 
 The `ark-mcp` server exposes **`ark_recommend`** — same JSON as

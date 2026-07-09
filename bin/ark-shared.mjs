@@ -369,6 +369,9 @@ export {
   layerForFile,
   layerForRelativePath,
   isEdgeDenied,
+  DEFAULT_GENERATED_FILE_GLOBS,
+  scanExcludePatterns,
+  isScanExcludedRelative,
 } from './ark-layer-match.mjs';
 
 function normalizePrefix(prefix) {

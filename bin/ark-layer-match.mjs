@@ -166,3 +166,32 @@ export function isEdgeDenied(rules, from, to) {
   const hit = (rules ?? []).find((r) => r.from === from && r.to === to);
   return hit?.allowed === false;
 }
+
+/**
+ * Codegen / generated source globs skipped by the default scan.
+ * Universal (TanStack Router routeTree.gen, many `*.generated.ts` tools, etc.).
+ * Opt out with `excludeGenerated: false` in ark.config.json; add more via top-level `exclude`.
+ */
+export const DEFAULT_GENERATED_FILE_GLOBS = [
+  '**/*.gen.ts',
+  '**/*.gen.tsx',
+  '**/*.generated.ts',
+  '**/*.generated.tsx',
+];
+
+/**
+ * Globs that remove files from ark-check scan (cycles, layers, coverage).
+ * @param {{ exclude?: string[], excludeGenerated?: boolean } | null | undefined} config
+ */
+export function scanExcludePatterns(config) {
+  const custom = Array.isArray(config?.exclude) ? config.exclude.filter((p) => typeof p === 'string') : [];
+  const generated =
+    config?.excludeGenerated === false ? [] : DEFAULT_GENERATED_FILE_GLOBS;
+  return [...generated, ...custom];
+}
+
+/** Relative path (posix) matches any scan-exclude glob. */
+export function isScanExcludedRelative(relPath, config) {
+  const rel = String(relPath).split(path.sep).join('/');
+  return scanExcludePatterns(config).some((pattern) => globToRegExp(pattern).test(rel));
+}

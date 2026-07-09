@@ -31,6 +31,7 @@ import {
   formatArchitectureRecommendationHuman,
   globToRegExp,
   installDevHint,
+  isScanExcludedRelative,
   presentLockfiles,
   layerForFile,
   looksLikeIntent,
@@ -250,6 +251,7 @@ function usage() {
     'Config shape:',
     '{',
     '  "include": ["src"],',
+    '  // optional: "exclude": ["**/vendor/**"], "excludeGenerated": false  (default skips *.gen.ts / *.generated.ts)',
     '  "layers": [',
     '    { "name": "DomainModel", "patterns": ["src/domain/**"], "intentPrefixes": ["Domain."],',
     '      "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"] }',
@@ -523,7 +525,7 @@ const THIN_COVERAGE_PERCENT = 50;
 function maybeWarnBrownfield(root, config) {
   let files;
   try {
-    files = (config.include ?? []).flatMap((entry) => walk(path.join(root, entry)));
+    files = collectGovernedFiles(root, config);
   } catch {
     return false;
   }
@@ -755,6 +757,15 @@ function walk(dir, files = []) {
     }
   }
   return files;
+}
+
+/** Walk include roots then drop codegen / config.exclude (universal scan filter). */
+function collectGovernedFiles(root, config) {
+  const raw = (config.include ?? []).flatMap((entry) => walk(path.join(root, entry)));
+  return raw.filter((abs) => {
+    const rel = normalize(path.relative(root, abs));
+    return !isScanExcludedRelative(rel, config);
+  });
 }
 
 function normalize(value) {
@@ -1412,6 +1423,8 @@ function detectCycles(graph) {
       line: 1,
       target: members.join(' → '),
       message: `Circular dependency among ${members.length} files: ${members.join(' → ')} → ${members[0]}.`,
+      // Graph is value/runtime edges only (type-only imports omitted).
+      cycleKind: 'value',
     }));
 }
 
@@ -1552,7 +1565,7 @@ async function main() {
   const config = readConfig(root, args.config);
   const manifest = readManifest(root, args.manifest);
   const rules = manifest?.architecture?.rules ?? config.rules;
-  const files = config.include.flatMap((entry) => walk(path.join(root, entry)));
+  const files = collectGovernedFiles(root, config);
 
   // --coverage is a pure glob/report view (no TypeScript resolver), so serve it BEFORE the
   // TS import: the report must work — and exit 0 — even when typescript isn't installed.
@@ -1759,7 +1772,11 @@ async function main() {
       const targetLayer = target ? layerForFile(root, target, config.layers) : undefined;
       if (target && targetLayer) {
         const relTarget = normalize(path.relative(root, target));
-        if (relTarget !== relFile) importGraph.get(relFile).add(relTarget);
+        // Cycle graph is runtime coupling only. Type-only imports are erased by TS and
+        // must not form CIRCULAR_DEPENDENCY (e.g. codegen `import type` back-edges).
+        if (relTarget !== relFile && !edge.typeOnly) {
+          importGraph.get(relFile).add(relTarget);
+        }
       }
       const rule = targetLayer ? isBlocked(rules, sourceLayer, targetLayer) : undefined;
       if (rule) {

@@ -10,6 +10,9 @@ import {
   patternSpecificity as specTs,
   layerForRelativePath as layerTs,
   isEdgeDenied as edgeTs,
+  scanExcludePatterns as scanTs,
+  isScanExcludedRelative as exclTs,
+  DEFAULT_GENERATED_FILE_GLOBS as genTs,
 } from '../../../src/domain/layerMatch';
 
 const binUrl = pathToFileURL(path.resolve('bin/ark-layer-match.mjs')).href;
@@ -72,5 +75,19 @@ describe('layer-match parity (domain TS ↔ bin ESM)', async () => {
       const abs = path.posix.join(root, rel);
       expect(bin.layerForFile(root, abs, layers)).toBe(layerTs(rel, layers));
     }
+  });
+
+  it('scan exclude patterns and generated defaults agree', () => {
+    expect(genTs).toEqual(bin.DEFAULT_GENERATED_FILE_GLOBS);
+    expect(scanTs({})).toEqual(bin.scanExcludePatterns({}));
+    expect(scanTs({ excludeGenerated: false })).toEqual(bin.scanExcludePatterns({ excludeGenerated: false }));
+    expect(exclTs('src/app/routeTree.gen.ts', {})).toBe(true);
+    expect(exclTs('src/app/routeTree.gen.ts', {})).toBe(
+      bin.isScanExcludedRelative('src/app/routeTree.gen.ts', {})
+    );
+    expect(exclTs('src/app/routeTree.gen.ts', { excludeGenerated: false })).toBe(false);
+    expect(exclTs('src/vendor/x.ts', { exclude: ['**/vendor/**'] })).toBe(
+      bin.isScanExcludedRelative('src/vendor/x.ts', { exclude: ['**/vendor/**'] })
+    );
   });
 });

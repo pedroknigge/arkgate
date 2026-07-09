@@ -27,6 +27,14 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 - **`normalizeToolsList`:** safe comma-split for tools args (never `new Set("codex,grok")`
   character-splitting).
 
+### Fixed — codegen / type-only cycles (universal)
+
+- **Cycle graph uses value edges only:** `import type` / type-only module references no
+  longer create `CIRCULAR_DEPENDENCY` (fixes false cycles from router codegen
+  `import type` back-edges). Real value cycles still fail.
+- **Default scan skip for generated sources:** `**/*.gen.ts(x)` and `**/*.generated.ts(x)`.
+  Opt out with `"excludeGenerated": false`. Add more via top-level `"exclude": [...]`.
+
 ## 2.6.0 — 2026-07-09
 
 ### Changed — maintainability hygiene (#11 / #12)
