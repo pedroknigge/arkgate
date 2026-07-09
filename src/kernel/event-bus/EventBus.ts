@@ -225,6 +225,10 @@ export class EventBusImpl<Context = unknown> implements EventBus {
     });
     this.dependencyGraph?.registerEventFlow(event.metadata.source, event.intent);
 
+    // Snapshot subscribers before policy hooks so onSoftViolation cannot change
+    // who is notified for this publish (preserves pre-R8 semantics).
+    const matching = [...(this.subscriptionsByIntent.get(event.intent) ?? [])];
+
     // 5. Policy
     if (this.policyEngine) {
       await enforcePublishPolicy(event as DomainEvent, {
@@ -238,7 +242,6 @@ export class EventBusImpl<Context = unknown> implements EventBus {
     }
 
     // 6. History / outbox / published trace
-    const matching = [...(this.subscriptionsByIntent.get(event.intent) ?? [])];
     await recordSuccessfulPublish(
       this.recording,
       event as DomainEvent,
