@@ -50,6 +50,13 @@ export interface WorkflowSnapshot<P extends SagaContext = SagaContext> {
   error?: string;
 }
 
+/**
+ * Pluggable saga/workflow snapshot store.
+ *
+ * **Durability stance (R9):** Default `InMemoryWorkflowStore` is reference-only (not
+ * production durability). Inject a durable store for production. See
+ * `docs/production-hardening.md`.
+ */
 export interface WorkflowStore {
   save<P extends SagaContext>(snapshot: WorkflowSnapshot<P>): MaybePromise<void>;
   get<P extends SagaContext = SagaContext>(id: string): MaybePromise<WorkflowSnapshot<P> | undefined>;

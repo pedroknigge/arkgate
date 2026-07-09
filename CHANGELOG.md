@@ -2,6 +2,24 @@
 
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here.
 
+## 2.8.1 — 2026-07-09
+
+Runtime honesty release (roadmap **R8–R9**): EventBus publish pipeline decomposition and
+explicit InMemory durability stance. **No intentional CLI flag or JSON shape breaks.**
+
+### Changed
+
+- **R8 — EventBus decomposition:** publish pipeline split into cohesive modules under
+  `src/kernel/event-bus/` (`payloadPatch`, `publishGuards`, `publishInterceptors`,
+  `observedLayerFlow`, `publishPolicy`, `publishRecording`). `EventBus.ts` is
+  orchestration + public surface only. **`createEventBus` API and enforcement order
+  unchanged.** Snapshot of subscribers still taken before policy hooks.
+- **R9 — Runtime durability stance:** built-in stores are documented as **reference
+  InMemory-only** (not production durability) in README, `docs/production-hardening.md`,
+  `docs/package-surface.md`, and JSDoc on `OutboxStore` / `AuditStore` /
+  `ReadModelStore` / `WorkflowStore` (+ InMemory implementations). No durable adapter
+  shipped — inject your own for production.
+
 ## 2.8.0 — 2026-07-09
 
 Co-pilot quality release (roadmap **R5–R7**): labeled eval corpus, fourth mechanical-safe kind,

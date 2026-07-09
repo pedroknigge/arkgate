@@ -151,6 +151,36 @@ describe('Event Bus core (Iteration 3)', () => {
     expect(bus.getTrace().some((t) => t.type === 'policy.softViolation')).toBe(true);
   });
 
+  it('does not notify subscribers registered during onSoftViolation for the same publish', async () => {
+    // Pre-R8 snapshot order: matching handlers are fixed before policy hooks run.
+    const late: DomainEvent[] = [];
+    const early: DomainEvent[] = [];
+    const softPolicy = definePolicy({
+      name: 'Advisory',
+      severity: 'soft',
+      check: () => ({ message: 'late-sub' }),
+    });
+
+    const bus = createEventBus({
+      policies: [softPolicy],
+      getPolicyContext: (event) => ({ event }),
+      onSoftViolation: () => {
+        bus.subscribe(OrderPlaced, (e) => late.push(e));
+      },
+    });
+    bus.subscribe(OrderPlaced, (e) => early.push(e));
+
+    await bus.publish(OrderPlaced({ orderId: 'snap', amount: 1 }));
+
+    expect(early).toHaveLength(1);
+    expect(late).toHaveLength(0);
+
+    // Next publish notifies both (late was registered after snapshot).
+    await bus.publish(OrderPlaced({ orderId: 'snap2', amount: 2 }));
+    expect(early).toHaveLength(2);
+    expect(late).toHaveLength(1);
+  });
+
   it('calls onHandlerError when subscriber fails', async () => {
     const errors: unknown[] = [];
     const bus = createEventBus({

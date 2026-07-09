@@ -54,12 +54,23 @@ export interface AuditQuery {
   limit?: number;
 }
 
+/**
+ * Pluggable persistence for audit records.
+ *
+ * **Durability stance (R9):** Default is `InMemoryAuditStore` — reference only, not
+ * production durability (lost on restart). Implement this interface for durable audit.
+ * See `docs/production-hardening.md`.
+ */
 export interface AuditStore {
   append(record: AuditRecord): MaybePromise<void>;
   query(query?: AuditQuery): MaybePromise<AuditRecord[]>;
   clear(): MaybePromise<void>;
 }
 
+/**
+ * High-level audit API used by the event bus / kernel.
+ * Durability is that of the injected `AuditStore` (default in-memory).
+ */
 export interface AuditTrail {
   record(input: AuditRecordInput): Promise<AuditRecord>;
   query(query?: AuditQuery): Promise<AuditRecord[]>;
@@ -67,6 +78,7 @@ export interface AuditTrail {
 }
 
 export interface CreateAuditTrailOptions {
+  /** Durable store when provided; otherwise `InMemoryAuditStore` (not production durability). */
   store?: AuditStore;
   maxRecords?: number;
 }

@@ -16,6 +16,13 @@ export interface ProjectionCheckpoint {
   updatedAt?: string;
 }
 
+/**
+ * Pluggable projection/read-model state.
+ *
+ * **Durability stance (R9):** Default `InMemoryReadModelStore` is reference-only (not
+ * production durability). Inject a durable store for production. See
+ * `docs/production-hardening.md`.
+ */
 export interface ReadModelStore {
   load<State = unknown>(name: string): MaybePromise<State | undefined>;
   save<State = unknown>(name: string, state: State): MaybePromise<void>;

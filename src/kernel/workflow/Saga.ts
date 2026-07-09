@@ -53,6 +53,10 @@ async function withTimeout<T>(
   }
 }
 
+/**
+ * Reference in-process workflow store. **Not production durability.**
+ * See `docs/production-hardening.md`.
+ */
 export class InMemoryWorkflowStore implements WorkflowStore {
   private readonly snapshots = new Map<string, WorkflowSnapshot>();
 

@@ -1,13 +1,10 @@
 /**
- * EventBus implementation.
+ * EventBus implementation — public surface + publish orchestration.
  *
- * Core publish/subscribe mechanics with:
- * - Intent-aware typing via creators
- * - Automatic metadata enrichment
- * - Full publish history for observability
- * - Strict registry validation (opt-in by default when registry provided)
+ * Publish pipeline stages live in cohesive modules (R8):
+ *   guards → interceptors → contract re-check → observed layer flow →
+ *   policy → history/outbox/trace → handlers → onPublish hook
  */
-
 import type {
   DomainEvent,
   EventMetadata,
@@ -19,51 +16,46 @@ import type {
   EventHandler,
   EventInterceptor,
   EventInterceptionInfo,
-  EventPayloadPatch,
   EventPublisher,
   IntentCreator,
   ObservedLayerFlowMode,
   PublishedEventRecord,
   TraceRecord,
-  TraceSink,
   Unsubscribe,
 } from './types';
 import type { IntentRegistry } from '../intent/IntentRegistry';
 import type { DependencyGraph } from '../graph';
 import type { ArchitectureProfile } from '../layers';
-import type { AuditRecordType, AuditTrail } from '../audit';
 import type { EventContractRegistry } from '../event-contracts';
-import type { OutboxStore } from '../outbox';
-import { validateIntentName } from '../intent/validateIntentName';
 import {
   PolicyEngine,
-  PolicyViolationError,
   isLayerPolicy,
-  type PolicyEvaluationResult,
 } from '../policy';
 import { buildPublishPolicyContext } from './policyContext';
 import {
-  UnregisteredIntentError,
-  InvalidIntentNameError,
   LayerPolicyContextError,
-  EventContractViolationError,
-  UnknownEventSourceError,
-  ObservedLayerFlowViolationError,
   SourceMetadataOverrideError,
 } from './errors';
+import {
+  assertIntentAllowed,
+  assertSourceAllowed,
+  assertContractAllowed,
+} from './publishGuards';
+import { applyInterceptors, type RegisteredInterceptor } from './publishInterceptors';
+import { assertObservedLayerFlowAllowed } from './observedLayerFlow';
+import { enforcePublishPolicy } from './publishPolicy';
+import {
+  appendTrace as appendTraceToBuffers,
+  recordAudit as recordAuditToBuffers,
+  recordRawPublishDiagnostic,
+  recordSuccessfulPublish,
+  enrichMetadata,
+  type RecordingBuffers,
+} from './publishRecording';
 
 interface InternalSubscription {
   intentName: string;
   handler: EventHandler<IntentName, unknown>;
-}
-
-interface InternalInterceptor {
-  registrationId: string;
-  interceptorId: string;
-  intentName: string;
-  interceptor: EventInterceptor<IntentName, unknown>;
-  createdAt: string;
-  lastInterceptedAt?: string;
 }
 
 let interceptorSequence = 0;
@@ -73,123 +65,23 @@ function nextInterceptorRegistrationId(): string {
   return `interceptor-${Date.now()}-${interceptorSequence}`;
 }
 
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return false;
-  }
-  const proto = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
-}
-
-function clonePatchValue(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(clonePatchValue);
-  if (isPlainRecord(value)) {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, child]) => [key, clonePatchValue(child)])
-    );
-  }
-  return value;
-}
-
-function mergeRecordPatch(
-  target: Record<string, unknown>,
-  patch: Record<string, unknown>,
-  path = 'payload'
-): Record<string, unknown> {
-  const next = { ...target };
-
-  for (const [key, value] of Object.entries(patch)) {
-    const childPath = `${path}.${key}`;
-    if (!(key in next) || next[key] === undefined) {
-      next[key] = clonePatchValue(value);
-      continue;
-    }
-
-    if (isPlainRecord(next[key]) && isPlainRecord(value)) {
-      next[key] = mergeRecordPatch(next[key] as Record<string, unknown>, value, childPath);
-      continue;
-    }
-
-    if (Array.isArray(next[key]) && Array.isArray(value)) {
-      next[key] = mergeArrayPatch(next[key] as unknown[], value, childPath);
-      continue;
-    }
-
-    throw new Error(`Interceptor patch cannot overwrite existing ${childPath}.`);
-  }
-
-  return next;
-}
-
-function mergeArrayPatch(
-  target: unknown[],
-  patch: unknown[],
-  path = 'payload'
-): unknown[] {
-  const next = [...target];
-
-  patch.forEach((value, index) => {
-    const childPath = `${path}[${index}]`;
-    if (index >= next.length || next[index] === undefined) {
-      next[index] = clonePatchValue(value);
-      return;
-    }
-
-    if (isPlainRecord(next[index]) && isPlainRecord(value)) {
-      next[index] = mergeRecordPatch(next[index] as Record<string, unknown>, value, childPath);
-      return;
-    }
-
-    if (Array.isArray(next[index]) && Array.isArray(value)) {
-      next[index] = mergeArrayPatch(next[index] as unknown[], value, childPath);
-      return;
-    }
-
-    throw new Error(`Interceptor patch cannot overwrite existing ${childPath}.`);
-  });
-
-  return next;
-}
-
-function applyPayloadPatch(payload: unknown, patch: EventPayloadPatch): unknown {
-  if (Array.isArray(patch)) {
-    if (payload === undefined) return clonePatchValue(patch);
-    if (!Array.isArray(payload)) {
-      throw new Error('Array interceptor patch requires an array payload.');
-    }
-    return mergeArrayPatch(payload, patch);
-  }
-
-  if (payload === undefined) return clonePatchValue(patch);
-  if (!isPlainRecord(payload)) {
-    throw new Error('Object interceptor patch requires an object payload.');
-  }
-  return mergeRecordPatch(payload, patch);
-}
-
 export class EventBusImpl<Context = unknown> implements EventBus {
   private readonly subscriptions: InternalSubscription[] = [];
   private readonly subscriptionsByIntent = new Map<string, InternalSubscription[]>();
-  private readonly interceptors: InternalInterceptor[] = [];
-  private readonly interceptorsByIntent = new Map<string, InternalInterceptor[]>();
-  private readonly history: PublishedEventRecord[] = [];
-  private readonly trace: TraceRecord[] = [];
+  private readonly interceptors: RegisteredInterceptor[] = [];
+  private readonly interceptorsByIntent = new Map<string, RegisteredInterceptor[]>();
+  private readonly recording: RecordingBuffers;
   private readonly onPublish?: (event: DomainEvent) => void | Promise<void>;
   private readonly onSoftViolation?: EventBusOptions<Context>['onSoftViolation'];
   private readonly onHandlerError?: EventBusOptions<Context>['onHandlerError'];
-  private readonly auditTrail?: AuditTrail;
   private readonly eventContracts?: EventContractRegistry;
   private readonly strictEventContracts: boolean;
   private readonly requireKnownSource: boolean;
   private readonly architectureProfile?: ArchitectureProfile;
   private readonly enforceObservedLayerFlowMode: ObservedLayerFlowMode;
-  private readonly outbox?: OutboxStore;
-  private readonly instanceId?: string;
-  private readonly traceSinks: TraceSink[];
   private readonly rethrowHandlerErrors: boolean;
   private readonly policyEngine?: PolicyEngine<Context>;
   private readonly getPolicyContext: (event: DomainEvent) => Context;
-  private readonly maxHistorySize?: number;
   private readonly intentRegistry?: IntentRegistry;
   private readonly dependencyGraph?: DependencyGraph;
   private readonly strictRegistry: boolean;
@@ -199,23 +91,28 @@ export class EventBusImpl<Context = unknown> implements EventBus {
     this.onPublish = options.onPublish;
     this.onSoftViolation = options.onSoftViolation;
     this.onHandlerError = options.onHandlerError;
-    this.auditTrail = options.auditTrail;
     this.eventContracts = options.eventContracts;
     this.strictEventContracts = options.strictEventContracts ?? false;
     this.requireKnownSource = options.requireKnownSource ?? false;
     this.architectureProfile = options.architectureProfile;
     this.enforceObservedLayerFlowMode = options.enforceObservedLayerFlow ?? 'off';
-    this.outbox = options.outbox;
-    this.instanceId = options.instanceId;
-    this.traceSinks = [...(options.traceSinks ?? [])];
     this.rethrowHandlerErrors = options.rethrowHandlerErrors ?? false;
-    this.maxHistorySize = options.maxHistorySize;
     this.intentRegistry = options.intentRegistry;
     this.dependencyGraph = options.dependencyGraph;
     this.strictRegistry =
       options.strictRegistry ?? options.intentRegistry !== undefined;
     this.validateIntentNaming =
       options.validateIntentNaming ?? this.strictRegistry;
+
+    this.recording = {
+      history: [],
+      trace: [],
+      maxHistorySize: options.maxHistorySize,
+      traceSinks: [...(options.traceSinks ?? [])],
+      auditTrail: options.auditTrail,
+      outbox: options.outbox,
+      instanceId: options.instanceId,
+    };
 
     if (options.policyEngine) {
       this.policyEngine = options.policyEngine;
@@ -261,7 +158,11 @@ export class EventBusImpl<Context = unknown> implements EventBus {
       const created = creator(payload);
       event = {
         ...created,
-        metadata: this.enrichMetadata(created.metadata, extraMeta),
+        metadata: enrichMetadata(
+          created.metadata,
+          extraMeta,
+          this.recording.instanceId
+        ),
       } as DomainEvent<N, P>;
     } else {
       const rawEvent = eventOrCreator as DomainEvent<N, P>;
@@ -271,99 +172,86 @@ export class EventBusImpl<Context = unknown> implements EventBus {
         {};
       event = {
         ...rawEvent,
-        metadata: this.enrichMetadata(rawEvent.metadata, extraMeta),
+        metadata: enrichMetadata(
+          rawEvent.metadata,
+          extraMeta,
+          this.recording.instanceId
+        ),
       };
     }
 
+    // --- Publish pipeline (order is the product contract) ---
+
     if (rawPublish && this.strictRegistry) {
-      await this.recordRawPublishDiagnostic(event as DomainEvent);
+      await recordRawPublishDiagnostic(this.recording, event as DomainEvent);
     }
 
-    this.assertIntentAllowed(event.intent);
-    this.assertSourceAllowed(event as DomainEvent);
-    this.assertContractAllowed(event as DomainEvent);
-    event = await this.applyInterceptors(event as DomainEvent<N, P>);
-    this.assertContractAllowed(event as DomainEvent);
-    // Enforce BEFORE recording the observed edge: in hard mode a rejected flow must not
-    // leave a phantom edge in the graph that pollutes drift/manifest/observability reports.
-    await this.assertObservedLayerFlowAllowed(event as DomainEvent);
+    // 1. Guards: intent + source + contract
+    assertIntentAllowed(event.intent, {
+      strictRegistry: this.strictRegistry,
+      validateIntentNaming: this.validateIntentNaming,
+      intentRegistry: this.intentRegistry,
+    });
+    assertSourceAllowed(event as DomainEvent, {
+      requireKnownSource: this.requireKnownSource,
+      intentRegistry: this.intentRegistry,
+    });
+    assertContractAllowed(event as DomainEvent, {
+      eventContracts: this.eventContracts,
+      strictEventContracts: this.strictEventContracts,
+    });
+
+    // 2. Interceptors (may patch payload; contract re-checked per interceptor)
+    event = await applyInterceptors(event as DomainEvent<N, P>, {
+      interceptorsForIntent: (intent) => this.interceptorsByIntent.get(intent) ?? [],
+      eventContracts: this.eventContracts,
+      strictEventContracts: this.strictEventContracts,
+      appendTrace: (r) => this.appendTrace(r),
+      recordAudit: (type, e, details) => this.recordAudit(type, e, details),
+    });
+
+    // 3. Contract again after interceptors
+    assertContractAllowed(event as DomainEvent, {
+      eventContracts: this.eventContracts,
+      strictEventContracts: this.strictEventContracts,
+    });
+
+    // 4. Observed layer flow BEFORE graph edge registration
+    await assertObservedLayerFlowAllowed(event as DomainEvent, {
+      mode: this.enforceObservedLayerFlowMode,
+      architectureProfile: this.architectureProfile,
+      appendTrace: (r) => this.appendTrace(r),
+      recordAudit: (type, e, details) => this.recordAudit(type, e, details),
+    });
     this.dependencyGraph?.registerEventFlow(event.metadata.source, event.intent);
 
+    // Snapshot subscribers before policy hooks so onSoftViolation cannot change
+    // who is notified for this publish (preserves pre-R8 semantics).
     const matching = [...(this.subscriptionsByIntent.get(event.intent) ?? [])];
 
+    // 5. Policy
     if (this.policyEngine) {
-      const ctx = this.getPolicyContext(event as DomainEvent);
-      let policyResult: PolicyEvaluationResult;
-      try {
-        policyResult = this.policyEngine.enforce(ctx);
-      } catch (err) {
-        if (err instanceof PolicyViolationError) {
-          this.appendTrace({
-            type: 'policy.hardViolation',
-            timestamp: new Date().toISOString(),
-            intent: event.intent,
-            correlationId: event.metadata.correlationId,
-            traceId: event.metadata.traceId,
-            spanId: event.metadata.spanId,
-            details: { violations: err.violations },
-          });
-          await this.recordAudit('policy.hardViolation', event as DomainEvent, {
-            violations: err.violations,
-          });
-        }
-        throw err;
-      }
-
-      if (policyResult.softViolations.length > 0) {
-        this.appendTrace({
-          type: 'policy.softViolation',
-          timestamp: new Date().toISOString(),
-          intent: event.intent,
-          correlationId: event.metadata.correlationId,
-          traceId: event.metadata.traceId,
-          spanId: event.metadata.spanId,
-          details: { violations: policyResult.softViolations },
-        });
-        await this.recordAudit('policy.softViolation', event as DomainEvent, {
-          violations: policyResult.softViolations,
-        });
-
-        if (this.onSoftViolation) {
-          await this.safeHook(
-            () => this.onSoftViolation!(policyResult, event as DomainEvent),
-            'onSoftViolation',
-            event as DomainEvent
-          );
-        }
-      }
+      await enforcePublishPolicy(event as DomainEvent, {
+        policyEngine: this.policyEngine,
+        getPolicyContext: this.getPolicyContext,
+        appendTrace: (r) => this.appendTrace(r),
+        recordAudit: (type, e, details) => this.recordAudit(type, e, details),
+        onSoftViolation: this.onSoftViolation,
+        safeHook: (fn, name, e) => this.safeHook(fn, name, e),
+      });
     }
 
-    const record: PublishedEventRecord = {
-      event: event as DomainEvent,
-      publishedAt: new Date().toISOString(),
-      subscribersNotified: matching.length,
-    };
-    this.appendHistory(record);
-    await this.outbox?.enqueue(event as DomainEvent);
-
-    this.appendTrace({
-      type: 'event.published',
-      timestamp: record.publishedAt,
-      intent: event.intent,
-      correlationId: event.metadata.correlationId,
-      traceId: event.metadata.traceId,
-      spanId: event.metadata.spanId,
-      details: { subscribersNotified: matching.length },
-    });
-    await this.recordAudit('event.published', event as DomainEvent, {
-      subscribersNotified: matching.length,
-    });
-
-    const notifications = matching.map((sub) =>
-      this.invokeHandler(sub, event as DomainEvent)
+    // 6. History / outbox / published trace
+    await recordSuccessfulPublish(
+      this.recording,
+      event as DomainEvent,
+      matching.length
     );
 
-    await Promise.all(notifications);
+    // 7. Handlers + onPublish hook
+    await Promise.all(
+      matching.map((sub) => this.invokeHandler(sub, event as DomainEvent))
+    );
 
     if (this.onPublish) {
       await this.safeHook(
@@ -380,7 +268,11 @@ export class EventBusImpl<Context = unknown> implements EventBus {
     const sourceName =
       typeof source === 'string' ? source : (source as IntentCreator<N, P>).name;
 
-    this.assertIntentAllowed(sourceName);
+    assertIntentAllowed(sourceName, {
+      strictRegistry: this.strictRegistry,
+      validateIntentNaming: this.validateIntentNaming,
+      intentRegistry: this.intentRegistry,
+    });
 
     return {
       source: sourceName,
@@ -407,7 +299,11 @@ export class EventBusImpl<Context = unknown> implements EventBus {
     const intentName =
       typeof intent === 'string' ? intent : (intent as IntentCreator<N, P>).name;
 
-    this.assertIntentAllowed(intentName);
+    assertIntentAllowed(intentName, {
+      strictRegistry: this.strictRegistry,
+      validateIntentNaming: this.validateIntentNaming,
+      intentRegistry: this.intentRegistry,
+    });
 
     const sub: InternalSubscription = {
       intentName,
@@ -440,9 +336,13 @@ export class EventBusImpl<Context = unknown> implements EventBus {
     const intentName =
       typeof intent === 'string' ? intent : (intent as IntentCreator<N, P>).name;
 
-    this.assertIntentAllowed(intentName);
+    assertIntentAllowed(intentName, {
+      strictRegistry: this.strictRegistry,
+      validateIntentNaming: this.validateIntentNaming,
+      intentRegistry: this.intentRegistry,
+    });
 
-    const registration: InternalInterceptor = {
+    const registration: RegisteredInterceptor = {
       registrationId: nextInterceptorRegistrationId(),
       interceptorId: interceptorId ?? intentName,
       intentName,
@@ -490,205 +390,31 @@ export class EventBusImpl<Context = unknown> implements EventBus {
   }
 
   getHistory(): PublishedEventRecord[] {
-    return [...this.history];
+    return [...this.recording.history];
   }
 
   clearHistory(): void {
-    this.history.length = 0;
+    this.recording.history.length = 0;
   }
 
   getTrace(): TraceRecord[] {
-    return [...this.trace];
+    return [...this.recording.trace];
   }
 
   clearTrace(): void {
-    this.trace.length = 0;
+    this.recording.trace.length = 0;
   }
 
-  private assertIntentAllowed(intentName: string): void {
-    if (!this.strictRegistry && !this.validateIntentNaming) {
-      return;
-    }
-
-    if (this.validateIntentNaming) {
-      const validation = validateIntentName(intentName);
-      if (!validation.valid) {
-        throw new InvalidIntentNameError(intentName, validation.reason!);
-      }
-    }
-
-    if (this.strictRegistry && this.intentRegistry && !this.intentRegistry.has(intentName)) {
-      throw new UnregisteredIntentError(intentName);
-    }
+  private appendTrace(record: TraceRecord): void {
+    appendTraceToBuffers(this.recording, record);
   }
 
-  private assertSourceAllowed(event: DomainEvent): void {
-    if (!this.requireKnownSource) return;
-    if (!event.metadata.source || event.metadata.source === 'unknown') {
-      throw new UnknownEventSourceError(event.intent);
-    }
-    if (this.intentRegistry && !this.intentRegistry.has(event.metadata.source)) {
-      throw new UnknownEventSourceError(event.intent, event.metadata.source);
-    }
-  }
-
-  private assertContractAllowed(event: DomainEvent): void {
-    if (!this.eventContracts) return;
-    const result = this.eventContracts.validate(event);
-
-    if (!result.ok && (this.strictEventContracts || result.contract)) {
-      throw new EventContractViolationError(event.intent, result.issues);
-    }
-  }
-
-  /**
-   * Enforce the OBSERVED producer→event flow (metadata.source → intent) against the
-   * architecture profile's layer rules. This is the runtime counterpart to the
-   * declared-model layer policy: it checks what the system actually did, resolving both
-   * layers directly from the profile. It runs BEFORE the flow is recorded via
-   * registerEventFlow, so in hard mode a rejected flow leaves no edge in the graph.
-   */
-  private async assertObservedLayerFlowAllowed(event: DomainEvent): Promise<void> {
-    if (this.enforceObservedLayerFlowMode === 'off' || !this.architectureProfile) {
-      return;
-    }
-
-    const source = event.metadata.source;
-    if (!source || source === 'unknown') return;
-
-    const profile = this.architectureProfile;
-    const fromLayer = profile.resolveLayer(source);
-    const toLayer = profile.resolveLayer(event.intent);
-    if (!fromLayer || !toLayer) return;
-
-    const blocked = profile.rules.find(
-      (rule) => !rule.allowed && rule.from === fromLayer && rule.to === toLayer
-    );
-    if (!blocked) return;
-
-    const severity = this.enforceObservedLayerFlowMode;
-    const message =
-      blocked.message ??
-      `Observed layer violation: "${source}" (${fromLayer}) must not produce "${event.intent}" (${toLayer}).`;
-    const details = {
-      source,
-      intent: event.intent,
-      fromLayer,
-      toLayer,
-      severity,
-      message,
-      rule: blocked,
-    };
-
-    this.appendTrace({
-      type: 'layer.observedViolation',
-      timestamp: new Date().toISOString(),
-      intent: event.intent,
-      correlationId: event.metadata.correlationId,
-      traceId: event.metadata.traceId,
-      spanId: event.metadata.spanId,
-      details,
-    });
-    await this.recordAudit('layer.observedViolation', event, details);
-
-    if (severity === 'hard') {
-      throw new ObservedLayerFlowViolationError(source, event.intent, fromLayer, toLayer, message);
-    }
-  }
-
-  private async recordRawPublishDiagnostic(event: DomainEvent): Promise<void> {
-    const details = {
-      intent: event.intent,
-      source: event.metadata.source,
-      suggestion:
-        'Publish through a registered intent creator so strict registry, contracts, and agent tooling share one source of truth.',
-    };
-    this.appendTrace({
-      type: 'event.rawPublish',
-      timestamp: new Date().toISOString(),
-      intent: event.intent,
-      correlationId: event.metadata.correlationId,
-      traceId: event.metadata.traceId,
-      spanId: event.metadata.spanId,
-      details,
-    });
-    await this.recordAudit('event.rawPublish', event, details);
-  }
-
-  private async applyInterceptors<N extends IntentName, P>(
-    event: DomainEvent<N, P>
-  ): Promise<DomainEvent<N, P>> {
-    if (event.metadata.allowInterception === false) {
-      return event;
-    }
-
-    const matching = [...(this.interceptorsByIntent.get(event.intent) ?? [])];
-    let current = event as DomainEvent<N, P>;
-
-    for (const registration of matching) {
-      const patches: EventPayloadPatch[] = [];
-      try {
-        await Promise.resolve(
-          registration.interceptor({
-            event: current as Readonly<DomainEvent<IntentName, unknown>>,
-            intercept: (patch) => {
-              patches.push(patch);
-            },
-          })
-        );
-
-        if (patches.length === 0) {
-          continue;
-        }
-
-        const timestamp = new Date().toISOString();
-        let candidate = {
-          ...current,
-          metadata: {
-            ...current.metadata,
-            interceptions: [
-              ...(current.metadata.interceptions ?? []),
-              { interceptorId: registration.interceptorId, timestamp },
-            ],
-          },
-        } as DomainEvent<N, P>;
-
-        for (const patch of patches) {
-          candidate = {
-            ...candidate,
-            payload: applyPayloadPatch(candidate.payload, patch) as P,
-            metadata: { ...candidate.metadata },
-          };
-        }
-
-        this.assertContractAllowed(candidate as DomainEvent);
-        current = candidate;
-        registration.lastInterceptedAt = timestamp;
-
-        this.appendTrace({
-          type: 'event.intercepted',
-          timestamp,
-          intent: current.intent,
-          correlationId: current.metadata.correlationId,
-          traceId: current.metadata.traceId,
-          spanId: current.metadata.spanId,
-          details: {
-            registrationId: registration.registrationId,
-            interceptorId: registration.interceptorId,
-            patchesApplied: patches.length,
-          },
-        });
-        await this.recordAudit('event.intercepted', current as DomainEvent, {
-          registrationId: registration.registrationId,
-          interceptorId: registration.interceptorId,
-          patchesApplied: patches.length,
-        });
-      } catch (err) {
-        await this.recordInterceptorError(registration, current as DomainEvent, err);
-      }
-    }
-
-    return current;
+  private async recordAudit(
+    type: Parameters<typeof recordAuditToBuffers>[1],
+    event: DomainEvent,
+    details?: unknown
+  ): Promise<void> {
+    await recordAuditToBuffers(this.recording, type, event, details);
   }
 
   private async invokeHandler(
@@ -751,117 +477,6 @@ export class EventBusImpl<Context = unknown> implements EventBus {
         error: err instanceof Error ? err.message : String(err),
       });
     }
-  }
-
-  private async recordInterceptorError(
-    interceptor: InternalInterceptor,
-    event: DomainEvent,
-    error: unknown
-  ): Promise<void> {
-    const message = error instanceof Error ? error.message : String(error);
-    this.appendTrace({
-      type: 'interceptor.error',
-      timestamp: new Date().toISOString(),
-      intent: event.intent,
-      correlationId: event.metadata.correlationId,
-      traceId: event.metadata.traceId,
-      spanId: event.metadata.spanId,
-      details: {
-        registrationId: interceptor.registrationId,
-        interceptorId: interceptor.interceptorId,
-        error: message,
-      },
-    });
-    await this.recordAudit('interceptor.error', event, {
-      registrationId: interceptor.registrationId,
-      interceptorId: interceptor.interceptorId,
-      error: message,
-    });
-  }
-
-  private appendHistory(record: PublishedEventRecord): void {
-    this.history.push(record);
-    if (
-      this.maxHistorySize !== undefined &&
-      this.history.length > this.maxHistorySize
-    ) {
-      this.history.splice(0, this.history.length - this.maxHistorySize);
-    }
-  }
-
-  private appendTrace(record: TraceRecord): void {
-    this.trace.push(record);
-    if (
-      this.maxHistorySize !== undefined &&
-      this.trace.length > this.maxHistorySize
-    ) {
-      this.trace.splice(0, this.trace.length - this.maxHistorySize);
-    }
-    for (const sink of this.traceSinks) {
-      try {
-        sink(record);
-      } catch {
-        /* Trace sinks must not affect publish semantics. */
-      }
-    }
-  }
-
-  private async recordAudit(
-    type: AuditRecordType,
-    event: DomainEvent,
-    details?: unknown
-  ): Promise<void> {
-    if (!this.auditTrail) return;
-    try {
-      await this.auditTrail.record({
-        type,
-        source: event.metadata.source,
-        intent: event.intent,
-        correlationId: event.metadata.correlationId,
-        causationId: event.metadata.causationId,
-        subject: event.intent,
-        details,
-      });
-    } catch (err) {
-      this.appendTrace({
-        type: 'hook.error',
-        timestamp: new Date().toISOString(),
-        intent: event.intent,
-        correlationId: event.metadata.correlationId,
-        traceId: event.metadata.traceId,
-        spanId: event.metadata.spanId,
-        details: {
-          hook: 'auditTrail',
-          error: err instanceof Error ? err.message : String(err),
-        },
-      });
-    }
-  }
-
-  private enrichMetadata(
-    base: EventMetadata,
-    extra: Partial<EventMetadata>
-  ): EventMetadata {
-    return {
-      ...base,
-      ...extra,
-      occurredAt:
-        extra.occurredAt || base.occurredAt || new Date().toISOString(),
-      source: extra.source || base.source || 'unknown',
-      kernelInstanceId:
-        extra.kernelInstanceId ?? base.kernelInstanceId ?? this.instanceId,
-      eventVersion: extra.eventVersion ?? base.eventVersion,
-      schemaVersion: extra.schemaVersion ?? base.schemaVersion,
-      allowInterception:
-        extra.allowInterception ?? base.allowInterception,
-      interceptions:
-        extra.interceptions ?? base.interceptions,
-      correlationId: extra.correlationId ?? base.correlationId,
-      causationId: extra.causationId ?? base.causationId,
-      traceId: extra.traceId ?? base.traceId,
-      spanId: extra.spanId ?? base.spanId,
-      parentSpanId: extra.parentSpanId ?? base.parentSpanId,
-    };
   }
 }
 
