@@ -283,47 +283,33 @@ If your runtime can run a shell command before file writes and pass the tool pay
 - Grok payloads also get `{ "decision": "deny", "reason": "…" }` on stdout when blocked
 - plumbing problems (no stdin, non-source files, files outside `--root`) never block
 
-## ESLint (editor feedback)
+## ESLint (editor feedback) — same contract as CI
 
-For in-editor red squiggles on layer violations, add the ESLint plugin. It ships a
-flat-config preset you can spread directly:
+For in-editor red squiggles that match **`arkgate-check`**, add the ESLint plugin.
+Layer imports and purity globals are driven by **`ark.config.json`** (walk-up from the
+linted file): same layer globs, specificity, `exclude`, and `rules[]` edges as the CI gate.
 
 ```js
 // eslint.config.js  (flat config)
 import ark from 'arkgate/eslint';
 
 export default [
-  ark.configs.recommended,   // ark/no-domain-infra-imports, no-raw-event-publish, require-publish-source
-];
-```
-
-`recommended` deliberately omits **`ark/no-forbidden-globals`** (domain purity: no
-`fetch`, `Date.now`, `Math.random`, …). That rule is only correct when scoped to your
-domain directories — a global block would flag legitimate infrastructure code. Add it
-as its own block with a `files` glob matching your `DomainModel` layer:
-
-```js
-import ark from 'arkgate/eslint';
-
-export default [
   ark.configs.recommended,
-  {
-    files: ['packages/*/domain/**', 'src/**/domain/**'],  // your DomainModel layer paths
-    plugins: { ark },
-    rules: {
-      'ark/no-forbidden-globals': [
-        'error',
-        { globals: ['fetch', 'process', 'Date.now', 'Math.random'] },  // match ark.config.json
-      ],
-    },
-  },
+  // no-domain-infra-imports  → config-driven layer edges (type-only + value)
+  // no-forbidden-globals     → layer.forbiddenGlobals from ark.config.json
+  // no-raw-event-publish + require-publish-source → runtime event hygiene
 ];
 ```
 
-Rule ids are `ark/<kebab-name>`. Keep the `globals` list in sync with the
-`forbiddenGlobals` on your `DomainModel` layer in `ark.config.json` so the editor and
-`ark-check` agree. All four rules are exported individually too (`ark.rules`) if you
-prefer to wire them by hand.
+**Parity notes (2.5+):**
+
+- Relative imports are resolved to on-disk TS/JS targets; package bare imports are left to CI/TS.
+- Type-only and value forbidden edges both error (same pass/fail as `arkgate-check`).
+- `no-forbidden-globals` only applies when the file’s layer declares `forbiddenGlobals` (or you pass a `globals` option). Layers without a purity list are not inventively restricted.
+- Without `ark.config.json`, `no-domain-infra-imports` falls back to a domain→infra path heuristic.
+
+Rule ids are `ark/<kebab-name>`. Individual rules are also on `ark.rules` if you wire them by hand.
+Prefer keeping editor + CI on the same `ark.config.json` — do not maintain a parallel globals list unless you intentionally override.
 
 ## CI backstop
 

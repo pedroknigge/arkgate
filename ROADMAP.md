@@ -116,13 +116,15 @@ Ordered by leverage for the dual audience:
 
 ### P1 — quality & install DX
 
-4. ESLint plugin parity with CI resolver rules.  
+4. ~~ESLint plugin parity with CI layer/import + purity rules~~ → **shipped in 2.5.0 train**
+   (`arkgate/eslint` loads `ark.config.json`; dual-driver tests with `arkgate-check`).  
 5. Framework policy packs only if filename overlays are not enough.  
 6. Codex multi-project MCP DX (avoid last-wins home config).  
 7. ~~Clearer messaging when TypeScript is missing / TS7~~ → **shipped**
    ([docs/typescript-support.md](docs/typescript-support.md), load fallback, CI matrix 5/6/7).  
 8. ~~Identity cutover~~ → **done as ArkGate / `arkgate`** (deprecate predecessor package).  
 9. Adopt TS 7.1+ stable programmatic API when Microsoft ships it (extend `usableTypescript`).  
+10. ~~Adoption completeness (doctor hosts/MCP/codex/origin)~~ → **shipped 2.4.0**.  
 
 ### P2 — growth surfaces (not prerequisites)
 

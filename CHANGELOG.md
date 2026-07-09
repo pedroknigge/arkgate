@@ -2,6 +2,24 @@
 
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here.
 
+## Unreleased — 2.5.0
+
+### Added — ESLint ↔ CI layer parity
+
+- **`arkgate/eslint`** `no-domain-infra-imports` is **config-driven**: loads
+  `ark.config.json` (walk-up from the linted file), classifies layers with the same
+  glob specificity + `exclude` semantics as `arkgate-check`, and denies edges from
+  `rules[]` — not path-token “domain/infra” heuristics alone.
+- Relative imports resolve to on-disk TS/JS targets; type-only and value imports both
+  fail when the edge is denied (same pass/fail as CI).
+- **`no-forbidden-globals`** reads `forbiddenGlobals` from the matched layer in
+  `ark.config.json` (no invented defaults for layers without a purity list). Optional
+  rule option `globals` still overrides. Domain path heuristic + defaults only when
+  no config is found.
+- Dual-driver tests: same fixtures → ESLint rule + `ark-check --json` agree.
+- Recommended config enables `ark/no-forbidden-globals`.
+- Without `ark.config.json`, legacy domain→infra path heuristic remains for bare trees.
+
 ## 2.4.0 — 2026-07-08
 
 ### Added — Adoption completeness (P0–P2)

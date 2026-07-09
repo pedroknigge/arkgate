@@ -167,6 +167,7 @@ ark.config.json
 | Classified plan (`mechanical-safe` / judgment) | ✅ | ❌ |
 | TypeScript 5 / 6 / 7 project compilers | ✅ | varies |
 | Adoption scorecard (hosts / MCP / origin) | ✅ | ❌ |
+| **Editor ESLint same layer contract as CI** | ✅ (`arkgate/eslint`) | varies |
 
 ---
 
@@ -210,7 +211,7 @@ NestJS: `arkgate/nestjs` (optional peer `@nestjs/common`).
 | Audience | Link |
 |----------|------|
 | New builders (plain language) | [docs/enthusiast/](docs/enthusiast/README.md) |
-| Wire Claude / Cursor / Codex / Grok | [docs/ai-gates.md](docs/ai-gates.md) |
+| Wire Claude / Cursor / Codex / Grok + **ESLint (CI-parity)** | [docs/ai-gates.md](docs/ai-gates.md) |
 | **TypeScript 5 / 6 / 7 support** | [docs/typescript-support.md](docs/typescript-support.md) |
 | Migrate from `ark-runtime-kernel` | [docs/migrate-from-ark-runtime-kernel.md](docs/migrate-from-ark-runtime-kernel.md) |
 | Messy existing repo | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |

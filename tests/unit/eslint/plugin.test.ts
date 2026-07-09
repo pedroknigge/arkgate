@@ -28,8 +28,9 @@ describe('Ark ESLint plugin', () => {
     expect(arkEslint.configs?.recommended).toBeDefined();
   });
 
-  it('flags infrastructure imports from domain files', () => {
-    const { context, reports } = createContext();
+  it('flags infrastructure imports from domain files (heuristic without ark.config.json)', () => {
+    // Path is not under a real project with ark.config.json → legacy heuristic path.
+    const { context, reports } = createContext('/tmp/no-config-repo/src/domain/order.ts');
     const listener = noDomainInfraImports.create(context);
 
     listener.ImportDeclaration({
@@ -37,7 +38,7 @@ describe('Ark ESLint plugin', () => {
     });
 
     expect(reports).toHaveLength(1);
-    expect(reports[0].messageId).toBe('forbiddenImport');
+    expect(reports[0].messageId).toBe('forbiddenImportHeuristic');
   });
 
   it('flags raw event publish calls', () => {
@@ -87,7 +88,9 @@ describe('ark/no-forbidden-globals', () => {
   }
 
   it('flags dotted globals, bare-global member access, calls, and constructions', () => {
-    const { listener, reports } = run();
+    // Filename without walk-up config → domain heuristic + default globals.
+    const { context, reports } = createContext('/tmp/no-config/src/domain/order.ts');
+    const listener = noForbiddenGlobals.create(context);
     listener.MemberExpression({
       object: { type: 'Identifier', name: 'Date' },
       property: { name: 'now' },

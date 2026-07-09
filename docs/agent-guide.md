@@ -338,7 +338,7 @@ layers, unclassified included files, unmatched layer patterns, duplicate layers,
 that reference unknown layers. These are advisory by default. Use `--strict-config` once a
 project is ready to fail CI on coverage gaps.
 
-Use the optional ESLint plugin for fast local feedback:
+Use the optional ESLint plugin for fast local feedback aligned with CI:
 
 ```js
 import ark from 'arkgate/eslint';
@@ -348,8 +348,9 @@ export default [
 ];
 ```
 
-Rules: `ark/no-domain-infra-imports`, `ark/no-raw-event-publish`, and
-`ark/require-publish-source`.
+Rules: `ark/no-domain-infra-imports` (layer edges from `ark.config.json`, same semantics as
+`arkgate-check`), `ark/no-forbidden-globals` (per-layer `forbiddenGlobals`),
+`ark/no-raw-event-publish`, and `ark/require-publish-source`. See [ai-gates.md](ai-gates.md).
 
 ## Runtime Observability
 

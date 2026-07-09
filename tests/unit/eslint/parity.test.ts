@@ -1,0 +1,186 @@
+/**
+ * Dual-driver parity: shipped ESLint rules + shipped ark-check CLI on the same fixtures.
+ * Does not re-implement layer resolution in the assertions — only compares outcomes.
+ */
+import { describe, it, expect, afterEach } from 'vitest';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {
+  noDomainInfraImports,
+  noForbiddenGlobals,
+  layerForRelativePath,
+  isEdgeDenied,
+  loadArkConfig,
+  findConfigPath,
+  resolveRelativeImport,
+} from '../../../src/eslint/index';
+
+const CHECK = path.resolve('bin/ark-check.mjs');
+
+const HEX_CONFIG = {
+  include: ['src'],
+  layers: [
+    {
+      name: 'DomainModel',
+      patterns: ['src/domain/**'],
+      forbiddenGlobals: ['fetch', 'process', 'Date.now', 'Math.random'],
+    },
+    { name: 'ApplicationOrchestration', patterns: ['src/application/**'] },
+    { name: 'PersistenceAdapters', patterns: ['src/infra/**'] },
+  ],
+  rules: [
+    { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
+    { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
+    { from: 'ApplicationOrchestration', to: 'DomainModel', allowed: true },
+    { from: 'ApplicationOrchestration', to: 'PersistenceAdapters', allowed: true },
+    { from: 'PersistenceAdapters', to: 'DomainModel', allowed: true },
+    { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
+  ],
+};
+
+function createContext(filename: string, options?: unknown[]) {
+  const reports: Array<Record<string, unknown>> = [];
+  return {
+    reports,
+    context: {
+      getFilename: () => filename,
+      options,
+      report: (descriptor: Record<string, unknown>) => reports.push(descriptor),
+    },
+  };
+}
+
+function runArkCheckJson(root: string) {
+  const r = spawnSync(
+    process.execPath,
+    [CHECK, '--root', root, '--config', 'ark.config.json', '--json', '--no-cache'],
+    { encoding: 'utf8' }
+  );
+  const out = JSON.parse(r.stdout || '{}') as {
+    ok: boolean;
+    violations: Array<{ ruleId: string; file?: string; typeOnly?: boolean }>;
+  };
+  return { status: r.status ?? 1, ...out };
+}
+
+describe('ESLint ↔ ark-check parity', () => {
+  const temps: string[] = [];
+  afterEach(() => {
+    for (const t of temps) {
+      try {
+        fs.rmSync(t, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
+    }
+    temps.length = 0;
+  });
+
+  function fixture() {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-eslint-parity-'));
+    temps.push(root);
+    fs.writeFileSync(path.join(root, 'ark.config.json'), JSON.stringify(HEX_CONFIG, null, 2));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/application'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/infra'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/domain/user.ts'), 'export type User = { id: string };\n');
+    fs.writeFileSync(path.join(root, 'src/infra/db.ts'), 'export const db = {};\n');
+    fs.writeFileSync(
+      path.join(root, 'src/application/use-case.ts'),
+      "import type { User } from '../domain/user';\nexport function run(u: User) { return u; }\n"
+    );
+    return root;
+  }
+
+  it('forbidden domain→infra value import: ESLint and ark-check both fail', () => {
+    const root = fixture();
+    const domainFile = path.join(root, 'src/domain/bad.ts');
+    fs.writeFileSync(domainFile, "import { db } from '../infra/db';\nexport const x = db;\n");
+
+    const check = runArkCheckJson(root);
+    expect(check.ok).toBe(false);
+    expect(check.violations.some((v) => v.ruleId === 'LAYER_IMPORT_VIOLATION')).toBe(true);
+
+    const { context, reports } = createContext(domainFile);
+    const listener = noDomainInfraImports.create(context);
+    listener.ImportDeclaration({ source: { value: '../infra/db' } });
+    expect(reports.length).toBeGreaterThanOrEqual(1);
+    expect(reports[0].messageId).toBe('forbiddenImport');
+    expect((reports[0].data as { fromLayer: string }).fromLayer).toBe('DomainModel');
+    expect((reports[0].data as { toLayer: string }).toLayer).toBe('PersistenceAdapters');
+  });
+
+  it('forbidden domain→infra type-only import: both still flag (same pass/fail as CI)', () => {
+    const root = fixture();
+    const domainFile = path.join(root, 'src/domain/type-bad.ts');
+    fs.writeFileSync(
+      domainFile,
+      "import type { db as Db } from '../infra/db';\nexport type X = typeof Db;\n"
+    );
+
+    const check = runArkCheckJson(root);
+    expect(check.ok).toBe(false);
+    const layerHits = check.violations.filter((v) => v.ruleId === 'LAYER_IMPORT_VIOLATION');
+    expect(layerHits.length).toBeGreaterThan(0);
+
+    const { context, reports } = createContext(domainFile);
+    noDomainInfraImports.create(context).ImportDeclaration({
+      source: { value: '../infra/db' },
+      importKind: 'type',
+    });
+    expect(reports.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('allowed application→domain import: ESLint and ark-check both pass', () => {
+    const root = fixture();
+    // use-case.ts already imports domain type — allowed edge
+    const check = runArkCheckJson(root);
+    expect(check.ok).toBe(true);
+    expect(check.violations.filter((v) => v.ruleId === 'LAYER_IMPORT_VIOLATION')).toHaveLength(0);
+
+    const appFile = path.join(root, 'src/application/use-case.ts');
+    const { context, reports } = createContext(appFile);
+    noDomainInfraImports.create(context).ImportDeclaration({
+      source: { value: '../domain/user' },
+    });
+    expect(reports).toHaveLength(0);
+  });
+
+  it('forbidden global in DomainModel: ESLint and ark-check both flag', () => {
+    const root = fixture();
+    const domainFile = path.join(root, 'src/domain/clock.ts');
+    fs.writeFileSync(domainFile, 'export const now = () => Date.now();\n');
+
+    const check = runArkCheckJson(root);
+    expect(check.ok).toBe(false);
+    expect(check.violations.some((v) => v.ruleId === 'FORBIDDEN_GLOBAL')).toBe(true);
+
+    const { context, reports } = createContext(domainFile);
+    const listener = noForbiddenGlobals.create(context);
+    listener.MemberExpression({
+      object: { type: 'Identifier', name: 'Date' },
+      property: { name: 'now' },
+    });
+    expect(reports.length).toBeGreaterThanOrEqual(1);
+    expect((reports[0].data as { name: string }).name).toBe('Date.now');
+  });
+
+  it('shipped helpers agree with config for layer + edge checks', () => {
+    const root = fixture();
+    const cfgPath = findConfigPath(path.join(root, 'src/domain/user.ts'));
+    expect(cfgPath).toBeTruthy();
+    const cfg = loadArkConfig(cfgPath!);
+    expect(cfg).toBeTruthy();
+    expect(layerForRelativePath('src/domain/user.ts', cfg!.layers)).toBe('DomainModel');
+    expect(layerForRelativePath('src/infra/db.ts', cfg!.layers)).toBe('PersistenceAdapters');
+    expect(isEdgeDenied(cfg!.rules, 'DomainModel', 'PersistenceAdapters')).toBe(true);
+    expect(isEdgeDenied(cfg!.rules, 'ApplicationOrchestration', 'DomainModel')).toBe(false);
+    const resolved = resolveRelativeImport(
+      path.join(root, 'src/domain/bad.ts'),
+      '../infra/db'
+    );
+    expect(resolved && fs.existsSync(resolved)).toBe(true);
+  });
+});
