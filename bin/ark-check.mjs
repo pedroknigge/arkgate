@@ -44,6 +44,7 @@ import {
   REQUIRED_GATE_FILES,
   codexPromptsDir,
 } from './lib/agent-gates.mjs';
+import { syncBaselineIntoCheckSurfaces } from './lib/field-install.mjs';
 import {
   detectEnforcement,
   renderHtmlReport,
@@ -1087,8 +1088,25 @@ async function main() {
       console.log('Gate with: ark-check --root . --config ark.config.json --strict-config');
       return;
     }
-    const { fullPath, count } = writeBaseline(root, args.baseline, violations);
+    const { fullPath, count } = writeBaseline(root, baselineName, violations);
     console.log(`Wrote ${fullPath} with ${count} frozen violation key(s).`);
+    // Keep existing package.json scripts + CI workflows on the ratchet without a
+    // full --force reinstall (field log: baseline after start left CI without --baseline).
+    const baselineRel = path.isAbsolute(baselineName)
+      ? path.relative(root, baselineName).split(path.sep).join('/')
+      : String(baselineName).replace(/^\.\/+/, '');
+    const sync = syncBaselineIntoCheckSurfaces(root, {
+      baselineRel: baselineRel || '.ark-baseline.json',
+    });
+    if (sync.changed.length > 0) {
+      console.log(
+        `Synced --baseline into: ${sync.changed.map((c) => c.file).join(', ')}`
+      );
+    } else {
+      console.log(
+        'No existing check scripts/workflows needed a --baseline patch (add check:architecture or re-run --install-agent-gates).'
+      );
+    }
     console.log('Commit it and gate CI with: ark-check --baseline (only NEW violations fail).');
     if (summary.total > 0) printViolationBreakdown(summary);
     return;

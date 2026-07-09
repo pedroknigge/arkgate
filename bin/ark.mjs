@@ -18,6 +18,7 @@ import {
   resolveArchetypePreset,
   resolveOperatingMode,
 } from './ark-shared.mjs';
+import { pinArkgateDevDependency, FALSE_GREEN_GAP_ID } from './lib/field-install.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
@@ -70,24 +71,32 @@ Commands:
 
 Options:
   --yes        Non-interactive defaults: create config if needed, install gate templates, run strict check.
+               (Also the implicit default when stdin/stdout are not a TTY — agents never hang on prompts.)
   --force      Allow generated files to overwrite existing files.
   --no-strict  Skip the final strict ark-check run.
-  --no-install (upgrade) Refresh gates/skills only; don't reinstall the package.
+  --no-install Skip adding/installing arkgate as a project devDependency (start/upgrade).
   --preset     Start from a named architecture preset instead of detection.
   --archetype  Application shape from templates/architecture-playbook.json (maps to the matching preset).
                Valid ids: crud-product, api-backend, frontend-surface, library-sdk, cli-utility,
                worker-pipeline, event-coordinator, integration-bridge, multi-app-workspace, prototype-spike,
                vertical-slice-product, ddd-bounded-contexts.
-  --tools      Comma-separated agents to gate (claude,cursor,codex,windsurf,cline,copilot,kiro,roo,continue,gemini).
-               Omit to auto-detect from each tool's config dir, falling back to claude+cursor+codex.
+  --tools      Comma-separated agents to gate (claude,cursor,codex,grok,windsurf,cline,copilot,kiro,roo,continue,gemini).
+               Omit to auto-detect from each tool's config dir, falling back to claude+cursor+codex+grok.
 
 Interactive mode (TTY, no --yes): asks what application shape you are building and maps it to a preset.
+Non-interactive (no TTY): uses the same defaults as --yes — never calls readline on a null interface.
 `;
 }
 
-// The package-manager command that adds arkgate@latest as a dev dependency.
-function packageInstallArgv(root) {
-  const spec = 'arkgate@latest';
+// The package-manager command that adds arkgate as a dev dependency.
+// Prefer an explicit version/range when pin already chose one (avoid pin=^2.9.0 then
+// `npm i arkgate@latest` rewriting package.json to a different range).
+function packageInstallArgv(root, versionSpec) {
+  const range =
+    typeof versionSpec === 'string' && versionSpec.trim()
+      ? versionSpec.trim()
+      : 'latest';
+  const spec = range.startsWith('arkgate@') ? range : `arkgate@${range}`;
   const pm = detectPackageManager(root);
   if (pm === 'pnpm') return ['pnpm', ['add', '-D', spec]];
   if (pm === 'yarn') return ['yarn', ['add', '-D', spec]];
@@ -166,11 +175,47 @@ function isInteractiveTty() {
   return Boolean(process.stdin.isTTY && process.stdout.isTTY);
 }
 
+/**
+ * True when prompts should be skipped and guided defaults applied.
+ * Agents typically have no TTY — never call readline on a null interface.
+ */
+export function shouldUseNonInteractiveDefaults(args, tty = isInteractiveTty()) {
+  return Boolean(args?.yes || !tty);
+}
+
 async function askYesNo(rl, question, defaultYes = true) {
+  if (!rl) {
+    // Defensive: non-TTY callers must not reach here; return the default rather than throw.
+    return defaultYes;
+  }
   const suffix = defaultYes ? ' [Y/n] ' : ' [y/N] ';
   const answer = (await rl.question(`${question}${suffix}`)).trim().toLowerCase();
   if (!answer) return defaultYes;
   return answer === 'y' || answer === 'yes';
+}
+
+/**
+ * Pin arkgate in package.json (and optionally run the package manager).
+ * start calls this so CI/`npx` is not forced to rely on a stale global install.
+ *
+ * @param {string} root
+ * @param {{ install?: boolean, runPackageManager?: boolean }} [opts]
+ */
+export function ensureProjectArkgateDependency(root, opts = {}) {
+  const install = opts.install !== false;
+  const runPm = opts.runPackageManager === true;
+  if (!install) {
+    return { pinned: { changed: false, reason: 'skipped-no-install' }, installStatus: null };
+  }
+  const pinned = pinArkgateDevDependency(root);
+  let installStatus = null;
+  // Only run the package manager after a successful pin change — avoid surprise
+  // network on every start when arkgate is already listed.
+  if (runPm && pinned.changed) {
+    const [command, commandArgs] = packageInstallArgv(root, pinned.version);
+    installStatus = runCommand(command, commandArgs, root);
+  }
+  return { pinned, installStatus };
 }
 
 async function resolveArchetypeInteractive(rl, root) {
@@ -214,12 +259,19 @@ function resolveInitPreset(args) {
 async function init(args) {
   const root = args.root;
   const configPath = path.join(root, 'ark.config.json');
-  const interactive = !args.yes && isInteractiveTty();
+  const nonInteractive = shouldUseNonInteractiveDefaults(args);
+  const interactive = !nonInteractive;
   const rl = interactive
     ? readline.createInterface({ input: process.stdin, output: process.stdout })
     : null;
 
   try {
+    if (nonInteractive && !args.yes) {
+      console.log(
+        'Non-interactive session (no TTY) — using guided defaults (same as --yes). Pass flags to override.'
+      );
+    }
+
     let archetype = args.archetype;
     let preset = args.preset;
 
@@ -231,9 +283,8 @@ async function init(args) {
       const resolved = resolveArchetypePreset(archetype);
       preset = resolved.preset;
       console.log(`Using archetype ${archetype} → preset ${preset} (${resolved.label})`);
-    } else if (!preset && !interactive && !args.yes) {
-      // non-TTY without --yes/--preset/--archetype: fall back to detection init
-    } else if (!preset && args.yes && !archetype) {
+    } else if (!preset && nonInteractive && !archetype) {
+      // non-TTY / --yes without explicit shape: recommend → preset
       const rec = buildArchitectureRecommendation(root);
       preset = rec.preset;
       archetype = rec.archetype;
@@ -244,7 +295,7 @@ async function init(args) {
     if (fs.existsSync(configPath)) {
       shouldInit = args.force
         ? true
-        : args.yes
+        : nonInteractive
           ? false
           : await askYesNo(rl, 'ark.config.json already exists. Regenerate it?', false);
     }
@@ -259,7 +310,8 @@ async function init(args) {
       console.log('Skipped ark.config.json generation.');
     }
 
-    const installGates = args.yes || (await askYesNo(rl, 'Configure agent and CI gate templates?', true));
+    const installGates =
+      nonInteractive || (await askYesNo(rl, 'Configure agent and CI gate templates?', true));
     if (installGates) {
       const gateArgs = ['--root', root, '--install-agent-gates'];
       if (args.tools) gateArgs.push('--tools', args.tools);
@@ -269,7 +321,8 @@ async function init(args) {
     }
 
     const runStrict =
-      args.strict && (args.yes || (await askYesNo(rl, 'Run strict architecture check now?', true)));
+      args.strict &&
+      (nonInteractive || (await askYesNo(rl, 'Run strict architecture check now?', true)));
     if (runStrict) {
       return runArkCheck(
         ['--root', root, '--config', 'ark.config.json', '--strict-config'],
@@ -299,7 +352,8 @@ async function init(args) {
 // orchestrates existing steps (recommend → init → --plan) and frames each in outcome terms.
 async function start(args) {
   const root = args.root;
-  const interactive = !args.yes && isInteractiveTty();
+  const nonInteractive = shouldUseNonInteractiveDefaults(args);
+  const interactive = !nonInteractive;
   const rl = interactive
     ? readline.createInterface({ input: process.stdin, output: process.stdout })
     : null;
@@ -310,6 +364,11 @@ async function start(args) {
       "I'll look at your code, suggest a shape, set up the guardrails, and show you a plan."
     );
     console.log('Nothing in your code is changed — this only adds Ark configuration.');
+    if (nonInteractive && !args.yes) {
+      console.log(
+        'Non-interactive session (no TTY) — using guided defaults (same as --yes). Pass flags to override.'
+      );
+    }
 
     // 1) Look at the project.
     let rec;
@@ -332,12 +391,33 @@ async function start(args) {
         );
         console.log('match the contract to how your code is already organized, and flag only genuine issues.');
       }
-      const proceed = args.yes || (await askYesNo(rl, '\nSet Ark up for this shape?', true));
+      const proceed =
+        nonInteractive || (await askYesNo(rl, '\nSet Ark up for this shape?', true));
       if (!proceed) {
         archetype = interactive ? await resolveArchetypeInteractive(rl, root) : rec.archetype;
       }
     } else if (interactive) {
       archetype = await resolveArchetypeInteractive(rl, root);
+    }
+
+    // 2b) Pin arkgate as a project devDependency so CI/npx do not depend on a stale global.
+    if (args.install !== false && fs.existsSync(path.join(root, 'package.json'))) {
+      const { pinned, installStatus } = ensureProjectArkgateDependency(root, {
+        install: true,
+        runPackageManager: true,
+      });
+      if (pinned.changed) {
+        console.log(`  Pinned arkgate@${pinned.version} in package.json devDependencies.`);
+        if (installStatus !== null && installStatus !== 0) {
+          console.log(
+            `  Package manager install exited ${installStatus} — package.json is still pinned; run install when online.`
+          );
+        }
+      } else if (pinned.reason === 'already-present') {
+        console.log(`  arkgate already in package.json (${pinned.version}).`);
+      }
+    } else if (args.install === false) {
+      console.log('  Skipping arkgate package pin (--no-install).');
     }
 
     // 3) Set up config + gates. Greenfield → the shape's preset; an established repo → detection,
@@ -473,8 +553,28 @@ async function start(args) {
 
     // 5) Plain-language wrap-up — one next step, status light only.
     // Modes are detected (Suggest/Adapt/Enforce), not user-picked settings.
+    // Soft-block false-green using the same doctor adoption gap (no second detector).
+    let falseGreenGap = null;
+    try {
+      const doc = JSON.parse(doctorCapture.stdout || '{}');
+      falseGreenGap = (doc.doctor?.adoption?.gaps ?? []).find(
+        (g) => g?.id === FALSE_GREEN_GAP_ID
+      );
+    } catch {
+      falseGreenGap = null;
+    }
+    if (falseGreenGap && mode === 'enforce') {
+      mode = 'adapt';
+      planOk = false;
+    }
+
     console.log('');
-    if (mode === 'enforce' && planOk) {
+    if (falseGreenGap) {
+      console.log('Done — status: ADAPT (contract may be a false green — do not stop at a clean plan).');
+      console.log('What happens now:');
+      console.log(`  • ${falseGreenGap.message}`);
+      console.log(`  • Next: ${falseGreenGap.fix}`);
+    } else if (mode === 'enforce' && planOk) {
       console.log('Done — status: ENFORCE (gates can honestly protect you).');
       console.log('What happens now:');
       console.log('  • Every edit is checked (in CI and, if wired, at write time).');
@@ -495,11 +595,16 @@ async function start(args) {
     }
     console.log('');
     console.log('Next (the only flow you need):');
-    console.log('  1. In your agent:  /ark-autopilot');
-    console.log('     → origin report, adoption, plan, safe fixes, leave gates on.');
+    if (falseGreenGap) {
+      console.log('  1. In your agent:  /ark-adopt  (or /ark-contract) — fix the contract first');
+      console.log('     → reclassify I/O dirs out of Application; then /ark-autopilot for residual debt.');
+    } else {
+      console.log('  1. In your agent:  /ark-autopilot');
+      console.log('     → origin report, adoption, plan, safe fixes, leave gates on.');
+    }
     console.log(`  2. Status anytime: ${arkCommand(root, 'ark-check', '--doctor')}`);
     console.log(`  3. After edits:    ${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config')}`);
-    if (mode === 'adapt' && planOk) {
+    if (mode === 'adapt' && planOk && !falseGreenGap) {
       console.log(
         `  4. When green but cores still optional: ${arkCommand(root, 'ark-check', '--ratchet-cores')} → honest ENFORCE`
       );
@@ -560,4 +665,10 @@ async function main() {
   return 2;
 }
 
-process.exitCode = await main();
+// Only run when executed as the CLI entry (not when imported by unit tests).
+const isMain =
+  Boolean(process.argv[1]) &&
+  path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+if (isMain) {
+  process.exitCode = await main();
+}

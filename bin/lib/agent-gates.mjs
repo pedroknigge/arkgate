@@ -23,6 +23,7 @@ import {
   applyFrameworkLayoutOverlays,
 } from '../ark-shared.mjs';
 import { CORE_LAYER_NAMES } from './core-ratchet.mjs';
+import { falseGreenAdoptionGap } from './field-install.mjs';
 import {
   assessCodexHomeMcp,
   codexArkBlockHasPreferredBin,
@@ -364,6 +365,18 @@ export function checkArgsForRoot(root, { requireGates = false } = {}) {
   const gatesFlag = requireGates ? ' --require-gates' : '';
   return `--root . --config ark.config.json --strict-config${baselineFlag}${gatesFlag}`;
 }
+
+// Field-install helpers live in field-install.mjs (keep agent-gates scannable).
+// Re-export for callers that already import from this module.
+export {
+  ensureBaselineFlagInCheckCommand,
+  syncBaselineIntoCheckSurfaces,
+  pinArkgateDevDependency,
+  IO_DIR_SEGMENTS,
+  detectContractFalseGreenRisk,
+  FALSE_GREEN_GAP_ID,
+  falseGreenAdoptionGap,
+} from './field-install.mjs';
 
 export function packageManager(root) {
   // CI always require-gates; baseline follows checkArgsForRoot.
@@ -769,10 +782,20 @@ export function resolveTools(args) {
   if (fs.existsSync(path.join(root, '.gemini'))) detected.add('gemini');
   // copilot has no reliable directory signal (.github exists in most repos),
   // so it is explicit-only via --tools.
-  // No signal at all: fall back to writing the primary tools' templates so a fresh
-  // project still gets a complete, reviewable starter set.
+  // Host signals: Grok Build / xAI agents often have no project `.grok/` yet but
+  // set an env marker (or run with GROK_*). Include Grok so skills install there.
+  if (
+    process.env.GROK_BUILD === '1' ||
+    process.env.GROK_BUILD === 'true' ||
+    process.env.XAI_GROK === '1' ||
+    process.env.XAI_GROK === 'true'
+  ) {
+    detected.add('grok');
+  }
+  // No signal at all: fall back to a complete starter set including Grok (field
+  // log: default claude+cursor+codex silently omitted Grok skills for Grok hosts).
   if (detected.size === 0) {
-    return { tools: new Set(['claude', 'cursor', 'codex']), source: 'default' };
+    return { tools: new Set(['claude', 'cursor', 'codex', 'grok']), source: 'default' };
   }
   return { tools: detected, source: 'detected' };
 }
@@ -1539,6 +1562,16 @@ export function collectAdoptionGaps(root, config, coverage) {
     }
   }
 
+  // --- False-green contract (field-install detector; doctor skillGaps already cover missing skills) ---
+  let contractFalseGreen = null;
+  if (!isProducer && config) {
+    const gap = falseGreenAdoptionGap(root, config, coverage);
+    if (gap) {
+      contractFalseGreen = { risk: true, message: gap.message, fix: gap.fix };
+      gaps.push(gap);
+    }
+  }
+
   return {
     gaps,
     hosts,
@@ -1549,6 +1582,7 @@ export function collectAdoptionGaps(root, config, coverage) {
     baseline,
     layerBalance,
     deployPath,
+    contractFalseGreen,
   };
 }
 

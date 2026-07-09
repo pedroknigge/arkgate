@@ -4,6 +4,40 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+## 2.9.1 — 2026-07-09
+
+Field-install honesty: non-TTY start, baseline→CI sync, pin, false-green soft block, Grok defaults.
+**No intentional CLI flag or JSON shape breaks.**
+
+### Fixed
+
+- **Non-TTY `ark start` / `ark init`:** when stdin/stdout are not a TTY and `--yes` was
+  omitted, guided setup no longer throws on a null readline interface. Non-interactive
+  sessions use the same defaults as `--yes` (agents never hang on prompts).
+- **Baseline → CI/scripts sync:** after a successful `--update-baseline`, existing
+  `package.json` scripts and GitHub Actions workflows that already run `ark-check` gain
+  `--baseline .ark-baseline.json` without a full `--force` reinstall of gate templates.
+- **Grok in default agent tools:** no-signal `--install-agent-gates` now installs
+  claude + cursor + codex + **grok**; `GROK_BUILD` / `XAI_GROK` env also adds Grok when
+  other hosts are detected.
+
+### Added
+
+- **`start` pins `arkgate` as a devDependency** (opt out with `--no-install`) so CI/`npx`
+  are not forced to rely on a stale global install.
+- **False-green contract soft block:** doctor adoption gap
+  `contract-false-green-io-under-application` when Domain/Persistence are empty while
+  Application globs still cover I/O dirs (airtable/supabase/prisma/…). `ark start`
+  wrap-up and `/ark-autopilot` steer to `/ark-adopt` / `/ark-contract` instead of pure
+  ENFORCE victory.
+- **`bin/lib/field-install.mjs`:** field-install helpers (baseline sync, pin, false-green)
+  extracted from the agent-gates surface for scannability; re-exported from `agent-gates.mjs`.
+
+### Changed
+
+- **Public ROADMAP:** active backlog is **Track W** (constrained write → verified repair:
+  W1–W6). Finished foundation tracks live under Shipped.
+
 ## 2.9.0 — 2026-07-09
 
 Track P: slice isolation, vertical-slice + DDD presets, skill surface, and adoption depth.

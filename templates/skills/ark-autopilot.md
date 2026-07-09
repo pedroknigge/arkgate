@@ -35,6 +35,12 @@ never weaken the gate).
 
 ## Flow
 
+0. **False-green soft block (mandatory before victory)** — Run `ark-check --doctor` (or `--coverage`).
+   If Domain/Persistence (or similar cores) are **empty** while Application-class globs still cover
+   I/O dirs (`airtable`, `supabase`, `prisma`, `drizzle`, `repositories`, …), **do not** claim
+   ENFORCE / `goal.met` from type-only cleanup alone. Route to **`/ark-adopt`** or **`/ark-contract`**
+   first: reclassify real persistence/auth out of Application. Doctor gap id:
+   `contract-false-green-io-under-application`.
 1. **Setup if needed** — `ark start` if no `ark.config.json`. Trust `--recommend` / playbook:
    `vertical-slice-product` and `ddd-bounded-contexts` are first-class shapes (not hexagonal by default).
 2. **Origin report** — `ark-check --report ark-report.html` (do not `--reset-origin` unless asked).
@@ -55,6 +61,7 @@ never weaken the gate).
 
 - Disable rules, broaden allows, or baseline **new** debt to “finish”.
 - Claim clean while judgment steps were skipped without user decision.
+- Claim ENFORCE / “done” when doctor reports `contract-false-green-io-under-application` (adopt first).
 - Replace host Nest/DI with the runtime kernel unasked.
 
 ## Done criteria
