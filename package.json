@@ -73,6 +73,8 @@
     "check:layer-match": "node scripts/generate-layer-match.mjs --check",
     "generate:cli-pure": "node scripts/generate-cli-pure.mjs",
     "check:cli-pure": "node scripts/generate-cli-pure.mjs --check",
+    "check:gallery-starters": "node scripts/check-gallery-starters.mjs",
+    "generate:gallery-starters": "node scripts/check-gallery-starters.mjs --write",
     "test:ts-compat": "node scripts/ts-compat-matrix.mjs 5.9.3 && node scripts/ts-compat-matrix.mjs 6.0.3 && node scripts/ts-compat-matrix.mjs 7.0.2",
     "eval:agent": "node eval/run.mjs",
     "eval:corpus": "node eval/validate-corpus.mjs",

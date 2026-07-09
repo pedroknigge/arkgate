@@ -4,7 +4,9 @@
 
 **Analogy:** Separate city districts with a shared square; no tunnels between private basements.
 
-Phase-1 scaffold. Same-layer imports across contexts are blocked via `peerIsolation`.
+Phase-1 scaffold. **Any import across bounded contexts is blocked** via `peerIsolation`
+(same technical layer *and* cross-layer, e.g. billing application → identity domain).
+Only SharedKernel and events/integration patterns may connect contexts.
 
 ## Layout
 
@@ -32,7 +34,7 @@ src/
 
 ## Three rules for your AI agent
 
-1. **Contexts do not import each other** at domain or application layers.
+1. **Contexts do not import each other** (any layer pair) — extract to shared kernel or use events.
 2. **Domain must not use fetch/process/Date.now** — inject ports.
 3. **Do not weaken `ark.config.json` to pass.** Integrate via events or shared kernel.
 

@@ -12,7 +12,8 @@
         "src/**/domain/**"
       ],
       "exclude": [
-        "**/kernel/**"
+        "src/kernel/**",
+        "**/src/kernel/**"
       ],
       "forbiddenGlobals": [
         "fetch",
@@ -31,7 +32,8 @@
         "src/**/application/**"
       ],
       "exclude": [
-        "**/kernel/**"
+        "src/kernel/**",
+        "**/src/kernel/**"
       ],
       "optional": true
     },
@@ -47,7 +49,8 @@
         "src/**/http/**"
       ],
       "exclude": [
-        "**/kernel/**"
+        "src/kernel/**",
+        "**/src/kernel/**"
       ],
       "optional": true
     },
@@ -64,7 +67,8 @@
         "src/**/repositories/**"
       ],
       "exclude": [
-        "**/kernel/**"
+        "src/kernel/**",
+        "**/src/kernel/**"
       ],
       "optional": true
     },
@@ -76,7 +80,8 @@
         "src/shared/**"
       ],
       "exclude": [
-        "src/kernel/**"
+        "src/kernel/**",
+        "**/src/kernel/**"
       ],
       "optional": true
     }
@@ -156,7 +161,51 @@
         "contexts",
         "bounded-contexts"
       ],
-      "message": "Bounded contexts must not import each other at the domain layer. Use shared kernel or integration events."
+      "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
+    },
+    {
+      "from": "DomainModel",
+      "to": "ApplicationOrchestration",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "contexts",
+        "bounded-contexts"
+      ],
+      "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
+    },
+    {
+      "from": "DomainModel",
+      "to": "PresentationAdapters",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "contexts",
+        "bounded-contexts"
+      ],
+      "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
+    },
+    {
+      "from": "DomainModel",
+      "to": "PersistenceAdapters",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "contexts",
+        "bounded-contexts"
+      ],
+      "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
+    },
+    {
+      "from": "ApplicationOrchestration",
+      "to": "DomainModel",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "contexts",
+        "bounded-contexts"
+      ],
+      "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
     },
     {
       "from": "ApplicationOrchestration",
@@ -167,7 +216,51 @@
         "contexts",
         "bounded-contexts"
       ],
-      "message": "Bounded contexts must not import each other at the application layer. Prefer events or an anti-corruption layer."
+      "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
+    },
+    {
+      "from": "ApplicationOrchestration",
+      "to": "PresentationAdapters",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "contexts",
+        "bounded-contexts"
+      ],
+      "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
+    },
+    {
+      "from": "ApplicationOrchestration",
+      "to": "PersistenceAdapters",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "contexts",
+        "bounded-contexts"
+      ],
+      "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
+    },
+    {
+      "from": "PresentationAdapters",
+      "to": "DomainModel",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "contexts",
+        "bounded-contexts"
+      ],
+      "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
+    },
+    {
+      "from": "PresentationAdapters",
+      "to": "ApplicationOrchestration",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "contexts",
+        "bounded-contexts"
+      ],
+      "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
     },
     {
       "from": "PresentationAdapters",
@@ -177,7 +270,52 @@
       "sliceFolders": [
         "contexts",
         "bounded-contexts"
-      ]
+      ],
+      "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
+    },
+    {
+      "from": "PresentationAdapters",
+      "to": "PersistenceAdapters",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "contexts",
+        "bounded-contexts"
+      ],
+      "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
+    },
+    {
+      "from": "PersistenceAdapters",
+      "to": "DomainModel",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "contexts",
+        "bounded-contexts"
+      ],
+      "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
+    },
+    {
+      "from": "PersistenceAdapters",
+      "to": "ApplicationOrchestration",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "contexts",
+        "bounded-contexts"
+      ],
+      "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
+    },
+    {
+      "from": "PersistenceAdapters",
+      "to": "PresentationAdapters",
+      "allowed": false,
+      "peerIsolation": true,
+      "sliceFolders": [
+        "contexts",
+        "bounded-contexts"
+      ],
+      "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
     },
     {
       "from": "PersistenceAdapters",
@@ -187,7 +325,8 @@
       "sliceFolders": [
         "contexts",
         "bounded-contexts"
-      ]
+      ],
+      "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
     }
   ]
 }

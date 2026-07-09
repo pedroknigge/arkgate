@@ -53,4 +53,22 @@ describe('ddd-bounded-contexts preset', async () => {
     const cfg = ARCHITECTURE_PRESETS['ddd-bounded-contexts']([]);
     expect(isEdgeDenied(cfg.rules, 'DomainModel', 'PersistenceAdapters')).toBe(true);
   });
+
+  it('denies application→domain across contexts (cross-layer peerIsolation)', () => {
+    const cfg = ARCHITECTURE_PRESETS['ddd-bounded-contexts']([]);
+    expect(
+      isEdgeDenied(cfg.rules, 'ApplicationOrchestration', 'DomainModel', {
+        fromPath: 'src/contexts/billing/application/open.ts',
+        toPath: 'src/contexts/identity/domain/user.ts',
+        layers: cfg.layers,
+      })
+    ).toBe(true);
+    expect(
+      isEdgeDenied(cfg.rules, 'ApplicationOrchestration', 'DomainModel', {
+        fromPath: 'src/contexts/billing/application/open.ts',
+        toPath: 'src/contexts/billing/domain/invoice.ts',
+        layers: cfg.layers,
+      })
+    ).toBe(false);
+  });
 });

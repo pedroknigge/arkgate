@@ -11,7 +11,8 @@
         "src/modules/**"
       ],
       "exclude": [
-        "**/kernel/**"
+        "src/kernel/**",
+        "**/src/kernel/**"
       ],
       "optional": true
     },
@@ -22,7 +23,8 @@
         "src/shared/**"
       ],
       "exclude": [
-        "**/kernel/**"
+        "src/kernel/**",
+        "**/src/kernel/**"
       ],
       "optional": true
     },
@@ -35,7 +37,8 @@
         "src/infrastructure/**"
       ],
       "exclude": [
-        "**/kernel/**"
+        "src/kernel/**",
+        "**/src/kernel/**"
       ],
       "optional": true
     },
@@ -49,7 +52,8 @@
         "pages/**"
       ],
       "exclude": [
-        "**/kernel/**"
+        "src/kernel/**",
+        "**/src/kernel/**"
       ],
       "optional": true
     }

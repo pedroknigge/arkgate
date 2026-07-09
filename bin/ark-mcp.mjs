@@ -45,6 +45,7 @@ import {
   detectTsPackageRoots,
   resolveIncludeRoots,
 } from './ark-shared.mjs';
+import { createImportTargetResolver } from './lib/import-resolve.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 
@@ -95,100 +96,6 @@ function resolveInRoot(root, maybePath) {
 function inferLayer(filePath, config, root) {
   if (!filePath) return undefined;
   return layerForFile(root, filePath, config.layers);
-}
-
-// Read tsconfig path aliases via the TypeScript config parser (so JSONC + `extends` work).
-// Returns { baseUrl (absolute), aliases: [{ from, to }] } — `from` a prefix like "@/", `to`
-// its base like "./src/". Empty when typescript/tsconfig is unavailable; callers then resolve
-// only relative imports (aliased ones fall through to the infra heuristic — no worse than before).
-function readTsconfigAliases(ts, root) {
-  if (!ts) return { baseUrl: root, aliases: [] };
-  try {
-    const configPath = ts.findConfigFile(root, ts.sys.fileExists, 'tsconfig.json');
-    if (!configPath) return { baseUrl: root, aliases: [] };
-    const read = ts.readConfigFile(configPath, ts.sys.readFile);
-    if (read.error) return { baseUrl: root, aliases: [] };
-    const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, path.dirname(configPath));
-    const opts = parsed.options || {};
-    const baseUrl = opts.baseUrl || path.dirname(configPath);
-    const aliases = [];
-    for (const [pattern, targets] of Object.entries(opts.paths || {})) {
-      if (!Array.isArray(targets) || targets.length === 0) continue;
-      aliases.push({ from: pattern.replace(/\*$/, ''), to: String(targets[0]).replace(/\*$/, '') });
-    }
-    aliases.sort((a, b) => b.from.length - a.from.length); // longest prefix wins
-    return { baseUrl, aliases };
-  } catch {
-    return { baseUrl: root, aliases: [] };
-  }
-}
-
-// Resolve an import specifier to a repo-relative target path (directory-level — enough to
-// classify the layer). Relative and tsconfig-aliased imports resolve; bare packages return
-// undefined (ungoverned → the gate's infra heuristic decides those).
-function resolveSpecifierToRel(specifier, fromFilePath, root, tsAliases) {
-  let abs;
-  if (specifier.startsWith('./') || specifier.startsWith('../')) {
-    if (!fromFilePath) return undefined;
-    abs = path.resolve(path.dirname(path.resolve(root, fromFilePath)), specifier);
-  } else {
-    const alias = tsAliases.aliases.find((a) => specifier.startsWith(a.from));
-    if (!alias) return undefined; // bare package specifier
-    abs = path.resolve(tsAliases.baseUrl, `${alias.to}${specifier.slice(alias.from.length)}`);
-  }
-  const rel = path.relative(root, abs).split(path.sep).join('/');
-  return rel.startsWith('..') ? undefined : rel; // outside the project root
-}
-
-// Build the resolveImportLayer callback for the AI write gate: specifier → target layer, so
-// the gate lets ark.config.json layer RULES govern a resolvable edge instead of the infra
-// path-heuristic. A barrel/dir import (`@/lib/db`) is classified like a file under it.
-function createImportLayerResolver(ts, root, config) {
-  const layers = config.layers ?? [];
-  if (layers.length === 0) return undefined;
-  const tsAliases = readTsconfigAliases(ts, root);
-  return (specifier, fromFilePath) => {
-    const rel = resolveSpecifierToRel(specifier, fromFilePath, root, tsAliases);
-    if (!rel) return undefined;
-    // When the target is a real directory (a barrel import like `@/lib/db`), classify a file
-    // INSIDE it so it resolves to the `src/lib/db/**` layer, not a broader `src/lib/**` that
-    // the bare path would also match. Falls back to the same probe when the target isn't on
-    // disk (e.g. a file referenced without its extension).
-    let probe = rel;
-    try {
-      if (fs.statSync(path.join(root, rel)).isDirectory()) probe = `${rel}/index.ts`;
-    } catch {
-      /* not on disk — classify the path as-is, with the dir-style fallback below */
-    }
-    return layerForFile(root, probe, layers) || layerForFile(root, `${rel}/index.ts`, layers);
-  };
-}
-
-/** Repo-relative path for peerIsolation slice keys (file path or import specifier). */
-function createImportRelativePathResolver(ts, root) {
-  const tsAliases = readTsconfigAliases(ts, root);
-  return (specifierOrFilePath, fromFilePath) => {
-    if (!specifierOrFilePath || typeof specifierOrFilePath !== 'string') return undefined;
-    // Absolute or root-relative source file path (the file being written).
-    if (
-      path.isAbsolute(specifierOrFilePath) ||
-      (!specifierOrFilePath.includes(':') &&
-        !specifierOrFilePath.startsWith('.') &&
-        !specifierOrFilePath.startsWith('@') &&
-        fs.existsSync(
-          path.isAbsolute(specifierOrFilePath)
-            ? specifierOrFilePath
-            : path.join(root, specifierOrFilePath)
-        ))
-    ) {
-      const abs = path.isAbsolute(specifierOrFilePath)
-        ? specifierOrFilePath
-        : path.resolve(root, specifierOrFilePath);
-      const rel = path.relative(root, abs).split(path.sep).join('/');
-      return rel.startsWith('..') ? undefined : rel;
-    }
-    return resolveSpecifierToRel(specifierOrFilePath, fromFilePath, root, tsAliases);
-  };
 }
 
 async function loadArk() {
@@ -528,11 +435,9 @@ async function main() {
     typescript: ts,
     forbiddenGlobals,
     infrastructureLayers,
-    // Contract-first: a resolvable import edge is judged by the config's layer rules, not the
-    // infra path-heuristic — so the write gate agrees with ark-check (ark.config.json wins).
-    resolveImportLayer: createImportLayerResolver(ts, args.root, config),
-    resolveImportRelativePath: createImportRelativePathResolver(ts, args.root),
-    layersForSliceInfer: configLayers.map((layer) => ({
+    // Contract-first: one resolve step yields layer + relPath for rules + peerIsolation.
+    resolveImportTarget: createImportTargetResolver(ts, args.root, config),
+    architectureLayers: configLayers.map((layer) => ({
       name: layer.name,
       patterns: layer.patterns,
     })),

@@ -369,11 +369,12 @@ discoverability.
 
 ### Peer isolation (cross-slice bans)
 
-Classic rules deny **layer A → layer B**. Same-layer imports were always allowed.
-For vertical-slice and bounded-context layouts you often need: *auth may not import payments*
-even though both are under `Features`.
+Classic rules deny **layer A → layer B** always. **Same-layer is always allowed** unless a
+rule sets `peerIsolation: true`.
 
-Opt-in on a same-layer deny rule:
+`peerIsolation: true` + `allowed: false` means: deny **only when importer and importee
+resolve to different slice ids** (works for same-layer *and* cross-layer pairs). Same-slice
+edges are not denied by that rule.
 
 ```json
 {
@@ -385,13 +386,11 @@ Opt-in on a same-layer deny rule:
 ```
 
 - **Denied:** `src/features/auth/**` → `src/features/payments/**` (different slice id).
-- **Allowed:** imports within the same slice; imports to other layers (e.g. `Shared`) unless a separate rule denies them.
-- **`sliceFolders`:** optional list of path segments that own the slice name as the next
-  segment (default: inferred from the layer’s globs, e.g. `src/features/**` → `features`).
-- **Fail-open:** if either path has no slice segment, the edge is not blocked as peerIsolation
-  (avoids monorepo false positives). Without paths (legacy callers), same-layer stays allowed.
-- Enforced by `ark-check`, `arkgate/eslint`, and `ark-mcp` write-gate when paths resolve.
-- Fixes are **judgment** (not mechanical-safe): extract to shared, or coordinate via events/ports.
+- **Allowed:** same-slice imports; classic non-peerIsolation denies still apply across layers.
+- **`sliceFolders`:** optional parent segments (default: inferred from layer globs).
+- **Fail-open:** missing paths or unclassifiable slices → do not deny via peerIsolation.
+- Enforced by `ark-check`, `arkgate/eslint`, and `ark-mcp` when paths resolve.
+- Fixes are **judgment** (not mechanical-safe).
 
 Agents can generate a config from the project's actual directory layout instead of inventing layer mappings:
 

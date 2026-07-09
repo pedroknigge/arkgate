@@ -3,6 +3,7 @@
  * Runs BEFORE the flow is recorded so hard mode leaves no phantom graph edge.
  */
 import type { DomainEvent } from '../../domain/types';
+import { findDeniedEdgeRule } from '../../domain/layerMatch';
 import type { ArchitectureProfile } from '../layers';
 import type { AuditRecordType } from '../audit';
 import type { ObservedLayerFlowMode, TraceRecord } from './types';
@@ -39,9 +40,8 @@ export async function assertObservedLayerFlowAllowed(
   const toLayer = profile.resolveLayer(event.intent);
   if (!fromLayer || !toLayer) return;
 
-  const blocked = profile.rules.find(
-    (rule) => !rule.allowed && rule.from === fromLayer && rule.to === toLayer
-  );
+  // Same deny SoT as CI / write-gate (intent names — no file paths; peerIsolation fails open).
+  const blocked = findDeniedEdgeRule(profile.rules, fromLayer, toLayer);
   if (!blocked) return;
 
   const severity = deps.mode;

@@ -99,10 +99,51 @@ describe('peerIsolation edge rules', () => {
     expect(isEdgeDenied(peerRules, 'Features', 'Features')).toBe(false);
   });
 
+  it('classic same-layer deny without peerIsolation is ignored (historical allow)', () => {
+    const rules = [{ from: 'Features', to: 'Features', allowed: false as const }];
+    expect(
+      isEdgeDenied(rules, 'Features', 'Features', {
+        fromPath: 'src/features/a/x.ts',
+        toPath: 'src/features/b/y.ts',
+        layers: featuresLayers,
+      })
+    ).toBe(false);
+  });
+
   it('classic cross-layer deny still works without paths', () => {
     const rules = [{ from: 'DomainModel', to: 'PersistenceAdapters', allowed: false as const }];
     expect(isEdgeDenied(rules, 'DomainModel', 'PersistenceAdapters')).toBe(true);
     expect(isEdgeDenied(rules, 'DomainModel', 'DomainModel')).toBe(false);
+  });
+
+  it('peerIsolation denies cross-layer cross-slice (DDD honesty)', () => {
+    const rules = [
+      {
+        from: 'ApplicationOrchestration',
+        to: 'DomainModel',
+        allowed: false as const,
+        peerIsolation: true,
+        sliceFolders: ['contexts'],
+      },
+    ];
+    const layers = [
+      { name: 'DomainModel', patterns: ['src/contexts/**/domain/**'] },
+      { name: 'ApplicationOrchestration', patterns: ['src/contexts/**/application/**'] },
+    ];
+    expect(
+      isEdgeDenied(rules, 'ApplicationOrchestration', 'DomainModel', {
+        fromPath: 'src/contexts/billing/application/open.ts',
+        toPath: 'src/contexts/identity/domain/user.ts',
+        layers,
+      })
+    ).toBe(true);
+    expect(
+      isEdgeDenied(rules, 'ApplicationOrchestration', 'DomainModel', {
+        fromPath: 'src/contexts/billing/application/open.ts',
+        toPath: 'src/contexts/billing/domain/invoice.ts',
+        layers,
+      })
+    ).toBe(false);
   });
 
   it('explicit sliceFolders override inference', () => {

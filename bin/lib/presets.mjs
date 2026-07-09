@@ -19,16 +19,35 @@ export function denyUpward(names) {
   return rules;
 }
 
+/**
+ * peerIsolation matrix: deny only when importer/importee sit under different slices.
+ * Covers same-layer and cross-layer pairs (honest DDD / vertical-slice isolation).
+ */
+export function peerIsolationEdges(layerNames, sliceFolders, message) {
+  const rules = [];
+  for (const from of layerNames) {
+    for (const to of layerNames) {
+      rules.push({
+        from,
+        to,
+        allowed: false,
+        peerIsolation: true,
+        sliceFolders,
+        ...(message ? { message } : {}),
+      });
+    }
+  }
+  return rules;
+}
+
 // Named starter configs. Globs use `**` so they fit both flat (src/domain/**) and
 // modular (src/modules/x/domain/**) layouts. Every layer is optional, so the strict
 // check passes on a greenfield repo and each layer switches on as its dir gains files.
 //
-// Framework internals live under conventional names like `kernel/` and are NOT application
-// architecture — a broad `src/**/domain/**` would otherwise swallow `src/kernel/domain`
-// (DI/runtime wiring) and fire domain-purity rules on it, the false-positive class that
-// motivated `exclude`. Carve those out of every wildcard preset layer by default; a config
-// author who really does keep app code under kernel/ can drop the exclude.
-export const FRAMEWORK_INTERNAL_EXCLUDE = ['**/kernel/**'];
+// Framework internals under `src/kernel/**` are NOT application architecture — a broad
+// `src/**/domain/**` would otherwise swallow `src/kernel/domain`. Do NOT use `**/kernel/**`
+// (that carves out legitimate `src/shared/kernel/**` SharedKernel paths).
+export const FRAMEWORK_INTERNAL_EXCLUDE = ['src/kernel/**', '**/src/kernel/**'];
 export function presetWithOverlays(baseConfig, root) {
   if (!root) return baseConfig;
   return applyFrameworkLayoutOverlays(baseConfig, root);
@@ -160,16 +179,8 @@ export const ARCHITECTURE_PRESETS = {
       Entities: 'Business entities with their UI and logic.',
       Shared: 'Reusable primitives with no business knowledge.',
     };
-    // Prefer src/<layer>/** (canonical FSD). Also accept package-root <layer>/** for
-    // monorepo packages that hoist FSD segments without an extra src/ prefix.
-    // Do NOT use bare **/app/** — too greedy for Nest/Next monorepos (use monorepo preset).
-    const fsdPatterns = (dir) => {
-      const base = [`src/${dir}/**`, `${dir}/**`];
-      // Next App Router often lives at repo-root app/ while FSD uses src/app — same layer.
-      if (dir === 'app') return [...base, 'src/app/**', 'app/**'];
-      if (dir === 'pages') return [...base, 'src/pages/**', 'pages/**'];
-      return base;
-    };
+    // Canonical FSD under src/<layer>/**; also root <layer>/** for packages that hoist segments.
+    const fsdPatterns = (dir) => [`src/${dir}/**`, `${dir}/**`];
     return presetWithOverlays(
       {
         include: ['src', 'app', 'pages'],
@@ -452,11 +463,19 @@ export const ARCHITECTURE_PRESETS = {
 
   /**
    * DDD bounded contexts: per-context domain/application/infra/presentation + shared kernel.
-   * Same-layer peerIsolation on context folders prevents context A from importing context B.
-   * Cross-layer cross-context edges still follow the hexagonal matrix (document limitation).
+   * peerIsolation on every pair of context-local layers blocks cross-context imports
+   * (same or cross technical layer). SharedKernel is exempt (not in the peer matrix).
+   * Classic hexagonal denies still block e.g. Domain → Persistence within a context.
    */
-  'ddd-bounded-contexts': (_workspaces, root) =>
-    presetWithOverlays(
+  'ddd-bounded-contexts': (_workspaces, root) => {
+    const contextLayers = [
+      'DomainModel',
+      'ApplicationOrchestration',
+      'PresentationAdapters',
+      'PersistenceAdapters',
+    ];
+    const sliceFolders = ['contexts', 'bounded-contexts'];
+    return presetWithOverlays(
       {
         include: ['src'],
         layers: [
@@ -516,10 +535,8 @@ export const ARCHITECTURE_PRESETS = {
           {
             name: 'SharedKernel',
             description: 'Truly shared kernel types and primitives across contexts.',
-            // Do NOT apply FRAMEWORK_INTERNAL_EXCLUDE (`**/kernel/**`) — it would carve out
-            // `src/shared/kernel/**` itself. Only skip the product's own framework `src/kernel/**`.
             patterns: ['src/shared/kernel/**', 'src/shared/**'],
-            exclude: ['src/kernel/**'],
+            exclude: FRAMEWORK_INTERNAL_EXCLUDE,
             optional: true,
           },
         ],
@@ -537,43 +554,16 @@ export const ARCHITECTURE_PRESETS = {
           { from: 'SharedKernel', to: 'ApplicationOrchestration', allowed: false },
           { from: 'SharedKernel', to: 'PresentationAdapters', allowed: false },
           { from: 'SharedKernel', to: 'PersistenceAdapters', allowed: false },
-          // Inter-context: same technical layer must not cross context folders.
-          {
-            from: 'DomainModel',
-            to: 'DomainModel',
-            allowed: false,
-            peerIsolation: true,
-            sliceFolders: ['contexts', 'bounded-contexts'],
-            message:
-              'Bounded contexts must not import each other at the domain layer. Use shared kernel or integration events.',
-          },
-          {
-            from: 'ApplicationOrchestration',
-            to: 'ApplicationOrchestration',
-            allowed: false,
-            peerIsolation: true,
-            sliceFolders: ['contexts', 'bounded-contexts'],
-            message:
-              'Bounded contexts must not import each other at the application layer. Prefer events or an anti-corruption layer.',
-          },
-          {
-            from: 'PresentationAdapters',
-            to: 'PresentationAdapters',
-            allowed: false,
-            peerIsolation: true,
-            sliceFolders: ['contexts', 'bounded-contexts'],
-          },
-          {
-            from: 'PersistenceAdapters',
-            to: 'PersistenceAdapters',
-            allowed: false,
-            peerIsolation: true,
-            sliceFolders: ['contexts', 'bounded-contexts'],
-          },
+          ...peerIsolationEdges(
+            contextLayers,
+            sliceFolders,
+            'Bounded contexts must not import each other. Use shared kernel or integration events.'
+          ),
         ],
       },
       root
-    ),
+    );
+  },
 };
 
 // Aliases: Clean / Onion map to the hexagonal factory (same matrix + globs). Avoid dual maintenance.

@@ -182,9 +182,14 @@ function resolveSliceFolders(rule, layerName, layers) {
     return inferSliceFoldersFromPatterns(layer?.patterns);
 }
 /**
- * Find the first denying rule for a layer edge. Same-layer edges are allowed
- * unless a matching rule has `allowed: false` (and for `peerIsolation`, only
- * when fromPath/toPath resolve to different slices).
+ * Find the first denying rule for a layer edge.
+ *
+ * Semantics (locked):
+ * - Classic (`allowed: false`, no peerIsolation): deny cross-layer edges only.
+ *   Same-layer is always allowed (historical short-circuit).
+ * - `peerIsolation: true` + `allowed: false`: deny only when importer and importee
+ *   resolve to **different** slice ids (same or cross layer). Same-slice → allow.
+ *   Missing paths or unclassifiable slices → fail-open (do not deny).
  */
 export function findDeniedEdgeRule(rules, from, to, options) {
     for (const rule of rules ?? []) {
@@ -192,30 +197,26 @@ export function findDeniedEdgeRule(rules, from, to, options) {
             continue;
         if (rule.allowed !== false)
             continue;
-        if (from !== to) {
-            return rule;
+        if (rule.peerIsolation) {
+            const fromPath = options?.fromPath;
+            const toPath = options?.toPath;
+            if (!fromPath || !toPath)
+                continue;
+            const folders = resolveSliceFolders(rule, from, options?.layers);
+            if (folders.length === 0)
+                continue;
+            const fromSlice = sliceIdForPath(fromPath, folders);
+            const toSlice = sliceIdForPath(toPath, folders);
+            if (!fromSlice || !toSlice)
+                continue;
+            if (fromSlice !== toSlice)
+                return rule;
+            continue; // same slice: this peerIsolation rule does not deny
         }
-        // Same-layer deny
-        if (!rule.peerIsolation) {
-            // Explicit same-layer ban without peer isolation — deny all same-layer edges.
-            return rule;
-        }
-        const fromPath = options?.fromPath;
-        const toPath = options?.toPath;
-        if (!fromPath || !toPath) {
-            // Without paths we cannot classify slices — keep historical allow for same-layer.
+        // Classic deny — same-layer always allowed without peerIsolation
+        if (from === to)
             continue;
-        }
-        const folders = resolveSliceFolders(rule, from, options?.layers);
-        if (folders.length === 0)
-            continue;
-        const fromSlice = sliceIdForPath(fromPath, folders);
-        const toSlice = sliceIdForPath(toPath, folders);
-        // Fail-open when either side is not under a slice folder (avoids monorepo false positives).
-        if (!fromSlice || !toSlice)
-            continue;
-        if (fromSlice !== toSlice)
-            return rule;
+        return rule;
     }
     return undefined;
 }

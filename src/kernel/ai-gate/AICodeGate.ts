@@ -65,28 +65,23 @@ export interface AICodeGateOptions<Context = AICodeGateContext> {
    */
   infrastructureLayers?: string[];
   /**
-   * Resolve an import specifier to the architecture layer of its TARGET file, if that target
-   * is governed by a declared layer (else undefined). When provided, the gate lets the
-   * layer RULES decide a governed edge instead of the infrastructure path-heuristic — so the
-   * write gate honors `ark.config.json` exactly like `ark-check`, and the heuristic only
-   * applies to ungoverned targets (external packages, paths no layer covers). The caller
-   * (ark-mcp) supplies this using the config's layer globs + tsconfig path aliases.
+   * Preferred single resolve step: import specifier or absolute source file →
+   * `{ layer, relPath }` for contract + peerIsolation. Prefer this over the
+   * legacy layer-only callback.
+   */
+  resolveImportTarget?: (
+    specifierOrFilePath: string,
+    fromFilePath?: string
+  ) => { layer?: string; relPath?: string } | undefined;
+  /**
+   * @deprecated Prefer resolveImportTarget. Layer-only resolve for governed imports.
    */
   resolveImportLayer?: (specifier: string, fromFilePath?: string) => string | undefined;
   /**
-   * Resolve a source file path or import specifier to a repo-relative path for
-   * peerIsolation slice comparison. When omitted, same-layer peerIsolation rules
-   * cannot fire on the write gate (CI still enforces them via ark-check).
-   */
-  resolveImportRelativePath?: (
-    specifierOrFilePath: string,
-    fromFilePath?: string
-  ) => string | undefined;
-  /**
    * Layer configs (patterns) used to infer sliceFolders when a peerIsolation rule
-   * omits an explicit list. Optional — rules may set sliceFolders themselves.
+   * omits an explicit list.
    */
-  layersForSliceInfer?: Array<{ name: string; patterns?: string[] }>;
+  architectureLayers?: Array<{ name: string; patterns?: string[] }>;
 }
 
 function violation(
@@ -474,37 +469,39 @@ export function createAICodeGate<Context = AICodeGateContext>(
         // (`ark.config.json` is authoritative), so an edge the config allows — e.g. a route
         // calling a repository, or a repository importing the DB — is never blocked here just
         // because the specifier contains an "infra" token.
-        // Cross-layer edges and same-layer peerIsolation rules are governed by the contract.
-        // Ungoverned / same-layer without peerIsolation still fall through to the infra path
-        // heuristic (e.g. a core file reaching `./infra/db` that lives in the same layer).
-        const targetLayer = options.resolveImportLayer?.(specifier.value, filePath);
+        // Contract + peerIsolation share one resolve step when resolveImportTarget is set.
+        const targetHit =
+          options.resolveImportTarget?.(specifier.value, filePath) ??
+          (options.resolveImportLayer
+            ? { layer: options.resolveImportLayer(specifier.value, filePath) }
+            : undefined);
+        const sourceHit =
+          typeof filePath === 'string'
+            ? options.resolveImportTarget?.(filePath) ??
+              (options.resolveImportLayer
+                ? { layer: contextLayer, relPath: undefined }
+                : undefined)
+            : undefined;
+        const targetLayer = targetHit?.layer;
         if (targetLayer && contextLayer) {
-          const fromPath =
-            typeof filePath === 'string'
-              ? options.resolveImportRelativePath?.(filePath)
-              : undefined;
-          const toPath =
-            typeof filePath === 'string'
-              ? options.resolveImportRelativePath?.(specifier.value, filePath)
-              : options.resolveImportRelativePath?.(specifier.value);
           const blocked = findDeniedEdgeRule(
             options.architectureProfile?.rules,
             contextLayer,
             targetLayer,
             {
-              fromPath: fromPath || undefined,
-              toPath: toPath || undefined,
-              layers: options.layersForSliceInfer,
+              fromPath: sourceHit?.relPath,
+              toPath: targetHit?.relPath,
+              layers: options.architectureLayers,
             }
           );
           if (blocked) {
-            const peer = Boolean(blocked.peerIsolation && targetLayer === contextLayer);
+            const peer = Boolean(blocked.peerIsolation);
             violations.push(
               violation(
                 'LAYER_IMPORT_VIOLATION',
                 blocked.message ??
                   (peer
-                    ? `Layer "${contextLayer}" must not import another slice of "${targetLayer}".`
+                    ? `Layer "${contextLayer}" must not import across slices into "${targetLayer}".`
                     : `Layer "${contextLayer}" must not import "${targetLayer}".`),
                 {
                   line: lineOf(source, specifier.index),
@@ -606,11 +603,11 @@ export function createAICodeGate<Context = AICodeGateContext>(
           const targetLayer = options.architectureProfile.resolveLayer(literal.value);
           if (!targetLayer) continue;
 
-          const blocked = options.architectureProfile.rules.find(
-            (rule) =>
-              !rule.allowed &&
-              rule.from === contextLayer &&
-              rule.to === targetLayer
+          // Intent names are not files — peerIsolation cannot classify slices; classic deny only.
+          const blocked = findDeniedEdgeRule(
+            options.architectureProfile.rules,
+            contextLayer,
+            targetLayer
           );
 
           if (blocked) {

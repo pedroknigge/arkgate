@@ -4,14 +4,25 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+### Changed
+
+- **Same-layer deny semantics (locked):** classic `{ allowed: false }` without
+  `peerIsolation` never blocks same-layer edges (historical short-circuit restored /
+  confirmed). Only `peerIsolation: true` may deny, and only when slice ids differ.
+- **`peerIsolation` applies cross-layer too:** when set, deny only if slices differ
+  (enables honest DDD inter-context isolation for e.g. application→domain across contexts).
+- **`FRAMEWORK_INTERNAL_EXCLUDE`:** `src/kernel/**` + `**/src/kernel/**` only — no longer
+  `**/kernel/**` (which carved out `src/shared/kernel/**`).
+- **Write-gate import resolve:** single `resolveImportTarget` primitive in
+  `bin/lib/import-resolve.mjs`; `ark-mcp` entry stays under 1000 LOC.
+- **Gallery starters:** `npm run check:gallery-starters` fails on factory drift;
+  `generate:gallery-starters` rewrites configs from presets.
+
 ### Added
 
-- **`peerIsolation` edge rules (P0):** same-layer deny rules may set
-  `"peerIsolation": true` so only **cross-slice** imports are blocked
-  (e.g. `features/auth` ↛ `features/payments`) while same-slice imports stay allowed.
-  Optional `sliceFolders` (else inferred from layer globs). Wired in `ark-check`, ESLint,
-  write-gate (`ark-mcp`), remediation (`cross-slice-boundary`, always judgment).
-  Opt-in — existing configs unchanged.
+- **`peerIsolation` edge rules (P0):** opt-in cross-slice bans
+  (e.g. `features/auth` ↛ `features/payments`). Optional `sliceFolders`.
+  Wired in `ark-check`, ESLint, write-gate, remediation (`cross-slice-boundary`, judgment).
 - **`vertical-slice` preset (P2):** Features / Shared / Lib / App with peerIsolation on
   Features. `ark init --preset vertical-slice`. CLI help and fit scoring include all
   public presets (`ui-surface` documented).
@@ -19,9 +30,8 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
   signal `verticalSliceLayout`, policy pack `enthusiast-vertical-slice`, gallery
   `examples/vertical-slice-starter/` (strict-config green).
 - **P4 `ddd-bounded-contexts` preset:** contexts/*/domain|application|presentation|infra +
-  SharedKernel; same-layer peerIsolation across contexts. Archetype, pack
-  `enthusiast-ddd-bounded-contexts`, gallery `examples/ddd-context-starter/`.
-  Also ships `enthusiast-ui-surface` pack for the existing ui-surface preset.
+  SharedKernel; peerIsolation matrix blocks **any** cross-context import (same or
+  cross technical layer). Archetype, pack, gallery starter.
 - **Skills (S1/S3):** architect/place/fix/adopt/autopilot know vertical-slice + DDD;
   new host-only `/ark-think` skill (no package LLM).
 - **Eval corpus (S5):** `eval/cases/vertical-slice-cross-feature` labeled peerIsolation case

@@ -263,7 +263,7 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
           targetTypeNames.size > 0 &&
           !targetCached?.hasTopLevelSideEffects &&
           named.every((n) => targetTypeNames.has(n));
-        const peerIsolation = Boolean(rule.peerIsolation && sourceLayer === targetLayer);
+        const peerIsolation = Boolean(rule.peerIsolation);
         violations.push({
           ruleId: 'LAYER_IMPORT_VIOLATION',
           file: relFile,
