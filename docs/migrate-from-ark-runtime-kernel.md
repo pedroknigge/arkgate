@@ -49,6 +49,17 @@ TypeScript host and falls back when `require('typescript')` is version-only. See
 [typescript-support.md](typescript-support.md). Optional dual-install (TS 6 for tools + TS 7
 CLI) is documented there.
 
+### MCP args (avoid double binary)
+
+`.mcp.json` / `.cursor/mcp.json` must look like:
+
+```json
+"args": ["arkgate-mcp", "--root", ".", "--config", "ark.config.json"]
+```
+
+**Not** `["ark-mcp", "arkgate-mcp", …]` — that breaks MCP stdio. Fixed by
+`npx arkgate-check --install-agent-gates --migrate-commands` (ArkGate ≥ 2.4.0).
+
 ---
 
 ## What to change in your repo

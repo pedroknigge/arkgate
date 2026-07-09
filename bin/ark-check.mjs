@@ -1244,7 +1244,8 @@ function mcpJson(root) {
     mcpServers: {
       ark: {
         type: 'stdio',
-        ...execCommandParts(root, 'ark-mcp', ['--root', '.', '--config', 'ark.config.json']),
+        // Prefer arkgate-mcp; ark-mcp alias still works for one major.
+        ...execCommandParts(root, PREFERRED_MCP_BIN, ['--root', '.', '--config', 'ark.config.json']),
       },
     },
   }, null, 2)}\n`;
@@ -1255,7 +1256,7 @@ function mcpJson(root) {
 // it flags the two gotchas of hand-editing the global config: absolute paths (config.toml is
 // loaded without the project as cwd) and the required restart.
 function codexTomlSnippet(root) {
-  const { command, args } = execCommandParts(root, 'ark-mcp', [
+  const { command, args } = execCommandParts(root, PREFERRED_MCP_BIN, [
     '--root',
     '/absolute/path/to/project',
     '--config',
@@ -1389,7 +1390,7 @@ function claudeSettings(root) {
           hooks: [
             {
               type: 'command',
-              command: `${runner} ark-mcp --session-context --root "$CLAUDE_PROJECT_DIR" --config ark.config.json`,
+              command: `${runner} ${PREFERRED_MCP_BIN} --session-context --root "$CLAUDE_PROJECT_DIR" --config ark.config.json`,
             },
           ],
         },
@@ -1400,7 +1401,7 @@ function claudeSettings(root) {
           hooks: [
             {
               type: 'command',
-              command: `${runner} ark-mcp --hook --root "$CLAUDE_PROJECT_DIR" --config ark.config.json`,
+              command: `${runner} ${PREFERRED_MCP_BIN} --hook --root "$CLAUDE_PROJECT_DIR" --config ark.config.json`,
             },
           ],
         },
@@ -1412,7 +1413,7 @@ function claudeSettings(root) {
 // Grok Build project config: MCP registration (commit-friendly relative paths — unlike
 // Codex's global config.toml, Grok loads .grok/config.toml from the project).
 function grokProjectConfig(root) {
-  const { command, args } = execCommandParts(root, 'ark-mcp', [
+  const { command, args } = execCommandParts(root, PREFERRED_MCP_BIN, [
     '--root',
     '.',
     '--config',
@@ -1427,7 +1428,7 @@ args = [${argsToml}]
 `;
 }
 
-// Grok Build hooks: same ark-mcp contracts as Claude. Grok sets CLAUDE_PROJECT_DIR as
+// Grok Build hooks: same arkgate-mcp contracts as Claude. Grok sets CLAUDE_PROJECT_DIR as
 // an alias for GROK_WORKSPACE_ROOT. Matcher keeps Claude names (Write|Edit|MultiEdit)
 // and Grok natives (write|search_replace) — Grok aliases both directions.
 function grokHooks(root) {
@@ -1440,7 +1441,7 @@ function grokHooks(root) {
             {
               type: 'command',
               timeout: 30,
-              command: `${runner} ark-mcp --session-context --root "$CLAUDE_PROJECT_DIR" --config ark.config.json`,
+              command: `${runner} ${PREFERRED_MCP_BIN} --session-context --root "$CLAUDE_PROJECT_DIR" --config ark.config.json`,
             },
           ],
         },
@@ -1452,7 +1453,7 @@ function grokHooks(root) {
             {
               type: 'command',
               timeout: 30,
-              command: `${runner} ark-mcp --hook --root "$CLAUDE_PROJECT_DIR" --config ark.config.json`,
+              command: `${runner} ${PREFERRED_MCP_BIN} --hook --root "$CLAUDE_PROJECT_DIR" --config ark.config.json`,
             },
           ],
         },
@@ -1664,7 +1665,7 @@ function wireCodexMcp(root, force) {
   const esc = (s) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const absRoot = path.resolve(root);
   const absConfig = path.join(absRoot, 'ark.config.json');
-  const { command, args } = execCommandParts(root, 'ark-mcp', [
+  const { command, args } = execCommandParts(root, PREFERRED_MCP_BIN, [
     '--root',
     esc(absRoot),
     '--config',
@@ -1777,10 +1778,60 @@ const COMMAND_GATE_TEXT_FILES = [
   '.grok/hooks/ark-write-gate.json', '.grok/config.toml',
 ];
 const COMMAND_GATE_JSON_FILES = ['.mcp.json', '.cursor/mcp.json'];
+// Primary CLI names (product) + one-major aliases. migrate-commands must strip ALL of these
+// before re-emitting a single preferred bin — otherwise a partial rename leaves
+// args: ["ark-mcp", "arkgate-mcp", ...] which breaks stdio MCP hosts.
+const ARK_MCP_BINS = new Set(['arkgate-mcp', 'ark-mcp']);
+const ARK_CHECK_BINS = new Set(['arkgate-check', 'ark-check']);
+const ARK_CLI_BINS = new Set(['arkgate', 'ark']);
+const PREFERRED_MCP_BIN = 'arkgate-mcp';
+const PREFERRED_CHECK_BIN = 'arkgate-check';
+const PREFERRED_CLI_BIN = 'arkgate';
+// Runner argv noise that is not a bin argument (pnpm exec form).
+const MCP_RUNNER_ARGV = new Set(['exec', '--config.verify-deps-before-run=false']);
 // The runner token immediately before an ark command in a text command string.
 // Matches npm/yarn runners and both pnpm forms (legacy `pnpm exec` + verify-deps-safe form).
+// Longer bin names first so `arkgate-check` is not partially matched as `ark`.
 const RUNNER_BEFORE_ARK =
-  /\b(?:npx|pnpm --config\.verify-deps-before-run=false exec|pnpm exec|yarn)(?= (?:ark-check|ark-mcp|ark)\b)/g;
+  /\b(?:npx|pnpm --config\.verify-deps-before-run=false exec|pnpm exec|yarn)(?= (?:arkgate-check|arkgate-mcp|arkgate|ark-check|ark-mcp|ark)\b)/g;
+
+/** Keep only MCP server flags from existing args (drop runner tokens + any ark* bin names). */
+function stripMcpServerArgs(args) {
+  if (!Array.isArray(args) || args.length === 0) {
+    return ['--root', '.', '--config', 'ark.config.json'];
+  }
+  const kept = args.filter(
+    (entry) =>
+      typeof entry === 'string' &&
+      !MCP_RUNNER_ARGV.has(entry) &&
+      !ARK_MCP_BINS.has(entry) &&
+      !ARK_CHECK_BINS.has(entry) &&
+      !ARK_CLI_BINS.has(entry)
+  );
+  return kept.length > 0 ? kept : ['--root', '.', '--config', 'ark.config.json'];
+}
+
+/** True when mcpServers.ark.args list more than one Ark MCP bin (broken dual rename). */
+function mcpArgsHaveDuplicateBins(args) {
+  if (!Array.isArray(args)) return false;
+  const hits = args.filter((entry) => ARK_MCP_BINS.has(entry));
+  return hits.length > 1 || (hits.length === 1 && args.indexOf(hits[0]) !== args.lastIndexOf(hits[0]));
+}
+
+function brokenMcpGateFiles(root) {
+  const bad = [];
+  for (const rel of COMMAND_GATE_JSON_FILES) {
+    let json;
+    try {
+      json = JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8'));
+    } catch {
+      continue;
+    }
+    const ark = json?.mcpServers?.ark;
+    if (ark && mcpArgsHaveDuplicateBins(ark.args)) bad.push(rel);
+  }
+  return bad;
+}
 
 // Gate files whose Ark command runner doesn't match this project's package manager — the
 // advisory (and --migrate-commands) target. Returns [] for npm/unknown projects (npx is right)
@@ -1842,6 +1893,8 @@ function warnLockfileConflict(root) {
 // --migrate-commands: rewrite ONLY the Ark command runner in existing gate files to the
 // project's package manager (no --force clobber). Closes the upgrade gap where a repo that
 // adopted before the package-manager-aware templates keeps a stale `npx`.
+// Also normalizes MCP JSON to a single preferred bin (arkgate-mcp), stripping any dual
+// ark-mcp + arkgate-mcp residue left by partial renames during package identity cutover.
 function runMigrateCommands(root) {
   const runner = execRunner(root);
   const changed = [];
@@ -1853,7 +1906,12 @@ function runMigrateCommands(root) {
     } catch {
       continue;
     }
-    const next = text.replace(RUNNER_BEFORE_ARK, runner);
+    let next = text.replace(RUNNER_BEFORE_ARK, runner);
+    // Prefer primary product bins in command strings (aliases still work if left alone).
+    next = next
+      .replace(/\bark-mcp\b/g, PREFERRED_MCP_BIN)
+      .replace(/\bark-check\b/g, PREFERRED_CHECK_BIN);
+    // Do not blanket-replace bare `ark` — it appears in prose ("Ark check", product name).
     if (next !== text) {
       fs.writeFileSync(full, next);
       changed.push(rel);
@@ -1869,23 +1927,23 @@ function runMigrateCommands(root) {
     }
     const ark = json?.mcpServers?.ark;
     if (!ark) continue;
-    const binArgs = Array.isArray(ark.args)
-      ? ark.args.filter((entry) => entry !== 'exec' && entry !== 'ark-mcp')
-      : ['--root', '.', '--config', 'ark.config.json'];
-    const parts = execCommandParts(root, 'ark-mcp', binArgs);
+    const binArgs = stripMcpServerArgs(ark.args);
+    const parts = execCommandParts(root, PREFERRED_MCP_BIN, binArgs);
     if (ark.command !== parts.command || JSON.stringify(ark.args) !== JSON.stringify(parts.args)) {
       json.mcpServers.ark = { ...ark, ...parts };
       fs.writeFileSync(full, `${JSON.stringify(json, null, 2)}\n`);
       changed.push(rel);
     }
   }
-  const pm = runner === 'pnpm exec' ? 'pnpm' : runner;
-  console.log(`Migrated the Ark command runner to "${pm}" in existing gate files.`);
+  const pm = runner === 'pnpm exec' || runner.startsWith('pnpm ') ? 'pnpm' : runner;
+  console.log(`Migrated ArkGate command runners to "${pm}" and normalized MCP bins in gate files.`);
   if (changed.length === 0) {
-    console.log('  Nothing to change — all Ark commands already use the right runner.');
+    console.log('  Nothing to change — runners and MCP bins already look correct.');
   } else {
     for (const rel of changed) console.log(`  updated ${rel}`);
-    console.log('  (only the command runner changed; customized content is untouched.)');
+    console.log(
+      `  (runner + single MCP bin \`${PREFERRED_MCP_BIN}\`; customized non-command content is untouched.)`
+    );
   }
   warnLockfileConflict(root);
 }
@@ -3012,8 +3070,12 @@ function detectEnforcement(root) {
     (f) => has(f) && (fileIncludes(f, 'arkgate') || fileIncludes(f, 'ark-runtime-kernel'))
   );
   const writeGateFile =
-    (fileIncludes('.claude/settings.json', 'ark-mcp') && '.claude/settings.json') ||
+    ((fileIncludes('.claude/settings.json', 'arkgate-mcp') ||
+      fileIncludes('.claude/settings.json', 'ark-mcp')) &&
+      '.claude/settings.json') ||
     (has('.cursor/mcp.json') && '.cursor/mcp.json') ||
+    (fileIncludes('.grok/hooks/ark-write-gate.json', 'arkgate-mcp') &&
+      '.grok/hooks/ark-write-gate.json') ||
     null;
   return [
     { name: 'Write gate', where: writeGateFile, what: 'blocks a bad edit as you type (PreToolUse hook / MCP)' },
@@ -5271,6 +5333,16 @@ async function main() {
         color.dim(
           `Ark commands in ${staleRunners.join(', ')} use a runner that doesn't match this repo's ` +
             `package manager. Fix (no clobber): ${arkCommand(root, 'ark-check', '--install-agent-gates --migrate-commands')}`
+        )
+      );
+    }
+
+    const brokenMcp = brokenMcpGateFiles(root);
+    if (brokenMcp.length > 0) {
+      console.log(
+        color.yellow(
+          `Broken MCP argv in ${brokenMcp.join(', ')}: more than one of ark-mcp/arkgate-mcp in args ` +
+            `(stdio hosts get a double binary name). Fix: ${arkCommand(root, 'ark-check', '--install-agent-gates --migrate-commands')}`
         )
       );
     }

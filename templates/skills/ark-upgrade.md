@@ -23,6 +23,16 @@ project's `typescript` main export is version-only (TS 7.0). After upgrade, poin
 `docs/typescript-support.md` if the gate or `ARK_DEBUG_TS=1` mentions fallback. Dual install
 (TS6 JS API + TS7 CLI) is optional for tooling that still needs classic `tsc` APIs.
 
+**MCP double-bin check (identity cutover):** after upgrade, open `.mcp.json` and
+`.cursor/mcp.json`. `args` must contain **exactly one** of `arkgate-mcp` / `ark-mcp`
+(prefer `arkgate-mcp`), never both. If both appear, run:
+
+```
+npx arkgate-check --install-agent-gates --migrate-commands
+```
+
+`ark upgrade` already runs migrate-commands; re-run it if an older 2.x left dual names.
+
 ## Fast path
 
 One command does the whole flow — update the package, refresh gates + `/ark-*` skills

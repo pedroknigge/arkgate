@@ -4,6 +4,14 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## 2.4.0 — 2026-07-08
 
+### Fixed — MCP dual-bin on upgrade (field: PREDIAL WEB 2.1→2.2)
+
+- **`--migrate-commands`** stripped only `ark-mcp` then re-prepended a bin while
+  `arkgate-mcp` could remain → `args: ["ark-mcp","arkgate-mcp",…]` broke stdio MCP.
+  Now strips **all** MCP bin aliases + runner noise and emits a single
+  **`arkgate-mcp`**. Fresh `.mcp.json` / hooks / Codex+Grok wiring use the preferred bin.
+- Doctor warns when dual bins are detected; `/ark-upgrade` skill documents the check.
+
 ### Added — TypeScript 5 / 6 / 7 compatibility bar
 
 - **`usableTypescript` / load fallback** shared in `ark-shared.mjs`: reject modules

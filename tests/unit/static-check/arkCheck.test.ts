@@ -340,7 +340,9 @@ describe('ark-check --install-agent-gates', () => {
     expect(mcp).not.toContain('"command": "npx"');
 
     const settings = fs.readFileSync(path.join(pnpmRoot, '.claude/settings.json'), 'utf8');
-    expect(settings).toContain('pnpm --config.verify-deps-before-run=false exec ark-mcp --session-context');
+    expect(settings).toContain(
+      'pnpm --config.verify-deps-before-run=false exec arkgate-mcp --session-context'
+    );
     expect(settings).not.toContain('npx ark-mcp');
 
     const cursor = fs.readFileSync(path.join(pnpmRoot, '.cursor/rules/ark.mdc'), 'utf8');
@@ -451,8 +453,11 @@ describe('ark-check --install-agent-gates', () => {
     expect(res.status).toBe(0);
 
     const settings = fs.readFileSync(path.join(root, '.claude/settings.json'), 'utf8');
-    expect(settings).toContain('pnpm --config.verify-deps-before-run=false exec ark-mcp --hook');
+    expect(settings).toContain(
+      'pnpm --config.verify-deps-before-run=false exec arkgate-mcp --hook'
+    );
     expect(settings).not.toContain('npx ark-mcp');
+    expect(settings).not.toContain('npx arkgate-mcp');
     expect(JSON.parse(settings)._custom).toBe('keep me'); // customization preserved
 
     const mcp = JSON.parse(fs.readFileSync(path.join(root, '.mcp.json'), 'utf8'));
@@ -460,11 +465,71 @@ describe('ark-check --install-agent-gates', () => {
     expect(mcp.mcpServers.ark.args.slice(0, 3)).toEqual([
       '--config.verify-deps-before-run=false',
       'exec',
-      'ark-mcp',
+      'arkgate-mcp',
+    ]);
+    // Exactly one MCP bin — never dual ark-mcp + arkgate-mcp
+    expect(mcp.mcpServers.ark.args.filter((a: string) => /^(ark|arkgate)-mcp$/.test(a))).toEqual([
+      'arkgate-mcp',
     ]);
 
-    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('pnpm --config.verify-deps-before-run=false exec ark-check');
+    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain(
+      'pnpm --config.verify-deps-before-run=false exec arkgate-check'
+    );
     expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).not.toContain('npx ark-check');
+  });
+
+  it('migrate-commands repairs double MCP bin names (ark-mcp + arkgate-mcp)', () => {
+    // Field bug from PREDIAL WEB /ark-upgrade 2.1→2.2: migrate only stripped ark-mcp
+    // then re-prepended ark-mcp while arkgate-mcp remained → broken stdio argv.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-migrate-double-'));
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+    fs.mkdirSync(path.join(root, '.cursor'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.mcp.json'),
+      JSON.stringify(
+        {
+          mcpServers: {
+            ark: {
+              type: 'stdio',
+              command: 'npx',
+              args: ['ark-mcp', 'arkgate-mcp', '--root', '.', '--config', 'ark.config.json'],
+            },
+          },
+        },
+        null,
+        2
+      )
+    );
+    fs.writeFileSync(
+      path.join(root, '.cursor/mcp.json'),
+      JSON.stringify(
+        {
+          mcpServers: {
+            ark: {
+              type: 'stdio',
+              command: 'npx',
+              args: ['arkgate-mcp', 'ark-mcp', '--root', '.', '--config', 'ark.config.json'],
+            },
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    const res = runInstallAgentGates(root, ['--migrate-commands']);
+    expect(res.status).toBe(0);
+
+    for (const rel of ['.mcp.json', '.cursor/mcp.json']) {
+      const mcp = JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8'));
+      expect(mcp.mcpServers.ark.args).toEqual([
+        'arkgate-mcp',
+        '--root',
+        '.',
+        '--config',
+        'ark.config.json',
+      ]);
+    }
   });
 
   it('includes --require-gates in the generated CI workflow command', () => {
@@ -904,7 +969,7 @@ describe('ark init', () => {
     expect(status).toBe(0);
     // One command runs the whole sequence.
     expect(out).toContain('Refreshing agent gates');
-    expect(out).toContain('Migrated the Ark command runner');
+    expect(out).toContain('Migrated ArkGate command runners');
     expect(out).toContain('Ark check passed');
     // `update` is an accepted alias for `upgrade`.
     const alias = execFileSync(
