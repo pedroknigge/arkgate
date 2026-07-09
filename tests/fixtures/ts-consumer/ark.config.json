@@ -1,0 +1,11 @@
+{
+  "include": ["src"],
+  "layers": [
+    { "name": "DomainModel", "patterns": ["src/domain/**"], "forbiddenGlobals": ["fetch"] },
+    { "name": "ApplicationOrchestration", "patterns": ["src/app/**"] }
+  ],
+  "rules": [
+    { "from": "DomainModel", "to": "ApplicationOrchestration", "allowed": false },
+    { "from": "ApplicationOrchestration", "to": "DomainModel", "allowed": true }
+  ]
+}

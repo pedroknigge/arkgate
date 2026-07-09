@@ -204,6 +204,7 @@ NestJS: `arkgate/nestjs` (optional peer `@nestjs/common`).
 |----------|------|
 | New builders (plain language) | [docs/enthusiast/](docs/enthusiast/README.md) |
 | Wire Claude / Cursor / Codex / Grok | [docs/ai-gates.md](docs/ai-gates.md) |
+| **TypeScript 5 / 6 / 7 support** | [docs/typescript-support.md](docs/typescript-support.md) |
 | Messy existing repo | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Agent / MCP tools | [docs/agent-guide.md](docs/agent-guide.md) |
 | Demos | [docs/demos/](docs/demos/) |

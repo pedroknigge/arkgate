@@ -37,6 +37,8 @@ import {
   resolveIntentLayer,
   resolveOperatingMode,
   shouldShowNewHereNudge,
+  usableTypescript,
+  typescriptUsabilityHint,
 } from './ark-shared.mjs';
 
 function parseArgs(argv) {
@@ -1051,49 +1053,89 @@ function writeTemplate(root, relativePath, content, force) {
 }
 
 /**
- * Normalize a required/imported TypeScript module. TS 5.x exposes `sys` on the root
- * export; TS 7+ (and some ESM interop shapes) may not — those are unusable for ark-check's
- * module resolution host, so we reject them and fall through to Ark's own TypeScript.
- */
-function usableTypescript(mod) {
-  if (!mod) return null;
-  const ts = mod.default && mod.sys == null ? mod.default : mod;
-  if (ts && typeof ts === 'object' && ts.sys && typeof ts.sys.fileExists === 'function') {
-    return ts;
-  }
-  return null;
-}
-
-/**
- * Load a TypeScript module with a working `sys`. Prefer the project's install when it is
- * API-compatible; otherwise Ark's dependency (or a bare import). Returns null only when
- * nothing usable is available.
+ * Load a TypeScript module with a working JS API host (`sys` + AST + resolve).
+ * Prefer the project's install when API-compatible (TS 5/6 + any TS 7 that still
+ * exposes the classic JS host). TypeScript 7.0.x main entry is version-only
+ * (`{ version, versionMajorMinor }`); programmatic APIs live under
+ * `typescript/unstable/*` and are not yet the gate's host — we fall through to
+ * ArkGate's own `typescript` dependency (JS-API 5.x) or a bare import.
+ * Returns `{ ts, source, version, fallbackReason? }` or null.
  */
 async function loadTypeScript(root) {
+  const { createRequire } = await import('node:module');
   const loaders = [];
   try {
-    const { createRequire } = await import('node:module');
     const req = createRequire(path.join(root, 'package.json'));
-    loaders.push(() => req('typescript'));
+    loaders.push({
+      label: 'project',
+      load: () => req('typescript'),
+      resolvePath: () => {
+        try {
+          return req.resolve('typescript');
+        } catch {
+          return null;
+        }
+      },
+    });
   } catch {
     /* project has no package.json resolvable tree */
   }
+  // Nested under arkgate (production dependency) — must work when project has only TS7.
   try {
-    const { createRequire } = await import('node:module');
     const req = createRequire(__arkCheckCli);
-    loaders.push(() => req('typescript'));
+    loaders.push({
+      label: 'arkgate',
+      load: () => req('typescript'),
+      resolvePath: () => {
+        try {
+          return req.resolve('typescript');
+        } catch {
+          return null;
+        }
+      },
+    });
   } catch {
     /* ark install tree unavailable */
   }
-  loaders.push(async () => {
-    const m = await import('typescript');
-    return m;
+  loaders.push({
+    label: 'import',
+    load: async () => {
+      const m = await import('typescript');
+      return m;
+    },
+    resolvePath: () => null,
   });
 
-  for (const load of loaders) {
+  let projectRejected = null;
+  const triedPaths = new Set();
+  for (const { label, load, resolvePath } of loaders) {
     try {
-      const ts = usableTypescript(await load());
-      if (ts) return ts;
+      const resolved = typeof resolvePath === 'function' ? resolvePath() : null;
+      if (resolved && triedPaths.has(resolved)) {
+        // Same physical package already rejected (e.g. project === hoisted arkgate path).
+        continue;
+      }
+      if (resolved) triedPaths.add(resolved);
+
+      const mod = await load();
+      const ts = usableTypescript(mod);
+      if (ts) {
+        const version =
+          typeof ts.version === 'string'
+            ? ts.version
+            : typeof mod?.version === 'string'
+              ? mod.version
+              : undefined;
+        return {
+          ts,
+          source: label,
+          version,
+          ...(projectRejected ? { fallbackReason: projectRejected } : {}),
+        };
+      }
+      if (label === 'project' && mod) {
+        projectRejected = `project typescript is not API-compatible (${typescriptUsabilityHint(mod)}); using ArkGate's JS-API TypeScript fallback (TypeScript 7.0 main export is version-only). See docs/typescript-support.md.`;
+      }
     } catch {
       /* try next loader */
     }
@@ -4744,23 +4786,38 @@ async function main() {
 
   // Resolve TypeScript from the project first, then Ark's own install, then bare import.
   // --plan can still run honestly (coverage + empty violations) when TS is missing.
-  const ts = await loadTypeScript(root);
-  if (!ts) {
+  // Early TypeScript 7 native builds may load but lack a JS `sys` host — we fall back.
+  const loaded = await loadTypeScript(root);
+  if (!loaded?.ts) {
     if (args.plan) {
       const cov = computeCoverage(root, config, files, rules);
       if (!args.json) {
         console.log(
           color.yellow(
-            `TypeScript not found — plan shows coverage honesty only (no import graph). Install with: ${installDevHint(root, 'typescript')}`
+            `TypeScript not found — plan shows coverage honesty only (no import graph). Install with: ${installDevHint(root, 'typescript')} (supported: 5.x–7.x; see docs/typescript-support.md)`
           )
         );
       }
       runPlan(root, [], args.json, cov.governed.percent, cov.governed.totalFiles);
       return;
     }
-    console.error(`ark-check requires TypeScript. Install it with: ${installDevHint(root, 'typescript')}`);
+    console.error(
+      `ark-check requires a JS-API TypeScript (5.x–7.x with ts.sys). Install with: ${installDevHint(root, 'typescript')} — see docs/typescript-support.md`
+    );
     process.exitCode = 2;
     return;
+  }
+  const { ts } = loaded;
+  if (loaded.fallbackReason && !args.json) {
+    console.log(color.yellow(loaded.fallbackReason));
+  }
+  if (process.env.ARK_DEBUG_TS === '1' && !args.json) {
+    console.log(
+      color.dim(
+        `[ark-check] TypeScript ${loaded.version ?? '?'} via ${loaded.source}` +
+          (loaded.fallbackReason ? ' (fallback)' : '')
+      )
+    );
   }
 
   const manifestIntentLayers = intentLayersFromManifest(manifest);

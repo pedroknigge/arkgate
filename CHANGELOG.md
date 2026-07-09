@@ -2,6 +2,20 @@
 
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here.
 
+## Unreleased
+
+### Added — TypeScript 5 / 6 / 7 compatibility bar
+
+- **`usableTypescript` / load fallback** shared in `ark-shared.mjs`: reject modules
+  without classic JS host (`ts.sys` + AST + resolve). TypeScript **7.0.x** main export is
+  version-only — gate falls back to ArkGate’s nested **JS-API** `typescript@^5.9`
+  (production dependency) so teams can try project TS 7 without breaking the gate.
+- **CI job `ts-compat`:** matrix `typescript@5.9.3` / `6.0.3` / `7.0.2` on
+  `tests/fixtures/ts-consumer` via `scripts/ts-compat-matrix.mjs`.
+- **Docs:** [docs/typescript-support.md](docs/typescript-support.md) (supported ranges,
+  TS7 version-only entry, tsconfig 6→7, dual-install 6+7, `ARK_DEBUG_TS`).
+- Optional peer `typescript: >=5 <8` (project compiler); runtime dependency pins JS-API host.
+
 ## 2.3.0 — 2026-07-08
 
 ### Added — P0 complete (mechanical-safe depth + release-trust)

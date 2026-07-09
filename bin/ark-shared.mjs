@@ -630,6 +630,59 @@ export function classifyRemediation(violation) {
   };
 }
 
+/**
+ * Normalize a required/imported TypeScript module for ark-check's host.
+ * TS 5/6 expose `sys` on the root export. Early TS 7 / some ESM interop shapes
+ * may nest under `.default` or omit `sys` — those are unusable for resolve/scan
+ * and must fall through to a JS-API-compatible TypeScript (Ark's own or 5/6).
+ *
+ * @param {unknown} mod
+ * @returns {object | null} usable typescript namespace, or null
+ */
+export function usableTypescript(mod) {
+  if (!mod || typeof mod !== 'object') return null;
+  // Prefer root; if root has no sys but default does (CJS/ESM interop), use default.
+  const candidates = [mod];
+  if (mod.default && typeof mod.default === 'object') candidates.push(mod.default);
+  for (const ts of candidates) {
+    if (
+      ts &&
+      typeof ts === 'object' &&
+      ts.sys &&
+      typeof ts.sys.fileExists === 'function' &&
+      typeof ts.createSourceFile === 'function' &&
+      typeof ts.resolveModuleName === 'function'
+    ) {
+      return ts;
+    }
+  }
+  return null;
+}
+
+/**
+ * Human-readable reason a typescript package module is unusable for the gate.
+ * @param {unknown} mod
+ */
+export function typescriptUsabilityHint(mod) {
+  if (!mod) return 'module is null/undefined';
+  const ts = mod.default && mod.sys == null ? mod.default : mod;
+  if (!ts || typeof ts !== 'object') return 'not an object export';
+  // TS 7.0.x main export is only { version, versionMajorMinor }; classic JS host is not there.
+  if (
+    typeof ts.version === 'string' &&
+    !ts.sys &&
+    typeof ts.createSourceFile !== 'function' &&
+    typeof ts.resolveModuleName !== 'function'
+  ) {
+    return `version-only export (${ts.version}) — TypeScript 7 main entry no longer ships the classic JS host (sys/AST/resolve); gate falls back to a JS-API TypeScript`;
+  }
+  if (!ts.sys) return 'missing ts.sys (common with early TypeScript 7 native builds without a full JS host)';
+  if (typeof ts.sys.fileExists !== 'function') return 'ts.sys.fileExists is not a function';
+  if (typeof ts.createSourceFile !== 'function') return 'missing createSourceFile (AST API)';
+  if (typeof ts.resolveModuleName !== 'function') return 'missing resolveModuleName';
+  return 'unknown shape incompatibility';
+}
+
 /** The three package managers Ark emits commands for. */
 const LOCKFILES = { pnpm: 'pnpm-lock.yaml', yarn: 'yarn.lock', npm: 'package-lock.json' };
 

@@ -39,3 +39,26 @@ jobs:
       # never silently rot below 100% coverage of src.
       - name: Architecture gate (ark-check)
         run: npm run check:architecture
+
+  # Consumer TypeScript matrix: ark-check --plan against TS 5 / 6 / 7 installed in a
+  # throwaway fixture (tests/fixtures/ts-consumer). Ensures gate load + resolve work
+  # while the ecosystem moves to TypeScript 7 (native). See docs/typescript-support.md.
+  ts-compat:
+    name: TypeScript ${{ matrix.typescript }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        typescript: ['5.9.3', '6.0.3', '7.0.2']
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: ark-check --plan on consumer fixture (typescript@${{ matrix.typescript }})
+        run: node scripts/ts-compat-matrix.mjs ${{ matrix.typescript }}

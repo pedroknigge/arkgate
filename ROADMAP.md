@@ -118,8 +118,10 @@ Ordered by leverage for the dual audience:
 4. ESLint plugin parity with CI resolver rules.  
 5. Framework policy packs only if filename overlays are not enough.  
 6. Codex multi-project MCP DX (avoid last-wins home config).  
-7. Clearer messaging when TypeScript is missing on bare repos.  
+7. ~~Clearer messaging when TypeScript is missing / TS7~~ → **shipped**
+   ([docs/typescript-support.md](docs/typescript-support.md), load fallback, CI matrix 5/6/7).  
 8. ~~Identity cutover~~ → **done as ArkGate / `arkgate`** (deprecate predecessor package).  
+9. Adopt TS 7.1+ stable programmatic API when Microsoft ships it (extend `usableTypescript`).  
 
 ### P2 — growth surfaces (not prerequisites)
 
