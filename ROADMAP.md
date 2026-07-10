@@ -11,7 +11,7 @@ runtime API may exist; it is not the wedge.
 **npm:** [`arkgate`](https://www.npmjs.com/package/arkgate) (product **ArkGate**; formerly `ark-runtime-kernel`).  
 **Product shape:** write gate (`arkgate-mcp`) · CI gate (`arkgate-check`) · plan / goal / loop · agent skills.
 
-**How to use this file:** implement **one item at a time**, in order (**W1 → W2 → …**). Do not start
+**How to use this file:** implement **one item at a time**, in order (**Q1 → Q2 → …**). Do not start
 the next item until the current item’s **Definition of Done** is green. Finished foundation work
 lives under [Shipped](#shipped-context); do not treat completed tracks as “next.”
 
@@ -21,14 +21,18 @@ lives under [Shipped](#shipped-context); do not treat completed tracks as “nex
 
 **Shipped:** **Gate → Guide → Co-pilot** (through 2.x — write gate, CI, plan/loop/autopilot, honest coverage).
 
-**Next product arc:** **Constrained write → Verified repair**
+**Current product arc:** **Trust 95+ — prove the gate, repair loop, and adoption path at release quality**
 
 | Stage | Meaning |
 |-------|---------|
-| **Constrained write** | The write path places, constrains the legal surface, and **auto-repairs only mechanical-safe** violations *at the boundary* (not reject-and-retry forever). |
-| **Verified repair** | Proven, narrow structural transforms (e.g. port-proof extraction) may become mechanical-safe **only** with static proof + labeled evals — never a general codemod engine. |
+| **Close confidence gaps** | Raise regression confidence on the code that enforces, repairs, packages, and releases ArkGate; thresholds ratchet upward rather than resetting. |
+| **Prove the whole enforcement chain** | Show that human edits, agent writes, CI configuration, branch protection, and published artifacts cannot silently bypass the contract. |
+| **Prove it outside this repository** | Publish reproducible adoption evidence across real greenfield and brownfield TypeScript projects, hosts, package managers, and repository sizes. |
 
-The bottleneck is no longer “do we have a gate?” — it is the **agent write loop**: draft → block → re-reason → sometimes cheat the contract. The product multiplies when that loop collapses to **prepare → (autoPatch \| judgmentBrief) → commit**.
+Track W shipped the constrained-write and verified-repair primitives. The bottleneck is now
+**confidence outside the happy path**: global coverage is still below the desired bar, this repo
+can dogfood a reject-only hook, branch protection is external state, and field evidence is thinner
+than the package surface. Trust 95+ closes those gaps before adding another broad capability.
 
 One contract, two entries (unchanged):
 
@@ -53,8 +57,8 @@ Three **operating modes** (status lights — not settings):
 ### Audience strategy (natural path)
 
 1. **Now** — best architecture gate + co-pilot for **TypeScript + AI agents**.  
-2. **Next (this backlog)** — **Write Protocol**: constrain + auto-repair safe writes; measure loop cost (turns / tokens / CHEATED).  
-3. **Then** — verified structural transforms only when proof + evals allow; teams (baseline UX, reports).  
+2. **Now (Track Q)** — raise measurable release confidence to **95+/100** without weakening the gate.
+3. **Then** — demand-driven teams UX (baseline trend, reports) and verified transforms only when proof + evals allow.
 4. **Later** — org-scale monorepo / control-plane only if demand pulls.  
 5. **Identity** — **ArkGate / `arkgate` locked** (predecessor package deprecated).
 
@@ -69,7 +73,7 @@ Status legend: `todo` · `doing` · `done`
 
 Work in this order. Each item is a shippable slice (PR-sized or small PR stack).
 
-### Track W — Constrained write → verified repair (**done** — W1–W6 shipped on branch)
+### Track W — Constrained write → verified repair (**done** — W1–W6 published)
 
 Primary bet after Gate → Guide → Co-pilot. Reuse `classifyRemediation` and existing
 mechanical-safe kinds; do **not** invent a general codemod. Expand safe kinds only after W1–W3
@@ -88,9 +92,37 @@ instrument the write boundary and loop metrics. **All W items are `done`.**
 
 ---
 
+### Track Q — Trust 95+ (**active next**)
+
+The goal is not a vanity score or 95% coverage everywhere. It is a release gate that earns
+**95+/100** through independent evidence across correctness, bypass resistance, adoption,
+maintainability, documentation, performance, runtime reliability, and supply-chain security.
+
+Current baseline (2.11.0): **88/100**. Coverage is 46.27% statements/lines, 73.55% branches,
+and 70.20% functions; the self-hosted write path may report `reject-only`; external adoption
+evidence is not yet a published matrix.
+
+| # | Status | Item | Definition of Done |
+|---|--------|------|-------------------|
+| **Q1** | `todo` | **Coverage + mutation ratchet** | Global statements/lines ≥ **80%**, branches/functions ≥ **85%**; enforcement-critical modules (CLI parsing, safety diagnostics, baseline, hook/MCP, Action runner, release verifier) ≥ **95% branch**. Add mutation tests for at least the strict/bypass and baseline paths. Thresholds only move upward; two consecutive CI runs pass. |
+| **Q2** | `todo` | **Repair-capable dogfood** | This repository reports `doctor.writePath.mode = repair`; installed Claude/Grok hooks use `--hook-repair`; a real deny → structured repair → revalidation fixture passes for every supported repair-capable host. Reject-only remains an explicit supported choice for consumers, not ArkGate's own final state. |
+| **Q3** | `todo` | **Weakest-link enforcement proof** | Add `ark-check --doctor`/CI evidence for the required status check and branch protection when GitHub context is available; ship a maintained pre-commit option for human edits; test missing CI, non-required CI, direct disk writes, and config drift. The release checklist fails if strict CI is not required on the default branch. |
+| **Q4** | `todo` | **External adoption matrix** | Run reproducible clean-room adoption on ≥ **12** real or fixture-backed repos spanning ≥4 archetypes, 4 agent hosts, npm/pnpm/yarn, greenfield + brownfield, and small/medium/large trees. Publish time-to-Enforce, turns-to-green, false-block, CHEATED, and manual-intervention rates. No P0/P1 false green remains open. |
+| **Q5** | `todo` | **Performance + scale budgets** | Add cold/warm benchmarks at 1k/10k/50k governed files, symlink and monorepo cases; publish p50/p95 time and peak memory. Set non-flaky regression budgets in CI and profile before adding incremental complexity. |
+| **Q6** | `todo` | **Surface parity + maintainability** | Contract tests prove CLI, MCP, ESLint, Action, generated hooks, and config schema agree on every shared rule. Add public API/JSON snapshots, module-size budgets for orchestration entries, and a package-surface compatibility fixture so breadth cannot drift silently. |
+| **Q7** | `todo` | **Documentation completeness** | Every stable surface changed since 2.10 has reference + how-to coverage; strict/doctor/safety/Action/repair each have a runnable clean-room example. Contributor setup and release instructions are smoke-tested. Diátaxis coverage map has no zero-coverage public surface and no stale architecture diagrams. |
+| **Q8** | `todo` | **Runtime failure assurance** | Fault-injection tests cover cancellation-ignoring steps, compensation failures, retries, duplicate delivery, restart/durability boundaries, and observable terminal state. InMemory production risks stay fail-closed unless explicitly approved as ephemeral. |
+| **Q9** | `todo` | **Security + supply-chain assurance** | Publish a threat model for agent/human/CI/runtime bypasses; fuzz config/glob/AST/path inputs; keep signed tags, npm provenance, checksum, dependency review, CodeQL, Semgrep, and zero high alerts release-blocking. Generate an SBOM release asset and verify package contents against an allowlist. |
+| **Q10** | `todo` | **Independent 95+ exit audit** | Re-run an adversarial review from a clean checkout and score the weighted rubric below. Exit only at ≥95 with no open P0/P1, all required GitHub checks green on the shipped SHA, npm/package smoke green, and every exception documented with owner + expiry. |
+
+**Order rule:** Q1–Q3 are the hard foundation. Q4 starts once the instrumentation from Q1/Q2
+is stable. Q5–Q9 may run in parallel after Q3. Q10 is the only exit gate.
+
+---
+
 ### Track D — Growth (demand-driven — **not** the next product bet)
 
-These stay useful; they are **not** a substitute for Track W.
+These stay useful; they are **not** a substitute for Track Q.
 
 | # | Status | Item | Definition of Done |
 |---|--------|------|-------------------|
@@ -111,7 +143,7 @@ These stay useful; they are **not** a substitute for Track W.
 
 ## Implementation rules (every item)
 
-1. **One item at a time** — branch/PR title includes the id (`W1: write-boundary autoPatch`).  
+1. **One item at a time** — branch/PR title includes the id (`Q1: coverage + mutation ratchet`).
 2. **Tests first or with** — behavior change without tests is incomplete. CLI/MCP: real entry + fixtures.  
 3. **Dogfood** — `npm run test:run`, `npm run typecheck`, `npm run check:architecture` green before merge.  
 4. **No hard-line breaks** — no general codemod engine; no silent judgment auto-apply; no false-green health.  
@@ -121,12 +153,12 @@ These stay useful; they are **not** a substitute for Track W.
 ### Suggested next sessions
 
 ```text
-Session → W1  write-boundary autoPatch (4 mechanical-safe kinds)
-Session → W2  ark_prepare_write (place + constrain + validate + patch)
-Session → W3  loop-cost eval (turns / tokens / CHEATED)
-Session → W4  opt-in hook repair payload
-Session → W5  doctor prepare-write awareness
-Session → W6  verified port-proof transform (only after W1–W3)
+Session → Q1  coverage + mutation ratchet on enforcement-critical paths
+Session → Q2  repair-capable self-hosted write path
+Session → Q3  required-check / human-edit / config-drift enforcement proof
+Session → Q4  external adoption matrix and published evidence
+Session → Q5–Q9  scale, parity, docs, runtime, and security assurance
+Session → Q10 independent 95+ exit audit
 ```
 
 ---
@@ -153,6 +185,20 @@ Session → W6  verified port-proof transform (only after W1–W3)
 | **Time-to-Enforce** (optional) | Fixture greenfield/brownfield: steps from `start` to doctor Enforce |
 
 Foundation KPIs still hold: layer-matcher drift guard (R1), no `ark-check` entry re-bloat past orchestration budget (R3).
+
+### Trust 95+ weighted exit score
+
+| Dimension | Weight | Exit evidence |
+|-----------|-------:|---------------|
+| Contract + enforcement integrity | 25 | Q2–Q3 green; no bypass or false-green P0/P1 |
+| Correctness + regression confidence | 20 | Q1 thresholds + mutation tests green |
+| Security + release integrity | 20 | Q9, signed/provenance/checksum/SBOM gates green |
+| Developer experience + repair loop | 15 | Repair-capable dogfood and measured turns-to-green |
+| External adoption proof | 10 | Q4 matrix published with no open critical failure |
+| Maintainability + documentation | 10 | Q5–Q7 parity, budgets, and doc coverage green |
+
+Score ≥95 is necessary but not sufficient: any open P0/P1, unsigned release, non-required CI
+gate, or unverified package artifact is an automatic fail.
 
 ---
 
@@ -197,10 +243,11 @@ Peer isolation, vertical-slice + DDD presets, monorepo depth, FSD/Next honesty, 
 - One-flow UX: `start` → `/ark-autopilot` → `doctor`  
 - Deploy-path adoption gaps; Next/monorepo honesty  
 
-### Trust (partial)
+### Trust foundation (through 2.11.0)
 
-- npm provenance, security workflows, no install lifecycle scripts  
-- Release tag verify fail-closed by default (`ARK_ALLOW_UNSIGNED_RELEASE_TAG` override documented)  
+- Signed annotated release tags, npm provenance, release checksum, security workflows, no install lifecycle scripts
+- Release tag verification fails closed by default (`ARK_ALLOW_UNSIGNED_RELEASE_TAG` remains emergency-only)
+- `--strict` safety diagnostics and required-gate checks are shipped; Q3 adds external branch-protection proof
 
 ---
 
@@ -242,4 +289,4 @@ Issues and PRs: [github.com/pedroknigge/arkgate](https://github.com/pedroknigge/
 
 For onboarding misfires, include archetype id and `ark-check --recommend --json`.
 
-**Start implementation at W1.** Mark status in this file when you pick up or finish an item.
+**Start implementation at Q1.** Mark status in this file when you pick up or finish an item.
