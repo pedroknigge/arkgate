@@ -69,11 +69,11 @@ Status legend: `todo` · `doing` · `done`
 
 Work in this order. Each item is a shippable slice (PR-sized or small PR stack).
 
-### Track W — Constrained write → verified repair (**active**)
+### Track W — Constrained write → verified repair (**done** — W1–W6 shipped on branch)
 
 Primary bet after Gate → Guide → Co-pilot. Reuse `classifyRemediation` and existing
 mechanical-safe kinds; do **not** invent a general codemod. Expand safe kinds only after W1–W3
-instrument the write boundary and loop metrics.
+instrument the write boundary and loop metrics. **All W items are `done`.**
 
 | # | Status | Item | Why now | Definition of Done |
 |---|--------|------|---------|-------------------|
