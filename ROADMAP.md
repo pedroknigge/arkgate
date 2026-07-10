@@ -99,23 +99,22 @@ The goal is not a vanity score or 95% coverage everywhere. It is a release gate 
 **95+/100** through independent evidence across correctness, bypass resistance, adoption,
 maintainability, documentation, performance, runtime reliability, and supply-chain security.
 
-Current baseline (**2.12.0** / Q1 done): **~90/100**. Global Vitest coverage floors met on the
-broad include set (`src/**` + `bin/lib/**` + `bin/ark-shared.mjs`): statements/lines **≥80%**
-(measured **92.71%**), branches/functions **≥85%** (measured **85%** / **94.76%**);
-enforcement-critical modules at **≥95%** branch. External adoption matrix and multi-host
-repair-capable dogfood proofs remain **Q2+**.
+Current baseline (**2.12.x** / Q1–Q2 done, Q3–Q9 partial): **~91–92/100** (estimate). Global Vitest
+coverage floors met on the broad include set; self-hosted write path is **repair-capable** (Q2).
+Remaining Trust score is limited by external adoption matrix (Q4), full Diátaxis (Q7), required
+branch-protection on default branch (Q3 external), large-N scale CI budgets (Q5), and Q10 audit.
 
 | # | Status | Item | Definition of Done |
 |---|--------|------|-------------------|
 | **Q1** | `done` | **Coverage + mutation ratchet** | **Done:** Vitest floors statements/lines **≥80%**, functions **≥85%**, branches **≥85%** on the **broad non-gamed include** (`src/**` + `bin/lib/**` + `bin/ark-shared.mjs`; only process-entry shells excluded). Critical modules (write-path-detect, auto-patch, prepare-write, safety-diagnostics, baseline-key, graph-cycles) enforce **≥95%** branch. Two consecutive green `npm run test:coverage` runs. agent-gates modularization: facade ≤600 LOC; modules including mcp-adoption/deploy-path each ≤600. |
-| **Q2** | `todo` | **Repair-capable dogfood** | This repository reports `doctor.writePath.mode = repair`; installed Claude/Grok hooks use `--hook-repair`; a real deny → structured repair → revalidation fixture passes for every supported repair-capable host. Reject-only remains an explicit supported choice for consumers, not ArkGate's own final state. |
-| **Q3** | `todo` | **Weakest-link enforcement proof** | Add `ark-check --doctor`/CI evidence for the required status check and branch protection when GitHub context is available; ship a maintained pre-commit option for human edits; test missing CI, non-required CI, direct disk writes, and config drift. The release checklist fails if strict CI is not required on the default branch. |
-| **Q4** | `todo` | **External adoption matrix** | Run reproducible clean-room adoption on ≥ **12** real or fixture-backed repos spanning ≥4 archetypes, 4 agent hosts, npm/pnpm/yarn, greenfield + brownfield, and small/medium/large trees. Publish time-to-Enforce, turns-to-green, false-block, CHEATED, and manual-intervention rates. No P0/P1 false green remains open. |
-| **Q5** | `todo` | **Performance + scale budgets** | Add cold/warm benchmarks at 1k/10k/50k governed files, symlink and monorepo cases; publish p50/p95 time and peak memory. Set non-flaky regression budgets in CI and profile before adding incremental complexity. |
-| **Q6** | `todo` | **Surface parity + maintainability** | Contract tests prove CLI, MCP, ESLint, Action, generated hooks, and config schema agree on every shared rule. Add public API/JSON snapshots, module-size budgets for orchestration entries, and a package-surface compatibility fixture so breadth cannot drift silently. |
+| **Q2** | `done` | **Repair-capable dogfood** | **Done:** `doctor.writePath.mode = repair` on this tree; Claude + Grok hooks use `--hook-repair`; tests drive `bin/ark-mcp.mjs` deny → `ARK_REPAIR_JSON`/`autoPatch` → host re-inject → revalidation exit 0. Reject-only remains supported without `--hook-repair`. |
+| **Q3** | `doing` | **Weakest-link enforcement proof** | **Local done:** doctor adoption gaps via `bin/lib/weakest-link.mjs` (missing CI, no ark-check job, config drift, pre-commit missing); maintained `templates/hooks/pre-commit-ark`; optional `ARK_DOCTOR_GITHUB=1` → `reportGithubBranchProtection` (honest unavailable / not-protected). **Remaining:** default-branch required-check green on GitHub admin state; release checklist hard-fail when protection absent in prod org. |
+| **Q4** | `todo` | **External adoption matrix** | Run reproducible clean-room adoption on ≥ **12** real or fixture-backed repos spanning ≥4 archetypes, 4 agent hosts, npm/pnpm/yarn, greenfield + brownfield, and small/medium/large trees. Publish time-to-Enforce, turns-to-green, false-block, CHEATED, and manual-intervention rates. No P0/P1 false green remains open. Scaffold only: `eval/adoption-matrix.md`. |
+| **Q5** | `doing` | **Performance + scale budgets** | **Partial:** `scripts/ark-scale-bench.mjs` + `npm run bench:scale` measure real ark-check cold/warm p50/p95 on generated trees; vitest runs n=20. **Remaining:** publish 1k/10k/50k + symlink/monorepo CI budgets that fail non-flaky regressions. |
+| **Q6** | `doing` | **Surface parity + maintainability** | **Partial:** `scripts/check-module-budgets.mjs` + `npm run check:module-budgets` (LOC budgets on orchestration modules); surface parity checks for preferred bins/hooks. **Remaining:** full CLI/MCP/ESLint/Action/config schema contract suite + public JSON snapshots. |
 | **Q7** | `todo` | **Documentation completeness** | Every stable surface changed since 2.10 has reference + how-to coverage; strict/doctor/safety/Action/repair each have a runnable clean-room example. Contributor setup and release instructions are smoke-tested. Diátaxis coverage map has no zero-coverage public surface and no stale architecture diagrams. |
-| **Q8** | `todo` | **Runtime failure assurance** | Fault-injection tests cover cancellation-ignoring steps, compensation failures, retries, duplicate delivery, restart/durability boundaries, and observable terminal state. InMemory production risks stay fail-closed unless explicitly approved as ephemeral. |
-| **Q9** | `todo` | **Security + supply-chain assurance** | Publish a threat model for agent/human/CI/runtime bypasses; fuzz config/glob/AST/path inputs; keep signed tags, npm provenance, checksum, dependency review, CodeQL, Semgrep, and zero high alerts release-blocking. Generate an SBOM release asset and verify package contents against an allowlist. |
+| **Q8** | `doing` | **Runtime failure assurance** | **Partial:** fault-injection tests for compensation failure audit, cancellation-ignoring timeout, outbox retry attempts + clear (restart/durability boundary); prior retry/timeout coverage retained. **Remaining:** broader duplicate-delivery + multi-store restart matrix; CI job dedicated to fault suite. |
+| **Q9** | `doing` | **Security + supply-chain assurance** | **Partial:** `docs/threat-model.md` (T1–T10); `scripts/verify-package-files.mjs` + `npm run check:package-files`; existing signed tags / provenance / security.yml. **Remaining:** SBOM release asset, fuzz suite for config/glob/AST/path, zero-high-alert hard gate wired to release. |
 | **Q10** | `todo` | **Independent 95+ exit audit** | Re-run an adversarial review from a clean checkout and score the weighted rubric below. Exit only at ≥95 with no open P0/P1, all required GitHub checks green on the shipped SHA, npm/package smoke green, and every exception documented with owner + expiry. |
 
 **Order rule:** Q1–Q3 are the hard foundation. Q4 starts once the instrumentation from Q1/Q2
@@ -156,11 +155,12 @@ These stay useful; they are **not** a substitute for Track Q.
 ### Suggested next sessions
 
 ```text
-Session → Q1  coverage + mutation ratchet on enforcement-critical paths
-Session → Q2  repair-capable self-hosted write path
-Session → Q3  required-check / human-edit / config-drift enforcement proof
-Session → Q4  external adoption matrix and published evidence
-Session → Q5–Q9  scale, parity, docs, runtime, and security assurance
+Session → Q3  finish external branch-protection required-check on default branch
+Session → Q5  wire 1k/10k/50k scale budgets into CI (non-flaky)
+Session → Q6  full surface parity snapshots (CLI/MCP/ESLint/Action)
+Session → Q4  external adoption matrix (≥12 repos) evidence pack
+Session → Q7  Diátaxis coverage map + clean-room examples
+Session → Q8–Q9  remaining fault matrix + SBOM/fuzz release gates
 Session → Q10 independent 95+ exit audit
 ```
 

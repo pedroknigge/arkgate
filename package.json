@@ -53,6 +53,7 @@
     "docs/brownfield-adoption.md",
     "docs/package-surface.md",
     "docs/production-hardening.md",
+    "docs/threat-model.md",
     "tests/fixtures/ts-consumer",
     "templates",
     "server.json",
@@ -82,6 +83,9 @@
     "eval:corpus": "node eval/validate-corpus.mjs",
     "eval:comparative": "node eval/comparative-run.mjs",
     "eval:loop-cost": "node eval/loop-cost-run.mjs",
+    "bench:scale": "node scripts/ark-scale-bench.mjs",
+    "check:module-budgets": "node scripts/check-module-budgets.mjs",
+    "check:package-files": "node scripts/verify-package-files.mjs",
     "clean": "rm -rf dist",
     "release:npm": "node scripts/release-npm.mjs",
     "prepack": "npm run build"

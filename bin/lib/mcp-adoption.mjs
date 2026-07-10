@@ -11,6 +11,7 @@ import { assessCodexHomeMcp, codexConfigPath } from './codex-home.mjs';
 import { detectWritePathCapabilities } from './write-path-detect.mjs';
 import { detectActiveAgentHost, skillTemplateNames } from './skill-install.mjs';
 import { detectDeployPathQuality } from './deploy-path.mjs';
+import { collectWeakestLinkGaps } from './weakest-link.mjs';
 
 export { detectDeployPathQuality };
 
@@ -415,6 +416,19 @@ export function collectAdoptionGaps(root, config, coverage) {
     }
   }
 
+  // --- Q3 weakest-link: CI / pre-commit / config drift (local FS; optional GH via ARK_DOCTOR_GITHUB=1) ---
+  const includeGithub =
+    process.env.ARK_DOCTOR_GITHUB === '1' ||
+    process.env.ARK_DOCTOR_GITHUB === 'true';
+  const weakest = collectWeakestLinkGaps(root, {
+    adopted,
+    isProducer,
+    includeGithub,
+  });
+  for (const g of weakest.gaps) {
+    gaps.push(g);
+  }
+
   return {
     gaps,
     hosts,
@@ -427,6 +441,12 @@ export function collectAdoptionGaps(root, config, coverage) {
     deployPath,
     contractFalseGreen,
     writePath,
+    enforcement: {
+      ci: weakest.ci,
+      preCommit: weakest.preCommit,
+      drift: weakest.drift,
+      github: weakest.github,
+    },
   };
 }
 

@@ -4,6 +4,23 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+### Added
+
+- **Q2 repair dogfood closed:** deny → `ARK_REPAIR_JSON`/`autoPatch` → host re-inject →
+  revalidation allow proven via shipped `bin/ark-mcp.mjs` (Claude/Grok hooks already
+  `--hook-repair`; `doctor.writePath.mode = repair`).
+- **Q3 weakest-link sensors:** `bin/lib/weakest-link.mjs` + doctor adoption gaps
+  (`enforcement-ci-*`, config drift, pre-commit missing); maintained
+  `templates/hooks/pre-commit-ark`; optional `ARK_DOCTOR_GITHUB=1` branch-protection
+  report (honest unavailable / not-protected — never fake green).
+- **Q5 scale bench:** `scripts/ark-scale-bench.mjs` / `npm run bench:scale` (real
+  ark-check cold/warm p50/p95 on generated trees).
+- **Q6 module budgets:** `scripts/check-module-budgets.mjs` / `npm run check:module-budgets`.
+- **Q8 fault-injection tests:** compensation failure audit, cancellation-ignoring timeout,
+  outbox retry attempts + clear (durability boundary).
+- **Q9 threat model + package allowlist:** `docs/threat-model.md`,
+  `scripts/verify-package-files.mjs` / `npm run check:package-files`.
+
 ### Changed
 
 - **Active host vs deferred Codex on upgrade/doctor:** `/ark-upgrade` greens the
@@ -15,6 +32,8 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
   `detectActiveAgentHost`, `codexConcernIsActive` (do not treat `CODEX_HOME` alone
   as Codex). `ark-check` advisory for stale Codex-home skills notes the deferral.
   Completion contract adds **Active host** / **Deferred hosts**.
+- **ROADMAP Track Q:** Q2 `done`; Q3/Q5/Q6/Q8/Q9 `doing` with residual external/DoD
+  items listed; Q4/Q7/Q10 remain `todo` (no false complete).
 
 ## 2.12.0 — 2026-07-10
 

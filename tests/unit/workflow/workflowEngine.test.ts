@@ -53,6 +53,69 @@ describe('WorkflowEngine', () => {
     ).toThrow('duplicate step name "same"');
   });
 
+  it('Q8: compensation failure is audited and does not mask the original error', async () => {
+    const audit = createAuditTrail();
+    const engine = createWorkflowEngine(createEventBus(), { auditTrail: audit });
+    engine.register({
+      name: 'CompFail',
+      steps: [
+        {
+          name: 'ok',
+          execute: () => ({ ok: true }),
+          compensate: async () => {
+            throw new Error('comp-boom');
+          },
+        },
+        {
+          name: 'fail',
+          execute: () => {
+            throw new Error('step-boom');
+          },
+        },
+      ],
+    });
+    await expect(engine.start('CompFail', {})).rejects.toThrow('step-boom');
+    const snap = (await engine.list('CompFail'))[0];
+    expect(snap.status).toBe('failed');
+    const compFails = await audit.query({ type: 'workflow.step.failed' });
+    expect(
+      compFails.some(
+        (e) =>
+          (e.details as { compensation?: boolean; error?: string })?.compensation === true &&
+          String((e.details as { error?: string })?.error || '').includes('comp-boom')
+      )
+    ).toBe(true);
+  });
+
+  it('Q8: cancellation-ignoring step still fails timeout and ends failed', async () => {
+    const engine = createWorkflowEngine(createEventBus());
+    const effects: string[] = [];
+    engine.register({
+      name: 'IgnoreCancel',
+      steps: [
+        {
+          name: 'stubborn',
+          timeoutMs: 15,
+          execute: () =>
+            new Promise<void>((resolve) => {
+              // Deliberately ignore AbortSignal — gate still times out the step.
+              setTimeout(() => {
+                effects.push('ran-late');
+                resolve();
+              }, 80);
+            }),
+        },
+      ],
+    });
+    await expect(engine.start('IgnoreCancel', {})).rejects.toThrow(/timed out/i);
+    const snap = (await engine.list('IgnoreCancel'))[0];
+    expect(snap.status).toBe('failed');
+    expect(snap.failedStep).toBe('stubborn');
+    await new Promise((r) => setTimeout(r, 100));
+    // Late work may still run if it ignored abort; status remains failed (observable terminal).
+    expect(snap.status).toBe('failed');
+  });
+
   it('aborts timed-out steps cooperatively and clears the running step', async () => {
     const engine = createWorkflowEngine(createEventBus());
     const effects: string[] = [];

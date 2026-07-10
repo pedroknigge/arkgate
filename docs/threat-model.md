@@ -1,0 +1,63 @@
+# Threat model — ArkGate (Q9)
+
+**Scope:** architecture write gate, CI gate, agent hooks/MCP, optional runtime kernel.  
+**Not in scope:** full org identity platforms, browser XSS in consumer apps, or npm registry
+infrastructure beyond how this package is published.
+
+## Assets
+
+| Asset | Why it matters |
+|-------|----------------|
+| `ark.config.json` contract | Defines what agents may import; weaken it → silent architectural debt |
+| Write gate (`arkgate-mcp --hook`) | Last line of defense before agent disk writes |
+| CI `ark-check --strict` | Merge backstop when write gate is bypassed |
+| Baselines (`.ark-baseline.json`) | Freezes debt; abuse silences real violations |
+| Published npm tarball + Action SHA | Supply-chain integrity of the gate itself |
+| Optional runtime kernel | Event/saga state; InMemory is not durable |
+
+## Actors
+
+- **AI agent** (Claude / Cursor / Codex / Grok) with tool write access  
+- **Human developer** editing files outside hooks (IDE, git apply)  
+- **CI runner** on PRs / main  
+- **Maintainer / attacker** with publish or PR privileges  
+
+## Threats (STRIDE-light)
+
+| ID | Threat | Impact | Mitigations (shipped) |
+|----|--------|--------|------------------------|
+| T1 | Agent bypasses hook (direct `fs` / alternate tool) | Ungoverned code lands | CI gate; optional pre-commit (Q3); doctor writePath honesty |
+| T2 | Human commits without agent path | Same as T1 | `templates/hooks/pre-commit-ark`; branch protection + required check (Q3 external) |
+| T3 | CI job missing / not required | Merge green without architecture | doctor `enforcement-ci-*` gaps; `--strict` profile |
+| T4 | Config weakened (`peerIsolation: false`, empty rules) | False green | safety diagnostics; false-green adoption detector |
+| T5 | Baseline ratcheted open | Debt reintroduced | baseline unused/stale signals; occurrence keys |
+| T6 | Dual MCP bin / wrong root | Gate points at wrong tree | migrate-commands; Codex fail-closed temp roots |
+| T7 | Malicious dependency in publish | Compromised gate | signed tags, npm provenance, dependency-review, CodeQL, Semgrep, `verify-package-files` |
+| T8 | Path traversal in hooks/check | Read/write outside project | root resolution + under-root import resolve |
+| T9 | Runtime InMemory mistaken for durable | Data loss | durability stance docs + safety InMemory production detector |
+| T10 | Repair payload silently applied | Unexpected rewrites | repair never writes; host must re-inject; exit 2 on deny |
+
+## Trust boundaries
+
+```
+Agent host  --PreToolUse/MCP-->  arkgate-mcp (write gate)
+Human IDE   --disk/git-------->  working tree
+working tree --PR------------>  CI ark-check --strict
+npm publish <-- signed tag ---  GitHub Release + provenance
+```
+
+## Residual risk (accepted)
+
+- Branch protection is **external GitHub state** — doctor reports honestly when unavailable.  
+- Full external adoption matrix (Q4) and independent ≥95 audit (Q10) are separate exit gates.  
+- Live multi-agent loop-cost remains optional (`ARK_EVAL_LOOP_LIVE`).
+
+## Verification hooks
+
+| Check | Command |
+|-------|---------|
+| Package allowlist | `node scripts/verify-package-files.mjs` |
+| Module budgets | `node scripts/check-module-budgets.mjs` |
+| Security CI | `.github/workflows/security.yml` |
+| Audit (prod deps) | `npm run security:audit` |
+| Architecture | `npm run check:architecture` |

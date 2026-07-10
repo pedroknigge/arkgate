@@ -270,4 +270,74 @@ describe('deny→repair via shipped bin/ark-mcp.mjs', () => {
       fs.rmSync(apRoot, { recursive: true, force: true });
     }
   });
+
+  it('Q2: deny → host re-injects autoPatch.source → revalidation allows (exit 0)', () => {
+    expect(fs.existsSync(SHIPPED_MCP)).toBe(true);
+    const apRoot = mk();
+    try {
+      fs.mkdirSync(path.join(apRoot, 'src/domain'), { recursive: true });
+      fs.mkdirSync(path.join(apRoot, 'src/infra'), { recursive: true });
+      fs.writeFileSync(
+        path.join(apRoot, 'src/infra/types-only.ts'),
+        'export type Row = { id: string };\nexport interface Item { n: number }\n'
+      );
+      fs.writeFileSync(
+        path.join(apRoot, 'ark.config.json'),
+        JSON.stringify({
+          include: ['src'],
+          layers: [
+            {
+              name: 'DomainModel',
+              patterns: ['src/domain/**'],
+              intentPrefixes: ['Domain.'],
+            },
+            {
+              name: 'PersistenceAdapters',
+              patterns: ['src/infra/**'],
+              intentPrefixes: ['Adapter.Persistence.'],
+            },
+          ],
+          rules: [{ from: 'DomainModel', to: 'PersistenceAdapters', allowed: false }],
+        })
+      );
+      const badContent =
+        "import { Row } from '../infra/types-only';\nexport function id(r: Row): string { return r.id; }\n";
+      const filePath = path.join(apRoot, 'src/domain/use-row.ts');
+      const deny = spawnSync(
+        'node',
+        [SHIPPED_MCP, '--hook', '--hook-repair', '--root', apRoot],
+        {
+          input: JSON.stringify({
+            tool_name: 'Write',
+            tool_input: { file_path: filePath, content: badContent },
+          }),
+          encoding: 'utf8',
+          cwd: REPO,
+        }
+      );
+      expect(deny.status).toBe(2);
+      const repairLine = deny.stderr.split('\n').find((l) => l.startsWith('ARK_REPAIR_JSON:'));
+      expect(repairLine).toBeTruthy();
+      const repair = JSON.parse(repairLine!.slice('ARK_REPAIR_JSON:'.length));
+      expect(repair.autoPatch?.valid).toBe(true);
+      expect(typeof repair.autoPatch?.source).toBe('string');
+      // Host re-injects patched content (gate never wrote the file)
+      const allow = spawnSync(
+        'node',
+        [SHIPPED_MCP, '--hook', '--hook-repair', '--root', apRoot],
+        {
+          input: JSON.stringify({
+            tool_name: 'Write',
+            tool_input: { file_path: filePath, content: repair.autoPatch.source },
+          }),
+          encoding: 'utf8',
+          cwd: REPO,
+        }
+      );
+      expect(allow.status, allow.stderr || allow.stdout).toBe(0);
+      expect(allow.stderr).not.toContain('ARK_REPAIR_JSON:');
+    } finally {
+      fs.rmSync(apRoot, { recursive: true, force: true });
+    }
+  });
 });

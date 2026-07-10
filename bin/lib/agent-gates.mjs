@@ -98,6 +98,14 @@ export {
 } from './mcp-adoption.mjs';
 
 export {
+  detectPreCommitArk,
+  detectCiEnforcement,
+  detectConfigGateDrift,
+  reportGithubBranchProtection,
+  collectWeakestLinkGaps,
+} from './weakest-link.mjs';
+
+export {
   staleRunnerGateFiles,
   warnLockfileConflict,
   runMigrateCommands,
