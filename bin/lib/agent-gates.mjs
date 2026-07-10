@@ -598,14 +598,53 @@ If Ark reports violations, fix the architecture instead of bypassing the gate.
 // Default CI Node when the project declares nothing. A current LTS, NOT the
 // oldest supported: the npm-ci-lockfile-mismatch failure only happens when CI's
 // npm is OLDER than the npm that wrote the lockfile, so defaulting high is safer.
-const DEFAULT_CI_NODE_VERSION = '22';
+// Bumped 20 → 22 → 24 as consumer lockfiles moved with newer local npm.
+const DEFAULT_CI_NODE_VERSION = '24';
+
+/**
+ * Read Node majors from sibling GitHub Actions workflows (not ark-check.yml).
+ * A stale generated ark gate must not pin us to an old default when the project's
+ * real CI already runs a newer Node (classic "CI green / Ark red" false gate).
+ * @param {string} root
+ * @returns {string | null} highest major found, or null
+ */
+export function detectNodeMajorFromWorkflows(root) {
+  const dir = path.join(root, '.github', 'workflows');
+  if (!fs.existsSync(dir)) return null;
+  let entries;
+  try {
+    entries = fs.readdirSync(dir);
+  } catch {
+    return null;
+  }
+  const majors = [];
+  for (const name of entries) {
+    if (!/\.ya?ml$/i.test(name)) continue;
+    // Ignore our own template so regenerating does not re-read a stale 20/22 pin.
+    if (/^ark-check\.ya?ml$/i.test(name)) continue;
+    let text;
+    try {
+      text = fs.readFileSync(path.join(dir, name), 'utf8');
+    } catch {
+      continue;
+    }
+    // node-version: '24' | "24" | 24 | 24.x  (skip node-version-file: lines)
+    for (const match of text.matchAll(/(?:^|\n)\s*(?:- )?node-version:\s*['"]?(\d+)/g)) {
+      majors.push(Number(match[1]));
+    }
+  }
+  if (majors.length === 0) return null;
+  // Highest major: older CI npm is the class that fails against modern lockfiles.
+  return String(Math.max(...majors));
+}
 
 // Decide the Node the generated CI should use, preferring the project's own
 // declaration so CI's npm matches the dev's (a mismatch makes `npm ci` fail with
 // "missing from lock file" — a red gate unrelated to architecture). In order:
 //   1. .nvmrc / .node-version → setup-node's node-version-file (exact, best)
 //   2. package.json engines.node → its concrete major
-//   3. a current-LTS default
+//   3. sibling workflows' node-version (highest major; excludes ark-check.yml)
+//   4. a current-LTS default
 export function detectCiNode(root) {
   for (const file of ['.nvmrc', '.node-version']) {
     if (fs.existsSync(path.join(root, file))) return { kind: 'file', value: file };
@@ -615,6 +654,8 @@ export function detectCiNode(root) {
     const major = enginesNode.match(/\d+/)?.[0];
     if (major) return { kind: 'version', value: major };
   }
+  const fromWorkflows = detectNodeMajorFromWorkflows(root);
+  if (fromWorkflows) return { kind: 'version', value: fromWorkflows };
   return { kind: 'default', value: DEFAULT_CI_NODE_VERSION };
 }
 

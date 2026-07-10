@@ -4,6 +4,18 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+### Fixed
+
+- **Generated CI Node default lags local npm (again):** when a project had no
+  `.nvmrc` / `engines.node`, the Ark architecture gate workflow defaulted to
+  Node 22. Lockfiles written on Node 24/26 then failed `npm ci` with
+  "Missing: … from lock file" before `ark-check` ran — CI green, Ark red.
+  Detection order is now `.nvmrc` / `.node-version` → `engines.node` → **highest
+  `node-version` from sibling workflows** (excludes `ark-check.yml` so a stale
+  gate cannot re-pin itself) → default **24**. Refresh existing gates with
+  `ark-check --install-agent-gates --force` (or edit `node-version` in
+  `.github/workflows/ark-check.yml`).
+
 ## 2.11.0 — 2026-07-10
 
 Fail-closed enforcement hardening: `--strict` now combines contract coverage, installed-gate

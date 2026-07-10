@@ -567,6 +567,42 @@ describe('ark-check --install-agent-gates', () => {
     expect(workflow).toContain("node-version: '22'");
   });
 
+  it('inherits Node major from a sibling CI workflow when the project declares none', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-node-sibling-'));
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+    // Project CI on 24 while a stale ark-check.yml still pins 22 — Ark must follow
+    // the real CI, not re-read its own outdated template.
+    fs.writeFileSync(
+      path.join(root, '.github/workflows/ci.yml'),
+      `name: CI
+jobs:
+  build:
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+`
+    );
+    fs.writeFileSync(
+      path.join(root, '.github/workflows/ark-check.yml'),
+      `name: Ark architecture gate
+jobs:
+  ark-check:
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+`
+    );
+
+    const result = runInstallAgentGates(root, ['--force']);
+    expect(result.status).toBe(0);
+    const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
+    expect(workflow).toContain("node-version: '24'");
+    expect(workflow).not.toContain("node-version: '22'");
+  });
+
   it('falls back to a current-LTS Node when the project declares none', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-node-default-'));
     fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
@@ -576,8 +612,9 @@ describe('ark-check --install-agent-gates', () => {
     const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
     // A current LTS, not the oldest supported — defaulting high avoids the
     // "CI npm older than the lockfile's npm" failure class.
-    expect(workflow).toContain("node-version: '22'");
+    expect(workflow).toContain("node-version: '24'");
     expect(workflow).not.toContain('node-version: 20');
+    expect(workflow).not.toContain("node-version: '22'");
   });
 
   it('names the CI steps so an install failure does not read as an architecture failure', () => {
