@@ -11,6 +11,8 @@ import {
   detectPreCommitArk,
   collectWeakestLinkGaps,
   reportGithubBranchProtection,
+  jobIdsThatRunArkCheck,
+  isArkRequiredStatusCheck,
 } from '../../../bin/lib/weakest-link.mjs';
 
 const temps: string[] = [];
@@ -108,5 +110,31 @@ describe('Q3 weakest-link sensors (shipped weakest-link.mjs)', () => {
     } else {
       expect(report.arkCheckRequired === true || report.arkCheckRequired === false).toBe(true);
     }
+  });
+
+  it('treats required check "build" as Ark when that job runs check:architecture', () => {
+    const root = mk();
+    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.github/workflows/ci.yml'),
+      `name: CI
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm run check:architecture
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm run lint
+`
+    );
+    const jobs = jobIdsThatRunArkCheck(root);
+    expect(jobs.has('build')).toBe(true);
+    expect(jobs.has('lint')).toBe(false);
+    expect(isArkRequiredStatusCheck(root, ['build'])).toBe(true);
+    expect(isArkRequiredStatusCheck(root, ['lint'])).toBe(false);
+    expect(isArkRequiredStatusCheck(root, ['arkgate-check'])).toBe(true);
   });
 });

@@ -101,6 +101,60 @@ export function detectCiEnforcement(root) {
 }
 
 /**
+ * Job ids (GitHub Actions) whose job body runs ark-check / check:architecture.
+ * Used so required status check "build" counts when the build job runs Ark.
+ * @param {string} root
+ * @returns {Set<string>}
+ */
+export function jobIdsThatRunArkCheck(root) {
+  const ids = new Set();
+  const wfDir = path.join(root, '.github', 'workflows');
+  if (!fs.existsSync(wfDir)) return ids;
+  let files = [];
+  try {
+    files = fs.readdirSync(wfDir).filter((f) => /\.ya?ml$/i.test(f));
+  } catch {
+    return ids;
+  }
+  for (const f of files) {
+    let text = '';
+    try {
+      text = fs.readFileSync(path.join(wfDir, f), 'utf8');
+    } catch {
+      continue;
+    }
+    if (!/\barkgate-check\b|\bark-check\b|check:architecture/.test(text)) continue;
+    const jobsIdx = text.search(/^jobs:\s*$/m);
+    if (jobsIdx < 0) continue;
+    const jobsSection = text.slice(jobsIdx);
+    const re = /^ {2}([A-Za-z0-9_-]+):\s*$/gm;
+    const matches = [...jobsSection.matchAll(re)];
+    for (let i = 0; i < matches.length; i++) {
+      const jobId = matches[i][1];
+      const start = matches[i].index ?? 0;
+      const end = i + 1 < matches.length ? (matches[i + 1].index ?? jobsSection.length) : jobsSection.length;
+      const body = jobsSection.slice(start, end);
+      if (/\barkgate-check\b|\bark-check\b|check:architecture/.test(body)) {
+        ids.add(jobId);
+      }
+    }
+  }
+  return ids;
+}
+
+/**
+ * Whether required status checks include Ark (by name or by matching a job that runs Ark).
+ * @param {string} root
+ * @param {string[]} requiredNames
+ */
+export function isArkRequiredStatusCheck(root, requiredNames) {
+  if (!Array.isArray(requiredNames) || requiredNames.length === 0) return false;
+  if (requiredNames.some((n) => /ark|architecture|arkgate/i.test(String(n)))) return true;
+  const jobIds = jobIdsThatRunArkCheck(root);
+  return requiredNames.some((n) => jobIds.has(String(n)));
+}
+
+/**
  * Config / gate surface drift (adopted projects only).
  * @param {string} root
  * @param {{ adopted?: boolean, isProducer?: boolean }} [opts]
@@ -234,12 +288,8 @@ export function reportGithubBranchProtection(opts = {}) {
     ? parsed.checks.map((c) => String(c?.context || c?.name || '')).filter(Boolean)
     : [];
   const all = [...new Set([...contexts, ...checkNames])];
-  const arkCheckRequired = all.some(
-    (name) =>
-      /ark/i.test(name) ||
-      /architecture/i.test(name) ||
-      /arkgate/i.test(name)
-  );
+  // Name match OR required check id equals a workflow job that runs ark-check (e.g. "build").
+  const arkCheckRequired = isArkRequiredStatusCheck(cwd, all);
 
   return {
     available: true,

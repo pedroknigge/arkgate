@@ -96,13 +96,11 @@ function runCheck(root) {
   });
   const end = process.hrtime.bigint();
   const ms = Number(end - start) / 1e6;
-  const rss = result.signal ? null : (process.memoryUsage?.()?.rss ?? null);
   return {
     status: result.status ?? 1,
     ms,
-    // Child RSS is not process.memoryUsage; parse from /usr/bin/time when available later.
-    // Here we record parent RSS after spawn as a coarse peak signal.
-    peakRssBytes: typeof rss === 'number' ? rss : null,
+    // Child process RSS is not available from spawnSync without /usr/bin/time — leave null.
+    peakRssBytes: null,
     stderrTail: (result.stderr || '').slice(-200),
   };
 }

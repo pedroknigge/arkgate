@@ -101,6 +101,8 @@ export {
   detectPreCommitArk,
   detectCiEnforcement,
   detectConfigGateDrift,
+  jobIdsThatRunArkCheck,
+  isArkRequiredStatusCheck,
   reportGithubBranchProtection,
   collectWeakestLinkGaps,
 } from './weakest-link.mjs';

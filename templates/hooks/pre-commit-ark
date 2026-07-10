@@ -25,8 +25,9 @@ run_check() {
     return $?
   fi
   if command -v npx >/dev/null 2>&1; then
-    npx --no-install arkgate-check --root . --config ark.config.json --strict-config 2>/dev/null \
-      || npx arkgate-check --root . --config ark.config.json --strict-config
+    # --yes: pre-commit is non-interactive; never hang on npx install prompts
+    npx --yes --no-install arkgate-check --root . --config ark.config.json --strict-config 2>/dev/null \
+      || npx --yes arkgate-check --root . --config ark.config.json --strict-config
     return $?
   fi
   echo "ark-check not found — install arkgate or add check:architecture script" >&2
