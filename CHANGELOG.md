@@ -9,7 +9,9 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 - **`/ark-explore` skill:** decision-grade recon — field path (run starters/checks),
   installed hooks vs install templates, coupling via fan-in/exports (not LOC alone),
   ranked “así te lo re-soluciono” rows only when residual changes action; ENFORCE /
-  empty plan treated as baseline, not the story.
+  empty plan treated as baseline, not the story. **v2.1:** output modes (recon vs
+  dual-plan seed, no multi-week roadmaps by default); path-correct vs design-correct
+  + semantic false-green; success signals and kill-switches on bets (anti-vanity).
 - **`/ark-autopilot` skill:** explore-first (decision-grade), **dual plan** —
   A remediation from `--plan` + B pattern/evolution bets (never auto-apply B as
   mechanical-safe); empty plan no longer means “healthy” without explore/B.
