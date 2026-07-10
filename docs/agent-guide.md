@@ -178,6 +178,20 @@ reference, and explanation for the full path (recommend → init → gallery →
 5. Use `/ark-place` or `ark_place` for individual files after the contract exists.
 6. Verify with `ark-check --root . --config ark.config.json --strict-config`.
 
+### Write protocol (2.10+ / Track W)
+
+Prefer preparing the write before the host commits it to disk:
+
+| Surface | Role |
+|---------|------|
+| MCP **`ark_prepare_write`** | Place + constrain + validate + optional `autoPatch` + `judgmentBrief` + contentHash in one call |
+| Write-gate **`autoPatch`** | Mechanical-safe **import type** rewrites only; post-patch revalidation green or discarded |
+| PreToolUse **`--hook-repair`** | On deny: `ARK_REPAIR_JSON` / `ARK_AUTOPATCH_JSON` on stderr (still exit 2 — never silent write) |
+| Doctor **`writePath`** | Reports `repair` \| `reject-only` \| `mcp-only` \| `none` for installed gates |
+
+Port-proof inject binding is **judgment** for auto-apply (signature/arity change), not write-path autoPatch.
+Full reference: [ai-gates.md](ai-gates.md). Loop-cost harness: `npm run eval:loop-cost`.
+
 Do not invent layers outside the 11-layer profile or named presets. Unrecognized
 directories (`utils/`, `lib/`) must be classified explicitly via `/ark-contract`.
 
