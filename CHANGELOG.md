@@ -4,8 +4,21 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+### Fixed
+
+- **Dogfood write path repair:** local Claude/Grok hooks use `--hook-repair`; doctor
+  reports `writePath.mode = repair` on this tree.
+- **Self-hosted AGENTS.md:** `--install-agent-gates --force` no longer overwrites library
+  mother-repo Identity (`skipped-self-hosted`).
+- **hexagonal-order-api:** `safety.allowInMemory` for ephemeral demo kernel; prefer
+  `arkgate/runtime` imports; `npm run check` green under `--strict-config`.
+- **multi-app / monorepo rules:** deny App→Persistence, Presentation→Domain, and
+  Persistence→Presentation (parity with crud-product starter).
+
 ### Changed
 
+- **Hook templates extracted** to `bin/lib/hook-templates.mjs` (agent-gates seam).
+- **Coverage thresholds** ratchet: statements/lines 46, branches 73, functions 70 (upward only).
 - **`/ark-explore` skill:** decision-grade recon — field path (run starters/checks),
   installed hooks vs install templates, coupling via fan-in/exports (not LOC alone),
   ranked “así te lo re-soluciono” rows only when residual changes action; ENFORCE /

@@ -2,7 +2,7 @@
  * Composition root: the only file allowed to see every layer.
  * Wires the Ark kernel, the adapters, and the use case together.
  */
-import { createArkKernel } from 'arkgate';
+import { createArkKernel } from 'arkgate/runtime';
 import { ORDER_PLACED, type OrderPlacedPayload } from './domain/order.js';
 import { PLACE_ORDER, createPlaceOrder } from './application/place-order.js';
 import { createInMemoryOrderRepository } from './adapters/persistence/in-memory-order-repository.js';

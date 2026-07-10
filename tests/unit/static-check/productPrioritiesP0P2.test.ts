@@ -12,7 +12,12 @@ import {
   resolveIncludeRoots,
   buildArchitectureRecommendation,
 } from '../../../bin/ark-shared.mjs';
-import { isArkAgentsContent, writeTemplate, wireCodexMcp } from '../../../bin/lib/agent-gates.mjs';
+import {
+  isArkAgentsContent,
+  isSelfHostedLibraryAgents,
+  writeTemplate,
+  wireCodexMcp,
+} from '../../../bin/lib/agent-gates.mjs';
 
 const CHECK = path.resolve('bin/ark-check.mjs');
 const ARK = path.resolve('bin/ark.mjs');
@@ -121,6 +126,39 @@ describe('P0 AGENTS non-clobber', () => {
         '# OpenMontage\n\nMANDATORY: Read AGENT_GUIDE.md before responding.\n'
       )
     ).toBe(false);
+  });
+
+  it('isSelfHostedLibraryAgents detects mother-repo Identity block', () => {
+    expect(
+      isSelfHostedLibraryAgents(
+        '# ArkGate Enforcement (self-hosted)\n\n## Identity — read this first\n\nmother / canonical development repository\n'
+      )
+    ).toBe(true);
+    expect(isSelfHostedLibraryAgents('# Ark Enforcement\n\nBefore editing')).toBe(false);
+  });
+
+  it('writeTemplate --force never clobbers self-hosted library AGENTS.md', () => {
+    const root = mk();
+    const identity = `# ArkGate Enforcement (self-hosted)
+
+## Identity — read this first (every agent)
+
+> **Git / clone only.**
+
+**This working tree is the mother / canonical development repository for the ArkGate library.**
+
+## Where new code belongs
+DomainModel only.
+`;
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), identity);
+    const consumerTemplate = `# Ark Enforcement
+
+Before editing TypeScript or JavaScript source files:
+1. Run ark-check.
+`;
+    const r = writeTemplate(root, 'AGENTS.md', consumerTemplate, true);
+    expect(r.status).toBe('skipped-self-hosted');
+    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toBe(identity);
   });
 
   it('writeTemplate --force merges or keeps non-Ark AGENTS.md', () => {

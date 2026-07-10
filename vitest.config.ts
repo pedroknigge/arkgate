@@ -17,11 +17,12 @@ export default defineConfig({
     hookTimeout: 30000,
     teardownTimeout: 30000,
     coverage: {
+      // Ratchet upward only (Trust Q1 target is higher). Values must stay ≤ last green medians.
       thresholds: {
-        statements: 45,
-        branches: 70,
-        functions: 68,
-        lines: 45,
+        statements: 46,
+        branches: 73,
+        functions: 70,
+        lines: 46,
       },
     },
   },
