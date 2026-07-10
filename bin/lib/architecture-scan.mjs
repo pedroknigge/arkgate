@@ -34,6 +34,7 @@ import {
 } from './config-warnings.mjs';
 import { detectCycles } from './graph-cycles.mjs';
 import { normalize } from './scan-files.mjs';
+import { collectSafetyDiagnostics } from './safety-diagnostics.mjs';
 import {
   createCompilerOptionsLookup,
   createModuleResolutionHost,
@@ -187,6 +188,8 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
 
   const violations = [];
   const warnings = collectConfigWarnings(root, config, files, rules, manifest);
+  const safety = collectSafetyDiagnostics(ts, root, config, files);
+  warnings.push(...safety.warnings);
   const cacheKey = args.noCache ? undefined : scanCacheKey(root, args);
   const cachedFiles = cacheKey ? loadScanCache(root, cacheKey) : undefined;
   const nextCacheFiles = {};
@@ -326,5 +329,5 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
     }
   }
 
-  return { violations, warnings };
+  return { violations, warnings, safety: safety.report };
 }

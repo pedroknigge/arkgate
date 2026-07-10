@@ -35,15 +35,12 @@ jobs:
 
       - run: npm ci
 
-      # Release-trust (P0): verify-release-tag defaults to fail-closed on unsigned tags.
-      # We set ARK_ALLOW_UNSIGNED_RELEASE_TAG=true until annotated tags are GPG-signed in CI.
-      # Remove this env (or set false) when signing is configured — unsigned must then fail.
+      # Release-trust (P0): unsigned tags fail closed.
       - name: Verify release tag
         run: node scripts/verify-release-tag.mjs "$RELEASE_TAG"
         env:
           GITHUB_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
-          ARK_ALLOW_UNSIGNED_RELEASE_TAG: 'true'
 
       - name: Require GitHub release first
         run: gh release view "$RELEASE_TAG"

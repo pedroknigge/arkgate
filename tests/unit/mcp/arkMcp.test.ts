@@ -94,8 +94,12 @@ describe('ark-mcp server (write-path gate)', () => {
         layers: [
           { name: 'core', patterns: ['src/core/**'], intentPrefixes: ['Domain.'] },
           { name: 'app', patterns: ['src/app/**'], intentPrefixes: ['Application.'] },
+          { name: 'tooling', patterns: ['tools/**'] },
         ],
-        rules: [{ from: 'core', to: 'app', allowed: false }],
+        rules: [
+          { from: 'core', to: 'app', allowed: false },
+          { from: 'core', to: 'tooling', allowed: false },
+        ],
       })
     );
     emptyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-mcp-empty-'));
@@ -317,7 +321,18 @@ describe('ark-mcp server (write-path gate)', () => {
     const res = await client.request('resources/read', { uri: 'ark://manifest' });
     const contract = JSON.parse(res.result.contents[0].text);
     expect(contract.source).toBe('project');
-    expect(contract.layers.map((l: { name: string }) => l.name).sort()).toEqual(['app', 'core']);
+    expect(contract.layers.map((l: { name: string }) => l.name).sort()).toEqual([
+      'app',
+      'core',
+      'tooling',
+    ]);
+    expect(contract.layers.find((l: { name: string }) => l.name === 'tooling').patterns).toEqual([
+      'tools/**',
+    ]);
+    expect(contract.intentLayers.map((l: { name: string }) => l.name).sort()).toEqual([
+      'app',
+      'core',
+    ]);
     expect(contract.rules.some((r: { from: string; to: string }) => r.from === 'core' && r.to === 'app')).toBe(
       true
     );
@@ -1051,6 +1066,19 @@ describe('ark-mcp --hook ratchet (pre-existing violations do not block edits)', 
     expect(result.status).toBe(2);
     expect(result.stderr).toContain('fetch');
     expect(result.stderr).not.toContain('Date.now');
+  });
+
+  it('blocks an added duplicate occurrence of a pre-existing violation', () => {
+    const result = hook({
+      tool_name: 'Edit',
+      tool_input: {
+        file_path: path.join(root, 'src/domain/legacy.ts'),
+        old_string: 'export const at = Date.now();',
+        new_string: 'export const at = Date.now();\nexport const again = Date.now();',
+      },
+    });
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('Date.now');
   });
 
   it('still blocks all violations in a brand-new file', () => {

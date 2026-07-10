@@ -39,4 +39,55 @@ describe('WorkflowEngine', () => {
     expect(await engine.get(snapshot.id)).toMatchObject({ status: 'completed' });
     expect(await audit.query({ type: 'workflow.step.completed' })).toHaveLength(2);
   });
+
+  it('rejects duplicate step names before they can corrupt compensation order', () => {
+    const engine = createWorkflowEngine(createEventBus());
+    expect(() =>
+      engine.register({
+        name: 'DuplicateSteps',
+        steps: [
+          { name: 'same', execute: () => undefined },
+          { name: 'same', execute: () => undefined },
+        ],
+      })
+    ).toThrow('duplicate step name "same"');
+  });
+
+  it('aborts timed-out steps cooperatively and clears the running step', async () => {
+    const engine = createWorkflowEngine(createEventBus());
+    const effects: string[] = [];
+    engine.register({
+      name: 'TimedWorkflow',
+      steps: [
+        {
+          name: 'slow',
+          timeoutMs: 10,
+          execute: (_payload, _bus, signal) =>
+            new Promise<void>((resolve, reject) => {
+              const timer = setTimeout(() => {
+                effects.push('late');
+                resolve();
+              }, 60);
+              signal.addEventListener(
+                'abort',
+                () => {
+                  clearTimeout(timer);
+                  reject(signal.reason);
+                },
+                { once: true }
+              );
+            }),
+        },
+      ],
+    });
+
+    await expect(engine.start('TimedWorkflow', {})).rejects.toThrow('timed out');
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(effects).toEqual([]);
+    expect((await engine.list('TimedWorkflow'))[0]).toMatchObject({
+      status: 'failed',
+      failedStep: 'slow',
+      currentStep: undefined,
+    });
+  });
 });

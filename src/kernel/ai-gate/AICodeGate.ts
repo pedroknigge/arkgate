@@ -82,6 +82,8 @@ export interface AICodeGateOptions<Context = AICodeGateContext> {
    * omits an explicit list.
    */
   architectureLayers?: Array<{ name: string; patterns?: string[] }>;
+  /** Explicit file-level escape hatch for reviewed non-literal dynamic imports. */
+  allowNonLiteralDynamicImport?: (filePath?: string) => boolean;
 }
 
 function violation(
@@ -154,6 +156,102 @@ function extractModuleSpecifiers(source: string): ModuleSpecifierMatch[] {
   }
 
   return matches.sort((a, b) => a.index - b.index);
+}
+
+function extractModuleSpecifiersAst(ts: any, source: string): ModuleSpecifierMatch[] {
+  const sourceFile = ts.createSourceFile('generated.ts', source, ts.ScriptTarget.Latest, true);
+  const matches: ModuleSpecifierMatch[] = [];
+  const push = (
+    node: any,
+    value: string,
+    kind: ModuleSpecifierMatch['kind'],
+    typeOnly = false
+  ) => {
+    matches.push({
+      value,
+      index: node.getStart(sourceFile),
+      kind,
+      typeOnly,
+    });
+  };
+
+  const visit = (node: any) => {
+    if (ts.isImportDeclaration(node) && ts.isStringLiteralLike(node.moduleSpecifier)) {
+      const clause = node.importClause;
+      const namedBindings = clause?.namedBindings;
+      const specifiersOnly =
+        clause &&
+        !clause.name &&
+        namedBindings &&
+        ts.isNamedImports(namedBindings) &&
+        namedBindings.elements.length > 0 &&
+        namedBindings.elements.every((element: any) => element.isTypeOnly === true);
+      push(
+        node.moduleSpecifier,
+        node.moduleSpecifier.text,
+        'import',
+        Boolean(clause?.isTypeOnly || specifiersOnly)
+      );
+    } else if (ts.isExportDeclaration(node) && ts.isStringLiteralLike(node.moduleSpecifier)) {
+      const clause = node.exportClause;
+      const specifiersOnly =
+        clause &&
+        ts.isNamedExports(clause) &&
+        clause.elements.length > 0 &&
+        clause.elements.every((element: any) => element.isTypeOnly === true);
+      push(
+        node.moduleSpecifier,
+        node.moduleSpecifier.text,
+        'export',
+        Boolean(node.isTypeOnly || specifiersOnly)
+      );
+    } else if (ts.isCallExpression(node) && node.arguments.length === 1) {
+      const argument = node.arguments[0];
+      const value = tsStringLiteralText(ts, argument);
+      if (value !== undefined && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+        push(argument, value, 'dynamic-import');
+      } else if (
+        value !== undefined &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === 'require'
+      ) {
+        push(argument, value, 'require');
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return matches.sort((a, b) => a.index - b.index);
+}
+
+function nonLiteralDynamicImportLines(ts: any, source: string): number[] {
+  const sourceFile = ts.createSourceFile('generated.ts', source, ts.ScriptTarget.Latest, true);
+  const lines: number[] = [];
+  const visit = (node: any) => {
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+      (!node.arguments[0] || !ts.isStringLiteralLike(node.arguments[0]))
+    ) {
+      lines.push(sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return lines;
+}
+
+function extractQuotedStringsAst(ts: any, source: string): StringMatch[] {
+  const sourceFile = ts.createSourceFile('generated.ts', source, ts.ScriptTarget.Latest, true);
+  const matches: StringMatch[] = [];
+  const visit = (node: any) => {
+    if (ts.isStringLiteralLike(node)) {
+      matches.push({ value: node.text, index: node.getStart(sourceFile) });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return matches;
 }
 
 function looksLikeIntentName(s: string): boolean {
@@ -429,6 +527,27 @@ export function createAICodeGate<Context = AICodeGateContext>(
       const gateContext = context as AICodeGateContext | undefined;
       const filePath = gateContext?.filePath;
       const contextLayer = gateContext?.layer;
+      const moduleSpecifiers = options.typescript
+        ? extractModuleSpecifiersAst(options.typescript, source)
+        : extractModuleSpecifiers(source);
+      const quotedStrings = options.typescript
+        ? extractQuotedStringsAst(options.typescript, source)
+        : extractQuotedStrings(source);
+
+      if (
+        options.typescript &&
+        !options.allowNonLiteralDynamicImport?.(filePath)
+      ) {
+        for (const line of nonLiteralDynamicImportLines(options.typescript, source)) {
+          violations.push(
+            violation(
+              'DYNAMIC_IMPORT_NOT_ALLOWLISTED',
+              'Non-literal dynamic import cannot be resolved statically; add the reviewed file to dynamicImportAllowlist.',
+              { line, filePath }
+            )
+          );
+        }
+      }
 
       // Infra-role layers may import infrastructure; built-in heuristics off there.
       // User-supplied forbiddenPatterns are an explicit opt-in and always apply.
@@ -469,7 +588,7 @@ export function createAICodeGate<Context = AICodeGateContext>(
         }
       }
 
-      for (const specifier of extractModuleSpecifiers(source)) {
+      for (const specifier of moduleSpecifiers) {
         // Contract first: if the import target resolves to a declared layer, the layer RULES
         // decide — not the path heuristic. This keeps the write gate consistent with ark-check
         // (`ark.config.json` is authoritative), so an edge the config allows — e.g. a route
@@ -594,7 +713,7 @@ export function createAICodeGate<Context = AICodeGateContext>(
       }
 
       if (enforceAllowlist && intentNames.size > 0) {
-        for (const literal of extractQuotedStrings(source)) {
+        for (const literal of quotedStrings) {
           if (looksLikeIntentName(literal.value) && !intentNames.has(literal.value)) {
             violations.push(
               violation(
@@ -613,7 +732,7 @@ export function createAICodeGate<Context = AICodeGateContext>(
       }
 
       if (options.architectureProfile && contextLayer) {
-        for (const literal of extractQuotedStrings(source)) {
+        for (const literal of quotedStrings) {
           if (!looksLikeIntentName(literal.value)) continue;
 
           const targetLayer = options.architectureProfile.resolveLayer(literal.value);

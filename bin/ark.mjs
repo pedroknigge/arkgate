@@ -32,22 +32,33 @@ function parseArgs(argv) {
     strict: true,
     install: true,
     help: false,
+    version: false,
+  };
+
+  const requireValue = (flag, index) => {
+    const value = argv[index + 1];
+    if (value === undefined || value.startsWith('-')) {
+      throw new Error(`Missing value for ${flag}. Run ark --help for usage.`);
+    }
+    return value;
   };
 
   // Scan from the first user token (index 2) so a leading flag like `ark --help` is
   // recognized: the command is the first NON-dash argument, not blindly argv[2].
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === '--root') args.root = path.resolve(argv[++i]);
+    if (arg === '--root') args.root = path.resolve(requireValue(arg, i++));
     else if (arg === '--yes' || arg === '-y') args.yes = true;
     else if (arg === '--force') args.force = true;
     else if (arg === '--no-strict') args.strict = false;
     else if (arg === '--no-install') args.install = false;
-    else if (arg === '--preset') args.preset = argv[++i];
-    else if (arg === '--archetype') args.archetype = argv[++i];
-    else if (arg === '--tools') args.tools = argv[++i];
+    else if (arg === '--preset') args.preset = requireValue(arg, i++);
+    else if (arg === '--archetype') args.archetype = requireValue(arg, i++);
+    else if (arg === '--tools') args.tools = requireValue(arg, i++);
     else if (arg === '--help' || arg === '-h' || arg === 'help') args.help = true;
+    else if (arg === '--version' || arg === '-V') args.version = true;
     else if (!arg.startsWith('-') && args.command === undefined) args.command = arg;
+    else throw new Error(`Unknown argument: ${arg}. Run ark --help for usage.`);
   }
 
   return args;
@@ -86,6 +97,15 @@ Options:
 Interactive mode (TTY, no --yes): asks what application shape you are building and maps it to a preset.
 Non-interactive (no TTY): uses the same defaults as --yes — never calls readline on a null interface.
 `;
+}
+
+function cliVersion() {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(here, '..', 'package.json'), 'utf8'));
+    return typeof pkg.version === 'string' ? pkg.version : 'unknown';
+  } catch {
+    return 'unknown';
+  }
 }
 
 // The package-manager command that adds arkgate as a dev dependency.
@@ -627,7 +647,17 @@ async function start(args) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv);
+  let args;
+  try {
+    args = parseArgs(process.argv);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    return 2;
+  }
+  if (args.version) {
+    console.log(cliVersion());
+    return 0;
+  }
   if (args.help || !args.command) {
     console.log(usage());
     return 0;

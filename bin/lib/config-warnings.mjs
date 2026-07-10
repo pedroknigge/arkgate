@@ -55,6 +55,28 @@ export function configWarning(ruleId, message, extra = {}) {
 
 export function collectConfigWarnings(root, config, files, rules, manifest) {
   const warnings = [];
+  if (
+    config.dynamicImportAllowlist !== undefined &&
+    (!Array.isArray(config.dynamicImportAllowlist) ||
+      config.dynamicImportAllowlist.some((entry) => typeof entry !== 'string'))
+  ) {
+    warnings.push(
+      configWarning(
+        'CONFIG_INVALID_DYNAMIC_IMPORT_ALLOWLIST',
+        'dynamicImportAllowlist must be an array of file globs.'
+      )
+    );
+  }
+  if (config.safety !== undefined && (config.safety === null || typeof config.safety !== 'object' || Array.isArray(config.safety))) {
+    warnings.push(configWarning('CONFIG_INVALID_SAFETY', 'safety must be an object.'));
+  } else if (config.safety) {
+    for (const key of ['maxTsSuppressions', 'maxAnyCasts']) {
+      const value = config.safety[key];
+      if (value !== undefined && (!Number.isInteger(value) || value < 0)) {
+        warnings.push(configWarning('CONFIG_INVALID_SAFETY_THRESHOLD', `safety.${key} must be a non-negative integer.`));
+      }
+    }
+  }
   const layers = Array.isArray(config.layers) ? config.layers : [];
   const manifestLayers = Array.isArray(manifest?.architecture?.layers)
     ? manifest.architecture.layers

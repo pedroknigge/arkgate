@@ -48,6 +48,7 @@ import {
   DEFAULT_LAYER_DIRECTORIES,
   DEFAULT_RULES,
   arkCommand,
+  globToRegExp,
   layerForFile,
   shouldShowNewHereNudge,
   detectWorkspaces,
@@ -273,18 +274,23 @@ function runHook(gate, config, args, ts) {
   // line numbers (edits shift them); simpler than full baselineKey (no file/layer fields
   // needed — this file is fixed).
   const violationKey = (violation) => `${violation.ruleId}|${violation.target ?? violation.message}`;
-  let existingKeys = new Set();
+  let existingCounts = new Map();
   try {
     const current = fs.readFileSync(filePath, 'utf8');
-    existingKeys = new Set(
-      gate.validate(current, { layer, filePath }).violations.map(violationKey)
-    );
+    for (const violation of gate.validate(current, { layer, filePath }).violations) {
+      const key = violationKey(violation);
+      existingCounts.set(key, (existingCounts.get(key) ?? 0) + 1);
+    }
   } catch {
     // New file: nothing pre-exists, every violation is new.
   }
-  const newViolations = (result.violations ?? []).filter(
-    (violation) => !existingKeys.has(violationKey(violation))
-  );
+  const newViolations = (result.violations ?? []).filter((violation) => {
+    const key = violationKey(violation);
+    const remaining = existingCounts.get(key) ?? 0;
+    if (remaining === 0) return true;
+    existingCounts.set(key, remaining - 1);
+    return false;
+  });
   if (newViolations.length === 0) return;
 
   const lines = newViolations.map(
@@ -368,8 +374,14 @@ function runArkCheckJsonFromRoot(root, config, extraArgs, manifest) {
   const result = spawnSync(
     process.execPath,
     [arkCheckBin, '--root', root, '--config', config, ...manifestArgs, '--json', ...extraArgs],
-    { encoding: 'utf8' }
+    { encoding: 'utf8', timeout: 120_000, maxBuffer: 20 * 1024 * 1024 }
   );
+  if (result.error) {
+    return {
+      data: null,
+      raw: `ark-check failed to execute: ${result.error.message}`,
+    };
+  }
   const stdout = result.stdout ?? '';
   try {
     return { data: JSON.parse(stdout), raw: stdout };
@@ -544,6 +556,18 @@ async function main() {
       name: layer.name,
       patterns: layer.patterns,
     })),
+    allowNonLiteralDynamicImport: (filePath) => {
+      if (!filePath || !Array.isArray(config.dynamicImportAllowlist)) return false;
+      const rel = path.relative(args.root, path.resolve(args.root, filePath)).split(path.sep).join('/');
+      return config.dynamicImportAllowlist.some((pattern) => {
+        if (typeof pattern !== 'string') return false;
+        try {
+          return globToRegExp(pattern).test(rel);
+        } catch {
+          return false;
+        }
+      });
+    },
   });
 
   if (args.hook) {
@@ -706,7 +730,10 @@ async function main() {
   // DomainModel there would tell the agent to create a second layer for the same
   // prefix, making longest-prefix resolution ambiguous.
   function suggestedLayers() {
-    const activeNames = new Set(profile.layers.map((layer) => layer.name));
+    const activeNames = new Set([
+      ...configLayers.map((layer) => layer.name),
+      ...profile.layers.map((layer) => layer.name),
+    ]);
     const claimedPrefixes = new Set(
       profile.layers.flatMap((layer) =>
         (layer.prefixes ?? []).map((p) => (p.endsWith('.') ? p : `${p}.`))
@@ -732,13 +759,30 @@ async function main() {
       );
     }
     const suggestions = suggestedLayers();
+    const contractLayers = usedProjectConfig
+      ? configLayers.map((layer) => ({
+          ...layer,
+          prefixes: Array.isArray(layer.intentPrefixes) ? layer.intentPrefixes : [],
+        }))
+      : profile.layers;
     return JSON.stringify(
       {
         source: profile === ark.elevenLayerProfile ? 'strictDefaultElevenLayerProfile' : 'project',
         name: profile.name,
-        layers: profile.layers,
+        // File placement contract: every configured layer, including layers that do not
+        // own intent prefixes (e.g. Tooling / FrameworkAdapters).
+        layers: contractLayers,
+        // Runtime/intent resolution profile kept explicit so consumers never have to infer
+        // why a prefix-less file layer is absent from intent resolution.
+        intentLayers: profile.layers,
         rules: profile.rules,
         ...(Object.keys(forbiddenGlobals).length > 0 ? { forbiddenGlobals } : {}),
+        ...(Array.isArray(config.dynamicImportAllowlist)
+          ? { dynamicImportAllowlist: config.dynamicImportAllowlist }
+          : {}),
+        ...(config.safety && typeof config.safety === 'object'
+          ? { safety: config.safety }
+          : {}),
         ...(suggestions.length > 0
           ? {
               suggestedLayers: suggestions,

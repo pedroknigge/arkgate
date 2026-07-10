@@ -13,14 +13,14 @@ inputs:
     description: 'Path to ark.config.json (relative to root)'
     default: 'ark.config.json'
   strict-config:
-    description: 'Fail on config-coverage warnings too'
+    description: 'Enable strict checks; the current Action revision also requires gates and safety diagnostics'
     default: 'true'
   baseline:
     description: 'Baseline file of frozen violations (empty = disabled)'
     default: ''
   version:
-    description: 'arkgate version to run'
-    default: 'latest'
+    description: 'Optional exact npm version override; empty runs the checked-out Action revision'
+    default: ''
   github-token:
     description: 'Token used to comment violations on the PR (empty = no comment)'
     default: ''
@@ -37,13 +37,26 @@ runs:
         INPUT_STRICT: ${{ inputs.strict-config }}
         INPUT_BASELINE: ${{ inputs.baseline }}
         INPUT_VERSION: ${{ inputs.version }}
+        ACTION_PATH: ${{ github.action_path }}
       run: |
-        set +e
+        set -euo pipefail
         ARGS=(--root "$INPUT_ROOT" --config "$INPUT_CONFIG")
-        [ "$INPUT_STRICT" = "true" ] && ARGS+=(--strict-config)
         [ -n "$INPUT_BASELINE" ] && ARGS+=(--baseline "$INPUT_BASELINE")
-        # Prefer arkgate-check; fall back to ark-check if an older tarball is pinned.
-        npx --yes --package "arkgate@$INPUT_VERSION" arkgate-check "${ARGS[@]}" 2>&1 | tee arkgate-check-output.txt
+
+        if [ -n "$INPUT_VERSION" ]; then
+          # Explicit compatibility override: old releases may not expose --strict.
+          [ "$INPUT_STRICT" = "true" ] && ARGS+=(--strict-config)
+          RUNNER=(npx --yes --package "arkgate@$INPUT_VERSION" arkgate-check)
+        else
+          # The `uses:` ref already pins the Action revision. Install only its production
+          # dependency (TypeScript) inside the Action checkout, then run this exact source.
+          (cd "$ACTION_PATH" && npm ci --omit=dev --ignore-scripts)
+          [ "$INPUT_STRICT" = "true" ] && ARGS+=(--strict)
+          RUNNER=(node "$ACTION_PATH/bin/ark-check.mjs")
+        fi
+
+        set +e
+        "${RUNNER[@]}" "${ARGS[@]}" 2>&1 | tee arkgate-check-output.txt
         STATUS=${PIPESTATUS[0]}
         {
           echo "## ArkGate architecture check"

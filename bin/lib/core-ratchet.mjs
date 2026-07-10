@@ -6,18 +6,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { arkCommand } from '../ark-shared.mjs';
 import { computeCoverage } from './doctor-plan.mjs';
+import { CORE_LAYER_NAMES } from './core-layers.mjs';
+
+export { CORE_LAYER_NAMES } from './core-layers.mjs';
 
 /**
  * Core layers whose optionality matters once they match files (presets share these names).
  * Used by doctor adoption gaps and `--ratchet-cores`.
  */
-export const CORE_LAYER_NAMES = new Set([
-  'DomainModel',
-  'ApplicationOrchestration',
-  'PresentationAdapters',
-  'PersistenceAdapters',
-]);
-
 /**
  * Plan a ratchet of optional→required for core layers that already match files.
  * Empty cores stay optional (avoids false ENFORCE theatre). Pure — does not write disk.

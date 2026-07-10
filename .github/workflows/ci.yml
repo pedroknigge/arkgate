@@ -27,6 +27,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: JavaScript syntax (bin/scripts/eval)
+        run: npm run check:js
+
       # R1: bin/ark-layer-match.mjs must be regenerated from src/domain/layerMatch.ts
       - name: Layer-match derived artifact (drift guard)
         run: npm run check:layer-match
@@ -35,8 +38,8 @@ jobs:
       - name: CLI pure helpers derived artifacts (drift guard)
         run: npm run check:cli-pure
 
-      - name: Test
-        run: npm run test:run
+      - name: Test with coverage thresholds
+        run: npm run test:coverage
         # Includes evalCorpus.test.ts (spawns npm run eval:corpus) — no separate step
 
       - name: Build
@@ -48,6 +51,24 @@ jobs:
       # never silently rot below 100% coverage of src.
       - name: Architecture gate (ark-check)
         run: npm run check:architecture
+
+  node-compat:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22, 24]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run check:js
+      - run: node bin/ark-check.mjs --version
 
   # Consumer TypeScript matrix: ark-check --plan against TS 5 / 6 / 7 installed in a
   # throwaway fixture (tests/fixtures/ts-consumer). Ensures gate load + resolve work
