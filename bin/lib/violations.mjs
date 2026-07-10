@@ -11,8 +11,8 @@ const color = {
 };
 
 /** Canonical: src/domain/baselineKey.ts → bin/lib/baseline-key.mjs (R4). */
-import { baselineKey } from './baseline-key.mjs';
-export { baselineKey };
+import { baselineKey, baselineOccurrenceKeys } from './baseline-key.mjs';
+export { baselineKey, baselineOccurrenceKeys };
 
 export function readBaseline(root, baselinePath) {
   const fullPath = path.isAbsolute(baselinePath) ? baselinePath : path.join(root, baselinePath);
@@ -23,7 +23,7 @@ export function readBaseline(root, baselinePath) {
 
 export function writeBaseline(root, baselinePath, violations) {
   const fullPath = path.isAbsolute(baselinePath) ? baselinePath : path.join(root, baselinePath);
-  const keys = [...new Set(violations.map(baselineKey))].sort();
+  const keys = baselineOccurrenceKeys(violations).sort();
   fs.writeFileSync(
     fullPath,
     `${JSON.stringify({ version: 1, note: 'Frozen ark-check violations. Only NEW violations fail --baseline runs. Regenerate with: ark-check --update-baseline', violations: keys }, null, 2)}\n`

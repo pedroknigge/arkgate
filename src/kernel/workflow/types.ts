@@ -20,7 +20,15 @@ export interface WorkflowStep<P extends SagaContext = SagaContext> {
   onEvent?: IntentName;
   retry?: RetryPolicy;
   timeoutMs?: number;
-  execute: (payload: P, bus: EventBus) => MaybePromise<Partial<P> | void>;
+  /**
+   * Execute one step. The signal is aborted when `timeoutMs` elapses; implementations
+   * performing I/O must pass it to the underlying client for cooperative cancellation.
+   */
+  execute: (
+    payload: P,
+    bus: EventBus,
+    signal: AbortSignal
+  ) => MaybePromise<Partial<P> | void>;
   compensate?: (payload: P, bus: EventBus, error?: unknown) => MaybePromise<void>;
 }
 

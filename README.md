@@ -190,6 +190,9 @@ ark.config.json
 - **Brownfield:** baseline ratchet, refuse to freeze a wrong contract, `/ark-adopt` for mature trees.
 - **Agents:** skills install into Claude / Cursor / Codex / Grok; `ark start` freezes an origin report under `.ark/reports/`.
 - **Write protocol (2.10 / Track W):** mechanical-safe **autoPatch** on the write gate (`import type`); MCP **`ark_prepare_write`** (place + validate + patch + judgmentBrief); opt-in hook **`--hook-repair`** (`ARK_REPAIR_JSON`); doctor **`writePath`** (repair vs reject-only); loop-cost eval (`npm run eval:loop-cost`). Port-proof inject is **judgment** (arity change), not silent auto-apply.
+- **Fail-closed CI (2.11):** `--strict` combines config coverage, required CI/MCP/write gates,
+  PreToolUse hook presence, and bypass diagnostics for dynamic imports, TypeScript suppressions,
+  explicit `any` casts, InMemory runtime defaults, and disabled peer isolation.
 - **TypeScript:** project compilers 5.x / 6.x / 7.x — gate falls back to a nested JS-API TypeScript when TS 7’s main export is version-only ([docs/typescript-support.md](docs/typescript-support.md)).
 
 ### Why not only ESLint / dependency-cruiser / Nx?
@@ -214,6 +217,7 @@ ark.config.json
 npx arkgate start                         # guided setup + plan + origin report
 npx arkgate-check --doctor                # health + Adoption gaps (not just fitness)
 npx arkgate-check --doctor --json         # machine-readable doctor.adoption
+npx arkgate-check --strict                # fail-closed CI + installed-gate/safety checks
 npx arkgate-check --plan                  # safe-to-auto-fix vs your call
 npx arkgate-check --coverage              # Governed: N%
 npx arkgate-check --report ark-report.html  # showcase HTML + Adoption card + origin/latest
@@ -224,8 +228,8 @@ npx arkgate upgrade                       # package + gates/skills + MCP/Codex n
 CI (example):
 
 ```yaml
-- run: npx arkgate-check --root . --config ark.config.json --strict-config
-# or: uses: pedroknigge/arkgate@main
+- run: npx arkgate-check --root . --config ark.config.json --strict
+# or: uses: pedroknigge/arkgate@<tag-or-SHA>  # runs that checked-out revision
 ```
 
 ---

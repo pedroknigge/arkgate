@@ -22,7 +22,7 @@ import {
   createElevenLayerConfig,
   applyFrameworkLayoutOverlays,
 } from '../ark-shared.mjs';
-import { CORE_LAYER_NAMES } from './core-ratchet.mjs';
+import { CORE_LAYER_NAMES } from './core-layers.mjs';
 import { falseGreenAdoptionGap } from './field-install.mjs';
 import {
   assessCodexHomeMcp,
@@ -184,7 +184,11 @@ export function hasArkWorkflow(root) {
     .some((file) => {
       try {
         const content = fs.readFileSync(path.join(workflowsDir, file), 'utf8');
-        return /\bark-check\b/.test(content) || /\bcheck:architecture\b/.test(content);
+        return (
+          /\bark-check\b/.test(content) ||
+          /\bcheck:architecture\b/.test(content) ||
+          /\buses\s*:\s*['"]?[^'"\s#]+\/arkgate@/i.test(content)
+        );
       } catch {
         return false;
       }
@@ -362,8 +366,8 @@ export function checkArgsForRoot(root, { requireGates = false } = {}) {
   const baselineFlag = fs.existsSync(path.join(root, '.ark-baseline.json'))
     ? ' --baseline .ark-baseline.json'
     : '';
-  const gatesFlag = requireGates ? ' --require-gates' : '';
-  return `--root . --config ark.config.json --strict-config${baselineFlag}${gatesFlag}`;
+  const profile = requireGates ? '--strict' : '--strict-config';
+  return `--root . --config ark.config.json ${profile}${baselineFlag}`;
 }
 
 // Field-install helpers live in field-install.mjs (keep agent-gates scannable).

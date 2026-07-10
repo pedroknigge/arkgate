@@ -19,7 +19,7 @@ import {
   staleRunnerGateFiles,
 } from './agent-gates.mjs';
 import {
-  baselineKey,
+  baselineOccurrenceKeys,
   readBaseline,
   summarizeViolations,
   violationEdge,
@@ -272,9 +272,10 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   // Prefer writePath from adoption (same detector); recompute only if missing (tests/stubs).
   const writePath = adoption.writePath ?? detectWritePathCapabilities(root);
   const baseline = readBaseline(root, '.ark-baseline.json');
-  const currentKeys = new Set(violations.map(baselineKey));
+  const occurrenceKeys = baselineOccurrenceKeys(violations);
+  const currentKeys = new Set(occurrenceKeys);
   const suppressed = baseline.exists
-    ? violations.filter((v) => baseline.keys.has(baselineKey(v))).length
+    ? occurrenceKeys.filter((key) => baseline.keys.has(key)).length
     : 0;
   const staleBaseline = baseline.exists
     ? [...baseline.keys].filter((key) => !currentKeys.has(key)).length
@@ -347,6 +348,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
                 : { gap: null }),
             },
             adoption,
+            safety: options.safety,
             newHere: showNewHere
               ? {
                   show: true,
@@ -593,10 +595,32 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   }
 
   console.log('');
+  console.log(color.bold('Safety / bypass resistance'));
+  const safety = options.safety;
+  if (!safety) {
+    line(warn, 'Safety diagnostics unavailable');
+  } else {
+    const rows = [
+      ['Non-literal dynamic imports', safety.nonLiteralDynamicImports],
+      ['@ts-ignore / @ts-nocheck', safety.tsSuppressions],
+      ['Explicit any casts', safety.anyCasts],
+      ['InMemory stores in production source', safety.inMemoryProductionStores],
+      ['Rules with peerIsolation: false', safety.disabledPeerIsolationRules],
+    ];
+    for (const [label, entries] of rows) {
+      line(entries.length === 0 ? ok : warn, `${label}: ${entries.length}`);
+    }
+    if (rows.some(([, entries]) => entries.length > 0)) {
+      actions.push('resolve strict safety diagnostics before treating CI as enforcement');
+    }
+  }
+
+  console.log('');
   if (actions.length === 0) {
     console.log(color.green('✔ Healthy — nothing to do.'));
   } else {
-    console.log(color.bold(`Top actions (${actions.length}):`));
-    actions.forEach((action, index) => console.log(`  ${index + 1}. ${action}`));
+    const uniqueActions = [...new Set(actions.filter(Boolean))];
+    console.log(color.bold(`Top actions (${uniqueActions.length}):`));
+    uniqueActions.forEach((action, index) => console.log(`  ${index + 1}. ${action}`));
   }
 }

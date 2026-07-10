@@ -16,10 +16,10 @@ This document is the consumer contract for **what is stable** vs **what is opt-i
 |---------|----------------|-----------------|
 | **CLI** | `arkgate` / `arkgate-check` (aliases `ark` / `ark-check`) | Flags and human text may improve; **JSON output shapes** for `--json` (check, doctor, plan, coverage, recommend) are stable within a major. Additive fields OK; removals/renames are major. |
 | **MCP tools** | `arkgate-mcp` / `ark://…` resources | Tool names and primary argument shapes are stable within a major. |
-| **`ark.config.json`** | Layer globs, rules, include/exclude, forbiddenGlobals, intent prefixes | Schema fields documented in playbooks/examples are stable; new optional fields may appear. |
+| **`ark.config.json`** | Layer globs, rules, include/exclude, forbiddenGlobals, intent prefixes, `peerIsolation`, `dynamicImportAllowlist`, `safety` thresholds | Schema fields documented in playbooks/examples are stable; new optional fields may appear. |
 | **Agent skills** | `/ark-*` templates installed by `--install-agent-gates` | Skill *names* and “default flow” are stable; internal skill prose may evolve. |
 | **ESLint subpath** | `arkgate/eslint` | Config-driven layer/import rules; loads consumer `ark.config.json`. |
-| **GitHub Action** | `pedroknigge/arkgate` (see `action.yml`) | Inputs for running the check stay stable within a major. |
+| **GitHub Action** | `pedroknigge/arkgate` (see `action.yml`) | The `uses:` tag/SHA selects the checker source; `version` remains an optional exact npm compatibility override. |
 
 Gates need **no application code imports**. Most projects only use the CLI + MCP + config.
 

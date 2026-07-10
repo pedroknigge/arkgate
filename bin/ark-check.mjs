@@ -43,6 +43,7 @@ import {
   arkPackageVersion,
   REQUIRED_GATE_FILES,
   codexPromptsDir,
+  detectWritePathCapabilities,
 } from './lib/agent-gates.mjs';
 import { syncBaselineIntoCheckSurfaces } from './lib/field-install.mjs';
 import {
@@ -64,6 +65,7 @@ import {
 import { runRatchetCores } from './lib/core-ratchet.mjs';
 import {
   baselineKey,
+  baselineOccurrenceKeys,
   readBaseline,
   summarizeViolations,
   writeBaseline,
@@ -99,6 +101,7 @@ function parseArgs(argv) {
     printConfig: undefined,
     tsconfig: undefined,
     json: false,
+    strict: false,
     strictConfig: false,
     requireGates: false,
     init: false,
@@ -122,13 +125,25 @@ function parseArgs(argv) {
     version: false,
     help: false,
   };
+  const requireValue = (flag, index) => {
+    const value = argv[index + 1];
+    if (value === undefined || value.startsWith('-')) {
+      throw new Error(`Missing value for ${flag}. Run ark-check --help for usage.`);
+    }
+    return value;
+  };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--json') args.json = true;
+    else if (arg === '--strict') {
+      args.strict = true;
+      args.strictConfig = true;
+      args.requireGates = true;
+    }
     else if (arg === '--strict-config') args.strictConfig = true;
     else if (arg === '--require-gates') args.requireGates = true;
     else if (arg === '--init') args.init = true;
-    else if (arg === '--preset') args.preset = argv[++i];
+    else if (arg === '--preset') args.preset = requireValue(arg, i++);
     else if (arg === '--install-agent-gates') args.installAgentGates = true;
     else if (arg === '--tools') {
       // Consume the next arg only when it isn't another flag (same rule as --baseline),
@@ -152,7 +167,7 @@ function parseArgs(argv) {
     else if (arg === '--recommend') args.recommend = true;
     else if (arg === '--write-plan') args.writePlan = true;
     else if (arg === '--list-policy-packs') args.listPolicyPacks = true;
-    else if (arg === '--apply-policy-pack') args.applyPolicyPack = argv[++i];
+    else if (arg === '--apply-policy-pack') args.applyPolicyPack = requireValue(arg, i++);
     else if (arg === '--suggest-include') args.suggestInclude = true;
     else if (arg === '--adopt-contract') args.adoptContract = true;
     else if (arg === '--ratchet-cores') args.ratchetCores = true;
@@ -174,13 +189,14 @@ function parseArgs(argv) {
       const next = argv[i + 1];
       args.baseline = next && !next.startsWith('-') ? argv[++i] : '.ark-baseline.json';
     }
-    else if (arg === '--root') args.root = path.resolve(argv[++i]);
-    else if (arg === '--config') args.config = argv[++i];
-    else if (arg === '--manifest') args.manifest = argv[++i];
-    else if (arg === '--print-config') args.printConfig = argv[++i];
-    else if (arg === '--tsconfig') args.tsconfig = argv[++i];
+    else if (arg === '--root') args.root = path.resolve(requireValue(arg, i++));
+    else if (arg === '--config') args.config = requireValue(arg, i++);
+    else if (arg === '--manifest') args.manifest = requireValue(arg, i++);
+    else if (arg === '--print-config') args.printConfig = requireValue(arg, i++);
+    else if (arg === '--tsconfig') args.tsconfig = requireValue(arg, i++);
     else if (arg === '--help' || arg === '-h') args.help = true;
     else if (arg === '--version' || arg === '-V') args.version = true;
+    else throw new Error(`Unknown argument: ${arg}. Run ark-check --help for usage.`);
   }
   return args;
 }
@@ -198,7 +214,7 @@ function usage() {
   return [
     'Usage: arkgate-check | ark-check  (identical bins; product name ArkGate)',
     '       ark-check --version',
-    '       ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-config] [--require-gates] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
+    '       ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict | --strict-config] [--require-gates] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
     '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
     '       ark-check --plan [--json]              classified remediation plan (mechanical-safe / judgment / deferred) + goal; report only',
     '       ark-check --recommend [--json] [--write-plan]  application-shape plan; --write-plan emits ark-adoption-plan.json',
@@ -251,6 +267,8 @@ function usage() {
     '',
     'Config warnings are advisory by default and are included in JSON output.',
     'Use --strict-config to make config warnings fail the check.',
+    'Use --strict for the fail-closed CI profile: --strict-config + --require-gates',
+    'plus the security diagnostics surfaced by doctor.',
     '',
     '--require-gates fails the check when AGENTS.md, .mcp.json, or the generated CI',
     'workflow is missing, so "installed but never configured" is a red CI. Combine it',
@@ -301,6 +319,10 @@ function readConfig(root, configPath) {
     ...(raw.exclude ? { exclude: raw.exclude } : {}),
     ...(raw.excludeGenerated !== undefined ? { excludeGenerated: raw.excludeGenerated } : {}),
     ...(raw.cyclePolicy ? { cyclePolicy: raw.cyclePolicy } : {}),
+    ...(raw.dynamicImportAllowlist
+      ? { dynamicImportAllowlist: raw.dynamicImportAllowlist }
+      : {}),
+    ...(raw.safety ? { safety: raw.safety } : {}),
   };
 }
 
@@ -316,7 +338,7 @@ function detectConfig(root) {
 
   for (const entry of DEFAULT_INTENT_PREFIXES) {
     const directories = (DEFAULT_LAYER_DIRECTORIES[entry.layer] ?? []).filter(
-      (directory) => walk(path.join(root, srcDir, directory)).length > 0
+      (directory) => walk(path.join(root, srcDir, directory), [], { root }).length > 0
     );
     if (directories.length === 0) continue;
     layers.push({
@@ -784,7 +806,7 @@ function runInit(args) {
     }
     // The starter profile only governs src/. Existing source elsewhere would make the
     // gate silently green, so surface it instead of pretending the project is covered.
-    const outside = walk(args.root)
+    const outside = walk(args.root, [], { root: args.root })
       .map((file) => normalize(path.relative(args.root, file)))
       .filter((rel) => !rel.startsWith('src/') && !rel.split('/').some((s) => s.startsWith('.')));
     if (outside.length > 0) {
@@ -956,6 +978,9 @@ async function main() {
 
   if (args.requireGates) {
     const missing = missingGates(args.root);
+    if (args.strict && !detectWritePathCapabilities(args.root).hookPresent) {
+      missing.push('PreToolUse write hook');
+    }
     if (missing.length > 0) {
       const payload = {
         ok: false,
@@ -1032,7 +1057,7 @@ async function main() {
     );
   }
 
-  const { violations, warnings } = runArchitectureScan({
+  const { violations, warnings, safety } = runArchitectureScan({
     root,
     config,
     manifest,
@@ -1046,6 +1071,7 @@ async function main() {
     runDoctor(root, config, files, rules, violations, args.json, {
       configPath: path.isAbsolute(args.config) ? args.config : path.join(root, args.config),
       configMissing: !fs.existsSync(path.isAbsolute(args.config) ? args.config : path.join(root, args.config)),
+      safety,
     });
     return;
   }
@@ -1118,11 +1144,10 @@ async function main() {
   if (args.baseline) {
     const baseline = readBaseline(root, args.baseline);
     if (baseline.exists) {
-      suppressed = violations.filter((violation) => baseline.keys.has(baselineKey(violation)));
-      activeViolations = violations.filter(
-        (violation) => !baseline.keys.has(baselineKey(violation))
-      );
-      const currentKeys = new Set(violations.map(baselineKey));
+      const occurrenceKeys = baselineOccurrenceKeys(violations);
+      suppressed = violations.filter((_, index) => baseline.keys.has(occurrenceKeys[index]));
+      activeViolations = violations.filter((_, index) => !baseline.keys.has(occurrenceKeys[index]));
+      const currentKeys = new Set(occurrenceKeys);
       staleBaselineKeys = [...baseline.keys].filter((key) => !currentKeys.has(key)).length;
     } else {
       warnings.push(

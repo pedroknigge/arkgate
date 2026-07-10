@@ -153,7 +153,7 @@ Layers:
   - PersistenceAdapters: src/adapters/persistence/**
 Rules: 10 denied layer edge(s). Full contract: ark://manifest MCP resource.
 Baseline: 3 frozen violation(s) — only NEW violations fail; do not add to them.
-After edits run: npx ark-check --root . --config ark.config.json --strict-config
+After edits run: npx ark-check --root . --config ark.config.json --strict
 ```
 
 The hook belongs in the **project's** `.claude/settings.json` (that's what
@@ -390,8 +390,26 @@ Prefer keeping editor + CI on the same `ark.config.json` — do not maintain a p
 Whatever the agent side does, gate the merge:
 
 ```yaml
-- run: npx ark-check --root . --config ark.config.json --strict-config
+- run: npx ark-check --root . --config ark.config.json --strict
 ```
+
+The `--strict` profile also requires the generated CI/write gates and fails on safety
+diagnostics. Configure reviewed exceptions explicitly:
+
+```json
+{
+  "dynamicImportAllowlist": ["src/plugins/loader.ts"],
+  "safety": {
+    "maxTsSuppressions": 0,
+    "maxAnyCasts": 0,
+    "allowInMemory": false,
+    "allowDisabledPeerIsolation": false
+  }
+}
+```
+
+`ark-check --doctor --json` reports counts under `doctor.safety`. An `any` cast is
+reported as lost static assurance; it does not imply that a runtime schema was bypassed.
 
 Adopting Ark on an existing codebase with violations? Freeze them once and ratchet down:
 

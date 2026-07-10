@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -267,7 +267,7 @@ describe('ark-check --install-agent-gates', () => {
     expect(agents).toContain('ark-check --root . --config ark.config.json --strict-config');
 
     const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
-    expect(workflow).toContain('npx ark-check --root . --config ark.config.json --strict-config');
+    expect(workflow).toContain('npx ark-check --root . --config ark.config.json --strict');
   });
 
   it('skips existing files unless --force is passed', () => {
@@ -300,7 +300,7 @@ describe('ark-check --install-agent-gates', () => {
     expect(pnpmWorkflow).toContain('cache: pnpm');
     expect(pnpmWorkflow).toContain('corepack enable');
     expect(pnpmWorkflow).toContain('pnpm install --frozen-lockfile');
-    expect(pnpmWorkflow).toContain('pnpm --config.verify-deps-before-run=false exec ark-check --root . --config ark.config.json --strict-config');
+    expect(pnpmWorkflow).toContain('pnpm --config.verify-deps-before-run=false exec ark-check --root . --config ark.config.json --strict');
     expect(pnpmWorkflow).not.toContain('npm ci');
 
     const yarnRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-yarn-'));
@@ -315,7 +315,7 @@ describe('ark-check --install-agent-gates', () => {
     expect(yarnWorkflow).toContain('cache: yarn');
     expect(yarnWorkflow).toContain('corepack enable');
     expect(yarnWorkflow).toContain('yarn install --frozen-lockfile');
-    expect(yarnWorkflow).toContain('yarn ark-check --root . --config ark.config.json --strict-config');
+    expect(yarnWorkflow).toContain('yarn ark-check --root . --config ark.config.json --strict');
     expect(yarnWorkflow).not.toContain('npm ci');
   });
 
@@ -529,14 +529,14 @@ describe('ark-check --install-agent-gates', () => {
     }
   });
 
-  it('includes --require-gates in the generated CI workflow command', () => {
+  it('uses the fail-closed --strict profile in the generated CI workflow command', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-require-'));
     fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
 
     const result = runInstallAgentGates(root);
     expect(result.status).toBe(0);
     const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
-    expect(workflow).toContain('--strict-config --require-gates');
+    expect(workflow).toContain('--strict');
   });
 
   it('follows the project Node pin (.nvmrc) in the generated CI workflow', () => {
@@ -603,7 +603,7 @@ describe('ark-check --install-agent-gates', () => {
     const result = runInstallAgentGates(root, ['--force']);
     expect(result.status).toBe(0);
     const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
-    expect(workflow).toContain('--strict-config --baseline .ark-baseline.json --require-gates');
+    expect(workflow).toContain('--strict --baseline .ark-baseline.json');
   });
 
   it('writes only base + selected tool templates with --tools', () => {
@@ -827,6 +827,50 @@ describe('ark-check --require-gates', () => {
     const payload = JSON.parse(json) as { ok: boolean; error?: string };
     expect(payload.ok).toBe(true);
     expect(payload.error).toBeUndefined();
+  });
+
+  it('accepts a CI workflow that invokes the ArkGate Action', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-require-action-ci-'));
+    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), 'Ark instructions\n');
+    fs.writeFileSync(path.join(root, '.mcp.json'), '{"mcpServers":{}}\n');
+    fs.writeFileSync(
+      path.join(root, '.github/workflows/ci.yml'),
+      [
+        'name: Ark',
+        'on: [pull_request]',
+        'jobs:',
+        '  ark:',
+        '    runs-on: ubuntu-latest',
+        '    steps:',
+        "      - uses: 'pedroknigge/arkgate@v2'",
+        '',
+      ].join('\n')
+    );
+
+    const json = execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--require-gates', '--json'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    expect((JSON.parse(json) as { ok: boolean }).ok).toBe(true);
+  });
+
+  it('requires a PreToolUse write hook in the --strict profile', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-strict-hook-'));
+    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), 'Ark instructions\n');
+    fs.writeFileSync(path.join(root, '.mcp.json'), '{"mcpServers":{}}\n');
+    fs.writeFileSync(path.join(root, '.github/workflows/ci.yml'), 'run: ark-check\n');
+
+    const result = spawnSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--strict', '--json'],
+      { encoding: 'utf8' }
+    );
+    expect(result.status).toBe(1);
+    const payload = JSON.parse(result.stdout) as { missing: string[] };
+    expect(payload.missing).toContain('PreToolUse write hook');
   });
 });
 
@@ -1601,6 +1645,27 @@ describe('ark-check CLI', () => {
     expect(result.warnings.map((w) => w.ruleId)).toContain('CONFIG_NO_LAYERS');
   });
 
+  it('fails closed on unknown arguments instead of silently disabling strict checks', () => {
+    const result = spawnSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--strcit-config', '--json'],
+      { encoding: 'utf8' }
+    );
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('Unknown argument: --strcit-config');
+  });
+
+  it('fails with usage guidance when a required flag value is missing', () => {
+    const result = spawnSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root'],
+      { encoding: 'utf8' }
+    );
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('Missing value for --root');
+    expect(result.stderr).not.toContain('TypeError');
+  });
+
   it('prints an explicit failure message for strict config warnings in human output', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-check-strict-human-'));
     fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
@@ -1704,6 +1769,46 @@ describe('ark-check --baseline', () => {
     };
     expect(result.ok).toBe(true);
     expect(result.staleBaselineKeys).toBeGreaterThan(0);
+  });
+
+  it('treats an added duplicate occurrence as new debt', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-baseline-duplicate-'));
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          {
+            name: 'DomainModel',
+            patterns: ['src/domain/**'],
+            forbiddenGlobals: ['Date.now'],
+          },
+        ],
+        rules: [],
+      })
+    );
+    const file = path.join(root, 'src/domain/order.ts');
+    fs.writeFileSync(file, 'export const first = Date.now();\n');
+    execFileSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+
+    fs.writeFileSync(
+      file,
+      'export const first = Date.now();\nexport const second = Date.now();\n'
+    );
+    const result = runArkCheck(root, ['--baseline']) as unknown as {
+      ok: boolean;
+      violations: Array<{ target?: string }>;
+      suppressedViolations: number;
+    };
+    expect(result.ok).toBe(false);
+    expect(result.suppressedViolations).toBe(1);
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0].target).toBe('Date.now');
   });
 });
 

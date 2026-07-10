@@ -16,5 +16,13 @@ export default defineConfig({
     testTimeout: 30000,
     hookTimeout: 30000,
     teardownTimeout: 30000,
+    coverage: {
+      thresholds: {
+        statements: 45,
+        branches: 70,
+        functions: 68,
+        lines: 45,
+      },
+    },
   },
 });

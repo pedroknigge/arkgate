@@ -37,6 +37,11 @@ When implementing Ark store interfaces in production, cover these guarantees exp
 - Observability: failed writes and dispatches are visible to operators.
 - Migration: schema changes for stored records are versioned.
 
+Workflow `timeoutMs` uses cooperative cancellation: ArkGate aborts the `AbortSignal`
+passed as the third `execute` argument, but JavaScript cannot stop an operation that
+ignores that signal. Production steps must pass it to network/database clients and keep
+external effects idempotent; otherwise work may finish after the workflow was marked failed.
+
 ## Interface Targets
 
 | Concern | Interface |

@@ -13,7 +13,7 @@ npm ci
 npm run build        # bin/ark-mcp.mjs loads dist/, so build first
 npx vitest run       # full test suite (npm test starts watch mode)
 npm run typecheck
-npx arkgate-check --root . --config ark.config.json --strict-config
+npx arkgate-check --root . --config ark.config.json --strict
 npm run check:architecture   # ArkGate dogfoods itself
 npm run check:layer-match    # derived bin/ark-layer-match.mjs must match domain source
 npm run check:cli-pure       # remediation + baselineKey derived helpers in sync
@@ -61,9 +61,17 @@ docs subset ship to consumers.
 ## Releasing (maintainers)
 
 ```bash
-npm version <patch|minor|major>
-npm run release:npm          # verifies, builds (prepack), publishes
+npm version <patch|minor|major> --no-git-tag-version
+npm run release:npm -- --dry
+git tag -s vX.Y.Z -m "arkgate vX.Y.Z"
+gh release create vX.Y.Z --verify-tag --generate-notes
+gh workflow run publish-npm.yml -f tag=vX.Y.Z -f dry_run=false
 ```
+
+Real releases are GitHub-first: the publish workflow requires a signed annotated tag and an
+existing GitHub Release, reruns the release gates, publishes to npm with provenance, and uploads
+the npm tarball checksum. Local `npm publish` is emergency-only and intentionally not the normal
+maintainer path.
 
 ## Not sure where to start?
 

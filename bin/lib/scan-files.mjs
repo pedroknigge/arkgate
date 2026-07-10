@@ -32,24 +32,62 @@ export function isSkippedSourceDir(name) {
   );
 }
 
-export function walk(dir, files = []) {
-  const stat = fs.statSync(dir, { throwIfNoEntry: false });
+function isInsideRoot(root, target) {
+  const rel = path.relative(root, target);
+  return rel === '' || (!rel.startsWith(`..${path.sep}`) && rel !== '..' && !path.isAbsolute(rel));
+}
+
+/**
+ * Walk source files while treating symlinks explicitly.
+ *
+ * When `root` is provided, every resolved file/directory must stay inside it.
+ * Internal symlink directories are followed once (TypeScript follows them too),
+ * while escaping links fail closed instead of reading arbitrary filesystem paths.
+ */
+export function walk(dir, files = [], options = {}) {
+  const state = options.state ?? {
+    root: options.root ? fs.realpathSync(options.root) : undefined,
+    visitedDirectories: new Set(),
+    visitedFiles: new Set(),
+  };
+  const lstat = fs.lstatSync(dir, { throwIfNoEntry: false });
+  if (!lstat) return files;
+  const resolved = fs.realpathSync(dir);
+  if (state.root && !isInsideRoot(state.root, resolved)) {
+    throw new Error(
+      `Refusing to scan symlink outside project root: ${dir} -> ${resolved}`
+    );
+  }
+  const stat = lstat.isSymbolicLink()
+    ? fs.statSync(dir, { throwIfNoEntry: false })
+    : lstat;
   if (!stat) return files;
   // An `include` entry may be a single file (e.g. a root-level "middleware.ts"),
   // not just a directory — govern it directly instead of trying to scandir it
   // (which threw ENOTDIR). The extension filter still applies.
   if (stat.isFile()) {
-    if (isGovernableSourceFile(path.basename(dir))) files.push(dir);
+    if (
+      isGovernableSourceFile(path.basename(dir)) &&
+      !state.visitedFiles.has(resolved)
+    ) {
+      state.visitedFiles.add(resolved);
+      files.push(dir);
+    }
     return files;
   }
   if (!stat.isDirectory()) return files;
+  if (state.visitedDirectories.has(resolved)) return files;
+  state.visitedDirectories.add(resolved);
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       if (isSkippedSourceDir(entry.name)) continue;
-      walk(full, files);
+      walk(full, files, { state });
+    } else if (entry.isSymbolicLink()) {
+      if (isSkippedSourceDir(entry.name)) continue;
+      walk(full, files, { state });
     } else if (isGovernableSourceFile(entry.name)) {
-      files.push(full);
+      walk(full, files, { state });
     }
   }
   return files;
@@ -57,7 +95,14 @@ export function walk(dir, files = []) {
 
 /** Walk include roots then drop codegen / config.exclude (universal scan filter). */
 export function collectGovernedFiles(root, config) {
-  const raw = (config.include ?? []).flatMap((entry) => walk(path.join(root, entry)));
+  const state = {
+    root: fs.realpathSync(root),
+    visitedDirectories: new Set(),
+    visitedFiles: new Set(),
+  };
+  const raw = (config.include ?? []).flatMap((entry) =>
+    walk(path.join(root, entry), [], { state })
+  );
   return raw.filter((abs) => {
     const rel = normalize(path.relative(root, abs));
     return !isScanExcludedRelative(rel, config);

@@ -33,21 +33,24 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function withTimeout<T>(
-  operation: Promise<T>,
+  operation: (signal: AbortSignal) => Promise<T>,
   timeoutMs: number | undefined,
   stepName: string
 ): Promise<T> {
-  if (timeoutMs === undefined) return operation;
+  const controller = new AbortController();
+  if (timeoutMs === undefined) return operation(controller.signal);
 
   let timeout: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<T>((_, reject) => {
     timeout = setTimeout(() => {
-      reject(new Error(`Workflow step "${stepName}" timed out after ${timeoutMs}ms.`));
+      const error = new Error(`Workflow step "${stepName}" timed out after ${timeoutMs}ms.`);
+      controller.abort(error);
+      reject(error);
     }, timeoutMs);
   });
 
   try {
-    return await Promise.race([operation, timeoutPromise]);
+    return await Promise.race([operation(controller.signal), timeoutPromise]);
   } finally {
     if (timeout) clearTimeout(timeout);
   }
@@ -94,6 +97,16 @@ class WorkflowEngineImpl implements WorkflowEngine {
   register<P extends SagaContext>(definition: WorkflowDefinition<P>): void {
     if (this.definitions.has(definition.name)) {
       throw new Error(`Workflow "${definition.name}" is already registered.`);
+    }
+
+    const names = new Set<string>();
+    for (const step of definition.steps) {
+      if (names.has(step.name)) {
+        throw new Error(
+          `Workflow "${definition.name}" has duplicate step name "${step.name}".`
+        );
+      }
+      names.add(step.name);
     }
 
     this.definitions.set(definition.name, definition as WorkflowDefinition);
@@ -149,6 +162,7 @@ class WorkflowEngineImpl implements WorkflowEngine {
     } catch (err) {
       await this.compensate(snapshot, definition.steps, err);
       snapshot.status = 'failed';
+      snapshot.currentStep = undefined;
       snapshot.error = errorMessage(err);
       snapshot.updatedAt = new Date().toISOString();
       await this.store.save(snapshot);
@@ -188,7 +202,7 @@ class WorkflowEngineImpl implements WorkflowEngine {
 
       try {
         const result = await withTimeout(
-          Promise.resolve(step.execute(snapshot.context, this.bus)),
+          (signal) => Promise.resolve(step.execute(snapshot.context, this.bus, signal)),
           step.timeoutMs,
           step.name
         );

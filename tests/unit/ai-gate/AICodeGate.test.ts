@@ -45,6 +45,20 @@ describe('AI Code Gate (basic)', () => {
     );
   });
 
+  it('blocks non-literal dynamic imports unless the target file is explicitly allowed', () => {
+    const source = 'const module = await import(modulePath);';
+    const blocked = createAICodeGate({ typescript: ts }).validate(source, {
+      filePath: 'src/plugin.ts',
+    });
+    expect(blocked.violations.some((v) => v.ruleId === 'DYNAMIC_IMPORT_NOT_ALLOWLISTED')).toBe(true);
+
+    const allowed = createAICodeGate({
+      typescript: ts,
+      allowNonLiteralDynamicImport: (filePath) => filePath === 'src/plugin.ts',
+    }).validate(source, { filePath: 'src/plugin.ts' });
+    expect(allowed.valid).toBe(true);
+  });
+
   it('W1: typeOnly skips classic layer deny; value import of same edge still blocks', () => {
     const profile = {
       name: 'test',
@@ -77,6 +91,31 @@ describe('AI Code Gate (basic)', () => {
       filePath: 'src/domain/order.ts',
     });
     expect(value.violations.some((v) => v.ruleId === 'LAYER_IMPORT_VIOLATION')).toBe(true);
+  });
+
+  it('uses the TypeScript AST to ignore comments and recognize specifier-level type imports', () => {
+    const gate = createAICodeGate({
+      typescript: ts,
+      architectureProfile: {
+        name: 'ast-imports',
+        layers: [
+          { name: 'DomainModel', prefixes: ['Domain.'] },
+          { name: 'Kernel', prefixes: ['Kernel.'] },
+        ],
+        rules: [{ from: 'DomainModel', to: 'Kernel', allowed: false }],
+      } as never,
+      resolveImportTarget: (specifier: string) =>
+        specifier.includes('kernel') ? { layer: 'Kernel', relPath: 'src/kernel/types.ts' } : undefined,
+    });
+    const result = gate.validate(
+      [
+        `// import { runtime } from '../kernel/runtime';`,
+        `import { type KernelType } from '../kernel/types';`,
+        `export { type KernelOptions } from '../kernel/options';`,
+      ].join('\n'),
+      { layer: 'DomainModel', filePath: 'src/domain/model.ts' }
+    );
+    expect(result.violations.filter((v) => v.ruleId === 'LAYER_IMPORT_VIOLATION')).toEqual([]);
   });
 
   it('W1: peerIsolation still hard-blocks import type across slices', () => {

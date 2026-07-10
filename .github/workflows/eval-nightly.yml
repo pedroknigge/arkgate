@@ -25,7 +25,7 @@ jobs:
         run: node eval/comparative-run.mjs
 
       - name: Upload comparative report
-        uses: actions/upload-artifact@6c964a0b7b315529a3790bce7251d968c1c0a71c # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: comparative-eval-report
           path: eval/comparative-report.json

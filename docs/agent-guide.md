@@ -176,7 +176,7 @@ reference, and explanation for the full path (recommend → init → gallery →
 3. Run `ark init --archetype <id> --yes`, `--apply-policy-pack enthusiast-<preset>`, or `ark init --preset <preset> --yes` when no `ark.config.json` exists.
 4. Optional: `--write-plan` for `ark-adoption-plan.json`; copy a gallery starter from `examples/README.md`.
 5. Use `/ark-place` or `ark_place` for individual files after the contract exists.
-6. Verify with `ark-check --root . --config ark.config.json --strict-config`.
+6. Verify with `ark-check --root . --config ark.config.json --strict`.
 
 ### Write protocol (2.10+ / Track W)
 

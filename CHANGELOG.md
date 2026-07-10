@@ -4,6 +4,49 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+## 2.11.0 — 2026-07-10
+
+Fail-closed enforcement hardening: `--strict` now combines contract coverage, installed-gate
+checks, write-hook presence, and bypass diagnostics in one CI profile. The GitHub Action runs
+the exact checked-out revision by default, and runtime workflows cancel timed-out work
+cooperatively.
+
+### Added
+
+- **Strict CI profile:** `arkgate-check --strict` enables strict config validation, requires
+  generated gates plus a PreToolUse write hook, and fails on configured safety diagnostics.
+- **Bypass diagnostics:** new `dynamicImportAllowlist` and `safety` config fields detect
+  non-literal dynamic imports, TypeScript suppression directives, explicit `any` casts,
+  production InMemory defaults, and disabled or omitted peer isolation. `--doctor --json`
+  exposes the same evidence under `doctor.safety`.
+- **Release-quality CI:** JavaScript syntax validation, enforced coverage thresholds, and a
+  Node 18/20/22/24 compatibility matrix now run before merge.
+
+### Changed
+
+- **Pinned GitHub Action execution:** `uses: pedroknigge/arkgate@<tag-or-SHA>` now runs that
+  checked-out ArkGate source. The `version` input remains available only as an explicit exact
+  npm compatibility override.
+- **Complete MCP contract:** `ark://manifest` exposes every configured file layer separately
+  from runtime intent layers, plus reviewed dynamic-import and safety policy.
+- **Workflow cancellation contract:** workflow steps receive an `AbortSignal` as their third
+  argument. `timeoutMs` aborts that signal, clears the active step, and rejects duplicate step
+  names before execution can corrupt compensation order.
+- **Filesystem confinement:** source scans follow internal symlinks once and reject symlinks
+  that escape the project root.
+
+### Fixed
+
+- **Baseline duplicate honesty:** repeated violations now receive stable per-occurrence keys,
+  so adding a second identical violation is new debt instead of being hidden by one baseline
+  entry.
+- **Write-hook duplicate honesty:** proposed writes compare violation counts, preventing a new
+  duplicate from being mistaken for an already-existing violation.
+- **CLI argument safety:** unknown flags and missing flag values fail with usage guidance
+  instead of silently weakening enforcement or throwing an internal error.
+- **Action gate detection:** repositories using the ArkGate composite Action satisfy the CI
+  gate check without needing a separate literal `ark-check` command.
+
 ## 2.10.0 — 2026-07-10
 
 Track W — **Constrained write → verified repair**: write-boundary autoPatch, prepare_write,

@@ -1,9 +1,20 @@
 {
-  "include": ["src"],
+  "include": ["src", "bin", "scripts"],
+  "dynamicImportAllowlist": ["bin/ark-mcp.mjs"],
+  "safety": {
+    "maxTsSuppressions": 0,
+    "maxAnyCasts": 0,
+    "allowInMemory": false
+  },
   "layers": [
     {
       "name": "DomainModel",
-      "patterns": ["src/domain/**"],
+      "patterns": [
+        "src/domain/**",
+        "bin/ark-layer-match.mjs",
+        "bin/lib/remediation.mjs",
+        "bin/lib/baseline-key.mjs"
+      ],
       "intentPrefixes": ["Domain."],
       "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"]
     },
@@ -19,7 +30,7 @@
     },
     {
       "name": "Tooling",
-      "patterns": ["src/eslint/**"]
+      "patterns": ["src/eslint/**", "bin/**", "scripts/**"]
     },
     {
       "name": "FrameworkAdapters",
