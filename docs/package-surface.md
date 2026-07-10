@@ -17,7 +17,7 @@ This document is the consumer contract for **what is stable** vs **what is opt-i
 | **CLI** | `arkgate` / `arkgate-check` (aliases `ark` / `ark-check`) | Flags and human text may improve; **JSON output shapes** for `--json` (check, doctor, plan, coverage, recommend) are stable within a major. Additive fields OK; removals/renames are major. |
 | **MCP tools** | `arkgate-mcp` / `ark://…` resources | Tool names and primary argument shapes are stable within a major. |
 | **`ark.config.json`** | Layer globs, rules, include/exclude, forbiddenGlobals, intent prefixes, `peerIsolation`, `dynamicImportAllowlist`, `safety` thresholds | Schema fields documented in playbooks/examples are stable; new optional fields may appear. |
-| **Agent skills** | `/ark-*` templates installed by `--install-agent-gates` | Skill *names* and “default flow” are stable; internal skill prose may evolve. |
+| **Agent skills** | `/ark-*` templates installed by `--install-agent-gates` | Skill *names* and “default flow” are stable; internal skill prose may evolve (e.g. explore dual-plan seed, day-zero origin order). |
 | **ESLint subpath** | `arkgate/eslint` | Config-driven layer/import rules; loads consumer `ark.config.json`. |
 | **GitHub Action** | `pedroknigge/arkgate` (see `action.yml`) | The `uses:` tag/SHA selects the checker source; `version` remains an optional exact npm compatibility override. |
 
@@ -73,3 +73,10 @@ See [production-hardening.md](./production-hardening.md) for runtime operational
 | Bugfix with no contract change | **patch** |
 | Prefer `arkgate/runtime` over root (docs only; root still exports) | **patch/minor** |
 | Remove root kernel re-exports | **major** (with migration notes) |
+
+---
+
+## Release notes (maintainers)
+
+Ship notes for a version live under [releases/](./releases/) (e.g. [2.12.0.md](./releases/2.12.0.md)).
+Publish path: signed annotated tag → GitHub Release → `publish-npm.yml` (see [CONTRIBUTING.md](../CONTRIBUTING.md)).

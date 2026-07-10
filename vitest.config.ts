@@ -17,11 +17,61 @@ export default defineConfig({
     hookTimeout: 30000,
     teardownTimeout: 30000,
     coverage: {
+      // Full product surface under unit test (libs + domain/kernel).
+      // Only process-entry shells excluded: V8 does not attribute spawn child coverage.
+      include: [
+        'src/**/*.{ts,js,mjs}',
+        'bin/lib/**/*.mjs',
+        'bin/ark-shared.mjs',
+      ],
+      exclude: [
+        '**/node_modules/**',
+        'dist/**',
+        'eval/**',
+        'examples/**',
+        'tests/**',
+        'scripts/**',
+        'bin/ark-check.mjs',
+        'bin/ark-mcp.mjs',
+        'bin/ark.mjs',
+      ],
       thresholds: {
-        statements: 45,
-        branches: 70,
-        functions: 68,
-        lines: 45,
+        statements: 80,
+        branches: 85,
+        functions: 85,
+        lines: 80,
+        'bin/lib/write-path-detect.mjs': {
+          statements: 95,
+          lines: 95,
+          branches: 95,
+          functions: 100,
+        },
+        'bin/lib/auto-patch.mjs': {
+          statements: 95,
+          lines: 95,
+          branches: 95,
+        },
+        'bin/lib/prepare-write.mjs': {
+          statements: 95,
+          lines: 95,
+          branches: 95,
+        },
+        'bin/lib/safety-diagnostics.mjs': {
+          statements: 95,
+          lines: 95,
+          branches: 95,
+        },
+        'bin/lib/baseline-key.mjs': {
+          statements: 100,
+          lines: 100,
+          branches: 95,
+          functions: 100,
+        },
+        'bin/lib/graph-cycles.mjs': {
+          statements: 100,
+          lines: 100,
+          branches: 95,
+        },
       },
     },
   },

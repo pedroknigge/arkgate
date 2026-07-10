@@ -38,3 +38,4 @@ marketing/
 .ark/
 .tmp-*
 eval/loop-cost-report.json
+.codex/

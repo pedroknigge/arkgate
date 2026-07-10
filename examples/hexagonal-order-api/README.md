@@ -8,6 +8,10 @@ A tiny but real order API with a hexagonal architecture, governed by Ark's three
 
 No frameworks, no external runtime dependencies — just `node:http` and `arkgate`.
 
+Prefer **`arkgate/runtime`** for kernel imports (not the root package barrel). This demo opts
+into `safety.allowInMemory: true` because the stock kernel wires an InMemory outbox for local
+exercises — **not** a production pattern.
+
 ## Layout
 
 ```

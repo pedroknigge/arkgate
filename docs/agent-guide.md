@@ -49,12 +49,22 @@ MCP `ark_recommend` and the `/ark-architect` skill.
 ### Terminal onboarding (Phase B)
 
 ```bash
-npx ark init --archetype crud-product --yes   # non-interactive: shape → preset → gates → strict check
+npx ark start --yes                             # preferred: shape → contract → **day-zero origin** → gates → plan
+npx ark init --archetype crud-product --yes   # non-interactive: shape → preset → origin → gates
 npx ark init                                    # TTY wizard: pick application shape (1–8), not a framework
 npx ark-check --doctor                          # includes "New here?" when coverage is low or config is fresh
 npx ark-check --report beginner.html --beginner # simplified HTML for enthusiasts
 npx ark-check --watch                           # debounced re-check when governed files change
 ```
+
+**Day-zero origin (2.12+):** as soon as `ark.config.json` exists, `ark start` / `ark init`
+freeze `.ark/reports/origin.*` **before** writing agent docs, skills, or CI templates.
+Later `--report` shows evolution vs that snapshot. Do not `--reset-origin` unless the user
+explicitly wants a new baseline.
+
+**Default agent co-pilot:** `/ark-autopilot` (explore-first, dual plan A remediation + B
+pattern bets). Recon without applying: `/ark-explore`. Never treat empty `--plan` as
+“architecture healthy” without the explore pass.
 
 `ark init --archetype <id>` maps playbook ids to named presets (`hexagonal`, `layered`,
 `feature-sliced`, `monorepo`). With `--yes` and no archetype, Ark auto-selects from

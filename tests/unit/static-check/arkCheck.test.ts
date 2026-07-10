@@ -567,6 +567,42 @@ describe('ark-check --install-agent-gates', () => {
     expect(workflow).toContain("node-version: '22'");
   });
 
+  it('inherits Node major from a sibling CI workflow when the project declares none', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-node-sibling-'));
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+    // Project CI on 24 while a stale ark-check.yml still pins 22 — Ark must follow
+    // the real CI, not re-read its own outdated template.
+    fs.writeFileSync(
+      path.join(root, '.github/workflows/ci.yml'),
+      `name: CI
+jobs:
+  build:
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+`
+    );
+    fs.writeFileSync(
+      path.join(root, '.github/workflows/ark-check.yml'),
+      `name: Ark architecture gate
+jobs:
+  ark-check:
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+`
+    );
+
+    const result = runInstallAgentGates(root, ['--force']);
+    expect(result.status).toBe(0);
+    const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
+    expect(workflow).toContain("node-version: '24'");
+    expect(workflow).not.toContain("node-version: '22'");
+  });
+
   it('falls back to a current-LTS Node when the project declares none', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-node-default-'));
     fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
@@ -576,8 +612,9 @@ describe('ark-check --install-agent-gates', () => {
     const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
     // A current LTS, not the oldest supported — defaulting high avoids the
     // "CI npm older than the lockfile's npm" failure class.
-    expect(workflow).toContain("node-version: '22'");
+    expect(workflow).toContain("node-version: '24'");
     expect(workflow).not.toContain('node-version: 20');
+    expect(workflow).not.toContain("node-version: '22'");
   });
 
   it('names the CI steps so an install failure does not read as an architecture failure', () => {
@@ -937,7 +974,7 @@ describe('ark init', () => {
     expect(run(['bogus']).status).toBe(2);
   });
 
-  it('`ark start --yes` guides setup end to end: shape → config + gates → plan', () => {
+  it('`ark start --yes` guides setup end to end: shape → config → origin → gates → plan', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-start-'));
     fs.writeFileSync(path.join(root, 'package.json'), '{"name":"fresh"}\n');
     fs.mkdirSync(path.join(root, 'src'), { recursive: true });
@@ -963,12 +1000,20 @@ describe('ark init', () => {
     expect(out).toContain('Next (the only flow you need)');
     expect(out).toContain('/ark-autopilot');
     expect(out).toMatch(/--doctor/);
+    // Day-zero origin freezes after contract, before agent docs/gates messaging.
+    expect(out).toMatch(/day-zero architecture picture|Freezing day-zero/i);
+    const originIdx = out.search(/Freezing day-zero|Architecture origin already frozen/i);
+    const gatesIdx = out.search(/Installing agent and CI gate templates/i);
+    expect(originIdx).toBeGreaterThanOrEqual(0);
+    expect(gatesIdx).toBeGreaterThan(originIdx);
     // It actually set things up — and left the gates active so it "stays that way"
-    // (the enforcement handoff): config, agent contract, and the CI gate.
+    // (the enforcement handoff): config, agent contract, CI gate, and origin snapshot.
     expect(fs.existsSync(path.join(root, 'ark.config.json'))).toBe(true);
     expect(fs.existsSync(path.join(root, 'AGENTS.md'))).toBe(true);
     expect(fs.existsSync(path.join(root, '.github/workflows/ark-check.yml'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.ark/reports/origin.json'))).toBe(true);
     expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('Default agent flow');
+    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toMatch(/explore first/i);
   });
 
   it('`ark start` adopts an established codebase (detection, not a wildcard preset)', () => {

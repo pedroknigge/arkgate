@@ -4,6 +4,70 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+## 2.12.0 — 2026-07-10
+
+### Fixed
+
+- **Install agent gates on temp roots:** skip rewriting the developer's real
+  `~/.codex/config.toml` when the project root is a temp/upgrade scratch and
+  `CODEX_HOME` is unset. Home MCP wire failures no longer fail an otherwise
+  successful repo gate install (sandbox/EPERM). Explicit `CODEX_HOME` and
+  `--codex-home` still wire as before.
+- **Q1 coverage floors (broad include, 80/85/95):** Vitest thresholds statements/lines **≥80%**,
+  branches/functions **≥85%** on the **full product unit surface** (`src/**` + `bin/lib/**` +
+  `bin/ark-shared.mjs`; only process-entry shells excluded — no cherry-picked enforcement-core
+  include). Per-path critical floors: write-path-detect / auto-patch / prepare-write /
+  safety-diagnostics / baseline-key / graph-cycles at **≥95%** branch. Real branch-driving tests
+  under `tests/unit/static-check/` (critical + surface/topup/seam suites). Two consecutive
+  green `npm run test:coverage` captures (stmts/lines **92.71%**, branches **85%**, functions
+  **94.76%**; critical modules all **≥95%** branch).
+- **agent-gates modularization:** thin facade (`bin/lib/agent-gates.mjs` ~100 LOC) re-exports
+  `gate-files`, `skill-install`, `ci-and-commands`, `mcp-adoption`, `install-migrate`,
+  `typescript-host`, `hook-templates`, `write-path-detect`, plus field/codex helpers.
+  `detectDeployPathQuality` extracted to `bin/lib/deploy-path.mjs` so `mcp-adoption.mjs` stays
+  under the 600 LOC module budget. Import hygiene on extract modules; `loadTypeScript` uses
+  `__arkCheckCli` for the nested arkgate TypeScript fallback.
+- **Deny→repair CI proof:** `tests/unit/static-check/writePathDetect.test.ts` drives
+  shipped `bin/ark-mcp.mjs --hook --hook-repair` and asserts `ARK_REPAIR_JSON` /
+  `ARK_AUTOPATCH_JSON` on deny (exit 2); reject-only without repair flag still supported.
+- **Dogfood write path repair:** local Claude/Grok hooks use `--hook-repair`; doctor
+  reports `writePath.mode = repair` on this tree.
+- **Self-hosted AGENTS.md:** `--install-agent-gates --force` no longer overwrites library
+  mother-repo Identity (`skipped-self-hosted`).
+- **hexagonal-order-api:** `safety.allowInMemory` for ephemeral demo kernel; prefer
+  `arkgate/runtime` imports; `npm run check` green under `--strict-config`.
+- **multi-app / monorepo rules:** deny App→Persistence, Presentation→Domain, and
+  Persistence→Presentation (parity with crud-product starter).
+- **Generated CI Node default lags local npm (again):** when a project had no
+  `.nvmrc` / `engines.node`, the Ark architecture gate workflow defaulted to
+  Node 22. Lockfiles written on Node 24/26 then failed `npm ci` with
+  "Missing: … from lock file" before `ark-check` ran — CI green, Ark red.
+  Detection order is now `.nvmrc` / `.node-version` → `engines.node` → **highest
+  `node-version` from sibling workflows** (excludes `ark-check.yml` so a stale
+  gate cannot re-pin itself) → default **24**. Refresh existing gates with
+  `ark-check --install-agent-gates --force` (or edit `node-version` in
+  `.github/workflows/ark-check.yml`).
+
+### Changed
+
+- **Hook templates extracted** to `bin/lib/hook-templates.mjs` (agent-gates seam).
+- **Write-path detect extracted** to `bin/lib/write-path-detect.mjs` (doctor W5; re-exported
+  from agent-gates).
+- **Coverage thresholds** raised to Q1 floors on the broad include set: statements/lines **≥80**,
+  branches/functions **≥85**, critical write/safety modules **≥95%** branch (see Fixed above).
+- **`/ark-explore` skill:** decision-grade recon — field path (run starters/checks),
+  installed hooks vs install templates, coupling via fan-in/exports (not LOC alone),
+  ranked “así te lo re-soluciono” rows only when residual changes action; ENFORCE /
+  empty plan treated as baseline, not the story. **v2.1:** output modes (recon vs
+  dual-plan seed, no multi-week roadmaps by default); path-correct vs design-correct
+  + semantic false-green; success signals and kill-switches on bets (anti-vanity).
+- **`/ark-autopilot` skill:** explore-first (decision-grade), **dual plan** —
+  A remediation from `--plan` + B pattern/evolution bets (never auto-apply B as
+  mechanical-safe); empty plan no longer means “healthy” without explore/B.
+- **Day-zero origin first:** `ark start` / `ark init` freeze `.ark/reports/origin.*`
+  immediately after `ark.config.json` exists and **before** agent docs, skills, and CI
+  templates. Later `--report` still shows evolution vs that snapshot.
+
 ## 2.11.0 — 2026-07-10
 
 Fail-closed enforcement hardening: `--strict` now combines contract coverage, installed-gate

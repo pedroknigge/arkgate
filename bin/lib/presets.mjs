@@ -259,9 +259,12 @@ export const ARCHITECTURE_PRESETS = {
           { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
           { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
           { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
+          { from: 'ApplicationOrchestration', to: 'PersistenceAdapters', allowed: false },
           { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
           { from: 'PresentationAdapters', to: 'PersistenceAdapters', allowed: false },
+          { from: 'PresentationAdapters', to: 'DomainModel', allowed: false },
           { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
+          { from: 'PersistenceAdapters', to: 'PresentationAdapters', allowed: false },
         ],
       },
       root

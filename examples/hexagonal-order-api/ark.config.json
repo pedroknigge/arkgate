@@ -1,5 +1,8 @@
 {
   "include": ["src"],
+  "safety": {
+    "allowInMemory": true
+  },
   "layers": [
     {
       "name": "DomainModel",

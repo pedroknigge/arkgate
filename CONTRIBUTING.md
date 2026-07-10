@@ -4,6 +4,10 @@ Thanks for your interest! ArkGate is young and contributions of every size are w
 
 **Product site:** [arkgate.online](https://www.arkgate.online/) · **Source:** this repository.
 
+**Agents / contributors (git clone only — not in the npm tarball):** this checkout is the
+**canonical mother repository** for developing and releasing the `arkgate` library — not a
+sample app that consumes ArkGate. Read `AGENTS.md` (**Identity**) before large changes.
+
 ## Setup
 
 ```bash
@@ -60,11 +64,26 @@ docs subset ship to consumers.
 
 ## Releasing (maintainers)
 
+**Version sources that must stay in sync:** `package.json`, `package-lock.json` (root),
+`src/version.ts`, `server.json` (MCP registry). Smoke test enforces this.
+
+**Docs for a release:**
+
+1. `CHANGELOG.md` — versioned section (not only Unreleased)
+2. `docs/releases/X.Y.Z.md` — human release notes + publish checklist
+3. `README.md` / `ROADMAP.md` if user-facing flow or roadmap status changed
+
 ```bash
+# Bump versions (or land a release PR that already bumps them)
 npm version <patch|minor|major> --no-git-tag-version
-npm run release:npm -- --dry
+# Keep server.json + src/version.ts aligned with package.json
+
+# On main, green CI
+npm run release:npm -- --dry          # typecheck + tests + audit + arch + pack dry-run
 git tag -s vX.Y.Z -m "arkgate vX.Y.Z"
-gh release create vX.Y.Z --verify-tag --generate-notes
+git push origin vX.Y.Z
+gh release create vX.Y.Z --verify-tag --title "arkgate vX.Y.Z" \
+  --notes-file docs/releases/X.Y.Z.md   # or --generate-notes
 gh workflow run publish-npm.yml -f tag=vX.Y.Z -f dry_run=false
 ```
 
@@ -72,6 +91,9 @@ Real releases are GitHub-first: the publish workflow requires a signed annotated
 existing GitHub Release, reruns the release gates, publishes to npm with provenance, and uploads
 the npm tarball checksum. Local `npm publish` is emergency-only and intentionally not the normal
 maintainer path.
+
+**Current release in flight:** see [docs/releases/2.12.0.md](docs/releases/2.12.0.md) after
+PR #26 merges.
 
 ## Not sure where to start?
 

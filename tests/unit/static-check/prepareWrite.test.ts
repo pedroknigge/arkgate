@@ -142,4 +142,44 @@ describe('prepare-write (W2)', () => {
     expect(out.autoPatch).toBeUndefined();
     expect(out.judgmentBrief?.fixClass).toBe('port-inversion');
   });
+
+  it('composePrepareWrite rejects non-string source and handles valid empty gate', () => {
+    expect(composePrepareWrite({ source: null as unknown as string, placement: {}, root, ts, validate: () => ({ valid: true }) }).ok).toBe(
+      false
+    );
+    const ok = composePrepareWrite({
+      source: 'export const x = 1;\n',
+      placement: {
+        filePath: 'src/domain/x.ts',
+        layer: 'DomainModel',
+        governed: true,
+        mayImport: ['DomainModel'],
+        mustNotImport: [],
+        forbiddenGlobals: ['fetch'],
+        mayImportInfrastructure: true,
+        suggestedLayers: ['DomainModel'],
+        message: 'placed',
+        note: 'note',
+        description: 'desc',
+      },
+      root,
+      ts,
+      validate: () => ({ valid: true, violations: [] }),
+    });
+    expect(ok.valid).toBe(true);
+    expect(ok.mayImportInfrastructure).toBe(true);
+    expect(ok.placementMessage).toBe('placed');
+    expect(buildJudgmentBrief([])).toBeNull();
+    expect(
+      buildJudgmentBrief([
+        {
+          ruleId: 'LAYER_IMPORT_VIOLATION',
+          typeOnly: true,
+          sourcePureTypeModule: true,
+          fromLayer: 'DomainModel',
+          toLayer: 'PersistenceAdapters',
+        },
+      ])?.remediationClass
+    ).toMatch(/mechanical-safe|judgment|deferred/);
+  });
 });

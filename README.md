@@ -23,8 +23,8 @@ and makes sure a “green” check means something real.
 If you remember nothing else:
 
 ```text
-1.  npx arkgate start          ← install shape + gates + origin report
-2.  /ark-autopilot             ← in your agent: adopt, fix, leave gates on
+1.  npx arkgate start          ← walk tree → contract → **day-zero origin** → gates
+2.  /ark-autopilot             ← explore first, dual plan, safe fixes, leave gates on
 3.  npx arkgate-check --doctor ← “where am I?” anytime (one status screen)
 ```
 
@@ -106,7 +106,7 @@ Full checklist (CI, MCP, Codex, imports): **[docs/migrate-from-ark-runtime-kerne
 
 ```bash
 npm install -D arkgate typescript
-npx arkgate start                 # setup + origin report
+npx arkgate start                 # contract → day-zero origin → gates + plan
 # in agent:
 #   /ark-autopilot
 npx arkgate-check --doctor        # status light + next action
@@ -117,11 +117,13 @@ Aliases `ark` / `ark-check` / `ark-mcp` still work. **npm / pnpm / yarn**. No in
 <details>
 <summary>What <code>/ark-autopilot</code> does under the hood (optional detail)</summary>
 
-1. Setup if needed (`ark start`).
-2. Origin architecture report (before picture in `.ark/reports/`).
-3. Adoption: match contract to real folders, raise governed %.
-4. Plan + safe auto-fixes; judgment when you ask for full apply.
-5. Gates on + after report (evolution vs origin).
+1. Setup if needed (`ark start` — contract, then **day-zero origin**, then gates).
+2. **Explore pass** (decision-grade map of *this* product; field path when demos exist).
+3. **Dual plan:** **A** remediation from `--plan` (mechanical-safe only by default); **B** pattern/evolution bets (never auto-applied as mechanical-safe). Empty plan ≠ “healthy” without explore/B.
+4. Apply A → re-check; judgment only when you ask for full apply.
+5. Gates on + latest report (evolution vs frozen origin).
+
+Standalone recon without applying: `/ark-explore`.
 
 </details>
 
@@ -188,11 +190,14 @@ ark.config.json
 - **Presets:** hexagonal, layered, feature-sliced, monorepo, ui-surface, vertical-slice, ddd-bounded-contexts (+ aliases clean-architecture / onion-architecture). Layers start optional; doctor suggests tightening populated cores. Cross-slice / cross-context bans use optional `peerIsolation` rules.
 - **Frameworks:** Nest / Next / express / library layouts get sensible globs on init so day-one coverage is real.
 - **Brownfield:** baseline ratchet, refuse to freeze a wrong contract, `/ark-adopt` for mature trees.
-- **Agents:** skills install into Claude / Cursor / Codex / Grok; `ark start` freezes an origin report under `.ark/reports/`.
+- **Agents:** skills install into Claude / Cursor / Codex / Grok; `ark start` freezes **day-zero origin** under `.ark/reports/` **before** agent docs/CI templates.
 - **Write protocol (2.10 / Track W):** mechanical-safe **autoPatch** on the write gate (`import type`); MCP **`ark_prepare_write`** (place + validate + patch + judgmentBrief); opt-in hook **`--hook-repair`** (`ARK_REPAIR_JSON`); doctor **`writePath`** (repair vs reject-only); loop-cost eval (`npm run eval:loop-cost`). Port-proof inject is **judgment** (arity change), not silent auto-apply.
 - **Fail-closed CI (2.11):** `--strict` combines config coverage, required CI/MCP/write gates,
   PreToolUse hook presence, and bypass diagnostics for dynamic imports, TypeScript suppressions,
   explicit `any` casts, InMemory runtime defaults, and disabled peer isolation.
+- **Trust / coverage (2.12):** package unit-test floors on the broad product surface
+  (statements/lines **≥80%**, branches/functions **≥85%**; enforcement-critical modules **≥95%**
+  branch). Explore dual-plan + day-zero origin first (see above). Roadmap next: Q2 repair dogfood matrix.
 - **TypeScript:** project compilers 5.x / 6.x / 7.x — gate falls back to a nested JS-API TypeScript when TS 7’s main export is version-only ([docs/typescript-support.md](docs/typescript-support.md)).
 
 ### Why not only ESLint / dependency-cruiser / Nx?
@@ -214,7 +219,7 @@ ark.config.json
 ## Common commands
 
 ```bash
-npx arkgate start                         # guided setup + plan + origin report
+npx arkgate start                         # guided setup: contract → origin → gates → plan
 npx arkgate-check --doctor                # health + Adoption gaps (not just fitness)
 npx arkgate-check --doctor --json         # machine-readable doctor.adoption
 npx arkgate-check --strict                # fail-closed CI + installed-gate/safety checks

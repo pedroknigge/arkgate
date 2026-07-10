@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/bin/ark-mcp.mjs\" --hook --root \"$CLAUDE_PROJECT_DIR\" --config ark.config.json"
+            "command": "node \"$CLAUDE_PROJECT_DIR/bin/ark-mcp.mjs\" --hook --hook-repair --root \"$CLAUDE_PROJECT_DIR\" --config ark.config.json"
           }
         ]
       }

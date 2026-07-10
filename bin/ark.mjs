@@ -23,6 +23,32 @@ import { pinArkgateDevDependency, FALSE_GREEN_GAP_ID } from './lib/field-install
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
 
+/**
+ * Day-zero architecture picture: freeze origin under `.ark/reports/` as soon as
+ * `ark.config.json` exists — **before** agent docs, skills, CI templates, or cleanups.
+ * Idempotent: origin is written only once (`--report` archive semantics).
+ */
+function freezeDayZeroOrigin(root) {
+  const configPath = path.join(root, 'ark.config.json');
+  if (!fs.existsSync(configPath)) {
+    console.log(
+      `  Skip origin freeze — no ark.config.json yet. After init: ${arkCommand(root, 'ark-check', '--report ark-report.html')}`
+    );
+    return;
+  }
+  const originJson = path.join(root, '.ark', 'reports', 'origin.json');
+  const already = fs.existsSync(originJson);
+  console.log(
+    already
+      ? 'Architecture origin already frozen (.ark/reports/origin.*) — leaving it untouched.'
+      : 'Freezing day-zero architecture picture (origin) before agent docs / gates…'
+  );
+  runArkCheck(
+    ['--root', root, '--config', 'ark.config.json', '--report', 'ark-report.html'],
+    { cwd: root }
+  );
+}
+
 function parseArgs(argv) {
   const args = {
     command: undefined,
@@ -330,6 +356,10 @@ async function init(args) {
       console.log('Skipped ark.config.json generation.');
     }
 
+    // Origin first: contract-on-tree picture before AGENTS.md / skills / CI templates.
+    console.log('');
+    freezeDayZeroOrigin(root);
+
     const installGates =
       nonInteractive || (await askYesNo(rl, 'Configure agent and CI gate templates?', true));
     if (installGates) {
@@ -357,7 +387,7 @@ async function init(args) {
       console.log(`Shape: ${archetype}. Plan: ${arkCommand(root, 'ark-check', '--recommend')}`);
     }
     console.log(
-      `Freeze day-one architecture snapshot: ${arkCommand(root, 'ark-check', '--report ark-report.html')} (writes .ark/reports/origin.* once).`
+      `Day-zero origin: .ark/reports/origin.* (frozen once; later --report shows evolution vs origin).`
     );
     console.log(`Adoption health: ${arkCommand(root, 'ark-check', '--doctor')}`);
     return 0;
@@ -381,9 +411,11 @@ async function start(args) {
   try {
     console.log("Let's set up Ark for your project.");
     console.log(
-      "I'll look at your code, suggest a shape, set up the guardrails, and show you a plan."
+      "I'll walk the tree, freeze a day-zero architecture picture, then set up guardrails and show a plan."
     );
-    console.log('Nothing in your code is changed — this only adds Ark configuration.');
+    console.log(
+      'Nothing in your product code is changed — only Ark config, then origin snapshot, then agent/CI templates.'
+    );
     if (nonInteractive && !args.yes) {
       console.log(
         'Non-interactive session (no TTY) — using guided defaults (same as --yes). Pass flags to override.'
@@ -440,10 +472,10 @@ async function start(args) {
       console.log('  Skipping arkgate package pin (--no-install).');
     }
 
-    // 3) Set up config + gates. Greenfield → the shape's preset; an established repo → detection,
-    // so the contract anchors to the directories you already have instead of aspirational globs.
+    // 3) Contract first (config only). Greenfield → shape preset; established repo → detection,
+    // so the contract anchors to directories you already have instead of aspirational globs.
     console.log('');
-    console.log('Setting up Ark…');
+    console.log('Setting up Ark contract…');
     const configPath = path.join(root, 'ark.config.json');
     if (!fs.existsSync(configPath)) {
       const initArgs = ['--root', root, '--init'];
@@ -482,6 +514,15 @@ async function start(args) {
     } else {
       console.log('  Found an existing ark.config.json — keeping it.');
     }
+
+    // 4) Day-zero origin — freeze the architecture picture *before* agent docs / CI / skills.
+    // Later --report runs show evolution vs this snapshot. Idempotent (origin once).
+    console.log('');
+    freezeDayZeroOrigin(root);
+
+    // 5) Agent + CI gate templates (docs, hooks, skills) — after origin is frozen.
+    console.log('');
+    console.log('Installing agent and CI gate templates…');
     {
       const gateArgs = ['--root', root, '--install-agent-gates'];
       if (args.tools) gateArgs.push('--tools', args.tools);
@@ -489,7 +530,7 @@ async function start(args) {
       runArkCheck(gateArgs, { cwd: root });
     }
 
-    // 4) Show the plan: what's safe to auto-fix vs what needs a decision.
+    // 6) Show the plan: what's safe to auto-fix vs what needs a decision.
     console.log('');
     console.log('Your architecture plan:');
     runArkCheck(['--root', root, '--config', 'ark.config.json', '--plan'], { cwd: root });
@@ -571,7 +612,7 @@ async function start(args) {
       planOk = false;
     }
 
-    // 5) Plain-language wrap-up — one next step, status light only.
+    // 7) Plain-language wrap-up — one next step, status light only.
     // Modes are detected (Suggest/Adapt/Enforce), not user-picked settings.
     // Soft-block false-green using the same doctor adoption gap (no second detector).
     let falseGreenGap = null;
@@ -620,7 +661,7 @@ async function start(args) {
       console.log('     → reclassify I/O dirs out of Application; then /ark-autopilot for residual debt.');
     } else {
       console.log('  1. In your agent:  /ark-autopilot');
-      console.log('     → origin report, adoption, plan, safe fixes, leave gates on.');
+      console.log('     → explore first, dual plan (remediation + pattern bets), safe fixes, leave gates on.');
     }
     console.log(`  2. Status anytime: ${arkCommand(root, 'ark-check', '--doctor')}`);
     console.log(`  3. After edits:    ${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config')}`);
@@ -630,16 +671,8 @@ async function start(args) {
       );
     }
     console.log('');
-    console.log('Optional later: --plan · --coverage · /ark-fix · /ark-place · ark upgrade');
-
-    // 6) First architecture report — freezes an origin snapshot under .ark/reports/
-    // so later --report runs can show evolution. Idempotent: origin is written only once.
-    console.log('');
-    console.log('Capturing architecture report (origin snapshot on first run)…');
-    runArkCheck(
-      ['--root', root, '--config', 'ark.config.json', '--report', 'ark-report.html'],
-      { cwd: root }
-    );
+    console.log('Day-zero origin is under .ark/reports/origin.* — re-run --report later for evolution.');
+    console.log('Optional later: --plan · --coverage · /ark-explore · /ark-fix · /ark-place · ark upgrade');
     return 0;
   } finally {
     rl?.close();
