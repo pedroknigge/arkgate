@@ -109,6 +109,31 @@ The fixture must actually violate (`ark-check` exits 1) or the runner reports
 after the run, so "delete the file" doesn't count as a fix. `case.json` is
 stripped from the copy before the agent sees it — no answer key leaks.
 
+### Loop-cost harness (W3 — fixture-measured, CI-safe)
+
+Measures **turns-to-green**, optional **tokens-to-green**, and **CHEATED** for a
+documented case set (type-only + judgment). Default mode is **fixture-measured**:
+it applies W1 `autoPatch` on labeled fixtures without a live agent.
+
+```bash
+npm run eval:loop-cost
+# or: node eval/loop-cost-run.mjs
+# first capture / refresh baseline:
+node eval/loop-cost-run.mjs --write-baseline
+```
+
+| Output | Meaning |
+|--------|---------|
+| `eval/loop-cost-report.json` | Latest run |
+| `eval/loop-cost-baseline.json` | Captured baseline for ÷10 targets after W1–W2 |
+
+**Green for type-only cases** = write-path cleared via revalidated autoPatch (1 turn
+baseline). Full `ark-check` may still list type-placement debt for plan/loop.
+**Judgment cases** report `JUDGMENT_REQUIRED` without autoPatch (not CHEATED).
+Live agents remain optional/nightly (`eval:agent`); not required for this harness.
+
+Unit test: `tests/unit/static-check/loopCostEval.test.ts`.
+
 ### Static corpus check (CI, no agent)
 
 ```bash

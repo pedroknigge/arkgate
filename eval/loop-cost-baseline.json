@@ -1,0 +1,29 @@
+{
+  "capturedAt": "2026-07-10T00:02:50.792Z",
+  "mode": "fixture-measured",
+  "cases": [
+    {
+      "id": "import-type-of-type-exports",
+      "kind": "type-only",
+      "turnsToGreen": 1,
+      "tokensToGreen": null,
+      "cheated": false,
+      "status": "PASS"
+    },
+    {
+      "id": "domain-forbidden-global",
+      "kind": "judgment",
+      "turnsToGreen": null,
+      "tokensToGreen": null,
+      "cheated": false,
+      "status": "JUDGMENT_REQUIRED"
+    }
+  ],
+  "summary": {
+    "caseCount": 2,
+    "typeOnlyWithGreen": 1,
+    "medianTurnsTypeOnly": 1,
+    "cheatedRate": 0,
+    "cheatedCount": 0
+  }
+}

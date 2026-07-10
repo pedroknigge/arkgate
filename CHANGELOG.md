@@ -6,6 +6,9 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ### Added
 
+- **W3 loop-cost eval harness:** `eval/loop-cost-run.mjs` / `npm run eval:loop-cost`
+  records turns-to-green, optional tokens, CHEATED (fixture-measured). Baseline
+  `eval/loop-cost-baseline.json` (medianTurnsTypeOnly=1, cheatedRate=0).
 - **W2 `ark_prepare_write` MCP tool:** place + constrain + validate + optional autoPatch +
   judgmentBrief + contentHash in one call (`bin/lib/prepare-write.mjs`). Composes
   `ark_place` + write gate — not a second contract.

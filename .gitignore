@@ -37,3 +37,4 @@ marketing/
 # Ark generated reports / local state
 .ark/
 .tmp-*
+eval/loop-cost-report.json

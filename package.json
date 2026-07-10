@@ -79,6 +79,7 @@
     "eval:agent": "node eval/run.mjs",
     "eval:corpus": "node eval/validate-corpus.mjs",
     "eval:comparative": "node eval/comparative-run.mjs",
+    "eval:loop-cost": "node eval/loop-cost-run.mjs",
     "clean": "rm -rf dist",
     "release:npm": "node scripts/release-npm.mjs",
     "prepack": "npm run build"
