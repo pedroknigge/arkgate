@@ -94,76 +94,9 @@ export function provePortProofInject(ts, source, opts = {}) {
 
   const methods = new Set();
   const functionNames = new Set();
-  /** @type {Map<import('typescript').Node, boolean>} */
-  let usesOutsideFunction = false;
   let freeBindingUse = false;
 
-  /**
-   * Walk and validate every Identifier matching bindingName.
-   */
-  function visit(node, inFunction) {
-    if (ts.isFunctionDeclaration(node) && node.body) {
-      const name = node.name?.text || '(anonymous)';
-      for (const child of node.getChildren(sf)) {
-        visit(child, true);
-      }
-      // Track if this function body referenced binding — done via methods/functionNames
-      return;
-    }
-    // Skip the import clause binding itself
-    if (node === targetImport || (targetImport && isNodeInside(targetImport, node))) {
-      // Still walk import for completeness but ignore binding decl
-      if (ts.isImportSpecifier(node)) return;
-    }
-
-    if (ts.isIdentifier(node) && node.text === bindingName) {
-      // Skip declaration of the binding in import
-      if (node.parent && ts.isImportSpecifier(node.parent)) return;
-      if (node.parent && ts.isParameter(node.parent) && node.parent.name === node) return;
-
-      // Must be property access: binding.method as call
-      const parent = node.parent;
-      if (
-        parent &&
-        ts.isPropertyAccessExpression(parent) &&
-        parent.expression === node &&
-        parent.parent &&
-        ts.isCallExpression(parent.parent) &&
-        parent.parent.expression === parent
-      ) {
-        if (!inFunction) {
-          usesOutsideFunction = true;
-          return;
-        }
-        methods.add(parent.name.text);
-        // find enclosing function name
-        let cur = node.parent;
-        while (cur) {
-          if (ts.isFunctionDeclaration(cur) && cur.name) {
-            functionNames.add(cur.name.text);
-            break;
-          }
-          cur = cur.parent;
-        }
-        return;
-      }
-      freeBindingUse = true;
-      return;
-    }
-
-    ts.forEachChild(node, (child) => visit(child, inFunction));
-  }
-
-  function isNodeInside(ancestor, node) {
-    let cur = node;
-    while (cur) {
-      if (cur === ancestor) return true;
-      cur = cur.parent;
-    }
-    return false;
-  }
-
-  // Custom walk: mark function bodies
+  // Walk top-level: only function declarations may use the binding (as method calls).
   function walkTop(node) {
     if (ts.isFunctionDeclaration(node)) {
       if (node.body) {
@@ -223,9 +156,6 @@ export function provePortProofInject(ts, source, opts = {}) {
     walkTop(stmt);
   }
 
-  if (usesOutsideFunction) {
-    return { eligible: false, reason: 'module-level-use' };
-  }
   if (freeBindingUse) {
     return { eligible: false, reason: 'free-or-non-call-use' };
   }

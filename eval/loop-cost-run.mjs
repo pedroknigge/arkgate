@@ -239,8 +239,8 @@ function runFixtureCase(caseSpec, ts) {
       }
       const check = runArkCheck(tmp);
       arkCheckGreen = check.code === 0;
-      // Write-path green: autoPatch applied successfully this turn (W1 revalidated).
-      // Full CI green is reported separately (type-only debt may remain for plan/loop).
+      // Write-path green: fixture proxy — import-type rewrite applied this turn.
+      // Full CI green is arkCheckGreen (reported separately).
       if (writePathCleared || arkCheckGreen) {
         writePathGreen = true;
         break;
