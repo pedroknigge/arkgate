@@ -6,6 +6,9 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ### Fixed
 
+- **Deny→repair CI proof:** `tests/unit/static-check/writePathDetect.test.ts` drives
+  shipped `bin/ark-mcp.mjs --hook --hook-repair` and asserts `ARK_REPAIR_JSON` /
+  `ARK_AUTOPATCH_JSON` on deny (exit 2); reject-only without repair flag still supported.
 - **Dogfood write path repair:** local Claude/Grok hooks use `--hook-repair`; doctor
   reports `writePath.mode = repair` on this tree.
 - **Self-hosted AGENTS.md:** `--install-agent-gates --force` no longer overwrites library
@@ -18,7 +21,11 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 ### Changed
 
 - **Hook templates extracted** to `bin/lib/hook-templates.mjs` (agent-gates seam).
-- **Coverage thresholds** ratchet: statements/lines 46, branches 73, functions 70 (upward only).
+- **Write-path detect extracted** to `bin/lib/write-path-detect.mjs` (doctor W5; re-exported
+  from agent-gates).
+- **Coverage thresholds** ratchet: statements/lines **46.5**, branches **73.6**, functions
+  **70.5** (upward only; was 46/73/70). Per-file floors for write-path-detect, auto-patch,
+  prepare-write ≥90% lines. Full Q1 80/85 remains further sessions.
 - **`/ark-explore` skill:** decision-grade recon — field path (run starters/checks),
   installed hooks vs install templates, coupling via fan-in/exports (not LOC alone),
   ranked “así te lo re-soluciono” rows only when residual changes action; ENFORCE /

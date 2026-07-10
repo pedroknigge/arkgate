@@ -17,12 +17,27 @@ export default defineConfig({
     hookTimeout: 30000,
     teardownTimeout: 30000,
     coverage: {
-      // Ratchet upward only (Trust Q1 target is higher). Values must stay ≤ last green medians.
+      // Ratchet upward only (Trust Q1 global 80/85 is further sessions). Floors stay ≤ green medians.
+      // Prior floor before this goal: 46 / 73 / 70 / 46. Enforcement-critical modules have floors.
       thresholds: {
-        statements: 46,
-        branches: 73,
-        functions: 70,
-        lines: 46,
+        statements: 46.5,
+        branches: 73.6,
+        functions: 70.5,
+        lines: 46.5,
+        'bin/lib/write-path-detect.mjs': {
+          statements: 90,
+          lines: 90,
+          branches: 70,
+          functions: 90,
+        },
+        'bin/lib/auto-patch.mjs': {
+          statements: 90,
+          lines: 90,
+        },
+        'bin/lib/prepare-write.mjs': {
+          statements: 90,
+          lines: 90,
+        },
       },
     },
   },
