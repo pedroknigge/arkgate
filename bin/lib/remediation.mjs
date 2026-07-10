@@ -19,6 +19,14 @@ export const MECHANICAL_SAFE_KINDS = [
     'type-only-import-move',
     'import-type-from-pure-type-module',
     'import-type-of-type-exports',
+    // port-proof-inject-binding is intentionally NOT mechanical-safe (signature change).
+];
+/**
+ * Judgment-class kinds that still have a named transform / plan label (eval corpus vocabulary).
+ * Never auto-apply without multi-file / caller proof.
+ */
+export const JUDGMENT_SUGGESTED_KINDS = [
+    'port-proof-inject-binding',
 ];
 /** fixClass values from enrichViolationWithFixClass (eval corpus / reports). */
 export const KNOWN_FIX_CLASSES = [
@@ -89,6 +97,19 @@ export function classifyRemediation(violation) {
                 confidence: 0.86,
                 remediationKind: 'import-type-of-type-exports',
                 rationale: 'Named bindings are type-only exports of the target module (even if the file also exports values): convert to `import type` / `export type` (erased at runtime). Gate verifies.',
+            };
+        }
+        // W6: port-proof inject is a *suggested* shape when proof holds, but always judgment
+        // for auto-apply — adding a required parameter breaks external call sites.
+        if (violation?.portProofEligible &&
+            edgeKind !== 'require' &&
+            edgeKind !== 'dynamic-import' &&
+            !violation?.typeOnly) {
+            return {
+                class: 'judgment',
+                confidence: 0.82,
+                remediationKind: 'port-proof-inject-binding',
+                rationale: 'Port-proof shape: single named value import used only as binding.method(...) in function declarations. Inject as a port parameter (body-local calls preserved) — outer layer must pass the impl. Not mechanical-safe auto-apply: call arity changes. Apply via agent judgment / multi-file plan.',
             };
         }
         return {

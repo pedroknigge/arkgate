@@ -12,17 +12,26 @@
  *   - resource  ark://manifest  — the architectural contract (layers + rules, or a project
  *                                 manifest file when --manifest is provided)
  *   - tool      validate_code   — runs Ark's AI code gate on a source snippet; returns
- *                                 { valid, violations } and sets isError when invalid
+ *                                 { valid, violations, autoPatch? } and sets isError when invalid.
+ *                                 autoPatch (W1) is a gate-revalidated rewrite for mechanical-safe
+ *                                 import-type kinds only (not W6 port-proof — signature change is judgment);
+ *                                 discarded if post-patch still invalid.
+ *   - tool      ark_prepare_write — W2: place + constrain + validate + autoPatch + judgmentBrief
+ *                                 + contentHash (composes ark_place + write gate; not a second contract).
  *   - tool      ark_recommend   — deterministic application-shape plan (same as
  *                                 ark-check --recommend --json)
  *
  * Usage: ark-mcp [--root <dir>] [--config ark.config.json] [--manifest <manifest.json>]
- *        ark-mcp --hook [--root <dir>] [--config ark.config.json]
+ *        ark-mcp --hook [--hook-repair] [--root <dir>] [--config ark.config.json]
  *
  * --hook runs one-shot instead of serving: it reads a Claude Code PreToolUse payload from
  * stdin, validates the file content a Write/Edit/MultiEdit is about to produce, and exits
  * 2 with the violations on stderr when the write must be blocked (0 otherwise). This is
  * the copy-paste integration for agent runtimes whose hooks run shell commands.
+ *
+ * --hook-repair (W4, also ARK_HOOK_REPAIR=1): on deny, emit machine-readable
+ * ARK_REPAIR_JSON / ARK_AUTOPATCH_JSON on stderr (and autoPatch in Grok deny JSON).
+ * Never silently writes the file — default and repair mode both hard-block.
  *
  * --session-context runs one-shot and prints a compact contract summary (layers, rule
  * count, forbidden globals, baseline state, check command) to stdout. Bind it to a
@@ -46,8 +55,21 @@ import {
   resolveIncludeRoots,
 } from './ark-shared.mjs';
 import { createImportTargetResolver } from './lib/import-resolve.mjs';
+import { validateWithAutoPatch, resolveImportFileAbs } from './lib/auto-patch.mjs';
+import { composePrepareWrite } from './lib/prepare-write.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
+
+/**
+ * W4 — opt-in hook repair payload.
+ * True when CLI `--hook-repair` or env ARK_HOOK_REPAIR is 1/true/yes.
+ * Default remains hard block with prose violations only (no machine-readable patch).
+ */
+function envTruthy(name) {
+  const v = process.env[name];
+  if (v == null || v === '') return false;
+  return /^(1|true|yes|on)$/i.test(String(v).trim());
+}
 
 function parseArgs(argv) {
   const args = {
@@ -56,17 +78,26 @@ function parseArgs(argv) {
     configExplicit: false,
     manifest: undefined,
     hook: false,
+    /** When true with --hook: emit ARK_REPAIR_JSON / ARK_AUTOPATCH_JSON (never silent write). */
+    hookRepair: false,
     sessionContext: false,
   };
   for (let i = 2; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--hook') args.hook = true;
-    else if (a === '--session-context') args.sessionContext = true;
+    else if (a === '--hook-repair') {
+      args.hook = true;
+      args.hookRepair = true;
+    } else if (a === '--session-context') args.sessionContext = true;
     else if (a === '--root') args.root = path.resolve(argv[++i]);
     else if (a === '--config') {
       args.config = argv[++i];
       args.configExplicit = true;
     } else if (a === '--manifest') args.manifest = argv[++i];
+  }
+  // Env can enable repair without rewriting host templates (ARK_HOOK_REPAIR=1).
+  if (envTruthy('ARK_HOOK_REPAIR')) {
+    args.hookRepair = true;
   }
   return args;
 }
@@ -191,7 +222,7 @@ function proposedSource(toolName, toolInput) {
  * decision JSON on stdout. Gate plumbing problems (no stdin, malformed JSON, non-file
  * tools, non-source files) never block the agent.
  */
-function runHook(gate, config, args) {
+function runHook(gate, config, args, ts) {
   let payload;
   try {
     payload = JSON.parse(fs.readFileSync(0, 'utf8'));
@@ -213,14 +244,34 @@ function runHook(gate, config, args) {
   if (typeof source !== 'string') return;
 
   const layer = inferLayer(filePath, config, args.root);
-  const result = gate.validate(source, { layer, filePath });
+  const validateOnce = (src) => gate.validate(src, { layer, filePath });
+  // W1: one validation pass (+ optional autoPatch). Original write still blocked when
+  // invalid; hosts must apply autoPatch explicitly (never silent write).
+  const result = ts
+    ? validateWithAutoPatch({
+        source,
+        filePath,
+        root: args.root,
+        ts,
+        validate: validateOnce,
+        resolveTargetAbs: resolveImportFileAbs,
+      })
+    : (() => {
+        const once = validateOnce(source);
+        return {
+          valid: Boolean(once.valid),
+          violations: once.violations ?? [],
+          autoPatch: null,
+        };
+      })();
   if (result.valid) return;
 
   // Ratchet semantics (same philosophy as ark-check --baseline): an edit is blocked only
   // when it ADDS violations relative to the file's current on-disk state. Otherwise a
   // pre-existing violation — frozen in a baseline or predating Ark adoption — would make
-  // every subsequent edit to that file un-writable while CI passes. Keys ignore line
-  // numbers (edits shift them) and collapse duplicates, mirroring ark-check's baselineKey.
+  // every subsequent edit to that file un-writable while CI passes. Same-file keys ignore
+  // line numbers (edits shift them); simpler than full baselineKey (no file/layer fields
+  // needed — this file is fixed).
   const violationKey = (violation) => `${violation.ruleId}|${violation.target ?? violation.message}`;
   let existingKeys = new Set();
   try {
@@ -231,7 +282,7 @@ function runHook(gate, config, args) {
   } catch {
     // New file: nothing pre-exists, every violation is new.
   }
-  const newViolations = result.violations.filter(
+  const newViolations = (result.violations ?? []).filter(
     (violation) => !existingKeys.has(violationKey(violation))
   );
   if (newViolations.length === 0) return;
@@ -246,16 +297,68 @@ function runHook(gate, config, args) {
   const suggestions = [
     ...new Set(newViolations.map((violation) => violation.suggestion).filter(Boolean)),
   ];
+  const autoPatch = result.autoPatch;
+  // W4: structured repair payload is opt-in (--hook-repair / ARK_HOOK_REPAIR).
+  // Default remains hard block with prose only — hosts that cannot re-inject stay clean.
+  const repair = Boolean(args.hookRepair);
   const message = [
     `Ark architecture gate blocked this write to ${rel}${layer ? ` (layer: ${layer})` : ''}:`,
     ...lines,
     ...(suggestions.length > 0 ? ['Fix:', ...suggestions.map((s) => `  ${s}`)] : []),
+    ...(autoPatch && repair
+      ? [
+          `autoPatch available (${autoPatch.remediationKind}, confidence ${autoPatch.confidence}): ` +
+            'apply the patched source from ARK_AUTOPATCH_JSON / ARK_REPAIR_JSON on stderr' +
+            (grokStyle ? ' (or autoPatch in the deny JSON on stdout)' : '') +
+            ' instead of re-drafting. Gate still denies this write (never silent apply).',
+        ]
+      : []),
+    ...(autoPatch && !repair
+      ? [
+          `Mechanical-safe autoPatch is available (${autoPatch.remediationKind}). ` +
+            'Enable repair payload with ARK_HOOK_REPAIR=1 or --hook-repair to receive ' +
+            'machine-readable source (still hard-blocks; host re-injects).',
+        ]
+      : []),
     'Fix the violations and retry. The architecture contract is available as the ark://manifest MCP resource.',
   ].join('\n');
   process.stderr.write(message + '\n');
+
+  if (repair) {
+    // Structured envelope for any host that can re-inject. Never writes the file.
+    const repairPayload = {
+      mode: 'repair',
+      decision: 'deny',
+      filePath: rel.split(path.sep).join('/'),
+      ...(layer ? { layer } : {}),
+      ...(autoPatch
+        ? {
+            autoPatch: {
+              source: autoPatch.source,
+              remediationKind: autoPatch.remediationKind,
+              confidence: autoPatch.confidence,
+              valid: autoPatch.valid,
+            },
+          }
+        : { autoPatch: null }),
+    };
+    process.stderr.write(`ARK_REPAIR_JSON:${JSON.stringify(repairPayload)}\n`);
+    if (autoPatch) {
+      process.stderr.write(`ARK_AUTOPATCH_JSON:${JSON.stringify(autoPatch)}\n`);
+    }
+  }
+
   // Grok Build honors { decision: "deny" } on stdout (exit 2 alone is also deny).
+  // autoPatch in stdout only when repair mode is on (same opt-in as stderr).
   if (grokStyle) {
-    process.stdout.write(JSON.stringify({ decision: 'deny', reason: message }) + '\n');
+    process.stdout.write(
+      JSON.stringify({
+        decision: 'deny',
+        reason: message,
+        ...(repair && autoPatch ? { autoPatch } : {}),
+        ...(repair ? { repair: true } : {}),
+      }) + '\n'
+    );
   }
   process.exitCode = 2;
 }
@@ -444,7 +547,7 @@ async function main() {
   });
 
   if (args.hook) {
-    runHook(gate, config, args);
+    runHook(gate, config, args, ts);
     return;
   }
 
@@ -463,7 +566,9 @@ async function main() {
         "Validate a source snippet about to be written against Ark's architecture " +
         '(forbidden infra imports, unknown intents, and layer-reference violations). ' +
         'Bind to PreToolUse on Write/Edit to block architecturally-invalid generated code. ' +
-        'Returns { valid, violations }; isError is true when the code is invalid.',
+        'Returns { valid, violations, autoPatch? }. autoPatch (when present) is a ' +
+        'mechanical-safe rewrite of the source (import type conversion) that re-validates green; ' +
+        'hosts may apply it instead of re-drafting. isError is true when valid is false.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -518,7 +623,8 @@ async function main() {
       description:
         'Place a file in the architecture: pass filePath (preferred) and/or description. ' +
         'Returns layer, mayImport / mustNotImport, forbiddenGlobals. Call BEFORE writing a new file. ' +
-        'If only description is given, returns a conventional path proposal under a governed layer.',
+        'If only description is given, returns a conventional path proposal under a governed layer. ' +
+        'Prefer ark_prepare_write when you already have the source snippet (place+validate+autoPatch in one call).',
       inputSchema: {
         type: 'object',
         properties: {
@@ -532,6 +638,34 @@ async function main() {
               'What you are building (e.g. "Remotion caption overlay"). Used when filePath is omitted to propose a path.',
           },
         },
+      },
+    },
+    {
+      name: 'ark_prepare_write',
+      description:
+        'Prepare a write against the architecture contract: place (filePath and/or description) + ' +
+        'constrain (layer, mayImport, mustNotImport, forbiddenGlobals) + validate source + optional ' +
+        'mechanical-safe autoPatch + judgmentBrief when judgment is needed + contentHash for host commit. ' +
+        'Composes ark_place + write-gate — call BEFORE Write/Edit when you have the snippet. ' +
+        'Returns { filePath, layer, valid, violations?, autoPatch?, judgmentBrief?, contentHash, ... }.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          source: { type: 'string', description: 'Full source text about to be written.' },
+          filePath: {
+            type: 'string',
+            description: 'Target path (preferred). Used for layer inference and autoPatch resolution.',
+          },
+          description: {
+            type: 'string',
+            description: 'When filePath omitted: propose a conventional path from this description.',
+          },
+          layer: {
+            type: 'string',
+            description: 'Optional explicit layer override (otherwise inferred from filePath).',
+          },
+        },
+        required: ['source'],
       },
     },
     {
@@ -626,13 +760,38 @@ async function main() {
     if (typeof source !== 'string') {
       return { content: [{ type: 'text', text: 'Missing required "source" argument.' }], isError: true };
     }
-    const layer = params.arguments.layer ?? inferLayer(params.arguments.filePath, config, args.root);
-    const result = gate.validate(source, {
-      layer,
-      filePath: params.arguments.filePath,
+    const filePath = params.arguments.filePath;
+    const layer = params.arguments.layer ?? inferLayer(filePath, config, args.root);
+    const validateOnce = (src) =>
+      gate.validate(src, {
+        layer,
+        filePath,
+      });
+    // W1: attempt mechanical-safe single-file autoPatch (import type), re-validate or discard.
+    const result = validateWithAutoPatch({
+      source,
+      filePath,
+      root: args.root,
+      ts,
+      validate: validateOnce,
+      resolveTargetAbs: resolveImportFileAbs,
     });
     return {
-      content: [{ type: 'text', text: JSON.stringify({ ...result, layer }, null, 2) }],
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(
+            {
+              valid: result.valid,
+              violations: result.violations,
+              ...(result.autoPatch ? { autoPatch: result.autoPatch } : {}),
+              layer,
+            },
+            null,
+            2
+          ),
+        },
+      ],
       isError: !result.valid,
     };
   }
@@ -691,11 +850,8 @@ async function main() {
   // Deterministic placement guidance (in-process; no TS resolver needed): which layer a
   // path falls in, and — from the same rules ark-check enforces (default allow, explicit
   // `allowed:false` denies) — which layers it may and must not import.
-  function runPlace(params) {
-    const filePath = params?.arguments?.filePath;
-    const description = params?.arguments?.description;
+  function placeResult(filePath, description) {
     if ((typeof filePath !== 'string' || !filePath) && typeof description === 'string' && description.trim()) {
-      // Description-only: propose a governed path under PresentationAdapters (UI default).
       const slug = description
         .trim()
         .toLowerCase()
@@ -705,73 +861,39 @@ async function main() {
       const proposedPath = `src/components/${slug}.tsx`;
       const layerName = inferLayer(proposedPath, config, args.root) || 'PresentationAdapters';
       return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(
-              {
-                filePath: proposedPath,
-                proposed: true,
-                description: description.trim(),
-                layer: layerName,
-                governed: Boolean(inferLayer(proposedPath, config, args.root)),
-                note:
-                  'filePath was omitted — proposed a conventional path from description. ' +
-                  'Pass filePath explicitly for authoritative placement. Then validate_code the snippet.',
-              },
-              null,
-              2
-            ),
-          },
-        ],
-        isError: false,
+        filePath: proposedPath,
+        proposed: true,
+        description: description.trim(),
+        layer: layerName,
+        governed: Boolean(inferLayer(proposedPath, config, args.root)),
+        note:
+          'filePath was omitted — proposed a conventional path from description. ' +
+          'Pass filePath explicitly for authoritative placement.',
       };
     }
     if (typeof filePath !== 'string' || !filePath) {
       return {
-        content: [
-          {
-            type: 'text',
-            text:
-              'ark_place needs filePath and/or description. ' +
-              'Example: { "filePath": "src/components/Foo.tsx" } or { "description": "caption overlay UI component" }.',
-          },
-        ],
-        isError: true,
+        error:
+          'Needs filePath and/or description. ' +
+          'Example: { "filePath": "src/components/Foo.tsx" } or { "description": "caption overlay UI component" }.',
       };
     }
     const layerName = inferLayer(filePath, config, args.root);
     if (!layerName) {
-      // Two distinct reasons the path matched no layer: either this project declares no
-      // path-based layers at all (the gate still enforces the default 11-layer profile by
-      // intent-name PREFIX — placement just can't be inferred from the path), or it does
-      // declare layers and this path falls outside all of them (genuinely ungoverned).
       const noLayers = configLayers.length === 0;
       return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(
-              {
-                filePath,
-                layer: null,
-                governed: noLayers, // default-profile intent rules still apply when no layers configured
-                message: noLayers
-                  ? 'This project declares no path-based layers in ark.config.json, so a ' +
-                    'layer cannot be inferred from the path. The gate still enforces the ' +
-                    'default 11-layer profile by intent-name prefix — read ark://manifest ' +
-                    'for the layers and validate the actual snippet with validate_code.'
-                  : 'No layer pattern matches this path — code here is UNGOVERNED (no import ' +
-                    'rules enforced). Place it under a directory a layer in ark.config.json ' +
-                    'matches, or add a layer. See suggestedLayers for conventional homes.',
-                suggestedLayers: suggestedLayers(),
-              },
-              null,
-              2
-            ),
-          },
-        ],
-        isError: false,
+        filePath,
+        layer: null,
+        governed: noLayers,
+        message: noLayers
+          ? 'This project declares no path-based layers in ark.config.json, so a ' +
+            'layer cannot be inferred from the path. The gate still enforces the ' +
+            'default 11-layer profile by intent-name prefix — read ark://manifest ' +
+            'for the layers and validate the actual snippet with validate_code.'
+          : 'No layer pattern matches this path — code here is UNGOVERNED (no import ' +
+            'rules enforced). Place it under a directory a layer in ark.config.json ' +
+            'matches, or add a layer. See suggestedLayers for conventional homes.',
+        suggestedLayers: suggestedLayers(),
       };
     }
     const layerMeta = configLayers.find((layer) => layer.name === layerName);
@@ -782,31 +904,88 @@ async function main() {
     );
     const mayImport = otherNames.filter((name) => !mustNotImport.includes(name));
     return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(
-            {
-              filePath,
-              layer: layerName,
-              governed: true,
-              description: layerMeta?.description,
-              forbiddenGlobals: layerMeta?.forbiddenGlobals ?? [],
-              ...(layerMeta?.mayImportInfrastructure
-                ? { mayImportInfrastructure: true }
-                : {}),
-              mayImport,
-              mustNotImport,
-              note:
-                'mayImport = layers with no explicit deny (default is allow). Respect ' +
-                'forbiddenGlobals, then verify the actual snippet with validate_code.',
-            },
-            null,
-            2
-          ),
-        },
-      ],
+      filePath,
+      layer: layerName,
+      governed: true,
+      description: layerMeta?.description,
+      forbiddenGlobals: layerMeta?.forbiddenGlobals ?? [],
+      ...(layerMeta?.mayImportInfrastructure ? { mayImportInfrastructure: true } : {}),
+      mayImport,
+      mustNotImport,
+      note:
+        'mayImport = layers with no explicit deny (default is allow). Respect ' +
+        'forbiddenGlobals, then verify the actual snippet with validate_code or ark_prepare_write.',
+    };
+  }
+
+  function runPlace(params) {
+    const placement = placeResult(params?.arguments?.filePath, params?.arguments?.description);
+    if (placement.error) {
+      return {
+        content: [{ type: 'text', text: `ark_place: ${placement.error}` }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: 'text', text: JSON.stringify(placement, null, 2) }],
       isError: false,
+    };
+  }
+
+  /**
+   * W2: place + constrain + validate + autoPatch + judgmentBrief + contentHash.
+   * Composes ark_place + write-boundary gate — not a second contract.
+   */
+  function runPrepareWrite(params) {
+    const source = params?.arguments?.source;
+    const filePath = params?.arguments?.filePath;
+    const description = params?.arguments?.description;
+    if (typeof source !== 'string') {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'ark_prepare_write requires "source" (string). Optional: filePath, description.',
+          },
+        ],
+        isError: true,
+      };
+    }
+    const placement = placeResult(filePath, description);
+    if (placement.error) {
+      return {
+        content: [{ type: 'text', text: `ark_prepare_write: ${placement.error}` }],
+        isError: true,
+      };
+    }
+    const layer =
+      placement.layer ||
+      params?.arguments?.layer ||
+      inferLayer(placement.filePath, config, args.root);
+    const validateOnce = (src) =>
+      gate.validate(src, {
+        layer,
+        filePath: placement.filePath,
+      });
+    const result = composePrepareWrite({
+      source,
+      placement: { ...placement, layer },
+      root: args.root,
+      ts,
+      validate: validateOnce,
+      resolveTargetAbs: resolveImportFileAbs,
+    });
+    if (!result.ok) {
+      return {
+        content: [{ type: 'text', text: result.error || 'prepare_write failed' }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+      // Align with validate_code / --hook: proposed source still invalid → isError.
+      // autoPatch is additive recovery guidance in the body, never soft-success.
+      isError: !result.valid,
     };
   }
 
@@ -852,6 +1031,7 @@ async function main() {
     ark_check: runCheckTool,
     ark_coverage: runCoverageTool,
     ark_place: runPlace,
+    ark_prepare_write: runPrepareWrite,
     ark_recommend: runRecommendTool,
     ark_suggest_include: runSuggestIncludeTool,
   };

@@ -151,6 +151,11 @@ critical handoffs say **STOP** and name the next skill (hosts must follow — ma
 When the host allows it, skills may **fan out parallel subagents** (disjoint scopes);
 otherwise they **fall back to sequential**.
 
+**Write path (Track W):** Prefer MCP **`ark_prepare_write`** when you have a snippet (place +
+constrain + validate + optional `autoPatch` + `judgmentBrief`). PreToolUse hooks with
+`--hook-repair` emit machine-readable repair payloads on deny (still hard block; never silent
+write). See [docs/ai-gates.md](docs/ai-gates.md).
+
 | Need | Skill |
 |------|--------|
 | Only the apply loop (plan already exists) | `/ark-loop` |
@@ -184,6 +189,7 @@ ark.config.json
 - **Frameworks:** Nest / Next / express / library layouts get sensible globs on init so day-one coverage is real.
 - **Brownfield:** baseline ratchet, refuse to freeze a wrong contract, `/ark-adopt` for mature trees.
 - **Agents:** skills install into Claude / Cursor / Codex / Grok; `ark start` freezes an origin report under `.ark/reports/`.
+- **Write protocol (2.10 / Track W):** mechanical-safe **autoPatch** on the write gate (`import type`); MCP **`ark_prepare_write`** (place + validate + patch + judgmentBrief); opt-in hook **`--hook-repair`** (`ARK_REPAIR_JSON`); doctor **`writePath`** (repair vs reject-only); loop-cost eval (`npm run eval:loop-cost`). Port-proof inject is **judgment** (arity change), not silent auto-apply.
 - **TypeScript:** project compilers 5.x / 6.x / 7.x — gate falls back to a nested JS-API TypeScript when TS 7’s main export is version-only ([docs/typescript-support.md](docs/typescript-support.md)).
 
 ### Why not only ESLint / dependency-cruiser / Nx?

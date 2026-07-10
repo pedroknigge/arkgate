@@ -38,6 +38,11 @@ GitHub Actions, `AGENTS.md`, a Codex TOML snippet under `docs/`, and (when
 selected) Grok Build project files under `.grok/`. It skips existing files unless
 you pass `--force`, so review and commit only the templates that match your project.
 
+**Doctor (W5):** `ark-check --doctor --json` includes `doctor.writePath`
+(`mode`: `repair` | `reject-only` | `mcp-only` | `none`, plus `prepareWrite` /
+`autoPatch` flags) so leads can see whether the write path is repair-capable or
+still reject-only.
+
 If your project uses Codex or Grok, treat MCP registration as part of the default
 setup, not an optional extra. Ark works best when the agent can read `ark://manifest`
 before it writes code; that is the fast path to avoiding architecture drift during
@@ -52,6 +57,40 @@ violations relative to the file's current on-disk state, so files with pre-exist
 (baselined) violations stay editable — they just can't get worse. New files block on
 every violation.
 
+### Opt-in repair payload (W4)
+
+Default is **hard block with prose** on stderr. Hosts that can re-inject a fixed write
+can enable a **machine-readable repair payload** (still exit `2` — **never** silent write):
+
+| Enable | Effect on deny |
+|--------|----------------|
+| `--hook-repair` | Emit `ARK_REPAIR_JSON:…` and, when available, `ARK_AUTOPATCH_JSON:…` on stderr |
+| `ARK_HOOK_REPAIR=1` | Same as `--hook-repair` (env, no template rewrite) |
+
+`ARK_REPAIR_JSON` shape (stable additive):
+
+```json
+{
+  "mode": "repair",
+  "decision": "deny",
+  "filePath": "src/domain/use.ts",
+  "layer": "DomainModel",
+  "autoPatch": {
+    "source": "import type { Row } from '../infra/types-only';\n…",
+    "remediationKind": "import-type-from-pure-type-module",
+    "confidence": 0.85,
+    "valid": true
+  }
+}
+```
+
+When no mechanical-safe patch applies, `autoPatch` is `null` (host still re-reasons or uses
+`ark_prepare_write` / judgment). Grok deny JSON also includes `autoPatch` + `"repair": true`
+when repair mode is on.
+
+`--install-agent-gates` writes Claude/Grok PreToolUse commands with `--hook-repair` enabled.
+Reject-only installs: drop `--hook-repair` (or unset `ARK_HOOK_REPAIR`).
+
 Add to your project's `.claude/settings.json`:
 
 ```json
@@ -63,7 +102,7 @@ Add to your project's `.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "npx ark-mcp --hook --root \"$CLAUDE_PROJECT_DIR\" --config ark.config.json"
+            "command": "npx ark-mcp --hook --hook-repair --root \"$CLAUDE_PROJECT_DIR\" --config ark.config.json"
           }
         ]
       }
@@ -124,10 +163,11 @@ prints nothing and exits 0, so non-Ark projects are untouched.
 
 ## Claude Code — MCP server (contract discovery + on-demand validation)
 
-The MCP server exposes a resource and four tools agents can use proactively:
+The MCP server exposes a resource and tools agents can use proactively (not an exhaustive list — `tools/list` is authoritative):
 
 - **`ark://manifest`** (resource) — the machine-readable architecture contract (layers + rules), so the agent can read the architecture before generating code.
-- **`validate_code`** (tool) — validates a snippet against the architecture on demand (the write-path gate).
+- **`validate_code`** (tool) — validates a snippet against the architecture on demand (the write-path gate). May return additive **`autoPatch`** (W1) for mechanical-safe import-type rewrites.
+- **`ark_prepare_write`** (tool) — **W2:** place + constrain + validate + optional autoPatch + judgmentBrief + contentHash in one call (composes `ark_place` + write gate).
 - **`ark_place`** (tool) — given a target file path, returns its layer, forbidden globals, and which layers it may / must not import. Call it *before* writing a new file so generated code lands in a governed location.
 - **`ark_check`** (tool) — runs the full architecture check and returns structured violations (applies the baseline automatically when one exists).
 - **`ark_coverage`** (tool) — per-layer file counts, the full unclassified-file list, and layers whose patterns match nothing.

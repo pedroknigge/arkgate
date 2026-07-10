@@ -65,8 +65,9 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 | `pure-type-file-relocate` | Relocate pure-type file to owning layer (or rename out of false Domain globs) |
 | `import-type-from-pure-type-module` | Convert value import of pure-type module to `import type` |
 | `import-type-of-type-exports` | Convert value-syntax named import/export of type-only exports from a mixed module to `import type` / `export type` |
+| *(none for port-proof)* | **W6** `port-proof-inject-binding` is **judgment** (arity change) — propose inject; do not auto-apply |
 
-Never auto: value imports (including mixed bindings with values), dynamic import/require, forbidden globals, cycles, infra moves.
+Never auto: free value uses of imports, multi-import files, dynamic import/require, forbidden globals, cycles, port-proof inject, multi-file adapter scaffolding without proof.
 
 ## Steps
 

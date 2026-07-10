@@ -1,6 +1,6 @@
 {
   "name": "arkgate",
-  "version": "2.9.2",
+  "version": "2.10.0",
   "description": "ArkGate — architecture co-pilot for AI TypeScript (write gate, CI gate, plan/loop)",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -79,6 +79,7 @@
     "eval:agent": "node eval/run.mjs",
     "eval:corpus": "node eval/validate-corpus.mjs",
     "eval:comparative": "node eval/comparative-run.mjs",
+    "eval:loop-cost": "node eval/loop-cost-run.mjs",
     "clean": "rm -rf dist",
     "release:npm": "node scripts/release-npm.mjs",
     "prepack": "npm run build"

@@ -25,6 +25,7 @@ import {
   textOfModuleSpecifier,
   typeOnlyExportNames,
 } from './ast-scan.mjs';
+import { provePortProofInject } from './port-proof.mjs';
 import {
   intentLayersFromManifest,
   layerForIntent,
@@ -264,6 +265,23 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
           !targetCached?.hasTopLevelSideEffects &&
           named.every((n) => targetTypeNames.has(n));
         const peerIsolation = Boolean(rule.peerIsolation);
+        // W6: port-proof eligibility (value import only; fail-closed static proof).
+        let portProofEligible = false;
+        if (
+          !edge.typeOnly &&
+          !peerIsolation &&
+          edge.kind === 'import' &&
+          !targetTypeOnlyExports &&
+          !namedBindingsTypeOnly
+        ) {
+          try {
+            const srcText = fs.readFileSync(file, 'utf8');
+            const proof = provePortProofInject(ts, srcText, { filePath: file });
+            portProofEligible = Boolean(proof.eligible);
+          } catch {
+            portProofEligible = false;
+          }
+        }
         violations.push({
           ruleId: 'LAYER_IMPORT_VIOLATION',
           file: relFile,
@@ -275,6 +293,7 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
           ...(targetTypeOnlyExports ? { targetTypeOnlyExports: true } : {}),
           ...(sourcePureTypeModule ? { sourcePureTypeModule: true } : {}),
           ...(namedBindingsTypeOnly ? { namedBindingsTypeOnly: true } : {}),
+          ...(portProofEligible ? { portProofEligible: true } : {}),
           ...(edge.kind ? { edgeKind: edge.kind } : {}),
           ...(peerIsolation ? { peerIsolation: true } : {}),
           message:

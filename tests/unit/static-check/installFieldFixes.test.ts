@@ -16,6 +16,9 @@ import {
 import {
   resolveTools,
   detectSkillGaps,
+  detectWritePathCapabilities,
+  claudeSettings,
+  grokHooks,
 } from '../../../bin/lib/agent-gates.mjs';
 import {
   shouldUseNonInteractiveDefaults,
@@ -386,5 +389,109 @@ describe('detectSkillGaps reports missing skills for this package', () => {
     const gaps = detectSkillGaps(root);
     expect(gaps.length).toBeGreaterThan(0);
     expect(gaps[0].missing).toBeGreaterThan(0);
+  });
+});
+
+describe('W4 install templates include --hook-repair', () => {
+  it('claude and grok PreToolUse commands opt into repair payload', () => {
+    const root = tempRoot('ark-hook-tpl-');
+    write(root, 'package-lock.json', '{}\n');
+    const claude = claudeSettings(root);
+    expect(claude).toContain('--hook-repair');
+    expect(claude).toContain('--hook');
+    const grok = grokHooks(root);
+    expect(grok).toContain('--hook-repair');
+    expect(grok).toMatch(/Write\|Edit\|MultiEdit|write\|search_replace/);
+  });
+});
+
+describe('W5 detectWritePathCapabilities', () => {
+  it('reports none when no hooks or MCP', () => {
+    const root = tempRoot('ark-wp-none-');
+    const cap = detectWritePathCapabilities(root);
+    expect(cap.mode).toBe('none');
+    expect(cap.prepareWrite).toBe(false);
+    expect(cap.autoPatch).toBe(false);
+    expect(cap.gap?.id).toBe('write-path-none');
+  });
+
+  it('reports reject-only when --hook without --hook-repair', () => {
+    const root = tempRoot('ark-wp-reject-');
+    write(
+      root,
+      '.claude/settings.json',
+      JSON.stringify({
+        hooks: {
+          PreToolUse: [
+            {
+              hooks: [
+                {
+                  type: 'command',
+                  command: 'npx ark-mcp --hook --root . --config ark.config.json',
+                },
+              ],
+            },
+          ],
+        },
+      })
+    );
+    const cap = detectWritePathCapabilities(root);
+    expect(cap.mode).toBe('reject-only');
+    expect(cap.hookPresent).toBe(true);
+    expect(cap.hookRepair).toBe(false);
+    expect(cap.autoPatch).toBe(false);
+    expect(cap.gap?.id).toBe('write-path-reject-only');
+  });
+
+  it('reports repair when --hook-repair and MCP prepare-write', () => {
+    const root = tempRoot('ark-wp-repair-');
+    write(
+      root,
+      '.claude/settings.json',
+      JSON.stringify({
+        hooks: {
+          PreToolUse: [
+            {
+              hooks: [
+                {
+                  type: 'command',
+                  command: 'npx ark-mcp --hook --hook-repair --root . --config ark.config.json',
+                },
+              ],
+            },
+          ],
+        },
+      })
+    );
+    write(
+      root,
+      '.mcp.json',
+      JSON.stringify({
+        mcpServers: {
+          ark: { command: 'npx', args: ['ark-mcp', '--root', '.'] },
+        },
+      })
+    );
+    const cap = detectWritePathCapabilities(root);
+    expect(cap.mode).toBe('repair');
+    expect(cap.prepareWrite).toBe(true);
+    expect(cap.autoPatch).toBe(true);
+    expect(cap.gap).toBeNull();
+  });
+
+  it('reports mcp-only when MCP present without PreToolUse hook', () => {
+    const root = tempRoot('ark-wp-mcp-');
+    write(
+      root,
+      '.mcp.json',
+      JSON.stringify({
+        mcpServers: { ark: { command: 'npx', args: ['arkgate-mcp'] } },
+      })
+    );
+    const cap = detectWritePathCapabilities(root);
+    expect(cap.mode).toBe('mcp-only');
+    expect(cap.prepareWrite).toBe(true);
+    expect(cap.autoPatch).toBe(true);
+    expect(cap.gap?.id).toBe('write-path-mcp-only');
   });
 });

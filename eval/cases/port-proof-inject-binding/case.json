@@ -1,0 +1,10 @@
+{
+  "description": "W6: domain value-imports infra with a single binding.method(...) call — port-proof inject is a suggested judgment shape (not mechanical-safe auto-apply; call arity changes).",
+  "expectedFix": "Inject the binding as a port parameter (outer layer passes the implementation). Do not treat single-file signature change as silent autoPatch.",
+  "mustKeep": ["src/domain/order.ts", "src/infra/db.ts"],
+  "theme": "port-proof-inject",
+  "expectedRuleId": "LAYER_IMPORT_VIOLATION",
+  "expectedFixClass": "port-inversion",
+  "expectedRemediationClass": "judgment",
+  "expectedRemediationKind": "port-proof-inject-binding"
+}

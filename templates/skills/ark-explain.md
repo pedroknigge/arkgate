@@ -66,7 +66,7 @@ forensics, baseline taxonomy) for tech leads.
 
 When explaining the **plan**, name the four `mechanical-safe` remediation kinds only
 (type-only move, pure-type file relocate, `import type` of pure-type modules,
-`import-type-of-type-exports` for named type exports from mixed modules) — everything
+`import-type-of-type-exports` for named type exports from mixed modules; W6 port-proof inject is judgment when proof holds) — everything
 else is judgment/deferred and must not be auto-applied.
 
 ## Spoken / written explanation

@@ -20,7 +20,14 @@ export type RemediationKind =
   | 'type-only-import-move'
   | 'import-type-from-pure-type-module'
   /** R6: named bindings are type-only exports of (possibly mixed) target — convert to import/export type. */
-  | 'import-type-of-type-exports';
+  | 'import-type-of-type-exports'
+  /**
+   * W6: single named value import used only as `binding.method(...)` inside function
+   * declarations — inject binding as a typed port parameter (static proof available).
+   * Stays **judgment** for auto-apply: transform changes call arity (outer layer must inject).
+   * Module-local body proof is not program-wide behavior preservation.
+   */
+  | 'port-proof-inject-binding';
 
 /** All remediationKinds that may return class: mechanical-safe (ordered for docs/tests). */
 export const MECHANICAL_SAFE_KINDS: readonly RemediationKind[] = [
@@ -28,6 +35,15 @@ export const MECHANICAL_SAFE_KINDS: readonly RemediationKind[] = [
   'type-only-import-move',
   'import-type-from-pure-type-module',
   'import-type-of-type-exports',
+  // port-proof-inject-binding is intentionally NOT mechanical-safe (signature change).
+] as const;
+
+/**
+ * Judgment-class kinds that still have a named transform / plan label (eval corpus vocabulary).
+ * Never auto-apply without multi-file / caller proof.
+ */
+export const JUDGMENT_SUGGESTED_KINDS: readonly RemediationKind[] = [
+  'port-proof-inject-binding',
 ] as const;
 
 /** fixClass values from enrichViolationWithFixClass (eval corpus / reports). */
@@ -59,6 +75,11 @@ export type ArkViolationLike = {
   targetTypeOnlyExports?: boolean;
   /** True when every named binding on a static import/export is a type-only export of the target. */
   namedBindingsTypeOnly?: boolean;
+  /**
+   * W6: static proof that a value import is eligible for port-proof inject
+   * (single named binding, only `binding.method(...)` in function decls). Fail-closed.
+   */
+  portProofEligible?: boolean;
   /** Cross-slice / cross-context peerIsolation violation. Always judgment. */
   peerIsolation?: boolean;
   edgeKind?: string;
@@ -138,6 +159,22 @@ export function classifyRemediation(violation: ArkViolationLike | null | undefin
         remediationKind: 'import-type-of-type-exports',
         rationale:
           'Named bindings are type-only exports of the target module (even if the file also exports values): convert to `import type` / `export type` (erased at runtime). Gate verifies.',
+      };
+    }
+    // W6: port-proof inject is a *suggested* shape when proof holds, but always judgment
+    // for auto-apply — adding a required parameter breaks external call sites.
+    if (
+      violation?.portProofEligible &&
+      edgeKind !== 'require' &&
+      edgeKind !== 'dynamic-import' &&
+      !violation?.typeOnly
+    ) {
+      return {
+        class: 'judgment',
+        confidence: 0.82,
+        remediationKind: 'port-proof-inject-binding',
+        rationale:
+          'Port-proof shape: single named value import used only as binding.method(...) in function declarations. Inject as a port parameter (body-local calls preserved) — outer layer must pass the impl. Not mechanical-safe auto-apply: call arity changes. Apply via agent judgment / multi-file plan.',
       };
     }
     return {

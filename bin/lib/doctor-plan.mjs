@@ -14,6 +14,7 @@ import {
 import {
   collectAdoptionGaps,
   detectSkillGaps,
+  detectWritePathCapabilities,
   missingGates,
   staleRunnerGateFiles,
 } from './agent-gates.mjs';
@@ -268,6 +269,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const skillGaps = detectSkillGaps(root);
   const staleRunners = staleRunnerGateFiles(root);
   const adoption = collectAdoptionGaps(root, config, cov);
+  // Prefer writePath from adoption (same detector); recompute only if missing (tests/stubs).
+  const writePath = adoption.writePath ?? detectWritePathCapabilities(root);
   const baseline = readBaseline(root, '.ark-baseline.json');
   const currentKeys = new Set(violations.map(baselineKey));
   const suppressed = baseline.exists
@@ -323,6 +326,26 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             gatesMissing,
             skillGaps,
             staleRunnerFiles: staleRunners,
+            // W5 — prepare-write / autoPatch / reject-only awareness (stable additive)
+            writePath: {
+              mode: writePath.mode,
+              prepareWrite: writePath.prepareWrite,
+              autoPatch: writePath.autoPatch,
+              hookPresent: writePath.hookPresent,
+              hookRepair: writePath.hookRepair,
+              mcpPresent: writePath.mcpPresent,
+              evidence: writePath.evidence,
+              ...(writePath.gap
+                ? {
+                    gap: {
+                      id: writePath.gap.id,
+                      severity: writePath.gap.severity,
+                      message: writePath.gap.message,
+                      fix: writePath.gap.fix,
+                    },
+                  }
+                : { gap: null }),
+            },
             adoption,
             newHere: showNewHere
               ? {
@@ -466,6 +489,37 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       actions.push(
         `resolve the non-baselined violations — see the classified plan (${arkCommand(root, 'ark-check', '--plan')}), then /ark-fix`
       );
+    }
+  }
+
+  console.log('');
+  console.log(color.bold('Write path (agent)'));
+  const writePathLabels = {
+    repair: 'repair-capable — hard block + machine-readable autoPatch / ARK_REPAIR_JSON',
+    'reject-only': 'reject-only — hard block with prose; no repair payload',
+    'mcp-only': 'MCP tools only — prepare-write/autoPatch available; no PreToolUse hook',
+    none: 'none — no write gate hook and no Ark MCP',
+  };
+  const wpMark =
+    writePath.mode === 'repair'
+      ? ok
+      : writePath.mode === 'none'
+        ? bad
+        : warn;
+  line(wpMark, `Mode: ${writePath.mode} — ${writePathLabels[writePath.mode] || writePath.mode}`);
+  line(
+    writePath.prepareWrite ? ok : warn,
+    `prepare-write (MCP): ${writePath.prepareWrite ? 'yes' : 'no'}`
+  );
+  line(
+    writePath.autoPatch ? ok : warn,
+    `autoPatch surface: ${writePath.autoPatch ? 'yes' : 'no'}`
+  );
+  if (writePath.gap) {
+    line(writePath.gap.severity === 'warn' ? warn : warn, writePath.gap.message);
+    if (writePath.gap.fix) {
+      line(' ', color.dim(`Fix: ${writePath.gap.fix}`));
+      actions.push(writePath.gap.fix);
     }
   }
 

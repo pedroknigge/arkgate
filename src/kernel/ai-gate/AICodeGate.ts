@@ -101,6 +101,8 @@ interface ModuleSpecifierMatch {
   value: string;
   index: number;
   kind: 'import' | 'export' | 'dynamic-import' | 'require';
+  /** True for `import type` / `export type` — erased at runtime (W1 write-path). */
+  typeOnly?: boolean;
 }
 
 function lineOf(source: string, index: number): number {
@@ -143,7 +145,11 @@ function extractModuleSpecifiers(source: string): ModuleSpecifierMatch[] {
     let match: RegExpExecArray | null;
     while ((match = pattern.re.exec(source)) !== null) {
       const index = match.index + match[0].indexOf(match[1]);
-      matches.push({ value: match[1], index, kind: pattern.kind });
+      const raw = match[0];
+      const typeOnly =
+        (pattern.kind === 'import' && /\bimport\s+type\b/.test(raw)) ||
+        (pattern.kind === 'export' && /\bexport\s+type\b/.test(raw));
+      matches.push({ value: match[1], index, kind: pattern.kind, typeOnly });
     }
   }
 
@@ -495,6 +501,12 @@ export function createAICodeGate<Context = AICodeGateContext>(
             }
           );
           if (blocked) {
+            // W1: type-only static edges (`import type` / `export type`) are erased at
+            // runtime — do not hard-block the write path. ark-check --plan still surfaces
+            // them for type placement (mechanical-safe relocate). Value imports stay hard-block.
+            if (specifier.typeOnly && !blocked.peerIsolation) {
+              continue;
+            }
             const peer = Boolean(blocked.peerIsolation);
             violations.push(
               violation(
@@ -514,7 +526,11 @@ export function createAICodeGate<Context = AICodeGateContext>(
                     ? 'Extract shared code to a shared layer, or coordinate slices via events/ports — do not import across feature/context slices.'
                     : 'Depend on a port/interface owned by an inner layer instead, or move this ' +
                       'code to a layer allowed to make this import.',
-                  details: { importKind: specifier.kind, peerIsolation: peer },
+                  details: {
+                    importKind: specifier.kind,
+                    peerIsolation: peer,
+                    ...(specifier.typeOnly ? { typeOnly: true } : {}),
+                  },
                 }
               )
             );
@@ -527,8 +543,8 @@ export function createAICodeGate<Context = AICodeGateContext>(
         }
 
         // Ungoverned / same-layer (no peerIsolation hit): fall back to the infra path-heuristic
-        // unless this source layer is exempt from it.
-        if (exemptFromInfraHeuristics) continue;
+        // unless this source layer is exempt from it. Type-only edges skip the heuristic (W1).
+        if (exemptFromInfraHeuristics || specifier.typeOnly) continue;
         if (!hasInfrastructureToken(specifier.value) && !isKnownInfrastructurePackage(specifier.value)) {
           continue;
         }

@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url';
 // Vocabulary from the product classifier (generated CLI pure), not a parallel list.
 import {
   KNOWN_FIX_CLASSES as FIX_CLASS_LIST,
+  JUDGMENT_SUGGESTED_KINDS,
   MECHANICAL_SAFE_KINDS,
   REMEDIATION_CLASSES,
 } from '../bin/lib/remediation.mjs';
@@ -47,7 +48,8 @@ const REQUIRED_THEMES = [
 
 const KNOWN_FIX_CLASSES = new Set(FIX_CLASS_LIST);
 const KNOWN_REMEDIATION_CLASSES = new Set(REMEDIATION_CLASSES);
-const KNOWN_REMEDIATION_KINDS = new Set(MECHANICAL_SAFE_KINDS);
+// Mechanical-safe + judgment-suggested kinds (e.g. W6 port-proof) are valid corpus labels.
+const KNOWN_REMEDIATION_KINDS = new Set([...MECHANICAL_SAFE_KINDS, ...JUDGMENT_SUGGESTED_KINDS]);
 
 function listCaseDirs() {
   if (!fs.existsSync(CASES_DIR)) return [];
