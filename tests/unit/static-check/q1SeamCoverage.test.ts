@@ -238,7 +238,9 @@ command = "echo"
 
       const sync = syncBaselineIntoCheckSurfaces(root, { baselineRel: '.ark-baseline.json' });
       expect(sync && typeof sync === 'object').toBe(true);
-      expect(syncBaselineIntoCheckSurfaces(root, { baselineRel: 'missing.json' }).skipped || true).toBeTruthy();
+      expect(syncBaselineIntoCheckSurfaces(root, { baselineRel: 'missing.json' }).skipped).toEqual([
+        'no-baseline-file',
+      ]);
 
       const cov = {
         emptyLayers: ['DomainModel', 'PersistenceAdapters'],

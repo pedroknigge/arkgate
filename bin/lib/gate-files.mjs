@@ -1,44 +1,9 @@
 /**
- * Extracted agent-gates module (install modularization).
+ * Gate file IO: package.json helpers, template writes, required gates.
  */
-import { createRequire } from 'node:module';
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  arkCommand,
-  detectPackageManager,
-  execCommandParts,
-  execRunner,
-  presentLockfiles,
-  usableTypescript,
-  typescriptUsabilityHint,
-  DEFAULT_INTENT_PREFIXES,
-  DEFAULT_LAYER_DIRECTORIES,
-  DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
-  DEFAULT_RULES,
-  createElevenLayerConfig,
-  applyFrameworkLayoutOverlays,
-} from '../ark-shared.mjs';
-import { CORE_LAYER_NAMES } from './core-layers.mjs';
-import { falseGreenAdoptionGap } from './field-install.mjs';
-import {
-  assessCodexHomeMcp,
-  codexConfigPath,
-  codexPromptsDir,
-  isTempOrUpgradeRoot,
-  wireCodexMcp,
-} from './codex-home.mjs';
-import {
-  PREFERRED_MCP_BIN,
-  claudeSettings,
-  grokHooks,
-  grokProjectConfig,
-} from './hook-templates.mjs';
-import { detectWritePathCapabilities } from './write-path-detect.mjs';
-
 
 export const __packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const __arkCheckCli = path.join(__packageRoot, 'bin', 'ark-check.mjs');
@@ -256,13 +221,3 @@ export function writeTemplate(root, relativePath, content, force) {
     return { relativePath, status: 'failed' };
   }
 }
-
-/**
- * Load a TypeScript module with a working JS API host (`sys` + AST + resolve).
- * Prefer the project's install when API-compatible (TS 5/6 + any TS 7 that still
- * exposes the classic JS host). TypeScript 7.0.x main entry is version-only
- * (`{ version, versionMajorMinor }`); programmatic APIs live under
- * `typescript/unstable/*` and are not yet the gate's host — we fall through to
- * ArkGate's own `typescript` dependency (JS-API 5.x) or a bare import.
- * Returns `{ ts, source, version, fallbackReason? }` or null.
- */

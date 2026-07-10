@@ -1,64 +1,21 @@
 /**
- * Extracted agent-gates module (install modularization).
+ * Package-manager commands, agent instruction text, and CI workflow templates.
  */
-import { createRequire } from 'node:module';
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
   arkCommand,
   detectPackageManager,
   execCommandParts,
   execRunner,
-  presentLockfiles,
-  usableTypescript,
-  typescriptUsabilityHint,
   DEFAULT_INTENT_PREFIXES,
   DEFAULT_LAYER_DIRECTORIES,
-  DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
-  DEFAULT_RULES,
-  createElevenLayerConfig,
-  applyFrameworkLayoutOverlays,
 } from '../ark-shared.mjs';
-import { CORE_LAYER_NAMES } from './core-layers.mjs';
 import { falseGreenAdoptionGap } from './field-install.mjs';
-import {
-  assessCodexHomeMcp,
-  codexConfigPath,
-  codexPromptsDir,
-  isTempOrUpgradeRoot,
-  wireCodexMcp,
-} from './codex-home.mjs';
-import {
-  PREFERRED_MCP_BIN,
-  claudeSettings,
-  grokHooks,
-  grokProjectConfig,
-} from './hook-templates.mjs';
-import { detectWritePathCapabilities } from './write-path-detect.mjs';
+import { PREFERRED_MCP_BIN } from './hook-templates.mjs';
+import { readPackageJson } from './gate-files.mjs';
 
-import {
-  readPackageJson,
-  hasCheckArchitectureScript,
-  ensureTypecheckScript,
-  packageScriptsHaveTypecheck,
-  treeHasTypecheckScript,
-  readJson,
-  ensureDirForFile,
-} from './gate-files.mjs';
-
-export function checkArgsForRoot(root, { requireGates = false } = {}) {
-  const baselineFlag = fs.existsSync(path.join(root, '.ark-baseline.json'))
-    ? ' --baseline .ark-baseline.json'
-    : '';
-  const profile = requireGates ? '--strict' : '--strict-config';
-  return `--root . --config ark.config.json ${profile}${baselineFlag}`;
-}
-
-// Field-install helpers live in field-install.mjs (keep agent-gates scannable).
-// Re-export for callers that already import from this module.
+// Field-install helpers re-exported for callers that import from this module.
 export {
   ensureBaselineFlagInCheckCommand,
   syncBaselineIntoCheckSurfaces,
@@ -68,6 +25,15 @@ export {
   FALSE_GREEN_GAP_ID,
   falseGreenAdoptionGap,
 } from './field-install.mjs';
+
+export function checkArgsForRoot(root, { requireGates = false } = {}) {
+  const baselineFlag = fs.existsSync(path.join(root, '.ark-baseline.json'))
+    ? ' --baseline .ark-baseline.json'
+    : '';
+  const profile = requireGates ? '--strict' : '--strict-config';
+  return `--root . --config ark.config.json ${profile}${baselineFlag}`;
+}
+
 
 export function packageManager(root) {
   // CI always require-gates; baseline follows checkArgsForRoot.
@@ -418,5 +384,3 @@ ${qualityBlock ? `${qualityBlock}\n` : ''}      - name: Ark architecture check
         run: ${pm.run}
 `;
 }
-
-/** Normalize --tools from array or comma-separated string (never character-split a string). */

@@ -1,45 +1,9 @@
 /**
- * Extracted agent-gates module (install modularization).
+ * TypeScript host resolution for architecture scan (API-compatible loader).
  */
-import { createRequire } from 'node:module';
-import { spawnSync } from 'node:child_process';
-import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import {
-  arkCommand,
-  detectPackageManager,
-  execCommandParts,
-  execRunner,
-  presentLockfiles,
-  usableTypescript,
-  typescriptUsabilityHint,
-  DEFAULT_INTENT_PREFIXES,
-  DEFAULT_LAYER_DIRECTORIES,
-  DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
-  DEFAULT_RULES,
-  createElevenLayerConfig,
-  applyFrameworkLayoutOverlays,
-} from '../ark-shared.mjs';
-import { CORE_LAYER_NAMES } from './core-layers.mjs';
-import { falseGreenAdoptionGap } from './field-install.mjs';
-import {
-  assessCodexHomeMcp,
-  codexConfigPath,
-  codexPromptsDir,
-  isTempOrUpgradeRoot,
-  wireCodexMcp,
-} from './codex-home.mjs';
-import {
-  PREFERRED_MCP_BIN,
-  claudeSettings,
-  grokHooks,
-  grokProjectConfig,
-} from './hook-templates.mjs';
-import { detectWritePathCapabilities } from './write-path-detect.mjs';
-
-import { __packageRoot } from './gate-files.mjs';
+import { usableTypescript, typescriptUsabilityHint } from '../ark-shared.mjs';
+import { __arkCheckCli } from './gate-files.mjs';
 
 export async function loadTypeScript(root) {
   const { createRequire } = await import('node:module');
@@ -122,9 +86,3 @@ export async function loadTypeScript(root) {
   }
   return null;
 }
-
-/**
- * Args for every emitted `ark-check` (AGENTS.md, package.json, Cursor rule, CI).
- * If `.ark-baseline.json` exists, include `--baseline` so agent/local/CI paths
- * match the ratchet — otherwise agents re-fail on frozen debt (field-test bug).
- */

@@ -1,33 +1,18 @@
 /**
- * Extracted agent-gates module (install modularization).
+ * Migrate command runners and install agent-gate templates.
  */
-import { createRequire } from 'node:module';
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
   arkCommand,
   detectPackageManager,
   execCommandParts,
   execRunner,
   presentLockfiles,
-  usableTypescript,
-  typescriptUsabilityHint,
-  DEFAULT_INTENT_PREFIXES,
-  DEFAULT_LAYER_DIRECTORIES,
-  DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
-  DEFAULT_RULES,
-  createElevenLayerConfig,
-  applyFrameworkLayoutOverlays,
 } from '../ark-shared.mjs';
-import { CORE_LAYER_NAMES } from './core-layers.mjs';
-import { falseGreenAdoptionGap } from './field-install.mjs';
 import {
-  assessCodexHomeMcp,
-  codexConfigPath,
   codexPromptsDir,
+  codexConfigPath,
   isTempOrUpgradeRoot,
   wireCodexMcp,
 } from './codex-home.mjs';
@@ -37,17 +22,10 @@ import {
   grokHooks,
   grokProjectConfig,
 } from './hook-templates.mjs';
-import { detectWritePathCapabilities } from './write-path-detect.mjs';
-
 import {
   hasCheckArchitectureScript,
   ensureTypecheckScript,
   writeTemplate,
-  ensureDirForFile,
-  readJson,
-  readPackageJson,
-  hasArkWorkflow,
-  missingGates,
 } from './gate-files.mjs';
 import {
   packageManager,
@@ -67,27 +45,19 @@ import {
   KNOWN_TOOLS,
   SKILL_TOOL_TARGETS,
   skillTemplates,
-  skillTemplateNames,
   stampSkill,
   installedSkillVersion,
   isVersionOlder,
   detectSkillGaps,
-  detectCodexHomeGap,
   arkPackageVersion,
 } from './skill-install.mjs';
 import { detectDeployPathQuality } from './deploy-path.mjs';
 import {
   stripMcpServerArgs,
-  brokenMcpGateFiles,
-  mcpArgsHaveDuplicateBins,
   COMMAND_GATE_TEXT_FILES,
   COMMAND_GATE_JSON_FILES,
   PREFERRED_CHECK_BIN,
-  PREFERRED_CLI_BIN,
   RUNNER_BEFORE_ARK,
-  ARK_MCP_BINS,
-  ARK_CHECK_BINS,
-  ARK_CLI_BINS,
 } from './mcp-adoption.mjs';
 
 export function staleRunnerGateFiles(root) {
@@ -398,8 +368,19 @@ export function runInstallAgentGates(args) {
   // templates above; Codex reads MCP servers only from ~/.codex/config.toml, so it needs a
   // home-dir merge instead. Fires whenever Codex is in play so `ark://manifest` is live
   // without a manual copy step.
+  //
+  // Skip home-dir mutation when the project root is a temp/upgrade scratch *and*
+  // CODEX_HOME is the default (~/.codex). Fixtures must not rewrite the developer's
+  // real Codex config. When CODEX_HOME is redirected (unit tests set a temp home) or
+  // --codex-home is explicit, wire as usual.
   let codexMcp = null;
-  if (tools.has('codex') || args.codexHome) {
+  const wantCodexWire = tools.has('codex') || args.codexHome;
+  const skipHomeWire =
+    wantCodexWire &&
+    isTempOrUpgradeRoot(root) &&
+    !args.codexHome &&
+    !process.env.CODEX_HOME;
+  if (wantCodexWire && !skipHomeWire) {
     codexMcp = wireCodexMcp(root, args.force);
     console.log('');
     console.log(`Codex MCP registration (${codexMcp.file}):`);
@@ -417,13 +398,23 @@ export function runInstallAgentGates(args) {
       console.log('          RESTART Codex — it does not hot-load MCP servers.');
       console.log('          Then expect: resource ark://manifest + tools validate_code, ark_check, ark_coverage, ark_place.');
     }
+  } else if (skipHomeWire) {
+    codexMcp = { status: 'skipped', file: codexConfigPath(), reason: 'temp-root' };
   }
 
-  const failed = [...results, ...homeResults, ...(codexMcp ? [codexMcp] : [])].filter((result) => result.status === 'failed');
-  if (failed.length > 0) {
-    console.error(`\nFailed to write ${failed.length} template(s).`);
+  // Repo templates + explicit --codex-home skill writes are hard failures.
+  // Home MCP wire is best-effort: unreadable ~/.codex (sandbox, permissions) must not
+  // mark an otherwise successful repo gate install as failed.
+  const hardFailed = [...results, ...homeResults].filter((result) => result.status === 'failed');
+  if (hardFailed.length > 0) {
+    console.error(`\nFailed to write ${hardFailed.length} template(s).`);
     process.exitCode = 1;
     return;
+  }
+  if (codexMcp?.status === 'failed') {
+    console.error(
+      `\nWarning: Codex home MCP registration failed (${codexMcp.message}). Repo gates were written; fix ~/.codex access or re-run with --tools codex --force.`
+    );
   }
   console.log('');
   console.log('Next steps:');
@@ -449,5 +440,3 @@ export function runInstallAgentGates(args) {
   }
   warnLockfileConflict(root);
 }
-
-

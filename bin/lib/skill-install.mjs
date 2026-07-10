@@ -1,44 +1,9 @@
 /**
- * Extracted agent-gates module (install modularization).
+ * Tool detection, skill templates, stamping, and skill freshness gaps.
  */
-import { createRequire } from 'node:module';
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import {
-  arkCommand,
-  detectPackageManager,
-  execCommandParts,
-  execRunner,
-  presentLockfiles,
-  usableTypescript,
-  typescriptUsabilityHint,
-  DEFAULT_INTENT_PREFIXES,
-  DEFAULT_LAYER_DIRECTORIES,
-  DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
-  DEFAULT_RULES,
-  createElevenLayerConfig,
-  applyFrameworkLayoutOverlays,
-} from '../ark-shared.mjs';
-import { CORE_LAYER_NAMES } from './core-layers.mjs';
-import { falseGreenAdoptionGap } from './field-install.mjs';
-import {
-  assessCodexHomeMcp,
-  codexConfigPath,
-  codexPromptsDir,
-  isTempOrUpgradeRoot,
-  wireCodexMcp,
-} from './codex-home.mjs';
-import {
-  PREFERRED_MCP_BIN,
-  claudeSettings,
-  grokHooks,
-  grokProjectConfig,
-} from './hook-templates.mjs';
-import { detectWritePathCapabilities } from './write-path-detect.mjs';
-
+import { codexPromptsDir } from './codex-home.mjs';
 import { __packageRoot, readJson } from './gate-files.mjs';
 
 export function normalizeToolsList(tools) {
@@ -292,33 +257,3 @@ export function detectSkillGaps(root) {
   }
   return gaps;
 }
-
-// Files carrying an emitted Ark command whose runner (npx / pnpm exec / yarn) should match
-// the project's package manager. .mcp.json / .cursor/mcp.json hold it structurally
-// (command/args); the rest hold it as text ("npx ark-check …", incl. .claude/settings.json
-// hook strings and the package.json check:architecture script).
-const COMMAND_GATE_TEXT_FILES = [
-  '.claude/settings.json', 'AGENTS.md', '.cursor/rules/ark.mdc', '.windsurf/rules/ark.md',
-  '.clinerules/ark.md', '.github/copilot-instructions.md', '.kiro/steering/ark.md',
-  '.roo/rules/ark.md', '.continue/rules/ark.md', 'GEMINI.md', 'package.json',
-  '.grok/hooks/ark-write-gate.json', '.grok/config.toml',
-];
-const COMMAND_GATE_JSON_FILES = ['.mcp.json', '.cursor/mcp.json'];
-// Primary CLI names (product) + one-major aliases. migrate-commands must strip ALL of these
-// before re-emitting a single preferred bin — otherwise a partial rename leaves
-// args: ["ark-mcp", "arkgate-mcp", ...] which breaks stdio MCP hosts.
-const ARK_MCP_BINS = new Set(['arkgate-mcp', 'ark-mcp']);
-const ARK_CHECK_BINS = new Set(['arkgate-check', 'ark-check']);
-const ARK_CLI_BINS = new Set(['arkgate', 'ark']);
-// PREFERRED_MCP_BIN lives in hook-templates.mjs (re-exported above).
-const PREFERRED_CHECK_BIN = 'arkgate-check';
-const PREFERRED_CLI_BIN = 'arkgate';
-// Runner argv noise that is not a bin argument (pnpm exec form).
-const MCP_RUNNER_ARGV = new Set(['exec', '--config.verify-deps-before-run=false']);
-// The runner token immediately before an ark command in a text command string.
-// Matches npm/yarn runners and both pnpm forms (legacy `pnpm exec` + verify-deps-safe form).
-// Longer bin names first so `arkgate-check` is not partially matched as `ark`.
-const RUNNER_BEFORE_ARK =
-  /\b(?:npx|pnpm --config\.verify-deps-before-run=false exec|pnpm exec|yarn)(?= (?:arkgate-check|arkgate-mcp|arkgate|ark-check|ark-mcp|ark)\b)/g;
-
-/** Keep only MCP server flags from existing args (drop runner tokens + any ark* bin names). */
