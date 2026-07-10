@@ -51,8 +51,8 @@ arkgate-check --watch
 
 | `class` | Agent may auto-apply? | Examples (`remediationKind`) |
 |---------|----------------------|------------------------------|
-| `mechanical-safe` | Yes (validate + rollback) | `type-only-import-move`, `pure-type-file-relocate`, `import-type-from-pure-type-module`, `import-type-of-type-exports`, `port-proof-inject-binding` (W6, proof-gated) |
-| `judgment` | No — propose | free value-import uses, multi-file ports, infra relocate, cycles |
+| `mechanical-safe` | Yes (validate + rollback) | `type-only-import-move`, `pure-type-file-relocate`, `import-type-from-pure-type-module`, `import-type-of-type-exports` |
+| `judgment` | No — propose | free value-import uses, multi-file ports, **W6 port-proof inject** (arity change), infra relocate, cycles |
 | `deferred` | No | unclear shape |
 
 ## Violation JSON (enthusiast fields)

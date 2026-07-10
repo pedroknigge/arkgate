@@ -63,8 +63,8 @@ describe('port-proof inject (W6)', () => {
     expect(out!.source).not.toMatch(/import\s*\{\s*db\s*\}/);
   });
 
-  it('classifyRemediation marks portProofEligible as mechanical-safe W6 kind', () => {
-    expect(MECHANICAL_SAFE_KINDS).toContain('port-proof-inject-binding');
+  it('classifyRemediation marks portProofEligible as judgment (suggested kind, not auto-safe)', () => {
+    expect(MECHANICAL_SAFE_KINDS).not.toContain('port-proof-inject-binding');
     const v = classifyRemediation({
       ruleId: 'LAYER_IMPORT_VIOLATION',
       edgeKind: 'import',
@@ -72,8 +72,24 @@ describe('port-proof inject (W6)', () => {
       fromLayer: 'DomainModel',
       toLayer: 'PersistenceAdapters',
     });
-    expect(v.class).toBe('mechanical-safe');
+    expect(v.class).toBe('judgment');
     expect(v.remediationKind).toBe('port-proof-inject-binding');
+  });
+
+  it('apply refuses rest-parameter functions (illegal syntax)', () => {
+    const src = `import { db } from '../infra/db';\nexport function f(...args: string[]) {\n  return db.save(args[0]);\n}\n`;
+    // prove may still see binding.method form; apply must fail closed
+    expect(applyPortProofInject(ts, src)).toBeNull();
+  });
+
+  it('peerIsolation + typeOnly stays judgment (not type-only-import-move)', () => {
+    const v = classifyRemediation({
+      ruleId: 'LAYER_IMPORT_VIOLATION',
+      peerIsolation: true,
+      typeOnly: true,
+    });
+    expect(v.class).toBe('judgment');
+    expect(v.remediationKind).toBeUndefined();
   });
 
   it('classifyRemediation keeps value import without proof as judgment', () => {

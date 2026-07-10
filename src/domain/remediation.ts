@@ -23,7 +23,9 @@ export type RemediationKind =
   | 'import-type-of-type-exports'
   /**
    * W6: single named value import used only as `binding.method(...)` inside function
-   * declarations — inject binding as a typed port parameter (static proof + eval-gated).
+   * declarations — inject binding as a typed port parameter (static proof available).
+   * Stays **judgment** for auto-apply: transform changes call arity (outer layer must inject).
+   * Module-local body proof is not program-wide behavior preservation.
    */
   | 'port-proof-inject-binding';
 
@@ -33,6 +35,14 @@ export const MECHANICAL_SAFE_KINDS: readonly RemediationKind[] = [
   'type-only-import-move',
   'import-type-from-pure-type-module',
   'import-type-of-type-exports',
+  // port-proof-inject-binding is intentionally NOT mechanical-safe (signature change).
+] as const;
+
+/**
+ * Judgment-class kinds that still have a named transform / plan label (eval corpus vocabulary).
+ * Never auto-apply without multi-file / caller proof.
+ */
+export const JUDGMENT_SUGGESTED_KINDS: readonly RemediationKind[] = [
   'port-proof-inject-binding',
 ] as const;
 
@@ -151,8 +161,8 @@ export function classifyRemediation(violation: ArkViolationLike | null | undefin
           'Named bindings are type-only exports of the target module (even if the file also exports values): convert to `import type` / `export type` (erased at runtime). Gate verifies.',
       };
     }
-    // W6: port-proof inject — only when scan/static proof set portProofEligible.
-    // Value/require/dynamic/mixed without proof stay judgment (fail closed).
+    // W6: port-proof inject is a *suggested* shape when proof holds, but always judgment
+    // for auto-apply — adding a required parameter breaks external call sites.
     if (
       violation?.portProofEligible &&
       edgeKind !== 'require' &&
@@ -160,11 +170,11 @@ export function classifyRemediation(violation: ArkViolationLike | null | undefin
       !violation?.typeOnly
     ) {
       return {
-        class: 'mechanical-safe',
-        confidence: 0.8,
+        class: 'judgment',
+        confidence: 0.82,
         remediationKind: 'port-proof-inject-binding',
         rationale:
-          'Single named value import used only as binding.method(...) inside function declarations: inject the binding as a port parameter (call sites preserved). Outer layer must pass the implementation. Static proof of body-identical evaluation when the param equals the former import; gate revalidates.',
+          'Port-proof shape: single named value import used only as binding.method(...) in function declarations. Inject as a port parameter (body-local calls preserved) — outer layer must pass the impl. Not mechanical-safe auto-apply: call arity changes. Apply via agent judgment / multi-file plan.',
       };
     }
     return {

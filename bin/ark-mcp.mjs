@@ -14,7 +14,8 @@
  *   - tool      validate_code   — runs Ark's AI code gate on a source snippet; returns
  *                                 { valid, violations, autoPatch? } and sets isError when invalid.
  *                                 autoPatch (W1) is a gate-revalidated rewrite for mechanical-safe
- *                                 import-type kinds only; discarded if post-patch still invalid.
+ *                                 import-type kinds only (not W6 port-proof — signature change is judgment);
+ *                                 discarded if post-patch still invalid.
  *   - tool      ark_prepare_write — W2: place + constrain + validate + autoPatch + judgmentBrief
  *                                 + contentHash (composes ark_place + write gate; not a second contract).
  *   - tool      ark_recommend   — deterministic application-shape plan (same as

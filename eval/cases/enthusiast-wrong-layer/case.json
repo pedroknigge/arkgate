@@ -1,10 +1,10 @@
 {
-  "description": "Enthusiast wrong-layer: domain imports persistence via a single binding.method(...) — W6 port-proof inject is mechanical-safe when static proof holds.",
+  "description": "Enthusiast wrong-layer: domain imports persistence via a single binding.method(...) — W6 may label port-proof-inject-binding as suggested judgment (not mechanical-safe).",
   "expectedFix": "Inject the binding as a port parameter (or introduce a richer port). Do not import src/infra from domain as a value dependency.",
   "mustKeep": ["src/domain/order.ts"],
   "theme": "wrong-layer",
   "expectedRuleId": "LAYER_IMPORT_VIOLATION",
   "expectedFixClass": "port-inversion",
-  "expectedRemediationClass": "mechanical-safe",
+  "expectedRemediationClass": "judgment",
   "expectedRemediationKind": "port-proof-inject-binding"
 }

@@ -289,16 +289,19 @@ export function applyPortProofInject(ts, source, opts = {}) {
     if (params.some((p) => ts.isIdentifier(p.name) && p.name.text === bindingName)) {
       continue;
     }
-    const insertAt =
-      params.length > 0
-        ? params[params.length - 1].getEnd()
-        : stmt.parameters.pos !== undefined
-          ? // empty param list: find `(` after name
-            source.indexOf('(', stmt.name.getEnd())
-          : -1;
-    let at;
+    // Fail closed: rest params / non-identifier patterns would yield illegal TS
+    // (e.g. function f(...args, db: Port)).
+    if (
+      params.some(
+        (p) =>
+          p.dotDotDotToken ||
+          !ts.isIdentifier(p.name)
+      )
+    ) {
+      return null;
+    }
     if (params.length > 0) {
-      at = params[params.length - 1].getEnd();
+      const at = params[params.length - 1].getEnd();
       fnEdits.push({
         start: at,
         end: at,
@@ -307,7 +310,7 @@ export function applyPortProofInject(ts, source, opts = {}) {
     } else {
       const open = source.indexOf('(', stmt.name.getEnd());
       if (open < 0) continue;
-      at = open + 1;
+      const at = open + 1;
       fnEdits.push({
         start: at,
         end: at,

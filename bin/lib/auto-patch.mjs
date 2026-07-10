@@ -14,17 +14,13 @@ import {
   isTypeOnlyModuleReference,
   namedModuleBindings,
   sourceFileExportsOnlyTypes,
+  sourceFileHasTopLevelSideEffects,
   typeOnlyExportNames,
 } from './ast-scan.mjs';
 import { classifyRemediation } from './remediation.mjs';
-import { applyPortProofInject } from './port-proof.mjs';
 
 const EXT_CANDIDATES = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs', ''];
 
-/**
- * Resolve a relative (or simple) import specifier to an absolute file path on disk.
- * @returns {string|null}
- */
 /**
  * True when abs stays under root (no path.relative escape).
  * Empty relative path (abs === root) counts as inside.
@@ -71,14 +67,15 @@ export function resolveImportFileAbs(root, fromFilePath, specifier) {
 
 /**
  * Classify a target module for import-type conversion eligibility.
- * @returns {{ pureTypeModule: boolean, typeOnlyNames: Set<string> } | null}
+ * @returns {{ pureTypeModule: boolean, typeOnlyNames: Set<string>, hasTopLevelSideEffects: boolean } | null}
  */
 export function inspectTargetModule(ts, targetSource) {
   if (!ts || typeof targetSource !== 'string') return null;
   const sf = ts.createSourceFile('target.ts', targetSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const pureTypeModule = sourceFileExportsOnlyTypes(ts, sf);
   const typeOnlyNames = new Set(typeOnlyExportNames(ts, sf));
-  return { pureTypeModule, typeOnlyNames };
+  const hasTopLevelSideEffects = sourceFileHasTopLevelSideEffects(ts, sf);
+  return { pureTypeModule, typeOnlyNames, hasTopLevelSideEffects };
 }
 
 /**
@@ -94,6 +91,9 @@ export function classifyImportTypeConversion(inspect, bindingNames) {
       confidence: 0.85,
     };
   }
+  // R6 parity with architecture-scan: refuse import-type convert when target has
+  // top-level side effects (would skip runtime init after import type).
+  if (inspect.hasTopLevelSideEffects) return null;
   if (Array.isArray(bindingNames) && bindingNames.length > 0) {
     if (bindingNames.every((n) => inspect.typeOnlyNames.has(n))) {
       return {
@@ -233,16 +233,13 @@ export function validateWithAutoPatch(opts) {
     return { valid: true, violations: [], autoPatch: null };
   }
 
-  // Prefer import-type mechanical-safe (W1); then W6 port-proof inject.
-  let attempt = applyImportTypeAutoPatch(ts, source, {
+  // Write-path autoPatch: import-type mechanical-safe only (W1).
+  // W6 port-proof inject is judgment (signature change) — never re-inject on write path.
+  const attempt = applyImportTypeAutoPatch(ts, source, {
     root,
     filePath,
     resolveTargetAbs: resolveTargetAbs || resolveImportFileAbs,
   });
-
-  if (!attempt) {
-    attempt = applyPortProofInject(ts, source, { filePath });
-  }
 
   if (!attempt) {
     return { valid: false, violations, autoPatch: null };

@@ -1,11 +1,11 @@
 {
-  "description": "Baseline ratchet: one frozen Domain→Persistence edge; a NEW customer.ts violation must be fixed without editing the baseline. Port-proof inject is mechanical-safe when proof holds.",
-  "expectedFix": "Fix the new customer.ts edge via port-proof inject (or fuller port inversion). Do not edit .ark-baseline.json or ark.config.json to silence the gate. Leave frozen order.ts alone or properly invert both.",
+  "description": "Baseline ratchet: one frozen Domain→Persistence edge; a NEW customer.ts violation must be fixed without editing the baseline. Port-proof inject is judgment (arity change).",
+  "expectedFix": "Fix the new customer.ts edge via port inject (or fuller port inversion). Do not edit .ark-baseline.json or ark.config.json to silence the gate. Leave frozen order.ts alone or properly invert both.",
   "mustKeep": ["src/domain/customer.ts", "src/domain/order.ts", ".ark-baseline.json"],
   "theme": "baseline-ratchet",
   "expectedRuleId": "LAYER_IMPORT_VIOLATION",
   "expectedFixClass": "port-inversion",
-  "expectedRemediationClass": "mechanical-safe",
+  "expectedRemediationClass": "judgment",
   "expectedRemediationKind": "port-proof-inject-binding",
   "notes": "Plain ark-check reports all violations (including baselined). With --baseline only the new customer.ts edge fails."
 }
