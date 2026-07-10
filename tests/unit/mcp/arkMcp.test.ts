@@ -193,6 +193,8 @@ describe('ark-mcp server (write-path gate)', () => {
       expect(payload.forbiddenGlobals).toContain('fetch');
       expect(payload.contentHash).toMatch(/^sha256:/);
       expect(payload.valid).toBe(false);
+      // Proposed source still invalid → isError (autoPatch is additive, not soft-success)
+      expect(res.result.isError).toBe(true);
       expect(payload.autoPatch?.valid).toBe(true);
       expect(payload.autoPatch?.source).toMatch(/import\s+type/);
       // clean snippet → valid
@@ -482,6 +484,218 @@ describe('ark-mcp --hook (PreToolUse gate)', () => {
     // would-be infra layer at the exemption.
     expect(result.stderr).toContain('Fix:');
     expect(result.stderr).toContain('mayImportInfrastructure');
+  });
+
+  it('W4: default --hook is reject-only (no ARK_AUTOPATCH_JSON); still exit 2', () => {
+    const apRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-hook-reject-'));
+    try {
+      fs.mkdirSync(path.join(apRoot, 'src/domain'), { recursive: true });
+      fs.mkdirSync(path.join(apRoot, 'src/infra'), { recursive: true });
+      fs.writeFileSync(
+        path.join(apRoot, 'src/infra/types-only.ts'),
+        'export type Row = { id: string };\nexport interface Item { n: number }\n'
+      );
+      fs.writeFileSync(
+        path.join(apRoot, 'ark.config.json'),
+        JSON.stringify({
+          include: ['src'],
+          layers: [
+            {
+              name: 'DomainModel',
+              patterns: ['src/domain/**'],
+              intentPrefixes: ['Domain.'],
+            },
+            {
+              name: 'PersistenceAdapters',
+              patterns: ['src/infra/**'],
+              intentPrefixes: ['Adapter.Persistence.'],
+            },
+          ],
+          rules: [{ from: 'DomainModel', to: 'PersistenceAdapters', allowed: false }],
+        })
+      );
+      const payload = {
+        tool_name: 'Write',
+        tool_input: {
+          file_path: path.join(apRoot, 'src/domain/use-row.ts'),
+          content:
+            "import { Row } from '../infra/types-only';\nexport function id(r: Row): string { return r.id; }\n",
+        },
+      };
+      const result = runHook(apRoot, payload);
+      expect(result.status).toBe(2);
+      expect(result.stderr).not.toContain('ARK_AUTOPATCH_JSON:');
+      expect(result.stderr).not.toContain('ARK_REPAIR_JSON:');
+      expect(result.stderr).toMatch(/ARK_HOOK_REPAIR=1|--hook-repair/);
+    } finally {
+      fs.rmSync(apRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('W4: --hook-repair emits ARK_REPAIR_JSON + ARK_AUTOPATCH_JSON (still exit 2, never allow)', () => {
+    const apRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-hook-repair-'));
+    try {
+      fs.mkdirSync(path.join(apRoot, 'src/domain'), { recursive: true });
+      fs.mkdirSync(path.join(apRoot, 'src/infra'), { recursive: true });
+      fs.writeFileSync(
+        path.join(apRoot, 'src/infra/types-only.ts'),
+        'export type Row = { id: string };\nexport interface Item { n: number }\n'
+      );
+      fs.writeFileSync(
+        path.join(apRoot, 'ark.config.json'),
+        JSON.stringify({
+          include: ['src'],
+          layers: [
+            {
+              name: 'DomainModel',
+              patterns: ['src/domain/**'],
+              intentPrefixes: ['Domain.'],
+            },
+            {
+              name: 'PersistenceAdapters',
+              patterns: ['src/infra/**'],
+              intentPrefixes: ['Adapter.Persistence.'],
+            },
+          ],
+          rules: [{ from: 'DomainModel', to: 'PersistenceAdapters', allowed: false }],
+        })
+      );
+      const payload = {
+        tool_name: 'Write',
+        tool_input: {
+          file_path: path.join(apRoot, 'src/domain/use-row.ts'),
+          content:
+            "import { Row } from '../infra/types-only';\nexport function id(r: Row): string { return r.id; }\n",
+        },
+      };
+      const result = spawnSync(
+        'node',
+        [mcpBin, '--hook', '--hook-repair', '--root', apRoot],
+        {
+          input: JSON.stringify(payload),
+          encoding: 'utf8',
+          env: process.env,
+        }
+      );
+      expect(result.status).toBe(2);
+      expect(result.stderr).toContain('ARK_REPAIR_JSON:');
+      expect(result.stderr).toContain('ARK_AUTOPATCH_JSON:');
+      const repairLine = result.stderr
+        .split('\n')
+        .find((l) => l.startsWith('ARK_REPAIR_JSON:'));
+      expect(repairLine).toBeTruthy();
+      const repair = JSON.parse(repairLine!.slice('ARK_REPAIR_JSON:'.length));
+      expect(repair.mode).toBe('repair');
+      expect(repair.decision).toBe('deny');
+      expect(repair.autoPatch?.valid).toBe(true);
+      expect(repair.autoPatch?.source).toMatch(/import\s+type/);
+      expect(repair.autoPatch?.remediationKind).toMatch(/import-type/);
+      const patchLine = result.stderr
+        .split('\n')
+        .find((l) => l.startsWith('ARK_AUTOPATCH_JSON:'));
+      const patch = JSON.parse(patchLine!.slice('ARK_AUTOPATCH_JSON:'.length));
+      expect(patch.source).toBe(repair.autoPatch.source);
+    } finally {
+      fs.rmSync(apRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('W4: ARK_HOOK_REPAIR=1 enables repair payload without --hook-repair flag', () => {
+    const apRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-hook-env-repair-'));
+    try {
+      fs.mkdirSync(path.join(apRoot, 'src/domain'), { recursive: true });
+      fs.mkdirSync(path.join(apRoot, 'src/infra'), { recursive: true });
+      fs.writeFileSync(
+        path.join(apRoot, 'src/infra/types-only.ts'),
+        'export type Row = { id: string };\n'
+      );
+      fs.writeFileSync(
+        path.join(apRoot, 'ark.config.json'),
+        JSON.stringify({
+          include: ['src'],
+          layers: [
+            { name: 'DomainModel', patterns: ['src/domain/**'], intentPrefixes: ['Domain.'] },
+            {
+              name: 'PersistenceAdapters',
+              patterns: ['src/infra/**'],
+              intentPrefixes: ['Adapter.Persistence.'],
+            },
+          ],
+          rules: [{ from: 'DomainModel', to: 'PersistenceAdapters', allowed: false }],
+        })
+      );
+      const result = runHook(
+        apRoot,
+        {
+          tool_name: 'Write',
+          tool_input: {
+            file_path: path.join(apRoot, 'src/domain/use-row.ts'),
+            content:
+              "import { Row } from '../infra/types-only';\nexport function id(r: Row): string { return r.id; }\n",
+          },
+        },
+        { ARK_HOOK_REPAIR: '1' }
+      );
+      expect(result.status).toBe(2);
+      expect(result.stderr).toContain('ARK_REPAIR_JSON:');
+    } finally {
+      fs.rmSync(apRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('W4: Grok deny JSON includes autoPatch only when repair mode is on', () => {
+    const apRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-hook-grok-repair-'));
+    try {
+      fs.mkdirSync(path.join(apRoot, 'src/domain'), { recursive: true });
+      fs.mkdirSync(path.join(apRoot, 'src/infra'), { recursive: true });
+      fs.writeFileSync(
+        path.join(apRoot, 'src/infra/types-only.ts'),
+        'export type Row = { id: string };\n'
+      );
+      fs.writeFileSync(
+        path.join(apRoot, 'ark.config.json'),
+        JSON.stringify({
+          include: ['src'],
+          layers: [
+            { name: 'DomainModel', patterns: ['src/domain/**'], intentPrefixes: ['Domain.'] },
+            {
+              name: 'PersistenceAdapters',
+              patterns: ['src/infra/**'],
+              intentPrefixes: ['Adapter.Persistence.'],
+            },
+          ],
+          rules: [{ from: 'DomainModel', to: 'PersistenceAdapters', allowed: false }],
+        })
+      );
+      const payload = {
+        toolName: 'write',
+        toolInput: {
+          file_path: path.join(apRoot, 'src/domain/use-row.ts'),
+          content:
+            "import { Row } from '../infra/types-only';\nexport function id(r: Row): string { return r.id; }\n",
+        },
+      };
+      const off = spawnSync('node', [mcpBin, '--hook', '--root', apRoot], {
+        input: JSON.stringify(payload),
+        encoding: 'utf8',
+      });
+      expect(off.status).toBe(2);
+      const offJson = JSON.parse(off.stdout.trim().split('\n').pop()!);
+      expect(offJson.decision).toBe('deny');
+      expect(offJson.autoPatch).toBeUndefined();
+
+      const on = spawnSync('node', [mcpBin, '--hook', '--hook-repair', '--root', apRoot], {
+        input: JSON.stringify(payload),
+        encoding: 'utf8',
+      });
+      expect(on.status).toBe(2);
+      const onJson = JSON.parse(on.stdout.trim().split('\n').pop()!);
+      expect(onJson.decision).toBe('deny');
+      expect(onJson.repair).toBe(true);
+      expect(onJson.autoPatch?.source).toMatch(/import\s+type/);
+    } finally {
+      fs.rmSync(apRoot, { recursive: true, force: true });
+    }
   });
 
   it('allows a clean Write (exit 0)', () => {

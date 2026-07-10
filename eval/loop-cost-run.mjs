@@ -126,11 +126,13 @@ function loadCase(id) {
 
 /**
  * One fixture turn: try import-type autoPatch on every .ts/.tsx under src/.
- * Returns { changed, writePathCleared } where writePathCleared means at least one
- * file received a revalidated import-type patch (W1 write-boundary green).
+ * Returns { changed, writePathCleared }. writePathCleared means at least one file
+ * got a non-no-op import-type rewrite from applyImportTypeAutoPatch (fixture proxy
+ * for the W1 write-boundary path). Full AICodeGate revalidation lives in
+ * validateWithAutoPatch / MCP tests; this harness measures mechanical rewrite turns.
  *
- * Note: ark-check may still report type-only layer debt (plan surface). Loop cost
- * for the agent write path is write-gate / autoPatch success, not full CI green.
+ * Note: ark-check may still report type-only layer debt (`arkCheckGreen` separate).
+ * Loop cost "green" = write-path autoPatch success, not full CI green.
  */
 function applyAutoPatchTurn(root, ts) {
   let changed = false;
@@ -141,13 +143,16 @@ function applyAutoPatchTurn(root, ts) {
   for (const rel of files) {
     const abs = path.join(srcRoot, rel);
     const before = fs.readFileSync(abs, 'utf8');
-    // Skip already type-only pure files with no value imports to convert
     const patch = applyImportTypeAutoPatch(ts, before, {
       root,
       filePath: abs,
       resolveTargetAbs: resolveImportFileAbs,
     });
-    if (patch && patch.source !== before) {
+    if (
+      patch &&
+      patch.source !== before &&
+      /\bimport\s+type\b|\bexport\s+type\b/.test(patch.source)
+    ) {
       fs.writeFileSync(abs, patch.source);
       changed = true;
       writePathCleared = true;

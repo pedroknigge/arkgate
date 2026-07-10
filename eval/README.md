@@ -127,8 +127,9 @@ node eval/loop-cost-run.mjs --write-baseline
 | `eval/loop-cost-report.json` | Latest run |
 | `eval/loop-cost-baseline.json` | Captured baseline for ÷10 targets after W1–W2 |
 
-**Green for type-only cases** = write-path cleared via revalidated autoPatch (1 turn
-baseline). Full `ark-check` may still list type-placement debt for plan/loop.
+**Green for type-only cases** = write-path cleared via mechanical import-type autoPatch
+(fixture proxy for W1; 1 turn baseline). Report also records `arkCheckGreen` separately —
+full `ark-check` may still list type-placement debt for plan/loop.
 **Judgment cases** report `JUDGMENT_REQUIRED` without autoPatch (not CHEATED).
 Live agents remain optional/nightly (`eval:agent`); not required for this harness.
 

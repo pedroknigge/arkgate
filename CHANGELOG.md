@@ -6,6 +6,10 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ### Added
 
+- **W4 opt-in hook repair payload:** `--hook-repair` / `ARK_HOOK_REPAIR=1` on deny emits
+  `ARK_REPAIR_JSON` + `ARK_AUTOPATCH_JSON` (stderr) and optional Grok `autoPatch` (stdout).
+  Default `--hook` remains hard-block prose only. Install templates (Claude/Grok) include
+  `--hook-repair`. Never silent write.
 - **W3 loop-cost eval harness:** `eval/loop-cost-run.mjs` / `npm run eval:loop-cost`
   records turns-to-green, optional tokens, CHEATED (fixture-measured). Baseline
   `eval/loop-cost-baseline.json` (medianTurnsTypeOnly=1, cheatedRate=0).
@@ -23,6 +27,9 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 - **Write gate type-only edges:** `import type` / `export type` no longer hard-block
   LAYER_IMPORT / infra heuristics on the write path (erased at runtime). Value imports
   and peerIsolation still deny. ark-check plan continues to surface type placement debt.
+- **`ark_prepare_write` isError:** always `isError` when proposed source is invalid
+  (autoPatch is additive recovery, not soft-success).
+- **`resolveImportFileAbs`:** confines disk reads under project root (no path escape).
 
 ## 2.9.2 — 2026-07-09
 

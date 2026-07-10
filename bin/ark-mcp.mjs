@@ -21,12 +21,16 @@
  *                                 ark-check --recommend --json)
  *
  * Usage: ark-mcp [--root <dir>] [--config ark.config.json] [--manifest <manifest.json>]
- *        ark-mcp --hook [--root <dir>] [--config ark.config.json]
+ *        ark-mcp --hook [--hook-repair] [--root <dir>] [--config ark.config.json]
  *
  * --hook runs one-shot instead of serving: it reads a Claude Code PreToolUse payload from
  * stdin, validates the file content a Write/Edit/MultiEdit is about to produce, and exits
  * 2 with the violations on stderr when the write must be blocked (0 otherwise). This is
  * the copy-paste integration for agent runtimes whose hooks run shell commands.
+ *
+ * --hook-repair (W4, also ARK_HOOK_REPAIR=1): on deny, emit machine-readable
+ * ARK_REPAIR_JSON / ARK_AUTOPATCH_JSON on stderr (and autoPatch in Grok deny JSON).
+ * Never silently writes the file — default and repair mode both hard-block.
  *
  * --session-context runs one-shot and prints a compact contract summary (layers, rule
  * count, forbidden globals, baseline state, check command) to stdout. Bind it to a
@@ -55,6 +59,17 @@ import { composePrepareWrite } from './lib/prepare-write.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 
+/**
+ * W4 — opt-in hook repair payload.
+ * True when CLI `--hook-repair` or env ARK_HOOK_REPAIR is 1/true/yes.
+ * Default remains hard block with prose violations only (no machine-readable patch).
+ */
+function envTruthy(name) {
+  const v = process.env[name];
+  if (v == null || v === '') return false;
+  return /^(1|true|yes|on)$/i.test(String(v).trim());
+}
+
 function parseArgs(argv) {
   const args = {
     root: process.cwd(),
@@ -62,17 +77,26 @@ function parseArgs(argv) {
     configExplicit: false,
     manifest: undefined,
     hook: false,
+    /** When true with --hook: emit ARK_REPAIR_JSON / ARK_AUTOPATCH_JSON (never silent write). */
+    hookRepair: false,
     sessionContext: false,
   };
   for (let i = 2; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--hook') args.hook = true;
-    else if (a === '--session-context') args.sessionContext = true;
+    else if (a === '--hook-repair') {
+      args.hook = true;
+      args.hookRepair = true;
+    } else if (a === '--session-context') args.sessionContext = true;
     else if (a === '--root') args.root = path.resolve(argv[++i]);
     else if (a === '--config') {
       args.config = argv[++i];
       args.configExplicit = true;
     } else if (a === '--manifest') args.manifest = argv[++i];
+  }
+  // Env can enable repair without rewriting host templates (ARK_HOOK_REPAIR=1).
+  if (envTruthy('ARK_HOOK_REPAIR')) {
+    args.hookRepair = true;
   }
   return args;
 }
@@ -220,8 +244,9 @@ function runHook(gate, config, args, ts) {
 
   const layer = inferLayer(filePath, config, args.root);
   const validateOnce = (src) => gate.validate(src, { layer, filePath });
-  // W1: try mechanical-safe import-type autoPatch; re-validate or discard (never silent write).
-  const patched = ts
+  // W1: one validation pass (+ optional autoPatch). Original write still blocked when
+  // invalid; hosts must apply autoPatch explicitly (never silent write).
+  const result = ts
     ? validateWithAutoPatch({
         source,
         filePath,
@@ -230,18 +255,22 @@ function runHook(gate, config, args, ts) {
         validate: validateOnce,
         resolveTargetAbs: resolveImportFileAbs,
       })
-    : { valid: false, violations: validateOnce(source).violations, autoPatch: null };
-
-  // If autoPatch exists and is valid, the *original* write is still blocked (hosts must apply
-  // the patch explicitly). If original was already valid, exit allow.
-  const result = validateOnce(source);
+    : (() => {
+        const once = validateOnce(source);
+        return {
+          valid: Boolean(once.valid),
+          violations: once.violations ?? [],
+          autoPatch: null,
+        };
+      })();
   if (result.valid) return;
 
   // Ratchet semantics (same philosophy as ark-check --baseline): an edit is blocked only
   // when it ADDS violations relative to the file's current on-disk state. Otherwise a
   // pre-existing violation — frozen in a baseline or predating Ark adoption — would make
-  // every subsequent edit to that file un-writable while CI passes. Keys ignore line
-  // numbers (edits shift them) and collapse duplicates, mirroring ark-check's baselineKey.
+  // every subsequent edit to that file un-writable while CI passes. Same-file keys ignore
+  // line numbers (edits shift them); simpler than full baselineKey (no file/layer fields
+  // needed — this file is fixed).
   const violationKey = (violation) => `${violation.ruleId}|${violation.target ?? violation.message}`;
   let existingKeys = new Set();
   try {
@@ -252,7 +281,7 @@ function runHook(gate, config, args, ts) {
   } catch {
     // New file: nothing pre-exists, every violation is new.
   }
-  const newViolations = result.violations.filter(
+  const newViolations = (result.violations ?? []).filter(
     (violation) => !existingKeys.has(violationKey(violation))
   );
   if (newViolations.length === 0) return;
@@ -267,28 +296,66 @@ function runHook(gate, config, args, ts) {
   const suggestions = [
     ...new Set(newViolations.map((violation) => violation.suggestion).filter(Boolean)),
   ];
-  const autoPatch = patched.autoPatch;
+  const autoPatch = result.autoPatch;
+  // W4: structured repair payload is opt-in (--hook-repair / ARK_HOOK_REPAIR).
+  // Default remains hard block with prose only — hosts that cannot re-inject stay clean.
+  const repair = Boolean(args.hookRepair);
   const message = [
     `Ark architecture gate blocked this write to ${rel}${layer ? ` (layer: ${layer})` : ''}:`,
     ...lines,
     ...(suggestions.length > 0 ? ['Fix:', ...suggestions.map((s) => `  ${s}`)] : []),
-    ...(autoPatch
+    ...(autoPatch && repair
       ? [
           `autoPatch available (${autoPatch.remediationKind}, confidence ${autoPatch.confidence}): ` +
-            'apply the patched source from the JSON payload instead of re-drafting.',
+            'apply the patched source from ARK_AUTOPATCH_JSON / ARK_REPAIR_JSON on stderr' +
+            (grokStyle ? ' (or autoPatch in the deny JSON on stdout)' : '') +
+            ' instead of re-drafting. Gate still denies this write (never silent apply).',
+        ]
+      : []),
+    ...(autoPatch && !repair
+      ? [
+          `Mechanical-safe autoPatch is available (${autoPatch.remediationKind}). ` +
+            'Enable repair payload with ARK_HOOK_REPAIR=1 or --hook-repair to receive ' +
+            'machine-readable source (still hard-blocks; host re-injects).',
         ]
       : []),
     'Fix the violations and retry. The architecture contract is available as the ark://manifest MCP resource.',
   ].join('\n');
   process.stderr.write(message + '\n');
+
+  if (repair) {
+    // Structured envelope for any host that can re-inject. Never writes the file.
+    const repairPayload = {
+      mode: 'repair',
+      decision: 'deny',
+      filePath: rel.split(path.sep).join('/'),
+      ...(layer ? { layer } : {}),
+      ...(autoPatch
+        ? {
+            autoPatch: {
+              source: autoPatch.source,
+              remediationKind: autoPatch.remediationKind,
+              confidence: autoPatch.confidence,
+              valid: autoPatch.valid,
+            },
+          }
+        : { autoPatch: null }),
+    };
+    process.stderr.write(`ARK_REPAIR_JSON:${JSON.stringify(repairPayload)}\n`);
+    if (autoPatch) {
+      process.stderr.write(`ARK_AUTOPATCH_JSON:${JSON.stringify(autoPatch)}\n`);
+    }
+  }
+
   // Grok Build honors { decision: "deny" } on stdout (exit 2 alone is also deny).
-  // Additive autoPatch field (W1) — hosts may re-inject; never silent write.
+  // autoPatch in stdout only when repair mode is on (same opt-in as stderr).
   if (grokStyle) {
     process.stdout.write(
       JSON.stringify({
         decision: 'deny',
         reason: message,
-        ...(autoPatch ? { autoPatch } : {}),
+        ...(repair && autoPatch ? { autoPatch } : {}),
+        ...(repair ? { repair: true } : {}),
       }) + '\n'
     );
   }
@@ -915,8 +982,9 @@ async function main() {
     }
     return {
       content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-      // isError when invalid and no autoPatch — host must decide; autoPatch is recoverable
-      isError: result.valid === false && !result.autoPatch,
+      // Align with validate_code / --hook: proposed source still invalid → isError.
+      // autoPatch is additive recovery guidance in the body, never soft-success.
+      isError: !result.valid,
     };
   }
 

@@ -24,29 +24,46 @@ const EXT_CANDIDATES = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.
  * Resolve a relative (or simple) import specifier to an absolute file path on disk.
  * @returns {string|null}
  */
+/**
+ * True when abs stays under root (no path.relative escape).
+ * Empty relative path (abs === root) counts as inside.
+ * @param {string} root
+ * @param {string} abs
+ */
+function isUnderRoot(root, abs) {
+  if (!root || !abs) return false;
+  const rel = path.relative(path.resolve(root), path.resolve(abs));
+  return !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
 export function resolveImportFileAbs(root, fromFilePath, specifier) {
   if (typeof specifier !== 'string' || !specifier) return null;
   if (!specifier.startsWith('./') && !specifier.startsWith('../')) return null;
-  if (!fromFilePath) return null;
+  if (!fromFilePath || !root) return null;
+  const rootAbs = path.resolve(root);
   const fromAbs = path.isAbsolute(fromFilePath)
-    ? fromFilePath
-    : path.resolve(root, fromFilePath);
+    ? path.resolve(fromFilePath)
+    : path.resolve(rootAbs, fromFilePath);
+  // Refuse resolution when the importer itself is outside the project root.
+  if (!isUnderRoot(rootAbs, fromAbs)) return null;
   const base = path.resolve(path.dirname(fromAbs), specifier);
-  for (const ext of EXT_CANDIDATES) {
-    const candidate = base + ext;
+  const tryFile = (candidate) => {
     try {
+      if (!isUnderRoot(rootAbs, candidate)) return null;
       if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
     } catch {
       /* continue */
     }
+    return null;
+  };
+  for (const ext of EXT_CANDIDATES) {
+    const hit = tryFile(base + ext);
+    if (hit) return hit;
   }
-  for (const ext of ['.ts', '.tsx', '.js', '.mjs']) {
-    const idx = path.join(base, `index${ext}`);
-    try {
-      if (fs.existsSync(idx) && fs.statSync(idx).isFile()) return idx;
-    } catch {
-      /* continue */
-    }
+  for (const ext of EXT_CANDIDATES) {
+    if (!ext) continue;
+    const hit = tryFile(path.join(base, `index${ext}`));
+    if (hit) return hit;
   }
   return null;
 }
@@ -123,21 +140,14 @@ export function applyImportTypeAutoPatch(ts, source, opts = {}) {
     }
     const inspect = inspectTargetModule(ts, targetText);
     const bindings = namedModuleBindings(ts, stmt);
-    // Side-effect or default/namespace imports of pure-type modules: convert whole import type
-    // only when pureTypeModule (clause becomes import type).
-    const conversion = classifyImportTypeConversion(
-      inspect,
-      bindings
-    );
-    // For pure type module with default import — skip (unsafe / judgment)
+    // Named imports/re-exports only. Default, namespace, and side-effect imports stay
+    // judgment (never auto-convert to import type).
+    const conversion = classifyImportTypeConversion(inspect, bindings);
     if (ts.isImportDeclaration(stmt)) {
       const clause = stmt.importClause;
-      if (clause?.name && !inspect?.pureTypeModule) continue;
-      if (clause?.name && inspect?.pureTypeModule) {
-        // default import of pure-type module is rare; still judgment-ish — skip
-        continue;
-      }
       if (!clause) continue; // side-effect
+      if (clause.name) continue; // default import — judgment
+      if (clause.namedBindings && ts.isNamespaceImport(clause.namedBindings)) continue;
     }
     if (!conversion) continue;
 

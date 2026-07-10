@@ -115,6 +115,45 @@ describe('auto-patch (W1 mechanical-safe import type)', () => {
     expect(patch).toBeNull();
   });
 
+  it('does not rewrite mixed type+value named imports', () => {
+    const mixed = inspectTargetModule(
+      ts,
+      fs.readFileSync(path.join(root, 'src/data/mixed.ts'), 'utf8')
+    );
+    expect(classifyImportTypeConversion(mixed, ['Row', 'q'])).toBeNull();
+    const source = `import { Row, q } from '../data/mixed';\nexport const n = q;\nexport type R = Row;\n`;
+    const from = path.join(root, 'src/ui/uses-mixed.ts');
+    const patch = applyImportTypeAutoPatch(ts, source, {
+      root,
+      filePath: from,
+    });
+    expect(patch).toBeNull();
+  });
+
+  it('does not resolve imports that escape project root', () => {
+    const from = path.join(root, 'src/ui/uses.ts');
+    // Enough ../ to leave the temp root; must not open /etc or parent dirs.
+    expect(resolveImportFileAbs(root, from, '../../../../../../../../etc/passwd')).toBeNull();
+    expect(resolveImportFileAbs(root, '/tmp/outside.ts', './secret')).toBeNull();
+    expect(resolveImportFileAbs(root, from, 'lodash')).toBeNull();
+  });
+
+  it('skips default and side-effect imports (judgment)', () => {
+    const from = path.join(root, 'src/ui/uses-def.ts');
+    expect(
+      applyImportTypeAutoPatch(ts, `import Id from '../data/types-only';\nexport type T = Id;\n`, {
+        root,
+        filePath: from,
+      })
+    ).toBeNull();
+    expect(
+      applyImportTypeAutoPatch(ts, `import '../data/types-only';\nexport const x = 1;\n`, {
+        root,
+        filePath: from,
+      })
+    ).toBeNull();
+  });
+
   it('validateWithAutoPatch discards when revalidation fails', () => {
     const source = `import { Id } from '../data/types-only';\nexport function asId(x: Id): Id { return x; }\n`;
     const from = path.join(root, 'src/ui/uses-id.ts');

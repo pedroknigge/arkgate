@@ -45,6 +45,86 @@ describe('AI Code Gate (basic)', () => {
     );
   });
 
+  it('W1: typeOnly skips classic layer deny; value import of same edge still blocks', () => {
+    const profile = {
+      name: 'test',
+      layers: [
+        { name: 'DomainModel', prefixes: ['Domain.'] },
+        { name: 'PersistenceAdapters', prefixes: ['Adapter.Persistence.'] },
+      ],
+      rules: [{ from: 'DomainModel', to: 'PersistenceAdapters', allowed: false }],
+    };
+    const gate = createAICodeGate({
+      architectureProfile: profile as never,
+      resolveImportTarget: (spec: string) => {
+        if (spec.includes('persist') || spec.includes('infra')) {
+          return { layer: 'PersistenceAdapters', filePath: 'src/infra/repo.ts' };
+        }
+        return null;
+      },
+    });
+
+    const typeOnly = gate.validate(
+      `import type { Row } from '../infra/repo';\nexport type T = Row;\n`,
+      { layer: 'DomainModel', filePath: 'src/domain/order.ts' }
+    );
+    expect(
+      typeOnly.violations.filter((v) => v.ruleId === 'LAYER_IMPORT_VIOLATION')
+    ).toHaveLength(0);
+
+    const value = gate.validate(`import { Row } from '../infra/repo';\nexport const x = Row;\n`, {
+      layer: 'DomainModel',
+      filePath: 'src/domain/order.ts',
+    });
+    expect(value.violations.some((v) => v.ruleId === 'LAYER_IMPORT_VIOLATION')).toBe(true);
+  });
+
+  it('W1: peerIsolation still hard-blocks import type across slices', () => {
+    const profile = {
+      name: 'peer-test',
+      layers: [{ name: 'DomainModel', prefixes: ['Domain.'] }],
+      rules: [
+        {
+          from: 'DomainModel',
+          to: 'DomainModel',
+          allowed: false,
+          peerIsolation: true,
+          sliceFolders: ['features'],
+        },
+      ],
+    };
+    const gate = createAICodeGate({
+      architectureProfile: profile as never,
+      architectureLayers: [
+        { name: 'DomainModel', patterns: ['src/domain/features/**'] },
+      ],
+      resolveImportTarget: (specOrFile: string) => {
+        // Absolute-ish source file resolve (fromPath)
+        if (specOrFile.includes('orders/order')) {
+          return {
+            layer: 'DomainModel',
+            relPath: 'src/domain/features/orders/order.ts',
+          };
+        }
+        if (specOrFile.includes('other') || specOrFile.includes('../other')) {
+          return {
+            layer: 'DomainModel',
+            relPath: 'src/domain/features/other/model.ts',
+          };
+        }
+        return undefined;
+      },
+    });
+
+    const res = gate.validate(
+      `import type { Other } from '../other/model';\nexport type T = Other;\n`,
+      { layer: 'DomainModel', filePath: 'src/domain/features/orders/order.ts' }
+    );
+    const peer = res.violations.filter((v) => v.ruleId === 'LAYER_IMPORT_VIOLATION');
+    expect(peer.length).toBeGreaterThanOrEqual(1);
+    expect(peer.some((v) => Boolean(v.details?.peerIsolation))).toBe(true);
+  });
+
   it('passes clean code', () => {
     const gate = createAICodeGate();
     const good = `const x = OrderPlaced({ id: '1' });`;

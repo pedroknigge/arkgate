@@ -702,7 +702,9 @@ export function claudeSettings(root) {
           hooks: [
             {
               type: 'command',
-              command: `${runner} ${PREFERRED_MCP_BIN} --hook --root "$CLAUDE_PROJECT_DIR" --config ark.config.json`,
+              // W4: --hook-repair emits ARK_REPAIR_JSON / ARK_AUTOPATCH_JSON on deny
+              // (still exit 2 — never silent write). Omit --hook-repair for reject-only prose.
+              command: `${runner} ${PREFERRED_MCP_BIN} --hook --hook-repair --root "$CLAUDE_PROJECT_DIR" --config ark.config.json`,
             },
           ],
         },
@@ -758,7 +760,8 @@ export function grokHooks(root) {
             {
               type: 'command',
               timeout: 30,
-              command: `${runner} ${PREFERRED_MCP_BIN} --hook --root "${grokRoot}" --config ark.config.json`,
+              // W4: --hook-repair → structured autoPatch on deny (hard block still).
+              command: `${runner} ${PREFERRED_MCP_BIN} --hook --hook-repair --root "${grokRoot}" --config ark.config.json`,
             },
           ],
         },

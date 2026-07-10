@@ -16,6 +16,8 @@ import {
 import {
   resolveTools,
   detectSkillGaps,
+  claudeSettings,
+  grokHooks,
 } from '../../../bin/lib/agent-gates.mjs';
 import {
   shouldUseNonInteractiveDefaults,
@@ -386,5 +388,18 @@ describe('detectSkillGaps reports missing skills for this package', () => {
     const gaps = detectSkillGaps(root);
     expect(gaps.length).toBeGreaterThan(0);
     expect(gaps[0].missing).toBeGreaterThan(0);
+  });
+});
+
+describe('W4 install templates include --hook-repair', () => {
+  it('claude and grok PreToolUse commands opt into repair payload', () => {
+    const root = tempRoot('ark-hook-tpl-');
+    write(root, 'package-lock.json', '{}\n');
+    const claude = claudeSettings(root);
+    expect(claude).toContain('--hook-repair');
+    expect(claude).toContain('--hook');
+    const grok = grokHooks(root);
+    expect(grok).toContain('--hook-repair');
+    expect(grok).toMatch(/Write\|Edit\|MultiEdit|write\|search_replace/);
   });
 });
