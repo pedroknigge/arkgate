@@ -272,11 +272,15 @@ primary A. It writes a **scoped secondary** table:
 |------|---------|
 | Add B without moving primary | `ark-check --install-agent-gates --tools codex` (no `--force`) |
 | Make B the primary binding | `ark-check --install-agent-gates --tools codex --force` |
-| Doctor: primary points at another permanent project | gap id `codex-home-multi-project` (warn if no secondary yet; info if scoped table already present) |
+| Doctor: primary points at another permanent project | gap id `codex-home-multi-project` (warn if no secondary yet and session host is unknown/Codex; **info + `deferred`** when the session host is known and not Codex — e.g. Grok/Claude/Cursor; info if a scoped secondary is already present) |
+| When using Codex: refresh home skills/MCP | `ark-check --install-agent-gates --skills-only --codex-home --force` |
 
 `ark-check --doctor` surfaces the multi-project state so you are not left thinking B owns
-`ark://manifest` when only a secondary table exists. Temp/upgrade primary roots are still
-rewritten fail-closed (not multi-project).
+`ark://manifest` when only a secondary table exists. **Deferred (fix when using Codex):**
+non-temp Codex-home gaps (`codex-home-multi-project`, stale `$CODEX_HOME/prompts`) are
+severity **info**, marked `deferred: true`, and omitted from Top actions when the session
+host is known and not Codex — `/ark-upgrade` on Grok/Claude is not Incomplete because of
+them. **Temp/upgrade primary roots** stay fail-closed urgent (rewritten, not multi-project).
 
 ## Grok Build (xAI)
 

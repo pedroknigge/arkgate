@@ -220,7 +220,7 @@ npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok
 |------|------------|-----|-------------|
 | Claude Code | PreToolUse hook | `.mcp.json` / `claude mcp add` | `.claude/skills/<name>/SKILL.md` |
 | Cursor | Advisory (rules + MCP) | `.cursor/mcp.json` | `.cursor/commands/` |
-| OpenAI Codex | MCP + CI | `$CODEX_HOME/config.toml` (global; absolute `--root`; multi-project → secondary `ark_<slug>` unless `--force`) | `$CODEX_HOME/prompts` (`--codex-home`) |
+| OpenAI Codex | MCP + CI | `$CODEX_HOME/config.toml` (global; absolute `--root`; multi-project → secondary `ark_<slug>` unless `--force`; doctor defers non-temp home gaps when session host ≠ Codex — see [ai-gates.md](ai-gates.md)) | `$CODEX_HOME/prompts` (`--codex-home`; fix when using Codex) |
 | **Grok Build** | PreToolUse hook (`.grok/hooks/`) | `.grok/config.toml` + `.mcp.json` | `.grok/skills/<name>/SKILL.md` |
 
 Full copy-paste setups: [ai-gates.md](ai-gates.md). Skill inventory: main [README](../README.md#agent-skills-ark-).

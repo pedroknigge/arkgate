@@ -171,7 +171,7 @@ write). See [docs/ai-gates.md](docs/ai-gates.md).
 | Plain-language tour of the report | `/ark-explain` |
 | Deep coverage + opportunities audit | `/ark-coverage` |
 | Migrate hand-rolled bus/outbox (TS) | `/ark-runtime` |
-| Bump ArkGate + refresh all agent hosts | `/ark-upgrade` |
+| Bump ArkGate + refresh active host (defer Codex when not on Codex) | `/ark-upgrade` |
 
 Hosts with full MCP/hooks: **Claude Code**, **Cursor**, **Codex**, **Grok Build**.  
 More: [docs/ai-gates.md](docs/ai-gates.md). Health: **`npx arkgate-check --doctor`**.

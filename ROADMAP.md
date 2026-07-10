@@ -229,7 +229,7 @@ Completed work stays here for history. **Do not implement these as “next.”**
 | **R4** | Typed pure core (remediation, baselineKey, layerMatch) + `check:cli-pure` |
 | **R5** | Labeled eval corpus (≥15 cases; 16 shipped) |
 | **R6** | Fourth mechanical-safe kind `import-type-of-type-exports` |
-| **R7** | Codex multi-project MCP DX + doctor gap |
+| **R7** | Codex multi-project MCP DX + doctor gap (+ host-aware deferred home debt when session ≠ Codex) |
 | **R8** | EventBus publish pipeline decomposition |
 | **R9** | Runtime durability stance (InMemory reference honesty) |
 | **R10** | Product site [arkgate.online](https://www.arkgate.online/) |
@@ -245,6 +245,12 @@ Peer isolation, vertical-slice + DDD presets, monorepo depth, FSD/Next honesty, 
 - Identity cutover to **ArkGate / `arkgate`**  
 - One-flow UX: `start` → `/ark-autopilot` → `doctor`  
 - Deploy-path adoption gaps; Next/monorepo honesty  
+
+### Post-2.12 hygiene (docs + skill policy)
+
+- `/ark-upgrade` and doctor: **active host first**; Codex `$CODEX_HOME` non-temp debt is
+  **deferred** when the session host is known and not Codex (temp MCP roots stay fail-closed)  
+
 
 ### Trust foundation (through 2.11.0)
 
