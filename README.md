@@ -117,11 +117,13 @@ Aliases `ark` / `ark-check` / `ark-mcp` still work. **npm / pnpm / yarn**. No in
 <details>
 <summary>What <code>/ark-autopilot</code> does under the hood (optional detail)</summary>
 
-1. Setup if needed (`ark start`).
-2. Origin architecture report (before picture in `.ark/reports/`).
-3. Adoption: match contract to real folders, raise governed %.
-4. Plan + safe auto-fixes; judgment when you ask for full apply.
-5. Gates on + after report (evolution vs origin).
+1. Setup if needed (`ark start` — contract, then **day-zero origin**, then gates).
+2. **Explore pass** (decision-grade map of *this* product; field path when demos exist).
+3. **Dual plan:** **A** remediation from `--plan` (mechanical-safe only by default); **B** pattern/evolution bets (never auto-applied as mechanical-safe). Empty plan ≠ “healthy” without explore/B.
+4. Apply A → re-check; judgment only when you ask for full apply.
+5. Gates on + latest report (evolution vs frozen origin).
+
+Standalone recon without applying: `/ark-explore`.
 
 </details>
 
@@ -193,6 +195,9 @@ ark.config.json
 - **Fail-closed CI (2.11):** `--strict` combines config coverage, required CI/MCP/write gates,
   PreToolUse hook presence, and bypass diagnostics for dynamic imports, TypeScript suppressions,
   explicit `any` casts, InMemory runtime defaults, and disabled peer isolation.
+- **Trust / coverage (2.12):** package unit-test floors on the broad product surface
+  (statements/lines **≥80%**, branches/functions **≥85%**; enforcement-critical modules **≥95%**
+  branch). Explore dual-plan + day-zero origin first (see above). Roadmap next: Q2 repair dogfood matrix.
 - **TypeScript:** project compilers 5.x / 6.x / 7.x — gate falls back to a nested JS-API TypeScript when TS 7’s main export is version-only ([docs/typescript-support.md](docs/typescript-support.md)).
 
 ### Why not only ESLint / dependency-cruiser / Nx?

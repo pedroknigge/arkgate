@@ -99,11 +99,11 @@ The goal is not a vanity score or 95% coverage everywhere. It is a release gate 
 **95+/100** through independent evidence across correctness, bypass resistance, adoption,
 maintainability, documentation, performance, runtime reliability, and supply-chain security.
 
-Current baseline (2.11.0 + Q1 residual): **~90/100**. Global Vitest coverage floors met on the
+Current baseline (**2.12.0** / Q1 done): **~90/100**. Global Vitest coverage floors met on the
 broad include set (`src/**` + `bin/lib/**` + `bin/ark-shared.mjs`): statements/lines **≥80%**
 (measured **92.71%**), branches/functions **≥85%** (measured **85%** / **94.76%**);
-enforcement-critical modules at **≥95%** branch. External adoption matrix and repair-capable
-dogfood proofs remain Q2+.
+enforcement-critical modules at **≥95%** branch. External adoption matrix and multi-host
+repair-capable dogfood proofs remain **Q2+**.
 
 | # | Status | Item | Definition of Done |
 |---|--------|------|-------------------|
@@ -292,4 +292,4 @@ Issues and PRs: [github.com/pedroknigge/arkgate](https://github.com/pedroknigge/
 
 For onboarding misfires, include archetype id and `ark-check --recommend --json`.
 
-**Start implementation at Q2.** Mark status in this file when you pick up or finish an item.
+**After 2.12.0 ships: start implementation at Q2.** Mark status in this file when you pick up or finish an item.

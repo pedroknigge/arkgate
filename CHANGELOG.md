@@ -25,7 +25,8 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
   `gate-files`, `skill-install`, `ci-and-commands`, `mcp-adoption`, `install-migrate`,
   `typescript-host`, `hook-templates`, `write-path-detect`, plus field/codex helpers.
   `detectDeployPathQuality` extracted to `bin/lib/deploy-path.mjs` so `mcp-adoption.mjs` stays
-  under the 600 LOC module budget.
+  under the 600 LOC module budget. Import hygiene on extract modules; `loadTypeScript` uses
+  `__arkCheckCli` for the nested arkgate TypeScript fallback.
 - **Deny→repair CI proof:** `tests/unit/static-check/writePathDetect.test.ts` drives
   shipped `bin/ark-mcp.mjs --hook --hook-repair` and asserts `ARK_REPAIR_JSON` /
   `ARK_AUTOPATCH_JSON` on deny (exit 2); reject-only without repair flag still supported.
