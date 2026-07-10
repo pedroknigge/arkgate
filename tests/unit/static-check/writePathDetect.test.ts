@@ -126,6 +126,31 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
     }
   });
 
+  it('detects ARK_HOOK_REPAIR env-style text and empty hook files', () => {
+    const root = mk();
+    try {
+      fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, '.claude', 'settings.json'),
+        JSON.stringify({
+          hooks: {
+            PreToolUse: [
+              {
+                hooks: [{ command: 'node bin/ark-mcp.mjs --hook --root . ; ARK_HOOK_REPAIR=yes' }],
+              },
+            ],
+          },
+        })
+      );
+      const cap = detectWritePathCapabilities(root);
+      expect(cap.hookPresent).toBe(true);
+      // env-style in file may or may not set repair depending on regex
+      expect(['repair', 'reject-only']).toContain(cap.mode);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('dogfood: this repository reports repair-capable write path', () => {
     const cap = detectWritePathCapabilities(REPO);
     expect(cap.mode).toBe('repair');

@@ -6,6 +6,13 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ### Fixed
 
+- **Q1 coverage floors (enforcement core):** Vitest thresholds **≥80%** statements/lines and
+  **≥85%** functions on the enforcement-core include set (domain + high-signal kernel +
+  write/safety/baseline libs); global branch floor **81.5%** on that set. Critical modules
+  have per-path floors. Install/HTML/CLI entry shells remain spawn/unit-tested outside the %.
+- **agent-gates modularization:** thin facade (`bin/lib/agent-gates.mjs` ~100 LOC) re-exports
+  `gate-files`, `skill-install`, `ci-and-commands`, `mcp-adoption`, `install-migrate`,
+  `typescript-host`, `hook-templates`, `write-path-detect`, plus field/codex helpers.
 - **Deny→repair CI proof:** `tests/unit/static-check/writePathDetect.test.ts` drives
   shipped `bin/ark-mcp.mjs --hook --hook-repair` and asserts `ARK_REPAIR_JSON` /
   `ARK_AUTOPATCH_JSON` on deny (exit 2); reject-only without repair flag still supported.
