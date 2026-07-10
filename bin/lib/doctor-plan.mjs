@@ -570,10 +570,20 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     );
   } else {
     for (const gap of adoption.gaps) {
-      const mark = gap.severity === 'warn' ? warn : gap.severity === 'info' ? warn : bad;
+      // Deferred Codex-home debt (non-temp) is annotated, not a top action, when the
+      // session host is not Codex — fix when that host is used.
+      const mark = gap.deferred
+        ? color.dim('·')
+        : gap.severity === 'warn'
+          ? warn
+          : gap.severity === 'info'
+            ? warn
+            : bad;
       line(mark, gap.message);
-      if (gap.fix) line(' ', color.dim(`Fix: ${gap.fix}`));
-      actions.push(gap.fix || gap.message);
+      if (gap.fix) {
+        line(' ', color.dim(gap.deferred ? `When using Codex: ${gap.fix}` : `Fix: ${gap.fix}`));
+      }
+      if (!gap.deferred) actions.push(gap.fix || gap.message);
     }
     if (adoption.layerBalance) {
       line(warn, color.dim(adoption.layerBalance.educational));

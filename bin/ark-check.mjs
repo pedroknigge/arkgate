@@ -33,6 +33,7 @@ import {
   loadTypeScript,
   detectSkillGaps,
   detectCodexHomeGap,
+  detectActiveAgentHost,
   missingGates,
   staleRunnerGateFiles,
   brokenMcpGateFiles,
@@ -1403,10 +1404,19 @@ async function main() {
       const parts = [];
       if (codexHomeGap.missing > 0) parts.push(`${codexHomeGap.missing} missing`);
       if (codexHomeGap.stale > 0) parts.push(`${codexHomeGap.stale} outdated`);
+      // Advisory always; when session host is known and not Codex, say so so
+      // /ark-upgrade does not chase home prompts as Incomplete.
+      const activeHost = detectActiveAgentHost();
+      const deferredNote =
+        activeHost != null && activeHost !== 'codex'
+          ? ' Deferred unless you use Codex — not a blocker for Grok/Claude/Cursor. '
+          : ' ';
       console.log(
         color.dim(
-          `/ark-* skills in ${codexPromptsDir()} are behind this Ark (${parts.join(', ')}). ` +
-            `Codex loads them from there, not the repo. Refresh: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --codex-home --force')}`
+          `/ark-* skills in ${codexPromptsDir()} are behind this Ark (${parts.join(', ')}).` +
+            deferredNote +
+            `Codex loads them from $CODEX_HOME/prompts, not the repo. ` +
+            `When using Codex: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --codex-home --force')}`
         )
       );
     }

@@ -4,6 +4,18 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+### Changed
+
+- **Active host vs deferred Codex on upgrade/doctor:** `/ark-upgrade` greens the
+  **session host** first; Codex `$CODEX_HOME` prompts/MCP multi-project debt is
+  **deferred** when the session host is **known and not Codex** (Grok/Claude/Cursor).
+  Unknown host (CI/plain shell) keeps original severity. Doctor marks deferred gaps
+  `deferred: true` (severity `info`), prefixes the message, and omits them from Top
+  actions. Temp/upgrade MCP `--root` stays urgent (fail-closed). New helpers:
+  `detectActiveAgentHost`, `codexConcernIsActive` (do not treat `CODEX_HOME` alone
+  as Codex). `ark-check` advisory for stale Codex-home skills notes the deferral.
+  Completion contract adds **Active host** / **Deferred hosts**.
+
 ## 2.12.0 — 2026-07-10
 
 ### Fixed

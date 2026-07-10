@@ -76,6 +76,8 @@ export {
   normalizeToolsList,
   resolveTools,
   KNOWN_TOOLS,
+  detectActiveAgentHost,
+  codexConcernIsActive,
   arkPackageVersion,
   stampSkill,
   installedSkillVersion,

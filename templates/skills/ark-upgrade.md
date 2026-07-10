@@ -1,6 +1,6 @@
 ---
 name: ark-upgrade
-description: Update arkgate to the latest published version, then refresh gates and /ark-* skills for every agent CLI and re-verify the architecture check. Autonomous.
+description: Update arkgate to the latest published version, then refresh gates and /ark-* skills for the active agent host (defer inactive hosts like Codex when not in use) and re-verify the architecture check. Autonomous.
 ---
 
 # /ark-upgrade — Update ArkGate and refresh its gates
@@ -38,6 +38,13 @@ read the **Adoption** section — host gaps, Codex home temp paths, optional-but
 core layers, missing origin snapshot, baseline policy. Fix commands are printed per gap.
 HTML reports include the same Adoption card (separate from the 0–100 fitness score).
 
+**Active host vs deferred hosts:** green the **session host** (Grok, Claude, Cursor, …)
+and repo gates first. Codex home (`$CODEX_HOME` prompts + `config.toml` MCP multi-project)
+is **deferred** unless this session is Codex or the user asked to fix Codex. Doctor marks
+those gaps `deferred` / info and does not put them in Top actions. A temp/upgrade MCP
+`--root` stays urgent (fail-closed rewrite). Never set **Incomplete?** because of deferred
+Codex debt.
+
 ## Dual engine (mandatory)
 
 | Engine | Role |
@@ -58,7 +65,8 @@ the same files or weaken the gate.
 ## Fast path
 
 One command does the whole flow — update the package, refresh gates + `/ark-*` skills
-(and Codex home prompts), migrate command runners, and run the strict check:
+(and best-effort Codex home prompts when `~/.codex` exists), migrate command runners,
+and run the strict check:
 
 ```
 arkgate upgrade
@@ -112,13 +120,18 @@ npx arkgate-check --install-agent-gates --skills-only --force
    losing customizations. If the changelog says a GATE file changed, report the
    diff and let the user decide; never rewrite settings/CI/AGENTS.md without
    explicit approval.
-   If you use Codex, its prompts live in `$CODEX_HOME/prompts` (`~/.codex/prompts`),
-   not the repo, so a repo refresh never updates them. Refresh them there too:
-   `ark-check --install-agent-gates --skills-only --codex-home --force`. Keep
-   `--skills-only` — without it, `--force` also rewrites customized gate files
-   (AGENTS.md, CI, settings). This writes to the user's home dir — say so. (A normal
-   `ark-check` now flags stale Codex-home skills when copies exist, so you don't have
-   to remember.)
+   **Active host first.** Refresh skills for the host running this skill (e.g.
+   `.grok/skills/`, `.claude/skills/`, `.cursor/commands/`). Repo-local copies for
+   other detected hosts are fine to refresh in the same pass when cheap.
+   **Codex is deferred when you are not on Codex.** Prompts live in
+   `$CODEX_HOME/prompts` (`~/.codex/prompts`), not the repo. `ark upgrade` may
+   best-effort refresh that home when it exists; still list Codex under
+   **Deferred hosts** and do **not** chase MCP multi-project / stale home skills
+   until the user is on Codex (or asks). Fix command when needed:
+   `ark-check --install-agent-gates --skills-only --codex-home --force`
+   (and `--tools codex` / `--force` for primary MCP rebind). Exception: temp or
+   `ark-upgrade` MCP `--root` paths — leave fail-closed rewrite to the CLI; do not
+   block completion on multi-project noise.
    **Migrate stale command runners.** The package-manager-aware command templates
    (`pnpm exec` / `yarn` / `npx`) only apply to NEWLY written files, so a repo that adopted
    Ark before they shipped keeps a stale `npx` in its EXISTING gate files
@@ -138,10 +151,14 @@ npx arkgate-check --install-agent-gates --skills-only --force
 
 ## Operating rules
 
-- Cover EVERY detected agent CLI (`.claude/`, `.cursor/`, `.codex/`,
-  `.windsurf/`, `.clinerules/`, `.kiro/`), not just the one running this skill —
-  gates and skills must stay in sync across tools or the weakest tool becomes
-  the hole in the fence.
+- **Must green:** the **active session host** (skills + gates that host uses) and
+  shared repo surfaces (`.mcp.json` dual-bin, command runners, architecture check).
+- **May defer:** other hosts not used in this session. Always list them under
+  **Deferred hosts** with the fix command — do not treat them as Incomplete.
+  Codex home (global `$CODEX_HOME`) is the common case on Grok/Claude.
+- **Optional sync:** if other repo-local tool dirs already exist (`.cursor/`,
+  `.claude/`, …), refreshing their `/ark-*` skills is good hygiene when cheap;
+  it is not a reason to fail the skill when the active host is already current.
 - Never run `--force` blindly; customized files are the user's.
 - Stop only if the changelog documents a breaking config change with two valid
   migration paths — then present both with a recommendation.
@@ -158,8 +175,8 @@ npx arkgate-check --install-agent-gates --skills-only --force
 
 End with a passing check. Report: latest published version, old → new version
 (or "already latest"), changelog entries that mattered here (plain language),
-files written/refreshed per tool, skipped customized files needing a manual
-look, and the final check status.
+files written/refreshed for the **active host**, deferred hosts (if any),
+skipped customized files needing a manual look, and the final check status.
 
 ## Completion contract (skill incomplete if missing)
 
@@ -168,9 +185,12 @@ End with **exactly** these headings (markdown `###`):
 ### Completion
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
+- **Active host:** e.g. `grok` / `claude` / `cursor` / `codex` (skills/gates OK or note)
+- **Deferred hosts:** `none` | e.g. `codex — home MCP/prompts; fix when using Codex`
 - **Result:** one-line outcome
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 
 If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
-**Skill incomplete if missing** any of the bullets above.
+**Deferred hosts (including Codex when not on Codex) never make Incomplete? yes.**
+**Skill incomplete if missing** any of the bullets above (use `none` for Deferred hosts when empty).
