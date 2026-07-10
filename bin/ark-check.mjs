@@ -56,6 +56,7 @@ import {
   reportsDir,
   readJsonSafe,
 } from './lib/html-report.mjs';
+import { shouldOpenHtmlReport, openHtmlInBrowser } from './lib/open-html.mjs';
 import {
   computeCoverage,
   runCoverage,
@@ -122,6 +123,8 @@ function parseArgs(argv) {
     applyPolicyPack: undefined,
     watch: false,
     beginner: false,
+    openReport: false,
+    noOpenReport: false,
     version: false,
     help: false,
   };
@@ -183,6 +186,8 @@ function parseArgs(argv) {
     }
     else if (arg === '--reset-origin') args.resetOrigin = true;
     else if (arg === '--no-archive') args.noArchive = true;
+    else if (arg === '--open') args.openReport = true;
+    else if (arg === '--no-open') args.noOpenReport = true;
     else if (arg === '--baseline' || arg === '--update-baseline') {
       if (arg === '--update-baseline') args.updateBaseline = true;
       // optional path value: consume the next arg only when it isn't another flag
@@ -224,8 +229,9 @@ function usage() {
     '       ark-check --adopt-contract [--write]   expand include + UI patterns from ungoverned dirs (contract adopt)',
     '       ark-check --ratchet-cores              when raw graph is green (0 violations; baseline ignored), set optional:false on populated cores only (writes ark.config.json)',
     '       ark-check --watch                      re-run the check when governed files change (debounced)',
-    '       ark-check --report [file.html] [--beginner] [--reset-origin] [--no-archive]',
+    '       ark-check --report [file.html] [--beginner] [--reset-origin] [--no-archive] [--open|--no-open]',
     '           HTML report + snapshots under .ark/reports/ (origin once, latest each run, history JSON)',
+    '           Best-effort open in browser (local TTY). No-op if open fails. --no-open / ARK_NO_OPEN_REPORT=1 to skip; --open forces open.',
     '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture] [--force]',
     '       ark-check --install-agent-gates [--tools claude,cursor,codex,grok] [--skills-only] [--codex-home] [--force]',
     '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
@@ -1276,6 +1282,18 @@ async function main() {
           );
         }
       }
+    }
+
+    // Best-effort: open the report in the default browser. If it opens, fine;
+    // if not (headless, no GUI, spawn error), do nothing — never fail the check.
+    // Skipped in CI / Vitest / ARK_NO_OPEN_REPORT; --open / --no-open override.
+    if (
+      shouldOpenHtmlReport({
+        force: Boolean(args.openReport),
+        noOpen: Boolean(args.noOpenReport) || Boolean(args.json),
+      })
+    ) {
+      openHtmlInBrowser(reportPath);
     }
   }
 

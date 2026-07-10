@@ -225,7 +225,7 @@ npx arkgate-check --doctor --json         # machine-readable doctor.adoption
 npx arkgate-check --strict                # fail-closed CI + installed-gate/safety checks
 npx arkgate-check --plan                  # safe-to-auto-fix vs your call
 npx arkgate-check --coverage              # Governed: N%
-npx arkgate-check --report ark-report.html  # showcase HTML + Adoption card + origin/latest
+npx arkgate-check --report ark-report.html  # showcase HTML (opens in browser on local TTY; --no-open to skip)
 npx arkgate-check --baseline              # only NEW violations fail
 npx arkgate upgrade                       # package + gates/skills + MCP/Codex normalize
 ```
