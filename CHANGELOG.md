@@ -4,6 +4,19 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+### Changed
+
+- **`/ark-explore` skill:** decision-grade recon — field path (run starters/checks),
+  installed hooks vs install templates, coupling via fan-in/exports (not LOC alone),
+  ranked “así te lo re-soluciono” rows only when residual changes action; ENFORCE /
+  empty plan treated as baseline, not the story.
+- **`/ark-autopilot` skill:** explore-first (decision-grade), **dual plan** —
+  A remediation from `--plan` + B pattern/evolution bets (never auto-apply B as
+  mechanical-safe); empty plan no longer means “healthy” without explore/B.
+- **Day-zero origin first:** `ark start` / `ark init` freeze `.ark/reports/origin.*`
+  immediately after `ark.config.json` exists and **before** agent docs, skills, and CI
+  templates. Later `--report` still shows evolution vs that snapshot.
+
 ### Fixed
 
 - **Generated CI Node default lags local npm (again):** when a project had no

@@ -23,8 +23,8 @@ and makes sure a “green” check means something real.
 If you remember nothing else:
 
 ```text
-1.  npx arkgate start          ← install shape + gates + origin report
-2.  /ark-autopilot             ← in your agent: adopt, fix, leave gates on
+1.  npx arkgate start          ← walk tree → contract → **day-zero origin** → gates
+2.  /ark-autopilot             ← explore first, dual plan, safe fixes, leave gates on
 3.  npx arkgate-check --doctor ← “where am I?” anytime (one status screen)
 ```
 
@@ -106,7 +106,7 @@ Full checklist (CI, MCP, Codex, imports): **[docs/migrate-from-ark-runtime-kerne
 
 ```bash
 npm install -D arkgate typescript
-npx arkgate start                 # setup + origin report
+npx arkgate start                 # contract → day-zero origin → gates + plan
 # in agent:
 #   /ark-autopilot
 npx arkgate-check --doctor        # status light + next action
@@ -188,7 +188,7 @@ ark.config.json
 - **Presets:** hexagonal, layered, feature-sliced, monorepo, ui-surface, vertical-slice, ddd-bounded-contexts (+ aliases clean-architecture / onion-architecture). Layers start optional; doctor suggests tightening populated cores. Cross-slice / cross-context bans use optional `peerIsolation` rules.
 - **Frameworks:** Nest / Next / express / library layouts get sensible globs on init so day-one coverage is real.
 - **Brownfield:** baseline ratchet, refuse to freeze a wrong contract, `/ark-adopt` for mature trees.
-- **Agents:** skills install into Claude / Cursor / Codex / Grok; `ark start` freezes an origin report under `.ark/reports/`.
+- **Agents:** skills install into Claude / Cursor / Codex / Grok; `ark start` freezes **day-zero origin** under `.ark/reports/` **before** agent docs/CI templates.
 - **Write protocol (2.10 / Track W):** mechanical-safe **autoPatch** on the write gate (`import type`); MCP **`ark_prepare_write`** (place + validate + patch + judgmentBrief); opt-in hook **`--hook-repair`** (`ARK_REPAIR_JSON`); doctor **`writePath`** (repair vs reject-only); loop-cost eval (`npm run eval:loop-cost`). Port-proof inject is **judgment** (arity change), not silent auto-apply.
 - **Fail-closed CI (2.11):** `--strict` combines config coverage, required CI/MCP/write gates,
   PreToolUse hook presence, and bypass diagnostics for dynamic imports, TypeScript suppressions,
@@ -214,7 +214,7 @@ ark.config.json
 ## Common commands
 
 ```bash
-npx arkgate start                         # guided setup + plan + origin report
+npx arkgate start                         # guided setup: contract → origin → gates → plan
 npx arkgate-check --doctor                # health + Adoption gaps (not just fitness)
 npx arkgate-check --doctor --json         # machine-readable doctor.adoption
 npx arkgate-check --strict                # fail-closed CI + installed-gate/safety checks

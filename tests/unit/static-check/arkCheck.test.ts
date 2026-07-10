@@ -974,7 +974,7 @@ describe('ark init', () => {
     expect(run(['bogus']).status).toBe(2);
   });
 
-  it('`ark start --yes` guides setup end to end: shape → config + gates → plan', () => {
+  it('`ark start --yes` guides setup end to end: shape → config → origin → gates → plan', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-start-'));
     fs.writeFileSync(path.join(root, 'package.json'), '{"name":"fresh"}\n');
     fs.mkdirSync(path.join(root, 'src'), { recursive: true });
@@ -1000,12 +1000,20 @@ describe('ark init', () => {
     expect(out).toContain('Next (the only flow you need)');
     expect(out).toContain('/ark-autopilot');
     expect(out).toMatch(/--doctor/);
+    // Day-zero origin freezes after contract, before agent docs/gates messaging.
+    expect(out).toMatch(/day-zero architecture picture|Freezing day-zero/i);
+    const originIdx = out.search(/Freezing day-zero|Architecture origin already frozen/i);
+    const gatesIdx = out.search(/Installing agent and CI gate templates/i);
+    expect(originIdx).toBeGreaterThanOrEqual(0);
+    expect(gatesIdx).toBeGreaterThan(originIdx);
     // It actually set things up — and left the gates active so it "stays that way"
-    // (the enforcement handoff): config, agent contract, and the CI gate.
+    // (the enforcement handoff): config, agent contract, CI gate, and origin snapshot.
     expect(fs.existsSync(path.join(root, 'ark.config.json'))).toBe(true);
     expect(fs.existsSync(path.join(root, 'AGENTS.md'))).toBe(true);
     expect(fs.existsSync(path.join(root, '.github/workflows/ark-check.yml'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.ark/reports/origin.json'))).toBe(true);
     expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('Default agent flow');
+    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toMatch(/explore first/i);
   });
 
   it('`ark start` adopts an established codebase (detection, not a wildcard preset)', () => {

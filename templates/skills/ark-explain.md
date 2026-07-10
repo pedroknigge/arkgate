@@ -37,7 +37,8 @@ the same files or weaken the gate.
    (`pnpm … exec ark-check` / `yarn` / `npx`).
 
    This also maintains snapshots under **`.ark/reports/`**:
-   - `origin.json` / `origin.html` — frozen **first** report (start of the journey)
+   - `origin.json` / `origin.html` — frozen **day-zero** report (`ark start`/`ark init`
+     freezes this **right after** `ark.config.json`, before agent docs/CI templates)
    - `latest.json` / `latest.html` — every run
    - `history/*.json` — last ~20 machine-readable points for later tooling
 

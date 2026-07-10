@@ -469,9 +469,10 @@ export function agentInstructions(root) {
 
 1. If \`ark.config.json\` is missing: run \`${startCmd}\` once.
 2. For adoption / cleanup / “make architecture sound”: run the **\`/ark-autopilot\`** skill
-   (origin report → adopt → plan → safe fixes → gates). Do **not** invent a second
-   architecture curriculum outside the routing table below — when a trigger matches, use
-   that skill; when unsure, stay on autopilot.
+   (explore first → dual plan: remediation + pattern bets → safe fixes → gates). Day-zero
+   origin is frozen by \`ark start\`/\`ark init\` (or autopilot if missing) **before** agent docs.
+   Do **not** invent a second architecture curriculum outside the routing table below — when a
+   trigger matches, use that skill; when unsure, stay on autopilot.
 3. Status anytime: \`${doctorCmd}\` (status light + next action — not a mode picker).
 4. After ordinary feature edits: run \`${checkCmd}\`. On violations → **\`/ark-fix\`** (or
    \`/ark-place\` for new files, \`/ark-contract\` only if the contract itself is wrong).
