@@ -75,7 +75,20 @@ import {
   detectCodexHomeGap,
   arkPackageVersion,
 } from './skill-install.mjs';
-import { detectDeployPathQuality, stripMcpServerArgs, brokenMcpGateFiles, mcpArgsHaveDuplicateBins, COMMAND_GATE_TEXT_FILES, COMMAND_GATE_JSON_FILES, PREFERRED_CHECK_BIN, PREFERRED_CLI_BIN, RUNNER_BEFORE_ARK, ARK_MCP_BINS, ARK_CHECK_BINS, ARK_CLI_BINS } from './mcp-adoption.mjs';
+import { detectDeployPathQuality } from './deploy-path.mjs';
+import {
+  stripMcpServerArgs,
+  brokenMcpGateFiles,
+  mcpArgsHaveDuplicateBins,
+  COMMAND_GATE_TEXT_FILES,
+  COMMAND_GATE_JSON_FILES,
+  PREFERRED_CHECK_BIN,
+  PREFERRED_CLI_BIN,
+  RUNNER_BEFORE_ARK,
+  ARK_MCP_BINS,
+  ARK_CHECK_BINS,
+  ARK_CLI_BINS,
+} from './mcp-adoption.mjs';
 
 export function staleRunnerGateFiles(root) {
   const want = execRunner(root);

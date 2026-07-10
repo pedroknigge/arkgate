@@ -98,13 +98,15 @@ The goal is not a vanity score or 95% coverage everywhere. It is a release gate 
 **95+/100** through independent evidence across correctness, bypass resistance, adoption,
 maintainability, documentation, performance, runtime reliability, and supply-chain security.
 
-Current baseline (2.11.0): **88/100**. Coverage is 46.27% statements/lines, 73.55% branches,
-and 70.20% functions; the self-hosted write path may report `reject-only`; external adoption
-evidence is not yet a published matrix.
+Current baseline (2.11.0 + Q1 residual): **~90/100**. Global Vitest coverage floors met on the
+broad include set (`src/**` + `bin/lib/**` + `bin/ark-shared.mjs`): statements/lines **≥80%**
+(measured **92.71%**), branches/functions **≥85%** (measured **85%** / **94.76%**);
+enforcement-critical modules at **≥95%** branch. External adoption matrix and repair-capable
+dogfood proofs remain Q2+.
 
 | # | Status | Item | Definition of Done |
 |---|--------|------|-------------------|
-| **Q1** | `doing` | **Coverage + mutation ratchet** | **In progress (enforcement-core metric):** Vitest floors statements/lines **≥80%**, functions **≥85%**, branches **≥81.5%** on the enforcement-core include set; baseline + safety/bypass + deny→repair tests exercise shipped entry points. Remaining: widen include set toward whole `bin/lib` at 80/85 without gaming, and raise critical-module branch floors toward **95%**. |
+| **Q1** | `done` | **Coverage + mutation ratchet** | **Done:** Vitest floors statements/lines **≥80%**, functions **≥85%**, branches **≥85%** on the **broad non-gamed include** (`src/**` + `bin/lib/**` + `bin/ark-shared.mjs`; only process-entry shells excluded). Critical modules (write-path-detect, auto-patch, prepare-write, safety-diagnostics, baseline-key, graph-cycles) enforce **≥95%** branch. Two consecutive green `npm run test:coverage` runs. agent-gates modularization: facade ≤600 LOC; modules including mcp-adoption/deploy-path each ≤600. |
 | **Q2** | `todo` | **Repair-capable dogfood** | This repository reports `doctor.writePath.mode = repair`; installed Claude/Grok hooks use `--hook-repair`; a real deny → structured repair → revalidation fixture passes for every supported repair-capable host. Reject-only remains an explicit supported choice for consumers, not ArkGate's own final state. |
 | **Q3** | `todo` | **Weakest-link enforcement proof** | Add `ark-check --doctor`/CI evidence for the required status check and branch protection when GitHub context is available; ship a maintained pre-commit option for human edits; test missing CI, non-required CI, direct disk writes, and config drift. The release checklist fails if strict CI is not required on the default branch. |
 | **Q4** | `todo` | **External adoption matrix** | Run reproducible clean-room adoption on ≥ **12** real or fixture-backed repos spanning ≥4 archetypes, 4 agent hosts, npm/pnpm/yarn, greenfield + brownfield, and small/medium/large trees. Publish time-to-Enforce, turns-to-green, false-block, CHEATED, and manual-intervention rates. No P0/P1 false green remains open. |

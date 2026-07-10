@@ -6,13 +6,19 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ### Fixed
 
-- **Q1 coverage floors (enforcement core):** Vitest thresholds **≥80%** statements/lines and
-  **≥85%** functions on the enforcement-core include set (domain + high-signal kernel +
-  write/safety/baseline libs); global branch floor **81.5%** on that set. Critical modules
-  have per-path floors. Install/HTML/CLI entry shells remain spawn/unit-tested outside the %.
+- **Q1 coverage floors (broad include, 80/85/95):** Vitest thresholds statements/lines **≥80%**,
+  branches/functions **≥85%** on the **full product unit surface** (`src/**` + `bin/lib/**` +
+  `bin/ark-shared.mjs`; only process-entry shells excluded — no cherry-picked enforcement-core
+  include). Per-path critical floors: write-path-detect / auto-patch / prepare-write /
+  safety-diagnostics / baseline-key / graph-cycles at **≥95%** branch. Real branch-driving tests
+  under `tests/unit/static-check/` (critical + surface/topup/seam suites). Two consecutive
+  green `npm run test:coverage` captures (stmts/lines **92.71%**, branches **85%**, functions
+  **94.76%**; critical modules all **≥95%** branch).
 - **agent-gates modularization:** thin facade (`bin/lib/agent-gates.mjs` ~100 LOC) re-exports
   `gate-files`, `skill-install`, `ci-and-commands`, `mcp-adoption`, `install-migrate`,
   `typescript-host`, `hook-templates`, `write-path-detect`, plus field/codex helpers.
+  `detectDeployPathQuality` extracted to `bin/lib/deploy-path.mjs` so `mcp-adoption.mjs` stays
+  under the 600 LOC module budget.
 - **Deny→repair CI proof:** `tests/unit/static-check/writePathDetect.test.ts` drives
   shipped `bin/ark-mcp.mjs --hook --hook-repair` and asserts `ARK_REPAIR_JSON` /
   `ARK_AUTOPATCH_JSON` on deny (exit 2); reject-only without repair flag still supported.
@@ -30,9 +36,8 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 - **Hook templates extracted** to `bin/lib/hook-templates.mjs` (agent-gates seam).
 - **Write-path detect extracted** to `bin/lib/write-path-detect.mjs` (doctor W5; re-exported
   from agent-gates).
-- **Coverage thresholds** ratchet: statements/lines **46.5**, branches **73.6**, functions
-  **70.5** (upward only; was 46/73/70). Per-file floors for write-path-detect, auto-patch,
-  prepare-write ≥90% lines. Full Q1 80/85 remains further sessions.
+- **Coverage thresholds** raised to Q1 floors on the broad include set: statements/lines **≥80**,
+  branches/functions **≥85**, critical write/safety modules **≥95%** branch (see Fixed above).
 - **`/ark-explore` skill:** decision-grade recon — field path (run starters/checks),
   installed hooks vs install templates, coupling via fan-in/exports (not LOC alone),
   ranked “así te lo re-soluciono” rows only when residual changes action; ENFORCE /

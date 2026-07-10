@@ -86,11 +86,12 @@ export {
   detectSkillGaps,
 } from './skill-install.mjs';
 
+export { detectDeployPathQuality } from './deploy-path.mjs';
+
 export {
   stripMcpServerArgs,
   mcpArgsHaveDuplicateBins,
   brokenMcpGateFiles,
-  detectDeployPathQuality,
   collectAdoptionGaps,
 } from './mcp-adoption.mjs';
 
