@@ -1,12 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  DEFAULT_ARK_CONFIG_RULES,
+  withArkConfigMetadata,
+} from './lib/config-contract.mjs';
 
 /**
- * Default layer rule matrix + intent-prefix map, shared by both CLIs and by the ark-mcp
- * write-path gate so they enforce identically. These mirror the elevenLayerProfile in
- * src/kernel/layers/ArchitectureProfile.ts; kept here (not imported from dist) because the
- * CLIs run standalone with only `typescript` present, no build step.
+ * Default intent-prefix map shared by both CLIs and the ark-mcp write-path gate. The rule
+ * matrix comes from the generated Domain config contract above. Prefixes mirror the runtime
+ * profile but stay in this standalone CLI module because the CLIs run without a build step.
  */
 export const DEFAULT_INTENT_PREFIXES = [
   { layer: 'DomainModel', prefixes: ['Domain.'] },
@@ -41,35 +44,7 @@ export const DEFAULT_LAYER_DIRECTORIES = {
   Kernel: ['kernel'],
 };
 
-const DEFAULT_ALLOWED_FLOWS = [
-  { from: 'PresentationAdapters', to: 'ApplicationOrchestration' },
-  { from: 'ApplicationOrchestration', to: 'DomainModel' },
-  { from: 'WorkflowSagaEngine', to: 'ApplicationOrchestration' },
-  { from: 'WorkflowSagaEngine', to: 'DomainModel' },
-  { from: 'BackgroundJobsScheduling', to: 'ApplicationOrchestration' },
-];
-
-function flowKey(from, to) {
-  return `${from}->${to}`;
-}
-
-function createStrictDenyRules(layers, allowedFlows) {
-  const allowed = new Set(allowedFlows.map((flow) => flowKey(flow.from, flow.to)));
-  const rules = [];
-  for (const from of layers) {
-    for (const to of layers) {
-      if (from.layer === to.layer) continue;
-      if (allowed.has(flowKey(from.layer, to.layer))) continue;
-      rules.push({ from: from.layer, to: to.layer, allowed: false });
-    }
-  }
-  return rules;
-}
-
-export const DEFAULT_RULES = createStrictDenyRules(
-  DEFAULT_INTENT_PREFIXES,
-  DEFAULT_ALLOWED_FLOWS
-);
+export const DEFAULT_RULES = DEFAULT_ARK_CONFIG_RULES;
 
 /**
  * Default ambient globals forbidden in the domain layer: a pure domain does no I/O and is
@@ -82,7 +57,7 @@ export function createElevenLayerConfig(options = {}) {
   const rootDir = options.rootDir ?? 'src';
   const optional = options.optionalLayers ?? true;
   const prefix = rootDir === '.' ? '' : `${rootDir}/`;
-  const config = {
+  const config = withArkConfigMetadata({
     include: options.include ?? [rootDir],
     layers: DEFAULT_INTENT_PREFIXES.map((entry) => ({
       name: entry.layer,
@@ -96,7 +71,7 @@ export function createElevenLayerConfig(options = {}) {
         : {}),
     })),
     rules: DEFAULT_RULES,
-  };
+  });
   // When a project root is known, overlay Nest/Next/express filename conventions so a
   // flat framework starter is governed on day one (not "0% governed / false green").
   if (options.root) return applyFrameworkLayoutOverlays(config, options.root);
@@ -134,7 +109,7 @@ export function applyFrameworkLayoutOverlays(config, root) {
   try {
     signals = collectRepoShapeSignals(root);
   } catch {
-    return config;
+    return withArkConfigMetadata(config);
   }
 
   const next = {
@@ -344,7 +319,7 @@ export function applyFrameworkLayoutOverlays(config, root) {
       : 'library';
   }
 
-  return next;
+  return withArkConfigMetadata(next);
 }
 
 /**

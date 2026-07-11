@@ -1,4 +1,6 @@
 {
+  "$schema": "https://unpkg.com/arkgate@2/schemas/ark.config.schema.json",
+  "schemaVersion": "1.0",
   "include": ["src"],
   "safety": {
     "allowInMemory": true

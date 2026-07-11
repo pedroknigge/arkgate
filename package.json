@@ -22,6 +22,8 @@
       "import": "./dist/eslint/index.js",
       "require": "./dist/eslint/index.cjs"
     },
+    "./schema": "./schemas/ark.config.schema.json",
+    "./schema/ark.config.schema.json": "./schemas/ark.config.schema.json",
     "./nestjs": {
       "types": "./dist/nestjs/index.d.ts",
       "import": "./dist/nestjs/index.js",
@@ -42,6 +44,7 @@
     "bin",
     "bin/lib",
     "dist",
+    "schemas",
     "docs/agent-guide.md",
     "docs/enthusiast",
     "docs/demos",
@@ -51,6 +54,7 @@
     "docs/ark-check-example.json",
     "docs/assets",
     "docs/brownfield-adoption.md",
+    "docs/configuration.md",
     "docs/package-surface.md",
     "docs/production-hardening.md",
     "docs/threat-model.md",

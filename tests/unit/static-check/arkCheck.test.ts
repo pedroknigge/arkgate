@@ -1923,7 +1923,7 @@ describe('ark-check forbiddenGlobals', () => {
     expect(globals.every((v) => v.file === 'src/domain/order.ts')).toBe(true);
   });
 
-  it('passes clean domain code and warns on a malformed forbiddenGlobals value', () => {
+  it('passes clean domain code and rejects a malformed forbiddenGlobals value', () => {
     const root = project('export const order = 1;\n');
     expect(runArkCheck(root).ok).toBe(true);
 
@@ -1931,10 +1931,13 @@ describe('ark-check forbiddenGlobals', () => {
       path.join(root, 'ark.config.json'),
       CONFIG.replace(JSON.stringify(['fetch', 'Date.now', 'console']), '"fetch"')
     );
-    const result = runArkCheck(root);
-    expect(result.warnings.some((w) => w.ruleId === 'CONFIG_INVALID_FORBIDDEN_GLOBALS')).toBe(true);
-    // Malformed entry is ignored, not enforced and not crashing.
-    expect(result.violations.filter((v) => v.ruleId === 'FORBIDDEN_GLOBAL')).toEqual([]);
+    const result = spawnSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--json'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    );
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('$.layers[0].forbiddenGlobals');
   });
 
   it('supports baselining FORBIDDEN_GLOBAL violations', () => {
@@ -2435,7 +2438,7 @@ describe('framework layout overlays (Nest / Next)', () => {
         return {
           ...l,
           optional: false,
-          patterns: [...(l.patterns || []), 'src/layouts/**', 'app/**'],
+          patterns: [...(l.patterns || []), 'src/unused-layouts/**', 'unused-app/**'],
         };
       }
       if (l.name === 'ApplicationOrchestration' || l.name === 'DomainModel') {

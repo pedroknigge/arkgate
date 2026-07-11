@@ -58,6 +58,7 @@ import {
 import { createImportTargetResolver } from './lib/import-resolve.mjs';
 import { validateWithAutoPatch, resolveImportFileAbs } from './lib/auto-patch.mjs';
 import { composePrepareWrite } from './lib/prepare-write.mjs';
+import { loadArkConfigContract } from './lib/config-contract.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 
@@ -118,6 +119,11 @@ function readJson(file, { required } = {}) {
   } catch (err) {
     throw new Error(`Failed to parse ${file}: ${err instanceof Error ? err.message : String(err)}`);
   }
+}
+
+function readArkConfig(file, { required } = {}) {
+  const raw = readJson(file, { required });
+  return raw === undefined ? undefined : loadArkConfigContract(raw, file).config;
 }
 
 function resolveInRoot(root, maybePath) {
@@ -460,11 +466,11 @@ async function main() {
   const ts = await loadOptionalTypeScript();
 
   const config =
-    (configPath ? readJson(configPath, { required: args.configExplicit }) : undefined) ?? {
-      include: ['src'],
-      layers: [],
-      rules: [],
-    };
+    (configPath ? readArkConfig(configPath, { required: args.configExplicit }) : undefined) ??
+    loadArkConfigContract(
+      { include: ['src'], layers: [], rules: DEFAULT_RULES },
+      configPath ?? 'ark.config.json'
+    ).config;
   if (!config.layers || config.layers.length === 0) {
     process.stderr.write(
       '[ark-mcp] warning: no layers configured — file→layer inference from config patterns ' +

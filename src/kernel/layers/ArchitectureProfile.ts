@@ -7,6 +7,10 @@ import type {
   CreateElevenLayerArkConfigOptions,
   CreateArchitectureProfileOptions,
 } from './types';
+import {
+  DEFAULT_ARK_CONFIG_RULES,
+  withArkConfigMetadata,
+} from '../../domain/configContract';
 
 function normalizePrefix(prefix: string): string {
   return prefix.endsWith('.') ? prefix : `${prefix}.`;
@@ -20,28 +24,6 @@ function byLongestPrefix(a: ArchitectureLayer, b: ArchitectureLayer): number {
     ? Math.max(...b.prefixes.map((p) => p.length))
     : 0;
   return maxB - maxA;
-}
-
-function flowKey(from: string, to: string): string {
-  return `${from}->${to}`;
-}
-
-function createStrictDenyRules(
-  layers: ArchitectureLayer[],
-  allowedFlows: Array<Pick<ArchitectureRule, 'from' | 'to'>>
-): ArchitectureRule[] {
-  const allowed = new Set(allowedFlows.map((flow) => flowKey(flow.from, flow.to)));
-  const rules: ArchitectureRule[] = [];
-
-  for (const from of layers) {
-    for (const to of layers) {
-      if (from.name === to.name) continue;
-      if (allowed.has(flowKey(from.name, to.name))) continue;
-      rules.push({ from: from.name, to: to.name, allowed: false });
-    }
-  }
-
-  return rules;
 }
 
 export function createArchitectureProfile(
@@ -155,21 +137,10 @@ const elevenLayerProfileLayers: ArchitectureLayer[] = [
   },
 ];
 
-const elevenLayerAllowedFlows: Array<Pick<ArchitectureRule, 'from' | 'to'>> = [
-  { from: 'PresentationAdapters', to: 'ApplicationOrchestration' },
-  { from: 'ApplicationOrchestration', to: 'DomainModel' },
-  { from: 'WorkflowSagaEngine', to: 'ApplicationOrchestration' },
-  { from: 'WorkflowSagaEngine', to: 'DomainModel' },
-  { from: 'BackgroundJobsScheduling', to: 'ApplicationOrchestration' },
-];
-
 export const elevenLayerProfile = createArchitectureProfile({
   name: 'Ark 11-layer Hexagonal Event-Driven Profile',
   layers: elevenLayerProfileLayers,
-  rules: createStrictDenyRules(
-    elevenLayerProfileLayers,
-    elevenLayerAllowedFlows
-  ),
+  rules: DEFAULT_ARK_CONFIG_RULES.map((rule) => ({ ...rule })),
 });
 
 const defaultElevenLayerDirectories: Record<string, string[]> = {
@@ -198,7 +169,7 @@ export function createElevenLayerArkConfig(
   const optional = options.optionalLayers ?? true;
   const prefix = rootDir === '.' ? '' : `${rootDir}/`;
 
-  return {
+  return withArkConfigMetadata({
     include: options.include ?? [rootDir],
     layers: elevenLayerProfile.layers.map((layer) => ({
       name: layer.name,
@@ -209,5 +180,5 @@ export function createElevenLayerArkConfig(
       optional,
     })),
     rules: [...elevenLayerProfile.rules],
-  };
+  });
 }

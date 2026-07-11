@@ -1,38 +1,20 @@
 {
-  "$schema": "https://unpkg.com/arkgate@2/schemas/ark.config.schema.json",
-  "schemaVersion": "1.0",
-  "include": ["src", "bin", "scripts"],
-  "dynamicImportAllowlist": ["bin/ark-mcp.mjs", "scripts/generate-cli-pure.mjs"],
-  "safety": {
-    "maxTsSuppressions": 0,
-    "maxAnyCasts": 0,
-    "allowInMemory": false
-  },
+  "include": ["src"],
   "layers": [
     {
       "name": "DomainModel",
-      "patterns": [
-        "src/domain/**",
-        "bin/ark-layer-match.mjs",
-        "bin/lib/remediation.mjs",
-        "bin/lib/baseline-key.mjs"
-      ],
+      "patterns": ["src/domain/**"],
       "intentPrefixes": ["Domain."],
       "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"]
     },
     {
       "name": "Kernel",
-      "patterns": [
-        "src/kernel/**",
-        "src/runtime/**",
-        "src/index.ts",
-        "src/version.ts"
-      ],
+      "patterns": ["src/kernel/**", "src/index.ts", "src/version.ts"],
       "intentPrefixes": ["Kernel."]
     },
     {
       "name": "Tooling",
-      "patterns": ["src/eslint/**", "bin/**", "scripts/**"]
+      "patterns": ["src/eslint/**"]
     },
     {
       "name": "FrameworkAdapters",
@@ -49,6 +31,6 @@
     { "from": "DomainModel", "to": "Tooling", "allowed": false },
     { "from": "Kernel", "to": "Tooling", "allowed": false },
     { "from": "Tooling", "to": "Kernel", "allowed": false },
-    { "from": "Tooling", "to": "DomainModel", "allowed": true }
+    { "from": "Tooling", "to": "DomainModel", "allowed": false }
   ]
 }

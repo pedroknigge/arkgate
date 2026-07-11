@@ -83,6 +83,7 @@ import {
 import {
   ARCHITECTURE_PRESETS,
 } from './lib/presets.mjs';
+import { loadArkConfigContract, parseArkConfigJson } from './lib/config-contract.mjs';
 
 import {
   collectGovernedFiles,
@@ -320,25 +321,12 @@ function readConfig(root, configPath) {
     ? configPath
     : path.join(root, configPath);
   if (!fs.existsSync(fullPath)) {
-    return {
-      include: ['src'],
-      layers: [],
-      rules: DEFAULT_RULES,
-    };
+    return loadArkConfigContract(
+      { include: ['src'], layers: [], rules: DEFAULT_RULES },
+      fullPath
+    ).config;
   }
-  const raw = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
-  return {
-    include: raw.include ?? ['src'],
-    layers: raw.layers ?? [],
-    rules: raw.rules ?? DEFAULT_RULES,
-    ...(raw.exclude ? { exclude: raw.exclude } : {}),
-    ...(raw.excludeGenerated !== undefined ? { excludeGenerated: raw.excludeGenerated } : {}),
-    ...(raw.cyclePolicy ? { cyclePolicy: raw.cyclePolicy } : {}),
-    ...(raw.dynamicImportAllowlist
-      ? { dynamicImportAllowlist: raw.dynamicImportAllowlist }
-      : {}),
-    ...(raw.safety ? { safety: raw.safety } : {}),
-  };
+  return parseArkConfigJson(fs.readFileSync(fullPath, 'utf8'), fullPath).config;
 }
 
 /**
