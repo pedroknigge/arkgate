@@ -29,7 +29,9 @@ describe('Structrail adoption gaps (structural)', () => {
     const json = JSON.parse(raw);
     const args: string[] = json?.mcpServers?.structrail?.args ?? [];
     const bins = args.filter((arg) =>
+      // legacy-identity:start negative-test removal=v4
       ['structrail-mcp', 'arkgate-mcp', 'ark-mcp'].includes(arg)
+      // legacy-identity:end
     );
     expect(bins).toEqual(['structrail-mcp']);
   });

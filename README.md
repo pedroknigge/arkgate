@@ -116,7 +116,7 @@ npx structrail-check --doctor        # status light + next action
 
 **npm / pnpm / yarn.** No install lifecycle scripts.
 
-<!-- legacy-identity:start v3-compatibility -->
+<!-- legacy-identity:start v3-compatibility removal=v4 -->
 Migrating from ArkGate v2? The deprecated `arkgate@3` wrapper retains `arkgate*`, `ark*`,
 `ark.config.json`, `ARK_*`, `ark://…`, `ark_*`, and `/ark-*` for all of v3. New work should use
 Structrail names. See the [v3 migration guide](docs/migrations/arkgate-to-structrail.md).

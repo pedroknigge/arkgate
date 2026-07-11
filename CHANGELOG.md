@@ -27,6 +27,11 @@ All notable changes to Structrail (`structrail`; formerly ArkGate / `arkgate` an
 - **Cross-package-manager compatibility matrix:** clean local-tarball installs cover npm, pnpm,
   and Yarn across primary-only, compatibility-only, and combined consumers, including all four
   import subpaths and every public bin.
+- **Legacy identity ratchet:** `npm run check:identity` rejects unapproved ArkGate-era names on
+  current public surfaces. Compatibility blocks, aliases, fixtures, and internal v3 artifacts are
+  reviewable through one allowlist and share the removal target `v4`; migration/history and the
+  M6-gated external repository metadata remain separate categories. CI and both npm publish paths
+  run the same check, and the rename adds no telemetry.
 
 - **Active-host enforcement capabilities:** doctor and adoption checks now project
   `hard-write`, `advisory-write`, `merge-gate`, and `repair-payload` from the active host only,

@@ -1,4 +1,4 @@
 #!/usr/bin/env node
-import { runArkCli } from './ark.mjs';
+import { runArkCli as runStructrailCli } from './ark.mjs';
 
-process.exitCode = await runArkCli();
+process.exitCode = await runStructrailCli();

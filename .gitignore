@@ -17,7 +17,7 @@ reports/mutation/
 *.tsbuildinfo
 .gstack/
 
-# Ark agent-eval generated reports (fixtures stay tracked)
+# Structrail agent-eval generated reports (fixtures stay tracked)
 eval/report.json
 eval/comparative-report.json
 
@@ -36,7 +36,7 @@ marketing/
 # Local pack artifacts
 *.tgz
 
-# Ark generated reports / local state
+# Structrail generated reports / local state
 .ark/
 .tmp-*
 eval/loop-cost-report.json

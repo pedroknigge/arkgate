@@ -10,6 +10,7 @@ Update the `structrail` dependency to the latest published version and
 bring the repo's generated artifacts and gates in line with it. This skill
 checks the registry itself — don't assume the copy in `node_modules` is current.
 
+<!-- legacy-identity:start migration-history -->
 **Still on `ark-runtime-kernel`?** Migrate first (legacy package, same product lineage):
 
 ```bash
@@ -18,6 +19,7 @@ npx structrail-check --install-agent-gates --force
 ```
 
 Guide: `docs/migrate-from-ark-runtime-kernel.md` in the package (or on GitHub).
+<!-- legacy-identity:end -->
 
 **TypeScript 7 projects:** Structrail falls back to a nested JS-API TypeScript when the
 project's `typescript` main export is version-only (TS 7.0). After upgrade, point users at
@@ -26,7 +28,9 @@ project's `typescript` main export is version-only (TS 7.0). After upgrade, poin
 
 **MCP double-bin check (identity cutover):** after upgrade, open `.mcp.json` and
 `.cursor/mcp.json`. `args` must contain exactly one MCP bin: prefer `structrail-mcp`;
+<!-- legacy-identity:start v3-compatibility removal=v4 -->
 `arkgate-mcp` and `ark-mcp` are v3 compatibility inputs only. If multiple appear, run:
+<!-- legacy-identity:end -->
 
 ```
 npx structrail-check --install-agent-gates --migrate-commands
@@ -71,7 +75,9 @@ and run the strict check:
 
 ```
 structrail upgrade
+# legacy-identity:start v3-compatibility removal=v4
 # (v3 aliases: arkgate upgrade / ark upgrade)
+# legacy-identity:end
 ```
 
 Use it when the user just wants the update done. Run the detailed steps below instead when

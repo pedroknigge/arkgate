@@ -69,6 +69,7 @@
     "test:confidence": "npm run test:coverage && npm run test:mutation",
     "typecheck": "tsc --noEmit",
     "security:audit": "npm audit --omit=dev --audit-level=high",
+    "check:identity": "node scripts/check-legacy-identity.mjs",
     "check:architecture": "node bin/structrail-check.mjs --root . --config structrail.config.json --strict",
     "check:js": "node scripts/check-js-syntax.mjs",
     "generate:layer-match": "node scripts/generate-layer-match.mjs",

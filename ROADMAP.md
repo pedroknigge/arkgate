@@ -112,6 +112,7 @@ Run for every implementation item unless the item is documentation/decision-only
 npm run typecheck
 npm run test:confidence
 npm run check:js
+npm run check:identity
 npm run check:layer-match
 npm run check:cli-pure
 npm run check:module-budgets
@@ -894,8 +895,8 @@ retain v2 names. External names and redirects remain unchanged until M0/M6 evide
 
 ```text
 Item: S07-M1 — Migrate ArkGate to Structrail with compatibility
-Current result: local package/bin/config/env/MCP/skills/docs/eval migration implemented with v3 compatibility
-Next: land the legacy-name ratchet and full local audit; keep M0 reservation/legal as the public-cutover gate
+Current result: local migration + v4-bounded legacy-name ratchet implemented with v3 compatibility
+Next: run and record the full local acceptance audit; keep M0 reservation/legal as the public-cutover gate
 Primary plan: docs/migrations/arkgate-to-structrail.md
 Required finish: target identity cut over + all v2 paths green through arkgate@3 + common/package gates
 ```

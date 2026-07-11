@@ -1,5 +1,5 @@
 /**
- * arkgate/eslint — editor-side architecture gate.
+ * structrail/eslint — editor-side architecture gate.
  *
  * Layer / import / forbidden-globals rules load `structrail.config.json` from the linted
  * project (walk-up from the file) and use the same glob specificity + edge semantics
@@ -85,7 +85,7 @@ type AstNode = {
   computed?: boolean;
 };
 
-type ArkRule = {
+type StructrailRule = {
   meta: {
     type: 'problem';
     docs: { description: string };
@@ -95,8 +95,8 @@ type ArkRule = {
   create(context: RuleContext): RuleListener;
 };
 
-type ArkEslintPlugin = {
-  rules: Record<string, ArkRule>;
+type StructrailEslintPlugin = {
+  rules: Record<string, StructrailRule>;
   configs?: Record<string, unknown>;
 };
 
@@ -114,13 +114,14 @@ type StructrailConfig = {
   rules?: EdgeRule[];
 };
 
-// ── Config I/O (editor-only; matching primitives come from ark-layer-match.mjs) ──
+// ── Config I/O (editor-only; matching primitives come from the generated layer matcher) ──
 
 export function findConfigPath(startFile: string): string | null {
   if (!startFile || startFile === '<input>' || startFile.startsWith('stdin')) return null;
   let dir = path.dirname(path.resolve(startFile));
   for (;;) {
     const canonical = path.join(dir, 'structrail.config.json');
+    // legacy-identity:start v3-compatibility removal=v4
     const legacy = path.join(dir, 'ark.config.json');
     const canonicalExists = fs.existsSync(canonical);
     const legacyExists = fs.existsSync(legacy);
@@ -132,6 +133,7 @@ export function findConfigPath(startFile: string): string | null {
     }
     if (canonicalExists) return canonical;
     if (legacyExists) return legacy;
+    // legacy-identity:end
     const parent = path.dirname(dir);
     if (parent === dir) return null;
     dir = parent;
@@ -298,7 +300,7 @@ const DEFAULT_FORBIDDEN_GLOBALS = ['fetch', 'process', 'Date.now', 'Math.random'
  * Replaces path-token domain/infra heuristics when structrail.config.json is present.
  * Rule id kept as `no-domain-infra-imports` for recommended-config / upgrade stability.
  */
-export const noDomainInfraImports: ArkRule = {
+export const noDomainInfraImports: StructrailRule = {
   meta: {
     type: 'problem',
     docs: {
@@ -368,7 +370,7 @@ export const noDomainInfraImports: ArkRule = {
   },
 };
 
-export const noRawEventPublish: ArkRule = {
+export const noRawEventPublish: StructrailRule = {
   meta: {
     type: 'problem',
     docs: {
@@ -395,7 +397,7 @@ export const noRawEventPublish: ArkRule = {
   },
 };
 
-export const requirePublishSource: ArkRule = {
+export const requirePublishSource: StructrailRule = {
   meta: {
     type: 'problem',
     docs: {
@@ -421,7 +423,7 @@ export const requirePublishSource: ArkRule = {
   },
 };
 
-export const noForbiddenGlobals: ArkRule = {
+export const noForbiddenGlobals: StructrailRule = {
   meta: {
     type: 'problem',
     docs: {
@@ -539,7 +541,7 @@ const rules = {
   'no-forbidden-globals': noForbiddenGlobals,
 };
 
-const plugin: ArkEslintPlugin = { rules };
+const plugin: StructrailEslintPlugin = { rules };
 
 plugin.configs = {
   recommended: {
@@ -551,6 +553,7 @@ plugin.configs = {
       'structrail/no-forbidden-globals': 'error',
     },
   },
+  // legacy-identity:start v3-compatibility removal=v4
   'recommended-legacy': {
     plugins: { ark: plugin },
     rules: {
@@ -560,6 +563,7 @@ plugin.configs = {
       'ark/no-forbidden-globals': 'error',
     },
   },
+  // legacy-identity:end
 };
 
 export { plugin };

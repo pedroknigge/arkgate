@@ -21,6 +21,7 @@ npm run typecheck
 npm run test:confidence # full coverage + critical-module mutation gates
 npx structrail-check --root . --config structrail.config.json --strict
 npm run check:architecture   # Structrail dogfoods itself
+npm run check:identity       # no unapproved legacy public names
 npm run check:layer-match    # derived bin/ark-layer-match.mjs must match domain source
 npm run check:cli-pure       # remediation + baselineKey derived helpers in sync
 npm run test:ts-compat       # consumer matrix TS 5.9 / 6.0 / 7.0 (optional, slower)
@@ -45,7 +46,7 @@ without discussion. NestJS and similar stay optional `peerDependencies` + devDep
 - `src/kernel/` — optional runtime kernel (registry, event bus, contracts, …)
 - `src/eslint/` · `src/nestjs/` — optional adapters
 - `bin/` — primary CLIs: `structrail` / `structrail-check` / `structrail-mcp`
-<!-- legacy-identity:start v3-compatibility -->
+<!-- legacy-identity:start v3-compatibility removal=v4 -->
 - `compat/arkgate/` — deprecated v3 wrapper that owns `arkgate*` and `ark*` compatibility bins
 <!-- legacy-identity:end -->
 - `templates/` — playbook, policy packs, agent skills (shipped on npm; install via `--install-agent-gates`)

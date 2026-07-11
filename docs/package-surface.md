@@ -23,7 +23,7 @@ This document is the consumer contract for **what is stable** vs **what is exper
 
 Gates need **no application code imports**. Most projects only use the CLI + MCP + config.
 
-<!-- legacy-identity:start v3-compatibility -->
+<!-- legacy-identity:start v3-compatibility removal=v4 -->
 ### Deprecated v3 compatibility
 
 The separate `arkgate@3` wrapper retains the v2 imports, six `arkgate*`/`ark*` bins,

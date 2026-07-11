@@ -377,7 +377,7 @@ function tsIsPublishCall(ts: any, node: any): boolean {
   return ts.isIdentifier(expression) && expression.text === 'publish';
 }
 
-function tsIsArkPublishCandidate(ts: any, node: any): boolean {
+function tsIsStructrailPublishCandidate(ts: any, node: any): boolean {
   if (!ts.isCallExpression(node)) return false;
   const firstArg = node.arguments[0];
   const rawIntent = tsStringLiteralText(ts, firstArg);
@@ -554,7 +554,7 @@ function analyzePublishAst<Context>(
         );
       }
 
-      if (tsIsArkPublishCandidate(ts, node) && !tsPublishHasSource(ts, node)) {
+      if (tsIsStructrailPublishCandidate(ts, node) && !tsPublishHasSource(ts, node)) {
         violations.push(
           violation('PUBLISH_MISSING_SOURCE', 'Strict Structrail publish calls must include metadata.source.', {
             line: lineForNode(node),

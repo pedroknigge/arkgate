@@ -26,7 +26,7 @@ standalone core loads
 `dist/index.js`: run `npm run build` after cloning or the write gate reports an error
 instead of validating. Product name **Structrail**; npm `structrail`; primary bins `structrail*`.
 
-<!-- legacy-identity:start v3-compatibility -->
+<!-- legacy-identity:start v3-compatibility removal=v4 -->
 The separate `compat/arkgate/` package owns the deprecated `arkgate*` and `ark*` v3 paths.
 <!-- legacy-identity:end -->
 

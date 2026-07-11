@@ -10,6 +10,7 @@ import {
   validateSelectedTools,
 } from '../../../bin/lib/enforcement-profiles.mjs';
 import { KNOWN_TOOLS } from '../../../bin/lib/skill-install.mjs';
+import { STRUCTRAIL_GENERATION_IDENTITY } from '../../../bin/lib/product-identity.mjs';
 
 function mk(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'ark-enforcement-profile-'));
@@ -139,6 +140,24 @@ describe('enforcement profile policy', () => {
           force: true,
         })
       ).toMatchObject({ ok: true, host: 'grok' });
+
+      fs.writeFileSync(
+        path.join(root, '.grok', 'hooks', 'structrail-write-gate.json'),
+        '{"hooks":{}}\n'
+      );
+      expect(
+        validateHardWriteRequest({
+          root,
+          host: 'grok',
+          tools: 'grok',
+          identity: STRUCTRAIL_GENERATION_IDENTITY,
+        })
+      ).toEqual({
+        ok: false,
+        error:
+          '.grok/hooks/structrail-write-gate.json already exists without an Ark hard-write hook and would be preserved. ' +
+          'Use --force to replace that host file, or omit --require-write-hook for merge-only enforcement.',
+      });
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

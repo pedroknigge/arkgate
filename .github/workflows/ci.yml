@@ -30,6 +30,9 @@ jobs:
       - name: JavaScript syntax (bin/scripts/eval)
         run: npm run check:js
 
+      - name: Legacy identity ratchet
+        run: npm run check:identity
+
       # R1: bin/ark-layer-match.mjs must be regenerated from src/domain/layerMatch.ts
       - name: Layer-match derived artifact (drift guard)
         run: npm run check:layer-match
@@ -45,7 +48,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      # Mandatory architecture gate: ark-check exits non-zero on any layer violation,
+      # Mandatory architecture gate: structrail-check exits non-zero on any layer violation,
       # which fails the job and blocks the merge. --strict-config also fails the job on
       # governance-coverage warnings (e.g. unclassified source files), so the config can
       # never silently rot below 100% coverage of src.
@@ -90,5 +93,5 @@ jobs:
 
       - run: npm ci
 
-      - name: ark-check --plan on consumer fixture (typescript@${{ matrix.typescript }})
+      - name: structrail-check --plan on consumer fixture (typescript@${{ matrix.typescript }})
         run: node scripts/ts-compat-matrix.mjs ${{ matrix.typescript }}

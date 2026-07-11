@@ -37,6 +37,12 @@ describe('legacy public identity ratchet', () => {
     expect(result.stderr).toContain('ArkGate');
   });
 
+  it('rejects an unapproved legacy public filename', () => {
+    const result = run(fixture({ 'docs/ark-guide.md': '# Structrail\n' }));
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('docs/ark-guide.md:path');
+  });
+
   it('allows v3 compatibility only when its removal target is v4', () => {
     const accepted = run(
       fixture({
@@ -113,6 +119,23 @@ describe('legacy public identity ratchet', () => {
     expect(rejected.stderr).toContain('src/index.ts:2');
   });
 
+  it('does not let a detached deprecation comment approve later legacy text', () => {
+    const result = run(
+      fixture({
+        'src/index.ts': [
+          '/** @deprecated Use StructrailKernel. Removal target: v4. */',
+          '',
+          '',
+          '',
+          'export const ArkGateName = "legacy";',
+          '',
+        ].join('\n'),
+      })
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('src/index.ts:5');
+  });
+
   it('passes against the repository public surface', () => {
     const result = run(REPO);
     expect(result.status, result.stderr).toBe(0);
@@ -127,12 +150,17 @@ describe('legacy identity gate wiring', () => {
     };
     const ci = fs.readFileSync(path.join(REPO, '.github/workflows/ci.yml'), 'utf8');
     const release = fs.readFileSync(path.join(REPO, 'scripts/release-npm.mjs'), 'utf8');
+    const publishWorkflow = fs.readFileSync(
+      path.join(REPO, '.github/workflows/publish-npm.yml'),
+      'utf8'
+    );
 
     expect(pkg.scripts['check:identity']).toBe('node scripts/check-legacy-identity.mjs');
     expect(ci).toContain('run: npm run check:identity');
     const identityGate = release.indexOf("run('npm run check:identity')");
-    const publish = release.indexOf("'npm publish --dry-run'");
+    const publishCommand = release.indexOf("'npm publish --dry-run'");
     expect(identityGate).toBeGreaterThanOrEqual(0);
-    expect(publish).toBeGreaterThan(identityGate);
+    expect(publishCommand).toBeGreaterThan(identityGate);
+    expect(publishWorkflow).toContain('npm run check:identity');
   });
 });

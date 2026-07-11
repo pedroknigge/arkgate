@@ -1,0 +1,379 @@
+{
+  "schemaVersion": 1,
+  "removalTarget": "v4",
+  "ignoredPaths": [
+    {
+      "path": "CHANGELOG.md",
+      "match": "exact",
+      "category": "history",
+      "reason": "Release history must preserve the names used by each shipped version."
+    },
+    {
+      "path": "ROADMAP.md",
+      "match": "exact",
+      "category": "migration",
+      "reason": "The active roadmap records the identity decision and external cutover gate."
+    },
+    {
+      "path": "docs/adr/",
+      "match": "prefix",
+      "category": "history",
+      "reason": "ADRs are immutable decision records."
+    },
+    {
+      "path": "docs/migrations/",
+      "match": "prefix",
+      "category": "migration",
+      "reason": "Migration documentation must name both generations."
+    },
+    {
+      "path": "docs/releases/",
+      "match": "prefix",
+      "category": "history",
+      "reason": "Historical release notes retain their original identity."
+    },
+    {
+      "path": "docs/migrate-from-ark-runtime-kernel.md",
+      "match": "exact",
+      "category": "migration",
+      "reason": "Historical package migration guide."
+    },
+    {
+      "path": "compat/",
+      "match": "prefix",
+      "category": "compatibility-code",
+      "removalTarget": "v4",
+      "reason": "The v3 compatibility package owns the legacy npm and bin surfaces."
+    },
+    {
+      "path": "eval/cases/",
+      "match": "prefix",
+      "category": "compatibility-assertions",
+      "removalTarget": "v4",
+      "reason": "Evaluation fixtures preserve legacy baselines and conflict cases through v3."
+    },
+    {
+      "path": "tests/",
+      "match": "prefix",
+      "category": "compatibility-assertions",
+      "removalTarget": "v4",
+      "reason": "Tests and fixtures prove the supported v3 aliases and negative cases."
+    },
+    {
+      "path": "bin/lib/",
+      "match": "prefix",
+      "category": "internal-compatibility-code",
+      "removalTarget": "v4",
+      "reason": "Standalone CLI internals implement and test the v3 alias table; generated output has separate identity tests."
+    },
+    {
+      "path": "bin/ark-check.mjs",
+      "match": "exact",
+      "category": "compatibility-code",
+      "removalTarget": "v4",
+      "reason": "Legacy checker implementation and bin target."
+    },
+    {
+      "path": "bin/ark-layer-match.mjs",
+      "match": "exact",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Generated pure CLI artifact retained while v3 wrappers share the implementation."
+    },
+    {
+      "path": "bin/ark-mcp.mjs",
+      "match": "exact",
+      "category": "compatibility-code",
+      "removalTarget": "v4",
+      "reason": "Legacy MCP implementation and bin target."
+    },
+    {
+      "path": "bin/ark-shared.mjs",
+      "match": "exact",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Shared standalone CLI implementation retained through the compatibility major."
+    },
+    {
+      "path": "bin/ark.mjs",
+      "match": "exact",
+      "category": "compatibility-code",
+      "removalTarget": "v4",
+      "reason": "Legacy guided CLI implementation and bin target."
+    },
+    {
+      "path": "scripts/ark-scale-bench.mjs",
+      "match": "exact",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Internal benchmark filename predates the public rename."
+    },
+    {
+      "path": "scripts/check-legacy-identity.mjs",
+      "match": "exact",
+      "category": "ratchet-infrastructure",
+      "reason": "The checker necessarily encodes the forbidden tokens."
+    },
+    {
+      "path": "scripts/legacy-identity-allowlist.json",
+      "match": "exact",
+      "category": "ratchet-infrastructure",
+      "reason": "The reviewed allowlist necessarily names legacy paths."
+    },
+    {
+      "path": "scripts/check-module-budgets.mjs",
+      "match": "exact",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Budgets still address legacy implementation filenames."
+    },
+    {
+      "path": "scripts/generate-layer-match.mjs",
+      "match": "exact",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Generator targets the retained v3 implementation filename."
+    },
+    {
+      "path": "scripts/ts-compat-matrix.mjs",
+      "match": "exact",
+      "category": "compatibility-assertions",
+      "removalTarget": "v4",
+      "reason": "The compatibility matrix deliberately exercises legacy config and checker paths."
+    },
+    {
+      "path": "scripts/verify-release-tag.mjs",
+      "match": "exact",
+      "category": "compatibility-code",
+      "removalTarget": "v4",
+      "reason": "Release verification accepts v3 environment aliases."
+    },
+    {
+      "path": "stryker.config.mjs",
+      "match": "exact",
+      "category": "compatibility-assertions",
+      "removalTarget": "v4",
+      "reason": "Mutation targets retain implementation filenames during v3."
+    },
+    {
+      "path": "vitest.config.ts",
+      "match": "exact",
+      "category": "compatibility-assertions",
+      "removalTarget": "v4",
+      "reason": "Coverage exclusions and thresholds retain implementation filenames during v3."
+    },
+    {
+      "path": "templates/hooks/pre-commit-ark",
+      "match": "exact",
+      "category": "compatibility-template",
+      "removalTarget": "v4",
+      "reason": "Deprecated v3 hook template."
+    },
+    {
+      "path": "templates/tests/ark-adoption-gaps.test.ts",
+      "match": "exact",
+      "category": "compatibility-template",
+      "removalTarget": "v4",
+      "reason": "Deprecated v3 adoption-test template."
+    }
+  ],
+  "allowedPathNames": [
+    {
+      "path": "src/kernel/manifest/createArkManifest.ts",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Source filename remains the implementation home for deprecated v3 exports."
+    },
+    {
+      "path": "src/kernel/runtime/createArkKernel.ts",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Source filename remains the implementation home for deprecated v3 exports."
+    },
+    {
+      "path": "src/kernel/testing/ArkTestHarness.ts",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Source filename remains the implementation home for deprecated v3 exports."
+    }
+  ],
+  "allowedLines": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "contains": "bin/ark-layer-match.mjs",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "CI verifies the retained generated artifact."
+    },
+    {
+      "path": "AGENTS.md",
+      "contains": "except `ark-mcp`",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Self-hosted source boundary names the retained implementation file."
+    },
+    {
+      "path": "AGENTS.md",
+      "contains": "`bin/ark-shared.mjs`",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Self-hosted source boundary names the retained implementation file."
+    },
+    {
+      "path": "AGENTS.md",
+      "contains": "`bin/ark-layer-match.mjs`",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Self-hosted generator table names the retained artifact."
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "contains": "github.com/pedroknigge/arkgate",
+      "category": "external-cutover",
+      "reason": "The GitHub repository has not passed the M6 rename gate."
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "contains": "bin/ark-layer-match.mjs",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Contributor command documents the retained generated artifact."
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "contains": "bin/ark-shared.mjs",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Contributor architecture notes name the retained implementation file."
+    },
+    {
+      "path": "docs/agent-guide.md",
+      "contains": "node_modules/.cache/ark-check.json",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "The cache filename is an internal persisted artifact through v3."
+    },
+    {
+      "path": "docs/package-surface.md",
+      "contains": "bin/ark-layer-match.mjs",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "The explicit internal-surface list names the generated artifact."
+    },
+    {
+      "path": "package.json",
+      "contains": "docs/migrate-from-ark-runtime-kernel.md",
+      "category": "migration",
+      "reason": "The package ships the historical migration guide."
+    },
+    {
+      "path": "README.md",
+      "contains": "ark-runtime-kernel",
+      "category": "migration",
+      "reason": "The public documentation retains the predecessor-package migration path."
+    },
+    {
+      "path": "package.json",
+      "contains": "scripts/ark-scale-bench.mjs",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "The internal benchmark script retains its filename through v3."
+    },
+    {
+      "path": "package.json",
+      "contains": "github.com/pedroknigge/arkgate",
+      "category": "external-cutover",
+      "reason": "Repository and issue metadata remain truthful until M6."
+    },
+    {
+      "path": "server.json",
+      "contains": "github.com/pedroknigge/arkgate",
+      "category": "external-cutover",
+      "reason": "Registry repository metadata remains truthful until M6."
+    },
+    {
+      "path": "structrail.config.json",
+      "contains": "bin/ark-mcp.mjs",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Self-hosted dynamic-import allowlist names the retained implementation."
+    },
+    {
+      "path": "structrail.config.json",
+      "contains": "bin/ark-layer-match.mjs",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Self-hosted layer pattern names the retained generated artifact."
+    },
+    {
+      "path": "bin/structrail-check.mjs",
+      "contains": "./ark-check.mjs",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "The primary wrapper delegates to the v3 implementation."
+    },
+    {
+      "path": "bin/structrail-mcp.mjs",
+      "contains": "./ark-mcp.mjs",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "The primary wrapper delegates to the v3 implementation."
+    },
+    {
+      "path": "bin/structrail.mjs",
+      "contains": "./ark.mjs",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "The primary wrapper delegates to the v3 implementation."
+    },
+    {
+      "path": "src/domain/layerMatch.ts",
+      "contains": "bin/ark-layer-match.mjs",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Canonical source documents its generated v3 artifact."
+    },
+    {
+      "path": "src/eslint/index.ts",
+      "contains": "bin/ark-layer-match.mjs",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Adapter source documents its generated matching artifact."
+    },
+    {
+      "path": "src/kernel/ai-gate/AICodeGate.ts",
+      "contains": "bin/ark-shared.mjs",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Parity comment names the standalone implementation."
+    },
+    {
+      "path": "src/kernel/manifest/index.ts",
+      "contains": "./createArkManifest",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Barrel imports the retained implementation filename."
+    },
+    {
+      "path": "src/kernel/runtime/index.ts",
+      "contains": "./createArkKernel",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Barrel imports the retained implementation filename."
+    },
+    {
+      "path": "src/kernel/testing/index.ts",
+      "contains": "./ArkTestHarness",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Barrel imports the retained implementation filename."
+    },
+    {
+      "path": "src/nestjs/index.ts",
+      "contains": "../kernel/runtime/createArkKernel",
+      "category": "internal-artifact",
+      "removalTarget": "v4",
+      "reason": "Adapter imports the retained implementation filename."
+    }
+  ]
+}

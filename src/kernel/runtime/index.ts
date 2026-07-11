@@ -7,6 +7,10 @@ export {
   createLenientStructrailKernelFromConfig,
   createStrictStructrailKernel,
   createStrictStructrailKernelFromConfig,
+} from './createArkKernel';
+
+/** @deprecated Use the Structrail-named runtime exports. Removal target: v4. */
+export {
   createArkKernel,
   createArkKernelFromConfig,
   createLenientArkKernel,

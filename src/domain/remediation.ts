@@ -68,7 +68,7 @@ export type RemediationVerdict = {
 };
 
 /** Minimal violation shape used by classify/enrich (CLI may attach extra fields). */
-export type ArkViolationLike = {
+export type StructrailViolationLike = {
   ruleId?: string;
   typeOnly?: boolean;
   sourcePureTypeModule?: boolean;
@@ -91,7 +91,7 @@ export type ArkViolationLike = {
 
 export type FixClassEffort = 'small' | 'medium';
 
-export type EnrichedViolation<T extends ArkViolationLike = ArkViolationLike> = T & {
+export type EnrichedViolation<T extends StructrailViolationLike = StructrailViolationLike> = T & {
   fixClass: string;
   effort: FixClassEffort;
   enthusiastHint: string;
@@ -101,7 +101,9 @@ export type EnrichedViolation<T extends ArkViolationLike = ArkViolationLike> = T
  * Co-pilot work classifier — the TRUST BOUNDARY for auto-apply.
  * Biased toward 'judgment': false mechanical-safe is worse than an extra human approval.
  */
-export function classifyRemediation(violation: ArkViolationLike | null | undefined): RemediationVerdict {
+export function classifyRemediation(
+  violation: StructrailViolationLike | null | undefined
+): RemediationVerdict {
   const ruleId = violation?.ruleId;
   if (ruleId === 'LAYER_IMPORT_VIOLATION') {
     // Cross-slice peer isolation is always judgment (extract shared / events — not mechanical).
@@ -216,7 +218,7 @@ export function classifyRemediation(violation: ArkViolationLike | null | undefin
 /**
  * Deterministic fix-class labels for JSON output (English, shared with skills/reports).
  */
-export function enrichViolationWithFixClass<T extends ArkViolationLike>(
+export function enrichViolationWithFixClass<T extends StructrailViolationLike>(
   violation: T
 ): EnrichedViolation<T> {
   const enriched = { ...violation } as EnrichedViolation<T>;

@@ -50,7 +50,9 @@ const evalEnvironment = (suffix) =>
   resolveEnvironmentValue(
     process.env,
     `STRUCTRAIL_EVAL_${suffix}`,
+    // legacy-identity:start v3-compatibility removal=v4
     `ARK_EVAL_${suffix}`
+    // legacy-identity:end
   ).value;
 
 const PROTECTED = ['structrail.config.json', '.ark-baseline.json', 'tsconfig.json', 'AGENTS.md'];

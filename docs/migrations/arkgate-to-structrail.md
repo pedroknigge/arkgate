@@ -138,6 +138,14 @@ systems.
 4. Before v4, publish a separate removal ADR based on field evidence. Until then, old paths are
    supported behavior, not best-effort aliases.
 
+**Local implementation (2026-07-11):** `npm run check:identity` scans tracked and non-ignored
+public surfaces, rejects unmarked legacy names, validates balanced approval blocks, and requires
+`removal=v4` (or `Removal target: v4` on deprecated TypeScript declarations). The reviewed
+allowlist separates v3 compatibility/assertions/internal artifacts from immutable history,
+migration material, and M6-gated external metadata. CI, the release script, and the token-backed
+publish branch run the same ratchet. No rename telemetry was added; a removal ADR remains forbidden
+until field evidence exists before v4.
+
 ## Acceptance gate for `S07-M1`
 
 - Both tarballs pass clean npm, pnpm, and yarn install/import/bin smoke tests.

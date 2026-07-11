@@ -44,7 +44,9 @@ const evalEnvironment = (suffix) =>
   resolveEnvironmentValue(
     process.env,
     `STRUCTRAIL_EVAL_${suffix}`,
+    // legacy-identity:start v3-compatibility removal=v4
     `ARK_EVAL_${suffix}`
+    // legacy-identity:end
   ).value;
 
 // Governance surface: touching any of these to make the gate go green is a

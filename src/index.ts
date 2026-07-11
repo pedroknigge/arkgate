@@ -3,7 +3,9 @@
  *
  * Zero-dependency write gate + CI gate + co-pilot (plan / goal / loop) for
  * TypeScript repos and agents. Optional runtime kernel is not the product.
+ * legacy-identity:start v3-compatibility removal=v4
  * npm package: `structrail` (`arkgate` is the deprecated v3 compatibility package).
+ * legacy-identity:end
  *
  * **Runtime kernel (opt-in):** prefer `import { … } from 'structrail/runtime'`.
  * This root barrel still re-exports kernel symbols for compatibility within

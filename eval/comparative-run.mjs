@@ -25,7 +25,9 @@ const FIXTURES_DIR = path.join(HERE, 'comparative', 'fixtures');
 const comparativeOutput = resolveEnvironmentValue(
   process.env,
   'STRUCTRAIL_COMPARATIVE_OUT',
+  // legacy-identity:start v3-compatibility removal=v4
   'ARK_COMPARATIVE_OUT'
+  // legacy-identity:end
 ).value;
 const OUT_PATH = comparativeOutput
   ? path.resolve(comparativeOutput)
