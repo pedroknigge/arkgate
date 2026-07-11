@@ -1,10 +1,39 @@
 import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import arkEslint, {
+  findConfigPath,
   noDomainInfraImports,
   noForbiddenGlobals,
   noRawEventPublish,
   requirePublishSource,
 } from '../../../src/eslint/index';
+
+describe('Structrail ESLint config discovery', () => {
+  it('prefers the canonical filename, accepts legacy, and fails on ambiguity', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'structrail-eslint-config-'));
+    const source = path.join(root, 'src', 'domain', 'order.ts');
+    fs.mkdirSync(path.dirname(source), { recursive: true });
+    fs.writeFileSync(source, 'export const order = 1;\n');
+
+    const canonical = path.join(root, 'structrail.config.json');
+    const legacy = path.join(root, 'ark.config.json');
+    fs.writeFileSync(canonical, '{}\n');
+    expect(findConfigPath(source)).toBe(canonical);
+
+    fs.rmSync(canonical);
+    fs.writeFileSync(legacy, '{}\n');
+    expect(findConfigPath(source)).toBe(legacy);
+
+    fs.writeFileSync(canonical, '{}\n');
+    expect(() => findConfigPath(source)).toThrow(
+      /both structrail\.config\.json and ark\.config\.json/i
+    );
+
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+});
 
 function createContext(filename = '/repo/src/domain/order.ts') {
   const reports: Array<Record<string, unknown>> = [];
