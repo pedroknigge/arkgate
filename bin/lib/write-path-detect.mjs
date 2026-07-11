@@ -42,12 +42,8 @@ export function detectWritePathCapabilities(root) {
     } catch {
       continue;
     }
-    // PreToolUse / write-gate command referencing ark(-gate)?-mcp --hook
-    if (
-      /--hook\b/.test(text) ||
-      /\b(ark|arkgate)-mcp\b[\s\S]{0,80}--hook\b/.test(text) ||
-      /\b--hook\b[\s\S]{0,80}\b(ark|arkgate)-mcp\b/.test(text)
-    ) {
+    // PreToolUse / write-gate command using Ark's --hook mode.
+    if (/--hook\b/.test(text)) {
       hookPresent = true;
       evidence.push(rel);
     }
@@ -56,7 +52,7 @@ export function detectWritePathCapabilities(root) {
       /ARK_HOOK_REPAIR\s*=\s*['"]?(1|true|yes|on)/i.test(text)
     ) {
       hookRepair = true;
-      if (!evidence.includes(rel)) evidence.push(rel);
+      evidence.push(rel);
     }
   }
 

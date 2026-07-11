@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-07-10
+- **Status date:** 2026-07-11
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -57,7 +57,7 @@ These are the starting facts this roadmap must change.
 | Area | Baseline | Consequence |
 |---|---|---|
 | Architecture | Self-hosted strict check passes; 125/125 files governed | Keep the contract and dogfood path |
-| Tests | 680 tests pass, but `npm run test:coverage` exits 1 at 84.73% branch coverage vs 85% required | Current local HEAD is not releasable |
+| Tests | 680 tests passed, but `npm run test:coverage` exited 1 at 84.73% branch coverage vs 85% required | `S02` owns restoring the release gate |
 | Mutation testing | Roadmap claimed a mutation ratchet; no mutation runner or configuration exists | Prior Q1 completion claim is withdrawn |
 | Write enforcement | Claude/Grok have hard hooks; Cursor/Codex are advisory at write time | Capabilities must be reported per active host |
 | Strict onboarding | Codex-only and Cursor-only installs generate CI that fails for a missing PreToolUse hook | `start` can create a broken setup |
@@ -110,8 +110,7 @@ Run for every implementation item unless the item is documentation/decision-only
 
 ```bash
 npm run typecheck
-npm run test:run
-npm run test:coverage
+npm run test:confidence
 npm run check:js
 npm run check:layer-match
 npm run check:cli-pure
@@ -120,11 +119,6 @@ npm run check:package-files
 npm run check:architecture
 npm run build
 ```
-
-**Temporary `S01` exception:** the audit baseline already assigned the red global branch threshold
-to `RB-05`/`S02`. `S01` may close when all 683 tests pass, branch coverage does not regress from
-84.73%, and every other common gate is green. This does not authorize a release. `S02` must remove
-this paragraph and make the full coverage command green before any later item starts.
 
 For package-surface changes, also run:
 
@@ -154,7 +148,7 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 1 | `S01` | `done` | S | — | Workflow effects are never retried because telemetry failed |
-| 2 | `S02` | `doing` | M | `S01` | Local confidence gates are green and truthfully named |
+| 2 | `S02` | `done` | M | `S01` | Local confidence gates are green and truthfully named |
 | 3 | `S03` | `todo` | M | `S02` | Enforcement capabilities are computed per active host |
 | 4 | `S04` | `todo` | M | `S03` | Every supported host-only install produces a valid CI/write contract |
 | 5 | `S05` | `todo` | M | `S04` | All confirmed scanner false positives and bypasses are closed |
@@ -176,7 +170,7 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 21 | `V04` | `todo` | M | `C06`, `V03` | Package and release artifacts are small, complete, and attestable |
 | 22 | `V05` | `todo` | M | all prior items | Independent audit passes and the product may exit beta |
 
-**Start here:** `S01`. Do not begin `S02` in the same PR.
+**Next:** `S03`. Keep the host-capability change isolated from the completed regression-gate work.
 
 ---
 
@@ -218,11 +212,11 @@ npm run check:architecture
 
 **Local evidence (2026-07-11):** 683/683 tests pass; the focused workflow suite has 8/8 tests;
 typecheck, build, architecture, JS/parity/module/package gates pass. Global branch coverage improved
-from 84.73% to 84.77% and remains the explicit `S02` blocker.
+from 84.73% to 84.77%; this was the explicit blocker subsequently closed by `S02`.
 
 ### S02 — Restore honest regression gates
 
-- **Status:** `doing`
+- **Status:** `done`
 - **Closes:** `RB-05`
 - **Likely files:** tests for uncovered branches, `vitest.config.ts`, mutation config, CI/release scripts
 
@@ -252,6 +246,14 @@ npm run test:coverage
 npm run test:mutation
 npm run check:architecture
 ```
+
+**Local evidence (2026-07-11):** the final `npm run test:confidence` exits 0 with 698/698 tests,
+85.22% branch coverage, and 92.45% mutation score (265 real mutants: 245 killed, 20 survived,
+0 no-coverage/errors/timeouts). A second clean coverage run also exits 0 at 85.22%; no coverage
+threshold, include, or exclusion was weakened. CI, the local/OIDC release script, and the token
+publish path all invoke `test:confidence` before publish, guarded by
+`tests/unit/scripts/confidence-gates.test.ts`. Typecheck, build, architecture, JS/parity,
+module-budget, package-files, and production security-audit gates pass.
 
 ### S03 — Model write enforcement per active host
 
@@ -802,9 +804,9 @@ before Phase C stabilizes new public surfaces.
 ## Next implementation session
 
 ```text
-Item: S02 — Restore honest regression gates
-First result: make global branch coverage ≥85% without exclusions or threshold reduction
-Then: add a real mutation runner and wire the same confidence gate into CI/release
-Primary files: tests for uncovered branches, vitest/mutation config, package scripts, CI/release
-Required finish: two clean coverage runs + mutation threshold + architecture/common gates green
+Item: S03 — Model write enforcement per active host
+First result: define the canonical host capability/evidence model and expose a failing mixed-host case
+Then: make doctor/write-path verdicts explicit-host aware without losing repo-wide inventory
+Primary files: write-path-detect, doctor-plan, mcp-adoption, active-host helpers, focused snapshots
+Required finish: Claude/Grok/Cursor/Codex/unknown/mixed fixtures + common confidence gates green
 ```

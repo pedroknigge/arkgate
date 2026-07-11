@@ -12,6 +12,10 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ### Added
 
+- **Executable regression confidence gate:** `npm run test:confidence` now combines the existing
+  broad Vitest coverage thresholds with real Stryker mutation testing over write-path detection,
+  dependency extraction, forbidden-global detection, baseline keys, and workflow retry logic.
+  CI and both npm release paths invoke the same gate; mutation score fails below 90%.
 - **Q2 repair dogfood closed:** deny → `ARK_REPAIR_JSON`/`autoPatch` → host re-inject →
   revalidation allow proven via shipped `bin/ark-mcp.mjs` (Claude/Grok hooks already
   `--hook-repair`; `doctor.writePath.mode = repair`).

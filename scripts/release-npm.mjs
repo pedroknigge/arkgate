@@ -2,8 +2,8 @@
 /**
  * scripts/release-npm.mjs
  *
- * One-command npm release: verify (typecheck + tests + security audit +
- * architecture gate) → publish.
+ * One-command npm release: verify (typecheck + coverage/mutation confidence +
+ * security audit + architecture gate) → publish.
  * `prepack` runs the build, so `npm publish` always ships a fresh dist.
  *
  * Real releases should run through .github/workflows/publish-npm.yml so npm
@@ -62,7 +62,7 @@ try {
 }
 
 run('npm run typecheck');
-run('npx vitest run');
+run('npm run test:confidence');
 run('npm run security:audit');
 run('npm run check:architecture');
 

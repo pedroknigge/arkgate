@@ -67,7 +67,9 @@
     "dev": "tsup --watch",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=json-summary",
+    "test:coverage": "npm run build && vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=json-summary",
+    "test:mutation": "npm run build && stryker run",
+    "test:confidence": "npm run test:coverage && npm run test:mutation",
     "typecheck": "tsc --noEmit",
     "security:audit": "npm audit --omit=dev --audit-level=high",
     "check:architecture": "node bin/ark-check.mjs --root . --config ark.config.json --strict",
@@ -106,6 +108,7 @@
     }
   },
   "overrides": {
+    "qs": "6.15.3",
     "vite": "6.4.3",
     "tsup": {
       "esbuild": "0.28.1"
@@ -116,6 +119,8 @@
   },
   "devDependencies": {
     "@nestjs/common": "^11.1.27",
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/vitest-runner": "^9.6.1",
     "@types/node": "^20.14.0",
     "@vitest/coverage-v8": "^3.2.6",
     "reflect-metadata": "^0.2.2",

@@ -126,7 +126,7 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
     }
   });
 
-  it('detects ARK_HOOK_REPAIR env-style text and empty hook files', () => {
+  it('detects ARK_HOOK_REPAIR env-style text without an MCP config', () => {
     const root = mk();
     try {
       fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
@@ -144,8 +144,75 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
       );
       const cap = detectWritePathCapabilities(root);
       expect(cap.hookPresent).toBe(true);
-      // env-style in file may or may not set repair depending on regex
-      expect(['repair', 'reject-only']).toContain(cap.mode);
+      expect(cap.hookRepair).toBe(true);
+      expect(cap.mcpPresent).toBe(false);
+      expect(cap.autoPatch).toBe(true);
+      expect(cap.mode).toBe('repair');
+      expect(cap.evidence).toEqual(['.claude/settings.json']);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not infer capabilities from unrelated hook or MCP content', () => {
+    const root = mk();
+    try {
+      fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.claude', 'settings.json'), '{"hooks":[]}');
+      fs.writeFileSync(path.join(root, '.mcp.json'), '{"mcpServers":{"other":{}}}');
+
+      expect(detectWritePathCapabilities(root)).toMatchObject({
+        mode: 'none',
+        hookPresent: false,
+        hookRepair: false,
+        mcpPresent: false,
+        evidence: [],
+      });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('detects each supported MCP config signature independently', () => {
+    const cases = [
+      { rel: '.mcp.json', text: 'command = "arkgate-mcp"' },
+      { rel: '.grok/config.toml', text: '[mcp_servers.ark]\ncommand = "custom"' },
+      { rel: '.cursor/mcp.json', text: '"ark": {' },
+      { rel: '.mcp.json', text: 'mcpServers = ["ark"]' },
+    ];
+
+    for (const { rel, text } of cases) {
+      const root = mk();
+      try {
+        fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
+        fs.writeFileSync(path.join(root, rel), text);
+
+        expect(detectWritePathCapabilities(root)).toMatchObject({
+          mode: 'mcp-only',
+          prepareWrite: true,
+          autoPatch: true,
+          hookPresent: false,
+          mcpPresent: true,
+          evidence: [rel],
+        });
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('ignores unreadable hook and MCP paths', () => {
+    const root = mk();
+    try {
+      fs.mkdirSync(path.join(root, '.claude', 'settings.json'), { recursive: true });
+      fs.mkdirSync(path.join(root, '.mcp.json'), { recursive: true });
+
+      expect(detectWritePathCapabilities(root)).toMatchObject({
+        mode: 'none',
+        hookPresent: false,
+        mcpPresent: false,
+        evidence: [],
+      });
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
