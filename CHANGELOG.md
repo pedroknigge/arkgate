@@ -22,6 +22,11 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ### Added
 
+- **Versioned configuration contract:** `ark.config.json` now carries `$schema` and
+  `schemaVersion: "1.0"`. One canonical loader validates and migrates the contract for CLI, MCP,
+  and ESLint with path-specific diagnostics and a fail-closed unknown-key policy. The generated
+  JSON Schema ships at the stable `arkgate/schema` subpath; unversioned configs from the previous
+  major migrate deterministically in memory.
 - **Active-host enforcement capabilities:** doctor and adoption checks now project
   `hard-write`, `advisory-write`, `merge-gate`, and `repair-payload` from the active host only,
   with evidence paths and a separate repo-wide inventory. Claude/Grok hooks can no longer make

@@ -1,0 +1,750 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://unpkg.com/arkgate@2/schemas/ark.config.schema.json",
+  "title": "ArkGate architecture contract",
+  "description": "Versioned contract consumed identically by ArkGate CLI, MCP, and ESLint surfaces.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "include",
+    "layers",
+    "rules"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1,
+      "default": "https://unpkg.com/arkgate@2/schemas/ark.config.schema.json",
+      "description": "Editor-facing URL or local path for this JSON Schema."
+    },
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0",
+      "default": "1.0"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "include": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "minItems": 1,
+      "default": [
+        "src"
+      ]
+    },
+    "exclude": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "default": []
+    },
+    "excludeGenerated": {
+      "type": "boolean",
+      "default": true
+    },
+    "frameworkOverlay": {
+      "type": "string",
+      "minLength": 1
+    },
+    "layers": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/layer"
+      }
+    },
+    "rules": {
+      "type": "array",
+      "default": [
+        {
+          "from": "DomainModel",
+          "to": "ApplicationOrchestration",
+          "allowed": false
+        },
+        {
+          "from": "DomainModel",
+          "to": "PersistenceAdapters",
+          "allowed": false
+        },
+        {
+          "from": "DomainModel",
+          "to": "IntegrationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "DomainModel",
+          "to": "WorkflowSagaEngine",
+          "allowed": false
+        },
+        {
+          "from": "DomainModel",
+          "to": "BackgroundJobsScheduling",
+          "allowed": false
+        },
+        {
+          "from": "DomainModel",
+          "to": "PresentationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "DomainModel",
+          "to": "ReportingReadModels",
+          "allowed": false
+        },
+        {
+          "from": "DomainModel",
+          "to": "ExtensibilityMetadata",
+          "allowed": false
+        },
+        {
+          "from": "DomainModel",
+          "to": "SecurityAuditObservability",
+          "allowed": false
+        },
+        {
+          "from": "DomainModel",
+          "to": "Kernel",
+          "allowed": false
+        },
+        {
+          "from": "ApplicationOrchestration",
+          "to": "PersistenceAdapters",
+          "allowed": false
+        },
+        {
+          "from": "ApplicationOrchestration",
+          "to": "IntegrationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "ApplicationOrchestration",
+          "to": "WorkflowSagaEngine",
+          "allowed": false
+        },
+        {
+          "from": "ApplicationOrchestration",
+          "to": "BackgroundJobsScheduling",
+          "allowed": false
+        },
+        {
+          "from": "ApplicationOrchestration",
+          "to": "PresentationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "ApplicationOrchestration",
+          "to": "ReportingReadModels",
+          "allowed": false
+        },
+        {
+          "from": "ApplicationOrchestration",
+          "to": "ExtensibilityMetadata",
+          "allowed": false
+        },
+        {
+          "from": "ApplicationOrchestration",
+          "to": "SecurityAuditObservability",
+          "allowed": false
+        },
+        {
+          "from": "ApplicationOrchestration",
+          "to": "Kernel",
+          "allowed": false
+        },
+        {
+          "from": "PersistenceAdapters",
+          "to": "DomainModel",
+          "allowed": false
+        },
+        {
+          "from": "PersistenceAdapters",
+          "to": "ApplicationOrchestration",
+          "allowed": false
+        },
+        {
+          "from": "PersistenceAdapters",
+          "to": "IntegrationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "PersistenceAdapters",
+          "to": "WorkflowSagaEngine",
+          "allowed": false
+        },
+        {
+          "from": "PersistenceAdapters",
+          "to": "BackgroundJobsScheduling",
+          "allowed": false
+        },
+        {
+          "from": "PersistenceAdapters",
+          "to": "PresentationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "PersistenceAdapters",
+          "to": "ReportingReadModels",
+          "allowed": false
+        },
+        {
+          "from": "PersistenceAdapters",
+          "to": "ExtensibilityMetadata",
+          "allowed": false
+        },
+        {
+          "from": "PersistenceAdapters",
+          "to": "SecurityAuditObservability",
+          "allowed": false
+        },
+        {
+          "from": "PersistenceAdapters",
+          "to": "Kernel",
+          "allowed": false
+        },
+        {
+          "from": "IntegrationAdapters",
+          "to": "DomainModel",
+          "allowed": false
+        },
+        {
+          "from": "IntegrationAdapters",
+          "to": "ApplicationOrchestration",
+          "allowed": false
+        },
+        {
+          "from": "IntegrationAdapters",
+          "to": "PersistenceAdapters",
+          "allowed": false
+        },
+        {
+          "from": "IntegrationAdapters",
+          "to": "WorkflowSagaEngine",
+          "allowed": false
+        },
+        {
+          "from": "IntegrationAdapters",
+          "to": "BackgroundJobsScheduling",
+          "allowed": false
+        },
+        {
+          "from": "IntegrationAdapters",
+          "to": "PresentationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "IntegrationAdapters",
+          "to": "ReportingReadModels",
+          "allowed": false
+        },
+        {
+          "from": "IntegrationAdapters",
+          "to": "ExtensibilityMetadata",
+          "allowed": false
+        },
+        {
+          "from": "IntegrationAdapters",
+          "to": "SecurityAuditObservability",
+          "allowed": false
+        },
+        {
+          "from": "IntegrationAdapters",
+          "to": "Kernel",
+          "allowed": false
+        },
+        {
+          "from": "WorkflowSagaEngine",
+          "to": "PersistenceAdapters",
+          "allowed": false
+        },
+        {
+          "from": "WorkflowSagaEngine",
+          "to": "IntegrationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "WorkflowSagaEngine",
+          "to": "BackgroundJobsScheduling",
+          "allowed": false
+        },
+        {
+          "from": "WorkflowSagaEngine",
+          "to": "PresentationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "WorkflowSagaEngine",
+          "to": "ReportingReadModels",
+          "allowed": false
+        },
+        {
+          "from": "WorkflowSagaEngine",
+          "to": "ExtensibilityMetadata",
+          "allowed": false
+        },
+        {
+          "from": "WorkflowSagaEngine",
+          "to": "SecurityAuditObservability",
+          "allowed": false
+        },
+        {
+          "from": "WorkflowSagaEngine",
+          "to": "Kernel",
+          "allowed": false
+        },
+        {
+          "from": "BackgroundJobsScheduling",
+          "to": "DomainModel",
+          "allowed": false
+        },
+        {
+          "from": "BackgroundJobsScheduling",
+          "to": "PersistenceAdapters",
+          "allowed": false
+        },
+        {
+          "from": "BackgroundJobsScheduling",
+          "to": "IntegrationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "BackgroundJobsScheduling",
+          "to": "WorkflowSagaEngine",
+          "allowed": false
+        },
+        {
+          "from": "BackgroundJobsScheduling",
+          "to": "PresentationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "BackgroundJobsScheduling",
+          "to": "ReportingReadModels",
+          "allowed": false
+        },
+        {
+          "from": "BackgroundJobsScheduling",
+          "to": "ExtensibilityMetadata",
+          "allowed": false
+        },
+        {
+          "from": "BackgroundJobsScheduling",
+          "to": "SecurityAuditObservability",
+          "allowed": false
+        },
+        {
+          "from": "BackgroundJobsScheduling",
+          "to": "Kernel",
+          "allowed": false
+        },
+        {
+          "from": "PresentationAdapters",
+          "to": "DomainModel",
+          "allowed": false
+        },
+        {
+          "from": "PresentationAdapters",
+          "to": "PersistenceAdapters",
+          "allowed": false
+        },
+        {
+          "from": "PresentationAdapters",
+          "to": "IntegrationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "PresentationAdapters",
+          "to": "WorkflowSagaEngine",
+          "allowed": false
+        },
+        {
+          "from": "PresentationAdapters",
+          "to": "BackgroundJobsScheduling",
+          "allowed": false
+        },
+        {
+          "from": "PresentationAdapters",
+          "to": "ReportingReadModels",
+          "allowed": false
+        },
+        {
+          "from": "PresentationAdapters",
+          "to": "ExtensibilityMetadata",
+          "allowed": false
+        },
+        {
+          "from": "PresentationAdapters",
+          "to": "SecurityAuditObservability",
+          "allowed": false
+        },
+        {
+          "from": "PresentationAdapters",
+          "to": "Kernel",
+          "allowed": false
+        },
+        {
+          "from": "ReportingReadModels",
+          "to": "DomainModel",
+          "allowed": false
+        },
+        {
+          "from": "ReportingReadModels",
+          "to": "ApplicationOrchestration",
+          "allowed": false
+        },
+        {
+          "from": "ReportingReadModels",
+          "to": "PersistenceAdapters",
+          "allowed": false
+        },
+        {
+          "from": "ReportingReadModels",
+          "to": "IntegrationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "ReportingReadModels",
+          "to": "WorkflowSagaEngine",
+          "allowed": false
+        },
+        {
+          "from": "ReportingReadModels",
+          "to": "BackgroundJobsScheduling",
+          "allowed": false
+        },
+        {
+          "from": "ReportingReadModels",
+          "to": "PresentationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "ReportingReadModels",
+          "to": "ExtensibilityMetadata",
+          "allowed": false
+        },
+        {
+          "from": "ReportingReadModels",
+          "to": "SecurityAuditObservability",
+          "allowed": false
+        },
+        {
+          "from": "ReportingReadModels",
+          "to": "Kernel",
+          "allowed": false
+        },
+        {
+          "from": "ExtensibilityMetadata",
+          "to": "DomainModel",
+          "allowed": false
+        },
+        {
+          "from": "ExtensibilityMetadata",
+          "to": "ApplicationOrchestration",
+          "allowed": false
+        },
+        {
+          "from": "ExtensibilityMetadata",
+          "to": "PersistenceAdapters",
+          "allowed": false
+        },
+        {
+          "from": "ExtensibilityMetadata",
+          "to": "IntegrationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "ExtensibilityMetadata",
+          "to": "WorkflowSagaEngine",
+          "allowed": false
+        },
+        {
+          "from": "ExtensibilityMetadata",
+          "to": "BackgroundJobsScheduling",
+          "allowed": false
+        },
+        {
+          "from": "ExtensibilityMetadata",
+          "to": "PresentationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "ExtensibilityMetadata",
+          "to": "ReportingReadModels",
+          "allowed": false
+        },
+        {
+          "from": "ExtensibilityMetadata",
+          "to": "SecurityAuditObservability",
+          "allowed": false
+        },
+        {
+          "from": "ExtensibilityMetadata",
+          "to": "Kernel",
+          "allowed": false
+        },
+        {
+          "from": "SecurityAuditObservability",
+          "to": "DomainModel",
+          "allowed": false
+        },
+        {
+          "from": "SecurityAuditObservability",
+          "to": "ApplicationOrchestration",
+          "allowed": false
+        },
+        {
+          "from": "SecurityAuditObservability",
+          "to": "PersistenceAdapters",
+          "allowed": false
+        },
+        {
+          "from": "SecurityAuditObservability",
+          "to": "IntegrationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "SecurityAuditObservability",
+          "to": "WorkflowSagaEngine",
+          "allowed": false
+        },
+        {
+          "from": "SecurityAuditObservability",
+          "to": "BackgroundJobsScheduling",
+          "allowed": false
+        },
+        {
+          "from": "SecurityAuditObservability",
+          "to": "PresentationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "SecurityAuditObservability",
+          "to": "ReportingReadModels",
+          "allowed": false
+        },
+        {
+          "from": "SecurityAuditObservability",
+          "to": "ExtensibilityMetadata",
+          "allowed": false
+        },
+        {
+          "from": "SecurityAuditObservability",
+          "to": "Kernel",
+          "allowed": false
+        },
+        {
+          "from": "Kernel",
+          "to": "DomainModel",
+          "allowed": false
+        },
+        {
+          "from": "Kernel",
+          "to": "ApplicationOrchestration",
+          "allowed": false
+        },
+        {
+          "from": "Kernel",
+          "to": "PersistenceAdapters",
+          "allowed": false
+        },
+        {
+          "from": "Kernel",
+          "to": "IntegrationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "Kernel",
+          "to": "WorkflowSagaEngine",
+          "allowed": false
+        },
+        {
+          "from": "Kernel",
+          "to": "BackgroundJobsScheduling",
+          "allowed": false
+        },
+        {
+          "from": "Kernel",
+          "to": "PresentationAdapters",
+          "allowed": false
+        },
+        {
+          "from": "Kernel",
+          "to": "ReportingReadModels",
+          "allowed": false
+        },
+        {
+          "from": "Kernel",
+          "to": "ExtensibilityMetadata",
+          "allowed": false
+        },
+        {
+          "from": "Kernel",
+          "to": "SecurityAuditObservability",
+          "allowed": false
+        }
+      ],
+      "items": {
+        "$ref": "#/$defs/rule"
+      }
+    },
+    "cyclePolicy": {
+      "type": "string",
+      "enum": [
+        "strict",
+        "soft",
+        "framework-soft",
+        "off"
+      ],
+      "default": "strict"
+    },
+    "dynamicImportAllowlist": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "default": []
+    },
+    "safety": {
+      "$ref": "#/$defs/safety",
+      "default": {
+        "maxTsSuppressions": 0,
+        "maxAnyCasts": 0,
+        "allowInMemory": false,
+        "allowDisabledPeerIsolation": false
+      }
+    }
+  },
+  "$defs": {
+    "layer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "patterns"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "patterns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "intentPrefixes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "forbiddenGlobals": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "mayImportInfrastructure": {
+          "type": "boolean"
+        },
+        "optional": {
+          "type": "boolean"
+        }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from",
+        "to",
+        "allowed"
+      ],
+      "properties": {
+        "from": {
+          "type": "string",
+          "minLength": 1
+        },
+        "to": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowed": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "peerIsolation": {
+          "type": "boolean"
+        },
+        "sliceFolders": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxTsSuppressions": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "maxAnyCasts": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "allowInMemory": {
+          "type": "boolean",
+          "default": false
+        },
+        "allowDisabledPeerIsolation": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  }
+}

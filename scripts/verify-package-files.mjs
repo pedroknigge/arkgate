@@ -26,7 +26,15 @@ const DENY = [
 ];
 
 /** Required publish entries (must be listed in package.json files or always-included). */
-const REQUIRE_LISTED = ['bin', 'dist', 'templates', 'README.md', 'LICENSE', 'CHANGELOG.md'];
+const REQUIRE_LISTED = [
+  'bin',
+  'dist',
+  'schemas',
+  'templates',
+  'README.md',
+  'LICENSE',
+  'CHANGELOG.md',
+];
 
 function main() {
   const asJson = process.argv.includes('--json');

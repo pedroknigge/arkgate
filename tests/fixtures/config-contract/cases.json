@@ -1,0 +1,18 @@
+{
+  "publishedConfigFiles": [
+    "ark.config.json",
+    "tests/fixtures/ts-consumer/ark.config.json",
+    "examples/api-backend-starter/ark.config.json",
+    "examples/crud-product-starter/ark.config.json",
+    "examples/ddd-context-starter/ark.config.json",
+    "examples/hexagonal-order-api/ark.config.json",
+    "examples/multi-app-workspace-starter/ark.config.json",
+    "examples/vertical-slice-starter/ark.config.json",
+    "examples/worker-pipeline-starter/ark.config.json"
+  ],
+  "previousMajor": {
+    "tag": "v1.19.0",
+    "configFile": "tests/fixtures/config-contract/v1.19.0/ark.config.json",
+    "expectedConfigFile": "tests/fixtures/config-contract/v1.19.0/migrated.1.0.json"
+  }
+}

@@ -8,6 +8,7 @@ import {
   DEFAULT_INTENT_PREFIXES,
   resolveIncludeRoots,
 } from '../ark-shared.mjs';
+import { withArkConfigMetadata } from './config-contract.mjs';
 
 export function denyUpward(names) {
   const rules = [];
@@ -49,8 +50,8 @@ export function peerIsolationEdges(layerNames, sliceFolders, message) {
 // (that carves out legitimate `src/shared/kernel/**` SharedKernel paths).
 export const FRAMEWORK_INTERNAL_EXCLUDE = ['src/kernel/**', '**/src/kernel/**'];
 export function presetWithOverlays(baseConfig, root) {
-  if (!root) return baseConfig;
-  return applyFrameworkLayoutOverlays(baseConfig, root);
+  const config = root ? applyFrameworkLayoutOverlays(baseConfig, root) : baseConfig;
+  return withArkConfigMetadata(config);
 }
 
 export const ARCHITECTURE_PRESETS = {

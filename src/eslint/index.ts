@@ -15,6 +15,7 @@ import {
   layerForRelativePath,
   isEdgeDenied,
 } from '../domain/layerMatch';
+import { parseArkConfigJson, type ArkConfig } from '../domain/configContract';
 
 export { globToRegExp, patternSpecificity, layerForRelativePath, isEdgeDenied };
 
@@ -100,20 +101,6 @@ type ArkEslintPlugin = {
   configs?: Record<string, unknown>;
 };
 
-type LayerConfig = {
-  name: string;
-  patterns?: string[];
-  exclude?: string[];
-  forbiddenGlobals?: string[];
-};
-
-type EdgeRule = { from: string; to: string; allowed?: boolean };
-
-type ArkConfig = {
-  layers?: LayerConfig[];
-  rules?: EdgeRule[];
-};
-
 // ── Config I/O (editor-only; matching primitives come from ark-layer-match.mjs) ──
 
 export function findConfigPath(startFile: string): string | null {
@@ -132,14 +119,10 @@ const _configCache = new Map<string, ArkConfig | null>();
 
 export function loadArkConfig(configPath: string): ArkConfig | null {
   if (_configCache.has(configPath)) return _configCache.get(configPath) ?? null;
-  try {
-    const raw = JSON.parse(fs.readFileSync(configPath, 'utf8')) as ArkConfig;
-    _configCache.set(configPath, raw);
-    return raw;
-  } catch {
-    _configCache.set(configPath, null);
-    return null;
-  }
+  if (!fs.existsSync(configPath)) return null;
+  const config = parseArkConfigJson(fs.readFileSync(configPath, 'utf8'), configPath).config;
+  _configCache.set(configPath, config);
+  return config;
 }
 
 /** Resolve relative import specifier to an absolute path candidate (TS-oriented). */

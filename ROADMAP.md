@@ -155,7 +155,7 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 5 | `S05` | `done` | M | `S04` | All confirmed scanner false positives and bypasses are closed |
 | 6 | `S06` | `done` | S | `S03`–`S05` | README, docs, doctor, and site use one truthful support matrix |
 | 7 | `S07` | `done` | S | `S06` | ArkGate is retained as the canonical product identity |
-| 8 | `C01` | `todo` | M | `S07` | `ark.config.json` has a versioned JSON Schema and migrations |
+| 8 | `C01` | `done` | M | `S07` | `ark.config.json` has a versioned JSON Schema and migrations |
 | 9 | `C02` | `todo` | M | `C01` | A stable analysis IR and programmatic API are specified |
 | 10 | `C03` | `todo` | L | `C02` | CLI/MCP scanning uses one importable engine without generated duplication |
 | 11 | `C04` | `todo` | L | `C03` | Symbol-aware analysis defines and enforces the supported soundness envelope |
@@ -171,7 +171,7 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 21 | `V04` | `todo` | M | `C06`, `V03` | Package and release artifacts are small, complete, and attestable |
 | 22 | `V05` | `todo` | M | all prior items | Independent audit passes and the product may exit beta |
 
-**Next:** `C01`. Version and validate `ark.config.json` through one shared contract loader.
+**Next:** `C02`. Specify the stable analysis IR and programmatic API.
 
 ---
 
@@ -471,8 +471,13 @@ existing command/skill names.
 
 ### C01 — Version and validate `ark.config.json`
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `S07`
+
+**Started (2026-07-11):** the first contract fixture matrix covers every published repository
+config, every preset factory, and the previous supported major (`v1.19.0`). The initial red tests pin
+version metadata, legacy compatibility, and path-specific rejection of unknown keys before the
+shared loader is implemented.
 
 **Implementation**
 
@@ -491,6 +496,19 @@ existing command/skill names.
 - CLI, MCP, and ESLint cannot parse config differently.
 
 **Verify:** config fixture suite, public JSON snapshots, `npm pack --dry-run`, common merge gate.
+
+**Completed (2026-07-11):** `src/domain/configContract.ts` now owns schema `1.0`, defaults,
+constraints, path-specific diagnostics, and the explicit unversioned migration. Its generated CLI
+artifact and packaged JSON Schema are drift-checked, while CLI, MCP, ESLint, presets, and runtime
+config factories consume the same contract. Every shipped config and preset validates; the prior
+`v1.19.0` fixture migrates deterministically without mutation.
+
+**Evidence:** implementation commit `54c475d` passed all 11 checks on draft PR #28. Local
+`test:confidence` passed 847/847 tests with 85.32% branch coverage and a 97.79% mutation score
+(398/407 killed); the focused contract suite passed 110/110. Typecheck, build, architecture,
+generated-artifact, module-budget, package-file, gallery, TypeScript 5.9/6/7, package dry-run, and
+production audit gates passed. The Ark contract stayed at 0 violations / 0 warnings before and
+after the change.
 
 ### C02 — Specify the stable analysis IR and API
 
@@ -857,9 +875,9 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: C01 — Version and validate ark.config.json
-First result: add failing schema/loader fixtures for every shipped config and prior supported version
-Then: implement one versioned schema, deterministic migrations, and one loader shared by all adapters
-Primary files: config loader, packaged schema, CLI/MCP/ESLint adapters, config fixtures
-Required finish: presets/examples validate + invalid paths fail precisely + common/package gates green
+Item: C02 — Specify the stable analysis IR and API
+First result: add the engine-ownership ADR and failing public contract tests for the minimal API/IR
+Then: define deterministic loadContract/analyzeProject/analyzeChange/explainViolation boundaries
+Primary files: ADR, public API types, analysis IR fixtures, package exports, contract tests
+Required finish: one documented owner + deterministic IR + in-memory edit input + no runtime type leaks
 ```
