@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Maintained by Structrail — human-edit architecture gate.
+# Install (git hooks):
+#   cp templates/hooks/pre-commit-structrail .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+# Or with husky:
+#   cp templates/hooks/pre-commit-structrail .husky/pre-commit && chmod +x .husky/pre-commit
+#
+# Blocks commit when structrail-check fails. Does not replace CI branch protection.
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cd "$ROOT"
+
+run_check() {
+  if [ -f package.json ] && node -e "const p=require('./package.json');process.exit(p.scripts&&p.scripts['check:architecture']?0:1)" 2>/dev/null; then
+    npm run -s check:architecture
+    return $?
+  fi
+  if [ -f bin/structrail-check.mjs ]; then
+    node bin/structrail-check.mjs --root . --config structrail.config.json --strict-config
+    return $?
+  fi
+  if command -v structrail-check >/dev/null 2>&1; then
+    structrail-check --root . --config structrail.config.json --strict-config
+    return $?
+  fi
+  if command -v npx >/dev/null 2>&1; then
+    # --yes: pre-commit is non-interactive; never hang on npx install prompts
+    npx --yes --no-install structrail-check --root . --config structrail.config.json --strict-config 2>/dev/null \
+      || npx --yes structrail-check --root . --config structrail.config.json --strict-config
+    return $?
+  fi
+  echo "structrail-check not found — install structrail or add a check:architecture script" >&2
+  return 1
+}
+
+run_check

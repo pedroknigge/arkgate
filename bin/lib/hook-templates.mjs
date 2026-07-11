@@ -6,7 +6,7 @@ import { execCommandParts, execRunner } from '../ark-shared.mjs';
 import { ARK_GENERATION_IDENTITY } from './product-identity.mjs';
 
 /** Preferred MCP binary name for generated hooks (package dual-bin). */
-export const PREFERRED_MCP_BIN = 'arkgate-mcp';
+export const PREFERRED_MCP_BIN = 'structrail-mcp';
 
 export function claudeSettings(root, identity = ARK_GENERATION_IDENTITY) {
   const runner = execRunner(root);

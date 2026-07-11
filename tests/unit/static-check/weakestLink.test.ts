@@ -100,6 +100,23 @@ describe('Q3 weakest-link sensors (shipped weakest-link.mjs)', () => {
     expect(gaps.some((g) => g.id === 'enforcement-pre-commit-template-missing')).toBe(true);
   });
 
+  it('requires the canonical pre-commit template for a Structrail producer', () => {
+    const root = mk();
+    fs.mkdirSync(path.join(root, 'templates/skills'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'templates/hooks'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'templates/hooks/pre-commit-ark'), '# legacy\n');
+    fs.writeFileSync(path.join(root, 'structrail.config.json'), '{}\n');
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# Structrail Enforcement\n');
+
+    const { gaps } = collectWeakestLinkGaps(root, { adopted: true, isProducer: true });
+    expect(gaps).toContainEqual(
+      expect.objectContaining({
+        id: 'enforcement-pre-commit-template-missing',
+        message: expect.stringContaining('pre-commit-structrail'),
+      })
+    );
+  });
+
   it('reportGithubBranchProtection is honest when gh unavailable or forced fail', () => {
     const report = reportGithubBranchProtection({
       env: { ...process.env, PATH: '/nonexistent-path-for-gh' },

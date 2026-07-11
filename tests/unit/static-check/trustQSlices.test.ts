@@ -74,8 +74,7 @@ describe('Q6 surface parity (preferred bins + skills)', () => {
     expect(pkg.bin['structrail-mcp']).toBe('bin/structrail-mcp.mjs');
     expect(legacy.bin['arkgate-check']).toBe('bin/arkgate-check.mjs');
     expect(legacy.bin['arkgate-mcp']).toBe('bin/arkgate-mcp.mjs');
-    // M5 migrates generated hooks; until then they deliberately target the compatibility package.
-    expect(hooks).toMatch(/PREFERRED_MCP_BIN\s*=\s*['"]arkgate-mcp['"]/);
+    expect(hooks).toMatch(/PREFERRED_MCP_BIN\s*=\s*['"]structrail-mcp['"]/);
     // Skills template list includes upgrade
     expect(fs.existsSync(path.join(REPO, 'templates/skills/structrail-upgrade.md'))).toBe(true);
   });
@@ -93,10 +92,10 @@ describe('Q9 package files + threat model', () => {
     expect(report.ok).toBe(true);
   });
 
-  it('pre-commit template exists and mentions ark-check', () => {
-    const p = path.join(REPO, 'templates/hooks/pre-commit-ark');
+  it('primary pre-commit template exists and invokes structrail-check', () => {
+    const p = path.join(REPO, 'templates/hooks/pre-commit-structrail');
     expect(fs.existsSync(p)).toBe(true);
     const text = fs.readFileSync(p, 'utf8');
-    expect(text).toMatch(/ark-check|arkgate-check|check:architecture/);
+    expect(text).toMatch(/structrail-check|check:architecture/);
   });
 });

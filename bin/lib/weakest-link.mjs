@@ -13,6 +13,7 @@ const PRECOMMIT_MARKERS = [
   'ark-check',
   'arkgate-check',
   'check:architecture',
+  'pre-commit-structrail',
   'pre-commit-ark',
 ];
 
@@ -24,6 +25,7 @@ export function detectPreCommitArk(root) {
   const candidates = [
     path.join(root, '.git', 'hooks', 'pre-commit'),
     path.join(root, '.husky', 'pre-commit'),
+    path.join(root, 'templates', 'hooks', 'pre-commit-structrail'),
     path.join(root, 'templates', 'hooks', 'pre-commit-ark'),
   ];
   let present = false;
@@ -324,6 +326,7 @@ export function reportGithubBranchProtection(opts = {}) {
  * @param {{ adopted?: boolean, isProducer?: boolean, includeGithub?: boolean }} [opts]
  */
 export function collectWeakestLinkGaps(root, opts = {}) {
+  const identity = generationIdentityForRoot(root);
   const adopted =
     opts.adopted ?? fs.existsSync(path.join(root, 'AGENTS.md'));
   const isProducer =
@@ -333,7 +336,8 @@ export function collectWeakestLinkGaps(root, opts = {}) {
   const ci = detectCiEnforcement(root);
   const pre = detectPreCommitArk(root);
   const drift = detectConfigGateDrift(root, { adopted, isProducer });
-  const templatePreCommit = path.join(root, 'templates', 'hooks', 'pre-commit-ark');
+  const templateName = `pre-commit-${identity.fileStem}`;
+  const templatePreCommit = path.join(root, 'templates', 'hooks', templateName);
   const shipsPreCommitTemplate =
     isProducer && fs.existsSync(templatePreCommit);
 
@@ -342,15 +346,15 @@ export function collectWeakestLinkGaps(root, opts = {}) {
       id: 'enforcement-ci-missing',
       severity: 'warn',
       message: 'No .github/workflows directory — CI architecture gate cannot be required on merge',
-      fix: arkCommand(root, 'ark-check', '--install-agent-gates'),
+      fix: arkCommand(root, identity.checkBin, '--install-agent-gates'),
     });
   } else if (adopted && !isProducer && ci.hasWorkflowsDir && !ci.hasArkCheckWorkflow) {
     gaps.push({
       id: 'enforcement-ci-no-ark-check',
       severity: 'warn',
       message:
-        'CI workflows exist but none run ark-check / arkgate-check / check:architecture',
-      fix: arkCommand(root, 'ark-check', '--install-agent-gates'),
+        `CI workflows exist but none run ${identity.checkBin} / check:architecture`,
+      fix: arkCommand(root, identity.checkBin, '--install-agent-gates'),
     });
   } else if (
     adopted &&
@@ -371,17 +375,17 @@ export function collectWeakestLinkGaps(root, opts = {}) {
     gaps.push(issue);
   }
 
-  // Human-edit path: recommend pre-commit when adopted consumer has no ark-aware hook
+  // Human-edit path: recommend pre-commit when an adopted consumer has no gate-aware hook.
   if (adopted && !isProducer && !pre.arkAware) {
     gaps.push({
       id: 'enforcement-pre-commit-missing',
       severity: 'info',
       message: pre.present
-        ? 'pre-commit hook exists but does not run Ark architecture check (human disk edits can bypass agent gates)'
-        : 'No ark-aware pre-commit hook — human edits can land without the write gate; install maintained template',
-      fix: shipsPreCommitTemplate || fs.existsSync(path.join(process.cwd(), 'templates', 'hooks', 'pre-commit-ark'))
-        ? 'Install: cp templates/hooks/pre-commit-ark .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit (or husky equivalent)'
-        : 'Copy pre-commit-ark from the arkgate package templates/hooks/ into .git/hooks/pre-commit',
+        ? `pre-commit hook exists but does not run ${identity.productName} architecture check (human disk edits can bypass agent gates)`
+        : `No ${identity.productName}-aware pre-commit hook — human edits can land without the write gate; install maintained template`,
+      fix: shipsPreCommitTemplate || fs.existsSync(path.join(process.cwd(), 'templates', 'hooks', templateName))
+        ? `Install: cp templates/hooks/${templateName} .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit (or husky equivalent)`
+        : `Copy ${templateName} from the ${identity.packageName} package templates/hooks/ into .git/hooks/pre-commit`,
     });
   }
 
@@ -390,8 +394,8 @@ export function collectWeakestLinkGaps(root, opts = {}) {
     gaps.push({
       id: 'enforcement-pre-commit-template-missing',
       severity: 'warn',
-      message: 'Producer package missing templates/hooks/pre-commit-ark (Q3 human-edit path)',
-      fix: 'Add templates/hooks/pre-commit-ark to the package',
+      message: `Producer package missing templates/hooks/${templateName} (human-edit path)`,
+      fix: `Add templates/hooks/${templateName} to the package`,
     });
   }
 
@@ -403,7 +407,7 @@ export function collectWeakestLinkGaps(root, opts = {}) {
         id: 'enforcement-branch-unprotected',
         severity: 'warn',
         message: 'Default branch has no GitHub branch protection (architecture check cannot be required)',
-        fix: 'Enable branch protection and require the architecture / ark-check status check',
+        fix: `Enable branch protection and require the architecture / ${identity.checkBin} status check`,
       });
     } else if (
       github.available &&
