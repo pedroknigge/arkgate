@@ -334,7 +334,7 @@ async function resolveArchetypeInteractive(rl, root) {
 }
 
 function resolveArchetypeFromRecommend(root) {
-  const rec = buildArchitectureRecommendation(root);
+  const rec = buildArchitectureRecommendation(root, { identity: invocationIdentity });
   console.log(`Suggested shape: ${rec.archetype} — ${rec.label} (confidence ${rec.confidence})`);
   return rec.archetype;
 }
@@ -382,7 +382,7 @@ async function init(args) {
       console.log(`Using archetype ${archetype} → preset ${preset} (${resolved.label})`);
     } else if (!preset && nonInteractive && !archetype) {
       // non-TTY / --yes without explicit shape: recommend → preset
-      const rec = buildArchitectureRecommendation(root);
+      const rec = buildArchitectureRecommendation(root, { identity: invocationIdentity });
       preset = rec.preset;
       archetype = rec.archetype;
       console.log(`Auto-selected archetype ${archetype} → preset ${preset}`);
@@ -497,7 +497,7 @@ async function start(args) {
     // 1) Look at the project.
     let rec;
     try {
-      rec = buildArchitectureRecommendation(root);
+      rec = buildArchitectureRecommendation(root, { identity: invocationIdentity });
     } catch {
       rec = undefined;
     }

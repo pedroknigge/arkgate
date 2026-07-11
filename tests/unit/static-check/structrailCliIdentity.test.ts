@@ -237,7 +237,12 @@ describe('Structrail CLI identity', () => {
 
     const report = runCheck(root, ['--report', '--no-open']);
     expect(report.status, report.stderr).toBe(0);
-    expect(fs.existsSync(path.join(root, 'structrail-report.html'))).toBe(true);
+    const reportPath = path.join(root, 'structrail-report.html');
+    expect(fs.existsSync(reportPath)).toBe(true);
     expect(fs.existsSync(path.join(root, 'ark-report.html'))).toBe(false);
+    const reportHtml = fs.readFileSync(reportPath, 'utf8');
+    expect(reportHtml).toContain('Structrail architecture report');
+    expect(reportHtml).toContain('/structrail-explain');
+    expect(reportHtml).not.toMatch(/\bArkGate\b|\bArk\b|\bark(?:gate)?-(?:check|mcp)\b|\/ark-/);
   });
 });

@@ -1510,6 +1510,12 @@ export const MATURE_REPO_FILE_THRESHOLD = 150;
 
 export function buildArchitectureRecommendation(root, options = {}) {
   const playbookPath = options.playbookPath ?? defaultPlaybookPath();
+  const identity = options.identity ?? {
+    cliBin: 'ark',
+    checkBin: 'ark-check',
+    configName: 'ark.config.json',
+    skillPrefix: 'ark',
+  };
   const playbook = loadArchitecturePlaybook(playbookPath);
   const signals = collectRepoShapeSignals(root);
   const result = scoreArchetypes(signals, playbook);
@@ -1566,11 +1572,16 @@ export function buildArchitectureRecommendation(root, options = {}) {
     // A repo past this size is not greenfield: `ark init` would scaffold a starter that governs
     // a thin slice and can mis-flag framework internals, so steer these to the adoption flow.
     mature: signals.sourceFileCount >= MATURE_REPO_FILE_THRESHOLD,
-    initCommand: `${arkCommand(root, 'ark', `init --archetype ${result.archetype} --yes`)}`,
-    firstCommand: `${arkCommand(root, 'ark', `init --archetype ${result.archetype} --yes`)}`,
-    adoptCommand: arkCommand(root, 'ark-check', '--recommend --write-plan'),
-    recommendCommand: arkCommand(root, 'ark-check', '--recommend'),
-    checkCommand: arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config'),
+    initCommand: arkCommand(root, identity.cliBin, `init --archetype ${result.archetype} --yes`),
+    firstCommand: arkCommand(root, identity.cliBin, `init --archetype ${result.archetype} --yes`),
+    adoptCommand: arkCommand(root, identity.checkBin, '--recommend --write-plan'),
+    recommendCommand: arkCommand(root, identity.checkBin, '--recommend'),
+    checkCommand: arkCommand(
+      root,
+      identity.checkBin,
+      `--root . --config ${identity.configName} --strict-config`
+    ),
+    adoptSkill: `/${identity.skillPrefix}-adopt`,
   };
 }
 
@@ -1694,7 +1705,7 @@ export function formatArchitectureRecommendationHuman(recommendation) {
     );
     lines.push('not the greenfield starter, so the contract matches your real structure:');
     lines.push(`Next: ${recommendation.adoptCommand}`);
-    lines.push('Then: run /ark-adopt in your agent (re-scope layers to reality, freeze real debt only)');
+    lines.push(`Then: run ${recommendation.adoptSkill ?? '/ark-adopt'} in your agent (re-scope layers to reality, freeze real debt only)`);
   } else {
     lines.push(`Next: ${recommendation.firstCommand}`);
     lines.push(`Then: ${recommendation.checkCommand}`);
@@ -1765,7 +1776,7 @@ export function buildAdoptionPlanDocument(recommendation) {
     recommendCommand: recommendation.recommendCommand,
     galleryStarter: GALLERY_STARTER_BY_ARCHETYPE[recommendation.archetype] ?? null,
     policyPack: policyPackId,
-    writePlanCommand: 'ark-check --recommend --write-plan',
+    writePlanCommand: recommendation.adoptCommand,
   };
 }
 

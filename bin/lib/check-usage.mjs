@@ -11,7 +11,7 @@ export function checkUsage(identity) {
     `       ${check} --root <project> --config <${config}> [--manifest <${manifest}>] [--tsconfig <tsconfig.json>] [--strict-merge | --strict | --strict-config] [--require-gates] [--require-write-hook <host>] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]`,
     `       ${check} --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)`,
     `       ${check} --plan [--json]              classified remediation plan (mechanical-safe / judgment / deferred) + goal; report only`,
-    `       ${check} --recommend [--json] [--write-plan]  application-shape plan; --write-plan emits ark-adoption-plan.json`,
+    `       ${check} --recommend [--json] [--write-plan]  application-shape plan; --write-plan emits ${identity.fileStem}-adoption-plan.json`,
     `       ${check} --list-policy-packs            enthusiast packs (hexagonal, layered, feature-sliced, monorepo, ui-surface, vertical-slice, ddd-bounded-contexts)`,
     `       ${check} --apply-policy-pack <id> [--force]  write ${config} from templates/policy-packs/ (uses preset factory)`,
     `       ${check} --suggest-include [--json]   propose include roots (TS packages / workspaces)`,

@@ -13,6 +13,17 @@ import {
 import { collectAdoptionGaps, arkCheckCommand } from './agent-gates.mjs';
 import { FIX_HINTS } from './violations.mjs';
 
+function reportIdentity(identity) {
+  return identity ?? {
+    productName: 'Ark',
+    cliBin: 'ark',
+    checkBin: 'ark-check',
+    configName: 'ark.config.json',
+    skillPrefix: 'ark',
+    fileStem: 'ark',
+  };
+}
+
 export function detectEnforcement(root) {
   const has = (rel) => fs.existsSync(path.join(root, rel));
   const fileIncludes = (rel, needle) => {
@@ -28,19 +39,29 @@ export function detectEnforcement(root) {
     const hit = fs
       .readdirSync(dir)
       .filter((f) => /\.ya?ml$/.test(f))
-      .find((f) => fileIncludes(path.join('.github', 'workflows', f), 'ark-check'));
+      .find((f) =>
+        ['structrail-check', 'arkgate-check', 'ark-check'].some((bin) =>
+          fileIncludes(path.join('.github', 'workflows', f), bin)
+        )
+      );
     return hit ? `.github/workflows/${hit}` : null;
   };
   const eslintFile = ['eslint.config.mjs', 'eslint.config.js', 'eslint.config.cjs', '.eslintrc.json', '.eslintrc.cjs'].find(
-    (f) => has(f) && (fileIncludes(f, 'arkgate') || fileIncludes(f, 'ark-runtime-kernel'))
+    (f) =>
+      has(f) &&
+      (fileIncludes(f, 'structrail') ||
+        fileIncludes(f, 'arkgate') ||
+        fileIncludes(f, 'ark-runtime-kernel'))
   );
   const writeGateFile =
-    ((fileIncludes('.claude/settings.json', 'arkgate-mcp') ||
+    ((fileIncludes('.claude/settings.json', 'structrail-mcp') ||
+      fileIncludes('.claude/settings.json', 'arkgate-mcp') ||
       fileIncludes('.claude/settings.json', 'ark-mcp')) &&
       '.claude/settings.json') ||
     (has('.cursor/mcp.json') && '.cursor/mcp.json') ||
-    (fileIncludes('.grok/hooks/ark-write-gate.json', 'arkgate-mcp') &&
-      '.grok/hooks/ark-write-gate.json') ||
+    (fileIncludes('.grok/hooks/structrail-write-gate.json', 'structrail-mcp') &&
+      '.grok/hooks/structrail-write-gate.json') ||
+    (fileIncludes('.grok/hooks/ark-write-gate.json', 'arkgate-mcp') && '.grok/hooks/ark-write-gate.json') ||
     null;
   return [
     { name: 'Write gate', where: writeGateFile, what: 'blocks a bad edit as you type (PreToolUse hook / MCP)' },
@@ -82,7 +103,9 @@ export function buildReportSnapshot({
   enforcement,
   score,
   mode,
+  identity,
 }) {
+  const report = reportIdentity(identity);
   const layers = Array.isArray(config?.layers) ? config.layers : [];
   const rules = Array.isArray(config?.rules) ? config.rules : [];
   const counts = {};
@@ -92,9 +115,9 @@ export function buildReportSnapshot({
   const gatesOn = (enforcement || []).filter((e) => e.on).length;
   return {
     version: 1,
-    kind: 'ark-architecture-snapshot',
+    kind: `${report.fileStem}-architecture-snapshot`,
     generatedAt: new Date().toISOString(),
-    arkVersion: version ?? null,
+    [`${report.fileStem}Version`]: version ?? null,
     project: (() => {
       try {
         return readJsonSafe(path.join(root, 'package.json'))?.name || path.basename(root);
@@ -290,7 +313,7 @@ export function archiveReportSnapshots(root, { html, snapshot, resetOrigin = fal
       const suffix = text.endsWith('\n') || text.length === 0 ? '' : '\n';
       fs.writeFileSync(
         gitignore,
-        `${text}${suffix}\n# Ark generated reports / local state\n.ark/\n`
+        `${text}${suffix}\n# Architecture gate generated reports / local state\n.ark/\n`
       );
     }
   }
@@ -299,7 +322,8 @@ export function archiveReportSnapshots(root, { html, snapshot, resetOrigin = fal
 }
 
 // Simplified onboarding report: compact diagram, placement table, short violation list.
-export function renderBeginnerHtmlReport({ root, config, violations, ok, version, configPath, generatedAt }) {
+export function renderBeginnerHtmlReport({ root, config, violations, ok, version, configPath, generatedAt, identity }) {
+  const report = reportIdentity(identity);
   const layers = Array.isArray(config.layers) ? config.layers : [];
   const esc = htmlEscape;
   const project = (() => {
@@ -313,11 +337,11 @@ export function renderBeginnerHtmlReport({ root, config, violations, ok, version
   const phase1 = layers.slice(0, 4);
   const diagram = phase1
     .map((layer, index) => `${index + 1}. ${layer.name}`)
-    .join('  →  ') || 'Add layers in ark.config.json';
+    .join('  →  ') || `Add layers in ${report.configName}`;
 
   const placementRows = layers
     .map((layer) => {
-      const purpose = layer.description || 'See ark.config.json';
+      const purpose = layer.description || `See ${report.configName}`;
       const folders = (layer.patterns || []).join(', ') || '—';
       return `<tr><td><strong>${esc(layer.name)}</strong></td><td>${esc(purpose)}</td><td><code>${esc(folders)}</code></td></tr>`;
     })
@@ -333,13 +357,13 @@ export function renderBeginnerHtmlReport({ root, config, violations, ok, version
         .join('\n')
     : '<li class="dim">No active violations — architecture matches the contract.</li>';
 
-  const meta = [version ? `ark-check v${esc(version)}` : '', generatedAt ? esc(generatedAt) : '']
+  const meta = [version ? `${report.checkBin} v${esc(version)}` : '', generatedAt ? esc(generatedAt) : '']
     .filter(Boolean)
     .join(' · ');
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ark beginner guide — ${esc(project)}</title>
+<title>${report.productName} beginner guide — ${esc(project)}</title>
 <style>
   body { font-family: system-ui, sans-serif; margin: 2rem; line-height: 1.5; max-width: 720px; }
   h1 { font-size: 1.4rem; }
@@ -368,9 +392,9 @@ export function renderBeginnerHtmlReport({ root, config, violations, ok, version
   <h2>What to fix first</h2>
   <ul>${violationRows}</ul>
   <h2>Next steps</h2>
-  <p><code>${arkCheckCommand(root)}</code></p>
-  <p><code>${arkCommand(root, 'ark-check', '--recommend')}</code></p>
-  <footer>Generated by ark-check --report --beginner. Config: ${esc(configPath)}</footer>
+  <p><code>${arkCheckCommand(root, report)}</code></p>
+  <p><code>${arkCommand(root, report.checkBin, '--recommend')}</code></p>
+  <footer>Generated by ${report.checkBin} --report --beginner. Config: ${esc(configPath)}</footer>
 </body></html>`;
 }
 
@@ -396,7 +420,9 @@ export function renderHtmlReport({
   currentSnapshot = null,
   originJustCreated = false,
   adoption = null,
+  identity,
 }) {
+  const report = reportIdentity(identity);
   const layers = Array.isArray(config.layers) ? config.layers : [];
   const rules = Array.isArray(config.rules) ? config.rules : [];
   const esc = htmlEscape;
@@ -726,10 +752,10 @@ export function renderHtmlReport({
   const skillsNote =
     skillGaps.length === 0
       ? '<div class="pill good">Agent skills current for detected tools</div>'
-      : `<div class="pill warn">${skillGaps.length} skill gap(s) — run ark upgrade / --install-agent-gates</div>`;
+      : `<div class="pill warn">${skillGaps.length} skill gap(s) — run ${report.cliBin} upgrade / --install-agent-gates</div>`;
 
   const meta = [
-    version ? `ark-check v${esc(version)}` : '',
+    version ? `${report.checkBin} v${esc(version)}` : '',
     generatedAt ? esc(generatedAt) : '',
     configPath ? `config: ${esc(configPath)}` : '',
   ]
@@ -742,7 +768,7 @@ export function renderHtmlReport({
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ark · ${esc(project)}</title>
+<title>${report.productName} · ${esc(project)}</title>
 <style>
   :root {
     --bg: #07090d; --panel: #10141b; --panel2: #161b24; --ink: #eef1f5; --dim: #8b93a0;
@@ -935,7 +961,7 @@ export function renderHtmlReport({
 <body><div class="wrap">
   <div class="hero">
     <div class="card">
-      <div class="brand"><i></i> Ark architecture report</div>
+      <div class="brand"><i></i> ${report.productName} architecture report</div>
       <h1>${esc(project)} <span class="badge ${status}">${status}</span> <span class="badge mode">${esc(modeLabel)}</span></h1>
       <p class="lede">${esc(modeBlurb)} One machine-readable contract · write gate · CI · optional runtime.</p>
       <div class="kpis">
@@ -948,7 +974,7 @@ export function renderHtmlReport({
       ${skillsNote}
     </div>
     <div class="card score-card">
-      <div class="score-ring ${scoreTone}"><div><div class="score-n">${score}</div><div class="dim" style="font-size:.72rem;letter-spacing:.08em;text-transform:uppercase">Ark score</div></div></div>
+      <div class="score-ring ${scoreTone}"><div><div class="score-n">${score}</div><div class="dim" style="font-size:.72rem;letter-spacing:.08em;text-transform:uppercase">${report.productName} score</div></div></div>
       <p class="score-cap">${esc(scoreCaption)}</p>
       <p class="meta" style="margin-top:.65rem">Coverage ${scoreCoverage} · Clean ${scoreClean} · Gates ${scoreGates} · Rules ${scoreRules}</p>
     </div>
@@ -1054,7 +1080,7 @@ export function renderHtmlReport({
       </div>`;
     }
     const rows = [
-      ['Ark score', originSnapshot.score, currentSnapshot.score, ''],
+      [`${report.productName} score`, originSnapshot.score, currentSnapshot.score, ''],
       ['Governed %', originSnapshot.governedPercent, currentSnapshot.governedPercent, 'pp'],
       ['Files in scope', originSnapshot.totalFiles, currentSnapshot.totalFiles, ''],
       ['Classified files', originSnapshot.classifiedFiles, currentSnapshot.classifiedFiles, ''],
@@ -1287,7 +1313,7 @@ export function renderHtmlReport({
     <details style="margin-top:1rem">
       <summary>Score model (transparent)</summary>
       <p class="legend">
-        Ark score = 0.4×coverage + 0.3×clean + 0.2×gates + 0.1×rule-density.
+        ${report.productName} score = 0.4×coverage + 0.3×clean + 0.2×gates + 0.1×rule-density.
         Coverage=${scoreCoverage}, clean=${scoreClean}, gates=${scoreGates}, rules=${scoreRules} → <b>${score}</b>.
         This is a fitness signal for humans, not a CI gate.
       </p>
@@ -1297,19 +1323,19 @@ export function renderHtmlReport({
   <div class="section card">
     <h2>Commands worth memorizing</h2>
     <div class="cmds">
-      <code>${arkCheckCommand(root)}</code>
-      <code>${arkCommand(root, 'ark-check', '--coverage')}</code>
-      <code>${arkCommand(root, 'ark-check', '--plan')}</code>
-      <code>${arkCommand(root, 'ark-check', '--doctor')}</code>
-      <code>${arkCommand(root, 'ark-check', '--report ark-report.html')}</code>
-      <code>/ark-place "&lt;what you're building&gt;"</code>
-      <code>/ark-explain</code>
+      <code>${arkCheckCommand(root, report)}</code>
+      <code>${arkCommand(root, report.checkBin, '--coverage')}</code>
+      <code>${arkCommand(root, report.checkBin, '--plan')}</code>
+      <code>${arkCommand(root, report.checkBin, '--doctor')}</code>
+      <code>${arkCommand(root, report.checkBin, `--report ${report.fileStem}-report.html`)}</code>
+      <code>/${report.skillPrefix}-place "&lt;what you're building&gt;"</code>
+      <code>/${report.skillPrefix}-explain</code>
     </div>
   </div>
 
   <footer>
-    Generated by ${meta || 'ark-check'} · visual twin of <code>/ark-explain</code>.
-    Regenerate with <code>ark-check --report</code>; add the file to <code>.gitignore</code> rather than committing it.
+    Generated by ${meta || report.checkBin} · visual twin of <code>/${report.skillPrefix}-explain</code>.
+    Regenerate with <code>${report.checkBin} --report</code>; add the file to <code>.gitignore</code> rather than committing it.
   </footer>
 </div></body></html>
 `;

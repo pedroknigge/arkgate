@@ -13,7 +13,6 @@ import {
   DEFAULT_RULES,
   applyFrameworkLayoutOverlays,
   arkCommand,
-  ADOPTION_PLAN_FILENAME,
   buildArchitectureRecommendation,
   createElevenLayerConfig,
   enrichViolationWithFixClass,
@@ -197,7 +196,7 @@ function parseArgs(argv) {
     else if (arg === '--no-cache') args.noCache = true;
     else if (arg === '--report') {
       const next = argv[i + 1];
-      args.report = next && !next.startsWith('-') ? argv[++i] : 'ark-report.html';
+      args.report = next && !next.startsWith('-') ? argv[++i] : `${invocationIdentity.fileStem}-report.html`;
     }
     else if (arg === '--reset-origin') args.resetOrigin = true;
     else if (arg === '--no-archive') args.noArchive = true;
@@ -930,10 +929,13 @@ async function main() {
 
   if (args.recommend) {
     try {
-      const recommendation = buildArchitectureRecommendation(args.root);
+      const recommendation = buildArchitectureRecommendation(args.root, {
+        identity: invocationIdentity,
+      });
+      const adoptionPlanFilename = `${invocationIdentity.fileStem}-adoption-plan.json`;
       let planWritten;
       if (args.writePlan) {
-        const result = writeAdoptionPlan(args.root, recommendation);
+        const result = writeAdoptionPlan(args.root, recommendation, adoptionPlanFilename);
         planWritten = result.path;
       }
       if (args.json) {
@@ -942,7 +944,7 @@ async function main() {
             {
               ...recommendation,
               ...(planWritten
-                ? { adoptionPlanPath: path.relative(args.root, planWritten) || ADOPTION_PLAN_FILENAME }
+                ? { adoptionPlanPath: path.relative(args.root, planWritten) || adoptionPlanFilename }
                 : {}),
             },
             null,
@@ -953,7 +955,7 @@ async function main() {
         console.log(formatArchitectureRecommendationHuman(recommendation));
         if (planWritten) {
           console.log('');
-          console.log(`Wrote ${path.relative(args.root, planWritten) || ADOPTION_PLAN_FILENAME}`);
+          console.log(`Wrote ${path.relative(args.root, planWritten) || adoptionPlanFilename}`);
         }
       }
     } catch (error) {
@@ -1263,6 +1265,7 @@ async function main() {
       enforcement: enforcementForReport,
       score: fitness.score,
       mode: fitness.mode,
+      identity: invocationIdentity,
     });
     // Origin is read before archive so the HTML can show "just created" vs deltas.
     const existingOrigin = args.resetOrigin
@@ -1284,6 +1287,7 @@ async function main() {
       originSnapshot: existingOrigin,
       currentSnapshot,
       originJustCreated: !existingOrigin,
+      identity: invocationIdentity,
     };
     const html = args.beginner
       ? renderBeginnerHtmlReport(reportPayload)
