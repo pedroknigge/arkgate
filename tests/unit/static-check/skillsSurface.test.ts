@@ -13,6 +13,10 @@ import {
   skillTemplateNames,
   skillTemplates,
 } from '../../../bin/lib/agent-gates.mjs';
+import {
+  ARK_GENERATION_IDENTITY,
+  STRUCTRAIL_GENERATION_IDENTITY,
+} from '../../../bin/lib/product-identity.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const SKILLS_DIR = path.join(REPO, 'templates/skills');
@@ -33,6 +37,9 @@ const EXPECTED_SKILLS = [
   'ark-think',
   'ark-upgrade',
 ] as const;
+const CANONICAL_SKILLS = EXPECTED_SKILLS.map((name) =>
+  name.replace(/^ark-/, 'structrail-')
+);
 
 describe('active agent host detection', () => {
   it('detects Grok / Claude / Cursor / Codex without treating CODEX_HOME alone as Codex', () => {
@@ -67,8 +74,8 @@ describe('skill surface inventory', () => {
     expect(names).toEqual([...EXPECTED_SKILLS].sort());
   });
 
-  it('ark-upgrade documents active vs deferred hosts (Codex not Incomplete)', () => {
-    const body = fs.readFileSync(path.join(SKILLS_DIR, 'ark-upgrade.md'), 'utf8');
+  it('structrail-upgrade documents active vs deferred hosts (Codex not Incomplete)', () => {
+    const body = fs.readFileSync(path.join(SKILLS_DIR, 'structrail-upgrade.md'), 'utf8');
     expect(body).toMatch(/Active host vs deferred/i);
     expect(body).toContain('**Active host:**');
     expect(body).toContain('**Deferred hosts:**');
@@ -76,7 +83,7 @@ describe('skill surface inventory', () => {
   });
 
   it('skillTemplates returns non-empty body for each expected skill', () => {
-    const map = new Map(skillTemplates());
+    const map = new Map(skillTemplates(ARK_GENERATION_IDENTITY));
     for (const name of EXPECTED_SKILLS) {
       const body = map.get(name);
       expect(body, name).toBeTruthy();
@@ -91,13 +98,19 @@ describe('skill surface inventory', () => {
       .filter((n) => /^[a-z0-9-]+\.md$/.test(n))
       .map((n) => path.basename(n, '.md'))
       .sort();
-    expect(onDisk).toEqual([...EXPECTED_SKILLS].sort());
+    expect(onDisk).toEqual([...CANONICAL_SKILLS].sort());
+    expect(skillTemplateNames(STRUCTRAIL_GENERATION_IDENTITY).sort()).toEqual(
+      [...CANONICAL_SKILLS].sort()
+    );
+    expect(skillTemplateNames(ARK_GENERATION_IDENTITY).sort()).toEqual(
+      [...EXPECTED_SKILLS].sort()
+    );
   });
 });
 
 describe('skill dual-engine + completion contract', () => {
   it('every skill template includes dual-engine and completion contract', () => {
-    for (const name of EXPECTED_SKILLS) {
+    for (const name of CANONICAL_SKILLS) {
       const body = fs.readFileSync(path.join(SKILLS_DIR, `${name}.md`), 'utf8');
       expect(body, name).toContain('## Dual engine (mandatory)');
       expect(body, name).toContain('## Completion contract (skill incomplete if missing)');
@@ -112,12 +125,12 @@ describe('skill dual-engine + completion contract', () => {
 
   it('critical skills include hard STOP handoff phrases', () => {
     const needStop = [
-      'ark-autopilot',
-      'ark-adopt',
-      'ark-loop',
-      'ark-fix',
-      'ark-coverage',
-      'ark-explore',
+      'structrail-autopilot',
+      'structrail-adopt',
+      'structrail-loop',
+      'structrail-fix',
+      'structrail-coverage',
+      'structrail-explore',
     ];
     for (const name of needStop) {
       const body = fs.readFileSync(path.join(SKILLS_DIR, `${name}.md`), 'utf8');
@@ -127,7 +140,7 @@ describe('skill dual-engine + completion contract', () => {
   });
 
   it('every skill documents subagent fan-out with sequential fallback', () => {
-    for (const name of EXPECTED_SKILLS) {
+    for (const name of CANONICAL_SKILLS) {
       const body = fs.readFileSync(path.join(SKILLS_DIR, `${name}.md`), 'utf8');
       expect(body, name).toContain('## Subagent fan-out (optional, host-dependent)');
       expect(body.toLowerCase(), name).toMatch(/fall back to sequential/);
