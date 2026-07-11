@@ -8,7 +8,7 @@ function listenerWithScope(scope: Scope) {
   const reports: Array<Record<string, unknown>> = [];
   const listener = noForbiddenGlobals.create({
     filename: '/tmp/no-config/src/domain/order.ts',
-    options: [{ globals: ['fetch', 'Date.now'] }],
+    options: [{ globals: ['fetch', 'Date.now', 'console'] }],
     sourceCode: { getScope: () => scope },
     report: (descriptor: Record<string, unknown>) => reports.push(descriptor),
   } as never);
@@ -51,9 +51,19 @@ describe('ESLint confirmed forbidden-global bypass corpus', () => {
       },
       property: { type: 'Identifier', name: 'now' },
     });
+    listener.MemberExpression({
+      type: 'MemberExpression',
+      object: {
+        type: 'MemberExpression',
+        object: { type: 'Identifier', name: 'globalThis' },
+        property: { type: 'Identifier', name: 'console' },
+      },
+      property: { type: 'Identifier', name: 'log' },
+    });
 
     expect(reports.map((report) => (report.data as { name: string }).name).sort()).toEqual([
       'Date.now',
+      'console',
       'fetch',
     ]);
   });

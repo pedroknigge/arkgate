@@ -20,6 +20,7 @@ describe('mutation-critical scanner contracts', () => {
     const file = source(`
 Date.now();
 console.log('message');
+globalThis.console.log('global message');
 fetch('/orders');
 new WebSocket('ws://localhost');
 Math.random();
@@ -37,7 +38,38 @@ const local = fetch;
         'WebSocket',
         'Math',
       ]).map((use) => use.name)
-    ).toEqual(['Date.now', 'console', 'fetch', 'WebSocket', 'Math']);
+    ).toEqual([
+      'Date.now',
+      'console',
+      'console',
+      'fetch',
+      'WebSocket',
+      'Math',
+      'fetch',
+      'fetch',
+    ]);
+  });
+
+  it('uses lexical bindings while retaining ambient aliases and static globalThis chains', () => {
+    const file = source(`
+function run(fetch) { return fetch('/local'); }
+const Date = { now: () => 1 };
+Date.now();
+type FetchType = typeof fetch;
+const client = { fetch() { return 1; } };
+client.fetch();
+const alias = fetch;
+const bag = { fetch };
+globalThis.Date.now();
+globalThis.console.log('message');
+factory().Date.now();
+`);
+
+    expect(
+      collectForbiddenGlobalUses(ts, file, ['fetch', 'Date.now', 'console']).map(
+        (use) => use.name
+      )
+    ).toEqual(['fetch', 'fetch', 'Date.now', 'console']);
   });
 
   it('classifies import and export references conservatively', () => {

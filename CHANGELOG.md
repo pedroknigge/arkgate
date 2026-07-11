@@ -9,6 +9,12 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 - **Workflow retry boundary:** `RetryPolicy` now retries only `step.execute` failures and
   timeouts. A snapshot-store or completion-audit failure after a successful effect is terminal,
   enters compensation, and never executes the completed effect again.
+- **Scanner bypass corpus:** forbidden-global checks now use single-file TypeScript symbols, so
+  local `fetch` / `Date` bindings do not false-positive while ambient aliases and
+  `globalThis.Date.now()` remain violations. CLI, AICodeGate, and ESLint share the verdict.
+  TypeScript `import x = require('...')` now creates a dependency edge, and direct
+  `require(expr)` emits `DYNAMIC_REQUIRE_NOT_ALLOWLISTED` (strict profiles fail unless the file
+  is reviewed in `dynamicImportAllowlist`). The scan cache is versioned past the old semantics.
 
 ### Added
 

@@ -26,8 +26,25 @@ type RuleContext = {
   physicalFilename?: string;
   /** ESLint ≤8 API — still present on some hosts; removed in ESLint 10. */
   getFilename?: () => string;
+  /** ESLint 9+ source/scope API. */
+  sourceCode?: SourceCode;
+  /** ESLint ≤8 source/scope API. */
+  getSourceCode?: () => SourceCode;
   options?: unknown[];
 };
+
+type ScopeVariable = { defs?: unknown[] };
+type ScopeReference = {
+  identifier?: AstNode;
+  resolved?: ScopeVariable | null;
+  isValueReference?: boolean;
+};
+type Scope = {
+  set?: Map<string, ScopeVariable>;
+  references?: ScopeReference[];
+  upper?: Scope | null;
+};
+type SourceCode = { getScope?: (node: AstNode) => Scope };
 
 /** Resolve the file path being linted across ESLint 8–10 context shapes. */
 function lintedFilename(context: RuleContext): string {
@@ -63,6 +80,9 @@ type AstNode = {
   properties?: AstNode[];
   importKind?: string;
   specifiers?: AstNode[];
+  parent?: AstNode;
+  init?: AstNode;
+  computed?: boolean;
 };
 
 type ArkRule = {
@@ -157,6 +177,55 @@ function stringValue(node: AstNode | undefined): string | undefined {
 
 function propertyName(node: AstNode | undefined): string | undefined {
   return node?.name ?? stringValue(node);
+}
+
+function sourceCodeFor(context: RuleContext): SourceCode | undefined {
+  return context.sourceCode ?? context.getSourceCode?.();
+}
+
+function referenceFor(context: RuleContext, node: AstNode): ScopeReference | undefined {
+  let scope = sourceCodeFor(context)?.getScope?.(node);
+  while (scope) {
+    const reference = scope.references?.find((candidate) => candidate.identifier === node);
+    if (reference) return reference;
+    scope = scope.upper ?? undefined;
+  }
+  return undefined;
+}
+
+function isLocallyBound(context: RuleContext, node: AstNode, name: string): boolean {
+  const reference = referenceFor(context, node);
+  if (reference?.resolved) return (reference.resolved.defs?.length ?? 0) > 0;
+
+  let scope = sourceCodeFor(context)?.getScope?.(node);
+  while (scope) {
+    const variable = scope.set?.get(name);
+    if (variable) return (variable.defs?.length ?? 0) > 0;
+    scope = scope.upper ?? undefined;
+  }
+  return false;
+}
+
+function isValueIdentifierReference(context: RuleContext, node: AstNode): boolean {
+  const reference = referenceFor(context, node);
+  if (reference) return reference.isValueReference !== false;
+  return node.parent?.type === 'VariableDeclarator' && node.parent.init === node;
+}
+
+function memberExpressionPath(
+  node: AstNode | undefined
+): { root: AstNode; segments: string[] } | undefined {
+  if (node?.type === 'Identifier' && node.name) {
+    return { root: node, segments: [node.name] };
+  }
+  if (!node) return undefined;
+  const memberLike =
+    node.type === 'MemberExpression' || Boolean(node.object && node.property);
+  if (!memberLike || node.computed === true) return undefined;
+  const base = memberExpressionPath(node.object);
+  const property = propertyName(node.property);
+  if (!base || !property) return undefined;
+  return { root: base.root, segments: [...base.segments, property] };
 }
 
 function calleePropertyName(node: AstNode): string | undefined {
@@ -395,6 +464,8 @@ export const noForbiddenGlobals: ArkRule = {
       return {} as RuleListener;
     }
 
+    const scopeAware = typeof sourceCodeFor(context)?.getScope === 'function';
+
     const report = (node: AstNode, name: string) =>
       context.report({
         node,
@@ -404,19 +475,45 @@ export const noForbiddenGlobals: ArkRule = {
 
     return {
       MemberExpression(node) {
-        const base = node.object?.type === 'Identifier' ? node.object.name : undefined;
-        if (!base) return;
-        const dotted = `${base}.${propertyName(node.property) ?? ''}`;
-        if (globals!.has(dotted)) report(node, dotted);
-        else if (globals!.has(base)) report(node, base);
+        if (node.parent?.type === 'MemberExpression' && node.parent.object === node) return;
+        const path = memberExpressionPath(node);
+        if (!path || isLocallyBound(context, path.root, path.segments[0])) return;
+        const explicitGlobalThis = path.segments[0] === 'globalThis';
+        const normalized = explicitGlobalThis ? path.segments.slice(1) : path.segments;
+        let match: string | undefined;
+        for (let length = normalized.length; length >= (explicitGlobalThis ? 1 : 2); length -= 1) {
+          const candidate = normalized.slice(0, length).join('.');
+          if (globals!.has(candidate)) {
+            match = candidate;
+            break;
+          }
+        }
+        if (match) report(node, match);
+        else if (!scopeAware && globals!.has(path.segments[0])) {
+          report(node, path.segments[0]);
+        }
       },
       CallExpression(node) {
+        if (scopeAware) return;
         const callee = node.callee?.type === 'Identifier' ? node.callee.name : undefined;
         if (callee && globals!.has(callee)) report(node, callee);
       },
       NewExpression(node) {
+        if (scopeAware) return;
         const callee = node.callee?.type === 'Identifier' ? node.callee.name : undefined;
         if (callee && globals!.has(callee)) report(node, callee);
+      },
+      Identifier(node) {
+        if (
+          !scopeAware ||
+          !node.name ||
+          !globals!.has(node.name) ||
+          !isValueIdentifierReference(context, node) ||
+          isLocallyBound(context, node, node.name)
+        ) {
+          return;
+        }
+        report(node, node.name);
       },
     };
   },

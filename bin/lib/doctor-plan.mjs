@@ -625,7 +625,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     line(warn, 'Safety diagnostics unavailable');
   } else {
     const rows = [
-      ['Non-literal dynamic imports', safety.nonLiteralDynamicImports],
+      ['Non-literal dynamic dependencies', safety.nonLiteralDynamicImports],
       ['@ts-ignore / @ts-nocheck', safety.tsSuppressions],
       ['Explicit any casts', safety.anyCasts],
       ['InMemory stores in production source', safety.inMemoryProductionStores],

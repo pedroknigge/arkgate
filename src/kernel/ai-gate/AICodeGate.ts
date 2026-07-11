@@ -82,7 +82,7 @@ export interface AICodeGateOptions<Context = AICodeGateContext> {
    * omits an explicit list.
    */
   architectureLayers?: Array<{ name: string; patterns?: string[] }>;
-  /** Explicit file-level escape hatch for reviewed non-literal dynamic imports. */
+  /** Explicit file-level escape hatch for reviewed non-literal import()/require() calls. */
   allowNonLiteralDynamicImport?: (filePath?: string) => boolean;
 }
 
@@ -205,7 +205,14 @@ function extractModuleSpecifiersAst(ts: any, source: string): ModuleSpecifierMat
         'export',
         Boolean(node.isTypeOnly || specifiersOnly)
       );
-    } else if (ts.isCallExpression(node) && node.arguments.length === 1) {
+    } else if (
+      ts.isImportEqualsDeclaration(node) &&
+      ts.isExternalModuleReference(node.moduleReference)
+    ) {
+      const argument = node.moduleReference.expression;
+      const value = tsStringLiteralText(ts, argument);
+      if (value !== undefined) push(argument, value, 'require');
+    } else if (ts.isCallExpression(node)) {
       const argument = node.arguments[0];
       const value = tsStringLiteralText(ts, argument);
       if (value !== undefined && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
@@ -224,21 +231,32 @@ function extractModuleSpecifiersAst(ts: any, source: string): ModuleSpecifierMat
   return matches.sort((a, b) => a.index - b.index);
 }
 
-function nonLiteralDynamicImportLines(ts: any, source: string): number[] {
+function nonLiteralDynamicDependencies(
+  ts: any,
+  source: string
+): Array<{ line: number; kind: 'import' | 'require' }> {
   const sourceFile = ts.createSourceFile('generated.ts', source, ts.ScriptTarget.Latest, true);
-  const lines: number[] = [];
+  const uses: Array<{ line: number; kind: 'import' | 'require' }> = [];
   const visit = (node: any) => {
-    if (
-      ts.isCallExpression(node) &&
-      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-      (!node.arguments[0] || !ts.isStringLiteralLike(node.arguments[0]))
-    ) {
-      lines.push(sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1);
+    if (ts.isCallExpression(node)) {
+      const dynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
+      const directRequire =
+        ts.isIdentifier(node.expression) && node.expression.text === 'require';
+      const argument = node.arguments[0];
+      if (
+        (dynamicImport || directRequire) &&
+        (!argument || !ts.isStringLiteralLike(argument))
+      ) {
+        uses.push({
+          line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
+          kind: directRequire ? 'require' : 'import',
+        });
+      }
     }
     ts.forEachChild(node, visit);
   };
   visit(sourceFile);
-  return lines;
+  return uses;
 }
 
 function extractQuotedStringsAst(ts: any, source: string): StringMatch[] {
@@ -391,11 +409,57 @@ function tsPublishSourceLiteral(ts: any, node: any): string | undefined {
   );
 }
 
+function singleFileTypeChecker(ts: any, sourceFile: any): any {
+  const options = {
+    noLib: true,
+    noResolve: true,
+    target: ts.ScriptTarget.Latest,
+  };
+  const host = ts.createCompilerHost(options, true);
+  host.getSourceFile = (fileName: string) =>
+    fileName === sourceFile.fileName ? sourceFile : undefined;
+  host.fileExists = (fileName: string) => fileName === sourceFile.fileName;
+  host.readFile = (fileName: string) =>
+    fileName === sourceFile.fileName ? sourceFile.text : undefined;
+  return ts.createProgram([sourceFile.fileName], options, host).getTypeChecker();
+}
+
+function propertyAccessPath(ts: any, node: any): { root: any; segments: string[] } | undefined {
+  const segments: string[] = [];
+  let current = node;
+  while (ts.isPropertyAccessExpression(current)) {
+    segments.unshift(current.name.text);
+    current = current.expression;
+  }
+  if (!ts.isIdentifier(current)) return undefined;
+  segments.unshift(current.text);
+  return { root: current, segments };
+}
+
+function isRuntimeIdentifierReference(ts: any, node: any): boolean {
+  if (ts.isPropertyAccessExpression(node.parent) && node.parent.name === node) return false;
+  return (
+    (ts.isExpressionNode(node) && !ts.isInTypeQuery(node)) ||
+    (ts.isShorthandPropertyAssignment(node.parent) && node.parent.name === node)
+  );
+}
+
+function hasLocalDeclaration(ts: any, checker: any, sourceFile: any, node: any): boolean {
+  const shorthand =
+    ts.isShorthandPropertyAssignment(node.parent) && node.parent.name === node;
+  const symbol = shorthand
+    ? checker.getShorthandAssignmentValueSymbol(node.parent)
+    : checker.getSymbolAtLocation(node);
+  return Boolean(
+    symbol?.declarations?.some((declaration: any) => declaration.getSourceFile() === sourceFile)
+  );
+}
+
 /**
- * Find uses of forbidden ambient globals. Positional, not scope-aware — kept in sync with
- * `collectForbiddenGlobalUses` in bin/ark-shared.mjs (the CLIs run standalone and must not
- * import from dist): dotted entries ("Date.now") flag that property access; bare entries
- * ("console", "fetch") flag property accesses on them, direct calls, and constructions.
+ * Find uses of forbidden ambient globals with single-file TypeScript binding. Kept in sync
+ * with `collectForbiddenGlobalUses` in bin/ark-shared.mjs (the standalone CLIs cannot import
+ * from dist). Local parameters/variables/imports have symbols; unbound runtime identifiers
+ * and explicit `globalThis` property chains are ambient.
  */
 function analyzeForbiddenGlobals(
   ts: any,
@@ -407,6 +471,7 @@ function analyzeForbiddenGlobals(
   const entries = new Set(forbidden);
   if (entries.size === 0) return [];
   const sourceFile = ts.createSourceFile('generated.ts', source, ts.ScriptTarget.Latest, true);
+  const checker = singleFileTypeChecker(ts, sourceFile);
   const violations: AICodeGateViolation[] = [];
   const flag = (name: string, node: any) =>
     violations.push(
@@ -421,17 +486,32 @@ function analyzeForbiddenGlobals(
     );
 
   const visit = (node: any) => {
-    if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.expression)) {
-      const dotted = `${node.expression.text}.${node.name.text}`;
-      if (entries.has(dotted)) flag(dotted, node);
-      else if (entries.has(node.expression.text)) flag(node.expression.text, node);
+    const nestedPropertyAccess =
+      ts.isPropertyAccessExpression(node) &&
+      ts.isPropertyAccessExpression(node.parent) &&
+      node.parent.expression === node;
+    if (ts.isPropertyAccessExpression(node) && !nestedPropertyAccess) {
+      const path = propertyAccessPath(ts, node);
+      if (path && !hasLocalDeclaration(ts, checker, sourceFile, path.root)) {
+        const explicitGlobalThis = path.segments[0] === 'globalThis';
+        const normalized = explicitGlobalThis ? path.segments.slice(1) : path.segments;
+        let match: string | undefined;
+        for (let length = normalized.length; length >= (explicitGlobalThis ? 1 : 2); length -= 1) {
+          const candidate = normalized.slice(0, length).join('.');
+          if (entries.has(candidate)) {
+            match = candidate;
+            break;
+          }
+        }
+        if (match) flag(match, node);
+      }
     } else if (
-      (ts.isCallExpression(node) || ts.isNewExpression(node)) &&
-      node.expression &&
-      ts.isIdentifier(node.expression) &&
-      entries.has(node.expression.text)
+      ts.isIdentifier(node) &&
+      entries.has(node.text) &&
+      isRuntimeIdentifierReference(ts, node) &&
+      !hasLocalDeclaration(ts, checker, sourceFile, node)
     ) {
-      flag(node.expression.text, node);
+      flag(node.text, node);
     }
     ts.forEachChild(node, visit);
   };
@@ -538,12 +618,15 @@ export function createAICodeGate<Context = AICodeGateContext>(
         options.typescript &&
         !options.allowNonLiteralDynamicImport?.(filePath)
       ) {
-        for (const line of nonLiteralDynamicImportLines(options.typescript, source)) {
+        for (const dependency of nonLiteralDynamicDependencies(options.typescript, source)) {
+          const isRequire = dependency.kind === 'require';
           violations.push(
             violation(
-              'DYNAMIC_IMPORT_NOT_ALLOWLISTED',
-              'Non-literal dynamic import cannot be resolved statically; add the reviewed file to dynamicImportAllowlist.',
-              { line, filePath }
+              isRequire
+                ? 'DYNAMIC_REQUIRE_NOT_ALLOWLISTED'
+                : 'DYNAMIC_IMPORT_NOT_ALLOWLISTED',
+              `Non-literal ${isRequire ? 'require call' : 'dynamic import'} cannot be resolved statically; add the reviewed file to dynamicImportAllowlist.`,
+              { line: dependency.line, filePath }
             )
           );
         }

@@ -128,9 +128,10 @@ export function scanCacheKey(root, args) {
   // warm cache from an older Ark can't feed stale entries to new logic. v2: typeOnly on edges.
   // v3: per-file exportsOnlyTypes. v4: typeOnlyExportNames + namedBindings.
   // v5: hasTopLevelSideEffects. v6: non-exported impure inits + non-export class statics.
+  // v7: scope-aware forbidden globals + import-equals dependency edges.
   return crypto
     .createHash('sha1')
-    .update(`ark-check-cache-v6\0${read(configPath)}\0${manifestPath ? read(manifestPath) : ''}`)
+    .update(`ark-check-cache-v7\0${read(configPath)}\0${manifestPath ? read(manifestPath) : ''}`)
     .digest('hex');
 }
 

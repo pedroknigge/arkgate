@@ -151,7 +151,7 @@ P0/security patches. Do not publish a normal stable feature release until `S01`â
 | 2 | `S02` | `done` | M | `S01` | Local confidence gates are green and truthfully named |
 | 3 | `S03` | `done` | M | `S02` | Enforcement capabilities are computed per active host |
 | 4 | `S04` | `done` | M | `S03` | Every supported host-only install produces a valid CI/write contract |
-| 5 | `S05` | `doing` | M | `S04` | All confirmed scanner false positives and bypasses are closed |
+| 5 | `S05` | `done` | M | `S04` | All confirmed scanner false positives and bypasses are closed |
 | 6 | `S06` | `todo` | S | `S03`â€“`S05` | README, docs, doctor, and site use one truthful support matrix |
 | 7 | `S07` | `todo` | S | `S06` | Product naming is decided before the public core API is stabilized |
 | 8 | `C01` | `todo` | M | `S07` | `ark.config.json` has a versioned JSON Schema and migrations |
@@ -170,7 +170,7 @@ P0/security patches. Do not publish a normal stable feature release until `S01`â
 | 21 | `V04` | `todo` | M | `C06`, `V03` | Package and release artifacts are small, complete, and attestable |
 | 22 | `V05` | `todo` | M | all prior items | Independent audit passes and the product may exit beta |
 
-**Next:** `S05`. Close the required scanner bypass corpus across every shipped analysis surface.
+**Next:** `S06`. Publish one truthful support matrix from the active-host capability model.
 
 ---
 
@@ -345,7 +345,7 @@ generated-parity, module-budget, package-files, and production security-audit ga
 
 ### S05 â€” Close the confirmed scanner bypass corpus
 
-- **Status:** `doing`
+- **Status:** `done`
 - **Closes:** `RB-04`
 - **Likely files:** `bin/ark-shared.mjs`, dependency/safety scanners, `AICodeGate.ts`, new adversarial tests
 
@@ -381,6 +381,17 @@ npx vitest run tests/unit/ai-gate
 npm run eval:corpus
 npm run test:coverage
 ```
+
+**Local evidence (2026-07-11):** the adversarial corpus was committed red first (`3419b2f`),
+then closed without expected-failure annotations across ark-check, AICodeGate, and ESLint.
+Single-file TypeScript symbols distinguish local bindings from ambient references; static AST
+paths cover `globalThis`, import-equals, literal import attributes, and direct dynamic
+import/require policy. Workspace-package enforcement remains green and scan cache v7 prevents old
+verdict reuse. Static-check passes 454/454 tests, AICodeGate 26/26, ESLint 15/15, and the eval
+corpus 18/18 cases. The final confidence gate passes 732/732 tests at 85.16% branch coverage and
+97.49% mutation with no uncovered mutants. TypeScript 5.9/6.0/7.0 compatibility, typecheck, build,
+JavaScript syntax, architecture, generated parity, module budgets, package allowlist/dry-run, and
+production security audit all pass (0 vulnerabilities).
 
 ### S06 â€” Publish one truthful support matrix
 

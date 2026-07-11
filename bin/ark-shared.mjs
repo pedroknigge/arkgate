@@ -398,40 +398,97 @@ export function resolveOperatingMode({
   return 'suggest';
 }
 
+function singleFileTypeChecker(ts, sourceFile) {
+  const options = {
+    noLib: true,
+    noResolve: true,
+    target: ts.ScriptTarget.Latest,
+  };
+  const host = ts.createCompilerHost(options, true);
+  host.getSourceFile = (fileName) =>
+    fileName === sourceFile.fileName ? sourceFile : undefined;
+  host.fileExists = (fileName) => fileName === sourceFile.fileName;
+  host.readFile = (fileName) =>
+    fileName === sourceFile.fileName ? sourceFile.text : undefined;
+  return ts.createProgram([sourceFile.fileName], options, host).getTypeChecker();
+}
+
+function propertyAccessPath(ts, node) {
+  const segments = [];
+  let current = node;
+  while (ts.isPropertyAccessExpression(current)) {
+    segments.unshift(current.name.text);
+    current = current.expression;
+  }
+  if (!ts.isIdentifier(current)) return undefined;
+  segments.unshift(current.text);
+  return { root: current, segments };
+}
+
+function isRuntimeIdentifierReference(ts, node) {
+  if (ts.isPropertyAccessExpression(node.parent) && node.parent.name === node) return false;
+  return (
+    (ts.isExpressionNode(node) && !ts.isInTypeQuery(node)) ||
+    (ts.isShorthandPropertyAssignment(node.parent) && node.parent.name === node)
+  );
+}
+
+function hasLocalDeclaration(ts, checker, sourceFile, node) {
+  const shorthand =
+    ts.isShorthandPropertyAssignment(node.parent) && node.parent.name === node;
+  const symbol = shorthand
+    ? checker.getShorthandAssignmentValueSymbol(node.parent)
+    : checker.getSymbolAtLocation(node);
+  return Boolean(
+    symbol?.declarations?.some((declaration) => declaration.getSourceFile() === sourceFile)
+  );
+}
+
 /**
  * Find uses of forbidden ambient globals in a TypeScript source file.
  *
- * Detection is deliberately positional, not scope-aware (kept in sync with
- * `collectForbiddenGlobalUses` in src/kernel/ai-gate/AICodeGate.ts — the CLIs must not
- * import from dist):
- *   - a dotted entry ("Date.now") flags `Date.now` property accesses
- *   - a bare entry ("console", "fetch") flags property accesses on it (`console.log`),
- *     direct calls (`fetch(...)`), and constructions (`new WebSocket(...)`)
- * Bare identifier mentions in other positions (types, shadowed locals, import names) are
- * NOT flagged, trading a little recall for near-zero false positives without a type checker.
+ * A no-lib, no-resolution TypeScript program binds declarations in this file only. An
+ * identifier with a symbol is therefore local (parameter, variable, import, etc.); an
+ * unbound runtime identifier is ambient. Dotted entries use AST property chains and
+ * explicit `globalThis` access is normalized to the configured global name.
  *
+ * Kept in sync with `analyzeForbiddenGlobals` in
+ * src/kernel/ai-gate/AICodeGate.ts — the standalone CLIs must not import from dist.
  * Returns [{ name, node }] where `name` is the matched forbidden entry.
  */
 export function collectForbiddenGlobalUses(ts, sourceFile, forbidden) {
   const entries = new Set(forbidden ?? []);
   if (entries.size === 0) return [];
+  const checker = singleFileTypeChecker(ts, sourceFile);
   const uses = [];
 
   const visit = (node) => {
-    if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.expression)) {
-      const dotted = `${node.expression.text}.${node.name.text}`;
-      if (entries.has(dotted)) {
-        uses.push({ name: dotted, node });
-      } else if (entries.has(node.expression.text)) {
-        uses.push({ name: node.expression.text, node });
+    const nestedPropertyAccess =
+      ts.isPropertyAccessExpression(node) &&
+      ts.isPropertyAccessExpression(node.parent) &&
+      node.parent.expression === node;
+    if (ts.isPropertyAccessExpression(node) && !nestedPropertyAccess) {
+      const path = propertyAccessPath(ts, node);
+      if (path && !hasLocalDeclaration(ts, checker, sourceFile, path.root)) {
+        const explicitGlobalThis = path.segments[0] === 'globalThis';
+        const normalized = explicitGlobalThis ? path.segments.slice(1) : path.segments;
+        let match;
+        for (let length = normalized.length; length >= (explicitGlobalThis ? 1 : 2); length -= 1) {
+          const candidate = normalized.slice(0, length).join('.');
+          if (entries.has(candidate)) {
+            match = candidate;
+            break;
+          }
+        }
+        if (match) uses.push({ name: match, node });
       }
     } else if (
-      (ts.isCallExpression(node) || ts.isNewExpression(node)) &&
-      node.expression &&
-      ts.isIdentifier(node.expression) &&
-      entries.has(node.expression.text)
+      ts.isIdentifier(node) &&
+      entries.has(node.text) &&
+      isRuntimeIdentifierReference(ts, node) &&
+      !hasLocalDeclaration(ts, checker, sourceFile, node)
     ) {
-      uses.push({ name: node.expression.text, node });
+      uses.push({ name: node.text, node });
     }
     ts.forEachChild(node, visit);
   };

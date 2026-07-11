@@ -25,7 +25,7 @@ function dependencyGate() {
 describe('AI Code Gate confirmed scanner bypass corpus', () => {
   const globalsGate = createAICodeGate({
     typescript: ts,
-    forbiddenGlobals: { DomainModel: ['fetch', 'Date.now'] },
+    forbiddenGlobals: { DomainModel: ['fetch', 'Date.now', 'console'] },
   });
 
   it('does not treat locally bound fetch or Date names as ambient globals', () => {
@@ -47,6 +47,7 @@ describe('AI Code Gate confirmed scanner bypass corpus', () => {
         'const request = fetch;',
         'export const load = () => request("/orders");',
         'export const now = globalThis.Date.now();',
+        'globalThis.console.log(now);',
       ].join('\n'),
       { layer: 'DomainModel', filePath: 'src/domain/order.ts' }
     );
@@ -56,7 +57,7 @@ describe('AI Code Gate confirmed scanner bypass corpus', () => {
         .filter((v) => v.ruleId === 'FORBIDDEN_GLOBAL')
         .map((v) => v.target)
         .sort()
-    ).toEqual(['Date.now', 'fetch']);
+    ).toEqual(['Date.now', 'console', 'fetch']);
   });
 
   it('treats TypeScript import-equals require syntax as a dependency edge', () => {

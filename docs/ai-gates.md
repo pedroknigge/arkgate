@@ -415,6 +415,31 @@ diagnostics. Configure reviewed exceptions explicitly:
 `ark-check --doctor --json` reports counts under `doctor.safety`. An `any` cast is
 reported as lost static assurance; it does not imply that a runtime schema was bypassed.
 
+### Scanner soundness envelope
+
+ArkGate uses the TypeScript compiler API for the governed source files. The repository scanner
+and `createAICodeGate({ typescript })` recognize these dependency forms:
+
+- `import ... from 'literal'`, side-effect imports, and `export ... from 'literal'`;
+- TypeScript `import x = require('literal')` external-module references;
+- direct `import('literal')` and direct `require('literal')` calls; and
+- relative, tsconfig path-alias, package, and installed workspace-package targets that resolve
+  to source inside the project root. Third-party or escaped targets are deliberately not governed.
+
+Direct `import(expr)` emits `DYNAMIC_IMPORT_NOT_ALLOWLISTED`; direct `require(expr)` emits
+`DYNAMIC_REQUIRE_NOT_ALLOWLISTED`. They are warnings in the default reporting profile and fail
+`--strict-config` / `--strict-merge`. The existing `dynamicImportAllowlist` name is retained for
+compatibility and is the reviewed file-level exception for both forms. Aliased loaders (for
+example `const load = require; load(expr)`) and runtime-computed module maps are not resolved.
+
+Forbidden globals use single-file TypeScript binding: parameters, variables, functions, classes,
+and imports declared in the file shadow ambient names. Bare ambient value references are reported
+even when assigned to an alias, and static dotted access through `globalThis` is normalized (for
+example `globalThis.Date.now()`). This is not whole-program data-flow analysis: computed property
+names, aliases of dotted members, and cross-file symbol provenance are outside the current
+envelope. When callers omit the `typescript` option, AICodeGate retains its conservative literal
+fallback and does not claim symbol-aware parity; the shipped `ark-mcp` path supplies TypeScript.
+
 Adopting Ark on an existing codebase with violations? Freeze them once and ratchet down:
 
 ```bash

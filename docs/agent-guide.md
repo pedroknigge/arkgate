@@ -354,11 +354,17 @@ if (!result.valid) {
 }
 ```
 
-Passing the `typescript` module enables built-in AST checks for raw publish calls, missing
-`metadata.source`, and source-layer mismatches. `ark-mcp` enables these checks
-automatically when TypeScript is available.
+Passing the `typescript` module enables built-in AST/symbol checks for dependencies, forbidden
+ambient globals, raw publish calls, missing `metadata.source`, and source-layer mismatches.
+`ark-mcp` enables these checks automatically when TypeScript is available. The exact supported
+syntax and unresolved-dynamic policy are documented in
+[Scanner soundness envelope](ai-gates.md#scanner-soundness-envelope).
 
-Violation codes (from `createAICodeGate`): `RAW_EVENT_PUBLISH`, `PUBLISH_MISSING_SOURCE`, `PUBLISH_SOURCE_LAYER_MISMATCH`, `FORBIDDEN_PATTERN`, `FORBIDDEN_SUBSTRING`, `FORBIDDEN_IMPORT`, `POLICY_VIOLATION`, `UNKNOWN_INTENT`, `LAYER_REFERENCE_VIOLATION`, `EXTENSION_ERROR`, `AST_ANALYZER_ERROR`.
+Relevant violation codes include `LAYER_IMPORT_VIOLATION`, `FORBIDDEN_GLOBAL`,
+`DYNAMIC_IMPORT_NOT_ALLOWLISTED`, `DYNAMIC_REQUIRE_NOT_ALLOWLISTED`, `RAW_EVENT_PUBLISH`,
+`PUBLISH_MISSING_SOURCE`, `PUBLISH_SOURCE_LAYER_MISMATCH`, `FORBIDDEN_PATTERN`,
+`FORBIDDEN_SUBSTRING`, `FORBIDDEN_IMPORT`, `POLICY_VIOLATION`, `UNKNOWN_INTENT`,
+`LAYER_REFERENCE_VIOLATION`, `EXTENSION_ERROR`, and `AST_ANALYZER_ERROR`.
 
 Use `ark-check` in CI for repository-level checks that need real file paths:
 
@@ -461,8 +467,9 @@ Example config:
 ```
 
 `ark-check` resolves imports through the TypeScript module resolver against your
-`tsconfig.json` — relative, path-alias (e.g. `@infra/db`), package imports, dynamic
-`import()`, and `require()` — plus string intent references. It also flags raw
+`tsconfig.json` — relative, path-alias (e.g. `@infra/db`), package/workspace imports,
+TypeScript `import = require()`, dynamic `import()`, and `require()` — plus string intent
+references. It also flags raw
 `publish()` calls, publish calls without `metadata.source`, and source intent literals
 whose resolved layer differs from the publishing file layer. Pass `--tsconfig <path>` to force one config
 for every file; otherwise each source file uses the nearest `tsconfig.json` above it (like

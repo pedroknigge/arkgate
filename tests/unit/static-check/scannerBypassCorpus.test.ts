@@ -36,7 +36,7 @@ function makeProject(source: string) {
         {
           name: 'DomainModel',
           patterns: ['src/domain/**'],
-          forbiddenGlobals: ['fetch', 'Date.now'],
+          forbiddenGlobals: ['fetch', 'Date.now', 'console'],
         },
         { name: 'PersistenceAdapters', patterns: ['src/infra/**'] },
       ],
@@ -78,6 +78,7 @@ describe('ark-check confirmed scanner bypass corpus', () => {
         'const request = fetch;',
         'export const load = () => request("/orders");',
         'export const now = globalThis.Date.now();',
+        'globalThis.console.log(now);',
       ].join('\n')
     );
 
@@ -86,7 +87,7 @@ describe('ark-check confirmed scanner bypass corpus', () => {
       .map((v) => v.target)
       .sort();
 
-    expect(globals).toEqual(['Date.now', 'fetch']);
+    expect(globals).toEqual(['Date.now', 'console', 'fetch']);
   });
 
   it('treats TypeScript import-equals require syntax as a dependency edge', () => {
