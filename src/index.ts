@@ -239,6 +239,36 @@ export {
 } from './kernel/ai-gate';
 
 // =============================================================================
+// Analysis Engine (stable IR contract)
+// =============================================================================
+
+export {
+  loadContract,
+  analyzeProject,
+  analyzeChange,
+  explainViolation,
+  type AnalysisContract,
+  type AnalyzeProjectInput,
+  type AnalyzeChangeInput,
+  type AnalysisResult,
+} from './kernel/analysis';
+
+export {
+  ANALYSIS_IR_SCHEMA_VERSION,
+  deterministicHash,
+  stableSerialize,
+  type AnalysisFileInput,
+  type AnalysisFileChange,
+  type AnalysisCompilerOptions,
+  type AnalysisFile,
+  type AnalysisImportEdge,
+  type AnalysisCapabilityUse,
+  type AnalysisEvidence,
+  type AnalysisViolation,
+  type AnalysisIr,
+} from './domain/analysis';
+
+// =============================================================================
 // Read Models / Projections
 // =============================================================================
 
