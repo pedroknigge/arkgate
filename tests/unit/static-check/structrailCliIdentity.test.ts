@@ -204,4 +204,40 @@ describe('Structrail CLI identity', () => {
       expect(output).not.toMatch(legacySurface);
     }
   });
+
+  it('uses canonical filenames and commands for new plans and reports', () => {
+    const root = project('generated-output');
+    fs.writeFileSync(
+      path.join(root, 'structrail.config.json'),
+      `${JSON.stringify(
+        {
+          include: ['src'],
+          layers: [{ name: 'Application', patterns: ['src/**'] }],
+          rules: [],
+        },
+        null,
+        2
+      )}\n`
+    );
+
+    const recommend = runCheck(root, ['--recommend', '--write-plan', '--json']);
+    expect(recommend.status, recommend.stderr).toBe(0);
+    const recommendation = JSON.parse(recommend.stdout);
+    expect(recommendation.adoptionPlanPath).toBe('structrail-adoption-plan.json');
+    expect(recommendation.initCommand).toContain('structrail init');
+    expect(recommendation.adoptCommand).toContain('structrail-check --recommend --write-plan');
+    expect(recommendation.checkCommand).toContain(
+      'structrail-check --root . --config structrail.config.json --strict-config'
+    );
+    expect(fs.existsSync(path.join(root, 'structrail-adoption-plan.json'))).toBe(true);
+    expect(fs.existsSync(path.join(root, 'ark-adoption-plan.json'))).toBe(false);
+    expect(
+      fs.readFileSync(path.join(root, 'structrail-adoption-plan.json'), 'utf8')
+    ).not.toMatch(/\bark(?:gate)?(?:-check)?\b|ark\.config\.json/);
+
+    const report = runCheck(root, ['--report', '--no-open']);
+    expect(report.status, report.stderr).toBe(0);
+    expect(fs.existsSync(path.join(root, 'structrail-report.html'))).toBe(true);
+    expect(fs.existsSync(path.join(root, 'ark-report.html'))).toBe(false);
+  });
 });
