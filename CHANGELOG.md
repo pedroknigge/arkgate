@@ -6,6 +6,10 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ### Fixed
 
+- **Test and Codex-home isolation:** Vitest now redirects `CODEX_HOME` to a disposable test home,
+  so direct helper calls and spawned CLIs cannot rewrite the developer's real Codex config. Temp
+  project installs also recognize an explicitly exported default `~/.codex` as the real home and
+  skip implicit MCP rewiring unless `--codex-home` is requested.
 - **Workflow retry boundary:** `RetryPolicy` now retries only `step.execute` failures and
   timeouts. A snapshot-store or completion-audit failure after a successful effect is terminal,
   enters compensation, and never executes the completed effect again.

@@ -42,6 +42,7 @@ import {
 import {
   codexPromptsDir,
   codexConfigPath,
+  usesDefaultCodexHome,
   isTempOrUpgradeRoot,
   codexProjectSlug,
   extractCodexRootFromBlock,
@@ -583,6 +584,10 @@ describe('field-install + install-migrate + skill + codex + mcp branches', () =>
   it('codex-home toml helpers and wire', () => {
     expect(isTempOrUpgradeRoot('/tmp/foo')).toBe(true);
     expect(isTempOrUpgradeRoot('/Users/me/proj')).toBe(false);
+    expect(usesDefaultCodexHome({}, '/Users/me')).toBe(true);
+    expect(usesDefaultCodexHome({ CODEX_HOME: '' }, '/Users/me')).toBe(true);
+    expect(usesDefaultCodexHome({ CODEX_HOME: '/Users/me/.codex' }, '/Users/me')).toBe(true);
+    expect(usesDefaultCodexHome({ CODEX_HOME: '/tmp/codex-test' }, '/Users/me')).toBe(false);
     expect(codexProjectSlug('/Users/me/My Project')).toMatch(/./);
     expect(codexPromptsDir()).toMatch(/codex|prompts|\.codex/i);
     expect(codexConfigPath()).toMatch(/config|\.codex/i);

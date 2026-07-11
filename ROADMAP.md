@@ -69,19 +69,20 @@ These are the starting facts this roadmap must change.
 | External proof | Adoption matrix is a scaffold; comparative eval is mostly curated oracle data | Product claims lack field evidence |
 | Supply chain | Protected main, signed tags, provenance, CodeQL/Semgrep, and no open alerts | Preserve this foundation |
 
-### Confirmed release blockers
+### Release blocker register
 
-| ID | Severity | Blocker |
-|---|---:|---|
-| `RB-01` | P0 if runtime remains stable | Successful workflow effects can be retried when completion audit fails |
-| `RB-02` | P1 | Active-host write enforcement can be overstated by hooks installed for another host |
-| `RB-03` | P1 | Host-only onboarding can generate an immediately failing strict CI workflow |
-| `RB-04` | P1 | Known semantic false positives and dependency bypasses remain open |
-| `RB-05` | P1 | Local coverage gate is red while the prior roadmap says it is complete |
-| `RB-06` | P1 | `start` mutates too much before proving contract fit |
+| ID | Severity | Status | Resolution / owner |
+|---|---:|---|---|
+| `RB-01` | P0 if runtime remains stable | `closed` | S01 separated effect retry from completion persistence/audit |
+| `RB-02` | P1 | `closed` | S03 computes enforcement from the active host only |
+| `RB-03` | P1 | `closed` | S04 gives every supported host-only install a valid merge/write contract |
+| `RB-04` | P1 | `closed` | S05 closed the confirmed semantic false positives and dependency bypasses |
+| `RB-05` | P1 | `closed` | S02 restored executable coverage and mutation gates |
+| `RB-06` | P1 | `open` | O03 owns preview-first setup and the five-file default limit |
 
-`RB-01`–`RB-05` must be closed by the end of Phase S. `RB-06` remains a release blocker until
-`O03` is done; Phase O owns the preview-first and setup-size redesign.
+`RB-01`–`RB-05` are closed by the corresponding completed Phase S items and their recorded
+evidence. `RB-06` remains the only blocker in this register; normal stable feature releases remain
+gated until `O03` is done.
 
 ---
 

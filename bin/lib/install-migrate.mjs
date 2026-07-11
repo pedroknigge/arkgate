@@ -14,6 +14,7 @@ import {
   codexPromptsDir,
   codexConfigPath,
   isTempOrUpgradeRoot,
+  usesDefaultCodexHome,
   wireCodexMcp,
 } from './codex-home.mjs';
 import {
@@ -391,16 +392,17 @@ export function runInstallAgentGates(args) {
   // without a manual copy step.
   //
   // Skip home-dir mutation when the project root is a temp/upgrade scratch *and*
-  // CODEX_HOME is the default (~/.codex). Fixtures must not rewrite the developer's
-  // real Codex config. When CODEX_HOME is redirected (unit tests set a temp home) or
-  // --codex-home is explicit, wire as usual.
+  // CODEX_HOME resolves to the default (~/.codex). Codex itself may export that exact
+  // path, so presence alone does not prove isolation. Fixtures must not rewrite the
+  // developer's real config. A genuinely redirected CODEX_HOME or explicit
+  // --codex-home still wires as requested.
   let codexMcp = null;
   const wantCodexWire = tools.has('codex') || args.codexHome;
   const skipHomeWire =
     wantCodexWire &&
     isTempOrUpgradeRoot(root) &&
     !args.codexHome &&
-    !process.env.CODEX_HOME;
+    usesDefaultCodexHome();
   if (wantCodexWire && !skipHomeWire) {
     codexMcp = wireCodexMcp(root, args.force);
     console.log('');
