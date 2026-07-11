@@ -67,10 +67,10 @@ function relativeEvidencePath(root, file) {
 
 function isArkMcpText(text) {
   return (
-    /\b(ark|arkgate)-mcp\b/.test(text) ||
-    /mcp_servers\.ark\b/.test(text) ||
-    /"ark"\s*:\s*\{/.test(text) ||
-    /mcpServers[\s\S]*\bark\b/.test(text)
+    /\b(ark|arkgate|structrail)-mcp\b/.test(text) ||
+    /mcp_servers\.(ark|structrail)\b/.test(text) ||
+    /"(ark|structrail)"\s*:\s*\{/.test(text) ||
+    /mcpServers[\s\S]*\b(ark|structrail)\b/.test(text)
   );
 }
 
@@ -80,7 +80,7 @@ function hookEvidence(root, relativePath) {
   const repair = Boolean(
     hard &&
       (/--hook-repair\b/.test(text) ||
-        /ARK_HOOK_REPAIR\s*=\s*['"]?(1|true|yes|on)/i.test(text))
+        /(?:ARK|STRUCTRAIL)_HOOK_REPAIR\s*=\s*['"]?(1|true|yes|on)/i.test(text))
   );
   return {
     hard: hard ? [relativePath] : [],
@@ -93,12 +93,19 @@ function mcpEvidence(root, relativePath) {
   return isArkMcpText(text) ? [relativePath] : [];
 }
 
+function mergeHookEvidence(...records) {
+  return {
+    hard: unique(records.flatMap((record) => record.hard)),
+    repair: unique(records.flatMap((record) => record.repair)),
+  };
+}
+
 function codexMcpEvidence(root) {
   const file = codexConfigPath();
   const text = readText(file);
   const resolvedRoot = path.resolve(root);
   const registered = listCodexArkServerTables(text).some((entry) => {
-    if (!entry.root || !/\b(ark|arkgate)-mcp\b/.test(entry.block)) return false;
+    if (!entry.root || !/\b(ark|arkgate|structrail)-mcp\b/.test(entry.block)) return false;
     return path.resolve(entry.root) === resolvedRoot;
   });
   return registered ? [relativeEvidencePath(root, file)] : [];
@@ -123,7 +130,10 @@ function hostRecord(hard, advisory, repair, merge) {
 export function detectWritePathInventory(root) {
   const merge = detectCiEnforcement(root).arkWorkflowFiles;
   const claudeHook = hookEvidence(root, '.claude/settings.json');
-  const grokHook = hookEvidence(root, '.grok/hooks/ark-write-gate.json');
+  const grokHook = mergeHookEvidence(
+    hookEvidence(root, '.grok/hooks/ark-write-gate.json'),
+    hookEvidence(root, '.grok/hooks/structrail-write-gate.json')
+  );
   const hosts = {
     claude: hostRecord(
       claudeHook.hard,

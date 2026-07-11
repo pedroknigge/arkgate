@@ -913,6 +913,7 @@ const color = {
 
 async function main() {
   const args = parseArgs(process.argv);
+  args.primaryIdentity = isStructrailInvocation();
   if (args.version) {
     console.log(arkPackageVersion());
     process.exit(0);
@@ -926,7 +927,7 @@ async function main() {
     root: args.root,
     requested: args.config,
     explicit: args.configExplicit,
-    primary: isStructrailInvocation(),
+    primary: args.primaryIdentity,
   });
   if (configIdentity.error) {
     const payload = {
@@ -1474,7 +1475,7 @@ async function main() {
     if (brokenMcp.length > 0) {
       console.log(
         color.yellow(
-          `Broken MCP argv in ${brokenMcp.join(', ')}: more than one of ark-mcp/arkgate-mcp in args ` +
+          `Broken MCP argv in ${brokenMcp.join(', ')}: more than one Structrail/ArkGate MCP bin in args ` +
             `(stdio hosts get a double binary name). Fix: ${arkCommand(root, 'ark-check', '--install-agent-gates --migrate-commands')}`
         )
       );

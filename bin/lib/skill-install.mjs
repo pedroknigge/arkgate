@@ -5,6 +5,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { codexPromptsDir } from './codex-home.mjs';
 import { __packageRoot, readJson } from './gate-files.mjs';
+import {
+  ARK_GENERATION_IDENTITY,
+  generationIdentityForRoot,
+} from './product-identity.mjs';
 
 export function normalizeToolsList(tools) {
   if (tools == null) return [];
@@ -172,19 +176,20 @@ export function arkPackageVersion() {
 
 // Insert `arkVersion: <v>` into a skill's YAML frontmatter (before its closing
 // `---`). No frontmatter → returned unchanged. Idempotent for a given version.
-export function stampSkill(content, version) {
+export function stampSkill(content, version, identity = ARK_GENERATION_IDENTITY) {
   if (!version) return content;
   const lines = content.split('\n');
   if (lines[0] !== '---') return content;
   const closeIdx = lines.indexOf('---', 1);
   if (closeIdx === -1) return content;
+  const versionLine = new RegExp(`^${identity.skillVersionKey}:`);
   const existing = lines.findIndex(
-    (line, i) => i > 0 && i < closeIdx && /^arkVersion:/.test(line)
+    (line, i) => i > 0 && i < closeIdx && versionLine.test(line)
   );
   if (existing !== -1) {
-    lines[existing] = `arkVersion: ${version}`;
+    lines[existing] = `${identity.skillVersionKey}: ${version}`;
   } else {
-    lines.splice(closeIdx, 0, `arkVersion: ${version}`);
+    lines.splice(closeIdx, 0, `${identity.skillVersionKey}: ${version}`);
   }
   return lines.join('\n');
 }
@@ -198,7 +203,7 @@ export function installedSkillVersion(filePath) {
   } catch {
     return null;
   }
-  const match = content.match(/^arkVersion:\s*(.+)$/m);
+  const match = content.match(/^(?:structrailVersion|arkVersion):\s*(.+)$/m);
   return match ? match[1].trim() : null;
 }
 
@@ -217,7 +222,20 @@ export function isVersionOlder(a, b) {
   return false;
 }
 
-export function skillTemplates() {
+function canonicalizeSkillTemplate(content) {
+  return content
+    .replace(/\bArkGate\b/g, 'Structrail')
+    .replace(/\barkgate\b/g, 'structrail')
+    .replace(/ark\.config\.json/g, 'structrail.config.json')
+    .replace(/ark:\/\//g, 'structrail://')
+    .replace(/\bark_(?=[a-z0-9])/g, 'structrail_')
+    .replace(/\/ark-/g, '/structrail-')
+    .replace(/(?<!\.)\bark-(?=[a-z0-9])/g, 'structrail-')
+    .replace(/\bark(?=\s+(?:start|init|upgrade)\b)/g, 'structrail')
+    .replace(/\bArk\b/g, 'Structrail');
+}
+
+export function skillTemplates(identity = ARK_GENERATION_IDENTITY) {
   const dir = path.join(__packageRoot, 'templates', 'skills');
   // A missing/mispackaged templates dir would otherwise install zero skills with
   // exit 0 — warn so a packaging regression (e.g. "templates" dropped from the
@@ -227,7 +245,7 @@ export function skillTemplates() {
     entries = fs.readdirSync(dir, { withFileTypes: true });
   } catch {
     console.error(
-      `Warning: skill templates directory not found (${dir}); no /ark-* skills installed.`
+      `Warning: skill templates directory not found (${dir}); no /${identity.skillPrefix}-* skills installed.`
     );
     return [];
   }
@@ -235,12 +253,20 @@ export function skillTemplates() {
     .filter((entry) => entry.isFile() && /^[a-z0-9-]+\.md$/.test(entry.name))
     .map((entry) => entry.name)
     .sort()
-    .map((name) => [path.basename(name, '.md'), fs.readFileSync(path.join(dir, name), 'utf8')]);
+    .map((name) => {
+      const sourceName = path.basename(name, '.md');
+      const source = fs.readFileSync(path.join(dir, name), 'utf8');
+      if (!identity.primary) return [sourceName, source];
+      return [
+        sourceName.replace(/^ark-/, `${identity.skillPrefix}-`),
+        canonicalizeSkillTemplate(source),
+      ];
+    });
 }
 
 // Skill names only, silent on a missing templates dir — for the freshness
 // advisory below, which must not print packaging warnings on every check run.
-export function skillTemplateNames() {
+export function skillTemplateNames(identity = ARK_GENERATION_IDENTITY) {
   const dir = path.join(__packageRoot, 'templates', 'skills');
   let entries;
   try {
@@ -250,7 +276,10 @@ export function skillTemplateNames() {
   }
   return entries
     .filter((entry) => entry.isFile() && /^[a-z0-9-]+\.md$/.test(entry.name))
-    .map((entry) => path.basename(entry.name, '.md'));
+    .map((entry) => path.basename(entry.name, '.md'))
+    .map((name) =>
+      identity.primary ? name.replace(/^ark-/, `${identity.skillPrefix}-`) : name
+    );
 }
 
 // A normal ark-check run is the reliable discovery point for new /ark-* skills.
@@ -261,10 +290,10 @@ export function skillTemplateNames() {
 // skills this version ships, surface it here so agents and CI actually notice.
 // Advisory only — never affects the exit code. Copilot has no reliable directory
 // signal, so it is not auto-detected (explicit --tools only), matching resolveTools.
-export function detectCodexHomeGap(root) {
+export function detectCodexHomeGap(root, identity = generationIdentityForRoot(root)) {
   if (!fs.existsSync(path.join(root, 'AGENTS.md'))) return null;
   if (fs.existsSync(path.join(root, 'templates', 'skills'))) return null;
-  const skillNames = skillTemplateNames();
+  const skillNames = skillTemplateNames(identity);
   if (skillNames.length === 0) return null;
   const dir = codexPromptsDir();
   if (!fs.existsSync(dir)) return null;
@@ -282,12 +311,12 @@ export function detectCodexHomeGap(root) {
   return missing > 0 || stale > 0 ? { missing, stale } : null;
 }
 
-export function detectSkillGaps(root) {
+export function detectSkillGaps(root, identity = generationIdentityForRoot(root)) {
   if (!fs.existsSync(path.join(root, 'AGENTS.md'))) return [];
   // The Ark source tree keeps the skill templates at templates/skills/ — it's the
   // producer, not a consumer, so it must not nag itself to "install" its own skills.
   if (fs.existsSync(path.join(root, 'templates', 'skills'))) return [];
-  const skillNames = skillTemplateNames();
+  const skillNames = skillTemplateNames(identity);
   if (skillNames.length === 0) return [];
   const detected = [];
   if (fs.existsSync(path.join(root, '.claude'))) detected.push('claude');

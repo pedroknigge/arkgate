@@ -12,22 +12,26 @@ import { detectWritePathCapabilities } from './write-path-detect.mjs';
 import { detectActiveAgentHost, skillTemplateNames } from './skill-install.mjs';
 import { detectDeployPathQuality } from './deploy-path.mjs';
 import { collectWeakestLinkGaps } from './weakest-link.mjs';
+import { generationIdentityForRoot } from './product-identity.mjs';
 
 export { detectDeployPathQuality };
 
 export const COMMAND_GATE_TEXT_FILES = [
-  '.claude/settings.json', 'AGENTS.md', '.cursor/rules/ark.mdc', '.windsurf/rules/ark.md',
-  '.clinerules/ark.md', '.github/copilot-instructions.md', '.kiro/steering/ark.md',
-  '.roo/rules/ark.md', '.continue/rules/ark.md', 'GEMINI.md', 'package.json',
-  '.grok/hooks/ark-write-gate.json', '.grok/config.toml',
+  '.claude/settings.json', 'AGENTS.md', '.cursor/rules/ark.mdc', '.cursor/rules/structrail.mdc',
+  '.windsurf/rules/ark.md', '.windsurf/rules/structrail.md', '.clinerules/ark.md',
+  '.clinerules/structrail.md', '.github/copilot-instructions.md', '.kiro/steering/ark.md',
+  '.kiro/steering/structrail.md', '.roo/rules/ark.md', '.roo/rules/structrail.md',
+  '.continue/rules/ark.md', '.continue/rules/structrail.md', 'GEMINI.md', 'package.json',
+  '.grok/hooks/ark-write-gate.json', '.grok/hooks/structrail-write-gate.json',
+  '.grok/config.toml',
 ];
 export const COMMAND_GATE_JSON_FILES = ['.mcp.json', '.cursor/mcp.json'];
 // Primary CLI names (product) + one-major aliases. migrate-commands must strip ALL of these
 // before re-emitting a single preferred bin — otherwise a partial rename leaves
 // args: ["ark-mcp", "arkgate-mcp", ...] which breaks stdio MCP hosts.
-export const ARK_MCP_BINS = new Set(['arkgate-mcp', 'ark-mcp']);
-export const ARK_CHECK_BINS = new Set(['arkgate-check', 'ark-check']);
-export const ARK_CLI_BINS = new Set(['arkgate', 'ark']);
+export const ARK_MCP_BINS = new Set(['structrail-mcp', 'arkgate-mcp', 'ark-mcp']);
+export const ARK_CHECK_BINS = new Set(['structrail-check', 'arkgate-check', 'ark-check']);
+export const ARK_CLI_BINS = new Set(['structrail', 'arkgate', 'ark']);
 // PREFERRED_MCP_BIN lives in hook-templates.mjs (re-exported above).
 export const PREFERRED_CHECK_BIN = 'arkgate-check';
 export const PREFERRED_CLI_BIN = 'arkgate';
@@ -37,13 +41,14 @@ export const MCP_RUNNER_ARGV = new Set(['exec', '--config.verify-deps-before-run
 // Matches npm/yarn runners and both pnpm forms (legacy `pnpm exec` + verify-deps-safe form).
 // Longer bin names first so `arkgate-check` is not partially matched as `ark`.
 export const RUNNER_BEFORE_ARK =
-  /\b(?:npx|pnpm --config\.verify-deps-before-run=false exec|pnpm exec|yarn)(?= (?:arkgate-check|arkgate-mcp|arkgate|ark-check|ark-mcp|ark)\b)/g;
+  /\b(?:npx|pnpm --config\.verify-deps-before-run=false exec|pnpm exec|yarn)(?= (?:structrail-check|structrail-mcp|structrail|arkgate-check|arkgate-mcp|arkgate|ark-check|ark-mcp|ark)\b)/g;
 
 /** Keep only MCP server flags from existing args (drop runner tokens + any ark* bin names). */
 
-export function stripMcpServerArgs(args) {
+export function stripMcpServerArgs(args, identity) {
+  const configName = identity?.configName ?? 'ark.config.json';
   if (!Array.isArray(args) || args.length === 0) {
-    return ['--root', '.', '--config', 'ark.config.json'];
+    return ['--root', '.', '--config', configName];
   }
   const kept = args.filter(
     (entry) =>
@@ -53,7 +58,7 @@ export function stripMcpServerArgs(args) {
       !ARK_CHECK_BINS.has(entry) &&
       !ARK_CLI_BINS.has(entry)
   );
-  return kept.length > 0 ? kept : ['--root', '.', '--config', 'ark.config.json'];
+  return kept.length > 0 ? kept : ['--root', '.', '--config', configName];
 }
 
 /** True when mcpServers.ark.args list more than one Ark MCP bin (broken dual rename). */
@@ -72,8 +77,8 @@ export function brokenMcpGateFiles(root) {
     } catch {
       continue;
     }
-    const ark = json?.mcpServers?.ark;
-    if (ark && mcpArgsHaveDuplicateBins(ark.args)) bad.push(rel);
+    const servers = [json?.mcpServers?.structrail, json?.mcpServers?.ark].filter(Boolean);
+    if (servers.some((server) => mcpArgsHaveDuplicateBins(server.args))) bad.push(rel);
   }
   return bad;
 }
@@ -86,6 +91,7 @@ export function collectAdoptionGaps(root, config, coverage) {
   const gaps = [];
   const adopted = fs.existsSync(path.join(root, 'AGENTS.md'));
   const isProducer = fs.existsSync(path.join(root, 'templates', 'skills'));
+  const identity = generationIdentityForRoot(root);
 
   // --- Write path: prepare-write / autoPatch / reject-only (W5) ---
   const writePath = detectWritePathCapabilities(root);
@@ -109,22 +115,22 @@ export function collectAdoptionGaps(root, config, coverage) {
     gaps.push({
       id: 'mcp-dual-bin',
       severity: 'warn',
-      message: `Broken MCP argv in ${dualMcp.join(', ')}: more than one of ark-mcp/arkgate-mcp`,
-      fix: arkCommand(root, 'ark-check', '--install-agent-gates --migrate-commands'),
+      message: `Broken MCP argv in ${dualMcp.join(', ')}: more than one Structrail/ArkGate MCP bin`,
+      fix: arkCommand(root, identity.checkBin, '--install-agent-gates --migrate-commands'),
     });
   }
 
   // --- Host completeness (only when project already adopted gates) ---
   const hosts = [];
   if (adopted && !isProducer) {
-    const skillNames = skillTemplateNames();
+    const skillNames = skillTemplateNames(identity);
     const hostChecks = [
       {
         host: 'grok',
         dir: '.grok',
         skill: (n) => path.join(root, '.grok', 'skills', n, 'SKILL.md'),
         extras: [
-          ['.grok/hooks/ark-write-gate.json', 'write-gate hook'],
+          [`.grok/hooks/${identity.fileStem}-write-gate.json`, 'write-gate hook'],
           ['.grok/config.toml', 'project MCP config'],
         ],
         toolsFlag: 'grok',
@@ -165,7 +171,7 @@ export function collectAdoptionGaps(root, config, coverage) {
           })`,
           fix: arkCommand(
             root,
-            'ark-check',
+            identity.checkBin,
             `--install-agent-gates --tools ${h.toolsFlag} --force`
           ),
         });
@@ -183,8 +189,8 @@ export function collectAdoptionGaps(root, config, coverage) {
     } catch {
       toml = '';
     }
-    if (toml.includes('[mcp_servers.ark]')) {
-      const assessed = assessCodexHomeMcp(toml, root);
+    if (toml.includes(`[mcp_servers.${identity.mcpServerKey}]`)) {
+      const assessed = assessCodexHomeMcp(toml, root, identity);
       codexHome = {
         file: codexFile,
         root: assessed.root,
@@ -212,7 +218,7 @@ export function collectAdoptionGaps(root, config, coverage) {
           severity,
           deferred,
           message,
-          fix: arkCommand(root, 'ark-check', assessed.gap.fixArgs),
+          fix: arkCommand(root, identity.checkBin, assessed.gap.fixArgs),
         });
       }
     }
@@ -232,7 +238,7 @@ export function collectAdoptionGaps(root, config, coverage) {
         id: `core-optional-${layer.name}`,
         severity: 'info',
         message: `Core layer ${layer.name} has ${files} file(s) but is still optional: true — contract is weaker than the tree`,
-        fix: `${arkCommand(root, 'ark-check', '--ratchet-cores')} (when architecture is green: 0 active violations)`,
+        fix: `${arkCommand(root, identity.checkBin, '--ratchet-cores')} (when architecture is green: 0 active violations)`,
       });
     }
   }
@@ -248,7 +254,7 @@ export function collectAdoptionGaps(root, config, coverage) {
       id: 'origin-report-missing',
       severity: 'info',
       message: 'No origin architecture snapshot under .ark/reports/ yet',
-      fix: arkCommand(root, 'ark-check', '--report ark-report.html'),
+      fix: arkCommand(root, identity.checkBin, '--report ark-report.html'),
     });
   }
 
@@ -281,7 +287,12 @@ export function collectAdoptionGaps(root, config, coverage) {
         for (const f of fs.readdirSync(wfDir)) {
           if (!/\.ya?ml$/i.test(f)) continue;
           const text = fs.readFileSync(path.join(wfDir, f), 'utf8');
-          if (text.includes('--baseline') && (text.includes('ark-check') || text.includes('arkgate-check'))) {
+          if (
+            text.includes('--baseline') &&
+            (text.includes('structrail-check') ||
+              text.includes('ark-check') ||
+              text.includes('arkgate-check'))
+          ) {
             primaryPathUsesBaseline = true;
             break;
           }
@@ -340,7 +351,7 @@ export function collectAdoptionGaps(root, config, coverage) {
       severity: 'warn',
       message:
         'Empty scope: include paths match 0 TypeScript/JS files — checks are not governing this tree',
-      fix: `${arkCommand(root, 'ark-check', '--suggest-include')} then ${arkCommand(root, 'ark-check', '--adopt-contract --write')}`,
+      fix: `${arkCommand(root, identity.checkBin, '--suggest-include')} then ${arkCommand(root, identity.checkBin, '--adopt-contract --write')}`,
     });
   }
 

@@ -8,6 +8,7 @@ import path from 'node:path';
 import { arkCommand } from '../ark-shared.mjs';
 
 const PRECOMMIT_MARKERS = [
+  'structrail-check',
   'ark-check',
   'arkgate-check',
   'check:architecture',
@@ -85,6 +86,7 @@ export function detectCiEnforcement(root) {
       continue;
     }
     const mentionsArk =
+      /\bstructrail-check\b/.test(text) ||
       /\barkgate-check\b/.test(text) ||
       /\bark-check\b/.test(text) ||
       /check:architecture/.test(text) ||
@@ -95,7 +97,10 @@ export function detectCiEnforcement(root) {
       if (/--strict\b/.test(text) || /check:architecture/.test(text)) {
         out.hasStrictFlag = true;
       }
-      if (/architecture|ark-check|arkgate-check/i.test(f) || /name:\s*.*ark/i.test(text)) {
+      if (
+        /architecture|structrail-check|ark-check|arkgate-check/i.test(f) ||
+        /name:\s*.*(?:structrail|ark)/i.test(text)
+      ) {
         out.hasArchitectureJobName = true;
       }
     }
@@ -126,7 +131,9 @@ export function jobIdsThatRunArkCheck(root) {
     } catch {
       continue;
     }
-    if (!/\barkgate-check\b|\bark-check\b|check:architecture/.test(text)) continue;
+    if (!/\bstructrail-check\b|\barkgate-check\b|\bark-check\b|check:architecture/.test(text)) {
+      continue;
+    }
     const jobsIdx = text.search(/^jobs:\s*$/m);
     if (jobsIdx < 0) continue;
     const jobsSection = text.slice(jobsIdx);
@@ -137,7 +144,7 @@ export function jobIdsThatRunArkCheck(root) {
       const start = matches[i].index ?? 0;
       const end = i + 1 < matches.length ? (matches[i + 1].index ?? jobsSection.length) : jobsSection.length;
       const body = jobsSection.slice(start, end);
-      if (/\barkgate-check\b|\bark-check\b|check:architecture/.test(body)) {
+      if (/\bstructrail-check\b|\barkgate-check\b|\bark-check\b|check:architecture/.test(body)) {
         ids.add(jobId);
       }
     }
@@ -152,7 +159,9 @@ export function jobIdsThatRunArkCheck(root) {
  */
 export function isArkRequiredStatusCheck(root, requiredNames) {
   if (!Array.isArray(requiredNames) || requiredNames.length === 0) return false;
-  if (requiredNames.some((n) => /ark|architecture|arkgate/i.test(String(n)))) return true;
+  if (requiredNames.some((n) => /structrail|ark|architecture|arkgate/i.test(String(n)))) {
+    return true;
+  }
   const jobIds = jobIdsThatRunArkCheck(root);
   return requiredNames.some((n) => jobIds.has(String(n)));
 }
@@ -167,7 +176,9 @@ export function detectConfigGateDrift(root, opts = {}) {
     opts.adopted ?? fs.existsSync(path.join(root, 'AGENTS.md'));
   const isProducer =
     opts.isProducer ?? fs.existsSync(path.join(root, 'templates', 'skills'));
-  const hasConfig = fs.existsSync(path.join(root, 'ark.config.json'));
+  const hasConfig =
+    fs.existsSync(path.join(root, 'structrail.config.json')) ||
+    fs.existsSync(path.join(root, 'ark.config.json'));
   const hasAgents = fs.existsSync(path.join(root, 'AGENTS.md'));
   let hasCheckScript = false;
   try {

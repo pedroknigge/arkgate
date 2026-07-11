@@ -26,6 +26,8 @@ describe('Structrail agent-gate generation', () => {
         '--install-agent-gates',
         '--tools',
         'claude,cursor,codex,grok,windsurf,cline,copilot,kiro,roo,continue,gemini',
+        '--require-write-hook',
+        'grok',
         '--force',
       ],
       {
@@ -58,6 +60,8 @@ describe('Structrail agent-gate generation', () => {
     expect(read('.grok/hooks/structrail-write-gate.json')).toContain('structrail-mcp');
     expect(read('.cursor/rules/structrail.mdc')).toContain('structrail://manifest');
     expect(read('docs/structrail-codex-config.toml')).toContain('[mcp_servers.structrail]');
+    expect(read('codex-home/config.toml')).toContain('[mcp_servers.structrail]');
+    expect(read('codex-home/config.toml')).toContain('structrail-mcp');
 
     const workflow = read('.github/workflows/structrail-check.yml');
     expect(workflow).toContain('name: Structrail architecture gate');

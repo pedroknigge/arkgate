@@ -48,7 +48,7 @@ export function hasHardWriteHook(root, host) {
   return detectWritePathCapabilities(root, host).capabilities['hard-write'];
 }
 
-export function validateHardWriteRequest({ root, host, tools, force = false }) {
+export function validateHardWriteRequest({ root, host, tools, force = false, identity }) {
   const toolSelection = validateSelectedTools(tools);
   if (!toolSelection.ok) return toolSelection;
   if (host == null) return { ok: true, host: null, tools: toolSelection.tools };
@@ -78,12 +78,16 @@ export function validateHardWriteRequest({ root, host, tools, force = false }) {
     };
   }
 
-  const hookFile = path.join(root, support.hookPath);
+  const hookPath =
+    normalizedHost === 'grok' && identity?.fileStem
+      ? `.grok/hooks/${identity.fileStem}-write-gate.json`
+      : support.hookPath;
+  const hookFile = path.join(root, hookPath);
   if (fs.existsSync(hookFile) && !force && !hasHardWriteHook(root, normalizedHost)) {
     return {
       ok: false,
       error:
-        `${support.hookPath} already exists without an Ark hard-write hook and would be preserved. ` +
+        `${hookPath} already exists without an Ark hard-write hook and would be preserved. ` +
         'Use --force to replace that host file, or omit --require-write-hook for merge-only enforcement.',
     };
   }

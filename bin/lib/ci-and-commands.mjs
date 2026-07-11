@@ -13,7 +13,7 @@ import {
 } from '../ark-shared.mjs';
 import { falseGreenAdoptionGap } from './field-install.mjs';
 import { renderHostSupportMatrixMarkdown } from './host-support-matrix.mjs';
-import { PREFERRED_MCP_BIN } from './hook-templates.mjs';
+import { ARK_GENERATION_IDENTITY } from './product-identity.mjs';
 import { readPackageJson } from './gate-files.mjs';
 
 // Field-install helpers re-exported for callers that import from this module.
@@ -27,18 +27,20 @@ export {
   falseGreenAdoptionGap,
 } from './field-install.mjs';
 
-export function checkArgsForRoot(root, { requireGates = false } = {}) {
+export function checkArgsForRoot(
+  root,
+  { requireGates = false, identity = ARK_GENERATION_IDENTITY } = {}
+) {
   const baselineFlag = fs.existsSync(path.join(root, '.ark-baseline.json'))
     ? ' --baseline .ark-baseline.json'
     : '';
   const profile = requireGates ? '--strict-merge' : '--strict-config';
-  return `--root . --config ark.config.json ${profile}${baselineFlag}`;
+  return `--root . --config ${identity.configName} ${profile}${baselineFlag}`;
 }
 
-
-export function packageManager(root) {
+export function packageManager(root, identity = ARK_GENERATION_IDENTITY) {
   // CI always require-gates; baseline follows checkArgsForRoot.
-  const checkArgs = checkArgsForRoot(root, { requireGates: true });
+  const checkArgs = checkArgsForRoot(root, { requireGates: true, identity });
   // Same detection as every emitted command (execRunner): honors the packageManager field and
   // won't let a stray pnpm-lock.yaml hijack an npm project (package-lock.json wins the tie).
   const pm = detectPackageManager(root);
@@ -48,7 +50,7 @@ export function packageManager(root) {
       setup: ['corepack enable'],
       install: 'pnpm install --frozen-lockfile',
       // Same runner as execRunner(): skip pnpm's verify-deps gate (ERR_PNPM_IGNORED_BUILDS).
-      run: `pnpm --config.verify-deps-before-run=false exec ark-check ${checkArgs}`,
+      run: `pnpm --config.verify-deps-before-run=false exec ${identity.checkBin} ${checkArgs}`,
     };
   }
   if (pm === 'yarn') {
@@ -56,7 +58,7 @@ export function packageManager(root) {
       cache: 'yarn',
       setup: ['corepack enable'],
       install: 'yarn install --frozen-lockfile',
-      run: `yarn ark-check ${checkArgs}`,
+      run: `yarn ${identity.checkBin} ${checkArgs}`,
     };
   }
   // Monorepo hosts (e.g. Next app under frontend/) often have a root package.json only for
@@ -71,39 +73,41 @@ export function packageManager(root) {
     cache: 'npm',
     setup: [],
     install,
-    run: `npx ark-check ${checkArgs}`,
+    run: `npx ${identity.checkBin} ${checkArgs}`,
   };
 }
 
 // The runner prefix (npx / pnpm exec / yarn) is added per project by arkCheckCommand
 // so a pnpm-only repo never gets an `npx` instruction — see execRunner() in ark-shared.mjs.
-export function arkCheckCommand(root) {
-  return arkCommand(root, 'ark-check', checkArgsForRoot(root));
+export function arkCheckCommand(root, identity = ARK_GENERATION_IDENTITY) {
+  return arkCommand(root, identity.checkBin, checkArgsForRoot(root, { identity }));
 }
 
-export function checkArchitectureScriptSnippet(root) {
+export function checkArchitectureScriptSnippet(root, identity = ARK_GENERATION_IDENTITY) {
   // The package manager's runner resolves the installed binary; `node bin/ark-check.mjs`
   // only works inside Ark's own repo. Package-manager aware so a pnpm/yarn repo isn't
   // handed an `npx` alias that violates its "never npx" policy.
-  return `"check:architecture": "${arkCheckCommand(root)}"`;
+  return `"check:architecture": "${arkCheckCommand(root, identity)}"`;
 }
 
 // Canonical agent contract. AGENTS.md and the Cursor rule both derive from this single
 // source so the steps can never drift out of sync between the two files. `steps(checkCommand)`
 // is a builder because the check command's runner prefix varies with the package manager.
-const AGENT_CONTRACT = {
-  manifestResource: 'ark://manifest',
-  steps: (checkCommand) => [
-    `Read the Ark contract from \`ark://manifest\` when the MCP server is available.`,
-    `Keep source files inside the layer boundaries declared in \`ark.config.json\`.`,
-    `Do not bypass Ark publishers, event contracts, or source metadata for runtime mutations.`,
-    `After edits, run \`${checkCommand}\`.`,
-    `If Ark reports violations, fix the architecture instead of weakening the gate.`,
-  ],
-  // Cursor-only guidance: the write-time validate_code tool is available in
-  // Cursor's runtime but has no equivalent in a plain AGENTS.md read.
-  cursorValidateStep: `Validate the full post-edit file content with the \`validate_code\` tool before writing whenever your runtime supports it.`,
-};
+function agentContract(identity) {
+  return {
+    manifestResource: identity.manifestResource,
+    steps: (checkCommand) => [
+      `Read the ${identity.productName} contract from \`${identity.manifestResource}\` when the MCP server is available.`,
+      `Keep source files inside the layer boundaries declared in \`${identity.configName}\`.`,
+      `Do not bypass ${identity.productName} publishers, event contracts, or source metadata for runtime mutations.`,
+      `After edits, run \`${checkCommand}\`.`,
+      `If ${identity.productName} reports violations, fix the architecture instead of weakening the gate.`,
+    ],
+    // Cursor-only guidance: the write-time validate_code tool is available in
+    // Cursor's runtime but has no equivalent in a plain AGENTS.md read.
+    cursorValidateStep: `Validate the full post-edit file content with the \`validate_code\` tool before writing whenever your runtime supports it.`,
+  };
+}
 
 export function layerPlacementTable() {
   const rows = DEFAULT_INTENT_PREFIXES.map((entry) => {
@@ -117,33 +121,35 @@ export function layerPlacementTable() {
 ${rows}`;
 }
 
-export function agentInstructions(root) {
-  const checkCmd = arkCheckCommand(root);
-  const startCmd = arkCommand(root, 'ark', 'start');
-  const doctorCmd = arkCommand(root, 'ark-check', '--doctor');
-  const steps = AGENT_CONTRACT.steps(checkCmd)
+export function agentInstructions(root, identity = ARK_GENERATION_IDENTITY) {
+  const checkCmd = arkCheckCommand(root, identity);
+  const startCmd = arkCommand(root, identity.cliBin, 'start');
+  const doctorCmd = arkCommand(root, identity.checkBin, '--doctor');
+  const skill = (name) => `/${identity.skillPrefix}-${name}`;
+  const contract = agentContract(identity);
+  const steps = contract.steps(checkCmd)
     .map((step, index) => `${index + 1}. ${step}`)
     .join('\n');
-  return `# Ark Enforcement
+  return `# ${identity.productName} Enforcement
 
 ## Default agent flow (if unsure, do only this)
 
-1. If \`ark.config.json\` is missing: run \`${startCmd}\` once.
-2. For adoption / cleanup / “make architecture sound”: run the **\`/ark-autopilot\`** skill
+1. If \`${identity.configName}\` is missing: run \`${startCmd}\` once.
+2. For adoption / cleanup / “make architecture sound”: run the **\`${skill('autopilot')}\`** skill
    (explore first → dual plan: remediation + pattern bets → safe fixes → gates). Day-zero
-   origin is frozen by \`ark start\`/\`ark init\` (or autopilot if missing) **before** agent docs.
+   origin is frozen by \`${identity.cliBin} start\`/\`${identity.cliBin} init\` (or autopilot if missing) **before** agent docs.
    Do **not** invent a second architecture curriculum outside the routing table below — when a
    trigger matches, use that skill; when unsure, stay on autopilot.
 3. Status anytime: \`${doctorCmd}\` (status light + next action — not a mode picker).
-4. After ordinary feature edits: run \`${checkCmd}\`. On violations → **\`/ark-fix\`** (or
-   \`/ark-place\` for new files, \`/ark-contract\` only if the contract itself is wrong).
+4. After ordinary feature edits: run \`${checkCmd}\`. On violations → **\`${skill('fix')}\`** (or
+   \`${skill('place')}\` for new files, \`${skill('contract')}\` only if the contract itself is wrong).
 
 Skills are **dual-engine**: deterministic CLI sensors + exploratory read of *this* repo — not JSON-only wrappers.
 When a skill says **STOP — do not continue this skill as complete**, stop and invoke the named handoff skill.
 
 ## Host enforcement support
 
-${renderHostSupportMatrixMarkdown()}
+${renderHostSupportMatrixMarkdown(identity)}
 
 ### Subagent fan-out
 If the host supports **parallel subagents**, skills may ask you to fan out **read-only**
@@ -155,19 +161,19 @@ files; never weaken the gate via subagents.
 
 | When | Invoke |
 |------|--------|
-| Unsure / make architecture sound | **/ark-autopilot** (default) |
-| Need map / opportunities only (no apply) | \`/ark-explore\` |
-| Greenfield shape / empty tree | \`/ark-architect\` |
-| Brownfield / wrong contract / false-green | \`/ark-adopt\` then \`/ark-contract\` if globs wrong |
-| Edit \`ark.config.json\` layers/rules/intents | \`/ark-contract\` |
-| New file “where does this go?” | \`/ark-place\` |
-| Gate violation on a change | \`/ark-fix\` |
-| Drive plan to goal.met | \`/ark-loop\` |
-| Deep coverage + ranked audit | \`/ark-coverage\` |
-| Design trade-offs (no package LLM) | \`/ark-think\` |
-| Explain / HTML report tour | \`/ark-explain\` |
-| Bump arkgate + refresh hosts | \`/ark-upgrade\` |
-| Optional runtime kernel migrate | \`/ark-runtime\` |
+| Unsure / make architecture sound | **${skill('autopilot')}** (default) |
+| Need map / opportunities only (no apply) | \`${skill('explore')}\` |
+| Greenfield shape / empty tree | \`${skill('architect')}\` |
+| Brownfield / wrong contract / false-green | \`${skill('adopt')}\` then \`${skill('contract')}\` if globs wrong |
+| Edit \`${identity.configName}\` layers/rules/intents | \`${skill('contract')}\` |
+| New file “where does this go?” | \`${skill('place')}\` |
+| Gate violation on a change | \`${skill('fix')}\` |
+| Drive plan to goal.met | \`${skill('loop')}\` |
+| Deep coverage + ranked audit | \`${skill('coverage')}\` |
+| Design trade-offs (no package LLM) | \`${skill('think')}\` |
+| Explain / HTML report tour | \`${skill('explain')}\` |
+| Bump ${identity.packageName} + refresh hosts | \`${skill('upgrade')}\` |
+| Optional runtime kernel migrate | \`${skill('runtime')}\` |
 
 ## Before editing TypeScript or JavaScript source files
 
@@ -175,26 +181,25 @@ ${steps}
 
 ## Where new code belongs
 
-\`ark.config.json\` is authoritative for this project. When creating a NEW kind of code
+\`${identity.configName}\` is authoritative for this project. When creating a NEW kind of code
 that no existing layer covers (a saga, a background job, a read model, ...), use the
-default 11-layer placement below and add the layer to \`ark.config.json\` — do not invent
+default 11-layer placement below and add the layer to \`${identity.configName}\` — do not invent
 an ungoverned location:
 
 ${layerPlacementTable()}
 
-The project is only considered Ark-enforced when its host-appropriate write path is configured
+The project is only considered ${identity.productName}-enforced when its host-appropriate write path is configured
 and the CI check passes. Only Claude/Grok provide a hard local write boundary; Cursor/Codex use
 advisory MCP plus CI. The experimental runtime is not required.
 `;
 }
 
-export function mcpJson(root) {
+export function mcpJson(root, identity = ARK_GENERATION_IDENTITY) {
   return `${JSON.stringify({
     mcpServers: {
-      ark: {
+      [identity.mcpServerKey]: {
         type: 'stdio',
-        // Prefer arkgate-mcp; ark-mcp alias still works for one major.
-        ...execCommandParts(root, PREFERRED_MCP_BIN, ['--root', '.', '--config', 'ark.config.json']),
+        ...execCommandParts(root, identity.mcpBin, ['--root', '.', '--config', identity.configName]),
       },
     },
   }, null, 2)}\n`;
@@ -204,19 +209,19 @@ export function mcpJson(root) {
 // block (with absolute paths) into ~/.codex/config.toml. This copy is a reference only, so
 // it flags the two gotchas of hand-editing the global config: absolute paths (config.toml is
 // loaded without the project as cwd) and the required restart.
-export function codexTomlSnippet(root) {
-  const { command, args } = execCommandParts(root, PREFERRED_MCP_BIN, [
+export function codexTomlSnippet(root, identity = ARK_GENERATION_IDENTITY) {
+  const { command, args } = execCommandParts(root, identity.mcpBin, [
     '--root',
     '/absolute/path/to/project',
     '--config',
-    '/absolute/path/to/project/ark.config.json',
+    `/absolute/path/to/project/${identity.configName}`,
   ]);
   const argsToml = args.map((value) => `"${value}"`).join(', ');
   return `# Add to ~/.codex/config.toml (or $CODEX_HOME/config.toml), then RESTART Codex —
 # it does not hot-load MCP servers. Use ABSOLUTE paths: config.toml is global, so
 # "." would resolve against Codex's launch dir, not this project. Prefer:
-#   ark-check --install-agent-gates --tools codex   (auto-merges the absolute paths)
-[mcp_servers.ark]
+#   ${identity.checkBin} --install-agent-gates --tools codex   (auto-merges the absolute paths)
+[mcp_servers.${identity.mcpServerKey}]
 command = "${command}"
 args = [${argsToml}]
 `;
@@ -228,13 +233,14 @@ args = [${argsToml}]
  * Derived from the same AGENT_CONTRACT as AGENTS.md and the Cursor rule so the steps
  * can never drift; points at AGENTS.md for the full placement table.
  */
-export function instructionRule(root) {
-  const steps = AGENT_CONTRACT.steps(arkCheckCommand(root))
+export function instructionRule(root, identity = ARK_GENERATION_IDENTITY) {
+  const contract = agentContract(identity);
+  const steps = contract.steps(arkCheckCommand(root, identity))
     .map((step, index) => `${index + 1}. ${step}`)
     .join('\n');
-  return `# Ark architecture contract
+  return `# ${identity.productName} architecture contract
 
-This project's architecture is governed by Ark (\`ark.config.json\` is authoritative).
+This project's architecture is governed by ${identity.productName} (\`${identity.configName}\` is authoritative).
 Before writing or editing TypeScript or JavaScript source files:
 
 ${steps}
@@ -243,22 +249,23 @@ See \`AGENTS.md\` for the full contract and the layer placement table.
 `;
 }
 
-export function cursorRule(root) {
+export function cursorRule(root, identity = ARK_GENERATION_IDENTITY) {
+  const contract = agentContract(identity);
   return `---
-description: Ark architecture contract
+description: ${identity.productName} architecture contract
 alwaysApply: true
 ---
 
 Before writing or editing TypeScript or JavaScript source files, read the
-\`${AGENT_CONTRACT.manifestResource}\` resource from the \`ark\` MCP server when available.
+\`${contract.manifestResource}\` resource from the \`${identity.mcpServerKey}\` MCP server when available.
 
-${AGENT_CONTRACT.cursorValidateStep} After edits, run:
+${contract.cursorValidateStep} After edits, run:
 
 \`\`\`bash
-${arkCheckCommand(root)}
+${arkCheckCommand(root, identity)}
 \`\`\`
 
-If Ark reports violations, fix the architecture instead of bypassing the gate.
+If ${identity.productName} reports violations, fix the architecture instead of bypassing the gate.
 `;
 }
 
@@ -288,7 +295,7 @@ export function detectNodeMajorFromWorkflows(root) {
   for (const name of entries) {
     if (!/\.ya?ml$/i.test(name)) continue;
     // Ignore our own template so regenerating does not re-read a stale 20/22 pin.
-    if (/^ark-check\.ya?ml$/i.test(name)) continue;
+    if (/^(?:ark|structrail)-check\.ya?ml$/i.test(name)) continue;
     let text;
     try {
       text = fs.readFileSync(path.join(dir, name), 'utf8');
@@ -331,7 +338,12 @@ export function detectCiNode(root) {
  * @param {{ kind: string, value: string }} ciNode
  * @param {{ hasLintScript?: boolean, hasTypecheckScript?: boolean }} [quality]
  */
-export function githubWorkflow(pm, ciNode, quality = {}) {
+export function githubWorkflow(
+  pm,
+  ciNode,
+  quality = {},
+  identity = ARK_GENERATION_IDENTITY
+) {
   // pnpm/yarn setup (corepack enable) MUST run before actions/setup-node so the package
   // manager is on PATH when setup-node's `cache: pnpm|yarn` tries to resolve the store —
   // otherwise the cache step fails on a fresh runner ("Unable to locate executable file: pnpm").
@@ -366,7 +378,7 @@ export function githubWorkflow(pm, ciNode, quality = {}) {
   ]
     .filter(Boolean)
     .join('\n');
-  return `name: Ark architecture gate
+  return `name: ${identity.productName} architecture gate
 
 on:
   pull_request:
@@ -374,7 +386,7 @@ on:
     branches: [main, master]
 
 jobs:
-  ark-check:
+  ${identity.fileStem}-check:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -386,7 +398,7 @@ ${nodeSetup}
           cache: ${pm.cache}
       - name: Install dependencies
         run: ${pm.install}
-${qualityBlock ? `${qualityBlock}\n` : ''}      - name: Ark architecture check
+${qualityBlock ? `${qualityBlock}\n` : ''}      - name: ${identity.productName} architecture check
         run: ${pm.run}
 `;
 }

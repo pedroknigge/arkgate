@@ -5,6 +5,7 @@
  * Installed evidence remains authoritative for a specific repository and is
  * reported separately by write-path-capabilities.mjs.
  */
+import { ARK_GENERATION_IDENTITY } from './product-identity.mjs';
 
 function hostProfile(label, hookPath, hookSurface, hardWrite, repairPayload) {
   return Object.freeze({
@@ -56,7 +57,9 @@ export function formatHostSupportSummary(profile) {
   return `${write} + advisory MCP + CI check + ${repair}`;
 }
 
-export function renderHostSupportMatrixMarkdown() {
+export function renderHostSupportMatrixMarkdown(identity = ARK_GENERATION_IDENTITY) {
+  const checkBin = identity.primary ? identity.checkBin : 'arkgate-check';
+  const productName = identity.primary ? identity.productName : 'ArkGate';
   const rows = HOST_SUPPORT_HOSTS.map((host) => {
     const profile = HOST_SUPPORT_MATRIX[host];
     const capabilities = profile.capabilities;
@@ -66,12 +69,12 @@ export function renderHostSupportMatrixMarkdown() {
     const repair = capabilities['repair-payload']
       ? 'Emitted on hook deny; host must re-inject'
       : 'No hard-boundary payload';
-    return `| ${profile.label} | ${local} | Advisory; the agent must call it | Available \`arkgate-check --strict-merge\` check | ${repair} |`;
+    return `| ${profile.label} | ${local} | Advisory; the agent must call it | Available \`${checkBin} --strict-merge\` check | ${repair} |`;
   }).join('\n');
 
   return `| Host | Local write boundary | MCP validation | CI / merge path | Repair payload |
 |------|----------------------|----------------|-----------------|----------------|
 ${rows}
 
-This table describes the supported profile **after its files are installed and the host loads/trusts them**. A hard local boundary covers only the listed hook operations; alternate tools, direct filesystem writes, and human edits still rely on CI. MCP validation is advisory because the agent must call it. The CI check blocks a merge only when the repository makes that status required. Repair payloads never write code silently: the host must re-inject the candidate and ArkGate revalidates it. Run \`arkgate-check --doctor\` for the evidence actually detected in the current repository.`;
+This table describes the supported profile **after its files are installed and the host loads/trusts them**. A hard local boundary covers only the listed hook operations; alternate tools, direct filesystem writes, and human edits still rely on CI. MCP validation is advisory because the agent must call it. The CI check blocks a merge only when the repository makes that status required. Repair payloads never write code silently: the host must re-inject the candidate and ${productName} revalidates it. Run \`${checkBin} --doctor\` for the evidence actually detected in the current repository.`;
 }
