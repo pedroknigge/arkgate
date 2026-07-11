@@ -6,7 +6,7 @@
  *   1. ≥ MIN_CASES directories with case.json
  *   2. Each case has expected labels (expectedFixClass + theme; skipHarness may omit ruleId)
  *   3. Required R5 themes are covered by at least one case
- *   4. Every non-skipHarness fixture fails real ark-check with exit 1 and ≥1 violation
+ *   4. Every non-skipHarness fixture fails real structrail-check with exit 1 and ≥1 violation
  *   5. When expectedRemediationKind is set, --plan first step matches (mechanical-safe kinds)
  *
  * Exit 0 = corpus green for CI. Does not run the agent harness.
@@ -30,7 +30,7 @@ import {
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..');
 const CASES_DIR = path.join(HERE, 'cases');
-const ARK_CHECK = path.join(REPO, 'bin', 'ark-check.mjs');
+const STRUCTRAIL_CHECK = path.join(REPO, 'bin', 'structrail-check.mjs');
 
 const MIN_CASES = 15;
 
@@ -75,10 +75,10 @@ function loadCase(name) {
   return { name, dir, def };
 }
 
-function runArkCheck(root, extraArgs = []) {
+function runStructrailCheck(root, extraArgs = []) {
   const res = spawnSync(
     process.execPath,
-    [ARK_CHECK, '--root', root, '--config', 'ark.config.json', ...extraArgs],
+    [STRUCTRAIL_CHECK, '--root', root, '--config', 'structrail.config.json', ...extraArgs],
     { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }
   );
   return {
@@ -149,25 +149,25 @@ function main() {
     }
 
     harnessCases += 1;
-    if (!fs.existsSync(path.join(dir, 'ark.config.json'))) {
-      errors.push(`${name}: missing ark.config.json (required unless skipHarness)`);
+    if (!fs.existsSync(path.join(dir, 'structrail.config.json'))) {
+      errors.push(`${name}: missing structrail.config.json (required unless skipHarness)`);
       continue;
     }
 
-    const check = runArkCheck(dir);
+    const check = runStructrailCheck(dir);
     if (check.code !== 1) {
       errors.push(
-        `${name}: ark-check exit ${check.code} (want 1 — fixture must violate). Tail:\n${check.output.slice(-400)}`
+        `${name}: structrail-check exit ${check.code} (want 1 — fixture must violate). Tail:\n${check.output.slice(-400)}`
       );
       continue;
     }
     if (!/violation/i.test(check.output)) {
-      errors.push(`${name}: ark-check exit 1 but output has no "violation" marker`);
+      errors.push(`${name}: structrail-check exit 1 but output has no "violation" marker`);
     }
 
     // Label alignment for mechanical-safe kinds via --plan
     if (def.expectedRemediationKind || def.expectedRemediationClass === 'mechanical-safe') {
-      const planRun = runArkCheck(dir, ['--plan', '--json']);
+      const planRun = runStructrailCheck(dir, ['--plan', '--json']);
       let plan;
       try {
         plan = JSON.parse(planRun.output);
@@ -205,7 +205,7 @@ function main() {
 
   notes.push(`harness-eligible cases: ${harnessCases}`);
 
-  console.log('Ark eval corpus validation (static, no agent)');
+  console.log('Structrail eval corpus validation (static, no agent)');
   console.log('─'.repeat(48));
   for (const n of notes) console.log(`  · ${n}`);
   console.log('─'.repeat(48));

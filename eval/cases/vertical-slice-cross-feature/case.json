@@ -1,7 +1,7 @@
 {
   "description": "Vertical slice peerIsolation: features/auth imports features/payments (cross-slice blocked).",
-  "expectedFix": "Do not import another feature. Extract shared code to src/shared, or coordinate via events/ports. Never weaken ark.config peerIsolation to pass.",
-  "mustKeep": ["src/features/auth/login.ts", "src/features/payments/charge.ts", "ark.config.json"],
+  "expectedFix": "Do not import another feature. Extract shared code to src/shared, or coordinate via events/ports. Never weaken structrail.config peerIsolation to pass.",
+  "mustKeep": ["src/features/auth/login.ts", "src/features/payments/charge.ts", "structrail.config.json"],
   "theme": "cross-slice",
   "expectedRuleId": "LAYER_IMPORT_VIOLATION",
   "expectedFixClass": "cross-slice-boundary",

@@ -1,6 +1,6 @@
 {
   "description": "Value-syntax named import of a type-only export from a mixed module (R6: import-type-of-type-exports).",
-  "expectedFix": "Change to import type { Row } from the data module (or move Row to a shared type layer). Do not import value bindings or edit ark.config.json.",
+  "expectedFix": "Change to import type { Row } from the data module (or move Row to a shared type layer). Do not import value bindings or edit structrail.config.json.",
   "mustKeep": ["src/ui/uses-row.ts", "src/data/mixed.ts"],
   "theme": "import-type-of-type-exports",
   "expectedRuleId": "LAYER_IMPORT_VIOLATION",

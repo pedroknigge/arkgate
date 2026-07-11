@@ -3,12 +3,12 @@
  * Comparative eval — static oracle mode (CI-safe).
  *
  * Loads 30 enthusiast prompts from eval/comparative/prompts.json. Fixture-backed
- * entries are verified with real ark-check runs on with-ark / without-ark trees;
+ * entries are verified with real structrail-check runs on with-structrail / without-structrail trees;
  * oracle-only entries ship curated metrics for reporting.
  *
  * Usage:
  *   node eval/comparative-run.mjs
- *   ARK_COMPARATIVE_OUT=eval/comparative-report.json node eval/comparative-run.mjs
+ *   STRUCTRAIL_COMPARATIVE_OUT=eval/comparative-report.json node eval/comparative-run.mjs
  */
 
 import { spawnSync } from 'node:child_process';
@@ -19,7 +19,7 @@ import { resolveEnvironmentValue } from '../bin/lib/product-identity.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..');
-const ARK_CHECK = path.join(REPO, 'bin', 'ark-check.mjs');
+const STRUCTRAIL_CHECK = path.join(REPO, 'bin', 'structrail-check.mjs');
 const PROMPTS_PATH = path.join(HERE, 'comparative', 'prompts.json');
 const FIXTURES_DIR = path.join(HERE, 'comparative', 'fixtures');
 const comparativeOutput = resolveEnvironmentValue(
@@ -36,7 +36,7 @@ const REQUIRED_METRIC_KEYS = ['layerViolations', 'misplacedFiles', 'contractInta
 function runCheck(root) {
   const res = spawnSync(
     process.execPath,
-    [ARK_CHECK, '--root', root, '--config', 'ark.config.json', '--strict-config', '--json'],
+    [STRUCTRAIL_CHECK, '--root', root, '--config', 'structrail.config.json', '--strict-config', '--json'],
     { encoding: 'utf8' }
   );
   const raw = `${res.stdout || ''}${res.stderr || ''}`.trim();
@@ -44,7 +44,7 @@ function runCheck(root) {
   try {
     json = JSON.parse(raw);
   } catch {
-    throw new Error(`ark-check did not return JSON for ${root}\n${raw}`);
+    throw new Error(`structrail-check did not return JSON for ${root}\n${raw}`);
   }
   return { exitCode: res.status ?? 1, json };
 }
@@ -97,36 +97,36 @@ function stripMeasured(metrics) {
 
 function validateFixture(prompt) {
   const base = path.join(FIXTURES_DIR, prompt.fixture);
-  const withoutRoot = path.join(base, 'without-ark');
-  const withRoot = path.join(base, 'with-ark');
+  const withoutRoot = path.join(base, 'without-structrail');
+  const withRoot = path.join(base, 'with-structrail');
   if (!fs.existsSync(withoutRoot) || !fs.existsSync(withRoot)) {
-    throw new Error(`Fixture ${prompt.fixture} missing with-ark or without-ark tree`);
+    throw new Error(`Fixture ${prompt.fixture} missing with-structrail or without-structrail tree`);
   }
 
   const withoutMeasured = measureTree(withoutRoot);
   const withMeasured = measureTree(withRoot);
 
   if (withoutMeasured.ok) {
-    throw new Error(`Fixture ${prompt.fixture}/without-ark expected violations but check passed`);
+    throw new Error(`Fixture ${prompt.fixture}/without-structrail expected violations but check passed`);
   }
   if (!withMeasured.ok) {
-    throw new Error(`Fixture ${prompt.fixture}/with-ark expected green check but failed`);
+    throw new Error(`Fixture ${prompt.fixture}/with-structrail expected green check but failed`);
   }
   if (withoutMeasured.layerViolations < 1) {
-    throw new Error(`Fixture ${prompt.fixture}/without-ark expected >=1 violation`);
+    throw new Error(`Fixture ${prompt.fixture}/without-structrail expected >=1 violation`);
   }
   if (withMeasured.layerViolations !== 0) {
-    throw new Error(`Fixture ${prompt.fixture}/with-ark expected 0 violations`);
+    throw new Error(`Fixture ${prompt.fixture}/with-structrail expected 0 violations`);
   }
 
-  metricsMatch(prompt.withoutArk, withoutMeasured, `${prompt.id}.withoutArk`);
-  metricsMatch(prompt.withArk, withMeasured, `${prompt.id}.withArk`);
+  metricsMatch(prompt.withoutStructrail, withoutMeasured, `${prompt.id}.withoutStructrail`);
+  metricsMatch(prompt.withStructrail, withMeasured, `${prompt.id}.withStructrail`);
 
   return {
     verified: true,
     measured: {
-      withoutArk: withoutMeasured,
-      withArk: withMeasured,
+      withoutStructrail: withoutMeasured,
+      withStructrail: withMeasured,
     },
   };
 }
@@ -144,15 +144,15 @@ function main() {
   let failures = 0;
 
   for (const prompt of prompts) {
-    assertMetricsShape(`${prompt.id}.withoutArk`, prompt.withoutArk);
-    assertMetricsShape(`${prompt.id}.withArk`, prompt.withArk);
+    assertMetricsShape(`${prompt.id}.withoutStructrail`, prompt.withoutStructrail);
+    assertMetricsShape(`${prompt.id}.withStructrail`, prompt.withStructrail);
 
     const entry = {
       id: prompt.id,
       prompt: prompt.prompt,
       archetype: prompt.archetype,
-      withoutArk: { ...prompt.withoutArk },
-      withArk: { ...prompt.withArk },
+      withoutStructrail: { ...prompt.withoutStructrail },
+      withStructrail: { ...prompt.withStructrail },
       source: prompt.fixture ? 'fixture+oracle' : 'oracle',
     };
 
@@ -162,8 +162,8 @@ function main() {
         entry.fixture = prompt.fixture;
         entry.fixtureVerified = fixture.verified;
         entry.source = 'fixture-measured';
-        entry.withoutArk = stripMeasured(fixture.measured.withoutArk);
-        entry.withArk = stripMeasured(fixture.measured.withArk);
+        entry.withoutStructrail = stripMeasured(fixture.measured.withoutStructrail);
+        entry.withStructrail = stripMeasured(fixture.measured.withStructrail);
         entry.measured = fixture.measured;
       } catch (error) {
         failures += 1;
@@ -182,19 +182,19 @@ function main() {
     promptCount: results.length,
     fixtureBacked: results.filter((r) => r.fixture).length,
     summary: {
-      withoutArk: {
+      withoutStructrail: {
         avgLayerViolations:
-          results.reduce((sum, r) => sum + r.withoutArk.layerViolations, 0) / results.length,
+          results.reduce((sum, r) => sum + r.withoutStructrail.layerViolations, 0) / results.length,
         avgMisplacedFiles:
-          results.reduce((sum, r) => sum + r.withoutArk.misplacedFiles, 0) / results.length,
+          results.reduce((sum, r) => sum + r.withoutStructrail.misplacedFiles, 0) / results.length,
       },
-      withArk: {
+      withStructrail: {
         avgLayerViolations:
-          results.reduce((sum, r) => sum + r.withArk.layerViolations, 0) / results.length,
+          results.reduce((sum, r) => sum + r.withStructrail.layerViolations, 0) / results.length,
         avgMisplacedFiles:
-          results.reduce((sum, r) => sum + r.withArk.misplacedFiles, 0) / results.length,
+          results.reduce((sum, r) => sum + r.withStructrail.misplacedFiles, 0) / results.length,
         avgGovernedPercent:
-          results.reduce((sum, r) => sum + (r.withArk.governedPercent ?? 0), 0) / results.length,
+          results.reduce((sum, r) => sum + (r.withStructrail.governedPercent ?? 0), 0) / results.length,
       },
     },
     results,

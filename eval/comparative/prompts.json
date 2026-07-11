@@ -1,222 +1,222 @@
 {
   "version": "1",
   "mode": "static-oracle",
-  "description": "Enthusiast prompts graded with-Ark vs without-Ark. Fixture-backed entries are verified by ark-check; others ship curated oracle metrics for CI.",
+  "description": "Enthusiast prompts graded with-Structrail vs without-Structrail. Fixture-backed entries are verified by structrail-check; others ship curated oracle metrics for CI.",
   "prompts": [
     {
       "id": "todo-app-db",
       "prompt": "Build a todo app with a database",
       "archetype": "crud-product",
       "fixture": "todo-app-db",
-      "withoutArk": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 100 }
+      "withoutStructrail": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 100 }
     },
     {
       "id": "rest-user-api",
       "prompt": "Create a REST API for user profiles",
       "archetype": "api-backend",
       "fixture": "rest-user-api",
-      "withoutArk": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 100 }
+      "withoutStructrail": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 100 }
     },
     {
       "id": "nightly-order-sync",
       "prompt": "Add a nightly cron job to sync orders",
       "archetype": "worker-pipeline",
       "fixture": "nightly-order-sync",
-      "withoutArk": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 100 }
+      "withoutStructrail": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 100 }
     },
     {
       "id": "monorepo-web-domain",
       "prompt": "Monorepo with a web app and shared domain package",
       "archetype": "multi-app-workspace",
       "fixture": "monorepo-web-domain",
-      "withoutArk": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 100 }
+      "withoutStructrail": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 100 }
     },
     {
       "id": "admin-postgres",
       "prompt": "Admin panel that stores settings in Postgres",
       "archetype": "crud-product",
-      "withoutArk": { "layerViolations": 2, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 85 }
+      "withoutStructrail": { "layerViolations": 2, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 85 }
     },
     {
       "id": "graphql-mobile-backend",
       "prompt": "GraphQL backend for a mobile app",
       "archetype": "api-backend",
-      "withoutArk": { "layerViolations": 2, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 80 }
+      "withoutStructrail": { "layerViolations": 2, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 80 }
     },
     {
       "id": "email-digest-queue",
       "prompt": "Queue consumer that sends email digests",
       "archetype": "worker-pipeline",
-      "withoutArk": { "layerViolations": 2, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 75 }
+      "withoutStructrail": { "layerViolations": 2, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 75 }
     },
     {
       "id": "two-next-apps",
       "prompt": "Two Next.js apps sharing a types package",
       "archetype": "multi-app-workspace",
-      "withoutArk": { "layerViolations": 2, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 70 }
+      "withoutStructrail": { "layerViolations": 2, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 70 }
     },
     {
       "id": "hackathon-sqlite",
       "prompt": "Hackathon MVP with a SQLite file",
       "archetype": "prototype-spike",
-      "withoutArk": { "layerViolations": 0, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 55 }
+      "withoutStructrail": { "layerViolations": 0, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 55 }
     },
     {
       "id": "booking-payments",
       "prompt": "Booking site with calendar and payments",
       "archetype": "crud-product",
-      "withoutArk": { "layerViolations": 3, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 65 }
+      "withoutStructrail": { "layerViolations": 3, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 65 }
     },
     {
       "id": "webhook-receiver",
       "prompt": "Webhook receiver service",
       "archetype": "api-backend",
-      "withoutArk": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 90 }
+      "withoutStructrail": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 90 }
     },
     {
       "id": "s3-etl-worker",
       "prompt": "ETL worker that pulls from S3",
       "archetype": "worker-pipeline",
-      "withoutArk": { "layerViolations": 2, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 72 }
+      "withoutStructrail": { "layerViolations": 2, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 72 }
     },
     {
       "id": "turborepo-api-web",
       "prompt": "Turborepo with API and web",
       "archetype": "multi-app-workspace",
-      "withoutArk": { "layerViolations": 3, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 68 }
+      "withoutStructrail": { "layerViolations": 3, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 68 }
     },
     {
       "id": "export-cli",
       "prompt": "Internal CLI to export reports",
       "archetype": "cli-utility",
-      "withoutArk": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 60 }
+      "withoutStructrail": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 60 }
     },
     {
       "id": "date-utils-sdk",
       "prompt": "npm library for date utilities",
       "archetype": "library-sdk",
-      "withoutArk": { "layerViolations": 0, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 80 }
+      "withoutStructrail": { "layerViolations": 0, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 80 }
     },
     {
       "id": "react-spa-external-api",
       "prompt": "React SPA calling an external API",
       "archetype": "frontend-surface",
-      "withoutArk": { "layerViolations": 1, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 62 }
+      "withoutStructrail": { "layerViolations": 1, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 62 }
     },
     {
       "id": "checkout-retries",
       "prompt": "Checkout flow with retries and compensation",
       "archetype": "event-coordinator",
-      "withoutArk": { "layerViolations": 3, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 58 }
+      "withoutStructrail": { "layerViolations": 3, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 58 }
     },
     {
       "id": "salesforce-sync",
       "prompt": "Sync Salesforce records into our database",
       "archetype": "integration-bridge",
-      "withoutArk": { "layerViolations": 2, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 64 }
+      "withoutStructrail": { "layerViolations": 2, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 64 }
     },
     {
       "id": "learning-spike",
       "prompt": "Quick proof-of-concept to learn a framework",
       "archetype": "prototype-spike",
-      "withoutArk": { "layerViolations": 0, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 50 }
+      "withoutStructrail": { "layerViolations": 0, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 50 }
     },
     {
       "id": "saas-dashboard",
       "prompt": "SaaS dashboard with teams and billing",
       "archetype": "crud-product",
       "fixture": "saas-dashboard",
-      "withoutArk": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 100 }
+      "withoutStructrail": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 100 }
     },
     {
       "id": "trpc-orders",
       "prompt": "tRPC router for orders",
       "archetype": "api-backend",
-      "withoutArk": { "layerViolations": 2, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 82 }
+      "withoutStructrail": { "layerViolations": 2, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 82 }
     },
     {
       "id": "session-prune-job",
       "prompt": "Background job to prune stale sessions",
       "archetype": "worker-pipeline",
-      "withoutArk": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 78 }
+      "withoutStructrail": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 78 }
     },
     {
       "id": "pnpm-admin-storefront",
       "prompt": "pnpm workspace with admin and storefront apps",
       "archetype": "multi-app-workspace",
-      "withoutArk": { "layerViolations": 2, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 71 }
+      "withoutStructrail": { "layerViolations": 2, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 71 }
     },
     {
       "id": "landing-contact-form",
       "prompt": "Marketing landing page with a contact form",
       "archetype": "crud-product",
-      "withoutArk": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 66 }
+      "withoutStructrail": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 66 }
     },
     {
       "id": "bff-microservices",
       "prompt": "BFF in front of several microservices",
       "archetype": "api-backend",
-      "withoutArk": { "layerViolations": 2, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 76 }
+      "withoutStructrail": { "layerViolations": 2, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 76 }
     },
     {
       "id": "scheduled-reports",
       "prompt": "Scheduled report generator",
       "archetype": "worker-pipeline",
-      "withoutArk": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 74 }
+      "withoutStructrail": { "layerViolations": 1, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 74 }
     },
     {
       "id": "shared-ui-kit",
       "prompt": "Shared UI kit across three apps in one repo",
       "archetype": "multi-app-workspace",
-      "withoutArk": { "layerViolations": 2, "misplacedFiles": 3, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 69 }
+      "withoutStructrail": { "layerViolations": 2, "misplacedFiles": 3, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 69 }
     },
     {
       "id": "open-source-sdk",
       "prompt": "Open-source SDK published to npm",
       "archetype": "library-sdk",
-      "withoutArk": { "layerViolations": 0, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 85 }
+      "withoutStructrail": { "layerViolations": 0, "misplacedFiles": 1, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 85 }
     },
     {
       "id": "approval-workflow",
       "prompt": "Multi-step approval workflow",
       "archetype": "event-coordinator",
-      "withoutArk": { "layerViolations": 3, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 57 }
+      "withoutStructrail": { "layerViolations": 3, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 57 }
     },
     {
       "id": "zapier-connector",
       "prompt": "Zapier-style connector between two APIs",
       "archetype": "integration-bridge",
-      "withoutArk": { "layerViolations": 2, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
-      "withArk": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 63 }
+      "withoutStructrail": { "layerViolations": 2, "misplacedFiles": 2, "contractIntact": true, "cheated": false },
+      "withStructrail": { "layerViolations": 0, "misplacedFiles": 0, "contractIntact": true, "cheated": false, "governedPercent": 63 }
     }
   ]
 }

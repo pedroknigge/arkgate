@@ -9,18 +9,18 @@
  *
  * Default mode is **fixture-measured** (deterministic, CI-safe):
  *   1. Copy a labeled case under eval/cases/
- *   2. Confirm ark-check fails
+ *   2. Confirm structrail-check fails
  *   3. Attempt mechanical-safe autoPatch on violating source files (W1)
- *   4. Re-run ark-check; count turns; detect CHEATED if protected files change
+ *   4. Re-run structrail-check; count turns; detect CHEATED if protected files change
  *
- * Live agent mode (optional / nightly): set ARK_EVAL_LOOP_LIVE=1 to delegate
+ * Live agent mode (optional / nightly): set STRUCTRAIL_EVAL_LOOP_LIVE=1 to delegate
  * remaining judgment cases to eval/run.mjs-style agents later. Fixture mode
  * never requires a live model.
  *
  * Usage:
  *   node eval/loop-cost-run.mjs
  *   node eval/loop-cost-run.mjs --write-baseline
- *   ARK_EVAL_LOOP_CASE=import-type-of-type-exports node eval/loop-cost-run.mjs
+ *   STRUCTRAIL_EVAL_LOOP_CASE=import-type-of-type-exports node eval/loop-cost-run.mjs
  *
  * Outputs:
  *   eval/loop-cost-report.json
@@ -42,7 +42,7 @@ import { resolveEnvironmentValue } from '../bin/lib/product-identity.mjs';
 const require = createRequire(import.meta.url);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..');
-const ARK_CHECK = path.join(REPO, 'bin', 'ark-check.mjs');
+const STRUCTRAIL_CHECK = path.join(REPO, 'bin', 'structrail-check.mjs');
 const CASES_DIR = path.join(HERE, 'cases');
 const REPORT_PATH = path.join(HERE, 'loop-cost-report.json');
 const BASELINE_PATH = path.join(HERE, 'loop-cost-baseline.json');
@@ -53,7 +53,7 @@ const evalEnvironment = (suffix) =>
     `ARK_EVAL_${suffix}`
   ).value;
 
-const PROTECTED = ['ark.config.json', '.ark-baseline.json', 'tsconfig.json', 'AGENTS.md'];
+const PROTECTED = ['structrail.config.json', '.ark-baseline.json', 'tsconfig.json', 'AGENTS.md'];
 const PROTECTED_DIRS = ['.github', '.claude', '.cursor', '.codex', '.grok'];
 
 /** Documented case set: ≥1 type-only mechanical-safe + ≥1 judgment. */
@@ -111,10 +111,10 @@ function isProtected(rel) {
   return PROTECTED_DIRS.some((d) => norm === d || norm.startsWith(`${d}/`));
 }
 
-function runArkCheck(root) {
+function runStructrailCheck(root) {
   const res = spawnSync(
     process.execPath,
-    [ARK_CHECK, '--root', root, '--config', 'ark.config.json'],
+    [STRUCTRAIL_CHECK, '--root', root, '--config', 'structrail.config.json'],
     { cwd: root, encoding: 'utf8' }
   );
   return {
@@ -138,7 +138,7 @@ function loadCase(id) {
  * for the W1 write-boundary path). Full AICodeGate revalidation lives in
  * validateWithAutoPatch / MCP tests; this harness measures mechanical rewrite turns.
  *
- * Note: ark-check may still report type-only layer debt (`arkCheckGreen` separate).
+ * Note: structrail-check may still report type-only layer debt (`structrailCheckGreen` separate).
  * Loop cost "green" = write-path autoPatch success, not full CI green.
  */
 function applyAutoPatchTurn(root, ts) {
@@ -202,7 +202,7 @@ function detectCheated(root, beforeSnap, caseDef) {
 function runFixtureCase(caseSpec, ts) {
   const { id, kind, maxTurns } = caseSpec;
   const loaded = loadCase(id);
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), `ark-loop-cost-${id}-`));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), `structrail-loop-cost-${id}-`));
   try {
     copyDir(loaded.dir, tmp);
     // strip answer key
@@ -213,7 +213,7 @@ function runFixtureCase(caseSpec, ts) {
     }
 
     const beforeSnap = snapshotFiles(tmp);
-    const initial = runArkCheck(tmp);
+    const initial = runStructrailCheck(tmp);
     if (initial.code === 0) {
       return {
         id,
@@ -223,13 +223,13 @@ function runFixtureCase(caseSpec, ts) {
         turnsToGreen: null,
         tokensToGreen: null,
         cheated: false,
-        why: 'fixture did not violate under ark-check',
+        why: 'fixture did not violate under structrail-check',
       };
     }
 
     let turns = 0;
     let writePathGreen = false;
-    let arkCheckGreen = false;
+    let structrailCheckGreen = false;
     let cheated = false;
     let why = '';
     let lastStrategy = null;
@@ -244,11 +244,11 @@ function runFixtureCase(caseSpec, ts) {
         why = cheat.why;
         break;
       }
-      const check = runArkCheck(tmp);
-      arkCheckGreen = check.code === 0;
+      const check = runStructrailCheck(tmp);
+      structrailCheckGreen = check.code === 0;
       // Write-path green: fixture proxy — import-type rewrite applied this turn.
-      // Full CI green is arkCheckGreen (reported separately).
-      if (writePathCleared || arkCheckGreen) {
+      // Full CI green is structrailCheckGreen (reported separately).
+      if (writePathCleared || structrailCheckGreen) {
         writePathGreen = true;
         break;
       }
@@ -267,7 +267,7 @@ function runFixtureCase(caseSpec, ts) {
         turnsAttempted: turns,
         strategy: lastStrategy,
         why,
-        arkCheckGreen: false,
+        structrailCheckGreen: false,
         expectedRemediationClass: loaded.meta.expectedRemediationClass,
       };
     }
@@ -282,7 +282,7 @@ function runFixtureCase(caseSpec, ts) {
         tokensToGreen: null,
         cheated: false,
         strategy: lastStrategy,
-        arkCheckGreen,
+        structrailCheckGreen,
         expectedRemediationClass: loaded.meta.expectedRemediationClass,
       };
     }
@@ -299,7 +299,7 @@ function runFixtureCase(caseSpec, ts) {
       cheated: false,
       turnsAttempted: turns,
       strategy: lastStrategy,
-      arkCheckGreen,
+      structrailCheckGreen,
       expectedRemediationClass: loaded.meta.expectedRemediationClass,
       why: judgment
         ? 'no mechanical-safe autoPatch cleared the write path (expected for judgment cases)'

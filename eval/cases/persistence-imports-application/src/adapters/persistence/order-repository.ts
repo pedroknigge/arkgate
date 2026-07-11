@@ -5,7 +5,7 @@ import { createPlaceOrder } from '../../application/place-order.js';
 const store = new Map<string, Order>();
 
 export class InMemoryOrderRepository {
-  // Smuggling the use case into the adapter — the dependency that ark-check blocks.
+  // Smuggling the use case into the adapter — the dependency that structrail-check blocks.
   readonly placeOrder = createPlaceOrder(this as never);
 
   async save(order: Order): Promise<void> {
