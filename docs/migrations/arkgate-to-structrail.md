@@ -161,6 +161,28 @@ until field evidence exists before v4.
 - External cutover evidence is attached to the implementation record; no release is required merely
   to start the code migration, but `S07-M1` cannot be marked done while the public identity is split.
 
+## Local acceptance audit — 2026-07-11
+
+The reversible/local portion of this gate was audited at commit `6df6716`. The audit used
+`git archive HEAD` to create the ignored, non-ephemeral checkout `.tmp-s07-audit-clean`, followed by
+a fresh `npm ci`. The checkout had no `.git`, prebuilt `dist`, or reused `node_modules`, so it also
+exercised packaged-tree fallbacks instead of relying on working-tree metadata.
+
+| Acceptance criterion | Reproducible evidence at `6df6716` | Result |
+|---|---|---|
+| Both package generations install cleanly | `tests/publish/structrail-package-managers.test.ts` plus `tests/publish/structrail-identity.test.ts` inside `npm run test:confidence` | 9/9 npm, pnpm, and Yarn primary/legacy/combined cases; 3/3 package identity/config/import/bin cases |
+| New surfaces use the canonical identity | `structrailCliIdentity` 5/5, `structrailGeneration` 1/1, `structrailPublicAliases` 2/2, and `npm run check:identity` after mutation output existed | Green; ratchet scanned 289 text files with removal target v4 |
+| Every v2 identity category retains a tested v3 path | Full 104-file Vitest run, including package subpaths/bins, config, environment, MCP, skills/hosts, and public type/value aliases | 782/782 tests passed |
+| Canonical and legacy verdicts agree | `tests/unit/mcp/arkMcp.test.ts` resource/tool parity and the installed-package alias assertions | Green; canonical and compatibility values/resources produced equal results |
+| Config/environment ambiguity is explicit | `structrail-identity` config cases plus `productIdentityEnvironment` 3/3 | Dual implicit configs reject; canonical environment values win and report conflicts |
+| Common and confidence gates pass cleanly | typecheck; JS syntax; identity; layer/CLI generated parity; module budgets; package allowlist; architecture; build; `npm run test:confidence` | Green; coverage 91.79% statements, 85.23% branches, 94.98% functions, 91.79% lines; mutation 97.20% (415 killed, 1 timeout, 12 survived, 0 uncovered/errors) |
+| Distribution checks pass | `npm pack --dry-run`, `npm run test:ts-compat`, `npm run security:audit` | 132-file tarball, 809.8 kB packed / 3.3 MB unpacked; TypeScript 5.9.3, 6.0.3, and 7.0.2 green; 0 production vulnerabilities |
+
+This is not the final `S07-M1` completion record. M0 still needs reservation/ownership and legal
+evidence, and M6 still needs explicit authorization for the GitHub, npm, website/domain, registry,
+redirect, provenance, and signed-release cutover. After those external changes, repeat this clean
+audit on the cutover commit and attach the external evidence before changing the item to `done`.
+
 ## Rollback
 
 Before publication, revert the migration commit series normally. After publication, do not unpublish

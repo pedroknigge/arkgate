@@ -7,6 +7,9 @@ All notable changes to Structrail (`structrail`; formerly ArkGate / `arkgate` an
 
 ### Fixed
 
+- **Identity ratchet on exported trees:** `check:identity` now excludes the git-ignored Stryker
+  mutation report even when the audited tree has no `.git` metadata. A regression fixture proves
+  the post-mutation gate does not treat generated JSON as a product surface.
 - **Workflow retry boundary:** `RetryPolicy` now retries only `step.execute` failures and
   timeouts. A snapshot-store or completion-audit failure after a successful effect is terminal,
   enters compensation, and never executes the completed effect again.

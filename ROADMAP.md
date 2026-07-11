@@ -155,7 +155,7 @@ and `O03` are `done`.
 | 5 | `S05` | `done` | M | `S04` | All confirmed scanner false positives and bypasses are closed |
 | 6 | `S06` | `done` | S | `S03`–`S05` | README, docs, doctor, and site use one truthful support matrix |
 | 7 | `S07` | `done` | S | `S06` | Structrail is the decided identity before the public core API is stabilized |
-| 8 | `S07-M1` | `doing` | L | `S07` | Structrail is primary locally; external cutover and final audit remain |
+| 8 | `S07-M1` | `doing` | L | `S07` | Local acceptance is green; M0/M6 cutover and final re-audit remain |
 | 9 | `C01` | `todo` | M | `S07-M1` | `structrail.config.json` has a versioned JSON Schema and migrations |
 | 10 | `C02` | `todo` | M | `C01` | A stable analysis IR and programmatic API are specified |
 | 11 | `C03` | `todo` | L | `C02` | CLI/MCP scanning uses one importable engine without generated duplication |
@@ -172,8 +172,8 @@ and `O03` are `done`.
 | 22 | `V04` | `todo` | M | `C06`, `V03` | Package and release artifacts are small, complete, and attestable |
 | 23 | `V05` | `todo` | M | all prior items | Independent audit passes and the product may exit beta |
 
-**Next:** finish `S07-M1` ratchet/audit locally, then complete the gated external identity cutover
-before stabilizing the Phase C schema.
+**Next:** complete the human-authorized M0/M6 identity cutover, then repeat the clean acceptance
+audit on that cutover commit. Do not start the Phase C schema before `S07-M1` is `done`.
 
 ---
 
@@ -500,6 +500,15 @@ as a hard dependency of `C01`.
 - Common merge gate, package/type compatibility, security, and clean-checkout checks pass.
 
 **Verify:** follow the `S07-M1` acceptance gate and ordered M0–M7 checklist in the migration plan.
+
+**Local evidence (2026-07-11, `6df6716`):** the
+[clean local acceptance audit](docs/migrations/arkgate-to-structrail.md#local-acceptance-audit--2026-07-11)
+passes from a fresh archive checkout: 782/782 tests, 91.79% statements / 85.23% branches / 94.98%
+functions / 91.79% lines, 97.20% mutation, all nine npm/pnpm/Yarn package combinations, a
+132-file dry-run tarball, TypeScript 5.9.3/6.0.3/7.0.2, architecture and generated-parity gates,
+and 0 production vulnerabilities. `S07-M1` remains `doing`: M0 reservation/legal evidence and the
+explicitly authorized M6 public cutover are not complete, and the same audit must be repeated on
+the final cutover commit.
 
 ---
 
@@ -895,8 +904,8 @@ retain v2 names. External names and redirects remain unchanged until M0/M6 evide
 
 ```text
 Item: S07-M1 — Migrate ArkGate to Structrail with compatibility
-Current result: local migration + v4-bounded legacy-name ratchet implemented with v3 compatibility
-Next: run and record the full local acceptance audit; keep M0 reservation/legal as the public-cutover gate
+Current result: local migration, v4-bounded ratchet, and clean local acceptance audit green at 6df6716
+Next: record M0 reservation/legal proof, authorize and execute M6, then re-run the audit on cutover HEAD
 Primary plan: docs/migrations/arkgate-to-structrail.md
-Required finish: target identity cut over + all v2 paths green through arkgate@3 + common/package gates
+Required finish: public identity cut over + external evidence + all v2 paths/common/package gates green
 ```
