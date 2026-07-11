@@ -139,7 +139,8 @@ export function runMigrateCommands(root, identity = generationIdentity(false)) {
     // Prefer primary product bins in command strings (aliases still work if left alone).
     next = next
       .replace(/\b(?:structrail-mcp|arkgate-mcp|ark-mcp)\b/g, preferredMcpBin)
-      .replace(/\b(?:structrail-check|arkgate-check|ark-check)\b/g, preferredCheckBin);
+      .replace(/\b(?:structrail-check|arkgate-check|ark-check)\b/g, preferredCheckBin)
+      .replace(/\b(?:structrail|ark)\.config\.json\b/g, identity.configName);
     // Do not blanket-replace bare `ark` — it appears in prose ("Ark check", product name).
     if (next !== text) {
       fs.writeFileSync(full, next);

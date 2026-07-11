@@ -13,6 +13,8 @@ import { detectActiveAgentHost, skillTemplateNames } from './skill-install.mjs';
 import { detectDeployPathQuality } from './deploy-path.mjs';
 import { collectWeakestLinkGaps } from './weakest-link.mjs';
 import {
+  CANONICAL_CONFIG_NAME,
+  LEGACY_CONFIG_NAME,
   generationIdentityForRoot,
   resolveBooleanEnvironment,
 } from './product-identity.mjs';
@@ -61,7 +63,14 @@ export function stripMcpServerArgs(args, identity) {
       !ARK_CHECK_BINS.has(entry) &&
       !ARK_CLI_BINS.has(entry)
   );
-  return kept.length > 0 ? kept : ['--root', '.', '--config', configName];
+  if (kept.length === 0) return ['--root', '.', '--config', configName];
+  return kept.map((entry, index) =>
+    index > 0 &&
+    kept[index - 1] === '--config' &&
+    (entry === CANONICAL_CONFIG_NAME || entry === LEGACY_CONFIG_NAME)
+      ? configName
+      : entry
+  );
 }
 
 /** True when mcpServers.ark.args list more than one Ark MCP bin (broken dual rename). */

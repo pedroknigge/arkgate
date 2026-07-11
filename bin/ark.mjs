@@ -18,23 +18,29 @@ import {
   resolveArchetypePreset,
   resolveOperatingMode,
 } from './ark-shared.mjs';
-import { pinArkgateDevDependency, FALSE_GREEN_GAP_ID } from './lib/field-install.mjs';
+import { pinProductDevDependency, FALSE_GREEN_GAP_ID } from './lib/field-install.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
+import {
+  CANONICAL_CONFIG_NAME,
+  LEGACY_CONFIG_NAME,
+  generationIdentity,
+  isStructrailInvocation,
+} from './lib/product-identity.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const primaryInvocation = path.basename(process.argv[1] ?? '').startsWith('structrail');
-const arkCheck = path.join(here, primaryInvocation ? 'structrail-check.mjs' : 'ark-check.mjs');
+const invocationIdentity = generationIdentity(isStructrailInvocation());
+const arkCheck = path.join(here, `${invocationIdentity.checkBin}.mjs`);
 
 /**
  * Day-zero architecture picture: freeze origin under `.ark/reports/` as soon as
- * `ark.config.json` exists — **before** agent docs, skills, CI templates, or cleanups.
+ * The invocation's config exists — **before** agent docs, skills, CI templates, or cleanups.
  * Idempotent: origin is written only once (`--report` archive semantics).
  */
 function freezeDayZeroOrigin(root) {
-  const configPath = path.join(root, 'ark.config.json');
+  const configPath = path.join(root, invocationIdentity.configName);
   if (!fs.existsSync(configPath)) {
     console.log(
-      `  Skip origin freeze — no ark.config.json yet. After init: ${arkCommand(root, 'ark-check', '--report ark-report.html')}`
+      `  Skip origin freeze — no ${invocationIdentity.configName} yet. After init: ${arkCommand(root, invocationIdentity.checkBin, `--report ${invocationIdentity.fileStem}-report.html`)}`
     );
     return;
   }
@@ -46,7 +52,14 @@ function freezeDayZeroOrigin(root) {
       : 'Freezing day-zero architecture picture (origin) before agent docs / gates…'
   );
   runArkCheck(
-    ['--root', root, '--config', 'ark.config.json', '--report', 'ark-report.html'],
+    [
+      '--root',
+      root,
+      '--config',
+      invocationIdentity.configName,
+      '--report',
+      `${invocationIdentity.fileStem}-report.html`,
+    ],
     { cwd: root }
   );
 }
@@ -56,6 +69,7 @@ function parseArgs(argv) {
     command: undefined,
     root: process.cwd(),
     yes: false,
+    apply: false,
     force: false,
     strict: true,
     install: true,
@@ -67,7 +81,9 @@ function parseArgs(argv) {
   const requireValue = (flag, index) => {
     const value = argv[index + 1];
     if (value === undefined || value.startsWith('-')) {
-      throw new Error(`Missing value for ${flag}. Run ark --help for usage.`);
+      throw new Error(
+        `Missing value for ${flag}. Run ${invocationIdentity.cliBin} --help for usage.`
+      );
     }
     return value;
   };
@@ -78,6 +94,7 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === '--root') args.root = path.resolve(requireValue(arg, i++));
     else if (arg === '--yes' || arg === '-y') args.yes = true;
+    else if (arg === '--apply') args.apply = true;
     else if (arg === '--force') args.force = true;
     else if (arg === '--no-strict') args.strict = false;
     else if (arg === '--no-install') args.install = false;
@@ -90,34 +107,46 @@ function parseArgs(argv) {
     else if (arg === '--help' || arg === '-h' || arg === 'help') args.help = true;
     else if (arg === '--version' || arg === '-V') args.version = true;
     else if (!arg.startsWith('-') && args.command === undefined) args.command = arg;
-    else throw new Error(`Unknown argument: ${arg}. Run ark --help for usage.`);
+    else {
+      throw new Error(
+        `Unknown argument: ${arg}. Run ${invocationIdentity.cliBin} --help for usage.`
+      );
+    }
   }
 
   return args;
 }
 
 function usage() {
+  const cli = invocationIdentity.cliBin;
+  const product = invocationIdentity.productName;
+  const skill = (name) => `/${invocationIdentity.skillPrefix}-${name}`;
   return `Usage:
-  ark start   [--root <project>] [--tools <list>] [--require-write-hook <host>] [--yes]
-  ark init    [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture]
+  ${cli} start   [--root <project>] [--tools <list>] [--require-write-hook <host>] [--yes]
+  ${cli} init    [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture]
               [--archetype <playbook-id>] [--tools <list>] [--require-write-hook <host>] [--yes] [--force] [--no-strict]
-  ark upgrade [--root <project>] [--no-install] [--no-strict]
+  ${cli} upgrade [--root <project>] [--no-install] [--no-strict]
+  ${cli} migrate-config [--root <project>] [--apply]
 
 Commands:
   start     New here? The guided setup. Looks at your project, suggests a shape in
             plain language, sets up the guardrails, and shows a plan — no code changed.
-  init      Configure Ark project enforcement with explicit prompts.
-  upgrade   One command to update Ark: bump the package to @latest, refresh gate
-            templates + /ark-* skills (and Codex home prompts), migrate command
+  init      Configure ${product} project enforcement with explicit prompts.
+  upgrade   One command to update ${product}: bump the package to @latest, refresh gate
+            templates + ${skill('*')} skills (and Codex home prompts), migrate command
             runners to this project's package manager, then run the strict check.
-            (alias: ark update)
+            (alias: ${cli} update)
+  migrate-config
+            Preview the v3 ${LEGACY_CONFIG_NAME} → ${CANONICAL_CONFIG_NAME} rename.
+            Add --apply to rename it and normalize known generated command references.
 
 Options:
   --yes        Non-interactive defaults: create config if needed, install gate templates, run strict check.
                (Also the implicit default when stdin/stdout are not a TTY — agents never hang on prompts.)
   --force      Allow generated files to overwrite existing files.
-  --no-strict  Skip the final strict ark-check run.
-  --no-install Skip adding/installing arkgate as a project devDependency (start/upgrade).
+  --apply      Apply migrate-config; without it the command is read-only.
+  --no-strict  Skip the final strict ${invocationIdentity.checkBin} run.
+  --no-install Skip adding/installing ${invocationIdentity.packageName} as a project devDependency (start/upgrade).
   --preset     Start from a named architecture preset instead of detection.
   --archetype  Application shape from templates/architecture-playbook.json (maps to the matching preset).
                Valid ids: crud-product, api-backend, frontend-surface, library-sdk, cli-utility,
@@ -143,15 +172,16 @@ function cliVersion() {
   }
 }
 
-// The package-manager command that adds arkgate as a dev dependency.
+// The package-manager command that adds the invoked product as a dev dependency.
 // Prefer an explicit version/range when pin already chose one (avoid pin=^2.9.0 then
 // `npm i arkgate@latest` rewriting package.json to a different range).
-function packageInstallArgv(root, versionSpec) {
+function packageInstallArgv(root, versionSpec, packageName = invocationIdentity.packageName) {
   const range =
     typeof versionSpec === 'string' && versionSpec.trim()
       ? versionSpec.trim()
       : 'latest';
-  const spec = range.startsWith('arkgate@') ? range : `arkgate@${range}`;
+  const packagePrefix = `${packageName}@`;
+  const spec = range.startsWith(packagePrefix) ? range : `${packagePrefix}${range}`;
   const pm = detectPackageManager(root);
   if (pm === 'pnpm') return ['pnpm', ['add', '-D', spec]];
   if (pm === 'yarn') return ['yarn', ['add', '-D', spec]];
@@ -163,13 +193,16 @@ function runCommand(command, commandArgs, cwd) {
   return result.status ?? 1;
 }
 
-// `ark upgrade`: the one command that replaces the "install @latest && install-agent-gates
+// `upgrade`: the one command that replaces the "install @latest && install-agent-gates
 // --skills-only --force && ... --codex-home --force && ... --migrate-commands && check" chain.
 // Each step reruns ark-check as a fresh process, so the refresh runs from the freshly-installed
 // version, not this (now-older) process.
 async function upgrade(args) {
   const root = args.root;
-  console.log('Ark upgrade — updating the package, gates, skills, and command runners.');
+  const product = invocationIdentity.productName;
+  const cli = invocationIdentity.cliBin;
+  const skillPrefix = invocationIdentity.skillPrefix;
+  console.log(`${product} upgrade — updating the package, gates, skills, and command runners.`);
 
   if (args.install) {
     const [command, commandArgs] = packageInstallArgv(root);
@@ -178,7 +211,7 @@ async function upgrade(args) {
     if (status !== 0) {
       console.error(
         `\nPackage update failed (exit ${status}). Fix the install and re-run, or use ` +
-          '`ark upgrade --no-install` to refresh gates/skills against the installed version.'
+          `\`${cli} upgrade --no-install\` to refresh gates/skills against the installed version.`
       );
       return status;
     }
@@ -186,7 +219,7 @@ async function upgrade(args) {
     console.log('\n1/4  Skipping package install (--no-install).');
   }
 
-  console.log('\n2/4  Refreshing agent gates + /ark-* skills…');
+  console.log(`\n2/4  Refreshing agent gates + /${skillPrefix}-* skills…`);
   let status = runArkCheck(['--root', root, '--install-agent-gates'], { cwd: root });
   if (status !== 0) return status;
 
@@ -212,7 +245,7 @@ async function upgrade(args) {
   }
   console.log('\n4/4  Verifying architecture…');
   return runArkCheck(
-    ['--root', root, '--config', 'ark.config.json', '--strict-merge'],
+    ['--root', root, '--config', invocationIdentity.configName, '--strict-merge'],
     { cwd: root }
   );
 }
@@ -250,27 +283,36 @@ async function askYesNo(rl, question, defaultYes = true) {
 }
 
 /**
- * Pin arkgate in package.json (and optionally run the package manager).
+ * Pin the invoked package in package.json (and optionally run the package manager).
  * start calls this so CI/`npx` is not forced to rely on a stale global install.
  *
  * @param {string} root
  * @param {{ install?: boolean, runPackageManager?: boolean }} [opts]
  */
-export function ensureProjectArkgateDependency(root, opts = {}) {
+export function ensureProjectDependency(
+  root,
+  opts = {},
+  packageName = invocationIdentity.packageName
+) {
   const install = opts.install !== false;
   const runPm = opts.runPackageManager === true;
   if (!install) {
     return { pinned: { changed: false, reason: 'skipped-no-install' }, installStatus: null };
   }
-  const pinned = pinArkgateDevDependency(root);
+  const pinned = pinProductDevDependency(root, packageName);
   let installStatus = null;
   // Only run the package manager after a successful pin change — avoid surprise
   // network on every start when arkgate is already listed.
   if (runPm && pinned.changed) {
-    const [command, commandArgs] = packageInstallArgv(root, pinned.version);
+    const [command, commandArgs] = packageInstallArgv(root, pinned.version, packageName);
     installStatus = runCommand(command, commandArgs, root);
   }
   return { pinned, installStatus };
+}
+
+/** v3 compatibility helper retained for existing internal callers and tests. */
+export function ensureProjectArkgateDependency(root, opts = {}) {
+  return ensureProjectDependency(root, opts, 'arkgate');
 }
 
 async function resolveArchetypeInteractive(rl, root) {
@@ -302,7 +344,7 @@ function resolveInitPreset(args) {
   if (args.archetype) {
     if (!isValidArchetypeId(args.archetype)) {
       throw new Error(
-        `Unknown archetype "${args.archetype}". Run ark-check --recommend to see a suggested shape.`
+        `Unknown archetype "${args.archetype}". Run ${invocationIdentity.checkBin} --recommend to see a suggested shape.`
       );
     }
     const resolved = resolveArchetypePreset(args.archetype);
@@ -313,7 +355,7 @@ function resolveInitPreset(args) {
 
 async function init(args) {
   const root = args.root;
-  const configPath = path.join(root, 'ark.config.json');
+  const configPath = path.join(root, invocationIdentity.configName);
   const nonInteractive = shouldUseNonInteractiveDefaults(args);
   const interactive = !nonInteractive;
   const rl = interactive
@@ -352,7 +394,11 @@ async function init(args) {
         ? true
         : nonInteractive
           ? false
-          : await askYesNo(rl, 'ark.config.json already exists. Regenerate it?', false);
+          : await askYesNo(
+              rl,
+              `${invocationIdentity.configName} already exists. Regenerate it?`,
+              false
+            );
     }
 
     if (shouldInit) {
@@ -362,7 +408,7 @@ async function init(args) {
       const status = runArkCheck(initArgs, { cwd: root });
       if (status !== 0) return status;
     } else {
-      console.log('Skipped ark.config.json generation.');
+      console.log(`Skipped ${invocationIdentity.configName} generation.`);
     }
 
     // Origin first: contract-on-tree picture before AGENTS.md / skills / CI templates.
@@ -386,7 +432,13 @@ async function init(args) {
       args.strict &&
       (nonInteractive || (await askYesNo(rl, 'Run strict architecture check now?', true)));
     if (runStrict) {
-      const strictArgs = ['--root', root, '--config', 'ark.config.json', '--strict-merge'];
+      const strictArgs = [
+        '--root',
+        root,
+        '--config',
+        invocationIdentity.configName,
+        '--strict-merge',
+      ];
       if (args.requireWriteHook) {
         strictArgs.push('--require-write-hook', args.requireWriteHook);
       }
@@ -394,15 +446,17 @@ async function init(args) {
     }
 
     console.log(
-      `Ark init complete. Run \`${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-merge')}\` before merging.`
+      `${invocationIdentity.productName} init complete. Run \`${arkCommand(root, invocationIdentity.checkBin, `--root . --config ${invocationIdentity.configName} --strict-merge`)}\` before merging.`
     );
     if (archetype) {
-      console.log(`Shape: ${archetype}. Plan: ${arkCommand(root, 'ark-check', '--recommend')}`);
+      console.log(
+        `Shape: ${archetype}. Plan: ${arkCommand(root, invocationIdentity.checkBin, '--recommend')}`
+      );
     }
     console.log(
       `Day-zero origin: .ark/reports/origin.* (frozen once; later --report shows evolution vs origin).`
     );
-    console.log(`Adoption health: ${arkCommand(root, 'ark-check', '--doctor')}`);
+    console.log(`Adoption health: ${arkCommand(root, invocationIdentity.checkBin, '--doctor')}`);
     return 0;
   } finally {
     rl?.close();
@@ -415,6 +469,11 @@ async function init(args) {
 // orchestrates existing steps (recommend → init → --plan) and frames each in outcome terms.
 async function start(args) {
   const root = args.root;
+  const product = invocationIdentity.productName;
+  const packageName = invocationIdentity.packageName;
+  const configName = invocationIdentity.configName;
+  const checkBin = invocationIdentity.checkBin;
+  const skill = (name) => `/${invocationIdentity.skillPrefix}-${name}`;
   const nonInteractive = shouldUseNonInteractiveDefaults(args);
   const interactive = !nonInteractive;
   const rl = interactive
@@ -422,12 +481,12 @@ async function start(args) {
     : null;
 
   try {
-    console.log("Let's set up Ark for your project.");
+    console.log(`Let's set up ${product} for your project.`);
     console.log(
       "I'll walk the tree, freeze a day-zero architecture picture, then set up guardrails and show a plan."
     );
     console.log(
-      'Nothing in your product code is changed — only Ark config, then origin snapshot, then agent/CI templates.'
+      `Nothing in your product code is changed — only ${product} config, then origin snapshot, then agent/CI templates.`
     );
     if (nonInteractive && !args.yes) {
       console.log(
@@ -452,12 +511,12 @@ async function start(args) {
       if (rec.mature) {
         console.log('');
         console.log(
-          `This is an established codebase (${rec.signals?.sourceFileCount} files), so Ark will ADOPT it:`
+          `This is an established codebase (${rec.signals?.sourceFileCount} files), so ${product} will ADOPT it:`
         );
         console.log('match the contract to how your code is already organized, and flag only genuine issues.');
       }
       const proceed =
-        nonInteractive || (await askYesNo(rl, '\nSet Ark up for this shape?', true));
+        nonInteractive || (await askYesNo(rl, `\nSet ${product} up for this shape?`, true));
       if (!proceed) {
         archetype = interactive ? await resolveArchetypeInteractive(rl, root) : rec.archetype;
       }
@@ -465,31 +524,33 @@ async function start(args) {
       archetype = await resolveArchetypeInteractive(rl, root);
     }
 
-    // 2b) Pin arkgate as a project devDependency so CI/npx do not depend on a stale global.
+    // 2b) Pin the invoked package so CI/npx do not depend on a stale global.
     if (args.install !== false && fs.existsSync(path.join(root, 'package.json'))) {
-      const { pinned, installStatus } = ensureProjectArkgateDependency(root, {
+      const { pinned, installStatus } = ensureProjectDependency(root, {
         install: true,
         runPackageManager: true,
       });
       if (pinned.changed) {
-        console.log(`  Pinned arkgate@${pinned.version} in package.json devDependencies.`);
+        console.log(
+          `  Pinned ${packageName}@${pinned.version} in package.json devDependencies.`
+        );
         if (installStatus !== null && installStatus !== 0) {
           console.log(
             `  Package manager install exited ${installStatus} — package.json is still pinned; run install when online.`
           );
         }
       } else if (pinned.reason === 'already-present') {
-        console.log(`  arkgate already in package.json (${pinned.version}).`);
+        console.log(`  ${packageName} already in package.json (${pinned.version}).`);
       }
     } else if (args.install === false) {
-      console.log('  Skipping arkgate package pin (--no-install).');
+      console.log(`  Skipping ${packageName} package pin (--no-install).`);
     }
 
     // 3) Contract first (config only). Greenfield → shape preset; established repo → detection,
     // so the contract anchors to directories you already have instead of aspirational globs.
     console.log('');
-    console.log('Setting up Ark contract…');
-    const configPath = path.join(root, 'ark.config.json');
+    console.log(`Setting up ${product} contract…`);
+    const configPath = path.join(root, configName);
     if (!fs.existsSync(configPath)) {
       const initArgs = ['--root', root, '--init'];
       const preset = archetype ? resolveArchetypePreset(archetype).preset : undefined;
@@ -525,7 +586,7 @@ async function start(args) {
       const status = runArkCheck(initArgs, { cwd: root });
       if (status !== 0) return status;
     } else {
-      console.log('  Found an existing ark.config.json — keeping it.');
+      console.log(`  Found an existing ${configName} — keeping it.`);
     }
 
     // 4) Day-zero origin — freeze the architecture picture *before* agent docs / CI / skills.
@@ -550,18 +611,18 @@ async function start(args) {
     // 6) Show the plan: what's safe to auto-fix vs what needs a decision.
     console.log('');
     console.log('Your architecture plan:');
-    runArkCheck(['--root', root, '--config', 'ark.config.json', '--plan'], { cwd: root });
+    runArkCheck(['--root', root, '--config', configName, '--plan'], { cwd: root });
 
     // Capture plan + doctor JSON for an honest wrap-up. Mode MUST match --doctor
     // (emptyLayers, core-optional, presentation bag) — never claim ENFORCE from plan alone.
     const planCapture = spawnSync(
       process.execPath,
-      [arkCheck, '--root', root, '--config', 'ark.config.json', '--plan', '--json'],
+      [arkCheck, '--root', root, '--config', configName, '--plan', '--json'],
       { cwd: root, encoding: 'utf8' }
     );
     const doctorCapture = spawnSync(
       process.execPath,
-      [arkCheck, '--root', root, '--config', 'ark.config.json', '--doctor', '--json'],
+      [arkCheck, '--root', root, '--config', configName, '--doctor', '--json'],
       { cwd: root, encoding: 'utf8' }
     );
     let planOk = true;
@@ -660,7 +721,9 @@ async function start(args) {
       console.log('Done — status: SUGGEST (starting shape installed; expand as you grow).');
       console.log('What happens now:');
       if (governedPercent != null) {
-        console.log(`  • Ark governs ~${governedPercent}% of in-scope files — low is normal on a fresh scaffold.`);
+        console.log(
+          `  • ${product} governs ~${governedPercent}% of in-scope files — low is normal on a fresh scaffold.`
+        );
       }
     } else {
       console.log('Done — status: ADAPT (contract still aligning with your real layout).');
@@ -674,26 +737,72 @@ async function start(args) {
     console.log('');
     console.log('Next (the only flow you need):');
     if (falseGreenGap) {
-      console.log('  1. In your agent:  /ark-adopt  (or /ark-contract) — fix the contract first');
-      console.log('     → reclassify I/O dirs out of Application; then /ark-autopilot for residual debt.');
+      console.log(
+        `  1. In your agent:  ${skill('adopt')}  (or ${skill('contract')}) — fix the contract first`
+      );
+      console.log(
+        `     → reclassify I/O dirs out of Application; then ${skill('autopilot')} for residual debt.`
+      );
     } else {
-      console.log('  1. In your agent:  /ark-autopilot');
+      console.log(`  1. In your agent:  ${skill('autopilot')}`);
       console.log('     → explore first, dual plan (remediation + pattern bets), safe fixes, leave gates on.');
     }
-    console.log(`  2. Status anytime: ${arkCommand(root, 'ark-check', '--doctor')}`);
-    console.log(`  3. After edits:    ${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-merge')}`);
+    console.log(`  2. Status anytime: ${arkCommand(root, checkBin, '--doctor')}`);
+    console.log(
+      `  3. After edits:    ${arkCommand(root, checkBin, `--root . --config ${configName} --strict-merge`)}`
+    );
     if (mode === 'adapt' && planOk && !falseGreenGap) {
       console.log(
-        `  4. When green but cores still optional: ${arkCommand(root, 'ark-check', '--ratchet-cores')} → honest ENFORCE`
+        `  4. When green but cores still optional: ${arkCommand(root, checkBin, '--ratchet-cores')} → honest ENFORCE`
       );
     }
     console.log('');
     console.log('Day-zero origin is under .ark/reports/origin.* — re-run --report later for evolution.');
-    console.log('Optional later: --plan · --coverage · /ark-explore · /ark-fix · /ark-place · ark upgrade');
+    console.log(
+      `Optional later: --plan · --coverage · ${skill('explore')} · ${skill('fix')} · ${skill('place')} · ${invocationIdentity.cliBin} upgrade`
+    );
     return 0;
   } finally {
     rl?.close();
   }
+}
+
+function migrateConfig(args) {
+  const root = args.root;
+  const canonicalPath = path.join(root, CANONICAL_CONFIG_NAME);
+  const legacyPath = path.join(root, LEGACY_CONFIG_NAME);
+  const canonicalExists = fs.existsSync(canonicalPath);
+  const legacyExists = fs.existsSync(legacyPath);
+
+  if (canonicalExists && legacyExists) {
+    console.error(
+      `Both ${CANONICAL_CONFIG_NAME} and ${LEGACY_CONFIG_NAME} exist. ` +
+        'Remove the ambiguity or choose the governing file before migrating.'
+    );
+    return 2;
+  }
+  if (canonicalExists) {
+    console.log(`This project already uses ${CANONICAL_CONFIG_NAME}; no migration needed.`);
+    return 0;
+  }
+  if (!legacyExists) {
+    console.log(`No ${LEGACY_CONFIG_NAME} found; no migration needed.`);
+    return 0;
+  }
+  if (!args.apply) {
+    console.log('Config identity migration preview:');
+    console.log(`  rename ${LEGACY_CONFIG_NAME} -> ${CANONICAL_CONFIG_NAME}`);
+    console.log('  normalize known generated gate and package command references');
+    console.log('No files changed. Re-run with --apply to apply this migration.');
+    return 0;
+  }
+
+  fs.renameSync(legacyPath, canonicalPath);
+  console.log(`Renamed ${LEGACY_CONFIG_NAME} -> ${CANONICAL_CONFIG_NAME}.`);
+  return runArkCheck(
+    ['--root', root, '--install-agent-gates', '--migrate-commands'],
+    { cwd: root }
+  );
 }
 
 export async function runArkCli(argv = process.argv) {
@@ -713,8 +822,14 @@ export async function runArkCli(argv = process.argv) {
     return 0;
   }
 
+  if (args.apply && args.command !== 'migrate-config') {
+    console.error('--apply is supported only by migrate-config.');
+    return 2;
+  }
   if (args.requireWriteHook && !['start', 'init'].includes(args.command)) {
-    console.error('--require-write-hook is supported by ark start and ark init.');
+    console.error(
+      `--require-write-hook is supported by ${invocationIdentity.cliBin} start and ${invocationIdentity.cliBin} init.`
+    );
     return 2;
   }
   const enforcement = validateHardWriteRequest({
@@ -753,6 +868,15 @@ export async function runArkCli(argv = process.argv) {
   if (args.command === 'upgrade' || args.command === 'update') {
     try {
       return await upgrade(args);
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      return 2;
+    }
+  }
+
+  if (args.command === 'migrate-config') {
+    try {
+      return migrateConfig(args);
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));
       return 2;
