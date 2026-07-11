@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import { version } from '../../src/index';
 
-describe('ArkGate bootstrap (smoke)', () => {
+describe('Structrail bootstrap (smoke)', () => {
   it('exposes a semantic version', () => {
     expect(version).toMatch(/^\d+\.\d+\.\d+$/);
   });
@@ -11,7 +11,7 @@ describe('ArkGate bootstrap (smoke)', () => {
     const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
     const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
     const server = JSON.parse(readFileSync('server.json', 'utf8'));
-    expect(pkg.name).toBe('arkgate');
+    expect(pkg.name).toBe('structrail');
     expect(pkg.version).toBe(version);
     expect(lock.version).toBe(version);
     expect(lock.packages[''].version).toBe(version);

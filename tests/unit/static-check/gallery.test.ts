@@ -58,10 +58,10 @@ describe('Phase D — example gallery starters', () => {
         devDependencies?: Record<string, string>;
       };
       expect(pkg.scripts.check).toBe(
-        'ark-check --root . --config ark.config.json --strict-config'
+        'structrail-check --root . --config ark.config.json --strict-config'
       );
       expect(pkg.scripts.check).not.toContain('../..');
-      expect(pkg.devDependencies?.['arkgate']).toBeDefined();
+      expect(pkg.devDependencies?.['structrail']).toBeDefined();
     });
   }
 
@@ -74,10 +74,15 @@ describe('Phase D — example gallery starters', () => {
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as {
       devDependencies: Record<string, string>;
     };
-    pkg.devDependencies['arkgate'] = `file:${REPO}`;
+    pkg.devDependencies['structrail'] = `file:${REPO}`;
+    pkg.devDependencies.typescript = `file:${path.join(REPO, 'node_modules', 'typescript')}`;
     fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
 
-    execSync('npm install --ignore-scripts', { cwd: tmp, stdio: 'pipe' });
+    execSync('npm install --ignore-scripts --offline --no-audit --no-fund', {
+      cwd: tmp,
+      stdio: 'pipe',
+      env: { ...process.env, npm_config_cache: path.join(tmp, '.npm-cache') },
+    });
     const out = execSync('npm run check', { cwd: tmp, encoding: 'utf8' });
     expect(out).toContain('Ark check passed');
   }, 60_000);

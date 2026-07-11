@@ -94,12 +94,17 @@ import {
 } from './lib/config-warnings.mjs';
 import { runArchitectureScan } from './lib/architecture-scan.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
+import {
+  isStructrailInvocation,
+  resolveConfigIdentity,
+} from './lib/product-identity.mjs';
 
 
 function parseArgs(argv) {
   const args = {
     root: process.cwd(),
-    config: 'ark.config.json',
+    config: undefined,
+    configExplicit: false,
     manifest: undefined,
     printConfig: undefined,
     tsconfig: undefined,
@@ -199,7 +204,10 @@ function parseArgs(argv) {
       args.baseline = next && !next.startsWith('-') ? argv[++i] : '.ark-baseline.json';
     }
     else if (arg === '--root') args.root = path.resolve(requireValue(arg, i++));
-    else if (arg === '--config') args.config = requireValue(arg, i++);
+    else if (arg === '--config') {
+      args.config = requireValue(arg, i++);
+      args.configExplicit = true;
+    }
     else if (arg === '--manifest') args.manifest = requireValue(arg, i++);
     else if (arg === '--print-config') args.printConfig = requireValue(arg, i++);
     else if (arg === '--tsconfig') args.tsconfig = requireValue(arg, i++);
@@ -913,6 +921,32 @@ async function main() {
     console.log(usage());
     return;
   }
+
+  const configIdentity = resolveConfigIdentity({
+    root: args.root,
+    requested: args.config,
+    explicit: args.configExplicit,
+    primary: isStructrailInvocation(),
+  });
+  if (configIdentity.error) {
+    const payload = {
+      ok: false,
+      error: configIdentity.error,
+      message: configIdentity.message,
+      paths: configIdentity.paths,
+    };
+    if (args.json) console.log(JSON.stringify(payload, null, 2));
+    else console.error(configIdentity.message);
+    process.exitCode = 2;
+    return;
+  }
+  args.config = configIdentity.config;
+  args.identityDeprecations = configIdentity.deprecations;
+  if (!args.json) {
+    for (const deprecation of args.identityDeprecations) {
+      console.error(`warning ${deprecation.code} ${deprecation.message}`);
+    }
+  }
   if (args.init) {
     runInit(args);
     return;
@@ -1348,6 +1382,9 @@ async function main() {
       suppressedViolations: suppressed.length,
       staleBaselineKeys,
       warnings,
+      ...(args.identityDeprecations.length > 0
+        ? { deprecations: args.identityDeprecations }
+        : {}),
       ...(activeViolations.length > 0 ? { summary: summarizeViolations(activeViolations) } : {}),
       ...(skillGaps.length > 0 ? { skillGaps } : {}),
       ...(codexHomeGap ? { codexHomeGap } : {}),
@@ -1476,6 +1513,7 @@ async function main() {
 async function runWatchMode(args) {
   const argv = process.argv.slice(2).filter((token) => token !== '--watch');
   let debounce;
+  let polling = false;
   const rerun = () => {
     clearTimeout(debounce);
     debounce = setTimeout(() => {
@@ -1497,13 +1535,34 @@ async function runWatchMode(args) {
     return;
   }
 
+  const startPollingFallback = (error) => {
+    if (polling) return;
+    polling = true;
+    console.error(
+      `warning native recursive watch failed (${error?.code ?? 'unknown'}); ` +
+        'falling back to file polling.'
+    );
+    for (const file of collectGovernedFiles(args.root, config)) {
+      fs.watchFile(file, { interval: 250 }, (current, previous) => {
+        if (current.mtimeMs !== previous.mtimeMs || current.size !== previous.size) rerun();
+      });
+    }
+    // The native watcher may fail after the triggering edit. Scan once immediately so the
+    // transition to polling cannot swallow that change.
+    rerun();
+  };
+
   for (const entry of config.include ?? []) {
     const target = path.join(args.root, entry);
     if (!fs.existsSync(target)) continue;
     try {
-      fs.watch(target, { recursive: true }, rerun);
-    } catch {
-      fs.watch(target, rerun);
+      const watcher = fs.watch(target, { recursive: true }, rerun);
+      watcher.on('error', (error) => {
+        watcher.close();
+        startPollingFallback(error);
+      });
+    } catch (error) {
+      startPollingFallback(error);
     }
   }
 

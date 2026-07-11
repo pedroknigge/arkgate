@@ -52,7 +52,12 @@ function pack(cwd: string, destination: string) {
     {
       cwd,
       encoding: 'utf8',
-      env: { ...process.env, npm_config_cache: path.join(tmp, 'npm-cache') },
+      timeout: 30_000,
+      env: {
+        ...process.env,
+        npm_config_cache: path.join(tmp, 'npm-cache'),
+        npm_config_ignore_scripts: 'true',
+      },
     }
   ).trim();
   return path.join(destination, output.split(/\r?\n/).at(-1)!);
@@ -147,6 +152,7 @@ describe('Structrail v3 identity and ArkGate compatibility contract', () => {
       primaryTarball = pack(root, packs);
     });
     const legacyTarball = pack(path.join(root, 'compat', 'arkgate'), packs);
+    const typescriptTarball = pack(path.join(root, 'node_modules', 'typescript'), packs);
     execFileSync(
       'npm',
       [
@@ -155,12 +161,15 @@ describe('Structrail v3 identity and ArkGate compatibility contract', () => {
         '--no-audit',
         '--no-fund',
         '--package-lock=false',
+        '--offline',
         primaryTarball,
         legacyTarball,
+        typescriptTarball,
       ],
       {
         cwd: consumer,
         stdio: 'pipe',
+        timeout: 60_000,
         env: { ...process.env, npm_config_cache: path.join(tmp, 'npm-cache') },
       }
     );
@@ -209,5 +218,16 @@ describe('Structrail v3 identity and ArkGate compatibility contract', () => {
     }).trim();
     expect(primaryVersion).toBe('3.0.0');
     expect(legacyVersion).toBe(primaryVersion);
+
+    const primaryCliVersion = execFileSync(localBin(consumer, 'structrail'), ['--version'], {
+      cwd: consumer,
+      encoding: 'utf8',
+    }).trim();
+    const legacyCliVersion = execFileSync(localBin(consumer, 'arkgate'), ['--version'], {
+      cwd: consumer,
+      encoding: 'utf8',
+    }).trim();
+    expect(primaryCliVersion).toBe(primaryVersion);
+    expect(legacyCliVersion).toBe(primaryVersion);
   }, 120_000);
 });

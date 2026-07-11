@@ -22,7 +22,8 @@ import { pinArkgateDevDependency, FALSE_GREEN_GAP_ID } from './lib/field-install
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const arkCheck = path.join(here, 'ark-check.mjs');
+const primaryInvocation = path.basename(process.argv[1] ?? '').startsWith('structrail');
+const arkCheck = path.join(here, primaryInvocation ? 'structrail-check.mjs' : 'ark-check.mjs');
 
 /**
  * Day-zero architecture picture: freeze origin under `.ark/reports/` as soon as
@@ -695,10 +696,10 @@ async function start(args) {
   }
 }
 
-async function main() {
+export async function runArkCli(argv = process.argv) {
   let args;
   try {
-    args = parseArgs(process.argv);
+    args = parseArgs(argv);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     return 2;
@@ -768,5 +769,5 @@ const isMain =
   Boolean(process.argv[1]) &&
   path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
 if (isMain) {
-  process.exitCode = await main();
+  process.exitCode = await runArkCli();
 }

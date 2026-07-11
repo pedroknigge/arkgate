@@ -1,7 +1,7 @@
 {
-  "name": "arkgate",
-  "version": "2.12.0",
-  "description": "ArkGate — architecture co-pilot for AI TypeScript (write gate, CI gate, plan/loop)",
+  "name": "structrail",
+  "version": "3.0.0",
+  "description": "Structrail — architecture guardrails for AI TypeScript (write gate, CI gate, plan/loop)",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -30,14 +30,11 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "arkgate": "bin/ark.mjs",
-    "arkgate-check": "bin/ark-check.mjs",
-    "arkgate-mcp": "bin/ark-mcp.mjs",
-    "ark": "bin/ark.mjs",
-    "ark-check": "bin/ark-check.mjs",
-    "ark-mcp": "bin/ark-mcp.mjs"
+    "structrail": "bin/structrail.mjs",
+    "structrail-check": "bin/structrail-check.mjs",
+    "structrail-mcp": "bin/structrail-mcp.mjs"
   },
-  "mcpName": "io.github.pedroknigge/arkgate",
+  "mcpName": "io.github.pedroknigge/structrail",
   "files": [
     "bin",
     "bin/lib",
@@ -132,7 +129,7 @@
     "node": ">=18"
   },
   "keywords": [
-    "arkgate",
+    "structrail",
     "architecture",
     "architecture-gate",
     "ai-agents",

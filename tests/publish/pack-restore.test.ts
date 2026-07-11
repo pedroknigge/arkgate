@@ -39,7 +39,7 @@ describe('publish manifest', () => {
     expect(p.scripts.prepack).toBe('npm run build');
   });
 
-  it('npm pack ships bin + dist + dual CLIs and typescript host dep', () => {
+  it('npm pack ships bin + dist + Structrail CLIs and typescript host dep', () => {
     // prepack rebuilds dist/, which races with the MCP suite's build — serialize.
     withDistLock(() => run('npm', ['pack', '--pack-destination', tmp, '--silent']));
 
@@ -70,9 +70,13 @@ describe('publish manifest', () => {
       import: './dist/runtime/index.js',
       require: './dist/runtime/index.cjs',
     });
-    expect(inner.bin['arkgate-check']).toBe('bin/ark-check.mjs');
-    expect(inner.bin['ark-check']).toBe('bin/ark-check.mjs');
-    expect(fs.existsSync(path.join(extract, 'package', 'bin', 'ark-check.mjs'))).toBe(true);
+    expect(inner.bin['structrail-check']).toBe('bin/structrail-check.mjs');
+    expect(Object.keys(inner.bin).sort()).toEqual([
+      'structrail',
+      'structrail-check',
+      'structrail-mcp',
+    ]);
+    expect(fs.existsSync(path.join(extract, 'package', 'bin', 'structrail-check.mjs'))).toBe(true);
     expect(fs.existsSync(path.join(extract, 'package', 'dist', 'eslint', 'index.js'))).toBe(true);
     expect(fs.existsSync(path.join(extract, 'package', 'dist', 'runtime', 'index.js'))).toBe(true);
     expect(fs.existsSync(path.join(extract, 'package', 'docs', 'typescript-support.md'))).toBe(true);

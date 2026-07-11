@@ -30,12 +30,12 @@ function lineCount(rel: string): number {
 }
 
 describe('ark-check entry slim-down (R3)', () => {
-  it('package bins still point at bin/ark-check.mjs', () => {
+  it('the primary bin points at the Structrail wrapper and keeps the slim implementation', () => {
     const pkg = JSON.parse(
       fs.readFileSync(path.join(root, 'package.json'), 'utf8')
     ) as { bin: Record<string, string> };
-    expect(pkg.bin['arkgate-check']).toBe('bin/ark-check.mjs');
-    expect(pkg.bin['ark-check']).toBe('bin/ark-check.mjs');
+    expect(pkg.bin['structrail-check']).toBe('bin/structrail-check.mjs');
+    expect(fs.existsSync(path.join(root, 'bin/structrail-check.mjs'))).toBe(true);
     expect(fs.existsSync(entry)).toBe(true);
   });
 

@@ -64,11 +64,17 @@ describe('Q6 module budgets (scripts/check-module-budgets.mjs)', () => {
 });
 
 describe('Q6 surface parity (preferred bins + skills)', () => {
-  it('hook templates and package bins agree on arkgate-* product names', () => {
+  it('uses Structrail primary bins while the explicit v3 compatibility surface stays intact', () => {
     const hooks = fs.readFileSync(path.join(REPO, 'bin/lib/hook-templates.mjs'), 'utf8');
     const pkg = JSON.parse(fs.readFileSync(path.join(REPO, 'package.json'), 'utf8'));
-    expect(pkg.bin['arkgate-check']).toBe('bin/ark-check.mjs');
-    expect(pkg.bin['arkgate-mcp']).toBe('bin/ark-mcp.mjs');
+    const legacy = JSON.parse(
+      fs.readFileSync(path.join(REPO, 'compat/arkgate/package.json'), 'utf8')
+    );
+    expect(pkg.bin['structrail-check']).toBe('bin/structrail-check.mjs');
+    expect(pkg.bin['structrail-mcp']).toBe('bin/structrail-mcp.mjs');
+    expect(legacy.bin['arkgate-check']).toBe('bin/arkgate-check.mjs');
+    expect(legacy.bin['arkgate-mcp']).toBe('bin/arkgate-mcp.mjs');
+    // M5 migrates generated hooks; until then they deliberately target the compatibility package.
     expect(hooks).toMatch(/PREFERRED_MCP_BIN\s*=\s*['"]arkgate-mcp['"]/);
     // Skills template list includes upgrade
     expect(fs.existsSync(path.join(REPO, 'templates/skills/ark-upgrade.md'))).toBe(true);

@@ -262,7 +262,7 @@ async function waitForOutput(
     if (matched) return text;
     await new Promise((r) => setTimeout(r, 100));
   }
-  throw new Error(`Timed out waiting for output: ${pattern}`);
+  throw new Error(`Timed out waiting for output: ${pattern}\n${chunks.join('')}`);
 }
 
 describe('Phase B — watch mode', () => {
@@ -284,14 +284,16 @@ describe('Phase B — watch mode', () => {
     child.stdout?.on('data', (chunk: Buffer) => chunks.push(chunk.toString()));
     child.stderr?.on('data', (chunk: Buffer) => chunks.push(chunk.toString()));
 
-    const beforeTouch = await waitForOutput(chunks, 'Watching governed paths');
+    try {
+      const beforeTouch = await waitForOutput(chunks, 'Watching governed paths');
 
-    const target = path.join(root, 'src/domain/order.ts');
-    fs.writeFileSync(target, "import { db } from '../infra/db';\nexport const a = db;\n");
+      const target = path.join(root, 'src/domain/order.ts');
+      fs.writeFileSync(target, "import { db } from '../infra/db';\nexport const a = db;\n");
 
-    const afterTouch = await waitForOutput(chunks, /violation|LAYER_IMPORT|✖/i, 10_000);
-    child.kill('SIGTERM');
-
-    expect(afterTouch.length).toBeGreaterThan(beforeTouch.length);
+      const afterTouch = await waitForOutput(chunks, /violation|LAYER_IMPORT|✖/i, 10_000);
+      expect(afterTouch.length).toBeGreaterThan(beforeTouch.length);
+    } finally {
+      child.kill('SIGTERM');
+    }
   }, 20_000);
 });

@@ -1,0 +1,71 @@
+{
+  "name": "arkgate",
+  "version": "3.0.0",
+  "description": "Deprecated compatibility package for Structrail",
+  "deprecated": "ArkGate was renamed to Structrail. Install structrail instead; compatibility remains through v3.",
+  "type": "module",
+  "main": "./index.cjs",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "require": "./index.cjs"
+    },
+    "./runtime": {
+      "types": "./runtime/index.d.ts",
+      "import": "./runtime/index.js",
+      "require": "./runtime/index.cjs"
+    },
+    "./eslint": {
+      "types": "./eslint/index.d.ts",
+      "import": "./eslint/index.js",
+      "require": "./eslint/index.cjs"
+    },
+    "./nestjs": {
+      "types": "./nestjs/index.d.ts",
+      "import": "./nestjs/index.js",
+      "require": "./nestjs/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "arkgate": "bin/arkgate.mjs",
+    "arkgate-check": "bin/arkgate-check.mjs",
+    "arkgate-mcp": "bin/arkgate-mcp.mjs",
+    "ark": "bin/arkgate.mjs",
+    "ark-check": "bin/arkgate-check.mjs",
+    "ark-mcp": "bin/arkgate-mcp.mjs"
+  },
+  "files": [
+    "bin",
+    "eslint",
+    "nestjs",
+    "runtime",
+    "index.js",
+    "index.cjs",
+    "index.d.ts",
+    "README.md"
+  ],
+  "dependencies": {
+    "structrail": "3.0.0"
+  },
+  "peerDependencies": {
+    "@nestjs/common": ">=9"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/common": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pedroknigge/arkgate.git",
+    "directory": "compat/arkgate"
+  }
+}

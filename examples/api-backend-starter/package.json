@@ -5,9 +5,9 @@
   "description": "Phase-1 scaffold for an API server without UI (api-backend archetype)",
   "type": "module",
   "scripts": {
-    "check": "ark-check --root . --config ark.config.json --strict-config"
+    "check": "structrail-check --root . --config ark.config.json --strict-config"
   },
   "devDependencies": {
-    "arkgate": "^1.14.0"
+    "structrail": "^3.0.0"
   }
 }
