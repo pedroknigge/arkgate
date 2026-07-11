@@ -4,8 +4,14 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+## 2.13.0 — 2026-07-11
+
 ### Fixed
 
+- **Temp-worktree release verification:** Codex multi-project fixtures now keep the simulated
+  primary project outside temp-root policy even when the repository itself is checked out under
+  `/tmp`, so the release confidence gate is reproducible without weakening fail-closed temp MCP
+  rewrites.
 - **Test and Codex-home isolation:** Vitest now redirects `CODEX_HOME` to a disposable test home,
   so direct helper calls and spawned CLIs cannot rewrite the developer's real Codex config. Temp
   project installs also recognize an explicitly exported default `~/.codex` as the real home and

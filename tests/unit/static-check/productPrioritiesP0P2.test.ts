@@ -29,6 +29,11 @@ function mk() {
   return root;
 }
 
+/** Stable path string for permanent-project policy tests; no files are written there. */
+function permanentProjectPath(...parts: string[]) {
+  return path.join(path.parse(process.cwd()).root, 'arkgate-test-workspaces', ...parts);
+}
+
 afterEach(() => {
   for (const t of temps) {
     try {
@@ -351,17 +356,12 @@ describe('P2 soft cycles + codex multi', () => {
   });
 
   it('wireCodexMcp multi-project writes secondary table without force', () => {
-    // Use non-temp paths: isTempOrUpgradeRoot treats /var/folders as temp and rewrites primary.
     const base = path.join(process.cwd(), '.tmp-p0p2-codex-multi');
     fs.rmSync(base, { recursive: true, force: true });
-    const rootA = path.join(base, 'proj-a');
-    const rootB = path.join(base, 'proj-b');
+    const rootA = permanentProjectPath('p0p2-codex-multi', 'proj-a');
+    const rootB = permanentProjectPath('p0p2-codex-multi', 'proj-b');
     const codexHome = path.join(base, 'codex-home');
-    fs.mkdirSync(rootA, { recursive: true });
-    fs.mkdirSync(rootB, { recursive: true });
     fs.mkdirSync(codexHome, { recursive: true });
-    fs.writeFileSync(path.join(rootA, 'ark.config.json'), '{}');
-    fs.writeFileSync(path.join(rootB, 'ark.config.json'), '{}');
     const prev = process.env.CODEX_HOME;
     process.env.CODEX_HOME = codexHome;
     try {
