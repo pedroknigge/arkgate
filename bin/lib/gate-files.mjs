@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { generationIdentityForRoot } from './product-identity.mjs';
 
 export const __packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const __arkCheckCli = path.join(__packageRoot, 'bin', 'ark-check.mjs');
@@ -118,8 +119,6 @@ export const REQUIRED_GATE_FILES = [
   'AGENTS.md',
   '.mcp.json',
 ];
-const REQUIRED_GATE_WORKFLOW = '.github/workflows/*.yml running ark-check';
-
 export function hasArkWorkflow(root) {
   const workflowsDir = path.join(root, '.github', 'workflows');
   if (!fs.existsSync(workflowsDir)) return false;
@@ -142,10 +141,13 @@ export function hasArkWorkflow(root) {
 }
 
 export function missingGates(root) {
+  const identity = generationIdentityForRoot(root);
   const missing = REQUIRED_GATE_FILES.filter(
     (relativePath) => !fs.existsSync(path.join(root, relativePath))
   );
-  if (!hasArkWorkflow(root)) missing.push(REQUIRED_GATE_WORKFLOW);
+  if (!hasArkWorkflow(root)) {
+    missing.push(`.github/workflows/*.yml running ${identity.checkBin}`);
+  }
   return missing;
 }
 

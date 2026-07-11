@@ -94,12 +94,15 @@ import {
 } from './lib/config-warnings.mjs';
 import { runArchitectureScan } from './lib/architecture-scan.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
+import { checkUsage } from './lib/check-usage.mjs';
 import {
+  generationIdentity,
   isStructrailInvocation,
   resolveEnvironmentValue,
   resolveConfigIdentity,
 } from './lib/product-identity.mjs';
 
+const invocationIdentity = generationIdentity(isStructrailInvocation());
 
 function parseArgs(argv) {
   const args = {
@@ -139,7 +142,9 @@ function parseArgs(argv) {
   const requireValue = (flag, index) => {
     const value = argv[index + 1];
     if (value === undefined || value.startsWith('-')) {
-      throw new Error(`Missing value for ${flag}. Run ark-check --help for usage.`);
+      throw new Error(
+        `Missing value for ${flag}. Run ${invocationIdentity.checkBin} --help for usage.`
+      );
     }
     return value;
   };
@@ -214,7 +219,11 @@ function parseArgs(argv) {
     else if (arg === '--tsconfig') args.tsconfig = requireValue(arg, i++);
     else if (arg === '--help' || arg === '-h') args.help = true;
     else if (arg === '--version' || arg === '-V') args.version = true;
-    else throw new Error(`Unknown argument: ${arg}. Run ark-check --help for usage.`);
+    else {
+      throw new Error(
+        `Unknown argument: ${arg}. Run ${invocationIdentity.checkBin} --help for usage.`
+      );
+    }
   }
   return args;
 }
@@ -229,99 +238,7 @@ function displayPathFromRoot(root, absPath) {
 }
 
 function usage() {
-  return [
-    'Usage: arkgate-check | ark-check  (identical bins; product name ArkGate)',
-    '       ark-check --version',
-    '       ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-merge | --strict | --strict-config] [--require-gates] [--require-write-hook <host>] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
-    '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
-    '       ark-check --plan [--json]              classified remediation plan (mechanical-safe / judgment / deferred) + goal; report only',
-    '       ark-check --recommend [--json] [--write-plan]  application-shape plan; --write-plan emits ark-adoption-plan.json',
-    '       ark-check --list-policy-packs            enthusiast packs (hexagonal, layered, feature-sliced, monorepo, ui-surface, vertical-slice, ddd-bounded-contexts)',
-    '       ark-check --apply-policy-pack <id> [--force]  write ark.config.json from templates/policy-packs/ (uses preset factory)',
-    '       ark-check --suggest-include [--json]   propose include roots (TS packages / workspaces)',
-    '       ark-check --adopt-contract [--write]   expand include + UI patterns from ungoverned dirs (contract adopt)',
-    '       ark-check --ratchet-cores              when raw graph is green (0 violations; baseline ignored), set optional:false on populated cores only (writes ark.config.json)',
-    '       ark-check --watch                      re-run the check when governed files change (debounced)',
-    '       ark-check --report [file.html] [--beginner] [--reset-origin] [--no-archive] [--open|--no-open]',
-    '           HTML report + snapshots under .ark/reports/ (origin once, latest each run, history JSON)',
-    '           Best-effort open in browser (local TTY). No-op if open fails. --no-open / ARK_NO_OPEN_REPORT=1 to skip; --open forces open.',
-    '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture] [--force]',
-    '       ark-check --install-agent-gates [--tools claude,cursor,codex,grok] [--require-write-hook <host>] [--skills-only] [--codex-home] [--force]',
-    '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
-    '       ark-check --print-config eleven-layer',
-    '',
-    'Adopting Ark in an existing codebase? Run --update-baseline once to freeze existing',
-    'violations, commit the baseline file, and gate CI with --baseline: only NEW violations',
-    'fail the check, so the ratchet only moves toward zero.',
-    '',
-    '--init scans the project for the built-in layer directory conventions (src/domain,',
-    'src/application, src/adapters/persistence, ...) and writes an ark.config.json covering',
-    'only the layers that actually exist, with the default rules filtered to those layers.',
-    'Undetected profile layers are printed as suggestions with their conventional',
-    'directories. When nothing is detected, the full 11-layer starter profile is written',
-    'instead (all layers optional, anchored at src/), so the strict check passes today and',
-    'each layer starts being enforced as soon as its directory gains source files.',
-    '',
-    'Resolves relative, tsconfig path-alias, and package imports via the TypeScript',
-    'module resolver, then checks each resolved cross-layer import against the rules.',
-    'Path aliases resolve against the NEAREST tsconfig.json above each source file, so',
-    'monorepo packages with per-package configs work under a single --root. Pass',
-    '--tsconfig to force one config for every file. If no tsconfig is found, path',
-    'aliases are unavailable but relative/package imports still resolve.',
-    '',
-    'Parsed files are cached in node_modules/.cache/ark-check.json (keyed by mtime+size',
-    'and the config/manifest contents); import edges are always re-resolved against the',
-    'live filesystem, so the cache can never hide a new violation. --no-cache disables it.',
-    '',
-    'Config shape:',
-    '{',
-    '  "include": ["src"],',
-    '  // optional: "exclude": ["**/vendor/**"], "excludeGenerated": false  (default skips *.gen.ts / *.generated.ts)',
-    '  "layers": [',
-    '    { "name": "DomainModel", "patterns": ["src/domain/**"], "intentPrefixes": ["Domain."],',
-    '      "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"] }',
-    '  ],',
-    '  "rules": [{ "from": "DomainModel", "to": "PersistenceAdapters", "allowed": false }]',
-    '}',
-    '',
-    'Config warnings are advisory by default and are included in JSON output.',
-    'Use --strict-config to make config warnings fail the check.',
-    'Use --strict-merge for the fail-closed CI profile: --strict-config + --require-gates',
-    'plus the security diagnostics surfaced by doctor. --strict is a compatibility alias.',
-    'This merge profile never depends on an editor/agent hook.',
-    'Add --require-write-hook claude|grok to validate a hard local write boundary for that',
-    'specific host. Cursor and Codex expose advisory MCP tools plus the shared CI check;',
-    'merge blocking requires repository policy to make that status required.',
-    '',
-    '--require-gates fails the check when AGENTS.md, .mcp.json, or the generated CI',
-    'workflow is missing, so "installed but never configured" is a red CI. Combine it',
-    'with --strict-config to enforce gate presence and architecture in one run.',
-    '',
-    '--install-agent-gates writes AGENTS.md, .mcp.json, and the CI workflow for every',
-    'project, plus tool-specific templates. Known tools: claude, cursor, codex, grok',
-    '(Claude/Grok hard-write hooks; Cursor/Codex advisory MCP; shared CI check for all) and',
-    'windsurf, cline, copilot, kiro, roo, continue, gemini',
-    '(instruction-tier rule files derived from the same contract).',
-    'It also installs the /ark-* skills shipped in templates/skills/ into each',
-    'detected tool\'s command location (.claude/skills/, .cursor/commands/,',
-    '.codex/prompts/, .grok/skills/, .windsurf/workflows/, .clinerules/workflows/,',
-    '.github/prompts/).',
-    'Kiro, Roo, Continue, and Gemini have no command mechanism and receive only their',
-    'rule file. Existing files are never overwritten without --force, so re-running',
-    'after an update only adds what is missing. --skills-only restricts the write to',
-    'just the /ark-* skills (safe to --force-refresh — it leaves a customized AGENTS.md,',
-    'settings, and CI workflow untouched).',
-    'Pass --tools to pick which tool configs to write; otherwise they are auto-detected',
-    'from their config directories (.claude/, .cursor/, .codex/, .grok/, .windsurf/,',
-    '.clinerules/, .kiro/, .roo/, .continue/, .gemini/; copilot is explicit-only).',
-    'claude+cursor+codex+grok are written when nothing is detected.',
-    '',
-    'Generate a starter 11-layer config:',
-    '  ark-check --print-config eleven-layer > ark.config.json',
-    '',
-    'Install agent + CI enforcement templates:',
-    '  ark-check --install-agent-gates',
-  ].join('\n');
+  return checkUsage(invocationIdentity);
 }
 
 function readConfig(root, configPath) {
@@ -448,12 +365,14 @@ function proposeForUncovered(root, srcDir, layers) {
 function printInitNextSteps(root) {
   console.log('');
   console.log('Next steps:');
-  console.log(`  1. CI gate:        ${arkCheckCommand(root)}`);
-  console.log(`  2. AI write gate:  ${arkCommand(root, 'ark-mcp', '--root . --config ark.config.json')}`);
+  console.log(`  1. CI gate:        ${arkCheckCommand(root, invocationIdentity)}`);
+  console.log(
+    `  2. AI write gate:  ${arkCommand(root, invocationIdentity.mcpBin, `--root . --config ${invocationIdentity.configName}`)}`
+  );
   console.log('     (bind its validate_code tool to your agent\'s pre-write hook — see README)');
   if (!hasCheckArchitectureScript(root)) {
     console.log('  3. Add the package.json alias if you want `run check:architecture`:');
-    console.log(`     ${checkArchitectureScriptSnippet(root)}`);
+    console.log(`     ${checkArchitectureScriptSnippet(root, invocationIdentity)}`);
   }
 }
 
@@ -511,7 +430,7 @@ function runApplyPolicyPack(args) {
 
   if (fs.existsSync(configPath) && !args.force) {
     console.error(
-      `${configPath} already exists. Re-run with --force to overwrite, or use /ark-contract to evolve it.`
+      `${configPath} already exists. Re-run with --force to overwrite, or use /${invocationIdentity.skillPrefix}-contract to evolve it.`
     );
     process.exitCode = 2;
     return;
@@ -537,7 +456,9 @@ function runApplyPolicyPack(args) {
     } else {
       console.log(`Wrote ${configPath} (${pack.label})`);
       console.log(`Preset: ${pack.preset}. Phase 1: ${(pack.phases?.['1'] ?? []).join(', ')}`);
-      console.log(`Verify: ${arkCommand(args.root, 'ark-check', '--root . --config ark.config.json --strict-config')}`);
+      console.log(
+        `Verify: ${arkCommand(args.root, invocationIdentity.checkBin, `--root . --config ${invocationIdentity.configName} --strict-config`)}`
+      );
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -584,9 +505,15 @@ function maybeWarnBrownfield(root, config) {
   console.log('usually a thin slice, and a broad domain glob can mis-flag framework internals as');
   console.log('impure domain code (a contract mismatch, not real debt). For a contract aligned to');
   console.log('your actual structure — governing more, with only genuine debt frozen — run adoption:');
-  console.log(`  ${arkCommand(root, 'ark-check', '--recommend --write-plan')}   # plan + ark-adoption-plan.json`);
-  console.log('  then run /ark-adopt in your agent   # re-scope layers to reality, freeze real debt only');
-  console.log(`Inspect what is governed right now: ${arkCommand(root, 'ark-check', '--coverage')}`);
+  console.log(
+    `  ${arkCommand(root, invocationIdentity.checkBin, '--recommend --write-plan')}   # plan + ark-adoption-plan.json`
+  );
+  console.log(
+    `  then run /${invocationIdentity.skillPrefix}-adopt in your agent   # re-scope layers to reality, freeze real debt only`
+  );
+  console.log(
+    `Inspect what is governed right now: ${arkCommand(root, invocationIdentity.checkBin, '--coverage')}`
+  );
   return true;
 }
 
@@ -604,7 +531,7 @@ function runSuggestInclude(args) {
     note:
       include.length === 0 && tsPackages.length === 0
         ? 'No TS packages or workspaces found — default suggestion is src/ (create it or pass include by hand).'
-        : 'Use these paths as ark.config.json "include". Prefer --adopt-contract --write to expand patterns too.',
+        : `Use these paths as ${invocationIdentity.configName} "include". Prefer --adopt-contract --write to expand patterns too.`,
   };
   if (args.json) {
     console.log(JSON.stringify(payload, null, 2));
@@ -714,7 +641,11 @@ function runAdoptContract(args) {
   console.log(`  presentation patterns += ${uiPatterns.join(', ')}`);
   if (proposal.wrote) {
     console.log(color.green(`  wrote ${path.relative(root, configPath) || args.config}`));
-    console.log(color.dim(`  Next: ${arkCommand(root, 'ark-check', '--coverage')} then --plan`));
+    console.log(
+      color.dim(
+        `  Next: ${arkCommand(root, invocationIdentity.checkBin, '--coverage')} then --plan`
+      )
+    );
   } else {
     console.log(color.dim('  Dry-run only. Re-run with --write to apply (does not weaken rules).'));
   }
@@ -769,7 +700,9 @@ function runInit(args) {
     if (args.preset === 'monorepo') {
       console.log('');
       console.log(`include: ${finalConfig.include.join(', ')} — patterns match by directory name in any`);
-      console.log(`package; adjust to your naming, then verify: ${arkCommand(args.root, 'ark-check', '--coverage')}`);
+      console.log(
+        `package; adjust to your naming, then verify: ${arkCommand(args.root, invocationIdentity.checkBin, '--coverage')}`
+      );
     }
     maybeWarnBrownfield(args.root, finalConfig);
     printInitNextSteps(args.root);
@@ -820,7 +753,9 @@ function runInit(args) {
       console.log(`  ${layer.name}: ${layer.patterns.join(', ')}`);
     }
     console.log('');
-    console.log(`Verify what each layer actually governs: ${arkCommand(args.root, 'ark-check', '--coverage')}`);
+    console.log(
+      `Verify what each layer actually governs: ${arkCommand(args.root, invocationIdentity.checkBin, '--coverage')}`
+    );
   } else if (mode === 'greenfield') {
     console.log('No conventional layer directories found — generated the full 11-layer starter');
     console.log('profile instead. Every layer is marked optional, so the strict check passes now');
@@ -862,11 +797,15 @@ function runInit(args) {
       const recognized = proposals.filter((p) => !p.unrecognized);
       const unrecognized = proposals.filter((p) => p.unrecognized);
       console.log('');
-      console.log('Ungoverned directories — Ark enforces NOTHING here until they are classified.');
+      console.log(
+        `Ungoverned directories — ${invocationIdentity.productName} enforces NOTHING here until they are classified.`
+      );
       console.log('A green check ignores this code; it is not "clean", it is unchecked.');
       if (recognized.length > 0) {
         console.log('');
-        console.log('Proposed layer for each (from the 11-layer profile + presets — apply via /ark-contract):');
+        console.log(
+          `Proposed layer for each (from the 11-layer profile + presets — apply via /${invocationIdentity.skillPrefix}-contract):`
+        );
         for (const p of recognized) {
           const alt = p.alternatives?.length ? ` (or ${p.alternatives.join(' / ')} — confirm)` : '';
           console.log(`  ${p.dir}/ → ${p.layer}${alt}`);
@@ -884,7 +823,9 @@ function runInit(args) {
       );
       if (fit) {
         console.log('');
-        console.log(`Closest starter model: ${fit.name} — \`ark init --preset ${fit.name} --force\` to start from its rule set.`);
+        console.log(
+          `Closest starter model: ${fit.name} — \`${invocationIdentity.cliBin} init --preset ${fit.name} --force\` to start from its rule set.`
+        );
       }
     }
   }
@@ -1020,7 +961,7 @@ async function main() {
       if (args.json) {
         console.log(JSON.stringify({ ok: false, error: message }, null, 2));
       } else {
-        console.error(`ark-check --recommend failed: ${message}`);
+        console.error(`${invocationIdentity.checkBin} --recommend failed: ${message}`);
       }
       process.exitCode = 2;
     }
@@ -1066,7 +1007,7 @@ async function main() {
       if (args.json) {
         console.log(JSON.stringify(payload, null, 2));
       } else {
-        console.error('Ark gates are not installed. Missing:');
+        console.error(`${invocationIdentity.productName} gates are not installed. Missing:`);
         for (const relativePath of missing) {
           console.error(`  - ${relativePath}`);
         }
@@ -1074,7 +1015,7 @@ async function main() {
           ? `--install-agent-gates --tools ${writeRequest.host} --require-write-hook ${writeRequest.host}`
           : '--install-agent-gates';
         console.error(
-          `\nRun \`${arkCommand(args.root, 'ark', 'init')}\` (or \`${arkCommand(args.root, 'ark-check', installArgs)}\`) to configure enforcement.`
+          `\nRun \`${arkCommand(args.root, invocationIdentity.cliBin, 'init')}\` (or \`${arkCommand(args.root, invocationIdentity.checkBin, installArgs)}\`) to configure enforcement.`
         );
       }
       process.exitCode = 1;
@@ -1086,10 +1027,15 @@ async function main() {
     // callers still get a clear signal from the exit code and the human-mode line.
     if (!args.json) {
       if (args.requireGates) {
-        console.log('Ark gates present (merge profile): ' + REQUIRED_GATE_FILES.join(', '));
+        console.log(
+          `${invocationIdentity.productName} gates present (merge profile): ` +
+            REQUIRED_GATE_FILES.join(', ')
+        );
       }
       if (writeRequest?.host) {
-        console.log(`Ark hard-write hook present for ${writeRequest.host}.`);
+        console.log(
+          `${invocationIdentity.productName} hard-write hook present for ${writeRequest.host}.`
+        );
       }
     }
   }
@@ -1103,7 +1049,7 @@ async function main() {
   // --coverage is a pure glob/report view (no TypeScript resolver), so serve it BEFORE the
   // TS import: the report must work — and exit 0 — even when typescript isn't installed.
   if (args.coverage) {
-    runCoverage(root, config, files, rules, args.json);
+    runCoverage(root, config, files, rules, args.json, invocationIdentity);
     return;
   }
 
@@ -1121,11 +1067,18 @@ async function main() {
           )
         );
       }
-      runPlan(root, [], args.json, cov.governed.percent, cov.governed.totalFiles);
+      runPlan(
+        root,
+        [],
+        args.json,
+        cov.governed.percent,
+        cov.governed.totalFiles,
+        invocationIdentity
+      );
       return;
     }
     console.error(
-      `ark-check requires a JS-API TypeScript (5.x–7.x with ts.sys). Install with: ${installDevHint(root, 'typescript')} — see docs/typescript-support.md`
+      `${invocationIdentity.checkBin} requires a JS-API TypeScript (5.x–7.x with ts.sys). Install with: ${installDevHint(root, 'typescript')} — see docs/typescript-support.md`
     );
     process.exitCode = 2;
     return;
@@ -1142,7 +1095,7 @@ async function main() {
   if (debugTypescript === '1' && !args.json) {
     console.log(
       color.dim(
-        `[ark-check] TypeScript ${loaded.version ?? '?'} via ${loaded.source}` +
+        `[${invocationIdentity.checkBin}] TypeScript ${loaded.version ?? '?'} via ${loaded.source}` +
           (loaded.fallbackReason ? ' (fallback)' : '')
       )
     );
@@ -1163,6 +1116,7 @@ async function main() {
       configPath: path.isAbsolute(args.config) ? args.config : path.join(root, args.config),
       configMissing: !fs.existsSync(path.isAbsolute(args.config) ? args.config : path.join(root, args.config)),
       safety,
+      identity: invocationIdentity,
     });
     return;
   }
@@ -1183,7 +1137,9 @@ async function main() {
       printViolationBreakdown(summary, { toStderr: true });
       console.error('');
       console.error('Freezing this would bury a likely CONTRACT bug as "debt". Fix the contract');
-      console.error('first (/ark-contract), then re-run. To freeze anyway: --update-baseline --force.');
+      console.error(
+        `first (/${invocationIdentity.skillPrefix}-contract), then re-run. To freeze anyway: --update-baseline --force.`
+      );
       process.exitCode = 2;
       return;
     }
@@ -1202,7 +1158,9 @@ async function main() {
       } else {
         console.log('No violations to freeze — baseline not written (zero debt).');
       }
-      console.log('Gate with: ark-check --root . --config ark.config.json --strict-config');
+      console.log(
+        `Gate with: ${invocationIdentity.checkBin} --root . --config ${invocationIdentity.configName} --strict-config`
+      );
       return;
     }
     const { fullPath, count } = writeBaseline(root, baselineName, violations);
@@ -1224,7 +1182,9 @@ async function main() {
         'No existing check scripts/workflows needed a --baseline patch (add check:architecture or re-run --install-agent-gates).'
       );
     }
-    console.log('Commit it and gate CI with: ark-check --baseline (only NEW violations fail).');
+    console.log(
+      `Commit it and gate CI with: ${invocationIdentity.checkBin} --baseline (only NEW violations fail).`
+    );
     if (summary.total > 0) printViolationBreakdown(summary);
     return;
   }
@@ -1244,7 +1204,7 @@ async function main() {
       warnings.push(
         configWarning(
           'BASELINE_NOT_FOUND',
-          `Baseline file not found: ${baseline.fullPath}. Generate it with: ark-check --update-baseline`
+          `Baseline file not found: ${baseline.fullPath}. Generate it with: ${invocationIdentity.checkBin} --update-baseline`
         )
       );
     }
@@ -1257,7 +1217,14 @@ async function main() {
 
   if (args.plan) {
     const cov = computeCoverage(root, config, files, rules);
-    runPlan(root, activeViolations, args.json, cov.governed.percent, cov.governed.totalFiles);
+    runPlan(
+      root,
+      activeViolations,
+      args.json,
+      cov.governed.percent,
+      cov.governed.totalFiles,
+      invocationIdentity
+    );
     return;
   }
 
@@ -1409,25 +1376,27 @@ async function main() {
     if (staleBaselineKeys > 0) {
       console.error(
         color.dim(
-          `${staleBaselineKeys} baseline entr(y/ies) no longer occur — tighten the ratchet with: ark-check --update-baseline`
+          `${staleBaselineKeys} baseline entr(y/ies) no longer occur — tighten the ratchet with: ${invocationIdentity.checkBin} --update-baseline`
         )
       );
     }
     if (activeViolations.length === 0) {
       const advisoryOnly = warnings.length > 0 && strictWarnings.length === 0;
       if (warnings.length === 0) {
-        console.log(`${color.green('✔')} Ark check passed.${baselineNote}`);
+        console.log(
+          `${color.green('✔')} ${invocationIdentity.productName} check passed.${baselineNote}`
+        );
       } else if (args.strictConfig && strictWarnings.length > 0) {
         console.error(
-          `${color.red('✖')} Ark check failed with ${strictWarnings.length} config warning(s).${baselineNote}`
+          `${color.red('✖')} ${invocationIdentity.productName} check failed with ${strictWarnings.length} config warning(s).${baselineNote}`
         );
       } else if (advisoryOnly) {
         console.log(
-          `${color.green('✔')} Ark check passed with ${warnings.length} advisory warning(s).${baselineNote}`
+          `${color.green('✔')} ${invocationIdentity.productName} check passed with ${warnings.length} advisory warning(s).${baselineNote}`
         );
       } else {
         console.log(
-          `${color.green('✔')} Ark check passed with ${warnings.length} config warning(s).${baselineNote}`
+          `${color.green('✔')} ${invocationIdentity.productName} check passed with ${warnings.length} config warning(s).${baselineNote}`
         );
       }
     } else {
@@ -1449,8 +1418,8 @@ async function main() {
       if (missingTotal > 0) {
         console.log(
           color.dim(
-            `${missingTotal} /ark-* skill(s) not installed for ${tools} (this Ark version ships them). ` +
-              `Install: ${arkCommand(root, 'ark-check', '--install-agent-gates')}`
+            `${missingTotal} /${invocationIdentity.skillPrefix}-* skill(s) not installed for ${tools} (this ${invocationIdentity.productName} version ships them). ` +
+              `Install: ${arkCommand(root, invocationIdentity.checkBin, '--install-agent-gates')}`
           )
         );
       }
@@ -1460,8 +1429,8 @@ async function main() {
         // AGENTS.md / settings / CI untouched (a bare --force would clobber them).
         console.log(
           color.dim(
-            `${staleTotal} /ark-* skill(s) outdated for ${tools} (this Ark ships newer versions). ` +
-              `Refresh: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --force')}`
+            `${staleTotal} /${invocationIdentity.skillPrefix}-* skill(s) outdated for ${tools} (this ${invocationIdentity.productName} ships newer versions). ` +
+              `Refresh: ${arkCommand(root, invocationIdentity.checkBin, '--install-agent-gates --skills-only --force')}`
           )
         );
       }
@@ -1471,8 +1440,8 @@ async function main() {
     if (staleRunners.length > 0) {
       console.log(
         color.dim(
-          `Ark commands in ${staleRunners.join(', ')} use a runner that doesn't match this repo's ` +
-            `package manager. Fix (no clobber): ${arkCommand(root, 'ark-check', '--install-agent-gates --migrate-commands')}`
+          `${invocationIdentity.productName} commands in ${staleRunners.join(', ')} use a runner that doesn't match this repo's ` +
+            `package manager. Fix (no clobber): ${arkCommand(root, invocationIdentity.checkBin, '--install-agent-gates --migrate-commands')}`
         )
       );
     }
@@ -1481,8 +1450,8 @@ async function main() {
     if (brokenMcp.length > 0) {
       console.log(
         color.yellow(
-          `Broken MCP argv in ${brokenMcp.join(', ')}: more than one Structrail/ArkGate MCP bin in args ` +
-            `(stdio hosts get a double binary name). Fix: ${arkCommand(root, 'ark-check', '--install-agent-gates --migrate-commands')}`
+          `Broken MCP argv in ${brokenMcp.join(', ')}: more than one canonical/compatibility MCP bin in args ` +
+            `(stdio hosts get a double binary name). Fix: ${arkCommand(root, invocationIdentity.checkBin, '--install-agent-gates --migrate-commands')}`
         )
       );
     }
@@ -1500,10 +1469,10 @@ async function main() {
           : ' ';
       console.log(
         color.dim(
-          `/ark-* skills in ${codexPromptsDir()} are behind this Ark (${parts.join(', ')}).` +
+          `/${invocationIdentity.skillPrefix}-* skills in ${codexPromptsDir()} are behind this ${invocationIdentity.productName} (${parts.join(', ')}).` +
             deferredNote +
             `Codex loads them from $CODEX_HOME/prompts, not the repo. ` +
-            `When using Codex: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --codex-home --force')}`
+            `When using Codex: ${arkCommand(root, invocationIdentity.checkBin, '--install-agent-gates --skills-only --codex-home --force')}`
         )
       );
     }

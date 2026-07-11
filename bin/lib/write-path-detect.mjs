@@ -8,6 +8,7 @@
 import { arkCommand } from '../ark-shared.mjs';
 import { formatHostSupportSummary } from './host-support-matrix.mjs';
 import { buildWritePathCapabilityModel } from './write-path-capabilities.mjs';
+import { generationIdentityForRoot } from './product-identity.mjs';
 
 function installToolsForHost(activeHost) {
   return activeHost === 'unknown'
@@ -16,6 +17,7 @@ function installToolsForHost(activeHost) {
 }
 
 export function detectWritePathCapabilities(root, explicitHost) {
+  const identity = generationIdentityForRoot(root);
   const model = buildWritePathCapabilityModel(root, explicitHost);
   const { activeHost, support, capabilities, capabilityEvidence, inventory } = model;
   const hardWrite = capabilities['hard-write'];
@@ -35,13 +37,13 @@ export function detectWritePathCapabilities(root, explicitHost) {
       id: 'write-path-none',
       severity: 'warn',
       message:
-        `Active host ${activeHost} has no hard write boundary or advisory Ark MCP. ` +
+        `Active host ${activeHost} has no hard write boundary or advisory ${identity.productName} MCP. ` +
         (capabilities['merge-gate']
           ? 'The CI check remains separate and does not block local writes.'
-          : 'No Ark CI check was detected either.'),
+          : `No ${identity.productName} CI check was detected either.`),
       fix: arkCommand(
         root,
-        'ark-check',
+        identity.checkBin,
         `--install-agent-gates --tools ${tools}`
       ),
     };
@@ -56,7 +58,7 @@ export function detectWritePathCapabilities(root, explicitHost) {
           : 'Install its MCP surface or enable hook repair for guided re-entry.'),
       fix: arkCommand(
         root,
-        'ark-check',
+        identity.checkBin,
         `--install-agent-gates --tools ${tools} --force`
       ),
     };
@@ -69,7 +71,7 @@ export function detectWritePathCapabilities(root, explicitHost) {
         'but no hard write boundary; the CI check can still reject the change before merge.',
       fix: arkCommand(
         root,
-        'ark-check',
+        identity.checkBin,
         `--install-agent-gates --tools ${tools}`
       ),
     };

@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { arkCommand } from '../ark-shared.mjs';
+import { generationIdentityForRoot } from './product-identity.mjs';
 
 const PRECOMMIT_MARKERS = [
   'structrail-check',
@@ -172,6 +173,7 @@ export function isArkRequiredStatusCheck(root, requiredNames) {
  * @param {{ adopted?: boolean, isProducer?: boolean }} [opts]
  */
 export function detectConfigGateDrift(root, opts = {}) {
+  const identity = generationIdentityForRoot(root);
   const adopted =
     opts.adopted ?? fs.existsSync(path.join(root, 'AGENTS.md'));
   const isProducer =
@@ -192,8 +194,8 @@ export function detectConfigGateDrift(root, opts = {}) {
     issues.push({
       id: 'config-drift-agents-without-config',
       severity: 'warn',
-      message: 'AGENTS.md present but ark.config.json missing — gates cannot enforce the contract',
-      fix: arkCommand(root, 'ark', 'init'),
+      message: `AGENTS.md present but ${identity.configName} missing — gates cannot enforce the contract`,
+      fix: arkCommand(root, identity.cliBin, 'init'),
     });
   }
   if (hasConfig && !hasCheckScript && !isProducer) {
@@ -201,16 +203,16 @@ export function detectConfigGateDrift(root, opts = {}) {
       id: 'config-drift-no-check-script',
       severity: 'warn',
       message:
-        'ark.config.json exists but package.json has no check:architecture script (CI/local parity drift)',
-      fix: arkCommand(root, 'ark-check', '--install-agent-gates'),
+        `${identity.configName} exists but package.json has no check:architecture script (CI/local parity drift)`,
+      fix: arkCommand(root, identity.checkBin, '--install-agent-gates'),
     });
   }
   if (hasConfig && !hasAgents && !isProducer) {
     issues.push({
       id: 'config-drift-config-without-agents',
       severity: 'info',
-      message: 'ark.config.json without AGENTS.md — agent hosts may not see the write-gate contract',
-      fix: arkCommand(root, 'ark-check', '--install-agent-gates'),
+      message: `${identity.configName} without AGENTS.md — agent hosts may not see the write-gate contract`,
+      fix: arkCommand(root, identity.checkBin, '--install-agent-gates'),
     });
   }
   return { hasConfig, hasAgents, hasCheckScript, issues };

@@ -84,7 +84,7 @@ describe('Phase D — example gallery starters', () => {
       env: { ...process.env, npm_config_cache: path.join(tmp, '.npm-cache') },
     });
     const out = execSync('npm run check', { cwd: tmp, encoding: 'utf8' });
-    expect(out).toContain('Ark check passed');
+    expect(out).toContain('Structrail check passed');
   }, 60_000);
 
   it('gallery README indexes every starter archetype', () => {

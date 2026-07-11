@@ -25,6 +25,7 @@ import {
   violationEdge,
 } from './violations.mjs';
 import { buildUnclassifiedSuggestions } from './suggestions.mjs';
+import { ARK_GENERATION_IDENTITY } from './product-identity.mjs';
 
 const color = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
@@ -78,7 +79,7 @@ export function computeCoverage(root, config, files, rules) {
   };
 }
 
-export function runCoverage(root, config, files, rules, asJson) {
+export function runCoverage(root, config, files, rules, asJson, identity = ARK_GENERATION_IDENTITY) {
   const cov = computeCoverage(root, config, files, rules);
   if (asJson) {
     console.log(JSON.stringify({ ok: true, coverage: cov }, null, 2));
@@ -94,7 +95,7 @@ export function runCoverage(root, config, files, rules, asJson) {
     ...layerRows.map((row) => row.name.length)
   );
   const pad = (value) => value.padEnd(nameWidth);
-  console.log(`Ark coverage (include: ${(config.include ?? []).join(', ') || '.'}):`);
+  console.log(`${identity.productName} coverage (include: ${(config.include ?? []).join(', ') || '.'}):`);
   console.log('');
   console.log(`  ${pad('Layer')}  Files`);
   for (const row of layerRows) {
@@ -110,7 +111,7 @@ export function runCoverage(root, config, files, rules, asJson) {
   if (files.length > 0 && governed.percent < 50) {
     console.log('');
     console.log(
-      `⚠ Ark governs a MINORITY of your code (${governed.percent}%). A green check here does NOT`
+      `⚠ ${identity.productName} governs a MINORITY of your code (${governed.percent}%). A green check here does NOT`
     );
     console.log('  mean the codebase is checked — the rest is ungoverned. Classify the directories');
     console.log('  below to actually cover it.');
@@ -128,7 +129,9 @@ export function runCoverage(root, config, files, rules, asJson) {
       }
     }
     console.log('');
-    console.log('Apply these via /ark-contract (adds the layer patterns to ark.config.json).');
+    console.log(
+      `Apply these via /${identity.skillPrefix}-contract (adds the layer patterns to ${identity.configName}).`
+    );
   }
   if (layersWithoutRules.length > 0) {
     console.log('');
@@ -142,7 +145,7 @@ export function runCoverage(root, config, files, rules, asJson) {
 // Co-pilot Phase F — turn active violations into a classified, ordered remediation PLAN with an
 // embedded GOAL. This is the `plan` primitive the future apply-loop (Phase H, `loop`) consumes
 // and the autopilot (Phase I) drives toward the `goal`. Read-only: it changes no files.
-export function buildRemediationPlan(root, activeViolations, governedPercent = null, totalFiles = null) {
+export function buildRemediationPlan(root, activeViolations, governedPercent = null, totalFiles = null, identity = ARK_GENERATION_IDENTITY) {
   // A plan with 0 violations but ~0% governed (or ZERO files in scope) is a FALSE green:
   // nothing is actually being checked. Treat as "not done — classify / fix include first."
   const governedLow = governedPercent != null && governedPercent < 50;
@@ -184,9 +187,9 @@ export function buildRemediationPlan(root, activeViolations, governedPercent = n
         activeViolations.length > 0
           ? `Resolve ${activeViolations.length} architecture violation(s) without weakening the contract.`
           : emptyScope
-            ? 'No source files matched the contract include paths — this "clean" result checks nothing. Fix include/layers (monorepo → apps/packages, or /ark-adopt) so Ark has real code to govern.'
+            ? `No source files matched the contract include paths — this "clean" result checks nothing. Fix include/layers (monorepo → apps/packages, or /${identity.skillPrefix}-adopt) so ${identity.productName} has real code to govern.`
             : governedLow
-              ? `No violations — but Ark governs only ${governedPercent}% of your code, so this "clean" result checks almost nothing. Classify the rest (ark-check --coverage, then /ark-adopt) so it's actually enforced.`
+              ? `No violations — but ${identity.productName} governs only ${governedPercent}% of your code, so this "clean" result checks almost nothing. Classify the rest (${identity.checkBin} --coverage, then /${identity.skillPrefix}-adopt) so it's actually enforced.`
               : 'No active violations — the architecture already meets its contract.',
       // The loop's termination signal (Phase H): nothing left to remediate AND the contract
       // actually governs real code. Empty scope or low coverage is not "met".
@@ -206,15 +209,23 @@ export function buildRemediationPlan(root, activeViolations, governedPercent = n
 
 // `--plan`: print the classified remediation plan. Dual-focus output — a one-line headline
 // anyone can read, then the per-step detail a developer acts on. Read-only.
-export function runPlan(root, activeViolations, asJson, governedPercent = null, totalFiles = null) {
-  const plan = buildRemediationPlan(root, activeViolations, governedPercent, totalFiles);
+export function runPlan(root, activeViolations, asJson, governedPercent = null, totalFiles = null, identity = ARK_GENERATION_IDENTITY) {
+  const plan = buildRemediationPlan(
+    root,
+    activeViolations,
+    governedPercent,
+    totalFiles,
+    identity
+  );
   // Honesty: a zero-violation plan with almost nothing governed is NOT "ok".
   const planOk = plan.goal.met === true;
   if (asJson) {
     console.log(JSON.stringify({ ok: planOk, plan }, null, 2));
     return plan;
   }
-  console.log(color.bold(`Ark plan — ${path.basename(path.resolve(root)) || '.'}`));
+  console.log(
+    color.bold(`${identity.productName} plan — ${path.basename(path.resolve(root)) || '.'}`)
+  );
   console.log('');
   console.log(plan.goal.statement);
   if (governedPercent != null) {
@@ -252,9 +263,13 @@ export function runPlan(root, activeViolations, asJson, governedPercent = null, 
 }
 
 export function runDoctor(root, config, files, rules, violations, asJson, options = {}) {
+  const identity = options.identity ?? ARK_GENERATION_IDENTITY;
+  const product = identity.productName;
+  const skill = (name) => `/${identity.skillPrefix}-${name}`;
+  const envPrefix = identity.primary ? 'STRUCTRAIL' : 'ARK';
   const cov = computeCoverage(root, config, files, rules);
   const summary = summarizeViolations(violations);
-  const configPath = options.configPath ?? path.join(root, 'ark.config.json');
+  const configPath = options.configPath ?? path.join(root, identity.configName);
   const configMissing = options.configMissing ?? !fs.existsSync(configPath);
   const showNewHere = shouldShowNewHereNudge(root, configPath, cov.governed.percent, configMissing);
   let recommendation;
@@ -363,9 +378,13 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
                   preset: recommendation?.preset,
                   galleryStarter: recommendation?.galleryStarter,
                   policyPack: recommendation?.policyPack,
-                  recommendCommand: arkCommand(root, 'ark-check', '--recommend'),
+                  recommendCommand: arkCommand(root, identity.checkBin, '--recommend'),
                   initCommand: recommendation?.archetype
-                    ? arkCommand(root, 'ark', `init --archetype ${recommendation.archetype} --yes`)
+                    ? arkCommand(
+                        root,
+                        identity.cliBin,
+                        `init --archetype ${recommendation.archetype} --yes`
+                      )
                     : undefined,
                 }
               : { show: false },
@@ -384,7 +403,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const actions = [];
   const line = (mark, text) => console.log(`  ${mark} ${text}`);
 
-  console.log(color.bold(`Ark doctor — ${path.basename(path.resolve(root)) || '.'}`));
+  console.log(color.bold(`${product} doctor — ${path.basename(path.resolve(root)) || '.'}`));
 
   const emptyScope = cov.governed.totalFiles === 0;
   const totalFiles = cov.governed.totalFiles || 0;
@@ -406,9 +425,9 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const modeMark = mode === 'enforce' ? ok : mode === 'adapt' ? warn : warn;
   const modeHelp = {
     suggest:
-      'Setup — Ark proposes a starting architecture shape. You do not pick this mode; it means the tree is thin or new. Next: accept the shape (ark start / ark init) and add real layers as you grow.',
+      `Setup — ${product} proposes a starting architecture shape. You do not pick this mode; it means the tree is thin or new. Next: accept the shape (${identity.cliBin} start / ${identity.cliBin} init) and add real layers as you grow.`,
     adapt:
-      'Align — contract and folders still disagree, or coverage is weak / debt is open. You do not pick this mode. Next: classify ungoverned dirs (/ark-contract, /ark-adopt), run the plan (/ark-autopilot or /ark-loop). Gates do not fully protect you yet.',
+      `Align — contract and folders still disagree, or coverage is weak / debt is open. You do not pick this mode. Next: classify ungoverned dirs (${skill('contract')}, ${skill('adopt')}), run the plan (${skill('autopilot')} or ${skill('loop')}). Gates do not fully protect you yet.`,
     enforce:
       'Guard — contract coverage is honest and checked edges are clean. You do not pick this mode; you arrived here. Next: keep the host-appropriate write path and CI check on; only NEW violations should fail.',
   };
@@ -416,7 +435,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   if (emptyScope) {
     line(
       bad,
-      'Empty scope: include paths match 0 source files — a green check is meaningless until include/layers match the tree (monorepo → apps/packages, or /ark-adopt).'
+      `Empty scope: include paths match 0 source files — a green check is meaningless until include/layers match the tree (monorepo → apps/packages, or ${skill('adopt')}).`
     );
   }
 
@@ -430,8 +449,11 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         : warn;
   line(govMark, `Governed: ${cov.governed.percent}% (${cov.governed.classifiedFiles}/${cov.governed.totalFiles} files)`);
   if (cov.suggestions.length > 0) {
-    line(warn, `${cov.suggestions.length} ungoverned director(y/ies) — proposals: ${arkCommand(root, 'ark-check', '--coverage')}`);
-    actions.push('classify the ungoverned directories (/ark-contract)');
+    line(
+      warn,
+      `${cov.suggestions.length} ungoverned director(y/ies) — proposals: ${arkCommand(root, identity.checkBin, '--coverage')}`
+    );
+    actions.push(`classify the ungoverned directories (${skill('contract')})`);
   }
   if (cov.emptyLayers.length > 0) line(warn, `Empty layers (pattern matches nothing): ${cov.emptyLayers.join(', ')}`);
   if (cov.layersWithoutRules.length > 0) line(warn, `Layers with no rule edge: ${cov.layersWithoutRules.join(', ')}`);
@@ -446,7 +468,10 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         line(ok, `Gallery starter: ${recommendation.galleryStarter}`);
       }
       if (recommendation.policyPack) {
-        line(ok, `Policy pack: ${arkCommand(root, 'ark-check', `--apply-policy-pack ${recommendation.policyPack}`)}`);
+        line(
+          ok,
+          `Policy pack: ${arkCommand(root, identity.checkBin, `--apply-policy-pack ${recommendation.policyPack}`)}`
+        );
       }
       if (recommendation.signals?.nestFramework) {
         line(
@@ -463,11 +488,16 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     } else {
       line(warn, 'Low governed coverage or fresh config — pick an application shape before adding code.');
     }
-    line(ok, `See the plan: ${arkCommand(root, 'ark-check', '--recommend')}`);
+    line(ok, `See the plan: ${arkCommand(root, identity.checkBin, '--recommend')}`);
     if (recommendation?.archetype) {
-      line(ok, `Quick setup: ${arkCommand(root, 'ark', `init --archetype ${recommendation.archetype} --yes`)}`);
+      line(
+        ok,
+        `Quick setup: ${arkCommand(root, identity.cliBin, `init --archetype ${recommendation.archetype} --yes`)}`
+      );
     }
-    actions.unshift('run ark-check --recommend or /ark-architect to choose your application shape');
+    actions.unshift(
+      `run ${identity.checkBin} --recommend or ${skill('architect')} to choose your application shape`
+    );
   }
 
   console.log('');
@@ -495,7 +525,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     }
     if (activeCount > 0) {
       actions.push(
-        `resolve the non-baselined violations — see the classified plan (${arkCommand(root, 'ark-check', '--plan')}), then /ark-fix`
+        `resolve the non-baselined violations — see the classified plan (${arkCommand(root, identity.checkBin, '--plan')}), then ${skill('fix')}`
       );
     }
   }
@@ -504,10 +534,10 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   console.log(color.bold('Write path (agent)'));
   const capabilities = writePath.capabilities;
   const writePathLabels = {
-    repair: 'repair-capable — hard block + machine-readable autoPatch / ARK_REPAIR_JSON',
+    repair: `repair-capable — hard block + machine-readable autoPatch / ${envPrefix}_REPAIR_JSON`,
     'reject-only': 'reject-only — hard block with prose; no repair payload',
     'mcp-only': 'MCP tools only — prepare-write/autoPatch available; no PreToolUse hook',
-    none: 'no write gate hook and no Ark MCP',
+    none: `no write gate hook and no ${product} MCP`,
   };
   const wpMark =
     capabilities['hard-write']
@@ -547,12 +577,20 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   if (gatesMissing.length === 0) line(ok, 'Shared gate files present (AGENTS.md, .mcp.json, CI)');
   else {
     line(bad, `Missing gates: ${gatesMissing.join(', ')}`);
-    actions.push(`install gates (${arkCommand(root, 'ark-check', '--install-agent-gates')})`);
+    actions.push(
+      `install gates (${arkCommand(root, identity.checkBin, '--install-agent-gates')})`
+    );
   }
-  if (missingSkills + staleSkills === 0) line(ok, '/ark-* skills current for detected tools');
-  else {
-    line(warn, `${missingSkills} missing / ${staleSkills} outdated /ark-* skill(s) for ${skillGaps.map((g) => g.tool).join(', ')}`);
-    actions.push('refresh /ark-* skills (--install-agent-gates --skills-only --force)');
+  if (missingSkills + staleSkills === 0) {
+    line(ok, `/${identity.skillPrefix}-* skills current for detected tools`);
+  } else {
+    line(
+      warn,
+      `${missingSkills} missing / ${staleSkills} outdated /${identity.skillPrefix}-* skill(s) for ${skillGaps.map((g) => g.tool).join(', ')}`
+    );
+    actions.push(
+      `refresh /${identity.skillPrefix}-* skills (--install-agent-gates --skills-only --force)`
+    );
   }
 
   console.log('');
@@ -574,7 +612,9 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   if (staleRunners.length === 0) line(ok, 'Emitted commands match the package manager');
   else {
     line(warn, `Stale runner in ${staleRunners.join(', ')}`);
-    actions.push(`migrate command runners (${arkCommand(root, 'ark-check', '--install-agent-gates --migrate-commands')})`);
+    actions.push(
+      `migrate command runners (${arkCommand(root, identity.checkBin, '--install-agent-gates --migrate-commands')})`
+    );
   }
 
   // Adoption completeness (hosts, MCP health, codex home, core optionality, origin, baseline policy)
