@@ -45,7 +45,7 @@
     "docs/ai-gates.md",
     "docs/migrate-from-ark-runtime-kernel.md",
     "docs/typescript-support.md",
-    "docs/ark-check-example.json",
+    "docs/structrail-check-example.json",
     "docs/assets",
     "docs/brownfield-adoption.md",
     "docs/package-surface.md",
@@ -69,7 +69,7 @@
     "test:confidence": "npm run test:coverage && npm run test:mutation",
     "typecheck": "tsc --noEmit",
     "security:audit": "npm audit --omit=dev --audit-level=high",
-    "check:architecture": "node bin/ark-check.mjs --root . --config ark.config.json --strict",
+    "check:architecture": "node bin/structrail-check.mjs --root . --config structrail.config.json --strict",
     "check:js": "node scripts/check-js-syntax.mjs",
     "generate:layer-match": "node scripts/generate-layer-match.mjs",
     "check:layer-match": "node scripts/generate-layer-match.mjs --check",
@@ -160,6 +160,5 @@
   },
   "bugs": {
     "url": "https://github.com/pedroknigge/arkgate/issues"
-  },
-  "homepage": "https://www.arkgate.online/"
+  }
 }

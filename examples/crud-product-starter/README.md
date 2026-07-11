@@ -29,7 +29,7 @@ src/
 
 1. **No database or HTTP imports inside `domain/`.** Business rules stay pure.
 2. **UI calls use cases, not repositories.** Presentation → application only.
-3. **Do not weaken `ark.config.json` to pass.** Fix imports or move files instead.
+3. **Do not weaken `structrail.config.json` to pass.** Fix imports or move files instead.
 
 ## Verify
 
@@ -38,17 +38,17 @@ After copying this folder to your project:
 ```bash
 npm install
 npm run check
-# ✔ Ark check passed.
+# ✔ Structrail check passed.
 ```
 
-`arkgate` supplies the `ark-check` CLI via `devDependencies`.
+`structrail` supplies the `structrail-check` CLI via `devDependencies`.
 
 ## Next steps
 
 ```bash
-ark init --archetype crud-product --yes    # if starting from an empty repo
-ark-check --doctor
-ark-check --install-agent-gates            # when using AI coding tools
+structrail init --archetype crud-product --yes    # if starting from an empty repo
+structrail-check --doctor
+structrail-check --install-agent-gates            # when using AI coding tools
 ```
 
 Launch is **N/A** by design — add your framework (Next, Vite, etc.) in the presentation layer when ready.

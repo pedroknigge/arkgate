@@ -1,7 +1,7 @@
-# ArkGate internal roadmap — truth, focus, proof
+# Structrail internal roadmap — truth, focus, proof
 
 - **Status date:** 2026-07-11
-- **Scope:** canonical implementation queue for the ArkGate library repository
+- **Scope:** canonical implementation queue for the Structrail library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
 This roadmap supersedes the former “Trust 95+” estimate and its active Q-track. Shipped work is
@@ -12,7 +12,7 @@ product is release-ready.
 
 ## Product mandate
 
-ArkGate exists to prevent architecture-invalid TypeScript changes with low friction and
+Structrail exists to prevent architecture-invalid TypeScript changes with low friction and
 verifiable coverage.
 
 ```text
@@ -154,7 +154,7 @@ and `O03` are `done`.
 | 5 | `S05` | `done` | M | `S04` | All confirmed scanner false positives and bypasses are closed |
 | 6 | `S06` | `done` | S | `S03`–`S05` | README, docs, doctor, and site use one truthful support matrix |
 | 7 | `S07` | `done` | S | `S06` | Structrail is the decided identity before the public core API is stabilized |
-| 8 | `S07-M1` | `todo` | L | `S07` | ArkGate migrates to Structrail with one-major compatibility |
+| 8 | `S07-M1` | `doing` | L | `S07` | Structrail is primary locally; external cutover and final audit remain |
 | 9 | `C01` | `todo` | M | `S07-M1` | `structrail.config.json` has a versioned JSON Schema and migrations |
 | 10 | `C02` | `todo` | M | `C01` | A stable analysis IR and programmatic API are specified |
 | 11 | `C03` | `todo` | L | `C02` | CLI/MCP scanning uses one importable engine without generated duplication |
@@ -171,8 +171,8 @@ and `O03` are `done`.
 | 22 | `V04` | `todo` | M | `C06`, `V03` | Package and release artifacts are small, complete, and attestable |
 | 23 | `V05` | `todo` | M | all prior items | Independent audit passes and the product may exit beta |
 
-**Next:** `S07-M1`. Reserve the Structrail identity, then execute the compatibility migration before
-stabilizing the Phase C schema.
+**Next:** finish `S07-M1` ratchet/audit locally, then complete the gated external identity cutover
+before stabilizing the Phase C schema.
 
 ---
 
@@ -482,8 +482,9 @@ as a hard dependency of `C01`.
    Stop and supersede ADR 0001 if a prerequisite fails before cutover.
 2. Commit failing installed-package fixtures for every current public identity and every target
    Structrail surface.
-3. Make Structrail primary across package, bins, config, environment, MCP, skills, repository, and
-   website without redesigning unrelated product behavior.
+3. Make Structrail primary across package, bins, config, environment, MCP, skills, and local
+   repository surfaces without redesigning unrelated product behavior. Repository/website cutover
+   remains gated by M0/M6.
 4. Publish or prepare the `arkgate@3` compatibility package and retain legacy names for all of v3.
 5. Ratchet new public names so ArkGate identifiers can exist only in explicit compatibility,
    migration, history, fixture, or negative-test locations.
@@ -873,19 +874,19 @@ the new exit evidence.
 
 ### Identity transition decided by S07
 
-| Surface | Current until `S07-M1` | Target primary | v3 compatibility |
+| Surface | Working-tree primary | External state pending M6 | v3 compatibility |
 |---|---|---|---|
-| Product | ArkGate | Structrail | ArkGate deprecated |
-| npm | `arkgate` | `structrail` | `arkgate@3` wrapper |
-| Bins | `arkgate*`, `ark*` | `structrail*` | six old bins via wrapper |
-| Config | `ark.config.json` | `structrail.config.json` | legacy loader through v3 |
-| MCP | `ark://...`, `ark_*` | `structrail://...`, `structrail_*` | aliases through v3 |
-| Website | [arkgate.online](https://www.arkgate.online/) | reserved Structrail domain | redirects through v3 |
-| Repository | [pedroknigge/arkgate](https://github.com/pedroknigge/arkgate) | `pedroknigge/structrail` | GitHub redirect |
+| Product | Structrail | — | ArkGate deprecated |
+| npm | `structrail@3` manifest prepared | publish only after package smoke | `arkgate@3` wrapper |
+| Bins | `structrail*` | publish only after package smoke | six old bins via wrapper |
+| Config | `structrail.config.json` | — | legacy loader through v3 |
+| MCP | `structrail://...`, `structrail_*` | registry registration pending | aliases through v3 |
+| Website | no Structrail domain advertised | reservation/legal + redirects pending | existing URLs redirect in M6 |
+| Repository | local product surfaces renamed | GitHub rename pending | GitHub redirect in M6 |
 
-[ADR 0001](docs/adr/0001-product-identity-structrail.md) fixes the target identity. The repository
-must continue describing its shipped surfaces as ArkGate until `S07-M1` completes; Phase C must not
-stabilize a new ArkGate-named surface.
+[ADR 0001](docs/adr/0001-product-identity-structrail.md) fixes the target identity. Local package,
+docs, examples, gates, and Phase C plans now use Structrail; explicit compatibility/history locations
+retain v2 names. External names and redirects remain unchanged until M0/M6 evidence is complete.
 
 ---
 
@@ -893,8 +894,8 @@ stabilize a new ArkGate-named surface.
 
 ```text
 Item: S07-M1 — Migrate ArkGate to Structrail with compatibility
-First result: commit failing package/bin/config compatibility fixtures before production changes
-Then: implement the locally reversible rename; keep M0 reservation/legal as the public-cutover gate
+Current result: local package/bin/config/env/MCP/skills/docs/eval migration implemented with v3 compatibility
+Next: land the legacy-name ratchet and full local audit; keep M0 reservation/legal as the public-cutover gate
 Primary plan: docs/migrations/arkgate-to-structrail.md
 Required finish: target identity cut over + all v2 paths green through arkgate@3 + common/package gates
 ```

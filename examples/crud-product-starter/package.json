@@ -1,11 +1,11 @@
 {
-  "name": "ark-gallery-crud-product-starter",
+  "name": "structrail-gallery-crud-product-starter",
   "private": true,
   "version": "0.0.0",
   "description": "Phase-1 scaffold for a product with UI and stored data (crud-product archetype)",
   "type": "module",
   "scripts": {
-    "check": "structrail-check --root . --config ark.config.json --strict-config"
+    "check": "structrail-check --root . --config structrail.config.json --strict-config"
   },
   "devDependencies": {
     "structrail": "^3.0.0"

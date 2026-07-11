@@ -1,13 +1,16 @@
 ---
-name: ark-runtime
-description: Replace hand-rolled infra with the Ark runtime kernel — event bus, outbox, audit, sagas, projections, policies, NestJS. Finds candidates, wires one, verifies.
-arkVersion: 2.9.1
+name: structrail-runtime
+description: Evaluate the experimental Structrail runtime kernel against hand-rolled event bus, outbox, audit, saga, projection, policy, or NestJS code. Finds one candidate, wires one, verifies.
+structrailVersion: 3.0.0
 ---
 
-# /ark-runtime — Adopt the runtime kernel (opt-in features)
+# /structrail-runtime — Evaluate the runtime kernel (experimental opt-in)
 
-`arkgate` is not just static checking: it ships a runtime kernel
-(`createArkKernel`) with an event bus, event contracts, outbox, audit trail,
+The runtime kernel is currently **experimental** and is not required for Structrail enforcement or
+presented as production-ready. Use this skill only when the user explicitly wants to evaluate it.
+
+`structrail` ships the experimental runtime kernel
+(`createStructrailKernel`) with an event bus, event contracts, outbox, audit trail,
 policy engine, workflow/saga coordination, projections, observability hooks,
 and NestJS adapters. This skill migrates hand-rolled versions of those to the
 kernel, one feature at a time.
@@ -39,17 +42,17 @@ the same files or weaken the gate.
    - saga/workflow orchestration (multi-step processes with compensation)
    - read-model/projection builders
    - policy/authorization checks scattered across use cases
-   Also check whether `@nestjs/common` is present → the `arkgate/nestjs`
+   Also check whether `@nestjs/common` is present → the `structrail/nestjs`
    adapters apply.
 2. **Pick ONE target** — the smallest, most self-contained candidate (fewest
    call sites). Migrating everything at once is how adoptions die. List the
    rest as follow-ups in the report.
-3. **Migrate** — import from `arkgate` (root export) or
-   `arkgate/nestjs`, and read the package's `docs/agent-guide.md`
-   (in `node_modules/arkgate/docs/`) for the runtime API before
+3. **Migrate** — import from `structrail/runtime` (preferred experimental subpath) or
+   `structrail/nestjs`, and read the package's `docs/agent-guide.md`
+   (in `node_modules/structrail/docs/`) for the runtime API before
    writing code. Wire the kernel at the composition root; keep the domain
    ignorant of it (handlers/ports, not kernel imports inside domain code —
-   the write gate will enforce this anyway). Note: the kernel bounds in-memory
+   the architecture check enforces this; Claude/Grok hooks can block it earlier). Note: the kernel bounds in-memory
    history by default (`maxHistorySize` 1000); mention this if the hand-rolled
    version retained everything.
 4. **Delete the hand-rolled version** once call sites are moved — the point is
@@ -60,14 +63,14 @@ the same files or weaken the gate.
 
 ## Critical handoffs
 
-- No static gates yet: **STOP — do not continue this skill as complete.** Run `/ark-architect` or `/ark-adopt` first.
+- No static gates yet: **STOP — do not continue this skill as complete.** Run `/structrail-architect` or `/structrail-adopt` first.
 - Inventory finds nothing: stop; do not introduce kernel speculatively.
 
 ## Operating rules
 
 - If the inventory finds NO hand-rolled equivalents, say so and stop — do not
   introduce the runtime kernel speculatively. Static enforcement alone is a
-  complete, valid use of Ark.
+  complete, valid use of Structrail.
 - Keep the migration diff reviewable: one feature per invocation.
 - Plain-language reporting: one sentence per concept ("outbox = events are
   saved in the same transaction as your data, then published — so you never
@@ -75,12 +78,12 @@ the same files or weaken the gate.
 
 ## Related onboarding
 
-- Adopt static gates and application shape **first** (`/ark-architect`, `/ark-adopt`).
+- Adopt static gates and application shape **first** (`/structrail-architect`, `/structrail-adopt`).
 - Runtime kernel is optional and separate from enthusiast onboarding.
 
 ## Verify and report
 
-Run the project's tests plus `ark-check --root . --config ark.config.json
+Run the project's tests plus `structrail-check --root . --config structrail.config.json
 --strict-config`. Report: what was migrated, lines deleted vs added, remaining
 candidates ranked, and any behavior differences (e.g. bounded history).
 
@@ -92,7 +95,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Handoff:** `/ark-…` / CLI / `none`
+- **Handoff:** `/structrail-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 
 If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.

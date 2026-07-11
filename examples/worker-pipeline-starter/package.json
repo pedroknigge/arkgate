@@ -1,11 +1,11 @@
 {
-  "name": "ark-gallery-worker-pipeline-starter",
+  "name": "structrail-gallery-worker-pipeline-starter",
   "private": true,
   "version": "0.0.0",
   "description": "Phase-1 scaffold for background jobs and workers (worker-pipeline archetype)",
   "type": "module",
   "scripts": {
-    "check": "structrail-check --root . --config ark.config.json --strict-config"
+    "check": "structrail-check --root . --config structrail.config.json --strict-config"
   },
   "devDependencies": {
     "structrail": "^3.0.0"

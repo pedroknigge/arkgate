@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/bin/ark-mcp.mjs\" --session-context --root \"$CLAUDE_PROJECT_DIR\" --config ark.config.json"
+            "command": "node \"$CLAUDE_PROJECT_DIR/bin/structrail-mcp.mjs\" --session-context --root \"$CLAUDE_PROJECT_DIR\" --config structrail.config.json"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/bin/ark-mcp.mjs\" --hook --hook-repair --root \"$CLAUDE_PROJECT_DIR\" --config ark.config.json"
+            "command": "node \"$CLAUDE_PROJECT_DIR/bin/structrail-mcp.mjs\" --hook --hook-repair --root \"$CLAUDE_PROJECT_DIR\" --config structrail.config.json"
           }
         ]
       }

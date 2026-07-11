@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Ensure gallery starter ark.config.json files match ARCHITECTURE_PRESETS factories.
+ * Ensure gallery starter structrail.config.json files match ARCHITECTURE_PRESETS factories.
  * Usage:
  *   node scripts/check-gallery-starters.mjs           # exit 1 if drift
  *   node scripts/check-gallery-starters.mjs --write   # regenerate configs
@@ -31,7 +31,7 @@ for (const { dir, preset } of STARTERS) {
     continue;
   }
   const expected = factory([]);
-  const configPath = path.join(root, dir, 'ark.config.json');
+  const configPath = path.join(root, dir, 'structrail.config.json');
   const next = stableStringify(expected);
   if (write) {
     fs.mkdirSync(path.dirname(configPath), { recursive: true });

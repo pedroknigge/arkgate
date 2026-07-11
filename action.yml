@@ -1,5 +1,5 @@
-name: 'ArkGate Architecture Check'
-description: 'Block merges on architecture violations (cross-layer imports, intent references) with arkgate-check'
+name: 'Structrail Architecture Check'
+description: 'Block merges on architecture violations (cross-layer imports, intent references) with structrail-check'
 author: 'pedroknigge'
 branding:
   icon: 'shield'
@@ -10,8 +10,8 @@ inputs:
     description: 'Project root to check'
     default: '.'
   config:
-    description: 'Path to ark.config.json (relative to root)'
-    default: 'ark.config.json'
+    description: 'Path to structrail.config.json (relative to root)'
+    default: 'structrail.config.json'
   strict-config:
     description: 'Enable strict checks; the current Action revision also requires gates and safety diagnostics'
     default: 'true'
@@ -28,8 +28,8 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Run arkgate-check
-      id: ark
+    - name: Run structrail-check
+      id: structrail
       shell: bash
       env:
         INPUT_ROOT: ${{ inputs.root }}
@@ -46,23 +46,23 @@ runs:
         if [ -n "$INPUT_VERSION" ]; then
           # Explicit compatibility override: old releases may not expose --strict.
           [ "$INPUT_STRICT" = "true" ] && ARGS+=(--strict-config)
-          RUNNER=(npx --yes --package "arkgate@$INPUT_VERSION" arkgate-check)
+          RUNNER=(npx --yes --package "structrail@$INPUT_VERSION" structrail-check)
         else
           # The `uses:` ref already pins the Action revision. Install only its production
           # dependency (TypeScript) inside the Action checkout, then run this exact source.
           (cd "$ACTION_PATH" && npm ci --omit=dev --ignore-scripts)
           [ "$INPUT_STRICT" = "true" ] && ARGS+=(--strict)
-          RUNNER=(node "$ACTION_PATH/bin/ark-check.mjs")
+          RUNNER=(node "$ACTION_PATH/bin/structrail-check.mjs")
         fi
 
         set +e
-        "${RUNNER[@]}" "${ARGS[@]}" 2>&1 | tee arkgate-check-output.txt
+        "${RUNNER[@]}" "${ARGS[@]}" 2>&1 | tee structrail-check-output.txt
         STATUS=${PIPESTATUS[0]}
         {
-          echo "## ArkGate architecture check"
+          echo "## Structrail architecture check"
           echo ""
           echo '```'
-          cat arkgate-check-output.txt
+          cat structrail-check-output.txt
           echo '```'
         } >> "$GITHUB_STEP_SUMMARY"
         echo "status=$STATUS" >> "$GITHUB_OUTPUT"
@@ -77,12 +77,12 @@ runs:
         REPO: ${{ github.repository }}
       run: |
         {
-          echo "### ArkGate architecture check failed"
+          echo "### Structrail architecture check failed"
           echo ""
           echo '```'
-          cat arkgate-check-output.txt
+          cat structrail-check-output.txt
           echo '```'
           echo ""
-          echo "_Layer rules live in \`ark.config.json\`. Site: https://www.arkgate.online/ · Source: https://github.com/pedroknigge/arkgate_"
-        } > arkgate-comment.md
-        gh pr comment "$PR" --repo "$REPO" --body-file arkgate-comment.md
+          echo "_Layer rules live in \`structrail.config.json\`._"
+        } > structrail-comment.md
+        gh pr comment "$PR" --repo "$REPO" --body-file structrail-comment.md

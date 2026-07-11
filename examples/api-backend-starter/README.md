@@ -29,7 +29,7 @@ src/
 
 1. **Route handlers do not import the database.** Call a use case instead.
 2. **Domain code must not know HTTP status codes.** Keep that in presentation.
-3. **Do not weaken `ark.config.json` to pass.** Move code to the correct layer.
+3. **Do not weaken `structrail.config.json` to pass.** Move code to the correct layer.
 
 ## Verify
 
@@ -41,6 +41,6 @@ npm run check
 ## Next steps
 
 ```bash
-ark init --archetype api-backend --yes
-ark-check --doctor
+structrail init --archetype api-backend --yes
+structrail-check --doctor
 ```

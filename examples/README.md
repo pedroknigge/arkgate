@@ -1,8 +1,8 @@
-# ArkGate Examples
+# Structrail Examples
 
 Clone a starter that matches your **application shape** (archetype), not your framework.
-Each gallery starter is a phase-1 scaffold with an enthusiast README, `ark.config.json`, and a
-passing `arkgate-check` / `ark-check --strict-config`. For deep teaching exercises, use
+Each gallery starter is a phase-1 scaffold with an enthusiast README, `structrail.config.json`, and a
+passing `structrail-check` / `structrail-check --strict-config`. For deep teaching exercises, use
 `hexagonal-order-api`.
 
 ## Gallery starters (by archetype)
@@ -19,16 +19,16 @@ passing `arkgate-check` / `ark-check --strict-config`. For deep teaching exercis
 Pick the closest shape, copy the directory, then run:
 
 ```bash
-npm install      # installs arkgate → ark-check
+npm install      # installs structrail → structrail-check
 npm run check    # inside the starter — must stay green
-ark-check --doctor
+structrail-check --doctor
 ```
 
-`/ark-architect` points here in step 7 after it scaffolds phase-1 layers.
+`/structrail-architect` points here in step 7 after it scaffolds phase-1 layers.
 
 ## hexagonal-order-api/
 
-Clonable order API with a real hexagonal layout (`domain` / `application` / `adapters`) governed by all three Ark gates: `ark-check` in CI, `ark-mcp` for agents, and the strict kernel runtime (intents, event contract, projection) at runtime. Has its own `package.json`; see [hexagonal-order-api/README.md](hexagonal-order-api/README.md).
+Clonable order API with a real hexagonal layout (`domain` / `application` / `adapters`) governed by all three Structrail gates: `structrail-check` in CI, `structrail-mcp` for agents, and the strict kernel runtime (intents, event contract, projection) at runtime. Has its own `package.json`; see [hexagonal-order-api/README.md](hexagonal-order-api/README.md).
 
 Use this when you need a **runnable** API and intentional “break it on purpose” exercises — not a minimal scaffold.
 

@@ -5,7 +5,7 @@ corrects the architecture instead of weakening the contract.
 
 ## Prerequisites
 
-- Ark installed in the repo (`ark-check`, agent gates optional for this demo)
+- Structrail installed in the repo (`structrail-check`, agent gates optional for this demo)
 - [examples/hexagonal-order-api](../../examples/hexagonal-order-api/) cloned with dependencies
 
 ## Steps
@@ -21,7 +21,7 @@ npm run check
 Expected:
 
 ```
-✔ Ark check passed.
+✔ Structrail check passed.
 ```
 
 ### 2. Introduce a deliberate domain → persistence import
@@ -61,14 +61,14 @@ npm run check
 Expected:
 
 ```
-✔ Ark check passed.
+✔ Structrail check passed.
 ```
 
 ## What this proves
 
 - The gate blocks the common enthusiast mistake (database code in domain).
 - The error message points at the **layer edge**, not a generic lint rule.
-- The fix is a file move or port inversion — not editing `ark.config.json`.
+- The fix is a file move or port inversion — not editing `structrail.config.json`.
 
 See also: [Break it on purpose](../../examples/hexagonal-order-api/README.md#break-it-on-purpose)
 for two more exercises.

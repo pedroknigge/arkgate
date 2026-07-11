@@ -1,4 +1,7 @@
 /**
+ * @deprecated V3 compatibility template. New projects copy
+ * templates/tests/structrail-adoption-gaps.test.ts instead.
+ *
  * Structural adoption-gap tests — copy into your project (e.g. tests/ark-adoption-gaps.test.ts)
  * and run with Vitest/Jest. Asserts real on-disk gate artifacts (no mocks).
  *

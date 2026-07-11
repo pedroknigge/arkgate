@@ -10,7 +10,7 @@ layered architecture jargon. Your job: translate **what they want to build**
 (application shape, not framework name) into an Structrail preset, a phase-1 layer plan,
 conventional directories, and a passing honest check — without weakening the gate.
 
-Commands below are written as `structrail-check` / `ark`; run each through the project's
+Commands below are written as `structrail-check` / `structrail`; run each through the project's
 package manager (`pnpm exec`, `yarn`, `npx`) — match the lockfile.
 
 ## Dual engine (mandatory)

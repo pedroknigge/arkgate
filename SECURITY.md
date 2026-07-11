@@ -1,6 +1,6 @@
 # Security Policy
 
-**ArkGate** (`arkgate`) runs on developer machines, in CI, and in agent tooling paths, so
+**Structrail** (`structrail`) runs on developer machines, in CI, and in agent tooling paths, so
 security reports are treated as high priority.
 
 ## Supported Versions
@@ -17,7 +17,7 @@ Preferred path: use GitHub's private vulnerability reporting for this repository
 - affected version or commit
 - reproduction steps
 - expected impact
-- whether the issue affects `arkgate-check` / `ark-check`, `arkgate-mcp` / `ark-mcp`,
+- whether the issue affects `structrail-check`, `structrail-mcp`,
   generated agent gates, the GitHub Action, or the optional runtime kernel
 
 If private vulnerability reporting is unavailable, open a minimal public issue asking for
@@ -25,7 +25,7 @@ a private security contact without including exploit details.
 
 ## Release Verification
 
-ArkGate releases are GitHub-first:
+Structrail releases are GitHub-first:
 
 1. Changes land on GitHub and must pass CI plus the dedicated security workflow.
 2. A GitHub Release is created from a signed `vX.Y.Z` tag (`git tag -s`). The publish

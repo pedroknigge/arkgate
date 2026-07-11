@@ -1,5 +1,9 @@
 # Migrate from `ark-runtime-kernel` → **ArkGate** (`arkgate`)
 
+> Historical v1→v2 guide. For the current v2→v3 identity migration, use
+> [ArkGate → Structrail](migrations/arkgate-to-structrail.md). New projects should install
+> `structrail` and use Structrail names directly.
+
 **Same product.** Only the npm name and primary CLI names changed.
 Config, baselines, and `/ark-*` skills stay.
 

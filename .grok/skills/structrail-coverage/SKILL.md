@@ -1,12 +1,12 @@
 ---
-name: ark-coverage
-description: Exploratory deep-audit of real code + Ark adoption gaps. CLI is a sensor only — map the product, read source, propose concrete remediations and ranked opportunities with "así te lo re-soluciono".
-arkVersion: 2.9.1
+name: structrail-coverage
+description: Exploratory deep-audit of real code + Structrail adoption gaps. CLI is a sensor only — map the product, read source, propose concrete remediations and ranked opportunities with "así te lo re-soluciono".
+structrailVersion: 3.0.0
 ---
 
-# /ark-coverage — Deep coverage + capability gaps
+# /structrail-coverage — Deep coverage + capability gaps
 
-You audit how this repo uses ArkGate **and** what the **real product tree** needs next.
+You audit how this repo uses Structrail **and** what the **real product tree** needs next.
 Work autonomously. End with a ranked report that is both **deterministic** (numbers) and
 **exploratory** (source-backed suggestions).
 
@@ -18,7 +18,7 @@ Work autonomously. End with a ranked report that is both **deterministic** (numb
 | **Deterministic** | governed%, layers, gates, baseline, doctor gaps, summary edges |
 | **Exploratory** | product map, clusters opened, opportunities beyond “fix violation X” |
 
-**Forbidden:** only `ark-check --coverage/--doctor/--json` paraphrase or gate checklists with no source evidence.
+**Forbidden:** only `structrail-check --coverage/--doctor/--json` paraphrase or gate checklists with no source evidence.
 
 **Required before you finish:**
 1. CLI sensor: `--coverage --json`, `--doctor`, normal `--json` for `summary`.
@@ -31,7 +31,7 @@ Work autonomously. End with a ranked report that is both **deterministic** (numb
    ranked by impact × enforceability, even if the check is already green.
 
 If you did not open source files, the skill is **not complete**.  
-Full recon-only mode: `/ark-explore`.
+Full recon-only mode: `/structrail-explore`.
 
 
 ## Subagent fan-out (optional, host-dependent)
@@ -41,7 +41,7 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 
 | Host capability | Behavior |
 |-----------------|----------|
-| **Parallel subagents supported** (e.g. multi-agent / `spawn_subagent` / concurrent Agent tools) | Launch **2–N** agents in **one wave** with **disjoint path scopes**. Prefer **read-only** explore agents for mapping; at most **one writer** unless the host gives isolated worktrees. Parent merges findings, then runs `ark-check` once. |
+| **Parallel subagents supported** (e.g. multi-agent / `spawn_subagent` / concurrent Agent tools) | Launch **2–N** agents in **one wave** with **disjoint path scopes**. Prefer **read-only** explore agents for mapping; at most **one writer** unless the host gives isolated worktrees. Parent merges findings, then runs `structrail-check` once. |
 | **Not supported** (single agent only) | **Fall back to sequential** — same checklist, one cluster/step at a time. Never claim parallel work you did not run. |
 
 **Rules:**
@@ -55,34 +55,34 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 
 | Mode | User meaning | What you tell them |
 |------|----------------|--------------------|
-| **Suggest / Setup** | Thin or new tree | “Ark will propose a starting shape — you don’t switch a mode.” |
+| **Suggest / Setup** | Thin or new tree | “Structrail will propose a starting shape — you don’t switch a mode.” |
 | **Adapt / Align** | Contract ≠ folders or open debt | “Gates don’t fully protect you yet — classify + fix plan.” |
-| **Enforce / Guard** | Coverage + clean edges + honest cores | “You arrived here — keep CI/write gates on.” |
+| **Enforce / Guard** | Coverage + clean edges + honest cores | “You arrived here — keep the host-appropriate write path and CI check on.” |
 
 Never say “your architecture is guarded” while `goal.met` is false, governed% is low,
 or false-green doctor gaps are open.
 
 ## Related onboarding
 
-- **Greenfield:** low governed% → `/ark-architect` or `ark-check --recommend`.
-- **Brownfield:** `/ark-adopt` + this skill’s deep map — **not** `/ark-architect`.
+- **Greenfield:** low governed% → `/structrail-architect` or `structrail-check --recommend`.
+- **Brownfield:** `/structrail-adopt` + this skill’s deep map — **not** `/structrail-architect`.
 - **Business rules / intents loose in the tree:** also cover in **Así te lo re-soluciono**
   (mine → `intentPrefixes` / Domain placement / kernel `defineIntent` stubs).
-- **Explore-only report:** `/ark-explore`.
+- **Explore-only report:** `/structrail-explore`.
 
 ## Checklist (sensor)
 
-1. Config + `ark-check --strict-config` (dead preset globs advisory; unclassified files still fail strict).
+1. Config + `structrail-check --strict-config` (dead preset globs advisory; unclassified files still fail strict).
 2. Baseline policy (orphan empty file? wire or delete).
-3. Write gates + `/ark-*` skills per detected agent.
+3. Host-appropriate write path + `/structrail-*` skills per detected agent.
 4. CI workflow + monorepo install reality (`frontend/package.json`?).
-5. ESLint `arkgate/eslint` if ESLint exists.
+5. ESLint `structrail/eslint` if ESLint exists.
 6. Domain `forbiddenGlobals`.
 7. **Governed%** + unclassified + `suggestions` from `--coverage --json`.
 8. Concentrated edges in check `summary` → contract smell, not N freezes.
 9. `layersWithoutRules` + empty cores with I/O under Application (false-green).
-    On false-green: **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
-    On one-edge wall: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
+    On false-green: **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /structrail-adopt or /structrail-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
+    On one-edge wall: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /structrail-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
 10. Runtime kernel / Nest only if deps prove it — never force-fit Next+Python.
 
 ## Deep code pass (exploratory — the model job)
@@ -92,7 +92,7 @@ For each top cluster (e.g. `src/features/*`, `src/lib/*`, `apps/*/src`):
 - Who imports whom (App→Presentation? Domain→App? cross-feature?).
 - Is “core” / “lib” really application, UI, I/O, or mixed?
 - Loose business logic: `calculate*`, `can*`, `validate*`, policy numbers, publish/intent strings without registry.
-- Propose: layer home, `ark.config.json` patterns, Domain extract, intent names (`Domain.*` / `Application.*`).
+- Propose: layer home, `structrail.config.json` patterns, Domain extract, intent names (`Domain.*` / `Application.*`).
 - **Opportunity**, not only residual debt: what would make agents safer next week?
 
 ## Output format
@@ -106,7 +106,7 @@ For each top cluster (e.g. `src/features/*`, `src/lib/*`, `apps/*/src`):
 Kinds: `debt` | `false-green` | `shape` | `manifiesto` | `gates` | `opportunity`
 
 4. **Manifiesto / reglas de negocio** (if any): proposed intents / Domain files / config edits.
-5. Offer: “Apply top N?” / “Run /ark-adopt?” — apply only if user agrees; then re-run strict check.
+5. Offer: “Apply top N?” / “Run /structrail-adopt?” — apply only if user agrees; then re-run strict check.
 
 ## Done criteria
 
@@ -123,7 +123,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Handoff:** `/ark-…` / CLI / `none`
+- **Handoff:** `/structrail-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 
 If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.

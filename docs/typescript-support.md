@@ -1,6 +1,6 @@
 # TypeScript support (5.x · 6.x · 7.x)
 
-ArkGate’s architecture gate (`arkgate-check` / `ark-mcp`) needs a **JavaScript API**
+Structrail’s architecture gate (`structrail-check` / `structrail-mcp`) needs a **JavaScript API**
 TypeScript package that exposes:
 
 - `ts.sys` (at least `fileExists`)
@@ -18,7 +18,7 @@ semantics of your app still come from **your** project `typescript` + `tsconfig`
 | **TypeScript 6.x** | Supported (bridge release before 7) |
 | **TypeScript 7.x** | Supported as **project** compiler; gate loads project TS when API-compatible, otherwise **falls back** to a JS-API TypeScript |
 
-Optional peer (documentational):
+Supported peer range:
 
 ```json
 "peerDependencies": {
@@ -26,13 +26,13 @@ Optional peer (documentational):
 }
 ```
 
-ArkGate does not hard-require `typescript` as a runtime dependency of the package
-itself; the CLI resolves it from the **project** first, then from the environment.
+Structrail ships `typescript@^5.9` as its JS-API fallback. The CLI still resolves a usable
+TypeScript from the **project** first, then falls back to the package-owned dependency.
 
 ## How loading works
 
 1. Prefer `require('typescript')` from the **project** root (when it has `sys` + AST + resolve).  
-2. If missing or **not API-compatible** (TS 7.0 version-only export, or incomplete host), fall back to **ArkGate’s own** `typescript` dependency (JS-API 5.x nested under the package), then bare `import('typescript')`.  
+2. If missing or **not API-compatible** (TS 7.0 version-only export, or incomplete host), fall back to **Structrail’s own** `typescript` dependency (JS-API 5.x nested under the package), then bare `import('typescript')`.
 3. If nothing usable is found:  
    - `--plan` still prints **coverage honesty** (no import graph)  
    - full check exits non-zero with an install hint  
@@ -40,19 +40,19 @@ itself; the CLI resolves it from the **project** first, then from the environmen
 Debug which TypeScript was used:
 
 ```bash
-ARK_DEBUG_TS=1 npx arkgate-check --plan
-# → [ark-check] TypeScript 5.9.x via arkgate (fallback)
+STRUCTRAIL_DEBUG_TS=1 npx structrail-check --plan
+# → [structrail-check] TypeScript 5.9.x via structrail (fallback)
 ```
 
 ## TypeScript 7 notes
 
-TypeScript 7 is the **native (Go) compiler** generation. Important for tools like ArkGate:
+TypeScript 7 is the **native (Go) compiler** generation. Important for tools like Structrail:
 
 - **`require('typescript')` on 7.0.x** exports only `{ version, versionMajorMinor }` — not `sys`, `createSourceFile`, or `resolveModuleName`.  
-- Unstable programmatic surfaces live under `typescript/unstable/*` (sync/async API, AST). They are **not** the classic TS 5/6 host ArkGate uses today.  
+- Unstable programmatic surfaces live under `typescript/unstable/*` (sync/async API, AST). They are **not** the classic TS 5/6 host Structrail uses today.
 - Stable **programmatic JS API** maturity continues over the 7.x line (Microsoft: full story into **7.1+**).  
-- When the project’s TypeScript is not API-compatible, ArkGate loads its **bundled JS-API dependency** (`typescript@^5.9`, nested under the package) so the host write path and CI check keep working while you try TS 7 as the project compiler.
-- Your **tsconfig** must follow TS 6/7 defaults (see below) or `tsc` / resolve can fail independently of ArkGate.
+- When the project’s TypeScript is not API-compatible, Structrail loads its **bundled JS-API dependency** (`typescript@^5.9`, nested under the package) so the host write path and CI check keep working while you try TS 7 as the project compiler.
+- Your **tsconfig** must follow TS 6/7 defaults (see below) or `tsc` / resolve can fail independently of Structrail.
 
 ### tsconfig defaults that surprise teams (TS 6 → 7)
 
@@ -103,14 +103,14 @@ If you need **tsc 7** for builds and a **JS API 6** for tools that still expect 
 - `npx tsc6` — TypeScript 6 CLI (from the alias package)  
 - `npx typescript-7` / install path — TypeScript 7 CLI as needed  
 
-ArkGate will prefer the project’s `typescript` package; keep that entry **API-compatible** (5/6, or 7 once `sys` is present). See Microsoft’s TS 7 RC blog for dual-install details.
+Structrail will prefer the project’s `typescript` package; keep that entry **API-compatible** (5/6, or 7 once `sys` is present). See Microsoft’s TS 7 RC blog for dual-install details.
 
 ## CI matrix (this repo)
 
 GitHub Actions job `ts-compat` installs TypeScript **5.9.x**, **6.0.x**, and **7.0.x** into a temp copy of `tests/fixtures/ts-consumer` and runs:
 
 ```bash
-node bin/ark-check.mjs --root <fixture> --plan --json --no-cache
+node bin/structrail-check.mjs --root <fixture> --plan --json --no-cache
 ```
 
 Locally:
@@ -121,7 +121,7 @@ node scripts/ts-compat-matrix.mjs 6.0.3
 node scripts/ts-compat-matrix.mjs 7.0.2
 ```
 
-## What “compatible” means for ArkGate
+## What “compatible” means for Structrail
 
 | Goal | Status |
 |------|--------|
@@ -129,7 +129,7 @@ node scripts/ts-compat-matrix.mjs 7.0.2
 | Plan/check work with project TS 5/6 | Yes |
 | Plan/check work when project has TS 7 + usable `sys` | Yes (uses project) |
 | Gate uses native Go typechecker API exclusively | Not required; future if 7.1+ exposes a stable Node API we adopt |
-| User tsconfigs with removed options still “just work” | User must migrate tsconfig (TS6/7); Ark reports resolve/parse failures clearly |
+| User tsconfigs with removed options still “just work” | User must migrate tsconfig (TS6/7); Structrail reports resolve/parse failures clearly |
 
 ## Future (7.1+ programmatic API)
 

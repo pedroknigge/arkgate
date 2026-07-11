@@ -6,7 +6,7 @@
           {
             "type": "command",
             "timeout": 30,
-            "command": "node bin/ark-mcp.mjs --session-context --root \"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\" --config ark.config.json"
+            "command": "node bin/structrail-mcp.mjs --session-context --root \"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\" --config structrail.config.json"
           }
         ]
       }
@@ -18,7 +18,7 @@
           {
             "type": "command",
             "timeout": 30,
-            "command": "node bin/ark-mcp.mjs --hook --hook-repair --root \"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\" --config ark.config.json"
+            "command": "node bin/structrail-mcp.mjs --hook --hook-repair --root \"${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}\" --config structrail.config.json"
           }
         ]
       }

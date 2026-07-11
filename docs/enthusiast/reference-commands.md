@@ -1,20 +1,19 @@
 # Reference: commands and artifacts
 
-Product: **ArkGate** (`arkgate`). Prefer `arkgate` / `arkgate-check` / `arkgate-mcp`; aliases
-`ark` / `ark-check` / `ark-mcp` work for one major. TypeScript 5–7: [typescript-support.md](../typescript-support.md).
+Product: **Structrail** (`structrail`). Commands: `structrail`, `structrail-check`, and `structrail-mcp`.
+TypeScript 5–7: [typescript-support.md](../typescript-support.md).
 
 ## Recommendation
 
 ```bash
-arkgate-check --recommend [--json] [--write-plan]
-# alias: ark-check …
+structrail-check --recommend [--json] [--write-plan]
 ```
 
-MCP: `ark_recommend` — same JSON body.
+MCP: `structrail_recommend` — same JSON body.
 
 ## Adoption plan artifact
 
-`ark-adoption-plan.json` — optional committed record. Fields:
+`structrail-adoption-plan.json` — optional committed record. Fields:
 
 - `archetype`, `preset`, `confidence`
 - `phases` (`1` | `2` | `3` layer lists) and `adoptInOrder.phase1|phase2|phase3`
@@ -28,8 +27,8 @@ Never weakens the gate; JSON only.
 ## Policy packs
 
 ```bash
-ark-check --list-policy-packs [--json]
-ark-check --apply-policy-pack <id> [--force]
+structrail-check --list-policy-packs [--json]
+structrail-check --apply-policy-pack <id> [--force]
 ```
 
 Pack metadata: `templates/policy-packs/enthusiast-*.json`.
@@ -37,14 +36,14 @@ Pack metadata: `templates/policy-packs/enthusiast-*.json`.
 ## Init and verify
 
 ```bash
-arkgate start --yes                    # guided setup + plan
-ark init --archetype <id> --yes        # alias path
-arkgate-check --doctor [--json]
-arkgate-check --coverage [--json]
-arkgate-check --plan [--json]          # mechanical-safe vs judgment vs deferred
-arkgate-check --strict-config
-arkgate-check --report out.html --beginner
-arkgate-check --watch
+structrail start --yes                    # guided setup + plan
+structrail init --archetype <id> --yes
+structrail-check --doctor [--json]
+structrail-check --coverage [--json]
+structrail-check --plan [--json]          # mechanical-safe vs judgment vs deferred
+structrail-check --strict-config
+structrail-check --report out.html --beginner
+structrail-check --watch
 ```
 
 ## Plan classes (`--plan --json`)

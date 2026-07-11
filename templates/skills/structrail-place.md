@@ -37,7 +37,7 @@ the same files or weaken the gate.
 
 ## Steps
 
-1. **Read the contract, not your intuition.** If the `ark` MCP server is available,
+1. **Read the contract, not your intuition.** If the `structrail` MCP server is available,
    call the **`structrail_place`** tool with the target file path — it returns the layer,
    its forbidden globals, and exactly which layers the file may / must not import,
    straight from the contract (no guessing). Otherwise load `structrail.config.json` and the

@@ -15,10 +15,10 @@
     <text x="24" y="96" fill="#8b949e">● Edit(src/domain/order.ts)</text>
     <text x="40" y="118" fill="#6e7681">import { PgOrderRepository } from '../adapters/persistence/pg-order-repository';</text>
 
-    <text x="24" y="152" fill="#f85149" font-weight="bold">✗ Ark architecture gate blocked this write to src/domain/order.ts (layer: DomainModel):</text>
+    <text x="24" y="152" fill="#f85149" font-weight="bold">✗ Structrail architecture gate blocked this write to src/domain/order.ts (layer: DomainModel):</text>
     <text x="40" y="174" fill="#f85149">- [FORBIDDEN_IMPORT] Forbidden import target: "../adapters/persistence/pg-order-repository".</text>
     <text x="24" y="196" fill="#8b949e">Fix the violations and retry. The architecture contract is available as the</text>
-    <text x="24" y="214" fill="#8b949e">ark://manifest MCP resource.</text>
+    <text x="24" y="214" fill="#8b949e">structrail://manifest MCP resource.</text>
 
     <text x="24" y="248" fill="#c9d1d9">● The domain layer can't import persistence adapters. I'll define the port in the</text>
     <text x="24" y="266" fill="#c9d1d9">domain instead and implement it in src/adapters/persistence/.</text>

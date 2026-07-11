@@ -1,5 +1,5 @@
 /**
- * Basic full demo example for Ark (rich output for verification).
+ * Basic full demo example for Structrail (rich output for verification).
  *
  * Exercises core APIs including H1–H7 improvements.
  */
@@ -11,7 +11,7 @@ import {
   createDependencyGraph,
   syncRegistryToGraph,
   createMetadataRegistry,
-  createArkManifest,
+  createStructrailManifest,
   definePort,
   createAdapter,
   checkContract,
@@ -23,7 +23,7 @@ import {
 } from '../../src/index';
 
 async function main() {
-  console.log('=== Ark Basic Demo ===');
+  console.log('=== Structrail Basic Demo ===');
 
   const registry = createIntentRegistry();
   const OrderPlaced = registry.define<
@@ -83,7 +83,7 @@ async function main() {
   );
   await saga.run({});
 
-  const manifest = createArkManifest({
+  const manifest = createStructrailManifest({
     registry,
     policyEngine,
     metadata,

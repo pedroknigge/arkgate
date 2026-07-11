@@ -28,8 +28,8 @@ packages/
 ## Three rules for your AI agent
 
 1. **Apps do not import another app's internal folders.** Share via `packages/`.
-2. **Classify every new top-level directory** with `/ark-contract` before codegen spreads files.
-3. **Do not weaken `ark.config.json` to pass.** Extend `include` and layer patterns instead.
+2. **Classify every new top-level directory** with `/structrail-contract` before codegen spreads files.
+3. **Do not weaken `structrail.config.json` to pass.** Extend `include` and layer patterns instead.
 
 ## Verify
 
@@ -41,6 +41,6 @@ npm run check
 ## Next steps
 
 ```bash
-ark init --archetype multi-app-workspace --yes
-ark-check --coverage
+structrail init --archetype multi-app-workspace --yes
+structrail-check --coverage
 ```

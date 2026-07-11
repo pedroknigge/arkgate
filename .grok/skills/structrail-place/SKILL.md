@@ -1,10 +1,10 @@
 ---
-name: ark-place
+name: structrail-place
 description: "Where does new code go? Names the layer, directory, and naming for a new artifact from the contract, and scaffolds it there. Autonomous."
-arkVersion: 2.9.1
+structrailVersion: 3.0.0
 ---
 
-# /ark-place — Where does this code go?
+# /structrail-place — Where does this code go?
 
 The user describes something they need to build (a saga, a background job, an
 event handler, a repository, an HTTP client, a use case, a projection, …).
@@ -38,11 +38,11 @@ the same files or weaken the gate.
 
 ## Steps
 
-1. **Read the contract, not your intuition.** If the `ark` MCP server is available,
-   call the **`ark_place`** tool with the target file path — it returns the layer,
+1. **Read the contract, not your intuition.** If the `structrail` MCP server is available,
+   call the **`structrail_place`** tool with the target file path — it returns the layer,
    its forbidden globals, and exactly which layers the file may / must not import,
-   straight from the contract (no guessing). Otherwise load `ark.config.json` and the
-   `ark://manifest` MCP resource (it includes `suggestedLayers` with conventional
+   straight from the contract (no guessing). Otherwise load `structrail.config.json` and the
+   `structrail://manifest` MCP resource (it includes `suggestedLayers` with conventional
    directories for layers not yet adopted). The project's `AGENTS.md` placement table,
    if present, is authoritative too.
 2. **Classify the artifact** by what it does, not what it's called:
@@ -64,15 +64,15 @@ the same files or weaken the gate.
    which layers it may/may not import (from `rules`).
 4. **If the layer isn't adopted yet** (suggested but no directory): say so,
    give the conventional directory from `suggestedLayers`, and offer
-   `/ark-contract` to adopt it — don't silently drop the code into a
+   `/structrail-contract` to adopt it — don't silently drop the code into a
    wrong-but-existing layer.
 5. **If asked to create it**: scaffold the file(s) in place, following the
    nearest existing sibling's style, and any port/adapter split the rules force.
 
 ## Critical handoffs
 
-- If the user needs bulk adoption / wrong contract, not a single artifact: **STOP — do not continue this skill as complete.** **STOP — wrong skill: invoke /ark-adopt or /ark-contract** instead of ad-hoc multi-file grinding without a plan.
-- If contract lacks a home for the artifact: **STOP — do not continue this skill as complete.** Adopt the layer via `/ark-contract` first.
+- If the user needs bulk adoption / wrong contract, not a single artifact: **STOP — do not continue this skill as complete.** **STOP — wrong skill: invoke /structrail-adopt or /structrail-contract** instead of ad-hoc multi-file grinding without a plan.
+- If contract lacks a home for the artifact: **STOP — do not continue this skill as complete.** Adopt the layer via `/structrail-contract` first.
 
 ## Operating rules
 
@@ -85,15 +85,15 @@ the same files or weaken the gate.
 
 ## Related onboarding
 
-- Run **after** shape adoption: `/ark-architect` or `ark init --archetype` on greenfield;
-  `/ark-adopt` on brownfield.
-- `ark-check --recommend` / MCP `ark_recommend` picks phase-1 dirs; gallery starters in
+- Run **after** shape adoption: `/structrail-architect` or `structrail init --archetype` on greenfield;
+  `/structrail-adopt` on brownfield.
+- `structrail-check --recommend` / MCP `structrail_recommend` picks phase-1 dirs; gallery starters in
   `examples/*-starter/` show correct placement per archetype.
 - Related demos: `docs/demos/` (write-gate self-correction, brownfield, autopilot).
 
 ## Verify and report
 
-If you created files, run `ark-check --root . --config ark.config.json
+If you created files, run `structrail-check --root . --config structrail.config.json
 --strict-config` and make it pass. Report: placement + why, files created (if
 any), and the import rules the new code must respect going forward.
 
@@ -105,7 +105,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Handoff:** `/ark-…` / CLI / `none`
+- **Handoff:** `/structrail-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 
 If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.

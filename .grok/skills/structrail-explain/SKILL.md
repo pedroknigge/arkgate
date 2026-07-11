@@ -1,10 +1,10 @@
 ---
-name: ark-explain
+name: structrail-explain
 description: Explain this project's architecture in plain language and generate the showcase HTML report — layers, rules, coverage, gates, and why the contract exists.
-arkVersion: 2.9.1
+structrailVersion: 3.0.0
 ---
 
-# /ark-explain — Understand this project's architecture
+# /structrail-explain — Understand this project's architecture
 
 The user wants to understand the architecture, a specific rule, or why the gate blocked them.
 Your job is to **teach with this repo's real data** and leave a shareable visual artifact.
@@ -31,14 +31,15 @@ the same files or weaken the gate.
 1. Run the full HTML report (uses the real contract + coverage + gates):
 
    ```bash
-   npx ark-check --root . --config ark.config.json --report ark-report.html
+   npx structrail-check --root . --config structrail.config.json --report structrail-report.html
    ```
 
    Prefer the project's package-manager runner if gates already emit one
-   (`pnpm … exec ark-check` / `yarn` / `npx`).
+   (`pnpm … exec structrail-check` / `yarn` / `npx`).
 
    This also maintains snapshots under **`.ark/reports/`**:
-   - `origin.json` / `origin.html` — frozen **first** report (start of the journey)
+   - `origin.json` / `origin.html` — frozen **day-zero** report (`structrail start`/`structrail init`
+     freezes this **right after** `structrail.config.json`, before agent docs/CI templates)
    - `latest.json` / `latest.html` — every run
    - `history/*.json` — last ~20 machine-readable points for later tooling
 
@@ -46,33 +47,33 @@ the same files or weaken the gate.
    violations, files per layer). Do not delete origin unless the user explicitly wants a
    new baseline (`--reset-origin`).
 
-2. Tell the user the path to `ark-report.html` and `.ark/reports/origin.html`.
-   Mention `.ark/` should stay gitignored (Ark appends that on first report when possible).
+2. Tell the user the path to `structrail-report.html` and `.ark/reports/origin.html`.
+   Mention `.ark/` should stay gitignored (Structrail appends that on first report when possible).
 
 3. Optionally also run:
 
    ```bash
-   npx ark-check --coverage
-   npx ark-check --doctor
-   npx ark-check --plan
+   npx structrail-check --coverage
+   npx structrail-check --doctor
+   npx structrail-check --plan
    ```
 
    so your spoken explanation matches the report's governed%, operating mode
    (SUGGEST / ADAPT / ENFORCE), and the plan's safe-to-auto vs decision counts.
 
 The HTML report is the visual twin of this skill: architecture map, files per layer,
-dependency direction, matrix, violations, enforcement points, Ark fitness score, and a
+dependency direction, matrix, violations, enforcement points, Structrail fitness score, and a
 **Senior diagnostics** block (coupling fan-in/out, deny density, purity surface, pattern
 forensics, baseline taxonomy) for tech leads.
 
 When explaining the **plan**, name the four `mechanical-safe` remediation kinds only
 (type-only move, pure-type file relocate, `import type` of pure-type modules,
-`import-type-of-type-exports` for named type exports from mixed modules) — everything
+`import-type-of-type-exports` for named type exports from mixed modules; W6 port-proof inject is judgment when proof holds) — everything
 else is judgment/deferred and must not be auto-applied.
 
 ## Spoken / written explanation
 
-1. **Load the real contract**: `ark.config.json`, `ark://manifest` if available, `AGENTS.md`.
+1. **Load the real contract**: `structrail.config.json`, `structrail://manifest` if available, `AGENTS.md`.
 2. **If asked generally** ("explain the architecture"), produce a guided tour:
    - Operating mode + governed% (honest: low coverage means green checks almost nothing).
    - Each major layer: name, purpose, one real file from this repo, file count if known.
@@ -81,7 +82,7 @@ else is judgment/deferred and must not be auto-applied.
    - If a DI/kernel framework border exists, explain public surface vs internals.
 3. **If asked about a specific rule or block**, answer with: the rule, the consequence it
    prevents, and the sanctioned fix (usually a port). If they want it fixed now:
-   **STOP — do not continue this skill as complete.** **STOP — fix requested: invoke /ark-fix.**
+   **STOP — do not continue this skill as complete.** **STOP — fix requested: invoke /structrail-fix.**
    This skill stays read-only.
 4. **If asked "what's a port/adapter/saga…"**, two sentences + this-repo example or conventional path.
 
@@ -93,15 +94,15 @@ else is judgment/deferred and must not be auto-applied.
 - Calibrate depth: one-rule questions get a paragraph; full tours get structure + report.
 - Every jargon term gets a one-line plain definition on first use.
 - End with:
-  - the strict check from `package.json` (or `ark-check --root . --config ark.config.json --strict-config`)
-  - `/ark-place` for "where does new code go?"
-  - the path to `ark-report.html`
+  - the strict check from `package.json` (or `structrail-check --root . --config structrail.config.json --strict-config`)
+  - `/structrail-place` for "where does new code go?"
+  - the path to `structrail-report.html`
 
 ## Related
 
-- Onboarding: `/ark-architect`, `ark-check --recommend`, `docs/enthusiast/README.md`
-- Brownfield: `/ark-adopt`, `docs/brownfield-adoption.md`
-- Autopilot: `/ark-autopilot` after the user understands the contract
+- Onboarding: `/structrail-architect`, `structrail-check --recommend`, `docs/enthusiast/README.md`
+- Brownfield: `/structrail-adopt`, `docs/brownfield-adoption.md`
+- Autopilot: `/structrail-autopilot` after the user understands the contract
 
 ## Completion contract (skill incomplete if missing)
 
@@ -111,7 +112,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Handoff:** `/ark-…` / CLI / `none`
+- **Handoff:** `/structrail-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 
 If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.

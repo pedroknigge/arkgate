@@ -1,12 +1,12 @@
 {
-  "name": "ark-gallery-multi-app-workspace-starter",
+  "name": "structrail-gallery-multi-app-workspace-starter",
   "private": true,
   "version": "0.0.0",
   "description": "Phase-1 scaffold for several apps in one repository (multi-app-workspace archetype)",
   "workspaces": ["apps/*", "packages/*"],
   "type": "module",
   "scripts": {
-    "check": "structrail-check --root . --config ark.config.json --strict-config"
+    "check": "structrail-check --root . --config structrail.config.json --strict-config"
   },
   "devDependencies": {
     "structrail": "^3.0.0"

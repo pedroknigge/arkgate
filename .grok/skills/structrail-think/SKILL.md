@@ -1,13 +1,13 @@
 ---
-name: ark-think
+name: structrail-think
 description: "Host-side architectural reasoning — exploratory options from real code + contract, trade-offs, evolution paths. No gate bypass. No package LLM call."
-arkVersion: 2.9.1
+structrailVersion: 3.0.0
 ---
 
-# /ark-think — Architectural reasoning (host LLM only)
+# /structrail-think — Architectural reasoning (host LLM only)
 
-You are the user's architecture thinking partner **inside** the project's Ark contract.
-This skill does **not** call any LLM API from the arkgate package. **You** (the host agent)
+You are the user's architecture thinking partner **inside** the project's Structrail contract.
+This skill does **not** call any LLM API from the structrail package. **You** (the host agent)
 reason; the write-gate and CI remain deterministic.
 
 
@@ -28,7 +28,7 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 
 | Host capability | Behavior |
 |-----------------|----------|
-| **Parallel subagents supported** (e.g. multi-agent / `spawn_subagent` / concurrent Agent tools) | Launch **2–N** agents in **one wave** with **disjoint path scopes**. Prefer **read-only** explore agents for mapping; at most **one writer** unless the host gives isolated worktrees. Parent merges findings, then runs `ark-check` once. |
+| **Parallel subagents supported** (e.g. multi-agent / `spawn_subagent` / concurrent Agent tools) | Launch **2–N** agents in **one wave** with **disjoint path scopes**. Prefer **read-only** explore agents for mapping; at most **one writer** unless the host gives isolated worktrees. Parent merges findings, then runs `structrail-check` once. |
 | **Not supported** (single agent only) | **Fall back to sequential** — same checklist, one cluster/step at a time. Never claim parallel work you did not run. |
 
 **Rules:**
@@ -48,8 +48,8 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 
 ## Steps
 
-1. **Load the contract** — `ark.config.json`, MCP `ark://manifest` if available, and
-   `ark-check --coverage --json` / `--doctor` for honesty about governed% and false-green.
+1. **Load the contract** — `structrail.config.json`, MCP `structrail://manifest` if available, and
+   `structrail-check --coverage --json` / `--doctor` for honesty about governed% and false-green.
 2. **Touch the product** — README + **≥5 source files** on the decision surface (the feature,
    package, or boundary under discussion). Name paths in the answer.
 3. **Name the active shape** — which preset/archetype fits (hexagonal, vertical-slice,
@@ -59,10 +59,10 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
    Prefer concrete paths and import rules over abstract diagrams.
 5. **Explore alternatives** — for each option: coupling, testability, **AI-agent safety**
    (will write-gate + skills keep humans honest?), migration cost.
-6. **Surface hard lines** — never suggest: weakening `ark.config.json` to pass, silent
+6. **Surface hard lines** — never suggest: weakening `structrail.config.json` to pass, silent
    judgment auto-apply, codemod engines, or skipping write-gate/CI.
-7. **Hand off** — placement `/ark-place`; config `/ark-contract`; bulk debt `/ark-loop` /
-   `/ark-autopilot`; map-only `/ark-explore`; violations `/ark-fix`.
+7. **Hand off** — placement `/structrail-place`; config `/structrail-contract`; bulk debt `/structrail-loop` /
+   `/structrail-autopilot`; map-only `/structrail-explore`; violations `/structrail-fix`.
    When the user needs action not advice: **STOP — do not continue this skill as complete** — invoke the handoff skill.
 
 ## Output format
@@ -71,14 +71,14 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 - **Options:** 2–3 alternatives with trade-offs (coupling, testability, agent safety, enforceability)
 - **Recommendation:** one option + why it is enforceable **today**
 - **Risks if we pick wrong:** one sentence user-visible impact
-- **Next command:** exact `ark-check` / skill to run next
+- **Next command:** exact `structrail-check` / skill to run next
 
 ## Related
 
-- Greenfield shape: `/ark-architect`
-- Brownfield: `/ark-adopt`
-- Full recon: `/ark-explore`
-- Explain existing: `/ark-explain`
+- Greenfield shape: `/structrail-architect`
+- Brownfield: `/structrail-adopt`
+- Full recon: `/structrail-explore`
+- Explain existing: `/structrail-explain`
 
 ## Completion contract (skill incomplete if missing)
 
@@ -88,7 +88,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Handoff:** `/ark-…` / CLI / `none`
+- **Handoff:** `/structrail-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 
 If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.

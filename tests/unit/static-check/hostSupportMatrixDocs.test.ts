@@ -11,10 +11,11 @@ import {
   HOST_SUPPORT_MATRIX,
   renderHostSupportMatrixMarkdown,
 } from '../../../bin/lib/host-support-matrix.mjs';
+import { STRUCTRAIL_GENERATION_IDENTITY } from '../../../bin/lib/product-identity.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const MATRIX_START = '<!-- arkgate-host-support:start -->';
-const MATRIX_END = '<!-- arkgate-host-support:end -->';
+const MATRIX_START = '<!-- structrail-host-support:start -->';
+const MATRIX_END = '<!-- structrail-host-support:end -->';
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.join(REPO, relativePath), 'utf8');
@@ -78,9 +79,9 @@ describe('canonical public host support matrix', () => {
   });
 
   it('renders README and generated AGENTS.md from the same matrix', () => {
-    const rendered = renderHostSupportMatrixMarkdown();
+    const rendered = renderHostSupportMatrixMarkdown(STRUCTRAIL_GENERATION_IDENTITY);
     expect(readMatrixBlock(read('README.md'))).toBe(rendered);
-    expect(agentInstructions(REPO)).toContain(rendered);
+    expect(agentInstructions(REPO, STRUCTRAIL_GENERATION_IDENTITY)).toContain(rendered);
   });
 
   it('keeps detailed host docs linked to the canonical matrix without universal claims', () => {

@@ -24,14 +24,14 @@ describe('Structrail bootstrap (smoke)', () => {
   it('runs the checked-out Action revision by default instead of an older npm release', () => {
     const action = readFileSync('action.yml', 'utf8');
     expect(action).toContain("default: ''");
-    expect(action).toContain('node "$ACTION_PATH/bin/ark-check.mjs"');
+    expect(action).toContain('node "$ACTION_PATH/bin/structrail-check.mjs"');
     expect(action).not.toContain("default: 'latest'");
     expect(action).not.toContain("default: '2.10.0'");
   });
 
-  it('points package homepage at the official product site', () => {
+  it('does not advertise an unreserved Structrail domain before external cutover', () => {
     const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
-    expect(pkg.homepage).toBe('https://www.arkgate.online/');
+    expect(pkg.homepage).toBeUndefined();
   });
 
   it('exports core domain types at runtime (shapes only for now)', () => {

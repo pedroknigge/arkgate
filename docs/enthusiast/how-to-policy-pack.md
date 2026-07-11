@@ -1,12 +1,12 @@
 # How to apply an enthusiast policy pack
 
-Policy packs are thin enthusiast variants over the same preset factories as `ark init --preset`.
+Policy packs are thin enthusiast variants over the same preset factories as `structrail init --preset`.
 
 ## List packs
 
 ```bash
-npx ark-check --list-policy-packs
-npx ark-check --list-policy-packs --json
+npx structrail-check --list-policy-packs
+npx structrail-check --list-policy-packs --json
 ```
 
 Available packs:
@@ -19,11 +19,11 @@ Available packs:
 ## Apply
 
 ```bash
-npx ark-check --apply-policy-pack enthusiast-hexagonal
-npx ark-check --root . --config ark.config.json --strict-config
+npx structrail-check --apply-policy-pack enthusiast-hexagonal
+npx structrail-check --root . --config structrail.config.json --strict-config
 ```
 
-Use `--force` to overwrite an existing `ark.config.json`.
+Use `--force` to overwrite an existing `structrail.config.json`.
 
 Monorepo packs detect workspace roots from `package.json` / `pnpm-workspace.yaml` the same way `--init --preset monorepo` does.
 
@@ -31,7 +31,7 @@ Monorepo packs detect workspace roots from `package.json` / `pnpm-workspace.yaml
 
 | You know… | Start with |
 |-----------|------------|
-| Application shape (todo app, API, …) | `ark-check --recommend` → `ark init --archetype` |
+| Application shape (todo app, API, …) | `structrail-check --recommend` → `structrail init --archetype` |
 | Preset name only | `--apply-policy-pack enthusiast-<preset>` |
 
-`ark-adoption-plan.json` from `--write-plan` includes a suggested `policyPack` id matching the recommended preset.
+`structrail-adoption-plan.json` from `--write-plan` includes a suggested `policyPack` id matching the recommended preset.

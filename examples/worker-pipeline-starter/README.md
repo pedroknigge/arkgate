@@ -27,7 +27,7 @@ src/
 
 1. **Job files call application use cases — not SQL clients directly.**
 2. **Keep schedulers thin.** Heavy logic belongs in `application/`.
-3. **Do not weaken `ark.config.json` to pass.** Relocate imports instead.
+3. **Do not weaken `structrail.config.json` to pass.** Relocate imports instead.
 
 ## Verify
 
@@ -39,6 +39,6 @@ npm run check
 ## Next steps
 
 ```bash
-ark init --archetype worker-pipeline --yes
-ark-check --doctor
+structrail init --archetype worker-pipeline --yes
+structrail-check --doctor
 ```

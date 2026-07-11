@@ -1,10 +1,10 @@
 // Want to see the gate fail? Rename this file to BROKEN.example.ts and run:
 //
-//   npx ark-check --root . --config ark.config.json
+//   npx structrail-check --root . --config structrail.config.json
 //
 // A persistence adapter must never depend on application use cases
-// (PersistenceAdapters -> ApplicationOrchestration is blocked in ark.config.json),
-// so ark-check reports a LAYER_IMPORT_VIOLATION and exits non-zero.
+// (PersistenceAdapters -> ApplicationOrchestration is blocked in structrail.config.json),
+// so structrail-check reports a LAYER_IMPORT_VIOLATION and exits non-zero.
 // Rename it back to .txt when you are done.
 
 import { createPlaceOrder } from '../../application/place-order.js'; // ILLEGAL import

@@ -1,10 +1,10 @@
 {
-  "name": "ark-gallery-ddd-context-starter",
+  "name": "structrail-gallery-ddd-context-starter",
   "private": true,
   "version": "0.0.0",
   "description": "Phase-1 scaffold for DDD bounded contexts (ddd-bounded-contexts archetype)",
   "type": "module",
   "scripts": {
-    "check": "node ../../bin/ark-check.mjs --root . --config ark.config.json --strict-config"
+    "check": "node ../../bin/structrail-check.mjs --root . --config structrail.config.json --strict-config"
   }
 }

@@ -38,19 +38,19 @@ export function ensureMcpRuntime() {
   if (mcpRuntimeDir) {
     return {
       mcpRuntimeDir,
-      mcpBin: path.join(mcpRuntimeDir, 'bin/ark-mcp.mjs'),
-      arkCheckBin: path.join(mcpRuntimeDir, 'bin/ark-check.mjs'),
+      mcpBin: path.join(mcpRuntimeDir, 'bin/structrail-mcp.mjs'),
+      structrailCheckBin: path.join(mcpRuntimeDir, 'bin/structrail-check.mjs'),
     };
   }
   execSync('npm run build', { cwd: REPO_ROOT, stdio: 'ignore' });
-  mcpRuntimeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-phasec-evidence-'));
+  mcpRuntimeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'structrail-phasec-evidence-'));
   fs.cpSync(path.join(REPO_ROOT, 'bin'), path.join(mcpRuntimeDir, 'bin'), { recursive: true });
   fs.cpSync(path.join(REPO_ROOT, 'dist'), path.join(mcpRuntimeDir, 'dist'), { recursive: true });
   fs.cpSync(path.join(REPO_ROOT, 'templates'), path.join(mcpRuntimeDir, 'templates'), { recursive: true });
   return {
     mcpRuntimeDir,
-    mcpBin: path.join(mcpRuntimeDir, 'bin/ark-mcp.mjs'),
-    arkCheckBin: path.join(mcpRuntimeDir, 'bin/ark-check.mjs'),
+    mcpBin: path.join(mcpRuntimeDir, 'bin/structrail-mcp.mjs'),
+    structrailCheckBin: path.join(mcpRuntimeDir, 'bin/structrail-check.mjs'),
   };
 }
 
@@ -134,17 +134,17 @@ export function captureVitestStaticCheck(scratchDir) {
 }
 
 export async function captureMcpRecommendParity(scratchDir) {
-  const { mcpBin, arkCheckBin } = ensureMcpRuntime();
-  const greenfield = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-parity-green-'));
+  const { mcpBin, structrailCheckBin } = ensureMcpRuntime();
+  const greenfield = fs.mkdtempSync(path.join(os.tmpdir(), 'structrail-parity-green-'));
   seedGreenfield(greenfield);
 
   const client = createMcpClient(mcpBin, greenfield);
   try {
-    const mcpRes = await client.request('tools/call', { name: 'ark_recommend', arguments: {} });
-    assertOk(mcpRes.result?.content?.[0]?.text, 'ark_recommend returned no content');
+    const mcpRes = await client.request('tools/call', { name: 'structrail_recommend', arguments: {} });
+    assertOk(mcpRes.result?.content?.[0]?.text, 'structrail_recommend returned no content');
     const mcp = JSON.parse(mcpRes.result.content[0].text);
 
-    const cli = spawnSync('node', [arkCheckBin, '--root', greenfield, '--recommend', '--json'], {
+    const cli = spawnSync('node', [structrailCheckBin, '--root', greenfield, '--recommend', '--json'], {
       encoding: 'utf8',
     });
     assertOk(cli.status === 0, `CLI recommend failed (exit ${cli.status})`);
@@ -188,11 +188,11 @@ export function captureSessionContextHint(scratchDir) {
   const { mcpBin } = ensureMcpRuntime();
   const lines = [];
 
-  const lowRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-session-low-'));
+  const lowRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'structrail-session-low-'));
   fs.mkdirSync(path.join(lowRoot, 'src/loose'), { recursive: true });
   fs.writeFileSync(path.join(lowRoot, 'src/loose/util.ts'), 'export const u = 1;\n');
   fs.writeFileSync(
-    path.join(lowRoot, 'ark.config.json'),
+    path.join(lowRoot, 'structrail.config.json'),
     `${JSON.stringify(
       {
         include: ['src'],
@@ -204,22 +204,22 @@ export function captureSessionContextHint(scratchDir) {
     )}\n`
   );
 
-  const low = spawnSync('node', [mcpBin, '--session-context', '--root', lowRoot, '--config', 'ark.config.json'], {
+  const low = spawnSync('node', [mcpBin, '--session-context', '--root', lowRoot, '--config', 'structrail.config.json'], {
     encoding: 'utf8',
   });
   assertOk(low.status === 0, `session-context low fixture failed (exit ${low.status})`);
-  assertOk(low.stdout.includes('New to Ark?'), 'low-coverage session-context missing New to Ark?');
-  assertOk(low.stdout.includes('/ark-architect'), 'low-coverage session-context missing /ark-architect');
-  assertOk(low.stdout.includes('ark-check --recommend'), 'low-coverage session-context missing bare recommend command');
+  assertOk(low.stdout.includes('New to Structrail?'), 'low-coverage session-context missing New to Structrail?');
+  assertOk(low.stdout.includes('/structrail-architect'), 'low-coverage session-context missing /structrail-architect');
+  assertOk(low.stdout.includes('structrail-check --recommend'), 'low-coverage session-context missing bare recommend command');
 
   lines.push('=== low coverage fixture ===');
   lines.push(low.stdout);
 
-  const highRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-session-high-'));
+  const highRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'structrail-session-high-'));
   fs.mkdirSync(path.join(highRoot, 'src/domain'), { recursive: true });
   fs.writeFileSync(path.join(highRoot, 'src/domain/order.ts'), 'export const o = 1;\n');
   fs.writeFileSync(
-    path.join(highRoot, 'ark.config.json'),
+    path.join(highRoot, 'structrail.config.json'),
     `${JSON.stringify(
       {
         include: ['src'],
@@ -231,11 +231,11 @@ export function captureSessionContextHint(scratchDir) {
     )}\n`
   );
 
-  const high = spawnSync('node', [mcpBin, '--session-context', '--root', highRoot, '--config', 'ark.config.json'], {
+  const high = spawnSync('node', [mcpBin, '--session-context', '--root', highRoot, '--config', 'structrail.config.json'], {
     encoding: 'utf8',
   });
   assertOk(high.status === 0, `session-context high fixture failed (exit ${high.status})`);
-  assertOk(!high.stdout.includes('New to Ark?'), 'high-coverage session-context should omit New to Ark?');
+  assertOk(!high.stdout.includes('New to Structrail?'), 'high-coverage session-context should omit New to Structrail?');
 
   lines.push('=== high coverage fixture ===');
   lines.push(high.stdout);
@@ -251,12 +251,12 @@ export function capturePhaseCDocs(scratchDir) {
 
   const grep = spawnSync(
     'grep',
-    ['-n', '-E', 'ark_recommend|ark-architect|New to Ark', guidePath, skillPath],
+    ['-n', '-E', 'structrail_recommend|structrail-architect|New to Structrail', guidePath, skillPath],
     { encoding: 'utf8' }
   );
   const output = grep.stdout || '';
-  assertOk(output.includes('ark_recommend'), 'phase-c-docs grep missing ark_recommend');
-  assertOk(output.includes('ark-architect'), 'phase-c-docs grep missing ark-architect');
+  assertOk(output.includes('structrail_recommend'), 'phase-c-docs grep missing structrail_recommend');
+  assertOk(output.includes('structrail-architect'), 'phase-c-docs grep missing structrail-architect');
 
   writeScratch(scratchDir, 'phase-c-docs.txt', output);
   return output;
@@ -268,16 +268,16 @@ export function captureEvalCases(scratchDir) {
   const skip = spawnSync('node', [path.join(REPO_ROOT, 'eval/run.mjs')], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
-    env: { ...process.env, ARK_EVAL_CASE: 'enthusiast-greenfield-crud' },
+    env: { ...process.env, STRUCTRAIL_EVAL_CASE: 'enthusiast-greenfield-crud' },
   });
-  lines.push('=== ARK_EVAL_CASE=enthusiast-greenfield-crud ===');
+  lines.push('=== STRUCTRAIL_EVAL_CASE=enthusiast-greenfield-crud ===');
   lines.push(`${skip.stdout}${skip.stderr}`);
   assertOk(`${skip.stdout}${skip.stderr}`.includes('SKIPPED'), 'greenfield-crud eval did not report SKIPPED');
 
   const wrongLayerCase = path.join(REPO_ROOT, 'eval/cases/enthusiast-wrong-layer');
   const pre = spawnSync(
     'node',
-    [path.join(REPO_ROOT, 'bin/ark-check.mjs'), '--root', wrongLayerCase, '--config', 'ark.config.json'],
+    [path.join(REPO_ROOT, 'bin/structrail-check.mjs'), '--root', wrongLayerCase, '--config', 'structrail.config.json'],
     { encoding: 'utf8' }
   );
   lines.push('=== enthusiast-wrong-layer pre-check ===');
@@ -297,7 +297,7 @@ export function captureCheckArchitecture(scratchDir) {
   const output = `${result.stdout || ''}${result.stderr || ''}`;
   writeScratch(scratchDir, 'check-architecture.log', output);
   assertOk(result.status === 0, `check:architecture failed (exit ${result.status})`);
-  assertOk(output.includes('Ark check passed'), 'check:architecture output missing pass marker');
+  assertOk(output.includes('Structrail check passed'), 'check:architecture output missing pass marker');
   return output;
 }
 

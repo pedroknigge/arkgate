@@ -6,13 +6,13 @@ loop · autopilot) in one sitting.
 
 ## In one line
 
-`npx ark start` sets it up and shows a plan; **`/ark-autopilot`** (in your agent) carries the
-plan out — applying the safe fixes and proposing the rest, always validated by `ark-check`.
+`npx structrail start` sets it up and shows a plan; **`/structrail-autopilot`** (in your agent) carries the
+plan out — applying the safe fixes and proposing the rest, always validated by `structrail-check`.
 
 ## Prerequisites
 
-- Ark built or installed from this repository
-- An agent CLI (Claude, Cursor, Codex, Grok, …) for the `/ark-autopilot` and `/ark-loop` steps
+- Structrail built or installed from this repository
+- An agent CLI (Claude, Cursor, Codex, Grok, …) for the `/structrail-autopilot` and `/structrail-loop` steps
 
 ## Steps
 
@@ -22,10 +22,10 @@ plan out — applying the safe fixes and proposing the rest, always validated by
 TMP=$(mktemp -d); cd "$TMP"
 git init -q                        # the loop works in a discardable worktree
 npm init -y >/dev/null
-npx ark start --yes
+npx structrail start --yes
 ```
 
-Ark describes the project's shape in plain language, writes `ark.config.json` + agent/CI gates,
+Structrail describes the project's shape in plain language, writes `structrail.config.json` + agent/CI gates,
 and prints the **plan** — how many fixes are _safe to auto-apply_ vs _need your decision_ —
 plus which **operating mode** applies: **suggest**, **adapt**, or **enforce**.
 
@@ -35,8 +35,8 @@ the layer globs so day-one **governed%** is real (not a false-green empty contra
 ### 2. See the plan yourself (optional)
 
 ```bash
-npx ark-check --plan            # human view (includes Governed: N%)
-npx ark-check --plan --json     # { ok, plan: { goal, counts, steps } }
+npx structrail-check --plan            # human view (includes Governed: N%)
+npx structrail-check --plan --json     # { ok, plan: { goal, counts, steps } }
 ```
 
 Each step is tagged `mechanical-safe` / `judgment` / `deferred` with a `confidence`,
@@ -51,16 +51,16 @@ checks almost nothing is not "done."
 In your agent, run:
 
 ```
-/ark-autopilot
+/structrail-autopilot
 ```
 
-It runs the whole flow (newbie tier): confirms the plan, hands off to `/ark-loop` to apply the
-`mechanical-safe` steps one at a time — **validating each with `ark-check` and rolling back any
+It runs the whole flow (newbie tier): confirms the plan, hands off to `/structrail-loop` to apply the
+`mechanical-safe` steps one at a time — **validating each with `structrail-check` and rolling back any
 regression** — proposes each `judgment` step for a yes/no, loops until `goal.met`, and reports
 what was auto-applied vs proposed vs deferred. Nothing lands until you review the diff.
 
-Expert entry: skip the autopilot and use the pieces — `ark init` / `/ark-contract` to shape the
-contract, `ark-check --plan` for the work, `/ark-fix` for targeted fixes, `ark-check
+Expert entry: skip the autopilot and use the pieces — `structrail init` / `/structrail-contract` to shape the
+contract, `structrail-check --plan` for the work, `/structrail-fix` for targeted fixes, `structrail-check
 --strict-config` as the gate. Same contract, same gates; same suggest/adapt/enforce modes.
 
 ### 4. It stays clean
@@ -69,17 +69,17 @@ The gates installed in step 1 keep enforcing the architecture from now on — in
 time if the MCP hook is wired. Verify:
 
 ```bash
-npx ark-check --root . --config ark.config.json --strict-config
+npx structrail-check --root . --config structrail.config.json --strict-config
 ```
 
 ## What this proves
 
-- **plan + goal** (Phase F): `ark-check --plan` classifies the work and defines "done" (with
+- **plan + goal** (Phase F): `structrail-check --plan` classifies the work and defines "done" (with
   governed% honesty).
-- **guided setup** (Phase G): `ark start` — no preset or skill name required; modes
+- **guided setup** (Phase G): `structrail start` — no preset or skill name required; modes
   suggest / adapt / enforce.
-- **loop** (Phase H): `/ark-loop` — safe, reversible, validated apply.
-- **autopilot** (Phase I): `/ark-autopilot` — the whole thing, with newbie/expert entry styles.
+- **loop** (Phase H): `/structrail-loop` — safe, reversible, validated apply.
+- **autopilot** (Phase I): `/structrail-autopilot` — the whole thing, with newbie/expert entry styles.
 - **field honesty** (2.0): framework overlays + no false-green at 0% governed.
 
 The classifier's precision (only provably-safe changes are ever `mechanical-safe`) is guarded

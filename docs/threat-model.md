@@ -1,4 +1,4 @@
-# Threat model — ArkGate (Q9)
+# Threat model — Structrail
 
 **Scope:** architecture write/CI gates, agent hooks/MCP, and the experimental optional runtime.
 **Not in scope:** full org identity platforms, browser XSS in consumer apps, or npm registry
@@ -8,9 +8,9 @@ infrastructure beyond how this package is published.
 
 | Asset | Why it matters |
 |-------|----------------|
-| `ark.config.json` contract | Defines what agents may import; weaken it → silent architectural debt |
-| Write hook (`arkgate-mcp --hook`) | Hard local boundary only for installed/trusted Claude/Grok hook operations |
-| CI `ark-check --strict-merge` | Repository check for every host; merge blocking requires a required status |
+| `structrail.config.json` contract | Defines what agents may import; weaken it → silent architectural debt |
+| Write hook (`structrail-mcp --hook`) | Hard local boundary only for installed/trusted Claude/Grok hook operations |
+| CI `structrail-check --strict-merge` | Repository check for every host; merge blocking requires a required status |
 | Baselines (`.ark-baseline.json`) | Freezes debt; abuse silences real violations |
 | Published npm tarball + Action SHA | Supply-chain integrity of the gate itself |
 | Experimental runtime kernel | Event/saga state; InMemory is not durable |
@@ -28,7 +28,7 @@ infrastructure beyond how this package is published.
 | ID | Threat | Impact | Mitigations (shipped) |
 |----|--------|--------|------------------------|
 | T1 | Agent bypasses hook (direct `fs` / alternate tool) | Ungoverned code lands | CI gate; optional pre-commit (Q3); doctor writePath honesty |
-| T2 | Human commits without agent path | Same as T1 | `templates/hooks/pre-commit-ark`; branch protection + required check (Q3 external) |
+| T2 | Human commits without agent path | Same as T1 | `templates/hooks/pre-commit-structrail`; branch protection + required check (external) |
 | T3 | CI job missing / not required | Merge green without architecture | doctor `enforcement-ci-*` gaps; `--strict-merge` profile |
 | T4 | Config weakened (`peerIsolation: false`, empty rules) | False green | safety diagnostics; false-green adoption detector |
 | T5 | Baseline ratcheted open | Debt reintroduced | baseline unused/stale signals; occurrence keys |
@@ -41,18 +41,18 @@ infrastructure beyond how this package is published.
 ## Trust boundaries
 
 ```
-Claude/Grok host --PreToolUse--> arkgate-mcp (hard matched-write boundary)
-Any MCP host     --tool call----> arkgate-mcp (advisory validation)
+Claude/Grok host --PreToolUse--> structrail-mcp (hard matched-write boundary)
+Any MCP host     --tool call----> structrail-mcp (advisory validation)
 Human IDE        --disk/git-----> working tree
-working tree     --PR-----------> CI ark-check --strict-merge
+working tree     --PR-----------> CI structrail-check --strict-merge
 npm publish <-- signed tag ---  GitHub Release + provenance
 ```
 
 ## Residual risk (accepted)
 
 - Branch protection is **external GitHub state** — doctor reports honestly when unavailable.  
-- Full external adoption matrix (Q4) and independent ≥95 audit (Q10) are separate exit gates.  
-- Live multi-agent loop-cost remains optional (`ARK_EVAL_LOOP_LIVE`).
+- Full external adoption matrix and independent audit remain separate exit gates.
+- Live multi-agent loop-cost remains optional (`STRUCTRAIL_EVAL_LOOP_LIVE`).
 
 ## Verification hooks
 

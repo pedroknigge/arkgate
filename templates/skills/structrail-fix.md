@@ -79,7 +79,7 @@ If the “fix” is really a missing business intent or Domain home for a rule:
 
 ## Rules
 
-- No `ark-*-disable`, no allowing a bad edge “to finish”, no baselining a **new** violation you introduced.
+- No `structrail-*-disable`, no allowing a bad edge “to finish”, no baselining a **new** violation you introduced.
 - Prefer mechanical-safe kinds when the plan tags them; otherwise design judgment carefully.
 - Code only — no DB migrations unless user asked.
 

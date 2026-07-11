@@ -1,5 +1,5 @@
 /**
- * Gallery starter ark.config.json must match preset factories (no silent drift).
+ * Gallery starter structrail.config.json must match preset factories (no silent drift).
  */
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';

@@ -1,7 +1,7 @@
 /**
  * R5: labeled eval corpus under eval/cases/ — static gates (no live agent).
  *
- * Drives real ark-check on every harness-eligible fixture and validates case.json
+ * Drives real structrail-check on every harness-eligible fixture and validates case.json
  * labels against the domain fixClass / remediation vocabulary.
  */
 import { describe, expect, it } from 'vitest';
@@ -15,7 +15,7 @@ import {
 
 const REPO = path.resolve(import.meta.dirname, '../../..');
 const CASES_DIR = path.join(REPO, 'eval/cases');
-const ARK_CHECK = path.join(REPO, 'bin/ark-check.mjs');
+const STRUCTRAIL_CHECK = path.join(REPO, 'bin/structrail-check.mjs');
 const VALIDATE = path.join(REPO, 'eval/validate-corpus.mjs');
 
 const MIN_CASES = 15;
@@ -58,10 +58,10 @@ function loadCase(name: string): CaseDef {
   return JSON.parse(fs.readFileSync(path.join(CASES_DIR, name, 'case.json'), 'utf8')) as CaseDef;
 }
 
-function runArkCheck(root: string, extra: string[] = []) {
+function runStructrailCheck(root: string, extra: string[] = []) {
   const res = spawnSync(
     process.execPath,
-    [ARK_CHECK, '--root', root, '--config', 'ark.config.json', ...extra],
+    [STRUCTRAIL_CHECK, '--root', root, '--config', 'structrail.config.json', ...extra],
     { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }
   );
   return { code: res.status ?? 1, output: `${res.stdout || ''}${res.stderr || ''}` };
@@ -94,20 +94,20 @@ describe('R5 eval corpus (eval/cases)', () => {
     }
   });
 
-  it('every harness-eligible fixture actually violates under real ark-check', () => {
+  it('every harness-eligible fixture actually violates under real structrail-check', () => {
     const harness = names.filter((n) => !loadCase(n).skipHarness);
     expect(harness.length).toBeGreaterThanOrEqual(MIN_CASES - 2);
 
     for (const name of harness) {
       const root = path.join(CASES_DIR, name);
-      expect(fs.existsSync(path.join(root, 'ark.config.json')), name).toBe(true);
-      const { code, output } = runArkCheck(root);
+      expect(fs.existsSync(path.join(root, 'structrail.config.json')), name).toBe(true);
+      const { code, output } = runStructrailCheck(root);
       expect(code, `${name} exit (want 1)\n${output.slice(-300)}`).toBe(1);
       expect(output.toLowerCase(), name).toMatch(/violation/);
     }
   });
 
-  it('mechanical-safe cases expose matching remediationKind via ark-check --plan', () => {
+  it('mechanical-safe cases expose matching remediationKind via structrail-check --plan', () => {
     const labeled = names.filter((n) => {
       const d = loadCase(n);
       return !d.skipHarness && d.expectedRemediationKind;
@@ -117,7 +117,7 @@ describe('R5 eval corpus (eval/cases)', () => {
     for (const name of labeled) {
       const def = loadCase(name);
       const root = path.join(CASES_DIR, name);
-      const { code, output } = runArkCheck(root, ['--plan', '--json']);
+      const { code, output } = runStructrailCheck(root, ['--plan', '--json']);
       // --plan is report-only (exit 0) even when violations exist
       expect([0, 1], name).toContain(code);
       const plan = JSON.parse(output) as {

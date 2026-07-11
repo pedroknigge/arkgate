@@ -62,13 +62,20 @@ describe('ark-check entry slim-down (R3)', () => {
     }
   });
 
-  it('real ark-check still passes on this repo (orchestration wires the scan)', () => {
+  it('real structrail-check still passes on this repo (orchestration wires the scan)', () => {
     const result = spawnSync(
       process.execPath,
-      [entry, '--root', root, '--config', 'ark.config.json', '--strict-config'],
+      [
+        path.join(root, 'bin/structrail-check.mjs'),
+        '--root',
+        root,
+        '--config',
+        'structrail.config.json',
+        '--strict-config',
+      ],
       { cwd: root, encoding: 'utf8' }
     );
     expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout + result.stderr).toMatch(/Ark check passed/);
+    expect(result.stdout + result.stderr).toMatch(/Structrail check passed/);
   });
 });

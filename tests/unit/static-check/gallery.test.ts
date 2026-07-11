@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 const REPO = path.resolve(import.meta.dirname, '../../..');
-const ARK_CHECK = path.join(REPO, 'bin/ark-check.mjs');
+const STRUCTRAIL_CHECK = path.join(REPO, 'bin/structrail-check.mjs');
 const EXAMPLES = path.join(REPO, 'examples');
 
 const GALLERY_STARTERS = [
@@ -20,7 +20,7 @@ type CheckJson = { ok: boolean; violations: unknown[]; warnings: unknown[] };
 function runStrictCheck(root: string): CheckJson {
   const stdout = execFileSync(
     'node',
-    [ARK_CHECK, '--root', root, '--config', 'ark.config.json', '--strict-config', '--json'],
+    [STRUCTRAIL_CHECK, '--root', root, '--config', 'structrail.config.json', '--strict-config', '--json'],
     { encoding: 'utf8' }
   );
   return JSON.parse(stdout) as CheckJson;
@@ -39,9 +39,9 @@ function copyDir(src: string, dst: string) {
 
 describe('Phase D — example gallery starters', () => {
   for (const starter of GALLERY_STARTERS) {
-    it(`${starter.dir} passes ark-check --strict-config`, () => {
+    it(`${starter.dir} passes structrail-check --strict-config`, () => {
       const root = path.join(EXAMPLES, starter.dir);
-      expect(fs.existsSync(path.join(root, 'ark.config.json'))).toBe(true);
+      expect(fs.existsSync(path.join(root, 'structrail.config.json'))).toBe(true);
       expect(fs.existsSync(path.join(root, 'README.md'))).toBe(true);
 
       const result = runStrictCheck(root);
@@ -58,7 +58,7 @@ describe('Phase D — example gallery starters', () => {
         devDependencies?: Record<string, string>;
       };
       expect(pkg.scripts.check).toBe(
-        'structrail-check --root . --config ark.config.json --strict-config'
+        'structrail-check --root . --config structrail.config.json --strict-config'
       );
       expect(pkg.scripts.check).not.toContain('../..');
       expect(pkg.devDependencies?.['structrail']).toBeDefined();
@@ -67,7 +67,7 @@ describe('Phase D — example gallery starters', () => {
 
   it('crud-product-starter npm run check works when copied and installed', () => {
     const src = path.join(EXAMPLES, 'crud-product-starter');
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-gallery-copy-'));
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'structrail-gallery-copy-'));
     copyDir(src, tmp);
 
     const pkgPath = path.join(tmp, 'package.json');

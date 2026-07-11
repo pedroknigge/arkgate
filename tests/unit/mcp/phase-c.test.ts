@@ -12,7 +12,7 @@ import {
 } from '../../helpers/phase-c-evidence.mjs';
 
 const scratchDir =
-  process.env.PHASE_C_SCRATCH || fs.mkdtempSync(path.join(os.tmpdir(), 'ark-phasec-test-scratch-'));
+  process.env.PHASE_C_SCRATCH || fs.mkdtempSync(path.join(os.tmpdir(), 'structrail-phasec-test-scratch-'));
 
 describe('Phase C — verification evidence helpers', () => {
   beforeAll(() => {
@@ -20,14 +20,14 @@ describe('Phase C — verification evidence helpers', () => {
     fs.mkdirSync(scratchDir, { recursive: true });
   }, 120000);
 
-  it('lists ark_recommend in MCP tools/list', async () => {
-    const greenfield = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-phasec-tools-'));
+  it('lists structrail_recommend in MCP tools/list', async () => {
+    const greenfield = fs.mkdtempSync(path.join(os.tmpdir(), 'structrail-phasec-tools-'));
     fs.writeFileSync(
       path.join(greenfield, 'package.json'),
       JSON.stringify({ name: 'greenfield', version: '0.0.0' })
     );
     const tools = await listMcpToolNames(greenfield);
-    expect(tools).toContain('ark_recommend');
+    expect(tools).toContain('structrail_recommend');
   });
 
   it('captureMcpRecommendParity — MCP matches CLI and writes mcp-recommend-parity.json', async () => {
@@ -42,16 +42,16 @@ describe('Phase C — verification evidence helpers', () => {
 
   it('captureSessionContextHint — low coverage shows hint, high omits it', () => {
     const { low, high } = captureSessionContextHint(scratchDir);
-    expect(low).toContain('New to Ark?');
-    expect(low).toContain('/ark-architect');
-    expect(low).toContain('ark-check --recommend');
-    expect(high).not.toContain('New to Ark?');
+    expect(low).toContain('New to Structrail?');
+    expect(low).toContain('/structrail-architect');
+    expect(low).toContain('structrail-check --recommend');
+    expect(high).not.toContain('New to Structrail?');
     expect(fs.existsSync(path.join(scratchDir, 'session-context-hint.txt'))).toBe(true);
   });
 
   it('capturePhaseCDocs — skill template and agent-guide references', () => {
     const output = capturePhaseCDocs(scratchDir);
-    expect(output).toContain('ark_recommend');
+    expect(output).toContain('structrail_recommend');
     expect(fs.existsSync(path.join(REPO_ROOT, 'templates/skills/structrail-architect.md'))).toBe(true);
   });
 });

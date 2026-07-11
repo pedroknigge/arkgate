@@ -1,14 +1,14 @@
 # hexagonal-order-api
 
-A tiny but real order API with a hexagonal architecture, governed by Ark's three gates:
+A tiny but real order API with a hexagonal architecture, governed by Structrail's three gates:
 
-- **ark-check** — CI gate: static import analysis between layers.
-- **ark-mcp** — AI gate: the same rules, exposed to coding agents via MCP.
-- **Ark kernel runtime** — strict event bus, intent registry, event contracts, projections.
+- **structrail-check** — CI gate: static import analysis between layers.
+- **structrail-mcp** — AI gate: the same rules, exposed to coding agents via MCP.
+- **Structrail kernel runtime** — strict event bus, intent registry, event contracts, projections.
 
-No frameworks, no external runtime dependencies — just `node:http` and `arkgate`.
+No frameworks, no external runtime dependencies — just `node:http` and `structrail`.
 
-Prefer **`arkgate/runtime`** for kernel imports (not the root package barrel). This demo opts
+Prefer **`structrail/runtime`** for kernel imports (not the root package barrel). This demo opts
 into `safety.allowInMemory: true` because the stock kernel wires an InMemory outbox for local
 exercises — **not** a production pattern.
 
@@ -23,7 +23,7 @@ src/
   main.ts               composition root   — wires kernel, adapters, and use case
 ```
 
-`ark.config.json` maps each folder to a layer and blocks the imports hexagonal
+`structrail.config.json` maps each folder to a layer and blocks the imports hexagonal
 architecture forbids (domain → adapters, application → adapters, adapter → adapter, ...).
 
 ## Run it
@@ -38,11 +38,11 @@ Then, in another terminal:
 ```bash
 curl -s -X POST http://localhost:3000/orders \
   -H 'content-type: application/json' \
-  -d '{"sku":"ARK-001","quantity":2,"amount":49.9}'
+  -d '{"sku":"SR-001","quantity":2,"amount":49.9}'
 # -> {"orderId":"..."}
 
 curl -s http://localhost:3000/orders/<orderId>
-# -> read model served from the Ark projection, not from the repository
+# -> read model served from the Structrail projection, not from the repository
 ```
 
 What happens on each POST:
@@ -54,8 +54,8 @@ What happens on each POST:
 ## Gate 1: CI check
 
 ```bash
-npm run check      # = npx ark-check --root . --config ark.config.json --strict-config
-# ✔ Ark check passed.
+npm run check      # = npx structrail-check --root . --config structrail.config.json --strict-config
+# ✔ Structrail check passed.
 ```
 
 Exits 0 when every import respects the layer rules. Add it to CI as-is.
@@ -96,25 +96,25 @@ await deps.publisher.publish('Domain.Order.OrderPlaced' as never, payload, { sou
 
 ```
 ✖ RAW_EVENT_PUBLISH  src/application/place-order.ts:25
-  Publish through a registered intent creator; raw event objects or intent strings bypass Ark contracts and tooling.
+  Publish through a registered intent creator; raw event objects or intent strings bypass Structrail contracts and tooling.
 ```
 
 **Bonus (runtime gate):** the kernel is strict by default — drop `amount` from the publish payload in the use case and the running server rejects the POST with an event-contract violation; no bad event ever reaches the read model.
 
-## Gate 2: AI agents (ark-mcp)
+## Gate 2: AI agents (structrail-mcp)
 
 Expose the same rules to coding agents so illegal code is rejected *before* it is written:
 
 ```bash
-npx ark-mcp --root . --config ark.config.json
+npx structrail-mcp --root . --config structrail.config.json
 ```
 
 Register it as an MCP server in your agent and bind the write gate:
 
 ```bash
 # Claude / Cursor / Codex / Grok (and CI templates) in one shot:
-npx ark-check --install-agent-gates --tools claude,cursor,codex,grok
-# or Claude only: claude mcp add ark -- npx ark-mcp --root . --config ark.config.json
+npx structrail-check --install-agent-gates --tools claude,cursor,codex,grok
+# or Claude only: claude mcp add structrail -- npx structrail-mcp --root . --config structrail.config.json
 ```
 
 See the [AI gates guide](../../docs/ai-gates.md) (includes Grok Build `.grok/` layout).

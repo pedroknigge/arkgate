@@ -36,7 +36,7 @@ src/
 
 1. **Contexts do not import each other** (any layer pair) — extract to shared kernel or use events.
 2. **Domain must not use fetch/process/Date.now** — inject ports.
-3. **Do not weaken `ark.config.json` to pass.** Integrate via events or shared kernel.
+3. **Do not weaken `structrail.config.json` to pass.** Integrate via events or shared kernel.
 
 ## Verify
 
@@ -44,4 +44,4 @@ src/
 npm run check
 ```
 
-Init: `ark init --preset ddd-bounded-contexts` or `ark init --archetype ddd-bounded-contexts --yes`.
+Init: `structrail init --preset ddd-bounded-contexts` or `structrail init --archetype ddd-bounded-contexts --yes`.

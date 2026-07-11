@@ -31,14 +31,14 @@ src/
 
 1. **Never import `features/A` from `features/B`.** Extract to `shared/` or use events.
 2. **Shared must not import Features.** Dependency points inward to shared/lib only.
-3. **Do not weaken `ark.config.json` to pass.** Move or extract code instead.
+3. **Do not weaken `structrail.config.json` to pass.** Move or extract code instead.
 
 ## Verify
 
 ```bash
 npm run check
 # or from repo root:
-node ../../bin/ark-check.mjs --root . --config ark.config.json --strict-config
+node ../../bin/structrail-check.mjs --root . --config structrail.config.json --strict-config
 ```
 
-Init elsewhere: `ark init --preset vertical-slice` or `ark init --archetype vertical-slice-product --yes`.
+Init elsewhere: `structrail init --preset vertical-slice` or `structrail init --archetype vertical-slice-product --yes`.

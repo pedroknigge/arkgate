@@ -49,7 +49,7 @@ jobs:
       # which fails the job and blocks the merge. --strict-config also fails the job on
       # governance-coverage warnings (e.g. unclassified source files), so the config can
       # never silently rot below 100% coverage of src.
-      - name: Architecture gate (ark-check)
+      - name: Architecture gate (structrail-check)
         run: npm run check:architecture
 
   node-compat:
@@ -68,9 +68,9 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run check:js
-      - run: node bin/ark-check.mjs --version
+      - run: node bin/structrail-check.mjs --version
 
-  # Consumer TypeScript matrix: ark-check --plan against TS 5 / 6 / 7 installed in a
+  # Consumer TypeScript matrix: structrail-check --plan against TS 5 / 6 / 7 installed in a
   # throwaway fixture (tests/fixtures/ts-consumer). Ensures gate load + resolve work
   # while the ecosystem moves to TypeScript 7 (native). See docs/typescript-support.md.
   ts-compat:

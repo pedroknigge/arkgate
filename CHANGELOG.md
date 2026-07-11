@@ -1,6 +1,7 @@
 # Changelog
 
-All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here.
+All notable changes to Structrail (`structrail`; formerly ArkGate / `arkgate` and
+`ark-runtime-kernel`) are documented here.
 
 ## Unreleased
 
@@ -17,6 +18,15 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
   is reviewed in `dynamicImportAllowlist`). The scan cache is versioned past the old semantics.
 
 ### Added
+
+- **Structrail v3 identity:** `structrail` is now the primary package with `structrail`,
+  `structrail-check`, and `structrail-mcp`; new configs, environment variables, MCP resources/tools,
+  skills, examples, reports, and evaluation output use Structrail names. The deprecated
+  `arkgate@3` wrapper retains all v2 imports and six legacy bins through v3. Config/environment/MCP
+  aliases remain conflict-aware, and `structrail migrate-config` is preview-first and idempotent.
+- **Cross-package-manager compatibility matrix:** clean local-tarball installs cover npm, pnpm,
+  and Yarn across primary-only, compatibility-only, and combined consumers, including all four
+  import subpaths and every public bin.
 
 - **Active-host enforcement capabilities:** doctor and adoption checks now project
   `hard-write`, `advisory-write`, `merge-gate`, and `repair-payload` from the active host only,

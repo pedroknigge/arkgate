@@ -1,4 +1,4 @@
-import type { EventPublisher, IntentCreator } from 'arkgate/runtime';
+import type { EventPublisher, IntentCreator } from 'structrail/runtime';
 import { ORDER_PLACED, placeOrder, type OrderPlacedPayload } from '../domain/order.js';
 import type { OrderRepository } from '../domain/order-repository.js';
 
@@ -11,7 +11,7 @@ export interface PlaceOrderInput {
 }
 
 /**
- * Use case: depends only on the domain and on Ark ports (publisher + intent
+ * Use case: depends only on the domain and on Structrail ports (publisher + intent
  * creator), never on concrete adapters.
  */
 export function createPlaceOrder(deps: {
