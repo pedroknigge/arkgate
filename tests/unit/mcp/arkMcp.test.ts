@@ -522,12 +522,32 @@ describe('Structrail MCP identity with ArkGate aliases', () => {
         'ark_prepare_write',
       ])
     );
+    const canonicalTools = tools.result.tools.filter(
+      (tool: { name: string }) =>
+        tool.name === 'validate_code' || tool.name.startsWith('structrail_')
+    );
+    for (const tool of canonicalTools) {
+      expect(JSON.stringify(tool), tool.name).not.toMatch(
+        /\bArkGate\b|\bArk\b|ark\.config\.json|\bark-check\b|\bark_[a-z]/
+      );
+    }
+    const legacyTools = tools.result.tools.filter((tool: { name: string }) =>
+      tool.name.startsWith('ark_')
+    );
+    for (const tool of legacyTools) {
+      expect(tool.description, tool.name).toContain('Deprecated ArkGate alias');
+      expect(tool.description, tool.name).toContain(
+        tool.name.replace(/^ark_/, 'structrail_')
+      );
+    }
 
     const resources = await client.request('resources/list');
     expect(resources.result.resources.map((resource: { uri: string }) => resource.uri)).toEqual([
       'structrail://manifest',
       'ark://manifest',
     ]);
+    expect(resources.result.resources[0].name).toContain('Structrail');
+    expect(resources.result.resources[1].name).toContain('deprecated alias');
   });
 
   it('keeps canonical and legacy resource/tool verdicts identical', async () => {
