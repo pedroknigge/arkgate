@@ -471,14 +471,15 @@ as a hard dependency of `C01`.
 
 ### S07-M1 — Migrate ArkGate to Structrail with compatibility
 
-- **Status:** `todo`
+- **Status:** `doing`
 - **Depends on:** `S07`
 - **Plan:** [ArkGate to Structrail migration](docs/migrations/arkgate-to-structrail.md)
 
 **Implementation**
 
-1. Reserve the external identity and complete the required legal availability work; stop and
-   supersede ADR 0001 if a prerequisite fails.
+1. Recheck the external identity before local work. Reservation and legal clearance block public
+   metadata/cutover and the final `done` state, but not red fixtures or locally reversible code.
+   Stop and supersede ADR 0001 if a prerequisite fails before cutover.
 2. Commit failing installed-package fixtures for every current public identity and every target
    Structrail surface.
 3. Make Structrail primary across package, bins, config, environment, MCP, skills, repository, and
@@ -892,8 +893,8 @@ stabilize a new ArkGate-named surface.
 
 ```text
 Item: S07-M1 — Migrate ArkGate to Structrail with compatibility
-First result: complete M0 identity reservation/legal prerequisites; do not rename code before them
-Then: commit failing package/bin/config/environment/MCP/skill compatibility fixtures
+First result: commit failing package/bin/config compatibility fixtures before production changes
+Then: implement the locally reversible rename; keep M0 reservation/legal as the public-cutover gate
 Primary plan: docs/migrations/arkgate-to-structrail.md
 Required finish: target identity cut over + all v2 paths green through arkgate@3 + common/package gates
 ```

@@ -37,9 +37,12 @@ have a migration assertion; a global text replacement is not an acceptable imple
 
 ## Ordered implementation
 
-### M0 — Reserve and record external identity
+### M0 — Recheck, reserve, and record external identity
 
-This is a human-authorized external-state gate. Before changing published metadata:
+This is a human-authorized external-state gate. Run the read-only availability recheck before local
+implementation. M1–M5 may then proceed as reversible local commits, but do not change external
+systems, publish packages, advertise the new domains, or mark `S07-M1` done until all M0 evidence is
+complete:
 
 1. Recheck and reserve the chosen `.com` and `.dev` domains.
 2. Recheck npm and GitHub availability and reserve the needed identities without publishing a
@@ -48,8 +51,9 @@ This is a human-authorized external-state gate. Before changing published metada
 4. Store ownership and renewal responsibility outside the repository; record only non-secret proof
    links or issue references here.
 
-If any prerequisite fails, stop and supersede ADR 0001. Do not continue with a partially available
-identity.
+If any prerequisite fails before public cutover, stop and supersede ADR 0001. Do not publish or
+complete the migration with a partially available identity. Local work may be reverted or adapted
+through a normal follow-up commit.
 
 ### M1 — Add failing compatibility fixtures
 
@@ -113,7 +117,8 @@ Commit the red fixtures before making them pass.
 
 ### M6 — Repository and public cutover
 
-This step requires explicit authorization because it changes external systems.
+This step requires completed M0 evidence and explicit authorization because it changes external
+systems.
 
 1. Rename the GitHub repository and update Action examples, badges, issue links, security policy,
    release automation, MCP registry metadata, and provenance subjects.
