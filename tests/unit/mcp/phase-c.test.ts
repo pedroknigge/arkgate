@@ -52,6 +52,6 @@ describe('Phase C — verification evidence helpers', () => {
   it('capturePhaseCDocs — skill template and agent-guide references', () => {
     const output = capturePhaseCDocs(scratchDir);
     expect(output).toContain('ark_recommend');
-    expect(fs.existsSync(path.join(REPO_ROOT, 'templates/skills/ark-architect.md'))).toBe(true);
+    expect(fs.existsSync(path.join(REPO_ROOT, 'templates/skills/structrail-architect.md'))).toBe(true);
   });
 });

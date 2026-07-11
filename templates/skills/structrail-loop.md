@@ -1,24 +1,24 @@
 ---
-name: ark-loop
-description: Drive ark-check --plan to zero active violations. Read real source, auto-apply only mechanical-safe kinds, design judgment from the product tree. CLI validates — you edit code.
+name: structrail-loop
+description: Drive structrail-check --plan to zero active violations. Read real source, auto-apply only mechanical-safe kinds, design judgment from the product tree. CLI validates — you edit code.
 ---
 
-# /ark-loop — Apply the plan safely
+# /structrail-loop — Apply the plan safely
 
-Read Ark’s classified **plan**, work toward **goal.met**, one small step at a time,
-validating every change with `ark-check` and rolling back regressions.
+Read Structrail’s classified **plan**, work toward **goal.met**, one small step at a time,
+validating every change with `structrail-check` and rolling back regressions.
 
 Deterministic kinds stay **tight**. Your job is still **exploratory on the files**: open
 importers/targets, see if the plan step is a symptom of wrong shape / false Domain / I/O
-under Application — escalate to `/ark-contract` or `/ark-explore` when the wall is structural.
+under Application — escalate to `/structrail-contract` or `/structrail-explore` when the wall is structural.
 
 
 ## Related onboarding
 
-- **Greenfield:** `/ark-architect` or `ark-check --recommend` / `ark start`.
-- **Brownfield:** `/ark-adopt` — match contract to reality; do not force a starter preset.
-- **Map / opportunities:** `/ark-explore`.
-- **Default path:** `ark start` → `/ark-autopilot` → `ark-check --doctor`.
+- **Greenfield:** `/structrail-architect` or `structrail-check --recommend` / `structrail start`.
+- **Brownfield:** `/structrail-adopt` — match contract to reality; do not force a starter preset.
+- **Map / opportunities:** `/structrail-explore`.
+- **Default path:** `structrail start` → `/structrail-autopilot` → `structrail-check --doctor`.
 
 ## Dual engine (mandatory)
 
@@ -35,7 +35,7 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 
 | Host capability | Behavior |
 |-----------------|----------|
-| **Parallel subagents supported** (e.g. multi-agent / `spawn_subagent` / concurrent Agent tools) | Launch **2–N** agents in **one wave** with **disjoint path scopes**. Prefer **read-only** explore agents for mapping; at most **one writer** unless the host gives isolated worktrees. Parent merges findings, then runs `ark-check` once. |
+| **Parallel subagents supported** (e.g. multi-agent / `spawn_subagent` / concurrent Agent tools) | Launch **2–N** agents in **one wave** with **disjoint path scopes**. Prefer **read-only** explore agents for mapping; at most **one writer** unless the host gives isolated worktrees. Parent merges findings, then runs `structrail-check` once. |
 | **Not supported** (single agent only) | **Fall back to sequential** — same checklist, one cluster/step at a time. Never claim parallel work you did not run. |
 
 **Rules:**
@@ -54,8 +54,8 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 2. For each step you touch: **read** `file` and `target` source (and enough callers to know the edge).
 3. **“Así te lo re-soluciono”** — exact edit before applying.
 4. After each apply: full gate re-run; rollback if targeted violation remains or new ones appear.
-5. If one edge dominates: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
-6. If empty cores + I/O under Application: **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
+5. If one edge dominates: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /structrail-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
+6. If empty cores + I/O under Application: **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /structrail-adopt or /structrail-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
 
 ## mechanical-safe only (auto)
 
@@ -71,7 +71,7 @@ Never auto: free value uses of imports, multi-import files, dynamic import/requi
 
 ## Steps
 
-1. **Plan** — `ark-check --plan --json` (+ `--baseline` if used). If `goal.met`, stop.
+1. **Plan** — `structrail-check --plan --json` (+ `--baseline` if used). If `goal.met`, stop.
 2. **Worktree** — prefer discardable git worktree.
 3. **Apply mechanical-safe** one-by-one with validate/rollback.
 4. **Judgment** — propose with source-based design; apply only if user approved (or parent autopilot said full apply).
@@ -81,14 +81,14 @@ Never auto: free value uses of imports, multi-import files, dynamic import/requi
 ## Operating rules
 
 - Never weaken the gate (no rule disables, no fresh baselining of new debt).
-- Concentrated single edge → stop and hand to `/ark-contract` with code evidence.
+- Concentrated single edge → stop and hand to `/structrail-contract` with code evidence.
 - When unsure behavior preservation → judgment, not mechanical-safe.
 
 ## Done criteria
 
 - Gate confirms each kept edit.
 - Honest residual list with **Así te lo re-soluciono** for anything left.
-- If residual steps hide domain/business rules in the wrong layer, call out **manifiesto** work (`intentPrefixes` / Domain placement) via `/ark-contract` or `/ark-adopt`.
+- If residual steps hide domain/business rules in the wrong layer, call out **manifiesto** work (`intentPrefixes` / Domain placement) via `/structrail-contract` or `/structrail-adopt`.
 
 ## Completion contract (skill incomplete if missing)
 
@@ -98,7 +98,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Handoff:** `/ark-…` / CLI / `none`
+- **Handoff:** `/structrail-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 
 If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.

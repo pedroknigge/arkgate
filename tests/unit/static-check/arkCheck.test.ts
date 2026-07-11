@@ -672,7 +672,7 @@ jobs:
     const skillNames = fs
       .readdirSync(path.resolve('templates/skills'))
       .filter((file) => file.endsWith('.md'))
-      .map((file) => file.replace(/\.md$/, ''));
+      .map((file) => file.replace(/\.md$/, '').replace(/^structrail-/, 'ark-'));
     expect(skillNames).toContain('ark-coverage');
     expect(skillNames.length).toBeGreaterThanOrEqual(8);
 

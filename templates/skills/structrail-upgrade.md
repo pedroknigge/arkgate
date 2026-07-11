@@ -1,39 +1,39 @@
 ---
-name: ark-upgrade
-description: Update arkgate to the latest published version, then refresh gates and /ark-* skills for the active agent host (defer inactive hosts like Codex when not in use) and re-verify the architecture check. Autonomous.
+name: structrail-upgrade
+description: Update structrail to the latest published version, then refresh gates and /structrail-* skills for the active agent host (defer inactive hosts like Codex when not in use) and re-verify the architecture check. Autonomous.
 ---
 
-# /ark-upgrade — Update ArkGate and refresh its gates
+# /structrail-upgrade — Update Structrail and refresh its gates
 
-Update the `arkgate` dependency to the latest published version and
+Update the `structrail` dependency to the latest published version and
 bring the repo's generated artifacts and gates in line with it. This skill
 checks the registry itself — don't assume the copy in `node_modules` is current.
 
-**Still on `ark-runtime-kernel`?** Migrate first (same product, new package name):
+**Still on `ark-runtime-kernel`?** Migrate first (legacy package, same product lineage):
 
 ```bash
-npm uninstall ark-runtime-kernel && npm install -D arkgate
-npx arkgate-check --install-agent-gates --force
+npm uninstall ark-runtime-kernel && npm install -D structrail
+npx structrail-check --install-agent-gates --force
 ```
 
 Guide: `docs/migrate-from-ark-runtime-kernel.md` in the package (or on GitHub).
 
-**TypeScript 7 projects:** ArkGate falls back to a nested JS-API TypeScript when the
+**TypeScript 7 projects:** Structrail falls back to a nested JS-API TypeScript when the
 project's `typescript` main export is version-only (TS 7.0). After upgrade, point users at
-`docs/typescript-support.md` if the gate or `ARK_DEBUG_TS=1` mentions fallback. Dual install
+`docs/typescript-support.md` if the gate or `STRUCTRAIL_DEBUG_TS=1` mentions fallback. Dual install
 (TS6 JS API + TS7 CLI) is optional for tooling that still needs classic `tsc` APIs.
 
 **MCP double-bin check (identity cutover):** after upgrade, open `.mcp.json` and
-`.cursor/mcp.json`. `args` must contain **exactly one** of `arkgate-mcp` / `ark-mcp`
-(prefer `arkgate-mcp`), never both. If both appear, run:
+`.cursor/mcp.json`. `args` must contain exactly one MCP bin: prefer `structrail-mcp`;
+`arkgate-mcp` and `ark-mcp` are v3 compatibility inputs only. If multiple appear, run:
 
 ```
-npx arkgate-check --install-agent-gates --migrate-commands
+npx structrail-check --install-agent-gates --migrate-commands
 ```
 
-`ark upgrade` already runs migrate-commands; re-run it if an older 2.x left dual names.
+`structrail upgrade` already runs migrate-commands; re-run it if an older 2.x left dual names.
 
-**Adoption completeness:** run `npx arkgate-check --doctor` (or `--doctor --json`) and
+**Adoption completeness:** run `npx structrail-check --doctor` (or `--doctor --json`) and
 read the **Adoption** section — host gaps, Codex home temp paths, optional-but-populated
 core layers, missing origin snapshot, baseline policy. Fix commands are printed per gap.
 HTML reports include the same Adoption card (separate from the 0–100 fitness score).
@@ -64,13 +64,13 @@ the same files or weaken the gate.
 
 ## Fast path
 
-One command does the whole flow — update the package, refresh gates + `/ark-*` skills
+One command does the whole flow — update the package, refresh gates + `/structrail-*` skills
 (and best-effort Codex home prompts when `~/.codex` exists), migrate command runners,
 and run the strict check:
 
 ```
-arkgate upgrade
-# (alias: ark upgrade)
+structrail upgrade
+# (v3 aliases: arkgate upgrade / ark upgrade)
 ```
 
 Use it when the user just wants the update done. Run the detailed steps below instead when
@@ -79,15 +79,15 @@ reports a problem to triage. Always refresh skills so agents pick up new `mechan
 kinds and TS guidance:
 
 ```
-npx arkgate-check --install-agent-gates --skills-only --force
+npx structrail-check --install-agent-gates --skills-only --force
 ```
 
 ## Steps
 
 1. **Check the registry, then update.** Compare the installed version
-   (`node_modules/arkgate/package.json`) against the latest published:
-   `npm view arkgate version`. If a newer version exists, update it —
-   `npm install -D arkgate@latest` (or the project's package manager:
+   (`node_modules/structrail/package.json`) against the latest published:
+   `npm view structrail version`. If a newer version exists, update it —
+   `npm install -D structrail@latest` (or the project's package manager:
    `pnpm add -D` / `yarn add -D`) — so the lockfile moves too; a pinned lockfile
    is exactly why "just re-run install" often stays on the old version. If the
    installed version already equals the latest, say so and still run steps 3-4
@@ -101,22 +101,22 @@ npx arkgate-check --install-agent-gates --skills-only --force
    `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` FIRST, bump the dependency spec, then
    run a plain `pnpm install`, and verify with `pnpm install --frozen-lockfile` before moving
    on. Only exclude a first-party package you trust.
-2. **Changelog triage** — read `node_modules/arkgate/CHANGELOG.md`
+2. **Changelog triage** — read `node_modules/structrail/CHANGELOG.md`
    (shipped in the package) for the versions between old and new, and pick out
    only entries that affect THIS repo (new flags, changed defaults, new gate
    templates, new skills). Summarize each in one sentence with what, if
    anything, the repo must do about it. If the file is absent (older releases
-   didn't ship it), fall back to `npm view arkgate@<version> ...` or
+   didn't ship it), fall back to `npm view structrail@<version> ...` or
    the GitHub release notes — say which source you used.
-3. **Refresh templates** — run `ark-check --install-agent-gates`. Without
+3. **Refresh templates** — run `structrail-check --install-agent-gates`. Without
    `--force` it only writes missing files (new skills, new tool templates) and
-   skips existing ones. To pick up NEW versions of the `/ark-*` skills that a
-   package update shipped, run `ark-check --install-agent-gates --skills-only
+   skips existing ones. To pick up NEW versions of the `/structrail-*` skills that a
+   package update shipped, run `structrail-check --install-agent-gates --skills-only
    --force`: `--skills-only` scopes the overwrite to the canonical skills and
    leaves the gate files alone. Do NOT run a bare `--install-agent-gates --force`
    to refresh skills — it also overwrites `AGENTS.md` (often customized with the
    project's real layer table), `.claude/settings.json` (hooks/permissions), and
-   `.github/workflows/ark-check.yml` (CI) with the generic templates, silently
+   `.github/workflows/structrail-check.yml` (CI) with the generic templates, silently
    losing customizations. If the changelog says a GATE file changed, report the
    diff and let the user decide; never rewrite settings/CI/AGENTS.md without
    explicit approval.
@@ -124,27 +124,27 @@ npx arkgate-check --install-agent-gates --skills-only --force
    `.grok/skills/`, `.claude/skills/`, `.cursor/commands/`). Repo-local copies for
    other detected hosts are fine to refresh in the same pass when cheap.
    **Codex is deferred when you are not on Codex.** Prompts live in
-   `$CODEX_HOME/prompts` (`~/.codex/prompts`), not the repo. `ark upgrade` may
+   `$CODEX_HOME/prompts` (`~/.codex/prompts`), not the repo. `structrail upgrade` may
    best-effort refresh that home when it exists; still list Codex under
    **Deferred hosts** and do **not** chase MCP multi-project / stale home skills
    until the user is on Codex (or asks). Fix command when needed:
-   `ark-check --install-agent-gates --skills-only --codex-home --force`
+   `structrail-check --install-agent-gates --skills-only --codex-home --force`
    (and `--tools codex` / `--force` for primary MCP rebind). Exception: temp or
-   `ark-upgrade` MCP `--root` paths — leave fail-closed rewrite to the CLI; do not
+   `structrail-upgrade` MCP `--root` paths — leave fail-closed rewrite to the CLI; do not
    block completion on multi-project noise.
    **Migrate stale command runners.** The package-manager-aware command templates
    (`pnpm exec` / `yarn` / `npx`) only apply to NEWLY written files, so a repo that adopted
-   Ark before they shipped keeps a stale `npx` in its EXISTING gate files
+   Structrail before they shipped keeps a stale `npx` in its EXISTING gate files
    (`.claude/settings.json` hooks, `.mcp.json`, `AGENTS.md`, the `check:architecture` script).
    In a pnpm/yarn repo that means the write gate runs on a command the repo forbids. Run
-   `ark-check --install-agent-gates --migrate-commands`: it rewrites ONLY the command runner
-   in those files, preserving every customization (no `--force` clobber). A normal `ark-check`
+   `structrail-check --install-agent-gates --migrate-commands`: it rewrites ONLY the command runner
+   in those files, preserving every customization (no `--force` clobber). A normal `structrail-check`
    also flags this when it detects the mismatch.
-4. **Re-verify** — `ark-check --root . --config ark.config.json
+4. **Re-verify** — `structrail-check --root . --config structrail.config.json
    --strict-config` (with `--baseline .ark-baseline.json` if present). A new
    version may detect violations the old one missed: if new violations appear,
-   **STOP — do not continue this skill as complete.** **STOP — bulk residual debt: invoke /ark-loop or /ark-autopilot**
-   (or `/ark-fix` for a small set). If they are too numerous to fix
+   **STOP — do not continue this skill as complete.** **STOP — bulk residual debt: invoke /structrail-loop or /structrail-autopilot**
+   (or `/structrail-fix` for a small set). If they are too numerous to fix
    now, freezing them in the baseline (`--update-baseline`) is a valid stopgap
    but it silences NEW violations, so it requires explicit user approval first
    — never regenerate the baseline on your own to get a green check.
@@ -157,7 +157,7 @@ npx arkgate-check --install-agent-gates --skills-only --force
   **Deferred hosts** with the fix command — do not treat them as Incomplete.
   Codex home (global `$CODEX_HOME`) is the common case on Grok/Claude.
 - **Optional sync:** if other repo-local tool dirs already exist (`.cursor/`,
-  `.claude/`, …), refreshing their `/ark-*` skills is good hygiene when cheap;
+  `.claude/`, …), refreshing their `/structrail-*` skills is good hygiene when cheap;
   it is not a reason to fail the skill when the active host is already current.
 - Never run `--force` blindly; customized files are the user's.
 - Stop only if the changelog documents a breaking config change with two valid
@@ -165,11 +165,11 @@ npx arkgate-check --install-agent-gates --skills-only --force
 
 ## Related onboarding
 
-- After upgrade, re-run `ark-check --doctor` — `/ark-architect` and `ark-check --recommend` ship
+- After upgrade, re-run `structrail-check --doctor` — `/structrail-architect` and `structrail-check --recommend` ship
   with the package for **greenfield** shape adoption.
-- **Brownfield** repos: point users to `/ark-adopt` and `docs/brownfield-adoption.md`, not
-  `/ark-architect`. Demo: `docs/demos/02-brownfield-baseline-adoption.md`.
-- Refresh gates: `ark-check --install-agent-gates --force --skills-only` if skills are stale.
+- **Brownfield** repos: point users to `/structrail-adopt` and `docs/brownfield-adoption.md`, not
+  `/structrail-architect`. Demo: `docs/demos/02-brownfield-baseline-adoption.md`.
+- Refresh gates: `structrail-check --install-agent-gates --force --skills-only` if skills are stale.
 
 ## Verify and report
 
@@ -188,7 +188,7 @@ End with **exactly** these headings (markdown `###`):
 - **Active host:** e.g. `grok` / `claude` / `cursor` / `codex` (skills/gates OK or note)
 - **Deferred hosts:** `none` | e.g. `codex — home MCP/prompts; fix when using Codex`
 - **Result:** one-line outcome
-- **Handoff:** `/ark-…` / CLI / `none`
+- **Handoff:** `/structrail-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 
 If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.

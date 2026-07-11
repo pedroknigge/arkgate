@@ -1,11 +1,11 @@
 ---
-name: ark-fix
-description: Resolve Ark architecture violations at the root cause — read importers and product context, design ports/adapters/moves/intent alignment. Never weaken the contract. CLI only validates.
+name: structrail-fix
+description: Resolve Structrail architecture violations at the root cause — read importers and product context, design ports/adapters/moves/intent alignment. Never weaken the contract. CLI only validates.
 ---
 
-# /ark-fix — Fix architecture violations at the root
+# /structrail-fix — Fix architecture violations at the root
 
-You fix violations Ark reports. Prefer structural fixes over silencing the gate.
+You fix violations Structrail reports. Prefer structural fixes over silencing the gate.
 **Read the surrounding product code** (callers, package role, feature ownership) — not only
 the two files on the violation edge.
 
@@ -14,7 +14,7 @@ the two files on the violation edge.
 
 | Engine | Role |
 |--------|------|
-| **Deterministic** | Violation list, plan kinds, post-edit `ark-check` |
+| **Deterministic** | Violation list, plan kinds, post-edit `structrail-check` |
 | **Exploratory** | Why this edge exists in *this* product; better home; manifiesto if the rule is business |
 
 
@@ -25,7 +25,7 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 
 | Host capability | Behavior |
 |-----------------|----------|
-| **Parallel subagents supported** (e.g. multi-agent / `spawn_subagent` / concurrent Agent tools) | Launch **2–N** agents in **one wave** with **disjoint path scopes**. Prefer **read-only** explore agents for mapping; at most **one writer** unless the host gives isolated worktrees. Parent merges findings, then runs `ark-check` once. |
+| **Parallel subagents supported** (e.g. multi-agent / `spawn_subagent` / concurrent Agent tools) | Launch **2–N** agents in **one wave** with **disjoint path scopes**. Prefer **read-only** explore agents for mapping; at most **one writer** unless the host gives isolated worktrees. Parent merges findings, then runs `structrail-check` once. |
 | **Not supported** (single agent only) | **Fall back to sequential** — same checklist, one cluster/step at a time. Never claim parallel work you did not run. |
 
 **Rules:**
@@ -37,26 +37,26 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 
 ## Related onboarding
 
-- **Greenfield:** `/ark-architect` or `ark-check --recommend` / `ark start`.
-- **Brownfield:** `/ark-adopt` — match contract to reality; do not force a starter preset.
-- **Map first:** `/ark-explore` when the violation is one of many structural smells.
+- **Greenfield:** `/structrail-architect` or `structrail-check --recommend` / `structrail start`.
+- **Brownfield:** `/structrail-adopt` — match contract to reality; do not force a starter preset.
+- **Map first:** `/structrail-explore` when the violation is one of many structural smells.
 - **peerIsolation / cross-slice:** always **judgment** — extract to shared, events/ports, or redesign ownership. Never auto-apply cross-feature or cross-context moves.
 - **`vertical-slice` ownership:** feature code stays under `src/features/<slice>/…` (no sibling-slice imports); shared primitives in `src/shared/`; infra in `src/lib/`; shell in `src/app/`. Cross-feature edges are peerIsolation — extract shared or use events/ports.
 - **`ddd-bounded-contexts` ownership:** code under `src/contexts/<context>/{domain,application,infrastructure,presentation}/`; shared kernel only under `src/shared/kernel/`. Cross-context imports (same or cross technical layer) are peerIsolation — integrate via application APIs/events, not peer technical layers.
-- **Default path:** `ark start` → `/ark-autopilot` → `ark-check --doctor`.
+- **Default path:** `structrail start` → `/structrail-autopilot` → `structrail-check --doctor`.
 
 ## Anti-wrapper rule (mandatory)
 
 **Forbidden:** only listing violations from JSON without reading importers/targets.
 
 **Required:**
-1. Run `ark-check` as **sensor** (and `--plan --json` if multi-step) — CLI validates; you remediate.
+1. Run `structrail-check` as **sensor** (and `--plan --json` if multi-step) — CLI validates; you remediate.
 2. **Read** each violated file and its import target (plus callers that explain product role).
-   If the wall is a concentrated contract smell: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
-   If false-green cores: **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
-   If many residuals: **STOP — do not continue this skill as complete.** **STOP — bulk residual debt: invoke /ark-loop or /ark-autopilot** instead of ad-hoc multi-file grinding without a plan.
+   If the wall is a concentrated contract smell: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /structrail-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
+   If false-green cores: **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /structrail-adopt or /structrail-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
+   If many residuals: **STOP — do not continue this skill as complete.** **STOP — bulk residual debt: invoke /structrail-loop or /structrail-autopilot** instead of ad-hoc multi-file grinding without a plan.
 3. **“Así te lo re-soluciono”** — concrete change before editing.
-4. After edits: `ark-check --strict-config` (and baseline if configured).
+4. After edits: `structrail-check --strict-config` (and baseline if configured).
 
 ## Common fix patterns
 
@@ -65,16 +65,16 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 | App → Presentation type-only | Extract type to application/core; re-export from UI |
 | App → Presentation value (UI in core) | Move component wrappers to presentation |
 | Domain → outer layer | Port/interface in Domain; adapter outside; or relocate false Domain file (`**/types.ts` trap) |
-| Intent prefix mismatch | Rename intent to layer’s `intentPrefixes` or fix prefix in config via `/ark-contract` |
+| Intent prefix mismatch | Rename intent to layer’s `intentPrefixes` or fix prefix in config via `/structrail-contract` |
 | Forbidden global in Domain | Inject a port (Clock, Id, Http) — don’t allow `Date.now` in Domain |
-| Concentrated edge wall | Stop grinding; `/ark-contract` facade/surface split |
+| Concentrated edge wall | Stop grinding; `/structrail-contract` facade/surface split |
 
 ## Manifiesto
 
 If the “fix” is really a missing business intent or Domain home for a rule:
 
 - Propose intent name + layer placement.
-- Register / place code so `ark://manifest` / config can enforce it.
+- Register / place code so `structrail://manifest` / config can enforce it.
 - Do not only delete the import.
 
 ## Rules
@@ -96,7 +96,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Handoff:** `/ark-…` / CLI / `none`
+- **Handoff:** `/structrail-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 
 If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.

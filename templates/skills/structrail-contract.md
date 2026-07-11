@@ -1,12 +1,12 @@
 ---
-name: ark-contract
-description: Safely edit ark.config.json (layers, rules, forbiddenGlobals, intent prefixes) and land business rules into the Ark manifest. Validated with strict ark-check. Deep source evidence required.
+name: structrail-contract
+description: Safely edit structrail.config.json (layers, rules, forbiddenGlobals, intent prefixes) and land business rules into the Structrail manifest. Validated with strict structrail-check. Deep source evidence required.
 ---
 
-# /ark-contract — Change the architecture contract (safely)
+# /structrail-contract — Change the architecture contract (safely)
 
 The **one sanctioned way** to change layers/rules/`intentPrefixes`/includes.
-Also used to **land mined business rules** into the executable manifest (`ark.config.json` + intent naming that `ark://manifest` exposes).
+Also used to **land mined business rules** into the executable manifest (`structrail.config.json` + intent naming that `structrail://manifest` exposes).
 
 
 ## Dual engine (mandatory)
@@ -28,9 +28,9 @@ the same files or weaken the gate.
 
 ## Related onboarding
 
-- **Greenfield:** `/ark-architect` or `ark-check --recommend` / `ark start`.
-- **Brownfield:** `/ark-adopt` — match contract to reality; do not force a starter preset.
-- **Default path:** `ark start` → `/ark-autopilot` → `ark-check --doctor`.
+- **Greenfield:** `/structrail-architect` or `structrail-check --recommend` / `structrail start`.
+- **Brownfield:** `/structrail-adopt` — match contract to reality; do not force a starter preset.
+- **Default path:** `structrail start` → `/structrail-autopilot` → `structrail-check --doctor`.
 
 ## Anti-wrapper rule (mandatory)
 
@@ -40,7 +40,7 @@ the same files or weaken the gate.
 1. Snapshot before using CLI as **sensor**: coverage + check JSON.
 2. **Read source** in dirs you reclassify (sample files).
 3. **“Así te lo re-soluciono”** — exact JSON fields + which files become governed/ungoverned.
-4. After write: `ark-check --strict-config` must be the validation gate (dead pattern noise is advisory; unclassified + real violations still matter).
+4. After write: `structrail-check --strict-config` must be the validation gate (dead pattern noise is advisory; unclassified + real violations still matter).
 
 ## What you may edit
 
@@ -69,12 +69,12 @@ Contract edits are most common in **Align (Adapt)**. In **Guard (Enforce)**, tre
 
 ## Critical handoffs
 
-- After contract is honest but residual violations remain: **STOP — do not continue this skill as complete.** **STOP — bulk residual debt: invoke /ark-loop or /ark-autopilot** instead of ad-hoc multi-file grinding without a plan.
-- New artifact home after reclassify: **STOP — do not continue this skill as complete.** **STOP — new file placement: invoke /ark-place** when the user needs a new artifact home.
+- After contract is honest but residual violations remain: **STOP — do not continue this skill as complete.** **STOP — bulk residual debt: invoke /structrail-loop or /structrail-autopilot** instead of ad-hoc multi-file grinding without a plan.
+- New artifact home after reclassify: **STOP — do not continue this skill as complete.** **STOP — new file placement: invoke /structrail-place** when the user needs a new artifact home.
 
 ## Done
 
-- Diff of `ark.config.json` explained in plain language.
+- Diff of `structrail.config.json` explained in plain language.
 - **Así te lo re-soluciono en el manifiesto** when intents/Domain were part of the request.
 - Strict check result captured.
 
@@ -86,7 +86,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Handoff:** `/ark-…` / CLI / `none`
+- **Handoff:** `/structrail-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 
 If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.

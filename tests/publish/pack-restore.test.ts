@@ -81,5 +81,13 @@ describe('publish manifest', () => {
     expect(fs.existsSync(path.join(extract, 'package', 'dist', 'runtime', 'index.js'))).toBe(true);
     expect(fs.existsSync(path.join(extract, 'package', 'docs', 'typescript-support.md'))).toBe(true);
     expect(fs.existsSync(path.join(extract, 'package', 'docs', 'package-surface.md'))).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(extract, 'package', 'templates', 'skills', 'structrail-coverage.md')
+      )
+    ).toBe(true);
+    expect(
+      fs.existsSync(path.join(extract, 'package', 'templates', 'skills', 'ark-coverage.md'))
+    ).toBe(false);
   }, 30_000);
 });

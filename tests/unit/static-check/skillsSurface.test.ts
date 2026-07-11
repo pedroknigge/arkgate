@@ -89,6 +89,8 @@ describe('skill surface inventory', () => {
       expect(body, name).toBeTruthy();
       expect(String(body).length).toBeGreaterThan(200);
       expect(String(body)).toMatch(/^---\s*\nname:\s*/m);
+      expect(String(body)).toContain('Deprecated v3 compatibility alias');
+      expect(String(body)).toContain(`/${name.replace(/^ark-/, 'structrail-')}`);
     }
   });
 

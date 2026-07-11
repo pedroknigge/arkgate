@@ -104,7 +104,7 @@ describe('canonical public host support matrix', () => {
       'docs/agent-guide.md',
       'docs/package-surface.md',
       'docs/production-hardening.md',
-      'templates/skills/ark-runtime.md',
+      'templates/skills/structrail-runtime.md',
     ]) {
       expect(read(file), file).toMatch(/runtime[\s\S]{0,240}experimental|experimental[\s\S]{0,240}runtime/i);
     }

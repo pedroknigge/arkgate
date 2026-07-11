@@ -144,31 +144,31 @@ describe('Phase E — skills and docs cross-references', () => {
     const skills = fs.readdirSync(SKILLS_DIR).filter((name) => name.endsWith('.md'));
     // Keep in lockstep with templates/skills inventory (skillsSurface.test.ts).
     expect(skills.length).toBeGreaterThanOrEqual(13);
-    expect(skills).toContain('ark-explore.md');
+    expect(skills).toContain('structrail-explore.md');
     for (const file of skills) {
       const text = fs.readFileSync(path.join(SKILLS_DIR, file), 'utf8');
       const hasOnboarding =
-        text.includes('/ark-architect') ||
-        text.includes('ark-check --recommend') ||
-        text.includes('ark_recommend');
+        text.includes('/structrail-architect') ||
+        text.includes('structrail-check --recommend') ||
+        text.includes('structrail_recommend');
       expect(hasOnboarding, `${file} should mention onboarding`).toBe(true);
     }
   });
 
-  it('general skills contrast greenfield onboarding vs brownfield /ark-adopt', () => {
+  it('general skills contrast greenfield onboarding vs brownfield /structrail-adopt', () => {
     const mustMentionBrownfield = [
-      'ark-coverage.md',
-      'ark-upgrade.md',
-      'ark-fix.md',
-      'ark-place.md',
-      'ark-explain.md',
-      'ark-contract.md',
-      'ark-runtime.md',
+      'structrail-coverage.md',
+      'structrail-upgrade.md',
+      'structrail-fix.md',
+      'structrail-place.md',
+      'structrail-explain.md',
+      'structrail-contract.md',
+      'structrail-runtime.md',
     ];
     for (const file of mustMentionBrownfield) {
       const text = fs.readFileSync(path.join(SKILLS_DIR, file), 'utf8');
       const hasBrownfield =
-        text.includes('/ark-adopt') || text.toLowerCase().includes('brownfield');
+        text.includes('/structrail-adopt') || text.toLowerCase().includes('brownfield');
       expect(hasBrownfield, `${file} should contrast brownfield adoption`).toBe(true);
     }
   });

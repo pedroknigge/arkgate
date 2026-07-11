@@ -226,17 +226,32 @@ export function isVersionOlder(a, b) {
   return false;
 }
 
-function canonicalizeSkillTemplate(content) {
+function legacySkillTemplate(content) {
   return content
-    .replace(/\bArkGate\b/g, 'Structrail')
-    .replace(/\barkgate\b/g, 'structrail')
-    .replace(/ark\.config\.json/g, 'structrail.config.json')
-    .replace(/ark:\/\//g, 'structrail://')
-    .replace(/\bark_(?=[a-z0-9])/g, 'structrail_')
-    .replace(/\/ark-/g, '/structrail-')
-    .replace(/(?<!\.)\bark-(?=[a-z0-9])/g, 'structrail-')
-    .replace(/\bark(?=\s+(?:start|init|upgrade)\b)/g, 'structrail')
-    .replace(/\bArk\b/g, 'Structrail');
+    .replace(/structrail\.config\.json/g, 'ark.config.json')
+    .replace(/structrail:\/\//g, 'ark://')
+    .replace(/\bstructrail_(?=[a-z0-9])/g, 'ark_')
+    .replace(/\/structrail-/g, '/ark-')
+    .replace(/(?<!\.)\bstructrail-(?=[a-z0-9])/g, 'ark-')
+    .replace(/node_modules\/structrail/g, 'node_modules/arkgate')
+    .replace(/(['"])structrail(?=\/|['"])/g, '$1arkgate')
+    .replace(
+      /(\b(?:npm|pnpm|yarn)\s+(?:install|add|view|uninstall)(?:\s+-D)?\s+)structrail\b/g,
+      '$1arkgate'
+    )
+    .replace(/\bstructrail(?=\s+(?:start|init|upgrade)\b)/g, 'ark')
+    .replace(/\bstructrail\b/g, 'ark')
+    .replace(/\bStructrail\b/g, 'ArkGate');
+}
+
+function legacySkillNotice(content, legacyName, canonicalName) {
+  const notice =
+    `> **Deprecated v3 compatibility alias.** \`/${legacyName}\` maps to ` +
+    `\`/${canonicalName}\`. It remains supported through v3; removal target: v4.\n`;
+  const frontmatterEnd = content.indexOf('\n---', 4);
+  if (frontmatterEnd === -1) return `${notice}\n${content}`;
+  const bodyStart = frontmatterEnd + 4;
+  return `${content.slice(0, bodyStart)}\n\n${notice}${content.slice(bodyStart)}`;
 }
 
 export function skillTemplates(identity = ARK_GENERATION_IDENTITY) {
@@ -260,10 +275,11 @@ export function skillTemplates(identity = ARK_GENERATION_IDENTITY) {
     .map((name) => {
       const sourceName = path.basename(name, '.md');
       const source = fs.readFileSync(path.join(dir, name), 'utf8');
-      if (!identity.primary) return [sourceName, source];
+      if (identity.primary) return [sourceName, source];
+      const legacyName = sourceName.replace(/^structrail-/, `${identity.skillPrefix}-`);
       return [
-        sourceName.replace(/^ark-/, `${identity.skillPrefix}-`),
-        canonicalizeSkillTemplate(source),
+        legacyName,
+        legacySkillNotice(legacySkillTemplate(source), legacyName, sourceName),
       ];
     });
 }
@@ -282,7 +298,9 @@ export function skillTemplateNames(identity = ARK_GENERATION_IDENTITY) {
     .filter((entry) => entry.isFile() && /^[a-z0-9-]+\.md$/.test(entry.name))
     .map((entry) => path.basename(entry.name, '.md'))
     .map((name) =>
-      identity.primary ? name.replace(/^ark-/, `${identity.skillPrefix}-`) : name
+      identity.primary
+        ? name
+        : name.replace(/^structrail-/, `${identity.skillPrefix}-`)
     );
 }
 

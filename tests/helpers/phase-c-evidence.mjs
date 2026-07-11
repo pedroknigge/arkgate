@@ -245,9 +245,9 @@ export function captureSessionContextHint(scratchDir) {
 }
 
 export function capturePhaseCDocs(scratchDir) {
-  const skillPath = path.join(REPO_ROOT, 'templates/skills/ark-architect.md');
+  const skillPath = path.join(REPO_ROOT, 'templates/skills/structrail-architect.md');
   const guidePath = path.join(REPO_ROOT, 'docs/agent-guide.md');
-  assertOk(fs.existsSync(skillPath), 'templates/skills/ark-architect.md missing');
+  assertOk(fs.existsSync(skillPath), 'templates/skills/structrail-architect.md missing');
 
   const grep = spawnSync(
     'grep',

@@ -77,7 +77,7 @@ describe('Q6 surface parity (preferred bins + skills)', () => {
     // M5 migrates generated hooks; until then they deliberately target the compatibility package.
     expect(hooks).toMatch(/PREFERRED_MCP_BIN\s*=\s*['"]arkgate-mcp['"]/);
     // Skills template list includes upgrade
-    expect(fs.existsSync(path.join(REPO, 'templates/skills/ark-upgrade.md'))).toBe(true);
+    expect(fs.existsSync(path.join(REPO, 'templates/skills/structrail-upgrade.md'))).toBe(true);
   });
 });
 
