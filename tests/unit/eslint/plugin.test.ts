@@ -46,7 +46,7 @@ function createContext(filename = '/repo/src/domain/order.ts') {
   };
 }
 
-describe('Ark ESLint plugin', () => {
+describe('Structrail ESLint plugin', () => {
   it('exports recommended rules', () => {
     expect(Object.keys(arkEslint.rules)).toEqual([
       'no-domain-infra-imports',
@@ -55,6 +55,21 @@ describe('Ark ESLint plugin', () => {
       'no-forbidden-globals',
     ]);
     expect(arkEslint.configs?.recommended).toBeDefined();
+    expect(arkEslint.configs?.recommended).toMatchObject({
+      plugins: { structrail: arkEslint },
+      rules: {
+        'structrail/no-domain-infra-imports': 'error',
+        'structrail/no-raw-event-publish': 'error',
+        'structrail/require-publish-source': 'error',
+        'structrail/no-forbidden-globals': 'error',
+      },
+    });
+    const recommended = arkEslint.configs?.recommended as {
+      plugins: Record<string, unknown>;
+      rules: Record<string, unknown>;
+    };
+    expect(Object.keys(recommended.plugins)).toEqual(['structrail']);
+    expect(Object.keys(recommended.rules).some((name) => name.startsWith('ark/'))).toBe(false);
   });
 
   it('flags infrastructure imports from domain files (heuristic without ark.config.json)', () => {
