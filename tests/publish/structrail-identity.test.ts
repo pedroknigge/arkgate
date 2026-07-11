@@ -198,7 +198,7 @@ describe('Structrail v3 identity and ArkGate compatibility contract', () => {
       { cwd: consumer, stdio: 'pipe' }
     );
 
-    for (const name of [
+    const binNames = [
       'structrail',
       'structrail-check',
       'structrail-mcp',
@@ -208,8 +208,26 @@ describe('Structrail v3 identity and ArkGate compatibility contract', () => {
       'ark',
       'ark-check',
       'ark-mcp',
-    ]) {
+    ];
+    for (const name of binNames) {
       expect(fs.existsSync(localBin(consumer, name)), name).toBe(true);
+    }
+
+    for (const name of binNames) {
+      const version = execFileSync(localBin(consumer, name), ['--version'], {
+        cwd: consumer,
+        encoding: 'utf8',
+      }).trim();
+      expect(version, `${name} --version`).toBe('3.0.0');
+
+      const help = execFileSync(localBin(consumer, name), ['--help'], {
+        cwd: consumer,
+        encoding: 'utf8',
+      });
+      expect(help.length, `${name} --help`).toBeGreaterThan(80);
+      expect(help, `${name} --help`).toMatch(
+        name.startsWith('structrail') ? /Structrail|structrail/ : /ArkGate|arkgate|\bark\b/i
+      );
     }
 
     const primaryVersion = execFileSync(localBin(consumer, 'structrail-check'), ['--version'], {
