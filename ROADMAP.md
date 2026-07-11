@@ -155,7 +155,7 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 5 | `S05` | `done` | M | `S04` | All confirmed scanner false positives and bypasses are closed |
 | 6 | `S06` | `done` | S | `S03`–`S05` | README, docs, doctor, and site use one truthful support matrix |
 | 7 | `S07` | `done` | S | `S06` | ArkGate is retained as the canonical product identity |
-| 8 | `C01` | `todo` | M | `S07` | `ark.config.json` has a versioned JSON Schema and migrations |
+| 8 | `C01` | `doing` | M | `S07` | `ark.config.json` has a versioned JSON Schema and migrations |
 | 9 | `C02` | `todo` | M | `C01` | A stable analysis IR and programmatic API are specified |
 | 10 | `C03` | `todo` | L | `C02` | CLI/MCP scanning uses one importable engine without generated duplication |
 | 11 | `C04` | `todo` | L | `C03` | Symbol-aware analysis defines and enforces the supported soundness envelope |
@@ -471,8 +471,13 @@ existing command/skill names.
 
 ### C01 — Version and validate `ark.config.json`
 
-- **Status:** `todo`
+- **Status:** `doing`
 - **Depends on:** `S07`
+
+**Started (2026-07-11):** the first contract fixture matrix covers every published repository
+config, every preset factory, and the previous supported major (`v1.19.0`). The initial red tests pin
+version metadata, legacy compatibility, and path-specific rejection of unknown keys before the
+shared loader is implemented.
 
 **Implementation**
 
