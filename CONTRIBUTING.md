@@ -97,8 +97,8 @@ existing GitHub Release, reruns the release gates, publishes to npm with provena
 the npm tarball checksum. Local `npm publish` is emergency-only and intentionally not the normal
 maintainer path.
 
-**Current release in flight:** see [docs/releases/2.12.0.md](docs/releases/2.12.0.md) after
-PR #26 merges.
+**Current release in flight:** see [docs/releases/2.13.0.md](docs/releases/2.13.0.md).
+Publication remains gated by the release-blocker policy recorded there and in `ROADMAP.md`.
 
 ## Not sure where to start?
 

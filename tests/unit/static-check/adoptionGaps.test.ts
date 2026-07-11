@@ -7,6 +7,11 @@ import path from 'node:path';
 const CHECK = path.resolve('bin/ark-check.mjs');
 const REPO = path.resolve('.');
 
+/** Stable path string for permanent-project policy tests; no files are written there. */
+function permanentProjectPath(name: string) {
+  return path.join(path.parse(process.cwd()).root, 'arkgate-test-workspaces', name);
+}
+
 function runCheck(root: string, extra: string[], env: NodeJS.ProcessEnv = {}) {
   return spawnSync(process.execPath, [CHECK, '--root', root, ...extra], {
     encoding: 'utf8',
@@ -203,14 +208,13 @@ args = ["ark-mcp", "--root", "/var/folders/xx/ark-upgrade-tmp123", "--config", "
   }
 
   it('R7 doctor flags multi-project when Codex primary is another permanent project', () => {
-    // Non-temp paths so primary A is permanent (not fail-closed rewrite).
     const base = path.join(process.cwd(), '.tmp-r7-codex-doctor');
     fs.rmSync(base, { recursive: true, force: true });
     temps.push(base);
-    const rootA = path.join(base, 'proj-a');
+    const rootA = permanentProjectPath('r7-codex-doctor-a');
     const rootB = path.join(base, 'proj-b');
     const codexHome = path.join(base, 'codex-home');
-    for (const r of [rootA, rootB]) {
+    for (const r of [rootB]) {
       fs.mkdirSync(path.join(r, 'src/domain'), { recursive: true });
       fs.mkdirSync(path.join(r, 'src/app'), { recursive: true });
       fs.mkdirSync(path.join(r, 'src/application'), { recursive: true });
@@ -300,10 +304,10 @@ args = ["arkgate-mcp", "--root", "${absA}", "--config", "${absA}/ark.config.json
     const base = path.join(process.cwd(), '.tmp-r7-codex-defer-grok');
     fs.rmSync(base, { recursive: true, force: true });
     temps.push(base);
-    const rootA = path.join(base, 'proj-a');
+    const rootA = permanentProjectPath('r7-codex-defer-grok-a');
     const rootB = path.join(base, 'proj-b');
     const codexHome = path.join(base, 'codex-home');
-    for (const r of [rootA, rootB]) {
+    for (const r of [rootB]) {
       fs.mkdirSync(path.join(r, 'src/domain'), { recursive: true });
       fs.mkdirSync(path.join(r, 'src/app'), { recursive: true });
       fs.mkdirSync(path.join(r, 'src/application'), { recursive: true });
