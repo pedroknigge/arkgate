@@ -32,6 +32,8 @@ export default defineConfig({
         'examples/**',
         'tests/**',
         'scripts/**',
+        // Generated from the canonical Kernel engine; drift and parity tests still execute it.
+        'bin/lib/analysis-engine.mjs',
         'bin/ark-check.mjs',
         'bin/ark-mcp.mjs',
         'bin/ark.mjs',

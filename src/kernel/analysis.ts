@@ -25,6 +25,14 @@ import {
   patternSpecificity,
 } from '../domain/layerMatch';
 
+export {
+  collectForbiddenCapabilityUses,
+  extractSemanticDependencies,
+  type ForbiddenCapabilityUse,
+  type SemanticDependency,
+  type SemanticDependencyKind,
+} from './semanticAnalysis';
+
 export type AnalysisContract = ArkConfigLoadResult & { policyHash: string };
 
 export type AnalyzeProjectInput = {

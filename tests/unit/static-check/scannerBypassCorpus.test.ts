@@ -90,6 +90,25 @@ describe('ark-check confirmed scanner bypass corpus', () => {
     expect(globals).toEqual(['Date.now', 'console', 'fetch']);
   });
 
+  it('resolves dotted aliases, static globalThis keys, and destructuring', () => {
+    const root = makeProject(
+      [
+        'const Clock = Date;',
+        'export const now = Clock.now();',
+        'export const other = globalThis["Date"]["now"]();',
+        'const { log } = globalThis.console;',
+        'log(other);',
+      ].join('\n')
+    );
+
+    const globals = runCheck(root)
+      .violations.filter((v) => v.ruleId === 'FORBIDDEN_GLOBAL')
+      .map((v) => v.target)
+      .sort();
+
+    expect(globals).toEqual(['Date.now', 'Date.now', 'console']);
+  });
+
   it('treats TypeScript import-equals require syntax as a dependency edge', () => {
     const root = makeProject(
       'import db = require("../infra/db");\nexport const connection = db;\n'
@@ -114,6 +133,20 @@ describe('ark-check confirmed scanner bypass corpus', () => {
     expect(result.warnings.map((warning) => warning.ruleId)).toContain(
       'DYNAMIC_REQUIRE_NOT_ALLOWLISTED'
     );
+  });
+
+  it('does not treat a locally declared require function as CommonJS', () => {
+    const root = makeProject(
+      'export function load(require: (value: string) => unknown) { return require("../infra/db"); }\n'
+    );
+
+    const result = runCheck(root, ['--strict-config']);
+
+    expect(result.violations).toEqual([]);
+    expect(result.warnings.map((warning) => warning.ruleId)).not.toContain(
+      'DYNAMIC_REQUIRE_NOT_ALLOWLISTED'
+    );
+    expect(result.ok).toBe(true);
   });
 
   it('continues to resolve and enforce workspace package imports', () => {

@@ -5,16 +5,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  collectForbiddenGlobalUses,
   layerForFile,
   looksLikeIntent,
 } from '../ark-shared.mjs';
 import {
-  isTypeOnlyModuleReference,
   isArkPublishCandidate,
   isPublishCall,
   lineOf,
-  moduleSpecifierFromCall,
   namedModuleBindings,
   objectHasProperty,
   publishHasSource,
@@ -22,7 +19,6 @@ import {
   sourceFileExportsOnlyTypes,
   sourceFileHasTopLevelSideEffects,
   stringLiteralText,
-  textOfModuleSpecifier,
   typeOnlyExportNames,
 } from './ast-scan.mjs';
 import { provePortProofInject } from './port-proof.mjs';
@@ -32,7 +28,11 @@ import {
   isBlocked,
   collectConfigWarnings,
 } from './config-warnings.mjs';
-import { evaluateArchitectureGraph } from './analysis-engine.mjs';
+import {
+  collectForbiddenCapabilityUses,
+  evaluateArchitectureGraph,
+  extractSemanticDependencies,
+} from './analysis-engine.mjs';
 import { normalize } from './scan-files.mjs';
 import { collectSafetyDiagnostics } from './safety-diagnostics.mjs';
 import {
@@ -57,11 +57,11 @@ export function scanSourceFile(ts, root, config, rules, manifestIntentLayers, fi
   const forbiddenGlobals = Array.isArray(layerConfig?.forbiddenGlobals)
     ? layerConfig.forbiddenGlobals.filter((entry) => typeof entry === 'string')
     : [];
-  for (const use of collectForbiddenGlobalUses(ts, sourceFile, forbiddenGlobals)) {
+  for (const use of collectForbiddenCapabilityUses(ts, sourceFile, forbiddenGlobals)) {
     violations.push({
       ruleId: 'FORBIDDEN_GLOBAL',
       file: normalize(path.relative(root, file)),
-      line: lineOf(sourceFile, use.node.getStart(sourceFile)),
+      line: use.line,
       fromLayer: sourceLayer,
       target: use.name,
       message: `${sourceLayer} must not use the ambient global "${use.name}".`,
@@ -79,33 +79,18 @@ export function scanSourceFile(ts, root, config, rules, manifestIntentLayers, fi
     });
   };
 
+  for (const dependency of extractSemanticDependencies(ts, sourceFile)) {
+    if (!dependency.specifier) continue;
+    checkModuleEdge(
+      dependency.specifier,
+      dependency.node,
+      dependency.kind,
+      dependency.typeOnly
+    );
+  }
+
   const visit = (node) => {
-    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
-      const specifier = textOfModuleSpecifier(node);
-      if (specifier) {
-        checkModuleEdge(
-          specifier,
-          node,
-          ts.isImportDeclaration(node) ? 'import' : 'export',
-          isTypeOnlyModuleReference(ts, node)
-        );
-      }
-    }
-
-    if (
-      ts.isImportEqualsDeclaration(node) &&
-      ts.isExternalModuleReference(node.moduleReference)
-    ) {
-      const specifier = stringLiteralText(ts, node.moduleReference.expression);
-      if (specifier) checkModuleEdge(specifier, node, 'require');
-    }
-
     if (ts.isCallExpression(node)) {
-      const moduleCall = moduleSpecifierFromCall(ts, node);
-      if (moduleCall) {
-        checkModuleEdge(moduleCall.value, node, moduleCall.kind);
-      }
-
       if (isPublishCall(ts, node)) {
         const firstArg = node.arguments[0];
         const rawIntent = stringLiteralText(ts, firstArg);

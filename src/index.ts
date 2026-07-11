@@ -250,6 +250,8 @@ export {
   evaluateArchitectureGraph,
   collectAnalysisConfigWarnings,
   detectArchitectureCycles,
+  collectForbiddenCapabilityUses,
+  extractSemanticDependencies,
   type AnalysisContract,
   type AnalyzeProjectInput,
   type AnalyzeChangeInput,
@@ -259,6 +261,9 @@ export {
   type EvaluateArchitectureGraphInput,
   type ArchitectureEngineResult,
   type CollectAnalysisConfigWarningsInput,
+  type ForbiddenCapabilityUse,
+  type SemanticDependency,
+  type SemanticDependencyKind,
 } from './kernel/analysis';
 
 export {

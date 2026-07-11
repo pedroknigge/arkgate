@@ -487,6 +487,185 @@ function findDeniedEdgeRule(rules, from, to, options) {
   return void 0;
 }
 
+// src/kernel/semanticAnalysis.ts
+function literalText(ts, node) {
+  return node && ts.isStringLiteralLike(node) ? node.text : void 0;
+}
+function lineOf(sourceFile, node) {
+  return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+}
+function isTypeOnlyReference(ts, node) {
+  if (ts.isImportDeclaration(node)) {
+    const clause = node.importClause;
+    if (!clause) return false;
+    if (clause.isTypeOnly) return true;
+    const named = clause.namedBindings;
+    return Boolean(
+      named && ts.isNamedImports(named) && named.elements.length > 0 && named.elements.every((element) => element.isTypeOnly)
+    );
+  }
+  if (ts.isExportDeclaration(node)) {
+    if (node.isTypeOnly) return true;
+    const clause = node.exportClause;
+    return Boolean(
+      clause && ts.isNamedExports(clause) && clause.elements.length > 0 && clause.elements.every((element) => element.isTypeOnly)
+    );
+  }
+  return false;
+}
+function singleFileChecker(ts, sourceFile) {
+  const options = { noLib: true, noResolve: true, target: ts.ScriptTarget.Latest };
+  const host = ts.createCompilerHost(options, true);
+  host.getSourceFile = (fileName) => fileName === sourceFile.fileName ? sourceFile : void 0;
+  host.fileExists = (fileName) => fileName === sourceFile.fileName;
+  host.readFile = (fileName) => fileName === sourceFile.fileName ? sourceFile.text : void 0;
+  return ts.createProgram([sourceFile.fileName], options, host).getTypeChecker();
+}
+function symbolAt(checker, node) {
+  try {
+    return checker.getSymbolAtLocation(node);
+  } catch {
+    return void 0;
+  }
+}
+function localDeclaration(ts, checker, sourceFile, node) {
+  const shorthand = node.parent && ts.isShorthandPropertyAssignment(node.parent) && node.parent.name === node;
+  let symbol;
+  try {
+    symbol = shorthand ? checker.getShorthandAssignmentValueSymbol(node.parent) : symbolAt(checker, node);
+  } catch {
+    symbol = void 0;
+  }
+  return Boolean(
+    symbol?.declarations?.some(
+      (declaration) => declaration.getSourceFile().fileName === sourceFile.fileName
+    )
+  );
+}
+function extractSemanticDependencies(ts, sourceFile) {
+  const checker = singleFileChecker(ts, sourceFile);
+  const dependencies = [];
+  const add = (node, kind, specifier, typeOnly = false) => dependencies.push({
+    specifier,
+    kind,
+    line: lineOf(sourceFile, node),
+    typeOnly,
+    unresolved: specifier === void 0,
+    node
+  });
+  const visit = (node) => {
+    if (ts.isImportDeclaration(node)) {
+      add(node, "import", literalText(ts, node.moduleSpecifier), isTypeOnlyReference(ts, node));
+    } else if (ts.isExportDeclaration(node) && node.moduleSpecifier) {
+      add(node, "export", literalText(ts, node.moduleSpecifier), isTypeOnlyReference(ts, node));
+    } else if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference)) {
+      add(node, "require", literalText(ts, node.moduleReference.expression));
+    } else if (ts.isCallExpression(node)) {
+      const dynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
+      const directRequire = ts.isIdentifier(node.expression) && node.expression.text === "require" && !localDeclaration(ts, checker, sourceFile, node.expression);
+      if (dynamicImport || directRequire) {
+        add(node, directRequire ? "require" : "dynamic-import", literalText(ts, node.arguments[0]));
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return dependencies;
+}
+function staticAccessPath(ts, node) {
+  const segments = [];
+  let current = node;
+  while (ts.isPropertyAccessExpression(current) || ts.isElementAccessExpression(current)) {
+    if (ts.isPropertyAccessExpression(current)) segments.unshift(current.name.text);
+    else {
+      const property = literalText(ts, current.argumentExpression);
+      if (property === void 0) return void 0;
+      segments.unshift(property);
+    }
+    current = current.expression;
+  }
+  if (!ts.isIdentifier(current)) return void 0;
+  segments.unshift(current.text);
+  return { root: current, segments };
+}
+function runtimeIdentifierReference(ts, node) {
+  const parent = node.parent;
+  if (ts.isPropertyAccessExpression(parent) || ts.isElementAccessExpression(parent)) return false;
+  return ts.isExpressionNode(node) && !ts.isInTypeQuery(node) || ts.isShorthandPropertyAssignment(parent) && parent.name === node;
+}
+function bestForbiddenMatch(entries, segments) {
+  const normalized = segments[0] === "globalThis" ? segments.slice(1) : segments;
+  for (let length = normalized.length; length >= 1; length -= 1) {
+    const candidate = normalized.slice(0, length).join(".");
+    if (entries.has(candidate)) return candidate;
+  }
+  return void 0;
+}
+function collectForbiddenCapabilityUses(ts, sourceFile, forbidden) {
+  const entries = new Set(forbidden);
+  const checker = singleFileChecker(ts, sourceFile);
+  const aliases = /* @__PURE__ */ new Map();
+  const topLevelNames = /* @__PURE__ */ new Set();
+  for (const statement of sourceFile.statements) {
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (ts.isIdentifier(declaration.name)) topLevelNames.add(declaration.name.text);
+      }
+    }
+  }
+  const resolvePath = (node) => {
+    const path = staticAccessPath(ts, node);
+    if (!path) return void 0;
+    const symbol = symbolAt(checker, path.root);
+    const alias = symbol ? aliases.get(symbol) : void 0;
+    if (alias) return [...alias, ...path.segments.slice(1)];
+    return localDeclaration(ts, checker, sourceFile, path.root) || topLevelNames.has(path.root.text) ? void 0 : path.segments;
+  };
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (!declaration.initializer || !ts.isIdentifier(declaration.name)) continue;
+      const path = resolvePath(declaration.initializer);
+      const symbol = symbolAt(checker, declaration.name);
+      if (!path || !symbol) continue;
+      aliases.set(symbol, path);
+    }
+  }
+  const uses = [];
+  const seen = /* @__PURE__ */ new Set();
+  const flag = (name, node) => {
+    const line = lineOf(sourceFile, node);
+    const key = `${name}:${node.getStart(sourceFile)}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    uses.push({ name, line, node });
+  };
+  const visit = (node) => {
+    const parentContinuesPath = node.parent && (ts.isPropertyAccessExpression(node.parent) || ts.isElementAccessExpression(node.parent)) && node.parent.expression === node;
+    if ((ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) && !parentContinuesPath) {
+      const path = resolvePath(node);
+      const match = path ? bestForbiddenMatch(entries, path) : void 0;
+      if (match) flag(match, node);
+    } else if (ts.isIdentifier(node) && entries.has(node.text) && runtimeIdentifierReference(ts, node) && !localDeclaration(ts, checker, sourceFile, node)) {
+      flag(node.text, node);
+    }
+    if (ts.isVariableDeclaration(node) && ts.isObjectBindingPattern(node.name) && node.initializer) {
+      const base = resolvePath(node.initializer);
+      if (base) {
+        for (const element of node.name.elements) {
+          if (!ts.isIdentifier(element.name)) continue;
+          const property = element.propertyName ? literalText(ts, element.propertyName) ?? element.propertyName.text : element.name.text;
+          const match = bestForbiddenMatch(entries, [...base, property]);
+          if (match) flag(match, node.initializer);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return uses;
+}
+
 // src/kernel/analysis.ts
 function loadContract(input, source) {
   const loaded = typeof input === "string" ? parseArkConfigJson(input, source) : loadArkConfigContract(input, source);
@@ -945,8 +1124,10 @@ export {
   analyzeChange,
   analyzeProject,
   collectAnalysisConfigWarnings,
+  collectForbiddenCapabilityUses,
   detectArchitectureCycles,
   evaluateArchitectureGraph,
   explainViolation,
+  extractSemanticDependencies,
   loadContract
 };

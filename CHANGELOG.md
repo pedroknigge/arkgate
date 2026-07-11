@@ -10,6 +10,12 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
   diagnostics now have one Kernel implementation shared by the library, CLI, and MCP. A documented
   standalone CLI bundle preserves the package's self-hosted boundary and is protected by a CI drift
   check and Kernel/bundle parity fixtures.
+- **Symbol-aware semantic analysis:** one Kernel extractor now resolves forbidden ambient
+  capabilities through local symbols, aliases, `globalThis`, static keys, and destructuring, and
+  classifies TS/JS dependency forms across ESM, CommonJS, type-only, and unresolved dynamic edges.
+  CLI, safety diagnostics, and AICodeGate consume the same generated implementation. The supported
+  soundness envelope is documented and guarded by a labeled adversarial corpus plus TypeScript
+  5/6/7 and mutation matrices.
 
 ### Fixed
 

@@ -1536,6 +1536,12 @@ function watchFingerprint(target) {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
+  console.error(
+    process.env.ARK_DEBUG_STACK === '1' && error instanceof Error
+      ? error.stack
+      : error instanceof Error
+        ? error.message
+        : String(error)
+  );
   process.exitCode = 2;
 });
