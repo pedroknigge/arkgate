@@ -120,8 +120,18 @@ export function findConfigPath(startFile: string): string | null {
   if (!startFile || startFile === '<input>' || startFile.startsWith('stdin')) return null;
   let dir = path.dirname(path.resolve(startFile));
   for (;;) {
-    const candidate = path.join(dir, 'ark.config.json');
-    if (fs.existsSync(candidate)) return candidate;
+    const canonical = path.join(dir, 'structrail.config.json');
+    const legacy = path.join(dir, 'ark.config.json');
+    const canonicalExists = fs.existsSync(canonical);
+    const legacyExists = fs.existsSync(legacy);
+    if (canonicalExists && legacyExists) {
+      throw new Error(
+        `Both structrail.config.json and ark.config.json exist in ${dir}; ` +
+          'configure one contract explicitly instead of relying on discovery.'
+      );
+    }
+    if (canonicalExists) return canonical;
+    if (legacyExists) return legacy;
     const parent = path.dirname(dir);
     if (parent === dir) return null;
     dir = parent;

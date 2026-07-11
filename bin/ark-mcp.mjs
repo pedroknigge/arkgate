@@ -58,6 +58,11 @@ import {
 import { createImportTargetResolver } from './lib/import-resolve.mjs';
 import { validateWithAutoPatch, resolveImportFileAbs } from './lib/auto-patch.mjs';
 import { composePrepareWrite } from './lib/prepare-write.mjs';
+import {
+  isStructrailInvocation,
+  resolveBooleanEnvironment,
+  resolveConfigIdentity,
+} from './lib/product-identity.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 
@@ -66,16 +71,10 @@ const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
  * True when CLI `--hook-repair` or env ARK_HOOK_REPAIR is 1/true/yes.
  * Default remains hard block with prose violations only (no machine-readable patch).
  */
-function envTruthy(name) {
-  const v = process.env[name];
-  if (v == null || v === '') return false;
-  return /^(1|true|yes|on)$/i.test(String(v).trim());
-}
-
 function parseArgs(argv) {
   const args = {
     root: process.cwd(),
-    config: 'ark.config.json',
+    config: undefined,
     configExplicit: false,
     manifest: undefined,
     hook: false,
@@ -96,10 +95,16 @@ function parseArgs(argv) {
       args.configExplicit = true;
     } else if (a === '--manifest') args.manifest = argv[++i];
   }
-  // Env can enable repair without rewriting host templates (ARK_HOOK_REPAIR=1).
-  if (envTruthy('ARK_HOOK_REPAIR')) {
+  const repairEnvironment = resolveBooleanEnvironment(
+    process.env,
+    'STRUCTRAIL_HOOK_REPAIR',
+    'ARK_HOOK_REPAIR'
+  );
+  // Canonical value wins when both generations are present.
+  if (repairEnvironment.value) {
     args.hookRepair = true;
   }
+  args.repairEnvironment = repairEnvironment;
   return args;
 }
 
@@ -314,7 +319,8 @@ function runHook(gate, config, args, ts) {
     ...(autoPatch && repair
       ? [
           `autoPatch available (${autoPatch.remediationKind}, confidence ${autoPatch.confidence}): ` +
-            'apply the patched source from ARK_AUTOPATCH_JSON / ARK_REPAIR_JSON on stderr' +
+            'apply the patched source from STRUCTRAIL_AUTOPATCH_JSON / ' +
+            'STRUCTRAIL_REPAIR_JSON on stderr (ARK_* aliases are also emitted)' +
             (grokStyle ? ' (or autoPatch in the deny JSON on stdout)' : '') +
             ' instead of re-drafting. Gate still denies this write (never silent apply).',
         ]
@@ -322,7 +328,7 @@ function runHook(gate, config, args, ts) {
     ...(autoPatch && !repair
       ? [
           `Mechanical-safe autoPatch is available (${autoPatch.remediationKind}). ` +
-            'Enable repair payload with ARK_HOOK_REPAIR=1 or --hook-repair to receive ' +
+            'Enable repair payload with STRUCTRAIL_HOOK_REPAIR=1 or --hook-repair to receive ' +
             'machine-readable source (still hard-blocks; host re-injects).',
         ]
       : []),
@@ -348,8 +354,10 @@ function runHook(gate, config, args, ts) {
           }
         : { autoPatch: null }),
     };
+    process.stderr.write(`STRUCTRAIL_REPAIR_JSON:${JSON.stringify(repairPayload)}\n`);
     process.stderr.write(`ARK_REPAIR_JSON:${JSON.stringify(repairPayload)}\n`);
     if (autoPatch) {
+      process.stderr.write(`STRUCTRAIL_AUTOPATCH_JSON:${JSON.stringify(autoPatch)}\n`);
       process.stderr.write(`ARK_AUTOPATCH_JSON:${JSON.stringify(autoPatch)}\n`);
     }
   }
@@ -447,6 +455,25 @@ function printSessionContext(config, profile, forbiddenGlobals, args, configPath
 
 async function main() {
   const args = parseArgs(process.argv);
+  const primaryInvocation = isStructrailInvocation();
+  const configIdentity = resolveConfigIdentity({
+    root: args.root,
+    requested: args.config,
+    explicit: args.configExplicit,
+    primary: primaryInvocation,
+  });
+  if (configIdentity.error) throw new Error(configIdentity.message);
+  args.config = configIdentity.config;
+  if (primaryInvocation) {
+    for (const deprecation of configIdentity.deprecations) {
+      process.stderr.write(`warning ${deprecation.code} ${deprecation.message}\n`);
+    }
+    if (args.repairEnvironment.conflict) {
+      process.stderr.write(
+        'warning environment-conflict STRUCTRAIL_HOOK_REPAIR overrides ARK_HOOK_REPAIR.\n'
+      );
+    }
+  }
   const configPath = resolveInRoot(args.root, args.config);
 
   // SessionStart contract injection is only meaningful in Ark-governed projects. Bail
@@ -580,10 +607,10 @@ async function main() {
     return;
   }
 
-  const SERVER_INFO = { name: 'arkgate', version: ark.version };
+  const SERVER_INFO = { name: primaryInvocation ? 'structrail' : 'arkgate', version: ark.version };
   const DEFAULT_PROTOCOL = '2024-11-05';
 
-  const TOOLS = [
+  const LEGACY_TOOLS = [
     {
       name: 'validate_code',
       description:
@@ -711,10 +738,28 @@ async function main() {
     },
   ];
 
+  const canonicalTools = LEGACY_TOOLS.slice(1).map((tool) => ({
+    ...tool,
+    name: tool.name.replace(/^ark_/, 'structrail_'),
+  }));
+  const legacyTools = LEGACY_TOOLS.slice(1).map((tool) => ({
+    ...tool,
+    description: `Deprecated ArkGate alias; use ${tool.name.replace(/^ark_/, 'structrail_')}. ${tool.description}`,
+  }));
+  const TOOLS = [LEGACY_TOOLS[0], ...canonicalTools, ...legacyTools];
+
   const RESOURCES = [
     {
+      uri: 'structrail://manifest',
+      name: 'Structrail architectural contract',
+      description:
+        'The architecture agents must obey before generating code: layers and layer rules ' +
+        '(plus the full project manifest when --manifest is provided).',
+      mimeType: 'application/json',
+    },
+    {
       uri: 'ark://manifest',
-      name: 'Ark architectural contract',
+      name: 'Ark architectural contract (deprecated alias)',
       description:
         'The architecture agents must obey before generating code: layers and layer rules ' +
         '(plus the full project manifest when --manifest is provided).',
@@ -1072,6 +1117,12 @@ async function main() {
 
   const TOOL_HANDLERS = {
     validate_code: runValidate,
+    structrail_check: runCheckTool,
+    structrail_coverage: runCoverageTool,
+    structrail_place: runPlace,
+    structrail_prepare_write: runPrepareWrite,
+    structrail_recommend: runRecommendTool,
+    structrail_suggest_include: runSuggestIncludeTool,
     ark_check: runCheckTool,
     ark_coverage: runCoverageTool,
     ark_place: runPlace,
@@ -1118,12 +1169,12 @@ async function main() {
         reply(id, { resources: RESOURCES });
         return;
       case 'resources/read':
-        if (params?.uri !== 'ark://manifest') {
+        if (params?.uri !== 'structrail://manifest' && params?.uri !== 'ark://manifest') {
           fail(id, -32602, `Unknown resource: ${params?.uri}`);
           return;
         }
         reply(id, {
-          contents: [{ uri: 'ark://manifest', mimeType: 'application/json', text: manifestText() }],
+          contents: [{ uri: params.uri, mimeType: 'application/json', text: manifestText() }],
         });
         return;
       default:

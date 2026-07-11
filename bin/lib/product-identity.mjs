@@ -10,6 +10,22 @@ export function isStructrailInvocation(invocationPath = process.argv[1]) {
   return path.basename(invocationPath ?? '').startsWith('structrail');
 }
 
+function envTruthy(value) {
+  return /^(1|true|yes|on)$/i.test(String(value ?? '').trim());
+}
+
+export function resolveBooleanEnvironment(env, canonicalName, legacyName) {
+  const hasCanonical = Object.prototype.hasOwnProperty.call(env, canonicalName);
+  const hasLegacy = Object.prototype.hasOwnProperty.call(env, legacyName);
+  const canonicalValue = hasCanonical ? envTruthy(env[canonicalName]) : undefined;
+  const legacyValue = hasLegacy ? envTruthy(env[legacyName]) : undefined;
+  return {
+    value: hasCanonical ? canonicalValue : (legacyValue ?? false),
+    source: hasCanonical ? canonicalName : hasLegacy ? legacyName : null,
+    conflict: hasCanonical && hasLegacy && canonicalValue !== legacyValue,
+  };
+}
+
 function configDeprecation(configPath) {
   return {
     code: 'legacy-config-filename',

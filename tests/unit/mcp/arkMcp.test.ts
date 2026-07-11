@@ -991,6 +991,12 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
     const res = await client.request('tools/list');
     expect(res.result.tools.map((t: { name: string }) => t.name)).toEqual([
       'validate_code',
+      'structrail_check',
+      'structrail_coverage',
+      'structrail_place',
+      'structrail_prepare_write',
+      'structrail_recommend',
+      'structrail_suggest_include',
       'ark_check',
       'ark_coverage',
       'ark_place',
