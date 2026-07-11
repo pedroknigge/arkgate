@@ -70,6 +70,9 @@ describe('Structrail ESLint plugin', () => {
     };
     expect(Object.keys(recommended.plugins)).toEqual(['structrail']);
     expect(Object.keys(recommended.rules).some((name) => name.startsWith('ark/'))).toBe(false);
+    expect(JSON.stringify(arkEslint.rules)).not.toMatch(
+      /\bArkGate\b|\bArk\b|ark\.config\.json|\barkgate-check\b|\bark-check\b/
+    );
   });
 
   it('flags infrastructure imports from domain files (heuristic without ark.config.json)', () => {

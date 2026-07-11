@@ -316,7 +316,7 @@ describe('AI Code Gate (basic)', () => {
     expect(res.violations[0].target).toBe('Adapter.Persistence.OrderRepository');
   });
 
-  it('uses TypeScript AST checks for Ark publish misuse when provided', () => {
+  it('uses TypeScript AST checks for Structrail publish misuse with canonical diagnostics', () => {
     const gate = createAICodeGate({
       typescript: ts,
       architectureProfile: elevenLayerProfile,
@@ -334,6 +334,9 @@ describe('AI Code Gate (basic)', () => {
 
     expect(res.valid).toBe(false);
     expect(res.violations.map((v) => v.ruleId)).toContain('RAW_EVENT_PUBLISH');
+    expect(res.violations.map((v) => v.message).join('\n')).not.toMatch(
+      /\bArkGate\b|\bArk\b|ark\.config\.json|\barkgate-check\b|\bark-check\b/
+    );
     expect(res.violations.filter((v) => v.ruleId === 'PUBLISH_MISSING_SOURCE')).toHaveLength(2);
     expect(res.violations.map((v) => v.ruleId)).toContain('PUBLISH_SOURCE_LAYER_MISMATCH');
   });
