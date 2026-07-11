@@ -96,6 +96,7 @@ import { runArchitectureScan } from './lib/architecture-scan.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import {
   isStructrailInvocation,
+  resolveEnvironmentValue,
   resolveConfigIdentity,
 } from './lib/product-identity.mjs';
 
@@ -1133,7 +1134,12 @@ async function main() {
   if (loaded.fallbackReason && !args.json) {
     console.log(color.yellow(loaded.fallbackReason));
   }
-  if (process.env.ARK_DEBUG_TS === '1' && !args.json) {
+  const debugTypescript = resolveEnvironmentValue(
+    process.env,
+    'STRUCTRAIL_DEBUG_TS',
+    'ARK_DEBUG_TS'
+  ).value;
+  if (debugTypescript === '1' && !args.json) {
     console.log(
       color.dim(
         `[ark-check] TypeScript ${loaded.version ?? '?'} via ${loaded.source}` +

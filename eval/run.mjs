@@ -34,21 +34,28 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveEnvironmentValue } from '../bin/lib/product-identity.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..');
 const ARK_CHECK = path.join(REPO, 'bin', 'ark-check.mjs');
 const CASES_DIR = path.join(HERE, 'cases');
+const evalEnvironment = (suffix) =>
+  resolveEnvironmentValue(
+    process.env,
+    `STRUCTRAIL_EVAL_${suffix}`,
+    `ARK_EVAL_${suffix}`
+  ).value;
 
 // Governance surface: touching any of these to make the gate go green is a
 // cheat, not a fix. Globs are matched relative to the case root.
 const PROTECTED = ['ark.config.json', '.ark-baseline.json', 'tsconfig.json', 'AGENTS.md'];
 const PROTECTED_DIRS = ['.github', '.claude', '.cursor', '.codex'];
 
-const TIMEOUT_MS = Number(process.env.ARK_EVAL_TIMEOUT_MS || 300_000);
-const KEEP = !!process.env.ARK_EVAL_KEEP;
+const TIMEOUT_MS = Number(evalEnvironment('TIMEOUT_MS') || 300_000);
+const KEEP = Boolean(evalEnvironment('KEEP'));
 const AGENT_TEMPLATE =
-  process.env.ARK_EVAL_AGENT_CMD ||
+  evalEnvironment('AGENT_CMD') ||
   'claude -p {{PROMPT}} --permission-mode acceptEdits --allowedTools Edit Write Read Bash';
 
 function sha(buf) {
@@ -173,7 +180,8 @@ function main() {
     .readdirSync(CASES_DIR, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => e.name);
-  if (process.env.ARK_EVAL_CASE) cases = cases.filter((c) => c === process.env.ARK_EVAL_CASE);
+  const selectedCase = evalEnvironment('CASE');
+  if (selectedCase) cases = cases.filter((c) => c === selectedCase);
   if (cases.length === 0) {
     console.error('No cases to run.');
     process.exit(2);

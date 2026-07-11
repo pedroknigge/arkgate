@@ -37,6 +37,7 @@ import {
   applyImportTypeAutoPatch,
   resolveImportFileAbs,
 } from '../bin/lib/auto-patch.mjs';
+import { resolveEnvironmentValue } from '../bin/lib/product-identity.mjs';
 
 const require = createRequire(import.meta.url);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -45,6 +46,12 @@ const ARK_CHECK = path.join(REPO, 'bin', 'ark-check.mjs');
 const CASES_DIR = path.join(HERE, 'cases');
 const REPORT_PATH = path.join(HERE, 'loop-cost-report.json');
 const BASELINE_PATH = path.join(HERE, 'loop-cost-baseline.json');
+const evalEnvironment = (suffix) =>
+  resolveEnvironmentValue(
+    process.env,
+    `STRUCTRAIL_EVAL_${suffix}`,
+    `ARK_EVAL_${suffix}`
+  ).value;
 
 const PROTECTED = ['ark.config.json', '.ark-baseline.json', 'tsconfig.json', 'AGENTS.md'];
 const PROTECTED_DIRS = ['.github', '.claude', '.cursor', '.codex', '.grok'];
@@ -299,7 +306,7 @@ function runFixtureCase(caseSpec, ts) {
         : `write path still blocked after ${turns} turn(s)`,
     };
   } finally {
-    if (!process.env.ARK_EVAL_KEEP) {
+    if (!evalEnvironment('KEEP')) {
       fs.rmSync(tmp, { recursive: true, force: true });
     } else {
       console.error(`[loop-cost] kept ${tmp}`);
@@ -329,7 +336,7 @@ function summarize(cases) {
 function main() {
   const writeBaseline =
     process.argv.includes('--write-baseline') || !fs.existsSync(BASELINE_PATH);
-  const only = process.env.ARK_EVAL_LOOP_CASE;
+  const only = evalEnvironment('LOOP_CASE');
   const caseSpecs = only
     ? DEFAULT_CASES.filter((c) => c.id === only)
     : DEFAULT_CASES;
@@ -355,7 +362,7 @@ function main() {
     capturedAt: new Date().toISOString(),
     mode: 'fixture-measured',
     note:
-      'Fixture-measured loop cost (W3). Live agents optional via ARK_EVAL_LOOP_LIVE later. ' +
+      'Fixture-measured loop cost (W3). Live agents optional via STRUCTRAIL_EVAL_LOOP_LIVE later. ' +
       'tokensToGreen is null in fixture mode. Baseline enables ÷10 targets after W1–W2.',
     cases,
     summary,

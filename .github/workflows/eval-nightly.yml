@@ -44,7 +44,7 @@ jobs:
       - run: npm ci
 
       - name: Live agent eval (optional — needs claude on PATH)
-        if: ${{ vars.ARK_RUN_LIVE_AGENT_EVAL == 'true' }}
+        if: ${{ vars.STRUCTRAIL_RUN_LIVE_AGENT_EVAL == 'true' || (vars.STRUCTRAIL_RUN_LIVE_AGENT_EVAL == '' && vars.ARK_RUN_LIVE_AGENT_EVAL == 'true') }}
         run: node eval/run.mjs
         env:
-          ARK_EVAL_CASE: enthusiast-greenfield-crud
+          STRUCTRAIL_EVAL_CASE: enthusiast-greenfield-crud

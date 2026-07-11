@@ -15,14 +15,20 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveEnvironmentValue } from '../bin/lib/product-identity.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..');
 const ARK_CHECK = path.join(REPO, 'bin', 'ark-check.mjs');
 const PROMPTS_PATH = path.join(HERE, 'comparative', 'prompts.json');
 const FIXTURES_DIR = path.join(HERE, 'comparative', 'fixtures');
-const OUT_PATH = process.env.ARK_COMPARATIVE_OUT
-  ? path.resolve(process.env.ARK_COMPARATIVE_OUT)
+const comparativeOutput = resolveEnvironmentValue(
+  process.env,
+  'STRUCTRAIL_COMPARATIVE_OUT',
+  'ARK_COMPARATIVE_OUT'
+).value;
+const OUT_PATH = comparativeOutput
+  ? path.resolve(comparativeOutput)
   : path.join(HERE, 'comparative-report.json');
 
 const REQUIRED_METRIC_KEYS = ['layerViolations', 'misplacedFiles', 'contractIntact', 'cheated'];

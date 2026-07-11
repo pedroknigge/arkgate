@@ -69,6 +69,18 @@ function envTruthy(value) {
   return /^(1|true|yes|on)$/i.test(String(value ?? '').trim());
 }
 
+export function resolveEnvironmentValue(env, canonicalName, legacyName) {
+  const hasCanonical = Object.prototype.hasOwnProperty.call(env, canonicalName);
+  const hasLegacy = Object.prototype.hasOwnProperty.call(env, legacyName);
+  const canonicalValue = hasCanonical ? env[canonicalName] : undefined;
+  const legacyValue = hasLegacy ? env[legacyName] : undefined;
+  return {
+    value: hasCanonical ? canonicalValue : legacyValue,
+    source: hasCanonical ? canonicalName : hasLegacy ? legacyName : null,
+    conflict: hasCanonical && hasLegacy && canonicalValue !== legacyValue,
+  };
+}
+
 export function resolveBooleanEnvironment(env, canonicalName, legacyName) {
   const hasCanonical = Object.prototype.hasOwnProperty.call(env, canonicalName);
   const hasLegacy = Object.prototype.hasOwnProperty.call(env, legacyName);

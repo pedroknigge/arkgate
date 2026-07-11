@@ -8,6 +8,7 @@ import { __packageRoot, readJson } from './gate-files.mjs';
 import {
   ARK_GENERATION_IDENTITY,
   generationIdentityForRoot,
+  resolveEnvironmentValue,
 } from './product-identity.mjs';
 
 export function normalizeToolsList(tools) {
@@ -35,14 +36,17 @@ function envTruthy(v) {
 
 /**
  * Best-effort active agent host for this process (session host).
- * Prefer ARK_ACTIVE_HOST when set. Do NOT treat CODEX_HOME alone as Codex —
+ * Prefer STRUCTRAIL_ACTIVE_HOST (or the v3 ARK_ACTIVE_HOST alias) when set.
+ * Do NOT treat CODEX_HOME alone as Codex —
  * that dir exists for anyone who installed Codex, even when running Grok/Claude.
  *
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {string|null} tool id (claude|cursor|codex|grok|…) or null if unknown
  */
 export function detectActiveAgentHost(env = process.env) {
-  const explicit = String(env.ARK_ACTIVE_HOST || '')
+  const explicit = String(
+    resolveEnvironmentValue(env, 'STRUCTRAIL_ACTIVE_HOST', 'ARK_ACTIVE_HOST').value ?? ''
+  )
     .trim()
     .toLowerCase();
   if (explicit) return explicit;

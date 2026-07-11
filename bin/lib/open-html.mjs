@@ -5,6 +5,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { resolveEnvironmentValue } from './product-identity.mjs';
 
 /**
  * Whether report generation should open the browser.
@@ -16,7 +17,11 @@ export function shouldOpenHtmlReport(opts = {}) {
   const env = opts.env ?? process.env;
   if (opts.noOpen) return false;
   if (opts.force) return true;
-  const off = env.ARK_NO_OPEN_REPORT;
+  const off = resolveEnvironmentValue(
+    env,
+    'STRUCTRAIL_NO_OPEN_REPORT',
+    'ARK_NO_OPEN_REPORT'
+  ).value;
   if (off === '1' || off === 'true' || off === 'yes') return false;
   if (env.CI === 'true' || env.CI === '1') return false;
   if (env.GITHUB_ACTIONS === 'true') return false;

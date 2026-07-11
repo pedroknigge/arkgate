@@ -12,7 +12,10 @@ import { detectWritePathCapabilities } from './write-path-detect.mjs';
 import { detectActiveAgentHost, skillTemplateNames } from './skill-install.mjs';
 import { detectDeployPathQuality } from './deploy-path.mjs';
 import { collectWeakestLinkGaps } from './weakest-link.mjs';
-import { generationIdentityForRoot } from './product-identity.mjs';
+import {
+  generationIdentityForRoot,
+  resolveBooleanEnvironment,
+} from './product-identity.mjs';
 
 export { detectDeployPathQuality };
 
@@ -427,10 +430,12 @@ export function collectAdoptionGaps(root, config, coverage) {
     }
   }
 
-  // --- Q3 weakest-link: CI / pre-commit / config drift (local FS; optional GH via ARK_DOCTOR_GITHUB=1) ---
-  const includeGithub =
-    process.env.ARK_DOCTOR_GITHUB === '1' ||
-    process.env.ARK_DOCTOR_GITHUB === 'true';
+  // --- Q3 weakest-link: CI / pre-commit / config drift (local FS; optional GitHub API) ---
+  const includeGithub = resolveBooleanEnvironment(
+    process.env,
+    'STRUCTRAIL_DOCTOR_GITHUB',
+    'ARK_DOCTOR_GITHUB'
+  ).value;
   const weakest = collectWeakestLinkGaps(root, {
     adopted,
     isProducer,
