@@ -60,6 +60,12 @@
       "reason": "Tests and fixtures prove the supported v3 aliases and negative cases."
     },
     {
+      "path": "reports/mutation/",
+      "match": "prefix",
+      "category": "generated-artifact",
+      "reason": "Stryker emits generated mutation reports here; they are ignored by git and are not product surfaces."
+    },
+    {
       "path": "bin/lib/",
       "match": "prefix",
       "category": "internal-compatibility-code",

@@ -136,6 +136,16 @@ describe('legacy public identity ratchet', () => {
     expect(result.stderr).toContain('src/index.ts:5');
   });
 
+  it('ignores generated mutation reports when scanning an exported tree without git metadata', () => {
+    const result = run(
+      fixture({
+        'README.md': '# Structrail\n',
+        'reports/mutation/mutation.json': '{"mutant":"arkgate"}\n',
+      })
+    );
+    expect(result.status, result.stderr).toBe(0);
+  });
+
   it('passes against the repository public surface', () => {
     const result = run(REPO);
     expect(result.status, result.stderr).toBe(0);
