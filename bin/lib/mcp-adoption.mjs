@@ -9,8 +9,9 @@ import { CORE_LAYER_NAMES } from './core-layers.mjs';
 import { falseGreenAdoptionGap } from './field-install.mjs';
 import { assessCodexHomeMcp, codexConfigPath } from './codex-home.mjs';
 import { detectWritePathCapabilities } from './write-path-detect.mjs';
-import { skillTemplateNames } from './skill-install.mjs';
+import { detectActiveAgentHost, skillTemplateNames } from './skill-install.mjs';
 import { detectDeployPathQuality } from './deploy-path.mjs';
+import { collectWeakestLinkGaps } from './weakest-link.mjs';
 
 export { detectDeployPathQuality };
 
@@ -195,10 +196,22 @@ export function collectAdoptionGaps(root, config, coverage) {
         scopedTable: assessed.scopedTable,
       };
       if (assessed.gap) {
+        // Temp/upgrade MCP roots stay urgent (fail-closed). Non-temp Codex-home debt
+        // is deferred only when the session host is known and is not Codex
+        // (Grok/Claude/Cursor…). Unknown host (CI/plain shell) keeps original severity.
+        const tempUrgent = Boolean(assessed.tempPath);
+        const activeHost = detectActiveAgentHost();
+        const deferred =
+          !tempUrgent && activeHost != null && activeHost !== 'codex';
+        const severity = deferred ? 'info' : assessed.gap.severity;
+        const message = deferred
+          ? `Deferred (fix when using Codex): ${assessed.gap.message}`
+          : assessed.gap.message;
         gaps.push({
           id: assessed.gap.id,
-          severity: assessed.gap.severity,
-          message: assessed.gap.message,
+          severity,
+          deferred,
+          message,
           fix: arkCommand(root, 'ark-check', assessed.gap.fixArgs),
         });
       }
@@ -403,6 +416,19 @@ export function collectAdoptionGaps(root, config, coverage) {
     }
   }
 
+  // --- Q3 weakest-link: CI / pre-commit / config drift (local FS; optional GH via ARK_DOCTOR_GITHUB=1) ---
+  const includeGithub =
+    process.env.ARK_DOCTOR_GITHUB === '1' ||
+    process.env.ARK_DOCTOR_GITHUB === 'true';
+  const weakest = collectWeakestLinkGaps(root, {
+    adopted,
+    isProducer,
+    includeGithub,
+  });
+  for (const g of weakest.gaps) {
+    gaps.push(g);
+  }
+
   return {
     gaps,
     hosts,
@@ -415,6 +441,12 @@ export function collectAdoptionGaps(root, config, coverage) {
     deployPath,
     contractFalseGreen,
     writePath,
+    enforcement: {
+      ci: weakest.ci,
+      preCommit: weakest.preCommit,
+      drift: weakest.drift,
+      github: weakest.github,
+    },
   };
 }
 

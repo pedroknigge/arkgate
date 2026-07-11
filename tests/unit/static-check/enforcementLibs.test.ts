@@ -531,7 +531,8 @@ describe('html-report render + doctor plan runners (shipped)', () => {
       { layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }], rules: [] },
       coverage
     );
-    expect(adoption.writePath?.mode).toBe('repair');
+    expect(adoption.writePath?.inventory.capabilities['hard-write']).toBe(true);
+    expect(adoption.writePath?.inventory.capabilities['repair-payload']).toBe(true);
     expect(Array.isArray(adoption.gaps)).toBe(true);
   });
 

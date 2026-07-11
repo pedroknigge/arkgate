@@ -408,7 +408,7 @@ describe('W4 install templates include --hook-repair', () => {
 describe('W5 detectWritePathCapabilities', () => {
   it('reports none when no hooks or MCP', () => {
     const root = tempRoot('ark-wp-none-');
-    const cap = detectWritePathCapabilities(root);
+    const cap = detectWritePathCapabilities(root, 'unknown');
     expect(cap.mode).toBe('none');
     expect(cap.prepareWrite).toBe(false);
     expect(cap.autoPatch).toBe(false);
@@ -435,7 +435,7 @@ describe('W5 detectWritePathCapabilities', () => {
         },
       })
     );
-    const cap = detectWritePathCapabilities(root);
+    const cap = detectWritePathCapabilities(root, 'claude');
     expect(cap.mode).toBe('reject-only');
     expect(cap.hookPresent).toBe(true);
     expect(cap.hookRepair).toBe(false);
@@ -472,7 +472,7 @@ describe('W5 detectWritePathCapabilities', () => {
         },
       })
     );
-    const cap = detectWritePathCapabilities(root);
+    const cap = detectWritePathCapabilities(root, 'claude');
     expect(cap.mode).toBe('repair');
     expect(cap.prepareWrite).toBe(true);
     expect(cap.autoPatch).toBe(true);
@@ -488,7 +488,7 @@ describe('W5 detectWritePathCapabilities', () => {
         mcpServers: { ark: { command: 'npx', args: ['arkgate-mcp'] } },
       })
     );
-    const cap = detectWritePathCapabilities(root);
+    const cap = detectWritePathCapabilities(root, 'claude');
     expect(cap.mode).toBe('mcp-only');
     expect(cap.prepareWrite).toBe(true);
     expect(cap.autoPatch).toBe(true);

@@ -76,6 +76,8 @@ export {
   normalizeToolsList,
   resolveTools,
   KNOWN_TOOLS,
+  detectActiveAgentHost,
+  codexConcernIsActive,
   arkPackageVersion,
   stampSkill,
   installedSkillVersion,
@@ -94,6 +96,16 @@ export {
   brokenMcpGateFiles,
   collectAdoptionGaps,
 } from './mcp-adoption.mjs';
+
+export {
+  detectPreCommitArk,
+  detectCiEnforcement,
+  detectConfigGateDrift,
+  jobIdsThatRunArkCheck,
+  isArkRequiredStatusCheck,
+  reportGithubBranchProtection,
+  collectWeakestLinkGaps,
+} from './weakest-link.mjs';
 
 export {
   staleRunnerGateFiles,

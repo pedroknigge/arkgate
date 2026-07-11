@@ -179,6 +179,29 @@ args = ["ark-mcp", "--root", "/var/folders/xx/ark-upgrade-tmp123", "--config", "
     expect(bins.includes('ark-mcp') && bins.includes('arkgate-mcp')).toBe(false);
   });
 
+  /** Neutralize host signals so multi-project severity is not auto-deferred by Grok/Claude env. */
+  function neutralHostEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
+    return {
+      GROK_BUILD: '',
+      XAI_GROK: '',
+      GROK_WORKSPACE_ROOT: '',
+      GROK_SESSION_ID: '',
+      CLAUDE_PROJECT_DIR: '',
+      CLAUDE_CODE: '',
+      CLAUDECODE: '',
+      CLAUDE_CODE_ENTRYPOINT: '',
+      CURSOR_TRACE_ID: '',
+      CURSOR_AGENT: '',
+      CURSOR_AGENT_CLI: '',
+      CODEX_SANDBOX: '',
+      CODEX_THREAD_ID: '',
+      CODEX_CI: '',
+      CODEX_SESSION_ID: '',
+      ARK_ACTIVE_HOST: '',
+      ...extra,
+    };
+  }
+
   it('R7 doctor flags multi-project when Codex primary is another permanent project', () => {
     // Non-temp paths so primary A is permanent (not fail-closed rewrite).
     const base = path.join(process.cwd(), '.tmp-r7-codex-doctor');
@@ -211,7 +234,7 @@ args = ["arkgate-mcp", "--root", "${absA}", "--config", "${absA}/ark.config.json
     const before = runCheck(
       rootB,
       ['--config', 'ark.config.json', '--doctor', '--json', '--no-cache'],
-      { CODEX_HOME: codexHome }
+      neutralHostEnv({ CODEX_HOME: codexHome })
     );
     expect(before.status).toBe(0);
     const beforeJ = JSON.parse(before.stdout);
@@ -222,10 +245,15 @@ args = ["arkgate-mcp", "--root", "${absA}", "--config", "${absA}/ark.config.json
     expect(beforeJ.doctor.adoption.codexHome?.multiProject).toBe(true);
     expect(beforeJ.doctor.adoption.codexHome?.wrongRoot).toBe(true);
     expect(beforeJ.doctor.adoption.codexHome?.needsRewrite).toBe(false);
-    const multiGap = (beforeJ.doctor.adoption.gaps as Array<{ id: string; fix?: string; severity?: string }>).find(
-      (g) => g.id === 'codex-home-multi-project'
-    );
+    const multiGap = (beforeJ.doctor.adoption.gaps as Array<{
+      id: string;
+      fix?: string;
+      severity?: string;
+      deferred?: boolean;
+    }>).find((g) => g.id === 'codex-home-multi-project');
+    // Unknown host (no session signal): multi-project without scoped table stays warn.
     expect(multiGap?.severity).toBe('warn');
+    expect(multiGap?.deferred).toBe(false);
     expect(multiGap?.fix).toMatch(/install-agent-gates/);
     expect(before.stdout + before.stderr).not.toMatch(/codex-home-mcp/); // not the temp-rewrite gap
 
@@ -233,7 +261,7 @@ args = ["arkgate-mcp", "--root", "${absA}", "--config", "${absA}/ark.config.json
     const install = runCheck(
       rootB,
       ['--install-agent-gates', '--tools', 'codex'],
-      { CODEX_HOME: codexHome }
+      neutralHostEnv({ CODEX_HOME: codexHome })
     );
     expect(install.status).toBe(0);
     const toml = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
@@ -248,7 +276,7 @@ args = ["arkgate-mcp", "--root", "${absA}", "--config", "${absA}/ark.config.json
     const after = runCheck(
       rootB,
       ['--config', 'ark.config.json', '--doctor', '--json', '--no-cache'],
-      { CODEX_HOME: codexHome }
+      neutralHostEnv({ CODEX_HOME: codexHome })
     );
     expect(after.status).toBe(0);
     const afterJ = JSON.parse(after.stdout);
@@ -263,9 +291,64 @@ args = ["arkgate-mcp", "--root", "${absA}", "--config", "${absA}/ark.config.json
     const human = runCheck(
       rootB,
       ['--config', 'ark.config.json', '--doctor', '--no-cache'],
-      { CODEX_HOME: codexHome }
+      neutralHostEnv({ CODEX_HOME: codexHome })
     );
     expect(human.stdout).toMatch(/Codex primary|multi-project|another project/i);
+  });
+
+  it('defers Codex multi-project gap when session host is Grok (not a Top-action blocker)', () => {
+    const base = path.join(process.cwd(), '.tmp-r7-codex-defer-grok');
+    fs.rmSync(base, { recursive: true, force: true });
+    temps.push(base);
+    const rootA = path.join(base, 'proj-a');
+    const rootB = path.join(base, 'proj-b');
+    const codexHome = path.join(base, 'codex-home');
+    for (const r of [rootA, rootB]) {
+      fs.mkdirSync(path.join(r, 'src/domain'), { recursive: true });
+      fs.mkdirSync(path.join(r, 'src/app'), { recursive: true });
+      fs.mkdirSync(path.join(r, 'src/application'), { recursive: true });
+      fs.mkdirSync(path.join(r, 'src/infra'), { recursive: true });
+      writeTwoLayerOptional(r);
+      fs.writeFileSync(path.join(r, 'AGENTS.md'), '# agent\n');
+      fs.writeFileSync(path.join(r, 'package.json'), '{"name":"r7-fixture"}\n');
+    }
+    fs.mkdirSync(codexHome, { recursive: true });
+    const absA = path.resolve(rootA);
+    fs.writeFileSync(
+      path.join(codexHome, 'config.toml'),
+      `[mcp_servers.ark]
+command = "npx"
+args = ["arkgate-mcp", "--root", "${absA}", "--config", "${absA}/ark.config.json"]
+`
+    );
+
+    const r = runCheck(
+      rootB,
+      ['--config', 'ark.config.json', '--doctor', '--json', '--no-cache'],
+      neutralHostEnv({ CODEX_HOME: codexHome, GROK_BUILD: '1' })
+    );
+    expect(r.status).toBe(0);
+    const j = JSON.parse(r.stdout);
+    const gap = (j.doctor.adoption.gaps as Array<{
+      id: string;
+      severity?: string;
+      deferred?: boolean;
+      message?: string;
+    }>).find((g) => g.id === 'codex-home-multi-project');
+    expect(gap).toBeTruthy();
+    expect(gap?.deferred).toBe(true);
+    expect(gap?.severity).toBe('info');
+    expect(gap?.message).toMatch(/Deferred \(fix when using Codex\)/i);
+
+    const human = runCheck(
+      rootB,
+      ['--config', 'ark.config.json', '--doctor', '--no-cache'],
+      neutralHostEnv({ CODEX_HOME: codexHome, GROK_BUILD: '1' })
+    );
+    expect(human.stdout).toMatch(/Deferred \(fix when using Codex\)/i);
+    expect(human.stdout).toMatch(/When using Codex:/i);
+    // Deferred gaps must not appear as numbered Top actions
+    expect(human.stdout).not.toMatch(/Top actions[\s\S]*install-agent-gates --tools codex/i);
   });
 
   it('doctor flags missing lint script when Next production build embeds ESLint (universal deploy-path)', () => {

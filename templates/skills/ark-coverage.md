@@ -56,7 +56,7 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 |------|----------------|--------------------|
 | **Suggest / Setup** | Thin or new tree | “Ark will propose a starting shape — you don’t switch a mode.” |
 | **Adapt / Align** | Contract ≠ folders or open debt | “Gates don’t fully protect you yet — classify + fix plan.” |
-| **Enforce / Guard** | Coverage + clean edges + honest cores | “You arrived here — keep CI/write gates on.” |
+| **Enforce / Guard** | Coverage + clean edges + honest cores | “You arrived here — keep the host-appropriate write path and CI check on.” |
 
 Never say “your architecture is guarded” while `goal.met` is false, governed% is low,
 or false-green doctor gaps are open.
@@ -73,7 +73,7 @@ or false-green doctor gaps are open.
 
 1. Config + `ark-check --strict-config` (dead preset globs advisory; unclassified files still fail strict).
 2. Baseline policy (orphan empty file? wire or delete).
-3. Write gates + `/ark-*` skills per detected agent.
+3. Host-appropriate write path + `/ark-*` skills per detected agent.
 4. CI workflow + monorepo install reality (`frontend/package.json`?).
 5. ESLint `arkgate/eslint` if ESLint exists.
 6. Domain `forbiddenGlobals`.

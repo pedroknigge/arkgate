@@ -19,6 +19,7 @@ import {
   resolveOperatingMode,
 } from './ark-shared.mjs';
 import { pinArkgateDevDependency, FALSE_GREEN_GAP_ID } from './lib/field-install.mjs';
+import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
@@ -57,6 +58,7 @@ function parseArgs(argv) {
     force: false,
     strict: true,
     install: true,
+    requireWriteHook: undefined,
     help: false,
     version: false,
   };
@@ -81,6 +83,9 @@ function parseArgs(argv) {
     else if (arg === '--preset') args.preset = requireValue(arg, i++);
     else if (arg === '--archetype') args.archetype = requireValue(arg, i++);
     else if (arg === '--tools') args.tools = requireValue(arg, i++);
+    else if (arg === '--require-write-hook') {
+      args.requireWriteHook = requireValue(arg, i++).trim().toLowerCase();
+    }
     else if (arg === '--help' || arg === '-h' || arg === 'help') args.help = true;
     else if (arg === '--version' || arg === '-V') args.version = true;
     else if (!arg.startsWith('-') && args.command === undefined) args.command = arg;
@@ -92,9 +97,9 @@ function parseArgs(argv) {
 
 function usage() {
   return `Usage:
-  ark start   [--root <project>] [--yes]
+  ark start   [--root <project>] [--tools <list>] [--require-write-hook <host>] [--yes]
   ark init    [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture]
-              [--archetype <playbook-id>] [--tools <list>] [--yes] [--force] [--no-strict]
+              [--archetype <playbook-id>] [--tools <list>] [--require-write-hook <host>] [--yes] [--force] [--no-strict]
   ark upgrade [--root <project>] [--no-install] [--no-strict]
 
 Commands:
@@ -119,6 +124,9 @@ Options:
                vertical-slice-product, ddd-bounded-contexts.
   --tools      Comma-separated agents to gate (claude,cursor,codex,grok,windsurf,cline,copilot,kiro,roo,continue,gemini).
                Omit to auto-detect from each tool's config dir, falling back to claude+cursor+codex+grok.
+  --require-write-hook <host>
+               Require and verify a hard local write hook for Claude or Grok. Cursor/Codex are
+               advisory-write plus hard CI merge only; impossible requests fail before any write.
 
 Interactive mode (TTY, no --yes): asks what application shape you are building and maps it to a preset.
 Non-interactive (no TTY): uses the same defaults as --yes — never calls readline on a null interface.
@@ -203,7 +211,7 @@ async function upgrade(args) {
   }
   console.log('\n4/4  Verifying architecture…');
   return runArkCheck(
-    ['--root', root, '--config', 'ark.config.json', '--strict-config'],
+    ['--root', root, '--config', 'ark.config.json', '--strict-merge'],
     { cwd: root }
   );
 }
@@ -365,6 +373,9 @@ async function init(args) {
     if (installGates) {
       const gateArgs = ['--root', root, '--install-agent-gates'];
       if (args.tools) gateArgs.push('--tools', args.tools);
+      if (args.requireWriteHook) {
+        gateArgs.push('--require-write-hook', args.requireWriteHook);
+      }
       if (args.force) gateArgs.push('--force');
       const status = runArkCheck(gateArgs, { cwd: root });
       if (status !== 0) return status;
@@ -374,14 +385,15 @@ async function init(args) {
       args.strict &&
       (nonInteractive || (await askYesNo(rl, 'Run strict architecture check now?', true)));
     if (runStrict) {
-      return runArkCheck(
-        ['--root', root, '--config', 'ark.config.json', '--strict-config'],
-        { cwd: root }
-      );
+      const strictArgs = ['--root', root, '--config', 'ark.config.json', '--strict-merge'];
+      if (args.requireWriteHook) {
+        strictArgs.push('--require-write-hook', args.requireWriteHook);
+      }
+      return runArkCheck(strictArgs, { cwd: root });
     }
 
     console.log(
-      `Ark init complete. Run \`${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config')}\` before merging.`
+      `Ark init complete. Run \`${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-merge')}\` before merging.`
     );
     if (archetype) {
       console.log(`Shape: ${archetype}. Plan: ${arkCommand(root, 'ark-check', '--recommend')}`);
@@ -526,8 +538,12 @@ async function start(args) {
     {
       const gateArgs = ['--root', root, '--install-agent-gates'];
       if (args.tools) gateArgs.push('--tools', args.tools);
+      if (args.requireWriteHook) {
+        gateArgs.push('--require-write-hook', args.requireWriteHook);
+      }
       if (args.force) gateArgs.push('--force');
-      runArkCheck(gateArgs, { cwd: root });
+      const status = runArkCheck(gateArgs, { cwd: root });
+      if (status !== 0) return status;
     }
 
     // 6) Show the plan: what's safe to auto-fix vs what needs a decision.
@@ -664,7 +680,7 @@ async function start(args) {
       console.log('     → explore first, dual plan (remediation + pattern bets), safe fixes, leave gates on.');
     }
     console.log(`  2. Status anytime: ${arkCommand(root, 'ark-check', '--doctor')}`);
-    console.log(`  3. After edits:    ${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-config')}`);
+    console.log(`  3. After edits:    ${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-merge')}`);
     if (mode === 'adapt' && planOk && !falseGreenGap) {
       console.log(
         `  4. When green but cores still optional: ${arkCommand(root, 'ark-check', '--ratchet-cores')} → honest ENFORCE`
@@ -694,6 +710,25 @@ async function main() {
   if (args.help || !args.command) {
     console.log(usage());
     return 0;
+  }
+
+  if (args.requireWriteHook && !['start', 'init'].includes(args.command)) {
+    console.error('--require-write-hook is supported by ark start and ark init.');
+    return 2;
+  }
+  const enforcement = validateHardWriteRequest({
+    root: args.root,
+    host: args.requireWriteHook,
+    tools: args.tools,
+    force: args.force,
+  });
+  if (!enforcement.ok) {
+    console.error(enforcement.error);
+    return 2;
+  }
+  if (enforcement.host) {
+    args.requireWriteHook = enforcement.host;
+    if (!args.tools) args.tools = enforcement.tools.join(',');
   }
 
   if (args.command === 'start') {

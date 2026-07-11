@@ -14,6 +14,7 @@ import {
   codexPromptsDir,
   codexConfigPath,
   isTempOrUpgradeRoot,
+  usesDefaultCodexHome,
   wireCodexMcp,
 } from './codex-home.mjs';
 import {
@@ -40,9 +41,7 @@ import {
   checkArchitectureScriptSnippet,
 } from './ci-and-commands.mjs';
 import {
-  normalizeToolsList,
   resolveTools,
-  KNOWN_TOOLS,
   SKILL_TOOL_TARGETS,
   skillTemplates,
   stampSkill,
@@ -59,6 +58,11 @@ import {
   PREFERRED_CHECK_BIN,
   RUNNER_BEFORE_ARK,
 } from './mcp-adoption.mjs';
+import {
+  hasHardWriteHook,
+  validateHardWriteRequest,
+  validateSelectedTools,
+} from './enforcement-profiles.mjs';
 
 export function staleRunnerGateFiles(root) {
   const want = execRunner(root);
@@ -179,17 +183,35 @@ export function runInstallAgentGates(args) {
     return;
   }
   if (args.tools != null) {
-    const list = normalizeToolsList(args.tools);
-    args.tools = list;
-    const unknown = list.filter((tool) => !KNOWN_TOOLS.includes(tool));
-    if (list.length === 0 || unknown.length > 0) {
-      console.error(
-        `--tools expects a comma-separated subset of: ${KNOWN_TOOLS.join(', ')}` +
-          (unknown.length > 0 ? ` (unknown: ${unknown.join(', ')})` : '')
-      );
+    const selection = validateSelectedTools(args.tools);
+    if (!selection.ok) {
+      console.error(selection.error);
       process.exitCode = 2;
       return;
     }
+    args.tools = selection.tools;
+  }
+  const writeRequest = validateHardWriteRequest({
+    root,
+    host: args.requireWriteHook,
+    tools: args.tools,
+    force: args.force,
+  });
+  if (!writeRequest.ok) {
+    console.error(writeRequest.error);
+    process.exitCode = 2;
+    return;
+  }
+  if (writeRequest.host && args.tools == null) {
+    args.tools = writeRequest.tools;
+  }
+  if (writeRequest.host && args.skillsOnly && !hasHardWriteHook(root, writeRequest.host)) {
+    console.error(
+      `--skills-only cannot install the requested ${writeRequest.host} hard-write hook. ` +
+      'Remove --skills-only or omit --require-write-hook.'
+    );
+    process.exitCode = 2;
+    return;
   }
   const pm = packageManager(root);
   const hasCheckScript = hasCheckArchitectureScript(root);
@@ -370,16 +392,17 @@ export function runInstallAgentGates(args) {
   // without a manual copy step.
   //
   // Skip home-dir mutation when the project root is a temp/upgrade scratch *and*
-  // CODEX_HOME is the default (~/.codex). Fixtures must not rewrite the developer's
-  // real Codex config. When CODEX_HOME is redirected (unit tests set a temp home) or
-  // --codex-home is explicit, wire as usual.
+  // CODEX_HOME resolves to the default (~/.codex). Codex itself may export that exact
+  // path, so presence alone does not prove isolation. Fixtures must not rewrite the
+  // developer's real config. A genuinely redirected CODEX_HOME or explicit
+  // --codex-home still wires as requested.
   let codexMcp = null;
   const wantCodexWire = tools.has('codex') || args.codexHome;
   const skipHomeWire =
     wantCodexWire &&
     isTempOrUpgradeRoot(root) &&
     !args.codexHome &&
-    !process.env.CODEX_HOME;
+    usesDefaultCodexHome();
   if (wantCodexWire && !skipHomeWire) {
     codexMcp = wireCodexMcp(root, args.force);
     console.log('');
@@ -415,6 +438,14 @@ export function runInstallAgentGates(args) {
     console.error(
       `\nWarning: Codex home MCP registration failed (${codexMcp.message}). Repo gates were written; fix ~/.codex access or re-run with --tools codex --force.`
     );
+  }
+  if (writeRequest.host) {
+    if (!hasHardWriteHook(root, writeRequest.host)) {
+      console.error(`\nFailed to verify the ${writeRequest.host} hard-write hook after install.`);
+      process.exitCode = 1;
+      return;
+    }
+    console.log(`\nHard-write hook verified for ${writeRequest.host}.`);
   }
   console.log('');
   console.log('Next steps:');

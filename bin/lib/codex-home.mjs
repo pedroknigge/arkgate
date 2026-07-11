@@ -22,6 +22,13 @@ export function codexConfigPath() {
   return path.join(base, 'config.toml');
 }
 
+/** True when CODEX_HOME is unset/empty or resolves to the real default ~/.codex. */
+export function usesDefaultCodexHome(env = process.env, homeDir = os.homedir()) {
+  const configured = env?.CODEX_HOME;
+  if (typeof configured !== 'string' || configured.trim() === '') return true;
+  return path.resolve(configured) === path.resolve(homeDir, '.codex');
+}
+
 /** Temp / upgrade sandbox roots must never remain as Codex MCP --root. */
 export function isTempOrUpgradeRoot(p) {
   if (!p || typeof p !== 'string') return false;

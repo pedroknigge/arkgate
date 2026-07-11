@@ -23,6 +23,70 @@ export function normalizeToolsList(tools) {
   return [];
 }
 
+function envTruthy(v) {
+  if (v == null || v === '') return false;
+  const s = String(v).trim().toLowerCase();
+  return s !== '0' && s !== 'false' && s !== 'no' && s !== 'off';
+}
+
+/**
+ * Best-effort active agent host for this process (session host).
+ * Prefer ARK_ACTIVE_HOST when set. Do NOT treat CODEX_HOME alone as Codex —
+ * that dir exists for anyone who installed Codex, even when running Grok/Claude.
+ *
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {string|null} tool id (claude|cursor|codex|grok|…) or null if unknown
+ */
+export function detectActiveAgentHost(env = process.env) {
+  const explicit = String(env.ARK_ACTIVE_HOST || '')
+    .trim()
+    .toLowerCase();
+  if (explicit) return explicit;
+
+  // Grok / xAI Build
+  if (
+    envTruthy(env.GROK_BUILD) ||
+    envTruthy(env.XAI_GROK) ||
+    env.GROK_WORKSPACE_ROOT ||
+    env.GROK_SESSION_ID
+  ) {
+    return 'grok';
+  }
+  // Claude Code
+  if (
+    env.CLAUDE_PROJECT_DIR ||
+    envTruthy(env.CLAUDE_CODE) ||
+    envTruthy(env.CLAUDECODE) ||
+    env.CLAUDE_CODE_ENTRYPOINT
+  ) {
+    return 'claude';
+  }
+  // Cursor agent
+  if (env.CURSOR_TRACE_ID || env.CURSOR_AGENT || envTruthy(env.CURSOR_AGENT_CLI)) {
+    return 'cursor';
+  }
+  // Codex session — never CODEX_HOME alone (see above)
+  if (
+    envTruthy(env.CODEX_SANDBOX) ||
+    env.CODEX_THREAD_ID ||
+    envTruthy(env.CODEX_CI) ||
+    env.CODEX_SESSION_ID
+  ) {
+    return 'codex';
+  }
+  return null;
+}
+
+/**
+ * True when Codex home / MCP / prompts should be treated as an urgent concern
+ * for this process. Non-Codex hosts (Grok, Claude, Cursor, …) defer Codex debt.
+ *
+ * @param {NodeJS.ProcessEnv} [env]
+ */
+export function codexConcernIsActive(env = process.env) {
+  return detectActiveAgentHost(env) === 'codex';
+}
+
 export function resolveTools(args) {
   const explicit = normalizeToolsList(args.tools);
   if (explicit.length > 0) {

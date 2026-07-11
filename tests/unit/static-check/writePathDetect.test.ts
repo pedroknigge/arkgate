@@ -28,11 +28,16 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
   it('returns none when no hooks or MCP are installed', () => {
     const root = mk();
     try {
-      const cap = detectWritePathCapabilities(root);
+      const cap = detectWritePathCapabilities(root, 'unknown');
       expect(cap.mode).toBe('none');
       expect(cap.hookPresent).toBe(false);
       expect(cap.mcpPresent).toBe(false);
+      expect(cap.autoPatch).toBe(false);
+      expect(cap.capabilities['merge-gate']).toBe(false);
       expect(cap.gap?.id).toBe('write-path-none');
+      expect(cap.gap?.fix).toContain(
+        '--install-agent-gates --tools claude,grok,cursor,codex'
+      );
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
@@ -58,11 +63,13 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
           },
         })
       );
-      const cap = detectWritePathCapabilities(root);
+      const cap = detectWritePathCapabilities(root, 'claude');
       expect(cap.mode).toBe('reject-only');
       expect(cap.hookPresent).toBe(true);
       expect(cap.hookRepair).toBe(false);
+      expect(cap.inventory.hosts.claude.configured).toBe(true);
       expect(cap.gap?.id).toBe('write-path-reject-only');
+      expect(cap.gap?.fix).toContain('--install-agent-gates --tools claude --force');
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
@@ -97,7 +104,11 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
           },
         })
       );
-      const cap = detectWritePathCapabilities(root);
+      fs.writeFileSync(
+        path.join(root, '.grok', 'config.toml'),
+        '[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp"]\n'
+      );
+      const cap = detectWritePathCapabilities(root, 'grok');
       expect(cap.mode).toBe('repair');
       expect(cap.hookRepair).toBe(true);
       expect(cap.prepareWrite).toBe(true);
@@ -118,7 +129,7 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
           mcpServers: { ark: { command: 'npx', args: ['arkgate-mcp'] } },
         })
       );
-      const cap = detectWritePathCapabilities(root);
+      const cap = detectWritePathCapabilities(root, 'claude');
       expect(cap.mode).toBe('mcp-only');
       expect(cap.gap?.id).toBe('write-path-mcp-only');
     } finally {
@@ -126,7 +137,7 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
     }
   });
 
-  it('detects ARK_HOOK_REPAIR env-style text and empty hook files', () => {
+  it('detects ARK_HOOK_REPAIR env-style text without an MCP config', () => {
     const root = mk();
     try {
       fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
@@ -142,17 +153,84 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
           },
         })
       );
-      const cap = detectWritePathCapabilities(root);
+      const cap = detectWritePathCapabilities(root, 'claude');
       expect(cap.hookPresent).toBe(true);
-      // env-style in file may or may not set repair depending on regex
-      expect(['repair', 'reject-only']).toContain(cap.mode);
+      expect(cap.hookRepair).toBe(true);
+      expect(cap.mcpPresent).toBe(false);
+      expect(cap.autoPatch).toBe(true);
+      expect(cap.mode).toBe('repair');
+      expect(cap.evidence).toEqual(['.claude/settings.json']);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not infer capabilities from unrelated hook or MCP content', () => {
+    const root = mk();
+    try {
+      fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.claude', 'settings.json'), '{"hooks":[]}');
+      fs.writeFileSync(path.join(root, '.mcp.json'), '"ark"junk: {');
+
+      expect(detectWritePathCapabilities(root, 'claude')).toMatchObject({
+        mode: 'none',
+        hookPresent: false,
+        hookRepair: false,
+        mcpPresent: false,
+        evidence: [],
+      });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('detects each supported MCP config signature independently', () => {
+    const cases = [
+      { host: 'claude', rel: '.mcp.json', text: 'command = "arkgate-mcp"' },
+      { host: 'grok', rel: '.grok/config.toml', text: '[mcp_servers.ark]\ncommand = "custom"' },
+      { host: 'cursor', rel: '.cursor/mcp.json', text: '"ark": {' },
+      { host: 'claude', rel: '.mcp.json', text: 'mcpServers = ["ark"]' },
+    ];
+
+    for (const { host, rel, text } of cases) {
+      const root = mk();
+      try {
+        fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
+        fs.writeFileSync(path.join(root, rel), text);
+
+        expect(detectWritePathCapabilities(root, host)).toMatchObject({
+          mode: 'mcp-only',
+          prepareWrite: true,
+          autoPatch: true,
+          hookPresent: false,
+          mcpPresent: true,
+          evidence: [rel],
+        });
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('ignores unreadable hook and MCP paths', () => {
+    const root = mk();
+    try {
+      fs.mkdirSync(path.join(root, '.claude', 'settings.json'), { recursive: true });
+      fs.mkdirSync(path.join(root, '.mcp.json'), { recursive: true });
+
+      expect(detectWritePathCapabilities(root, 'claude')).toMatchObject({
+        mode: 'none',
+        hookPresent: false,
+        mcpPresent: false,
+        evidence: [],
+      });
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
 
   it('dogfood: this repository reports repair-capable write path', () => {
-    const cap = detectWritePathCapabilities(REPO);
+    const cap = detectWritePathCapabilities(REPO, 'grok');
     expect(cap.mode).toBe('repair');
     expect(cap.hookRepair).toBe(true);
     expect(cap.hookPresent).toBe(true);
@@ -266,6 +344,76 @@ describe('deny→repair via shipped bin/ark-mcp.mjs', () => {
       expect(result.status).toBe(2);
       expect(result.stderr).not.toContain('ARK_AUTOPATCH_JSON:');
       expect(result.stderr).not.toContain('ARK_REPAIR_JSON:');
+    } finally {
+      fs.rmSync(apRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('Q2: deny → host re-injects autoPatch.source → revalidation allows (exit 0)', () => {
+    expect(fs.existsSync(SHIPPED_MCP)).toBe(true);
+    const apRoot = mk();
+    try {
+      fs.mkdirSync(path.join(apRoot, 'src/domain'), { recursive: true });
+      fs.mkdirSync(path.join(apRoot, 'src/infra'), { recursive: true });
+      fs.writeFileSync(
+        path.join(apRoot, 'src/infra/types-only.ts'),
+        'export type Row = { id: string };\nexport interface Item { n: number }\n'
+      );
+      fs.writeFileSync(
+        path.join(apRoot, 'ark.config.json'),
+        JSON.stringify({
+          include: ['src'],
+          layers: [
+            {
+              name: 'DomainModel',
+              patterns: ['src/domain/**'],
+              intentPrefixes: ['Domain.'],
+            },
+            {
+              name: 'PersistenceAdapters',
+              patterns: ['src/infra/**'],
+              intentPrefixes: ['Adapter.Persistence.'],
+            },
+          ],
+          rules: [{ from: 'DomainModel', to: 'PersistenceAdapters', allowed: false }],
+        })
+      );
+      const badContent =
+        "import { Row } from '../infra/types-only';\nexport function id(r: Row): string { return r.id; }\n";
+      const filePath = path.join(apRoot, 'src/domain/use-row.ts');
+      const deny = spawnSync(
+        'node',
+        [SHIPPED_MCP, '--hook', '--hook-repair', '--root', apRoot],
+        {
+          input: JSON.stringify({
+            tool_name: 'Write',
+            tool_input: { file_path: filePath, content: badContent },
+          }),
+          encoding: 'utf8',
+          cwd: REPO,
+        }
+      );
+      expect(deny.status).toBe(2);
+      const repairLine = deny.stderr.split('\n').find((l) => l.startsWith('ARK_REPAIR_JSON:'));
+      expect(repairLine).toBeTruthy();
+      const repair = JSON.parse(repairLine!.slice('ARK_REPAIR_JSON:'.length));
+      expect(repair.autoPatch?.valid).toBe(true);
+      expect(typeof repair.autoPatch?.source).toBe('string');
+      // Host re-injects patched content (gate never wrote the file)
+      const allow = spawnSync(
+        'node',
+        [SHIPPED_MCP, '--hook', '--hook-repair', '--root', apRoot],
+        {
+          input: JSON.stringify({
+            tool_name: 'Write',
+            tool_input: { file_path: filePath, content: repair.autoPatch.source },
+          }),
+          encoding: 'utf8',
+          cwd: REPO,
+        }
+      );
+      expect(allow.status, allow.stderr || allow.stdout).toBe(0);
+      expect(allow.stderr).not.toContain('ARK_REPAIR_JSON:');
     } finally {
       fs.rmSync(apRoot, { recursive: true, force: true });
     }

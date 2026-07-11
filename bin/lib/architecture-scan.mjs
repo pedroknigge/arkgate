@@ -92,6 +92,14 @@ export function scanSourceFile(ts, root, config, rules, manifestIntentLayers, fi
       }
     }
 
+    if (
+      ts.isImportEqualsDeclaration(node) &&
+      ts.isExternalModuleReference(node.moduleReference)
+    ) {
+      const specifier = stringLiteralText(ts, node.moduleReference.expression);
+      if (specifier) checkModuleEdge(specifier, node, 'require');
+    }
+
     if (ts.isCallExpression(node)) {
       const moduleCall = moduleSpecifierFromCall(ts, node);
       if (moduleCall) {

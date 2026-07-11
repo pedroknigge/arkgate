@@ -146,15 +146,20 @@ export function collectSafetyDiagnostics(ts, root, config, files) {
         });
       }
 
-      if (ts.isCallExpression(node) && node.expression?.kind === ts.SyntaxKind.ImportKeyword) {
+      if (ts.isCallExpression(node)) {
+        const dynamicImport = node.expression?.kind === ts.SyntaxKind.ImportKeyword;
+        const directRequire =
+          ts.isIdentifier(node.expression) && node.expression.text === 'require';
         const argument = node.arguments[0];
-        if (!argument || !ts.isStringLiteralLike(argument)) {
-          if (!matchesAny(relFile, dynamicAllowlist)) {
-            report.nonLiteralDynamicImports.push({
-              file: relFile,
-              line: lineOf(sourceFile, node.getStart(sourceFile)),
-            });
-          }
+        const unresolved =
+          (dynamicImport || directRequire) &&
+          (!argument || !ts.isStringLiteralLike(argument));
+        if (unresolved && !matchesAny(relFile, dynamicAllowlist)) {
+          report.nonLiteralDynamicImports.push({
+            file: relFile,
+            line: lineOf(sourceFile, node.getStart(sourceFile)),
+            kind: directRequire ? 'require' : 'import',
+          });
         }
       }
 
@@ -216,13 +221,28 @@ export function collectSafetyDiagnostics(ts, root, config, files) {
   }
 
   const warnings = [];
-  if (report.nonLiteralDynamicImports.length > 0) {
-    const first = report.nonLiteralDynamicImports[0];
+  const nonLiteralImports = report.nonLiteralDynamicImports.filter(
+    (entry) => entry.kind !== 'require'
+  );
+  if (nonLiteralImports.length > 0) {
+    const first = nonLiteralImports[0];
     warnings.push({
       ruleId: 'DYNAMIC_IMPORT_NOT_ALLOWLISTED',
       file: first.file,
       line: first.line,
-      message: `${report.nonLiteralDynamicImports.length} non-literal dynamic import(s) cannot be resolved statically. Add only reviewed files to dynamicImportAllowlist.`,
+      message: `${nonLiteralImports.length} non-literal dynamic import(s) cannot be resolved statically. Add only reviewed files to dynamicImportAllowlist.`,
+    });
+  }
+  const nonLiteralRequires = report.nonLiteralDynamicImports.filter(
+    (entry) => entry.kind === 'require'
+  );
+  if (nonLiteralRequires.length > 0) {
+    const first = nonLiteralRequires[0];
+    warnings.push({
+      ruleId: 'DYNAMIC_REQUIRE_NOT_ALLOWLISTED',
+      file: first.file,
+      line: first.line,
+      message: `${nonLiteralRequires.length} non-literal require call(s) cannot be resolved statically. Add only reviewed files to dynamicImportAllowlist.`,
     });
   }
   if (report.tsSuppressions.length > maxTsSuppressions) {

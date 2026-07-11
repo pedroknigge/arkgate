@@ -6,6 +6,7 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/**/*.test.ts'],
     exclude: ['node_modules', 'dist'],
+    setupFiles: ['tests/setup/isolateCodexHome.ts'],
     // This is a CLI test suite: most tests spawn `node bin/*.mjs` via synchronous execFileSync.
     // With many parallel worker forks all blocked in a child process at once, the reporter RPC
     // can't get an ACK in the default window on a slow CI runner → "Timeout calling
@@ -41,6 +42,18 @@ export default defineConfig({
         functions: 85,
         lines: 80,
         'bin/lib/write-path-detect.mjs': {
+          statements: 95,
+          lines: 95,
+          branches: 95,
+          functions: 100,
+        },
+        'bin/lib/write-path-capabilities.mjs': {
+          statements: 95,
+          lines: 95,
+          branches: 95,
+          functions: 100,
+        },
+        'bin/lib/enforcement-profiles.mjs': {
           statements: 95,
           lines: 95,
           branches: 95,

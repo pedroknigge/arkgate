@@ -327,8 +327,14 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             gatesMissing,
             skillGaps,
             staleRunnerFiles: staleRunners,
-            // W5 — prepare-write / autoPatch / reject-only awareness (stable additive)
+            // Active-host guarantees plus separate repo-wide inventory.
             writePath: {
+              activeHost: writePath.activeHost,
+              support: writePath.support,
+              supportSummary: writePath.supportSummary,
+              capabilities: writePath.capabilities,
+              capabilityEvidence: writePath.capabilityEvidence,
+              inventory: writePath.inventory,
               mode: writePath.mode,
               prepareWrite: writePath.prepareWrite,
               autoPatch: writePath.autoPatch,
@@ -404,7 +410,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     adapt:
       'Align — contract and folders still disagree, or coverage is weak / debt is open. You do not pick this mode. Next: classify ungoverned dirs (/ark-contract, /ark-adopt), run the plan (/ark-autopilot or /ark-loop). Gates do not fully protect you yet.',
     enforce:
-      'Guard — contract governs enough real code and edges are clean enough for gates to protect you. You do not pick this mode; you arrived here. Next: keep CI/write gates on; only NEW violations should fail.',
+      'Guard — contract coverage is honest and checked edges are clean. You do not pick this mode; you arrived here. Next: keep the host-appropriate write path and CI check on; only NEW violations should fail.',
   };
   line(modeMark, `${mode.toUpperCase()} — ${modeHelp[mode]}`);
   if (emptyScope) {
@@ -496,26 +502,37 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
 
   console.log('');
   console.log(color.bold('Write path (agent)'));
+  const capabilities = writePath.capabilities;
   const writePathLabels = {
     repair: 'repair-capable — hard block + machine-readable autoPatch / ARK_REPAIR_JSON',
     'reject-only': 'reject-only — hard block with prose; no repair payload',
     'mcp-only': 'MCP tools only — prepare-write/autoPatch available; no PreToolUse hook',
-    none: 'none — no write gate hook and no Ark MCP',
+    none: 'no write gate hook and no Ark MCP',
   };
   const wpMark =
-    writePath.mode === 'repair'
+    capabilities['hard-write']
       ? ok
-      : writePath.mode === 'none'
-        ? bad
-        : warn;
+      : capabilities['advisory-write'] || capabilities['merge-gate']
+        ? warn
+        : bad;
+  line(' ', `Active host: ${writePath.activeHost}`);
+  line(' ', `Supported profile: ${writePath.supportSummary}`);
   line(wpMark, `Mode: ${writePath.mode} — ${writePathLabels[writePath.mode] || writePath.mode}`);
   line(
-    writePath.prepareWrite ? ok : warn,
-    `prepare-write (MCP): ${writePath.prepareWrite ? 'yes' : 'no'}`
+    capabilities['hard-write'] ? ok : warn,
+    `Hard write boundary: ${capabilities['hard-write'] ? 'yes' : 'no'}`
   );
   line(
-    writePath.autoPatch ? ok : warn,
-    `autoPatch surface: ${writePath.autoPatch ? 'yes' : 'no'}`
+    warn,
+    `Advisory write tools (MCP): ${capabilities['advisory-write'] ? 'yes' : 'no'}`
+  );
+  line(
+    capabilities['merge-gate'] ? ok : bad,
+    `CI check (--strict-merge): ${capabilities['merge-gate'] ? 'yes' : 'no'} (merge blocking requires a required status)`
+  );
+  line(
+    capabilities['repair-payload'] ? ok : warn,
+    `Repair payload at hard boundary: ${capabilities['repair-payload'] ? 'yes' : 'no'}`
   );
   if (writePath.gap) {
     line(writePath.gap.severity === 'warn' ? warn : warn, writePath.gap.message);
@@ -527,7 +544,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
 
   console.log('');
   console.log(color.bold('Gates & skills'));
-  if (gatesMissing.length === 0) line(ok, 'Gate files present (AGENTS.md, .mcp.json, CI, write gate)');
+  if (gatesMissing.length === 0) line(ok, 'Shared gate files present (AGENTS.md, .mcp.json, CI)');
   else {
     line(bad, `Missing gates: ${gatesMissing.join(', ')}`);
     actions.push(`install gates (${arkCommand(root, 'ark-check', '--install-agent-gates')})`);
@@ -570,10 +587,20 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     );
   } else {
     for (const gap of adoption.gaps) {
-      const mark = gap.severity === 'warn' ? warn : gap.severity === 'info' ? warn : bad;
+      // Deferred Codex-home debt (non-temp) is annotated, not a top action, when the
+      // session host is not Codex — fix when that host is used.
+      const mark = gap.deferred
+        ? color.dim('·')
+        : gap.severity === 'warn'
+          ? warn
+          : gap.severity === 'info'
+            ? warn
+            : bad;
       line(mark, gap.message);
-      if (gap.fix) line(' ', color.dim(`Fix: ${gap.fix}`));
-      actions.push(gap.fix || gap.message);
+      if (gap.fix) {
+        line(' ', color.dim(gap.deferred ? `When using Codex: ${gap.fix}` : `Fix: ${gap.fix}`));
+      }
+      if (!gap.deferred) actions.push(gap.fix || gap.message);
     }
     if (adoption.layerBalance) {
       line(warn, color.dim(adoption.layerBalance.educational));
@@ -601,7 +628,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     line(warn, 'Safety diagnostics unavailable');
   } else {
     const rows = [
-      ['Non-literal dynamic imports', safety.nonLiteralDynamicImports],
+      ['Non-literal dynamic dependencies', safety.nonLiteralDynamicImports],
       ['@ts-ignore / @ts-nocheck', safety.tsSuppressions],
       ['Explicit any casts', safety.anyCasts],
       ['InMemory stores in production source', safety.inMemoryProductionStores],

@@ -76,7 +76,7 @@ jobs:
             echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> "$GITHUB_WORKSPACE/.npmrc"
             # Still run full verify suite, then publish with token.
             npm run typecheck
-            npx vitest run
+            npm run test:confidence
             npm run security:audit
             npm run check:architecture
             npm publish --access public --provenance

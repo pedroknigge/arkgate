@@ -25,6 +25,7 @@ describe('safety diagnostics', () => {
   it('reports non-literal dynamic imports unless the file is allowlisted', () => {
     expect(fixture('import(name)').warnings[0]?.ruleId).toBe('DYNAMIC_IMPORT_NOT_ALLOWLISTED');
     expect(fixture('import(name)', { dynamicImportAllowlist: ['src.ts'] }).warnings).toEqual([]);
+    expect(fixture("import('./data.json', { with: { type: 'json' } })").warnings).toEqual([]);
   });
 
   it('enforces suppression and any-cast thresholds', () => {

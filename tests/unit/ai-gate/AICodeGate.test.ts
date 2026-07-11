@@ -57,6 +57,16 @@ describe('AI Code Gate (basic)', () => {
       allowNonLiteralDynamicImport: (filePath) => filePath === 'src/plugin.ts',
     }).validate(source, { filePath: 'src/plugin.ts' });
     expect(allowed.valid).toBe(true);
+
+    const literalWithAttributes = createAICodeGate({ typescript: ts }).validate(
+      "import('./data.json', { with: { type: 'json' } });",
+      { filePath: 'src/plugin.ts' }
+    );
+    expect(
+      literalWithAttributes.violations.some(
+        (violation) => violation.ruleId === 'DYNAMIC_IMPORT_NOT_ALLOWLISTED'
+      )
+    ).toBe(false);
   });
 
   it('W1: typeOnly skips classic layer deny; value import of same edge still blocks', () => {

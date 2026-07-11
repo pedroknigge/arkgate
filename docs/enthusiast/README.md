@@ -15,7 +15,7 @@ aliases `ark` / `ark-check` still work).
 |------|---------|
 | **Suggest** | Propose an application shape and install a starter contract. |
 | **Adapt** | Match the contract to your real layout / raise governed coverage. |
-| **Enforce** | The contract actually governs your code; gates hold the line. |
+| **Enforce** | The contract covers the real code and checked edges are clean; host/CI guarantees remain separate. |
 
 `ark start` and `ark-check --plan` will not claim "everything is guarded" while governed coverage is near zero. On Nest/Next/express starters, init also merges **framework filename conventions** into the layer globs so day-one coverage is real.
 
@@ -27,7 +27,7 @@ aliases `ark` / `ark-check` still work).
 | **How-to** | [Pick your application shape](how-to-pick-shape.md) | Run `--recommend` / `ark_recommend` and read the plan |
 | **How-to** | [Use a gallery starter](how-to-gallery-starter.md) | Copy a phase-1 scaffold that matches your archetype |
 | **How-to** | [Apply an enthusiast policy pack](how-to-policy-pack.md) | Write `ark.config.json` from a named preset |
-| **How-to** | [Install agent gates](how-to-agent-gates.md) | Wire the write gate and `/ark-*` skills |
+| **How-to** | [Install agent gates](how-to-agent-gates.md) | Wire the host-appropriate write path and `/ark-*` skills |
 | **Reference** | [Archetypes and presets](reference-archetypes.md) | Look up playbook ids, presets, and phase-1 layers |
 | **Reference** | [Commands and artifacts](reference-commands.md) | `--recommend`, `--write-plan`, `ark-adoption-plan.json`, fix-class JSON |
 | **Explanation** | [Why application shape matters](explanation-application-shape.md) | Understand shapes vs frameworks and progressive phases |

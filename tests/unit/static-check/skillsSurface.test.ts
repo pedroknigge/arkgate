@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   agentInstructions,
+  codexConcernIsActive,
+  detectActiveAgentHost,
   skillTemplateNames,
   skillTemplates,
 } from '../../../bin/lib/agent-gates.mjs';
@@ -32,10 +34,38 @@ const EXPECTED_SKILLS = [
   'ark-upgrade',
 ] as const;
 
+describe('active agent host detection', () => {
+  it('detects Grok / Claude / Cursor / Codex without treating CODEX_HOME alone as Codex', () => {
+    expect(detectActiveAgentHost({ ARK_ACTIVE_HOST: 'cursor' })).toBe('cursor');
+    expect(detectActiveAgentHost({ GROK_BUILD: '1' })).toBe('grok');
+    expect(detectActiveAgentHost({ CLAUDE_PROJECT_DIR: '/tmp/proj' })).toBe('claude');
+    expect(detectActiveAgentHost({ CURSOR_TRACE_ID: 'abc' })).toBe('cursor');
+    expect(detectActiveAgentHost({ CODEX_THREAD_ID: 't1' })).toBe('codex');
+    // Home dir exists for anyone who installed Codex — not a session signal
+    expect(detectActiveAgentHost({ CODEX_HOME: '/Users/me/.codex' })).toBe(null);
+    expect(detectActiveAgentHost({})).toBe(null);
+  });
+
+  it('codexConcernIsActive only when session host is Codex', () => {
+    expect(codexConcernIsActive({ CODEX_THREAD_ID: 't1' })).toBe(true);
+    expect(codexConcernIsActive({ GROK_BUILD: '1' })).toBe(false);
+    expect(codexConcernIsActive({ CODEX_HOME: '/Users/me/.codex' })).toBe(false);
+    expect(codexConcernIsActive({})).toBe(false);
+  });
+});
+
 describe('skill surface inventory', () => {
   it('skillTemplateNames lists every expected skill', () => {
     const names = skillTemplateNames().sort();
     expect(names).toEqual([...EXPECTED_SKILLS].sort());
+  });
+
+  it('ark-upgrade documents active vs deferred hosts (Codex not Incomplete)', () => {
+    const body = fs.readFileSync(path.join(SKILLS_DIR, 'ark-upgrade.md'), 'utf8');
+    expect(body).toMatch(/Active host vs deferred/i);
+    expect(body).toContain('**Active host:**');
+    expect(body).toContain('**Deferred hosts:**');
+    expect(body).toMatch(/Deferred hosts.*never make Incomplete/i);
   });
 
   it('skillTemplates returns non-empty body for each expected skill', () => {

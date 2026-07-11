@@ -111,22 +111,22 @@ describe('write-path-detect branches ≥95%', () => {
   it('covers all mode combinations and evidence collection', () => {
     const root = mk();
     try {
-      expect(detectWritePathCapabilities(root).mode).toBe('none');
-      expect(detectWritePathCapabilities(root).gap?.id).toBe('write-path-none');
+      expect(detectWritePathCapabilities(root, 'unknown').mode).toBe('none');
+      expect(detectWritePathCapabilities(root, 'unknown').gap?.id).toBe('write-path-none');
 
       fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
       fs.writeFileSync(path.join(root, '.claude/settings.json'), '{ not-a-hook }');
-      expect(detectWritePathCapabilities(root).hookPresent).toBe(false);
+      expect(detectWritePathCapabilities(root, 'claude').hookPresent).toBe(false);
 
-      // ARK_HOOK_REPAIR alone (no --hook) → evidence push when rel not yet listed
+      // A repair marker without a hard hook is not an enforceable capability.
       fs.writeFileSync(
         path.join(root, '.claude/settings.json'),
         'ARK_HOOK_REPAIR=1\n'
       );
-      let cap = detectWritePathCapabilities(root);
-      expect(cap.hookRepair).toBe(true);
+      let cap = detectWritePathCapabilities(root, 'claude');
+      expect(cap.hookRepair).toBe(false);
       expect(cap.hookPresent).toBe(false);
-      expect(cap.evidence).toContain('.claude/settings.json');
+      expect(cap.evidence).toEqual([]);
       // hook + repair
       fs.writeFileSync(
         path.join(root, '.claude/settings.json'),
@@ -144,7 +144,7 @@ describe('write-path-detect branches ≥95%', () => {
           },
         })
       );
-      cap = detectWritePathCapabilities(root);
+      cap = detectWritePathCapabilities(root, 'claude');
       expect(cap.hookPresent).toBe(true);
       expect(cap.mode).toBe('reject-only');
       expect(cap.gap?.id).toBe('write-path-reject-only');
@@ -156,14 +156,14 @@ describe('write-path-detect branches ≥95%', () => {
         path.join(root, '.claude/settings.json'),
         'command: --hook npx ark-mcp somewhere\n'
       );
-      expect(detectWritePathCapabilities(root).hookPresent).toBe(true);
+      expect(detectWritePathCapabilities(root, 'claude').hookPresent).toBe(true);
 
       // repair via ARK_HOOK_REPAIR=1 text
       fs.writeFileSync(
         path.join(root, '.claude/settings.json'),
         'command: node bin/ark-mcp.mjs --hook\nARK_HOOK_REPAIR=1\n'
       );
-      cap = detectWritePathCapabilities(root);
+      cap = detectWritePathCapabilities(root, 'claude');
       expect(cap.hookRepair).toBe(true);
       expect(cap.mode).toBe('repair');
       expect(cap.gap).toBeNull();
@@ -174,7 +174,7 @@ describe('write-path-detect branches ≥95%', () => {
           path.join(root, '.claude/settings.json'),
           `command: node bin/ark-mcp.mjs --hook\nARK_HOOK_REPAIR=${val}\n`
         );
-        expect(detectWritePathCapabilities(root).hookRepair).toBe(true);
+        expect(detectWritePathCapabilities(root, 'claude').hookRepair).toBe(true);
       }
 
       // mcp-only: each detection pattern isolated (OR alternatives)
@@ -185,7 +185,7 @@ describe('write-path-detect branches ≥95%', () => {
         path.join(root, '.mcp.json'),
         '{ "mcpServers": { "ark": { "command": "node", "args": ["./local-server.js"] } } }\n'
       );
-      cap = detectWritePathCapabilities(root);
+      cap = detectWritePathCapabilities(root, 'claude');
       expect(cap.mcpPresent).toBe(true);
       expect(cap.mode).toBe('mcp-only');
       expect(cap.gap?.id).toBe('write-path-mcp-only');
@@ -202,7 +202,7 @@ describe('write-path-detect branches ≥95%', () => {
         path.join(root, '.cursor/mcp.json'),
         'mcpServers block mentions ark for tooling\n'
       );
-      cap = detectWritePathCapabilities(root);
+      cap = detectWritePathCapabilities(root, 'cursor');
       expect(cap.mcpPresent).toBe(true);
 
       // pattern: mcp_servers.ark only (toml) — no ark-mcp token
@@ -212,7 +212,7 @@ describe('write-path-detect branches ≥95%', () => {
         path.join(root, '.grok/config.toml'),
         '[mcp_servers.ark]\ncommand = "node"\nargs = ["./x.js"]\n'
       );
-      cap = detectWritePathCapabilities(root);
+      cap = detectWritePathCapabilities(root, 'grok');
       expect(cap.mcpPresent).toBe(true);
 
       // classic arkgate-mcp bin
@@ -221,7 +221,7 @@ describe('write-path-detect branches ≥95%', () => {
         path.join(root, '.mcp.json'),
         JSON.stringify({ mcpServers: { tools: { command: 'npx', args: ['arkgate-mcp'] } } })
       );
-      cap = detectWritePathCapabilities(root);
+      cap = detectWritePathCapabilities(root, 'claude');
       expect(cap.mcpPresent).toBe(true);
       expect(cap.prepareWrite).toBe(true);
       // reject-only WITH mcp present → MCP message branch of gap
@@ -230,7 +230,7 @@ describe('write-path-detect branches ≥95%', () => {
         path.join(root, '.claude/settings.json'),
         'command: node bin/ark-mcp.mjs --hook --root .\n'
       );
-      cap = detectWritePathCapabilities(root);
+      cap = detectWritePathCapabilities(root, 'claude');
       expect(cap.mode).toBe('reject-only');
       expect(cap.mcpPresent).toBe(true);
       expect(cap.gap?.message).toMatch(/MCP|prepare-write|hook-repair/i);
@@ -249,7 +249,7 @@ describe('write-path-detect branches ≥95%', () => {
           },
         })
       );
-      cap = detectWritePathCapabilities(root);
+      cap = detectWritePathCapabilities(root, 'grok');
       expect(cap.mode).toBe('reject-only');
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
@@ -279,7 +279,7 @@ describe('write-path-detect branches ≥95%', () => {
         return orig.call(fs, p, ...rest);
       });
       try {
-        const cap = detectWritePathCapabilities(root);
+        const cap = detectWritePathCapabilities(root, 'claude');
         // catch continues → neither hook nor mcp detected from unreadable files
         expect(cap.hookPresent).toBe(false);
         expect(cap.mcpPresent).toBe(false);

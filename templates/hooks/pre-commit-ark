@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Maintained by ArkGate (Q3) — human-edit architecture gate.
+# Install (git hooks):
+#   cp templates/hooks/pre-commit-ark .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+# Or with husky:
+#   cp templates/hooks/pre-commit-ark .husky/pre-commit && chmod +x .husky/pre-commit
+#
+# Blocks commit when ark-check fails. Does not replace CI branch protection.
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cd "$ROOT"
+
+run_check() {
+  if [ -f package.json ] && node -e "const p=require('./package.json');process.exit(p.scripts&&p.scripts['check:architecture']?0:1)" 2>/dev/null; then
+    npm run -s check:architecture
+    return $?
+  fi
+  if [ -f bin/ark-check.mjs ]; then
+    node bin/ark-check.mjs --root . --config ark.config.json --strict-config
+    return $?
+  fi
+  if command -v arkgate-check >/dev/null 2>&1; then
+    arkgate-check --root . --config ark.config.json --strict-config
+    return $?
+  fi
+  if command -v npx >/dev/null 2>&1; then
+    # --yes: pre-commit is non-interactive; never hang on npx install prompts
+    npx --yes --no-install arkgate-check --root . --config ark.config.json --strict-config 2>/dev/null \
+      || npx --yes arkgate-check --root . --config ark.config.json --strict-config
+    return $?
+  fi
+  echo "ark-check not found — install arkgate or add check:architecture script" >&2
+  return 1
+}
+
+run_check

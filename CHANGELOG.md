@@ -4,6 +4,75 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+### Fixed
+
+- **Test and Codex-home isolation:** Vitest now redirects `CODEX_HOME` to a disposable test home,
+  so direct helper calls and spawned CLIs cannot rewrite the developer's real Codex config. Temp
+  project installs also recognize an explicitly exported default `~/.codex` as the real home and
+  skip implicit MCP rewiring unless `--codex-home` is requested.
+- **Workflow retry boundary:** `RetryPolicy` now retries only `step.execute` failures and
+  timeouts. A snapshot-store or completion-audit failure after a successful effect is terminal,
+  enters compensation, and never executes the completed effect again.
+- **Scanner bypass corpus:** forbidden-global checks now use single-file TypeScript symbols, so
+  local `fetch` / `Date` bindings do not false-positive while ambient aliases and
+  `globalThis.Date.now()` remain violations. CLI, AICodeGate, and ESLint share the verdict.
+  TypeScript `import x = require('...')` now creates a dependency edge, and direct
+  `require(expr)` emits `DYNAMIC_REQUIRE_NOT_ALLOWLISTED` (strict profiles fail unless the file
+  is reviewed in `dynamicImportAllowlist`). The scan cache is versioned past the old semantics.
+
+### Added
+
+- **Active-host enforcement capabilities:** doctor and adoption checks now project
+  `hard-write`, `advisory-write`, `merge-gate`, and `repair-payload` from the active host only,
+  with evidence paths and a separate repo-wide inventory. Claude/Grok hooks can no longer make
+  Codex, Cursor, or an unknown host appear hard-enforced; human doctor output names the host and
+  separates advisory MCP checks from the shared CI check and its external required-status policy.
+- **Host-compatible enforcement profiles:** generated CI now uses `--strict-merge`, while
+  `--strict` remains a compatibility alias; neither depends on an editor hook. The optional
+  `--require-write-hook <host>` check verifies Claude/Grok explicitly, reports Cursor/Codex as
+  advisory-write plus the shared CI check only, and makes `ark start` reject impossible,
+  mismatched, or preserved-incompatible requests before writing project files.
+- **Executable regression confidence gate:** `npm run test:confidence` now combines the existing
+  broad Vitest coverage thresholds with real Stryker mutation testing over write-path detection,
+  dependency extraction, forbidden-global detection, baseline keys, and workflow retry logic.
+  CI and both npm release paths invoke the same gate; mutation score fails below 90%.
+- **Q2 repair dogfood closed:** deny → `ARK_REPAIR_JSON`/`autoPatch` → host re-inject →
+  revalidation allow proven via shipped `bin/ark-mcp.mjs` (Claude/Grok hooks already
+  `--hook-repair`; `doctor.writePath.mode = repair`).
+- **Q3 weakest-link sensors:** `bin/lib/weakest-link.mjs` + doctor adoption gaps
+  (`enforcement-ci-*`, config drift, pre-commit missing); maintained
+  `templates/hooks/pre-commit-ark`; optional `ARK_DOCTOR_GITHUB=1` branch-protection
+  report (honest unavailable / not-protected — never fake green).
+- **Q5 scale bench:** `scripts/ark-scale-bench.mjs` / `npm run bench:scale` (real
+  ark-check cold/warm p50/p95 on generated trees).
+- **Q6 module budgets:** `scripts/check-module-budgets.mjs` / `npm run check:module-budgets`.
+- **Q8 fault-injection tests:** compensation failure audit, cancellation-ignoring timeout,
+  outbox retry attempts + clear (durability boundary).
+- **Q9 threat model + package allowlist:** `docs/threat-model.md`,
+  `scripts/verify-package-files.mjs` / `npm run check:package-files`.
+
+### Changed
+
+- **Product identity retained:** ArkGate, `arkgate`, the `arkgate*` / `ark*` commands,
+  `ark.config.json`, `ark://`, `ARK_*`, the existing GitHub repository, and `arkgate.online` remain
+  canonical. The unpublished local rename experiment was reversed before any external cutover.
+- **Truthful host support matrix and runtime status:** one capability-backed matrix now drives
+  README and generated `AGENTS.md` guarantees for Claude, Grok, Cursor, and Codex. Doctor exposes
+  both the supported host profile and repository evidence; public docs distinguish hard local
+  hooks, advisory MCP, CI checks, and required-status merge blocking. The optional runtime/Nest
+  surface is explicitly experimental and is not required for architecture-gate adoption.
+- **Active host vs deferred Codex on upgrade/doctor:** `/ark-upgrade` greens the
+  **session host** first; Codex `$CODEX_HOME` prompts/MCP multi-project debt is
+  **deferred** when the session host is **known and not Codex** (Grok/Claude/Cursor).
+  Unknown host (CI/plain shell) keeps original severity. Doctor marks deferred gaps
+  `deferred: true` (severity `info`), prefixes the message, and omits them from Top
+  actions. Temp/upgrade MCP `--root` stays urgent (fail-closed). New helpers:
+  `detectActiveAgentHost`, `codexConcernIsActive` (do not treat `CODEX_HOME` alone
+  as Codex). `ark-check` advisory for stale Codex-home skills notes the deferral.
+  Completion contract adds **Active host** / **Deferred hosts**.
+- **ROADMAP Track Q:** Q2 `done`; Q3/Q5/Q6/Q8/Q9 `doing` with residual external/DoD
+  items listed; Q4/Q7/Q10 remain `todo` (no false complete).
+
 ## 2.12.0 — 2026-07-10
 
 ### Fixed

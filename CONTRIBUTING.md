@@ -15,8 +15,8 @@ git clone https://github.com/pedroknigge/arkgate
 cd arkgate
 npm ci
 npm run build        # bin/ark-mcp.mjs loads dist/, so build first
-npx vitest run       # full test suite (npm test starts watch mode)
 npm run typecheck
+npm run test:confidence # full coverage + critical-module mutation gates
 npx arkgate-check --root . --config ark.config.json --strict
 npm run check:architecture   # ArkGate dogfoods itself
 npm run check:layer-match    # derived bin/ark-layer-match.mjs must match domain source
@@ -31,7 +31,11 @@ npm run generate:layer-match   # src/domain/layerMatch.ts
 npm run generate:cli-pure      # src/domain/remediation.ts + baselineKey.ts
 ```
 
-Node >= 18. **Runtime dependencies stay minimal:** only `typescript` (JS-API host for the gate when the project ships TypeScript 7’s version-only main export). Do not add other production deps without discussion. NestJS and similar stay optional `peerDependencies` + devDependencies.
+ArkGate's library and CLIs support Node >= 18. The repository confidence/release gate requires
+Node >= 20 because it runs the current Stryker mutation runner; CI uses Node 20 and publish uses
+Node 24. **Runtime dependencies stay minimal:** only `typescript` (JS-API host for the gate when
+the project ships TypeScript 7’s version-only main export). Do not add other production deps
+without discussion. NestJS and similar stay optional `peerDependencies` + devDependencies.
 
 ## Project layout (public GitHub tree)
 
@@ -54,7 +58,8 @@ docs subset ship to consumers.
 
 1. **Every behavior change needs a test.** CLI behavior is tested by executing the real binaries against temp fixtures (see `tests/unit/static-check/arkCheck.test.ts` for the pattern).
 2. **The three gates must agree.** `arkgate-check` / `ark-check`, `arkgate-mcp` / `ark-mcp`, and the ESLint plugin share semantics via `bin/ark-shared.mjs` and the config format — if you change classification or rule semantics in one, change it everywhere and add a test proving they match.
-3. **CI must be green**: typecheck, tests, build, and `check:architecture` all gate merges.
+3. **CI must be green**: typecheck, coverage + mutation confidence, build, and
+   `check:architecture` all gate merges.
 4. Keep diffs small and boring. No new abstractions without a second concrete use.
 
 ## Proposing changes
@@ -79,7 +84,7 @@ npm version <patch|minor|major> --no-git-tag-version
 # Keep server.json + src/version.ts aligned with package.json
 
 # On main, green CI
-npm run release:npm -- --dry          # typecheck + tests + audit + arch + pack dry-run
+npm run release:npm -- --dry          # typecheck + confidence + audit + arch + pack dry-run
 git tag -s vX.Y.Z -m "arkgate vX.Y.Z"
 git push origin vX.Y.Z
 gh release create vX.Y.Z --verify-tag --title "arkgate vX.Y.Z" \

@@ -640,7 +640,7 @@ jobs:
     const result = runInstallAgentGates(root, ['--force']);
     expect(result.status).toBe(0);
     const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
-    expect(workflow).toContain('--strict --baseline .ark-baseline.json');
+    expect(workflow).toContain('--strict-merge --baseline .ark-baseline.json');
   });
 
   it('writes only base + selected tool templates with --tools', () => {
@@ -893,21 +893,40 @@ describe('ark-check --require-gates', () => {
     expect((JSON.parse(json) as { ok: boolean }).ok).toBe(true);
   });
 
-  it('requires a PreToolUse write hook in the --strict profile', () => {
+  it('keeps the merge profile host-agnostic and requires hooks only for an explicit host', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-strict-hook-'));
-    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
-    fs.writeFileSync(path.join(root, 'AGENTS.md'), 'Ark instructions\n');
-    fs.writeFileSync(path.join(root, '.mcp.json'), '{"mcpServers":{}}\n');
-    fs.writeFileSync(path.join(root, '.github/workflows/ci.yml'), 'run: ark-check\n');
+    fs.mkdirSync(path.join(root, 'src', 'domain'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'domain', 'value.ts'), 'export const value = 1;\n');
+    expect(
+      spawnSync('node', [path.resolve('bin/ark-check.mjs'), '--root', root, '--init'], {
+        encoding: 'utf8',
+      }).status
+    ).toBe(0);
+    expect(runInstallAgentGates(root, ['--tools', 'cursor']).status).toBe(0);
 
-    const result = spawnSync(
+    const merge = spawnSync(
       'node',
       [path.resolve('bin/ark-check.mjs'), '--root', root, '--strict', '--json'],
       { encoding: 'utf8' }
     );
+    expect(merge.status, `${merge.stdout}\n${merge.stderr}`).toBe(0);
+
+    const result = spawnSync(
+      'node',
+      [
+        path.resolve('bin/ark-check.mjs'),
+        '--root',
+        root,
+        '--strict',
+        '--require-write-hook',
+        'claude',
+        '--json',
+      ],
+      { encoding: 'utf8' }
+    );
     expect(result.status).toBe(1);
     const payload = JSON.parse(result.stdout) as { missing: string[] };
-    expect(payload.missing).toContain('PreToolUse write hook');
+    expect(payload.missing).toContain('claude hard-write hook');
   });
 });
 

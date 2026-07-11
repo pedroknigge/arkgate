@@ -38,8 +38,8 @@ jobs:
       - name: CLI pure helpers derived artifacts (drift guard)
         run: npm run check:cli-pure
 
-      - name: Test with coverage thresholds
-        run: npm run test:coverage
+      - name: Test confidence (coverage + mutation)
+        run: npm run test:confidence
         # Includes evalCorpus.test.ts (spawns npm run eval:corpus) — no separate step
 
       - name: Build

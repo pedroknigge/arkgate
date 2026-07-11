@@ -12,6 +12,8 @@ dist/
 
 # test / tooling
 coverage/
+.stryker-tmp/
+reports/mutation/
 *.tsbuildinfo
 .gstack/
 

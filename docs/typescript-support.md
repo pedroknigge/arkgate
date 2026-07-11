@@ -32,7 +32,7 @@ itself; the CLI resolves it from the **project** first, then from the environmen
 ## How loading works
 
 1. Prefer `require('typescript')` from the **project** root (when it has `sys` + AST + resolve).  
-2. If missing or **not API-compatible** (TS 7.0 version-only export, or incomplete host), fall back to **ArkGate’s own** `typescript` dependency (JS-API 5.x nested under the package), then bare `import('typescript')`.  
+2. If missing or **not API-compatible** (TS 7.0 version-only export, or incomplete host), fall back to **ArkGate’s own** `typescript` dependency (JS-API 5.x nested under the package), then bare `import('typescript')`.
 3. If nothing usable is found:  
    - `--plan` still prints **coverage honesty** (no import graph)  
    - full check exits non-zero with an install hint  
@@ -49,9 +49,9 @@ ARK_DEBUG_TS=1 npx arkgate-check --plan
 TypeScript 7 is the **native (Go) compiler** generation. Important for tools like ArkGate:
 
 - **`require('typescript')` on 7.0.x** exports only `{ version, versionMajorMinor }` — not `sys`, `createSourceFile`, or `resolveModuleName`.  
-- Unstable programmatic surfaces live under `typescript/unstable/*` (sync/async API, AST). They are **not** the classic TS 5/6 host ArkGate uses today.  
+- Unstable programmatic surfaces live under `typescript/unstable/*` (sync/async API, AST). They are **not** the classic TS 5/6 host ArkGate uses today.
 - Stable **programmatic JS API** maturity continues over the 7.x line (Microsoft: full story into **7.1+**).  
-- When the project’s TypeScript is not API-compatible, ArkGate loads its **bundled JS-API dependency** (`typescript@^5.9`, nested under the package) so the write/CI gate keeps working while you try TS 7 as the project compiler.  
+- When the project’s TypeScript is not API-compatible, ArkGate loads its **bundled JS-API dependency** (`typescript@^5.9`, nested under the package) so the host write path and CI check keep working while you try TS 7 as the project compiler.
 - Your **tsconfig** must follow TS 6/7 defaults (see below) or `tsc` / resolve can fail independently of ArkGate.
 
 ### tsconfig defaults that surprise teams (TS 6 → 7)

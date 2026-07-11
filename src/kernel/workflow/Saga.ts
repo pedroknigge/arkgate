@@ -200,22 +200,13 @@ class WorkflowEngineImpl implements WorkflowEngine {
       snapshot.attempts[step.name] = attempt;
       await this.store.save(snapshot);
 
+      let result: Partial<P> | void;
       try {
-        const result = await withTimeout(
+        result = await withTimeout(
           (signal) => Promise.resolve(step.execute(snapshot.context, this.bus, signal)),
           step.timeoutMs,
           step.name
         );
-        if (result) Object.assign(snapshot.context, result);
-        snapshot.completedSteps.push(step.name);
-        snapshot.currentStep = undefined;
-        snapshot.updatedAt = new Date().toISOString();
-        await this.store.save(snapshot);
-        await this.audit('workflow.step.completed', snapshot, {
-          step: step.name,
-          attempt,
-        });
-        return;
       } catch (err) {
         if (attempt < maxAttempts) {
           if (retry.delayMs) await sleep(retry.delayMs);
@@ -232,6 +223,19 @@ class WorkflowEngineImpl implements WorkflowEngine {
         });
         throw err;
       }
+
+      // Retry only the step effect. Once execute resolves, persistence or audit
+      // failures are terminal and must never repeat an already-successful effect.
+      if (result) Object.assign(snapshot.context, result);
+      snapshot.completedSteps.push(step.name);
+      snapshot.currentStep = undefined;
+      snapshot.updatedAt = new Date().toISOString();
+      await this.store.save(snapshot);
+      await this.audit('workflow.step.completed', snapshot, {
+        step: step.name,
+        attempt,
+      });
+      return;
     }
 
     throw new Error(`Workflow step "${step.name}" did not complete.`);
