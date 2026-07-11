@@ -22,12 +22,12 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
   `hard-write`, `advisory-write`, `merge-gate`, and `repair-payload` from the active host only,
   with evidence paths and a separate repo-wide inventory. Claude/Grok hooks can no longer make
   Codex, Cursor, or an unknown host appear hard-enforced; human doctor output names the host and
-  separates advisory MCP checks from the hard CI merge gate.
+  separates advisory MCP checks from the shared CI check and its external required-status policy.
 - **Host-compatible enforcement profiles:** generated CI now uses `--strict-merge`, while
   `--strict` remains a compatibility alias; neither depends on an editor hook. The optional
   `--require-write-hook <host>` check verifies Claude/Grok explicitly, reports Cursor/Codex as
-  advisory-write plus hard merge only, and makes `ark start` reject impossible, mismatched, or
-  preserved-incompatible requests before writing project files.
+  advisory-write plus the shared CI check only, and makes `ark start` reject impossible,
+  mismatched, or preserved-incompatible requests before writing project files.
 - **Executable regression confidence gate:** `npm run test:confidence` now combines the existing
   broad Vitest coverage thresholds with real Stryker mutation testing over write-path detection,
   dependency extraction, forbidden-global detection, baseline keys, and workflow retry logic.
@@ -49,6 +49,11 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ### Changed
 
+- **Truthful host support matrix and runtime status:** one capability-backed matrix now drives
+  README and generated `AGENTS.md` guarantees for Claude, Grok, Cursor, and Codex. Doctor exposes
+  both the supported host profile and repository evidence; public docs distinguish hard local
+  hooks, advisory MCP, CI checks, and required-status merge blocking. The optional runtime/Nest
+  surface is explicitly experimental and is not required for architecture-gate adoption.
 - **Active host vs deferred Codex on upgrade/doctor:** `/ark-upgrade` greens the
   **session host** first; Codex `$CODEX_HOME` prompts/MCP multi-project debt is
   **deferred** when the session host is **known and not Codex** (Grok/Claude/Cursor).

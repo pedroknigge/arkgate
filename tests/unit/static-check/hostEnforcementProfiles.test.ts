@@ -105,7 +105,7 @@ function snapshotTree(root: string): Record<string, string> {
 }
 
 describe('host-specific enforcement profiles', () => {
-  it.each(HOSTS)('%s-only install emits a green merge gate and a truthful write verdict', (host) => {
+  it.each(HOSTS)('%s-only install emits a green CI check and a truthful write verdict', (host) => {
     const root = createFixture();
     try {
       const hardHost = host === 'claude' || host === 'grok';
@@ -151,7 +151,7 @@ describe('host-specific enforcement profiles', () => {
       } else {
         expect(hard.status).toBe(2);
         expect(`${hard.stdout}\n${hard.stderr}`).toMatch(
-          /advisory-write.*hard merge/i
+          /advisory-write.*shared CI check/i
         );
       }
 
@@ -237,7 +237,7 @@ describe('host-specific enforcement profiles', () => {
       );
       expect(result.status).toBe(2);
       expect(`${result.stdout}\n${result.stderr}`).toMatch(
-        /codex.*advisory-write.*hard merge/i
+        /codex.*advisory-write.*shared CI check/i
       );
       expect(fs.readdirSync(root)).toEqual([]);
     } finally {

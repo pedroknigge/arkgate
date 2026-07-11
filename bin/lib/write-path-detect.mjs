@@ -6,6 +6,7 @@
  * Claude/Grok hook can never become a Codex/Cursor guarantee.
  */
 import { arkCommand } from '../ark-shared.mjs';
+import { formatHostSupportSummary } from './host-support-matrix.mjs';
 import { buildWritePathCapabilityModel } from './write-path-capabilities.mjs';
 
 function installToolsForHost(activeHost) {
@@ -16,7 +17,7 @@ function installToolsForHost(activeHost) {
 
 export function detectWritePathCapabilities(root, explicitHost) {
   const model = buildWritePathCapabilityModel(root, explicitHost);
-  const { activeHost, capabilities, capabilityEvidence, inventory } = model;
+  const { activeHost, support, capabilities, capabilityEvidence, inventory } = model;
   const hardWrite = capabilities['hard-write'];
   const advisoryWrite = capabilities['advisory-write'];
   const repairPayload = capabilities['repair-payload'];
@@ -36,8 +37,8 @@ export function detectWritePathCapabilities(root, explicitHost) {
       message:
         `Active host ${activeHost} has no hard write boundary or advisory Ark MCP. ` +
         (capabilities['merge-gate']
-          ? 'The CI merge gate remains separate and does not block local writes.'
-          : 'No Ark merge gate was detected either.'),
+          ? 'The CI check remains separate and does not block local writes.'
+          : 'No Ark CI check was detected either.'),
       fix: arkCommand(
         root,
         'ark-check',
@@ -65,7 +66,7 @@ export function detectWritePathCapabilities(root, explicitHost) {
       severity: 'info',
       message:
         `Active host ${activeHost} has advisory prepare-write/autoPatch tools, ` +
-        'but no hard write boundary; CI can still reject the change at merge time.',
+        'but no hard write boundary; the CI check can still reject the change before merge.',
       fix: arkCommand(
         root,
         'ark-check',
@@ -76,6 +77,8 @@ export function detectWritePathCapabilities(root, explicitHost) {
 
   return {
     activeHost,
+    support,
+    supportSummary: formatHostSupportSummary(support),
     capabilities,
     capabilityEvidence,
     inventory,

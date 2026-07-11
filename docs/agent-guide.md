@@ -1,7 +1,9 @@
 # ArkGate — Agent Integration Guide
 
 **ArkGate** (`arkgate`) — architecture co-pilot for AI TypeScript. This guide describes how AI
-agents and codegen tools safely interact with the write gate, MCP tools, and `/ark-*` skills.
+agents and codegen tools safely interact with write hooks, advisory MCP tools, CI, and `/ark-*`
+skills. Guarantees differ by host; start with the
+[canonical host support matrix](../README.md#host-enforcement-support).
 
 CLI names: prefer **`arkgate` / `arkgate-check` / `arkgate-mcp`**; aliases `ark` / `ark-check` /
 `ark-mcp` still work for one major. TypeScript **5.x / 6.x / 7.x** as the project compiler:
@@ -216,18 +218,21 @@ npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok
 # alias: npx ark-check --install-agent-gates --tools claude,cursor,codex,grok
 ```
 
-| Host | Write gate | MCP | Skills path |
-|------|------------|-----|-------------|
-| Claude Code | PreToolUse hook | `.mcp.json` / `claude mcp add` | `.claude/skills/<name>/SKILL.md` |
-| Cursor | Advisory (rules + MCP) | `.cursor/mcp.json` | `.cursor/commands/` |
-| OpenAI Codex | MCP + CI | `$CODEX_HOME/config.toml` (global; absolute `--root`; multi-project → secondary `ark_<slug>` unless `--force`; doctor defers non-temp home gaps when session host ≠ Codex — see [ai-gates.md](ai-gates.md)) | `$CODEX_HOME/prompts` (`--codex-home`; fix when using Codex) |
-| **Grok Build** | PreToolUse hook (`.grok/hooks/`) | `.grok/config.toml` + `.mcp.json` | `.grok/skills/<name>/SKILL.md` |
+| Host | Installed paths | Skills path |
+|------|-----------------|-------------|
+| Claude Code | `.claude/settings.json` hook + `.mcp.json` / `claude mcp add` | `.claude/skills/<name>/SKILL.md` |
+| Cursor | `.cursor/mcp.json` + `.cursor/rules/ark.mdc` | `.cursor/commands/` |
+| OpenAI Codex | `$CODEX_HOME/config.toml` (global; absolute `--root`; multi-project → secondary `ark_<slug>` unless `--force`; doctor defers non-temp home gaps when session host ≠ Codex — see [ai-gates.md](ai-gates.md)) | `$CODEX_HOME/prompts` (`--codex-home`; fix when using Codex) |
+| **Grok Build** | `.grok/hooks/ark-write-gate.json` + `.grok/config.toml` / `.mcp.json` | `.grok/skills/<name>/SKILL.md` |
 
-Full copy-paste setups: [ai-gates.md](ai-gates.md). Skill inventory: main [README](../README.md#agent-skills-ark-).
+This is a path reference, not a guarantee table. Full copy-paste setups:
+[ai-gates.md](ai-gates.md). Skill inventory: main [README](../README.md#agent-skills-ark-).
 
-## Contract Discovery
+## Experimental runtime: contract discovery
 
-Prefer `createStrictArkKernel()` for strict projects. It wires the registry, graph,
+The runtime kernel is currently **experimental** and is not required for static gate adoption or
+presented as production-ready. If you are evaluating it, prefer `createStrictArkKernel()`. It
+wires the registry, graph,
 policies, event bus, audit trail, event contracts, outbox, observability,
 projections, metadata, workflow engine, and 11-layer architecture profile:
 
@@ -244,8 +249,8 @@ const contract = ark.manifest().toJSON();
 // contract.observability, projections
 ```
 
-Prefer `arkgate/runtime` for the optional kernel (root `arkgate` still re-exports for
-compat). Package surface policy: [package-surface.md](package-surface.md).
+Use `arkgate/runtime` when evaluating the experimental kernel (root `arkgate` still re-exports
+for compatibility). Package surface policy: [package-surface.md](package-surface.md).
 
 Agents should read `contract` and `ark.observability.report()` before generating or modifying code.
 
@@ -630,8 +635,8 @@ Register the server itself in `.mcp.json` so the agent can read `ark://manifest`
 }
 ```
 
-This makes the manifest + AI gate an enforced checkpoint rather than a library the agent
-must remember to call.
+On Claude/Grok, the installed PreToolUse hook makes matched writes an enforced checkpoint. MCP
+registration by itself remains advisory on every host because the agent must call the tool.
 
 ## Recommended Agent Workflow
 

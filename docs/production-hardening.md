@@ -1,7 +1,8 @@
 # Production Hardening
 
-The optional runtime kernel is imported from **`arkgate/runtime`** (preferred). See
-[package-surface.md](package-surface.md).
+The optional runtime kernel is currently **experimental**. This page is a requirements checklist
+for teams evaluating **`arkgate/runtime`**, not a claim that the runtime is production-ready.
+Static ArkGate adoption does not require it. See [package-surface.md](package-surface.md).
 
 ## Durability stance (R9)
 

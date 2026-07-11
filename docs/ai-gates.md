@@ -1,12 +1,13 @@
 # Gating AI Agents with ArkGate
 
 **ArkGate** (`arkgate`) is the architecture co-pilot for AI TypeScript (write gate · CI · plan/loop).
-The write-path gate is what makes it different from every other architecture linter:
-generated code is validated against your architecture **before it lands on disk**, not
-after the PR is red.
+On Claude Code and Grok Build, an installed and trusted PreToolUse hook can block matched writes
+before they land on disk. Cursor and OpenAI Codex use advisory MCP validation at write time; CI is
+their hard repository check. See the
+[canonical host support matrix](../README.md#host-enforcement-support) before installing.
 
 Everything below uses the same `ark.config.json` as `arkgate-check` / `ark-check` (CI) — one
-contract, enforced everywhere. Generate it once:
+contract shared by every surface. Generate it once:
 
 ```bash
 npx arkgate-check --init
@@ -40,8 +41,8 @@ you pass `--force`, so review and commit only the templates that match your proj
 
 **Doctor (W5):** `ark-check --doctor --json` includes `doctor.writePath`
 (`mode`: `repair` | `reject-only` | `mcp-only` | `none`, plus `prepareWrite` /
-`autoPatch` flags) so leads can see whether the write path is repair-capable or
-still reject-only.
+`autoPatch` flags), the supported profile for the active host, and the evidence actually found.
+Supported capability and installed guarantee are deliberately separate.
 
 If your project uses Codex or Grok, treat MCP registration as part of the default
 setup, not an optional extra. Ark works best when the agent can read `ark://manifest`
@@ -223,7 +224,8 @@ path. If it reports violations, fix them before writing. The architecture
 contract is available as the `ark://manifest` resource.
 ```
 
-Your hard backstop in Cursor is CI: `ark-check` fails the PR on anything that slips through.
+Your repository backstop in Cursor is CI: `ark-check` fails its check on anything that slips
+through. It blocks the merge only when that status is required by repository policy.
 
 ## OpenAI Codex CLI
 
@@ -251,8 +253,9 @@ args = ["arkgate-mcp", "--root", "/absolute/path/to/project", "--config", "/abso
 Then **restart Codex** — it does not hot-load MCP servers. Expect resource `ark://manifest`
 and tools `validate_code`, `ark_check`, `ark_coverage`, `ark_place`.
 
-Same model as Cursor for enforcement: MCP for discovery/validation, `ark-check` in CI as
-the hard gate. Register the MCP server as soon as the repo is adopted.
+Same model as Cursor for enforcement: advisory MCP for discovery/validation and `ark-check` as
+the hard CI check. It becomes a merge block only when the status is required. Register the MCP
+server as soon as the repo is adopted.
 
 ### Multi-project Codex (home config last-wins)
 
@@ -324,7 +327,8 @@ command = "npx"
 args = ["ark-mcp", "--root", ".", "--config", "ark.config.json"]
 ```
 
-Then restart Grok or refresh via `/mcps`. Pair with CI `ark-check` as the hard merge gate.
+Then restart Grok or refresh via `/mcps`. Pair with CI `ark-check`; require that status if it
+must block merges.
 
 ## Instruction-tier agents: Windsurf, Cline, Copilot, Kiro, Roo Code, Continue, Gemini CLI
 
@@ -349,7 +353,7 @@ npx ark-check --install-agent-gates --tools windsurf,cline,copilot,kiro,roo,cont
 
 All of them derive from the same contract as `AGENTS.md` and the Cursor rule, so the
 steps cannot drift. These are advisory (the agent reads rules; nothing blocks the
-write) — keep `ark-check` in CI as the hard gate.
+write). Keep `ark-check` in CI and require its status when it must block merges.
 
 ## Any other agent runtime with shell hooks
 
@@ -391,14 +395,16 @@ Prefer keeping editor + CI on the same `ark.config.json` — do not maintain a p
 
 ## CI backstop
 
-Whatever the agent side does, gate the merge:
+Whatever the agent side does, run the merge profile in CI:
 
 ```yaml
-- run: npx ark-check --root . --config ark.config.json --strict
+- run: npx ark-check --root . --config ark.config.json --strict-merge
 ```
 
-The `--strict` profile also requires the generated CI/write gates and fails on safety
-diagnostics. Configure reviewed exceptions explicitly:
+`--strict-merge` requires strict config plus the shared gate files (`AGENTS.md`, MCP config,
+and CI workflow) and fails on safety diagnostics. `--strict` is a compatibility alias. Neither
+profile requires an editor hook; add `--require-write-hook claude|grok` only when CI must verify
+that host-specific local boundary too. Configure reviewed exceptions explicitly:
 
 ```json
 {

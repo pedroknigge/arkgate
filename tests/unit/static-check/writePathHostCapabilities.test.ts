@@ -535,6 +535,7 @@ describe('active-host write capability model', () => {
       expect(payload.doctor.writePath.capabilities['repair-payload']).toBe(false);
       expect(payload.doctor.writePath.inventory.hosts.grok.capabilities['hard-write']).toBe(true);
 
+      write(root, '.mcp.json', '{"mcpServers":{"ark":{"args":["arkgate-mcp"]}}}\n');
       const humanRun = spawnSync(
         process.execPath,
         [ARK_CHECK, '--root', root, '--config', 'ark.config.json', '--doctor', '--no-cache'],
@@ -548,7 +549,10 @@ describe('active-host write capability model', () => {
       expect(humanRun.stdout).toContain('Active host: cursor');
       expect(humanRun.stdout).toContain('Hard write boundary: no');
       expect(humanRun.stdout).toContain('Advisory write tools (MCP): yes');
-      expect(humanRun.stdout).toContain('Hard merge gate (CI): yes');
+      expect(humanRun.stdout).toContain('CI check (--strict-merge): yes');
+      expect(humanRun.stdout).toContain('merge blocking requires a required status');
+      expect(humanRun.stdout).toContain('Shared gate files present (AGENTS.md, .mcp.json, CI)');
+      expect(humanRun.stdout).not.toContain('Gate files present (AGENTS.md, .mcp.json, CI, write gate)');
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

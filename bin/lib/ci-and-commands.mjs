@@ -12,6 +12,7 @@ import {
   DEFAULT_LAYER_DIRECTORIES,
 } from '../ark-shared.mjs';
 import { falseGreenAdoptionGap } from './field-install.mjs';
+import { renderHostSupportMatrixMarkdown } from './host-support-matrix.mjs';
 import { PREFERRED_MCP_BIN } from './hook-templates.mjs';
 import { readPackageJson } from './gate-files.mjs';
 
@@ -140,6 +141,10 @@ export function agentInstructions(root) {
 Skills are **dual-engine**: deterministic CLI sensors + exploratory read of *this* repo — not JSON-only wrappers.
 When a skill says **STOP — do not continue this skill as complete**, stop and invoke the named handoff skill.
 
+## Host enforcement support
+
+${renderHostSupportMatrixMarkdown()}
+
 ### Subagent fan-out
 If the host supports **parallel subagents**, skills may ask you to fan out **read-only**
 scouts (disjoint path scopes) and merge in the parent. If the host does **not**,
@@ -177,8 +182,9 @@ an ungoverned location:
 
 ${layerPlacementTable()}
 
-The project is only considered Ark-enforced when the write gate and CI gate pass
-(runtime path only if this project opted into the kernel).
+The project is only considered Ark-enforced when its host-appropriate write path is configured
+and the CI check passes. Only Claude/Grok provide a hard local write boundary; Cursor/Codex use
+advisory MCP plus CI. The experimental runtime is not required.
 `;
 }
 

@@ -75,8 +75,8 @@ describe('enforcement profile policy', () => {
       ).toEqual({
         ok: false,
         error:
-          'codex supports advisory-write plus hard merge enforcement, not a hard local write hook. ' +
-          'Omit --require-write-hook and keep --strict-merge for CI.',
+          'codex supports advisory-write plus the shared CI check, not a hard local write hook. ' +
+          'Omit --require-write-hook, keep --strict-merge in CI, and require that status to block merges.',
       });
       expect(
         validateHardWriteRequest({ root, host: 'claude', tools: 'cursor' })

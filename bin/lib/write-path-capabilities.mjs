@@ -1,7 +1,7 @@
 /**
  * Host-specific write enforcement inventory and active-host projection.
  *
- * Hard hooks, advisory MCP tools, CI merge gates, and repair payloads are
+ * Hard hooks, advisory MCP tools, CI checks, and repair payloads are
  * deliberately separate capabilities. Repo-wide inventory never becomes an
  * active-host guarantee unless that host owns the supporting evidence.
  */
@@ -11,6 +11,10 @@ import {
   codexConfigPath,
   listCodexArkServerTables,
 } from './codex-home.mjs';
+import {
+  getHostSupportProfile,
+  HOST_SUPPORT_HOSTS,
+} from './host-support-matrix.mjs';
 import { detectActiveAgentHost } from './skill-install.mjs';
 import { detectCiEnforcement } from './weakest-link.mjs';
 
@@ -21,7 +25,7 @@ export const WRITE_CAPABILITY_NAMES = [
   'repair-payload',
 ];
 
-const KNOWN_HOSTS = ['claude', 'grok', 'cursor', 'codex'];
+const KNOWN_HOSTS = HOST_SUPPORT_HOSTS;
 
 function unique(values) {
   return [...new Set(values)];
@@ -170,6 +174,7 @@ export function buildWritePathCapabilityModel(root, explicitHost) {
 
   return {
     activeHost,
+    support: getHostSupportProfile(activeHost),
     capabilities: capabilityMap(capabilityEvidence),
     capabilityEvidence,
     inventory,

@@ -1,6 +1,6 @@
 # Threat model — ArkGate (Q9)
 
-**Scope:** architecture write gate, CI gate, agent hooks/MCP, optional runtime kernel.  
+**Scope:** architecture write/CI gates, agent hooks/MCP, and the experimental optional runtime.
 **Not in scope:** full org identity platforms, browser XSS in consumer apps, or npm registry
 infrastructure beyond how this package is published.
 
@@ -9,15 +9,16 @@ infrastructure beyond how this package is published.
 | Asset | Why it matters |
 |-------|----------------|
 | `ark.config.json` contract | Defines what agents may import; weaken it → silent architectural debt |
-| Write gate (`arkgate-mcp --hook`) | Last line of defense before agent disk writes |
-| CI `ark-check --strict` | Merge backstop when write gate is bypassed |
+| Write hook (`arkgate-mcp --hook`) | Hard local boundary only for installed/trusted Claude/Grok hook operations |
+| CI `ark-check --strict-merge` | Repository check for every host; merge blocking requires a required status |
 | Baselines (`.ark-baseline.json`) | Freezes debt; abuse silences real violations |
 | Published npm tarball + Action SHA | Supply-chain integrity of the gate itself |
-| Optional runtime kernel | Event/saga state; InMemory is not durable |
+| Experimental runtime kernel | Event/saga state; InMemory is not durable |
 
 ## Actors
 
-- **AI agent** (Claude / Cursor / Codex / Grok) with tool write access  
+- **AI agent** (Claude / Cursor / Codex / Grok) with tool write access; see the
+  [canonical host support matrix](../README.md#host-enforcement-support)
 - **Human developer** editing files outside hooks (IDE, git apply)  
 - **CI runner** on PRs / main  
 - **Maintainer / attacker** with publish or PR privileges  
@@ -28,7 +29,7 @@ infrastructure beyond how this package is published.
 |----|--------|--------|------------------------|
 | T1 | Agent bypasses hook (direct `fs` / alternate tool) | Ungoverned code lands | CI gate; optional pre-commit (Q3); doctor writePath honesty |
 | T2 | Human commits without agent path | Same as T1 | `templates/hooks/pre-commit-ark`; branch protection + required check (Q3 external) |
-| T3 | CI job missing / not required | Merge green without architecture | doctor `enforcement-ci-*` gaps; `--strict` profile |
+| T3 | CI job missing / not required | Merge green without architecture | doctor `enforcement-ci-*` gaps; `--strict-merge` profile |
 | T4 | Config weakened (`peerIsolation: false`, empty rules) | False green | safety diagnostics; false-green adoption detector |
 | T5 | Baseline ratcheted open | Debt reintroduced | baseline unused/stale signals; occurrence keys |
 | T6 | Dual MCP bin / wrong root | Gate points at wrong tree | migrate-commands; Codex fail-closed temp roots |
@@ -40,9 +41,10 @@ infrastructure beyond how this package is published.
 ## Trust boundaries
 
 ```
-Agent host  --PreToolUse/MCP-->  arkgate-mcp (write gate)
-Human IDE   --disk/git-------->  working tree
-working tree --PR------------>  CI ark-check --strict
+Claude/Grok host --PreToolUse--> arkgate-mcp (hard matched-write boundary)
+Any MCP host     --tool call----> arkgate-mcp (advisory validation)
+Human IDE        --disk/git-----> working tree
+working tree     --PR-----------> CI ark-check --strict-merge
 npm publish <-- signed tag ---  GitHub Release + provenance
 ```
 

@@ -8,7 +8,7 @@ npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok
 
 Installs:
 
-- Write-gate hook configuration (Claude / Grok PreToolUse; Cursor advisory + MCP)
+- Write-path configuration (Claude/Grok hard PreToolUse; Cursor/Codex advisory MCP)
   — PreToolUse uses **`--hook-repair`** (W4): on deny, stderr may include
   `ARK_REPAIR_JSON` / `ARK_AUTOPATCH_JSON` for hosts that re-inject a patch.
   Still exit 2 / hard block; never silent write. Drop `--hook-repair` for
@@ -23,6 +23,9 @@ Installs:
 | Cursor | `.cursor/mcp.json`, `.cursor/rules/ark.mdc`, `.cursor/commands/` |
 | Codex | `docs/ark-codex-config.toml` + home MCP/prompts |
 | **Grok Build** | `.grok/config.toml`, `.grok/hooks/`, `.grok/skills/` |
+
+See the [canonical host support matrix](../../README.md#host-enforcement-support) for the exact
+local, MCP, CI, and repair guarantees. The table above only lists installed paths.
 
 ## Session hint
 
@@ -39,7 +42,8 @@ npx arkgate-check --doctor
 npx arkgate-check --require-gates
 ```
 
-Doctor JSON (`--doctor --json`) includes **`writePath`**: whether PreToolUse is
+Doctor JSON (`--doctor --json`) includes **`writePath`**: the active host's supported profile,
+installed evidence, and whether PreToolUse is
 `repair` (machine-readable autoPatch on deny), `reject-only`, `mcp-only`, or
 `none` — plus `prepareWrite` / `autoPatch` booleans for leads.
 

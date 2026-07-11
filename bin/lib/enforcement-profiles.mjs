@@ -5,24 +5,29 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { detectWritePathCapabilities } from './write-path-detect.mjs';
+import {
+  HOST_SUPPORT_HOSTS,
+  HOST_SUPPORT_MATRIX,
+} from './host-support-matrix.mjs';
 import { KNOWN_TOOLS, normalizeToolsList } from './skill-install.mjs';
 
-export const HOST_ENFORCEMENT_SUPPORT = Object.freeze({
-  claude: Object.freeze({
-    hardWrite: true,
-    advisoryWrite: true,
-    hookPath: '.claude/settings.json',
-  }),
-  grok: Object.freeze({
-    hardWrite: true,
-    advisoryWrite: true,
-    hookPath: '.grok/hooks/ark-write-gate.json',
-  }),
-  cursor: Object.freeze({ hardWrite: false, advisoryWrite: true, hookPath: null }),
-  codex: Object.freeze({ hardWrite: false, advisoryWrite: true, hookPath: null }),
-});
+export const HOST_ENFORCEMENT_SUPPORT = Object.freeze(
+  Object.fromEntries(
+    HOST_SUPPORT_HOSTS.map((host) => {
+      const profile = HOST_SUPPORT_MATRIX[host];
+      return [
+        host,
+        Object.freeze({
+          hardWrite: profile.capabilities['hard-write'],
+          advisoryWrite: profile.capabilities['advisory-write'],
+          hookPath: profile.hookPath,
+        }),
+      ];
+    })
+  )
+);
 
-export const WRITE_PROFILE_HOSTS = Object.freeze(Object.keys(HOST_ENFORCEMENT_SUPPORT));
+export const WRITE_PROFILE_HOSTS = HOST_SUPPORT_HOSTS;
 
 export function validateSelectedTools(tools) {
   if (tools == null) return { ok: true, tools: null };
@@ -60,8 +65,8 @@ export function validateHardWriteRequest({ root, host, tools, force = false }) {
     return {
       ok: false,
       error:
-        `${normalizedHost} supports advisory-write plus hard merge enforcement, not a hard local write hook. ` +
-        'Omit --require-write-hook and keep --strict-merge for CI.',
+        `${normalizedHost} supports advisory-write plus the shared CI check, not a hard local write hook. ` +
+        'Omit --require-write-hook, keep --strict-merge in CI, and require that status to block merges.',
     };
   }
 

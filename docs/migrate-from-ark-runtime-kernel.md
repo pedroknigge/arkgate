@@ -129,6 +129,9 @@ Or edit `.grok/config.toml` → `args` use `arkgate-mcp`.
 
 ### TypeScript imports (runtime / Nest / ESLint only)
 
+The runtime and Nest surfaces are currently **experimental**; migrating the package name does not
+require adopting them. Static CLI/MCP enforcement remains the supported product path.
+
 ```diff
 - import { createStrictArkKernelFromConfig } from 'ark-runtime-kernel';
 + import { createStrictArkKernelFromConfig } from 'arkgate/runtime';

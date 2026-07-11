@@ -395,7 +395,7 @@ production security audit all pass (0 vulnerabilities).
 
 ### S06 — Publish one truthful support matrix
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Closes:** unsupported product claims
 - **Likely files:** `README.md`, `docs/ai-gates.md`, `docs/agent-guide.md`, templates, release docs,
 website source if maintained in this repository
@@ -421,6 +421,17 @@ rg -n "every write|full MCP/hooks|PreToolUse|hard write|advisory" README.md docs
 npm run test:run
 npm run check:architecture
 ```
+
+**Local evidence (2026-07-11):** `bin/lib/host-support-matrix.mjs` is the single static support
+source for Claude, Grok, Cursor, and Codex. It renders the only public guarantee matrix in README
+and the generated `AGENTS.md`; detailed guides link to it, while doctor reports both the supported
+profile and repository-specific evidence. Hard hook operations, advisory MCP calls, CI checks,
+external required-status merge blocking, and repair re-injection are stated separately. No website
+source is maintained in this repository. Runtime/Nest docs and the shipped `/ark-runtime` skill now
+label that surface experimental and unnecessary for gate adoption. The docs regression passes with
+the full 736/736-test suite; coverage is 92.59% statements/lines, 85.22% branches, and 95.28%
+functions. Typecheck, build, JavaScript syntax, architecture, generated parity, module budgets,
+package allowlist/dry-run, and the production security audit pass (0 vulnerabilities).
 
 ### S07 — Decide the product name before stabilizing new APIs
 

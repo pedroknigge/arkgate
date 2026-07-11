@@ -6,7 +6,7 @@
 **Public product site:** [arkgate.online](https://www.arkgate.online/) (promise + only flow).  
 In-repo `docs/` remains the package/agent reference. Source: GitHub; distribution: npm.
 
-This document is the consumer contract for **what is stable** vs **what is opt-in**.
+This document is the consumer contract for **what is stable** vs **what is experimental**.
 
 ---
 
@@ -25,20 +25,23 @@ Gates need **no application code imports**. Most projects only use the CLI + MCP
 
 ---
 
-## Opt-in surfaces
+## Experimental opt-in surfaces
+
+These APIs are shipped for evaluation and compatibility, but they are **not production-ready
+product claims**. Static architecture enforcement does not depend on them.
 
 | Surface | Import path | Notes |
 |---------|-------------|--------|
-| **Runtime kernel** | **`arkgate/runtime`** (preferred) | Event bus, intents, policies, sagas, outbox, projections, `createArkKernel` / strict helpers. Optional. Not required for architecture enforcement. Built-in stores are **InMemory reference only** (not production durability) — see [production-hardening.md](./production-hardening.md). |
-| **Root package barrel** | `arkgate` | Still re-exports the runtime kernel for **compatibility**. Prefer `arkgate/runtime` for new code. Root may be thinned in a future **major**. |
-| **NestJS adapter** | `arkgate/nestjs` | Optional peer `@nestjs/common`. Wires a kernel into Nest DI. |
+| **Runtime kernel** | **`arkgate/runtime`** (preferred) | Experimental event bus, intents, policies, sagas, outbox, projections, and strict helpers. Not required for architecture enforcement. Built-in stores are **InMemory reference only** (not production durability) — see [production-hardening.md](./production-hardening.md). |
+| **Root package barrel** | `arkgate` | Still re-exports the experimental runtime kernel for **compatibility**. Prefer `arkgate/runtime` when evaluating it. Root may be thinned in a future **major**. |
+| **NestJS adapter** | `arkgate/nestjs` | Experimental optional peer `@nestjs/common`; wires a kernel into Nest DI. |
 
 ---
 
 ## Recommended imports
 
 ```ts
-// Preferred — opt-in runtime kernel
+// Preferred path when evaluating the experimental runtime kernel
 import {
   createStrictArkKernel,
   createStrictArkKernelFromConfig,
@@ -51,7 +54,8 @@ import { createStrictArkKernel } from 'arkgate';
 import { ArkModule, InjectArk } from 'arkgate/nestjs';
 ```
 
-See [production-hardening.md](./production-hardening.md) for runtime operational guidance.
+See [production-hardening.md](./production-hardening.md) for requirements an eventual
+production deployment would need to satisfy; it is not a readiness certification.
 
 ---
 

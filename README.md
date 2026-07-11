@@ -43,15 +43,16 @@ commands above).
 
 ## What it is (30 seconds)
 
-**ArkGate** = a machine-readable architecture file (`ark.config.json`) enforced in two places
-you always care about:
+**ArkGate** = a machine-readable architecture file (`ark.config.json`) enforced at CI, with
+host-specific protection while an agent writes:
 
 | When | Tool |
 |------|------|
-| **While the AI writes** | `arkgate-mcp` write gate (blocks bad edits) |
-| **Before merge** | `arkgate-check` CI |
+| **While the AI writes** | Hard PreToolUse block on Claude/Grok; advisory MCP on Cursor/Codex |
+| **Before merge** | `arkgate-check` CI check; merge blocking requires it as a required status |
 
-Optional later: runtime kernel (`createArkKernel`) if you want event/intent governance.
+Optional later: the **experimental** runtime kernel (`createArkKernel`) if you want to evaluate
+event/intent governance. It is not required for gate adoption.
 
 It is **not** a web framework, ORM, or job runner.
 
@@ -82,7 +83,7 @@ mode you configure:
 |-------|--------|-----------|
 | **Suggest** | New/thin project | Finish `start` + autopilot |
 | **Adapt** | Not fully protected yet | Keep autopilot / adopt until clean |
-| **Enforce** | Gates can honestly protect you | Build features; fix with `/ark-fix` if blocked |
+| **Enforce** | Contract coverage is honest and checked edges are clean | Keep the host-appropriate write path; require the CI status if it must block merges |
 
 You **arrive** at Enforce. You never “turn on Enforce”.
 
@@ -155,8 +156,9 @@ otherwise they **fall back to sequential**.
 
 **Write path (Track W):** Prefer MCP **`ark_prepare_write`** when you have a snippet (place +
 constrain + validate + optional `autoPatch` + `judgmentBrief`). PreToolUse hooks with
-`--hook-repair` emit machine-readable repair payloads on deny (still hard block; never silent
-write). See [docs/ai-gates.md](docs/ai-gates.md).
+`--hook-repair` on Claude/Grok emit machine-readable repair payloads on deny (still hard block;
+never silent write). Cursor/Codex MCP calls remain advisory. See
+[docs/ai-gates.md](docs/ai-gates.md).
 
 | Need | Skill |
 |------|--------|
@@ -170,11 +172,24 @@ write). See [docs/ai-gates.md](docs/ai-gates.md).
 | Edit `ark.config.json` safely | `/ark-contract` |
 | Plain-language tour of the report | `/ark-explain` |
 | Deep coverage + opportunities audit | `/ark-coverage` |
-| Migrate hand-rolled bus/outbox (TS) | `/ark-runtime` |
+| Evaluate the experimental runtime against hand-rolled bus/outbox (TS) | `/ark-runtime` |
 | Bump ArkGate + refresh active host (defer Codex when not on Codex) | `/ark-upgrade` |
 
-Hosts with full MCP/hooks: **Claude Code**, **Cursor**, **Codex**, **Grok Build**.  
-More: [docs/ai-gates.md](docs/ai-gates.md). Health: **`npx arkgate-check --doctor`**.
+### Host enforcement support
+
+<!-- arkgate-host-support:start -->
+| Host | Local write boundary | MCP validation | CI / merge path | Repair payload |
+|------|----------------------|----------------|-----------------|----------------|
+| Claude Code | Hard block for PreToolUse `Write` / `Edit` / `MultiEdit` | Advisory; the agent must call it | Available `arkgate-check --strict-merge` check | Emitted on hook deny; host must re-inject |
+| Grok Build | Hard block for PreToolUse `write` / `search_replace` (plus aliases) | Advisory; the agent must call it | Available `arkgate-check --strict-merge` check | Emitted on hook deny; host must re-inject |
+| Cursor | No hard hook; MCP/rules are advisory | Advisory; the agent must call it | Available `arkgate-check --strict-merge` check | No hard-boundary payload |
+| OpenAI Codex | No hard hook; MCP/rules are advisory | Advisory; the agent must call it | Available `arkgate-check --strict-merge` check | No hard-boundary payload |
+
+This table describes the supported profile **after its files are installed and the host loads/trusts them**. A hard local boundary covers only the listed hook operations; alternate tools, direct filesystem writes, and human edits still rely on CI. MCP validation is advisory because the agent must call it. The CI check blocks a merge only when the repository makes that status required. Repair payloads never write code silently: the host must re-inject the candidate and ArkGate revalidates it. Run `arkgate-check --doctor` for the evidence actually detected in the current repository.
+<!-- arkgate-host-support:end -->
+
+Detailed setup: [docs/ai-gates.md](docs/ai-gates.md).
+
 ---
 
 ## How it works (short)
@@ -182,9 +197,9 @@ More: [docs/ai-gates.md](docs/ai-gates.md). Health: **`npx arkgate-check --docto
 ```
 ark.config.json
       │
-      ├─► Write gate (arkgate-mcp)  — agent PreToolUse / MCP tools
-      ├─► CI gate (arkgate-check)   — PR / main
-      └─► Runtime kernel (opt-in)   — only if you call it
+      ├─► Write path (arkgate-mcp)  — hard hook or advisory MCP, by host
+      ├─► CI check (arkgate-check)  — merge block only when status is required
+      └─► Runtime kernel            — experimental opt-in; gates do not need it
 ```
 
 - **Presets:** hexagonal, layered, feature-sliced, monorepo, ui-surface, vertical-slice, ddd-bounded-contexts (+ aliases clean-architecture / onion-architecture). Layers start optional; doctor suggests tightening populated cores. Cross-slice / cross-context bans use optional `peerIsolation` rules.
@@ -192,9 +207,11 @@ ark.config.json
 - **Brownfield:** baseline ratchet, refuse to freeze a wrong contract, `/ark-adopt` for mature trees.
 - **Agents:** skills install into Claude / Cursor / Codex / Grok; `ark start` freezes **day-zero origin** under `.ark/reports/` **before** agent docs/CI templates.
 - **Write protocol (2.10 / Track W):** mechanical-safe **autoPatch** on the write gate (`import type`); MCP **`ark_prepare_write`** (place + validate + patch + judgmentBrief); opt-in hook **`--hook-repair`** (`ARK_REPAIR_JSON`); doctor **`writePath`** (repair vs reject-only); loop-cost eval (`npm run eval:loop-cost`). Port-proof inject is **judgment** (arity change), not silent auto-apply.
-- **Fail-closed CI (2.11):** `--strict` combines config coverage, required CI/MCP/write gates,
-  PreToolUse hook presence, and bypass diagnostics for dynamic imports, TypeScript suppressions,
-  explicit `any` casts, InMemory runtime defaults, and disabled peer isolation.
+- **Fail-closed CI (2.11):** `--strict-merge` combines config coverage, shared gate-file
+  presence, and bypass diagnostics for dynamic imports, TypeScript suppressions, explicit `any`
+  casts, InMemory runtime defaults, and disabled peer isolation. `--strict` is a compatibility
+  alias. Neither requires an editor hook; use `--require-write-hook claude|grok` when that local
+  guarantee is part of the check.
 - **Trust / coverage (2.12):** package unit-test floors on the broad product surface
   (statements/lines **≥80%**, branches/functions **≥85%**; enforcement-critical modules **≥95%**
   branch). Explore dual-plan + day-zero origin first (see above). Roadmap next: Q2 repair dogfood matrix.
@@ -205,7 +222,7 @@ ark.config.json
 | | ArkGate | Typical boundary linter |
 |--|:---:|:---:|
 | CI import rules | ✅ | ✅ |
-| Block **AI writes** before they land | ✅ | ❌ |
+| Hard-block supported-host AI writes before they land | ✅ (Claude/Grok hooks) | ❌ |
 | Contract agents can read (`ark://manifest`) | ✅ | ❌ |
 | Placement tools (`ark_place`, …) | ✅ | ❌ |
 | Honest governed % + adoption path | ✅ | ❌ |
@@ -239,10 +256,11 @@ CI (example):
 
 ---
 
-## Optional: runtime kernel
+## Optional experimental runtime kernel
 
-Gates need **no app code changes**. If you also want runtime intent/event contracts,
-use the **opt-in** subpath (preferred):
+Gates need **no app code changes**. The runtime API is currently **experimental** and is not a
+production-readiness claim. If you want to evaluate runtime intent/event contracts, use the
+opt-in subpath (preferred):
 
 ```ts
 import { createStrictArkKernelFromConfig } from 'arkgate/runtime';
@@ -250,7 +268,7 @@ import { createStrictArkKernelFromConfig } from 'arkgate/runtime';
 ```
 
 Root `import { … } from 'arkgate'` still re-exports kernel symbols for compatibility
-in this major; prefer `arkgate/runtime` for new code.
+in this major; use `arkgate/runtime` when evaluating the experimental surface.
 
 NestJS: `arkgate/nestjs` (optional peer `@nestjs/common`).
 
@@ -269,7 +287,7 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Audience | Link |
 |----------|------|
 | New builders (plain language) | [docs/enthusiast/](docs/enthusiast/README.md) |
-| **Package surface (stable vs opt-in)** | [docs/package-surface.md](docs/package-surface.md) |
+| **Package surface (stable vs experimental)** | [docs/package-surface.md](docs/package-surface.md) |
 | Wire Claude / Cursor / Codex / Grok + **ESLint (CI-parity)** | [docs/ai-gates.md](docs/ai-gates.md) |
 | **TypeScript 5 / 6 / 7 support** | [docs/typescript-support.md](docs/typescript-support.md) |
 | Migrate from `ark-runtime-kernel` | [docs/migrate-from-ark-runtime-kernel.md](docs/migrate-from-ark-runtime-kernel.md) |
