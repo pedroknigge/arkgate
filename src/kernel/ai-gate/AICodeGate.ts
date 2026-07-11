@@ -52,14 +52,14 @@ export interface AICodeGateOptions<Context = AICodeGateContext> {
   /**
    * Ambient globals forbidden per layer (layer name → entries such as "fetch" or
    * "Date.now"). Checked only when `typescript` is provided and context.layer resolves
-   * to a listed layer — mirrors ark-check's FORBIDDEN_GLOBAL rule.
+   * to a listed layer — mirrors structrail-check's FORBIDDEN_GLOBAL rule.
    */
   forbiddenGlobals?: Record<string, string[]>;
   /**
    * Layer names whose role is infrastructure and may therefore import infrastructure
    * (a persistence adapter importing the DB is correct, not a violation). The built-in
    * infra-import heuristics are suppressed for these layers and for any layer whose
-   * name matches the conventional infra tokens. Populate from ark.config.json layers
+   * name matches the conventional infra tokens. Populate from structrail.config.json layers
    * flagged `mayImportInfrastructure: true`, so unconventionally-named infra layers
    * opt in explicitly. User-supplied `forbiddenPatterns` still apply everywhere.
    */
@@ -306,7 +306,7 @@ function isKnownInfrastructurePackage(specifier: string): boolean {
 // infrastructure — that's what the layer is for. The built-in infra-import
 // heuristics exist to keep the pure core (domain/application) clean, so they
 // must not fire against such a layer, otherwise the write-gate contradicts an
-// ark.config.json that explicitly allows the edge (which ark-check passes).
+// structrail.config.json that explicitly allows the edge (which structrail-check passes).
 // Substring match, not token-split, so camelCase names like "PersistenceAdapters"
 // resolve. ponytail: name-based heuristic; add an explicit per-layer
 // `mayImportInfrastructure` flag if a project needs finer control.
@@ -547,7 +547,7 @@ function analyzePublishAst<Context>(
         tsObjectHasProperty(ts, firstArg, 'intent')
       ) {
         violations.push(
-          violation('RAW_EVENT_PUBLISH', 'Publish through a registered intent creator; raw event objects or intent strings bypass Ark contracts and tooling.', {
+          violation('RAW_EVENT_PUBLISH', 'Publish through a registered intent creator; raw event objects or intent strings bypass Structrail contracts and tooling.', {
             line: lineForNode(node),
             filePath,
           })
@@ -643,7 +643,7 @@ export function createAICodeGate<Context = AICodeGateContext>(
       // instead of looking like a hard block.
       const infraLayerEscapeHatch =
         contextLayer !== undefined
-          ? ` If "${contextLayer}" is an infrastructure layer, mark it in ark.config.json with "mayImportInfrastructure": true (or name it with an infra token like Adapters/Persistence/Repository).`
+          ? ` If "${contextLayer}" is an infrastructure layer, mark it in structrail.config.json with "mayImportInfrastructure": true (or name it with an infra token like Adapters/Persistence/Repository).`
           : '';
       for (const pat of userForbidden) {
         if (pat instanceof RegExp) {
@@ -673,8 +673,8 @@ export function createAICodeGate<Context = AICodeGateContext>(
 
       for (const specifier of moduleSpecifiers) {
         // Contract first: if the import target resolves to a declared layer, the layer RULES
-        // decide — not the path heuristic. This keeps the write gate consistent with ark-check
-        // (`ark.config.json` is authoritative), so an edge the config allows — e.g. a route
+        // decide — not the path heuristic. This keeps the write gate consistent with structrail-check
+        // (`structrail.config.json` is authoritative), so an edge the config allows — e.g. a route
         // calling a repository, or a repository importing the DB — is never blocked here just
         // because the specifier contains an "infra" token.
         // Contract + peerIsolation share one resolve step when resolveImportTarget is set.
@@ -704,7 +704,7 @@ export function createAICodeGate<Context = AICodeGateContext>(
           );
           if (blocked) {
             // W1: type-only static edges (`import type` / `export type`) are erased at
-            // runtime — do not hard-block the write path. ark-check --plan still surfaces
+            // runtime — do not hard-block the write path. structrail-check --plan still surfaces
             // them for type placement (mechanical-safe relocate). Value imports stay hard-block.
             if (specifier.typeOnly && !blocked.peerIsolation) {
               continue;

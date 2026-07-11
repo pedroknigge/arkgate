@@ -25,7 +25,7 @@ export type EventPayloadSchema = Record<string, EventSchemaField>;
 /**
  * Minimal Standard Schema interface (https://standardschema.dev).
  * Any zod/valibot/arktype (or other spec-compliant) schema satisfies this,
- * so Ark stays zero-dependency while accepting the validators you already use.
+ * so Structrail stays zero-dependency while accepting the validators you already use.
  */
 export interface StandardSchemaV1<Input = unknown, Output = Input> {
   readonly '~standard': {

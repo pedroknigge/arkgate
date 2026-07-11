@@ -1,5 +1,5 @@
 /**
- * Intent-specific types for the Ark kernel.
+ * Intent-specific types for the Structrail kernel.
  *
  * Intents provide semantic naming for every important concept in the system
  * (domain events, application operations, adapters, workflows).

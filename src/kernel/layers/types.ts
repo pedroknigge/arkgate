@@ -79,7 +79,7 @@ export interface StructrailCheckConfig {
 export interface CreateElevenLayerStructrailConfigOptions {
   /** Source root used in generated file patterns. Default: "src". */
   rootDir?: string;
-  /** Include entries for ark-check. Default: [rootDir]. */
+  /** Include entries for structrail-check. Default: [rootDir]. */
   include?: string[];
   /** Mark generated layers optional. Default: true. */
   optionalLayers?: boolean;

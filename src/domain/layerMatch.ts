@@ -1,5 +1,5 @@
 /**
- * Pure layer-glob matching for ark.config.json.
+ * Pure layer-glob matching for structrail.config.json.
  *
  * **Canonical algorithm** for CLI, ESLint, and library consumers.
  * The CLI load path uses the generated `bin/ark-layer-match.mjs`
@@ -15,7 +15,7 @@ export type LayerConfig = {
 };
 
 /**
- * Layer-to-layer dependency rule from ark.config.json.
+ * Layer-to-layer dependency rule from structrail.config.json.
  *
  * - Classic: `{ from, to, allowed: false }` denies **cross-layer** edges only.
  *   Same-layer is always allowed without peerIsolation (historical short-circuit).

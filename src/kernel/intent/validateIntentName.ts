@@ -23,7 +23,7 @@ export interface IntentNameValidation {
 }
 
 /**
- * Validate that an intent name follows Ark naming conventions.
+ * Validate that an intent name follows Structrail naming conventions.
  */
 export function validateIntentName(name: string): IntentNameValidation {
   if (!name || typeof name !== 'string') {

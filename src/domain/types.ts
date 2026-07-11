@@ -1,5 +1,5 @@
 /**
- * Core domain primitives for Ark.
+ * Core domain primitives for Structrail.
  * These types are the foundation for all governance concepts.
  */
 

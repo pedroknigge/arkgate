@@ -256,7 +256,7 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
       enriched.fixClass = 'add-source-metadata';
       enriched.effort = 'small';
       enriched.enthusiastHint =
-        'Add metadata.source to the publish call so Ark knows which layer is publishing the event.';
+        'Add metadata.source to the publish call so Structrail knows which layer is publishing the event.';
       break;
     case 'PUBLISH_SOURCE_LAYER_MISMATCH':
       enriched.fixClass = 'fix-source-layer';
@@ -280,7 +280,7 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
       enriched.fixClass = 'review-contract';
       enriched.effort = 'small';
       enriched.enthusiastHint =
-        'Read the violation message and the layer rules in ark.config.json, then adjust imports or move code to the correct layer.';
+        'Read the violation message and the layer rules in structrail.config.json, then adjust imports or move code to the correct layer.';
   }
   return enriched;
 }

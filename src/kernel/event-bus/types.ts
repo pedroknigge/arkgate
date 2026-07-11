@@ -1,5 +1,5 @@
 /**
- * Event Bus types for the Ark kernel.
+ * Event Bus types for the Structrail kernel.
  *
  * The Event Bus is the central nervous system for Domain Events.
  * It provides publish/subscribe, history for observability, and metadata handling.

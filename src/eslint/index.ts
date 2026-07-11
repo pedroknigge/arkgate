@@ -1,9 +1,9 @@
 /**
  * arkgate/eslint — editor-side architecture gate.
  *
- * Layer / import / forbidden-globals rules load `ark.config.json` from the linted
+ * Layer / import / forbidden-globals rules load `structrail.config.json` from the linted
  * project (walk-up from the file) and use the same glob specificity + edge semantics
- * as ark-check. Matching primitives come from the canonical
+ * as structrail-check. Matching primitives come from the canonical
  * `src/domain/layerMatch.ts` (CLI loads the generated `bin/ark-layer-match.mjs`) —
  * no Kernel imports.
  */
@@ -268,7 +268,7 @@ function isPublishCall(node: AstNode): boolean {
   return calleePropertyName(node) === 'publish';
 }
 
-/** Heuristic fallback when no ark.config.json (pre-contract projects). */
+/** Heuristic fallback when no structrail.config.json (pre-contract projects). */
 function isDomainFileHeuristic(filename: string): boolean {
   const normalized = filename.split('\\').join('/').toLowerCase();
   return normalized.includes('/domain/') || normalized.endsWith('/domain.ts');
@@ -295,7 +295,7 @@ const DEFAULT_FORBIDDEN_GLOBALS = ['fetch', 'process', 'Date.now', 'Math.random'
 
 /**
  * Config-driven layer import boundary (primary editor gate).
- * Replaces path-token domain/infra heuristics when ark.config.json is present.
+ * Replaces path-token domain/infra heuristics when structrail.config.json is present.
  * Rule id kept as `no-domain-infra-imports` for recommended-config / upgrade stability.
  */
 export const noDomainInfraImports: ArkRule = {
@@ -303,11 +303,11 @@ export const noDomainInfraImports: ArkRule = {
     type: 'problem',
     docs: {
       description:
-        'Disallow imports that violate ark.config.json layer rules (same contract as arkgate-check). Falls back to domain→infra path heuristics when no config is found.',
+        'Disallow imports that violate structrail.config.json layer rules (same contract as structrail-check). Falls back to domain→infra path heuristics when no config is found.',
     },
     messages: {
       forbiddenImport:
-        'Architecture: {{fromLayer}} must not import {{toLayer}} (ark.config.json). Specifier: {{specifier}}',
+        'Architecture: {{fromLayer}} must not import {{toLayer}} (structrail.config.json). Specifier: {{specifier}}',
       forbiddenImportHeuristic:
         'Domain code must not import infrastructure, adapters, repositories, or database modules.',
     },
@@ -377,7 +377,7 @@ export const noRawEventPublish: ArkRule = {
     },
     messages: {
       rawPublish:
-        'Publish through a registered intent creator; raw event objects or intent strings bypass Ark contracts.',
+        'Publish through a registered intent creator; raw event objects or intent strings bypass Structrail contracts.',
     },
     schema: [],
   },
@@ -426,11 +426,11 @@ export const noForbiddenGlobals: ArkRule = {
     type: 'problem',
     docs: {
       description:
-        'Disallow ambient globals from the layer’s forbiddenGlobals in ark.config.json (same purity surface as arkgate-check). Option `globals` overrides. Without config, defaults apply only on domain-like paths.',
+        'Disallow ambient globals from the layer’s forbiddenGlobals in structrail.config.json (same purity surface as structrail-check). Option `globals` overrides. Without config, defaults apply only on domain-like paths.',
     },
     messages: {
       forbiddenGlobal:
-        'Ambient global "{{name}}" is forbidden in {{layer}} (ark.config.json); inject the capability through a port instead.',
+        'Ambient global "{{name}}" is forbidden in {{layer}} (structrail.config.json); inject the capability through a port instead.',
       forbiddenGlobalDefault:
         'Ambient global "{{name}}" is forbidden here; inject the capability through a port instead.',
     },

@@ -1,5 +1,5 @@
 /**
- * Policy types for the Ark kernel.
+ * Policy types for the Structrail kernel.
  *
  * Policies allow declaring architectural rules that can be checked at runtime.
  * Supports both hard policies (must never be violated) and soft policies (warnings).

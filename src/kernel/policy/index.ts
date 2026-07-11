@@ -1,5 +1,5 @@
 /**
- * Ark Policy module
+ * Structrail Policy module
  * Declarative hard and soft policy engine for architectural governance.
  */
 

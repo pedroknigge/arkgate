@@ -1,5 +1,5 @@
 /**
- * Pure baseline identity key for ark-check violation freeze / ratchet.
+ * Pure baseline identity key for structrail-check violation freeze / ratchet.
  *
  * **Canonical algorithm** — CLI loads generated `bin/lib/baseline-key.mjs`.
  * Zero Node I/O.

@@ -6,7 +6,7 @@
  * Uses a default shared registry for convenience, while still allowing
  * isolated registries via `createIntentRegistry()`.
  *
- * Intents are the core of Ark's governance model. They give every
+ * Intents are the core of Structrail's governance model. They give every
  * architectural concept (domain events, use cases, adapter operations, workflows)
  * an explicit, namespaced, machine-readable identity.
  */
