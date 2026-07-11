@@ -42,6 +42,18 @@ passed as the third `execute` argument, but JavaScript cannot stop an operation 
 ignores that signal. Production steps must pass it to network/database clients and keep
 external effects idempotent; otherwise work may finish after the workflow was marked failed.
 
+### Workflow retry boundary
+
+`RetryPolicy` applies only while `step.execute` is running, including a timeout from that
+execution. Once `execute` resolves, ArkGate marks the step completed before saving the
+snapshot and recording `workflow.step.completed`. If either post-effect operation fails, the
+workflow enters its failure/compensation path; it does not execute the completed step again.
+
+The same fail-closed rule applies when the final `workflow.completed` audit record fails:
+completed steps are compensated when handlers exist, and the workflow ends failed. Production
+effects and compensations must therefore be idempotent, and audit/snapshot stores must be
+operational dependencies rather than best-effort telemetry.
+
 ## Interface Targets
 
 | Concern | Interface |

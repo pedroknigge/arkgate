@@ -4,6 +4,12 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+### Fixed
+
+- **Workflow retry boundary:** `RetryPolicy` now retries only `step.execute` failures and
+  timeouts. A snapshot-store or completion-audit failure after a successful effect is terminal,
+  enters compensation, and never executes the completed effect again.
+
 ### Added
 
 - **Q2 repair dogfood closed:** deny → `ARK_REPAIR_JSON`/`autoPatch` → host re-inject →

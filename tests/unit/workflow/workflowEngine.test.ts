@@ -3,6 +3,8 @@ import {
   createAuditTrail,
   createEventBus,
   createWorkflowEngine,
+  InMemoryWorkflowStore,
+  type WorkflowSnapshot,
 } from '../../../src/index';
 
 describe('WorkflowEngine', () => {
@@ -38,6 +40,148 @@ describe('WorkflowEngine', () => {
     expect(snapshot.attempts.reserve).toBe(2);
     expect(await engine.get(snapshot.id)).toMatchObject({ status: 'completed' });
     expect(await audit.query({ type: 'workflow.step.completed' })).toHaveLength(2);
+  });
+
+  it('does not retry a successful effect when step completion audit fails', async () => {
+    const audit = createAuditTrail({
+      store: {
+        append: (record) => {
+          if (record.type === 'workflow.step.completed') {
+            throw new Error('audit unavailable');
+          }
+        },
+        query: () => [],
+        clear: () => undefined,
+      },
+    });
+    const engine = createWorkflowEngine(createEventBus(), { auditTrail: audit });
+    let executions = 0;
+    let compensations = 0;
+
+    engine.register({
+      name: 'AuditFailureAfterEffect',
+      steps: [
+        {
+          name: 'charge',
+          retry: { attempts: 2 },
+          execute: () => {
+            executions += 1;
+            return { charged: true };
+          },
+          compensate: () => {
+            compensations += 1;
+          },
+        },
+      ],
+    });
+
+    await expect(engine.start('AuditFailureAfterEffect', {})).rejects.toThrow(
+      'audit unavailable'
+    );
+    const snapshot = (await engine.list('AuditFailureAfterEffect'))[0];
+
+    expect(executions).toBe(1);
+    expect(compensations).toBe(1);
+    expect(snapshot.completedSteps).toEqual(['charge']);
+    expect(snapshot.attempts.charge).toBe(1);
+    expect(snapshot).toMatchObject({ status: 'failed', error: 'audit unavailable' });
+  });
+
+  it('does not repeat completed effects when workflow completion audit fails', async () => {
+    const audit = createAuditTrail({
+      store: {
+        append: (record) => {
+          if (record.type === 'workflow.completed') {
+            throw new Error('completion audit unavailable');
+          }
+        },
+        query: () => [],
+        clear: () => undefined,
+      },
+    });
+    const engine = createWorkflowEngine(createEventBus(), { auditTrail: audit });
+    let executions = 0;
+    let compensations = 0;
+
+    engine.register({
+      name: 'CompletionAuditFailure',
+      steps: [
+        {
+          name: 'charge',
+          retry: { attempts: 2 },
+          execute: () => {
+            executions += 1;
+          },
+          compensate: () => {
+            compensations += 1;
+          },
+        },
+      ],
+    });
+
+    await expect(engine.start('CompletionAuditFailure', {})).rejects.toThrow(
+      'completion audit unavailable'
+    );
+    const snapshot = (await engine.list('CompletionAuditFailure'))[0];
+
+    expect(executions).toBe(1);
+    expect(compensations).toBe(1);
+    expect(snapshot.completedSteps).toEqual(['charge']);
+    expect(snapshot).toMatchObject({ status: 'failed', error: 'completion audit unavailable' });
+  });
+
+  it('does not retry a successful effect when post-effect persistence fails', async () => {
+    const store = new (class extends InMemoryWorkflowStore {
+      private failCompletionSave = true;
+
+      override save<P extends Record<string, unknown>>(
+        snapshot: WorkflowSnapshot<P>
+      ): void {
+        if (
+          this.failCompletionSave &&
+          snapshot.status === 'running' &&
+          snapshot.currentStep === undefined &&
+          snapshot.completedSteps.includes('charge')
+        ) {
+          this.failCompletionSave = false;
+          throw new Error('workflow store unavailable');
+        }
+        super.save(snapshot);
+      }
+    })();
+    const engine = createWorkflowEngine(createEventBus(), { store });
+    let executions = 0;
+    let compensations = 0;
+
+    engine.register({
+      name: 'PersistenceFailureAfterEffect',
+      steps: [
+        {
+          name: 'charge',
+          retry: { attempts: 2 },
+          execute: () => {
+            executions += 1;
+          },
+          compensate: () => {
+            compensations += 1;
+          },
+        },
+      ],
+    });
+
+    await expect(engine.start('PersistenceFailureAfterEffect', {})).rejects.toThrow(
+      'workflow store unavailable'
+    );
+    const snapshot = (await engine.list('PersistenceFailureAfterEffect'))[0];
+
+    expect(executions).toBe(1);
+    expect(compensations).toBe(1);
+    expect(snapshot.completedSteps).toEqual(['charge']);
+    expect(snapshot.attempts.charge).toBe(1);
+    expect(snapshot).toMatchObject({
+      status: 'failed',
+      error: 'workflow store unavailable',
+    });
   });
 
   it('rejects duplicate step names before they can corrupt compensation order', () => {
