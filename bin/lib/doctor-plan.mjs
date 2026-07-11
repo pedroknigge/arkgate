@@ -520,12 +520,12 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     `Hard write boundary: ${capabilities['hard-write'] ? 'yes' : 'no'}`
   );
   line(
-    capabilities['advisory-write'] ? warn : warn,
+    warn,
     `Advisory write tools (MCP): ${capabilities['advisory-write'] ? 'yes' : 'no'}`
   );
   line(
     capabilities['merge-gate'] ? ok : bad,
-    `Merge gate (CI): ${capabilities['merge-gate'] ? 'yes' : 'no'}`
+    `Hard merge gate (CI): ${capabilities['merge-gate'] ? 'yes' : 'no'}`
   );
   line(
     capabilities['repair-payload'] ? ok : warn,

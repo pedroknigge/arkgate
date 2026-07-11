@@ -8,6 +8,24 @@ import { detectWritePathCapabilities } from '../../../bin/lib/write-path-detect.
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const ARK_CHECK = path.join(REPO, 'bin', 'ark-check.mjs');
+const HOST_ENV_KEYS = [
+  'ARK_ACTIVE_HOST',
+  'GROK_BUILD',
+  'XAI_GROK',
+  'GROK_WORKSPACE_ROOT',
+  'GROK_SESSION_ID',
+  'CLAUDE_PROJECT_DIR',
+  'CLAUDE_CODE',
+  'CLAUDECODE',
+  'CLAUDE_CODE_ENTRYPOINT',
+  'CURSOR_TRACE_ID',
+  'CURSOR_AGENT',
+  'CURSOR_AGENT_CLI',
+  'CODEX_SANDBOX',
+  'CODEX_THREAD_ID',
+  'CODEX_CI',
+  'CODEX_SESSION_ID',
+] as const;
 
 function mk(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'ark-host-cap-'));
@@ -84,6 +102,23 @@ function withCodexHome<T>(root: string, run: () => T): T {
   } finally {
     if (previous === undefined) delete process.env.CODEX_HOME;
     else process.env.CODEX_HOME = previous;
+  }
+}
+
+function withActiveHost<T>(host: string | null, run: () => T): T {
+  const previous = Object.fromEntries(
+    HOST_ENV_KEYS.map((key) => [key, process.env[key]])
+  );
+  for (const key of HOST_ENV_KEYS) delete process.env[key];
+  if (host) process.env.ARK_ACTIVE_HOST = host;
+  try {
+    return run();
+  } finally {
+    for (const key of HOST_ENV_KEYS) {
+      const value = previous[key];
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
   }
 }
 
@@ -299,16 +334,165 @@ describe('active-host write capability model', () => {
         detectWritePathCapabilities(root, 'codex')
       );
 
-      expect(result.activeHost).toBe('codex');
-      expect(result.capabilities).toEqual({
-        'hard-write': false,
-        'advisory-write': false,
-        'merge-gate': true,
-        'repair-payload': false,
-      });
+      expect(project(result)).toMatchInlineSnapshot(`
+        {
+          "activeHost": "codex",
+          "activeInventory": {
+            "capabilities": {
+              "advisory-write": false,
+              "hard-write": false,
+              "merge-gate": true,
+              "repair-payload": false,
+            },
+            "configured": false,
+          },
+          "capabilities": {
+            "advisory-write": false,
+            "hard-write": false,
+            "merge-gate": true,
+            "repair-payload": false,
+          },
+          "capabilityEvidence": {
+            "advisory-write": [],
+            "hard-write": [],
+            "merge-gate": [
+              ".github/workflows/ark-check.yml",
+            ],
+            "repair-payload": [],
+          },
+          "inventoryCapabilities": {
+            "advisory-write": true,
+            "hard-write": true,
+            "merge-gate": true,
+            "repair-payload": true,
+          },
+          "mode": "none",
+        }
+      `);
       expect(result.inventory.hosts.grok.capabilities).toMatchObject({
         'hard-write': true,
         'repair-payload': true,
+      });
+      expect(result.gap?.fix).toContain('--install-agent-gates --tools codex');
+      expect(result.gap?.fix).not.toContain('--tools claude');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps external Codex configuration as an absolute evidence path', () => {
+    const root = mk();
+    const codexHome = mk();
+    try {
+      write(
+        codexHome,
+        'config.toml',
+        `[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp", "--root", "${root}"]\n`
+      );
+      const previous = process.env.CODEX_HOME;
+      process.env.CODEX_HOME = codexHome;
+      try {
+        const result = detectWritePathCapabilities(root, 'codex');
+        expect(result.capabilityEvidence['advisory-write']).toEqual([
+          path.join(codexHome, 'config.toml').split(path.sep).join('/'),
+        ]);
+      } finally {
+        if (previous === undefined) delete process.env.CODEX_HOME;
+        else process.env.CODEX_HOME = previous;
+      }
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+      fs.rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects incomplete or non-Ark Codex MCP tables', () => {
+    const root = mk();
+    const codexHome = mk();
+    try {
+      write(
+        codexHome,
+        'config.toml',
+        `[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp"]\n\n` +
+          `[mcp_servers.ark_other]\ncommand = "custom"\nargs = ["--root", "${root}"]\n`
+      );
+      const previous = process.env.CODEX_HOME;
+      process.env.CODEX_HOME = codexHome;
+      try {
+        expect(detectWritePathCapabilities(root, 'codex').capabilities['advisory-write']).toBe(false);
+
+        write(
+          codexHome,
+          'config.toml',
+          `[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp"]\n\n` +
+            `[mcp_servers.ark_valid]\ncommand = "npx"\nargs = ["arkgate-mcp", "--root", "${root}"]\n`
+        );
+        expect(detectWritePathCapabilities(root, 'codex').capabilities['advisory-write']).toBe(true);
+
+        const otherRoot = mk();
+        try {
+          write(
+            codexHome,
+            'config.toml',
+            `[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp", "--root", "${otherRoot}"]\n`
+          );
+          expect(detectWritePathCapabilities(root, 'codex').capabilities['advisory-write']).toBe(false);
+        } finally {
+          fs.rmSync(otherRoot, { recursive: true, force: true });
+        }
+      } finally {
+        if (previous === undefined) delete process.env.CODEX_HOME;
+        else process.env.CODEX_HOME = previous;
+      }
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+      fs.rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
+  it('uses active-host detection only when no explicit host is supplied', () => {
+    const root = mk();
+    try {
+      writeMcp(root, 'cursor');
+      expect(
+        withActiveHost('cursor', () => detectWritePathCapabilities(root))
+      ).toMatchObject({
+        activeHost: 'cursor',
+        capabilities: { 'advisory-write': true },
+      });
+      expect(
+        withActiveHost(null, () => detectWritePathCapabilities(root))
+      ).toMatchObject({
+        activeHost: 'unknown',
+        capabilities: { 'advisory-write': false },
+      });
+      expect(
+        withActiveHost('cursor', () => detectWritePathCapabilities(root, 'claude'))
+      ).toMatchObject({
+        activeHost: 'claude',
+        capabilities: { 'advisory-write': false },
+      });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('accepts intentional whitespace variants without broadening signatures', () => {
+    const root = mk();
+    try {
+      write(root, '.mcp.json', '"ark":{');
+      write(
+        root,
+        '.claude/settings.json',
+        'command: arkgate-mcp --hook\nARK_HOOK_REPAIR = true\n'
+      );
+      expect(detectWritePathCapabilities(root, 'claude')).toMatchObject({
+        mode: 'repair',
+        capabilities: {
+          'hard-write': true,
+          'advisory-write': true,
+          'repair-payload': true,
+        },
       });
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
@@ -364,7 +548,7 @@ describe('active-host write capability model', () => {
       expect(humanRun.stdout).toContain('Active host: cursor');
       expect(humanRun.stdout).toContain('Hard write boundary: no');
       expect(humanRun.stdout).toContain('Advisory write tools (MCP): yes');
-      expect(humanRun.stdout).toContain('Merge gate (CI): yes');
+      expect(humanRun.stdout).toContain('Hard merge gate (CI): yes');
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

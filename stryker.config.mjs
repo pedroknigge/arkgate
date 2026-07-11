@@ -10,8 +10,11 @@ const config = {
   // Named enforcement boundaries from ROADMAP S02. Ranges keep the initial gate
   // focused on product decisions instead of presentation-only strings and entry shells.
   mutate: [
-    'bin/lib/write-path-detect.mjs:27-90',
-    'bin/lib/write-path-detect.mjs:124-134',
+    'bin/lib/write-path-capabilities.mjs:39-176',
+    'bin/lib/write-path-detect.mjs:11-32',
+    'bin/lib/write-path-detect.mjs:47-47',
+    'bin/lib/write-path-detect.mjs:62-62',
+    'bin/lib/write-path-detect.mjs:77-96',
     'bin/lib/ast-scan.mjs:11-42',
     'bin/lib/ast-scan.mjs:301-322',
     'bin/lib/ast-scan.mjs:411-427',
@@ -23,6 +26,8 @@ const config = {
     'tests/unit/workflow/workflowEngine.test.ts',
     'tests/unit/domain/baselineKey.test.ts',
     'tests/unit/static-check/writePathDetect.test.ts',
+    'tests/unit/static-check/writePathHostCapabilities.test.ts',
+    'tests/unit/static-check/criticalBranchCoverage.test.ts',
     'tests/unit/static-check/mutationCritical.test.ts',
   ],
   reporters: ['clear-text', 'progress', 'json'],

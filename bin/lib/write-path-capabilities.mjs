@@ -62,7 +62,6 @@ function relativeEvidencePath(root, file) {
 }
 
 function isArkMcpText(text) {
-  if (!text) return false;
   return (
     /\b(ark|arkgate)-mcp\b/.test(text) ||
     /mcp_servers\.ark\b/.test(text) ||
@@ -93,15 +92,10 @@ function mcpEvidence(root, relativePath) {
 function codexMcpEvidence(root) {
   const file = codexConfigPath();
   const text = readText(file);
-  if (!text) return [];
   const resolvedRoot = path.resolve(root);
   const registered = listCodexArkServerTables(text).some((entry) => {
     if (!entry.root || !/\b(ark|arkgate)-mcp\b/.test(entry.block)) return false;
-    try {
-      return path.resolve(entry.root) === resolvedRoot;
-    } catch {
-      return false;
-    }
+    return path.resolve(entry.root) === resolvedRoot;
   });
   return registered ? [relativeEvidencePath(root, file)] : [];
 }
@@ -162,7 +156,7 @@ export function detectWritePathInventory(root) {
 
 export function buildWritePathCapabilityModel(root, explicitHost) {
   const inventory = detectWritePathInventory(root);
-  const detectedHost = explicitHost ?? detectActiveAgentHost() ?? 'unknown';
+  const detectedHost = explicitHost ?? detectActiveAgentHost();
   const activeHost = KNOWN_HOSTS.includes(detectedHost) ? detectedHost : 'unknown';
   const activeRecord = inventory.hosts[activeHost];
   const capabilityEvidence = activeRecord

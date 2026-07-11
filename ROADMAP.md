@@ -149,7 +149,7 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 |---:|---|---|---:|---|---|
 | 1 | `S01` | `done` | S | — | Workflow effects are never retried because telemetry failed |
 | 2 | `S02` | `done` | M | `S01` | Local confidence gates are green and truthfully named |
-| 3 | `S03` | `doing` | M | `S02` | Enforcement capabilities are computed per active host |
+| 3 | `S03` | `done` | M | `S02` | Enforcement capabilities are computed per active host |
 | 4 | `S04` | `todo` | M | `S03` | Every supported host-only install produces a valid CI/write contract |
 | 5 | `S05` | `todo` | M | `S04` | All confirmed scanner false positives and bypasses are closed |
 | 6 | `S06` | `todo` | S | `S03`–`S05` | README, docs, doctor, and site use one truthful support matrix |
@@ -170,7 +170,8 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 21 | `V04` | `todo` | M | `C06`, `V03` | Package and release artifacts are small, complete, and attestable |
 | 22 | `V05` | `todo` | M | all prior items | Independent audit passes and the product may exit beta |
 
-**Next:** `S03`. Keep the host-capability change isolated from the completed regression-gate work.
+**Next:** `S04`. Make strict/onboarding guarantees explicit per host without coupling CI to an
+unrelated write hook.
 
 ---
 
@@ -257,7 +258,7 @@ module-budget, package-files, and production security-audit gates pass.
 
 ### S03 — Model write enforcement per active host
 
-- **Status:** `doing`
+- **Status:** `done`
 - **Closes:** `RB-02`
 - **Likely files:** `bin/lib/write-path-detect.mjs`, `bin/lib/doctor-plan.mjs`,
 `bin/lib/mcp-adoption.mjs`, host detection modules, write-path tests
@@ -287,6 +288,16 @@ npx vitest run tests/unit/static-check/writePathDetect.test.ts
 npx vitest run tests/unit/static-check/installFieldFixes.test.ts
 npm run test:coverage
 ```
+
+**Local evidence (2026-07-11):** active-host and repo-inventory verdicts are separated for
+Claude, Grok, Cursor, Codex, unknown, and mixed fixtures; doctor JSON with
+`ARK_ACTIVE_HOST=codex` keeps Grok hard-hook/repair evidence in inventory only, while human output
+labels advisory MCP and the hard CI merge gate independently. The full suite passes 705/705 tests
+at 85.24% branch coverage; focused write-path coverage is 100% for both the canonical capability
+model and compatibility projection. Mutation passes at 98.04% overall
+(`write-path-capabilities` 99.23%, `write-path-detect` 100%). Typecheck, build, JavaScript syntax,
+architecture, generated-parity, module-budget, package-files, and production security-audit gates
+pass (0 vulnerabilities).
 
 ### S04 — Make strict and onboarding compatible with each host
 

@@ -12,6 +12,11 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ### Added
 
+- **Active-host enforcement capabilities:** doctor and adoption checks now project
+  `hard-write`, `advisory-write`, `merge-gate`, and `repair-payload` from the active host only,
+  with evidence paths and a separate repo-wide inventory. Claude/Grok hooks can no longer make
+  Codex, Cursor, or an unknown host appear hard-enforced; human doctor output names the host and
+  separates advisory MCP checks from the hard CI merge gate.
 - **Executable regression confidence gate:** `npm run test:confidence` now combines the existing
   broad Vitest coverage thresholds with real Stryker mutation testing over write-path detection,
   dependency extraction, forbidden-global detection, baseline keys, and workflow retry logic.

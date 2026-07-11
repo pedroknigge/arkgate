@@ -46,6 +46,12 @@ export default defineConfig({
           branches: 95,
           functions: 100,
         },
+        'bin/lib/write-path-capabilities.mjs': {
+          statements: 95,
+          lines: 95,
+          branches: 95,
+          functions: 100,
+        },
         'bin/lib/auto-patch.mjs': {
           statements: 95,
           lines: 95,

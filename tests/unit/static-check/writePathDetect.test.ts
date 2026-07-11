@@ -32,7 +32,12 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
       expect(cap.mode).toBe('none');
       expect(cap.hookPresent).toBe(false);
       expect(cap.mcpPresent).toBe(false);
+      expect(cap.autoPatch).toBe(false);
+      expect(cap.capabilities['merge-gate']).toBe(false);
       expect(cap.gap?.id).toBe('write-path-none');
+      expect(cap.gap?.fix).toContain(
+        '--install-agent-gates --tools claude,grok,cursor,codex'
+      );
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
@@ -62,7 +67,9 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
       expect(cap.mode).toBe('reject-only');
       expect(cap.hookPresent).toBe(true);
       expect(cap.hookRepair).toBe(false);
+      expect(cap.inventory.hosts.claude.configured).toBe(true);
       expect(cap.gap?.id).toBe('write-path-reject-only');
+      expect(cap.gap?.fix).toContain('--install-agent-gates --tools claude --force');
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
@@ -163,7 +170,7 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
     try {
       fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
       fs.writeFileSync(path.join(root, '.claude', 'settings.json'), '{"hooks":[]}');
-      fs.writeFileSync(path.join(root, '.mcp.json'), '{"mcpServers":{"other":{}}}');
+      fs.writeFileSync(path.join(root, '.mcp.json'), '"ark"junk: {');
 
       expect(detectWritePathCapabilities(root, 'claude')).toMatchObject({
         mode: 'none',
