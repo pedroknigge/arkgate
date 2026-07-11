@@ -156,7 +156,7 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 6 | `S06` | `done` | S | `S03`–`S05` | README, docs, doctor, and site use one truthful support matrix |
 | 7 | `S07` | `done` | S | `S06` | ArkGate is retained as the canonical product identity |
 | 8 | `C01` | `done` | M | `S07` | `ark.config.json` has a versioned JSON Schema and migrations |
-| 9 | `C02` | `todo` | M | `C01` | A stable analysis IR and programmatic API are specified |
+| 9 | `C02` | `done` | M | `C01` | A stable analysis IR and programmatic API are specified |
 | 10 | `C03` | `todo` | L | `C02` | CLI/MCP scanning uses one importable engine without generated duplication |
 | 11 | `C04` | `todo` | L | `C03` | Symbol-aware analysis defines and enforces the supported soundness envelope |
 | 12 | `C05` | `todo` | M | `C04` | CLI, MCP, ESLint, hooks, and Action have contract parity |
@@ -171,7 +171,7 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 21 | `V04` | `todo` | M | `C06`, `V03` | Package and release artifacts are small, complete, and attestable |
 | 22 | `V05` | `todo` | M | all prior items | Independent audit passes and the product may exit beta |
 
-**Next:** `C02`. Specify the stable analysis IR and programmatic API.
+**Next:** `C03`. Move CLI/MCP scanning behind the importable engine.
 
 ---
 
@@ -512,7 +512,7 @@ after the change.
 
 ### C02 — Specify the stable analysis IR and API
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `C01`
 
 **Implementation**
@@ -523,6 +523,9 @@ after the change.
 - Define versioned IR types for files, layers, resolved/unresolved edges, symbol capability uses,
   evidence, violations, and content/policy hashes.
 - Add contract tests before moving scanner implementation.
+
+**Evidence:** `docs/adr/0002-analysis-engine-ownership.md`, `src/domain/analysis.ts`,
+`src/kernel/analysis.ts`, and `tests/unit/analysis/analysisApi.test.ts`.
 
 **Acceptance**
 
@@ -875,9 +878,9 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: C02 — Specify the stable analysis IR and API
-First result: add the engine-ownership ADR and failing public contract tests for the minimal API/IR
-Then: define deterministic loadContract/analyzeProject/analyzeChange/explainViolation boundaries
-Primary files: ADR, public API types, analysis IR fixtures, package exports, contract tests
-Required finish: one documented owner + deterministic IR + in-memory edit input + no runtime type leaks
+Item: C03 — Move scanning behind the importable engine
+First result: inventory the CLI/MCP scanner paths and write contract tests against C02's API
+Then: route adapters through the engine without generated scanner duplication
+Primary files: scanner adapters, importable engine integration, and parity fixtures
+Required finish: CLI/MCP scanning shares C02's engine and public contract
 ```

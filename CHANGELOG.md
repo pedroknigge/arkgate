@@ -6,6 +6,9 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## 2.13.0 — 2026-07-11
 
+- Added the stable, deterministic analysis IR and public in-memory API: `loadContract`,
+  `analyzeProject`, `analyzeChange`, and `explainViolation`.
+
 ### Fixed
 
 - **Temp-worktree release verification:** Codex multi-project fixtures now keep the simulated
