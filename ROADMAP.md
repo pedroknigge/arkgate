@@ -739,7 +739,7 @@ and `Semgrep CE` checks plus the Node/TypeScript/parity matrix, and was squash-m
 
 ### O04 — Build clean-room onboarding fixtures
 
-- **Status:** `doing`
+- **Status:** `done`
 - **Depends on:** `O03`
 
 **Implementation**
@@ -764,7 +764,10 @@ idempotency, and no unrelated host files. The canonical capability checks confir
 repair only for Claude/Grok, and advisory write plus CI merge gate for Cursor/Codex. The matrix
 uses only temporary lockfile signals and does not execute a package-manager install. Typecheck,
 JavaScript syntax, and strict Ark configuration checks pass locally. CI now shards the 12 fixture
-groups; retain `doing` until its required remote checks pass on the published commit.
+groups. PR [#43](https://github.com/pedroknigge/arkgate/pull/43) used GitHub-verified signed
+commit `771343d`, passed all 12 `Onboarding <shape>/<size>` CI shards, the full `build` gate
+(6m57s), security, compatibility, and adapter-parity checks, and was squash-merged as
+`9c762c9be9e1606017b66b3e40573b0dca00dfa6`.
 
 ---
 
@@ -939,13 +942,10 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: O04 — Build clean-room onboarding fixtures
-First result: create the 12 fixture descriptors for library, API, frontend, and monorepo shapes
-at small, medium, and large sizes
-Then: execute the 144 deterministic host/package-manager cells without network installs and expose
-their result schema and focused test command
-Primary files: tests/fixtures/onboarding/, onboarding-matrix test harness, eval/onboarding/, CI
-sharding only if required
-Required finish: every supported cell has preview/apply parity, truthful host capability, at least
-90% governed coverage for Enforce, strict merge success, idempotency, and no unrelated host files
+Item: V01 — Add real cold, warm, and incremental budgets
+First result: freeze a versioned benchmark schema and runner metadata for realistic generated trees
+Then: measure cold, warm cache-hit, and one-file incremental analysis at 1k/10k/50k scale in CI
+Primary files: scripts/ark-scale-bench.mjs, benchmark fixtures/results, and CI performance job
+Required finish: documented p50/p95, cache-hit proof, bounded peak RSS, and enforced non-flaky
+latency and memory budgets
 ```
