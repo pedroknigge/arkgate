@@ -1,14 +1,5 @@
 #!/usr/bin/env node
-/**
- * Q5 — ark-check scale/budget harness.
- * Generates fixture trees of N governed files, runs ark-check cold+warm,
- * reports p50/p95-style timings and peak RSS. Does not invent fake pass timings:
- * budgets are advisory unless --fail-budget is set with an explicit --max-ms.
- *
- * Usage:
- *   node scripts/ark-scale-bench.mjs [--sizes 50,200] [--runs 3] [--json] [--keep]
- *   node scripts/ark-scale-bench.mjs --sizes 50 --runs 2 --max-ms 120000 --fail-budget
- */
+/** V01 reproducible cold, warm-cache, and incremental analysis benchmark. */
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -18,16 +9,18 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, '..');
 const CHECK = path.join(REPO, 'bin', 'ark-check.mjs');
+const WORKER = path.join(REPO, 'scripts', 'ark-scale-worker.mjs');
+const BUDGETS = path.join(REPO, 'eval', 'performance', 'budgets.v1.json');
 
 function parseArgs(argv) {
   const out = {
-    sizes: [50, 200],
-    runs: 3,
+    sizes: [1000, 10000, 50000],
+    runs: 5,
     json: false,
     keep: false,
-    maxMs: null,
     failBudget: false,
     outDir: null,
+    out: null,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -39,10 +32,10 @@ function parseArgs(argv) {
       .map((s) => Number(s.trim()))
       .filter((n) => Number.isFinite(n) && n > 0);
     else if (a === '--runs') out.runs = Math.max(1, Number(argv[++i]) || 1);
-    else if (a === '--max-ms') out.maxMs = Number(argv[++i]);
     else if (a === '--out-dir') out.outDir = argv[++i];
+    else if (a === '--out') out.out = argv[++i];
   }
-  if (out.sizes.length === 0) out.sizes = [50];
+  if (out.sizes.length === 0) out.sizes = [1000];
   return out;
 }
 
@@ -52,44 +45,120 @@ function percentile(sorted, p) {
   return sorted[idx];
 }
 
+function writeJson(file, value) {
+  fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
+}
+
 function writeFixture(root, n) {
-  fs.mkdirSync(path.join(root, 'src', 'domain'), { recursive: true });
-  fs.mkdirSync(path.join(root, 'src', 'app'), { recursive: true });
+  for (const directory of [
+    'src/domain',
+    'src/services',
+    'src/adapters',
+    'src/components',
+    'packages/core/src/domain',
+    'packages/api/src/services',
+    'packages/web/src/components',
+  ]) {
+    fs.mkdirSync(path.join(root, directory), { recursive: true });
+  }
   fs.writeFileSync(
     path.join(root, 'ark.config.json'),
     JSON.stringify(
       {
-        include: ['src'],
+        include: ['src', 'packages'],
         layers: [
-          { name: 'DomainModel', patterns: ['src/domain/**'], optional: true },
-          {
-            name: 'ApplicationOrchestration',
-            patterns: ['src/app/**'],
-            optional: true,
-          },
+          { name: 'DomainModel', patterns: ['src/domain/**', 'packages/*/src/domain/**'] },
+          { name: 'ApplicationOrchestration', patterns: ['src/services/**', 'packages/*/src/services/**'] },
+          { name: 'PersistenceAdapters', patterns: ['src/adapters/**'] },
+          { name: 'PresentationAdapters', patterns: ['src/components/**', 'packages/*/src/components/**'] },
         ],
-        rules: [
-          { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
-          { from: 'ApplicationOrchestration', to: 'DomainModel', allowed: true },
-        ],
+        rules: [{ from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false }],
       },
       null,
       2
     )
   );
-  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'ark-scale-fixture' }));
+  writeJson(path.join(root, 'package.json'), {
+    name: 'ark-scale-fixture',
+    private: true,
+    type: 'module',
+    workspaces: ['packages/*'],
+  });
+  writeJson(path.join(root, 'packages/core/package.json'), { name: '@ark-scale/core', private: true, type: 'module' });
+  writeJson(path.join(root, 'packages/api/package.json'), {
+    name: '@ark-scale/api', private: true, type: 'module', dependencies: { '@ark-scale/core': 'workspace:*' },
+  });
+  writeJson(path.join(root, 'packages/web/package.json'), {
+    name: '@ark-scale/web', private: true, type: 'module', dependencies: { '@ark-scale/api': 'workspace:*' },
+  });
+  fs.writeFileSync(path.join(root, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+  writeJson(path.join(root, 'tsconfig.json'), {
+    compilerOptions: {
+      baseUrl: '.',
+      module: 'NodeNext',
+      moduleResolution: 'NodeNext',
+      paths: {
+        '@shared/*': ['src/domain/*'],
+        '@core/*': ['packages/core/src/*'],
+        '@api/*': ['packages/api/src/*'],
+      },
+    },
+    include: ['src', 'packages'],
+  });
+  fs.writeFileSync(path.join(root, 'src/domain/shared.ts'), 'export type Shared = { readonly id: string };\n');
+  try {
+    fs.symlinkSync(path.join(root, 'packages', 'core'), path.join(root, 'packages', 'core-link'), 'junction');
+  } catch {
+    // A symlink is a fixture signal; filesystems without support still exercise the remaining tree.
+  }
+  const roots = [
+    'src/domain', 'src/services', 'src/adapters', 'src/components',
+    'packages/core/src/domain', 'packages/api/src/services', 'packages/web/src/components',
+  ];
+  const extensions = ['.ts', '.mts', '.cts', '.js'];
   for (let i = 0; i < n; i++) {
-    const dir = i % 2 === 0 ? 'domain' : 'app';
+    const directory = roots[i % roots.length];
+    const extension = extensions[i % extensions.length];
+    const file = `f${i}${extension}`;
+    const previous = i > 0 && Math.floor(i / roots.length) === Math.floor((i - 1) / roots.length)
+      ? `import { value${i - 1} } from './f${i - 1}${extensions[(i - 1) % extensions.length]}';\n`
+      : '';
+    const alias = i % 29 === 0 ? "import type { Shared } from '@shared/shared';\n" : '';
+    const suffix = i > 0 && previous ? ` + value${i - 1}` : '';
     fs.writeFileSync(
-      path.join(root, 'src', dir, `f${i}.ts`),
-      `export const v${i} = ${i};\nexport type T${i} = { n: number };\n`
+      path.join(root, directory, file),
+      `${previous}${alias}export const value${i} = ${i}${suffix};\nexport type Model${i} = { id: string };\n`
     );
   }
 }
 
-function runCheck(root) {
+function sourceFiles(root) {
+  const out = [];
+  const visit = (directory) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'core-link') continue;
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(absolute);
+      else if (/\.(?:[cm]?[jt]s|tsx|jsx)$/.test(entry.name)) out.push(absolute);
+    }
+  };
+  visit(root);
+  return out.sort();
+}
+
+function parsePeakRss(stderr) {
+  if (process.platform === 'linux') {
+    const kib = stderr.trim().split(/\s+/).at(-1);
+    return /^\d+$/.test(kib || '') ? Number(kib) * 1024 : null;
+  }
+  const match = stderr.match(/(\d+)\s+maximum resident set size/);
+  return match ? Number(match[1]) : null;
+}
+
+function runTimed(command, args, root) {
   const start = process.hrtime.bigint();
-  const result = spawnSync(process.execPath, [CHECK, '--root', root, '--config', 'ark.config.json', '--no-cache'], {
+  const useLinuxTime = process.platform === 'linux';
+  const result = spawnSync(useLinuxTime ? '/usr/bin/time' : command, useLinuxTime ? ['-f', '%M', command, ...args] : args, {
     cwd: root,
     encoding: 'utf8',
     env: process.env,
@@ -99,10 +168,73 @@ function runCheck(root) {
   return {
     status: result.status ?? 1,
     ms,
-    // Child process RSS is not available from spawnSync without /usr/bin/time — leave null.
-    peakRssBytes: null,
+    peakRssBytes: useLinuxTime ? parsePeakRss(result.stderr || '') : null,
+    stdout: result.stdout || '',
     stderrTail: (result.stderr || '').slice(-200),
   };
+}
+
+function runCheck(root, noCache = false) {
+  return runTimed(process.execPath, [CHECK, '--root', root, '--config', 'ark.config.json', ...(noCache ? ['--no-cache'] : [])], root);
+}
+
+function cacheHitCount(root) {
+  try {
+    const cache = JSON.parse(fs.readFileSync(path.join(root, 'node_modules', '.cache', 'ark-check.json'), 'utf8'));
+    return sourceFiles(root).filter((file) => {
+      const relative = path.relative(root, file).split(path.sep).join('/');
+      const cached = cache.files?.[relative];
+      const stat = fs.statSync(file);
+      return cached?.fileKey === `${stat.mtimeMs}:${stat.size}`;
+    }).length;
+  } catch {
+    return 0;
+  }
+}
+
+function runIncremental(root) {
+  const files = sourceFiles(root);
+  const changedFile = path.relative(root, files[Math.floor(files.length / 2)]).split(path.sep).join('/');
+  const result = runTimed(process.execPath, [WORKER, '--root', root, '--change', changedFile], root);
+  let payload = null;
+  try {
+    payload = JSON.parse(result.stdout || '{}');
+  } catch {
+    // Kept as a failed sample below.
+  }
+  return { ...result, ...payload };
+}
+
+function summary(samples) {
+  const times = samples.map((sample) => sample.ms).filter(Number.isFinite);
+  const sorted = [...times].sort((a, b) => a - b);
+  return {
+    samples,
+    p50Ms: percentile(sorted, 50),
+    p95Ms: percentile(sorted, 95),
+    maxMs: sorted.at(-1) ?? null,
+    minMs: sorted[0] ?? null,
+    failures: samples.filter((sample) => sample.status !== 0).length,
+    peakRssBytes: Math.max(...samples.map((sample) => sample.peakRssBytes ?? 0)),
+  };
+}
+
+function loadBudgets() {
+  return JSON.parse(fs.readFileSync(BUDGETS, 'utf8'));
+}
+
+function budgetFailures(report, budgets) {
+  const failures = [];
+  const cold = report.results.find((result) => result.size === budgets.scenarios.cold.size)?.cold;
+  const incremental = report.results.find((result) => result.size === budgets.scenarios.incremental.size)?.incremental;
+  if (cold && cold.p95Ms > budgets.scenarios.cold.maxP95Ms) failures.push(`cold p95 ${cold.p95Ms}ms exceeds ${budgets.scenarios.cold.maxP95Ms}ms`);
+  if (incremental && incremental.p95Ms >= budgets.scenarios.incremental.maxP95Ms) failures.push(`incremental p95 ${incremental.p95Ms}ms is not below ${budgets.scenarios.incremental.maxP95Ms}ms`);
+  for (const result of report.results) {
+    if (result.warm.cacheHits < budgets.scenarios.warm.minCacheHits) failures.push(`warm cache has ${result.warm.cacheHits} hits for n=${result.size}`);
+    if (result.peakRssBytes > budgets.scenarios.memory.maxPeakRssBytes) failures.push(`peak RSS ${result.peakRssBytes} exceeds ${budgets.scenarios.memory.maxPeakRssBytes}`);
+    if (result.status !== 0) failures.push(`scenario failure for n=${result.size}`);
+  }
+  return failures;
 }
 
 function main() {
@@ -112,78 +244,78 @@ function main() {
     : fs.mkdtempSync(path.join(os.tmpdir(), 'ark-scale-'));
   fs.mkdirSync(base, { recursive: true });
 
+  const budgets = loadBudgets();
   const results = [];
   for (const size of args.sizes) {
     const root = path.join(base, `n${size}`);
     fs.rmSync(root, { recursive: true, force: true });
     writeFixture(root, size);
-    const times = [];
-    let lastStatus = 1;
-    for (let r = 0; r < args.runs; r++) {
-      const one = runCheck(root);
-      times.push(one.ms);
-      lastStatus = one.status;
-    }
-    const sorted = [...times].sort((a, b) => a - b);
-    const cold = times[0];
-    const warm = times.length > 1 ? times[times.length - 1] : times[0];
+    const cachePath = path.join(root, 'node_modules', '.cache', 'ark-check.json');
+    fs.rmSync(cachePath, { force: true });
+    const cold = summary(Array.from({ length: args.runs }, () => runCheck(root, true)));
+    runCheck(root); // primes the real ark-check cache outside the measured warm samples
+    const warm = summary(Array.from({ length: args.runs }, () => runCheck(root)));
+    warm.cacheHits = cacheHitCount(root);
+    const incremental = summary(Array.from({ length: args.runs }, () => runIncremental(root)));
+    incremental.policyHashPreserved = incremental.samples.every((sample) => sample.policyHashPreserved === true);
+    incremental.contentHashPreserved = incremental.samples.every((sample) => sample.contentHashPreserved === true);
+    const peakRssBytes = Math.max(cold.peakRssBytes, warm.peakRssBytes, incremental.peakRssBytes);
     results.push({
       size,
       runs: args.runs,
-      status: lastStatus,
-      coldMs: cold,
-      warmMs: warm,
-      p50Ms: percentile(sorted, 50),
-      p95Ms: percentile(sorted, 95),
-      maxMs: sorted[sorted.length - 1],
-      minMs: sorted[0],
-      samplesMs: times,
+      status: cold.failures + warm.failures + incremental.failures === 0 ? 0 : 1,
+      cold,
+      warm,
+      incremental,
+      peakRssBytes,
+      // Compatibility summary for the former Q5 contract.
+      p50Ms: cold.p50Ms,
+      p95Ms: cold.p95Ms,
     });
   }
 
   const report = {
+    schemaVersion: 1,
     tool: 'ark-scale-bench',
-    check: CHECK,
-    base,
+    runner: { platform: process.platform, arch: process.arch, node: process.version },
+    budgets: { schemaVersion: budgets.schemaVersion, path: path.relative(REPO, BUDGETS) },
     results,
     generatedAt: new Date().toISOString(),
   };
+  const failures = budgetFailures(report, budgets);
+  report.ok = failures.length === 0;
+  report.failures = failures;
 
   if (!args.keep && !args.outDir) {
     try {
       fs.rmSync(base, { recursive: true, force: true });
-      report.base = '(deleted)';
     } catch {
       /* keep */
     }
   }
 
+  if (args.out) {
+    const target = path.resolve(args.out);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, `${JSON.stringify(report, null, 2)}\n`);
+  }
   if (args.json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
     console.log('Ark scale bench (Q5)');
     for (const row of results) {
       console.log(
-        `  n=${row.size} runs=${row.runs} cold=${row.coldMs.toFixed(1)}ms warm=${row.warmMs.toFixed(1)}ms ` +
-          `p50=${row.p50Ms?.toFixed(1)}ms p95=${row.p95Ms?.toFixed(1)}ms status=${row.status}`
+        `  n=${row.size} cold p95=${row.cold.p95Ms?.toFixed(1)}ms warm p95=${row.warm.p95Ms?.toFixed(1)}ms ` +
+          `incremental p95=${row.incremental.p95Ms?.toFixed(1)}ms cacheHits=${row.warm.cacheHits} rss=${row.peakRssBytes} status=${row.status}`
       );
     }
   }
 
-  if (args.failBudget && args.maxMs != null && Number.isFinite(args.maxMs)) {
-    const breach = results.find((r) => r.p95Ms != null && r.p95Ms > args.maxMs);
-    if (breach) {
-      console.error(
-        `Budget fail: n=${breach.size} p95=${breach.p95Ms}ms > max-ms=${args.maxMs}`
-      );
-      process.exitCode = 1;
-      return;
-    }
-  }
-  // Structural: harness must produce finite timings
-  if (results.some((r) => !Number.isFinite(r.p50Ms))) {
+  if (args.failBudget && failures.length > 0) {
+    console.error(`Budget fail: ${failures.join('; ')}`);
     process.exitCode = 1;
   }
+  if (results.some((result) => !Number.isFinite(result.cold.p50Ms) || result.peakRssBytes <= 0)) process.exitCode = 1;
 }
 
 main();

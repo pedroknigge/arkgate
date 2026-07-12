@@ -203,8 +203,17 @@ export function resolveRelativeFallback(fromFile, specifier) {
  * lookup); edges that resolve outside the root are still skipped.
  */
 export function resolveImport(ts, specifier, containingFile, options, host, root) {
-  const res = ts.resolveModuleName(specifier, containingFile, options, host);
-  let file = res.resolvedModule?.resolvedFileName;
+  let file;
+  // Explicit relative extensions are already unambiguous on disk. Avoid a full TypeScript
+  // resolver walk for the common ESM/CJS form; retain TypeScript as the fallback for aliases,
+  // packages, extensionless imports, and any explicit path that is not an existing file.
+  if (specifier.startsWith('.') && path.extname(specifier)) {
+    file = resolveRelativeFallback(containingFile, specifier);
+  }
+  if (!file) {
+    const res = ts.resolveModuleName(specifier, containingFile, options, host);
+    file = res.resolvedModule?.resolvedFileName;
+  }
   if (!file && specifier.startsWith('.')) {
     file = resolveRelativeFallback(containingFile, specifier);
   }

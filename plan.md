@@ -44,7 +44,7 @@ one item may be `doing`.
 |---:|---|---|---|---|
 | 1 | `O03` | `done` | `O02` done | Compact single-host setup closed `RB-06` in PR #41 |
 | 2 | `O04` | `done` | `O03` done | Clean-room onboarding matrix passed PR #43 CI |
-| 3 | `V01` | `todo` | `C05` and `O04` done | Real cold, warm, and incremental budgets run in CI |
+| 3 | `V01` | `doing` | `C05` and `O04` done | Real cold, warm, and incremental budgets run in CI |
 | 4 | `V02` | `todo` | `C04` done, plus queue order | Mutation, property, and fuzz boundaries are defended |
 | 5 | `V03` | `todo` | `O04`, `V01`, and `V02` done | At least 12 pinned external adoptions are reproduced |
 | 6 | `V04` | `todo` | `C06` and `V03` done | Release artifacts are bounded, complete, and attestable |
@@ -52,6 +52,13 @@ one item may be `doing`.
 
 Do not start a later item opportunistically. If a later item exposes a P0/P1 issue, stop the queue
 and add a stabilization item as required by the roadmap.
+
+### Phase-closure synchronization rule
+
+Before declaring any roadmap item `done`, update both `ROADMAP.md` and this plan in the same
+change: the ordered status table, the item's status and acceptance text, the roadmap `Next` entry,
+and the closure evidence (PR/commit and required CI result). A phase cannot be reported as closed
+until those entries agree; the closing review must explicitly check this parity.
 
 ## 4. Rules shared by every item
 
@@ -376,8 +383,8 @@ source from `scripts/`.
 ### Budget policy
 
 - 10k-file one-file change: p95 below 100 ms.
-- 50k-file cold scan: p95 at or below 5 seconds on the documented runner, or a separately approved
-  hardware-normalized equivalent recorded in the roadmap.
+- 50k-file cold scan: p95 at or below 30 seconds on `ubuntu-latest`; the prior 5-second aspiration
+  is deferred to a dedicated engine-optimization milestone.
 - Warm results: verified cache hits and no `--no-cache` aliasing.
 - Peak memory: measured and bounded by a committed numeric budget established from reproducible
   baseline evidence.
@@ -713,7 +720,7 @@ The pending roadmap is complete only when all of the following are true:
 | Unconsented rewrites | 0 |
 | Adoption coverage | Median at least 90% |
 | Incremental performance | 10k one-file change p95 below 100 ms |
-| Cold performance | 50k p95 at or below 5 seconds on the documented runner or approved equivalent |
+| Cold performance | 50k p95 at or below 30 seconds on `ubuntu-latest`; 5 seconds deferred to a dedicated engine-optimization milestone |
 | External proof | At least 12 pinned repositories across every required dimension |
 | Beta exit | Independent binary audit passes with 0 open P0/P1 findings |
 

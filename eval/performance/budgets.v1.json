@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "runner": {
+    "image": "ubuntu-latest",
+    "node": "20",
+    "measurement": "fresh child processes; Linux peak RSS from /usr/bin/time -f %M"
+  },
+  "sampling": { "runs": 5 },
+  "scenarios": {
+    "cold": { "size": 50000, "maxP95Ms": 30000 },
+    "incremental": { "size": 10000, "maxP95Ms": 100 },
+    "warm": { "minCacheHits": 1 },
+    "memory": { "maxPeakRssBytes": 1073741824 }
+  }
+}

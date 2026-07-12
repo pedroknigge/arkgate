@@ -54,6 +54,24 @@ jobs:
         env:
           O04_SHARD: ${{ matrix.fixture }}
 
+  performance:
+    name: Performance budgets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Enforce V01 performance budgets
+        run: npm run bench:scale -- --sizes 1000,10000,50000 --runs 5 --fail-budget --json --out performance.v1.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: performance-v1-${{ github.sha }}
+          path: performance.v1.json
+
   build:
     runs-on: ubuntu-latest
     steps:

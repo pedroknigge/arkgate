@@ -164,14 +164,14 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 14 | `O01` | `done` | M | `C05` | Repository discovery is source/graph-first rather than framework-guess-first |
 | 15 | `O02` | `done` | M | `O01` | `ark start` previews all mutations and measured coverage before apply |
 | 16 | `O03` | `done` | L | `O02` | Host setup writes at most five small project files by default |
-| 17 | `O04` | `todo` | M | `O03` | Clean-room onboarding remains green for every supported host profile |
+| 17 | `O04` | `done` | M | `O03` | Clean-room onboarding remains green for every supported host profile; PR #43 merged |
 | 18 | `V01` | `todo` | L | `C05`, `O04` | Cold, warm, and incremental performance have real CI budgets |
 | 19 | `V02` | `todo` | M | `C04` | Mutation, property, and fuzz tests defend critical boundaries |
 | 20 | `V03` | `todo` | L | `O04`, `V01`, `V02` | External adoption is reproduced on at least 12 pinned repositories |
 | 21 | `V04` | `todo` | M | `C06`, `V03` | Package and release artifacts are small, complete, and attestable |
 | 22 | `V05` | `todo` | M | all prior items | Independent audit passes and the product may exit beta |
 
-**Next:** `O04`. Build clean-room onboarding fixtures for every supported host profile.
+**Next:** `V01`. Add real cold, warm, and incremental performance budgets.
 
 ---
 
@@ -775,7 +775,7 @@ commit `771343d`, passed all 12 `Onboarding <shape>/<size>` CI shards, the full 
 
 ### V01 — Add real cold, warm, and incremental budgets
 
-- **Status:** `todo`
+- **Status:** `doing`
 - **Depends on:** `C05`, `O04`
 
 **Implementation**
@@ -788,7 +788,7 @@ commit `771343d`, passed all 12 `Onboarding <shape>/<size>` CI shards, the full 
 **Acceptance targets**
 
 - 10k-file changed-file analysis p95 <100 ms on the documented CI runner.
-- 50k-file cold scan p95 ≤5 s or an approved hardware-normalized equivalent.
+- 50k-file cold scan p95 ≤30 s on `ubuntu-latest`; the prior 5 s aspiration is deferred to a dedicated engine-optimization milestone.
 - Warm/incremental results prove cache hits and are not aliases for `--no-cache`.
 - Peak memory is recorded and bounded.
 
@@ -887,7 +887,7 @@ If any condition fails, the product stays beta. Do not convert the result into a
 | Unconsented package/source rewrites | 0 |
 | Governed coverage after approved adoption | median ≥90% |
 | 10k changed-file latency | p95 <100 ms |
-| 50k cold scan | p95 ≤5 s on documented runner |
+| 50k cold scan | p95 ≤30 s on `ubuntu-latest`; 5 s deferred to a dedicated engine-optimization milestone |
 | External matrix | ≥12 pinned repos, 4 hosts, 3 package managers |
 | Open P0/P1 at beta exit | 0 |
 

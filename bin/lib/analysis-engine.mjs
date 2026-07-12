@@ -543,7 +543,7 @@ function localDeclaration(ts, checker, sourceFile, node) {
   );
 }
 function extractSemanticDependencies(ts, sourceFile) {
-  const checker = singleFileChecker(ts, sourceFile);
+  let checker;
   const dependencies = [];
   const add = (node, kind, specifier, typeOnly = false) => dependencies.push({
     specifier,
@@ -562,7 +562,13 @@ function extractSemanticDependencies(ts, sourceFile) {
       add(node, "require", literalText(ts, node.moduleReference.expression));
     } else if (ts.isCallExpression(node)) {
       const dynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
-      const directRequire = ts.isIdentifier(node.expression) && node.expression.text === "require" && !localDeclaration(ts, checker, sourceFile, node.expression);
+      const requireCall = ts.isIdentifier(node.expression) && node.expression.text === "require";
+      const directRequire = requireCall && !localDeclaration(
+        ts,
+        checker ?? (checker = singleFileChecker(ts, sourceFile)),
+        sourceFile,
+        node.expression
+      );
       if (dynamicImport || directRequire) {
         add(node, directRequire ? "require" : "dynamic-import", literalText(ts, node.arguments[0]));
       }
@@ -602,6 +608,7 @@ function bestForbiddenMatch(entries, segments) {
   return void 0;
 }
 function collectForbiddenCapabilityUses(ts, sourceFile, forbidden) {
+  if (forbidden.length === 0) return [];
   const entries = new Set(forbidden);
   const checker = singleFileChecker(ts, sourceFile);
   const aliases = /* @__PURE__ */ new Map();
