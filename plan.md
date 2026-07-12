@@ -44,7 +44,7 @@ one item may be `doing`.
 |---:|---|---|---|---|
 | 1 | `O03` | `done` | `O02` done | Compact single-host setup closed `RB-06` in PR #41 |
 | 2 | `O04` | `done` | `O03` done | Clean-room onboarding matrix passed PR #43 CI |
-| 3 | `V01` | `doing` | `C05` and `O04` done | Real cold, warm, and incremental budgets run in CI |
+| 3 | `V01` | `done` | `C05` and `O04` done | PR #45 (`d1400ca`) passed real cold, warm, and incremental budgets in CI |
 | 4 | `V02` | `todo` | `C04` done, plus queue order | Mutation, property, and fuzz boundaries are defended |
 | 5 | `V03` | `todo` | `O04`, `V01`, and `V02` done | At least 12 pinned external adoptions are reproduced |
 | 6 | `V04` | `todo` | `C06` and `V03` done | Release artifacts are bounded, complete, and attestable |
@@ -345,6 +345,12 @@ for cold scans, warm scans with verified cache hits, changed-file analysis, and 
 - Leaves `peakRssBytes` as `null`.
 - Defaults to 50 and 200 files instead of the 1k/10k/50k roadmap sizes.
 - Does not benchmark one-file `analyzeChange` behavior.
+
+### Closure evidence
+
+PR #45 at `d1400ca` passed the full GitHub Actions matrix. Its `Performance budgets` job on
+`ubuntu-latest` passed the committed 1k/10k/50k latency, cache-hit, and RSS gates; the artifact is
+tied to the candidate SHA. V01 is done.
 
 ### Work packages
 

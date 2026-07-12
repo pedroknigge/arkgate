@@ -165,13 +165,13 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 15 | `O02` | `done` | M | `O01` | `ark start` previews all mutations and measured coverage before apply |
 | 16 | `O03` | `done` | L | `O02` | Host setup writes at most five small project files by default |
 | 17 | `O04` | `done` | M | `O03` | Clean-room onboarding remains green for every supported host profile; PR #43 merged |
-| 18 | `V01` | `todo` | L | `C05`, `O04` | Cold, warm, and incremental performance have real CI budgets |
+| 18 | `V01` | `done` | L | `C05`, `O04` | Cold, warm, and incremental performance have real CI budgets; PR #45 passed green CI |
 | 19 | `V02` | `todo` | M | `C04` | Mutation, property, and fuzz tests defend critical boundaries |
 | 20 | `V03` | `todo` | L | `O04`, `V01`, `V02` | External adoption is reproduced on at least 12 pinned repositories |
 | 21 | `V04` | `todo` | M | `C06`, `V03` | Package and release artifacts are small, complete, and attestable |
 | 22 | `V05` | `todo` | M | all prior items | Independent audit passes and the product may exit beta |
 
-**Next:** `V01`. Add real cold, warm, and incremental performance budgets.
+**Next:** `V02`. Expand mutation, property, and fuzz assurance.
 
 ---
 
@@ -775,7 +775,7 @@ commit `771343d`, passed all 12 `Onboarding <shape>/<size>` CI shards, the full 
 
 ### V01 — Add real cold, warm, and incremental budgets
 
-- **Status:** `doing`
+- **Status:** `done`
 - **Depends on:** `C05`, `O04`
 
 **Implementation**
@@ -791,6 +791,9 @@ commit `771343d`, passed all 12 `Onboarding <shape>/<size>` CI shards, the full 
 - 50k-file cold scan p95 ≤30 s on `ubuntu-latest`; the prior 5 s aspiration is deferred to a dedicated engine-optimization milestone.
 - Warm/incremental results prove cache hits and are not aliases for `--no-cache`.
 - Peak memory is recorded and bounded.
+
+**Closure evidence:** PR #45 (`d1400ca`) passed the full CI matrix, including `Performance budgets`
+on `ubuntu-latest`, where the committed 1k/10k/50k report met latency, cache-hit, and RSS budgets.
 
 ### V02 — Expand mutation, property, and fuzz assurance
 
