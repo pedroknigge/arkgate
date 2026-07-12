@@ -105,6 +105,12 @@ export function collectSafetyDiagnostics(ts, root, config, files) {
 
   for (const file of files) {
     const source = fs.readFileSync(file, 'utf8');
+    // Most source files cannot contain a safety finding. Avoid parsing a second AST when the
+    // lexical markers for every supported diagnostic are absent; a match only opts into the
+    // existing exact AST analysis, so this cannot suppress a finding.
+    if (!/@ts-(?:ignore|nocheck)\b|\bany\b|\b(?:import|require)\s*\(|\barkgate(?:\/runtime)?\b/.test(source)) {
+      continue;
+    }
     const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
     const relFile = normalize(path.relative(root, file));
 

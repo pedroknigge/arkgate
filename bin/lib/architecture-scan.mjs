@@ -90,6 +90,9 @@ export function scanSourceFile(ts, root, config, rules, manifestIntentLayers, fi
     );
   }
 
+  const needsPolicyWalk =
+    /\bpublish\s*\(|\bintent\b/.test(source) ||
+    /['"`]\s*[A-Z][A-Za-z0-9_]*\./.test(source);
   const visit = (node) => {
     if (ts.isCallExpression(node)) {
       if (isPublishCall(ts, node)) {
@@ -154,7 +157,7 @@ export function scanSourceFile(ts, root, config, rules, manifestIntentLayers, fi
 
     ts.forEachChild(node, visit);
   };
-  visit(sourceFile);
+  if (needsPolicyWalk) visit(sourceFile);
   return {
     contentViolations: violations,
     edges,

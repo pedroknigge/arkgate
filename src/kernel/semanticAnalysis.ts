@@ -93,7 +93,7 @@ export function extractSemanticDependencies(
   ts: any,
   sourceFile: any
 ): SemanticDependency[] {
-  const checker = singleFileChecker(ts, sourceFile);
+  let checker: any;
   const dependencies: SemanticDependency[] = [];
   const add = (
     node: any,
@@ -122,10 +122,16 @@ export function extractSemanticDependencies(
       add(node, 'require', literalText(ts, node.moduleReference.expression));
     } else if (ts.isCallExpression(node)) {
       const dynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
+      const requireCall =
+        ts.isIdentifier(node.expression) && node.expression.text === 'require';
       const directRequire =
-        ts.isIdentifier(node.expression) &&
-        node.expression.text === 'require' &&
-        !localDeclaration(ts, checker, sourceFile, node.expression);
+        requireCall &&
+        !localDeclaration(
+          ts,
+          checker ?? (checker = singleFileChecker(ts, sourceFile)),
+          sourceFile,
+          node.expression
+        );
       if (dynamicImport || directRequire) {
         add(node, directRequire ? 'require' : 'dynamic-import', literalText(ts, node.arguments[0]));
       }
@@ -177,6 +183,7 @@ export function collectForbiddenCapabilityUses(
   sourceFile: any,
   forbidden: readonly string[]
 ): ForbiddenCapabilityUse[] {
+  if (forbidden.length === 0) return [];
   const entries = new Set(forbidden);
   const checker = singleFileChecker(ts, sourceFile);
   const aliases = new Map<unknown, string[]>();

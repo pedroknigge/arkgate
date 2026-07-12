@@ -101,6 +101,7 @@
     "eval:comparative": "node eval/comparative-run.mjs",
     "eval:loop-cost": "node eval/loop-cost-run.mjs",
     "bench:scale": "node scripts/ark-scale-bench.mjs",
+    "test:scale-bench": "npm run build && vitest run tests/unit/scripts/arkScaleBench.test.ts",
     "check:module-budgets": "node scripts/check-module-budgets.mjs",
     "check:package-files": "node scripts/verify-package-files.mjs",
     "clean": "rm -rf dist",
