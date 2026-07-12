@@ -131,6 +131,33 @@ node scripts/ts-compat-matrix.mjs 7.0.2
 | Gate uses native Go typechecker API exclusively | Not required; future if 7.1+ exposes a stable Node API we adopt |
 | User tsconfigs with removed options still “just work” | User must migrate tsconfig (TS6/7); Ark reports resolve/parse failures clearly |
 
+## Static-analysis soundness envelope
+
+ArkGate uses the TypeScript compiler API to extract dependency and ambient-capability facts. The
+same Kernel implementation feeds the library, CLI, MCP write gate, and AICodeGate bundle.
+
+Dependency forms enforced when their module specifier is a string literal:
+
+- ESM `import`, `import type`, side-effect imports, and `export ... from` / `export type ... from`;
+- TypeScript `import x = require("...")`;
+- unshadowed CommonJS `require("...")`;
+- dynamic `import("...")`.
+
+Non-literal `import(expr)` and unshadowed `require(expr)` are reported as unresolved. They are
+advisory by default, fail with `--strict-config`, and may be reviewed at file granularity through
+`dynamicImportAllowlist`. A locally declared `require` function is not treated as CommonJS.
+
+Forbidden capabilities are resolved with single-file TypeScript symbols. Local variables,
+parameters, and imports shadow ambient names; aliases such as `const Clock = Date`, explicit
+`globalThis`, static bracket access, and object destructuring remain detectable. Resolution of
+module paths then uses the nearest tsconfig/jsconfig compiler options, including path aliases,
+project-local packages, workspaces, and symlinked workspace entries.
+
+ArkGate intentionally does not claim soundness for runtime-generated module names, `eval`, custom
+loader functions, proxy-based globals, dynamically computed property keys, or aliases mutated
+after declaration. Those constructs must remain absent from governed pure layers or be handled by
+an explicit project policy. Every newly discovered bypass is minimized into the adversarial corpus.
+
 ## Future (7.1+ programmatic API)
 
 When Microsoft ships a stable Node API for native TypeScript 7.1+:

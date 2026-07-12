@@ -1,8 +1,5 @@
-/**
- * R2: drive real package.json exports + built dist entries for arkgate/runtime
- * and root compat (kernel symbols still on the main barrel).
- */
-import { describe, it, expect, beforeAll } from 'vitest';
+/** C06: the gate and experimental runtime build and package independently. */
+import { beforeAll, describe, expect, it } from 'vitest';
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -11,94 +8,50 @@ import { spawnSync } from 'node:child_process';
 import { withDistLock } from '../../helpers/distLock';
 
 const root = process.cwd();
-const require = createRequire(path.join(root, 'package.json'));
+const runtimeRoot = path.join(root, 'packages/runtime');
+const require = createRequire(path.join(runtimeRoot, 'package.json'));
 
-function ensureBuild() {
+function buildBoth() {
   withDistLock(() => {
-    const runtimeJs = path.join(root, 'dist/runtime/index.js');
-    const runtimeCjs = path.join(root, 'dist/runtime/index.cjs');
-    if (fs.existsSync(runtimeJs) && fs.existsSync(runtimeCjs)) return;
-    const result = spawnSync('npm', ['run', 'build'], {
-      cwd: root,
-      encoding: 'utf8',
-      stdio: 'pipe',
-    });
-    if (result.status !== 0) {
-      throw new Error(
-        `npm run build failed:\n${result.stderr || result.stdout || ''}`
-      );
+    for (const script of ['build', 'build:runtime']) {
+      const result = spawnSync('npm', ['run', script], { cwd: root, encoding: 'utf8' });
+      if (result.status !== 0) throw new Error(result.stderr || result.stdout);
     }
   });
 }
 
-describe('package exports — arkgate/runtime (R2)', () => {
-  beforeAll(() => {
-    ensureBuild();
-  }, 120_000);
+describe('isolated runtime distribution', () => {
+  beforeAll(buildBoth, 120_000);
 
-  it('package.json exports map declares ./runtime with types + import + require', () => {
-    const pkg = JSON.parse(
-      fs.readFileSync(path.join(root, 'package.json'), 'utf8')
-    ) as {
-      exports: Record<string, { types?: string; import?: string; require?: string }>;
-    };
-    expect(pkg.exports['./runtime']).toEqual({
-      types: './dist/runtime/index.d.ts',
-      import: './dist/runtime/index.js',
-      require: './dist/runtime/index.cjs',
-    });
-    // Root still present for compat
-    expect(pkg.exports['.']).toMatchObject({
-      types: './dist/index.d.ts',
-      import: './dist/index.js',
-      require: './dist/index.cjs',
-    });
+  it('keeps the root gate bundle free of runtime and NestJS artifacts', async () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+    expect(pkg.exports['./runtime'].import).toBe('./compat/runtime.js');
+    expect(pkg.exports['./nestjs'].import).toBe('./compat/nestjs.js');
+    expect(fs.existsSync(path.join(root, 'dist/runtime'))).toBe(false);
+    expect(fs.existsSync(path.join(root, 'dist/nestjs'))).toBe(false);
+    const gate = await import(pathToFileURL(path.join(root, 'dist/index.js')).href);
+    expect(typeof gate.createAICodeGate).toBe('function');
+    expect(gate.createStrictArkKernel).toBeUndefined();
+    expect(gate.InMemoryEventBuffer).toBeUndefined();
   });
 
-  it('built dist/runtime artifacts exist', () => {
-    for (const rel of [
-      'dist/runtime/index.js',
-      'dist/runtime/index.cjs',
-      'dist/runtime/index.d.ts',
-      'dist/runtime/index.d.cts',
-    ]) {
-      expect(fs.existsSync(path.join(root, rel)), rel).toBe(true);
-    }
-  });
-
-  it('ESM import of dist/runtime exposes a callable createStrictArkKernel', async () => {
-    const url = pathToFileURL(path.join(root, 'dist/runtime/index.js')).href;
-    const mod = await import(url);
-    expect(typeof mod.createStrictArkKernel).toBe('function');
-    expect(typeof mod.createStrictArkKernelFromConfig).toBe('function');
-    expect(typeof mod.createArkKernel).toBe('function');
-    const ark = mod.createStrictArkKernel({ instanceId: 'r2-runtime-esm' });
-    expect(ark).toBeTruthy();
-    expect(ark.instanceId).toBe('r2-runtime-esm');
-    expect(typeof ark.publisher).toBe('function');
-  });
-
-  it('CJS require of dist/runtime exposes the same kernel factory', () => {
-    const cjsPath = path.join(root, 'dist/runtime/index.cjs');
-    // Bust cache so a rebuild in another suite does not serve a stale module.
+  it('builds the experimental package independently for ESM and CJS', async () => {
+    const esmPath = path.join(runtimeRoot, 'dist/index.js');
+    const cjsPath = path.join(runtimeRoot, 'dist/index.cjs');
+    const esm = await import(pathToFileURL(esmPath).href);
+    expect(typeof esm.createStrictArkKernel).toBe('function');
+    expect(typeof esm.InMemoryEventBuffer).toBe('function');
     delete require.cache[require.resolve(cjsPath)];
-    const mod = require(cjsPath) as {
-      createStrictArkKernel: (opts?: { instanceId?: string }) => {
-        instanceId: string;
-        publisher: unknown;
-      };
-    };
-    expect(typeof mod.createStrictArkKernel).toBe('function');
-    const ark = mod.createStrictArkKernel({ instanceId: 'r2-runtime-cjs' });
-    expect(ark.instanceId).toBe('r2-runtime-cjs');
+    const cjs = require(cjsPath);
+    expect(typeof cjs.createStrictArkKernel).toBe('function');
+    expect(typeof cjs.InMemoryEventBuffer).toBe('function');
   });
 
-  it('root dist entry still re-exports kernel factories (compat)', async () => {
-    const url = pathToFileURL(path.join(root, 'dist/index.js')).href;
-    const mod = await import(url);
-    expect(typeof mod.createStrictArkKernel).toBe('function');
-    expect(typeof mod.createArkKernel).toBe('function');
-    const ark = mod.createStrictArkKernel({ instanceId: 'r2-root-compat' });
-    expect(ark.instanceId).toBe('r2-root-compat');
+  it('labels runtime experimental and publishes no source-tree dependency', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(runtimeRoot, 'package.json'), 'utf8'));
+    expect(pkg.name).toBe('@arkgate/runtime');
+    expect(pkg.version).toMatch(/^0\./);
+    expect(pkg.publishConfig.tag).toBe('experimental');
+    expect(pkg.files).toEqual(['dist', 'README.md']);
   });
 });

@@ -11,7 +11,7 @@ import type { ProjectionRegistry } from '../projections';
 import type { EventBus, EventPublisher, ObservedLayerFlowMode } from '../event-bus';
 import type { IntentCreator } from '../intent';
 import type { IntentName } from '../../domain/types';
-import type { OutboxStore } from '../outbox';
+import type { EventBufferStore } from '../outbox';
 import type { WorkflowEngine } from '../workflow';
 
 export interface ArkKernel {
@@ -22,7 +22,9 @@ export interface ArkKernel {
   metadata: MetadataRegistry;
   auditTrail: AuditTrail;
   eventContracts: EventContractRegistry;
-  outbox: OutboxStore;
+  eventBuffer: EventBufferStore;
+  /** @deprecated Use eventBuffer. */
+  outbox: EventBufferStore;
   projections: ProjectionRegistry;
   policyEngine: PolicyEngine;
   eventBus: EventBus;
@@ -46,7 +48,9 @@ export interface CreateArkKernelOptions {
   policies?: Policy[];
   auditTrail?: AuditTrail;
   eventContracts?: EventContractRegistry;
-  outbox?: OutboxStore;
+  eventBuffer?: EventBufferStore;
+  /** @deprecated Use eventBuffer. */
+  outbox?: EventBufferStore;
   metadata?: MetadataRegistry;
   projections?: ProjectionRegistry;
   /**

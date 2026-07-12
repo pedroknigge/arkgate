@@ -18,11 +18,28 @@ import type { IntentCreator } from '../intent';
 import type { IntentName } from '../../domain/types';
 import type { ArchitectureProfile } from '../layers';
 import { findDeniedEdgeRule } from '../../domain/layerMatch';
+import { classifyPublishFacts, looksLikeArkIntent } from '../../domain/sourcePolicy';
+import {
+  collectForbiddenCapabilityUses,
+  extractSemanticDependencies,
+} from '../semanticAnalysis';
 
 export interface AICodeGatePolicyContext<Context = AICodeGateContext> {
   source: string;
   context?: Context;
 }
+
+type SemanticSourceFileLike = { fileName: string; text: string };
+type SemanticNodeLike = { getStart(sourceFile: unknown): number };
+type TypescriptSemanticHost = {
+  ScriptTarget: { Latest: unknown };
+  createSourceFile(
+    fileName: string,
+    source: string,
+    target: unknown,
+    setParentNodes: boolean
+  ): SemanticSourceFileLike;
+};
 
 export interface AICodeGateOptions<Context = AICodeGateContext> {
   policies?: Policy<AICodeGatePolicyContext<Context>>[];
@@ -158,107 +175,6 @@ function extractModuleSpecifiers(source: string): ModuleSpecifierMatch[] {
   return matches.sort((a, b) => a.index - b.index);
 }
 
-function extractModuleSpecifiersAst(ts: any, source: string): ModuleSpecifierMatch[] {
-  const sourceFile = ts.createSourceFile('generated.ts', source, ts.ScriptTarget.Latest, true);
-  const matches: ModuleSpecifierMatch[] = [];
-  const push = (
-    node: any,
-    value: string,
-    kind: ModuleSpecifierMatch['kind'],
-    typeOnly = false
-  ) => {
-    matches.push({
-      value,
-      index: node.getStart(sourceFile),
-      kind,
-      typeOnly,
-    });
-  };
-
-  const visit = (node: any) => {
-    if (ts.isImportDeclaration(node) && ts.isStringLiteralLike(node.moduleSpecifier)) {
-      const clause = node.importClause;
-      const namedBindings = clause?.namedBindings;
-      const specifiersOnly =
-        clause &&
-        !clause.name &&
-        namedBindings &&
-        ts.isNamedImports(namedBindings) &&
-        namedBindings.elements.length > 0 &&
-        namedBindings.elements.every((element: any) => element.isTypeOnly === true);
-      push(
-        node.moduleSpecifier,
-        node.moduleSpecifier.text,
-        'import',
-        Boolean(clause?.isTypeOnly || specifiersOnly)
-      );
-    } else if (ts.isExportDeclaration(node) && ts.isStringLiteralLike(node.moduleSpecifier)) {
-      const clause = node.exportClause;
-      const specifiersOnly =
-        clause &&
-        ts.isNamedExports(clause) &&
-        clause.elements.length > 0 &&
-        clause.elements.every((element: any) => element.isTypeOnly === true);
-      push(
-        node.moduleSpecifier,
-        node.moduleSpecifier.text,
-        'export',
-        Boolean(node.isTypeOnly || specifiersOnly)
-      );
-    } else if (
-      ts.isImportEqualsDeclaration(node) &&
-      ts.isExternalModuleReference(node.moduleReference)
-    ) {
-      const argument = node.moduleReference.expression;
-      const value = tsStringLiteralText(ts, argument);
-      if (value !== undefined) push(argument, value, 'require');
-    } else if (ts.isCallExpression(node)) {
-      const argument = node.arguments[0];
-      const value = tsStringLiteralText(ts, argument);
-      if (value !== undefined && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
-        push(argument, value, 'dynamic-import');
-      } else if (
-        value !== undefined &&
-        ts.isIdentifier(node.expression) &&
-        node.expression.text === 'require'
-      ) {
-        push(argument, value, 'require');
-      }
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(sourceFile);
-  return matches.sort((a, b) => a.index - b.index);
-}
-
-function nonLiteralDynamicDependencies(
-  ts: any,
-  source: string
-): Array<{ line: number; kind: 'import' | 'require' }> {
-  const sourceFile = ts.createSourceFile('generated.ts', source, ts.ScriptTarget.Latest, true);
-  const uses: Array<{ line: number; kind: 'import' | 'require' }> = [];
-  const visit = (node: any) => {
-    if (ts.isCallExpression(node)) {
-      const dynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
-      const directRequire =
-        ts.isIdentifier(node.expression) && node.expression.text === 'require';
-      const argument = node.arguments[0];
-      if (
-        (dynamicImport || directRequire) &&
-        (!argument || !ts.isStringLiteralLike(argument))
-      ) {
-        uses.push({
-          line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
-          kind: directRequire ? 'require' : 'import',
-        });
-      }
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(sourceFile);
-  return uses;
-}
-
 function extractQuotedStringsAst(ts: any, source: string): StringMatch[] {
   const sourceFile = ts.createSourceFile('generated.ts', source, ts.ScriptTarget.Latest, true);
   const matches: StringMatch[] = [];
@@ -272,9 +188,6 @@ function extractQuotedStringsAst(ts: any, source: string): StringMatch[] {
   return matches;
 }
 
-function looksLikeIntentName(s: string): boolean {
-  return /^(Domain|Application|Adapter|Workflow|Job|Presentation|Reporting|Metadata|Security|Audit|Observability|Kernel)\.[A-Za-z0-9_.]+$/.test(s);
-}
 
 function hasInfrastructureToken(specifier: string): boolean {
   const tokens = specifier
@@ -382,7 +295,7 @@ function tsIsArkPublishCandidate(ts: any, node: any): boolean {
   const firstArg = node.arguments[0];
   const rawIntent = tsStringLiteralText(ts, firstArg);
   return (
-    (rawIntent !== undefined && looksLikeIntentName(rawIntent)) ||
+    (rawIntent !== undefined && looksLikeArkIntent(rawIntent)) ||
     tsObjectHasProperty(ts, firstArg, 'intent') ||
     tsLooksLikeIntentCreatorExpression(ts, firstArg)
   );
@@ -409,116 +322,6 @@ function tsPublishSourceLiteral(ts: any, node: any): string | undefined {
   );
 }
 
-function singleFileTypeChecker(ts: any, sourceFile: any): any {
-  const options = {
-    noLib: true,
-    noResolve: true,
-    target: ts.ScriptTarget.Latest,
-  };
-  const host = ts.createCompilerHost(options, true);
-  host.getSourceFile = (fileName: string) =>
-    fileName === sourceFile.fileName ? sourceFile : undefined;
-  host.fileExists = (fileName: string) => fileName === sourceFile.fileName;
-  host.readFile = (fileName: string) =>
-    fileName === sourceFile.fileName ? sourceFile.text : undefined;
-  return ts.createProgram([sourceFile.fileName], options, host).getTypeChecker();
-}
-
-function propertyAccessPath(ts: any, node: any): { root: any; segments: string[] } | undefined {
-  const segments: string[] = [];
-  let current = node;
-  while (ts.isPropertyAccessExpression(current)) {
-    segments.unshift(current.name.text);
-    current = current.expression;
-  }
-  if (!ts.isIdentifier(current)) return undefined;
-  segments.unshift(current.text);
-  return { root: current, segments };
-}
-
-function isRuntimeIdentifierReference(ts: any, node: any): boolean {
-  if (ts.isPropertyAccessExpression(node.parent) && node.parent.name === node) return false;
-  return (
-    (ts.isExpressionNode(node) && !ts.isInTypeQuery(node)) ||
-    (ts.isShorthandPropertyAssignment(node.parent) && node.parent.name === node)
-  );
-}
-
-function hasLocalDeclaration(ts: any, checker: any, sourceFile: any, node: any): boolean {
-  const shorthand =
-    ts.isShorthandPropertyAssignment(node.parent) && node.parent.name === node;
-  const symbol = shorthand
-    ? checker.getShorthandAssignmentValueSymbol(node.parent)
-    : checker.getSymbolAtLocation(node);
-  return Boolean(
-    symbol?.declarations?.some((declaration: any) => declaration.getSourceFile() === sourceFile)
-  );
-}
-
-/**
- * Find uses of forbidden ambient globals with single-file TypeScript binding. Kept in sync
- * with `collectForbiddenGlobalUses` in bin/ark-shared.mjs (the standalone CLIs cannot import
- * from dist). Local parameters/variables/imports have symbols; unbound runtime identifiers
- * and explicit `globalThis` property chains are ambient.
- */
-function analyzeForbiddenGlobals(
-  ts: any,
-  source: string,
-  filePath: string | undefined,
-  layer: string,
-  forbidden: string[]
-): AICodeGateViolation[] {
-  const entries = new Set(forbidden);
-  if (entries.size === 0) return [];
-  const sourceFile = ts.createSourceFile('generated.ts', source, ts.ScriptTarget.Latest, true);
-  const checker = singleFileTypeChecker(ts, sourceFile);
-  const violations: AICodeGateViolation[] = [];
-  const flag = (name: string, node: any) =>
-    violations.push(
-      violation('FORBIDDEN_GLOBAL', `${layer} must not use the ambient global "${name}".`, {
-        line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
-        filePath,
-        target: name,
-        fromLayer: layer,
-        suggestion:
-          'Inject the capability through a port (e.g. a Clock, IdGenerator, or HttpPort) instead of reaching for the ambient global.',
-      })
-    );
-
-  const visit = (node: any) => {
-    const nestedPropertyAccess =
-      ts.isPropertyAccessExpression(node) &&
-      ts.isPropertyAccessExpression(node.parent) &&
-      node.parent.expression === node;
-    if (ts.isPropertyAccessExpression(node) && !nestedPropertyAccess) {
-      const path = propertyAccessPath(ts, node);
-      if (path && !hasLocalDeclaration(ts, checker, sourceFile, path.root)) {
-        const explicitGlobalThis = path.segments[0] === 'globalThis';
-        const normalized = explicitGlobalThis ? path.segments.slice(1) : path.segments;
-        let match: string | undefined;
-        for (let length = normalized.length; length >= (explicitGlobalThis ? 1 : 2); length -= 1) {
-          const candidate = normalized.slice(0, length).join('.');
-          if (entries.has(candidate)) {
-            match = candidate;
-            break;
-          }
-        }
-        if (match) flag(match, node);
-      }
-    } else if (
-      ts.isIdentifier(node) &&
-      entries.has(node.text) &&
-      isRuntimeIdentifierReference(ts, node) &&
-      !hasLocalDeclaration(ts, checker, sourceFile, node)
-    ) {
-      flag(node.text, node);
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(sourceFile);
-  return violations;
-}
-
 function analyzePublishAst<Context>(
   ts: any,
   source: string,
@@ -542,29 +345,20 @@ function analyzePublishAst<Context>(
     if (tsIsPublishCall(ts, node)) {
       const firstArg = node.arguments[0];
       const rawIntent = tsStringLiteralText(ts, firstArg);
-      if (
-        (rawIntent && looksLikeIntentName(rawIntent)) ||
-        tsObjectHasProperty(ts, firstArg, 'intent')
-      ) {
+      for (const finding of classifyPublishFacts({
+        publishCall: true,
+        rawIntentName: rawIntent,
+        objectHasIntent: tsObjectHasProperty(ts, firstArg, 'intent'),
+        arkPublishCandidate: tsIsArkPublishCandidate(ts, node),
+        hasSource: tsPublishHasSource(ts, node),
+      })) {
         violations.push(
-          violation('RAW_EVENT_PUBLISH', 'Publish through a registered intent creator; raw event objects or intent strings bypass Ark contracts and tooling.', {
-            line: lineForNode(node),
-            filePath,
-          })
-        );
-      }
-
-      if (tsIsArkPublishCandidate(ts, node) && !tsPublishHasSource(ts, node)) {
-        violations.push(
-          violation('PUBLISH_MISSING_SOURCE', 'Strict Ark publish calls must include metadata.source.', {
-            line: lineForNode(node),
-            filePath,
-          })
+          violation(finding.ruleId, finding.message, { line: lineForNode(node), filePath })
         );
       }
 
       const sourceIntent = tsPublishSourceLiteral(ts, node);
-      if (profile && contextLayer && sourceIntent && looksLikeIntentName(sourceIntent)) {
+      if (profile && contextLayer && sourceIntent && looksLikeArkIntent(sourceIntent)) {
         const sourceLayer = profile.resolveLayer(sourceIntent);
         if (sourceLayer && sourceLayer !== contextLayer) {
           violations.push(
@@ -607,8 +401,27 @@ export function createAICodeGate<Context = AICodeGateContext>(
       const gateContext = context as AICodeGateContext | undefined;
       const filePath = gateContext?.filePath;
       const contextLayer = gateContext?.layer;
-      const moduleSpecifiers = options.typescript
-        ? extractModuleSpecifiersAst(options.typescript, source)
+      const semanticTypescript = options.typescript as TypescriptSemanticHost | undefined;
+      const semanticSourceFile = semanticTypescript
+        ? semanticTypescript.createSourceFile(
+            filePath ?? 'generated.ts',
+            source,
+            semanticTypescript.ScriptTarget.Latest,
+            true
+          )
+        : undefined;
+      const semanticDependencies = semanticSourceFile
+        ? extractSemanticDependencies(options.typescript, semanticSourceFile)
+        : undefined;
+      const moduleSpecifiers = semanticDependencies
+        ? semanticDependencies
+            .filter((dependency) => dependency.specifier !== undefined)
+            .map((dependency) => ({
+              value: dependency.specifier!,
+              index: (dependency.node as SemanticNodeLike).getStart(semanticSourceFile),
+              kind: dependency.kind,
+              typeOnly: dependency.typeOnly,
+            }))
         : extractModuleSpecifiers(source);
       const quotedStrings = options.typescript
         ? extractQuotedStringsAst(options.typescript, source)
@@ -618,7 +431,7 @@ export function createAICodeGate<Context = AICodeGateContext>(
         options.typescript &&
         !options.allowNonLiteralDynamicImport?.(filePath)
       ) {
-        for (const dependency of nonLiteralDynamicDependencies(options.typescript, source)) {
+        for (const dependency of semanticDependencies?.filter(({ unresolved }) => unresolved) ?? []) {
           const isRequire = dependency.kind === 'require';
           violations.push(
             violation(
@@ -797,7 +610,7 @@ export function createAICodeGate<Context = AICodeGateContext>(
 
       if (enforceAllowlist && intentNames.size > 0) {
         for (const literal of quotedStrings) {
-          if (looksLikeIntentName(literal.value) && !intentNames.has(literal.value)) {
+          if (looksLikeArkIntent(literal.value) && !intentNames.has(literal.value)) {
             violations.push(
               violation(
                 'UNKNOWN_INTENT',
@@ -816,7 +629,7 @@ export function createAICodeGate<Context = AICodeGateContext>(
 
       if (options.architectureProfile && contextLayer) {
         for (const literal of quotedStrings) {
-          if (!looksLikeIntentName(literal.value)) continue;
+          if (!looksLikeArkIntent(literal.value)) continue;
 
           const targetLayer = options.architectureProfile.resolveLayer(literal.value);
           if (!targetLayer) continue;
@@ -865,15 +678,31 @@ export function createAICodeGate<Context = AICodeGateContext>(
         }
       }
 
-      if (options.typescript && contextLayer && options.forbiddenGlobals?.[contextLayer]?.length) {
+      if (
+        options.typescript &&
+        semanticSourceFile &&
+        contextLayer &&
+        options.forbiddenGlobals?.[contextLayer]?.length
+      ) {
         try {
           violations.push(
-            ...analyzeForbiddenGlobals(
+            ...collectForbiddenCapabilityUses(
               options.typescript,
-              source,
-              filePath,
-              contextLayer,
+              semanticSourceFile,
               options.forbiddenGlobals[contextLayer]
+            ).map((use) =>
+              violation(
+                'FORBIDDEN_GLOBAL',
+                `${contextLayer} must not use the ambient global "${use.name}".`,
+                {
+                  line: use.line,
+                  filePath,
+                  target: use.name,
+                  fromLayer: contextLayer,
+                  suggestion:
+                    'Inject the capability through a port (e.g. a Clock, IdGenerator, or HttpPort) instead of reaching for the ambient global.',
+                }
+              )
             )
           );
         } catch (err) {

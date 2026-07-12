@@ -5,14 +5,24 @@
  * TypeScript repos and agents. Optional runtime kernel is not the product.
  * npm package: `arkgate` (formerly `ark-runtime-kernel`).
  *
- * **Runtime kernel (opt-in):** prefer `import { … } from 'arkgate/runtime'`.
- * This root barrel still re-exports kernel symbols for compatibility within
- * this major — see `docs/package-surface.md`.
+ * **Runtime package source:** this barrel is compiled only into `@arkgate/runtime`.
+ * The stable `arkgate` root is built from `src/gate.ts`.
  *
  * @packageDocumentation
  */
 
 export { version } from './version';
+
+export {
+  ARK_ANALYSIS_RESULT_SCHEMA_VERSION,
+  ARK_ANALYSIS_RESULT_SCHEMA,
+  createAdapterResult,
+  toAdapterDiagnostic,
+  type AdapterDiagnostic,
+  type AdapterResult,
+  type AdapterSeverity,
+  type AdapterViolationInput,
+} from './domain/adapterContract';
 
 // Domain types are re-exported below; no local value imports needed here.
 
@@ -120,9 +130,13 @@ export {
 
 export {
   InMemoryOutboxStore,
+  InMemoryEventBuffer,
   type OutboxRecord,
   type OutboxStatus,
   type OutboxStore,
+  type EventBufferRecord,
+  type EventBufferStatus,
+  type EventBufferStore,
 } from './kernel/outbox';
 
 // =============================================================================
@@ -250,6 +264,8 @@ export {
   evaluateArchitectureGraph,
   collectAnalysisConfigWarnings,
   detectArchitectureCycles,
+  collectForbiddenCapabilityUses,
+  extractSemanticDependencies,
   type AnalysisContract,
   type AnalyzeProjectInput,
   type AnalyzeChangeInput,
@@ -259,6 +275,9 @@ export {
   type EvaluateArchitectureGraphInput,
   type ArchitectureEngineResult,
   type CollectAnalysisConfigWarningsInput,
+  type ForbiddenCapabilityUse,
+  type SemanticDependency,
+  type SemanticDependencyKind,
 } from './kernel/analysis';
 
 export {

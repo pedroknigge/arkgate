@@ -10,6 +10,20 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
   diagnostics now have one Kernel implementation shared by the library, CLI, and MCP. A documented
   standalone CLI bundle preserves the package's self-hosted boundary and is protected by a CI drift
   check and Kernel/bundle parity fixtures.
+- **Symbol-aware semantic analysis:** one Kernel extractor now resolves forbidden ambient
+  capabilities through local symbols, aliases, `globalThis`, static keys, and destructuring, and
+  classifies TS/JS dependency forms across ESM, CommonJS, type-only, and unresolved dynamic edges.
+  CLI, safety diagnostics, and AICodeGate consume the same generated implementation. The supported
+  soundness envelope is documented and guarded by a labeled adversarial corpus plus TypeScript
+  5/6/7 and mutation matrices.
+- **Versioned adapter parity:** CLI JSON, MCP structured results, write hooks, ESLint, and the
+  GitHub Action now expose the same `ark.analysis-result` v1 diagnostics. A generated JSON Schema,
+  committed compatibility fixture, exact golden corpus, and mandatory CI parity job prevent
+  adapter drift; source-policy decisions no longer live privately inside ESLint.
+- **Runtime package isolation:** the next-major `arkgate` root now contains only gate APIs. The
+  optional runtime and NestJS adapter build independently as experimental `@arkgate/runtime`;
+  deprecated subpath shims contain no implementation. The non-atomic store is now presented as
+  `InMemoryEventBuffer`, with production recovery and durability requirements made explicit.
 
 ### Fixed
 

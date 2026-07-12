@@ -61,6 +61,8 @@ function runArkCheckJson(root: string) {
   const out = JSON.parse(r.stdout || '{}') as {
     ok: boolean;
     violations: Array<{ ruleId: string; file?: string; typeOnly?: boolean }>;
+    diagnostics: Array<Record<string, unknown>>;
+    schemaVersion: string;
   };
   return { status: r.status ?? 1, ...out };
 }
@@ -105,11 +107,18 @@ describe('ESLint ↔ ark-check parity', () => {
 
     const { context, reports } = createContext(domainFile);
     const listener = noDomainInfraImports.create(context);
-    listener.ImportDeclaration({ source: { value: '../infra/db' } });
+    listener.ImportDeclaration({
+      source: { value: '../infra/db' },
+      loc: { start: { line: 1 } },
+    });
     expect(reports.length).toBeGreaterThanOrEqual(1);
     expect(reports[0].messageId).toBe('forbiddenImport');
     expect((reports[0].data as { fromLayer: string }).fromLayer).toBe('DomainModel');
     expect((reports[0].data as { toLayer: string }).toLayer).toBe('PersistenceAdapters');
+    expect(check.schemaVersion).toBe('1.0');
+    expect(reports[0].diagnostic).toEqual(
+      check.diagnostics.find((item) => item.ruleId === 'LAYER_IMPORT_VIOLATION')
+    );
   });
 
   it('forbidden domain→infra type-only import: both still flag (same pass/fail as CI)', () => {
@@ -162,9 +171,13 @@ describe('ESLint ↔ ark-check parity', () => {
     listener.MemberExpression({
       object: { type: 'Identifier', name: 'Date' },
       property: { name: 'now' },
+      loc: { start: { line: 1 } },
     });
     expect(reports.length).toBeGreaterThanOrEqual(1);
     expect((reports[0].data as { name: string }).name).toBe('Date.now');
+    expect(reports[0].diagnostic).toEqual(
+      check.diagnostics.find((item) => item.ruleId === 'FORBIDDEN_GLOBAL')
+    );
   });
 
   it('shipped helpers agree with config for layer + edge checks', () => {

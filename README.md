@@ -266,21 +266,21 @@ CI (example):
 
 Gates need **no app code changes**. The runtime API is currently **experimental** and is not a
 production-readiness claim. If you want to evaluate runtime intent/event contracts, use the
-opt-in subpath (preferred):
+separate experimental package:
 
 ```ts
-import { createStrictArkKernelFromConfig } from 'arkgate/runtime';
+import { createStrictArkKernelFromConfig } from '@arkgate/runtime';
 // see docs/production-hardening.md and docs/package-surface.md
 ```
 
-Root `import { … } from 'arkgate'` still re-exports kernel symbols for compatibility
-in this major; use `arkgate/runtime` when evaluating the experimental surface.
+The stable `arkgate` package does not bundle runtime implementation. The deprecated
+`arkgate/runtime` forwarding shim requires `@arkgate/runtime` and is removed in ArkGate 4.
 
-NestJS: `arkgate/nestjs` (optional peer `@nestjs/common`).
+NestJS: `@arkgate/runtime/nestjs` (optional peer `@nestjs/common`).
 
 ### Durability stance (built-in stores)
 
-The kernel’s default stores (`InMemoryOutboxStore`, `InMemoryAuditStore`,
+The kernel’s default stores (`InMemoryEventBuffer`, `InMemoryAuditStore`,
 `InMemoryReadModelStore`, `InMemoryWorkflowStore`) are **reference in-memory only**:
 fine for tests, demos, and single-process local work — they **do not** survive restarts
 and are **not** production durability. Implement the store interfaces (or inject your own)

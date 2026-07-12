@@ -1,2 +1,2 @@
 export * from './types';
-export { InMemoryOutboxStore } from './InMemoryOutboxStore';
+export { InMemoryEventBuffer, InMemoryOutboxStore } from './InMemoryOutboxStore';

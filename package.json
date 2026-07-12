@@ -1,6 +1,6 @@
 {
   "name": "arkgate",
-  "version": "2.13.0",
+  "version": "3.0.0-beta.0",
   "description": "ArkGate — architecture co-pilot for AI TypeScript (write gate, CI gate, plan/loop)",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -13,9 +13,9 @@
       "require": "./dist/index.cjs"
     },
     "./runtime": {
-      "types": "./dist/runtime/index.d.ts",
-      "import": "./dist/runtime/index.js",
-      "require": "./dist/runtime/index.cjs"
+      "types": "./compat/runtime.d.ts",
+      "import": "./compat/runtime.js",
+      "require": "./compat/runtime.cjs"
     },
     "./eslint": {
       "types": "./dist/eslint/index.d.ts",
@@ -24,10 +24,12 @@
     },
     "./schema": "./schemas/ark.config.schema.json",
     "./schema/ark.config.schema.json": "./schemas/ark.config.schema.json",
+    "./schema/analysis-result": "./schemas/ark.analysis-result.schema.json",
+    "./schema/ark.analysis-result.schema.json": "./schemas/ark.analysis-result.schema.json",
     "./nestjs": {
-      "types": "./dist/nestjs/index.d.ts",
-      "import": "./dist/nestjs/index.js",
-      "require": "./dist/nestjs/index.cjs"
+      "types": "./compat/nestjs.d.ts",
+      "import": "./compat/nestjs.js",
+      "require": "./compat/nestjs.cjs"
     },
     "./package.json": "./package.json"
   },
@@ -43,6 +45,7 @@
   "files": [
     "bin",
     "bin/lib",
+    "compat",
     "dist",
     "schemas",
     "docs/agent-guide.md",
@@ -67,13 +70,17 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "node scripts/clean-gate-dist.mjs && tsup",
+    "build:runtime": "tsup --config packages/runtime/tsup.config.ts",
     "dev": "tsup --watch",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "npm run build && vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=json-summary",
     "test:mutation": "npm run build && stryker run",
     "test:confidence": "npm run test:coverage && npm run test:mutation",
+    "test:adapter-parity": "vitest run tests/unit/adapters/adapterParity.test.ts tests/unit/eslint/parity.test.ts",
+    "test:gate-only": "vitest run tests/unit/static-check/arkCheck.test.ts tests/unit/mcp/arkMcp.test.ts tests/unit/eslint",
+    "test:package-isolation": "node scripts/smoke-package-isolation.mjs",
     "typecheck": "tsc --noEmit",
     "security:audit": "npm audit --omit=dev --audit-level=high",
     "check:architecture": "node bin/ark-check.mjs --root . --config ark.config.json --strict",
@@ -102,11 +109,11 @@
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
-    "@nestjs/common": ">=9",
+    "@arkgate/runtime": ">=0.1.0-experimental.0 <1",
     "typescript": ">=5.0.0 <8"
   },
   "peerDependenciesMeta": {
-    "@nestjs/common": {
+    "@arkgate/runtime": {
       "optional": true
     },
     "typescript": {

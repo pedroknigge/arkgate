@@ -134,11 +134,10 @@ require adopting them. Static CLI/MCP enforcement remains the supported product 
 
 ```diff
 - import { createStrictArkKernelFromConfig } from 'ark-runtime-kernel';
-+ import { createStrictArkKernelFromConfig } from 'arkgate/runtime';
-  // root `arkgate` still re-exports kernel symbols this major (compat)
++ import { createStrictArkKernelFromConfig } from '@arkgate/runtime';
 
 - import { ArkModule } from 'ark-runtime-kernel/nestjs';
-+ import { ArkModule } from 'arkgate/nestjs';
++ import { ArkModule } from '@arkgate/runtime/nestjs';
 
 - import ark from 'ark-runtime-kernel/eslint';
 + import ark from 'arkgate/eslint';

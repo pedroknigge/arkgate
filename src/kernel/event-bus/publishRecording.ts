@@ -4,7 +4,7 @@
  */
 import type { DomainEvent, EventMetadata } from '../../domain/types';
 import type { AuditRecordType, AuditTrail } from '../audit';
-import type { OutboxStore } from '../outbox';
+import type { EventBufferStore } from '../outbox';
 import type { PublishedEventRecord, TraceRecord, TraceSink } from './types';
 
 export type RecordingBuffers = {
@@ -13,7 +13,7 @@ export type RecordingBuffers = {
   maxHistorySize?: number;
   traceSinks: TraceSink[];
   auditTrail?: AuditTrail;
-  outbox?: OutboxStore;
+  eventBuffer?: EventBufferStore;
   instanceId?: string;
 };
 
@@ -116,7 +116,7 @@ export async function recordSuccessfulPublish(
     subscribersNotified,
   };
   appendHistory(buffers, record);
-  await buffers.outbox?.enqueue(event);
+  await buffers.eventBuffer?.enqueue(event);
 
   appendTrace(buffers, {
     type: 'event.published',

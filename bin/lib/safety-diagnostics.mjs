@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { globToRegExp } from '../ark-shared.mjs';
+import { extractSemanticDependencies } from './analysis-engine.mjs';
 import { lineOf } from './ast-scan.mjs';
 import { normalize } from './scan-files.mjs';
 
@@ -107,6 +108,17 @@ export function collectSafetyDiagnostics(ts, root, config, files) {
     const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
     const relFile = normalize(path.relative(root, file));
 
+    if (!matchesAny(relFile, dynamicAllowlist)) {
+      for (const dependency of extractSemanticDependencies(ts, sourceFile)) {
+        if (!dependency.unresolved) continue;
+        report.nonLiteralDynamicImports.push({
+          file: relFile,
+          line: dependency.line,
+          kind: dependency.kind === 'require' ? 'require' : 'import',
+        });
+      }
+    }
+
     for (const position of tsSuppressionPositions(sourceFile, source)) {
       report.tsSuppressions.push({
         file: relFile,
@@ -144,23 +156,6 @@ export function collectSafetyDiagnostics(ts, root, config, files) {
           file: relFile,
           line: lineOf(sourceFile, node.getStart(sourceFile)),
         });
-      }
-
-      if (ts.isCallExpression(node)) {
-        const dynamicImport = node.expression?.kind === ts.SyntaxKind.ImportKeyword;
-        const directRequire =
-          ts.isIdentifier(node.expression) && node.expression.text === 'require';
-        const argument = node.arguments[0];
-        const unresolved =
-          (dynamicImport || directRequire) &&
-          (!argument || !ts.isStringLiteralLike(argument));
-        if (unresolved && !matchesAny(relFile, dynamicAllowlist)) {
-          report.nonLiteralDynamicImports.push({
-            file: relFile,
-            line: lineOf(sourceFile, node.getStart(sourceFile)),
-            kind: directRequire ? 'require' : 'import',
-          });
-        }
       }
 
       if (!allowInMemory && !isProvider && ts.isImportDeclaration(node)) {

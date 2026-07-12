@@ -4,7 +4,7 @@ import { version } from '../../src/index';
 
 describe('ArkGate bootstrap (smoke)', () => {
   it('exposes a semantic version', () => {
-    expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(version).toMatch(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
   });
 
   it('keeps package.json, package-lock.json, and server.json versions in sync with src/version', () => {

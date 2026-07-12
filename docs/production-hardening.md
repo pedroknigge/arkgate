@@ -1,7 +1,7 @@
 # Production Hardening
 
 The optional runtime kernel is currently **experimental**. This page is a requirements checklist
-for teams evaluating **`arkgate/runtime`**, not a claim that the runtime is production-ready.
+for teams evaluating **`@arkgate/runtime`**, not a claim that the runtime is production-ready.
 Static ArkGate adoption does not require it. See [package-surface.md](package-surface.md).
 
 ## Durability stance (R9)
@@ -19,11 +19,11 @@ stores that match their durability, ordering, retention, and operational require
 These defaults do not survive process restarts:
 
 - `InMemoryAuditStore`
-- `InMemoryOutboxStore`
+- `InMemoryEventBuffer` (`InMemoryOutboxStore` is a deprecated compatibility alias)
 - `InMemoryReadModelStore`
 - `InMemoryWorkflowStore`
 
-Use them only when losing state is acceptable. JSDoc on `OutboxStore`, `AuditStore`,
+Use them only when losing state is acceptable. JSDoc on `EventBufferStore`, `AuditStore`,
 `ReadModelStore`, and `WorkflowStore` restates this stance at the type level.
 
 ## Production Store Checklist
@@ -55,12 +55,25 @@ completed steps are compensated when handlers exist, and the workflow ends faile
 effects and compensations must therefore be idempotent, and audit/snapshot stores must be
 operational dependencies rather than best-effort telemetry.
 
+### Required recovery semantics (not implemented by built-ins)
+
+| Contract | Required definition before a production claim |
+|----------|-----------------------------------------------|
+| Workflow recovery | Persist the last committed step and effect id; restart resumes only from that checkpoint and never assumes an in-flight effect failed or succeeded without reconciliation. |
+| Optimistic versioning | Every snapshot write carries the previously read version; conflicting writes fail without overwriting and the caller reloads before retrying. |
+| Dispatcher leases | A claim records owner and expiry atomically; only the owner may acknowledge it, and takeover is allowed only after expiry. |
+| Idempotent delivery | Every message/effect has a stable idempotency key retained for the full retry window; duplicate attempts return the prior outcome without repeating the effect. |
+| Atomic handoff | Application state and dispatch record commit in one transaction. Without this guarantee the API must be called an event buffer, not an outbox. |
+
+The experimental package supplies none of these persistence guarantees. Fault/restart matrices
+must cover crashes before and after every transaction, effect, checkpoint, lease, and acknowledgement.
+
 ## Interface Targets
 
 | Concern | Interface |
 |---------|-----------|
 | Audit records | `AuditStore` |
-| Outbox dispatch handoff | `OutboxStore` |
+| Non-atomic dispatch buffer | `EventBufferStore` |
 | Projection state | `ReadModelStore` |
 | Workflow snapshots | `WorkflowStore` |
 

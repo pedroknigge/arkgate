@@ -1,11 +1,11 @@
 import type { DomainEvent } from '../../domain/types';
 
-export type OutboxStatus = 'pending' | 'dispatched' | 'failed';
+export type EventBufferStatus = 'pending' | 'dispatched' | 'failed';
 
-export interface OutboxRecord {
+export interface EventBufferRecord {
   id: string;
   event: DomainEvent;
-  status: OutboxStatus;
+  status: EventBufferStatus;
   attempts: number;
   createdAt: string;
   updatedAt: string;
@@ -13,17 +13,24 @@ export interface OutboxRecord {
 }
 
 /**
- * Pluggable outbox for publish handoff.
+ * Pluggable non-atomic event buffer for publish handoff.
  *
  * **Durability stance (R9):** ArkGate ships only a reference in-process store
- * (`InMemoryOutboxStore`) for tests, demos, and single-process development — it does
+ * (`InMemoryEventBuffer`) for tests, demos, and single-process development — it does
  * not survive process restarts and is **not production durability**. Inject your own
- * `OutboxStore` (DB, queue, etc.) for real systems. See `docs/production-hardening.md`.
+ * This is not a transactional outbox. See `docs/production-hardening.md`.
  */
-export interface OutboxStore {
-  enqueue(event: DomainEvent): Promise<OutboxRecord>;
+export interface EventBufferStore {
+  enqueue(event: DomainEvent): Promise<EventBufferRecord>;
   markDispatched(id: string): Promise<void>;
   markFailed(id: string, error: unknown): Promise<void>;
-  list(status?: OutboxStatus): Promise<OutboxRecord[]>;
+  list(status?: EventBufferStatus): Promise<EventBufferRecord[]>;
   clear(): Promise<void>;
 }
+
+/** @deprecated Use EventBufferStatus. */
+export type OutboxStatus = EventBufferStatus;
+/** @deprecated Use EventBufferRecord. */
+export type OutboxRecord = EventBufferRecord;
+/** @deprecated Use EventBufferStore. */
+export type OutboxStore = EventBufferStore;

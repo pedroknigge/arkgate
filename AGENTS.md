@@ -46,7 +46,7 @@ Before editing TypeScript or JavaScript source files:
 | Layer | Directories | Notes |
 |-------|-------------|-------|
 | DomainModel | `src/domain/` + generated pure CLI artifacts | Pure types and invariants. `fetch`, `process`, `Date.now`, `Math.random` are forbidden globals here — inject a port instead. |
-| Kernel | `src/kernel/`, `src/runtime/`, `src/index.ts`, `src/version.ts` | The library itself (+ `arkgate/runtime` entry). May depend on DomainModel only. |
+| Kernel | `src/kernel/`, `src/runtime/`, `src/gate.ts`, `src/index.ts`, `src/version.ts` | The gate API plus experimental runtime sources. May depend on DomainModel only. |
 | Tooling | `src/eslint/`, `bin/`, `scripts/` | ESLint plugin, standalone CLIs, and repository scripts. May import **DomainModel only** (pure helpers). Not Kernel. |
 | FrameworkAdapters | `src/nestjs/` | Optional NestJS integration. May depend on Kernel only. |
 
