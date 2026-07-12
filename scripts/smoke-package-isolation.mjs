@@ -33,7 +33,7 @@ try {
   run('npm', ['init', '-y'], gateInstall);
   run(
     'npm',
-    ['install', '--offline', '--ignore-scripts', '--omit=optional', '--no-audit', '--no-fund', gateTarball],
+    ['install', '--ignore-scripts', '--omit=optional', '--no-audit', '--no-fund', gateTarball],
     gateInstall
   );
   const gate = await import(
@@ -51,7 +51,7 @@ try {
   run('npm', ['init', '-y'], runtimeInstall);
   run(
     'npm',
-    ['install', '--offline', '--ignore-scripts', '--omit=optional', '--no-audit', '--no-fund', runtimeTarball],
+    ['install', '--ignore-scripts', '--omit=optional', '--no-audit', '--no-fund', runtimeTarball],
     runtimeInstall
   );
   const runtime = await import(
