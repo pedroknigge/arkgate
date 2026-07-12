@@ -43,7 +43,7 @@ one item may be `doing`.
 | Order | Item | Roadmap state | Dependency gate | Exit result |
 |---:|---|---|---|---|
 | 1 | `O03` | `done` | `O02` done | Compact single-host setup closed `RB-06` in PR #41 |
-| 2 | `O04` | `doing` | `O03` done | Clean-room onboarding matrix is green |
+| 2 | `O04` | `done` | `O03` done | Clean-room onboarding matrix passed PR #43 CI |
 | 3 | `V01` | `todo` | `C05` and `O04` done | Real cold, warm, and incremental budgets run in CI |
 | 4 | `V02` | `todo` | `C04` done, plus queue order | Mutation, property, and fuzz boundaries are defended |
 | 5 | `V03` | `todo` | `O04`, `V01`, and `V02` done | At least 12 pinned external adoptions are reproduced |
@@ -295,15 +295,15 @@ commands are generated and inspected offline; the harness must not install from 
 
 ### Acceptance checklist
 
-- [ ] All 144 supported cells pass without network installation.
-- [ ] Every applied fixture has a green strict merge gate.
-- [ ] Claude and Grok report only their supported hard-write/repair guarantees.
-- [ ] Cursor and Codex report advisory write plus hard CI, never borrowed hard-hook evidence.
-- [ ] Previewed mutations exactly equal applied mutations.
-- [ ] Projected coverage equals measured post-apply coverage.
-- [ ] No cell reports Enforce below 90% coverage.
-- [ ] Every second run has a zero diff.
-- [ ] No cell requires files for an unrelated host.
+- [x] All 144 supported cells pass without network installation.
+- [x] Every applied fixture has a green strict merge gate.
+- [x] Claude and Grok report only their supported hard-write/repair guarantees.
+- [x] Cursor and Codex report advisory write plus hard CI, never borrowed hard-hook evidence.
+- [x] Previewed mutations exactly equal applied mutations.
+- [x] Projected coverage equals measured post-apply coverage.
+- [x] No cell reports Enforce below 90% coverage.
+- [x] Every second run has a zero diff.
+- [x] No cell requires files for an unrelated host.
 
 ### Focused verification
 
@@ -318,8 +318,9 @@ Then run the common merge gate.
 **Local evidence (2026-07-12):** `npm run test:onboarding-matrix` passed all 12 offline shards
 and their 144 deterministic cells. `npm run typecheck`, `npm run check:js`, and
 `npx ark-check --root . --config ark.config.json --strict-config` also pass. The `onboarding-matrix`
-CI job runs the same fixture shards independently; O04 stays `doing` until that remote evidence is
-green for the published candidate.
+CI job runs the same fixture shards independently. PR #43 passed every shard plus the full build,
+security, compatibility, and adapter-parity gates on signed commit `771343d`, then merged as
+`9c762c9`; O04 is done.
 
 ## 7. V01 - add real cold, warm, and incremental budgets
 
