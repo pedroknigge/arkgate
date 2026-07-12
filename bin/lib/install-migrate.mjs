@@ -27,6 +27,7 @@ import {
 import {
   hasCheckArchitectureScript,
   ensureTypecheckScript,
+  compactRouterHost,
   writeTemplate,
 } from './gate-files.mjs';
 import {
@@ -37,6 +38,7 @@ import {
   detectCiNode,
   cursorRule,
   instructionRule,
+  compactAgentInstructions,
   codexTomlSnippet,
   arkCheckCommand,
   checkArchitectureScriptSnippet,
@@ -216,12 +218,21 @@ export function runInstallAgentGates(args) {
   }
   const pm = packageManager(root);
   const hasCheckScript = hasCheckArchitectureScript(root);
-  const { tools, source } = resolveTools(args);
+  const { tools, source } = args.compact && args.tools == null
+    ? { tools: new Set(), source: 'compact-none' }
+    : resolveTools(args);
+  if (args.compact && tools.size > 1) {
+    console.error('--compact accepts exactly one selected host. Pass --tools <host>.');
+    process.exitCode = 2;
+    return;
+  }
   const toolSource =
     source === 'explicit'
       ? 'from --tools'
       : source === 'detected'
         ? 'auto-detected from config dirs'
+        : source === 'compact-none'
+          ? 'no active host detected'
         : 'default set — no agent config dirs found';
   console.log(`Agent gates for: ${[...tools].sort().join(', ')} (${toolSource})`);
   const templates = [];
@@ -232,15 +243,21 @@ export function runInstallAgentGates(args) {
   // Do not mutate package.json under --skills-only (typecheck bootstrap is gates/CI).
   if (!args.skillsOnly) {
     // Bootstrap typecheck before CI template so generated workflow includes the step.
-    const typecheckBootstrap = ensureTypecheckScript(root, { write: true });
-    if (typecheckBootstrap.changed && !args.json) {
+    const typecheckBootstrap = ensureTypecheckScript(root, { write: !args.compact });
+    if (typecheckBootstrap.changed && !args.compact && !args.json) {
       console.log(
         `Added package.json script "typecheck": "${typecheckBootstrap.script}" (tsconfig present; local/CI parity).`
       );
     }
     // Base gates: tool-agnostic contract + CI backstop, always written.
-    templates.push(['AGENTS.md', agentInstructions(root)]);
-    templates.push(['.mcp.json', mcpJson(root)]);
+    const compactHost = args.compact ? [...tools][0] ?? null : null;
+    templates.push([
+      'AGENTS.md',
+      args.compact ? compactAgentInstructions(root, compactHost) : agentInstructions(root),
+    ]);
+    if (!args.compact || !compactHost || compactHost === 'claude') {
+      templates.push(['.mcp.json', mcpJson(root)]);
+    }
     templates.push([
       '.github/workflows/ark-check.yml',
       (() => {
@@ -253,14 +270,14 @@ export function runInstallAgentGates(args) {
     ]);
     if (tools.has('cursor')) {
       templates.push(['.cursor/mcp.json', mcpJson(root)]);
-      templates.push(['.cursor/rules/ark.mdc', cursorRule(root)]);
+      if (!args.compact) templates.push(['.cursor/rules/ark.mdc', cursorRule(root)]);
     }
     if (tools.has('claude')) {
       templates.push(['.claude/settings.json', claudeSettings(root)]);
     }
     if (tools.has('codex')) {
       templates.push(['.codex/hooks.json', codexHooks(root)]);
-      templates.push(['docs/ark-codex-config.toml', codexTomlSnippet(root)]);
+      if (!args.compact) templates.push(['docs/ark-codex-config.toml', codexTomlSnippet(root)]);
     }
     if (tools.has('grok')) {
       templates.push(['.grok/config.toml', grokProjectConfig(root)]);
@@ -298,18 +315,37 @@ export function runInstallAgentGates(args) {
   const version = arkPackageVersion();
   const skills = skillTemplates().map(([name, content]) => [name, stampSkill(content, version)]);
   const skillPaths = new Set();
-  for (const tool of tools) {
-    const target = SKILL_TOOL_TARGETS[tool];
-    if (!target) continue;
-    for (const [name, content] of skills) {
-      const relativePath = target(name);
-      skillPaths.add(relativePath);
-      templates.push([relativePath, content]);
+  if (!args.compact) {
+    for (const tool of tools) {
+      const target = SKILL_TOOL_TARGETS[tool];
+      if (!target) continue;
+      for (const [name, content] of skills) {
+        const relativePath = target(name);
+        skillPaths.add(relativePath);
+        templates.push([relativePath, content]);
+      }
+    }
+  }
+
+  // A compact router can be moved back from an explicit host removal. Delete the
+  // generic MCP file only when it exactly matches Ark's generated artifact.
+  const priorCompactHost = compactRouterHost(root);
+  if (args.compact && priorCompactHost === 'none' && [...tools][0]) {
+    const genericMcp = path.join(root, '.mcp.json');
+    try {
+      if (fs.readFileSync(genericMcp, 'utf8') === mcpJson(root)) fs.rmSync(genericMcp);
+    } catch {
+      // Missing or customized user MCP configuration is deliberately retained.
     }
   }
 
   const results = templates.map(([relativePath, content]) =>
-    writeTemplate(root, relativePath, content, args.force)
+    writeTemplate(
+      root,
+      relativePath,
+      content,
+      args.force || (args.compact && relativePath === 'AGENTS.md' && priorCompactHost !== null)
+    )
   );
 
   console.log('Ark agent gate templates:');
@@ -399,7 +435,7 @@ export function runInstallAgentGates(args) {
   // developer's real config. A genuinely redirected CODEX_HOME or explicit
   // --codex-home still wires as requested.
   let codexMcp = null;
-  const wantCodexWire = tools.has('codex') || args.codexHome;
+  const wantCodexWire = !args.compact && (tools.has('codex') || args.codexHome);
   const skipHomeWire =
     wantCodexWire &&
     isTempOrUpgradeRoot(root) &&

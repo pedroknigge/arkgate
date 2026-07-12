@@ -42,6 +42,7 @@ import {
   checkArchitectureScriptSnippet,
   arkCheckCommand,
   arkPackageVersion,
+  compactRouterHost,
   REQUIRED_GATE_FILES,
   codexPromptsDir,
   detectWritePathCapabilities,
@@ -111,6 +112,7 @@ function parseArgs(argv) {
     requireWriteHook: undefined,
     init: false,
     installAgentGates: false,
+    compact: false,
     tools: undefined,
     force: false,
     skillsOnly: false,
@@ -154,6 +156,7 @@ function parseArgs(argv) {
     else if (arg === '--init') args.init = true;
     else if (arg === '--preset') args.preset = requireValue(arg, i++);
     else if (arg === '--install-agent-gates') args.installAgentGates = true;
+    else if (arg === '--compact') args.compact = true;
     else if (arg === '--tools') {
       // Consume the next arg only when it isn't another flag (same rule as --baseline),
       // so `--tools --force` can't silently eat --force as a "tool name".
@@ -1039,7 +1042,13 @@ async function main() {
     // callers still get a clear signal from the exit code and the human-mode line.
     if (!args.json) {
       if (args.requireGates) {
-        console.log('Ark gates present (merge profile): ' + REQUIRED_GATE_FILES.join(', '));
+        const compactHost = compactRouterHost(args.root);
+        console.log(
+          'Ark gates present (merge profile): ' +
+            (compactHost
+              ? `AGENTS.md, compact host registration (${compactHost})`
+              : REQUIRED_GATE_FILES.join(', '))
+        );
       }
       if (writeRequest?.host) {
         console.log(`Ark hard-write hook present for ${writeRequest.host}.`);

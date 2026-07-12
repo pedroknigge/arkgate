@@ -119,6 +119,40 @@ export const REQUIRED_GATE_FILES = [
   '.mcp.json',
 ];
 const REQUIRED_GATE_WORKFLOW = '.github/workflows/*.yml running ark-check';
+const COMPACT_ROUTER = /<!--\s*arkgate:compact-router host=([a-z]+)\s*-->/;
+
+const COMPACT_HOST_FILES = {
+  claude: ['.claude/settings.json'],
+  grok: ['.grok/config.toml', '.grok/hooks/ark-write-gate.json'],
+  cursor: ['.cursor/mcp.json'],
+  codex: ['.codex/hooks.json'],
+  windsurf: ['.windsurf/rules/ark.md'],
+  cline: ['.clinerules/ark.md'],
+  copilot: ['.github/copilot-instructions.md'],
+  kiro: ['.kiro/steering/ark.md'],
+  roo: ['.roo/rules/ark.md'],
+  continue: ['.continue/rules/ark.md'],
+  gemini: ['GEMINI.md'],
+};
+
+export function compactRouterHost(root) {
+  try {
+    const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
+    return agents.match(COMPACT_ROUTER)?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function isCompactRouterAgentsContent(text) {
+  return typeof text === 'string' && COMPACT_ROUTER.test(text);
+}
+
+function hasCompactHostRegistration(root, host) {
+  if (host === 'none') return fs.existsSync(path.join(root, '.mcp.json'));
+  const files = COMPACT_HOST_FILES[host];
+  return Boolean(files) && files.every((relativePath) => fs.existsSync(path.join(root, relativePath)));
+}
 
 export function hasArkWorkflow(root) {
   const workflowsDir = path.join(root, '.github', 'workflows');
@@ -141,9 +175,14 @@ export function hasArkWorkflow(root) {
 }
 
 export function missingGates(root) {
-  const missing = REQUIRED_GATE_FILES.filter(
-    (relativePath) => !fs.existsSync(path.join(root, relativePath))
-  );
+  const compactHost = compactRouterHost(root);
+  const required = compactHost
+    ? REQUIRED_GATE_FILES.filter((relativePath) => relativePath !== '.mcp.json')
+    : REQUIRED_GATE_FILES;
+  const missing = required.filter((relativePath) => !fs.existsSync(path.join(root, relativePath)));
+  if (compactHost && !hasCompactHostRegistration(root, compactHost)) {
+    missing.push(`compact host registration (${compactHost})`);
+  }
   if (!hasArkWorkflow(root)) missing.push(REQUIRED_GATE_WORKFLOW);
   return missing;
 }

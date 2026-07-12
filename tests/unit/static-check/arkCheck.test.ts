@@ -994,7 +994,7 @@ describe('ark init', () => {
     expect(run(['bogus']).status).toBe(2);
   });
 
-  it('`ark start --yes` guides setup end to end: shape → config → origin → gates → plan', () => {
+  it('`ark start --yes` guides setup end to end: shape → config → compact gates → plan', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-start-'));
     fs.writeFileSync(path.join(root, 'package.json'), '{"name":"fresh"}\n');
     fs.mkdirSync(path.join(root, 'src'), { recursive: true });
@@ -1022,13 +1022,13 @@ describe('ark init', () => {
     expect(out).toContain('Commands in the approved setup plan');
     expect(out).toContain('Applied');
     // It actually set things up — and left the gates active so it "stays that way"
-    // (the enforcement handoff): config, agent contract, CI gate, and origin snapshot.
+    // (the enforcement handoff): config, compact agent router, and CI gate.
     expect(fs.existsSync(path.join(root, 'ark.config.json'))).toBe(true);
     expect(fs.existsSync(path.join(root, 'AGENTS.md'))).toBe(true);
     expect(fs.existsSync(path.join(root, '.github/workflows/ark-check.yml'))).toBe(true);
-    expect(fs.existsSync(path.join(root, '.ark/reports/origin.json'))).toBe(true);
-    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('Default agent flow');
-    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toMatch(/explore first/i);
+    expect(fs.existsSync(path.join(root, '.ark/reports/origin.json'))).toBe(false);
+    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('## Compact router');
+    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('ark://manifest');
   });
 
   it('`ark start` adopts an established codebase (detection, not a wildcard preset)', () => {

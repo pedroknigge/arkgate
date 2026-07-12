@@ -188,6 +188,37 @@ advisory MCP plus CI. The experimental runtime is not required.
 `;
 }
 
+/**
+ * Compact onboarding uses one project router instead of copied slash-command
+ * skills. The package and ark MCP resources remain the canonical capability
+ * source; the marker makes the selected host verifiable by the strict gate.
+ */
+export function compactAgentInstructions(root, host = null) {
+  const selectedHost = host || 'none';
+  const checkCmd = arkCheckCommand(root);
+  const doctorCmd = arkCommand(root, 'ark-check', '--doctor');
+  const installSkills = arkCommand(
+    root,
+    'ark-check',
+    `--install-agent-gates --skills-only --tools ${selectedHost === 'none' ? '<host>' : selectedHost}`
+  );
+  return `# Ark Enforcement
+
+<!-- arkgate:compact-router host=${selectedHost} -->
+## Compact router
+
+This project uses the ArkGate package and its \`ark\` MCP resources as its one
+agent router. Before editing TypeScript or JavaScript, read \`ark://manifest\`
+when available; use \`ark_place\` for new files and \`validate_code\` after edits.
+If MCP is unavailable, inspect \`ark.config.json\` and run \`${checkCmd}\`.
+
+For architecture status, run \`${doctorCmd}\`. The selected host is
+\`${selectedHost}\`; its host registration and CI gate are installed alongside
+this file. Full \`/ark-*\` guided workflows are optional and can be added later
+with \`${installSkills}\`.
+`;
+}
+
 export function mcpJson(root) {
   return `${JSON.stringify({
     mcpServers: {

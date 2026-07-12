@@ -22,6 +22,11 @@ npx arkgate start
 # or: npx ark init
 ```
 
+`ark start` asks for the active agent on a TTY (or detects it otherwise) and applies a compact
+router setup: at most five project files and no `package.json` change unless you pass `--install`.
+Use `--tools <host>` to select the host explicitly. The broader command below remains the explicit
+way to install the full per-host `/ark-*` skill inventory.
+
 For non-interactive defaults, use:
 
 ```bash

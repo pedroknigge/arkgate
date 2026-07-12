@@ -4,6 +4,28 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { arkCommand, buildArchitectureRecommendation } from '../ark-shared.mjs';
+import { compactAgentInstructions, instructionRule, mcpJson } from './ci-and-commands.mjs';
+import { claudeSettings, codexHooks, grokHooks, grokProjectConfig } from './hook-templates.mjs';
+
+const COMPACT_HOST_TEMPLATES = {
+  claude: (root) => [
+    ['.claude/settings.json', claudeSettings(root)],
+    ['.mcp.json', mcpJson(root)],
+  ],
+  grok: (root) => [
+    ['.grok/config.toml', grokProjectConfig(root)],
+    ['.grok/hooks/ark-write-gate.json', grokHooks(root)],
+  ],
+  cursor: (root) => [['.cursor/mcp.json', mcpJson(root)]],
+  codex: (root) => [['.codex/hooks.json', codexHooks(root)]],
+  windsurf: (root) => [['.windsurf/rules/ark.md', instructionRule(root)]],
+  cline: (root) => [['.clinerules/ark.md', instructionRule(root)]],
+  copilot: (root) => [['.github/copilot-instructions.md', instructionRule(root)]],
+  kiro: (root) => [['.kiro/steering/ark.md', instructionRule(root)]],
+  roo: (root) => [['.roo/rules/ark.md', instructionRule(root)]],
+  continue: (root) => [['.continue/rules/ark.md', instructionRule(root)]],
+  gemini: (root) => [['GEMINI.md', instructionRule(root)]],
+};
 
 function treeFiles(root) {
   const files = new Map();
@@ -31,15 +53,44 @@ function digest(content) {
   return `sha256:${crypto.createHash('sha256').update(content ?? Buffer.alloc(0)).digest('hex')}`;
 }
 
+function change(pathname, before, after) {
+  return {
+    path: pathname,
+    action: !before ? 'create' : !after ? 'delete' : 'edit',
+    beforeHash: before ? digest(before) : null,
+    afterHash: after ? digest(after) : null,
+    beforeBase64: before ? before.toString('base64') : null,
+    afterBase64: after ? after.toString('base64') : null,
+  };
+}
+
+function setupBudget(changes) {
+  const generatedChanges = changes.filter((item) => item.path !== 'package.json');
+  const bytes = generatedChanges.reduce(
+    (total, item) => total + (item.afterBase64 ? Buffer.from(item.afterBase64, 'base64').length : 0),
+    0
+  );
+  return {
+    files: generatedChanges.length,
+    bytes,
+    maxFiles: 5,
+    maxBytes: 25 * 1024,
+    ok: generatedChanges.length <= 5 && bytes < 25 * 1024,
+  };
+}
+
 function commands(root, args, helpers) {
+  if (args.removeHost) {
+    return [`ark start --root ${root} --tools ${args.removeHost} --apply`];
+  }
   const result = [];
-  if (args.install !== false && fs.existsSync(path.join(root, 'package.json'))) {
+  if (args.installExplicit && args.install && fs.existsSync(path.join(root, 'package.json'))) {
     const [command, commandArgs] = helpers.packageInstallArgv(root, `^${helpers.cliVersion()}`);
     result.push(`${command} ${commandArgs.join(' ')}`);
   }
   result.push(arkCommand(root, 'ark-check', '--init'));
-  result.push(arkCommand(root, 'ark-check', '--report ark-report.html'));
-  result.push(arkCommand(root, 'ark-check', '--install-agent-gates'));
+  const host = args.tools ? ` --tools ${args.tools}` : '';
+  result.push(arkCommand(root, 'ark-check', `--install-agent-gates --compact${host}`));
   result.push(arkCommand(root, 'ark-check', '--plan --json'));
   result.push(arkCommand(root, 'ark-check', '--coverage --json'));
   return result;
@@ -51,6 +102,7 @@ export function renderStartPreview(preview) {
     console.log(`Your project looks like: ${preview.analysis.label} (${preview.analysis.archetype}, confidence ${preview.analysis.confidence}).`);
   }
   console.log(`Projected governed coverage: ${preview.projectedCoverage.percent ?? 'unknown'}% (${preview.projectedCoverage.classifiedFiles}/${preview.projectedCoverage.totalFiles} files)`);
+  console.log(`Compact setup budget: ${preview.setupBudget.files}/${preview.setupBudget.maxFiles} files, ${preview.setupBudget.bytes}/${preview.setupBudget.maxBytes} bytes${preview.setupBudget.ok ? '' : ' (exceeded)'}.`);
   console.log('Files to create/edit/delete:');
   if (preview.changes.length === 0) console.log('  (none)');
   for (const change of preview.changes) {
@@ -68,8 +120,16 @@ export function renderStartPreview(preview) {
 }
 
 export function applyStartPreview(root, preview) {
+  if (!preview.setupBudget?.ok) {
+    throw new Error('Refusing to apply a start plan that exceeds the compact setup budget.');
+  }
   for (const change of preview.changes) {
     const target = path.join(root, change.path);
+    const current = fs.existsSync(target) ? fs.readFileSync(target) : null;
+    const currentHash = current ? digest(current) : null;
+    if (currentHash !== change.beforeHash) {
+      throw new Error(`Refusing to apply stale preview: ${change.path} changed after planning.`);
+    }
     if (change.action === 'delete') {
       fs.rmSync(target, { force: true });
       continue;
@@ -79,7 +139,56 @@ export function applyStartPreview(root, preview) {
   }
 }
 
+function planHostRemoval(args, helpers) {
+  const host = args.removeHost;
+  const templateFactory = COMPACT_HOST_TEMPLATES[host];
+  if (!templateFactory) throw new Error(`Unknown compact host: ${host}.`);
+  const changes = [];
+  const unresolvedDecisions = [];
+  for (const [relativePath, expected] of templateFactory(args.root)) {
+    const target = path.join(args.root, relativePath);
+    if (!fs.existsSync(target)) continue;
+    const before = fs.readFileSync(target);
+    if (before.toString('utf8') !== expected) {
+      unresolvedDecisions.push(`${relativePath} was customized and was left untouched.`);
+      continue;
+    }
+    changes.push(change(relativePath, before, null));
+  }
+
+  const agentsPath = path.join(args.root, 'AGENTS.md');
+  if (fs.existsSync(agentsPath)) {
+    const before = fs.readFileSync(agentsPath);
+    if (before.toString('utf8') === compactAgentInstructions(args.root, host)) {
+      changes.push(change('AGENTS.md', before, Buffer.from(compactAgentInstructions(args.root))));
+    } else {
+      unresolvedDecisions.push('AGENTS.md is not the expected compact router and was left untouched.');
+    }
+  }
+
+  const genericMcp = path.join(args.root, '.mcp.json');
+  if (!fs.existsSync(genericMcp)) {
+    changes.push(change('.mcp.json', null, Buffer.from(mcpJson(args.root))));
+  }
+
+  return {
+    version: 1,
+    root: args.root,
+    readOnly: true,
+    mode: 'remove-host',
+    host,
+    analysis: null,
+    projectedCoverage: { percent: null, classifiedFiles: 0, totalFiles: 0 },
+    changes,
+    setupBudget: setupBudget(changes),
+    commands: commands(args.root, args, helpers),
+    hostGuarantees: ['host removal is limited to Ark-owned compact artifacts', 'restore with the displayed --tools command'],
+    unresolvedDecisions,
+  };
+}
+
 export async function planStart(args, helpers) {
+  if (args.removeHost) return planHostRemoval(args, helpers);
   const root = args.root;
   const before = treeFiles(root);
   let recommendation = null;
@@ -107,7 +216,8 @@ export async function planStart(args, helpers) {
     if (args.yes) childArgs.push('--yes');
     if (args.force) childArgs.push('--force');
     if (!args.strict) childArgs.push('--no-strict');
-    if (!args.install) childArgs.push('--no-install');
+    if (args.installExplicit && args.install) childArgs.push('--install');
+    if (args.installExplicit && !args.install) childArgs.push('--no-install');
     if (args.tools) childArgs.push('--tools', args.tools);
     if (args.requireWriteHook) childArgs.push('--require-write-hook', args.requireWriteHook);
     const planned = spawnSync(process.execPath, [helpers.cliPath, ...childArgs], {
@@ -131,15 +241,8 @@ export async function planStart(args, helpers) {
     for (const file of [...new Set([...before.keys(), ...after.keys()])].sort()) {
       const oldContent = before.get(file);
       const newContent = after.get(file);
-      if (oldContent?.equals(newContent) || (!oldContent && !newContent)) continue;
-      changes.push({
-        path: file,
-        action: !oldContent ? 'create' : !newContent ? 'delete' : 'edit',
-        beforeHash: oldContent ? digest(oldContent) : null,
-        afterHash: newContent ? digest(newContent) : null,
-        beforeBase64: oldContent ? oldContent.toString('base64') : null,
-        afterBase64: newContent ? newContent.toString('base64') : null,
-      });
+      if ((oldContent && newContent && oldContent.equals(newContent)) || (!oldContent && !newContent)) continue;
+      changes.push(change(file, oldContent, newContent));
     }
     const percent = coverage.governed?.percent ?? null;
     return {
@@ -153,6 +256,7 @@ export async function planStart(args, helpers) {
         totalFiles: coverage.governed?.totalFiles ?? coverage.totalFiles ?? 0,
       },
       changes,
+      setupBudget: setupBudget(changes),
       commands: commands(root, args, helpers),
       hostGuarantees: [
         args.requireWriteHook ? `Hard-write hook verified for ${args.requireWriteHook}` : 'shared CI merge gate will be installed',

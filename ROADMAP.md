@@ -163,7 +163,7 @@ P0/security patches. Do not publish a normal stable feature release until `S01`â
 | 13 | `C06` | `done` | L | `C05` | Runtime is isolated from the gate package and marked experimental until proven |
 | 14 | `O01` | `done` | M | `C05` | Repository discovery is source/graph-first rather than framework-guess-first |
 | 15 | `O02` | `done` | M | `O01` | `ark start` previews all mutations and measured coverage before apply |
-| 16 | `O03` | `todo` | L | `O02` | Host setup writes at most five small project files by default |
+| 16 | `O03` | `doing` | L | `O02` | Host setup writes at most five small project files by default |
 | 17 | `O04` | `todo` | M | `O03` | Clean-room onboarding remains green for every supported host profile |
 | 18 | `V01` | `todo` | L | `C05`, `O04` | Cold, warm, and incremental performance have real CI budgets |
 | 19 | `V02` | `todo` | M | `C04` | Mutation, property, and fuzz tests defend critical boundaries |

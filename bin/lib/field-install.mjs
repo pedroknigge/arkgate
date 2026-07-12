@@ -21,6 +21,68 @@ function arkPackageVersion() {
   }
 }
 
+function matchingBrace(text, openIndex) {
+  let depth = 0;
+  let quoted = false;
+  let escaped = false;
+  for (let index = openIndex; index < text.length; index += 1) {
+    const char = text[index];
+    if (quoted) {
+      if (escaped) escaped = false;
+      else if (char === '\\') escaped = true;
+      else if (char === '"') quoted = false;
+      continue;
+    }
+    if (char === '"') quoted = true;
+    else if (char === '{') depth += 1;
+    else if (char === '}' && --depth === 0) return index;
+  }
+  return -1;
+}
+
+function addDevDependencyPreservingFormat(source, version) {
+  const multiline = /\r?\n/.test(source);
+  const eol = source.includes('\r\n') ? '\r\n' : '\n';
+  const rootPropertyIndent = source.match(/\r?\n([ \t]+)"[^"\n]+"\s*:/)?.[1] ?? '  ';
+  const indentUnit = rootPropertyIndent;
+  const encoded = JSON.stringify(version);
+  const devMatch = /"devDependencies"\s*:\s*\{/.exec(source);
+
+  if (devMatch) {
+    const open = source.indexOf('{', devMatch.index);
+    const close = matchingBrace(source, open);
+    if (close === -1) throw new Error('Unbalanced devDependencies object');
+    const body = source.slice(open + 1, close);
+    if (!multiline) {
+      const addition = body.trim() ? `,"arkgate":${encoded}` : `"arkgate":${encoded}`;
+      return `${source.slice(0, close)}${addition}${source.slice(close)}`;
+    }
+    const beforeClose = source.slice(0, close);
+    const trailing = beforeClose.match(/\s*$/)?.[0] ?? '';
+    const contentEnd = close - trailing.length;
+    const closingIndent = trailing.slice(trailing.lastIndexOf('\n') + 1);
+    const propertyIndent = `${closingIndent}${indentUnit}`;
+    const addition = body.trim()
+      ? `,${eol}${propertyIndent}"arkgate": ${encoded}`
+      : `${propertyIndent}"arkgate": ${encoded}`;
+    return `${source.slice(0, contentEnd)}${addition}${eol}${closingIndent}${source.slice(close)}`;
+  }
+
+  const rootClose = source.lastIndexOf('}');
+  if (rootClose === -1) throw new Error('Unbalanced package.json object');
+  const rootBody = source.slice(0, rootClose);
+  if (!multiline) {
+    const separator = rootBody.trim().endsWith('{') ? '' : ',';
+    return `${rootBody}${separator}"devDependencies":{"arkgate":${encoded}}${source.slice(rootClose)}`;
+  }
+  const trailing = rootBody.match(/\s*$/)?.[0] ?? '';
+  const contentEnd = rootClose - trailing.length;
+  const rootClosingIndent = trailing.slice(trailing.lastIndexOf('\n') + 1);
+  const separator = source.slice(0, contentEnd).trimEnd().endsWith('{') ? '' : ',';
+  const addition = `${separator}${eol}${rootPropertyIndent}"devDependencies": {${eol}${rootPropertyIndent}${indentUnit}"arkgate": ${encoded}${eol}${rootPropertyIndent}}`;
+  return `${source.slice(0, contentEnd)}${addition}${eol}${rootClosingIndent}${source.slice(rootClose)}`;
+}
+
 /**
  * Ensure a check command string includes `--baseline <file>`.
  * Only touches strings that already invoke ark-check / arkgate-check.
@@ -150,16 +212,15 @@ export function pinArkgateDevDependency(root, opts = {}) {
     return { changed: false, reason: 'no-package-json' };
   }
   let pkg;
+  let source;
   try {
-    pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    source = fs.readFileSync(pkgPath, 'utf8');
+    pkg = JSON.parse(source);
   } catch {
     return { changed: false, reason: 'unreadable-package-json' };
   }
   const deps = pkg.dependencies && typeof pkg.dependencies === 'object' ? pkg.dependencies : {};
-  const dev =
-    pkg.devDependencies && typeof pkg.devDependencies === 'object'
-      ? { ...pkg.devDependencies }
-      : {};
+  const dev = pkg.devDependencies && typeof pkg.devDependencies === 'object' ? pkg.devDependencies : {};
   if (typeof deps.arkgate === 'string' || typeof dev.arkgate === 'string') {
     return {
       changed: false,
@@ -174,12 +235,8 @@ export function pinArkgateDevDependency(root, opts = {}) {
       : shipped
         ? `^${shipped}`
         : 'latest';
-  dev.arkgate = version;
   if (opts.write !== false) {
-    fs.writeFileSync(
-      pkgPath,
-      `${JSON.stringify({ ...pkg, devDependencies: dev }, null, 2)}\n`
-    );
+    fs.writeFileSync(pkgPath, addDevDependencyPreservingFormat(source, version));
   }
   return { changed: true, reason: 'added', version };
 }

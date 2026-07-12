@@ -45,6 +45,7 @@ export {
   packageScriptsHaveTypecheck,
   treeHasTypecheckScript,
   ensureTypecheckScript,
+  compactRouterHost,
   REQUIRED_GATE_FILES,
   hasArkWorkflow,
   missingGates,

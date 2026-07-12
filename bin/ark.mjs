@@ -21,6 +21,7 @@ import {
 import { pinArkgateDevDependency, FALSE_GREEN_GAP_ID } from './lib/field-install.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import { applyStartPreview, planStart, renderStartPreview } from './lib/start-preview.mjs';
+import { detectActiveAgentHost } from './lib/skill-install.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
@@ -59,10 +60,12 @@ function parseArgs(argv) {
     force: false,
     strict: true,
     install: true,
+    installExplicit: false,
     apply: false,
     json: false,
     internalApply: false,
     skipPackageManager: false,
+    removeHost: undefined,
     requireWriteHook: undefined,
     help: false,
     version: false,
@@ -84,11 +87,19 @@ function parseArgs(argv) {
     else if (arg === '--yes' || arg === '-y') args.yes = true;
     else if (arg === '--force') args.force = true;
     else if (arg === '--no-strict') args.strict = false;
-    else if (arg === '--no-install') args.install = false;
+    else if (arg === '--install') {
+      args.install = true;
+      args.installExplicit = true;
+    }
+    else if (arg === '--no-install') {
+      args.install = false;
+      args.installExplicit = true;
+    }
     else if (arg === '--apply') args.apply = true;
     else if (arg === '--json') args.json = true;
     else if (arg === '--internal-apply') args.internalApply = true;
     else if (arg === '--skip-package-manager') args.skipPackageManager = true;
+    else if (arg === '--remove-host') args.removeHost = requireValue(arg, i++).trim().toLowerCase();
     else if (arg === '--preset') args.preset = requireValue(arg, i++);
     else if (arg === '--archetype') args.archetype = requireValue(arg, i++);
     else if (arg === '--tools') args.tools = requireValue(arg, i++);
@@ -106,7 +117,7 @@ function parseArgs(argv) {
 
 function usage() {
   return `Usage:
-  ark start   [--root <project>] [--tools <list>] [--require-write-hook <host>] [--apply] [--json]
+  ark start   [--root <project>] [--tools <host>] [--require-write-hook <host>] [--install] [--apply] [--json]
   ark init    [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture]
               [--archetype <playbook-id>] [--tools <list>] [--require-write-hook <host>] [--yes] [--force] [--no-strict]
   ark upgrade [--root <project>] [--no-install] [--no-strict]
@@ -124,6 +135,7 @@ Options:
                (Also the implicit default when stdin/stdout are not a TTY — agents never hang on prompts.)
   --force      Allow generated files to overwrite existing files.
   --no-strict  Skip the final strict ark-check run.
+  --install    Add arkgate to package.json explicitly before applying a start plan.
   --no-install Skip adding/installing arkgate as a project devDependency (start/upgrade).
   --apply       Apply the mutations shown by the start preview.
   --json        Emit the start preview as deterministic machine-readable JSON.
@@ -132,8 +144,10 @@ Options:
                Valid ids: crud-product, api-backend, frontend-surface, library-sdk, cli-utility,
                worker-pipeline, event-coordinator, integration-bridge, multi-app-workspace, prototype-spike,
                vertical-slice-product, ddd-bounded-contexts.
-  --tools      Comma-separated agents to gate (claude,cursor,codex,grok,windsurf,cline,copilot,kiro,roo,continue,gemini).
-               Omit to auto-detect from each tool's config dir, falling back to claude+cursor+codex+grok.
+  --tools      One active agent host for start (claude,cursor,codex,grok,windsurf,cline,copilot,kiro,roo,continue,gemini).
+               Omit to use the active host; an unknown host creates only the shared compact router.
+  --remove-host <host>
+               Preview or apply removal of that compact host integration; re-add it with --tools <host>.
   --require-write-hook <host>
                Require and verify a hard local write hook for Claude or Grok. Cursor/Codex are
                advisory-write plus hard CI merge only; impossible requests fail before any write.
@@ -237,6 +251,25 @@ function runArkCheck(args, options = {}) {
 
 function isInteractiveTty() {
   return Boolean(process.stdin.isTTY && process.stdout.isTTY);
+}
+
+async function resolveStartHost(args) {
+  if (args.tools || args.removeHost) return args.tools;
+  const active = detectActiveAgentHost();
+  if (!isInteractiveTty() || args.yes) return active ?? undefined;
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = (
+      await rl.question(
+        `Which agent should receive Ark's compact router? [${active ?? 'skip for now'}] `
+      )
+    )
+      .trim()
+      .toLowerCase();
+    return answer || active || undefined;
+  } finally {
+    rl.close();
+  }
 }
 
 /**
@@ -420,10 +453,11 @@ async function init(args) {
 
 // `ark start` — the guided entry point (co-pilot Phase G). One command takes a newcomer from
 // "I have a project" to "governed, with a plan" in plain language, without knowing any skill
-// names: look at the code → suggest a shape → set up the guardrails → show the plan. It only
+// names: look at the code → suggest a shape → set up one compact host router → show the plan. It only
 // orchestrates existing steps (recommend → init → --plan) and frames each in outcome terms.
 async function start(args) {
   if (!args.internalApply) {
+    args.tools = await resolveStartHost(args);
     const preview = await planStart(args, {
       arkCheck,
       cliPath: fileURLToPath(import.meta.url),
@@ -447,10 +481,10 @@ async function start(args) {
   try {
     console.log("Let's set up Ark for your project.");
     console.log(
-      "I'll walk the tree, freeze a day-zero architecture picture, then set up guardrails and show a plan."
+      "I'll walk the tree, create a compact host-specific guardrail setup, then show a plan."
     );
     console.log(
-      'Nothing in your product code is changed — only Ark config, then origin snapshot, then agent/CI templates.'
+      'Nothing in your product code is changed — only Ark config, one active-host router, and a CI template.'
     );
     if (nonInteractive && !args.yes) {
       console.log(
@@ -489,7 +523,7 @@ async function start(args) {
     }
 
     // 2b) Pin arkgate as a project devDependency so CI/npx do not depend on a stale global.
-    if (args.install !== false && fs.existsSync(path.join(root, 'package.json'))) {
+    if (args.installExplicit && args.install && fs.existsSync(path.join(root, 'package.json'))) {
       const { pinned, installStatus } = ensureProjectArkgateDependency(root, {
         install: true,
         runPackageManager: !args.skipPackageManager,
@@ -504,7 +538,7 @@ async function start(args) {
       } else if (pinned.reason === 'already-present') {
         console.log(`  arkgate already in package.json (${pinned.version}).`);
       }
-    } else if (args.install === false) {
+    } else if (args.installExplicit && args.install === false) {
       console.log('  Skipping arkgate package pin (--no-install).');
     }
 
@@ -551,16 +585,16 @@ async function start(args) {
       console.log('  Found an existing ark.config.json — keeping it.');
     }
 
-    // 4) Day-zero origin — freeze the architecture picture *before* agent docs / CI / skills.
-    // Later --report runs show evolution vs this snapshot. Idempotent (origin once).
+    // 4) Compact start deliberately avoids reports/history and copied skills. A report can
+    // be requested later, after the small host-specific setup is accepted.
     console.log('');
-    freezeDayZeroOrigin(root);
+    console.log('Skipping day-zero report archive in compact start (run ark-check --report later if wanted).');
 
-    // 5) Agent + CI gate templates (docs, hooks, skills) — after origin is frozen.
+    // 5) Agent + CI gate templates for exactly one active host.
     console.log('');
     console.log('Installing agent and CI gate templates…');
     {
-      const gateArgs = ['--root', root, '--install-agent-gates'];
+      const gateArgs = ['--root', root, '--install-agent-gates', '--compact'];
       if (args.tools) gateArgs.push('--tools', args.tools);
       if (args.requireWriteHook) {
         gateArgs.push('--require-write-hook', args.requireWriteHook);
@@ -711,7 +745,7 @@ async function start(args) {
       );
     }
     console.log('');
-    console.log('Day-zero origin is under .ark/reports/origin.* — re-run --report later for evolution.');
+    console.log('Optional later: ark-check --report ark-report.html (captures a day-zero/evolution report).');
     console.log('Optional later: --plan · --coverage · /ark-explore · /ark-fix · /ark-place · ark upgrade');
     return 0;
   } finally {

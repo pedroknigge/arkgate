@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { codexPromptsDir } from './codex-home.mjs';
-import { __packageRoot, readJson } from './gate-files.mjs';
+import { __packageRoot, isCompactRouterAgentsContent, readJson } from './gate-files.mjs';
 
 export function normalizeToolsList(tools) {
   if (tools == null) return [];
@@ -284,6 +284,13 @@ export function detectCodexHomeGap(root) {
 
 export function detectSkillGaps(root) {
   if (!fs.existsSync(path.join(root, 'AGENTS.md'))) return [];
+  try {
+    if (isCompactRouterAgentsContent(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8'))) {
+      return [];
+    }
+  } catch {
+    // Continue with the ordinary missing-skill detection below.
+  }
   // The Ark source tree keeps the skill templates at templates/skills/ — it's the
   // producer, not a consumer, so it must not nag itself to "install" its own skills.
   if (fs.existsSync(path.join(root, 'templates', 'skills'))) return [];

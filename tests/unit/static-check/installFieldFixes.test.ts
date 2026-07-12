@@ -227,7 +227,7 @@ describe('ensureBaselineFlagInCheckCommand + syncBaselineIntoCheckSurfaces', () 
   });
 });
 
-describe('pinArkgateDevDependency + start --no-install', () => {
+describe('pinArkgateDevDependency + compact start install policy', () => {
   it('pins arkgate in devDependencies without network', () => {
     const root = tempRoot('ark-pin-');
     write(root, 'package.json', JSON.stringify({ name: 'pin-me', version: '1.0.0' }, null, 2));
@@ -250,7 +250,7 @@ describe('pinArkgateDevDependency + start --no-install', () => {
     expect(pkg.devDependencies?.arkgate).toBeUndefined();
   });
 
-  it('start --no-install still runs; start without --no-install pins package.json', () => {
+  it('start leaves package.json alone by default and pins only with --install', () => {
     const root = tempRoot('ark-start-pin-');
     write(
       root,
@@ -258,19 +258,24 @@ describe('pinArkgateDevDependency + start --no-install', () => {
       JSON.stringify({ name: 'start-pin', version: '0.0.1', private: true }, null, 2)
     );
     write(root, 'src/index.ts', 'export {};\n');
-    // Pin only via pure helper (no network) — simulates what start does before optional npm
-    const pin = pinArkgateDevDependency(root);
-    expect(pin.changed).toBe(true);
-    // Full start with --no-install must not throw and leave gates
     const result = spawnSync(
       process.execPath,
-      [path.resolve('bin/ark.mjs'), 'start', '--apply', '--root', root, '--no-install', '--no-strict'],
+      [path.resolve('bin/ark.mjs'), 'start', '--apply', '--root', root, '--no-strict'],
       { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
     expect(result.status).toBe(0);
     expect(fs.existsSync(path.join(root, 'ark.config.json')) || fs.existsSync(path.join(root, 'AGENTS.md'))).toBe(
       true
     );
+    expect(JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).devDependencies?.arkgate).toBeUndefined();
+
+    const explicit = spawnSync(
+      process.execPath,
+      [path.resolve('bin/ark.mjs'), 'start', '--apply', '--install', '--root', root, '--no-strict'],
+      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+    expect(explicit.status, `${explicit.stdout}\n${explicit.stderr}`).toBe(0);
+    expect(JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).devDependencies.arkgate).toMatch(/^\^/);
   });
 });
 

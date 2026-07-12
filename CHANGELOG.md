@@ -6,6 +6,12 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ### Added
 
+- **Compact active-host onboarding:** `ark start` now asks for the active host on a TTY (or
+  detects it non-interactively), writes at most five project files / 25 KB, and uses one
+  package/MCP-backed router instead of copied per-host skill packs. It does not alter
+  `package.json` unless `--install` is explicit; host removal and re-addition are previewed,
+  safe, and reversible.
+
 - **Canonical analysis engine bundle:** graph policy, cycle evaluation, and configuration
   diagnostics now have one Kernel implementation shared by the library, CLI, and MCP. A documented
   standalone CLI bundle preserves the package's self-hosted boundary and is protected by a CI drift

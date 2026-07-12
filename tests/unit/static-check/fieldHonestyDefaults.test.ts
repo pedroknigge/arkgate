@@ -308,7 +308,7 @@ describe('ark start wrap-up — Next-like host false ENFORCE', () => {
 });
 
 describe('ark start typecheck bootstrap', () => {
-  it('adds typecheck script and CI step when tsconfig exists but package.json lacks typecheck', () => {
+  it('does not add a typecheck script or CI step when compact start sees a tsconfig', () => {
     const root = mkTemp('ark-start-typecheck-');
     writeTree(root, {
       'package.json': JSON.stringify({
@@ -328,17 +328,18 @@ describe('ark start typecheck bootstrap', () => {
       { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }
     );
     expect(res.status).toBe(0);
+    expect(res.stdout).not.toContain('Added package.json script "typecheck"');
 
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-    expect(pkg.scripts.typecheck).toBe('tsc --noEmit');
+    expect(pkg.scripts.typecheck).toBeUndefined();
     expect(pkg.scripts.lint).toBe('eslint .');
 
     const workflow = fs.readFileSync(
       path.join(root, '.github/workflows/ark-check.yml'),
       'utf8'
     );
-    expect(workflow).toMatch(/name: Typecheck/);
-    expect(workflow).toMatch(/npm run typecheck/);
+    expect(workflow).not.toMatch(/name: Typecheck/);
+    expect(workflow).not.toMatch(/npm run typecheck/);
   });
 });
 

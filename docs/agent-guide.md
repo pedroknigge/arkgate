@@ -57,7 +57,7 @@ MCP `ark_recommend` and the `/ark-architect` skill.
 ### Terminal onboarding (Phase B)
 
 ```bash
-npx ark start --yes                             # preferred: shape → contract → **day-zero origin** → gates → plan
+npx ark start --yes                             # preferred: shape → compact contract → active host → CI → plan
 npx ark init --archetype crud-product --yes   # non-interactive: shape → preset → origin → gates
 npx ark init                                    # TTY wizard: pick application shape (1–8), not a framework
 npx ark-check --doctor                          # includes "New here?" when coverage is low or config is fresh
@@ -65,14 +65,15 @@ npx ark-check --report beginner.html --beginner # simplified HTML for enthusiast
 npx ark-check --watch                           # debounced re-check when governed files change
 ```
 
-**Day-zero origin (2.12+):** as soon as `ark.config.json` exists, `ark start` / `ark init`
-freeze `.ark/reports/origin.*` **before** writing agent docs, skills, or CI templates.
-Later `--report` shows evolution vs that snapshot. Do not `--reset-origin` unless the user
-explicitly wants a new baseline.
+**Day-zero origin (2.12+):** `ark init` freezes `.ark/reports/origin.*` before writing agent
+docs or CI templates. Compact `ark start` keeps first-run setup under five small project files;
+run `ark-check --report ark-report.html` explicitly when you want to establish an origin/evolution
+baseline. Do not `--reset-origin` unless the user explicitly wants a new baseline.
 
-**Default agent co-pilot:** `/ark-autopilot` (explore-first, dual plan A remediation + B
-pattern bets). Recon without applying: `/ark-explore`. Never treat empty `--plan` as
-“architecture healthy” without the explore pass.
+**Full-skill agent co-pilot:** after explicitly installing the `/ark-*` pack, use
+`/ark-autopilot` (explore-first, dual plan A remediation + B pattern bets). Recon without
+applying: `/ark-explore`. The default compact router uses MCP/CLI directly. Never treat empty
+`--plan` as “architecture healthy” without the explore pass.
 
 `ark init --archetype <id>` maps playbook ids to named presets (`hexagonal`, `layered`,
 `feature-sliced`, `monorepo`). With `--yes` and no archetype, Ark auto-selects from
@@ -217,7 +218,7 @@ directories (`utils/`, `lib/`) must be classified explicitly via `/ark-contract`
 
 ## Supported agent hosts
 
-Wire write-gate + MCP + `/ark-*` skills with:
+Wire write-gate + MCP + the full `/ark-*` skill set with:
 
 ```bash
 npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok

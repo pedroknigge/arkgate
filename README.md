@@ -25,7 +25,8 @@ If you remember nothing else:
 ```text
 1.  npx arkgate start          ← read-only preview: files + commands + projected coverage
     npx arkgate start --apply  ← apply exactly the previewed mutations
-2.  /ark-autopilot             ← explore first, dual plan, safe fixes, leave gates on
+2.  Compact router             ← MCP/AGENTS routes place, validate, and architecture checks
+    /ark-autopilot             ← optional full guided workflow after its skill pack is installed
 3.  npx arkgate-check --doctor ← “where am I?” anytime (one status screen)
 ```
 
@@ -37,8 +38,8 @@ If you remember nothing else:
 | New ArkGate version | `/ark-upgrade` |
 
 **Everything else is optional.** You do not need to learn “modes”, 11 skills, or the runtime
-kernel to get value. Agents that are unsure should **only** run `/ark-autopilot` (or the three
-commands above).
+kernel to get value. The compact router is enough for normal work; install `/ark-autopilot` only
+when you want the full guided workflow.
 
 ---
 
@@ -66,12 +67,13 @@ It is **not** a web framework, ORM, or job runner.
 
 ## Who it’s for
 
-Same start for almost everyone: **`npx arkgate start` → `/ark-autopilot`**.
+Same start for almost everyone: **`npx arkgate start` → compact router** (then
+`/ark-autopilot` when you opt into the full skill pack).
 
 | You are… | Same start, then… |
 |----------|-------------------|
-| Builder with AI | Stay on autopilot until doctor is happy |
-| Tech lead on a messy monorepo | Autopilot (or deeper `/ark-adopt` if you want a focused brownfield pass) |
+| Builder with AI | Use the compact router and doctor; add autopilot when you want guided remediation |
+| Tech lead on a messy monorepo | Add autopilot (or deeper `/ark-adopt` for a focused brownfield pass) |
 | Power user | Same flow; use `ark-check --plan` / `--coverage` when you want the raw sensor |
 
 **Not for:** no TypeScript, “just one lint rule”, or looking for an app framework.
@@ -112,8 +114,8 @@ Full checklist (CI, MCP, Codex, imports): **[docs/migrate-from-ark-runtime-kerne
 ```bash
 npm install -D arkgate typescript
 npx arkgate start                 # read-only preview: exact mutations + projected coverage
-npx arkgate start --apply         # apply the previewed contract → origin → gates plan
-# in agent:
+npx arkgate start --apply         # apply the compact contract → active-host router → CI plan
+# optional, after installing the full skill pack:
 #   /ark-autopilot
 npx arkgate-check --doctor        # status light + next action
 ```
@@ -123,7 +125,7 @@ Aliases `ark` / `ark-check` / `ark-mcp` still work. **npm / pnpm / yarn**. No in
 <details>
 <summary>What <code>/ark-autopilot</code> does under the hood (optional detail)</summary>
 
-1. Setup if needed (`ark start` — contract, then **day-zero origin**, then gates).
+1. Setup if needed (`ark start` — compact contract + active-host router + CI gate; create an HTML/origin report explicitly when you need one).
 2. **Explore pass** (decision-grade map of *this* product; field path when demos exist).
 3. **Dual plan:** **A** remediation from `--plan` (mechanical-safe only by default); **B** pattern/evolution bets (never auto-applied as mechanical-safe). Empty plan ≠ “healthy” without explore/B.
 4. Apply A → re-check; judgment only when you ask for full apply.
@@ -152,8 +154,9 @@ npx arkgate-check --coverage
 Install once: `npx arkgate-check --install-agent-gates`
 (`--tools claude,cursor,codex,grok` to pick hosts.)
 
-**Default is always `/ark-autopilot`.** The rest are escapes, not a second curriculum.
-Generated `AGENTS.md` includes a **skill routing table** (trigger → skill). Skills are
+**The compact router is the default; `/ark-autopilot` is the full guided option.** The rest are
+escapes, not a second curriculum. Full-install `AGENTS.md` includes a **skill routing table**
+(trigger → skill). Skills are
 **dual-engine** (CLI sensor + read real source) and end with a fixed **completion contract**;
 critical handoffs say **STOP** and name the next skill (hosts must follow — markdown cannot chain calls).
 When the host allows it, skills may **fan out parallel subagents** (disjoint scopes);
@@ -213,7 +216,7 @@ ark.config.json
   [configuration and editor guide](docs/configuration.md).
 - **Frameworks:** Nest / Next / express / library layouts get sensible globs on init so day-one coverage is real.
 - **Brownfield:** baseline ratchet, refuse to freeze a wrong contract, `/ark-adopt` for mature trees.
-- **Agents:** skills install into Claude / Cursor / Codex / Grok; `ark start` freezes **day-zero origin** under `.ark/reports/` **before** agent docs/CI templates.
+- **Agents:** `ark start` asks for (or detects) one active host and writes one compact router, not copied skill packs. Use `ark-check --install-agent-gates --skills-only --tools <host>` later when you explicitly want the full `/ark-*` skill set. Reports are opt-in with `ark-check --report`.
 - **Write protocol (2.10 / Track W):** mechanical-safe **autoPatch** on the write gate (`import type`); MCP **`ark_prepare_write`** (place + validate + patch + judgmentBrief); opt-in hook **`--hook-repair`** (`ARK_REPAIR_JSON`); doctor **`writePath`** (repair vs reject-only); loop-cost eval (`npm run eval:loop-cost`). Port-proof inject is **judgment** (arity change), not silent auto-apply.
 - **Fail-closed CI (2.11):** `--strict-merge` combines config coverage, shared gate-file
   presence, and bypass diagnostics for dynamic imports, TypeScript suppressions, explicit `any`
@@ -245,7 +248,9 @@ ark.config.json
 
 ```bash
 npx arkgate start                         # guided read-only preview
-npx arkgate start --apply                 # apply the previewed contract → origin → gates plan
+npx arkgate start --apply                 # apply the compact active-host setup (≤5 files)
+npx arkgate start --tools codex --apply   # select the host explicitly
+npx arkgate start --install --apply       # also add arkgate to package.json (explicit only)
 npx arkgate-check --doctor                # health + Adoption gaps (not just fitness)
 npx arkgate-check --doctor --json         # machine-readable doctor.adoption
 npx arkgate-check --strict                # fail-closed CI + installed-gate/safety checks
