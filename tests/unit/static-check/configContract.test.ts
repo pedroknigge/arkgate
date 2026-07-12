@@ -14,6 +14,7 @@ import {
   loadArkConfigContract,
   migrateArkConfig,
   parseArkConfigJson,
+  withArkConfigMetadata,
 } from '../../../src/domain/configContract';
 import {
   loadArkConfigContract as loadGeneratedArkConfigContract,
@@ -352,6 +353,31 @@ describe('C01 config contract', () => {
     expect(() => parseArkConfigJson('{ nope', 'broken.json')).toThrow(
       'Invalid ArkGate config (broken.json):\n- $: invalid JSON'
     );
+  });
+
+  it('keeps migration metadata and config metadata on their exact public contract', () => {
+    expect(migrateArkConfig(VALID_MINIMAL_CONFIG)).toMatchObject({ migratedFrom: 'unversioned' });
+    expect(
+      migrateArkConfig({ ...VALID_MINIMAL_CONFIG, schemaVersion: ARK_CONFIG_SCHEMA_VERSION })
+    ).toMatchObject({ migratedFrom: null });
+    expect(() => migrateArkConfig({ ...VALID_MINIMAL_CONFIG, schemaVersion: '2.0' }, 'future.json'))
+      .toThrow('unsupported version "2.0"; expected 1.0');
+    expect(() => parseArkConfigJson('{', 'broken.json')).toThrow('Invalid ArkGate config (broken.json)');
+
+    expect(
+      withArkConfigMetadata({ include: ['src'], $schema: '', schemaVersion: 'legacy' })
+    ).toEqual({
+      $schema: ARK_CONFIG_SCHEMA_URL,
+      schemaVersion: ARK_CONFIG_SCHEMA_VERSION,
+      include: ['src'],
+    });
+    expect(
+      withArkConfigMetadata({ include: ['src'], $schema: './schema.json', schemaVersion: 'legacy' })
+    ).toEqual({
+      $schema: './schema.json',
+      schemaVersion: ARK_CONFIG_SCHEMA_VERSION,
+      include: ['src'],
+    });
   });
 
   it('accepts a local editor schema path while keeping the current contract version', () => {
