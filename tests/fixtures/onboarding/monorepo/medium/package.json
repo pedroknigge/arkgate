@@ -1,0 +1,6 @@
+{
+  "name": "o04-monorepo-medium",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": { "check": "tsc --noEmit" }
+}

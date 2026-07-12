@@ -1,0 +1,6 @@
+{
+  "name": "o04-frontend-medium",
+  "private": true,
+  "type": "module",
+  "scripts": { "check": "tsc --noEmit" }
+}

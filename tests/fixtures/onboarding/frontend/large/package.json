@@ -1,0 +1,6 @@
+{
+  "name": "o04-frontend-large",
+  "private": true,
+  "type": "module",
+  "scripts": { "check": "tsc --noEmit" }
+}

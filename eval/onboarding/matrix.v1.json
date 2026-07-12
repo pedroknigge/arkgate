@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "candidate": { "ref": "HEAD", "resolution": "recorded by the focused runner" },
+  "offline": true,
+  "dimensions": {
+    "shapes": ["library", "api", "frontend", "monorepo"],
+    "sizes": ["small", "medium", "large"],
+    "hosts": ["claude", "grok", "cursor", "codex"],
+    "packageManagers": ["npm", "pnpm", "yarn"]
+  },
+  "expectedCells": 144,
+  "requiredAssertions": [
+    "preview-is-byte-identical",
+    "preview-apply-path-parity",
+    "strict-merge-green",
+    "canonical-host-capabilities",
+    "projected-coverage-equals-measured-coverage",
+    "enforce-coverage-at-least-90-percent",
+    "idempotent-rerun",
+    "no-unrelated-host-files"
+  ]
+}
