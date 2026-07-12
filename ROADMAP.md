@@ -78,11 +78,11 @@ These are the starting facts this roadmap must change.
 | `RB-03` | P1 | `closed` | S04 gives every supported host-only install a valid merge/write contract |
 | `RB-04` | P1 | `closed` | S05 closed the confirmed semantic false positives and dependency bypasses |
 | `RB-05` | P1 | `closed` | S02 restored executable coverage and mutation gates |
-| `RB-06` | P1 | `open` | O03 owns preview-first setup and the five-file default limit |
+| `RB-06` | P1 | `closed` | O03 compact active-host setup passed PR #41 CI and merged as `105cd39` |
 
-`RB-01`–`RB-05` are closed by the corresponding completed Phase S items and their recorded
-evidence. `RB-06` remains the only blocker in this register; normal stable feature releases remain
-gated until `O03` is done.
+`RB-01`–`RB-06` are closed by the corresponding completed items and their recorded evidence.
+ArkGate remains beta until the V05 binary exit gate passes; closing `RB-06` only removes the
+onboarding release blocker.
 
 ---
 
@@ -163,7 +163,7 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 13 | `C06` | `done` | L | `C05` | Runtime is isolated from the gate package and marked experimental until proven |
 | 14 | `O01` | `done` | M | `C05` | Repository discovery is source/graph-first rather than framework-guess-first |
 | 15 | `O02` | `done` | M | `O01` | `ark start` previews all mutations and measured coverage before apply |
-| 16 | `O03` | `doing` | L | `O02` | Host setup writes at most five small project files by default |
+| 16 | `O03` | `done` | L | `O02` | Host setup writes at most five small project files by default |
 | 17 | `O04` | `todo` | M | `O03` | Clean-room onboarding remains green for every supported host profile |
 | 18 | `V01` | `todo` | L | `C05`, `O04` | Cold, warm, and incremental performance have real CI budgets |
 | 19 | `V02` | `todo` | M | `C04` | Mutation, property, and fuzz tests defend critical boundaries |
@@ -171,7 +171,7 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 21 | `V04` | `todo` | M | `C06`, `V03` | Package and release artifacts are small, complete, and attestable |
 | 22 | `V05` | `todo` | M | all prior items | Independent audit passes and the product may exit beta |
 
-**Next:** `O03`. Reduce default host setup to at most five small project files.
+**Next:** `O04`. Build clean-room onboarding fixtures for every supported host profile.
 
 ---
 
@@ -701,7 +701,7 @@ package smoke installed and imported `arkgate` and `@arkgate/runtime` independen
 
 ### O03 — Reduce setup to the active host and five files
 
-- **Status:** `doing`
+- **Status:** `done`
 - **Depends on:** `O02`
 - **Closes:** `RB-06`
 
@@ -730,8 +730,12 @@ explicit remove/re-add. `README.md` and `docs/agent-guide.md` now document the e
 explicit package opt-in, and reversible `--remove-host` path. The focused O03/install/docs suites
 pass 159/159; the local confidence gate passes 892/892 tests at 85.26% branch coverage and 94.76%
 mutation. Typecheck, JavaScript syntax, generated-artifact drift, module-budget, package-file,
-strict architecture, and build gates pass locally. Keep O03 `doing` until CI passes on the pushed
-commit; only then mark it `done` and close `RB-06`.
+strict architecture, and build gates pass locally.
+
+**Merge evidence (2026-07-12):** PR [#41](https://github.com/pedroknigge/arkgate/pull/41) used
+signed commit `a20f851` (GitHub SSH verification: valid), passed all required `build`, `CodeQL`,
+and `Semgrep CE` checks plus the Node/TypeScript/parity matrix, and was squash-merged as
+`105cd3985aa0f360f881e992dc894fd8aaf231b4`. `RB-06` is closed.
 
 ### O04 — Build clean-room onboarding fixtures
 
@@ -925,10 +929,13 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: O03 — Reduce setup to the active host and five files
-First result: push the local O03 evidence commit and confirm all required CI checks are green
-Then: mark O03 done, close RB-06, and begin O04 only after that status transition
-Primary files: ROADMAP.md evidence/status, O03 fixture/docs already verified locally
-Required finish: one active host writes at most five files / 25 KB, preserves user source and
-scripts by default, and has a documented reversible removal path backed by green CI
+Item: O04 — Build clean-room onboarding fixtures
+First result: create the 12 fixture descriptors for library, API, frontend, and monorepo shapes
+at small, medium, and large sizes
+Then: execute the 144 deterministic host/package-manager cells without network installs and expose
+their result schema and focused test command
+Primary files: tests/fixtures/onboarding/, onboarding-matrix test harness, eval/onboarding/, CI
+sharding only if required
+Required finish: every supported cell has preview/apply parity, truthful host capability, at least
+90% governed coverage for Enforce, strict merge success, idempotency, and no unrelated host files
 ```

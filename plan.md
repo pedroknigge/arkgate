@@ -3,7 +3,7 @@
 - Prepared: 2026-07-12
 - Source of truth: `ROADMAP.md` dated 2026-07-11
 - Scope: `O03`, `O04`, `V01`, `V02`, `V03`, `V04`, and `V05`
-- Current release constraint: `RB-06` remains open until `O03` is done
+- Current release constraint: `RB-06` closed with O03; ArkGate remains beta until V05 passes
 
 ## 1. Purpose and authority
 
@@ -19,21 +19,21 @@ When this document and `ROADMAP.md` disagree:
 3. Mark an item `done` only in accordance with the roadmap workflow and only after CI is green on
    the pushed commit.
 
-## 2. Baseline reconciliation required at the next roadmap edit
+## 2. Completed roadmap reconciliation
 
-The current roadmap has two stale internal references. They do not change the execution order.
+O03 completed on 2026-07-12. PR #41 passed its required CI using GitHub-verified signed commit
+`a20f851` and was squash-merged as `105cd39`.
 
 | Roadmap location | Current text | Operational interpretation | Required correction |
 |---|---|---|---|
-| Ordered queue | `O03` is `doing` | Authoritative current status | Keep `doing` until its closure gate passes |
-| `O03` detail | `O03` is `todo` | Stale detail status | Change to `doing` before further O03 implementation, or directly to `done` only with complete evidence |
-| `Next` marker | `O03` | Authoritative next item | Keep |
-| Next implementation session | Points to completed `O01` | Stale session note | Replace with the current `O03` handoff |
+| Ordered queue | `O03` is `done` | O03 completion is authoritative | Start O04 only when its first implementation slice begins |
+| `O03` detail | `O03` is `done` | Detailed status matches the queue | Preserve the linked local and remote evidence |
+| `Next` marker | `O04` | Next queued item | Keep until O04 starts |
+| Next implementation session | Points to `O04` | Current handoff | Maintain the clean-room matrix scope |
 
-The repository already contains an O03 compact-start implementation and
-`tests/unit/static-check/o03CompactStart.test.ts`. Therefore O03 starts with a gap audit against
-the roadmap acceptance criteria. Do not rewrite the implementation merely because the roadmap
-detail has not yet recorded its evidence.
+The repository contains O03's compact-start implementation and its acceptance suite at
+`tests/unit/static-check/o03CompactStart.test.ts`. Its local and remote evidence is recorded in
+`ROADMAP.md`; do not reopen it unless a regression is found.
 
 ## 3. Ordered plan of record
 
@@ -42,7 +42,7 @@ one item may be `doing`.
 
 | Order | Item | Roadmap state | Dependency gate | Exit result |
 |---:|---|---|---|---|
-| 1 | `O03` | `doing` in queue | `O02` done | Compact single-host setup closes `RB-06` |
+| 1 | `O03` | `done` | `O02` done | Compact single-host setup closed `RB-06` in PR #41 |
 | 2 | `O04` | `todo` | `O03` done | Clean-room onboarding matrix is green |
 | 3 | `V01` | `todo` | `C05` and `O04` done | Real cold, warm, and incremental budgets run in CI |
 | 4 | `V02` | `todo` | `C04` done, plus queue order | Mutation, property, and fuzz boundaries are defended |
@@ -158,13 +158,13 @@ Before an item becomes `done`:
 6. `ROADMAP.md` records the evidence, changes the item to `done`, and names the next item without
    changing that next item to `doing` until work actually begins.
 
-## 5. O03 - reduce setup to the active host and five files
+## 5. O03 - reduce setup to the active host and five files (completed)
 
 ### Outcome
 
-Close `RB-06` by proving that normal setup selects one active host, writes at most five generated
-project files totaling less than 25 KB, copies no per-host skill pack, and changes package metadata
-only with explicit consent.
+Closed `RB-06`: normal setup selects one active host, writes at most five generated project files
+totaling less than 25 KB, copies no per-host skill pack, and changes package metadata only with
+explicit consent.
 
 ### Current implementation baseline
 
@@ -178,9 +178,8 @@ The current tree already has:
 - Budget, idempotency, package formatting, multi-host rejection, and removal tests in
   `tests/unit/static-check/o03CompactStart.test.ts`.
 
-This is an implementation-in-progress baseline, not closure evidence. Start by running the focused
-suite and mapping every roadmap acceptance criterion to an assertion. Add code only for a proven
-gap.
+The acceptance suite, full local gate, and PR #41 CI are green. The signed commit was squash-merged
+as `105cd39`; this is closure evidence rather than an implementation baseline.
 
 ### Work packages
 
@@ -222,17 +221,17 @@ limited to the canonical Claude, Grok, Cursor, and Codex support matrix.
 
 ### Acceptance checklist
 
-- [ ] Every selectable single host produces no more than five generated files.
-- [ ] Every selectable single host produces less than 25 KB.
-- [ ] Default setup does not change `package.json`, product source, unrelated scripts, or unrelated
+- [x] Every selectable single host produces no more than five generated files.
+- [x] Every selectable single host produces less than 25 KB.
+- [x] Default setup does not change `package.json`, product source, unrelated scripts, or unrelated
       host files.
-- [ ] No copied per-host skill, prompt, or command directory is generated.
-- [ ] Preview and apply report and enforce the same byte budget.
-- [ ] Applying the preview changes exactly the previewed paths and bytes.
-- [ ] Re-running setup yields a zero diff.
-- [ ] Host removal and restore are explicit and reversible.
-- [ ] Customized files are preserved and reported as unresolved, not overwritten or deleted.
-- [ ] Documentation and changelog match actual behavior.
+- [x] No copied per-host skill, prompt, or command directory is generated.
+- [x] Preview and apply report and enforce the same byte budget.
+- [x] Applying the preview changes exactly the previewed paths and bytes.
+- [x] Re-running setup yields a zero diff.
+- [x] Host removal and restore are explicit and reversible.
+- [x] Customized files are preserved and reported as unresolved, not overwritten or deleted.
+- [x] Documentation and changelog match actual behavior.
 
 ### Focused verification
 
@@ -241,7 +240,7 @@ npx vitest run tests/unit/static-check/o03CompactStart.test.ts
 npx vitest run tests/unit/static-check/arkCheck.test.ts tests/unit/static-check/fieldHonestyDefaults.test.ts
 ```
 
-Then run the common merge gate. O03 is done only after the pushed commit is green in CI.
+The common merge gate and PR #41 CI passed; O03 is done.
 
 ## 6. O04 - build clean-room onboarding fixtures
 
@@ -711,5 +710,5 @@ The pending roadmap is complete only when all of the following are true:
 | External proof | At least 12 pinned repositories across every required dimension |
 | Beta exit | Independent binary audit passes with 0 open P0/P1 findings |
 
-Until the final row passes, ArkGate remains beta. While `RB-06` is open, normal stable feature
-releases remain blocked; only canary releases and emergency P0/security patches are allowed.
+Until the final row passes, ArkGate remains beta. Stable release remains subject to the V05 binary
+exit gate and all applicable release checks.
