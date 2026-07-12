@@ -216,7 +216,7 @@ ark.config.json
   [configuration and editor guide](docs/configuration.md).
 - **Frameworks:** Nest / Next / express / library layouts get sensible globs on init so day-one coverage is real.
 - **Brownfield:** baseline ratchet, refuse to freeze a wrong contract, `/ark-adopt` for mature trees.
-- **Agents:** `ark start` asks for (or detects) one active host and writes one compact router, not copied skill packs. Use `ark-check --install-agent-gates --skills-only --tools <host>` later when you explicitly want the full `/ark-*` skill set. Reports are opt-in with `ark-check --report`.
+- **Agents:** `ark start` asks for (or detects) one active host and writes one compact router, not copied skill packs, in at most five project files and 25 KB. Use `ark-check --install-agent-gates --skills-only --tools <host>` later when you explicitly want the full `/ark-*` skill set. Reports are opt-in with `ark-check --report`.
 - **Write protocol (2.10 / Track W):** mechanical-safe **autoPatch** on the write gate (`import type`); MCP **`ark_prepare_write`** (place + validate + patch + judgmentBrief); opt-in hook **`--hook-repair`** (`ARK_REPAIR_JSON`); doctor **`writePath`** (repair vs reject-only); loop-cost eval (`npm run eval:loop-cost`). Port-proof inject is **judgment** (arity change), not silent auto-apply.
 - **Fail-closed CI (2.11):** `--strict-merge` combines config coverage, shared gate-file
   presence, and bypass diagnostics for dynamic imports, TypeScript suppressions, explicit `any`
@@ -251,6 +251,7 @@ npx arkgate start                         # guided read-only preview
 npx arkgate start --apply                 # apply the compact active-host setup (≤5 files)
 npx arkgate start --tools codex --apply   # select the host explicitly
 npx arkgate start --install --apply       # also add arkgate to package.json (explicit only)
+npx arkgate start --remove-host codex     # preview compact-host removal; add --apply to confirm
 npx arkgate-check --doctor                # health + Adoption gaps (not just fitness)
 npx arkgate-check --doctor --json         # machine-readable doctor.adoption
 npx arkgate-check --strict                # fail-closed CI + installed-gate/safety checks

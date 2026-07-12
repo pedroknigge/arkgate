@@ -66,9 +66,14 @@ npx ark-check --watch                           # debounced re-check when govern
 ```
 
 **Day-zero origin (2.12+):** `ark init` freezes `.ark/reports/origin.*` before writing agent
-docs or CI templates. Compact `ark start` keeps first-run setup under five small project files;
+docs or CI templates. Compact `ark start` keeps first-run setup under five project files and
+25 KB;
 run `ark-check --report ark-report.html` explicitly when you want to establish an origin/evolution
 baseline. Do not `--reset-origin` unless the user explicitly wants a new baseline.
+
+To remove a compact host integration, preview `ark start --remove-host <host>` and add `--apply`
+only after review. Ark removes only its exact compact artifacts, leaves customized files untouched
+as unresolved decisions, and restores the integration with `ark start --tools <host> --apply`.
 
 **Full-skill agent co-pilot:** after explicitly installing the `/ark-*` pack, use
 `/ark-autopilot` (explore-first, dual plan A remediation + B pattern bets). Recon without

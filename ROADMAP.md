@@ -701,7 +701,7 @@ package smoke installed and imported `arkgate` and `@arkgate/runtime` independen
 
 ### O03 — Reduce setup to the active host and five files
 
-- **Status:** `todo`
+- **Status:** `doing`
 - **Depends on:** `O02`
 - **Closes:** `RB-06`
 
@@ -720,6 +720,18 @@ package smoke installed and imported `arkgate` and `@arkgate/runtime` independen
 - Default setup does not modify product source or unrelated package scripts.
 - Re-run is idempotent with a zero diff.
 - Host removal/update has an explicit, reversible path.
+
+**Local evidence (2026-07-12):** `tests/unit/static-check/o03CompactStart.test.ts` passes
+14/14 cases across Claude, Grok, Cursor, Codex, Windsurf, Cline, Copilot, Kiro, Roo, Continue,
+and Gemini. The fixture proves preview/apply stays within the five-file / 25 KB budget, leaves
+product source and a user-owned script unchanged, does not change `package.json` without
+`--install`, rejects multi-host compact selection, avoids repo-local Codex prompts, and supports
+explicit remove/re-add. `README.md` and `docs/agent-guide.md` now document the exact budget,
+explicit package opt-in, and reversible `--remove-host` path. The focused O03/install/docs suites
+pass 159/159; the local confidence gate passes 892/892 tests at 85.26% branch coverage and 94.76%
+mutation. Typecheck, JavaScript syntax, generated-artifact drift, module-budget, package-file,
+strict architecture, and build gates pass locally. Keep O03 `doing` until CI passes on the pushed
+commit; only then mark it `done` and close `RB-06`.
 
 ### O04 — Build clean-room onboarding fixtures
 
@@ -913,9 +925,10 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: O01 — Replace framework guessing with source/graph-first discovery
-First result: inventory discovery decisions still based on framework names or directory folklore
-Then: derive candidates from imports, ownership, and contract coverage with explicit confidence
-Primary files: discovery helpers, recommend/adopt flows, fixtures, and reference docs
-Required finish: framework identity is supporting evidence, never the primary architecture decision
+Item: O03 — Reduce setup to the active host and five files
+First result: push the local O03 evidence commit and confirm all required CI checks are green
+Then: mark O03 done, close RB-06, and begin O04 only after that status transition
+Primary files: ROADMAP.md evidence/status, O03 fixture/docs already verified locally
+Required finish: one active host writes at most five files / 25 KB, preserves user source and
+scripts by default, and has a documented reversible removal path backed by green CI
 ```

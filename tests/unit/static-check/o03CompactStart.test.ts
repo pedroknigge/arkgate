@@ -27,8 +27,9 @@ function createFixture() {
   fs.mkdirSync(path.join(root, 'src', 'domain'), { recursive: true });
   fs.writeFileSync(
     path.join(root, 'package.json'),
-    '{\n    "name": "o03-fixture",\n    "private": true\n}\n'
+    '{\n    "name": "o03-fixture",\n    "private": true,\n    "scripts": {\n        "verify": "node check.mjs"\n    }\n}\n'
   );
+  fs.writeFileSync(path.join(root, 'check.mjs'), 'console.log("user script");\n');
   fs.writeFileSync(path.join(root, 'src', 'domain', 'value.ts'), 'export const value = 1;\n');
   return root;
 }
@@ -78,8 +79,11 @@ describe('O03 compact start', () => {
       const before = snapshot(root);
       const applied = JSON.parse(start(root, host, ['--apply'])) as typeof preview;
       const after = snapshot(root);
-      expect(changedPaths(before, after)).toEqual(applied.changes.map((change) => change.path).sort());
-      expect(changedPaths(before, after).length).toBeLessThanOrEqual(5);
+      const changed = changedPaths(before, after);
+      expect(changed).toEqual(applied.changes.map((change) => change.path).sort());
+      expect(changed.length).toBeLessThanOrEqual(5);
+      expect(changed).not.toContain('check.mjs');
+      expect(changed).not.toContain('src/domain/value.ts');
       expect(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).toBe(originalPackage);
       const instructions = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
       expect(instructions).toContain('## Compact router');
