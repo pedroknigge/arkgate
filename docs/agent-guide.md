@@ -25,10 +25,13 @@ Each of the twelve archetypes (`crud-product`, `api-backend`, `frontend-surface`
 - plain-language analogy and anti-patterns,
 - optional book references for depth only.
 
-Scoring is **deterministic**: repo shape signals (workspaces, UI dirs, API surface,
-persistence, jobs, workflows, CLI `bin`, source-file count, …) are matched against the
-playbook. Framework packages may appear as secondary `toolHints` in JSON output — never as
-the primary archetype id.
+Scoring is **deterministic** and source/graph-first. Ark discovers package units and roots from
+workspace manifests, `tsconfig`/`jsconfig` references, package exports and entrypoints, plus
+conventional `src`/`source` directories. Runtime and peer dependencies contribute framework
+signals; dev-only dependencies are reported but do not determine the application shape. Docs,
+examples, and test packages are reported separately and excluded from root-product inference.
+Framework packages may appear as secondary `toolHints` in JSON output — never as the primary
+archetype id.
 
 All playbook labels, analogies, anti-patterns, and `--recommend` prose are **English**
 (`locale: "en"` in the playbook). Agents should present them as-is unless a future locale
@@ -43,7 +46,10 @@ npx ark-check --recommend --json
 
 `--recommend` does not require `ark.config.json`. It exits `0` and prints a progressive
 adoption plan: archetype id, preset, `confidence`, `runnerUp`, `why` (shape signals),
+structured positive/negative `evidence`, discovered `signals.packageUnits`,
 `adoptInOrder.phase1`, `firstCommand` (`ark init --archetype …`), and `checkCommand`.
+When the top two shapes are close or projected governed coverage is below 90%, JSON sets
+`requiresConfirmation: true` and explains why in `confirmationReasons`.
 
 Human output highlights phase-1 layers and the analogy; JSON is the stable contract for
 MCP `ark_recommend` and the `/ark-architect` skill.

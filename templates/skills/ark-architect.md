@@ -44,8 +44,9 @@ the same files or weaken the gate.
 
 1. **Detect the shape** — call MCP tool **`ark_recommend`** (or run
    `ark-check --recommend --json`). Read `archetype`, `preset`, `confidence`,
-   `adoptInOrder.phase1`, `analogy`, and `why`. Ask at most **two** questions only
-   if `confidence < 0.5`:
+   `adoptInOrder.phase1`, `analogy`, `why`, `evidence`, and `requiresConfirmation`.
+   Ask at most **two** questions only if `requiresConfirmation` is true (or for compatibility
+   with older ArkGate output, `confidence < 0.5`):
    - "Will this app save data between sessions?"
    - "Is this one app or several in one repository?"
 

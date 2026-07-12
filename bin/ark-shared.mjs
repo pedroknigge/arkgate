@@ -869,6 +869,85 @@ function isSourceFile(name) {
   return /\.(tsx?|jsx?|mjsx?|cjsx?|mts|cts)$/i.test(name);
 }
 
+function readJsonc(file) {
+  try {
+    const text = fs
+      .readFileSync(file, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+      .replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function packageRole(rel, pkg) {
+  const tokens = rel.toLowerCase().split('/');
+  if (tokens.some((token) => ['docs', 'documentation', 'website', 'examples', 'example', 'tests', 'test', 'fixtures'].includes(token))) {
+    return tokens.some((token) => token.startsWith('doc') || token === 'website')
+      ? 'docs'
+      : tokens.some((token) => token.startsWith('test') || token === 'fixtures')
+        ? 'test'
+        : 'example';
+  }
+  if (pkg?.bin) return 'cli';
+  if (pkg?.exports || pkg?.main || pkg?.module || pkg?.types || pkg?.typings) return 'library';
+  return 'application';
+}
+
+function entrypointDirs(pkg) {
+  const values = [];
+  const add = (value) => {
+    if (typeof value === 'string' && !value.includes('*')) values.push(value);
+    else if (value && typeof value === 'object') Object.values(value).forEach(add);
+  };
+  for (const key of ['main', 'module', 'types', 'typings', 'exports']) add(pkg?.[key]);
+  return values.map((value) => path.posix.dirname(value.replace(/^\.\//, ''))).filter((dir) => dir !== '.');
+}
+
+/** Package/import units and their explicit source roots, before framework inference. */
+export function discoverRepoUnits(root) {
+  const packageRels = new Set(['.']);
+  for (const rel of detectTsPackageRoots(root)) packageRels.add(rel);
+  const units = [];
+  for (const rel of packageRels) {
+    const abs = rel === '.' ? root : path.join(root, rel);
+    const pkg = readPackageJson(abs);
+    if (!pkg && rel !== '.') continue;
+    const roots = new Set();
+    for (const name of ['src', 'source']) {
+      if (fs.existsSync(path.join(abs, name))) roots.add(name);
+    }
+    if (rel === '.') {
+      for (const name of ['api', 'lib', 'app', 'frontend', 'web', 'client']) {
+        if (dirHasTsSources(path.join(abs, name), 3)) roots.add(name);
+      }
+    }
+    for (const name of ['tsconfig.json', 'jsconfig.json']) {
+      const config = readJsonc(path.join(abs, name));
+      const rootDir = config?.compilerOptions?.rootDir;
+      if (typeof rootDir === 'string') roots.add(normalizeRel(rootDir));
+      for (const ref of config?.references ?? []) {
+        if (typeof ref?.path === 'string') roots.add(normalizeRel(ref.path).replace(/^\.\//, ''));
+      }
+    }
+    for (const dir of entrypointDirs(pkg)) {
+      if (!['dist', 'build', 'lib'].includes(dir.split('/')[0])) roots.add(normalizeRel(dir));
+    }
+    if (roots.size === 0 && dirHasTsSources(abs, 2)) roots.add('.');
+    const productionDeps = { ...(pkg?.dependencies ?? {}), ...(pkg?.peerDependencies ?? {}), ...(pkg?.optionalDependencies ?? {}) };
+    units.push({
+      root: rel,
+      role: packageRole(rel, pkg),
+      sourceRoots: [...roots],
+      productionDeps,
+      devDependencies: { ...(pkg?.devDependencies ?? {}) },
+    });
+  }
+  return units;
+}
+
 function walkSourceFiles(dir, files = [], depth = 0) {
   if (depth > 12) return files;
   const stat = fs.statSync(dir, { throwIfNoEntry: false });
@@ -947,36 +1026,9 @@ function countTsxFiles(files) {
  */
 export function collectAggregatedDeps(root) {
   const deps = {};
-  const mergePkg = (pkg) => {
-    if (!pkg || typeof pkg !== 'object') return;
-    for (const key of ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']) {
-      const block = pkg[key];
-      if (block && typeof block === 'object') Object.assign(deps, block);
-    }
-  };
-  mergePkg(readPackageJson(root));
-  let entries = [];
-  try {
-    entries = fs.readdirSync(root, { withFileTypes: true });
-  } catch {
-    return deps;
-  }
-  for (const entry of entries) {
-    if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name === 'node_modules') continue;
-    const childRoot = path.join(root, entry.name);
-    mergePkg(readPackageJson(childRoot));
-    // One level under conventional multi-package roots
-    if (['packages', 'apps', 'services', 'plugins', 'packages-internal'].includes(entry.name)) {
-      try {
-        for (const sub of fs.readdirSync(childRoot, { withFileTypes: true })) {
-          if (sub.isDirectory() && !sub.name.startsWith('.')) {
-            mergePkg(readPackageJson(path.join(childRoot, sub.name)));
-          }
-        }
-      } catch {
-        /* ignore */
-      }
-    }
+  for (const unit of discoverRepoUnits(root)) {
+    if (['docs', 'example', 'test'].includes(unit.role)) continue;
+    Object.assign(deps, unit.productionDeps);
   }
   return deps;
 }
@@ -987,27 +1039,32 @@ export function collectAggregatedDeps(root) {
  */
 export function collectRepoShapeSignals(root) {
   const pkg = readPackageJson(root);
+  const repoUnits = discoverRepoUnits(root);
   const workspaceDirs = detectWorkspaces(root);
   const workspaces = workspaceDirs.length > 0;
   // Include frontend/web/client — common Next monorepo app folders.
-  const candidateScanDirs = [
-    'src',
-    'lib',
-    'api',
-    'packages',
-    'apps',
-    'frontend',
-    'web',
-    'client',
-    'app',
-    ...workspaceDirs,
-  ];
+  const candidateScanDirs = repoUnits
+    .filter((unit) => !['docs', 'example', 'test'].includes(unit.role))
+    .flatMap((unit) => unit.sourceRoots.map((sourceRoot) =>
+      normalizeRel(path.posix.join(unit.root === '.' ? '' : unit.root, sourceRoot))
+    ));
   const srcDirs = [...new Set(candidateScanDirs)].filter((d) =>
     fs.existsSync(path.join(root, d))
   );
   const scanRoots = srcDirs.length > 0 ? srcDirs.map((d) => path.join(root, d)) : [root];
-  const sourceFiles = scanRoots.flatMap((dir) => walkSourceFiles(dir));
+  const sourceFiles = [...new Set(scanRoots.flatMap((dir) => walkSourceFiles(dir)))];
   const sourceFileCount = sourceFiles.length;
+  const excludedUnitRoots = repoUnits
+    .filter((unit) => ['docs', 'example', 'test'].includes(unit.role) && unit.root !== '.')
+    .map((unit) => `${unit.root}/`);
+  const productionFiles = walkSourceFiles(root).filter((file) => {
+    const rel = path.relative(root, file).split(path.sep).join('/');
+    return !excludedUnitRoots.some((prefix) => rel.startsWith(prefix));
+  });
+  const discoveredFileSet = new Set(sourceFiles.map((file) => path.resolve(file)));
+  const projectedGovernedCoverage = productionFiles.length === 0
+    ? 0
+    : Math.round((productionFiles.filter((file) => discoveredFileSet.has(path.resolve(file))).length / productionFiles.length) * 100);
   const tinyTree = sourceFileCount < 3;
 
   // Nested package.json deps (not root-only) — critical for monorepo Next under frontend/
@@ -1145,6 +1202,8 @@ export function collectRepoShapeSignals(root) {
   }
 
   return {
+    repoUnits,
+    discoveredRoots: srcDirs,
     workspaces,
     workspaceDirs,
     ui,
@@ -1162,6 +1221,7 @@ export function collectRepoShapeSignals(root) {
     libraryOnly,
     tinyTree,
     sourceFileCount,
+    projectedGovernedCoverage,
     domain,
     application,
     domainHeavy,
@@ -1248,6 +1308,16 @@ export function whyFromMatchedSignals(signals, matched) {
   return why;
 }
 
+function evidenceFromMatchedSignals(signals, matched) {
+  return (matched ?? []).flatMap((token) => {
+    const negative = token.startsWith('!');
+    const signal = negative ? token.slice(1) : token;
+    const label = negative ? NEGATIVE_SIGNAL_WHY[signal] : SIGNAL_WHY[signal];
+    if (!label || !signals[signal]) return [];
+    return [{ signal, effect: negative ? 'negative' : 'positive', explanation: label(signals) }];
+  });
+}
+
 export function defaultPlaybookPath() {
   return path.join(
     path.dirname(fileURLToPath(import.meta.url)),
@@ -1332,6 +1402,11 @@ export function scoreArchetypes(signals, playbook) {
       label: fallback.label,
       preset: fallback.preset,
       confidence,
+      requiresConfirmation: true,
+      confirmationReasons: [
+        `projected governed coverage is ${signals.projectedGovernedCoverage ?? 0}% (below 90%)`,
+        'no archetype received a positive score',
+      ],
       phases: fallback.phases,
       analogy: fallback.analogy,
       antiPatterns: fallback.antiPatterns,
@@ -1353,6 +1428,10 @@ export function scoreArchetypes(signals, playbook) {
   if (thinTs) {
     confidence = Math.min(confidence, 0.28);
   }
+  const closeRecommendations = Boolean(second && top.score - second.score <= 2);
+  const lowProjectedCoverage = (signals.projectedGovernedCoverage ?? 0) < 90;
+  if (closeRecommendations) confidence = Math.min(confidence, 0.49);
+  if (lowProjectedCoverage) confidence = Math.min(confidence, 0.49);
 
   return {
     ranked: scored,
@@ -1367,6 +1446,12 @@ export function scoreArchetypes(signals, playbook) {
             'TypeScript/JS surface is thin or missing — treat the archetype as a weak hint. Prefer ark-check --suggest-include / --adopt-contract on the real package roots before scaffolding.',
         }
       : {}),
+    requiresConfirmation: closeRecommendations || thinTs || lowProjectedCoverage,
+    confirmationReasons: [
+      ...(closeRecommendations ? ['top recommendations are within 2 score points'] : []),
+      ...(lowProjectedCoverage ? [`projected governed coverage is ${signals.projectedGovernedCoverage}% (below 90%)`] : []),
+      ...(thinTs ? ['the discovered source surface is thin'] : []),
+    ],
     phases: top.phases,
     analogy: top.analogy,
     antiPatterns: top.antiPatterns,
@@ -1404,6 +1489,8 @@ export function buildArchitectureRecommendation(root, options = {}) {
     label: result.label,
     preset: result.preset,
     confidence: result.confidence,
+    requiresConfirmation: result.requiresConfirmation ?? false,
+    confirmationReasons: result.confirmationReasons ?? [],
     ...(result.thinTsSurface ? { thinTsSurface: true, caution: result.caution } : {}),
     phases: result.phases,
     adoptInOrder,
@@ -1411,6 +1498,7 @@ export function buildArchitectureRecommendation(root, options = {}) {
     antiPatterns: result.antiPatterns,
     books: result.books,
     why: whyFromMatchedSignals(signals, result.matched),
+    evidence: evidenceFromMatchedSignals(signals, result.matched),
     matchedSignals: result.matched,
     runnerUp: result.runnerUp,
     toolHints: signals.toolHints,
@@ -1418,6 +1506,15 @@ export function buildArchitectureRecommendation(root, options = {}) {
     policyPack: policyPackId,
     signals: {
       sourceFileCount: signals.sourceFileCount,
+      projectedGovernedCoverage: signals.projectedGovernedCoverage,
+      discoveredRoots: signals.discoveredRoots,
+      packageUnits: signals.repoUnits.map((unit) => ({
+        root: unit.root,
+        role: unit.role,
+        sourceRoots: unit.sourceRoots,
+        productionDependencies: Object.keys(unit.productionDeps).sort(),
+        devOnlyDependencies: Object.keys(unit.devDependencies).sort(),
+      })),
       workspaces: signals.workspaces,
       ui: signals.ui,
       apiSurface: signals.apiSurface,
@@ -1514,6 +1611,10 @@ export function formatArchitectureRecommendationHuman(recommendation) {
   lines.push('');
   lines.push(`Archetype: ${recommendation.archetype} — ${recommendation.label}`);
   lines.push(`Preset: ${recommendation.preset} (confidence ${recommendation.confidence})`);
+  if (recommendation.requiresConfirmation) {
+    lines.push('⚠ Confirmation required before applying this recommendation.');
+    for (const reason of recommendation.confirmationReasons ?? []) lines.push(`  - ${reason}`);
+  }
   if (recommendation.galleryStarter) {
     lines.push(`Gallery starter: ${recommendation.galleryStarter}`);
   }
@@ -1623,6 +1724,8 @@ export function buildAdoptionPlanDocument(recommendation) {
     label: recommendation.label,
     preset: recommendation.preset,
     confidence: recommendation.confidence,
+    requiresConfirmation: recommendation.requiresConfirmation ?? false,
+    confirmationReasons: recommendation.confirmationReasons ?? [],
     phases: recommendation.phases,
     adoptInOrder: recommendation.adoptInOrder,
     matchedSignals: recommendation.matchedSignals ?? [],
