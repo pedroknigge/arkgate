@@ -59,6 +59,7 @@ import { createImportTargetResolver } from './lib/import-resolve.mjs';
 import { validateWithAutoPatch, resolveImportFileAbs } from './lib/auto-patch.mjs';
 import { composePrepareWrite } from './lib/prepare-write.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
+import { ARK_ANALYSIS_RESULT_SCHEMA, createAdapterResult } from './lib/adapter-contract.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 
@@ -298,6 +299,11 @@ function runHook(gate, config, args, ts) {
     return false;
   });
   if (newViolations.length === 0) return;
+  const normalizedRel = rel.split(path.sep).join('/');
+  const adapterResult = createAdapterResult({
+    valid: false,
+    violations: newViolations.map((violation) => ({ ...violation, file: normalizedRel })),
+  });
 
   const lines = newViolations.map(
     (violation) =>
@@ -339,9 +345,10 @@ function runHook(gate, config, args, ts) {
   if (repair) {
     // Structured envelope for any host that can re-inject. Never writes the file.
     const repairPayload = {
+      ...adapterResult,
       mode: 'repair',
       decision: 'deny',
-      filePath: rel.split(path.sep).join('/'),
+      filePath: normalizedRel,
       ...(layer ? { layer } : {}),
       ...(autoPatch
         ? {
@@ -367,6 +374,7 @@ function runHook(gate, config, args, ts) {
       JSON.stringify({
         decision: 'deny',
         reason: message,
+        analysis: adapterResult,
         ...(repair && autoPatch ? { autoPatch } : {}),
         ...(repair ? { repair: true } : {}),
       }) + '\n'
@@ -616,6 +624,7 @@ async function main() {
         },
         required: ['source'],
       },
+      outputSchema: ARK_ANALYSIS_RESULT_SCHEMA,
     },
     {
       name: 'ark_check',
@@ -638,6 +647,7 @@ async function main() {
           },
         },
       },
+      outputSchema: ARK_ANALYSIS_RESULT_SCHEMA,
     },
     {
       name: 'ark_coverage',
@@ -826,12 +836,17 @@ async function main() {
       validate: validateOnce,
       resolveTargetAbs: resolveImportFileAbs,
     });
+    const adapterResult = createAdapterResult({
+      valid: result.valid,
+      violations: result.violations,
+    });
     return {
       content: [
         {
           type: 'text',
           text: JSON.stringify(
             {
+              ...adapterResult,
               valid: result.valid,
               violations: result.violations,
               ...(result.autoPatch ? { autoPatch: result.autoPatch } : {}),
@@ -842,6 +857,7 @@ async function main() {
           ),
         },
       ],
+      structuredContent: adapterResult,
       isError: !result.valid,
     };
   }
@@ -868,6 +884,11 @@ async function main() {
     }
     return {
       content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+      structuredContent: {
+        schemaVersion: data.schemaVersion,
+        valid: data.valid,
+        diagnostics: data.diagnostics,
+      },
       isError: data.ok === false,
     };
   }

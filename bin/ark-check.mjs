@@ -84,6 +84,7 @@ import {
   ARCHITECTURE_PRESETS,
 } from './lib/presets.mjs';
 import { loadArkConfigContract, parseArkConfigJson } from './lib/config-contract.mjs';
+import { createAdapterResult } from './lib/adapter-contract.mjs';
 
 import {
   collectGovernedFiles,
@@ -1330,7 +1331,13 @@ async function main() {
   }
 
   if (args.json) {
+    const adapterResult = createAdapterResult({
+      valid: ok,
+      violations: activeViolations.map(enrichViolationWithFixClass),
+      warnings,
+    });
     console.log(JSON.stringify({
+      ...adapterResult,
       ok,
       violations: activeViolations.map(enrichViolationWithFixClass),
       suppressedViolations: suppressed.length,
@@ -1489,9 +1496,13 @@ async function runWatchMode(args) {
     const target = path.join(args.root, entry);
     if (!fs.existsSync(target)) continue;
     try {
-      fs.watch(target, { recursive: true }, rerun);
+      const watcher = fs.watch(target, { recursive: true }, rerun);
+      watcher.on('error', () => {
+        watcher.close();
+        watchByPolling(target, rerun);
+      });
     } catch {
-      fs.watch(target, rerun);
+      watchByPolling(target, rerun);
     }
   }
 
@@ -1499,7 +1510,45 @@ async function runWatchMode(args) {
   await new Promise(() => {});
 }
 
+function watchByPolling(target, onChange) {
+  let previous = watchFingerprint(target);
+  setInterval(() => {
+    const current = watchFingerprint(target);
+    if (current === previous) return;
+    previous = current;
+    onChange();
+  }, 250);
+}
+
+function watchFingerprint(target) {
+  const pending = [target];
+  const entries = [];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    let stat;
+    try {
+      stat = fs.statSync(current);
+    } catch {
+      continue;
+    }
+    entries.push(`${current}:${stat.mtimeMs}:${stat.size}`);
+    if (!stat.isDirectory()) continue;
+    try {
+      for (const name of fs.readdirSync(current)) pending.push(path.join(current, name));
+    } catch {
+      // A concurrent delete is represented by the next fingerprint.
+    }
+  }
+  return entries.sort().join('|');
+}
+
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
+  console.error(
+    process.env.ARK_DEBUG_STACK === '1' && error instanceof Error
+      ? error.stack
+      : error instanceof Error
+        ? error.message
+        : String(error)
+  );
   process.exitCode = 2;
 });

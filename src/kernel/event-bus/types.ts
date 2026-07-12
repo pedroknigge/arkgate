@@ -12,7 +12,7 @@ import type { ArchitectureProfile } from '../layers';
 import type { Policy, PolicyEngine, PolicyEvaluationResult } from '../policy';
 import type { AuditTrail } from '../audit';
 import type { EventContractRegistry } from '../event-contracts';
-import type { OutboxStore } from '../outbox';
+import type { EventBufferStore } from '../outbox';
 
 export type { IntentCreator };
 
@@ -81,8 +81,10 @@ export interface EventBusOptions<Context = unknown> {
    */
   enforceObservedLayerFlow?: ObservedLayerFlowMode;
 
-  /** Optional outbox store for durable delivery handoff. */
-  outbox?: OutboxStore;
+  /** Optional non-atomic event buffer for dispatch handoff. */
+  eventBuffer?: EventBufferStore;
+  /** @deprecated Use eventBuffer. */
+  outbox?: EventBufferStore;
 
   /** Stable id stamped into event metadata for this kernel/event bus instance. */
   instanceId?: string;

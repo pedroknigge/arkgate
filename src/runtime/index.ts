@@ -2,12 +2,11 @@
  * Preferred package entry for the **optional** ArkGate runtime kernel.
  *
  * ```ts
- * import { createStrictArkKernelFromConfig } from 'arkgate/runtime';
+ * import { createStrictArkKernelFromConfig } from '@arkgate/runtime';
  * ```
  *
  * Architecture gates (CLI / MCP / eslint) do **not** require this entry.
- * The root package `arkgate` still re-exports the same symbols for compatibility;
- * prefer this subpath for new code. See `docs/package-surface.md`.
+ * The stable `arkgate` package does not bundle this experimental implementation.
  *
  * @packageDocumentation
  */

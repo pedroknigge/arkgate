@@ -290,7 +290,7 @@ describe('ark start wrap-up — Next-like host false ENFORCE', () => {
     const ARK = path.join(REPO, 'bin/ark.mjs');
     const res = spawnSync(
       process.execPath,
-      [ARK, 'start', '--root', root, '--yes', '--force', '--tools', 'claude'],
+      [ARK, 'start', '--root', root, '--yes', '--no-install', '--force', '--tools', 'claude'],
       { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }
     );
     // Capture wrap-up lines from ark start (shipped bin/ark.mjs path)
@@ -327,7 +327,7 @@ describe('ark start typecheck bootstrap', () => {
     const ARK = path.join(REPO, 'bin/ark.mjs');
     const res = spawnSync(
       process.execPath,
-      [ARK, 'start', '--root', root, '--yes', '--force', '--tools', 'claude'],
+      [ARK, 'start', '--root', root, '--yes', '--no-install', '--force', '--tools', 'claude'],
       { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }
     );
     const out = `${res.stdout || ''}${res.stderr || ''}`;
@@ -371,7 +371,7 @@ describe('ark-check --ratchet-cores', () => {
     const ARK = path.join(REPO, 'bin/ark.mjs');
     spawnSync(
       process.execPath,
-      [ARK, 'start', '--root', root, '--yes', '--force', '--tools', 'claude'],
+      [ARK, 'start', '--root', root, '--yes', '--no-install', '--force', '--tools', 'claude'],
       { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }
     );
 

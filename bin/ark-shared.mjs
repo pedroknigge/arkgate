@@ -5,6 +5,8 @@ import {
   DEFAULT_ARK_CONFIG_RULES,
   withArkConfigMetadata,
 } from './lib/config-contract.mjs';
+import { collectForbiddenCapabilityUses } from './lib/analysis-engine.mjs';
+import { looksLikeArkIntent } from './lib/source-policy.mjs';
 
 /**
  * Default intent-prefix map shared by both CLIs and the ark-mcp write-path gate. The rule
@@ -373,102 +375,8 @@ export function resolveOperatingMode({
   return 'suggest';
 }
 
-function singleFileTypeChecker(ts, sourceFile) {
-  const options = {
-    noLib: true,
-    noResolve: true,
-    target: ts.ScriptTarget.Latest,
-  };
-  const host = ts.createCompilerHost(options, true);
-  host.getSourceFile = (fileName) =>
-    fileName === sourceFile.fileName ? sourceFile : undefined;
-  host.fileExists = (fileName) => fileName === sourceFile.fileName;
-  host.readFile = (fileName) =>
-    fileName === sourceFile.fileName ? sourceFile.text : undefined;
-  return ts.createProgram([sourceFile.fileName], options, host).getTypeChecker();
-}
-
-function propertyAccessPath(ts, node) {
-  const segments = [];
-  let current = node;
-  while (ts.isPropertyAccessExpression(current)) {
-    segments.unshift(current.name.text);
-    current = current.expression;
-  }
-  if (!ts.isIdentifier(current)) return undefined;
-  segments.unshift(current.text);
-  return { root: current, segments };
-}
-
-function isRuntimeIdentifierReference(ts, node) {
-  if (ts.isPropertyAccessExpression(node.parent) && node.parent.name === node) return false;
-  return (
-    (ts.isExpressionNode(node) && !ts.isInTypeQuery(node)) ||
-    (ts.isShorthandPropertyAssignment(node.parent) && node.parent.name === node)
-  );
-}
-
-function hasLocalDeclaration(ts, checker, sourceFile, node) {
-  const shorthand =
-    ts.isShorthandPropertyAssignment(node.parent) && node.parent.name === node;
-  const symbol = shorthand
-    ? checker.getShorthandAssignmentValueSymbol(node.parent)
-    : checker.getSymbolAtLocation(node);
-  return Boolean(
-    symbol?.declarations?.some((declaration) => declaration.getSourceFile() === sourceFile)
-  );
-}
-
-/**
- * Find uses of forbidden ambient globals in a TypeScript source file.
- *
- * A no-lib, no-resolution TypeScript program binds declarations in this file only. An
- * identifier with a symbol is therefore local (parameter, variable, import, etc.); an
- * unbound runtime identifier is ambient. Dotted entries use AST property chains and
- * explicit `globalThis` access is normalized to the configured global name.
- *
- * Kept in sync with `analyzeForbiddenGlobals` in
- * src/kernel/ai-gate/AICodeGate.ts — the standalone CLIs must not import from dist.
- * Returns [{ name, node }] where `name` is the matched forbidden entry.
- */
 export function collectForbiddenGlobalUses(ts, sourceFile, forbidden) {
-  const entries = new Set(forbidden ?? []);
-  if (entries.size === 0) return [];
-  const checker = singleFileTypeChecker(ts, sourceFile);
-  const uses = [];
-
-  const visit = (node) => {
-    const nestedPropertyAccess =
-      ts.isPropertyAccessExpression(node) &&
-      ts.isPropertyAccessExpression(node.parent) &&
-      node.parent.expression === node;
-    if (ts.isPropertyAccessExpression(node) && !nestedPropertyAccess) {
-      const path = propertyAccessPath(ts, node);
-      if (path && !hasLocalDeclaration(ts, checker, sourceFile, path.root)) {
-        const explicitGlobalThis = path.segments[0] === 'globalThis';
-        const normalized = explicitGlobalThis ? path.segments.slice(1) : path.segments;
-        let match;
-        for (let length = normalized.length; length >= (explicitGlobalThis ? 1 : 2); length -= 1) {
-          const candidate = normalized.slice(0, length).join('.');
-          if (entries.has(candidate)) {
-            match = candidate;
-            break;
-          }
-        }
-        if (match) uses.push({ name: match, node });
-      }
-    } else if (
-      ts.isIdentifier(node) &&
-      entries.has(node.text) &&
-      isRuntimeIdentifierReference(ts, node) &&
-      !hasLocalDeclaration(ts, checker, sourceFile, node)
-    ) {
-      uses.push({ name: node.text, node });
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(sourceFile);
-  return uses;
+  return collectForbiddenCapabilityUses(ts, sourceFile, forbidden ?? []);
 }
 
 // Layer glob matching — generated from canonical src/domain/layerMatch.ts (see generate:layer-match).
@@ -511,17 +419,8 @@ export function resolveIntentLayer(intent, layers) {
   return sorted.find((layer) => layer.prefixes.some((prefix) => intent.startsWith(prefix)))?.name;
 }
 
-/**
- * Intent-name recognizer. Kept deliberately in sync with `looksLikeIntentName` in
- * src/kernel/ai-gate/AICodeGate.ts: the two live in separate layers on purpose — the
- * CLIs run standalone (with only `typescript` present, no build), so they must not
- * import from the compiled library. Update both if the layer prefixes change.
- */
-const INTENT_NAME =
-  /^(Domain|Application|Adapter|Workflow|Job|Presentation|Reporting|Metadata|Security|Audit|Observability|Kernel)\.[A-Za-z0-9_.]+$/;
-
 export function looksLikeIntent(value) {
-  return INTENT_NAME.test(value);
+  return looksLikeArkIntent(value);
 }
 
 /**

@@ -110,7 +110,7 @@ export class EventBusImpl<Context = unknown> implements EventBus {
       maxHistorySize: options.maxHistorySize,
       traceSinks: [...(options.traceSinks ?? [])],
       auditTrail: options.auditTrail,
-      outbox: options.outbox,
+      eventBuffer: options.eventBuffer ?? options.outbox,
       instanceId: options.instanceId,
     };
 

@@ -1,0 +1,37 @@
+{
+  "name": "@arkgate/runtime",
+  "version": "0.1.0-experimental.0",
+  "description": "Experimental optional runtime companion for ArkGate",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./nestjs": {
+      "types": "./dist/nestjs/index.d.ts",
+      "import": "./dist/nestjs/index.js",
+      "require": "./dist/nestjs/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "README.md"],
+  "peerDependencies": {
+    "@nestjs/common": ">=9"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/common": { "optional": true }
+  },
+  "engines": { "node": ">=18" },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pedroknigge/arkgate.git",
+    "directory": "packages/runtime"
+  },
+  "publishConfig": { "access": "public", "tag": "experimental" }
+}

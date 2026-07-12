@@ -5,16 +5,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  collectForbiddenGlobalUses,
   layerForFile,
   looksLikeIntent,
 } from '../ark-shared.mjs';
 import {
-  isTypeOnlyModuleReference,
   isArkPublishCandidate,
   isPublishCall,
   lineOf,
-  moduleSpecifierFromCall,
   namedModuleBindings,
   objectHasProperty,
   publishHasSource,
@@ -22,7 +19,6 @@ import {
   sourceFileExportsOnlyTypes,
   sourceFileHasTopLevelSideEffects,
   stringLiteralText,
-  textOfModuleSpecifier,
   typeOnlyExportNames,
 } from './ast-scan.mjs';
 import { provePortProofInject } from './port-proof.mjs';
@@ -32,9 +28,14 @@ import {
   isBlocked,
   collectConfigWarnings,
 } from './config-warnings.mjs';
-import { detectCycles } from './graph-cycles.mjs';
+import {
+  collectForbiddenCapabilityUses,
+  evaluateArchitectureGraph,
+  extractSemanticDependencies,
+} from './analysis-engine.mjs';
 import { normalize } from './scan-files.mjs';
 import { collectSafetyDiagnostics } from './safety-diagnostics.mjs';
+import { classifyPublishFacts } from './source-policy.mjs';
 import {
   createCompilerOptionsLookup,
   createModuleResolutionHost,
@@ -57,11 +58,11 @@ export function scanSourceFile(ts, root, config, rules, manifestIntentLayers, fi
   const forbiddenGlobals = Array.isArray(layerConfig?.forbiddenGlobals)
     ? layerConfig.forbiddenGlobals.filter((entry) => typeof entry === 'string')
     : [];
-  for (const use of collectForbiddenGlobalUses(ts, sourceFile, forbiddenGlobals)) {
+  for (const use of collectForbiddenCapabilityUses(ts, sourceFile, forbiddenGlobals)) {
     violations.push({
       ruleId: 'FORBIDDEN_GLOBAL',
       file: normalize(path.relative(root, file)),
-      line: lineOf(sourceFile, use.node.getStart(sourceFile)),
+      line: use.line,
       fromLayer: sourceLayer,
       target: use.name,
       message: `${sourceLayer} must not use the ambient global "${use.name}".`,
@@ -79,56 +80,34 @@ export function scanSourceFile(ts, root, config, rules, manifestIntentLayers, fi
     });
   };
 
+  for (const dependency of extractSemanticDependencies(ts, sourceFile)) {
+    if (!dependency.specifier) continue;
+    checkModuleEdge(
+      dependency.specifier,
+      dependency.node,
+      dependency.kind,
+      dependency.typeOnly
+    );
+  }
+
   const visit = (node) => {
-    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
-      const specifier = textOfModuleSpecifier(node);
-      if (specifier) {
-        checkModuleEdge(
-          specifier,
-          node,
-          ts.isImportDeclaration(node) ? 'import' : 'export',
-          isTypeOnlyModuleReference(ts, node)
-        );
-      }
-    }
-
-    if (
-      ts.isImportEqualsDeclaration(node) &&
-      ts.isExternalModuleReference(node.moduleReference)
-    ) {
-      const specifier = stringLiteralText(ts, node.moduleReference.expression);
-      if (specifier) checkModuleEdge(specifier, node, 'require');
-    }
-
     if (ts.isCallExpression(node)) {
-      const moduleCall = moduleSpecifierFromCall(ts, node);
-      if (moduleCall) {
-        checkModuleEdge(moduleCall.value, node, moduleCall.kind);
-      }
-
       if (isPublishCall(ts, node)) {
         const firstArg = node.arguments[0];
         const rawIntent = stringLiteralText(ts, firstArg);
-        if (
-          (rawIntent && looksLikeIntent(rawIntent)) ||
-          objectHasProperty(ts, firstArg, 'intent')
-        ) {
+        for (const finding of classifyPublishFacts({
+          publishCall: true,
+          rawIntentName: rawIntent,
+          objectHasIntent: objectHasProperty(ts, firstArg, 'intent'),
+          arkPublishCandidate: isArkPublishCandidate(ts, node),
+          hasSource: publishHasSource(ts, node),
+        })) {
           violations.push({
-            ruleId: 'RAW_EVENT_PUBLISH',
+            ruleId: finding.ruleId,
             file: normalize(path.relative(root, file)),
             line: lineOf(sourceFile, node.getStart(sourceFile)),
-            message:
-              'Publish through a registered intent creator; raw event objects or intent strings bypass Ark contracts and tooling.',
-          });
-        }
-
-        if (isArkPublishCandidate(ts, node) && !publishHasSource(ts, node)) {
-          violations.push({
-            ruleId: 'PUBLISH_MISSING_SOURCE',
-            file: normalize(path.relative(root, file)),
-            line: lineOf(sourceFile, node.getStart(sourceFile)),
-            fromLayer: sourceLayer,
-            message: 'Strict Ark publish calls must include metadata.source.',
+            ...(finding.ruleId === 'PUBLISH_MISSING_SOURCE' ? { fromLayer: sourceLayer } : {}),
+            message: finding.message,
           });
         }
 
@@ -194,7 +173,6 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
   const compilerOptionsFor = createCompilerOptionsLookup(ts, root, args.tsconfig);
   const moduleHost = createModuleResolutionHost(ts);
 
-  const violations = [];
   const warnings = collectConfigWarnings(root, config, files, rules, manifest);
   const safety = collectSafetyDiagnostics(ts, root, config, files);
   warnings.push(...safety.warnings);
@@ -202,13 +180,11 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
   const cachedFiles = cacheKey ? loadScanCache(root, cacheKey) : undefined;
   const nextCacheFiles = {};
 
-  const importGraph = new Map();
   const scanned = [];
   for (const file of files) {
     const sourceLayer = layerForFile(root, file, config.layers);
     if (!sourceLayer) continue;
     const relFile = normalize(path.relative(root, file));
-    if (!importGraph.has(relFile)) importGraph.set(relFile, new Set());
     const stat = fs.statSync(file);
     const fileKey = `${stat.mtimeMs}:${stat.size}`;
     const cached = cachedFiles?.[relFile];
@@ -231,8 +207,8 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
     scanned.push({ file, sourceLayer, relFile, entry });
   }
 
+  const engineEdges = [];
   for (const { file, sourceLayer, relFile, entry } of scanned) {
-    violations.push(...entry.contentViolations);
     for (const edge of entry.edges) {
       const target = resolveImport(
         ts,
@@ -243,99 +219,69 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
         root
       );
       const targetLayer = target ? layerForFile(root, target, config.layers) : undefined;
-      if (target && targetLayer) {
-        const relTarget = normalize(path.relative(root, target));
-        if (relTarget !== relFile && !edge.typeOnly) {
-          importGraph.get(relFile).add(relTarget);
-        }
-      }
       const relTarget = target ? normalize(path.relative(root, target)) : undefined;
-      const rule = targetLayer
+      const targetCached = relTarget ? nextCacheFiles[relTarget] : undefined;
+      const staticEdge = edge.kind === 'import' || edge.kind === 'export';
+      const targetTypeOnlyExports =
+        staticEdge && Boolean(targetCached?.exportsOnlyTypes) && !edge.typeOnly;
+      const sourcePureTypeModule = Boolean(entry.exportsOnlyTypes);
+      const targetTypeNames = new Set(targetCached?.typeOnlyExportNames || []);
+      const named = edge.namedBindings;
+      const namedBindingsTypeOnly =
+        staticEdge &&
+        Array.isArray(named) &&
+        named.length > 0 &&
+        targetTypeNames.size > 0 &&
+        !targetCached?.hasTopLevelSideEffects &&
+        named.every((name) => targetTypeNames.has(name));
+      const deniedRule = targetLayer
         ? isBlocked(rules, sourceLayer, targetLayer, {
             fromPath: relFile,
             toPath: relTarget,
             layers: config.layers,
           })
         : undefined;
-      if (rule) {
-        const targetCached = relTarget ? nextCacheFiles[relTarget] : undefined;
-        const staticEdge = edge.kind === 'import' || edge.kind === 'export';
-        const targetTypeOnlyExports =
-          staticEdge && Boolean(targetCached?.exportsOnlyTypes) && !edge.typeOnly;
-        const sourcePureTypeModule = Boolean(entry.exportsOnlyTypes);
-        // R6: every named binding is a type-only export of the target (mixed modules OK).
-        // Conservative: no dual-space value names, no top-level side effects on target
-        // (import type would skip evaluation), no default/namespace/side-effect/export*.
-        const targetTypeNames = new Set(targetCached?.typeOnlyExportNames || []);
-        const named = edge.namedBindings;
-        const namedBindingsTypeOnly =
-          staticEdge &&
-          Array.isArray(named) &&
-          named.length > 0 &&
-          targetTypeNames.size > 0 &&
-          !targetCached?.hasTopLevelSideEffects &&
-          named.every((n) => targetTypeNames.has(n));
-        const peerIsolation = Boolean(rule.peerIsolation);
-        // W6: port-proof eligibility (value import only; fail-closed static proof).
-        let portProofEligible = false;
-        if (
-          !edge.typeOnly &&
-          !peerIsolation &&
-          edge.kind === 'import' &&
-          !targetTypeOnlyExports &&
-          !namedBindingsTypeOnly
-        ) {
-          try {
-            const srcText = fs.readFileSync(file, 'utf8');
-            const proof = provePortProofInject(ts, srcText, { filePath: file });
-            portProofEligible = Boolean(proof.eligible);
-          } catch {
-            portProofEligible = false;
-          }
+      let portProofEligible = false;
+      if (
+        deniedRule &&
+        !deniedRule.peerIsolation &&
+        !edge.typeOnly &&
+        edge.kind === 'import' &&
+        !targetTypeOnlyExports &&
+        !namedBindingsTypeOnly
+      ) {
+        try {
+          const source = fs.readFileSync(file, 'utf8');
+          portProofEligible = Boolean(provePortProofInject(ts, source, { filePath: file }).eligible);
+        } catch {
+          portProofEligible = false;
         }
-        violations.push({
-          ruleId: 'LAYER_IMPORT_VIOLATION',
-          file: relFile,
-          line: edge.line,
-          fromLayer: sourceLayer,
-          toLayer: targetLayer,
-          target: relTarget,
-          ...(edge.typeOnly ? { typeOnly: true } : {}),
-          ...(targetTypeOnlyExports ? { targetTypeOnlyExports: true } : {}),
-          ...(sourcePureTypeModule ? { sourcePureTypeModule: true } : {}),
-          ...(namedBindingsTypeOnly ? { namedBindingsTypeOnly: true } : {}),
-          ...(portProofEligible ? { portProofEligible: true } : {}),
-          ...(edge.kind ? { edgeKind: edge.kind } : {}),
-          ...(peerIsolation ? { peerIsolation: true } : {}),
-          message:
-            rule.message ??
-            (peerIsolation
-              ? `${sourceLayer} must not ${edge.kind} another slice of ${targetLayer} (${relFile} → ${relTarget}). Extract shared code or use events/ports across slices.`
-              : `${sourceLayer} must not ${edge.kind} ${targetLayer}.`),
-        });
       }
+      engineEdges.push({
+        from: relFile,
+        fromLayer: sourceLayer,
+        to: relTarget,
+        toLayer: targetLayer,
+        line: edge.line,
+        kind: edge.kind,
+        typeOnly: edge.typeOnly,
+        targetTypeOnlyExports,
+        sourcePureTypeModule,
+        namedBindingsTypeOnly,
+        portProofEligible,
+      });
     }
   }
 
   if (cacheKey) saveScanCache(root, cacheKey, nextCacheFiles);
 
-  const cyclePolicy = String(config.cyclePolicy || 'strict').toLowerCase();
-  if (cyclePolicy !== 'off') {
-    const cycles = detectCycles(importGraph);
-    if (cyclePolicy === 'soft' || cyclePolicy === 'framework-soft') {
-      for (const c of cycles) {
-        warnings.push({
-          ruleId: 'CIRCULAR_DEPENDENCY',
-          message: `${c.message} (soft cycle policy — advisory only; set cyclePolicy: "strict" to fail the check)`,
-          file: c.file,
-          target: c.target,
-          failsStrict: false,
-        });
-      }
-    } else {
-      violations.push(...cycles);
-    }
-  }
-
-  return { violations, warnings, safety: safety.report };
+  return evaluateArchitectureGraph({
+    config,
+    rules,
+    files: scanned.map(({ relFile }) => relFile),
+    contentViolations: scanned.flatMap(({ entry }) => entry.contentViolations),
+    edges: engineEdges,
+    warnings,
+    safety: safety.report,
+  });
 }

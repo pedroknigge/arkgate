@@ -1,5 +1,5 @@
 import type { DomainEvent } from '../../domain/types';
-import type { OutboxRecord, OutboxStatus, OutboxStore } from './types';
+import type { EventBufferRecord, EventBufferStatus, EventBufferStore } from './types';
 
 let outboxSequence = 0;
 
@@ -8,7 +8,7 @@ function nextOutboxId(): string {
   return `outbox-${Date.now()}-${outboxSequence}`;
 }
 
-function cloneRecord(record: OutboxRecord): OutboxRecord {
+function cloneRecord(record: EventBufferRecord): EventBufferRecord {
   return {
     ...record,
     event: {
@@ -19,16 +19,16 @@ function cloneRecord(record: OutboxRecord): OutboxRecord {
 }
 
 /**
- * Reference in-process outbox. **Not production durability** — state is lost on
+ * Reference in-process event buffer. **Not production durability** — state is lost on
  * process exit. Use only for tests/demos/local single-process work; inject a durable
- * `OutboxStore` in production (see `docs/production-hardening.md`).
+ * This is not an atomic outbox (see `docs/production-hardening.md`).
  */
-export class InMemoryOutboxStore implements OutboxStore {
-  private readonly records = new Map<string, OutboxRecord>();
+export class InMemoryEventBuffer implements EventBufferStore {
+  private readonly records = new Map<string, EventBufferRecord>();
 
-  async enqueue(event: DomainEvent): Promise<OutboxRecord> {
+  async enqueue(event: DomainEvent): Promise<EventBufferRecord> {
     const now = new Date().toISOString();
-    const record: OutboxRecord = {
+    const record: EventBufferRecord = {
       id: nextOutboxId(),
       event,
       status: 'pending',
@@ -56,7 +56,7 @@ export class InMemoryOutboxStore implements OutboxStore {
     record.updatedAt = new Date().toISOString();
   }
 
-  async list(status?: OutboxStatus): Promise<OutboxRecord[]> {
+  async list(status?: EventBufferStatus): Promise<EventBufferRecord[]> {
     return Array.from(this.records.values())
       .filter((record) => !status || record.status === status)
       .map(cloneRecord);
@@ -66,3 +66,6 @@ export class InMemoryOutboxStore implements OutboxStore {
     this.records.clear();
   }
 }
+
+/** @deprecated Use InMemoryEventBuffer. */
+export const InMemoryOutboxStore = InMemoryEventBuffer;

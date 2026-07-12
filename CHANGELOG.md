@@ -4,6 +4,35 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+### Added
+
+- **Canonical analysis engine bundle:** graph policy, cycle evaluation, and configuration
+  diagnostics now have one Kernel implementation shared by the library, CLI, and MCP. A documented
+  standalone CLI bundle preserves the package's self-hosted boundary and is protected by a CI drift
+  check and Kernel/bundle parity fixtures.
+- **Symbol-aware semantic analysis:** one Kernel extractor now resolves forbidden ambient
+  capabilities through local symbols, aliases, `globalThis`, static keys, and destructuring, and
+  classifies TS/JS dependency forms across ESM, CommonJS, type-only, and unresolved dynamic edges.
+  CLI, safety diagnostics, and AICodeGate consume the same generated implementation. The supported
+  soundness envelope is documented and guarded by a labeled adversarial corpus plus TypeScript
+  5/6/7 and mutation matrices.
+- **Versioned adapter parity:** CLI JSON, MCP structured results, write hooks, ESLint, and the
+  GitHub Action now expose the same `ark.analysis-result` v1 diagnostics. A generated JSON Schema,
+  committed compatibility fixture, exact golden corpus, and mandatory CI parity job prevent
+  adapter drift; source-policy decisions no longer live privately inside ESLint.
+- **Runtime package isolation:** the next-major `arkgate` root now contains only gate APIs. The
+  optional runtime and NestJS adapter build independently as experimental `@arkgate/runtime`;
+  deprecated subpath shims contain no implementation. The non-atomic store is now presented as
+  `InMemoryEventBuffer`, with production recovery and durability requirements made explicit.
+
+### Fixed
+
+- **Deterministic offline setup tests:** `ark start` fixtures that do not exercise installation now
+  pass `--no-install`, preventing a published current version from turning unit tests into registry
+  installs.
+- **Node 26 watch fallback:** `ark-check --watch` falls back to bounded polling when recursive
+  `fs.watch` fails asynchronously with `EMFILE`, instead of crashing the watcher process.
+
 ## 2.13.0 — 2026-07-11
 
 - Added the stable, deterministic analysis IR and public in-memory API: `loadContract`,

@@ -21,6 +21,8 @@ const config = {
     'bin/lib/ast-scan.mjs:411-427',
     'bin/ark-shared.mjs:415-440',
     'src/domain/baselineKey.ts:20-48',
+    'src/kernel/semanticAnalysis.ts:18-49',
+    'src/kernel/semanticAnalysis.ts:78-258',
     'src/kernel/workflow/Saga.ts:188-238',
   ],
   testFiles: [
@@ -31,6 +33,7 @@ const config = {
     'tests/unit/static-check/enforcementProfiles.test.ts',
     'tests/unit/static-check/criticalBranchCoverage.test.ts',
     'tests/unit/static-check/mutationCritical.test.ts',
+    'tests/unit/analysis/semanticAnalysis.test.ts',
   ],
   reporters: ['clear-text', 'progress', 'json'],
   jsonReporter: { fileName: 'reports/mutation/mutation.json' },

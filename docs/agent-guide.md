@@ -239,7 +239,7 @@ projections, metadata, workflow engine, and 11-layer architecture profile:
 ```ts
 import {
   createStrictArkKernel,
-} from 'arkgate/runtime';
+} from '@arkgate/runtime';
 
 const ark = createStrictArkKernel();
 // ... define intents, event contracts, metadata, projections, and workflows through ark.*
@@ -249,8 +249,8 @@ const contract = ark.manifest().toJSON();
 // contract.observability, projections
 ```
 
-Use `arkgate/runtime` when evaluating the experimental kernel (root `arkgate` still re-exports
-for compatibility). Package surface policy: [package-surface.md](package-surface.md).
+Use `@arkgate/runtime` only when evaluating the experimental kernel. The stable `arkgate` gate
+package contains no runtime implementation. Package surface policy: [package-surface.md](package-surface.md).
 
 Agents should read `contract` and `ark.observability.report()` before generating or modifying code.
 

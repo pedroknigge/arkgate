@@ -1,0 +1,264 @@
+import { describe, expect, it } from 'vitest';
+import {
+  analyzeChange as analyzeChangeFromKernel,
+  analyzeProject as analyzeProjectFromKernel,
+  collectAnalysisConfigWarnings as collectWarningsFromKernel,
+  detectArchitectureCycles,
+  evaluateArchitectureGraph as evaluateGraphFromKernel,
+  loadContract as loadContractFromKernel,
+} from '../../../src/index';
+import {
+  analyzeChange as analyzeChangeFromBundle,
+  analyzeProject as analyzeProjectFromBundle,
+  collectAnalysisConfigWarnings as collectWarningsFromBundle,
+  detectArchitectureCycles as detectCyclesFromBundle,
+  evaluateArchitectureGraph as evaluateGraphFromBundle,
+  loadContract as loadContractFromBundle,
+} from '../../../bin/lib/analysis-engine.mjs';
+
+const config = {
+  include: ['src'],
+  layers: [
+    { name: 'DomainModel', patterns: ['src/domain/**'] },
+    { name: 'Kernel', patterns: ['src/kernel/**'] },
+  ],
+  rules: [{ from: 'DomainModel', to: 'Kernel', allowed: false }],
+};
+
+const files = [
+  {
+    path: 'src/domain/order.ts',
+    content: "import { service } from '../kernel/service';\nexport const order = service;\n",
+  },
+  { path: 'src/kernel/service.ts', content: 'export const service = 1;\n' },
+];
+
+describe('generated CLI analysis engine', () => {
+  it('matches the canonical Kernel API for project analysis', () => {
+    const kernelContract = loadContractFromKernel(config);
+    const bundleContract = loadContractFromBundle(config);
+
+    expect(bundleContract).toEqual(kernelContract);
+    expect(
+      analyzeProjectFromBundle({ contract: bundleContract, files, compilerOptions: { strict: true } })
+    ).toEqual(
+      analyzeProjectFromKernel({ contract: kernelContract, files, compilerOptions: { strict: true } })
+    );
+  });
+
+  it('matches the canonical Kernel API for in-memory changes', () => {
+    const kernelContract = loadContractFromKernel(config);
+    const bundleContract = loadContractFromBundle(config);
+    const changes = [
+      { path: 'src/domain/order.ts', content: 'export const order = 2;\n' },
+    ] as const;
+
+    expect(analyzeChangeFromBundle({ contract: bundleContract, files, changes })).toEqual(
+      analyzeChangeFromKernel({ contract: kernelContract, files, changes })
+    );
+  });
+
+  it.each(['strict', 'soft', 'off'] as const)(
+    'matches graph policy and cycle evaluation for cyclePolicy=%s',
+    (cyclePolicy) => {
+      const contract = loadContractFromKernel({ ...config, cyclePolicy });
+      const input = {
+        config: contract.config,
+        rules: contract.config.rules,
+        files: ['src/domain/a.ts', 'src/kernel/b.ts'],
+        contentViolations: [],
+        edges: [
+          {
+            from: 'src/domain/a.ts',
+            fromLayer: 'DomainModel',
+            to: 'src/kernel/b.ts',
+            toLayer: 'Kernel',
+            line: 3,
+            kind: 'import',
+            portProofEligible: true,
+          },
+          {
+            from: 'src/kernel/b.ts',
+            fromLayer: 'Kernel',
+            to: 'src/domain/a.ts',
+            toLayer: 'DomainModel',
+            line: 1,
+            kind: 'import',
+          },
+        ],
+      };
+
+      expect(evaluateGraphFromBundle(input)).toEqual(evaluateGraphFromKernel(input));
+      const result = evaluateGraphFromKernel(input);
+      expect(result.violations.some(({ ruleId }) => ruleId === 'LAYER_IMPORT_VIOLATION')).toBe(true);
+      expect(result.violations.some(({ ruleId }) => ruleId === 'CIRCULAR_DEPENDENCY')).toBe(
+        cyclePolicy === 'strict'
+      );
+      expect(result.warnings.some(({ ruleId }) => ruleId === 'CIRCULAR_DEPENDENCY')).toBe(
+        cyclePolicy === 'soft'
+      );
+    }
+  );
+
+  it('matches canonical configuration diagnostics', () => {
+    const contract = loadContractFromKernel({
+      include: ['src'],
+      layers: [
+        { name: 'One', patterns: ['src/**'] },
+        { name: 'Two', patterns: ['src/**'] },
+        { name: 'Missing', patterns: ['missing/**'] },
+      ],
+      rules: [{ from: 'Unknown', to: 'Two', allowed: false }],
+    });
+    const input = {
+      config: contract.config,
+      rules: contract.config.rules,
+      files: ['src/a.ts', 'other/unclassified.ts'],
+    };
+
+    const kernelWarnings = collectWarningsFromKernel(input);
+    expect(collectWarningsFromBundle(input)).toEqual(kernelWarnings);
+    expect(kernelWarnings.map(({ ruleId }) => ruleId)).toEqual(
+      expect.arrayContaining([
+        'CONFIG_LAYER_PATTERN_NO_MATCHES',
+        'CONFIG_RULE_UNKNOWN_FROM_LAYER',
+        'CONFIG_AMBIGUOUS_LAYERS',
+        'CONFIG_UNCLASSIFIED_FILES',
+      ])
+    );
+  });
+
+  it('covers graph edge metadata, peer isolation, and disconnected cycle branches', () => {
+    const graph = new Map([
+      ['a.ts', new Set(['a.ts', 'b.ts', 'outside.ts'])],
+      ['b.ts', new Set(['a.ts'])],
+      ['single.ts', new Set<string>()],
+    ]);
+    expect(detectArchitectureCycles(graph)).toEqual([
+      expect.objectContaining({ ruleId: 'CIRCULAR_DEPENDENCY', target: 'a.ts → b.ts' }),
+    ]);
+    expect(detectCyclesFromBundle(graph)).toEqual(detectArchitectureCycles(graph));
+
+    const contract = loadContractFromKernel({
+      include: ['src'],
+      cyclePolicy: 'off',
+      layers: [{ name: 'Slice', patterns: ['src/**'] }],
+      rules: [
+        {
+          from: 'Slice',
+          to: 'Slice',
+          allowed: false,
+          peerIsolation: true,
+          sliceFolders: ['features'],
+        },
+      ],
+    });
+    const input = {
+      config: contract.config,
+      rules: contract.config.rules,
+      files: ['src/features/a/index.ts', 'src/features/b/index.ts'],
+      contentViolations: [{ ruleId: 'CONTENT', message: 'content' }],
+      warnings: [{ ruleId: 'WARNING', message: 'warning' }],
+      safety: { checked: true },
+      edges: [
+        {
+          from: 'src/features/a/index.ts',
+          fromLayer: 'Slice',
+          to: 'src/features/b/index.ts',
+          toLayer: 'Slice',
+          line: 2,
+          kind: 'export',
+          typeOnly: true,
+          targetTypeOnlyExports: true,
+          sourcePureTypeModule: true,
+          namedBindingsTypeOnly: true,
+          portProofEligible: true,
+        },
+        {
+          from: 'src/features/a/index.ts',
+          fromLayer: 'Slice',
+          line: 3,
+          kind: 'dynamic-import',
+        },
+      ],
+    };
+    const result = evaluateGraphFromKernel(input);
+    expect(evaluateGraphFromBundle(input)).toEqual(result);
+
+    expect(result.safety).toEqual({ checked: true });
+    expect(result.warnings).toEqual([{ ruleId: 'WARNING', message: 'warning' }]);
+    expect(result.violations).toEqual([
+      { ruleId: 'CONTENT', message: 'content' },
+      expect.objectContaining({
+        ruleId: 'LAYER_IMPORT_VIOLATION',
+        peerIsolation: true,
+        typeOnly: true,
+        targetTypeOnlyExports: true,
+        sourcePureTypeModule: true,
+        namedBindingsTypeOnly: true,
+        edgeKind: 'export',
+      }),
+    ]);
+    expect(result.violations[1]).not.toHaveProperty('portProofEligible');
+  });
+
+  it('covers malformed and incomplete configuration diagnostics', () => {
+    const input = {
+      config: {
+        include: ['src'],
+        dynamicImportAllowlist: 'invalid',
+        safety: { maxTsSuppressions: -1, maxAnyCasts: 1.5 },
+        layers: [
+          { name: '', patterns: ['src/**'] },
+          { name: 'Empty', patterns: [], forbiddenGlobals: 'fetch' },
+          { name: 'Duplicate', patterns: ['missing/**'] },
+          { name: 'Duplicate', patterns: ['src/**'] },
+          { name: 'Optional', patterns: ['optional/**'], optional: true },
+        ],
+        rules: [
+          { from: 'UnknownFrom', to: 'Duplicate', allowed: false },
+          { from: 'Duplicate', to: 'UnknownTo', allowed: false },
+        ],
+      } as never,
+      rules: [
+        { from: 'UnknownFrom', to: 'Duplicate', allowed: false },
+        { from: 'Duplicate', to: 'UnknownTo', allowed: false },
+      ],
+      files: ['src/file.ts'],
+      manifest: { architecture: { layers: [{ name: 'ManifestLayer' }, {}] } },
+    };
+    const warnings = collectWarningsFromKernel(input);
+    expect(collectWarningsFromBundle(input)).toEqual(warnings);
+    const ids = warnings.map(({ ruleId }) => ruleId);
+
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        'CONFIG_INVALID_DYNAMIC_IMPORT_ALLOWLIST',
+        'CONFIG_INVALID_SAFETY_THRESHOLD',
+        'CONFIG_LAYER_WITHOUT_NAME',
+        'CONFIG_LAYER_WITHOUT_PATTERNS',
+        'CONFIG_INVALID_FORBIDDEN_GLOBALS',
+        'CONFIG_LAYER_PATTERN_NO_MATCHES',
+        'CONFIG_DUPLICATE_LAYER',
+        'CONFIG_RULE_UNKNOWN_FROM_LAYER',
+        'CONFIG_RULE_UNKNOWN_TO_LAYER',
+      ])
+    );
+    expect(
+      warnings.some(
+        ({ ruleId, layer }) => ruleId === 'CONFIG_LAYER_PATTERN_NO_MATCHES' && layer === 'Optional'
+      )
+    ).toBe(false);
+
+    const emptyInput = {
+      config: { include: ['src'], layers: [], rules: [], safety: null } as never,
+      rules: [],
+      files: [],
+    };
+    const emptyWarnings = collectWarningsFromKernel(emptyInput);
+    expect(collectWarningsFromBundle(emptyInput)).toEqual(emptyWarnings);
+    expect(emptyWarnings.map(({ ruleId }) => ruleId)).toEqual(
+      expect.arrayContaining(['CONFIG_INVALID_SAFETY', 'CONFIG_NO_LAYERS'])
+    );
+  });
+});

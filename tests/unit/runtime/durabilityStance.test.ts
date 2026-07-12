@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   InMemoryOutboxStore,
+  InMemoryEventBuffer,
   InMemoryAuditStore,
   InMemoryReadModelStore,
   InMemoryWorkflowStore,
@@ -22,6 +23,7 @@ function readSrc(rel: string): string {
 describe('R9 runtime durability stance', () => {
   it('exports the reference InMemory store classes (shipped defaults)', () => {
     expect(typeof InMemoryOutboxStore).toBe('function');
+    expect(InMemoryEventBuffer).toBe(InMemoryOutboxStore);
     expect(typeof InMemoryAuditStore).toBe('function');
     expect(typeof InMemoryReadModelStore).toBe('function');
     expect(typeof InMemoryWorkflowStore).toBe('function');
@@ -51,14 +53,14 @@ describe('R9 runtime durability stance', () => {
   it('states the stance in README and production-hardening', () => {
     const readme = readSrc('README.md');
     expect(readme).toMatch(/Durability stance/);
-    expect(readme).toMatch(/InMemoryOutboxStore/);
+    expect(readme).toMatch(/InMemoryEventBuffer/);
     expect(readme).toMatch(/not[\s*]+production durability/i);
     expect(readme).toMatch(/production-hardening\.md/);
 
     const hardening = readSrc('docs/production-hardening.md');
     expect(hardening).toMatch(/Durability stance \(R9\)/);
     expect(hardening).toMatch(/does not ship production-durable adapters/i);
-    expect(hardening).toMatch(/InMemoryOutboxStore/);
+    expect(hardening).toMatch(/InMemoryEventBuffer/);
   });
 
   it('package-surface marks runtime stores as InMemory reference only', () => {

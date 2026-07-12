@@ -262,7 +262,7 @@ async function waitForOutput(
     if (matched) return text;
     await new Promise((r) => setTimeout(r, 100));
   }
-  throw new Error(`Timed out waiting for output: ${pattern}`);
+  throw new Error(`Timed out waiting for output: ${pattern}\n${chunks.join('')}`);
 }
 
 describe('Phase B — watch mode', () => {

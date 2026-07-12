@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0",
+  "valid": false,
+  "diagnostics": [
+    {
+      "ruleId": "LAYER_IMPORT_VIOLATION",
+      "severity": "error",
+      "message": "DomainModel must not import PersistenceAdapters.",
+      "location": {
+        "file": "src/domain/order.ts",
+        "line": 1,
+        "column": 1
+      },
+      "evidence": {
+        "target": "src/infra/db.ts",
+        "fromLayer": "DomainModel",
+        "toLayer": "PersistenceAdapters"
+      }
+    }
+  ]
+}

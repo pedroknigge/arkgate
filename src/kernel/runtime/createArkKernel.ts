@@ -10,7 +10,7 @@ import {
 import { createArkManifest } from '../manifest';
 import { createMetadataRegistry } from '../metadata';
 import { createObservabilityReporter } from '../observability';
-import { InMemoryOutboxStore } from '../outbox';
+import { InMemoryEventBuffer } from '../outbox';
 import {
   PolicyEngine,
   defineArchitectureProfilePolicy,
@@ -48,7 +48,7 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
   const metadata = options.metadata ?? createMetadataRegistry();
   const auditTrail = options.auditTrail ?? createAuditTrail({ maxRecords: maxHistorySize });
   const eventContracts = options.eventContracts ?? createEventContractRegistry();
-  const outbox = options.outbox ?? new InMemoryOutboxStore();
+  const eventBuffer = options.eventBuffer ?? options.outbox ?? new InMemoryEventBuffer();
   const projections =
     options.projections ?? createProjectionRegistry({ auditTrail });
   const policyEngine = new PolicyEngine([
@@ -73,7 +73,7 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
     architectureProfile: profile,
     enforceObservedLayerFlow:
       options.enforceObservedLayerFlow ?? (strict ? 'hard' : 'off'),
-    outbox,
+    eventBuffer,
     instanceId,
     maxHistorySize,
     onPublish: options.autoApplyProjections === false
@@ -98,7 +98,8 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
     metadata,
     auditTrail,
     eventContracts,
-    outbox,
+    eventBuffer,
+    outbox: eventBuffer,
     projections,
     policyEngine,
     eventBus,
