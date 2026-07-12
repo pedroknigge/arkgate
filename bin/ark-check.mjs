@@ -84,6 +84,7 @@ import {
   ARCHITECTURE_PRESETS,
 } from './lib/presets.mjs';
 import { loadArkConfigContract, parseArkConfigJson } from './lib/config-contract.mjs';
+import { createAdapterResult } from './lib/adapter-contract.mjs';
 
 import {
   collectGovernedFiles,
@@ -1330,7 +1331,13 @@ async function main() {
   }
 
   if (args.json) {
+    const adapterResult = createAdapterResult({
+      valid: ok,
+      violations: activeViolations.map(enrichViolationWithFixClass),
+      warnings,
+    });
     console.log(JSON.stringify({
+      ...adapterResult,
       ok,
       violations: activeViolations.map(enrichViolationWithFixClass),
       suppressedViolations: suppressed.length,

@@ -6,6 +6,7 @@ import {
   withArkConfigMetadata,
 } from './lib/config-contract.mjs';
 import { collectForbiddenCapabilityUses } from './lib/analysis-engine.mjs';
+import { looksLikeArkIntent } from './lib/source-policy.mjs';
 
 /**
  * Default intent-prefix map shared by both CLIs and the ark-mcp write-path gate. The rule
@@ -418,17 +419,8 @@ export function resolveIntentLayer(intent, layers) {
   return sorted.find((layer) => layer.prefixes.some((prefix) => intent.startsWith(prefix)))?.name;
 }
 
-/**
- * Intent-name recognizer. Kept deliberately in sync with `looksLikeIntentName` in
- * src/kernel/ai-gate/AICodeGate.ts: the two live in separate layers on purpose — the
- * CLIs run standalone (with only `typescript` present, no build), so they must not
- * import from the compiled library. Update both if the layer prefixes change.
- */
-const INTENT_NAME =
-  /^(Domain|Application|Adapter|Workflow|Job|Presentation|Reporting|Metadata|Security|Audit|Observability|Kernel)\.[A-Za-z0-9_.]+$/;
-
 export function looksLikeIntent(value) {
-  return INTENT_NAME.test(value);
+  return looksLikeArkIntent(value);
 }
 
 /**

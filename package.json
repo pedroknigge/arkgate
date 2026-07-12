@@ -24,6 +24,8 @@
     },
     "./schema": "./schemas/ark.config.schema.json",
     "./schema/ark.config.schema.json": "./schemas/ark.config.schema.json",
+    "./schema/analysis-result": "./schemas/ark.analysis-result.schema.json",
+    "./schema/ark.analysis-result.schema.json": "./schemas/ark.analysis-result.schema.json",
     "./nestjs": {
       "types": "./dist/nestjs/index.d.ts",
       "import": "./dist/nestjs/index.js",
@@ -74,6 +76,7 @@
     "test:coverage": "npm run build && vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=json-summary",
     "test:mutation": "npm run build && stryker run",
     "test:confidence": "npm run test:coverage && npm run test:mutation",
+    "test:adapter-parity": "vitest run tests/unit/adapters/adapterParity.test.ts tests/unit/eslint/parity.test.ts",
     "typecheck": "tsc --noEmit",
     "security:audit": "npm audit --omit=dev --audit-level=high",
     "check:architecture": "node bin/ark-check.mjs --root . --config ark.config.json --strict",

@@ -16,6 +16,14 @@ import {
   isEdgeDenied,
 } from '../domain/layerMatch';
 import { parseArkConfigJson, type ArkConfig } from '../domain/configContract';
+import {
+  toAdapterDiagnostic,
+  type AdapterDiagnostic,
+  type AdapterViolationInput,
+} from '../domain/adapterContract';
+import {
+  classifyPublishFacts,
+} from '../domain/sourcePolicy';
 
 export { globToRegExp, patternSpecificity, layerForRelativePath, isEdgeDenied };
 
@@ -84,7 +92,25 @@ type AstNode = {
   parent?: AstNode;
   init?: AstNode;
   computed?: boolean;
+  loc?: { start?: { line?: number; column?: number } };
 };
+
+function reportAdapterDiagnostic(
+  context: RuleContext,
+  node: AstNode,
+  messageId: string,
+  violation: AdapterViolationInput,
+  data?: Record<string, unknown>
+): AdapterDiagnostic {
+  const diagnostic = toAdapterDiagnostic({
+    ...violation,
+    line: violation.line ?? node.loc?.start?.line,
+    column: violation.column ??
+      (typeof node.loc?.start?.column === 'number' ? node.loc.start.column + 1 : undefined),
+  });
+  context.report({ node, messageId, ...(data ? { data } : {}), diagnostic });
+  return diagnostic;
+}
 
 type ArkRule = {
   meta: {
@@ -228,38 +254,9 @@ function objectHasMetadataSource(node: AstNode | undefined): boolean {
   return objectHasProperty(metadata, 'source');
 }
 
-function looksLikeIntent(value: string): boolean {
-  return /^(Domain|Application|Adapter|Workflow|Job|Presentation|Reporting|Metadata|Security|Audit|Observability|Kernel)\.[A-Za-z0-9_.]+$/.test(
-    value
-  );
-}
-
 function isPublishCall(node: AstNode): boolean {
   return calleePropertyName(node) === 'publish';
 }
-
-/** Heuristic fallback when no ark.config.json (pre-contract projects). */
-function isDomainFileHeuristic(filename: string): boolean {
-  const normalized = filename.split('\\').join('/').toLowerCase();
-  return normalized.includes('/domain/') || normalized.endsWith('/domain.ts');
-}
-
-function isInfraImportHeuristic(specifier: string): boolean {
-  const normalized = specifier.toLowerCase();
-  return [
-    'adapter',
-    'adapters',
-    'infrastructure',
-    'persistence',
-    'repository',
-    'repositories',
-    'integration',
-    'database',
-    'db',
-  ].some((token) => normalized.includes(token));
-}
-
-const DEFAULT_FORBIDDEN_GLOBALS = ['fetch', 'process', 'Date.now', 'Math.random'];
 
 // ── Rules ──────────────────────────────────────────────────────────────────
 
@@ -273,7 +270,7 @@ export const noDomainInfraImports: ArkRule = {
     type: 'problem',
     docs: {
       description:
-        'Disallow imports that violate ark.config.json layer rules (same contract as arkgate-check). Falls back to domain→infra path heuristics when no config is found.',
+        'Disallow imports that violate ark.config.json layer rules (same contract as arkgate-check).',
     },
     messages: {
       forbiddenImport:
@@ -315,19 +312,26 @@ export const noDomainInfraImports: ArkRule = {
             layers: config.layers,
           })
         ) {
-          context.report({
+          reportAdapterDiagnostic(
+            context,
             node,
-            messageId: 'forbiddenImport',
-            data: { fromLayer, toLayer, specifier: source },
-          });
+            'forbiddenImport',
+            {
+              ruleId: 'LAYER_IMPORT_VIOLATION',
+              file: relFile,
+              fromLayer,
+              toLayer,
+              target: relTarget,
+              ...(node.importKind === 'type' ? { typeOnly: true } : {}),
+              message: `${fromLayer} must not import ${toLayer}.`,
+            },
+            { fromLayer, toLayer, specifier: source }
+          );
         }
         return;
       }
 
-      // No contract: legacy heuristic so bare domain folders still get a signal.
-      if (isDomainFileHeuristic(filename) && isInfraImportHeuristic(source)) {
-        context.report({ node, messageId: 'forbiddenImportHeuristic' });
-      }
+      // No contract means no architecture policy. CI and editor stay equally contract-driven.
     };
 
     return {
@@ -354,11 +358,21 @@ export const noRawEventPublish: ArkRule = {
   create(context) {
     return {
       CallExpression(node) {
-        if (!isPublishCall(node)) return;
         const firstArg = node.arguments?.[0];
         const firstValue = stringValue(firstArg);
-        if ((firstValue && looksLikeIntent(firstValue)) || objectHasProperty(firstArg, 'intent')) {
-          context.report({ node, messageId: 'rawPublish' });
+        const findings = classifyPublishFacts({
+          publishCall: isPublishCall(node),
+          rawIntentName: firstValue,
+          objectHasIntent: objectHasProperty(firstArg, 'intent'),
+          arkPublishCandidate: false,
+          hasSource: true,
+        });
+        if (findings.some((finding) => finding.ruleId === 'RAW_EVENT_PUBLISH')) {
+          const finding = findings.find((item) => item.ruleId === 'RAW_EVENT_PUBLISH')!;
+          reportAdapterDiagnostic(context, node, 'rawPublish', {
+            ...finding,
+            file: lintedFilename(context),
+          });
         }
       },
     };
@@ -379,13 +393,23 @@ export const requirePublishSource: ArkRule = {
   create(context) {
     return {
       CallExpression(node) {
-        if (!isPublishCall(node)) return;
         const firstArg = node.arguments?.[0];
         const metadataArg = node.arguments?.[2];
-        if (objectHasMetadataSource(firstArg) || objectHasProperty(metadataArg, 'source')) {
-          return;
+        const findings = classifyPublishFacts({
+          publishCall: isPublishCall(node),
+          rawIntentName: stringValue(firstArg),
+          objectHasIntent: objectHasProperty(firstArg, 'intent'),
+          arkPublishCandidate: true,
+          hasSource:
+            objectHasMetadataSource(firstArg) || objectHasProperty(metadataArg, 'source'),
+        });
+        const finding = findings.find((item) => item.ruleId === 'PUBLISH_MISSING_SOURCE');
+        if (finding) {
+          reportAdapterDiagnostic(context, node, 'missingSource', {
+            ...finding,
+            file: lintedFilename(context),
+          });
         }
-        context.report({ node, messageId: 'missingSource' });
       },
     };
   },
@@ -396,7 +420,7 @@ export const noForbiddenGlobals: ArkRule = {
     type: 'problem',
     docs: {
       description:
-        'Disallow ambient globals from the layer’s forbiddenGlobals in ark.config.json (same purity surface as arkgate-check). Option `globals` overrides. Without config, defaults apply only on domain-like paths.',
+        'Disallow ambient globals from the layer’s forbiddenGlobals in ark.config.json (same purity surface as ark-check). Option `globals` explicitly overrides.',
     },
     messages: {
       forbiddenGlobal:
@@ -439,8 +463,6 @@ export const noForbiddenGlobals: ArkRule = {
         // Layer has no purity list — do not invent defaults (matches CI).
         globals = null;
       }
-    } else if (isDomainFileHeuristic(filename)) {
-      globals = new Set(DEFAULT_FORBIDDEN_GLOBALS);
     }
 
     if (!globals) {
@@ -449,12 +471,25 @@ export const noForbiddenGlobals: ArkRule = {
 
     const scopeAware = typeof sourceCodeFor(context)?.getScope === 'function';
 
-    const report = (node: AstNode, name: string) =>
-      context.report({
+    const report = (node: AstNode, name: string) => {
+      const absFile = path.isAbsolute(filename) ? filename : path.resolve(filename);
+      const reportFile = root
+        ? path.relative(root, absFile).split(path.sep).join('/')
+        : filename;
+      reportAdapterDiagnostic(
+        context,
         node,
-        messageId: config ? 'forbiddenGlobal' : 'forbiddenGlobalDefault',
-        data: { name, layer: layerName },
-      });
+        config ? 'forbiddenGlobal' : 'forbiddenGlobalDefault',
+        {
+          ruleId: 'FORBIDDEN_GLOBAL',
+          file: reportFile,
+          fromLayer: layerName,
+          target: name,
+          message: `${layerName} must not use the ambient global "${name}".`,
+        },
+        { name, layer: layerName }
+      );
+    };
 
     return {
       MemberExpression(node) {

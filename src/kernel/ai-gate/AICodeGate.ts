@@ -18,6 +18,7 @@ import type { IntentCreator } from '../intent';
 import type { IntentName } from '../../domain/types';
 import type { ArchitectureProfile } from '../layers';
 import { findDeniedEdgeRule } from '../../domain/layerMatch';
+import { classifyPublishFacts, looksLikeArkIntent } from '../../domain/sourcePolicy';
 import {
   collectForbiddenCapabilityUses,
   extractSemanticDependencies,
@@ -187,9 +188,6 @@ function extractQuotedStringsAst(ts: any, source: string): StringMatch[] {
   return matches;
 }
 
-function looksLikeIntentName(s: string): boolean {
-  return /^(Domain|Application|Adapter|Workflow|Job|Presentation|Reporting|Metadata|Security|Audit|Observability|Kernel)\.[A-Za-z0-9_.]+$/.test(s);
-}
 
 function hasInfrastructureToken(specifier: string): boolean {
   const tokens = specifier
@@ -297,7 +295,7 @@ function tsIsArkPublishCandidate(ts: any, node: any): boolean {
   const firstArg = node.arguments[0];
   const rawIntent = tsStringLiteralText(ts, firstArg);
   return (
-    (rawIntent !== undefined && looksLikeIntentName(rawIntent)) ||
+    (rawIntent !== undefined && looksLikeArkIntent(rawIntent)) ||
     tsObjectHasProperty(ts, firstArg, 'intent') ||
     tsLooksLikeIntentCreatorExpression(ts, firstArg)
   );
@@ -347,29 +345,20 @@ function analyzePublishAst<Context>(
     if (tsIsPublishCall(ts, node)) {
       const firstArg = node.arguments[0];
       const rawIntent = tsStringLiteralText(ts, firstArg);
-      if (
-        (rawIntent && looksLikeIntentName(rawIntent)) ||
-        tsObjectHasProperty(ts, firstArg, 'intent')
-      ) {
+      for (const finding of classifyPublishFacts({
+        publishCall: true,
+        rawIntentName: rawIntent,
+        objectHasIntent: tsObjectHasProperty(ts, firstArg, 'intent'),
+        arkPublishCandidate: tsIsArkPublishCandidate(ts, node),
+        hasSource: tsPublishHasSource(ts, node),
+      })) {
         violations.push(
-          violation('RAW_EVENT_PUBLISH', 'Publish through a registered intent creator; raw event objects or intent strings bypass Ark contracts and tooling.', {
-            line: lineForNode(node),
-            filePath,
-          })
-        );
-      }
-
-      if (tsIsArkPublishCandidate(ts, node) && !tsPublishHasSource(ts, node)) {
-        violations.push(
-          violation('PUBLISH_MISSING_SOURCE', 'Strict Ark publish calls must include metadata.source.', {
-            line: lineForNode(node),
-            filePath,
-          })
+          violation(finding.ruleId, finding.message, { line: lineForNode(node), filePath })
         );
       }
 
       const sourceIntent = tsPublishSourceLiteral(ts, node);
-      if (profile && contextLayer && sourceIntent && looksLikeIntentName(sourceIntent)) {
+      if (profile && contextLayer && sourceIntent && looksLikeArkIntent(sourceIntent)) {
         const sourceLayer = profile.resolveLayer(sourceIntent);
         if (sourceLayer && sourceLayer !== contextLayer) {
           violations.push(
@@ -621,7 +610,7 @@ export function createAICodeGate<Context = AICodeGateContext>(
 
       if (enforceAllowlist && intentNames.size > 0) {
         for (const literal of quotedStrings) {
-          if (looksLikeIntentName(literal.value) && !intentNames.has(literal.value)) {
+          if (looksLikeArkIntent(literal.value) && !intentNames.has(literal.value)) {
             violations.push(
               violation(
                 'UNKNOWN_INTENT',
@@ -640,7 +629,7 @@ export function createAICodeGate<Context = AICodeGateContext>(
 
       if (options.architectureProfile && contextLayer) {
         for (const literal of quotedStrings) {
-          if (!looksLikeIntentName(literal.value)) continue;
+          if (!looksLikeArkIntent(literal.value)) continue;
 
           const targetLayer = options.architectureProfile.resolveLayer(literal.value);
           if (!targetLayer) continue;

@@ -666,6 +666,34 @@ function collectForbiddenCapabilityUses(ts, sourceFile, forbidden) {
   return uses;
 }
 
+// src/domain/sourcePolicy.ts
+var SOURCE_POLICY_MESSAGES = {
+  RAW_EVENT_PUBLISH: "Publish through a registered intent creator; raw event objects or intent strings bypass Ark contracts and tooling.",
+  PUBLISH_MISSING_SOURCE: "Strict Ark publish calls must include metadata.source."
+};
+function looksLikeArkIntent(value) {
+  return /^(Domain|Application|Adapter|Workflow|Job|Presentation|Reporting|Metadata|Security|Audit|Observability|Kernel)\.[A-Za-z0-9_.]+$/.test(
+    value
+  );
+}
+function classifyPublishFacts(facts) {
+  if (!facts.publishCall) return [];
+  const findings = [];
+  if (facts.rawIntentName !== void 0 && looksLikeArkIntent(facts.rawIntentName) || facts.objectHasIntent) {
+    findings.push({
+      ruleId: "RAW_EVENT_PUBLISH",
+      message: SOURCE_POLICY_MESSAGES.RAW_EVENT_PUBLISH
+    });
+  }
+  if (facts.arkPublishCandidate && !facts.hasSource) {
+    findings.push({
+      ruleId: "PUBLISH_MISSING_SOURCE",
+      message: SOURCE_POLICY_MESSAGES.PUBLISH_MISSING_SOURCE
+    });
+  }
+  return findings;
+}
+
 // src/kernel/analysis.ts
 function loadContract(input, source) {
   const loaded = typeof input === "string" ? parseArkConfigJson(input, source) : loadArkConfigContract(input, source);
@@ -1121,13 +1149,16 @@ function collectAnalysisConfigWarnings(input) {
   return warnings;
 }
 export {
+  SOURCE_POLICY_MESSAGES,
   analyzeChange,
   analyzeProject,
+  classifyPublishFacts,
   collectAnalysisConfigWarnings,
   collectForbiddenCapabilityUses,
   detectArchitectureCycles,
   evaluateArchitectureGraph,
   explainViolation,
   extractSemanticDependencies,
-  loadContract
+  loadContract,
+  looksLikeArkIntent
 };

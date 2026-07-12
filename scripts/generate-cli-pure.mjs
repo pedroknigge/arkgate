@@ -7,6 +7,8 @@
  *   src/domain/baselineKey.ts  → bin/lib/baseline-key.mjs
  *   src/domain/configContract.ts → bin/lib/config-contract.mjs
  *                                → schemas/ark.config.schema.json
+ *   src/domain/adapterContract.ts → bin/lib/adapter-contract.mjs
+ *                                 → schemas/ark.analysis-result.schema.json
  *
  * Layer match remains scripts/generate-layer-match.mjs (R1).
  *
@@ -37,7 +39,20 @@ const MODULES = [
     canonical: 'src/domain/configContract.ts',
     derived: 'bin/lib/config-contract.mjs',
     schemaDerived: 'schemas/ark.config.schema.json',
+    schemaExport: 'ARK_CONFIG_SCHEMA',
     label: 'versioned ark.config.json contract + schema',
+  },
+  {
+    canonical: 'src/domain/adapterContract.ts',
+    derived: 'bin/lib/adapter-contract.mjs',
+    schemaDerived: 'schemas/ark.analysis-result.schema.json',
+    schemaExport: 'ARK_ANALYSIS_RESULT_SCHEMA',
+    label: 'versioned cross-adapter analysis result contract + schema',
+  },
+  {
+    canonical: 'src/domain/sourcePolicy.ts',
+    derived: 'bin/lib/source-policy.mjs',
+    label: 'shared source-policy classification',
   },
 ];
 
@@ -89,13 +104,13 @@ function normalizeNewlines(s) {
   return s.replace(/\r\n/g, '\n');
 }
 
-async function buildSchemaSource(derivedSource) {
+async function buildSchemaSource(derivedSource, schemaExport) {
   const url = `data:text/javascript;base64,${Buffer.from(derivedSource).toString('base64')}`;
   const module = await import(url);
-  if (!module.ARK_CONFIG_SCHEMA || typeof module.ARK_CONFIG_SCHEMA !== 'object') {
-    throw new Error('configContract.ts must export ARK_CONFIG_SCHEMA');
+  if (!module[schemaExport] || typeof module[schemaExport] !== 'object') {
+    throw new Error(`canonical module must export ${schemaExport}`);
   }
-  return `${JSON.stringify(module.ARK_CONFIG_SCHEMA, null, 2)}\n`;
+  return `${JSON.stringify(module[schemaExport], null, 2)}\n`;
 }
 
 async function main() {
@@ -112,7 +127,7 @@ async function main() {
     const canonicalTs = fs.readFileSync(canonicalPath, 'utf8');
     const expected = normalizeNewlines(buildDerivedSource(mod.canonical, canonicalTs));
     const expectedSchema = mod.schemaDerived
-      ? normalizeNewlines(await buildSchemaSource(expected))
+      ? normalizeNewlines(await buildSchemaSource(expected, mod.schemaExport))
       : undefined;
 
     if (checkOnly) {

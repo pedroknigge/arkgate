@@ -35,6 +35,7 @@ import {
 } from './analysis-engine.mjs';
 import { normalize } from './scan-files.mjs';
 import { collectSafetyDiagnostics } from './safety-diagnostics.mjs';
+import { classifyPublishFacts } from './source-policy.mjs';
 import {
   createCompilerOptionsLookup,
   createModuleResolutionHost,
@@ -94,26 +95,19 @@ export function scanSourceFile(ts, root, config, rules, manifestIntentLayers, fi
       if (isPublishCall(ts, node)) {
         const firstArg = node.arguments[0];
         const rawIntent = stringLiteralText(ts, firstArg);
-        if (
-          (rawIntent && looksLikeIntent(rawIntent)) ||
-          objectHasProperty(ts, firstArg, 'intent')
-        ) {
+        for (const finding of classifyPublishFacts({
+          publishCall: true,
+          rawIntentName: rawIntent,
+          objectHasIntent: objectHasProperty(ts, firstArg, 'intent'),
+          arkPublishCandidate: isArkPublishCandidate(ts, node),
+          hasSource: publishHasSource(ts, node),
+        })) {
           violations.push({
-            ruleId: 'RAW_EVENT_PUBLISH',
+            ruleId: finding.ruleId,
             file: normalize(path.relative(root, file)),
             line: lineOf(sourceFile, node.getStart(sourceFile)),
-            message:
-              'Publish through a registered intent creator; raw event objects or intent strings bypass Ark contracts and tooling.',
-          });
-        }
-
-        if (isArkPublishCandidate(ts, node) && !publishHasSource(ts, node)) {
-          violations.push({
-            ruleId: 'PUBLISH_MISSING_SOURCE',
-            file: normalize(path.relative(root, file)),
-            line: lineOf(sourceFile, node.getStart(sourceFile)),
-            fromLayer: sourceLayer,
-            message: 'Strict Ark publish calls must include metadata.source.',
+            ...(finding.ruleId === 'PUBLISH_MISSING_SOURCE' ? { fromLayer: sourceLayer } : {}),
+            message: finding.message,
           });
         }
 

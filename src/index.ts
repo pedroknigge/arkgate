@@ -14,6 +14,17 @@
 
 export { version } from './version';
 
+export {
+  ARK_ANALYSIS_RESULT_SCHEMA_VERSION,
+  ARK_ANALYSIS_RESULT_SCHEMA,
+  createAdapterResult,
+  toAdapterDiagnostic,
+  type AdapterDiagnostic,
+  type AdapterResult,
+  type AdapterSeverity,
+  type AdapterViolationInput,
+} from './domain/adapterContract';
+
 // Domain types are re-exported below; no local value imports needed here.
 
 /**

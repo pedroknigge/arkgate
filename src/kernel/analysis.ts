@@ -33,6 +33,14 @@ export {
   type SemanticDependencyKind,
 } from './semanticAnalysis';
 
+export {
+  SOURCE_POLICY_MESSAGES,
+  classifyPublishFacts,
+  looksLikeArkIntent,
+  type PublishSyntaxFacts,
+  type SourcePolicyFinding,
+} from '../domain/sourcePolicy';
+
 export type AnalysisContract = ArkConfigLoadResult & { policyHash: string };
 
 export type AnalyzeProjectInput = {
