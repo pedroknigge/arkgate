@@ -739,7 +739,7 @@ and `Semgrep CE` checks plus the Node/TypeScript/parity matrix, and was squash-m
 
 ### O04 — Build clean-room onboarding fixtures
 
-- **Status:** `todo`
+- **Status:** `doing`
 - **Depends on:** `O03`
 
 **Implementation**
@@ -755,6 +755,16 @@ and `Semgrep CE` checks plus the Node/TypeScript/parity matrix, and was squash-m
 - Hard/advisory write capability matches the canonical host matrix.
 - No fixture reports Enforce below 90% governed coverage.
 - No host setup requires files for an unrelated host.
+
+**Local evidence (2026-07-12):** `npm run test:onboarding-matrix` passed all 12 offline
+fixture shards (144 cells: library, API, frontend, and monorepo at small/medium/large across
+Claude, Grok, Cursor, Codex, npm, pnpm, and yarn). Every cell proved read-only preview,
+preview/apply path parity, green strict merge, equal projected/measured 100% governed coverage,
+idempotency, and no unrelated host files. The canonical capability checks confirm hard write and
+repair only for Claude/Grok, and advisory write plus CI merge gate for Cursor/Codex. The matrix
+uses only temporary lockfile signals and does not execute a package-manager install. Typecheck,
+JavaScript syntax, and strict Ark configuration checks pass locally. CI now shards the 12 fixture
+groups; retain `doing` until its required remote checks pass on the published commit.
 
 ---
 

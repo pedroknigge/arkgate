@@ -1,0 +1,6 @@
+{
+  "name": "o04-api-small",
+  "private": true,
+  "type": "module",
+  "scripts": { "check": "tsc --noEmit" }
+}

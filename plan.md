@@ -43,7 +43,7 @@ one item may be `doing`.
 | Order | Item | Roadmap state | Dependency gate | Exit result |
 |---:|---|---|---|---|
 | 1 | `O03` | `done` | `O02` done | Compact single-host setup closed `RB-06` in PR #41 |
-| 2 | `O04` | `todo` | `O03` done | Clean-room onboarding matrix is green |
+| 2 | `O04` | `doing` | `O03` done | Clean-room onboarding matrix is green |
 | 3 | `V01` | `todo` | `C05` and `O04` done | Real cold, warm, and incremental budgets run in CI |
 | 4 | `V02` | `todo` | `C04` done, plus queue order | Mutation, property, and fuzz boundaries are defended |
 | 5 | `V03` | `todo` | `O04`, `V01`, and `V02` done | At least 12 pinned external adoptions are reproduced |
@@ -314,6 +314,12 @@ npm run test:onboarding-matrix
 ```
 
 Then run the common merge gate.
+
+**Local evidence (2026-07-12):** `npm run test:onboarding-matrix` passed all 12 offline shards
+and their 144 deterministic cells. `npm run typecheck`, `npm run check:js`, and
+`npx ark-check --root . --config ark.config.json --strict-config` also pass. The `onboarding-matrix`
+CI job runs the same fixture shards independently; O04 stays `doing` until that remote evidence is
+green for the published candidate.
 
 ## 7. V01 - add real cold, warm, and incremental budgets
 

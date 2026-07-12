@@ -1,0 +1,6 @@
+{
+  "name": "o04-library-large",
+  "private": true,
+  "type": "module",
+  "scripts": { "check": "tsc --noEmit" }
+}
