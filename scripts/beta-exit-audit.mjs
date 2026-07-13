@@ -30,6 +30,8 @@ if (!fs.existsSync(adoptionFile)) checks.push(check('adoption', 'unverified', `m
 else {
   const adoption = readJson(adoptionFile);
   checks.push(check('adoption', adoption.acceptance && Object.values(adoption.acceptance).every(Boolean) ? 'pass' : 'fail', `cells=${adoption.cellCount}, coverage=${adoption.medians?.governedCoveragePercent ?? 'n/a'}%`));
+  const adoptionCandidate = adoption.candidate?.sha ?? adoption.candidateSha;
+  checks.push(check('adoption-candidate', adoptionCandidate === candidate ? 'pass' : 'fail', adoptionCandidate === candidate ? 'adoption evidence matches candidate' : `adoption candidate=${adoptionCandidate ?? 'missing'}`));
   const hosts = Object.keys(adoption.dimensions?.hosts ?? {});
   checks.push(check('host-profiles', ['claude', 'grok', 'cursor', 'codex'].every((host) => hosts.includes(host)) ? 'pass' : 'fail', `hosts=${hosts.join(',') || 'none'}`));
 }

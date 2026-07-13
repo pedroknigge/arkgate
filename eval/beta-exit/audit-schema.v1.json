@@ -3,6 +3,7 @@
   "requiredChecks": [
     "candidate-sha",
     "adoption",
+    "adoption-candidate",
     "host-profiles",
     "release-artifacts",
     "independent-review"
