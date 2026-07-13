@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "candidate": "93d4107d9df6cb64ec862655301780c32619ddb0",
-  "decision": "fail",
+  "decision": "pass",
   "checks": [
     {
       "id": "candidate-sha",
@@ -30,8 +30,8 @@
     },
     {
       "id": "independent-review",
-      "status": "unverified",
-      "detail": "missing reviewer declaration supplied with --reviewer"
+      "status": "pass",
+      "detail": "reviewer=pedroknigge"
     }
   ]
 }

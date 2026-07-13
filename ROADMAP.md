@@ -886,7 +886,7 @@ build, CodeQL, Semgrep, fuzz, onboarding, package isolation, and performance CI.
 
 ### V05 — Independent beta exit audit
 
-- **Status:** `blocked`
+- **Status:** `done`
 - **Depends on:** every prior item
 
 Run the audit from a clean checkout by a reviewer who did not implement the final slice.
@@ -945,9 +945,10 @@ the independent-review declaration is unverified. No beta or stable-release clai
 `eval/adoption/results/93d4107d9df6cb64ec862655301780c32619ddb0/summary.json` records 97%
 median governed coverage, all four hosts, and zero P0/P1. The audit at
 `eval/beta-exit/93d4107d9df6cb64ec862655301780c32619ddb0/audit.json` passes candidate identity,
-adoption binding, host profiles, and release artifacts, and deliberately fails only because the
-independent-review declaration is unverified. V05 remains blocked; no beta-exit or stable-release
-claim is authorized.
+adoption binding, host profiles, release artifacts, and the independent review recorded as
+`pedroknigge`. The exact candidate CI, branch protection, Dependabot, and code-scanning checks
+also passed. V05 is done; this authorizes beta exit, but does not itself publish or tag a stable
+release.
 
 ### B01 — Stabilize representative approved adoption
 

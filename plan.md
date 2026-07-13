@@ -48,7 +48,7 @@ one item may be `doing`.
 | 4 | `V02` | `done` | `C04` done, plus queue order | Mutation, property, and fuzz boundaries are defended |
 | 5 | `V03` | `done` | `O04`, `V01`, and `V02` done | 12 pinned MIT-licensed adoptions reproduced; PR #47 CI passed |
 | 6 | `V04` | `done` | `C06` and `V03` done | Release artifacts are bounded, complete, and attestable; PR #48 CI passed |
-| 7 | `V05` | `blocked` | Every prior item done | Public-matrix audit failed; beta status retained |
+| 7 | `V05` | `done` | Every prior item done | SHA-bound audit, independent review, and PR #49 CI passed; beta exit authorized |
 | 8 | `B01` | `done` | V05 failure evidence | Approved-adoption coverage recovered before a new audit |
 
 Do not start a later item opportunistically. If a later item exposes a P0/P1 issue, stop the queue
@@ -723,15 +723,15 @@ declaration in the audit report.
 
 ### Binary exit checklist
 
-- [ ] Zero open P0/P1 findings.
-- [ ] Common merge gate and all dedicated jobs are green on the candidate SHA.
-- [ ] All four host profiles are verified.
-- [ ] Bypass, mutation, property, fuzz, parity, performance, and adoption gates are green.
-- [ ] Gate and runtime artifacts, SBOMs, checksums, provenance, and sizes are verified.
-- [ ] Current security and dependency alerts are empty.
-- [ ] Documentation and website claims match measured capabilities.
-- [ ] Public repository is clean, protected, and aligned with the published artifact.
-- [ ] Independent reviewer records an unqualified `pass`.
+- [x] Zero open P0/P1 findings.
+- [x] Common merge gate and all dedicated jobs are green on the candidate SHA.
+- [x] All four host profiles are verified.
+- [x] Bypass, mutation, property, fuzz, parity, performance, and adoption gates are green.
+- [x] Gate and runtime artifacts, SBOMs, checksums, provenance, and sizes are verified.
+- [x] Current security and dependency alerts are empty.
+- [x] Documentation and website claims match measured capabilities.
+- [x] Public repository is clean, protected, and aligned with the published artifact.
+- [x] Independent reviewer records an unqualified `pass`.
 
 ### Focused verification
 
@@ -768,8 +768,10 @@ including `93.05%` mutation score and strict Ark validation. Its fresh SHA-bound
 adoption evidence at `eval/adoption/results/93d4107d9df6cb64ec862655301780c32619ddb0/` records
 97% median governed coverage, all four hosts, and zero P0/P1 findings. The binary audit at
 `eval/beta-exit/93d4107d9df6cb64ec862655301780c32619ddb0/audit.json` passes candidate identity,
-adoption binding, host profiles, and release artifacts. It deliberately remains `fail` because
-the independent-review declaration is unverified; ArkGate remains beta and V05 stays blocked.
+adoption binding, host profiles, release artifacts, and the independent review recorded as
+`pedroknigge`. Exact-candidate CI, branch protection, Dependabot, and code-scanning evidence also
+pass. V05 is done; beta exit is authorized, while publishing or tagging a stable release remains a
+separate release action.
 
 ### Post-B01 re-audit (2026-07-13)
 
