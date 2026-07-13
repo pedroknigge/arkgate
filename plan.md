@@ -3,7 +3,8 @@
 - Prepared: 2026-07-13
 - Source of truth: `ROADMAP.md` dated 2026-07-13
 - Scope: `O03`, `O04`, `V01`, `V02`, `V03`, `V04`, and `V05`
-- Current release constraint: `RB-06` closed with O03; ArkGate remains beta until V05 passes
+- Current release constraint: V05 passed in PR #49; `3.0.0` is prepared but must not be tagged or
+  published without explicit release authorization
 
 ## 1. Purpose and authority
 
@@ -53,6 +54,20 @@ one item may be `doing`.
 
 Do not start a later item opportunistically. If a later item exposes a P0/P1 issue, stop the queue
 and add a stabilization item as required by the roadmap.
+
+### Post-roadmap release 3.0.0
+
+The implementation roadmap is complete. The next operation is a release procedure, not another
+roadmap feature:
+
+1. Run `npm run release:npm -- --dry` from clean `main` for `arkgate@3.0.0`.
+2. With explicit authorization, create and push signed tag `v3.0.0`.
+3. Create the GitHub Release from `docs/releases/3.0.0.md`.
+4. Dispatch `publish-npm.yml` with `tag=v3.0.0` and `dry_run=false`; it verifies the tag and
+   release before provenance-backed npm publication.
+5. Verify npm version, release assets, SBOM/checksums, provenance, and the published tag/SHA.
+
+No action in this section publishes or tags a release by itself.
 
 ### Phase-closure synchronization rule
 

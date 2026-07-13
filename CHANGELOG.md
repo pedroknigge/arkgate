@@ -4,6 +4,10 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+No changes are scheduled after the prepared stable release.
+
+## 3.0.0 — 2026-07-13
+
 ### Added
 
 - **Compact active-host onboarding:** `ark start` now asks for the active host on a TTY (or

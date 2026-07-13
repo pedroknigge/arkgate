@@ -81,8 +81,8 @@ These are the starting facts this roadmap must change.
 | `RB-06` | P1 | `closed` | O03 compact active-host setup passed PR #41 CI and merged as `105cd39` |
 
 `RB-01`–`RB-06` are closed by the corresponding completed items and their recorded evidence.
-ArkGate remains beta until the V05 binary exit gate passes; closing `RB-06` only removes the
-onboarding release blocker.
+V05 passed its binary exit gate in PR #49. The next action is the separately authorized stable
+`3.0.0` release procedure; closing `RB-06` only removed the onboarding release blocker.
 
 ---
 
@@ -169,10 +169,11 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 19 | `V02` | `done` | M | `C04` | Mutation, property, and fuzz tests defend critical boundaries |
 | 20 | `V03` | `done` | L | `O04`, `V01`, `V02` | External adoption is reproduced on 12 pinned MIT-licensed repositories |
 | 21 | `V04` | `done` | M | `C06`, `V03` | Package and release artifacts are bounded, complete, and attestable |
-| 22 | `V05` | `blocked` | M | all prior items | Independent audit failed; ArkGate remains beta |
+| 22 | `V05` | `done` | M | all prior items | Independent audit passed; PR #49 CI green and beta exit authorized |
 | 23 | `B01` | `done` | L | `V05` failure evidence | Approved-adoption coverage recovered without lowering the exit criterion |
 
-**Next:** `V05`. Complete the independent beta-exit audit on a fresh candidate.
+**Next:** no roadmap implementation item remains. Prepare and execute the separate stable
+`3.0.0` release procedure only with explicit tag/publication authorization.
 
 ---
 
@@ -1031,10 +1032,11 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: V04 — Tighten package and release assurance
-First result: freeze gate/runtime packed-size and packed-file baselines from a clean candidate
-Then: add SBOM, checksums, provenance, and installed-tarball isolation evidence without changing the
-published surface speculatively
-Primary files: package manifests, package verification/release scripts, and release workflow
-Required finish: bounded, complete, attestable artifacts with gate/runtime isolation proven
+Item: Release 3.0.0 — stable publication
+First result: verify the prepared `3.0.0` candidate from clean `main` with the release dry run
+Then: create a signed `v3.0.0` tag and GitHub Release, then dispatch `publish-npm.yml` with
+`dry_run=false` for provenance-backed publication
+Primary files: `package.json`, `package-lock.json`, `src/version.ts`, `server.json`,
+`CHANGELOG.md`, and `docs/releases/3.0.0.md`
+Required finish: npm `arkgate@3.0.0`, GitHub Release artifacts, provenance, and tag all agree
 ```
