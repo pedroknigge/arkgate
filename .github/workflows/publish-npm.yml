@@ -121,7 +121,15 @@ jobs:
 
       - name: Attach release artifacts
         if: ${{ !inputs.dry_run }}
-        run: find release-artifacts -type f -print0 | xargs -0 gh release upload "$RELEASE_TAG" --clobber
+        run: |
+          set -euo pipefail
+          upload_dir="$(mktemp -d)"
+          while IFS= read -r -d '' file; do
+            relative="${file#release-artifacts/}"
+            asset_name="${relative//\//--}"
+            cp "$file" "$upload_dir/$asset_name"
+          done < <(find release-artifacts -type f -print0)
+          gh release upload "$RELEASE_TAG" "$upload_dir"/* --clobber
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
