@@ -174,6 +174,8 @@ function runCell(cell, candidate, work, candidateSha) {
     repository: cell.repository,
     repositorySha: cell.sha,
     candidateSha,
+    shape: cell.shape,
+    size: cell.size,
     host: cell.host,
     packageManager: cell.packageManager,
     expectedInstallCommand: cell.installCommand,
@@ -238,7 +240,12 @@ function main() {
   const sourceSha = args.candidateSha ?? run('git', ['rev-parse', 'HEAD'], { cwd: REPO });
   const outputRoot = path.resolve(args.out ?? path.join(HERE, 'adoption', 'results', sourceSha));
   if (args.dryRun) {
-    const result = { schemaVersion: 1, mode: 'dry-run', candidateSha: sourceSha, cells: cells.map(({ id, repository, sha }) => ({ id, repository, sha })) };
+    const result = {
+      schemaVersion: 1,
+      mode: 'dry-run',
+      candidateSha: sourceSha,
+      cells: cells.map(({ id, repository, sha, shape, size, host, packageManager }) => ({ id, repository, sha, shape, size, host, packageManager })),
+    };
     writeJson(path.join(outputRoot, 'summary.json'), result);
     console.log(`Validated ${cells.length} pinned adoption cells`);
     return;

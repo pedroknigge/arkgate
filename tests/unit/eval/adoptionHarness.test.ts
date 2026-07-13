@@ -18,6 +18,9 @@ describe('V03 external adoption harness', () => {
       const summary = JSON.parse(fs.readFileSync(path.join(out, 'summary.json'), 'utf8'));
       expect(summary.cells).toHaveLength(12);
       expect(new Set(summary.cells.map((cell: { repository: string }) => cell.repository)).size).toBe(12);
+      expect(new Set(summary.cells.map((cell: { shape: string }) => cell.shape))).toEqual(
+        new Set(['library', 'api', 'frontend', 'monorepo'])
+      );
     } finally {
       fs.rmSync(out, { recursive: true, force: true });
     }
