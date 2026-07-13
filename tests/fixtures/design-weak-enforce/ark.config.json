@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0",
+  "include": ["src"],
+  "layers": [
+    {
+      "name": "DomainModel",
+      "patterns": ["src/domain/**"]
+    },
+    {
+      "name": "ApplicationOrchestration",
+      "patterns": ["src/application/**", "src/services/**"]
+    },
+    {
+      "name": "PersistenceAdapters",
+      "patterns": ["src/repositories/**"]
+    },
+    {
+      "name": "PresentationAdapters",
+      "patterns": ["src/routes/**", "src/features/**/ui/**", "src/components/**"]
+    }
+  ],
+  "rules": [
+    { "from": "DomainModel", "to": "ApplicationOrchestration", "allowed": false },
+    { "from": "DomainModel", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "DomainModel", "to": "PresentationAdapters", "allowed": false },
+    { "from": "ApplicationOrchestration", "to": "PresentationAdapters", "allowed": false },
+    { "from": "PersistenceAdapters", "to": "PresentationAdapters", "allowed": false }
+  ]
+}

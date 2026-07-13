@@ -179,7 +179,7 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 24 | `P01` | `done` | M | 3.0.0 released | Skills explore non-deterministic residual and plan Shape dual-plan B; routing de-overlaps skills |
 | 25 | `P02` | `done` | M | `P01` | Doctor reports deterministic design smells (path vs design); ENFORCE can be design-weak |
 | 26 | `P03` | `done` | M | `P02` | Stable JSON IR for plan **B** pattern bets (pilot, success signal, kill-switch); never mechanical-safe |
-| 27 | `P04` | `todo` | M | `P03` | Eval fixtures: ENFORCE + design-weak and spaghetti concurrent patterns; CI guards skill/CLI honesty |
+| 27 | `P04` | `done` | M | `P03` | Eval fixtures: ENFORCE + design-weak and spaghetti concurrent patterns; CI guards skill/CLI honesty |
 | 28 | `P05` | `todo` | M | `P03` | Extraction-card playbook productized in docs + judgment assists (no general codemod) |
 
 **Next:** `P02` — deterministic design smells in doctor (`P01` done). Stable `3.0.0` is published;
@@ -260,12 +260,14 @@ with prisma-in-route reports `designFitness.designWeak: true` and smell evidence
 
 ### P04 — Eval honesty for design-weak ENFORCE
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `P03`
-- **Likely files:** `eval/cases/*`, skills surface or agent eval prompts, CI shard if cheap
+- **Likely files:** `tests/fixtures/design-weak-enforce/**`, `tests/unit/static-check/designWeakEnforce.test.ts`
 
-**Outcome:** at least one synthetic spaghetti fixture where plan A is empty and design smells /
-patternBets are non-empty; agent or golden report cannot call the tree “healthy finished.”
+**Outcome:** synthetic spaghetti fixture where plan A is empty and design smells /
+patternBets are non-empty; `assertNotHealthyFinishedIgnoringDesign` refuses healthy-finished claims.
+
+**Local evidence (2026-07-13):** `designWeakEnforce.test.ts` 5/5 on permanent fixture.
 
 ### P05 — Extraction cards as productized judgment assist
 
