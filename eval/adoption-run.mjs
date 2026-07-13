@@ -140,7 +140,7 @@ function packCandidate(work) {
 function cloneCell(cell, work, sourceCache) {
   const cloneRoot = path.join(work, cell.id);
   if (sourceCache) {
-    const cached = path.resolve(sourceCache, cell.id);
+    const cached = fs.realpathSync(path.resolve(sourceCache, cell.id));
     if (!fs.existsSync(path.join(cached, '.git'))) throw new Error(`${cell.id} source cache is missing a Git checkout`);
     if (run('git', ['remote', 'get-url', 'origin'], { cwd: cached }) !== cell.repository) throw new Error(`${cell.id} source cache origin does not match manifest`);
     if (run('git', ['rev-parse', 'HEAD'], { cwd: cached }) !== cell.sha) throw new Error(`${cell.id} source cache SHA does not match manifest`);
