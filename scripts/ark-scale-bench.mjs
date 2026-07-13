@@ -245,6 +245,9 @@ function main() {
   fs.mkdirSync(base, { recursive: true });
 
   const budgets = loadBudgets();
+  const incrementalRuns = args.failBudget
+    ? Math.max(args.runs, budgets.sampling.minIncrementalRuns ?? args.runs)
+    : args.runs;
   const results = [];
   for (const size of args.sizes) {
     const root = path.join(base, `n${size}`);
@@ -256,13 +259,15 @@ function main() {
     runCheck(root); // primes the real ark-check cache outside the measured warm samples
     const warm = summary(Array.from({ length: args.runs }, () => runCheck(root)));
     warm.cacheHits = cacheHitCount(root);
-    const incremental = summary(Array.from({ length: args.runs }, () => runIncremental(root)));
+    runIncremental(root); // primes the incremental worker path outside measured samples
+    const incremental = summary(Array.from({ length: incrementalRuns }, () => runIncremental(root)));
     incremental.policyHashPreserved = incremental.samples.every((sample) => sample.policyHashPreserved === true);
     incremental.contentHashPreserved = incremental.samples.every((sample) => sample.contentHashPreserved === true);
     const peakRssBytes = Math.max(cold.peakRssBytes, warm.peakRssBytes, incremental.peakRssBytes);
     results.push({
       size,
       runs: args.runs,
+      incrementalRuns,
       status: cold.failures + warm.failures + incremental.failures === 0 ? 0 : 1,
       cold,
       warm,

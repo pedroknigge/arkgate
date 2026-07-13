@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "id": "A02",
+  "repository": "https://github.com/luizomf/clean-architecture-api-boilerplate.git",
+  "repositorySha": "7fb1ba431f8dd3d9f581798c072019eceb72d73e",
+  "projectPath": ".",
+  "candidateSha": "a52fcbeebf9f6eaae7d458101809616e142e2658",
+  "shape": "api",
+  "size": "medium",
+  "host": "claude",
+  "packageManager": "pnpm",
+  "expectedInstallCommand": "pnpm install --frozen-lockfile",
+  "treeFiles": 197,
+  "candidateInstallMs": 695,
+  "preview": {
+    "exitCode": 0,
+    "changes": 5,
+    "projectedCoverage": {
+      "percent": 92,
+      "classifiedFiles": 115,
+      "totalFiles": 125
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 5,
+    "firstGreenMsExcludingDependencyInstall": 836
+  },
+  "strictMerge": {
+    "exitCode": 1
+  },
+  "governedCoverage": {
+    "percent": 92,
+    "classifiedFiles": 115,
+    "totalFiles": 125
+  },
+  "mergeGateState": "adapt",
+  "finalCiState": "not-run-external-ci; local-strict-merge-fail",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [
+    "Retained as Adapt after local strict-merge failure; no rule override or bypass was applied."
+  ],
+  "issues": [
+    {
+      "severity": "P2",
+      "class": "repository-incompatibility",
+      "message": "local strict-merge did not pass; retained as Adapt without bypass"
+    }
+  ],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": "{\n  \"schemaVersion\": \"1.0\",\n  \"valid\": false,\n  \"diagnostics\": [\n    {\n      \"ruleId\": \"LAYER_IMPORT_VIOLATION\",\n      \"severity\": \"error\",\n      \"message\": \"ApplicationOrchestration must not import PersistenceAdapters.\",\n      \"location\": {\n        \"file\": \"src/application/use-cases/sign-in/sign-in.ts\",\n        \"line\": 4,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"src/application/ports/repositories/user/find-user-by-email-repository.ts\",\n        \"fromLayer\": \"ApplicationOrchestration\",\n        \"toLayer\": \"PersistenceAdapters\"\n      }\n    },\n    {\n      \"ruleId\": \"LAYER_IMPORT_VIOLATION\",\n      \"severity\": \"error\",\n      \"message\": \"ApplicationOrchestration must not import PersistenceAdapters.\",\n      \"location\": {\n        \"file\": \"src/application/use-cases/sign-in/sign-in.ts\",\n        \"line\": 12,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"src/application/ports/repositories/token/create-token-repository.ts\",\n        \"fromLayer\": \"ApplicationOrchestration\",\n        \"toLayer\": \"PersistenceAdapters\"\n      }\n    },\n    {\n      \"ruleId\": \"LAYER_IMPORT_VIOLATION\",\n      \"severity\": \"error\",\n      \"message\": \"ApplicationOrchestration must "
+  }
+}

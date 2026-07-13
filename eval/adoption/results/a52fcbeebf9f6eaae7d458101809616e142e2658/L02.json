@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "id": "L02",
+  "repository": "https://github.com/LCcodder/nodejs-hexagonal-architecture-boilerplate.git",
+  "repositorySha": "6096e359ca53f10acd08a5041a95bc7fd659473f",
+  "projectPath": ".",
+  "candidateSha": "a52fcbeebf9f6eaae7d458101809616e142e2658",
+  "shape": "library",
+  "size": "medium",
+  "host": "grok",
+  "packageManager": "pnpm",
+  "expectedInstallCommand": "pnpm install --frozen-lockfile",
+  "treeFiles": 62,
+  "candidateInstallMs": 695,
+  "preview": {
+    "exitCode": 0,
+    "changes": 5,
+    "projectedCoverage": {
+      "percent": 98,
+      "classifiedFiles": 39,
+      "totalFiles": 40
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 5,
+    "firstGreenMsExcludingDependencyInstall": 737
+  },
+  "strictMerge": {
+    "exitCode": 1
+  },
+  "governedCoverage": {
+    "percent": 98,
+    "classifiedFiles": 39,
+    "totalFiles": 40
+  },
+  "mergeGateState": "adapt",
+  "finalCiState": "not-run-external-ci; local-strict-merge-fail",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [
+    "Retained as Adapt after local strict-merge failure; no rule override or bypass was applied."
+  ],
+  "issues": [
+    {
+      "severity": "P2",
+      "class": "repository-incompatibility",
+      "message": "local strict-merge did not pass; retained as Adapt without bypass"
+    }
+  ],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": "{\n  \"schemaVersion\": \"1.0\",\n  \"valid\": false,\n  \"diagnostics\": [\n    {\n      \"ruleId\": \"LAYER_IMPORT_VIOLATION\",\n      \"severity\": \"error\",\n      \"message\": \"ApplicationOrchestration must not import PresentationAdapters.\",\n      \"location\": {\n        \"file\": \"src/api/adapters/controllers/auth/AuthController.ts\",\n        \"line\": 4,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"src/api/shared/types/guards/IsError.ts\",\n        \"fromLayer\": \"ApplicationOrchestration\",\n        \"toLayer\": \"PresentationAdapters\"\n      }\n    },\n    {\n      \"ruleId\": \"LAYER_IMPORT_VIOLATION\",\n      \"severity\": \"error\",\n      \"message\": \"ApplicationOrchestration must not import PresentationAdapters.\",\n      \"location\": {\n        \"file\": \"src/api/adapters/controllers/auth/AuthController.ts\",\n        \"line\": 6,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"src/api/shared/utils/InternalServerErrorForResponse.ts\",\n        \"fromLayer\": \"ApplicationOrchestration\",\n        \"toLayer\": \"PresentationAdapters\"\n      }\n    },\n    {\n      \"ruleId\": \"LAYER_IMPORT_VIOLATION\",\n      \"severity\": \"error\",\n      \"message\": \"ApplicationOrchestration must not import PresentationAdapter"
+  }
+}

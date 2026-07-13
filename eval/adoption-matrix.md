@@ -1,33 +1,23 @@
-# External adoption matrix (Q4) — scaffold
+# External adoption matrix (V03)
 
-**Status:** template only. Full Q4 DoD requires ≥12 published clean-room runs — **not done**.
+`eval/adoption/manifest.v1.json` pins twelve distinct public TypeScript repositories to full
+commit SHAs. It balances the four product shapes, four supported hosts, npm/pnpm/yarn, and three
+tree-size classes. Third-party source is always cloned into a temporary directory and is never
+committed here.
 
-## Dimensions (fill per run)
+## Reproduce
 
-| Field | Values |
-|-------|--------|
-| Archetype | greenfield hexagonal · brownfield layered · monorepo · Next UI · Nest API · library |
-| Host | Claude · Cursor · Codex · Grok |
-| Package manager | npm · pnpm · yarn |
-| Tree size | small (<100) · medium · large |
-| Path | `ark start` / `ark init` / `/ark-adopt` |
-| Time-to-Enforce | minutes / agent turns |
-| turns-to-green | median |
-| false-block | count |
-| CHEATED | 0/1 |
-| Manual interventions | count |
-| P0/P1 open | none / list |
+```bash
+npm run build
+npm run eval:adoption -- --manifest eval/adoption/manifest.v1.json
+```
 
-## Runs log
+The runner packs the current candidate once, installs that tarball into an isolated harness, then
+runs each clean clone through `ark start --apply` and `ark-check --strict-merge`. It records the
+pinned repository SHA, tarball SHA-256, host, package-manager command, preview/apply sizes,
+governed coverage, candidate-install time, first-green time excluding that install, issues, and
+merge-gate state.
 
-| # | Date | Repo/fixture | Archetype | Host | PM | Size | Enforce? | Notes |
-|---|------|--------------|-----------|------|-----|------|----------|-------|
-| 1 | | | | | | | | _pending_ |
-
-## How to run a cell
-
-1. Clean clone or fixture under a temp root.  
-2. Install arkgate; `ark start` or adopt path.
-3. Record doctor operating mode, writePath, violations.  
-4. Attach loop-cost / plan metrics when using agents.  
-5. Append a row; never mark ROADMAP Q4 `done` until ≥12 cells + no open P0/P1.
+Results live under `eval/adoption/results/<candidate-sha>/`; only JSON evidence and the summary
+Markdown are committed. The scheduled/manual workflow uploads the same evidence and normal PR CI
+never depends on third-party network access.

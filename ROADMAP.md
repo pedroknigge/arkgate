@@ -66,7 +66,7 @@ These are the starting facts this roadmap must change.
 | Onboarding | Default setup can generate 71 files/~487 KB; tested brownfield coverage was 0%, 23%, and 33% | Adoption cost is too high and contract fit too low |
 | Performance | Cold scan is roughly linear and ~5 s at 50k trivial files; “warm” benchmark also uses `--no-cache` | Incremental latency is unknown |
 | Package | ~3.1 MB unpacked; root and runtime bundles overlap; core scanner is not a stable import API | Public surface is inverted |
-| External proof | Adoption matrix is a scaffold; comparative eval is mostly curated oracle data | Product claims lack field evidence |
+| External proof | V03 reproduced 12 MIT-licensed public targets with 93% median governed coverage and no open P0/P1 | Retain the scheduled matrix as field evidence |
 | Supply chain | Protected main, signed tags, provenance, CodeQL/Semgrep, and no open alerts | Preserve this foundation |
 
 ### Release blocker register
@@ -167,11 +167,11 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 17 | `O04` | `done` | M | `O03` | Clean-room onboarding remains green for every supported host profile; PR #43 merged |
 | 18 | `V01` | `done` | L | `C05`, `O04` | Cold, warm, and incremental performance have real CI budgets; PR #45 passed green CI |
 | 19 | `V02` | `done` | M | `C04` | Mutation, property, and fuzz tests defend critical boundaries |
-| 20 | `V03` | `todo` | L | `O04`, `V01`, `V02` | External adoption is reproduced on at least 12 pinned repositories |
+| 20 | `V03` | `done` | L | `O04`, `V01`, `V02` | External adoption is reproduced on 12 pinned MIT-licensed repositories |
 | 21 | `V04` | `todo` | M | `C06`, `V03` | Package and release artifacts are small, complete, and attestable |
 | 22 | `V05` | `todo` | M | all prior items | Independent audit passes and the product may exit beta |
 
-**Next:** `V03`. Reproduce the external adoption matrix on 12 pinned repositories.
+**Next:** `V04`. Tighten package and release assurance.
 
 ---
 
@@ -826,7 +826,7 @@ counterexample is retained as a minimized filesystem fixture.
 
 ### V03 — Run the external adoption matrix
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `O04`, `V01`, `V02`
 
 **Implementation**
@@ -844,6 +844,14 @@ counterexample is retained as a minimized filesystem fixture.
 - No open P0/P1 false green or destructive onboarding issue.
 - Median time to a valid merge gate is <5 minutes excluding dependency installation.
 - Median governed coverage after approved apply is ≥90%; lower cases remain Adapt and are explained.
+
+**Closure evidence (2026-07-12):** `eval/adoption/manifest.v1.json` pins 12 distinct public
+MIT-licensed repository SHAs across all required shapes, hosts, package managers, and sizes. The
+packed candidate `a52fcbeebf9f6eaae7d458101809616e142e2658` was applied from clean temporary
+clones; the versioned results record three green merge gates, nine explicit `Adapt` cases, 589 ms
+median first-green time excluding dependency installation, 93% median governed coverage, and zero
+open P0/P1 issues. No third-party source is committed. PR #47 passed the full required CI matrix,
+including build, CodeQL, Semgrep, onboarding, fuzz, and performance checks.
 
 ### V04 — Tighten package and release assurance
 
@@ -955,10 +963,10 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: V03 — Run the external adoption matrix
-First result: freeze a 12-cell manifest of public repositories pinned to full commit SHAs
-Then: reproduce adoption and Ark checks for each cell, retaining failure evidence and host coverage
-Primary files: adoption runner, pinned repository manifest, fixture reports, and CI workflow
-Required finish: all 12 cells are reproducible with recorded host, package-manager, tree-size, and
-candidate-SHA evidence
+Item: V04 — Tighten package and release assurance
+First result: freeze gate/runtime packed-size and packed-file baselines from a clean candidate
+Then: add SBOM, checksums, provenance, and installed-tarball isolation evidence without changing the
+published surface speculatively
+Primary files: package manifests, package verification/release scripts, and release workflow
+Required finish: bounded, complete, attestable artifacts with gate/runtime isolation proven
 ```

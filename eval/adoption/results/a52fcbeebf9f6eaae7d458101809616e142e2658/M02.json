@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "id": "M02",
+  "repository": "https://github.com/changesets/changesets.git",
+  "repositorySha": "7b7e391e0e5e6bd11ea1a4df96160a7894e930ac",
+  "projectPath": "packages/cli",
+  "candidateSha": "a52fcbeebf9f6eaae7d458101809616e142e2658",
+  "shape": "monorepo",
+  "size": "medium",
+  "host": "cursor",
+  "packageManager": "pnpm",
+  "expectedInstallCommand": "pnpm install --frozen-lockfile",
+  "treeFiles": 52,
+  "candidateInstallMs": 695,
+  "preview": {
+    "exitCode": 0,
+    "changes": 4,
+    "projectedCoverage": {
+      "percent": 0,
+      "classifiedFiles": 0,
+      "totalFiles": 31
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 4,
+    "firstGreenMsExcludingDependencyInstall": 634
+  },
+  "strictMerge": {
+    "exitCode": 1
+  },
+  "governedCoverage": {
+    "percent": 0,
+    "classifiedFiles": 0,
+    "totalFiles": 31
+  },
+  "mergeGateState": "adapt",
+  "finalCiState": "not-run-external-ci; local-strict-merge-fail",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [
+    "Retained as Adapt after local strict-merge failure; no rule override or bypass was applied.",
+    "Retained as Adapt below 90% governed coverage; no policy override was applied."
+  ],
+  "issues": [
+    {
+      "severity": "P2",
+      "class": "repository-incompatibility",
+      "message": "local strict-merge did not pass; retained as Adapt without bypass"
+    },
+    {
+      "severity": "P2",
+      "class": "contract-decision",
+      "message": "governed coverage 0% remains Adapt"
+    }
+  ],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": "{\n  \"schemaVersion\": \"1.0\",\n  \"valid\": false,\n  \"diagnostics\": [\n    {\n      \"ruleId\": \"CONFIG_UNCLASSIFIED_FILES\",\n      \"severity\": \"warning\",\n      \"message\": \"31 included source file(s) are not matched by any configured layer; ark-check will not enforce import rules for those source files.\",\n      \"location\": {\n        \"file\": \"<unknown>\",\n        \"line\": 1,\n        \"column\": 1\n      },\n      \"evidence\": {}\n    },\n    {\n      \"ruleId\": \"DYNAMIC_IMPORT_NOT_ALLOWLISTED\",\n      \"severity\": \"warning\",\n      \"message\": \"1 non-literal dynamic import(s) cannot be resolved statically. Add only reviewed files to dynamicImportAllowlist.\",\n      \"location\": {\n        \"file\": \"src/commit/getCommitFunctions.ts\",\n        \"line\": 29,\n        \"column\": 1\n      },\n      \"evidence\": {}\n    }\n  ],\n  \"ok\": false,\n  \"violations\": [],\n  \"suppressedViolations\": 0,\n  \"staleBaselineKeys\": 0,\n  \"warnings\": [\n    {\n      \"ruleId\": \"CONFIG_UNCLASSIFIED_FILES\",\n      \"message\": \"31 included source file(s) are not matched by any configured layer; ark-check will not enforce import rules for those source files.\",\n      \"count\": 31,\n      \"samples\": [\n        \"src/changelog.ts\",\n        \"src/cli.ts\",\n        \""
+  }
+}

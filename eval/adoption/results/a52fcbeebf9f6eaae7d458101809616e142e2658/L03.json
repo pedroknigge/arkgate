@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "id": "L03",
+  "repository": "https://github.com/Kandriws/nestjs-hexagonal-auth.git",
+  "repositorySha": "9ce1c33476610ff4d1a703b8aa37b0a392e23ff4",
+  "projectPath": ".",
+  "candidateSha": "a52fcbeebf9f6eaae7d458101809616e142e2658",
+  "shape": "library",
+  "size": "large",
+  "host": "cursor",
+  "packageManager": "yarn",
+  "expectedInstallCommand": "yarn install --immutable",
+  "treeFiles": 386,
+  "candidateInstallMs": 695,
+  "preview": {
+    "exitCode": 0,
+    "changes": 4,
+    "projectedCoverage": {
+      "percent": 99,
+      "classifiedFiles": 315,
+      "totalFiles": 319
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 4,
+    "firstGreenMsExcludingDependencyInstall": 1187
+  },
+  "strictMerge": {
+    "exitCode": 1
+  },
+  "governedCoverage": {
+    "percent": 99,
+    "classifiedFiles": 315,
+    "totalFiles": 319
+  },
+  "mergeGateState": "adapt",
+  "finalCiState": "not-run-external-ci; local-strict-merge-fail",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [
+    "Retained as Adapt after local strict-merge failure; no rule override or bypass was applied."
+  ],
+  "issues": [
+    {
+      "severity": "P2",
+      "class": "repository-incompatibility",
+      "message": "local strict-merge did not pass; retained as Adapt without bypass"
+    }
+  ],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": "{\n  \"schemaVersion\": \"1.0\",\n  \"valid\": false,\n  \"diagnostics\": [\n    {\n      \"ruleId\": \"FORBIDDEN_GLOBAL\",\n      \"severity\": \"error\",\n      \"message\": \"DomainModel must not use the ambient global \\\"Date.now\\\".\",\n      \"location\": {\n        \"file\": \"src/shared/domain/utils/date-time.util.ts\",\n        \"line\": 48,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"Date.now\",\n        \"fromLayer\": \"DomainModel\"\n      }\n    },\n    {\n      \"ruleId\": \"LAYER_IMPORT_VIOLATION\",\n      \"severity\": \"error\",\n      \"message\": \"PresentationAdapters must not import PersistenceAdapters.\",\n      \"location\": {\n        \"file\": \"src/app.module.ts\",\n        \"line\": 4,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"src/auth/infrastructure/guards/index.ts\",\n        \"fromLayer\": \"PresentationAdapters\",\n        \"toLayer\": \"PersistenceAdapters\"\n      }\n    },\n    {\n      \"ruleId\": \"LAYER_IMPORT_VIOLATION\",\n      \"severity\": \"error\",\n      \"message\": \"ApplicationOrchestration must not import PersistenceAdapters.\",\n      \"location\": {\n        \"file\": \"src/auth/application/use-cases/assign-permissions-to-role.use-case.ts\",\n        \"line\": 4,\n        \"column\": 1\n      },\n    "
+  }
+}

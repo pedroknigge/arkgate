@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "id": "A03",
+  "repository": "https://github.com/AlbertHernandez/nestjs-hexagonal-architecture-example.git",
+  "repositorySha": "dbb23feceb117c22f3ea04caee5bc20884203ae8",
+  "projectPath": ".",
+  "candidateSha": "a52fcbeebf9f6eaae7d458101809616e142e2658",
+  "shape": "api",
+  "size": "large",
+  "host": "grok",
+  "packageManager": "yarn",
+  "expectedInstallCommand": "yarn install --immutable",
+  "treeFiles": 96,
+  "candidateInstallMs": 695,
+  "preview": {
+    "exitCode": 0,
+    "changes": 5,
+    "projectedCoverage": {
+      "percent": 90,
+      "classifiedFiles": 27,
+      "totalFiles": 30
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 5,
+    "firstGreenMsExcludingDependencyInstall": 697
+  },
+  "strictMerge": {
+    "exitCode": 1
+  },
+  "governedCoverage": {
+    "percent": 90,
+    "classifiedFiles": 27,
+    "totalFiles": 30
+  },
+  "mergeGateState": "adapt",
+  "finalCiState": "not-run-external-ci; local-strict-merge-fail",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [
+    "Retained as Adapt after local strict-merge failure; no rule override or bypass was applied."
+  ],
+  "issues": [
+    {
+      "severity": "P2",
+      "class": "repository-incompatibility",
+      "message": "local strict-merge did not pass; retained as Adapt without bypass"
+    }
+  ],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": "{\n  \"schemaVersion\": \"1.0\",\n  \"valid\": false,\n  \"diagnostics\": [\n    {\n      \"ruleId\": \"LAYER_IMPORT_VIOLATION\",\n      \"severity\": \"error\",\n      \"message\": \"PersistenceAdapters must not import ApplicationOrchestration.\",\n      \"location\": {\n        \"file\": \"src/contexts/payments/infrastructure/http-api/v1/create-payment/create-payment.controller.ts\",\n        \"line\": 3,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"src/contexts/payments/application/create-payment-use-case/create-payment.use-case.ts\",\n        \"fromLayer\": \"PersistenceAdapters\",\n        \"toLayer\": \"ApplicationOrchestration\"\n      }\n    },\n    {\n      \"ruleId\": \"LAYER_IMPORT_VIOLATION\",\n      \"severity\": \"error\",\n      \"message\": \"PersistenceAdapters must not import ApplicationOrchestration.\",\n      \"location\": {\n        \"file\": \"src/contexts/payments/infrastructure/http-api/v1/find-payment-by-id/find-payment-by-id.controller.ts\",\n        \"line\": 3,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"src/contexts/payments/application/find-payment-by-id-use-case/find-payment-by-id.use-case.ts\",\n        \"fromLayer\": \"PersistenceAdapters\",\n        \"toLayer\": \"ApplicationOrchestration"
+  }
+}

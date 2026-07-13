@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "A01",
+  "repository": "https://github.com/tim-hub/nestjs-hexagonal-example.git",
+  "repositorySha": "ad1143821e876dd3823fa1f77e21790f808c0a3c",
+  "projectPath": ".",
+  "candidateSha": "a52fcbeebf9f6eaae7d458101809616e142e2658",
+  "shape": "api",
+  "size": "small",
+  "host": "codex",
+  "packageManager": "npm",
+  "expectedInstallCommand": "npm ci",
+  "treeFiles": 29,
+  "candidateInstallMs": 695,
+  "preview": {
+    "exitCode": 0,
+    "changes": 4,
+    "projectedCoverage": {
+      "percent": 100,
+      "classifiedFiles": 12,
+      "totalFiles": 12
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 4,
+    "firstGreenMsExcludingDependencyInstall": 589
+  },
+  "strictMerge": {
+    "exitCode": 0
+  },
+  "governedCoverage": {
+    "percent": 100,
+    "classifiedFiles": 12,
+    "totalFiles": 12
+  },
+  "mergeGateState": "green",
+  "finalCiState": "not-run-external-ci; local-strict-merge-pass",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [],
+  "issues": [],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": ""
+  }
+}
