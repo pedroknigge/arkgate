@@ -16,6 +16,10 @@ and makes sure a “green” check means something real.
 
 </div>
 
+> **Release status:** the stable `3.0.0` candidate is prepared and passed its beta-exit audit.
+> It is not tagged or published to npm yet; the npm badge always reflects the registry's current
+> published version.
+
 ---
 
 ## The only flow (humans and agents)
@@ -223,9 +227,11 @@ ark.config.json
   casts, InMemory runtime defaults, and disabled peer isolation. `--strict` is a compatibility
   alias. Neither requires an editor hook; use `--require-write-hook claude|grok` when that local
   guarantee is part of the check.
-- **Trust / coverage (2.12):** package unit-test floors on the broad product surface
+- **Trust / coverage (3.0 release baseline):** package unit-test floors on the broad product surface
   (statements/lines **≥80%**, branches/functions **≥85%**; enforcement-critical modules **≥95%**
-  branch). Explore dual-plan + day-zero origin first (see above). Roadmap next: Q2 repair dogfood matrix.
+  branch). The V05 beta-exit audit passed with 12 pinned public adoptions, 97% median governed
+  coverage, and zero P0/P1 findings. Stable publication remains the signed-tag, GitHub Release,
+  and provenance-backed npm workflow documented in [the 3.0.0 release notes](docs/releases/3.0.0.md).
 - **TypeScript:** project compilers 5.x / 6.x / 7.x — gate falls back to a nested JS-API TypeScript when TS 7’s main export is version-only ([docs/typescript-support.md](docs/typescript-support.md)).
 
 ### Why not only ESLint / dependency-cruiser / Nx?
@@ -310,6 +316,7 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Agent / MCP tools | [docs/agent-guide.md](docs/agent-guide.md) |
 | Demos | [docs/demos/](docs/demos/) |
 | Examples | [examples/](examples/README.md) |
+| Release 3.0.0 | [release notes and publication checklist](docs/releases/3.0.0.md) |
 | Roadmap | [ROADMAP.md](ROADMAP.md) · [Changelog](CHANGELOG.md) |
 
 ---
