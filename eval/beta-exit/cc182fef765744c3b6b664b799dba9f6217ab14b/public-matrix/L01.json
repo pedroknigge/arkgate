@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "id": "L01",
+  "repository": "https://github.com/sindresorhus/yocto-queue.git",
+  "repositorySha": "b07eac099753833b29d06c614149904445739776",
+  "projectPath": ".",
+  "candidateSha": "cc182fef765744c3b6b664b799dba9f6217ab14b",
+  "shape": "library",
+  "size": "small",
+  "host": "claude",
+  "packageManager": "npm",
+  "expectedInstallCommand": "npm install",
+  "treeFiles": 13,
+  "candidateInstallMs": 661,
+  "preview": {
+    "exitCode": 0,
+    "changes": 5,
+    "projectedCoverage": {
+      "percent": 0,
+      "classifiedFiles": 0,
+      "totalFiles": 0
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 5,
+    "firstGreenMsExcludingDependencyInstall": 511
+  },
+  "strictMerge": {
+    "exitCode": 0
+  },
+  "governedCoverage": {
+    "percent": 0,
+    "classifiedFiles": 0,
+    "totalFiles": 0
+  },
+  "mergeGateState": "adapt",
+  "finalCiState": "not-run-external-ci; local-strict-merge-pass",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [
+    "Retained as Adapt below 90% governed coverage; no policy override was applied."
+  ],
+  "issues": [
+    {
+      "severity": "P2",
+      "class": "contract-decision",
+      "message": "governed coverage 0% remains Adapt"
+    }
+  ],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": ""
+  }
+}

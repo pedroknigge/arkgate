@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "M03",
+  "repository": "https://github.com/vercel/turborepo.git",
+  "repositorySha": "ed1724965d854cd9c2f8b71a0fa826ec786be161",
+  "projectPath": "packages/turbo-types",
+  "candidateSha": "b775193d310bd964938453a4349393e4f3c4564a",
+  "shape": "monorepo",
+  "size": "large",
+  "host": "codex",
+  "packageManager": "yarn",
+  "expectedInstallCommand": "yarn install --immutable",
+  "treeFiles": 16,
+  "candidateInstallMs": 402,
+  "preview": {
+    "exitCode": 0,
+    "changes": 4,
+    "projectedCoverage": {
+      "percent": 100,
+      "classifiedFiles": 5,
+      "totalFiles": 5
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 4,
+    "firstGreenMsExcludingDependencyInstall": 577
+  },
+  "strictMerge": {
+    "exitCode": 0
+  },
+  "governedCoverage": {
+    "percent": 100,
+    "classifiedFiles": 5,
+    "totalFiles": 5
+  },
+  "mergeGateState": "green",
+  "finalCiState": "not-run-external-ci; local-strict-merge-pass",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [],
+  "issues": [],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": ""
+  }
+}

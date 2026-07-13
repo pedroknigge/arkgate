@@ -12,6 +12,7 @@ const outAt = process.argv.indexOf('--out');
 const out = path.resolve(outAt === -1 ? path.join(root, 'eval', 'beta-exit', candidate) : process.argv[outAt + 1]);
 const reviewerAt = process.argv.indexOf('--reviewer');
 const reviewer = reviewerAt === -1 ? null : path.resolve(process.argv[reviewerAt + 1]);
+const adoptionAt = process.argv.indexOf('--adoption-summary');
 
 function check(id, status, detail) { return { id, status, detail }; }
 function readJson(file) { return JSON.parse(fs.readFileSync(file, 'utf8')); }
@@ -22,7 +23,9 @@ function reportMarkdown(report) {
 
 const checks = [];
 checks.push(check('candidate-sha', /^[0-9a-f]{40}$/i.test(candidate) ? 'pass' : 'fail', /^[0-9a-f]{40}$/i.test(candidate) ? 'full SHA supplied' : 'candidate must be a full SHA'));
-const adoptionFile = path.join(root, 'eval', 'adoption', 'results', candidate, 'summary.json');
+const adoptionFile = adoptionAt === -1
+  ? path.join(root, 'eval', 'adoption', 'results', candidate, 'summary.json')
+  : path.resolve(process.argv[adoptionAt + 1]);
 if (!fs.existsSync(adoptionFile)) checks.push(check('adoption', 'unverified', `missing ${path.relative(root, adoptionFile)}`));
 else {
   const adoption = readJson(adoptionFile);

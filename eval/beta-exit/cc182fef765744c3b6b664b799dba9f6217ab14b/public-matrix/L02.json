@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "id": "L02",
+  "repository": "https://github.com/colinhacks/zod.git",
+  "repositorySha": "912f0f51b0ced654d0069741e7160834dca742ee",
+  "projectPath": ".",
+  "candidateSha": "cc182fef765744c3b6b664b799dba9f6217ab14b",
+  "shape": "library",
+  "size": "medium",
+  "host": "grok",
+  "packageManager": "pnpm",
+  "expectedInstallCommand": "pnpm install --frozen-lockfile",
+  "treeFiles": 580,
+  "candidateInstallMs": 661,
+  "preview": {
+    "exitCode": 0,
+    "changes": 4,
+    "projectedCoverage": {
+      "percent": 23,
+      "classifiedFiles": 51,
+      "totalFiles": 222
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 4,
+    "firstGreenMsExcludingDependencyInstall": 1309
+  },
+  "strictMerge": {
+    "exitCode": 1
+  },
+  "governedCoverage": {
+    "percent": 23,
+    "classifiedFiles": 51,
+    "totalFiles": 222
+  },
+  "mergeGateState": "adapt",
+  "finalCiState": "not-run-external-ci; local-strict-merge-fail",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [
+    "Retained as Adapt after local strict-merge failure; no rule override or bypass was applied.",
+    "Retained as Adapt below 90% governed coverage; no policy override was applied."
+  ],
+  "issues": [
+    {
+      "severity": "P2",
+      "class": "repository-incompatibility",
+      "message": "local strict-merge did not pass; retained as Adapt without bypass"
+    },
+    {
+      "severity": "P2",
+      "class": "contract-decision",
+      "message": "governed coverage 23% remains Adapt"
+    }
+  ],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": "{\n  \"schemaVersion\": \"1.0\",\n  \"valid\": false,\n  \"diagnostics\": [\n    {\n      \"ruleId\": \"CONFIG_UNCLASSIFIED_FILES\",\n      \"severity\": \"warning\",\n      \"message\": \"171 included source file(s) are not matched by any configured layer; ark-check will not enforce import rules for those source files.\",\n      \"location\": {\n        \"file\": \"<unknown>\",\n        \"line\": 1,\n        \"column\": 1\n      },\n      \"evidence\": {}\n    },\n    {\n      \"ruleId\": \"TS_SUPPRESSION_THRESHOLD_EXCEEDED\",\n      \"severity\": \"warning\",\n      \"message\": \"18 @ts-ignore/@ts-nocheck directive(s) exceed safety.maxTsSuppressions (0).\",\n      \"location\": {\n        \"file\": \"packages/zod/src/v3/types.ts\",\n        \"line\": 708,\n        \"column\": 1\n      },\n      \"evidence\": {}\n    },\n    {\n      \"ruleId\": \"ANY_CAST_THRESHOLD_EXCEEDED\",\n      \"severity\": \"warning\",\n      \"message\": \"415 explicit any cast(s) exceed safety.maxAnyCasts (0).\",\n      \"location\": {\n        \"file\": \"packages/bench/benchUtil.ts\",\n        \"line\": 8,\n        \"column\": 1\n      },\n      \"evidence\": {}\n    }\n  ],\n  \"ok\": false,\n  \"violations\": [],\n  \"suppressedViolations\": 0,\n  \"staleBaselineKeys\": 0,\n  \"warnings\": [\n    {\n      \"ruleId\": \"CONFIG_UNCLAS"
+  }
+}

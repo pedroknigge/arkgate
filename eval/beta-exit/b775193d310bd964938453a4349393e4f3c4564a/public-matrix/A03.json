@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "id": "A03",
+  "repository": "https://github.com/nestjs/nest.git",
+  "repositorySha": "926e3a4dc8b3bf9a96b275fe348b71246c303929",
+  "projectPath": ".",
+  "candidateSha": "b775193d310bd964938453a4349393e4f3c4564a",
+  "shape": "api",
+  "size": "large",
+  "host": "grok",
+  "packageManager": "yarn",
+  "expectedInstallCommand": "yarn install --immutable",
+  "treeFiles": 2128,
+  "candidateInstallMs": 402,
+  "preview": {
+    "exitCode": 0,
+    "changes": 5,
+    "projectedCoverage": {
+      "percent": 7,
+      "classifiedFiles": 63,
+      "totalFiles": 927
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 5,
+    "firstGreenMsExcludingDependencyInstall": 2291
+  },
+  "strictMerge": {
+    "exitCode": 1
+  },
+  "governedCoverage": {
+    "percent": 7,
+    "classifiedFiles": 63,
+    "totalFiles": 927
+  },
+  "mergeGateState": "adapt",
+  "finalCiState": "not-run-external-ci; local-strict-merge-fail",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [
+    "Retained as Adapt after local strict-merge failure; no rule override or bypass was applied.",
+    "Retained as Adapt below 90% governed coverage; no policy override was applied."
+  ],
+  "issues": [
+    {
+      "severity": "P2",
+      "class": "repository-incompatibility",
+      "message": "local strict-merge did not pass; retained as Adapt without bypass"
+    },
+    {
+      "severity": "P2",
+      "class": "contract-decision",
+      "message": "governed coverage 7% remains Adapt"
+    }
+  ],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": "{\n  \"schemaVersion\": \"1.0\",\n  \"valid\": false,\n  \"diagnostics\": [\n    {\n      \"ruleId\": \"CIRCULAR_DEPENDENCY\",\n      \"severity\": \"error\",\n      \"message\": \"Circular dependency among 6 files: packages/common/services/console-logger.service.ts → packages/common/services/logger.service.ts → packages/common/services/utils/filter-log-levels.util.ts → packages/common/services/utils/index.ts → packages/common/services/utils/is-log-level-enabled.util.ts → packages/common/services/utils/is-log-level.util.ts → packages/common/services/console-logger.service.ts.\",\n      \"location\": {\n        \"file\": \"packages/common/services/console-logger.service.ts\",\n        \"line\": 1,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"packages/common/services/console-logger.service.ts → packages/common/services/logger.service.ts → packages/common/services/utils/filter-log-levels.util.ts → packages/common/services/utils/index.ts → packages/common/services/utils/is-log-level-enabled.util.ts → packages/common/services/utils/is-log-level.util.ts\"\n      }\n    },\n    {\n      \"ruleId\": \"CONFIG_UNCLASSIFIED_FILES\",\n      \"severity\": \"warning\",\n      \"message\": \"864 included source file(s) are not m"
+  }
+}

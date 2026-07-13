@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "candidate": "b775193d310bd964938453a4349393e4f3c4564a",
+  "decision": "fail",
+  "checks": [
+    {
+      "id": "candidate-sha",
+      "status": "pass",
+      "detail": "full SHA supplied"
+    },
+    {
+      "id": "adoption",
+      "status": "fail",
+      "detail": "cells=12, coverage=7%"
+    },
+    {
+      "id": "host-profiles",
+      "status": "pass",
+      "detail": "hosts=claude,grok,cursor,codex"
+    },
+    {
+      "id": "release-artifacts",
+      "status": "pass",
+      "detail": "tarballs, SBOMs, checksums, manifests verified"
+    },
+    {
+      "id": "independent-review",
+      "status": "unverified",
+      "detail": "missing reviewer declaration supplied with --reviewer"
+    }
+  ]
+}

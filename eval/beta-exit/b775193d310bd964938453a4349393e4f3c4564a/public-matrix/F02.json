@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "id": "F02",
+  "repository": "https://github.com/vuejs/core.git",
+  "repositorySha": "9e03beb6b4c85a9d5b49b731c08263aa648e2a2a",
+  "projectPath": ".",
+  "candidateSha": "b775193d310bd964938453a4349393e4f3c4564a",
+  "shape": "frontend",
+  "size": "medium",
+  "host": "codex",
+  "packageManager": "pnpm",
+  "expectedInstallCommand": "pnpm install --frozen-lockfile",
+  "treeFiles": 703,
+  "candidateInstallMs": 402,
+  "preview": {
+    "exitCode": 0,
+    "changes": 4,
+    "projectedCoverage": {
+      "percent": 2,
+      "classifiedFiles": 6,
+      "totalFiles": 294
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 4,
+    "firstGreenMsExcludingDependencyInstall": 1400
+  },
+  "strictMerge": {
+    "exitCode": 1
+  },
+  "governedCoverage": {
+    "percent": 2,
+    "classifiedFiles": 6,
+    "totalFiles": 294
+  },
+  "mergeGateState": "adapt",
+  "finalCiState": "not-run-external-ci; local-strict-merge-fail",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [
+    "Retained as Adapt after local strict-merge failure; no rule override or bypass was applied.",
+    "Retained as Adapt below 90% governed coverage; no policy override was applied."
+  ],
+  "issues": [
+    {
+      "severity": "P2",
+      "class": "repository-incompatibility",
+      "message": "local strict-merge did not pass; retained as Adapt without bypass"
+    },
+    {
+      "severity": "P2",
+      "class": "contract-decision",
+      "message": "governed coverage 2% remains Adapt"
+    }
+  ],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": "{\n  \"schemaVersion\": \"1.0\",\n  \"valid\": false,\n  \"diagnostics\": [\n    {\n      \"ruleId\": \"CIRCULAR_DEPENDENCY\",\n      \"severity\": \"error\",\n      \"message\": \"Circular dependency among 2 files: packages/runtime-core/src/components/BaseTransition.ts → packages/runtime-core/src/components/KeepAlive.ts → packages/runtime-core/src/components/BaseTransition.ts.\",\n      \"location\": {\n        \"file\": \"packages/runtime-core/src/components/BaseTransition.ts\",\n        \"line\": 1,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"packages/runtime-core/src/components/BaseTransition.ts → packages/runtime-core/src/components/KeepAlive.ts\"\n      }\n    },\n    {\n      \"ruleId\": \"CONFIG_UNCLASSIFIED_FILES\",\n      \"severity\": \"warning\",\n      \"message\": \"288 included source file(s) are not matched by any configured layer; ark-check will not enforce import rules for those source files.\",\n      \"location\": {\n        \"file\": \"<unknown>\",\n        \"line\": 1,\n        \"column\": 1\n      },\n      \"evidence\": {}\n    },\n    {\n      \"ruleId\": \"ANY_CAST_THRESHOLD_EXCEEDED\",\n      \"severity\": \"warning\",\n      \"message\": \"172 explicit any cast(s) exceed safety.maxAnyCasts (0).\",\n      \"location\": {\n   "
+  }
+}

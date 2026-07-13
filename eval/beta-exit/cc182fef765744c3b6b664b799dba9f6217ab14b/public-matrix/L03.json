@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "id": "L03",
+  "repository": "https://github.com/microsoft/TypeScript.git",
+  "repositorySha": "637d5746b70257028fb95aad32ddec6b26ab0a14",
+  "projectPath": ".",
+  "candidateSha": "cc182fef765744c3b6b664b799dba9f6217ab14b",
+  "shape": "library",
+  "size": "large",
+  "host": "cursor",
+  "packageManager": "yarn",
+  "expectedInstallCommand": "yarn install --immutable",
+  "treeFiles": 81339,
+  "candidateInstallMs": 661,
+  "preview": {
+    "exitCode": 0,
+    "changes": 3,
+    "projectedCoverage": {
+      "percent": 0,
+      "classifiedFiles": 0,
+      "totalFiles": 0
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 3,
+    "firstGreenMsExcludingDependencyInstall": 21109
+  },
+  "strictMerge": {
+    "exitCode": 1
+  },
+  "governedCoverage": {
+    "percent": 0,
+    "classifiedFiles": 0,
+    "totalFiles": 0
+  },
+  "mergeGateState": "adapt",
+  "finalCiState": "not-run-external-ci; local-strict-merge-fail",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [
+    "Retained as Adapt after local strict-merge failure; no rule override or bypass was applied.",
+    "Retained as Adapt below 90% governed coverage; no policy override was applied."
+  ],
+  "issues": [
+    {
+      "severity": "P2",
+      "class": "repository-incompatibility",
+      "message": "local strict-merge did not pass; retained as Adapt without bypass"
+    },
+    {
+      "severity": "P2",
+      "class": "contract-decision",
+      "message": "governed coverage 0% remains Adapt"
+    }
+  ],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": "{\n  \"ok\": false,\n  \"error\": \"missing-gates\",\n  \"missing\": [\n    \".mcp.json\"\n  ]\n}"
+  }
+}
