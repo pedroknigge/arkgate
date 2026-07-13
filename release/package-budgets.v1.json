@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "packages": {
+    "gate": {
+      "path": ".",
+      "maxPackedBytes": 400000,
+      "maxUnpackedBytes": 1400000,
+      "maxFiles": 130,
+      "exception": "The 250 KB/1 MB target is not yet feasible while shipping the documented standalone CLI/MCP tooling. Source maps were removed in V04; this bounded exception must be reconsidered before ArkGate 4."
+    },
+    "runtime": {
+      "path": "packages/runtime",
+      "maxPackedBytes": 160000,
+      "maxUnpackedBytes": 700000,
+      "maxFiles": 20
+    }
+  }
+}

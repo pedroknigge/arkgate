@@ -133,6 +133,14 @@ jobs:
       - name: Gate/runtime package isolation smoke
         run: npm run test:package-isolation
 
+      - name: Verify V04 release artifacts
+        run: npm run check:release-artifacts -- --out release-artifacts
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-artifacts-${{ github.sha }}
+          path: release-artifacts
+
       # Mandatory architecture gate: ark-check exits non-zero on any layer violation,
       # which fails the job and blocks the merge. --strict-config also fails the job on
       # governance-coverage warnings (e.g. unclassified source files), so the config can

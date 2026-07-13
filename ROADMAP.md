@@ -168,10 +168,10 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 18 | `V01` | `done` | L | `C05`, `O04` | Cold, warm, and incremental performance have real CI budgets; PR #45 passed green CI |
 | 19 | `V02` | `done` | M | `C04` | Mutation, property, and fuzz tests defend critical boundaries |
 | 20 | `V03` | `done` | L | `O04`, `V01`, `V02` | External adoption is reproduced on 12 pinned MIT-licensed repositories |
-| 21 | `V04` | `todo` | M | `C06`, `V03` | Package and release artifacts are small, complete, and attestable |
+| 21 | `V04` | `done` | M | `C06`, `V03` | Package and release artifacts are bounded, complete, and attestable |
 | 22 | `V05` | `todo` | M | all prior items | Independent audit passes and the product may exit beta |
 
-**Next:** `V04`. Tighten package and release assurance.
+**Next:** `V05`. Run the independent beta-exit audit.
 
 ---
 
@@ -855,7 +855,7 @@ including build, CodeQL, Semgrep, onboarding, fuzz, and performance checks.
 
 ### V04 — Tighten package and release assurance
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `C06`, `V03`
 
 **Implementation**
@@ -874,6 +874,14 @@ including build, CodeQL, Semgrep, onboarding, fuzz, and performance checks.
 - Runtime is absent from gate-only smoke imports and bundles.
 - Release dry-run and installed-tarball smoke tests pass from a clean checkout.
 - No open high vulnerability/code-scanning alert at release time.
+
+**Closure evidence (2026-07-13):** V04 removes published source maps and adds a versioned artifact
+gate that builds both tarballs, enforces budgets, validates independent installs, and emits
+CycloneDX SBOMs, SHA-256 checksums, and packed-content manifests. The experimental runtime is
+bounded at 160 KB packed, 700 KB unpacked, and 20 files. The gate remains at 375 KB packed and
+1.33 MB unpacked under an explicit 400 KB/1.4 MB exception: its standalone CLI/MCP distribution
+cannot yet meet the 250 KB/1 MB target; this must be reconsidered before ArkGate 4. PR #48 passed
+build, CodeQL, Semgrep, fuzz, onboarding, package isolation, and performance CI.
 
 ### V05 — Independent beta exit audit
 

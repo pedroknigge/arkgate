@@ -110,6 +110,8 @@
     "test:scale-bench": "npm run build && vitest run tests/unit/scripts/arkScaleBench.test.ts",
     "check:module-budgets": "node scripts/check-module-budgets.mjs",
     "check:package-files": "node scripts/verify-package-files.mjs",
+    "check:release-artifacts": "node scripts/verify-release-artifacts.mjs",
+    "test:release-artifacts": "vitest run tests/unit/scripts/verifyReleaseArtifacts.test.ts",
     "clean": "rm -rf dist",
     "release:npm": "node scripts/release-npm.mjs",
     "prepack": "npm run build"

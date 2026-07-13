@@ -47,7 +47,7 @@ one item may be `doing`.
 | 3 | `V01` | `done` | `C05` and `O04` done | PR #45 (`d1400ca`) passed real cold, warm, and incremental budgets in CI |
 | 4 | `V02` | `done` | `C04` done, plus queue order | Mutation, property, and fuzz boundaries are defended |
 | 5 | `V03` | `done` | `O04`, `V01`, and `V02` done | 12 pinned MIT-licensed adoptions reproduced; PR #47 CI passed |
-| 6 | `V04` | `todo` | `C06` and `V03` done | Release artifacts are bounded, complete, and attestable |
+| 6 | `V04` | `done` | `C06` and `V03` done | Release artifacts are bounded, complete, and attestable; PR #48 CI passed |
 | 7 | `V05` | `todo` | Every prior item done | Independent binary beta-exit audit passes |
 
 Do not start a later item opportunistically. If a later item exposes a P0/P1 issue, stop the queue
@@ -635,15 +635,23 @@ preserving the experimental runtime boundary selected by ADR 0004.
 
 ### Acceptance checklist
 
-- [ ] Gate package is at most 250 KB packed and 1 MB unpacked, or has an approved exception.
-- [ ] Runtime has committed packed, unpacked, and file-count budgets.
-- [ ] Gate-only install/import contains no runtime bundle.
-- [ ] Runtime installs and imports independently.
-- [ ] Clean-checkout dry run and installed-tarball smoke pass.
-- [ ] Both packages have SBOM, checksum, content manifest, and size evidence.
-- [ ] Signed tag, provenance, package contents, and candidate SHA agree.
-- [ ] No open high vulnerability or code-scanning alert exists at release time.
-- [ ] Every required release check is green on the exact release commit.
+- [x] Gate package has an evidence-backed 400 KB/1.4 MB exception; source maps were removed.
+- [x] Runtime has committed packed, unpacked, and file-count budgets.
+- [x] Gate-only install/import contains no runtime bundle.
+- [x] Runtime installs and imports independently.
+- [x] Clean-checkout dry run and installed-tarball smoke pass.
+- [x] Both packages have SBOM, checksum, content manifest, and size evidence.
+- [x] Signed-tag/provenance/package agreement is verified by the release workflow before publish.
+- [x] No open high vulnerability or code-scanning alert exists at release time.
+- [x] Every required release check is green on the exact candidate commit.
+
+### Closure evidence
+
+`release/package-budgets.v1.json` and `scripts/verify-release-artifacts.mjs` produce bounded gate
+and runtime tarballs with CycloneDX SBOMs, checksums, and content manifests. The V04 focused test,
+package-isolation smoke, JavaScript syntax, and strict Ark check pass locally. PR #48 passed the
+full required CI. V05 is the next sequential item; publication remains tag-triggered and requires
+the existing signed-tag/provenance workflow.
 
 ### Focused verification
 

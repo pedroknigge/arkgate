@@ -65,6 +65,7 @@ run('npm run typecheck');
 run('npm run test:confidence');
 run('npm run security:audit');
 run('npm run check:architecture');
+run('npm run check:release-artifacts -- --out /tmp/arkgate-release-artifacts');
 
 if (!dry && allowLocalPublish) {
   console.warn('[release-npm] local publish is not provenance-backed.');
