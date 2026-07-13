@@ -50,6 +50,13 @@ you pass `--force`, so review and commit only the templates that match your proj
 `autoPatch` flags), the supported profile for the active host, and the evidence actually found.
 Supported capability and installed guarantee are deliberately separate.
 
+**Design fitness (3.0.1+):** the same doctor JSON may include `doctor.designFitness` and
+`doctor.designSmells[]` (path evidence). Edge-clean `operatingMode: enforce` can still set
+`designFitness.designWeak: true` (**ENFORCE · design-weak**). That is Shape residual, not a
+write-path failure. Companion plan JSON: `plan.patternBets[]` with `neverMechanicalSafe: true`
+— never treat as write-boundary `autoPatch` / mechanical-safe. See
+[package-surface.md](package-surface.md) and [brownfield-adoption.md](brownfield-adoption.md) §6.
+
 If your project uses Codex or Grok, treat MCP registration as part of the default
 setup, not an optional extra. Ark works best when the agent can read `ark://manifest`
 before it writes code; that is the fast path to avoiding architecture drift during

@@ -79,12 +79,27 @@ as unresolved decisions, and restores the integration with `ark start --tools <h
 (no apply). `/ark-coverage` = Ark **fitness** only (governed/gates). `/ark-think` = one decision
 (2–3 options). `/ark-adopt` = brownfield Align/Stabilize + seed Shape B. `/ark-autopilot` =
 explore then apply A + propose/apply-with-ok B. `/ark-loop` = plan A only. Empty plan A is not
-“architecture healthy” if design-weak residual remains.
+“architecture healthy” if design-weak residual remains. Full routing table: full-install
+`AGENTS.md` / [README skill table](../README.md#other-skills-only-when-you-need-them).
+
+**Design fitness (3.0.1+):** after edges are clean, doctor can still report **ENFORCE · design-weak**.
+
+```bash
+npx ark-check --doctor --json   # doctor.designFitness + doctor.designSmells[]
+npx ark-check --plan --json     # plan.goal.designWeak + plan.patternBets[] (never mechanical-safe)
+```
+
+Smell ids (stable): `io-under-application`, `handler-in-persistence`, `god-module`,
+`domain-logic-in-ui`, `facade-sql-in-routes`, `mixed-pattern-cluster`, `soft-contract`.
+Each has `evidence[]` paths. Plan **B** bets include `pilot`, `successSignal`, `killSwitch`,
+and **`neverMechanicalSafe: true`** — loop/autoPatch must ignore them. For judgment I/O moves
+use **extraction cards** ([brownfield-adoption.md](brownfield-adoption.md) §6). Multi-PR residual
+may optionally be persisted as a short Shape plan under the repo; not a gate requirement.
 
 **Full-skill agent co-pilot:** after explicitly installing the `/ark-*` pack, use
 `/ark-autopilot` (explore-first, dual plan A remediation + B pattern bets). Recon without
 applying: `/ark-explore`. The default compact router uses MCP/CLI directly. Never treat empty
-`--plan` as “architecture healthy” without the explore pass.
+`--plan` steps as “architecture healthy” when `designWeak` / non-empty `patternBets` remain.
 
 `ark init --archetype <id>` maps playbook ids to named presets (`hexagonal`, `layered`,
 `feature-sliced`, `monorepo`). With `--yes` and no archetype, Ark auto-selects from

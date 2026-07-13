@@ -35,16 +35,21 @@ the layer globs so day-one **governed%** is real (not a false-green empty contra
 ### 2. See the plan yourself (optional)
 
 ```bash
-npx ark-check --plan            # human view (includes Governed: N%)
-npx ark-check --plan --json     # { ok, plan: { goal, counts, steps } }
+npx ark-check --plan            # human view (includes Governed: N%; pattern bets when design-weak)
+npx ark-check --plan --json     # { ok, plan: { goal, counts, steps, patternBets?, designSmells? } }
+npx ark-check --doctor --json   # designFitness / designSmells when residual is design-weak
 ```
 
-Each step is tagged `mechanical-safe` / `judgment` / `deferred` with a `confidence`,
+Each **A** step is tagged `mechanical-safe` / `judgment` / `deferred` with a `confidence`,
 `rationale`, and often `remediationKind`. Auto-safe kinds: type-only type move, pure-type **file**
 relocate, `import type` of pure-type modules, and named type-export imports from mixed modules
 (`import-type-of-type-exports`). `goal.met` is true only when
 there are no active violations **and** governed coverage is meaningful — so a clean plan that
 checks almost nothing is not "done."
+
+When edges are clean but design residual remains, JSON also sets `goal.designWeak` and
+`patternBets[]` (each with `neverMechanicalSafe: true`). Those are **B** (Shape) bets — not
+auto-applied. Extraction cards: [brownfield-adoption.md](../brownfield-adoption.md) §6.
 
 ### 3. Carry the plan out — the autopilot
 
@@ -54,10 +59,12 @@ In your agent, run:
 /ark-autopilot
 ```
 
-It runs the whole flow (newbie tier): confirms the plan, hands off to `/ark-loop` to apply the
-`mechanical-safe` steps one at a time — **validating each with `ark-check` and rolling back any
-regression** — proposes each `judgment` step for a yes/no, loops until `goal.met`, and reports
-what was auto-applied vs proposed vs deferred. Nothing lands until you review the diff.
+It runs the whole flow (newbie tier): **explore first** (map + dual plan), hands off to
+`/ark-loop` for plan **A** `mechanical-safe` steps one at a time — **validating each with
+`ark-check` and rolling back any regression** — proposes each A `judgment` and each B
+pattern/Shape bet for a yes/no, and reports what was auto-applied vs proposed vs deferred.
+Nothing lands until you review the diff. Empty A with open B is **not** “architecture healthy
+finished.”
 
 Expert entry: skip the autopilot and use the pieces — `ark init` / `/ark-contract` to shape the
 contract, `ark-check --plan` for the work, `/ark-fix` for targeted fixes, `ark-check
