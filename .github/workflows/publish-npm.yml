@@ -48,6 +48,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
 
+      - name: Verify release artifacts
+        run: npm run check:release-artifacts -- --out release-artifacts
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-artifacts-${{ inputs.tag }}
+          path: release-artifacts
+
       - name: Verify package is still unpublished
         run: |
           set -euo pipefail
@@ -107,6 +115,13 @@ jobs:
           curl -fsSL "$tarball_url" -o "$tarball"
           shasum -a 256 "$tarball" > "$tarball.sha256"
           gh release upload "$RELEASE_TAG" "$tarball.sha256" --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+
+      - name: Attach release artifacts
+        if: ${{ !inputs.dry_run }}
+        run: find release-artifacts -type f -print0 | xargs -0 gh release upload "$RELEASE_TAG" --clobber
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}

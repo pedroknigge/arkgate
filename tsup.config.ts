@@ -6,7 +6,7 @@ export default defineConfig({
   external: ['@nestjs/common'],
   dts: true,
   splitting: false,
-  sourcemap: true,
+  sourcemap: false,
   clean: true,
   minify: false,
   treeshake: false,
