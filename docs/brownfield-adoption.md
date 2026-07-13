@@ -117,7 +117,28 @@ ark-check --doctor --json   # designFitness.designWeak + designSmells[].evidence
 ark-check --plan --json     # patternBets[] with neverMechanicalSafe: true
 ```
 
-Fixture for CI honesty: `tests/fixtures/design-weak-enforce/` (empty plan A + non-empty B).
+### Pilot loop (Q04) — one pilot at a time → re-doctor
+
+When doctor/plan report **ENFORCE · design-weak**, JSON also includes **`pilotLoop`**:
+
+| Field | Meaning |
+|-------|---------|
+| `pilotLoop.active` | `true` when design-weak and at least one pattern bet exists |
+| `pilotLoop.nextPilot` | **One** extraction card (same fields as §6) ranked from `patternBets` |
+| `pilotLoop.oneAtATime` | Always true — do not multi-pilot batch |
+| `pilotLoop.neverMechanicalSafe` | Always true — judgment only; re-doctor is the success sensor |
+
+**Loop:**
+
+1. Read `pilotLoop.nextPilot` (or fill the §6 card by hand).
+2. Apply **only** that pilot (bounded path(s) in `evidence` / `pilotTarget`).
+3. Re-run `ark-check --doctor --json` (and `--plan --json`).
+4. Success on this step = **reduced smell evidence on the pilot paths** (or that smell cleared). Residual outside the pilot may remain — that is honest Shape work, not failure.
+5. Pick the next `nextPilot` only after re-doctor; stop on kill-switch.
+
+Do **not** claim “healthy finished” while `designWeak` remains. Do **not** auto-apply pattern bets as mechanical-safe.
+
+Fixture for CI honesty: `tests/fixtures/design-weak-enforce/` (empty plan A + non-empty B + pilotLoop).
 
 ### Optional: durable Shape plan (multi-PR)
 

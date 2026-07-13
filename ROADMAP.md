@@ -189,9 +189,10 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 29 | `Q01` | `done` | M | Phase P done | Single post-green “clarify for AI / Shape” door in doctor + routing |
 | 30 | `Q02` | `done` | S | `Q01` | Human outcome language for each design smell id (docs parity) |
 | 31 | `Q03` | `done` | M | `Q01` | Optional golden pattern artifact for new-code place/prepare-write guidance |
+| 32 | `Q04` | `done` | M | `Q02`, `Q03` | Pilot loop productized: extraction card → one pilot → re-doctor |
 
-**Next:** no Q item scheduled after `Q03`. Epic: [docs/plans/power-simple-shape](docs/plans/power-simple-shape/README.md)
-(remaining Q04–Q06 still proposed until approved into this table).
+**Next:** no Q item scheduled after `Q04`. Epic: [docs/plans/power-simple-shape](docs/plans/power-simple-shape/README.md)
+(remaining Q05–Q06 still proposed until approved into this table).
 
 ---
 
@@ -248,6 +249,25 @@ mechanical-safe kind. Malformed file → invalid summary, not silent success.
 **Local evidence (2026-07-13):** `q03GoldenPattern.test.ts` 10/10 green; design-weak
 fixture still `designWeak` + `postGreenPath.clarify-for-ai` with golden present;
 `check:architecture` strict green.
+
+### Q04 — Pilot loop productized (one pilot → re-doctor)
+
+- **Status:** `done`
+- **Depends on:** `Q02`, `Q03`
+- **Likely files:** `bin/lib/pilot-loop.mjs`, `bin/lib/doctor-plan.mjs`,
+  `docs/brownfield-adoption.md`, `docs/package-surface.md`, `docs/agent-guide.md`,
+  `templates/skills/ark-explore.md` / `ark-autopilot.md`,
+  `tests/unit/static-check/q04PilotLoop.test.ts`
+
+**Outcome:** From design-weak residual, product surfaces emit **one** next pilot
+(extraction-card fields from patternBets): pilot target, move, success, kill-switch.
+After a single pilot change, re-doctor is the success sensor (reduced evidence on pilot
+paths). Never multi-pilot batch, never mechanical-safe, never false healthy finished.
+
+**Local evidence (2026-07-13):** `q04PilotLoop.test.ts` 9/9 green; design-weak fixture
+selects `facade-sql-in-routes` → pilot on `src/routes/orders.ts`; after single pilot
+rewrite, smell cleared on pilot path while `goal.met` stays true and residual
+`domain-logic-in-ui` remains; patternBets never mechanical-safe; `check:architecture` green.
 
 ## Phase P — post-3.0 pattern depth
 

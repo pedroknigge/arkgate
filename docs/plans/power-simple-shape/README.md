@@ -152,7 +152,7 @@ flowchart TB
 | 1 | `Q01` | M | **done** — Single post-green path in doctor top-action + skill routing: “clarify for AI / Shape” without skill shopping | Phase P done |
 | 2 | `Q02` | S | **done** — Human outcome language for top design smells (and docs parity) | Q01 |
 | 3 | `Q03` | M | **done** — Golden pattern artifact (`.ark/golden-pattern.json`) + place/prepare-write/doctor read it for *new* code | Q01 |
-| 4 | `Q04` | M | **Pilot loop productized**: extraction card → one pilot → re-doctor; gallery or fixture proof | Q02, Q03 |
+| 4 | `Q04` | M | **done** — Pilot loop productized: extraction card → one pilot → re-doctor; fixture proof | Q02, Q03 |
 | 5 | `Q05` | M | **AI-velocity evidence**: eval/bench golden-path vs design-weak for same feature prompt | Q04 |
 | 6 | `Q06` | S | **Release + surfaces**: package-surface, agent-guide, site, CHANGELOG; patch release when behavior ships | Q01–Q05 as needed |
 

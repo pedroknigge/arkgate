@@ -51,6 +51,9 @@ decision-grade explore pass **and** without opening violating files.
 4. **Open every file** in plan A `steps[]` (and `target` if present) before classifying a fix.
 5. **“Así te lo re-soluciono”** for each A cluster and each B pattern bet.
 6. Apply A → re-run ark-check → rollback on regression. **Never auto-apply B** as mechanical-safe.
+7. **Q04 pilot loop for B:** when design-weak, take **`pilotLoop.nextPilot`** (one extraction card)
+   → apply **only** that pilot with user OK → **re-doctor**. Never multi-pilot batch B; residual
+   outside the pilot may remain and must not be called “healthy finished.”
 
 
 ## Subagent fan-out (optional, host-dependent)

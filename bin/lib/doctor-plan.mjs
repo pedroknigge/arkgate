@@ -37,6 +37,7 @@ import {
   isDoctorHealthyNothingToDo,
 } from './post-green-path.mjs';
 import { loadGoldenPattern, summarizeGoldenPattern } from './golden-pattern.mjs';
+import { summarizePilotLoop } from './pilot-loop.mjs';
 
 const color = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
@@ -227,6 +228,12 @@ export function buildRemediationPlan(
     governedPercent,
     totalFiles,
   });
+  // Q04 — single next pilot extraction card (one at a time → re-doctor).
+  const pilotLoop = summarizePilotLoop({
+    designWeak,
+    patternBets,
+    designSmells,
+  });
 
   let statement =
     activeViolations.length > 0
@@ -269,6 +276,8 @@ export function buildRemediationPlan(
     // Additive: pattern evolution bets derived from design smells (never auto).
     patternBets,
     designSmells,
+    // Q04: one-pilot loop step (extraction card); never mechanical-safe.
+    pilotLoop,
   };
 }
 
@@ -323,6 +332,21 @@ export function runPlan(
       console.log(`  [decide] ${bet.smellId}  ${color.dim(bet.pilot)}`);
       console.log(color.dim(`           success: ${bet.successSignal}`));
     }
+  }
+  // Q04 — single next pilot (one at a time → re-doctor).
+  if (plan.pilotLoop?.active && plan.pilotLoop.nextPilot) {
+    console.log('');
+    console.log(color.bold('Next pilot (one at a time → re-doctor)'));
+    const np = plan.pilotLoop.nextPilot;
+    console.log(`  Pilot: ${np.pilotTarget || np.pilot}  [${np.smellId}]`);
+    console.log(color.dim(`  Move: ${np.move}`));
+    console.log(color.dim(`  Success: ${np.successSignal}`));
+    console.log(color.dim(`  Kill-switch: ${np.killSwitch}`));
+    console.log(
+      color.dim(
+        '  Apply this ONE pilot, then ark-check --doctor — never multi-pilot batch; never mechanical-safe.'
+      )
+    );
   }
   if (activeViolations.length === 0) return plan;
   console.log('');
@@ -393,6 +417,13 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const postGreenPath = buildPostGreenNextAction(designFitness);
   // Q03 — optional golden pattern for NEW code (advisory; never clears design-weak).
   const goldenPattern = summarizeGoldenPattern(loadGoldenPattern(root));
+  // Q04 — one next pilot (extraction card) when design-weak.
+  const patternBetsForLoop = buildPatternBetsFromSmells(designSmells);
+  const pilotLoop = summarizePilotLoop({
+    designWeak: designFitness.designWeak,
+    patternBets: patternBetsForLoop,
+    designSmells,
+  });
 
   if (asJson) {
     console.log(
@@ -427,6 +458,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
               : {}),
             // Q03: advisory golden for new-code placement (absent = no claim).
             goldenPattern,
+            // Q04: one-pilot loop (extraction card → re-doctor).
+            pilotLoop,
             governed: cov.governed,
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
@@ -574,6 +607,16 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     if (postGreenPath) {
       // Rank first via mergePostGreenTopActions at the end (Q01 single door).
       actions.push(postGreenPath.action);
+    }
+    // Q04 — surface one next pilot under design-weak.
+    if (pilotLoop?.active && pilotLoop.nextPilot) {
+      const np = pilotLoop.nextPilot;
+      line(
+        warn,
+        `Next pilot (one at a time): ${np.pilotTarget || np.pilot} [${np.smellId}] → re-doctor after change`
+      );
+      line(' ', color.dim(`success: ${np.successSignal}`));
+      line(' ', color.dim('never multi-pilot batch; patternBets never mechanical-safe'));
     }
   }
 

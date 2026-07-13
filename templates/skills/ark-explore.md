@@ -223,11 +223,15 @@ ENFORCE without Shape progress is **`ENFORCE · design-weak`** — say that out 
 | `facade-sql-in-routes` | Routes import raw ORM/SQL while “repositories exist” elsewhere |
 
 **Extraction card** (for each I/O / god-module B bet — judgment, never mechanical-safe).
-Canonical productized template also in `docs/brownfield-adoption.md` §6:
+Canonical productized template also in `docs/brownfield-adoption.md` §6.
+
+**Q04 pilot loop:** when doctor/plan JSON is available, use **`pilotLoop.nextPilot`** as the
+**single** next extraction card (one pilot at a time → re-doctor). Do not open five B bets
+in parallel. After the pilot lands, re-run doctor; success = reduced evidence on pilot paths.
 
 ```text
 ### Extraction card
-Pilot: <one dir or feature>
+Pilot: <one dir or feature — or pilotLoop.nextPilot.pilotTarget>
 Smell: <doctor designSmells[].id when present, else agent-detected id>
 Move: <verbatim I/O or rule → port/adapter or Domain file>
 Do not:
@@ -235,12 +239,13 @@ Do not:
   - weaken ark.config.json
   - auto-apply as mechanical-safe or invent new mechanical-safe kinds
   - big-bang the monorepo
-Success: <observable / falsifiable>
+Success: <observable / falsifiable — re-doctor>
 Kill-switch: <stop condition>
-Next: /ark-autopilot (apply with user ok) | /ark-fix (one cluster) | /ark-contract (globs only)
+Next: /ark-autopilot (apply with user ok) | /ark-fix (one cluster) | re-doctor
 ```
 
-When doctor JSON is available, prefer smell `id`s from `designSmells` / `patternBets[].smellId`.
+When doctor JSON is available, prefer smell `id`s from `designSmells` / `patternBets[].smellId`
+and the ranked **`pilotLoop.nextPilot`**.
 
 ## Output format (keep tight)
 

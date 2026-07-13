@@ -85,9 +85,14 @@ explore then apply A + propose/apply-with-ok B. `/ark-loop` = plan A only. Empty
 **Design fitness (3.0.1+):** after edges are clean, doctor can still report **ENFORCE · design-weak**.
 
 ```bash
-npx ark-check --doctor --json   # doctor.designFitness + doctor.designSmells[]
-npx ark-check --plan --json     # plan.goal.designWeak + plan.patternBets[] (never mechanical-safe)
+npx ark-check --doctor --json   # doctor.designFitness + doctor.designSmells[] + doctor.pilotLoop
+npx ark-check --plan --json     # plan.goal.designWeak + plan.patternBets[] + plan.pilotLoop
 ```
+
+**Pilot loop (Q04):** when design-weak, `pilotLoop.nextPilot` is **one** extraction card
+(pilot target, move, success, kill-switch). Apply **that one pilot only**, then re-doctor.
+Success = reduced smell evidence on pilot paths; residual outside the pilot may remain.
+Never multi-pilot batch; never mechanical-safe; never claim healthy finished while design-weak.
 
 Smell **ids** (stable JSON) plus **outcome** lines (plain language, Q02) on each
 `designSmells[]` object — prefer `outcome` for humans; keep `id` for automation:
