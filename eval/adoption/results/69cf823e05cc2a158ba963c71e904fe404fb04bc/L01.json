@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "L01",
+  "repository": "https://github.com/sindresorhus/yocto-queue.git",
+  "repositorySha": "b07eac099753833b29d06c614149904445739776",
+  "projectPath": ".",
+  "candidateSha": "69cf823e05cc2a158ba963c71e904fe404fb04bc",
+  "shape": "library",
+  "size": "small",
+  "host": "claude",
+  "packageManager": "npm",
+  "expectedInstallCommand": "npm install",
+  "treeFiles": 13,
+  "candidateInstallMs": 716,
+  "preview": {
+    "exitCode": 0,
+    "changes": 5,
+    "projectedCoverage": {
+      "percent": 100,
+      "classifiedFiles": 1,
+      "totalFiles": 1
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 5,
+    "firstGreenMsExcludingDependencyInstall": 551
+  },
+  "strictMerge": {
+    "exitCode": 0
+  },
+  "governedCoverage": {
+    "percent": 100,
+    "classifiedFiles": 1,
+    "totalFiles": 1
+  },
+  "mergeGateState": "green",
+  "finalCiState": "not-run-external-ci; local-strict-merge-pass",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [],
+  "issues": [],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": ""
+  }
+}

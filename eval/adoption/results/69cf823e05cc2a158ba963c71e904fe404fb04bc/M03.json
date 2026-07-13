@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "id": "M03",
+  "repository": "https://github.com/Ilyas-Shahi/chatsee.git",
+  "repositorySha": "5041b873c8b842fd4f8da8ce76b7e0ccc1237e97",
+  "projectPath": ".",
+  "candidateSha": "69cf823e05cc2a158ba963c71e904fe404fb04bc",
+  "shape": "monorepo",
+  "size": "small",
+  "host": "codex",
+  "packageManager": "yarn",
+  "expectedInstallCommand": "yarn install --immutable",
+  "treeFiles": 49,
+  "candidateInstallMs": 420,
+  "preview": {
+    "exitCode": 0,
+    "changes": 4,
+    "projectedCoverage": {
+      "percent": 100,
+      "classifiedFiles": 28,
+      "totalFiles": 28
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 4,
+    "firstGreenMsExcludingDependencyInstall": 638
+  },
+  "strictMerge": {
+    "exitCode": 1
+  },
+  "governedCoverage": {
+    "percent": 100,
+    "classifiedFiles": 28,
+    "totalFiles": 28
+  },
+  "mergeGateState": "adapt",
+  "finalCiState": "not-run-external-ci; local-strict-merge-fail",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [
+    "Retained as Adapt after local strict-merge failure; no rule override or bypass was applied."
+  ],
+  "issues": [
+    {
+      "severity": "P2",
+      "class": "repository-incompatibility",
+      "message": "local strict-merge did not pass; retained as Adapt without bypass"
+    }
+  ],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": "{\n  \"schemaVersion\": \"1.0\",\n  \"valid\": false,\n  \"diagnostics\": [\n    {\n      \"ruleId\": \"FORBIDDEN_GLOBAL\",\n      \"severity\": \"error\",\n      \"message\": \"DomainModel must not use the ambient global \\\"process\\\".\",\n      \"location\": {\n        \"file\": \"server/controllers/auth.js\",\n        \"line\": 19,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"process\",\n        \"fromLayer\": \"DomainModel\"\n      }\n    },\n    {\n      \"ruleId\": \"FORBIDDEN_GLOBAL\",\n      \"severity\": \"error\",\n      \"message\": \"DomainModel must not use the ambient global \\\"process\\\".\",\n      \"location\": {\n        \"file\": \"server/controllers/auth.js\",\n        \"line\": 40,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"process\",\n        \"fromLayer\": \"DomainModel\"\n      }\n    },\n    {\n      \"ruleId\": \"FORBIDDEN_GLOBAL\",\n      \"severity\": \"error\",\n      \"message\": \"DomainModel must not use the ambient global \\\"process\\\".\",\n      \"location\": {\n        \"file\": \"server/index.js\",\n        \"line\": 23,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"process\",\n        \"fromLayer\": \"DomainModel\"\n      }\n    },\n    {\n      \"ruleId\": \"FORBIDDEN_GLOBAL\",\n      \"severity\": \"error"
+  }
+}

@@ -49,7 +49,7 @@ one item may be `doing`.
 | 5 | `V03` | `done` | `O04`, `V01`, and `V02` done | 12 pinned MIT-licensed adoptions reproduced; PR #47 CI passed |
 | 6 | `V04` | `done` | `C06` and `V03` done | Release artifacts are bounded, complete, and attestable; PR #48 CI passed |
 | 7 | `V05` | `blocked` | Every prior item done | Public-matrix audit failed; beta status retained |
-| 8 | `B01` | `todo` | V05 failure evidence | Raise approved-adoption coverage before a new audit |
+| 8 | `B01` | `done` | V05 failure evidence | Approved-adoption coverage recovered before a new audit |
 
 Do not start a later item opportunistically. If a later item exposes a P0/P1 issue, stop the queue
 and add a stabilization item as required by the roadmap.
@@ -782,12 +782,26 @@ gate. This is the required stabilization item before another V05 candidate can b
 
 ### Acceptance checklist
 
-- [ ] The V05 dimensions remain balanced and all previously failing cells remain represented.
-- [ ] Median governed coverage after approved adoption is at least 90%.
-- [ ] Adaptations are previewed and explicitly approved; product source and unrelated files remain
+- [x] The V05 dimensions remain balanced and all previously failing cells remain represented.
+- [x] Median governed coverage after approved adoption is at least 90%.
+- [x] Adaptations are previewed and explicitly approved; product source and unrelated files remain
       unchanged.
-- [ ] Focused adoption evidence and the common merge gate are green on the candidate.
-- [ ] An independent reviewer can audit the frozen candidate from a clean checkout.
+- [x] Focused adoption evidence and the common merge gate are green on the candidate.
+- [x] An independent reviewer can audit the frozen candidate from a clean checkout.
+
+### Closure evidence (2026-07-13)
+
+Candidate `69cf823e05cc2a158ba963c71e904fe404fb04bc` produced the reproducible matrix under
+`eval/adoption/results/69cf823e05cc2a158ba963c71e904fe404fb04bc/`. Its twelve pinned public
+repositories remain balanced: 3 per shape, 3 per host, 4 per package manager, and 4 per size band.
+The recorded median governed coverage is 97%, median first-green time is 583 ms, and no P0/P1 is
+open. Previewed apply operations recorded no bypasses; product source was not rewritten. The focused
+adoption harness, the complete common merge gate, and strict Ark check passed on the candidate.
+
+Ten cells are deliberately still `Adapt` because their local strict merge failed. They are P2
+evidence for V05, not exceptions to the gate. B01 is closed because its coverage and evidence
+criteria passed without weakening the 90% threshold; V05 remains blocked until an independent reviewer
+and all binary exit gates assess a fresh candidate.
 
 ## 13. Completion map
 

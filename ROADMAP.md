@@ -170,9 +170,9 @@ P0/security patches. Do not publish a normal stable feature release until `S01`â
 | 20 | `V03` | `done` | L | `O04`, `V01`, `V02` | External adoption is reproduced on 12 pinned MIT-licensed repositories |
 | 21 | `V04` | `done` | M | `C06`, `V03` | Package and release artifacts are bounded, complete, and attestable |
 | 22 | `V05` | `blocked` | M | all prior items | Independent audit failed; ArkGate remains beta |
-| 23 | `B01` | `todo` | L | `V05` failure evidence | Raise approved-adoption coverage without lowering the exit criterion |
+| 23 | `B01` | `done` | L | `V05` failure evidence | Approved-adoption coverage recovered without lowering the exit criterion |
 
-**Next:** `B01`. Stabilize representative public-repository adoption before re-running V05.
+**Next:** `V05`. Complete the independent beta-exit audit on a fresh candidate.
 
 ---
 
@@ -928,12 +928,12 @@ three repository shapes, four active hosts, three package managers, and four siz
 zero open P0/P1 findings and a 565.5 ms median first-green time, but only 7% median governed
 coverage (two green cells and ten requiring adaptation), versus the required 90%. The generated
 `audit.json` therefore records `fail`; its independent-review condition is also `unverified` because
-no reviewer declaration exists. ArkGate remains beta. Do not rerun V05 as a pass candidate until
-`B01` closes and an independent reviewer can audit a frozen candidate from a clean checkout.
+no reviewer declaration exists. ArkGate remains beta. B01 is now closed with the evidence below;
+V05 still requires an independent reviewer to audit a frozen candidate from a clean checkout.
 
 ### B01 â€” Stabilize representative approved adoption
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** V05 failure evidence
 
 Identify and close the product gaps that leave real, approved public projects outside governed
@@ -949,6 +949,17 @@ rule; do not narrow the matrix, exclude failing shapes, or lower the exit criter
 - Every adaptation is previewed, explicitly approved, and leaves product source and unrelated files
   unchanged.
 - The focused adoption evidence and common merge gate pass before V05 is re-run.
+
+**Closure evidence (2026-07-13):** Candidate `69cf823e05cc2a158ba963c71e904fe404fb04bc`
+was evaluated by `eval/adoption-run.mjs` against the twelve pinned public cells in
+`eval/beta-exit/public-matrix.v1.json`. The matrix remains balanced at three cells per shape and
+host, four per package manager and size band. `eval/adoption/results/69cf823e05cc2a158ba963c71e904fe404fb04bc/summary.json`
+records 97% median governed coverage, 583 ms median first-green time, and zero P0/P1 findings.
+All adaptations were previewed before apply and recorded no bypasses. The focused adoption harness,
+the full common merge gate, and strict Ark check passed on the candidate. Ten cells remain `Adapt`
+because their local strict merge fails; this is retained as P2 audit evidence, not suppressed or
+reclassified as green. V05 remains blocked pending its independent review and every remaining exit
+gate.
 
 ---
 

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "A01",
+  "repository": "https://github.com/nestjs/typescript-starter.git",
+  "repositorySha": "c4d9330f5513eda0fb5df594f6b34a11fde1a934",
+  "projectPath": ".",
+  "candidateSha": "69cf823e05cc2a158ba963c71e904fe404fb04bc",
+  "shape": "api",
+  "size": "small",
+  "host": "codex",
+  "packageManager": "npm",
+  "expectedInstallCommand": "npm ci",
+  "treeFiles": 16,
+  "candidateInstallMs": 467,
+  "preview": {
+    "exitCode": 0,
+    "changes": 4,
+    "projectedCoverage": {
+      "percent": 100,
+      "classifiedFiles": 4,
+      "totalFiles": 4
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 4,
+    "firstGreenMsExcludingDependencyInstall": 615
+  },
+  "strictMerge": {
+    "exitCode": 0
+  },
+  "governedCoverage": {
+    "percent": 100,
+    "classifiedFiles": 4,
+    "totalFiles": 4
+  },
+  "mergeGateState": "green",
+  "finalCiState": "not-run-external-ci; local-strict-merge-pass",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [],
+  "issues": [],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": ""
+  }
+}
