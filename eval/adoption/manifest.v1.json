@@ -17,7 +17,7 @@
     { "id": "F02", "repository": "https://github.com/solidjs/solid.git", "sha": "d2f81d546d5dff37aa25e4fa224e2192efec8c1a", "shape": "frontend", "host": "codex", "packageManager": "pnpm", "size": "medium", "installCommand": "pnpm install --frozen-lockfile" },
     { "id": "F03", "repository": "https://github.com/withastro/astro.git", "sha": "79a41e06add3cbb144809f88a0b5ac88d2f8e7d1", "shape": "frontend", "host": "claude", "packageManager": "yarn", "size": "large", "installCommand": "yarn install --immutable" },
     { "id": "M01", "repository": "https://github.com/lerna/lerna.git", "sha": "294e33a2a6885bb34fdd8e48125eaf80d1058db1", "shape": "monorepo", "host": "grok", "packageManager": "npm", "size": "small", "installCommand": "npm install" },
-    { "id": "M02", "repository": "https://github.com/changesets/changesets.git", "sha": "7b7e391e0e5e6bd11ea1a4df96160a7894e930ac", "shape": "monorepo", "host": "cursor", "packageManager": "pnpm", "size": "medium", "installCommand": "pnpm install --frozen-lockfile" },
-    { "id": "M03", "repository": "https://github.com/vercel/turborepo.git", "sha": "ed1724965d854cd9c2f8b71a0fa826ec786be161", "shape": "monorepo", "host": "codex", "packageManager": "yarn", "size": "large", "installCommand": "yarn install --immutable" }
+    { "id": "M02", "repository": "https://github.com/changesets/changesets.git", "sha": "7b7e391e0e5e6bd11ea1a4df96160a7894e930ac", "projectPath": "packages/cli", "shape": "monorepo", "host": "cursor", "packageManager": "pnpm", "size": "medium", "installCommand": "pnpm install --frozen-lockfile" },
+    { "id": "M03", "repository": "https://github.com/vercel/turborepo.git", "sha": "ed1724965d854cd9c2f8b71a0fa826ec786be161", "projectPath": "packages/turbo-types", "shape": "monorepo", "host": "codex", "packageManager": "yarn", "size": "large", "installCommand": "yarn install --immutable" }
   ]
 }

@@ -70,6 +70,7 @@ function validateManifest(manifest) {
       if (typeof cell[key] !== 'string' || cell[key].length === 0) throw new Error(`${cell.id || 'cell'} missing ${key}`);
     }
     if (!/^[0-9a-f]{40}$/i.test(cell.sha)) throw new Error(`${cell.id} must pin a full commit SHA`);
+    if (cell.projectPath !== undefined && (typeof cell.projectPath !== 'string' || path.isAbsolute(cell.projectPath) || cell.projectPath.split('/').includes('..'))) throw new Error(`${cell.id} has unsafe projectPath`);
     if (ids.has(cell.id) || repositories.has(cell.repository)) throw new Error(`duplicate cell id or repository: ${cell.id}`);
     ids.add(cell.id);
     repositories.add(cell.repository);
@@ -135,9 +136,12 @@ function packCandidate(work) {
 }
 
 function cloneCell(cell, work) {
-  const root = path.join(work, cell.id);
-  run('git', ['clone', '--depth', '1', '--filter=blob:none', cell.repository, root]);
-  run('git', ['checkout', '--detach', cell.sha], { cwd: root });
+  const cloneRoot = path.join(work, cell.id);
+  run('git', ['clone', '--depth', '1', '--filter=blob:none', cell.repository, cloneRoot]);
+  run('git', ['checkout', '--detach', cell.sha], { cwd: cloneRoot });
+  const root = path.resolve(cloneRoot, cell.projectPath ?? '.');
+  if (!root.startsWith(`${cloneRoot}${path.sep}`) && root !== cloneRoot) throw new Error(`${cell.id} projectPath escaped clone`);
+  if (!fs.existsSync(path.join(root, 'package.json'))) throw new Error(`${cell.id} projectPath has no package.json`);
   return root;
 }
 
@@ -173,6 +177,7 @@ function runCell(cell, candidate, work, candidateSha) {
     id: cell.id,
     repository: cell.repository,
     repositorySha: cell.sha,
+    projectPath: cell.projectPath ?? '.',
     candidateSha,
     shape: cell.shape,
     size: cell.size,
@@ -244,7 +249,7 @@ function main() {
       schemaVersion: 1,
       mode: 'dry-run',
       candidateSha: sourceSha,
-      cells: cells.map(({ id, repository, sha, shape, size, host, packageManager }) => ({ id, repository, sha, shape, size, host, packageManager })),
+      cells: cells.map(({ id, repository, sha, shape, size, host, packageManager, projectPath }) => ({ id, repository, sha, shape, size, host, packageManager, projectPath: projectPath ?? '.' })),
     };
     writeJson(path.join(outputRoot, 'summary.json'), result);
     console.log(`Validated ${cells.length} pinned adoption cells`);
