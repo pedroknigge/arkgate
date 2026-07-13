@@ -156,13 +156,17 @@ function runCell(cell, candidate, work, candidateSha) {
   const changes = changedPaths(initial, actual);
   const previewChanges = Array.isArray(previewJson?.changes) ? previewJson.changes.map((change) => change.path).sort() : [];
   const coverage = checkJson?.coverage?.governed ?? previewJson?.projectedCoverage ?? null;
-  const mergeGateState = checked.status === 0 ? 'green' : 'adapt';
+  const coveragePercent = coverage?.percent;
+  const mergeGateState = checked.status === 0 && typeof coveragePercent === 'number' && coveragePercent >= 90 ? 'green' : 'adapt';
   const issues = [];
   if (preview.status !== 0 || applied.status !== 0) {
     issues.push({ severity: 'P2', class: 'repository-incompatibility', message: (applied.stderr || preview.stderr).trim().slice(0, 1200) });
   }
   if (previewChanges.length > 0 && JSON.stringify(previewChanges) !== JSON.stringify(changes)) {
     issues.push({ severity: 'P1', class: 'destructive-onboarding', message: 'preview/apply path parity mismatch' });
+  }
+  if (checked.status === 0 && (typeof coveragePercent !== 'number' || coveragePercent < 90)) {
+    issues.push({ severity: 'P2', class: 'contract-decision', message: `governed coverage ${coveragePercent ?? 'unknown'}% remains Adapt` });
   }
   return {
     schemaVersion: 1,
@@ -184,7 +188,10 @@ function runCell(cell, candidate, work, candidateSha) {
     bypasses: 0,
     manualDecisions: [],
     issues,
-    diagnostics: { preview: diagnostic(preview.stderr || preview.stdout, root), apply: diagnostic(applied.stderr || applied.stdout, root) },
+    diagnostics: {
+      preview: preview.status === 0 ? '' : diagnostic(preview.stderr || preview.stdout, root),
+      apply: applied.status === 0 ? '' : diagnostic(applied.stderr || applied.stdout, root),
+    },
   };
 }
 
