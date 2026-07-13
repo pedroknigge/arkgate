@@ -4,7 +4,15 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
-No changes are scheduled after 3.0.1.
+No changes are scheduled after 3.0.2.
+
+## 3.0.2 — 2026-07-13
+
+### Documentation
+
+- Sync consumer-facing agent docs with 3.0.1 design-depth skills: `designFitness` /
+  `patternBets`, extraction cards, dual-plan B honesty in agent-guide, AI gates, and the
+  autopilot demo. Release note status for 3.0.1 marked published.
 
 ## 3.0.1 — 2026-07-13
 
