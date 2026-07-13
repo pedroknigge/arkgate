@@ -1036,7 +1036,7 @@ folded into Phase C implementation work.
 Item: No implementation item scheduled
 First result: define and approve a post-3.0 roadmap item before changing product behavior
 Then: create a scoped implementation plan and its acceptance evidence
-Primary files: `package.json`, `package-lock.json`, `src/version.ts`, `server.json`,
-`CHANGELOG.md`, and `docs/releases/3.0.0.md`
-Required finish: npm `arkgate@3.0.0`, GitHub Release artifacts, provenance, and tag all agree
+Primary files: whatever the approved post-3.0 item names
+Required finish: item acceptance + common merge gate green on the same commit
+Released baseline: npm arkgate@3.0.0, signed tag v3.0.0, GitHub Release, and docs/releases/3.0.0.md agree
 ```

@@ -1,16 +1,18 @@
-# ArkGate pending roadmap execution plan
+# ArkGate roadmap execution plan (closed through 3.0.0)
 
 - Prepared: 2026-07-13
+- Closed: 2026-07-13 (stable `3.0.0` published)
 - Source of truth: `ROADMAP.md` dated 2026-07-13
-- Scope: `O03`, `O04`, `V01`, `V02`, `V03`, `V04`, and `V05`
+- Scope: `O03`, `O04`, `V01`, `V02`, `V03`, `V04`, and `V05` (all `done`)
 - Current release state: V05 passed in PR #49; `3.0.0` was released on 2026-07-13 with signed tag,
   GitHub Release, npm publication, and MCP Registry publication
 
 ## 1. Purpose and authority
 
-This document turns the pending roadmap into an implementation-ready sequence. It adds execution
-detail, evidence locations, likely files, and verification commands. It does not replace the
-roadmap.
+This document recorded the pending roadmap as an implementation-ready sequence through beta exit
+and the stable 3.0.0 release. It retains execution detail, evidence locations, and verification
+commands as historical record. It does not replace the roadmap. New product work requires a newly
+approved roadmap item before this plan is extended.
 
 When this document and `ROADMAP.md` disagree:
 
