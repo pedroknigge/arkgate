@@ -132,6 +132,40 @@ export function applyFrameworkLayoutOverlays(config, root) {
     }
   };
 
+  // Framework-free application layouts are common in clean-room starters and
+  // brownfield products. Govern their explicit source conventions without
+  // claiming a framework that package.json does not declare.
+  if (signals.apiSurface && !signals.nestFramework && !signals.expressLike) {
+    ensureInclude('src');
+    mergeLayerPatterns(next, 'PresentationAdapters', [
+      'src/**/routes/**',
+      'src/**/controllers/**',
+      'src/**/http/**',
+      'src/**/api/**',
+    ]);
+    mergeLayerPatterns(next, 'ApplicationOrchestration', [
+      'src/**/services/**',
+      'src/**/use-cases/**',
+      'src/**/usecases/**',
+    ]);
+  }
+
+  if (signals.ui && !signals.nextFramework) {
+    ensureInclude('src');
+    mergeLayerPatterns(next, 'PresentationAdapters', [
+      'src/**/components/**',
+      'src/**/layouts/**',
+      'src/**/ui/**',
+      'src/**/routes/**',
+      'src/**/pages/**',
+    ]);
+    // Match the existing ui-surface profile: UI components may consume their
+    // display-domain models, while the domain still cannot depend on UI.
+    next.rules = next.rules.filter(
+      (rule) => !(rule.from === 'PresentationAdapters' && rule.to === 'DomainModel' && rule.allowed === false)
+    );
+  }
+
   if (signals.nestFramework) {
     ensureInclude('src');
     // Nest flat + modular conventions (controllers/services next to modules).
