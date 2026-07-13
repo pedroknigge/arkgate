@@ -38,6 +38,7 @@ If you remember nothing else:
 | Gate failed after an edit | `/ark-fix` |
 | “Where does this new file go?” | `/ark-place` |
 | Contract globs / layers wrong | `/ark-contract` |
+| **Messy / spaghetti code** (even if the gate is green) | **`/ark-explore`** then **`/ark-autopilot`** — [below](#less-spaghetti-after-the-gate-is-green) |
 | New ArkGate version | `/ark-upgrade` |
 
 **Everything else is optional.** You do not need to learn “modes”, 11 skills, or the runtime
@@ -92,9 +93,36 @@ mode you configure:
 |-------|--------|-----------|
 | **Suggest** | New/thin project | Finish `start` + autopilot |
 | **Adapt** | Not fully protected yet | Keep autopilot / adopt until clean |
-| **Enforce** | Contract coverage is honest and checked edges are clean | Keep the host-appropriate write path; require the CI status if it must block merges |
+| **Enforce** | Contract coverage is honest and checked **edges** are clean | Keep write path + CI. If the tree is still a mess → [Shape flow](#less-spaghetti-after-the-gate-is-green) |
+| **Enforce · design-weak** | Edges clean, but doctor still sees design smells (`designSmells` / `patternBets`) | **`/ark-explore`** (shape-focus) → **`/ark-autopilot`** for dual-plan **B** — not “done” |
 
-You **arrive** at Enforce. You never “turn on Enforce”.
+You **arrive** at Enforce. You never “turn on Enforce”.  
+**Enforce does not mean the design is elegant** — only that the contract’s import edges are honest.
+
+---
+
+## Less spaghetti after the gate is green
+
+A green check can still leave god modules, SQL in routes, and three patterns at once.
+That residual is **Shape** work — plan **B**, never auto-applied as mechanical-safe.
+
+```text
+1.  /ark-explore              ← map + dual-plan B + extraction cards (no apply)
+2.  /ark-autopilot            ← apply A (edges); B only with your ok, one pilot at a time
+3.  npx arkgate-check --doctor
+    npx arkgate-check --plan --json   ← designWeak + patternBets when residual remains
+```
+
+| If… | Skill |
+|-----|--------|
+| Need the map / “what’s the golden pattern?” | `/ark-explore` |
+| Ready to execute the dual plan | `/ark-autopilot` |
+| Contract still lies (false-green, wrong globs) | `/ark-adopt` first, then explore |
+| One cluster only | `/ark-fix` (+ extraction card) |
+| Only care about governed% / gates installed | `/ark-coverage` (not the Shape map) |
+
+Phases: **Align** (honest contract) → **Stabilize** (real baseline) → **Shape** (golden pattern + pilot).  
+Details: [docs/brownfield-adoption.md](docs/brownfield-adoption.md) §6 · skills install: `npx arkgate-check --install-agent-gates`.
 
 ---
 
