@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "dimensions": {
+    "shapes": ["library", "api", "frontend", "monorepo"],
+    "hosts": ["claude", "grok", "cursor", "codex"],
+    "packageManagers": ["npm", "pnpm", "yarn"],
+    "sizes": ["small", "medium", "large"]
+  },
+  "cells": [
+    { "id": "L01", "repository": "https://github.com/sindresorhus/yocto-queue.git", "sha": "b07eac099753833b29d06c614149904445739776", "shape": "library", "host": "claude", "packageManager": "npm", "size": "small", "installCommand": "npm install" },
+    { "id": "L02", "repository": "https://github.com/colinhacks/zod.git", "sha": "912f0f51b0ced654d0069741e7160834dca742ee", "shape": "library", "host": "grok", "packageManager": "pnpm", "size": "medium", "installCommand": "pnpm install --frozen-lockfile" },
+    { "id": "L03", "repository": "https://github.com/microsoft/TypeScript.git", "sha": "637d5746b70257028fb95aad32ddec6b26ab0a14", "shape": "library", "host": "cursor", "packageManager": "yarn", "size": "large", "installCommand": "yarn install --immutable" },
+    { "id": "A01", "repository": "https://github.com/nestjs/typescript-starter.git", "sha": "c4d9330f5513eda0fb5df594f6b34a11fde1a934", "shape": "api", "host": "codex", "packageManager": "npm", "size": "small", "installCommand": "npm ci" },
+    { "id": "A02", "repository": "https://github.com/honojs/hono.git", "sha": "b2ae3a2204a48ce15a26448fd746d39745eb1837", "shape": "api", "host": "claude", "packageManager": "pnpm", "size": "medium", "installCommand": "pnpm install --frozen-lockfile" },
+    { "id": "A03", "repository": "https://github.com/nestjs/nest.git", "sha": "926e3a4dc8b3bf9a96b275fe348b71246c303929", "shape": "api", "host": "grok", "packageManager": "yarn", "size": "large", "installCommand": "yarn install --immutable" },
+    { "id": "F01", "repository": "https://github.com/preactjs/preact.git", "sha": "67c9935e3e692bcf43f37b34bd7429054903c0d1", "shape": "frontend", "host": "cursor", "packageManager": "npm", "size": "small", "installCommand": "npm install" },
+    { "id": "F02", "repository": "https://github.com/solidjs/solid.git", "sha": "d2f81d546d5dff37aa25e4fa224e2192efec8c1a", "shape": "frontend", "host": "codex", "packageManager": "pnpm", "size": "medium", "installCommand": "pnpm install --frozen-lockfile" },
+    { "id": "F03", "repository": "https://github.com/withastro/astro.git", "sha": "79a41e06add3cbb144809f88a0b5ac88d2f8e7d1", "shape": "frontend", "host": "claude", "packageManager": "yarn", "size": "large", "installCommand": "yarn install --immutable" },
+    { "id": "M01", "repository": "https://github.com/lerna/lerna.git", "sha": "294e33a2a6885bb34fdd8e48125eaf80d1058db1", "shape": "monorepo", "host": "grok", "packageManager": "npm", "size": "small", "installCommand": "npm install" },
+    { "id": "M02", "repository": "https://github.com/changesets/changesets.git", "sha": "7b7e391e0e5e6bd11ea1a4df96160a7894e930ac", "shape": "monorepo", "host": "cursor", "packageManager": "pnpm", "size": "medium", "installCommand": "pnpm install --frozen-lockfile" },
+    { "id": "M03", "repository": "https://github.com/vercel/turborepo.git", "sha": "ed1724965d854cd9c2f8b71a0fa826ec786be161", "shape": "monorepo", "host": "codex", "packageManager": "yarn", "size": "large", "installCommand": "yarn install --immutable" }
+  ]
+}
