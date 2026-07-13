@@ -1,7 +1,7 @@
 ---
 name: ark-adopt
-description: Brownfield onboarding — exploratory match of contract to real product code, classify ungoverned dirs, mine business rules into the manifest, freeze only real debt. Deep source analysis required.
-arkVersion: 2.9.1
+description: Brownfield onboarding — match contract to real product code, classify ungoverned dirs, mine business rules, freeze only real debt, seed Shape dual-plan B for spaghetti residual. Deep source analysis required.
+arkVersion: 3.0.0
 ---
 
 # /ark-adopt — Bring Ark into an existing codebase
@@ -9,6 +9,18 @@ arkVersion: 2.9.1
 Goal: contract reflects **product reality**, most code governed, only genuine debt frozen
 with a burn-down. A green check over a wrong contract is a **false green**.
 
+**Adopt is Align + Stabilize, then seed Shape.** Freezing debt without a pattern plan leaves
+spaghetti “ENFORCE · design-weak”. Always end with dual-plan **B** seeds (or handoff explore)
+when design smells remain after the contract is honest.
+
+## When / not when
+
+| Use `/ark-adopt` when… | Do **not** use it when… |
+|------------------------|-------------------------|
+| Existing messy repo; contract ≠ folders | Empty greenfield shape → `/ark-architect` |
+| False-green / concentrated edge needs contract truth | Map-only without writing config/baseline → `/ark-explore` |
+| Mine loose business rules into Domain / intents | Single violation fix → `/ark-fix` |
+| Freeze **real** debt after contract is honest | Grind plan A only → `/ark-loop`; full apply loop → `/ark-autopilot` |
 
 ## Dual engine (mandatory)
 
@@ -79,22 +91,33 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    - Deliver section **“Así te lo re-soluciono en el manifiesto”** with before/after contract snippets.
 5. **Freeze only real debt** — `--update-baseline` (zero debt → **no empty baseline file** left behind).
 6. **Gates + skills** — `--install-agent-gates` (CI monorepo-aware when `frontend/package.json` exists).
-7. **Ratchet + opportunity plan** — ranked residual edges + **explore-style bets** (what to improve next week).
+7. **Ratchet + Shape seed (mandatory exploratory close)** — after freeze/gates:
+   - Name phase: **Align** (contract honesty) → **Stabilize** (baseline real) → **Shape** (golden pattern).
+   - If plan A is empty but the tree still shows concurrent patterns, god modules, facade SQL,
+     domain logic in UI, or semantic false-green: emit **dual-plan B** (3–5 bets) with pilot,
+     success signal, kill-switch, and extraction cards for I/O moves — same bar as `/ark-explore` §G.
+   - Do **not** claim “adopt complete / healthy” solely because the check is green.
+   - Prefer handoff `/ark-autopilot` for B execution with user ok, or `/ark-explore` shape-focus
+     if the user only wanted a plan.
 
 ## Operating modes
 
 Explain modes as **detected stages** (Setup / Align / Guard), not user settings.
+**Guard on the contract ≠ Shape done.** Say `ENFORCE · design-weak` when B residual remains.
 
 ## Verify
 
 `ark-check --root . --config ark.config.json --strict-config` (+ baseline only if non-empty file retained).
-Report: governed% before/after, files written, frozen count, false positives avoided, manifest/intent proposals applied or deferred, **top opportunities still open**.
+Report: governed% before/after, files written, frozen count, false positives avoided, manifest/intent
+proposals applied or deferred, **phase**, **top Shape / design-weak opportunities still open**
+(with success signals).
 
 ## Never
 
 - Freeze false positives to get green.
 - Force runtime kernel over existing Nest/DI.
 - Claim Enforce while governed% is low, cores empty with I/O in Application, or core bags ungoverned.
+- End adopt with only “baseline written” when design-weak residual is visible in files you opened.
 
 ## Completion contract (skill incomplete if missing)
 

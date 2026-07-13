@@ -143,5 +143,38 @@ describe('agentInstructions routing table', () => {
     expect(text).toMatch(/if unsure[\s\S]*\/ark-autopilot/i);
     expect(text).toMatch(/Subagent fan-out/i);
     expect(text.toLowerCase()).toMatch(/fall back to sequential/);
+    // Post-3.0: non-overlapping roles + Shape honesty
+    expect(text).toMatch(/Do \*\*not\*\* run overlapping skills|Do not run overlapping skills/i);
+    expect(text).toMatch(/Align.*Stabilize.*Shape/s);
+    expect(text).toMatch(/design-weak|Shape work/i);
+  });
+});
+
+describe('skill role clarity + exploratory depth (P01)', () => {
+  it('critical recon skills define When/not when and design-depth / Shape vocabulary', () => {
+    const explore = fs.readFileSync(path.join(SKILLS_DIR, 'ark-explore.md'), 'utf8');
+    expect(explore).toContain('## When / not when');
+    expect(explore).toMatch(/shape-focus|Dual-plan seed/i);
+    expect(explore).toMatch(/Spaghetti \/ design-depth|design-depth ladder/i);
+    expect(explore).toMatch(/ENFORCE · design-weak|ENFORCE·design-weak|design-weak/);
+    expect(explore).toContain('Extraction card');
+    expect(explore).toMatch(/Align|Stabilize|Shape/);
+
+    const coverage = fs.readFileSync(path.join(SKILLS_DIR, 'ark-coverage.md'), 'utf8');
+    expect(coverage).toContain('## When / not when');
+    expect(coverage).toMatch(/not `?\/ark-explore`|not \/ark-explore|This is not `/i);
+    expect(coverage).toMatch(/handoff.*\/ark-explore|\/ark-explore.*shape/i);
+
+    const think = fs.readFileSync(path.join(SKILLS_DIR, 'ark-think.md'), 'utf8');
+    expect(think).toContain('## When / not when');
+    expect(think).toMatch(/ONE decision|One decision|one decision/i);
+
+    const adopt = fs.readFileSync(path.join(SKILLS_DIR, 'ark-adopt.md'), 'utf8');
+    expect(adopt).toContain('## When / not when');
+    expect(adopt).toMatch(/Shape seed|dual-plan B|design-weak/i);
+
+    const autopilot = fs.readFileSync(path.join(SKILLS_DIR, 'ark-autopilot.md'), 'utf8');
+    expect(autopilot).toContain('## When / not when');
+    expect(autopilot).toMatch(/Pattern \/ Shape|Shape bets|design-weak/i);
   });
 });

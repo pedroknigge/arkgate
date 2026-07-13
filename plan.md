@@ -1,18 +1,17 @@
-# ArkGate roadmap execution plan (closed through 3.0.0)
+# ArkGate roadmap execution plan (3.0.0 closed; Phase P open)
 
 - Prepared: 2026-07-13
-- Closed: 2026-07-13 (stable `3.0.0` published)
+- 3.0.0 closed: 2026-07-13 (stable published)
 - Source of truth: `ROADMAP.md` dated 2026-07-13
-- Scope: `O03`, `O04`, `V01`, `V02`, `V03`, `V04`, and `V05` (all `done`)
-- Current release state: V05 passed in PR #49; `3.0.0` was released on 2026-07-13 with signed tag,
-  GitHub Release, npm publication, and MCP Registry publication
+- Scope closed: `O03`–`O04`, `V01`–`V05`, `B01` (all `done`)
+- Phase P: post-3.0 pattern depth — `P01` done (skills); next `P02` doctor design smells
+- Current release state: `3.0.0` signed tag, GitHub Release, npm, MCP Registry
 
 ## 1. Purpose and authority
 
-This document recorded the pending roadmap as an implementation-ready sequence through beta exit
-and the stable 3.0.0 release. It retains execution detail, evidence locations, and verification
-commands as historical record. It does not replace the roadmap. New product work requires a newly
-approved roadmap item before this plan is extended.
+This document recorded the pending roadmap through beta exit and stable 3.0.0. Phase P items
+live in `ROADMAP.md` (ordered queue + detail). This plan is historical for O/V tracks; do not
+silently reinterpret Phase P from here — update `ROADMAP.md` first.
 
 When this document and `ROADMAP.md` disagree:
 

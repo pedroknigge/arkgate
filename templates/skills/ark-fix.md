@@ -9,6 +9,16 @@ You fix violations Ark reports. Prefer structural fixes over silencing the gate.
 **Read the surrounding product code** (callers, package role, feature ownership) — not only
 the two files on the violation edge.
 
+## When / not when
+
+| Use `/ark-fix` when… | Do **not** use it when… |
+|----------------------|-------------------------|
+| One change / small cluster just failed the gate | Bulk residual / many edges → `/ark-loop` or `/ark-autopilot` |
+| Need a structural fix (port, move, intent rename) | Map residual / pattern Shape plan → `/ark-explore` |
+| Judgment design for a known violation | Contract wrong / false-green → STOP to `/ark-contract` / `/ark-adopt` |
+
+When the fix is really a **Shape** extraction (I/O out of routes, god module split), write an
+**extraction card** (pilot, success signal, kill-switch) before editing — same spirit as explore §G.
 
 ## Dual engine (mandatory)
 

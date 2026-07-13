@@ -1,12 +1,15 @@
 ---
 name: ark-runtime
-description: Replace hand-rolled infra with the Ark runtime kernel — event bus, outbox, audit, sagas, projections, policies, NestJS. Finds candidates, wires one, verifies.
-arkVersion: 2.9.1
+description: Evaluate the experimental Ark runtime kernel against hand-rolled event bus, outbox, audit, saga, projection, policy, or NestJS code. Finds one candidate, wires one, verifies.
+arkVersion: 3.0.0
 ---
 
-# /ark-runtime — Adopt the runtime kernel (opt-in features)
+# /ark-runtime — Evaluate the runtime kernel (experimental opt-in)
 
-`arkgate` is not just static checking: it ships a runtime kernel
+The runtime kernel is currently **experimental** and is not required for ArkGate enforcement or
+presented as production-ready. Use this skill only when the user explicitly wants to evaluate it.
+
+`arkgate` ships the experimental runtime kernel
 (`createArkKernel`) with an event bus, event contracts, outbox, audit trail,
 policy engine, workflow/saga coordination, projections, observability hooks,
 and NestJS adapters. This skill migrates hand-rolled versions of those to the
@@ -44,12 +47,12 @@ the same files or weaken the gate.
 2. **Pick ONE target** — the smallest, most self-contained candidate (fewest
    call sites). Migrating everything at once is how adoptions die. List the
    rest as follow-ups in the report.
-3. **Migrate** — import from `arkgate` (root export) or
+3. **Migrate** — import from `arkgate/runtime` (preferred experimental subpath) or
    `arkgate/nestjs`, and read the package's `docs/agent-guide.md`
    (in `node_modules/arkgate/docs/`) for the runtime API before
    writing code. Wire the kernel at the composition root; keep the domain
    ignorant of it (handlers/ports, not kernel imports inside domain code —
-   the write gate will enforce this anyway). Note: the kernel bounds in-memory
+   the architecture check enforces this; Claude/Grok hooks can block it earlier). Note: the kernel bounds in-memory
    history by default (`maxHistorySize` 1000); mention this if the hand-rolled
    version retained everything.
 4. **Delete the hand-rolled version** once call sites are moved — the point is

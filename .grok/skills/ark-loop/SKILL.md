@@ -1,7 +1,7 @@
 ---
 name: ark-loop
 description: Drive ark-check --plan to zero active violations. Read real source, auto-apply only mechanical-safe kinds, design judgment from the product tree. CLI validates — you edit code.
-arkVersion: 2.9.1
+arkVersion: 3.0.0
 ---
 
 # /ark-loop — Apply the plan safely
@@ -13,6 +13,17 @@ Deterministic kinds stay **tight**. Your job is still **exploratory on the files
 importers/targets, see if the plan step is a symptom of wrong shape / false Domain / I/O
 under Application — escalate to `/ark-contract` or `/ark-explore` when the wall is structural.
 
+## When / not when
+
+| Use `/ark-loop` when… | Do **not** use it when… |
+|-----------------------|-------------------------|
+| Plan A has steps; drive to `goal.met` | Plan A empty — **stop**; residual Shape → `/ark-explore` / `/ark-autopilot` B |
+| Mechanical-safe + approved judgment only | Full product recon first → explore inside `/ark-autopilot` |
+| User already has a plan and wants the apply loop | Brownfield contract false-green → `/ark-adopt` |
+
+**Empty plan is not success for the product** — only for *edge remediation*. If `goal.met` and
+you still see design-weak smells while looping: do **not** invent mechanical-safe kinds; hand off
+`/ark-explore` shape-focus or `/ark-autopilot` for dual-plan B.
 
 ## Related onboarding
 
@@ -66,12 +77,14 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 | `pure-type-file-relocate` | Relocate pure-type file to owning layer (or rename out of false Domain globs) |
 | `import-type-from-pure-type-module` | Convert value import of pure-type module to `import type` |
 | `import-type-of-type-exports` | Convert value-syntax named import/export of type-only exports from a mixed module to `import type` / `export type` |
+| *(none for port-proof)* | **W6** `port-proof-inject-binding` is **judgment** (arity change) — propose inject; do not auto-apply |
 
-Never auto: value imports (including mixed bindings with values), dynamic import/require, forbidden globals, cycles, infra moves.
+Never auto: free value uses of imports, multi-import files, dynamic import/require, forbidden globals, cycles, port-proof inject, multi-file adapter scaffolding without proof.
 
 ## Steps
 
-1. **Plan** — `ark-check --plan --json` (+ `--baseline` if used). If `goal.met`, stop.
+1. **Plan** — `ark-check --plan --json` (+ `--baseline` if used). If `goal.met`: stop **A**;
+   if design-weak residual is visible, hand off explore/autopilot B — do not claim architecture done.
 2. **Worktree** — prefer discardable git worktree.
 3. **Apply mechanical-safe** one-by-one with validate/rollback.
 4. **Judgment** — propose with source-based design; apply only if user approved (or parent autopilot said full apply).

@@ -1,10 +1,17 @@
 ---
 name: ark-place
 description: "Where does new code go? Names the layer, directory, and naming for a new artifact from the contract, and scaffolds it there. Autonomous."
-arkVersion: 2.9.1
+arkVersion: 3.0.0
 ---
 
 # /ark-place — Where does this code go?
+
+## When / not when
+
+| Use `/ark-place` when… | Do **not** use it when… |
+|------------------------|-------------------------|
+| New artifact: where + scaffold under contract | Existing violation fix → `/ark-fix` |
+| Naming / directory for a known kind | Contract layers wrong → `/ark-contract`; full shape choice greenfield → `/ark-architect` |
 
 The user describes something they need to build (a saga, a background job, an
 event handler, a repository, an HTTP client, a use case, a projection, …).

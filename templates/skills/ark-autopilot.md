@@ -1,6 +1,6 @@
 ---
 name: ark-autopilot
-description: End-to-end architecture co-pilot — decision-grade explore first, dual plan (remediation + pattern improvements), mechanical-safe fixes, judgment design. CLI is a sensor; you read and remediate files.
+description: End-to-end co-pilot — explore first, dual plan A remediation + B pattern/Shape bets, mechanical-safe fixes, judgment design. Empty plan A is not healthy if design-weak. CLI is a sensor; you read and remediate files.
 ---
 
 # /ark-autopilot — Get to a sound architecture, end to end
@@ -11,15 +11,23 @@ execute **judgment** fixes you design from reading source (still validate with a
 never weaken the gate).
 
 **Not a plan grinder.** Empty `--plan` does **not** mean “architecture is healthy” without
-the explore pass and dual-plan section B (pattern bets).
+the explore pass and dual-plan section B (pattern / Shape bets).
 
+## When / not when
+
+| Use `/ark-autopilot` when… | Do **not** use it when… |
+|----------------------------|-------------------------|
+| “Make architecture sound” end-to-end | Map only, no apply → `/ark-explore` |
+| Brownfield or greenfield with apply | Only fitness numbers → `/ark-coverage` |
+| User wants A + B planned and A executed | Single edge fix → `/ark-fix`; plan A only → `/ark-loop` |
+| Spaghetti under ENFORCE: Shape work with user ok on B | Contract false-green first → `/ark-adopt` / `/ark-contract` STOP paths |
 
 ## Related onboarding
 
 - **Greenfield:** `/ark-architect` or `ark-check --recommend` / `ark start`.
 - **Brownfield:** `/ark-adopt` — match contract to reality; do not force a starter preset.
-- **Deep map only:** `/ark-explore` — full recon report without applying fixes.
-- **Adoption metrics only:** `/ark-coverage` — governed% + capability gaps (feeds dual plan B).
+- **Deep map only:** `/ark-explore` — full recon / dual-plan seed without applying.
+- **Adoption fitness only:** `/ark-coverage` — governed% + capability gaps (not pattern dual-plan).
 - **Default path:** `ark start` → `/ark-autopilot` → `ark-check --doctor`.
 
 ## Dual engine (mandatory)
@@ -64,30 +72,34 @@ Useful first wave: **core product tree** | **field path** (examples/starters) | 
 
 Do this **before** grinding plan A — plan lists *violations*, not *product reality*.  
 Use the **`/ark-explore` decision-grade bar** (compressed into the autopilot report, not optional fluff).
+Include explore **§G** when spaghetti / design-weak signals fire.
 
-1. **Headline** — product one-liner + honesty (mode, governed%, false-green / false-promise risk).
-2. **Map** — entry points, lived layout vs globs (one screen).
-3. **Field path** — if `examples/` / gallery / starter docs exist: open ≥2, **run** their check when cheap; flag soft-green or broken demos. Else `Field path: n/a`.
-4. **Agent/gate reality** — installed hooks vs install templates (e.g. `--hook` vs `--hook-repair`); MCP; CI gate present.
-5. **Coupling** — fan-in / exports / importers for hotspots (LOC alone is a hint).
-6. **False-green soft block** — doctor/coverage: empty Domain/Persistence while Application owns I/O (`airtable`, `supabase`, `prisma`, `drizzle`, `repositories`, …). Doctor gap id: `contract-false-green-io-under-application`. If so:
+1. **Headline** — product one-liner + honesty (mode, governed%, false-green / false-promise /
+   **ENFORCE·design-weak** risk).
+2. **Map** — entry points, lived layout vs globs (one screen). **Concurrent patterns** table when ≥2 styles.
+3. **Phase ladder** — name **Align | Stabilize | Shape** (explore §G).
+4. **Field path** — if `examples/` / gallery / starter docs exist: open ≥2, **run** their check when cheap; flag soft-green or broken demos. Else `Field path: n/a` + internal norm.
+5. **Agent/gate reality** — installed hooks vs install templates (e.g. `--hook` vs `--hook-repair`); MCP; CI gate present.
+6. **Coupling** — fan-in / exports / importers for hotspots (LOC alone is a hint).
+7. **False-green soft block** — doctor/coverage: empty Domain/Persistence while Application owns I/O (`airtable`, `supabase`, `prisma`, `drizzle`, `repositories`, …). Doctor gap id: `contract-false-green-io-under-application`. If so:
    **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
-7. **Seed dual plan B** — 2–5 pattern / evolution bets ranked (impact × effort × enforceability).
+8. **Seed dual plan B** — 2–5 pattern / Shape bets ranked (impact × effort × enforceability). Each B row needs pilot + success signal; I/O bets need an **extraction card** (explore §G).
 
 Min bar: **≥12 source files** across **≥4 meaningful directories** (not only files in `steps[]`).  
-Standalone long report: `/ark-explore`. Adoption numbers deep-dive: `/ark-coverage`.
+Standalone long report: `/ark-explore`. Adoption fitness only: `/ark-coverage`.
 
 ## Dual plan (always emit)
 
 | Section | Source | Question | Auto-apply? |
 |---------|--------|----------|-------------|
-| **A. Remediation** | `--plan --json` + opened step files | What must change so the gate is honest? | Only `mechanical-safe` by default |
-| **B. Pattern / evolution** | Explore + coverage/doctor | What existing patterns should improve even if A is empty? | **Never** as mechanical-safe |
+| **A. Remediation** | `--plan --json` + opened step files | What must change so the **gate** is honest? | Only `mechanical-safe` by default |
+| **B. Pattern / Shape** | Explore §B/§G (not coverage alone) | What **design** must improve even if A is empty? | **Never** as mechanical-safe |
 
 **Section A** — group by edge; treat `peerIsolation` / cross-slice as **judgment**.  
-**Section B** examples: peerIsolation, move rules out of UI, strengthen starter/preset rules, write-path repair, split god orchestration modules, Domain placement / intents, import surface (`/runtime` vs root). Cap **3–5** B rows. Each row: evidence path + **así te lo re-soluciono** + next skill/command + success signal.
+**Section B** examples: choose golden pattern + pilot migrate-on-touch, peerIsolation, move rules out of UI, write-path repair, split god modules, Domain placement / intents, facade SQL → port/adapter (extraction card). Cap **3–5** B rows. Each row: evidence path + **así te lo re-soluciono** + next skill/command + **success signal** + **pilot** (+ kill-switch if new layer).
 
-B does **not** count as “architecture healthy finished.” Report B as `proposed | deferred | applied-with-user-ok`.
+B does **not** count as “architecture healthy finished.” Report B as `proposed | deferred | applied-with-user-ok`.  
+When A is empty and B is non-empty: status is **`goal.met on edges · Shape residual open`** — never “done” without listing B.
 
 ## Origin snapshot (day-zero picture)
 
@@ -136,12 +148,13 @@ B does **not** count as “architecture healthy finished.” Report B as `propos
 
 ## Done criteria
 
-- Explore pass completed (decision-grade map + paths + field path or n/a + B seeds).
-- Dual plan emitted (A and/or B; if both empty, one-line justification).
+- Explore pass completed (decision-grade map + paths + field path or n/a + phase + B seeds).
+- Dual plan emitted (A and/or B; if both empty, one-line justification with evidence no design-weak smells).
 - Origin present under `.ark/reports/origin.*` (frozen this run or earlier).
 - Every applied A step validated by real `ark-check`.
 - Final plan `goal.met` true **or** remaining A steps listed with file-level proposals.
-- Open **B opportunities** listed; report HTML paths cited.
+- Open **B / Shape opportunities** listed with success signals; report HTML paths cited when used.
+- If A empty and design-weak present: B listed — **Incomplete?** must not claim full healthy stop.
 
 ## Completion contract (skill incomplete if missing)
 

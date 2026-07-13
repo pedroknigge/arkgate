@@ -24,19 +24,19 @@ gate. The optional runtime is not the product and must not determine the package
 
 ### Product boundary
 
-**Build now**
+**Build now (post-3.0)**
 
-- One versioned architecture contract.
-- One semantic analysis engine shared by CLI, MCP, ESLint, hooks, and CI.
-- Honest host-specific enforcement capabilities.
-- Preview-first onboarding with measured governed coverage.
-- Reproducible external evidence.
+- Deeper **exploratory** agent skills for design-correct residual under ENFORCE (path
+  non-deterministic: concurrent patterns, Shape dual-plan B, extraction cards).
+- Clear skill routing so skills do not overlap or claim “healthy” from empty plan A alone.
+- Later queue: deterministic design-smell sensors, stable plan-B IR, eval fixtures, then
+  productized extraction cards — without silent judgment auto-apply or a general codemod.
 
-**Freeze until the exit gate is met**
+**Still frozen (do not start without a new item)**
 
 - New architecture presets or policy packs.
-- New agent skills beyond consolidating the current set.
-- New runtime features.
+- New skill *names* beyond consolidating/clarifying the current 13 (prefer deepen + route).
+- New runtime features (optional kernel stays experimental).
 - New report polish that does not expose required evidence.
 - Org control-plane, polyglot support, or broad codemods.
 
@@ -172,9 +172,102 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 22 | `V05` | `done` | M | all prior items | Independent audit passed; PR #49 CI green and beta exit authorized |
 | 23 | `B01` | `done` | L | `V05` failure evidence | Approved-adoption coverage recovered without lowering the exit criterion |
 
-**Next:** no roadmap implementation item remains. Stable `3.0.0` was released with signed tag,
-GitHub Release, npm publication, and MCP Registry publication. Any further work requires a newly
-approved roadmap item.
+### Phase P — post-3.0 pattern depth (contract + lived design)
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 24 | `P01` | `done` | M | 3.0.0 released | Skills explore non-deterministic residual and plan Shape dual-plan B; routing de-overlaps skills |
+| 25 | `P02` | `todo` | M | `P01` | Doctor reports deterministic design smells (path vs design); ENFORCE can be design-weak |
+| 26 | `P03` | `todo` | M | `P02` | Stable JSON IR for plan **B** pattern bets (pilot, success signal, kill-switch); never mechanical-safe |
+| 27 | `P04` | `todo` | M | `P03` | Eval fixtures: ENFORCE + design-weak and spaghetti concurrent patterns; CI guards skill/CLI honesty |
+| 28 | `P05` | `todo` | M | `P03` | Extraction-card playbook productized in docs + judgment assists (no general codemod) |
+
+**Next:** `P02` — deterministic design smells in doctor (`P01` done). Stable `3.0.0` is published;
+Phase P is the post-release queue for design-depth under an honest gate.
+
+---
+
+## Phase P — post-3.0 pattern depth
+
+### P01 — Skills: exploratory depth + routing clarity
+
+- **Status:** `done`
+- **Closes:** agent ambiguity between explore / coverage / think / adopt / autopilot; empty plan A
+  celebrated as “architecture healthy”; weak dual-plan B on spaghetti installs
+- **Likely files:** `templates/skills/*.md`, `bin/lib/ci-and-commands.mjs` (skill routing),
+  `README.md` skill table, `docs/agent-guide.md`, `tests/unit/static-check/skillsSurface.test.ts`
+
+**Implementation**
+
+1. Add **When / not when** to every overlapping skill; keep 13 names (no new skills).
+2. Make `/ark-explore` the canonical non-deterministic recon: path vs design, concurrent patterns,
+   Align→Stabilize→**Shape** ladder, auto dual-plan seed on spaghetti signals, extraction cards.
+3. Narrow `/ark-coverage` to Ark **fitness** (governed/gates/baseline); handoff explore for Shape.
+4. Narrow `/ark-think` to **one** decision (2–3 options); handoff explore for full dual-plan.
+5. Require adopt/autopilot to seed or execute dual-plan **B** when design-weak residual remains.
+6. Update full-install `agentInstructions` routing table: no overlapping skills; Shape honesty.
+7. Tests lock routing phrases + explore/coverage/think/adopt/autopilot vocabulary.
+
+**Acceptance**
+
+- Skills surface tests pass; every critical skill has When/not when.
+- Explore documents Shape ladder + extraction cards + design-weak under ENFORCE.
+- Coverage explicitly defers pattern dual-plan to explore.
+- Routing table names Align/Stabilize/Shape and forbids treating empty A as healthy finished.
+- No new skill basename; no gate weakening; no new mechanical-safe kinds.
+
+**Verify**
+
+```bash
+npx vitest run tests/unit/static-check/skillsSurface.test.ts
+npm run check:architecture
+```
+
+**Local evidence (2026-07-13):** `skillsSurface` 11/11 pass; `check:architecture` pass. Explore
+§G Shape ladder + extraction cards shipped; coverage/think narrowed; adopt/autopilot seed B;
+routing table de-overlaps; no new skill names.
+
+### P02 — Deterministic design smells in doctor
+
+- **Status:** `todo`
+- **Depends on:** `P01`
+- **Likely files:** `bin/lib/doctor-plan.mjs`, analysis sensors, doctor JSON schema, unit tests
+
+**Outcome:** doctor emits stable smell ids (e.g. `io-under-application` already, plus
+`handler-in-persistence`, `god-module` heuristics, `domain-logic-in-ui` candidates) so
+“ENFORCE · design-weak” is machine-visible without LLM prose.
+
+**Acceptance:** doctor JSON documents smells with paths; false-positive rate bounded by fixtures;
+skills reference doctor ids when present without requiring them for agent-detected smells.
+
+### P03 — Stable plan-B pattern bet IR
+
+- **Status:** `todo`
+- **Depends on:** `P02`
+- **Likely files:** plan output in CLI/MCP, analysis-result schema if needed, docs/package-surface
+
+**Outcome:** `ark-check --plan --json` (or sibling flag) can include `patternBets[]` with
+`pilot`, `successSignal`, `killSwitch`, `neverMechanicalSafe: true`. Additive within major.
+
+**Acceptance:** schema + fixture; never auto-applied; autopilot/loop consume without inventing kinds.
+
+### P04 — Eval honesty for design-weak ENFORCE
+
+- **Status:** `todo`
+- **Depends on:** `P03`
+- **Likely files:** `eval/cases/*`, skills surface or agent eval prompts, CI shard if cheap
+
+**Outcome:** at least one synthetic spaghetti fixture where plan A is empty and design smells /
+patternBets are non-empty; agent or golden report cannot call the tree “healthy finished.”
+
+### P05 — Extraction cards as productized judgment assist
+
+- **Status:** `todo`
+- **Depends on:** `P03`
+- **Likely files:** `docs/brownfield-adoption.md`, skill cross-links, optional MCP judgmentBrief field
+
+**Outcome:** I/O and god-module judgment has a fixed card template (pilot, move bytes, do-not list,
+success, kill-switch) in docs and skills; still human/agent applied, no bulk codemod engine.
 
 ---
 
@@ -1033,10 +1126,10 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: No implementation item scheduled
-First result: define and approve a post-3.0 roadmap item before changing product behavior
-Then: create a scoped implementation plan and its acceptance evidence
-Primary files: whatever the approved post-3.0 item names
-Required finish: item acceptance + common merge gate green on the same commit
-Released baseline: npm arkgate@3.0.0, signed tag v3.0.0, GitHub Release, and docs/releases/3.0.0.md agree
+Item: P02 — Deterministic design smells in doctor (todo; next when started)
+First result: doctor JSON smell ids with path evidence + fixtures (no false ENFORCE healthy)
+Then: wire skills to prefer doctor ids when present; keep agent-detected smells in explore
+Primary files: bin/lib/doctor-plan.mjs, analysis sensors, doctor tests, eval fixtures seed
+Required finish: P02 acceptance + common merge gate green on the same commit
+Released baseline: npm arkgate@3.0.0; P01 skills depth already on main after this change lands
 ```
