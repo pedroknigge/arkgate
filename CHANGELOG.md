@@ -4,7 +4,27 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
-No changes are scheduled after the prepared stable release.
+No changes are scheduled after 3.0.1.
+
+## 3.0.1 — 2026-07-13
+
+### Added
+
+- **Design fitness (doctor):** deterministic `designSmells` and `designFitness` on
+  `ark-check --doctor --json` / human doctor. Edge-clean ENFORCE can report
+  **ENFORCE · design-weak** when lived design residual remains (e.g. facade SQL in routes,
+  handlers in persistence, god modules, domain logic in UI, soft contract, mixed patterns).
+- **Plan pattern B:** `ark-check --plan --json` includes `patternBets[]` with pilot, success
+  signal, kill-switch, and `neverMechanicalSafe: true`. Never auto-applied by loop/autoPatch;
+  `goal.met` remains edge honesty only.
+- **Skills (Phase P):** clearer When/not when routing; explore Shape ladder and dual-plan B;
+  coverage narrowed to Ark fitness; adopt/autopilot seed Shape residual; extraction-card
+  template in brownfield docs and skills.
+- **Fixture:** `tests/fixtures/design-weak-enforce` for ENFORCE + design-weak honesty.
+
+### Fixed
+
+- Module budget for `bin/lib/doctor-plan.mjs` raised to match the design-depth surface.
 
 ## 3.0.0 — 2026-07-13
 
