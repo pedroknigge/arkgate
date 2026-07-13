@@ -761,6 +761,15 @@ The audit implementation is present in `scripts/beta-exit-audit.mjs`, with its c
 
 V05 is therefore blocked, not done. ArkGate remains beta and stable publication is not authorized.
 
+### Post-B01 re-audit (2026-07-13)
+
+Candidate `42c77f62384e40ffb71e16388e6530f34253f9b9` has fresh adoption evidence under
+`eval/adoption/results/42c77f62384e40ffb71e16388e6530f34253f9b9/`: 97% median governed coverage,
+583 ms median first-green time, all four hosts, and zero P0/P1. Its binary audit at
+`eval/beta-exit/42c77f62384e40ffb71e16388e6530f34253f9b9/audit.json` passes candidate identity,
+adoption-candidate binding, host profiles, and release artifacts. The decision remains `fail` only
+because no independent reviewer declaration was supplied. ArkGate remains beta.
+
 ## 12. B01 - stabilize representative approved adoption
 
 ### Outcome

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "id": "L02",
+  "repository": "https://github.com/colinhacks/zod.git",
+  "repositorySha": "912f0f51b0ced654d0069741e7160834dca742ee",
+  "projectPath": ".",
+  "candidateSha": "42c77f62384e40ffb71e16388e6530f34253f9b9",
+  "shape": "library",
+  "size": "medium",
+  "host": "grok",
+  "packageManager": "pnpm",
+  "expectedInstallCommand": "pnpm install --frozen-lockfile",
+  "treeFiles": 580,
+  "candidateInstallMs": 705,
+  "preview": {
+    "exitCode": 0,
+    "changes": 4,
+    "projectedCoverage": {
+      "percent": 100,
+      "classifiedFiles": 167,
+      "totalFiles": 167
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 4,
+    "firstGreenMsExcludingDependencyInstall": 1628
+  },
+  "strictMerge": {
+    "exitCode": 1
+  },
+  "governedCoverage": {
+    "percent": 100,
+    "classifiedFiles": 167,
+    "totalFiles": 167
+  },
+  "mergeGateState": "adapt",
+  "finalCiState": "not-run-external-ci; local-strict-merge-fail",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [
+    "Retained as Adapt after local strict-merge failure; no rule override or bypass was applied."
+  ],
+  "issues": [
+    {
+      "severity": "P2",
+      "class": "repository-incompatibility",
+      "message": "local strict-merge did not pass; retained as Adapt without bypass"
+    }
+  ],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": "{\n  \"schemaVersion\": \"1.0\",\n  \"valid\": false,\n  \"diagnostics\": [\n    {\n      \"ruleId\": \"FORBIDDEN_GLOBAL\",\n      \"severity\": \"error\",\n      \"message\": \"DomainModel must not use the ambient global \\\"process\\\".\",\n      \"location\": {\n        \"file\": \"packages/tsc/bisect.ts\",\n        \"line\": 5,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"process\",\n        \"fromLayer\": \"DomainModel\"\n      }\n    },\n    {\n      \"ruleId\": \"FORBIDDEN_GLOBAL\",\n      \"severity\": \"error\",\n      \"message\": \"DomainModel must not use the ambient global \\\"process\\\".\",\n      \"location\": {\n        \"file\": \"packages/tsc/bisect.ts\",\n        \"line\": 54,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"process\",\n        \"fromLayer\": \"DomainModel\"\n      }\n    },\n    {\n      \"ruleId\": \"FORBIDDEN_GLOBAL\",\n      \"severity\": \"error\",\n      \"message\": \"DomainModel must not use the ambient global \\\"process\\\".\",\n      \"location\": {\n        \"file\": \"packages/tsc/bisect.ts\",\n        \"line\": 74,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"process\",\n        \"fromLayer\": \"DomainModel\"\n      }\n    },\n    {\n      \"ruleId\": \"FORBIDDEN_GLOBAL\",\n      \"severity\": \"error\","
+  }
+}

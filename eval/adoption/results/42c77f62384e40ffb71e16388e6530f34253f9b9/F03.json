@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "id": "F03",
+  "repository": "https://github.com/RequestNetwork/easy-invoice.git",
+  "repositorySha": "42ad4d0ece43552322add9d089c9e8e8cdcca812",
+  "projectPath": ".",
+  "candidateSha": "42c77f62384e40ffb71e16388e6530f34253f9b9",
+  "shape": "frontend",
+  "size": "medium",
+  "host": "claude",
+  "packageManager": "npm",
+  "expectedInstallCommand": "npm ci",
+  "treeFiles": 269,
+  "candidateInstallMs": 705,
+  "preview": {
+    "exitCode": 0,
+    "changes": 5,
+    "projectedCoverage": {
+      "percent": 98,
+      "classifiedFiles": 204,
+      "totalFiles": 208
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 5,
+    "firstGreenMsExcludingDependencyInstall": 1207
+  },
+  "strictMerge": {
+    "exitCode": 1
+  },
+  "governedCoverage": {
+    "percent": 98,
+    "classifiedFiles": 204,
+    "totalFiles": 208
+  },
+  "mergeGateState": "adapt",
+  "finalCiState": "not-run-external-ci; local-strict-merge-fail",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [
+    "Retained as Adapt after local strict-merge failure; no rule override or bypass was applied."
+  ],
+  "issues": [
+    {
+      "severity": "P2",
+      "class": "repository-incompatibility",
+      "message": "local strict-merge did not pass; retained as Adapt without bypass"
+    }
+  ],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": "{\n  \"schemaVersion\": \"1.0\",\n  \"valid\": false,\n  \"diagnostics\": [\n    {\n      \"ruleId\": \"CONFIG_LAYER_PATTERN_NO_MATCHES\",\n      \"severity\": \"warning\",\n      \"message\": \"Layer \\\"ApplicationOrchestration\\\" pattern \\\"src/features/**\\\" matched no included files.\",\n      \"location\": {\n        \"file\": \"<unknown>\",\n        \"line\": 1,\n        \"column\": 1\n      },\n      \"evidence\": {}\n    },\n    {\n      \"ruleId\": \"CONFIG_LAYER_PATTERN_NO_MATCHES\",\n      \"severity\": \"warning\",\n      \"message\": \"Layer \\\"ApplicationOrchestration\\\" pattern \\\"src/services/**\\\" matched no included files.\",\n      \"location\": {\n        \"file\": \"<unknown>\",\n        \"line\": 1,\n        \"column\": 1\n      },\n      \"evidence\": {}\n    },\n    {\n      \"ruleId\": \"CONFIG_LAYER_PATTERN_NO_MATCHES\",\n      \"severity\": \"warning\",\n      \"message\": \"Layer \\\"ApplicationOrchestration\\\" pattern \\\"src/use-cases/**\\\" matched no included files.\",\n      \"location\": {\n        \"file\": \"<unknown>\",\n        \"line\": 1,\n        \"column\": 1\n      },\n      \"evidence\": {}\n    },\n    {\n      \"ruleId\": \"CONFIG_LAYER_PATTERN_NO_MATCHES\",\n      \"severity\": \"warning\",\n      \"message\": \"Layer \\\"ApplicationOrchestration\\\" pattern \\\"src/core/**\\\" matched "
+  }
+}

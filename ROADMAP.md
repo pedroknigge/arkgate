@@ -931,6 +931,14 @@ coverage (two green cells and ten requiring adaptation), versus the required 90%
 no reviewer declaration exists. ArkGate remains beta. B01 is now closed with the evidence below;
 V05 still requires an independent reviewer to audit a frozen candidate from a clean checkout.
 
+**Post-B01 re-audit (2026-07-13):** Candidate `42c77f62384e40ffb71e16388e6530f34253f9b9`
+has a fresh, SHA-bound twelve-cell adoption result at
+`eval/adoption/results/42c77f62384e40ffb71e16388e6530f34253f9b9/summary.json`: 97% median
+governed coverage, 583 ms median first-green, all four hosts, and zero P0/P1. Its binary report at
+`eval/beta-exit/42c77f62384e40ffb71e16388e6530f34253f9b9/audit.json` passes candidate identity,
+adoption-to-candidate binding, host profiles, and release artifacts. It deliberately fails because
+the independent-review declaration is unverified. No beta or stable-release claim is authorized.
+
 ### B01 — Stabilize representative approved adoption
 
 - **Status:** `done`

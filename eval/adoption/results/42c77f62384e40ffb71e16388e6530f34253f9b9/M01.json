@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "id": "M01",
+  "repository": "https://github.com/stumpapp/stump.git",
+  "repositorySha": "f3a63a6a47f124861cab55c9eec11460894b1191",
+  "projectPath": ".",
+  "candidateSha": "42c77f62384e40ffb71e16388e6530f34253f9b9",
+  "shape": "monorepo",
+  "size": "large",
+  "host": "grok",
+  "packageManager": "yarn",
+  "expectedInstallCommand": "yarn install --immutable",
+  "treeFiles": 2559,
+  "candidateInstallMs": 705,
+  "preview": {
+    "exitCode": 0,
+    "changes": 5,
+    "projectedCoverage": {
+      "percent": 100,
+      "classifiedFiles": 1487,
+      "totalFiles": 1488
+    }
+  },
+  "apply": {
+    "exitCode": 0,
+    "filesChanged": 5,
+    "firstGreenMsExcludingDependencyInstall": 5036
+  },
+  "strictMerge": {
+    "exitCode": 1
+  },
+  "governedCoverage": {
+    "percent": 100,
+    "classifiedFiles": 1487,
+    "totalFiles": 1488
+  },
+  "mergeGateState": "adapt",
+  "finalCiState": "not-run-external-ci; local-strict-merge-fail",
+  "falseBlocks": 0,
+  "bypasses": 0,
+  "manualDecisions": [
+    "Retained as Adapt after local strict-merge failure; no rule override or bypass was applied."
+  ],
+  "issues": [
+    {
+      "severity": "P2",
+      "class": "repository-incompatibility",
+      "message": "local strict-merge did not pass; retained as Adapt without bypass"
+    }
+  ],
+  "diagnostics": {
+    "preview": "",
+    "apply": "",
+    "strictMerge": "{\n  \"schemaVersion\": \"1.0\",\n  \"valid\": false,\n  \"diagnostics\": [\n    {\n      \"ruleId\": \"FORBIDDEN_GLOBAL\",\n      \"severity\": \"error\",\n      \"message\": \"DomainModel must not use the ambient global \\\"process\\\".\",\n      \"location\": {\n        \"file\": \"apps/expo/app/_layout.tsx\",\n        \"line\": 57,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"process\",\n        \"fromLayer\": \"DomainModel\"\n      }\n    },\n    {\n      \"ruleId\": \"FORBIDDEN_GLOBAL\",\n      \"severity\": \"error\",\n      \"message\": \"DomainModel must not use the ambient global \\\"Date.now\\\".\",\n      \"location\": {\n        \"file\": \"apps/expo/components/book/reader/epub/ReadiumReader.tsx\",\n        \"line\": 314,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"Date.now\",\n        \"fromLayer\": \"DomainModel\"\n      }\n    },\n    {\n      \"ruleId\": \"FORBIDDEN_GLOBAL\",\n      \"severity\": \"error\",\n      \"message\": \"DomainModel must not use the ambient global \\\"Date.now\\\".\",\n      \"location\": {\n        \"file\": \"apps/expo/components/book/reader/epub/ReadiumReader.tsx\",\n        \"line\": 329,\n        \"column\": 1\n      },\n      \"evidence\": {\n        \"target\": \"Date.now\",\n        \"fromLayer\": \"DomainModel\"\n      }"
+  }
+}
