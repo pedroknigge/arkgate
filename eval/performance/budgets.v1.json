@@ -5,7 +5,7 @@
     "node": "20",
     "measurement": "fresh child processes; Linux peak RSS from /usr/bin/time -f %M"
   },
-  "sampling": { "runs": 5 },
+  "sampling": { "runs": 5, "minIncrementalRuns": 20 },
   "scenarios": {
     "cold": { "size": 50000, "maxP95Ms": 30000 },
     "incremental": { "size": 10000, "maxP95Ms": 100 },
