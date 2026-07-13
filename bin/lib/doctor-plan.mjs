@@ -25,6 +25,12 @@ import {
   violationEdge,
 } from './violations.mjs';
 import { buildUnclassifiedSuggestions } from './suggestions.mjs';
+import {
+  detectDesignSmells,
+  buildPatternBetsFromSmells,
+  summarizeDesignFitness,
+  isDesignWeak,
+} from './design-smells.mjs';
 
 const color = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
@@ -142,7 +148,25 @@ export function runCoverage(root, config, files, rules, asJson) {
 // Co-pilot Phase F — turn active violations into a classified, ordered remediation PLAN with an
 // embedded GOAL. This is the `plan` primitive the future apply-loop (Phase H, `loop`) consumes
 // and the autopilot (Phase I) drives toward the `goal`. Read-only: it changes no files.
-export function buildRemediationPlan(root, activeViolations, governedPercent = null, totalFiles = null) {
+/**
+ * @param {string} root
+ * @param {object[]} activeViolations
+ * @param {number|null} [governedPercent]
+ * @param {number|null} [totalFiles]
+ * @param {object} [options]
+ * @param {object[]} [options.designSmells]
+ * @param {object[]} [options.patternBets]
+ * @param {object} [options.config]
+ * @param {string[]} [options.files]
+ * @param {object} [options.coverage]
+ */
+export function buildRemediationPlan(
+  root,
+  activeViolations,
+  governedPercent = null,
+  totalFiles = null,
+  options = {}
+) {
   // A plan with 0 violations but ~0% governed (or ZERO files in scope) is a FALSE green:
   // nothing is actually being checked. Treat as "not done — classify / fix include first."
   const governedLow = governedPercent != null && governedPercent < 50;
@@ -177,20 +201,54 @@ export function buildRemediationPlan(root, activeViolations, governedPercent = n
     judgment: countOf('judgment'),
     deferred: countOf('deferred'),
   };
+
+  // Plan B (pattern bets) — never mechanical-safe; additive within major (P03).
+  let designSmells = options.designSmells;
+  if (!designSmells && options.config && options.files) {
+    designSmells = detectDesignSmells(
+      root,
+      options.config,
+      options.files,
+      options.coverage ?? null
+    );
+  }
+  designSmells = designSmells ?? [];
+  const patternBets =
+    options.patternBets ?? buildPatternBetsFromSmells(designSmells);
+  const edgesMet = activeViolations.length === 0 && !notHonestlyEnforced;
+  const designWeak = isDesignWeak(designSmells, {
+    activeViolations: activeViolations.length,
+    governedPercent,
+    totalFiles,
+  });
+
+  let statement =
+    activeViolations.length > 0
+      ? `Resolve ${activeViolations.length} architecture violation(s) without weakening the contract.`
+      : emptyScope
+        ? 'No source files matched the contract include paths — this "clean" result checks nothing. Fix include/layers (monorepo → apps/packages, or /ark-adopt) so Ark has real code to govern.'
+        : governedLow
+          ? `No violations — but Ark governs only ${governedPercent}% of your code, so this "clean" result checks almost nothing. Classify the rest (ark-check --coverage, then /ark-adopt) so it's actually enforced.`
+          : 'No active violations — the architecture already meets its contract.';
+  if (designWeak) {
+    statement =
+      'No active edge violations — contract edges are clean, but design smells remain (ENFORCE · design-weak). Shape residual is plan B only; not healthy finished.';
+  }
+
   return {
     version: '1',
     goal: {
-      statement:
-        activeViolations.length > 0
-          ? `Resolve ${activeViolations.length} architecture violation(s) without weakening the contract.`
-          : emptyScope
-            ? 'No source files matched the contract include paths — this "clean" result checks nothing. Fix include/layers (monorepo → apps/packages, or /ark-adopt) so Ark has real code to govern.'
-            : governedLow
-              ? `No violations — but Ark governs only ${governedPercent}% of your code, so this "clean" result checks almost nothing. Classify the rest (ark-check --coverage, then /ark-adopt) so it's actually enforced.`
-              : 'No active violations — the architecture already meets its contract.',
-      // The loop's termination signal (Phase H): nothing left to remediate AND the contract
-      // actually governs real code. Empty scope or low coverage is not "met".
-      met: activeViolations.length === 0 && !notHonestlyEnforced,
+      statement,
+      // Edge remediation termination (Phase H). Design-weak does NOT flip met false
+      // (would break loop semantics) — it is reported separately for honesty.
+      met: edgesMet,
+      designWeak,
+      ...(designWeak
+        ? {
+            designWeakLabel:
+              'ENFORCE · design-weak — use patternBets / dual-plan B; never auto-apply as mechanical-safe',
+          }
+        : {}),
       ...(governedPercent != null ? { governedPercent } : {}),
       ...(totalFiles != null ? { totalFiles } : {}),
       ...(emptyScope ? { emptyScope: true } : {}),
@@ -198,17 +256,38 @@ export function buildRemediationPlan(root, activeViolations, governedPercent = n
       autoApplicable: counts.mechanicalSafe,
       needsDecision: counts.judgment,
       deferred: counts.deferred,
+      patternBetCount: patternBets.length,
     },
     counts,
     steps,
+    // Additive: pattern evolution bets derived from design smells (never auto).
+    patternBets,
+    designSmells,
   };
 }
 
 // `--plan`: print the classified remediation plan. Dual-focus output — a one-line headline
 // anyone can read, then the per-step detail a developer acts on. Read-only.
-export function runPlan(root, activeViolations, asJson, governedPercent = null, totalFiles = null) {
-  const plan = buildRemediationPlan(root, activeViolations, governedPercent, totalFiles);
+/**
+ * @param {object} [options] optional { config, files, coverage, designSmells, patternBets }
+ */
+export function runPlan(
+  root,
+  activeViolations,
+  asJson,
+  governedPercent = null,
+  totalFiles = null,
+  options = {}
+) {
+  const plan = buildRemediationPlan(
+    root,
+    activeViolations,
+    governedPercent,
+    totalFiles,
+    options
+  );
   // Honesty: a zero-violation plan with almost nothing governed is NOT "ok".
+  // design-weak still ok:true for edge goal.met, but JSON carries designWeak + patternBets.
   const planOk = plan.goal.met === true;
   if (asJson) {
     console.log(JSON.stringify({ ok: planOk, plan }, null, 2));
@@ -217,12 +296,27 @@ export function runPlan(root, activeViolations, asJson, governedPercent = null, 
   console.log(color.bold(`Ark plan — ${path.basename(path.resolve(root)) || '.'}`));
   console.log('');
   console.log(plan.goal.statement);
+  if (plan.goal.designWeak) {
+    console.log(
+      color.yellow(
+        `  ENFORCE · design-weak — ${plan.patternBets?.length ?? 0} pattern bet(s) (never auto-apply)`
+      )
+    );
+  }
   if (governedPercent != null) {
     const pctLabel =
       governedPercent < 50
         ? color.yellow(`Governed: ${governedPercent}% of in-scope files`)
         : color.dim(`Governed: ${governedPercent}% of in-scope files`);
     console.log(pctLabel);
+  }
+  if (plan.patternBets?.length && activeViolations.length === 0) {
+    console.log('');
+    console.log(color.bold('Pattern bets (B) — judgment only'));
+    for (const bet of plan.patternBets.slice(0, 5)) {
+      console.log(`  [decide] ${bet.smellId}  ${color.dim(bet.pilot)}`);
+      console.log(color.dim(`           success: ${bet.successSignal}`));
+    }
   }
   if (activeViolations.length === 0) return plan;
   console.log('');
@@ -245,7 +339,7 @@ export function runPlan(root, activeViolations, asJson, governedPercent = null, 
   console.log('');
   console.log(
     color.dim(
-      'Plan only — no files changed. "auto" = an agent can safely apply it; "decide" = your call.'
+      'Plan only — no files changed. "auto" = an agent can safely apply it; "decide" = your call. patternBets are never auto.'
     )
   );
   return plan;
@@ -283,6 +377,12 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const activeCount = violations.length - suppressed;
   const missingSkills = skillGaps.reduce((sum, gap) => sum + gap.missing, 0);
   const staleSkills = skillGaps.reduce((sum, gap) => sum + gap.stale, 0);
+  const designSmells = detectDesignSmells(root, config, files, cov);
+  const designFitness = summarizeDesignFitness(designSmells, {
+    activeViolations: activeCount,
+    governedPercent: cov.governed.percent,
+    totalFiles: cov.governed.totalFiles,
+  });
 
   if (asJson) {
     console.log(
@@ -304,6 +404,9 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
                 return p ? p.files / total : null;
               })(),
             }),
+            // Path-correct ENFORCE can still be design-weak (P02).
+            designFitness,
+            designSmells,
             governed: cov.governed,
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
@@ -412,12 +515,42 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     enforce:
       'Guard — contract coverage is honest and checked edges are clean. You do not pick this mode; you arrived here. Next: keep the host-appropriate write path and CI check on; only NEW violations should fail.',
   };
-  line(modeMark, `${mode.toUpperCase()} — ${modeHelp[mode]}`);
+  const modeTitle =
+    mode === 'enforce' && designFitness.designWeak
+      ? 'ENFORCE · design-weak'
+      : mode.toUpperCase();
+  line(
+    modeMark,
+    `${modeTitle} — ${
+      designFitness.designWeak
+        ? 'Guard on edges is honest, but design smells remain (Shape residual). You do not pick this mode. Next: /ark-explore dual-plan B or /ark-autopilot for pattern bets — never treat empty plan A as healthy finished.'
+        : modeHelp[mode]
+    }`
+  );
   if (emptyScope) {
     line(
       bad,
       'Empty scope: include paths match 0 source files — a green check is meaningless until include/layers match the tree (monorepo → apps/packages, or /ark-adopt).'
     );
+  }
+
+  console.log('');
+  console.log(color.bold('Design fitness'));
+  if (designSmells.length === 0) {
+    line(ok, designFitness.label);
+  } else {
+    line(designFitness.designWeak ? warn : warn, designFitness.label);
+    for (const smell of designSmells.slice(0, 5)) {
+      line(' ', color.dim(`[${smell.id}] ${smell.message}`));
+      if (smell.evidence?.length) {
+        line(' ', color.dim(`evidence: ${smell.evidence.slice(0, 4).join(', ')}`));
+      }
+    }
+    if (designFitness.designWeak) {
+      actions.push(
+        'shape residual: /ark-explore (shape-focus) or /ark-autopilot dual-plan B — pattern bets are never mechanical-safe'
+      );
+    }
   }
 
   console.log('');

@@ -1083,7 +1083,11 @@ async function main() {
           )
         );
       }
-      runPlan(root, [], args.json, cov.governed.percent, cov.governed.totalFiles);
+      runPlan(root, [], args.json, cov.governed.percent, cov.governed.totalFiles, {
+        config,
+        files,
+        coverage: cov,
+      });
       return;
     }
     console.error(
@@ -1214,7 +1218,11 @@ async function main() {
 
   if (args.plan) {
     const cov = computeCoverage(root, config, files, rules);
-    runPlan(root, activeViolations, args.json, cov.governed.percent, cov.governed.totalFiles);
+    runPlan(root, activeViolations, args.json, cov.governed.percent, cov.governed.totalFiles, {
+      config,
+      files,
+      coverage: cov,
+    });
     return;
   }
 

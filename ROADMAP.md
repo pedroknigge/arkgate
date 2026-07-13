@@ -177,7 +177,7 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 24 | `P01` | `done` | M | 3.0.0 released | Skills explore non-deterministic residual and plan Shape dual-plan B; routing de-overlaps skills |
-| 25 | `P02` | `todo` | M | `P01` | Doctor reports deterministic design smells (path vs design); ENFORCE can be design-weak |
+| 25 | `P02` | `done` | M | `P01` | Doctor reports deterministic design smells (path vs design); ENFORCE can be design-weak |
 | 26 | `P03` | `todo` | M | `P02` | Stable JSON IR for plan **B** pattern bets (pilot, success signal, kill-switch); never mechanical-safe |
 | 27 | `P04` | `todo` | M | `P03` | Eval fixtures: ENFORCE + design-weak and spaghetti concurrent patterns; CI guards skill/CLI honesty |
 | 28 | `P05` | `todo` | M | `P03` | Extraction-card playbook productized in docs + judgment assists (no general codemod) |
@@ -229,16 +229,19 @@ routing table de-overlaps; no new skill names.
 
 ### P02 — Deterministic design smells in doctor
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `P01`
-- **Likely files:** `bin/lib/doctor-plan.mjs`, analysis sensors, doctor JSON schema, unit tests
+- **Likely files:** `bin/lib/design-smells.mjs`, `bin/lib/doctor-plan.mjs`, `tests/unit/static-check/designSmells.test.ts`
 
-**Outcome:** doctor emits stable smell ids (e.g. `io-under-application` already, plus
-`handler-in-persistence`, `god-module` heuristics, `domain-logic-in-ui` candidates) so
-“ENFORCE · design-weak” is machine-visible without LLM prose.
+**Outcome:** doctor emits stable smell ids (`facade-sql-in-routes`, `handler-in-persistence`,
+`god-module`, `domain-logic-in-ui`, `io-under-application`, `mixed-pattern-cluster`,
+`soft-contract`) so “ENFORCE · design-weak” is machine-visible without LLM prose.
 
 **Acceptance:** doctor JSON documents smells with paths; false-positive rate bounded by fixtures;
 skills reference doctor ids when present without requiring them for agent-detected smells.
+
+**Local evidence (2026-07-13):** `designSmells.test.ts` 13/13; CLI `--doctor --json` on a fixture
+with prisma-in-route reports `designFitness.designWeak: true` and smell evidence paths.
 
 ### P03 — Stable plan-B pattern bet IR
 
