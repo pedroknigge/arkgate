@@ -376,3 +376,59 @@ function killSwitchFor(id) {
       return 'If pilot increases edge violations without design clarity, stop and re-map with /ark-explore';
   }
 }
+
+/**
+ * Honesty guard (P03/P04): refuse “healthy finished” claims when design residual remains.
+ * @returns {{ ok: true } | { ok: false, error: string }}
+ */
+export function assertNotHealthyFinishedIgnoringDesign(planOrDoctor) {
+  const designWeak =
+    planOrDoctor?.goal?.designWeak === true ||
+    planOrDoctor?.designFitness?.designWeak === true;
+  const bets =
+    planOrDoctor?.patternBets?.length ??
+    planOrDoctor?.goal?.patternBetCount ??
+    0;
+  const smells =
+    planOrDoctor?.designSmells?.length ?? planOrDoctor?.designFitness?.smellCount ?? 0;
+  const edgesMet =
+    planOrDoctor?.goal?.met === true ||
+    (planOrDoctor?.operatingMode === 'enforce' &&
+      (planOrDoctor?.violations?.active ?? 0) === 0);
+
+  if (edgesMet && (designWeak || bets > 0 || smells > 0)) {
+    return {
+      ok: false,
+      error:
+        'Cannot claim architecture healthy finished: edge goal.met/ENFORCE coexists with design-weak residual (designSmells / patternBets). Use dual-plan B; never auto-apply pattern bets.',
+    };
+  }
+  return { ok: true };
+}
+
+/**
+ * patternBets must never appear as mechanical-safe kinds (loop / autoPatch).
+ * @param {object[]} patternBets
+ * @param {string[]} mechanicalSafeKinds from remediation.MECHANICAL_SAFE_KINDS
+ */
+export function assertPatternBetsNeverMechanicalSafe(patternBets, mechanicalSafeKinds = []) {
+  const safe = new Set(mechanicalSafeKinds);
+  for (const bet of patternBets || []) {
+    if (bet.neverMechanicalSafe !== true) {
+      return {
+        ok: false,
+        error: `patternBet ${bet.id} missing neverMechanicalSafe: true`,
+      };
+    }
+    if (bet.class === 'mechanical-safe') {
+      return { ok: false, error: `patternBet ${bet.id} has class mechanical-safe` };
+    }
+    if (bet.remediationKind && safe.has(bet.remediationKind)) {
+      return {
+        ok: false,
+        error: `patternBet ${bet.id} uses mechanical-safe remediationKind ${bet.remediationKind}`,
+      };
+    }
+  }
+  return { ok: true };
+}

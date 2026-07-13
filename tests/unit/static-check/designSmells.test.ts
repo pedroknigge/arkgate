@@ -11,6 +11,8 @@ import {
   isDesignWeak,
   summarizeDesignFitness,
   DESIGN_SMELL_IDS,
+  assertNotHealthyFinishedIgnoringDesign,
+  assertPatternBetsNeverMechanicalSafe,
 } from '../../../bin/lib/design-smells.mjs';
 import {
   buildRemediationPlan,
@@ -18,6 +20,7 @@ import {
   runPlan,
   computeCoverage,
 } from '../../../bin/lib/doctor-plan.mjs';
+import { MECHANICAL_SAFE_KINDS } from '../../../bin/lib/remediation.mjs';
 
 const temps: string[] = [];
 
@@ -268,5 +271,40 @@ describe('summarizeDesignFitness', () => {
     const s = summarizeDesignFitness([], { activeViolations: 0, governedPercent: 100, totalFiles: 5 });
     expect(s.status).toBe('ok');
     expect(s.designWeak).toBe(false);
+  });
+});
+
+describe('patternBets non-auto contract (P03)', () => {
+  it('patternBets never collide with MECHANICAL_SAFE_KINDS', () => {
+    const bets = buildPatternBetsFromSmells(
+      DESIGN_SMELL_IDS.map((id) => ({
+        id,
+        severity: 'warn' as const,
+        message: id,
+        evidence: [`src/${id}.ts`],
+        fix: 'x',
+      }))
+    );
+    const guard = assertPatternBetsNeverMechanicalSafe(bets, MECHANICAL_SAFE_KINDS);
+    expect(guard.ok).toBe(true);
+    for (const kind of MECHANICAL_SAFE_KINDS) {
+      expect(bets.some((b) => b.remediationKind === kind)).toBe(false);
+    }
+  });
+
+  it('assertNotHealthyFinishedIgnoringDesign fails when designWeak under met edges', () => {
+    const bad = assertNotHealthyFinishedIgnoringDesign({
+      goal: { met: true, designWeak: true },
+      patternBets: [{ id: 'x', neverMechanicalSafe: true }],
+    });
+    expect(bad.ok).toBe(false);
+    expect(bad.error).toMatch(/healthy finished|design-weak/i);
+
+    const good = assertNotHealthyFinishedIgnoringDesign({
+      goal: { met: true, designWeak: false },
+      patternBets: [],
+      designSmells: [],
+    });
+    expect(good.ok).toBe(true);
   });
 });

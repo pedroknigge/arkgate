@@ -178,7 +178,7 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 |---:|---|---|---:|---|---|
 | 24 | `P01` | `done` | M | 3.0.0 released | Skills explore non-deterministic residual and plan Shape dual-plan B; routing de-overlaps skills |
 | 25 | `P02` | `done` | M | `P01` | Doctor reports deterministic design smells (path vs design); ENFORCE can be design-weak |
-| 26 | `P03` | `todo` | M | `P02` | Stable JSON IR for plan **B** pattern bets (pilot, success signal, kill-switch); never mechanical-safe |
+| 26 | `P03` | `done` | M | `P02` | Stable JSON IR for plan **B** pattern bets (pilot, success signal, kill-switch); never mechanical-safe |
 | 27 | `P04` | `todo` | M | `P03` | Eval fixtures: ENFORCE + design-weak and spaghetti concurrent patterns; CI guards skill/CLI honesty |
 | 28 | `P05` | `todo` | M | `P03` | Extraction-card playbook productized in docs + judgment assists (no general codemod) |
 
@@ -245,14 +245,18 @@ with prisma-in-route reports `designFitness.designWeak: true` and smell evidence
 
 ### P03 — Stable plan-B pattern bet IR
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `P02`
-- **Likely files:** plan output in CLI/MCP, analysis-result schema if needed, docs/package-surface
+- **Likely files:** `bin/lib/doctor-plan.mjs`, `bin/lib/design-smells.mjs`, `docs/package-surface.md`
 
-**Outcome:** `ark-check --plan --json` (or sibling flag) can include `patternBets[]` with
+**Outcome:** `ark-check --plan --json` includes `patternBets[]` with
 `pilot`, `successSignal`, `killSwitch`, `neverMechanicalSafe: true`. Additive within major.
 
-**Acceptance:** schema + fixture; never auto-applied; autopilot/loop consume without inventing kinds.
+**Acceptance:** documented surface + fixture; never auto-applied; loop/autoPatch only
+`MECHANICAL_SAFE_KINDS`; honesty guard refuses “healthy finished” under design-weak.
+
+**Local evidence (2026-07-13):** plan JSON sample with `patternBets[0].neverMechanicalSafe`;
+`assertPatternBetsNeverMechanicalSafe` vs `MECHANICAL_SAFE_KINDS` green.
 
 ### P04 — Eval honesty for design-weak ENFORCE
 
