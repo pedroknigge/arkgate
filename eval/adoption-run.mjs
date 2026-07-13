@@ -28,6 +28,7 @@ const args = {
   candidateSha: argValue(process.argv, '--candidate-sha'),
   dryRun: process.argv.includes('--dry-run'),
   keep: process.argv.includes('--keep'),
+  resume: process.argv.includes('--resume'),
 };
 
 function run(command, argv, options = {}) {
@@ -301,11 +302,19 @@ function main() {
     const candidate = { sha: sourceSha, tarballSha256: packed.tarballSha256, installMs: packed.installMs };
     const results = [];
     for (const cell of cells) {
+      const resultFile = path.join(outputRoot, `${cell.id}.json`);
       let result;
-      try { result = runCell(cell, packed, work, sourceSha); }
-      catch (error) { result = environmentFailure(cell, sourceSha, error); }
+      if (args.resume && fs.existsSync(resultFile)) {
+        result = JSON.parse(fs.readFileSync(resultFile, 'utf8'));
+        if (result.candidateSha !== sourceSha || result.repositorySha !== cell.sha) {
+          throw new Error(`${cell.id} resume artifact does not match the candidate or repository SHA`);
+        }
+      } else {
+        try { result = runCell(cell, packed, work, sourceSha); }
+        catch (error) { result = environmentFailure(cell, sourceSha, error); }
+      }
       results.push(result);
-      writeJson(path.join(outputRoot, `${cell.id}.json`), result);
+      writeJson(resultFile, result);
       console.log(`${cell.id}: ${result.mergeGateState} coverage=${result.governedCoverage?.percent ?? 'n/a'}`);
     }
     const resultSummary = summary(manifest, results, candidate);
