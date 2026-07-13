@@ -36,6 +36,7 @@ import {
   mergePostGreenTopActions,
   isDoctorHealthyNothingToDo,
 } from './post-green-path.mjs';
+import { loadGoldenPattern, summarizeGoldenPattern } from './golden-pattern.mjs';
 
 const color = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
@@ -390,6 +391,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   });
   // Q01 — single post-green door when design-weak (map → B; no skill shopping).
   const postGreenPath = buildPostGreenNextAction(designFitness);
+  // Q03 — optional golden pattern for NEW code (advisory; never clears design-weak).
+  const goldenPattern = summarizeGoldenPattern(loadGoldenPattern(root));
 
   if (asJson) {
     console.log(
@@ -422,6 +425,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
                   healthyFinishedForbidden: true,
                 }
               : {}),
+            // Q03: advisory golden for new-code placement (absent = no claim).
+            goldenPattern,
             governed: cov.governed,
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
@@ -570,6 +575,26 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       // Rank first via mergePostGreenTopActions at the end (Q01 single door).
       actions.push(postGreenPath.action);
     }
+  }
+
+  // Q03 — optional golden pattern note (advisory for new code only).
+  if (goldenPattern.present) {
+    console.log('');
+    console.log(color.bold('Golden pattern (new code)'));
+    line(
+      ok,
+      `"${goldenPattern.name}" — ${goldenPattern.norm}` +
+        (goldenPattern.newCodeHome ? ` Prefer: ${goldenPattern.newCodeHome}.` : '') +
+        ' Advisory only — does not clear design-weak or replace the gate.'
+    );
+  } else if (goldenPattern.invalid) {
+    console.log('');
+    console.log(color.bold('Golden pattern (new code)'));
+    line(
+      warn,
+      `${goldenPattern.path} is present but invalid (${goldenPattern.error || 'invalid'}). ` +
+        'Fix or remove it — absence is fine; a bad file is not guidance.'
+    );
   }
 
   console.log('');

@@ -47,7 +47,10 @@ the same files or weaken the gate.
 1. **Read the contract, not your intuition.** If the `ark` MCP server is available,
    call the **`ark_place`** tool with the target file path — it returns the layer,
    its forbidden globals, and exactly which layers the file may / must not import,
-   straight from the contract (no guessing). Otherwise load `ark.config.json` and the
+   straight from the contract (no guessing). When present, also honor optional
+   **`goldenPattern`** (from `.ark/golden-pattern.json`) for **NEW code only** —
+   advisory layout norm; never overrides the gate and never clears design-weak.
+   Absent golden is normal. Otherwise load `ark.config.json` and the
    `ark://manifest` MCP resource (it includes `suggestedLayers` with conventional
    directories for layers not yet adopted). The project's `AGENTS.md` placement table,
    if present, is authoritative too.

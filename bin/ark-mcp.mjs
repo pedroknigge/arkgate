@@ -60,6 +60,7 @@ import { validateWithAutoPatch, resolveImportFileAbs } from './lib/auto-patch.mj
 import { composePrepareWrite } from './lib/prepare-write.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
 import { ARK_ANALYSIS_RESULT_SCHEMA, createAdapterResult } from './lib/adapter-contract.mjs';
+import { loadGoldenPattern, attachGoldenToPlacement } from './lib/golden-pattern.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 
@@ -748,7 +749,9 @@ async function main() {
       name: 'ark_place',
       description:
         'Place a file in the architecture: pass filePath (preferred) and/or description. ' +
-        'Returns layer, mayImport / mustNotImport, forbiddenGlobals. Call BEFORE writing a new file. ' +
+        'Returns layer, mayImport / mustNotImport, forbiddenGlobals, and optional goldenPattern ' +
+        '(advisory for NEW code when .ark/golden-pattern.json exists — never clears design-weak). ' +
+        'Call BEFORE writing a new file. ' +
         'If only description is given, returns a conventional path proposal under a governed layer. ' +
         'Prefer ark_prepare_write when you already have the source snippet (place+validate+autoPatch in one call).',
       inputSchema: {
@@ -1007,7 +1010,11 @@ async function main() {
   // Deterministic placement guidance (in-process; no TS resolver needed): which layer a
   // path falls in, and — from the same rules ark-check enforces (default allow, explicit
   // `allowed:false` denies) — which layers it may and must not import.
+  // Q03: when present, attach optional `.ark/golden-pattern.json` (advisory for NEW code only).
   function placeResult(filePath, description) {
+    const golden = loadGoldenPattern(args.root);
+    const withGolden = (placement) => attachGoldenToPlacement(placement, golden);
+
     if ((typeof filePath !== 'string' || !filePath) && typeof description === 'string' && description.trim()) {
       const slug = description
         .trim()
@@ -1017,7 +1024,7 @@ async function main() {
         .slice(0, 48) || 'component';
       const proposedPath = `src/components/${slug}.tsx`;
       const layerName = inferLayer(proposedPath, config, args.root) || 'PresentationAdapters';
-      return {
+      return withGolden({
         filePath: proposedPath,
         proposed: true,
         description: description.trim(),
@@ -1026,7 +1033,7 @@ async function main() {
         note:
           'filePath was omitted — proposed a conventional path from description. ' +
           'Pass filePath explicitly for authoritative placement.',
-      };
+      });
     }
     if (typeof filePath !== 'string' || !filePath) {
       return {
@@ -1038,7 +1045,7 @@ async function main() {
     const layerName = inferLayer(filePath, config, args.root);
     if (!layerName) {
       const noLayers = configLayers.length === 0;
-      return {
+      return withGolden({
         filePath,
         layer: null,
         governed: noLayers,
@@ -1051,7 +1058,7 @@ async function main() {
             'rules enforced). Place it under a directory a layer in ark.config.json ' +
             'matches, or add a layer. See suggestedLayers for conventional homes.',
         suggestedLayers: suggestedLayers(),
-      };
+      });
     }
     const layerMeta = configLayers.find((layer) => layer.name === layerName);
     const rules = config.rules ?? DEFAULT_RULES;
@@ -1060,7 +1067,7 @@ async function main() {
       rules.some((rule) => !rule.allowed && rule.from === layerName && rule.to === to)
     );
     const mayImport = otherNames.filter((name) => !mustNotImport.includes(name));
-    return {
+    return withGolden({
       filePath,
       layer: layerName,
       governed: true,
@@ -1072,7 +1079,7 @@ async function main() {
       note:
         'mayImport = layers with no explicit deny (default is allow). Respect ' +
         'forbiddenGlobals, then verify the actual snippet with validate_code or ark_prepare_write.',
-    };
+    });
   }
 
   function runPlace(params) {

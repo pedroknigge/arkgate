@@ -188,9 +188,10 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 |---:|---|---|---:|---|---|
 | 29 | `Q01` | `done` | M | Phase P done | Single post-green “clarify for AI / Shape” door in doctor + routing |
 | 30 | `Q02` | `done` | S | `Q01` | Human outcome language for each design smell id (docs parity) |
+| 31 | `Q03` | `done` | M | `Q01` | Optional golden pattern artifact for new-code place/prepare-write guidance |
 
-**Next:** no Q item scheduled after `Q02`. Epic narrative: [docs/plans/power-simple-shape](docs/plans/power-simple-shape/README.md)
-(remaining Q03–Q06 still proposed until approved into this table).
+**Next:** no Q item scheduled after `Q03`. Epic: [docs/plans/power-simple-shape](docs/plans/power-simple-shape/README.md)
+(remaining Q04–Q06 still proposed until approved into this table).
 
 ---
 
@@ -228,6 +229,25 @@ agent-guide table parity. Smell **ids unchanged**. Q01 postGreenPath preserved.
 
 **Local evidence (2026-07-13):** `q02SmellOutcomes.test.ts` green; fixture doctor JSON smells
 all have `outcome`; human doctor shows ORM-in-routes outcome wording.
+
+### Q03 — Optional golden pattern artifact (new-code guidance)
+
+- **Status:** `done`
+- **Depends on:** `Q01`
+- **Likely files:** `bin/lib/golden-pattern.mjs`, `bin/ark-mcp.mjs` (`ark_place` /
+  `ark_prepare_write`), `bin/lib/prepare-write.mjs`, `bin/lib/doctor-plan.mjs`,
+  `templates/skills/ark-place.md`, `docs/agent-guide.md`, `docs/package-surface.md`,
+  `tests/unit/static-check/q03GoldenPattern.test.ts`
+
+**Outcome:** Consumers may record a short golden norm at `.ark/golden-pattern.json`
+(`name` + `norm`, optional `newCodeHome` / `examplePath`). `ark_place` /
+`ark_prepare_write` and doctor JSON surface it as **advisory for NEW code only**.
+**Absent is OK** (no claim). **Never** ENFORCE, never clears `design-weak`, never a
+mechanical-safe kind. Malformed file → invalid summary, not silent success.
+
+**Local evidence (2026-07-13):** `q03GoldenPattern.test.ts` 10/10 green; design-weak
+fixture still `designWeak` + `postGreenPath.clarify-for-ai` with golden present;
+`check:architecture` strict green.
 
 ## Phase P — post-3.0 pattern depth
 

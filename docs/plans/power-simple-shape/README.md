@@ -151,7 +151,7 @@ flowchart TB
 |---:|---|---:|---|---|
 | 1 | `Q01` | M | **done** — Single post-green path in doctor top-action + skill routing: “clarify for AI / Shape” without skill shopping | Phase P done |
 | 2 | `Q02` | S | **done** — Human outcome language for top design smells (and docs parity) | Q01 |
-| 3 | `Q03` | M | **Golden pattern artifact** for consumers + place/prepare-write/skills read it for *new* code | Q01 |
+| 3 | `Q03` | M | **done** — Golden pattern artifact (`.ark/golden-pattern.json`) + place/prepare-write/doctor read it for *new* code | Q01 |
 | 4 | `Q04` | M | **Pilot loop productized**: extraction card → one pilot → re-doctor; gallery or fixture proof | Q02, Q03 |
 | 5 | `Q05` | M | **AI-velocity evidence**: eval/bench golden-path vs design-weak for same feature prompt | Q04 |
 | 6 | `Q06` | S | **Release + surfaces**: package-surface, agent-guide, site, CHANGELOG; patch release when behavior ships | Q01–Q05 as needed |
@@ -189,6 +189,13 @@ Implementation rules (carry forward from ROADMAP):
 | Newbie path hides power so devs leave | Always expose `--json` and advanced skill table; never remove depth |
 | AI-velocity metric is gamed | Use fixed prompt + fixture trees; publish method next to number |
 | Scope creep into runtime / presets | Freeze list in non-goals; kill-switch: drop Q-item if it needs new preset pack |
+
+### Q03 storage decision (locked)
+
+**Chosen:** `.ark/golden-pattern.json` side-car (not a new `ark.config.json` field).
+Rationale: optional consumer artifact under existing local-state convention; no schema
+churn; absence is normal; never gates ENFORCE. Fields: `name` + `norm` required;
+`newCodeHome`, `examplePath`, `schemaVersion` optional.
 
 ### Open decisions (ADR only when locked)
 

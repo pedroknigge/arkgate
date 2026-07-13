@@ -235,16 +235,42 @@ reference, and explanation for the full path (recommend → init → gallery →
 5. Use `/ark-place` or `ark_place` for individual files after the contract exists.
 6. Verify with `ark-check --root . --config ark.config.json --strict`.
 
+### Golden pattern for new code (Q03)
+
+When the team has picked **one** layout style for *new* files (after Shape / pilot),
+you may record it as an optional side-car:
+
+```json
+// .ark/golden-pattern.json
+{
+  "schemaVersion": "1",
+  "name": "vertical-slice features",
+  "norm": "New features live under src/features/<slice>/; shared only in src/shared/.",
+  "newCodeHome": "src/features/",
+  "examplePath": "src/features/billing/createInvoice.ts"
+}
+```
+
+| Rule | Meaning |
+|------|---------|
+| **Optional** | Missing file is fine — no claim, no error. |
+| **Advisory** | `ark_place` / `ark_prepare_write` and doctor attach `goldenPattern` for **new** code only. |
+| **Not a gate** | Does **not** ENFORCE, does **not** clear design-weak, does not replace `ark.config.json`. |
+| **Malformed** | Invalid JSON or missing `name`/`norm` → `invalid: true`; fix or delete — do not treat as guidance. |
+
+Legacy paths stay migrate-on-touch; the golden norm limits where agents put **new** code.
+
 ### Write protocol (2.10+ / Track W)
 
 Prefer preparing the write before the host commits it to disk:
 
 | Surface | Role |
 |---------|------|
-| MCP **`ark_prepare_write`** | Place + constrain + validate + optional `autoPatch` + `judgmentBrief` + contentHash in one call |
+| MCP **`ark_prepare_write`** | Place + constrain + validate + optional `autoPatch` + `judgmentBrief` + contentHash + optional `goldenPattern` in one call |
 | Write-gate **`autoPatch`** | Mechanical-safe **import type** rewrites only; post-patch revalidation green or discarded |
 | PreToolUse **`--hook-repair`** | On deny: `ARK_REPAIR_JSON` / `ARK_AUTOPATCH_JSON` on stderr (still exit 2 — never silent write) |
 | Doctor **`writePath`** | Reports `repair` \| `reject-only` \| `mcp-only` \| `none` for installed gates |
+| Doctor **`goldenPattern`** | Optional Q03 advisory summary (`present` / `invalid`); never clears design-weak |
 
 Port-proof inject binding is **judgment** for auto-apply (signature/arity change), not write-path autoPatch.
 Full reference: [ai-gates.md](ai-gates.md). Loop-cost harness: `npm run eval:loop-cost`.
