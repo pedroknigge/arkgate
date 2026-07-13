@@ -106,6 +106,19 @@ describe('loadGoldenPattern (Q03)', () => {
     expect(r.invalid).toBe(true);
     expect(r.error).toBe('missing-name-or-norm');
   });
+
+  it('empty root / not-object / array JSON fail closed', () => {
+    expect(loadGoldenPattern('').present).toBe(false);
+    expect(loadGoldenPattern(null as unknown as string).present).toBe(false);
+    fs.mkdirSync(path.join(tmp, '.ark'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, '.ark', 'golden-pattern.json'), '[]', 'utf8');
+    const arr = loadGoldenPattern(tmp);
+    expect(arr.invalid).toBe(true);
+    expect(arr.error).toBe('not-object');
+    fs.writeFileSync(path.join(tmp, '.ark', 'golden-pattern.json'), 'null', 'utf8');
+    expect(loadGoldenPattern(tmp).invalid).toBe(true);
+    expect(summarizeGoldenPattern(null as unknown as object).present).toBe(false);
+  });
 });
 
 describe('attachGoldenToPlacement + composePrepareWrite', () => {

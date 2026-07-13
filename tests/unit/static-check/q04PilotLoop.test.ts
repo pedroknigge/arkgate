@@ -20,6 +20,7 @@ import {
   formatExtractionCard,
   comparePilotResidual,
   extractionCardFromBet,
+  fileEvidencePaths,
   PILOT_LOOP_ID,
 } from '../../../bin/lib/pilot-loop.mjs';
 import {
@@ -49,6 +50,89 @@ function doctorJson(root: string, config: object, files: string[]) {
   }
   return JSON.parse(logs.join('\n'));
 }
+
+describe('pilot-loop edge branches (Q04 coverage)', () => {
+  it('fileEvidencePaths drops non-file tokens', () => {
+    expect(
+      fileEvidencePaths(['layout:features/*', 'layer:X', 'rule:r', 'src/a.ts', '', null as unknown as string])
+    ).toEqual(['src/a.ts']);
+    expect(fileEvidencePaths(undefined)).toEqual([]);
+  });
+
+  it('extractionCardFromBet defaults and null guard', () => {
+    expect(extractionCardFromBet(null as unknown as object)).toBeNull();
+    expect(extractionCardFromBet(undefined as unknown as object)).toBeNull();
+    const sparse = extractionCardFromBet({
+      smellId: 'god-module',
+      evidence: ['layout:features/*'],
+    });
+    expect(sparse!.patternBetId).toBe('pattern-b:god-module');
+    expect(sparse!.pilotTarget).toBe('src/**');
+    expect(sparse!.move).toMatch(/bounded extraction/i);
+    expect(sparse!.successSignal).toMatch(/Smell evidence/i);
+    expect(sparse!.killSwitch).toMatch(/ark-explore/i);
+  });
+
+  it('selectNextPilot builds from designSmells; skips mechanical-safe and neverMechanicalSafe:false', () => {
+    expect(selectNextPilot(null)).toBeNull();
+    expect(selectNextPilot([])).toBeNull();
+    const fromSmells = selectNextPilot([], {
+      designSmells: [
+        {
+          id: 'facade-sql-in-routes',
+          message: 'm',
+          evidence: ['src/routes/x.ts'],
+          fix: 'move',
+        },
+      ],
+    });
+    expect(fromSmells?.smellId).toBe('facade-sql-in-routes');
+
+    const onlyBad = selectNextPilot([
+      {
+        id: 'b1',
+        smellId: 'god-module',
+        class: 'mechanical-safe',
+        neverMechanicalSafe: true,
+        evidence: ['src/a.ts'],
+      },
+      {
+        id: 'b2',
+        smellId: 'soft-contract',
+        neverMechanicalSafe: false,
+        evidence: ['src/b.ts'],
+      },
+      null,
+    ]);
+    expect(onlyBad).toBeNull();
+  });
+
+  it('summarizePilotLoop inactive without bets; formatExtractionCard null', () => {
+    expect(formatExtractionCard(null)).toBeNull();
+    const empty = summarizePilotLoop({ designWeak: true, patternBets: [] });
+    expect(empty.active).toBe(false);
+    expect(empty.reason).toBe('no-pattern-bets');
+  });
+
+  it('comparePilotResidual handles missing pilot files and target glob', () => {
+    const delta = comparePilotResidual({
+      beforeSmells: [{ id: 'x', evidence: ['src/a.ts'] }],
+      afterSmells: [{ id: 'x', evidence: ['src/a.ts'] }],
+      nextPilot: { smellId: 'x', evidence: [], pilotTarget: 'src/**' },
+    });
+    expect(delta.beforeEvidenceCount).toBeGreaterThanOrEqual(0);
+    expect(delta.reduced).toBe(false);
+
+    const withTarget = comparePilotResidual({
+      beforeSmells: [{ id: 'y', evidence: ['src/y.ts'] }],
+      afterSmells: [],
+      nextPilot: { smellId: 'y', evidence: [], pilotTarget: 'src/y.ts' },
+    });
+    expect(withTarget.pilotFiles).toContain('src/y.ts');
+    expect(withTarget.pilotSmellCleared).toBe(true);
+    expect(withTarget.reduced).toBe(true);
+  });
+});
 
 describe('selectNextPilot / extraction card (Q04)', () => {
   it('selects one pilot from real design-weak fixture patternBets', () => {

@@ -53,6 +53,19 @@ describe('Q05 FEATURE_SCENARIO + placement ladder', () => {
     });
     expect(withG.guidedByGolden).toBe(true);
     expect(withG.attempts).toEqual(['src/domain/canRefund.ts']);
+
+    // Nested loadGoldenPattern shape
+    const nested = placementAttemptsForArm({
+      present: true,
+      golden: { name: 'n', norm: 'm', newCodeHome: 'src/domain' },
+    });
+    expect(nested.guidedByGolden).toBe(true);
+    expect(nested.attempts[0]).toMatch(/src\/domain\/canRefund\.ts/);
+
+    // Present without newCodeHome → full ladder
+    const noHome = placementAttemptsForArm({ present: true, name: 'n', norm: 'm' });
+    expect(noHome.guidedByGolden).toBe(false);
+    expect(placementAttemptsForArm(null).guidedByGolden).toBe(false);
   });
 });
 
