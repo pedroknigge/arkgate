@@ -45,7 +45,7 @@ one item may be `doing`.
 | 1 | `O03` | `done` | `O02` done | Compact single-host setup closed `RB-06` in PR #41 |
 | 2 | `O04` | `done` | `O03` done | Clean-room onboarding matrix passed PR #43 CI |
 | 3 | `V01` | `done` | `C05` and `O04` done | PR #45 (`d1400ca`) passed real cold, warm, and incremental budgets in CI |
-| 4 | `V02` | `todo` | `C04` done, plus queue order | Mutation, property, and fuzz boundaries are defended |
+| 4 | `V02` | `done` | `C04` done, plus queue order | Mutation, property, and fuzz boundaries are defended |
 | 5 | `V03` | `todo` | `O04`, `V01`, and `V02` done | At least 12 pinned external adoptions are reproduced |
 | 6 | `V04` | `todo` | `C06` and `V03` done | Release artifacts are bounded, complete, and attestable |
 | 7 | `V05` | `todo` | Every prior item done | Independent binary beta-exit audit passes |
@@ -440,6 +440,7 @@ traversal, crashes, and silent bypasses with deterministic and reproducible test
 - `tests/property/layerMatch.property.test.ts`
 - `tests/property/baselineKey.property.test.ts`
 - `tests/fuzz/configContract.fuzz.test.ts`
+- `tests/fuzz/glob.fuzz.test.ts`
 - `tests/fuzz/moduleSpecifier.fuzz.test.ts`
 - `tests/fuzz/hookPayload.fuzz.test.ts`
 - `tests/fuzz/filesystemPath.fuzz.test.ts`
@@ -459,12 +460,12 @@ Canonical implementation changes must stay in their existing owners:
 
 ### Acceptance checklist
 
-- [ ] Every critical mutation group remains at or above 90%.
-- [ ] Property and fuzz runs are reproducible from a reported seed.
-- [ ] PR fuzzing has a fixed case/time budget.
-- [ ] Extended fuzzing has a fixed case/time budget and retained artifacts.
-- [ ] No crash, traversal escape, or silent bypass remains unresolved.
-- [ ] Every fixed fuzz defect has a minimized permanent regression fixture.
+- [x] Every critical mutation group remains at or above 90%.
+- [x] Property and fuzz runs are reproducible from a reported seed.
+- [x] PR fuzzing has a fixed case/time budget.
+- [x] Extended fuzzing has a fixed case/time budget and retained artifacts.
+- [x] No crash, traversal escape, or silent bypass remains unresolved.
+- [x] Every fixed fuzz defect has a minimized permanent regression fixture.
 
 ### Focused verification
 
@@ -477,6 +478,22 @@ npm run test:fuzz
 ```
 
 Run all relevant generated-artifact checks and then the common merge gate.
+
+### Closure evidence (2026-07-12)
+
+- `fast-check` is a development-only dependency; `test:property`, `test:fuzz`, and
+  `test:fuzz:extended` use fixed campaign seeds, bounded case/time budgets, shrinking, and JSON
+  reports under `reports/fuzz` with candidate SHA metadata. The PR fuzz job now includes JSON
+  config, globs, module specifiers, hook payloads, and filesystem paths; hook traversal attempts
+  are asserted to leave external files untouched.
+- `npm run test:mutation` reports 93.75% config loading, 91.19% graph edges, 99.58% host
+  capabilities, 100% baselines, and 95.83% workflow-failure boundaries; aggregate 95.43%.
+- The full coverage suite passed 115 files / 908 tests with 91.09% statements and 85.47% branches.
+  `npm run typecheck`, `npm run check:js`, `npm run check:architecture`, `npm run security:audit`,
+  and `npm run test:package-isolation` passed locally.
+- The fuzzer exposed a root realpath comparison counterexample; its minimized `.` input is held in
+  `tests/fixtures/fuzz-regressions/filesystem-path/realpath-root.json`, and the test normalizes its
+  temporary root before asserting containment.
 
 ## 9. V03 - run the external adoption matrix
 

@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "threshold": 90,
+  "groups": [
+    {
+      "id": "config-loading",
+      "targets": [
+        { "file": "src/domain/configContract.ts", "startLine": 386, "endLine": 460 }
+      ]
+    },
+    {
+      "id": "graph-edges",
+      "targets": [
+        { "file": "src/kernel/semanticAnalysis.ts", "startLine": 18, "endLine": 258 }
+      ]
+    },
+    {
+      "id": "host-capabilities",
+      "targets": [
+        { "file": "bin/lib/enforcement-profiles.mjs", "startLine": 10, "endLine": 92 },
+        { "file": "bin/lib/write-path-capabilities.mjs", "startLine": 39, "endLine": 176 },
+        { "file": "bin/lib/write-path-detect.mjs", "startLine": 11, "endLine": 96 }
+      ]
+    },
+    {
+      "id": "baselines",
+      "targets": [
+        { "file": "src/domain/baselineKey.ts", "startLine": 20, "endLine": 48 }
+      ]
+    },
+    {
+      "id": "workflow-failure-boundaries",
+      "targets": [
+        { "file": "src/kernel/workflow/Saga.ts", "startLine": 188, "endLine": 238 }
+      ]
+    }
+  ]
+}
