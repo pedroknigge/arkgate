@@ -20,12 +20,12 @@ When this document and `ROADMAP.md` disagree:
 3. Mark an item `done` only in accordance with the roadmap workflow and only after CI is green on
    the pushed commit.
 
-## 2. Completed roadmap reconciliation
+## 2. Historical O03 reconciliation
 
 O03 completed on 2026-07-12. PR #41 passed its required CI using GitHub-verified signed commit
 `a20f851` and was squash-merged as `105cd39`.
 
-| Roadmap location | Current text | Operational interpretation | Required correction |
+| Roadmap location | Historical record | Operational interpretation | Required correction |
 |---|---|---|---|
 | Ordered queue | `O03` is `done` | O03 completion is authoritative | Start O04 only when its first implementation slice begins |
 | `O03` detail | `O03` is `done` | Detailed status matches the queue | Preserve the linked local and remote evidence |
@@ -759,7 +759,7 @@ npm run audit:beta-exit -- --candidate <full-sha>
 No stable release is authorized unless this command, the independent review, and every roadmap
 binary exit condition pass on the same candidate.
 
-### Current V05 evidence and decision
+### Historical V05 failure evidence and decision
 
 The audit implementation is present in `scripts/beta-exit-audit.mjs`, with its contract in
 `eval/beta-exit/audit-schema.v1.json`. On 2026-07-13 it evaluated candidate
@@ -788,7 +788,7 @@ adoption binding, host profiles, release artifacts, and the independent review r
 pass. V05 is done; beta exit is authorized, while publishing or tagging a stable release remains a
 separate release action.
 
-### Post-B01 re-audit (2026-07-13)
+### Historical post-B01 re-audit (2026-07-13)
 
 Candidate `42c77f62384e40ffb71e16388e6530f34253f9b9` has fresh adoption evidence under
 `eval/adoption/results/42c77f62384e40ffb71e16388e6530f34253f9b9/`: 97% median governed coverage,

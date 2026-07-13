@@ -638,7 +638,7 @@ compatibility. Full coverage passed 875 tests with 85.60% branches; mutation pas
 - Ensure gate-only consumers do not install or bundle runtime code.
 
 **Evidence:** ADR 0004 selects a separate `@arkgate/runtime` 0.x package published only under the
-`experimental` tag. ArkGate `3.0.0-beta.0` builds its stable root from `src/gate.ts`; the root
+`experimental` tag. ArkGate `3.0.0` builds its stable root from `src/gate.ts`; the root
 tarball has no runtime or NestJS bundles, while deprecated `arkgate/runtime` and `arkgate/nestjs`
 paths are forwarding shims scheduled for removal in ArkGate 4. The preferred non-transactional
 API is `InMemoryEventBuffer`; old outbox names remain deprecated aliases. Recovery, optimistic
@@ -978,8 +978,8 @@ records 97% median governed coverage, 583 ms median first-green time, and zero P
 All adaptations were previewed before apply and recorded no bypasses. The focused adoption harness,
 the full common merge gate, and strict Ark check passed on the candidate. Ten cells remain `Adapt`
 because their local strict merge fails; this is retained as P2 audit evidence, not suppressed or
-reclassified as green. V05 remains blocked pending its independent review and every remaining exit
-gate.
+reclassified as green. At that point V05 remained blocked pending its independent review and every
+remaining exit gate; the later current re-audit above records its completed decision.
 
 ---
 
