@@ -822,9 +822,15 @@ async function main() {
 }
 
 // Only run when executed as the CLI entry (not when imported by unit tests).
-const isMain =
-  Boolean(process.argv[1]) &&
-  path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+function entryPath(file) {
+  try {
+    return fs.realpathSync(file);
+  } catch {
+    return path.resolve(file);
+  }
+}
+
+const isMain = Boolean(process.argv[1]) && entryPath(process.argv[1]) === entryPath(fileURLToPath(import.meta.url));
 if (isMain) {
   process.exitCode = await main();
 }
