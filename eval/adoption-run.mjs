@@ -66,7 +66,7 @@ function validateManifest(manifest) {
   const ids = new Set();
   const repositories = new Set();
   for (const cell of manifest.cells) {
-    for (const key of ['id', 'repository', 'sha', 'shape', 'host', 'packageManager', 'size', 'installCommand']) {
+    for (const key of ['id', 'repository', 'sha', 'license', 'shape', 'host', 'packageManager', 'size', 'installCommand']) {
       if (typeof cell[key] !== 'string' || cell[key].length === 0) throw new Error(`${cell.id || 'cell'} missing ${key}`);
     }
     if (!/^[0-9a-f]{40}$/i.test(cell.sha)) throw new Error(`${cell.id} must pin a full commit SHA`);
