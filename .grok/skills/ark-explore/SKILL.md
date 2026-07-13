@@ -75,7 +75,10 @@ say so in one line and hand off `stop`.
 | **B. Pattern / evolution** | **3–5** bets max; each: evidence · así te lo re-soluciono · **success signal** · next skill · **pilot** · **kill-switch** if new layer/big move |
 | **Phase ladder** | Name which of Align / Stabilize / **Shape** the repo is in (§G) |
 
-Long multi-PR execution belongs to **`/ark-autopilot`** (or a human-owned doc after the seed).
+Long multi-PR execution belongs to **`/ark-autopilot`**. If residual spans sessions/PRs,
+optionally point the user at a durable Shape plan (e.g. `docs/plans/shape-<pilot>/`) seeded
+from patternBets + extraction cards — **optional**, not a gate requirement
+(see `docs/brownfield-adoption.md` §6).
 
 ## Subagent fan-out (optional, host-dependent)
 

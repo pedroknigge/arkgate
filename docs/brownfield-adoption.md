@@ -119,6 +119,23 @@ ark-check --plan --json     # patternBets[] with neverMechanicalSafe: true
 
 Fixture for CI honesty: `tests/fixtures/design-weak-enforce/` (empty plan A + non-empty B).
 
+### Optional: durable Shape plan (multi-PR)
+
+CLI `patternBets` and extraction cards are enough for a single session. If residual spans
+**multiple PRs or agents**, optionally persist one human-readable plan under the repo
+(e.g. `docs/plans/shape-<pilot>/README.md` or any team path) with:
+
+| Field | Source |
+|-------|--------|
+| Phase | Align / Stabilize / **Shape** |
+| Golden vs legacy patterns | explore concurrent-patterns table |
+| Smell ids / patternBets | `ark-check --doctor --json` / `--plan --json` |
+| Extraction cards | §6 template above |
+| Status of pilot | e.g. dual path (legacy + new) → real (only golden) when smells clear |
+
+This is **optional narrative**, not a gate. Ark does not require a docs skill or a fixed
+folder layout. Prefer one authority plan; promote or archive it when the pilot is real.
+
 ## What Ark does NOT do here
 
 Ark reorganizes and governs code — it never touches your data model. Migrating raw SQL to a

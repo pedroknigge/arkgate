@@ -102,6 +102,8 @@ B does **not** count as “architecture healthy finished.” Report B as `propos
 When A is empty and B is non-empty: status is **`goal.met on edges · Shape residual open`** — never “done” without listing B.
 Prefer CLI `patternBets[]` / `designSmells[]` when present; apply B only with explicit user ok using
 **extraction cards** (`docs/brownfield-adoption.md` §6) — never mechanical-safe, never silent.
+If B will take multiple PRs, offer (do not require) persisting a short Shape plan under the
+repo so the next agent session continues the same pilot — still never auto-apply B.
 
 ## Origin snapshot (day-zero picture)
 
