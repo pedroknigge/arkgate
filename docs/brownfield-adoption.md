@@ -86,10 +86,61 @@ violations — the ratchet only moves toward zero.
 `/ark-fix` resolves each cluster at the root cause; fixing a frozen violation shrinks the
 baseline permanently. Re-freeze lower with `--update-baseline` as you go.
 
+## 6. Shape residual — extraction cards (judgment assist, P05)
+
+When edges are green (`ark-check --plan` has empty `steps[]`) but doctor reports
+**ENFORCE · design-weak** (`designSmells` / `patternBets`), you are in **Shape** work. Plan A
+is done; plan **B** is not auto-applicable.
+
+Use one **extraction card** per pilot (I/O relocate, god-module split, domain-out-of-UI).
+Agents and humans fill the same fields — never invent a codemod engine or silent apply:
+
+```text
+### Extraction card
+Pilot: <one directory or feature path>
+Smell: <doctor designSmells[].id or agent-detected id>
+Move: <what moves, e.g. query bytes verbatim → OrderRepository adapter>
+Do not:
+  - rewrite queries / touch schema / migrations
+  - weaken ark.config.json to silence the smell
+  - auto-apply as mechanical-safe or invent new mechanical-safe kinds
+  - big-bang the whole monorepo
+Success: <falsifiable signal, e.g. 0 routes import @prisma/client>
+Kill-switch: <when to stop, e.g. if 2 PRs still confuse ownership → stop layer add>
+Next: /ark-fix (one cluster) | /ark-autopilot (user ok on B) | /ark-explore shape-focus
+```
+
+CLI sensors:
+
+```bash
+ark-check --doctor --json   # designFitness.designWeak + designSmells[].evidence
+ark-check --plan --json     # patternBets[] with neverMechanicalSafe: true
+```
+
+Fixture for CI honesty: `tests/fixtures/design-weak-enforce/` (empty plan A + non-empty B).
+
+### Optional: durable Shape plan (multi-PR)
+
+CLI `patternBets` and extraction cards are enough for a single session. If residual spans
+**multiple PRs or agents**, optionally persist one human-readable plan under the repo
+(e.g. `docs/plans/shape-<pilot>/README.md` or any team path) with:
+
+| Field | Source |
+|-------|--------|
+| Phase | Align / Stabilize / **Shape** |
+| Golden vs legacy patterns | explore concurrent-patterns table |
+| Smell ids / patternBets | `ark-check --doctor --json` / `--plan --json` |
+| Extraction cards | §6 template above |
+| Status of pilot | e.g. dual path (legacy + new) → real (only golden) when smells clear |
+
+This is **optional narrative**, not a gate. Ark does not require a docs skill or a fixed
+folder layout. Prefer one authority plan; promote or archive it when the pilot is real.
+
 ## What Ark does NOT do here
 
 Ark reorganizes and governs code — it never touches your data model. Migrating raw SQL to a
 repository moves the same query to another file; the schema, migrations, and the database are
 untouched. And the burn-down itself is the team's work (or a codemod, or an agent loop) — Ark
 diagnoses, orders it, and gives you the pattern; it doesn't auto-run hundreds of edits against
-your restricted data layer.
+your restricted data layer. **Extraction cards are judgment assists only** — no general codemod
+and no silent auto-apply of plan B.

@@ -75,6 +75,12 @@ To remove a compact host integration, preview `ark start --remove-host <host>` a
 only after review. Ark removes only its exact compact artifacts, leaves customized files untouched
 as unresolved decisions, and restores the integration with `ark start --tools <host> --apply`.
 
+**Skill roles (avoid overlap):** `/ark-explore` = map + dual-plan **seed** + Shape residual
+(no apply). `/ark-coverage` = Ark **fitness** only (governed/gates). `/ark-think` = one decision
+(2–3 options). `/ark-adopt` = brownfield Align/Stabilize + seed Shape B. `/ark-autopilot` =
+explore then apply A + propose/apply-with-ok B. `/ark-loop` = plan A only. Empty plan A is not
+“architecture healthy” if design-weak residual remains.
+
 **Full-skill agent co-pilot:** after explicitly installing the `/ark-*` pack, use
 `/ark-autopilot` (explore-first, dual plan A remediation + B pattern bets). Recon without
 applying: `/ark-explore`. The default compact router uses MCP/CLI directly. Never treat empty

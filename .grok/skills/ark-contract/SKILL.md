@@ -1,10 +1,17 @@
 ---
 name: ark-contract
 description: Safely edit ark.config.json (layers, rules, forbiddenGlobals, intent prefixes) and land business rules into the Ark manifest. Validated with strict ark-check. Deep source evidence required.
-arkVersion: 2.9.1
+arkVersion: 3.0.0
 ---
 
 # /ark-contract — Change the architecture contract (safely)
+
+## When / not when
+
+| Use `/ark-contract` when… | Do **not** use it when… |
+|---------------------------|-------------------------|
+| Edit layers/rules/includes/intents with source evidence | Move product code without config change → `/ark-fix` / `/ark-loop` |
+| Concentrated-edge / false-green STOP from other skills | Full map without config edit → `/ark-explore` |
 
 The **one sanctioned way** to change layers/rules/`intentPrefixes`/includes.
 Also used to **land mined business rules** into the executable manifest (`ark.config.json` + intent naming that `ark://manifest` exposes).

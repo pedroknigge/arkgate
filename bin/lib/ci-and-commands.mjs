@@ -153,21 +153,26 @@ files; never weaken the gate via subagents.
 
 ## Skill routing (triggers → skill)
 
-| When | Invoke |
-|------|--------|
-| Unsure / make architecture sound | **/ark-autopilot** (default) |
-| Need map / opportunities only (no apply) | \`/ark-explore\` |
-| Greenfield shape / empty tree | \`/ark-architect\` |
-| Brownfield / wrong contract / false-green | \`/ark-adopt\` then \`/ark-contract\` if globs wrong |
-| Edit \`ark.config.json\` layers/rules/intents | \`/ark-contract\` |
-| New file “where does this go?” | \`/ark-place\` |
-| Gate violation on a change | \`/ark-fix\` |
-| Drive plan to goal.met | \`/ark-loop\` |
-| Deep coverage + ranked audit | \`/ark-coverage\` |
-| Design trade-offs (no package LLM) | \`/ark-think\` |
-| Explain / HTML report tour | \`/ark-explain\` |
-| Bump arkgate + refresh hosts | \`/ark-upgrade\` |
-| Optional runtime kernel migrate | \`/ark-runtime\` |
+Do **not** run overlapping skills for the same job. Pick **one** primary skill from the table.
+
+| When | Invoke | Not this |
+|------|--------|----------|
+| Unsure / make architecture sound (apply path) | **/ark-autopilot** (default) | explore-only, coverage-only |
+| Map / residual / dual-plan **seed** / spaghetti Shape plan (no apply) | \`/ark-explore\` | coverage (fitness only), think (one decision) |
+| ENFORCE but design-weak / concurrent patterns / god modules | \`/ark-explore\` shape-focus or dual-plan seed → then autopilot for apply | loop (empty A is not done) |
+| Greenfield shape / empty tree | \`/ark-architect\` | adopt |
+| Brownfield / wrong contract / false-green | \`/ark-adopt\` then \`/ark-contract\` if globs wrong | architect |
+| Edit \`ark.config.json\` layers/rules/intents | \`/ark-contract\` | fix/loop for config |
+| New file “where does this go?” | \`/ark-place\` | architect (unless greenfield shape missing) |
+| Gate violation on a change (small cluster) | \`/ark-fix\` | loop/autopilot unless bulk |
+| Drive plan **A** to goal.met | \`/ark-loop\` | explore (unless A empty + design residual) |
+| Ark **fitness** only (governed%, gates, baseline, install gaps) | \`/ark-coverage\` | explore (full recon) |
+| One design decision, 2–3 options | \`/ark-think\` | explore (full dual-plan) |
+| Explain / HTML report tour | \`/ark-explain\` | explore |
+| Bump arkgate + refresh hosts | \`/ark-upgrade\` | — |
+| Optional runtime kernel evaluate | \`/ark-runtime\` | — |
+
+**Phases (brownfield honesty):** Align (contract truth) → Stabilize (real baseline) → Shape (golden pattern + pilot). Empty plan A after Stabilize still leaves Shape work — that is explore/autopilot **B**, not “healthy finished.”
 
 ## Before editing TypeScript or JavaScript source files
 

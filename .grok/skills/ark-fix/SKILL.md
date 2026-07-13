@@ -1,7 +1,7 @@
 ---
 name: ark-fix
 description: Resolve Ark architecture violations at the root cause — read importers and product context, design ports/adapters/moves/intent alignment. Never weaken the contract. CLI only validates.
-arkVersion: 2.9.1
+arkVersion: 3.0.0
 ---
 
 # /ark-fix — Fix architecture violations at the root
@@ -10,6 +10,28 @@ You fix violations Ark reports. Prefer structural fixes over silencing the gate.
 **Read the surrounding product code** (callers, package role, feature ownership) — not only
 the two files on the violation edge.
 
+## When / not when
+
+| Use `/ark-fix` when… | Do **not** use it when… |
+|----------------------|-------------------------|
+| One change / small cluster just failed the gate | Bulk residual / many edges → `/ark-loop` or `/ark-autopilot` |
+| Need a structural fix (port, move, intent rename) | Map residual / pattern Shape plan → `/ark-explore` |
+| Judgment design for a known violation | Contract wrong / false-green → STOP to `/ark-contract` / `/ark-adopt` |
+
+When the fix is really a **Shape** extraction (I/O out of routes, god module split), write an
+**extraction card** before editing — same template as [brownfield-adoption.md](../../docs/brownfield-adoption.md)
+§6 and explore §G. Fixed fields (never mechanical-safe, never silent B apply):
+
+```text
+### Extraction card
+Pilot: <one directory or feature path>
+Smell: <doctor designSmells id if present>
+Move: <verbatim relocate / split>
+Do not: rewrite queries; weaken ark.config; invent mechanical-safe kinds; big-bang
+Success: <falsifiable>
+Kill-switch: <stop condition>
+Next: re-run ark-check; shrink baseline if applicable
+```
 
 ## Dual engine (mandatory)
 

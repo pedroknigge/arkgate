@@ -12,6 +12,19 @@ Deterministic kinds stay **tight**. Your job is still **exploratory on the files
 importers/targets, see if the plan step is a symptom of wrong shape / false Domain / I/O
 under Application — escalate to `/ark-contract` or `/ark-explore` when the wall is structural.
 
+## When / not when
+
+| Use `/ark-loop` when… | Do **not** use it when… |
+|-----------------------|-------------------------|
+| Plan A has steps; drive to `goal.met` | Plan A empty — **stop**; residual Shape → `/ark-explore` / `/ark-autopilot` B |
+| Mechanical-safe + approved judgment only | Full product recon first → explore inside `/ark-autopilot` |
+| User already has a plan and wants the apply loop | Brownfield contract false-green → `/ark-adopt` |
+
+**Empty plan is not success for the product** — only for *edge remediation*. If `goal.met` and
+(`goal.designWeak` or non-empty `patternBets` from `--plan --json`): do **not** invent
+mechanical-safe kinds; hand off `/ark-explore` shape-focus or `/ark-autopilot` for dual-plan B.
+Pattern bets always have `neverMechanicalSafe: true` — extraction cards only
+(`docs/brownfield-adoption.md` §6).
 
 ## Related onboarding
 
@@ -71,7 +84,8 @@ Never auto: free value uses of imports, multi-import files, dynamic import/requi
 
 ## Steps
 
-1. **Plan** — `ark-check --plan --json` (+ `--baseline` if used). If `goal.met`, stop.
+1. **Plan** — `ark-check --plan --json` (+ `--baseline` if used). If `goal.met`: stop **A**;
+   if design-weak residual is visible, hand off explore/autopilot B — do not claim architecture done.
 2. **Worktree** — prefer discardable git worktree.
 3. **Apply mechanical-safe** one-by-one with validate/rollback.
 4. **Judgment** — propose with source-based design; apply only if user approved (or parent autopilot said full apply).

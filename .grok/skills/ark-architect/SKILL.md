@@ -1,10 +1,17 @@
 ---
 name: ark-architect
 description: Choose the application shape, adopt phase-1 layers, scaffold directories, and verify honestly — for enthusiasts before codegen. Autonomous.
-arkVersion: 2.9.1
+arkVersion: 3.0.0
 ---
 
 # /ark-architect — Choose your application shape and adopt Ark
+
+## When / not when
+
+| Use `/ark-architect` when… | Do **not** use it when… |
+|----------------------------|-------------------------|
+| Greenfield / thin tree; pick shape + phase-1 layers | Existing spaghetti brownfield → `/ark-adopt` (+ `/ark-explore` first if map missing) |
+| Enthusiast before heavy codegen | Enforcement residual on mature tree → `/ark-autopilot` |
 
 The user is building something new or early in Ark adoption. They may not know
 layered architecture jargon. Your job: translate **what they want to build**
@@ -45,8 +52,9 @@ the same files or weaken the gate.
 
 1. **Detect the shape** — call MCP tool **`ark_recommend`** (or run
    `ark-check --recommend --json`). Read `archetype`, `preset`, `confidence`,
-   `adoptInOrder.phase1`, `analogy`, and `why`. Ask at most **two** questions only
-   if `confidence < 0.5`:
+   `adoptInOrder.phase1`, `analogy`, `why`, `evidence`, and `requiresConfirmation`.
+   Ask at most **two** questions only if `requiresConfirmation` is true (or for compatibility
+   with older ArkGate output, `confidence < 0.5`):
    - "Will this app save data between sessions?"
    - "Is this one app or several in one repository?"
 

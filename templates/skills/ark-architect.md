@@ -5,6 +5,13 @@ description: Choose the application shape, adopt phase-1 layers, scaffold direct
 
 # /ark-architect — Choose your application shape and adopt Ark
 
+## When / not when
+
+| Use `/ark-architect` when… | Do **not** use it when… |
+|----------------------------|-------------------------|
+| Greenfield / thin tree; pick shape + phase-1 layers | Existing spaghetti brownfield → `/ark-adopt` (+ `/ark-explore` first if map missing) |
+| Enthusiast before heavy codegen | Enforcement residual on mature tree → `/ark-autopilot` |
+
 The user is building something new or early in Ark adoption. They may not know
 layered architecture jargon. Your job: translate **what they want to build**
 (application shape, not framework name) into an Ark preset, a phase-1 layer plan,

@@ -18,7 +18,8 @@ const BUDGETS = [
   { path: 'bin/lib/agent-gates.mjs', max: 150 },
   { path: 'bin/lib/mcp-adoption.mjs', max: 600 },
   { path: 'bin/lib/install-migrate.mjs', max: 600 },
-  { path: 'bin/lib/doctor-plan.mjs', max: 700 },
+  // Phase P: designFitness / designSmells doctor surface + patternBets plan IR.
+  { path: 'bin/lib/doctor-plan.mjs', max: 850 },
   { path: 'bin/lib/presets.mjs', max: 650 },
   { path: 'bin/lib/config-contract.mjs', max: 500 },
   { path: 'bin/lib/weakest-link.mjs', max: 500 },

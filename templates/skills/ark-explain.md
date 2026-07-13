@@ -6,6 +6,14 @@ description: Explain this project's architecture in plain language and generate 
 # /ark-explain — Understand this project's architecture
 
 The user wants to understand the architecture, a specific rule, or why the gate blocked them.
+
+## When / not when
+
+| Use `/ark-explain` when… | Do **not** use it when… |
+|--------------------------|-------------------------|
+| Plain-language tour of layers/rules/report | Decision-grade recon / dual-plan → `/ark-explore` |
+| “Why did the gate block me?” pedagogy | Apply fixes → `/ark-fix` / `/ark-autopilot` |
+| Generate / walk HTML showcase report | Fitness numbers only → `/ark-coverage`; brownfield action → `/ark-adopt` |
 Your job is to **teach with this repo's real data** and leave a shareable visual artifact.
 
 ## Dual engine (mandatory)

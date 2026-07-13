@@ -171,20 +171,22 @@ constrain + validate + optional `autoPatch` + `judgmentBrief`). PreToolUse hooks
 never silent write). Cursor/Codex MCP calls remain advisory. See
 [docs/ai-gates.md](docs/ai-gates.md).
 
-| Need | Skill |
-|------|--------|
-| Only the apply loop (plan already exists) | `/ark-loop` |
-| Empty greenfield shape/scaffold | `/ark-architect` |
-| Deep brownfield / manifest mining alone | `/ark-adopt` |
-| Exploratory map of the real product (no apply) | `/ark-explore` |
-| New file placement | `/ark-place` |
-| Gate violation on a change | `/ark-fix` |
-| Design trade-offs within the contract (no package LLM) | `/ark-think` |
-| Edit `ark.config.json` safely | `/ark-contract` |
-| Plain-language tour of the report | `/ark-explain` |
-| Deep coverage + opportunities audit | `/ark-coverage` |
-| Evaluate the experimental runtime against hand-rolled bus/outbox (TS) | `/ark-runtime` |
-| Bump ArkGate + refresh active host (defer Codex when not on Codex) | `/ark-upgrade` |
+| Need | Skill | Not |
+|------|--------|-----|
+| Only the apply loop for plan **A** (edges) | `/ark-loop` | empty A + design residual → explore |
+| Empty greenfield shape/scaffold | `/ark-architect` | brownfield → adopt |
+| Brownfield contract match / baseline / manifest | `/ark-adopt` | map-only → explore |
+| Map / dual-plan **seed** / spaghetti Shape plan (no apply) | `/ark-explore` | fitness-only → coverage |
+| New file placement | `/ark-place` | — |
+| Gate violation on a change | `/ark-fix` | bulk → loop/autopilot |
+| One design decision (2–3 options) | `/ark-think` | full dual-plan → explore |
+| Edit `ark.config.json` safely | `/ark-contract` | — |
+| Plain-language tour / HTML report | `/ark-explain` | recon → explore |
+| Ark **fitness** (governed%, gates, install gaps) | `/ark-coverage` | full recon → explore |
+| Evaluate experimental runtime | `/ark-runtime` | — |
+| Bump ArkGate + refresh active host | `/ark-upgrade` | — |
+
+Brownfield phases: **Align** (honest contract) → **Stabilize** (real baseline) → **Shape** (golden pattern + pilot). ENFORCE with empty plan A can still be **design-weak** — that residual is explore/autopilot **B**, not “done.”
 
 ### Host enforcement support
 

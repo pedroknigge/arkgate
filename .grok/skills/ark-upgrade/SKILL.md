@@ -1,7 +1,7 @@
 ---
 name: ark-upgrade
 description: Update arkgate to the latest published version, then refresh gates and /ark-* skills for the active agent host (defer inactive hosts like Codex when not in use) and re-verify the architecture check. Autonomous.
-arkVersion: 2.12.0
+arkVersion: 3.0.0
 ---
 
 # /ark-upgrade — Update ArkGate and refresh its gates

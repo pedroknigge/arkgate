@@ -1,12 +1,20 @@
 ---
 name: ark-explain
 description: Explain this project's architecture in plain language and generate the showcase HTML report — layers, rules, coverage, gates, and why the contract exists.
-arkVersion: 2.9.1
+arkVersion: 3.0.0
 ---
 
 # /ark-explain — Understand this project's architecture
 
 The user wants to understand the architecture, a specific rule, or why the gate blocked them.
+
+## When / not when
+
+| Use `/ark-explain` when… | Do **not** use it when… |
+|--------------------------|-------------------------|
+| Plain-language tour of layers/rules/report | Decision-grade recon / dual-plan → `/ark-explore` |
+| “Why did the gate block me?” pedagogy | Apply fixes → `/ark-fix` / `/ark-autopilot` |
+| Generate / walk HTML showcase report | Fitness numbers only → `/ark-coverage`; brownfield action → `/ark-adopt` |
 Your job is to **teach with this repo's real data** and leave a shareable visual artifact.
 
 ## Dual engine (mandatory)
@@ -38,7 +46,8 @@ the same files or weaken the gate.
    (`pnpm … exec ark-check` / `yarn` / `npx`).
 
    This also maintains snapshots under **`.ark/reports/`**:
-   - `origin.json` / `origin.html` — frozen **first** report (start of the journey)
+   - `origin.json` / `origin.html` — frozen **day-zero** report (`ark start`/`ark init`
+     freezes this **right after** `ark.config.json`, before agent docs/CI templates)
    - `latest.json` / `latest.html` — every run
    - `history/*.json` — last ~20 machine-readable points for later tooling
 
@@ -67,7 +76,7 @@ forensics, baseline taxonomy) for tech leads.
 
 When explaining the **plan**, name the four `mechanical-safe` remediation kinds only
 (type-only move, pure-type file relocate, `import type` of pure-type modules,
-`import-type-of-type-exports` for named type exports from mixed modules) — everything
+`import-type-of-type-exports` for named type exports from mixed modules; W6 port-proof inject is judgment when proof holds) — everything
 else is judgment/deferred and must not be auto-applied.
 
 ## Spoken / written explanation
