@@ -113,7 +113,9 @@ function parseJson(text) {
 }
 
 function packCandidate(work) {
-  const packed = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', work], { cwd: REPO }));
+  const packOutput = run('npm', ['pack', '--json', '--pack-destination', work], { cwd: REPO });
+  const jsonStart = packOutput.lastIndexOf('\n[');
+  const packed = JSON.parse(jsonStart === -1 ? packOutput : packOutput.slice(jsonStart + 1));
   const tarball = path.join(work, packed[0].filename);
   const home = path.join(work, 'candidate');
   fs.mkdirSync(home, { recursive: true });
