@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "requiredChecks": [
+    "candidate-sha",
+    "adoption",
+    "host-profiles",
+    "release-artifacts",
+    "independent-review"
+  ]
+}
