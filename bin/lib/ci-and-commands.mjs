@@ -158,21 +158,23 @@ Do **not** run overlapping skills for the same job. Pick **one** primary skill f
 | When | Invoke | Not this |
 |------|--------|----------|
 | Unsure / make architecture sound (apply path) | **/ark-autopilot** (default) | explore-only, coverage-only |
-| Map / residual / dual-plan **seed** / spaghetti Shape plan (no apply) | \`/ark-explore\` | coverage (fitness only), think (one decision) |
-| ENFORCE but design-weak / concurrent patterns / god modules | \`/ark-explore\` shape-focus or dual-plan seed → then autopilot for apply | loop (empty A is not done) |
+| **Messy / spaghetti / design-weak after green / clarify for AI** | **Single path:** \`/ark-explore\` shape-focus → dual-plan B, then \`/ark-autopilot\` only to apply B with OK | coverage, think, loop-as-done, skill-shopping |
+| Map / residual / dual-plan seed only (no apply, already know you want recon) | \`/ark-explore\` | coverage (fitness only) |
 | Greenfield shape / empty tree | \`/ark-architect\` | adopt |
 | Brownfield / wrong contract / false-green | \`/ark-adopt\` then \`/ark-contract\` if globs wrong | architect |
 | Edit \`ark.config.json\` layers/rules/intents | \`/ark-contract\` | fix/loop for config |
 | New file “where does this go?” | \`/ark-place\` | architect (unless greenfield shape missing) |
 | Gate violation on a change (small cluster) | \`/ark-fix\` | loop/autopilot unless bulk |
-| Drive plan **A** to goal.met | \`/ark-loop\` | explore (unless A empty + design residual) |
-| Ark **fitness** only (governed%, gates, baseline, install gaps) | \`/ark-coverage\` | explore (full recon) |
-| One design decision, 2–3 options | \`/ark-think\` | explore (full dual-plan) |
+| Drive plan **A** to goal.met | \`/ark-loop\` | explore (unless A empty + design residual → single Shape path above) |
+| Ark **fitness** only (governed%, gates, baseline, install gaps) | \`/ark-coverage\` | Shape / design-weak (use single path above) |
+| One design decision, 2–3 options | \`/ark-think\` | full Shape residual (use single path) |
 | Explain / HTML report tour | \`/ark-explain\` | explore |
 | Bump arkgate + refresh hosts | \`/ark-upgrade\` | — |
 | Optional runtime kernel evaluate | \`/ark-runtime\` | — |
 
-**Phases (brownfield honesty):** Align (contract truth) → Stabilize (real baseline) → Shape (golden pattern + pilot). Empty plan A after Stabilize still leaves Shape work — that is explore/autopilot **B**, not “healthy finished.”
+**Post-green door (Q01):** when doctor reports ENFORCE · design-weak, the **primary** next action is the single Shape path above — not a choice among explore / coverage / think. Doctor JSON: \`postGreenPath\` / \`primaryNextAction\`.
+
+**Phases (brownfield honesty):** Align (contract truth) → Stabilize (real baseline) → Shape (golden pattern + pilot). Empty plan A after Stabilize still leaves Shape work — that is the single post-green path, not “healthy finished.”
 
 ## Before editing TypeScript or JavaScript source files
 

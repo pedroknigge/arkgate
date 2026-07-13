@@ -1,7 +1,7 @@
 ---
 name: ark-explore
 description: Decision-grade architecture recon — sensor + tree + field path + coupling + design-correct residual. Dual-plan seed for spaghetti/pattern debt (never multi-week roadmaps). CLI is a sensor; you read the tree. No gate bypass.
-arkVersion: 3.0.0
+arkVersion: 3.0.2
 ---
 
 # /ark-explore — Recon the real project
@@ -17,9 +17,14 @@ ranked residual that changes the next command — **not** a celebration of ENFOR
 | Use `/ark-explore` when… | Do **not** use it when… |
 |--------------------------|-------------------------|
 | Map / “what next?” / residual after ENFORCE | User wants edits applied → `/ark-autopilot` or `/ark-fix` |
+| **Primary post-green door (Q01):** messy / spaghetti / design-weak / “clarify for AI” | Skill-shopping coverage or think for the same residual |
 | Spaghetti brownfield: patterns concurrent, design-weak under green check | Only “governed% + gates installed?” numbers → `/ark-coverage` |
 | Dual-plan **seed** (A remediation + B pattern bets) without applying | One design trade-off between 2–3 options already mapped → `/ark-think` |
 | Path-correct vs design-correct honesty | Plain-language tour / HTML report → `/ark-explain` |
+
+**Q01 single path:** when doctor `postGreenPath` / ENFORCE · design-weak is active, **this skill
+(shape-focus / dual-plan seed) is the map half of the one door** — then `/ark-autopilot` only
+to apply B with user OK. Do not send the user to coverage or think as equal first choices.
 
 `/ark-autopilot`, `/ark-adopt`, and `/ark-coverage` embed a **lighter** version of this pass.
 **You** are the full recon + pattern-planning skill.

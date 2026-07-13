@@ -182,10 +182,36 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 27 | `P04` | `done` | M | `P03` | Eval fixtures: ENFORCE + design-weak and spaghetti concurrent patterns; CI guards skill/CLI honesty |
 | 28 | `P05` | `done` | M | `P03` | Extraction-card playbook productized in docs + judgment assists (no general codemod) |
 
-**Next:** no Phase P implementation item remains (`P01`–`P05` done). Stable `3.0.0` is published;
-further product work requires a newly approved roadmap item.
+### Phase Q — power + simple (AI-clear path)
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 29 | `Q01` | `done` | M | Phase P done | Single post-green “clarify for AI / Shape” door in doctor + routing |
+
+**Next:** no Q item scheduled after `Q01`. Epic narrative: [docs/plans/power-simple-shape](docs/plans/power-simple-shape/README.md)
+(remaining Q02–Q06 still proposed until approved into this table).
 
 ---
+
+## Phase Q — power + simple (detail)
+
+### Q01 — Single post-green “clarify for AI / Shape” path
+
+- **Status:** `done`
+- **Depends on:** Phase P
+- **Likely files:** `bin/lib/post-green-path.mjs`, `bin/lib/doctor-plan.mjs`,
+  `bin/lib/ci-and-commands.mjs`, `templates/skills/ark-explore.md`, `ark-autopilot.md`,
+  `tests/unit/static-check/q01PostGreenPath.test.ts`
+
+**Outcome:** When `designFitness.designWeak`, doctor ranks **one** primary next action
+(`/ark-explore` shape-focus → dual-plan B → `/ark-autopilot` only to apply B with OK). JSON
+exposes `postGreenPath` + `primaryNextAction` + `healthyFinishedForbidden`. Skill routing maps
+messy/design-weak/clarify-for-AI to that single path. No new skill basename; no new
+mechanical-safe kinds.
+
+**Local evidence (2026-07-13):** `q01PostGreenPath.test.ts` green; design-weak fixture doctor
+JSON `postGreenPath.id === clarify-for-ai`; human top action #1 is the chained path; no
+“Healthy — nothing to do” under design-weak.
 
 ## Phase P — post-3.0 pattern depth
 
@@ -1139,10 +1165,10 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: No Phase P item scheduled (P01–P05 done)
-First result: define and approve a post-P roadmap item before changing product behavior
-Then: scoped plan + acceptance evidence
-Primary files: whatever the approved item names
-Required finish: item acceptance + common merge gate green on the same commit
-Released baseline: npm arkgate@3.0.0; Phase P skills/doctor/plan B/fixtures/extraction cards on branch
+Item: Q01 done — single post-green clarify-for-ai path
+First result: doctor postGreenPath / primaryNextAction on design-weak; routing Single path row
+Then: approve Q02+ into this table before starting (outcome language / golden pattern / …)
+Primary files: bin/lib/post-green-path.mjs, bin/lib/doctor-plan.mjs, bin/lib/ci-and-commands.mjs
+Required finish: Q01 acceptance + tests + architecture green (landed this session)
+Released baseline: npm arkgate@3.0.2+; Q01 lands on main before next patch
 ```

@@ -1,7 +1,7 @@
 ---
 name: ark-autopilot
 description: End-to-end co-pilot — explore first, dual plan A remediation + B pattern/Shape bets, mechanical-safe fixes, judgment design. Empty plan A is not healthy if design-weak. CLI is a sensor; you read and remediate files.
-arkVersion: 3.0.0
+arkVersion: 3.0.2
 ---
 
 # /ark-autopilot — Get to a sound architecture, end to end
@@ -21,7 +21,11 @@ the explore pass and dual-plan section B (pattern / Shape bets).
 | “Make architecture sound” end-to-end | Map only, no apply → `/ark-explore` |
 | Brownfield or greenfield with apply | Only fitness numbers → `/ark-coverage` |
 | User wants A + B planned and A executed | Single edge fix → `/ark-fix`; plan A only → `/ark-loop` |
+| **Apply half of Q01 post-green path** (after explore map / when user wants full apply) | Skipping explore when doctor primary is Shape map-first |
 | Spaghetti under ENFORCE: Shape work with user ok on B | Contract false-green first → `/ark-adopt` / `/ark-contract` STOP paths |
+
+**Q01:** doctor’s single door is `/ark-explore` shape-focus → dual-plan B, **then** this skill only
+to apply B with OK. Prefer that order when `postGreenPath` / design-weak is the primary residual.
 
 ## Related onboarding
 

@@ -31,6 +31,11 @@ import {
   summarizeDesignFitness,
   isDesignWeak,
 } from './design-smells.mjs';
+import {
+  buildPostGreenNextAction,
+  mergePostGreenTopActions,
+  isDoctorHealthyNothingToDo,
+} from './post-green-path.mjs';
 
 const color = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
@@ -383,6 +388,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     governedPercent: cov.governed.percent,
     totalFiles: cov.governed.totalFiles,
   });
+  // Q01 — single post-green door when design-weak (map → B; no skill shopping).
+  const postGreenPath = buildPostGreenNextAction(designFitness);
 
   if (asJson) {
     console.log(
@@ -407,6 +414,14 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             // Path-correct ENFORCE can still be design-weak (P02).
             designFitness,
             designSmells,
+            // Q01: primary next action when Shape residual dominates (null if not design-weak).
+            postGreenPath,
+            ...(postGreenPath
+              ? {
+                  primaryNextAction: postGreenPath.action,
+                  healthyFinishedForbidden: true,
+                }
+              : {}),
             governed: cov.governed,
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
@@ -523,7 +538,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     modeMark,
     `${modeTitle} — ${
       designFitness.designWeak
-        ? 'Guard on edges is honest, but design smells remain (Shape residual). You do not pick this mode. Next: /ark-explore dual-plan B or /ark-autopilot for pattern bets — never treat empty plan A as healthy finished.'
+        ? 'Guard on edges is honest, but design smells remain (Shape residual). You do not pick this mode. Next: single path — /ark-explore shape-focus → dual-plan B, then /ark-autopilot only to apply B with your OK. Never empty plan A = done.'
         : modeHelp[mode]
     }`
   );
@@ -546,10 +561,9 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         line(' ', color.dim(`evidence: ${smell.evidence.slice(0, 4).join(', ')}`));
       }
     }
-    if (designFitness.designWeak) {
-      actions.push(
-        'shape residual: /ark-explore (shape-focus) or /ark-autopilot dual-plan B — pattern bets are never mechanical-safe'
-      );
+    if (postGreenPath) {
+      // Rank first via mergePostGreenTopActions at the end (Q01 single door).
+      actions.push(postGreenPath.action);
     }
   }
 
@@ -776,11 +790,21 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   }
 
   console.log('');
-  if (actions.length === 0) {
+  const uniqueActions = mergePostGreenTopActions(actions, postGreenPath);
+  if (isDoctorHealthyNothingToDo(designFitness, uniqueActions)) {
     console.log(color.green('✔ Healthy — nothing to do.'));
   } else {
-    const uniqueActions = [...new Set(actions.filter(Boolean))];
+    if (designFitness.designWeak && uniqueActions.length === 0 && postGreenPath) {
+      uniqueActions.push(postGreenPath.action);
+    }
     console.log(color.bold(`Top actions (${uniqueActions.length}):`));
     uniqueActions.forEach((action, index) => console.log(`  ${index + 1}. ${action}`));
+    if (postGreenPath) {
+      console.log(
+        color.dim(
+          '  (post-green path is primary when ENFORCE · design-weak — do not skill-shop explore vs coverage vs think)'
+        )
+      );
+    }
   }
 }
