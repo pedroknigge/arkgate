@@ -5,6 +5,7 @@ import {
   applyFrameworkLayoutOverlays,
   createElevenLayerConfig,
   DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
+  discoverRepoUnits,
   DEFAULT_INTENT_PREFIXES,
   resolveIncludeRoots,
 } from '../ark-shared.mjs';
@@ -203,12 +204,41 @@ export const ARCHITECTURE_PRESETS = {
   monorepo: (includeDirs, root) => {
     let include =
       includeDirs && includeDirs.length > 0 ? [...includeDirs] : [];
+    let units = [];
     if (root) {
       const resolved = resolveIncludeRoots(root);
       if (resolved.length > 0) include = resolved;
+      units = discoverRepoUnits(root);
+      const nonProductRoots = new Set(
+        units
+          .filter((unit) => ['docs', 'example', 'test'].includes(unit.role))
+          .map((unit) => unit.root)
+      );
+      include = include.filter((entry) => !nonProductRoots.has(entry));
     }
     // Turborepo: apps/ + packages/; Nx enterprise: apps/ + libs/ (+ packages/).
     if (include.length === 0) include = ['packages', 'apps', 'libs'];
+    // Established workspaces often have flat package source roots rather than a
+    // directory named domain/application. The package manifest supplies a real,
+    // reviewable role signal: a published library is a domain surface; an app or
+    // CLI package coordinates work. This is deliberately limited to package roots
+    // Ark already discovered, never a catch-all **/src/** fallback.
+    const packagePatterns = (roles) => {
+      if (!root) return [];
+      return units
+        .filter((unit) => roles.includes(unit.role))
+        .flatMap((unit) => unit.sourceRoots.map((sourceRoot) => {
+          const base = unit.root === '.'
+            ? sourceRoot
+            : sourceRoot === '.'
+              ? unit.root
+              : `${unit.root}/${sourceRoot}`;
+          return base === '.' ? null : `${base}/**`;
+        }))
+        .filter(Boolean);
+    };
+    const librarySourcePatterns = packagePatterns(['library']);
+    const applicationSourcePatterns = packagePatterns(['application', 'cli']);
     return presetWithOverlays(
       {
         include,
@@ -219,14 +249,24 @@ export const ARCHITECTURE_PRESETS = {
               'Pure business rules and entities, in any package. No I/O, no framework, no ambient globals.',
             // Domain by intentional folders only — NOT bare **/types.ts (that mis-classifies
             // application bags like frontend/src/core/**/types.ts as Domain and creates false edges).
-            patterns: ['**/domain/**', '**/entities/**', '**/cinematic/types.ts'],
+            patterns: [
+              '**/domain/**',
+              '**/entities/**',
+              '**/cinematic/types.ts',
+              ...librarySourcePatterns,
+            ],
             forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
             optional: true,
           },
           {
             name: 'ApplicationOrchestration',
             description: 'Use cases and services that coordinate the domain through ports.',
-            patterns: ['**/application/**', '**/use-cases/**', '**/services/**'],
+            patterns: [
+              '**/application/**',
+              '**/use-cases/**',
+              '**/services/**',
+              ...applicationSourcePatterns,
+            ],
             optional: true,
           },
           {

@@ -12,7 +12,7 @@ export const SOURCE_FILE_NAME = /\.[cm]?[tj]sx?$/;
  *  to production code (*.spec.ts). Counting them as ungoverned forces false
  *  CONFIG_UNCLASSIFIED_FILES under --strict-config on every starter. */
 export const TEST_FILE_NAME =
-  /(^test\.|\.(spec|test)(?:-d)?\.)(tsx?|jsx?|mjsx?|cjsx?|mts|cts)$/i;
+  /(^test(?:[-_.]).*|\.(spec|test)(?:-d)?\.)(tsx?|jsx?|mjsx?|cjsx?|mts|cts)$/i;
 
 export function isGovernableSourceFile(name) {
   return SOURCE_FILE_NAME.test(name) && !name.endsWith('.d.ts') && !TEST_FILE_NAME.test(name);
@@ -23,6 +23,17 @@ export function isSkippedSourceDir(name) {
     name === 'node_modules' ||
     name === 'dist' ||
     name === 'coverage' ||
+    name === 'bench' ||
+    name === 'benches' ||
+    name === 'benchmark' ||
+    name === 'benchmarks' ||
+    name === 'docs' ||
+    name === 'documentation' ||
+    name === 'example' ||
+    name === 'examples' ||
+    name === 'fixture' ||
+    name === 'fixtures' ||
+    name === 'playground' ||
     name === '__tests__' ||
     name === '__mocks__' ||
     name === 'e2e' ||
