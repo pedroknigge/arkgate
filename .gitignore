@@ -35,6 +35,7 @@ marketing/
 
 # Local pack artifacts
 *.tgz
+release/artifacts/
 
 # Ark generated reports / local state
 .ark/
