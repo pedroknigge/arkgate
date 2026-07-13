@@ -46,7 +46,7 @@ one item may be `doing`.
 | 2 | `O04` | `done` | `O03` done | Clean-room onboarding matrix passed PR #43 CI |
 | 3 | `V01` | `done` | `C05` and `O04` done | PR #45 (`d1400ca`) passed real cold, warm, and incremental budgets in CI |
 | 4 | `V02` | `done` | `C04` done, plus queue order | Mutation, property, and fuzz boundaries are defended |
-| 5 | `V03` | `todo` | `O04`, `V01`, and `V02` done | At least 12 pinned external adoptions are reproduced |
+| 5 | `V03` | `done` | `O04`, `V01`, and `V02` done | 12 pinned MIT-licensed adoptions reproduced; PR #47 CI passed |
 | 6 | `V04` | `todo` | `C06` and `V03` done | Release artifacts are bounded, complete, and attestable |
 | 7 | `V05` | `todo` | Every prior item done | Independent binary beta-exit audit passes |
 
@@ -561,14 +561,22 @@ dimension.
 
 ### Acceptance checklist
 
-- [ ] At least 12 distinct public repository SHAs are pinned and reproduced.
-- [ ] Four product shapes, four hosts, three package managers, and three sizes are represented.
-- [ ] No third-party source is committed.
-- [ ] Every result is tied to the ArkGate candidate SHA and exact command environment.
-- [ ] No open P0/P1 false green or destructive onboarding issue remains.
-- [ ] Median first-green time is below five minutes, excluding dependency installation.
-- [ ] Median governed coverage is at least 90%.
-- [ ] Cases below 90% remain Adapt and explain the missing coverage.
+- [x] At least 12 distinct public repository SHAs are pinned and reproduced.
+- [x] Four product shapes, four hosts, three package managers, and three sizes are represented.
+- [x] No third-party source is committed.
+- [x] Every result is tied to the ArkGate candidate SHA and exact command environment.
+- [x] No open P0/P1 false green or destructive onboarding issue remains.
+- [x] Median first-green time is below five minutes, excluding dependency installation.
+- [x] Median governed coverage is at least 90%.
+- [x] Cases below 90% remain Adapt and explain the missing coverage.
+
+### Closure evidence
+
+The MIT-licensed 12-cell manifest and per-cell results are committed under
+`eval/adoption/`. Candidate `a52fcbeebf9f6eaae7d458101809616e142e2658` produced three green
+local merge gates, nine retained `Adapt` cases, 589 ms median first-green time, 93% median
+governed coverage, and no open P0/P1. PR #47 passed the required build, CodeQL, Semgrep,
+onboarding, fuzz, and performance checks. `V04` is now the next sequential item.
 
 ### Focused verification
 
