@@ -16,9 +16,8 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **Release status:** the stable `3.0.0` candidate is prepared and passed its beta-exit audit.
-> It is not tagged or published to npm yet; the npm badge always reflects the registry's current
-> published version.
+> **ArkGate 3.0** passed its independent beta-exit audit. The npm badge reports the version
+> currently available in the registry.
 
 ---
 
