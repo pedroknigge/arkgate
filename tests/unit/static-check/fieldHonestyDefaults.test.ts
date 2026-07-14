@@ -24,6 +24,7 @@ import {
   detectDeployPathQuality,
   ensureTypecheckScript,
 } from '../../../bin/lib/agent-gates.mjs';
+import { computeReportFitness } from '../../../bin/lib/html-report.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const ARK_CHECK = path.join(REPO, 'bin/ark-check.mjs');
@@ -84,6 +85,75 @@ describe('resolveOperatingMode honesty', () => {
       presentationShare: 0.3,
     });
     expect(mode).toBe('enforce');
+  });
+});
+
+describe('computeReportFitness mode vs doctor coreOptional', () => {
+  it('ENFORCE when only non-core optional layers are populated (report must match doctor)', () => {
+    // Predial-class host: four cores required + green; secondary layers stay optional:true
+    // with files. Pre-fix html-report counted those as coreOptionalWithFiles → false ADAPT.
+    const fitness = computeReportFitness({
+      coverage: {
+        governed: { percent: 100, classifiedFiles: 40, totalFiles: 40 },
+        layers: [
+          { name: 'DomainModel', files: 4 },
+          { name: 'ApplicationOrchestration', files: 8 },
+          { name: 'PresentationAdapters', files: 12 },
+          { name: 'PersistenceAdapters', files: 6 },
+          { name: 'SharedKernel', files: 3 },
+          { name: 'IntegrationAdapters', files: 4 },
+          { name: 'WorkflowAdapters', files: 2 },
+          { name: 'RuntimeConfig', files: 1 },
+        ],
+      },
+      violations: [],
+      ok: true,
+      enforcement: [{ on: true }, { on: true }, { on: true }],
+      config: {
+        layers: [
+          { name: 'DomainModel', optional: false },
+          { name: 'ApplicationOrchestration', optional: false },
+          { name: 'PresentationAdapters', optional: false },
+          { name: 'PersistenceAdapters', optional: false },
+          { name: 'SharedKernel', optional: true },
+          { name: 'IntegrationAdapters', optional: true },
+          { name: 'WorkflowAdapters', optional: true },
+          { name: 'RuntimeConfig', optional: true },
+        ],
+        rules: [
+          { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
+          { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
+        ],
+      },
+    });
+    expect(fitness.mode).toBe('enforce');
+    expect(fitness.modeLabel).toBe('ENFORCE');
+  });
+
+  it('ADAPT when a populated core remains optional: true', () => {
+    const fitness = computeReportFitness({
+      coverage: {
+        governed: { percent: 100, classifiedFiles: 20, totalFiles: 20 },
+        layers: [
+          { name: 'DomainModel', files: 5 },
+          { name: 'PresentationAdapters', files: 10 },
+          { name: 'PersistenceAdapters', files: 5 },
+        ],
+      },
+      violations: [],
+      ok: true,
+      enforcement: [{ on: true }],
+      config: {
+        layers: [
+          { name: 'DomainModel', optional: true },
+          { name: 'PresentationAdapters', optional: false },
+          { name: 'PersistenceAdapters', optional: false },
+          { name: 'SharedKernel', optional: true },
+        ],
+        rules: [],
+      },
+    });
+    expect(fitness.mode).toBe('adapt');
   });
 });
 

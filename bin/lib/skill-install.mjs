@@ -43,10 +43,11 @@ export function detectActiveAgentHost(env = process.env) {
     .toLowerCase();
   if (explicit) return explicit;
 
-  // Grok / xAI Build
+  // Grok / xAI Build (include GROK_AGENT — common session signal missing in older detect)
   if (
     envTruthy(env.GROK_BUILD) ||
     envTruthy(env.XAI_GROK) ||
+    envTruthy(env.GROK_AGENT) ||
     env.GROK_WORKSPACE_ROOT ||
     env.GROK_SESSION_ID
   ) {

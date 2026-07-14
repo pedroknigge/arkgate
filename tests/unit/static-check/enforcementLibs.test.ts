@@ -26,6 +26,9 @@ import {
 } from '../../../bin/lib/ts-resolve.mjs';
 import {
   htmlEscape,
+  metricKpi,
+  baselineSignalHint,
+  modeBadgeHint,
   buildReportSnapshot,
   computeReportFitness,
   deltaField,
@@ -34,7 +37,15 @@ import {
   reportsDir,
   archiveReportSnapshots,
   readJsonSafe,
+  renderHtmlReport,
 } from '../../../bin/lib/html-report.mjs';
+import {
+  renderDesignDepthStrip,
+  renderDesignCleanNote,
+  renderWritePathAdoptionBlock,
+  renderBaselineSignalLegend,
+  writePathModeHint,
+} from '../../../bin/lib/html-report-depth.mjs';
 import {
   computeCoverage,
   buildRemediationPlan,
@@ -167,6 +178,133 @@ describe('ts-resolve + import-resolve (shipped)', () => {
 });
 
 describe('html-report pure helpers (shipped)', () => {
+  it('metric KPIs expose plain-language hints for newcomers', () => {
+    const tile = metricKpi('100%', 'Governed', 'Share of scanned files in a layer');
+    expect(tile).toContain('class="kpi"');
+    expect(tile).toContain('class="kpi-hint"');
+    expect(tile).toContain('Share of scanned files in a layer');
+    expect(tile).toContain('Governed');
+    expect(tile).toContain('100%');
+    expect(baselineSignalHint('keep-empty')).toMatch(/freezes 0 keys/i);
+    expect(baselineSignalHint('active-ratchet')).toMatch(/freezes known debt/i);
+    expect(modeBadgeHint('enforce')).toMatch(/hold the line/i);
+    expect(modeBadgeHint('adapt')).toMatch(/aligning/i);
+  });
+
+  it('design-depth strip, write-path block, and baseline legend render for showcase', () => {
+    const weak = renderDesignDepthStrip({
+      mode: 'enforce',
+      designFitness: { designWeak: true, smellCount: 1 },
+      designSmells: [
+        {
+          id: 'god-module',
+          outcome: 'A few huge files own too many responsibilities',
+          evidence: ['lib/db/schema.ts'],
+        },
+      ],
+      pilotLoop: {
+        active: true,
+        nextPilot: {
+          smellId: 'god-module',
+          pilotTarget: 'lib/db/schema.ts',
+          successSignal: 'split pilot',
+          killSwitch: 'stop after one',
+        },
+      },
+      postGreenPath: { short: '/ark-explore shape-focus' },
+    });
+    expect(weak).toContain('design-weak');
+    expect(weak).toContain('god-module');
+    expect(weak).toContain('lib/db/schema.ts');
+    expect(weak).toContain('Next pilot');
+    expect(weak).toContain('/ark-explore shape-focus');
+
+    const clean = renderDesignCleanNote({
+      ok: true,
+      mode: 'enforce',
+      designFitness: { designWeak: false, smellCount: 0 },
+    });
+    expect(clean).toContain('Design depth · OK');
+    // Missing sensors must not claim design OK (callers without designDepth).
+    expect(
+      renderDesignCleanNote({ ok: true, mode: 'enforce', designFitness: null })
+    ).toBe('');
+    expect(renderDesignCleanNote({ ok: true, mode: 'enforce' })).toBe('');
+
+    const wp = renderWritePathAdoptionBlock({
+      activeHost: 'unknown',
+      mode: 'none',
+      inventory: {
+        hosts: {
+          grok: { configured: true },
+          claude: { configured: true },
+        },
+      },
+      hookPresent: false,
+      mcpPresent: false,
+    });
+    expect(wp).toContain('Write path');
+    expect(wp).toContain('unknown');
+    expect(wp).toContain('grok');
+    expect(writePathModeHint('repair')).toMatch(/repair payload/i);
+    expect(renderBaselineSignalLegend()).toContain('keep-empty');
+
+    const root = mk();
+    try {
+      const html = renderHtmlReport({
+        root,
+        config: {
+          layers: [{ name: 'DomainModel', patterns: ['src/**'] }],
+          rules: [],
+        },
+        coverage: {
+          governed: { percent: 100, classifiedFiles: 2, totalFiles: 2 },
+          layers: [{ name: 'DomainModel', files: 2 }],
+        },
+        violations: [],
+        ok: true,
+        version: '0.0.0-test',
+        adoption: {
+          gaps: [],
+          hosts: [{ host: 'grok', complete: true }],
+          mcp: { ok: true, dualBinFiles: [] },
+          coreOptional: [],
+          originReport: { present: true, path: '.ark/reports/origin.json' },
+          baseline: {
+            exists: true,
+            frozenKeys: 0,
+            primaryPathUsesBaseline: true,
+            signal: 'keep-empty',
+          },
+          writePath: {
+            activeHost: 'grok',
+            mode: 'repair',
+            hookPresent: true,
+            hookRepair: true,
+            mcpPresent: true,
+            inventory: { hosts: { grok: { configured: true } } },
+          },
+        },
+        designDepth: {
+          designFitness: { designWeak: true, smellCount: 1, label: 'ENFORCE · design-weak' },
+          designSmells: [{ id: 'god-module', outcome: 'split me', evidence: ['a.ts'] }],
+          pilotLoop: {
+            active: true,
+            nextPilot: { smellId: 'god-module', pilotTarget: 'a.ts' },
+          },
+          postGreenPath: { short: '/ark-explore shape-focus' },
+        },
+      });
+      expect(html).toContain('design-weak');
+      expect(html).toContain('id="design-depth"');
+      expect(html).toContain('Write path');
+      expect(html).toContain('Baseline policy signals');
+      expect(html).toContain('kpi-hint');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('escapes HTML and computes fitness + snapshots', () => {
     expect(htmlEscape('<a&b>')).toContain('&lt;');
     expect(formatDelta(3)).toBe('+3');

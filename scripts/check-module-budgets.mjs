@@ -25,7 +25,9 @@ const BUDGETS = [
   { path: 'bin/lib/weakest-link.mjs', max: 500 },
   { path: 'bin/lib/enforcement-profiles.mjs', max: 150 },
   { path: 'bin/lib/write-path-detect.mjs', max: 200 },
-  { path: 'bin/lib/html-report.mjs', max: 1500 },
+  { path: 'bin/lib/html-report.mjs', max: 1550 },
+  // Design-depth / write-path / baseline legend for showcase HTML (split from renderer).
+  { path: 'bin/lib/html-report-depth.mjs', max: 320 },
 ];
 
 function loc(rel) {

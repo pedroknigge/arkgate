@@ -58,6 +58,7 @@ import {
   reportsDir,
   readJsonSafe,
 } from './lib/html-report.mjs';
+import { buildReportDepthPayload } from './lib/html-report-depth.mjs';
 import { shouldOpenHtmlReport, openHtmlInBrowser } from './lib/open-html.mjs';
 import {
   computeCoverage,
@@ -1266,6 +1267,13 @@ async function main() {
     const existingOrigin = args.resetOrigin
       ? null
       : readJsonSafe(path.join(reportsDir(root), 'origin.json'));
+    const { adoption: adoptionForReport, designDepth } = buildReportDepthPayload(
+      root,
+      config,
+      files,
+      coverage,
+      activeViolations
+    );
     const reportPayload = {
       root,
       config,
@@ -1282,6 +1290,8 @@ async function main() {
       originSnapshot: existingOrigin,
       currentSnapshot,
       originJustCreated: !existingOrigin,
+      adoption: adoptionForReport,
+      designDepth,
     };
     const html = args.beginner
       ? renderBeginnerHtmlReport(reportPayload)

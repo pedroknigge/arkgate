@@ -4,7 +4,40 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
-No changes are scheduled after 3.0.3.
+No changes are scheduled after 3.0.4.
+
+## 3.0.4 — 2026-07-14
+
+Report honesty + showcase depth patch. **No breaking** CLI or `ark.config.json` changes.
+**No gate weaken.**
+
+### Fixed
+
+- **HTML report false ADAPT:** `computeReportFitness` counted *any* `optional: true` layer
+  with files as `coreOptionalWithFiles`, so doctor could report **ENFORCE** while
+  `ark-report.html` / `latest.json` mode stayed **ADAPT** (secondary layers like
+  SharedKernel / Integration / Workflow). Report now uses the same `CORE_LAYER_NAMES`
+  filter as doctor adoption (`DomainModel`, `ApplicationOrchestration`,
+  `PresentationAdapters`, `PersistenceAdapters`).
+- **False adoption gap `write-path-none` on report/CI:** when `activeHost` is `unknown`
+  (plain `npx ark-check --report` outside an agent session) but the repo inventory already
+  has hard-write hooks or advisory MCP for Claude/Grok/Cursor/Codex, doctor/report no longer
+  open a `write-path-none` adoption gap. Session projection still reports `mode: none` for
+  honesty (other hosts' hooks are not a guarantee for this process). `detectActiveAgentHost`
+  also recognizes `GROK_AGENT`.
+
+### Added
+
+- **Report metric hints:** HTML showcase KPIs (hero, adoption, contract density, debt) show
+  plain-language micro-copy under each tile plus native tooltips; PASS/mode badges and score
+  parts (Coverage/Clean/Gates/Rules) explain what they mean for newcomers.
+- **Report design-depth strip:** `ark-check --report` includes doctor-parity Shape residual
+  (design-weak badge, smell outcomes, one next pilot, post-green door, optional golden pattern).
+  Clean ENFORCE with no smells shows a short “Design depth · OK” note (only when sensors ran).
+- **Report adoption extras:** write-path line (active host · mode · inventory on disk) and a
+  fixed baseline-policy legend (`keep-empty` / `active-ratchet` / `absent`).
+
+Release note: `docs/releases/3.0.4.md`.
 
 ## 3.0.3 — 2026-07-13
 

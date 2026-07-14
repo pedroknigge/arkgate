@@ -11,6 +11,13 @@ import {
   resolveOperatingMode,
 } from '../ark-shared.mjs';
 import { collectAdoptionGaps, arkCheckCommand } from './agent-gates.mjs';
+import { CORE_LAYER_NAMES } from './core-layers.mjs';
+import {
+  renderBaselineSignalLegend,
+  renderDesignCleanNote,
+  renderDesignDepthStrip,
+  renderWritePathAdoptionBlock,
+} from './html-report-depth.mjs';
 import { FIX_HINTS } from './violations.mjs';
 
 export function detectEnforcement(root) {
@@ -56,6 +63,53 @@ export function htmlEscape(value) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+/**
+ * KPI tile with plain-language hint (visible micro-copy + native tooltip).
+ * Helps newcomers read the showcase without memorizing Ark jargon.
+ *
+ * @param {string|number} value
+ * @param {string} label short metric name
+ * @param {string} hint one-sentence meaning
+ */
+export function metricKpi(value, label, hint) {
+  const v = htmlEscape(String(value));
+  const l = htmlEscape(label);
+  const h = htmlEscape(hint);
+  return `<div class="kpi" title="${h}" aria-label="${l}: ${v}. ${h}">
+        <b>${v}</b>
+        <span>${l}</span>
+        <em class="kpi-hint">${h}</em>
+      </div>`;
+}
+
+/** Baseline policy signal → human meaning (adoption card). */
+export function baselineSignalHint(signal) {
+  switch (String(signal || '')) {
+    case 'keep-empty':
+      return 'Baseline file exists and freezes 0 keys — every violation is active (honest green).';
+    case 'active-ratchet':
+      return 'Baseline freezes known debt keys; new distinct violations still fail the check.';
+    case 'absent':
+      return 'No .ark-baseline.json — all findings are active (or you have not adopted a freeze file).';
+    default:
+      return 'How frozen debt is handled relative to active architecture violations.';
+  }
+}
+
+/** Operating mode badge tooltip. */
+export function modeBadgeHint(mode) {
+  switch (String(mode || '').toLowerCase()) {
+    case 'enforce':
+      return 'Contract matches the tree: cores are required where populated, coverage is honest, gates can hold the line.';
+    case 'adapt':
+      return 'Contract is live but still aligning (optional cores with files, empty cores, or presentation-bag false green).';
+    case 'suggest':
+      return 'Starter shape — expand layers and raise governed coverage as the codebase grows.';
+    default:
+      return 'Operating mode for co-pilot surfaces (suggest · adapt · enforce).';
+  }
 }
 
 /** Directory for origin / latest / history architecture report snapshots. */
@@ -159,7 +213,10 @@ export function computeReportFitness({ coverage, violations, ok, enforcement, co
   const presentationRow = (coverage?.layers ?? []).find(
     (r) => r.name === 'PresentationAdapters'
   );
+  // Same honesty gate as doctor (`mcp-adoption` coreOptional): only the four cores
+  // matter. Secondary optional layers with files must not force ADAPT on the HTML report.
   const coreOptionalWithFiles = (config?.layers ?? []).filter((layer) => {
+    if (!CORE_LAYER_NAMES.has(layer.name)) return false;
     if (layer.optional !== true) return false;
     const row = (coverage?.layers ?? []).find((r) => r.name === layer.name);
     return (row?.files ?? 0) > 0;
@@ -396,6 +453,8 @@ export function renderHtmlReport({
   currentSnapshot = null,
   originJustCreated = false,
   adoption = null,
+  /** Optional design-depth (doctor parity): designFitness, designSmells, pilotLoop, postGreenPath, goldenPattern */
+  designDepth = null,
 }) {
   const layers = Array.isArray(config.layers) ? config.layers : [];
   const rules = Array.isArray(config.rules) ? config.rules : [];
@@ -448,6 +507,29 @@ export function renderHtmlReport({
   } = fitness;
 
   const adoptionView = adoption || collectAdoptionGaps(root, config, coverage);
+  const depth = designDepth && typeof designDepth === 'object' ? designDepth : {};
+  const designFitness = depth.designFitness ?? null;
+  const designSmells = Array.isArray(depth.designSmells) ? depth.designSmells : [];
+  const designWeakBadge =
+    designFitness?.designWeak === true
+      ? ` <span class="badge design" title="Edges can be green while lived design residual remains (Shape). Not a FAIL.">design-weak</span>`
+      : '';
+  const designStripHtml =
+    renderDesignDepthStrip({
+      designFitness,
+      designSmells,
+      pilotLoop: depth.pilotLoop,
+      postGreenPath: depth.postGreenPath,
+      goldenPattern: depth.goldenPattern,
+      mode,
+    }) ||
+    renderDesignCleanNote({
+      designFitness,
+      ok,
+      mode,
+    });
+  const writePathHtml = renderWritePathAdoptionBlock(adoptionView.writePath);
+  const baselineLegendHtml = renderBaselineSignalLegend();
 
   // ── Senior diagnostics (coupling, purity, contract density) ──────────────
   const layerNames = ordered.map((l) => l.name);
@@ -818,9 +900,33 @@ export function renderHtmlReport({
   .score-cap { color: var(--dim); font-size: .85rem; margin: 0; }
   .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: .65rem; margin: 1rem 0 0; }
   @media (max-width: 720px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
-  .kpi { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: .7rem .8rem; }
+  .kpi { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: .7rem .8rem; cursor: help; }
   .kpi b { display: block; font-size: 1.25rem; letter-spacing: -0.02em; }
   .kpi span { color: var(--dim); font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; }
+  .kpi-hint {
+    display: block; margin-top: .4rem; color: var(--dim); font-size: .68rem; font-style: normal;
+    font-weight: 450; line-height: 1.35; letter-spacing: 0; text-transform: none; max-width: 16rem;
+  }
+  .score-parts span { cursor: help; border-bottom: 1px dotted color-mix(in srgb, var(--dim) 55%, transparent); }
+  .badge[title] { cursor: help; }
+  .badge.design {
+    background: color-mix(in srgb, var(--gold) 18%, transparent); color: var(--gold);
+    border-color: color-mix(in srgb, var(--gold) 40%, transparent);
+  }
+  .badge.design-ok {
+    background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green);
+    border-color: color-mix(in srgb, var(--green) 35%, transparent);
+  }
+  .design-strip { border-left: 3px solid var(--gold); }
+  .design-strip.is-clean { border-left-color: var(--green); }
+  .design-strip.has-smells { border-left-color: var(--gold); }
+  .design-head { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+  .pilot-card {
+    margin-top: .35rem; padding: .75rem .9rem; border-radius: 12px;
+    background: var(--panel2); border: 1px solid var(--line);
+  }
+  .write-path-block { margin-top: .15rem; }
+  .baseline-legend summary { cursor: pointer; color: var(--dim); font-size: .84rem; }
   .section { margin-top: 1.35rem; }
   .grid-2 { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 1rem; }
   @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
@@ -936,23 +1042,48 @@ export function renderHtmlReport({
   <div class="hero">
     <div class="card">
       <div class="brand"><i></i> Ark architecture report</div>
-      <h1>${esc(project)} <span class="badge ${status}">${status}</span> <span class="badge mode">${esc(modeLabel)}</span></h1>
-      <p class="lede">${esc(modeBlurb)} One machine-readable contract · write gate · CI · optional runtime.</p>
+      <h1>${esc(project)} <span class="badge ${status}" title="${status === 'PASS' ? 'Architecture check is green: 0 active violations against the contract.' : 'Architecture check failed: active violations remain (or the scan could not complete cleanly).'}">${status}</span> <span class="badge mode" title="${esc(modeBadgeHint(mode))}">${esc(modeLabel)}</span>${designWeakBadge}</h1>
+      <p class="lede">${esc(modeBlurb)}${designFitness?.designWeak ? ' Design residual remains (see strip below) — not a FAIL.' : ''} One machine-readable contract · write gate · CI · optional runtime.</p>
       <div class="kpis">
-        <div class="kpi"><b>${esc(govLabel)}</b><span>Governed</span></div>
-        <div class="kpi"><b>${layers.length}</b><span>Layers</span></div>
-        <div class="kpi"><b>${gatesOn}/${enforcement.length}</b><span>Gates live</span></div>
-        <div class="kpi"><b>${violations.length}${suppressed ? ` · ${suppressed}Δ` : ''}</b><span>Violations${suppressed ? ' · frozen' : ''}</span></div>
+        ${metricKpi(
+          govLabel,
+          'Governed',
+          'Share of scanned files assigned to a contract layer. 100% means every in-scope file has a home.'
+        )}
+        ${metricKpi(
+          layers.length,
+          'Layers',
+          'How many architecture layers the contract defines (cores + optional product layers).'
+        )}
+        ${metricKpi(
+          `${gatesOn}/${enforcement.length}`,
+          'Gates live',
+          'Write hook, CI workflow, ESLint plugin, and baseline file — how many enforcement points are actually present.'
+        )}
+        ${metricKpi(
+          `${violations.length}${suppressed ? ` · ${suppressed}Δ` : ''}`,
+          `Violations${suppressed ? ' · frozen' : ''}`,
+          suppressed
+            ? 'Active contract breaks right now; Δ = keys frozen in baseline (not failing until ratchet).'
+            : 'Active contract breaks (layer imports, purity, etc.). Zero means edges match the rules.'
+        )}
       </div>
       <p class="meta">${meta}</p>
       ${skillsNote}
     </div>
-    <div class="card score-card">
+    <div class="card score-card" title="Human fitness signal only — not a CI gate. Weighted blend of coverage, cleanliness, live gates, and rule density.">
       <div class="score-ring ${scoreTone}"><div><div class="score-n">${score}</div><div class="dim" style="font-size:.72rem;letter-spacing:.08em;text-transform:uppercase">Ark score</div></div></div>
       <p class="score-cap">${esc(scoreCaption)}</p>
-      <p class="meta" style="margin-top:.65rem">Coverage ${scoreCoverage} · Clean ${scoreClean} · Gates ${scoreGates} · Rules ${scoreRules}</p>
+      <p class="meta score-parts" style="margin-top:.65rem">
+        <span title="0.4 weight — governed file percent (or 50 if coverage unknown).">${esc(`Coverage ${scoreCoverage}`)}</span>
+        · <span title="0.3 weight — 100 with zero active violations; drops as violations pile up.">${esc(`Clean ${scoreClean}`)}</span>
+        · <span title="0.2 weight — share of enforcement points that are present on disk (hook, CI, ESLint, baseline).">${esc(`Gates ${scoreGates}`)}</span>
+        · <span title="0.1 weight — how dense the deny matrix is relative to layer pairs (stricter inward architecture scores higher).">${esc(`Rules ${scoreRules}`)}</span>
+      </p>
     </div>
   </div>
+
+  ${designStripHtml}
 
   <div class="section card" id="adoption">
     <h2>Adoption</h2>
@@ -960,10 +1091,30 @@ export function renderHtmlReport({
       Co-pilot completeness — separate from the 0–100 fitness score above. Hosts, MCP health, origin snapshot, core optionality, baseline policy.
     </p>
     <div class="kpis" style="margin-bottom:.75rem">
-      <div class="kpi"><b>${adoptionView.gaps.length === 0 ? 'OK' : adoptionView.gaps.length}</b><span>${adoptionView.gaps.length === 0 ? 'No adoption gaps' : 'Adoption gap(s)'}</span></div>
-      <div class="kpi"><b>${adoptionView.originReport.present ? 'yes' : 'no'}</b><span>Origin report</span></div>
-      <div class="kpi"><b>${esc(adoptionView.baseline.signal)}</b><span>Baseline policy</span></div>
-      <div class="kpi"><b>${adoptionView.mcp.ok ? 'ok' : 'fix'}</b><span>Repo MCP argv</span></div>
+      ${metricKpi(
+        adoptionView.gaps.length === 0 ? 'OK' : adoptionView.gaps.length,
+        adoptionView.gaps.length === 0 ? 'No adoption gaps' : 'Adoption gap(s)',
+        adoptionView.gaps.length === 0
+          ? 'Hosts, MCP argv, origin snapshot, and core optionality look complete for co-pilot use.'
+          : 'Install or fix the listed gaps so agents get write gates, MCP, and honest cores.'
+      )}
+      ${metricKpi(
+        adoptionView.originReport.present ? 'yes' : 'no',
+        'Origin report',
+        'First architecture snapshot under .ark/reports/origin.* — future reports show evolution deltas against it.'
+      )}
+      ${metricKpi(
+        adoptionView.baseline.signal,
+        'Baseline policy',
+        baselineSignalHint(adoptionView.baseline.signal)
+      )}
+      ${metricKpi(
+        adoptionView.mcp.ok ? 'ok' : 'fix',
+        'Repo MCP argv',
+        adoptionView.mcp.ok
+          ? 'Repo MCP config points at a single ark/arkgate MCP bin (no dual-bin conflict).'
+          : 'Broken MCP argv: more than one of ark-mcp/arkgate-mcp — migrate with --install-agent-gates --migrate-commands.'
+      )}
     </div>
     ${
       adoptionView.gaps.length
@@ -991,6 +1142,8 @@ export function renderHtmlReport({
             .join(' · ')}</p>`
         : ''
     }
+    ${writePathHtml}
+    ${baselineLegendHtml}
   </div>
 
   <div class="section grid-2">
@@ -1138,10 +1291,26 @@ export function renderHtmlReport({
 
     <h3>Contract density</h3>
     <div class="kpis" style="margin-top:.35rem">
-      <div class="kpi"><b>${denyRatio}%</b><span>Edges denied</span></div>
-      <div class="kpi"><b>${deniedCount}</b><span>Deny rules</span></div>
-      <div class="kpi"><b>${allowedCount}</b><span>Explicit allows</span></div>
-      <div class="kpi"><b>${pairCount}</b><span>Directed pairs</span></div>
+      ${metricKpi(
+        `${denyRatio}%`,
+        'Edges denied',
+        'Denied directed layer pairs ÷ all possible pairs. Higher = stricter inward dependency rules.'
+      )}
+      ${metricKpi(
+        deniedCount,
+        'Deny rules',
+        'Explicit allowed:false rules in ark.config.json (row may not import column).'
+      )}
+      ${metricKpi(
+        allowedCount,
+        'Explicit allows',
+        'Explicit allowed:true edges. Most opens are implicit (no rule) unless you document them.'
+      )}
+      ${metricKpi(
+        pairCount,
+        'Directed pairs',
+        'layers × (layers − 1) — every ordered from→to pair the matrix can constrain.'
+      )}
     </div>
     <p class="dim" style="margin:.55rem 0 0;font-size:.84rem">
       Deny ratio = denied ÷ (layers × (layers−1)). High ratio = strict inward architecture.
@@ -1270,10 +1439,26 @@ export function renderHtmlReport({
 
     <h3>Debt &amp; violation taxonomy</h3>
     <div class="kpis" style="margin-top:.35rem">
-      <div class="kpi"><b>${violations.length}</b><span>Active</span></div>
-      <div class="kpi"><b>${valueN}</b><span>Value edges</span></div>
-      <div class="kpi"><b>${typeOnlyN}</b><span>Type-only</span></div>
-      <div class="kpi"><b>${suppressed || baselineKeys}</b><span>Baseline keys</span></div>
+      ${metricKpi(
+        violations.length,
+        'Active',
+        'Violations that fail the check right now (not frozen by baseline).'
+      )}
+      ${metricKpi(
+        valueN,
+        'Value edges',
+        'Runtime import edges that cross a deny rule (stronger debt than type-only).'
+      )}
+      ${metricKpi(
+        typeOnlyN,
+        'Type-only',
+        'Type-only imports across a deny edge — often mechanical-safe to rewrite as import type.'
+      )}
+      ${metricKpi(
+        suppressed || baselineKeys,
+        'Baseline keys',
+        'Distinct frozen debt keys in .ark-baseline.json (or suppressed count for this run).'
+      )}
     </div>
     ${
       topEdges.length
@@ -1291,6 +1476,14 @@ export function renderHtmlReport({
         Coverage=${scoreCoverage}, clean=${scoreClean}, gates=${scoreGates}, rules=${scoreRules} → <b>${score}</b>.
         This is a fitness signal for humans, not a CI gate.
       </p>
+      <ul class="senior-list" style="margin-top:.45rem">
+        <li><b>Coverage</b> — % of in-scope files that match a layer pattern.</li>
+        <li><b>Clean</b> — 100 with zero active violations; falls as breaks accumulate.</li>
+        <li><b>Gates</b> — share of write / CI / ESLint / baseline enforcement points present.</li>
+        <li><b>Rules</b> — deny-matrix density (more inward denies → higher component).</li>
+        <li><b>PASS / FAIL</b> — binary edge honesty (active violations), independent of the 0–100 score.</li>
+        <li><b>SUGGEST / ADAPT / ENFORCE</b> — whether the contract is honest enough to protect the tree (not a skill grade).</li>
+      </ul>
     </details>
   </div>
 

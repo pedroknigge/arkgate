@@ -38,6 +38,7 @@ describe('active agent host detection', () => {
   it('detects Grok / Claude / Cursor / Codex without treating CODEX_HOME alone as Codex', () => {
     expect(detectActiveAgentHost({ ARK_ACTIVE_HOST: 'cursor' })).toBe('cursor');
     expect(detectActiveAgentHost({ GROK_BUILD: '1' })).toBe('grok');
+    expect(detectActiveAgentHost({ GROK_AGENT: '1' })).toBe('grok');
     expect(detectActiveAgentHost({ CLAUDE_PROJECT_DIR: '/tmp/proj' })).toBe('claude');
     expect(detectActiveAgentHost({ CURSOR_TRACE_ID: 'abc' })).toBe('cursor');
     expect(detectActiveAgentHost({ CODEX_THREAD_ID: 't1' })).toBe('codex');

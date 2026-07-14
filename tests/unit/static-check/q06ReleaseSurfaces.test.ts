@@ -1,5 +1,5 @@
 /**
- * Q06 — release surface parity for Phase Q (3.0.3).
+ * Release surface parity — version pins + historical Phase Q docs + 3.0.4 report patch.
  * Structural checks on shipped docs + version metadata (no re-implementation).
  */
 import { describe, it, expect } from 'vitest';
@@ -9,26 +9,48 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+const CURRENT = '3.0.4';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
 }
 
-describe('Q06 version bump 3.0.3', () => {
+describe(`version bump ${CURRENT}`, () => {
   it('package metadata matches src/version', () => {
-    expect(version).toBe('3.0.3');
+    expect(version).toBe(CURRENT);
     const pkg = JSON.parse(read('package.json'));
     const lock = JSON.parse(read('package-lock.json'));
     const server = JSON.parse(read('server.json'));
-    expect(pkg.version).toBe('3.0.3');
-    expect(lock.version).toBe('3.0.3');
-    expect(lock.packages[''].version).toBe('3.0.3');
-    expect(server.version).toBe('3.0.3');
-    expect(server.packages[0].version).toBe('3.0.3');
+    expect(pkg.version).toBe(CURRENT);
+    expect(lock.version).toBe(CURRENT);
+    expect(lock.packages[''].version).toBe(CURRENT);
+    expect(server.version).toBe(CURRENT);
+    expect(server.packages[0].version).toBe(CURRENT);
   });
 });
 
-describe('Q06 CHANGELOG + release note cover Q01–Q05', () => {
+describe('CHANGELOG + release note cover 3.0.4 report honesty', () => {
+  it('CHANGELOG 3.0.4 section names report fixes and design strip', () => {
+    const body = read('CHANGELOG.md');
+    expect(body).toMatch(/## 3\.0\.4/);
+    expect(body).toMatch(/false ADAPT|coreOptionalWithFiles|CORE_LAYER_NAMES/i);
+    expect(body).toMatch(/write-path-none/i);
+    expect(body).toMatch(/design-depth strip|design-weak/i);
+    expect(body).toMatch(/metric hints|KPI/i);
+  });
+
+  it('docs/releases/3.0.4.md has upgrade path and honesty', () => {
+    const body = read('docs/releases/3.0.4.md');
+    expect(body).toMatch(/arkgate@3\.0\.4/);
+    expect(body).toMatch(/npm install -D arkgate@3\.0\.4/);
+    expect(body).toMatch(/design-weak|design-depth/i);
+    expect(body).toMatch(/write-path|CORE_LAYER|false ADAPT/i);
+    // Honesty language may say "No gate weaken"; ban claims that we did weaken.
+    expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
+  });
+});
+
+describe('historical Q06 CHANGELOG + release note cover Q01–Q05', () => {
   it('CHANGELOG 3.0.3 section names Phase Q surfaces', () => {
     const body = read('CHANGELOG.md');
     expect(body).toMatch(/## 3\.0\.3/);

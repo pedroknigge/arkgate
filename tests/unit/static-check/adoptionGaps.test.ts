@@ -189,6 +189,7 @@ args = ["ark-mcp", "--root", "/var/folders/xx/ark-upgrade-tmp123", "--config", "
     return {
       GROK_BUILD: '',
       XAI_GROK: '',
+      GROK_AGENT: '',
       GROK_WORKSPACE_ROOT: '',
       GROK_SESSION_ID: '',
       CLAUDE_PROJECT_DIR: '',

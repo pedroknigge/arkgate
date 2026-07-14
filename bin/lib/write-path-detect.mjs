@@ -30,21 +30,32 @@ export function detectWritePathCapabilities(root, explicitHost) {
 
   const tools = installToolsForHost(activeHost);
   let gap = null;
+  // Repo inventory (any host) can show hard/advisory write while activeHost is
+  // unknown (plain shell / `npx ark-check --report` outside an agent session).
+  // Session projection stays mode=none (other hosts' hooks are not a guarantee for
+  // this process) — but do not open an adoption gap: gates exist on disk.
+  const inventoryHasWriteBoundary =
+    Boolean(inventory?.capabilities?.['hard-write']) ||
+    Boolean(inventory?.capabilities?.['advisory-write']);
   if (mode === 'none') {
-    gap = {
-      id: 'write-path-none',
-      severity: 'warn',
-      message:
-        `Active host ${activeHost} has no hard write boundary or advisory Ark MCP. ` +
-        (capabilities['merge-gate']
-          ? 'The CI check remains separate and does not block local writes.'
-          : 'No Ark CI check was detected either.'),
-      fix: arkCommand(
-        root,
-        'ark-check',
-        `--install-agent-gates --tools ${tools}`
-      ),
-    };
+    if (activeHost === 'unknown' && inventoryHasWriteBoundary) {
+      gap = null;
+    } else {
+      gap = {
+        id: 'write-path-none',
+        severity: 'warn',
+        message:
+          `Active host ${activeHost} has no hard write boundary or advisory Ark MCP. ` +
+          (capabilities['merge-gate']
+            ? 'The CI check remains separate and does not block local writes.'
+            : 'No Ark CI check was detected either.'),
+        fix: arkCommand(
+          root,
+          'ark-check',
+          `--install-agent-gates --tools ${tools}`
+        ),
+      };
+    }
   } else if (mode === 'reject-only') {
     gap = {
       id: 'write-path-reject-only',

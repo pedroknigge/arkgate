@@ -43,6 +43,44 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
     }
   });
 
+  it('does not open write-path-none when host is unknown but inventory has write gates', () => {
+    // Report/CI path: npx ark-check --report with no agent env → activeHost unknown.
+    // Hooks on disk must not become a false adoption gap.
+    const root = mk();
+    try {
+      fs.mkdirSync(path.join(root, '.grok', 'hooks'), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, '.grok', 'hooks', 'ark-write-gate.json'),
+        JSON.stringify({
+          hooks: {
+            PreToolUse: [
+              {
+                hooks: [
+                  {
+                    command:
+                      'npx arkgate-mcp --hook --hook-repair --root . --config ark.config.json',
+                  },
+                ],
+              },
+            ],
+          },
+        })
+      );
+      fs.writeFileSync(
+        path.join(root, '.grok', 'config.toml'),
+        '[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp"]\n'
+      );
+      const cap = detectWritePathCapabilities(root, 'unknown');
+      expect(cap.activeHost).toBe('unknown');
+      expect(cap.mode).toBe('none'); // session projection: not a guarantee for this process
+      expect(cap.inventory.hosts.grok.configured).toBe(true);
+      expect(cap.inventory.capabilities['hard-write']).toBe(true);
+      expect(cap.gap).toBeNull();
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('classifies reject-only when hook has --hook without --hook-repair', () => {
     const root = mk();
     try {
