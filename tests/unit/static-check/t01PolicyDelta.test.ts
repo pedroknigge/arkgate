@@ -156,6 +156,34 @@ describe('T01 strict policy transition guard', () => {
     expect(result.stderr).toContain('Cannot read policy base');
   });
 
+  it('ignores ambient CI refs for a checked root that is not a Git repository', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-t01-policy-nongit-'));
+    roots.push(root);
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/domain/order.ts'), 'export const order = 1;\n');
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# Ark\n');
+    writeJson(root, '.mcp.json', { mcpServers: { ark: {} } });
+    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.github/workflows/ark-check.yml'),
+      'name: Ark\njobs:\n  check:\n    steps:\n      - run: npx ark-check --strict-merge\n'
+    );
+    writeJson(root, 'ark.config.json', {
+      include: ['src'],
+      layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+      rules: [],
+    });
+
+    const result = run(root, ['--strict-merge'], { GITHUB_BASE_REF: 'main' });
+
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).not.toHaveProperty('policyDelta');
+
+    const explicit = run(root, ['--strict-merge', '--policy-base-ref', 'HEAD']);
+    expect(explicit.status).toBe(2);
+    expect(explicit.stderr).toContain('Cannot resolve policy base ref outside a Git repository');
+  });
+
   it('keeps first-time adoption green when the CI base commit has no policy file', () => {
     const { root } = setupRoot();
     git(root, ['rm', 'ark.config.json']);

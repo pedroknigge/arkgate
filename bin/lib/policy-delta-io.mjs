@@ -89,7 +89,10 @@ export function resolvePolicyBaseConfig({
 
   const top = repositoryRoot(root);
   if (!top) {
-    if (requestedRef) throw new Error(`Cannot resolve policy base ref outside a Git repository: ${ref}`);
+    // GitHub and ARK_POLICY_BASE_REF describe the process workspace, which may
+    // be different from an explicitly checked nested/temporary project root.
+    // Only the CLI flag is an unambiguous request to resolve this exact root.
+    if (baseRef) throw new Error(`Cannot resolve policy base ref outside a Git repository: ${ref}`);
     return null;
   }
   const relativeConfig = configPathInRepository(root, configPath, top);
