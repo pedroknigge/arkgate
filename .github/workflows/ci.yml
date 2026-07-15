@@ -67,7 +67,7 @@ jobs:
       - run: npm run build
       - name: Enforce V01 performance budgets
         run: npm run bench:scale -- --sizes 1000,10000,50000 --runs 5 --fail-budget --json --out performance.v1.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: performance-v1-${{ github.sha }}
           path: performance.v1.json
@@ -84,7 +84,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:fuzz
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: always()
         with:
           name: fuzz-pr-${{ github.sha }}
@@ -95,6 +95,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
@@ -136,7 +138,7 @@ jobs:
       - name: Verify V04 release artifacts
         run: npm run check:release-artifacts -- --out release-artifacts
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: release-artifacts-${{ github.sha }}
           path: release-artifacts
@@ -147,6 +149,8 @@ jobs:
       # never silently rot below 100% coverage of src.
       - name: Architecture gate (ark-check)
         run: npm run check:architecture
+        env:
+          ARK_POLICY_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
 
   node-compat:
     name: Node ${{ matrix.node }}

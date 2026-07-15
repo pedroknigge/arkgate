@@ -18,6 +18,9 @@
  *                                 discarded if post-patch still invalid.
  *   - tool      ark_prepare_write — W2: place + constrain + validate + autoPatch + judgmentBrief
  *                                 + contentHash (composes ark_place + write gate; not a second contract).
+ *   - tool      ark_prepare_change — atomically preflights a create/update/delete batch without writes.
+ *   - tool      ark_policy_delta — classifies a base/candidate ark.config.json transition and
+ *                                 rejects weakening without an exact hash-bound acknowledgement.
  *   - tool      ark_recommend   — deterministic application-shape plan (same as
  *                                 ark-check --recommend --json)
  *
@@ -61,6 +64,8 @@ import { composePrepareWrite } from './lib/prepare-write.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
 import { ARK_ANALYSIS_RESULT_SCHEMA, createAdapterResult } from './lib/adapter-contract.mjs';
 import { loadGoldenPattern, attachGoldenToPlacement } from './lib/golden-pattern.mjs';
+import { prepareChangeFromRoot } from './lib/prepare-change.mjs';
+import { detectWritePathCapabilities } from './lib/write-path-detect.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 
@@ -201,17 +206,23 @@ function applyCodexUpdatePatch(current, lines) {
   let source = current.split('\n');
   let cursor = 0;
   const hunks = [];
-  let hunk = [];
+  let hunk = null;
   for (const line of lines) {
     if (line.startsWith('@@')) {
-      if (hunk.length > 0) hunks.push(hunk);
-      hunk = [];
+      if (hunk) hunks.push(hunk);
+      hunk = { anchor: line.slice(2).trim(), entries: [] };
     } else if (/^[ +\-]/.test(line)) {
-      hunk.push(line);
+      if (!hunk) return null;
+      hunk.entries.push(line);
     }
   }
-  if (hunk.length > 0) hunks.push(hunk);
-  for (const entries of hunks) {
+  if (hunk) hunks.push(hunk);
+  for (const { anchor, entries } of hunks) {
+    if (anchor) {
+      const anchorAt = source.findIndex((line, index) => index >= cursor && line === anchor);
+      if (anchorAt < 0) return null;
+      cursor = anchorAt + 1;
+    }
     const oldLines = entries.filter((line) => !line.startsWith('+')).map((line) => line.slice(1));
     const newLines = entries.filter((line) => !line.startsWith('-')).map((line) => line.slice(1));
     let found = -1;
@@ -229,36 +240,94 @@ function applyCodexUpdatePatch(current, lines) {
 }
 
 function codexPatchWrites(patch, root) {
-  if (typeof patch !== 'string' || !patch.includes('*** Begin Patch')) return [];
+  if (typeof patch !== 'string') {
+    return { writes: [], complete: false };
+  }
   const lines = patch.split('\n');
+  const begin = lines.indexOf('*** Begin Patch');
+  const end = lines.indexOf('*** End Patch', begin + 1);
+  if (begin < 0 || end <= begin) return { writes: [], complete: false };
   const writes = [];
-  for (let index = 0; index < lines.length; index += 1) {
+  const seenPaths = new Set();
+  let complete = [
+    ...lines.slice(0, begin),
+    ...lines.slice(end + 1),
+  ].every((line) => line.trim() === '');
+  let sawFileDirective = false;
+  for (let index = begin + 1; index < end; index += 1) {
     const match = lines[index].match(/^\*\*\* (Add|Update|Delete) File: (.+)$/);
-    if (!match) continue;
+    if (!match) {
+      if (lines[index].trim() !== '') complete = false;
+      continue;
+    }
+    sawFileDirective = true;
     const [, action, relativePath] = match;
     const body = [];
-    for (index += 1; index < lines.length && !lines[index].startsWith('*** '); index += 1) {
+    for (index += 1; index < end && !lines[index].startsWith('*** '); index += 1) {
       body.push(lines[index]);
     }
     index -= 1;
-    if (action === 'Delete') continue;
     const filePath = path.resolve(root, relativePath);
+    const rel = path.relative(root, filePath);
+    if (
+      seenPaths.has(filePath) ||
+      rel.startsWith(`..${path.sep}`) ||
+      rel === '..' ||
+      path.isAbsolute(rel)
+    ) {
+      complete = false;
+      continue;
+    }
+    seenPaths.add(filePath);
+    if (action === 'Delete') {
+      if (body.some((line) => line.trim() !== '') || !fs.existsSync(filePath)) {
+        complete = false;
+        continue;
+      }
+      writes.push({ path: relativePath, delete: true });
+      continue;
+    }
     let content;
     if (action === 'Add') {
+      if (
+        body.length === 0 ||
+        fs.existsSync(filePath) ||
+        body.some((line) => !line.startsWith('+'))
+      ) {
+        complete = false;
+        continue;
+      }
       content = body.filter((line) => line.startsWith('+')).map((line) => line.slice(1)).join('\n');
       if (body.some((line) => line.startsWith('+'))) content += '\n';
     } else {
+      if (
+        !body.some((line) => line.startsWith('@@')) ||
+        body.some((line) => !line.startsWith('@@') && !/^[ +\-]/.test(line))
+      ) {
+        complete = false;
+        continue;
+      }
       let current;
       try {
         current = fs.readFileSync(filePath, 'utf8');
       } catch {
+        complete = false;
         continue;
       }
       content = applyCodexUpdatePatch(current, body);
+      if (content === null) complete = false;
     }
-    if (typeof content === 'string') writes.push({ filePath, content });
+    if (typeof content === 'string') writes.push({ path: relativePath, filePath, content });
   }
-  return writes;
+  return { writes, complete: complete && sawFileDirective };
+}
+
+function hookEnforcement(root, host, operation, completePatch = false) {
+  return detectWritePathCapabilities(root, host, {
+    boundary: 'pre-tool',
+    operation,
+    completePatch,
+  }).enforcementLadder;
 }
 
 /**
@@ -308,22 +377,75 @@ function runHook(gate, config, args, ts) {
   runHookPayload(payload, gate, config, args, ts);
 }
 
-function runHookPayload(payload, gate, config, args, ts) {
+function runHookPayload(payload, gate, config, args, ts, attemptContext) {
   const { toolName, toolInput, grokStyle } = normalizeHookPayload(payload);
   if (toolName === 'ApplyPatch') {
     const patch = toolInput.patch ?? toolInput.input ?? toolInput.content;
-    for (const write of codexPatchWrites(patch, args.root)) {
-      runHookPayload(
-        {
-          tool_name: 'Write',
-          tool_input: { file_path: write.filePath, content: write.content },
-        },
-        gate,
+    const parsedPatch = codexPatchWrites(patch, args.root);
+    // Codex ApplyPatch is only preflighted when Ark can reconstruct every file operation.
+    // An incomplete reconstruction must not be mislabeled as atomic or hard enforcement.
+    if (!parsedPatch.complete) return;
+    const patchWrites = parsedPatch.writes;
+    const governedWrites = patchWrites.filter((change) => {
+      const relative = String(change.path).replace(/\\/g, '/');
+      if (!SOURCE_FILE.test(relative) || relative.endsWith('.d.ts')) return false;
+      return Boolean(inferLayer(path.resolve(args.root, relative), config, args.root));
+    });
+    const changes = governedWrites.map(({ path: relativePath, content, delete: deleted }) =>
+      deleted ? { path: relativePath, delete: true } : { path: relativePath, content }
+    );
+    if (changes.length === 0) return;
+    let result;
+    try {
+      result = prepareChangeFromRoot({
+        root: args.root,
         config,
-        args,
-        ts
+        configSource: path.isAbsolute(args.config)
+          ? args.config
+          : path.join(args.root, args.config),
+        changes,
+      });
+    } catch {
+      return;
+    }
+    if (result.valid) {
+      for (const write of governedWrites) {
+        if (typeof write.content !== 'string') continue;
+        runHookPayload(
+          {
+            tool_name: 'Write',
+            tool_input: { file_path: write.filePath, content: write.content },
+          },
+          gate,
+          config,
+          args,
+          ts,
+          { host: 'codex', operation: 'apply_patch', completePatch: true }
+        );
+      }
+      return;
+    }
+    const message = [
+      `Ark architecture gate blocked this complete ${toolName} (${changes.length} governed file(s)):`,
+      ...result.diagnostics.map(
+        (diagnostic) =>
+          `- [${diagnostic.ruleId}] ${diagnostic.message}\n  Next action: ${diagnostic.nextAction}`
+      ),
+      'No project file was written. Fix the complete patch and retry.',
+    ].join('\n');
+    process.stderr.write(`${message}\n`);
+    if (args.hookRepair) {
+      process.stderr.write(
+        `ARK_REPAIR_JSON:${JSON.stringify({
+          ...result,
+          mode: 'repair',
+          decision: 'deny',
+          enforcement: hookEnforcement(args.root, 'codex', 'apply_patch', true),
+          autoPatch: null,
+        })}\n`
       );
     }
+    process.exitCode = 2;
     return;
   }
   const filePath = toolInput.file_path;
@@ -392,9 +514,9 @@ function runHookPayload(payload, gate, config, args, ts) {
     violations: newViolations.map((violation) => ({ ...violation, file: normalizedRel })),
   });
 
-  const lines = newViolations.map(
-    (violation) =>
-      `- [${violation.ruleId}] ${violation.message}${violation.line ? ` (line ${violation.line})` : ''}`
+  const lines = adapterResult.diagnostics.map(
+    (diagnostic) =>
+      `- [${diagnostic.ruleId}] ${diagnostic.message}${diagnostic.location.line ? ` (line ${diagnostic.location.line})` : ''}\n  Next action: ${diagnostic.nextAction}`
   );
   // Surface the per-violation fix hints (the gate carries them in `suggestion`,
   // but the hook was dropping them). Dedupe so two infra violations sharing one
@@ -436,6 +558,13 @@ function runHookPayload(payload, gate, config, args, ts) {
       mode: 'repair',
       decision: 'deny',
       filePath: normalizedRel,
+      enforcement: hookEnforcement(
+        args.root,
+        attemptContext?.host ?? (grokStyle ? 'grok' : 'claude'),
+        attemptContext?.operation ??
+          (grokStyle ? (toolName === 'Edit' ? 'search_replace' : 'write') : toolName),
+        Boolean(attemptContext?.completePatch)
+      ),
       ...(layer ? { layer } : {}),
       ...(autoPatch
         ? {
@@ -737,6 +866,34 @@ async function main() {
       outputSchema: ARK_ANALYSIS_RESULT_SCHEMA,
     },
     {
+      name: 'ark_policy_delta',
+      description:
+        'Classify a complete ark.config.json transition as strengthening, neutral, ' +
+        'judgment-required, or weakening. Pass the previous baseConfig and optional ' +
+        'candidateConfig (defaults to this project contract). Weakening and judgment-required ' +
+        'results set isError unless acknowledgement exactly matches both policy hashes and all ' +
+        'blocking finding ids. Read-only; never edits the contract.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          baseConfig: {
+            type: 'object',
+            description: 'Previous complete ark.config.json object.',
+          },
+          candidateConfig: {
+            type: 'object',
+            description: 'Candidate complete config; defaults to the current project contract.',
+          },
+          acknowledgement: {
+            type: 'object',
+            description:
+              'Optional schemaVersion/basePolicyHash/candidatePolicyHash/findingIds/reason object.',
+          },
+        },
+        required: ['baseConfig'],
+      },
+    },
+    {
       name: 'ark_coverage',
       description:
         'Report what each layer actually governs: per-layer file counts, the FULL list of ' +
@@ -795,6 +952,38 @@ async function main() {
           },
         },
         required: ['source'],
+      },
+    },
+    {
+      name: 'ark_prepare_change',
+      description:
+        'Validate one complete governed-source create/update/delete batch as an atomic in-memory candidate. ' +
+        'Catches cross-file forbidden edges and cycles before any host write, and returns ' +
+        'per-file content hashes plus base/candidate tree and policy hashes. Never writes files.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          changes: {
+            type: 'array',
+            description:
+              'Full candidate batch. Each item is {path, content} for create/update or {path, delete:true}.',
+            items: {
+              type: 'object',
+              properties: {
+                path: { type: 'string' },
+                content: { type: 'string' },
+                delete: { type: 'boolean' },
+              },
+              required: ['path'],
+            },
+          },
+          changeMap: {
+            type: 'object',
+            description:
+              'Optional strict schema 1.0 architecture change map. Omit it to use ordinary atomic preflight.',
+          },
+        },
+        required: ['changes'],
       },
     },
     {
@@ -993,6 +1182,33 @@ async function main() {
     return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }], isError: false };
   }
 
+  function runPolicyDeltaTool(params) {
+    const baseConfig = params?.arguments?.baseConfig;
+    if (!baseConfig || typeof baseConfig !== 'object' || Array.isArray(baseConfig)) {
+      return {
+        content: [{ type: 'text', text: 'ark_policy_delta requires baseConfig (object).' }],
+        isError: true,
+      };
+    }
+    try {
+      const result = ark.analyzePolicyDelta({
+        baseConfig,
+        candidateConfig: params?.arguments?.candidateConfig ?? config,
+        acknowledgement: params?.arguments?.acknowledgement,
+      });
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        structuredContent: result,
+        isError: !result.valid,
+      };
+    } catch (error) {
+      return {
+        content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
+        isError: true,
+      };
+    }
+  }
+
   function runRecommendTool() {
     const { data, raw } = runArkCheckJson(['--recommend']);
     if (!data) {
@@ -1153,6 +1369,29 @@ async function main() {
     };
   }
 
+  function runPrepareChange(params) {
+    try {
+      const result = prepareChangeFromRoot({
+        root: args.root,
+        config,
+        configSource: configPath,
+        changes: params?.arguments?.changes,
+        changeMap: params?.arguments?.changeMap,
+        changeMapSource: 'ark_prepare_change.changeMap',
+      });
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        structuredContent: result,
+        isError: !result.valid,
+      };
+    } catch (error) {
+      return {
+        content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
+        isError: true,
+      };
+    }
+  }
+
   function runSuggestIncludeTool() {
     try {
       const workspaces = detectWorkspaces(args.root);
@@ -1193,9 +1432,11 @@ async function main() {
   const TOOL_HANDLERS = {
     validate_code: runValidate,
     ark_check: runCheckTool,
+    ark_policy_delta: runPolicyDeltaTool,
     ark_coverage: runCoverageTool,
     ark_place: runPlace,
     ark_prepare_write: runPrepareWrite,
+    ark_prepare_change: runPrepareChange,
     ark_recommend: runRecommendTool,
     ark_suggest_include: runSuggestIncludeTool,
   };

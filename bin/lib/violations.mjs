@@ -12,6 +12,7 @@ const color = {
 
 /** Canonical: src/domain/baselineKey.ts → bin/lib/baseline-key.mjs (R4). */
 import { baselineKey, baselineOccurrenceKeys } from './baseline-key.mjs';
+import { toAdapterDiagnostic } from './adapter-contract.mjs';
 export { baselineKey, baselineOccurrenceKeys };
 
 export function readBaseline(root, baselinePath) {
@@ -56,8 +57,7 @@ export function printViolation(violation) {
     console.error(`  ${violation.fromLayer} → ${violation.toLayer}${target}`);
   }
   console.error(`  ${violation.message}`);
-  const hint = FIX_HINTS[violation.ruleId];
-  if (hint) console.error(`  ${color.dim(`fix: ${hint}`)}`);
+  console.error(`  ${color.dim(`Next action: ${toAdapterDiagnostic(violation).nextAction}`)}`);
   console.error('');
 }
 

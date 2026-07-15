@@ -281,13 +281,20 @@ Prefer preparing the write before the host commits it to disk:
 | Surface | Role |
 |---------|------|
 | MCP **`ark_prepare_write`** | Place + constrain + validate + optional `autoPatch` + `judgmentBrief` + contentHash + optional `goldenPattern` in one call |
+| MCP **`ark_prepare_change`** | Validate one complete create/update/delete batch in memory; optional `changeMap` also returns structural convergence; never writes |
+| CLI **`ark preflight --changes <file> --json`** | Same atomic verdict and map convergence for hosts/scripts that do not call MCP |
 | Write-gate **`autoPatch`** | Mechanical-safe **import type** rewrites only; post-patch revalidation green or discarded |
 | PreToolUse **`--hook-repair`** | On deny: `ARK_REPAIR_JSON` / `ARK_AUTOPATCH_JSON` on stderr (still exit 2 — never silent write) |
-| Doctor **`writePath`** | Reports `repair` \| `reject-only` \| `mcp-only` \| `none` for installed gates |
+| Doctor **`writePath`** | Reports installed mode plus `enforcementLadder` (`supported` / `installed` / `active` / `bypassable`, evidence, operation coverage, required-status honesty) |
 | Doctor **`goldenPattern`** | Optional Q03 advisory summary (`present` / `invalid`); never clears design-weak |
 
 Port-proof inject binding is **judgment** for auto-apply (signature/arity change), not write-path autoPatch.
 Full reference: [ai-gates.md](ai-gates.md). Loop-cost harness: `npm run eval:loop-cost`.
+
+Blocking diagnostics carry one deterministic `nextAction` in both human and JSON output. Complete
+Codex `ApplyPatch` payloads use the same atomic batch engine as CLI/MCP before single-file safety
+checks; this improves early feedback without upgrading Codex's bypassable hook to a universal hard
+boundary. Removing `AGENTS.md`, skills, or session context never changes the contract verdict.
 
 Do not invent layers outside the 11-layer profile or named presets. Unrecognized
 directories (`utils/`, `lib/`) must be classified explicitly via `/ark-contract`.
@@ -671,6 +678,13 @@ The strongest place to constrain an AI agent is the moment it writes a file, not
 `arkgate-mcp` / `ark-mcp` exposes ArkGate over MCP (JSON-RPC over stdio; gate host needs a
 JS-API TypeScript — nested or project) so a host can gate
 the write path:
+
+For a complete multi-file candidate, use `ark preflight --changes changes.json --json` or MCP
+`ark_prepare_change`. Add `--change-map map.json` (or MCP `changeMap`) only for an explicit schema
+`1.0` structural plan. Ark binds its normalized `changeMapHash` and compares the full candidate
+against the current supplied base. `convergence.findings` separates satisfied, missing,
+contradictory, and unplanned paths/edges; any structural mismatch rejects the batch. No map is
+required, and `behavioralCompletion` remains `not-evaluated` even when structure converges.
 
 ```bash
 npx ark-mcp --root . --config ark.config.json [--manifest ark.manifest.json]

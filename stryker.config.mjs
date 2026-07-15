@@ -32,6 +32,7 @@ const config = {
     'tests/unit/static-check/configContract.test.ts',
     'tests/unit/static-check/writePathDetect.test.ts',
     'tests/unit/static-check/writePathHostCapabilities.test.ts',
+    'tests/unit/static-check/t05EnforcementLadder.test.ts',
     'tests/unit/static-check/enforcementProfiles.test.ts',
     'tests/unit/static-check/criticalBranchCoverage.test.ts',
     'tests/unit/static-check/mutationCritical.test.ts',

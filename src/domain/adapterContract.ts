@@ -1,6 +1,6 @@
 /** Versioned public result contract shared by every ArkGate enforcement adapter. */
 
-export const ARK_ANALYSIS_RESULT_SCHEMA_VERSION = '1.0' as const;
+export const ARK_ANALYSIS_RESULT_SCHEMA_VERSION = '1.1' as const;
 
 export type AdapterSeverity = 'error' | 'warning';
 
@@ -15,7 +15,11 @@ export type AdapterViolationInput = {
   fromLayer?: unknown;
   toLayer?: unknown;
   typeOnly?: unknown;
+  targetTypeOnlyExports?: unknown;
+  namedBindingsTypeOnly?: unknown;
+  peerIsolation?: unknown;
   severity?: unknown;
+  nextAction?: unknown;
 };
 
 export type AdapterDiagnostic = {
@@ -29,10 +33,12 @@ export type AdapterDiagnostic = {
     toLayer?: string;
     typeOnly?: boolean;
   };
+  /** Added in schema 1.1; optional in TypeScript so 1.0 consumer-owned values remain valid. */
+  nextAction?: string;
 };
 
 export type AdapterResult = {
-  schemaVersion: typeof ARK_ANALYSIS_RESULT_SCHEMA_VERSION;
+  schemaVersion: '1.0' | typeof ARK_ANALYSIS_RESULT_SCHEMA_VERSION;
   valid: boolean;
   diagnostics: AdapterDiagnostic[];
 };
@@ -43,6 +49,35 @@ function text(value: unknown): string | undefined {
 
 function positiveInteger(value: unknown, fallback: number): number {
   return Number.isInteger(value) && Number(value) > 0 ? Number(value) : fallback;
+}
+
+function nextActionForDiagnostic(
+  ruleId: string,
+  evidence: AdapterDiagnostic['evidence'],
+  violation: AdapterViolationInput
+): string {
+  if (ruleId === 'LAYER_IMPORT_VIOLATION') {
+    if (
+      evidence.typeOnly ||
+      violation.targetTypeOnlyExports === true ||
+      violation.namedBindingsTypeOnly === true
+    ) {
+      return 'Move the referenced type to a mutually allowed layer, use `import type`, then preflight again.';
+    }
+    if (violation.peerIsolation === true) {
+      return 'Extract the shared dependency to a shared layer, then preflight again.';
+    }
+    return `Define a port in ${evidence.fromLayer ?? 'the source layer'}, inject the ${evidence.toLayer ?? 'outer-layer'} implementation, then preflight again.`;
+  }
+  if (ruleId === 'FORBIDDEN_GLOBAL') {
+    return `Inject ${evidence.target ?? 'the capability'} through a port, then preflight again.`;
+  }
+  if (ruleId === 'CIRCULAR_DEPENDENCY') {
+    return 'Extract the shared dependency into a third module, then preflight again.';
+  }
+  if (ruleId === 'RAW_EVENT_PUBLISH') return 'Publish through a registered intent creator, then run Ark again.';
+  if (ruleId === 'PUBLISH_MISSING_SOURCE') return 'Add metadata.source to the publish call, then run Ark again.';
+  return `Resolve ${ruleId} without weakening ark.config.json, then run Ark again.`;
 }
 
 export function toAdapterDiagnostic(
@@ -67,6 +102,7 @@ export function toAdapterDiagnostic(
       column: positiveInteger(violation.column, 1),
     },
     evidence,
+    nextAction: text(violation.nextAction) ?? nextActionForDiagnostic(ruleId, evidence, violation),
   };
 }
 
@@ -125,6 +161,7 @@ export const ARK_ANALYSIS_RESULT_SCHEMA = {
               typeOnly: { type: 'boolean' },
             },
           },
+          nextAction: { type: 'string', minLength: 1 },
         },
       },
     },

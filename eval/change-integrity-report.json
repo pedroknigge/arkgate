@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "1.0",
+  "id": "t05-change-integrity",
+  "mode": "fixture-measured",
+  "liveLlmRequired": false,
+  "fixture": "tests/fixtures/change-integrity-feature",
+  "scenario": "Add a pure free-shipping rule without crossing DomainModel -> Kernel.",
+  "casualJourney": {
+    "contextFilesRequired": false,
+    "rejectedBeforeWrite": true,
+    "conciseDenials": 1,
+    "nextAction": "Define a port in DomainModel, inject the Kernel implementation, then preflight again."
+  },
+  "seniorJourney": {
+    "policyHash": "fnv1a-6c88e86d",
+    "baseTreeHash": "fnv1a-3174fedb",
+    "candidateTreeHash": "fnv1a-93b4e660",
+    "ruleIds": [
+      "LAYER_IMPORT_VIOLATION"
+    ],
+    "cliMcpHookFinalParity": true
+  },
+  "contextIndependent": {
+    "sameVerdictAndHashes": true,
+    "comparedArtifacts": [
+      "none",
+      "AGENTS.md",
+      ".agents/skills/**",
+      ".session-context.txt"
+    ]
+  },
+  "enforcement": {
+    "schemaVersion": "1.0",
+    "activeHost": "codex",
+    "localWrite": {
+      "supported": false,
+      "installed": true,
+      "active": true,
+      "bypassable": true,
+      "hard": false,
+      "evidence": [],
+      "completePatch": true,
+      "coverage": "complete-patch",
+      "operation": "apply_patch",
+      "operationCovered": true
+    },
+    "advisoryMcp": {
+      "supported": true,
+      "installed": false,
+      "active": false,
+      "bypassable": true,
+      "hard": false,
+      "evidence": []
+    },
+    "ciMerge": {
+      "supported": true,
+      "installed": false,
+      "active": false,
+      "bypassable": "unknown",
+      "hard": false,
+      "evidence": [],
+      "requiredStatus": "unverified"
+    }
+  },
+  "completion": {
+    "acceptanceCommand": "node acceptance.mjs",
+    "acceptancePassed": true,
+    "strictArkCommand": "ark-check --strict-config --json --no-cache",
+    "strictArkPassed": true,
+    "behavioralCompletionClaimedByPreflight": false
+  },
+  "ok": true
+}

@@ -22,6 +22,13 @@ import { pinArkgateDevDependency, FALSE_GREEN_GAP_ID } from './lib/field-install
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import { applyStartPreview, planStart, renderStartPreview } from './lib/start-preview.mjs';
 import { detectActiveAgentHost } from './lib/skill-install.mjs';
+import { loadArkConfigContract } from './lib/config-contract.mjs';
+import {
+  prepareChangeFromRoot,
+  readChangeMapFile,
+  readChangeSetFile,
+  renderChangePreflight,
+} from './lib/prepare-change.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
@@ -56,6 +63,7 @@ function parseArgs(argv) {
   const args = {
     command: undefined,
     root: process.cwd(),
+    config: 'ark.config.json',
     yes: false,
     force: false,
     strict: true,
@@ -101,6 +109,9 @@ function parseArgs(argv) {
     else if (arg === '--skip-package-manager') args.skipPackageManager = true;
     else if (arg === '--remove-host') args.removeHost = requireValue(arg, i++).trim().toLowerCase();
     else if (arg === '--preset') args.preset = requireValue(arg, i++);
+    else if (arg === '--config') args.config = requireValue(arg, i++);
+    else if (arg === '--changes') args.changes = requireValue(arg, i++);
+    else if (arg === '--change-map') args.changeMap = requireValue(arg, i++);
     else if (arg === '--archetype') args.archetype = requireValue(arg, i++);
     else if (arg === '--tools') args.tools = requireValue(arg, i++);
     else if (arg === '--require-write-hook') {
@@ -121,6 +132,7 @@ function usage() {
   ark init    [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture]
               [--archetype <playbook-id>] [--tools <list>] [--require-write-hook <host>] [--yes] [--force] [--no-strict]
   ark upgrade [--root <project>] [--no-install] [--no-strict]
+  ark preflight --changes <change-set.json> [--change-map <map.json>] [--root <project>] [--config ark.config.json] [--json]
 
 Commands:
   start     New here? Analyze and preview the complete setup. Read-only unless --apply.
@@ -128,6 +140,7 @@ Commands:
   upgrade   One command to update Ark: bump the package to @latest, refresh gate
             templates + /ark-* skills (and Codex home prompts), migrate command
             runners to this project's package manager, then run the strict check.
+  preflight Validate one atomic create/update/delete set without writing project files.
             (alias: ark update)
 
 Options:
@@ -775,6 +788,13 @@ async function main() {
     console.error('--require-write-hook is supported by ark start and ark init.');
     return 2;
   }
+  if (
+    args.command !== 'preflight' &&
+    (args.changes || args.changeMap || args.config !== 'ark.config.json')
+  ) {
+    console.error('--changes, --change-map, and --config are supported by ark preflight.');
+    return 2;
+  }
   const enforcement = validateHardWriteRequest({
     root: args.root,
     host: args.requireWriteHook,
@@ -811,6 +831,33 @@ async function main() {
   if (args.command === 'upgrade' || args.command === 'update') {
     try {
       return await upgrade(args);
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      return 2;
+    }
+  }
+
+  if (args.command === 'preflight') {
+    try {
+      if (!args.changes) throw new Error('ark preflight requires --changes <change-set.json>.');
+      const configPath = path.isAbsolute(args.config)
+        ? args.config
+        : path.join(args.root, args.config);
+      const config = loadArkConfigContract(
+        JSON.parse(fs.readFileSync(configPath, 'utf8')),
+        configPath
+      ).config;
+      const changeMap = args.changeMap ? readChangeMapFile(args.root, args.changeMap) : undefined;
+      const result = prepareChangeFromRoot({
+        root: args.root,
+        config,
+        configSource: configPath,
+        changes: readChangeSetFile(args.root, args.changes),
+        ...(changeMap ? { changeMap: changeMap.input, changeMapSource: changeMap.source } : {}),
+      });
+      if (args.json) console.log(JSON.stringify(result, null, 2));
+      else renderChangePreflight(result);
+      return result.valid ? 0 : 1;
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));
       return 2;

@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-07-13
+- **Status date:** 2026-07-15
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -22,15 +22,32 @@ product value = writes observed × semantic precision × enforcement strength ×
 The product wedge is the architecture contract, semantic analysis engine, agent adapters, and CI
 gate. The optional runtime is not the product and must not determine the package shape.
 
+### North-star product invariant
+
+ArkGate is an architecture write firewall plus a coach, not a prompt convention. The
+`ark.config.json` contract and deterministic engine decide whether a change is valid; agent memory,
+`AGENTS.md`, skills, and prose improve prevention but are never trusted enforcement inputs.
+
+- Validate at the earliest available boundary and enforce at the earliest non-bypassable one: hard
+  PreToolUse when covered, transactional MCP preparation for proactive feedback, and a required
+  CI/merge check as the final boundary.
+- Given the same base tree, candidate change, compiler inputs, and policy, every adapter returns the
+  same verdict and evidence without an LLM deciding pass/fail.
+- Every rejection teaches: concise human cause and next action for a casual user, plus stable JSON,
+  hashes, and exact evidence for an experienced engineer.
+
 ### Product boundary
 
-**Build now (post-3.0)**
+**Shipped in 3.1.0**
 
-- Deeper **exploratory** agent skills for design-correct residual under ENFORCE (path
-  non-deterministic: concurrent patterns, Shape dual-plan B, extraction cards).
-- Clear skill routing so skills do not overlap or claim “healthy” from empty plan A alone.
-- Later queue: deterministic design-smell sensors, stable plan-B IR, eval fixtures, then
-  productized extraction cards — without silent judgment auto-apply or a general codemod.
+- Protect **contract transitions**, not only the final `ark.config.json`: classify policy deltas
+  and require explicit, hash-bound acknowledgment for weakening changes.
+- Preflight create/update/delete batches as one atomic candidate so cross-file edges and cycles
+  are rejected before the host commits any source write.
+- Add an optional, tool-agnostic architecture change map and a read-only convergence report for
+  multi-step work. Keep product intent in the user's own spec or brief.
+- Reuse the existing analysis engine, CLI/MCP adapters, and current skills; do not add a second
+  planner, task tracker, or skill namespace.
 
 **Still frozen (do not start without a new item)**
 
@@ -43,7 +60,14 @@ gate. The optional runtime is not the product and must not determine the package
 ### Hard lines
 
 - No silent auto-apply of judgment-heavy changes.
+- No automatic approval of a weaker contract; any exception is explicit and bound to both policy
+  hashes.
+- No enforcement claim based only on prompt context, `AGENTS.md`, a rules file, or MCP registration;
+  advisory remains labeled advisory unless the host makes that path non-bypassable.
+- No LLM-derived pass/fail verdict and no blocking diagnostic without stable evidence plus an
+  actionable next step.
 - No general codemod engine.
+- No product-spec or task-management engine, and no behavioral “done” claim from path traceability.
 - No “Enforce” status when active-host enforcement or governed coverage is incomplete.
 - No release claim that cannot be reproduced from a clean checkout.
 - No numeric trust score. The final gate is binary.
@@ -68,6 +92,7 @@ These are the starting facts this roadmap must change.
 | Package | ~3.1 MB unpacked; root and runtime bundles overlap; core scanner is not a stable import API | Public surface is inverted |
 | External proof | V03 reproduced 12 MIT-licensed public targets with 93% median governed coverage and no open P0/P1 | Retain the scheduled matrix as field evidence |
 | Supply chain | Protected main, signed tags, provenance, CodeQL/Semgrep, and no open alerts | Preserve this foundation |
+| Change integrity | Final-state checks and single-file prepare-write exist; policy deltas and atomic multi-file preflight are not public adapter surfaces, and no plan-vs-actual convergence exists | `T01`–`T05` move deterministic feedback before the first write without becoming a spec manager |
 
 ### Release blocker register
 
@@ -193,9 +218,39 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 33 | `Q05` | `done` | M | `Q04` | AI-velocity evidence: golden-path vs design-weak same feature scenario |
 | 34 | `Q06` | `done` | S | `Q01`–`Q05` | Release train: CHANGELOG, 3.0.3 notes, surface parity, dry-run readiness |
 
-**Next:** Phase Q complete and shipped (`arkgate@3.0.3`+). Latest patch: **`arkgate@3.0.5`**
-(Codex skill catalog + residual honesty). Epic backlog:
-[docs/plans/power-simple-shape](docs/plans/power-simple-shape/README.md).
+### Phase T — change integrity (contract delta → atomic patch → convergence)
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 35 | `T01` | `done` | M | Phase Q done | Semantic policy-delta guard detects and blocks unacknowledged contract weakening |
+| 36 | `T02` | `done` | L | `T01` | CLI/MCP preflight create, update, and delete batches atomically before writes |
+| 37 | `T03` | `done` | M | `T02` | Optional versioned architecture change map describes planned paths and dependency edges |
+| 38 | `T04` | `done` | M | `T03` | Read-only convergence reports planned, missing, contradictory, and unplanned structural impact |
+| 39 | `T05` | `done` | M | `T01`–`T04` | Context-independent enforcement ladder, dual-depth remediation, adapter parity, adversarial eval, docs, and release evidence |
+
+**Next:** Phase T shipped in **`arkgate@3.1.0`**. No item is `doing`; any next phase must be added
+here before implementation. Retained evidence:
+[change-integrity-loop](docs/plans/change-integrity-loop/README.md).
+
+### Next-round package budget guardrail
+
+Before any post-T item moves to `doing`, recalibrate the gate-package budget from a clean packed
+candidate. The current `427 KB` packed ceiling is an internal release guardrail, not an npm
+requirement, and its remaining `221` bytes must not become an accidental product constraint.
+
+- Keep `250 KB` packed / `1 MB` unpacked as the long-term optimization target, not as a reason to
+  remove useful CLI, MCP, schema, or coaching surfaces.
+- Set the hard packed, unpacked, and file-count ceilings once for the roadmap cycle with at least
+  10% headroom over the measured clean candidate; do not ratchet them upward item by item.
+- Any item projected to consume more than 25% of that cycle's headroom must record the user value,
+  packed-content delta, and alternatives considered before implementation.
+- If a candidate exceeds the cycle ceiling, reduce accidental/duplicated published surface or
+  approve a new evidence-backed exception explicitly. Never raise the ceiling only to match the
+  latest measurement plus a token margin.
+
+**Next-round verification:** `npm pack --json --dry-run`, `npm run check:package-files`, and
+`npm run check:release-artifacts` must agree on the candidate contents and recorded budget before
+the first implementation item starts.
 
 ---
 
@@ -1257,10 +1312,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: Q01 done — single post-green clarify-for-ai path
-First result: doctor postGreenPath / primaryNextAction on design-weak; routing Single path row
-Then: approve Q02+ into this table before starting (outcome language / golden pattern / …)
-Primary files: bin/lib/post-green-path.mjs, bin/lib/doctor-plan.mjs, bin/lib/ci-and-commands.mjs
-Required finish: Q01 acceptance + tests + architecture green (landed this session)
-Released baseline: npm arkgate@3.0.2+; Q01 lands on main before next patch
+Item: none — Phase T implementation is complete; the roadmap has no active `doing` item
+Next action: recalibrate the package budget under the next-round guardrail, then define and review a bounded roadmap item
+Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
+Released baseline: npm arkgate@3.1.0; Phase T shipped from PR #64
 ```

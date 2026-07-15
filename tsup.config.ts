@@ -8,7 +8,10 @@ export default defineConfig({
   splitting: false,
   sourcemap: false,
   clean: true,
-  minify: false,
+  // npm ships this output alongside readable TypeScript sources in the repository.
+  // Compact the duplicate ESM/CJS distribution so stable analysis features stay
+  // inside the release artifact budget.
+  minify: true,
   treeshake: false,
   cjsInterop: true,
   target: 'es2022',

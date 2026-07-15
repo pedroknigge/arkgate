@@ -24,6 +24,38 @@ import {
   layerForRelativePath,
   patternSpecificity,
 } from '../domain/layerMatch';
+import {
+  classifyArkPolicyDelta,
+  policyDeltaAcknowledgementMatches,
+  type PolicyDeltaAcknowledgement,
+  type PolicyDeltaClassification,
+  type PolicyDeltaFinding,
+} from '../domain/policyDelta';
+import type { ArchitectureChangeMapContract } from '../domain/changeMap';
+import {
+  analyzeArchitectureConvergence,
+  type ArchitectureConvergenceResult,
+} from '../domain/changeConvergence';
+import { deterministicNextAction } from '../domain/remediation';
+
+export {
+  loadArchitectureChangeMap,
+  type ArchitectureChangeMap,
+  type ArchitectureChangeMapContract,
+  type ArchitectureChangeMapDependency,
+  type ArchitectureChangeMapFile,
+  type ArchitectureChangeOperation,
+} from '../domain/changeMap';
+
+export {
+  analyzeArchitectureConvergence,
+  type AnalyzeArchitectureConvergenceInput,
+  type ArchitectureActualChange,
+  type ArchitectureConvergenceClassification,
+  type ArchitectureConvergenceFinding,
+  type ArchitectureConvergenceResult,
+  type ArchitectureDependency,
+} from '../domain/changeConvergence';
 
 export {
   collectForbiddenCapabilityUses,
@@ -51,10 +83,31 @@ export type AnalyzeProjectInput = {
 
 export type AnalyzeChangeInput = AnalyzeProjectInput & {
   changes: readonly AnalysisFileChange[];
+  changeMap?: ArchitectureChangeMapContract;
 };
 
 export type AnalysisResult = {
   ir: AnalysisIr;
+};
+
+export type AnalyzePolicyDeltaInput = {
+  baseConfig: unknown;
+  candidateConfig: unknown;
+  acknowledgement?: PolicyDeltaAcknowledgement;
+  baseSource?: string;
+  candidateSource?: string;
+};
+
+export type PolicyDeltaAnalysis = {
+  schemaVersion: '1.0';
+  basePolicyHash: string;
+  candidatePolicyHash: string;
+  classification: PolicyDeltaClassification;
+  findings: PolicyDeltaFinding[];
+  blockingFindingIds: string[];
+  requiresAcknowledgement: boolean;
+  acknowledged: boolean;
+  valid: boolean;
 };
 
 export type ArchitectureEngineViolation = {
@@ -65,6 +118,7 @@ export type ArchitectureEngineViolation = {
   target?: string;
   fromLayer?: string;
   toLayer?: string;
+  nextAction?: string;
   [key: string]: unknown;
 };
 
@@ -98,6 +152,28 @@ export type ArchitectureEngineResult = {
   safety?: unknown;
 };
 
+export type PreparedChangeFile = {
+  path: string;
+  operation: 'create' | 'update' | 'delete';
+  beforeContentHash?: string;
+  candidateContentHash?: string;
+};
+
+export type ChangePreflightResult = {
+  schemaVersion: '1.0';
+  valid: boolean;
+  readOnly: true;
+  policyHash: string;
+  compilerOptionsHash: string;
+  baseTreeHash: string;
+  candidateTreeHash: string;
+  changeMapHash?: string;
+  convergence?: ArchitectureConvergenceResult;
+  changes: PreparedChangeFile[];
+  violations: ArchitectureEngineViolation[];
+  warnings: ArchitectureEngineViolation[];
+};
+
 export type CollectAnalysisConfigWarningsInput = {
   config: ArkConfig;
   rules: ArkConfig['rules'];
@@ -115,8 +191,51 @@ export function loadContract(input: unknown, source?: string): AnalysisContract 
   return { ...loaded, policyHash: deterministicHash(stableSerialize(loaded.config)) };
 }
 
+export function analyzePolicyDelta(input: AnalyzePolicyDeltaInput): PolicyDeltaAnalysis {
+  const base = loadContract(input.baseConfig, input.baseSource ?? 'base ark.config.json');
+  const candidate = loadContract(
+    input.candidateConfig,
+    input.candidateSource ?? 'candidate ark.config.json'
+  );
+  const delta = classifyArkPolicyDelta(base.config, candidate.config);
+  const blockingFindingIds = delta.findings
+    .filter(
+      (finding) =>
+        finding.classification === 'weakening' ||
+        finding.classification === 'judgment-required'
+    )
+    .map((finding) => finding.id)
+    .sort();
+  const requiresAcknowledgement = blockingFindingIds.length > 0;
+  const acknowledged =
+    requiresAcknowledgement &&
+    policyDeltaAcknowledgementMatches(input.acknowledgement, {
+      basePolicyHash: base.policyHash,
+      candidatePolicyHash: candidate.policyHash,
+      findingIds: blockingFindingIds,
+    });
+
+  return {
+    schemaVersion: delta.schemaVersion,
+    basePolicyHash: base.policyHash,
+    candidatePolicyHash: candidate.policyHash,
+    classification: delta.classification,
+    findings: delta.findings,
+    blockingFindingIds,
+    requiresAcknowledgement,
+    acknowledged,
+    valid: !requiresAcknowledgement || acknowledged,
+  };
+}
+
 function normalizePath(value: string): string {
-  return value.replace(/\\/g, '/').replace(/^\.\//, '');
+  const segments: string[] = [];
+  for (const segment of value.replace(/\\/g, '/').split('/')) {
+    if (!segment || segment === '.') continue;
+    if (segment === '..' && segments.length > 0 && segments.at(-1) !== '..') segments.pop();
+    else segments.push(segment);
+  }
+  return segments.join('/');
 }
 
 type ModuleSpecifier = { value: string; offset: number; excerpt: string };
@@ -460,6 +579,142 @@ export function evaluateArchitectureGraph(
   }
 
   return { violations, warnings, safety: input.safety };
+}
+
+function analysisTreeHash(files: readonly AnalysisFile[]): string {
+  return deterministicHash(
+    stableSerialize(files.map(({ path, contentHash }) => ({ path, contentHash })))
+  );
+}
+
+/**
+ * Evaluate one create/update/delete set as a single in-memory candidate.
+ * The function never writes and returns hashes that bind a later host commit to
+ * the exact base, policy, compiler options, and candidate contents it checked.
+ */
+export function preflightChange(input: AnalyzeChangeInput): ChangePreflightResult {
+  const base = analyzeProject(input);
+  const baseByPath = new Map(base.ir.files.map((file) => [file.path, file]));
+  const uniqueChanges: AnalysisFileChange[] = [];
+  const seen = new Set<string>();
+  const inputViolations: ArchitectureEngineViolation[] = [];
+
+  for (const change of input.changes) {
+    const rawPath = change.path.replace(/\\/g, '/');
+    const path = normalizePath(change.path);
+    if (
+      !path ||
+      path === '..' ||
+      path.startsWith('../') ||
+      rawPath.startsWith('/') ||
+      /^[A-Za-z]:\//.test(rawPath) ||
+      rawPath.includes('\0')
+    ) {
+      inputViolations.push({
+        ruleId: 'INVALID_CHANGE_PATH',
+        file: '<change-set>',
+        line: 1,
+        message: 'Every change requires a safe, non-empty project-relative path.',
+      });
+      continue;
+    }
+    if (seen.has(path)) {
+      inputViolations.push({
+        ruleId: 'DUPLICATE_CHANGE_PATH',
+        file: path,
+        line: 1,
+        message: `The atomic change set contains more than one operation for ${path}.`,
+      });
+      continue;
+    }
+    seen.add(path);
+    if ('delete' in change && change.delete && !baseByPath.has(path)) {
+      inputViolations.push({
+        ruleId: 'DELETE_TARGET_MISSING',
+        file: path,
+        line: 1,
+        message: `Cannot delete ${path} because it is not present in the supplied base tree.`,
+      });
+    }
+    uniqueChanges.push(
+      'delete' in change && change.delete
+        ? { path, delete: true }
+        : { path, content: 'content' in change ? change.content : '' }
+    );
+  }
+
+  if (input.changes.length === 0) {
+    inputViolations.push({
+      ruleId: 'CHANGE_SET_EMPTY',
+      file: '<change-set>',
+      line: 1,
+      message: 'Atomic preflight requires at least one create, update, or delete.',
+    });
+  }
+
+  const candidate = analyzeChange({ ...input, changes: uniqueChanges });
+  const candidateByPath = new Map(candidate.ir.files.map((file) => [file.path, file]));
+  const graphResult = evaluateArchitectureGraph({
+    config: input.contract.config,
+    rules: input.contract.config.rules,
+    files: candidate.ir.files.map((file) => file.path),
+    contentViolations: [],
+    edges: candidate.ir.edges
+      .filter((edge): edge is AnalysisImportEdge & { fromLayer: string } => Boolean(edge.fromLayer))
+      .map((edge) => ({
+        from: edge.from,
+        fromLayer: edge.fromLayer,
+        ...(edge.to ? { to: edge.to } : {}),
+        ...(edge.toLayer ? { toLayer: edge.toLayer } : {}),
+        line: edge.evidence.line,
+        kind: 'import',
+      })),
+  });
+
+  const changes = uniqueChanges
+    .map((change): PreparedChangeFile => {
+      const path = normalizePath(change.path);
+      const before = baseByPath.get(path);
+      const after = candidateByPath.get(path);
+      return {
+        path,
+        operation: 'delete' in change && change.delete ? 'delete' : before ? 'update' : 'create',
+        ...(before ? { beforeContentHash: before.contentHash } : {}),
+        ...(after ? { candidateContentHash: after.contentHash } : {}),
+      };
+    })
+    .sort((left, right) => left.path.localeCompare(right.path));
+  const violations = [...inputViolations, ...graphResult.violations].map((violation) => ({
+    ...violation,
+    nextAction: deterministicNextAction(violation),
+  }));
+  const convergence = input.changeMap
+    ? analyzeArchitectureConvergence({
+        changeMap: input.changeMap,
+        changes,
+        baseDependencies: base.ir.edges.flatMap((edge) =>
+          edge.to ? [{ from: edge.from, to: edge.to }] : []
+        ),
+        candidateDependencies: candidate.ir.edges.flatMap((edge) =>
+          edge.to ? [{ from: edge.from, to: edge.to }] : []
+        ),
+      })
+    : undefined;
+
+  return {
+    schemaVersion: '1.0',
+    valid: violations.length === 0 && (convergence?.structurallyConverged ?? true),
+    readOnly: true,
+    policyHash: input.contract.policyHash,
+    compilerOptionsHash: candidate.ir.compilerOptionsHash,
+    baseTreeHash: analysisTreeHash(base.ir.files),
+    candidateTreeHash: analysisTreeHash(candidate.ir.files),
+    ...(input.changeMap ? { changeMapHash: input.changeMap.hash } : {}),
+    ...(convergence ? { convergence } : {}),
+    changes,
+    violations,
+    warnings: graphResult.warnings,
+  };
 }
 
 function configWarning(

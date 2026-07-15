@@ -44,4 +44,19 @@ describe('confidence gate wiring', () => {
     expect(tokenPublish).toBeGreaterThan(tokenConfidence);
     expect(publishWorkflow).toContain('npm run release:npm');
   });
+
+  it('can resume checksum and release assets after npm already published the tag', () => {
+    const workflow = read('.github/workflows/publish-npm.yml');
+    expect(workflow).toContain('id: npm-state');
+    expect(workflow).toContain('published_git_head="$(npm view "$package@$version" gitHead');
+    expect(workflow).toContain('tag_commit="$(git rev-list -n 1 "$RELEASE_TAG")"');
+    expect(workflow).toContain("steps.npm-state.outputs.published != 'true'");
+
+    const checksum = workflow.indexOf('- name: Upload npm tarball checksum');
+    const assets = workflow.indexOf('- name: Attach release artifacts');
+    expect(checksum).toBeGreaterThan(workflow.indexOf('- name: Publish to npm'));
+    expect(assets).toBeGreaterThan(checksum);
+    expect(workflow.slice(checksum, assets)).not.toContain('npm-state.outputs.published');
+    expect(workflow.slice(assets)).not.toContain('npm-state.outputs.published');
+  });
 });

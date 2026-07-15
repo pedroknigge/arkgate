@@ -139,6 +139,16 @@ npm run eval:ai-velocity
 Method is printed next to the numbers in the harness stdout and stored in
 `comparison.method` on the report. CI gate: `tests/unit/static-check/q05AiVelocity.test.ts`.
 
+### Change-integrity harness (T05 — fixed feature, no live LLM)
+
+`npm run eval:change-integrity` runs the committed free-shipping feature fixture through the same
+rejected candidate with and without `AGENTS.md`, skills, and injected prose. It requires identical
+hashes/verdicts across context variants and compatible diagnostic identity across CLI, MCP,
+complete-patch hook, and final `ark-check`. The corrected candidate must then pass its prewritten
+`acceptance.mjs` and `ark-check --strict-config`; preflight still never claims behavioral completion.
+
+Output: `eval/change-integrity-report.json`. The report is deterministic and fixture-measured.
+
 ### Loop-cost harness (W3 — fixture-measured, CI-safe)
 
 Measures **turns-to-green**, optional **tokens-to-green**, and **CHEATED** for a

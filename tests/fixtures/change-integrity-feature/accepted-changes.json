@@ -1,0 +1,8 @@
+{
+  "changes": [
+    {
+      "path": "src/domain/shipping-policy.js",
+      "content": "const FREE_SHIPPING_THRESHOLD = 100;\nexport const qualifiesForFreeShipping = (subtotal) => subtotal >= FREE_SHIPPING_THRESHOLD;\n"
+    }
+  ]
+}

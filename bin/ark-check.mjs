@@ -99,6 +99,7 @@ import {
 } from './lib/config-warnings.mjs';
 import { runArchitectureScan } from './lib/architecture-scan.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
+import { analyzePolicyTransition } from './lib/policy-delta-io.mjs';
 
 
 function parseArgs(argv) {
@@ -110,6 +111,7 @@ function parseArgs(argv) {
     tsconfig: undefined,
     json: false,
     strictConfig: false,
+    strictMerge: false,
     requireGates: false,
     requireWriteHook: undefined,
     init: false,
@@ -119,6 +121,9 @@ function parseArgs(argv) {
     force: false,
     skillsOnly: false,
     baseline: undefined,
+    policyBase: undefined,
+    policyBaseRef: undefined,
+    policyAck: undefined,
     updateBaseline: false,
     noCache: false,
     coverage: false,
@@ -149,6 +154,7 @@ function parseArgs(argv) {
     else if (arg === '--strict' || arg === '--strict-merge') {
       args.strictConfig = true;
       args.requireGates = true;
+      args.strictMerge = true;
     }
     else if (arg === '--strict-config') args.strictConfig = true;
     else if (arg === '--require-gates') args.requireGates = true;
@@ -205,6 +211,9 @@ function parseArgs(argv) {
       const next = argv[i + 1];
       args.baseline = next && !next.startsWith('-') ? argv[++i] : '.ark-baseline.json';
     }
+    else if (arg === '--policy-base') args.policyBase = requireValue(arg, i++);
+    else if (arg === '--policy-base-ref') args.policyBaseRef = requireValue(arg, i++);
+    else if (arg === '--policy-ack') args.policyAck = requireValue(arg, i++);
     else if (arg === '--root') args.root = path.resolve(requireValue(arg, i++));
     else if (arg === '--config') args.config = requireValue(arg, i++);
     else if (arg === '--manifest') args.manifest = requireValue(arg, i++);
@@ -230,7 +239,7 @@ function usage() {
   return [
     'Usage: arkgate-check | ark-check  (identical bins; product name ArkGate)',
     '       ark-check --version',
-    '       ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-merge | --strict | --strict-config] [--require-gates] [--require-write-hook <host>] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
+    '       ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-merge | --strict | --strict-config] [--policy-base <file> | --policy-base-ref <git-ref>] [--policy-ack <file>] [--require-gates] [--require-write-hook <host>] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
     '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
     '       ark-check --plan [--json]              classified remediation plan (mechanical-safe / judgment / deferred) + goal; report only',
     '       ark-check --recommend [--json] [--write-plan]  application-shape plan; --write-plan emits ark-adoption-plan.json',
@@ -287,6 +296,10 @@ function usage() {
     'Use --strict-merge for the fail-closed CI profile: --strict-config + --require-gates',
     'plus the security diagnostics surfaced by doctor. --strict is a compatibility alias.',
     'This merge profile never depends on an editor/agent hook.',
+    'When a Git merge base is available, --strict-merge classifies the ark.config.json',
+    'transition. Weakening or judgment-required findings fail unless --policy-ack names',
+    'every finding and is bound to both policy hashes. Use --policy-base/--policy-base-ref',
+    'for an explicit comparison; ARK_POLICY_BASE_REF is the CI environment equivalent.',
     'Add --require-write-hook claude|grok to validate a hard local write boundary for that',
     'specific host. Cursor and Codex expose advisory MCP tools plus the shared CI check;',
     'merge blocking requires repository policy to make that status required.',
@@ -1060,6 +1073,15 @@ async function main() {
 
   const root = args.root;
   const config = readConfig(root, args.config);
+  const policyDelta = analyzePolicyTransition({
+    root,
+    configPath: args.config,
+    candidateConfig: config,
+    strictMerge: args.strictMerge,
+    basePath: args.policyBase,
+    baseRef: args.policyBaseRef,
+    acknowledgementPath: args.policyAck,
+  });
   const manifest = readManifest(root, args.manifest);
   const rules = manifest?.architecture?.rules ?? config.rules;
   const files = collectGovernedFiles(root, config);
@@ -1216,7 +1238,9 @@ async function main() {
   // Soft/advisory warnings (failsStrict === false) never fail --strict-config.
   const strictWarnings = warnings.filter((w) => w.failsStrict !== false);
   const ok =
-    activeViolations.length === 0 && (!args.strictConfig || strictWarnings.length === 0);
+    activeViolations.length === 0 &&
+    (!args.strictConfig || strictWarnings.length === 0) &&
+    (policyDelta?.valid ?? true);
 
   if (args.plan) {
     const cov = computeCoverage(root, config, files, rules);
@@ -1384,6 +1408,7 @@ async function main() {
           }
         : {}),
       ...(codexRepoSkillGap ? { codexRepoSkillGap } : {}),
+      ...(policyDelta ? { policyDelta } : {}),
     }, null, 2));
   } else {
     for (const warning of warnings) {
@@ -1402,7 +1427,22 @@ async function main() {
         )
       );
     }
-    if (activeViolations.length === 0) {
+    if (policyDelta && !policyDelta.valid) {
+      for (const finding of policyDelta.findings.filter(
+        ({ classification }) =>
+          classification === 'weakening' || classification === 'judgment-required'
+      )) {
+        console.error(
+          `${color.red('policy')} ${finding.classification} ${finding.path}: ${finding.message}`
+        );
+        console.error(`  Next: ${finding.nextAction}`);
+      }
+      console.error(
+        `Policy transition blocked (${policyDelta.basePolicyHash} → ${policyDelta.candidatePolicyHash}). ` +
+          'Provide --policy-ack with the exact hashes, finding ids, and a non-empty reason.'
+      );
+    }
+    if (activeViolations.length === 0 && (policyDelta?.valid ?? true)) {
       const advisoryOnly = warnings.length > 0 && strictWarnings.length === 0;
       if (warnings.length === 0) {
         console.log(`${color.green('✔')} Ark check passed.${baselineNote}`);
@@ -1421,7 +1461,9 @@ async function main() {
       }
     } else {
       console.error(
-        `${color.red('✖')} ${activeViolations.length} violation(s).${baselineNote}`
+        activeViolations.length > 0
+          ? `${color.red('✖')} ${activeViolations.length} violation(s).${baselineNote}`
+          : `${color.red('✖')} Policy transition rejected.${baselineNote}`
       );
     }
 

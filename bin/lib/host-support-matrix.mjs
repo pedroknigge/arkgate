@@ -6,11 +6,12 @@
  * reported separately by write-path-capabilities.mjs.
  */
 
-function hostProfile(label, hookPath, hookSurface, hardWrite, repairPayload) {
+function hostProfile(label, hookPath, hookSurface, hookOperations, hardWrite, repairPayload) {
   return Object.freeze({
     label,
     hookPath,
     hookSurface,
+    hookOperations: Object.freeze(hookOperations),
     capabilities: Object.freeze({
       'hard-write': hardWrite,
       'advisory-write': true,
@@ -25,6 +26,7 @@ export const HOST_SUPPORT_MATRIX = Object.freeze({
     'Claude Code',
     '.claude/settings.json',
     'PreToolUse `Write` / `Edit` / `MultiEdit`',
+    ['Write', 'Edit', 'MultiEdit'],
     true,
     true
   ),
@@ -32,14 +34,16 @@ export const HOST_SUPPORT_MATRIX = Object.freeze({
     'Grok Build',
     '.grok/hooks/ark-write-gate.json',
     'PreToolUse `write` / `search_replace` (plus aliases)',
+    ['write', 'search_replace'],
     true,
     true
   ),
-  cursor: hostProfile('Cursor', null, null, false, false),
+  cursor: hostProfile('Cursor', null, null, [], false, false),
   codex: hostProfile(
     'OpenAI Codex',
     '.codex/hooks.json',
     'Best-effort PreToolUse `apply_patch`; Code Mode hosts may bypass the event',
+    ['apply_patch'],
     false,
     false
   ),

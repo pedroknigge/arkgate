@@ -95,7 +95,32 @@ export type EnrichedViolation<T extends ArkViolationLike = ArkViolationLike> = T
   fixClass: string;
   effort: FixClassEffort;
   enthusiastHint: string;
+  nextAction: string;
 };
+
+/** One deterministic re-entry action shared by human and machine denial surfaces. */
+export function deterministicNextAction(violation: ArkViolationLike): string {
+  switch (violation.ruleId) {
+    case 'LAYER_IMPORT_VIOLATION':
+      if (violation.typeOnly || violation.targetTypeOnlyExports || violation.namedBindingsTypeOnly) {
+        return 'Move the referenced type to a mutually allowed layer, use `import type`, then preflight again.';
+      }
+      if (violation.peerIsolation) {
+        return 'Extract the shared dependency to a shared layer, then preflight again.';
+      }
+      return `Define a port in ${violation.fromLayer ?? 'the source layer'}, inject the ${violation.toLayer ?? 'outer-layer'} implementation, then preflight again.`;
+    case 'FORBIDDEN_GLOBAL':
+      return `Inject ${violation.target ?? 'the capability'} through a port, then preflight again.`;
+    case 'CIRCULAR_DEPENDENCY':
+      return 'Extract the shared dependency into a third module, then preflight again.';
+    case 'RAW_EVENT_PUBLISH':
+      return 'Publish through a registered intent creator, then run Ark again.';
+    case 'PUBLISH_MISSING_SOURCE':
+      return 'Add metadata.source to the publish call, then run Ark again.';
+    default:
+      return `Resolve ${typeof violation.ruleId === 'string' && violation.ruleId.length > 0 ? violation.ruleId : 'ARK_UNKNOWN'} without weakening ark.config.json, then run Ark again.`;
+  }
+}
 
 /**
  * Co-pilot work classifier — the TRUST BOUNDARY for auto-apply.
@@ -282,5 +307,6 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
       enriched.enthusiastHint =
         'Read the violation message and the layer rules in ark.config.json, then adjust imports or move code to the correct layer.';
   }
+  enriched.nextAction = deterministicNextAction(violation);
   return enriched;
 }

@@ -95,3 +95,47 @@ Safety fields:
 
 The packaged JSON Schema is authoritative for types, constraints, defaults, and the unknown-key
 policy.
+
+## Contract transitions
+
+`ark-check --strict-merge` protects the transition into a new contract, not only the resulting
+file. In a Git checkout it compares the candidate `ark.config.json` with the merge base when that
+base is available. CI can bind the comparison explicitly:
+
+```bash
+ARK_POLICY_BASE_REF="$BASE_SHA" npx ark-check --strict-merge
+```
+
+For local or non-Git automation, supply a committed config file or Git ref:
+
+```bash
+npx ark-check --strict-config --policy-base ./before.ark.config.json --json
+npx ark-check --strict-merge --policy-base-ref origin/main
+```
+
+The additive JSON result includes `policyDelta`: both policy hashes, the overall classification,
+stable findings, and `blockingFindingIds`. Supported comparisons cover governed include/exclude
+roots, layer patterns/exclusions/forbidden globals, deny rules, same-layer peer isolation,
+cycle policy, dynamic-import allowlists, and safety thresholds. Ambiguous ownership changes are
+`judgment-required` rather than guessed.
+
+Weakening and judgment-required transitions fail closed. An intentional exception is an explicit
+JSON artifact passed with `--policy-ack`:
+
+```json
+{
+  "schemaVersion": "1.0",
+  "basePolicyHash": "fnv1a-...",
+  "candidatePolicyHash": "fnv1a-...",
+  "findingIds": ["weakening:$.dynamicImportAllowlist:added"],
+  "reason": "Temporary loader while the static registry is migrated."
+}
+```
+
+The acknowledgement must list every blocking finding exactly. It is not a permanent allowlist:
+changing either contract changes its hash and invalidates the acknowledgement.
+
+MCP clients can call `ark_policy_delta` with the previous `baseConfig`, an optional candidate
+contract (the current project contract is the default), and the same optional acknowledgement.
+It invokes the public classifier directly, is read-only, and marks a blocking result as an MCP
+error without maintaining separate adapter policy.

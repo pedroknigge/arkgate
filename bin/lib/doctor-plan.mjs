@@ -491,6 +491,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
               capabilities: writePath.capabilities,
               capabilityEvidence: writePath.capabilityEvidence,
               inventory: writePath.inventory,
+              enforcementLadder: writePath.enforcementLadder,
               mode: writePath.mode,
               prepareWrite: writePath.prepareWrite,
               autoPatch: writePath.autoPatch,
@@ -738,17 +739,19 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   line(' ', `Active host: ${writePath.activeHost}`);
   line(' ', `Supported profile: ${writePath.supportSummary}`);
   line(wpMark, `Mode: ${writePath.mode} — ${writePathLabels[writePath.mode] || writePath.mode}`);
+  const ladder = writePath.enforcementLadder;
+  const state = (value) => value === true ? 'yes' : value === false ? 'no' : String(value);
   line(
-    capabilities['hard-write'] ? ok : warn,
-    `Hard write boundary: ${capabilities['hard-write'] ? 'yes' : 'no'}`
+    ladder.localWrite.installed ? ok : warn,
+    `Hard hook — supported: ${state(ladder.localWrite.supported)} · installed: ${state(ladder.localWrite.installed)} · active/trusted: ${state(ladder.localWrite.active)} · bypassable: ${state(ladder.localWrite.bypassable)}`
   );
   line(
     warn,
-    `Advisory write tools (MCP): ${capabilities['advisory-write'] ? 'yes' : 'no'}`
+    `Advisory MCP — supported: ${state(ladder.advisoryMcp.supported)} · installed: ${state(ladder.advisoryMcp.installed)} · active: ${state(ladder.advisoryMcp.active)} · bypassable: ${state(ladder.advisoryMcp.bypassable)}`
   );
   line(
     capabilities['merge-gate'] ? ok : bad,
-    `CI check (--strict-merge): ${capabilities['merge-gate'] ? 'yes' : 'no'} (merge blocking requires a required status)`
+    `Merge gate — supported: ${state(ladder.ciMerge.supported)} · installed: ${state(ladder.ciMerge.installed)} · active: ${state(ladder.ciMerge.active)} · bypassable: ${state(ladder.ciMerge.bypassable)} · required status: ${state(ladder.ciMerge.requiredStatus)}`
   );
   line(
     capabilities['repair-payload'] ? ok : warn,

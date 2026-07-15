@@ -15,9 +15,9 @@ function installToolsForHost(activeHost) {
     : activeHost;
 }
 
-export function detectWritePathCapabilities(root, explicitHost) {
-  const model = buildWritePathCapabilityModel(root, explicitHost);
-  const { activeHost, support, capabilities, capabilityEvidence, inventory } = model;
+export function detectWritePathCapabilities(root, explicitHost, attempt) {
+  const model = buildWritePathCapabilityModel(root, explicitHost, attempt);
+  const { activeHost, support, capabilities, capabilityEvidence, enforcementLadder, inventory } = model;
   const hardWrite = capabilities['hard-write'];
   const advisoryWrite = capabilities['advisory-write'];
   const repairPayload = capabilities['repair-payload'];
@@ -98,6 +98,7 @@ export function detectWritePathCapabilities(root, explicitHost) {
     supportSummary: formatHostSupportSummary(support),
     capabilities,
     capabilityEvidence,
+    enforcementLadder,
     inventory,
     // Compatibility projection for existing doctor/API consumers.
     mode,

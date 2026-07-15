@@ -10,9 +10,11 @@ const mcpBin = path.resolve(process.cwd(), 'bin/ark-mcp.mjs');
 
 describe('hook payload fuzzing', () => {
   let root: string;
+  let outsideRoot: string;
 
   beforeAll(() => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-fuzz-hook-'));
+    outsideRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-fuzz-hook-outside-'));
     fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
     fs.writeFileSync(
       path.join(root, 'ark.config.json'),
@@ -24,7 +26,10 @@ describe('hook payload fuzzing', () => {
     );
   });
 
-  afterAll(() => fs.rmSync(root, { recursive: true, force: true }));
+  afterAll(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(outsideRoot, { recursive: true, force: true });
+  });
 
   it('never silently allows a randomized forbidden Write payload', () => {
     runFuzz(
@@ -67,7 +72,8 @@ describe('hook payload fuzzing', () => {
     runFuzz(
       'hook-payload-traversal',
       fc.property(fc.stringMatching(/^[a-z0-9]{1,24}$/), (name) => {
-        const outside = path.resolve(root, '..', `${name}.ts`);
+        const outside = path.join(outsideRoot, `${name}.ts`);
+        fs.rmSync(outside, { force: true });
         const result = spawnSync(process.execPath, [mcpBin, '--hook', '--root', root], {
           input: JSON.stringify({
             tool_name: 'Write',

@@ -1,23 +1,23 @@
-# ArkGate roadmap execution plan (3.0.0 closed; Phase P open)
+# ArkGate roadmap execution plan (historical 3.0.0 record)
 
 - Prepared: 2026-07-13
 - 3.0.0 closed: 2026-07-13 (stable published)
-- Source of truth: `ROADMAP.md` dated 2026-07-13
+- Current authority: `ROADMAP.md` (use its current status date)
 - Scope closed: `O03`–`O04`, `V01`–`V05`, `B01` (all `done`)
-- Phase P: post-3.0 pattern depth — `P01` done (skills); next `P02` doctor design smells
-- Current release state: `3.0.0` signed tag, GitHub Release, npm, MCP Registry
+- Later phases: P and Q are complete; future implementation authority lives only in `ROADMAP.md`
+- Current release state at reconciliation: `3.0.5` published
 
 ## 1. Purpose and authority
 
-This document recorded the pending roadmap through beta exit and stable 3.0.0. Phase P items
-live in `ROADMAP.md` (ordered queue + detail). This plan is historical for O/V tracks; do not
-silently reinterpret Phase P from here — update `ROADMAP.md` first.
+This document recorded the pending roadmap through beta exit and stable 3.0.0. It is historical
+for the O/V/B tracks and does not govern later phases. Use `ROADMAP.md` and its linked active epic
+for all current queue, acceptance, and handoff decisions.
 
 When this document and `ROADMAP.md` disagree:
 
 1. The ordered queue, dependencies, status, acceptance criteria, release rules, and stop conditions
    in `ROADMAP.md` win.
-2. Update this plan to match the roadmap; do not silently reinterpret the roadmap from here.
+2. For O/V/B history, keep this record accurate; do not extend it with later-phase implementation.
 3. Mark an item `done` only in accordance with the roadmap workflow and only after CI is green on
    the pushed commit.
 
@@ -73,12 +73,11 @@ releases. The procedure below is retained as the completed release record:
 
 No action in this section publishes or tags a release by itself.
 
-### Phase-closure synchronization rule
+### Historical phase-closure synchronization rule
 
-Before declaring any roadmap item `done`, update both `ROADMAP.md` and this plan in the same
-change: the ordered status table, the item's status and acceptance text, the roadmap `Next` entry,
-and the closure evidence (PR/commit and required CI result). A phase cannot be reported as closed
-until those entries agree; the closing review must explicitly check this parity.
+For O03–B01, completion required `ROADMAP.md` and this execution record to agree in the same
+change. That rule is retained as historical evidence. New phases update `ROADMAP.md` and their
+linked active epic instead; do not append them to this closed record.
 
 ## 4. Rules shared by every item
 

@@ -4,7 +4,53 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
-No changes are scheduled after 3.0.5.
+## 3.1.0 — 2026-07-15
+
+Deterministic change integrity. **No breaking** CLI or `ark.config.json` changes. **No gate
+weaken.**
+
+### Added
+
+- **T01 policy-transition guard:** the public analysis API and generated CLI engine classify
+  `ark.config.json` changes as `strengthening`, `neutral`, `judgment-required`, or `weakening`.
+  `--strict-merge` compares the Git merge-base contract when available; explicit
+  `--policy-base` / `--policy-base-ref` inputs are also supported.
+- **Hash-bound acknowledgement:** weakening and judgment-required findings fail until
+  `--policy-ack` supplies the exact base/candidate policy hashes, complete finding-id set, and a
+  non-empty reason. Any later contract edit invalidates the acknowledgement.
+- **CI base provenance:** generated workflows fetch full history and the composite Action passes
+  the PR/push base SHA through `ARK_POLICY_BASE_REF`.
+- **MCP parity:** `ark_policy_delta` exposes the same read-only classifier for explicit base and
+  candidate contracts and returns blocking transitions as tool errors.
+- **T02 atomic change preflight:** public `preflightChange(...)`, CLI
+  `ark preflight --changes <change-set.json>`, and MCP `ark_prepare_change` evaluate one complete
+  create/update/delete candidate without writing. Schema `1.0` includes per-file content
+  fingerprints plus policy, compiler, base-tree, and candidate-tree fingerprints.
+- **Batch safety:** duplicate normalized paths, stale delete targets, lexical root escapes, and
+  symlink escapes fail closed; cross-file forbidden edges and cycles are reported before commit.
+- **T03 optional architecture change map:** strict schema `1.0` describes canonical operations,
+  resolved layers, and local edges. CLI/MCP preflight binds its deterministic hash; no map is
+  installed by default. Both published schema subpaths are parity-checked with the Domain contract.
+- **T04 honest structural convergence:** map-enabled preflight compares the explicit complete
+  candidate with the current supplied base through the shared analysis IR. Stable findings separate
+  satisfied, missing, contradictory, and unplanned file/edge work; structural drift rejects the
+  batch without writes, while every result states behavioral completion was not evaluated.
+- **T05 actionable, context-independent enforcement:** blocking diagnostics expose one deterministic
+  `nextAction` across JSON and human output. Doctor and hook repair JSON separate supported,
+  installed, active, and bypassable enforcement with evidence and operation coverage; MCP-only and
+  locally unverifiable required-status state remain labeled honestly.
+- **Complete-patch hook parity:** governed Codex `ApplyPatch` create/update/delete sets use the same
+  atomic preflight as CLI/MCP before per-file safety checks, catching batch-only edges and cycles.
+  Codex remains advisory/bypassable at the host level.
+- **Fixed Phase T evaluation:** `npm run eval:change-integrity` proves identical no-context hashes and
+  verdicts, CLI/MCP/hook/final diagnostic parity, one concise casual denial, prewritten feature
+  acceptance, and strict Ark green without a live LLM or required planning file.
+### Fixed
+
+- **Compatibility/release:** analysis-result `1.1` preserves `1.0` TypeScript values; first-push
+  zero SHAs and resumable npm release assets are handled safely.
+
+Release note: `docs/releases/3.1.0.md`.
 
 ## 3.0.5 — 2026-07-14
 

@@ -417,6 +417,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 ${setupSteps ? `${setupSteps}\n` : ''}      - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -425,6 +427,8 @@ ${nodeSetup}
       - name: Install dependencies
         run: ${pm.install}
 ${qualityBlock ? `${qualityBlock}\n` : ''}      - name: Ark architecture check
+        env:
+          ARK_POLICY_BASE_REF: \${{ github.event.pull_request.base.sha || github.event.before }}
         run: ${pm.run}
 `;
 }

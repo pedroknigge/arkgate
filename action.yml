@@ -38,6 +38,7 @@ runs:
         INPUT_BASELINE: ${{ inputs.baseline }}
         INPUT_VERSION: ${{ inputs.version }}
         ACTION_PATH: ${{ github.action_path }}
+        ARK_POLICY_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
       run: |
         set -euo pipefail
         ARGS=(--root "$INPUT_ROOT" --config "$INPUT_CONFIG")
@@ -53,6 +54,14 @@ runs:
           (cd "$ACTION_PATH" && npm ci --omit=dev --ignore-scripts)
           [ "$INPUT_STRICT" = "true" ] && ARGS+=(--strict)
           RUNNER=(node "$ACTION_PATH/bin/ark-check.mjs")
+        fi
+
+        if [[ "$ARK_POLICY_BASE_REF" =~ ^0{40,64}$ ]]; then
+          ARK_POLICY_BASE_REF=""
+          export ARK_POLICY_BASE_REF
+        fi
+        if [ -n "$ARK_POLICY_BASE_REF" ] && ! git cat-file -e "$ARK_POLICY_BASE_REF^{commit}" 2>/dev/null; then
+          git fetch --no-tags --depth=1 origin "$ARK_POLICY_BASE_REF"
         fi
 
         set +e

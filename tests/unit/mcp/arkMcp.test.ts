@@ -127,6 +127,64 @@ describe('ark-mcp server (write-path gate)', () => {
     expect(res.result.tools.map((t: { name: string }) => t.name)).toContain('ark_prepare_write');
   });
 
+  it('lists and runs atomic ark_prepare_change without writing a rejected batch', async () => {
+    const listed = await client.request('tools/list');
+    expect(listed.result.tools.map((t: { name: string }) => t.name)).toContain(
+      'ark_prepare_change'
+    );
+
+    const res = await client.request('tools/call', {
+      name: 'ark_prepare_change',
+      arguments: {
+        changeMap: {
+          $schema: 'https://unpkg.com/arkgate@3/schemas/ark.change-map.schema.json',
+          schemaVersion: '1.0',
+          files: [
+            { path: 'src/core/order.ts', operation: 'create', layer: 'core' },
+            { path: 'src/app/service.ts', operation: 'create', layer: 'app' },
+          ],
+          dependencies: [{ from: 'src/core/order.ts', to: 'src/app/service.ts' }],
+        },
+        changes: [
+          {
+            path: 'src/core/order.ts',
+            content: "import { service } from '../app/service';\nexport const order = service;\n",
+          },
+          { path: 'src/app/service.ts', content: 'export const service = 1;\n' },
+        ],
+      },
+    });
+    const payload = JSON.parse(res.result.content[0].text);
+    expect(res.result.isError).toBe(true);
+    expect(payload).toMatchObject({
+      schemaVersion: '1.0',
+      valid: false,
+      readOnly: true,
+      changes: [
+        { path: 'src/app/service.ts', operation: 'create' },
+        { path: 'src/core/order.ts', operation: 'create' },
+      ],
+    });
+    expect(payload.policyHash).toMatch(/^fnv1a-/);
+    expect(payload.baseTreeHash).toMatch(/^fnv1a-/);
+    expect(payload.candidateTreeHash).toMatch(/^fnv1a-/);
+    expect(payload.changeMapHash).toMatch(/^fnv1a-/);
+    expect(payload.convergence).toMatchObject({
+      readOnly: true,
+      structurallyConverged: true,
+      behavioralCompletion: 'not-evaluated',
+      summary: { satisfied: 3, missing: 0, contradictory: 0, unplanned: 0 },
+    });
+    expect(payload.violations).toEqual([
+      expect.objectContaining({
+        ruleId: 'LAYER_IMPORT_VIOLATION',
+        file: 'src/core/order.ts',
+      }),
+    ]);
+    expect(fs.existsSync(path.join(projectRoot, 'src/core/order.ts'))).toBe(false);
+    expect(fs.existsSync(path.join(projectRoot, 'src/app/service.ts'))).toBe(false);
+  });
+
   it('flags a forbidden infra import (isError + valid:false)', async () => {
     const res = await client.request('tools/call', {
       name: 'validate_code',
@@ -906,9 +964,11 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
     expect(res.result.tools.map((t: { name: string }) => t.name)).toEqual([
       'validate_code',
       'ark_check',
+      'ark_policy_delta',
       'ark_coverage',
       'ark_place',
       'ark_prepare_write',
+      'ark_prepare_change',
       'ark_recommend',
       'ark_suggest_include',
     ]);
@@ -940,6 +1000,36 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
     const loosePayload = JSON.parse(loose.result.content[0].text);
     expect(loosePayload.ok).toBe(true);
     expect(loose.result.isError).toBe(false);
+  });
+
+  it('ark_policy_delta shares the hash-bound classifier and rejects weakening', async () => {
+    const baseConfig = {
+      include: ['src'],
+      layers: [
+        {
+          name: 'DomainModel',
+          patterns: ['src/domain/**'],
+          forbiddenGlobals: ['Date.now', 'fetch'],
+        },
+        { name: 'PersistenceAdapters', patterns: ['src/infra/**'] },
+      ],
+      rules: [{ from: 'DomainModel', to: 'PersistenceAdapters', allowed: false }],
+    };
+    const response = await client.request('tools/call', {
+      name: 'ark_policy_delta',
+      arguments: { baseConfig },
+    });
+    const payload = JSON.parse(response.result.content[0].text);
+
+    expect(response.result.isError).toBe(true);
+    expect(payload).toMatchObject({
+      classification: 'weakening',
+      valid: false,
+      requiresAcknowledgement: true,
+    });
+    expect(payload.findings).toContainEqual(
+      expect.objectContaining({ path: '$.layers[DomainModel].forbiddenGlobals' })
+    );
   });
 
   it('ark_place resolves the layer, forbidden globals, and denied import targets', async () => {

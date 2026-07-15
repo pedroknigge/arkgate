@@ -548,10 +548,15 @@ describe('active-host write capability model', () => {
       );
       expect(humanRun.status).toBe(0);
       expect(humanRun.stdout).toContain('Active host: cursor');
-      expect(humanRun.stdout).toContain('Hard write boundary: no');
-      expect(humanRun.stdout).toContain('Advisory write tools (MCP): yes');
-      expect(humanRun.stdout).toContain('CI check (--strict-merge): yes');
-      expect(humanRun.stdout).toContain('merge blocking requires a required status');
+      expect(humanRun.stdout).toContain(
+        'Hard hook — supported: no · installed: no · active/trusted: no · bypassable: yes'
+      );
+      expect(humanRun.stdout).toContain(
+        'Advisory MCP — supported: yes · installed: yes · active: unverified · bypassable: yes'
+      );
+      expect(humanRun.stdout).toContain(
+        'Merge gate — supported: yes · installed: yes · active: unverified · bypassable: unknown · required status: unverified'
+      );
       expect(humanRun.stdout).toContain('Shared gate files present (AGENTS.md, .mcp.json, CI)');
       expect(humanRun.stdout).not.toContain('Gate files present (AGENTS.md, .mcp.json, CI, write gate)');
     } finally {

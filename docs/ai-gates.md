@@ -48,7 +48,11 @@ you pass `--force`, so review and commit only the templates that match your proj
 **Doctor (W5):** `ark-check --doctor --json` includes `doctor.writePath`
 (`mode`: `repair` | `reject-only` | `mcp-only` | `none`, plus `prepareWrite` /
 `autoPatch` flags), the supported profile for the active host, and the evidence actually found.
-Supported capability and installed guarantee are deliberately separate.
+`writePath.enforcementLadder` separates `supported`, `installed`, `active`, and `bypassable` for
+local hooks, advisory MCP, and CI. Doctor leaves hook trust and required-status policy
+`unverified`; an actual covered PreToolUse denial can report operation-scoped activity. Codex
+`apply_patch` can expose a complete patch to the shared atomic preflight, but the host remains
+bypassable/advisory because some Code Mode paths do not dispatch the project hook.
 
 **Design fitness (3.0.1+):** the same doctor JSON may include `doctor.designFitness` and
 `doctor.designSmells[]` (path evidence). Edge-clean `operatingMode: enforce` can still set
@@ -182,6 +186,9 @@ The MCP server exposes a resource and tools agents can use proactively (not an e
 - **`ark://manifest`** (resource) — the machine-readable architecture contract (layers + rules), so the agent can read the architecture before generating code.
 - **`validate_code`** (tool) — validates a snippet against the architecture on demand (the write-path gate). May return additive **`autoPatch`** (W1) for mechanical-safe import-type rewrites.
 - **`ark_prepare_write`** (tool) — **W2:** place + constrain + validate + optional autoPatch + judgmentBrief + contentHash in one call (composes `ark_place` + write gate).
+- **`ark_prepare_change`** (tool) — **T02–T05:** read-only atomic create/update/delete preflight with cross-file edge/cycle findings and candidate fingerprints. Optional `changeMap` accepts strict schema `1.0` intent and returns its hash plus satisfied/missing/contradictory/unplanned structural convergence; behavioral completion is not evaluated. Omission is supported. MCP registration remains advisory unless the host makes invocation non-bypassable.
+- Blocking CLI/MCP/hook diagnostics include the same deterministic `nextAction`. `AGENTS.md`, skill
+  catalogs, session prose, and live LLM calls are not inputs to the enforcement verdict.
 - **`ark_place`** (tool) — given a target file path, returns its layer, forbidden globals, and which layers it may / must not import. Call it *before* writing a new file so generated code lands in a governed location.
 - **`ark_check`** (tool) — runs the full architecture check and returns structured violations (applies the baseline automatically when one exists).
 - **`ark_coverage`** (tool) — per-layer file counts, the full unclassified-file list, and layers whose patterns match nothing.

@@ -1,14 +1,14 @@
 # Plan: Power + simple → AI-clear code (post–Phase P)
 
-> **Plan (not SSOT implementation docs).** Library hub: [AGENTS.md](../../../AGENTS.md)  
-> Related: [ROADMAP.md](../../../ROADMAP.md) · [package-surface.md](../../package-surface.md) · [brownfield-adoption.md](../../brownfield-adoption.md) · [README — Less spaghetti](../../../README.md#less-spaghetti-after-the-gate-is-green)  
-> When slices ship, promote durable decisions to ADRs and fold accepted IDs into `ROADMAP.md`.
+> **Plan (not SSOT implementation docs).** Library hub: [AGENTS.md](../../../AGENTS.md)<br>
+> Related: [ROADMAP.md](../../../ROADMAP.md) · [package-surface.md](../../package-surface.md) · [brownfield-adoption.md](../../brownfield-adoption.md) · [README — Less spaghetti](../../../README.md#less-spaghetti-after-the-gate-is-green)<br>
+> Durable decisions and accepted IDs were folded into `ROADMAP.md` when Phase Q shipped.
 
-**Status:** Planned  
-**Slug:** `power-simple-shape`  
-**Kind:** epic / product vision  
-**Owners:** product (Pedro) + library maintainers  
-**Last updated:** 2026-07-13  
+**Status:** Shipped<br>
+**Slug:** `power-simple-shape`<br>
+**Kind:** epic / product vision<br>
+**Owners:** product (Pedro) + library maintainers<br>
+**Last updated:** 2026-07-14<br>
 **Code path (if any):** Phase Q surfaces ship in **arkgate@3.0.3** (post-green path, smell outcomes, golden pattern, pilot loop, AI-velocity eval) on top of Phase P (`design-smells`, `patternBets`, skills)
 
 ---
@@ -197,34 +197,36 @@ Rationale: optional consumer artifact under existing local-state convention; no 
 churn; absence is normal; never gates ENFORCE. Fields: `name` + `norm` required;
 `newCodeHome`, `examplePath`, `schemaVersion` optional.
 
-### Open decisions (ADR only when locked)
+### Decisions closed by Phase Q
 
-1. **Golden pattern storage:** `ark.config.json` field vs `.ark/golden-pattern.json` vs AGENTS compact norm only?
-2. **Product name for post-green path:** “Shape” vs “Clarify for AI” vs doctor-only wording?
-3. **Is a new skill basename allowed** if routing alone fails usability tests?
-4. **How far does “AI-velocity” go into CI** (smoke only vs required gate)?
-
----
-
-## Open questions
-
-- Which gallery starter is the golden-path velocity baseline?
-- Should compact `ark start` mention Shape only after first ENFORCE, to avoid newbie overload?
-- Multi-language doctor outcome strings: English-only for MVP (consistent with playbook)?
+| Decision | Shipped answer |
+|---|---|
+| Golden-pattern storage | Project-local `.ark/golden-pattern.json`. |
+| Product entry point | `doctor` exposes `clarify-for-ai` and routes into the existing exploration flow. |
+| Skill surface | Existing skills were reused; no new public skill basename was introduced. |
+| AI-velocity evidence | A deterministic fixed-fixture evaluation was added without live-model scoring. |
 
 ---
 
-## Promotion
+## Questions closed by Phase Q
 
-When implementation of Q-items starts:
+- No gallery starter became a second source of truth; the fixed fixture owns the comparison scenario.
+- Compact `ark start` stayed focused, while `doctor` owns discovery of the post-green Shape path.
+- The first playbook shipped in English; locale-aware rendering remained outside Phase Q.
 
-1. Fold approved Q-rows into `ROADMAP.md` ordered queue (one `doing`).
-2. File ADRs for golden-pattern storage and any new public skill name.
-3. When a slice is user-visible and stable, update [package-surface.md](../../package-surface.md) and consumer docs; site copy stays in `arkgate-site`.
-4. Create `docs/features/<slice>/` only if a durable code surface needs a pack (most Q work is product CLI/skills — ROADMAP + release notes may suffice).
-5. Mark this plan **Shipped** or **Superseded** when Q01–Q06 acceptance is met or replaced by a later epic.
+---
 
-**Status (2026-07-13):** Phase Q **Shipped** in package **3.0.3** (notes prepared; publish from main after merge).
+## Promotion completed
+
+Completion record:
+
+1. Q01–Q06 were folded into the `ROADMAP.md` ordered queue and completed sequentially.
+2. Golden-pattern storage was locked as `.ark/golden-pattern.json`; no new public skill name was added.
+3. Stable surfaces were documented in [package-surface.md](../../package-surface.md), consumer docs, and release notes.
+4. No separate feature pack was needed; roadmap evidence and release notes own the shipped CLI/skill slices.
+5. This plan is now **Shipped** and retained as epic rationale.
+
+**Status (2026-07-13):** Phase Q **Shipped and published** in package **3.0.3**.
 
 ---
 
@@ -251,4 +253,4 @@ When implementation of Q-items starts:
 
 ---
 
-*End of plan. Not a commitment to start Q01 until explicitly moved to `doing` in ROADMAP.md.*
+*End of shipped epic rationale. Phase Q implementation authority and evidence remain in `ROADMAP.md`.*

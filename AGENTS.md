@@ -60,6 +60,8 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/remediation.ts` | `bin/lib/remediation.mjs` | `generate:cli-pure` / `check:cli-pure` |
 | `src/domain/baselineKey.ts` | `bin/lib/baseline-key.mjs` | (same `cli-pure` scripts) |
 | `src/domain/configContract.ts` | `bin/lib/config-contract.mjs` + `schemas/ark.config.schema.json` | (same `cli-pure` scripts) |
+| `src/domain/changeMap.ts` | bundled in `bin/lib/analysis-engine.mjs`; schema parity test guards `schemas/ark.change-map.schema.json` | `generate:analysis-engine` / `check:analysis-engine` |
+| `src/domain/changeConvergence.ts` | bundled in `bin/lib/analysis-engine.mjs` | `generate:analysis-engine` / `check:analysis-engine` |
 
 Parity/drift tests + CI enforce generated files stay in sync.
 
@@ -67,12 +69,13 @@ The project is only considered Ark-enforced when the write gate, CI gate, and ru
 
 ## Product plans (library epic queue seeds)
 
-Implementation queue remains **`ROADMAP.md`** (one `doing` at a time). Narrative epics that
-are not yet folded into the ordered queue live under `docs/plans/`:
+Implementation queue remains **`ROADMAP.md`** (one `doing` at a time). Narrative epic seeds and
+retained shipped rationale live under `docs/plans/`:
 
 | Plan | Status | Purpose |
 |------|--------|---------|
-| [power-simple-shape](docs/plans/power-simple-shape/README.md) | Planned | Dual depth (dev power + newbie simplicity) → AI-clear, maintainable code after Enforce |
+| [power-simple-shape](docs/plans/power-simple-shape/README.md) | Shipped | Dual depth (dev power + newbie simplicity) → AI-clear, maintainable code after Enforce |
+| [change-integrity-loop](docs/plans/change-integrity-loop/README.md) | Shipped in 3.1.0 | Context-independent contract guard, atomic patch preflight, dual-depth remediation, and structural convergence |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in
 `ROADMAP.md`.

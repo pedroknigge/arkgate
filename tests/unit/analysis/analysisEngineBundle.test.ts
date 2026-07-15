@@ -1,19 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import {
+  analyzeArchitectureConvergence as analyzeConvergenceFromKernel,
   analyzeChange as analyzeChangeFromKernel,
+  analyzePolicyDelta as analyzePolicyDeltaFromKernel,
   analyzeProject as analyzeProjectFromKernel,
   collectAnalysisConfigWarnings as collectWarningsFromKernel,
   detectArchitectureCycles,
   evaluateArchitectureGraph as evaluateGraphFromKernel,
   loadContract as loadContractFromKernel,
+  preflightChange as preflightChangeFromKernel,
 } from '../../../src/index';
+import { loadArchitectureChangeMap as loadChangeMapFromKernel } from '../../../src/domain/changeMap';
 import {
   analyzeChange as analyzeChangeFromBundle,
+  analyzeArchitectureConvergence as analyzeConvergenceFromBundle,
+  analyzePolicyDelta as analyzePolicyDeltaFromBundle,
   analyzeProject as analyzeProjectFromBundle,
   collectAnalysisConfigWarnings as collectWarningsFromBundle,
   detectArchitectureCycles as detectCyclesFromBundle,
   evaluateArchitectureGraph as evaluateGraphFromBundle,
   loadContract as loadContractFromBundle,
+  loadArchitectureChangeMap as loadChangeMapFromBundle,
+  preflightChange as preflightChangeFromBundle,
 } from '../../../bin/lib/analysis-engine.mjs';
 
 const config = {
@@ -56,6 +64,50 @@ describe('generated CLI analysis engine', () => {
     expect(analyzeChangeFromBundle({ contract: bundleContract, files, changes })).toEqual(
       analyzeChangeFromKernel({ contract: kernelContract, files, changes })
     );
+    expect(preflightChangeFromBundle({ contract: bundleContract, files, changes })).toEqual(
+      preflightChangeFromKernel({ contract: kernelContract, files, changes })
+    );
+  });
+
+  it('matches the canonical change-map contract and hash', () => {
+    const kernelContract = loadContractFromKernel(config);
+    const bundleContract = loadContractFromBundle(config);
+    const map = {
+      $schema: 'https://unpkg.com/arkgate@3/schemas/ark.change-map.schema.json',
+      schemaVersion: '1.0',
+      files: [{ path: 'src/domain/order.ts', operation: 'update', layer: 'DomainModel' }],
+      dependencies: [],
+    };
+
+    const bundleMap = loadChangeMapFromBundle(map, bundleContract.config);
+    const kernelMap = loadChangeMapFromKernel(map, kernelContract.config);
+    expect(bundleMap).toEqual(kernelMap);
+    const changes = [{ path: 'src/domain/order.ts', content: 'export const order = 2;\n' }] as const;
+    expect(
+      preflightChangeFromBundle({ contract: bundleContract, files, changes, changeMap: bundleMap })
+    ).toEqual(
+      preflightChangeFromKernel({ contract: kernelContract, files, changes, changeMap: kernelMap })
+    );
+    const convergenceInput = {
+      changeMap: kernelMap,
+      changes: [{ path: 'src/domain/order.ts', operation: 'update' as const }],
+      baseDependencies: [],
+      candidateDependencies: [],
+    };
+    expect(analyzeConvergenceFromBundle(convergenceInput)).toEqual(
+      analyzeConvergenceFromKernel(convergenceInput)
+    );
+  });
+
+  it('matches the canonical Kernel API for policy transitions', () => {
+    const candidate = {
+      ...config,
+      dynamicImportAllowlist: ['src/domain/dynamic.ts'],
+    };
+
+    expect(
+      analyzePolicyDeltaFromBundle({ baseConfig: config, candidateConfig: candidate })
+    ).toEqual(analyzePolicyDeltaFromKernel({ baseConfig: config, candidateConfig: candidate }));
   });
 
   it.each(['strict', 'soft', 'off'] as const)(

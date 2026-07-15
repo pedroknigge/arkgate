@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "path": "src/domain/shipping-policy.js",
+      "content": "import { shippingThreshold } from '../kernel/shipping-config.js';\nexport const qualifiesForFreeShipping = (subtotal) => subtotal >= shippingThreshold;\n"
+    },
+    {
+      "path": "src/kernel/shipping-config.js",
+      "content": "export const shippingThreshold = 100;\n"
+    }
+  ]
+}

@@ -136,7 +136,7 @@ npx arkgate-check --install-agent-gates --force
 npx arkgate-check --doctor
 ```
 
-Full checklist (CI, MCP, Codex, imports): **[docs/migrate-from-ark-runtime-kernel.md](docs/migrate-from-ark-runtime-kernel.md)**.
+Full checklist (CI, MCP, Codex, imports): **[migrate-from-ark-runtime-kernel.md](https://github.com/pedroknigge/arkgate/blob/main/docs/migrate-from-ark-runtime-kernel.md)**.
 
 ---
 
@@ -199,6 +199,20 @@ constrain + validate + optional `autoPatch` + `judgmentBrief`). PreToolUse hooks
 never silent write). Cursor/Codex MCP calls remain advisory. See
 [docs/ai-gates.md](docs/ai-gates.md).
 
+For a complete multi-file architecture-source candidate, use MCP **`ark_prepare_change`** or
+`ark preflight --changes change-set.json --json`. Creates, updates, and deletes are evaluated as
+one read-only graph, so an edge or cycle that appears only across the batch is rejected before any
+project file is written. With `--change-map map.json` (or MCP `changeMap`), the same verdict also
+classifies planned structure as satisfied, missing, contradictory, or unplanned. This is structural
+convergence only: behavioral completion is always reported as not evaluated.
+
+Every blocking diagnostic carries stable rule/location/evidence fields plus one deterministic
+`nextAction`; human CLI/hook text prints that same action. A complete Codex `ApplyPatch` payload is
+reconstructed and sent through the same atomic engine before per-file safety checks. Codex remains
+honestly bypassable/advisory because not every Code Mode write dispatches the project hook. The
+verdict depends only on the explicit contract and candidate—not `AGENTS.md`, skills, injected prose,
+or an LLM.
+
 | Need | Skill | Not |
 |------|--------|-----|
 | Only the apply loop for plan **A** (edges) | `/ark-loop` | empty A + design residual → explore |
@@ -245,12 +259,16 @@ ark.config.json
 
 - **Presets:** hexagonal, layered, feature-sliced, monorepo, ui-surface, vertical-slice, ddd-bounded-contexts (+ aliases clean-architecture / onion-architecture). Layers start optional; doctor suggests tightening populated cores. Cross-slice / cross-context bans use optional `peerIsolation` rules.
 - **Versioned config:** generated contracts include `$schema` + `schemaVersion`; CLI, MCP, and
-  ESLint validate through the same loader. Unknown keys fail with their JSON path. See the
-  [configuration and editor guide](docs/configuration.md).
+  ESLint validate through the same loader. Unknown keys fail with their JSON path. Strict merge
+  also compares the contract transition and blocks unacknowledged weakening with hashes and stable
+  finding ids. See the [configuration and editor guide](docs/configuration.md).
 - **Frameworks:** Nest / Next / express / library layouts get sensible globs on init so day-one coverage is real.
 - **Brownfield:** baseline ratchet, refuse to freeze a wrong contract, `/ark-adopt` for mature trees.
 - **Agents:** `ark start` asks for (or detects) one active host and writes one compact router, not copied skill packs, in at most five project files and 25 KB. Use `ark-check --install-agent-gates --skills-only --tools <host>` later when you explicitly want the full `/ark-*` skill set. Reports are opt-in with `ark-check --report`.
 - **Write protocol (2.10 / Track W):** mechanical-safe **autoPatch** on the write gate (`import type`); MCP **`ark_prepare_write`** (place + validate + patch + judgmentBrief); opt-in hook **`--hook-repair`** (`ARK_REPAIR_JSON`); doctor **`writePath`** (repair vs reject-only); loop-cost eval (`npm run eval:loop-cost`). Port-proof inject is **judgment** (arity change), not silent auto-apply.
+- **Enforcement ladder (Phase T):** doctor JSON exposes `writePath.enforcementLadder` with separate
+  `supported`, `installed`, `active`, `bypassable`, evidence, operation coverage, and required-status
+  honesty. Hook repair JSON carries the operation-scoped ladder; MCP alone remains advisory.
 - **Fail-closed CI (2.11):** `--strict-merge` combines config coverage, shared gate-file
   presence, and bypass diagnostics for dynamic imports, TypeScript suppressions, explicit `any`
   casts, InMemory runtime defaults, and disabled peer isolation. `--strict` is a compatibility
@@ -288,12 +306,14 @@ npx arkgate start --tools codex --apply   # select the host explicitly
 npx arkgate start --install --apply       # also add arkgate to package.json (explicit only)
 npx arkgate start --remove-host codex     # preview compact-host removal; add --apply to confirm
 npx arkgate-check --doctor                # health + Adoption gaps (not just fitness)
-npx arkgate-check --doctor --json         # machine-readable doctor.adoption
+npx arkgate-check --doctor --json         # adoption + explicit writePath.enforcementLadder
 npx arkgate-check --strict                # fail-closed CI + installed-gate/safety checks
 npx arkgate-check --plan                  # safe-to-auto-fix vs your call
 npx arkgate-check --coverage              # Governed: N%
 npx arkgate-check --report ark-report.html  # showcase HTML (opens in browser on local TTY; --no-open to skip)
 npx arkgate-check --baseline              # only NEW violations fail
+npx arkgate preflight --changes changes.json --json  # atomic read-only batch verdict
+npx arkgate preflight --changes changes.json --change-map map.json --json  # intent hash + structural convergence
 npx arkgate upgrade                       # package + gates/skills + MCP/Codex normalize
 ```
 
@@ -314,7 +334,7 @@ separate experimental package:
 
 ```ts
 import { createStrictArkKernelFromConfig } from '@arkgate/runtime';
-// see docs/production-hardening.md and docs/package-surface.md
+// see the repository production-hardening and package-surface guides
 ```
 
 The stable `arkgate` package does not bundle runtime implementation. The deprecated
@@ -328,7 +348,7 @@ The kernel’s default stores (`InMemoryEventBuffer`, `InMemoryAuditStore`,
 `InMemoryReadModelStore`, `InMemoryWorkflowStore`) are **reference in-memory only**:
 fine for tests, demos, and single-process local work — they **do not** survive restarts
 and are **not** production durability. Implement the store interfaces (or inject your own)
-for real systems. Details: [docs/production-hardening.md](docs/production-hardening.md).
+for real systems. Details: [production-hardening.md](https://github.com/pedroknigge/arkgate/blob/main/docs/production-hardening.md).
 
 ---
 
@@ -340,12 +360,12 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | **Package surface (stable vs experimental)** | [docs/package-surface.md](docs/package-surface.md) |
 | Wire Claude / Cursor / Codex / Grok + **ESLint (CI-parity)** | [docs/ai-gates.md](docs/ai-gates.md) |
 | **TypeScript 5 / 6 / 7 support** | [docs/typescript-support.md](docs/typescript-support.md) |
-| Migrate from `ark-runtime-kernel` | [docs/migrate-from-ark-runtime-kernel.md](docs/migrate-from-ark-runtime-kernel.md) |
+| Migrate from `ark-runtime-kernel` | [docs/migrate-from-ark-runtime-kernel.md](https://github.com/pedroknigge/arkgate/blob/main/docs/migrate-from-ark-runtime-kernel.md) |
 | Messy existing repo | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Agent / MCP tools | [docs/agent-guide.md](docs/agent-guide.md) |
 | Demos | [docs/demos/](docs/demos/) |
 | Examples | [examples/](examples/README.md) |
-| Latest release (3.0.5) | [release notes](docs/releases/3.0.5.md) · [3.0.0 baseline](docs/releases/3.0.0.md) |
+| Latest release (3.1.0) | [release notes](docs/releases/3.1.0.md) · [3.0.0 baseline](docs/releases/3.0.0.md) |
 | Roadmap | [ROADMAP.md](ROADMAP.md) · [Changelog](CHANGELOG.md) |
 
 ---

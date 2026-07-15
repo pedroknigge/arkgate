@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '3.0.5';
+const CURRENT = '3.1.0';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -26,6 +26,28 @@ describe(`version bump ${CURRENT}`, () => {
     expect(lock.packages[''].version).toBe(CURRENT);
     expect(server.version).toBe(CURRENT);
     expect(server.packages[0].version).toBe(CURRENT);
+  });
+});
+
+describe('CHANGELOG + release note cover 3.1.0 change integrity', () => {
+  it('CHANGELOG 3.1.0 section names the T01–T05 surfaces', () => {
+    const body = read('CHANGELOG.md');
+    expect(body).toMatch(/## 3\.1\.0/);
+    expect(body).toMatch(/policy-transition guard/i);
+    expect(body).toMatch(/atomic change preflight/i);
+    expect(body).toMatch(/architecture change map/i);
+    expect(body).toMatch(/structural convergence/i);
+    expect(body).toMatch(/context-independent enforcement/i);
+  });
+
+  it('docs/releases/3.1.0.md has upgrade path and enforcement honesty', () => {
+    const body = read('docs/releases/3.1.0.md');
+    expect(body).toMatch(/arkgate@3\.1\.0/);
+    expect(body).toMatch(/npm install -D arkgate@3\.1\.0/);
+    expect(body).toMatch(/ark_prepare_change/);
+    expect(body).toMatch(/MCP registration is advisory/i);
+    expect(body).toMatch(/behavioral completion|behavior are complete/i);
+    expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
   });
 });
 
