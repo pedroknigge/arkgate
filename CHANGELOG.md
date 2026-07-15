@@ -17,6 +17,12 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
   the PR/push base SHA through `ARK_POLICY_BASE_REF`.
 - **MCP parity:** `ark_policy_delta` exposes the same read-only classifier for explicit base and
   candidate contracts and returns blocking transitions as tool errors.
+- **T02 atomic change preflight:** public `preflightChange(...)`, CLI
+  `ark preflight --changes <change-set.json>`, and MCP `ark_prepare_change` evaluate one complete
+  create/update/delete candidate without writing. Schema `1.0` includes per-file content
+  fingerprints plus policy, compiler, base-tree, and candidate-tree fingerprints.
+- **Batch safety:** duplicate normalized paths, stale delete targets, lexical root escapes, and
+  symlink escapes fail closed; cross-file forbidden edges and cycles are reported before commit.
 
 ## 3.0.5 — 2026-07-14
 

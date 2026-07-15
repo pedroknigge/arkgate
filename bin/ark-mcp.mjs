@@ -18,6 +18,7 @@
  *                                 discarded if post-patch still invalid.
  *   - tool      ark_prepare_write — W2: place + constrain + validate + autoPatch + judgmentBrief
  *                                 + contentHash (composes ark_place + write gate; not a second contract).
+ *   - tool      ark_prepare_change — atomically preflights a create/update/delete batch without writes.
  *   - tool      ark_policy_delta — classifies a base/candidate ark.config.json transition and
  *                                 rejects weakening without an exact hash-bound acknowledgement.
  *   - tool      ark_recommend   — deterministic application-shape plan (same as
@@ -63,6 +64,7 @@ import { composePrepareWrite } from './lib/prepare-write.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
 import { ARK_ANALYSIS_RESULT_SCHEMA, createAdapterResult } from './lib/adapter-contract.mjs';
 import { loadGoldenPattern, attachGoldenToPlacement } from './lib/golden-pattern.mjs';
+import { prepareChangeFromRoot } from './lib/prepare-change.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 
@@ -828,6 +830,33 @@ async function main() {
       },
     },
     {
+      name: 'ark_prepare_change',
+      description:
+        'Validate one complete governed-source create/update/delete batch as an atomic in-memory candidate. ' +
+        'Catches cross-file forbidden edges and cycles before any host write, and returns ' +
+        'per-file content hashes plus base/candidate tree and policy hashes. Never writes files.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          changes: {
+            type: 'array',
+            description:
+              'Full candidate batch. Each item is {path, content} for create/update or {path, delete:true}.',
+            items: {
+              type: 'object',
+              properties: {
+                path: { type: 'string' },
+                content: { type: 'string' },
+                delete: { type: 'boolean' },
+              },
+              required: ['path'],
+            },
+          },
+        },
+        required: ['changes'],
+      },
+    },
+    {
       name: 'ark_recommend',
       description:
         'Score this repository against templates/architecture-playbook.json and return the ' +
@@ -1210,6 +1239,27 @@ async function main() {
     };
   }
 
+  function runPrepareChange(params) {
+    try {
+      const result = prepareChangeFromRoot({
+        root: args.root,
+        config,
+        configSource: configPath,
+        changes: params?.arguments?.changes,
+      });
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        structuredContent: result,
+        isError: !result.valid,
+      };
+    } catch (error) {
+      return {
+        content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
+        isError: true,
+      };
+    }
+  }
+
   function runSuggestIncludeTool() {
     try {
       const workspaces = detectWorkspaces(args.root);
@@ -1254,6 +1304,7 @@ async function main() {
     ark_coverage: runCoverageTool,
     ark_place: runPlace,
     ark_prepare_write: runPrepareWrite,
+    ark_prepare_change: runPrepareChange,
     ark_recommend: runRecommendTool,
     ark_suggest_include: runSuggestIncludeTool,
   };

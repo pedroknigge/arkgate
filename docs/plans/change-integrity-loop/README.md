@@ -4,12 +4,12 @@
 > Related: [ROADMAP.md](../../../ROADMAP.md) · [configuration.md](../../configuration.md) · [package-surface.md](../../package-surface.md) · [agent-guide.md](../../agent-guide.md) · [threat-model.md](../../threat-model.md)<br>
 > `ROADMAP.md` owns order and status. This plan owns the bounded product rationale and acceptance for Phase T.
 
-**Status:** In progress (`T01`)<br>
+**Status:** In progress (`T02`)<br>
 **Slug:** `change-integrity-loop`<br>
 **Kind:** epic<br>
 **Owners:** product (Pedro) + library maintainers<br>
 **Last updated:** 2026-07-14<br>
-**Code path:** `src/domain/policyDelta.ts`, `src/kernel/analysis.ts`, `bin/lib/policy-delta-io.mjs`, and existing CLI/Action adapters
+**Code path:** `src/domain/policyDelta.ts`, `src/kernel/analysis.ts`, `bin/lib/policy-delta-io.mjs`, `bin/lib/prepare-change.mjs`, and existing CLI/MCP/Action adapters
 
 ---
 
@@ -116,10 +116,10 @@ base tree, and the candidate change.
 - [x] **A2 — Hash-bound exception:** Strict merge rejects an unacknowledged weakening. An explicit
       exception names the finding and binds to both old and new policy hashes, so later edits
       invalidate it.
-- [ ] **A3 — Atomic patch verdict:** A single operation accepts creates, updates, and deletes,
+- [x] **A3 — Atomic patch verdict:** A single operation accepts creates, updates, and deletes,
       catches cross-file forbidden edges and cycles, and matches the final full-check verdict on
       the acceptance corpus.
-- [ ] **A4 — No partial commit:** Preflight is read-only and returns per-file evidence plus policy
+- [x] **A4 — No partial commit:** Preflight is read-only and returns per-file evidence plus policy
       and content hashes. ArkGate never writes a subset of a rejected patch.
 - [ ] **A5 — Optional change map:** A strict, versioned JSON document can declare planned file
       operations and local dependency edges without embedding product requirements or becoming a
@@ -151,9 +151,9 @@ base tree, and the candidate change.
 | Kind | Surface | Notes |
 |------|---------|-------|
 | JSON Schema | Versioned architecture change map | Exact filename/export TBD in `T03`; optional and strict |
-| CLI | Contract-delta and batch-preflight JSON | Names TBD; preview/read-only first |
+| CLI | `ark preflight --changes <change-set.json> --json` | Explicit, read-only create/update/delete batch |
 | CLI | Structural convergence report | Requires explicit change-map path and change base |
-| MCP | Parity tools over the same engine | No MCP-only verdict logic |
+| MCP | `ark_policy_delta` and `ark_prepare_change` | No MCP-only verdict logic |
 | Existing skills | `/ark-explore` and `/ark-autopilot` may emit/consume the optional map | No new basename |
 | CI | Strict policy-delta check | Final `ark-check` remains mandatory |
 
@@ -198,8 +198,9 @@ Implementation principles:
 
 | Item | Current evidence |
 |---|---|
-| `T01` | Locally complete: pure semantic classifier, Kernel/public API, generated CLI parity, strict-merge Git-base resolution, hash-bound acknowledgement, MCP/Action/workflow parity, and unit/property/CLI fixtures. `/review` plus gate verification auto-fixed the original eight issues and two CI-context regressions: ambient GitHub base refs are ignored for a separately checked non-Git root, while an explicit `--policy-base-ref` still fails closed; the repository's own architecture job now performs a full checkout and supplies the immutable base SHA instead of relying on an unfetched `origin/main`. Common gate: 1,058 tests; 90.71% statements / 85.37% branches; 90.79% mutation; architecture, generated-artifact drift, module/package budgets, 411.5 KB tarball, and TypeScript 5.9/6.0/7.0 green. The focused T01 suite (5 tests) and reproduced `frontend/small` onboarding shard (12 cells) pass after the CI fixes; remote CI must be green before `T02` starts. |
-| `T02`–`T05` | Not started. |
+| `T01` | Done on pushed commit `13ccb85`: CI and Security green, including 12 onboarding matrices, Node 18–24, TypeScript 5.9–7, fuzz, adapter parity, performance, 90.79% mutation, release artifacts, and strict architecture with an immutable fetched base SHA. `/review` plus gates resolved the original eight issues and both CI-context regressions. |
+| `T02` | Locally complete: Kernel `preflightChange`, generated bundle parity, shared `prepare-change` adapter, CLI `ark preflight`, MCP `ark_prepare_change`, normalized/duplicate/stale/escape checks, per-file and tree/policy/compiler fingerprints, and no-write fixtures. The acceptance corpus covers create/update/delete, individually-valid/collectively-invalid forbidden edges and cycles, final full-check verdict parity, scope rejection, and symlink escapes. `/review` auto-fixed six defects: MCP CI inventory drift, out-of-scope false-green results, traversal/symlink escapes, unrelated CLI flag acceptance, an incorrect custom-config source label, and the one-file package budget delta. Local evidence: 1,069 tests; 90.47% statements / 85.43% branches / 92.40% functions; 90.79% mutation overall and 92.60% across critical modules; TypeScript 5.9.3/6.0.3/7.0.2; strict architecture, generated artifacts, module/package budgets, build, and a 417.2 KB / 131-file package dry-run green. Commit and remote CI remain pending. |
+| `T03`–`T05` | Not started. |
 
 Only one item may be `doing`, and no Phase T implementation starts from this planning change.
 
@@ -226,11 +227,14 @@ Only one item may be `doing`, and no Phase T implementation starts from this pla
 | Registered MCP is mistaken for a hard write boundary | Capability output separates available, invoked, covered, and merge-enforced evidence |
 | Senior-grade evidence overwhelms a casual user | Keep one concise human action over the same stable JSON evidence; never fork verdict logic by audience |
 
+### Locked decisions
+
+- T01 uses CLI base/acknowledgement inputs plus the `ark_policy_delta` MCP classifier.
+- T02 is a distinct `ark_prepare_change` MCP tool and `ark preflight` CLI command; it does not
+  overload the single-file `ark_prepare_write` contract. See ADR 0005.
+
 ### Open decisions
 
-- Whether policy-delta acknowledgment is a CLI flag plus JSON file or a single signed-off artifact.
-- Whether batch preflight is a new MCP tool or a backwards-compatible batch form of
-  `ark_prepare_write`.
 - The change-map filename/export and how an explicit Git base is supplied for convergence.
 - Whether `T05` is a minor release or remains experimental until external adoption evidence exists.
 

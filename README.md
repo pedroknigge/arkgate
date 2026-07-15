@@ -199,6 +199,11 @@ constrain + validate + optional `autoPatch` + `judgmentBrief`). PreToolUse hooks
 never silent write). Cursor/Codex MCP calls remain advisory. See
 [docs/ai-gates.md](docs/ai-gates.md).
 
+For a complete multi-file architecture-source candidate, use MCP **`ark_prepare_change`** or
+`ark preflight --changes change-set.json --json`. Creates, updates, and deletes are evaluated as
+one read-only graph, so an edge or cycle that appears only across the batch is rejected before any
+project file is written.
+
 | Need | Skill | Not |
 |------|--------|-----|
 | Only the apply loop for plan **A** (edges) | `/ark-loop` | empty A + design residual → explore |

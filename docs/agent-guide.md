@@ -281,6 +281,8 @@ Prefer preparing the write before the host commits it to disk:
 | Surface | Role |
 |---------|------|
 | MCP **`ark_prepare_write`** | Place + constrain + validate + optional `autoPatch` + `judgmentBrief` + contentHash + optional `goldenPattern` in one call |
+| MCP **`ark_prepare_change`** | Validate one complete create/update/delete batch in memory; return cross-file findings and candidate fingerprints; never writes |
+| CLI **`ark preflight --changes <file> --json`** | Same atomic verdict for hosts/scripts that do not call MCP |
 | Write-gate **`autoPatch`** | Mechanical-safe **import type** rewrites only; post-patch revalidation green or discarded |
 | PreToolUse **`--hook-repair`** | On deny: `ARK_REPAIR_JSON` / `ARK_AUTOPATCH_JSON` on stderr (still exit 2 — never silent write) |
 | Doctor **`writePath`** | Reports `repair` \| `reject-only` \| `mcp-only` \| `none` for installed gates |

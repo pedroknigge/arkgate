@@ -222,14 +222,14 @@ P0/security patches. Do not publish a normal stable feature release until `S01`â
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 35 | `T01` | `doing` | M | Phase Q done | Semantic policy-delta guard detects and blocks unacknowledged contract weakening |
-| 36 | `T02` | `todo` | L | `T01` | CLI/MCP preflight create, update, and delete batches atomically before writes |
+| 35 | `T01` | `done` | M | Phase Q done | Semantic policy-delta guard detects and blocks unacknowledged contract weakening |
+| 36 | `T02` | `doing` | L | `T01` | CLI/MCP preflight create, update, and delete batches atomically before writes |
 | 37 | `T03` | `todo` | M | `T02` | Optional versioned architecture change map describes planned paths and dependency edges |
 | 38 | `T04` | `todo` | M | `T03` | Read-only convergence reports planned, missing, contradictory, and unplanned structural impact |
 | 39 | `T05` | `todo` | M | `T01`â€“`T04` | Context-independent enforcement ladder, dual-depth remediation, adapter parity, adversarial eval, docs, and release evidence |
 
-**Next:** Phase T is active with `T01` as the only `doing` item. Start `T02` only after `T01`
-is reviewed, verified, and committed. Scope and acceptance:
+**Next:** Phase T is active with `T02` as the only `doing` item. `T01` is green on pushed commit
+`13ccb85`; start `T03` only after `T02` is reviewed, verified, committed, and green in CI. Scope and acceptance:
 [change-integrity-loop](docs/plans/change-integrity-loop/README.md).
 Latest published patch: **`arkgate@3.0.5`**.
 

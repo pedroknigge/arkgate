@@ -7,6 +7,7 @@ import {
   detectArchitectureCycles,
   evaluateArchitectureGraph as evaluateGraphFromKernel,
   loadContract as loadContractFromKernel,
+  preflightChange as preflightChangeFromKernel,
 } from '../../../src/index';
 import {
   analyzeChange as analyzeChangeFromBundle,
@@ -16,6 +17,7 @@ import {
   detectArchitectureCycles as detectCyclesFromBundle,
   evaluateArchitectureGraph as evaluateGraphFromBundle,
   loadContract as loadContractFromBundle,
+  preflightChange as preflightChangeFromBundle,
 } from '../../../bin/lib/analysis-engine.mjs';
 
 const config = {
@@ -57,6 +59,9 @@ describe('generated CLI analysis engine', () => {
 
     expect(analyzeChangeFromBundle({ contract: bundleContract, files, changes })).toEqual(
       analyzeChangeFromKernel({ contract: kernelContract, files, changes })
+    );
+    expect(preflightChangeFromBundle({ contract: bundleContract, files, changes })).toEqual(
+      preflightChangeFromKernel({ contract: kernelContract, files, changes })
     );
   });
 
