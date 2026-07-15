@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '3.1.0';
+const CURRENT = '3.2.0';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -26,6 +26,32 @@ describe(`version bump ${CURRENT}`, () => {
     expect(lock.packages[''].version).toBe(CURRENT);
     expect(server.version).toBe(CURRENT);
     expect(server.packages[0].version).toBe(CURRENT);
+  });
+});
+
+describe('CHANGELOG + release note cover 3.2.0 contract health', () => {
+  it('CHANGELOG 3.2.0 section names the W01–W03 surfaces and stays advisory', () => {
+    const body = read('CHANGELOG.md');
+    expect(body).toMatch(/## 3\.2\.0/);
+    expect(body).toMatch(/contract smells/i);
+    expect(body).toMatch(/contractHealth/);
+    expect(body).toMatch(/contract-smell-acks\.json/);
+    expect(body).toMatch(/governance weight/i);
+    expect(body).toMatch(/notAScore/);
+    expect(body).toMatch(/deliberate trade-off, not a gap/i);
+    expect(body).toMatch(/advisory only/i);
+  });
+
+  it('docs/releases/3.2.0.md has upgrade path and advisory honesty', () => {
+    const body = read('docs/releases/3.2.0.md');
+    expect(body).toMatch(/arkgate@3\.2\.0/);
+    expect(body).toMatch(/npm install -D arkgate@3\.2\.0/);
+    expect(body).toMatch(/contractHealth/);
+    expect(body).toMatch(/governanceWeight/);
+    expect(body).toMatch(/notAScore/);
+    expect(body).toMatch(/advisory only/i);
+    expect(body).toMatch(/MCP registration is advisory/i);
+    expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
   });
 });
 

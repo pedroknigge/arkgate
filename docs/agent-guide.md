@@ -3,7 +3,9 @@
 **ArkGate** (`arkgate`) — architecture co-pilot for AI TypeScript. This guide describes how AI
 agents and codegen tools safely interact with write hooks, advisory MCP tools, CI, and `/ark-*`
 skills. Guarantees differ by host; start with the
-[canonical host support matrix](../README.md#host-enforcement-support).
+[canonical host support matrix](../README.md#host-enforcement-support). The advisory-local /
+hard-CI split is a deliberate trade-off, not a gap: local hooks and MCP coach at write time,
+while a required merge status is the one boundary a repository can make every write path share.
 
 CLI names: prefer **`arkgate` / `arkgate-check` / `arkgate-mcp`**; aliases `ark` / `ark-check` /
 `ark-mcp` still work for one major. TypeScript **5.x / 6.x / 7.x** as the project compiler:
@@ -116,6 +118,23 @@ Smell **ids** (stable JSON) plus **outcome** lines (plain language, Q02) on each
 | `facade-sql-in-routes` | Routes import ORM/SQL — keep queries in repository/adapter |
 | `mixed-pattern-cluster` | Several layout styles — pick one golden pattern + pilot |
 | `soft-contract` | Layers without deny rules — add real walls, not soft green |
+
+**Contract health (W01):** doctor JSON also carries `contractHealth` — a meta-lint of the
+contract itself (never of the code): `contract-bidirectional-allow` (both directions explicitly
+allowed between two layers), `contract-peripheral-depends-core` (audit/observability layer allowed
+into orchestration/persistence), `contract-lateral-adapter-allow` (adapter layer allowed into a
+sibling adapter layer), `contract-dead-rule` (rule references an empty or unknown layer, or is a
+same-layer no-op; `optional: true` layers are exempt). Advisory only: it never changes the
+verdict, `designFitness`, or `patternBets` — layer roles come from name heuristics, so treat a
+miss as a warning to read, not a defect to silence. A deliberate edge is acknowledged in
+`.ark/contract-smell-acks.json` (`{ acks: [{ id, edge, reason }] }`); `acknowledged` counts
+applied acks only, and a malformed sidecar or edge string suppresses nothing.
+
+**Governance weight (W02):** `contractHealth.governanceWeight` reports raw facts (layers, rules,
+governed files, files/layer, rules/layer) plus a fixed band (`heavy` / `typical` / `light` /
+`unknown`) with fixed wording. It is explicitly `notAScore` — never a gate input. Read `heavy` as
+"justify the next layer/rule with demonstrated pressure", never as "delete layers"; read `light`
+as "a boundary may be missing where violations concentrate".
 
 Each smell also has `evidence[]` paths and `message` (technical detail). Plan **B** bets include
 `pilot`, `successSignal`, `killSwitch`, and **`neverMechanicalSafe: true`** — loop/autoPatch must

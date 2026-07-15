@@ -76,6 +76,7 @@ retained shipped rationale live under `docs/plans/`:
 |------|--------|---------|
 | [power-simple-shape](docs/plans/power-simple-shape/README.md) | Shipped | Dual depth (dev power + newbie simplicity) → AI-clear, maintainable code after Enforce |
 | [change-integrity-loop](docs/plans/change-integrity-loop/README.md) | Shipped in 3.1.0 | Context-independent contract guard, atomic patch preflight, dual-depth remediation, and structural convergence |
+| [understandable-execution](docs/plans/understandable-execution/README.md) | Planned | Explicit effect/state boundaries, cohesive enforcement core, and measured pre-tool flow without style dogma |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in
 `ROADMAP.md`.
