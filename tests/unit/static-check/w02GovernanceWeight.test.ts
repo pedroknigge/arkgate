@@ -12,6 +12,8 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   computeGovernanceWeight,
+  formatContractHealthLines,
+  summarizeContractHealth,
   GOVERNANCE_WEIGHT_NOTES,
 } from '../../../bin/lib/contract-smells.mjs';
 import { runDoctor } from '../../../bin/lib/doctor-plan.mjs';
@@ -90,12 +92,71 @@ describe('W02 governance weight — descriptive bands', () => {
     expect(computeGovernanceWeight({ layers: [], rules: [] }, coverageOf(10, [])).weight).toBe(
       'unknown'
     );
-    expect(
-      computeGovernanceWeight({ layers: layersNamed(3), rules: [] }, coverageOf(0, [0, 0, 0])).weight
-    ).toBe('unknown');
+    const empty = computeGovernanceWeight(
+      { layers: layersNamed(3), rules: [] },
+      coverageOf(0, [0, 0, 0])
+    );
+    expect(empty.weight).toBe('unknown');
+    expect(empty.note).toBe(GOVERNANCE_WEIGHT_NOTES.unknown);
     expect(computeGovernanceWeight({ layers: layersNamed(3), rules: [] }, null).weight).toBe(
       'unknown'
     );
+    // Coverage object without governed counts, and hostile counts, also read unknown.
+    expect(computeGovernanceWeight({ layers: layersNamed(3), rules: [] }, {} as never).weight).toBe(
+      'unknown'
+    );
+    expect(
+      computeGovernanceWeight({ layers: layersNamed(3), rules: [] }, coverageOf(NaN, [])).weight
+    ).toBe('unknown');
+    expect(
+      computeGovernanceWeight({ layers: layersNamed(6), rules: [] }, coverageOf(-5, [])).weight
+    ).toBe('unknown');
+  });
+
+  it('bands at the exact documented thresholds, on raw ratios', () => {
+    const sparse = (n: number) => [{ from: 'L0', to: 'L1', allowed: false }].slice(0, n);
+    // 6 layers: 149 files → 24.83 files/layer → heavy; 150 files → 25.0 → typical.
+    expect(
+      computeGovernanceWeight({ layers: layersNamed(6), rules: sparse(1) }, coverageOf(149, [])).weight
+    ).toBe('heavy');
+    expect(
+      computeGovernanceWeight({ layers: layersNamed(6), rules: sparse(1) }, coverageOf(150, [])).weight
+    ).toBe('typical');
+    // Rules disjunct alone (5 layers < 6): 20 rules = 4/layer over a small tree → heavy; 19 → typical.
+    const denseRules = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({ from: `L${i}`, to: `L${i + 1}`, allowed: false }));
+    expect(
+      computeGovernanceWeight({ layers: layersNamed(5), rules: denseRules(20) }, coverageOf(100, [])).weight
+    ).toBe('heavy');
+    expect(
+      computeGovernanceWeight({ layers: layersNamed(5), rules: denseRules(19) }, coverageOf(100, [])).weight
+    ).toBe('typical');
+    // Dense rules on a LARGE tree never read heavy — heaviness is size-relative.
+    expect(
+      computeGovernanceWeight({ layers: layersNamed(3), rules: denseRules(12) }, coverageOf(100000, [])).weight
+    ).toBe('typical');
+    // Light boundary: 2 layers, 150 files → light; 149 → typical; 3 layers never light.
+    expect(
+      computeGovernanceWeight({ layers: layersNamed(2), rules: sparse(1) }, coverageOf(150, [])).weight
+    ).toBe('light');
+    expect(
+      computeGovernanceWeight({ layers: layersNamed(2), rules: sparse(1) }, coverageOf(149, [])).weight
+    ).toBe('typical');
+    expect(
+      computeGovernanceWeight({ layers: layersNamed(3), rules: sparse(1) }, coverageOf(300, [])).weight
+    ).toBe('typical');
+  });
+
+  it('counts only well-formed rules and tolerates malformed shapes', () => {
+    const weight = computeGovernanceWeight(
+      {
+        layers: layersNamed(3),
+        rules: [null, 'x', 7, { allowed: false }, { from: 'A', to: 'B' }, { from: 'A', to: 'B', allowed: false }],
+      } as never,
+      coverageOf(120, [null as never, { name: 'L0', patterns: [], files: 120 }] as never)
+    );
+    expect(weight.rules).toBe(1);
+    expect(weight.deniedEdges + weight.allowedEdges).toBe(weight.rules);
   });
 
   it('is facts plus a fixed note — no composite score field exists', () => {
@@ -106,7 +167,31 @@ describe('W02 governance weight — descriptive bands', () => {
     expect(typeof weight.deniedEdges).toBe('number');
     expect(typeof weight.allowedEdges).toBe('number');
     expect(typeof weight.rulesPerLayer).toBe('number');
-    expect(Object.values(GOVERNANCE_WEIGHT_NOTES).every((n) => typeof n === 'string')).toBe(true);
+    expect(Object.keys(GOVERNANCE_WEIGHT_NOTES).sort()).toEqual([
+      'heavy',
+      'light',
+      'typical',
+      'unknown',
+    ]);
+  });
+});
+
+describe('W02 governance weight — human lines', () => {
+  it('a light band alone (zero smells, valid acks) unlocks the advisory section', () => {
+    const weight = computeGovernanceWeight(
+      { layers: layersNamed(2), rules: [{ from: 'L0', to: 'L1', allowed: false }] },
+      coverageOf(300, [200, 100])
+    );
+    const health = {
+      ...summarizeContractHealth([], { exists: false, acks: [] }, 0),
+      governanceWeight: weight,
+    };
+    const rows = formatContractHealthLines([], health);
+    expect(rows.length).toBeGreaterThan(0);
+    const line = rows.find((r) => r.text.startsWith('governance weight: light'));
+    expect(line).toBeDefined();
+    expect(line!.mark).toBe('warn');
+    expect(rows.some((r) => r.text === GOVERNANCE_WEIGHT_NOTES.light)).toBe(true);
   });
 });
 

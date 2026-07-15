@@ -143,7 +143,7 @@ export function analyzeContractSmells(
   effectiveRules = null
 ) {
   const layers = Array.isArray(config?.layers) ? config.layers : [];
-  const rules = (Array.isArray(effectiveRules) ? effectiveRules : config?.rules) ?? [];
+  const rules = wellFormedRules(config, effectiveRules);
   const layerByName = new Map();
   for (const l of layers) {
     if (l && typeof l.name === 'string') layerByName.set(l.name, l);
@@ -153,9 +153,7 @@ export function analyzeContractSmells(
     if (row && typeof row.name === 'string') filesPerLayer.set(row.name, row.files ?? 0);
   }
 
-  const isRule = (r) =>
-    r !== null && typeof r === 'object' && typeof r.from === 'string' && typeof r.to === 'string';
-  const explicitAllows = rules.filter((r) => isRule(r) && r.allowed === true && r.from !== r.to);
+  const explicitAllows = rules.filter((r) => r.allowed === true && r.from !== r.to);
 
   /** Per-id findings: { edge (canonical, for acks; null = unmatchable), detail (display) }. */
   const findings = {};
@@ -206,7 +204,6 @@ export function analyzeContractSmells(
   // 4) Dead rules: self edges (the gate ignores same-layer rules), unknown layers,
   //    or — when coverage is known — layers matching zero files (optional layers exempt).
   for (const r of rules) {
-    if (!isRule(r)) continue;
     const edge = `${r.from}->${r.to}`;
     const ackEdge = ackMatchable(r.from, r.to) ? edge : null;
     if (r.from === r.to) {
@@ -313,19 +310,37 @@ function fixFor(id) {
  */
 export const GOVERNANCE_WEIGHT_NOTES = Object.freeze({
   heavy:
-    'Heavier than typical for a tree this size. Not a defect and not a score — but before adding another layer or rule, ask for demonstrated pressure (repeated violations or acknowledgments on one edge). Do not delete working layers to change this number.',
+    'Heavier than typical for the governed tree size. Not a defect and not a score — but before adding another layer or rule, ask for demonstrated pressure (repeated violations or acknowledgments on one edge). Do not delete working layers to change this number.',
   light:
-    'Lighter than typical for a tree this size — a large tree with few boundaries. Consider whether a new boundary is justified where violations or churn concentrate.',
-  typical: 'Within the typical band for a tree this size.',
+    'Lighter than typical for the governed tree size — a large tree with few boundaries. Consider whether a new boundary is justified where violations or churn concentrate.',
+  typical: 'Within the typical band for the governed tree size.',
   unknown: 'Not enough governed files (or declared layers) to describe governance weight.',
 });
 
-/** Fixed banding thresholds (documented facts, not tunables). */
+/**
+ * Fixed banding thresholds (stated in docs/package-surface.md; deterministic, not tunables).
+ * heavy: fewer than 25 governed files per layer AND (6+ layers OR 4+ rules per layer) —
+ * both signals are size-relative, so a large tree with a dense but proportionate rule
+ * matrix never reads heavy. light: at most 2 layers over 150+ governed files.
+ */
+const HEAVY_FILES_PER_LAYER_BELOW = 25;
 const HEAVY_MIN_LAYERS = 6;
-const HEAVY_MAX_FILES_PER_LAYER = 25;
 const HEAVY_RULES_PER_LAYER = 4;
 const LIGHT_MAX_LAYERS = 2;
 const LIGHT_MIN_FILES = 150;
+
+/** Rules in force, filtered to well-formed entries (string from/to, boolean allowed). */
+function wellFormedRules(config, effectiveRules) {
+  const rules = (Array.isArray(effectiveRules) ? effectiveRules : config?.rules) ?? [];
+  return rules.filter(
+    (r) =>
+      r !== null &&
+      typeof r === 'object' &&
+      typeof r.from === 'string' &&
+      typeof r.to === 'string' &&
+      typeof r.allowed === 'boolean'
+  );
+}
 
 /**
  * W02 — descriptive governance-weight facts for a contract over a governed tree.
@@ -337,9 +352,7 @@ const LIGHT_MIN_FILES = 150;
  */
 export function computeGovernanceWeight(config, coverage = null, effectiveRules = null) {
   const layers = Array.isArray(config?.layers) ? config.layers : [];
-  const rules = ((Array.isArray(effectiveRules) ? effectiveRules : config?.rules) ?? []).filter(
-    (r) => r !== null && typeof r === 'object'
-  );
+  const rules = wellFormedRules(config, effectiveRules);
   const declaredLayers = layers.filter((l) => l && typeof l.name === 'string').length;
   const governedFiles = coverage?.governed?.classifiedFiles ?? 0;
   const populatedLayers = (coverage?.layers ?? []).filter((r) => r && (r.files ?? 0) > 0).length;
@@ -355,27 +368,35 @@ export function computeGovernanceWeight(config, coverage = null, effectiveRules 
     allowedEdges,
     notAScore: true,
   };
-  if (declaredLayers === 0 || governedFiles === 0) {
+  if (declaredLayers === 0 || !(Number.isFinite(governedFiles) && governedFiles > 0)) {
     return {
       ...base,
+      governedFiles: Number.isFinite(governedFiles) ? governedFiles : 0,
       filesPerLayer: null,
       rulesPerLayer: null,
       weight: 'unknown',
       note: GOVERNANCE_WEIGHT_NOTES.unknown,
     };
   }
-  const filesPerLayer = round1(governedFiles / declaredLayers);
-  const rulesPerLayer = round1(rules.length / declaredLayers);
+  // Band on the raw ratios; the rounded values are for display only.
+  const rawFilesPerLayer = governedFiles / declaredLayers;
+  const rawRulesPerLayer = rules.length / declaredLayers;
   let weight = 'typical';
   if (
-    (declaredLayers >= HEAVY_MIN_LAYERS && filesPerLayer < HEAVY_MAX_FILES_PER_LAYER) ||
-    rules.length >= HEAVY_RULES_PER_LAYER * declaredLayers
+    rawFilesPerLayer < HEAVY_FILES_PER_LAYER_BELOW &&
+    (declaredLayers >= HEAVY_MIN_LAYERS || rawRulesPerLayer >= HEAVY_RULES_PER_LAYER)
   ) {
     weight = 'heavy';
   } else if (declaredLayers <= LIGHT_MAX_LAYERS && governedFiles >= LIGHT_MIN_FILES) {
     weight = 'light';
   }
-  return { ...base, filesPerLayer, rulesPerLayer, weight, note: GOVERNANCE_WEIGHT_NOTES[weight] };
+  return {
+    ...base,
+    filesPerLayer: round1(rawFilesPerLayer),
+    rulesPerLayer: round1(rawRulesPerLayer),
+    weight,
+    note: GOVERNANCE_WEIGHT_NOTES[weight],
+  };
 }
 
 /**
@@ -415,10 +436,11 @@ export function printContractHealthSection(health, io) {
 /**
  * Human doctor lines for the contract-health section (advisory).
  * Returns `{ mark, text }` rows with mark `'warn' | 'dim'`; doctor prints them.
- * Empty array when there is nothing to say (no smells, valid/absent ack file).
+ * Empty array when there is nothing to say: no smells, a valid/absent ack file,
+ * and a non-noteworthy governance weight (only `heavy`/`light` print).
  *
  * @param {ReturnType<typeof detectContractSmells>} smells
- * @param {ReturnType<typeof summarizeContractHealth>} health
+ * @param {ReturnType<typeof computeContractHealth>} health also read: `health.governanceWeight`
  */
 export function formatContractHealthLines(smells, health) {
   const rows = [];
