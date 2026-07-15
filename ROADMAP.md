@@ -38,7 +38,7 @@ ArkGate is an architecture write firewall plus a coach, not a prompt convention.
 
 ### Product boundary
 
-**Build next (post-3.0.5)**
+**Shipped in 3.1.0**
 
 - Protect **contract transitions**, not only the final `ark.config.json`: classify policy deltas
   and require explicit, hash-bound acknowledgment for weakening changes.
@@ -228,11 +228,9 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | 38 | `T04` | `done` | M | `T03` | Read-only convergence reports planned, missing, contradictory, and unplanned structural impact |
 | 39 | `T05` | `done` | M | `T01`–`T04` | Context-independent enforcement ladder, dual-depth remediation, adapter parity, adversarial eval, docs, and release evidence |
 
-**Next:** Phase T implementation is complete on pushed commits `6e5ddf4` and `0b9e456`; exact-SHA
-CI run `29393783076` and Security run `29393783072` are green. PR #64 remains unmerged and
-unpublished. No item is `doing`; any next phase must be added here before implementation. Evidence:
+**Next:** Phase T shipped in **`arkgate@3.1.0`**. No item is `doing`; any next phase must be added
+here before implementation. Retained evidence:
 [change-integrity-loop](docs/plans/change-integrity-loop/README.md).
-Latest published patch: **`arkgate@3.0.5`**.
 
 ### Next-round package budget guardrail
 
@@ -1317,5 +1315,5 @@ folded into Phase C implementation work.
 Item: none — Phase T implementation is complete; the roadmap has no active `doing` item
 Next action: recalibrate the package budget under the next-round guardrail, then define and review a bounded roadmap item
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
-Released baseline: npm arkgate@3.0.5; Phase T remains unmerged and unpublished in PR #64
+Released baseline: npm arkgate@3.1.0; Phase T shipped from PR #64
 ```

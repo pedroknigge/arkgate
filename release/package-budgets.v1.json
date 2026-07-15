@@ -6,7 +6,7 @@
       "maxPackedBytes": 427000,
       "maxUnpackedBytes": 1500000,
       "maxFiles": 132,
-      "exception": "The 250 KB/1 MB target is not yet feasible while shipping the documented standalone CLI/MCP tooling plus Phase Q consumer surfaces, atomic preflight, and the change-map JSON Schema. T05 raises the packed ceiling by 6 KB (421 KB to 427 KB) for complete-patch hook preflight, the explicit enforcement ladder, and deterministic diagnostic next actions; the measured candidate is 426,070 bytes. Legacy migration/demo and experimental-runtime hardening guides remain repository-hosted, source maps were removed in V04, and this exception must be reconsidered before ArkGate 4."
+      "exception": "The 250 KB/1 MB target is not yet feasible while shipping the documented standalone CLI/MCP tooling plus Phase Q consumer surfaces, atomic preflight, and the change-map JSON Schema. T05 raises the packed ceiling by 6 KB (421 KB to 427 KB) for complete-patch hook preflight, the explicit enforcement ladder, deterministic diagnostic next actions, and the 1.1 compatibility contract; the measured 3.1.0 candidate is 426,587 bytes. Legacy migration/demo and experimental-runtime hardening guides remain repository-hosted, source maps were removed in V04, and this exception must be reconsidered before ArkGate 4."
     },
     "runtime": {
       "path": "packages/runtime",

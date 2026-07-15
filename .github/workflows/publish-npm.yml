@@ -56,15 +56,26 @@ jobs:
           name: release-artifacts-${{ inputs.tag }}
           path: release-artifacts
 
-      - name: Verify package is still unpublished
+      - name: Resolve npm publication state
+        id: npm-state
         run: |
           set -euo pipefail
           package="$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).name")"
           version="$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version")"
           if npm view "$package@$version" version >/dev/null 2>&1; then
-            echo "$package@$version is already published" >&2
-            exit 1
+            published_git_head="$(npm view "$package@$version" gitHead 2>/dev/null)"
+            tag_commit="$(git rev-list -n 1 "$RELEASE_TAG")"
+            if [ -z "$published_git_head" ] || [ "$published_git_head" != "$tag_commit" ]; then
+              echo "::error::$package@$version exists but gitHead ${published_git_head:-<missing>} does not match tag commit $tag_commit"
+              exit 1
+            fi
+            echo "$package@$version already matches $RELEASE_TAG; resuming release assets."
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
           fi
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
 
       - name: Release dry run
         if: ${{ inputs.dry_run }}
@@ -74,7 +85,7 @@ jobs:
       # Prefer NPM_TOKEN when set (first publish of a new package name, or emergency).
       # Otherwise use Trusted Publishing via OIDC (npm run release:npm).
       - name: Publish to npm
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && steps.npm-state.outputs.published != 'true' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |

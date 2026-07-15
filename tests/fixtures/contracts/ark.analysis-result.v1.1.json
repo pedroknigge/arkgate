@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "valid": false,
   "diagnostics": [
     {
@@ -15,7 +15,8 @@
         "target": "src/infra/db.ts",
         "fromLayer": "DomainModel",
         "toLayer": "PersistenceAdapters"
-      }
+      },
+      "nextAction": "Define a port in DomainModel, inject the PersistenceAdapters implementation, then preflight again."
     }
   ]
 }

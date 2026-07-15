@@ -365,7 +365,7 @@ for real systems. Details: [production-hardening.md](https://github.com/pedrokni
 | Agent / MCP tools | [docs/agent-guide.md](docs/agent-guide.md) |
 | Demos | [docs/demos/](docs/demos/) |
 | Examples | [examples/](examples/README.md) |
-| Latest release (3.0.5) | [release notes](docs/releases/3.0.5.md) · [3.0.0 baseline](docs/releases/3.0.0.md) |
+| Latest release (3.1.0) | [release notes](docs/releases/3.1.0.md) · [3.0.0 baseline](docs/releases/3.0.0.md) |
 | Roadmap | [ROADMAP.md](ROADMAP.md) · [Changelog](CHANGELOG.md) |
 
 ---

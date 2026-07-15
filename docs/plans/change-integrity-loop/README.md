@@ -4,7 +4,7 @@
 > Related: [ROADMAP.md](../../../ROADMAP.md) · [configuration.md](../../configuration.md) · [package-surface.md](../../package-surface.md) · [agent-guide.md](../../agent-guide.md) · [threat-model.md](../../threat-model.md)<br>
 > `ROADMAP.md` owns order and status. This plan owns the bounded product rationale and acceptance for Phase T.
 
-**Status:** Complete (unreleased; PR [#64](https://github.com/pedroknigge/arkgate/pull/64))<br>
+**Status:** Shipped in `arkgate@3.1.0` from PR [#64](https://github.com/pedroknigge/arkgate/pull/64)<br>
 **Slug:** `change-integrity-loop`<br>
 **Kind:** epic<br>
 **Owners:** product (Pedro) + library maintainers<br>
@@ -202,9 +202,9 @@ Implementation principles:
 | `T02` | Done on pushed commit `484f606`: Security and CI green across CodeQL/Semgrep/dependency review, confidence/90.79% mutation, strict architecture, release artifacts, performance, fuzz, adapter parity, Node 18–24, TypeScript 5.9–7, and all 12 onboarding shards. `/review` resolved six implementation/package issues before commit. |
 | `T03` | Done on pushed commit `0aba7cc`: CI and Security green across all 23 CI jobs plus CodeQL/Semgrep/dependency review. Strict schema `1.0`, path/layer/edge resolution, deterministic hash, schema/package subpaths, optional CLI/MCP input, and no-map compatibility are implemented. `/review` removed duplicate bundle exports, rejected edges involving deleted files, and removed a non-literal generator import. Evidence: 1,081 tests; 90.36% statements / 85.25% branches / 92.35% functions; 90.79% mutation overall / 92.60% critical; TypeScript 5.9.3/6.0.3/7.0.2. CI exposed and verified two environment contracts: a documented 421 KB package ceiling after Linux measured 420,257 bytes, and a hard 125 ms/20-sample incremental p95 ceiling after shared runners measured 106.93/100.57 ms for unchanged `analyzeChange` code. |
 | `T04` | Done on pushed commit `02e0576`: exact-SHA CI and Security are green across all 23 CI jobs plus CodeQL/Semgrep/dependency review. Pure DomainModel classification, shared Kernel/generated-engine integration, CLI/MCP parity, dual-depth human output, four outcome classes, clean convergence, and byte-for-byte no-write fixtures are implemented. `/review` restored the missing stable-root function export, preserved the protected package-surface doc, and kept the 421 KB ceiling by moving only repository-hosted legacy/runtime docs out of the gate tarball. Evidence: 1,085 tests; 90.26% statements / 85.29% branches / 92.27% functions; 90.79% mutation overall / 92.60% critical; TypeScript 5.9.3/6.0.3/7.0.2; 418,777-byte package with 2,223-byte headroom. |
-| `T05` | Done on pushed commits `6e5ddf4` and `0b9e456`: versioned enforcement ladder, deterministic `nextAction`, complete-patch atomic hook parity, context-removal proof, and fixed free-shipping acceptance journey are implemented. Exact-SHA CI run `29393783076` and Security run `29393783072` are green across confidence, release artifacts, architecture, performance, adapter parity, deterministic fuzz, Node 18–24, TypeScript 5.9.3/6.0.3/7.0.2, all 12 onboarding shards, CodeQL, Semgrep, and dependency review. `eval/change-integrity-report.json` is green without a live LLM. Evidence: 1,105 tests; 90.38% statements / 85.26% branches / 92.67% functions; 91.06% mutation overall / 92.74% critical groups / 93.02% host-capabilities; 426,070-byte package under the documented 427 KB ceiling with 930-byte headroom. `/review` fixed canonical/generated drift, per-file-only and context-anchor patch validation, installed-vs-active enforcement ambiguity, adapter compatibility, a mutation-test blind spot, and shared-dist test races without lowering thresholds. The implementation is complete but remains unmerged and unpublished in PR #64; npm is still `arkgate@3.0.5`. |
+| `T05` | Done on pushed commits `6e5ddf4` and `0b9e456`: versioned enforcement ladder, deterministic `nextAction`, complete-patch atomic hook parity, context-removal proof, and fixed free-shipping acceptance journey are implemented. Exact-SHA CI run `29393783076` and Security run `29393783072` are green across confidence, release artifacts, architecture, performance, adapter parity, deterministic fuzz, Node 18–24, TypeScript 5.9.3/6.0.3/7.0.2, all 12 onboarding shards, CodeQL, Semgrep, and dependency review. `eval/change-integrity-report.json` is green without a live LLM. Final release evidence: 1,111 tests; 90.42% statements / 85.26% branches / 91.88% functions; 91.06% mutation overall / 92.74% critical groups / 93.02% host-capabilities; package candidate 426,587 bytes under the documented 427 KB ceiling with 413-byte headroom. `/review` fixed canonical/generated drift, per-file-only and context-anchor patch validation, installed-vs-active enforcement ambiguity, adapter compatibility, a mutation-test blind spot, shared-dist test races, first-push base provenance, and resumable release publication without lowering thresholds. Phase T shipped in `arkgate@3.1.0` from PR #64. |
 
-No Phase T item remains `doing`; the completed implementation remains unreleased in PR #64.
+No Phase T item remains `doing`; the completed implementation shipped in `arkgate@3.1.0`.
 
 ## Dependencies & risks
 
@@ -242,9 +242,10 @@ No Phase T item remains `doing`; the completed implementation remains unreleased
   tree as base; it performs no implicit Git diff and never claims behavioral completion. See
   [ADR 0007](../../adr/0007-convergence-uses-explicit-candidate.md).
 
-### Open decisions
+### Release decision
 
-- Whether `T05` is a minor release or remains experimental until external adoption evidence exists.
+- `T05` ships as the stable minor `arkgate@3.1.0`; its CLI, MCP, and JSON changes are additive and
+  the runtime kernel remains separately experimental.
 
 Lock an ADR only when one of these decisions becomes a stable public contract.
 

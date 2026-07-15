@@ -8,7 +8,7 @@
  * Pure CLI helper (bin/lib/adapter-contract.mjs). Zero Node I/O.
  */
 
-export const ARK_ANALYSIS_RESULT_SCHEMA_VERSION = '1.0';
+export const ARK_ANALYSIS_RESULT_SCHEMA_VERSION = '1.1';
 function text(value) {
     return typeof value === 'string' && value.length > 0 ? value : undefined;
 }

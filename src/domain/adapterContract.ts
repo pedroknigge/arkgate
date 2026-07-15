@@ -1,6 +1,6 @@
 /** Versioned public result contract shared by every ArkGate enforcement adapter. */
 
-export const ARK_ANALYSIS_RESULT_SCHEMA_VERSION = '1.0' as const;
+export const ARK_ANALYSIS_RESULT_SCHEMA_VERSION = '1.1' as const;
 
 export type AdapterSeverity = 'error' | 'warning';
 
@@ -33,11 +33,12 @@ export type AdapterDiagnostic = {
     toLayer?: string;
     typeOnly?: boolean;
   };
-  nextAction: string;
+  /** Added in schema 1.1; optional in TypeScript so 1.0 consumer-owned values remain valid. */
+  nextAction?: string;
 };
 
 export type AdapterResult = {
-  schemaVersion: typeof ARK_ANALYSIS_RESULT_SCHEMA_VERSION;
+  schemaVersion: '1.0' | typeof ARK_ANALYSIS_RESULT_SCHEMA_VERSION;
   valid: boolean;
   diagnostics: AdapterDiagnostic[];
 };

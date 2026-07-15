@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { githubWorkflow } from '../../../bin/lib/ci-and-commands.mjs';
+import { normalizePolicyBaseRef } from '../../../bin/lib/policy-delta-io.mjs';
 
 const ARK_CHECK = path.resolve('bin/ark-check.mjs');
 const roots: string[] = [];
@@ -84,12 +85,23 @@ describe('T01 strict policy transition guard', () => {
     const action = fs.readFileSync(path.resolve('action.yml'), 'utf8');
     expect(action).toContain('ARK_POLICY_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}');
     expect(action).toContain('git fetch --no-tags --depth=1 origin "$ARK_POLICY_BASE_REF"');
+    expect(action).toContain('^0{40,64}$');
 
     const selfCi = fs.readFileSync(path.resolve('.github/workflows/ci.yml'), 'utf8');
     expect(selfCi).toContain('fetch-depth: 0');
     expect(selfCi).toContain(
       'ARK_POLICY_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}'
     );
+  });
+
+  it('treats GitHub first-push null SHAs as no policy predecessor', () => {
+    expect(normalizePolicyBaseRef('0'.repeat(40))).toBe('');
+    expect(normalizePolicyBaseRef('0'.repeat(64))).toBe('');
+    expect(normalizePolicyBaseRef('  HEAD  ')).toBe('HEAD');
+
+    const { root } = setupRoot();
+    const result = run(root, ['--strict-merge'], { ARK_POLICY_BASE_REF: '0'.repeat(40) });
+    expect(result.status, result.stderr).toBe(0);
   });
 
   it('blocks an unacknowledged weakening and accepts only the exact hash-bound acknowledgement', () => {

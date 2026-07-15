@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import {
   ARK_ANALYSIS_RESULT_SCHEMA,
   ARK_ANALYSIS_RESULT_SCHEMA_VERSION,
@@ -14,7 +15,7 @@ describe('cross-adapter result contract v1', () => {
   it('keeps the committed compatibility fixture byte-for-value stable', () => {
     const fixture = JSON.parse(
       fs.readFileSync(
-        path.resolve('tests/fixtures/contracts/ark.analysis-result.v1.json'),
+        path.resolve('tests/fixtures/contracts/ark.analysis-result.v1.1.json'),
         'utf8'
       )
     );
@@ -34,8 +35,28 @@ describe('cross-adapter result contract v1', () => {
         ],
       })
     ).toEqual(fixture);
-    expect(ARK_ANALYSIS_RESULT_SCHEMA_VERSION).toBe('1.0');
-    expect(ARK_ANALYSIS_RESULT_SCHEMA.properties.schemaVersion.const).toBe('1.0');
+    expect(ARK_ANALYSIS_RESULT_SCHEMA_VERSION).toBe('1.1');
+    expect(ARK_ANALYSIS_RESULT_SCHEMA.properties.schemaVersion.const).toBe('1.1');
+  });
+
+  it('retains the 1.0 fixture without the additive action field', () => {
+    const legacy = JSON.parse(
+      fs.readFileSync(
+        path.resolve('tests/fixtures/contracts/ark.analysis-result.v1.json'),
+        'utf8'
+      )
+    );
+    expect(legacy.schemaVersion).toBe('1.0');
+    expect(legacy.diagnostics[0]).not.toHaveProperty('nextAction');
+  });
+
+  it('typechecks consumer-owned 1.0 diagnostics without nextAction', () => {
+    const result = spawnSync(
+      path.resolve('node_modules/.bin/tsc'),
+      ['-p', 'tests/fixtures/public-api-compat/tsconfig.json'],
+      { cwd: process.cwd(), encoding: 'utf8' }
+    );
+    expect(result.status, result.stderr || result.stdout).toBe(0);
   });
 
   it('normalizes legacy code fields, warnings, and invalid locations deterministically', () => {
@@ -45,7 +66,7 @@ describe('cross-adapter result contract v1', () => {
         warnings: [{ code: 'LEGACY_WARNING', severity: 'warning', line: 0, column: -1 }],
       })
     ).toEqual({
-      schemaVersion: '1.0',
+      schemaVersion: '1.1',
       valid: true,
       diagnostics: [
         {

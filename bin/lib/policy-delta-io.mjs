@@ -29,6 +29,11 @@ function safeRef(value) {
   );
 }
 
+export function normalizePolicyBaseRef(value) {
+  const ref = typeof value === 'string' ? value.trim() : '';
+  return /^0{40,64}$/.test(ref) ? '' : ref;
+}
+
 function repositoryRoot(root) {
   const result = runGit(root, ['rev-parse', '--show-toplevel']);
   return result.status === 0 ? result.stdout.trim() : null;
@@ -80,7 +85,7 @@ export function resolvePolicyBaseConfig({
     return { config: readJsonFile(absolute, 'Policy base'), source: absolute, ref: null };
   }
 
-  const envRef = typeof env.ARK_POLICY_BASE_REF === 'string' ? env.ARK_POLICY_BASE_REF.trim() : '';
+  const envRef = normalizePolicyBaseRef(env.ARK_POLICY_BASE_REF);
   const githubBase = typeof env.GITHUB_BASE_REF === 'string' ? env.GITHUB_BASE_REF.trim() : '';
   const requestedRef = baseRef || envRef || (githubBase ? `origin/${githubBase}` : '');
   const ref = requestedRef || discoverLocalBaseRef(root);

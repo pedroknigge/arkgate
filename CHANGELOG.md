@@ -4,6 +4,11 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+## 3.1.0 — 2026-07-15
+
+Deterministic change integrity from policy transition through atomic patch preflight and structural
+convergence. **No breaking** CLI or `ark.config.json` changes. **No gate weaken.**
+
 ### Added
 
 - **T01 policy-transition guard:** the public analysis API and generated CLI engine classify
@@ -42,6 +47,17 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
   acceptance, and strict Ark green without a live LLM or required planning file.
 - **Performance gate stability:** the 10k-file incremental p95 remains hard-gated over 20 samples,
   with a 125 ms shared-runner ceiling justified by two consecutive Linux CI measurements.
+
+### Fixed
+
+- **Public schema compatibility:** `ark.analysis-result` advances to `1.1`; `nextAction` stays
+  optional for consumer-owned TypeScript values and the immutable `1.0` fixture remains covered.
+- **First-push CI:** GitHub's all-zero `before` SHA is treated as no policy predecessor instead of
+  being fetched as an invalid ref.
+- **Resumable npm release:** rerunning the publish workflow after npm succeeds now verifies the
+  published `gitHead` against the signed tag and continues checksum/release-asset attachment.
+
+Release note: `docs/releases/3.1.0.md`.
 
 ## 3.0.5 — 2026-07-14
 
