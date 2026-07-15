@@ -4,6 +4,51 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+## 3.2.0 — 2026-07-15
+
+Contract health (Phase W): ArkGate now also meta-lints the contract itself and describes its
+governance weight, and the docs name the enforcement-boundary trade-off explicitly. Everything in
+this release is **advisory only** — no verdict, `designFitness`, `patternBets`, or gate result
+changes. **No breaking** CLI or `ark.config.json` changes. **No gate weaken.**
+
+### Added
+
+- **W01 contract smells:** `ark-check --doctor --json` gains `doctor.contractHealth` with four
+  stable, deterministic smell ids that lint the contract rather than the code:
+  `contract-bidirectional-allow` (both directions explicitly allowed between two layers),
+  `contract-peripheral-depends-core` (audit/observability layer allowed into
+  orchestration/persistence), `contract-lateral-adapter-allow` (adapter layer allowed into a
+  sibling adapter layer), and `contract-dead-rule` (rule referencing an unknown or empty layer, or
+  a same-layer no-op; `optional: true` layers are exempt). Each smell carries `severity`,
+  sorted `evidence[]` with honest `…(+N more)` truncation, technical `message`, plain-language
+  `outcome`, and `fix`. Human doctor prints a "Contract health (advisory)" section.
+- **Acknowledgment sidecar:** deliberate edges are recorded in an optional
+  `.ark/contract-smell-acks.json` (`{ acks: [{ id, edge, reason }] }`; bidirectional edges
+  order-insensitive) — the versioned `ark.config.json` schema is untouched. The file is bounded
+  (≤64 KB, ≤200 entries); a malformed file or edge grammar is reported via `ackFile.invalid` and
+  never suppresses a smell. `contractHealth.acknowledged` counts applied acks only.
+- **W02 governance weight:** `doctor.contractHealth.governanceWeight` reports raw facts
+  (declared/populated layers, governed files, rules, denied/allowed edges, files-per-layer,
+  rules-per-layer) plus a fixed comparative band — `heavy` (fewer than 25 governed files per layer
+  AND 6+ layers or 4+ rules per layer), `light` (≤2 layers over 150+ governed files), `typical`,
+  or `unknown` — with fixed wording and an explicit `notAScore: true`. Banding uses raw ratios;
+  reported ratios are rounded for display. The heavy note asks to justify NEW layers with
+  demonstrated pressure and never suggests deleting working ones.
+- **W03 enforcement-boundary positioning:** README explains why the hard guarantee lives at the
+  required merge status ("deliberate trade-off, not a gap"; the contract doubles as a pressure
+  sensor), and `docs/ai-gates.md` / `docs/agent-guide.md` carry the same framing next to the
+  canonical host support matrix. A docs regression pins the wording without strengthening any
+  guarantee claim.
+
+### Fixed
+
+- Contract meta-lint reads the rules actually in force (manifest-aware), not only `config.rules`.
+- Hostile ack-file inputs (FIFO/symlink targets, oversized files, sloppy edge strings) can no
+  longer hang `--doctor`, exhaust memory, or silently suppress findings; null rule entries and
+  malformed coverage rows no longer throw.
+- Governance-weight banding is size-relative in both clauses: a large tree with a proportionate
+  dense rule matrix never reads `heavy`, and NaN/negative counts read `unknown`.
+
 ## 3.1.0 — 2026-07-15
 
 Deterministic change integrity. **No breaking** CLI or `ark.config.json` changes. **No gate

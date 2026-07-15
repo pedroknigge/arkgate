@@ -274,7 +274,9 @@ file; for the U/W pair, the execution order is the one stated here (W before U).
 | 49 | `W02` | `done` | S | `W01` | Governance-weight evidence is reported descriptively without becoming a score or gate |
 
 Phase W implementation is complete (W03 → W01 → W02, each with commit + review evidence). The
-phase is marked Shipped only after release evidence exists (next stable release train).
+`3.2.0` release train is prepared (version sync, CHANGELOG, `docs/releases/3.2.0.md`, surface
+parity test); the phase is marked Shipped only after the maintainer authorizes publication and
+release evidence exists.
 
 ### Next-round package budget guardrail
 
@@ -1573,8 +1575,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: none — Phase W implementation is complete (W03, W01, W02 done with review evidence)
-Next action: release train packaging Phase W (maintainer authorizes publish), then review U01 open decisions and move only U01 to `doing`
+Item: none — Phase W complete; 3.2.0 release train PREPARED (version sync, CHANGELOG, release note, parity test, dry-run readiness)
+Next action: maintainer authorizes publish (tag v3.2.0 → GitHub Release → publish-npm.yml), then review U01 open decisions and move only U01 to `doing`
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
 Released baseline: npm arkgate@3.1.0; Phase T shipped from PR #64
 ```
