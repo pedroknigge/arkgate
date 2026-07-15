@@ -130,6 +130,12 @@ miss as a warning to read, not a defect to silence. A deliberate edge is acknowl
 `.ark/contract-smell-acks.json` (`{ acks: [{ id, edge, reason }] }`); `acknowledged` counts
 applied acks only, and a malformed sidecar or edge string suppresses nothing.
 
+**Governance weight (W02):** `contractHealth.governanceWeight` reports raw facts (layers, rules,
+governed files, files/layer, rules/layer) plus a fixed band (`heavy` / `typical` / `light` /
+`unknown`) with fixed wording. It is explicitly `notAScore` — never a gate input. Read `heavy` as
+"justify the next layer/rule with demonstrated pressure", never as "delete layers"; read `light`
+as "a boundary may be missing where violations concentrate".
+
 Each smell also has `evidence[]` paths and `message` (technical detail). Plan **B** bets include
 `pilot`, `successSignal`, `killSwitch`, and **`neverMechanicalSafe: true`** — loop/autoPatch must
 ignore them. For judgment I/O moves use **extraction cards**

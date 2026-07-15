@@ -271,7 +271,10 @@ file; for the U/W pair, the execution order is the one stated here (W before U).
 |---:|---|---|---:|---|---|
 | 47 | `W03` | `done` | S | Phase T shipped | Positioning docs name the advisory-local / hard-CI boundary as a deliberate trade-off |
 | 48 | `W01` | `done` | M | `W03` | Doctor reports deterministic contract smells (meta-lint of `ark.config.json` itself) |
-| 49 | `W02` | `todo` | S | `W01` | Governance-weight evidence is reported descriptively without becoming a score or gate |
+| 49 | `W02` | `done` | S | `W01` | Governance-weight evidence is reported descriptively without becoming a score or gate |
+
+Phase W implementation is complete (W03 → W01 → W02, each with commit + review evidence). The
+phase is marked Shipped only after release evidence exists (next stable release train).
 
 ### Next-round package budget guardrail
 
@@ -454,7 +457,7 @@ are green. Docs: `docs/package-surface.md` stable-surface row + `docs/agent-guid
 
 ### W02 — Governance-weight evidence (descriptive, never a score)
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `W01`
 - **Likely files:** `bin/lib/doctor-plan.mjs` or coverage reporting, `docs/agent-guide.md`,
   `docs/brownfield-adoption.md`, focused tests
@@ -470,6 +473,18 @@ heavyweight contract onto a small project.
 composite score, ranking, or gate input (the final gate stays binary per the hard lines); wording
 never tells a user to delete layers, only to justify new ones; fixtures pin a light, a typical,
 and a heavy contract; absence of the surface changes no verdict.
+
+**Local evidence (2026-07-15):** `computeGovernanceWeight` in `bin/lib/contract-smells.mjs`
+reports raw facts (declared/populated layers, governed files, rules, denied/allowed edges,
+files-per-layer, rules-per-layer) plus a fixed band (`heavy`/`typical`/`light`/`unknown`) with
+fixed notes and `notAScore: true`; surfaced as `doctor.contractHealth.governanceWeight` with a
+human line only for noteworthy bands. Red-first `w02GovernanceWeight.test.ts` passes 7/7,
+pinning the field-analysis heavy case (10 layers / 90 rules / 228 files → heavy), a light case,
+this repo's typical shape, unknown on empty scope, the no-score key guard, the
+never-delete-layers wording, and doctor JSON/human advisory isolation. Dogfood: this repository
+reads `typical` (4 layers / 10 rules / 159 governed files). Full confidence gate, typecheck,
+JS syntax, module budgets (zero new doctor-plan lines), build, and strict architecture check are
+green. Docs: package-surface row + agent-guide section.
 
 ### W03 — Name the enforcement-boundary trade-off in positioning docs
 
@@ -1558,8 +1573,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: W02 — governance-weight descriptive evidence (Phase W runs before Phase U; W03 and W01 are done)
-Next action: implement W02, then close Phase W; Phase U (starting at U01) resumes after W ships
+Item: none — Phase W implementation is complete (W03, W01, W02 done with review evidence)
+Next action: release train packaging Phase W (maintainer authorizes publish), then review U01 open decisions and move only U01 to `doing`
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
 Released baseline: npm arkgate@3.1.0; Phase T shipped from PR #64
 ```

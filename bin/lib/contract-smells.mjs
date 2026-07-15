@@ -308,7 +308,78 @@ function fixFor(id) {
 }
 
 /**
- * One-call compute for doctor: acks + smells + JSON-ready summary.
+ * W02 — fixed comparative wording per band. Facts + a note; explicitly never a
+ * score, ranking, or gate input. Heavy wording must never suggest deleting layers.
+ */
+export const GOVERNANCE_WEIGHT_NOTES = Object.freeze({
+  heavy:
+    'Heavier than typical for a tree this size. Not a defect and not a score — but before adding another layer or rule, ask for demonstrated pressure (repeated violations or acknowledgments on one edge). Do not delete working layers to change this number.',
+  light:
+    'Lighter than typical for a tree this size — a large tree with few boundaries. Consider whether a new boundary is justified where violations or churn concentrate.',
+  typical: 'Within the typical band for a tree this size.',
+  unknown: 'Not enough governed files (or declared layers) to describe governance weight.',
+});
+
+/** Fixed banding thresholds (documented facts, not tunables). */
+const HEAVY_MIN_LAYERS = 6;
+const HEAVY_MAX_FILES_PER_LAYER = 25;
+const HEAVY_RULES_PER_LAYER = 4;
+const LIGHT_MAX_LAYERS = 2;
+const LIGHT_MIN_FILES = 150;
+
+/**
+ * W02 — descriptive governance-weight facts for a contract over a governed tree.
+ * Raw counts and ratios with a fixed comparative note. Advisory only.
+ *
+ * @param {object} config ark.config (layers; rules unless overridden)
+ * @param {object|null} coverage computeCoverage result
+ * @param {object[]|null} [effectiveRules]
+ */
+export function computeGovernanceWeight(config, coverage = null, effectiveRules = null) {
+  const layers = Array.isArray(config?.layers) ? config.layers : [];
+  const rules = ((Array.isArray(effectiveRules) ? effectiveRules : config?.rules) ?? []).filter(
+    (r) => r !== null && typeof r === 'object'
+  );
+  const declaredLayers = layers.filter((l) => l && typeof l.name === 'string').length;
+  const governedFiles = coverage?.governed?.classifiedFiles ?? 0;
+  const populatedLayers = (coverage?.layers ?? []).filter((r) => r && (r.files ?? 0) > 0).length;
+  const deniedEdges = rules.filter((r) => r.allowed === false).length;
+  const allowedEdges = rules.filter((r) => r.allowed === true).length;
+  const round1 = (n) => Math.round(n * 10) / 10;
+  const base = {
+    declaredLayers,
+    populatedLayers,
+    governedFiles,
+    rules: rules.length,
+    deniedEdges,
+    allowedEdges,
+    notAScore: true,
+  };
+  if (declaredLayers === 0 || governedFiles === 0) {
+    return {
+      ...base,
+      filesPerLayer: null,
+      rulesPerLayer: null,
+      weight: 'unknown',
+      note: GOVERNANCE_WEIGHT_NOTES.unknown,
+    };
+  }
+  const filesPerLayer = round1(governedFiles / declaredLayers);
+  const rulesPerLayer = round1(rules.length / declaredLayers);
+  let weight = 'typical';
+  if (
+    (declaredLayers >= HEAVY_MIN_LAYERS && filesPerLayer < HEAVY_MAX_FILES_PER_LAYER) ||
+    rules.length >= HEAVY_RULES_PER_LAYER * declaredLayers
+  ) {
+    weight = 'heavy';
+  } else if (declaredLayers <= LIGHT_MAX_LAYERS && governedFiles >= LIGHT_MIN_FILES) {
+    weight = 'light';
+  }
+  return { ...base, filesPerLayer, rulesPerLayer, weight, note: GOVERNANCE_WEIGHT_NOTES[weight] };
+}
+
+/**
+ * One-call compute for doctor: acks + smells + governance weight + JSON-ready summary.
  * `rules` should be the rules actually in force (manifest-aware callers pass them).
  *
  * @param {string} root
@@ -319,7 +390,11 @@ function fixFor(id) {
 export function computeContractHealth(root, config, coverage, rules = null) {
   const ackState = loadContractSmellAcks(root);
   const { smells, matchedAcks } = analyzeContractSmells(config, coverage, ackState, rules);
-  return { ...summarizeContractHealth(smells, ackState, matchedAcks), smells };
+  return {
+    ...summarizeContractHealth(smells, ackState, matchedAcks),
+    governanceWeight: computeGovernanceWeight(config, coverage, rules),
+    smells,
+  };
 }
 
 /**
@@ -348,7 +423,9 @@ export function printContractHealthSection(health, io) {
 export function formatContractHealthLines(smells, health) {
   const rows = [];
   const list = smells ?? [];
-  if (list.length === 0 && !health?.ackFile?.invalid) return rows;
+  const gw = health?.governanceWeight;
+  const weightNoteworthy = gw?.weight === 'heavy' || gw?.weight === 'light';
+  if (list.length === 0 && !health?.ackFile?.invalid && !weightNoteworthy) return rows;
   if (health?.ackFile?.invalid) {
     rows.push({
       mark: 'warn',
@@ -370,6 +447,13 @@ export function formatContractHealthLines(smells, health) {
   }
   if ((health?.acknowledged ?? 0) > 0) {
     rows.push({ mark: 'dim', text: `acknowledged edges applied: ${health.acknowledged}` });
+  }
+  if (weightNoteworthy) {
+    rows.push({
+      mark: 'warn',
+      text: `governance weight: ${gw.weight} — ${gw.declaredLayers} layer(s), ${gw.rules} rule(s), ${gw.governedFiles} governed file(s) (${gw.filesPerLayer} files/layer)`,
+    });
+    rows.push({ mark: 'dim', text: gw.note });
   }
   rows.push({
     mark: 'dim',
