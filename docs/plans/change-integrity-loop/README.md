@@ -4,12 +4,12 @@
 > Related: [ROADMAP.md](../../../ROADMAP.md) · [configuration.md](../../configuration.md) · [package-surface.md](../../package-surface.md) · [agent-guide.md](../../agent-guide.md) · [threat-model.md](../../threat-model.md)<br>
 > `ROADMAP.md` owns order and status. This plan owns the bounded product rationale and acceptance for Phase T.
 
-**Status:** In progress (`T03`)<br>
+**Status:** In progress (`T04`)<br>
 **Slug:** `change-integrity-loop`<br>
 **Kind:** epic<br>
 **Owners:** product (Pedro) + library maintainers<br>
 **Last updated:** 2026-07-14<br>
-**Code path:** `src/domain/policyDelta.ts`, `src/domain/changeMap.ts`, `src/kernel/analysis.ts`, `bin/lib/policy-delta-io.mjs`, `bin/lib/prepare-change.mjs`, and existing CLI/MCP/Action adapters
+**Code path:** `src/domain/policyDelta.ts`, `src/domain/changeMap.ts`, `src/domain/changeConvergence.ts`, `src/kernel/analysis.ts`, `bin/lib/policy-delta-io.mjs`, `bin/lib/prepare-change.mjs`, and existing CLI/MCP/Action adapters
 
 ---
 
@@ -124,7 +124,7 @@ base tree, and the candidate change.
 - [x] **A5 — Optional change map:** A strict, versioned JSON document can declare planned file
       operations and local dependency edges without embedding product requirements or becoming a
       default setup file.
-- [ ] **A6 — Honest convergence:** The final report distinguishes satisfied structural work,
+- [x] **A6 — Honest convergence:** The final report distinguishes satisfied structural work,
       planned-but-missing work, contradictions, and unplanned architectural impact. It never says
       the feature is behaviorally complete.
 - [ ] **A7 — Adapter parity:** CLI, MCP, hooks where the host exposes a complete patch, and CI use
@@ -152,7 +152,7 @@ base tree, and the candidate change.
 |------|---------|-------|
 | JSON Schema | `arkgate/schema/change-map` (`schemas/ark.change-map.schema.json`) | Schema `1.0`; optional and strict |
 | CLI | `ark preflight --changes <change-set.json> --json` | Explicit, read-only create/update/delete batch |
-| CLI | Structural convergence report | Requires explicit change-map path and change base |
+| CLI | Structural convergence report | Existing preflight uses explicit map + complete candidate against the current supplied base |
 | MCP | `ark_policy_delta` and `ark_prepare_change` | No MCP-only verdict logic |
 | Existing skills | `/ark-explore` and `/ark-autopilot` may emit/consume the optional map | No new basename |
 | CI | Strict policy-delta check | Final `ark-check` remains mandatory |
@@ -200,8 +200,9 @@ Implementation principles:
 |---|---|
 | `T01` | Done on pushed commit `13ccb85`: CI and Security green, including 12 onboarding matrices, Node 18–24, TypeScript 5.9–7, fuzz, adapter parity, performance, 90.79% mutation, release artifacts, and strict architecture with an immutable fetched base SHA. `/review` plus gates resolved the original eight issues and both CI-context regressions. |
 | `T02` | Done on pushed commit `484f606`: Security and CI green across CodeQL/Semgrep/dependency review, confidence/90.79% mutation, strict architecture, release artifacts, performance, fuzz, adapter parity, Node 18–24, TypeScript 5.9–7, and all 12 onboarding shards. `/review` resolved six implementation/package issues before commit. |
-| `T03` | Commits `c3ee6d1` + `f9ace2d`; Security and 22/23 CI jobs are green. Strict schema `1.0`, path/layer/edge resolution, deterministic hash, schema/package subpaths, optional CLI/MCP input, and no-map compatibility are implemented. `/review` removed duplicate bundle exports, rejected edges involving deleted files, and removed a non-literal generator import. Local evidence: 1,081 tests; 90.36% statements / 85.25% branches / 92.35% functions; 90.79% mutation overall / 92.60% critical; TypeScript 5.9.3/6.0.3/7.0.2 and common gates green. CI exposed two environment contracts: npm-pack measured 420,257 bytes on Linux (fixed with byte reduction plus a documented 421 KB ceiling), and unchanged 10k `analyzeChange` code measured 106.93/100.57 ms p95 versus 70.29 ms on T02 while 50k stayed ~24 s. The performance autofix retains 20 samples and a hard 125 ms p95 ceiling with explicit runner headroom. Final fix commit and exact-SHA CI remain pending. |
-| `T04`–`T05` | Not started. |
+| `T03` | Done on pushed commit `0aba7cc`: CI and Security green across all 23 CI jobs plus CodeQL/Semgrep/dependency review. Strict schema `1.0`, path/layer/edge resolution, deterministic hash, schema/package subpaths, optional CLI/MCP input, and no-map compatibility are implemented. `/review` removed duplicate bundle exports, rejected edges involving deleted files, and removed a non-literal generator import. Evidence: 1,081 tests; 90.36% statements / 85.25% branches / 92.35% functions; 90.79% mutation overall / 92.60% critical; TypeScript 5.9.3/6.0.3/7.0.2. CI exposed and verified two environment contracts: a documented 421 KB package ceiling after Linux measured 420,257 bytes, and a hard 125 ms/20-sample incremental p95 ceiling after shared runners measured 106.93/100.57 ms for unchanged `analyzeChange` code. |
+| `T04` | Implemented and locally green: pure DomainModel classification, shared Kernel/generated-engine integration, CLI/MCP parity, dual-depth human output, four outcome classes, clean convergence, and byte-for-byte no-write fixtures. `/review` restored the missing stable-root function export, preserved the protected package-surface doc, and kept the 421 KB ceiling by moving only repository-hosted legacy/runtime docs out of the gate tarball. Evidence: 1,085 tests; 90.26% statements / 85.29% branches / 92.27% functions; 90.79% mutation overall / 92.60% critical; TypeScript 5.9.3/6.0.3/7.0.2; 418,777-byte package with 2,223-byte headroom. Exact-SHA CI/Security evidence pending. |
+| `T05` | Not started. |
 
 Only one item may be `doing`, and no Phase T implementation starts from this planning change.
 
@@ -237,10 +238,12 @@ Only one item may be `doing`, and no Phase T implementation starts from this pla
 - T03 uses no default filename or installed artifact: callers explicitly provide a strict schema
   `1.0` map through `--change-map` or MCP, and preflight binds its normalized hash. See
   [ADR 0006](../../adr/0006-optional-architecture-change-map.md).
+- T04 uses the same explicit preflight change set as the candidate and the supplied/current project
+  tree as base; it performs no implicit Git diff and never claims behavioral completion. See
+  [ADR 0007](../../adr/0007-convergence-uses-explicit-candidate.md).
 
 ### Open decisions
 
-- How an explicit Git base is supplied for convergence.
 - Whether `T05` is a minor release or remains experimental until external adoption evidence exists.
 
 Lock an ADR only when one of these decisions becomes a stable public contract.

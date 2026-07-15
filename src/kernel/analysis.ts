@@ -32,6 +32,10 @@ import {
   type PolicyDeltaFinding,
 } from '../domain/policyDelta';
 import type { ArchitectureChangeMapContract } from '../domain/changeMap';
+import {
+  analyzeArchitectureConvergence,
+  type ArchitectureConvergenceResult,
+} from '../domain/changeConvergence';
 
 export {
   loadArchitectureChangeMap,
@@ -41,6 +45,16 @@ export {
   type ArchitectureChangeMapFile,
   type ArchitectureChangeOperation,
 } from '../domain/changeMap';
+
+export {
+  analyzeArchitectureConvergence,
+  type AnalyzeArchitectureConvergenceInput,
+  type ArchitectureActualChange,
+  type ArchitectureConvergenceClassification,
+  type ArchitectureConvergenceFinding,
+  type ArchitectureConvergenceResult,
+  type ArchitectureDependency,
+} from '../domain/changeConvergence';
 
 export {
   collectForbiddenCapabilityUses,
@@ -152,6 +166,7 @@ export type ChangePreflightResult = {
   baseTreeHash: string;
   candidateTreeHash: string;
   changeMapHash?: string;
+  convergence?: ArchitectureConvergenceResult;
   changes: PreparedChangeFile[];
   violations: ArchitectureEngineViolation[];
   warnings: ArchitectureEngineViolation[];
@@ -668,16 +683,29 @@ export function preflightChange(input: AnalyzeChangeInput): ChangePreflightResul
     })
     .sort((left, right) => left.path.localeCompare(right.path));
   const violations = [...inputViolations, ...graphResult.violations];
+  const convergence = input.changeMap
+    ? analyzeArchitectureConvergence({
+        changeMap: input.changeMap,
+        changes,
+        baseDependencies: base.ir.edges.flatMap((edge) =>
+          edge.to ? [{ from: edge.from, to: edge.to }] : []
+        ),
+        candidateDependencies: candidate.ir.edges.flatMap((edge) =>
+          edge.to ? [{ from: edge.from, to: edge.to }] : []
+        ),
+      })
+    : undefined;
 
   return {
     schemaVersion: '1.0',
-    valid: violations.length === 0,
+    valid: violations.length === 0 && (convergence?.structurallyConverged ?? true),
     readOnly: true,
     policyHash: input.contract.policyHash,
     compilerOptionsHash: candidate.ir.compilerOptionsHash,
     baseTreeHash: analysisTreeHash(base.ir.files),
     candidateTreeHash: analysisTreeHash(candidate.ir.files),
     ...(input.changeMap ? { changeMapHash: input.changeMap.hash } : {}),
+    ...(convergence ? { convergence } : {}),
     changes,
     violations,
     warnings: graphResult.warnings,

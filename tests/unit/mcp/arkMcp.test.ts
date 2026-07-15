@@ -169,6 +169,12 @@ describe('ark-mcp server (write-path gate)', () => {
     expect(payload.baseTreeHash).toMatch(/^fnv1a-/);
     expect(payload.candidateTreeHash).toMatch(/^fnv1a-/);
     expect(payload.changeMapHash).toMatch(/^fnv1a-/);
+    expect(payload.convergence).toMatchObject({
+      readOnly: true,
+      structurallyConverged: true,
+      behavioralCompletion: 'not-evaluated',
+      summary: { satisfied: 3, missing: 0, contradictory: 0, unplanned: 0 },
+    });
     expect(payload.violations).toEqual([
       expect.objectContaining({
         ruleId: 'LAYER_IMPORT_VIOLATION',

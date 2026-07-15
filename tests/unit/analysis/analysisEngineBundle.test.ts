@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  analyzeArchitectureConvergence as analyzeConvergenceFromKernel,
   analyzeChange as analyzeChangeFromKernel,
   analyzePolicyDelta as analyzePolicyDeltaFromKernel,
   analyzeProject as analyzeProjectFromKernel,
@@ -12,6 +13,7 @@ import {
 import { loadArchitectureChangeMap as loadChangeMapFromKernel } from '../../../src/domain/changeMap';
 import {
   analyzeChange as analyzeChangeFromBundle,
+  analyzeArchitectureConvergence as analyzeConvergenceFromBundle,
   analyzePolicyDelta as analyzePolicyDeltaFromBundle,
   analyzeProject as analyzeProjectFromBundle,
   collectAnalysisConfigWarnings as collectWarningsFromBundle,
@@ -77,8 +79,23 @@ describe('generated CLI analysis engine', () => {
       dependencies: [],
     };
 
-    expect(loadChangeMapFromBundle(map, bundleContract.config)).toEqual(
-      loadChangeMapFromKernel(map, kernelContract.config)
+    const bundleMap = loadChangeMapFromBundle(map, bundleContract.config);
+    const kernelMap = loadChangeMapFromKernel(map, kernelContract.config);
+    expect(bundleMap).toEqual(kernelMap);
+    const changes = [{ path: 'src/domain/order.ts', content: 'export const order = 2;\n' }] as const;
+    expect(
+      preflightChangeFromBundle({ contract: bundleContract, files, changes, changeMap: bundleMap })
+    ).toEqual(
+      preflightChangeFromKernel({ contract: kernelContract, files, changes, changeMap: kernelMap })
+    );
+    const convergenceInput = {
+      changeMap: kernelMap,
+      changes: [{ path: 'src/domain/order.ts', operation: 'update' as const }],
+      baseDependencies: [],
+      candidateDependencies: [],
+    };
+    expect(analyzeConvergenceFromBundle(convergenceInput)).toEqual(
+      analyzeConvergenceFromKernel(convergenceInput)
     );
   });
 

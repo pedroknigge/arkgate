@@ -136,7 +136,7 @@ npx arkgate-check --install-agent-gates --force
 npx arkgate-check --doctor
 ```
 
-Full checklist (CI, MCP, Codex, imports): **[docs/migrate-from-ark-runtime-kernel.md](docs/migrate-from-ark-runtime-kernel.md)**.
+Full checklist (CI, MCP, Codex, imports): **[migrate-from-ark-runtime-kernel.md](https://github.com/pedroknigge/arkgate/blob/main/docs/migrate-from-ark-runtime-kernel.md)**.
 
 ---
 
@@ -202,7 +202,9 @@ never silent write). Cursor/Codex MCP calls remain advisory. See
 For a complete multi-file architecture-source candidate, use MCP **`ark_prepare_change`** or
 `ark preflight --changes change-set.json --json`. Creates, updates, and deletes are evaluated as
 one read-only graph, so an edge or cycle that appears only across the batch is rejected before any
-project file is written.
+project file is written. With `--change-map map.json` (or MCP `changeMap`), the same verdict also
+classifies planned structure as satisfied, missing, contradictory, or unplanned. This is structural
+convergence only: behavioral completion is always reported as not evaluated.
 
 | Need | Skill | Not |
 |------|--------|-----|
@@ -301,7 +303,7 @@ npx arkgate-check --coverage              # Governed: N%
 npx arkgate-check --report ark-report.html  # showcase HTML (opens in browser on local TTY; --no-open to skip)
 npx arkgate-check --baseline              # only NEW violations fail
 npx arkgate preflight --changes changes.json --json  # atomic read-only batch verdict
-npx arkgate preflight --changes changes.json --change-map map.json --json  # optional structural intent hash
+npx arkgate preflight --changes changes.json --change-map map.json --json  # intent hash + structural convergence
 npx arkgate upgrade                       # package + gates/skills + MCP/Codex normalize
 ```
 
@@ -322,7 +324,7 @@ separate experimental package:
 
 ```ts
 import { createStrictArkKernelFromConfig } from '@arkgate/runtime';
-// see docs/production-hardening.md and docs/package-surface.md
+// see the repository production-hardening and package-surface guides
 ```
 
 The stable `arkgate` package does not bundle runtime implementation. The deprecated
@@ -336,7 +338,7 @@ The kernel’s default stores (`InMemoryEventBuffer`, `InMemoryAuditStore`,
 `InMemoryReadModelStore`, `InMemoryWorkflowStore`) are **reference in-memory only**:
 fine for tests, demos, and single-process local work — they **do not** survive restarts
 and are **not** production durability. Implement the store interfaces (or inject your own)
-for real systems. Details: [docs/production-hardening.md](docs/production-hardening.md).
+for real systems. Details: [production-hardening.md](https://github.com/pedroknigge/arkgate/blob/main/docs/production-hardening.md).
 
 ---
 
@@ -348,7 +350,7 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | **Package surface (stable vs experimental)** | [docs/package-surface.md](docs/package-surface.md) |
 | Wire Claude / Cursor / Codex / Grok + **ESLint (CI-parity)** | [docs/ai-gates.md](docs/ai-gates.md) |
 | **TypeScript 5 / 6 / 7 support** | [docs/typescript-support.md](docs/typescript-support.md) |
-| Migrate from `ark-runtime-kernel` | [docs/migrate-from-ark-runtime-kernel.md](docs/migrate-from-ark-runtime-kernel.md) |
+| Migrate from `ark-runtime-kernel` | [docs/migrate-from-ark-runtime-kernel.md](https://github.com/pedroknigge/arkgate/blob/main/docs/migrate-from-ark-runtime-kernel.md) |
 | Messy existing repo | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Agent / MCP tools | [docs/agent-guide.md](docs/agent-guide.md) |
 | Demos | [docs/demos/](docs/demos/) |

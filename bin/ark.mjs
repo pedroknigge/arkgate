@@ -27,6 +27,7 @@ import {
   prepareChangeFromRoot,
   readChangeMapFile,
   readChangeSetFile,
+  renderChangePreflight,
 } from './lib/prepare-change.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -855,16 +856,7 @@ async function main() {
         ...(changeMap ? { changeMap: changeMap.input, changeMapSource: changeMap.source } : {}),
       });
       if (args.json) console.log(JSON.stringify(result, null, 2));
-      else if (result.valid) {
-        console.log(`✔ Atomic preflight passed for ${result.changes.length} change(s).`);
-        console.log(`  candidate ${result.candidateTreeHash} · policy ${result.policyHash}`);
-      } else {
-        console.error(`Atomic preflight rejected ${result.violations.length} finding(s):`);
-        for (const finding of result.violations) {
-          console.error(`  - ${finding.ruleId} ${finding.file ?? '<unknown>'}:${finding.line ?? 1} — ${finding.message}`);
-        }
-        console.error('No project file was written. Fix the complete change set and preflight again.');
-      }
+      else renderChangePreflight(result);
       return result.valid ? 0 : 1;
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));

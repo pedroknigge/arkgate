@@ -61,6 +61,7 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/baselineKey.ts` | `bin/lib/baseline-key.mjs` | (same `cli-pure` scripts) |
 | `src/domain/configContract.ts` | `bin/lib/config-contract.mjs` + `schemas/ark.config.schema.json` | (same `cli-pure` scripts) |
 | `src/domain/changeMap.ts` | bundled in `bin/lib/analysis-engine.mjs`; schema parity test guards `schemas/ark.change-map.schema.json` | `generate:analysis-engine` / `check:analysis-engine` |
+| `src/domain/changeConvergence.ts` | bundled in `bin/lib/analysis-engine.mjs` | `generate:analysis-engine` / `check:analysis-engine` |
 
 Parity/drift tests + CI enforce generated files stay in sync.
 
@@ -74,7 +75,7 @@ retained shipped rationale live under `docs/plans/`:
 | Plan | Status | Purpose |
 |------|--------|---------|
 | [power-simple-shape](docs/plans/power-simple-shape/README.md) | Shipped | Dual depth (dev power + newbie simplicity) → AI-clear, maintainable code after Enforce |
-| [change-integrity-loop](docs/plans/change-integrity-loop/README.md) | Planned | Context-independent contract guard, atomic patch preflight, dual-depth remediation, and structural convergence |
+| [change-integrity-loop](docs/plans/change-integrity-loop/README.md) | In progress (`T04`) | Context-independent contract guard, atomic patch preflight, dual-depth remediation, and structural convergence |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in
 `ROADMAP.md`.

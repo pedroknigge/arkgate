@@ -7,6 +7,8 @@
 In-repo `docs/` remains the package/agent reference. Source: GitHub; distribution: npm.
 
 This document is the consumer contract for **what is stable** vs **what is experimental**.
+It ships as the consumer contract linked from the npm README. The separate experimental-runtime
+hardening guide remains repository-hosted rather than duplicated in the gate tarball.
 
 ---
 
@@ -26,6 +28,7 @@ This document is the consumer contract for **what is stable** vs **what is exper
 | **Policy transition analysis (T01, unreleased)** | `analyzePolicyDelta(...)`; MCP `ark_policy_delta`; CLI `--policy-base` / `--policy-base-ref` / `--policy-ack`; check JSON `policyDelta` | Additive schema `1.0`. Classifications and finding ids are deterministic. Weakening/judgment requires an acknowledgement bound to both policy hashes and the exact blocking finding set. |
 | **Atomic change preflight (T02, unreleased)** | `preflightChange(...)`; CLI `ark preflight --changes <file> --json`; MCP `ark_prepare_change` | Additive schema `1.0`. One complete governed production-source `{path,content}` / `{path,delete:true}` batch; read-only; returns operation, content/tree/policy/compiler fingerprints and stable graph findings. MCP availability alone is advisory. |
 | **Architecture change map (T03, unreleased)** | `arkgate/schema/change-map`; CLI `ark preflight --change-map <file>`; MCP `ark_prepare_change.changeMap` | Optional strict schema `1.0`. Canonical planned paths + operations + resolved Ark layers + dependencies between planned files. Preflight returns `changeMapHash`; absence is normal and adds no project file. Structural intent only, never behavioral completion. |
+| **Structural convergence (T04, unreleased)** | `analyzeArchitectureConvergence(...)`; map-enabled `preflightChange(...)`; existing CLI/MCP preflight adapters | Additive `convergence` result with stable `satisfied`, `missing`, `contradictory`, and `unplanned` findings. Uses the supplied/current project tree as base and the explicit complete change set as candidate; no implicit Git or LLM input. `readOnly: true`; `behavioralCompletion: "not-evaluated"`. Structural mismatch makes preflight invalid. |
 | **`arkgate/schema/analysis-result`** | Public CLI/MCP/hook diagnostic envelope (`schemaVersion`, `valid`, `diagnostics`) | Versioned JSON Schema; committed v1 compatibility fixture protects rule, severity, location, and evidence fields. |
 | **Config JSON Schema** | `arkgate/schema` or `arkgate/schema/ark.config.schema.json` | Stable package resource subpaths for editor completion and contract tooling. |
 | **Agent skills** | `/ark-*` templates installed by `--install-agent-gates` | Skill *names* and “default flow” are stable; internal skill prose may evolve (e.g. When/not when, explore Shape dual-plan seed, extraction cards, day-zero origin order). |

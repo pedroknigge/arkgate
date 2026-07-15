@@ -125,6 +125,40 @@ export function prepareChangeFromRoot({
   };
 }
 
+export function renderChangePreflight(result) {
+  const convergence = result.convergence;
+  if (result.valid) {
+    console.log(`✔ Atomic preflight passed for ${result.changes.length} change(s).`);
+    console.log(`  candidate ${result.candidateTreeHash} · policy ${result.policyHash}`);
+  } else {
+    const structuralFindings = convergence
+      ? convergence.summary.missing + convergence.summary.contradictory + convergence.summary.unplanned
+      : 0;
+    console.error(
+      `Atomic preflight rejected ${result.violations.length + structuralFindings} finding(s):`
+    );
+    for (const finding of result.violations) {
+      console.error(
+        `  - ${finding.ruleId} ${finding.file ?? '<unknown>'}:${finding.line ?? 1} — ${finding.message}`
+      );
+    }
+    for (const finding of convergence?.findings ?? []) {
+      if (finding.classification !== 'satisfied') {
+        console.error(`  - ${finding.id} — ${finding.message}`);
+      }
+    }
+    console.error('No project file was written. Fix the complete change set and preflight again.');
+  }
+  if (convergence) {
+    const { satisfied, missing, contradictory, unplanned } = convergence.summary;
+    const write = convergence.structurallyConverged ? console.log : console.error;
+    write(
+      `Structural convergence: ${convergence.structurallyConverged ? 'passed' : 'failed'} · satisfied ${satisfied} · missing ${missing} · contradictory ${contradictory} · unplanned ${unplanned}.`
+    );
+    write('Behavioral completion: not evaluated; run the feature acceptance tests separately.');
+  }
+}
+
 export function readChangeSetFile(root, requestPath) {
   const absolute = path.isAbsolute(requestPath) ? requestPath : path.join(root, requestPath);
   let parsed;

@@ -6,7 +6,7 @@
       "maxPackedBytes": 421000,
       "maxUnpackedBytes": 1500000,
       "maxFiles": 132,
-      "exception": "The 250 KB/1 MB target is not yet feasible while shipping the documented standalone CLI/MCP tooling plus Phase Q surfaces (doctor/plan/eval docs), the shared T02 atomic-preflight adapter, and the T03 change-map JSON Schema. T03 adds a bounded 1 KB cross-platform npm-pack allowance after CI measured 420257 bytes; source maps were removed in V04, and this exception must be reconsidered before ArkGate 4."
+      "exception": "The 250 KB/1 MB target is not yet feasible while shipping the documented standalone CLI/MCP tooling plus Phase Q consumer surfaces, atomic preflight, and the change-map JSON Schema. The 421 KB ceiling is retained after T04 by linking repository-hosted legacy migration/demo and experimental-runtime hardening guides instead of duplicating them in the gate tarball; source maps were removed in V04, and this exception must be reconsidered before ArkGate 4."
     },
     "runtime": {
       "path": "packages/runtime",
