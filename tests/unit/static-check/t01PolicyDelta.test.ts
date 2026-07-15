@@ -84,6 +84,12 @@ describe('T01 strict policy transition guard', () => {
     const action = fs.readFileSync(path.resolve('action.yml'), 'utf8');
     expect(action).toContain('ARK_POLICY_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}');
     expect(action).toContain('git fetch --no-tags --depth=1 origin "$ARK_POLICY_BASE_REF"');
+
+    const selfCi = fs.readFileSync(path.resolve('.github/workflows/ci.yml'), 'utf8');
+    expect(selfCi).toContain('fetch-depth: 0');
+    expect(selfCi).toContain(
+      'ARK_POLICY_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}'
+    );
   });
 
   it('blocks an unacknowledged weakening and accepts only the exact hash-bound acknowledgement', () => {
