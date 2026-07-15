@@ -425,8 +425,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     patternBets: patternBetsForLoop,
     designSmells,
   });
-  // W01 — contract meta-lint. Advisory only; never feeds designWeak/patternBets or the verdict.
-  const { smells: contractSmells, health: contractHealth } = computeContractHealth(root, config, cov);
+  // W01 — contract meta-lint over the rules in force. Advisory; never feeds any verdict.
+  const contractHealth = computeContractHealth(root, config, cov, rules);
 
   if (asJson) {
     console.log(
@@ -647,7 +647,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   }
 
   // W01 — contract health (advisory; verdict unchanged).
-  printContractHealthSection(contractSmells, contractHealth, { line, warn, color });
+  printContractHealthSection(contractHealth, { line, warn, color });
 
   console.log('');
   console.log(color.bold('Coverage'));

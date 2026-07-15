@@ -123,10 +123,12 @@ Smell **ids** (stable JSON) plus **outcome** lines (plain language, Q02) on each
 contract itself (never of the code): `contract-bidirectional-allow` (both directions explicitly
 allowed between two layers), `contract-peripheral-depends-core` (audit/observability layer allowed
 into orchestration/persistence), `contract-lateral-adapter-allow` (adapter layer allowed into a
-sibling adapter layer), `contract-dead-rule` (rule references an empty or unknown layer). Advisory
-only: it never changes the verdict, `designFitness`, or `patternBets`. A deliberate edge is
-acknowledged in `.ark/contract-smell-acks.json` (`{ acks: [{ id, edge, reason }] }`); a malformed
-sidecar sets `contractHealth.ackFile.invalid` and suppresses nothing.
+sibling adapter layer), `contract-dead-rule` (rule references an empty or unknown layer, or is a
+same-layer no-op; `optional: true` layers are exempt). Advisory only: it never changes the
+verdict, `designFitness`, or `patternBets` — layer roles come from name heuristics, so treat a
+miss as a warning to read, not a defect to silence. A deliberate edge is acknowledged in
+`.ark/contract-smell-acks.json` (`{ acks: [{ id, edge, reason }] }`); `acknowledged` counts
+applied acks only, and a malformed sidecar or edge string suppresses nothing.
 
 Each smell also has `evidence[]` paths and `message` (technical detail). Plan **B** bets include
 `pilot`, `successSignal`, `killSwitch`, and **`neverMechanicalSafe: true`** — loop/autoPatch must
