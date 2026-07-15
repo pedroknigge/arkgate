@@ -23,7 +23,11 @@ import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import { applyStartPreview, planStart, renderStartPreview } from './lib/start-preview.mjs';
 import { detectActiveAgentHost } from './lib/skill-install.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
-import { prepareChangeFromRoot, readChangeSetFile } from './lib/prepare-change.mjs';
+import {
+  prepareChangeFromRoot,
+  readChangeMapFile,
+  readChangeSetFile,
+} from './lib/prepare-change.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
@@ -106,6 +110,7 @@ function parseArgs(argv) {
     else if (arg === '--preset') args.preset = requireValue(arg, i++);
     else if (arg === '--config') args.config = requireValue(arg, i++);
     else if (arg === '--changes') args.changes = requireValue(arg, i++);
+    else if (arg === '--change-map') args.changeMap = requireValue(arg, i++);
     else if (arg === '--archetype') args.archetype = requireValue(arg, i++);
     else if (arg === '--tools') args.tools = requireValue(arg, i++);
     else if (arg === '--require-write-hook') {
@@ -126,7 +131,7 @@ function usage() {
   ark init    [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture]
               [--archetype <playbook-id>] [--tools <list>] [--require-write-hook <host>] [--yes] [--force] [--no-strict]
   ark upgrade [--root <project>] [--no-install] [--no-strict]
-  ark preflight --changes <change-set.json> [--root <project>] [--config ark.config.json] [--json]
+  ark preflight --changes <change-set.json> [--change-map <map.json>] [--root <project>] [--config ark.config.json] [--json]
 
 Commands:
   start     New here? Analyze and preview the complete setup. Read-only unless --apply.
@@ -782,8 +787,11 @@ async function main() {
     console.error('--require-write-hook is supported by ark start and ark init.');
     return 2;
   }
-  if (args.command !== 'preflight' && (args.changes || args.config !== 'ark.config.json')) {
-    console.error('--changes and --config are supported by ark preflight.');
+  if (
+    args.command !== 'preflight' &&
+    (args.changes || args.changeMap || args.config !== 'ark.config.json')
+  ) {
+    console.error('--changes, --change-map, and --config are supported by ark preflight.');
     return 2;
   }
   const enforcement = validateHardWriteRequest({
@@ -838,11 +846,13 @@ async function main() {
         JSON.parse(fs.readFileSync(configPath, 'utf8')),
         configPath
       ).config;
+      const changeMap = args.changeMap ? readChangeMapFile(args.root, args.changeMap) : undefined;
       const result = prepareChangeFromRoot({
         root: args.root,
         config,
         configSource: configPath,
         changes: readChangeSetFile(args.root, args.changes),
+        ...(changeMap ? { changeMap: changeMap.input, changeMapSource: changeMap.source } : {}),
       });
       if (args.json) console.log(JSON.stringify(result, null, 2));
       else if (result.valid) {

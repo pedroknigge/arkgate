@@ -136,6 +136,15 @@ describe('ark-mcp server (write-path gate)', () => {
     const res = await client.request('tools/call', {
       name: 'ark_prepare_change',
       arguments: {
+        changeMap: {
+          $schema: 'https://unpkg.com/arkgate@3/schemas/ark.change-map.schema.json',
+          schemaVersion: '1.0',
+          files: [
+            { path: 'src/core/order.ts', operation: 'create', layer: 'core' },
+            { path: 'src/app/service.ts', operation: 'create', layer: 'app' },
+          ],
+          dependencies: [{ from: 'src/core/order.ts', to: 'src/app/service.ts' }],
+        },
         changes: [
           {
             path: 'src/core/order.ts',
@@ -159,6 +168,7 @@ describe('ark-mcp server (write-path gate)', () => {
     expect(payload.policyHash).toMatch(/^fnv1a-/);
     expect(payload.baseTreeHash).toMatch(/^fnv1a-/);
     expect(payload.candidateTreeHash).toMatch(/^fnv1a-/);
+    expect(payload.changeMapHash).toMatch(/^fnv1a-/);
     expect(payload.violations).toEqual([
       expect.objectContaining({
         ruleId: 'LAYER_IMPORT_VIOLATION',

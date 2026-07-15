@@ -852,6 +852,11 @@ async function main() {
               required: ['path'],
             },
           },
+          changeMap: {
+            type: 'object',
+            description:
+              'Optional strict schema 1.0 architecture change map. Omit it to use ordinary atomic preflight.',
+          },
         },
         required: ['changes'],
       },
@@ -1246,6 +1251,8 @@ async function main() {
         config,
         configSource: configPath,
         changes: params?.arguments?.changes,
+        changeMap: params?.arguments?.changeMap,
+        changeMapSource: 'ark_prepare_change.changeMap',
       });
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],

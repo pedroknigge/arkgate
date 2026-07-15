@@ -674,6 +674,12 @@ The strongest place to constrain an AI agent is the moment it writes a file, not
 JS-API TypeScript — nested or project) so a host can gate
 the write path:
 
+For a complete multi-file source candidate, use `ark preflight --changes changes.json --json` or
+MCP `ark_prepare_change`. Add `--change-map map.json` (or MCP `changeMap`) only when the team has an
+explicit schema `1.0` structural plan. The map contains canonical file operations, resolved Ark
+layers, and dependencies between planned files; Ark binds its normalized `changeMapHash` but does
+not claim the feature is behaviorally complete. No map is generated or required by default.
+
 ```bash
 npx ark-mcp --root . --config ark.config.json [--manifest ark.manifest.json]
 ```

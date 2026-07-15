@@ -4,12 +4,12 @@
 > Related: [ROADMAP.md](../../../ROADMAP.md) · [configuration.md](../../configuration.md) · [package-surface.md](../../package-surface.md) · [agent-guide.md](../../agent-guide.md) · [threat-model.md](../../threat-model.md)<br>
 > `ROADMAP.md` owns order and status. This plan owns the bounded product rationale and acceptance for Phase T.
 
-**Status:** In progress (`T02`)<br>
+**Status:** In progress (`T03`)<br>
 **Slug:** `change-integrity-loop`<br>
 **Kind:** epic<br>
 **Owners:** product (Pedro) + library maintainers<br>
 **Last updated:** 2026-07-14<br>
-**Code path:** `src/domain/policyDelta.ts`, `src/kernel/analysis.ts`, `bin/lib/policy-delta-io.mjs`, `bin/lib/prepare-change.mjs`, and existing CLI/MCP/Action adapters
+**Code path:** `src/domain/policyDelta.ts`, `src/domain/changeMap.ts`, `src/kernel/analysis.ts`, `bin/lib/policy-delta-io.mjs`, `bin/lib/prepare-change.mjs`, and existing CLI/MCP/Action adapters
 
 ---
 
@@ -121,7 +121,7 @@ base tree, and the candidate change.
       the acceptance corpus.
 - [x] **A4 — No partial commit:** Preflight is read-only and returns per-file evidence plus policy
       and content hashes. ArkGate never writes a subset of a rejected patch.
-- [ ] **A5 — Optional change map:** A strict, versioned JSON document can declare planned file
+- [x] **A5 — Optional change map:** A strict, versioned JSON document can declare planned file
       operations and local dependency edges without embedding product requirements or becoming a
       default setup file.
 - [ ] **A6 — Honest convergence:** The final report distinguishes satisfied structural work,
@@ -150,7 +150,7 @@ base tree, and the candidate change.
 
 | Kind | Surface | Notes |
 |------|---------|-------|
-| JSON Schema | Versioned architecture change map | Exact filename/export TBD in `T03`; optional and strict |
+| JSON Schema | `arkgate/schema/change-map` (`schemas/ark.change-map.schema.json`) | Schema `1.0`; optional and strict |
 | CLI | `ark preflight --changes <change-set.json> --json` | Explicit, read-only create/update/delete batch |
 | CLI | Structural convergence report | Requires explicit change-map path and change base |
 | MCP | `ark_policy_delta` and `ark_prepare_change` | No MCP-only verdict logic |
@@ -199,8 +199,9 @@ Implementation principles:
 | Item | Current evidence |
 |---|---|
 | `T01` | Done on pushed commit `13ccb85`: CI and Security green, including 12 onboarding matrices, Node 18–24, TypeScript 5.9–7, fuzz, adapter parity, performance, 90.79% mutation, release artifacts, and strict architecture with an immutable fetched base SHA. `/review` plus gates resolved the original eight issues and both CI-context regressions. |
-| `T02` | Locally complete: Kernel `preflightChange`, generated bundle parity, shared `prepare-change` adapter, CLI `ark preflight`, MCP `ark_prepare_change`, normalized/duplicate/stale/escape checks, per-file and tree/policy/compiler fingerprints, and no-write fixtures. The acceptance corpus covers create/update/delete, individually-valid/collectively-invalid forbidden edges and cycles, final full-check verdict parity, scope rejection, and symlink escapes. `/review` auto-fixed six defects: MCP CI inventory drift, out-of-scope false-green results, traversal/symlink escapes, unrelated CLI flag acceptance, an incorrect custom-config source label, and the one-file package budget delta. Local evidence: 1,069 tests; 90.47% statements / 85.43% branches / 92.40% functions; 90.79% mutation overall and 92.60% across critical modules; TypeScript 5.9.3/6.0.3/7.0.2; strict architecture, generated artifacts, module/package budgets, build, and a 417.2 KB / 131-file package dry-run green. Commit and remote CI remain pending. |
-| `T03`–`T05` | Not started. |
+| `T02` | Done on pushed commit `484f606`: Security and CI green across CodeQL/Semgrep/dependency review, confidence/90.79% mutation, strict architecture, release artifacts, performance, fuzz, adapter parity, Node 18–24, TypeScript 5.9–7, and all 12 onboarding shards. `/review` resolved six implementation/package issues before commit. |
+| `T03` | Locally verified: strict schema `1.0`, pure path/layer/edge resolution, deterministic map hash, schema parity guard, stable package subpaths, optional CLI `--change-map`, MCP input parity, and no-map compatibility fixtures. `/review` removed a duplicated root-bundle schema/API copy that initially exceeded the 420 KB tarball budget, rejected dependencies involving deleted files, and removed a non-literal generator import that the architecture gate correctly rejected. Evidence: 1,081 tests; 90.37% statements / 85.25% branches / 92.35% functions; 90.79% mutation overall and 92.60% across critical modules; TypeScript 5.9.3/6.0.3/7.0.2; strict architecture, generated artifacts, module/package budgets, build, release artifacts, and a 419.3 KB / 132-file package dry-run green with the byte limit unchanged. Commit and remote CI remain pending. |
+| `T04`–`T05` | Not started. |
 
 Only one item may be `doing`, and no Phase T implementation starts from this planning change.
 
@@ -231,11 +232,15 @@ Only one item may be `doing`, and no Phase T implementation starts from this pla
 
 - T01 uses CLI base/acknowledgement inputs plus the `ark_policy_delta` MCP classifier.
 - T02 is a distinct `ark_prepare_change` MCP tool and `ark preflight` CLI command; it does not
-  overload the single-file `ark_prepare_write` contract. See ADR 0005.
+  overload the single-file `ark_prepare_write` contract. See
+  [ADR 0005](../../adr/0005-atomic-change-preflight.md).
+- T03 uses no default filename or installed artifact: callers explicitly provide a strict schema
+  `1.0` map through `--change-map` or MCP, and preflight binds its normalized hash. See
+  [ADR 0006](../../adr/0006-optional-architecture-change-map.md).
 
 ### Open decisions
 
-- The change-map filename/export and how an explicit Git base is supplied for convergence.
+- How an explicit Git base is supplied for convergence.
 - Whether `T05` is a minor release or remains experimental until external adoption evidence exists.
 
 Lock an ADR only when one of these decisions becomes a stable public contract.

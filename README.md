@@ -300,6 +300,8 @@ npx arkgate-check --plan                  # safe-to-auto-fix vs your call
 npx arkgate-check --coverage              # Governed: N%
 npx arkgate-check --report ark-report.html  # showcase HTML (opens in browser on local TTY; --no-open to skip)
 npx arkgate-check --baseline              # only NEW violations fail
+npx arkgate preflight --changes changes.json --json  # atomic read-only batch verdict
+npx arkgate preflight --changes changes.json --change-map map.json --json  # optional structural intent hash
 npx arkgate upgrade                       # package + gates/skills + MCP/Codex normalize
 ```
 

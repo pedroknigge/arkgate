@@ -5,8 +5,8 @@
       "path": ".",
       "maxPackedBytes": 420000,
       "maxUnpackedBytes": 1500000,
-      "maxFiles": 131,
-      "exception": "The 250 KB/1 MB target is not yet feasible while shipping the documented standalone CLI/MCP tooling plus Phase Q surfaces (doctor/plan/eval docs) and the single shared T02 atomic-preflight adapter. Source maps were removed in V04; this bounded exception must be reconsidered before ArkGate 4."
+      "maxFiles": 132,
+      "exception": "The 250 KB/1 MB target is not yet feasible while shipping the documented standalone CLI/MCP tooling plus Phase Q surfaces (doctor/plan/eval docs), the shared T02 atomic-preflight adapter, and the T03 change-map JSON Schema. Source maps were removed in V04; this bounded exception must be reconsidered before ArkGate 4."
     },
     "runtime": {
       "path": "packages/runtime",

@@ -26,6 +26,8 @@
     "./schema/ark.config.schema.json": "./schemas/ark.config.schema.json",
     "./schema/analysis-result": "./schemas/ark.analysis-result.schema.json",
     "./schema/ark.analysis-result.schema.json": "./schemas/ark.analysis-result.schema.json",
+    "./schema/change-map": "./schemas/ark.change-map.schema.json",
+    "./schema/ark.change-map.schema.json": "./schemas/ark.change-map.schema.json",
     "./nestjs": {
       "types": "./compat/nestjs.d.ts",
       "import": "./compat/nestjs.js",

@@ -182,7 +182,7 @@ The MCP server exposes a resource and tools agents can use proactively (not an e
 - **`ark://manifest`** (resource) — the machine-readable architecture contract (layers + rules), so the agent can read the architecture before generating code.
 - **`validate_code`** (tool) — validates a snippet against the architecture on demand (the write-path gate). May return additive **`autoPatch`** (W1) for mechanical-safe import-type rewrites.
 - **`ark_prepare_write`** (tool) — **W2:** place + constrain + validate + optional autoPatch + judgmentBrief + contentHash in one call (composes `ark_place` + write gate).
-- **`ark_prepare_change`** (tool) — **T02:** read-only atomic create/update/delete preflight with cross-file edge/cycle findings and candidate fingerprints. MCP registration remains advisory unless the host makes invocation non-bypassable.
+- **`ark_prepare_change`** (tool) — **T02/T03:** read-only atomic create/update/delete preflight with cross-file edge/cycle findings and candidate fingerprints. Optional `changeMap` accepts strict schema `1.0` structural intent and returns `changeMapHash`; omission is supported. MCP registration remains advisory unless the host makes invocation non-bypassable.
 - **`ark_place`** (tool) — given a target file path, returns its layer, forbidden globals, and which layers it may / must not import. Call it *before* writing a new file so generated code lands in a governed location.
 - **`ark_check`** (tool) — runs the full architecture check and returns structured violations (applies the baseline automatically when one exists).
 - **`ark_coverage`** (tool) — per-layer file counts, the full unclassified-file list, and layers whose patterns match nothing.

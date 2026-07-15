@@ -9,6 +9,7 @@ import {
   loadContract as loadContractFromKernel,
   preflightChange as preflightChangeFromKernel,
 } from '../../../src/index';
+import { loadArchitectureChangeMap as loadChangeMapFromKernel } from '../../../src/domain/changeMap';
 import {
   analyzeChange as analyzeChangeFromBundle,
   analyzePolicyDelta as analyzePolicyDeltaFromBundle,
@@ -17,6 +18,7 @@ import {
   detectArchitectureCycles as detectCyclesFromBundle,
   evaluateArchitectureGraph as evaluateGraphFromBundle,
   loadContract as loadContractFromBundle,
+  loadArchitectureChangeMap as loadChangeMapFromBundle,
   preflightChange as preflightChangeFromBundle,
 } from '../../../bin/lib/analysis-engine.mjs';
 
@@ -62,6 +64,21 @@ describe('generated CLI analysis engine', () => {
     );
     expect(preflightChangeFromBundle({ contract: bundleContract, files, changes })).toEqual(
       preflightChangeFromKernel({ contract: kernelContract, files, changes })
+    );
+  });
+
+  it('matches the canonical change-map contract and hash', () => {
+    const kernelContract = loadContractFromKernel(config);
+    const bundleContract = loadContractFromBundle(config);
+    const map = {
+      $schema: 'https://unpkg.com/arkgate@3/schemas/ark.change-map.schema.json',
+      schemaVersion: '1.0',
+      files: [{ path: 'src/domain/order.ts', operation: 'update', layer: 'DomainModel' }],
+      dependencies: [],
+    };
+
+    expect(loadChangeMapFromBundle(map, bundleContract.config)).toEqual(
+      loadChangeMapFromKernel(map, kernelContract.config)
     );
   });
 

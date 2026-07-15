@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { loadContract, preflightChange } from './analysis-engine.mjs';
+import { loadArchitectureChangeMap, loadContract, preflightChange } from './analysis-engine.mjs';
 import { createAdapterResult } from './adapter-contract.mjs';
 import { collectGovernedFiles, isGovernableSourceFile, normalize } from './scan-files.mjs';
 import { isScanExcludedRelative, layerForRelativePath } from '../ark-shared.mjs';
@@ -89,16 +89,30 @@ function baseFilesForChange(root, config, changes) {
   return [...byPath.values()].sort((left, right) => left.path.localeCompare(right.path));
 }
 
-export function prepareChangeFromRoot({ root, config, configSource, changes, compilerOptions }) {
+export function prepareChangeFromRoot({
+  root,
+  config,
+  configSource,
+  changes,
+  changeMap,
+  changeMapSource,
+  compilerOptions,
+}) {
   const normalizedChanges = normalizeChangeSet(changes);
   for (const change of normalizedChanges) {
     assertInsideProject(root, change.path);
     assertGovernedSource(config, change.path);
   }
+  const contract = loadContract(config, configSource ?? path.join(root, 'ark.config.json'));
+  const loadedChangeMap =
+    changeMap === undefined
+      ? undefined
+      : loadArchitectureChangeMap(changeMap, contract.config, changeMapSource);
   const result = preflightChange({
-    contract: loadContract(config, configSource ?? path.join(root, 'ark.config.json')),
+    contract,
     files: baseFilesForChange(root, config, normalizedChanges),
     changes: normalizedChanges,
+    ...(loadedChangeMap ? { changeMap: loadedChangeMap } : {}),
     ...(compilerOptions ? { compilerOptions } : {}),
   });
   return {
@@ -122,4 +136,15 @@ export function readChangeSetFile(root, requestPath) {
     );
   }
   return Array.isArray(parsed) ? parsed : parsed?.changes;
+}
+
+export function readChangeMapFile(root, requestPath) {
+  const absolute = path.isAbsolute(requestPath) ? requestPath : path.join(root, requestPath);
+  try {
+    return { source: absolute, input: JSON.parse(fs.readFileSync(absolute, 'utf8')) };
+  } catch (error) {
+    throw new Error(
+      `Cannot read architecture change map ${absolute}: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
 }

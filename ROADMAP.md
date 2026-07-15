@@ -223,13 +223,13 @@ P0/security patches. Do not publish a normal stable feature release until `S01`�
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 35 | `T01` | `done` | M | Phase Q done | Semantic policy-delta guard detects and blocks unacknowledged contract weakening |
-| 36 | `T02` | `doing` | L | `T01` | CLI/MCP preflight create, update, and delete batches atomically before writes |
-| 37 | `T03` | `todo` | M | `T02` | Optional versioned architecture change map describes planned paths and dependency edges |
+| 36 | `T02` | `done` | L | `T01` | CLI/MCP preflight create, update, and delete batches atomically before writes |
+| 37 | `T03` | `doing` | M | `T02` | Optional versioned architecture change map describes planned paths and dependency edges |
 | 38 | `T04` | `todo` | M | `T03` | Read-only convergence reports planned, missing, contradictory, and unplanned structural impact |
 | 39 | `T05` | `todo` | M | `T01`–`T04` | Context-independent enforcement ladder, dual-depth remediation, adapter parity, adversarial eval, docs, and release evidence |
 
-**Next:** Phase T is active with `T02` as the only `doing` item. `T01` is green on pushed commit
-`13ccb85`; start `T03` only after `T02` is reviewed, verified, committed, and green in CI. Scope and acceptance:
+**Next:** Phase T is active with `T03` as the only `doing` item. `T02` is green on pushed commit
+`484f606`; start `T04` only after `T03` is reviewed, verified, committed, and green in CI. Scope and acceptance:
 [change-integrity-loop](docs/plans/change-integrity-loop/README.md).
 Latest published patch: **`arkgate@3.0.5`**.
 
@@ -1293,11 +1293,11 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: T01 todo — semantic policy-delta guard
-First result: a failing mutation corpus for include/exclude, deny-rule, peer-isolation,
-allowlist, and safety-threshold weakening; neutral reorder/description changes stay neutral
-Then: implement the pure delta classifier and hash-bound acknowledgment; keep T02 blocked
-Primary surfaces: DomainModel policy-delta IR, generated CLI parity, ark-check/MCP/Action adapters
-Required finish: T01 acceptance + focused tests + common merge gate + architecture green
-Released baseline: npm arkgate@3.0.5; this roadmap change does not start implementation
+Item: T03 doing — optional versioned architecture change map
+Current result: strict schema 1.0, deterministic normalization/hash, CLI/MCP preflight binding,
+schema parity, generated-engine parity, and no-map compatibility are locally green
+Then: commit T03, require exact-SHA CI/Security green, mark it done, and begin T04 only afterward
+Primary surfaces: DomainModel change-map contract, shared preflight adapter, CLI/MCP, package schema
+Required finish: T03 focused/full tests + mutation + common merge gate + remote exact-SHA evidence
+Released baseline: npm arkgate@3.0.5; Phase T remains unreleased on the dedicated feature branch
 ```

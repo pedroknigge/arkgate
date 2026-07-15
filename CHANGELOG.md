@@ -23,6 +23,13 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
   fingerprints plus policy, compiler, base-tree, and candidate-tree fingerprints.
 - **Batch safety:** duplicate normalized paths, stale delete targets, lexical root escapes, and
   symlink escapes fail closed; cross-file forbidden edges and cycles are reported before commit.
+- **T03 optional architecture change map:** strict schema `1.0` describes canonical planned file
+  operations, resolved Ark layers, and local dependency edges. It is never installed by default.
+  CLI `ark preflight --change-map <map.json>` and MCP `ark_prepare_change.changeMap` bind its
+  deterministic hash to the preflight result.
+- **Published change-map schema:** editor/tooling subpaths `arkgate/schema/change-map` and
+  `arkgate/schema/ark.change-map.schema.json` are parity-checked against the canonical Domain
+  contract.
 
 ## 3.0.5 — 2026-07-14
 

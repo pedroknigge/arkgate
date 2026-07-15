@@ -31,6 +31,20 @@ import {
   type PolicyDeltaClassification,
   type PolicyDeltaFinding,
 } from '../domain/policyDelta';
+import type { ArchitectureChangeMapContract } from '../domain/changeMap';
+
+export {
+  ARK_CHANGE_MAP_SCHEMA,
+  ARK_CHANGE_MAP_SCHEMA_URL,
+  ARK_CHANGE_MAP_SCHEMA_VERSION,
+  ArchitectureChangeMapValidationError,
+  loadArchitectureChangeMap,
+  type ArchitectureChangeMap,
+  type ArchitectureChangeMapContract,
+  type ArchitectureChangeMapDependency,
+  type ArchitectureChangeMapFile,
+  type ArchitectureChangeOperation,
+} from '../domain/changeMap';
 
 export {
   collectForbiddenCapabilityUses,
@@ -58,6 +72,7 @@ export type AnalyzeProjectInput = {
 
 export type AnalyzeChangeInput = AnalyzeProjectInput & {
   changes: readonly AnalysisFileChange[];
+  changeMap?: ArchitectureChangeMapContract;
 };
 
 export type AnalysisResult = {
@@ -140,6 +155,7 @@ export type ChangePreflightResult = {
   compilerOptionsHash: string;
   baseTreeHash: string;
   candidateTreeHash: string;
+  changeMapHash?: string;
   changes: PreparedChangeFile[];
   violations: ArchitectureEngineViolation[];
   warnings: ArchitectureEngineViolation[];
@@ -665,6 +681,7 @@ export function preflightChange(input: AnalyzeChangeInput): ChangePreflightResul
     compilerOptionsHash: candidate.ir.compilerOptionsHash,
     baseTreeHash: analysisTreeHash(base.ir.files),
     candidateTreeHash: analysisTreeHash(candidate.ir.files),
+    ...(input.changeMap ? { changeMapHash: input.changeMap.hash } : {}),
     changes,
     violations,
     warnings: graphResult.warnings,
