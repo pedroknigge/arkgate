@@ -2,7 +2,6 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://unpkg.com/arkgate@3/schemas/ark.change-map.schema.json",
   "title": "ArkGate architecture change map",
-  "description": "Optional structural plan for project-relative file operations and local dependency edges.",
   "type": "object",
   "additionalProperties": false,
   "required": [

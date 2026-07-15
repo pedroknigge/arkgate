@@ -34,10 +34,6 @@ import {
 import type { ArchitectureChangeMapContract } from '../domain/changeMap';
 
 export {
-  ARK_CHANGE_MAP_SCHEMA,
-  ARK_CHANGE_MAP_SCHEMA_URL,
-  ARK_CHANGE_MAP_SCHEMA_VERSION,
-  ArchitectureChangeMapValidationError,
   loadArchitectureChangeMap,
   type ArchitectureChangeMap,
   type ArchitectureChangeMapContract,

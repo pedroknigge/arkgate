@@ -78,8 +78,6 @@ export const ARK_CHANGE_MAP_SCHEMA = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   $id: ARK_CHANGE_MAP_SCHEMA_URL,
   title: 'ArkGate architecture change map',
-  description:
-    'Optional structural plan for project-relative file operations and local dependency edges.',
   type: 'object',
   additionalProperties: false,
   required: ['$schema', 'schemaVersion', 'files'],
