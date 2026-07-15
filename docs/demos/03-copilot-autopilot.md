@@ -6,8 +6,9 @@ loop · autopilot) in one sitting.
 
 ## In one line
 
-`npx ark start` sets it up and shows a plan; **`/ark-autopilot`** (in your agent) carries the
-plan out — applying the safe fixes and proposing the rest, always validated by `ark-check`.
+`npx ark start` previews the setup and plan; `npx ark start --apply` applies exactly that preview.
+Then **`/ark-autopilot`** (in your agent) carries the remediation plan out — applying the safe
+fixes and proposing the rest, always validated by `ark-check`.
 
 ## Prerequisites
 
@@ -22,12 +23,14 @@ plan out — applying the safe fixes and proposing the rest, always validated by
 TMP=$(mktemp -d); cd "$TMP"
 git init -q                        # the loop works in a discardable worktree
 npm init -y >/dev/null
-npx ark start --yes
+npx ark start --yes          # read-only preview
+npx ark start --yes --apply  # apply the preview after review
 ```
 
-Ark describes the project's shape in plain language, writes `ark.config.json` + agent/CI gates,
-and prints the **plan** — how many fixes are _safe to auto-apply_ vs _need your decision_ —
-plus which **operating mode** applies: **suggest**, **adapt**, or **enforce**.
+Ark describes the project's shape in plain language and previews `ark.config.json` + agent/CI
+gates, projected coverage, exact file hashes, follow-up commands, and host guarantees. `--apply`
+writes that exact preview. After apply, `ark-check --plan` classifies fixes as _safe to auto-apply_
+or _need your decision_, while doctor reports **suggest**, **adapt**, or **enforce**.
 
 On Nest/Next/express/library projects, init also merges framework filename conventions into
 the layer globs so day-one **governed%** is real (not a false-green empty contract).
@@ -72,8 +75,9 @@ contract, `ark-check --plan` for the work, `/ark-fix` for targeted fixes, `ark-c
 
 ### 4. It stays clean
 
-The gates installed in step 1 keep enforcing the architecture from now on — in CI, and at write
-time if the MCP hook is wired. Verify:
+The gates installed in step 1 keep checking the architecture from now on. A supported, trusted
+Claude/Grok PreToolUse hook can block covered writes; MCP calls remain advisory, and a required CI
+status is the final cross-host merge boundary. Verify:
 
 ```bash
 npx ark-check --root . --config ark.config.json --strict-config

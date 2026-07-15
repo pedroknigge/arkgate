@@ -32,7 +32,7 @@ Add to the top of `src/domain/order.ts`:
 import { createInMemoryOrderRepository } from '../adapters/persistence/in-memory-order-repository.js';
 ```
 
-### 3. Run the CI gate (same stimulus as the write-gate hook)
+### 3. Run the CI gate (same architecture contract as the write-gate hook)
 
 ```bash
 npm run check

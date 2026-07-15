@@ -57,7 +57,8 @@ MCP `ark_recommend` and the `/ark-architect` skill.
 ### Terminal onboarding (Phase B)
 
 ```bash
-npx ark start --yes                             # preferred: shape → compact contract → active host → CI → plan
+npx ark start --yes                           # preferred read-only preview: shape → contract → host → CI
+npx ark start --yes --apply                   # apply exactly the previewed compact setup
 npx ark init --archetype crud-product --yes   # non-interactive: shape → preset → origin → gates
 npx ark init                                    # TTY wizard: pick application shape (1–8), not a framework
 npx ark-check --doctor                          # includes "New here?" when coverage is low or config is fresh
@@ -66,8 +67,8 @@ npx ark-check --watch                           # debounced re-check when govern
 ```
 
 **Day-zero origin (2.12+):** `ark init` freezes `.ark/reports/origin.*` before writing agent
-docs or CI templates. Compact `ark start` keeps first-run setup under five project files and
-25 KB;
+docs or CI templates. Compact `ark start` previews first and keeps the applied setup under five
+project files and 25 KB;
 run `ark-check --report ark-report.html` explicitly when you want to establish an origin/evolution
 baseline. Do not `--reset-origin` unless the user explicitly wants a new baseline.
 

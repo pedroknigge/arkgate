@@ -32,12 +32,14 @@ aliases `ark` / `ark-check` still work).
 | **Reference** | [Commands and artifacts](reference-commands.md) | `--recommend`, `--write-plan`, `ark-adoption-plan.json`, fix-class JSON |
 | **Explanation** | [Why application shape matters](explanation-application-shape.md) | Understand shapes vs frameworks and progressive phases |
 
-## Public demos (Phase D)
+## Public demos
 
 Reproducible scripts — no video required:
 
 - [Write-gate self-correction](../demos/01-write-gate-self-correction.md)
 - [Brownfield baseline adoption](../demos/02-brownfield-baseline-adoption.md)
+- [Co-pilot autopilot, end to end](../demos/03-copilot-autopilot.md)
+
 ## Gallery starters
 
 | Archetype | Directory |
@@ -46,6 +48,8 @@ Reproducible scripts — no video required:
 | `api-backend` | [examples/api-backend-starter](../../examples/api-backend-starter/) |
 | `worker-pipeline` | [examples/worker-pipeline-starter](../../examples/worker-pipeline-starter/) |
 | `multi-app-workspace` | [examples/multi-app-workspace-starter](../../examples/multi-app-workspace-starter/) |
+| `vertical-slice-product` | [examples/vertical-slice-starter](../../examples/vertical-slice-starter/) |
+| `ddd-bounded-contexts` | [examples/ddd-context-starter](../../examples/ddd-context-starter/) |
 
 Deep teaching example (runnable API + break exercises): [hexagonal-order-api](../../examples/hexagonal-order-api/).
 

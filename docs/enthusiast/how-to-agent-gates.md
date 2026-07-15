@@ -21,7 +21,7 @@ Installs:
 |------|-------------|
 | Claude Code | `.claude/settings.json`, `.claude/skills/` |
 | Cursor | `.cursor/mcp.json`, `.cursor/rules/ark.mdc`, `.cursor/commands/` |
-| Codex | `docs/ark-codex-config.toml` + home MCP/prompts |
+| Codex | `.codex/hooks.json`, repo `.agents/skills/`, `docs/ark-codex-config.toml`; MCP in `$CODEX_HOME/config.toml`, optional home skills via `--codex-home` |
 | **Grok Build** | `.grok/config.toml`, `.grok/hooks/`, `.grok/skills/` |
 
 See the [canonical host support matrix](../../README.md#host-enforcement-support) for the exact
@@ -42,10 +42,10 @@ npx arkgate-check --doctor
 npx arkgate-check --require-gates
 ```
 
-Doctor JSON (`--doctor --json`) includes **`writePath`**: the active host's supported profile,
-installed evidence, and whether PreToolUse is
-`repair` (machine-readable autoPatch on deny), `reject-only`, `mcp-only`, or
-`none` — plus `prepareWrite` / `autoPatch` booleans for leads.
+Doctor JSON (`--doctor --json`) includes **`writePath`** and its `enforcementLadder`: the active
+host's supported profile, installed and observed evidence, covered operations, bypassability, and
+CI required-status honesty. `mode` remains `repair`, `reject-only`, `mcp-only`, or `none`; MCP
+registration alone never upgrades an advisory path to hard enforcement.
 
 After upgrading the package, refresh skills so agents see the latest plan kinds:
 

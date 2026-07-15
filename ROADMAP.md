@@ -80,7 +80,10 @@ ArkGate is an architecture write firewall plus a coach, not a prompt convention.
 
 ## Audit baseline
 
-These are the starting facts this roadmap must change.
+These are historical starting facts captured before their associated phases. They intentionally
+retain the measurements and gaps that motivated the work; they are **not** the current product
+status. Use the ordered queue, closure evidence, and [Next implementation session](#next-implementation-session)
+for current truth.
 
 | Area | Baseline | Consequence |
 |---|---|---|
