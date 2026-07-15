@@ -5,7 +5,9 @@ On Claude Code and Grok Build, an installed and trusted PreToolUse hook can bloc
 before they land on disk. Cursor and OpenAI Codex use advisory MCP validation at write time; CI is
 their hard repository check. Codex 0.123+ dispatches hooks for its native `apply_patch` handler,
 but Code Mode hosts can execute deferred nested writes without that project hook event. See the
-[canonical host support matrix](../README.md#host-enforcement-support) before installing.
+[canonical host support matrix](../README.md#host-enforcement-support) before installing. The
+advisory-local / hard-CI split is a deliberate trade-off: local surfaces optimize feedback speed,
+while the required merge status is the only boundary every write path shares.
 
 Everything below uses the same `ark.config.json` as `arkgate-check` / `ark-check` (CI) — one
 contract shared by every surface. Generate it once:

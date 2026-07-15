@@ -3,7 +3,9 @@
 **ArkGate** (`arkgate`) — architecture co-pilot for AI TypeScript. This guide describes how AI
 agents and codegen tools safely interact with write hooks, advisory MCP tools, CI, and `/ark-*`
 skills. Guarantees differ by host; start with the
-[canonical host support matrix](../README.md#host-enforcement-support).
+[canonical host support matrix](../README.md#host-enforcement-support). The advisory-local /
+hard-CI split is a deliberate trade-off, not a gap: local hooks and MCP coach at write time,
+while the required merge status is the boundary every write path shares.
 
 CLI names: prefer **`arkgate` / `arkgate-check` / `arkgate-mcp`**; aliases `ark` / `ark-check` /
 `ark-mcp` still work for one major. TypeScript **5.x / 6.x / 7.x** as the project compiler:

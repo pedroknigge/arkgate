@@ -243,6 +243,21 @@ Brownfield phases: **Align** (honest contract) → **Stabilize** (real baseline)
 This table describes the supported profile **after its files are installed and the host loads/trusts them**. A hard local boundary covers only the listed hook operations; alternate tools, direct filesystem writes, and human edits still rely on CI. MCP validation is advisory because the agent must call it. The CI check blocks a merge only when the repository makes that status required. Repair payloads never write code silently: the host must re-inject the candidate and ArkGate revalidates it. Run `arkgate-check --doctor` for the evidence actually detected in the current repository.
 <!-- arkgate-host-support:end -->
 
+#### Why the hard guarantee lives at the merge gate
+
+The split above is a deliberate trade-off, not a gap. ArkGate validates at the earliest boundary
+each host offers and enforces at the earliest **non-bypassable** one. Hard hooks (Claude Code,
+Grok Build) deny the listed write operations at write time; advisory surfaces (MCP, rules) coach
+the agent while it works. But any local boundary can be routed around — another tool, a direct
+filesystem write, a human edit — so the only guarantee ArkGate claims for every path is the
+`arkgate-check --strict-merge` check, and only when the repository makes that status required.
+Local checks optimize feedback speed; the merge gate owns correctness.
+
+A useful consequence: the contract doubles as a pressure sensor. Recurring violations or baseline
+exceptions concentrated on one layer edge are evidence that the current design stopped fitting the
+code — a reason to reshape the contract deliberately (start with `/ark-explore`), never to weaken
+the gate.
+
 Detailed setup: [docs/ai-gates.md](docs/ai-gates.md).
 
 ---

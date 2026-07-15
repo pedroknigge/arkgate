@@ -98,6 +98,24 @@ describe('canonical public host support matrix', () => {
     );
   });
 
+  it('names the enforcement-boundary trade-off next to the canonical matrix (W03)', () => {
+    const readme = read('README.md');
+    const matrixEnd = readme.indexOf(MATRIX_END);
+    expect(matrixEnd).toBeGreaterThanOrEqual(0);
+    const afterMatrix = readme.slice(matrixEnd, matrixEnd + 3500);
+
+    // The rationale lives directly after the matrix and names the split as deliberate.
+    expect(afterMatrix).toContain('#### Why the hard guarantee lives at the merge gate');
+    expect(afterMatrix).toMatch(/deliberate trade-off, not a gap/i);
+    expect(afterMatrix).toMatch(/pressure sensor/i);
+    // It must not strengthen any guarantee: the merge gate stays conditional on a required status.
+    expect(afterMatrix).toMatch(/required/i);
+
+    // Detailed host docs point to the rationale, not only to the table.
+    expect(read('docs/ai-gates.md')).toMatch(/deliberate trade-off/i);
+    expect(read('docs/agent-guide.md')).toMatch(/deliberate trade-off/i);
+  });
+
   it('marks every promoted runtime surface experimental', () => {
     for (const file of [
       'README.md',

@@ -255,18 +255,21 @@ mandatory inlining, function/file-length rules, class bans, broad codemods, runt
 LLM-derived verdicts. Narrative scope and kill-switches:
 [understandable-execution](docs/plans/understandable-execution/README.md).
 
-### Phase W — contract health (candidate backlog, parked)
+### Phase W — contract health
 
 Origin: 2026-07-15 external field analysis of a governed production Next.js project (10 layers,
 ~90 rules, 228 files, 0 violations). The analysis validated enforcement but surfaced three gaps
-that live in the contract itself, not in the governed code. Items stay `parked` until Phase U
-ships; activating one requires moving it to `todo` deliberately after `U07`.
+that live in the contract itself, not in the governed code. **Owner decision (2026-07-15):**
+Phase W runs before Phase U — it has no technical dependency on U (it reads the contract and
+existing coverage data, not code effects), it is small and advisory-only, and the field feedback
+is fresh. Order is `W03 → W01 → W02`. Timebox: if `W01` grows beyond M, park it where it stands
+and start `U01`. Phase U remains next after W ships.
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 48 | `W01` | `parked` | M | `U07` | Doctor reports deterministic contract smells (meta-lint of `ark.config.json` itself) |
-| 49 | `W02` | `parked` | S | `W01` | Governance-weight evidence is reported descriptively without becoming a score or gate |
-| 50 | `W03` | `parked` | S | `U07` | Positioning docs name the advisory-local / hard-CI boundary as a deliberate trade-off |
+| 48 | `W03` | `done` | S | Phase T shipped | Positioning docs name the advisory-local / hard-CI boundary as a deliberate trade-off |
+| 49 | `W01` | `todo` | M | `W03` | Doctor reports deterministic contract smells (meta-lint of `ark.config.json` itself) |
+| 50 | `W02` | `todo` | S | `W01` | Governance-weight evidence is reported descriptively without becoming a score or gate |
 
 ### Next-round package budget guardrail
 
@@ -400,7 +403,7 @@ the phase plan is marked Shipped only after release evidence exists.
 
 ---
 
-## Phase W — contract health (candidate detail)
+## Phase W — contract health (detail)
 
 ArkGate validates code against the contract; nothing yet validates the contract against known
 contract anti-patterns or reports its governance cost. All three items are advisory-only surfaces:
@@ -409,8 +412,8 @@ they never change a pass/fail verdict, never auto-apply, and respect every exist
 
 ### W01 — Deterministic contract smells (meta-lint of the contract)
 
-- **Status:** `parked`
-- **Depends on:** `U07`
+- **Status:** `todo`
+- **Depends on:** `W03`
 - **Likely files:** `bin/lib/design-smells.mjs` (new contract-smell family), `bin/lib/doctor-plan.mjs`,
   `docs/agent-guide.md`, fixture matrix, focused static-check tests
 
@@ -430,7 +433,7 @@ field decided in the item's opening ADR note.
 
 ### W02 — Governance-weight evidence (descriptive, never a score)
 
-- **Status:** `parked`
+- **Status:** `todo`
 - **Depends on:** `W01`
 - **Likely files:** `bin/lib/doctor-plan.mjs` or coverage reporting, `docs/agent-guide.md`,
   `docs/brownfield-adoption.md`, focused tests
@@ -449,8 +452,8 @@ and a heavy contract; absence of the surface changes no verdict.
 
 ### W03 — Name the enforcement-boundary trade-off in positioning docs
 
-- **Status:** `parked`
-- **Depends on:** `U07`
+- **Status:** `done`
+- **Depends on:** Phase T shipped
 - **Likely files:** `README.md`, `docs/ai-gates.md`, `docs/agent-guide.md`, host-support-matrix
   wording, docs regression snapshot
 
@@ -464,6 +467,15 @@ field analysis reached exactly this reading unaided; the positioning should stat
 **Acceptance:** README/positioning contain the trade-off rationale next to the existing support
 matrix without strengthening any guarantee claim; the S06 docs regression still passes; no code,
 schema, or template behavior changes.
+
+**Local evidence (2026-07-15):** README gains "Why the hard guarantee lives at the merge gate"
+directly under the canonical matrix; `docs/ai-gates.md` and `docs/agent-guide.md` name the
+advisory-local / hard-CI split as a deliberate trade-off next to their matrix links. A new W03
+case in `hostSupportMatrixDocs.test.ts` was committed red first and pins the heading, the
+"deliberate trade-off, not a gap" and "pressure sensor" wording, and the required-status
+conditionality; the existing no-universal-claims guards still pass. Typecheck, the full
+static-check suite (71 files / 744 tests), and strict `check:architecture` are green. Docs +
+test only; no code, schema, or template behavior changed.
 
 ---
 
@@ -1525,8 +1537,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: none — Phase U is planned; no item is active until U01 is deliberately moved to `doing`
-Next action: review U01 capability/config/corpus decisions, then start only U01
+Item: W03 — enforcement-boundary trade-off in positioning docs (Phase W runs before Phase U by owner decision)
+Next action: finish W03, then W01, then W02; Phase U (starting at U01) resumes after W ships
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
 Released baseline: npm arkgate@3.1.0; Phase T shipped from PR #64
 ```
