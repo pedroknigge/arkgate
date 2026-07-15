@@ -44,23 +44,14 @@ arkgate-check --doctor [--json]
 arkgate-check --coverage [--json]
 arkgate-check --plan [--json]          # mechanical-safe vs judgment vs deferred
 arkgate-check --strict-config
+arkgate-check --strict-merge
+arkgate preflight --changes changes.json [--change-map map.json] --json
 arkgate-check --report out.html --beginner
 arkgate-check --watch
 ```
 
-## Contract transitions and complete changes (3.1+)
-
-```bash
-arkgate-check --strict-merge --policy-base-ref origin/main
-arkgate preflight --changes changes.json --json
-arkgate preflight --changes changes.json --change-map map.json --json
-```
-
-Strict merge blocks unacknowledged weaker or judgment-required policy changes. Preflight reads one
-complete create/update/delete source batch without writing. An optional schema `1.0` map reports
-structural convergence (`satisfied`, `missing`, `contradictory`, `unplanned`), never behavioral
-completion. MCP equivalents: `ark_policy_delta`, `ark_prepare_change`. See
-[configuration](../configuration.md) for hash-bound acknowledgements.
+In 3.1+, strict merge protects policy changes; preflight checks one complete batch without writing
+(`--change-map` adds structural convergence). MCP: `ark_policy_delta`, `ark_prepare_change`.
 
 ## Plan classes (`--plan --json`)
 

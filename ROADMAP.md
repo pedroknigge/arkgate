@@ -241,9 +241,10 @@ here before implementation. Retained evidence:
 
 ### Next-round package budget guardrail
 
-Before any post-T item moves to `doing`, recalibrate the gate-package budget from a clean packed
-candidate. The current `427 KB` packed ceiling is an internal release guardrail, not an npm
-requirement, and its remaining `221` bytes must not become an accidental product constraint.
+**Recalibrated 2026-07-15:** the gate-package ceilings now retain at least 10% headroom over the
+clean Linux documentation-sync candidate: 427,528 packed bytes, 1,445,621 unpacked bytes, and 128
+files. The resulting limits (471,000 / 1,591,000 / 141) remain internal release guardrails, not npm
+requirements.
 
 - Keep `250 KB` packed / `1 MB` unpacked as the long-term optimization target, not as a reason to
   remove useful deterministic enforcement or architecture/organization coaching surfaces such as
@@ -1321,7 +1322,7 @@ folded into Phase C implementation work.
 
 ```text
 Item: none — Phase T implementation is complete; the roadmap has no active `doing` item
-Next action: recalibrate the package budget under the next-round guardrail, then define and review a bounded roadmap item
+Next action: define and review a bounded roadmap item before implementation
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
 Released baseline: npm arkgate@3.1.0; Phase T shipped from PR #64
 ```
