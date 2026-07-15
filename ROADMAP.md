@@ -270,7 +270,7 @@ file; for the U/W pair, the execution order is the one stated here (W before U).
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 47 | `W03` | `done` | S | Phase T shipped | Positioning docs name the advisory-local / hard-CI boundary as a deliberate trade-off |
-| 48 | `W01` | `todo` | M | `W03` | Doctor reports deterministic contract smells (meta-lint of `ark.config.json` itself) |
+| 48 | `W01` | `done` | M | `W03` | Doctor reports deterministic contract smells (meta-lint of `ark.config.json` itself) |
 | 49 | `W02` | `todo` | S | `W01` | Governance-weight evidence is reported descriptively without becoming a score or gate |
 
 ### Next-round package budget guardrail
@@ -414,7 +414,7 @@ they never change a pass/fail verdict, never auto-apply, and respect every exist
 
 ### W01 — Deterministic contract smells (meta-lint of the contract)
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `W03`
 - **Likely files:** `bin/lib/design-smells.mjs` (new contract-smell family), `bin/lib/doctor-plan.mjs`,
   `docs/agent-guide.md`, fixture matrix, focused static-check tests
@@ -432,6 +432,25 @@ bidirectional edge fixture must stay clean when explicitly acknowledged); ids fo
 pattern with plain-language `outcome`; advisory severity only — no smell blocks a merge gate or
 downgrades ENFORCE; no new skill name, preset, or config key beyond an optional acknowledgment
 field decided in the item's opening ADR note.
+
+**ADR note (2026-07-15):** acknowledgments live in an optional sidecar
+`.ark/contract-smell-acks.json` (`{ acks: [{ id, edge, reason }] }`), following the Q03
+golden-pattern precedent — the versioned `ark.config.json` contract and its schema are untouched,
+so no policy-delta or migration surface changes. A malformed sidecar is reported
+(`ackFile.invalid`) and suppresses nothing.
+
+**Local evidence (2026-07-15):** `bin/lib/contract-smells.mjs` ships four stable ids
+(`contract-bidirectional-allow`, `contract-peripheral-depends-core`,
+`contract-lateral-adapter-allow`, `contract-dead-rule`) with Q02-style outcomes; doctor JSON gains
+`doctor.contractHealth` and a human "Contract health (advisory)" section; nothing feeds
+`designFitness`, `patternBets`, `postGreenPath`, or any verdict. Red-first
+`w01ContractSmells.test.ts` passes 12/12 with positive/negative fixtures per id, order-insensitive
+ack suppression, malformed-ack honesty, a self-hosting zero-smell guard on this repo's own
+contract, and a doctor-JSON advisory-isolation case. The full confidence gate passes (1124 tests;
+mutation aggregate 92.74%, all groups ≥90%), module budgets pass without raising any budget
+(doctor-plan footprint kept minimal via `computeContractHealth` / `printContractHealthSection`),
+typecheck, JS syntax, layer-match, cli-pure, package-files, build, and strict `check:architecture`
+are green. Docs: `docs/package-surface.md` stable-surface row + `docs/agent-guide.md` section.
 
 ### W02 — Governance-weight evidence (descriptive, never a score)
 
@@ -1539,8 +1558,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: W01 — deterministic contract smells (Phase W runs before Phase U by owner decision; W03 is done)
-Next action: implement W01, then W02; Phase U (starting at U01) resumes after W ships
+Item: W02 — governance-weight descriptive evidence (Phase W runs before Phase U; W03 and W01 are done)
+Next action: implement W02, then close Phase W; Phase U (starting at U01) resumes after W ships
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
 Released baseline: npm arkgate@3.1.0; Phase T shipped from PR #64
 ```

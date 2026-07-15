@@ -40,6 +40,7 @@ import {
 } from './post-green-path.mjs';
 import { loadGoldenPattern, summarizeGoldenPattern } from './golden-pattern.mjs';
 import { summarizePilotLoop } from './pilot-loop.mjs';
+import { computeContractHealth, printContractHealthSection } from './contract-smells.mjs';
 
 const color = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
@@ -424,6 +425,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     patternBets: patternBetsForLoop,
     designSmells,
   });
+  // W01 — contract meta-lint. Advisory only; never feeds designWeak/patternBets or the verdict.
+  const { smells: contractSmells, health: contractHealth } = computeContractHealth(root, config, cov);
 
   if (asJson) {
     console.log(
@@ -460,6 +463,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             goldenPattern,
             // Q04: one-pilot loop (extraction card → re-doctor).
             pilotLoop,
+            // W01: contract-health meta-lint (advisory; verdict unchanged).
+            contractHealth,
             governed: cov.governed,
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
@@ -640,6 +645,9 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         'Fix or remove it — absence is fine; a bad file is not guidance.'
     );
   }
+
+  // W01 — contract health (advisory; verdict unchanged).
+  printContractHealthSection(contractSmells, contractHealth, { line, warn, color });
 
   console.log('');
   console.log(color.bold('Coverage'));

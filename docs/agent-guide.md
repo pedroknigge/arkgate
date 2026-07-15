@@ -119,6 +119,15 @@ Smell **ids** (stable JSON) plus **outcome** lines (plain language, Q02) on each
 | `mixed-pattern-cluster` | Several layout styles — pick one golden pattern + pilot |
 | `soft-contract` | Layers without deny rules — add real walls, not soft green |
 
+**Contract health (W01):** doctor JSON also carries `contractHealth` — a meta-lint of the
+contract itself (never of the code): `contract-bidirectional-allow` (both directions explicitly
+allowed between two layers), `contract-peripheral-depends-core` (audit/observability layer allowed
+into orchestration/persistence), `contract-lateral-adapter-allow` (adapter layer allowed into a
+sibling adapter layer), `contract-dead-rule` (rule references an empty or unknown layer). Advisory
+only: it never changes the verdict, `designFitness`, or `patternBets`. A deliberate edge is
+acknowledged in `.ark/contract-smell-acks.json` (`{ acks: [{ id, edge, reason }] }`); a malformed
+sidecar sets `contractHealth.ackFile.invalid` and suppresses nothing.
+
 Each smell also has `evidence[]` paths and `message` (technical detail). Plan **B** bets include
 `pilot`, `successSignal`, `killSwitch`, and **`neverMechanicalSafe: true`** — loop/autoPatch must
 ignore them. For judgment I/O moves use **extraction cards**
