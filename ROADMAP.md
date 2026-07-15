@@ -35,6 +35,10 @@ ArkGate is an architecture write firewall plus a coach, not a prompt convention.
   same verdict and evidence without an LLM deciding pass/fail.
 - Every rejection teaches: concise human cause and next action for a casual user, plus stable JSON,
   hashes, and exact evidence for an experienced engineer.
+- After structural validity, help improve architecture and code organization: suggest where new
+  code belongs, surface design smells, recommend a consistent pattern, and propose one small
+  extraction pilot at a time. These evidence-backed judgment aids never masquerade as deterministic
+  pass/fail enforcement.
 
 ### Product boundary
 
@@ -76,7 +80,10 @@ ArkGate is an architecture write firewall plus a coach, not a prompt convention.
 
 ## Audit baseline
 
-These are the starting facts this roadmap must change.
+These are historical starting facts captured before their associated phases. They intentionally
+retain the measurements and gaps that motivated the work; they are **not** the current product
+status. Use the ordered queue, closure evidence, and [Next implementation session](#next-implementation-session)
+for current truth.
 
 | Area | Baseline | Consequence |
 |---|---|---|
@@ -234,12 +241,14 @@ here before implementation. Retained evidence:
 
 ### Next-round package budget guardrail
 
-Before any post-T item moves to `doing`, recalibrate the gate-package budget from a clean packed
-candidate. The current `427 KB` packed ceiling is an internal release guardrail, not an npm
-requirement, and its remaining `221` bytes must not become an accidental product constraint.
+**Recalibrated 2026-07-15:** the gate-package ceilings now retain at least 10% headroom over the
+clean Linux documentation-sync candidate: 427,528 packed bytes, 1,445,621 unpacked bytes, and 128
+files. The resulting limits (471,000 / 1,591,000 / 141) remain internal release guardrails, not npm
+requirements.
 
 - Keep `250 KB` packed / `1 MB` unpacked as the long-term optimization target, not as a reason to
-  remove useful CLI, MCP, schema, or coaching surfaces.
+  remove useful deterministic enforcement or architecture/organization coaching surfaces such as
+  CLI, MCP, schemas, placement guidance, design-smell diagnostics, or extraction pilots.
 - Set the hard packed, unpacked, and file-count ceilings once for the roadmap cycle with at least
   10% headroom over the measured clean candidate; do not ratchet them upward item by item.
 - Any item projected to consume more than 25% of that cycle's headroom must record the user value,
@@ -1313,7 +1322,7 @@ folded into Phase C implementation work.
 
 ```text
 Item: none — Phase T implementation is complete; the roadmap has no active `doing` item
-Next action: recalibrate the package budget under the next-round guardrail, then define and review a bounded roadmap item
+Next action: define and review a bounded roadmap item before implementation
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
 Released baseline: npm arkgate@3.1.0; Phase T shipped from PR #64
 ```

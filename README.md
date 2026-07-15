@@ -16,8 +16,8 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 3.0** passed its independent beta-exit audit. The npm badge reports the version
-> currently available in the registry.
+> **ArkGate 3.1.0** is current stable: policy-transition checks, atomic multi-file preflight,
+> and optional structural convergence. [Release notes](docs/releases/3.1.0.md).
 
 ---
 
@@ -156,7 +156,7 @@ Aliases `ark` / `ark-check` / `ark-mcp` still work. **npm / pnpm / yarn**. No in
 <details>
 <summary>What <code>/ark-autopilot</code> does under the hood (optional detail)</summary>
 
-1. Setup if needed (`ark start` — compact contract + active-host router + CI gate; create an HTML/origin report explicitly when you need one).
+1. Setup if needed (`ark start` previews; review, then `ark start --apply`).
 2. **Explore pass** (decision-grade map of *this* product; field path when demos exist).
 3. **Dual plan:** **A** remediation from `--plan` (mechanical-safe only by default); **B** pattern/evolution bets (never auto-applied as mechanical-safe). Empty plan ≠ “healthy” without explore/B.
 4. Apply A → re-check; judgment only when you ask for full apply.
@@ -264,7 +264,9 @@ ark.config.json
   finding ids. See the [configuration and editor guide](docs/configuration.md).
 - **Frameworks:** Nest / Next / express / library layouts get sensible globs on init so day-one coverage is real.
 - **Brownfield:** baseline ratchet, refuse to freeze a wrong contract, `/ark-adopt` for mature trees.
-- **Agents:** `ark start` asks for (or detects) one active host and writes one compact router, not copied skill packs, in at most five project files and 25 KB. Use `ark-check --install-agent-gates --skills-only --tools <host>` later when you explicitly want the full `/ark-*` skill set. Reports are opt-in with `ark-check --report`.
+- **Agents:** `ark start` previews one compact active-host router (≤5 files / 25 KB); `--apply`
+  writes those exact bytes. Full skills remain explicit via `--install-agent-gates --skills-only`;
+  reports remain opt-in via `ark-check --report`.
 - **Write protocol (2.10 / Track W):** mechanical-safe **autoPatch** on the write gate (`import type`); MCP **`ark_prepare_write`** (place + validate + patch + judgmentBrief); opt-in hook **`--hook-repair`** (`ARK_REPAIR_JSON`); doctor **`writePath`** (repair vs reject-only); loop-cost eval (`npm run eval:loop-cost`). Port-proof inject is **judgment** (arity change), not silent auto-apply.
 - **Enforcement ladder (Phase T):** doctor JSON exposes `writePath.enforcementLadder` with separate
   `supported`, `installed`, `active`, `bypassable`, evidence, operation coverage, and required-status
@@ -274,11 +276,8 @@ ark.config.json
   casts, InMemory runtime defaults, and disabled peer isolation. `--strict` is a compatibility
   alias. Neither requires an editor hook; use `--require-write-hook claude|grok` when that local
   guarantee is part of the check.
-- **Trust / coverage (3.0 release baseline):** package unit-test floors on the broad product surface
-  (statements/lines **≥80%**, branches/functions **≥85%**; enforcement-critical modules **≥95%**
-  branch). The V05 beta-exit audit passed with 12 pinned public adoptions, 97% median governed
-  coverage, and zero P0/P1 findings. Stable publication remains the signed-tag, GitHub Release,
-  and provenance-backed npm workflow documented in [the 3.0.0 release notes](docs/releases/3.0.0.md).
+- **Release evidence:** independent 3.0 audit baseline plus signed-tag, GitHub Release, and
+  provenance-backed npm publication; see the [3.1.0 release notes](docs/releases/3.1.0.md).
 - **TypeScript:** project compilers 5.x / 6.x / 7.x — gate falls back to a nested JS-API TypeScript when TS 7’s main export is version-only ([docs/typescript-support.md](docs/typescript-support.md)).
 
 ### Why not only ESLint / dependency-cruiser / Nx?
@@ -357,16 +356,17 @@ for real systems. Details: [production-hardening.md](https://github.com/pedrokni
 | Audience | Link |
 |----------|------|
 | New builders (plain language) | [docs/enthusiast/](docs/enthusiast/README.md) |
-| **Package surface (stable vs experimental)** | [docs/package-surface.md](docs/package-surface.md) |
-| Wire Claude / Cursor / Codex / Grok + **ESLint (CI-parity)** | [docs/ai-gates.md](docs/ai-gates.md) |
+| **Package surface and configuration** | [package policy](docs/package-surface.md) · [contract](docs/configuration.md) |
+| Wire agents + **ESLint (CI-parity)** | [docs/ai-gates.md](docs/ai-gates.md) · [threat model](docs/threat-model.md) |
 | **TypeScript 5 / 6 / 7 support** | [docs/typescript-support.md](docs/typescript-support.md) |
 | Migrate from `ark-runtime-kernel` | [docs/migrate-from-ark-runtime-kernel.md](https://github.com/pedroknigge/arkgate/blob/main/docs/migrate-from-ark-runtime-kernel.md) |
 | Messy existing repo | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Agent / MCP tools | [docs/agent-guide.md](docs/agent-guide.md) |
+| Security reporting | [SECURITY.md](SECURITY.md) |
 | Demos | [docs/demos/](docs/demos/) |
 | Examples | [examples/](examples/README.md) |
 | Latest release (3.1.0) | [release notes](docs/releases/3.1.0.md) · [3.0.0 baseline](docs/releases/3.0.0.md) |
-| Roadmap | [ROADMAP.md](ROADMAP.md) · [Changelog](CHANGELOG.md) |
+| Roadmap and decisions | [ROADMAP.md](ROADMAP.md) · [ADRs](docs/adr/) · [Changelog](CHANGELOG.md) |
 
 ---
 

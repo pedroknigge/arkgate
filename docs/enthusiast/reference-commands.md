@@ -37,15 +37,21 @@ Pack metadata: `templates/policy-packs/enthusiast-*.json`.
 ## Init and verify
 
 ```bash
-arkgate start --yes                    # guided setup + plan
+arkgate start --yes                    # read-only setup preview with non-interactive defaults
+arkgate start --yes --apply            # apply exactly that preview
 ark init --archetype <id> --yes        # alias path
 arkgate-check --doctor [--json]
 arkgate-check --coverage [--json]
 arkgate-check --plan [--json]          # mechanical-safe vs judgment vs deferred
 arkgate-check --strict-config
+arkgate-check --strict-merge
+arkgate preflight --changes changes.json [--change-map map.json] --json
 arkgate-check --report out.html --beginner
 arkgate-check --watch
 ```
+
+In 3.1+, strict merge protects policy changes; preflight checks one complete batch without writing
+(`--change-map` adds structural convergence). MCP: `ark_policy_delta`, `ark_prepare_change`.
 
 ## Plan classes (`--plan --json`)
 

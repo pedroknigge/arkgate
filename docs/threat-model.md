@@ -1,4 +1,4 @@
-# Threat model — ArkGate (Q9)
+# Threat model — ArkGate
 
 **Scope:** architecture write/CI gates, agent hooks/MCP, and the experimental optional runtime.
 **Not in scope:** full org identity platforms, browser XSS in consumer apps, or npm registry
@@ -54,7 +54,8 @@ npm publish <-- signed tag ---  GitHub Release + provenance
 ## Residual risk (accepted)
 
 - Branch protection is **external GitHub state** — doctor reports honestly when unavailable.  
-- Full external adoption matrix (Q4) and independent ≥95 audit (Q10) are separate exit gates.
+- External adoption and independent-audit evidence are release snapshots bound to pinned commits;
+  they do not prove every repository layout or future host version.
 - Live multi-agent loop-cost remains optional (`ARK_EVAL_LOOP_LIVE`).
 
 ## Verification hooks

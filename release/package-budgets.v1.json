@@ -3,10 +3,10 @@
   "packages": {
     "gate": {
       "path": ".",
-      "maxPackedBytes": 427000,
-      "maxUnpackedBytes": 1500000,
-      "maxFiles": 132,
-      "exception": "The 250 KB/1 MB target is not yet feasible while shipping the documented standalone CLI/MCP tooling plus Phase Q consumer surfaces, atomic preflight, and the change-map JSON Schema. T05 raises the packed ceiling by 6 KB (421 KB to 427 KB) for complete-patch hook preflight, the explicit enforcement ladder, deterministic diagnostic next actions, and the 1.1 compatibility contract; the Node 20/npm 10 candidate is 426,779 bytes. Legacy migration/demo and experimental-runtime hardening guides remain repository-hosted, source maps were removed in V04, and this exception must be reconsidered before ArkGate 4."
+      "maxPackedBytes": 471000,
+      "maxUnpackedBytes": 1591000,
+      "maxFiles": 141,
+      "exception": "The 250 KB/1 MB target is not yet feasible while shipping the documented standalone CLI/MCP tooling, deterministic change-integrity surfaces, schemas, and consumer guidance. The post-3.1 cycle recalibrates once from the measured Linux candidate (427,528 packed bytes, 1,445,621 unpacked bytes, 128 files) with at least 10% headroom: 471,000 packed bytes, 1,591,000 unpacked bytes, and 141 files. Legacy migration/demo and experimental-runtime hardening guides remain repository-hosted, source maps were removed in V04, and this exception must be reconsidered before ArkGate 4."
     },
     "runtime": {
       "path": "packages/runtime",

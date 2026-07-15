@@ -12,27 +12,20 @@ contract shared by every surface. Generate it once:
 
 ```bash
 npx arkgate-check --init
-# aliases: ark-check, ark init, arkgate start
+# aliases: ark-check --init, ark init
 ```
 
 For guided setup with prompts, use:
 
 ```bash
-npx arkgate start
+npx arkgate start          # read-only preview
+npx arkgate start --apply  # apply exactly the previewed setup
 # or: npx ark init
 ```
 
-`ark start` asks for the active agent on a TTY (or detects it otherwise) and applies a compact
-router setup: at most five project files and no `package.json` change unless you pass `--install`.
-Use `--tools <host>` to select the host explicitly. The broader command below remains the explicit
-way to install the full per-host `/ark-*` skill inventory.
-
-For non-interactive defaults, use:
-
-```bash
-npx arkgate start --yes
-# or: npx ark init --yes
-```
+`ark start` detects one active host and previews a compact setup (≤5 files / 25 KB). Nothing is
+written until `--apply`, which rejects stale inputs. Select a host with `--tools <host>`; use the
+broader installer below only for the full `/ark-*` inventory.
 
 You can also generate only the starter gate files for common agent runtimes and CI:
 

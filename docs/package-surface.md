@@ -91,5 +91,6 @@ production deployment would need to satisfy; it is not a readiness certification
 
 ## Release notes (maintainers)
 
-Ship notes for a version live under [releases/](./releases/) (e.g. [2.12.0.md](./releases/2.12.0.md)).
+Ship notes for a version live under [releases/](./releases/) (latest:
+[3.1.0.md](./releases/3.1.0.md)).
 Publish path: signed annotated tag → GitHub Release → `publish-npm.yml` (see [CONTRIBUTING.md](../CONTRIBUTING.md)).

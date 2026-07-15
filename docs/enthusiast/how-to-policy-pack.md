@@ -15,6 +15,9 @@ Available packs:
 - `enthusiast-layered`
 - `enthusiast-feature-sliced`
 - `enthusiast-monorepo`
+- `enthusiast-ui-surface`
+- `enthusiast-vertical-slice`
+- `enthusiast-ddd-bounded-contexts`
 
 ## Apply
 

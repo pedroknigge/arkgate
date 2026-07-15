@@ -16,6 +16,8 @@ Authoritative source: `templates/architecture-playbook.json` (shipped in the npm
 | `integration-bridge` | System glue | `hexagonal` |
 | `multi-app-workspace` | Monorepo | `monorepo` |
 | `prototype-spike` | Quick experiment | `layered` |
+| `vertical-slice-product` | Feature-first product | `vertical-slice` |
+| `ddd-bounded-contexts` | Multiple business domains | `ddd-bounded-contexts` |
 
 ## Named presets
 
@@ -25,6 +27,9 @@ Authoritative source: `templates/architecture-playbook.json` (shipped in the npm
 | `layered` | `enthusiast-layered` |
 | `feature-sliced` | `enthusiast-feature-sliced` |
 | `monorepo` | `enthusiast-monorepo` |
+| `ui-surface` | `enthusiast-ui-surface` |
+| `vertical-slice` | `enthusiast-vertical-slice` |
+| `ddd-bounded-contexts` | `enthusiast-ddd-bounded-contexts` |
 
 ## Gallery mapping
 
@@ -34,3 +39,5 @@ Authoritative source: `templates/architecture-playbook.json` (shipped in the npm
 | `api-backend` | `examples/api-backend-starter/` |
 | `worker-pipeline` | `examples/worker-pipeline-starter/` |
 | `multi-app-workspace` | `examples/multi-app-workspace-starter/` |
+| `vertical-slice-product` | `examples/vertical-slice-starter/` |
+| `ddd-bounded-contexts` | `examples/ddd-context-starter/` |
