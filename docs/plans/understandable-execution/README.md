@@ -5,7 +5,7 @@
 > Implementation remains governed by `ROADMAP.md`; this plan records the epic rationale and
 > boundaries.
 
-**Status:** Implementation complete (U01–U07) — Shipped after the 3.4.0 release evidence<br>
+**Status:** Shipped in `arkgate@3.4.0` (2026-07-16)<br>
 **Slug:** `understandable-execution`<br>
 **Kind:** epic / redesign<br>
 **Owners:** product (Pedro) + library maintainers<br>
