@@ -244,17 +244,23 @@ Phase T shipped in **`arkgate@3.1.0`**. Retained evidence:
 |---:|---|---|---:|---|---|
 | 40 | `U01` | `todo` | S | Phase T shipped | ADR locks architecture-vs-style boundary, capability vocabulary, compatibility, and fixed corpus |
 | 41 | `U02` | `todo` | M | `U01` | Separate self-hosted cohesion pilots clear the named canonical god-module evidence without public drift |
-| 42 | `U03` | `todo` | L | `U01`, `U02` | Canonical analysis IR reports typed effect capabilities with stable evidence and generated-bundle parity |
+| 42 | `U03` | `todo` | L | `U01`, `U02` (soft) | Canonical analysis IR reports typed effect capabilities with stable evidence and generated-bundle parity |
 | 43 | `U04` | `todo` | L | `U03` | Opted-in layer capability walls block complete invalid patches consistently across every adapter |
 | 44 | `U05` | `todo` | M | `U03` | Ambient mutable-state sensor remains advisory until blocker-grade precision is proven |
 | 45 | `U06` | `todo` | M | `U04`, `U05` | Dual-depth remediation and measured end-to-end pre-tool/MCP budgets ship without style scoring |
 | 46 | `U07` | `todo` | S | `U01`–`U06` | Adoption, docs, package, compatibility, and release evidence close the phase |
 
-**Next (after Phase W ships — see the owner decision below):** review U01's open decisions, then
-move only U01 to `doing`. No U-item authorizes
-mandatory inlining, function/file-length rules, class bans, broad codemods, runtime work, or
-LLM-derived verdicts. Narrative scope and kill-switches:
-[understandable-execution](docs/plans/understandable-execution/README.md).
+**Next:** review U01's open decisions (now eight — including T01 policy-delta semantics for the
+capability surface, the surface-ownership map, and W02 governance-weight reconciliation), then
+move only U01 to `doing`. No U-item authorizes mandatory inlining, function/file-length rules,
+class bans, broad codemods, runtime work, or LLM-derived verdicts.
+
+**Release slicing (owner decision 2026-07-15):** Phase U ships as two stable minors — `U01–U03`
+first (advisory capability evidence in the IR, no enforcement; corpus matures in the field), then
+`U04–U07` (opted-in walls, state sensor, budgets, release evidence) — mirroring the Phase W
+advisory-first pattern. `U02` is a hygiene dependency for `U03`, not a logic one: if a pilot's
+kill-switch fires, record it as that pilot's evidence and start `U03` anyway. Narrative scope and
+kill-switches: [understandable-execution](docs/plans/understandable-execution/README.md).
 
 ### Phase W — contract health
 
@@ -315,7 +321,10 @@ the first implementation item starts.
 for blocker-grade precision. Explicitly exclude mandatory inlining, LOC/function-length rules,
 class bans, generic `const` lint, style scoring, and from-scratch rewrites.
 
-**Acceptance:** The ADR answers all five plan open decisions or records a bounded deferment; every
+**Acceptance:** The ADR answers all eight plan open decisions or records a bounded deferment —
+including the T01 policy-delta classification of introducing/migrating capability policy, the
+surface-ownership map (layer rules vs design smells vs W01 contract smells vs capability walls),
+and the W02 governance-weight treatment of capability policies; every
 proposed blocking capability has deterministic positive and negative fixtures; no production
 behavior or public schema changes in this item.
 
@@ -332,12 +341,14 @@ flow and stop if extraction increases coupling or call-site hopping.
 
 **Acceptance:** Exact public API, schema, hashes, diagnostics, generated bundle, adapter parity,
 performance, and package budgets remain green; self-doctor no longer reports either current file as
-a god-module candidate; no module budget is raised to land the pilots.
+a god-module candidate; no module budget is raised to land the pilots. A fired kill-switch is a
+valid close for a pilot (recorded as evidence) and does not block `U03` — the dependency is
+hygiene, not logic.
 
 ### U03 — Add typed effect capabilities to the canonical analysis IR
 
 - **Status:** `todo`
-- **Depends on:** `U01`, `U02`
+- **Depends on:** `U01`; `U02` soft (a recorded kill-switch also satisfies it)
 - **Likely files:** Domain analysis vocabulary, Kernel semantic analysis, generated CLI bundle,
   JSON Schema/public exports if authorized by U01, parity/property/fuzz tests
 
