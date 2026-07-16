@@ -1148,6 +1148,7 @@ async function main() {
       configPath: path.isAbsolute(args.config) ? args.config : path.join(root, args.config),
       configMissing: !fs.existsSync(path.isAbsolute(args.config) ? args.config : path.join(root, args.config)),
       safety,
+      ts,
     });
     return;
   }

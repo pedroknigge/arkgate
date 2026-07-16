@@ -143,6 +143,11 @@ Policy-delta classifies the ambient surface on the lowered capability space (equ
 migration = neutral; lowered loss = weakening). Vocabulary and lowering:
 `src/domain/capabilities.ts` / ADR 0009.
 
+**Ambient state (U05, advisory + opt-in):** `doctor.ambientState` flags module-scope `let`/`var`
+in `pure: true` layers only. Acknowledge deliberate registries/caches in
+`.ark/ambient-state-acks.json` (`{ acks: [{ file, name, reason }] }`) or move the state behind a
+port. Advisory only — never blocks, never feeds `designFitness`; no strict mode exists.
+
 **Governance weight (W02):** `contractHealth.governanceWeight` reports raw facts (layers, rules,
 governed files, files/layer, rules/layer) plus a fixed band (`heavy` / `typical` / `light` /
 `unknown`) with fixed wording. It is explicitly `notAScore` — never a gate input. Read `heavy` as

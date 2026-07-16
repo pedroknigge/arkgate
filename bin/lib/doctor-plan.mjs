@@ -40,7 +40,7 @@ import {
 } from './post-green-path.mjs';
 import { loadGoldenPattern, summarizeGoldenPattern } from './golden-pattern.mjs';
 import { summarizePilotLoop } from './pilot-loop.mjs';
-import { computeContractHealth, printContractHealthSection } from './contract-smells.mjs';
+import { computeDoctorAdvisories, printDoctorAdvisories } from './doctor-advisories.mjs';
 
 const color = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
@@ -425,8 +425,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     patternBets: patternBetsForLoop,
     designSmells,
   });
-  // W01 — contract meta-lint over the rules in force. Advisory; never feeds any verdict.
-  const contractHealth = computeContractHealth(root, config, cov, rules);
+  const { contractHealth, ambientState } = computeDoctorAdvisories(root, config, cov, rules, files, options.ts); // W01+U05 advisories — never a verdict
 
   if (asJson) {
     console.log(
@@ -465,6 +464,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             pilotLoop,
             // W01: contract-health meta-lint (advisory; verdict unchanged).
             contractHealth,
+            // U05: ambient-state sensor (advisory; opt-in; verdict unchanged).
+            ambientState,
             governed: cov.governed,
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
@@ -646,8 +647,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     );
   }
 
-  // W01 — contract health (advisory; verdict unchanged).
-  printContractHealthSection(contractHealth, { line, warn, color });
+  printDoctorAdvisories({ contractHealth, ambientState }, { line, warn, color }); // advisory sections
 
   console.log('');
   console.log(color.bold('Coverage'));

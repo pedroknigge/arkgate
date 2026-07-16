@@ -101,8 +101,10 @@ boundaries without changing its public API merely to reduce LOC.
   same ordered capability uses, violations, hashes, and remediation IDs through the canonical IR.
 - [ ] **A4 — Atomic enforcement:** a multi-file candidate cannot hide a newly introduced denied
   capability; pre-tool/MCP preflight and final CI agree on the complete patch.
-- [ ] **A5 — Ambient state earns strictness:** module-scope mutable-state findings remain advisory
-  until the fixed corpus proves blocker-grade precision and an explicit layer policy opts in.
+- [x] **A5 — Ambient state earns strictness:** module-scope mutable-state findings remain advisory
+  until the fixed corpus proves blocker-grade precision and an explicit layer policy opts in —
+  U05 shipped the sensor advisory-only, opt-in via `pure: true` layers, with sidecar acks and no
+  strict option anywhere.
 - [ ] **A6 — Dual depth:** every rejection has one plain-language next action and stable JSON
   evidence; no model interpretation decides pass/fail.
 - [ ] **A7 — Profile before optimize:** end-to-end hook and MCP paths have reproducible cold and

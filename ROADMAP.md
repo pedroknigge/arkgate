@@ -246,7 +246,7 @@ Phase T shipped in **`arkgate@3.1.0`**. Retained evidence:
 | 41 | `U02` | `done` | M | `U01` | Separate self-hosted cohesion pilots clear the named canonical god-module evidence without public drift |
 | 42 | `U03` | `done` | L | `U01`, `U02` (soft) | Canonical analysis IR reports typed effect capabilities with stable evidence and generated-bundle parity |
 | 43 | `U04` | `done` | L | `U03` | Opted-in layer capability walls block complete invalid patches consistently across every adapter |
-| 44 | `U05` | `todo` | M | `U03` | Ambient mutable-state sensor remains advisory until blocker-grade precision is proven |
+| 44 | `U05` | `done` | M | `U03` | Ambient mutable-state sensor remains advisory until blocker-grade precision is proven |
 | 45 | `U06` | `todo` | M | `U04`, `U05` | Dual-depth remediation and measured end-to-end pre-tool/MCP budgets ship without style scoring |
 | 46 | `U07` | `todo` | S | `U01`–`U06` | Adoption, docs, package, compatibility, and release evidence close the phase |
 
@@ -451,7 +451,7 @@ and strict architecture green. Docs: package-surface, agent-guide, configuration
 
 ### U05 — Prove ambient mutable-state diagnostics before strictness
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `U03`
 - **Likely files:** semantic analysis, doctor/design-smell vocabulary, fixed state corpus,
   adapter-parity and false-positive tests
@@ -463,6 +463,17 @@ The MVP diagnostic is advisory unless U01's evidence bar is met by the completed
 **Acceptance:** Stable evidence and plain remediation exist; no strict default is introduced from
 an incomplete corpus; any strict option requires explicit policy and zero known false-positive
 blockers in the fixed matrix.
+
+**Local evidence (2026-07-16):** `bin/lib/ambient-state.mjs` detects module-scope `let`/`var` in
+`pure: true` layers only (opt-in; MVP shape per D4), with sorted findings, an honest truncation
+count, and bounded sidecar acks at `.ark/ambient-state-acks.json` (malformed file suppresses
+nothing). Surfaced as `doctor.ambientState` + a human advisory section via the new
+`doctor-advisories.mjs` aggregator (doctor-plan stays inside its 920-LOC budget); when TypeScript
+is absent the sensor reports `available: false` instead of guessing. The fixed FP matrix is
+pinned by `u05AmbientState.test.ts` (6/6): const bindings, function-local state, non-pure layers,
+and acknowledged registries all stay silent; the doctor case proves `designFitness` and the
+verdict are untouched. **No strict mode exists anywhere** — strictness remains a later evidence
+decision (A5 checked in the plan).
 
 ### U06 — Ship dual-depth remediation and profile the real pre-tool path
 
@@ -1660,8 +1671,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: U05 — ambient mutable-state sensor (U04 done: walls live behind opt-in)
-Next action: doctor-only detector of module-scope mutable state in pure/walled layers; sidecar acks (W01 pattern); fixed FP corpus (registries, caches, memoization)
+Item: U06 — dual-depth remediation + measured end-to-end pre-tool/MCP budgets (U05 done)
+Next action: capability-port next-action ids exist (U04); record the Linux hook/MCP end-to-end baseline, then set ceilings as baseline + fixed headroom (D5 method); no optimization without a profile
 Released baseline: npm arkgate@3.3.0
 Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
