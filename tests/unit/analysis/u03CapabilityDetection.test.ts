@@ -177,4 +177,36 @@ describe('U03 pure IR engine carries import-based capability evidence', () => {
     // Pure engine stays compiler-free (C02): no ambient claims without symbols.
     expect(ir.capabilityUses).toEqual([]);
   });
+
+  function irForContent(content: string) {
+    return analyzeProject({ contract, files: [{ path: 'cases/inline.ts', content }] }).ir;
+  }
+
+  it('erases export-type re-exports and honors tricky import-type syntaxes (/review F1)', () => {
+    // Runtime-erased forms must produce no capability evidence in the pure engine.
+    expect(irForContent("export type { Pool } from 'pg';\n").capabilityUses).toEqual([]);
+    expect(irForContent("export type * from 'pg';\n").capabilityUses).toEqual([]);
+    expect(irForContent("import type Foo from 'pg';\nexport const x = 1;\n").capabilityUses).toEqual([]);
+    // Value forms keep counting: default binding literally named `type`, and
+    // identifiers merely starting with 'type'.
+    expect(irForContent("import type from 'pg';\n").capabilityUses).toHaveLength(1);
+    expect(irForContent("import typeFoo from 'pg';\n").capabilityUses).toHaveLength(1);
+    expect(irForContent("export { Pool } from 'pg';\n").capabilityUses).toHaveLength(1);
+    // Documented envelope: braced named-binding lists stay value imports here.
+    expect(irForContent("import { type Pool } from 'pg';\n").capabilityUses).toHaveLength(1);
+  });
+
+  it('classifies bare and node:-prefixed core network modules consistently (/review F2)', () => {
+    for (const spec of ['net', 'node:net', 'tls', 'dns', 'http2', 'dgram']) {
+      expect(capabilityForModuleSpecifier(spec), spec).toBe('network');
+    }
+  });
+
+  it('classifies the process/child_process module duals (/review I1, documented limit)', () => {
+    expect(capabilityForModuleSpecifier('node:process')).toBe('process');
+    expect(capabilityForModuleSpecifier('process')).toBe('process');
+    expect(capabilityForModuleSpecifier('child_process')).toBe('process');
+    // node:crypto is deliberately absent: hashing dominates, randomness FPs.
+    expect(capabilityForModuleSpecifier('node:crypto')).toBeNull();
+  });
 });

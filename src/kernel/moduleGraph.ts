@@ -70,8 +70,10 @@ function specifierAfterImport(source: string, index: number): ModuleSpecifier | 
   if (source[index] === '(') return readString(source, skipWhitespace(source, index + 1));
   // Conservative textual `import type …` detection: statements that begin with the
   // type keyword are erased at runtime and must not count as capability evidence.
-  // Mixed `{ type A, B }` named bindings stay value imports here; the symbol-aware
-  // collector owns that precision (documented envelope, ADR 0009 D3).
+  // Documented envelope (ADR 0009 D3): ANY braced named-binding list — including
+  // all-type `{ type A }` — stays a value import here, as does a comment between
+  // the keywords; the symbol-aware collector owns that precision. Template-literal
+  // bodies are scanned like the rest of the file (pre-existing scanner envelope).
   let typeOnly = false;
   if (isWordAt(source, 'type', index)) {
     const after = skipWhitespace(source, index + 'type'.length);
@@ -82,7 +84,16 @@ function specifierAfterImport(source: string, index: number): ModuleSpecifier | 
 }
 
 function specifierAfterExport(source: string, index: number): ModuleSpecifier | undefined {
-  return specifierInStaticStatement(source, index + 'export'.length, false);
+  // `export type { X } from '…'` is erased at runtime exactly like `import type`.
+  index = index + 'export'.length;
+  const afterKeyword = skipWhitespace(source, index);
+  let typeOnly = false;
+  if (isWordAt(source, 'type', afterKeyword)) {
+    const next = skipWhitespace(source, afterKeyword + 'type'.length);
+    if (source[next] === '{' || source[next] === '*') typeOnly = true;
+  }
+  const specifier = specifierInStaticStatement(source, index, false);
+  return specifier && typeOnly ? { ...specifier, typeOnly: true } : specifier;
 }
 
 function specifierInStaticStatement(

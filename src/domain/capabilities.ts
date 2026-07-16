@@ -64,9 +64,14 @@ const IMPORT_CAPABILITY_MODULES: Readonly<Record<string, CapabilityId>> = Object
   'graceful-fs': 'filesystem',
   memfs: 'filesystem',
   chokidar: 'filesystem',
-  // network
+  // network (bare and node:-prefixed core spellings both classify)
   http: 'network',
   https: 'network',
+  http2: 'network',
+  net: 'network',
+  tls: 'network',
+  dgram: 'network',
+  dns: 'network',
   'node:http': 'network',
   'node:https': 'network',
   'node:http2': 'network',
@@ -81,6 +86,14 @@ const IMPORT_CAPABILITY_MODULES: Readonly<Record<string, CapabilityId>> = Object
   ky: 'network',
   superagent: 'network',
   ws: 'network',
+  // process control via module import (the ambient global's module dual).
+  // Known limit (ADR 0009): these map to 'process' only — an environment-read
+  // through the imported binding is undercounted until U04 decides the dual;
+  // node:crypto is deliberately absent (hashing dominates; randomness FPs).
+  process: 'process',
+  'node:process': 'process',
+  child_process: 'process',
+  'node:child_process': 'process',
   // persistence
   '@prisma/client': 'persistence',
   prisma: 'persistence',

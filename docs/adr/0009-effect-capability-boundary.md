@@ -136,6 +136,14 @@ reasoning.
   explicitly accepted, documented limit.
 - U03 implements evidence per D1/D3; U04 implements config + walls per D2/D6/D7/D8; U05 follows
   D4; U06 follows D5.
+- **Known limits recorded by the U03 adversarial review** (documented envelope, revisit at U04):
+  a workspace/aliased package literally named like a driver (`pg`, `redis`) classifies by name —
+  compiler-free matching never consults resolution; the module duals of ambient globals map to a
+  single capability (`node:process` → `process` only — an environment read through the imported
+  binding is undercounted until U04 decides the dual; `node:crypto` is deliberately absent);
+  the pure engine and the symbol collector anchor multi-line imports at different lines, so the
+  D7 dedup key must not require line equality across engines; alias chains can yield more than
+  one evidence entry for one logical use — counts are evidence, never a metric.
 
 ## Fixture obligations (U01 exit — met)
 
