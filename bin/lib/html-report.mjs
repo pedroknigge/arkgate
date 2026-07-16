@@ -19,6 +19,7 @@ import {
   renderWritePathAdoptionBlock,
 } from './html-report-depth.mjs';
 import { FIX_HINTS } from './violations.mjs';
+import { capabilityBadgesFor, renderAdvisorySections } from './html-report-advisories.mjs';
 
 export function detectEnforcement(root) {
   const has = (rel) => fs.existsSync(path.join(root, rel));
@@ -455,6 +456,8 @@ export function renderHtmlReport({
   adoption = null,
   /** Optional design-depth (doctor parity): designFitness, designSmells, pilotLoop, postGreenPath, goldenPattern */
   designDepth = null,
+  /** Doctor advisory parity (X01): contractHealth (+governanceWeight), ambientState — guarded by reportParity.test.ts */
+  advisories = null,
 }) {
   const layers = Array.isArray(config.layers) ? config.layers : [];
   const rules = Array.isArray(config.rules) ? config.rules : [];
@@ -710,6 +713,7 @@ export function renderHtmlReport({
         Array.isArray(layer.forbiddenGlobals) && layer.forbiddenGlobals.length
           ? `<span class="tag warn">no ${layer.forbiddenGlobals.map(esc).join(', ')}</span>`
           : '',
+        capabilityBadgesFor(layer, esc),
         layer.mayImportInfrastructure ? '<span class="tag">may import infra</span>' : '',
         Array.isArray(layer.intentPrefixes) && layer.intentPrefixes.length
           ? `<span class="tag">${layer.intentPrefixes.map(esc).join(' ')}</span>`
@@ -1186,6 +1190,8 @@ export function renderHtmlReport({
     <h2>Violations</h2>
     ${violationBlocks}
   </div>
+
+  ${renderAdvisorySections(advisories, esc)}
 
   <div class="section card">
     <h2>Enforcement points</h2>

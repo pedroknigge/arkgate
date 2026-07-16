@@ -28,6 +28,7 @@ const BUDGETS = [
   { path: 'bin/lib/html-report.mjs', max: 1550 },
   // Design-depth / write-path / baseline legend for showcase HTML (split from renderer).
   { path: 'bin/lib/html-report-depth.mjs', max: 320 },
+  { path: 'bin/lib/html-report-advisories.mjs', max: 200 },
 ];
 
 function loc(rel) {
