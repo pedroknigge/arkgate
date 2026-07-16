@@ -1705,9 +1705,9 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: none — Phase U implementation COMPLETE (U01–U07 done); 3.4.0 release train PREPARED with green CI on 89173ed
-Next action: maintainer merges PR #69 and authorizes the 3.4.0 publish (checklist in docs/releases/3.4.0.md); after release evidence, mark the understandable-execution plan Shipped
-Released baseline: npm arkgate@3.3.0
+Item: none — Phase U SHIPPED in arkgate@3.4.0 (PR #69 → 5c4f983; signed tag v3.4.0; publish-npm run 29531051496; npm latest=3.4.0)
+Next action: plan the next phase — the ordered queue has no open item for the first time; recorded candidates: transitive capability inference (out of the U MVP), strict ambient-state after a field corpus, the node:process environment dual, template-interpolation specifiers
+Released baseline: npm arkgate@3.4.0; Phase U shipped from PR #69 (slice 1 from #68)
 Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
 Released baseline: npm arkgate@3.2.0; Phase W shipped from PR #66 (Phase T from PR #64)
