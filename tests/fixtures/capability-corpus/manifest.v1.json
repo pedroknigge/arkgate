@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "adr": "docs/adr/0009-effect-capability-boundary.md",
+  "notes": "U01 exit corpus. Structural until U03 implements detection; every capability behavior lands against these exact files. 'environment' means process.env reads; 'process' means process control/introspection (exit, cwd, argv).",
+  "capabilities": {
+    "network": { "evidenceSources": ["ambient-global", "import-based"] },
+    "filesystem": { "evidenceSources": ["import-based"] },
+    "clock": { "evidenceSources": ["ambient-global"] },
+    "randomness": { "evidenceSources": ["ambient-global"] },
+    "environment": { "evidenceSources": ["ambient-global"] },
+    "process": { "evidenceSources": ["ambient-global"] },
+    "persistence": { "evidenceSources": ["import-based"] }
+  },
+  "lowering": {
+    "fetch": "network",
+    "XMLHttpRequest": "network",
+    "Date.now": "clock",
+    "Date": "clock",
+    "Math.random": "randomness",
+    "process.env": "environment",
+    "process": "process"
+  },
+  "cases": [
+    { "id": "clock-globalthis-alias", "capability": "clock", "kind": "positive", "evidenceSource": "ambient-global", "category": "globalthis-alias", "file": "cases/clock-globalthis-alias.ts", "notes": "Aliasing the ambient Date through globalThis must still detect (S05 precedent)." },
+    { "id": "clock-new-date", "capability": "clock", "kind": "positive", "evidenceSource": "ambient-global", "file": "cases/clock-new-date.ts" },
+    { "id": "clock-now", "capability": "clock", "kind": "positive", "evidenceSource": "ambient-global", "file": "cases/clock-now.ts" },
+    { "id": "clock-shadowed", "capability": "clock", "kind": "negative", "evidenceSource": "ambient-global", "category": "shadowing", "file": "cases/clock-shadowed.ts", "notes": "A local parameter named Date is not the ambient clock." },
+    { "id": "clock-type-only", "capability": "clock", "kind": "negative", "evidenceSource": "ambient-global", "category": "type-only-global", "file": "cases/clock-type-only.ts", "notes": "Date as a type annotation plus instance methods reads no ambient clock." },
+    { "id": "environment-process-env", "capability": "environment", "kind": "positive", "evidenceSource": "ambient-global", "file": "cases/environment-process-env.ts" },
+    { "id": "environment-shadowed", "capability": "environment", "kind": "negative", "evidenceSource": "ambient-global", "category": "shadowing", "file": "cases/environment-shadowed.ts" },
+    { "id": "filesystem-node-fs", "capability": "filesystem", "kind": "positive", "evidenceSource": "import-based", "file": "cases/filesystem-node-fs.ts" },
+    { "id": "filesystem-promises", "capability": "filesystem", "kind": "positive", "evidenceSource": "import-based", "file": "cases/filesystem-promises.ts" },
+    { "id": "filesystem-similar-name", "capability": "filesystem", "kind": "negative", "evidenceSource": "import-based", "category": "similar-name", "file": "cases/filesystem-similar-name.ts", "notes": "'fsm-machine' contains 'fs' but is not a filesystem module — no substring matching." },
+    { "id": "filesystem-type-only", "capability": "filesystem", "kind": "negative", "evidenceSource": "import-based", "category": "type-only-import", "file": "cases/filesystem-type-only.ts" },
+    { "id": "network-client-import", "capability": "network", "kind": "positive", "evidenceSource": "import-based", "file": "cases/network-client-import.ts" },
+    { "id": "network-fetch-global", "capability": "network", "kind": "positive", "evidenceSource": "ambient-global", "file": "cases/network-fetch-global.ts" },
+    { "id": "network-fetch-shadowed", "capability": "network", "kind": "negative", "evidenceSource": "ambient-global", "category": "shadowing", "file": "cases/network-fetch-shadowed.ts" },
+    { "id": "network-similar-name", "capability": "network", "kind": "negative", "evidenceSource": "import-based", "category": "similar-name", "file": "cases/network-similar-name.ts", "notes": "'refetch-hints' contains 'fetch' but is not a known client." },
+    { "id": "network-type-only-import", "capability": "network", "kind": "negative", "evidenceSource": "import-based", "category": "type-only-import", "file": "cases/network-type-only-import.ts" },
+    { "id": "persistence-adapter-allowed", "capability": "persistence", "kind": "policy-allowed", "evidenceSource": "import-based", "category": "adapter-layer", "file": "cases/persistence-adapter-allowed.ts", "notes": "Detection fires; a PersistenceAdapters-style layer policy allows it; verdict stays green (D7)." },
+    { "id": "persistence-pg", "capability": "persistence", "kind": "positive", "evidenceSource": "import-based", "file": "cases/persistence-pg.ts" },
+    { "id": "persistence-prisma", "capability": "persistence", "kind": "positive", "evidenceSource": "import-based", "file": "cases/persistence-prisma.ts" },
+    { "id": "persistence-similar-name", "capability": "persistence", "kind": "negative", "evidenceSource": "import-based", "category": "similar-name", "file": "cases/persistence-similar-name.ts", "notes": "'pgn-parser' contains 'pg' but parses chess notation." },
+    { "id": "persistence-type-only", "capability": "persistence", "kind": "negative", "evidenceSource": "import-based", "category": "type-only-import", "file": "cases/persistence-type-only.ts" },
+    { "id": "process-cwd", "capability": "process", "kind": "positive", "evidenceSource": "ambient-global", "file": "cases/process-cwd.ts" },
+    { "id": "process-shadowed", "capability": "process", "kind": "negative", "evidenceSource": "ambient-global", "category": "shadowing", "file": "cases/process-shadowed.ts" },
+    { "id": "randomness-math-random", "capability": "randomness", "kind": "positive", "evidenceSource": "ambient-global", "file": "cases/randomness-math-random.ts" },
+    { "id": "randomness-shadowed", "capability": "randomness", "kind": "negative", "evidenceSource": "ambient-global", "category": "shadowing", "file": "cases/randomness-shadowed.ts" }
+  ],
+  "policyDelta": {
+    "executable": false,
+    "activatesIn": "U04",
+    "notes": "D6 lowered-policy pair. The capabilities config key is a U04 hypothesis shape; these files are corpus-only until the schema lands. T01 must classify on the LOWERED semantic space.",
+    "pairs": {
+      "candidate-neutral": {
+        "base": "policy-delta/base.config.json",
+        "candidate": "policy-delta/candidate-neutral.config.json",
+        "expectedClassification": "neutral",
+        "why": "forbiddenGlobals [fetch, Date.now] lower to [network, clock]; the candidate denies both — nothing lost."
+      },
+      "candidate-weakening": {
+        "base": "policy-delta/base.config.json",
+        "candidate": "policy-delta/candidate-weakening.config.json",
+        "expectedClassification": "weakening",
+        "why": "clock disappears from the lowered set — requires the hash-bound acknowledgment path."
+      }
+    }
+  }
+}

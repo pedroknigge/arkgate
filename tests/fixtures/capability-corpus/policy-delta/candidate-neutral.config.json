@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "1.0",
+  "include": ["src"],
+  "layers": [
+    {
+      "name": "DomainModel",
+      "patterns": ["src/domain/**"],
+      "capabilities": { "deny": ["network", "clock"] }
+    }
+  ],
+  "rules": []
+}

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "1.0",
+  "include": ["src"],
+  "layers": [
+    {
+      "name": "DomainModel",
+      "patterns": ["src/domain/**"],
+      "forbiddenGlobals": ["fetch", "Date.now"]
+    }
+  ],
+  "rules": []
+}

@@ -1,8 +1,8 @@
 # ADR 0009: Effect capabilities are architecture evidence, not a style doctrine
 
-- **Status:** Proposed (U01 `doing`; locks to Accepted when every proposed blocking capability
-  has deterministic positive and negative fixtures — the U01 acceptance bar)
-- **Date:** 2026-07-15
+- **Status:** Accepted (fixture obligations met in `tests/fixtures/capability-corpus/` with the
+  `u01CapabilityCorpus` structural guard)
+- **Date:** 2026-07-15 (proposed) · 2026-07-16 (accepted)
 - **Owner:** product (Pedro) + ArkGate maintainers
 - **Decision scope:** Phase U capability vocabulary, config surface, blocking threshold, and the
   architecture-vs-style boundary ([plan](../plans/understandable-execution/README.md))
@@ -130,10 +130,21 @@ reasoning.
 - U03 implements evidence per D1/D3; U04 implements config + walls per D2/D6/D7/D8; U05 follows
   D4; U06 follows D5.
 
-## Fixture obligations before Accepted (U01 exit)
+## Fixture obligations (U01 exit — met)
 
-For **every** capability ID: at least one positive fixture per evidence source (ambient-global,
-import-based, or both for hybrids) and negative fixtures covering local shadowing, type-only use,
-aliasing through `globalThis`, a legitimate adapter-layer use, and — for `persistence`/`network` —
-a non-driver import with a similar name. Plus one lowered-policy fixture pair for D6
-(neutral migration vs real weakening).
+The corpus lives at `tests/fixtures/capability-corpus/` (`manifest.v1.json`, 25 cases + the D6
+policy pair) and is guarded structurally by `tests/unit/static-check/u01CapabilityCorpus.test.ts`
+until U03 makes it executable. Per capability ID and applicable evidence source:
+
+- **Positives:** at least one per declared evidence source, including the adversarial
+  `globalThis` alias (which must still detect — S05 precedent, so it is a *positive*, not a
+  negative).
+- **Negatives per ambient-global source:** local shadowing, plus type-only *value* use (`Date` as
+  a type annotation) for at least one capability.
+- **Negatives per import-based source:** `import type` (must not count), and — for
+  `persistence`/`network`/`filesystem` — a non-driver import with a similar name (`pgn-parser`,
+  `refetch-hints`, `fsm-machine`): no substring matching.
+- **Policy-allowed:** one legitimate adapter-layer persistence use — detection fires, the layer
+  policy allows it, the verdict stays green (D7).
+- **D6 lowered-policy pair:** `policy-delta/` holds base + neutral-migration + real-weakening
+  configs with expected classifications; marked non-executable until U04's schema lands.

@@ -242,7 +242,7 @@ Phase T shipped in **`arkgate@3.1.0`**. Retained evidence:
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 40 | `U01` | `doing` | S | Phase T shipped | ADR locks architecture-vs-style boundary, capability vocabulary, compatibility, and fixed corpus |
+| 40 | `U01` | `done` | S | Phase T shipped | ADR locks architecture-vs-style boundary, capability vocabulary, compatibility, and fixed corpus |
 | 41 | `U02` | `todo` | M | `U01` | Separate self-hosted cohesion pilots clear the named canonical god-module evidence without public drift |
 | 42 | `U03` | `todo` | L | `U01`, `U02` (soft) | Canonical analysis IR reports typed effect capabilities with stable evidence and generated-bundle parity |
 | 43 | `U04` | `todo` | L | `U03` | Opted-in layer capability walls block complete invalid patches consistently across every adapter |
@@ -312,7 +312,7 @@ the first implementation item starts.
 
 ### U01 — Lock effect/state semantics and the architecture-vs-style boundary
 
-- **Status:** `doing`
+- **Status:** `done`
 - **Depends on:** Phase T shipped
 - **Likely files:** `docs/adr/0009-effect-capability-boundary.md`, `docs/plans/understandable-execution/README.md`,
   fixed positive/negative fixtures and eval design only as required by the ADR
@@ -328,6 +328,17 @@ surface-ownership dedup rule (layer rule wins, one finding, one `nextAction`); c
 excluded from W02 banding as a raw fact. Remaining before `done`: the fixture obligations listed
 in the ADR (positive/negative per capability ID and evidence source, plus the D6 lowered-policy
 pair), then flip the ADR to Accepted.
+
+**Local evidence (2026-07-16):** ADR 0009 is **Accepted**. The fixture corpus lives at
+`tests/fixtures/capability-corpus/` — `manifest.v1.json` + 25 case files covering every
+capability/evidence-source cell (positives incl. adversarial `globalThis` alias; negatives for
+shadowing, type-only value use, `import type`, and similar-name non-drivers `pgn-parser` /
+`refetch-hints` / `fsm-machine`; one policy-allowed adapter case) plus the D6 lowered-policy
+pair (neutral migration vs real weakening, marked non-executable until U04's schema).
+`u01CapabilityCorpus.test.ts` guards the matrix structurally (6/6): exact seven-ID vocabulary,
+per-source positive coverage, the negative matrix, TS parseability of every case, unique sorted
+ids, and the lowering invariant of the neutral candidate. No production behavior or public
+schema changed. Plan acceptance A1 checked.
 
 **Outcome:** Define supported capability IDs, evidence, config compatibility, and the threshold
 for blocker-grade precision. Explicitly exclude mandatory inlining, LOC/function-length rules,
@@ -1598,8 +1609,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: U01 — doing; ADR 0009 drafted (Proposed) with all eight decisions
-Next action: build the ADR 0009 fixture obligations (positive/negative per capability ID + the D6 lowered-policy pair), then flip ADR to Accepted and U01 to done
+Item: U02 — dogfood cohesion pilots (U01 done: ADR 0009 Accepted + capability corpus)
+Next action: pilot 1 = src/domain/configContract.ts, pilot 2 = src/kernel/analysis.ts, one at a time; a fired kill-switch is a valid close and does not block U03
 Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
 Released baseline: npm arkgate@3.2.0; Phase W shipped from PR #66 (Phase T from PR #64)
