@@ -243,7 +243,7 @@ Phase T shipped in **`arkgate@3.1.0`**. Retained evidence:
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 40 | `U01` | `done` | S | Phase T shipped | ADR locks architecture-vs-style boundary, capability vocabulary, compatibility, and fixed corpus |
-| 41 | `U02` | `todo` | M | `U01` | Separate self-hosted cohesion pilots clear the named canonical god-module evidence without public drift |
+| 41 | `U02` | `done` | M | `U01` | Separate self-hosted cohesion pilots clear the named canonical god-module evidence without public drift |
 | 42 | `U03` | `todo` | L | `U01`, `U02` (soft) | Canonical analysis IR reports typed effect capabilities with stable evidence and generated-bundle parity |
 | 43 | `U04` | `todo` | L | `U03` | Opted-in layer capability walls block complete invalid patches consistently across every adapter |
 | 44 | `U05` | `todo` | M | `U03` | Ambient mutable-state sensor remains advisory until blocker-grade precision is proven |
@@ -353,7 +353,7 @@ behavior or public schema changes in this item.
 
 ### U02 — Dogfood cohesive pure-core pilots
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `U01`
 - **Likely files:** `src/domain/configContract.ts`, `src/kernel/analysis.ts`, focused sibling modules,
   generators/parity tests, existing public-surface tests
@@ -367,6 +367,23 @@ performance, and package budgets remain green; self-doctor no longer reports eit
 a god-module candidate; no module budget is raised to land the pilots. A fired kill-switch is a
 valid close for a pilot (recorded as evidence) and does not block `U03` — the dependency is
 hygiene, not logic.
+
+**Local evidence (2026-07-16):** Both pilots landed without a kill-switch.
+**Pilot 1 (`configContract.ts`):** the contract type vocabulary moved to
+`src/domain/configTypes.ts` with `import type`/`export type` re-exports — guaranteed erased on
+transpile, so the generated `bin/lib/config-contract.mjs` and both published schemas stayed
+**byte-identical** (zero drift) and self-contained; 462→406 LOC / 18→11 export statements.
+**Pilot 2 (`analysis.ts`):** the C02 entry became a pure facade (74 lines) over five cohesive,
+acyclic kernel modules — `analysisTypes` (API vocabulary), `moduleGraph` (specifier scanning +
+edges), `graphEvaluate` (cycles + layer policy), `analysisCore` (load/analyze/policy delta),
+`changePreflight` (atomic candidate), `configWarnings` (config diagnostics) — every consumer
+import path unchanged; the tsup engine bundle regenerated. Self-doctor now reports **zero design
+smells and `designWeak: false`** on this repository for the first time. Mutation line ranges for
+`config-loading` were realigned (never widened); the runtime tarball exceeded its packed budget
+by 149 bytes from facade indirection and was brought back by minifying its duplicate ESM/CJS
+dist (the gate bundle's documented precedent) — 160,149→126,053 packed, **no ceiling raised**.
+Full suite 1131/1131; confidence gate green (config-loading 93.85%, aggregate 92.75%); layer-match,
+cli-pure, analysis-engine drift, package files, TS 5/6/7 compat, and strict architecture all green.
 
 ### U03 — Add typed effect capabilities to the canonical analysis IR
 
@@ -1609,8 +1626,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: U02 — dogfood cohesion pilots (U01 done: ADR 0009 Accepted + capability corpus)
-Next action: pilot 1 = src/domain/configContract.ts, pilot 2 = src/kernel/analysis.ts, one at a time; a fired kill-switch is a valid close and does not block U03
+Item: U03 — typed effect capabilities in the canonical IR (U01+U02 done; self-doctor at zero design smells)
+Next action: implement ADR 0009 D1/D3 detection against the capability corpus; extend semanticAnalysis + domain vocabulary; regenerate the engine bundle; corpus becomes executable
 Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
 Released baseline: npm arkgate@3.2.0; Phase W shipped from PR #66 (Phase T from PR #64)

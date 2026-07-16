@@ -6,53 +6,32 @@
  * The standalone CLI artifact is generated into bin/lib/config-contract.mjs.
  */
 
-export const ARK_CONFIG_SCHEMA_VERSION = '1.0' as const;
+import type {
+  ArkConfig,
+  ArkConfigIssue,
+  ArkConfigLoadResult,
+  ArkConfigMigrationResult,
+  ArkConfigRule,
+  ArkConfigSchemaVersion,
+  SchemaNode,
+  SchemaRoot,
+} from './configTypes';
+
+export type {
+  ArkConfig,
+  ArkConfigCyclePolicy,
+  ArkConfigIssue,
+  ArkConfigLayer,
+  ArkConfigLoadResult,
+  ArkConfigMigrationResult,
+  ArkConfigRule,
+  ArkConfigSafety,
+  ArkConfigSchemaVersion,
+} from './configTypes';
+
+export const ARK_CONFIG_SCHEMA_VERSION: ArkConfigSchemaVersion = '1.0';
 export const ARK_CONFIG_SCHEMA_URL =
   'https://unpkg.com/arkgate@2/schemas/ark.config.schema.json';
-
-export type ArkConfigCyclePolicy = 'strict' | 'soft' | 'framework-soft' | 'off';
-
-export type ArkConfigLayer = {
-  name: string;
-  patterns: string[];
-  exclude?: string[];
-  intentPrefixes?: string[];
-  description?: string;
-  forbiddenGlobals?: string[];
-  mayImportInfrastructure?: boolean;
-  optional?: boolean;
-};
-
-export type ArkConfigRule = {
-  from: string;
-  to: string;
-  allowed: boolean;
-  message?: string;
-  peerIsolation?: boolean;
-  sliceFolders?: string[];
-};
-
-export type ArkConfigSafety = {
-  maxTsSuppressions?: number;
-  maxAnyCasts?: number;
-  allowInMemory?: boolean;
-  allowDisabledPeerIsolation?: boolean;
-};
-
-export type ArkConfig = {
-  $schema: string;
-  schemaVersion: typeof ARK_CONFIG_SCHEMA_VERSION;
-  name?: string;
-  include: string[];
-  exclude?: string[];
-  excludeGenerated?: boolean;
-  frameworkOverlay?: string;
-  layers: ArkConfigLayer[];
-  rules: ArkConfigRule[];
-  cyclePolicy?: ArkConfigCyclePolicy;
-  dynamicImportAllowlist?: string[];
-  safety?: ArkConfigSafety;
-};
 
 const DEFAULT_LAYER_NAMES = [
   'DomainModel',
@@ -191,31 +170,6 @@ export const ARK_CONFIG_SCHEMA = {
     },
   },
 } as const;
-
-type SchemaNode = {
-  $ref?: string;
-  type?: 'object' | 'array' | 'string' | 'boolean' | 'integer';
-  const?: unknown;
-  enum?: readonly unknown[];
-  required?: readonly string[];
-  properties?: Readonly<Record<string, SchemaNode>>;
-  additionalProperties?: boolean;
-  items?: SchemaNode;
-  minItems?: number;
-  uniqueItems?: boolean;
-  minLength?: number;
-  minimum?: number;
-  default?: unknown;
-};
-
-type SchemaRoot = SchemaNode & {
-  $defs: Readonly<Record<string, SchemaNode>>;
-};
-
-export type ArkConfigIssue = {
-  path: string;
-  message: string;
-};
 
 export class ArkConfigValidationError extends Error {
   readonly issues: ArkConfigIssue[];
@@ -372,16 +326,6 @@ function defaultedConfig(input: Record<string, unknown>): Record<string, unknown
         : input.rules,
   };
 }
-
-export type ArkConfigLoadResult = {
-  config: ArkConfig;
-  migratedFrom: 'unversioned' | null;
-};
-
-export type ArkConfigMigrationResult = {
-  candidate: Record<string, unknown>;
-  migratedFrom: 'unversioned' | null;
-};
 
 export function migrateArkConfig(
   input: unknown,

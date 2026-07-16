@@ -15,7 +15,10 @@ export default defineConfig({
   splitting: false,
   sourcemap: false,
   clean: true,
-  minify: false,
+  // Same trade as the gate bundle (tsup.config.ts at the root): compact the
+  // duplicate ESM/CJS distribution so the experimental runtime stays inside its
+  // release artifact budget instead of ratcheting the ceiling.
+  minify: true,
   treeshake: false,
   cjsInterop: true,
   target: 'es2022',

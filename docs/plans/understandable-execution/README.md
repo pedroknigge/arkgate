@@ -92,8 +92,11 @@ boundaries without changing its public API merely to reduce LOC.
   compatibility, non-goals, and the evidence required before a diagnostic can block —
   [ADR 0009](../../adr/0009-effect-capability-boundary.md) (Accepted 2026-07-16) plus the
   `capability-corpus` fixtures and structural guard.
-- [ ] **A2 — Honest dogfood:** the named self-hosted god-module candidates are handled as
-  separate pilots; each preserves public behavior and stops if coupling or call-site hopping grows.
+- [x] **A2 — Honest dogfood:** the named self-hosted god-module candidates are handled as
+  separate pilots; each preserves public behavior and stops if coupling or call-site hopping grows
+  — U02 shipped both pilots (type-vocabulary split + C02 facade over cohesive kernel modules)
+  with byte-identical config artifacts, zero consumer import changes, and self-doctor reporting
+  zero design smells.
 - [ ] **A3 — Canonical effect evidence:** identical files, compiler inputs, and policy yield the
   same ordered capability uses, violations, hashes, and remediation IDs through the canonical IR.
 - [ ] **A4 — Atomic enforcement:** a multi-file candidate cannot hide a newly introduced denied
