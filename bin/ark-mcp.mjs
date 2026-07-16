@@ -58,6 +58,7 @@ import {
   detectTsPackageRoots,
   resolveIncludeRoots,
 } from './ark-shared.mjs';
+import { effectiveCapabilityDeny } from './lib/analysis-engine.mjs';
 import { createImportTargetResolver } from './lib/import-resolve.mjs';
 import { validateWithAutoPatch, resolveImportFileAbs } from './lib/auto-patch.mjs';
 import { composePrepareWrite } from './lib/prepare-write.mjs';
@@ -765,6 +766,14 @@ async function main() {
       ])
   );
 
+  // Layer → effective capability deny set (U04 walls). Same opt-in surface the
+  // CLI enforces; the gate applies it whenever the target file's layer is known.
+  const capabilityWalls = Object.fromEntries(
+    configLayers
+      .map((layer) => [layer.name, effectiveCapabilityDeny(layer)])
+      .filter(([name, deny]) => name && deny.length > 0)
+  );
+
   // Layers explicitly flagged as infrastructure in ark.config.json may import
   // infrastructure — the built-in infra-import heuristics skip them (in addition
   // to layers whose name conventionally signals an infra role). Lets a project
@@ -779,6 +788,7 @@ async function main() {
     enforceIntentAllowlist: intents.length > 0,
     typescript: ts,
     forbiddenGlobals,
+    capabilityWalls,
     infrastructureLayers,
     // Contract-first: one resolve step yields layer + relPath for rules + peerIsolation.
     resolveImportTarget: createImportTargetResolver(ts, args.root, config),

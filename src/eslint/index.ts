@@ -15,6 +15,7 @@ import {
   layerForRelativePath,
   isEdgeDenied,
 } from '../domain/layerMatch';
+import { capabilityForModuleSpecifier, effectiveCapabilityDeny } from '../domain/capabilities';
 import { parseArkConfigJson, type ArkConfig } from '../domain/configContract';
 import {
   toAdapterDiagnostic,
@@ -537,11 +538,95 @@ export const noForbiddenGlobals: ArkRule = {
   },
 };
 
+export const noDeniedCapabilities: ArkRule = {
+  meta: {
+    type: 'problem',
+    docs: {
+      description:
+        'Disallow importing modules whose effect capability the layer denies (ark.config.json capabilities.deny / pure — same wall surface as ark-check). Import dimension only: ambient globals stay with no-forbidden-globals and the CLI/hook symbol path.',
+    },
+    messages: {
+      deniedCapability:
+        '{{layer}} denies the {{capability}} capability (ark.config.json); "{{specifier}}" imports it. Define a port and bind the implementation in an adapter layer.',
+    },
+    schema: [],
+  },
+  create(context) {
+    const filename = lintedFilename(context);
+    const configPath = findConfigPath(filename);
+    const config = configPath ? loadArkConfig(configPath) : null;
+    const root = configPath ? path.dirname(configPath) : null;
+    if (!config || !root || !filename) return {} as RuleListener;
+    const absFile = path.isAbsolute(filename) ? filename : path.resolve(filename);
+    const relFile = path.relative(root, absFile).split(path.sep).join('/');
+    const layer = config.layers?.find(
+      (l) => l.name === layerForRelativePath(relFile, config.layers)
+    );
+    if (!layer) return {} as RuleListener;
+    const deny = new Set(effectiveCapabilityDeny(layer));
+    if (deny.size === 0) return {} as RuleListener;
+
+    const check = (node: AstNode, specifier: unknown, typeOnly: boolean) => {
+      if (typeOnly || typeof specifier !== 'string') return;
+      const capability = capabilityForModuleSpecifier(specifier);
+      if (!capability || !deny.has(capability)) return;
+      reportAdapterDiagnostic(
+        context,
+        node,
+        'deniedCapability',
+        {
+          ruleId: 'CAPABILITY_VIOLATION',
+          file: relFile,
+          fromLayer: layer.name,
+          target: specifier,
+          capability,
+          message: `${layer.name} denies the ${capability} capability; found import of "${specifier}".`,
+        },
+        { layer: layer.name, capability, specifier }
+      );
+    };
+
+    return {
+      ImportDeclaration(node) {
+        const importNode = node as AstNode & { source?: { value?: unknown }; importKind?: string };
+        check(node, importNode.source?.value, importNode.importKind === 'type');
+      },
+      ImportExpression(node) {
+        const importNode = node as AstNode & { source?: { type?: string; value?: unknown } };
+        if (importNode.source?.type === 'Literal') check(node, importNode.source.value, false);
+      },
+      ExportNamedDeclaration(node) {
+        const exportNode = node as AstNode & { source?: { value?: unknown }; exportKind?: string };
+        if (exportNode.source) check(node, exportNode.source.value, exportNode.exportKind === 'type');
+      },
+      ExportAllDeclaration(node) {
+        const exportNode = node as AstNode & { source?: { value?: unknown }; exportKind?: string };
+        check(node, exportNode.source?.value, exportNode.exportKind === 'type');
+      },
+      CallExpression(node) {
+        const call = node as AstNode & {
+          callee?: { type?: string; name?: string };
+          arguments?: Array<{ type?: string; value?: unknown }>;
+        };
+        if (
+          call.callee?.type === 'Identifier' &&
+          call.callee.name === 'require' &&
+          call.arguments?.[0]?.type === 'Literal' &&
+          !isLocallyBound(context, node, 'require')
+        ) {
+          check(node, call.arguments[0].value, false);
+        }
+      },
+    };
+  },
+};
+
 const rules = {
   'no-domain-infra-imports': noDomainInfraImports,
   'no-raw-event-publish': noRawEventPublish,
   'require-publish-source': requirePublishSource,
   'no-forbidden-globals': noForbiddenGlobals,
+  'no-denied-capabilities': noDeniedCapabilities,
 };
 
 const plugin: ArkEslintPlugin = { rules };
@@ -554,6 +639,7 @@ plugin.configs = {
       'ark/no-raw-event-publish': 'error',
       'ark/require-publish-source': 'error',
       'ark/no-forbidden-globals': 'error',
+      'ark/no-denied-capabilities': 'error',
     },
   },
 };

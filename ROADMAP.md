@@ -247,7 +247,7 @@ Phase T shipped in **`arkgate@3.1.0`**. Retained evidence:
 | 42 | `U03` | `done` | L | `U01`, `U02` (soft) | Canonical analysis IR reports typed effect capabilities with stable evidence and generated-bundle parity |
 | 43 | `U04` | `done` | L | `U03` | Opted-in layer capability walls block complete invalid patches consistently across every adapter |
 | 44 | `U05` | `done` | M | `U03` | Ambient mutable-state sensor remains advisory until blocker-grade precision is proven |
-| 45 | `U06` | `todo` | M | `U04`, `U05` | Dual-depth remediation and measured end-to-end pre-tool/MCP budgets ship without style scoring |
+| 45 | `U06` | `done` | M | `U04`, `U05` | Dual-depth remediation and measured end-to-end pre-tool/MCP budgets ship without style scoring |
 | 46 | `U07` | `todo` | S | `U01`–`U06` | Adoption, docs, package, compatibility, and release evidence close the phase |
 
 **Slice 1 shipped in `arkgate@3.3.0`** (2026-07-16): U01–U03 published from PR
@@ -477,7 +477,7 @@ decision (A5 checked in the plan).
 
 ### U06 — Ship dual-depth remediation and profile the real pre-tool path
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `U04`, `U05`
 - **Likely files:** remediation vocabulary, doctor/prepare-write/preflight responses, hook/MCP
   benchmark harness, Linux performance budgets and CI
@@ -489,6 +489,18 @@ hook/MCP path before any optimization or fixed threshold is approved.
 **Acceptance:** No LLM decides the verdict or remediation ID; adapter responses remain equivalent;
 profiles justify every optimization; reproducible CI budgets include measured runner headroom and
 do not weaken correctness checks.
+
+**Local evidence (2026-07-16):** Dual depth for capability walls across EVERY surface: the U06
+tests exposed and closed two parity gaps — the human `nextAction` fell to the generic fallback
+(adapterContract's own switch gained the CAPABILITY_VIOLATION case) and, critically, **the real
+PreToolUse hook did not enforce walls at all** (the AICodeGate now takes `capabilityWalls` with
+the same D7 dedup; `ark-mcp --hook` blocks a denied-capability Write end-to-end with exit 2 —
+pinned by a fresh-child-process test). ESLint gained `ark/no-denied-capabilities` (import
+dimension, recommended config) for adapter parity. `scripts/hook-path-bench.mjs` measures the
+COMPLETE paths (hook cold/warm + doctor cold, 1k/10k, fresh processes); the D5 method is locked
+in `eval/performance/hook-budgets.v1.json` — RECORDING mode until the Linux CI baseline exists,
+ceilings = baseline + fixed headroom, guarded by a test that forbids an invented ceiling without
+its baseline. CI job added. FIX_HINTS carries the casual port hint. Suite 1200/1200.
 
 ### U07 — Adoption and release evidence
 
@@ -1671,8 +1683,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: U06 — dual-depth remediation + measured end-to-end pre-tool/MCP budgets (U05 done)
-Next action: capability-port next-action ids exist (U04); record the Linux hook/MCP end-to-end baseline, then set ceilings as baseline + fixed headroom (D5 method); no optimization without a profile
+Item: U07 — adoption/docs/package/release evidence closes the phase (U06 done)
+Next action: adopt hook-path ceilings from the first Linux CI baseline; docs parity; package/compat checks; 3.4.0 release train (slice 2)
 Released baseline: npm arkgate@3.3.0
 Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security

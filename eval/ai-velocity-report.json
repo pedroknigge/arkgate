@@ -119,7 +119,7 @@
     "liveLlmRequired": false
   },
   "ok": true,
-  "generatedAt": "2026-07-16T18:07:36.982Z",
+  "generatedAt": "2026-07-16T18:24:34.743Z",
   "fixture": "tests/fixtures/design-weak-enforce",
   "command": "npm run eval:ai-velocity"
 }

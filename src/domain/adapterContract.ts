@@ -20,6 +20,8 @@ export type AdapterViolationInput = {
   peerIsolation?: unknown;
   severity?: unknown;
   nextAction?: unknown;
+  /** U04: the denied capability id on CAPABILITY_VIOLATION. */
+  capability?: unknown;
 };
 
 export type AdapterDiagnostic = {
@@ -71,6 +73,9 @@ function nextActionForDiagnostic(
   }
   if (ruleId === 'FORBIDDEN_GLOBAL') {
     return `Inject ${evidence.target ?? 'the capability'} through a port, then preflight again.`;
+  }
+  if (ruleId === 'CAPABILITY_VIOLATION') {
+    return `Define a ${text(violation.capability) ?? 'capability'} port in ${evidence.fromLayer ?? 'the walled layer'}, bind the implementation outside it, then preflight again.`;
   }
   if (ruleId === 'CIRCULAR_DEPENDENCY') {
     return 'Extract the shared dependency into a third module, then preflight again.';

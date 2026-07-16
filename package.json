@@ -1,7 +1,7 @@
 {
   "name": "arkgate",
   "version": "3.3.0",
-  "description": "ArkGate — architecture co-pilot for AI TypeScript (write gate, CI gate, plan/loop)",
+  "description": "ArkGate \u2014 architecture co-pilot for AI TypeScript (write gate, CI gate, plan/loop)",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -117,7 +117,8 @@
     "audit:beta-exit": "node scripts/beta-exit-audit.mjs",
     "clean": "rm -rf dist",
     "release:npm": "node scripts/release-npm.mjs",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "bench:hook-path": "node scripts/hook-path-bench.mjs"
   },
   "dependencies": {
     "typescript": ">=5.0.0 <8"

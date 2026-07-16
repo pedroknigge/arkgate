@@ -97,18 +97,24 @@ boundaries without changing its public API merely to reduce LOC.
   — U02 shipped both pilots (type-vocabulary split + C02 facade over cohesive kernel modules)
   with byte-identical config artifacts, zero consumer import changes, and self-doctor reporting
   zero design smells.
-- [ ] **A3 — Canonical effect evidence:** identical files, compiler inputs, and policy yield the
-  same ordered capability uses, violations, hashes, and remediation IDs through the canonical IR.
-- [ ] **A4 — Atomic enforcement:** a multi-file candidate cannot hide a newly introduced denied
-  capability; pre-tool/MCP preflight and final CI agree on the complete patch.
+- [x] **A3 — Canonical effect evidence:** identical files, compiler inputs, and policy yield the
+  same ordered capability uses, violations, hashes, and remediation IDs through the canonical IR
+  (U03 determinism cases against the frozen corpus).
+- [x] **A4 — Atomic enforcement:** a multi-file candidate cannot hide a newly introduced denied
+  capability; pre-tool/MCP preflight and final CI agree on the complete patch (U04 pinned the
+  multi-file case; U06 wired the real hook).
 - [x] **A5 — Ambient state earns strictness:** module-scope mutable-state findings remain advisory
   until the fixed corpus proves blocker-grade precision and an explicit layer policy opts in —
   U05 shipped the sensor advisory-only, opt-in via `pure: true` layers, with sidecar acks and no
   strict option anywhere.
-- [ ] **A6 — Dual depth:** every rejection has one plain-language next action and stable JSON
-  evidence; no model interpretation decides pass/fail.
-- [ ] **A7 — Profile before optimize:** end-to-end hook and MCP paths have reproducible cold and
-  incremental measurements before fixed budgets or optimizations are approved.
+- [x] **A6 — Dual depth:** every rejection has one plain-language next action and stable JSON
+  evidence; no model interpretation decides pass/fail — CAPABILITY_VIOLATION carries FIX_HINTS +
+  suggestion (casual) and ruleId/capability/fixClass/nextAction (JSON) across CLI, hook, MCP,
+  preflight, and ESLint.
+- [x] **A7 — Profile before optimize:** end-to-end hook and MCP paths have reproducible cold and
+  incremental measurements before fixed budgets or optimizations are approved — the hook-path
+  bench measures complete child-process paths; ceilings land only from the recorded Linux
+  baseline (record mode until then), and no optimization shipped without a profile.
 - [ ] **A8 — Hard lines held:** no weakened gate, new skill namespace, general codemod, runtime
   wedge, package-budget ratchet, or breaking API hidden inside the redesign.
 

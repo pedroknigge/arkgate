@@ -17,7 +17,9 @@ import type { Policy } from '../policy';
 import type { IntentCreator } from '../intent';
 import type { IntentName } from '../../domain/types';
 import type { ArchitectureProfile } from '../layers';
+import { ambientCoveredByForbiddenGlobals } from '../../domain/capabilities';
 import { findDeniedEdgeRule } from '../../domain/layerMatch';
+import { collectCapabilityUses } from '../capabilityAnalysis';
 import { classifyPublishFacts, looksLikeArkIntent } from '../../domain/sourcePolicy';
 import {
   collectForbiddenCapabilityUses,
@@ -72,6 +74,14 @@ export interface AICodeGateOptions<Context = AICodeGateContext> {
    * to a listed layer — mirrors ark-check's FORBIDDEN_GLOBAL rule.
    */
   forbiddenGlobals?: Record<string, string[]>;
+
+  /**
+   * Layer → effective capability deny set (U04 walls; ADR 0009). Enforced like
+   * forbiddenGlobals when the target file's layer is known. An ambient use
+   * already covered by the layer's forbiddenGlobals reports only
+   * FORBIDDEN_GLOBAL (D7 — one violation, one voice).
+   */
+  capabilityWalls?: Record<string, string[]>;
   /**
    * Layer names whose role is infrastructure and may therefore import infrastructure
    * (a persistence adapter importing the DB is correct, not a violation). The built-in
@@ -705,6 +715,51 @@ export function createAICodeGate<Context = AICodeGateContext>(
               )
             )
           );
+        } catch (err) {
+          violations.push(
+            violation(
+              'AST_ANALYZER_ERROR',
+              `TypeScript AST analyzer failed: ${err instanceof Error ? err.message : String(err)}`
+            )
+          );
+        }
+      }
+
+      if (
+        options.typescript &&
+        semanticSourceFile &&
+        contextLayer &&
+        options.capabilityWalls?.[contextLayer]?.length
+      ) {
+        try {
+          const denySet = new Set(options.capabilityWalls[contextLayer]);
+          const layerForbidden = options.forbiddenGlobals?.[contextLayer] ?? [];
+          for (const use of collectCapabilityUses(options.typescript, semanticSourceFile)) {
+            if (!denySet.has(use.capability)) continue;
+            if (
+              use.source === 'ambient-global' &&
+              ambientCoveredByForbiddenGlobals(use.symbol, layerForbidden)
+            ) {
+              continue;
+            }
+            violations.push(
+              violation(
+                'CAPABILITY_VIOLATION',
+                use.source === 'import-based'
+                  ? `${contextLayer} denies the ${use.capability} capability; found import of "${use.symbol}".`
+                  : `${contextLayer} denies the ${use.capability} capability; found ambient "${use.symbol}".`,
+                {
+                  line: use.line,
+                  filePath,
+                  target: use.symbol,
+                  capability: use.capability,
+                  fromLayer: contextLayer,
+                  suggestion:
+                    'Define a small port (ClockPort, HttpPort, StoragePort) and bind the implementation in an adapter layer.',
+                } as Partial<AICodeGateViolation>
+              )
+            );
+          }
         } catch (err) {
           violations.push(
             violation(

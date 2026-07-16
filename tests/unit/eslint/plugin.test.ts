@@ -24,6 +24,7 @@ describe('Ark ESLint plugin', () => {
       'no-raw-event-publish',
       'require-publish-source',
       'no-forbidden-globals',
+      'no-denied-capabilities',
     ]);
     expect(arkEslint.configs?.recommended).toBeDefined();
   });

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "method": "ADR 0009 D5 — record the Linux CI baseline FIRST; ceilings are baseline p95 plus fixed headroom, set once per roadmap cycle, never ratcheted per item. Scenarios without maxP95Ms are in RECORDING mode: the bench reports them and cannot fail on them.",
+  "runner": {
+    "image": "ubuntu-latest",
+    "node": "20",
+    "measurement": "fresh child processes; wall time of the complete spawn (node startup + TypeScript load + validate)"
+  },
+  "sampling": { "runs": 9 },
+  "scenarios": {
+    "hookWarm": {
+      "size": 10000,
+      "metric": "hookWarm",
+      "baselineMs": null,
+      "maxP95Ms": null,
+      "rationale": "The per-keystroke interactive path (PreToolUse hook with a warm scan cache). Ceiling lands after the first Linux baseline is recorded by CI."
+    },
+    "hookCold": {
+      "size": 10000,
+      "metric": "hookCold",
+      "baselineMs": null,
+      "maxP95Ms": null,
+      "rationale": "First write after a cache flush. Ceiling lands after the Linux baseline."
+    },
+    "doctorCold": {
+      "size": 10000,
+      "metric": "doctorCold",
+      "baselineMs": null,
+      "maxP95Ms": null,
+      "rationale": "Cold one-shot doctor over the tree. Ceiling lands after the Linux baseline."
+    }
+  }
+}

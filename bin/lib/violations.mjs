@@ -45,6 +45,8 @@ export const FIX_HINTS = {
     'Use a source intent that belongs to the same layer as the publishing file, or move the file.',
   FORBIDDEN_GLOBAL:
     'Inject the capability through a port (e.g. a Clock, IdGenerator, or HttpPort) instead of reaching for the ambient global.',
+  CAPABILITY_VIOLATION:
+    'This layer denies that effect. Define a small port (ClockPort, HttpPort, StoragePort) and bind the implementation in an adapter layer.',
   CIRCULAR_DEPENDENCY:
     'Break the cycle: extract the shared code into a module both sides import, invert one edge behind a port/interface, or merge the files if they are really one unit.',
 };
