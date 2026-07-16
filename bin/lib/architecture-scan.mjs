@@ -29,7 +29,10 @@ import {
   collectConfigWarnings,
 } from './config-warnings.mjs';
 import {
+  ambientCoveredByForbiddenGlobals,
+  collectCapabilityUses,
   collectForbiddenCapabilityUses,
+  effectiveCapabilityDeny,
   evaluateArchitectureGraph,
   extractSemanticDependencies,
 } from './analysis-engine.mjs';
@@ -67,6 +70,34 @@ export function scanSourceFile(ts, root, config, rules, manifestIntentLayers, fi
       target: use.name,
       message: `${sourceLayer} must not use the ambient global "${use.name}".`,
     });
+  }
+
+  // U04 — opted-in capability walls (ADR 0009). One violation, one voice: an
+  // ambient use already covered by this layer's forbiddenGlobals reports only
+  // FORBIDDEN_GLOBAL (D7 dedup); absence of the surface adds nothing.
+  const capabilityDeny = new Set(effectiveCapabilityDeny(layerConfig ?? {}));
+  if (capabilityDeny.size > 0) {
+    for (const use of collectCapabilityUses(ts, sourceFile)) {
+      if (!capabilityDeny.has(use.capability)) continue;
+      if (
+        use.source === 'ambient-global' &&
+        ambientCoveredByForbiddenGlobals(use.symbol, forbiddenGlobals)
+      ) {
+        continue;
+      }
+      violations.push({
+        ruleId: 'CAPABILITY_VIOLATION',
+        file: normalize(path.relative(root, file)),
+        line: use.line,
+        fromLayer: sourceLayer,
+        target: use.symbol,
+        capability: use.capability,
+        message:
+          use.source === 'import-based'
+            ? `${sourceLayer} denies the ${use.capability} capability; found import of "${use.symbol}".`
+            : `${sourceLayer} denies the ${use.capability} capability; found ambient "${use.symbol}".`,
+      });
+    }
   }
 
   const checkModuleEdge = (specifier, node, kind, typeOnly = false) => {

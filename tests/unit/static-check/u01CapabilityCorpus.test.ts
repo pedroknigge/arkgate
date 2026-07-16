@@ -175,8 +175,8 @@ describe('U01 capability corpus — completeness per ADR 0009', () => {
 
   it('carries the D7 adapter-policy artifact wiring the policy-allowed case', () => {
     const m = manifest();
-    expect(m.policyLayer.executable).toBe(false);
-    expect(m.policyLayer.activatesIn).toBe('U04');
+    expect(m.policyLayer.executable).toBe(true);
+    expect(m.policyLayer.activatedIn).toBe('U04');
     const policy = JSON.parse(readCase(m.policyLayer.file));
     const layers = policy.layers as Array<{ name: string; patterns: string[]; capabilities?: { deny: string[] } }>;
     const adapter = layers.find((l) => l.name === 'PersistenceAdapters');
@@ -189,8 +189,8 @@ describe('U01 capability corpus — completeness per ADR 0009', () => {
   it('carries the D6 lowered-policy pair (neutral migration vs real weakening)', () => {
     const m = manifest();
     const pd = m.policyDelta;
-    expect(pd.executable).toBe(false);
-    expect(pd.activatesIn).toBe('U04');
+    expect(pd.executable).toBe(true);
+    expect(pd.activatedIn).toBe('U04');
     for (const [name, expected] of [
       ['candidate-neutral', 'neutral'],
       ['candidate-weakening', 'weakening'],

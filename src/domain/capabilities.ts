@@ -146,6 +146,64 @@ export function capabilityForAmbientName(name: string): CapabilityId | null {
   return null;
 }
 
+/** The layer-policy slice this module reads (structural subset of ArkConfigLayer). */
+export type CapabilityLayerPolicy = {
+  capabilities?: { deny?: readonly string[] };
+  pure?: boolean;
+  forbiddenGlobals?: readonly string[];
+};
+
+/**
+ * Effective capability deny set for a layer (ADR 0009 D2): `pure: true` denies
+ * all seven; otherwise the declared deny list (deduped, sorted, unknown ids
+ * dropped — the schema rejects them before this runs).
+ */
+export function effectiveCapabilityDeny(layer: CapabilityLayerPolicy | null | undefined): CapabilityId[] {
+  if (layer?.pure === true) return [...CAPABILITY_IDS].sort();
+  const declared = layer?.capabilities?.deny ?? [];
+  const known = declared.filter((id): id is CapabilityId =>
+    (CAPABILITY_IDS as readonly string[]).includes(id)
+  );
+  return [...new Set(known)].sort();
+}
+
+/**
+ * D7 dedup helper: an ambient use whose matched path is already covered by the
+ * layer's forbiddenGlobals must report only FORBIDDEN_GLOBAL — the surface the
+ * user declared wins; one violation, one voice.
+ */
+export function ambientCoveredByForbiddenGlobals(
+  symbol: string,
+  forbiddenGlobals: readonly string[]
+): boolean {
+  if (forbiddenGlobals.length === 0) return false;
+  const entries = new Set(forbiddenGlobals);
+  const segments = symbol.split('.');
+  for (let length = segments.length; length >= 1; length -= 1) {
+    if (entries.has(segments.slice(0, length).join('.'))) return true;
+  }
+  return false;
+}
+
+/**
+ * D6: a layer's full lowered protection — effect capabilities covered by walls
+ * and lowerable forbiddenGlobals, plus the unlowerable raw globals that must
+ * keep comparing key-by-key. Policy-delta classifies on this, never on keys.
+ */
+export function loweredLayerCoverage(layer: CapabilityLayerPolicy | null | undefined): {
+  capabilities: CapabilityId[];
+  rawGlobals: string[];
+} {
+  const capabilities = new Set<CapabilityId>(effectiveCapabilityDeny(layer));
+  const rawGlobals = new Set<string>();
+  for (const entry of layer?.forbiddenGlobals ?? []) {
+    const lowered = lowerForbiddenGlobal(entry);
+    if (lowered.length === 0) rawGlobals.add(entry);
+    else for (const capability of lowered) capabilities.add(capability);
+  }
+  return { capabilities: [...capabilities].sort(), rawGlobals: [...rawGlobals].sort() };
+}
+
 /**
  * Coverage-faithful lowering of a forbiddenGlobals entry (ADR 0009 D6).
  * A prefix-matched global lowers to EVERY capability its matches cover: the

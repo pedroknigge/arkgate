@@ -1027,8 +1027,9 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
       valid: false,
       requiresAcknowledgement: true,
     });
+    // D6 (U04): a lowerable forbidden-global loss classifies on the lowered space.
     expect(payload.findings).toContainEqual(
-      expect.objectContaining({ path: '$.layers[DomainModel].forbiddenGlobals' })
+      expect.objectContaining({ path: '$.layers[DomainModel].capabilities' })
     );
   });
 

@@ -245,7 +245,7 @@ Phase T shipped in **`arkgate@3.1.0`**. Retained evidence:
 | 40 | `U01` | `done` | S | Phase T shipped | ADR locks architecture-vs-style boundary, capability vocabulary, compatibility, and fixed corpus |
 | 41 | `U02` | `done` | M | `U01` | Separate self-hosted cohesion pilots clear the named canonical god-module evidence without public drift |
 | 42 | `U03` | `done` | L | `U01`, `U02` (soft) | Canonical analysis IR reports typed effect capabilities with stable evidence and generated-bundle parity |
-| 43 | `U04` | `todo` | L | `U03` | Opted-in layer capability walls block complete invalid patches consistently across every adapter |
+| 43 | `U04` | `done` | L | `U03` | Opted-in layer capability walls block complete invalid patches consistently across every adapter |
 | 44 | `U05` | `todo` | M | `U03` | Ambient mutable-state sensor remains advisory until blocker-grade precision is proven |
 | 45 | `U06` | `todo` | M | `U04`, `U05` | Dual-depth remediation and measured end-to-end pre-tool/MCP budgets ship without style scoring |
 | 46 | `U07` | `todo` | S | `U01`–`U06` | Adoption, docs, package, compatibility, and release evidence close the phase |
@@ -420,7 +420,7 @@ artifacts, and strict architecture green. Evidence-only: nothing blocks until U0
 
 ### U04 — Enforce opted-in capability walls over complete patches
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `U03`
 - **Likely files:** config contract/schema/migration, analysis/preflight, CLI/MCP/ESLint/hook adapters,
   atomic candidate and adapter-parity fixtures
@@ -432,6 +432,22 @@ cannot miss a denied capability introduced across several files.
 **Acceptance:** CLI, MCP, ESLint, hooks, package API, and strict CI agree on the same complete
 candidate; policy weakening follows the existing hash-bound acknowledgment path; clean brownfield
 fixtures do not gain surprise blockers.
+
+**Local evidence (2026-07-16):** Layers opt in via `capabilities: { deny: [...] }` (seven-id enum
+in the versioned schema, path-specific rejection of unknown ids) or the dual-depth sugar
+`pure: true`; absence changes no verdict (brownfield case pinned). Enforcement is judgment-class
+`CAPABILITY_VIOLATION` with a port-injection `nextAction`, emitted by the pure IR engine
+(import-based), by atomic preflight over the complete candidate (A4 — multi-file case pinned),
+and by the symbol-aware CLI scan path (ambient + import; scan cache bumped to v8). D7 dedup: an
+ambient use covered by the layer's `forbiddenGlobals` reports only `FORBIDDEN_GLOBAL` (CLI case
+pinned). T01 now classifies the ambient surface on the LOWERED capability space via
+`loweredLayerCoverage` — the corpus D6 pair is executable (neutral migration passes without ack;
+real lowered loss requires it; bare `process` → deny `[process]` alone is weakening), and
+unlowerable custom globals keep the raw comparison. The two tests that pinned the pre-D6 finding
+path were updated to the designed semantics. `u04CapabilityWalls.test.ts` 15/15; corpus policy
+fixtures flipped executable; full suite 1184/1184; confidence gate green (aggregate 92.75%;
+config-loading range realigned 355-431 after the schema grew); artifacts, drift checks, budgets,
+and strict architecture green. Docs: package-surface, agent-guide, configuration.
 
 ### U05 — Prove ambient mutable-state diagnostics before strictness
 
@@ -1644,9 +1660,9 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: none — Phase U slice 1 SHIPPED in arkgate@3.3.0 (PR #68 → 64e5def; tag v3.3.0; publish-npm run 29514425825; npm latest=3.3.0)
-Next action: review U04 (opted-in capability walls: capabilities schema + pure: true, D6 lowered-space policy-delta, D7 dedup across adapters), then move only U04 to `doing`
-Released baseline: npm arkgate@3.3.0; slice 2 (U04–U07) is now unblocked
+Item: U05 — ambient mutable-state sensor (U04 done: walls live behind opt-in)
+Next action: doctor-only detector of module-scope mutable state in pure/walled layers; sidecar acks (W01 pattern); fixed FP corpus (registries, caches, memoization)
+Released baseline: npm arkgate@3.3.0
 Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
 Released baseline: npm arkgate@3.2.0; Phase W shipped from PR #66 (Phase T from PR #64)

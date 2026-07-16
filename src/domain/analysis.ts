@@ -52,6 +52,10 @@ export type AnalysisViolation = {
   ruleId: string;
   message: string;
   edge?: AnalysisImportEdge;
+  /** U04 (additive): present on CAPABILITY_VIOLATION — the denied capability id. */
+  capability?: string;
+  /** U04 (additive): the matched module specifier or ambient path. */
+  symbol?: string;
   evidence: AnalysisEvidence;
 };
 

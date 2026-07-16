@@ -45,10 +45,14 @@ export {
 export {
   AMBIENT_CAPABILITY_ENTRIES,
   CAPABILITY_IDS,
+  ambientCoveredByForbiddenGlobals,
   capabilityForAmbientName,
   capabilityForModuleSpecifier,
+  effectiveCapabilityDeny,
+  loweredLayerCoverage,
   lowerForbiddenGlobal,
   type CapabilityId,
+  type CapabilityLayerPolicy,
 } from '../domain/capabilities';
 
 export { collectCapabilityUses, type CapabilityUse } from './capabilityAnalysis';

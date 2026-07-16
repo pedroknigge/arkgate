@@ -7,8 +7,8 @@
       "targets": [
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 330,
-          "endLine": 406
+          "startLine": 355,
+          "endLine": 431
         }
       ]
     },

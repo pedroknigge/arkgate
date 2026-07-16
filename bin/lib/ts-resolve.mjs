@@ -129,9 +129,10 @@ export function scanCacheKey(root, args) {
   // v3: per-file exportsOnlyTypes. v4: typeOnlyExportNames + namedBindings.
   // v5: hasTopLevelSideEffects. v6: non-exported impure inits + non-export class statics.
   // v7: scope-aware forbidden globals + import-equals dependency edges.
+  // v8: opted-in capability walls (U04) — stale caches must not miss wall verdicts.
   return crypto
     .createHash('sha1')
-    .update(`ark-check-cache-v7\0${read(configPath)}\0${manifestPath ? read(manifestPath) : ''}`)
+    .update(`ark-check-cache-v8\0${read(configPath)}\0${manifestPath ? read(manifestPath) : ''}`)
     .digest('hex');
 }
 

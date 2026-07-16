@@ -135,8 +135,13 @@ seven closed ids (`network`, `filesystem`, `clock`, `randomness`, `environment`,
 `persistence`). `collectCapabilityUses(ts, sourceFile)` is the symbol-aware collector (ambient
 globals + imports, one scanner — shadowing/type-only/`globalThis` handled); `ir.capabilityUses`
 carries the import-based subset the pure engine can prove from content alone. Direct evidence
-only; nothing blocks on capabilities until a layer opts into a wall (U04). Vocabulary and
-lowering: `src/domain/capabilities.ts` / ADR 0009.
+only. **Walls (U04) are opt-in:** a layer with `capabilities: { deny: ["clock", …] }` or
+`pure: true` (deny all seven) turns matching evidence into judgment-class
+`CAPABILITY_VIOLATION` findings with a port-injection `nextAction`; absence changes no verdict.
+One violation, one voice: ambient uses covered by `forbiddenGlobals` stay `FORBIDDEN_GLOBAL`.
+Policy-delta classifies the ambient surface on the lowered capability space (equivalent
+migration = neutral; lowered loss = weakening). Vocabulary and lowering:
+`src/domain/capabilities.ts` / ADR 0009.
 
 **Governance weight (W02):** `contractHealth.governanceWeight` reports raw facts (layers, rules,
 governed files, files/layer, rules/layer) plus a fixed band (`heavy` / `typical` / `light` /

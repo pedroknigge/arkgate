@@ -676,6 +676,31 @@
           },
           "uniqueItems": true
         },
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "deny": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "network",
+                  "filesystem",
+                  "clock",
+                  "randomness",
+                  "environment",
+                  "process",
+                  "persistence"
+                ]
+              }
+            }
+          }
+        },
+        "pure": {
+          "type": "boolean"
+        },
         "mayImportInfrastructure": {
           "type": "boolean"
         },

@@ -141,6 +141,31 @@ export const ARK_CONFIG_SCHEMA = {
         intentPrefixes: stringArraySchema,
         description: { type: 'string', minLength: 1 },
         forbiddenGlobals: stringArraySchema,
+        capabilities: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            deny: {
+              type: 'array',
+              uniqueItems: true,
+              items: {
+                type: 'string',
+                // Parity with src/domain/capabilities.ts CAPABILITY_IDS (guarded by tests;
+                // this literal keeps the generated CLI artifact self-contained).
+                enum: [
+                  'network',
+                  'filesystem',
+                  'clock',
+                  'randomness',
+                  'environment',
+                  'process',
+                  'persistence',
+                ],
+              },
+            },
+          },
+        },
+        pure: { type: 'boolean' },
         mayImportInfrastructure: { type: 'boolean' },
         optional: { type: 'boolean' },
       },

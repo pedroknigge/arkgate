@@ -11,6 +11,10 @@ export type ArkConfigSchemaVersion = '1.0';
 
 export type ArkConfigCyclePolicy = 'strict' | 'soft' | 'framework-soft' | 'off';
 
+export type ArkConfigLayerCapabilities = {
+  deny?: string[];
+};
+
 export type ArkConfigLayer = {
   name: string;
   patterns: string[];
@@ -18,6 +22,10 @@ export type ArkConfigLayer = {
   intentPrefixes?: string[];
   description?: string;
   forbiddenGlobals?: string[];
+  /** ADR 0009 D2 — opt-in effect-capability walls; absence changes no verdict. */
+  capabilities?: ArkConfigLayerCapabilities;
+  /** Dual-depth sugar: `pure: true` denies all seven capabilities. */
+  pure?: boolean;
   mayImportInfrastructure?: boolean;
   optional?: boolean;
 };

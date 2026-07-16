@@ -11,6 +11,7 @@ import {
   type AnalysisFile,
   type AnalysisViolation,
 } from '../domain/analysis';
+import { effectiveCapabilityDeny } from '../domain/capabilities';
 import { loadArkConfigContract, parseArkConfigJson } from '../domain/configContract';
 import { layerForRelativePath } from '../domain/layerMatch';
 import {
@@ -96,6 +97,27 @@ export function analyzeProject(input: AnalyzeProjectInput): AnalysisResult {
     capabilityUses.push(...facts.capabilityUses);
   }
   const violations = violationsFor(edges, input.contract.config);
+
+  // U04: opted-in capability walls over the pure engine's import-based evidence.
+  // Absence of the surface adds nothing; ambient enforcement stays on the
+  // symbol-aware adapter path (documented envelope).
+  const denyByLayer = new Map(
+    input.contract.config.layers.map((layer) => [
+      layer.name,
+      new Set<string>(effectiveCapabilityDeny(layer)),
+    ])
+  );
+  for (const use of capabilityUses) {
+    const layer = fileByPath.get(use.file)?.layer;
+    if (!layer || !denyByLayer.get(layer)?.has(use.capability)) continue;
+    violations.push({
+      ruleId: 'CAPABILITY_VIOLATION',
+      message: `${layer} denies the ${use.capability} capability; found import of "${use.symbol}".`,
+      capability: use.capability,
+      symbol: use.symbol,
+      evidence: use.evidence,
+    });
+  }
 
   return {
     ir: {

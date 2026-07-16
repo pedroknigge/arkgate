@@ -95,11 +95,23 @@ export function preflightChange(input: AnalyzeChangeInput): ChangePreflightResul
 
   const candidate = analyzeChange({ ...input, changes: uniqueChanges });
   const candidateByPath = new Map(candidate.ir.files.map((file) => [file.path, file]));
+  // U04: the candidate IR's capability-wall violations flow into the same
+  // evaluator, so an atomic batch cannot hide a denied capability (A4).
+  const capabilityViolations: ArchitectureEngineViolation[] = candidate.ir.violations
+    .filter((violation) => violation.ruleId === 'CAPABILITY_VIOLATION')
+    .map((violation) => ({
+      ruleId: violation.ruleId,
+      file: violation.evidence.file,
+      line: violation.evidence.line,
+      target: violation.symbol,
+      capability: violation.capability,
+      message: violation.message,
+    }));
   const graphResult = evaluateArchitectureGraph({
     config: input.contract.config,
     rules: input.contract.config.rules,
     files: candidate.ir.files.map((file) => file.path),
-    contentViolations: [],
+    contentViolations: capabilityViolations,
     edges: candidate.ir.edges
       .filter((edge): edge is AnalysisImportEdge & { fromLayer: string } => Boolean(edge.fromLayer))
       .map((edge) => ({

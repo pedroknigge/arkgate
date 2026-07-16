@@ -83,6 +83,9 @@ Layer fields:
 
 - `name`, `patterns`, `exclude`, `description`
 - `intentPrefixes`, `forbiddenGlobals`, `mayImportInfrastructure`, `optional`
+- `capabilities: { deny: [...] }` — opt-in effect walls over the seven capability ids
+  (`network`, `filesystem`, `clock`, `randomness`, `environment`, `process`, `persistence`);
+  `pure: true` is the shorthand that denies all seven. Absence changes no verdict.
 
 Rule fields:
 

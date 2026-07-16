@@ -221,13 +221,15 @@ describe('T01 semantic policy delta', () => {
       path: '$.layers[DomainModel].intentPrefixes',
     },
     {
+      // ADR 0009 D6: removing a LOWERABLE global ('fetch' → network) is classified
+      // on the lowered capability space, so the finding lands on .capabilities.
       name: 'removes a forbidden global',
       candidate: {
         ...structuredClone(BASE_CONFIG),
         layers: [{ ...structuredClone(BASE_CONFIG.layers[0]), forbiddenGlobals: [] }],
       },
       classification: 'weakening',
-      path: '$.layers[DomainModel].forbiddenGlobals',
+      path: '$.layers[DomainModel].capabilities',
     },
     {
       name: 'allows direct infrastructure imports',

@@ -54,6 +54,8 @@ export function deterministicNextAction(violation) {
             return `Define a port in ${violation.fromLayer ?? 'the source layer'}, inject the ${violation.toLayer ?? 'outer-layer'} implementation, then preflight again.`;
         case 'FORBIDDEN_GLOBAL':
             return `Inject ${violation.target ?? 'the capability'} through a port, then preflight again.`;
+        case 'CAPABILITY_VIOLATION':
+            return `Define a ${String(violation.capability ?? 'capability')} port in ${violation.fromLayer ?? 'the walled layer'}, bind the implementation outside it, then preflight again.`;
         case 'CIRCULAR_DEPENDENCY':
             return 'Extract the shared dependency into a third module, then preflight again.';
         case 'RAW_EVENT_PUBLISH':
@@ -148,6 +150,13 @@ export function classifyRemediation(violation) {
             rationale: 'Ambient global in a pure layer: inject the capability through a port (Clock, Config, Http). Introducing the port is a design decision.',
         };
     }
+    if (ruleId === 'CAPABILITY_VIOLATION') {
+        return {
+            class: 'judgment',
+            confidence: 0.8,
+            rationale: 'A denied effect capability (clock/network/persistence/…) reached a walled layer: define a port and bind the implementation outside it. Never mechanical-safe — the port shape is a design decision.',
+        };
+    }
     if (ruleId === 'CIRCULAR_DEPENDENCY') {
         return {
             class: 'judgment',
@@ -200,6 +209,11 @@ export function enrichViolationWithFixClass(violation) {
             enriched.fixClass = 'inject-port';
             enriched.effort = 'small';
             enriched.enthusiastHint = `Do not call "${violation.target ?? 'that global'}" here. Pass the capability in through a small interface (for example a Clock, HttpPort, or Config provider).`;
+            break;
+        case 'CAPABILITY_VIOLATION':
+            enriched.fixClass = 'inject-port';
+            enriched.effort = 'medium';
+            enriched.enthusiastHint = `This layer denies the ${String(violation.capability ?? 'effect')} capability. Define a small port (for example ClockPort, HttpPort, StoragePort) and inject the implementation from an adapter layer instead of using "${violation.target ?? 'the capability'}" directly.`;
             break;
         case 'RAW_EVENT_PUBLISH':
             enriched.fixClass = 'registered-intent';
