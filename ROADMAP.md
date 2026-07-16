@@ -284,6 +284,41 @@ squash-merged as `0a3e098` with all required checks green; signed tag `v3.2.0`; 
 published from `docs/releases/3.2.0.md`; `publish-npm.yml` run 29455032343 succeeded and
 `npm view arkgate` shows `3.2.0` on `latest`. Each item retains commit + review evidence below.
 
+### Phase X — field feedback: report parity, ack lifecycle, reshape (candidate)
+
+Origin: 2026-07-16 field session over **amarilla-platform** (2,996 files, 12 layers, ENFORCE at
+100% with keep-empty baseline — the strongest adoption state on record). Reading its report and
+tree surfaced four gaps, one implemented immediately by owner directive; the rest are candidates
+gated on the usual promotion discipline.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 47b | `X01` | `done` | S | 3.4.0 shipped | The HTML report renders every doctor advisory, guarded by an executable parity rule |
+| 48b | `X02` | `parked` | S | `X01` | Contract-smell acknowledgments gain a lifecycle (review-by/staleness vs origin) so migration acks cannot fossilize |
+| 49b | `X03` | `parked` | S | — | Lateral-adapter smell recognizes family infrastructure (adapter → its own infra base is not a lateral peer) |
+| 50b | `X04` | `parked` | L | `X02`, plan doc + ADR | Reshape co-pilot: physicalCohesion sensor + reshape plan as a T03 change map, agent-executed one pilot at a time (moves/merges are judgment; never a codemod) |
+
+### X01 — Report parity with doctor advisories
+
+- **Status:** `done`
+- **Depends on:** 3.4.0 shipped
+
+**Outcome:** The HTML report renders the same advisory truth the doctor emits — contract health
+(W01) with acknowledgments honesty and governance weight (W02), ambient state (U05), and
+capability-wall badges (`pure` / `walls: …`) in the layers table (U04).
+
+**The standing rule (owner directive, 2026-07-16):** the report is a RENDERING of doctor truth
+and must evolve with what the product can deliver. That rule is EXECUTABLE, not prose:
+`reportParity.test.ts` enumerates the advisory keys `computeDoctorAdvisories` actually returns
+and fails when any of them lacks a `data-advisory` section in the rendered report — adding a
+doctor advisory without its report section breaks CI by construction.
+
+**Local evidence (2026-07-16):** `bin/lib/html-report-advisories.mjs` (budgeted, 200 LOC cap)
+renders the sections; `renderHtmlReport` gains the optional `advisories` payload wired from the
+CLI report path via `computeDoctorAdvisories`; the parity guard passes 4/4 including the full
+CLI `--report` end-to-end case and the wall badges. Field origin: the amarilla report on 3.4.0
+showed none of the three releases' surfaces.
+
 ### Next-round package budget guardrail
 
 **Recalibrated 2026-07-15:** the gate-package ceilings now retain at least 10% headroom over the
@@ -1705,8 +1740,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: none — Phase U SHIPPED in arkgate@3.4.0 (PR #69 → 5c4f983; signed tag v3.4.0; publish-npm run 29531051496; npm latest=3.4.0)
-Next action: plan the next phase — the ordered queue has no open item for the first time; recorded candidates: transitive capability inference (out of the U MVP), strict ambient-state after a field corpus, the node:process environment dual, template-interpolation specifiers
+Item: none — X01 (report parity) done from the amarilla field session; X02–X04 are parked candidates
+Next action: maintainer merges the report-parity PR; promoting X04 (reshape co-pilot) requires its plan doc + ADR first (X02/X03 are S-sized warm-ups); other recorded candidates: transitive capability inference, strict ambient-state after a field corpus, the node:process dual, template-interpolation specifiers
 Released baseline: npm arkgate@3.4.0; Phase U shipped from PR #69 (slice 1 from #68)
 Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security

@@ -59,6 +59,7 @@ import {
   reportsDir,
   readJsonSafe,
 } from './lib/html-report.mjs';
+import { computeDoctorAdvisories } from './lib/doctor-advisories.mjs';
 import { buildReportDepthPayload } from './lib/html-report-depth.mjs';
 import { shouldOpenHtmlReport, openHtmlInBrowser } from './lib/open-html.mjs';
 import {
@@ -100,7 +101,6 @@ import {
 import { runArchitectureScan } from './lib/architecture-scan.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import { analyzePolicyTransition } from './lib/policy-delta-io.mjs';
-
 
 function parseArgs(argv) {
   const args = {
@@ -1320,6 +1320,7 @@ async function main() {
       originJustCreated: !existingOrigin,
       adoption: adoptionForReport,
       designDepth,
+      advisories: computeDoctorAdvisories(root, config, coverage, rules, files, ts),
     };
     const html = args.beginner
       ? renderBeginnerHtmlReport(reportPayload)
