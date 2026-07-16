@@ -88,10 +88,15 @@ boundaries without changing its public API merely to reduce LOC.
 
 ## Acceptance criteria
 
-- [ ] **A1 — Boundary, not style:** an accepted ADR defines supported capability/state semantics,
-  compatibility, non-goals, and the evidence required before a diagnostic can block.
-- [ ] **A2 — Honest dogfood:** the named self-hosted god-module candidates are handled as
-  separate pilots; each preserves public behavior and stops if coupling or call-site hopping grows.
+- [x] **A1 — Boundary, not style:** an accepted ADR defines supported capability/state semantics,
+  compatibility, non-goals, and the evidence required before a diagnostic can block —
+  [ADR 0009](../../adr/0009-effect-capability-boundary.md) (Accepted 2026-07-16) plus the
+  `capability-corpus` fixtures and structural guard.
+- [x] **A2 — Honest dogfood:** the named self-hosted god-module candidates are handled as
+  separate pilots; each preserves public behavior and stops if coupling or call-site hopping grows
+  — U02 shipped both pilots (type-vocabulary split + C02 facade over cohesive kernel modules)
+  with byte-identical config artifacts, zero consumer import changes, and self-doctor reporting
+  zero design smells.
 - [ ] **A3 — Canonical effect evidence:** identical files, compiler inputs, and policy yield the
   same ordered capability uses, violations, hashes, and remediation IDs through the canonical IR.
 - [ ] **A4 — Atomic enforcement:** a multi-file candidate cannot hide a newly introduced denied
@@ -138,7 +143,7 @@ flowchart LR
 |---:|---|---:|---|---|
 | 1 | `U01` | S | Lock the architecture-vs-style boundary, capability vocabulary, compatibility, and fixed corpus in an ADR | Phase T shipped |
 | 2 | `U02` | M | Dogfood separate cohesive pure-core pilots without public API or verdict drift | `U01` |
-| 3 | `U03` | L | Add typed effect capability evidence to the canonical IR and generated CLI bundle | `U01`, `U02` |
+| 3 | `U03` | L | Add typed effect capability evidence to the canonical IR and generated CLI bundle | `U01`, `U02` (soft) |
 | 4 | `U04` | L | Enforce opted-in layer capability walls in complete-patch preflight with full adapter parity | `U03` |
 | 5 | `U05` | M | Add an advisory ambient mutable-state sensor and prove its precision before any strict option | `U03` |
 | 6 | `U06` | M | Ship dual-depth remediation and end-to-end pre-tool/MCP performance budgets | `U04`, `U05` |
@@ -147,6 +152,17 @@ flowchart LR
 One item may be `doing` at a time after promotion into `ROADMAP.md`. Every behavioral item starts
 with a failing fixture or measured baseline, preserves the canonical engine, and runs the common
 merge gate.
+
+**U02 is a hygiene dependency, not a logic one.** Splitting the named modules first reduces U03's
+merge surface, but U03 does not require the split: if a U02 pilot's kill-switch fires (coupling or
+call-site hopping grows), record the outcome as that pilot's evidence and start U03 anyway — a
+cosmetic pilot must never hold the phase hostage.
+
+**Release slicing (owner decision 2026-07-15):** the L+L middle concentrates the phase's
+wall-clock risk, so Phase U ships in two stable minors — `U01–U03` first (advisory capability
+evidence in the IR, no enforcement; the corpus matures in the field), then `U04–U07` (opted-in
+walls, ambient-state sensor, budgets, release evidence). This mirrors the Phase W advisory-first
+pattern; U07's release evidence closes the second slice.
 
 ## Dependencies & risks
 
@@ -171,11 +187,38 @@ merge gate.
 
 ## Open decisions owned by U01
 
-1. Capability IDs and whether they extend Analysis IR `1.0` additively or require a version change.
+1. Capability IDs and whether they extend Analysis IR `1.0` additively or require a version change
+   (precedent: 3.1.0 moved the analysis-result envelope `1.0 → 1.1` additively).
 2. Config shape and migration relationship with existing `forbiddenGlobals`.
 3. Which imports/globals are blocker-grade in the first corpus and which remain advisory.
 4. Whether ambient-state policy belongs in MVP config or remains doctor-only through U07.
+   Legitimate stateful modules (registries, caches, memoization) may be acknowledged via an
+   `.ark/` sidecar following the W01 contract-smell-acks precedent instead of a new config key.
 5. Exact end-to-end benchmark scenarios and thresholds after the Linux baseline is recorded.
+6. **Policy-delta (T01) classification semantics for the new capability surface:** whether adding
+   a capability wall classifies as strengthening (no acknowledgment), and whether migrating
+   `forbiddenGlobals` entries into equivalent capability policy is neutral or trips the weakening
+   guard when the old entries are removed. U04's enforcement reuses the existing hash-bound ack
+   path; the *classification* of introducing/migrating the new keys must be locked here so the
+   guard does not block legitimate migrations.
+7. **Surface-ownership map — one violation, one voice:** "persistence in the wrong layer" is
+   already detectable by layer import rules, design smells (`io-under-application`,
+   `facade-sql-in-routes`), and contract smells (`contract-lateral-adapter-allow`, W01); U04 adds
+   capability walls. The ADR must state which surface owns which question (declared edge vs lived
+   code vs typed effect vs contract shape), how remediations cross-reference each other, and note
+   that `persistence` is import-based — unlike clock/random/env, which are global/ambient-based.
+8. **W02 governance-weight reconciliation:** whether layer capability policies count as "rules"
+   for `governanceWeight` ratios. If they do, wall adopters drift toward the `heavy` band; either
+   exclude them from the count or document the effect before U04 ships.
+
+**Draft direction (owner-reviewed, 2026-07-15):** all eight decisions have a drafted answer in
+[ADR 0009](../../adr/0009-effect-capability-boundary.md) (Status: Proposed). Load-bearing calls:
+both config dialects **lower** to one capability semantic space (makes D6 mechanical and keeps
+one engine authoritative); `pure: true` is the casual-user surface (dual-depth); **direct
+evidence blocks, transitive inference never does**; ambient state stays doctor-only with sidecar
+acks (W01 precedent); capability policies are a governance-weight fact, not a rule count. The ADR
+locks to Accepted only when the U01 fixture obligations are met — the plan does not treat the
+draft as the contract.
 
 ## Promotion
 

@@ -16,9 +16,9 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 3.2.0** is current stable: contract health (advisory meta-lint of the contract +
-> governance weight), on top of 3.1's policy-transition checks, atomic multi-file preflight, and
-> optional structural convergence. [Release notes](docs/releases/3.2.0.md).
+> **ArkGate 3.3.0** is current stable: typed effect-capability evidence (seven closed ids,
+> evidence-only until walls opt in), on top of 3.2's contract health and 3.1's change-integrity
+> loop. [Release notes](docs/releases/3.3.0.md).
 
 ---
 

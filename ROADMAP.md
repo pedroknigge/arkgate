@@ -242,19 +242,25 @@ Phase T shipped in **`arkgate@3.1.0`**. Retained evidence:
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 40 | `U01` | `todo` | S | Phase T shipped | ADR locks architecture-vs-style boundary, capability vocabulary, compatibility, and fixed corpus |
-| 41 | `U02` | `todo` | M | `U01` | Separate self-hosted cohesion pilots clear the named canonical god-module evidence without public drift |
-| 42 | `U03` | `todo` | L | `U01`, `U02` | Canonical analysis IR reports typed effect capabilities with stable evidence and generated-bundle parity |
+| 40 | `U01` | `done` | S | Phase T shipped | ADR locks architecture-vs-style boundary, capability vocabulary, compatibility, and fixed corpus |
+| 41 | `U02` | `done` | M | `U01` | Separate self-hosted cohesion pilots clear the named canonical god-module evidence without public drift |
+| 42 | `U03` | `done` | L | `U01`, `U02` (soft) | Canonical analysis IR reports typed effect capabilities with stable evidence and generated-bundle parity |
 | 43 | `U04` | `todo` | L | `U03` | Opted-in layer capability walls block complete invalid patches consistently across every adapter |
 | 44 | `U05` | `todo` | M | `U03` | Ambient mutable-state sensor remains advisory until blocker-grade precision is proven |
 | 45 | `U06` | `todo` | M | `U04`, `U05` | Dual-depth remediation and measured end-to-end pre-tool/MCP budgets ship without style scoring |
 | 46 | `U07` | `todo` | S | `U01`–`U06` | Adoption, docs, package, compatibility, and release evidence close the phase |
 
-**Next (after Phase W ships — see the owner decision below):** review U01's open decisions, then
-move only U01 to `doing`. No U-item authorizes
-mandatory inlining, function/file-length rules, class bans, broad codemods, runtime work, or
-LLM-derived verdicts. Narrative scope and kill-switches:
-[understandable-execution](docs/plans/understandable-execution/README.md).
+**Next:** review U01's open decisions (now eight — including T01 policy-delta semantics for the
+capability surface, the surface-ownership map, and W02 governance-weight reconciliation), then
+move only U01 to `doing`. No U-item authorizes mandatory inlining, function/file-length rules,
+class bans, broad codemods, runtime work, or LLM-derived verdicts.
+
+**Release slicing (owner decision 2026-07-15):** Phase U ships as two stable minors — `U01–U03`
+first (advisory capability evidence in the IR, no enforcement; corpus matures in the field), then
+`U04–U07` (opted-in walls, state sensor, budgets, release evidence) — mirroring the Phase W
+advisory-first pattern. `U02` is a hygiene dependency for `U03`, not a logic one: if a pilot's
+kill-switch fires, record it as that pilot's evidence and start `U03` anyway. Narrative scope and
+kill-switches: [understandable-execution](docs/plans/understandable-execution/README.md).
 
 ### Phase W — contract health
 
@@ -306,22 +312,48 @@ the first implementation item starts.
 
 ### U01 — Lock effect/state semantics and the architecture-vs-style boundary
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** Phase T shipped
-- **Likely files:** a new ADR at the next free `docs/adr/` number, `docs/plans/understandable-execution/README.md`,
+- **Likely files:** `docs/adr/0009-effect-capability-boundary.md`, `docs/plans/understandable-execution/README.md`,
   fixed positive/negative fixtures and eval design only as required by the ADR
+
+**Started (2026-07-15):** [ADR 0009](docs/adr/0009-effect-capability-boundary.md) drafts all eight
+open decisions (Status: Proposed). Load-bearing calls: seven fixed capability IDs with declared
+evidence sources; both config dialects lower to one capability semantic space (`forbiddenGlobals`
+not deprecated; `pure: true` as the casual dual-depth surface; migrations proposed, never
+applied); blocker-grade = direct symbol/import evidence only, transitive inference never blocks;
+ambient state doctor-only with W01-style sidecar acks; benchmark method locked, numbers deferred
+to the measured baseline; T01 classifies on the lowered space (equivalent migration = neutral);
+surface-ownership dedup rule (layer rule wins, one finding, one `nextAction`); capability policies
+excluded from W02 banding as a raw fact. Remaining before `done`: the fixture obligations listed
+in the ADR (positive/negative per capability ID and evidence source, plus the D6 lowered-policy
+pair), then flip the ADR to Accepted.
+
+**Local evidence (2026-07-16):** ADR 0009 is **Accepted**. The fixture corpus lives at
+`tests/fixtures/capability-corpus/` — `manifest.v1.json` + 25 case files covering every
+capability/evidence-source cell (positives incl. adversarial `globalThis` alias; negatives for
+shadowing, type-only value use, `import type`, and similar-name non-drivers `pgn-parser` /
+`refetch-hints` / `fsm-machine`; one policy-allowed adapter case) plus the D6 lowered-policy
+pair (neutral migration vs real weakening, marked non-executable until U04's schema).
+`u01CapabilityCorpus.test.ts` guards the matrix structurally (6/6): exact seven-ID vocabulary,
+per-source positive coverage, the negative matrix, TS parseability of every case, unique sorted
+ids, and the lowering invariant of the neutral candidate. No production behavior or public
+schema changed. Plan acceptance A1 checked.
 
 **Outcome:** Define supported capability IDs, evidence, config compatibility, and the threshold
 for blocker-grade precision. Explicitly exclude mandatory inlining, LOC/function-length rules,
 class bans, generic `const` lint, style scoring, and from-scratch rewrites.
 
-**Acceptance:** The ADR answers all five plan open decisions or records a bounded deferment; every
+**Acceptance:** The ADR answers all eight plan open decisions or records a bounded deferment —
+including the T01 policy-delta classification of introducing/migrating capability policy, the
+surface-ownership map (layer rules vs design smells vs W01 contract smells vs capability walls),
+and the W02 governance-weight treatment of capability policies; every
 proposed blocking capability has deterministic positive and negative fixtures; no production
 behavior or public schema changes in this item.
 
 ### U02 — Dogfood cohesive pure-core pilots
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `U01`
 - **Likely files:** `src/domain/configContract.ts`, `src/kernel/analysis.ts`, focused sibling modules,
   generators/parity tests, existing public-surface tests
@@ -332,12 +364,35 @@ flow and stop if extraction increases coupling or call-site hopping.
 
 **Acceptance:** Exact public API, schema, hashes, diagnostics, generated bundle, adapter parity,
 performance, and package budgets remain green; self-doctor no longer reports either current file as
-a god-module candidate; no module budget is raised to land the pilots.
+a god-module candidate; no module budget is raised to land the pilots. A fired kill-switch is a
+valid close for a pilot (recorded as evidence) and does not block `U03` — the dependency is
+hygiene, not logic.
+
+**Local evidence (2026-07-16):** Both pilots landed without a kill-switch.
+**Pilot 1 (`configContract.ts`):** the contract type vocabulary moved to
+`src/domain/configTypes.ts` with `import type`/`export type` re-exports — guaranteed erased on
+transpile, so the generated `bin/lib/config-contract.mjs` and both published schemas stayed
+**byte-identical** (zero drift) and self-contained; 462→406 LOC / 18→11 export statements.
+**Pilot 2 (`analysis.ts`):** the C02 entry became a pure facade (74 lines) over five cohesive,
+acyclic kernel modules — `analysisTypes` (API vocabulary), `moduleGraph` (specifier scanning +
+edges), `graphEvaluate` (cycles + layer policy), `analysisCore` (load/analyze/policy delta),
+`changePreflight` (atomic candidate), `configWarnings` (config diagnostics) — every consumer
+import path unchanged; the tsup engine bundle regenerated. Self-doctor now reports **zero design
+smells and `designWeak: false`** on this repository for the first time. Mutation line ranges for
+`config-loading` were realigned with a deliberate 2-line widening (the previously-truncated tail
+of `withArkConfigMetadata` is now mutated — scope-positive, measured green at 93.85%); the
+runtime tarball exceeded its packed budget by 149 bytes from facade indirection and was brought
+back by minifying its duplicate ESM/CJS dist with `keepNames: true` (gate-bundle precedent;
+class/function `.name` stays stable for name-keyed reflection and Nest diagnostics — cross-model
+review catch) — 160,149→132,438 packed, **no ceiling raised**. `ArkConfigSchemaVersion` is one
+additive public type export.
+Full suite 1131/1131; confidence gate green (config-loading 93.85%, aggregate 92.75%); layer-match,
+cli-pure, analysis-engine drift, package files, TS 5/6/7 compat, and strict architecture all green.
 
 ### U03 — Add typed effect capabilities to the canonical analysis IR
 
-- **Status:** `todo`
-- **Depends on:** `U01`, `U02`
+- **Status:** `done`
+- **Depends on:** `U01`; `U02` soft (a recorded kill-switch also satisfies it)
 - **Likely files:** Domain analysis vocabulary, Kernel semantic analysis, generated CLI bundle,
   JSON Schema/public exports if authorized by U01, parity/property/fuzz tests
 
@@ -348,6 +403,20 @@ a second scanner or adapter-owned verdict.
 **Acceptance:** Identical content/compiler/policy inputs reproduce capability uses and hashes;
 shadowing, type-only, aliasing, dynamic-import, and legitimate-adapter negative cases are covered;
 generated bundle drift and public compatibility gates pass.
+
+**Local evidence (2026-07-16):** `src/domain/capabilities.ts` ships the closed seven-ID
+vocabulary with exact/subpath module matching (never substring), longest-prefix ambient mapping,
+and the D6 coverage-faithful `lowerForbiddenGlobal` (`process` → environment+process).
+`src/kernel/capabilityAnalysis.ts` composes the EXISTING collectors (`extractSemanticDependencies`
++ `collectForbiddenCapabilityUses`) — no second scanner, no change to `semanticAnalysis.ts`, so
+the pinned mutation ranges never moved. The pure IR engine populates `ir.capabilityUses` with the
+import-based subset from the same specifier scan (deterministic ordering; conservative textual
+`import type` erasure with the mixed-named-bindings envelope documented). The U01 corpus became
+executable: `u03CapabilityDetection.test.ts` runs all 25 cases through the symbol-aware collector
+(positives detect, negatives never, policy-allowed detects) plus vocabulary/lowering/IR
+determinism — 33/33 green on first run against the frozen corpus. Engine bundle regenerated;
+full suite 1164/1164; confidence gate green (aggregate 92.75%); budgets, TS 5/6/7, release
+artifacts, and strict architecture green. Evidence-only: nothing blocks until U04.
 
 ### U04 — Enforce opted-in capability walls over complete patches
 
@@ -1575,8 +1644,10 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: none — Phase W SHIPPED in arkgate@3.2.0 (PR #66 → 0a3e098; tag v3.2.0; publish-npm run 29455032343; npm latest=3.2.0)
-Next action: review U01 capability/config/corpus decisions, then start only U01 (MCP registry publication of 3.2.0 remains a separate maintainer step)
+Item: none implementable without maintainer action — U01–U03 done; 3.3.0 release train PREPARED (slice 1 of Phase U)
+Next action: maintainer merges PR #68 and authorizes the 3.3.0 publish (checklist in docs/releases/3.3.0.md); slice 2 (U04 walls → U07) starts after slice 1 ships per the owner decision
+Blocked: U04–U07 are gated behind slice 1 shipping (field maturation of the evidence corpus)
+Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
 Released baseline: npm arkgate@3.2.0; Phase W shipped from PR #66 (Phase T from PR #64)
 ```

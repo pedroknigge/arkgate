@@ -4,6 +4,43 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+## 3.3.0 — 2026-07-16
+
+Understandable execution, first slice (Phase U: U01–U03): typed effect capabilities as
+**evidence-only** architecture facts, a locked ADR boundary, and a legibility dogfood of the
+engine itself. Nothing blocks on capabilities in this release — walls arrive with the second
+slice (U04+) after the corpus matures in the field. **No breaking** CLI or `ark.config.json`
+changes. **No gate weaken.**
+
+### Added
+
+- **ADR 0009 (U01):** the accepted architecture-vs-style boundary — seven closed capability ids
+  (`network`, `filesystem`, `clock`, `randomness`, `environment`, `process`, `persistence`),
+  direct-evidence-only blocking threshold (transitive inference never blocks), config lowering
+  design (`forbiddenGlobals` and future capability policy lower to one semantic space;
+  `pure: true` planned as the casual surface), coverage-faithful lowering for prefix-matched
+  globals (bare `process` covers `environment` too), surface-ownership dedup rule, and the
+  W02 governance-weight reconciliation. Backed by a 25-case executable fixture corpus
+  (`tests/fixtures/capability-corpus/`) with a content-aware structural guard.
+- **Effect capabilities in the canonical analysis (U03):** `collectCapabilityUses(ts, sourceFile)`
+  composes the existing symbol-aware collectors (shadowing / type-only / `globalThis`-alias
+  precision; no second scanner); the Domain vocabulary ships as
+  `CAPABILITY_IDS` / `capabilityForModuleSpecifier` / `capabilityForAmbientName` /
+  `lowerForbiddenGlobal`; the compiler-free IR engine now populates `ir.capabilityUses` with
+  import-based evidence (exact module/subpath matching — never substring; textual
+  `import type` / `export type` erasure). Additive within IR `1.0`; evidence only.
+
+### Changed
+
+- **Engine legibility dogfood (U02):** `src/kernel/analysis.ts` is now a pure facade over six
+  cohesive kernel modules and the `ark.config.json` contract types moved to
+  `src/domain/configTypes.ts` — zero consumer import changes, byte-identical generated
+  config artifacts, identical hashes and verdicts (verified by execution old-vs-new). ArkGate's
+  own doctor now reports **zero design smells** on this repository.
+- The experimental `@arkgate/runtime` distribution is minified with `keepNames` (stable
+  class/function names for reflection and Nest diagnostics) and stays well inside its
+  release-artifact budget.
+
 ## 3.2.0 — 2026-07-15
 
 Contract health (Phase W): ArkGate now also meta-lints the contract itself and describes its

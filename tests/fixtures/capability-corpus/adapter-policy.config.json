@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1.0",
+  "include": ["cases"],
+  "layers": [
+    {
+      "name": "DomainModel",
+      "patterns": ["cases/persistence-prisma.ts", "cases/persistence-pg.ts"],
+      "capabilities": { "deny": ["persistence"] }
+    },
+    {
+      "name": "PersistenceAdapters",
+      "patterns": ["cases/persistence-adapter-allowed.ts"]
+    }
+  ],
+  "rules": []
+}

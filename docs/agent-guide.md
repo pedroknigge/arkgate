@@ -130,6 +130,14 @@ miss as a warning to read, not a defect to silence. A deliberate edge is acknowl
 `.ark/contract-smell-acks.json` (`{ acks: [{ id, edge, reason }] }`); `acknowledged` counts
 applied acks only, and a malformed sidecar or edge string suppresses nothing.
 
+**Effect capabilities (U03, evidence-only):** the analysis IR reports typed capability uses for
+seven closed ids (`network`, `filesystem`, `clock`, `randomness`, `environment`, `process`,
+`persistence`). `collectCapabilityUses(ts, sourceFile)` is the symbol-aware collector (ambient
+globals + imports, one scanner — shadowing/type-only/`globalThis` handled); `ir.capabilityUses`
+carries the import-based subset the pure engine can prove from content alone. Direct evidence
+only; nothing blocks on capabilities until a layer opts into a wall (U04). Vocabulary and
+lowering: `src/domain/capabilities.ts` / ADR 0009.
+
 **Governance weight (W02):** `contractHealth.governanceWeight` reports raw facts (layers, rules,
 governed files, files/layer, rules/layer) plus a fixed band (`heavy` / `typical` / `light` /
 `unknown`) with fixed wording. It is explicitly `notAScore` — never a gate input. Read `heavy` as

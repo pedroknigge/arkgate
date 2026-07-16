@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '3.2.0';
+const CURRENT = '3.3.0';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -26,6 +26,28 @@ describe(`version bump ${CURRENT}`, () => {
     expect(lock.packages[''].version).toBe(CURRENT);
     expect(server.version).toBe(CURRENT);
     expect(server.packages[0].version).toBe(CURRENT);
+  });
+});
+
+describe('CHANGELOG + release note cover 3.3.0 understandable execution slice 1', () => {
+  it('CHANGELOG 3.3.0 section names the U01-U03 surfaces and stays evidence-only', () => {
+    const body = read('CHANGELOG.md');
+    expect(body).toMatch(/## 3\.3\.0/);
+    expect(body).toMatch(/ADR 0009/);
+    expect(body).toMatch(/collectCapabilityUses/);
+    expect(body).toMatch(/capabilityUses/);
+    expect(body).toMatch(/evidence-only/i);
+    expect(body).toMatch(/zero design smells/i);
+  });
+
+  it('docs/releases/3.3.0.md has upgrade path and evidence-only honesty', () => {
+    const body = read('docs/releases/3.3.0.md');
+    expect(body).toMatch(/arkgate@3\.3\.0/);
+    expect(body).toMatch(/npm install -D arkgate@3\.3\.0/);
+    expect(body).toMatch(/evidence-only/i);
+    expect(body).toMatch(/transitive inference never/i);
+    expect(body).toMatch(/MCP registration is advisory/i);
+    expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
   });
 });
 
