@@ -1644,8 +1644,9 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: U04 — opted-in capability walls over complete patches (U01–U03 done; corpus executable at 33/33)
-Next action: config schema for layer capabilities + pure: true sugar; D6 lowered-space policy-delta; walls in preflight/adapters with the D7 dedup rule; first release slice (U01–U03 advisory) may ship before U04 per the owner decision
+Item: none implementable without maintainer action — U01–U03 done; 3.3.0 release train PREPARED (slice 1 of Phase U)
+Next action: maintainer merges PR #68 and authorizes the 3.3.0 publish (checklist in docs/releases/3.3.0.md); slice 2 (U04 walls → U07) starts after slice 1 ships per the owner decision
+Blocked: U04–U07 are gated behind slice 1 shipping (field maturation of the evidence corpus)
 Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
 Released baseline: npm arkgate@3.2.0; Phase W shipped from PR #66 (Phase T from PR #64)
