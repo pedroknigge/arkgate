@@ -4,23 +4,16 @@
   "runner": {
     "image": "ubuntu-latest",
     "node": "20",
-    "measurement": "fresh child processes; wall time of the complete spawn (node startup + TypeScript load + validate)"
+    "measurement": "fresh child processes; wall time of the complete spawn (node startup + TypeScript load + validate); non-zero child exits abort the run"
   },
   "sampling": { "runs": 9 },
   "scenarios": {
-    "hookWarm": {
+    "hook": {
       "size": 10000,
-      "metric": "hookWarm",
+      "metric": "hook",
       "baselineMs": null,
       "maxP95Ms": null,
-      "rationale": "The per-keystroke interactive path (PreToolUse hook with a warm scan cache). Ceiling lands after the first Linux baseline is recorded by CI."
-    },
-    "hookCold": {
-      "size": 10000,
-      "metric": "hookCold",
-      "baselineMs": null,
-      "maxP95Ms": null,
-      "rationale": "First write after a cache flush. Ceiling lands after the Linux baseline."
+      "rationale": "The per-keystroke interactive path: ark-mcp --hook validates the single proposed file (no scan-cache involvement — one distribution). Ceiling lands after the first Linux baseline is recorded by CI."
     },
     "doctorCold": {
       "size": 10000,

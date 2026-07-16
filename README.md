@@ -16,9 +16,10 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 3.3.0** is current stable: typed effect-capability evidence (seven closed ids,
-> evidence-only until walls opt in), on top of 3.2's contract health and 3.1's change-integrity
-> loop. [Release notes](docs/releases/3.3.0.md).
+> **ArkGate 3.4.0** is current stable: opt-in capability walls (`pure: true` or
+> `capabilities.deny` per layer, enforced on every adapter), the advisory ambient-state sensor,
+> and the measured pre-tool path — completing 3.3's evidence slice.
+> [Release notes](docs/releases/3.4.0.md).
 
 ---
 

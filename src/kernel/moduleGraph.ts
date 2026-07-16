@@ -175,13 +175,16 @@ function moduleSpecifiers(source: string): ModuleSpecifier[] {
       if (string) index = string.offset + string.excerpt.length - 1;
       continue;
     }
-    const specifier = isWordAt(source, 'import', index)
-      ? specifierAfterImport(source, index)
-      : isWordAt(source, 'export', index)
-        ? specifierAfterExport(source, index)
-        : isWordAt(source, 'require', index)
-          ? specifierAfterRequire(source, index)
-          : undefined;
+    // First-letter guard before each word probe: the scan visits every character,
+    // so unconditional startsWith calls dominate (CI V01 profile, U06).
+    const specifier =
+      current === 'i' && isWordAt(source, 'import', index)
+        ? specifierAfterImport(source, index)
+        : current === 'e' && isWordAt(source, 'export', index)
+          ? specifierAfterExport(source, index)
+          : current === 'r' && isWordAt(source, 'require', index)
+            ? specifierAfterRequire(source, index)
+            : undefined;
     if (specifier) result.push(specifier);
   }
   return result;

@@ -3,10 +3,11 @@
  * U06 — end-to-end pre-tool (hook) and doctor path benchmark (ADR 0009 D5).
  *
  * Measures the COMPLETE paths a user feels, as fresh child processes:
- *   hook-warm  — `ark-mcp --hook` validating one Write payload against a tree
- *                with a warm scan cache (the per-keystroke interactive path)
- *   hook-cold  — same invocation with no cache on disk
- *   doctor-cold — `ark-check --doctor --json --no-cache` over the tree
+ *   hook        — `ark-mcp --hook` validating one Write payload (the
+ *                 per-keystroke interactive path; the hook validates the single
+ *                 proposed file and does not consume the scan cache, so there
+ *                 is exactly ONE distribution — no fictional cold/warm split)
+ *   doctorCold  — `ark-check --doctor --json --no-cache` over the tree
  *
  * D5 method: record a Linux CI baseline FIRST; ceilings are baseline plus a
  * fixed headroom and live in eval/performance/hook-budgets.v1.json. Until a
@@ -97,6 +98,11 @@ function runHookOnce(root, payload) {
   );
   const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
   if (result.error) throw result.error;
+  // The payload is clean by construction: a non-zero exit means a broken
+  // environment, and its (fast) timing must never become a baseline.
+  if (result.status !== 0) {
+    throw new Error(`hook exited ${result.status}: ${result.stderr || result.stdout}`);
+  }
   return elapsedMs;
 }
 
@@ -118,12 +124,10 @@ function runDoctorOnce(root) {
   );
   const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
   if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error(`doctor exited ${result.status}: ${result.stderr || result.stdout}`);
+  }
   return elapsedMs;
-}
-
-function clearCaches(root) {
-  fs.rmSync(path.join(root, '.ark-cache'), { recursive: true, force: true });
-  fs.rmSync(path.join(root, 'node_modules', '.cache'), { recursive: true, force: true });
 }
 
 async function main() {
@@ -141,24 +145,15 @@ async function main() {
           content: 'export const edited = 1;\n',
         },
       };
-      const hookCold = [];
-      const hookWarm = [];
+      const hook = [];
       const doctorCold = [];
       for (let i = 0; i < args.runs; i += 1) {
-        clearCaches(root);
-        hookCold.push(runHookOnce(root, payload));
-        // Cache is now warm from the cold run; measure the interactive path.
-        hookWarm.push(runHookOnce(root, payload));
+        hook.push(runHookOnce(root, payload));
       }
       for (let i = 0; i < Math.max(3, Math.floor(args.runs / 2)); i += 1) {
         doctorCold.push(runDoctorOnce(root));
       }
-      results.push({
-        size,
-        hookCold: stats(hookCold),
-        hookWarm: stats(hookWarm),
-        doctorCold: stats(doctorCold),
-      });
+      results.push({ size, hook: stats(hook), doctorCold: stats(doctorCold) });
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
@@ -166,15 +161,21 @@ async function main() {
 
   const failures = [];
   if (args.failBudget && budgets?.scenarios) {
-    for (const result of results) {
-      for (const [scenario, spec] of Object.entries(budgets.scenarios)) {
-        if (spec.size !== result.size || typeof spec.maxP95Ms !== 'number') continue;
-        const measured = result[spec.metric ?? scenario]?.p95Ms;
-        if (typeof measured === 'number' && measured > spec.maxP95Ms) {
-          failures.push(
-            `Budget fail: ${scenario}@${result.size} p95 ${measured}ms is not below ${spec.maxP95Ms}ms`
-          );
-        }
+    for (const [scenario, spec] of Object.entries(budgets.scenarios)) {
+      if (typeof spec.maxP95Ms !== 'number') continue; // recording mode
+      const result = results.find((r) => r.size === spec.size);
+      const measured = result?.[spec.metric ?? scenario]?.p95Ms;
+      // An armed ceiling that resolves no measurement is a broken harness, not a pass.
+      if (typeof measured !== 'number') {
+        failures.push(
+          `Budget fail: armed scenario ${scenario}@${spec.size} resolved no measurement (metric ${spec.metric ?? scenario}; sizes run: ${results.map((r) => r.size).join(',')})`
+        );
+        continue;
+      }
+      if (measured > spec.maxP95Ms) {
+        failures.push(
+          `Budget fail: ${scenario}@${spec.size} p95 ${measured}ms is not below ${spec.maxP95Ms}ms`
+        );
       }
     }
   }
@@ -189,12 +190,15 @@ async function main() {
     ok: failures.length === 0,
   };
   const serialized = JSON.stringify(report, null, 2);
-  if (args.out) fs.writeFileSync(path.join(REPO, args.out), `${serialized}\n`);
+  if (args.out) {
+    const target = path.isAbsolute(args.out) ? args.out : path.join(REPO, args.out);
+    fs.writeFileSync(target, `${serialized}\n`);
+  }
   if (args.json) console.log(serialized);
   else {
     for (const r of results) {
       console.log(
-        `size ${r.size}: hook cold p95 ${r.hookCold.p95Ms}ms · hook warm p95 ${r.hookWarm.p95Ms}ms · doctor cold p95 ${r.doctorCold.p95Ms}ms`
+        `size ${r.size}: hook p95 ${r.hook.p95Ms}ms · doctor cold p95 ${r.doctorCold.p95Ms}ms`
       );
     }
   }

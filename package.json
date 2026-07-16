@@ -1,6 +1,6 @@
 {
   "name": "arkgate",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "description": "ArkGate \u2014 architecture co-pilot for AI TypeScript (write gate, CI gate, plan/loop)",
   "type": "module",
   "main": "./dist/index.cjs",

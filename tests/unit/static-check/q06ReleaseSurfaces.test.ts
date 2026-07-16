@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '3.3.0';
+const CURRENT = '3.4.0';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -26,6 +26,32 @@ describe(`version bump ${CURRENT}`, () => {
     expect(lock.packages[''].version).toBe(CURRENT);
     expect(server.version).toBe(CURRENT);
     expect(server.packages[0].version).toBe(CURRENT);
+  });
+});
+
+describe('CHANGELOG + release note cover 3.4.0 understandable execution slice 2', () => {
+  it('CHANGELOG 3.4.0 section names the U04-U06 surfaces and stays opt-in', () => {
+    const body = read('CHANGELOG.md');
+    expect(body).toMatch(/## 3\.4\.0/);
+    expect(body).toMatch(/Capability walls \(U04\)/);
+    expect(body).toMatch(/pure: true/);
+    expect(body).toMatch(/CAPABILITY_VIOLATION/);
+    expect(body).toMatch(/coverage\s+atoms|Coverage-atom/i);
+    expect(body).toMatch(/Ambient-state sensor \(U05/);
+    expect(body).toMatch(/bench:hook-path/);
+    expect(body).toMatch(/never mechanical-safe/i);
+    expect(body).toMatch(/opt-in/i);
+  });
+
+  it('docs/releases/3.4.0.md has upgrade path and opt-in honesty', () => {
+    const body = read('docs/releases/3.4.0.md');
+    expect(body).toMatch(/arkgate@3\.4\.0/);
+    expect(body).toMatch(/npm install -D arkgate@3\.4\.0/);
+    expect(body).toMatch(/pure.*true|"pure": true/);
+    expect(body).toMatch(/never rewrites\s+code silently|never auto-patched/i);
+    expect(body).toMatch(/no strict mode/i);
+    expect(body).toMatch(/MCP registration is advisory/i);
+    expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
   });
 });
 

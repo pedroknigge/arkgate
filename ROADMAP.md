@@ -504,7 +504,7 @@ its baseline. CI job added. FIX_HINTS carries the casual port hint. Suite 1200/1
 
 ### U07 — Adoption and release evidence
 
-- **Status:** `todo`
+- **Status:** `doing`
 - **Depends on:** `U01`–`U06`
 - **Likely files:** adoption/eval fixtures, README/configuration/agent/package-surface docs,
   CHANGELOG/release notes, package and compatibility checks
@@ -515,6 +515,16 @@ a new command, skill namespace, preset pack, runtime wedge, or package-budget ra
 **Acceptance:** Fixed adoption and adversarial corpora, full confidence gate, architecture check,
 TypeScript compatibility, package allowlist/artifact budgets, and exact-SHA CI/Security are green;
 the phase plan is marked Shipped only after release evidence exists.
+
+**Started (2026-07-16):** the 3.4.0 release train is prepared (version sync across package.json,
+lockfile, src/version.ts, server.json; CHANGELOG section; `docs/releases/3.4.0.md` with the
+opt-in honesty lines and maintainer checklist; release-surface parity test extended;
+README/package-surface pointers). U06's /review fixes are folded in: the bench dropped its
+fictional cold/warm split (the hook never consumes the scan cache — one honest distribution),
+armed ceilings that resolve no measurement now FAIL instead of silently passing, non-zero child
+exits abort a run, and the ESLint rule gained all-type named-list erasure parity plus a
+behavioral test. Remaining before `done`: green local gates + CI (including the recorded Linux
+hook baseline), then adopt ceilings = baseline + headroom.
 
 ---
 

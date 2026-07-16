@@ -4,6 +4,46 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+## 3.4.0 — 2026-07-16
+
+Understandable execution, second slice (Phase U: U04–U07): the capability evidence shipped in
+3.3 becomes **opt-in enforcement** across every adapter, plus the advisory ambient-state sensor
+and the measured pre-tool path. Everything remains opt-in — a config without `capabilities` /
+`pure` keys behaves exactly as before. **No breaking** CLI or `ark.config.json` changes.
+**No gate weaken.**
+
+### Added
+
+- **Capability walls (U04):** a layer may declare `capabilities: { deny: [...] }` (seven-id enum
+  in the versioned schema) or the casual shorthand `pure: true` (denies all seven). Enforcement
+  is judgment-class `CAPABILITY_VIOLATION` — never mechanical-safe, never auto-patched — with a
+  port-injection `nextAction`, across the CLI scan (ambient + import evidence), the pure IR
+  engine and atomic preflight (a multi-file batch cannot hide a denied capability), the real
+  PreToolUse hook and MCP gate (`capabilityWalls`), and ESLint
+  (`ark/no-denied-capabilities`, import dimension, in the recommended config). One violation,
+  one voice: an ambient use covered by the layer's `forbiddenGlobals` reports only
+  `FORBIDDEN_GLOBAL`.
+- **Coverage-atom policy delta (U04/D6):** T01 classifies the ambient/wall surface on coverage
+  atoms (`ambient:<entry>` prefix-expanded + `import:<capability>`): any lost atom is weakening
+  (`fetch`→`XMLHttpRequest`, `Date`→`Date.now`, wall→`forbiddenGlobals` all require the
+  hash-bound acknowledgment); migrating `forbiddenGlobals` to an equivalent-or-stronger wall
+  never needs one.
+- **Ambient-state sensor (U05, advisory + opt-in):** `doctor.ambientState` flags module-scope
+  `let`/`var` in `pure: true` layers only, with bounded sidecar acknowledgments at
+  `.ark/ambient-state-acks.json`. `declare` ambients and `using` bindings never count; skipped
+  oversized files are reported. No strict mode exists.
+- **Measured pre-tool path (U06):** `npm run bench:hook-path` measures the complete
+  hook/doctor child-process paths; `eval/performance/hook-budgets.v1.json` locks the D5 method
+  (Linux baseline first, ceilings = baseline + fixed headroom, recording mode until then); CI
+  runs the bench. Dual-depth remediation everywhere: plain port hints for casual users, stable
+  `ruleId`/`capability`/`fixClass`/`nextAction` JSON for tooling.
+
+### Fixed
+
+- The scan cache is version-bumped (v8) so a warm cache from an older ArkGate cannot miss wall
+  verdicts; template-literal text and `require()` handling in the pure scanner are
+  capability-correct (templates skipped; require counts as evidence, never as a graph edge).
+
 ## 3.3.0 — 2026-07-16
 
 Understandable execution, first slice (Phase U: U01–U03): typed effect capabilities as

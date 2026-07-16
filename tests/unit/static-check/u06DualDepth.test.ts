@@ -126,6 +126,62 @@ describe('U06 dual depth — ESLint parity (import dimension)', () => {
       ]
     ).toBe('error');
   });
+
+  it('reports denied imports but never runtime-erased type-only lists (/review F1)', async () => {
+    const plugin = (await import('../../../src/eslint/index')).default;
+    const rule = plugin.rules['no-denied-capabilities'];
+    const root = mk();
+    project(root); // DomainModel pure: true over src/domain/**
+    const reports: unknown[] = [];
+    const context = {
+      getFilename: () => path.join(root, 'src/domain/repo.ts'),
+      report: (descriptor: unknown) => reports.push(descriptor),
+      options: [],
+    };
+    const listener = rule.create(context as never) as Record<
+      string,
+      (node: unknown) => void
+    >;
+    const importNode = (extra: object) => ({
+      type: 'ImportDeclaration',
+      source: { type: 'Literal', value: 'pg' },
+      ...extra,
+    });
+    // Value import of a denied driver → reported.
+    listener.ImportDeclaration?.(
+      importNode({ importKind: 'value', specifiers: [{ type: 'ImportDefaultSpecifier' }] })
+    );
+    expect(reports).toHaveLength(1);
+    // Statement-level `import type` → erased.
+    listener.ImportDeclaration?.(
+      importNode({ importKind: 'type', specifiers: [{ type: 'ImportSpecifier', importKind: 'type' }] })
+    );
+    // All-type named list (`import { type Pool } from 'pg'`) — parity with the
+    // symbol path: erased at runtime, must NOT report.
+    listener.ImportDeclaration?.(
+      importNode({ importKind: 'value', specifiers: [{ type: 'ImportSpecifier', importKind: 'type' }] })
+    );
+    expect(reports).toHaveLength(1);
+    // Mixed list keeps its value import → reported.
+    listener.ImportDeclaration?.(
+      importNode({
+        importKind: 'value',
+        specifiers: [
+          { type: 'ImportSpecifier', importKind: 'type' },
+          { type: 'ImportSpecifier', importKind: 'value' },
+        ],
+      })
+    );
+    expect(reports).toHaveLength(2);
+    // Innocent similar-name module → silent.
+    listener.ImportDeclaration?.({
+      type: 'ImportDeclaration',
+      source: { type: 'Literal', value: 'pgn-parser' },
+      importKind: 'value',
+      specifiers: [{ type: 'ImportDefaultSpecifier' }],
+    });
+    expect(reports).toHaveLength(2);
+  });
 });
 
 describe('U06 budgets — D5 method is locked, numbers are not invented', () => {

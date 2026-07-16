@@ -588,16 +588,41 @@ export const noDeniedCapabilities: ArkRule = {
 
     return {
       ImportDeclaration(node) {
-        const importNode = node as AstNode & { source?: { value?: unknown }; importKind?: string };
-        check(node, importNode.source?.value, importNode.importKind === 'type');
+        const importNode = node as AstNode & {
+          source?: { value?: unknown };
+          importKind?: string;
+          specifiers?: Array<{ importKind?: string; type?: string }>;
+        };
+        // Parity with the symbol path (isTypeOnlyReference): a braced list whose
+        // named specifiers are ALL `type` is erased at runtime too.
+        const named = (importNode.specifiers ?? []).filter(
+          (s) => s.type === 'ImportSpecifier'
+        );
+        const allNamedTypeOnly =
+          named.length > 0 &&
+          named.length === (importNode.specifiers ?? []).length &&
+          named.every((s) => s.importKind === 'type');
+        check(
+          node,
+          importNode.source?.value,
+          importNode.importKind === 'type' || allNamedTypeOnly
+        );
       },
       ImportExpression(node) {
         const importNode = node as AstNode & { source?: { type?: string; value?: unknown } };
         if (importNode.source?.type === 'Literal') check(node, importNode.source.value, false);
       },
       ExportNamedDeclaration(node) {
-        const exportNode = node as AstNode & { source?: { value?: unknown }; exportKind?: string };
-        if (exportNode.source) check(node, exportNode.source.value, exportNode.exportKind === 'type');
+        const exportNode = node as AstNode & {
+          source?: { value?: unknown };
+          exportKind?: string;
+          specifiers?: Array<{ exportKind?: string; type?: string }>;
+        };
+        if (!exportNode.source) return;
+        const specifiers = (exportNode.specifiers ?? []) as Array<{ exportKind?: string }>;
+        const allTypeOnly =
+          specifiers.length > 0 && specifiers.every((s) => s.exportKind === 'type');
+        check(node, exportNode.source.value, exportNode.exportKind === 'type' || allTypeOnly);
       },
       ExportAllDeclaration(node) {
         const exportNode = node as AstNode & { source?: { value?: unknown }; exportKind?: string };
