@@ -244,7 +244,7 @@ Phase T shipped in **`arkgate@3.1.0`**. Retained evidence:
 |---:|---|---|---:|---|---|
 | 40 | `U01` | `done` | S | Phase T shipped | ADR locks architecture-vs-style boundary, capability vocabulary, compatibility, and fixed corpus |
 | 41 | `U02` | `done` | M | `U01` | Separate self-hosted cohesion pilots clear the named canonical god-module evidence without public drift |
-| 42 | `U03` | `todo` | L | `U01`, `U02` (soft) | Canonical analysis IR reports typed effect capabilities with stable evidence and generated-bundle parity |
+| 42 | `U03` | `done` | L | `U01`, `U02` (soft) | Canonical analysis IR reports typed effect capabilities with stable evidence and generated-bundle parity |
 | 43 | `U04` | `todo` | L | `U03` | Opted-in layer capability walls block complete invalid patches consistently across every adapter |
 | 44 | `U05` | `todo` | M | `U03` | Ambient mutable-state sensor remains advisory until blocker-grade precision is proven |
 | 45 | `U06` | `todo` | M | `U04`, `U05` | Dual-depth remediation and measured end-to-end pre-tool/MCP budgets ship without style scoring |
@@ -391,7 +391,7 @@ cli-pure, analysis-engine drift, package files, TS 5/6/7 compat, and strict arch
 
 ### U03 — Add typed effect capabilities to the canonical analysis IR
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `U01`; `U02` soft (a recorded kill-switch also satisfies it)
 - **Likely files:** Domain analysis vocabulary, Kernel semantic analysis, generated CLI bundle,
   JSON Schema/public exports if authorized by U01, parity/property/fuzz tests
@@ -403,6 +403,20 @@ a second scanner or adapter-owned verdict.
 **Acceptance:** Identical content/compiler/policy inputs reproduce capability uses and hashes;
 shadowing, type-only, aliasing, dynamic-import, and legitimate-adapter negative cases are covered;
 generated bundle drift and public compatibility gates pass.
+
+**Local evidence (2026-07-16):** `src/domain/capabilities.ts` ships the closed seven-ID
+vocabulary with exact/subpath module matching (never substring), longest-prefix ambient mapping,
+and the D6 coverage-faithful `lowerForbiddenGlobal` (`process` → environment+process).
+`src/kernel/capabilityAnalysis.ts` composes the EXISTING collectors (`extractSemanticDependencies`
++ `collectForbiddenCapabilityUses`) — no second scanner, no change to `semanticAnalysis.ts`, so
+the pinned mutation ranges never moved. The pure IR engine populates `ir.capabilityUses` with the
+import-based subset from the same specifier scan (deterministic ordering; conservative textual
+`import type` erasure with the mixed-named-bindings envelope documented). The U01 corpus became
+executable: `u03CapabilityDetection.test.ts` runs all 25 cases through the symbol-aware collector
+(positives detect, negatives never, policy-allowed detects) plus vocabulary/lowering/IR
+determinism — 33/33 green on first run against the frozen corpus. Engine bundle regenerated;
+full suite 1164/1164; confidence gate green (aggregate 92.75%); budgets, TS 5/6/7, release
+artifacts, and strict architecture green. Evidence-only: nothing blocks until U04.
 
 ### U04 — Enforce opted-in capability walls over complete patches
 
@@ -1630,8 +1644,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: U03 — typed effect capabilities in the canonical IR (U01+U02 done; self-doctor at zero design smells)
-Next action: implement ADR 0009 D1/D3 detection against the capability corpus; extend semanticAnalysis + domain vocabulary; regenerate the engine bundle; corpus becomes executable
+Item: U04 — opted-in capability walls over complete patches (U01–U03 done; corpus executable at 33/33)
+Next action: config schema for layer capabilities + pure: true sugar; D6 lowered-space policy-delta; walls in preflight/adapters with the D7 dedup rule; first release slice (U01–U03 advisory) may ship before U04 per the owner decision
 Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
 Released baseline: npm arkgate@3.2.0; Phase W shipped from PR #66 (Phase T from PR #64)

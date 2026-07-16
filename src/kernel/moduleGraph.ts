@@ -6,11 +6,13 @@
  * contract; src/kernel/semanticAnalysis.ts owns the symbol-aware path.
  */
 import type {
+  AnalysisCapabilityUse,
   AnalysisEvidence,
   AnalysisFile,
   AnalysisImportEdge,
   AnalysisViolation,
 } from '../domain/analysis';
+import { capabilityForModuleSpecifier } from '../domain/capabilities';
 import type { ArkConfig } from '../domain/configTypes';
 import { findDeniedEdgeRule } from '../domain/layerMatch';
 
@@ -24,7 +26,7 @@ export function normalizePath(value: string): string {
   return segments.join('/');
 }
 
-type ModuleSpecifier = { value: string; offset: number; excerpt: string };
+type ModuleSpecifier = { value: string; offset: number; excerpt: string; typeOnly?: boolean };
 
 function isIdentifierCharacter(value: string | undefined): boolean {
   return value !== undefined && /[A-Za-z0-9_$]/.test(value);
@@ -66,7 +68,17 @@ function isWordAt(source: string, word: string, index: number): boolean {
 function specifierAfterImport(source: string, index: number): ModuleSpecifier | undefined {
   index = skipWhitespace(source, index + 'import'.length);
   if (source[index] === '(') return readString(source, skipWhitespace(source, index + 1));
-  return specifierInStaticStatement(source, index, true);
+  // Conservative textual `import type …` detection: statements that begin with the
+  // type keyword are erased at runtime and must not count as capability evidence.
+  // Mixed `{ type A, B }` named bindings stay value imports here; the symbol-aware
+  // collector owns that precision (documented envelope, ADR 0009 D3).
+  let typeOnly = false;
+  if (isWordAt(source, 'type', index)) {
+    const after = skipWhitespace(source, index + 'type'.length);
+    if (source[after] !== ',' && !isWordAt(source, 'from', after)) typeOnly = true;
+  }
+  const specifier = specifierInStaticStatement(source, index, true);
+  return specifier && typeOnly ? { ...specifier, typeOnly: true } : specifier;
 }
 
 function specifierAfterExport(source: string, index: number): ModuleSpecifier | undefined {
@@ -170,6 +182,29 @@ function resolveSpecifier(
     if (found) return found;
   }
   return undefined;
+}
+
+/**
+ * Import-based capability evidence the pure engine can prove from content
+ * alone (ADR 0009 — U03). Ambient globals need symbols and belong to
+ * src/kernel/capabilityAnalysis.ts; relative specifiers are project code.
+ * Ordering is deterministic: specifier occurrence order within the file.
+ */
+export function capabilityUsesFor(file: AnalysisFile): AnalysisCapabilityUse[] {
+  const uses: AnalysisCapabilityUse[] = [];
+  for (const moduleSpecifier of moduleSpecifiers(file.content)) {
+    if (moduleSpecifier.typeOnly || moduleSpecifier.value.startsWith('.')) continue;
+    const capability = capabilityForModuleSpecifier(moduleSpecifier.value);
+    if (!capability) continue;
+    const line = file.content.slice(0, moduleSpecifier.offset).split('\n').length;
+    uses.push({
+      file: file.path,
+      symbol: moduleSpecifier.value,
+      capability,
+      evidence: { kind: 'import', file: file.path, line, excerpt: moduleSpecifier.excerpt },
+    });
+  }
+  return uses;
 }
 
 export function violationsFor(

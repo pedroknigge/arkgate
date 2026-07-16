@@ -42,6 +42,17 @@ export {
   type SourcePolicyFinding,
 } from '../domain/sourcePolicy';
 
+export {
+  AMBIENT_CAPABILITY_ENTRIES,
+  CAPABILITY_IDS,
+  capabilityForAmbientName,
+  capabilityForModuleSpecifier,
+  lowerForbiddenGlobal,
+  type CapabilityId,
+} from '../domain/capabilities';
+
+export { collectCapabilityUses, type CapabilityUse } from './capabilityAnalysis';
+
 export type {
   AnalysisContract,
   AnalysisResult,
