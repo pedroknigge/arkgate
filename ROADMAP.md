@@ -248,7 +248,7 @@ Phase T shipped in **`arkgate@3.1.0`**. Retained evidence:
 | 43 | `U04` | `done` | L | `U03` | Opted-in layer capability walls block complete invalid patches consistently across every adapter |
 | 44 | `U05` | `done` | M | `U03` | Ambient mutable-state sensor remains advisory until blocker-grade precision is proven |
 | 45 | `U06` | `done` | M | `U04`, `U05` | Dual-depth remediation and measured end-to-end pre-tool/MCP budgets ship without style scoring |
-| 46 | `U07` | `todo` | S | `U01`–`U06` | Adoption, docs, package, compatibility, and release evidence close the phase |
+| 46 | `U07` | `done` | S | `U01`–`U06` | Adoption, docs, package, compatibility, and release evidence close the phase |
 
 **Slice 1 shipped in `arkgate@3.3.0`** (2026-07-16): U01–U03 published from PR
 [#68](https://github.com/pedroknigge/arkgate/pull/68) (squash `64e5def`), signed tag `v3.3.0`,
@@ -504,7 +504,7 @@ its baseline. CI job added. FIX_HINTS carries the casual port hint. Suite 1200/1
 
 ### U07 — Adoption and release evidence
 
-- **Status:** `doing`
+- **Status:** `done`
 - **Depends on:** `U01`–`U06`
 - **Likely files:** adoption/eval fixtures, README/configuration/agent/package-surface docs,
   CHANGELOG/release notes, package and compatibility checks
@@ -523,8 +523,20 @@ README/package-surface pointers). U06's /review fixes are folded in: the bench d
 fictional cold/warm split (the hook never consumes the scan cache — one honest distribution),
 armed ceilings that resolve no measurement now FAIL instead of silently passing, non-zero child
 exits abort a run, and the ESLint rule gained all-type named-list erasure parity plus a
-behavioral test. Remaining before `done`: green local gates + CI (including the recorded Linux
-hook baseline), then adopt ceilings = baseline + headroom.
+behavioral test.
+
+**Local evidence (2026-07-16, closed):** CI run 29528935846 is fully green on `89173ed`
+(including the perf job: the V01 incremental regression the previous run caught — the specifier
+scan's unconditional word probes — was fixed with first-letter guards; Linux 10k incremental
+p95 112.5 ms < 125, and locally 41.2 ms vs 45.7 on main). The same run recorded the first Linux
+hook-path baseline: hook@10k p95 635.14 ms, doctorCold@10k p95 4063.72 ms — adopted as ceilings
+800 / 5100 ms (baseline + ~25% runner headroom, set once for this cycle per D5; the bench
+enforces them from now on, and the recording-mode guard test keeps invented ceilings impossible).
+Full local gates green at the release candidate: suite 1203/1203, confidence (aggregate 92.75%),
+release artifacts within budgets, `npm publish --dry-run` → `+ arkgate@3.4.0`, TS 5/6/7 compat,
+strict architecture. No new command, skill namespace, preset pack, runtime wedge, or
+package-budget ratchet was added anywhere in the phase. Phase U implementation is COMPLETE;
+the plan is marked Shipped after the 3.4.0 release evidence exists.
 
 ---
 
@@ -1693,8 +1705,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: U07 — adoption/docs/package/release evidence closes the phase (U06 done)
-Next action: adopt hook-path ceilings from the first Linux CI baseline; docs parity; package/compat checks; 3.4.0 release train (slice 2)
+Item: none — Phase U implementation COMPLETE (U01–U07 done); 3.4.0 release train PREPARED with green CI on 89173ed
+Next action: maintainer merges PR #69 and authorizes the 3.4.0 publish (checklist in docs/releases/3.4.0.md); after release evidence, mark the understandable-execution plan Shipped
 Released baseline: npm arkgate@3.3.0
 Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security

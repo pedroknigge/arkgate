@@ -11,16 +11,16 @@
     "hook": {
       "size": 10000,
       "metric": "hook",
-      "baselineMs": null,
-      "maxP95Ms": null,
-      "rationale": "The per-keystroke interactive path: ark-mcp --hook validates the single proposed file (no scan-cache involvement — one distribution). Ceiling lands after the first Linux baseline is recorded by CI."
+      "baselineMs": 635.14,
+      "maxP95Ms": 800,
+      "rationale": "The per-keystroke interactive path: ark-mcp --hook validates the single proposed file (no scan-cache involvement — one distribution). Linux baseline p95 635.14 ms recorded by CI run 29528935846 (2026-07-16); ceiling = baseline + ~26% runner headroom, set once for this cycle (D5 — never ratcheted per item)."
     },
     "doctorCold": {
       "size": 10000,
       "metric": "doctorCold",
-      "baselineMs": null,
-      "maxP95Ms": null,
-      "rationale": "Cold one-shot doctor over the tree. Ceiling lands after the Linux baseline."
+      "baselineMs": 4063.72,
+      "maxP95Ms": 5100,
+      "rationale": "Cold one-shot doctor over the tree. Linux baseline p95 4063.72 ms recorded by CI run 29528935846 (2026-07-16); ceiling = baseline + ~25% runner headroom, set once for this cycle."
     }
   }
 }

@@ -5,7 +5,7 @@
 > Implementation remains governed by `ROADMAP.md`; this plan records the epic rationale and
 > boundaries.
 
-**Status:** Planned<br>
+**Status:** Implementation complete (U01–U07) — Shipped after the 3.4.0 release evidence<br>
 **Slug:** `understandable-execution`<br>
 **Kind:** epic / redesign<br>
 **Owners:** product (Pedro) + library maintainers<br>
@@ -115,8 +115,10 @@ boundaries without changing its public API merely to reduce LOC.
   incremental measurements before fixed budgets or optimizations are approved — the hook-path
   bench measures complete child-process paths; ceilings land only from the recorded Linux
   baseline (record mode until then), and no optimization shipped without a profile.
-- [ ] **A8 — Hard lines held:** no weakened gate, new skill namespace, general codemod, runtime
-  wedge, package-budget ratchet, or breaking API hidden inside the redesign.
+- [x] **A8 — Hard lines held:** no weakened gate, new skill namespace, general codemod, runtime
+  wedge, package-budget ratchet, or breaking API hidden inside the redesign — verified across
+  U01–U07: every new surface is opt-in/advisory, budgets were met by extraction (never raised),
+  and the only classification change (D6 coverage atoms) STRENGTHENS the acknowledgment guard.
 
 ## Proposed public surface (hypothesis)
 
