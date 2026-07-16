@@ -85,11 +85,15 @@ Because both dialects lower to one capability space (D2), the T01 transition cla
 - Any real loss in the lowered set → **weakening**; the existing hash-bound acknowledgment path
   applies unchanged.
 
-Lowering must be **coverage-faithful for prefix-matched globals**: the shipped matcher flags
-`process.env.NODE_ENV` when `forbiddenGlobals` contains bare `process`, so `process` lowers to
-**both** `process` and `environment` — migrating it to `capabilities.deny: ["process"]` alone is
-a real loss and classifies as weakening. Equivalence is always computed on the full lowered set,
-never key-by-key.
+Lowering must be **coverage-faithful**, and bare capability ids are not fine-grained enough:
+classification happens on **coverage atoms** — `ambient:<entry>` for every known ambient-map
+entry a surface covers (prefix-expanded: fg `Date` covers `ambient:Date` AND `ambient:Date.now`;
+fg `process` covers `ambient:process.env` too) plus `import:<capability>` for a wall's module
+dimension (forbiddenGlobals never cover imports). Any lost atom is weakening: `fetch` →
+`XMLHttpRequest`, `Date` → `Date.now`, and wall → forbiddenGlobals all classify as weakening;
+fg → equivalent-or-stronger wall retains every atom and typically classifies **strengthening**
+(added import atoms) — never requiring an acknowledgment in that direction. Unlowerable custom
+globals keep the raw key-by-key comparison.
 
 Without this rule, every legitimate migration trips the weakening guard and users learn to
 acknowledge reflexively — which destroys the guard's meaning.

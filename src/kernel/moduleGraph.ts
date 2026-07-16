@@ -26,7 +26,14 @@ export function normalizePath(value: string): string {
   return segments.join('/');
 }
 
-type ModuleSpecifier = { value: string; offset: number; excerpt: string; typeOnly?: boolean };
+type ModuleSpecifier = {
+  value: string;
+  offset: number;
+  excerpt: string;
+  typeOnly?: boolean;
+  /** Found via `require(...)`: capability evidence only, never a graph edge (verdict stability). */
+  requireCall?: boolean;
+};
 
 function isIdentifierCharacter(value: string | undefined): boolean {
   return value !== undefined && /[A-Za-z0-9_$]/.test(value);
@@ -116,6 +123,34 @@ function specifierInStaticStatement(
   return undefined;
 }
 
+/** Skip a template literal (backtick to backtick, escapes honored). Interpolation
+ * contents are skipped with it — specifiers inside `${…}` are the symbol path's
+ * job (documented envelope); template TEXT must never become capability evidence. */
+function skipTemplateLiteral(source: string, index: number): number {
+  for (index += 1; index < source.length; index += 1) {
+    const current = source[index];
+    if (current === '\\') {
+      index += 1;
+    } else if (current === '`') {
+      return index;
+    }
+  }
+  return source.length;
+}
+
+function specifierAfterRequire(source: string, index: number): ModuleSpecifier | undefined {
+  // Property/optional-chain access (`x.require(…)`, `x?.require(…)`) is not the
+  // ambient require; the symbol-aware path owns shadowing precision.
+  let previous = index - 1;
+  while (previous >= 0 && /\s/.test(source[previous])) previous -= 1;
+  if (source[previous] === '.') return undefined;
+  let cursor = skipWhitespace(source, index + 'require'.length);
+  if (source[cursor] !== '(') return undefined;
+  cursor = skipWhitespace(source, cursor + 1);
+  const specifier = readString(source, cursor);
+  return specifier ? { ...specifier, requireCall: true } : undefined;
+}
+
 function moduleSpecifiers(source: string): ModuleSpecifier[] {
   const result: ModuleSpecifier[] = [];
   for (let index = 0; index < source.length; index += 1) {
@@ -131,7 +166,11 @@ function moduleSpecifiers(source: string): ModuleSpecifier[] {
       index = end + 1;
       continue;
     }
-    if (current === "'" || current === '"' || current === '`') {
+    if (current === '`') {
+      index = skipTemplateLiteral(source, index);
+      continue;
+    }
+    if (current === "'" || current === '"') {
       const string = readString(source, index);
       if (string) index = string.offset + string.excerpt.length - 1;
       continue;
@@ -140,7 +179,9 @@ function moduleSpecifiers(source: string): ModuleSpecifier[] {
       ? specifierAfterImport(source, index)
       : isWordAt(source, 'export', index)
         ? specifierAfterExport(source, index)
-        : undefined;
+        : isWordAt(source, 'require', index)
+          ? specifierAfterRequire(source, index)
+          : undefined;
     if (specifier) result.push(specifier);
   }
   return result;
@@ -163,6 +204,9 @@ export function moduleFactsFor(
   const capabilityUses: AnalysisCapabilityUse[] = [];
   for (const moduleSpecifier of moduleSpecifiers(file.content)) {
     const specifier = moduleSpecifier.value;
+    // require() specifiers feed capability evidence only — a relative require
+    // never becomes a graph edge here, preserving pre-U04 edge verdicts.
+    if (moduleSpecifier.requireCall && specifier.startsWith('.')) continue;
     if (!specifier.startsWith('.')) {
       if (moduleSpecifier.typeOnly) continue;
       const capability = capabilityForModuleSpecifier(specifier);

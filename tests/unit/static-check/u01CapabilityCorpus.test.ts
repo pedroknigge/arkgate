@@ -192,7 +192,7 @@ describe('U01 capability corpus — completeness per ADR 0009', () => {
     expect(pd.executable).toBe(true);
     expect(pd.activatedIn).toBe('U04');
     for (const [name, expected] of [
-      ['candidate-neutral', 'neutral'],
+      ['candidate-neutral', 'strengthening'],
       ['candidate-weakening', 'weakening'],
     ] as const) {
       expect(pd.pairs[name].expectedClassification).toBe(expected);

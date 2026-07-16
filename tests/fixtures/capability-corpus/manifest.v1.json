@@ -351,13 +351,13 @@
   },
   "policyDelta": {
     "executable": true,
-    "notes": "D6 lowered-policy pair. T01 must classify on the LOWERED semantic space.",
+    "notes": "D6 lowered-policy pair, executable since U04. T01 classifies on COVERAGE ATOMS (ambient entries + import dimension), never bare keys or capability ids: any lost atom is weakening; equivalent-or-stronger migration never needs an acknowledgment.",
     "pairs": {
       "candidate-neutral": {
         "base": "policy-delta/base.config.json",
         "candidate": "policy-delta/candidate-neutral.config.json",
-        "expectedClassification": "neutral",
-        "why": "forbiddenGlobals [fetch, Date.now] lower to [network, clock]; the candidate denies both \u2014 nothing lost."
+        "expectedClassification": "strengthening",
+        "why": "forbiddenGlobals [fetch, Date.now] lower to coverage atoms fully retained by deny [network, clock]; the walls also ADD import coverage, so the delta classifies strengthening \u2014 no acknowledgment required either way (never a loss)."
       },
       "candidate-weakening": {
         "base": "policy-delta/base.config.json",

@@ -153,6 +153,32 @@ describe('U04 walls in the pure engine (import-based evidence)', () => {
     expect(walls[0].nextAction).toMatch(/port/i);
   });
 
+  it('require() of a denied module is capability evidence in the pure engine (/review F1)', () => {
+    const result = preflightChange({
+      contract,
+      files: [],
+      changes: [
+        { path: 'src/domain/legacy.ts', content: "const pg = require('pg');\nexport const c = pg;\n" },
+      ],
+    });
+    expect(result.valid).toBe(false);
+    expect(result.violations.some((v) => v.ruleId === 'CAPABILITY_VIOLATION')).toBe(true);
+  });
+
+  it('template-literal text never becomes capability evidence (/review F3)', () => {
+    const { ir } = analyzeProject({
+      contract,
+      files: [
+        {
+          path: 'src/domain/sample.ts',
+          content: 'export const snippet = `import { Client } from \'pg\';`;\n',
+        },
+      ],
+    });
+    expect(ir.capabilityUses).toEqual([]);
+    expect(ir.violations).toEqual([]);
+  });
+
   it('a pure layer blocks every capability import in preflight', () => {
     const pure = loadContract({
       include: ['src'],
@@ -178,11 +204,49 @@ describe('U04 policy delta on the lowered space (ADR 0009 D6)', () => {
   const neutral = JSON.parse(readCorpus('policy-delta/candidate-neutral.config.json'));
   const weakening = JSON.parse(readCorpus('policy-delta/candidate-weakening.config.json'));
 
-  it('the corpus neutral migration classifies neutral (fg → equivalent capabilities)', () => {
+  it('the corpus migration never needs an acknowledgment (fg → equivalent-or-stronger walls)', () => {
     const delta = analyzePolicyDelta({ baseConfig: base, candidateConfig: neutral });
-    expect(delta.classification).toBe('neutral');
+    // Walls retain every lowered atom AND add import coverage → strengthening.
+    expect(delta.classification).toBe('strengthening');
+    expect(delta.requiresAcknowledgement).toBe(false);
     expect(delta.blockingFindingIds).toEqual([]);
     expect(delta.valid).toBe(true);
+  });
+
+  it('coverage atoms catch intra-capability and cross-surface losses (/review F2)', () => {
+    const layer = (extra: object) => ({
+      include: ['src'],
+      layers: [{ name: 'L', patterns: ['src/**'], ...extra }],
+      rules: [],
+    });
+    // Ambient granularity: fetch → XMLHttpRequest swaps atoms inside network.
+    expect(
+      analyzePolicyDelta({
+        baseConfig: layer({ forbiddenGlobals: ['fetch'] }),
+        candidateConfig: layer({ forbiddenGlobals: ['XMLHttpRequest'] }),
+      }).classification
+    ).toBe('weakening');
+    // Prefix granularity: Date covers Date.now, the reverse does not.
+    expect(
+      analyzePolicyDelta({
+        baseConfig: layer({ forbiddenGlobals: ['Date'] }),
+        candidateConfig: layer({ forbiddenGlobals: ['Date.now'] }),
+      }).classification
+    ).toBe('weakening');
+    // Cross-surface: a wall's import dimension is lost when migrating back to fg.
+    expect(
+      analyzePolicyDelta({
+        baseConfig: layer({ capabilities: { deny: ['network'] } }),
+        candidateConfig: layer({ forbiddenGlobals: ['fetch'] }),
+      }).classification
+    ).toBe('weakening');
+    // fg → wall of the same capability keeps every atom: never a weakening.
+    const up = analyzePolicyDelta({
+      baseConfig: layer({ forbiddenGlobals: ['Date'] }),
+      candidateConfig: layer({ capabilities: { deny: ['clock'] } }),
+    });
+    expect(up.requiresAcknowledgement).toBe(false);
+    expect(up.valid).toBe(true);
   });
 
   it('the corpus weakening migration requires the hash-bound acknowledgment', () => {

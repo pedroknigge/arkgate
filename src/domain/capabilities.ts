@@ -186,22 +186,42 @@ export function ambientCoveredByForbiddenGlobals(
 }
 
 /**
- * D6: a layer's full lowered protection — effect capabilities covered by walls
- * and lowerable forbiddenGlobals, plus the unlowerable raw globals that must
- * keep comparing key-by-key. Policy-delta classifies on this, never on keys.
+ * D6: a layer's protection expressed as COVERAGE ATOMS — the finest-grained
+ * units either surface can protect. `ambient:<entry>` atoms are the known
+ * ambient map entries a forbiddenGlobals prefix or a wall covers; `import:<id>`
+ * atoms are a wall's module-import enforcement (forbiddenGlobals never cover
+ * imports). Policy-delta classifies on atoms, never on keys or bare capability
+ * ids: losing ANY atom is a real loss (fetch → XMLHttpRequest, Date → Date.now,
+ * wall → forbiddenGlobals all weaken), while an equivalent-or-stronger
+ * migration never needs an acknowledgment. Unlowerable custom globals stay in
+ * `rawGlobals` for the key-by-key comparison.
  */
 export function loweredLayerCoverage(layer: CapabilityLayerPolicy | null | undefined): {
-  capabilities: CapabilityId[];
+  atoms: string[];
   rawGlobals: string[];
 } {
-  const capabilities = new Set<CapabilityId>(effectiveCapabilityDeny(layer));
+  const atoms = new Set<string>();
   const rawGlobals = new Set<string>();
+  const ambientEntries = Object.keys(AMBIENT_CAPABILITY_MAP);
   for (const entry of layer?.forbiddenGlobals ?? []) {
-    const lowered = lowerForbiddenGlobal(entry);
-    if (lowered.length === 0) rawGlobals.add(entry);
-    else for (const capability of lowered) capabilities.add(capability);
+    // The shipped matcher is prefix-based: fg `Date` also flags `Date.now`,
+    // fg `process` also flags `process.env` — expand to every covered entry.
+    const covered = ambientEntries.filter(
+      (candidate) => candidate === entry || candidate.startsWith(`${entry}.`)
+    );
+    if (covered.length === 0) rawGlobals.add(entry);
+    else for (const candidate of covered) atoms.add(`ambient:${candidate}`);
   }
-  return { capabilities: [...capabilities].sort(), rawGlobals: [...rawGlobals].sort() };
+  for (const capability of effectiveCapabilityDeny(layer)) {
+    atoms.add(`import:${capability}`);
+    // A wall's ambient dimension uses longest-match classification, so it
+    // covers exactly the entries that CLASSIFY as this capability (bare
+    // `process` does not cover `process.env` — that is `environment`).
+    for (const entry of ambientEntries) {
+      if (capabilityForAmbientName(entry) === capability) atoms.add(`ambient:${entry}`);
+    }
+  }
+  return { atoms: [...atoms].sort(), rawGlobals: [...rawGlobals].sort() };
 }
 
 /**

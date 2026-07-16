@@ -214,14 +214,15 @@ function compareLayers(
     compareStringSets(
       findings,
       `${path}.capabilities`,
-      previousCoverage.capabilities,
-      candidateCoverage.capabilities,
+      previousCoverage.atoms,
+      candidateCoverage.atoms,
       {
         added: 'strengthening',
         removed: 'weakening',
-        addedMessage: 'Additional effect capabilities are denied in this layer (lowered space).',
+        addedMessage:
+          'Additional ambient/import protection is enforced in this layer (coverage atoms).',
         removedMessage:
-          'An effect-capability protection was lost from this layer (lowered space).',
+          'An ambient/import protection was lost from this layer (coverage atoms).',
       }
     );
 
