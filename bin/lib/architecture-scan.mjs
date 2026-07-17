@@ -22,6 +22,7 @@ import {
   typeOnlyExportNames,
 } from './ast-scan.mjs';
 import { provePortProofInject } from './port-proof.mjs';
+import { summarizeParseHealth } from './parse-health.mjs';
 import {
   intentLayersFromManifest,
   layerForIntent,
@@ -192,6 +193,7 @@ export function scanSourceFile(ts, root, config, rules, manifestIntentLayers, fi
   return {
     contentViolations: violations,
     edges,
+    parseDiagnosticCount: sourceFile.parseDiagnostics?.length ?? 0,
     exportsOnlyTypes: sourceFileExportsOnlyTypes(ts, sourceFile),
     typeOnlyExportNames: typeOnlyExportNames(ts, sourceFile),
     hasTopLevelSideEffects: sourceFileHasTopLevelSideEffects(ts, sourceFile),
@@ -210,7 +212,7 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
   const warnings = collectConfigWarnings(root, config, files, rules, manifest);
   const safety = collectSafetyDiagnostics(ts, root, config, files);
   warnings.push(...safety.warnings);
-  const cacheKey = args.noCache ? undefined : scanCacheKey(root, args);
+  const cacheKey = args.noCache ? undefined : scanCacheKey(root, args, ts.version);
   const cachedFiles = cacheKey ? loadScanCache(root, cacheKey) : undefined;
   const nextCacheFiles = {};
 
@@ -223,7 +225,10 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
     const fileKey = `${stat.mtimeMs}:${stat.size}`;
     const cached = cachedFiles?.[relFile];
     const entry =
-      cached && cached.fileKey === fileKey
+      cached &&
+      cached.fileKey === fileKey &&
+      Number.isSafeInteger(cached.parseDiagnosticCount) &&
+      cached.parseDiagnosticCount >= 0
         ? cached
         : {
             fileKey,
@@ -309,13 +314,16 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
 
   if (cacheKey) saveScanCache(root, cacheKey, nextCacheFiles);
 
-  return evaluateArchitectureGraph({
-    config,
-    rules,
-    files: scanned.map(({ relFile }) => relFile),
-    contentViolations: scanned.flatMap(({ entry }) => entry.contentViolations),
-    edges: engineEdges,
-    warnings,
-    safety: safety.report,
-  });
+  return {
+    ...evaluateArchitectureGraph({
+      config,
+      rules,
+      files: scanned.map(({ relFile }) => relFile),
+      contentViolations: scanned.flatMap(({ entry }) => entry.contentViolations),
+      edges: engineEdges,
+      warnings,
+      safety: safety.report,
+    }),
+    parseHealth: summarizeParseHealth(scanned),
+  };
 }

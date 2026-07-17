@@ -338,7 +338,7 @@ lives only in prose: each names the gate that promotes it, and none may start wh
 | 54 | `Y05` | `done` | S | 3.6.0 shipped | Cycle ceilings (package + perf budgets) are re-measured and set once with evidence-backed headroom |
 | 55 | `Y01` | `done` | M | `X04`, `X02` | A rejected reshape pilot is a recorded decision the doctor respects, not advisory pressure re-fought every session |
 | 56 | `Y02` | `done` | M | `P02` | Deterministic hollow-persistence smell: HTTP/route definition living in Persistence-role layers is visible as an advisory |
-| 57 | `Y03` | `todo` | S | — | Governed files that fail to parse are surfaced honestly (a file the scanner cannot read is never silently "clean") |
+| 57 | `Y03` | `done` | S | — | Governed files that fail to parse are surfaced honestly (a file the scanner cannot read is never silently "clean") |
 | 58 | `Y04` | `todo` | S | — | Skill mechanical-edit hygiene rules close the three observed codemod defects |
 | 59 | `Y06` | `parked` | S | gate: field case | `pure`-layer opt-in nudge: doctor suggests declaring purity when the golden pattern names pure modules but no layer opts in |
 | 60 | `Y07` | `parked` | L | gate: `Y06` corpus | Strict (blocker-grade) ambient mutable-state diagnostics — only after a real `pure: true` field corpus exists (U05 condition unchanged) |
@@ -495,7 +495,7 @@ module budgets, package-file allowlist, `git diff --check`, and strict architect
 
 ### Y03 — Parse honesty for governed files
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** —
 
 **Outcome:** `scanSourceFile` reads the `parseDiagnostics` the AST already carries; governed
@@ -507,6 +507,22 @@ own evidence.
 
 **Non-negotiables:** zero additional parse cost (no second pass, no tsc dependency); advisory
 caps and overflow markers follow X07.
+
+**Implemented shape:** `scanSourceFile` reads only `sourceFile.parseDiagnostics.length` from the
+AST it already created and stores `parseDiagnosticCount` in scan-cache schema v9, keyed by the
+TypeScript parser version as well as policy inputs. The Tooling
+aggregator emits exact scanned, affected-file, and diagnostic totals plus a deterministic top-12
+`{ file, diagnosticCount }` list with `truncated`/`overflow`; no raw TypeScript diagnostic enters
+the cache or doctor surface. The same `parseHealth` object flows through architecture scan to
+doctor JSON/human output and the X01 HTML section. It remains advisory: the normal verdict,
+`ok`, violations, design fitness, and pattern bets are unchanged.
+
+**Local evidence (2026-07-17):** focused tests cover valid and two-diagnostic invalid governed
+files, one existing AST per cold-scanned file, deterministic 15-file overflow, v8/parser-identity
+invalidation, unsafe-count/sum degradation to unavailable, v9 cold/warm parity with zero warm
+reparses, doctor JSON/human, HTML report parity, and an unchanged green normal verdict.
+Typecheck, JavaScript syntax, module budgets, package-file
+allowlist, generated parity checks, `git diff --check`, and strict architecture passed.
 
 ### Y04 — Skill mechanical-edit hygiene
 
@@ -2177,8 +2193,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: Y03 — parse honesty for governed files (`todo`; Y05, Y01, and Y02 are done)
-Next action: implement Y03 without a second TypeScript parse or verdict change, then Y04. Y06–Y10 hold every retained candidate as a parked queue entry with a named promotion gate (pure-layer nudge → strict ambient-state; node:process dual; template-interpolation specifiers; transitive capability inference). The supervised reshape field pilot is superseded — the flagship mirror is golden-consistent; it waits for a corpus target whose mirroring is not golden-explained
+Item: Y04 — skill mechanical-edit hygiene (`todo`; Y05 and Y01–Y03 are done)
+Next action: implement the three field-observed skill/eval guards in Y04 without growing engine surfaces. Y06–Y10 hold every retained candidate as a parked queue entry with a named promotion gate (pure-layer nudge → strict ambient-state; node:process dual; template-interpolation specifiers; transitive capability inference). The supervised reshape field pilot is superseded — the flagship mirror is golden-consistent; it waits for a corpus target whose mirroring is not golden-explained
 Released baseline: npm arkgate@3.6.0 (Phase X close from PR #76, squash 5d368f5)
 Released baseline: npm arkgate@3.5.0 + MCP registry 3.5.0 isLatest (X01 from PR #71; X02+X03 + release train from PR #72)
 Released baseline: npm arkgate@3.4.0; Phase U shipped from PR #69 (slice 1 from #68)

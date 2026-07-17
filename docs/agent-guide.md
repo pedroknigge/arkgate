@@ -653,7 +653,15 @@ modules the way your build does, but is intentionally not yet a full type-graph 
 
 Repeat runs are cached in `node_modules/.cache/ark-check.json` — unchanged files skip the
 parse, while import edges always re-resolve against the live filesystem so the cache can
-never hide a new violation. `--no-cache` disables it.
+never hide a new violation. Cache schema v9 also preserves each file's parse-diagnostic count
+and binds it to the TypeScript parser version, so a warm doctor run cannot silently turn
+unreadable governed syntax into a clean claim after a parser change.
+`--no-cache` disables it.
+
+`ark-check --doctor --json` reports that syntax honesty under `doctor.parseHealth`: exact
+scanned/affected/diagnostic totals plus a deterministic top-12 file list and honest overflow.
+It is advisory in this release — it does not change the verdict, design fitness, pattern bets,
+or violations — but an affected governed file must not be described as successfully inspected.
 
 `ark-check --json` also reports `warnings` for incomplete governance coverage: missing
 layers, unclassified included files, unmatched layer patterns, duplicate layers, and rules

@@ -34,6 +34,8 @@ const BUDGETS = [
   { path: 'bin/lib/physical-cohesion.mjs', max: 260 },
   // Y01: bounded explicit verdict memory kept out of the X04 sensor/doctor orchestrator.
   { path: 'bin/lib/reshape-decisions.mjs', max: 300 },
+  // Y03: parse-health remains a count-only advisory, not a second scanner.
+  { path: 'bin/lib/parse-health.mjs', max: 80 },
 ];
 
 function loc(rel) {

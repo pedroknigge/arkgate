@@ -218,6 +218,23 @@ function physicalCohesionHtml(pc) {
   </section>`;
 }
 
+function parseHealthHtml(health) {
+  if (!health) return '';
+  const files = Array.isArray(health.files) ? health.files : [];
+  const body = health.available === false
+    ? '<p class="muted">Parse health was not available for this rendering — no clean claim is made.</p>'
+    : health.affectedFiles === 0
+    ? `<p class="muted">No parse diagnostics found across ${health.scannedFiles ?? 0} governed file(s) scanned.</p>`
+    : `<p><span class="tag warn">${health.affectedFiles} affected</span> ${health.diagnosticCount} parse diagnostic(s) across ${health.scannedFiles} governed file(s).</p>` +
+      `<ul>${files.map((f) => `<li><code>${esc(f.file)}</code> — ${f.diagnosticCount} parse diagnostic(s)</li>`).join('')}</ul>` +
+      (health.truncated > 0 ? `<p class="muted">…(+${health.truncated} more affected file(s); doctor list capped)</p>` : '');
+  return `
+  <section data-advisory="parseHealth">
+    <h2>Parse health <span class="muted">(advisory — unreadable syntax is never silently called clean)</span></h2>
+    ${body}
+  </section>`;
+}
+
 /**
  * Render every doctor advisory as report sections. Keys must cover everything
  * `computeDoctorAdvisories` returns — the parity guard enforces it.
@@ -230,6 +247,7 @@ export function renderAdvisorySections(advisories, escape) {
     contractHealthHtml(advisories.contractHealth),
     ambientStateHtml(advisories.ambientState),
     physicalCohesionHtml(advisories.physicalCohesion),
+    parseHealthHtml(advisories.parseHealth),
   ]
     .filter(Boolean)
     .join('\n');

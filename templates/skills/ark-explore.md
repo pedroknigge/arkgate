@@ -123,6 +123,7 @@ Useful split: **core product tree** | **field path** (`examples/`, starters) | *
 6. **§G spaghetti / design-depth** when signals fire (or always on brownfield).
 7. Ranked rows that **change a decision**; each bet has a **success signal** (not a file count).
 8. Hard lines: never weaken the contract; never invent mechanical-safe kinds; never claim ENFORCE from type-only cleanup while false-green doctor ids are active.
+9. **Parse honesty:** if `doctor.parseHealth.affectedFiles > 0`, open and name those paths; never describe them as clean or successfully inspected. The advisory does not change the gate verdict.
 
 ## Reconnaissance pass (do all that apply)
 

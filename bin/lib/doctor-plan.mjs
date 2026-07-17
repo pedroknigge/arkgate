@@ -424,7 +424,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     patternBets: patternBetsForLoop,
     designSmells,
   });
-  const { contractHealth, ambientState, physicalCohesion } = computeDoctorAdvisories(root, config, cov, rules, files, options.ts); // W01+U05+X04 advisories — never a verdict
+  const doctorAdvisories = computeDoctorAdvisories(root, config, cov, rules, files, options.ts, options.parseHealth); // advisory only — never a verdict
 
   if (asJson) {
     console.log(
@@ -461,11 +461,9 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             goldenPattern,
             // Q04: one-pilot loop (extraction card → re-doctor).
             pilotLoop,
-            // Advisories, never a verdict: W01 contract health, U05 ambient
-            // state (opt-in), X04 physical cohesion + proposed reshape pilot.
-            contractHealth,
-            ambientState,
-            physicalCohesion,
+            // Advisories, never a verdict: W01 contract health, U05 ambient state,
+            // X04 physical cohesion/reshape pilot, Y03 parse health.
+            ...doctorAdvisories,
             governed: cov.governed,
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
@@ -647,7 +645,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     );
   }
 
-  printDoctorAdvisories({ contractHealth, ambientState, physicalCohesion }, { line, warn, color }); // advisory sections
+  printDoctorAdvisories(doctorAdvisories, { line, warn, color }); // advisory sections
 
   console.log('');
   console.log(color.bold('Coverage'));
