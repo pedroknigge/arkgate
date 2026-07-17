@@ -223,6 +223,22 @@ describe('X04 reshape pilot — proposed, never applied (ADR 0010 D4–D7)', () 
     expect(computeReshapePilot({ findings: [] }, [], '/tmp')).toBeNull();
     expect(computeReshapePilot(null, [], '/tmp')).toBeNull();
   });
+
+  it('the consolidation target subtree is never re-proposed as a source (loop converges)', () => {
+    // End-to-end pilot-loop finding: after executing a pilot, the moved files
+    // live under src/features/<concept>/ — proposing them again loops forever.
+    const root = mk();
+    const rels: string[] = [];
+    for (let i = 0; i < 45; i++) rels.push(`src/app/api/projects/p${i}/route.ts`);
+    for (let i = 0; i < 12; i++) rels.push(`src/features/projects/projects-r${i}.ts`);
+    for (let i = 0; i < 25; i++) rels.push(`src/features/projects/handlers/projects-h${i}.ts`);
+    const files = seed(root, rels);
+    const pc = computePhysicalCohesion(root, files);
+    expect(pc.findingCount).toBe(1);
+    const pilot = computeReshapePilot(pc, files, root);
+    expect(pilot.nextPilot).toBeNull();
+    expect(pilot.note).toMatch(/fixed by framework convention or already consolidated/);
+  });
 });
 
 describe('X04 doctor surface stays advisory (pinned invariants)', () => {

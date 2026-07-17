@@ -414,11 +414,28 @@ calibration table exactly — 4 mirrored concepts (`projects` 561 files across
 `timesheet` 203; `people` 129; `process` 98) and the pilot targeted the smallest movable anchor
 (`src/lib/repositories`, 124 moves) with real from/to paths into `src/features/projects/`.
 
-**Local evidence (2026-07-17):** `bin/lib/physical-cohesion.mjs` (206/260 budget),
-`x04PhysicalCohesion.test.ts` (12/12 — ADR fixture obligations: amarilla-shape positive,
+**Local evidence (2026-07-17):** `bin/lib/physical-cohesion.mjs` (231/260 budget),
+`x04PhysicalCohesion.test.ts` (15/15 — ADR fixture obligations: amarilla-shape positive,
 healthy-tree + self-hosting negatives, determinism under shuffle, honest truncation,
-convention-only pilot refusal, pinned advisory invariants); parity guard extended automatically;
+convention-only pilot refusal, below-display-floor pilot, scaffold-segment regression,
+loop-convergence regression, pinned advisory invariants); parity guard extended automatically;
 `doctor-plan.mjs` held at exactly 920/920.
+
+**Multi-repo harness (pre-merge, owner-requested):** fresh shallow clones of five known repos
+(vercel/ai-chatbot, excalidraw, nestjs/nest, zod, hono) against the local build — zero crashes,
+4/4 parity sections in every report, doctor 204–621ms, zero false positives after the harness
+caught and fixed the scaffold-segment defect (nest: garbage `packages` concept over 91
+`index.ts` files with a nonsense pilot).
+
+**End-to-end pilot loop (executed, synthetic fixture with a real import graph):** pilot 1
+(12 repository files → `src/features/projects/`, imports updated) kept the gate green and
+advanced the doctor; the NAIVE pilot 2 was **blocked by the gate** (45 route violations, correct
+`/ark-contract` remediation — the preflight protecting exactly as designed) and the kill switch
+(`git reset --hard`) restored a green tree; the judgment pilot 2 (contract patterns via
+`/ark-contract` + handlers into the feature subdir) passed the gate; re-doctor then reported
+**convergence**: "every remaining anchor is fixed by framework convention or already
+consolidated". Two loop defects found and fixed in the process: the consolidation target (and
+its subtree) must never be re-proposed as a source.
 
 ### X01 — Report parity with doctor advisories
 

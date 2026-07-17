@@ -147,8 +147,17 @@ export function computeReshapePilot(cohesion, files, root) {
     if (!r || r.concept !== top.concept) continue;
     byAnchor.set(r.anchor, (byAnchor.get(r.anchor) ?? 0) + 1);
   }
+  const targetDir = `src/features/${top.concept}`;
   const movable = [...byAnchor.entries()]
-    .filter(([anchor]) => !CONVENTION_ANCHOR_RE.test(`${anchor}/`))
+    .filter(
+      ([anchor]) =>
+        !CONVENTION_ANCHOR_RE.test(`${anchor}/`) &&
+        // The consolidation target subtree is DONE, not a source — without
+        // this the loop re-proposes the files it just moved, forever
+        // (end-to-end pilot-loop finding).
+        anchor !== targetDir &&
+        !anchor.startsWith(`${targetDir}/`)
+    )
     .map(([anchor, count]) => ({ path: anchor, files: count }))
     .sort((a, b) => a.files - b.files || (a.path < b.path ? -1 : 1));
   if (movable.length === 0) {
@@ -157,14 +166,13 @@ export function computeReshapePilot(cohesion, files, root) {
       applied: false,
       neverMechanicalSafe: true,
       concept: top.concept,
-      note: 'Every anchor for this concept is fixed by framework convention — nothing to move; consider the merge-card review instead.',
+      note: 'Every remaining anchor for this concept is fixed by framework convention or already consolidated — nothing to move; consider the merge-card review instead.',
       nextPilot: null,
     };
   }
   // Smallest movable cluster worth piloting; if none reaches the floor, take
   // the largest movable anchor so the pilot still exists and stays honest.
   const pilotAnchor = movable.find((a) => a.files >= 10) ?? movable[movable.length - 1];
-  const targetDir = `src/features/${top.concept}`;
   const rels = (Array.isArray(files) ? files : [])
     .map(relOf)
     .filter((rel) => {
