@@ -308,6 +308,12 @@ green, cross-model review findings fixed in-branch). Signed tag `v3.5.0`; GitHub
 from `docs/releases/3.5.0.md`; `publish-npm.yml` run 29545346848 succeeded and `npm view arkgate`
 shows `3.5.0` on `latest`. Each item retains commit + review evidence below.
 
+X04–X07 shipped in **`arkgate@3.6.0`** (2026-07-17): Phase X consolidation PR
+[#76](https://github.com/pedroknigge/arkgate/pull/76) (squash `5d368f5`, CI + Security green on
+main; carries the reviewed content of #74 and #75). Signed tag `v3.6.0`; GitHub Release published
+from `docs/releases/3.6.0.md`; `publish-npm.yml` run 29592499256 succeeded and `npm view arkgate`
+shows `3.6.0` on `latest`. Phase X is fully shipped.
+
 ### 3.5.0 field validation (field-adopter worktree, 2026-07-16)
 
 Agent session over the field-adopter worktree (2,996 governed files, 12 layers, ENFORCE 100%, 29 real
@@ -1927,8 +1933,9 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: none — Phase X complete: X01–X03 shipped in 3.5.0; X04–X07 implemented, live-validated on the field adopter, multi-repo-harness validated, and the pilot loop executed end to end; **release 3.6.0 prepared in-branch** (version sync, CHANGELOG, release note with checklist, q06 CURRENT)
-Next action: maintainer merges the chain #73 → #74 → #75, then authorizes the 3.6.0 train (tag, GitHub Release, publish-npm, MCP registry); the supervised reshape field pilot on the field adopter is the first post-release activity; other recorded candidates: transitive capability inference, strict ambient-state after a field corpus (still no corpus — consider the pure-layer doctor nudge), the node:process dual, template-interpolation specifiers
+Item: none — Phase X fully shipped: X01–X03 in 3.5.0, X04–X07 in 3.6.0 (consolidation PR #76)
+Next action: maintainer publishes MCP registry 3.6.0 (mcp-publisher publish server.json); the supervised reshape field pilot on the field adopter is the first post-release activity; other recorded candidates: transitive capability inference, strict ambient-state after a field corpus (still no corpus — consider the pure-layer doctor nudge), the node:process dual, template-interpolation specifiers
+Released baseline: npm arkgate@3.6.0 (Phase X close from PR #76, squash 5d368f5)
 Released baseline: npm arkgate@3.5.0 + MCP registry 3.5.0 isLatest (X01 from PR #71; X02+X03 + release train from PR #72)
 Released baseline: npm arkgate@3.4.0; Phase U shipped from PR #69 (slice 1 from #68)
 Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub
