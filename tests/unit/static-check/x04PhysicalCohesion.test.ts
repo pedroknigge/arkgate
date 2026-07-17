@@ -82,6 +82,24 @@ describe('X04 classifyPhysical — deterministic concept extraction (ADR 0010 D2
     expect(classifyPhysical('src/app/api/route.ts')).toBeNull();
     expect(classifyPhysical('README.md')).toBeNull();
   });
+
+  it('monorepo scaffold segments never become a concept (nest-shape regression)', () => {
+    // Field harness caught: packages/<pkg>/index.ts grouped 91 files under a
+    // garbage "packages" concept with a nonsense pilot. Scaffold segments are
+    // skipped; the package name is the concept, anchored at packages/.
+    expect(classifyPhysical('packages/websockets/index.ts')).toEqual({
+      concept: 'websockets',
+      anchor: 'packages',
+    });
+    const rels: string[] = [];
+    for (let p = 0; p < 10; p++) {
+      for (let i = 0; i < 10; i++) rels.push(`packages/pkg${p}/sub${i}/index.ts`);
+    }
+    const root = mk();
+    const pc = computePhysicalCohesion(root, seed(root, rels));
+    expect(pc.findings.map((f: { concept: string }) => f.concept)).not.toContain('packages');
+    expect(pc.findingCount).toBe(0);
+  });
 });
 
 describe('X04 physicalCohesion sensor (ADR 0010 D1/D3)', () => {

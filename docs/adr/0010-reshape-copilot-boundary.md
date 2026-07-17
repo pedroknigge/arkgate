@@ -47,10 +47,12 @@ section exists from day one because the X01 parity guard fails CI without it.
 - Non-framework filenames: the first meaningful basename token (camelCase/kebab tokenization;
   noise tokens `use|api|get|set|app|lib` skipped; minimum length 3).
 - Framework filenames (`route|page|layout|index|loading|error|template|default|not-found|middleware|action(s)|handler`):
-  the concept is the **topmost** meaningful path segment (skipping `src|app|api|lib|pages|components|utils|helpers|hooks|server|client|shared|common`,
+  the concept is the **topmost** meaningful path segment (skipping scaffold segments
+  `src|app(s)|api|lib(s)|pages|packages|modules|components|utils|helpers|hooks|server|client|shared|common|test(s)|e2e|example(s)|dist|build`,
   dynamic segments `[…]`, and route groups `(…)`); the **anchor** is the path above that segment.
   This groups `src/app/api/projects/[id]/tasks/route.ts` under concept `projects`, anchor
-  `src/app/api`.
+  `src/app/api`, and `packages/websockets/index.ts` under concept `websockets`, anchor
+  `packages` (multi-repo harness regression: scaffold roots must never become a concept).
 - Same heuristic class as W01's layer-role regexes: a miss costs a warning line, never a verdict.
 
 ### D3 — Fixed thresholds, calibrated on the field corpus, not user tunables
