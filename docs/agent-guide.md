@@ -368,7 +368,7 @@ npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok
 |------|-----------------|-------------|
 | Claude Code | `.claude/settings.json` hook + `.mcp.json` / `claude mcp add` | `.claude/skills/<name>/SKILL.md` |
 | Cursor | `.cursor/mcp.json` + `.cursor/rules/ark.mdc` | `.cursor/commands/` |
-| OpenAI Codex | `$CODEX_HOME/config.toml` (global; absolute `--root`; multi-project → secondary `ark_<slug>` unless `--force`; doctor defers non-temp home gaps when session host ≠ Codex — see [ai-gates.md](ai-gates.md)) | **Repo:** `.agents/skills/<name>/SKILL.md`; **home:** `$CODEX_HOME/skills/<name>/SKILL.md` (`--codex-home`) |
+| OpenAI Codex | `.codex/config.toml` (project primary, relative `--root .`); optional legacy `$CODEX_HOME/config.toml` fallback uses absolute roots and scoped secondaries — see [ai-gates.md](ai-gates.md) | **Repo:** `.agents/skills/<name>/SKILL.md`; **home:** `$CODEX_HOME/skills/<name>/SKILL.md` (`--codex-home`) |
 | **Grok Build** | `.grok/hooks/ark-write-gate.json` + `.grok/config.toml` / `.mcp.json` | `.grok/skills/<name>/SKILL.md` |
 
 This is a path reference, not a guarantee table. Full copy-paste setups:

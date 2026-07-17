@@ -21,7 +21,7 @@ Installs:
 |------|-------------|
 | Claude Code | `.claude/settings.json`, `.claude/skills/` |
 | Cursor | `.cursor/mcp.json`, `.cursor/rules/ark.mdc`, `.cursor/commands/` |
-| Codex | `.codex/hooks.json`, `.agents/skills/`; MCP in `$CODEX_HOME/config.toml` |
+| Codex | `.codex/hooks.json`, `.codex/config.toml`, `.agents/skills/` |
 | **Grok Build** | `.grok/config.toml`, `.grok/hooks/`, `.grok/skills/` |
 
 See the [canonical host support matrix](../../README.md#host-enforcement-support) for the exact

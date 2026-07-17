@@ -111,7 +111,7 @@ Then restart the agent / reload MCP.
 
 ### Codex
 
-Re-register so home MCP points at this project with the new bin:
+Re-register the project MCP binding with the new bin:
 
 ```bash
 npx arkgate-check --install-agent-gates --tools codex --force

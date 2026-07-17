@@ -8,6 +8,7 @@ export {
   codexArkBlockNeedsRewrite,
   codexConfigPath,
   codexPrimaryTable,
+  codexProjectMcpIsValid,
   codexProjectSlug,
   codexPromptsDir,
   codexSkillsDir,
@@ -23,6 +24,7 @@ export {
 export {
   PREFERRED_MCP_BIN,
   claudeSettings,
+  codexProjectConfig,
   grokHooks,
   grokProjectConfig,
 } from './hook-templates.mjs';

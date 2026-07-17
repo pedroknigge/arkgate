@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  codexProjectMcpIsValid,
   codexConfigPath,
   listCodexArkServerTables,
 } from './codex-home.mjs';
@@ -154,6 +155,11 @@ function mcpEvidence(root, relativePath) {
 }
 
 function codexMcpEvidence(root) {
+  const projectFile = path.join(root, '.codex', 'config.toml');
+  const projectText = readText(projectFile);
+  const projectRegistered = codexProjectMcpIsValid(projectText, root);
+  if (projectRegistered) return ['.codex/config.toml'];
+
   const file = codexConfigPath();
   const text = readText(file);
   const resolvedRoot = path.resolve(root);

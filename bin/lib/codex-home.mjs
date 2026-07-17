@@ -47,6 +47,7 @@ export function isTempOrUpgradeRoot(p) {
     /\/tmp\//i.test(n) ||
     /\/Temp\//i.test(n) ||
     /ark-upgrade/i.test(n) ||
+    /\/(?:\.claude|\.codex|\.grok)\/worktrees\//i.test(n) ||
     /\/T\/(?:ark-|grok-)/i.test(n) ||
     /[\\/]AppData[\\/]Local[\\/]Temp[\\/]/i.test(n)
   );
@@ -144,6 +145,23 @@ export function codexScopedTableForRoot(tomlText, absRoot) {
   return null;
 }
 
+/** True when project TOML owns the primary Ark MCP binding for that project. */
+export function codexProjectMcpIsValid(tomlText, projectRoot) {
+  const resolvedRoot = path.resolve(projectRoot);
+  const primary = codexPrimaryTable(tomlText);
+  if (!primary?.root || !/\b(ark|arkgate)-mcp\b/.test(primary.block)) return false;
+  const config = primary.block.match(/"--config"\s*,\s*"([^"]+)"/)?.[1];
+  if (!config) return false;
+  try {
+    return (
+      path.resolve(resolvedRoot, primary.root) === resolvedRoot &&
+      path.resolve(resolvedRoot, config) === path.join(resolvedRoot, 'ark.config.json')
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** Extract --root from primary [mcp_servers.ark]. */
 export function extractCodexArkRootFromToml(tomlText) {
   return codexPrimaryTable(tomlText)?.root ?? null;
@@ -236,14 +254,11 @@ export function assessCodexHomeMcp(tomlText, absRoot) {
       message: scopedTable
         ? `Codex primary [mcp_servers.ark] is bound to another project (${rootArg}); ` +
           `this project is registered as [mcp_servers.${scopedTable}]. ` +
-          `Codex may still prefer the primary binding for ark://manifest — rebind if this repo should own it.`
+          `Install the project-scoped binding so this repo owns ark://manifest when active.`
         : `Codex home primary MCP --root is another permanent project ` +
           `(${rootArg || 'missing'} ≠ ${resolvedRoot}). ` +
-          `Install without --force adds a scoped [mcp_servers.ark_<slug>] table and leaves primary unchanged; ` +
-          `--force rebinds primary to this project.`,
-      fixArgs: scopedTable
-        ? '--install-agent-gates --tools codex --force'
-        : '--install-agent-gates --tools codex',
+          `Install the project-scoped binding for this repo; the global primary can remain unchanged.`,
+      fixArgs: '--install-agent-gates --tools codex',
     };
   }
 

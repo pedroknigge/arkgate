@@ -15,6 +15,7 @@ import {
   codexSkillsDir,
   codexConfigPath,
   isTempOrUpgradeRoot,
+  upsertCodexMcpTable,
   usesDefaultCodexHome,
   wireCodexMcp,
 } from './codex-home.mjs';
@@ -22,6 +23,7 @@ import {
   PREFERRED_MCP_BIN,
   claudeSettings,
   codexHooks,
+  codexProjectConfig,
   grokHooks,
   grokProjectConfig,
 } from './hook-templates.mjs';
@@ -279,6 +281,7 @@ export function runInstallAgentGates(args) {
     }
     if (tools.has('codex')) {
       templates.push(['.codex/hooks.json', codexHooks(root)]);
+      templates.push(['.codex/config.toml', codexProjectConfig(root)]);
       if (!args.compact) templates.push(['docs/ark-codex-config.toml', codexTomlSnippet(root)]);
     }
     if (tools.has('grok')) {
@@ -341,14 +344,29 @@ export function runInstallAgentGates(args) {
     }
   }
 
-  const results = templates.map(([relativePath, content]) =>
-    writeTemplate(
+  const results = templates.map(([relativePath, content]) => {
+    if (relativePath === '.codex/config.toml') {
+      const fullPath = path.join(root, relativePath);
+      let existing = '';
+      try {
+        existing = fs.readFileSync(fullPath, 'utf8');
+      } catch {
+        // A missing project config starts from the generated Ark table.
+      }
+      const tableStart = content.indexOf('[mcp_servers.ark]');
+      const generatedPrelude = tableStart > 0 ? content.slice(0, tableStart) : '';
+      const mergeBase = generatedPrelude ? existing.replace(generatedPrelude, '') : existing;
+      const merged = upsertCodexMcpTable(mergeBase, 'ark', content);
+      if (merged === existing) return { relativePath, status: 'skipped' };
+      return writeTemplate(root, relativePath, merged, true);
+    }
+    return writeTemplate(
       root,
       relativePath,
       content,
       args.force || (args.compact && relativePath === 'AGENTS.md' && priorCompactHost !== null)
-    )
-  );
+    );
+  });
 
   console.log('Ark agent gate templates:');
   let staleSkipped = 0;
@@ -427,11 +445,8 @@ export function runInstallAgentGates(args) {
     }
   }
 
-  // Auto-wire the ark MCP server into Codex's home config.toml. Claude and Cursor get
-  // machine-readable registrations (.claude/settings.json, .cursor/mcp.json) written as repo
-  // templates above; Codex reads MCP servers only from ~/.codex/config.toml, so it needs a
-  // home-dir merge instead. Fires whenever Codex is in play so `ark://manifest` is live
-  // without a manual copy step.
+  // Optional legacy/home fallback. Normal Codex installs use the project-scoped
+  // .codex/config.toml above, avoiding cross-project primary binding conflicts.
   //
   // Skip home MCP mutation when the project root is a temp/upgrade scratch *and*
   // CODEX_HOME is the default (~/.codex). Fixtures and agent smokes must not rewrite
@@ -439,7 +454,7 @@ export function runInstallAgentGates(args) {
   // home *skills* below; MCP binding of a temp root into default home is never safe.
   // A redirected CODEX_HOME (tests/isolation) may still wire as requested.
   let codexMcp = null;
-  const wantCodexWire = !args.compact && (tools.has('codex') || args.codexHome);
+  const wantCodexWire = !args.compact && !args.skillsOnly && args.codexHome;
   const skipHomeWire =
     wantCodexWire && isTempOrUpgradeRoot(root) && usesDefaultCodexHome();
   if (wantCodexWire && !skipHomeWire) {
@@ -475,7 +490,7 @@ export function runInstallAgentGates(args) {
   }
   if (codexMcp?.status === 'failed') {
     console.error(
-      `\nWarning: Codex home MCP registration failed (${codexMcp.message}). Repo gates were written; fix ~/.codex access or re-run with --tools codex --force.`
+      `\nWarning: Codex home MCP registration failed (${codexMcp.message}). Repo gates were written; fix ~/.codex access or re-run with --codex-home --force.`
     );
   }
   if (writeRequest.host) {

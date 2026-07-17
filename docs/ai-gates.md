@@ -263,23 +263,22 @@ npx ark-check --install-agent-gates --tools codex
 The generated hook includes `--hook-repair`, so a rejected patch carries the same structured
 repair envelope as Claude and Grok. Codex still needs hook trust enabled for the project.
 
-Unlike Claude/Cursor (project-local MCP files), **Codex loads MCP servers only from
-`$CODEX_HOME/config.toml`** (default `~/.codex/config.toml`) — a **global** home file.
-Hand-editing with relative `--root .` is wrong: Codex does not use the project as cwd, so
-`.` resolves against the launch directory. Prefer absolute paths, or let Ark write them:
+Modern Codex resolves MCP servers from the active project's `.codex/config.toml`. Ark writes
+that file with relative paths, so every repository owns its primary `ark` binding without
+competing for a global slot:
 
 ```bash
 npx ark-check --install-agent-gates --tools codex
-# optional: install /ark-* skills into $CODEX_HOME/skills/<name>/SKILL.md
+# optional: install /ark-* skills and a legacy global MCP fallback under $CODEX_HOME
 npx ark-check --install-agent-gates --codex-home
 ```
 
-Example shape (absolute paths — also what install writes):
+Project-scoped shape:
 
 ```toml
 [mcp_servers.ark]
 command = "npx"
-args = ["arkgate-mcp", "--root", "/absolute/path/to/project", "--config", "/absolute/path/to/project/ark.config.json"]
+args = ["arkgate-mcp", "--root", ".", "--config", "ark.config.json"]
 ```
 
 Then **restart Codex** — it does not hot-load MCP servers. Expect resource `ark://manifest`
@@ -288,11 +287,12 @@ and tools `validate_code`, `ark_check`, `ark_coverage`, `ark_place`.
 Codex uses the best-effort local patch hook plus advisory MCP for discovery/validation and
 `ark-check` as the hard merge backstop. Register all three as soon as the repo is adopted.
 
-### Multi-project Codex (home config last-wins)
+### Legacy Codex home fallback
 
-`[mcp_servers.ark]` is a **single primary** binding. If project A is already registered and
-you install gates for project B **without** `--force`, Ark does **not** silently steal
-primary A. It writes a **scoped secondary** table:
+`$CODEX_HOME/config.toml` remains supported for older clients or an explicit global binding.
+Because it is global, its `[mcp_servers.ark]` is a single primary. If project A is already
+registered and you run `--codex-home` for project B without `--force`, Ark preserves A and
+writes a scoped secondary table:
 
 ```toml
 [mcp_servers.ark]            # primary — still project A
@@ -304,13 +304,15 @@ primary A. It writes a **scoped secondary** table:
 
 | Goal | Command |
 |------|---------|
-| Add B without moving primary | `ark-check --install-agent-gates --tools codex` (no `--force`) |
-| Make B the primary binding | `ark-check --install-agent-gates --tools codex --force` |
+| Install the normal project binding | `ark-check --install-agent-gates --tools codex` |
+| Add B to the legacy home fallback | `ark-check --install-agent-gates --codex-home` |
+| Make B the legacy home primary | `ark-check --install-agent-gates --codex-home --force` |
 | Doctor: primary points at another permanent project | gap id `codex-home-multi-project` (warn if no secondary yet and session host is unknown/Codex; **info + `deferred`** when the session host is known and not Codex — e.g. Grok/Claude/Cursor; info if a scoped secondary is already present) |
-| When using Codex: refresh home skills/MCP | `ark-check --install-agent-gates --skills-only --codex-home --force` |
+| When using Codex: refresh home skills | `ark-check --install-agent-gates --skills-only --codex-home --force` |
 
-`ark-check --doctor` surfaces the multi-project state so you are not left thinking B owns
-`ark://manifest` when only a secondary table exists. **Deferred (fix when using Codex):**
+When a valid project `.codex/config.toml` exists, doctor treats it as the effective binding and
+does not report an unrelated home primary. Without a project binding, doctor surfaces the
+legacy multi-project state. **Deferred (fix when using Codex):**
 non-temp Codex-home gaps (`codex-home-multi-project`, stale `$CODEX_HOME/skills`) are
 severity **info**, marked `deferred: true`, and omitted from Top actions when the session
 host is known and not Codex — `/ark-upgrade` on Grok/Claude is not Incomplete because of

@@ -238,10 +238,8 @@ export function mcpJson(root) {
   }, null, 2)}\n`;
 }
 
-// Sample for docs/ — `ark-check --install-agent-gates --tools codex` auto-merges the real
-// block (with absolute paths) into ~/.codex/config.toml. This copy is a reference only, so
-// it flags the two gotchas of hand-editing the global config: absolute paths (config.toml is
-// loaded without the project as cwd) and the required restart.
+// Optional home fallback reference. Normal Codex installs write the project-scoped
+// `.codex/config.toml`; `--codex-home` is for older clients or an explicit global binding.
 export function codexTomlSnippet(root) {
   const { command, args } = execCommandParts(root, PREFERRED_MCP_BIN, [
     '--root',
@@ -250,10 +248,9 @@ export function codexTomlSnippet(root) {
     '/absolute/path/to/project/ark.config.json',
   ]);
   const argsToml = args.map((value) => `"${value}"`).join(', ');
-  return `# Add to ~/.codex/config.toml (or $CODEX_HOME/config.toml), then RESTART Codex —
-# it does not hot-load MCP servers. Use ABSOLUTE paths: config.toml is global, so
-# "." would resolve against Codex's launch dir, not this project. Prefer:
-#   ark-check --install-agent-gates --tools codex   (auto-merges the absolute paths)
+  return `# Optional global fallback for older Codex clients. Modern Codex uses the generated
+# project-scoped .codex/config.toml instead. If you install this fallback manually, restart
+# Codex and keep ABSOLUTE paths because $CODEX_HOME/config.toml is global.
 [mcp_servers.ark]
 command = "${command}"
 args = [${argsToml}]

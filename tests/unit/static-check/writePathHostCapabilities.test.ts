@@ -407,6 +407,36 @@ describe('active-host write capability model', () => {
     }
   });
 
+  it('prefers project-scoped Codex MCP evidence over an unrelated home primary', () => {
+    const root = mk();
+    const codexHome = mk();
+    try {
+      write(
+        root,
+        '.codex/config.toml',
+        '[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp", "--root", ".", "--config", "ark.config.json"]\n'
+      );
+      write(
+        codexHome,
+        'config.toml',
+        '[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp", "--root", "/another/project"]\n'
+      );
+      const previous = process.env.CODEX_HOME;
+      process.env.CODEX_HOME = codexHome;
+      try {
+        const result = detectWritePathCapabilities(root, 'codex');
+        expect(result.capabilities['advisory-write']).toBe(true);
+        expect(result.capabilityEvidence['advisory-write']).toEqual(['.codex/config.toml']);
+      } finally {
+        if (previous === undefined) delete process.env.CODEX_HOME;
+        else process.env.CODEX_HOME = previous;
+      }
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+      fs.rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
   it('rejects incomplete or non-Ark Codex MCP tables', () => {
     const root = mk();
     const codexHome = mk();
@@ -420,6 +450,13 @@ describe('active-host write capability model', () => {
       const previous = process.env.CODEX_HOME;
       process.env.CODEX_HOME = codexHome;
       try {
+        expect(detectWritePathCapabilities(root, 'codex').capabilities['advisory-write']).toBe(false);
+
+        write(
+          root,
+          '.codex/config.toml',
+          `[mcp_servers.ark_local]\ncommand = "npx"\nargs = ["arkgate-mcp", "--root", ".", "--config", "ark.config.json"]\n`
+        );
         expect(detectWritePathCapabilities(root, 'codex').capabilities['advisory-write']).toBe(false);
 
         write(

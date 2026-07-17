@@ -125,7 +125,7 @@ const COMPACT_HOST_FILES = {
   claude: ['.claude/settings.json'],
   grok: ['.grok/config.toml', '.grok/hooks/ark-write-gate.json'],
   cursor: ['.cursor/mcp.json'],
-  codex: ['.codex/hooks.json'],
+  codex: ['.codex/hooks.json', '.codex/config.toml'],
   windsurf: ['.windsurf/rules/ark.md'],
   cline: ['.clinerules/ark.md'],
   copilot: ['.github/copilot-instructions.md'],

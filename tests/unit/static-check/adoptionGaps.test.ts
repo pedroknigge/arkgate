@@ -208,6 +208,51 @@ args = ["ark-mcp", "--root", "/var/folders/xx/ark-upgrade-tmp123", "--config", "
     };
   }
 
+  it('doctor prefers the project Codex MCP over an unrelated home primary', () => {
+    const root = mk();
+    const codexHome = mk();
+    writeTwoLayerOptional(root);
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# agent\n');
+    fs.writeFileSync(path.join(root, 'package.json'), '{"name":"codex-project-fixture"}\n');
+    fs.mkdirSync(path.join(root, '.codex'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.codex', 'config.toml'),
+      '[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp", "--root", ".", "--config", "ark.config.json"]\n'
+    );
+    fs.writeFileSync(
+      path.join(codexHome, 'config.toml'),
+      '[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp", "--root", "/another/project"]\n'
+    );
+
+    const result = runCheck(
+      root,
+      ['--config', 'ark.config.json', '--doctor', '--json', '--no-cache'],
+      neutralHostEnv({ CODEX_HOME: codexHome, ARK_ACTIVE_HOST: 'codex' })
+    );
+    expect(result.status).toBe(0);
+    const out = JSON.parse(result.stdout);
+    const ids = out.doctor.adoption.gaps.map((gap: { id: string }) => gap.id);
+    expect(ids).not.toContain('codex-home-multi-project');
+    expect(out.doctor.adoption.codexHome).toBeNull();
+    expect(out.doctor.writePath.capabilityEvidence['advisory-write']).toEqual([
+      '.codex/config.toml',
+    ]);
+
+    fs.writeFileSync(
+      path.join(root, '.codex', 'config.toml'),
+      '[mcp_servers.ark]\ncommand = "custom"\nargs = ["--root", "."]\n'
+    );
+    const invalid = runCheck(
+      root,
+      ['--config', 'ark.config.json', '--doctor', '--json', '--no-cache'],
+      neutralHostEnv({ CODEX_HOME: codexHome, ARK_ACTIVE_HOST: 'codex' })
+    );
+    const invalidOut = JSON.parse(invalid.stdout);
+    expect(
+      invalidOut.doctor.adoption.gaps.map((gap: { id: string }) => gap.id)
+    ).toContain('codex-home-multi-project');
+  });
+
   it('R7 doctor flags multi-project when Codex primary is another permanent project', () => {
     const base = path.join(process.cwd(), '.tmp-r7-codex-doctor');
     fs.rmSync(base, { recursive: true, force: true });
@@ -262,10 +307,10 @@ args = ["arkgate-mcp", "--root", "${absA}", "--config", "${absA}/ark.config.json
     expect(multiGap?.fix).toMatch(/install-agent-gates/);
     expect(before.stdout + before.stderr).not.toMatch(/codex-home-mcp/); // not the temp-rewrite gap
 
-    // Install secondary for B without force
+    // Explicit legacy home fallback: install secondary for B without force.
     const install = runCheck(
       rootB,
-      ['--install-agent-gates', '--tools', 'codex'],
+      ['--install-agent-gates', '--tools', 'claude', '--codex-home'],
       neutralHostEnv({ CODEX_HOME: codexHome })
     );
     expect(install.status).toBe(0);

@@ -2925,9 +2925,7 @@ describe('ark-check monorepo tsconfig resolution', () => {
     expect(fs.existsSync(path.join(codexHome, 'prompts', 'ark-fix.md'))).toBe(false);
   });
 
-  it('--tools codex wires [mcp_servers.ark] into $CODEX_HOME/config.toml with absolute paths, preserving other tables and staying idempotent', () => {
-    // A space in the project path (like "PREDIAL WEB") is why absolute paths matter — the
-    // global config.toml is loaded without the project as cwd, so "." would be wrong.
+  it('--tools codex writes a project-scoped MCP config and leaves $CODEX_HOME unchanged', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark cxmcp-'));
     fs.writeFileSync(path.join(root, 'AGENTS.md'), '# AGENTS\n');
     fs.writeFileSync(
@@ -2939,27 +2937,49 @@ describe('ark-check monorepo tsconfig resolution', () => {
     fs.writeFileSync(path.join(codexHome, 'config.toml'), '[tui]\ntheme = "dark"\n');
     const configPath = path.join(codexHome, 'config.toml');
     const env = { ...process.env, CODEX_HOME: codexHome };
+    fs.mkdirSync(path.join(root, '.codex'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.codex', 'config.toml'),
+      '[features]\nweb_search = true\n'
+    );
 
     execFileSync(
       'node',
       [path.resolve('bin/ark-check.mjs'), '--install-agent-gates', '--root', root, '--tools', 'codex'],
       { encoding: 'utf8', stdio: 'pipe', env }
     );
-    let toml = fs.readFileSync(configPath, 'utf8');
+    let toml = fs.readFileSync(path.join(root, '.codex', 'config.toml'), 'utf8');
     expect(toml).toContain('[mcp_servers.ark]');
-    // Absolute --root and --config, not "." — the whole point of the config.toml path.
-    expect(toml).toContain(`"--root", "${path.resolve(root)}"`);
-    expect(toml).toContain(`"--config", "${path.join(path.resolve(root), 'ark.config.json')}"`);
-    expect(toml).not.toContain('"--root", "."');
-    expect(toml).toContain('[tui]'); // unrelated table preserved
+    expect(toml).toContain('"--root", "."');
+    expect(toml).toContain('"--config", "ark.config.json"');
+    expect(toml).toContain('[features]\nweb_search = true');
+    expect(fs.readFileSync(configPath, 'utf8')).toBe('[tui]\ntheme = "dark"\n');
 
-    // Second run without --force must not duplicate the table.
+    // Second run without --force keeps the single generated project table.
     execFileSync(
       'node',
       [path.resolve('bin/ark-check.mjs'), '--install-agent-gates', '--root', root, '--tools', 'codex'],
       { encoding: 'utf8', stdio: 'pipe', env }
     );
-    toml = fs.readFileSync(configPath, 'utf8');
+    toml = fs.readFileSync(path.join(root, '.codex', 'config.toml'), 'utf8');
+    expect(toml.match(/\[mcp_servers\.ark\]/g)).toHaveLength(1);
+
+    // --force refreshes only Ark's table and still preserves project-owned settings.
+    execFileSync(
+      'node',
+      [
+        path.resolve('bin/ark-check.mjs'),
+        '--install-agent-gates',
+        '--root',
+        root,
+        '--tools',
+        'codex',
+        '--force',
+      ],
+      { encoding: 'utf8', stdio: 'pipe', env }
+    );
+    toml = fs.readFileSync(path.join(root, '.codex', 'config.toml'), 'utf8');
+    expect(toml).toContain('[features]\nweb_search = true');
     expect(toml.match(/\[mcp_servers\.ark\]/g)).toHaveLength(1);
   });
 

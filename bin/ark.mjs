@@ -227,8 +227,8 @@ async function upgrade(args) {
   if (status !== 0) return status;
 
   // Codex home skill catalog is $CODEX_HOME/skills/<name>/SKILL.md (repo uses .agents/skills/).
-  // Refresh home when a Codex home exists. --force rewrites temp/upgrade MCP roots to this
-  // project + arkgate-mcp. Non-fatal: a permission error (e.g. sandbox) shouldn't fail upgrade.
+  // Refresh home skills when a Codex home exists. Project MCP is installed above in
+  // .codex/config.toml. Non-fatal: a permission error (e.g. sandbox) shouldn't fail upgrade.
   const codexHomeBase = process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
   if (fs.existsSync(codexHomeBase)) {
     console.log(`\n     Refreshing Codex home (${codexHomeBase})…`);

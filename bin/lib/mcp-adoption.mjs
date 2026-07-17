@@ -7,7 +7,11 @@ import path from 'node:path';
 import { arkCommand } from '../ark-shared.mjs';
 import { CORE_LAYER_NAMES } from './core-layers.mjs';
 import { falseGreenAdoptionGap } from './field-install.mjs';
-import { assessCodexHomeMcp, codexConfigPath } from './codex-home.mjs';
+import {
+  assessCodexHomeMcp,
+  codexConfigPath,
+  codexProjectMcpIsValid,
+} from './codex-home.mjs';
 import { detectWritePathCapabilities } from './write-path-detect.mjs';
 import { detectActiveAgentHost, skillTemplateNames } from './skill-install.mjs';
 import { detectDeployPathQuality } from './deploy-path.mjs';
@@ -19,7 +23,7 @@ export const COMMAND_GATE_TEXT_FILES = [
   '.claude/settings.json', 'AGENTS.md', '.cursor/rules/ark.mdc', '.windsurf/rules/ark.md',
   '.clinerules/ark.md', '.github/copilot-instructions.md', '.kiro/steering/ark.md',
   '.roo/rules/ark.md', '.continue/rules/ark.md', 'GEMINI.md', 'package.json',
-  '.grok/hooks/ark-write-gate.json', '.grok/config.toml',
+  '.grok/hooks/ark-write-gate.json', '.grok/config.toml', '.codex/config.toml',
 ];
 export const COMMAND_GATE_JSON_FILES = ['.mcp.json', '.cursor/mcp.json'];
 // Primary CLI names (product) + one-major aliases. migrate-commands must strip ALL of these
@@ -148,7 +152,10 @@ export function collectAdoptionGaps(root, config, coverage) {
         dir: '.codex',
         // Official Codex REPO skill catalog (Agent Skills standard) — not .codex/prompts.
         skill: (n) => path.join(root, '.agents', 'skills', n, 'SKILL.md'),
-        extras: [['.codex/hooks.json', 'hooks']],
+        extras: [
+          ['.codex/hooks.json', 'hooks'],
+          ['.codex/config.toml', 'project MCP config'],
+        ],
         toolsFlag: 'codex',
       },
     ];
@@ -183,7 +190,17 @@ export function collectAdoptionGaps(root, config, coverage) {
 
   // --- Codex home MCP (temp path / wrong root / multi-project) ---
   let codexHome = null;
-  if (adopted && !isProducer) {
+  const codexProjectMcp = (() => {
+    try {
+      return codexProjectMcpIsValid(
+        fs.readFileSync(path.join(root, '.codex', 'config.toml'), 'utf8'),
+        root
+      );
+    } catch {
+      return false;
+    }
+  })();
+  if (adopted && !isProducer && !codexProjectMcp) {
     const codexFile = codexConfigPath();
     let toml = '';
     try {

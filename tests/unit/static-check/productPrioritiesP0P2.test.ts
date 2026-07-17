@@ -13,6 +13,7 @@ import {
   buildArchitectureRecommendation,
 } from '../../../bin/ark-shared.mjs';
 import {
+  isTempOrUpgradeRoot,
   isArkAgentsContent,
   isSelfHostedLibraryAgents,
   writeTemplate,
@@ -353,6 +354,13 @@ describe('P2 soft cycles + codex multi', () => {
     expect(
       hardJ.violations.filter((v: { ruleId: string }) => v.ruleId === 'CIRCULAR_DEPENDENCY').length
     ).toBeGreaterThan(0);
+  });
+
+  it('treats agent worktrees as ephemeral Codex home roots', () => {
+    expect(isTempOrUpgradeRoot('/repo/.claude/worktrees/arkt')).toBe(true);
+    expect(isTempOrUpgradeRoot('/repo/.codex/worktrees/fix-mcp')).toBe(true);
+    expect(isTempOrUpgradeRoot('/repo/.grok/worktrees/release')).toBe(true);
+    expect(isTempOrUpgradeRoot('/repo/apps/permanent-project')).toBe(false);
   });
 
   it('wireCodexMcp multi-project writes secondary table without force', () => {
