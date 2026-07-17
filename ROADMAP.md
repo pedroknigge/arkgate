@@ -335,7 +335,7 @@ lives only in prose: each names the gate that promotes it, and none may start wh
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 54 | `Y05` | `doing` | S | 3.6.0 shipped | Cycle ceilings (package + perf budgets) are re-measured and set once with evidence-backed headroom |
+| 54 | `Y05` | `done` | S | 3.6.0 shipped | Cycle ceilings (package + perf budgets) are re-measured and set once with evidence-backed headroom |
 | 55 | `Y01` | `todo` | M | `X04`, `X02` | A rejected reshape pilot is a recorded decision the doctor respects, not advisory pressure re-fought every session |
 | 56 | `Y02` | `todo` | M | `P02` | Deterministic hollow-persistence smell: HTTP/route definition living in Persistence-role layers is visible as an advisory |
 | 57 | `Y03` | `todo` | S | — | Governed files that fail to parse are surfaced honestly (a file the scanner cannot read is never silently "clean") |
@@ -394,7 +394,7 @@ reproduced, report inspected, live login flow of the product exercised).
 
 ### Y05 — Cycle budget recalibration (package + perf ceilings)
 
-- **Status:** `doing`
+- **Status:** `done`
 - **Depends on:** 3.6.0 shipped
 
 **Outcome:** per the standing guardrails (package-budget rules below; ADR 0009 D5 for perf), the
@@ -414,6 +414,12 @@ attempt 1 measured hook@10k 629.687 ms and doctorCold@10k 5,154.522 ms on a docs
 unchanged-engine candidate; its unchanged-head retry measured 683.761 / 4,714.687 ms and run
 `29608857827` measured 619.852 / 4,781.35 ms. The worst p95 per scenario becomes the Phase Y
 baseline; fixed +30% runner headroom rounds up to 900 / 6,800 ms.
+
+**Closure evidence:** local dry-run/package allowlist/release-artifact checks and 31 focused
+tests passed before commit `2c064cd`. PR #78 CI run `29611290231` completed green on that SHA;
+its `Performance budgets` job passed twice consecutively without an engine change: attempt 1
+job `87986335243` and attempt 2 job `87988275984`. The first attempt also passed the full CI,
+security, confidence/mutation, package-isolation, artifact, and strict architecture jobs.
 
 ### Y01 — Reshape decisions are recorded (physical-cohesion verdict memory)
 
