@@ -6,8 +6,9 @@
   the calibration table exactly — 4 mirrored concepts, pilot at `src/lib/repositories` (124))
 - **Date:** 2026-07-17
 - **Owner:** product (Pedro) + ArkGate maintainers
-- **Decision scope:** Phase X, X04 — the physicalCohesion sensor, the reshape plan surface, the
-  execution model, and the hard lines ([plan](../plans/reshape-copilot/README.md))
+- **Decision scope:** Phase X/X04 plus Phase Y/Y01 — the physicalCohesion sensor, reshape plan,
+  explicit verdict memory, execution model, and hard lines
+  ([plan](../plans/reshape-copilot/README.md))
 
 ## Context
 
@@ -98,7 +99,22 @@ The roadmap freeze holds. `/ark-loop` gains the pilot-execution loop; `/ark-arch
 `/ark-fix` gain merge-card judgment framing. Promoting a dedicated `/ark-reshape` requires a new
 roadmap item backed by field discovery problems, not this ADR.
 
-### D9 — Non-goals (hard)
+### D9 — Reshape verdicts are explicit, anchor-bound memory (Y01)
+
+A proposed target may be recorded in the bounded optional sidecar
+`.ark/reshape-decisions.json` as `accepted`, `deferred`, or `rejected`, always with a reason and
+an optional X02-style `reviewBy`. Its identity is the concept plus the complete sorted anchor set
+— never file counts, move samples, or a change-map hash. Count/evidence drift cannot overturn an
+adopter verdict; adding/removing an anchor makes it stale and stops it applying (X05 semantics).
+
+Current `rejected`/`deferred` records suppress only pilot pressure for that target; the
+`physicalCohesion` findings still render. `accepted` leaves the existing one-pilot change-map and
+preflight path unchanged. Expired, malformed, stale, duplicate, oversized, or otherwise invalid
+records suppress nothing and surface in doctor/report. The sidecar is explicit-only: the free-form
+golden-pattern `norm`/`newCodeHome` is never parsed to infer a verdict. A team may cite its golden
+layout in the decision reason instead.
+
+### D10 — Non-goals (hard)
 
 No LOC/function-length/file-count style rules; no cohesion score; no strict mode; no
 auto-apply; no rewrite proposals. The sensor reports shape facts; the plan proposes physical
@@ -119,3 +135,5 @@ The doctor finally *sees* the mirrored-explosion pathology and says so in plain 
 the gate stays exactly as strict as before. Reorganization becomes a governed loop an agent can
 run without ever holding apply authority. The cost is heuristic: concept extraction will misread
 some names — accepted, because every output is advisory and each miss costs one warning line.
+Y01 adds durable local verdict memory without making the heuristic authoritative: facts remain
+visible, only repeated pilot pressure is quieted, and a changed anchor set reopens the decision.

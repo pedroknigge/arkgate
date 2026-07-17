@@ -446,11 +446,12 @@ export default [
 
 - Relative imports are resolved to on-disk TS/JS targets; package bare imports are left to CI/TS.
 - Type-only and value forbidden edges both error (same pass/fail as `arkgate-check`).
-- `no-forbidden-globals` only applies when the file’s layer declares `forbiddenGlobals` (or you pass a `globals` option). Layers without a purity list are not inventively restricted.
+- `no-forbidden-globals` applies from the file layer’s `forbiddenGlobals`; the `globals` option is only a standalone fallback when no project config applies, never an override that weakens the project contract. Layers without either surface are not inventively restricted. `process` also owns exact value imports of `process` / `node:process`; type-only forms, subpaths, and `child_process` stay excluded. If the same layer also denies the `process` capability, this rule is the single `FORBIDDEN_GLOBAL` voice.
 - Without `ark.config.json`, `no-domain-infra-imports` falls back to a domain→infra path heuristic.
 
 Rule ids are `ark/<kebab-name>`. Individual rules are also on `ark.rules` if you wire them by hand.
-Prefer keeping editor + CI on the same `ark.config.json` — do not maintain a parallel globals list unless you intentionally override.
+Prefer keeping editor + CI on the same `ark.config.json`. Use the rule-local `globals` list only
+for standalone linting where no project contract applies.
 
 ## CI backstop
 

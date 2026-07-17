@@ -1133,7 +1133,7 @@ async function main() {
     );
   }
 
-  const { violations, warnings, safety } = runArchitectureScan({
+  const { violations, warnings, safety, parseHealth } = runArchitectureScan({
     root,
     config,
     manifest,
@@ -1148,7 +1148,7 @@ async function main() {
       configPath: path.isAbsolute(args.config) ? args.config : path.join(root, args.config),
       configMissing: !fs.existsSync(path.isAbsolute(args.config) ? args.config : path.join(root, args.config)),
       safety,
-      ts,
+      ts, parseHealth,
     });
     return;
   }
@@ -1320,7 +1320,7 @@ async function main() {
       originJustCreated: !existingOrigin,
       adoption: adoptionForReport,
       designDepth,
-      advisories: computeDoctorAdvisories(root, config, coverage, rules, files, ts),
+      advisories: computeDoctorAdvisories(root, config, coverage, rules, files, ts, parseHealth),
     };
     const html = args.beginner
       ? renderBeginnerHtmlReport(reportPayload)

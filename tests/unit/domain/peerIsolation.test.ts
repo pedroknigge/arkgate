@@ -48,6 +48,7 @@ describe('sliceIdForPath / inferSliceFoldersFromPatterns', () => {
     expect(sliceIdForPath('src/features/auth/x.ts', ['features', 'modules'])).toBe(
       'features/auth'
     );
+    expect(sliceIdForPath('src/Features/Auth/api.ts', ['features'])).toBe('features/auth');
   });
 
   it('infers features from src/features/**', () => {
@@ -77,6 +78,23 @@ describe('peerIsolation edge rules', () => {
         layers: featuresLayers,
       })
     ).toBe(false);
+  });
+
+  it('normalizes mixed-case slice identity while preserving different slices', () => {
+    expect(
+      isEdgeDenied(peerRules, 'Features', 'Features', {
+        fromPath: 'src/Features/Auth/api.ts',
+        toPath: 'src/features/auth/utils/token.ts',
+        layers: featuresLayers,
+      })
+    ).toBe(false);
+    expect(
+      isEdgeDenied(peerRules, 'Features', 'Features', {
+        fromPath: 'src/Features/Auth/api.ts',
+        toPath: 'src/features/Payments/service.ts',
+        layers: featuresLayers,
+      })
+    ).toBe(true);
   });
 
   it('allows features → shared (different layers, no deny rule)', () => {

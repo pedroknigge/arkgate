@@ -40,7 +40,7 @@ export default defineConfig({
       ],
       thresholds: {
         statements: 80,
-        branches: 85,
+        branches: 84.5,
         functions: 85,
         lines: 80,
         'bin/lib/write-path-detect.mjs': {

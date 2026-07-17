@@ -152,6 +152,46 @@ function ambientStateHtml(state) {
   </section>`;
 }
 
+function reshapeDecisionsHtml(memory) {
+  if (!memory) return '';
+  const lifecycle = memory.lifecycle ?? {};
+  const rows = [];
+  if (memory.decisionFile?.invalid) {
+    rows.push(
+      `<p><span class="tag warn">invalid</span> ${esc(memory.decisionFile.path)} is ignored; no reshape decision suppresses a pilot.</p>`
+    );
+  }
+  for (const decision of memory.current ?? []) {
+    const tag = decision.verdict === 'accepted' ? 'ok' : 'warn';
+    const review = decision.reviewBy ? ` · review-by ${esc(decision.reviewBy)}` : '';
+    rows.push(
+      `<p><span class="tag ${tag}">${esc(decision.verdict)}</span> <b>${esc(decision.concept)}</b>${review} — ${esc(decision.reason)}${decision.suppressesPilot ? ' Pilot pressure suppressed; mirror facts remain visible.' : ' Pilot remains available.'}</p>`
+    );
+  }
+  if ((memory.currentCount ?? 0) > (memory.current?.length ?? 0)) {
+    rows.push(`<p class="muted">…(+${memory.currentCount - memory.current.length} more current decision(s))</p>`);
+  }
+  if ((lifecycle.expiredCount ?? 0) > 0) {
+    rows.push(`<p><span class="tag warn">expired</span> ${lifecycle.expiredCount} decision(s) no longer apply; pilot pressure is active again.</p>`);
+  }
+  if ((lifecycle.malformedCount ?? 0) > 0) {
+    rows.push(`<p><span class="tag warn">malformed</span> ${lifecycle.malformedCount} review-by date(s) are invalid; those decisions are ignored.</p>`);
+  }
+  if ((lifecycle.staleCount ?? 0) > 0) {
+    const stale = (lifecycle.stale ?? [])
+      .slice(0, 4)
+      .map((decision) => `<code>${esc(decision.concept)}</code>`)
+      .join(' · ');
+    const more = lifecycle.staleCount > 4 ? ` …(+${lifecycle.staleCount - 4} more)` : '';
+    rows.push(`<p><span class="tag warn">stale</span> ${lifecycle.staleCount} decision(s) have a changed anchor set and no longer apply: ${stale}${more}</p>`);
+  }
+  if ((lifecycle.undated ?? 0) > 0) {
+    rows.push(`<p class="muted">${lifecycle.undated} current decision(s) have no review-by date.</p>`);
+  }
+  if (rows.length === 0) return '';
+  return `<div data-advisory="reshapeDecisions"><h3>Reshape decisions <span class="muted">(explicit; pilot pressure only)</span></h3>${rows.join('\n')}</div>`;
+}
+
 function physicalCohesionHtml(pc) {
   if (!pc) return '';
   const findings = Array.isArray(pc.findings) ? pc.findings : [];
@@ -173,7 +213,25 @@ function physicalCohesionHtml(pc) {
   <section data-advisory="physicalCohesion">
     <h2>Physical cohesion <span class="muted">(advisory — facts, not a score; the verdict is unchanged)</span></h2>
     ${body}
+    ${reshapeDecisionsHtml(pc.reshapeDecisions)}
     ${pilot}
+  </section>`;
+}
+
+function parseHealthHtml(health) {
+  if (!health) return '';
+  const files = Array.isArray(health.files) ? health.files : [];
+  const body = health.available === false
+    ? '<p class="muted">Parse health was not available for this rendering — no clean claim is made.</p>'
+    : health.affectedFiles === 0
+    ? `<p class="muted">No parse diagnostics found across ${health.scannedFiles ?? 0} governed file(s) scanned.</p>`
+    : `<p><span class="tag warn">${health.affectedFiles} affected</span> ${health.diagnosticCount} parse diagnostic(s) across ${health.scannedFiles} governed file(s).</p>` +
+      `<ul>${files.map((f) => `<li><code>${esc(f.file)}</code> — ${f.diagnosticCount} parse diagnostic(s)</li>`).join('')}</ul>` +
+      (health.truncated > 0 ? `<p class="muted">…(+${health.truncated} more affected file(s); doctor list capped)</p>` : '');
+  return `
+  <section data-advisory="parseHealth">
+    <h2>Parse health <span class="muted">(advisory — unreadable syntax is never silently called clean)</span></h2>
+    ${body}
   </section>`;
 }
 
@@ -189,6 +247,7 @@ export function renderAdvisorySections(advisories, escape) {
     contractHealthHtml(advisories.contractHealth),
     ambientStateHtml(advisories.ambientState),
     physicalCohesionHtml(advisories.physicalCohesion),
+    parseHealthHtml(advisories.parseHealth),
   ]
     .filter(Boolean)
     .join('\n');

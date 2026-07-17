@@ -115,6 +115,17 @@ const IMPORT_CAPABILITY_MODULES: Readonly<Record<string, CapabilityId>> = Object
 });
 
 /**
+ * Exact module spellings that are the runtime-import form of one ambient
+ * forbidden global. This is deliberately narrower than the capability map:
+ * `child_process` is a process capability, but it is not the module dual of
+ * the ambient `process` binding (Y08).
+ */
+const FORBIDDEN_GLOBAL_MODULE_DUALS: Readonly<Record<string, readonly string[]>> =
+  Object.freeze({
+    process: Object.freeze(['process', 'node:process']),
+  });
+
+/**
  * Classify a module specifier. Exact entry or subpath of an entry only;
  * relative/absolute specifiers are project code, never a capability module.
  */
@@ -133,6 +144,24 @@ export function capabilityForModuleSpecifier(specifier: string): CapabilityId | 
   const second = specifier.indexOf('/', first + 1);
   if (second < 0) return null;
   return IMPORT_CAPABILITY_MODULES[specifier.slice(0, second)] ?? null;
+}
+
+/**
+ * Match an exact module-import dual owned by a declared forbidden global.
+ * No capability-wide lowering happens here: `forbiddenGlobals: ["process"]`
+ * covers only `process` and `node:process`, never `child_process`, subpaths, or
+ * another module that happens to classify as the process capability.
+ */
+export function forbiddenGlobalForModuleSpecifier(
+  specifier: string,
+  forbiddenGlobals: Iterable<string>
+): string | null {
+  for (const forbiddenGlobal of forbiddenGlobals) {
+    if (FORBIDDEN_GLOBAL_MODULE_DUALS[forbiddenGlobal]?.includes(specifier)) {
+      return forbiddenGlobal;
+    }
+  }
+  return null;
 }
 
 /** Classify a matched ambient name (as returned by the symbol-aware collector). */
@@ -168,9 +197,9 @@ export function effectiveCapabilityDeny(layer: CapabilityLayerPolicy | null | un
 }
 
 /**
- * D7 dedup helper: an ambient use whose matched path is already covered by the
- * layer's forbiddenGlobals must report only FORBIDDEN_GLOBAL — the surface the
- * user declared wins; one violation, one voice.
+ * D7 ambient dedup helper. Import-form dedup uses
+ * forbiddenGlobalForModuleSpecifier; in both cases the layer's declared
+ * forbiddenGlobals surface wins: one violation, one voice.
  */
 export function ambientCoveredByForbiddenGlobals(
   symbol: string,
@@ -189,12 +218,14 @@ export function ambientCoveredByForbiddenGlobals(
  * D6: a layer's protection expressed as COVERAGE ATOMS — the finest-grained
  * units either surface can protect. `ambient:<entry>` atoms are the known
  * ambient map entries a forbiddenGlobals prefix or a wall covers; `import:<id>`
- * atoms are a wall's module-import enforcement (forbiddenGlobals never cover
- * imports). Policy-delta classifies on atoms, never on keys or bare capability
- * ids: losing ANY atom is a real loss (fetch → XMLHttpRequest, Date → Date.now,
- * wall → forbiddenGlobals all weaken), while an equivalent-or-stronger
- * migration never needs an acknowledgment. Unlowerable custom globals stay in
- * `rawGlobals` for the key-by-key comparison.
+ * represents a wall's complete module-capability coverage; and
+ * `import-exact:<specifier>` records the narrow module dual shared by
+ * forbiddenGlobals `process` and a process wall. Policy-delta classifies on
+ * atoms, never on keys or bare capability ids: losing ANY atom is a real loss
+ * (fetch → XMLHttpRequest, Date → Date.now, wall → forbiddenGlobals all
+ * weaken), while an equivalent-or-stronger migration never needs an
+ * acknowledgment. Unlowerable custom globals stay in `rawGlobals` for the
+ * key-by-key comparison.
  */
 export function loweredLayerCoverage(layer: CapabilityLayerPolicy | null | undefined): {
   atoms: string[];
@@ -211,9 +242,17 @@ export function loweredLayerCoverage(layer: CapabilityLayerPolicy | null | undef
     );
     if (covered.length === 0) rawGlobals.add(entry);
     else for (const candidate of covered) atoms.add(`ambient:${candidate}`);
+    for (const specifier of FORBIDDEN_GLOBAL_MODULE_DUALS[entry] ?? []) {
+      atoms.add(`import-exact:${specifier}`);
+    }
   }
   for (const capability of effectiveCapabilityDeny(layer)) {
     atoms.add(`import:${capability}`);
+    if (capability === 'process') {
+      for (const specifier of FORBIDDEN_GLOBAL_MODULE_DUALS.process) {
+        atoms.add(`import-exact:${specifier}`);
+      }
+    }
     // A wall's ambient dimension uses longest-match classification, so it
     // covers exactly the entries that CLASSIFY as this capability (bare
     // `process` does not cover `process.env` — that is `environment`).

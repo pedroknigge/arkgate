@@ -9,6 +9,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   noDomainInfraImports,
+  noDeniedCapabilities,
   noForbiddenGlobals,
   layerForRelativePath,
   isEdgeDenied,
@@ -60,7 +61,12 @@ function runArkCheckJson(root: string) {
   );
   const out = JSON.parse(r.stdout || '{}') as {
     ok: boolean;
-    violations: Array<{ ruleId: string; file?: string; typeOnly?: boolean }>;
+    violations: Array<{
+      ruleId: string;
+      file?: string;
+      typeOnly?: boolean;
+      target?: string;
+    }>;
     diagnostics: Array<Record<string, unknown>>;
     schemaVersion: string;
   };
@@ -178,6 +184,231 @@ describe('ESLint ↔ ark-check parity', () => {
     expect(reports[0].diagnostic).toEqual(
       check.diagnostics.find((item) => item.ruleId === 'FORBIDDEN_GLOBAL')
     );
+  });
+
+  it('node:process is one FORBIDDEN_GLOBAL across ESLint and ark-check (Y08)', () => {
+    const root = fixture();
+    const configPath = path.join(root, 'ark.config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.layers[0].capabilities = { deny: ['process'] };
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    const domainFile = path.join(root, 'src/domain/process.ts');
+    fs.writeFileSync(
+      domainFile,
+      "import process from 'node:process';\nexport const cwd = process.cwd();\n"
+    );
+
+    const check = runArkCheckJson(root);
+    expect(check.ok).toBe(false);
+    expect(check.violations).toEqual([
+      expect.objectContaining({
+        ruleId: 'FORBIDDEN_GLOBAL',
+        target: 'node:process',
+      }),
+    ]);
+
+    // A rule-local empty fallback must not replace the project contract and
+    // create zero voices while the capability rule deduplicates.
+    const forbidden = createContext(domainFile, [{ globals: [] }]);
+    noForbiddenGlobals.create(forbidden.context).ImportDeclaration({
+      source: { value: 'node:process' },
+      specifiers: [{ type: 'ImportDefaultSpecifier' }],
+      loc: { start: { line: 1 } },
+    });
+    const wall = createContext(domainFile);
+    noDeniedCapabilities.create(wall.context).ImportDeclaration({
+      source: { value: 'node:process' },
+      specifiers: [{ type: 'ImportDefaultSpecifier' }],
+      loc: { start: { line: 1 } },
+    });
+
+    expect(forbidden.reports).toHaveLength(1);
+    expect(wall.reports).toHaveLength(0);
+    expect(forbidden.reports[0].diagnostic).toEqual(
+      check.diagnostics.find((item) => item.ruleId === 'FORBIDDEN_GLOBAL')
+    );
+  });
+
+  it('keeps denied-capability CLI results aligned with every listener form (Y08)', () => {
+    const root = fixture();
+    const configPath = path.join(root, 'ark.config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.layers[0].capabilities = { deny: ['filesystem', 'process'] };
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    const domainFile = path.join(root, 'src/domain/capabilities.ts');
+    fs.writeFileSync(
+      domainFile,
+      [
+        "import fs from 'node:fs';",
+        "import fsEq = require('node:fs');",
+        "export { readFile } from 'node:fs';",
+        "export * from 'node:fs/promises';",
+        "export const lazy = import('node:fs');",
+        "export const legacy = require('node:fs');",
+        'export const marker = [fs, fsEq];',
+      ].join('\n')
+    );
+
+    const check = runArkCheckJson(root);
+    const cliHits = check.violations.filter(
+      (violation) => violation.ruleId === 'CAPABILITY_VIOLATION'
+    );
+    expect(check.ok).toBe(false);
+    expect(cliHits).toHaveLength(6);
+    expect(cliHits.map((violation) => violation.target).sort()).toEqual(
+      ['node:fs', 'node:fs', 'node:fs', 'node:fs', 'node:fs', 'node:fs/promises'].sort()
+    );
+
+    const { context, reports } = createContext(domainFile);
+    const listener = noDeniedCapabilities.create(context);
+    const expectReport = (visit: () => void) => {
+      const before = reports.length;
+      visit();
+      expect(reports).toHaveLength(before + 1);
+    };
+    const expectNoReport = (visit: () => void) => {
+      const before = reports.length;
+      visit();
+      expect(reports).toHaveLength(before);
+    };
+
+    expectReport(() =>
+      listener.ImportDeclaration({
+        source: { value: 'node:fs' },
+        specifiers: [{ type: 'ImportDefaultSpecifier' }],
+      })
+    );
+    expectNoReport(() =>
+      listener.ImportDeclaration({
+        source: { value: 'node:fs' },
+        importKind: 'type',
+        specifiers: [{ type: 'ImportDefaultSpecifier' }],
+      })
+    );
+    expectNoReport(() =>
+      listener.ImportDeclaration({
+        source: { value: 'node:fs' },
+        specifiers: [{ type: 'ImportSpecifier', importKind: 'type' }],
+      })
+    );
+    expectNoReport(() =>
+      listener.ImportDeclaration({
+        source: { value: 'node:process' },
+        specifiers: [{ type: 'ImportDefaultSpecifier' }],
+      })
+    );
+    expectNoReport(() =>
+      listener.ImportDeclaration({
+        source: { value: 'not-a-capability' },
+        specifiers: [{ type: 'ImportDefaultSpecifier' }],
+      })
+    );
+    expectNoReport(() =>
+      listener.ImportDeclaration({
+        source: { value: 'pg' },
+        specifiers: [{ type: 'ImportDefaultSpecifier' }],
+      })
+    );
+    expectReport(() =>
+      listener.ImportExpression({ source: { type: 'Literal', value: 'node:fs' } })
+    );
+    expectNoReport(() =>
+      listener.ImportExpression({ source: { type: 'Identifier', value: 'node:fs' } })
+    );
+    expectReport(() =>
+      listener.TSImportEqualsDeclaration({
+        moduleReference: { expression: { value: 'node:fs' } },
+      } as never)
+    );
+    expectNoReport(() =>
+      listener.TSImportEqualsDeclaration({
+        isTypeOnly: true,
+        moduleReference: { expression: { value: 'node:fs' } },
+      } as never)
+    );
+    expectReport(() =>
+      listener.ExportNamedDeclaration({
+        source: { value: 'node:fs' },
+        specifiers: [{ exportKind: 'value' }],
+      })
+    );
+    expectNoReport(() =>
+      listener.ExportNamedDeclaration({ specifiers: [{ exportKind: 'value' }] })
+    );
+    expectNoReport(() =>
+      listener.ExportNamedDeclaration({
+        source: { value: 'node:fs' },
+        exportKind: 'type',
+        specifiers: [{ exportKind: 'value' }],
+      })
+    );
+    expectReport(() =>
+      listener.ExportAllDeclaration({ source: { value: 'node:fs' } })
+    );
+    expectNoReport(() =>
+      listener.ExportAllDeclaration({ source: { value: 'node:fs' }, exportKind: 'type' })
+    );
+    expectReport(() =>
+      listener.CallExpression({
+        callee: { type: 'Identifier', name: 'require' },
+        arguments: [{ type: 'Literal', value: 'node:fs' }],
+      })
+    );
+    expectNoReport(() =>
+      listener.CallExpression({
+        callee: { type: 'Identifier', name: 'require' },
+        arguments: [{ type: 'Identifier', name: 'moduleName' }],
+      })
+    );
+
+    expect(reports).toHaveLength(6);
+    expect(
+      reports.every(
+        (report) =>
+          report.messageId === 'deniedCapability' &&
+          (report.data as { specifier: string }).specifier === 'node:fs' &&
+          (report.data as { capability: string }).capability === 'filesystem' &&
+          (report.diagnostic as { ruleId: string }).ruleId === 'CAPABILITY_VIOLATION'
+      )
+    ).toBe(true);
+
+    const local = createContext(domainFile);
+    Object.assign(local.context, {
+      sourceCode: {
+        getScope: () => ({ set: new Map([['require', { defs: [{}] }]]) }),
+      },
+    });
+    noDeniedCapabilities.create(local.context).CallExpression({
+      callee: { type: 'Identifier', name: 'require' },
+      arguments: [{ type: 'Literal', value: 'node:fs' }],
+    });
+    expect(local.reports).toHaveLength(0);
+  });
+
+  it('treats pure layers as denying every import capability (Y08)', () => {
+    const root = fixture();
+    const configPath = path.join(root, 'ark.config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.layers[0].pure = true;
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    const domainFile = path.join(root, 'src/domain/pure.ts');
+    fs.writeFileSync(domainFile, 'export const marker = true;\n');
+
+    const { context, reports } = createContext(domainFile);
+    noDeniedCapabilities.create(context).ImportDeclaration({
+      source: { value: 'node:fs' },
+      specifiers: [{ type: 'ImportDefaultSpecifier' }],
+    });
+
+    expect(reports).toHaveLength(1);
+    expect(reports[0]).toMatchObject({
+      messageId: 'deniedCapability',
+      data: {
+        layer: 'DomainModel',
+        capability: 'filesystem',
+        specifier: 'node:fs',
+      },
+    });
   });
 
   it('shipped helpers agree with config for layer + edge checks', () => {

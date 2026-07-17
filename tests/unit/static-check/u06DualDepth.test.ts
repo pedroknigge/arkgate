@@ -190,8 +190,25 @@ describe('U06 budgets — D5 method is locked, numbers are not invented', () => 
       fs.readFileSync(path.resolve('eval/performance/hook-budgets.v1.json'), 'utf8')
     );
     expect(budgets.method).toMatch(/Linux CI baseline FIRST/);
+    expect(budgets.scenarios.hook).toMatchObject({
+      baselineMs: 683.761,
+      cycleObservedMaxP95Ms: 683.761,
+      maxP95Ms: 900,
+    });
+    expect(budgets.scenarios.doctorCold).toMatchObject({
+      baselineMs: 5154.522,
+      cycleObservedMaxP95Ms: 5154.522,
+      maxP95Ms: 6800,
+    });
     for (const [name, spec] of Object.entries(
-      budgets.scenarios as Record<string, { baselineMs: number | null; maxP95Ms: number | null }>
+      budgets.scenarios as Record<
+        string,
+        {
+          baselineMs: number | null;
+          cycleObservedMaxP95Ms?: number;
+          maxP95Ms: number | null;
+        }
+      >
     )) {
       // Either both recorded (ceiling from baseline) or both pending — never an
       // invented ceiling without its measured baseline.
@@ -201,6 +218,11 @@ describe('U06 budgets — D5 method is locked, numbers are not invented', () => 
           typeof spec.maxP95Ms === 'number' &&
           spec.maxP95Ms > spec.baselineMs);
       expect(consistent, name).toBe(true);
+      if (spec.cycleObservedMaxP95Ms !== undefined && spec.maxP95Ms !== null) {
+        expect(spec.maxP95Ms, name).toBeGreaterThanOrEqual(
+          Math.ceil(spec.cycleObservedMaxP95Ms * 1.3)
+        );
+      }
     }
   });
 });

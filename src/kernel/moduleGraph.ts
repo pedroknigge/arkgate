@@ -185,7 +185,14 @@ function moduleSpecifiers(source: string): ModuleSpecifier[] {
           : current === 'r' && isWordAt(source, 'require', index)
             ? specifierAfterRequire(source, index)
             : undefined;
-    if (specifier) result.push(specifier);
+    if (specifier) {
+      result.push(specifier);
+      // Resume after the literal already owned by this dependency. Besides
+      // avoiding redundant probes, this prevents `import x = require("pkg")`
+      // from being counted once as an import statement and again as a nested
+      // require call; its statement-level `import type` flag remains intact.
+      index = specifier.offset + specifier.excerpt.length - 1;
+    }
   }
   return result;
 }

@@ -11,6 +11,7 @@ import {
   preflightChange as preflightChangeFromKernel,
 } from '../../../src/index';
 import { loadArchitectureChangeMap as loadChangeMapFromKernel } from '../../../src/domain/changeMap';
+import { forbiddenGlobalForModuleSpecifier as forbiddenGlobalFromDomain } from '../../../src/domain/capabilities';
 import {
   analyzeChange as analyzeChangeFromBundle,
   analyzeArchitectureConvergence as analyzeConvergenceFromBundle,
@@ -22,6 +23,7 @@ import {
   loadContract as loadContractFromBundle,
   loadArchitectureChangeMap as loadChangeMapFromBundle,
   preflightChange as preflightChangeFromBundle,
+  forbiddenGlobalForModuleSpecifier as forbiddenGlobalFromBundle,
 } from '../../../bin/lib/analysis-engine.mjs';
 
 const config = {
@@ -42,6 +44,14 @@ const files = [
 ];
 
 describe('generated CLI analysis engine', () => {
+  it('matches the canonical exact process module-dual vocabulary (Y08)', () => {
+    for (const specifier of ['process', 'node:process', 'child_process', 'node:process/subpath']) {
+      expect(forbiddenGlobalFromBundle(specifier, ['process'])).toBe(
+        forbiddenGlobalFromDomain(specifier, ['process'])
+      );
+    }
+  });
+
   it('matches the canonical Kernel API for project analysis', () => {
     const kernelContract = loadContractFromKernel(config);
     const bundleContract = loadContractFromBundle(config);

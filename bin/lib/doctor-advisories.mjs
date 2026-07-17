@@ -1,6 +1,6 @@
 /**
- * Doctor's advisory sensors, aggregated (W01 contract health + U05 ambient
- * state + X04 physical cohesion). Advisory only: nothing here feeds a
+ * Doctor's advisory sensors, aggregated (W01 contract health, U05 ambient
+ * state, X04 physical cohesion, Y03 parse health). Nothing here feeds a
  * verdict, designFitness, or an exit code. One seam keeps doctor-plan.mjs
  * inside its module budget as new advisory surfaces land.
  */
@@ -8,17 +8,30 @@ import { computeAmbientState, printAmbientStateSection } from './ambient-state.m
 import { computeContractHealth, printContractHealthSection } from './contract-smells.mjs';
 import {
   computePhysicalCohesion,
-  computeReshapePilot,
   printPhysicalCohesionSection,
 } from './physical-cohesion.mjs';
+import {
+  computeDecisionAwareReshapePilot,
+  computeReshapeDecisionMemory,
+  printReshapeDecisionsSection,
+} from './reshape-decisions.mjs';
+import { printParseHealthSection, summarizeParseHealth } from './parse-health.mjs';
 
-export function computeDoctorAdvisories(root, config, cov, rules, files, ts) {
+export function computeDoctorAdvisories(root, config, cov, rules, files, ts, parseHealth) {
   const physicalCohesion = computePhysicalCohesion(root, files);
-  physicalCohesion.reshapePilot = computeReshapePilot(physicalCohesion, files, root);
+  const decisionMemory = computeReshapeDecisionMemory(root, files);
+  physicalCohesion.reshapeDecisions = decisionMemory.summary;
+  physicalCohesion.reshapePilot = computeDecisionAwareReshapePilot(
+    physicalCohesion,
+    files,
+    root,
+    decisionMemory
+  );
   return {
     contractHealth: computeContractHealth(root, config, cov, rules),
     ambientState: computeAmbientState(ts, root, config, files),
     physicalCohesion,
+    parseHealth: parseHealth ?? summarizeParseHealth(),
   };
 }
 
@@ -30,4 +43,6 @@ export function printDoctorAdvisories(advisories, io) {
     advisories.physicalCohesion?.reshapePilot,
     io
   );
+  printReshapeDecisionsSection(advisories.physicalCohesion?.reshapeDecisions, io);
+  printParseHealthSection(advisories.parseHealth, io);
 }

@@ -110,7 +110,7 @@ export function scanCachePath(root) {
   return path.join(root, 'node_modules', '.cache', 'ark-check.json');
 }
 
-export function scanCacheKey(root, args) {
+export function scanCacheKey(root, args, parserIdentity = '') {
   const read = (p) => {
     try {
       return fs.readFileSync(p, 'utf8');
@@ -130,9 +130,10 @@ export function scanCacheKey(root, args) {
   // v5: hasTopLevelSideEffects. v6: non-exported impure inits + non-export class statics.
   // v7: scope-aware forbidden globals + import-equals dependency edges.
   // v8: opted-in capability walls (U04) — stale caches must not miss wall verdicts.
+  // v9: per-file parseDiagnosticCount + parser identity (Y03); no raw diagnostics.
   return crypto
     .createHash('sha1')
-    .update(`ark-check-cache-v8\0${read(configPath)}\0${manifestPath ? read(manifestPath) : ''}`)
+    .update(`ark-check-cache-v9\0${String(parserIdentity)}\0${read(configPath)}\0${manifestPath ? read(manifestPath) : ''}`)
     .digest('hex');
 }
 

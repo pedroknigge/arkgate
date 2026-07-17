@@ -197,6 +197,53 @@ describe('U04 walls in the pure engine (import-based evidence)', () => {
     const walls = result.violations.filter((v) => v.ruleId === 'CAPABILITY_VIOLATION');
     expect(walls.map((v) => v.file).sort()).toEqual(['src/domain/fs.ts', 'src/domain/net.ts']);
   });
+
+  it('the process module dual is FORBIDDEN_GLOBAL in IR and atomic preflight, one voice (Y08)', () => {
+    const processContract = loadContract({
+      include: ['src'],
+      layers: [
+        {
+          name: 'DomainModel',
+          patterns: ['src/**'],
+          forbiddenGlobals: ['process'],
+          capabilities: { deny: ['process'] },
+        },
+      ],
+      rules: [],
+    });
+    const content =
+      "import process from 'node:process';\nexport const cwd = process.cwd();\n";
+    const { ir } = analyzeProject({
+      contract: processContract,
+      files: [
+        { path: 'src/process.ts', content },
+        {
+          path: 'src/types.ts',
+          content: "import type process from 'node:process';\nexport type Process = typeof process;\n",
+        },
+      ],
+    });
+    expect(ir.violations).toHaveLength(1);
+    expect(ir.violations[0]).toMatchObject({
+      ruleId: 'FORBIDDEN_GLOBAL',
+      symbol: 'node:process',
+      evidence: { kind: 'import', file: 'src/process.ts', line: 1 },
+    });
+
+    const preflight = preflightChange({
+      contract: processContract,
+      files: [],
+      changes: [{ path: 'src/process.ts', content }],
+    });
+    expect(preflight.valid).toBe(false);
+    expect(preflight.violations).toHaveLength(1);
+    expect(preflight.violations[0]).toMatchObject({
+      ruleId: 'FORBIDDEN_GLOBAL',
+      target: 'node:process',
+      edgeKind: 'import',
+      fromLayer: 'DomainModel',
+    });
+  });
 });
 
 describe('U04 policy delta on the lowered space (ADR 0009 D6)', () => {

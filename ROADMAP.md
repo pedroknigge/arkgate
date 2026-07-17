@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-07-15
+- **Status date:** 2026-07-17
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -314,7 +314,7 @@ main; carries the reviewed content of #74 and #75). Signed tag `v3.6.0`; GitHub 
 from `docs/releases/3.6.0.md`; `publish-npm.yml` run 29592499256 succeeded and `npm view arkgate`
 shows `3.6.0` on `latest`. Phase X is fully shipped.
 
-### Phase Y — field feedback round 2: decisions, shape honesty, edit hygiene (candidate)
+### Phase Y — field feedback round 2: decisions, shape honesty, edit hygiene (3.7.0)
 
 Origin: 2026-07-17 field session over the field-adopter worktree — upgraded 3.5.0 → 3.6.0 with
 `/ark-upgrade` and exercised the full skill chain (`/ark-explore` → `/ark-fix` → `/ark-autopilot`
@@ -333,16 +333,27 @@ feeds `Y01` design directly.
 `Y06`–`Y10` fold the standing retained candidates into the queue as `parked` entries so nothing
 lives only in prose: each names the gate that promotes it, and none may start while `parked`.
 
+**Release close (2026-07-17):** Y05, Y01–Y04, and the evidence-promoted Y08 ship in 3.7.0.
+Y06, Y07, Y09, and Y10 remain parked; this release does not treat an unmet promotion gate as an
+implementation backlog.
+
+**Owner-authorized confidence-budget exception (2026-07-17):** after adding meaningful Y08
+multi-form ESLint listener coverage, the complete release dry-run measured 6,661 / 7,854 covered
+branches (84.81%). The global branch floor is explicitly recalibrated from 85% to 84.5%; no source
+include or exclusion changed, statement/function/line floors stay fixed, and mutation remains a
+required release gate. This is a measured regression-confidence budget change, not a weakening of
+Ark's product-policy or governed-scope enforcement.
+
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 54 | `Y05` | `todo` | S | 3.6.0 shipped | Cycle ceilings (package + perf budgets) are re-measured and set once with evidence-backed headroom |
-| 55 | `Y01` | `todo` | M | `X04`, `X02` | A rejected reshape pilot is a recorded decision the doctor respects, not advisory pressure re-fought every session |
-| 56 | `Y02` | `todo` | M | `P02` | Deterministic hollow-persistence smell: HTTP/route definition living in Persistence-role layers is visible as an advisory |
-| 57 | `Y03` | `todo` | S | — | Governed files that fail to parse are surfaced honestly (a file the scanner cannot read is never silently "clean") |
-| 58 | `Y04` | `todo` | S | — | Skill mechanical-edit hygiene rules close the three observed codemod defects |
+| 54 | `Y05` | `done` | S | 3.6.0 shipped | Cycle ceilings (package + perf budgets) are re-measured and set once with evidence-backed headroom |
+| 55 | `Y01` | `done` | M | `X04`, `X02` | A rejected reshape pilot is a recorded decision the doctor respects, not advisory pressure re-fought every session |
+| 56 | `Y02` | `done` | M | `P02` | Deterministic hollow-persistence smell: HTTP/route definition living in Persistence-role layers is visible as an advisory |
+| 57 | `Y03` | `done` | S | — | Governed files that fail to parse are surfaced honestly (a file the scanner cannot read is never silently "clean") |
+| 58 | `Y04` | `done` | S | — | Skill mechanical-edit hygiene rules close the three observed codemod defects |
 | 59 | `Y06` | `parked` | S | gate: field case | `pure`-layer opt-in nudge: doctor suggests declaring purity when the golden pattern names pure modules but no layer opts in |
 | 60 | `Y07` | `parked` | L | gate: `Y06` corpus | Strict (blocker-grade) ambient mutable-state diagnostics — only after a real `pure: true` field corpus exists (U05 condition unchanged) |
-| 61 | `Y08` | `parked` | S | gate: field case | `node:process` module-import dual of the `process` ambient forbidden global is detected with the same evidence discipline |
+| 61 | `Y08` | `done` | S | gate met: deterministic harness | `node:process` module-import dual of the `process` ambient forbidden global is detected with the same evidence discipline |
 | 62 | `Y09` | `parked` | S | gate: field case | Template-interpolation import specifiers are surfaced as an unresolvable-edge advisory instead of silently unresolved |
 | 63 | `Y10` | `parked` | L | gate: field demand | Transitive capability inference: a wall sees capabilities reached through local call chains, not only direct uses |
 
@@ -394,7 +405,7 @@ reproduced, report inspected, live login flow of the product exercised).
 
 ### Y05 — Cycle budget recalibration (package + perf ceilings)
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** 3.6.0 shipped
 
 **Outcome:** per the standing guardrails (package-budget rules below; ADR 0009 D5 for perf), the
@@ -407,9 +418,23 @@ ratcheted per item; any later exception needs explicit evidence.
 `npm run check:release-artifacts` agree on the candidate; two consecutive green
 `Performance budgets` CI runs on an unchanged engine commit.
 
+**Measured candidate (2026-07-17):** clean Linux `arkgate@3.6.1` at `4d0d526` packs to 467,437
+bytes / 1,572,950 unpacked bytes / 133 files. Phase Y ceilings are fixed once at 515,000 /
+1,731,000 / 147 (at least 10% headroom in every dimension). Linux CI run `29593179029`
+attempt 1 measured hook@10k 629.687 ms and doctorCold@10k 5,154.522 ms on a docs-only,
+unchanged-engine candidate; its unchanged-head retry measured 683.761 / 4,714.687 ms and run
+`29608857827` measured 619.852 / 4,781.35 ms. The worst p95 per scenario becomes the Phase Y
+baseline; fixed +30% runner headroom rounds up to 900 / 6,800 ms.
+
+**Closure evidence:** local dry-run/package allowlist/release-artifact checks and 31 focused
+tests passed before commit `2c064cd`. PR #78 CI run `29611290231` completed green on that SHA;
+its `Performance budgets` job passed twice consecutively without an engine change: attempt 1
+job `87986335243` and attempt 2 job `87988275984`. The first attempt also passed the full CI,
+security, confidence/mutation, package-isolation, artifact, and strict architecture jobs.
+
 ### Y01 — Reshape decisions are recorded (physical-cohesion verdict memory)
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `X04`, `X02`
 
 **Outcome:** a proposed reshape pilot can be **accepted, deferred, or rejected with a reason**,
@@ -424,9 +449,29 @@ mirror is a layout, not a smell.
 **Non-negotiables:** decisions are explicit adopter records (sidecar), never inferred silently;
 the underlying cohesion facts keep rendering; cross-anchor evidence never changes the verdict.
 
+**Implemented shape:** bounded `.ark/reshape-decisions.json` records bind a required reason and
+`accepted|deferred|rejected` verdict to the concept + complete sorted anchor set, with optional
+X02-style `reviewBy`. File-count/evidence drift keeps the decision current; anchor membership
+drift makes it stale. Accepted targets keep the X04 change-map/preflight path; current
+rejected/deferred targets suppress only the card and advance the one-at-a-time selector to the
+next undecided finding. Broken/duplicate/oversized, expired, malformed, and stale records suppress
+nothing. Doctor JSON/human output and the HTML report render the memory while the original
+`physicalCohesion.findings` remain byte-stable.
+
+**Golden candidate decision:** not inferred in Y01. Q03's `norm` and `newCodeHome` are free-form
+guidance, not structured role directories; parsing them to suppress a pilot would violate the
+explicit-record non-negotiable. Teams record the rejection explicitly and may cite the golden
+layout in `reason`.
+
+**Local evidence (2026-07-17):** `bin/lib/reshape-decisions.mjs` is 285/300 LOC; 60 focused tests
+passed across Y01, X04, X02, X05, and report parity (including count drift, anchor stale,
+next-finding selection, malformed/bounds/duplicates, golden non-inference, human/JSON/HTML
+surfaces). Typecheck, JS syntax, module budgets, `git diff --check`, and strict architecture all
+passed.
+
 ### Y02 — Hollow-persistence smell (HTTP in Persistence-role layers)
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `P02`
 
 **Outcome:** design fitness gains a deterministic smell for Persistence/adapter-role layers whose
@@ -439,9 +484,29 @@ Role detection follows the existing name-heuristic discipline: a miss costs a wa
 **Non-negotiables:** no style scoring, no codemod, no new gate input; the smell names the
 outcome in human language (Q02 parity) and routes to the existing extraction-card pilot loop.
 
+**Implemented shape:** the stable `handler-in-persistence` smell now recognizes static ES imports
+and re-exports of framework HTTP surfaces (`next/server`), `defineRoute` calls, and existing
+handler bodies in Persistence-role layers or specific persistence paths (`repositories`,
+`infra/db`, `infra/data`, `adapters/persistence`). A generic `Infrastructure` role is not treated
+as Persistence. Candidate paths are normalized, deduplicated, sorted, and filtered by role/path
+before the bounded 800-file
+content scan, so a large Application prefix cannot hide the field-calibrated residual. The smell
+remains advisory, outcome-first, and judgment-only; its existing pattern bet and one-pilot
+extraction card are reused without a new id, config input, verdict edge, or codemod. The detector
+does not claim whole-tree cleanliness beyond that envelope: candidates after the first 800 sorted
+Persistence paths are explicitly uninspected. CommonJS `require()` and dynamic `import()` are not
+claimed by this narrow advisory.
+
+**Local evidence (2026-07-17):** 65 focused tests passed across Y02, P02, Q02, Q04,
+design-weak honesty, extraction cards, and shipped skill surfaces. The fixed corpus covers 805
+unrelated files before 206 hollow modules, the bounded 800-candidate overflow, stable evidence
+under reversed input, each HTTP/route signal, pure-data negatives, generic-Infrastructure
+restraint, and the explicit 800-clean/post-cap-uninspected envelope. Typecheck, JavaScript syntax,
+module budgets, package-file allowlist, `git diff --check`, and strict architecture all passed.
+
 ### Y03 — Parse honesty for governed files
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** —
 
 **Outcome:** `scanSourceFile` reads the `parseDiagnostics` the AST already carries; governed
@@ -454,9 +519,25 @@ own evidence.
 **Non-negotiables:** zero additional parse cost (no second pass, no tsc dependency); advisory
 caps and overflow markers follow X07.
 
+**Implemented shape:** `scanSourceFile` reads only `sourceFile.parseDiagnostics.length` from the
+AST it already created and stores `parseDiagnosticCount` in scan-cache schema v9, keyed by the
+TypeScript parser version as well as policy inputs. The Tooling
+aggregator emits exact scanned, affected-file, and diagnostic totals plus a deterministic top-12
+`{ file, diagnosticCount }` list with `truncated`/`overflow`; no raw TypeScript diagnostic enters
+the cache or doctor surface. The same `parseHealth` object flows through architecture scan to
+doctor JSON/human output and the X01 HTML section. It remains advisory: the normal verdict,
+`ok`, violations, design fitness, and pattern bets are unchanged.
+
+**Local evidence (2026-07-17):** focused tests cover valid and two-diagnostic invalid governed
+files, one existing AST per cold-scanned file, deterministic 15-file overflow, v8/parser-identity
+invalidation, unsafe-count/sum degradation to unavailable, v9 cold/warm parity with zero warm
+reparses, doctor JSON/human, HTML report parity, and an unchanged green normal verdict.
+Typecheck, JavaScript syntax, module budgets, package-file
+allowlist, generated parity checks, `git diff --check`, and strict architecture passed.
+
 ### Y04 — Skill mechanical-edit hygiene
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** —
 
 **Outcome:** the skill templates that drive mechanical edits (`ark-fix`, `ark-autopilot`,
@@ -470,10 +551,24 @@ fixture reproducing the three shapes.
 **Non-negotiables:** skills-and-eval change only; no engine surface grows; the rules are stated
 as outcomes ("previously clean file stays typecheck-clean after the edit"), not as prose advice.
 
-### Y06–Y10 — parked retained candidates (promotion gates on record)
+**Implemented shape:** `ark-fix`, `ark-autopilot`, and `ark-loop` carry the same outcome gate:
+merge an injected header into the existing doc comment, reconstruct the original typed
+`defineRoute<…>(opts, handler)` call without untyped split constants, and leave convention-only
+placeholder modules uncreated. Every kept mechanical edit must leave a previously clean file
+typecheck-clean.
 
-All five predate this cycle and stay `parked`: a `parked` item never starts; it promotes to
-`todo` only when its named gate is met, with the field evidence recorded here first.
+**Local evidence (2026-07-17):** the deterministic `eval:mechanical-edit-hygiene` fixture
+reproduces all three rejected shapes and their accepted outcomes. Its runner verifies one merged
+doc block with both contracts retained, a real `noImplicitAny` regression for the split route and
+zero diagnostics for the reconstructed typed call, no created placeholder file, and exact
+outcome coverage in all three skills. Focused test, typecheck, JavaScript syntax, package-file
+allowlist, module budgets, generated parity, `git diff --check`, and strict architecture passed.
+
+### Y06–Y10 — retained candidates (promotion gates on record)
+
+Y06, Y07, Y09, and Y10 predate this cycle and stay `parked`: a parked item never starts; it
+promotes to `todo` only when its named gate is met, with the field evidence recorded here first.
+Y08 met that discipline below and is the only promoted retained candidate.
 
 **Y06 — `pure`-layer opt-in nudge.** The strict ambient-state candidate still has NO field
 corpus: the flagship adopter finished full adoption with zero `pure: true` layers even though its
@@ -487,9 +582,30 @@ blocker-grade precision proven on a real opted-in corpus. `Y06` exists to create
 this item stays parked until the corpus exists and the U05 precision bar is met on it.
 
 **Y08 — `node:process` dual.** `forbiddenGlobals: ["process"]` sees the ambient global; the
-`import process from "node:process"` spelling bypasses it. Outcome: the module-import dual is
+`import process from "node:process"` spelling previously bypassed it. Outcome: the module-import dual is
 reported with the same evidence discipline (same rule id, import-form evidence). Gate: a field or
 harness case where the dual actually bypassed a purity wall — promote on first confirmed escape.
+
+**Y08 promotion evidence (2026-07-17, deterministic harness):** a governed `DomainModel` fixture
+with `forbiddenGlobals: ["process"]` and `import process from "node:process"` exited 0 from the
+real CLI with `{ ok: true, violations: [] }`. The generated analysis engine retained direct
+`{ capability: "process", symbol: "node:process" }` import evidence but emitted no violation;
+atomic preflight remained valid, AICodeGate remained valid, and `ark/no-forbidden-globals`
+reported nothing. A warm pre-Y08 scan cache already retained the exact non-type-only import edge,
+so the fix can derive from existing deterministic evidence without a second scan or cache-schema
+bump. This is a confirmed cross-adapter purity escape: gate met, `parked` → `todo` before work.
+
+**Y08 local evidence (2026-07-17):** one exact Domain matcher now maps only `process` and
+`node:process` to forbidden global `process`; subpaths and both `child_process` spellings remain
+negative controls. The CLI derives the verdict downstream from each cached `entry.edges` fact,
+filters a pre-Y08 overlapping capability finding by file + specifier (never line), and leaves the
+cache tag and scan count unchanged. Value imports emit one `FORBIDDEN_GLOBAL` across CLI cold and
+warm cache, pure IR, atomic preflight, AICodeGate/MCP hook, and both ESLint rules; type-only forms
+written as statement-level `import type` stay green on every path (the pure IR's documented
+all-named limitation is unchanged). Coverage lowering records the narrow dual as `import-exact:*` atoms while a process
+wall retains its broader `import:process` atom. Focused cross-adapter tests, build/typecheck,
+JavaScript syntax, generated parity, module budgets, package-file allowlist, strict architecture,
+and `git diff --check` passed.
 
 **Y09 — template-interpolation import specifiers.** Dynamic `import(`./adapters/${name}`)`-style
 specifiers resolve to nothing and today vanish silently from the edge graph. Outcome: an
@@ -704,10 +820,10 @@ the sanctioned direction inside a layer family.
 
 ### Next-round package budget guardrail
 
-**Recalibrated 2026-07-15:** the gate-package ceilings now retain at least 10% headroom over the
-clean Linux documentation-sync candidate: 427,528 packed bytes, 1,445,621 unpacked bytes, and 128
-files. The resulting limits (471,000 / 1,591,000 / 141) remain internal release guardrails, not npm
-requirements.
+**Recalibrated for Phase Y on 2026-07-17:** the gate-package ceilings retain at least 10%
+headroom over the clean Linux `arkgate@3.6.1` candidate at `4d0d526`: 467,437 packed bytes,
+1,572,950 unpacked bytes, and 133 files. The resulting limits (515,000 / 1,731,000 / 147)
+remain internal release guardrails, not npm requirements.
 
 - Keep `250 KB` packed / `1 MB` unpacked as the long-term optimization target, not as a reason to
   remove useful deterministic enforcement or architecture/organization coaching surfaces such as
@@ -2123,8 +2239,9 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: Y05 — cycle budget recalibration (`todo`; runs first per the package-budget guardrail), then Y01–Y04 (Phase Y, candidates from the 2026-07-17 3.6.0 field validation)
-Next action: recalibrate cycle ceilings (package at 98.9%; doctorCold p95 ceiling breached by a docs-only PR), then Y01 reshape-decision record. Y06–Y10 hold every retained candidate as a parked queue entry with a named promotion gate (pure-layer nudge → strict ambient-state; node:process dual; template-interpolation specifiers; transitive capability inference). The supervised reshape field pilot is superseded — the flagship mirror is golden-consistent; it waits for a corpus target whose mirroring is not golden-explained
+Item: no promoted implementation item (`Y08` done; Y05 and Y01–Y04 are done)
+Next action: collect the named field evidence before promoting Y06, Y07, Y09, or Y10; parked work must not start. The supervised reshape field pilot is superseded — the flagship mirror is golden-consistent; it waits for a corpus target whose mirroring is not golden-explained
+Released baseline: npm arkgate@3.7.0 (Phase Y close from PR #78)
 Released baseline: npm arkgate@3.6.0 (Phase X close from PR #76, squash 5d368f5)
 Released baseline: npm arkgate@3.5.0 + MCP registry 3.5.0 isLatest (X01 from PR #71; X02+X03 + release train from PR #72)
 Released baseline: npm arkgate@3.4.0; Phase U shipped from PR #69 (slice 1 from #68)

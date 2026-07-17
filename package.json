@@ -1,6 +1,6 @@
 {
   "name": "arkgate",
-  "version": "3.6.1",
+  "version": "3.7.0",
   "description": "ArkGate — architecture co-pilot for AI TypeScript (write gate, CI gate, plan/loop)",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -106,6 +106,7 @@
     "eval:loop-cost": "node eval/loop-cost-run.mjs",
     "eval:ai-velocity": "node eval/ai-velocity-run.mjs",
     "eval:change-integrity": "node eval/change-integrity-run.mjs",
+    "eval:mechanical-edit-hygiene": "node eval/mechanical-edit-hygiene-run.mjs",
     "eval:adoption": "node eval/adoption-run.mjs",
     "test:adoption-harness": "vitest run tests/unit/eval/adoptionHarness.test.ts",
     "bench:scale": "node scripts/ark-scale-bench.mjs",

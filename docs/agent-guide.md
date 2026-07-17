@@ -112,7 +112,7 @@ Smell **ids** (stable JSON) plus **outcome** lines (plain language, Q02) on each
 | id | Outcome (what to do / why the AI struggles) |
 |----|-----------------------------------------------|
 | `io-under-application` | Business code reaches DB/APIs directly — put I/O behind a port/adapter |
-| `handler-in-persistence` | HTTP handlers under storage folders — move handlers to API/UI |
+| `handler-in-persistence` | Static framework HTTP imports (`next/server`), `defineRoute` calls, or handler bodies under Persistence-role storage folders — move transport to API/UI |
 | `god-module` | Huge multi-job files — split the pilot by concern |
 | `domain-logic-in-ui` | can*/calculate* in UI — move pure rules into Domain |
 | `facade-sql-in-routes` | Routes import ORM/SQL — keep queries in repository/adapter |
@@ -163,6 +163,29 @@ never move. `reshapePilot.nextPilot` is a **proposed** one-at-a-time card (`move
 `movesTotal`, `successSignal`, `killSwitch`, `doNot[]`): run it only via `/ark-loop` through the
 write gate + atomic preflight; merges are `/ark-architect` judgment cards. `notAScore`, never a
 verdict/`designFitness` input; there is no apply path.
+
+**Reshape decision memory (Y01):** when the team accepts, defers, or rejects that target, record
+the explicit verdict in `.ark/reshape-decisions.json` using the card's exact
+`decisionTarget` (`concept` + complete sorted `anchors`), a non-empty `reason`, and optional
+`reviewBy` (`YYYY-MM-DD`). Current rejected/deferred decisions hide only the repeated pilot card;
+the physical facts keep rendering. Accepted keeps the same `/ark-loop` path. Expired/malformed
+dates and decisions whose anchor set changed no longer apply; doctor/report list them. The golden
+pattern is never parsed to infer a decision — cite it in `reason` when it explains the layout.
+
+```json
+{
+  "schemaVersion": "1",
+  "decisions": [
+    {
+      "concept": "projects",
+      "anchors": ["src/app/api", "src/lib/api-handlers", "src/lib/repositories"],
+      "verdict": "rejected",
+      "reason": "These role directories are our thin-shell-handlers-data golden layout.",
+      "reviewBy": "2027-01-31"
+    }
+  ]
+}
+```
 
 **Governance weight (W02):** `contractHealth.governanceWeight` reports raw facts (layers, rules,
 governed files, files/layer, rules/layer) plus a fixed band (`heavy` / `typical` / `light` /
@@ -630,7 +653,15 @@ modules the way your build does, but is intentionally not yet a full type-graph 
 
 Repeat runs are cached in `node_modules/.cache/ark-check.json` — unchanged files skip the
 parse, while import edges always re-resolve against the live filesystem so the cache can
-never hide a new violation. `--no-cache` disables it.
+never hide a new violation. Cache schema v9 also preserves each file's parse-diagnostic count
+and binds it to the TypeScript parser version, so a warm doctor run cannot silently turn
+unreadable governed syntax into a clean claim after a parser change.
+`--no-cache` disables it.
+
+`ark-check --doctor --json` reports that syntax honesty under `doctor.parseHealth`: exact
+scanned/affected/diagnostic totals plus a deterministic top-12 file list and honest overflow.
+It is advisory in this release — it does not change the verdict, design fitness, pattern bets,
+or violations — but an affected governed file must not be described as successfully inspected.
 
 `ark-check --json` also reports `warnings` for incomplete governance coverage: missing
 layers, unclassified included files, unmatched layer patterns, duplicate layers, and rules

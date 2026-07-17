@@ -105,12 +105,22 @@ If the “fix” is really a missing business intent or Domain home for a rule:
 - Prefer mechanical-safe kinds when the plan tags them; otherwise design judgment carefully.
 - Code only — no DB migrations unless user asked.
 
+## Mechanical-edit hygiene (Y04 — outcome gate)
+
+- Header injection must **merge into the existing doc comment**; the kept result has one `/**`, not stacked headers.
+- Route completion or movement must **preserve the original typed `defineRoute<…>(opts, handler)` call**; reconstruct that call instead of extracting untyped opts/handler constants that drop generics or contextual typing.
+- A convention-only `*-data.ts` stub is not a fix: move the real code or **leave the placeholder file uncreated**; never write `import "server-only"; export {}` as an empty naming token.
+- Keep the edit only when the **previously clean file stays typecheck-clean**. Otherwise roll it back and treat the change as judgment.
+
 ## Reshape findings (X04 — never mechanical)
 
 If `doctor.physicalCohesion` fires while you fix: do **not** fold reshape moves into your fix
 batch. Physical moves run only through `/ark-loop`'s one-pilot loop; merge decisions only as
 `/ark-architect` merge cards. A cohesion finding is context for your fix, never a license to
-reorganize.
+reorganize. Respect `physicalCohesion.reshapeDecisions`: never revive a current rejected/deferred
+target from the still-visible facts. If the user makes a verdict while reviewing the finding,
+record its exact `decisionTarget` + reason in `.ark/reshape-decisions.json`; never infer one from
+golden-pattern prose.
 
 ## Done
 

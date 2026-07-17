@@ -227,4 +227,12 @@ describe('skill role clarity + exploratory depth (P01)', () => {
     expect(autopilot).toContain('## When / not when');
     expect(autopilot).toMatch(/Pattern \/ Shape|Shape bets|design-weak/i);
   });
+
+  it('keeps Y01 reshape decision memory explicit in ark-autopilot', () => {
+    const autopilot = fs.readFileSync(path.join(SKILLS_DIR, 'ark-autopilot.md'), 'utf8');
+    expect(autopilot).toContain('reshapeDecisions');
+    expect(autopilot).toContain('decisionTarget');
+    expect(autopilot).toMatch(/accepts,\s*defers, or rejects/);
+    expect(autopilot).toMatch(/never reconstruct/);
+  });
 });

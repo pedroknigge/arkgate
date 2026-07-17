@@ -123,6 +123,7 @@ Useful split: **core product tree** | **field path** (`examples/`, starters) | *
 6. **§G spaghetti / design-depth** when signals fire (or always on brownfield).
 7. Ranked rows that **change a decision**; each bet has a **success signal** (not a file count).
 8. Hard lines: never weaken the contract; never invent mechanical-safe kinds; never claim ENFORCE from type-only cleanup while false-green doctor ids are active.
+9. **Parse honesty:** if `doctor.parseHealth.affectedFiles > 0`, open and name those paths; never describe them as clean or successfully inspected. The advisory does not change the gate verdict.
 
 ## Reconnaissance pass (do all that apply)
 
@@ -149,6 +150,12 @@ Useful split: **core product tree** | **field path** (`examples/`, starters) | *
 | … | `src/…` | `canonical` / `gate-green design-weak` / `legacy` |
 
 Mark the **golden** pattern to copy. Do not only list layer file counts.
+
+When `doctor.physicalCohesion` includes `reshapeDecisions`, treat current rejected/deferred
+targets as explicit adopter decisions, not residual to re-fight. Keep their mirror facts in the
+map. When the user accepts, defers, or rejects a live `reshapePilot.nextPilot`, record the card's
+exact `decisionTarget` with a reason (and optional `reviewBy`) in
+`.ark/reshape-decisions.json`. Never infer or suppress from free-form golden-pattern prose.
 
 ### C. Coupling & debt (measure, don’t guess)
 Prefer evidence over aesthetics:
@@ -215,7 +222,7 @@ ENFORCE without Shape progress is **`ENFORCE · design-weak`** — say that out 
 | Smell id (label) | How you detect it in source |
 |------------------|-----------------------------|
 | `io-under-application` | I/O clients under Application; empty Domain/Persistence (also doctor when present) |
-| `handler-in-persistence` | HTTP/route bodies under repo/db globs |
+| `handler-in-persistence` | Static framework HTTP imports, `defineRoute` calls, or route bodies under Persistence-role repo/db globs (first 800 sorted candidates; no advisory is not whole-tree proof above that bound) |
 | `god-module` | High fan-in + wide export surface + mixed concerns |
 | `domain-logic-in-ui` | `can*` / `calculate*` / policy constants in hooks/pages |
 | `mixed-pattern-cluster` | Same feature area uses ≥2 incompatible layouts |

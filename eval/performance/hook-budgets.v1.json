@@ -11,16 +11,18 @@
     "hook": {
       "size": 10000,
       "metric": "hook",
-      "baselineMs": 635.14,
-      "maxP95Ms": 800,
-      "rationale": "The per-keystroke interactive path: ark-mcp --hook validates the single proposed file (no scan-cache involvement — one distribution). Linux baseline p95 635.14 ms recorded by CI run 29528935846 (2026-07-16); ceiling = baseline + ~26% runner headroom, set once for this cycle (D5 — never ratcheted per item)."
+      "baselineMs": 683.761,
+      "cycleObservedMaxP95Ms": 683.761,
+      "maxP95Ms": 900,
+      "rationale": "The per-keystroke interactive path: ark-mcp --hook validates the single proposed file (no scan-cache involvement — one distribution). Phase Y clean Linux p95 was 629.687 ms in CI run 29593179029 attempt 1 and 683.761 ms on its unchanged-head retry; the larger value is the cycle baseline. The fixed 900 ms ceiling rounds up baseline +30% runner headroom and is never ratcheted per item (ADR 0009 D5)."
     },
     "doctorCold": {
       "size": 10000,
       "metric": "doctorCold",
-      "baselineMs": 4063.72,
-      "maxP95Ms": 5100,
-      "rationale": "Cold one-shot doctor over the tree. Linux baseline p95 4063.72 ms recorded by CI run 29528935846 (2026-07-16); ceiling = baseline + ~25% runner headroom, set once for this cycle."
+      "baselineMs": 5154.522,
+      "cycleObservedMaxP95Ms": 5154.522,
+      "maxP95Ms": 6800,
+      "rationale": "Cold one-shot doctor over the tree. Phase Y clean Linux p95 reached 5154.522 ms in CI run 29593179029 attempt 1 on an unchanged-engine docs candidate; its unchanged-head retry measured 4714.687 ms and main run 29608857827 measured 4781.35 ms. The largest value is the cycle baseline. The fixed 6800 ms ceiling rounds up baseline +30% runner headroom and is never ratcheted per item (ADR 0009 D5)."
     }
   }
 }

@@ -382,6 +382,57 @@ describe('AI Code Gate forbiddenGlobals', () => {
     const noTs = createAICodeGate({ forbiddenGlobals: { DomainModel: ['fetch'] } });
     expect(gateValid(noTs, 'fetch("/api");')).toBe(true);
   });
+
+  it('owns the exact node:process module dual once and excludes type-only imports (Y08)', () => {
+    const processGate = createAICodeGate({
+      typescript: ts,
+      forbiddenGlobals: { DomainModel: ['process'] },
+      capabilityWalls: { DomainModel: ['process'] },
+    });
+
+    const valueResult = processGate.validate(
+      "import process from 'node:process';\nexport const cwd = process.cwd();\n",
+      { layer: 'DomainModel', filePath: 'src/domain/process.ts' }
+    );
+    expect(valueResult.valid).toBe(false);
+    expect(valueResult.violations).toEqual([
+      expect.objectContaining({
+        ruleId: 'FORBIDDEN_GLOBAL',
+        target: 'node:process',
+        fromLayer: 'DomainModel',
+        details: expect.objectContaining({
+          importKind: 'import',
+          forbiddenGlobal: 'process',
+        }),
+      }),
+    ]);
+
+    const typeResult = processGate.validate(
+      "import type process from 'node:process';\nexport type Process = typeof process;\n",
+      { layer: 'DomainModel', filePath: 'src/domain/process-types.ts' }
+    );
+    expect(typeResult.valid).toBe(true);
+    expect(typeResult.violations).toEqual([]);
+
+    const importEqualsValue = processGate.validate(
+      "import Process = require('node:process');\nexport const cwd = Process.cwd();\n",
+      { layer: 'DomainModel', filePath: 'src/domain/process-equals.ts' }
+    );
+    expect(importEqualsValue.violations).toEqual([
+      expect.objectContaining({
+        ruleId: 'FORBIDDEN_GLOBAL',
+        target: 'node:process',
+        details: expect.objectContaining({ importKind: 'require' }),
+      }),
+    ]);
+
+    const importEqualsType = processGate.validate(
+      "import type Process = require('node:process');\nexport type ProcessType = typeof Process;\n",
+      { layer: 'DomainModel', filePath: 'src/domain/process-equals-types.ts' }
+    );
+    expect(importEqualsType.valid).toBe(true);
+    expect(importEqualsType.violations).toEqual([]);
+  });
 });
 
 function gateValid(g: ReturnType<typeof createAICodeGate>, source: string) {

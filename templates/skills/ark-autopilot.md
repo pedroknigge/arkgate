@@ -54,6 +54,11 @@ decision-grade explore pass **and** without opening violating files.
 7. **Q04 pilot loop for B:** when design-weak, take **`pilotLoop.nextPilot`** (one extraction card)
    → apply **only** that pilot with user OK → **re-doctor**. Never multi-pilot batch B; residual
    outside the pilot may remain and must not be called “healthy finished.”
+8. **Y01 reshape verdicts:** read `doctor.physicalCohesion.reshapeDecisions` before acting on
+   mirror facts. Outcome first: a current rejected/deferred verdict means “intentional/deferred
+   layout — no pilot”; never reconstruct that dead card from `findings`. When the user accepts,
+   defers, or rejects a live card, persist its exact `decisionTarget` with a non-empty reason and
+   optional `reviewBy` in `.ark/reshape-decisions.json`; never infer a verdict from golden prose.
 
 
 ## Subagent fan-out (optional, host-dependent)
@@ -146,6 +151,13 @@ repo so the next agent session continues the same pilot — still never auto-app
 13. **Core ratchet (when green)** — if plan `goal.met` and doctor still **ADAPT** only because
     populated cores are `optional: true`, run `ark-check --ratchet-cores` then `--doctor`.
     Never ratchet while active violations remain or false-green gap is open.
+
+## Mechanical-edit hygiene (Y04 — outcome gate)
+
+- Header injection must **merge into the existing doc comment**; the kept result has one `/**`, not stacked headers.
+- Route completion or movement must **preserve the original typed `defineRoute<…>(opts, handler)` call**; reconstruct that call instead of extracting untyped opts/handler constants that drop generics or contextual typing.
+- A convention-only `*-data.ts` stub is not a fix: move the real code or **leave the placeholder file uncreated**; never write `import "server-only"; export {}` as an empty naming token.
+- Keep the edit only when the **previously clean file stays typecheck-clean**. Otherwise roll it back and treat the change as judgment.
 
 ## Never
 

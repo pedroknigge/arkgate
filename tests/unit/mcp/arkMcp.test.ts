@@ -916,6 +916,21 @@ describe('ark-mcp --hook layer exclude parity', () => {
     expect(result.stderr).toContain('FORBIDDEN_GLOBAL');
   });
 
+  it('blocks the exact node:process module dual with one forbidden-global voice (Y08)', () => {
+    const result = runHook(root, {
+      tool_name: 'Write',
+      tool_input: {
+        file_path: path.join(root, 'src/domain/process.ts'),
+        content:
+          "import process from 'node:process';\nexport const cwd = process.cwd();\n",
+      },
+    });
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('FORBIDDEN_GLOBAL');
+    expect(result.stderr).toContain('node:process');
+    expect(result.stderr).not.toContain('CAPABILITY_VIOLATION');
+  });
+
   it('allows the same code in an excluded framework-internal subtree', () => {
     const result = runHook(root, {
       tool_name: 'Write',

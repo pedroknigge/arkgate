@@ -17,7 +17,10 @@ import type { Policy } from '../policy';
 import type { IntentCreator } from '../intent';
 import type { IntentName } from '../../domain/types';
 import type { ArchitectureProfile } from '../layers';
-import { ambientCoveredByForbiddenGlobals } from '../../domain/capabilities';
+import {
+  ambientCoveredByForbiddenGlobals,
+  forbiddenGlobalForModuleSpecifier,
+} from '../../domain/capabilities';
 import { findDeniedEdgeRule } from '../../domain/layerMatch';
 import { collectCapabilityUses } from '../capabilityAnalysis';
 import { classifyPublishFacts, looksLikeArkIntent } from '../../domain/sourcePolicy';
@@ -695,11 +698,12 @@ export function createAICodeGate<Context = AICodeGateContext>(
         options.forbiddenGlobals?.[contextLayer]?.length
       ) {
         try {
+          const layerForbidden = options.forbiddenGlobals[contextLayer];
           violations.push(
             ...collectForbiddenCapabilityUses(
               options.typescript,
               semanticSourceFile,
-              options.forbiddenGlobals[contextLayer]
+              layerForbidden
             ).map((use) =>
               violation(
                 'FORBIDDEN_GLOBAL',
@@ -715,6 +719,33 @@ export function createAICodeGate<Context = AICodeGateContext>(
               )
             )
           );
+          for (const dependency of semanticDependencies ?? []) {
+            if (dependency.typeOnly || !dependency.specifier) continue;
+            const forbiddenGlobal = forbiddenGlobalForModuleSpecifier(
+              dependency.specifier,
+              layerForbidden
+            );
+            if (!forbiddenGlobal) continue;
+            violations.push(
+              violation(
+                'FORBIDDEN_GLOBAL',
+                `${contextLayer} must not use module "${dependency.specifier}" because it is the import form of forbidden global "${forbiddenGlobal}".`,
+                {
+                  line: dependency.line,
+                  filePath,
+                  source: dependency.specifier,
+                  target: dependency.specifier,
+                  fromLayer: contextLayer,
+                  details: {
+                    importKind: dependency.kind,
+                    forbiddenGlobal,
+                  },
+                  suggestion:
+                    'Inject the capability through a port instead of importing the ambient global module form.',
+                }
+              )
+            );
+          }
         } catch (err) {
           violations.push(
             violation(
@@ -737,8 +768,10 @@ export function createAICodeGate<Context = AICodeGateContext>(
           for (const use of collectCapabilityUses(options.typescript, semanticSourceFile)) {
             if (!denySet.has(use.capability)) continue;
             if (
-              use.source === 'ambient-global' &&
-              ambientCoveredByForbiddenGlobals(use.symbol, layerForbidden)
+              (use.source === 'ambient-global' &&
+                ambientCoveredByForbiddenGlobals(use.symbol, layerForbidden)) ||
+              (use.source === 'import-based' &&
+                forbiddenGlobalForModuleSpecifier(use.symbol, layerForbidden))
             ) {
               continue;
             }

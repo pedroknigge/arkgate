@@ -22,6 +22,7 @@ import {
   typeOnlyExportNames,
 } from './ast-scan.mjs';
 import { provePortProofInject } from './port-proof.mjs';
+import { summarizeParseHealth } from './parse-health.mjs';
 import {
   intentLayersFromManifest,
   layerForIntent,
@@ -35,6 +36,7 @@ import {
   effectiveCapabilityDeny,
   evaluateArchitectureGraph,
   extractSemanticDependencies,
+  forbiddenGlobalForModuleSpecifier,
 } from './analysis-engine.mjs';
 import { normalize } from './scan-files.mjs';
 import { collectSafetyDiagnostics } from './safety-diagnostics.mjs';
@@ -80,8 +82,10 @@ export function scanSourceFile(ts, root, config, rules, manifestIntentLayers, fi
     for (const use of collectCapabilityUses(ts, sourceFile)) {
       if (!capabilityDeny.has(use.capability)) continue;
       if (
-        use.source === 'ambient-global' &&
-        ambientCoveredByForbiddenGlobals(use.symbol, forbiddenGlobals)
+        (use.source === 'ambient-global' &&
+          ambientCoveredByForbiddenGlobals(use.symbol, forbiddenGlobals)) ||
+        (use.source === 'import-based' &&
+          forbiddenGlobalForModuleSpecifier(use.symbol, forbiddenGlobals))
       ) {
         continue;
       }
@@ -192,6 +196,7 @@ export function scanSourceFile(ts, root, config, rules, manifestIntentLayers, fi
   return {
     contentViolations: violations,
     edges,
+    parseDiagnosticCount: sourceFile.parseDiagnostics?.length ?? 0,
     exportsOnlyTypes: sourceFileExportsOnlyTypes(ts, sourceFile),
     typeOnlyExportNames: typeOnlyExportNames(ts, sourceFile),
     hasTopLevelSideEffects: sourceFileHasTopLevelSideEffects(ts, sourceFile),
@@ -210,7 +215,7 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
   const warnings = collectConfigWarnings(root, config, files, rules, manifest);
   const safety = collectSafetyDiagnostics(ts, root, config, files);
   warnings.push(...safety.warnings);
-  const cacheKey = args.noCache ? undefined : scanCacheKey(root, args);
+  const cacheKey = args.noCache ? undefined : scanCacheKey(root, args, ts.version);
   const cachedFiles = cacheKey ? loadScanCache(root, cacheKey) : undefined;
   const nextCacheFiles = {};
 
@@ -223,7 +228,10 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
     const fileKey = `${stat.mtimeMs}:${stat.size}`;
     const cached = cachedFiles?.[relFile];
     const entry =
-      cached && cached.fileKey === fileKey
+      cached &&
+      cached.fileKey === fileKey &&
+      Number.isSafeInteger(cached.parseDiagnosticCount) &&
+      cached.parseDiagnosticCount >= 0
         ? cached
         : {
             fileKey,
@@ -242,8 +250,36 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
   }
 
   const engineEdges = [];
+  // Y08 derives exact forbidden-global module duals from dependency facts
+  // already stored in every current cache entry. This stays downstream of the
+  // cache: no second AST scan, no cache-shape/version bump, and warm pre-Y08
+  // entries gain the verdict immediately.
+  const forbiddenModuleDualViolations = [];
+  const forbiddenModuleDualKeys = new Set();
   for (const { file, sourceLayer, relFile, entry } of scanned) {
+    const layerConfig = config.layers.find((layer) => layer.name === sourceLayer);
+    const forbiddenGlobals = Array.isArray(layerConfig?.forbiddenGlobals)
+      ? layerConfig.forbiddenGlobals.filter((item) => typeof item === 'string')
+      : [];
     for (const edge of entry.edges) {
+      if (!edge.typeOnly) {
+        const forbiddenGlobal = forbiddenGlobalForModuleSpecifier(
+          edge.specifier,
+          forbiddenGlobals
+        );
+        if (forbiddenGlobal) {
+          forbiddenModuleDualKeys.add(`${relFile}\0${edge.specifier}`);
+          forbiddenModuleDualViolations.push({
+            ruleId: 'FORBIDDEN_GLOBAL',
+            file: relFile,
+            line: edge.line,
+            fromLayer: sourceLayer,
+            target: edge.specifier,
+            edgeKind: edge.kind,
+            message: `${sourceLayer} must not use module "${edge.specifier}" because it is the import form of forbidden global "${forbiddenGlobal}".`,
+          });
+        }
+      }
       const target = resolveImport(
         ts,
         edge.specifier,
@@ -309,13 +345,30 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
 
   if (cacheKey) saveScanCache(root, cacheKey, nextCacheFiles);
 
-  return evaluateArchitectureGraph({
-    config,
-    rules,
-    files: scanned.map(({ relFile }) => relFile),
-    contentViolations: scanned.flatMap(({ entry }) => entry.contentViolations),
-    edges: engineEdges,
-    warnings,
-    safety: safety.report,
-  });
+  // A cache written before Y08 can retain the overlapping capability-wall
+  // finding for this import. Filter by file+specifier (not line: D7 explicitly
+  // does not depend on cross-engine line anchors), then let FORBIDDEN_GLOBAL be
+  // the one declared-policy voice.
+  const contentViolations = scanned
+    .flatMap(({ entry }) => entry.contentViolations)
+    .filter(
+      (violation) =>
+        !(
+          violation.ruleId === 'CAPABILITY_VIOLATION' &&
+          forbiddenModuleDualKeys.has(`${violation.file}\0${violation.target}`)
+        )
+    );
+
+  return {
+    ...evaluateArchitectureGraph({
+      config,
+      rules,
+      files: scanned.map(({ relFile }) => relFile),
+      contentViolations: [...contentViolations, ...forbiddenModuleDualViolations],
+      edges: engineEdges,
+      warnings,
+      safety: safety.report,
+    }),
+    parseHealth: summarizeParseHealth(scanned),
+  };
 }

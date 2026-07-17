@@ -11,7 +11,10 @@ import {
   type AnalysisFile,
   type AnalysisViolation,
 } from '../domain/analysis';
-import { effectiveCapabilityDeny } from '../domain/capabilities';
+import {
+  effectiveCapabilityDeny,
+  forbiddenGlobalForModuleSpecifier,
+} from '../domain/capabilities';
 import { loadArkConfigContract, parseArkConfigJson } from '../domain/configContract';
 import { layerForRelativePath } from '../domain/layerMatch';
 import {
@@ -101,6 +104,7 @@ export function analyzeProject(input: AnalyzeProjectInput): AnalysisResult {
   // U04: opted-in capability walls over the pure engine's import-based evidence.
   // Absence of the surface adds nothing; ambient enforcement stays on the
   // symbol-aware adapter path (documented envelope).
+  const policyByLayer = new Map(input.contract.config.layers.map((layer) => [layer.name, layer]));
   const denyByLayer = new Map(
     input.contract.config.layers.map((layer) => [
       layer.name,
@@ -109,7 +113,22 @@ export function analyzeProject(input: AnalyzeProjectInput): AnalysisResult {
   );
   for (const use of capabilityUses) {
     const layer = fileByPath.get(use.file)?.layer;
-    if (!layer || !denyByLayer.get(layer)?.has(use.capability)) continue;
+    if (!layer) continue;
+    const layerPolicy = policyByLayer.get(layer);
+    const forbiddenGlobal = forbiddenGlobalForModuleSpecifier(
+      use.symbol,
+      layerPolicy?.forbiddenGlobals ?? []
+    );
+    if (forbiddenGlobal) {
+      violations.push({
+        ruleId: 'FORBIDDEN_GLOBAL',
+        message: `${layer} must not use module "${use.symbol}" because it is the import form of forbidden global "${forbiddenGlobal}".`,
+        symbol: use.symbol,
+        evidence: use.evidence,
+      });
+      continue;
+    }
+    if (!denyByLayer.get(layer)?.has(use.capability)) continue;
     violations.push({
       ruleId: 'CAPABILITY_VIOLATION',
       message: `${layer} denies the ${use.capability} capability; found import of "${use.symbol}".`,

@@ -102,10 +102,14 @@ describe('architecture change convergence', () => {
         expect.objectContaining({
           id: 'unplanned:dependency-added:src/domain/extra.ts->src/domain/order.ts',
           classification: 'unplanned',
+          nextAction:
+            'Remove the unplanned dependency src/domain/extra.ts->src/domain/order.ts from the candidate, then preflight again.',
         }),
         expect.objectContaining({
           id: 'unplanned:dependency-removed:src/domain/order.ts->src/domain/legacy.ts',
           classification: 'unplanned',
+          nextAction:
+            'Restore the removed dependency src/domain/order.ts->src/domain/legacy.ts in the candidate, then preflight again.',
         }),
       ])
     );

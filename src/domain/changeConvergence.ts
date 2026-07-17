@@ -68,7 +68,12 @@ function dependencyFinding(
       : classification === 'contradictory'
         ? { nextAction: `Replace the reverse dependency with ${dependencyKey(dependency)}, then preflight again.` }
         : classification === 'unplanned'
-          ? { nextAction: `Remove the unplanned dependency ${dependencyKey(dependency)} from the candidate, then preflight again.` }
+          ? {
+              nextAction:
+                suffix === 'dependency-removed'
+                  ? `Restore the removed dependency ${dependencyKey(dependency)} in the candidate, then preflight again.`
+                  : `Remove the unplanned dependency ${dependencyKey(dependency)} from the candidate, then preflight again.`,
+            }
           : {}),
   };
 }
