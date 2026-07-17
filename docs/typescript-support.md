@@ -153,6 +153,15 @@ parameters, and imports shadow ambient names; aliases such as `const Clock = Dat
 module paths then uses the nearest tsconfig/jsconfig compiler options, including path aliases,
 project-local packages, workspaces, and symlinked workspace entries.
 
+`forbiddenGlobals: ["process"]` also owns the exact runtime module spellings `process` and
+`node:process`. They report `FORBIDDEN_GLOBAL` with import-form evidence across the CLI, pure IR,
+atomic preflight, MCP/AICodeGate, and ESLint. This is an exact dual, not a process-capability wall:
+`node:process/subpath`, `child_process`, and `node:child_process` do not match. `import type` and
+`export type` declarations are erased and do not produce this finding on any path. The
+symbol-aware CLI/hook/AICodeGate path and ESLint also recognize all-type named lists; the
+compiler-free pure IR retains its documented conservative treatment of those lists as value
+imports.
+
 ArkGate intentionally does not claim soundness for runtime-generated module names, `eval`, custom
 loader functions, proxy-based globals, dynamically computed property keys, or aliases mutated
 after declaration. Those constructs must remain absent from governed pure layers or be handled by

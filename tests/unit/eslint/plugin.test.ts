@@ -114,4 +114,54 @@ describe('ark/no-forbidden-globals', () => {
       'localStorage',
     ]);
   });
+
+  it('flags the exact process module dual and excludes type-only imports (Y08)', () => {
+    const { listener, reports } = run([{ globals: ['process'] }]);
+    listener.ImportDeclaration({
+      source: { value: 'node:process' },
+      specifiers: [{ type: 'ImportDefaultSpecifier' }],
+    });
+    listener.ImportDeclaration({
+      source: { value: 'node:process' },
+      importKind: 'type',
+      specifiers: [{ type: 'ImportDefaultSpecifier' }],
+    });
+    listener.ImportDeclaration({
+      source: { value: 'node:process' },
+      specifiers: [{ type: 'ImportSpecifier', importKind: 'type' }],
+    });
+    listener.ImportDeclaration({
+      source: { value: 'node:process/subpath' },
+      specifiers: [{ type: 'ImportDefaultSpecifier' }],
+    });
+    listener.ImportDeclaration({
+      source: { value: 'node:child_process' },
+      specifiers: [{ type: 'ImportDefaultSpecifier' }],
+    });
+    listener.TSImportEqualsDeclaration({
+      moduleReference: { expression: { value: 'node:process' } },
+    } as never);
+    listener.TSImportEqualsDeclaration({
+      importKind: 'type',
+      moduleReference: { expression: { value: 'node:process' } },
+    } as never);
+
+    expect(reports).toHaveLength(2);
+    expect(reports[0]).toMatchObject({
+      messageId: 'forbiddenModule',
+      data: {
+        name: 'process',
+        specifier: 'node:process',
+        importKind: 'import',
+      },
+    });
+    expect(reports[1]).toMatchObject({
+      messageId: 'forbiddenModule',
+      data: {
+        name: 'process',
+        specifier: 'node:process',
+        importKind: 'require',
+      },
+    });
+  });
 });

@@ -342,7 +342,7 @@ lives only in prose: each names the gate that promotes it, and none may start wh
 | 58 | `Y04` | `done` | S | — | Skill mechanical-edit hygiene rules close the three observed codemod defects |
 | 59 | `Y06` | `parked` | S | gate: field case | `pure`-layer opt-in nudge: doctor suggests declaring purity when the golden pattern names pure modules but no layer opts in |
 | 60 | `Y07` | `parked` | L | gate: `Y06` corpus | Strict (blocker-grade) ambient mutable-state diagnostics — only after a real `pure: true` field corpus exists (U05 condition unchanged) |
-| 61 | `Y08` | `todo` | S | gate met: deterministic harness | `node:process` module-import dual of the `process` ambient forbidden global is detected with the same evidence discipline |
+| 61 | `Y08` | `done` | S | gate met: deterministic harness | `node:process` module-import dual of the `process` ambient forbidden global is detected with the same evidence discipline |
 | 62 | `Y09` | `parked` | S | gate: field case | Template-interpolation import specifiers are surfaced as an unresolvable-edge advisory instead of silently unresolved |
 | 63 | `Y10` | `parked` | L | gate: field demand | Transitive capability inference: a wall sees capabilities reached through local call chains, not only direct uses |
 
@@ -571,7 +571,7 @@ blocker-grade precision proven on a real opted-in corpus. `Y06` exists to create
 this item stays parked until the corpus exists and the U05 precision bar is met on it.
 
 **Y08 — `node:process` dual.** `forbiddenGlobals: ["process"]` sees the ambient global; the
-`import process from "node:process"` spelling bypasses it. Outcome: the module-import dual is
+`import process from "node:process"` spelling previously bypassed it. Outcome: the module-import dual is
 reported with the same evidence discipline (same rule id, import-form evidence). Gate: a field or
 harness case where the dual actually bypassed a purity wall — promote on first confirmed escape.
 
@@ -583,6 +583,18 @@ atomic preflight remained valid, AICodeGate remained valid, and `ark/no-forbidde
 reported nothing. A warm pre-Y08 scan cache already retained the exact non-type-only import edge,
 so the fix can derive from existing deterministic evidence without a second scan or cache-schema
 bump. This is a confirmed cross-adapter purity escape: gate met, `parked` → `todo` before work.
+
+**Y08 local evidence (2026-07-17):** one exact Domain matcher now maps only `process` and
+`node:process` to forbidden global `process`; subpaths and both `child_process` spellings remain
+negative controls. The CLI derives the verdict downstream from each cached `entry.edges` fact,
+filters a pre-Y08 overlapping capability finding by file + specifier (never line), and leaves the
+cache tag and scan count unchanged. Value imports emit one `FORBIDDEN_GLOBAL` across CLI cold and
+warm cache, pure IR, atomic preflight, AICodeGate/MCP hook, and both ESLint rules; type-only forms
+written as statement-level `import type` stay green on every path (the pure IR's documented
+all-named limitation is unchanged). Coverage lowering records the narrow dual as `import-exact:*` atoms while a process
+wall retains its broader `import:process` atom. Focused cross-adapter tests, build/typecheck,
+JavaScript syntax, generated parity, module budgets, package-file allowlist, strict architecture,
+and `git diff --check` passed.
 
 **Y09 — template-interpolation import specifiers.** Dynamic `import(`./adapters/${name}`)`-style
 specifiers resolve to nothing and today vanish silently from the edge graph. Outcome: an
@@ -2216,8 +2228,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: Y08 — `node:process` dual (`todo`; promotion evidence recorded; Y05 and Y01–Y04 are done)
-Next action: implement the exact process/node:process dual with type-only exclusion and one FORBIDDEN_GLOBAL voice across adapters. Y06, Y07, Y09, and Y10 remain parked behind their named field gates. The supervised reshape field pilot is superseded — the flagship mirror is golden-consistent; it waits for a corpus target whose mirroring is not golden-explained
+Item: no promoted implementation item (`Y08` done; Y05 and Y01–Y04 are done)
+Next action: collect the named field evidence before promoting Y06, Y07, Y09, or Y10; parked work must not start. The supervised reshape field pilot is superseded — the flagship mirror is golden-consistent; it waits for a corpus target whose mirroring is not golden-explained
 Released baseline: npm arkgate@3.6.0 (Phase X close from PR #76, squash 5d368f5)
 Released baseline: npm arkgate@3.5.0 + MCP registry 3.5.0 isLatest (X01 from PR #71; X02+X03 + release train from PR #72)
 Released baseline: npm arkgate@3.4.0; Phase U shipped from PR #69 (slice 1 from #68)

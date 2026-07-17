@@ -119,7 +119,12 @@ export function extractSemanticDependencies(
       ts.isImportEqualsDeclaration(node) &&
       ts.isExternalModuleReference(node.moduleReference)
     ) {
-      add(node, 'require', literalText(ts, node.moduleReference.expression));
+      add(
+        node,
+        'require',
+        literalText(ts, node.moduleReference.expression),
+        node.isTypeOnly === true
+      );
     } else if (ts.isCallExpression(node)) {
       const dynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
       const requireCall =

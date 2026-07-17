@@ -95,23 +95,33 @@ export function preflightChange(input: AnalyzeChangeInput): ChangePreflightResul
 
   const candidate = analyzeChange({ ...input, changes: uniqueChanges });
   const candidateByPath = new Map(candidate.ir.files.map((file) => [file.path, file]));
-  // U04: the candidate IR's capability-wall violations flow into the same
-  // evaluator, so an atomic batch cannot hide a denied capability (A4).
-  const capabilityViolations: ArchitectureEngineViolation[] = candidate.ir.violations
-    .filter((violation) => violation.ruleId === 'CAPABILITY_VIOLATION')
-    .map((violation) => ({
-      ruleId: violation.ruleId,
-      file: violation.evidence.file,
-      line: violation.evidence.line,
-      target: violation.symbol,
-      capability: violation.capability,
-      message: violation.message,
-    }));
+  // U04/Y08: direct import-effect violations flow into the same evaluator, so
+  // an atomic batch cannot hide either a capability wall or a forbidden
+  // global's exact module dual.
+  const directEffectViolations: ArchitectureEngineViolation[] = candidate.ir.violations
+    .filter(
+      (violation) =>
+        violation.ruleId === 'CAPABILITY_VIOLATION' ||
+        violation.ruleId === 'FORBIDDEN_GLOBAL'
+    )
+    .map((violation) => {
+      const fromLayer = candidateByPath.get(violation.evidence.file)?.layer;
+      return {
+        ruleId: violation.ruleId,
+        file: violation.evidence.file,
+        line: violation.evidence.line,
+        target: violation.symbol,
+        ...(violation.capability ? { capability: violation.capability } : {}),
+        ...(fromLayer ? { fromLayer } : {}),
+        edgeKind: 'import',
+        message: violation.message,
+      };
+    });
   const graphResult = evaluateArchitectureGraph({
     config: input.contract.config,
     rules: input.contract.config.rules,
     files: candidate.ir.files.map((file) => file.path),
-    contentViolations: capabilityViolations,
+    contentViolations: directEffectViolations,
     edges: candidate.ir.edges
       .filter((edge): edge is AnalysisImportEdge & { fromLayer: string } => Boolean(edge.fromLayer))
       .map((edge) => ({

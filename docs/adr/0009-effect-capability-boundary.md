@@ -88,8 +88,9 @@ Because both dialects lower to one capability space (D2), the T01 transition cla
 Lowering must be **coverage-faithful**, and bare capability ids are not fine-grained enough:
 classification happens on **coverage atoms** — `ambient:<entry>` for every known ambient-map
 entry a surface covers (prefix-expanded: fg `Date` covers `ambient:Date` AND `ambient:Date.now`;
-fg `process` covers `ambient:process.env` too) plus `import:<capability>` for a wall's module
-dimension (forbiddenGlobals never cover imports). Any lost atom is weakening: `fetch` →
+fg `process` covers `ambient:process.env` too), `import-exact:<specifier>` for a deliberately
+narrow forbidden-global module dual (Y08: exact `process` / `node:process` only), and
+`import:<capability>` for a wall's complete module dimension. Any lost atom is weakening: `fetch` →
 `XMLHttpRequest`, `Date` → `Date.now`, and wall → forbiddenGlobals all classify as weakening;
 fg → equivalent-or-stronger wall retains every atom and typically classifies **strengthening**
 (added import atoms) — never requiring an acknowledgment in that direction. Unlowerable custom
@@ -109,8 +110,11 @@ acknowledge reflexively — which destroys the guard's meaning.
 
 Deduplication rule: when one piece of evidence (same file, same import) violates both a layer
 rule and a capability wall, **one finding is emitted** — the layer rule wins when it exists (it is
-the surface the user declared); the wall speaks only where no edge rule covers the case. Both
-paths emit the same stable `nextAction` ("define a Clock/Random/HTTP/storage port; bind it outside
+the surface the user declared); the wall speaks only where no edge rule covers the case. Ambient
+and exact import evidence already owned by `forbiddenGlobals` likewise emit only
+`FORBIDDEN_GLOBAL`; a capability wall does not add a second voice. Cross-engine dedup keys use
+file + target evidence and deliberately do not require matching line anchors. Both paths emit the
+same stable `nextAction` ("define a Clock/Random/HTTP/storage port; bind it outside
 the pure layer"). Overlapping design smells reference the capability ID in their evidence instead
 of emitting a competing remediation.
 
@@ -142,9 +146,9 @@ reasoning.
   D4; U06 follows D5.
 - **Known limits recorded by the U03 adversarial review** (documented envelope, revisit at U04):
   a workspace/aliased package literally named like a driver (`pg`, `redis`) classifies by name —
-  compiler-free matching never consults resolution; the module duals of ambient globals map to a
-  single capability (`node:process` → `process` only — an environment read through the imported
-  binding is undercounted until U04 decides the dual; `node:crypto` is deliberately absent);
+  compiler-free matching never consults resolution; Y08 closes the exact `process` /
+  `node:process` forbidden-global module dual without pretending that `child_process`, subpaths,
+  or imported-binding member effects are ambient evidence (`node:crypto` remains deliberately absent);
   the pure engine and the symbol collector anchor multi-line imports at different lines, so the
   D7 dedup key must not require line equality across engines; alias chains can yield more than
   one evidence entry for one logical use — counts are evidence, never a metric.

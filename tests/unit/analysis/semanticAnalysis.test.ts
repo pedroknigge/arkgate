@@ -81,6 +81,19 @@ describe('canonical semantic analysis', () => {
     ]);
   });
 
+  it('keeps TypeScript import-equals value/type evidence distinct (Y08 review)', () => {
+    const input = source(
+      [
+        'import legacy = require("node:process");',
+        'import type ProcessType = require("node:process");',
+      ].join('\n')
+    );
+    expect(dependencyShape(extractSemanticDependencies(ts, input))).toEqual([
+      { specifier: 'node:process', kind: 'require', line: 1, typeOnly: false, unresolved: false },
+      { specifier: 'node:process', kind: 'require', line: 2, typeOnly: true, unresolved: false },
+    ]);
+  });
+
   it('resolves ambient aliases, globalThis static keys, and destructuring without local false positives', () => {
     const input = source(
       [

@@ -15,7 +15,11 @@ import {
   layerForRelativePath,
   isEdgeDenied,
 } from '../domain/layerMatch';
-import { capabilityForModuleSpecifier, effectiveCapabilityDeny } from '../domain/capabilities';
+import {
+  capabilityForModuleSpecifier,
+  effectiveCapabilityDeny,
+  forbiddenGlobalForModuleSpecifier,
+} from '../domain/capabilities';
 import { parseArkConfigJson, type ArkConfig } from '../domain/configContract';
 import {
   toAdapterDiagnostic,
@@ -421,13 +425,15 @@ export const noForbiddenGlobals: ArkRule = {
     type: 'problem',
     docs: {
       description:
-        'Disallow ambient globals from the layer’s forbiddenGlobals in ark.config.json (same purity surface as ark-check). Option `globals` explicitly overrides.',
+        'Disallow ambient globals from the layer’s forbiddenGlobals in ark.config.json (same purity surface as ark-check). Option `globals` is a standalone fallback when no project config applies.',
     },
     messages: {
       forbiddenGlobal:
         'Ambient global "{{name}}" is forbidden in {{layer}} (ark.config.json); inject the capability through a port instead.',
       forbiddenGlobalDefault:
         'Ambient global "{{name}}" is forbidden here; inject the capability through a port instead.',
+      forbiddenModule:
+        '{{layer}} must not use module "{{specifier}}" because it is the import form of forbidden global "{{name}}".',
     },
     schema: [
       {
@@ -449,9 +455,7 @@ export const noForbiddenGlobals: ArkRule = {
     let globals: Set<string> | null = null;
     let layerName = 'this layer';
 
-    if (option?.globals) {
-      globals = new Set(option.globals);
-    } else if (config && root && filename) {
+    if (config && root && filename) {
       const absFile = path.isAbsolute(filename) ? filename : path.resolve(filename);
       const relFile = path.relative(root, absFile).split(path.sep).join('/');
       const layer = config.layers?.find(
@@ -464,6 +468,10 @@ export const noForbiddenGlobals: ArkRule = {
         // Layer has no purity list — do not invent defaults (matches CI).
         globals = null;
       }
+    } else if (option?.globals) {
+      // Standalone linting only. A rule-local option must never replace a
+      // project contract and create a zero-voice gap with capability dedup.
+      globals = new Set(option.globals);
     }
 
     if (!globals) {
@@ -492,6 +500,34 @@ export const noForbiddenGlobals: ArkRule = {
       );
     };
 
+    const reportModule = (
+      node: AstNode,
+      specifier: unknown,
+      typeOnly: boolean,
+      importKind: string
+    ) => {
+      if (typeOnly || typeof specifier !== 'string') return;
+      const forbiddenGlobal = forbiddenGlobalForModuleSpecifier(specifier, globals!);
+      if (!forbiddenGlobal) return;
+      const absFile = path.isAbsolute(filename) ? filename : path.resolve(filename);
+      const reportFile = root
+        ? path.relative(root, absFile).split(path.sep).join('/')
+        : filename;
+      reportAdapterDiagnostic(
+        context,
+        node,
+        'forbiddenModule',
+        {
+          ruleId: 'FORBIDDEN_GLOBAL',
+          file: reportFile,
+          fromLayer: layerName,
+          target: specifier,
+          message: `${layerName} must not use module "${specifier}" because it is the import form of forbidden global "${forbiddenGlobal}".`,
+        },
+        { layer: layerName, name: forbiddenGlobal, specifier, importKind }
+      );
+    };
+
     return {
       MemberExpression(node) {
         if (node.parent?.type === 'MemberExpression' && node.parent.object === node) return;
@@ -513,9 +549,90 @@ export const noForbiddenGlobals: ArkRule = {
         }
       },
       CallExpression(node) {
+        const call = node as AstNode & {
+          callee?: { type?: string; name?: string };
+          arguments?: Array<{ type?: string; value?: unknown }>;
+        };
+        if (
+          call.callee?.type === 'Identifier' &&
+          call.callee.name === 'require' &&
+          call.arguments?.[0]?.type === 'Literal' &&
+          !isLocallyBound(context, node, 'require')
+        ) {
+          reportModule(node, call.arguments[0].value, false, 'require');
+        }
         if (scopeAware) return;
-        const callee = node.callee?.type === 'Identifier' ? node.callee.name : undefined;
+        const callee = call.callee?.type === 'Identifier' ? call.callee.name : undefined;
         if (callee && globals!.has(callee)) report(node, callee);
+      },
+      ImportDeclaration(node) {
+        const importNode = node as AstNode & {
+          source?: { value?: unknown };
+          importKind?: string;
+          specifiers?: Array<{ importKind?: string; type?: string }>;
+        };
+        const named = (importNode.specifiers ?? []).filter(
+          (specifier) => specifier.type === 'ImportSpecifier'
+        );
+        const allNamedTypeOnly =
+          named.length > 0 &&
+          named.length === (importNode.specifiers ?? []).length &&
+          named.every((specifier) => specifier.importKind === 'type');
+        reportModule(
+          node,
+          importNode.source?.value,
+          importNode.importKind === 'type' || allNamedTypeOnly,
+          'import'
+        );
+      },
+      ImportExpression(node) {
+        const importNode = node as AstNode & { source?: { type?: string; value?: unknown } };
+        if (importNode.source?.type === 'Literal') {
+          reportModule(node, importNode.source.value, false, 'dynamic-import');
+        }
+      },
+      TSImportEqualsDeclaration(node) {
+        const importNode = node as AstNode & {
+          importKind?: string;
+          isTypeOnly?: boolean;
+          moduleReference?: { expression?: { value?: unknown } };
+        };
+        reportModule(
+          node,
+          importNode.moduleReference?.expression?.value,
+          importNode.importKind === 'type' || importNode.isTypeOnly === true,
+          'require'
+        );
+      },
+      ExportNamedDeclaration(node) {
+        const exportNode = node as AstNode & {
+          source?: { value?: unknown };
+          exportKind?: string;
+          specifiers?: Array<{ exportKind?: string }>;
+        };
+        if (!exportNode.source) return;
+        const specifiers = (exportNode.specifiers ?? []) as Array<{ exportKind?: string }>;
+        const allTypeOnly =
+          specifiers.length > 0 &&
+          specifiers.every((specifier) => specifier.exportKind === 'type');
+        reportModule(
+          node,
+          exportNode.source.value,
+          exportNode.exportKind === 'type' || allTypeOnly,
+          'export'
+        );
+      },
+      ExportAllDeclaration(node) {
+        const exportNode = node as AstNode & {
+          source?: { value?: unknown };
+          exportKind?: string;
+        };
+        reportModule(
+          node,
+          exportNode.source?.value,
+          exportNode.exportKind === 'type',
+          'export'
+        );
       },
       NewExpression(node) {
         if (scopeAware) return;
@@ -568,6 +685,7 @@ export const noDeniedCapabilities: ArkRule = {
 
     const check = (node: AstNode, specifier: unknown, typeOnly: boolean) => {
       if (typeOnly || typeof specifier !== 'string') return;
+      if (forbiddenGlobalForModuleSpecifier(specifier, layer.forbiddenGlobals ?? [])) return;
       const capability = capabilityForModuleSpecifier(specifier);
       if (!capability || !deny.has(capability)) return;
       reportAdapterDiagnostic(
@@ -611,6 +729,18 @@ export const noDeniedCapabilities: ArkRule = {
       ImportExpression(node) {
         const importNode = node as AstNode & { source?: { type?: string; value?: unknown } };
         if (importNode.source?.type === 'Literal') check(node, importNode.source.value, false);
+      },
+      TSImportEqualsDeclaration(node) {
+        const importNode = node as AstNode & {
+          importKind?: string;
+          isTypeOnly?: boolean;
+          moduleReference?: { expression?: { value?: unknown } };
+        };
+        check(
+          node,
+          importNode.moduleReference?.expression?.value,
+          importNode.importKind === 'type' || importNode.isTypeOnly === true
+        );
       },
       ExportNamedDeclaration(node) {
         const exportNode = node as AstNode & {

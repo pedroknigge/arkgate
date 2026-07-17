@@ -87,6 +87,12 @@ Layer fields:
   (`network`, `filesystem`, `clock`, `randomness`, `environment`, `process`, `persistence`);
   `pure: true` is the shorthand that denies all seven. Absence changes no verdict.
 
+`forbiddenGlobals: ["process"]` covers the ambient binding plus exact runtime imports from
+`process` and `node:process`. It does not imply the broader `process` capability wall: subpaths
+and `child_process` remain outside this narrow dual, and statement-level `import type` /
+`export type` declarations are excluded. Declare `capabilities.deny: ["process"]` when the whole
+process module-capability family must be denied.
+
 Rule fields:
 
 - `from`, `to`, `allowed`, `message`, `peerIsolation`, `sliceFolders`

@@ -49,6 +49,7 @@ export {
   capabilityForAmbientName,
   capabilityForModuleSpecifier,
   effectiveCapabilityDeny,
+  forbiddenGlobalForModuleSpecifier,
   loweredLayerCoverage,
   lowerForbiddenGlobal,
   type CapabilityId,

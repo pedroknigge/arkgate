@@ -9,6 +9,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   noDomainInfraImports,
+  noDeniedCapabilities,
   noForbiddenGlobals,
   layerForRelativePath,
   isEdgeDenied,
@@ -60,7 +61,12 @@ function runArkCheckJson(root: string) {
   );
   const out = JSON.parse(r.stdout || '{}') as {
     ok: boolean;
-    violations: Array<{ ruleId: string; file?: string; typeOnly?: boolean }>;
+    violations: Array<{
+      ruleId: string;
+      file?: string;
+      typeOnly?: boolean;
+      target?: string;
+    }>;
     diagnostics: Array<Record<string, unknown>>;
     schemaVersion: string;
   };
@@ -176,6 +182,49 @@ describe('ESLint ↔ ark-check parity', () => {
     expect(reports.length).toBeGreaterThanOrEqual(1);
     expect((reports[0].data as { name: string }).name).toBe('Date.now');
     expect(reports[0].diagnostic).toEqual(
+      check.diagnostics.find((item) => item.ruleId === 'FORBIDDEN_GLOBAL')
+    );
+  });
+
+  it('node:process is one FORBIDDEN_GLOBAL across ESLint and ark-check (Y08)', () => {
+    const root = fixture();
+    const configPath = path.join(root, 'ark.config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.layers[0].capabilities = { deny: ['process'] };
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    const domainFile = path.join(root, 'src/domain/process.ts');
+    fs.writeFileSync(
+      domainFile,
+      "import process from 'node:process';\nexport const cwd = process.cwd();\n"
+    );
+
+    const check = runArkCheckJson(root);
+    expect(check.ok).toBe(false);
+    expect(check.violations).toEqual([
+      expect.objectContaining({
+        ruleId: 'FORBIDDEN_GLOBAL',
+        target: 'node:process',
+      }),
+    ]);
+
+    // A rule-local empty fallback must not replace the project contract and
+    // create zero voices while the capability rule deduplicates.
+    const forbidden = createContext(domainFile, [{ globals: [] }]);
+    noForbiddenGlobals.create(forbidden.context).ImportDeclaration({
+      source: { value: 'node:process' },
+      specifiers: [{ type: 'ImportDefaultSpecifier' }],
+      loc: { start: { line: 1 } },
+    });
+    const wall = createContext(domainFile);
+    noDeniedCapabilities.create(wall.context).ImportDeclaration({
+      source: { value: 'node:process' },
+      specifiers: [{ type: 'ImportDefaultSpecifier' }],
+      loc: { start: { line: 1 } },
+    });
+
+    expect(forbidden.reports).toHaveLength(1);
+    expect(wall.reports).toHaveLength(0);
+    expect(forbidden.reports[0].diagnostic).toEqual(
       check.diagnostics.find((item) => item.ruleId === 'FORBIDDEN_GLOBAL')
     );
   });

@@ -16,7 +16,9 @@ import {
   CAPABILITY_IDS,
   capabilityForAmbientName,
   capabilityForModuleSpecifier,
+  forbiddenGlobalForModuleSpecifier,
   lowerForbiddenGlobal,
+  loweredLayerCoverage,
 } from '../../../src/domain/capabilities';
 import {
   analyzeProject,
@@ -187,6 +189,9 @@ describe('U03 pure IR engine carries import-based capability evidence', () => {
     expect(irForContent("export type { Pool } from 'pg';\n").capabilityUses).toEqual([]);
     expect(irForContent("export type * from 'pg';\n").capabilityUses).toEqual([]);
     expect(irForContent("import type Foo from 'pg';\nexport const x = 1;\n").capabilityUses).toEqual([]);
+    expect(
+      irForContent("import type ProcessType = require('node:process');\n").capabilityUses
+    ).toEqual([]);
     // Value forms keep counting: default binding literally named `type`, and
     // identifiers merely starting with 'type'.
     expect(irForContent("import type from 'pg';\n").capabilityUses).toHaveLength(1);
@@ -194,6 +199,8 @@ describe('U03 pure IR engine carries import-based capability evidence', () => {
     expect(irForContent("export { Pool } from 'pg';\n").capabilityUses).toHaveLength(1);
     // Documented envelope: braced named-binding lists stay value imports here.
     expect(irForContent("import { type Pool } from 'pg';\n").capabilityUses).toHaveLength(1);
+    // A value import-equals is one dependency, never a duplicate nested require.
+    expect(irForContent("import process = require('node:process');\n").capabilityUses).toHaveLength(1);
   });
 
   it('classifies bare and node:-prefixed core network modules consistently (/review F2)', () => {
@@ -208,5 +215,31 @@ describe('U03 pure IR engine carries import-based capability evidence', () => {
     expect(capabilityForModuleSpecifier('child_process')).toBe('process');
     // node:crypto is deliberately absent: hashing dominates, randomness FPs.
     expect(capabilityForModuleSpecifier('node:crypto')).toBeNull();
+  });
+
+  it('matches only the exact forbidden-global process module duals (Y08)', () => {
+    expect(forbiddenGlobalForModuleSpecifier('node:process', ['process'])).toBe('process');
+    expect(forbiddenGlobalForModuleSpecifier('process', ['process'])).toBe('process');
+    expect(forbiddenGlobalForModuleSpecifier('node:process/subpath', ['process'])).toBeNull();
+    expect(forbiddenGlobalForModuleSpecifier('child_process', ['process'])).toBeNull();
+    expect(forbiddenGlobalForModuleSpecifier('node:child_process', ['process'])).toBeNull();
+    expect(forbiddenGlobalForModuleSpecifier('node:process', ['fetch'])).toBeNull();
+  });
+
+  it('records narrow process-dual atoms without overstating a full process wall (Y08)', () => {
+    const forbidden = loweredLayerCoverage({ forbiddenGlobals: ['process'] }).atoms;
+    expect(forbidden).toEqual(
+      expect.arrayContaining(['import-exact:process', 'import-exact:node:process'])
+    );
+    expect(forbidden).not.toContain('import:process');
+
+    const wall = loweredLayerCoverage({ capabilities: { deny: ['process'] } }).atoms;
+    expect(wall).toEqual(
+      expect.arrayContaining([
+        'import:process',
+        'import-exact:process',
+        'import-exact:node:process',
+      ])
+    );
   });
 });
