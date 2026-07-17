@@ -29,7 +29,7 @@ export const DESIGN_SMELL_OUTCOMES = Object.freeze({
   'io-under-application':
     'Business/application code reaches the database or external APIs directly — the AI will keep pasting I/O into the wrong place. Put data access behind a port/adapter.',
   'handler-in-persistence':
-    'HTTP handlers live under data/repository folders — names look like “storage” but they are routes. Move handlers to the API/UI layer so the AI stops mixing transport and storage.',
+    'Static framework HTTP imports or route definitions live under data/repository folders — names look like “storage” but the code still owns transport. Move HTTP handling to the API/UI layer so the AI stops mixing transport and storage.',
   'god-module':
     'A few huge files own too many responsibilities — the AI cannot safely edit one concern without breaking others. Split the pilot file by job (one export surface per concern).',
   'domain-logic-in-ui':
@@ -70,6 +70,12 @@ const IO_IMPORT_RE =
   /\bfrom\s+['"](?:@?prisma\/client|@supabase\/|drizzle-orm|typeorm|knex|mongodb|pg|mysql2|better-sqlite3|ioredis|redis)['"]|require\(\s*['"](?:@?prisma\/client|pg|knex|typeorm)/;
 const HANDLER_CONTENT_RE =
   /\b(?:@Controller|@Get|@Post|@Put|@Delete|Router\(\)|createRouter|express\.Router|fastify\.(?:get|post)|export\s+(?:async\s+)?function\s+(?:GET|POST|PUT|DELETE|PATCH)\b|export\s+const\s+(?:GET|POST|PUT|DELETE|PATCH)\s*=)/;
+const FRAMEWORK_HTTP_IMPORT_RE =
+  /(?:^|[;\n])\s*(?:import\s+(?:type\s+)?(?:[^;]{0,512}?\s+from\s+)?|export\s+(?:type\s+)?[^;]{0,512}?\s+from\s+)['"]next\/server(?:\.js)?['"]/;
+const ROUTE_DEFINITION_CALL_RE =
+  /\bdefineRoute\s*(?:<[\s\S]{1,512}?>)?\s*\(/;
+const ROUTE_DEFINITION_DECLARATION_RE =
+  /\b(?:export\s+)?(?:declare\s+)?(?:async\s+)?function\s+defineRoute\s*(?:<[\s\S]{1,512}?>)?\s*\(/g;
 const DOMAIN_LOGIC_UI_RE =
   /\b(?:export\s+)?(?:async\s+)?function\s+(?:can|calculate|compute|should)[A-Z]\w*|\b(?:export\s+)?const\s+(?:can|calculate|compute|should)[A-Z]\w*\s*=/;
 const EXPORT_RE =
@@ -139,7 +145,33 @@ function isPresentationLayer(name) {
 function isPersistenceLayer(name) {
   return (
     typeof name === 'string' &&
-    (/persist|repository|infra|data.?access/i.test(name) || name === 'PersistenceAdapters')
+    /persist|repository|data.?access/i.test(name)
+  );
+}
+
+function stripObviousCommentsAndTemplates(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/\/\/[^\n]*/g, ' ')
+    .replace(/`(?:\\[\s\S]|[^\\`])*`/g, ' ');
+}
+
+function hasFrameworkHttpImport(source) {
+  return FRAMEWORK_HTTP_IMPORT_RE.test(stripObviousCommentsAndTemplates(source));
+}
+
+function hasRouteDefinitionCall(source) {
+  const code = stripObviousCommentsAndTemplates(source)
+    .replace(/(["'])(?:\\.|(?!\1)[^\\\r\n])*\1/g, ' ')
+    .replace(ROUTE_DEFINITION_DECLARATION_RE, 'function __ark_defineRoute_declaration__(');
+  return ROUTE_DEFINITION_CALL_RE.test(code);
+}
+
+function hasHollowPersistenceShape(source) {
+  return (
+    hasFrameworkHttpImport(source) ||
+    hasRouteDefinitionCall(source) ||
+    HANDLER_CONTENT_RE.test(source)
   );
 }
 
@@ -172,6 +204,24 @@ export function detectDesignSmells(root, config, files = [], coverage = null) {
     if (rel.includes('node_modules/') || rel.endsWith('.d.ts')) continue;
     relFiles.push(rel);
   }
+  // Y02: the general scan cap must not hide Persistence candidates in large
+  // trees. Filter by the stable role/path heuristics first, then bound reads.
+  const persistenceUniverse = [];
+  for (const f of files) {
+    const rel = normalizeRel(resolvedRoot, f);
+    if (!rel || rel.startsWith('..')) continue;
+    if (!/\.(ts|tsx|js|jsx|mts|cts)$/.test(rel)) continue;
+    if (rel.includes('node_modules/') || rel.endsWith('.d.ts')) continue;
+    persistenceUniverse.push(rel);
+  }
+  const allPersistenceCandidates = [...new Set(persistenceUniverse)].sort().filter(
+    (rel) =>
+      PERSISTENCE_PATH_RE.test(rel) ||
+      isPersistenceLayer(layerNameFor(resolvedRoot, rel, config))
+  );
+  const persistenceCandidates = allPersistenceCandidates.slice(0, MAX_SCAN_FILES);
+  const persistenceCandidatesTruncated =
+    allPersistenceCandidates.length - persistenceCandidates.length;
 
   // soft-contract: layers with files but no rule edges
   const withoutRules = Array.isArray(coverage?.layersWithoutRules)
@@ -220,8 +270,7 @@ export function detectDesignSmells(root, config, files = [], coverage = null) {
     }
     if (/\/(?:domain|application|infrastructure|adapters)\//.test(rel)) hasHexPorts = true;
 
-    const abs = path.join(resolvedRoot, rel);
-    const source = readTextLimited(abs);
+    const source = readTextLimited(path.join(resolvedRoot, rel));
     if (source == null) continue;
 
     const layer = layerNameFor(resolvedRoot, rel, config);
@@ -230,13 +279,6 @@ export function detectDesignSmells(root, config, files = [], coverage = null) {
 
     if (loc >= GOD_LOC && exportsCount >= GOD_EXPORTS) {
       godEvidence.push(rel);
-    }
-
-    if (
-      (PERSISTENCE_PATH_RE.test(rel) || isPersistenceLayer(layer)) &&
-      HANDLER_CONTENT_RE.test(source)
-    ) {
-      handlerInPersist.push(rel);
     }
 
     if ((UI_PATH_RE.test(rel) || isPresentationLayer(layer)) && DOMAIN_LOGIC_UI_RE.test(source)) {
@@ -257,6 +299,13 @@ export function detectDesignSmells(root, config, files = [], coverage = null) {
     }
   }
 
+  for (const rel of persistenceCandidates) {
+    const source = readTextLimited(path.join(resolvedRoot, rel));
+    if (source != null && hasHollowPersistenceShape(source)) {
+      handlerInPersist.push(rel);
+    }
+  }
+
   if (!falseGreen?.risk && ioUnderAppFiles.length > 0) {
     smells.push(
       makeDesignSmell({
@@ -270,13 +319,17 @@ export function detectDesignSmells(root, config, files = [], coverage = null) {
   }
 
   if (handlerInPersist.length > 0) {
+    const capNote =
+      persistenceCandidatesTruncated > 0
+        ? `; ${persistenceCandidatesTruncated} more Persistence candidate(s) were not inspected by the bounded scan`
+        : '';
     smells.push(
       makeDesignSmell({
         id: 'handler-in-persistence',
         severity: 'warn',
-        message: `HTTP/route handler shape found under persistence/repository paths (${handlerInPersist.length} file(s)) — semantic false-green risk.`,
+        message: `Static framework HTTP import or route-definition/handler shape found in Persistence-role modules (${handlerInPersist.length} file(s)${capNote}) — semantic false-green risk.`,
         evidence: handlerInPersist.slice(0, 12),
-        fix: 'Move handlers to Presentation/API; keep Persistence as data access only (/ark-explore shape-focus).',
+        fix: 'Move HTTP imports and route definitions to Presentation/API; keep Persistence as data access only (/ark-explore shape-focus).',
       })
     );
   }
@@ -414,7 +467,7 @@ function successSignalFor(id) {
     case 'io-under-application':
       return '0 Application-layer files import prisma/supabase/drizzle/pg clients; I/O behind ports';
     case 'handler-in-persistence':
-      return '0 HTTP handler shapes under persistence/repository globs';
+      return '0 static framework HTTP imports or route-definition/handler shapes in Persistence-role modules';
     case 'god-module':
       return 'Pilot god module split; fan-in and export surface reduced without new edge violations';
     case 'domain-logic-in-ui':

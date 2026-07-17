@@ -112,7 +112,7 @@ Smell **ids** (stable JSON) plus **outcome** lines (plain language, Q02) on each
 | id | Outcome (what to do / why the AI struggles) |
 |----|-----------------------------------------------|
 | `io-under-application` | Business code reaches DB/APIs directly — put I/O behind a port/adapter |
-| `handler-in-persistence` | HTTP handlers under storage folders — move handlers to API/UI |
+| `handler-in-persistence` | Static framework HTTP imports (`next/server`), `defineRoute` calls, or handler bodies under Persistence-role storage folders — move transport to API/UI |
 | `god-module` | Huge multi-job files — split the pilot by concern |
 | `domain-logic-in-ui` | can*/calculate* in UI — move pure rules into Domain |
 | `facade-sql-in-routes` | Routes import ORM/SQL — keep queries in repository/adapter |

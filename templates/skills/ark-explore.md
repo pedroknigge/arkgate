@@ -221,7 +221,7 @@ ENFORCE without Shape progress is **`ENFORCE · design-weak`** — say that out 
 | Smell id (label) | How you detect it in source |
 |------------------|-----------------------------|
 | `io-under-application` | I/O clients under Application; empty Domain/Persistence (also doctor when present) |
-| `handler-in-persistence` | HTTP/route bodies under repo/db globs |
+| `handler-in-persistence` | Static framework HTTP imports, `defineRoute` calls, or route bodies under Persistence-role repo/db globs (first 800 sorted candidates; no advisory is not whole-tree proof above that bound) |
 | `god-module` | High fan-in + wide export surface + mixed concerns |
 | `domain-logic-in-ui` | `can*` / `calculate*` / policy constants in hooks/pages |
 | `mixed-pattern-cluster` | Same feature area uses ≥2 incompatible layouts |

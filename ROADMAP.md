@@ -337,7 +337,7 @@ lives only in prose: each names the gate that promotes it, and none may start wh
 |---:|---|---|---:|---|---|
 | 54 | `Y05` | `done` | S | 3.6.0 shipped | Cycle ceilings (package + perf budgets) are re-measured and set once with evidence-backed headroom |
 | 55 | `Y01` | `done` | M | `X04`, `X02` | A rejected reshape pilot is a recorded decision the doctor respects, not advisory pressure re-fought every session |
-| 56 | `Y02` | `todo` | M | `P02` | Deterministic hollow-persistence smell: HTTP/route definition living in Persistence-role layers is visible as an advisory |
+| 56 | `Y02` | `done` | M | `P02` | Deterministic hollow-persistence smell: HTTP/route definition living in Persistence-role layers is visible as an advisory |
 | 57 | `Y03` | `todo` | S | — | Governed files that fail to parse are surfaced honestly (a file the scanner cannot read is never silently "clean") |
 | 58 | `Y04` | `todo` | S | — | Skill mechanical-edit hygiene rules close the three observed codemod defects |
 | 59 | `Y06` | `parked` | S | gate: field case | `pure`-layer opt-in nudge: doctor suggests declaring purity when the golden pattern names pure modules but no layer opts in |
@@ -460,7 +460,7 @@ passed.
 
 ### Y02 — Hollow-persistence smell (HTTP in Persistence-role layers)
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `P02`
 
 **Outcome:** design fitness gains a deterministic smell for Persistence/adapter-role layers whose
@@ -472,6 +472,26 @@ Role detection follows the existing name-heuristic discipline: a miss costs a wa
 
 **Non-negotiables:** no style scoring, no codemod, no new gate input; the smell names the
 outcome in human language (Q02 parity) and routes to the existing extraction-card pilot loop.
+
+**Implemented shape:** the stable `handler-in-persistence` smell now recognizes static ES imports
+and re-exports of framework HTTP surfaces (`next/server`), `defineRoute` calls, and existing
+handler bodies in Persistence-role layers or specific persistence paths (`repositories`,
+`infra/db`, `infra/data`, `adapters/persistence`). A generic `Infrastructure` role is not treated
+as Persistence. Candidate paths are normalized, deduplicated, sorted, and filtered by role/path
+before the bounded 800-file
+content scan, so a large Application prefix cannot hide the field-calibrated residual. The smell
+remains advisory, outcome-first, and judgment-only; its existing pattern bet and one-pilot
+extraction card are reused without a new id, config input, verdict edge, or codemod. The detector
+does not claim whole-tree cleanliness beyond that envelope: candidates after the first 800 sorted
+Persistence paths are explicitly uninspected. CommonJS `require()` and dynamic `import()` are not
+claimed by this narrow advisory.
+
+**Local evidence (2026-07-17):** 65 focused tests passed across Y02, P02, Q02, Q04,
+design-weak honesty, extraction cards, and shipped skill surfaces. The fixed corpus covers 805
+unrelated files before 206 hollow modules, the bounded 800-candidate overflow, stable evidence
+under reversed input, each HTTP/route signal, pure-data negatives, generic-Infrastructure
+restraint, and the explicit 800-clean/post-cap-uninspected envelope. Typecheck, JavaScript syntax,
+module budgets, package-file allowlist, `git diff --check`, and strict architecture all passed.
 
 ### Y03 — Parse honesty for governed files
 
@@ -2157,8 +2177,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: Y02 — hollow-persistence advisory (`todo`; Y05 and Y01 are done)
-Next action: implement Y02 against the field-calibrated HTTP-in-Persistence shape, then Y03–Y04. Y06–Y10 hold every retained candidate as a parked queue entry with a named promotion gate (pure-layer nudge → strict ambient-state; node:process dual; template-interpolation specifiers; transitive capability inference). The supervised reshape field pilot is superseded — the flagship mirror is golden-consistent; it waits for a corpus target whose mirroring is not golden-explained
+Item: Y03 — parse honesty for governed files (`todo`; Y05, Y01, and Y02 are done)
+Next action: implement Y03 without a second TypeScript parse or verdict change, then Y04. Y06–Y10 hold every retained candidate as a parked queue entry with a named promotion gate (pure-layer nudge → strict ambient-state; node:process dual; template-interpolation specifiers; transitive capability inference). The supervised reshape field pilot is superseded — the flagship mirror is golden-consistent; it waits for a corpus target whose mirroring is not golden-explained
 Released baseline: npm arkgate@3.6.0 (Phase X close from PR #76, squash 5d368f5)
 Released baseline: npm arkgate@3.5.0 + MCP registry 3.5.0 isLatest (X01 from PR #71; X02+X03 + release train from PR #72)
 Released baseline: npm arkgate@3.4.0; Phase U shipped from PR #69 (slice 1 from #68)
