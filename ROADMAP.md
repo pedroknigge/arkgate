@@ -314,6 +314,148 @@ main; carries the reviewed content of #74 and #75). Signed tag `v3.6.0`; GitHub 
 from `docs/releases/3.6.0.md`; `publish-npm.yml` run 29592499256 succeeded and `npm view arkgate`
 shows `3.6.0` on `latest`. Phase X is fully shipped.
 
+### Phase Y — field feedback round 2: decisions, shape honesty, edit hygiene (candidate)
+
+Origin: 2026-07-17 field session over the field-adopter worktree — upgraded 3.5.0 → 3.6.0 with
+`/ark-upgrade` and exercised the full skill chain (`/ark-explore` → `/ark-fix` → `/ark-autopilot`
+→ `/ark-contract` → `/ark-explain`) end to end with **zero CLI failures** and every Phase X
+surface behaving as designed (see the 3.6.0 field validation below). The same session surfaced
+four gaps and one standing-guardrail trigger; all are candidates gated on the usual promotion
+discipline. `Y05` runs first — the package-budget guardrail requires recalibrated cycle ceilings
+before the first implementation item starts.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 54 | `Y05` | `todo` | S | 3.6.0 shipped | Cycle ceilings (package + perf budgets) are re-measured and set once with evidence-backed headroom |
+| 55 | `Y01` | `todo` | M | `X04`, `X02` | A rejected reshape pilot is a recorded decision the doctor respects, not advisory pressure re-fought every session |
+| 56 | `Y02` | `todo` | M | `P02` | Deterministic hollow-persistence smell: HTTP/route definition living in Persistence-role layers is visible as an advisory |
+| 57 | `Y03` | `todo` | S | — | Governed files that fail to parse are surfaced honestly (a file the scanner cannot read is never silently "clean") |
+| 58 | `Y04` | `todo` | S | — | Skill mechanical-edit hygiene rules close the three observed codemod defects |
+
+### 3.6.0 field validation (field-adopter worktree, 2026-07-17)
+
+Agent session over the field-adopter worktree (2,997 governed files, 12 layers, ENFORCE 100%,
+keep-empty baseline) upgraded `arkgate@3.5.0 → 3.6.0` and ran the full skill chain over real
+Shape work (parse-corpse repair, two un-hollow pilots, ack hygiene, explain + report). Transcript
+retained by the adopter; independently re-verified same day (strict gate green, tsc count
+reproduced, report inspected, live login flow of the product exercised).
+
+**Confirmed as designed:**
+
+- **X05 on the real sidecar** — `ackLifecycle.stale` listed exactly the three acks orphaned by
+  X03/X06 (`*->PersistenceInfrastructure` family edges); `/ark-contract` deleted them and dated
+  the remaining 26; doctor lifecycle clean after.
+- **X04 restraint held under pressure** — the reshape pilot (`projects @ src/lib/repositories`,
+  124 files) was proposed-only every time; nothing auto-applied; skills correctly rejected it
+  as fighting the adopter's golden role-layer layout (origin of `Y01`).
+- **X01/X07 at scale** — 82 KB report renders every advisory section (contract health with dated
+  acks, governance weight `typical`, ambient state `Idle`, physical cohesion with the proposed
+  pilot and per-anchor mirror counts); score 96, ENFORCE, 100% governed.
+- **Upgrade path** — pnpm cooling-off handled, skills refreshed across four hosts, MCP single-bin
+  verified, no breaking CLI or config changes; migrate-on-touch policy respected end to end
+  ("fix all residual" did not become a bulk codemod).
+
+**Findings registered as candidates (Y01–Y05 above):**
+
+- **Y01 origin:** the adopter rejected the same reshape pilot **three times in one session**
+  (explore, autopilot, fix-all) because the mirrored anchors (`src/app/api` ↔
+  `src/lib/api-handlers` ↔ `src/lib/repositories`) ARE its golden `thin-shell-handlers-data`
+  layout — and nothing records that decision, so every future session re-fights the advisory.
+- **Y02 origin:** ~206 Persistence modules import `next/server` / hold `NextResponse` bodies
+  left by a pre-3.6 bulk extract; gate green, design fitness clean — the smell is invisible to
+  the doctor, and the adopter compensates with a hand-rolled vitest (`ark-shape-residual`).
+- **Y03 origin:** the same bulk extract left 189 trailing-comma parse corpses across 147
+  **governed** files; ArkGate reported 100% governed / 0 violations the whole time. The scanner
+  builds each `ts.createSourceFile` and never inspects `parseDiagnostics` — the honesty signal
+  already exists at zero additional parse cost.
+- **Y04 origin:** three mechanical-edit defects in skill-driven fixes: stacked doc-comment
+  headers (`/** … */` injected above an existing `/** … */` producing nested comment text),
+  completing a missing route export by splitting `defineRoute<…>(opts, handler)` into untyped
+  `*_ROUTE_OPTS` / `*_ROUTE_HANDLER` consts (dropped generics → new implicit-any errors in
+  previously clean files), and empty placeholder `*-data.ts` stubs (`import "server-only";
+  export {}`) created only to satisfy naming conventions.
+- **Y05 origin:** package budget closed the cycle at **98.9% packed**; separately, a docs-only
+  PR failed the `doctorCold@10000` perf ceiling by 1.07% (p95 5154.5 ms vs 5100 ms) on an
+  unchanged engine — observed runner variance exceeds the recorded +25% headroom.
+
+### Y05 — Cycle budget recalibration (package + perf ceilings)
+
+- **Status:** `todo`
+- **Depends on:** 3.6.0 shipped
+
+**Outcome:** per the standing guardrails (package-budget rules below; ADR 0009 D5 for perf), the
+new cycle's ceilings are measured from clean candidates and set **once**: packed/unpacked/file-count
+with ≥ 10% headroom, and hook/doctorCold p95 ceilings whose headroom covers the runner variance
+actually observed this cycle (a docs-only diff must not be able to fail a perf budget). Never
+ratcheted per item; any later exception needs explicit evidence.
+
+**Verification:** `npm pack --json --dry-run`, `npm run check:package-files`,
+`npm run check:release-artifacts` agree on the candidate; two consecutive green
+`Performance budgets` CI runs on an unchanged engine commit.
+
+### Y01 — Reshape decisions are recorded (physical-cohesion verdict memory)
+
+- **Status:** `todo`
+- **Depends on:** `X04`, `X02`
+
+**Outcome:** a proposed reshape pilot can be **accepted, deferred, or rejected with a reason**,
+and the record has teeth: a rejected target stops being re-proposed (the sensor still reports the
+mirror facts; only the pilot pressure stops), an accepted one converges as today, and records
+reuse the X02 lifecycle (optional `reviewBy`, stale detection when the anchor set changes —
+X05 semantics). The doctor and report render the decision instead of the dead proposal.
+Candidate default worth evaluating during design: when the mirrored anchors match the declared
+golden pattern's role directories, the pilot is proposed at most once — a golden-consistent
+mirror is a layout, not a smell.
+
+**Non-negotiables:** decisions are explicit adopter records (sidecar), never inferred silently;
+the underlying cohesion facts keep rendering; cross-anchor evidence never changes the verdict.
+
+### Y02 — Hollow-persistence smell (HTTP in Persistence-role layers)
+
+- **Status:** `todo`
+- **Depends on:** `P02`
+
+**Outcome:** design fitness gains a deterministic smell for Persistence/adapter-role layers whose
+modules import framework HTTP surfaces (e.g. `next/server`) or hold route-definition calls —
+the "hollow extract" shape where the gate is green because only imports moved. Advisory only
+(design-fitness voice, never the verdict), calibrated on the field corpus (206 known-hollow
+modules vs the golden pure-data pilots) and the OSS harness for false-positive pressure.
+Role detection follows the existing name-heuristic discipline: a miss costs a warning line.
+
+**Non-negotiables:** no style scoring, no codemod, no new gate input; the smell names the
+outcome in human language (Q02 parity) and routes to the existing extraction-card pilot loop.
+
+### Y03 — Parse honesty for governed files
+
+- **Status:** `todo`
+- **Depends on:** —
+
+**Outcome:** `scanSourceFile` reads the `parseDiagnostics` the AST already carries; governed
+files that fail to parse surface as a doctor advisory (`parseHealth`: count + capped file list,
+report section under the X01 parity rule). The verdict is untouched this round — but the
+"100% governed, 0 violations" line can no longer be silently true over files the scanner could
+not honestly read. Escalation to verdict-relevant is a separate future decision requiring its
+own evidence.
+
+**Non-negotiables:** zero additional parse cost (no second pass, no tsc dependency); advisory
+caps and overflow markers follow X07.
+
+### Y04 — Skill mechanical-edit hygiene
+
+- **Status:** `todo`
+- **Depends on:** —
+
+**Outcome:** the skill templates that drive mechanical edits (`ark-fix`, `ark-autopilot`,
+`ark-loop`) encode three explicit rules from the field defects: (1) header injection merges into
+an existing doc comment, never stacks a second `/**` above it; (2) completing or moving a
+`defineRoute`-style export reconstructs the original **typed** call — never a split into untyped
+opts/handler constants that drops generics; (3) never create empty placeholder modules to satisfy
+naming conventions — either move the real code or leave the file uncreated. Guarded by an eval
+fixture reproducing the three shapes.
+
+**Non-negotiables:** skills-and-eval change only; no engine surface grows; the rules are stated
+as outcomes ("previously clean file stays typecheck-clean after the edit"), not as prose advice.
+
 ### 3.5.0 field validation (field-adopter worktree, 2026-07-16)
 
 Agent session over the field-adopter worktree (2,996 governed files, 12 layers, ENFORCE 100%, 29 real
@@ -1933,8 +2075,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: none — Phase X fully shipped: X01–X03 in 3.5.0, X04–X07 in 3.6.0 (consolidation PR #76)
-Next action: maintainer publishes MCP registry 3.6.0 (mcp-publisher publish server.json); the supervised reshape field pilot on the field adopter is the first post-release activity; other recorded candidates: transitive capability inference, strict ambient-state after a field corpus (still no corpus — consider the pure-layer doctor nudge), the node:process dual, template-interpolation specifiers
+Item: Y05 — cycle budget recalibration (`todo`; runs first per the package-budget guardrail), then Y01–Y04 (Phase Y, candidates from the 2026-07-17 3.6.0 field validation)
+Next action: recalibrate cycle ceilings (package at 98.9%; doctorCold p95 ceiling breached by a docs-only PR), then Y01 reshape-decision record. Retained candidates not promoted this round: transitive capability inference, strict ambient-state after a field corpus (still no corpus — consider the pure-layer doctor nudge), the node:process dual, template-interpolation specifiers
 Released baseline: npm arkgate@3.6.0 (Phase X close from PR #76, squash 5d368f5)
 Released baseline: npm arkgate@3.5.0 + MCP registry 3.5.0 isLatest (X01 from PR #71; X02+X03 + release train from PR #72)
 Released baseline: npm arkgate@3.4.0; Phase U shipped from PR #69 (slice 1 from #68)
