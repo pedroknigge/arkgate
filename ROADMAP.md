@@ -297,6 +297,57 @@ gated on the usual promotion discipline.
 | 48b | `X02` | `done` | S | `X01` | Contract-smell acknowledgments gain a lifecycle (review-by/staleness vs origin) so migration acks cannot fossilize |
 | 49b | `X03` | `done` | S | — | Lateral-adapter smell recognizes family infrastructure (adapter → its own infra base is not a lateral peer) |
 | 50b | `X04` | `parked` | L | `X02`, plan doc + ADR | Reshape co-pilot: physicalCohesion sensor + reshape plan as a T03 change map, agent-executed one pilot at a time (moves/merges are judgment; never a codemod) |
+| 51b | `X05` | `parked` | S | `X02` | Stale acknowledgments are surfaced (`ackLifecycle.stale` + human line) so an ack orphaned by a quieted smell is deleted, not silently carried |
+| 52b | `X06` | `parked` | S | `X03` | Family-infra heuristic covers mid-name families (`<Domain><Family>Adapters -> <Family>Infrastructure`) without weakening the cross-family default |
+| 53b | `X07` | `parked` | XS | `X01` | HTML report evidence lists carry their own honest `(+N more)` overflow marker (today capped at 6 with no marker) |
+
+X01–X03 shipped in **`arkgate@3.5.0`** (2026-07-16): X01 from PR
+[#71](https://github.com/pedroknigge/arkgate/pull/71) (squash `a5106b7`); X02+X03 and the release
+train from PR [#72](https://github.com/pedroknigge/arkgate/pull/72) (squash `7abf9e7`, CI 27/27
+green, cross-model review findings fixed in-branch). Signed tag `v3.5.0`; GitHub Release published
+from `docs/releases/3.5.0.md`; `publish-npm.yml` run 29545346848 succeeded and `npm view arkgate`
+shows `3.5.0` on `latest`. Each item retains commit + review evidence below.
+
+### 3.5.0 field validation (amarilla worktree, 2026-07-16)
+
+Agent session over the amarilla worktree (2,996 governed files, 12 layers, ENFORCE 100%, 29 real
+acks) installed `arkgate@3.5.0` and exercised every Phase X surface. Nothing pushed or merged;
+sidecar restored byte-identical (sha `0945fa87…`).
+
+**Confirmed as designed:**
+
+- **X02 on the real 29 acks** — all 29 are undated migration debt ("strangler", "dual-source",
+  "migrate-on-touch"): the exact fossilization profile. Experiment: future `reviewBy` still
+  applies; past date stops applying with `(ack expired 2026-01-01)` evidence; malformed (`soon`)
+  fails loud. `ackLifecycle` counts exact (`undated: 25` = 28−3); fossilization line renders in
+  doctor and report even with zero visible smells.
+- **X01 at scale** — 82 KB report, nothing truncated; all three `data-advisory` sections present
+  exactly once; governance weight `typical — 249.7 files/layer` as expected; ambient state
+  honestly `Idle`. Badges untestable there (no `pure`/`capabilities` declared).
+- **Perf** — doctor cold 2.84s on 3.5.0 vs 3.10s on 3.4.0 (Mac, record-only); warm 1.76s. No
+  regression signal.
+
+**Findings registered as candidates (X05–X07 above, plus X04/ambient evidence):**
+
+- **X05 origin:** the edge X03 quieted (`PersistenceAdapters -> PersistenceInfrastructure`)
+  orphaned its ack silently — file has 29, doctor applies 28, and nothing says "1 ack matches no
+  detected edge; delete it".
+- **X06 origin:** amarilla names domain-scoped adapters with the domain as leading token and the
+  family mid-name: `HoursPersistenceAdapters` / `MoneyPersistenceAdapters` over
+  `PersistenceInfrastructure`. The leading-token rule sees `Hours ≠ Persistence` and still fires
+  on 2 of the 3 member→base edges while the unprefixed one went quiet — inconsistent to the
+  adopter, whose own ack reasons frame these as family infra. Counterpoint recorded: they ARE
+  cross-domain in the leading token, so the miss is arguable, and the fix must not weaken the
+  cross-family default.
+- **X07 origin:** the report's per-finding evidence list caps at 6 `<code>` items with no
+  overflow marker — a 12-edge lateral smell silently shows half its evidence (the count survives
+  only in the message paragraph).
+- **X04 corpus, live:** 211 `route.ts` under `src/app/api/projects/**` mirrored by 167
+  `projects*` handlers in `src/lib/api-handlers/` — and no advisory says anything (governance
+  weight `typical`, design fitness clean). physicalCohesion has its calibration target.
+- **Ambient-state candidate evidence:** the flagship adopter has zero `pure: true` layers after
+  full adoption — the strict-mode candidate still has NO field corpus; consider a doctor nudge to
+  opt in when the golden pattern names pure modules but no layer declares purity.
 
 ### X01 — Report parity with doctor advisories
 
@@ -1788,8 +1839,9 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: none — X01 (report parity), X02 (ack lifecycle), and X03 (family infra) done from the amarilla field session; X04 is the remaining parked candidate
-Next action: maintainer merges the X02+X03 / 3.5.0 release PR, then the release train (tag, GitHub Release, publish-npm, MCP registry); promoting X04 (reshape co-pilot) requires its plan doc + ADR first; other recorded candidates: transitive capability inference, strict ambient-state after a field corpus, the node:process dual, template-interpolation specifiers
+Item: none — X01–X03 shipped in arkgate@3.5.0 and field-validated on amarilla; parked queue: X05 (stale acks, S), X06 (mid-name family heuristic, S), X07 (report evidence overflow marker, XS), X04 (reshape co-pilot, L)
+Next action: promote X05–X07 as S/XS warm-ups when a session opens (each has field evidence recorded above); promoting X04 requires its plan doc + ADR first (live corpus recorded: 211 route.ts vs 167 handlers); other recorded candidates: transitive capability inference, strict ambient-state after a field corpus (still no corpus — consider the pure-layer doctor nudge), the node:process dual, template-interpolation specifiers
+Released baseline: npm arkgate@3.5.0 + MCP registry 3.5.0 isLatest (X01 from PR #71; X02+X03 + release train from PR #72)
 Released baseline: npm arkgate@3.4.0; Phase U shipped from PR #69 (slice 1 from #68)
 Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
