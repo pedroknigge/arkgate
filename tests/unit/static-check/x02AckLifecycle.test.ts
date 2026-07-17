@@ -1,6 +1,6 @@
 /**
  * X02 — contract-smell acknowledgments have a lifecycle (field feedback,
- * amarilla 2026-07-16: ~15 of 29 acks were transitional migration debt with
+ * the field adopter 2026-07-16: ~15 of 29 acks were transitional migration debt with
  * no review date — fossilizable by construction).
  *
  * The rule: an optional `reviewBy` (YYYY-MM-DD) marks when a deliberate

@@ -73,7 +73,7 @@ const richFiles = [
   'src/application/useCase.ts',
   'src/workflows/sync.ts',
   'src/repositories/repo.ts',
-  'src/integrations/tokko.ts',
+  'src/integrations/crm.ts',
   'src/observability/audit.ts',
 ];
 

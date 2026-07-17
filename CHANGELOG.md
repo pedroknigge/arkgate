@@ -7,7 +7,7 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 ## 3.6.0 — 2026-07-17
 
 Phase X closes: the doctor learns to see **physical shape** and agents get a governed way to
-execute reorganizations, plus three field warm-ups from the 3.5.0 amarilla validation.
+execute reorganizations, plus three field warm-ups from the 3.5.0 the field adopter validation.
 Everything remains **advisory** — no verdict, exit-code, `designFitness`, or `patternBets`
 change. **No breaking** CLI or `ark.config.json` changes. **No gate weaken. No apply path.**
 
@@ -42,7 +42,7 @@ change. **No breaking** CLI or `ark.config.json` changes. **No gate weaken. No a
 
 ## 3.5.0 — 2026-07-16
 
-Field-feedback release (Phase X, from the amarilla adoption session): the HTML report reaches
+Field-feedback release (Phase X, from an internal field-adoption session): the HTML report reaches
 parity with the doctor and stays there by an executable rule, contract-smell acknowledgments gain
 a lifecycle so migration acks cannot fossilize, and the lateral-adapter smell stops firing on a
 family's own infrastructure base. Everything remains **advisory** — no verdict, `designFitness`,

@@ -10,7 +10,7 @@ the slices, acceptance criteria, and corpus obligations.
 
 ## Field origin (why this exists)
 
-amarilla-platform, 2026-07-16/17 field sessions (2,996 governed files, 12 layers, ENFORCE 100%):
+the field-adopter platform, 2026-07-16/17 field sessions (2,996 governed files, 12 layers, ENFORCE 100%):
 
 - 211 `route.ts` files under `src/app/api/projects/**` mirrored by 167 `projects*` handlers in
   `src/lib/api-handlers/` — a handful of domain concepts exploded across two parallel trees.
@@ -50,7 +50,7 @@ concept lives in the directory name). Thresholds are fixed constants calibrated 
 (below), not user tunables.
 
 Acceptance:
-- Flags the amarilla `projects` family (route tree + handler tree) in a fixture reproducing its
+- Flags the field-corpus `projects` family (route tree + handler tree) in a fixture reproducing its
   shape; stays silent on this repository and on the onboarding-matrix healthy fixtures.
 - Advisory invariants: verdict, exit code, `designFitness`, `patternBets` untouched (test-pinned).
 - Report section exists (parity guard extends automatically) with honest truncation markers.
@@ -71,12 +71,12 @@ Acceptance:
 
 `/ark-loop` gains the execute-one-pilot loop (read card → move → gate → re-doctor → stop);
 `/ark-architect` and `/ark-fix` gain the judgment framing for merge cards. Then one real pilot
-on the amarilla worktree (maintainer-supervised, no push/merge) becomes the acceptance evidence.
+on the field-adopter worktree (maintainer-supervised, no push/merge) becomes the acceptance evidence.
 
 ## Corpus obligations (before R1 lands)
 
-- A fixture reproducing the amarilla shape: `<root>/app/api/<concept>/**/route.ts` × N mirrored
+- A fixture reproducing the field-corpus shape: `<root>/app/api/<concept>/**/route.ts` × N mirrored
   by `<root>/lib/handlers/<concept>-*.ts` × M.
 - Negative fixtures: a healthy feature-foldered tree; this repository itself.
-- Calibration numbers recorded in the ADR from live runs on the amarilla worktree (authorized
+- Calibration numbers recorded in the ADR from live runs on the field-adopter worktree (authorized
   test bench, read-only against their tree).

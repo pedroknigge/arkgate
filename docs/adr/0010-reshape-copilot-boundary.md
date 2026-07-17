@@ -1,8 +1,8 @@
 # ADR 0010: Physical cohesion is advisory evidence; reshape is judgment, executed one pilot at a time
 
 - **Status:** Accepted (fixture obligations met in `x04PhysicalCohesion.test.ts`: positive
-  amarilla-shape fixture, healthy-tree and self-hosting negatives, pinned advisory invariants;
-  the X01 parity guard covers the report section; live run on the amarilla worktree reproduced
+  field-corpus-shape fixture, healthy-tree and self-hosting negatives, pinned advisory invariants;
+  the X01 parity guard covers the report section; live run on the field-adopter worktree reproduced
   the calibration table exactly — 4 mirrored concepts, pilot at `src/lib/repositories` (124))
 - **Date:** 2026-07-17
 - **Owner:** product (Pedro) + ArkGate maintainers
@@ -11,7 +11,7 @@
 
 ## Context
 
-ArkGate proves edges; it is blind to physical shape. The amarilla field sessions (3.4.0 and
+ArkGate proves edges; it is blind to physical shape. the internal field sessions (3.4.0 and
 3.5.0/3.6-dev, 2026-07-16/17) showed a fully green flagship adopter — 0 violations, 0 smells,
 governance weight `typical`, design fitness clean — whose tree holds domain concepts exploded
 across mirrored directory families. Measured with the calibration prototype (concept clusters
@@ -19,10 +19,10 @@ per anchor directory, path-segment extraction for framework filenames):
 
 | Tree | Concept | Anchor clusters |
 |---|---|---|
-| amarilla | `projects` | `src/app/api` (221) · `src/lib/api-handlers` (146) · `src/lib/repositories` (124) · `src/app/(dashboard)` (61) |
-| amarilla | `timesheet` | `src/app/api` (100) · `src/lib/repositories` (44) · `src/lib/api-handlers` (28) |
-| amarilla | `people` | `src/app/api` (82) · `src/lib/repositories` (24) |
-| amarilla | `process` | `src/app/api` (45) · `src/lib/api-handlers` (24) · `src/lib/repositories` (20) |
+| field adopter | `projects` | `src/app/api` (221) · `src/lib/api-handlers` (146) · `src/lib/repositories` (124) · `src/app/(dashboard)` (61) |
+| field adopter | `timesheet` | `src/app/api` (100) · `src/lib/repositories` (44) · `src/lib/api-handlers` (28) |
+| field adopter | `people` | `src/app/api` (82) · `src/lib/repositories` (24) |
+| field adopter | `process` | `src/app/api` (45) · `src/lib/api-handlers` (24) · `src/lib/repositories` (20) |
 | arkgate (self) | max any concept | 18 (under every threshold below) |
 
 Two prior facts shape the design: the 3.4.0 session found **zero structural clones** among the
@@ -59,7 +59,7 @@ section exists from day one because the X01 parity guard fails CI without it.
 
 A concept is reported when `maxCluster ≥ 40` OR at least two anchors hold `≥ 20` files each
 (the mirrored shape). Findings are ranked by `maxCluster` and capped (top 5) with an honest
-`truncated` count. On the corpus above this yields amarilla's four genuinely exploded families
+`truncated` count. On the corpus above this yields the adopter's four genuinely exploded families
 and zero findings on this repository — the constants live in code with this table as their
 provenance and change only with new corpus evidence.
 
@@ -90,7 +90,7 @@ reshape surface.
 Anchors under Next.js `src/app/**` or `pages/**` (when Next.js is detected in the tree) are
 reported as `fixedByConvention: true` and excluded from every proposed move — the route tree is
 where the framework demands it. The reshape proposal targets only convention-free anchors
-(amarilla: handlers and repositories may consolidate; the route tree may not move).
+(field adopter: handlers and repositories may consolidate; the route tree may not move).
 
 ### D8 — No new skill name: deepen `/ark-loop`, `/ark-architect`, `/ark-fix`
 
@@ -106,7 +106,7 @@ placement; humans and agents judge.
 
 ## Fixture obligations before Accepted
 
-1. A positive fixture reproducing the amarilla shape (`app/api/<concept>/**/route.ts` mirrored
+1. A positive fixture reproducing the field-corpus shape (`app/api/<concept>/**/route.ts` mirrored
    by `lib/handlers/<concept>-*.ts` and `lib/repositories/<concept>-*.ts`).
 2. Negative fixtures: this repository (self-hosting test) and a healthy feature-foldered tree.
 3. Advisory invariants pinned: verdict/`designFitness`/`patternBets` byte-identical with the

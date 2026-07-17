@@ -1,6 +1,5 @@
 /**
- * X05 — stale acknowledgments are surfaced (field feedback, amarilla
- * 2026-07-16): the edge the X03 carve-out quieted left its ack orphaned in
+ * X05 — stale acknowledgments are surfaced (field feedback, 2026-07-16): the edge the X03 carve-out quieted left its ack orphaned in
  * silence — 29 entries in the file, 28 applied, and nothing said "1 matches
  * no detected edge; delete it". A stale ack suppresses nothing; it should be
  * fixed or deleted, and the doctor/report must say so. Advisory only.

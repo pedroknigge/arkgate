@@ -1,6 +1,6 @@
 /**
  * X03 — the lateral-adapter smell recognizes family infrastructure (field
- * feedback, amarilla 2026-07-16): an adapter layer explicitly allowed into its
+ * feedback, the field adopter 2026-07-16): an adapter layer explicitly allowed into its
  * OWN family's infra base (`PaymentsAdapters -> PaymentsInfra`) is the
  * sanctioned direction, not a lateral peer. Cross-family edges, non-infra
  * siblings, and the reverse direction (base into member) still fire.
@@ -96,9 +96,9 @@ describe('X03 lateral-adapter smell — family infrastructure carve-out', () => 
   });
 });
 
-describe('X06 mid-name families (field: amarilla layer names)', () => {
+describe('X06 mid-name families (field-corpus layer names)', () => {
   it('a domain-scoped adapter carrying the family mid-name reaches its family base quietly', () => {
-    // amarilla: HoursPersistenceAdapters / MoneyPersistenceAdapters over
+    // field adopter: HoursPersistenceAdapters / MoneyPersistenceAdapters over
     // PersistenceInfrastructure — the family token sits mid-name, not leading.
     for (const from of ['HoursPersistenceAdapters', 'MoneyPersistenceAdapters']) {
       expect(
@@ -135,7 +135,7 @@ describe('X06 mid-name families (field: amarilla layer names)', () => {
   it('a domain-prefixed member of the same family is quiet by design (documented trade-off)', () => {
     // Cross-model review flagged this as suppression; it is the intended X06
     // shape: PaymentsPersistenceAdapters IS a persistence-family member, same
-    // as amarilla's HoursPersistenceAdapters. Membership = carrying the
+    // as the field adopter's HoursPersistenceAdapters. Membership = carrying the
     // family token; the miss cost stays a warning line, never a verdict.
     expect(
       lateralFor([

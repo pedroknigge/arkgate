@@ -65,7 +65,7 @@ function nameTokens(name) {
 /**
  * X03/X06 — an adapter reaching its OWN family's infrastructure base is not a
  * lateral peer: the target reads as `<Family><InfraWords…>` and the source
- * carries the family token ANYWHERE in its name (X06, field: amarilla names
+ * carries the family token ANYWHERE in its name (X06, field corpus names
  * domain-scoped adapters `HoursPersistenceAdapters` over
  * `PersistenceInfrastructure` — the family sits mid-name). EVERY remaining
  * target token must be an infra word (Infra/Base/Core/Shared/…) —

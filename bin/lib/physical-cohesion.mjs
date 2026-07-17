@@ -4,7 +4,7 @@
  *
  * ArkGate proves edges; this sensor sees SHAPE: one domain concept exploded
  * into large file clusters across parallel directory families (field origin:
- * amarilla `projects` = 221 route files + 146 handlers + 124 repositories,
+ * the field corpus `projects` concept = 221 route files + 146 handlers + 124 repositories,
  * all invisible to every edge-based surface). Facts only — `notAScore`,
  * never a verdict/designFitness/patternBets input, never a gate.
  *

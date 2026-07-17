@@ -2,7 +2,7 @@
  * X04 (R1/R2) — physicalCohesion sensor + proposed reshape pilot (ADR 0010).
  *
  * Fixture obligations from the ADR: a positive fixture reproducing the
- * amarilla shape (route tree mirrored by handler and repository trees),
+ * the field adopter shape (route tree mirrored by handler and repository trees),
  * negative fixtures (a healthy feature-foldered tree and this repository),
  * pinned advisory invariants (verdict/designFitness untouched), and the
  * report section (the X01 parity guard covers it automatically).
@@ -43,8 +43,8 @@ function seed(root: string, rels: string[]): string[] {
   return out;
 }
 
-/** The amarilla shape: one concept mirrored across route/handler/repo trees. */
-function amarillaShape(root: string): string[] {
+/** the field-corpus shape: one concept mirrored across route/handler/repo trees. */
+function fieldCorpusShape(root: string): string[] {
   const rels: string[] = [];
   for (let i = 0; i < 45; i++) rels.push(`src/app/api/projects/p${i}/route.ts`);
   for (let i = 0; i < 25; i++) rels.push(`src/lib/api-handlers/projects-h${i}.ts`);
@@ -103,9 +103,9 @@ describe('X04 classifyPhysical — deterministic concept extraction (ADR 0010 D2
 });
 
 describe('X04 physicalCohesion sensor (ADR 0010 D1/D3)', () => {
-  it('flags the amarilla shape as one mirrored concept with convention-aware anchors', () => {
+  it('flags the field-corpus shape as one mirrored concept with convention-aware anchors', () => {
     const root = mk();
-    const files = amarillaShape(root);
+    const files = fieldCorpusShape(root);
     const pc = computePhysicalCohesion(root, files);
     expect(pc.advisory).toBe(true);
     expect(pc.notAScore).toBe(true);
@@ -173,7 +173,7 @@ describe('X04 physicalCohesion sensor (ADR 0010 D1/D3)', () => {
 describe('X04 reshape pilot — proposed, never applied (ADR 0010 D4–D7)', () => {
   it('targets the smallest convention-free anchor with an honest move sample', () => {
     const root = mk();
-    const files = amarillaShape(root);
+    const files = fieldCorpusShape(root);
     const pc = computePhysicalCohesion(root, files);
     const pilot = computeReshapePilot(pc, files, root);
     expect(pilot.proposed).toBe(true);
@@ -258,7 +258,7 @@ describe('X04 doctor surface stays advisory (pinned invariants)', () => {
 
   it('doctor JSON exposes physicalCohesion without touching the verdict or designFitness', () => {
     const root = mk();
-    const files = amarillaShape(root);
+    const files = fieldCorpusShape(root);
     const config = {
       include: ['src'],
       layers: [{ name: 'Tooling', patterns: ['src/**'] }],
