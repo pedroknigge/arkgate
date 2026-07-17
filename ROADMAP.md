@@ -298,6 +298,13 @@ gated on the usual promotion discipline.
 | 49b | `X03` | `done` | S | — | Lateral-adapter smell recognizes family infrastructure (adapter → its own infra base is not a lateral peer) |
 | 50b | `X04` | `parked` | L | `X02`, plan doc + ADR | Reshape co-pilot: physicalCohesion sensor + reshape plan as a T03 change map, agent-executed one pilot at a time (moves/merges are judgment; never a codemod) |
 
+X01–X03 shipped in **`arkgate@3.5.0`** (2026-07-16): X01 from PR
+[#71](https://github.com/pedroknigge/arkgate/pull/71) (squash `a5106b7`); X02+X03 and the release
+train from PR [#72](https://github.com/pedroknigge/arkgate/pull/72) (squash `7abf9e7`, CI 27/27
+green, cross-model review findings fixed in-branch). Signed tag `v3.5.0`; GitHub Release published
+from `docs/releases/3.5.0.md`; `publish-npm.yml` run 29545346848 succeeded and `npm view arkgate`
+shows `3.5.0` on `latest`. Each item retains commit + review evidence below.
+
 ### X01 — Report parity with doctor advisories
 
 - **Status:** `done`
@@ -1788,8 +1795,9 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: none — X01 (report parity), X02 (ack lifecycle), and X03 (family infra) done from the amarilla field session; X04 is the remaining parked candidate
-Next action: maintainer merges the X02+X03 / 3.5.0 release PR, then the release train (tag, GitHub Release, publish-npm, MCP registry); promoting X04 (reshape co-pilot) requires its plan doc + ADR first; other recorded candidates: transitive capability inference, strict ambient-state after a field corpus, the node:process dual, template-interpolation specifiers
+Item: none — X01–X03 shipped in arkgate@3.5.0 from the amarilla field session; X04 is the remaining parked candidate
+Next action: maintainer publishes MCP registry 3.5.0 (mcp-publisher publish server.json); promoting X04 (reshape co-pilot) requires its plan doc + ADR first; other recorded candidates: transitive capability inference, strict ambient-state after a field corpus, the node:process dual, template-interpolation specifiers
+Released baseline: npm arkgate@3.5.0 (X01 from PR #71; X02+X03 + release train from PR #72)
 Released baseline: npm arkgate@3.4.0; Phase U shipped from PR #69 (slice 1 from #68)
 Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
