@@ -296,7 +296,7 @@ gated on the usual promotion discipline.
 | 47b | `X01` | `done` | S | 3.4.0 shipped | The HTML report renders every doctor advisory, guarded by an executable parity rule |
 | 48b | `X02` | `done` | S | `X01` | Contract-smell acknowledgments gain a lifecycle (review-by/staleness vs origin) so migration acks cannot fossilize |
 | 49b | `X03` | `done` | S | — | Lateral-adapter smell recognizes family infrastructure (adapter → its own infra base is not a lateral peer) |
-| 50b | `X04` | `parked` | L | `X02`, plan doc + ADR | Reshape co-pilot: physicalCohesion sensor + reshape plan as a T03 change map, agent-executed one pilot at a time (moves/merges are judgment; never a codemod) |
+| 50b | `X04` | `done` | L | `X02`, plan doc + ADR | Reshape co-pilot: physicalCohesion sensor + reshape plan as a T03 change map, agent-executed one pilot at a time (moves/merges are judgment; never a codemod) |
 | 51b | `X05` | `done` | S | `X02` | Stale acknowledgments are surfaced (`ackLifecycle.stale` + human line) so an ack orphaned by a quieted smell is deleted, not silently carried |
 | 52b | `X06` | `done` | S | `X03` | Family-infra heuristic covers mid-name families (`<Domain><Family>Adapters -> <Family>Infrastructure`) without weakening the cross-family default |
 | 53b | `X07` | `done` | XS | `X01` | HTML report evidence lists carry their own honest `(+N more)` overflow marker (today capped at 6 with no marker) |
@@ -386,6 +386,39 @@ the report's stale note says plain `(+N more)` instead of over-promising "in doc
 the JSON cap, and the expired note gained the same honest marker) and 1 rejected as the intended
 X06 shape (`PaymentsPersistenceAdapters -> PersistenceInfrastructure` is family membership by
 design — pinned as a documented-trade-off test).
+
+### X04 — Reshape co-pilot (physicalCohesion + proposed pilot + skill deepening)
+
+- **Status:** `done` (R1–R3; the supervised field pilot on a real adopter tree remains a
+  post-release activity by design)
+- **Depends on:** `X02`, plan doc + ADR — both met:
+  [plan](docs/plans/reshape-copilot/README.md), [ADR 0010](docs/adr/0010-reshape-copilot-boundary.md)
+  (**Accepted**, thresholds calibrated on the live corpus before any code)
+
+**Outcome:** the doctor sees physical shape. `doctor.physicalCohesion` reports concept clusters
+per anchor directory — concentration, not volume (dispersed `use-*` hooks never fire) — with
+fixed corpus-calibrated thresholds (`maxCluster ≥ 40` OR ≥2 anchors ≥ 20), honest capping, and
+`fixedByConvention` marking for `app/`/`pages/` anchors. `reshapePilot.nextPilot` is a
+**proposed, never applied** Q04-style card (one at a time; smallest convention-free anchor;
+`moveSample`/`movesTotal`; kill switch; `doNot[]` hard lines). `/ark-loop` gained the
+pilot-execution loop (change map + atomic preflight before any move); `/ark-architect` gained
+merge cards (merges are domain modeling — zero structural clones in the field corpus);
+`/ark-fix` gained the no-reshape-in-fix-batch rule. `notAScore`; verdict, `designFitness`, and
+`patternBets` pinned untouched. The report section existed from the first commit because the
+X01 parity guard fails CI without it — the standing rule enforcing itself on its first new
+consumer.
+
+**Live validation (amarilla worktree, 2026-07-17, local build):** the sensor reproduced the ADR
+calibration table exactly — 4 mirrored concepts (`projects` 561 files across
+`src/app/api` 221*conv · `api-handlers` 146 · `repositories` 124 · `(dashboard)` 61*conv;
+`timesheet` 203; `people` 129; `process` 98) and the pilot targeted the smallest movable anchor
+(`src/lib/repositories`, 124 moves) with real from/to paths into `src/features/projects/`.
+
+**Local evidence (2026-07-17):** `bin/lib/physical-cohesion.mjs` (206/260 budget),
+`x04PhysicalCohesion.test.ts` (12/12 — ADR fixture obligations: amarilla-shape positive,
+healthy-tree + self-hosting negatives, determinism under shuffle, honest truncation,
+convention-only pilot refusal, pinned advisory invariants); parity guard extended automatically;
+`doctor-plan.mjs` held at exactly 920/920.
 
 ### X01 — Report parity with doctor advisories
 
@@ -1877,8 +1910,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: X04 (reshape co-pilot) — X05–X07 implemented and live-validated on amarilla (unreleased; ride the next train); X04 starts with its plan doc + ADR (live corpus recorded: 211 route.ts vs 167 handlers)
-Next action: maintainer merges the X05–X07 PR; X04 plan doc + ADR before any X04 code; other recorded candidates: transitive capability inference, strict ambient-state after a field corpus (still no corpus — consider the pure-layer doctor nudge), the node:process dual, template-interpolation specifiers
+Item: none — Phase X complete: X01–X03 shipped in 3.5.0; X04 (ADR 0010 + physicalCohesion + reshape pilot + skill deepening) and X05–X07 implemented and live-validated on amarilla (unreleased; ride the next train, likely 3.6.0)
+Next action: maintainer merges the X05–X07 and X04 PRs, then decides the 3.6.0 train; the supervised reshape field pilot on amarilla is the first post-release activity; other recorded candidates: transitive capability inference, strict ambient-state after a field corpus (still no corpus — consider the pure-layer doctor nudge), the node:process dual, template-interpolation specifiers
 Released baseline: npm arkgate@3.5.0 + MCP registry 3.5.0 isLatest (X01 from PR #71; X02+X03 + release train from PR #72)
 Released baseline: npm arkgate@3.4.0; Phase U shipped from PR #69 (slice 1 from #68)
 Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub

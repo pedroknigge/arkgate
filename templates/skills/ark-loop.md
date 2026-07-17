@@ -82,6 +82,22 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 
 Never auto: free value uses of imports, multi-import files, dynamic import/require, forbidden globals, cycles, port-proof inject, multi-file adapter scaffolding without proof.
 
+## Reshape pilots (X04 — physical cohesion, advisory)
+
+When `ark-check --doctor --json` carries `doctor.physicalCohesion.reshapePilot.nextPilot`,
+you may run **that one pilot** — never more:
+
+1. Read the card: `pilotTarget`, `moveSample`/`movesTotal`, `successSignal`, `killSwitch`, `doNot[]`.
+2. Moves are **proposed only** — enumerate the full move set for the pilot anchor, express it as
+   an architecture change map, and validate through the atomic preflight (`ark_prepare_change` /
+   the write gate) **before** any file moves. A move the preflight rejects is a finding, not a
+   thing to force.
+3. Never move anything under `app/` or `pages/` (fixed by framework convention). Never merge
+   files here — merges are judgment cards for `/ark-architect` / `/ark-fix`.
+4. After the move set: full gate re-run + re-doctor. Success = the concept's cluster count drops
+   and the verdict stays green; otherwise use the kill switch (revert the move set, nothing else).
+5. Re-doctor decides whether a next card exists. One pilot per loop iteration, always.
+
 ## Steps
 
 1. **Plan** — `ark-check --plan --json` (+ `--baseline` if used). If `goal.met`: stop **A**;

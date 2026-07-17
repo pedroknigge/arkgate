@@ -156,6 +156,14 @@ in `pure: true` layers only. Acknowledge deliberate registries/caches in
 `.ark/ambient-state-acks.json` (`{ acks: [{ file, name, reason }] }`) or move the state behind a
 port. Advisory only — never blocks, never feeds `designFitness`; no strict mode exists.
 
+**Physical cohesion + reshape pilot (X04, advisory):** `doctor.physicalCohesion` reports concept
+clusters per anchor directory (concentration, not volume — dispersed hooks never fire) with
+fixed corpus-calibrated thresholds; anchors under `app/`/`pages/` are `fixedByConvention` and
+never move. `reshapePilot.nextPilot` is a **proposed** one-at-a-time card (`moveSample`,
+`movesTotal`, `successSignal`, `killSwitch`, `doNot[]`): run it only via `/ark-loop` through the
+write gate + atomic preflight; merges are `/ark-architect` judgment cards. `notAScore`, never a
+verdict/`designFitness` input; there is no apply path.
+
 **Governance weight (W02):** `contractHealth.governanceWeight` reports raw facts (layers, rules,
 governed files, files/layer, rules/layer) plus a fixed band (`heavy` / `typical` / `light` /
 `unknown`) with fixed wording. It is explicitly `notAScore` — never a gate input. Read `heavy` as

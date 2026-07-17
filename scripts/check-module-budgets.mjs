@@ -28,7 +28,10 @@ const BUDGETS = [
   { path: 'bin/lib/html-report.mjs', max: 1550 },
   // Design-depth / write-path / baseline legend for showcase HTML (split from renderer).
   { path: 'bin/lib/html-report-depth.mjs', max: 320 },
-  { path: 'bin/lib/html-report-advisories.mjs', max: 200 },
+  // X04 grew the advisory renderer a third section (physicalCohesion).
+  { path: 'bin/lib/html-report-advisories.mjs', max: 280 },
+  // X04 R1/R2: physicalCohesion sensor + proposed reshape pilot (ADR 0010).
+  { path: 'bin/lib/physical-cohesion.mjs', max: 260 },
 ];
 
 function loc(rel) {

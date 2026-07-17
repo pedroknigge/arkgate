@@ -152,6 +152,31 @@ function ambientStateHtml(state) {
   </section>`;
 }
 
+function physicalCohesionHtml(pc) {
+  if (!pc) return '';
+  const findings = Array.isArray(pc.findings) ? pc.findings : [];
+  const body = findings.length === 0
+    ? '<p class="muted">No mirrored concept explosion detected — no concept clusters over the calibrated thresholds (ADR 0010).</p>'
+    : findings
+        .map((f) => {
+          const anchors = (f.anchors ?? [])
+            .map((a) => `<code>${esc(a.path)}</code> (${a.files}${a.fixedByConvention ? ', fixed by convention' : ''})`)
+            .join(' · ');
+          return `<p><span class="tag warn">${esc(f.concept)}</span> ${f.files} file(s) across ${f.anchorCount} anchor(s)${f.mirrored ? ' — mirrored' : ''}: ${anchors}</p>`;
+        })
+        .join('\n') +
+      (pc.truncated > 0 ? `<p class="muted">…(+${pc.truncated} more concept(s) in doctor JSON)</p>` : '');
+  const pilot = pc.reshapePilot?.nextPilot
+    ? `<p class="muted">next pilot (proposed, never applied): ${esc(pc.reshapePilot.nextPilot.pilotTarget)} — one pilot at a time via /ark-loop; merges are judgment cards only.</p>`
+    : '';
+  return `
+  <section data-advisory="physicalCohesion">
+    <h2>Physical cohesion <span class="muted">(advisory — facts, not a score; the verdict is unchanged)</span></h2>
+    ${body}
+    ${pilot}
+  </section>`;
+}
+
 /**
  * Render every doctor advisory as report sections. Keys must cover everything
  * `computeDoctorAdvisories` returns — the parity guard enforces it.
@@ -160,7 +185,11 @@ function ambientStateHtml(state) {
 export function renderAdvisorySections(advisories, escape) {
   if (!advisories || typeof advisories !== 'object') return '';
   if (typeof escape === 'function') esc = escape;
-  return [contractHealthHtml(advisories.contractHealth), ambientStateHtml(advisories.ambientState)]
+  return [
+    contractHealthHtml(advisories.contractHealth),
+    ambientStateHtml(advisories.ambientState),
+    physicalCohesionHtml(advisories.physicalCohesion),
+  ]
     .filter(Boolean)
     .join('\n');
 }

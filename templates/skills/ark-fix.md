@@ -105,6 +105,13 @@ If the “fix” is really a missing business intent or Domain home for a rule:
 - Prefer mechanical-safe kinds when the plan tags them; otherwise design judgment carefully.
 - Code only — no DB migrations unless user asked.
 
+## Reshape findings (X04 — never mechanical)
+
+If `doctor.physicalCohesion` fires while you fix: do **not** fold reshape moves into your fix
+batch. Physical moves run only through `/ark-loop`'s one-pilot loop; merge decisions only as
+`/ark-architect` merge cards. A cohesion finding is context for your fix, never a license to
+reorganize.
+
 ## Done
 
 - Targeted violations gone; no new ones.
