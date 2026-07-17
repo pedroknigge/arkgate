@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '3.6.0';
+const CURRENT = '3.6.1';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -26,6 +26,28 @@ describe(`version bump ${CURRENT}`, () => {
     expect(lock.packages[''].version).toBe(CURRENT);
     expect(server.version).toBe(CURRENT);
     expect(server.packages[0].version).toBe(CURRENT);
+  });
+});
+
+describe('CHANGELOG + release note cover 3.6.1 Codex project MCP fix', () => {
+  it('CHANGELOG 3.6.1 names project scope, doctor honesty, and the home fallback', () => {
+    const body = read('CHANGELOG.md');
+    expect(body).toMatch(/## 3\.6\.1/);
+    expect(body).toMatch(/\.codex\/config\.toml/);
+    expect(body).toMatch(/codex-home-multi-project/);
+    expect(body).toMatch(/\.claude\/worktrees/);
+    expect(body).toMatch(/--codex-home/);
+    expect(body).toMatch(/No gate weaken/i);
+  });
+
+  it('docs/releases/3.6.1.md has the upgrade and compatibility path', () => {
+    const body = read('docs/releases/3.6.1.md');
+    expect(body).toMatch(/arkgate@3\.6\.1/);
+    expect(body).toMatch(/npm install -D arkgate@3\.6\.1/);
+    expect(body).toMatch(/\.codex\/config\.toml/);
+    expect(body).toMatch(/"--root", "\."/);
+    expect(body).toMatch(/--codex-home/);
+    expect(body).toMatch(/unchanged/i);
   });
 });
 

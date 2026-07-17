@@ -16,10 +16,9 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 3.4.0** is current stable: opt-in capability walls (`pure: true` or
-> `capabilities.deny` per layer, enforced on every adapter), the advisory ambient-state sensor,
-> and the measured pre-tool path — completing 3.3's evidence slice.
-> [Release notes](docs/releases/3.4.0.md).
+> **ArkGate 3.6.1** is current stable: Codex MCP configuration is project-scoped, doctor
+> recognizes the effective project binding, and stale agent worktrees no longer become
+> permanent global MCP owners. [Release notes](docs/releases/3.6.1.md).
 
 ---
 
@@ -383,7 +382,7 @@ for real systems. Details: [production-hardening.md](https://github.com/pedrokni
 | Security reporting | [SECURITY.md](SECURITY.md) |
 | Demos | [docs/demos/](docs/demos/) |
 | Examples | [examples/](examples/README.md) |
-| Latest release (3.1.0) | [release notes](docs/releases/3.1.0.md) · [3.0.0 baseline](docs/releases/3.0.0.md) |
+| Latest release (3.6.1) | [release notes](docs/releases/3.6.1.md) · [3.0.0 baseline](docs/releases/3.0.0.md) |
 | Roadmap and decisions | [ROADMAP.md](ROADMAP.md) · [ADRs](docs/adr/) · [Changelog](CHANGELOG.md) |
 
 ---

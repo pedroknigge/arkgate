@@ -4,6 +4,29 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+## 3.6.1 — 2026-07-17
+
+Codex project-scoped MCP fix. **No breaking** CLI, MCP tool, or `ark.config.json` changes.
+**No gate weaken.**
+
+### Fixed
+
+- **Codex MCP follows the active repository:** `--install-agent-gates --tools codex` now writes
+  `.codex/config.toml` with relative project paths. Each repository owns its primary `ark`
+  binding, so `ark upgrade` no longer leaves Codex resolving `ark://manifest` through another
+  permanent project registered in the global home config.
+- **Doctor effective-config honesty:** Codex advisory-MCP capability and adoption checks prefer
+  a valid project `.codex/config.toml`; an unrelated `$CODEX_HOME` primary no longer produces a
+  false `write-path-none` or `codex-home-multi-project` warning.
+- **Ephemeral worktree cleanup:** roots under `.claude/worktrees`, `.codex/worktrees`, or
+  `.grok/worktrees` are treated as temporary instead of permanent global MCP owners.
+
+### Changed
+
+- `$CODEX_HOME/config.toml` remains an explicit compatibility fallback via `--codex-home`.
+  Normal `--tools codex` installs no longer mutate the global MCP registry, and skills-only
+  home refreshes cannot accidentally rebind its primary server.
+
 ## 3.6.0 — 2026-07-17
 
 Phase X closes: the doctor learns to see **physical shape** and agents get a governed way to
