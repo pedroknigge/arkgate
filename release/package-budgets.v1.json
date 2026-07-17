@@ -3,10 +3,17 @@
   "packages": {
     "gate": {
       "path": ".",
-      "maxPackedBytes": 471000,
-      "maxUnpackedBytes": 1591000,
-      "maxFiles": 141,
-      "exception": "The 250 KB/1 MB target is not yet feasible while shipping the documented standalone CLI/MCP tooling, deterministic change-integrity surfaces, schemas, and consumer guidance. The post-3.1 cycle recalibrates once from the measured Linux candidate (427,528 packed bytes, 1,445,621 unpacked bytes, 128 files) with at least 10% headroom: 471,000 packed bytes, 1,591,000 unpacked bytes, and 141 files. Legacy migration/demo and experimental-runtime hardening guides remain repository-hosted, source maps were removed in V04, and this exception must be reconsidered before ArkGate 4."
+      "maxPackedBytes": 515000,
+      "maxUnpackedBytes": 1731000,
+      "maxFiles": 147,
+      "measuredCandidate": {
+        "sha": "4d0d526442e4eebff269a914171b981f48367990",
+        "version": "3.6.1",
+        "packedBytes": 467437,
+        "unpackedBytes": 1572950,
+        "files": 133
+      },
+      "exception": "The 250 KB/1 MB target is not yet feasible while shipping the documented standalone CLI/MCP tooling, deterministic change-integrity surfaces, schemas, and consumer guidance. Phase Y recalibrates once from the clean Linux 3.6.1 candidate at 4d0d526 (467,437 packed bytes, 1,572,950 unpacked bytes, 133 files) with at least 10% headroom: 515,000 packed bytes, 1,731,000 unpacked bytes, and 147 files. Legacy migration/demo and experimental-runtime hardening guides remain repository-hosted, source maps were removed in V04, and this exception must be reconsidered before ArkGate 4."
     },
     "runtime": {
       "path": "packages/runtime",

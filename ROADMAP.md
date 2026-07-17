@@ -335,7 +335,7 @@ lives only in prose: each names the gate that promotes it, and none may start wh
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 54 | `Y05` | `todo` | S | 3.6.0 shipped | Cycle ceilings (package + perf budgets) are re-measured and set once with evidence-backed headroom |
+| 54 | `Y05` | `doing` | S | 3.6.0 shipped | Cycle ceilings (package + perf budgets) are re-measured and set once with evidence-backed headroom |
 | 55 | `Y01` | `todo` | M | `X04`, `X02` | A rejected reshape pilot is a recorded decision the doctor respects, not advisory pressure re-fought every session |
 | 56 | `Y02` | `todo` | M | `P02` | Deterministic hollow-persistence smell: HTTP/route definition living in Persistence-role layers is visible as an advisory |
 | 57 | `Y03` | `todo` | S | — | Governed files that fail to parse are surfaced honestly (a file the scanner cannot read is never silently "clean") |
@@ -394,7 +394,7 @@ reproduced, report inspected, live login flow of the product exercised).
 
 ### Y05 — Cycle budget recalibration (package + perf ceilings)
 
-- **Status:** `todo`
+- **Status:** `doing`
 - **Depends on:** 3.6.0 shipped
 
 **Outcome:** per the standing guardrails (package-budget rules below; ADR 0009 D5 for perf), the
@@ -406,6 +406,14 @@ ratcheted per item; any later exception needs explicit evidence.
 **Verification:** `npm pack --json --dry-run`, `npm run check:package-files`,
 `npm run check:release-artifacts` agree on the candidate; two consecutive green
 `Performance budgets` CI runs on an unchanged engine commit.
+
+**Measured candidate (2026-07-17):** clean Linux `arkgate@3.6.1` at `4d0d526` packs to 467,437
+bytes / 1,572,950 unpacked bytes / 133 files. Phase Y ceilings are fixed once at 515,000 /
+1,731,000 / 147 (at least 10% headroom in every dimension). Linux CI run `29593179029`
+attempt 1 measured hook@10k 629.687 ms and doctorCold@10k 5,154.522 ms on a docs-only,
+unchanged-engine candidate; its unchanged-head retry measured 683.761 / 4,714.687 ms and run
+`29608857827` measured 619.852 / 4,781.35 ms. The worst p95 per scenario becomes the Phase Y
+baseline; fixed +30% runner headroom rounds up to 900 / 6,800 ms.
 
 ### Y01 — Reshape decisions are recorded (physical-cohesion verdict memory)
 
@@ -704,10 +712,10 @@ the sanctioned direction inside a layer family.
 
 ### Next-round package budget guardrail
 
-**Recalibrated 2026-07-15:** the gate-package ceilings now retain at least 10% headroom over the
-clean Linux documentation-sync candidate: 427,528 packed bytes, 1,445,621 unpacked bytes, and 128
-files. The resulting limits (471,000 / 1,591,000 / 141) remain internal release guardrails, not npm
-requirements.
+**Recalibrated for Phase Y on 2026-07-17:** the gate-package ceilings retain at least 10%
+headroom over the clean Linux `arkgate@3.6.1` candidate at `4d0d526`: 467,437 packed bytes,
+1,572,950 unpacked bytes, and 133 files. The resulting limits (515,000 / 1,731,000 / 147)
+remain internal release guardrails, not npm requirements.
 
 - Keep `250 KB` packed / `1 MB` unpacked as the long-term optimization target, not as a reason to
   remove useful deterministic enforcement or architecture/organization coaching surfaces such as

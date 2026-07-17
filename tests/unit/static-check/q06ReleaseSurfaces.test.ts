@@ -15,6 +15,29 @@ function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
 }
 
+describe('Y05 fixed roadmap-cycle package ceilings', () => {
+  it('retains at least 10% headroom over the recorded clean candidate', () => {
+    const gate = JSON.parse(read('release/package-budgets.v1.json')).packages.gate;
+    expect(gate.measuredCandidate).toEqual({
+      sha: '4d0d526442e4eebff269a914171b981f48367990',
+      version: '3.6.1',
+      packedBytes: 467437,
+      unpackedBytes: 1572950,
+      files: 133,
+    });
+    expect([gate.maxPackedBytes, gate.maxUnpackedBytes, gate.maxFiles]).toEqual([
+      515000, 1731000, 147,
+    ]);
+    expect(gate.maxPackedBytes).toBeGreaterThanOrEqual(
+      Math.ceil(gate.measuredCandidate.packedBytes * 1.1)
+    );
+    expect(gate.maxUnpackedBytes).toBeGreaterThanOrEqual(
+      Math.ceil(gate.measuredCandidate.unpackedBytes * 1.1)
+    );
+    expect(gate.maxFiles).toBeGreaterThanOrEqual(Math.ceil(gate.measuredCandidate.files * 1.1));
+  });
+});
+
 describe(`version bump ${CURRENT}`, () => {
   it('package metadata matches src/version', () => {
     expect(version).toBe(CURRENT);
