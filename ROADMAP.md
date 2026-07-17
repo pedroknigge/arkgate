@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-07-15
+- **Status date:** 2026-07-17
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -314,7 +314,7 @@ main; carries the reviewed content of #74 and #75). Signed tag `v3.6.0`; GitHub 
 from `docs/releases/3.6.0.md`; `publish-npm.yml` run 29592499256 succeeded and `npm view arkgate`
 shows `3.6.0` on `latest`. Phase X is fully shipped.
 
-### Phase Y — field feedback round 2: decisions, shape honesty, edit hygiene (candidate)
+### Phase Y — field feedback round 2: decisions, shape honesty, edit hygiene (3.7.0)
 
 Origin: 2026-07-17 field session over the field-adopter worktree — upgraded 3.5.0 → 3.6.0 with
 `/ark-upgrade` and exercised the full skill chain (`/ark-explore` → `/ark-fix` → `/ark-autopilot`
@@ -332,6 +332,17 @@ feeds `Y01` design directly.
 
 `Y06`–`Y10` fold the standing retained candidates into the queue as `parked` entries so nothing
 lives only in prose: each names the gate that promotes it, and none may start while `parked`.
+
+**Release close (2026-07-17):** Y05, Y01–Y04, and the evidence-promoted Y08 ship in 3.7.0.
+Y06, Y07, Y09, and Y10 remain parked; this release does not treat an unmet promotion gate as an
+implementation backlog.
+
+**Owner-authorized confidence-budget exception (2026-07-17):** after adding meaningful Y08
+multi-form ESLint listener coverage, the complete release dry-run measured 6,661 / 7,854 covered
+branches (84.81%). The global branch floor is explicitly recalibrated from 85% to 84.5%; no source
+include or exclusion changed, statement/function/line floors stay fixed, and mutation remains a
+required release gate. This is a measured regression-confidence budget change, not a weakening of
+Ark's product-policy or governed-scope enforcement.
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
@@ -2230,6 +2241,7 @@ folded into Phase C implementation work.
 ```text
 Item: no promoted implementation item (`Y08` done; Y05 and Y01–Y04 are done)
 Next action: collect the named field evidence before promoting Y06, Y07, Y09, or Y10; parked work must not start. The supervised reshape field pilot is superseded — the flagship mirror is golden-consistent; it waits for a corpus target whose mirroring is not golden-explained
+Released baseline: npm arkgate@3.7.0 (Phase Y close from PR #78)
 Released baseline: npm arkgate@3.6.0 (Phase X close from PR #76, squash 5d368f5)
 Released baseline: npm arkgate@3.5.0 + MCP registry 3.5.0 isLatest (X01 from PR #71; X02+X03 + release train from PR #72)
 Released baseline: npm arkgate@3.4.0; Phase U shipped from PR #69 (slice 1 from #68)

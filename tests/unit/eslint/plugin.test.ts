@@ -115,7 +115,7 @@ describe('ark/no-forbidden-globals', () => {
     ]);
   });
 
-  it('flags the exact process module dual and excludes type-only imports (Y08)', () => {
+  it('covers process module listeners while excluding type-only and non-exact forms (Y08)', () => {
     const { listener, reports } = run([{ globals: ['process'] }]);
     listener.ImportDeclaration({
       source: { value: 'node:process' },
@@ -145,23 +145,49 @@ describe('ark/no-forbidden-globals', () => {
       importKind: 'type',
       moduleReference: { expression: { value: 'node:process' } },
     } as never);
+    listener.ImportExpression({
+      source: { type: 'Literal', value: 'node:process' },
+    });
+    listener.ImportExpression({
+      source: { type: 'Identifier', value: 'node:process' },
+    });
+    listener.CallExpression({
+      callee: { type: 'Identifier', name: 'require' },
+      arguments: [{ type: 'Literal', value: 'node:process' }],
+    });
+    listener.CallExpression({
+      callee: { type: 'Identifier', name: 'require' },
+      arguments: [{ type: 'Identifier', name: 'moduleName' }],
+    });
+    listener.ExportNamedDeclaration({
+      source: { value: 'node:process' },
+      specifiers: [{ exportKind: 'value' }],
+    });
+    listener.ExportNamedDeclaration({
+      source: { value: 'node:process' },
+      exportKind: 'type',
+      specifiers: [{ exportKind: 'value' }],
+    });
+    listener.ExportNamedDeclaration({ specifiers: [{ exportKind: 'value' }] });
+    listener.ExportAllDeclaration({ source: { value: 'node:process' } });
+    listener.ExportAllDeclaration({
+      source: { value: 'node:process' },
+      exportKind: 'type',
+    });
 
-    expect(reports).toHaveLength(2);
-    expect(reports[0]).toMatchObject({
-      messageId: 'forbiddenModule',
-      data: {
-        name: 'process',
-        specifier: 'node:process',
-        importKind: 'import',
-      },
-    });
-    expect(reports[1]).toMatchObject({
-      messageId: 'forbiddenModule',
-      data: {
-        name: 'process',
-        specifier: 'node:process',
-        importKind: 'require',
-      },
-    });
+    expect(reports).toHaveLength(6);
+    expect(reports.map((report) => report.messageId)).toEqual(
+      Array(6).fill('forbiddenModule')
+    );
+    expect(
+      reports.map((report) => (report.data as { importKind: string }).importKind)
+    ).toEqual(['import', 'require', 'dynamic-import', 'require', 'export', 'export']);
+    expect(
+      reports.every(
+        (report) =>
+          (report.data as { name: string; specifier: string }).name === 'process' &&
+          (report.data as { name: string; specifier: string }).specifier === 'node:process'
+      )
+    ).toBe(true);
   });
 });

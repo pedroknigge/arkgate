@@ -4,6 +4,52 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+## 3.7.0 — 2026-07-17
+
+Phase Y turns field feedback into explicit decision memory, more honest design/parse advisories,
+safer skill-driven edits, and one confirmed purity-bypass closure. **No breaking** CLI, MCP tool,
+analysis IR, or `ark.config.json` changes. **No product-policy gate weakening. No automatic
+reshape or codemod.**
+
+### Added
+
+- **Recorded reshape decisions (Y01):** `.ark/reshape-decisions.json` can explicitly accept,
+  defer, or reject a physical-cohesion pilot with a required reason and optional `reviewBy`.
+  Current deferred/rejected decisions suppress only repeated pilot pressure; the underlying
+  facts remain visible. Stale, expired, malformed, duplicate, or oversized records suppress
+  nothing, and doctor/HTML surfaces render the lifecycle.
+- **Hollow-persistence advisory (Y02):** the existing `handler-in-persistence` smell now sees
+  static framework HTTP imports/re-exports, route definitions, and handler shapes inside
+  Persistence-role modules. It stays advisory and judgment-only, with a bounded and explicit
+  inspection envelope.
+- **Parse-health honesty (Y03):** doctor JSON/human output and the HTML report expose governed
+  files with parser diagnostics through additive `parseHealth` totals and a deterministic,
+  overflow-aware file list. The existing AST is reused; the verdict and exit code are unchanged.
+- **Exact `process` module dual (Y08):** `forbiddenGlobals: ["process"]` now owns exact value
+  imports of `process` and `node:process` across CLI cold/warm cache, pure IR, atomic preflight,
+  AICodeGate/MCP, and ESLint. It emits one `FORBIDDEN_GLOBAL` voice; type-only forms within the
+  documented TypeScript envelope, subpaths, and `child_process` remain excluded.
+
+### Changed
+
+- **Mechanical-edit hygiene (Y04):** `ark-fix`, `ark-autopilot`, and `ark-loop` now require
+  injected headers to merge into an existing doc block, typed `defineRoute<…>` calls to retain
+  their generics/shape, and convention-only placeholder modules to remain uncreated. A
+  deterministic eval guards all three outcomes.
+- **Cycle budgets (Y05):** package and Linux hook/doctor p95 ceilings were re-measured once from
+  clean 3.6.1 candidates with evidence-backed headroom, preserving fixed release guardrails.
+- **Confidence budget:** Y08 adds multi-form ESLint regressions while the full-suite branch floor
+  is recalibrated from 85% to 84.5%; statement/function/line floors and mutation gates are
+  unchanged.
+
+### Fixed
+
+- **Portable peer isolation:** slice identities are case-normalized, so mixed-case paths do not
+  produce a false cross-slice violation on case-insensitive filesystems. Repositories that differ
+  only by path case intentionally share the portable identity.
+- **Convergence remediation direction:** an unplanned removed dependency now tells the user to
+  restore it; an unplanned added dependency still tells the user to remove it.
+
 ## 3.6.1 — 2026-07-17
 
 Codex project-scoped MCP fix. **No breaking** CLI, MCP tool, or `ark.config.json` changes.

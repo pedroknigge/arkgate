@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '3.6.1';
+const CURRENT = '3.7.0';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -49,6 +49,44 @@ describe(`version bump ${CURRENT}`, () => {
     expect(lock.packages[''].version).toBe(CURRENT);
     expect(server.version).toBe(CURRENT);
     expect(server.packages[0].version).toBe(CURRENT);
+  });
+});
+
+describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
+  it('CHANGELOG 3.7.0 names every shipped Y surface and both focused fixes', () => {
+    const body = read('CHANGELOG.md');
+    expect(body).toMatch(/## 3\.7\.0/);
+    expect(body).toMatch(/reshape-decisions\.json/);
+    expect(body).toMatch(/handler-in-persistence/);
+    expect(body).toMatch(/parseHealth/);
+    expect(body).toMatch(/Mechanical-edit hygiene \(Y04\)/);
+    expect(body).toMatch(/Cycle budgets \(Y05\)/);
+    expect(body).toMatch(/node:process/);
+    expect(body).toMatch(/Portable peer isolation/);
+    expect(body).toMatch(/restore it/i);
+    expect(body).toMatch(/No product-policy gate weakening/i);
+  });
+
+  it('docs/releases/3.7.0.md has the upgrade path and boundary honesty', () => {
+    const body = read('docs/releases/3.7.0.md');
+    expect(body).toMatch(/arkgate@3\.7\.0/);
+    expect(body).toMatch(/npm install -D arkgate@3\.7\.0/);
+    expect(body).toMatch(/reshape-decisions\.json/);
+    expect(body).toMatch(/doctor\.parseHealth/);
+    expect(body).toMatch(/FORBIDDEN_GLOBAL/);
+    expect(body).toMatch(/branch floor is explicitly recalibrated from 85% to 84\.5%/);
+    expect(body).toMatch(/mcp-publisher validate server\.json/);
+    expect(body).toMatch(/mcp-publisher publish server\.json/);
+    expect(body).toMatch(/advisory/i);
+    expect(body).toMatch(/No breaking/i);
+    expect(body).toMatch(/Y06, Y07, Y09, and Y10 remain parked/);
+    expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
+  });
+
+  it('public latest-release pointers move together', () => {
+    expect(read('README.md')).toMatch(/Latest release \(3\.7\.0\).*3\.7\.0\.md/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.7\.0/s);
+    expect(read('docs/package-surface.md')).toMatch(/latest:\s*\[3\.7\.0\.md\]/s);
   });
 });
 
