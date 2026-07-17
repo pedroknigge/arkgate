@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '3.4.0';
+const CURRENT = '3.5.0';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -26,6 +26,34 @@ describe(`version bump ${CURRENT}`, () => {
     expect(lock.packages[''].version).toBe(CURRENT);
     expect(server.version).toBe(CURRENT);
     expect(server.packages[0].version).toBe(CURRENT);
+  });
+});
+
+describe('CHANGELOG + release note cover 3.5.0 field feedback (Phase X)', () => {
+  it('CHANGELOG 3.5.0 section names the X01–X03 surfaces and stays advisory', () => {
+    const body = read('CHANGELOG.md');
+    expect(body).toMatch(/## 3\.5\.0/);
+    expect(body).toMatch(/Report parity \(X01\)/);
+    expect(body).toMatch(/data-advisory/);
+    expect(body).toMatch(/Acknowledgment lifecycle \(X02\)/);
+    expect(body).toMatch(/reviewBy/);
+    expect(body).toMatch(/ackLifecycle/);
+    expect(body).toMatch(/Lateral-adapter smell \(X03\)/);
+    expect(body).toMatch(/own family/i);
+    expect(body).toMatch(/advisory/i);
+  });
+
+  it('docs/releases/3.5.0.md has upgrade path and advisory honesty', () => {
+    const body = read('docs/releases/3.5.0.md');
+    expect(body).toMatch(/arkgate@3\.5\.0/);
+    expect(body).toMatch(/npm install -D arkgate@3\.5\.0/);
+    expect(body).toMatch(/reviewBy/);
+    expect(body).toMatch(/ack expired/);
+    expect(body).toMatch(/data-advisory/);
+    expect(body).toMatch(/PaymentsAdapters -> PaymentsInfra/);
+    expect(body).toMatch(/additive and advisory/i);
+    expect(body).toMatch(/MCP registration is advisory/i);
+    expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
   });
 });
 

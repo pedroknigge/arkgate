@@ -123,12 +123,18 @@ Smell **ids** (stable JSON) plus **outcome** lines (plain language, Q02) on each
 contract itself (never of the code): `contract-bidirectional-allow` (both directions explicitly
 allowed between two layers), `contract-peripheral-depends-core` (audit/observability layer allowed
 into orchestration/persistence), `contract-lateral-adapter-allow` (adapter layer allowed into a
-sibling adapter layer), `contract-dead-rule` (rule references an empty or unknown layer, or is a
+sibling adapter layer; X03 — an adapter into its OWN family's infra base, e.g.
+`PaymentsAdapters -> PaymentsInfra`, is the sanctioned direction and does not fire),
+`contract-dead-rule` (rule references an empty or unknown layer, or is a
 same-layer no-op; `optional: true` layers are exempt). Advisory only: it never changes the
 verdict, `designFitness`, or `patternBets` — layer roles come from name heuristics, so treat a
 miss as a warning to read, not a defect to silence. A deliberate edge is acknowledged in
-`.ark/contract-smell-acks.json` (`{ acks: [{ id, edge, reason }] }`); `acknowledged` counts
-applied acks only, and a malformed sidecar or edge string suppresses nothing.
+`.ark/contract-smell-acks.json` (`{ acks: [{ id, edge, reason, reviewBy? }] }`); `acknowledged` counts
+applied acks only, and a malformed sidecar or edge string suppresses nothing. X02 — acks have a
+lifecycle: an optional `reviewBy` (`YYYY-MM-DD`) marks when the exception must be re-reviewed;
+past that date the ack stops applying and the smell returns annotated (`(ack expired …)`).
+Undated acks keep applying but are counted in `contractHealth.ackLifecycle.undated` — give
+migration acks a date so they cannot fossilize.
 
 **Effect capabilities (U03, evidence-only):** the analysis IR reports typed capability uses for
 seven closed ids (`network`, `filesystem`, `clock`, `randomness`, `environment`, `process`,

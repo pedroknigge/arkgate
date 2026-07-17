@@ -48,6 +48,30 @@ function governanceWeightHtml(gw) {
     </div>`;
 }
 
+function ackLifecycleHtml(lc) {
+  if (!lc) return '';
+  const rows = [];
+  if ((lc.expiredCount ?? 0) > 0) {
+    const edges = (lc.expired ?? [])
+      .map((e) => `<code>${esc(e.edge)}</code> (review-by ${esc(e.reviewBy)})`)
+      .join(' · ');
+    rows.push(
+      `<p><span class="tag warn">expired</span> ${lc.expiredCount} acknowledgment(s) past review-by — no longer applied, the smell is active again: ${edges}</p>`
+    );
+  }
+  if ((lc.malformed ?? 0) > 0) {
+    rows.push(
+      `<p><span class="tag warn">malformed</span> ${lc.malformed} acknowledgment(s) have a malformed review-by (expected YYYY-MM-DD) — ignored, not silently applied.</p>`
+    );
+  }
+  if ((lc.undated ?? 0) > 0) {
+    rows.push(
+      `<p class="muted">${lc.undated} applied acknowledgment(s) have no review-by date — add one so migration acks cannot fossilize.</p>`
+    );
+  }
+  return rows.join('\n');
+}
+
 function contractHealthHtml(health) {
   if (!health) return '';
   const smells = Array.isArray(health.smells) ? health.smells : [];
@@ -77,6 +101,7 @@ function contractHealthHtml(health) {
     ${invalid}
     ${body}
     ${ackNote}
+    ${ackLifecycleHtml(health.ackLifecycle)}
     ${governanceWeightHtml(health.governanceWeight)}
   </section>`;
 }

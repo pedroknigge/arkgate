@@ -4,6 +4,41 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+## 3.5.0 — 2026-07-16
+
+Field-feedback release (Phase X, from the amarilla adoption session): the HTML report reaches
+parity with the doctor and stays there by an executable rule, contract-smell acknowledgments gain
+a lifecycle so migration acks cannot fossilize, and the lateral-adapter smell stops firing on a
+family's own infrastructure base. Everything remains **advisory** — no verdict, `designFitness`,
+or gate behavior changes. **No breaking** CLI or `ark.config.json` changes. **No gate weaken.**
+
+### Added
+
+- **Report parity (X01):** `ark-check --report` now renders every doctor advisory — contract
+  health (smells with evidence/fix, acknowledgment honesty, invalid-sidecar warning), governance
+  weight, ambient state (idle/clean/findings with honest overflow), and capability-wall badges
+  (`pure` / `walls: …`) in the layers table. The rule is **executable**: `reportParity.test.ts`
+  enumerates the advisory keys `computeDoctorAdvisories` returns and fails CI when any key lacks
+  a `data-advisory` section — the report can never silently fall behind the product again.
+- **Acknowledgment lifecycle (X02):** a contract-smell ack may carry an optional `reviewBy`
+  (`YYYY-MM-DD`, strict round-trip validation). Past that date the ack **stops applying** and the
+  smell returns with `(ack expired …)` annotated evidence; a re-ack with a fresh date wins over a
+  dead entry, and once any dated ack exists for an edge the dated entries govern — a leftover
+  undated duplicate cannot resurrect an expired exception.
+  Undated acks keep applying (backward compatible) but are counted and surfaced —
+  doctor line, report note — even when every smell is suppressed. Malformed dates never apply
+  (fail-loud, like a sloppy edge); non-string `reviewBy` invalidates the file. Doctor JSON gains
+  `contractHealth.ackLifecycle` (`{ undated, malformed, expiredCount, expired[] }`).
+
+### Changed
+
+- **Lateral-adapter smell (X03):** `contract-lateral-adapter-allow` no longer fires when an
+  adapter layer reaches its **own family's infra base** (same leading name token and every
+  remaining target token an infra word — `Infra`/`Base`/`Core`/`Shared`/`Common`/`Kernel`/
+  `Platform`/`Foundation` — e.g. `PaymentsAdapters -> PaymentsInfra`; `PaymentsCoreAdapters` is
+  still a sibling). Cross-family edges, same-family non-infra siblings, and the reverse
+  direction (base → member) still fire.
+
 ## 3.4.0 — 2026-07-16
 
 Understandable execution, second slice (Phase U: U04–U07): the capability evidence shipped in

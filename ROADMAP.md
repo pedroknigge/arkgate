@@ -294,8 +294,8 @@ gated on the usual promotion discipline.
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 47b | `X01` | `done` | S | 3.4.0 shipped | The HTML report renders every doctor advisory, guarded by an executable parity rule |
-| 48b | `X02` | `parked` | S | `X01` | Contract-smell acknowledgments gain a lifecycle (review-by/staleness vs origin) so migration acks cannot fossilize |
-| 49b | `X03` | `parked` | S | — | Lateral-adapter smell recognizes family infrastructure (adapter → its own infra base is not a lateral peer) |
+| 48b | `X02` | `done` | S | `X01` | Contract-smell acknowledgments gain a lifecycle (review-by/staleness vs origin) so migration acks cannot fossilize |
+| 49b | `X03` | `done` | S | — | Lateral-adapter smell recognizes family infrastructure (adapter → its own infra base is not a lateral peer) |
 | 50b | `X04` | `parked` | L | `X02`, plan doc + ADR | Reshape co-pilot: physicalCohesion sensor + reshape plan as a T03 change map, agent-executed one pilot at a time (moves/merges are judgment; never a codemod) |
 
 ### X01 — Report parity with doctor advisories
@@ -318,6 +318,54 @@ renders the sections; `renderHtmlReport` gains the optional `advisories` payload
 CLI report path via `computeDoctorAdvisories`; the parity guard passes 4/4 including the full
 CLI `--report` end-to-end case and the wall badges. Field origin: the amarilla report on 3.4.0
 showed none of the three releases' surfaces.
+
+### X02 — Acknowledgment lifecycle (review-by)
+
+- **Status:** `done`
+- **Depends on:** `X01`
+
+**Outcome:** a contract-smell ack may carry an optional `reviewBy` (`YYYY-MM-DD`, strict
+round-trip validation). Past that date the ack **stops applying** and the smell returns with
+`(ack expired …)` annotated evidence — the lifecycle has teeth while staying advisory. Undated
+acks keep applying (backward compatible) but are counted and surfaced (doctor line, report note)
+**even when every smell is suppressed** — the exact fossilization case from the field. Malformed
+dates never apply (fail-loud, same discipline as a sloppy edge); a re-ack with a fresh date wins
+over a dead entry. Doctor JSON gains `contractHealth.ackLifecycle`
+(`{ undated, malformed, expiredCount, expired[] capped }`); the HTML report renders it inside the
+`contractHealth` section under the X01 parity rule.
+
+**Field origin (amarilla, 2026-07-16):** 29 acks, ~15 of them transitional migration debt with
+no review date — fossilizable by construction.
+
+**Local evidence (2026-07-16):** `bin/lib/contract-smells.mjs` (lifecycle status + resolveAck +
+summary), `bin/lib/html-report-advisories.mjs` (lifecycle rows), `x02AckLifecycle.test.ts`
+(14/14: semantics incl. same-day boundary, calendar round-trip, whole-file invalid on non-string
+`reviewBy`, re-ack precedence, doctor lines, fossilization visibility, report parity). Cross-model
+adversarial review found and fixed two lifecycle escapes: an undated leftover duplicate could
+resurrect an expired dated ack (now dated entries govern the edge), and the public
+`detectContractSmells` path never expired (now defaults `today` to the real clock; the pure
+`analyzeContractSmells` core keeps the clock injected).
+
+### X03 — Lateral smell recognizes family infrastructure
+
+- **Status:** `done`
+- **Depends on:** —
+
+**Outcome:** `contract-lateral-adapter-allow` no longer fires when an adapter reaches its **own
+family's infra base**: same leading name token (length ≥ 2, case-insensitive, camelCase/delimiter
+tokenization) and **every** remaining target token a whole infra word
+(`Infra(structure)`/`Base`/`Core`/`Shared`/`Common`/`Kernel`/`Platform`/`Foundation`) —
+`PaymentsCoreAdapters` is still a sibling (cross-model review finding, fixed from `some` to
+`every`). Cross-family edges, same-family non-infra siblings, and the reverse direction
+(base → member adapter) still fire. Name heuristic like the existing role regexes — a miss costs
+a warning line, never a verdict.
+
+**Field origin (amarilla, 2026-07-16):** the smell fired on `<Family>Adapters -> <Family>Infra`,
+the sanctioned direction inside a layer family.
+
+**Local evidence (2026-07-16):** `isFamilyInfrastructureEdge` in `bin/lib/contract-smells.mjs`;
+`x03FamilyInfra.test.ts` (7/7 incl. delimiter/case variants, embedded-word negative
+`PaymentsCoredumpGateway`, single-letter family negative).
 
 ### Next-round package budget guardrail
 
@@ -1740,8 +1788,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: none — X01 (report parity) done from the amarilla field session; X02–X04 are parked candidates
-Next action: maintainer merges the report-parity PR; promoting X04 (reshape co-pilot) requires its plan doc + ADR first (X02/X03 are S-sized warm-ups); other recorded candidates: transitive capability inference, strict ambient-state after a field corpus, the node:process dual, template-interpolation specifiers
+Item: none — X01 (report parity), X02 (ack lifecycle), and X03 (family infra) done from the amarilla field session; X04 is the remaining parked candidate
+Next action: maintainer merges the X02+X03 / 3.5.0 release PR, then the release train (tag, GitHub Release, publish-npm, MCP registry); promoting X04 (reshape co-pilot) requires its plan doc + ADR first; other recorded candidates: transitive capability inference, strict ambient-state after a field corpus, the node:process dual, template-interpolation specifiers
 Released baseline: npm arkgate@3.4.0; Phase U shipped from PR #69 (slice 1 from #68)
 Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub
 Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
