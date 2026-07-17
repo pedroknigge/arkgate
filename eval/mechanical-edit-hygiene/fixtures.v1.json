@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0",
+  "skillPaths": [
+    "templates/skills/ark-fix.md",
+    "templates/skills/ark-autopilot.md",
+    "templates/skills/ark-loop.md"
+  ],
+  "requiredSkillOutcomes": [
+    "merge into the existing doc comment",
+    "preserve the original typed `defineRoute<…>(opts, handler)` call",
+    "leave the placeholder file uncreated",
+    "previously clean file stays typecheck-clean"
+  ],
+  "cases": [
+    {
+      "id": "merge-existing-doc-comment",
+      "before": "/**\n * Existing behavior contract.\n */\nexport function quoteTotal(value: number): number {\n  return value;\n}\n",
+      "rejected": "/**\n * Ark boundary: pure calculation.\n */\n/**\n * Existing behavior contract.\n */\nexport function quoteTotal(value: number): number {\n  return value;\n}\n",
+      "accepted": "/**\n * Existing behavior contract.\n * Ark boundary: pure calculation.\n */\nexport function quoteTotal(value: number): number {\n  return value;\n}\n"
+    },
+    {
+      "id": "preserve-typed-define-route",
+      "before": "type RouteContext<T> = { params: T };\ndeclare function defineRoute<T>(opts: { method: 'GET' }, handler: (ctx: T) => string): unknown;\nconst projectRoute = defineRoute<RouteContext<{ id: string }>>(\n  { method: 'GET' },\n  (ctx) => ctx.params.id\n);\n",
+      "rejected": "type RouteContext<T> = { params: T };\ndeclare function defineRoute<T>(opts: { method: 'GET' }, handler: (ctx: T) => string): unknown;\nconst PROJECT_ROUTE_OPTS = { method: 'GET' };\nconst PROJECT_ROUTE_HANDLER = (ctx) => ctx.params.id;\nexport const GET = defineRoute(PROJECT_ROUTE_OPTS, PROJECT_ROUTE_HANDLER);\n",
+      "accepted": "type RouteContext<T> = { params: T };\ndeclare function defineRoute<T>(opts: { method: 'GET' }, handler: (ctx: T) => string): unknown;\nexport const GET = defineRoute<RouteContext<{ id: string }>>(\n  { method: 'GET' },\n  (ctx) => ctx.params.id\n);\n"
+    },
+    {
+      "id": "no-empty-placeholder",
+      "before": null,
+      "rejected": "import 'server-only';\nexport {};\n",
+      "accepted": null
+    }
+  ]
+}

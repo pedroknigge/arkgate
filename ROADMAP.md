@@ -339,7 +339,7 @@ lives only in prose: each names the gate that promotes it, and none may start wh
 | 55 | `Y01` | `done` | M | `X04`, `X02` | A rejected reshape pilot is a recorded decision the doctor respects, not advisory pressure re-fought every session |
 | 56 | `Y02` | `done` | M | `P02` | Deterministic hollow-persistence smell: HTTP/route definition living in Persistence-role layers is visible as an advisory |
 | 57 | `Y03` | `done` | S | — | Governed files that fail to parse are surfaced honestly (a file the scanner cannot read is never silently "clean") |
-| 58 | `Y04` | `todo` | S | — | Skill mechanical-edit hygiene rules close the three observed codemod defects |
+| 58 | `Y04` | `done` | S | — | Skill mechanical-edit hygiene rules close the three observed codemod defects |
 | 59 | `Y06` | `parked` | S | gate: field case | `pure`-layer opt-in nudge: doctor suggests declaring purity when the golden pattern names pure modules but no layer opts in |
 | 60 | `Y07` | `parked` | L | gate: `Y06` corpus | Strict (blocker-grade) ambient mutable-state diagnostics — only after a real `pure: true` field corpus exists (U05 condition unchanged) |
 | 61 | `Y08` | `parked` | S | gate: field case | `node:process` module-import dual of the `process` ambient forbidden global is detected with the same evidence discipline |
@@ -526,7 +526,7 @@ allowlist, generated parity checks, `git diff --check`, and strict architecture 
 
 ### Y04 — Skill mechanical-edit hygiene
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** —
 
 **Outcome:** the skill templates that drive mechanical edits (`ark-fix`, `ark-autopilot`,
@@ -539,6 +539,19 @@ fixture reproducing the three shapes.
 
 **Non-negotiables:** skills-and-eval change only; no engine surface grows; the rules are stated
 as outcomes ("previously clean file stays typecheck-clean after the edit"), not as prose advice.
+
+**Implemented shape:** `ark-fix`, `ark-autopilot`, and `ark-loop` carry the same outcome gate:
+merge an injected header into the existing doc comment, reconstruct the original typed
+`defineRoute<…>(opts, handler)` call without untyped split constants, and leave convention-only
+placeholder modules uncreated. Every kept mechanical edit must leave a previously clean file
+typecheck-clean.
+
+**Local evidence (2026-07-17):** the deterministic `eval:mechanical-edit-hygiene` fixture
+reproduces all three rejected shapes and their accepted outcomes. Its runner verifies one merged
+doc block with both contracts retained, a real `noImplicitAny` regression for the split route and
+zero diagnostics for the reconstructed typed call, no created placeholder file, and exact
+outcome coverage in all three skills. Focused test, typecheck, JavaScript syntax, package-file
+allowlist, module budgets, generated parity, `git diff --check`, and strict architecture passed.
 
 ### Y06–Y10 — parked retained candidates (promotion gates on record)
 
@@ -2193,8 +2206,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: Y04 — skill mechanical-edit hygiene (`todo`; Y05 and Y01–Y03 are done)
-Next action: implement the three field-observed skill/eval guards in Y04 without growing engine surfaces. Y06–Y10 hold every retained candidate as a parked queue entry with a named promotion gate (pure-layer nudge → strict ambient-state; node:process dual; template-interpolation specifiers; transitive capability inference). The supervised reshape field pilot is superseded — the flagship mirror is golden-consistent; it waits for a corpus target whose mirroring is not golden-explained
+Item: Y08 — `node:process` dual (promotion gate met; Y05 and Y01–Y04 are done)
+Next action: record the deterministic cross-adapter bypass evidence and promote Y08 from parked to todo before implementation. Y06, Y07, Y09, and Y10 remain parked behind their named field gates. The supervised reshape field pilot is superseded — the flagship mirror is golden-consistent; it waits for a corpus target whose mirroring is not golden-explained
 Released baseline: npm arkgate@3.6.0 (Phase X close from PR #76, squash 5d368f5)
 Released baseline: npm arkgate@3.5.0 + MCP registry 3.5.0 isLatest (X01 from PR #71; X02+X03 + release train from PR #72)
 Released baseline: npm arkgate@3.4.0; Phase U shipped from PR #69 (slice 1 from #68)

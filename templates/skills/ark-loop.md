@@ -82,6 +82,13 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 
 Never auto: free value uses of imports, multi-import files, dynamic import/require, forbidden globals, cycles, port-proof inject, multi-file adapter scaffolding without proof.
 
+## Mechanical-edit hygiene (Y04 — outcome gate)
+
+- Header injection must **merge into the existing doc comment**; the kept result has one `/**`, not stacked headers.
+- Route completion or movement must **preserve the original typed `defineRoute<…>(opts, handler)` call**; reconstruct that call instead of extracting untyped opts/handler constants that drop generics or contextual typing.
+- A convention-only `*-data.ts` stub is not a fix: move the real code or **leave the placeholder file uncreated**; never write `import "server-only"; export {}` as an empty naming token.
+- Keep the edit only when the **previously clean file stays typecheck-clean**. Otherwise roll it back and treat the change as judgment.
+
 ## Reshape pilots (X04 — physical cohesion, advisory)
 
 When `ark-check --doctor --json` carries `doctor.physicalCohesion.reshapePilot.nextPilot`,

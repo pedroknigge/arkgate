@@ -152,6 +152,13 @@ repo so the next agent session continues the same pilot — still never auto-app
     populated cores are `optional: true`, run `ark-check --ratchet-cores` then `--doctor`.
     Never ratchet while active violations remain or false-green gap is open.
 
+## Mechanical-edit hygiene (Y04 — outcome gate)
+
+- Header injection must **merge into the existing doc comment**; the kept result has one `/**`, not stacked headers.
+- Route completion or movement must **preserve the original typed `defineRoute<…>(opts, handler)` call**; reconstruct that call instead of extracting untyped opts/handler constants that drop generics or contextual typing.
+- A convention-only `*-data.ts` stub is not a fix: move the real code or **leave the placeholder file uncreated**; never write `import "server-only"; export {}` as an empty naming token.
+- Keep the edit only when the **previously clean file stays typecheck-clean**. Otherwise roll it back and treat the change as judgment.
+
 ## Never
 
 - Disable rules, broaden allows, or baseline **new** debt to “finish”.

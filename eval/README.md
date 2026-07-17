@@ -175,6 +175,22 @@ Live agents remain optional/nightly (`eval:agent`); not required for this harnes
 
 Unit test: `tests/unit/static-check/loopCostEval.test.ts`.
 
+### Mechanical-edit hygiene harness (Y04 — fixture-measured, CI-safe)
+
+`npm run eval:mechanical-edit-hygiene` guards the three field-observed shapes that a
+skill-driven mechanical edit must not reintroduce: stacked doc comments, a typed
+`defineRoute<…>(opts, handler)` call split into untyped constants, and an empty
+`server-only` placeholder module. The committed fixture contains each rejected and accepted
+shape; the runner proves the original and accepted source stay typecheck-clean under
+`noImplicitAny`, proves the route split fails, and requires the same outcome contract in
+`ark-fix`, `ark-autopilot`, and `ark-loop`. No live model or product-engine scanner is involved.
+
+```bash
+npm run eval:mechanical-edit-hygiene
+```
+
+Unit test: `tests/unit/eval/mechanicalEditHygiene.test.ts`.
+
 ### Static corpus check (CI, no agent)
 
 ```bash

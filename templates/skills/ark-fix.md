@@ -105,6 +105,13 @@ If the “fix” is really a missing business intent or Domain home for a rule:
 - Prefer mechanical-safe kinds when the plan tags them; otherwise design judgment carefully.
 - Code only — no DB migrations unless user asked.
 
+## Mechanical-edit hygiene (Y04 — outcome gate)
+
+- Header injection must **merge into the existing doc comment**; the kept result has one `/**`, not stacked headers.
+- Route completion or movement must **preserve the original typed `defineRoute<…>(opts, handler)` call**; reconstruct that call instead of extracting untyped opts/handler constants that drop generics or contextual typing.
+- A convention-only `*-data.ts` stub is not a fix: move the real code or **leave the placeholder file uncreated**; never write `import "server-only"; export {}` as an empty naming token.
+- Keep the edit only when the **previously clean file stays typecheck-clean**. Otherwise roll it back and treat the change as judgment.
+
 ## Reshape findings (X04 — never mechanical)
 
 If `doctor.physicalCohesion` fires while you fix: do **not** fold reshape moves into your fix
