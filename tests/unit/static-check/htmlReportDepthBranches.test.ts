@@ -118,12 +118,12 @@ describe('html-report-depth branch matrix', () => {
       designSmells: [{ id: 'god-module', outcome: 'big' }],
       pilotLoop: { active: false },
       postGreenPath: { action: 'long action text' },
-      goldenPattern: { present: true, name: 'tokko-cache', norm: 'split by concern', examplePath: 'lib/repos/tokko-cache/index.ts' },
+      goldenPattern: { present: true, name: 'crm-cache', norm: 'split by concern', examplePath: 'lib/repos/crm-cache/index.ts' },
     });
     expect(weakAdapt).toContain('SUGGEST · design-weak');
-    expect(weakAdapt).toContain('tokko-cache');
+    expect(weakAdapt).toContain('crm-cache');
     expect(weakAdapt).toContain('long action text');
-    expect(weakAdapt).toContain('lib/repos/tokko-cache/index.ts');
+    expect(weakAdapt).toContain('lib/repos/crm-cache/index.ts');
 
     const noGolden = renderDesignDepthStrip({
       mode: 'enforce',

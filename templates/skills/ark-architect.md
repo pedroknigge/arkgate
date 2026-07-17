@@ -112,6 +112,15 @@ the same files or weaken the gate.
 - Default to smallest viable phase 1; unlock phase 2 only when the user describes need.
 - All user-facing copy is **English**.
 
+## Merge cards (X04 reshape — judgment only)
+
+When `doctor.physicalCohesion` reports a mirrored concept and the user asks whether files
+should be **merged**, treat it as domain modeling, never deduplication (field fact: zero
+structural clones among 123 same-concept files). Produce a **merge card** per candidate group:
+which files, the domain concept they express, 2–3 shapes the merged module could take, and what
+each shape costs — **no default action, no auto-merge, never a codemod**. Physical **moves**
+belong to `/ark-loop`'s pilot loop; your job here is the judgment about what the concept IS.
+
 ## Verify and report
 
 End with `ark-check --root . --config ark.config.json --strict-config` when the

@@ -286,7 +286,7 @@ published from `docs/releases/3.2.0.md`; `publish-npm.yml` run 29455032343 succe
 
 ### Phase X — field feedback: report parity, ack lifecycle, reshape (candidate)
 
-Origin: 2026-07-16 field session over **amarilla-platform** (2,996 files, 12 layers, ENFORCE at
+Origin: 2026-07-16 field session over **the field-adopter platform** (2,996 files, 12 layers, ENFORCE at
 100% with keep-empty baseline — the strongest adoption state on record). Reading its report and
 tree surfaced four gaps, one implemented immediately by owner directive; the rest are candidates
 gated on the usual promotion discipline.
@@ -296,10 +296,10 @@ gated on the usual promotion discipline.
 | 47b | `X01` | `done` | S | 3.4.0 shipped | The HTML report renders every doctor advisory, guarded by an executable parity rule |
 | 48b | `X02` | `done` | S | `X01` | Contract-smell acknowledgments gain a lifecycle (review-by/staleness vs origin) so migration acks cannot fossilize |
 | 49b | `X03` | `done` | S | — | Lateral-adapter smell recognizes family infrastructure (adapter → its own infra base is not a lateral peer) |
-| 50b | `X04` | `parked` | L | `X02`, plan doc + ADR | Reshape co-pilot: physicalCohesion sensor + reshape plan as a T03 change map, agent-executed one pilot at a time (moves/merges are judgment; never a codemod) |
-| 51b | `X05` | `parked` | S | `X02` | Stale acknowledgments are surfaced (`ackLifecycle.stale` + human line) so an ack orphaned by a quieted smell is deleted, not silently carried |
-| 52b | `X06` | `parked` | S | `X03` | Family-infra heuristic covers mid-name families (`<Domain><Family>Adapters -> <Family>Infrastructure`) without weakening the cross-family default |
-| 53b | `X07` | `parked` | XS | `X01` | HTML report evidence lists carry their own honest `(+N more)` overflow marker (today capped at 6 with no marker) |
+| 50b | `X04` | `done` | L | `X02`, plan doc + ADR | Reshape co-pilot: physicalCohesion sensor + reshape plan as a T03 change map, agent-executed one pilot at a time (moves/merges are judgment; never a codemod) |
+| 51b | `X05` | `done` | S | `X02` | Stale acknowledgments are surfaced (`ackLifecycle.stale` + human line) so an ack orphaned by a quieted smell is deleted, not silently carried |
+| 52b | `X06` | `done` | S | `X03` | Family-infra heuristic covers mid-name families (`<Domain><Family>Adapters -> <Family>Infrastructure`) without weakening the cross-family default |
+| 53b | `X07` | `done` | XS | `X01` | HTML report evidence lists carry their own honest `(+N more)` overflow marker (today capped at 6 with no marker) |
 
 X01–X03 shipped in **`arkgate@3.5.0`** (2026-07-16): X01 from PR
 [#71](https://github.com/pedroknigge/arkgate/pull/71) (squash `a5106b7`); X02+X03 and the release
@@ -308,9 +308,9 @@ green, cross-model review findings fixed in-branch). Signed tag `v3.5.0`; GitHub
 from `docs/releases/3.5.0.md`; `publish-npm.yml` run 29545346848 succeeded and `npm view arkgate`
 shows `3.5.0` on `latest`. Each item retains commit + review evidence below.
 
-### 3.5.0 field validation (amarilla worktree, 2026-07-16)
+### 3.5.0 field validation (field-adopter worktree, 2026-07-16)
 
-Agent session over the amarilla worktree (2,996 governed files, 12 layers, ENFORCE 100%, 29 real
+Agent session over the field-adopter worktree (2,996 governed files, 12 layers, ENFORCE 100%, 29 real
 acks) installed `arkgate@3.5.0` and exercised every Phase X surface. Nothing pushed or merged;
 sidecar restored byte-identical (sha `0945fa87…`).
 
@@ -332,7 +332,7 @@ sidecar restored byte-identical (sha `0945fa87…`).
 - **X05 origin:** the edge X03 quieted (`PersistenceAdapters -> PersistenceInfrastructure`)
   orphaned its ack silently — file has 29, doctor applies 28, and nothing says "1 ack matches no
   detected edge; delete it".
-- **X06 origin:** amarilla names domain-scoped adapters with the domain as leading token and the
+- **X06 origin:** the field adopter names domain-scoped adapters with the domain as leading token and the
   family mid-name: `HoursPersistenceAdapters` / `MoneyPersistenceAdapters` over
   `PersistenceInfrastructure`. The leading-token rule sees `Hours ≠ Persistence` and still fires
   on 2 of the 3 member→base edges while the unprefixed one went quiet — inconsistent to the
@@ -348,6 +348,94 @@ sidecar restored byte-identical (sha `0945fa87…`).
 - **Ambient-state candidate evidence:** the flagship adopter has zero `pure: true` layers after
   full adoption — the strict-mode candidate still has NO field corpus; consider a doctor nudge to
   opt in when the golden pattern names pure modules but no layer declares purity.
+
+### X05–X07 — field warm-ups (stale acks, mid-name families, evidence overflow)
+
+- **Status:** `done` (all three)
+- **Depends on:** `X02` / `X03` / `X01` respectively
+
+**X05 outcome:** `analyzeContractSmells` collects detected canonical edges BEFORE ack filtering;
+any ack entry matching none (orphaned by a fixed contract or quieted heuristic, unknown id,
+typo'd edge) lands in `ackLifecycle.stale` (`staleCount` + list capped at 12). Doctor prints a
+dim line with the exact edges ("fix the edge string or delete the entry"), the report renders it
+with its own overflow marker, and both surface even at zero visible smells. An invalid sidecar
+reports zero stale — a broken file is never inspected.
+
+**X06 outcome:** `isFamilyInfrastructureEdge` matches the target's family token against ANY
+source token (case-insensitive, length ≥ 2), not only the leading one — the target must still be
+a pure `<Family><InfraWords…>` base (every remaining token an infra word), so non-base siblings,
+cross-family edges, and base → member keep firing. Hardening from self-review: a generic role
+word (`adapter(s)`/`gateway(s)`) never counts as a family token — otherwise `AdaptersCore` would
+read as every `*Adapters` layer's base and silently quiet genuine cross-family edges
+(`Persistence` stays a valid family).
+
+**X07 outcome:** the report's per-finding evidence list announces its 6-item cap with
+`…(+N more in doctor JSON)`; at or under the cap no marker appears.
+
+**Live validation (field-adopter worktree, 2026-07-17, local build):** doctor over the real tree now
+reports `acknowledged: 26`, `staleCount: 3` listing exactly the three orphaned
+`*->PersistenceInfrastructure` acks (the X03-quieted edge plus the two X06 mid-name edges
+`HoursPersistenceAdapters` / `MoneyPersistenceAdapters`), with the human line naming them —
+the adopter now gets told precisely what to delete. Zero visible smells, verdict untouched.
+
+**Local evidence (2026-07-17):** `x05StaleAcks.test.ts` (7/7), X06 describe block in
+`x03FamilyInfra.test.ts` with the field adopter's verbatim layer names (13/13 total), X07 case in
+`reportParity.test.ts`; `x02AckLifecycle.test.ts` updated for the extended `ackLifecycle` shape.
+Cross-model review: 2 findings fixed (stale output now sorted stable under sidecar reordering;
+the report's stale note says plain `(+N more)` instead of over-promising "in doctor JSON" past
+the JSON cap, and the expired note gained the same honest marker) and 1 rejected as the intended
+X06 shape (`PaymentsPersistenceAdapters -> PersistenceInfrastructure` is family membership by
+design — pinned as a documented-trade-off test).
+
+### X04 — Reshape co-pilot (physicalCohesion + proposed pilot + skill deepening)
+
+- **Status:** `done` (R1–R3; the supervised field pilot on a real adopter tree remains a
+  post-release activity by design)
+- **Depends on:** `X02`, plan doc + ADR — both met:
+  [plan](docs/plans/reshape-copilot/README.md), [ADR 0010](docs/adr/0010-reshape-copilot-boundary.md)
+  (**Accepted**, thresholds calibrated on the live corpus before any code)
+
+**Outcome:** the doctor sees physical shape. `doctor.physicalCohesion` reports concept clusters
+per anchor directory — concentration, not volume (dispersed `use-*` hooks never fire) — with
+fixed corpus-calibrated thresholds (`maxCluster ≥ 40` OR ≥2 anchors ≥ 20), honest capping, and
+`fixedByConvention` marking for `app/`/`pages/` anchors. `reshapePilot.nextPilot` is a
+**proposed, never applied** Q04-style card (one at a time; smallest convention-free anchor;
+`moveSample`/`movesTotal`; kill switch; `doNot[]` hard lines). `/ark-loop` gained the
+pilot-execution loop (change map + atomic preflight before any move); `/ark-architect` gained
+merge cards (merges are domain modeling — zero structural clones in the field corpus);
+`/ark-fix` gained the no-reshape-in-fix-batch rule. `notAScore`; verdict, `designFitness`, and
+`patternBets` pinned untouched. The report section existed from the first commit because the
+X01 parity guard fails CI without it — the standing rule enforcing itself on its first new
+consumer.
+
+**Live validation (field-adopter worktree, 2026-07-17, local build):** the sensor reproduced the ADR
+calibration table exactly — 4 mirrored concepts (`projects` 561 files across
+`src/app/api` 221*conv · `api-handlers` 146 · `repositories` 124 · `(dashboard)` 61*conv;
+`timesheet` 203; `people` 129; `process` 98) and the pilot targeted the smallest movable anchor
+(`src/lib/repositories`, 124 moves) with real from/to paths into `src/features/projects/`.
+
+**Local evidence (2026-07-17):** `bin/lib/physical-cohesion.mjs` (231/260 budget),
+`x04PhysicalCohesion.test.ts` (15/15 — ADR fixture obligations: field-corpus-shape positive,
+healthy-tree + self-hosting negatives, determinism under shuffle, honest truncation,
+convention-only pilot refusal, below-display-floor pilot, scaffold-segment regression,
+loop-convergence regression, pinned advisory invariants); parity guard extended automatically;
+`doctor-plan.mjs` held at exactly 920/920.
+
+**Multi-repo harness (pre-merge, owner-requested):** fresh shallow clones of five known repos
+(five well-known open-source repositories of different shapes) against the local build — zero crashes,
+4/4 parity sections in every report, doctor 204–621ms, zero false positives after the harness
+caught and fixed the scaffold-segment defect (nest: garbage `packages` concept over 91
+`index.ts` files with a nonsense pilot).
+
+**End-to-end pilot loop (executed, synthetic fixture with a real import graph):** pilot 1
+(12 repository files → `src/features/projects/`, imports updated) kept the gate green and
+advanced the doctor; the NAIVE pilot 2 was **blocked by the gate** (45 route violations, correct
+`/ark-contract` remediation — the preflight protecting exactly as designed) and the kill switch
+(`git reset --hard`) restored a green tree; the judgment pilot 2 (contract patterns via
+`/ark-contract` + handlers into the feature subdir) passed the gate; re-doctor then reported
+**convergence**: "every remaining anchor is fixed by framework convention or already
+consolidated". Two loop defects found and fixed in the process: the consolidation target (and
+its subtree) must never be re-proposed as a source.
 
 ### X01 — Report parity with doctor advisories
 
@@ -367,7 +455,7 @@ doctor advisory without its report section breaks CI by construction.
 **Local evidence (2026-07-16):** `bin/lib/html-report-advisories.mjs` (budgeted, 200 LOC cap)
 renders the sections; `renderHtmlReport` gains the optional `advisories` payload wired from the
 CLI report path via `computeDoctorAdvisories`; the parity guard passes 4/4 including the full
-CLI `--report` end-to-end case and the wall badges. Field origin: the amarilla report on 3.4.0
+CLI `--report` end-to-end case and the wall badges. Field origin: the field-adopter report on 3.4.0
 showed none of the three releases' surfaces.
 
 ### X02 — Acknowledgment lifecycle (review-by)
@@ -385,7 +473,7 @@ over a dead entry. Doctor JSON gains `contractHealth.ackLifecycle`
 (`{ undated, malformed, expiredCount, expired[] capped }`); the HTML report renders it inside the
 `contractHealth` section under the X01 parity rule.
 
-**Field origin (amarilla, 2026-07-16):** 29 acks, ~15 of them transitional migration debt with
+**Field origin (field session, 2026-07-16):** 29 acks, ~15 of them transitional migration debt with
 no review date — fossilizable by construction.
 
 **Local evidence (2026-07-16):** `bin/lib/contract-smells.mjs` (lifecycle status + resolveAck +
@@ -411,7 +499,7 @@ tokenization) and **every** remaining target token a whole infra word
 (base → member adapter) still fire. Name heuristic like the existing role regexes — a miss costs
 a warning line, never a verdict.
 
-**Field origin (amarilla, 2026-07-16):** the smell fired on `<Family>Adapters -> <Family>Infra`,
+**Field origin (field session, 2026-07-16):** the smell fired on `<Family>Adapters -> <Family>Infra`,
 the sanctioned direction inside a layer family.
 
 **Local evidence (2026-07-16):** `isFamilyInfrastructureEdge` in `bin/lib/contract-smells.mjs`;
@@ -1839,8 +1927,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: none — X01–X03 shipped in arkgate@3.5.0 and field-validated on amarilla; parked queue: X05 (stale acks, S), X06 (mid-name family heuristic, S), X07 (report evidence overflow marker, XS), X04 (reshape co-pilot, L)
-Next action: promote X05–X07 as S/XS warm-ups when a session opens (each has field evidence recorded above); promoting X04 requires its plan doc + ADR first (live corpus recorded: 211 route.ts vs 167 handlers); other recorded candidates: transitive capability inference, strict ambient-state after a field corpus (still no corpus — consider the pure-layer doctor nudge), the node:process dual, template-interpolation specifiers
+Item: none — Phase X complete: X01–X03 shipped in 3.5.0; X04–X07 implemented, live-validated on the field adopter, multi-repo-harness validated, and the pilot loop executed end to end; **release 3.6.0 prepared in-branch** (version sync, CHANGELOG, release note with checklist, q06 CURRENT)
+Next action: maintainer merges the chain #73 → #74 → #75, then authorizes the 3.6.0 train (tag, GitHub Release, publish-npm, MCP registry); the supervised reshape field pilot on the field adopter is the first post-release activity; other recorded candidates: transitive capability inference, strict ambient-state after a field corpus (still no corpus — consider the pure-layer doctor nudge), the node:process dual, template-interpolation specifiers
 Released baseline: npm arkgate@3.5.0 + MCP registry 3.5.0 isLatest (X01 from PR #71; X02+X03 + release train from PR #72)
 Released baseline: npm arkgate@3.4.0; Phase U shipped from PR #69 (slice 1 from #68)
 Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub

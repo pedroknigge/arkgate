@@ -182,6 +182,48 @@ describe('X01 report parity — the standing rule', () => {
     expect(gw).toContain('Acknowledged edges applied: <b>3</b>');
   });
 
+  it('X07 — a finding with more than six evidence items announces the cut', () => {
+    const esc = (v: unknown) => String(v);
+    const evidence = Array.from({ length: 12 }, (_, i) => `edge:A${i}->B${i}`);
+    const html = renderAdvisorySections(
+      {
+        contractHealth: {
+          smells: [
+            {
+              id: 'contract-lateral-adapter-allow',
+              message: 'm',
+              outcome: 'o',
+              evidence,
+              fix: 'f',
+            },
+          ],
+          acknowledged: 0,
+          ackFile: { path: '.ark/contract-smell-acks.json' },
+          governanceWeight: { weight: 'unknown' },
+        },
+      },
+      esc
+    );
+    expect(html).toContain('edge:A5->B5');
+    expect(html).not.toContain('edge:A6->B6');
+    expect(html).toContain('…(+6 more in doctor JSON)');
+    // At or under the cap, no marker appears.
+    const short = renderAdvisorySections(
+      {
+        contractHealth: {
+          smells: [
+            { id: 'contract-dead-rule', message: 'm', outcome: 'o', evidence: evidence.slice(0, 6), fix: 'f' },
+          ],
+          acknowledged: 0,
+          ackFile: { path: '.ark/contract-smell-acks.json' },
+          governanceWeight: { weight: 'unknown' },
+        },
+      },
+      esc
+    );
+    expect(short).not.toContain('more in doctor JSON');
+  });
+
   it('the full CLI --report path emits the sections end to end', () => {
     const root = mk();
     project(root);

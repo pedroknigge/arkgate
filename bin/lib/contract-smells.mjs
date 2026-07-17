@@ -63,19 +63,26 @@ function nameTokens(name) {
 }
 
 /**
- * X03 — an adapter reaching its OWN family's infrastructure base is not a
- * lateral peer: same leading family token and EVERY remaining target token
- * reads as an infra base (Infra/Base/Core/Shared/…) — `PaymentsCoreAdapters`
- * is still a sibling, not a base. Field origin: amarilla, where
- * `<Family>Adapters -> <Family>Infra` fired as adapter-to-adapter.
+ * X03/X06 — an adapter reaching its OWN family's infrastructure base is not a
+ * lateral peer: the target reads as `<Family><InfraWords…>` and the source
+ * carries the family token ANYWHERE in its name (X06, field corpus names
+ * domain-scoped adapters `HoursPersistenceAdapters` over
+ * `PersistenceInfrastructure` — the family sits mid-name). EVERY remaining
+ * target token must be an infra word (Infra/Base/Core/Shared/…) —
+ * `PaymentsCoreAdapters` is still a sibling, not a base. The reverse
+ * direction (base → member) never matches: the target must BE the base.
  * Name heuristic like the role regexes above — a miss costs a warning line.
  */
 function isFamilyInfrastructureEdge(from, to) {
   const fromTokens = nameTokens(from);
   const toTokens = nameTokens(to);
   if (fromTokens.length === 0 || toTokens.length < 2) return false;
-  const family = toTokens[0];
-  if (family.length < 2 || family.toLowerCase() !== fromTokens[0].toLowerCase()) return false;
+  const family = toTokens[0].toLowerCase();
+  // A generic role word is not a family: `AdaptersCore` must not read as the
+  // "Adapters family" base for every *Adapters layer — that would silently
+  // quiet genuine cross-family edges. (`Persistence` stays a valid family.)
+  if (/^(adapters?|gateways?)$/.test(family)) return false;
+  if (family.length < 2 || !fromTokens.some((t) => t.toLowerCase() === family)) return false;
   return toTokens.slice(1).every((t) => FAMILY_INFRA_RE.test(t));
 }
 
@@ -290,9 +297,28 @@ export function analyzeContractSmells(
     }
   }
 
+  // X05 — an ack that matches no detected edge is stale: orphaned by a fixed
+  // contract, a quieted heuristic, or a typo. Detected BEFORE ack filtering.
+  const detectedEdges = new Map();
+  for (const [id, entries] of Object.entries(findings)) {
+    detectedEdges.set(id, new Set(entries.map((e) => e.edge).filter((e) => e != null)));
+  }
+  const staleEdges = [];
+  if (ackState && !ackState.invalid && Array.isArray(ackState.acks)) {
+    for (const a of ackState.acks) {
+      const canonical = normalizeAckEdge(a.id, a.edge);
+      if (canonical != null && detectedEdges.get(a.id)?.has(canonical)) continue;
+      staleEdges.push({ id: a.id, edge: a.edge });
+    }
+    // Stable under sidecar reordering, like every other output here.
+    staleEdges.sort((a, b) =>
+      a.id === b.id ? (a.edge < b.edge ? -1 : a.edge > b.edge ? 1 : 0) : a.id < b.id ? -1 : 1
+    );
+  }
+
   const smells = [];
   let matchedAcks = 0;
-  const ackLifecycle = { undated: 0, malformed: 0, expired: [] };
+  const ackLifecycle = { undated: 0, malformed: 0, expired: [], stale: staleEdges };
   for (const id of CONTRACT_SMELL_IDS) {
     const entries = findings[id];
     if (!entries || entries.length === 0) continue;
@@ -545,9 +571,9 @@ export function formatContractHealthLines(smells, health) {
   const gw = health?.governanceWeight;
   const weightNoteworthy = gw?.weight === 'heavy' || gw?.weight === 'light';
   const lc = health?.ackLifecycle;
-  // Undated acks must surface even when every smell is suppressed — that is
-  // exactly the fossilization case X02 exists to catch.
-  const lifecycleNoteworthy = (lc?.undated ?? 0) > 0;
+  // Undated and stale acks must surface even when every smell is suppressed —
+  // fossilization (X02) and orphaned entries (X05) hide exactly there.
+  const lifecycleNoteworthy = (lc?.undated ?? 0) > 0 || (lc?.staleCount ?? 0) > 0;
   if (list.length === 0 && !health?.ackFile?.invalid && !weightNoteworthy && !lifecycleNoteworthy) {
     return rows;
   }
@@ -591,6 +617,14 @@ export function formatContractHealthLines(smells, health) {
       text: `${lc.undated} applied acknowledgment(s) have no review-by date — add one so migration acks cannot fossilize.`,
     });
   }
+  if ((lc?.staleCount ?? 0) > 0) {
+    const shown = (lc.stale ?? []).slice(0, 4).map((s) => s.edge);
+    const more = lc.staleCount > shown.length ? ` …(+${lc.staleCount - shown.length} more)` : '';
+    rows.push({
+      mark: 'dim',
+      text: `${lc.staleCount} acknowledgment(s) match no detected edge — stale; fix the edge string or delete the entry: ${shown.join(', ')}${more}`,
+    });
+  }
   if (weightNoteworthy) {
     rows.push({
       mark: 'warn',
@@ -610,20 +644,23 @@ export function formatContractHealthLines(smells, health) {
  * `acknowledged` counts ack entries that MATCHED a detected edge (stale acks count 0).
  * X02 — `ackLifecycle` reports how applied acks age: `undated` applied without
  * a review-by, `expired` past it (no longer applied), `malformed` bad dates.
+ * X05 — `stale` counts ack entries matching NO detected edge (orphaned or
+ * typo'd); they suppress nothing and should be fixed or deleted.
  *
  * @param {ReturnType<typeof detectContractSmells>} smells
  * @param {ReturnType<typeof loadContractSmellAcks>} ackState
  * @param {number} [matchedAcks]
- * @param {{ undated: number, malformed: number, expired: Array<{id: string, edge: string, reviewBy: string}> }} [ackLifecycle]
+ * @param {{ undated: number, malformed: number, expired: Array<{id: string, edge: string, reviewBy: string}>, stale: Array<{id: string, edge: string}> }} [ackLifecycle]
  */
 export function summarizeContractHealth(
   smells,
   ackState = { exists: false, acks: [] },
   matchedAcks = 0,
-  ackLifecycle = { undated: 0, malformed: 0, expired: [] }
+  ackLifecycle = { undated: 0, malformed: 0, expired: [], stale: [] }
 ) {
   const list = Array.isArray(smells) ? smells : [];
   const expired = Array.isArray(ackLifecycle?.expired) ? ackLifecycle.expired : [];
+  const stale = Array.isArray(ackLifecycle?.stale) ? ackLifecycle.stale : [];
   return {
     status: list.length > 0 ? 'contract-smells' : 'ok',
     smellCount: list.length,
@@ -634,6 +671,8 @@ export function summarizeContractHealth(
       malformed: ackLifecycle?.malformed ?? 0,
       expiredCount: expired.length,
       expired: expired.slice(0, MAX_EVIDENCE),
+      staleCount: stale.length,
+      stale: stale.slice(0, MAX_EVIDENCE),
     },
     advisory: true,
     label:

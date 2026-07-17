@@ -134,7 +134,9 @@ applied acks only, and a malformed sidecar or edge string suppresses nothing. X0
 lifecycle: an optional `reviewBy` (`YYYY-MM-DD`) marks when the exception must be re-reviewed;
 past that date the ack stops applying and the smell returns annotated (`(ack expired …)`).
 Undated acks keep applying but are counted in `contractHealth.ackLifecycle.undated` — give
-migration acks a date so they cannot fossilize.
+migration acks a date so they cannot fossilize. X05 — acks matching no detected edge are listed
+as `ackLifecycle.stale`: fix the edge string or delete the entry. X06 — the family-infra
+carve-out also matches mid-name families (`HoursPersistenceAdapters -> PersistenceInfrastructure`).
 
 **Effect capabilities (U03, evidence-only):** the analysis IR reports typed capability uses for
 seven closed ids (`network`, `filesystem`, `clock`, `randomness`, `environment`, `process`,
@@ -153,6 +155,14 @@ migration = neutral; lowered loss = weakening). Vocabulary and lowering:
 in `pure: true` layers only. Acknowledge deliberate registries/caches in
 `.ark/ambient-state-acks.json` (`{ acks: [{ file, name, reason }] }`) or move the state behind a
 port. Advisory only — never blocks, never feeds `designFitness`; no strict mode exists.
+
+**Physical cohesion + reshape pilot (X04, advisory):** `doctor.physicalCohesion` reports concept
+clusters per anchor directory (concentration, not volume — dispersed hooks never fire) with
+fixed corpus-calibrated thresholds; anchors under `app/`/`pages/` are `fixedByConvention` and
+never move. `reshapePilot.nextPilot` is a **proposed** one-at-a-time card (`moveSample`,
+`movesTotal`, `successSignal`, `killSwitch`, `doNot[]`): run it only via `/ark-loop` through the
+write gate + atomic preflight; merges are `/ark-architect` judgment cards. `notAScore`, never a
+verdict/`designFitness` input; there is no apply path.
 
 **Governance weight (W02):** `contractHealth.governanceWeight` reports raw facts (layers, rules,
 governed files, files/layer, rules/layer) plus a fixed band (`heavy` / `typical` / `light` /

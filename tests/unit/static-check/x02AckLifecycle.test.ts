@@ -1,6 +1,6 @@
 /**
  * X02 — contract-smell acknowledgments have a lifecycle (field feedback,
- * amarilla 2026-07-16: ~15 of 29 acks were transitional migration debt with
+ * the field adopter 2026-07-16: ~15 of 29 acks were transitional migration debt with
  * no review date — fossilizable by construction).
  *
  * The rule: an optional `reviewBy` (YYYY-MM-DD) marks when a deliberate
@@ -76,7 +76,14 @@ describe('X02 ack lifecycle — reviewBy semantics', () => {
     const health = healthFor(root);
     expect(health.smells).toEqual([]);
     expect(health.acknowledged).toBe(1);
-    expect(health.ackLifecycle).toEqual({ undated: 1, malformed: 0, expiredCount: 0, expired: [] });
+    expect(health.ackLifecycle).toEqual({
+      undated: 1,
+      malformed: 0,
+      expiredCount: 0,
+      expired: [],
+      staleCount: 0,
+      stale: [],
+    });
   });
 
   it('a future or same-day reviewBy applies; the day itself is still current', () => {
@@ -217,7 +224,14 @@ describe('X02 ack lifecycle — surfaces (doctor lines + report parity)', () => 
 
   it('summarize defaults keep old callers whole and cap the expired list honestly', () => {
     const bare = summarizeContractHealth([], { exists: false, acks: [] }, 0);
-    expect(bare.ackLifecycle).toEqual({ undated: 0, malformed: 0, expiredCount: 0, expired: [] });
+    expect(bare.ackLifecycle).toEqual({
+      undated: 0,
+      malformed: 0,
+      expiredCount: 0,
+      expired: [],
+      staleCount: 0,
+      stale: [],
+    });
     const many = Array.from({ length: 15 }, (_, i) => ({
       id: 'contract-bidirectional-allow',
       edge: `A${i}<->B${i}`,
@@ -227,9 +241,12 @@ describe('X02 ack lifecycle — surfaces (doctor lines + report parity)', () => 
       undated: 0,
       malformed: 0,
       expired: many,
+      stale: many.map(({ id, edge }) => ({ id, edge })),
     });
     expect(capped.ackLifecycle.expiredCount).toBe(15);
     expect(capped.ackLifecycle.expired.length).toBe(12);
+    expect(capped.ackLifecycle.staleCount).toBe(15);
+    expect(capped.ackLifecycle.stale.length).toBe(12);
   });
 
   it('the HTML report renders lifecycle truth inside the contractHealth section (X01 parity)', () => {

@@ -4,9 +4,45 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+## 3.6.0 — 2026-07-17
+
+Phase X closes: the doctor learns to see **physical shape** and agents get a governed way to
+execute reorganizations, plus three field warm-ups from the 3.5.0 the field adopter validation.
+Everything remains **advisory** — no verdict, exit-code, `designFitness`, or `patternBets`
+change. **No breaking** CLI or `ark.config.json` changes. **No gate weaken. No apply path.**
+
+### Added
+
+- **Physical cohesion sensor (X04, ADR 0010):** `doctor.physicalCohesion` reports domain
+  concepts exploded across mirrored directory clusters — concentration, not volume (dispersed
+  `use-*` hooks never fire). Deterministic path/name tokenization (framework filenames take the
+  topmost meaningful path segment; monorepo scaffold roots are never a concept); fixed
+  corpus-calibrated thresholds (`maxCluster ≥ 40` OR ≥2 anchors ≥ 20); findings ranked and
+  capped honestly; anchors under `app/`/`pages/` are `fixedByConvention`. `notAScore` — facts,
+  never a score or gate input.
+- **Reshape pilot (X04):** `physicalCohesion.reshapePilot.nextPilot` is a **proposed, never
+  applied** card — one at a time, smallest convention-free anchor, `moveSample`/`movesTotal`,
+  `successSignal`, `killSwitch`, hard `doNot[]`. Real moves run only through the write gate and
+  atomic preflight via `/ark-loop`; merges are `/ark-architect` **merge cards** (domain
+  modeling, **never a codemod**); `/ark-fix` never folds reshapes into a fix batch. The
+  consolidation target subtree is never re-proposed as a source — the loop converges (validated
+  end to end: pilot → gate → kill switch → judgment → convergence).
+- **Stale acknowledgments (X05):** ack entries matching no detected edge (orphaned, unknown id,
+  typo) land in `contractHealth.ackLifecycle` as `staleCount` + `stale[]` (sorted, capped);
+  doctor and report name the exact entries to fix or delete, even at zero visible smells.
+
+### Changed
+
+- **Mid-name families (X06):** the family-infra carve-out matches the target's family token
+  against ANY source token (`HoursPersistenceAdapters -> PersistenceInfrastructure` goes
+  quiet); generic role words (`adapter(s)`/`gateway(s)`) never count as a family, so
+  `AdaptersCore` is not every `*Adapters` layer's base.
+- **Report evidence overflow (X07):** per-finding evidence lists announce their 6-item cap with
+  an honest `(+N more)` marker; expired/stale lifecycle notes carry the same honesty.
+
 ## 3.5.0 — 2026-07-16
 
-Field-feedback release (Phase X, from the amarilla adoption session): the HTML report reaches
+Field-feedback release (Phase X, from an internal field-adoption session): the HTML report reaches
 parity with the doctor and stays there by an executable rule, contract-smell acknowledgments gain
 a lifecycle so migration acks cannot fossilize, and the lateral-adapter smell stops firing on a
 family's own infrastructure base. Everything remains **advisory** — no verdict, `designFitness`,
