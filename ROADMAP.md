@@ -114,7 +114,7 @@ for current truth.
 | `RB-05` | P1 | `closed` | S02 restored executable coverage and mutation gates |
 | `RB-06` | P1 | `closed` | O03 compact active-host setup passed PR #41 CI and merged as `105cd39` |
 | `RB-07` | P0 operational | `closed` | Z01 restricts cleanup to validated ArkGate-owned outputs and invocation-owned tarballs; PR #80 CI + release smoke are green |
-| `RB-08` | P1 | `open` | Z02 must make the packed TS7 fallback and incomplete-analysis verdict truthful |
+| `RB-08` | P1 | `closed` | Z02's distinct exact host and schema 1.2 fail-closed verdict passed all 36 packed cells in PR #81 CI; published 3.7.0 predates the correction |
 | `RB-09` | P1 | `open` | Z03–Z04 must decide and restore one candidate graph and verdict across preflight, API, write gate, and final CI |
 | `RB-10` | P1 journey | `open` | Z05–Z06 must make the installed starter, upgrade, enforcement, and package journey reproducible |
 | `RB-11` | P1 claim | `open` | Z07–Z09 must earn the 10x feedback, causal-evidence, retained-adoption, and independent-close claims |
@@ -123,7 +123,7 @@ for current truth.
 V05 passed its then-current binary exit gate in PR #49. The separately authorized stable `3.0.0`
 release completed on 2026-07-13; closing `RB-06` had removed the onboarding release blocker.
 The post-3.7.0 audit below supersedes that evidence as proof of *current* release readiness:
-`RB-08`–`RB-11` remain open, so the stabilization stop condition still applies.
+`RB-09`–`RB-11` remain open, so the stabilization stop condition still applies.
 
 ### Post-3.7.0 audit reset (2026-07-17)
 
@@ -419,7 +419,7 @@ may raise those ceilings merely to fit its own implementation.
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 64 | `Z01` | `done` | S | — | Release tooling deletes only validated, tool-owned targets and files |
-| 65 | `Z02` | `todo` | L | `Z01` | Packed TS5/6/7 analysis is available or explicitly non-green; incomplete analysis never satisfies the goal |
+| 65 | `Z02` | `done` | L | `Z01` | Packed TS5/6/7 analysis is available or explicitly non-green; incomplete analysis never satisfies the goal |
 | 66 | `Z03` | `todo` | M | `Z02` | The resolved-facts/public-API boundary and generated CLI parity seam are decided before implementation |
 | 67 | `Z04` | `todo` | L | `Z03` | One normalized candidate-facts graph produces one contract verdict across every supported adapter |
 | 68 | `Z05` | `todo` | L | `Z02`, `Z04` | Every starter and supported package manager completes the installed tarball journey in a clean consumer |
@@ -432,7 +432,7 @@ may raise those ceilings merely to fit its own implementation.
 
 - Repository truth corrections do not wait for performance or field evidence. The warning may
   merge immediately; the npm readme remains stale until a corrective package is published.
-- After `Z01` and `Z02` close `RB-07`/`RB-08`, a stable corrective patch may publish the safe
+- With `Z01` and `Z02` closed, a stable corrective patch may publish the safe
   release path, truthful completeness schema, and packed TS compatibility. It must continue to name
   `RB-09`–`RB-11` as open.
 - After `Z04`, adapter parity may publish as a patch when the selected seam is internal. If `Z03`
@@ -479,7 +479,7 @@ the same-SHA performance rerun above was also green. `RB-07` is closed.
 
 ### Z02 — Make analysis completeness and TS compatibility truthful
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `Z01`
 
 **Outcome:** TypeScript host loading has an API-compatible fallback that package-manager deduplication
@@ -498,6 +498,16 @@ user docs through contract/drift tests; artifacts generated from the same canoni
 byte-identical. Compatibility tests read those surfaces from the tarball, and the dual TS6/TS7
 fixture executes the documented commands rather than only inspecting installed packages.
 Close `RB-08` only on that packed matrix and schema/type/adapter parity proof.
+
+**Closure evidence:** source `228dd89342644954999af04564f926ffa893c47f` / PR #81 passed
+CI run `29655190747` and Security run `29655190745`. CI installed one checksum-verified candidate
+tarball across Node 18/20/22/24 × npm 10.8.2/pnpm 9.15.9/Yarn 4.17.1 × project TypeScript
+5.9.3/6.0.3/7.0.2: all 12 expanded jobs and all 36 cells passed. Yarn reported strict PnP for
+TS5/6 and `node-modules` for native TS7. Build confidence passed 164 test files / 1,373 tests,
+90.45% statement coverage, 91.44% mutation, generated parity, package isolation/release artifacts,
+and strict architecture; Security passed Dependency Review, CodeQL, and Semgrep. Missing-host and
+parse-incomplete fixtures remained non-green, and two independent read-only reviews found no P0/P1.
+`RB-08` is closed for current source; published 3.7.0 remains outside the correction.
 
 ### Z03 — Decide the resolved-facts and public API boundary
 
@@ -2563,8 +2573,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: `Z02` (`todo`) — make packed TS5/6/7 analysis available or explicitly non-green; no item is `doing` yet
-Next action: move only Z02 to `doing`, add the failing packed/deduped-host and completeness fixtures, then close RB-08 on the installed matrix
+Item: `Z03` (`todo`) — decide the resolved-facts/public-API boundary and generated CLI parity seam
+Next action: move only Z03 to `doing`, reproduce the alias/workspace/API differential, and record the selected parity-capable boundary before Z04 implementation
 Release lanes: Z01+Z02 may ship a stable corrective patch; Z04 may ship parity; Z06 closes the installed journey; Z07–Z09 gate only 10x/causal/retention/independent-close claims
 Parked unchanged: Y06, Y07, Y09, and Y10 retain their named field gates and must not start as collateral Z work
 Runtime parked: K01 retains confirmed experimental intra-process commit gaps outside Phase Z and does not block gate-package corrective releases

@@ -1,4 +1,4 @@
-/** Y03 — parse diagnostics from the architecture AST, advisory only. */
+/** Y03/Z02 — parse diagnostics stay visible and incomplete analysis fails closed. */
 import { afterEach, describe, expect, it } from 'vitest';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -276,7 +276,7 @@ describe('Y03 parse health', () => {
     expect(reparsedForIdentity.parseHealth).toEqual(cold.parseHealth);
   });
 
-  it('surfaces doctor JSON/human/report while leaving the normal verdict and design fitness untouched', () => {
+  it('keeps the non-strict exit advisory while JSON/plan/strict fail parse-incomplete analysis', () => {
     const root = project();
     write(
       root,
@@ -287,11 +287,27 @@ describe('Y03 parse health', () => {
 
     const check = runCli(root, ['--json', '--no-cache']);
     expect(check.status, check.stderr).toBe(0);
-    expect(JSON.parse(check.stdout)).toMatchObject({ ok: true, violations: [] });
+    expect(JSON.parse(check.stdout)).toMatchObject({
+      ok: false,
+      valid: false,
+      completeness: 'partial',
+      violations: [],
+    });
+
+    const planRun = runCli(root, ['--plan', '--json', '--no-cache']);
+    expect(planRun.status, planRun.stderr).toBe(0);
+    expect(JSON.parse(planRun.stdout)).toMatchObject({
+      ok: false,
+      plan: {
+        completeness: 'partial',
+        goal: { met: false },
+      },
+    });
 
     const doctorRun = runCli(root, ['--doctor', '--json', '--no-cache']);
     expect(doctorRun.status, doctorRun.stderr).toBe(0);
     const doctor = JSON.parse(doctorRun.stdout).doctor;
+    expect(doctor.completeness).toBe('partial');
     expect(doctor.parseHealth).toMatchObject({
       advisory: true,
       available: true,
@@ -310,10 +326,10 @@ describe('Y03 parse health', () => {
 
     const human = runCli(root, ['--doctor', '--no-cache']);
     expect(human.status, human.stderr).toBe(0);
-    expect(human.stdout).toContain('Parse health (advisory)');
+    expect(human.stdout).toContain('Parse health (analysis completeness)');
     expect(human.stdout).toContain('src/domain/bad.ts');
     expect(human.stdout).toMatch(/2 parse diagnostic/i);
-    expect(human.stdout).toMatch(/verdict.*unchanged/i);
+    expect(human.stdout).toMatch(/analysis incomplete/i);
 
     const report = runCli(root, [
       '--report',

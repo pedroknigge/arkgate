@@ -1,8 +1,9 @@
 # Reference: commands and artifacts
 
 Product: **ArkGate** (`arkgate`). Prefer `arkgate` / `arkgate-check` / `arkgate-mcp`; aliases
-`ark` / `ark-check` / `ark-mcp` work for one major. TypeScript 5/6 are supported; the TS7-only
-packed-consumer claim is suspended in 3.7.0: [typescript-support.md](../typescript-support.md).
+`ark` / `ark-check` / `ark-mcp` work for one major. The current source candidate supports packed
+project TypeScript 5.9/6.0/7.0 with a physically distinct TypeScript 6 analysis host; published
+3.7.0 predates that correction: [typescript-support.md](../typescript-support.md).
 
 ## Recommendation
 
@@ -53,6 +54,18 @@ arkgate-check --watch
 
 In 3.1+, strict merge protects policy changes; preflight checks one complete batch without writing
 (`--change-map` adds structural convergence). MCP: `ark_policy_delta`, `ark_prepare_change`.
+
+## Analysis completeness
+
+Current check envelopes use schema `1.2` and require `completeness`:
+
+| Value | Meaning | Agent rule |
+|-------|---------|------------|
+| `complete` | All governed files were analyzed | A clean verdict may be trusted |
+| `partial` | Governed parse diagnostics left evidence incomplete | Plan goal is false; strict merge fails |
+| `unavailable` | No usable TypeScript analysis host | Plan goal is false; CLI exits `2` |
+
+Doctor keeps the parse detail diagnostic, but never call a `partial` or `unavailable` result green.
 
 ## Plan classes (`--plan --json`)
 

@@ -33,7 +33,7 @@ describe('publish manifest', () => {
   it('package.json has only the intentional TypeScript host dep and dev scripts', () => {
     const p = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
     // Gate host only — JS-API TypeScript for resolve when project ships TS7 version-only export.
-    expect(Object.keys(p.dependencies ?? {}).sort()).toEqual(['typescript']);
+    expect(Object.keys(p.dependencies ?? {}).sort()).toEqual(['typescript-ark-host']);
     expect(p.scripts.test).toBe('vitest');
     expect(p.scripts.typecheck).toBe('tsc --noEmit');
     expect(p.scripts.prepack).toBe('npm run build');
@@ -54,7 +54,7 @@ describe('publish manifest', () => {
     const inner = JSON.parse(
       fs.readFileSync(path.join(extract, 'package', 'package.json'), 'utf8')
     );
-    expect(Object.keys(inner.dependencies ?? {}).sort()).toEqual(['typescript']);
+    expect(Object.keys(inner.dependencies ?? {}).sort()).toEqual(['typescript-ark-host']);
     expect(inner.exports['./nestjs']).toEqual({
       types: './compat/nestjs.d.ts',
       import: './compat/nestjs.js',

@@ -1,8 +1,9 @@
 /** Versioned public result contract shared by every ArkGate enforcement adapter. */
 
-export const ARK_ANALYSIS_RESULT_SCHEMA_VERSION = '1.1' as const;
+export const ARK_ANALYSIS_RESULT_SCHEMA_VERSION = '1.2' as const;
 
 export type AdapterSeverity = 'error' | 'warning';
+export type AnalysisCompleteness = 'complete' | 'partial' | 'unavailable';
 
 export type AdapterViolationInput = {
   ruleId?: unknown;
@@ -39,11 +40,30 @@ export type AdapterDiagnostic = {
   nextAction?: string;
 };
 
-export type AdapterResult = {
-  schemaVersion: '1.0' | typeof ARK_ANALYSIS_RESULT_SCHEMA_VERSION;
+type LegacyAdapterResult = {
+  schemaVersion: '1.0' | '1.1';
   valid: boolean;
   diagnostics: AdapterDiagnostic[];
+  completeness?: never;
 };
+
+type CompleteAdapterResult = {
+  schemaVersion: typeof ARK_ANALYSIS_RESULT_SCHEMA_VERSION;
+  valid: boolean;
+  completeness: 'complete';
+  diagnostics: AdapterDiagnostic[];
+};
+
+type IncompleteAdapterResult = {
+  schemaVersion: typeof ARK_ANALYSIS_RESULT_SCHEMA_VERSION;
+  valid: false;
+  completeness: 'partial' | 'unavailable';
+  diagnostics: AdapterDiagnostic[];
+};
+
+type CurrentAdapterResult = CompleteAdapterResult | IncompleteAdapterResult;
+
+export type AdapterResult = LegacyAdapterResult | CurrentAdapterResult;
 
 function text(value: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;
@@ -113,16 +133,28 @@ export function toAdapterDiagnostic(
 
 export function createAdapterResult(input: {
   valid: boolean;
+  completeness?: AnalysisCompleteness;
   violations?: readonly AdapterViolationInput[];
   warnings?: readonly AdapterViolationInput[];
-}): AdapterResult {
+}): CurrentAdapterResult {
+  const completeness = input.completeness ?? 'complete';
+  const diagnostics = [
+    ...(input.violations ?? []).map((item) => toAdapterDiagnostic(item, 'error')),
+    ...(input.warnings ?? []).map((item) => toAdapterDiagnostic(item, 'warning')),
+  ];
+  if (completeness !== 'complete') {
+    return {
+      schemaVersion: ARK_ANALYSIS_RESULT_SCHEMA_VERSION,
+      valid: false,
+      completeness,
+      diagnostics,
+    };
+  }
   return {
     schemaVersion: ARK_ANALYSIS_RESULT_SCHEMA_VERSION,
     valid: input.valid,
-    diagnostics: [
-      ...(input.violations ?? []).map((item) => toAdapterDiagnostic(item, 'error')),
-      ...(input.warnings ?? []).map((item) => toAdapterDiagnostic(item, 'warning')),
-    ],
+    completeness,
+    diagnostics,
   };
 }
 
@@ -132,10 +164,20 @@ export const ARK_ANALYSIS_RESULT_SCHEMA = {
   title: 'ArkGate analysis result',
   type: 'object',
   additionalProperties: false,
-  required: ['schemaVersion', 'valid', 'diagnostics'],
+  required: ['schemaVersion', 'valid', 'completeness', 'diagnostics'],
+  allOf: [
+    {
+      if: {
+        properties: { completeness: { enum: ['partial', 'unavailable'] } },
+        required: ['completeness'],
+      },
+      then: { properties: { valid: { const: false } } },
+    },
+  ],
   properties: {
     schemaVersion: { const: ARK_ANALYSIS_RESULT_SCHEMA_VERSION },
     valid: { type: 'boolean' },
+    completeness: { enum: ['complete', 'partial', 'unavailable'] },
     diagnostics: {
       type: 'array',
       items: {

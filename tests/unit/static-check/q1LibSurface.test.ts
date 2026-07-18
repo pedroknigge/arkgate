@@ -392,17 +392,17 @@ describe('doctor-plan branch push', () => {
       expect(cov.emptyLayers).toContain('EmptyLayer');
 
       // false-green plan: 0 violations, low coverage
-      const lowPlan = buildRemediationPlan(root, [], 20, 10);
+      const lowPlan = buildRemediationPlan(root, [], 20, 10, { completeness: 'complete' });
       expect(lowPlan.goal.met).toBe(false);
       expect(lowPlan.goal.statement).toMatch(/governs only|classify/i);
 
       // empty totalFiles
-      const emptyPlan = buildRemediationPlan(root, [], 100, 0);
+      const emptyPlan = buildRemediationPlan(root, [], 100, 0, { completeness: 'complete' });
       expect(emptyPlan.goal.emptyScope).toBe(true);
       expect(emptyPlan.goal.met).toBe(false);
 
       // clean honest plan
-      const clean = buildRemediationPlan(root, [], 100, 5);
+      const clean = buildRemediationPlan(root, [], 100, 5, { completeness: 'complete' });
       expect(clean.goal.met).toBe(true);
 
       // mixed classes of violations
@@ -435,7 +435,8 @@ describe('doctor-plan branch push', () => {
           },
         ],
         80,
-        10
+        10,
+        { completeness: 'complete' }
       );
       expect(plan.steps.length).toBe(3);
       expect(plan.counts.mechanicalSafe + plan.counts.judgment + plan.counts.deferred).toBe(3);
@@ -446,7 +447,7 @@ describe('doctor-plan branch push', () => {
       try {
         runCoverage(root, config, [domain, misc], config.rules, false);
         runCoverage(root, config, [domain, misc], config.rules, true);
-        runPlan(root, [], false, 20, 10);
+        runPlan(root, [], false, 20, 10, { completeness: 'complete' });
         runPlan(
           root,
           [
@@ -462,11 +463,13 @@ describe('doctor-plan branch push', () => {
           ],
           false,
           80,
-          10
+          10,
+          { completeness: 'complete' }
         );
-        runPlan(root, [], true, 100, 5);
+        runPlan(root, [], true, 100, 5, { completeness: 'complete' });
         runDoctor(root, config, [domain, misc], config.rules, [], false, {
           configMissing: true,
+          completeness: 'complete',
         });
         runDoctor(
           root,
@@ -483,7 +486,7 @@ describe('doctor-plan branch push', () => {
             },
           ],
           true,
-          { configPath: path.join(root, 'ark.config.json') }
+          { configPath: path.join(root, 'ark.config.json'), completeness: 'complete' }
         );
       } finally {
         console.log = orig;

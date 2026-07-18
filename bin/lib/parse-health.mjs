@@ -1,6 +1,7 @@
 /**
- * Y03 — parse honesty over the ASTs already created by architecture-scan.
- * Advisory only: counts are transported, never raw TypeScript diagnostics.
+ * Y03/Z02 — parse honesty over the ASTs already created by architecture-scan.
+ * Counts are transported without raw TypeScript diagnostics; Z02 maps affected
+ * governed files to a partial analysis verdict.
  */
 
 export const PARSE_HEALTH_FILE_CAP = 12;
@@ -55,11 +56,11 @@ export function summarizeParseHealth(scanned) {
   };
 }
 
-/** Human doctor section; clean parse health stays quiet. */
+/** Human doctor detail; clean parse health stays quiet. */
 export function printParseHealthSection(health, io) {
   if (!health || health.affectedFiles === 0) return;
   console.log('');
-  console.log(io.color.bold('Parse health (advisory)'));
+  console.log(io.color.bold('Parse health (analysis completeness)'));
   io.line(
     io.warn,
     `${health.affectedFiles} governed file(s) carry ${health.diagnosticCount} parse diagnostic(s) across ${health.scannedFiles} scanned file(s).`
@@ -70,5 +71,5 @@ export function printParseHealthSection(health, io) {
   if (health.truncated > 0) {
     io.line(' ', io.color.dim(`…(+${health.truncated} more affected file(s); list capped)`));
   }
-  io.line(' ', io.color.dim('advisory only — the gate verdict, design fitness, and pattern bets are unchanged'));
+  io.line(' ', io.color.dim('analysis incomplete — plan cannot be satisfied and strict merge fails closed'));
 }

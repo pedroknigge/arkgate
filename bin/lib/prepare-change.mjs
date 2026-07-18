@@ -115,14 +115,13 @@ export function prepareChangeFromRoot({
     ...(loadedChangeMap ? { changeMap: loadedChangeMap } : {}),
     ...(compilerOptions ? { compilerOptions } : {}),
   });
-  return {
-    ...createAdapterResult({
-      valid: result.valid,
-      violations: result.violations,
-      warnings: result.warnings,
-    }),
-    ...result,
-  };
+  const { diagnostics } = createAdapterResult({
+    valid: result.valid,
+    completeness: 'complete',
+    violations: result.violations,
+    warnings: result.warnings,
+  });
+  return { ...result, diagnostics };
 }
 
 export function renderChangePreflight(result) {

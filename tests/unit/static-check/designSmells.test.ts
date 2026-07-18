@@ -179,6 +179,7 @@ describe('patternBets IR (P03)', () => {
     ];
     const cov = computeCoverage(root, elevenish, files, elevenish.rules);
     const plan = buildRemediationPlan(root, [], 100, files.length, {
+      completeness: 'complete',
       config: elevenish,
       files,
       coverage: cov,
@@ -224,7 +225,7 @@ describe('doctor JSON surface (P02)', () => {
       logs.push(args.map(String).join(' '));
     };
     try {
-      runDoctor(root, elevenish, files, elevenish.rules, [], true, {});
+      runDoctor(root, elevenish, files, elevenish.rules, [], true, { completeness: 'complete' });
     } finally {
       console.log = orig;
     }

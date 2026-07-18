@@ -73,7 +73,7 @@ export function buildJudgmentBrief(violations) {
  *   placement: object,
  *   root: string,
  *   ts: object,
- *   validate: (source: string) => { valid: boolean, violations?: any[] },
+ *   validate: (source: string) => { valid: boolean, completeness?: string, violations?: any[] },
  *   resolveTargetAbs?: Function,
  * }} opts
  */
@@ -118,6 +118,7 @@ export function composePrepareWrite(opts) {
     // Q03: pass through golden pattern from ark_place (advisory; absent is normal).
     ...(placement?.goldenPattern ? { goldenPattern: placement.goldenPattern } : {}),
     valid: gate.valid,
+    ...(gate.completeness ? { completeness: gate.completeness } : {}),
     violations: gate.violations,
     ...(gate.autoPatch ? { autoPatch: gate.autoPatch } : {}),
     ...(judgment ? { judgmentBrief: judgment } : {}),

@@ -1,4 +1,4 @@
-# TypeScript support (5.x / 6.x; TS7 corrective status)
+# TypeScript support (5.x / 6.x / 7.x)
 
 ArkGate’s architecture gate (`arkgate-check` / `ark-mcp`) needs a **JavaScript API**
 TypeScript package that exposes:
@@ -14,17 +14,20 @@ semantics of your app still come from **your** project `typescript` + `tsconfig`
 
 | Range | Status |
 |-------|--------|
-| **TypeScript 5.x** | Fully supported (primary CI) |
-| **TypeScript 6.x** | Supported (bridge release before 7) |
-| **TypeScript 7.x** | **TS7-only packed-consumer support claim suspended in 3.7.0.** API-compatible project exports work, but dependency deduplication can remove the intended fallback |
+| **TypeScript 5.x** | Supported; packed compatibility cell uses **5.9.3** |
+| **TypeScript 6.x** | Supported; packed compatibility cell uses **6.0.3** |
+| **TypeScript 7.x** | Supported through the project's own compiler plus ArkGate's physically distinct TypeScript 6 analysis host; packed compatibility cell uses **7.0.2** |
 
-> **3.7.0 support correction:** installing the real `arkgate` tarball beside `typescript@7.0.2`
-> can deduplicate ArkGate's direct dependency to the same version-only export. Full check then
-> exits unavailable as it should, but `--plan --json` can incorrectly report `goal.met: true`
-> without an import graph. Do not use plan as the final TS7 gate; run full strict check, or keep an
-> API-compatible TypeScript 5/6 package under the project `typescript` name. Phase Z owns the
-> packed fallback and explicit analysis-completeness fix:
-> [enforcement-truth-at-speed](https://github.com/pedroknigge/arkgate/blob/main/docs/plans/enforcement-truth-at-speed/README.md).
+These current-source claims passed the complete 36-cell packed matrix on source `228dd893` in
+[CI run 29655190747](https://github.com/pedroknigge/arkgate/actions/runs/29655190747).
+Published 3.7.0 remains outside this corrected support claim.
+
+> **Distribution boundary:** published `arkgate@3.7.0` predates this correction. Its compatible
+> analysis dependency can deduplicate to a TS7 version-only export, and its unavailable
+> `--plan --json` result can incorrectly report `goal.met: true`. The current source candidate for
+> the next corrective release fixes both defects with a non-deduplicable host and explicit analysis
+> completeness. Do not attribute that fix to 3.7.0; upgrade once the corrective version is
+> published.
 
 Supported consumer range (also declared as an optional peer for compatibility):
 
@@ -34,28 +37,57 @@ Supported consumer range (also declared as an optional peer for compatibility):
 }
 ```
 
-The root `arkgate` package also depends directly on `typescript` (`>=5 <8`) as an intended fallback
-host. The CLI still resolves the consumer project's **own** `typescript` first so its
-module-resolution semantics win; it accepts the direct package dependency only when that export
-exposes the compiler API ArkGate needs. That range does not force a separate compatible copy in
-3.7.0; the warning above is the current distribution truth.
+The current source line installs one exact production fallback under a different package identity:
+
+```json
+"dependencies": {
+  "typescript-ark-host": "npm:typescript@6.0.3"
+}
+```
+
+The CLI still resolves the consumer project's **own** `typescript` first so a usable project API
+and its module-resolution semantics win. If that export is missing or version-only, ArkGate loads
+`typescript-ark-host`. Because the dependency key is distinct from `typescript`, npm, pnpm, and
+Yarn cannot satisfy it by reusing the project's TS7 package. It also does not replace the project's
+`tsc`; builds and type checks continue to run the compiler selected by the consumer lockfile.
 
 ## How loading works
 
-1. Prefer `require('typescript')` from the **project** root (when it has `sys` + AST + resolve).  
-2. If missing or **not API-compatible** (TS 7.0 version-only export, or incomplete host), attempt
-   ArkGate's direct dependency, then bare `import('typescript')`. In 3.7.0 this fallback is not
-   guaranteed to be a distinct API-compatible package after package-manager deduplication.
-3. If nothing usable is found:  
-   - `--plan` prints partial diagnostic data, but in 3.7.0 its `goal.met` value can be falsely green
-   - full check exits non-zero with an install hint and is the only valid gate
+1. Prefer `require('typescript')` from the **project** root when it has `sys` + AST + resolve.
+2. If the project export is missing or **not API-compatible** (for example, the TS 7.0
+   version-only export), load `typescript-ark-host` at exact `npm:typescript@6.0.3` from ArkGate's
+   install tree.
+3. If neither host is usable, analysis is `unavailable`: plan has `goal.met: false`, normal JSON
+   has `valid: false` and `ok: false` with `ANALYSIS_HOST_UNAVAILABLE`, and the CLI exits `2`.
+4. If the selected host reports parse diagnostics in governed files, analysis is `partial`:
+   `--plan --json` has `goal.met: false`, normal JSON has `valid: false` / `ok: false`, and
+   `--strict-merge` exits `1`. The non-strict command preserves its legacy advisory exit code;
+   doctor also remains diagnostic while exposing the same completeness and parse-health evidence.
 
 Debug which TypeScript was used:
 
 ```bash
 ARK_DEBUG_TS=1 npx arkgate-check --plan
-# → [ark-check] TypeScript 5.9.x via arkgate (fallback)
+# project TS 5/6 → [ark-check] TypeScript 5.9.3 via project
+# project TS 7   → [ark-check] TypeScript 6.0.3 via arkgate-fallback (fallback)
 ```
+
+## Analysis completeness (schema 1.2)
+
+Every current CLI/MCP/hook diagnostic envelope carries required `completeness`:
+
+| Value | Meaning | Can plan/check be green? |
+|-------|---------|--------------------------|
+| `complete` | Every governed file was analyzed with a usable host and no parse diagnostics | Yes, if the normal contract verdict is also clean |
+| `partial` | A host ran, but governed syntax could not be fully parsed | No in JSON/plan; strict merge fails. The non-strict process exit remains advisory for compatibility |
+| `unavailable` | No API-compatible host could produce architecture evidence | No; CLI exits `2` |
+
+Schema 1.2 makes the field required. The public TypeScript `AdapterResult` union still accepts
+consumer-owned 1.0/1.1 values for source compatibility, but newly produced results are 1.2. In
+1.2, both the exported discriminated union and JSON Schema prohibit `valid: true` when
+`completeness` is `partial` or `unavailable`. For source compatibility, an existing
+`createAdapterResult({ valid, ... })` call that omits the new input is treated as `complete`;
+new analysis adapters must pass their observed completeness explicitly.
 
 ## TypeScript 7 notes
 
@@ -64,7 +96,10 @@ TypeScript 7 is the **native (Go) compiler** generation. Important for tools lik
 - **`require('typescript')` on 7.0.x** exports only `{ version, versionMajorMinor }` — not `sys`, `createSourceFile`, or `resolveModuleName`.  
 - Unstable programmatic surfaces live under `typescript/unstable/*` (sync/async API, AST). They are **not** the classic TS 5/6 host ArkGate uses today.
 - Stable **programmatic JS API** maturity continues over the 7.x line (Microsoft: full story into **7.1+**).  
-- When the project’s TypeScript is not API-compatible, ArkGate attempts to load its **direct JS-API dependency** (currently constrained to `>=5 <8` and checked for the required API). In 3.7.0 package-manager deduplication can collapse that dependency to the same unusable export, so this is an attempted fallback, not a support guarantee.
+- When the project’s TypeScript is not API-compatible, the current source line loads the exact,
+  separately named `typescript-ark-host` dependency. Published 3.7.0 does not yet have that fix.
+- TypeScript 7 syntax that TypeScript 6.0.3 cannot parse is reported as `partial`, never clean.
+  ArkGate fails closed until its analysis host can parse every governed file.
 - Your **tsconfig** must follow TS 6/7 defaults (see below) or `tsc` / resolve can fail independently of ArkGate.
 
 ### tsconfig defaults that surprise teams (TS 6 → 7)
@@ -100,59 +135,62 @@ Example consumer-friendly skeleton (also used in `tests/fixtures/ts-consumer`):
 }
 ```
 
-## Side-by-side TypeScript 6 + 7 (tooling)
+## Project compiler remains project-owned
 
-If you need **tsc 7** for builds and a **JS API 6** for tools that still expect classic exports:
+Do not downgrade, alias, or replace the project's `typescript` dependency for ArkGate. A TS7
+project keeps TS7 for `tsc`, editor semantics, and its lockfile; `typescript-ark-host` is an
+internal analysis dependency. If a repository intentionally runs multiple `tsc` versions for its
+own migration, keep that setup separate from ArkGate's host resolution.
 
-```json
-{
-  "scripts": {
-    "typecheck:ts7": "node ./node_modules/typescript-7/bin/tsc --noEmit"
-  },
-  "devDependencies": {
-    "typescript": "npm:@typescript/typescript6@^6.0.0",
-    "typescript-7": "npm:typescript@^7.0.0"
-  }
-}
-```
+Declare the project compiler directly whenever you invoke `tsc`. If a consumer has no direct
+`typescript` dependency, a package manager may expose the fallback alias's binary because it is the
+only compiler in the install; that binary is not ArkGate's promise for project type checking. A
+direct project `typescript` dependency wins in the packed npm, pnpm, and Yarn cells.
 
-- `npx tsc6` — TypeScript 6 CLI (from the alias package)
-- `npm run typecheck:ts7` — TypeScript 7 through the explicit alias package path
+## Yarn PnP and the native TS7 compiler
 
-The npm alias does **not** create a `typescript-7` executable; `npx typescript-7` is invalid. If you
-need different TS7 flags, add them after `--` or call
-`node ./node_modules/typescript-7/bin/tsc` directly.
+The supported Yarn 4.17.1 matrix names its linker mode explicitly:
 
-ArkGate will prefer the project’s `typescript` package; keep that entry **API-compatible** (5/6, or 7 once `sys` is present). See Microsoft’s TS 7 RC blog for dual-install details.
+- TypeScript 5.9/6.0 cells use **strict PnP** with no root `node_modules`.
+- TypeScript 7.0 cells use Yarn's **`node-modules` linker**, so the native compiler resolves normal
+  package imports without an internal-path or unplugged-package bridge.
+
+Yarn supports PnP for JS TypeScript releases by applying a compatibility patch to TypeScript's
+resolver. The native TS7 compiler does not execute that JavaScript patch. ArkGate therefore does
+not claim strict-PnP type-checking support for the TS7 cell; use Yarn's `node-modules` linker or
+remain on the JS compiler for that workflow. ArkGate's CLI/MCP analysis-host fallback is a separate
+concern and never changes the compiler selected by the project. See Yarn's
+[PnP explanation](https://yarnpkg.com/getting-started/qa#why-is-typescript-patched-even-if-i-dont-use-plugnplay)
+and Microsoft's [TS7 native release notes](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/).
 
 ## CI matrix (this repo)
 
-GitHub Actions job `ts-compat` installs TypeScript **5.9.x**, **6.0.x**, and **7.0.x** into a temp
-copy of `tests/fixtures/ts-consumer` and runs the checkout binary:
+The release compatibility workflow packs the candidate first, then tests clean consumers across:
+
+- Node **18 / 20 / 22 / 24**;
+- **npm / pnpm / Yarn**;
+- project TypeScript **5.9.3 / 6.0.3 / 7.0.2**.
+
+That is 36 installed-artifact cells. Each cell verifies that the project's `tsc` stays on the
+requested project compiler and that ArkGate resolves its fallback as exact 6.0.3 when the project
+API is unusable. Reports record `installMode` so the Yarn TS7 linker boundary cannot disappear
+behind a green job. All 36 cells passed on source `228dd893` in CI run `29655190747`. Locally, the
+repository entry point is:
 
 ```bash
-node bin/ark-check.mjs --root <fixture> --plan --json --no-cache
+npm run test:ts-compat
 ```
-
-Locally:
-
-```bash
-node scripts/ts-compat-matrix.mjs 5.9.3
-node scripts/ts-compat-matrix.mjs 6.0.3
-node scripts/ts-compat-matrix.mjs 7.0.2
-```
-
-This matrix validates source-checkout behavior, not the installed dependency tree. It is not
-release evidence for TS7 until Z02 replaces it with a packed-candidate matrix that runs plan and
-full strict check.
 
 ## What “compatible” means for ArkGate
 
 | Goal | Status |
 |------|--------|
-| Gate does not crash on project TS 7 | Yes; packed 3.7.0 may exit unavailable when no distinct compatible host remains |
+| Packed gate runs beside project TS 7 | Yes in current source; verified across the complete packed matrix. Published 3.7.0 predates the distinct host |
 | Plan/check work with project TS 5/6 | Yes |
 | Plan/check work when project has TS 7 + usable `sys` | Yes (uses project) |
+| Project `tsc` remains the selected project version | Yes; the analysis alias does not replace it |
+| TS7-only syntax outside the TS6 parser envelope reports clean | No; completeness becomes `partial` and strict merge fails |
+| Missing analysis host can satisfy a plan | No; completeness is `unavailable`, goal is false, exit is `2` |
 | Gate uses native Go typechecker API exclusively | Not required; future if 7.1+ exposes a stable Node API we adopt |
 | User tsconfigs with removed options still “just work” | User must migrate tsconfig (TS6/7); Ark reports resolve/parse failures clearly |
 
@@ -200,6 +238,7 @@ When Microsoft ships a stable Node API for native TypeScript 7.1+:
 2. Keep the multi-version matrix green.  
 3. Optionally prefer project TS 7 for resolution without fallback.
 
-Until then, use an API-compatible project `typescript` package or treat full strict-check
-unavailability as a hard stop. The packed fallback + matrix becomes the compatibility story only
-after Z02 proves that installed path.
+Until then, the exact TypeScript 6 analysis alias is the compatibility bridge. Any `partial` or
+`unavailable` result is a hard stop for accepting the analysis, not permission to trust a
+clean-looking subset. Automation must read `valid`/`ok` or use `--strict-merge`; the legacy
+non-strict process exit is not the completeness authority.

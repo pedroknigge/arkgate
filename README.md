@@ -12,19 +12,19 @@ and makes sure a “green” check means something real.
 [![npm](https://img.shields.io/npm/v/arkgate?color=cb3837&label=npm)](https://www.npmjs.com/package/arkgate)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Node](https://img.shields.io/badge/node-%3E%3D18-339933?logo=node.js)
-![TS 5–6](https://img.shields.io/badge/TypeScript-5%20%7C%206-3178c6?logo=typescript)
+![TS 5–7](https://img.shields.io/badge/TypeScript-5%20%7C%206%20%7C%207-3178c6?logo=typescript)
 
 </div>
 
 > **ArkGate 3.7.0** is current stable: Phase Y adds explicit reshape decisions, hollow-
-> persistence and parse-health advisories, safer mechanical edits, and exact `process` module-
+> persistence and parse-health diagnostics, safer mechanical edits, and exact `process` module-
 > dual enforcement. [Release notes](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.7.0.md).
 
-> **TypeScript 7 correction for 3.7.0:** the TS7-only packed-consumer support claim is suspended.
-> Package-manager deduplication can remove ArkGate's compatible JS-API host; full check then exits
-> unavailable, while `--plan --json` can incorrectly report `goal.met: true`. Keep an API-compatible
-> TypeScript 5/6 package under the project `typescript` name and run the full strict gate. See the
-> [exact boundary and workaround](docs/typescript-support.md).
+> **TypeScript 7 distribution note:** published 3.7.0 predates the correction for a deduplicated
+> analysis host and falsely green unavailable plans. The current source candidate for the next
+> corrective release uses an exact, physically distinct TypeScript 6 analysis host and reports
+> required `complete | partial | unavailable` status. Do not attribute that fix to 3.7.0; see the
+> [exact boundary](docs/typescript-support.md).
 
 ---
 
@@ -213,10 +213,10 @@ project file is written. With `--change-map map.json` (or MCP `changeMap`), the 
 classifies planned structure as satisfied, missing, contradictory, or unplanned. This is structural
 convergence only: behavioral completion is always reported as not evaluated.
 
-> **Known 3.7.0 limitation:** the compiler-free atomic path can miss `tsconfig` aliases/workspace
+> **Known current limitation:** the compiler-free atomic path can miss `tsconfig` aliases/workspace
 > edges that final TypeScript-backed CI resolves. Treat the normal strict check as final authority
-> until [Phase Z](https://github.com/pedroknigge/arkgate/blob/main/docs/plans/enforcement-truth-at-speed/README.md)
-> closes the differential corpus.
+> until Z03/Z04 in [Phase Z](https://github.com/pedroknigge/arkgate/blob/main/docs/plans/enforcement-truth-at-speed/README.md)
+> close the differential corpus.
 
 Every blocking diagnostic carries stable rule/location/evidence fields plus one deterministic
 `nextAction`; human CLI/hook text prints that same action. A complete Codex `ApplyPatch` payload is
@@ -304,10 +304,18 @@ ark.config.json
   casts, InMemory runtime defaults, and disabled peer isolation. `--strict` is a compatibility
   alias. Neither requires an editor hook; use `--require-write-hook claude|grok` when that local
   guarantee is part of the check.
+- **Analysis completeness (next corrective line):** schema 1.2 requires
+  `complete | partial | unavailable`. Governed parse diagnostics make plan `goal.met: false` and
+  normal JSON `valid:false`/`ok:false`; strict merge exits `1`. The non-strict exit remains
+  advisory for compatibility. A missing host is `unavailable` and exits `2`; doctor keeps the
+  diagnostic detail without turning it into an architecture violation.
 - **Release evidence:** independent 3.0 audit baseline plus signed-tag, GitHub Release, and
   provenance-backed npm publication; see the [3.1.0 release notes](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.1.0.md).
-- **TypeScript:** project compilers 5.x / 6.x are supported; the TS7-only packed-consumer claim is
-  suspended in 3.7.0. See the exact boundary and workaround in
+- **TypeScript:** the current source candidate passed all 36 packed compatibility cells for project
+  compilers 5.9.3 / 6.0.3 / 7.0.2 across npm, pnpm, and Yarn. ArkGate prefers a usable project
+  API, then its exact `typescript-ark-host@6.0.3`; the project `tsc` remains project-owned.
+  Yarn uses strict PnP for TS5/6 and the `node-modules` linker for native TS7; that mode is explicit
+  in the report. Published 3.7.0 predates this correction. See the exact boundary in
   [docs/typescript-support.md](docs/typescript-support.md).
 
 ### Why not only ESLint / dependency-cruiser / Nx?
@@ -320,8 +328,8 @@ ark.config.json
 | Placement tools (`ark_place`, …) | ✅ | ❌ |
 | Honest governed % + adoption path | ✅ | ❌ |
 | Classified plan (`mechanical-safe` / judgment) | ✅ | ❌ |
-| TypeScript 5 / 6 project compilers | ✅ | varies |
-| TypeScript 7-only packed consumer | suspended in 3.7.0 | varies |
+| TypeScript 5.9 / 6.0 / 7.0 packed consumers | ✅ (current source; 36/36 packed CI cells; 3.7.0 predates the fix) | varies |
+| Incomplete analysis can satisfy plan/result/strict merge | ❌ (`partial` / `unavailable` fail closed) | varies |
 | Adoption scorecard (hosts / MCP / origin) | ✅ | ❌ |
 | **Editor ESLint same layer contract as CI** | ✅ (`arkgate/eslint`) | varies |
 
@@ -397,7 +405,7 @@ for real systems. Details: [production-hardening.md](https://github.com/pedrokni
 | New builders (plain language) | [docs/enthusiast/](docs/enthusiast/README.md) |
 | **Package surface and configuration** | [package policy](docs/package-surface.md) · [contract](docs/configuration.md) |
 | Wire agents + **ESLint (CI-parity)** | [docs/ai-gates.md](docs/ai-gates.md) · [threat model](docs/threat-model.md) |
-| **TypeScript 5 / 6 support + TS7 corrective status** | [docs/typescript-support.md](docs/typescript-support.md) |
+| **TypeScript 5 / 6 / 7 support + analysis completeness** | [docs/typescript-support.md](docs/typescript-support.md) |
 | Migrate from `ark-runtime-kernel` | [docs/migrate-from-ark-runtime-kernel.md](https://github.com/pedroknigge/arkgate/blob/main/docs/migrate-from-ark-runtime-kernel.md) |
 | Messy existing repo | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Agent / MCP tools | [docs/agent-guide.md](docs/agent-guide.md) |

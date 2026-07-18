@@ -209,6 +209,29 @@ describe('ark-mcp server (write-path gate)', () => {
     expect(JSON.parse(res.result.content[0].text).valid).toBe(true);
   });
 
+  it('fails closed when validate_code cannot completely parse the source', async () => {
+    const res = await client.request('tools/call', {
+      name: 'validate_code',
+      arguments: {
+        source: 'export const broken = ;\n',
+        filePath: 'src/core/broken.ts',
+      },
+    });
+    const payload = JSON.parse(res.result.content[0].text);
+    expect(res.result.isError).toBe(true);
+    expect(res.result.structuredContent).toMatchObject({
+      schemaVersion: '1.2',
+      valid: false,
+      completeness: 'partial',
+      diagnostics: [{ ruleId: 'ANALYSIS_PARSE_INCOMPLETE' }],
+    });
+    expect(payload).toMatchObject({
+      valid: false,
+      completeness: 'partial',
+      violations: [{ ruleId: 'ANALYSIS_PARSE_INCOMPLETE' }],
+    });
+  });
+
   it('W2: ark_prepare_write composes place + validate + autoPatch + contentHash', async () => {
     const prepRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-mcp-prepare-'));
     fs.writeFileSync(
@@ -802,6 +825,32 @@ describe('ark-mcp --hook (PreToolUse gate)', () => {
     expect(result.status).toBe(0);
   });
 
+  it('blocks parse-invalid source and emits a fail-closed repair envelope', () => {
+    const result = spawnSync('node', [mcpBin, '--hook', '--hook-repair', '--root', root], {
+      input: JSON.stringify({
+        tool_name: 'Write',
+        tool_input: {
+          file_path: path.join(root, 'src/domain/broken.ts'),
+          content: 'export const broken = ;\n',
+        },
+      }),
+      encoding: 'utf8',
+    });
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('ANALYSIS_PARSE_INCOMPLETE');
+    const repairLine = result.stderr
+      .split('\n')
+      .find((line) => line.startsWith('ARK_REPAIR_JSON:'));
+    expect(repairLine).toBeTruthy();
+    expect(JSON.parse(repairLine!.slice('ARK_REPAIR_JSON:'.length))).toMatchObject({
+      schemaVersion: '1.2',
+      valid: false,
+      completeness: 'partial',
+      diagnostics: [{ ruleId: 'ANALYSIS_PARSE_INCOMPLETE' }],
+      decision: 'deny',
+    });
+  });
+
   it('validates the post-edit file state for Edit, not the snippet alone', () => {
     const result = runHook(root, {
       tool_name: 'Edit',
@@ -1046,6 +1095,22 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
     expect(payload.findings).toContainEqual(
       expect.objectContaining({ path: '$.layers[DomainModel].capabilities' })
     );
+  });
+
+  it('ark_policy_delta keeps a valid neutral transition non-error', async () => {
+    const baseConfig = {
+      include: ['src'],
+      layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+      rules: [],
+    };
+    const response = await client.request('tools/call', {
+      name: 'ark_policy_delta',
+      arguments: { baseConfig, candidateConfig: baseConfig },
+    });
+    const payload = JSON.parse(response.result.content[0].text);
+
+    expect(response.result.isError).toBe(false);
+    expect(payload).toMatchObject({ classification: 'neutral', valid: true });
   });
 
   it('ark_place resolves the layer, forbidden globals, and denied import targets', async () => {

@@ -230,7 +230,7 @@ function parseHealthHtml(health) {
       (health.truncated > 0 ? `<p class="muted">…(+${health.truncated} more affected file(s); doctor list capped)</p>` : '');
   return `
   <section data-advisory="parseHealth">
-    <h2>Parse health <span class="muted">(advisory — unreadable syntax is never silently called clean)</span></h2>
+    <h2>Parse health <span class="muted">(completeness evidence — affected syntax makes analysis partial)</span></h2>
     ${body}
   </section>`;
 }

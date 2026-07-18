@@ -60,7 +60,7 @@ say so in one line and hand off `stop`.
 |------|------|-------------|
 | **Recon (default)** | map / residual / “what next?” / bare `/ark-explore` | Headline → map → ranked table → **Top 3** → residue → Completion |
 | **Dual-plan seed** | user asks for a **plan**, mejora, roadmap, “Ark + patrón”, **or** spaghetti signals fire (§G) | Same recon **plus** **§ Dual-plan seed** (A + B). **Cap 3–5 B bets.** |
-| **Shape-focus** | plan A already empty / ENFORCE, user wants **pattern** depth only | Abbreviated map + **mandatory** concurrent-patterns table + B bets only (A = “goal.met / empty”) |
+| **Shape-focus** | plan A already empty / ENFORCE, `plan.completeness` is `complete`, user wants **pattern** depth only | Abbreviated map + **mandatory** concurrent-patterns table + B bets only (A = “goal.met / empty”) |
 
 **Auto-upgrade:** if §G spaghetti signals fire, you **must** use dual-plan seed or shape-focus
 — never end on recon-only with “layers are clean.”
@@ -75,7 +75,7 @@ say so in one line and hand off `stop`.
 
 | Section | Content |
 |---------|---------|
-| **A. Remediation** | From `--plan` — usually empty when ENFORCE; one line if so |
+| **A. Remediation** | From `--plan` — usually empty when ENFORCE; one line if so. Empty counts only when `plan.completeness === "complete"` |
 | **B. Pattern / evolution** | **3–5** bets max; each: evidence · así te lo re-soluciono · **success signal** · next skill · **pilot** · **kill-switch** if new layer/big move |
 | **Phase ladder** | Name which of Align / Stabilize / **Shape** the repo is in (§G) |
 
@@ -123,7 +123,7 @@ Useful split: **core product tree** | **field path** (`examples/`, starters) | *
 6. **§G spaghetti / design-depth** when signals fire (or always on brownfield).
 7. Ranked rows that **change a decision**; each bet has a **success signal** (not a file count).
 8. Hard lines: never weaken the contract; never invent mechanical-safe kinds; never claim ENFORCE from type-only cleanup while false-green doctor ids are active.
-9. **Parse honesty:** if `doctor.parseHealth.affectedFiles > 0`, open and name those paths; never describe them as clean or successfully inspected. The advisory does not change the gate verdict.
+9. **Parse honesty:** require `plan.completeness === "complete"` before accepting `goal.met`. If `doctor.parseHealth.affectedFiles > 0`, open and name those paths; never describe them as clean or successfully inspected. Doctor alone does not change the gate verdict, but check/plan completeness is `partial`, plan goal is false, and strict merge fails.
 
 ## Reconnaissance pass (do all that apply)
 
@@ -202,7 +202,7 @@ Prefer bets the user can run next (`command` / skill), not vague “improve DX�
 ### G. Spaghetti / design-depth ladder (non-deterministic path — mandatory when signals fire)
 
 **Signals (any one → dual-plan seed or shape-focus):**
-- Plan A empty / `goal.met` **and** you still see design-weak / concurrent patterns / god modules.
+- Plan A empty / `goal.met` with `completeness: complete` **and** you still see design-weak / concurrent patterns / god modules.
 - Brownfield with mixed layouts (flat services + “hex” folders + feature dumps).
 - Semantic false-green (path-correct, design-wrong).
 - User words: spaghetti, monstruo, legacy, “está enforce pero horrible”, pattern, refactor shape.
@@ -275,7 +275,7 @@ Kinds: `risk` | `false-green` | `debt` | `opportunity` | `shape` | `manifiesto` 
    On false-green dominant: **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
    On concentrated edge dominant: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
 7. **Dual-plan seed** — required in dual-plan seed / shape-focus (and when §G auto-upgrades); A + B cap 3–5; extraction cards for I/O bets.
-8. **Deterministic residue** — plan steps, violations, doctor top action. Point to `/ark-loop` / `/ark-fix` **only when A steps exist**; never pretend loop is the architecture story when goal is already met.
+8. **Deterministic residue** — plan completeness, steps, violations, doctor top action. Point to `/ark-loop` / `/ark-fix` **only when A steps exist**; never call a `partial`/`unavailable` plan met, and never pretend loop is the architecture story when a complete goal is already met.
 
 Optional: **Diff vs naive sensor-only read** (what reading the tree changed).
 

@@ -64,6 +64,8 @@ import { validateWithAutoPatch, resolveImportFileAbs } from './lib/auto-patch.mj
 import { composePrepareWrite } from './lib/prepare-write.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
 import { ARK_ANALYSIS_RESULT_SCHEMA, createAdapterResult } from './lib/adapter-contract.mjs';
+import { loadTypeScript } from './lib/typescript-host.mjs';
+import { validateSnippetAnalysis } from './lib/snippet-analysis.mjs';
 import { loadGoldenPattern, attachGoldenToPlacement } from './lib/golden-pattern.mjs';
 import { prepareChangeFromRoot } from './lib/prepare-change.mjs';
 import { detectWritePathCapabilities } from './lib/write-path-detect.mjs';
@@ -159,14 +161,6 @@ async function loadArk() {
         err instanceof Error ? err.message : String(err)
       }`
     );
-  }
-}
-
-async function loadOptionalTypeScript() {
-  try {
-    return await import('typescript');
-  } catch {
-    return undefined;
   }
 }
 
@@ -462,7 +456,8 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext) {
   if (typeof source !== 'string') return;
 
   const layer = inferLayer(filePath, config, args.root);
-  const validateOnce = (src) => gate.validate(src, { layer, filePath });
+  const validateOnce = (src) =>
+    validateSnippetAnalysis({ gate, ts, source: src, context: { layer, filePath } });
   // W1: one validation pass (+ optional autoPatch). Original write still blocked when
   // invalid; hosts must apply autoPatch explicitly (never silent write).
   const result = ts
@@ -478,6 +473,7 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext) {
         const once = validateOnce(source);
         return {
           valid: Boolean(once.valid),
+          completeness: once.completeness,
           violations: once.violations ?? [],
           autoPatch: null,
         };
@@ -494,7 +490,8 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext) {
   let existingCounts = new Map();
   try {
     const current = fs.readFileSync(filePath, 'utf8');
-    for (const violation of gate.validate(current, { layer, filePath }).violations) {
+    for (const violation of validateOnce(current).violations) {
+      if (String(violation.ruleId ?? violation.code).startsWith('ANALYSIS_')) continue;
       const key = violationKey(violation);
       existingCounts.set(key, (existingCounts.get(key) ?? 0) + 1);
     }
@@ -502,6 +499,7 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext) {
     // New file: nothing pre-exists, every violation is new.
   }
   const newViolations = (result.violations ?? []).filter((violation) => {
+    if (String(violation.ruleId ?? violation.code).startsWith('ANALYSIS_')) return true;
     const key = violationKey(violation);
     const remaining = existingCounts.get(key) ?? 0;
     if (remaining === 0) return true;
@@ -512,6 +510,7 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext) {
   const normalizedRel = rel.split(path.sep).join('/');
   const adapterResult = createAdapterResult({
     valid: false,
+    completeness: result.completeness,
     violations: newViolations.map((violation) => ({ ...violation, file: normalizedRel })),
   });
 
@@ -688,7 +687,8 @@ async function main() {
   }
 
   const ark = await loadArk();
-  const ts = await loadOptionalTypeScript();
+  const loadedTypeScript = await loadTypeScript(args.root);
+  const ts = loadedTypeScript.ts ?? undefined;
 
   const config =
     (configPath ? readArkConfig(configPath, { required: args.configExplicit }) : undefined) ??
@@ -1111,10 +1111,7 @@ async function main() {
     const filePath = params.arguments.filePath;
     const layer = params.arguments.layer ?? inferLayer(filePath, config, args.root);
     const validateOnce = (src) =>
-      gate.validate(src, {
-        layer,
-        filePath,
-      });
+      validateSnippetAnalysis({ gate, ts, source: src, context: { layer, filePath } });
     // W1: attempt mechanical-safe single-file autoPatch (import type), re-validate or discard.
     const result = validateWithAutoPatch({
       source,
@@ -1126,6 +1123,7 @@ async function main() {
     });
     const adapterResult = createAdapterResult({
       valid: result.valid,
+      completeness: result.completeness,
       violations: result.violations,
     });
     return {
@@ -1135,7 +1133,7 @@ async function main() {
           text: JSON.stringify(
             {
               ...adapterResult,
-              valid: result.valid,
+              valid: adapterResult.valid,
               violations: result.violations,
               ...(result.autoPatch ? { autoPatch: result.autoPatch } : {}),
               layer,
@@ -1146,7 +1144,7 @@ async function main() {
         },
       ],
       structuredContent: adapterResult,
-      isError: !result.valid,
+      isError: !adapterResult.valid,
     };
   }
 
@@ -1175,6 +1173,7 @@ async function main() {
       structuredContent: {
         schemaVersion: data.schemaVersion,
         valid: data.valid,
+        completeness: data.completeness,
         diagnostics: data.diagnostics,
       },
       isError: data.ok === false,
@@ -1353,9 +1352,11 @@ async function main() {
       params?.arguments?.layer ||
       inferLayer(placement.filePath, config, args.root);
     const validateOnce = (src) =>
-      gate.validate(src, {
-        layer,
-        filePath: placement.filePath,
+      validateSnippetAnalysis({
+        gate,
+        ts,
+        source: src,
+        context: { layer, filePath: placement.filePath },
       });
     const result = composePrepareWrite({
       source,

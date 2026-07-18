@@ -99,7 +99,7 @@
     "check:analysis-engine": "node scripts/generate-analysis-engine.mjs --check",
     "check:gallery-starters": "node scripts/check-gallery-starters.mjs",
     "generate:gallery-starters": "node scripts/check-gallery-starters.mjs --write",
-    "test:ts-compat": "node scripts/ts-compat-matrix.mjs 5.9.3 && node scripts/ts-compat-matrix.mjs 6.0.3 && node scripts/ts-compat-matrix.mjs 7.0.2",
+    "test:ts-compat": "node scripts/ts-compat-matrix.mjs",
     "eval:agent": "node eval/run.mjs",
     "eval:corpus": "node eval/validate-corpus.mjs",
     "eval:comparative": "node eval/comparative-run.mjs",
@@ -122,7 +122,7 @@
     "bench:hook-path": "node scripts/hook-path-bench.mjs"
   },
   "dependencies": {
-    "typescript": ">=5.0.0 <8"
+    "typescript-ark-host": "npm:typescript@6.0.3"
   },
   "peerDependencies": {
     "@arkgate/runtime": ">=0.1.0-experimental.0 <1",
@@ -156,6 +156,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "tsup": "^8.1.0",
+    "typescript": "5.9.3",
     "vitest": "^3.2.6"
   },
   "engines": {

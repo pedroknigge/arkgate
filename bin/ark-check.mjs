@@ -84,21 +84,14 @@ import {
   detectBestFitModel,
   dirSegmentsFromGlob,
 } from './lib/suggestions.mjs';
-import {
-  ARCHITECTURE_PRESETS,
-} from './lib/presets.mjs';
+import { ARCHITECTURE_PRESETS } from './lib/presets.mjs';
 import { loadArkConfigContract, parseArkConfigJson } from './lib/config-contract.mjs';
 import { createAdapterResult } from './lib/adapter-contract.mjs';
-
-import {
-  collectGovernedFiles,
-  normalize,
-  walk,
-} from './lib/scan-files.mjs';
-import {
-  configWarning,
-} from './lib/config-warnings.mjs';
+import { collectGovernedFiles, normalize, walk } from './lib/scan-files.mjs';
+import { configWarning } from './lib/config-warnings.mjs';
 import { runArchitectureScan } from './lib/architecture-scan.mjs';
+import { ANALYSIS_COMPLETENESS, analysisIncompleteStatement } from './lib/analysis-completeness.mjs';
+import { reportUnavailableAnalysis } from './lib/unavailable-analysis.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import { analyzePolicyTransition } from './lib/policy-delta-io.mjs';
 
@@ -1093,31 +1086,16 @@ async function main() {
     return;
   }
 
-  // Resolve TypeScript from the project first, then Ark's own install, then bare import.
-  // --plan can still run honestly (coverage + empty violations) when TS is missing.
-  // Early TypeScript 7 native builds may load but lack a JS `sys` host — we fall back.
   const loaded = await loadTypeScript(root);
   if (!loaded?.ts) {
-    if (args.plan) {
-      const cov = computeCoverage(root, config, files, rules);
-      if (!args.json) {
-        console.log(
-          color.yellow(
-            `TypeScript not found — plan shows coverage honesty only (no import graph). Install with: ${installDevHint(root, 'typescript')} (supported: 5.x–7.x; see docs/typescript-support.md)`
-          )
-        );
-      }
-      runPlan(root, [], args.json, cov.governed.percent, cov.governed.totalFiles, {
-        config,
-        files,
-        coverage: cov,
-      });
-      return;
-    }
-    console.error(
-      `ark-check requires a JS-API TypeScript (5.x–7.x with ts.sys). Install with: ${installDevHint(root, 'typescript')} — see docs/typescript-support.md`
-    );
-    process.exitCode = 2;
+    const nextAction =
+      'Reinstall or upgrade arkgate to restore its exact typescript-ark-host@6.0.3 fallback; ' +
+      `alternatively install an API-compatible host with ${installDevHint(root, 'typescript@6.0.3')} — ` +
+      'see docs/typescript-support.md';
+    reportUnavailableAnalysis({
+      root, config, rules, files, args, createResult: createAdapterResult, nextAction,
+      message: loaded?.reason ?? 'ArkGate could not load an API-compatible TypeScript host.',
+    });
     return;
   }
   const { ts } = loaded;
@@ -1133,7 +1111,7 @@ async function main() {
     );
   }
 
-  const { violations, warnings, safety, parseHealth } = runArchitectureScan({
+  const { violations, warnings, safety, parseHealth, completeness } = runArchitectureScan({
     root,
     config,
     manifest,
@@ -1148,7 +1126,7 @@ async function main() {
       configPath: path.isAbsolute(args.config) ? args.config : path.join(root, args.config),
       configMissing: !fs.existsSync(path.isAbsolute(args.config) ? args.config : path.join(root, args.config)),
       safety,
-      ts, parseHealth,
+      ts, parseHealth, completeness,
     });
     return;
   }
@@ -1238,18 +1216,22 @@ async function main() {
 
   // Soft/advisory warnings (failsStrict === false) never fail --strict-config.
   const strictWarnings = warnings.filter((w) => w.failsStrict !== false);
-  const ok =
+  const observedOk =
     activeViolations.length === 0 &&
     (!args.strictConfig || strictWarnings.length === 0) &&
     (policyDelta?.valid ?? true);
+  const analysisComplete = completeness === ANALYSIS_COMPLETENESS.complete;
+  const ok = observedOk && analysisComplete;
 
   if (args.plan) {
     const cov = computeCoverage(root, config, files, rules);
-    runPlan(root, activeViolations, args.json, cov.governed.percent, cov.governed.totalFiles, {
+    const plan = runPlan(root, activeViolations, args.json, cov.governed.percent, cov.governed.totalFiles, {
       config,
       files,
       coverage: cov,
+      completeness,
     });
+    if (args.strictMerge) process.exitCode = ok && plan.goal.met ? 0 : 1;
     return;
   }
 
@@ -1388,7 +1370,8 @@ async function main() {
 
   if (args.json) {
     const adapterResult = createAdapterResult({
-      valid: ok,
+      valid: observedOk,
+      completeness,
       violations: activeViolations.map(enrichViolationWithFixClass),
       warnings,
     });
@@ -1444,7 +1427,9 @@ async function main() {
           'Provide --policy-ack with the exact hashes, finding ids, and a non-empty reason.'
       );
     }
-    if (activeViolations.length === 0 && (policyDelta?.valid ?? true)) {
+    if (!analysisComplete) {
+      console.error(color.yellow(analysisIncompleteStatement(completeness)));
+    } else if (activeViolations.length === 0 && (policyDelta?.valid ?? true)) {
       const advisoryOnly = warnings.length > 0 && strictWarnings.length === 0;
       if (warnings.length === 0) {
         console.log(`${color.green('✔')} Ark check passed.${baselineNote}`);
@@ -1509,7 +1494,7 @@ async function main() {
     return;
   }
 
-  process.exitCode = ok ? 0 : 1;
+  process.exitCode = observedOk && (!args.strictMerge || analysisComplete) ? 0 : 1;
 }
 
 async function runWatchMode(args) {

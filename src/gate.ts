@@ -6,6 +6,7 @@ export {
   ARK_ANALYSIS_RESULT_SCHEMA,
   createAdapterResult,
   toAdapterDiagnostic,
+  type AnalysisCompleteness,
   type AdapterDiagnostic,
   type AdapterResult,
   type AdapterSeverity,

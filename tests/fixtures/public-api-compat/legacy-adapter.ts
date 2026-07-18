@@ -14,4 +14,28 @@ const legacyResult: AdapterResult = {
   diagnostics: [legacyDiagnostic],
 };
 
+const v11Result: AdapterResult = {
+  schemaVersion: '1.1',
+  valid: false,
+  diagnostics: [{ ...legacyDiagnostic, nextAction: 'Define a port, then preflight again.' }],
+};
+
+const completeResult: AdapterResult = {
+  schemaVersion: '1.2',
+  completeness: 'complete',
+  valid: true,
+  diagnostics: [],
+};
+
+// @ts-expect-error An incomplete 1.2 analysis can never carry a green verdict.
+const partialGreenResult: AdapterResult = {
+  schemaVersion: '1.2',
+  completeness: 'partial',
+  valid: true,
+  diagnostics: [],
+};
+
 void legacyResult;
+void v11Result;
+void completeResult;
+void partialGreenResult;

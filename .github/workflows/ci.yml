@@ -174,25 +174,60 @@ jobs:
       - run: npm run check:js
       - run: node bin/ark-check.mjs --version
 
-  # Consumer TypeScript matrix: ark-check --plan against TS 5 / 6 / 7 installed in a
-  # throwaway fixture (tests/fixtures/ts-consumer). Ensures gate load + resolve work
-  # while the ecosystem moves to TypeScript 7 (native). See docs/typescript-support.md.
+  # Packed consumer matrix: 4 Node versions × 3 package managers × TS 5/6/7.
+  # The checkout is orchestration only; every product command resolves from the exact
+  # release tarball verified and uploaded by build. See docs/typescript-support.md.
   ts-compat:
-    name: TypeScript ${{ matrix.typescript }}
+    name: Packed TS / Node ${{ matrix.node }} / ${{ matrix.pm.name }}
+    needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        typescript: ['5.9.3', '6.0.3', '7.0.2']
+        node: [18, 20, 22, 24]
+        pm:
+          - { name: npm, version: 10.8.2 }
+          - { name: pnpm, version: 9.15.9 }
+          - { name: yarn, version: 4.17.1 }
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
-          node-version: 20
-          cache: npm
+          node-version: ${{ matrix.node }}
 
-      - run: npm ci
+      - name: Install pinned Corepack
+        run: npm install --global corepack@0.32.0
 
-      - name: ark-check --plan on consumer fixture (typescript@${{ matrix.typescript }})
-        run: node scripts/ts-compat-matrix.mjs ${{ matrix.typescript }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-artifacts-${{ github.sha }}
+          path: ${{ runner.temp }}/release-artifacts
+
+      - name: Exercise packed candidate across TypeScript 5/6/7
+        run: >-
+          node scripts/ts-compat-matrix.mjs
+          --artifact-dir "${{ runner.temp }}/release-artifacts/gate"
+          --package-manager "${{ matrix.pm.name }}"
+          --manager-version "${{ matrix.pm.version }}"
+          --typescript 5.9.3,6.0.3,7.0.2
+          --out "${{ runner.temp }}/ts-compat/report.json"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: ts-compat-node-${{ matrix.node }}-${{ matrix.pm.name }}-${{ github.sha }}
+          path: ${{ runner.temp }}/ts-compat/report.json
+          if-no-files-found: error
+
+  ts-compat-gate:
+    name: TypeScript compatibility gate
+    if: ${{ always() }}
+    needs: ts-compat
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every packed compatibility cell
+        env:
+          MATRIX_RESULT: ${{ needs.ts-compat.result }}
+        run: test "$MATRIX_RESULT" = success

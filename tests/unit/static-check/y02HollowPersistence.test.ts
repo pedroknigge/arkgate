@@ -67,7 +67,7 @@ function doctorOutput(root: string, files: string[], asJson: boolean): string {
   const original = console.log;
   console.log = (...values: unknown[]) => logs.push(values.map(String).join(' '));
   try {
-    runDoctor(root, CONFIG, files, CONFIG.rules, [], asJson, {});
+    runDoctor(root, CONFIG, files, CONFIG.rules, [], asJson, { completeness: 'complete' });
   } finally {
     console.log = original;
   }

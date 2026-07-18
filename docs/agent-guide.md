@@ -8,9 +8,10 @@ hard-CI split is a deliberate trade-off, not a gap: local hooks and MCP coach at
 while a required merge status is the one boundary a repository can make every write path share.
 
 CLI names: prefer **`arkgate` / `arkgate-check` / `arkgate-mcp`**; aliases `ark` / `ark-check` /
-`ark-mcp` still work for one major. TypeScript **5.x / 6.x** project compilers are supported. The
-TS7-only packed-consumer claim is suspended in 3.7.0; use the exact workaround and full-gate rule
-in [typescript-support.md](typescript-support.md).
+`ark-mcp` still work for one major. The current source candidate tests packed project TypeScript
+**5.9.3 / 6.0.3 / 7.0.2** and uses an exact, physically distinct TypeScript 6 analysis host when
+the project API is unusable. Published 3.7.0 predates that correction; see the distribution and
+completeness boundary in [typescript-support.md](typescript-support.md).
 
 ## Architecture playbook and `ark-check --recommend`
 
@@ -215,7 +216,8 @@ persisted as a short Shape plan under the repo; not a gate requirement.
 **Full-skill agent co-pilot:** after explicitly installing the `/ark-*` pack, use
 `/ark-autopilot` (explore-first, dual plan A remediation + B pattern bets). Recon without
 applying: `/ark-explore`. The default compact router uses MCP/CLI directly. Never treat empty
-`--plan` steps as “architecture healthy” when `designWeak` / non-empty `patternBets` remain.
+`--plan` steps as “architecture healthy” when `designWeak` / non-empty `patternBets` remain, or
+when `plan.completeness !== "complete"`. Partial and unavailable analysis force `goal.met: false`.
 
 `ark init --archetype <id>` maps playbook ids to named presets (`hexagonal`, `layered`,
 `feature-sliced`, `monorepo`). With `--yes` and no archetype, Ark auto-selects from
@@ -694,8 +696,13 @@ unreadable governed syntax into a clean claim after a parser change.
 
 `ark-check --doctor --json` reports that syntax honesty under `doctor.parseHealth`: exact
 scanned/affected/diagnostic totals plus a deterministic top-12 file list and honest overflow.
-It is advisory in this release — it does not change the verdict, design fitness, pattern bets,
-or violations — but an affected governed file must not be described as successfully inspected.
+Doctor remains diagnostic: parse health does not add an architecture violation or change design
+fitness/pattern bets. Verdict surfaces consume the evidence through required completeness,
+however. An affected governed file is `partial`, makes plan `goal.met: false` and normal JSON
+`valid:false`/`ok:false`, and makes strict merge exit `1`. The non-strict process exit remains
+advisory for compatibility, so automation must read JSON or use strict merge. No usable host is
+`unavailable`, forces the plan false, and exits `2`. Never describe either state as successfully
+inspected.
 
 `ark-check --json` also reports `warnings` for incomplete governance coverage: missing
 layers, unclassified included files, unmatched layer patterns, duplicate layers, and rules
@@ -795,8 +802,8 @@ not replace your web framework, HTTP clients, or job scheduler.
 ## Write-Path Gate (MCP)
 
 The strongest place to constrain an AI agent is the moment it writes a file, not after.
-`arkgate-mcp` / `ark-mcp` exposes ArkGate over MCP (JSON-RPC over stdio; gate host needs a
-JS-API TypeScript — nested or project) so a host can gate
+`arkgate-mcp` / `ark-mcp` exposes ArkGate over MCP (JSON-RPC over stdio; it prefers a usable
+project TypeScript API, then exact `typescript-ark-host@6.0.3`) so a host can gate
 the write path:
 
 For a complete multi-file candidate, use `ark preflight --changes changes.json --json` or MCP
@@ -828,6 +835,11 @@ The server exposes these nine tools:
 | `ark_prepare_change` | `{ changes, changeMap? }`: preflight one complete create/update/delete batch in memory; never writes files. |
 | `ark_recommend` | No args: return the deterministic application-shape plan used by `ark-check --recommend --json`. |
 | `ark_suggest_include` | No args: propose TypeScript/JavaScript include roots from workspaces and nested packages. |
+
+Current full-check diagnostic envelopes use schema `1.2` and require
+`completeness: "complete" | "partial" | "unavailable"`. MCP `ark_check` mirrors CLI `ok`; an
+incomplete result is returned as an error rather than a green subset. Consumer-owned 1.0/1.1
+`AdapterResult` values remain accepted by the public TypeScript union for source compatibility.
 
 For hook-based enforcement, `ark-mcp --hook` runs one-shot: it reads a PreToolUse payload
 from stdin, validates the post-edit file content, and exits `2` with violations on stderr

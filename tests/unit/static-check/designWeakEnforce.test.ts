@@ -43,6 +43,7 @@ describe('P04 design-weak-enforce fixture', () => {
     // No cross-layer import violations in this isolated fixture (each file is self-contained).
     const activeViolations: unknown[] = [];
     const plan = buildRemediationPlan(FIXTURE, activeViolations, cov.governed.percent, files.length, {
+      completeness: 'complete',
       config,
       files,
       coverage: cov,
@@ -66,6 +67,7 @@ describe('P04 design-weak-enforce fixture', () => {
     const files = collectGovernedFiles(FIXTURE, config);
     const cov = computeCoverage(FIXTURE, config, files, config.rules);
     const plan = buildRemediationPlan(FIXTURE, [], cov.governed.percent, files.length, {
+      completeness: 'complete',
       config,
       files,
       coverage: cov,
@@ -110,7 +112,7 @@ describe('P04 design-weak-enforce fixture', () => {
       logs.push(a.map(String).join(' '));
     };
     try {
-      runDoctor(FIXTURE, config, files, config.rules, [], true, {});
+      runDoctor(FIXTURE, config, files, config.rules, [], true, { completeness: 'complete' });
     } finally {
       console.log = orig;
     }

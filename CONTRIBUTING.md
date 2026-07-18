@@ -21,7 +21,7 @@ npx arkgate-check --root . --config ark.config.json --strict
 npm run check:architecture   # ArkGate dogfoods itself
 npm run check:layer-match    # derived bin/ark-layer-match.mjs must match domain source
 npm run check:cli-pure       # remediation + baselineKey derived helpers in sync
-npm run test:ts-compat       # consumer matrix TS 5.9 / 6.0 / 7.0 (optional, slower)
+npm run test:ts-compat       # packed-consumer TS 5.9 / 6.0 / 7.0 check (optional, slower)
 ```
 
 After editing pure Domain algorithms, regenerate CLI artifacts:
@@ -32,10 +32,18 @@ npm run generate:cli-pure      # src/domain/remediation.ts + baselineKey.ts
 ```
 
 ArkGate's library and CLIs support Node >= 18. The repository confidence/release gate requires
-Node >= 20 because it runs the current Stryker mutation runner; CI uses Node 20 and publish uses
-Node 24. **Runtime dependencies stay minimal:** only `typescript` (JS-API host for the gate when
-the project ships TypeScript 7’s version-only main export). Do not add other production deps
-without discussion. NestJS and similar stay optional `peerDependencies` + devDependencies.
+Node >= 20 because it runs the current Stryker mutation runner; compatibility CI also exercises
+the packed candidate on Node 18/20/22/24 and publish uses Node 24. **Runtime dependencies stay
+minimal:** only `typescript-ark-host` at exact `npm:typescript@6.0.3`, a physically distinct JS-API
+analysis host used when the project ships TypeScript 7’s version-only main export. It must not
+replace or change the project's selected `tsc`. Do not add other production deps without
+discussion. NestJS and similar stay optional `peerDependencies` + devDependencies.
+
+The compatibility workflow packs the candidate before testing clean installs: Node 18/20/22/24
+× npm/pnpm/Yarn × project TypeScript 5.9.3/6.0.3/7.0.2 (36 cells). A valid cell keeps the
+project's `tsc` version unchanged and reports ArkGate's fallback as exact 6.0.3 when needed. Yarn
+uses strict PnP for TS5/6 and its `node-modules` linker for native TS7; every JSON report records
+the install mode rather than hiding that compiler boundary.
 
 ## Project layout (public GitHub tree)
 
@@ -62,6 +70,9 @@ not ship unless they are explicitly named there.
 
 1. **Every behavior change needs a test.** CLI behavior is tested by executing the real binaries against temp fixtures (see `tests/unit/static-check/arkCheck.test.ts` for the pattern).
 2. **The three gates must agree.** `arkgate-check` / `ark-check`, `arkgate-mcp` / `ark-mcp`, and the ESLint plugin share semantics via `bin/ark-shared.mjs` and the config format — if you change classification or rule semantics in one, change it everywhere and add a test proving they match.
+   Current diagnostic envelopes use schema 1.2 and must report required
+   `completeness: complete | partial | unavailable`; incomplete analysis cannot satisfy a plan or
+   strict merge.
 3. **CI must be green**: typecheck, coverage + mutation confidence, build, and
    `check:architecture` all gate merges.
 4. Keep diffs small and boring. No new abstractions without a second concrete use.

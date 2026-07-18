@@ -7,14 +7,46 @@
   "required": [
     "schemaVersion",
     "valid",
+    "completeness",
     "diagnostics"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "completeness": {
+            "enum": [
+              "partial",
+              "unavailable"
+            ]
+          }
+        },
+        "required": [
+          "completeness"
+        ]
+      },
+      "then": {
+        "properties": {
+          "valid": {
+            "const": false
+          }
+        }
+      }
+    }
   ],
   "properties": {
     "schemaVersion": {
-      "const": "1.1"
+      "const": "1.2"
     },
     "valid": {
       "type": "boolean"
+    },
+    "completeness": {
+      "enum": [
+        "complete",
+        "partial",
+        "unavailable"
+      ]
     },
     "diagnostics": {
       "type": "array",

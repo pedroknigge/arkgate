@@ -1,8 +1,9 @@
 /**
  * Doctor's advisory sensors, aggregated (W01 contract health, U05 ambient
- * state, X04 physical cohesion, Y03 parse health). Nothing here feeds a
- * verdict, designFitness, or an exit code. One seam keeps doctor-plan.mjs
- * inside its module budget as new advisory surfaces land.
+ * state, X04 physical cohesion, Y03 parse health). These sensors do not create
+ * architecture violations or designFitness findings; Z02 separately maps
+ * parse-health evidence to analysis completeness and fail-closed exits. One
+ * seam keeps doctor-plan.mjs inside its module budget as new surfaces land.
  */
 import { computeAmbientState, printAmbientStateSection } from './ambient-state.mjs';
 import { computeContractHealth, printContractHealthSection } from './contract-smells.mjs';

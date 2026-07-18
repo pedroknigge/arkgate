@@ -18,12 +18,13 @@ npx arkgate-check --install-agent-gates --force
 
 Guide: `docs/migrate-from-ark-runtime-kernel.md` in the package (or on GitHub).
 
-**TypeScript 7 projects:** the TS7-only packed-consumer support claim is suspended in ArkGate
-3.7.0. Package-manager deduplication can remove the intended compatible JS-API fallback; full
-check then exits unavailable, while `--plan --json` can incorrectly report `goal.met: true`.
-Do not describe the fallback as guaranteed. Keep an API-compatible TypeScript 5/6 package under
-the project `typescript` name, run the full strict gate, and point users at
-`docs/typescript-support.md`. A dual TS6-JS-API / TS7-CLI install is the documented workaround.
+**TypeScript 7 projects:** published ArkGate 3.7.0 predates the corrective host and completeness
+contract. Its analysis dependency can deduplicate to the TS7 version-only export, and unavailable
+`--plan --json` can report a false `goal.met: true`. The current source candidate for the next
+corrective release installs `typescript-ark-host` at exact `npm:typescript@6.0.3` and emits required
+`complete | partial | unavailable` state. Do not claim that correction for 3.7.0. After a
+corrective release is installed, keep the project's own TypeScript/`tsc` unchanged and require
+`completeness: complete` from the final check; see `docs/typescript-support.md`.
 
 **MCP double-bin check (identity cutover):** after upgrade, open `.mcp.json` and
 `.cursor/mcp.json`. `args` must contain **exactly one** of `arkgate-mcp` / `ark-mcp`
@@ -147,7 +148,9 @@ npx arkgate-check --install-agent-gates --skills-only --force
    in those files, preserving every customization (no `--force` clobber). A normal `ark-check`
    also flags this when it detects the mismatch.
 4. **Re-verify** — `ark-check --root . --config ark.config.json
-   --strict-config` (with `--baseline .ark-baseline.json` if present). A new
+   --strict-config --json` (with `--baseline .ark-baseline.json` if present). Require top-level
+   `completeness: "complete"` and `ok: true`; a partial result (governed parse diagnostics) or
+   unavailable host is not a passing upgrade. A new
    version may detect violations the old one missed: if new violations appear,
    **STOP — do not continue this skill as complete.** **STOP — bulk residual debt: invoke /ark-loop or /ark-autopilot**
    (or `/ark-fix` for a small set). If they are too numerous to fix
@@ -179,10 +182,10 @@ npx arkgate-check --install-agent-gates --skills-only --force
 
 ## Verify and report
 
-End with a passing check. Report: latest published version, old → new version
+End with a passing, complete check. Report: latest published version, old → new version
 (or "already latest"), changelog entries that mattered here (plain language),
 files written/refreshed for the **active host**, deferred hosts (if any),
-skipped customized files needing a manual look, and the final check status.
+skipped customized files needing a manual look, and the final check status plus completeness.
 
 ## Completion contract (skill incomplete if missing)
 

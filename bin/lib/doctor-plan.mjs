@@ -1,6 +1,4 @@
-/**
- * Coverage, plan, and doctor CLI surfaces (roadmap #11).
- */
+/** Coverage, plan, and doctor CLI surfaces (roadmap #11). */
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -41,6 +39,7 @@ import {
 import { loadGoldenPattern, summarizeGoldenPattern } from './golden-pattern.mjs';
 import { summarizePilotLoop } from './pilot-loop.mjs';
 import { computeDoctorAdvisories, printDoctorAdvisories } from './doctor-advisories.mjs';
+import { ANALYSIS_COMPLETENESS, analysisIncompleteStatement, normalizeAnalysisCompleteness } from './analysis-completeness.mjs';
 
 const color = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
@@ -49,11 +48,9 @@ const color = {
   dim: (s) => `\x1b[2m${s}\x1b[0m`,
   bold: (s) => `\x1b[1m${s}\x1b[0m`,
 };
-
 function normalize(value) {
   return String(value).split(path.sep).join('/');
 }
-
 
 export function computeCoverage(root, config, files, rules) {
   const layers = config.layers ?? [];
@@ -154,9 +151,6 @@ export function runCoverage(root, config, files, rules, asJson) {
 // --doctor: one consolidated health view — coverage, violations, gates, skills, baseline,
 // and command runners — each with the exact command to fix it. Folds the data the other
 // modes already produce so a team sees "what state is my Ark adoption in?" at a glance.
-// Co-pilot Phase F — turn active violations into a classified, ordered remediation PLAN with an
-// embedded GOAL. This is the `plan` primitive the future apply-loop (Phase H, `loop`) consumes
-// and the autopilot (Phase I) drives toward the `goal`. Read-only: it changes no files.
 /**
  * @param {string} root
  * @param {object[]} activeViolations
@@ -176,11 +170,10 @@ export function buildRemediationPlan(
   totalFiles = null,
   options = {}
 ) {
-  // A plan with 0 violations but ~0% governed (or ZERO files in scope) is a FALSE green:
-  // nothing is actually being checked. Treat as "not done — classify / fix include first."
+  const completeness = normalizeAnalysisCompleteness(options.completeness);
   const governedLow = governedPercent != null && governedPercent < 50;
   const emptyScope = totalFiles === 0;
-  const notHonestlyEnforced = governedLow || emptyScope;
+  const notHonestlyEnforced = governedLow || emptyScope || completeness !== ANALYSIS_COMPLETENESS.complete;
   const steps = activeViolations.map((v, index) => {
     const verdict = classifyRemediation(v);
     return {
@@ -249,9 +242,11 @@ export function buildRemediationPlan(
     statement =
       'No active edge violations — contract edges are clean, but design smells remain (ENFORCE · design-weak). Shape residual is plan B only; not healthy finished.';
   }
+  if (completeness !== ANALYSIS_COMPLETENESS.complete) statement = analysisIncompleteStatement(completeness);
 
   return {
     version: '1',
+    completeness,
     goal: {
       statement,
       // Edge remediation termination (Phase H). Design-weak does NOT flip met false
@@ -378,6 +373,8 @@ export function runPlan(
 }
 
 export function runDoctor(root, config, files, rules, violations, asJson, options = {}) {
+  const completeness = normalizeAnalysisCompleteness(options.completeness);
+  const analysisComplete = completeness === ANALYSIS_COMPLETENESS.complete;
   const cov = computeCoverage(root, config, files, rules);
   const summary = summarizeViolations(violations);
   const configPath = options.configPath ?? path.join(root, 'ark.config.json');
@@ -408,11 +405,14 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     : 0;
   const activeCount = violations.length - suppressed;
   const designSmells = detectDesignSmells(root, config, files, cov);
-  const designFitness = summarizeDesignFitness(designSmells, {
+  const observedDesignFitness = summarizeDesignFitness(designSmells, {
     activeViolations: activeCount,
     governedPercent: cov.governed.percent,
     totalFiles: cov.governed.totalFiles,
   });
+  const designFitness = analysisComplete ? observedDesignFitness : {
+    ...observedDesignFitness, status: 'analysis-incomplete', designWeak: false, label: 'Design fitness not verified — analysis is incomplete; observed smells remain advisory.',
+  };
   // Q01 — single post-green door when design-weak (map → B; no skill shopping).
   const postGreenPath = buildPostGreenNextAction(designFitness);
   // Q03 — optional golden pattern for NEW code (advisory; never clears design-weak).
@@ -424,17 +424,18 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     patternBets: patternBetsForLoop,
     designSmells,
   });
-  const doctorAdvisories = computeDoctorAdvisories(root, config, cov, rules, files, options.ts, options.parseHealth); // advisory only — never a verdict
+  const doctorAdvisories = computeDoctorAdvisories(root, config, cov, rules, files, options.ts, options.parseHealth);
 
   if (asJson) {
     console.log(
       JSON.stringify(
         {
-          ok: true,
+          ok: analysisComplete,
           doctor: {
+            completeness,
             operatingMode: resolveOperatingMode({
               governedPercent: cov.governed.percent,
-              planMet: activeCount === 0 && cov.governed.percent >= 50,
+              planMet: analysisComplete && activeCount === 0 && cov.governed.percent >= 50,
               mature: cov.governed.totalFiles >= 150,
               totalFiles: cov.governed.totalFiles,
               emptyLayers: cov.emptyLayers,
@@ -481,7 +482,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             baseline: {
               exists: baseline.exists,
               frozen: baseline.exists ? baseline.keys.size : 0,
-              stale: staleBaseline,
+              stale: analysisComplete ? staleBaseline : null,
               policy: adoption.baseline,
             },
             gatesMissing,
@@ -544,16 +545,16 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const bad = color.red('✗');
   const actions = [];
   const line = (mark, text) => console.log(`  ${mark} ${text}`);
-
+  if (!analysisComplete) actions.push('restore complete analysis, then rerun ark-check --doctor');
   console.log(color.bold(`Ark doctor — ${path.basename(path.resolve(root)) || '.'}`));
+  if (!analysisComplete) line(warn, analysisIncompleteStatement(completeness));
 
   const emptyScope = cov.governed.totalFiles === 0;
   const totalFiles = cov.governed.totalFiles || 0;
   const presentationRow = cov.layers.find((r) => r.name === 'PresentationAdapters');
   const mode = resolveOperatingMode({
     governedPercent: emptyScope ? 0 : cov.governed.percent,
-    planMet:
-      activeCount === 0 && !emptyScope && cov.governed.percent >= 50,
+    planMet: analysisComplete && activeCount === 0 && !emptyScope && cov.governed.percent >= 50,
     mature: cov.governed.totalFiles >= 150,
     totalFiles: cov.governed.totalFiles,
     emptyLayers: cov.emptyLayers,
@@ -595,7 +596,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   console.log('');
   console.log(color.bold('Design fitness'));
   if (designSmells.length === 0) {
-    line(ok, designFitness.label);
+    line(analysisComplete ? ok : warn, designFitness.label);
   } else {
     line(designFitness.designWeak ? warn : warn, designFitness.label);
     for (const smell of designSmells.slice(0, 5)) {
@@ -700,8 +701,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   console.log('');
   console.log(color.bold('Violations'));
   if (violations.length === 0) {
-    // Avoid false confidence when the contract barely covers the tree.
-    if (emptyScope || cov.governed.percent < 50) {
+    if (!analysisComplete) line(warn, 'No reported violations — contract compliance is not verified until analysis is complete');
+    else if (emptyScope || cov.governed.percent < 50) {
       line(
         warn,
         'No active violations — coverage is still thin, so green is not yet honest enforcement'
@@ -812,12 +813,12 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   console.log('');
   console.log(color.bold('Baseline'));
   if (!baseline.exists) {
-    line(violations.length > 0 ? warn : ok, violations.length > 0 ? 'No baseline — adopting a dirty repo? freeze with --update-baseline' : 'No baseline (nothing to freeze)');
+    line(!analysisComplete || violations.length > 0 ? warn : ok, !analysisComplete ? 'No baseline — current violations were not fully evaluated' : violations.length > 0 ? 'No baseline — adopting a dirty repo? freeze with --update-baseline' : 'No baseline (nothing to freeze)');
   } else {
     // Baseline keys are line-agnostic, so N keys can suppress ≥N violations — label as keys
     // to avoid an apparent mismatch with the "frozen" violation count above.
-    line(ok, `${baseline.keys.size} frozen key(s)`);
-    if (staleBaseline > 0) {
+    line(analysisComplete ? ok : warn, `${baseline.keys.size} frozen key(s)${analysisComplete ? '' : ' — stale comparison not verified'}`);
+    if (analysisComplete && staleBaseline > 0) {
       line(warn, `${staleBaseline} stale entr(y/ies) no longer occur — tighten with --update-baseline`);
       actions.push('tighten the baseline (--update-baseline)');
     }

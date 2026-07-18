@@ -249,7 +249,9 @@ describe('X04 doctor surface stays advisory (pinned invariants)', () => {
       logs.push(args.map(String).join(' '));
     };
     try {
-      runDoctor(root, config, files, (config as { rules: object[] }).rules ?? [], [], true, {});
+      runDoctor(root, config, files, (config as { rules: object[] }).rules ?? [], [], true, {
+        completeness: 'complete',
+      });
     } finally {
       console.log = orig;
     }

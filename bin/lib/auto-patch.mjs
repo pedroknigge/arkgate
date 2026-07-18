@@ -194,7 +194,7 @@ export function applyImportTypeAutoPatch(ts, source, opts = {}) {
  *   filePath?: string,
  *   root: string,
  *   ts: object,
- *   validate: (source: string) => { valid: boolean, violations?: any[] },
+ *   validate: (source: string) => { valid: boolean, completeness?: string, violations?: any[] },
  *   resolveTargetAbs?: Function,
  * }} opts
  */
@@ -203,6 +203,7 @@ export function validateWithAutoPatch(opts) {
   const result = validate(source);
   const base = {
     valid: Boolean(result.valid),
+    ...(result.completeness ? { completeness: result.completeness } : {}),
     violations: Array.isArray(result.violations) ? result.violations : [],
   };
 
@@ -230,7 +231,12 @@ export function validateWithAutoPatch(opts) {
   });
 
   if (base.valid) {
-    return { valid: true, violations: [], autoPatch: null };
+    return {
+      valid: true,
+      ...(base.completeness ? { completeness: base.completeness } : {}),
+      violations: [],
+      autoPatch: null,
+    };
   }
 
   // Write-path autoPatch: import-type mechanical-safe only (W1).
@@ -242,17 +248,28 @@ export function validateWithAutoPatch(opts) {
   });
 
   if (!attempt) {
-    return { valid: false, violations, autoPatch: null };
+    return {
+      valid: false,
+      ...(base.completeness ? { completeness: base.completeness } : {}),
+      violations,
+      autoPatch: null,
+    };
   }
 
   const after = validate(attempt.source);
   if (!after.valid) {
     // Discard — never return an unvalidated patch
-    return { valid: false, violations, autoPatch: null };
+    return {
+      valid: false,
+      ...(base.completeness ? { completeness: base.completeness } : {}),
+      violations,
+      autoPatch: null,
+    };
   }
 
   return {
     valid: false,
+    ...(base.completeness ? { completeness: base.completeness } : {}),
     violations,
     autoPatch: {
       source: attempt.source,

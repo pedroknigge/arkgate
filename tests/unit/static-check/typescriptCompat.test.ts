@@ -8,6 +8,7 @@ import {
   usableTypescript,
   typescriptUsabilityHint,
 } from '../../../bin/ark-shared.mjs';
+import { loadTypeScript } from '../../../bin/lib/typescript-host.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const CHECK = path.join(REPO, 'bin/ark-check.mjs');
@@ -88,7 +89,7 @@ describe('ark-check + consumer fixture (real CLI)', () => {
 });
 
 describe('loadTypeScript fallback when project TS is unusable', () => {
-  it('still runs --plan when project typescript has no sys (simulates early TS7)', () => {
+  it('uses ArkGate\'s physically distinct TS6 host when project TypeScript is unusable', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-ts7-fallback-'));
     // Copy fixture sources
     fs.cpSync(FIXTURE, root, { recursive: true });
@@ -109,6 +110,11 @@ describe('loadTypeScript fallback when project TS is unusable', () => {
       JSON.stringify({ name: 'ts7-fallback-fixture', private: true })
     );
 
+    const loaded = await loadTypeScript(root);
+    expect(loaded).toMatchObject({ source: 'arkgate-fallback' });
+    expect(loaded?.version).toMatch(/^6\./);
+    expect(loaded?.fallbackReason).toMatch(/not API-compatible/i);
+
     const r = spawnSync(
       process.execPath,
       [CHECK, '--root', root, '--config', 'ark.config.json', '--plan', '--json', '--no-cache'],
@@ -117,7 +123,7 @@ describe('loadTypeScript fallback when project TS is unusable', () => {
         env: { ...process.env, ARK_DEBUG_TS: '1' },
       }
     );
-    // Must not crash; should use arkgate/import fallback TypeScript
+    // Must not crash; the installed CLI must use the same distinct fallback.
     expect(r.status).toBe(0);
     const out = JSON.parse(r.stdout);
     expect(out.plan?.steps?.length).toBeGreaterThan(0);

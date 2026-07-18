@@ -11,16 +11,17 @@ import {
 import { deterministicNextAction } from '../../../src/domain/remediation';
 import { classifyPublishFacts, looksLikeArkIntent } from '../../../src/domain/sourcePolicy';
 
-describe('cross-adapter result contract v1', () => {
+describe('cross-adapter result contract v1.2', () => {
   it('keeps the committed compatibility fixture byte-for-value stable', () => {
     const fixture = JSON.parse(
       fs.readFileSync(
-        path.resolve('tests/fixtures/contracts/ark.analysis-result.v1.1.json'),
+        path.resolve('tests/fixtures/contracts/ark.analysis-result.v1.2.json'),
         'utf8'
       )
     );
     expect(
       createAdapterResult({
+        completeness: 'complete',
         valid: false,
         violations: [
           {
@@ -35,22 +36,33 @@ describe('cross-adapter result contract v1', () => {
         ],
       })
     ).toEqual(fixture);
-    expect(ARK_ANALYSIS_RESULT_SCHEMA_VERSION).toBe('1.1');
-    expect(ARK_ANALYSIS_RESULT_SCHEMA.properties.schemaVersion.const).toBe('1.1');
+    expect(ARK_ANALYSIS_RESULT_SCHEMA_VERSION).toBe('1.2');
+    expect(ARK_ANALYSIS_RESULT_SCHEMA.properties.schemaVersion.const).toBe('1.2');
+    expect(ARK_ANALYSIS_RESULT_SCHEMA.required).toContain('completeness');
+    expect(ARK_ANALYSIS_RESULT_SCHEMA.properties.completeness).toEqual({
+      enum: ['complete', 'partial', 'unavailable'],
+    });
+    expect(ARK_ANALYSIS_RESULT_SCHEMA.allOf).toEqual([
+      {
+        if: {
+          properties: { completeness: { enum: ['partial', 'unavailable'] } },
+          required: ['completeness'],
+        },
+        then: { properties: { valid: { const: false } } },
+      },
+    ]);
   });
 
-  it('retains the 1.0 fixture without the additive action field', () => {
-    const legacy = JSON.parse(
-      fs.readFileSync(
-        path.resolve('tests/fixtures/contracts/ark.analysis-result.v1.json'),
-        'utf8'
-      )
+  it('retains the 1.0 and 1.1 fixtures without the additive completeness field', () => {
+    const fixtures = ['ark.analysis-result.v1.json', 'ark.analysis-result.v1.1.json'].map((name) =>
+      JSON.parse(fs.readFileSync(path.resolve('tests/fixtures/contracts', name), 'utf8'))
     );
-    expect(legacy.schemaVersion).toBe('1.0');
-    expect(legacy.diagnostics[0]).not.toHaveProperty('nextAction');
+    expect(fixtures.map((fixture) => fixture.schemaVersion)).toEqual(['1.0', '1.1']);
+    expect(fixtures.every((fixture) => !Object.hasOwn(fixture, 'completeness'))).toBe(true);
+    expect(fixtures[0].diagnostics[0]).not.toHaveProperty('nextAction');
   });
 
-  it('typechecks consumer-owned 1.0 diagnostics without nextAction', () => {
+  it('typechecks consumer-owned 1.0 and 1.1 results without completeness', () => {
     const result = spawnSync(
       path.resolve('node_modules/.bin/tsc'),
       ['-p', 'tests/fixtures/public-api-compat/tsconfig.json'],
@@ -59,14 +71,37 @@ describe('cross-adapter result contract v1', () => {
     expect(result.status, result.stderr || result.stdout).toBe(0);
   });
 
+  it('preserves legacy factory calls as complete and fails closed explicit incomplete analysis', () => {
+    expect(createAdapterResult({ valid: true })).toEqual({
+      schemaVersion: '1.2',
+      completeness: 'complete',
+      valid: true,
+      diagnostics: [],
+    });
+    expect(createAdapterResult({ valid: true, completeness: 'partial' })).toMatchObject({
+      completeness: 'partial',
+      valid: false,
+    });
+    expect(createAdapterResult({ valid: true, completeness: 'unavailable' })).toMatchObject({
+      completeness: 'unavailable',
+      valid: false,
+    });
+    expect(createAdapterResult({ valid: true, completeness: 'complete' })).toMatchObject({
+      completeness: 'complete',
+      valid: true,
+    });
+  });
+
   it('normalizes legacy code fields, warnings, and invalid locations deterministically', () => {
     expect(
       createAdapterResult({
+        completeness: 'complete',
         valid: true,
         warnings: [{ code: 'LEGACY_WARNING', severity: 'warning', line: 0, column: -1 }],
       })
     ).toEqual({
-      schemaVersion: '1.1',
+      schemaVersion: '1.2',
+      completeness: 'complete',
       valid: true,
       diagnostics: [
         {

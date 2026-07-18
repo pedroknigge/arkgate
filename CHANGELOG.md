@@ -4,6 +4,20 @@ All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are do
 
 ## Unreleased
 
+### Added
+
+- **Analysis completeness (Z02):** CLI, MCP, hook, and public schema/type envelopes now carry
+  required `complete | partial | unavailable` evidence. Incomplete analysis cannot satisfy a
+  remediation goal; governed parse diagnostics fail `--strict-merge`, and a missing analysis host
+  exits `2` instead of producing a clean-looking plan.
+
+### Fixed
+
+- **Packed TypeScript 7 analysis:** ArkGate now ships an exact, separately named TypeScript 6
+  JS-API host that package-manager deduplication cannot replace with TS7's version-only export.
+  The consumer's own TypeScript remains preferred when usable and its selected `tsc` is unchanged.
+  Packed Yarn cells record strict PnP for TS5/6 and the normal `node-modules` linker for native TS7.
+
 ## 3.7.0 — 2026-07-17
 
 Phase Y turns field feedback into explicit decision memory, more honest design/parse advisories,

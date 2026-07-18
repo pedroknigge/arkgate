@@ -44,7 +44,9 @@ function doctorJson(root: string, config: object, files: string[]) {
     logs.push(a.map(String).join(' '));
   };
   try {
-    runDoctor(root, config, files, (config as { rules: unknown[] }).rules, [], true, {});
+    runDoctor(root, config, files, (config as { rules: unknown[] }).rules, [], true, {
+      completeness: 'complete',
+    });
   } finally {
     console.log = orig;
   }
@@ -202,6 +204,7 @@ describe('plan + doctor wire pilotLoop (Q04)', () => {
     const files = collectGovernedFiles(FIXTURE, config);
     const cov = computeCoverage(FIXTURE, config, files, config.rules);
     const plan = buildRemediationPlan(FIXTURE, [], cov.governed.percent, files.length, {
+      completeness: 'complete',
       config,
       files,
       coverage: cov,
@@ -244,6 +247,7 @@ describe('plan + doctor wire pilotLoop (Q04)', () => {
     };
     try {
       runPlan(FIXTURE, [], false, cov.governed.percent, files.length, {
+        completeness: 'complete',
         config,
         files,
         coverage: cov,
@@ -287,6 +291,7 @@ describe('before → one pilot → re-doctor residual (Q04 fixture proof)', () =
     expect(pilot!.evidence).toContain('src/routes/orders.ts');
 
     const planBefore = buildRemediationPlan(tmp, [], covBefore.governed.percent, filesBefore.length, {
+      completeness: 'complete',
       config,
       files: filesBefore,
       coverage: covBefore,
@@ -327,6 +332,7 @@ export async function GET() {
     expect(delta.afterEvidence).not.toContain('src/routes/orders.ts');
 
     const planAfter = buildRemediationPlan(tmp, [], covAfter.governed.percent, filesAfter.length, {
+      completeness: 'complete',
       config,
       files: filesAfter,
       coverage: covAfter,
@@ -357,6 +363,7 @@ describe('honesty (Q04)', () => {
     const files = collectGovernedFiles(FIXTURE, config);
     const cov = computeCoverage(FIXTURE, config, files, config.rules);
     const plan = buildRemediationPlan(FIXTURE, [], cov.governed.percent, files.length, {
+      completeness: 'complete',
       config,
       files,
       coverage: cov,

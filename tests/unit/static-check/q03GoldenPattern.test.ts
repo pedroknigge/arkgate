@@ -216,7 +216,7 @@ describe('doctor surfaces goldenPattern without clearing design-weak (Q03 honest
       logs.push(a.map(String).join(' '));
     };
     try {
-      runDoctor(tmp, config, files, config.rules, [], true, {});
+      runDoctor(tmp, config, files, config.rules, [], true, { completeness: 'complete' });
     } finally {
       console.log = orig;
     }
@@ -247,7 +247,7 @@ describe('doctor surfaces goldenPattern without clearing design-weak (Q03 honest
       logs.push(a.map(String).join(' '));
     };
     try {
-      runDoctor(tmp, config, files, config.rules, [], true, {});
+      runDoctor(tmp, config, files, config.rules, [], true, { completeness: 'complete' });
     } finally {
       console.log = orig;
     }
@@ -280,7 +280,7 @@ describe('doctor surfaces goldenPattern without clearing design-weak (Q03 honest
       logs.push(a.map(String).join(' '));
     };
     try {
-      runDoctor(tmp, config, files, config.rules, [], false, {});
+      runDoctor(tmp, config, files, config.rules, [], false, { completeness: 'complete' });
     } finally {
       console.log = orig;
     }

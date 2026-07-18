@@ -74,7 +74,7 @@ describe('doctor surfaces outcome (Q02) and keeps Q01 door', () => {
       logs.push(a.map(String).join(' '));
     };
     try {
-      runDoctor(FIXTURE, config, files, config.rules, [], true, {});
+      runDoctor(FIXTURE, config, files, config.rules, [], true, { completeness: 'complete' });
     } finally {
       console.log = orig;
     }
@@ -97,7 +97,7 @@ describe('doctor surfaces outcome (Q02) and keeps Q01 door', () => {
       logs.push(a.map(String).join(' '));
     };
     try {
-      runDoctor(FIXTURE, config, files, config.rules, [], false, {});
+      runDoctor(FIXTURE, config, files, config.rules, [], false, { completeness: 'complete' });
     } finally {
       console.log = orig;
     }

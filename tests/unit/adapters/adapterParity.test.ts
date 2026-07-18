@@ -70,6 +70,7 @@ describe('versioned adapter parity contract', () => {
     expect(response.result.structuredContent).toEqual({
       schemaVersion: cli.schemaVersion,
       valid: cli.valid,
+      completeness: cli.completeness,
       diagnostics: cli.diagnostics,
     });
   });
@@ -101,6 +102,7 @@ describe('versioned adapter parity contract', () => {
 
     expect(repair.schemaVersion).toBe(cli.schemaVersion);
     expect(repair.valid).toBe(cli.valid);
+    expect(repair.completeness).toBe(cli.completeness);
     expect(repair.diagnostics).toEqual(cli.diagnostics);
   });
 

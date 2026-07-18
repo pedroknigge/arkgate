@@ -23,6 +23,7 @@ import {
 } from './ast-scan.mjs';
 import { provePortProofInject } from './port-proof.mjs';
 import { summarizeParseHealth } from './parse-health.mjs';
+import { completenessFromParseHealth } from './analysis-completeness.mjs';
 import {
   intentLayersFromManifest,
   layerForIntent,
@@ -356,8 +357,9 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
         !(
           violation.ruleId === 'CAPABILITY_VIOLATION' &&
           forbiddenModuleDualKeys.has(`${violation.file}\0${violation.target}`)
-        )
+      )
     );
+  const parseHealth = summarizeParseHealth(scanned);
 
   return {
     ...evaluateArchitectureGraph({
@@ -369,6 +371,7 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
       warnings,
       safety: safety.report,
     }),
-    parseHealth: summarizeParseHealth(scanned),
+    parseHealth,
+    completeness: completenessFromParseHealth(parseHealth),
   };
 }

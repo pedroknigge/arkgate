@@ -2,11 +2,10 @@
  * TypeScript host resolution for architecture scan (API-compatible loader).
  */
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { usableTypescript, typescriptUsabilityHint } from '../ark-shared.mjs';
-import { __arkCheckCli } from './gate-files.mjs';
 
 export async function loadTypeScript(root) {
-  const { createRequire } = await import('node:module');
   const loaders = [];
   try {
     const req = createRequire(path.join(root, 'package.json'));
@@ -24,15 +23,15 @@ export async function loadTypeScript(root) {
   } catch {
     /* project has no package.json resolvable tree */
   }
-  // Nested under arkgate (production dependency) — must work when project has only TS7.
+  // Dedicated production fallback: a different package identity cannot dedupe to project TS7.
   try {
-    const req = createRequire(__arkCheckCli);
+    const req = createRequire(import.meta.url);
     loaders.push({
-      label: 'arkgate',
-      load: () => req('typescript'),
+      label: 'arkgate-fallback',
+      load: () => req('typescript-ark-host'),
       resolvePath: () => {
         try {
-          return req.resolve('typescript');
+          return req.resolve('typescript-ark-host');
         } catch {
           return null;
         }
@@ -41,15 +40,6 @@ export async function loadTypeScript(root) {
   } catch {
     /* ark install tree unavailable */
   }
-  loaders.push({
-    label: 'import',
-    load: async () => {
-      const m = await import('typescript');
-      return m;
-    },
-    resolvePath: () => null,
-  });
-
   let projectRejected = null;
   const triedPaths = new Set();
   for (const { label, load, resolvePath } of loaders) {
@@ -78,11 +68,17 @@ export async function loadTypeScript(root) {
         };
       }
       if (label === 'project' && mod) {
-        projectRejected = `project typescript is not API-compatible (${typescriptUsabilityHint(mod)}); using ArkGate's JS-API TypeScript fallback (TypeScript 7.0 main export is version-only). See docs/typescript-support.md.`;
+        projectRejected = `project TypeScript is not API-compatible (${typescriptUsabilityHint(mod)}); using ArkGate's physically independent TypeScript 6 JS-API host. See docs/typescript-support.md.`;
       }
     } catch {
       /* try next loader */
     }
   }
-  return null;
+  return {
+    ts: null,
+    source: 'unavailable',
+    reason:
+      'ArkGate could not load either the project TypeScript API or its independent TypeScript 6 fallback.',
+    ...(projectRejected ? { fallbackReason: projectRejected } : {}),
+  };
 }

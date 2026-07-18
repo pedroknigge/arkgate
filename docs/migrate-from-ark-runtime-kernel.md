@@ -44,12 +44,13 @@ npx arkgate upgrade
 
 ### TypeScript 7
 
-The TS7-only packed-consumer support claim is suspended in ArkGate 3.7.0. Package-manager
-deduplication can remove the intended JS-API fallback; full check then exits unavailable, while
-`--plan --json` can incorrectly report `goal.met: true`. Keep an API-compatible TypeScript 5/6
-package under the project `typescript` name and run the full strict gate. The optional dual-install
-(TS6 JS API + TS7 CLI) workaround is documented in
-[typescript-support.md](typescript-support.md).
+Published ArkGate 3.7.0 predates the TS7 correction: package-manager deduplication can remove its
+intended JS-API fallback, and unavailable `--plan --json` can incorrectly report `goal.met: true`.
+The current source candidate for the next corrective release installs a physically distinct exact
+TypeScript 6 analysis host and reports required `complete | partial | unavailable` state. Do not
+attribute that fix to 3.7.0. Once the corrective version is published, upgrade ArkGate and keep the
+project's TypeScript/`tsc` unchanged; require `completeness: complete` from the final strict check.
+See [typescript-support.md](typescript-support.md).
 
 ### MCP args (avoid double binary)
 
@@ -174,6 +175,7 @@ Surface policy: [package-surface.md](package-surface.md).
 | `npm warn deprecated ark-runtime-kernel` | Swap dep to `arkgate` (this guide) |
 | `ark-check: not found` after uninstall | Use `npx arkgate-check` or reinstall `arkgate` |
 | MCP still launches old package | Update `.mcp.json` / Codex / Grok config; restart agent |
+| TS7 plan/check says `partial` or `unavailable` | Do not accept the plan as green; update to the corrective ArkGate release when published, then require `completeness: complete` |
 | pnpm blocks new package age | Wait for cooling-off or prefer `arkgate@latest`; if policy requires an exact pin, check `npm view arkgate version` and pin that version (currently `arkgate@3.7.0`) |
 
 ---

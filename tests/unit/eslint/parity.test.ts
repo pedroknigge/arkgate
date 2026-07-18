@@ -69,6 +69,7 @@ function runArkCheckJson(root: string) {
     }>;
     diagnostics: Array<Record<string, unknown>>;
     schemaVersion: string;
+    completeness: string;
   };
   return { status: r.status ?? 1, ...out };
 }
@@ -121,7 +122,8 @@ describe('ESLint ↔ ark-check parity', () => {
     expect(reports[0].messageId).toBe('forbiddenImport');
     expect((reports[0].data as { fromLayer: string }).fromLayer).toBe('DomainModel');
     expect((reports[0].data as { toLayer: string }).toLayer).toBe('PersistenceAdapters');
-    expect(check.schemaVersion).toBe('1.1');
+    expect(check.schemaVersion).toBe('1.2');
+    expect(check.completeness).toBe('complete');
     expect(reports[0].diagnostic).toEqual(
       check.diagnostics.find((item) => item.ruleId === 'LAYER_IMPORT_VIOLATION')
     );
