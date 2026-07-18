@@ -234,7 +234,6 @@ function displayPathFromRoot(root, absPath) {
   }
   return rel.split(path.sep).join('/');
 }
-
 function usage() {
   return [
     'Usage: arkgate-check | ark-check  (identical bins; product name ArkGate)',
