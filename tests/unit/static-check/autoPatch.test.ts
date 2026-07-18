@@ -154,6 +154,28 @@ describe('auto-patch (W1 mechanical-safe import type)', () => {
     ).toBeNull();
   });
 
+  it('preserves explicit completeness for already-valid and non-patchable results', () => {
+    const clean = validateWithAutoPatch({
+      source: 'export const clean = true;\n',
+      root,
+      ts,
+      validate: () => ({ valid: true, completeness: 'complete', violations: [] }),
+    });
+    expect(clean).toMatchObject({ valid: true, completeness: 'complete', autoPatch: null });
+
+    const partial = validateWithAutoPatch({
+      source: 'export const broken = ;\n',
+      root,
+      ts,
+      validate: () => ({
+        valid: false,
+        completeness: 'partial',
+        violations: [{ ruleId: 'ANALYSIS_PARSE_INCOMPLETE', message: 'parse' }],
+      }),
+    });
+    expect(partial).toMatchObject({ valid: false, completeness: 'partial', autoPatch: null });
+  });
+
   it('validateWithAutoPatch discards when revalidation fails', () => {
     const source = `import { Id } from '../data/types-only';\nexport function asId(x: Id): Id { return x; }\n`;
     const from = path.join(root, 'src/ui/uses-id.ts');
@@ -166,10 +188,15 @@ describe('auto-patch (W1 mechanical-safe import type)', () => {
       validate: (src: string) => {
         calls += 1;
         // First call: invalid. Second (patched): still invalid → discard.
-        return { valid: false, violations: [{ ruleId: 'LAYER_IMPORT_VIOLATION', message: 'x' }] };
+        return {
+          valid: false,
+          completeness: 'complete',
+          violations: [{ ruleId: 'LAYER_IMPORT_VIOLATION', message: 'x' }],
+        };
       },
     });
     expect(out.autoPatch).toBeNull();
+    expect(out.completeness).toBe('complete');
     expect(calls).toBeGreaterThanOrEqual(2);
   });
 
@@ -185,6 +212,7 @@ describe('auto-patch (W1 mechanical-safe import type)', () => {
         const isType = /import\s+type\b/.test(src);
         return {
           valid: isType,
+          completeness: 'complete',
           violations: isType
             ? []
             : [{ ruleId: 'LAYER_IMPORT_VIOLATION', message: 'layer', code: 'LAYER_IMPORT_VIOLATION' }],
@@ -192,6 +220,7 @@ describe('auto-patch (W1 mechanical-safe import type)', () => {
       },
     });
     expect(out.valid).toBe(false);
+    expect(out.completeness).toBe('complete');
     expect(out.autoPatch).not.toBeNull();
     expect(out.autoPatch!.valid).toBe(true);
     expect(out.autoPatch!.remediationKind).toBe('import-type-from-pure-type-module');
