@@ -12,17 +12,17 @@
       "size": 10000,
       "metric": "hook",
       "baselineMs": 683.761,
-      "cycleObservedMaxP95Ms": 683.761,
+      "cycleObservedMaxP95Ms": 595.053,
       "maxP95Ms": 900,
-      "rationale": "The per-keystroke interactive path: ark-mcp --hook validates the single proposed file (no scan-cache involvement — one distribution). Phase Y clean Linux p95 was 629.687 ms in CI run 29593179029 attempt 1 and 683.761 ms on its unchanged-head retry; the larger value is the cycle baseline. The fixed 900 ms ceiling rounds up baseline +30% runner headroom and is never ratcheted per item (ADR 0009 D5)."
+      "rationale": "The per-keystroke interactive path: ark-mcp --hook validates the single proposed file (no scan-cache involvement — one distribution). Phase Y's 683.761 ms baseline remains the comparison point for Z07. Phase Z source 6fa5079 CI run 29649631288 measured 591.165 ms and 595.053 ms on unchanged-head attempts; the frozen 900 ms ceiling retains 51.25% headroom over the worse Phase Z observation and is never ratcheted per item (ADR 0009 D5)."
     },
     "doctorCold": {
       "size": 10000,
       "metric": "doctorCold",
       "baselineMs": 5154.522,
-      "cycleObservedMaxP95Ms": 5154.522,
+      "cycleObservedMaxP95Ms": 5072.093,
       "maxP95Ms": 6800,
-      "rationale": "Cold one-shot doctor over the tree. Phase Y clean Linux p95 reached 5154.522 ms in CI run 29593179029 attempt 1 on an unchanged-engine docs candidate; its unchanged-head retry measured 4714.687 ms and main run 29608857827 measured 4781.35 ms. The largest value is the cycle baseline. The fixed 6800 ms ceiling rounds up baseline +30% runner headroom and is never ratcheted per item (ADR 0009 D5)."
+      "rationale": "Cold one-shot doctor over the tree. Phase Y's 5,154.522 ms baseline remains the retained comparison point. Phase Z source 6fa5079 CI run 29649631288 measured 5,072.093 ms and 4,799.834 ms on unchanged-head attempts; the frozen 6,800 ms ceiling retains 34.06% headroom over the worse Phase Z observation and is never ratcheted per item (ADR 0009 D5)."
     }
   }
 }

@@ -15,18 +15,20 @@ function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
 }
 
-describe('Y05 fixed roadmap-cycle package ceilings', () => {
+describe('Phase Z fixed roadmap-cycle package ceilings', () => {
   it('retains at least 10% headroom over the recorded clean candidate', () => {
     const gate = JSON.parse(read('release/package-budgets.v1.json')).packages.gate;
     expect(gate.measuredCandidate).toEqual({
-      sha: '4d0d526442e4eebff269a914171b981f48367990',
-      version: '3.6.1',
-      packedBytes: 467437,
-      unpackedBytes: 1572950,
-      files: 133,
+      sha: '6fa507900acde48fd972045e00c67e0bcdd27589',
+      ciCandidateSha: 'b4f25a422de96e004f21c4107aec3b98d2469c61',
+      ciRun: 29649631288,
+      version: '3.7.0',
+      packedBytes: 484608,
+      unpackedBytes: 1632090,
+      files: 135,
     });
     expect([gate.maxPackedBytes, gate.maxUnpackedBytes, gate.maxFiles]).toEqual([
-      515000, 1731000, 147,
+      534000, 1796000, 149,
     ]);
     expect(gate.maxPackedBytes).toBeGreaterThanOrEqual(
       Math.ceil(gate.measuredCandidate.packedBytes * 1.1)

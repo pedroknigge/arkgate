@@ -184,7 +184,7 @@ describe('U06 dual depth — ESLint parity (import dimension)', () => {
   });
 });
 
-describe('U06 budgets — D5 method is locked, numbers are not invented', () => {
+describe('U06 budgets — D5 method and Phase Z observations are locked', () => {
   it('the budgets file records the method and stays in recording mode until a Linux baseline', () => {
     const budgets = JSON.parse(
       fs.readFileSync(path.resolve('eval/performance/hook-budgets.v1.json'), 'utf8')
@@ -192,12 +192,12 @@ describe('U06 budgets — D5 method is locked, numbers are not invented', () => 
     expect(budgets.method).toMatch(/Linux CI baseline FIRST/);
     expect(budgets.scenarios.hook).toMatchObject({
       baselineMs: 683.761,
-      cycleObservedMaxP95Ms: 683.761,
+      cycleObservedMaxP95Ms: 595.053,
       maxP95Ms: 900,
     });
     expect(budgets.scenarios.doctorCold).toMatchObject({
       baselineMs: 5154.522,
-      cycleObservedMaxP95Ms: 5154.522,
+      cycleObservedMaxP95Ms: 5072.093,
       maxP95Ms: 6800,
     });
     for (const [name, spec] of Object.entries(

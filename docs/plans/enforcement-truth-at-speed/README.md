@@ -83,7 +83,7 @@ in the write loop.
 
 ## Acceptance criteria
 
-- [ ] **A1 — Safe maintenance:** release verification rejects broad/unowned output targets and
+- [x] **A1 — Safe maintenance:** release verification rejects broad/unowned output targets and
   package isolation preserves unrelated tarballs.
 - [ ] **A2 — Analysis completeness is explicit:** public JSON distinguishes complete, partial,
   and unavailable analysis; only complete analysis may produce a satisfied architecture goal. The
@@ -169,7 +169,7 @@ flowchart LR
 
 - **Depends on:** ArkGate 3.7.0 as the reproduced baseline; accepted ADRs 0002, 0003, 0005, and
   0008; the existing package/adoption/performance harnesses.
-- **Blocked by:** no external dependency. `Z01` is the first queue item.
+- **Blocked by:** no external dependency for `Z02`; `Z01` is closed with its cycle budgets frozen.
 - **Risk — Kernel impurity:** resolving imports inside Kernel would violate the four-layer contract.
   **Kill switch:** keep TypeScript/filesystem in Tooling and pass only serializable facts.
 - **Risk — cache false green:** stale invalidation is worse than current latency.
@@ -223,11 +223,11 @@ flowchart LR
 
 ## Promotion
 
-The implementation IDs are present as `todo` in [ROADMAP Phase Z](../../../ROADMAP.md#phase-z--enforcement-truth-at-speed).
-To start implementation:
+The implementation IDs are tracked in [ROADMAP Phase Z](../../../ROADMAP.md#phase-z--enforcement-truth-at-speed).
+`Z01` is complete; subsequent promotion follows the same discipline:
 
-1. Move only `Z01` to `doing`.
-2. Expose its failing safety case before changing behavior.
+1. Move only the next dependency-ready Z item to `doing` (`Z02` next).
+2. Expose its failing acceptance cases before changing behavior.
 3. Close the item-specific evidence and common merge gate on the same commit.
 4. Advance one Z item at a time; do not promote the parked Y candidates as collateral work.
 5. When `Z09` closes, mark this plan `Shipped`, retain it as rationale, and make the corrected

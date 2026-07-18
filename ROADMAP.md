@@ -113,7 +113,7 @@ for current truth.
 | `RB-04` | P1 | `closed` | S05 closed the confirmed semantic false positives and dependency bypasses |
 | `RB-05` | P1 | `closed` | S02 restored executable coverage and mutation gates |
 | `RB-06` | P1 | `closed` | O03 compact active-host setup passed PR #41 CI and merged as `105cd39` |
-| `RB-07` | P0 operational | `open` | Z01 must prevent release tooling from recursively deleting unowned targets or unrelated tarballs |
+| `RB-07` | P0 operational | `closed` | Z01 restricts cleanup to validated ArkGate-owned outputs and invocation-owned tarballs; PR #80 CI + release smoke are green |
 | `RB-08` | P1 | `open` | Z02 must make the packed TS7 fallback and incomplete-analysis verdict truthful |
 | `RB-09` | P1 | `open` | Z03–Z04 must decide and restore one candidate graph and verdict across preflight, API, write gate, and final CI |
 | `RB-10` | P1 journey | `open` | Z05–Z06 must make the installed starter, upgrade, enforcement, and package journey reproducible |
@@ -123,7 +123,7 @@ for current truth.
 V05 passed its then-current binary exit gate in PR #49. The separately authorized stable `3.0.0`
 release completed on 2026-07-13; closing `RB-06` had removed the onboarding release blocker.
 The post-3.7.0 audit below supersedes that evidence as proof of *current* release readiness:
-`RB-07`–`RB-11` are open, so the stabilization stop condition applies again.
+`RB-08`–`RB-11` remain open, so the stabilization stop condition still applies.
 
 ### Post-3.7.0 audit reset (2026-07-17)
 
@@ -418,7 +418,7 @@ may raise those ceilings merely to fit its own implementation.
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 64 | `Z01` | `doing` | S | — | Release tooling deletes only validated, tool-owned targets and files |
+| 64 | `Z01` | `done` | S | — | Release tooling deletes only validated, tool-owned targets and files |
 | 65 | `Z02` | `todo` | L | `Z01` | Packed TS5/6/7 analysis is available or explicitly non-green; incomplete analysis never satisfies the goal |
 | 66 | `Z03` | `todo` | M | `Z02` | The resolved-facts/public-API boundary and generated CLI parity seam are decided before implementation |
 | 67 | `Z04` | `todo` | L | `Z03` | One normalized candidate-facts graph produces one contract verdict across every supported adapter |
@@ -445,7 +445,7 @@ may raise those ceilings merely to fit its own implementation.
 
 ### Z01 — Make release cleanup tool-owned and path-safe
 
-- **Status:** `doing`
+- **Status:** `done`
 - **Depends on:** —
 
 **Outcome:** release-artifact verification refuses repository roots, ancestors, broad caller-owned
@@ -456,6 +456,26 @@ removes only tarballs created by that invocation.
 existing directory, symlink escape, and an unrelated pre-existing `.tgz`. Valid temporary output
 still produces the same tarballs, manifests, SBOMs, checksums, and budget verdict. Close `RB-07`
 only after the focused tests and release-artifact smoke pass from a clean checkout.
+
+**Measured candidate and Phase Z budgets (2026-07-18):** source commit `6fa5079` / PR synthetic
+candidate `b4f25a4` on clean Linux packs `arkgate@3.7.0` to 484,608 bytes / 1,632,090 unpacked
+bytes / 135 files. The Phase Z package ceilings are fixed once at 534,000 / 1,796,000 / 149,
+retaining 10.19% / 10.04% / 10.37% headroom. CI run `29649631288` performance attempt 1
+measured cold@50k 23,315.693 ms, incremental@10k 110.350 ms, hook@10k 591.165 ms, and
+doctorCold@10k 5,072.093 ms; its unchanged-head attempt 2 job `88094472142` measured
+24,568.744 / 111.538 / 595.053 / 4,799.834 ms. The existing 30,000 / 125 / 900 / 6,800 ms
+ceilings retain 22.11% / 12.07% / 51.25% / 34.06% headroom over the worst Phase Z observation,
+which exceeds the 5.37% / 1.08% / 0.66% observed attempt variance (doctor improved), so those
+ceilings are frozen unchanged before Z02.
+
+**Closure evidence:** the destructive-target and unrelated-tarball fixtures failed before the
+fix, then the focused Z01 suite passed 12/12. The default release smoke preserved the unmarked
+legacy report byte-for-byte while reproducing both tarballs, manifests, SBOMs, checksums, and
+budget verdict under a marked child. Local confidence passed 1,349 tests with 90.77% statements
+and 91.44% mutation (93.20% critical aggregate); strict Ark, TS5/6/7, package, generated-parity,
+syntax, type, and production-audit gates passed. Two independent read-only reviews found no P0/P1.
+PR #80 CI run `29649631288` and Security run `29649631280` completed green on source `6fa5079`;
+the same-SHA performance rerun above was also green. `RB-07` is closed.
 
 ### Z02 — Make analysis completeness and TS compatibility truthful
 
@@ -1105,10 +1125,12 @@ the sanctioned direction inside a layer family.
 
 ### Next-round package budget guardrail
 
-**Recalibrated for Phase Y on 2026-07-17:** the gate-package ceilings retain at least 10%
-headroom over the clean Linux `arkgate@3.6.1` candidate at `4d0d526`: 467,437 packed bytes,
-1,572,950 unpacked bytes, and 133 files. The resulting limits (515,000 / 1,731,000 / 147)
-remain internal release guardrails, not npm requirements.
+**Recalibrated for Phase Z on 2026-07-18:** the gate-package ceilings retain at least 10%
+headroom over clean Linux `arkgate@3.7.0` source `6fa5079` / PR candidate `b4f25a4`: 484,608
+packed bytes, 1,632,090 unpacked bytes, and 135 files. The resulting limits (534,000 / 1,796,000 /
+149) remain internal release guardrails, not npm requirements. The two same-engine Phase Z
+performance attempts and frozen ceilings are recorded under Z01 above; no later Phase Z item may
+raise them merely to fit its implementation.
 
 - Keep `250 KB` packed / `1 MB` unpacked as the long-term optimization target, not as a reason to
   remove useful deterministic enforcement or architecture/organization coaching surfaces such as
@@ -2541,8 +2563,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: `Z01` (`todo`) — make release cleanup tool-owned and path-safe; no item is `doing` yet
-Next action: move only Z01 to `doing`, expose the destructive-target fixtures before invoking release-artifacts, and close RB-07; then record Phase Z cycle budgets before Z02
+Item: `Z02` (`todo`) — make packed TS5/6/7 analysis available or explicitly non-green; no item is `doing` yet
+Next action: move only Z02 to `doing`, add the failing packed/deduped-host and completeness fixtures, then close RB-08 on the installed matrix
 Release lanes: Z01+Z02 may ship a stable corrective patch; Z04 may ship parity; Z06 closes the installed journey; Z07–Z09 gate only 10x/causal/retention/independent-close claims
 Parked unchanged: Y06, Y07, Y09, and Y10 retain their named field gates and must not start as collateral Z work
 Runtime parked: K01 retains confirmed experimental intra-process commit gaps outside Phase Z and does not block gate-package corrective releases

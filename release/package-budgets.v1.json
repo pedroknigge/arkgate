@@ -3,17 +3,19 @@
   "packages": {
     "gate": {
       "path": ".",
-      "maxPackedBytes": 515000,
-      "maxUnpackedBytes": 1731000,
-      "maxFiles": 147,
+      "maxPackedBytes": 534000,
+      "maxUnpackedBytes": 1796000,
+      "maxFiles": 149,
       "measuredCandidate": {
-        "sha": "4d0d526442e4eebff269a914171b981f48367990",
-        "version": "3.6.1",
-        "packedBytes": 467437,
-        "unpackedBytes": 1572950,
-        "files": 133
+        "sha": "6fa507900acde48fd972045e00c67e0bcdd27589",
+        "ciCandidateSha": "b4f25a422de96e004f21c4107aec3b98d2469c61",
+        "ciRun": 29649631288,
+        "version": "3.7.0",
+        "packedBytes": 484608,
+        "unpackedBytes": 1632090,
+        "files": 135
       },
-      "exception": "The 250 KB/1 MB target is not yet feasible while shipping the documented standalone CLI/MCP tooling, deterministic change-integrity surfaces, schemas, and consumer guidance. Phase Y recalibrates once from the clean Linux 3.6.1 candidate at 4d0d526 (467,437 packed bytes, 1,572,950 unpacked bytes, 133 files) with at least 10% headroom: 515,000 packed bytes, 1,731,000 unpacked bytes, and 147 files. Legacy migration/demo and experimental-runtime hardening guides remain repository-hosted, source maps were removed in V04, and this exception must be reconsidered before ArkGate 4."
+      "exception": "The 250 KB/1 MB target is not yet feasible while shipping the documented standalone CLI/MCP tooling, deterministic change-integrity surfaces, schemas, and consumer guidance. Phase Z recalibrates once from clean Linux arkgate@3.7.0 source 6fa5079 / PR candidate b4f25a4 (484,608 packed bytes, 1,632,090 unpacked bytes, 135 files) with at least 10% headroom: 534,000 packed bytes, 1,796,000 unpacked bytes, and 149 files. Legacy migration/demo and experimental-runtime hardening guides remain repository-hosted, source maps were removed in V04, and this exception must be reconsidered before ArkGate 4."
     },
     "runtime": {
       "path": "packages/runtime",
