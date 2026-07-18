@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "runner": {
     "image": "ubuntu-latest",
     "node": "20",
@@ -16,10 +16,19 @@
     "incremental": {
       "size": 10000,
       "maxP95Ms": 125,
+      "requirePolicyHashPreserved": true,
+      "requireContentHashPreserved": true,
       "cycleObservedMaxP95Ms": 111.537558,
       "rationale": "Phase Y established the 125 ms hard bound. Phase Z source 6fa5079 CI run 29649631288 measured 110.350 ms and 111.538 ms on unchanged-head attempts; the frozen ceiling retains 12.07% headroom over the worse attempt, above the observed 1.08% variance."
     },
-    "warm": { "minCacheHits": 1 },
+    "oneShotWarm": {
+      "size": 50000,
+      "maxP95Ms": 30000,
+      "expectedCacheMode": "none",
+      "requireColdOutputParity": true,
+      "requireLegacyCacheAbsent": true,
+      "rationale": "Z04 retired the pre-resolved-facts semantic cache because it could preserve stale or divergent verdicts. The one-shot warm control must remain cache-free, byte-identical to cold JSON, and no slower than the frozen 30,000 ms cold ceiling until Z07 supplies an identity-keyed snapshot."
+    },
     "memory": {
       "maxPeakRssBytes": 1073741824,
       "cycleObservedMaxPeakRssBytes": 248467456

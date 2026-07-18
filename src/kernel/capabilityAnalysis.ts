@@ -16,6 +16,8 @@ import {
 import {
   collectForbiddenCapabilityUses,
   extractSemanticDependencies,
+  type ForbiddenCapabilityUse,
+  type SemanticDependency,
 } from './semanticAnalysis';
 
 export type CapabilityUse = {
@@ -33,10 +35,17 @@ export type CapabilityUse = {
  * @param ts injected TypeScript module (same convention as semanticAnalysis)
  * @param sourceFile a ts.SourceFile for the analyzed content
  */
-export function collectCapabilityUses(ts: unknown, sourceFile: unknown): CapabilityUse[] {
+export function collectCapabilityUses(
+  ts: unknown,
+  sourceFile: unknown,
+  evidence?: {
+    dependencies?: readonly SemanticDependency[];
+    ambientUses?: readonly ForbiddenCapabilityUse[];
+  }
+): CapabilityUse[] {
   const uses: CapabilityUse[] = [];
 
-  for (const dependency of extractSemanticDependencies(ts, sourceFile)) {
+  for (const dependency of evidence?.dependencies ?? extractSemanticDependencies(ts, sourceFile)) {
     if (dependency.typeOnly || !dependency.specifier) continue;
     const capability = capabilityForModuleSpecifier(dependency.specifier);
     if (!capability) continue;
@@ -48,11 +57,9 @@ export function collectCapabilityUses(ts: unknown, sourceFile: unknown): Capabil
     });
   }
 
-  for (const use of collectForbiddenCapabilityUses(
-    ts,
-    sourceFile,
-    AMBIENT_CAPABILITY_ENTRIES
-  )) {
+  for (const use of
+    evidence?.ambientUses ??
+    collectForbiddenCapabilityUses(ts, sourceFile, AMBIENT_CAPABILITY_ENTRIES)) {
     const capability = capabilityForAmbientName(use.name);
     if (!capability) continue;
     uses.push({ capability, symbol: use.name, line: use.line, source: 'ambient-global' });

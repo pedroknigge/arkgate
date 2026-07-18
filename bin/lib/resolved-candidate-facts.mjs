@@ -185,6 +185,7 @@ function canonicalOverlayPath(root, requested, fileAliases, directoryAliases, co
 function collectCandidateFiles(root, config, changes) {
   const files = new Map();
   const directoryAliases = new Map();
+  const expandedAliasDirectories = new Set();
   const discovered = (config.include ?? [])
     .flatMap((entry) =>
       collectGovernedFiles(root, { ...config, include: [entry] }, {
@@ -220,6 +221,8 @@ function collectCandidateFiles(root, config, changes) {
     let relativeDirectory = path.posix.dirname(candidate.relative);
     if (relativeDirectory === '.') relativeDirectory = '';
     while (isInsideRoot(root, absoluteDirectory)) {
+      if (expandedAliasDirectories.has(absoluteDirectory)) break;
+      expandedAliasDirectories.add(absoluteDirectory);
       const realDirectory = fs.realpathSync(absoluteDirectory);
       rememberDirectoryAlias(
         directoryAliases,
@@ -233,10 +236,11 @@ function collectCandidateFiles(root, config, changes) {
       if (relativeDirectory === '.') relativeDirectory = '';
     }
   }
-  for (const { absolute, relative } of canonicalByRealpath.values()) {
+  for (const { absolute, real, relative } of canonicalByRealpath.values()) {
     files.set(relative, {
       path: relative,
       absolute: path.resolve(absolute),
+      real: path.resolve(real),
       content: fs.readFileSync(absolute, 'utf8'),
     });
   }
@@ -327,7 +331,7 @@ function createOverlayModuleHost(ts, root, files, changes) {
   };
   for (const file of files) {
     remember(file.absolute, file);
-    const real = tryRealpath(file.absolute);
+    const real = file.real ?? tryRealpath(file.absolute);
     if (real && isInsideRoot(root, real)) remember(real, file);
   }
   const candidateByPath = new Map(files.map((file) => [file.path, file]));
@@ -406,7 +410,7 @@ function createOverlayModuleHost(ts, root, files, changes) {
     if (deleted.has(absolute)) return absolute;
     const candidate = byAbsolute.get(absolute);
     if (candidate) {
-      const real = tryRealpath(candidate.absolute);
+      const real = candidate.real ?? tryRealpath(candidate.absolute);
       return real && isInsideRoot(root, real) ? real : candidate.absolute;
     }
     if (sys?.realpath) return sys.realpath(fileName);
@@ -442,14 +446,21 @@ function createOverlayModuleHost(ts, root, files, changes) {
   };
 }
 
-function nearestTsconfig(root, fileName) {
-  let directory = path.dirname(fileName);
+function nearestTsconfig(root, fileName, cache) {
+  const initial = path.dirname(fileName);
+  if (cache.has(initial)) return cache.get(initial);
+  let directory = initial;
   while (isInsideRoot(root, directory)) {
     const candidate = path.join(directory, 'tsconfig.json');
-    if (fs.existsSync(candidate)) return path.resolve(candidate);
+    if (fs.existsSync(candidate)) {
+      const resolved = path.resolve(candidate);
+      cache.set(initial, resolved);
+      return resolved;
+    }
     if (directory === root) break;
     directory = path.dirname(directory);
   }
+  cache.set(initial, undefined);
   return undefined;
 }
 
@@ -506,11 +517,12 @@ function compilerContext(ts, root, tsconfig, candidateFiles) {
       ? path.dirname(explicitPath)
       : undefined;
   const configByFile = new Map();
+  const nearestConfigByDirectory = new Map();
   if (explicitPath) {
     for (const file of candidateFiles) configByFile.set(path.resolve(file.absolute), explicitPath);
   } else if (!explicitPath) {
     for (const file of candidateFiles) {
-      const nearest = nearestTsconfig(root, file.absolute);
+      const nearest = nearestTsconfig(root, file.absolute, nearestConfigByDirectory);
       if (nearest) configByFile.set(path.resolve(file.absolute), nearest);
     }
   }
@@ -676,6 +688,24 @@ function declaredIntent(value, config) {
   );
 }
 
+function mayContainForbiddenCapability(ts, sourceFile, forbiddenGlobals) {
+  // Every symbol-aware match originates in an identifier or static string path segment.
+  // Inspect decoded AST text so escaped identifiers still take the full checker path.
+  const segments = new Set(forbiddenGlobals.flatMap((entry) => entry.split('.')));
+  let found = false;
+  const visit = (node) => {
+    if (!found &&
+      (ts.isIdentifier(node) || ts.isStringLiteralLike(node)) &&
+      segments.has(node.text)
+    ) {
+      found = true;
+    }
+    if (!found) ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return found;
+}
+
 function collectPolicyFacts(ts, sourceFile, relativePath, config) {
   const publishCalls = [];
   const intentReferences = [];
@@ -740,13 +770,13 @@ function tsSuppressionPositions(sourceFile, source) {
   return [...positions];
 }
 
-function collectSafetyUses(ts, sourceFile, relativePath, source) {
+function collectSafetyUses(ts, sourceFile, relativePath, source, dependencies) {
   const facts = tsSuppressionPositions(sourceFile, source).map((position) => ({
     file: relativePath,
     line: lineOf(sourceFile, position),
     kind: 'ts-suppression',
   }));
-  for (const dependency of extractSemanticDependencies(ts, sourceFile)) {
+  for (const dependency of dependencies) {
     if (!dependency.unresolved) continue;
     facts.push({
       file: relativePath,
@@ -915,11 +945,17 @@ export function resolveCandidateFacts({ root, config, ts, tsconfig, changes = []
     const exportsOnlyTypes = sourceFileExportsOnlyTypes(ts, sourceFile);
     const typeNames = typeOnlyExportNames(ts, sourceFile);
     const hasTopLevelSideEffects = sourceFileHasTopLevelSideEffects(ts, sourceFile);
+    const semanticDependencies = extractSemanticDependencies(ts, sourceFile);
+    const resolvedDependencies = semanticDependencies.map(({ node, ...dependency }) => ({
+      ...dependency,
+      namedBindings: namedModuleBindings(ts, node),
+    }));
     let portProofEligible = false;
     if (/\bimport\s*\{[^}]+\}\s*from\s*['"]\.\.?\//.test(candidate.content)) {
       try {
         portProofEligible = Boolean(
-          provePortProofInject(ts, candidate.content, { filePath: candidate.absolute }).eligible
+          provePortProofInject(ts, candidate.content, { filePath: candidate.absolute, sourceFile })
+            .eligible
         );
       } catch {
         portProofEligible = false;
@@ -927,11 +963,11 @@ export function resolveCandidateFacts({ root, config, ts, tsconfig, changes = []
     }
     parsed.set(candidate.path, {
       candidate,
-      sourceFile,
       exportsOnlyTypes,
       typeOnlyExportNames: typeNames,
       hasTopLevelSideEffects,
       portProofEligible,
+      dependencies: resolvedDependencies,
     });
     files.push({
       path: candidate.path,
@@ -949,8 +985,14 @@ export function resolveCandidateFacts({ root, config, ts, tsconfig, changes = []
         message: `${candidate.path} has ${parseDiagnosticCount} TypeScript parse diagnostic(s).`,
       });
     }
+    const forbiddenUses = mayContainForbiddenCapability(ts, sourceFile, forbiddenGlobals)
+      ? collectForbiddenCapabilityUses(ts, sourceFile, forbiddenGlobals)
+      : [];
     capabilityUses.push(
-      ...collectCapabilityUses(ts, sourceFile).map((use) => ({
+      ...collectCapabilityUses(ts, sourceFile, {
+        dependencies: semanticDependencies,
+        ambientUses: forbiddenUses,
+      }).map((use) => ({
         file: candidate.path,
         line: use.line,
         symbol: use.symbol,
@@ -959,7 +1001,7 @@ export function resolveCandidateFacts({ root, config, ts, tsconfig, changes = []
       }))
     );
     ambientUses.push(
-      ...collectForbiddenCapabilityUses(ts, sourceFile, forbiddenGlobals).map((use) => ({
+      ...forbiddenUses.map((use) => ({
         file: candidate.path,
         line: use.line,
         symbol: use.name,
@@ -968,12 +1010,14 @@ export function resolveCandidateFacts({ root, config, ts, tsconfig, changes = []
     const policy = collectPolicyFacts(ts, sourceFile, candidate.path, config);
     publishCalls.push(...policy.publishCalls);
     intentReferences.push(...policy.intentReferences);
-    safetyUses.push(...collectSafetyUses(ts, sourceFile, candidate.path, candidate.content));
+    safetyUses.push(
+      ...collectSafetyUses(ts, sourceFile, candidate.path, candidate.content, semanticDependencies)
+    );
   }
 
   const dependencies = [];
   for (const source of parsed.values()) {
-    for (const dependency of extractSemanticDependencies(ts, source.sourceFile)) {
+    for (const dependency of source.dependencies) {
       const resolved = resolveDependency(
         ts,
         dependency,
@@ -990,7 +1034,7 @@ export function resolveCandidateFacts({ root, config, ts, tsconfig, changes = []
             ` at line ${dependency.line}.`,
         });
       }
-      const namedBindings = namedModuleBindings(ts, dependency.node);
+      const namedBindings = dependency.namedBindings;
       const target = resolved.target ? parsed.get(resolved.target) : undefined;
       const staticEdge = dependency.kind === 'import' || dependency.kind === 'export';
       const targetTypeNames = new Set(target?.typeOnlyExportNames ?? []);

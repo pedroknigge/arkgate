@@ -26,14 +26,14 @@ import path from 'node:path';
 /**
  * @param {object} ts typescript module
  * @param {string} source
- * @param {{ filePath?: string, importLocalName?: string, importSpecifier?: string }} [opts]
+ * @param {{ filePath?: string, importLocalName?: string, importSpecifier?: string, sourceFile?: object }} [opts]
  * @returns {{ eligible: boolean, reason?: string, bindingName?: string, methods?: string[], functionNames?: string[], specifier?: string }}
  */
 export function provePortProofInject(ts, source, opts = {}) {
   if (!ts || typeof source !== 'string') {
     return { eligible: false, reason: 'missing-ts-or-source' };
   }
-  const sf = ts.createSourceFile(
+  const sf = opts.sourceFile ?? ts.createSourceFile(
     opts.filePath || 'file.ts',
     source,
     ts.ScriptTarget.Latest,

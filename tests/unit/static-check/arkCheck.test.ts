@@ -3211,12 +3211,11 @@ describe('ark-check violation diagnosis', () => {
     // Value violations stay untagged (real runtime coupling).
     expect(result.violations.find((v: any) => v.file === 'src/app/value.ts').typeOnly).toBeUndefined();
 
-    // Cache round-trip: a cached second run must still carry the typeOnly tag. (The scan
-    // cache stores edges; its schema tag — scanCacheKey v2 — invalidates a pre-typeOnly
-    // cache so an upgrade can't silently report every violation as a value edge.)
-    const cached: any = runArkCheck(root);
-    expect(cached.summary.typeOnlyCount).toBe(1);
-    expect(cached.violations.find((v: any) => v.file === 'src/app/types.ts').typeOnly).toBe(true);
+    // A repeated one-shot run must preserve the typeOnly tag without consulting the
+    // retired pre-resolved-facts cache.
+    const repeated: any = runArkCheck(root);
+    expect(repeated.summary.typeOnlyCount).toBe(1);
+    expect(repeated.violations.find((v: any) => v.file === 'src/app/types.ts').typeOnly).toBe(true);
   });
 
   it('refuses to freeze a lopsided violation set unless --force is passed', () => {

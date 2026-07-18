@@ -679,36 +679,17 @@ Example config:
 }
 ```
 
-`ark-check` resolves imports through the TypeScript module resolver against your
-`tsconfig.json` — relative, path-alias (e.g. `@infra/db`), package/workspace imports,
-TypeScript `import = require()`, dynamic `import()`, and `require()` — plus string intent
-references. It also flags raw
-`publish()` calls, publish calls without `metadata.source`, and source intent literals
-whose resolved layer differs from the publishing file layer. Pass `--tsconfig <path>` to force one config
-for every file; otherwise each source file uses the nearest `tsconfig.json` above it (like
-`tsc`), so monorepos with per-package alias maps work under a single `--root`. It resolves
-modules the way your build does, but is intentionally not yet a full type-graph analyzer
-(cross-layer type-only references beyond the import specifier are out of scope).
+`ark-check` resolves relative, alias, package/workspace, `import =`, `import()` and `require()` edges
+plus intent/publish evidence. It uses the nearest `tsconfig.json` unless `--tsconfig` is set;
+importless type references are out.
 
-The correctness path resolves and parses one complete candidate on every invocation. Legacy
-`node_modules/.cache/ark-check.json` files are ignored so a pre-Z04 snapshot cannot become a
-second semantic authority. `--no-cache` remains accepted as a compatibility no-op. Phase Z07
-introduces the identity-keyed warm snapshot only after exact cold/warm verdict parity is proven.
+Each run parses the full candidate and ignores retired `.cache/ark-check.json`; `--no-cache` is a
+no-op. Z07 owns the identity-keyed snapshot after exact cold/warm parity.
 
-`ark-check --doctor --json` reports that syntax honesty under `doctor.parseHealth`: exact
-scanned/affected/diagnostic totals plus a deterministic top-12 file list and honest overflow.
-Doctor remains diagnostic: parse health does not add an architecture violation or change design
-fitness/pattern bets. Verdict surfaces consume the evidence through required completeness,
-however. An affected governed file is `partial`, makes plan `goal.met: false` and normal JSON
-`valid:false`/`ok:false`, and makes strict merge exit `1`. The non-strict process exit remains
-advisory for compatibility, so automation must read JSON or use strict merge. No usable host is
-`unavailable`, forces the plan false, and exits `2`. Never describe either state as successfully
-inspected.
+Doctor JSON gives parse totals, deterministic top 12 and overflow. `partial` forces
+`goal.met`/`valid`/`ok` false and strict exit `1`; unavailable exits `2`. Non-strict is advisory.
 
-`ark-check --json` also reports `warnings` for incomplete governance coverage: missing
-layers, unclassified included files, unmatched layer patterns, duplicate layers, and rules
-that reference unknown layers. These are advisory by default. Use `--strict-config` once a
-project is ready to fail CI on coverage gaps.
+Config warnings stay advisory unless CI opts into `--strict-config`.
 
 Use the optional ESLint plugin for fast local feedback aligned with CI:
 

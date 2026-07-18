@@ -6,11 +6,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SCRIPT = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(SCRIPT);
 const REPO = path.resolve(__dirname, '..');
 const CHECK = path.join(REPO, 'bin', 'ark-check.mjs');
 const WORKER = path.join(REPO, 'scripts', 'ark-scale-worker.mjs');
-const BUDGETS = path.join(REPO, 'eval', 'performance', 'budgets.v1.json');
+const BUDGETS = path.join(REPO, 'eval', 'performance', 'budgets.v2.json');
 
 function parseArgs(argv) {
   const out = {
@@ -175,21 +176,11 @@ function runTimed(command, args, root) {
 }
 
 function runCheck(root, noCache = false) {
-  return runTimed(process.execPath, [CHECK, '--root', root, '--config', 'ark.config.json', ...(noCache ? ['--no-cache'] : [])], root);
-}
-
-function cacheHitCount(root) {
-  try {
-    const cache = JSON.parse(fs.readFileSync(path.join(root, 'node_modules', '.cache', 'ark-check.json'), 'utf8'));
-    return sourceFiles(root).filter((file) => {
-      const relative = path.relative(root, file).split(path.sep).join('/');
-      const cached = cache.files?.[relative];
-      const stat = fs.statSync(file);
-      return cached?.fileKey === `${stat.mtimeMs}:${stat.size}`;
-    }).length;
-  } catch {
-    return 0;
-  }
+  return runTimed(
+    process.execPath,
+    [CHECK, '--root', root, '--config', 'ark.config.json', '--json', ...(noCache ? ['--no-cache'] : [])],
+    root
+  );
 }
 
 function runIncremental(root) {
@@ -223,14 +214,22 @@ function loadBudgets() {
   return JSON.parse(fs.readFileSync(BUDGETS, 'utf8'));
 }
 
-function budgetFailures(report, budgets) {
+export function budgetFailures(report, budgets) {
   const failures = [];
   const cold = report.results.find((result) => result.size === budgets.scenarios.cold.size)?.cold;
   const incremental = report.results.find((result) => result.size === budgets.scenarios.incremental.size)?.incremental;
+  const oneShotWarm = report.results.find(
+    (result) => result.size === budgets.scenarios.oneShotWarm.size
+  )?.oneShotWarm;
   if (cold && cold.p95Ms > budgets.scenarios.cold.maxP95Ms) failures.push(`cold p95 ${cold.p95Ms}ms exceeds ${budgets.scenarios.cold.maxP95Ms}ms`);
   if (incremental && incremental.p95Ms >= budgets.scenarios.incremental.maxP95Ms) failures.push(`incremental p95 ${incremental.p95Ms}ms is not below ${budgets.scenarios.incremental.maxP95Ms}ms`);
+  if (oneShotWarm && oneShotWarm.p95Ms > budgets.scenarios.oneShotWarm.maxP95Ms) failures.push(`one-shot warm p95 ${oneShotWarm.p95Ms}ms exceeds ${budgets.scenarios.oneShotWarm.maxP95Ms}ms`);
   for (const result of report.results) {
-    if (result.warm.cacheHits < budgets.scenarios.warm.minCacheHits) failures.push(`warm cache has ${result.warm.cacheHits} hits for n=${result.size}`);
+    if (result.oneShotWarm.cacheMode !== budgets.scenarios.oneShotWarm.expectedCacheMode) failures.push(`one-shot warm cache mode is ${result.oneShotWarm.cacheMode} for n=${result.size}`);
+    if (budgets.scenarios.oneShotWarm.requireLegacyCacheAbsent && !result.oneShotWarm.legacyCacheAbsent) failures.push(`retired legacy cache exists for n=${result.size}`);
+    if (budgets.scenarios.oneShotWarm.requireColdOutputParity && !result.oneShotWarm.coldOutputParity) failures.push(`cold/one-shot-warm semantic output differs for n=${result.size}`);
+    if (budgets.scenarios.incremental.requirePolicyHashPreserved && !result.incremental.policyHashPreserved) failures.push(`incremental policy hash changed for n=${result.size}`);
+    if (budgets.scenarios.incremental.requireContentHashPreserved && !result.incremental.contentHashPreserved) failures.push(`incremental unchanged-content hash changed for n=${result.size}`);
     if (result.peakRssBytes > budgets.scenarios.memory.maxPeakRssBytes) failures.push(`peak RSS ${result.peakRssBytes} exceeds ${budgets.scenarios.memory.maxPeakRssBytes}`);
     if (result.status !== 0) failures.push(`scenario failure for n=${result.size}`);
   }
@@ -256,21 +255,39 @@ function main() {
     const cachePath = path.join(root, 'node_modules', '.cache', 'ark-check.json');
     fs.rmSync(cachePath, { force: true });
     const cold = summary(Array.from({ length: args.runs }, () => runCheck(root, true)));
-    runCheck(root); // primes filesystem/process state outside the measured one-shot warm samples
-    const warm = summary(Array.from({ length: args.runs }, () => runCheck(root)));
-    warm.cacheHits = cacheHitCount(root);
+    const oneShotWarmPrime = runCheck(root);
+    const oneShotWarm = summary(Array.from({ length: args.runs }, () => runCheck(root)));
+    const reference = cold.samples[0];
+    const matchesReference = (sample) =>
+      sample.status === reference?.status && sample.stdout === reference?.stdout;
+    oneShotWarm.cacheMode = 'none';
+    oneShotWarm.primeStatus = oneShotWarmPrime.status;
+    oneShotWarm.legacyCacheAbsent = !fs.existsSync(cachePath);
+    oneShotWarm.coldOutputParity = Boolean(
+      reference &&
+        cold.samples.every(matchesReference) &&
+        matchesReference(oneShotWarmPrime) &&
+        oneShotWarm.samples.every(matchesReference)
+    );
     runIncremental(root); // primes the incremental worker path outside measured samples
     const incremental = summary(Array.from({ length: incrementalRuns }, () => runIncremental(root)));
     incremental.policyHashPreserved = incremental.samples.every((sample) => sample.policyHashPreserved === true);
     incremental.contentHashPreserved = incremental.samples.every((sample) => sample.contentHashPreserved === true);
-    const peakRssBytes = Math.max(cold.peakRssBytes, warm.peakRssBytes, incremental.peakRssBytes);
+    const peakRssBytes = Math.max(
+      cold.peakRssBytes,
+      oneShotWarm.peakRssBytes,
+      incremental.peakRssBytes
+    );
     results.push({
       size,
       runs: args.runs,
       incrementalRuns,
-      status: cold.failures + warm.failures + incremental.failures === 0 ? 0 : 1,
+      status:
+        cold.failures + oneShotWarmPrime.status + oneShotWarm.failures + incremental.failures === 0
+          ? 0
+          : 1,
       cold,
-      warm,
+      oneShotWarm,
       incremental,
       peakRssBytes,
       // Compatibility summary for the former Q5 contract.
@@ -280,7 +297,7 @@ function main() {
   }
 
   const report = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     tool: 'ark-scale-bench',
     runner: { platform: process.platform, arch: process.arch, node: process.version },
     budgets: { schemaVersion: budgets.schemaVersion, path: path.relative(REPO, BUDGETS) },
@@ -310,8 +327,8 @@ function main() {
     console.log('Ark scale bench (Q5)');
     for (const row of results) {
       console.log(
-        `  n=${row.size} cold p95=${row.cold.p95Ms?.toFixed(1)}ms warm p95=${row.warm.p95Ms?.toFixed(1)}ms ` +
-          `incremental p95=${row.incremental.p95Ms?.toFixed(1)}ms cacheHits=${row.warm.cacheHits} rss=${row.peakRssBytes} status=${row.status}`
+        `  n=${row.size} cold p95=${row.cold.p95Ms?.toFixed(1)}ms one-shot-warm p95=${row.oneShotWarm.p95Ms?.toFixed(1)}ms ` +
+          `incremental p95=${row.incremental.p95Ms?.toFixed(1)}ms cacheMode=${row.oneShotWarm.cacheMode} parity=${row.oneShotWarm.coldOutputParity} rss=${row.peakRssBytes} status=${row.status}`
       );
     }
   }
@@ -323,4 +340,6 @@ function main() {
   if (results.some((result) => !Number.isFinite(result.cold.p50Ms) || result.peakRssBytes <= 0)) process.exitCode = 1;
 }
 
-main();
+if (process.argv[1] && path.resolve(process.argv[1]) === SCRIPT) {
+  main();
+}

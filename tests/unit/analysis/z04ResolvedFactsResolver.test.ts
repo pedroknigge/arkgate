@@ -445,7 +445,7 @@ describe('Z04 shipped resolved candidate facts resolver', () => {
     expect(loaded.ts).toBeTruthy();
     const change = {
       path: 'src/domain/link/new.ts',
-      content: "export const load = () => fetch('/data');\n",
+      content: "export const load = () => f\\u0065tch('/data');\n",
     };
     const config = {
       include: ['src', 'shared'],
@@ -524,6 +524,55 @@ describe('Z04 shipped resolved candidate facts resolver', () => {
       dependencies: [expect.objectContaining({ resolution: 'unresolved' })],
     });
     expect(failed.completenessReasons[0].message).not.toContain(root);
+  });
+
+  it('parses each candidate once while preserving port-proof evidence', async () => {
+    const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'ark-z04-single-parse-')));
+    roots.push(root);
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/adapters'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'src/domain/order.ts'),
+      "import { repository } from '../adapters/repository';\n" +
+        'export function loadOrder() { return repository.load(); }\n'
+    );
+    fs.writeFileSync(
+      path.join(root, 'src/adapters/repository.ts'),
+      'export const repository = { load: () => 1 };\n'
+    );
+    const config = {
+      include: ['src'],
+      layers: [
+        { name: 'DomainModel', patterns: ['src/domain/**'] },
+        { name: 'PersistenceAdapters', patterns: ['src/adapters/**'] },
+      ],
+      rules: [{ from: 'DomainModel', to: 'PersistenceAdapters', allowed: false }],
+    };
+    const loaded = await loadTypeScript(root);
+    expect(loaded.ts).toBeTruthy();
+    let parseCount = 0;
+    const countingTs = new Proxy(loaded.ts, {
+      get(target, property, receiver) {
+        if (property === 'createSourceFile') {
+          return (...args: Parameters<typeof target.createSourceFile>) => {
+            parseCount += 1;
+            return target.createSourceFile(...args);
+          };
+        }
+        return Reflect.get(target, property, receiver);
+      },
+    });
+
+    const facts = resolveCandidateFacts({ root, config, ts: countingTs });
+
+    expect(parseCount).toBe(facts.files.length);
+    expect(facts.dependencies).toEqual([
+      expect.objectContaining({
+        from: 'src/domain/order.ts',
+        target: 'src/adapters/repository.ts',
+        portProofEligible: true,
+      }),
+    ]);
   });
 
   it('uses only nearest candidate configs and hashes their transitive extends inputs', async () => {
