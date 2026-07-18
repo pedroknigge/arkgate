@@ -5,12 +5,19 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  defaultReleaseOutput,
+  prepareReleaseOutput,
+  validateReleaseOutput,
+} from './release-output-safety.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const budgets = JSON.parse(fs.readFileSync(path.join(root, 'release/package-budgets.v1.json'), 'utf8'));
 const outArg = process.argv.indexOf('--out');
-const output = path.resolve(outArg === -1 ? path.join(root, 'release', 'artifacts') : process.argv[outArg + 1]);
+if (outArg !== -1 && !process.argv[outArg + 1]) throw new Error('--out requires a path');
+let output = path.resolve(outArg === -1 ? defaultReleaseOutput(root) : process.argv[outArg + 1]);
 const json = process.argv.includes('--json');
+validateReleaseOutput(output, root);
 
 function run(command, args, cwd = root) {
   return execFileSync(command, args, { cwd, encoding: 'utf8' });
@@ -42,7 +49,7 @@ const work = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-release-artifacts-'));
 try {
   run('npm', ['run', 'build']);
   run('npm', ['run', 'build:runtime']);
-  fs.rmSync(output, { recursive: true, force: true });
+  output = prepareReleaseOutput(output, root);
   const results = Object.entries(budgets.packages).map(([name, policy]) => pack(name, policy, work));
   const report = { schemaVersion: 1, candidateSha: run('git', ['rev-parse', 'HEAD']).trim(), budgets: 'release/package-budgets.v1.json', results, ok: results.every((result) => result.errors.length === 0) };
   fs.writeFileSync(path.join(output, 'report.json'), `${JSON.stringify(report, null, 2)}\n`);

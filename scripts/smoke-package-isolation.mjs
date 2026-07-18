@@ -7,6 +7,8 @@ import { pathToFileURL } from 'node:url';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'arkgate-package-isolation-'));
+const packs = path.join(temp, 'packs');
+fs.mkdirSync(packs);
 
 function run(command, args, cwd) {
   const result = spawnSync(command, args, { cwd, encoding: 'utf8' });
@@ -17,9 +19,13 @@ function run(command, args, cwd) {
 }
 
 function pack(cwd) {
-  const raw = run('npm', ['pack', '--json', '--ignore-scripts'], cwd);
+  const raw = run(
+    'npm',
+    ['pack', '--json', '--ignore-scripts', '--pack-destination', packs],
+    cwd
+  );
   const report = JSON.parse(raw);
-  return path.join(cwd, report[0].filename);
+  return path.join(packs, report[0].filename);
 }
 
 try {
@@ -65,9 +71,4 @@ try {
   console.log('✔ gate-only and experimental runtime packages install independently.');
 } finally {
   fs.rmSync(temp, { recursive: true, force: true });
-  for (const cwd of [root, path.join(root, 'packages/runtime')]) {
-    for (const file of fs.readdirSync(cwd)) {
-      if (file.endsWith('.tgz')) fs.rmSync(path.join(cwd, file), { force: true });
-    }
-  }
 }

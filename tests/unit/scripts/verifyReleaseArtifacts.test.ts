@@ -6,7 +6,8 @@ import { describe, expect, it } from 'vitest';
 
 describe('V04 release artifacts', () => {
   it('emits bounded gate/runtime tarballs with SBOMs, checksums, and manifests', () => {
-    const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-release-artifacts-test-'));
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-release-artifacts-test-'));
+    const output = path.join(parent, 'artifacts');
     try {
       const result = spawnSync(process.execPath, ['scripts/verify-release-artifacts.mjs', '--json', '--out', output], { encoding: 'utf8' });
       expect(result.status, result.stderr || result.stdout).toBe(0);
@@ -20,6 +21,6 @@ describe('V04 release artifacts', () => {
         expect(sbom.serialNumber).toMatch(/^urn:uuid:[0-9a-f-]{36}$/);
         expect(fs.readdirSync(path.join(output, name)).some((file) => file.endsWith('.sha256'))).toBe(true);
       }
-    } finally { fs.rmSync(output, { recursive: true, force: true }); }
+    } finally { fs.rmSync(parent, { recursive: true, force: true }); }
   });
 });

@@ -37,7 +37,7 @@ else {
 }
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-beta-artifacts-'));
 try {
-  const artifactRun = command('npm', ['run', 'check:release-artifacts', '--', '--out', artifacts]);
+  const artifactRun = command('npm', ['run', 'check:release-artifacts', '--', '--out', path.join(artifacts, 'release')]);
   checks.push(check('release-artifacts', artifactRun.status === 0 ? 'pass' : 'fail', artifactRun.status === 0 ? 'tarballs, SBOMs, checksums, manifests verified' : (artifactRun.stderr || artifactRun.stdout).trim().slice(0, 300)));
 } finally { fs.rmSync(artifacts, { recursive: true, force: true }); }
 if (!reviewer || !fs.existsSync(reviewer)) checks.push(check('independent-review', 'unverified', 'missing reviewer declaration supplied with --reviewer'));

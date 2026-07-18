@@ -17,6 +17,7 @@
  */
 import { execFileSync, execSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 const root = process.cwd();
@@ -65,7 +66,17 @@ run('npm run typecheck');
 run('npm run test:confidence');
 run('npm run security:audit');
 run('npm run check:architecture');
-run('npm run check:release-artifacts -- --out /tmp/arkgate-release-artifacts');
+const releaseArtifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'arkgate-release-'));
+try {
+  console.log('[release-npm] npm run check:release-artifacts');
+  execFileSync(
+    'npm',
+    ['run', 'check:release-artifacts', '--', '--out', path.join(releaseArtifacts, 'artifacts')],
+    { cwd: root, stdio: 'inherit' }
+  );
+} finally {
+  fs.rmSync(releaseArtifacts, { recursive: true, force: true });
+}
 
 if (!dry && allowLocalPublish) {
   console.warn('[release-npm] local publish is not provenance-backed.');

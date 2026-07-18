@@ -418,7 +418,7 @@ may raise those ceilings merely to fit its own implementation.
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 64 | `Z01` | `todo` | S | — | Release tooling deletes only validated, tool-owned targets and files |
+| 64 | `Z01` | `doing` | S | — | Release tooling deletes only validated, tool-owned targets and files |
 | 65 | `Z02` | `todo` | L | `Z01` | Packed TS5/6/7 analysis is available or explicitly non-green; incomplete analysis never satisfies the goal |
 | 66 | `Z03` | `todo` | M | `Z02` | The resolved-facts/public-API boundary and generated CLI parity seam are decided before implementation |
 | 67 | `Z04` | `todo` | L | `Z03` | One normalized candidate-facts graph produces one contract verdict across every supported adapter |
@@ -445,7 +445,7 @@ may raise those ceilings merely to fit its own implementation.
 
 ### Z01 — Make release cleanup tool-owned and path-safe
 
-- **Status:** `todo`
+- **Status:** `doing`
 - **Depends on:** —
 
 **Outcome:** release-artifact verification refuses repository roots, ancestors, broad caller-owned

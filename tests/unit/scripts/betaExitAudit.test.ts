@@ -30,6 +30,7 @@ describe('V05 beta exit audit', () => {
     const result = spawnSync(process.execPath, ['scripts/beta-exit-audit.mjs', '--candidate', candidate, '--out', out, '--reviewer', reviewer, '--adoption-summary', adoption], { encoding: 'utf8' });
     expect(result.status).toBe(1);
     const report = JSON.parse(fs.readFileSync(path.join(out, 'audit.json'), 'utf8')) as { checks: Array<{ id: string; status: string }> };
+    expect(report.checks.find((check) => check.id === 'release-artifacts')?.status).toBe('pass');
     expect(report.checks.find((check) => check.id === 'adoption-candidate')?.status).toBe('fail');
   });
 });
