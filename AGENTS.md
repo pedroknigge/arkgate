@@ -20,6 +20,65 @@ If the task is “improve arkgate the product,” you are in the right place. If
 
 ---
 
+## Project knowledge map
+
+Code and manifests are the source of truth for implementation details and for whether a
+structural claim is true. These documents capture product intent, operating constraints, and
+retained decisions; when they disagree with code, fix or flag the documentation.
+
+| Topic | Canonical authority |
+|-------|---------------------|
+| Public product and first-run flow | [README.md](README.md) |
+| Stable vs experimental package contract | [docs/package-surface.md](docs/package-surface.md) |
+| Config contract and schema | [docs/configuration.md](docs/configuration.md) |
+| Agent, CLI, MCP, and runtime reference | [docs/agent-guide.md](docs/agent-guide.md) |
+| Host enforcement setup | [docs/ai-gates.md](docs/ai-gates.md) |
+| TypeScript compatibility | [docs/typescript-support.md](docs/typescript-support.md) |
+| Brownfield and enthusiast adoption | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) · [docs/enthusiast/](docs/enthusiast/README.md) |
+| Security | [SECURITY.md](SECURITY.md) · [docs/threat-model.md](docs/threat-model.md) |
+| Decisions | [docs/adr/](docs/adr/README.md) |
+| Implementation queue | [ROADMAP.md](ROADMAP.md) |
+| Releases | [CHANGELOG.md](CHANGELOG.md) · [3.7.0 notes](docs/releases/3.7.0.md) |
+| Documentation audit | [docs/audit/claims-matrix.md](docs/audit/claims-matrix.md) |
+
+Read this hub and the relevant authority before significant work. After changing a public
+surface, architecture boundary, decision, or plan, update its authority and the coverage row.
+
+### Package index
+
+The product tree contains two publishable Node/TypeScript packages. Example manifests under
+`examples/` are gallery fixtures, not additional workspace packages.
+
+| Package path | Role | Manifest | Canonical docs | Docs status |
+|--------------|------|----------|----------------|-------------|
+| `.` | Stable ArkGate gate, CLIs, MCP, ESLint, schemas, and integration assets | [package.json](package.json) | [README.md](README.md) · [package surface](docs/package-surface.md) | documented |
+| `packages/runtime` | Optional experimental runtime companion and NestJS adapter | [package.json](packages/runtime/package.json) | [package README](packages/runtime/README.md) · [package surface](docs/package-surface.md#experimental-opt-in-surfaces) | documented |
+
+### Surface coverage
+
+Coverage units are externally consumable manifest entries and shipped integration-asset
+families, plus the repository-only maintainer evidence surface. Internal `bin/lib/` helpers,
+generated artifacts, individual source modules, and test fixtures are evidence for these rows,
+not separate product surfaces. **Audit result (2026-07-17): 100% of this bounded set has a
+canonical documentation authority.**
+
+| Surface | Code / manifest evidence | Canonical documentation | Status | Documentation gap |
+|---------|--------------------------|-------------------------|--------|-------------------|
+| Stable `arkgate` package and programmatic gate API | `package.json` export `.` · `src/gate.ts` | [Package surface](docs/package-surface.md#programmatic-root-api) | Real | — |
+| Setup CLI (`arkgate` / `ark`) | `package.json` bins · `bin/ark.mjs` | [README commands](README.md#common-commands) · [Agent guide](docs/agent-guide.md#terminal-onboarding-phase-b) | Real | — |
+| Check/doctor CLI (`arkgate-check` / `ark-check`) | `package.json` bins · `bin/ark-check.mjs` | [Agent guide](docs/agent-guide.md) · [Brownfield guide](docs/brownfield-adoption.md) | Real | — |
+| MCP, `ark://manifest`, write hooks, and registry descriptor | `bin/ark-mcp.mjs` · `server.json` | [MCP reference](docs/agent-guide.md#write-path-gate-mcp) · [AI gates](docs/ai-gates.md) | Real | — |
+| Config and public schemas | `ark.config.json` · `schemas/` · package schema exports | [Configuration](docs/configuration.md) · [Package surface](docs/package-surface.md) | Real | — |
+| ESLint plugin | package export `./eslint` · `src/eslint/index.ts` | [AI gates](docs/ai-gates.md#eslint-editor-feedback--same-contract-as-ci) | Real | — |
+| Agent integration assets | `templates/skills/` · `templates/hooks/` · `templates/tests/` | [Agent guide](docs/agent-guide.md#supported-agent-hosts) · [AI gates](docs/ai-gates.md) | Real | — |
+| Shape playbook, policy packs, and gallery starters | `templates/architecture-playbook.json` · `templates/policy-packs/` · `examples/` | [Enthusiast track](docs/enthusiast/README.md) | Demo | — |
+| GitHub Action | `action.yml` | [Action setup and inputs](docs/ai-gates.md#ci-backstop) · [Package surface](docs/package-surface.md) | Real | — |
+| Experimental `@arkgate/runtime` | `packages/runtime/package.json` · `src/index.ts` | [Runtime README](packages/runtime/README.md) · [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Hardening](docs/production-hardening.md) | Partial | — |
+| Experimental runtime NestJS adapter | runtime export `./nestjs` · `src/nestjs/index.ts` | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) | Partial | — |
+| Deprecated `arkgate/runtime` and `arkgate/nestjs` forwarders | root package exports · `compat/` | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Migration guide](docs/migrate-from-ark-runtime-kernel.md) | Deprecated | — |
+| Published payload and compatibility fixture | root `package.json` `files` · `scripts/verify-package-files.mjs` | [Package surface](docs/package-surface.md) · [Contributing](CONTRIBUTING.md) | Real | — |
+| Maintainer verification, evaluation, and release workflows | root scripts · `tests/` · `eval/` · `.github/workflows/` | [Contributing](CONTRIBUTING.md) · [Eval guide](eval/README.md) · [Roadmap](ROADMAP.md) | Real | — |
+
 This repo **is** ArkGate, governed by its own working-tree gates — not the published package.
 The PreToolUse hook and the `ark` MCP server run `node bin/ark-mcp.mjs`, which loads
 `dist/index.js`: run `npm run build` after cloning or the write gate reports an error
@@ -76,7 +135,8 @@ retained shipped rationale live under `docs/plans/`:
 |------|--------|---------|
 | [power-simple-shape](docs/plans/power-simple-shape/README.md) | Shipped | Dual depth (dev power + newbie simplicity) → AI-clear, maintainable code after Enforce |
 | [change-integrity-loop](docs/plans/change-integrity-loop/README.md) | Shipped in 3.1.0 | Context-independent contract guard, atomic patch preflight, dual-depth remediation, and structural convergence |
-| [understandable-execution](docs/plans/understandable-execution/README.md) | Planned | Explicit effect/state boundaries, cohesive enforcement core, and measured pre-tool flow without style dogma |
+| [understandable-execution](docs/plans/understandable-execution/README.md) | Shipped in 3.4.0 | Explicit effect/state boundaries, cohesive enforcement core, and measured pre-tool flow without style dogma |
+| [reshape-copilot](docs/plans/reshape-copilot/README.md) | Shipped in 3.6.0 | Advisory physical-cohesion evidence and one governed reshape pilot at a time |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in
 `ROADMAP.md`.

@@ -19,7 +19,7 @@ the two files on the violation edge.
 | Judgment design for a known violation | Contract wrong / false-green → STOP to `/ark-contract` / `/ark-adopt` |
 
 When the fix is really a **Shape** extraction (I/O out of routes, god module split), write an
-**extraction card** before editing — same template as [brownfield-adoption.md](../../docs/brownfield-adoption.md)
+**extraction card** before editing — same template as `docs/brownfield-adoption.md`
 §6 and explore §G. Fixed fields (never mechanical-safe, never silent B apply):
 
 ```text

@@ -1,5 +1,16 @@
 # Reshape co-pilot (Phase X, X04)
 
+> **Plan (retained shipped rationale).** Library hub: [AGENTS.md](../../../AGENTS.md)<br>
+> Related: [ROADMAP.md](../../../ROADMAP.md) · [ADR 0010](../../adr/0010-reshape-copilot-boundary.md) · [3.6.0 release evidence](../../releases/3.6.0.md)
+
+**Status:** Shipped in `arkgate@3.6.0` (2026-07-17)<br>
+**Slug:** `reshape-copilot`<br>
+**Kind:** epic / advisory co-pilot<br>
+**Owners:** product (Pedro) + library maintainers<br>
+**Last updated:** 2026-07-17
+
+---
+
 ArkGate can prove a tree's *edges* are clean while its *physical shape* rots: hundreds of files
 mirroring one domain concept across parallel directories, invisible to every current sensor.
 X04 gives the doctor eyes for physical cohesion and gives agents a governed way to execute

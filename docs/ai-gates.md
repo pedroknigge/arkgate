@@ -438,6 +438,7 @@ export default [
   ark.configs.recommended,
   // no-domain-infra-imports  → config-driven layer edges (type-only + value)
   // no-forbidden-globals     → layer.forbiddenGlobals from ark.config.json
+  // ark/no-denied-capabilities → layer.capabilities.deny / layer.pure
   // no-raw-event-publish + require-publish-source → runtime event hygiene
 ];
 ```
@@ -460,6 +461,38 @@ Whatever the agent side does, run the merge profile in CI:
 ```yaml
 - run: npx ark-check --root . --config ark.config.json --strict-merge
 ```
+
+Or use the repository's composite Action at a pinned release or commit:
+
+```yaml
+- uses: pedroknigge/arkgate@v3.7.0
+  with:
+    root: .
+    config: ark.config.json
+    strict-config: 'true'
+    baseline: ''
+    version: ''
+    github-token: ${{ github.token }}
+```
+
+| Action input | Default | Meaning |
+|--------------|---------|---------|
+| `root` | `.` | Project root to check. |
+| `config` | `ark.config.json` | Config path relative to `root`. |
+| `strict-config` | `true` | On the current Action revision, run the fail-closed `--strict` profile; an explicit older `version` uses its compatibility `--strict-config` path. |
+| `baseline` | empty | Optional frozen-violation baseline; empty disables baseline mode. |
+| `version` | empty | Optional exact npm version override; empty runs the code from the pinned Action revision. |
+| `github-token` | empty | Token for a pull-request failure comment; empty skips the comment. |
+
+For an additional local human-commit check, copy the shipped hook template:
+
+```bash
+cp node_modules/arkgate/templates/hooks/pre-commit-ark .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+The template runs the project's architecture check before a commit. It is optional and local;
+it does not replace the CI job or repository policy that makes the CI status required for merges.
 
 `--strict-merge` requires strict config plus the shared gate files (`AGENTS.md`, MCP config,
 and CI workflow) and fails on safety diagnostics. `--strict` is a compatibility alias. Neither

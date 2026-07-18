@@ -10,7 +10,7 @@ npm install
 npm run check
 ```
 
-Pick by archetype — see [examples/README.md](../../examples/README.md).
+Pick by archetype — see [examples/README.md](https://github.com/pedroknigge/arkgate/blob/main/examples/README.md).
 
 ## When to use a starter vs hexagonal-order-api
 

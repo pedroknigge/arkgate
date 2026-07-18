@@ -140,8 +140,8 @@ Commands:
   upgrade   One command to update Ark: bump the package to @latest, refresh gate
             templates + /ark-* skills (and Codex home prompts), migrate command
             runners to this project's package manager, then run the strict check.
-  preflight Validate one atomic create/update/delete set without writing project files.
             (alias: ark update)
+  preflight Validate one atomic create/update/delete set without writing project files.
 
 Options:
   --yes        Non-interactive defaults: create config if needed, install gate templates, run strict check.

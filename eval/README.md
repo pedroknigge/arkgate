@@ -61,8 +61,10 @@ node eval/comparative-run.mjs
 - Five fixture-backed prompts are verified with real `ark-check` runs; the rest ship
   curated oracle metrics for reporting.
 
-Optional live-agent comparative runs: nightly workflow `.github/workflows/eval-nightly.yml`
-(best-effort; not gating default `npm test`).
+The nightly workflow `.github/workflows/eval-nightly.yml` always runs the static corpus and
+comparative oracle. Its live-agent job is optional and best-effort (not part of default
+`npm test`); the currently selected `enthusiast-greenfield-crud` case has `skipHarness: true`, so
+even when that job is enabled it reports `SKIPPED` until the workflow selects a live harness case.
 
 ### Enthusiast cases with `skipHarness`
 

@@ -18,7 +18,7 @@ semantics of your app still come from **your** project `typescript` + `tsconfig`
 | **TypeScript 6.x** | Supported (bridge release before 7) |
 | **TypeScript 7.x** | Supported as **project** compiler; gate loads project TS when API-compatible, otherwise **falls back** to a JS-API TypeScript |
 
-Optional peer (documentational):
+Supported consumer range (also declared as an optional peer for compatibility):
 
 ```json
 "peerDependencies": {
@@ -26,13 +26,15 @@ Optional peer (documentational):
 }
 ```
 
-ArkGate does not hard-require `typescript` as a runtime dependency of the package
-itself; the CLI resolves it from the **project** first, then from the environment.
+The root `arkgate` package also depends directly on `typescript` (`>=5 <8`) as a fallback host.
+The CLI still resolves the consumer project's **own** `typescript` first so its module-resolution
+semantics win; it accepts the direct package dependency only when that export exposes the compiler
+API ArkGate needs.
 
 ## How loading works
 
 1. Prefer `require('typescript')` from the **project** root (when it has `sys` + AST + resolve).  
-2. If missing or **not API-compatible** (TS 7.0 version-only export, or incomplete host), fall back to **ArkGate’s own** `typescript` dependency (JS-API 5.x nested under the package), then bare `import('typescript')`.
+2. If missing or **not API-compatible** (TS 7.0 version-only export, or incomplete host), fall back to **ArkGate’s direct** `typescript` dependency (a compatible JS-API host resolved from the package), then bare `import('typescript')`.
 3. If nothing usable is found:  
    - `--plan` still prints **coverage honesty** (no import graph)  
    - full check exits non-zero with an install hint  
@@ -51,7 +53,7 @@ TypeScript 7 is the **native (Go) compiler** generation. Important for tools lik
 - **`require('typescript')` on 7.0.x** exports only `{ version, versionMajorMinor }` — not `sys`, `createSourceFile`, or `resolveModuleName`.  
 - Unstable programmatic surfaces live under `typescript/unstable/*` (sync/async API, AST). They are **not** the classic TS 5/6 host ArkGate uses today.
 - Stable **programmatic JS API** maturity continues over the 7.x line (Microsoft: full story into **7.1+**).  
-- When the project’s TypeScript is not API-compatible, ArkGate loads its **bundled JS-API dependency** (`typescript@^5.9`, nested under the package) so the host write path and CI check keep working while you try TS 7 as the project compiler.
+- When the project’s TypeScript is not API-compatible, ArkGate loads its **direct JS-API dependency** (currently constrained to `>=5 <8` and checked for the required API) so the host write path and CI check keep working while you try TS 7 as the project compiler.
 - Your **tsconfig** must follow TS 6/7 defaults (see below) or `tsc` / resolve can fail independently of ArkGate.
 
 ### tsconfig defaults that surprise teams (TS 6 → 7)

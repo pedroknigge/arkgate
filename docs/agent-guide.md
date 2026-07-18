@@ -65,6 +65,7 @@ npx ark init --archetype crud-product --yes   # non-interactive: shape → prese
 npx ark init                                    # TTY wizard: pick application shape (1–8), not a framework
 npx ark-check --doctor                          # includes "New here?" when coverage is low or config is fresh
 npx ark-check --report beginner.html --beginner # simplified HTML for enthusiasts
+npx ark-check --ratchet-cores                   # require populated core layers after raw graph is green
 npx ark-check --watch                           # debounced re-check when governed files change
 ```
 
@@ -73,6 +74,14 @@ docs or CI templates. Compact `ark start` previews first and keeps the applied s
 project files and 25 KB;
 run `ark-check --report ark-report.html` explicitly when you want to establish an origin/evolution
 baseline. Do not `--reset-origin` unless the user explicitly wants a new baseline.
+`ark-check --report --no-archive` still creates `origin.*` on the first report (or on an explicit
+reset) and refreshes `latest.*`; it skips only the timestamped JSON file under
+`.ark/reports/history/`.
+
+Once the **raw** graph has zero violations (the baseline is deliberately ignored) and governed
+coverage is at least 50%, `ark-check --ratchet-cores` changes `optional: true` to
+`optional: false` for populated core layers in `ark.config.json`. Empty cores remain optional.
+The command refuses active raw violations or low coverage; re-run `ark-check --doctor` after it.
 
 To remove a compact host integration, preview `ark start --remove-host <host>` and add `--apply`
 only after review. Ark removes only its exact compact artifacts, leaves customized files untouched
@@ -104,7 +113,8 @@ Never multi-pilot batch; never mechanical-safe; never claim healthy finished whi
 **AI-velocity evidence (Q05):** deterministic fixture bench (no live LLM) compares the same
 feature add on design-weak vs golden-path trees. Run `npm run eval:ai-velocity`; metric is
 `placementTurns` (agent-equivalent steps to the DomainModel home). Method is stored next to
-the number in `eval/ai-velocity-report.json`. See [eval/README.md](../eval/README.md).
+the number in `eval/ai-velocity-report.json`. See
+[the evaluation guide](https://github.com/pedroknigge/arkgate/blob/main/eval/README.md).
 
 Smell **ids** (stable JSON) plus **outcome** lines (plain language, Q02) on each
 `designSmells[]` object — prefer `outcome` for humans; keep `id` for automation:
@@ -138,12 +148,14 @@ migration acks a date so they cannot fossilize. X05 — acks matching no detecte
 as `ackLifecycle.stale`: fix the edge string or delete the entry. X06 — the family-infra
 carve-out also matches mid-name families (`HoursPersistenceAdapters -> PersistenceInfrastructure`).
 
-**Effect capabilities (U03, evidence-only):** the analysis IR reports typed capability uses for
-seven closed ids (`network`, `filesystem`, `clock`, `randomness`, `environment`, `process`,
-`persistence`). `collectCapabilityUses(ts, sourceFile)` is the symbol-aware collector (ambient
-globals + imports, one scanner — shadowing/type-only/`globalThis` handled); `ir.capabilityUses`
-carries the import-based subset the pure engine can prove from content alone. Direct evidence
-only. **Walls (U04) are opt-in:** a layer with `capabilities: { deny: ["clock", …] }` or
+**Effect capabilities (U03, evidence-only):** the public analysis IR reports typed capability
+uses for seven closed ids (`network`, `filesystem`, `clock`, `randomness`, `environment`,
+`process`, `persistence`) through `analyzeProject(...).ir.capabilityUses`. The CLI/hook adapters
+add symbol-aware ambient evidence internally (shadowing/type-only/`globalThis` handled); the
+pure IR carries the import-based subset it can prove from content alone. `collectCapabilityUses`
+and `CAPABILITY_IDS` are internal implementation exports, not exports from `arkgate`; the related
+public low-level root helper is `collectForbiddenCapabilityUses`. Direct evidence only.
+**Walls (U04) are opt-in:** a layer with `capabilities: { deny: ["clock", …] }` or
 `pure: true` (deny all seven) turns matching evidence into judgment-class
 `CAPABILITY_VIOLATION` findings with a port-injection `nextAction`; absence changes no verdict.
 One violation, one voice: ambient uses covered by `forbiddenGlobals` stay `FORBIDDEN_GLOBAL`.
@@ -395,7 +407,18 @@ npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok
 | **Grok Build** | `.grok/hooks/ark-write-gate.json` + `.grok/config.toml` / `.mcp.json` | `.grok/skills/<name>/SKILL.md` |
 
 This is a path reference, not a guarantee table. Full copy-paste setups:
-[ai-gates.md](ai-gates.md). Skill inventory: main [README](../README.md#agent-skills-ark-).
+[ai-gates.md](ai-gates.md). Skill inventory: main
+[README](../README.md#other-skills-only-when-you-need-them).
+
+For an optional executable adoption check, copy the shipped template into a Vitest/Jest suite
+after installing ArkGate:
+
+```bash
+mkdir -p tests
+cp node_modules/arkgate/templates/tests/ark-adoption-gaps.test.ts tests/ark-adoption-gaps.test.ts
+```
+
+It checks real on-disk contract, MCP, skill, and report artifacts; it does not mock the gate.
 
 ## Experimental runtime: contract discovery
 
@@ -419,7 +442,11 @@ const contract = ark.manifest().toJSON();
 ```
 
 Use `@arkgate/runtime` only when evaluating the experimental kernel. The stable `arkgate` gate
-package contains no runtime implementation. Package surface policy: [package-surface.md](package-surface.md).
+package contains no runtime implementation. The companion is not currently present in the npm
+registry and is not published by the root release workflow. Verify availability with
+`npm view @arkgate/runtime dist-tags --json`; until a separate experimental publication exists,
+evaluate it only from a source checkout after `npm run build:runtime` and install the local
+`packages/runtime` folder. Package surface policy: [package-surface.md](package-surface.md).
 
 Agents should read `contract` and `ark.observability.report()` before generating or modifying code.
 
@@ -680,7 +707,8 @@ export default [
 
 Rules: `ark/no-domain-infra-imports` (layer edges from `ark.config.json`, same semantics as
 `arkgate-check`), `ark/no-forbidden-globals` (per-layer `forbiddenGlobals`),
-`ark/no-raw-event-publish`, and `ark/require-publish-source`. See [ai-gates.md](ai-gates.md).
+`ark/no-denied-capabilities` (per-layer capability deny sets), `ark/no-raw-event-publish`, and
+`ark/require-publish-source`. See [ai-gates.md](ai-gates.md).
 
 ## Runtime Observability
 
@@ -775,15 +803,24 @@ required, and `behavioralCompletion` remains `not-evaluated` even when structure
 npx ark-mcp --root . --config ark.config.json [--manifest ark.manifest.json]
 ```
 
-- **Resource `ark://manifest`** — contract discovery. Serve your exported
-  `ark.manifest().toJSON()` via `--manifest`, or omit it to get the 11-layer profile
-  (layers + rules) as the default contract.
-- **Tool `ark_recommend`** — no args. Returns the deterministic application-shape plan
-  (archetype, preset, phased adoption, analogy). Same as `ark-check --recommend --json`.
-- **Tool `validate_code`** — args `{ source, layer?, filePath? }`. Runs `createAICodeGate`
-  against the profile and (when a manifest is provided) the registered intent allowlist.
-  Returns `{ valid, violations, layer }`; `isError` is `true` when invalid. If `layer` is
-  omitted it is inferred from `filePath` via the config's layer patterns.
+- **Resource `ark://manifest`** — contract discovery. Serve an exported
+  `ark.manifest().toJSON()` via `--manifest`. Without that flag, the resource uses every active
+  layer and the effective rules from `ark.config.json`; the strict 11-layer profile is the
+  fallback only when the project config declares no layers.
+
+The server exposes these nine tools:
+
+| Tool | Primary input and purpose |
+|------|---------------------------|
+| `validate_code` | `{ source, layer?, filePath? }`: validate one snippet; infer the layer from `filePath` when possible; return an error result when invalid. |
+| `ark_check` | `{ strict?, baseline? }`: run the full project architecture check with structured diagnostics. |
+| `ark_policy_delta` | `{ baseConfig, candidateConfig?, acknowledgement? }`: classify a complete contract transition; never edits the contract. |
+| `ark_coverage` | No args: report per-layer counts, every unclassified file, unmatched layers, and missing rule edges. |
+| `ark_place` | `{ filePath?, description? }`: resolve or propose a governed home and return its import/global constraints. |
+| `ark_prepare_write` | `{ source, filePath?, description?, layer? }`: compose placement and snippet validation, with hashes and a mechanical-safe patch when available. |
+| `ark_prepare_change` | `{ changes, changeMap? }`: preflight one complete create/update/delete batch in memory; never writes files. |
+| `ark_recommend` | No args: return the deterministic application-shape plan used by `ark-check --recommend --json`. |
+| `ark_suggest_include` | No args: propose TypeScript/JavaScript include roots from workspaces and nested packages. |
 
 For hook-based enforcement, `ark-mcp --hook` runs one-shot: it reads a PreToolUse payload
 from stdin, validates the post-edit file content, and exits `2` with violations on stderr

@@ -38,20 +38,20 @@ Reproducible scripts — no video required:
 
 - [Write-gate self-correction](../demos/01-write-gate-self-correction.md)
 - [Brownfield baseline adoption](../demos/02-brownfield-baseline-adoption.md)
-- [Co-pilot autopilot, end to end](../demos/03-copilot-autopilot.md)
+- [Co-pilot autopilot, end to end](https://github.com/pedroknigge/arkgate/blob/main/docs/demos/03-copilot-autopilot.md)
 
 ## Gallery starters
 
 | Archetype | Directory |
 |-----------|-----------|
-| `crud-product` | [examples/crud-product-starter](../../examples/crud-product-starter/) |
-| `api-backend` | [examples/api-backend-starter](../../examples/api-backend-starter/) |
-| `worker-pipeline` | [examples/worker-pipeline-starter](../../examples/worker-pipeline-starter/) |
-| `multi-app-workspace` | [examples/multi-app-workspace-starter](../../examples/multi-app-workspace-starter/) |
-| `vertical-slice-product` | [examples/vertical-slice-starter](../../examples/vertical-slice-starter/) |
-| `ddd-bounded-contexts` | [examples/ddd-context-starter](../../examples/ddd-context-starter/) |
+| `crud-product` | [examples/crud-product-starter](https://github.com/pedroknigge/arkgate/tree/main/examples/crud-product-starter) |
+| `api-backend` | [examples/api-backend-starter](https://github.com/pedroknigge/arkgate/tree/main/examples/api-backend-starter) |
+| `worker-pipeline` | [examples/worker-pipeline-starter](https://github.com/pedroknigge/arkgate/tree/main/examples/worker-pipeline-starter) |
+| `multi-app-workspace` | [examples/multi-app-workspace-starter](https://github.com/pedroknigge/arkgate/tree/main/examples/multi-app-workspace-starter) |
+| `vertical-slice-product` | [examples/vertical-slice-starter](https://github.com/pedroknigge/arkgate/tree/main/examples/vertical-slice-starter) |
+| `ddd-bounded-contexts` | [examples/ddd-context-starter](https://github.com/pedroknigge/arkgate/tree/main/examples/ddd-context-starter) |
 
-Deep teaching example (runnable API + break exercises): [hexagonal-order-api](../../examples/hexagonal-order-api/).
+Deep teaching example (runnable API + break exercises): [hexagonal-order-api](https://github.com/pedroknigge/arkgate/tree/main/examples/hexagonal-order-api).
 
 ## Brownfield vs greenfield
 
@@ -63,5 +63,5 @@ Deep teaching example (runnable API + break exercises): [hexagonal-order-api](..
 ## Related
 
 - [Agent integration guide](../agent-guide.md)
-- [Public demos](../demos/)
-- [Examples index](../../examples/README.md)
+- [Public demos](https://github.com/pedroknigge/arkgate/tree/main/docs/demos)
+- [Examples index](https://github.com/pedroknigge/arkgate/blob/main/examples/README.md)

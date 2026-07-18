@@ -6,7 +6,7 @@ corrects the architecture instead of weakening the contract.
 ## Prerequisites
 
 - Ark installed in the repo (`ark-check`, agent gates optional for this demo)
-- [examples/hexagonal-order-api](../../examples/hexagonal-order-api/) cloned with dependencies
+- [examples/hexagonal-order-api](https://github.com/pedroknigge/arkgate/tree/main/examples/hexagonal-order-api) cloned with dependencies
 
 ## Steps
 
@@ -70,5 +70,5 @@ Expected:
 - The error message points at the **layer edge**, not a generic lint rule.
 - The fix is a file move or port inversion — not editing `ark.config.json`.
 
-See also: [Break it on purpose](../../examples/hexagonal-order-api/README.md#break-it-on-purpose)
+See also: [Break it on purpose](https://github.com/pedroknigge/arkgate/blob/main/examples/hexagonal-order-api/README.md#break-it-on-purpose)
 for two more exercises.

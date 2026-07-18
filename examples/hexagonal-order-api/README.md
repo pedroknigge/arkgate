@@ -6,11 +6,13 @@ A tiny but real order API with a hexagonal architecture, governed by Ark's three
 - **ark-mcp** — AI gate: the same rules, exposed to coding agents via MCP.
 - **Ark kernel runtime** — strict event bus, intent registry, event contracts, projections.
 
-No frameworks, no external runtime dependencies — just `node:http` and `arkgate`.
+No application framework: the API uses `node:http`, the `arkgate` gate package, and the separate
+experimental `@arkgate/runtime` companion.
 
-Prefer **`arkgate/runtime`** for kernel imports (not the root package barrel). This demo opts
-into `safety.allowInMemory: true` because the stock kernel wires an InMemory outbox for local
-exercises — **not** a production pattern.
+This fixture currently imports the deprecated **`arkgate/runtime`** forwarding shim to exercise
+compatibility. The shim resolves `@arkgate/runtime`; new code should import from
+`@arkgate/runtime` directly. This demo opts into `safety.allowInMemory: true` because the stock
+kernel wires an InMemory outbox for local exercises — **not** a production pattern.
 
 ## Layout
 
@@ -28,8 +30,15 @@ architecture forbids (domain → adapters, application → adapters, adapter →
 
 ## Run it
 
+The companion is not currently published to npm, so this repository example installs the built
+local source package. From the ArkGate repository root:
+
 ```bash
 npm install
+npm run build:runtime
+cd examples/hexagonal-order-api
+npm install
+npm install --no-save ../../packages/runtime
 npm start
 ```
 

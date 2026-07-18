@@ -91,12 +91,16 @@ One-line product north star:
 
 ## Acceptance criteria (epic-level)
 
-- [ ] **A1 — Dual depth, one door:** Newbie-facing path has ≤1 primary skill/command for “make code clearer for AI after green”; dev depth remains via `--json` / existing skills without new basenames unless justified by kill-switch.
-- [ ] **A2 — No false done:** Doctor and plan cannot be summarized as “healthy finished” when `designWeak` or non-empty `patternBets` (already partially enforced; productize in default agent flow + site).
-- [ ] **A3 — Golden norm:** Consumer repo can persist a golden pattern (config, origin, or small artifact) that placement and agent guidance copy for *new* files.
-- [ ] **A4 — Pilot success:** At least one documented pilot flow (fixture or gallery) goes design-weak → extraction card → reduced smell on pilot with gate still strict.
-- [ ] **A5 — AI velocity claim is evidence-backed:** At least one eval or bench shows fewer denials or fewer agent steps on golden-path vs design-weak fixture for the same feature prompt.
-- [ ] **A6 — Hard lines held:** No new mechanical-safe kinds for Shape; no silent B apply; no gate weakening; ROADMAP still one-`doing`-at-a-time when implementing.
+[ROADMAP Phase Q](../../../ROADMAP.md) records Q01–Q06 as `done`; the
+[3.0.3 release evidence](../../releases/3.0.3.md) maps Q01–Q05 to the shipped doctor, plan,
+golden-pattern, pilot-loop, and fixed-fixture evaluation surfaces.
+
+- [x] **A1 — Dual depth, one door:** Newbie-facing path has ≤1 primary skill/command for “make code clearer for AI after green”; dev depth remains via `--json` / existing skills without new basenames unless justified by kill-switch.
+- [x] **A2 — No false done:** Doctor and plan cannot be summarized as “healthy finished” when `designWeak` or non-empty `patternBets`; the default agent flow and site preserve that distinction.
+- [x] **A3 — Golden norm:** Consumer repo can persist a golden pattern (config, origin, or small artifact) that placement and agent guidance copy for *new* files.
+- [x] **A4 — Pilot success:** At least one documented pilot flow (fixture or gallery) goes design-weak → extraction card → reduced smell on pilot with gate still strict.
+- [x] **A5 — AI velocity claim is evidence-backed:** At least one eval or bench shows fewer denials or fewer agent steps on golden-path vs design-weak fixture for the same feature prompt.
+- [x] **A6 — Hard lines held:** No new mechanical-safe kinds for Shape; no silent B apply; no gate weakening; ROADMAP still one-`doing`-at-a-time when implementing.
 
 ---
 

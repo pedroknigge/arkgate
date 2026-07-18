@@ -240,6 +240,7 @@ function usage() {
     'Usage: arkgate-check | ark-check  (identical bins; product name ArkGate)',
     '       ark-check --version',
     '       ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-merge | --strict | --strict-config] [--policy-base <file> | --policy-base-ref <git-ref>] [--policy-ack <file>] [--require-gates] [--require-write-hook <host>] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
+    '       ark-check --doctor [--json]            read-only enforcement, safety, and advisory design diagnosis',
     '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
     '       ark-check --plan [--json]              classified remediation plan (mechanical-safe / judgment / deferred) + goal; report only',
     '       ark-check --recommend [--json] [--write-plan]  application-shape plan; --write-plan emits ark-adoption-plan.json',

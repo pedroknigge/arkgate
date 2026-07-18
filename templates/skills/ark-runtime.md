@@ -8,11 +8,12 @@ description: Evaluate the experimental Ark runtime kernel against hand-rolled ev
 The runtime kernel is currently **experimental** and is not required for ArkGate enforcement or
 presented as production-ready. Use this skill only when the user explicitly wants to evaluate it.
 
-`arkgate` ships the experimental runtime kernel
+The separate `@arkgate/runtime` source package contains the experimental runtime kernel
 (`createArkKernel`) with an event bus, event contracts, outbox, audit trail,
 policy engine, workflow/saga coordination, projections, observability hooks,
-and NestJS adapters. This skill migrates hand-rolled versions of those to the
-kernel, one feature at a time.
+and NestJS adapters. The stable `arkgate` package is the architecture gate; it does not bundle
+the runtime implementation. This skill migrates hand-rolled versions of those to the kernel,
+one feature at a time.
 
 ## Dual engine (mandatory)
 
@@ -41,20 +42,25 @@ the same files or weaken the gate.
    - saga/workflow orchestration (multi-step processes with compensation)
    - read-model/projection builders
    - policy/authorization checks scattered across use cases
-   Also check whether `@nestjs/common` is present → the `arkgate/nestjs`
+   Also check whether `@nestjs/common` is present → the `@arkgate/runtime/nestjs`
    adapters apply.
 2. **Pick ONE target** — the smallest, most self-contained candidate (fewest
    call sites). Migrating everything at once is how adoptions die. List the
    rest as follow-ups in the report.
-3. **Migrate** — import from `arkgate/runtime` (preferred experimental subpath) or
-   `arkgate/nestjs`, and read the package's `docs/agent-guide.md`
-   (in `node_modules/arkgate/docs/`) for the runtime API before
+3. **Resolve availability** — run `npm view @arkgate/runtime dist-tags --json`. If an
+   `experimental` tag exists, install that exact companion. Otherwise continue only from an
+   ArkGate source checkout: run `npm run build:runtime` at its root and install its local
+   `packages/runtime` folder into the target. Outside a source checkout, stop and report that the
+   runtime is unavailable; never fall back to the deprecated root shims as if they contained it.
+4. **Migrate** — import from `@arkgate/runtime` or `@arkgate/runtime/nestjs`, and read the
+   [runtime package guide](https://github.com/pedroknigge/arkgate/blob/main/packages/runtime/README.md)
+   plus the [experimental surface policy](https://github.com/pedroknigge/arkgate/blob/main/docs/package-surface.md#experimental-opt-in-surfaces) before
    writing code. Wire the kernel at the composition root; keep the domain
    ignorant of it (handlers/ports, not kernel imports inside domain code —
    the architecture check enforces this; Claude/Grok hooks can block it earlier). Note: the kernel bounds in-memory
    history by default (`maxHistorySize` 1000); mention this if the hand-rolled
    version retained everything.
-4. **Delete the hand-rolled version** once call sites are moved — the point is
+5. **Delete the hand-rolled version** once call sites are moved — the point is
    less code, not a second parallel system. Deleting code is a destructive move:
    confirm with the user before removing the old implementation, and never delete
    something the inventory only *suspects* is dead (a misclassified load-bearing
@@ -63,6 +69,7 @@ the same files or weaken the gate.
 ## Critical handoffs
 
 - No static gates yet: **STOP — do not continue this skill as complete.** Run `/ark-architect` or `/ark-adopt` first.
+- Runtime companion unavailable from npm and no ArkGate source checkout: **STOP** and report the distribution boundary.
 - Inventory finds nothing: stop; do not introduce kernel speculatively.
 
 ## Operating rules

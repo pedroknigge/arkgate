@@ -82,5 +82,5 @@ into `domain/`.
 ## Next steps
 
 - [How to pick your shape](how-to-pick-shape.md)
-- [Public demos](../demos/)
+- [Public demos](https://github.com/pedroknigge/arkgate/tree/main/docs/demos)
 - [Brownfield adoption](../brownfield-adoption.md) if you already have code

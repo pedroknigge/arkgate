@@ -68,8 +68,11 @@ CLI) is documented there.
 
 ```diff
 - "ark-runtime-kernel": "^2.0.1"
-+ "arkgate": "^2.1.0"
++ "arkgate": "^3.7.0"
 ```
+
+`3.7.0` is the current stable version when this guide was updated; prefer `arkgate@latest` for a
+fresh migration unless your repository intentionally pins an exact version.
 
 Scripts:
 
@@ -143,6 +146,12 @@ require adopting them. Static CLI/MCP enforcement remains the supported product 
 + import ark from 'arkgate/eslint';
 ```
 
+The `@arkgate/runtime` lines show the intended package boundary, not a currently available npm
+install: the companion is not yet present in the registry and the root release workflow does not
+publish it. Verify with `npm view @arkgate/runtime dist-tags --json`; until a separate
+experimental publication exists, migrate runtime imports only when evaluating a built local
+`packages/runtime` source checkout. The `arkgate/eslint` migration is available now.
+
 If you only used the CLI + MCP (most projects), **no import changes**.  
 Surface policy: [package-surface.md](package-surface.md).
 
@@ -163,7 +172,7 @@ Surface policy: [package-surface.md](package-surface.md).
 | `npm warn deprecated ark-runtime-kernel` | Swap dep to `arkgate` (this guide) |
 | `ark-check: not found` after uninstall | Use `npx arkgate-check` or reinstall `arkgate` |
 | MCP still launches old package | Update `.mcp.json` / Codex / Grok config; restart agent |
-| pnpm blocks new package age | Wait for cooling-off or pin exact version `arkgate@2.1.0` |
+| pnpm blocks new package age | Wait for cooling-off or prefer `arkgate@latest`; if policy requires an exact pin, check `npm view arkgate version` and pin that version (currently `arkgate@3.7.0`) |
 
 ---
 

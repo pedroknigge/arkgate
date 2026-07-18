@@ -39,8 +39,10 @@ without discussion. NestJS and similar stay optional `peerDependencies` + devDep
 
 ## Project layout (public GitHub tree)
 
-- `src/kernel/` — optional runtime kernel (registry, event bus, contracts, …)
-- `src/eslint/` · `src/nestjs/` — optional adapters
+- `src/domain/` — pure contracts, types, and canonical algorithms shared by the gate surfaces
+- `src/kernel/` — canonical gate analysis and preflight core; `src/kernel/runtime/` feeds only the experimental runtime companion
+- `src/runtime/` · `src/nestjs/` — experimental `@arkgate/runtime` package entries and its optional NestJS adapter
+- `src/eslint/` — stable editor adapter for the same architecture contract
 - `bin/` — dual CLIs: `arkgate` / `arkgate-check` / `arkgate-mcp` + aliases `ark` / `ark-check` / `ark-mcp`
 - `templates/` — playbook, policy packs, agent skills (shipped on npm; install via `--install-agent-gates`)
 - `docs/` — **user-facing** docs only (enthusiast track, ai-gates, TypeScript support, demos, …)
@@ -51,8 +53,10 @@ without discussion. NestJS and similar stay optional `peerDependencies` + devDep
 
 Maintainer-only planning, freeze checklists, marketing funnels, and local field notes live in
 a local **`internal/`** directory (gitignored). Do not commit it. The npm package is further
-restricted by the `"files"` list in `package.json` — only `bin`, `dist`, `templates`, and a
-docs subset ship to consumers.
+restricted by the `"files"` list in `package.json`: the stable payload includes `bin`, `compat`,
+`dist`, `schemas`, `templates`, public docs/assets, the TypeScript consumer fixture, and the
+listed package metadata files. Repository-only plans, tests, examples, and maintainer material do
+not ship unless they are explicitly named there.
 
 ## Rules of the road
 
@@ -96,6 +100,11 @@ Real releases are GitHub-first: the publish workflow requires a signed annotated
 existing GitHub Release, reruns the release gates, publishes to npm with provenance, and uploads
 the npm tarball checksum. Local `npm publish` is emergency-only and intentionally not the normal
 maintainer path.
+
+That workflow publishes the root **`arkgate`** package only. The experimental
+**`@arkgate/runtime`** companion has its own manifest, build, and package artifact under
+`packages/runtime`; its publication is a separate maintainer operation and is not automated by
+the root `publish-npm.yml` workflow.
 
 **MCP registry (after npm is on `latest`):** keep `server.json` at the same version, then:
 

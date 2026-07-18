@@ -202,13 +202,15 @@ changes. **No gate weaken.**
   globals (bare `process` covers `environment` too), surface-ownership dedup rule, and the
   W02 governance-weight reconciliation. Backed by a 25-case executable fixture corpus
   (`tests/fixtures/capability-corpus/`) with a content-aware structural guard.
-- **Effect capabilities in the canonical analysis (U03):** `collectCapabilityUses(ts, sourceFile)`
-  composes the existing symbol-aware collectors (shadowing / type-only / `globalThis`-alias
-  precision; no second scanner); the Domain vocabulary ships as
-  `CAPABILITY_IDS` / `capabilityForModuleSpecifier` / `capabilityForAmbientName` /
-  `lowerForbiddenGlobal`; the compiler-free IR engine now populates `ir.capabilityUses` with
-  import-based evidence (exact module/subpath matching — never substring; textual
-  `import type` / `export type` erasure). Additive within IR `1.0`; evidence only.
+- **Effect capabilities in the canonical analysis (U03):** the internal
+  `collectCapabilityUses(ts, sourceFile)` composes the existing symbol-aware collectors
+  (shadowing / type-only / `globalThis`-alias precision; no second scanner); the internal Domain
+  vocabulary is `CAPABILITY_IDS` / `capabilityForModuleSpecifier` /
+  `capabilityForAmbientName` / `lowerForbiddenGlobal`. These names were never root `arkgate`
+  exports. The supported public surface is `analyzeProject(...).ir.capabilityUses`, populated
+  with import-based evidence by the compiler-free IR engine (exact module/subpath matching —
+  never substring; textual `import type` / `export type` erasure). Additive within IR `1.0`;
+  evidence only.
 
 ### Changed
 
@@ -217,7 +219,7 @@ changes. **No gate weaken.**
   `src/domain/configTypes.ts` — zero consumer import changes, byte-identical generated
   config artifacts, identical hashes and verdicts (verified by execution old-vs-new). ArkGate's
   own doctor now reports **zero design smells** on this repository.
-- The experimental `@arkgate/runtime` distribution is minified with `keepNames` (stable
+- The experimental `@arkgate/runtime` built distribution artifact is minified with `keepNames` (stable
   class/function names for reflection and Nest diagnostics) and stays well inside its
   release-artifact budget.
 
@@ -1134,7 +1136,7 @@ Templates under `templates/skills/` (and project `.grok/skills` copies) for at l
 ### Documentation
 
 - **Migration guide** for the ~4.5k installs still on `ark-runtime-kernel`:
-  [docs/migrate-from-ark-runtime-kernel.md](docs/migrate-from-ark-runtime-kernel.md)
+  [docs/migrate-from-ark-runtime-kernel.md](https://github.com/pedroknigge/arkgate/blob/main/docs/migrate-from-ark-runtime-kernel.md)
   + README section *Upgrading from ark-runtime-kernel?*
 - `/ark-upgrade` skill points rename-aware projects at `arkgate`.
 
@@ -1155,7 +1157,7 @@ Templates under `templates/skills/` (and project `.grok/skills` copies) for at l
 
 ### Migration
 
-Full guide: [docs/migrate-from-ark-runtime-kernel.md](docs/migrate-from-ark-runtime-kernel.md).
+Full guide: [docs/migrate-from-ark-runtime-kernel.md](https://github.com/pedroknigge/arkgate/blob/main/docs/migrate-from-ark-runtime-kernel.md).
 
 ```bash
 npm uninstall ark-runtime-kernel && npm install -D arkgate

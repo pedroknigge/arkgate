@@ -18,7 +18,7 @@ and makes sure a “green” check means something real.
 
 > **ArkGate 3.7.0** is current stable: Phase Y adds explicit reshape decisions, hollow-
 > persistence and parse-health advisories, safer mechanical edits, and exact `process` module-
-> dual enforcement. [Release notes](docs/releases/3.7.0.md).
+> dual enforcement. [Release notes](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.7.0.md).
 
 ---
 
@@ -42,7 +42,7 @@ If you remember nothing else:
 | **Messy / spaghetti code** (even if the gate is green) | **`/ark-explore`** then **`/ark-autopilot`** — [below](#less-spaghetti-after-the-gate-is-green) |
 | New ArkGate version | `/ark-upgrade` |
 
-**Everything else is optional.** You do not need to learn “modes”, 11 skills, or the runtime
+**Everything else is optional.** You do not need to learn “modes”, the full skill pack, or the runtime
 kernel to get value. The compact router is enough for normal work; install `/ark-autopilot` only
 when you want the full guided workflow.
 
@@ -294,7 +294,7 @@ ark.config.json
   alias. Neither requires an editor hook; use `--require-write-hook claude|grok` when that local
   guarantee is part of the check.
 - **Release evidence:** independent 3.0 audit baseline plus signed-tag, GitHub Release, and
-  provenance-backed npm publication; see the [3.1.0 release notes](docs/releases/3.1.0.md).
+  provenance-backed npm publication; see the [3.1.0 release notes](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.1.0.md).
 - **TypeScript:** project compilers 5.x / 6.x / 7.x — gate falls back to a nested JS-API TypeScript when TS 7’s main export is version-only ([docs/typescript-support.md](docs/typescript-support.md)).
 
 ### Why not only ESLint / dependency-cruiser / Nx?
@@ -355,6 +355,9 @@ import { createStrictArkKernelFromConfig } from '@arkgate/runtime';
 
 The stable `arkgate` package does not bundle runtime implementation. The deprecated
 `arkgate/runtime` forwarding shim requires `@arkgate/runtime` and is removed in ArkGate 4.
+The companion is not currently present in the npm registry and the root release workflow does
+not publish it; the import above documents the intended boundary. Source-checkout evaluation
+requires `npm run build:runtime` followed by installing the local `packages/runtime` folder.
 
 NestJS: `@arkgate/runtime/nestjs` (optional peer `@nestjs/common`).
 
@@ -380,10 +383,10 @@ for real systems. Details: [production-hardening.md](https://github.com/pedrokni
 | Messy existing repo | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Agent / MCP tools | [docs/agent-guide.md](docs/agent-guide.md) |
 | Security reporting | [SECURITY.md](SECURITY.md) |
-| Demos | [docs/demos/](docs/demos/) |
-| Examples | [examples/](examples/README.md) |
-| Latest release (3.7.0) | [release notes](docs/releases/3.7.0.md) · [3.0.0 baseline](docs/releases/3.0.0.md) |
-| Roadmap and decisions | [ROADMAP.md](ROADMAP.md) · [ADRs](docs/adr/) · [Changelog](CHANGELOG.md) |
+| Demos | [docs/demos/](https://github.com/pedroknigge/arkgate/tree/main/docs/demos) |
+| Examples | [examples/](https://github.com/pedroknigge/arkgate/blob/main/examples/README.md) |
+| Latest release (3.7.0) | [release notes](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.7.0.md) · [3.0.0 baseline](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.0.0.md) |
+| Roadmap and decisions | [ROADMAP.md](https://github.com/pedroknigge/arkgate/blob/main/ROADMAP.md) · [ADRs](https://github.com/pedroknigge/arkgate/tree/main/docs/adr) · [Changelog](CHANGELOG.md) |
 
 ---
 
