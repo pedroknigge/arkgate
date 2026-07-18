@@ -1,0 +1,5 @@
+{
+  "name": "@z03/kernel",
+  "private": true,
+  "exports": "./src/index.ts"
+}

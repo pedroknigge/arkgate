@@ -5,6 +5,10 @@
 - **Owner:** ArkGate maintainers
 - **Decision scope:** analysis API, IR, CLI/MCP scanner migration
 
+> **Refined by [ADR 0011](0011-resolved-candidate-facts-boundary.md):** the supplied-content APIs
+> remain lexical compatibility surfaces; versioned resolved candidate facts are the named
+> parity-capable input.
+
 ## Context
 
 ArkGate currently has independently evolving scanner entry points in its CLI, MCP, hooks, and

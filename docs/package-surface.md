@@ -60,8 +60,9 @@ corrections as published in 3.7.0.
 
 One separate claim remains open: compiler-free atomic preflight does not resolve every
 alias/workspace edge that final TypeScript-backed CI resolves, and AICodeGate can add a same-layer
-path heuristic after the declared contract allows an edge. Z03/Z04 own that decision and
-differential corpus. Until they close, use full strict CI as final authority; no limitation is
+path heuristic after the declared contract allows an edge. Z03 selected the supplied-facts
+boundary in [ADR 0011](adr/0011-resolved-candidate-facts-boundary.md); Z04 owns its implementation
+and differential corpus. Until Z04 closes, use full strict CI as final authority; no limitation is
 permission to suppress the final gate.
 
 Gates need **no application code imports**. Most projects only use the CLI + MCP + config.

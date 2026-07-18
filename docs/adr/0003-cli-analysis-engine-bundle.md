@@ -5,6 +5,10 @@
 - **Owner:** ArkGate maintainers
 - **Decision scope:** C03 scanner ownership and CLI distribution
 
+> **Refined by [ADR 0011](0011-resolved-candidate-facts-boundary.md):** Tooling resolves one
+> candidate facts payload outside the generated bundle; the bundle validates and evaluates those
+> facts instead of receiving adapter-specific resolution callbacks.
+
 ## Context
 
 The public C02 analysis API lives in Kernel, while the npm CLIs deliberately run without importing

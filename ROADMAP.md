@@ -420,7 +420,7 @@ may raise those ceilings merely to fit its own implementation.
 |---:|---|---|---:|---|---|
 | 64 | `Z01` | `done` | S | — | Release tooling deletes only validated, tool-owned targets and files |
 | 65 | `Z02` | `done` | L | `Z01` | Packed TS5/6/7 analysis is available or explicitly non-green; incomplete analysis never satisfies the goal |
-| 66 | `Z03` | `todo` | M | `Z02` | The resolved-facts/public-API boundary and generated CLI parity seam are decided before implementation |
+| 66 | `Z03` | `done` | M | `Z02` | The resolved-facts/public-API boundary and generated CLI parity seam are decided before implementation |
 | 67 | `Z04` | `todo` | L | `Z03` | One normalized candidate-facts graph produces one contract verdict across every supported adapter |
 | 68 | `Z05` | `todo` | L | `Z02`, `Z04` | Every starter and supported package manager completes the installed tarball journey in a clean consumer |
 | 69 | `Z06` | `todo` | L | `Z05` | Upgrade touches only identity-proven managed assets and doctor reports actual enforcement state |
@@ -511,7 +511,7 @@ parse-incomplete fixtures remained non-green, and two independent read-only revi
 
 ### Z03 — Decide the resolved-facts and public API boundary
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `Z02`
 
 **Outcome:** a decision record selects exactly one parity-capable contract before implementation:
@@ -529,6 +529,17 @@ consequences; select the parity-capable surface and record why the rejected shap
 invariant. Amend an existing ADR only when its decision remains intact; create a new ADR when the
 public input, sync contract, or ownership boundary changes. `Z04` cannot start with this choice open
 or with a lexical-only API as the promised parity surface.
+
+**Completed (2026-07-18):** [ADR 0011](docs/adr/0011-resolved-candidate-facts-boundary.md)
+selects versioned supplied facts as the only parity-capable input: Tooling resolves one complete
+candidate, DomainModel owns the neutral schema, and Kernel synchronously evaluates the validated
+facts. The existing supplied-content names remain an explicitly named lexical compatibility mode;
+the generated CLI bundle consumes facts rather than owning a resolver. The minimal
+`resolved-facts-boundary` workspace independently reproduces both a tsconfig alias and an installed
+workspace package: the current lexical API sees no edges while final TypeScript-backed CLI reports
+both denied governed edges. The focused API/bundle/fixture suite passed 19 tests; typecheck,
+generated-bundle drift, package allowlist, and strict Ark checks passed. No Z04 implementation was
+started before the decision closed.
 
 ### Z04 — Build one candidate facts → IR → verdict pipeline
 
@@ -2573,8 +2584,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: `Z03` (`todo`) — decide the resolved-facts/public-API boundary and generated CLI parity seam
-Next action: move only Z03 to `doing`, reproduce the alias/workspace/API differential, and record the selected parity-capable boundary before Z04 implementation
+Item: `Z04` (`todo`) — build one normalized candidate-facts → IR → verdict pipeline
+Next action: move only Z04 to `doing`, turn the Z03 characterization into failing parity expectations, and implement the ADR 0011 facts schema/resolver/evaluator without importing effects into DomainModel or Kernel
 Release lanes: Z01+Z02 may ship a stable corrective patch; Z04 may ship parity; Z06 closes the installed journey; Z07–Z09 gate only 10x/causal/retention/independent-close claims
 Parked unchanged: Y06, Y07, Y09, and Y10 retain their named field gates and must not start as collateral Z work
 Runtime parked: K01 retains confirmed experimental intra-process commit gaps outside Phase Z and does not block gate-package corrective releases

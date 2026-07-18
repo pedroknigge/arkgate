@@ -18,6 +18,7 @@ decision; implementation and manifests remain authoritative for current structur
 | [0008](0008-enforcement-evidence-ladder.md) | Enforcement claims require boundary-specific evidence | Accepted |
 | [0009](0009-effect-capability-boundary.md) | Effect capabilities are architecture evidence, not style doctrine | Accepted |
 | [0010](0010-reshape-copilot-boundary.md) | Physical cohesion is advisory; reshape remains judgment | Accepted |
+| [0011](0011-resolved-candidate-facts-boundary.md) | Versioned resolved candidate facts are the parity-capable analysis input | Accepted |
 
 Do not renumber or delete accepted decisions. Add a superseding ADR when a durable decision
 changes, and link both records.

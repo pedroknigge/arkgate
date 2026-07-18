@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0",
+  "include": ["packages"],
+  "layers": [
+    { "name": "DomainModel", "patterns": ["packages/domain/**"] },
+    { "name": "Kernel", "patterns": ["packages/kernel/**"] }
+  ],
+  "rules": [
+    { "from": "DomainModel", "to": "Kernel", "allowed": false }
+  ]
+}

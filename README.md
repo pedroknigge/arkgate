@@ -215,8 +215,8 @@ convergence only: behavioral completion is always reported as not evaluated.
 
 > **Known current limitation:** the compiler-free atomic path can miss `tsconfig` aliases/workspace
 > edges that final TypeScript-backed CI resolves. Treat the normal strict check as final authority
-> until Z03/Z04 in [Phase Z](https://github.com/pedroknigge/arkgate/blob/main/docs/plans/enforcement-truth-at-speed/README.md)
-> close the differential corpus.
+> until Z04 in [Phase Z](https://github.com/pedroknigge/arkgate/blob/main/docs/plans/enforcement-truth-at-speed/README.md)
+> implements the resolved-facts decision and closes the differential corpus.
 
 Every blocking diagnostic carries stable rule/location/evidence fields plus one deterministic
 `nextAction`; human CLI/hook text prints that same action. A complete Codex `ApplyPatch` payload is

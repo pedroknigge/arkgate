@@ -1,0 +1,5 @@
+{
+  "name": "arkgate-z03-resolved-facts-boundary",
+  "private": true,
+  "workspaces": ["packages/*"]
+}

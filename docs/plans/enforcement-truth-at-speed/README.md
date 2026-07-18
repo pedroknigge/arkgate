@@ -91,10 +91,11 @@ in the write loop.
   contract/drift tests; copies generated from one source remain byte-identical.
 - [x] **A3 — Distribution is the test subject:** Node/TypeScript/package-manager compatibility
   runs install the packed candidate and exercise full check as well as plan.
-- [ ] **A4 — Decision before implementation:** `Z03` chooses a parity-capable Tooling resolver/facts
-  port or additive supplied-facts API; an existing lexical mode may remain explicitly incomplete
-  only if excluded by name from parity and paired with the chosen parity-capable surface. The
-  decision pins public compatibility, dependency direction, and generated CLI seam before work.
+- [x] **A4 — Decision before implementation:** `Z03`/[ADR 0011](../../adr/0011-resolved-candidate-facts-boundary.md)
+  selects an additive supplied-facts API: Tooling emits one versioned payload, DomainModel owns its
+  neutral schema, and Kernel evaluates it synchronously. The existing lexical mode remains
+  explicitly incomplete outside its envelope and excluded from parity; the generated CLI bundle
+  consumes the same facts/verdict seam.
 - [ ] **A5 — One fact graph:** aliases, workspaces, project packages, symlinks, relative imports,
   deletes, and governed-scope classification feed one serializable candidate fact set.
 - [ ] **A6 — One verdict:** the parity-capable API, preflight, CLI, MCP, complete-patch hook,
@@ -136,7 +137,7 @@ in the write loop.
 | Kind | Surface | Notes |
 |------|---------|-------|
 | Analysis JSON | Required schema 1.2 `completeness: complete \| partial \| unavailable` | Settled by `Z02`; incomplete analysis forces a non-green result while legacy 1.0/1.1 consumer values remain source-compatible |
-| Analysis input | Normalized resolved candidate facts | `Z03` must choose a parity-capable Tooling resolver/facts port or additive supplied-facts API; a lexical compatibility mode may remain explicitly incomplete but cannot be the parity surface |
+| Analysis input | Versioned resolved candidate facts | Settled by `Z03`/[ADR 0011](../../adr/0011-resolved-candidate-facts-boundary.md): Tooling emits one serializable facts payload, DomainModel owns its schema, and Kernel exposes named synchronous supplied-facts APIs; the lexical compatibility mode is excluded from parity |
 | Existing CLI/MCP | `plan`, `preflight`, `ark_prepare_change`, hook, strict check | Reuse current names; no new command or skill basename |
 | Performance | Warm project snapshot keyed by policy, compiler, and content identities | Opt-in pilot with the current one-shot path retained as fallback |
 | Evidence | Corrected adoption/live-agent/release reports | Versioned reports; historical reports remain labeled historical rather than rewritten |
@@ -169,8 +170,7 @@ flowchart LR
 
 - **Depends on:** ArkGate 3.7.0 as the reproduced baseline; accepted ADRs 0002, 0003, 0005, and
   0008; the existing package/adoption/performance harnesses.
-- **Blocked by:** `Z02` is closed; `Z03` is dependency-ready and must settle its ownership boundary
-  before `Z04` implementation.
+- **Blocked by:** `Z02` and `Z03` are closed; `Z04` is dependency-ready.
 - **Risk — Kernel impurity:** resolving imports inside Kernel would violate the four-layer contract.
   **Kill switch:** keep TypeScript/filesystem in Tooling and pass only serializable facts.
 - **Risk — cache false green:** stale invalidation is worse than current latency.
@@ -188,16 +188,16 @@ flowchart LR
 
 1. `Z02`: schema 1.2 requires `complete | partial | unavailable`; partial or unavailable analysis
    cannot satisfy `goal.met` or produce a green strict verdict.
+2. `Z03`: [ADR 0011](../../adr/0011-resolved-candidate-facts-boundary.md) selects additive,
+   versioned supplied facts. Tooling resolves; DomainModel owns neutral facts; Kernel evaluates them
+   synchronously. Existing supplied-content APIs remain named lexical compatibility surfaces and
+   cannot claim parity when required facts are outside their envelope.
 
 ## Open decisions
 
-1. `Z03`: whether normalized resolved facts use a Tooling resolver port or an additive supplied-
-   facts API, and whether the current lexical API remains as a named incomplete compatibility mode.
-   A lexical-only result cannot satisfy parity. This decision must close before `Z04` and requires a
-   new ADR if the public boundary, sync contract, or ownership changes.
-2. `Z07`: whether the fastest safe implementation is an MCP-resident snapshot, a reusable worker, or
+1. `Z07`: whether the fastest safe implementation is an MCP-resident snapshot, a reusable worker, or
    process-local incremental state. One-shot remains the compatibility fallback.
-3. `Z09`: which signed repository/review identity mechanism proves independence without introducing
+2. `Z09`: which signed repository/review identity mechanism proves independence without introducing
    an org control plane.
 
 ## Relationship to retained work
@@ -228,9 +228,9 @@ flowchart LR
 ## Promotion
 
 The implementation IDs are tracked in [ROADMAP Phase Z](../../../ROADMAP.md#phase-z--enforcement-truth-at-speed).
-`Z01` and `Z02` are complete; subsequent promotion follows the same discipline:
+`Z01`–`Z03` are complete; subsequent promotion follows the same discipline:
 
-1. Move only the next dependency-ready Z item to `doing` (`Z03` next).
+1. Move only the next dependency-ready Z item to `doing` (`Z04` next).
 2. Expose its failing acceptance cases before changing behavior.
 3. Close the item-specific evidence and common merge gate on the same commit.
 4. Advance one Z item at a time; do not promote the parked Y candidates as collateral work.

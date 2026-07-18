@@ -5,6 +5,11 @@
 - **Owner:** ArkGate maintainers
 - **Decision scope:** Kernel change transaction, CLI/MCP adapter contract
 
+> **Refined by [ADR 0011](0011-resolved-candidate-facts-boundary.md):** atomicity, read-only
+> behavior, hashes, and adapter names remain unchanged. `preflightChange` becomes the lexical
+> compatibility operation; `preflightResolvedChange` evaluates validated base/candidate facts and
+> is the parity-capable Kernel surface used by shipped CLI/MCP adapters.
+
 ## Context
 
 `ark_prepare_write` validates one proposed source file. A real architecture source change may create,

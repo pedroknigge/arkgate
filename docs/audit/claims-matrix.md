@@ -44,9 +44,9 @@ Internal helpers and individual test files are evidence, not separate product su
 3. The ignored `.ark/reports/latest.json` is an older local sensor snapshot and is not current
    release evidence; the live architecture check is the handoff gate.
 
-**Recommended next Intent:** move only Z03 into implementation and retain the Z03→Z09 sequence plus
-all parked Y/runtime gates. Z02 may enter the next corrective release, but is not published in
-3.7.0.
+**Recommended next Intent:** move only Z04 into implementation and retain the Z04→Z09 sequence plus
+all parked Y/runtime gates. Z03 selected the supplied-facts boundary in ADR 0011 but did not
+implement parity; Z02 may enter the next corrective release, but is not published in 3.7.0.
 
 ## Code inventory (high level)
 
@@ -91,7 +91,7 @@ There are no product UI routes or database schemas in this library repository.
 | C-022 | Nightly evaluation claims distinguish deterministic, opt-in live, and skipped cases | [Eval guide](../../eval/README.md) | nightly workflow · case metadata | OK | keep evidence labels honest |
 | C-023 | Migration and runtime guidance uses current package boundaries | [Migration guide](../migrate-from-ark-runtime-kernel.md) · runtime skill | manifests · compat shims | OK | keep deprecated paths labeled |
 | C-024 | Contributor layout distinguishes stable gate code, experimental runtime, and actual payload | [Contributing](../../CONTRIBUTING.md) | `src/gate.ts` · runtime manifest · root `files` | OK | keep |
-| C-025 | Programmatic preflight, CLI, MCP, complete-patch write gate, and final CI evaluate the same candidate graph and governed scope | [ADR 0005](../adr/0005-atomic-change-preflight.md) · [change-integrity plan](../plans/change-integrity-loop/README.md) | compiler-free relative-only graph · Tooling-only scope guard · alias differential reproduction · same-layer AICodeGate reproduction | Contradicted | `Z03` decision + `Z04` normalized facts, one pure verdict, and differential corpus |
+| C-025 | Programmatic preflight, CLI, MCP, complete-patch write gate, and final CI evaluate the same candidate graph and governed scope | [ADR 0005](../adr/0005-atomic-change-preflight.md) · [change-integrity plan](../plans/change-integrity-loop/README.md) | compiler-free relative-only graph · Tooling-only scope guard · alias/workspace differential fixture · same-layer AICodeGate reproduction · [ADR 0011](../adr/0011-resolved-candidate-facts-boundary.md) | Contradicted | `Z04`: implement the selected normalized facts boundary, one pure verdict, and differential corpus |
 | C-026 | Every gallery starter can be copied, installed, and checked using its documented commands | [Examples](../../examples/README.md) | starter manifests · copied vertical-slice reproduction | Contradicted | `Z05`: one catalog + current tarball clean-room matrix |
 | C-027 | `ark upgrade` refreshes existing Ark-managed project skills and gates while preserving user-owned files | Setup CLI help · agent guidance | `bin/ark.mjs` installer arguments · `bin/lib/gate-files.mjs` skip-without-force behavior · installed-template drift | Contradicted | `Z06`: managed-content identities, bounded refresh, stale/conflict report |
 | C-028 | V03/V05/B01 evidence measures time to the real merge gate, observed false blocks/bypasses, and independent review | [Roadmap evidence](../../ROADMAP.md#success-metrics) | `eval/adoption-run.mjs` timing/denominators/constants · beta declaration check · nightly skipped live case | Contradicted | `Z08` causal/full-denominator harness + `Z09` retained adoption and verified reviewer identity |
@@ -120,8 +120,8 @@ boundary. All 36 cells passed on source `228dd893` in CI run `29655190747`. The 
 is OK; the 3.7.0 distribution distinction remains until the corrective release is published.
 
 The remaining corrective implementation authority is
-[ROADMAP Phase Z](../../ROADMAP.md#phase-z--enforcement-truth-at-speed). Z03/Z04 still own
-cross-adapter parity; prose is not accepted as resolution.
+[ROADMAP Phase Z](../../ROADMAP.md#phase-z--enforcement-truth-at-speed). Z03 settled the boundary;
+Z04 still owns cross-adapter parity, and prose is not accepted as implementation evidence.
 
 ## Resolved or narrowed during this audit
 
