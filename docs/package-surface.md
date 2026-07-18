@@ -53,9 +53,10 @@ Published `arkgate@3.7.0` predates the non-deduplicable TS6 host and completenes
 The current source candidate for the next corrective release installs `typescript-ark-host` at
 exact `npm:typescript@6.0.3`, prefers a usable project compiler API, and fails closed on `partial`
 or `unavailable` analysis. Its packed compatibility gate is scoped to Node 18/20/22/24,
-npm/pnpm/Yarn, and project TypeScript 5.9.3/6.0.3/7.0.2; closure remains pending until all 36 CI
-cells pass. Yarn uses strict PnP for the JS compilers and its `node-modules` linker for native TS7;
-the report names that mode. Do not describe those corrections as published in 3.7.0.
+npm/pnpm/Yarn, and project TypeScript 5.9.3/6.0.3/7.0.2. All 36 packed cells passed on source
+`228dd893` in CI run `29655190747`. Yarn uses strict PnP for the JS compilers and its
+`node-modules` linker for native TS7; the report names that mode. Do not describe those
+corrections as published in 3.7.0.
 
 One separate claim remains open: compiler-free atomic preflight does not resolve every
 alias/workspace edge that final TypeScript-backed CI resolves, and AICodeGate can add a same-layer

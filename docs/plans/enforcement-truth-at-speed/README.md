@@ -8,11 +8,11 @@
 > [atomic preflight](../../adr/0005-atomic-change-preflight.md) ·
 > [enforcement evidence ladder](../../adr/0008-enforcement-evidence-ladder.md)
 
-**Status:** Planned<br>
+**Status:** In progress<br>
 **Slug:** `enforcement-truth-at-speed`<br>
 **Kind:** epic / redesign<br>
 **Owners:** product (Pedro) + library maintainers<br>
-**Last updated:** 2026-07-17<br>
+**Last updated:** 2026-07-18<br>
 **Code path (existing):** package/release scripts, TypeScript host, canonical analysis Kernel,
 generated CLI bundle, CLI/MCP/hook/ESLint adapters, onboarding assets, and evaluation harnesses
 
@@ -85,11 +85,11 @@ in the write loop.
 
 - [x] **A1 — Safe maintenance:** release verification rejects broad/unowned output targets and
   package isolation preserves unrelated tarballs.
-- [ ] **A2 — Analysis completeness is explicit:** public JSON distinguishes complete, partial,
+- [x] **A2 — Analysis completeness is explicit:** public JSON distinguishes complete, partial,
   and unavailable analysis; only complete analysis may produce a satisfied architecture goal. The
   schema, exported types, CLI/MCP JSON, snapshots, docs, and tarball are semantically equivalent by
   contract/drift tests; copies generated from one source remain byte-identical.
-- [ ] **A3 — Distribution is the test subject:** Node/TypeScript/package-manager compatibility
+- [x] **A3 — Distribution is the test subject:** Node/TypeScript/package-manager compatibility
   runs install the packed candidate and exercise full check as well as plan.
 - [ ] **A4 — Decision before implementation:** `Z03` chooses a parity-capable Tooling resolver/facts
   port or additive supplied-facts API; an existing lexical mode may remain explicitly incomplete
@@ -101,7 +101,7 @@ in the write loop.
   AICodeGate, ESLint where its envelope applies, and final CI agree on rule identity and evidence.
   A retained lexical compatibility API reports incomplete where it lacks facts. A resolved governed
   edge is decided by `ark.config.json`, including same-layer edges.
-- [ ] **A7 — Strict means complete:** parse-invalid or unresolved mandatory evidence fails closed
+- [x] **A7 — Strict means complete:** parse-invalid or unresolved mandatory evidence fails closed
   at `--strict-merge`; interactive doctor may remain advisory but cannot call the file clean.
 - [ ] **A8 — Installed journey is executable:** every gallery starter is copied to a temporary
   directory, installed from the candidate tarball, and passes its documented commands on every
@@ -135,7 +135,7 @@ in the write loop.
 
 | Kind | Surface | Notes |
 |------|---------|-------|
-| Analysis JSON | `analysisComplete` or equivalent completeness state | Additive hypothesis; exact shape belongs to `Z02` and may require a new ADR/schema decision |
+| Analysis JSON | Required schema 1.2 `completeness: complete \| partial \| unavailable` | Settled by `Z02`; incomplete analysis forces a non-green result while legacy 1.0/1.1 consumer values remain source-compatible |
 | Analysis input | Normalized resolved candidate facts | `Z03` must choose a parity-capable Tooling resolver/facts port or additive supplied-facts API; a lexical compatibility mode may remain explicitly incomplete but cannot be the parity surface |
 | Existing CLI/MCP | `plan`, `preflight`, `ark_prepare_change`, hook, strict check | Reuse current names; no new command or skill basename |
 | Performance | Warm project snapshot keyed by policy, compiler, and content identities | Opt-in pilot with the current one-shot path retained as fallback |
@@ -169,7 +169,8 @@ flowchart LR
 
 - **Depends on:** ArkGate 3.7.0 as the reproduced baseline; accepted ADRs 0002, 0003, 0005, and
   0008; the existing package/adoption/performance harnesses.
-- **Blocked by:** no external dependency for `Z02`; `Z01` is closed with its cycle budgets frozen.
+- **Blocked by:** `Z02` is closed; `Z03` is dependency-ready and must settle its ownership boundary
+  before `Z04` implementation.
 - **Risk — Kernel impurity:** resolving imports inside Kernel would violate the four-layer contract.
   **Kill switch:** keep TypeScript/filesystem in Tooling and pass only serializable facts.
 - **Risk — cache false green:** stale invalidation is worse than current latency.
@@ -183,17 +184,20 @@ flowchart LR
   **Mitigation:** held-out tasks, packed artifacts, control arms, all failures in denominators, and
   independent identity evidence.
 
+## Resolved decisions
+
+1. `Z02`: schema 1.2 requires `complete | partial | unavailable`; partial or unavailable analysis
+   cannot satisfy `goal.met` or produce a green strict verdict.
+
 ## Open decisions
 
-1. `Z02`: exact additive schema for complete/partial/unavailable analysis and whether it supersedes an
-   existing `goal.met` interpretation.
-2. `Z03`: whether normalized resolved facts use a Tooling resolver port or an additive supplied-
+1. `Z03`: whether normalized resolved facts use a Tooling resolver port or an additive supplied-
    facts API, and whether the current lexical API remains as a named incomplete compatibility mode.
    A lexical-only result cannot satisfy parity. This decision must close before `Z04` and requires a
    new ADR if the public boundary, sync contract, or ownership changes.
-3. `Z07`: whether the fastest safe implementation is an MCP-resident snapshot, a reusable worker, or
+2. `Z07`: whether the fastest safe implementation is an MCP-resident snapshot, a reusable worker, or
    process-local incremental state. One-shot remains the compatibility fallback.
-4. `Z09`: which signed repository/review identity mechanism proves independence without introducing
+3. `Z09`: which signed repository/review identity mechanism proves independence without introducing
    an org control plane.
 
 ## Relationship to retained work
@@ -224,9 +228,9 @@ flowchart LR
 ## Promotion
 
 The implementation IDs are tracked in [ROADMAP Phase Z](../../../ROADMAP.md#phase-z--enforcement-truth-at-speed).
-`Z01` is complete; subsequent promotion follows the same discipline:
+`Z01` and `Z02` are complete; subsequent promotion follows the same discipline:
 
-1. Move only the next dependency-ready Z item to `doing` (`Z02` next).
+1. Move only the next dependency-ready Z item to `doing` (`Z03` next).
 2. Expose its failing acceptance cases before changing behavior.
 3. Close the item-specific evidence and common merge gate on the same commit.
 4. Advance one Z item at a time; do not promote the parked Y candidates as collateral work.

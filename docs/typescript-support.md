@@ -18,8 +18,9 @@ semantics of your app still come from **your** project `typescript` + `tsconfig`
 | **TypeScript 6.x** | Supported; packed compatibility cell uses **6.0.3** |
 | **TypeScript 7.x** | Supported through the project's own compiler plus ArkGate's physically distinct TypeScript 6 analysis host; packed compatibility cell uses **7.0.2** |
 
-These are current-source candidate claims. Final closure requires the complete 36-cell packed CI
-matrix described below; published 3.7.0 remains outside this corrected support claim.
+These current-source claims passed the complete 36-cell packed matrix on source `228dd893` in
+[CI run 29655190747](https://github.com/pedroknigge/arkgate/actions/runs/29655190747).
+Published 3.7.0 remains outside this corrected support claim.
 
 > **Distribution boundary:** published `arkgate@3.7.0` predates this correction. Its compatible
 > analysis dependency can deduplicate to a TS7 version-only export, and its unavailable
@@ -173,7 +174,8 @@ The release compatibility workflow packs the candidate first, then tests clean c
 That is 36 installed-artifact cells. Each cell verifies that the project's `tsc` stays on the
 requested project compiler and that ArkGate resolves its fallback as exact 6.0.3 when the project
 API is unusable. Reports record `installMode` so the Yarn TS7 linker boundary cannot disappear
-behind a green job. Locally, the repository entry point is:
+behind a green job. All 36 cells passed on source `228dd893` in CI run `29655190747`. Locally, the
+repository entry point is:
 
 ```bash
 npm run test:ts-compat
@@ -183,7 +185,7 @@ npm run test:ts-compat
 
 | Goal | Status |
 |------|--------|
-| Packed gate runs beside project TS 7 | Yes in the current source candidate; published 3.7.0 predates the distinct host |
+| Packed gate runs beside project TS 7 | Yes in current source; verified across the complete packed matrix. Published 3.7.0 predates the distinct host |
 | Plan/check work with project TS 5/6 | Yes |
 | Plan/check work when project has TS 7 + usable `sys` | Yes (uses project) |
 | Project `tsc` remains the selected project version | Yes; the analysis alias does not replace it |

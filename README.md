@@ -311,7 +311,7 @@ ark.config.json
   diagnostic detail without turning it into an architecture violation.
 - **Release evidence:** independent 3.0 audit baseline plus signed-tag, GitHub Release, and
   provenance-backed npm publication; see the [3.1.0 release notes](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.1.0.md).
-- **TypeScript:** the current source candidate's packed compatibility harness targets project
+- **TypeScript:** the current source candidate passed all 36 packed compatibility cells for project
   compilers 5.9.3 / 6.0.3 / 7.0.2 across npm, pnpm, and Yarn. ArkGate prefers a usable project
   API, then its exact `typescript-ark-host@6.0.3`; the project `tsc` remains project-owned.
   Yarn uses strict PnP for TS5/6 and the `node-modules` linker for native TS7; that mode is explicit
@@ -328,7 +328,7 @@ ark.config.json
 | Placement tools (`ark_place`, …) | ✅ | ❌ |
 | Honest governed % + adoption path | ✅ | ❌ |
 | Classified plan (`mechanical-safe` / judgment) | ✅ | ❌ |
-| TypeScript 5.9 / 6.0 / 7.0 packed consumers | Candidate; 36-cell CI closure pending, and 3.7.0 predates the fix | varies |
+| TypeScript 5.9 / 6.0 / 7.0 packed consumers | ✅ (current source; 36/36 packed CI cells; 3.7.0 predates the fix) | varies |
 | Incomplete analysis can satisfy plan/result/strict merge | ❌ (`partial` / `unavailable` fail closed) | varies |
 | Adoption scorecard (hosts / MCP / origin) | ✅ | ❌ |
 | **Editor ESLint same layer contract as CI** | ✅ (`arkgate/eslint`) | varies |
