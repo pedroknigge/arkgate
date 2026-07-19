@@ -2,15 +2,16 @@
 /**
  * U06 — end-to-end pre-tool (hook) and doctor path benchmark (ADR 0009 D5).
  *
- * Measures the COMPLETE paths a user feels, as fresh child processes:
- *   hook        — `ark-mcp --hook` validating one Write payload (the
- *                 per-keystroke interactive path; the hook validates the single
- *                 proposed file and does not consume the scan cache, so there
- *                 is exactly ONE distribution — no fictional cold/warm split)
+ * Measures the COMPLETE paths a user feels:
+ *   hook.coldFallback — `ark-mcp --hook` validating one Write payload in a
+ *                 fresh process with the resident pilot disabled
+ *   hook.residentWarm — the same fresh launcher process and authoritative
+ *                 evaluator over the opt-in resident MCP transport, after one
+ *                 discarded prime; no verdict/result cache is involved
  *   doctor.cold — `ark-check --doctor --json --no-cache` over the tree
  *   doctor.oneShotWarm — the exact same command in fresh processes after one
  *                 discarded prime over the same immutable tree/cache state
- *   doctor.residentWarm — unavailable until Z07 supplies a resident pilot
+ *   doctor.residentWarm — unavailable until the Z07 doctor pilot is supplied
  *
  * D5 method: record a Linux CI baseline FIRST; ceilings are baseline plus a
  * fixed headroom and live in eval/performance/hook-budgets.v1.json. Until a
@@ -21,15 +22,18 @@
  *   node scripts/hook-path-bench.mjs [--sizes 1000,10000] [--runs 9] [--json]
  *                                    [--fail-budget] [--out report.json]
  */
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { residentHookEndpoint } from '../bin/lib/resident-hook.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BUDGETS = path.join(REPO, 'eval', 'performance', 'hook-budgets.v1.json');
+const MCP = path.join(REPO, 'bin', 'ark-mcp.mjs');
 
 function parseArgs(argv) {
   const out = { sizes: [1000, 10000], runs: 9, json: false, failBudget: false, out: undefined };
@@ -125,12 +129,16 @@ function treeIdentity(root) {
   return `sha256:${hash.digest('hex')}`;
 }
 
-function runHookOnce(root, payload) {
+function runHookOnce(root, payload, resident) {
   const started = process.hrtime.bigint();
   const result = spawnSync(
-    'node',
-    [path.join(REPO, 'bin/ark-mcp.mjs'), '--hook', '--root', root, '--config', 'ark.config.json'],
-    { input: JSON.stringify(payload), encoding: 'utf8' }
+    process.execPath,
+    [MCP, '--hook', '--root', root, '--config', 'ark.config.json'],
+    {
+      input: JSON.stringify(payload),
+      encoding: 'utf8',
+      env: { ...process.env, ARK_RESIDENT_HOOK: resident ? '1' : '0' },
+    }
   );
   const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
   if (result.error) throw result.error;
@@ -139,7 +147,82 @@ function runHookOnce(root, payload) {
   if (result.status !== 0) {
     throw new Error(`hook exited ${result.status}: ${result.stderr || result.stdout}`);
   }
-  return elapsedMs;
+  return {
+    elapsedMs,
+    status: result.status,
+    stdout: result.stdout || '',
+    stderr: result.stderr || '',
+  };
+}
+
+function waitForSocket(socket, child, timeoutMs = 5_000) {
+  const started = Date.now();
+  return new Promise((resolve, reject) => {
+    const attempt = () => {
+      if (child.exitCode !== null) {
+        reject(new Error(`resident MCP exited ${child.exitCode} before its socket was ready`));
+        return;
+      }
+      const client = net.createConnection(socket);
+      client.once('connect', () => {
+        client.destroy();
+        resolve();
+      });
+      client.once('error', () => {
+        client.destroy();
+        if (Date.now() - started >= timeoutMs) {
+          reject(new Error(`resident MCP socket was not ready after ${timeoutMs}ms`));
+        } else {
+          setTimeout(attempt, 10);
+        }
+      });
+    };
+    attempt();
+  });
+}
+
+async function startResidentMcp(root) {
+  const child = spawn(
+    process.execPath,
+    [MCP, '--root', root, '--config', 'ark.config.json'],
+    {
+      cwd: root,
+      env: { ...process.env, ARK_RESIDENT_HOOK: '1' },
+      stdio: ['pipe', 'ignore', 'pipe'],
+    }
+  );
+  let stderr = '';
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', (chunk) => {
+    stderr += chunk;
+  });
+  const endpoint = residentHookEndpoint({
+    root,
+    config: 'ark.config.json',
+    launcher: MCP,
+  });
+  try {
+    await waitForSocket(endpoint.socket, child);
+  } catch (error) {
+    child.kill('SIGTERM');
+    throw new Error(`${error instanceof Error ? error.message : String(error)}${stderr ? `: ${stderr}` : ''}`);
+  }
+  return { child, endpoint, stderr: () => stderr };
+}
+
+function stopResidentMcp(control) {
+  return new Promise((resolve) => {
+    if (!control || control.child.exitCode !== null) {
+      resolve();
+      return;
+    }
+    const timeout = setTimeout(() => control.child.kill('SIGTERM'), 2_000);
+    control.child.once('exit', () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+    control.child.stdin.end();
+  });
 }
 
 function doctorCommand(root) {
@@ -181,6 +264,7 @@ async function main() {
   const results = [];
   for (const size of args.sizes) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-hook-bench-'));
+    let residentControl;
     try {
       writeFixture(root, size);
       const payload = {
@@ -193,12 +277,30 @@ async function main() {
       const fixtureTreeHashBefore = treeIdentity(root);
       const legacyCachePath = path.join(root, 'node_modules', '.cache', 'ark-check.json');
       const legacyCacheAbsentBefore = !fs.existsSync(legacyCachePath);
-      const hook = [];
+      const hookColdFallback = [];
+      const hookResidentWarm = [];
       const doctorCold = [];
       const doctorOneShotWarm = [];
       for (let i = 0; i < args.runs; i += 1) {
-        hook.push(runHookOnce(root, payload));
+        hookColdFallback.push(runHookOnce(root, payload, false));
       }
+      residentControl = await startResidentMcp(root);
+      const hookResidentPrime = runHookOnce(root, payload, true);
+      for (let i = 0; i < args.runs; i += 1) {
+        hookResidentWarm.push(runHookOnce(root, payload, true));
+      }
+      const hookReference = hookColdFallback[0];
+      const hookComparable = [
+        ...hookColdFallback,
+        hookResidentPrime,
+        ...hookResidentWarm,
+      ];
+      const hookExactOutputParity = hookComparable.every(
+        (sample) =>
+          sample.status === hookReference.status &&
+          sample.stdout === hookReference.stdout &&
+          sample.stderr === hookReference.stderr
+      );
       const doctorRuns = Math.max(3, Math.floor(args.runs / 2));
       for (let i = 0; i < doctorRuns; i += 1) {
         doctorCold.push(runDoctorSample(root));
@@ -221,7 +323,19 @@ async function main() {
           treeHashAfter: fixtureTreeHashAfter,
           unchanged: fixtureTreeHashBefore === fixtureTreeHashAfter,
         },
-        hook: stats(hook),
+        hook: {
+          coldFallback: stats(hookColdFallback.map((sample) => sample.elapsedMs)),
+          residentWarm: {
+            ...stats(hookResidentWarm.map((sample) => sample.elapsedMs)),
+            primeMs: Number(hookResidentPrime.elapsedMs.toFixed(3)),
+            transport: process.platform === 'win32' ? 'named-pipe' : 'unix-socket',
+            resultCache: false,
+          },
+          exactOutputParity: hookExactOutputParity,
+          outputSha256: `sha256:${sha256(
+            `${hookReference.status}\0${hookReference.stdout}\0${hookReference.stderr}`
+          )}`,
+        },
         doctor: {
           executable: process.execPath,
           argv: doctorCommand(root),
@@ -244,6 +358,7 @@ async function main() {
         },
       });
     } finally {
+      await stopResidentMcp(residentControl);
       fs.rmSync(root, { recursive: true, force: true });
     }
   }
@@ -270,7 +385,7 @@ async function main() {
   }
 
   const report = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     tool: 'hook-path-bench',
     runner: { platform: process.platform, arch: process.arch, node: process.version },
     budgets: budgets ? 'eval/performance/hook-budgets.v1.json' : 'none (recording baseline)',
@@ -287,7 +402,7 @@ async function main() {
   else {
     for (const r of results) {
       console.log(
-        `size ${r.size}: hook p95 ${r.hook.p95Ms}ms · doctor cold p95 ${r.doctor.cold.p95Ms}ms · ` +
+        `size ${r.size}: hook fallback/resident p95 ${r.hook.coldFallback.p95Ms}/${r.hook.residentWarm.p95Ms}ms · doctor cold p95 ${r.doctor.cold.p95Ms}ms · ` +
           `doctor one-shot warm p95 ${r.doctor.oneShotWarm.p95Ms}ms`
       );
     }

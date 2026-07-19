@@ -4,17 +4,25 @@
   "runner": {
     "image": "ubuntu-latest",
     "node": "20",
-    "measurement": "fresh child processes; wall time of the complete spawn (node startup + TypeScript load + validate); cold and one-shot-warm doctor use identical argv/tree/cache state, with one discarded prime before warm samples; --no-cache is retained as an explicit legacy flag while no Ark cache exists; non-zero child exits abort the run"
+    "measurement": "hook cold fallback uses a fresh full process; hook resident warm uses a fresh lightweight launcher per sample against the opt-in resident MCP evaluator after one discarded prime and never caches a verdict; cold and one-shot-warm doctor use identical fresh-process argv/tree/cache state, with one discarded prime before warm samples; --no-cache is retained as an explicit legacy flag while no Ark cache exists; non-zero child exits abort the run"
   },
   "sampling": { "runs": 9 },
   "scenarios": {
     "hook": {
       "size": 10000,
-      "metric": "hook",
+      "metric": "hook.coldFallback",
       "baselineMs": 683.761,
       "cycleObservedMaxP95Ms": 595.053,
       "maxP95Ms": 900,
-      "rationale": "The per-keystroke interactive path: ark-mcp --hook validates the single proposed file (no scan-cache involvement — one distribution). Phase Y's 683.761 ms baseline remains the comparison point for Z07. Phase Z source 6fa5079 CI run 29649631288 measured 591.165 ms and 595.053 ms on unchanged-head attempts; the frozen 900 ms ceiling retains 51.25% headroom over the worse Phase Z observation and is never ratcheted per item (ADR 0009 D5)."
+      "rationale": "Compatibility/recovery path: ark-mcp --hook validates the single proposed file in a fresh full process. Phase Y's 683.761 ms baseline remains the comparison point. Phase Z source 6fa5079 CI run 29649631288 measured 591.165 ms and 595.053 ms on unchanged-head attempts; the frozen 900 ms ceiling retains 51.25% headroom over the worse Phase Z observation and is never ratcheted per item (ADR 0009 D5)."
+    },
+    "hookResidentWarm": {
+      "size": 10000,
+      "metric": "hook.residentWarm",
+      "baselineMs": null,
+      "targetP95Ms": 65,
+      "maxP95Ms": null,
+      "rationale": "Z07 preregistered warm hook target. A fresh lightweight launcher sends every payload to the same TypeScript-backed evaluator already resident in MCP; no allow/deny result is cached. The ceiling remains unarmed until comparable Linux evidence is recorded."
     },
     "doctorCold": {
       "size": 10000,

@@ -191,9 +191,16 @@ describe('U06 budgets — D5 method and Phase Z observations are locked', () => 
     );
     expect(budgets.method).toMatch(/Linux CI baseline FIRST/);
     expect(budgets.scenarios.hook).toMatchObject({
+      metric: 'hook.coldFallback',
       baselineMs: 683.761,
       cycleObservedMaxP95Ms: 595.053,
       maxP95Ms: 900,
+    });
+    expect(budgets.scenarios.hookResidentWarm).toMatchObject({
+      metric: 'hook.residentWarm',
+      baselineMs: null,
+      targetP95Ms: 65,
+      maxP95Ms: null,
     });
     expect(budgets.scenarios.doctorCold).toMatchObject({
       baselineMs: 5154.522,
@@ -202,7 +209,8 @@ describe('U06 budgets — D5 method and Phase Z observations are locked', () => 
     });
     expect(budgets.scenarios.doctorOneShotWarm).toMatchObject({
       metric: 'doctor.oneShotWarm',
-      baselineMs: null,
+      baselineMs: 2174.517,
+      cycleObservedMaxP95Ms: 2174.517,
       maxP95Ms: null,
     });
     expect(budgets.scenarios.doctorResidentWarm).toMatchObject({
@@ -221,10 +229,10 @@ describe('U06 budgets — D5 method and Phase Z observations are locked', () => 
         }
       >
     )) {
-      // Either both recorded (ceiling from baseline) or both pending — never an
-      // invented ceiling without its measured baseline.
+      // A ceiling always requires a measured baseline. A measured recording lane
+      // may intentionally remain unarmed until its resident comparator exists.
       const consistent =
-        (spec.baselineMs === null && spec.maxP95Ms === null) ||
+        spec.maxP95Ms === null ||
         (typeof spec.baselineMs === 'number' &&
           typeof spec.maxP95Ms === 'number' &&
           spec.maxP95Ms > spec.baselineMs);

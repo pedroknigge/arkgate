@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 describe('Z07 hook and doctor benchmark evidence', () => {
   it('records a comparable one-shot warm doctor baseline without inventing a resident result', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-z07-hook-bench-'));
-    const reportPath = path.join(root, 'hook-performance.v2.json');
+    const reportPath = path.join(root, 'hook-performance.v3.json');
     try {
       const result = spawnSync(
         process.execPath,
@@ -26,9 +26,16 @@ describe('Z07 hook and doctor benchmark evidence', () => {
       expect(result.status, result.stderr || result.stdout).toBe(0);
       const report = JSON.parse(result.stdout);
       const row = report.results[0];
-      expect(report).toMatchObject({ schemaVersion: 2, tool: 'hook-path-bench', ok: true });
+      expect(report).toMatchObject({ schemaVersion: 3, tool: 'hook-path-bench', ok: true });
       expect(row.fixture).toMatchObject({ unchanged: true });
       expect(row.fixture.treeHashBefore).toBe(row.fixture.treeHashAfter);
+      expect(row.hook).toMatchObject({ exactOutputParity: true });
+      expect(row.hook.coldFallback).toMatchObject({ runs: 3 });
+      expect(row.hook.residentWarm).toMatchObject({ runs: 3, resultCache: false });
+      expect(row.hook.coldFallback.p95Ms).toBeGreaterThan(0);
+      expect(row.hook.residentWarm.p95Ms).toBeGreaterThan(0);
+      expect(row.hook.residentWarm.primeMs).toBeGreaterThan(0);
+      expect(row.hook.outputSha256).toMatch(/^sha256:[a-f0-9]{64}$/);
       expect(row.doctor).toMatchObject({
         processMode: 'fresh-child-per-sample',
         cache: {

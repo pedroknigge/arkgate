@@ -64,6 +64,7 @@ export async function loadTypeScript(root) {
           ts,
           source: label,
           version,
+          ...(resolved ? { resolvedPath: resolved } : {}),
           ...(projectRejected ? { fallbackReason: projectRejected } : {}),
         };
       }

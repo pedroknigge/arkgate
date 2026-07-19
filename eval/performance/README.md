@@ -18,10 +18,12 @@ from `/usr/bin/time` on Linux and is bounded at 1 GiB. CI writes `performance.v2
 it as the candidate-SHA-tied performance artifact. Budget changes require measured evidence and
 review; the runner never rewrites this file.
 
-`hook-path-bench.mjs` schema `2` also records the complete hook path plus cold and one-shot-warm
-doctor distributions. Both doctor distributions use fresh processes with identical argv, fixture,
-and cache-free state; the retained `--no-cache` argument is explicitly reported as a legacy flag
-while no Ark cache exists. The warm distribution begins only after one discarded prime. The evidence
-includes exact JSON parity, before/after fixture identities, and an explicit `residentWarm: null`
-until Z07 supplies a real resident pilot. A one-shot warm result is never reported as resident or as
-a 10x doctor result.
+`hook-path-bench.mjs` schema `3` records a fresh-process hook fallback and the same payload through
+the opt-in resident MCP evaluator. Every resident sample still starts a fresh lightweight launcher;
+only TypeScript, the gate, and policy/compiler inputs stay resident, and no allow/deny result is
+cached. One discarded prime is excluded, byte-for-byte status/stdout/stderr parity is required, and
+policy/compiler identity drift forces the one-shot fallback. The same report retains cold and
+one-shot-warm doctor distributions in fresh processes with identical argv, fixture, and cache-free
+state. `--no-cache` remains an explicit legacy flag while no Ark cache exists. Doctor evidence keeps
+`residentWarm: null` until the separate doctor pilot exists; one-shot warm is never relabeled as
+resident or as a 10x result.
