@@ -231,3 +231,58 @@ jobs:
         env:
           MATRIX_RESULT: ${{ needs.ts-compat.result }}
         run: test "$MATRIX_RESULT" = success
+
+  # Z05 clean-room journey: the six canonical starters each install the exact
+  # build artifact under every supported package manager.
+  gallery-clean-room:
+    name: Gallery clean room / ${{ matrix.pm.name }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        pm:
+          - { name: npm, version: 10.8.2 }
+          - { name: pnpm, version: 9.15.9 }
+          - { name: yarn, version: 4.17.1 }
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 20
+
+      - name: Install pinned Corepack
+        run: npm install --global corepack@0.32.0
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-artifacts-${{ github.sha }}
+          path: ${{ runner.temp }}/release-artifacts
+
+      - name: Exercise all six packed gallery starters
+        run: >-
+          node scripts/gallery-clean-room-matrix.mjs
+          --artifact-dir "${{ runner.temp }}/release-artifacts/gate"
+          --package-manager "${{ matrix.pm.name }}"
+          --manager-version "${{ matrix.pm.version }}"
+          --out "${{ runner.temp }}/gallery-clean-room/report.json"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: gallery-clean-room-${{ matrix.pm.name }}-${{ github.sha }}
+          path: ${{ runner.temp }}/gallery-clean-room/report.json
+          if-no-files-found: error
+
+  gallery-clean-room-gate:
+    name: Gallery clean-room gate
+    if: ${{ always() }}
+    needs: gallery-clean-room
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every packed gallery cell
+        env:
+          MATRIX_RESULT: ${{ needs.gallery-clean-room.result }}
+        run: test "$MATRIX_RESULT" = success

@@ -41,6 +41,7 @@ src/
 ## Verify
 
 ```bash
+npm install
 npm run check
 ```
 

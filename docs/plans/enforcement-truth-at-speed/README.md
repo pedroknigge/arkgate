@@ -12,7 +12,7 @@
 **Slug:** `enforcement-truth-at-speed`<br>
 **Kind:** epic / redesign<br>
 **Owners:** product (Pedro) + library maintainers<br>
-**Last updated:** 2026-07-18<br>
+**Last updated:** 2026-07-19<br>
 **Code path (existing):** package/release scripts, TypeScript host, canonical analysis Kernel,
 generated CLI bundle, CLI/MCP/hook/ESLint adapters, onboarding assets, and evaluation harnesses
 
@@ -104,7 +104,7 @@ in the write loop.
   edge is decided by `ark.config.json`, including same-layer edges.
 - [x] **A7 — Strict means complete:** parse-invalid or unresolved mandatory evidence fails closed
   at `--strict-merge`; interactive doctor may remain advisory but cannot call the file clean.
-- [ ] **A8 — Installed journey is executable:** every gallery starter is copied to a temporary
+- [x] **A8 — Installed journey is executable:** every gallery starter is copied to a temporary
   directory, installed from the candidate tarball, and passes its documented commands on every
   supported package manager, including one deliberate violation.
 - [ ] **A9 — Managed means identity-proven:** upgrade refreshes only Ark-managed assets, reports
@@ -170,7 +170,7 @@ flowchart LR
 
 - **Depends on:** ArkGate 3.7.0 as the reproduced baseline; accepted ADRs 0002, 0003, 0005, and
   0008; the existing package/adoption/performance harnesses.
-- **Blocked by:** `Z02`–`Z04` are closed; `Z05` is dependency-ready.
+- **Blocked by:** `Z02`–`Z05` are closed; `Z06` is dependency-ready.
 - **Risk — Kernel impurity:** resolving imports inside Kernel would violate the four-layer contract.
   **Kill switch:** keep TypeScript/filesystem in Tooling and pass only serializable facts.
 - **Risk — cache false green:** stale invalidation is worse than current latency.
@@ -228,9 +228,9 @@ flowchart LR
 ## Promotion
 
 The implementation IDs are tracked in [ROADMAP Phase Z](../../../ROADMAP.md#phase-z--enforcement-truth-at-speed).
-`Z01`–`Z04` are complete; subsequent promotion follows the same discipline:
+`Z01`–`Z05` are complete; subsequent promotion follows the same discipline:
 
-1. Move only the next dependency-ready Z item to `doing` (`Z05` next).
+1. Move only the next dependency-ready Z item to `doing` (`Z06` next).
 2. Expose its failing acceptance cases before changing behavior.
 3. Close the item-specific evidence and common merge gate on the same commit.
 4. Advance one Z item at a time; do not promote the parked Y candidates as collateral work.

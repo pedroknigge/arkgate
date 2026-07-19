@@ -36,9 +36,8 @@ src/
 ## Verify
 
 ```bash
+npm install
 npm run check
-# or from repo root:
-node ../../bin/ark-check.mjs --root . --config ark.config.json --strict-config
 ```
 
 Init elsewhere: `ark init --preset vertical-slice` or `ark init --archetype vertical-slice-product --yes`.

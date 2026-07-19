@@ -8,30 +8,28 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { GALLERY_STARTERS } from '../bin/ark-shared.mjs';
 import { ARCHITECTURE_PRESETS } from '../bin/lib/presets.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const write = process.argv.includes('--write');
-
-const STARTERS = [
-  { dir: 'examples/vertical-slice-starter', preset: 'vertical-slice' },
-  { dir: 'examples/ddd-context-starter', preset: 'ddd-bounded-contexts' },
-];
 
 function stableStringify(obj) {
   return `${JSON.stringify(obj, null, 2)}\n`;
 }
 
 let failed = false;
-for (const { dir, preset } of STARTERS) {
+for (const { directory, generatedPreset: preset } of GALLERY_STARTERS.filter(
+  (starter) => starter.generatedPreset
+)) {
   const factory = ARCHITECTURE_PRESETS[preset];
   if (typeof factory !== 'function') {
-    console.error(`Unknown preset "${preset}" for ${dir}`);
+    console.error(`Unknown preset "${preset}" for ${directory}`);
     failed = true;
     continue;
   }
   const expected = factory([]);
-  const configPath = path.join(root, dir, 'ark.config.json');
+  const configPath = path.join(root, directory, 'ark.config.json');
   const next = stableStringify(expected);
   if (write) {
     fs.mkdirSync(path.dirname(configPath), { recursive: true });

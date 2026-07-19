@@ -1,19 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { execFileSync, execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
+import { GALLERY_STARTERS } from '../../../bin/ark-shared.mjs';
 
 const REPO = path.resolve(import.meta.dirname, '../../..');
 const ARK_CHECK = path.join(REPO, 'bin/ark-check.mjs');
 const EXAMPLES = path.join(REPO, 'examples');
-
-const GALLERY_STARTERS = [
-  { dir: 'crud-product-starter', archetype: 'crud-product' },
-  { dir: 'api-backend-starter', archetype: 'api-backend' },
-  { dir: 'worker-pipeline-starter', archetype: 'worker-pipeline' },
-  { dir: 'multi-app-workspace-starter', archetype: 'multi-app-workspace' },
-] as const;
 
 type CheckJson = { ok: boolean; violations: unknown[]; warnings: unknown[] };
 
@@ -26,23 +19,17 @@ function runStrictCheck(root: string): CheckJson {
   return JSON.parse(stdout) as CheckJson;
 }
 
-function copyDir(src: string, dst: string) {
-  fs.mkdirSync(dst, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    if (entry.name === 'node_modules') continue;
-    const s = path.join(src, entry.name);
-    const d = path.join(dst, entry.name);
-    if (entry.isDirectory()) copyDir(s, d);
-    else fs.copyFileSync(s, d);
-  }
-}
-
 describe('Phase D — example gallery starters', () => {
   for (const starter of GALLERY_STARTERS) {
-    it(`${starter.dir} passes ark-check --strict-config`, () => {
-      const root = path.join(EXAMPLES, starter.dir);
+    const name = path.basename(starter.directory);
+
+    it(`${name} passes ark-check --strict-config`, () => {
+      const root = path.join(REPO, starter.directory);
       expect(fs.existsSync(path.join(root, 'ark.config.json'))).toBe(true);
       expect(fs.existsSync(path.join(root, 'README.md'))).toBe(true);
+      const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+      expect(readme).toContain('npm install');
+      expect(readme).toContain('npm run check');
 
       const result = runStrictCheck(root);
       expect(result.ok).toBe(true);
@@ -50,9 +37,9 @@ describe('Phase D — example gallery starters', () => {
       expect(result.warnings).toHaveLength(0);
     });
 
-    it(`${starter.dir} package.json is self-contained for copy-paste`, () => {
+    it(`${name} package.json is self-contained for copy-paste`, () => {
       const pkg = JSON.parse(
-        fs.readFileSync(path.join(EXAMPLES, starter.dir, 'package.json'), 'utf8')
+        fs.readFileSync(path.join(REPO, starter.directory, 'package.json'), 'utf8')
       ) as {
         scripts: { check: string };
         devDependencies?: Record<string, string>;
@@ -61,31 +48,25 @@ describe('Phase D — example gallery starters', () => {
         'ark-check --root . --config ark.config.json --strict-config'
       );
       expect(pkg.scripts.check).not.toContain('../..');
-      expect(pkg.devDependencies?.['arkgate']).toBeDefined();
+      expect(pkg.devDependencies?.['arkgate']).toBe('^3.7.0');
     });
   }
 
-  it('crud-product-starter npm run check works when copied and installed', () => {
-    const src = path.join(EXAMPLES, 'crud-product-starter');
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-gallery-copy-'));
-    copyDir(src, tmp);
-
-    const pkgPath = path.join(tmp, 'package.json');
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as {
-      devDependencies: Record<string, string>;
-    };
-    pkg.devDependencies['arkgate'] = `file:${REPO}`;
-    fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
-
-    execSync('npm install --ignore-scripts', { cwd: tmp, stdio: 'pipe' });
-    const out = execSync('npm run check', { cwd: tmp, encoding: 'utf8' });
-    expect(out).toContain('Ark check passed');
-  }, 60_000);
+  it('defines exactly six unique frozen starters and excludes the deep teaching demo', () => {
+    expect(Object.isFrozen(GALLERY_STARTERS)).toBe(true);
+    expect(GALLERY_STARTERS.every((starter) => Object.isFrozen(starter))).toBe(true);
+    expect(GALLERY_STARTERS).toHaveLength(6);
+    expect(new Set(GALLERY_STARTERS.map((starter) => starter.archetype))).toHaveProperty('size', 6);
+    expect(new Set(GALLERY_STARTERS.map((starter) => starter.directory))).toHaveProperty('size', 6);
+    expect(GALLERY_STARTERS.some((starter) => starter.directory.includes('hexagonal-order-api'))).toBe(
+      false
+    );
+  });
 
   it('gallery README indexes every starter archetype', () => {
     const readme = fs.readFileSync(path.join(EXAMPLES, 'README.md'), 'utf8');
     for (const starter of GALLERY_STARTERS) {
-      expect(readme).toContain(starter.dir);
+      expect(readme).toContain(path.basename(starter.directory));
       expect(readme).toContain(starter.archetype);
     }
     expect(readme).toContain('hexagonal-order-api');

@@ -154,7 +154,7 @@ export function expectedTypeScriptHost(typescriptVersion) {
   };
 }
 
-function canonicalPath(candidate) {
+export function canonicalPath(candidate) {
   try {
     return fs.realpathSync(candidate);
   } catch {
@@ -202,7 +202,7 @@ function commandText(command, args) {
   return [command, ...args].join(' ');
 }
 
-function runCommand(command, args, options = {}) {
+export function runCommand(command, args, options = {}) {
   const started = Date.now();
   const result = spawnSync(command, args, {
     cwd: options.cwd,
@@ -224,7 +224,7 @@ function runCommand(command, args, options = {}) {
   };
 }
 
-function commandEvidence(result) {
+export function commandEvidence(result) {
   return {
     command: result.command,
     status: result.status,
@@ -243,11 +243,11 @@ function recordCommand(cell, stage, label, result) {
   return result;
 }
 
-function assertCondition(condition, message) {
+export function assertCondition(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-function expectStatus(result, expected, label) {
+export function expectStatus(result, expected, label) {
   if (result.status !== expected) {
     throw new Error(
       `${label} exited ${result.status ?? result.signal ?? 'without status'}, expected ${expected}\n` +
@@ -305,7 +305,7 @@ export function managerBinaryArgs(packageManager, binary, args) {
   return [binary, ...args];
 }
 
-function runManager(options, args, commandOptions = {}) {
+export function runManager(options, args, commandOptions = {}) {
   const invocation = managerInvocation(
     options.packageManager,
     options.managerVersion,
@@ -314,14 +314,14 @@ function runManager(options, args, commandOptions = {}) {
   return runCommand(invocation.command, invocation.args, commandOptions);
 }
 
-function runManagerBinary(options, cwd, binary, args, commandOptions = {}) {
+export function runManagerBinary(options, cwd, binary, args, commandOptions = {}) {
   return runManager(options, managerBinaryArgs(options.packageManager, binary, args), {
     cwd,
     ...commandOptions,
   });
 }
 
-function runConsumerNode(options, cwd, script) {
+export function runConsumerNode(options, cwd, script) {
   if (options.packageManager === 'yarn') {
     return runManager(options, ['node', script], { cwd });
   }
@@ -374,7 +374,7 @@ function createLocalCandidate(workRoot) {
   return tarball;
 }
 
-function resolveCandidate(options, workRoot) {
+export function resolveCandidate(options, workRoot) {
   let source;
   if (options.tarball) {
     source = path.resolve(options.tarball);
