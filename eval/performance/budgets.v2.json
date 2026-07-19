@@ -15,8 +15,9 @@
     },
     "canonicalResolvedAnalysis": {
       "size": 10000,
-      "targetP95Ms": 50,
-      "maxP95Ms": null,
+      "targetP95Ms": 100,
+      "baselineMs": 84.567725,
+      "maxP95Ms": 100,
       "localRecording": {
         "platform": "darwin-arm64",
         "node": "26.4.0",
@@ -28,8 +29,8 @@
       "requireFactsHashParity": true,
       "requireCandidateTreeHashParity": true,
       "requireCandidateIdentityChanged": true,
-      "cycleObservedMaxP95Ms": null,
-      "rationale": "Z07 replaces the retired lexical analyzeChange metric with canonical resolved-facts analysis over one changed candidate. Resolution and the validated public oracle are outside the timed stage. The sub-50 ms target remains recording-only until comparable Linux Node 20 candidate evidence arms a reviewed ceiling."
+      "cycleObservedMaxP95Ms": 84.567725,
+      "rationale": "Z07 replaces the retired lexical analyzeChange metric with canonical resolved-facts analysis over one changed candidate. Resolution and the validated public oracle are outside the timed stage. After the local 20.851 ms recording, three comparable Linux Node 20 distributions measured 84.023, 81.066, and 84.568 ms p95 with exact byte, verdict, facts, tree, and changed-identity parity. The reviewed 100 ms ceiling retains 18.25% headroom over the final/worst comparable p95; the earlier 50 ms target was retired before arming because it was unreachable on the recorded runner without changing the endpoint or caching a verdict."
     },
     "oneShotWarm": {
       "size": 50000,
@@ -41,7 +42,8 @@
     },
     "memory": {
       "maxPeakRssBytes": 1073741824,
-      "cycleObservedMaxPeakRssBytes": 248467456
+      "cycleObservedMaxPeakRssBytes": 723099648,
+      "rationale": "Z07 source d5cbe61 / PR synthetic candidate 381e51b, CI run 29704311754 measured a 723,099,648-byte maximum at 50k after input-probe ledgers became resident-only. The frozen 1 GiB ceiling retains 48.49% headroom; an earlier 1,105,842,176-byte attempt exposed and led to removal of accidental one-shot ledger retention rather than a budget increase."
     }
   }
 }

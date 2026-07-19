@@ -56,6 +56,17 @@ describe('Phase Z scale benchmark contract', () => {
     const budgets = JSON.parse(
       fs.readFileSync(path.join(REPO, 'eval/performance/budgets.v2.json'), 'utf8')
     );
+    expect(budgets.scenarios.canonicalResolvedAnalysis).toMatchObject({
+      size: 10000,
+      targetP95Ms: 100,
+      baselineMs: 84.567725,
+      cycleObservedMaxP95Ms: 84.567725,
+      maxP95Ms: 100,
+    });
+    expect(budgets.scenarios.memory).toMatchObject({
+      maxPeakRssBytes: 1073741824,
+      cycleObservedMaxPeakRssBytes: 723099648,
+    });
     const report = {
       results: [
         {

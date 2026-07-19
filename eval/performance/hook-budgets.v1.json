@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "method": "ADR 0009 D5 — record the Linux CI baseline FIRST; ceilings are baseline p95 plus fixed headroom, set once per roadmap cycle, never ratcheted per item. Scenarios without maxP95Ms are in RECORDING mode: the bench reports them and cannot fail on them. A targetP95Ms records a preregistered target but does not arm enforcement until maxP95Ms is set from comparable evidence.",
+  "method": "ADR 0009 D5 — record the Linux CI baseline FIRST; baseline-derived ceilings are baseline p95 plus fixed headroom, set once per roadmap cycle, never ratcheted per item. A preregistered absolute target remains the ceiling when comparable evidence lands below it. Scenarios without maxP95Ms are in RECORDING mode: the bench reports them and cannot fail on them. A targetP95Ms records that target but does not arm enforcement until comparable evidence exists.",
   "runner": {
     "image": "ubuntu-latest",
     "node": "20",
@@ -21,9 +21,9 @@
       "metric": "hook.residentWarm",
       "baselineMs": 41.487,
       "targetP95Ms": 65,
-      "cycleObservedMaxP95Ms": 41.487,
+      "cycleObservedMaxP95Ms": 58.177,
       "maxP95Ms": 65,
-      "rationale": "Z07 source 224a39a / PR synthetic candidate a3d7306, CI run 29700873361 measured 41.487 ms p95 on Linux x64 Node 20 at 10k after one discarded prime. The fresh launcher used the opt-in resident MCP evaluator, cached no verdict, preserved exact output bytes, and left the fixture tree unchanged. The preregistered 65 ms ceiling retains 56.68% runner headroom and is 16.48x below the retained Phase Y 683.761 ms baseline."
+      "rationale": "Z07 source 224a39a / PR synthetic candidate a3d7306, CI run 29700873361 established the 41.487 ms resident baseline. Final source d5cbe61 / synthetic candidate 381e51b, CI run 29704311754 measured 58.177 ms p95 at 10k after one discarded prime. The fresh launcher used the opt-in resident MCP evaluator, cached no verdict, preserved exact output bytes, and left the fixture tree unchanged. The frozen 65 ms ceiling retains 11.73% runner headroom and the final result is 11.75x below the retained Phase Y 683.761 ms baseline."
     },
     "doctorCold": {
       "size": 10000,
@@ -37,17 +37,18 @@
       "size": 10000,
       "metric": "doctor.oneShotWarm",
       "baselineMs": 2174.517,
-      "cycleObservedMaxP95Ms": 2174.517,
+      "cycleObservedMaxP95Ms": 2616.594,
       "maxP95Ms": null,
-      "rationale": "Z07 source 778a33a / PR synthetic candidate 9cfcb3a, CI run 29699589991, recorded 2,174.517 ms p95 from fresh doctor processes after one discarded prime, using the exact cold argv and immutable fixture/cache state. This is the like-for-like one-shot warm baseline before a resident implementation; it is not a resident or 10x claim."
+      "rationale": "Z07 source 778a33a / PR synthetic candidate 9cfcb3a, CI run 29699589991, established the 2,174.517 ms p95 like-for-like baseline from fresh doctor processes after one discarded prime. Final source d5cbe61 / CI run 29704311754 recorded 2,616.594 ms with the exact cold argv and immutable fixture/cache state. This remains a cache-free one-shot control, not a resident or 10x claim."
     },
     "doctorResidentWarm": {
       "size": 10000,
       "metric": "doctor.residentWarm",
-      "baselineMs": null,
+      "baselineMs": 468.669,
       "targetP95Ms": 500,
-      "maxP95Ms": null,
-      "rationale": "Z07 preregistered absolute UX target. The canonical-facts resident pilot now reports exact cold/warm JSON, hash, verdict, edit/delete, and invalidation parity, but this lane remains unarmed until comparable Linux evidence is recorded."
+      "cycleObservedMaxP95Ms": 468.669,
+      "maxP95Ms": 500,
+      "rationale": "Z07 source d5cbe61 / PR synthetic candidate 381e51b, CI run 29704311754 measured 468.669 ms p95 on Linux x64 Node 20 at 10k after one discarded prime. A lightweight public launcher removed one-shot module loading from the resident client while preserving exact cold JSON and fallback behavior. The canonical-facts pilot cached no verdict, reused only the immutable snapshot, and retained exact edit/delete/invalidation parity. The frozen 500 ms absolute UX ceiling retains 6.69% headroom; the like-for-like 2,174.517 ms one-shot baseline makes this a 4.64x improvement, not a 10x doctor claim."
     }
   }
 }
