@@ -47,4 +47,12 @@ jobs:
         if: ${{ vars.ARK_RUN_LIVE_AGENT_EVAL == 'true' }}
         run: node eval/run.mjs
         env:
-          ARK_EVAL_CASE: enthusiast-greenfield-crud
+          ARK_EVAL_CASE: port-proof-inject-binding
+
+      - name: Upload live-agent report
+        if: ${{ always() && vars.ARK_RUN_LIVE_AGENT_EVAL == 'true' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: live-agent-eval-report
+          path: eval/report.json
+          if-no-files-found: error
