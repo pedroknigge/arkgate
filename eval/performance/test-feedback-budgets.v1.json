@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "runner": { "image": "ubuntu-latest", "node": "20" },
-  "method": "Z07 pure canonical-facts tests use parallel threads while the bounded process-adapter list uses one serial fork; the full lane includes a packed clean-install smoke. Both lanes start together and the reported metric is total wall time.",
+  "method": "Z07 pure canonical-facts tests use parallel threads while the bounded process-adapter list uses one serial fork; hook-path benchmark parity runs in the dedicated performance job and the full lane, while the PR lane retains resident transport plus canonical scale coverage. The full lane includes a packed clean-install smoke. Both lanes start together and the reported metric is total wall time.",
   "modes": {
     "pr": { "maxWallMs": 10000 },
     "full": { "maxWallMs": 30000 }

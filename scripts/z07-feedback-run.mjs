@@ -18,7 +18,6 @@ const PR_PURE = [
 const PR_CLI = [
   'tests/unit/mcp/residentHook.test.ts',
   'tests/unit/scripts/arkScaleBench.test.ts',
-  'tests/unit/scripts/hookPathBench.test.ts',
 ];
 const FULL_PURE = [
   ...PR_PURE,
@@ -28,6 +27,7 @@ const FULL_PURE = [
 ];
 const FULL_CLI = [
   ...PR_CLI,
+  'tests/unit/scripts/hookPathBench.test.ts',
   'tests/unit/adapters/adapterParity.test.ts',
   'tests/unit/adapters/z04ResolvedAdapterParity.test.ts',
   'tests/unit/scripts/packageIsolationSafety.test.ts',
