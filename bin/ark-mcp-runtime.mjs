@@ -31,18 +31,22 @@ import {
   prepareChangeFromRoot,
 } from './lib/prepare-change.mjs';
 import { detectWritePathCapabilities } from './lib/write-path-detect.mjs';
-import { isGovernableSourceFile } from './lib/scan-files.mjs';
+import { collectGovernedFiles, isGovernableSourceFile } from './lib/scan-files.mjs';
 import {
   canonicalizeCandidateChanges,
   resolvedCompilerInputPaths,
   resolvedInputIdentities,
 } from './lib/resolved-candidate-facts.mjs';
 import {
+  createResidentInputLedger,
   RESIDENT_HOOK_PROTOCOL_VERSION,
+  residentDoctorEnvironment,
   residentEnvironmentIdentity,
   residentHookEndpoint,
   startResidentHookServer,
 } from './lib/resident-hook.mjs';
+import { resolveArchitectureSnapshot } from './lib/architecture-scan.mjs';
+import { runDoctor } from './lib/doctor-plan.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 const arkMcpLauncher = fileURLToPath(new URL('./ark-mcp.mjs', import.meta.url));
@@ -780,6 +784,92 @@ function captureResidentHook(payload, gate, config, args, ts, request) {
   return { stdout, stderr, status };
 }
 
+function sameResidentInvocation(request, args, kind) {
+  return (
+    request?.protocolVersion === RESIDENT_HOOK_PROTOCOL_VERSION &&
+    request?.kind === kind &&
+    typeof request.root === 'string' &&
+    path.resolve(request.root) === path.resolve(args.root) &&
+    request.config === args.config &&
+    (request.manifest ?? null) === (args.manifest ?? null) &&
+    (request.tsconfig ?? null) === (args.tsconfig ?? null)
+  );
+}
+
+function snapshotInputPaths(inputs) {
+  if (inputs instanceof Map) return [...inputs.keys()];
+  return [...(inputs ?? [])]
+    .map((entry) => (typeof entry === 'string' ? entry : entry?.path))
+    .filter((entry) => typeof entry === 'string');
+}
+
+function collectDoctorProject(root, config) {
+  const directories = [];
+  const files = collectGovernedFiles(root, config, {
+    onDirectory: (lexical, real) => directories.push(lexical, real),
+  });
+  return { files, paths: [...files, ...directories] };
+}
+
+function createResidentDoctorSession(args, config, ts) {
+  const rules = args.projectManifest?.architecture?.rules ?? config.rules;
+  const before = collectDoctorProject(args.root, config);
+  const beforeLedger = createResidentInputLedger(before.paths);
+  const snapshot = resolveArchitectureSnapshot({
+    root: args.root,
+    config,
+    manifest: args.projectManifest,
+    rules,
+    files: before.files,
+    ts,
+    args,
+  });
+  const after = collectDoctorProject(args.root, config);
+  if (!beforeLedger.matches(after.paths)) return null;
+  const resolutionInputs = snapshotInputPaths(snapshot.inputs);
+  const ledger = createResidentInputLedger([...after.paths, ...resolutionInputs]);
+  if (!ledger.matches([...after.paths, ...resolutionInputs])) return null;
+  return { files: after.files, ledger, resolutionInputs, rules, snapshot };
+}
+
+function verifyResidentDoctorSession(session) {
+  return session.ledger.matches();
+}
+
+function renderResidentDoctor(session, args, config, ts) {
+  let stdout = '';
+  runDoctor(args.root, config, session.files, session.rules, session.snapshot.result.violations, true, {
+    configPath: path.isAbsolute(args.config) ? args.config : path.join(args.root, args.config),
+    configMissing: !fs.existsSync(
+      path.isAbsolute(args.config) ? args.config : path.join(args.root, args.config)
+    ),
+    safety: session.snapshot.result.safety,
+    ts,
+    parseHealth: session.snapshot.result.parseHealth,
+    completeness: session.snapshot.result.completeness,
+    writeJson: (value) => {
+      stdout += `${value}\n`;
+    },
+  });
+  const result = session.snapshot.result;
+  return {
+    protocolVersion: RESIDENT_HOOK_PROTOCOL_VERSION,
+    fallback: false,
+    mode: 'resident-warm',
+    resultCache: false,
+    snapshotReuse: true,
+    analysisIdentity: {
+      policyHash: result.policyHash,
+      resolverIdentity: result.resolverIdentity,
+      factsHash: result.factsHash,
+      candidateTreeHash: result.candidateTreeHash,
+    },
+    status: 0,
+    stdout,
+    stderr: '',
+  };
+}
+
 async function startResidentHookControl({ args, gate, config, ts, loadedTypeScript, version }) {
   if (process.env.ARK_RESIDENT_HOOK !== '1') return null;
   const endpoint = residentHookEndpoint({
@@ -789,7 +879,10 @@ async function startResidentHookControl({ args, gate, config, ts, loadedTypeScri
     tsconfig: args.tsconfig,
     launcher: arkMcpLauncher,
   });
-  const identityPaths = residentHookInputs(ts, args);
+  const identityPaths = [
+    ...residentHookInputs(ts, args),
+    ...(loadedTypeScript?.resolvedPath ? [loadedTypeScript.resolvedPath] : []),
+  ];
   const identityTokens = [
     version,
     loadedTypeScript?.source ?? 'unavailable',
@@ -797,29 +890,62 @@ async function startResidentHookControl({ args, gate, config, ts, loadedTypeScri
     loadedTypeScript?.resolvedPath ?? 'unresolved',
   ];
   const initialIdentity = residentEnvironmentIdentity(identityPaths, identityTokens);
+  let doctorSession;
+  let doctorRefresh;
+  const refreshDoctor = () => {
+    if (!doctorRefresh) {
+      doctorRefresh = Promise.resolve()
+        .then(() => createResidentDoctorSession(args, config, ts))
+        .then((session) => {
+          doctorSession = session ?? undefined;
+          return doctorSession;
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          doctorRefresh = undefined;
+        });
+    }
+    return doctorRefresh;
+  };
   return startResidentHookServer({
     endpoint,
-    handle(request) {
-      const sameInvocation =
-        request?.protocolVersion === RESIDENT_HOOK_PROTOCOL_VERSION &&
-        request?.kind === 'hook' &&
-        typeof request.root === 'string' &&
-        path.resolve(request.root ?? '') === path.resolve(args.root) &&
-        request.config === args.config &&
-        (request.manifest ?? null) === (args.manifest ?? null) &&
-        (request.tsconfig ?? null) === (args.tsconfig ?? null);
+    async handle(request) {
       const currentIdentity = residentEnvironmentIdentity(identityPaths, identityTokens);
-      if (!sameInvocation || currentIdentity !== initialIdentity) {
+      if (currentIdentity !== initialIdentity) {
         return { protocolVersion: RESIDENT_HOOK_PROTOCOL_VERSION, fallback: true };
       }
-      const result = captureResidentHook(request.payload, gate, config, args, ts, request);
-      return {
-        protocolVersion: RESIDENT_HOOK_PROTOCOL_VERSION,
-        fallback: false,
-        mode: 'resident-warm',
-        environmentIdentity: initialIdentity,
-        ...result,
-      };
+      if (sameResidentInvocation(request, args, 'hook')) {
+        const result = captureResidentHook(request.payload, gate, config, args, ts, request);
+        return {
+          protocolVersion: RESIDENT_HOOK_PROTOCOL_VERSION,
+          fallback: false,
+          mode: 'resident-warm',
+          resultCache: false,
+          environmentIdentity: initialIdentity,
+          ...result,
+        };
+      }
+      if (
+        !sameResidentInvocation(request, args, 'doctor') ||
+        JSON.stringify(request.environment) !== JSON.stringify(residentDoctorEnvironment())
+      ) {
+        return { protocolVersion: RESIDENT_HOOK_PROTOCOL_VERSION, fallback: true };
+      }
+      let verified = doctorSession ? verifyResidentDoctorSession(doctorSession) : false;
+      if (!verified) {
+        doctorSession = undefined;
+        await refreshDoctor();
+        verified = doctorSession ? verifyResidentDoctorSession(doctorSession) : false;
+      }
+      if (!doctorSession || !verified) {
+        return { protocolVersion: RESIDENT_HOOK_PROTOCOL_VERSION, fallback: true };
+      }
+      const response = renderResidentDoctor(doctorSession, args, config, ts);
+      if (!verifyResidentDoctorSession(doctorSession)) {
+        doctorSession = undefined;
+        return { protocolVersion: RESIDENT_HOOK_PROTOCOL_VERSION, fallback: true };
+      }
+      return response;
     },
   });
 }

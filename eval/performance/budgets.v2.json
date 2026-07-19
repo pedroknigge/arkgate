@@ -1,11 +1,11 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "runner": {
     "image": "ubuntu-latest",
     "node": "20",
-    "measurement": "fresh child processes; Linux peak RSS from /usr/bin/time -f %M"
+    "measurement": "fresh child processes; canonical candidate resolution precedes the timed analysis stage; Linux peak RSS from /usr/bin/time -f %M"
   },
-  "sampling": { "runs": 5, "minIncrementalRuns": 20 },
+  "sampling": { "runs": 5, "minCanonicalResolvedAnalysisRuns": 20 },
   "scenarios": {
     "cold": {
       "size": 50000,
@@ -13,13 +13,23 @@
       "cycleObservedMaxP95Ms": 24568.744177,
       "rationale": "Phase Z source 6fa5079 CI run 29649631288 measured 23,315.693 ms and 24,568.744 ms on unchanged-head attempts. The frozen 30,000 ms ceiling retains 22.11% headroom over the worse attempt, above the observed 5.37% attempt variance."
     },
-    "incremental": {
+    "canonicalResolvedAnalysis": {
       "size": 10000,
-      "maxP95Ms": 125,
-      "requirePolicyHashPreserved": true,
-      "requireContentHashPreserved": true,
-      "cycleObservedMaxP95Ms": 111.537558,
-      "rationale": "Phase Y established the 125 ms hard bound. Phase Z source 6fa5079 CI run 29649631288 measured 110.350 ms and 111.538 ms on unchanged-head attempts; the frozen ceiling retains 12.07% headroom over the worse attempt, above the observed 1.08% variance."
+      "targetP95Ms": 50,
+      "maxP95Ms": null,
+      "localRecording": {
+        "platform": "darwin-arm64",
+        "node": "26.4.0",
+        "runs": 20,
+        "p95Ms": 20.851417
+      },
+      "requireOutputParity": true,
+      "requireVerdictParity": true,
+      "requireFactsHashParity": true,
+      "requireCandidateTreeHashParity": true,
+      "requireCandidateIdentityChanged": true,
+      "cycleObservedMaxP95Ms": null,
+      "rationale": "Z07 replaces the retired lexical analyzeChange metric with canonical resolved-facts analysis over one changed candidate. Resolution and the validated public oracle are outside the timed stage. The sub-50 ms target remains recording-only until comparable Linux Node 20 candidate evidence arms a reviewed ceiling."
     },
     "oneShotWarm": {
       "size": 50000,

@@ -4,7 +4,7 @@
   "runner": {
     "image": "ubuntu-latest",
     "node": "20",
-    "measurement": "hook cold fallback uses a fresh full process; hook resident warm uses a fresh lightweight launcher per sample against the opt-in resident MCP evaluator after one discarded prime and never caches a verdict; cold and one-shot-warm doctor use identical fresh-process argv/tree/cache state, with one discarded prime before warm samples; --no-cache is retained as an explicit legacy flag while no Ark cache exists; non-zero child exits abort the run"
+    "measurement": "hook cold fallback uses a fresh full process; hook resident warm uses a fresh lightweight launcher per sample against the opt-in resident MCP evaluator after one discarded prime and never caches a verdict; cold and one-shot-warm doctor use identical fresh-process argv/tree/cache state; resident doctor starts a fresh ark-check client per sample, reuses only canonical facts, and recomputes live doctor surfaces; --no-cache remains an explicit legacy flag; non-zero child exits abort the run"
   },
   "sampling": { "runs": 9 },
   "scenarios": {
@@ -19,10 +19,11 @@
     "hookResidentWarm": {
       "size": 10000,
       "metric": "hook.residentWarm",
-      "baselineMs": null,
+      "baselineMs": 41.487,
       "targetP95Ms": 65,
-      "maxP95Ms": null,
-      "rationale": "Z07 preregistered warm hook target. A fresh lightweight launcher sends every payload to the same TypeScript-backed evaluator already resident in MCP; no allow/deny result is cached. The ceiling remains unarmed until comparable Linux evidence is recorded."
+      "cycleObservedMaxP95Ms": 41.487,
+      "maxP95Ms": 65,
+      "rationale": "Z07 source 224a39a / PR synthetic candidate a3d7306, CI run 29700873361 measured 41.487 ms p95 on Linux x64 Node 20 at 10k after one discarded prime. The fresh launcher used the opt-in resident MCP evaluator, cached no verdict, preserved exact output bytes, and left the fixture tree unchanged. The preregistered 65 ms ceiling retains 56.68% runner headroom and is 16.48x below the retained Phase Y 683.761 ms baseline."
     },
     "doctorCold": {
       "size": 10000,
@@ -46,7 +47,7 @@
       "baselineMs": null,
       "targetP95Ms": 500,
       "maxP95Ms": null,
-      "rationale": "Z07 preregistered absolute UX target. The metric remains unavailable and unenforced until a resident pilot reports exact cold/warm JSON, hash, verdict, edit/delete, and invalidation parity."
+      "rationale": "Z07 preregistered absolute UX target. The canonical-facts resident pilot now reports exact cold/warm JSON, hash, verdict, edit/delete, and invalidation parity, but this lane remains unarmed until comparable Linux evidence is recorded."
     }
   }
 }

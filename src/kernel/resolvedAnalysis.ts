@@ -311,9 +311,10 @@ function contentViolations(
   return violations;
 }
 
-/** Validate supplied facts and evaluate their graph without host effects. */
-export function analyzeResolvedProject(input: AnalyzeResolvedProjectInput): ResolvedAnalysisResult {
-  const facts = loadResolvedCandidateFacts(input.facts);
+export function analyzeCanonicalResolvedProject(
+  input: { contract: AnalysisContract; facts: ResolvedCandidateFacts }
+): ResolvedAnalysisResult {
+  const { facts } = input;
   const expectedRequirementsHash = resolvedFactsEvidenceRequirementsHash(input.contract.config);
   const requirementsMatch = facts.evidenceRequirementsHash === expectedRequirementsHash;
   const completeness = requirementsMatch ? facts.completeness : 'unavailable';
@@ -410,4 +411,12 @@ export function analyzeResolvedProject(input: AnalyzeResolvedProjectInput): Reso
       warnings: evaluated.warnings,
     },
   };
+}
+
+/** Validate supplied facts and evaluate their graph without host effects. */
+export function analyzeResolvedProject(input: AnalyzeResolvedProjectInput): ResolvedAnalysisResult {
+  return analyzeCanonicalResolvedProject({
+    contract: input.contract,
+    facts: loadResolvedCandidateFacts(input.facts),
+  });
 }

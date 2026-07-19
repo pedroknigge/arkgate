@@ -6,8 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import ts from 'typescript';
 import {
+  resolveArchitectureSnapshot,
   runArchitectureScan,
-  scanSourceFile,
 } from '../../../bin/lib/architecture-scan.mjs';
 import { summarizeParseHealth } from '../../../bin/lib/parse-health.mjs';
 
@@ -81,7 +81,7 @@ afterEach(() => {
 });
 
 describe('Y03 parse health', () => {
-  it('reads zero or several diagnostics from each existing scan AST and transports only the count', () => {
+  it('reads diagnostics once per canonical fact and transports only the count', () => {
     const root = project();
     const valid = write(root, 'src/domain/valid.ts', 'export const valid = 1;\n');
     const invalid = write(
@@ -91,27 +91,24 @@ describe('Y03 parse health', () => {
     );
     const counted = countingTypeScript();
 
-    const clean = scanSourceFile(
-      counted.ts,
+    const snapshot = resolveArchitectureSnapshot({
       root,
-      CONFIG,
-      CONFIG.rules,
-      null,
-      valid,
-      'DomainModel'
+      config: CONFIG,
+      manifest: null,
+      rules: CONFIG.rules,
+      files: [valid, invalid],
+      ts: counted.ts,
+      args: { config: path.join(root, 'ark.config.json') },
+    });
+    const clean = snapshot.facts.files.find(
+      (file: { path: string }) => file.path === 'src/domain/valid.ts'
     );
-    const broken = scanSourceFile(
-      counted.ts,
-      root,
-      CONFIG,
-      CONFIG.rules,
-      null,
-      invalid,
-      'DomainModel'
+    const broken = snapshot.facts.files.find(
+      (file: { path: string }) => file.path === 'src/domain/invalid.ts'
     );
 
-    expect(clean.parseDiagnosticCount).toBe(0);
-    expect(broken.parseDiagnosticCount).toBe(2);
+    expect(clean?.parseDiagnosticCount).toBe(0);
+    expect(broken?.parseDiagnosticCount).toBe(2);
     expect(counted.calls()).toBe(2);
     expect(broken).not.toHaveProperty('parseDiagnostics');
     expect(JSON.stringify(broken)).not.toContain('parseDiagnostics');

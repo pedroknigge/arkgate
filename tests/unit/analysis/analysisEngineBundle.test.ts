@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import * as publicGate from '../../../src/gate';
 import {
   analyzeArchitectureConvergence as analyzeConvergenceFromKernel,
   analyzeChange as analyzeChangeFromKernel,
@@ -37,7 +38,9 @@ import {
   RESOLVED_CANDIDATE_FACTS_SCHEMA as resolvedFactsSchemaFromBundle,
   RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION as resolvedFactsVersionFromBundle,
   analyzeResolvedProject as analyzeResolvedProjectFromBundle,
+  analyzeTrustedResolvedProject,
   createResolvedCandidateFacts as createResolvedFactsFromBundle,
+  createTrustedResolvedCandidateFacts,
   loadResolvedCandidateFacts as loadResolvedFactsFromBundle,
   preflightResolvedChange as preflightResolvedChangeFromBundle,
 } from '../../../bin/lib/analysis-engine.mjs';
@@ -111,17 +114,40 @@ describe('generated CLI analysis engine', () => {
     };
     const kernelFacts = createResolvedFactsFromKernel(input);
     const bundleFacts = createResolvedFactsFromBundle(input);
+    const trustedFacts = createTrustedResolvedCandidateFacts(input);
     const kernelContract = loadContractFromKernel(config);
     const bundleContract = loadContractFromBundle(config);
 
     expect(resolvedFactsVersionFromBundle).toBe(resolvedFactsVersionFromKernel);
     expect(resolvedFactsSchemaFromBundle).toEqual(resolvedFactsSchemaFromKernel);
     expect(bundleFacts).toEqual(kernelFacts);
+    expect(trustedFacts).toEqual(kernelFacts);
+    expect(Object.isFrozen(trustedFacts)).toBe(true);
+    expect(Object.isFrozen(trustedFacts.files)).toBe(true);
+    expect(Object.isFrozen(trustedFacts.files[0])).toBe(true);
+    expect(Object.isFrozen(bundleFacts)).toBe(false);
+    expect(publicGate).not.toHaveProperty('analyzeTrustedResolvedProject');
+    expect(publicGate).not.toHaveProperty('createTrustedResolvedCandidateFacts');
+    expect(() => {
+      trustedFacts.files[0].contentHash = 'forged';
+    }).toThrow(TypeError);
+    expect(() =>
+      analyzeTrustedResolvedProject({ contract: bundleContract, facts: bundleFacts })
+    ).toThrow(/immutable in-process canonical facts/);
+    expect(() =>
+      analyzeTrustedResolvedProject({
+        contract: bundleContract,
+        facts: structuredClone(trustedFacts),
+      })
+    ).toThrow(/immutable in-process canonical facts/);
     expect(loadResolvedFactsFromBundle(bundleFacts)).toEqual(
       loadResolvedFactsFromKernel(kernelFacts)
     );
     expect(
       analyzeResolvedProjectFromBundle({ contract: bundleContract, facts: bundleFacts })
+    ).toEqual(analyzeResolvedProjectFromKernel({ contract: kernelContract, facts: kernelFacts }));
+    expect(
+      analyzeTrustedResolvedProject({ contract: bundleContract, facts: trustedFacts })
     ).toEqual(analyzeResolvedProjectFromKernel({ contract: kernelContract, facts: kernelFacts }));
     expect(
       preflightResolvedChangeFromBundle({

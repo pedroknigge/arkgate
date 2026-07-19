@@ -56,19 +56,27 @@ function isInsideRoot(root, target) {
  * while escaping links fail closed instead of reading arbitrary filesystem paths.
  */
 export function walk(dir, files = [], options = {}) {
-  const state = options.state ?? {
-    root: options.root ? fs.realpathSync(options.root) : undefined,
-    visitedDirectories: new Set(),
-    visitedFiles: new Set(),
-  };
+  let state = options.state;
+  if (!state) {
+    if (options.root) options.observeInput?.(path.resolve(options.root), 'realpath');
+    state = {
+      root: options.root ? fs.realpathSync(options.root) : undefined,
+      visitedDirectories: new Set(),
+      visitedFiles: new Set(),
+      observeInput: options.observeInput,
+    };
+  }
+  state.observeInput?.(path.resolve(dir), 'lstat');
   const lstat = fs.lstatSync(dir, { throwIfNoEntry: false });
   if (!lstat) return files;
+  state.observeInput?.(path.resolve(dir), 'realpath');
   const resolved = fs.realpathSync(dir);
   if (state.root && !isInsideRoot(state.root, resolved)) {
     throw new Error(
       `Refusing to scan symlink outside project root: ${dir} -> ${resolved}`
     );
   }
+  if (lstat.isSymbolicLink()) state.observeInput?.(path.resolve(dir), 'stat');
   const stat = lstat.isSymbolicLink()
     ? fs.statSync(dir, { throwIfNoEntry: false })
     : lstat;
@@ -90,6 +98,7 @@ export function walk(dir, files = [], options = {}) {
   state.onDirectory?.(dir, resolved);
   if (state.visitedDirectories.has(resolved)) return files;
   state.visitedDirectories.add(resolved);
+  state.observeInput?.(path.resolve(dir), 'directory');
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
@@ -107,11 +116,13 @@ export function walk(dir, files = [], options = {}) {
 
 /** Walk include roots then drop codegen / config.exclude (universal scan filter). */
 export function collectGovernedFiles(root, config, options = {}) {
+  options.observeInput?.(path.resolve(root), 'realpath');
   const state = {
     root: fs.realpathSync(root),
     visitedDirectories: new Set(),
     visitedFiles: new Set(),
     onDirectory: options.onDirectory,
+    observeInput: options.observeInput,
   };
   const raw = (config.include ?? []).flatMap((entry) =>
     walk(path.join(root, entry), [], { state })

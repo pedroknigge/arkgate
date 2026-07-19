@@ -11,7 +11,8 @@
  *   doctor.cold — `ark-check --doctor --json --no-cache` over the tree
  *   doctor.oneShotWarm — the exact same command in fresh processes after one
  *                 discarded prime over the same immutable tree/cache state
- *   doctor.residentWarm — unavailable until the Z07 doctor pilot is supplied
+ *   doctor.residentWarm — a fresh `ark-check` client reusing canonical facts in
+ *                 the same resident MCP; dynamic doctor advisories are recomputed
  *
  * D5 method: record a Linux CI baseline FIRST; ceilings are baseline plus a
  * fixed headroom and live in eval/performance/hook-budgets.v1.json. Until a
@@ -29,9 +30,15 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { residentHookEndpoint } from '../bin/lib/resident-hook.mjs';
+import {
+  RESIDENT_HOOK_PROTOCOL_VERSION,
+  requestResidentHook,
+  residentDoctorEnvironment,
+  residentHookEndpoint,
+} from '../bin/lib/resident-hook.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const SCRIPT = fileURLToPath(import.meta.url);
 const BUDGETS = path.join(REPO, 'eval', 'performance', 'hook-budgets.v1.json');
 const MCP = path.join(REPO, 'bin', 'ark-mcp.mjs');
 
@@ -225,7 +232,7 @@ function stopResidentMcp(control) {
   });
 }
 
-function doctorCommand(root) {
+function doctorCommand(root, resident = false) {
   return [
     path.join(REPO, 'bin/ark-check.mjs'),
     '--root',
@@ -235,13 +242,23 @@ function doctorCommand(root) {
     '--doctor',
     '--json',
     '--no-cache',
+    ...(resident ? ['--resident'] : []),
   ];
 }
 
-function runDoctorSample(root) {
-  const argv = doctorCommand(root);
+function runDoctorSample(root, resident = false) {
+  const argv = doctorCommand(root, resident);
   const started = process.hrtime.bigint();
-  const result = spawnSync(process.execPath, argv, { encoding: 'utf8' });
+  const result = spawnSync(process.execPath, argv, {
+    encoding: 'utf8',
+    env: resident
+      ? {
+          ...process.env,
+          ARK_RESIDENT_DOCTOR_REQUIRED: '1',
+          ARK_RESIDENT_DOCTOR_TIMEOUT_MS: '10000',
+        }
+      : process.env,
+  });
   const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
   if (result.error) throw result.error;
   if (result.status !== 0) {
@@ -251,11 +268,75 @@ function runDoctorSample(root) {
     elapsedMs,
     status: result.status,
     stdout: result.stdout || '',
+    stderr: result.stderr || '',
   };
+}
+
+async function residentDoctorMetadata(root, control) {
+  return requestResidentHook({
+    socket: control.endpoint.socket,
+    timeoutMs: 10_000,
+    request: {
+      protocolVersion: RESIDENT_HOOK_PROTOCOL_VERSION,
+      kind: 'doctor',
+      root,
+      config: 'ark.config.json',
+      manifest: null,
+      tsconfig: null,
+      environment: residentDoctorEnvironment(),
+    },
+  });
+}
+
+async function residentHookMetadata(root, control, payload) {
+  return requestResidentHook({
+    socket: control.endpoint.socket,
+    timeoutMs: 10_000,
+    request: {
+      protocolVersion: RESIDENT_HOOK_PROTOCOL_VERSION,
+      kind: 'hook',
+      root,
+      config: 'ark.config.json',
+      manifest: null,
+      tsconfig: null,
+      hookRepair: false,
+      grokHookEvent: false,
+      payload,
+    },
+  });
 }
 
 function metricAt(result, metric) {
   return metric.split('.').reduce((value, key) => value?.[key], result);
+}
+
+export function evidenceFailures(results) {
+  const failures = [];
+  for (const result of results) {
+    const at = `n=${result.size}`;
+    if (!result.fixture.unchanged || result.fixture.treeHashBefore !== result.fixture.treeHashAfter) {
+      failures.push(`Evidence fail: fixture changed for ${at}`);
+    }
+    if (!result.hook.exactOutputParity) failures.push(`Evidence fail: hook output diverged for ${at}`);
+    if (result.hook.residentWarm.resultCache !== false) {
+      failures.push(`Evidence fail: hook result cache was not disabled for ${at}`);
+    }
+    if (!result.doctor.exactOutputParity) failures.push(`Evidence fail: doctor output diverged for ${at}`);
+    if (
+      result.doctor.cache.mode !== 'none' ||
+      !result.doctor.cache.legacyCacheAbsentBefore ||
+      !result.doctor.cache.legacyCacheAbsentAfter
+    ) {
+      failures.push(`Evidence fail: doctor cache invariant failed for ${at}`);
+    }
+    if (result.doctor.residentWarm.resultCache !== false) {
+      failures.push(`Evidence fail: doctor result cache was not disabled for ${at}`);
+    }
+    if (result.doctor.residentWarm.snapshotReuse !== true) {
+      failures.push(`Evidence fail: doctor snapshot was not reused for ${at}`);
+    }
+  }
+  return failures;
 }
 
 async function main() {
@@ -281,11 +362,16 @@ async function main() {
       const hookResidentWarm = [];
       const doctorCold = [];
       const doctorOneShotWarm = [];
+      const doctorResidentWarm = [];
       for (let i = 0; i < args.runs; i += 1) {
         hookColdFallback.push(runHookOnce(root, payload, false));
       }
       residentControl = await startResidentMcp(root);
       const hookResidentPrime = runHookOnce(root, payload, true);
+      const residentHook = await residentHookMetadata(root, residentControl, payload);
+      if (!residentHook || residentHook.fallback !== false || residentHook.resultCache !== false) {
+        throw new Error('resident hook did not expose a cache-free authoritative evaluation');
+      }
       for (let i = 0; i < args.runs; i += 1) {
         hookResidentWarm.push(runHookOnce(root, payload, true));
       }
@@ -294,6 +380,7 @@ async function main() {
         ...hookColdFallback,
         hookResidentPrime,
         ...hookResidentWarm,
+        residentHook,
       ];
       const hookExactOutputParity = hookComparable.every(
         (sample) =>
@@ -309,10 +396,28 @@ async function main() {
       for (let i = 0; i < doctorRuns; i += 1) {
         doctorOneShotWarm.push(runDoctorSample(root));
       }
+      const doctorResidentPrime = runDoctorSample(root, true);
+      const residentDoctor = await residentDoctorMetadata(root, residentControl);
+      if (!residentDoctor || residentDoctor.fallback !== false || residentDoctor.snapshotReuse !== true) {
+        throw new Error('resident doctor did not expose a reusable canonical snapshot');
+      }
+      for (let i = 0; i < doctorRuns; i += 1) {
+        doctorResidentWarm.push(runDoctorSample(root, true));
+      }
       const reference = doctorCold[0];
-      const comparableSamples = [...doctorCold, doctorPrime, ...doctorOneShotWarm];
+      const comparableSamples = [
+        ...doctorCold,
+        doctorPrime,
+        ...doctorOneShotWarm,
+        doctorResidentPrime,
+        ...doctorResidentWarm,
+        residentDoctor,
+      ];
       const exactOutputParity = comparableSamples.every(
-        (sample) => sample.status === reference.status && sample.stdout === reference.stdout
+        (sample) =>
+          sample.status === reference.status &&
+          sample.stdout === reference.stdout &&
+          (sample.stderr ?? '') === reference.stderr
       );
       const fixtureTreeHashAfter = treeIdentity(root);
       const legacyCacheAbsentAfter = !fs.existsSync(legacyCachePath);
@@ -329,7 +434,7 @@ async function main() {
             ...stats(hookResidentWarm.map((sample) => sample.elapsedMs)),
             primeMs: Number(hookResidentPrime.elapsedMs.toFixed(3)),
             transport: process.platform === 'win32' ? 'named-pipe' : 'unix-socket',
-            resultCache: false,
+            resultCache: residentHook.resultCache,
           },
           exactOutputParity: hookExactOutputParity,
           outputSha256: `sha256:${sha256(
@@ -339,7 +444,7 @@ async function main() {
         doctor: {
           executable: process.execPath,
           argv: doctorCommand(root),
-          processMode: 'fresh-child-per-sample',
+          processMode: 'fresh-client-per-sample',
           cache: {
             mode: 'none',
             argvFlag: '--no-cache',
@@ -352,7 +457,14 @@ async function main() {
             ...stats(doctorOneShotWarm.map((sample) => sample.elapsedMs)),
             primeMs: Number(doctorPrime.elapsedMs.toFixed(3)),
           },
-          residentWarm: null,
+          residentWarm: {
+            ...stats(doctorResidentWarm.map((sample) => sample.elapsedMs)),
+            primeMs: Number(doctorResidentPrime.elapsedMs.toFixed(3)),
+            transport: process.platform === 'win32' ? 'named-pipe' : 'unix-socket',
+            resultCache: residentDoctor.resultCache,
+            snapshotReuse: residentDoctor.snapshotReuse,
+            analysisIdentity: residentDoctor.analysisIdentity,
+          },
           exactOutputParity,
           outputSha256: `sha256:${sha256(reference.stdout)}`,
         },
@@ -363,7 +475,7 @@ async function main() {
     }
   }
 
-  const failures = [];
+  const failures = evidenceFailures(results);
   if (args.failBudget && budgets?.scenarios) {
     for (const [scenario, spec] of Object.entries(budgets.scenarios)) {
       if (typeof spec.maxP95Ms !== 'number') continue; // recording mode
@@ -385,7 +497,7 @@ async function main() {
   }
 
   const report = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     tool: 'hook-path-bench',
     runner: { platform: process.platform, arch: process.arch, node: process.version },
     budgets: budgets ? 'eval/performance/hook-budgets.v1.json' : 'none (recording baseline)',
@@ -403,7 +515,7 @@ async function main() {
     for (const r of results) {
       console.log(
         `size ${r.size}: hook fallback/resident p95 ${r.hook.coldFallback.p95Ms}/${r.hook.residentWarm.p95Ms}ms · doctor cold p95 ${r.doctor.cold.p95Ms}ms · ` +
-          `doctor one-shot warm p95 ${r.doctor.oneShotWarm.p95Ms}ms`
+          `doctor one-shot/resident warm p95 ${r.doctor.oneShotWarm.p95Ms}/${r.doctor.residentWarm.p95Ms}ms`
       );
     }
   }
@@ -411,7 +523,9 @@ async function main() {
   if (failures.length > 0) process.exitCode = 1;
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.stack : String(error));
-  process.exitCode = 2;
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === SCRIPT) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.stack : String(error));
+    process.exitCode = 2;
+  });
+}

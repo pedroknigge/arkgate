@@ -77,6 +77,8 @@ every violation.
 Set `ARK_RESIDENT_HOOK=1` on both `ark-mcp` and its hook command. The pilot reuses the
 authoritative evaluator without caching decisions; stale inputs fall back one-shot.
 It is off by default, and `ApplyPatch` always uses the atomic one-shot preflight.
+With that MCP resident, `ark-check --doctor --json --resident` reuses canonical facts but
+recomputes live doctor surfaces; an absent or invalid snapshot falls back to the cold CLI.
 
 ### Opt-in repair payload (W4)
 

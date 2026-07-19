@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** V01 reproducible cold, one-shot-warm, and incremental analysis benchmark. */
+/** Reproducible cold, one-shot-warm, and canonical resolved-analysis benchmark. */
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -183,7 +183,7 @@ function runCheck(root, noCache = false) {
   );
 }
 
-function runIncremental(root) {
+function runCanonicalResolvedAnalysis(root) {
   const files = sourceFiles(root);
   const changedFile = path.relative(root, files[Math.floor(files.length / 2)]).split(path.sep).join('/');
   const result = runTimed(process.execPath, [WORKER, '--root', root, '--change', changedFile], root);
@@ -217,19 +217,34 @@ function loadBudgets() {
 export function budgetFailures(report, budgets) {
   const failures = [];
   const cold = report.results.find((result) => result.size === budgets.scenarios.cold.size)?.cold;
-  const incremental = report.results.find((result) => result.size === budgets.scenarios.incremental.size)?.incremental;
+  const canonicalResolvedAnalysis = report.results.find(
+    (result) => result.size === budgets.scenarios.canonicalResolvedAnalysis.size
+  )?.canonicalResolvedAnalysis;
   const oneShotWarm = report.results.find(
     (result) => result.size === budgets.scenarios.oneShotWarm.size
   )?.oneShotWarm;
   if (cold && cold.p95Ms > budgets.scenarios.cold.maxP95Ms) failures.push(`cold p95 ${cold.p95Ms}ms exceeds ${budgets.scenarios.cold.maxP95Ms}ms`);
-  if (incremental && incremental.p95Ms >= budgets.scenarios.incremental.maxP95Ms) failures.push(`incremental p95 ${incremental.p95Ms}ms is not below ${budgets.scenarios.incremental.maxP95Ms}ms`);
+  if (
+    canonicalResolvedAnalysis &&
+    Number.isFinite(budgets.scenarios.canonicalResolvedAnalysis.maxP95Ms) &&
+    canonicalResolvedAnalysis.p95Ms >= budgets.scenarios.canonicalResolvedAnalysis.maxP95Ms
+  ) {
+    failures.push(
+      `canonical resolved analysis p95 ${canonicalResolvedAnalysis.p95Ms}ms is not below ${budgets.scenarios.canonicalResolvedAnalysis.maxP95Ms}ms`
+    );
+  }
   if (oneShotWarm && oneShotWarm.p95Ms > budgets.scenarios.oneShotWarm.maxP95Ms) failures.push(`one-shot warm p95 ${oneShotWarm.p95Ms}ms exceeds ${budgets.scenarios.oneShotWarm.maxP95Ms}ms`);
   for (const result of report.results) {
     if (result.oneShotWarm.cacheMode !== budgets.scenarios.oneShotWarm.expectedCacheMode) failures.push(`one-shot warm cache mode is ${result.oneShotWarm.cacheMode} for n=${result.size}`);
     if (budgets.scenarios.oneShotWarm.requireLegacyCacheAbsent && !result.oneShotWarm.legacyCacheAbsent) failures.push(`retired legacy cache exists for n=${result.size}`);
     if (budgets.scenarios.oneShotWarm.requireColdOutputParity && !result.oneShotWarm.coldOutputParity) failures.push(`cold/one-shot-warm semantic output differs for n=${result.size}`);
-    if (budgets.scenarios.incremental.requirePolicyHashPreserved && !result.incremental.policyHashPreserved) failures.push(`incremental policy hash changed for n=${result.size}`);
-    if (budgets.scenarios.incremental.requireContentHashPreserved && !result.incremental.contentHashPreserved) failures.push(`incremental unchanged-content hash changed for n=${result.size}`);
+    const canonical = result.canonicalResolvedAnalysis;
+    if (budgets.scenarios.canonicalResolvedAnalysis.requireOutputParity && !canonical.outputParity) failures.push(`canonical resolved output differs from the validated oracle for n=${result.size}`);
+    if (budgets.scenarios.canonicalResolvedAnalysis.requireVerdictParity && !canonical.verdictParity) failures.push(`canonical resolved verdict differs from the validated oracle for n=${result.size}`);
+    if (budgets.scenarios.canonicalResolvedAnalysis.requireFactsHashParity && !canonical.factsHashParity) failures.push(`canonical resolved facts hash differs from the validated oracle for n=${result.size}`);
+    if (budgets.scenarios.canonicalResolvedAnalysis.requireCandidateTreeHashParity && !canonical.candidateTreeHashParity) failures.push(`canonical resolved tree hash differs from the validated oracle for n=${result.size}`);
+    if (budgets.scenarios.canonicalResolvedAnalysis.requireCandidateIdentityChanged && !canonical.candidateIdentityChanged) failures.push(`canonical resolved candidate identity did not change for n=${result.size}`);
+    if (!canonical.resolutionExcluded || canonical.timedStage !== 'analysis-only') failures.push(`canonical resolved measurement includes resolution for n=${result.size}`);
     if (result.peakRssBytes > budgets.scenarios.memory.maxPeakRssBytes) failures.push(`peak RSS ${result.peakRssBytes} exceeds ${budgets.scenarios.memory.maxPeakRssBytes}`);
     if (result.status !== 0) failures.push(`scenario failure for n=${result.size}`);
   }
@@ -244,9 +259,6 @@ function main() {
   fs.mkdirSync(base, { recursive: true });
 
   const budgets = loadBudgets();
-  const incrementalRuns = args.failBudget
-    ? Math.max(args.runs, budgets.sampling.minIncrementalRuns ?? args.runs)
-    : args.runs;
   const results = [];
   for (const size of args.sizes) {
     const root = path.join(base, `n${size}`);
@@ -269,26 +281,50 @@ function main() {
         matchesReference(oneShotWarmPrime) &&
         oneShotWarm.samples.every(matchesReference)
     );
-    runIncremental(root); // primes the incremental worker path outside measured samples
-    const incremental = summary(Array.from({ length: incrementalRuns }, () => runIncremental(root)));
-    incremental.policyHashPreserved = incremental.samples.every((sample) => sample.policyHashPreserved === true);
-    incremental.contentHashPreserved = incremental.samples.every((sample) => sample.contentHashPreserved === true);
+    const canonicalResolvedAnalysisRuns = args.failBudget
+      ? size === budgets.scenarios.canonicalResolvedAnalysis.size
+        ? Math.max(args.runs, budgets.sampling.minCanonicalResolvedAnalysisRuns ?? args.runs)
+        : 1
+      : args.runs;
+    runCanonicalResolvedAnalysis(root); // primes the canonical worker path outside measured samples
+    const canonicalResolvedAnalysis = summary(
+      Array.from({ length: canonicalResolvedAnalysisRuns }, () =>
+        runCanonicalResolvedAnalysis(root)
+      )
+    );
+    for (const field of [
+      'outputParity',
+      'verdictParity',
+      'factsHashParity',
+      'candidateTreeHashParity',
+      'candidateIdentityChanged',
+      'resolutionExcluded',
+    ]) {
+      canonicalResolvedAnalysis[field] = canonicalResolvedAnalysis.samples.every(
+        (sample) => sample[field] === true
+      );
+    }
+    canonicalResolvedAnalysis.timedStage = canonicalResolvedAnalysis.samples.every(
+      (sample) => sample.timedStage === 'analysis-only'
+    )
+      ? 'analysis-only'
+      : 'mixed';
     const peakRssBytes = Math.max(
       cold.peakRssBytes,
       oneShotWarm.peakRssBytes,
-      incremental.peakRssBytes
+      canonicalResolvedAnalysis.peakRssBytes
     );
     results.push({
       size,
       runs: args.runs,
-      incrementalRuns,
+      canonicalResolvedAnalysisRuns,
       status:
-        cold.failures + oneShotWarmPrime.status + oneShotWarm.failures + incremental.failures === 0
+        cold.failures + oneShotWarmPrime.status + oneShotWarm.failures + canonicalResolvedAnalysis.failures === 0
           ? 0
           : 1,
       cold,
       oneShotWarm,
-      incremental,
+      canonicalResolvedAnalysis,
       peakRssBytes,
       // Compatibility summary for the former Q5 contract.
       p50Ms: cold.p50Ms,
@@ -297,7 +333,7 @@ function main() {
   }
 
   const report = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     tool: 'ark-scale-bench',
     runner: { platform: process.platform, arch: process.arch, node: process.version },
     budgets: { schemaVersion: budgets.schemaVersion, path: path.relative(REPO, BUDGETS) },
@@ -328,7 +364,7 @@ function main() {
     for (const row of results) {
       console.log(
         `  n=${row.size} cold p95=${row.cold.p95Ms?.toFixed(1)}ms one-shot-warm p95=${row.oneShotWarm.p95Ms?.toFixed(1)}ms ` +
-          `incremental p95=${row.incremental.p95Ms?.toFixed(1)}ms cacheMode=${row.oneShotWarm.cacheMode} parity=${row.oneShotWarm.coldOutputParity} rss=${row.peakRssBytes} status=${row.status}`
+          `canonical-analysis p95=${row.canonicalResolvedAnalysis.p95Ms?.toFixed(1)}ms cacheMode=${row.oneShotWarm.cacheMode} parity=${row.canonicalResolvedAnalysis.outputParity} rss=${row.peakRssBytes} status=${row.status}`
       );
     }
   }

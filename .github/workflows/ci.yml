@@ -9,6 +9,27 @@ on:
   pull_request:
 
 jobs:
+  z07-feedback:
+    name: Z07 bounded feedback
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: PR-relevant feedback under 10 seconds
+        run: npm run test:z07:pr -- --json --out z07-feedback.pr.json
+      - name: Full Z07 non-mutation corpus under 30 seconds
+        run: npm run test:z07:nonmutation -- --json --out z07-feedback.full.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: z07-feedback-${{ github.sha }}
+          path: z07-feedback.*.json
+
   adapter-parity:
     name: Adapter parity
     runs-on: ubuntu-latest
@@ -66,15 +87,15 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Enforce Phase Z performance budgets
-        run: npm run bench:scale -- --sizes 1000,10000,50000 --runs 5 --fail-budget --json --out performance.v2.json
+        run: npm run bench:scale -- --sizes 1000,10000,50000 --runs 5 --fail-budget --json --out performance.v3.json
       - name: Hook-path end-to-end budgets (U06)
-        run: node scripts/hook-path-bench.mjs --sizes 1000,10000 --runs 9 --fail-budget --json --out hook-performance.v3.json
+        run: node scripts/hook-path-bench.mjs --sizes 1000,10000 --runs 9 --fail-budget --json --out hook-performance.v4.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: performance-z07-${{ github.sha }}
           path: |
-            performance.v2.json
-            hook-performance.v3.json
+            performance.v3.json
+            hook-performance.v4.json
 
   fuzz:
     name: Deterministic fuzz

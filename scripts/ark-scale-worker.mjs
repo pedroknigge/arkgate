@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { analyzeChange, analyzeProject, loadContract } from '../dist/index.js';
+import {
+  analyzeResolvedProject,
+  analyzeTrustedResolvedProject,
+  loadContract,
+} from '../bin/lib/analysis-engine.mjs';
+import { resolveCandidateFacts } from '../bin/lib/resolved-candidate-facts.mjs';
+import { loadTypeScript } from '../bin/lib/typescript-host.mjs';
 
 function parseArgs(argv) {
   const out = { root: null, change: null };
@@ -14,49 +19,65 @@ function parseArgs(argv) {
   return out;
 }
 
-function sourceFiles(root) {
-  const files = [];
-  const visit = (directory) => {
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'core-link') continue;
-      const absolute = path.join(directory, entry.name);
-      if (entry.isDirectory()) visit(absolute);
-      else if (/\.(?:[cm]?[jt]s|tsx|jsx)$/.test(entry.name)) {
-        files.push({ path: path.relative(root, absolute).split(path.sep).join('/'), content: fs.readFileSync(absolute, 'utf8') });
-      }
-    }
-  };
-  visit(root);
-  return files.sort((left, right) => left.path.localeCompare(right.path));
-}
-
 const args = parseArgs(process.argv.slice(2));
 const root = path.resolve(args.root);
-const files = sourceFiles(root);
-const contract = loadContract(JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8')));
-const before = analyzeProject({ contract, files });
-const changed = files.find((file) => file.path === args.change);
-if (!changed) throw new Error(`Changed file not found: ${args.change}`);
-const changes = [{ path: changed.path, content: `${changed.content}\nexport const incrementalMarker = true;\n` }];
-// Each benchmark sample uses a fresh process. Prime the same public API outside the timed region
-// so the reported latency represents steady-state incremental analysis rather than first-call JIT.
-analyzeChange({ contract, files, changes });
-const start = process.hrtime.bigint();
-const after = analyzeChange({
-  contract,
-  files,
-  changes,
+const changePath = String(args.change).replace(/\\/g, '/');
+const changedFile = path.resolve(root, ...changePath.split('/'));
+if (path.relative(root, changedFile).startsWith('..')) {
+  throw new Error(`Changed file is outside the fixture: ${args.change}`);
+}
+const config = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
+const loaded = await loadTypeScript(root);
+if (!loaded.ts) throw new Error(loaded.reason ?? 'TypeScript is unavailable.');
+const content = `${fs.readFileSync(changedFile, 'utf8')}\nexport const canonicalCandidateMarker = true;\n`;
+const contract = loadContract(config);
+
+// Resolution and the validated oracle deliberately remain outside the timed analysis stage.
+const resolutionStart = process.hrtime.bigint();
+const baseFacts = resolveCandidateFacts({ root, config, ts: loaded.ts });
+const candidateFacts = resolveCandidateFacts({
+  root,
+  config,
+  ts: loaded.ts,
+  changes: [{ path: changePath, content }],
 });
+const resolutionMs = Number(process.hrtime.bigint() - resolutionStart) / 1e6;
+const oracle = analyzeResolvedProject({ contract, facts: candidateFacts });
+const oracleBytes = JSON.stringify(oracle);
+
+// Prime JIT only. The timed call recomputes the verdict from immutable canonical facts.
+analyzeTrustedResolvedProject({ contract, facts: candidateFacts });
+const start = process.hrtime.bigint();
+const after = analyzeTrustedResolvedProject({ contract, facts: candidateFacts });
 const ms = Number(process.hrtime.bigint() - start) / 1e6;
-const unchanged = files.find((file) => file.path !== changed.path)?.path;
-const beforeHash = before.ir.files.find((file) => file.path === unchanged)?.contentHash;
-const afterHash = after.ir.files.find((file) => file.path === unchanged)?.contentHash;
 const maxRss = process.resourceUsage().maxRSS;
+const outputParity = JSON.stringify(after) === oracleBytes;
+const factsHashParity = after.factsHash === oracle.factsHash && after.factsHash === candidateFacts.factsHash;
+const candidateTreeHashParity =
+  after.candidateTreeHash === oracle.candidateTreeHash &&
+  after.candidateTreeHash === candidateFacts.candidateTreeHash;
+const verdictParity = after.valid === oracle.valid && after.strictValid === oracle.strictValid;
+const candidateIdentityChanged =
+  baseFacts.factsHash !== candidateFacts.factsHash &&
+  baseFacts.candidateTreeHash !== candidateFacts.candidateTreeHash;
 
 console.log(JSON.stringify({
-  status: 0,
+  status:
+    outputParity && factsHashParity && candidateTreeHashParity && verdictParity && candidateIdentityChanged
+      ? 0
+      : 1,
   ms,
   peakRssBytes: process.platform === 'darwin' ? maxRss : maxRss * 1024,
-  policyHashPreserved: before.ir.policyHash === after.ir.policyHash,
-  contentHashPreserved: Boolean(beforeHash && beforeHash === afterHash),
+  scenario: 'canonical-resolved-analysis',
+  timedStage: 'analysis-only',
+  resolutionExcluded: true,
+  resolutionMs,
+  changedPath: changePath,
+  outputParity,
+  verdictParity,
+  factsHashParity,
+  candidateTreeHashParity,
+  candidateIdentityChanged,
+  factsHash: after.factsHash,
+  candidateTreeHash: after.candidateTreeHash,
 }));

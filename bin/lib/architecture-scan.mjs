@@ -2,203 +2,29 @@
  * Architecture check pipeline: content scan → import graph → layer edges → cycles.
  * Extracted from ark-check entry (R3). Entry remains orchestration + presentation.
  */
-import fs from 'node:fs';
 import path from 'node:path';
-import {
-  looksLikeIntent,
-} from '../ark-shared.mjs';
-import {
-  isArkPublishCandidate,
-  isPublishCall,
-  lineOf,
-  namedModuleBindings,
-  objectHasProperty,
-  publishHasSource,
-  publishSourceLiteral,
-  sourceFileExportsOnlyTypes,
-  sourceFileHasTopLevelSideEffects,
-  stringLiteralText,
-  typeOnlyExportNames,
-} from './ast-scan.mjs';
 import { summarizeParseHealth } from './parse-health.mjs';
 import {
-  intentLayersFromManifest,
-  layerForIntent,
-  isBlocked,
-} from './config-warnings.mjs';
-import {
-  analyzeResolvedProject,
-  ambientCoveredByForbiddenGlobals,
-  collectCapabilityUses,
-  collectForbiddenCapabilityUses,
-  effectiveCapabilityDeny,
-  extractSemanticDependencies,
-  forbiddenGlobalForModuleSpecifier,
+  analyzeTrustedResolvedProject,
   loadContract,
 } from './analysis-engine.mjs';
-import { normalize } from './scan-files.mjs';
-import { classifyPublishFacts } from './source-policy.mjs';
 import { effectiveAnalysisConfig } from './analysis-policy.mjs';
 import { resolveCandidateFacts } from './resolved-candidate-facts.mjs';
 
-/**
- * Parse one governed source file into content violations + module edges.
- */
-export function scanSourceFile(ts, root, config, rules, manifestIntentLayers, file, sourceLayer) {
-  const source = fs.readFileSync(file, 'utf8');
-  const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
-  const violations = [];
-  const edges = [];
-
-  const layerConfig = config.layers.find((layer) => layer.name === sourceLayer);
-  const forbiddenGlobals = Array.isArray(layerConfig?.forbiddenGlobals)
-    ? layerConfig.forbiddenGlobals.filter((entry) => typeof entry === 'string')
-    : [];
-  for (const use of collectForbiddenCapabilityUses(ts, sourceFile, forbiddenGlobals)) {
-    violations.push({
-      ruleId: 'FORBIDDEN_GLOBAL',
-      file: normalize(path.relative(root, file)),
-      line: use.line,
-      fromLayer: sourceLayer,
-      target: use.name,
-      message: `${sourceLayer} must not use the ambient global "${use.name}".`,
-    });
-  }
-
-  // U04 — opted-in capability walls (ADR 0009). One violation, one voice: an
-  // ambient use already covered by this layer's forbiddenGlobals reports only
-  // FORBIDDEN_GLOBAL (D7 dedup); absence of the surface adds nothing.
-  const capabilityDeny = new Set(effectiveCapabilityDeny(layerConfig ?? {}));
-  if (capabilityDeny.size > 0) {
-    for (const use of collectCapabilityUses(ts, sourceFile)) {
-      if (!capabilityDeny.has(use.capability)) continue;
-      if (
-        (use.source === 'ambient-global' &&
-          ambientCoveredByForbiddenGlobals(use.symbol, forbiddenGlobals)) ||
-        (use.source === 'import-based' &&
-          forbiddenGlobalForModuleSpecifier(use.symbol, forbiddenGlobals))
-      ) {
-        continue;
-      }
-      violations.push({
-        ruleId: 'CAPABILITY_VIOLATION',
-        file: normalize(path.relative(root, file)),
-        line: use.line,
-        fromLayer: sourceLayer,
-        target: use.symbol,
-        capability: use.capability,
-        message:
-          use.source === 'import-based'
-            ? `${sourceLayer} denies the ${use.capability} capability; found import of "${use.symbol}".`
-            : `${sourceLayer} denies the ${use.capability} capability; found ambient "${use.symbol}".`,
-      });
-    }
-  }
-
-  const checkModuleEdge = (specifier, node, kind, typeOnly = false) => {
-    const namedBindings = namedModuleBindings(ts, node);
-    edges.push({
-      specifier,
-      line: lineOf(sourceFile, node.getStart(sourceFile)),
-      kind,
-      typeOnly,
-      ...(namedBindings ? { namedBindings } : {}),
-    });
+/** Resolve canonical facts and retain the filesystem probes needed to invalidate them. */
+export function resolveArchitectureSnapshot({ root, config, manifest, rules, files, ts, args }) {
+  const observedInputs = new Map();
+  const observeInput = (inputPath, kind) => {
+    const absolute = path.resolve(inputPath);
+    const kinds = observedInputs.get(absolute) ?? new Set();
+    kinds.add(kind);
+    observedInputs.set(absolute, kinds);
   };
-
-  for (const dependency of extractSemanticDependencies(ts, sourceFile)) {
-    if (!dependency.specifier) continue;
-    checkModuleEdge(
-      dependency.specifier,
-      dependency.node,
-      dependency.kind,
-      dependency.typeOnly
-    );
-  }
-
-  const needsPolicyWalk =
-    /\bpublish\s*\(|\bintent\b/.test(source) ||
-    /['"`]\s*[A-Z][A-Za-z0-9_]*\./.test(source);
-  const visit = (node) => {
-    if (ts.isCallExpression(node)) {
-      if (isPublishCall(ts, node)) {
-        const firstArg = node.arguments[0];
-        const rawIntent = stringLiteralText(ts, firstArg);
-        for (const finding of classifyPublishFacts({
-          publishCall: true,
-          rawIntentName: rawIntent,
-          objectHasIntent: objectHasProperty(ts, firstArg, 'intent'),
-          arkPublishCandidate: isArkPublishCandidate(ts, node),
-          hasSource: publishHasSource(ts, node),
-        })) {
-          violations.push({
-            ruleId: finding.ruleId,
-            file: normalize(path.relative(root, file)),
-            line: lineOf(sourceFile, node.getStart(sourceFile)),
-            ...(finding.ruleId === 'PUBLISH_MISSING_SOURCE' ? { fromLayer: sourceLayer } : {}),
-            message: finding.message,
-          });
-        }
-
-        const sourceIntent = publishSourceLiteral(ts, node);
-        if (sourceIntent && looksLikeIntent(sourceIntent)) {
-          const sourceIntentLayer = layerForIntent(
-            sourceIntent,
-            config.layers,
-            manifestIntentLayers
-          );
-          if (sourceIntentLayer && sourceIntentLayer !== sourceLayer) {
-            violations.push({
-              ruleId: 'PUBLISH_SOURCE_LAYER_MISMATCH',
-              file: normalize(path.relative(root, file)),
-              line: lineOf(sourceFile, node.getStart(sourceFile)),
-              fromLayer: sourceLayer,
-              toLayer: sourceIntentLayer,
-              target: sourceIntent,
-              message:
-                `Publish source "${sourceIntent}" resolves to ${sourceIntentLayer}, but the publishing file is classified as ${sourceLayer}.`,
-            });
-          }
-        }
-      }
-    }
-
-    if (ts.isStringLiteralLike(node) && looksLikeIntent(node.text)) {
-      const targetLayer = layerForIntent(node.text, config.layers, manifestIntentLayers);
-      const rule = targetLayer ? isBlocked(rules, sourceLayer, targetLayer) : undefined;
-      if (rule) {
-        violations.push({
-          ruleId: 'LAYER_INTENT_REFERENCE_VIOLATION',
-          file: normalize(path.relative(root, file)),
-          line: lineOf(sourceFile, node.getStart(sourceFile)),
-          fromLayer: sourceLayer,
-          toLayer: targetLayer,
-          target: node.text,
-          message:
-            rule.message ??
-            `${sourceLayer} must not reference ${targetLayer} intent ${node.text}.`,
-        });
-      }
-    }
-
-    ts.forEachChild(node, visit);
-  };
-  if (needsPolicyWalk) visit(sourceFile);
-  return {
-    contentViolations: violations,
-    edges,
-    parseDiagnosticCount: sourceFile.parseDiagnostics?.length ?? 0,
-    exportsOnlyTypes: sourceFileExportsOnlyTypes(ts, sourceFile),
-    typeOnlyExportNames: typeOnlyExportNames(ts, sourceFile),
-    hasTopLevelSideEffects: sourceFileHasTopLevelSideEffects(ts, sourceFile),
-  };
-}
-
-/**
- * Full architecture scan for governed files.
- * @returns {{ violations: object[], warnings: object[] }}
- */
-export function runArchitectureScan({ root, config, manifest, rules, files, ts, args }) {
+  const configPath = args?.config
+    ? path.resolve(root, args.config)
+    : path.join(root, 'ark.config.json');
+  observeInput(configPath, 'ark-config');
+  if (args?.manifest) observeInput(path.resolve(root, args.manifest), 'manifest');
   const effectiveConfig = effectiveAnalysisConfig(
     { ...config, rules: rules ?? config.rules },
     manifest
@@ -208,31 +34,41 @@ export function runArchitectureScan({ root, config, manifest, rules, files, ts, 
     config: effectiveConfig,
     ts,
     ...(args?.tsconfig ? { tsconfig: args.tsconfig } : {}),
+    observeInput,
   });
-  const loadedContract = loadContract(
-    effectiveConfig,
-    args?.config ? path.resolve(root, args.config) : path.join(root, 'ark.config.json')
-  );
-  const result = analyzeResolvedProject({ contract: loadedContract, facts });
+  const loadedContract = loadContract(effectiveConfig, configPath);
+  const analyzed = analyzeTrustedResolvedProject({ contract: loadedContract, facts });
   const parseHealth = summarizeParseHealth(
     facts.files.map((file) => ({
       relFile: file.path,
       entry: { parseDiagnosticCount: file.parseDiagnosticCount },
     }))
   );
-  return {
-    violations: result.ir.violations,
-    warnings: result.ir.warnings,
-    safety: result.safety,
+  const result = {
+    violations: analyzed.ir.violations,
+    warnings: analyzed.ir.warnings,
+    safety: analyzed.safety,
     parseHealth,
-    completeness: result.completeness,
-    completenessReasons: result.completenessReasons,
-    valid: result.valid,
-    strictValid: result.strictValid,
-    mode: result.mode,
-    policyHash: result.policyHash,
-    resolverIdentity: result.resolverIdentity,
-    factsHash: result.factsHash,
-    candidateTreeHash: result.candidateTreeHash,
+    completeness: analyzed.completeness,
+    completenessReasons: analyzed.completenessReasons,
+    valid: analyzed.valid,
+    strictValid: analyzed.strictValid,
+    mode: analyzed.mode,
+    policyHash: analyzed.policyHash,
+    resolverIdentity: analyzed.resolverIdentity,
+    factsHash: analyzed.factsHash,
+    candidateTreeHash: analyzed.candidateTreeHash,
   };
+  const inputs = [...observedInputs]
+    .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+    .map(([inputPath, kinds]) => ({ path: inputPath, kinds: [...kinds].sort() }));
+  return { facts, result, inputs };
+}
+
+/**
+ * Full architecture scan for governed files.
+ * @returns {{ violations: object[], warnings: object[] }}
+ */
+export function runArchitectureScan(options) {
+  return resolveArchitectureSnapshot(options).result;
 }

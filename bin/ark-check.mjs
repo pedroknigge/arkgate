@@ -94,6 +94,7 @@ import { ANALYSIS_COMPLETENESS, analysisIncompleteStatement } from './lib/analys
 import { reportUnavailableAnalysis } from './lib/unavailable-analysis.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import { analyzePolicyTransition } from './lib/policy-delta-io.mjs';
+import { tryResidentDoctor } from './lib/resident-doctor-client.mjs';
 
 function parseArgs(argv) {
   const args = {
@@ -119,6 +120,7 @@ function parseArgs(argv) {
     policyAck: undefined,
     updateBaseline: false,
     noCache: false,
+    resident: false,
     coverage: false,
     migrateCommands: false,
     doctor: false,
@@ -190,6 +192,7 @@ function parseArgs(argv) {
     else if (arg === '--codex-home') args.codexHome = true;
     else if (arg === '--migrate-commands') args.migrateCommands = true;
     else if (arg === '--no-cache') args.noCache = true;
+    else if (arg === '--resident') args.resident = true;
     else if (arg === '--report') {
       const next = argv[i + 1];
       args.report = next && !next.startsWith('-') ? argv[++i] : 'ark-report.html';
@@ -232,7 +235,7 @@ function usage() {
     'Usage: arkgate-check | ark-check  (identical bins; product name ArkGate)',
     '       ark-check --version',
     '       ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-merge | --strict | --strict-config] [--policy-base <file> | --policy-base-ref <git-ref>] [--policy-ack <file>] [--require-gates] [--require-write-hook <host>] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
-    '       ark-check --doctor [--json]            read-only enforcement, safety, and advisory design diagnosis',
+    '       ark-check --doctor [--json] [--resident]  read-only diagnosis; resident JSON falls back cold',
     '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
     '       ark-check --plan [--json]              classified remediation plan (mechanical-safe / judgment / deferred) + goal; report only',
     '       ark-check --recommend [--json] [--write-plan]  application-shape plan; --write-plan emits ark-adoption-plan.json',
@@ -905,6 +908,7 @@ const color = {
 
 async function main() {
   const args = parseArgs(process.argv);
+  if (await tryResidentDoctor(args)) return;
   if (args.version) {
     console.log(arkPackageVersion());
     process.exit(0);

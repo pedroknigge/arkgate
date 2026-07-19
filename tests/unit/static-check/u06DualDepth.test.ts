@@ -185,7 +185,7 @@ describe('U06 dual depth — ESLint parity (import dimension)', () => {
 });
 
 describe('U06 budgets — D5 method and Phase Z observations are locked', () => {
-  it('the budgets file records the method and stays in recording mode until a Linux baseline', () => {
+  it('the budgets file records the method and arms only metrics with Linux evidence', () => {
     const budgets = JSON.parse(
       fs.readFileSync(path.resolve('eval/performance/hook-budgets.v1.json'), 'utf8')
     );
@@ -198,9 +198,9 @@ describe('U06 budgets — D5 method and Phase Z observations are locked', () => 
     });
     expect(budgets.scenarios.hookResidentWarm).toMatchObject({
       metric: 'hook.residentWarm',
-      baselineMs: null,
+      baselineMs: 41.487,
       targetP95Ms: 65,
-      maxP95Ms: null,
+      maxP95Ms: 65,
     });
     expect(budgets.scenarios.doctorCold).toMatchObject({
       baselineMs: 5154.522,

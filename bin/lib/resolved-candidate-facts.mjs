@@ -13,7 +13,7 @@ import {
   AMBIENT_CAPABILITY_ENTRIES,
   collectCapabilityUses,
   collectForbiddenCapabilityUses,
-  createResolvedCandidateFacts,
+  createTrustedResolvedCandidateFacts,
   deterministicHash,
   extractSemanticDependencies,
   looksLikeArkIntent,
@@ -98,9 +98,15 @@ function isIncluded(relativePath, include) {
   });
 }
 
-function readPackageName(root) {
+function observeResolvedInput(observeInput, inputPath, kind) {
+  if (typeof inputPath === 'string') observeInput?.(path.resolve(inputPath), kind);
+}
+
+function readPackageName(root, observeInput) {
+  const packagePath = path.join(root, 'package.json');
+  observeResolvedInput(observeInput, packagePath, 'package');
   try {
-    const parsed = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+    const parsed = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
     return typeof parsed?.name === 'string' && parsed.name.length > 0 ? parsed.name : undefined;
   } catch {
     return undefined;
@@ -120,15 +126,18 @@ function rememberDirectoryAlias(aliases, real, relative, absolute) {
   aliases.set(real, current);
 }
 
-function potentialRealpath(root, absolute) {
+function potentialRealpath(root, absolute, observeInput) {
   const suffix = [];
   let existing = path.resolve(absolute);
-  while (!fs.existsSync(existing)) {
+  while (true) {
+    observeResolvedInput(observeInput, existing, 'exists');
+    if (fs.existsSync(existing)) break;
     const parent = path.dirname(existing);
     if (parent === existing) return undefined;
     suffix.unshift(path.basename(existing));
     existing = parent;
   }
+  observeResolvedInput(observeInput, existing, 'realpath');
   const real = path.join(fs.realpathSync(existing), ...suffix);
   if (!isInsideRoot(root, real)) {
     throw new Error(`Refusing candidate overlay through a symlink outside project root.`);
@@ -154,9 +163,16 @@ export function resolvedInputIdentities(root, inputs) {
   return identities;
 }
 
-function canonicalOverlayPath(root, requested, fileAliases, directoryAliases, config) {
+function canonicalOverlayPath(
+  root,
+  requested,
+  fileAliases,
+  directoryAliases,
+  config,
+  observeInput
+) {
   const absolute = path.join(root, ...requested.split('/'));
-  const real = potentialRealpath(root, absolute);
+  const real = potentialRealpath(root, absolute, observeInput);
   if (!real) return requested;
   const fileAlias = fileAliases.get(real);
   if (fileAlias) return fileAlias.relative;
@@ -182,13 +198,14 @@ function canonicalOverlayPath(root, requested, fileAliases, directoryAliases, co
   return [...candidates].sort()[0] ?? requested;
 }
 
-function collectCandidateFiles(root, config, changes) {
+function collectCandidateFiles(root, config, changes, observeInput) {
   const files = new Map();
   const directoryAliases = new Map();
   const expandedAliasDirectories = new Set();
   const discovered = (config.include ?? [])
     .flatMap((entry) =>
       collectGovernedFiles(root, { ...config, include: [entry] }, {
+        observeInput,
         onDirectory(absolute, real) {
           let relative = normalize(path.relative(root, absolute));
           if (relative === '.') relative = '';
@@ -196,11 +213,14 @@ function collectCandidateFiles(root, config, changes) {
         },
       })
     )
-    .map((absolute) => ({
-      absolute,
-      real: fs.realpathSync(absolute),
-      relative: canonicalProjectPath(normalize(path.relative(root, absolute))),
-    }))
+    .map((absolute) => {
+      observeResolvedInput(observeInput, absolute, 'realpath');
+      return {
+        absolute,
+        real: fs.realpathSync(absolute),
+        relative: canonicalProjectPath(normalize(path.relative(root, absolute))),
+      };
+    })
     .sort((left, right) =>
       left.relative < right.relative ? -1 : left.relative > right.relative ? 1 : 0
     );
@@ -223,6 +243,7 @@ function collectCandidateFiles(root, config, changes) {
     while (isInsideRoot(root, absoluteDirectory)) {
       if (expandedAliasDirectories.has(absoluteDirectory)) break;
       expandedAliasDirectories.add(absoluteDirectory);
+      observeResolvedInput(observeInput, absoluteDirectory, 'realpath');
       const realDirectory = fs.realpathSync(absoluteDirectory);
       rememberDirectoryAlias(
         directoryAliases,
@@ -237,6 +258,7 @@ function collectCandidateFiles(root, config, changes) {
     }
   }
   for (const { absolute, real, relative } of canonicalByRealpath.values()) {
+    observeResolvedInput(observeInput, absolute, 'source');
     files.set(relative, {
       path: relative,
       absolute: path.resolve(absolute),
@@ -254,7 +276,8 @@ function collectCandidateFiles(root, config, changes) {
       requested,
       fileAliases,
       directoryAliases,
-      config
+      config,
+      observeInput
     );
     if (changed.has(relative)) {
       throw new Error(`Atomic candidate overlay contains duplicate path ${relative}.`);
@@ -300,7 +323,8 @@ export function canonicalizeCandidateChanges({ root, config, changes = [] }) {
   );
 }
 
-function tryRealpath(value) {
+function tryRealpath(value, observeInput) {
+  observeResolvedInput(observeInput, value, 'realpath');
   try {
     return fs.realpathSync(value);
   } catch {
@@ -308,7 +332,7 @@ function tryRealpath(value) {
   }
 }
 
-function createOverlayModuleHost(ts, root, files, changes) {
+function createOverlayModuleHost(ts, root, files, changes, observeInput) {
   const sys = ts.sys;
   const byAbsolute = new Map();
   const pathByAbsolute = new Map();
@@ -331,7 +355,7 @@ function createOverlayModuleHost(ts, root, files, changes) {
   };
   for (const file of files) {
     remember(file.absolute, file);
-    const real = file.real ?? tryRealpath(file.absolute);
+    const real = file.real ?? tryRealpath(file.absolute, observeInput);
     if (real && isInsideRoot(root, real)) remember(real, file);
   }
   const candidateByPath = new Map(files.map((file) => [file.path, file]));
@@ -350,7 +374,7 @@ function createOverlayModuleHost(ts, root, files, changes) {
       const absolute = path.join(root, ...canonicalProjectPath(alias).split('/'));
       if (change?.delete === true) {
         deleted.add(path.resolve(absolute));
-        const real = tryRealpath(absolute);
+        const real = tryRealpath(absolute, observeInput);
         if (real && isInsideRoot(root, real)) deleted.add(path.resolve(real));
       } else if (candidate) {
         remember(absolute, candidate);
@@ -360,12 +384,14 @@ function createOverlayModuleHost(ts, root, files, changes) {
 
   const fileExists = (fileName) => {
     const absolute = path.resolve(fileName);
+    observeResolvedInput(observeInput, absolute, 'module-file');
     if (deleted.has(absolute)) return false;
     if (byAbsolute.has(absolute)) return true;
     return sys?.fileExists ? sys.fileExists(fileName) : fs.existsSync(fileName);
   };
   const readFile = (fileName) => {
     const absolute = path.resolve(fileName);
+    observeResolvedInput(observeInput, absolute, 'module-read');
     if (deleted.has(absolute)) return undefined;
     const candidate = byAbsolute.get(absolute);
     if (candidate) return candidate.content;
@@ -378,6 +404,7 @@ function createOverlayModuleHost(ts, root, files, changes) {
   };
   const directoryExists = (directory) => {
     const absolute = path.resolve(directory);
+    observeResolvedInput(observeInput, absolute, 'module-directory');
     if (virtualDirectories.has(absolute)) return true;
     if (sys?.directoryExists) return sys.directoryExists(directory);
     try {
@@ -388,6 +415,7 @@ function createOverlayModuleHost(ts, root, files, changes) {
   };
   const getDirectories = (directory) => {
     const absolute = path.resolve(directory);
+    observeResolvedInput(observeInput, absolute, 'module-directory');
     const names = new Set();
     if (sys?.getDirectories) {
       for (const item of sys.getDirectories(directory)) names.add(path.basename(item));
@@ -407,10 +435,11 @@ function createOverlayModuleHost(ts, root, files, changes) {
   };
   const realpath = (fileName) => {
     const absolute = path.resolve(fileName);
+    observeResolvedInput(observeInput, absolute, 'module-realpath');
     if (deleted.has(absolute)) return absolute;
     const candidate = byAbsolute.get(absolute);
     if (candidate) {
-      const real = candidate.real ?? tryRealpath(candidate.absolute);
+      const real = candidate.real ?? tryRealpath(candidate.absolute, observeInput);
       return real && isInsideRoot(root, real) ? real : candidate.absolute;
     }
     if (sys?.realpath) return sys.realpath(fileName);
@@ -446,12 +475,13 @@ function createOverlayModuleHost(ts, root, files, changes) {
   };
 }
 
-function nearestTsconfig(root, fileName, cache) {
+function nearestTsconfig(root, fileName, cache, observeInput) {
   const initial = path.dirname(fileName);
   if (cache.has(initial)) return cache.get(initial);
   let directory = initial;
   while (isInsideRoot(root, directory)) {
     const candidate = path.join(directory, 'tsconfig.json');
+    observeResolvedInput(observeInput, candidate, 'exists');
     if (fs.existsSync(candidate)) {
       const resolved = path.resolve(candidate);
       cache.set(initial, resolved);
@@ -506,7 +536,7 @@ function portableCompilerValue(root, value, externalAnchor) {
   return portable;
 }
 
-function compilerContext(ts, root, tsconfig, candidateFiles) {
+function compilerContext(ts, root, tsconfig, candidateFiles, observeInput) {
   const explicitPath = tsconfig
     ? path.isAbsolute(tsconfig)
       ? path.resolve(tsconfig)
@@ -522,7 +552,12 @@ function compilerContext(ts, root, tsconfig, candidateFiles) {
     for (const file of candidateFiles) configByFile.set(path.resolve(file.absolute), explicitPath);
   } else if (!explicitPath) {
     for (const file of candidateFiles) {
-      const nearest = nearestTsconfig(root, file.absolute, nearestConfigByDirectory);
+      const nearest = nearestTsconfig(
+        root,
+        file.absolute,
+        nearestConfigByDirectory,
+        observeInput
+      );
       if (nearest) configByFile.set(path.resolve(file.absolute), nearest);
     }
   }
@@ -537,6 +572,7 @@ function compilerContext(ts, root, tsconfig, candidateFiles) {
   for (const configPath of configPaths) {
     const configContents = new Map();
     const readConfig = (fileName) => {
+      observeResolvedInput(observeInput, fileName, 'tsconfig');
       try {
         const content = fs.readFileSync(fileName, 'utf8');
         if (/\.jsonc?$/i.test(fileName)) configContents.set(path.resolve(fileName), content);
@@ -562,10 +598,14 @@ function compilerContext(ts, root, tsconfig, candidateFiles) {
       read.config,
       {
         useCaseSensitiveFileNames: ts.sys?.useCaseSensitiveFileNames ?? true,
-        readDirectory: ts.sys?.readDirectory
-          ? (...args) => ts.sys.readDirectory(...args)
-          : () => [],
-        fileExists: ts.sys?.fileExists ?? fs.existsSync,
+        readDirectory(...args) {
+          observeResolvedInput(observeInput, args[0], 'tsconfig-directory');
+          return ts.sys?.readDirectory ? ts.sys.readDirectory(...args) : [];
+        },
+        fileExists(fileName) {
+          observeResolvedInput(observeInput, fileName, 'tsconfig-exists');
+          return ts.sys?.fileExists ? ts.sys.fileExists(fileName) : fs.existsSync(fileName);
+        },
         readFile: readConfig,
       },
       path.dirname(configPath),
@@ -625,11 +665,20 @@ function compilerContext(ts, root, tsconfig, candidateFiles) {
 }
 
 /** Project-relative TypeScript config closure read by the shipped resolver. */
-export function resolvedCompilerInputPaths({ root, config, ts, tsconfig, changes = [] }) {
+export function resolvedCompilerInputPaths({
+  root,
+  config,
+  ts,
+  tsconfig,
+  changes = [],
+  observeInput,
+}) {
   if (!ts?.readConfigFile || !ts?.parseJsonConfigFileContent) return [];
+  observeResolvedInput(observeInput, root, 'realpath');
   const canonicalRoot = fs.realpathSync(root);
-  const candidate = collectCandidateFiles(canonicalRoot, config, changes);
-  return compilerContext(ts, canonicalRoot, tsconfig, candidate.files).configInputPaths;
+  const candidate = collectCandidateFiles(canonicalRoot, config, changes, observeInput);
+  return compilerContext(ts, canonicalRoot, tsconfig, candidate.files, observeInput)
+    .configInputPaths;
 }
 
 function resolveRelativeFallback(specifier, containingFile, host) {
@@ -874,7 +923,7 @@ function collectSafetyUses(ts, sourceFile, relativePath, source, dependencies) {
 }
 
 function unavailableFacts(config, ts, reason) {
-  return createResolvedCandidateFacts({
+  return createTrustedResolvedCandidateFacts({
     schemaVersion: '1.0',
     completeness: 'unavailable',
     completenessReasons: [{ code: 'RESOLVER_UNAVAILABLE', message: reason }],
@@ -894,7 +943,14 @@ function unavailableFacts(config, ts, reason) {
 }
 
 /** Resolve one complete candidate tree (base or virtual overlay) into versioned neutral facts. */
-export function resolveCandidateFacts({ root, config, ts, tsconfig, changes = [] }) {
+export function resolveCandidateFacts({
+  root,
+  config,
+  ts,
+  tsconfig,
+  changes = [],
+  observeInput,
+}) {
   if (!ts?.createSourceFile || !ts?.resolveModuleName) {
     return unavailableFacts(config, ts, 'No API-compatible TypeScript resolver is available.');
   }
@@ -904,11 +960,12 @@ export function resolveCandidateFacts({ root, config, ts, tsconfig, changes = []
   let canonicalChanges;
   let compiler;
   try {
+    observeResolvedInput(observeInput, root, 'realpath');
     canonicalRoot = fs.realpathSync(root);
-    const candidate = collectCandidateFiles(canonicalRoot, config, changes);
+    const candidate = collectCandidateFiles(canonicalRoot, config, changes, observeInput);
     candidateFiles = candidate.files;
     canonicalChanges = candidate.changes;
-    compiler = compilerContext(ts, canonicalRoot, tsconfig, candidateFiles);
+    compiler = compilerContext(ts, canonicalRoot, tsconfig, candidateFiles, observeInput);
   } catch (error) {
     return unavailableFacts(
       config,
@@ -917,7 +974,13 @@ export function resolveCandidateFacts({ root, config, ts, tsconfig, changes = []
     );
   }
 
-  const host = createOverlayModuleHost(ts, canonicalRoot, candidateFiles, canonicalChanges);
+  const host = createOverlayModuleHost(
+    ts,
+    canonicalRoot,
+    candidateFiles,
+    canonicalChanges,
+    observeInput
+  );
   const forbiddenGlobals = [
     ...new Set([
       ...AMBIENT_CAPABILITY_ENTRIES,
@@ -1075,8 +1138,8 @@ export function resolveCandidateFacts({ root, config, ts, tsconfig, changes = []
     }
   }
 
-  const projectPackageName = readPackageName(canonicalRoot);
-  return createResolvedCandidateFacts({
+  const projectPackageName = readPackageName(canonicalRoot, observeInput);
+  return createTrustedResolvedCandidateFacts({
     schemaVersion: '1.0',
     completeness: completenessReasons.length === 0 ? 'complete' : 'partial',
     completenessReasons,
