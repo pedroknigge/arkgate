@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "repositories": [
+    {
+      "id": "kata-users-ts",
+      "nouns": ["Invitation", "Profile", "Receipt", "Subscription"]
+    },
+    {
+      "id": "typescript-starter",
+      "nouns": ["Session", "Greeting", "Welcome", "Membership"]
+    },
+    {
+      "id": "nestjs-hexagonal-example",
+      "nouns": ["Ticket", "QueueItem", "TicketView", "Priority"]
+    },
+    {
+      "id": "nestjs-hexagonal-auth",
+      "nouns": ["Otp", "Permission", "Login", "Role"]
+    },
+    {
+      "id": "zod",
+      "nouns": ["SchemaLease", "RegistryEntry", "IssueView", "ParsePlan"]
+    },
+    {
+      "id": "yocto-queue",
+      "nouns": ["Lease", "QueueRecord", "QueueView", "Batch"]
+    }
+  ],
+  "scenarios": [
+    "clock-boundary",
+    "repository-port",
+    "presentation-mapper",
+    "cycle-extraction"
+  ]
+}

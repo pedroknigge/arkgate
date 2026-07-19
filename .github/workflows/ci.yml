@@ -150,6 +150,9 @@ jobs:
       - name: Analysis engine CLI bundle (drift guard)
         run: npm run check:analysis-engine
 
+      - name: Z08 prompt corpus (drift guard)
+        run: npm run check:z08-prompts
+
       - name: Test confidence (coverage + mutation)
         run: npm run test:confidence
         # Includes evalCorpus.test.ts (spawns npm run eval:corpus) — no separate step

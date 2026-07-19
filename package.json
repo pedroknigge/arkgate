@@ -106,6 +106,8 @@
     "check:cli-pure": "node scripts/generate-cli-pure.mjs --check",
     "generate:analysis-engine": "node scripts/generate-analysis-engine.mjs",
     "check:analysis-engine": "node scripts/generate-analysis-engine.mjs --check",
+    "generate:z08-prompts": "node scripts/generate-z08-task-prompts.mjs",
+    "check:z08-prompts": "node scripts/generate-z08-task-prompts.mjs --check",
     "check:gallery-starters": "node scripts/check-gallery-starters.mjs",
     "generate:gallery-starters": "node scripts/check-gallery-starters.mjs --write",
     "test:ts-compat": "node scripts/ts-compat-matrix.mjs",

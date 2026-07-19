@@ -1,0 +1,354 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arkgate.online/schemas/eval/causal-manifest.v1.json",
+  "title": "ArkGate Z08 causal experiment manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "experimentId",
+    "frozenAt",
+    "candidate",
+    "toolchain",
+    "agent",
+    "grader",
+    "design",
+    "arms",
+    "repositories",
+    "tasks",
+    "runs",
+    "mutation"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "const": 1 },
+    "experimentId": { "$ref": "#/$defs/id" },
+    "frozenAt": { "type": "string", "format": "date-time" },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceRepository", "sourceSha", "tarballUrl", "tarballSha256"],
+      "properties": {
+        "sourceRepository": { "type": "string", "minLength": 1 },
+        "sourceSha": { "$ref": "#/$defs/gitSha" },
+        "tarballUrl": { "type": "string", "minLength": 1 },
+        "tarballSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "toolchain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "nodeVersion", "packageManagers", "typescriptVersions"],
+      "properties": {
+        "os": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["platform", "release", "arch", "image"],
+          "properties": {
+            "platform": { "type": "string", "minLength": 1 },
+            "release": { "type": "string", "minLength": 1 },
+            "arch": { "type": "string", "minLength": 1 },
+            "image": { "type": "string", "minLength": 1 }
+          }
+        },
+        "nodeVersion": { "type": "string", "minLength": 1 },
+        "packageManagers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/packageManager" }
+        },
+        "typescriptVersions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "name", "cliVersion", "model", "configSha256", "invocationFlags", "modelSeed"],
+      "properties": {
+        "provider": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "cliVersion": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "configSha256": { "$ref": "#/$defs/sha256" },
+        "invocationFlags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "modelSeed": { "type": "null" }
+      }
+    },
+    "grader": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "sha256", "stages"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "version": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "stages": {
+          "const": ["integrity", "architecture", "typecheck", "tests"]
+        }
+      }
+    },
+    "design": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tauMs",
+        "maxTurns",
+        "sessionsPerArm",
+        "bootstrapReplicates",
+        "bootstrapSeed",
+        "orderSeed",
+        "confidenceLevel",
+        "primaryMaxRatio",
+        "primaryUpperBoundExclusive",
+        "maxCompletionRegression",
+        "percentiles",
+        "exclusions"
+      ],
+      "properties": {
+        "tauMs": { "type": "integer", "minimum": 1 },
+        "maxTurns": { "type": "integer", "minimum": 1 },
+        "sessionsPerArm": { "type": "integer", "minimum": 3 },
+        "bootstrapReplicates": { "type": "integer", "minimum": 50000 },
+        "bootstrapSeed": { "type": "string", "minLength": 1 },
+        "orderSeed": { "type": "string", "minLength": 1 },
+        "confidenceLevel": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1 },
+        "primaryMaxRatio": { "type": "number", "exclusiveMinimum": 0, "maximum": 0.8 },
+        "primaryUpperBoundExclusive": { "const": 1 },
+        "maxCompletionRegression": { "type": "number", "minimum": 0, "maximum": 0.05 },
+        "percentiles": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1 },
+          "uniqueItems": true
+        },
+        "exclusions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "rationale"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "rationale": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "arms": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["control", "treatment"],
+      "properties": {
+        "control": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["arkgateEnabled", "setupCommands"],
+          "properties": {
+            "arkgateEnabled": { "const": false },
+            "setupCommands": { "const": [] }
+          }
+        },
+        "treatment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["arkgateEnabled", "setupCommands"],
+          "properties": {
+            "arkgateEnabled": { "const": true },
+            "setupCommands": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/argv" }
+            }
+          }
+        }
+      }
+    },
+    "repositories": {
+      "type": "array",
+      "minItems": 6,
+      "items": { "$ref": "#/$defs/repository" }
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 24,
+      "items": { "$ref": "#/$defs/task" }
+    },
+    "runs": {
+      "type": "array",
+      "minItems": 144,
+      "items": { "$ref": "#/$defs/run" }
+    },
+    "mutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runner", "configSha256", "ranges"],
+      "properties": {
+        "runner": { "type": "string", "minLength": 1 },
+        "configSha256": { "$ref": "#/$defs/sha256" },
+        "ranges": {
+          "type": "array",
+          "minItems": 4,
+          "items": { "$ref": "#/$defs/mutationRange" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "gitSha": { "type": "string", "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$" },
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "argv": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "packageManager": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "enum": ["npm", "pnpm", "yarn"] },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "url",
+        "sha",
+        "treeSha",
+        "license",
+        "lockfile",
+        "packageManager",
+        "typescriptVersion",
+        "commands",
+        "commonPatch"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "url": { "type": "string", "minLength": 1 },
+        "sha": { "$ref": "#/$defs/gitSha" },
+        "treeSha": { "$ref": "#/$defs/gitSha" },
+        "license": { "type": "string", "minLength": 1 },
+        "lockfile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "sha256", "synthetic"],
+          "properties": {
+            "path": { "type": "string", "minLength": 1 },
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "synthetic": { "type": "boolean" }
+          }
+        },
+        "packageManager": { "$ref": "#/$defs/packageManager" },
+        "typescriptVersion": { "type": "string", "minLength": 1 },
+        "commands": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["install", "typecheck", "tests"],
+          "properties": {
+            "install": { "$ref": "#/$defs/argv" },
+            "typecheck": { "$ref": "#/$defs/argv" },
+            "tests": { "$ref": "#/$defs/argv" }
+          }
+        },
+        "commonPatch": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "sha256", "rationale"],
+              "properties": {
+                "path": { "type": "string", "minLength": 1 },
+                "sha256": { "$ref": "#/$defs/sha256" },
+                "rationale": { "type": "string", "minLength": 1 }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "repositoryId",
+        "scenario",
+        "noun",
+        "prompt",
+        "promptSha256",
+        "fixtureSha256",
+        "oracleSha256",
+        "architectureConfigSha256",
+        "acceptanceSha256"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "repositoryId": { "$ref": "#/$defs/id" },
+        "scenario": { "$ref": "#/$defs/id" },
+        "noun": { "type": "string", "minLength": 1 },
+        "prompt": { "type": "string", "minLength": 1 },
+        "promptSha256": { "$ref": "#/$defs/sha256" },
+        "fixtureSha256": { "$ref": "#/$defs/sha256" },
+        "oracleSha256": { "$ref": "#/$defs/sha256" },
+        "architectureConfigSha256": { "$ref": "#/$defs/sha256" },
+        "acceptanceSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cellId",
+        "pairId",
+        "repositoryId",
+        "taskId",
+        "replicate",
+        "arm",
+        "sessionUuid",
+        "order",
+        "workspaceId"
+      ],
+      "properties": {
+        "cellId": { "$ref": "#/$defs/id" },
+        "pairId": { "$ref": "#/$defs/id" },
+        "repositoryId": { "$ref": "#/$defs/id" },
+        "taskId": { "$ref": "#/$defs/id" },
+        "replicate": { "type": "integer", "minimum": 1 },
+        "arm": { "enum": ["control", "treatment"] },
+        "sessionUuid": { "$ref": "#/$defs/uuid" },
+        "order": { "type": "integer", "minimum": 1 },
+        "workspaceId": { "$ref": "#/$defs/id" }
+      }
+    },
+    "mutationRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "file", "startLine", "endLine"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "file": { "type": "string", "minLength": 1 },
+        "startLine": { "type": "integer", "minimum": 1 },
+        "endLine": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}
