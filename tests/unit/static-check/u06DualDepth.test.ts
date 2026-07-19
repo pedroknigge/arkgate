@@ -190,6 +190,13 @@ describe('U06 budgets — D5 method and Phase Z observations are locked', () => 
       fs.readFileSync(path.resolve('eval/performance/hook-budgets.v1.json'), 'utf8')
     );
     expect(budgets.method).toMatch(/Linux CI baseline FIRST/);
+    expect(budgets.sampling).toMatchObject({
+      runs: 20,
+      percentileEstimator: 'nearest-rank',
+    });
+    expect(fs.readFileSync(path.resolve('.github/workflows/ci.yml'), 'utf8')).toContain(
+      'hook-path-bench.mjs --sizes 1000,10000 --runs 20'
+    );
     expect(budgets.scenarios.hook).toMatchObject({
       metric: 'hook.coldFallback',
       baselineMs: 683.761,

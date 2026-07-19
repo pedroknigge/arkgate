@@ -702,6 +702,14 @@ SHA-256 values are respectively `899987203df4b3c012ec9d7c48dd7268b49366904d619de
 `62b5ccdf45d8449fea90402bfea85411a4b0f3d07e940cf5d3ae32437891c8cc`, and
 `4a3c0866e1f5ac15c52bacebbb8e8fb645407b90511817fb36907fe9ec2d90e3`.
 
+The merged head's unchanged-source CI run `29705207603` then exposed a sampling defect rather than
+a semantic or endpoint regression: with nine observations, nearest-rank p95 was the maximum.
+Attempts 1 and 2 independently missed the hook and doctor resident targets at 73.866 ms and
+536.278 ms; attempt 3 passed both at 60.696 ms and 474.410 ms. The follow-up fixes the sample at 20
+for every hook and doctor lane, the minimum at which nearest-rank p95 excludes one isolated maximum.
+The 65 ms/500 ms targets, measured endpoints, fail-closed behavior, and earned 58.177 ms comparison
+remain unchanged.
+
 The release candidate remained under the frozen package budget at 509,089 packed bytes,
 1,777,406 unpacked bytes, and 143 files; its gate tarball SHA-256 is
 `57b746fa7b37dcd14313ffc8d1934fe97106c8b9497bb4be99dea7322f3b367b`. Confidence passed

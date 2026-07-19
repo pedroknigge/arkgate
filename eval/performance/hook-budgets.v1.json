@@ -6,7 +6,11 @@
     "node": "20",
     "measurement": "hook cold fallback uses a fresh full process; hook resident warm uses a fresh lightweight launcher per sample against the opt-in resident MCP evaluator after one discarded prime and never caches a verdict; cold and one-shot-warm doctor use identical fresh-process argv/tree/cache state; resident doctor starts a fresh ark-check client per sample, reuses only canonical facts, and recomputes live doctor surfaces; --no-cache remains an explicit legacy flag; non-zero child exits abort the run"
   },
-  "sampling": { "runs": 9 },
+  "sampling": {
+    "runs": 20,
+    "percentileEstimator": "nearest-rank",
+    "rationale": "Twenty observations are the minimum sample in which nearest-rank p95 is not the single maximum. Main run 29705207603 exposed the nine-sample estimator as unstable: attempt 1 missed hook resident p95 at 73.866 ms, attempt 2 missed doctor resident p95 at 536.278 ms, and attempt 3 passed at 60.696/474.410 ms on the same source. Targets and endpoints remain unchanged; only the preregistered sample is made fit for its named percentile."
+  },
   "scenarios": {
     "hook": {
       "size": 10000,

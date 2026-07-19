@@ -20,7 +20,7 @@
  * failing — no number is invented before the measured baseline.
  *
  * Usage:
- *   node scripts/hook-path-bench.mjs [--sizes 1000,10000] [--runs 9] [--json]
+ *   node scripts/hook-path-bench.mjs [--sizes 1000,10000] [--runs 20] [--json]
  *                                    [--fail-budget] [--out report.json]
  */
 import { spawn, spawnSync } from 'node:child_process';
@@ -43,7 +43,7 @@ const BUDGETS = path.join(REPO, 'eval', 'performance', 'hook-budgets.v1.json');
 const MCP = path.join(REPO, 'bin', 'ark-mcp.mjs');
 
 function parseArgs(argv) {
-  const out = { sizes: [1000, 10000], runs: 9, json: false, failBudget: false, out: undefined };
+  const out = { sizes: [1000, 10000], runs: 20, json: false, failBudget: false, out: undefined };
   for (let i = 2; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--sizes') out.sizes = argv[++i].split(',').map((s) => Number(s.trim()));
@@ -388,7 +388,7 @@ async function main() {
           sample.stdout === hookReference.stdout &&
           sample.stderr === hookReference.stderr
       );
-      const doctorRuns = Math.max(3, Math.floor(args.runs / 2));
+      const doctorRuns = args.runs;
       for (let i = 0; i < doctorRuns; i += 1) {
         doctorCold.push(runDoctorSample(root));
       }
