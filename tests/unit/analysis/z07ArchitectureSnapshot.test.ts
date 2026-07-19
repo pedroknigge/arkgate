@@ -63,10 +63,14 @@ describe('Z07 canonical architecture snapshot seam', () => {
     };
 
     const snapshot = resolveArchitectureSnapshot(options);
+    const leanSnapshot = resolveArchitectureSnapshot({ ...options, captureInputs: false });
     const legacyResult = runArchitectureScan(options);
 
     expect(snapshot.result).toEqual(legacyResult);
     expect(JSON.stringify(snapshot.result)).toBe(JSON.stringify(legacyResult));
+    expect(leanSnapshot.result).toEqual(snapshot.result);
+    expect(leanSnapshot.facts).toEqual(snapshot.facts);
+    expect(leanSnapshot.inputs).toEqual([]);
     expect(snapshot.facts).toEqual(resolveCandidateFacts({ root, config, ts: loaded.ts }));
     expect(Object.isFrozen(snapshot.facts)).toBe(true);
     expect(Object.isFrozen(snapshot.facts.files)).toBe(true);

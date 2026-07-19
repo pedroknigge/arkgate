@@ -11,20 +11,31 @@ import {
 import { effectiveAnalysisConfig } from './analysis-policy.mjs';
 import { resolveCandidateFacts } from './resolved-candidate-facts.mjs';
 
-/** Resolve canonical facts and retain the filesystem probes needed to invalidate them. */
-export function resolveArchitectureSnapshot({ root, config, manifest, rules, files, ts, args }) {
-  const observedInputs = new Map();
-  const observeInput = (inputPath, kind) => {
-    const absolute = path.resolve(inputPath);
-    const kinds = observedInputs.get(absolute) ?? new Set();
-    kinds.add(kind);
-    observedInputs.set(absolute, kinds);
-  };
+/** Resolve canonical facts and optionally retain filesystem probes for resident invalidation. */
+export function resolveArchitectureSnapshot({
+  root,
+  config,
+  manifest,
+  rules,
+  files,
+  ts,
+  args,
+  captureInputs = true,
+}) {
+  const observedInputs = captureInputs ? new Map() : undefined;
+  const observeInput = observedInputs
+    ? (inputPath, kind) => {
+        const absolute = path.resolve(inputPath);
+        const kinds = observedInputs.get(absolute) ?? new Set();
+        kinds.add(kind);
+        observedInputs.set(absolute, kinds);
+      }
+    : undefined;
   const configPath = args?.config
     ? path.resolve(root, args.config)
     : path.join(root, 'ark.config.json');
-  observeInput(configPath, 'ark-config');
-  if (args?.manifest) observeInput(path.resolve(root, args.manifest), 'manifest');
+  observeInput?.(configPath, 'ark-config');
+  if (args?.manifest) observeInput?.(path.resolve(root, args.manifest), 'manifest');
   const effectiveConfig = effectiveAnalysisConfig(
     { ...config, rules: rules ?? config.rules },
     manifest
@@ -59,9 +70,11 @@ export function resolveArchitectureSnapshot({ root, config, manifest, rules, fil
     factsHash: analyzed.factsHash,
     candidateTreeHash: analyzed.candidateTreeHash,
   };
-  const inputs = [...observedInputs]
-    .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
-    .map(([inputPath, kinds]) => ({ path: inputPath, kinds: [...kinds].sort() }));
+  const inputs = observedInputs
+    ? [...observedInputs]
+        .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+        .map(([inputPath, kinds]) => ({ path: inputPath, kinds: [...kinds].sort() }))
+    : [];
   return { facts, result, inputs };
 }
 
@@ -70,5 +83,5 @@ export function resolveArchitectureSnapshot({ root, config, manifest, rules, fil
  * @returns {{ violations: object[], warnings: object[] }}
  */
 export function runArchitectureScan(options) {
-  return resolveArchitectureSnapshot(options).result;
+  return resolveArchitectureSnapshot({ ...options, captureInputs: false }).result;
 }
