@@ -93,7 +93,7 @@ import {
   collectForbiddenGlobalUses,
 } from '../../../bin/ark-shared.mjs';
 import { createRequire } from 'node:module';
-import { scanSourceFile, runArchitectureScan } from '../../../bin/lib/architecture-scan.mjs';
+import { runArchitectureScan } from '../../../bin/lib/architecture-scan.mjs';
 import {
   createModuleResolutionHost,
   resolveRelativeFallback,
@@ -446,18 +446,6 @@ command = "echo"
         path.join(root, 'src/domain/bad.ts'),
         path.join(root, 'src/infra/db.ts'),
       ];
-      const scanned = scanSourceFile(
-        ts,
-        root,
-        archConfig,
-        archConfig.rules,
-        null,
-        path.join(root, 'src/domain/bad.ts'),
-        'DomainModel'
-      );
-      expect(
-        (scanned.contentViolations ?? scanned.violations ?? []).length
-      ).toBeGreaterThan(0);
       const scan = runArchitectureScan({
         root,
         config: archConfig,

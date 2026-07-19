@@ -108,7 +108,7 @@ import {
   configWarning,
   collectConfigWarnings,
 } from '../../../bin/lib/config-warnings.mjs';
-import { scanSourceFile, runArchitectureScan } from '../../../bin/lib/architecture-scan.mjs';
+import { runArchitectureScan } from '../../../bin/lib/architecture-scan.mjs';
 import {
   readBaseline,
   writeBaseline,
@@ -295,4 +295,3 @@ describe('ark-shared package manager + recommendation branches', () => {
     }
   });
 });
-

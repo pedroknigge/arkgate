@@ -108,7 +108,7 @@ import {
   configWarning,
   collectConfigWarnings,
 } from '../../../bin/lib/config-warnings.mjs';
-import { scanSourceFile, runArchitectureScan } from '../../../bin/lib/architecture-scan.mjs';
+import { runArchitectureScan } from '../../../bin/lib/architecture-scan.mjs';
 import {
   readBaseline,
   writeBaseline,
@@ -685,17 +685,6 @@ describe('import/ts-resolve + config-warnings + scan branch push', () => {
         intents: [{ name: 'Domain.Order', layer: 'DomainModel' }],
       });
       expect(Array.isArray(warns)).toBe(true);
-
-      const scanned = scanSourceFile(
-        ts,
-        root,
-        config,
-        config.rules,
-        new Map(),
-        path.join(root, 'src/domain/bad.ts'),
-        'DomainModel'
-      );
-      expect((scanned.contentViolations ?? scanned.violations ?? []).length).toBeGreaterThan(0);
 
       const scan = runArchitectureScan({
         root,

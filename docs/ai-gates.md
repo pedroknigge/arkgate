@@ -72,6 +72,14 @@ violations relative to the file's current on-disk state, so files with pre-exist
 (baselined) violations stay editable — they just can't get worse. New files block on
 every violation.
 
+### Opt-in resident hook pilot (Z07)
+
+Set `ARK_RESIDENT_HOOK=1` on both `ark-mcp` and its hook command. The pilot reuses the
+authoritative evaluator without caching decisions; stale inputs fall back one-shot.
+It is off by default, and `ApplyPatch` always uses the atomic one-shot preflight.
+With that MCP resident, `ark-check --doctor --json --resident` reuses canonical facts but
+recomputes live doctor surfaces; an absent or invalid snapshot falls back to the cold CLI.
+
 ### Opt-in repair payload (W4)
 
 Default is **hard block with prose** on stderr. Hosts that can re-inject a fixed write

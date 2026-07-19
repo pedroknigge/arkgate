@@ -67,7 +67,7 @@ import {
   readTsconfigAliases,
   resolveSpecifierToRel,
 } from '../../../bin/lib/import-resolve.mjs';
-import { scanSourceFile, runArchitectureScan } from '../../../bin/lib/architecture-scan.mjs';
+import { runArchitectureScan } from '../../../bin/lib/architecture-scan.mjs';
 import { suggestLayerForDir, detectBestFitModel } from '../../../bin/lib/suggestions.mjs';
 
 const require = createRequire(import.meta.url);
@@ -475,7 +475,7 @@ describe('safety-diagnostics + architecture-scan (shipped)', () => {
     }
   });
 
-  it('scanSourceFile finds forbidden global and layer import on real TS source', () => {
+  it('canonical architecture scan finds forbidden global and layer import on real TS source', () => {
     const ts = require('typescript');
     const root = mk();
     try {
@@ -499,25 +499,6 @@ describe('safety-diagnostics + architecture-scan (shipped)', () => {
         ],
       };
       const rules = [{ from: 'DomainModel', to: 'PersistenceAdapters', allowed: false }];
-      const scanned = scanSourceFile(
-        ts,
-        root,
-        config,
-        rules,
-        new Map(),
-        file,
-        'DomainModel'
-      );
-      const violations = scanned.contentViolations ?? scanned.violations ?? [];
-      expect(Array.isArray(violations)).toBe(true);
-      expect(violations.length).toBeGreaterThan(0);
-      expect(
-        violations.some(
-          (v: { ruleId: string }) =>
-            v.ruleId === 'FORBIDDEN_GLOBAL' || v.ruleId === 'LAYER_IMPORT_VIOLATION'
-        )
-      ).toBe(true);
-
       const scan = runArchitectureScan({
         root,
         config,

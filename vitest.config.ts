@@ -36,6 +36,7 @@ export default defineConfig({
         'bin/lib/analysis-engine.mjs',
         'bin/ark-check.mjs',
         'bin/ark-mcp.mjs',
+        'bin/ark-mcp-runtime.mjs',
         'bin/ark.mjs',
       ],
       thresholds: {

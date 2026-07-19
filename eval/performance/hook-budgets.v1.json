@@ -1,28 +1,54 @@
 {
   "schemaVersion": 1,
-  "method": "ADR 0009 D5 — record the Linux CI baseline FIRST; ceilings are baseline p95 plus fixed headroom, set once per roadmap cycle, never ratcheted per item. Scenarios without maxP95Ms are in RECORDING mode: the bench reports them and cannot fail on them.",
+  "method": "ADR 0009 D5 — record the Linux CI baseline FIRST; baseline-derived ceilings are baseline p95 plus fixed headroom, set once per roadmap cycle, never ratcheted per item. A preregistered absolute target remains the ceiling when comparable evidence lands below it. Scenarios without maxP95Ms are in RECORDING mode: the bench reports them and cannot fail on them. A targetP95Ms records that target but does not arm enforcement until comparable evidence exists.",
   "runner": {
     "image": "ubuntu-latest",
     "node": "20",
-    "measurement": "fresh child processes; wall time of the complete spawn (node startup + TypeScript load + validate); non-zero child exits abort the run"
+    "measurement": "hook cold fallback uses a fresh full process; hook resident warm uses a fresh lightweight launcher per sample against the opt-in resident MCP evaluator after one discarded prime and never caches a verdict; cold and one-shot-warm doctor use identical fresh-process argv/tree/cache state; resident doctor starts a fresh ark-check client per sample, reuses only canonical facts, and recomputes live doctor surfaces; --no-cache remains an explicit legacy flag; non-zero child exits abort the run"
   },
   "sampling": { "runs": 9 },
   "scenarios": {
     "hook": {
       "size": 10000,
-      "metric": "hook",
+      "metric": "hook.coldFallback",
       "baselineMs": 683.761,
       "cycleObservedMaxP95Ms": 595.053,
       "maxP95Ms": 900,
-      "rationale": "The per-keystroke interactive path: ark-mcp --hook validates the single proposed file (no scan-cache involvement — one distribution). Phase Y's 683.761 ms baseline remains the comparison point for Z07. Phase Z source 6fa5079 CI run 29649631288 measured 591.165 ms and 595.053 ms on unchanged-head attempts; the frozen 900 ms ceiling retains 51.25% headroom over the worse Phase Z observation and is never ratcheted per item (ADR 0009 D5)."
+      "rationale": "Compatibility/recovery path: ark-mcp --hook validates the single proposed file in a fresh full process. Phase Y's 683.761 ms baseline remains the comparison point. Phase Z source 6fa5079 CI run 29649631288 measured 591.165 ms and 595.053 ms on unchanged-head attempts; the frozen 900 ms ceiling retains 51.25% headroom over the worse Phase Z observation and is never ratcheted per item (ADR 0009 D5)."
+    },
+    "hookResidentWarm": {
+      "size": 10000,
+      "metric": "hook.residentWarm",
+      "baselineMs": 41.487,
+      "targetP95Ms": 65,
+      "cycleObservedMaxP95Ms": 58.177,
+      "maxP95Ms": 65,
+      "rationale": "Z07 source 224a39a / PR synthetic candidate a3d7306, CI run 29700873361 established the 41.487 ms resident baseline. Final source d5cbe61 / synthetic candidate 381e51b, CI run 29704311754 measured 58.177 ms p95 at 10k after one discarded prime. The fresh launcher used the opt-in resident MCP evaluator, cached no verdict, preserved exact output bytes, and left the fixture tree unchanged. The frozen 65 ms ceiling retains 11.73% runner headroom and the final result is 11.75x below the retained Phase Y 683.761 ms baseline."
     },
     "doctorCold": {
       "size": 10000,
-      "metric": "doctorCold",
+      "metric": "doctor.cold",
       "baselineMs": 5154.522,
       "cycleObservedMaxP95Ms": 5072.093,
       "maxP95Ms": 6800,
       "rationale": "Cold one-shot doctor over the tree. Phase Y's 5,154.522 ms baseline remains the retained comparison point. Phase Z source 6fa5079 CI run 29649631288 measured 5,072.093 ms and 4,799.834 ms on unchanged-head attempts; the frozen 6,800 ms ceiling retains 34.06% headroom over the worse Phase Z observation and is never ratcheted per item (ADR 0009 D5)."
+    },
+    "doctorOneShotWarm": {
+      "size": 10000,
+      "metric": "doctor.oneShotWarm",
+      "baselineMs": 2174.517,
+      "cycleObservedMaxP95Ms": 2616.594,
+      "maxP95Ms": null,
+      "rationale": "Z07 source 778a33a / PR synthetic candidate 9cfcb3a, CI run 29699589991, established the 2,174.517 ms p95 like-for-like baseline from fresh doctor processes after one discarded prime. Final source d5cbe61 / CI run 29704311754 recorded 2,616.594 ms with the exact cold argv and immutable fixture/cache state. This remains a cache-free one-shot control, not a resident or 10x claim."
+    },
+    "doctorResidentWarm": {
+      "size": 10000,
+      "metric": "doctor.residentWarm",
+      "baselineMs": 468.669,
+      "targetP95Ms": 500,
+      "cycleObservedMaxP95Ms": 468.669,
+      "maxP95Ms": 500,
+      "rationale": "Z07 source d5cbe61 / PR synthetic candidate 381e51b, CI run 29704311754 measured 468.669 ms p95 on Linux x64 Node 20 at 10k after one discarded prime. A lightweight public launcher removed one-shot module loading from the resident client while preserving exact cold JSON and fallback behavior. The canonical-facts pilot cached no verdict, reused only the immutable snapshot, and retained exact edit/delete/invalidation parity. The frozen 500 ms absolute UX ceiling retains 6.69% headroom; the like-for-like 2,174.517 ms one-shot baseline makes this a 4.64x improvement, not a 10x doctor claim."
     }
   }
 }

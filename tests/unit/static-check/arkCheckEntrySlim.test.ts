@@ -9,6 +9,7 @@ import { spawnSync } from 'node:child_process';
 
 const root = process.cwd();
 const entry = path.join(root, 'bin/ark-check.mjs');
+const runtime = path.join(root, 'bin/ark-check-runtime.mjs');
 
 /** New modules extracted for R3 (budget applies to these, not legacy agent-gates/html-report). */
 const R3_EXTRACTS = [
@@ -21,8 +22,9 @@ const R3_EXTRACTS = [
 ] as const;
 
 const LOC_BUDGET_NEW = 500;
-/** Pre-R3 shell was ~2369; orchestration should stay well under that. */
-const ENTRY_MAX_LOC = 1600;
+/** Public entry stays startup-light; one-shot orchestration remains below the R3 budget. */
+const ENTRY_MAX_LOC = 100;
+const RUNTIME_MAX_LOC = 1600;
 
 function lineCount(rel: string): number {
   const text = fs.readFileSync(path.join(root, rel), 'utf8');
@@ -39,19 +41,26 @@ describe('ark-check entry slim-down (R3)', () => {
     expect(fs.existsSync(entry)).toBe(true);
   });
 
-  it('entry is substantially thinner and does not house scan-graph guts', () => {
+  it('keeps the public entry lightweight and the one-shot runtime orchestration-only', () => {
     const loc = lineCount('bin/ark-check.mjs');
     expect(loc).toBeLessThan(ENTRY_MAX_LOC);
     const src = fs.readFileSync(entry, 'utf8');
+    expect(src).toMatch(/resident-doctor-client\.mjs/);
+    expect(src).toMatch(/import\(['"]\.\/ark-check-runtime\.mjs['"]\)/);
+    expect(src).not.toMatch(/architecture-scan\.mjs/);
+
+    const runtimeLoc = lineCount('bin/ark-check-runtime.mjs');
+    expect(runtimeLoc).toBeLessThan(RUNTIME_MAX_LOC);
+    const runtimeSrc = fs.readFileSync(runtime, 'utf8');
     // Must wire the extracted pipeline
-    expect(src).toMatch(/from ['"]\.\/lib\/architecture-scan\.mjs['"]/);
-    expect(src).toMatch(/runArchitectureScan\s*\(/);
+    expect(runtimeSrc).toMatch(/from ['"]\.\/lib\/architecture-scan\.mjs['"]/);
+    expect(runtimeSrc).toMatch(/runArchitectureScan\s*\(/);
     // Must not re-implement Tarjan / walk / resolveImport inline
-    expect(src).not.toMatch(/function detectCycles\s*\(/);
-    expect(src).not.toMatch(/function collectGovernedFiles\s*\(/);
-    expect(src).not.toMatch(/function resolveImport\s*\(/);
-    expect(src).not.toMatch(/function createModuleResolutionHost\s*\(/);
-    expect(src).not.toMatch(/function collectConfigWarnings\s*\(/);
+    expect(runtimeSrc).not.toMatch(/function detectCycles\s*\(/);
+    expect(runtimeSrc).not.toMatch(/function collectGovernedFiles\s*\(/);
+    expect(runtimeSrc).not.toMatch(/function resolveImport\s*\(/);
+    expect(runtimeSrc).not.toMatch(/function createModuleResolutionHost\s*\(/);
+    expect(runtimeSrc).not.toMatch(/function collectConfigWarnings\s*\(/);
   });
 
   it('each R3 extract module exists and is within ~500 LOC', () => {

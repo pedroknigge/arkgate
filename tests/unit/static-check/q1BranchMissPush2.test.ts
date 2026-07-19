@@ -43,7 +43,7 @@ import {
   detectCiNode,
   githubWorkflow,
 } from '../../../bin/lib/ci-and-commands.mjs';
-import { scanSourceFile, runArchitectureScan } from '../../../bin/lib/architecture-scan.mjs';
+import { runArchitectureScan } from '../../../bin/lib/architecture-scan.mjs';
 import {
   createModuleResolutionHost,
   parseTsconfig,
@@ -427,15 +427,6 @@ publish('Domain.Event', { source: 'x' });
         path.join(root, 'src/infra/db.ts'),
         path.join(root, 'src/app/pub.ts'),
       ];
-      for (const file of files) {
-        const layer =
-          file.includes('/domain/')
-            ? 'DomainModel'
-            : file.includes('/app/')
-              ? 'ApplicationOrchestration'
-              : 'PersistenceAdapters';
-        scanSourceFile(ts, root, config, config.rules, null, file, layer);
-      }
       const scan1 = runArchitectureScan({
         root,
         config,

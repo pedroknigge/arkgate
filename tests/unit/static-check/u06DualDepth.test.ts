@@ -185,43 +185,68 @@ describe('U06 dual depth — ESLint parity (import dimension)', () => {
 });
 
 describe('U06 budgets — D5 method and Phase Z observations are locked', () => {
-  it('the budgets file records the method and stays in recording mode until a Linux baseline', () => {
+  it('the budgets file records the method and arms only metrics with Linux evidence', () => {
     const budgets = JSON.parse(
       fs.readFileSync(path.resolve('eval/performance/hook-budgets.v1.json'), 'utf8')
     );
     expect(budgets.method).toMatch(/Linux CI baseline FIRST/);
     expect(budgets.scenarios.hook).toMatchObject({
+      metric: 'hook.coldFallback',
       baselineMs: 683.761,
       cycleObservedMaxP95Ms: 595.053,
       maxP95Ms: 900,
+    });
+    expect(budgets.scenarios.hookResidentWarm).toMatchObject({
+      metric: 'hook.residentWarm',
+      baselineMs: 41.487,
+      targetP95Ms: 65,
+      cycleObservedMaxP95Ms: 58.177,
+      maxP95Ms: 65,
     });
     expect(budgets.scenarios.doctorCold).toMatchObject({
       baselineMs: 5154.522,
       cycleObservedMaxP95Ms: 5072.093,
       maxP95Ms: 6800,
     });
+    expect(budgets.scenarios.doctorOneShotWarm).toMatchObject({
+      metric: 'doctor.oneShotWarm',
+      baselineMs: 2174.517,
+      cycleObservedMaxP95Ms: 2616.594,
+      maxP95Ms: null,
+    });
+    expect(budgets.scenarios.doctorResidentWarm).toMatchObject({
+      metric: 'doctor.residentWarm',
+      baselineMs: 468.669,
+      targetP95Ms: 500,
+      cycleObservedMaxP95Ms: 468.669,
+      maxP95Ms: 500,
+    });
     for (const [name, spec] of Object.entries(
       budgets.scenarios as Record<
         string,
         {
           baselineMs: number | null;
+          targetP95Ms?: number;
           cycleObservedMaxP95Ms?: number;
           maxP95Ms: number | null;
         }
       >
     )) {
-      // Either both recorded (ceiling from baseline) or both pending — never an
-      // invented ceiling without its measured baseline.
+      // A ceiling always requires a measured baseline. A measured recording lane
+      // may intentionally remain unarmed until its resident comparator exists.
       const consistent =
-        (spec.baselineMs === null && spec.maxP95Ms === null) ||
+        spec.maxP95Ms === null ||
         (typeof spec.baselineMs === 'number' &&
           typeof spec.maxP95Ms === 'number' &&
           spec.maxP95Ms > spec.baselineMs);
       expect(consistent, name).toBe(true);
       if (spec.cycleObservedMaxP95Ms !== undefined && spec.maxP95Ms !== null) {
-        expect(spec.maxP95Ms, name).toBeGreaterThanOrEqual(
-          Math.ceil(spec.cycleObservedMaxP95Ms * 1.3)
-        );
+        // A preregistered absolute UX target stays fixed after measurement; only
+        // baseline-derived ceilings require the cycle's 30% runner headroom.
+        const required = spec.maxP95Ms === spec.targetP95Ms
+          ? spec.cycleObservedMaxP95Ms
+          : Math.ceil(spec.cycleObservedMaxP95Ms * 1.3);
+        expect(spec.maxP95Ms, name).toBeGreaterThanOrEqual(required);
       }
     }
   });

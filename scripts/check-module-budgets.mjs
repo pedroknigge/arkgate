@@ -13,7 +13,8 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Soft product budgets (Q1/Q6). html-report is a deliberate large renderer. */
 const BUDGETS = [
-  { path: 'bin/ark-check.mjs', max: 1600 },
+  { path: 'bin/ark-check.mjs', max: 100 },
+  { path: 'bin/ark-check-runtime.mjs', max: 1600 },
   { path: 'bin/ark.mjs', max: 900 },
   { path: 'bin/lib/agent-gates.mjs', max: 150 },
   { path: 'bin/lib/mcp-adoption.mjs', max: 600 },

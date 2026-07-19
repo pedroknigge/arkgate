@@ -427,7 +427,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const doctorAdvisories = computeDoctorAdvisories(root, config, cov, rules, files, options.ts, options.parseHealth);
 
   if (asJson) {
-    console.log(
+    (options.writeJson ?? console.log)(
       JSON.stringify(
         {
           ok: analysisComplete,

@@ -16,7 +16,7 @@ const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'arkgate-analysis-engine
 
 try {
   await build({
-    entry: [path.join(root, 'src/kernel/analysis.ts')],
+    entry: { analysis: path.join(root, 'src/kernel/analysisBundle.ts') },
     format: ['esm'],
     outDir: temporary,
     bundle: true,
