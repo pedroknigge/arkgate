@@ -7,7 +7,10 @@
  *                 per-keystroke interactive path; the hook validates the single
  *                 proposed file and does not consume the scan cache, so there
  *                 is exactly ONE distribution — no fictional cold/warm split)
- *   doctorCold  — `ark-check --doctor --json --no-cache` over the tree
+ *   doctor.cold — `ark-check --doctor --json --no-cache` over the tree
+ *   doctor.oneShotWarm — the exact same command in fresh processes after one
+ *                 discarded prime over the same immutable tree/cache state
+ *   doctor.residentWarm — unavailable until Z07 supplies a resident pilot
  *
  * D5 method: record a Linux CI baseline FIRST; ceilings are baseline plus a
  * fixed headroom and live in eval/performance/hook-budgets.v1.json. Until a
@@ -19,6 +22,7 @@
  *                                    [--fail-budget] [--out report.json]
  */
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -89,6 +93,38 @@ function stats(samples) {
   };
 }
 
+function sha256(value) {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+function treeIdentity(root) {
+  const entries = [];
+  const visit = (directory) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const absolute = path.join(directory, entry.name);
+      const relative = path.relative(root, absolute).split(path.sep).join('/');
+      if (entry.isDirectory()) visit(absolute);
+      else if (entry.isSymbolicLink()) {
+        entries.push({ relative, kind: 'link', value: fs.readlinkSync(absolute) });
+      } else if (entry.isFile()) {
+        entries.push({ relative, kind: 'file', value: fs.readFileSync(absolute) });
+      }
+    }
+  };
+  visit(root);
+  entries.sort((a, b) => a.relative.localeCompare(b.relative));
+  const hash = createHash('sha256');
+  for (const entry of entries) {
+    hash.update(entry.kind);
+    hash.update('\0');
+    hash.update(entry.relative);
+    hash.update('\0');
+    hash.update(entry.value);
+    hash.update('\0');
+  }
+  return `sha256:${hash.digest('hex')}`;
+}
+
 function runHookOnce(root, payload) {
   const started = process.hrtime.bigint();
   const result = spawnSync(
@@ -106,28 +142,37 @@ function runHookOnce(root, payload) {
   return elapsedMs;
 }
 
-function runDoctorOnce(root) {
+function doctorCommand(root) {
+  return [
+    path.join(REPO, 'bin/ark-check.mjs'),
+    '--root',
+    root,
+    '--config',
+    'ark.config.json',
+    '--doctor',
+    '--json',
+    '--no-cache',
+  ];
+}
+
+function runDoctorSample(root) {
+  const argv = doctorCommand(root);
   const started = process.hrtime.bigint();
-  const result = spawnSync(
-    'node',
-    [
-      path.join(REPO, 'bin/ark-check.mjs'),
-      '--root',
-      root,
-      '--config',
-      'ark.config.json',
-      '--doctor',
-      '--json',
-      '--no-cache',
-    ],
-    { encoding: 'utf8' }
-  );
+  const result = spawnSync(process.execPath, argv, { encoding: 'utf8' });
   const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
   if (result.error) throw result.error;
   if (result.status !== 0) {
     throw new Error(`doctor exited ${result.status}: ${result.stderr || result.stdout}`);
   }
-  return elapsedMs;
+  return {
+    elapsedMs,
+    status: result.status,
+    stdout: result.stdout || '',
+  };
+}
+
+function metricAt(result, metric) {
+  return metric.split('.').reduce((value, key) => value?.[key], result);
 }
 
 async function main() {
@@ -145,15 +190,59 @@ async function main() {
           content: 'export const edited = 1;\n',
         },
       };
+      const fixtureTreeHashBefore = treeIdentity(root);
+      const legacyCachePath = path.join(root, 'node_modules', '.cache', 'ark-check.json');
+      const legacyCacheAbsentBefore = !fs.existsSync(legacyCachePath);
       const hook = [];
       const doctorCold = [];
+      const doctorOneShotWarm = [];
       for (let i = 0; i < args.runs; i += 1) {
         hook.push(runHookOnce(root, payload));
       }
-      for (let i = 0; i < Math.max(3, Math.floor(args.runs / 2)); i += 1) {
-        doctorCold.push(runDoctorOnce(root));
+      const doctorRuns = Math.max(3, Math.floor(args.runs / 2));
+      for (let i = 0; i < doctorRuns; i += 1) {
+        doctorCold.push(runDoctorSample(root));
       }
-      results.push({ size, hook: stats(hook), doctorCold: stats(doctorCold) });
+      const doctorPrime = runDoctorSample(root);
+      for (let i = 0; i < doctorRuns; i += 1) {
+        doctorOneShotWarm.push(runDoctorSample(root));
+      }
+      const reference = doctorCold[0];
+      const comparableSamples = [...doctorCold, doctorPrime, ...doctorOneShotWarm];
+      const exactOutputParity = comparableSamples.every(
+        (sample) => sample.status === reference.status && sample.stdout === reference.stdout
+      );
+      const fixtureTreeHashAfter = treeIdentity(root);
+      const legacyCacheAbsentAfter = !fs.existsSync(legacyCachePath);
+      results.push({
+        size,
+        fixture: {
+          treeHashBefore: fixtureTreeHashBefore,
+          treeHashAfter: fixtureTreeHashAfter,
+          unchanged: fixtureTreeHashBefore === fixtureTreeHashAfter,
+        },
+        hook: stats(hook),
+        doctor: {
+          executable: process.execPath,
+          argv: doctorCommand(root),
+          processMode: 'fresh-child-per-sample',
+          cache: {
+            mode: 'none',
+            argvFlag: '--no-cache',
+            legacyFlagOnly: true,
+            legacyCacheAbsentBefore,
+            legacyCacheAbsentAfter,
+          },
+          cold: stats(doctorCold.map((sample) => sample.elapsedMs)),
+          oneShotWarm: {
+            ...stats(doctorOneShotWarm.map((sample) => sample.elapsedMs)),
+            primeMs: Number(doctorPrime.elapsedMs.toFixed(3)),
+          },
+          residentWarm: null,
+          exactOutputParity,
+          outputSha256: `sha256:${sha256(reference.stdout)}`,
+        },
+      });
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
@@ -164,7 +253,7 @@ async function main() {
     for (const [scenario, spec] of Object.entries(budgets.scenarios)) {
       if (typeof spec.maxP95Ms !== 'number') continue; // recording mode
       const result = results.find((r) => r.size === spec.size);
-      const measured = result?.[spec.metric ?? scenario]?.p95Ms;
+      const measured = result ? metricAt(result, spec.metric ?? scenario)?.p95Ms : undefined;
       // An armed ceiling that resolves no measurement is a broken harness, not a pass.
       if (typeof measured !== 'number') {
         failures.push(
@@ -181,7 +270,7 @@ async function main() {
   }
 
   const report = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     tool: 'hook-path-bench',
     runner: { platform: process.platform, arch: process.arch, node: process.version },
     budgets: budgets ? 'eval/performance/hook-budgets.v1.json' : 'none (recording baseline)',
@@ -198,7 +287,8 @@ async function main() {
   else {
     for (const r of results) {
       console.log(
-        `size ${r.size}: hook p95 ${r.hook.p95Ms}ms · doctor cold p95 ${r.doctorCold.p95Ms}ms`
+        `size ${r.size}: hook p95 ${r.hook.p95Ms}ms · doctor cold p95 ${r.doctor.cold.p95Ms}ms · ` +
+          `doctor one-shot warm p95 ${r.doctor.oneShotWarm.p95Ms}ms`
       );
     }
   }

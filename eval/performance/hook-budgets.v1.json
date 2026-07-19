@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "method": "ADR 0009 D5 — record the Linux CI baseline FIRST; ceilings are baseline p95 plus fixed headroom, set once per roadmap cycle, never ratcheted per item. Scenarios without maxP95Ms are in RECORDING mode: the bench reports them and cannot fail on them.",
+  "method": "ADR 0009 D5 — record the Linux CI baseline FIRST; ceilings are baseline p95 plus fixed headroom, set once per roadmap cycle, never ratcheted per item. Scenarios without maxP95Ms are in RECORDING mode: the bench reports them and cannot fail on them. A targetP95Ms records a preregistered target but does not arm enforcement until maxP95Ms is set from comparable evidence.",
   "runner": {
     "image": "ubuntu-latest",
     "node": "20",
-    "measurement": "fresh child processes; wall time of the complete spawn (node startup + TypeScript load + validate); non-zero child exits abort the run"
+    "measurement": "fresh child processes; wall time of the complete spawn (node startup + TypeScript load + validate); cold and one-shot-warm doctor use identical argv/tree/cache state, with one discarded prime before warm samples; --no-cache is retained as an explicit legacy flag while no Ark cache exists; non-zero child exits abort the run"
   },
   "sampling": { "runs": 9 },
   "scenarios": {
@@ -18,11 +18,26 @@
     },
     "doctorCold": {
       "size": 10000,
-      "metric": "doctorCold",
+      "metric": "doctor.cold",
       "baselineMs": 5154.522,
       "cycleObservedMaxP95Ms": 5072.093,
       "maxP95Ms": 6800,
       "rationale": "Cold one-shot doctor over the tree. Phase Y's 5,154.522 ms baseline remains the retained comparison point. Phase Z source 6fa5079 CI run 29649631288 measured 5,072.093 ms and 4,799.834 ms on unchanged-head attempts; the frozen 6,800 ms ceiling retains 34.06% headroom over the worse Phase Z observation and is never ratcheted per item (ADR 0009 D5)."
+    },
+    "doctorOneShotWarm": {
+      "size": 10000,
+      "metric": "doctor.oneShotWarm",
+      "baselineMs": null,
+      "maxP95Ms": null,
+      "rationale": "Z07 recording lane: fresh doctor processes after one discarded prime, using the exact cold argv and immutable fixture/cache state. This establishes the like-for-like one-shot warm baseline before a resident implementation; it is not a resident or 10x claim."
+    },
+    "doctorResidentWarm": {
+      "size": 10000,
+      "metric": "doctor.residentWarm",
+      "baselineMs": null,
+      "targetP95Ms": 500,
+      "maxP95Ms": null,
+      "rationale": "Z07 preregistered absolute UX target. The metric remains unavailable and unenforced until a resident pilot reports exact cold/warm JSON, hash, verdict, edit/delete, and invalidation parity."
     }
   }
 }

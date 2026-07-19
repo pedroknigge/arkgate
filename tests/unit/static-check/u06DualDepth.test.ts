@@ -200,6 +200,17 @@ describe('U06 budgets — D5 method and Phase Z observations are locked', () => 
       cycleObservedMaxP95Ms: 5072.093,
       maxP95Ms: 6800,
     });
+    expect(budgets.scenarios.doctorOneShotWarm).toMatchObject({
+      metric: 'doctor.oneShotWarm',
+      baselineMs: null,
+      maxP95Ms: null,
+    });
+    expect(budgets.scenarios.doctorResidentWarm).toMatchObject({
+      metric: 'doctor.residentWarm',
+      baselineMs: null,
+      targetP95Ms: 500,
+      maxP95Ms: null,
+    });
     for (const [name, spec] of Object.entries(
       budgets.scenarios as Record<
         string,
