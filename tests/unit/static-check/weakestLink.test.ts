@@ -114,6 +114,10 @@ describe('Q3 weakest-link sensors (shipped weakest-link.mjs)', () => {
 
   it('treats required check "build" as Ark when that job runs check:architecture', () => {
     const root = mk();
+    fs.writeFileSync(
+      path.join(root, 'package.json'),
+      '{"scripts":{"check:architecture":"npx ark-check --strict-merge"}}\n'
+    );
     fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
     fs.writeFileSync(
       path.join(root, '.github/workflows/ci.yml'),
@@ -121,6 +125,7 @@ describe('Q3 weakest-link sensors (shipped weakest-link.mjs)', () => {
 on: push
 jobs:
   build:
+    name: Architecture contract
     runs-on: ubuntu-latest
     steps:
       - run: npm run check:architecture
@@ -132,9 +137,191 @@ jobs:
     );
     const jobs = jobIdsThatRunArkCheck(root);
     expect(jobs.has('build')).toBe(true);
+    expect(jobs.has('Architecture contract')).toBe(true);
     expect(jobs.has('lint')).toBe(false);
-    expect(isArkRequiredStatusCheck(root, ['build'])).toBe(true);
+    expect(isArkRequiredStatusCheck(root, ['build'])).toBe(false);
+    expect(isArkRequiredStatusCheck(root, ['Architecture contract'])).toBe(true);
     expect(isArkRequiredStatusCheck(root, ['lint'])).toBe(false);
-    expect(isArkRequiredStatusCheck(root, ['arkgate-check'])).toBe(true);
+    expect(isArkRequiredStatusCheck(root, ['architecture-review'])).toBe(false);
+    expect(isArkRequiredStatusCheck(root, ['arkgate-check'])).toBe(false);
+  });
+
+  it('requires check:architecture to resolve to an actual Ark command', () => {
+    for (const packageJson of [
+      '{"name":"missing-script"}\n',
+      '{"scripts":{"check:architecture":"echo ok"}}\n',
+    ]) {
+      const root = mk();
+      fs.writeFileSync(path.join(root, 'package.json'), packageJson);
+      fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, '.github/workflows/ci.yml'),
+        'jobs:\n  architecture:\n    steps:\n      - run: npm run check:architecture\n'
+      );
+
+      expect(detectCiEnforcement(root).hasArkCheckWorkflow).toBe(false);
+      expect(jobIdsThatRunArkCheck(root).size).toBe(0);
+    }
+  });
+
+  it('ignores statically disabled jobs and steps regardless of key order', () => {
+    const root = mk();
+    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.github/workflows/ci.yml'),
+      `jobs:
+  disabled-job:
+    if: false
+    steps:
+      - run: npx ark-check --strict
+  disabled-step-before:
+    steps:
+      - if: false
+        run: npx ark-check --strict
+  disabled-step-after:
+    steps:
+      - run: npx ark-check --strict
+        if: false
+  quoted-disabled-step:
+    steps:
+      - run: npx ark-check --strict
+        "if": false
+  non-blocking-step:
+    steps:
+      - run: npx ark-check --strict
+        continue-on-error: true
+  dependency-skippable-job:
+    needs: build
+    steps:
+      - run: npx ark-check --strict
+`
+    );
+
+    expect(detectCiEnforcement(root).hasArkCheckWorkflow).toBe(false);
+    expect(jobIdsThatRunArkCheck(root).size).toBe(0);
+  });
+
+  it('parses quoted job IDs and non-default indentation', () => {
+    const root = mk();
+    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.github/workflows/ci.yml'),
+      `jobs:
+    "architecture-contract":
+        name: 'Architecture contract'
+        steps:
+            - run: npx ark-check --strict
+`
+    );
+
+    expect(jobIdsThatRunArkCheck(root)).toEqual(
+      new Set(['architecture-contract', 'Architecture contract'])
+    );
+  });
+
+  it('binds strict flags to the Ark invocation that actually runs', () => {
+    const directRoot = mk();
+    fs.mkdirSync(path.join(directRoot, '.github/workflows'), { recursive: true });
+    fs.writeFileSync(
+      path.join(directRoot, '.github/workflows/ci.yml'),
+      'jobs:\n  architecture:\n    steps:\n      - run: npx ark-check\n      - run: echo --strict\n'
+    );
+    expect(detectCiEnforcement(directRoot)).toMatchObject({
+      hasArkCheckWorkflow: true,
+      failClosed: false,
+    });
+
+    const scriptRoot = mk();
+    fs.writeFileSync(
+      path.join(scriptRoot, 'package.json'),
+      '{"scripts":{"check:architecture":"echo --strict && npx ark-check"}}\n'
+    );
+    fs.mkdirSync(path.join(scriptRoot, '.github/workflows'), { recursive: true });
+    fs.writeFileSync(
+      path.join(scriptRoot, '.github/workflows/ci.yml'),
+      'jobs:\n  architecture:\n    steps:\n      - run: npm run check:architecture\n'
+    );
+    expect(detectCiEnforcement(scriptRoot)).toMatchObject({
+      hasArkCheckWorkflow: true,
+      failClosed: false,
+    });
+  });
+
+  it('rejects lookalike commands, shell comments, and folded echo text', () => {
+    const cases = [
+      'run: npx ark-check-fake --strict-merge-disabled',
+      'run: node scripts/fake-ark-check.mjs --strict',
+      'run: npm run check:architecture-fake',
+      'run: echo ok # && npx ark-check --strict',
+      'run: >\n          echo npx\n          ark-check --strict',
+    ];
+    for (const run of cases) {
+      const root = mk();
+      fs.writeFileSync(
+        path.join(root, 'package.json'),
+        '{"scripts":{"check:architecture":"npx ark-check --strict"}}\n'
+      );
+      fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, '.github/workflows/ci.yml'),
+        `jobs:\n  architecture:\n    steps:\n      - ${run}\n`
+      );
+      expect(detectCiEnforcement(root).hasArkCheckWorkflow, run).toBe(false);
+      expect(jobIdsThatRunArkCheck(root).size, run).toBe(0);
+    }
+  });
+
+  it('does not parse jobs text embedded in a YAML block scalar', () => {
+    const root = mk();
+    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.github/workflows/ci.yml'),
+      `name: Docs
+description: |
+  jobs:
+    architecture:
+      steps:
+        - run: npx ark-check --strict
+`
+    );
+    expect(detectCiEnforcement(root).hasArkCheckWorkflow).toBe(false);
+    expect(jobIdsThatRunArkCheck(root).size).toBe(0);
+  });
+
+  it('does not treat a swallowed Ark failure as merge enforcement', () => {
+    const root = mk();
+    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.github/workflows/ci.yml'),
+      'jobs:\n  architecture:\n    steps:\n      - run: npx ark-check --strict || true\n'
+    );
+    expect(detectCiEnforcement(root)).toMatchObject({
+      hasArkCheckWorkflow: true,
+      failClosed: false,
+    });
+    expect(jobIdsThatRunArkCheck(root).size).toBe(0);
+  });
+
+  it('does not treat comments, step names, or echo output as an Ark-running job', () => {
+    const root = mk();
+    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.github/workflows/ci.yml'),
+      `name: CI
+on: push
+# npx ark-check --strict
+jobs:
+  architecture-review:
+    name: Ark architecture docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain ark-check
+        run: echo "npx ark-check --strict"
+`
+    );
+
+    expect(detectCiEnforcement(root).hasArkCheckWorkflow).toBe(false);
+    expect(jobIdsThatRunArkCheck(root).size).toBe(0);
+    expect(isArkRequiredStatusCheck(root, ['architecture-review'])).toBe(false);
   });
 });

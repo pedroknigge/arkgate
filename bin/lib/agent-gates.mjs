@@ -120,6 +120,7 @@ export {
 } from './weakest-link.mjs';
 
 export {
+  buildManagedAssetCatalog,
   staleRunnerGateFiles,
   warnLockfileConflict,
   runMigrateCommands,

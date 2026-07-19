@@ -17,7 +17,7 @@ function installToolsForHost(activeHost) {
 
 export function detectWritePathCapabilities(root, explicitHost, attempt) {
   const model = buildWritePathCapabilityModel(root, explicitHost, attempt);
-  const { activeHost, support, capabilities, capabilityEvidence, enforcementLadder, inventory } = model;
+  const { activeHost, support, capabilities, capabilityEvidence, enforcementLadder, enforcementState, inventory } = model;
   const hardWrite = capabilities['hard-write'];
   const advisoryWrite = capabilities['advisory-write'];
   const repairPayload = capabilities['repair-payload'];
@@ -78,7 +78,7 @@ export function detectWritePathCapabilities(root, explicitHost, attempt) {
           'not equivalent to Claude/Grok PreToolUse hard-write + repair). ' +
           'The hard merge backstop is CI --strict-merge plus a required status check.'
         : `Active host ${activeHost} has advisory prepare-write/autoPatch tools, ` +
-          'but no hard write boundary; the CI check can still reject the change before merge.';
+          'but no hard write boundary; CI can report failure, while merge blocking requires provider policy.';
     gap = {
       id: 'write-path-mcp-only',
       severity: 'info',
@@ -99,6 +99,7 @@ export function detectWritePathCapabilities(root, explicitHost, attempt) {
     capabilities,
     capabilityEvidence,
     enforcementLadder,
+    enforcementState,
     inventory,
     // Compatibility projection for existing doctor/API consumers.
     mode,

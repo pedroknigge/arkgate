@@ -51,9 +51,9 @@ export function detectEnforcement(root) {
       '.grok/hooks/ark-write-gate.json') ||
     null;
   return [
-    { name: 'Write gate', where: writeGateFile, what: 'blocks a bad edit as you type (PreToolUse hook / MCP)' },
+    { name: 'Write gate', where: writeGateFile, what: 'configured local gate; active blocking depends on observed host/runtime evidence' },
     { name: 'ESLint', where: eslintFile || null, what: 'flags violations in your editor' },
-    { name: 'CI check', where: workflowsMentionArk(), what: 'blocks the merge if the architecture breaks' },
+    { name: 'CI check', where: workflowsMentionArk(), what: 'runs Ark; merge blocking requires provider-confirmed required status' },
     { name: 'Baseline', where: has('.ark-baseline.json') ? '.ark-baseline.json' : null, what: 'old violations frozen; new ones fail' },
   ].map((e) => ({ ...e, on: !!e.where }));
 }
@@ -1061,8 +1061,8 @@ export function renderHtmlReport({
         )}
         ${metricKpi(
           `${gatesOn}/${enforcement.length}`,
-          'Gates live',
-          'Write hook, CI workflow, ESLint plugin, and baseline file — how many enforcement points are actually present.'
+          'Gates configured',
+          'Write hook, CI workflow, ESLint plugin, and baseline file — how many enforcement surfaces are present, not proof that each is active or required.'
         )}
         ${metricKpi(
           `${violations.length}${suppressed ? ` · ${suppressed}Δ` : ''}`,
@@ -1222,7 +1222,7 @@ export function renderHtmlReport({
       ['Type-only violations', originSnapshot.typeOnlyViolations, currentSnapshot.typeOnlyViolations, ''],
       ['Layers', originSnapshot.layerCount, currentSnapshot.layerCount, ''],
       ['Deny rules', originSnapshot.denyRules, currentSnapshot.denyRules, ''],
-      ['Gates live', originSnapshot.gatesOn, currentSnapshot.gatesOn, ''],
+      ['Gates configured', originSnapshot.gatesOn, currentSnapshot.gatesOn, ''],
     ];
     const originDate = (originSnapshot.generatedAt || '').slice(0, 10) || 'origin';
     const nowDate = (currentSnapshot.generatedAt || '').slice(0, 10) || 'now';

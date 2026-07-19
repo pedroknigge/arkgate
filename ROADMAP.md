@@ -116,14 +116,14 @@ for current truth.
 | `RB-07` | P0 operational | `closed` | Z01 restricts cleanup to validated ArkGate-owned outputs and invocation-owned tarballs; PR #80 CI + release smoke are green |
 | `RB-08` | P1 | `closed` | Z02's distinct exact host and schema 1.2 fail-closed verdict passed all 36 packed cells in PR #81 CI; published 3.7.0 predates the correction |
 | `RB-09` | P1 | `closed` | Z03 selected versioned resolved-candidate facts; Z04 restored one graph/verdict across the parity-capable API, preflight, CLI, MCP, complete-patch write gate, eligible ESLint, and final CI |
-| `RB-10` | P1 journey | `open` | Z05–Z06 must make the installed starter, upgrade, enforcement, and package journey reproducible |
+| `RB-10` | P1 journey | `closed` | Z05–Z06 proved the installed starter, managed upgrade, observed enforcement, and packed journey across the clean-room matrices |
 | `RB-11` | P1 claim | `open` | Z07–Z09 must earn the 10x feedback, causal-evidence, retained-adoption, and independent-close claims |
 
 `RB-01`–`RB-06` are closed by the corresponding completed items and their recorded evidence.
 V05 passed its then-current binary exit gate in PR #49. The separately authorized stable `3.0.0`
 release completed on 2026-07-13; closing `RB-06` had removed the onboarding release blocker.
 The post-3.7.0 audit below supersedes that evidence as proof of *current* release readiness:
-`RB-10`–`RB-11` remain open, so the stabilization stop condition still applies.
+`RB-11` remains open, so the broad product-claim stop condition still applies.
 
 ### Post-3.7.0 audit reset (2026-07-17)
 
@@ -423,8 +423,8 @@ may raise those ceilings merely to fit its own implementation.
 | 66 | `Z03` | `done` | M | `Z02` | The resolved-facts/public-API boundary and generated CLI parity seam are decided before implementation |
 | 67 | `Z04` | `done` | L | `Z03` | One normalized candidate-facts graph produces one contract verdict across every supported adapter |
 | 68 | `Z05` | `done` | L | `Z02`, `Z04` | Every starter and supported package manager completes the installed tarball journey in a clean consumer |
-| 69 | `Z06` | `todo` | L | `Z05` | Upgrade touches only identity-proven managed assets and doctor reports actual enforcement state |
-| 70 | `Z07` | `todo` | L | `Z04`, `Z05` | A measured warm incremental control plane delivers order-of-magnitude feedback without semantic drift |
+| 69 | `Z06` | `done` | L | `Z05` | Upgrade touches only identity-proven managed assets and doctor reports actual enforcement state |
+| 70 | `Z07` | `doing` | L | `Z04`, `Z05` | A measured warm incremental control plane delivers order-of-magnitude feedback without semantic drift |
 | 71 | `Z08` | `todo` | L | `Z06`, `Z07` | Live-agent and causal evaluation count every outcome and defend the corrected path with mutation proof |
 | 72 | `Z09` | `todo` | L | `Z08` | Retained field adoption and a verifiably independent review earn the Phase Z product claims |
 
@@ -612,7 +612,7 @@ remains open for Z06's managed-upgrade and enforcement-state half.
 
 ### Z06 — Make managed upgrade and enforcement state truthful
 
-- **Status:** `todo`
+- **Status:** `done`
 - **Depends on:** `Z05`
 
 **Outcome:** upgrade refreshes only Ark-managed assets, preserves user-owned edits, and reports
@@ -628,9 +628,22 @@ fixture proves required CI status remains `unverified` without provider evidence
 workflow names never imply branch protection. Close `RB-10` only after the complete `Z05` clean-
 room matrix and this managed-content matrix are green.
 
+**Completed (2026-07-19):** source `7fa131f15b948511c40091c7dbc6b6fcfaa2f35f` / PR
+[#85](https://github.com/pedroknigge/arkgate/pull/85) passed CI run `29698123366` and
+Security run `29698123327`. The checksum-verified Linux candidate
+`2ddc876eb97c0d56c81b9e4acdd351025529270b5e9b463fe9449cb76cce5871` passed 11/11
+supported hosts and 132/132 managed-upgrade stages, all 12 packed Node/package-manager/TypeScript
+jobs, and all three gallery clean-room jobs. It remained inside the frozen package ceiling at
+510,941 packed bytes, 1,785,171 unpacked bytes, and 143 files. CI confidence passed 176 test files
+/ 1,500 tests, 90.44% statements/lines, 84.55% branches, 92.57% functions, and 93.20% mutation
+(93.89% over covered code); host-capabilities scored 91.78% and the critical aggregate 92.51%.
+Preview/apply binding, explicit conflict consent, idempotence, source/user-file non-mutation, and
+provider-evidence fail-closed behavior are covered by focused adversarial tests. Independent
+read-only review found no remaining P0/P1. `RB-10` is closed.
+
 ### Z07 — Deliver a warm incremental control plane
 
-- **Status:** `todo`
+- **Status:** `doing`
 - **Depends on:** `Z04`, `Z05`
 
 **Outcome:** the proven facts pipeline can reuse a project snapshot keyed by policy, compiler, and
@@ -2613,8 +2626,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: `Z06` (`todo`) — make managed upgrade and observed enforcement state truthful from the packed candidate
-Next action: after Z05 merges, move only Z06 to `doing`; reproduce managed-content drift/conflict and false required-CI evidence before implementing identity-bound preview/apply plus doctor parity
+Item: `Z07` (`doing`) — deliver a measured warm incremental control plane without semantic drift
+Next action: record the like-for-like one-shot warm-doctor baseline, then implement the smallest identity-keyed snapshot path and exact invalidation/parity corpus against the frozen targets
 Release lanes: Z01+Z02 may ship a stable corrective patch; Z04 may ship parity; Z06 closes the installed journey; Z07–Z09 gate only 10x/causal/retention/independent-close claims
 Parked unchanged: Y06, Y07, Y09, and Y10 retain their named field gates and must not start as collateral Z work
 Runtime parked: K01 retains confirmed experimental intra-process commit gaps outside Phase Z and does not block gate-package corrective releases

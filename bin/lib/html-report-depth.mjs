@@ -106,6 +106,14 @@ export function renderWritePathAdoptionBlock(writePath) {
   const gapNote = writePath.gap
     ? ` Gap: <b>${esc(writePath.gap.id)}</b> — ${esc(writePath.gap.message || '')}`
     : '';
+  const state = writePath.enforcementState;
+  const value = (entry) => entry === true ? 'yes' : entry === false ? 'no' : String(entry);
+  const boundary = (label, entry) => entry
+    ? `<li><b>${esc(label)}</b> — supported ${esc(value(entry.supported))}; analyzed ${esc(value(entry.analyzed))}; configured ${esc(value(entry.configured))}; installed ${esc(value(entry.installed))}; active ${esc(value(entry.active))}; bypassable ${esc(value(entry.bypassable))}; required ${esc(value(entry.required))}</li>`
+    : '';
+  const stateHtml = state
+    ? `<ul class="senior-list" style="margin:.45rem 0 0">${boundary('Local write', state.localWrite)}${boundary('Advisory MCP', state.advisoryMcp)}${boundary('CI merge', state.ciMerge)}</ul>`
+    : '';
   // invLine / gapNote already include escaped user content; only plain strings go through esc().
   return `<div class="write-path-block" title="${esc(writePathModeHint(mode))}">
       <p class="dim" style="margin:.65rem 0 .2rem;font-size:.84rem">
@@ -117,6 +125,7 @@ export function renderWritePathAdoptionBlock(writePath) {
       <p class="kpi-hint" style="max-width:none;margin:0">
         ${esc(writePathModeHint(mode))} ${invLine}${esc(unknownNote)}${gapNote}
       </p>
+      ${stateHtml}
     </div>`;
 }
 

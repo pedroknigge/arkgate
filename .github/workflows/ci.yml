@@ -286,3 +286,49 @@ jobs:
         env:
           MATRIX_RESULT: ${{ needs.gallery-clean-room.result }}
         run: test "$MATRIX_RESULT" = success
+
+  # Z06 managed-upgrade truth: every supported host installs and executes the exact
+  # checksummed candidate produced by build. Checkout code only orchestrates the run.
+  managed-upgrade-candidate:
+    name: Managed upgrade packed candidate
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 20
+
+      - name: Pin npm used by temporary consumers
+        run: npm install --global npm@10.8.2
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-artifacts-${{ github.sha }}
+          path: ${{ runner.temp }}/release-artifacts
+
+      - name: Exercise managed upgrades for all eleven hosts
+        run: >-
+          node tests/harness/managed-upgrade-candidate.mjs
+          --artifact-dir "${{ runner.temp }}/release-artifacts/gate"
+          --out "${{ runner.temp }}/managed-upgrade-candidate/report.json"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: managed-upgrade-candidate-${{ github.sha }}
+          path: ${{ runner.temp }}/managed-upgrade-candidate/report.json
+          if-no-files-found: error
+
+  managed-upgrade-candidate-gate:
+    name: Managed upgrade candidate gate
+    if: ${{ always() }}
+    needs: managed-upgrade-candidate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the complete packed-host matrix
+        env:
+          MATRIX_RESULT: ${{ needs.managed-upgrade-candidate.result }}
+        run: test "$MATRIX_RESULT" = success

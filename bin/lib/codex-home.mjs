@@ -68,11 +68,32 @@ export function codexProjectSlug(absRoot) {
   return `${base}_${hash}`;
 }
 
+/** Parse the one generated-style TOML args array from an MCP table body. */
+export function extractCodexArgsFromBlock(block) {
+  if (!block || typeof block !== 'string') return null;
+  const matches = [
+    ...block.matchAll(/^[ \t]*args[ \t]*=[ \t]*\[([^\]\r\n]*)\][ \t]*(?:#.*)?$/gm),
+  ];
+  if (matches.length !== 1) return null;
+  const tokens = [...matches[0][1].matchAll(/"(?:\\.|[^"\\])*"|'[^']*'/g)];
+  const shape = matches[0][1].replace(/"(?:\\.|[^"\\])*"|'[^']*'/g, '__ARK_STRING__');
+  if (!/^[ \t]*(?:__ARK_STRING__(?:[ \t]*,[ \t]*__ARK_STRING__)*[ \t]*,?)?[ \t]*$/.test(shape)) {
+    return null;
+  }
+  try {
+    return tokens.map((match) =>
+      match[0].startsWith('"') ? JSON.parse(match[0]) : match[0].slice(1, -1)
+    );
+  } catch {
+    return null;
+  }
+}
+
 /** Extract `--root` from one TOML mcp_servers table body. */
 export function extractCodexRootFromBlock(block) {
-  if (!block || typeof block !== 'string') return null;
-  const m = block.match(/"--root"\s*,\s*"([^"]+)"/);
-  return m ? m[1] : null;
+  const args = extractCodexArgsFromBlock(block);
+  const index = args?.indexOf('--root') ?? -1;
+  return index >= 0 && typeof args[index + 1] === 'string' ? args[index + 1] : null;
 }
 
 /**
@@ -82,20 +103,19 @@ export function extractCodexRootFromBlock(block) {
 export function listCodexArkServerTables(tomlText) {
   if (!tomlText || typeof tomlText !== 'string') return [];
   const out = [];
-  const headerRe = /\[mcp_servers\.(ark(?:_[a-zA-Z0-9_-]*)?)\]/g;
+  const headerRe =
+    /^[ \t]*\[[ \t]*(?:"mcp_servers"|'mcp_servers'|mcp_servers)[ \t]*\.[ \t]*(?:"(ark(?:_[a-zA-Z0-9_-]*)?)"|'(ark(?:_[a-zA-Z0-9_-]*)?)'|(ark(?:_[a-zA-Z0-9_-]*)?))[ \t]*\][ \t]*(?:#.*)?$/gm;
   const headers = [];
   let hm;
   while ((hm = headerRe.exec(tomlText)) !== null) {
-    headers.push({ table: hm[1], index: hm.index });
+    headers.push({ table: hm[1] ?? hm[2] ?? hm[3], index: hm.index });
   }
   for (let i = 0; i < headers.length; i++) {
     const start = headers[i].index;
-    let end = i + 1 < headers.length ? headers[i + 1].index : tomlText.length;
-    if (i + 1 >= headers.length) {
-      const rest = tomlText.slice(start + 1);
-      const other = rest.search(/\n\[/);
-      if (other >= 0) end = start + 1 + other;
-    }
+    let end = tomlText.length;
+    const rest = tomlText.slice(start + 1);
+    const other = rest.search(/\n(?=[ \t]*\[)/);
+    if (other >= 0) end = start + 1 + other;
     const block = tomlText.slice(start, end).replace(/\s+$/, '\n');
     out.push({
       table: headers[i].table,
@@ -148,9 +168,14 @@ export function codexScopedTableForRoot(tomlText, absRoot) {
 /** True when project TOML owns the primary Ark MCP binding for that project. */
 export function codexProjectMcpIsValid(tomlText, projectRoot) {
   const resolvedRoot = path.resolve(projectRoot);
+  if (listCodexArkServerTables(tomlText).filter((entry) => entry.table === 'ark').length !== 1) {
+    return false;
+  }
   const primary = codexPrimaryTable(tomlText);
-  if (!primary?.root || !/\b(ark|arkgate)-mcp\b/.test(primary.block)) return false;
-  const config = primary.block.match(/"--config"\s*,\s*"([^"]+)"/)?.[1];
+  const args = extractCodexArgsFromBlock(primary?.block);
+  if (!primary?.root || !args?.some((value) => /^(ark|arkgate)-mcp$/.test(value))) return false;
+  const configIndex = args.indexOf('--config');
+  const config = configIndex >= 0 ? args[configIndex + 1] : null;
   if (!config) return false;
   try {
     return (
@@ -170,7 +195,9 @@ export function extractCodexArkRootFromToml(tomlText) {
 export function codexArkBlockHasPreferredBin(tomlText) {
   const primary = codexPrimaryTable(tomlText);
   if (!primary) return false;
-  const bins = [...primary.block.matchAll(/"(arkgate-mcp|ark-mcp)"/g)].map((m) => m[1]);
+  const bins = (extractCodexArgsFromBlock(primary.block) ?? []).filter((value) =>
+    /^(arkgate-mcp|ark-mcp)$/.test(value)
+  );
   if (bins.length > 1) return false;
   return bins.length === 1 && bins[0] === PREFERRED_CODEX_MCP_BIN;
 }
@@ -180,7 +207,7 @@ export function codexArkBlockHasPreferredBin(tomlText) {
  * Permanent different project roots are NOT broken — multi-project uses a secondary table.
  */
 export function codexArkBlockNeedsRewrite(tomlText, absRoot) {
-  if (!tomlText || !tomlText.includes('[mcp_servers.ark]')) return true;
+  if (!codexPrimaryTable(tomlText)) return true;
   const rootArg = extractCodexArkRootFromToml(tomlText);
   if (!rootArg || isTempOrUpgradeRoot(rootArg)) return true;
   try {
@@ -210,7 +237,7 @@ export function codexArkBlockNeedsRewrite(tomlText, absRoot) {
  */
 export function assessCodexHomeMcp(tomlText, absRoot) {
   const resolvedRoot = path.resolve(absRoot);
-  if (!tomlText || !tomlText.includes('[mcp_servers.ark]')) {
+  if (!codexPrimaryTable(tomlText)) {
     return {
       root: null,
       tempPath: false,

@@ -321,6 +321,16 @@ export {
 } from './domain/policyDelta';
 
 export {
+  ARK_ENFORCEMENT_STATE_SCHEMA_VERSION,
+  type ArkEnforcementHost,
+  type ArkEnforcementState,
+  type EnforcementBoundaryState,
+  type EnforcementEvidence,
+  type EnforcementEvidenceField,
+  type EnforcementVerification,
+} from './domain/enforcementState';
+
+export {
   ANALYSIS_IR_SCHEMA_VERSION,
   RESOLVED_CANDIDATE_FACTS_SCHEMA,
   RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION,

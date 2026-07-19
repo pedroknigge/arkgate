@@ -43,9 +43,11 @@ you pass `--force`, so review and commit only the templates that match your proj
 **Doctor (W5):** `ark-check --doctor --json` includes `doctor.writePath`
 (`mode`: `repair` | `reject-only` | `mcp-only` | `none`, plus `prepareWrite` /
 `autoPatch` flags), the supported profile for the active host, and the evidence actually found.
-`writePath.enforcementLadder` separates `supported`, `installed`, `active`, and `bypassable` for
-local hooks, advisory MCP, and CI. Doctor leaves hook trust and required-status policy
-`unverified`; an actual covered PreToolUse denial can report operation-scoped activity. Codex
+`writePath.enforcementState` separately reports `supported`, `analyzed`, `configured`, `installed`,
+`active`, `bypassable`, and `required` with structured evidence for local hooks, advisory MCP, and
+CI. Its public schema is `arkgate/schema/enforcement-state`; `enforcementLadder` remains a
+compatibility projection. Doctor leaves hook trust and required-status policy `unverified` without
+runtime/provider evidence; an actual covered PreToolUse denial can report operation-scoped activity. Codex
 `apply_patch` can expose a complete patch to the shared atomic preflight, but the host remains
 bypassable/advisory because some Code Mode paths do not dispatch the project hook.
 

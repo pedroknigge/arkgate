@@ -13,10 +13,12 @@ agent skipped MCP, or branch protection did not require the CI status.
 
 ## Decision
 
-- `doctor.writePath.enforcementLadder` reports local hook, advisory MCP, and CI/merge separately.
-- Every boundary exposes supported, installed, active, bypassable, and concrete evidence state.
-- Doctor may infer support and installation, but leaves runtime activity/trust and required merge
-  status unverified when local files cannot prove them.
+- `doctor.writePath.enforcementState` is the schema-backed contract for local hook, advisory MCP,
+  and CI/merge boundaries. `enforcementLadder` remains a compatibility projection.
+- Every boundary exposes supported, analyzed, configured, installed, active, bypassable, required,
+  and structured evidence state. Configuration text never proves package installation.
+- Doctor leaves runtime activity/trust and required merge status `unverified` when local files
+  cannot prove them. Opt-in provider evidence targets the default branch, not the current branch.
 - `hard: true` is valid only inside an observed trusted hook invocation whose operation matches the
   host's covered surface. Other tools, direct filesystem edits, and human writes still rely on CI.
 - A complete Codex `apply_patch` event may be atomically preflighted, but the Codex host profile

@@ -10,6 +10,7 @@ import path from 'node:path';
 import {
   codexProjectMcpIsValid,
   codexConfigPath,
+  extractCodexArgsFromBlock,
   listCodexArkServerTables,
 } from './codex-home.mjs';
 import {
@@ -18,6 +19,7 @@ import {
 } from './host-support-matrix.mjs';
 import { detectActiveAgentHost } from './skill-install.mjs';
 import { detectCiEnforcement } from './weakest-link.mjs';
+import { buildEnforcementState } from './enforcement-state.mjs';
 
 export const WRITE_CAPABILITY_NAMES = [
   'hard-write',
@@ -126,22 +128,162 @@ function relativeEvidencePath(root, file) {
   return file.split(path.sep).join('/');
 }
 
-function isArkMcpText(text) {
-  return (
-    /\b(ark|arkgate)-mcp\b/.test(text) ||
-    /mcp_servers\.ark\b/.test(text) ||
-    /"ark"\s*:\s*\{/.test(text) ||
-    /mcpServers[\s\S]*\bark\b/.test(text)
+function isArkMcpToken(value) {
+  if (typeof value !== 'string') return false;
+  return /^(?:arkgate-mcp|ark-mcp)(?:\.mjs)?$/.test(
+    path.basename(value.trim().replace(/\\/g, '/'))
   );
+}
+
+function arkMcpInvocation(server) {
+  if (!server || typeof server !== 'object' || typeof server.command !== 'string') return false;
+  if (server.args !== undefined && !Array.isArray(server.args)) return false;
+  const args = server.args ?? [];
+  if (!args.every((value) => typeof value === 'string')) return false;
+  const argv = [server.command, ...args];
+  if (argv.filter(isArkMcpToken).length !== 1) return false;
+  if (isArkMcpToken(server.command)) return { argv, binIndex: 0 };
+  const runner = path.basename(server.command.trim().replace(/\\/g, '/'));
+  if (['npx', 'yarn'].includes(runner) && isArkMcpToken(args[0])) {
+    return { argv, binIndex: 1 };
+  }
+  if (runner === 'node') {
+    const script = args[0]?.replace(/\\/g, '/');
+    return isArkMcpToken(script) && /(?:^|\/)bin\/ark-mcp\.mjs$/.test(script)
+      ? { argv, binIndex: 1 }
+      : false;
+  }
+  if (runner === 'pnpm') {
+    const prefix = args[0] === 'exec'
+      ? 1
+      : args[0] === '--config.verify-deps-before-run=false' && args[1] === 'exec'
+        ? 2
+        : 0;
+    return prefix > 0 && isArkMcpToken(args[prefix])
+      ? { argv, binIndex: prefix + 1 }
+      : false;
+  }
+  return false;
+}
+
+function mcpServerRunsArk(server) {
+  return Boolean(arkMcpInvocation(server));
+}
+
+function commandArkMcpInvocation(command) {
+  if (typeof command !== 'string') return false;
+  const words = [];
+  for (const match of command.matchAll(/"([^"]*)"|'([^']*)'|(&&|\|\||[;|#])|([^\s;&|#]+)/g)) {
+    if (match[3]) break;
+    words.push(match[1] ?? match[2] ?? match[4]);
+  }
+  if (path.basename(words[0]?.replace(/\\/g, '/') ?? '') === 'env') words.shift();
+  const environment = {};
+  while (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[0] ?? '')) {
+    const assignment = words.shift();
+    const split = assignment.indexOf('=');
+    const value = assignment.slice(split + 1);
+    environment[assignment.slice(0, split)] = /^(['"]).*\1$/.test(value)
+      ? value.slice(1, -1)
+      : value;
+  }
+  const [executable, ...args] = words;
+  const invocation = arkMcpInvocation({ command: executable, args });
+  return invocation
+    ? { ...invocation, binArgs: invocation.argv.slice(invocation.binIndex + 1), environment }
+    : false;
+}
+
+function requiredWriteOperations(relativePath) {
+  return relativePath.startsWith('.grok/')
+    ? ['write', 'search_replace']
+    : ['Write', 'Edit', 'MultiEdit'];
+}
+
+function matcherOperations(relativePath, matcher) {
+  const required = requiredWriteOperations(relativePath);
+  if (typeof matcher !== 'string' || matcher.trim() === '') return required;
+  try {
+    const pattern = new RegExp(`^(?:${matcher})$`);
+    return required.filter((operation) => pattern.test(operation));
+  } catch {
+    return [];
+  }
+}
+
+function jsonArkMcpIsValid(text) {
+  try {
+    return mcpServerRunsArk(JSON.parse(text)?.mcpServers?.ark);
+  } catch {
+    return false;
+  }
+}
+
+function tomlMcpBlockIsValid(block) {
+  const matches = [
+    ...block.matchAll(
+      /^[ \t]*command[ \t]*=[ \t]*("(?:\\.|[^"\\])*"|'[^']*')[ \t]*(?:#.*)?$/gm
+    ),
+  ];
+  const args = extractCodexArgsFromBlock(block);
+  if (matches.length !== 1 || !args) return false;
+  const validLine = (line) =>
+    /^[ \t]*(?:#.*)?$/.test(line) ||
+    /^[ \t]*\[.*\][ \t]*(?:#.*)?$/.test(line) ||
+    /^[ \t]*command[ \t]*=[ \t]*("(?:\\.|[^"\\])*"|'[^']*')[ \t]*(?:#.*)?$/.test(line) ||
+    /^[ \t]*args[ \t]*=[ \t]*\[[^\]\r\n]*\][ \t]*(?:#.*)?$/.test(line);
+  if (block.split('\n').some((line) => !validLine(line))) return false;
+  let command;
+  try {
+    command = matches[0][1].startsWith('"')
+      ? JSON.parse(matches[0][1])
+      : matches[0][1].slice(1, -1);
+  } catch {
+    return false;
+  }
+  return mcpServerRunsArk({ command, args });
+}
+
+function tomlArkMcpIsValid(text) {
+  const primary = listCodexArkServerTables(text).filter((entry) => entry.table === 'ark');
+  return primary.length === 1 && tomlMcpBlockIsValid(primary[0].block);
 }
 
 function hookEvidence(root, relativePath) {
   const text = readText(path.join(root, relativePath));
-  const hard = Boolean(text && /--hook\b/.test(text));
-  const repair = Boolean(
-    hard &&
-      (/--hook-repair\b/.test(text) ||
-        /ARK_HOOK_REPAIR\s*=\s*['"]?(1|true|yes|on)/i.test(text))
+  let hooks = [];
+  try {
+    const groups = JSON.parse(text)?.hooks?.PreToolUse;
+    if (Array.isArray(groups)) {
+      hooks = groups.flatMap((group) =>
+        Array.isArray(group?.hooks)
+          ? group.hooks
+              .filter((hook) => !hook?.type || hook.type === 'command')
+              .map((hook) => ({
+                hook,
+                invocation: commandArkMcpInvocation(hook?.command),
+                operations: matcherOperations(relativePath, group.matcher),
+              }))
+              .filter((entry) => entry.invocation)
+          : []
+      );
+    }
+  } catch {
+    hooks = [];
+  }
+  const hardHooks = hooks.filter((entry) => entry.invocation.binArgs.includes('--hook'));
+  const required = requiredWriteOperations(relativePath);
+  const hard = required.every((operation) =>
+    hardHooks.some((entry) => entry.operations.includes(operation))
+  );
+  const repair = hard && required.every((operation) =>
+    hardHooks.some(({ hook, invocation, operations }) =>
+      operations.includes(operation) &&
+      (invocation.binArgs.includes('--hook-repair') ||
+        /^(?:1|true|yes|on)$/i.test(
+          String(hook.env?.ARK_HOOK_REPAIR ?? invocation.environment.ARK_HOOK_REPAIR ?? '')
+        ))
+    )
   );
   return {
     hard: hard ? [relativePath] : [],
@@ -151,20 +293,25 @@ function hookEvidence(root, relativePath) {
 
 function mcpEvidence(root, relativePath) {
   const text = readText(path.join(root, relativePath));
-  return isArkMcpText(text) ? [relativePath] : [];
+  const valid = relativePath.endsWith('.toml')
+    ? tomlArkMcpIsValid(text)
+    : jsonArkMcpIsValid(text);
+  return valid ? [relativePath] : [];
 }
 
 function codexMcpEvidence(root) {
   const projectFile = path.join(root, '.codex', 'config.toml');
   const projectText = readText(projectFile);
-  const projectRegistered = codexProjectMcpIsValid(projectText, root);
+  const projectRegistered =
+    codexProjectMcpIsValid(projectText, root) && tomlArkMcpIsValid(projectText);
   if (projectRegistered) return ['.codex/config.toml'];
 
   const file = codexConfigPath();
   const text = readText(file);
   const resolvedRoot = path.resolve(root);
-  const registered = listCodexArkServerTables(text).some((entry) => {
-    if (!entry.root || !/\b(ark|arkgate)-mcp\b/.test(entry.block)) return false;
+  const tables = listCodexArkServerTables(text);
+  const registered = new Set(tables.map((entry) => entry.table)).size === tables.length && tables.some((entry) => {
+    if (!entry.root || !tomlMcpBlockIsValid(entry.block)) return false;
     return path.resolve(entry.root) === resolvedRoot;
   });
   return registered ? [relativeEvidencePath(root, file)] : [];
@@ -227,11 +374,13 @@ export function detectWritePathInventory(root) {
     capabilities: capabilityMap(evidence),
     evidence,
     hosts,
+    ci,
   };
 }
 
 export function buildWritePathCapabilityModel(root, explicitHost, attempt) {
   const inventory = detectWritePathInventory(root);
+  const ci = inventory.ci;
   const detectedHost = explicitHost ?? detectActiveAgentHost();
   const activeHost = KNOWN_HOSTS.includes(detectedHost) ? detectedHost : 'unknown';
   const activeRecord = inventory.hosts[activeHost];
@@ -244,7 +393,7 @@ export function buildWritePathCapabilityModel(root, explicitHost, attempt) {
         'merge-gate': [...inventory.evidence['merge-gate']],
       };
 
-  return {
+  const model = {
     activeHost,
     support: getHostSupportProfile(activeHost),
     capabilities: capabilityMap(capabilityEvidence),
@@ -257,4 +406,7 @@ export function buildWritePathCapabilityModel(root, explicitHost, attempt) {
     ),
     inventory,
   };
+  model.enforcementState = buildEnforcementState(root, { ...model, ci });
+  model.enforcementLadder.ciMerge.requiredStatus = model.enforcementState.ciMerge.required;
+  return model;
 }

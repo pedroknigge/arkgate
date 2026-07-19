@@ -296,9 +296,11 @@ ark.config.json
   writes those exact bytes. Full skills remain explicit via `--install-agent-gates --skills-only`;
   reports remain opt-in via `ark-check --report`.
 - **Write protocol (2.10 / Track W):** mechanical-safe **autoPatch** on the write gate (`import type`); MCP **`ark_prepare_write`** (place + validate + patch + judgmentBrief); opt-in hook **`--hook-repair`** (`ARK_REPAIR_JSON`); doctor **`writePath`** (repair vs reject-only); loop-cost eval (`npm run eval:loop-cost`). Port-proof inject is **judgment** (arity change), not silent auto-apply.
-- **Enforcement ladder (Phase T):** doctor JSON exposes `writePath.enforcementLadder` with separate
-  `supported`, `installed`, `active`, `bypassable`, evidence, operation coverage, and required-status
-  honesty. Hook repair JSON carries the operation-scoped ladder; MCP alone remains advisory.
+- **Enforcement state:** doctor JSON exposes schema-backed `writePath.enforcementState` with
+  separate analyzed, configured, installed, active, bypassable, and required evidence for local
+  write, advisory MCP, and CI merge boundaries. Provider-unavailable required status remains
+  `unverified`; local workflow text never proves branch protection. The older
+  `enforcementLadder` projection remains for compatibility.
 - **Fail-closed CI (2.11):** `--strict-merge` combines config coverage, shared gate-file
   presence, and bypass diagnostics for dynamic imports, TypeScript suppressions, explicit `any`
   casts, InMemory runtime defaults, and disabled peer isolation. `--strict` is a compatibility
@@ -345,7 +347,7 @@ npx arkgate start --tools codex --apply   # select the host explicitly
 npx arkgate start --install --apply       # also add arkgate to package.json (explicit only)
 npx arkgate start --remove-host codex     # preview compact-host removal; add --apply to confirm
 npx arkgate-check --doctor                # health + Adoption gaps (not just fitness)
-npx arkgate-check --doctor --json         # adoption + explicit writePath.enforcementLadder
+npx arkgate-check --doctor --json         # adoption + schema-backed writePath.enforcementState
 npx arkgate-check --strict                # fail-closed CI + installed-gate/safety checks
 npx arkgate-check --plan                  # safe-to-auto-fix vs your call
 npx arkgate-check --coverage              # Governed: N%
@@ -353,13 +355,14 @@ npx arkgate-check --report ark-report.html  # showcase HTML (opens in browser on
 npx arkgate-check --baseline              # only NEW violations fail
 npx arkgate preflight --changes changes.json --json  # atomic read-only batch verdict
 npx arkgate preflight --changes changes.json --change-map map.json --json  # intent hash + structural convergence
-npx arkgate upgrade                       # package + gates/skills + MCP/Codex normalize
+npx arkgate upgrade --json                # read-only managed-content preview + planDigest
+npx arkgate upgrade --apply               # update package, then re-preview with the new CLI
+# run the emitted nextCommand to apply only that preview, including --plan-digest
 ```
 
-> **Known 3.7.0 upgrade limitation:** existing repo-managed skills may be skipped instead of
-> refreshed. If doctor reports them stale, run
-> `npx arkgate-check --install-agent-gates --force --skills-only`. Z06 replaces this workaround
-> with managed-content identities and an honest refresh report.
+Managed upgrade records content identities in `ark.managed.json`, preserves customized and
+unrelated files, and requires explicit consent for recorded deletions or conflicts. It never
+rewrites a Codex home or another global directory implicitly.
 
 CI (example):
 

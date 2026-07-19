@@ -54,7 +54,24 @@ function writeHook(root: string, host: 'claude' | 'grok', repair = true): void {
   write(
     root,
     relativePath,
-    `command: npx arkgate-mcp --hook${repair ? ' --hook-repair' : ''} --root .\n`
+    JSON.stringify({
+      hooks: {
+        PreToolUse: [
+          {
+            matcher:
+              host === 'grok'
+                ? 'Write|Edit|MultiEdit|write|search_replace'
+                : 'Write|Edit|MultiEdit',
+            hooks: [
+              {
+                type: 'command',
+                command: `npx arkgate-mcp --hook${repair ? ' --hook-repair' : ''} --root .`,
+              },
+            ],
+          },
+        ],
+      },
+    })
   );
 }
 
@@ -374,8 +391,14 @@ describe('active-host write capability model', () => {
         'hard-write': true,
         'repair-payload': true,
       });
-      expect(result.gap?.fix).toContain('--install-agent-gates --tools codex');
-      expect(result.gap?.fix).not.toContain('--tools claude');
+      expect(result.gap).toEqual({
+        id: 'write-path-none',
+        severity: 'warn',
+        message:
+          'Active host codex has no hard write boundary or advisory Ark MCP. ' +
+          'The CI check remains separate and does not block local writes.',
+        fix: 'npx ark-check --install-agent-gates --tools codex',
+      });
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
@@ -488,6 +511,40 @@ describe('active-host write capability model', () => {
     }
   });
 
+  it('does not infer Codex project scope from TOML comments', () => {
+    const root = mk();
+    const codexHome = mk();
+    try {
+      write(
+        root,
+        '.codex/config.toml',
+        '[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp"]\n' +
+          '# args = ["arkgate-mcp", "--root", ".", "--config", "ark.config.json"]\n'
+      );
+      write(
+        codexHome,
+        'config.toml',
+        '[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp"]\n' +
+          `# args = ["arkgate-mcp", "--root", "${root}"]\n`
+      );
+      const previous = process.env.CODEX_HOME;
+      process.env.CODEX_HOME = codexHome;
+      try {
+        expect(detectWritePathCapabilities(root, 'codex')).toMatchObject({
+          mode: 'none',
+          capabilities: { 'advisory-write': false },
+          capabilityEvidence: { 'advisory-write': [] },
+        });
+      } finally {
+        if (previous === undefined) delete process.env.CODEX_HOME;
+        else process.env.CODEX_HOME = previous;
+      }
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+      fs.rmSync(codexHome, { recursive: true, force: true });
+    }
+  });
+
   it('uses active-host detection only when no explicit host is supplied', () => {
     const root = mk();
     try {
@@ -518,11 +575,25 @@ describe('active-host write capability model', () => {
   it('accepts intentional whitespace variants without broadening signatures', () => {
     const root = mk();
     try {
-      write(root, '.mcp.json', '"ark":{');
+      write(
+        root,
+        '.mcp.json',
+        '{ "mcpServers" : { "ark" : { "command" : "npx", "args" : [ "arkgate-mcp" ] } } }'
+      );
       write(
         root,
         '.claude/settings.json',
-        'command: arkgate-mcp --hook\nARK_HOOK_REPAIR = true\n'
+        JSON.stringify({
+          hooks: {
+            PreToolUse: [
+              {
+                hooks: [
+                  { command: 'ARK_HOOK_REPAIR=true arkgate-mcp --hook' },
+                ],
+              },
+            ],
+          },
+        })
       );
       expect(detectWritePathCapabilities(root, 'claude')).toMatchObject({
         mode: 'repair',
@@ -532,6 +603,54 @@ describe('active-host write capability model', () => {
           'repair-payload': true,
         },
       });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps observed pre-tool coverage and CI-required evidence fail-closed', () => {
+    const root = mk();
+    try {
+      const complete = detectWritePathCapabilities(root, 'grok', {
+        boundary: 'pre-tool',
+        operation: 'write',
+        completePatch: true,
+      });
+      expect(complete.enforcementLadder.localWrite).toMatchObject({
+        installed: true,
+        active: true,
+        bypassable: false,
+        hard: true,
+        completePatch: true,
+        coverage: 'complete-patch',
+        operation: 'write',
+        operationCovered: true,
+      });
+      expect(complete.enforcementLadder.ciMerge).toMatchObject({
+        bypassable: 'unknown',
+        requiredStatus: 'unverified',
+      });
+
+      const unsupported = detectWritePathCapabilities(root, 'grok', {
+        boundary: 'pre-tool',
+        operation: 'Bash',
+        completePatch: true,
+      });
+      expect(unsupported.enforcementLadder.localWrite).toMatchObject({
+        active: false,
+        bypassable: true,
+        hard: false,
+        completePatch: false,
+        operationCovered: false,
+      });
+
+      expect(() =>
+        detectWritePathCapabilities(root, 'grok', {
+          boundary: 'pre-tool',
+          operation: 42,
+          completePatch: true,
+        })
+      ).not.toThrow();
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
@@ -573,7 +692,11 @@ describe('active-host write capability model', () => {
       expect(payload.doctor.writePath.capabilities['repair-payload']).toBe(false);
       expect(payload.doctor.writePath.inventory.hosts.grok.capabilities['hard-write']).toBe(true);
 
-      write(root, '.mcp.json', '{"mcpServers":{"ark":{"args":["arkgate-mcp"]}}}\n');
+      write(
+        root,
+        '.mcp.json',
+        '{"mcpServers":{"ark":{"command":"npx","args":["arkgate-mcp"]}}}\n'
+      );
       const humanRun = spawnSync(
         process.execPath,
         [ARK_CHECK, '--root', root, '--config', 'ark.config.json', '--doctor', '--no-cache'],
@@ -586,13 +709,13 @@ describe('active-host write capability model', () => {
       expect(humanRun.status).toBe(0);
       expect(humanRun.stdout).toContain('Active host: cursor');
       expect(humanRun.stdout).toContain(
-        'Hard hook — supported: no · installed: no · active/trusted: no · bypassable: yes'
+        'Local write — supported: no · analyzed: yes · configured: no · installed: no · active: no · bypassable: yes · required: unverified'
       );
       expect(humanRun.stdout).toContain(
-        'Advisory MCP — supported: yes · installed: yes · active: unverified · bypassable: yes'
+        'Advisory MCP — supported: yes · analyzed: yes · configured: yes · installed: no · active: no · bypassable: yes · required: unverified'
       );
       expect(humanRun.stdout).toContain(
-        'Merge gate — supported: yes · installed: yes · active: unverified · bypassable: unknown · required status: unverified'
+        'CI merge — supported: yes · analyzed: yes · configured: yes · installed: no · active: no · bypassable: unverified · required: unverified'
       );
       expect(humanRun.stdout).toContain('Shared gate files present (AGENTS.md, .mcp.json, CI)');
       expect(humanRun.stdout).not.toContain('Gate files present (AGENTS.md, .mcp.json, CI, write gate)');

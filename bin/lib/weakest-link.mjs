@@ -2,10 +2,20 @@
  * Q3 — Weakest-link enforcement sensors (local, pure FS; optional gh for protection).
  * Missing CI, config drift, pre-commit human-edit path, and honest branch-protection report.
  */
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { arkCommand } from '../ark-shared.mjs';
+import {
+  enforcingArkRunText,
+  reportGithubBranchProtection,
+  runsArkCheck,
+} from './github-enforcement.mjs';
+
+export {
+  isArkRequiredStatusCheck,
+  jobIdsThatRunArkCheck,
+  reportGithubBranchProtection,
+} from './github-enforcement.mjs';
 
 const PRECOMMIT_MARKERS = [
   'ark-check',
@@ -60,13 +70,12 @@ export function classifyArkCheckFlags(text) {
   if (!text || typeof text !== 'string') {
     return { hasFailClosedFlag: false, hasStrictConfigOnly: false, hasStrictFlag: false };
   }
-  const hasStrictMerge = /--strict-merge\b/.test(text);
-  const hasRequireGates = /--require-gates\b/.test(text);
+  const hasStrictMerge = /(?:^|\s)--strict-merge(?=\s|$)/.test(text);
+  const hasRequireGates = /(?:^|\s)--require-gates(?=\s|$)/.test(text);
   // Bare --strict (alias of --strict-merge), not --strict-config / already-matched merge.
-  const withoutLong = text.replace(/--strict-merge\b/g, ' ').replace(/--strict-config\b/g, ' ');
-  const hasBareStrict = /--strict\b/.test(withoutLong);
+  const hasBareStrict = /(?:^|\s)--strict(?=\s|$)/.test(text);
   const hasFailClosedFlag = hasStrictMerge || hasRequireGates || hasBareStrict;
-  const hasStrictConfig = /--strict-config\b/.test(text);
+  const hasStrictConfig = /(?:^|\s)--strict-config(?=\s|$)/.test(text);
   const hasStrictConfigOnly = hasStrictConfig && !hasFailClosedFlag;
   const hasStrictFlag = hasFailClosedFlag || hasStrictConfigOnly;
   return { hasFailClosedFlag, hasStrictConfigOnly, hasStrictFlag };
@@ -118,8 +127,6 @@ export function detectCiEnforcement(root) {
   } catch {
     checkArchScript = '';
   }
-  const scriptFlags = classifyArkCheckFlags(checkArchScript);
-
   for (const f of files) {
     let text = '';
     try {
@@ -127,17 +134,13 @@ export function detectCiEnforcement(root) {
     } catch {
       continue;
     }
-    const mentionsArk =
-      /\barkgate-check\b/.test(text) ||
-      /\bark-check\b/.test(text) ||
-      /check:architecture/.test(text) ||
-      /pedroknigge\/arkgate/.test(text);
+    const arkRunText = enforcingArkRunText(text, checkArchScript);
+    const mentionsArk = runsArkCheck(text, checkArchScript);
     if (mentionsArk) {
       out.hasArkCheckWorkflow = true;
       out.arkWorkflowFiles.push(`.github/workflows/${f}`);
-      const flags = classifyArkCheckFlags(text);
-      const viaScript = /check:architecture/.test(text) && scriptFlags.hasFailClosedFlag;
-      if (flags.hasFailClosedFlag || viaScript) {
+      const flags = classifyArkCheckFlags(arkRunText);
+      if (flags.hasFailClosedFlag) {
         out.hasFailClosedFlag = true;
         out.failClosed = true;
         out.hasStrictFlag = true;
@@ -154,60 +157,6 @@ export function detectCiEnforcement(root) {
     }
   }
   return out;
-}
-
-/**
- * Job ids (GitHub Actions) whose job body runs ark-check / check:architecture.
- * Used so required status check "build" counts when the build job runs Ark.
- * @param {string} root
- * @returns {Set<string>}
- */
-export function jobIdsThatRunArkCheck(root) {
-  const ids = new Set();
-  const wfDir = path.join(root, '.github', 'workflows');
-  if (!fs.existsSync(wfDir)) return ids;
-  let files = [];
-  try {
-    files = fs.readdirSync(wfDir).filter((f) => /\.ya?ml$/i.test(f));
-  } catch {
-    return ids;
-  }
-  for (const f of files) {
-    let text = '';
-    try {
-      text = fs.readFileSync(path.join(wfDir, f), 'utf8');
-    } catch {
-      continue;
-    }
-    if (!/\barkgate-check\b|\bark-check\b|check:architecture/.test(text)) continue;
-    const jobsIdx = text.search(/^jobs:\s*$/m);
-    if (jobsIdx < 0) continue;
-    const jobsSection = text.slice(jobsIdx);
-    const re = /^ {2}([A-Za-z0-9_-]+):\s*$/gm;
-    const matches = [...jobsSection.matchAll(re)];
-    for (let i = 0; i < matches.length; i++) {
-      const jobId = matches[i][1];
-      const start = matches[i].index ?? 0;
-      const end = i + 1 < matches.length ? (matches[i + 1].index ?? jobsSection.length) : jobsSection.length;
-      const body = jobsSection.slice(start, end);
-      if (/\barkgate-check\b|\bark-check\b|check:architecture/.test(body)) {
-        ids.add(jobId);
-      }
-    }
-  }
-  return ids;
-}
-
-/**
- * Whether required status checks include Ark (by name or by matching a job that runs Ark).
- * @param {string} root
- * @param {string[]} requiredNames
- */
-export function isArkRequiredStatusCheck(root, requiredNames) {
-  if (!Array.isArray(requiredNames) || requiredNames.length === 0) return false;
-  if (requiredNames.some((n) => /ark|architecture|arkgate/i.test(String(n)))) return true;
-  const jobIds = jobIdsThatRunArkCheck(root);
-  return requiredNames.some((n) => jobIds.has(String(n)));
 }
 
 /**
@@ -256,106 +205,6 @@ export function detectConfigGateDrift(root, opts = {}) {
     });
   }
   return { hasConfig, hasAgents, hasCheckScript, issues };
-}
-
-/**
- * Optional GitHub branch-protection / required-check report.
- * Never fakes green: unavailable when gh missing, no remote, or API error.
- *
- * @param {{ cwd?: string, repo?: string, branch?: string, env?: NodeJS.ProcessEnv }} [opts]
- * @returns {{
- *   available: boolean,
- *   reason?: string,
- *   requiredStatusChecks?: string[] | null,
- *   strict?: boolean | null,
- *   enforcesAdmins?: boolean | null,
- *   arkCheckRequired?: boolean | null,
- *   raw?: unknown,
- * }}
- */
-export function reportGithubBranchProtection(opts = {}) {
-  const cwd = opts.cwd ?? process.cwd();
-  const env = opts.env ?? process.env;
-  const gh = spawnSync('gh', ['--version'], { encoding: 'utf8', env });
-  if (gh.status !== 0) {
-    return { available: false, reason: 'gh-cli-unavailable' };
-  }
-
-  let repo = opts.repo;
-  if (!repo) {
-    const r = spawnSync('gh', ['repo', 'view', '--json', 'nameWithOwner', '-q', '.nameWithOwner'], {
-      cwd,
-      encoding: 'utf8',
-      env,
-    });
-    if (r.status !== 0 || !r.stdout?.trim()) {
-      return { available: false, reason: 'gh-repo-unavailable', raw: r.stderr };
-    }
-    repo = r.stdout.trim();
-  }
-
-  let branch = opts.branch;
-  if (!branch) {
-    const b = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
-      cwd,
-      encoding: 'utf8',
-      env,
-    });
-    branch = b.status === 0 ? b.stdout.trim() : 'main';
-    if (branch === 'HEAD') branch = 'main';
-  }
-
-  const view = spawnSync(
-    'gh',
-    [
-      'api',
-      `repos/${repo}/branches/${encodeURIComponent(branch)}/protection`,
-      '--jq',
-      '{strict: .required_status_checks.strict, contexts: .required_status_checks.contexts, checks: .required_status_checks.checks, enforcesAdmins: .enforce_admins.enabled}',
-    ],
-    { cwd, encoding: 'utf8', env }
-  );
-
-  if (view.status !== 0) {
-    const err = `${view.stderr || ''}${view.stdout || ''}`;
-    if (/Not Found|404|Branch not protected/i.test(err)) {
-      return {
-        available: true,
-        reason: 'branch-not-protected',
-        requiredStatusChecks: [],
-        strict: false,
-        enforcesAdmins: false,
-        arkCheckRequired: false,
-        raw: err.slice(0, 400),
-      };
-    }
-    return { available: false, reason: 'gh-api-error', raw: err.slice(0, 400) };
-  }
-
-  let parsed = null;
-  try {
-    parsed = JSON.parse(view.stdout || '{}');
-  } catch {
-    return { available: false, reason: 'gh-api-parse-error', raw: view.stdout };
-  }
-
-  const contexts = Array.isArray(parsed.contexts) ? parsed.contexts.map(String) : [];
-  const checkNames = Array.isArray(parsed.checks)
-    ? parsed.checks.map((c) => String(c?.context || c?.name || '')).filter(Boolean)
-    : [];
-  const all = [...new Set([...contexts, ...checkNames])];
-  // Name match OR required check id equals a workflow job that runs ark-check (e.g. "build").
-  const arkCheckRequired = isArkRequiredStatusCheck(cwd, all);
-
-  return {
-    available: true,
-    reason: 'ok',
-    requiredStatusChecks: all,
-    strict: Boolean(parsed.strict),
-    enforcesAdmins: Boolean(parsed.enforcesAdmins),
-    arkCheckRequired,
-    raw: parsed,
-  };
 }
 
 /**
@@ -434,14 +283,7 @@ export function collectWeakestLinkGaps(root, opts = {}) {
   let github = null;
   if (opts.includeGithub) {
     github = reportGithubBranchProtection({ cwd: root });
-    if (github.available && github.reason === 'branch-not-protected') {
-      gaps.push({
-        id: 'enforcement-branch-unprotected',
-        severity: 'warn',
-        message: 'Default branch has no GitHub branch protection (architecture check cannot be required)',
-        fix: 'Enable branch protection and require the architecture / ark-check status check',
-      });
-    } else if (
+    if (
       github.available &&
       github.arkCheckRequired === false &&
       Array.isArray(github.requiredStatusChecks)
@@ -450,7 +292,7 @@ export function collectWeakestLinkGaps(root, opts = {}) {
         id: 'enforcement-ark-check-not-required',
         severity: 'warn',
         message:
-          'Branch protection exists but no required status check looks like ark/architecture',
+          'Branch protection exists but no required status check matches a local Ark-running job',
         fix: 'Add the architecture CI job name to required status checks',
       });
     }

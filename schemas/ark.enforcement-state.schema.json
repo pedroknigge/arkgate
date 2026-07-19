@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://unpkg.com/arkgate@3/schemas/ark.enforcement-state.schema.json",
+  "title": "ArkGate enforcement state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "activeHost",
+    "localWrite",
+    "advisoryMcp",
+    "ciMerge"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "activeHost": {
+      "enum": ["claude", "grok", "cursor", "codex", "unknown"]
+    },
+    "localWrite": { "$ref": "#/$defs/boundary" },
+    "advisoryMcp": { "$ref": "#/$defs/boundary" },
+    "ciMerge": { "$ref": "#/$defs/boundary" }
+  },
+  "$defs": {
+    "verification": {
+      "anyOf": [{ "type": "boolean" }, { "const": "unverified" }]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "source", "value"],
+      "properties": {
+        "field": {
+          "enum": ["configured", "installed", "active", "bypassable", "required"]
+        },
+        "source": { "type": "string", "minLength": 1 },
+        "value": { "$ref": "#/$defs/verification" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "field": { "enum": ["configured", "installed"] } },
+            "required": ["field"]
+          },
+          "then": { "properties": { "value": { "type": "boolean" } } }
+        }
+      ]
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "supported",
+        "analyzed",
+        "configured",
+        "installed",
+        "active",
+        "bypassable",
+        "required",
+        "evidence"
+      ],
+      "properties": {
+        "supported": { "type": "boolean" },
+        "analyzed": { "type": "boolean" },
+        "configured": { "type": "boolean" },
+        "installed": { "type": "boolean" },
+        "active": { "$ref": "#/$defs/verification" },
+        "bypassable": { "$ref": "#/$defs/verification" },
+        "required": { "$ref": "#/$defs/verification" },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    }
+  }
+}

@@ -125,6 +125,81 @@ export function warnLockfileConflict(root) {
   );
 }
 
+/**
+ * Canonical, side-effect-free catalog of project assets emitted by the gate installer.
+ * Upgrade consumes this same allowlist; a manifest can record identities but can never
+ * introduce a new write path.
+ */
+export function buildManagedAssetCatalog({ root, tools, compact = false, skillsOnly = false }) {
+  const selectedTools = tools instanceof Set ? tools : new Set(tools ?? []);
+  const assets = [];
+  const add = (relativePath, content, kind = 'gate', scope = 'whole-file') => {
+    assets.push({
+      relativePath,
+      content,
+      kind,
+      scope,
+      templateId: `${kind}:${relativePath}`,
+    });
+  };
+
+  if (!skillsOnly) {
+    const compactHost = compact ? [...selectedTools][0] ?? null : null;
+    add(
+      'AGENTS.md',
+      compact ? compactAgentInstructions(root, compactHost) : agentInstructions(root)
+    );
+    if (!compact || !compactHost || compactHost === 'claude') add('.mcp.json', mcpJson(root));
+    const deploy = detectDeployPathQuality(root);
+    add(
+      '.github/workflows/ark-check.yml',
+      githubWorkflow(packageManager(root), detectCiNode(root), {
+        hasLintScript: deploy.hasLintScript,
+        hasTypecheckScript: deploy.hasTypecheckScript,
+      })
+    );
+    if (selectedTools.has('cursor')) {
+      add('.cursor/mcp.json', mcpJson(root));
+      if (!compact) add('.cursor/rules/ark.mdc', cursorRule(root));
+    }
+    if (selectedTools.has('claude')) add('.claude/settings.json', claudeSettings(root));
+    if (selectedTools.has('codex')) {
+      add('.codex/hooks.json', codexHooks(root));
+      add('.codex/config.toml', codexProjectConfig(root), 'gate', 'toml-section');
+      if (!compact) add('docs/ark-codex-config.toml', codexTomlSnippet(root));
+    }
+    if (selectedTools.has('grok')) {
+      add('.grok/config.toml', grokProjectConfig(root));
+      add('.grok/hooks/ark-write-gate.json', grokHooks(root));
+    }
+    if (selectedTools.has('windsurf')) add('.windsurf/rules/ark.md', instructionRule(root));
+    if (selectedTools.has('cline')) add('.clinerules/ark.md', instructionRule(root));
+    if (selectedTools.has('copilot')) {
+      add('.github/copilot-instructions.md', instructionRule(root));
+    }
+    if (selectedTools.has('kiro')) add('.kiro/steering/ark.md', instructionRule(root));
+    if (selectedTools.has('roo')) add('.roo/rules/ark.md', instructionRule(root));
+    if (selectedTools.has('continue')) add('.continue/rules/ark.md', instructionRule(root));
+    if (selectedTools.has('gemini')) add('GEMINI.md', instructionRule(root));
+  }
+
+  const version = arkPackageVersion();
+  const skills = skillTemplates().map(([name, content]) => [name, stampSkill(content, version)]);
+  const skillPaths = new Set();
+  if (!compact) {
+    for (const tool of selectedTools) {
+      const target = SKILL_TOOL_TARGETS[tool];
+      if (!target) continue;
+      for (const [name, content] of skills) {
+        const relativePath = target(name);
+        skillPaths.add(relativePath);
+        add(relativePath, content, 'skill');
+      }
+    }
+  }
+  return { assets, skills, skillPaths, version };
+}
+
 // --migrate-commands: rewrite ONLY the Ark command runner in existing gate files to the
 // project's package manager (no --force clobber). Closes the upgrade gap where a repo that
 // adopted before the package-manager-aware templates keeps a stale `npx`.
@@ -220,7 +295,6 @@ export function runInstallAgentGates(args) {
     process.exitCode = 2;
     return;
   }
-  const pm = packageManager(root);
   const hasCheckScript = hasCheckArchitectureScript(root);
   const { tools, source } = args.compact && args.tools == null
     ? { tools: new Set(), source: 'compact-none' }
@@ -239,7 +313,6 @@ export function runInstallAgentGates(args) {
           ? 'no active host detected'
         : 'default set — no agent config dirs found';
   console.log(`Agent gates for: ${[...tools].sort().join(', ')} (${toolSource})`);
-  const templates = [];
   // --skills-only refreshes just the canonical /ark-* skills, which are safe to
   // overwrite (they track the package). The gate/instruction files (AGENTS.md,
   // settings.json, CI workflow, rules) are the ones users customize, so a plain
@@ -253,84 +326,15 @@ export function runInstallAgentGates(args) {
         `Added package.json script "typecheck": "${typecheckBootstrap.script}" (tsconfig present; local/CI parity).`
       );
     }
-    // Base gates: tool-agnostic contract + CI backstop, always written.
-    const compactHost = args.compact ? [...tools][0] ?? null : null;
-    templates.push([
-      'AGENTS.md',
-      args.compact ? compactAgentInstructions(root, compactHost) : agentInstructions(root),
-    ]);
-    if (!args.compact || !compactHost || compactHost === 'claude') {
-      templates.push(['.mcp.json', mcpJson(root)]);
-    }
-    templates.push([
-      '.github/workflows/ark-check.yml',
-      (() => {
-        const deploy = detectDeployPathQuality(root);
-        return githubWorkflow(pm, detectCiNode(root), {
-          hasLintScript: deploy.hasLintScript,
-          hasTypecheckScript: deploy.hasTypecheckScript,
-        });
-      })(),
-    ]);
-    if (tools.has('cursor')) {
-      templates.push(['.cursor/mcp.json', mcpJson(root)]);
-      if (!args.compact) templates.push(['.cursor/rules/ark.mdc', cursorRule(root)]);
-    }
-    if (tools.has('claude')) {
-      templates.push(['.claude/settings.json', claudeSettings(root)]);
-    }
-    if (tools.has('codex')) {
-      templates.push(['.codex/hooks.json', codexHooks(root)]);
-      templates.push(['.codex/config.toml', codexProjectConfig(root)]);
-      if (!args.compact) templates.push(['docs/ark-codex-config.toml', codexTomlSnippet(root)]);
-    }
-    if (tools.has('grok')) {
-      templates.push(['.grok/config.toml', grokProjectConfig(root)]);
-      templates.push(['.grok/hooks/ark-write-gate.json', grokHooks(root)]);
-    }
-    // Instruction-tier hosts: one shared rule text, host-specific path.
-    if (tools.has('windsurf')) {
-      templates.push(['.windsurf/rules/ark.md', instructionRule(root)]);
-    }
-    if (tools.has('cline')) {
-      templates.push(['.clinerules/ark.md', instructionRule(root)]);
-    }
-    if (tools.has('copilot')) {
-      templates.push(['.github/copilot-instructions.md', instructionRule(root)]);
-    }
-    if (tools.has('kiro')) {
-      templates.push(['.kiro/steering/ark.md', instructionRule(root)]);
-    }
-    if (tools.has('roo')) {
-      templates.push(['.roo/rules/ark.md', instructionRule(root)]);
-    }
-    if (tools.has('continue')) {
-      templates.push(['.continue/rules/ark.md', instructionRule(root)]);
-    }
-    // Gemini CLI reads GEMINI.md as its primary project context (it also reads
-    // AGENTS.md, but GEMINI.md wins when both are present), so the rule lives there.
-    if (tools.has('gemini')) {
-      templates.push(['GEMINI.md', instructionRule(root)]);
-    }
   }
-  // /ark-* skills for every detected tool that supports project-level commands.
-  // Stamp each with the shipping version so a later ark-check can flag skills
-  // left behind by an older Ark (see detectSkillGaps) without nagging about
-  // user edits to the body.
-  const version = arkPackageVersion();
-  const skills = skillTemplates().map(([name, content]) => [name, stampSkill(content, version)]);
-  const skillPaths = new Set();
-  if (!args.compact) {
-    for (const tool of tools) {
-      const target = SKILL_TOOL_TARGETS[tool];
-      if (!target) continue;
-      for (const [name, content] of skills) {
-        const relativePath = target(name);
-        skillPaths.add(relativePath);
-        templates.push([relativePath, content]);
-      }
-    }
-  }
+  const catalog = buildManagedAssetCatalog({
+    root,
+    tools,
+    compact: args.compact,
+    skillsOnly: args.skillsOnly,
+  });
+  const { skills, skillPaths, version } = catalog;
+  const templates = catalog.assets.map(({ relativePath, content }) => [relativePath, content]);
 
   // A compact router can be moved back from an explicit host removal. Delete the
   // generic MCP file only when it exactly matches Ark's generated artifact.

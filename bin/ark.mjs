@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import readline from 'node:readline/promises';
@@ -21,6 +20,7 @@ import {
 import { pinArkgateDevDependency, FALSE_GREEN_GAP_ID } from './lib/field-install.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import { applyStartPreview, planStart, renderStartPreview } from './lib/start-preview.mjs';
+import { runUpgradeCommand } from './lib/upgrade-command.mjs';
 import { detectActiveAgentHost } from './lib/skill-install.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
 import { loadTypeScript } from './lib/typescript-host.mjs';
@@ -71,6 +71,8 @@ function parseArgs(argv) {
     install: true,
     installExplicit: false,
     apply: false,
+    acceptConflicts: false,
+    planDigest: undefined,
     json: false,
     internalApply: false,
     skipPackageManager: false,
@@ -105,6 +107,8 @@ function parseArgs(argv) {
       args.installExplicit = true;
     }
     else if (arg === '--apply') args.apply = true;
+    else if (arg === '--accept-conflicts') args.acceptConflicts = true;
+    else if (arg === '--plan-digest') args.planDigest = requireValue(arg, i++);
     else if (arg === '--json') args.json = true;
     else if (arg === '--internal-apply') args.internalApply = true;
     else if (arg === '--skip-package-manager') args.skipPackageManager = true;
@@ -134,15 +138,15 @@ function usage() {
   ark start   [--root <project>] [--tools <host>] [--require-write-hook <host>] [--install] [--apply] [--json]
   ark init    [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture]
               [--archetype <playbook-id>] [--tools <list>] [--require-write-hook <host>] [--yes] [--force] [--no-strict]
-  ark upgrade [--root <project>] [--no-install] [--no-strict]
+  ark upgrade [--root <project>] [--tools <list>] [--apply] [--plan-digest <sha256>] [--accept-conflicts] [--json] [--no-install] [--no-strict]
   ark preflight --changes <change-set.json> [--change-map <map.json>] [--root <project>] [--config ark.config.json] [--manifest <manifest.json>] [--tsconfig <tsconfig.json>] [--json]
 
 Commands:
   start     New here? Analyze and preview the complete setup. Read-only unless --apply.
   init      Configure Ark project enforcement with explicit prompts.
-  upgrade   One command to update Ark: bump the package to @latest, refresh gate
-            templates + /ark-* skills (and Codex home prompts), migrate command
-            runners to this project's package manager, then run the strict check.
+  upgrade   Preview identity-proven Ark-managed asset updates. With package install,
+            --apply bumps to @latest and recomputes the preview; a second explicit
+            --apply --no-install applies those exact bytes and verifies them.
             (alias: ark update)
   preflight Validate one atomic create/update/delete set without writing project files.
 
@@ -153,8 +157,11 @@ Options:
   --no-strict  Skip the final strict ark-check run.
   --install    Add arkgate to package.json explicitly before applying a start plan.
   --no-install Skip adding/installing arkgate as a project devDependency (start/upgrade).
-  --apply       Apply the mutations shown by the start preview.
-  --json        Emit the start preview as deterministic machine-readable JSON.
+  --apply       Apply a start plan; for upgrade, update/repreview or apply with --no-install.
+  --accept-conflicts
+                Allow upgrade to recreate deleted managed assets or replace recorded conflicts.
+  --plan-digest Digest emitted by an upgrade preview; required to apply managed bytes.
+  --json        Emit the start/upgrade preview as deterministic machine-readable JSON.
   --preset     Start from a named architecture preset instead of detection.
   --archetype  Application shape from templates/architecture-playbook.json (maps to the matching preset).
                Valid ids: crud-product, api-backend, frontend-surface, library-sdk, cli-utility,
@@ -200,60 +207,6 @@ function packageInstallArgv(root, versionSpec) {
 function runCommand(command, commandArgs, cwd) {
   const result = spawnSync(command, commandArgs, { cwd, stdio: 'inherit', encoding: 'utf8' });
   return result.status ?? 1;
-}
-
-// `ark upgrade`: the one command that replaces the "install @latest && install-agent-gates
-// --skills-only --force && ... --codex-home --force && ... --migrate-commands && check" chain.
-// Each step reruns ark-check as a fresh process, so the refresh runs from the freshly-installed
-// version, not this (now-older) process.
-async function upgrade(args) {
-  const root = args.root;
-  console.log('Ark upgrade — updating the package, gates, skills, and command runners.');
-
-  if (args.install) {
-    const [command, commandArgs] = packageInstallArgv(root);
-    console.log(`\n1/4  Updating the package: ${command} ${commandArgs.join(' ')}`);
-    const status = runCommand(command, commandArgs, root);
-    if (status !== 0) {
-      console.error(
-        `\nPackage update failed (exit ${status}). Fix the install and re-run, or use ` +
-          '`ark upgrade --no-install` to refresh gates/skills against the installed version.'
-      );
-      return status;
-    }
-  } else {
-    console.log('\n1/4  Skipping package install (--no-install).');
-  }
-
-  console.log('\n2/4  Refreshing agent gates + /ark-* skills…');
-  let status = runArkCheck(['--root', root, '--install-agent-gates'], { cwd: root });
-  if (status !== 0) return status;
-
-  // Codex home skill catalog is $CODEX_HOME/skills/<name>/SKILL.md (repo uses .agents/skills/).
-  // Refresh home skills when a Codex home exists. Project MCP is installed above in
-  // .codex/config.toml. Non-fatal: a permission error (e.g. sandbox) shouldn't fail upgrade.
-  const codexHomeBase = process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
-  if (fs.existsSync(codexHomeBase)) {
-    console.log(`\n     Refreshing Codex home (${codexHomeBase})…`);
-    runArkCheck(
-      ['--root', root, '--install-agent-gates', '--skills-only', '--codex-home', '--force'],
-      { cwd: root }
-    );
-  }
-
-  console.log('\n3/4  Migrating command runners to this project’s package manager…');
-  status = runArkCheck(['--root', root, '--install-agent-gates', '--migrate-commands'], { cwd: root });
-  if (status !== 0) return status;
-
-  if (!args.strict) {
-    console.log('\n4/4  Skipping the strict check (--no-strict). Upgrade complete.');
-    return 0;
-  }
-  console.log('\n4/4  Verifying architecture…');
-  return runArkCheck(
-    ['--root', root, '--config', 'ark.config.json', '--strict-merge'],
-    { cwd: root }
-  );
 }
 
 function runArkCheck(args, options = {}) {
@@ -836,7 +789,7 @@ async function main() {
 
   if (args.command === 'upgrade' || args.command === 'update') {
     try {
-      return await upgrade(args);
+      return runUpgradeCommand(args, { arkCheck, packageInstallArgv, runArkCheck });
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));
       return 2;

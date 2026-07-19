@@ -144,3 +144,13 @@ export {
   type ArkConfig,
   type ArkConfigLoadResult,
 } from './domain/configContract';
+
+export {
+  ARK_ENFORCEMENT_STATE_SCHEMA_VERSION,
+  type ArkEnforcementHost,
+  type ArkEnforcementState,
+  type EnforcementBoundaryState,
+  type EnforcementEvidence,
+  type EnforcementEvidenceField,
+  type EnforcementVerification,
+} from './domain/enforcementState';

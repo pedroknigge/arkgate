@@ -30,6 +30,8 @@
     "./schema/ark.change-map.schema.json": "./schemas/ark.change-map.schema.json",
     "./schema/resolved-candidate-facts": "./schemas/ark.resolved-candidate-facts.schema.json",
     "./schema/ark.resolved-candidate-facts.schema.json": "./schemas/ark.resolved-candidate-facts.schema.json",
+    "./schema/enforcement-state": "./schemas/ark.enforcement-state.schema.json",
+    "./schema/ark.enforcement-state.schema.json": "./schemas/ark.enforcement-state.schema.json",
     "./nestjs": {
       "types": "./compat/nestjs.d.ts",
       "import": "./compat/nestjs.js",

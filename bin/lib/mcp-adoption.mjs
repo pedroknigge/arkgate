@@ -16,6 +16,7 @@ import { detectWritePathCapabilities } from './write-path-detect.mjs';
 import { detectActiveAgentHost, skillTemplateNames } from './skill-install.mjs';
 import { detectDeployPathQuality } from './deploy-path.mjs';
 import { collectWeakestLinkGaps } from './weakest-link.mjs';
+import { withCiProviderEvidence } from './enforcement-state.mjs';
 
 export { detectDeployPathQuality };
 
@@ -92,7 +93,7 @@ export function collectAdoptionGaps(root, config, coverage) {
   const isProducer = fs.existsSync(path.join(root, 'templates', 'skills'));
 
   // --- Write path: prepare-write / autoPatch / reject-only (W5) ---
-  const writePath = detectWritePathCapabilities(root);
+  let writePath = detectWritePathCapabilities(root);
   // Only surface write-path gaps when the project has adopted gates (or has partial install).
   // Producer package tree always has templates — still report capability for dogfood honesty.
   if (writePath.gap && (adopted || writePath.hookPresent || writePath.mcpPresent || isProducer)) {
@@ -450,6 +451,7 @@ export function collectAdoptionGaps(root, config, coverage) {
     isProducer,
     includeGithub,
   });
+  writePath = withCiProviderEvidence(writePath, weakest.github);
   for (const g of weakest.gaps) {
     gaps.push(g);
   }

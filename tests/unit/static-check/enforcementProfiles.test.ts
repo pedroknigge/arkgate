@@ -104,7 +104,16 @@ describe('enforcement profile policy', () => {
       fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
       fs.writeFileSync(
         path.join(root, '.claude', 'settings.json'),
-        'command: arkgate-mcp --hook --root .\n'
+        JSON.stringify({
+          hooks: {
+            PreToolUse: [
+              {
+                matcher: 'Write|Edit|MultiEdit',
+                hooks: [{ command: 'arkgate-mcp --hook --root .' }],
+              },
+            ],
+          },
+        })
       );
       expect(hasHardWriteHook(root, 'claude')).toBe(true);
       expect(

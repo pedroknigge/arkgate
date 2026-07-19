@@ -106,8 +106,14 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
       expect(cap.hookPresent).toBe(true);
       expect(cap.hookRepair).toBe(false);
       expect(cap.inventory.hosts.claude.configured).toBe(true);
-      expect(cap.gap?.id).toBe('write-path-reject-only');
-      expect(cap.gap?.fix).toContain('--install-agent-gates --tools claude --force');
+      expect(cap.gap).toEqual({
+        id: 'write-path-reject-only',
+        severity: 'info',
+        message:
+          'Active host claude has a hard write boundary without a repair payload. ' +
+          'Install its MCP surface or enable hook repair for guided re-entry.',
+        fix: 'npx ark-check --install-agent-gates --tools claude --force',
+      });
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
@@ -169,13 +175,21 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
       );
       const cap = detectWritePathCapabilities(root, 'claude');
       expect(cap.mode).toBe('mcp-only');
-      expect(cap.gap?.id).toBe('write-path-mcp-only');
+      expect(cap.gap).toEqual({
+        id: 'write-path-mcp-only',
+        severity: 'info',
+        host: 'claude',
+        message:
+          'Active host claude has advisory prepare-write/autoPatch tools, ' +
+          'but no hard write boundary; CI can report failure, while merge blocking requires provider policy.',
+        fix: 'npx ark-check --install-agent-gates --tools claude',
+      });
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
 
-  it('detects ARK_HOOK_REPAIR env-style text without an MCP config', () => {
+  it('detects a prefixed ARK_HOOK_REPAIR environment without an MCP config', () => {
     const root = mk();
     try {
       fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
@@ -185,7 +199,7 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
           hooks: {
             PreToolUse: [
               {
-                hooks: [{ command: 'node bin/ark-mcp.mjs --hook --root . ; ARK_HOOK_REPAIR=yes' }],
+                hooks: [{ command: 'ARK_HOOK_REPAIR=yes node bin/ark-mcp.mjs --hook --root .' }],
               },
             ],
           },
@@ -222,12 +236,78 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
     }
   });
 
-  it('detects each supported MCP config signature independently', () => {
+  it('detects each supported MCP config structure independently', () => {
     const cases = [
-      { host: 'claude', rel: '.mcp.json', text: 'command = "arkgate-mcp"' },
-      { host: 'grok', rel: '.grok/config.toml', text: '[mcp_servers.ark]\ncommand = "custom"' },
-      { host: 'cursor', rel: '.cursor/mcp.json', text: '"ark": {' },
-      { host: 'claude', rel: '.mcp.json', text: 'mcpServers = ["ark"]' },
+      {
+        host: 'claude',
+        rel: '.mcp.json',
+        text: JSON.stringify({ mcpServers: { ark: { command: 'npx', args: ['arkgate-mcp'] } } }),
+      },
+      {
+        host: 'grok',
+        rel: '.grok/config.toml',
+        text: '[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp"]\n',
+      },
+      {
+        host: 'grok',
+        rel: '.grok/config.toml',
+        text: "[mcp_servers.ark]\ncommand = 'pnpm'\nargs = ['exec', 'arkgate-mcp']\n",
+      },
+      {
+        host: 'cursor',
+        rel: '.cursor/mcp.json',
+        text: JSON.stringify({ mcpServers: { ark: { command: 'ark-mcp', args: [] } } }),
+      },
+      {
+        host: 'claude',
+        rel: '.mcp.json',
+        text: JSON.stringify({ mcpServers: { ark: { command: 'arkgate-mcp' } } }),
+      },
+      {
+        host: 'claude',
+        rel: '.mcp.json',
+        text: JSON.stringify({
+          mcpServers: {
+            ark: {
+              command: 'pnpm',
+              args: ['--config.verify-deps-before-run=false', 'exec', 'arkgate-mcp'],
+            },
+          },
+        }),
+      },
+      {
+        host: 'claude',
+        rel: '.mcp.json',
+        text: JSON.stringify({
+          mcpServers: { ark: { command: 'node', args: ['bin/ark-mcp.mjs'] } },
+        }),
+      },
+      {
+        host: 'grok',
+        rel: '.grok/config.toml',
+        text: '["mcp_servers" . "ark"]\ncommand = "node"\nargs = ["bin/ark-mcp.mjs"]\n',
+      },
+      {
+        host: 'claude',
+        rel: '.mcp.json',
+        text: JSON.stringify({
+          mcpServers: { ark: { command: ' /usr/bin/npx ', args: [' arkgate-mcp '] } },
+        }),
+      },
+      {
+        host: 'claude',
+        rel: '.mcp.json',
+        text: JSON.stringify({
+          mcpServers: { ark: { command: 'C:\\tools\\arkgate-mcp', args: [] } },
+        }),
+      },
+      {
+        host: 'claude',
+        rel: '.mcp.json',
+        text: JSON.stringify({
+          mcpServers: { ark: { command: 'node', args: ['C:\\repo\\bin\\ark-mcp.mjs'] } },
+        }),
+      },
     ];
 
     for (const { host, rel, text } of cases) {
@@ -244,6 +324,287 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
           mcpPresent: true,
           evidence: [rel],
         });
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('rejects Ark words outside real hook and MCP wiring', () => {
+    const root = mk();
+    try {
+      fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, '.claude/settings.json'),
+        JSON.stringify({
+          note: '--hook arkgate-mcp',
+          hooks: {
+            PreToolUse: [
+              {
+                matcher: 'Write|Edit|MultiEdit',
+                hooks: [{ command: 'echo arkgate-mcp --hook' }],
+              },
+            ],
+          },
+        })
+      );
+      fs.writeFileSync(
+        path.join(root, '.mcp.json'),
+        JSON.stringify({
+          note: 'arkgate-mcp',
+          mcpServers: { ark: { command: 'custom', args: [] } },
+        })
+      );
+
+      expect(detectWritePathCapabilities(root, 'claude')).toMatchObject({
+        mode: 'none',
+        hookPresent: false,
+        mcpPresent: false,
+      });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects incomplete MCP argv and does not combine hook evidence', () => {
+    const invalidServers = [
+      { args: ['arkgate-mcp'] },
+      { command: 'custom', args: ['arkgate-mcp'] },
+      { command: 'npx', args: ['ark-mcp', 'arkgate-mcp'] },
+      { command: 'pnpm', args: ['run', 'not-ark', 'exec', 'arkgate-mcp'] },
+      { command: 'pnpm', args: ['dlx', 'other', 'exec', 'arkgate-mcp'] },
+      { command: 'node', args: ['malicious/ark-mcp.mjs'] },
+      { command: 'node', args: ['bin/ark-mcp.mjs.extra'] },
+      { command: 'node', args: [] },
+      { command: 'npx', args: 'arkgate-mcp' },
+      { command: 'npx', args: ['arkgate-mcp', 42] },
+      { command: 'npx', args: ['xarkgate-mcp'] },
+      { command: 'npx', args: ['arkgate-mcpx'] },
+      { command: 'custom', args: ['exec', 'arkgate-mcp'] },
+      { command: 'pnpm', args: ['arkgate-mcp'] },
+      {
+        command: 'pnpm',
+        args: ['--config.verify-deps-before-run=false', 'not-exec', 'arkgate-mcp'],
+      },
+      { command: 'pnpm', args: ['not-config', 'exec', 'arkgate-mcp'] },
+    ];
+    for (const server of invalidServers) {
+      const root = mk();
+      try {
+        fs.writeFileSync(
+          path.join(root, '.mcp.json'),
+          JSON.stringify({ mcpServers: { ark: server } })
+        );
+        expect(detectWritePathCapabilities(root, 'claude').mcpPresent).toBe(false);
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+
+    const root = mk();
+    try {
+      fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, '.claude/settings.json'),
+        JSON.stringify({
+          hooks: {
+            PreToolUse: [
+              {
+                matcher: 'Bash',
+                hooks: [{ command: 'npx arkgate-mcp --hook --hook-repair' }],
+              },
+              {
+                matcher: 'Write|Edit|MultiEdit',
+                hooks: [
+                  { command: 'npx arkgate-mcp --hook' },
+                  { command: 'ARK_HOOK_REPAIR=yes arkgate-mcp --session-context' },
+                ],
+              },
+            ],
+          },
+        })
+      );
+      expect(detectWritePathCapabilities(root, 'claude')).toMatchObject({
+        mode: 'reject-only',
+        hookPresent: true,
+        hookRepair: false,
+      });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not read hook flags after a shell comment or command separator', () => {
+    for (const command of [
+      'npx arkgate-mcp --session-context # --hook --hook-repair',
+      'npx arkgate-mcp --session-context ; echo --hook --hook-repair',
+    ]) {
+      const root = mk();
+      try {
+        fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+        fs.writeFileSync(
+          path.join(root, '.claude', 'settings.json'),
+          JSON.stringify({
+            hooks: {
+              PreToolUse: [{ matcher: 'Write|Edit|MultiEdit', hooks: [{ command }] }],
+            },
+          })
+        );
+
+        expect(detectWritePathCapabilities(root, 'claude')).toMatchObject({
+          mode: 'none',
+          hookPresent: false,
+          hookRepair: false,
+        });
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('parses exact quoted and pnpm hook invocations without widening command boundaries', () => {
+    for (const command of [
+      'npx "arkgate-mcp" --hook --hook-repair',
+      "npx 'arkgate-mcp' --hook --hook-repair",
+      'pnpm exec arkgate-mcp --hook --hook-repair',
+    ]) {
+      const root = mk();
+      try {
+        fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+        fs.writeFileSync(
+          path.join(root, '.claude/settings.json'),
+          JSON.stringify({
+            hooks: {
+              PreToolUse: [
+                { matcher: 'Write|Edit|MultiEdit', hooks: [{ command }] },
+              ],
+            },
+          })
+        );
+        expect(detectWritePathCapabilities(root, 'claude')).toMatchObject({
+          mode: 'repair',
+          hookPresent: true,
+          hookRepair: true,
+        });
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('covers write operations across anchored matcher groups', () => {
+    const root = mk();
+    try {
+      fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, '.claude', 'settings.json'),
+        JSON.stringify({
+          hooks: {
+            PreToolUse: [
+              {
+                matcher: '^(Write|Edit)$',
+                hooks: [{ command: 'npx arkgate-mcp --hook --hook-repair' }],
+              },
+              {
+                matcher: '^MultiEdit$',
+                hooks: [{ command: 'npx arkgate-mcp --hook --hook-repair' }],
+              },
+            ],
+          },
+        })
+      );
+
+      expect(detectWritePathCapabilities(root, 'claude')).toMatchObject({
+        mode: 'repair',
+        hookPresent: true,
+        hookRepair: true,
+      });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects malformed hook structures and accepts scoped repair environment forms', () => {
+    const invalidSettings = [
+      '{',
+      JSON.stringify({
+        hooks: {
+          PreToolUse: [
+            {
+              matcher: '[',
+              hooks: [{ command: 'npx arkgate-mcp --hook --hook-repair' }],
+            },
+          ],
+        },
+      }),
+      JSON.stringify({
+        hooks: {
+          PreToolUse: [
+            { matcher: 'Write|Edit|MultiEdit', hooks: 'not-an-array' },
+            {
+              matcher: 'Write|Edit|MultiEdit',
+              hooks: [
+                { command: '' },
+                { command: 42 },
+                { type: 'prompt', command: 'npx arkgate-mcp --hook --hook-repair' },
+              ],
+            },
+          ],
+        },
+      }),
+    ];
+    for (const text of invalidSettings) {
+      const root = mk();
+      try {
+        fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+        fs.writeFileSync(path.join(root, '.claude', 'settings.json'), text);
+        expect(detectWritePathCapabilities(root, 'claude').hookPresent).toBe(false);
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+
+    for (const hook of [
+      { command: 'env ARK_HOOK_REPAIR="yes" npx arkgate-mcp --hook' },
+      { command: 'npx arkgate-mcp --hook', env: { ARK_HOOK_REPAIR: 'true' } },
+    ]) {
+      const root = mk();
+      try {
+        fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+        fs.writeFileSync(
+          path.join(root, '.claude', 'settings.json'),
+          JSON.stringify({
+            hooks: {
+              PreToolUse: [{ matcher: 'Write|Edit|MultiEdit', hooks: [hook] }],
+            },
+          })
+        );
+        expect(detectWritePathCapabilities(root, 'claude')).toMatchObject({
+          mode: 'repair',
+          hookPresent: true,
+          hookRepair: true,
+        });
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('rejects malformed or duplicate Ark MCP TOML tables', () => {
+    const invalidToml = [
+      '[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp" "--root", "."]\n',
+      '[mcp_servers.ark]\ncommand = "npx"\ncommand = "arkgate-mcp"\nargs = ["arkgate-mcp"]\n',
+      '[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp"]\nbogus = ???\n',
+      '[mcp_servers.ark]\ncommand = "\\q"\nargs = ["arkgate-mcp"]\n',
+      '[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp"]\n\n' +
+        '[mcp_servers.ark]\ncommand = "npx"\nargs = ["arkgate-mcp"]\n',
+    ];
+    for (const text of invalidToml) {
+      const root = mk();
+      try {
+        fs.mkdirSync(path.join(root, '.grok'), { recursive: true });
+        fs.writeFileSync(path.join(root, '.grok', 'config.toml'), text);
+        expect(detectWritePathCapabilities(root, 'grok').mcpPresent).toBe(false);
       } finally {
         fs.rmSync(root, { recursive: true, force: true });
       }

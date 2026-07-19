@@ -488,7 +488,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             gatesMissing,
             skillGaps,
             staleRunnerFiles: staleRunners,
-            // Active-host guarantees plus separate repo-wide inventory.
             writePath: {
               activeHost: writePath.activeHost,
               support: writePath.support,
@@ -497,6 +496,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
               capabilityEvidence: writePath.capabilityEvidence,
               inventory: writePath.inventory,
               enforcementLadder: writePath.enforcementLadder,
+              enforcementState: writePath.enforcementState,
               mode: writePath.mode,
               prepareWrite: writePath.prepareWrite,
               autoPatch: writePath.autoPatch,
@@ -746,19 +746,20 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   line(' ', `Active host: ${writePath.activeHost}`);
   line(' ', `Supported profile: ${writePath.supportSummary}`);
   line(wpMark, `Mode: ${writePath.mode} — ${writePathLabels[writePath.mode] || writePath.mode}`);
-  const ladder = writePath.enforcementLadder;
+  const enforcement = writePath.enforcementState;
   const state = (value) => value === true ? 'yes' : value === false ? 'no' : String(value);
+  const boundary = (label, value) => `${label} — supported: ${state(value.supported)} · analyzed: ${state(value.analyzed)} · configured: ${state(value.configured)} · installed: ${state(value.installed)} · active: ${state(value.active)} · bypassable: ${state(value.bypassable)} · required: ${state(value.required)}`;
   line(
-    ladder.localWrite.installed ? ok : warn,
-    `Hard hook — supported: ${state(ladder.localWrite.supported)} · installed: ${state(ladder.localWrite.installed)} · active/trusted: ${state(ladder.localWrite.active)} · bypassable: ${state(ladder.localWrite.bypassable)}`
+    enforcement.localWrite.active === true ? ok : warn,
+    boundary('Local write', enforcement.localWrite)
   );
   line(
     warn,
-    `Advisory MCP — supported: ${state(ladder.advisoryMcp.supported)} · installed: ${state(ladder.advisoryMcp.installed)} · active: ${state(ladder.advisoryMcp.active)} · bypassable: ${state(ladder.advisoryMcp.bypassable)}`
+    boundary('Advisory MCP', enforcement.advisoryMcp)
   );
   line(
-    capabilities['merge-gate'] ? ok : bad,
-    `Merge gate — supported: ${state(ladder.ciMerge.supported)} · installed: ${state(ladder.ciMerge.installed)} · active: ${state(ladder.ciMerge.active)} · bypassable: ${state(ladder.ciMerge.bypassable)} · required status: ${state(ladder.ciMerge.requiredStatus)}`
+    enforcement.ciMerge.required === true ? ok : warn,
+    boundary('CI merge', enforcement.ciMerge)
   );
   line(
     capabilities['repair-payload'] ? ok : warn,

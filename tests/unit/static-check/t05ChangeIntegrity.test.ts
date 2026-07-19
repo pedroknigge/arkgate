@@ -253,9 +253,24 @@ describe('T05 context-independent enforcement proof', () => {
     write(
       root,
       '.claude/settings.json',
-      'command: npx arkgate-mcp --hook --hook-repair --root .\n'
+      JSON.stringify({
+        hooks: {
+          PreToolUse: [
+            {
+              matcher: 'Write|Edit|MultiEdit',
+              hooks: [
+                { command: 'npx arkgate-mcp --hook --hook-repair --root .' },
+              ],
+            },
+          ],
+        },
+      })
     );
-    write(root, '.mcp.json', '{"mcpServers":{"ark":{"args":["arkgate-mcp"]}}}\n');
+    write(
+      root,
+      '.mcp.json',
+      '{"mcpServers":{"ark":{"command":"npx","args":["arkgate-mcp"]}}}\n'
+    );
     write(
       root,
       '.github/workflows/ark-check.yml',

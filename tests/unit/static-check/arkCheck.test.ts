@@ -1076,7 +1076,7 @@ describe('ark init', () => {
     }
   });
 
-  it('`ark upgrade --no-install` refreshes gates, migrates runners, and verifies in one command', () => {
+  it('`ark upgrade --no-install` previews managed assets and `update` remains an alias', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-upgrade-'));
     fs.writeFileSync(path.join(root, 'package.json'), '{"name":"demo"}\n');
     fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
@@ -1088,30 +1088,44 @@ describe('ark init', () => {
         rules: [],
       })
     );
-    let out = '';
-    let status = 0;
-    try {
-      out = execFileSync('node', [path.resolve('bin/ark.mjs'), 'upgrade', '--no-install', '--root', root], {
-        encoding: 'utf8',
-        stdio: 'pipe',
-      });
-    } catch (error) {
-      const e = error as { status: number; stdout: string };
-      out = e.stdout ?? '';
-      status = e.status;
-    }
-    expect(status).toBe(0);
-    // One command runs the whole sequence.
-    expect(out).toContain('Refreshing agent gates');
-    expect(out).toContain('Migrated ArkGate command runners');
-    expect(out).toContain('Ark check passed');
+    const before = fs.readdirSync(root, { recursive: true }).map(String).sort();
+    const report = JSON.parse(
+      execFileSync(
+        'node',
+        [
+          path.resolve('bin/ark.mjs'),
+          'upgrade',
+          '--no-install',
+          '--no-strict',
+          '--tools',
+          'claude',
+          '--json',
+          '--root',
+          root,
+        ],
+        { encoding: 'utf8', stdio: 'pipe' }
+      )
+    ) as { readOnly: boolean; applied: boolean; summary: { changed: number } };
+    expect(report.readOnly).toBe(true);
+    expect(report.applied).toBe(false);
+    expect(report.summary.changed).toBeGreaterThan(0);
+    expect(fs.readdirSync(root, { recursive: true }).map(String).sort()).toEqual(before);
     // `update` is an accepted alias for `upgrade`.
     const alias = execFileSync(
       'node',
-      [path.resolve('bin/ark.mjs'), 'update', '--no-install', '--no-strict', '--root', root],
+      [
+        path.resolve('bin/ark.mjs'),
+        'update',
+        '--tools',
+        'claude',
+        '--no-install',
+        '--no-strict',
+        '--root',
+        root,
+      ],
       { encoding: 'utf8', stdio: 'pipe' }
     );
-    expect(alias).toContain('Ark upgrade —');
+    expect(alias).toContain('Ark managed upgrade preview');
   });
 
   it('generated CI enables corepack before actions/setup-node so pnpm cache resolves', () => {
