@@ -25,11 +25,9 @@ npm run check    # inside the starter — must stay green
 npx ark-check --doctor
 ```
 
-> **Known 3.7.0 gallery limitation:** some source-tree starter manifests still use an old ArkGate
-> range or a repository-relative check command. After copying, install `arkgate@latest` and make
-> the `check` script invoke `ark-check --root . --config ark.config.json --strict-config`.
-> [Phase Z](../docs/plans/enforcement-truth-at-speed/README.md) makes that clean-room journey
-> executable and test-pinned for every starter.
+The six canonical starters use self-contained manifests. CI copies each one outside this checkout,
+installs the same candidate tarball with npm, pnpm, and Yarn, then exercises check, doctor, start,
+preflight, strict-merge, and package import without rewriting source files.
 
 `/ark-architect` points here in step 7 after it scaffolds phase-1 layers.
 

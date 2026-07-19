@@ -422,7 +422,7 @@ may raise those ceilings merely to fit its own implementation.
 | 65 | `Z02` | `done` | L | `Z01` | Packed TS5/6/7 analysis is available or explicitly non-green; incomplete analysis never satisfies the goal |
 | 66 | `Z03` | `done` | M | `Z02` | The resolved-facts/public-API boundary and generated CLI parity seam are decided before implementation |
 | 67 | `Z04` | `done` | L | `Z03` | One normalized candidate-facts graph produces one contract verdict across every supported adapter |
-| 68 | `Z05` | `todo` | L | `Z02`, `Z04` | Every starter and supported package manager completes the installed tarball journey in a clean consumer |
+| 68 | `Z05` | `doing` | L | `Z02`, `Z04` | Every starter and supported package manager completes the installed tarball journey in a clean consumer |
 | 69 | `Z06` | `todo` | L | `Z05` | Upgrade touches only identity-proven managed assets and doctor reports actual enforcement state |
 | 70 | `Z07` | `todo` | L | `Z04`, `Z05` | A measured warm incremental control plane delivers order-of-magnitude feedback without semantic drift |
 | 71 | `Z08` | `todo` | L | `Z06`, `Z07` | Live-agent and causal evaluation count every outcome and defend the corrected path with mutation proof |
@@ -543,7 +543,7 @@ started before the decision closed.
 
 ### Z04 — Build one candidate facts → IR → verdict pipeline
 
-- **Status:** `doing`
+- **Status:** `done`
 - **Depends on:** `Z03`
 
 **Outcome:** under the selected boundary, the TypeScript/Tooling edge resolves the complete virtual
@@ -585,7 +585,7 @@ and performance reviews found no remaining P0/P1 defect. `RB-09` is closed; Y09/
 
 ### Z05 — Prove the installed starter and package journey
 
-- **Status:** `todo`
+- **Status:** `doing`
 - **Depends on:** `Z02`, `Z04`
 
 **Outcome:** documentation and generated assets describe commands that work outside this mother
@@ -2601,7 +2601,7 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: `Z05` (`todo`) — prove every installed gallery starter and supported package-manager journey from the packed candidate
+Item: `Z05` (`doing`) — prove every installed gallery starter and supported package-manager journey from the packed candidate
 Next action: move only Z05 to `doing`, replace split starter lists with one catalog, and make the current-tarball clean-room matrix prove documented install/check/doctor/start/preflight/strict/import behavior plus a deliberate violation without rewriting source
 Release lanes: Z01+Z02 may ship a stable corrective patch; Z04 may ship parity; Z06 closes the installed journey; Z07–Z09 gate only 10x/causal/retention/independent-close claims
 Parked unchanged: Y06, Y07, Y09, and Y10 retain their named field gates and must not start as collateral Z work

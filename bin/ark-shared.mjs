@@ -1711,14 +1711,26 @@ export function formatArchitectureRecommendationHuman(recommendation) {
 
 export const ADOPTION_PLAN_FILENAME = 'ark-adoption-plan.json';
 
-const GALLERY_STARTER_BY_ARCHETYPE = {
-  'crud-product': 'examples/crud-product-starter/',
-  'api-backend': 'examples/api-backend-starter/',
-  'worker-pipeline': 'examples/worker-pipeline-starter/',
-  'multi-app-workspace': 'examples/multi-app-workspace-starter/',
-  'vertical-slice-product': 'examples/vertical-slice-starter/',
-  'ddd-bounded-contexts': 'examples/ddd-context-starter/',
-};
+function galleryStarter(archetype, directory = archetype, generatedPreset) {
+  return Object.freeze({
+    archetype,
+    directory: `examples/${directory}-starter`,
+    ...(generatedPreset ? { generatedPreset } : {}),
+  });
+}
+
+export const GALLERY_STARTERS = Object.freeze([
+  galleryStarter('crud-product'),
+  galleryStarter('api-backend'),
+  galleryStarter('worker-pipeline'),
+  galleryStarter('multi-app-workspace'),
+  galleryStarter('vertical-slice-product', 'vertical-slice', 'vertical-slice'),
+  galleryStarter('ddd-bounded-contexts', 'ddd-context', 'ddd-bounded-contexts'),
+]);
+
+const GALLERY_STARTER_BY_ARCHETYPE = Object.fromEntries(
+  GALLERY_STARTERS.map(({ archetype, directory }) => [archetype, `${directory}/`])
+);
 
 /** Enthusiast pack id for a named preset, or null when none ships. */
 export function policyPackIdForPreset(preset) {

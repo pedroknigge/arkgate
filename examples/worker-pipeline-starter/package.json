@@ -8,6 +8,6 @@
     "check": "ark-check --root . --config ark.config.json --strict-config"
   },
   "devDependencies": {
-    "arkgate": "^1.14.0"
+    "arkgate": "^3.7.0"
   }
 }
