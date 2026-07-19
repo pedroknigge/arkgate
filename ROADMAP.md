@@ -422,7 +422,7 @@ may raise those ceilings merely to fit its own implementation.
 | 65 | `Z02` | `done` | L | `Z01` | Packed TS5/6/7 analysis is available or explicitly non-green; incomplete analysis never satisfies the goal |
 | 66 | `Z03` | `done` | M | `Z02` | The resolved-facts/public-API boundary and generated CLI parity seam are decided before implementation |
 | 67 | `Z04` | `done` | L | `Z03` | One normalized candidate-facts graph produces one contract verdict across every supported adapter |
-| 68 | `Z05` | `doing` | L | `Z02`, `Z04` | Every starter and supported package manager completes the installed tarball journey in a clean consumer |
+| 68 | `Z05` | `done` | L | `Z02`, `Z04` | Every starter and supported package manager completes the installed tarball journey in a clean consumer |
 | 69 | `Z06` | `todo` | L | `Z05` | Upgrade touches only identity-proven managed assets and doctor reports actual enforcement state |
 | 70 | `Z07` | `todo` | L | `Z04`, `Z05` | A measured warm incremental control plane delivers order-of-magnitude feedback without semantic drift |
 | 71 | `Z08` | `todo` | L | `Z06`, `Z07` | Live-agent and causal evaluation count every outcome and defend the corrected path with mutation proof |
@@ -585,7 +585,7 @@ and performance reviews found no remaining P0/P1 defect. `RB-09` is closed; Y09/
 
 ### Z05 — Prove the installed starter and package journey
 
-- **Status:** `doing`
+- **Status:** `done`
 - **Depends on:** `Z02`, `Z04`
 
 **Outcome:** documentation and generated assets describe commands that work outside this mother
@@ -597,6 +597,18 @@ atomic preflight, strict merge, and package-import path.
 stale registry ranges, repository-relative bins, or an unpublishable `file:../..` path for its
 consumer proof. Fixtures run from the packed candidate and verify both success and one deliberate
 architecture violation. No unconsented source or unrelated-file rewrite is allowed.
+
+**Completed (2026-07-19):** one frozen catalog owns all six canonical starters. PR
+[#84](https://github.com/pedroknigge/arkgate/pull/84) implementation head `3423758` passed CI run
+`29667803023` and Security run `29667803007`. The checksum-verified Linux candidate
+`abfeb512665928172c62fb3db478165af92d1ae8d141f9945bd9539a1158f069` passed npm 10.8.2,
+pnpm 9.15.9, and strict Yarn PnP 4.17.1: 18/18 starter cells and 198/198 fail-closed stages.
+Each cell proved the installed package path, check, complete doctor, exact start preview/apply,
+benign and deliberately forbidden atomic preflight, strict merge, and whole-journey non-mutation.
+The same CI artifact stayed inside the frozen ceiling at 519,476 packed bytes, 1,795,956 unpacked
+bytes, and 138 files. Local confidence passed 172 files / 1,442 tests, 90.92% statements/lines,
+84.58% branches, and 93.84% mutation; independent review found no remaining P0/P1. `RB-10`
+remains open for Z06's managed-upgrade and enforcement-state half.
 
 ### Z06 — Make managed upgrade and enforcement state truthful
 
@@ -2601,8 +2613,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: `Z05` (`doing`) — prove every installed gallery starter and supported package-manager journey from the packed candidate
-Next action: move only Z05 to `doing`, replace split starter lists with one catalog, and make the current-tarball clean-room matrix prove documented install/check/doctor/start/preflight/strict/import behavior plus a deliberate violation without rewriting source
+Item: `Z06` (`todo`) — make managed upgrade and observed enforcement state truthful from the packed candidate
+Next action: after Z05 merges, move only Z06 to `doing`; reproduce managed-content drift/conflict and false required-CI evidence before implementing identity-bound preview/apply plus doctor parity
 Release lanes: Z01+Z02 may ship a stable corrective patch; Z04 may ship parity; Z06 closes the installed journey; Z07–Z09 gate only 10x/causal/retention/independent-close claims
 Parked unchanged: Y06, Y07, Y09, and Y10 retain their named field gates and must not start as collateral Z work
 Runtime parked: K01 retains confirmed experimental intra-process commit gaps outside Phase Z and does not block gate-package corrective releases

@@ -4,7 +4,7 @@
 > [docs/package-surface.md](../package-surface.md) · Decisions: [docs/adr/](../adr/README.md)
 > **Code and manifests are the source of truth.** Documentation does not override implementation.
 
-**Date:** 2026-07-18<br>
+**Date:** 2026-07-19<br>
 **Scope:** project<br>
 **Intent:** audit → selective documentation update<br>
 **Variant:** ArkGate bridge (`ark.config.json`, local CLIs, `ark://manifest`)<br>
@@ -21,10 +21,10 @@ Internal helpers and individual test files are evidence, not separate product su
 
 | Verdict | Count |
 |---------|------:|
-| OK | 25 |
+| OK | 26 |
 | Partial | 0 |
 | Missing | 0 |
-| Contradicted | 3 |
+| Contradicted | 2 |
 | Unverifiable | 0 |
 
 **Surface coverage:** 14/14 bounded rows have a canonical authority in
@@ -32,12 +32,12 @@ Internal helpers and individual test files are evidence, not separate product su
 
 **Top residual risks:**
 
-1. Three product claims remain contradicted by clean-room, upgrade, or field evidence. They are
+1. Two product claims remain contradicted by upgrade or field evidence. They are
    correctness blockers or product-claim gates owned by
    [Phase Z](../plans/enforcement-truth-at-speed/README.md), not documentation wording to smooth over.
-   Z02's current-source claim is OK after its 36-cell packed CI matrix, and Z04's current-source
-   candidate-graph claim is OK after the differential adapter corpus; published 3.7.0 predates
-   both corrections.
+   Z02's current-source claim is OK after its 36-cell packed CI matrix, Z04's candidate-graph claim
+   is OK after the differential adapter corpus, and Z05's installed journey is OK after its
+   18-cell clean-room matrix; published 3.7.0 predates all three corrections.
 2. `@arkgate/runtime` is not currently present in the npm registry. Its first publication remains
    a separate maintainer action; the root publish workflow does not publish it automatically, and
    parked candidate `K01` retains three confirmed intra-process commit gaps. The docs now state
@@ -45,9 +45,9 @@ Internal helpers and individual test files are evidence, not separate product su
 3. The ignored `.ark/reports/latest.json` is an older local sensor snapshot and is not current
    release evidence; the live architecture check is the handoff gate.
 
-**Recommended next Intent:** move only Z05 into implementation and retain the Z05→Z09 sequence plus
-all parked Y/runtime gates. Z04 implements the supplied-facts boundary selected in ADR 0011; Z02
-and Z04 may enter the next corrective release, but neither correction is published in 3.7.0.
+**Recommended next Intent:** move only Z06 into implementation and retain the Z06→Z09 sequence plus
+all parked Y/runtime gates. Z04 implements the supplied-facts boundary selected in ADR 0011; Z02,
+Z04, and Z05 may enter the next corrective release, but none is published in 3.7.0.
 
 ## Code inventory (high level)
 
@@ -93,7 +93,7 @@ There are no product UI routes or database schemas in this library repository.
 | C-023 | Migration and runtime guidance uses current package boundaries | [Migration guide](../migrate-from-ark-runtime-kernel.md) · runtime skill | manifests · compat shims | OK | keep deprecated paths labeled |
 | C-024 | Contributor layout distinguishes stable gate code, experimental runtime, and actual payload | [Contributing](../../CONTRIBUTING.md) | `src/gate.ts` · runtime manifest · root `files` | OK | keep |
 | C-025 | Programmatic preflight, CLI, MCP, complete-patch write gate, and final CI evaluate the same candidate graph and governed scope | [ADR 0005](../adr/0005-atomic-change-preflight.md) · [change-integrity plan](../plans/change-integrity-loop/README.md) | versioned resolved-candidate facts · one generated pure verdict · exact policy/resolver/facts/tree identities · Z04 differential corpus across API/bundle/CLI/MCP/hook/final/eligible ESLint | OK | keep the corpus in `test:adapter-parity`; lexical compatibility stays explicitly incomplete/non-green |
-| C-026 | Every gallery starter can be copied, installed, and checked using its documented commands | [Examples](../../examples/README.md) | starter manifests · copied vertical-slice reproduction | Contradicted | `Z05`: one catalog + current tarball clean-room matrix |
+| C-026 | Every gallery starter can be copied, installed, and checked using its documented commands | [Examples](../../examples/README.md) | one frozen catalog · checksum-verified npm/pnpm/Yarn clean-room reports | OK | 18/18 cells and 198/198 stages passed on source `3423758` in CI run `29667803023`; publish in the corrective release |
 | C-027 | `ark upgrade` refreshes existing Ark-managed project skills and gates while preserving user-owned files | Setup CLI help · agent guidance | `bin/ark.mjs` installer arguments · `bin/lib/gate-files.mjs` skip-without-force behavior · installed-template drift | Contradicted | `Z06`: managed-content identities, bounded refresh, stale/conflict report |
 | C-028 | V03/V05/B01 evidence measures time to the real merge gate, observed false blocks/bypasses, and independent review | [Roadmap evidence](../../ROADMAP.md#success-metrics) | `eval/adoption-run.mjs` timing/denominators/constants · beta declaration check · nightly skipped live case | Contradicted | `Z08` causal/full-denominator harness + `Z09` retained adoption and verified reviewer identity |
 
@@ -127,9 +127,15 @@ and lexical compatibility paths are explicitly incomplete and non-green. The dif
 covers relative and configured resolution, packages/workspaces, symlinks, creates/updates/deletes,
 all supported import forms, unresolved and parse evidence, exclusions, and unclassified paths.
 
+Z05 closes the installed starter/package contradiction in the current source candidate. One frozen
+catalog drives all six starters, preset drift checks, static tests, and the packed CI matrix. npm,
+pnpm, and strict Yarn PnP consumed the same checksum-verified tarball; every cell proved package
+isolation, complete check/doctor/strict behavior, exact start consent, both benign and forbidden
+atomic preflight, and no source or unrelated-file mutation.
+
 The remaining corrective implementation authority is
-[ROADMAP Phase Z](../../ROADMAP.md#phase-z--enforcement-truth-at-speed). Z05 owns the installed
-starter/package journey; prose is not accepted as implementation evidence.
+[ROADMAP Phase Z](../../ROADMAP.md#phase-z--enforcement-truth-at-speed). Z06 owns managed upgrade
+and observed enforcement truth; prose is not accepted as implementation evidence.
 
 ## Resolved or narrowed during this audit
 
@@ -161,6 +167,10 @@ starter/package journey; prose is not accepted as implementation evidence.
 - Z04 differential adapter parity: **PASS** — 3 files / 19 tests; every parity-capable corpus cell
   agrees across its supported API, generated bundle, CLI, MCP, complete-patch hook/final check, and
   bounded ESLint surface, while parse/unavailable/lexical paths remain non-green.
+- Z05 installed gallery journey: **PASS** — source `3423758`, CI run `29667803023`, and Security
+  run `29667803007`; npm 10.8.2, pnpm 9.15.9, and strict Yarn PnP 4.17.1 each passed all six
+  starters and 66/66 stages against candidate SHA-256
+  `abfeb512665928172c62fb3db478165af92d1ae8d141f9945bd9539a1158f069`.
 - Surface parity: **PASS** — 124/124 `src/gate.ts` exports, 9/9 MCP tools, 9/9 public
   schema/metadata export aliases, and 6/6 Action inputs are named in their canonical docs.
 - Registry check: **OBSERVED** — `arkgate@latest` is `3.7.0`; querying
