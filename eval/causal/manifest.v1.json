@@ -1,0 +1,2330 @@
+{
+  "$schema": "./manifest.schema.v1.json",
+  "agent": {
+    "binary": "/Users/pedroknigge/.local/bin/grok",
+    "binarySha256": "7229f5e2a69b05832c86db82bebda541e92b5c24958fbfacf5c8f463394d3027",
+    "cliVersion": "0.2.106",
+    "configSha256": "f2b6cb75ec86dea4cd6e7cf0a58a241bbd8e7703fc6f8dd39cedf275e066c41c",
+    "environment": {
+      "GROK_DISABLE_AUTOUPDATER": "1",
+      "GROK_HOME": "<isolated-grok-config-home>",
+      "HOME": "<isolated-grok-home>",
+      "LANG": "C.UTF-8",
+      "NO_COLOR": "1",
+      "TZ": "UTC"
+    },
+    "invocationFlags": [
+      "--always-approve",
+      "--disable-web-search",
+      "--disallowed-tools=Agent,web_search,web_fetch,search_tool,use_tool",
+      "--max-turns=8",
+      "--no-memory",
+      "--no-plan",
+      "--no-subagents",
+      "--output-format=json",
+      "--reasoning-effort=high",
+      "--sandbox=strict",
+      "--verbatim"
+    ],
+    "model": "grok-4.5",
+    "modelSeed": null,
+    "name": "grok",
+    "provider": "xai"
+  },
+  "arms": {
+    "control": {
+      "arkgateEnabled": false,
+      "setupCommands": []
+    },
+    "treatment": {
+      "arkgateEnabled": true,
+      "setupCommands": [
+        [
+          "node",
+          ".arkgate-candidate/bin/ark.mjs",
+          "start",
+          "--root",
+          ".",
+          "--tools",
+          "grok",
+          "--require-write-hook",
+          "grok",
+          "--apply",
+          "--json"
+        ],
+        [
+          "z08-bind-candidate-runtime"
+        ]
+      ]
+    }
+  },
+  "candidate": {
+    "sourceRepository": "https://github.com/pedroknigge/arkgate.git",
+    "sourceSha": "bbc3190bd502c98f14f63675061f590e028fc0ce",
+    "tarballSha256": "59e8cbf9c3a3b3516fcb5ab78493adaf071a4d3e5afd6119854c340b99e70dc2",
+    "tarballUrl": "https://github.com/pedroknigge/arkgate/releases/download/z08-causal-candidate-v2/arkgate-3.7.0.tgz"
+  },
+  "design": {
+    "bootstrapReplicates": 50000,
+    "bootstrapSeed": "z08-hierarchical-bootstrap-v1",
+    "confidenceLevel": 0.95,
+    "exclusions": [
+      {
+        "id": "typescript-only",
+        "rationale": "This causal evaluation is explicitly scoped to pinned TypeScript repositories."
+      },
+      {
+        "id": "controlled-microfeatures",
+        "rationale": "Tasks are held-out controlled microfeatures under z08-task; results do not claim broad feature-delivery performance."
+      },
+      {
+        "id": "single-candidate",
+        "rationale": "Each independent session produces one final candidate; failed final candidates remain censored."
+      }
+    ],
+    "maxCompletionRegression": 0.05,
+    "maxTurns": 8,
+    "orderSeed": "z08-serial-order-v1",
+    "percentiles": [
+      0.5,
+      0.75,
+      0.95
+    ],
+    "primaryMaxRatio": 0.8,
+    "primaryUpperBoundExclusive": 1,
+    "sessionsPerArm": 3,
+    "tauMs": 240000
+  },
+  "experimentId": "z08-grok-causal-v1",
+  "frozenAt": "2026-07-20T19:51:41.000Z",
+  "grader": {
+    "id": "z08-common-grader-v1",
+    "sha256": "3878b29ff648e52de2aa08915b871dfe238f99b3f17969ca515e7faf4012ea97",
+    "stages": [
+      "integrity",
+      "architecture",
+      "typecheck",
+      "tests"
+    ],
+    "typeScriptHost": {
+      "entrypoint": "node_modules/typescript-ark-host/lib/tsc.js",
+      "sha256": "2cffde0b8c6760dfb0b5b0382bbb7e00ba6a8b2d981b9205b256a700a481d983",
+      "version": "6.0.3"
+    },
+    "version": "1.0.0"
+  },
+  "mutation": {
+    "configSha256": "163e4b8ced4333a7ae5a5f9f7472e36199749e33fb78e0e963c5aa8d08282d6a",
+    "ranges": [
+      {
+        "endLine": 27,
+        "file": "bin/lib/analysis-completeness.mjs",
+        "id": "analysis-completeness",
+        "sourceSha256": "c670535c251a411d637984cc8fae4a2c435c5e76dc88b67328ba5355bf71e84f",
+        "startLine": 9
+      },
+      {
+        "endLine": 728,
+        "file": "bin/lib/resolved-candidate-facts.mjs",
+        "id": "resolved-candidate-facts",
+        "sourceSha256": "d9f69cc8df3217220c4789c02b4226132149992372e753fe0dbf7af7f99193aa",
+        "startLine": 684
+      },
+      {
+        "endLine": 255,
+        "file": "bin/lib/managed-upgrade.mjs",
+        "id": "managed-upgrade",
+        "sourceSha256": "7fb20f6c1b98de665f21797163163fd2e22534af8dd157f3d5109c500cee826d",
+        "startLine": 233
+      },
+      {
+        "endLine": 162,
+        "file": "bin/lib/resident-hook.mjs",
+        "id": "snapshot-invalidation",
+        "sourceSha256": "974afd46063f37f23d467c28ae5f3c722ec3e1cc0b6bad3b5afb7e0333b29b96",
+        "startLine": 115
+      }
+    ],
+    "runner": "stryker@9.6.1"
+  },
+  "repositories": [
+    {
+      "commands": {
+        "install": [
+          [
+            "npm",
+            "ci"
+          ]
+        ],
+        "tests": [
+          "npm",
+          "test",
+          "--",
+          "--runInBand"
+        ],
+        "typecheck": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "commonPatch": null,
+      "id": "kata-users-ts",
+      "license": "MIT",
+      "lockfile": {
+        "path": "package-lock.json",
+        "sha256": "29e9cfab01613767183df878009cb6fe280a0f91970ad59cfc24bc8e77680501",
+        "synthetic": false
+      },
+      "packageManager": {
+        "name": "npm",
+        "version": "10.9.2"
+      },
+      "sha": "3feb2a5e692ee4285f08e30b00bf080b2abafcc3",
+      "treeSha": "20a41b62cb0866665cc0d4f677e2ea7a75ac7f72",
+      "typescriptVersion": "5.8.3",
+      "url": "https://github.com/carlosazaustre/kata-users-ts.git"
+    },
+    {
+      "commands": {
+        "install": [
+          [
+            "npm",
+            "ci"
+          ]
+        ],
+        "tests": [
+          "npm",
+          "test",
+          "--",
+          "--runInBand"
+        ],
+        "typecheck": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "commonPatch": null,
+      "id": "typescript-starter",
+      "license": "MIT",
+      "lockfile": {
+        "path": "package-lock.json",
+        "sha256": "f2c5a6753f8b6de69d2387e9b29a47ebe0eac1bb9ee90eb2fb3e64c138423c39",
+        "synthetic": false
+      },
+      "packageManager": {
+        "name": "npm",
+        "version": "10.9.2"
+      },
+      "sha": "c4d9330f5513eda0fb5df594f6b34a11fde1a934",
+      "treeSha": "a6fbb372699bed49ca8f2e9a697e150239c9cf23",
+      "typescriptVersion": "5.7.3",
+      "url": "https://github.com/nestjs/typescript-starter.git"
+    },
+    {
+      "commands": {
+        "install": [
+          [
+            "corepack",
+            "pnpm@7.33.7",
+            "install",
+            "--frozen-lockfile"
+          ]
+        ],
+        "tests": [
+          "corepack",
+          "pnpm@7.33.7",
+          "test",
+          "--",
+          "--runInBand"
+        ],
+        "typecheck": [
+          "corepack",
+          "pnpm@7.33.7",
+          "run",
+          "build"
+        ]
+      },
+      "commonPatch": {
+        "path": "eval/causal/patches/nestjs-hexagonal-example.patch",
+        "rationale": "The pinned source returns its documented ticket route, but one stale generated starter assertion still expects the pre-route greeting. The same one-line test-only repair is applied to both arms before timing.",
+        "sha256": "92917248bd12ddb6ad447e1df4175564366329db6549e573c5b1f646d351e713"
+      },
+      "id": "nestjs-hexagonal-example",
+      "license": "MIT (LICENSE.md; package metadata says UNLICENSED)",
+      "lockfile": {
+        "path": "pnpm-lock.yaml",
+        "sha256": "de90e8e3fde1a450b02d7425b240fd38557294d5fc2e05e6917445c3feb40a37",
+        "synthetic": false
+      },
+      "packageManager": {
+        "name": "pnpm",
+        "version": "7.33.7"
+      },
+      "sha": "ad1143821e876dd3823fa1f77e21790f808c0a3c",
+      "treeSha": "20abf70e8d5010e63bf2d7e5d454ef44536d614a",
+      "typescriptVersion": "4.6.4",
+      "url": "https://github.com/tim-hub/nestjs-hexagonal-example.git"
+    },
+    {
+      "commands": {
+        "install": [
+          [
+            "npm",
+            "ci"
+          ],
+          [
+            "npm",
+            "run",
+            "prisma:generate"
+          ]
+        ],
+        "tests": [
+          "/usr/bin/env",
+          "NODE_ENV=test",
+          "RESET_PASSWORD_FRONTEND_URL=http://localhost/reset",
+          "MAIL_HOST=localhost",
+          "MAIL_PORT=1025",
+          "MAIL_USER=test",
+          "MAIL_PASS=test",
+          "MAIL_FROM_EMAIL=test@example.com",
+          "GOOGLE_CLIENT_ID=test",
+          "GOOGLE_CLIENT_SECRET=test",
+          "GOOGLE_CALLBACK_URL=http://localhost/callback",
+          "ENCRYPTION_KEYS_FILE_PATH=./encryption-keys.json",
+          "JWT_ACCESS_SECRET=test-access",
+          "JWT_REFRESH_SECRET=test-refresh",
+          "JWT_RESET_SECRET=test-reset",
+          "DB_HOST=localhost",
+          "DB_USERNAME=test",
+          "DB_PASSWORD=test",
+          "DB_NAME=test",
+          "CACHE_REDIS_HOST=localhost",
+          "CACHE_REDIS_PASSWORD=test",
+          "npm",
+          "test",
+          "--",
+          "--runInBand"
+        ],
+        "typecheck": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "commonPatch": null,
+      "id": "nestjs-hexagonal-auth",
+      "license": "MIT",
+      "lockfile": {
+        "path": "package-lock.json",
+        "sha256": "fe32efe3e6621658acf6f6d6f501de1b1aa6f47ca78a048b4a76801f3903087c",
+        "synthetic": false
+      },
+      "packageManager": {
+        "name": "npm",
+        "version": "10.9.2"
+      },
+      "sha": "9ce1c33476610ff4d1a703b8aa37b0a392e23ff4",
+      "treeSha": "b4b67e3d5cb887b3ecfce649a5ca167391a94417",
+      "typescriptVersion": "5.9.2",
+      "url": "https://github.com/Kandriws/nestjs-hexagonal-auth.git"
+    },
+    {
+      "commands": {
+        "install": [
+          [
+            "corepack",
+            "pnpm@10.12.1",
+            "install",
+            "--frozen-lockfile"
+          ]
+        ],
+        "tests": [
+          "corepack",
+          "pnpm@10.12.1",
+          "exec",
+          "vitest",
+          "run",
+          "--typecheck.enabled=false"
+        ],
+        "typecheck": [
+          "corepack",
+          "pnpm@10.12.1",
+          "--filter",
+          "zod",
+          "exec",
+          "tsc",
+          "-p",
+          "tsconfig.test.json",
+          "--noEmit",
+          "--noUnusedLocals",
+          "false"
+        ]
+      },
+      "commonPatch": null,
+      "id": "zod",
+      "license": "MIT",
+      "lockfile": {
+        "path": "pnpm-lock.yaml",
+        "sha256": "03627f8232469285ad0ae0199f749bf5471f71e4d78f709cb74ad63bbf87bbc3",
+        "synthetic": false
+      },
+      "packageManager": {
+        "name": "pnpm",
+        "version": "10.12.1"
+      },
+      "sha": "912f0f51b0ced654d0069741e7160834dca742ee",
+      "treeSha": "aa57882b5c03f77cdfc84ee44a7967f2c9c210b6",
+      "typescriptVersion": "5.5.4",
+      "url": "https://github.com/colinhacks/zod.git"
+    },
+    {
+      "commands": {
+        "install": [
+          [
+            "npm",
+            "ci"
+          ]
+        ],
+        "tests": [
+          "npm",
+          "exec",
+          "--",
+          "ava"
+        ],
+        "typecheck": [
+          "npm",
+          "exec",
+          "--",
+          "tsd"
+        ]
+      },
+      "commonPatch": null,
+      "id": "yocto-queue",
+      "license": "MIT",
+      "lockfile": {
+        "path": "package-lock.json",
+        "sha256": "b49eb26e7c8574561fdcd3028a4931bc549d41ddc19e84f125a2acf954f1a40b",
+        "synthetic": true
+      },
+      "packageManager": {
+        "name": "npm",
+        "version": "10.9.2"
+      },
+      "sha": "b07eac099753833b29d06c614149904445739776",
+      "treeSha": "5a5f01d44bd03ec879cda4bf9591fe7f77598729",
+      "typescriptVersion": "4.9.5",
+      "url": "https://github.com/sindresorhus/yocto-queue.git"
+    }
+  ],
+  "runs": [
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-auth-repository-port-r3-treatment",
+      "order": 1,
+      "pairId": "nestjs-hexagonal-auth-repository-port-r3",
+      "replicate": 3,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "02eb4caf-1c9e-4e0f-bc23-397c21b48f0f",
+      "taskId": "nestjs-hexagonal-auth-repository-port",
+      "workspaceId": "nestjs-hexagonal-auth-repository-port-r3-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "kata-users-ts-repository-port-r1-treatment",
+      "order": 2,
+      "pairId": "kata-users-ts-repository-port-r1",
+      "replicate": 1,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "4dec6bed-ff18-40c9-a968-d9dbab0a451a",
+      "taskId": "kata-users-ts-repository-port",
+      "workspaceId": "kata-users-ts-repository-port-r1-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-example-cycle-extraction-r3-treatment",
+      "order": 3,
+      "pairId": "nestjs-hexagonal-example-cycle-extraction-r3",
+      "replicate": 3,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "20954344-4797-4b33-ac57-02ec7f5fbc43",
+      "taskId": "nestjs-hexagonal-example-cycle-extraction",
+      "workspaceId": "nestjs-hexagonal-example-cycle-extraction-r3-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "yocto-queue-repository-port-r1-treatment",
+      "order": 4,
+      "pairId": "yocto-queue-repository-port-r1",
+      "replicate": 1,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "db61b66c-2130-412f-8dcd-4cc36fbe84e4",
+      "taskId": "yocto-queue-repository-port",
+      "workspaceId": "yocto-queue-repository-port-r1-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-auth-repository-port-r1-control",
+      "order": 5,
+      "pairId": "nestjs-hexagonal-auth-repository-port-r1",
+      "replicate": 1,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "bb6f5c4a-9a8f-45f8-a2ef-fcffcb4a576f",
+      "taskId": "nestjs-hexagonal-auth-repository-port",
+      "workspaceId": "nestjs-hexagonal-auth-repository-port-r1-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "yocto-queue-repository-port-r3-control",
+      "order": 6,
+      "pairId": "yocto-queue-repository-port-r3",
+      "replicate": 3,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "78efc0b9-49e1-469a-90e3-144147b6e385",
+      "taskId": "yocto-queue-repository-port",
+      "workspaceId": "yocto-queue-repository-port-r3-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "kata-users-ts-repository-port-r3-treatment",
+      "order": 7,
+      "pairId": "kata-users-ts-repository-port-r3",
+      "replicate": 3,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "dff4de7a-67bc-4b8c-be3a-5852e04ce713",
+      "taskId": "kata-users-ts-repository-port",
+      "workspaceId": "kata-users-ts-repository-port-r3-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "zod-clock-boundary-r1-treatment",
+      "order": 8,
+      "pairId": "zod-clock-boundary-r1",
+      "replicate": 1,
+      "repositoryId": "zod",
+      "sessionUuid": "dc044e00-12b5-434d-9cd6-bdd1cf87cd13",
+      "taskId": "zod-clock-boundary",
+      "workspaceId": "zod-clock-boundary-r1-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "yocto-queue-clock-boundary-r1-control",
+      "order": 9,
+      "pairId": "yocto-queue-clock-boundary-r1",
+      "replicate": 1,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "e8a4dfe5-6076-4ac8-b06a-dde6e8065b4f",
+      "taskId": "yocto-queue-clock-boundary",
+      "workspaceId": "yocto-queue-clock-boundary-r1-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "zod-repository-port-r2-treatment",
+      "order": 10,
+      "pairId": "zod-repository-port-r2",
+      "replicate": 2,
+      "repositoryId": "zod",
+      "sessionUuid": "644dc22d-af2f-40fa-948d-80f406dcaf63",
+      "taskId": "zod-repository-port",
+      "workspaceId": "zod-repository-port-r2-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "yocto-queue-clock-boundary-r2-control",
+      "order": 11,
+      "pairId": "yocto-queue-clock-boundary-r2",
+      "replicate": 2,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "93528da9-fb83-41f8-b837-bbca72f1e93e",
+      "taskId": "yocto-queue-clock-boundary",
+      "workspaceId": "yocto-queue-clock-boundary-r2-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "kata-users-ts-clock-boundary-r1-treatment",
+      "order": 12,
+      "pairId": "kata-users-ts-clock-boundary-r1",
+      "replicate": 1,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "af60cc21-d3f5-4a82-bc87-a4e3a563809b",
+      "taskId": "kata-users-ts-clock-boundary",
+      "workspaceId": "kata-users-ts-clock-boundary-r1-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-example-cycle-extraction-r3-control",
+      "order": 13,
+      "pairId": "nestjs-hexagonal-example-cycle-extraction-r3",
+      "replicate": 3,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "4356f239-81ea-4742-aafe-27df42f1acbd",
+      "taskId": "nestjs-hexagonal-example-cycle-extraction",
+      "workspaceId": "nestjs-hexagonal-example-cycle-extraction-r3-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "typescript-starter-presentation-mapper-r2-control",
+      "order": 14,
+      "pairId": "typescript-starter-presentation-mapper-r2",
+      "replicate": 2,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "e4e2a286-316b-473e-8e6a-8eb29c0e4dab",
+      "taskId": "typescript-starter-presentation-mapper",
+      "workspaceId": "typescript-starter-presentation-mapper-r2-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "zod-cycle-extraction-r2-treatment",
+      "order": 15,
+      "pairId": "zod-cycle-extraction-r2",
+      "replicate": 2,
+      "repositoryId": "zod",
+      "sessionUuid": "ed0eb72b-3ceb-48a7-8fad-c58730bb165c",
+      "taskId": "zod-cycle-extraction",
+      "workspaceId": "zod-cycle-extraction-r2-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-example-clock-boundary-r2-treatment",
+      "order": 16,
+      "pairId": "nestjs-hexagonal-example-clock-boundary-r2",
+      "replicate": 2,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "416a44ff-c845-41ad-b6e0-c3b09aaa1b76",
+      "taskId": "nestjs-hexagonal-example-clock-boundary",
+      "workspaceId": "nestjs-hexagonal-example-clock-boundary-r2-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "typescript-starter-cycle-extraction-r3-treatment",
+      "order": 17,
+      "pairId": "typescript-starter-cycle-extraction-r3",
+      "replicate": 3,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "611f7f93-ea39-4d24-9bc1-1ad9cace209d",
+      "taskId": "typescript-starter-cycle-extraction",
+      "workspaceId": "typescript-starter-cycle-extraction-r3-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "zod-presentation-mapper-r2-treatment",
+      "order": 18,
+      "pairId": "zod-presentation-mapper-r2",
+      "replicate": 2,
+      "repositoryId": "zod",
+      "sessionUuid": "66d786ca-1e75-4f3d-b5ff-7deec29c2705",
+      "taskId": "zod-presentation-mapper",
+      "workspaceId": "zod-presentation-mapper-r2-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-example-presentation-mapper-r1-control",
+      "order": 19,
+      "pairId": "nestjs-hexagonal-example-presentation-mapper-r1",
+      "replicate": 1,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "42005b2b-502e-4679-9603-908f54b0a250",
+      "taskId": "nestjs-hexagonal-example-presentation-mapper",
+      "workspaceId": "nestjs-hexagonal-example-presentation-mapper-r1-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "kata-users-ts-clock-boundary-r3-treatment",
+      "order": 20,
+      "pairId": "kata-users-ts-clock-boundary-r3",
+      "replicate": 3,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "9a059085-42b0-4de3-984d-56e316cdd971",
+      "taskId": "kata-users-ts-clock-boundary",
+      "workspaceId": "kata-users-ts-clock-boundary-r3-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "kata-users-ts-repository-port-r2-treatment",
+      "order": 21,
+      "pairId": "kata-users-ts-repository-port-r2",
+      "replicate": 2,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "d179d682-db63-45bd-a05b-86aa914d4c80",
+      "taskId": "kata-users-ts-repository-port",
+      "workspaceId": "kata-users-ts-repository-port-r2-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "yocto-queue-repository-port-r2-control",
+      "order": 22,
+      "pairId": "yocto-queue-repository-port-r2",
+      "replicate": 2,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "fd159103-1229-4d68-af02-3a4e82bfce2b",
+      "taskId": "yocto-queue-repository-port",
+      "workspaceId": "yocto-queue-repository-port-r2-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "zod-presentation-mapper-r3-control",
+      "order": 23,
+      "pairId": "zod-presentation-mapper-r3",
+      "replicate": 3,
+      "repositoryId": "zod",
+      "sessionUuid": "d648c585-a623-4620-9489-162bcee63d0b",
+      "taskId": "zod-presentation-mapper",
+      "workspaceId": "zod-presentation-mapper-r3-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "kata-users-ts-cycle-extraction-r2-treatment",
+      "order": 24,
+      "pairId": "kata-users-ts-cycle-extraction-r2",
+      "replicate": 2,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "ac45ee1a-86a8-42cb-9079-6e1109c2f6a7",
+      "taskId": "kata-users-ts-cycle-extraction",
+      "workspaceId": "kata-users-ts-cycle-extraction-r2-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "kata-users-ts-cycle-extraction-r3-treatment",
+      "order": 25,
+      "pairId": "kata-users-ts-cycle-extraction-r3",
+      "replicate": 3,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "d02ce205-683a-4e24-947a-ff844d0cefc8",
+      "taskId": "kata-users-ts-cycle-extraction",
+      "workspaceId": "kata-users-ts-cycle-extraction-r3-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "yocto-queue-clock-boundary-r1-treatment",
+      "order": 26,
+      "pairId": "yocto-queue-clock-boundary-r1",
+      "replicate": 1,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "52c9a81c-3ef4-46df-97a0-24d2ed5c068a",
+      "taskId": "yocto-queue-clock-boundary",
+      "workspaceId": "yocto-queue-clock-boundary-r1-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-example-presentation-mapper-r2-treatment",
+      "order": 27,
+      "pairId": "nestjs-hexagonal-example-presentation-mapper-r2",
+      "replicate": 2,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "841898f0-e80b-457f-bb68-4e15312ccfc1",
+      "taskId": "nestjs-hexagonal-example-presentation-mapper",
+      "workspaceId": "nestjs-hexagonal-example-presentation-mapper-r2-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "yocto-queue-presentation-mapper-r3-treatment",
+      "order": 28,
+      "pairId": "yocto-queue-presentation-mapper-r3",
+      "replicate": 3,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "2e540f3d-4e90-4878-8483-9995cbc96457",
+      "taskId": "yocto-queue-presentation-mapper",
+      "workspaceId": "yocto-queue-presentation-mapper-r3-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-auth-presentation-mapper-r1-treatment",
+      "order": 29,
+      "pairId": "nestjs-hexagonal-auth-presentation-mapper-r1",
+      "replicate": 1,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "37ac6278-4c54-4aef-8de1-7bcf65a0b9ad",
+      "taskId": "nestjs-hexagonal-auth-presentation-mapper",
+      "workspaceId": "nestjs-hexagonal-auth-presentation-mapper-r1-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-example-repository-port-r2-treatment",
+      "order": 30,
+      "pairId": "nestjs-hexagonal-example-repository-port-r2",
+      "replicate": 2,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "32fd3c2f-5daa-452c-9707-618b28db3af8",
+      "taskId": "nestjs-hexagonal-example-repository-port",
+      "workspaceId": "nestjs-hexagonal-example-repository-port-r2-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "zod-cycle-extraction-r1-treatment",
+      "order": 31,
+      "pairId": "zod-cycle-extraction-r1",
+      "replicate": 1,
+      "repositoryId": "zod",
+      "sessionUuid": "424f0d39-0573-404b-8e47-c51842799bac",
+      "taskId": "zod-cycle-extraction",
+      "workspaceId": "zod-cycle-extraction-r1-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-auth-presentation-mapper-r3-control",
+      "order": 32,
+      "pairId": "nestjs-hexagonal-auth-presentation-mapper-r3",
+      "replicate": 3,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "0349f3ee-acfe-43da-9259-0f7e8817d1fd",
+      "taskId": "nestjs-hexagonal-auth-presentation-mapper",
+      "workspaceId": "nestjs-hexagonal-auth-presentation-mapper-r3-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "kata-users-ts-presentation-mapper-r3-treatment",
+      "order": 33,
+      "pairId": "kata-users-ts-presentation-mapper-r3",
+      "replicate": 3,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "86504e8b-31c3-4835-b51a-404893ba3fea",
+      "taskId": "kata-users-ts-presentation-mapper",
+      "workspaceId": "kata-users-ts-presentation-mapper-r3-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "yocto-queue-repository-port-r2-treatment",
+      "order": 34,
+      "pairId": "yocto-queue-repository-port-r2",
+      "replicate": 2,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "4f422c7d-ab2d-40fd-a55e-f8a4f5300ec3",
+      "taskId": "yocto-queue-repository-port",
+      "workspaceId": "yocto-queue-repository-port-r2-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-auth-cycle-extraction-r3-control",
+      "order": 35,
+      "pairId": "nestjs-hexagonal-auth-cycle-extraction-r3",
+      "replicate": 3,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "893ed0be-9a3e-4bf6-bcc9-a5d494f2802d",
+      "taskId": "nestjs-hexagonal-auth-cycle-extraction",
+      "workspaceId": "nestjs-hexagonal-auth-cycle-extraction-r3-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-auth-clock-boundary-r2-treatment",
+      "order": 36,
+      "pairId": "nestjs-hexagonal-auth-clock-boundary-r2",
+      "replicate": 2,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "6ae8e606-09c7-4c43-9c56-89e323c62c62",
+      "taskId": "nestjs-hexagonal-auth-clock-boundary",
+      "workspaceId": "nestjs-hexagonal-auth-clock-boundary-r2-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-example-clock-boundary-r3-control",
+      "order": 37,
+      "pairId": "nestjs-hexagonal-example-clock-boundary-r3",
+      "replicate": 3,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "cc62877a-a655-47b3-9491-90c526d195af",
+      "taskId": "nestjs-hexagonal-example-clock-boundary",
+      "workspaceId": "nestjs-hexagonal-example-clock-boundary-r3-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "yocto-queue-presentation-mapper-r1-treatment",
+      "order": 38,
+      "pairId": "yocto-queue-presentation-mapper-r1",
+      "replicate": 1,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "804a0dc1-aae2-4766-945a-2e19544cc89f",
+      "taskId": "yocto-queue-presentation-mapper",
+      "workspaceId": "yocto-queue-presentation-mapper-r1-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "kata-users-ts-presentation-mapper-r1-treatment",
+      "order": 39,
+      "pairId": "kata-users-ts-presentation-mapper-r1",
+      "replicate": 1,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "963b06a8-e0e7-4c65-8294-1150d58680f7",
+      "taskId": "kata-users-ts-presentation-mapper",
+      "workspaceId": "kata-users-ts-presentation-mapper-r1-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-auth-cycle-extraction-r3-treatment",
+      "order": 40,
+      "pairId": "nestjs-hexagonal-auth-cycle-extraction-r3",
+      "replicate": 3,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "cfcd0dc7-8498-4c2b-afa6-60016a4bb42a",
+      "taskId": "nestjs-hexagonal-auth-cycle-extraction",
+      "workspaceId": "nestjs-hexagonal-auth-cycle-extraction-r3-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "yocto-queue-presentation-mapper-r1-control",
+      "order": 41,
+      "pairId": "yocto-queue-presentation-mapper-r1",
+      "replicate": 1,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "b07e0b33-0d95-4891-bb2d-e4a108351bb3",
+      "taskId": "yocto-queue-presentation-mapper",
+      "workspaceId": "yocto-queue-presentation-mapper-r1-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-example-repository-port-r2-control",
+      "order": 42,
+      "pairId": "nestjs-hexagonal-example-repository-port-r2",
+      "replicate": 2,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "c78e6c8b-28f4-48a1-a08a-2864a4000c87",
+      "taskId": "nestjs-hexagonal-example-repository-port",
+      "workspaceId": "nestjs-hexagonal-example-repository-port-r2-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "kata-users-ts-repository-port-r1-control",
+      "order": 43,
+      "pairId": "kata-users-ts-repository-port-r1",
+      "replicate": 1,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "2c0220b0-a4d0-42b1-932f-48213f031db2",
+      "taskId": "kata-users-ts-repository-port",
+      "workspaceId": "kata-users-ts-repository-port-r1-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "zod-clock-boundary-r2-control",
+      "order": 44,
+      "pairId": "zod-clock-boundary-r2",
+      "replicate": 2,
+      "repositoryId": "zod",
+      "sessionUuid": "5328fed7-3277-475f-8473-e9676aa0470f",
+      "taskId": "zod-clock-boundary",
+      "workspaceId": "zod-clock-boundary-r2-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "typescript-starter-cycle-extraction-r2-treatment",
+      "order": 45,
+      "pairId": "typescript-starter-cycle-extraction-r2",
+      "replicate": 2,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "0420cd26-ee10-499f-b9c1-96a5c4409eb6",
+      "taskId": "typescript-starter-cycle-extraction",
+      "workspaceId": "typescript-starter-cycle-extraction-r2-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "zod-presentation-mapper-r2-control",
+      "order": 46,
+      "pairId": "zod-presentation-mapper-r2",
+      "replicate": 2,
+      "repositoryId": "zod",
+      "sessionUuid": "9bead61f-ad33-4458-a0f1-be3a209df160",
+      "taskId": "zod-presentation-mapper",
+      "workspaceId": "zod-presentation-mapper-r2-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "yocto-queue-repository-port-r3-treatment",
+      "order": 47,
+      "pairId": "yocto-queue-repository-port-r3",
+      "replicate": 3,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "5fb07edf-784e-4bb7-a5a5-df715945119d",
+      "taskId": "yocto-queue-repository-port",
+      "workspaceId": "yocto-queue-repository-port-r3-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "typescript-starter-cycle-extraction-r1-treatment",
+      "order": 48,
+      "pairId": "typescript-starter-cycle-extraction-r1",
+      "replicate": 1,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "49d7cad5-82ee-454e-bf9c-f5d4c76cbf60",
+      "taskId": "typescript-starter-cycle-extraction",
+      "workspaceId": "typescript-starter-cycle-extraction-r1-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-auth-repository-port-r2-treatment",
+      "order": 49,
+      "pairId": "nestjs-hexagonal-auth-repository-port-r2",
+      "replicate": 2,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "27f922b4-fabe-416d-8eba-57c1b586d436",
+      "taskId": "nestjs-hexagonal-auth-repository-port",
+      "workspaceId": "nestjs-hexagonal-auth-repository-port-r2-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-auth-repository-port-r1-treatment",
+      "order": 50,
+      "pairId": "nestjs-hexagonal-auth-repository-port-r1",
+      "replicate": 1,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "23a60716-227e-4945-b399-0a954d76e16d",
+      "taskId": "nestjs-hexagonal-auth-repository-port",
+      "workspaceId": "nestjs-hexagonal-auth-repository-port-r1-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "kata-users-ts-clock-boundary-r1-control",
+      "order": 51,
+      "pairId": "kata-users-ts-clock-boundary-r1",
+      "replicate": 1,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "254553de-d406-48ba-9bc0-cc7798c4fd36",
+      "taskId": "kata-users-ts-clock-boundary",
+      "workspaceId": "kata-users-ts-clock-boundary-r1-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "typescript-starter-presentation-mapper-r2-treatment",
+      "order": 52,
+      "pairId": "typescript-starter-presentation-mapper-r2",
+      "replicate": 2,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "f5ccf11a-f0c8-4ffb-80aa-e5fc71b3bd82",
+      "taskId": "typescript-starter-presentation-mapper",
+      "workspaceId": "typescript-starter-presentation-mapper-r2-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "typescript-starter-clock-boundary-r1-treatment",
+      "order": 53,
+      "pairId": "typescript-starter-clock-boundary-r1",
+      "replicate": 1,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "420575ed-4ecc-4c5f-8160-d55e824fd345",
+      "taskId": "typescript-starter-clock-boundary",
+      "workspaceId": "typescript-starter-clock-boundary-r1-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-example-clock-boundary-r1-control",
+      "order": 54,
+      "pairId": "nestjs-hexagonal-example-clock-boundary-r1",
+      "replicate": 1,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "9039e51b-b8e6-43d9-b04c-499d336017cf",
+      "taskId": "nestjs-hexagonal-example-clock-boundary",
+      "workspaceId": "nestjs-hexagonal-example-clock-boundary-r1-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "kata-users-ts-cycle-extraction-r1-treatment",
+      "order": 55,
+      "pairId": "kata-users-ts-cycle-extraction-r1",
+      "replicate": 1,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "ba3ab14e-e820-467d-929d-9c7f2eaaae79",
+      "taskId": "kata-users-ts-cycle-extraction",
+      "workspaceId": "kata-users-ts-cycle-extraction-r1-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-auth-clock-boundary-r1-control",
+      "order": 56,
+      "pairId": "nestjs-hexagonal-auth-clock-boundary-r1",
+      "replicate": 1,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "54de8a74-2c1f-4520-bec1-2f39294edaf1",
+      "taskId": "nestjs-hexagonal-auth-clock-boundary",
+      "workspaceId": "nestjs-hexagonal-auth-clock-boundary-r1-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "typescript-starter-cycle-extraction-r2-control",
+      "order": 57,
+      "pairId": "typescript-starter-cycle-extraction-r2",
+      "replicate": 2,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "2cc5b6c7-315a-408a-9322-6472849f76c1",
+      "taskId": "typescript-starter-cycle-extraction",
+      "workspaceId": "typescript-starter-cycle-extraction-r2-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "typescript-starter-clock-boundary-r2-control",
+      "order": 58,
+      "pairId": "typescript-starter-clock-boundary-r2",
+      "replicate": 2,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "90748125-ccd1-4901-85f5-575782994259",
+      "taskId": "typescript-starter-clock-boundary",
+      "workspaceId": "typescript-starter-clock-boundary-r2-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-example-cycle-extraction-r1-control",
+      "order": 59,
+      "pairId": "nestjs-hexagonal-example-cycle-extraction-r1",
+      "replicate": 1,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "f05ae1bb-1065-451c-83e0-f6201f37e8d9",
+      "taskId": "nestjs-hexagonal-example-cycle-extraction",
+      "workspaceId": "nestjs-hexagonal-example-cycle-extraction-r1-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "typescript-starter-presentation-mapper-r1-control",
+      "order": 60,
+      "pairId": "typescript-starter-presentation-mapper-r1",
+      "replicate": 1,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "947eed5d-f2f6-4943-9512-77b3038f4a81",
+      "taskId": "typescript-starter-presentation-mapper",
+      "workspaceId": "typescript-starter-presentation-mapper-r1-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-example-clock-boundary-r3-treatment",
+      "order": 61,
+      "pairId": "nestjs-hexagonal-example-clock-boundary-r3",
+      "replicate": 3,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "afd4c1d7-2500-46bc-9dfd-01f41f17b25b",
+      "taskId": "nestjs-hexagonal-example-clock-boundary",
+      "workspaceId": "nestjs-hexagonal-example-clock-boundary-r3-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-auth-cycle-extraction-r2-control",
+      "order": 62,
+      "pairId": "nestjs-hexagonal-auth-cycle-extraction-r2",
+      "replicate": 2,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "d6562814-7d59-4296-864f-cb71e91dcf56",
+      "taskId": "nestjs-hexagonal-auth-cycle-extraction",
+      "workspaceId": "nestjs-hexagonal-auth-cycle-extraction-r2-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "yocto-queue-cycle-extraction-r1-control",
+      "order": 63,
+      "pairId": "yocto-queue-cycle-extraction-r1",
+      "replicate": 1,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "2a3d2ab7-3bf7-441f-950f-0686a44b7f43",
+      "taskId": "yocto-queue-cycle-extraction",
+      "workspaceId": "yocto-queue-cycle-extraction-r1-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-example-presentation-mapper-r3-control",
+      "order": 64,
+      "pairId": "nestjs-hexagonal-example-presentation-mapper-r3",
+      "replicate": 3,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "54992c01-b3d2-4f67-af8e-77ba3438bdf7",
+      "taskId": "nestjs-hexagonal-example-presentation-mapper",
+      "workspaceId": "nestjs-hexagonal-example-presentation-mapper-r3-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "zod-clock-boundary-r3-control",
+      "order": 65,
+      "pairId": "zod-clock-boundary-r3",
+      "replicate": 3,
+      "repositoryId": "zod",
+      "sessionUuid": "62ca2902-8beb-48f5-ad80-e460798023dd",
+      "taskId": "zod-clock-boundary",
+      "workspaceId": "zod-clock-boundary-r3-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "yocto-queue-cycle-extraction-r2-control",
+      "order": 66,
+      "pairId": "yocto-queue-cycle-extraction-r2",
+      "replicate": 2,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "57a31c6f-e192-4fc4-907b-8d2b49e4a53c",
+      "taskId": "yocto-queue-cycle-extraction",
+      "workspaceId": "yocto-queue-cycle-extraction-r2-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-auth-cycle-extraction-r2-treatment",
+      "order": 67,
+      "pairId": "nestjs-hexagonal-auth-cycle-extraction-r2",
+      "replicate": 2,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "49fb7213-0e86-4415-a2a6-4ac558863982",
+      "taskId": "nestjs-hexagonal-auth-cycle-extraction",
+      "workspaceId": "nestjs-hexagonal-auth-cycle-extraction-r2-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "zod-cycle-extraction-r1-control",
+      "order": 68,
+      "pairId": "zod-cycle-extraction-r1",
+      "replicate": 1,
+      "repositoryId": "zod",
+      "sessionUuid": "0e844ad5-616e-4753-a907-8fa3ff8e104f",
+      "taskId": "zod-cycle-extraction",
+      "workspaceId": "zod-cycle-extraction-r1-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-auth-clock-boundary-r2-control",
+      "order": 69,
+      "pairId": "nestjs-hexagonal-auth-clock-boundary-r2",
+      "replicate": 2,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "6594fb0b-9c93-4a54-8326-5d6594a4b81c",
+      "taskId": "nestjs-hexagonal-auth-clock-boundary",
+      "workspaceId": "nestjs-hexagonal-auth-clock-boundary-r2-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "typescript-starter-presentation-mapper-r1-treatment",
+      "order": 70,
+      "pairId": "typescript-starter-presentation-mapper-r1",
+      "replicate": 1,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "8777625d-4bc0-4345-8ed6-d486c17599a3",
+      "taskId": "typescript-starter-presentation-mapper",
+      "workspaceId": "typescript-starter-presentation-mapper-r1-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "zod-clock-boundary-r3-treatment",
+      "order": 71,
+      "pairId": "zod-clock-boundary-r3",
+      "replicate": 3,
+      "repositoryId": "zod",
+      "sessionUuid": "d3c251f3-cc65-4ef5-9abb-bd878e7b17fc",
+      "taskId": "zod-clock-boundary",
+      "workspaceId": "zod-clock-boundary-r3-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "yocto-queue-clock-boundary-r3-control",
+      "order": 72,
+      "pairId": "yocto-queue-clock-boundary-r3",
+      "replicate": 3,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "b0bf6518-7949-498e-8d1e-c0b7a451c6e1",
+      "taskId": "yocto-queue-clock-boundary",
+      "workspaceId": "yocto-queue-clock-boundary-r3-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-example-presentation-mapper-r2-control",
+      "order": 73,
+      "pairId": "nestjs-hexagonal-example-presentation-mapper-r2",
+      "replicate": 2,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "d9bcc805-7e19-4cd4-b393-3939631fc809",
+      "taskId": "nestjs-hexagonal-example-presentation-mapper",
+      "workspaceId": "nestjs-hexagonal-example-presentation-mapper-r2-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "yocto-queue-repository-port-r1-control",
+      "order": 74,
+      "pairId": "yocto-queue-repository-port-r1",
+      "replicate": 1,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "b0bc2a3d-f87c-4bc9-959e-d69b04702d22",
+      "taskId": "yocto-queue-repository-port",
+      "workspaceId": "yocto-queue-repository-port-r1-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "zod-repository-port-r3-treatment",
+      "order": 75,
+      "pairId": "zod-repository-port-r3",
+      "replicate": 3,
+      "repositoryId": "zod",
+      "sessionUuid": "1088f780-cda1-4a7e-8461-203d0a445809",
+      "taskId": "zod-repository-port",
+      "workspaceId": "zod-repository-port-r3-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-auth-repository-port-r3-control",
+      "order": 76,
+      "pairId": "nestjs-hexagonal-auth-repository-port-r3",
+      "replicate": 3,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "57ee38e3-79d4-402f-8ac0-191ecb214f64",
+      "taskId": "nestjs-hexagonal-auth-repository-port",
+      "workspaceId": "nestjs-hexagonal-auth-repository-port-r3-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-example-repository-port-r3-treatment",
+      "order": 77,
+      "pairId": "nestjs-hexagonal-example-repository-port-r3",
+      "replicate": 3,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "fa3b6ae5-c880-4ad7-b01d-721816b9d74d",
+      "taskId": "nestjs-hexagonal-example-repository-port",
+      "workspaceId": "nestjs-hexagonal-example-repository-port-r3-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-example-clock-boundary-r2-control",
+      "order": 78,
+      "pairId": "nestjs-hexagonal-example-clock-boundary-r2",
+      "replicate": 2,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "73094eab-a21f-4212-8ac6-d1483764343a",
+      "taskId": "nestjs-hexagonal-example-clock-boundary",
+      "workspaceId": "nestjs-hexagonal-example-clock-boundary-r2-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-example-repository-port-r3-control",
+      "order": 79,
+      "pairId": "nestjs-hexagonal-example-repository-port-r3",
+      "replicate": 3,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "4b730d18-6310-4637-9364-bc3decd42423",
+      "taskId": "nestjs-hexagonal-example-repository-port",
+      "workspaceId": "nestjs-hexagonal-example-repository-port-r3-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "typescript-starter-clock-boundary-r3-control",
+      "order": 80,
+      "pairId": "typescript-starter-clock-boundary-r3",
+      "replicate": 3,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "6c91302f-6aae-4c2f-bf5f-cf1a58c2185b",
+      "taskId": "typescript-starter-clock-boundary",
+      "workspaceId": "typescript-starter-clock-boundary-r3-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-example-cycle-extraction-r2-treatment",
+      "order": 81,
+      "pairId": "nestjs-hexagonal-example-cycle-extraction-r2",
+      "replicate": 2,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "bd74f679-99f4-4fb9-b8f6-e61dfdc94146",
+      "taskId": "nestjs-hexagonal-example-cycle-extraction",
+      "workspaceId": "nestjs-hexagonal-example-cycle-extraction-r2-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "typescript-starter-clock-boundary-r1-control",
+      "order": 82,
+      "pairId": "typescript-starter-clock-boundary-r1",
+      "replicate": 1,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "04d4275f-2c19-4cb8-868c-34847efb924b",
+      "taskId": "typescript-starter-clock-boundary",
+      "workspaceId": "typescript-starter-clock-boundary-r1-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-auth-cycle-extraction-r1-treatment",
+      "order": 83,
+      "pairId": "nestjs-hexagonal-auth-cycle-extraction-r1",
+      "replicate": 1,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "f227ab6e-33a2-4179-ae71-4c8f1e06f19f",
+      "taskId": "nestjs-hexagonal-auth-cycle-extraction",
+      "workspaceId": "nestjs-hexagonal-auth-cycle-extraction-r1-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-auth-repository-port-r2-control",
+      "order": 84,
+      "pairId": "nestjs-hexagonal-auth-repository-port-r2",
+      "replicate": 2,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "3df8ebba-52b8-4673-a7ac-61059f891284",
+      "taskId": "nestjs-hexagonal-auth-repository-port",
+      "workspaceId": "nestjs-hexagonal-auth-repository-port-r2-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-example-cycle-extraction-r2-control",
+      "order": 85,
+      "pairId": "nestjs-hexagonal-example-cycle-extraction-r2",
+      "replicate": 2,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "e6f7ed1f-5d8a-4b3f-9e45-54450d58efb5",
+      "taskId": "nestjs-hexagonal-example-cycle-extraction",
+      "workspaceId": "nestjs-hexagonal-example-cycle-extraction-r2-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "kata-users-ts-repository-port-r3-control",
+      "order": 86,
+      "pairId": "kata-users-ts-repository-port-r3",
+      "replicate": 3,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "a50ba61e-2eca-4dbb-83fd-00f53a1dec92",
+      "taskId": "kata-users-ts-repository-port",
+      "workspaceId": "kata-users-ts-repository-port-r3-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "typescript-starter-cycle-extraction-r3-control",
+      "order": 87,
+      "pairId": "typescript-starter-cycle-extraction-r3",
+      "replicate": 3,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "e4a285de-98fb-4d07-babd-2c621806ed32",
+      "taskId": "typescript-starter-cycle-extraction",
+      "workspaceId": "typescript-starter-cycle-extraction-r3-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "typescript-starter-clock-boundary-r3-treatment",
+      "order": 88,
+      "pairId": "typescript-starter-clock-boundary-r3",
+      "replicate": 3,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "25800f95-489b-4cd2-9dc5-41fb2cc8491c",
+      "taskId": "typescript-starter-clock-boundary",
+      "workspaceId": "typescript-starter-clock-boundary-r3-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "kata-users-ts-clock-boundary-r2-treatment",
+      "order": 89,
+      "pairId": "kata-users-ts-clock-boundary-r2",
+      "replicate": 2,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "70542d3c-a92e-496f-aa6a-793f271cb2eb",
+      "taskId": "kata-users-ts-clock-boundary",
+      "workspaceId": "kata-users-ts-clock-boundary-r2-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "zod-presentation-mapper-r3-treatment",
+      "order": 90,
+      "pairId": "zod-presentation-mapper-r3",
+      "replicate": 3,
+      "repositoryId": "zod",
+      "sessionUuid": "29749591-edc5-4bb2-a60e-e8543a7c3dbb",
+      "taskId": "zod-presentation-mapper",
+      "workspaceId": "zod-presentation-mapper-r3-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "kata-users-ts-presentation-mapper-r2-control",
+      "order": 91,
+      "pairId": "kata-users-ts-presentation-mapper-r2",
+      "replicate": 2,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "5a5752ca-e9d8-4f1d-996d-f305b234a092",
+      "taskId": "kata-users-ts-presentation-mapper",
+      "workspaceId": "kata-users-ts-presentation-mapper-r2-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "zod-cycle-extraction-r2-control",
+      "order": 92,
+      "pairId": "zod-cycle-extraction-r2",
+      "replicate": 2,
+      "repositoryId": "zod",
+      "sessionUuid": "c289a821-ea59-48d1-9d4e-8db1537cbcc8",
+      "taskId": "zod-cycle-extraction",
+      "workspaceId": "zod-cycle-extraction-r2-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "zod-cycle-extraction-r3-control",
+      "order": 93,
+      "pairId": "zod-cycle-extraction-r3",
+      "replicate": 3,
+      "repositoryId": "zod",
+      "sessionUuid": "95aab61f-aafd-46ff-9239-36207c135993",
+      "taskId": "zod-cycle-extraction",
+      "workspaceId": "zod-cycle-extraction-r3-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "kata-users-ts-cycle-extraction-r3-control",
+      "order": 94,
+      "pairId": "kata-users-ts-cycle-extraction-r3",
+      "replicate": 3,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "713f2ea8-80ae-4a16-8e9f-ed00dd15708d",
+      "taskId": "kata-users-ts-cycle-extraction",
+      "workspaceId": "kata-users-ts-cycle-extraction-r3-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-example-repository-port-r1-treatment",
+      "order": 95,
+      "pairId": "nestjs-hexagonal-example-repository-port-r1",
+      "replicate": 1,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "a01f8054-6705-42dc-93b1-427eb45851cb",
+      "taskId": "nestjs-hexagonal-example-repository-port",
+      "workspaceId": "nestjs-hexagonal-example-repository-port-r1-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "yocto-queue-cycle-extraction-r3-treatment",
+      "order": 96,
+      "pairId": "yocto-queue-cycle-extraction-r3",
+      "replicate": 3,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "681763d3-a81d-433b-9670-4736efdb6b02",
+      "taskId": "yocto-queue-cycle-extraction",
+      "workspaceId": "yocto-queue-cycle-extraction-r3-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "zod-repository-port-r3-control",
+      "order": 97,
+      "pairId": "zod-repository-port-r3",
+      "replicate": 3,
+      "repositoryId": "zod",
+      "sessionUuid": "10ef3b2a-b6f2-451c-8b33-636a841a3b05",
+      "taskId": "zod-repository-port",
+      "workspaceId": "zod-repository-port-r3-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "kata-users-ts-presentation-mapper-r2-treatment",
+      "order": 98,
+      "pairId": "kata-users-ts-presentation-mapper-r2",
+      "replicate": 2,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "8c7de210-0841-4521-b044-e9ce9541e99e",
+      "taskId": "kata-users-ts-presentation-mapper",
+      "workspaceId": "kata-users-ts-presentation-mapper-r2-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "zod-presentation-mapper-r1-control",
+      "order": 99,
+      "pairId": "zod-presentation-mapper-r1",
+      "replicate": 1,
+      "repositoryId": "zod",
+      "sessionUuid": "b1cc4fea-b020-4613-a901-d859c582fa99",
+      "taskId": "zod-presentation-mapper",
+      "workspaceId": "zod-presentation-mapper-r1-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "yocto-queue-presentation-mapper-r2-control",
+      "order": 100,
+      "pairId": "yocto-queue-presentation-mapper-r2",
+      "replicate": 2,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "73d6b9cd-36a1-4b0b-adfc-dc181748f14c",
+      "taskId": "yocto-queue-presentation-mapper",
+      "workspaceId": "yocto-queue-presentation-mapper-r2-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-auth-presentation-mapper-r3-treatment",
+      "order": 101,
+      "pairId": "nestjs-hexagonal-auth-presentation-mapper-r3",
+      "replicate": 3,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "9b540892-96b1-45c2-964c-3eeb6037b8e3",
+      "taskId": "nestjs-hexagonal-auth-presentation-mapper",
+      "workspaceId": "nestjs-hexagonal-auth-presentation-mapper-r3-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-example-repository-port-r1-control",
+      "order": 102,
+      "pairId": "nestjs-hexagonal-example-repository-port-r1",
+      "replicate": 1,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "219da018-9b6e-48c4-bb22-2bee2b6b8e90",
+      "taskId": "nestjs-hexagonal-example-repository-port",
+      "workspaceId": "nestjs-hexagonal-example-repository-port-r1-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "typescript-starter-presentation-mapper-r3-treatment",
+      "order": 103,
+      "pairId": "typescript-starter-presentation-mapper-r3",
+      "replicate": 3,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "10ece0e0-1bf8-49df-9b53-4d4574609a32",
+      "taskId": "typescript-starter-presentation-mapper",
+      "workspaceId": "typescript-starter-presentation-mapper-r3-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-auth-presentation-mapper-r2-control",
+      "order": 104,
+      "pairId": "nestjs-hexagonal-auth-presentation-mapper-r2",
+      "replicate": 2,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "395c74fa-d044-4b72-b976-b499575e0e49",
+      "taskId": "nestjs-hexagonal-auth-presentation-mapper",
+      "workspaceId": "nestjs-hexagonal-auth-presentation-mapper-r2-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "typescript-starter-repository-port-r3-treatment",
+      "order": 105,
+      "pairId": "typescript-starter-repository-port-r3",
+      "replicate": 3,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "300ff8dd-fa8e-42b8-acd5-1202e656a905",
+      "taskId": "typescript-starter-repository-port",
+      "workspaceId": "typescript-starter-repository-port-r3-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "zod-repository-port-r1-treatment",
+      "order": 106,
+      "pairId": "zod-repository-port-r1",
+      "replicate": 1,
+      "repositoryId": "zod",
+      "sessionUuid": "b22129e5-8402-4a0e-8470-f8b2005e61ba",
+      "taskId": "zod-repository-port",
+      "workspaceId": "zod-repository-port-r1-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-auth-clock-boundary-r3-control",
+      "order": 107,
+      "pairId": "nestjs-hexagonal-auth-clock-boundary-r3",
+      "replicate": 3,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "d4bceeb2-c532-4721-9488-5bb8c52c9cf7",
+      "taskId": "nestjs-hexagonal-auth-clock-boundary",
+      "workspaceId": "nestjs-hexagonal-auth-clock-boundary-r3-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "typescript-starter-presentation-mapper-r3-control",
+      "order": 108,
+      "pairId": "typescript-starter-presentation-mapper-r3",
+      "replicate": 3,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "b47aec88-9acd-4ba2-a517-0ec215ae5e52",
+      "taskId": "typescript-starter-presentation-mapper",
+      "workspaceId": "typescript-starter-presentation-mapper-r3-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "kata-users-ts-clock-boundary-r3-control",
+      "order": 109,
+      "pairId": "kata-users-ts-clock-boundary-r3",
+      "replicate": 3,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "51c20eca-ad1c-42de-bac2-e6f19ee3880f",
+      "taskId": "kata-users-ts-clock-boundary",
+      "workspaceId": "kata-users-ts-clock-boundary-r3-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "typescript-starter-repository-port-r1-treatment",
+      "order": 110,
+      "pairId": "typescript-starter-repository-port-r1",
+      "replicate": 1,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "8864b710-2918-46b4-81ee-c4fe66138671",
+      "taskId": "typescript-starter-repository-port",
+      "workspaceId": "typescript-starter-repository-port-r1-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "typescript-starter-repository-port-r2-control",
+      "order": 111,
+      "pairId": "typescript-starter-repository-port-r2",
+      "replicate": 2,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "251e8f43-3251-4b98-b2d7-b815fe8b476f",
+      "taskId": "typescript-starter-repository-port",
+      "workspaceId": "typescript-starter-repository-port-r2-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "zod-cycle-extraction-r3-treatment",
+      "order": 112,
+      "pairId": "zod-cycle-extraction-r3",
+      "replicate": 3,
+      "repositoryId": "zod",
+      "sessionUuid": "ce1f8457-f8da-4a2d-891b-c04defd2677a",
+      "taskId": "zod-cycle-extraction",
+      "workspaceId": "zod-cycle-extraction-r3-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "kata-users-ts-repository-port-r2-control",
+      "order": 113,
+      "pairId": "kata-users-ts-repository-port-r2",
+      "replicate": 2,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "0d263bbc-fed5-4034-8659-c0a03870b287",
+      "taskId": "kata-users-ts-repository-port",
+      "workspaceId": "kata-users-ts-repository-port-r2-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "yocto-queue-presentation-mapper-r2-treatment",
+      "order": 114,
+      "pairId": "yocto-queue-presentation-mapper-r2",
+      "replicate": 2,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "7dd311a1-ebbf-4f1a-ba42-1d1dbed226a3",
+      "taskId": "yocto-queue-presentation-mapper",
+      "workspaceId": "yocto-queue-presentation-mapper-r2-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "yocto-queue-clock-boundary-r2-treatment",
+      "order": 115,
+      "pairId": "yocto-queue-clock-boundary-r2",
+      "replicate": 2,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "4d6e9b3c-1eae-4799-854a-3a04656d01ba",
+      "taskId": "yocto-queue-clock-boundary",
+      "workspaceId": "yocto-queue-clock-boundary-r2-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-auth-cycle-extraction-r1-control",
+      "order": 116,
+      "pairId": "nestjs-hexagonal-auth-cycle-extraction-r1",
+      "replicate": 1,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "38523810-0ad1-4e0c-9045-a4c0129849c5",
+      "taskId": "nestjs-hexagonal-auth-cycle-extraction",
+      "workspaceId": "nestjs-hexagonal-auth-cycle-extraction-r1-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-auth-clock-boundary-r1-treatment",
+      "order": 117,
+      "pairId": "nestjs-hexagonal-auth-clock-boundary-r1",
+      "replicate": 1,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "3ad8586c-cf78-435f-b6e8-9e250e4fca31",
+      "taskId": "nestjs-hexagonal-auth-clock-boundary",
+      "workspaceId": "nestjs-hexagonal-auth-clock-boundary-r1-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "typescript-starter-clock-boundary-r2-treatment",
+      "order": 118,
+      "pairId": "typescript-starter-clock-boundary-r2",
+      "replicate": 2,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "8cc1bb62-e49b-4a2f-9a54-3de1ba94d408",
+      "taskId": "typescript-starter-clock-boundary",
+      "workspaceId": "typescript-starter-clock-boundary-r2-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "yocto-queue-cycle-extraction-r2-treatment",
+      "order": 119,
+      "pairId": "yocto-queue-cycle-extraction-r2",
+      "replicate": 2,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "c1559727-1f8f-46fb-aae7-e6dcc529de15",
+      "taskId": "yocto-queue-cycle-extraction",
+      "workspaceId": "yocto-queue-cycle-extraction-r2-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "zod-repository-port-r2-control",
+      "order": 120,
+      "pairId": "zod-repository-port-r2",
+      "replicate": 2,
+      "repositoryId": "zod",
+      "sessionUuid": "49a5233f-4b77-4711-9d3b-707fc7c1d4ed",
+      "taskId": "zod-repository-port",
+      "workspaceId": "zod-repository-port-r2-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-example-cycle-extraction-r1-treatment",
+      "order": 121,
+      "pairId": "nestjs-hexagonal-example-cycle-extraction-r1",
+      "replicate": 1,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "5bea47e1-6bac-499b-85bc-97edc4bef33c",
+      "taskId": "nestjs-hexagonal-example-cycle-extraction",
+      "workspaceId": "nestjs-hexagonal-example-cycle-extraction-r1-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "zod-clock-boundary-r2-treatment",
+      "order": 122,
+      "pairId": "zod-clock-boundary-r2",
+      "replicate": 2,
+      "repositoryId": "zod",
+      "sessionUuid": "df888b13-89bf-422d-8218-7064c2442bc5",
+      "taskId": "zod-clock-boundary",
+      "workspaceId": "zod-clock-boundary-r2-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "zod-presentation-mapper-r1-treatment",
+      "order": 123,
+      "pairId": "zod-presentation-mapper-r1",
+      "replicate": 1,
+      "repositoryId": "zod",
+      "sessionUuid": "966564cc-8869-46d4-8e28-b477b684df74",
+      "taskId": "zod-presentation-mapper",
+      "workspaceId": "zod-presentation-mapper-r1-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-auth-presentation-mapper-r2-treatment",
+      "order": 124,
+      "pairId": "nestjs-hexagonal-auth-presentation-mapper-r2",
+      "replicate": 2,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "93754794-24a5-4eab-9bd6-3837bcbe4638",
+      "taskId": "nestjs-hexagonal-auth-presentation-mapper",
+      "workspaceId": "nestjs-hexagonal-auth-presentation-mapper-r2-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-auth-clock-boundary-r3-treatment",
+      "order": 125,
+      "pairId": "nestjs-hexagonal-auth-clock-boundary-r3",
+      "replicate": 3,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "6156e1f1-0571-48c1-a2b7-882828ecf436",
+      "taskId": "nestjs-hexagonal-auth-clock-boundary",
+      "workspaceId": "nestjs-hexagonal-auth-clock-boundary-r3-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "kata-users-ts-cycle-extraction-r2-control",
+      "order": 126,
+      "pairId": "kata-users-ts-cycle-extraction-r2",
+      "replicate": 2,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "5a151d2e-3b12-45f3-ac8b-b793bfc9461b",
+      "taskId": "kata-users-ts-cycle-extraction",
+      "workspaceId": "kata-users-ts-cycle-extraction-r2-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "kata-users-ts-clock-boundary-r2-control",
+      "order": 127,
+      "pairId": "kata-users-ts-clock-boundary-r2",
+      "replicate": 2,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "2f405266-7d31-40d5-b611-e5802b4a4848",
+      "taskId": "kata-users-ts-clock-boundary",
+      "workspaceId": "kata-users-ts-clock-boundary-r2-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "zod-repository-port-r1-control",
+      "order": 128,
+      "pairId": "zod-repository-port-r1",
+      "replicate": 1,
+      "repositoryId": "zod",
+      "sessionUuid": "55b2637a-32dc-4b4e-a6a9-fc41cba55b6f",
+      "taskId": "zod-repository-port",
+      "workspaceId": "zod-repository-port-r1-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "kata-users-ts-presentation-mapper-r3-control",
+      "order": 129,
+      "pairId": "kata-users-ts-presentation-mapper-r3",
+      "replicate": 3,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "e4b335bd-88ba-4453-a68a-14820059b1c0",
+      "taskId": "kata-users-ts-presentation-mapper",
+      "workspaceId": "kata-users-ts-presentation-mapper-r3-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "kata-users-ts-presentation-mapper-r1-control",
+      "order": 130,
+      "pairId": "kata-users-ts-presentation-mapper-r1",
+      "replicate": 1,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "b1cf1c9f-0b30-4927-8c19-3cf8a3ead514",
+      "taskId": "kata-users-ts-presentation-mapper",
+      "workspaceId": "kata-users-ts-presentation-mapper-r1-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-example-presentation-mapper-r3-treatment",
+      "order": 131,
+      "pairId": "nestjs-hexagonal-example-presentation-mapper-r3",
+      "replicate": 3,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "03f3dd76-ce47-4ece-bab6-14bbf03402e1",
+      "taskId": "nestjs-hexagonal-example-presentation-mapper",
+      "workspaceId": "nestjs-hexagonal-example-presentation-mapper-r3-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "yocto-queue-cycle-extraction-r3-control",
+      "order": 132,
+      "pairId": "yocto-queue-cycle-extraction-r3",
+      "replicate": 3,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "21c6595f-db88-4d5c-a582-c152711e9ff2",
+      "taskId": "yocto-queue-cycle-extraction",
+      "workspaceId": "yocto-queue-cycle-extraction-r3-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "kata-users-ts-cycle-extraction-r1-control",
+      "order": 133,
+      "pairId": "kata-users-ts-cycle-extraction-r1",
+      "replicate": 1,
+      "repositoryId": "kata-users-ts",
+      "sessionUuid": "32639563-e28a-460f-ae17-fcbd5212e2fb",
+      "taskId": "kata-users-ts-cycle-extraction",
+      "workspaceId": "kata-users-ts-cycle-extraction-r1-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "typescript-starter-repository-port-r1-control",
+      "order": 134,
+      "pairId": "typescript-starter-repository-port-r1",
+      "replicate": 1,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "635a52c2-1b78-4745-8f98-8e3fbf5d0306",
+      "taskId": "typescript-starter-repository-port",
+      "workspaceId": "typescript-starter-repository-port-r1-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-example-clock-boundary-r1-treatment",
+      "order": 135,
+      "pairId": "nestjs-hexagonal-example-clock-boundary-r1",
+      "replicate": 1,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "6b9b67ec-ccf6-42e2-ad1a-9cd13809d50f",
+      "taskId": "nestjs-hexagonal-example-clock-boundary",
+      "workspaceId": "nestjs-hexagonal-example-clock-boundary-r1-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "typescript-starter-repository-port-r2-treatment",
+      "order": 136,
+      "pairId": "typescript-starter-repository-port-r2",
+      "replicate": 2,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "706be47b-193d-49a5-9f1c-e367406c9d83",
+      "taskId": "typescript-starter-repository-port",
+      "workspaceId": "typescript-starter-repository-port-r2-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "yocto-queue-presentation-mapper-r3-control",
+      "order": 137,
+      "pairId": "yocto-queue-presentation-mapper-r3",
+      "replicate": 3,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "6eaab130-5151-4ad7-a033-e1798345f62d",
+      "taskId": "yocto-queue-presentation-mapper",
+      "workspaceId": "yocto-queue-presentation-mapper-r3-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "yocto-queue-cycle-extraction-r1-treatment",
+      "order": 138,
+      "pairId": "yocto-queue-cycle-extraction-r1",
+      "replicate": 1,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "4d2187ea-8843-4225-9ccd-149acdc2b93d",
+      "taskId": "yocto-queue-cycle-extraction",
+      "workspaceId": "yocto-queue-cycle-extraction-r1-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "typescript-starter-repository-port-r3-control",
+      "order": 139,
+      "pairId": "typescript-starter-repository-port-r3",
+      "replicate": 3,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "513a3d2e-5c60-405b-bdfe-d1539d983bcb",
+      "taskId": "typescript-starter-repository-port",
+      "workspaceId": "typescript-starter-repository-port-r3-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "typescript-starter-cycle-extraction-r1-control",
+      "order": 140,
+      "pairId": "typescript-starter-cycle-extraction-r1",
+      "replicate": 1,
+      "repositoryId": "typescript-starter",
+      "sessionUuid": "3a7462a8-9d25-42ef-bcc0-dffcd3b4f761",
+      "taskId": "typescript-starter-cycle-extraction",
+      "workspaceId": "typescript-starter-cycle-extraction-r1-control"
+    },
+    {
+      "arm": "control",
+      "cellId": "nestjs-hexagonal-auth-presentation-mapper-r1-control",
+      "order": 141,
+      "pairId": "nestjs-hexagonal-auth-presentation-mapper-r1",
+      "replicate": 1,
+      "repositoryId": "nestjs-hexagonal-auth",
+      "sessionUuid": "925d9cb1-5296-42b8-8638-14ce5d26a2c9",
+      "taskId": "nestjs-hexagonal-auth-presentation-mapper",
+      "workspaceId": "nestjs-hexagonal-auth-presentation-mapper-r1-control"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "yocto-queue-clock-boundary-r3-treatment",
+      "order": 142,
+      "pairId": "yocto-queue-clock-boundary-r3",
+      "replicate": 3,
+      "repositoryId": "yocto-queue",
+      "sessionUuid": "70cd0a37-862f-4003-bd37-baf431da7884",
+      "taskId": "yocto-queue-clock-boundary",
+      "workspaceId": "yocto-queue-clock-boundary-r3-treatment"
+    },
+    {
+      "arm": "treatment",
+      "cellId": "nestjs-hexagonal-example-presentation-mapper-r1-treatment",
+      "order": 143,
+      "pairId": "nestjs-hexagonal-example-presentation-mapper-r1",
+      "replicate": 1,
+      "repositoryId": "nestjs-hexagonal-example",
+      "sessionUuid": "91392630-df32-4d29-a239-d93c562dabaa",
+      "taskId": "nestjs-hexagonal-example-presentation-mapper",
+      "workspaceId": "nestjs-hexagonal-example-presentation-mapper-r1-treatment"
+    },
+    {
+      "arm": "control",
+      "cellId": "zod-clock-boundary-r1-control",
+      "order": 144,
+      "pairId": "zod-clock-boundary-r1",
+      "replicate": 1,
+      "repositoryId": "zod",
+      "sessionUuid": "b090fa31-5f1d-4528-b4fd-19e7758849a1",
+      "taskId": "zod-clock-boundary",
+      "workspaceId": "zod-clock-boundary-r1-control"
+    }
+  ],
+  "schemaVersion": 1,
+  "tasks": [
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "eb682bfbd8728fb95f148c15d8c67a26664c50bdb0961506f6a5ddf3673949e6",
+      "fixtureSha256": "b5fda2207eb4c3f24c750b1b68197b4b55a65b8fa9797d15ecc54e22433bf784",
+      "id": "kata-users-ts-clock-boundary",
+      "noun": "Invitation",
+      "oracleSha256": "8af0538b8a9a071d29e778b8a175f04a875f1c8902666a4445874b9c9021a12c",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRefactor InvitationStatus so its constructor accepts a replaceable Clock with now(): Date. Expiration must be true at the exact deadline. Keep SystemClock as the production adapter, and remove the application layer's dependency on concrete infrastructure.\n\nWork only inside z08-task/kata-users-ts-clock-boundary.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "c89da0fe01522fb17a143ab8f1168f2d2388de15195ca68620384d5c33e84a5f",
+      "repositoryId": "kata-users-ts",
+      "scenario": "clock-boundary"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "88d7d5da853e033a564acecb5799a0c5b5b17b4256b5a507bb41102e3094c4fc",
+      "fixtureSha256": "010ee2da1840f4a757a2fb7be47a93c8114b10f52097a052afae350ec5c07e7b",
+      "id": "kata-users-ts-repository-port",
+      "noun": "Profile",
+      "oracleSha256": "a33c7f5d61bb67c3ede5ae743558a0154c14cf83e22e81a9420e41e4a6dc94d1",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRefactor FindProfile so its constructor accepts a ProfileRepository port and execute(id) remains asynchronous. Keep JsonProfileRepository as an adapter, but remove all application-layer imports of concrete infrastructure.\n\nWork only inside z08-task/kata-users-ts-repository-port.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "31d21f539ccfd41973d7f88e426e2bf7b4fe38d7673fe2f481d36c28c0bbd9cb",
+      "repositoryId": "kata-users-ts",
+      "scenario": "repository-port"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "e55bac6377a2eb51bd61a955ce206be9c64e7f883af2f2e6f1e2334f2acfe44b",
+      "fixtureSha256": "1220e7886c93cb0a490e00858ba66edad8a9477dece803cee47e0b23153ec763",
+      "id": "kata-users-ts-presentation-mapper",
+      "noun": "Receipt",
+      "oracleSha256": "960a55ffacde82e7072f02f304e73191f5264447387d961cfa25d3333a0084c2",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRemove the domain model's HTTP response dependency. Receipt must expose snapshot(), and ReceiptPresenter.toResponse(snapshot) must produce { id, displayLabel } with a trimmed label.\n\nWork only inside z08-task/kata-users-ts-presentation-mapper.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "8171af5631a0dcb19570e11263ac17f0bf30218ad82e8bf68aeca36c5a711e31",
+      "repositoryId": "kata-users-ts",
+      "scenario": "presentation-mapper"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "5ff1e384a012cb5013c842b4fce8093f2f2fa7f814128fc0b3bd7724d1e60e06",
+      "fixtureSha256": "a5dca99beefd0b634a6b4b481fa0475e9ba9c6d513bd1bbf16b6e6f40efb3bfa",
+      "id": "kata-users-ts-cycle-extraction",
+      "noun": "Subscription",
+      "oracleSha256": "c492059117b0aec3bd0b5971223ec5656563c8e087d0f3711a55d931e06f0806",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRemove the circular dependency between calculate-subscription and subscription-discount by extracting the pure pricing policy to the domain layer. Preserve calculateSubscription(amount, tier): standard returns amount + 5; preferred returns amount * 0.9.\n\nWork only inside z08-task/kata-users-ts-cycle-extraction.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "06ae546a076a3d798d5f2792f91ac661802d250a22319e2061a5a4f95cccc3c3",
+      "repositoryId": "kata-users-ts",
+      "scenario": "cycle-extraction"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "921b15516d4ec0515334c3ff11ab60fe4f556f00b280459bab1b3c1845bcd362",
+      "fixtureSha256": "3ab060a4be3ccaff53a7154e7e6ac905bc881cdedf90d304ab403a29e7dcf5e7",
+      "id": "typescript-starter-clock-boundary",
+      "noun": "Session",
+      "oracleSha256": "04b6c4330d36d9fbb080af15df5559d0bfe409f30974bf0d6ee4fc309e00ab16",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRefactor SessionStatus so its constructor accepts a replaceable Clock with now(): Date. Expiration must be true at the exact deadline. Keep SystemClock as the production adapter, and remove the application layer's dependency on concrete infrastructure.\n\nWork only inside z08-task/typescript-starter-clock-boundary.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "eb81f4a978d03b6e8ab83648f1c8f30f4ee7021509eb9c932fbdcff174ed5f51",
+      "repositoryId": "typescript-starter",
+      "scenario": "clock-boundary"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "42932ab7350bf26fe61681cb7d7d13574eb968f1e01f8524dcc3a9aabcba5fc7",
+      "fixtureSha256": "e8d6cd585f041ec1a8de3b033c8037487880ab9172b0471358b907073d76f740",
+      "id": "typescript-starter-repository-port",
+      "noun": "Greeting",
+      "oracleSha256": "7a221fb5111f6b8586e177b5c839e66da5d8b6456ba71893634cbf6641f5823a",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRefactor FindGreeting so its constructor accepts a GreetingRepository port and execute(id) remains asynchronous. Keep JsonGreetingRepository as an adapter, but remove all application-layer imports of concrete infrastructure.\n\nWork only inside z08-task/typescript-starter-repository-port.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "eef47505bde5006a4645d6b22d4a2deea4aac1d8b31eb2e6fded1c6fdd1daeb9",
+      "repositoryId": "typescript-starter",
+      "scenario": "repository-port"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "18022bdc8127657c54dfa3c540bc775a3262b5c7dc89913fe268246c0d6785e3",
+      "fixtureSha256": "630687c7fedf5ef7d526713014dbf9c97fed7ce445544055f44b9ceee946c067",
+      "id": "typescript-starter-presentation-mapper",
+      "noun": "Welcome",
+      "oracleSha256": "4d3ca14860f0e2a78034580597377f05bdcf002228d8e0eea9d3a310e63823d8",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRemove the domain model's HTTP response dependency. Welcome must expose snapshot(), and WelcomePresenter.toResponse(snapshot) must produce { id, displayLabel } with a trimmed label.\n\nWork only inside z08-task/typescript-starter-presentation-mapper.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "6f6f2f05e140867d6a607c4a874491fa7ad19b813956ec24c32d5bc3c09b5ec6",
+      "repositoryId": "typescript-starter",
+      "scenario": "presentation-mapper"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "0b25856fb47547eb91656b33b93500dd2075655d2e0f56a0be090a370fcc985f",
+      "fixtureSha256": "0d9a10e631b39df9d870889c27e2a7b0dfe92ead361c9baff606e989c2186126",
+      "id": "typescript-starter-cycle-extraction",
+      "noun": "Membership",
+      "oracleSha256": "1c19d9de6d26b510d4d149a15a8234e84f2e3d545373a9182f92d5f9498bd247",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRemove the circular dependency between calculate-membership and membership-discount by extracting the pure pricing policy to the domain layer. Preserve calculateMembership(amount, tier): standard returns amount + 5; preferred returns amount * 0.9.\n\nWork only inside z08-task/typescript-starter-cycle-extraction.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "c9908a8f7c732a793efcd63c5cd3b7ce4f31638755990e84b3379d593c76cc56",
+      "repositoryId": "typescript-starter",
+      "scenario": "cycle-extraction"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "b11473fd038d16edc0df4a352609e6c637d5e99aaea7703a4889fa11a25cd55b",
+      "fixtureSha256": "c000de451252c5e774ff19584662ebbf3b162c1bae82abde8a8d561e66c15a8d",
+      "id": "nestjs-hexagonal-example-clock-boundary",
+      "noun": "Ticket",
+      "oracleSha256": "ad08a21c5ead1969930a1159bede1c63a3871cf691fa49d85b6cd8719b508bf0",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRefactor TicketStatus so its constructor accepts a replaceable Clock with now(): Date. Expiration must be true at the exact deadline. Keep SystemClock as the production adapter, and remove the application layer's dependency on concrete infrastructure.\n\nWork only inside z08-task/nestjs-hexagonal-example-clock-boundary.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "93beb89a1c25a11404d16fb81fcdeab32e36025ebd362c578d361073e55c8c2a",
+      "repositoryId": "nestjs-hexagonal-example",
+      "scenario": "clock-boundary"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "d4ef2d5cfe421995d22a11f1791d39c28ce0e9742e57d1311f6dc8cf24c92bef",
+      "fixtureSha256": "b925b446d1c94d8a238765bb0dd1ac782ab43ace881e862ad5dc3147750bbc3f",
+      "id": "nestjs-hexagonal-example-repository-port",
+      "noun": "QueueItem",
+      "oracleSha256": "5280151ed6190abcdbdadb480f0507a57cdf3399afa6f4427148ec180b03d02f",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRefactor FindQueueItem so its constructor accepts a QueueItemRepository port and execute(id) remains asynchronous. Keep JsonQueueItemRepository as an adapter, but remove all application-layer imports of concrete infrastructure.\n\nWork only inside z08-task/nestjs-hexagonal-example-repository-port.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "ecdbcaa1333fbc4a0a0f195300573a7e510cf31ea877b5e97a485ee31f8c6fac",
+      "repositoryId": "nestjs-hexagonal-example",
+      "scenario": "repository-port"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "a6cfa1e83678def0e2ca6ead5466f9fd98598e8c12c86316e1dab17127b1980f",
+      "fixtureSha256": "4e0b50ff5f1999885478d763bfdbce3dd9121a36e3436bc1d63f89dda1aec181",
+      "id": "nestjs-hexagonal-example-presentation-mapper",
+      "noun": "TicketView",
+      "oracleSha256": "9183acdd7582e7477c6821722399699542d2c53e16543aff2fcc0742260ba1b5",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRemove the domain model's HTTP response dependency. TicketView must expose snapshot(), and TicketViewPresenter.toResponse(snapshot) must produce { id, displayLabel } with a trimmed label.\n\nWork only inside z08-task/nestjs-hexagonal-example-presentation-mapper.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "66678907f8e52b25b0a526ce76f3bd704c5d865f1544c5fced14b35ca29ba33e",
+      "repositoryId": "nestjs-hexagonal-example",
+      "scenario": "presentation-mapper"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "4f5ec3a412e5d299709c7cda2bb67b337d4e1dcb4e2d01da0456077d4ebd6c04",
+      "fixtureSha256": "9202b5c447b9c1a771d1240272a85cd36ea6297914dec8a2eb57248567454f53",
+      "id": "nestjs-hexagonal-example-cycle-extraction",
+      "noun": "Priority",
+      "oracleSha256": "5748ed292037d2798162ddb251b49ab34eca65120dc035d679c8689630933b5b",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRemove the circular dependency between calculate-priority and priority-discount by extracting the pure pricing policy to the domain layer. Preserve calculatePriority(amount, tier): standard returns amount + 5; preferred returns amount * 0.9.\n\nWork only inside z08-task/nestjs-hexagonal-example-cycle-extraction.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "e8de878657db6004f5ceaf2f5d75a73b76a7fa12c560027f5eb0fa4979392252",
+      "repositoryId": "nestjs-hexagonal-example",
+      "scenario": "cycle-extraction"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "59ba99c368e719d4f0100c1c191a7270d9134853aacbb45a478eb7dde29a87e9",
+      "fixtureSha256": "5e4e8ffa9ccb9bd939702fb82291005797e916a95c692bf4dd86872940f0882b",
+      "id": "nestjs-hexagonal-auth-clock-boundary",
+      "noun": "Otp",
+      "oracleSha256": "f68dc60975e0e82dd576e9c9770e0fb38d37cb60d1e4dbf65aba4f0c58780eee",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRefactor OtpStatus so its constructor accepts a replaceable Clock with now(): Date. Expiration must be true at the exact deadline. Keep SystemClock as the production adapter, and remove the application layer's dependency on concrete infrastructure.\n\nWork only inside z08-task/nestjs-hexagonal-auth-clock-boundary.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "b94553a5cd474bb9bd17462199657be0a72199a6b67255fa6c4160aaa2124667",
+      "repositoryId": "nestjs-hexagonal-auth",
+      "scenario": "clock-boundary"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "a1cc10bda6c86110eae99b73fe6957b5b160b0c195edfcb2f214629f4a64e18c",
+      "fixtureSha256": "2d5573f7b23f87ab6b8bb21ae60fbf7c65178f0319bdfa8f2d1a94174d599f01",
+      "id": "nestjs-hexagonal-auth-repository-port",
+      "noun": "Permission",
+      "oracleSha256": "ba664281f709e943d50f4095c8c68127b35e8d96d707a5dd44518560ac1184f5",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRefactor FindPermission so its constructor accepts a PermissionRepository port and execute(id) remains asynchronous. Keep JsonPermissionRepository as an adapter, but remove all application-layer imports of concrete infrastructure.\n\nWork only inside z08-task/nestjs-hexagonal-auth-repository-port.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "8abbe87220aad88140bd22e136a233ce5588d22eda8d42cdb905a971ebf843c6",
+      "repositoryId": "nestjs-hexagonal-auth",
+      "scenario": "repository-port"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "c1910b40d70b91fd2f72e2c2d2a33197ba986e095458cfa023d5945bb8690e79",
+      "fixtureSha256": "01f763991654fa1419b8a5f7931b5c89c50794395c24105749a56d740178f6fb",
+      "id": "nestjs-hexagonal-auth-presentation-mapper",
+      "noun": "Login",
+      "oracleSha256": "9f35278d383d738804d34b83a288a2f2ab4007b823d65eb8f5609ae0fd496c01",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRemove the domain model's HTTP response dependency. Login must expose snapshot(), and LoginPresenter.toResponse(snapshot) must produce { id, displayLabel } with a trimmed label.\n\nWork only inside z08-task/nestjs-hexagonal-auth-presentation-mapper.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "f22380f52ff13e0e59d63989bd6704e41997cd64d2376a11e55478372b77970d",
+      "repositoryId": "nestjs-hexagonal-auth",
+      "scenario": "presentation-mapper"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "d51664de0ebf9d695f58e8bd9f23f8d7b05cf0d5afa008cca42232e8babd2f78",
+      "fixtureSha256": "f1cffe54079484a4457957d70d8113c3758e323285d1bb5dced571e7f52a4973",
+      "id": "nestjs-hexagonal-auth-cycle-extraction",
+      "noun": "Role",
+      "oracleSha256": "226f09eca9120d986c2919e4681d1d570479a163783e4cf11233994c71a29f29",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRemove the circular dependency between calculate-role and role-discount by extracting the pure pricing policy to the domain layer. Preserve calculateRole(amount, tier): standard returns amount + 5; preferred returns amount * 0.9.\n\nWork only inside z08-task/nestjs-hexagonal-auth-cycle-extraction.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "4870d63c6b9b0e9870565fb8f1167929eb8f50f742d0a25cfe393b0deac422e8",
+      "repositoryId": "nestjs-hexagonal-auth",
+      "scenario": "cycle-extraction"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "b755fa374cfadd96f64f76726fe70109aa3cc8ecd09b8eab7f62a046d8cc2892",
+      "fixtureSha256": "dc542fef995ffa369eeeda4aa73dbf4a2dd8c2c765b0bf80bc280b28672b7ddf",
+      "id": "zod-clock-boundary",
+      "noun": "SchemaLease",
+      "oracleSha256": "c2635d53b025f620aa0dd2de0f69505cb9496349c86765cef2d4ded2d5187452",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRefactor SchemaLeaseStatus so its constructor accepts a replaceable Clock with now(): Date. Expiration must be true at the exact deadline. Keep SystemClock as the production adapter, and remove the application layer's dependency on concrete infrastructure.\n\nWork only inside z08-task/zod-clock-boundary.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "cfc60a4be2c08a2c7736aa3fb780126e2c64df6f7eaa84df1e883e28301ba5a9",
+      "repositoryId": "zod",
+      "scenario": "clock-boundary"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "859d620714afedf5a1cd2b3c53d92cd6f5c564b5ba3e3c0dd3d900ec395372b6",
+      "fixtureSha256": "7302dc8d09aafa99f2e52b6829e7c9c5603a8e6df438c88932369e143c2fc25a",
+      "id": "zod-repository-port",
+      "noun": "RegistryEntry",
+      "oracleSha256": "d6077c15bfc6d110986ec8cd683ee32bd35ab874e1095fda6c7e79f6e6128833",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRefactor FindRegistryEntry so its constructor accepts a RegistryEntryRepository port and execute(id) remains asynchronous. Keep JsonRegistryEntryRepository as an adapter, but remove all application-layer imports of concrete infrastructure.\n\nWork only inside z08-task/zod-repository-port.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "0cd9adceae2c9fd24d6f220ea4d19fac692348cbb3c389ccaf0a4d3f8d9ccc22",
+      "repositoryId": "zod",
+      "scenario": "repository-port"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "f08227ae99315395f39b5381faddc563c3d29fe95b277effba3466d8a2763911",
+      "fixtureSha256": "69f2e01dafe7c8b97e21083b7e683d9ed9d5f3a55c9e38f48b0752a076fa560c",
+      "id": "zod-presentation-mapper",
+      "noun": "IssueView",
+      "oracleSha256": "670a0d64246e995723cfff5cf66e55be16163d0dd37c470f309d5abdfc060e4b",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRemove the domain model's HTTP response dependency. IssueView must expose snapshot(), and IssueViewPresenter.toResponse(snapshot) must produce { id, displayLabel } with a trimmed label.\n\nWork only inside z08-task/zod-presentation-mapper.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "1a7bb912ec5a9ff6cd1337d1acf12183400cb49a5843fb16775fea9f76de2b34",
+      "repositoryId": "zod",
+      "scenario": "presentation-mapper"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "986edaeb8a806447716e9efec30b98f61861a593b7bbe43c5df263e388edffc1",
+      "fixtureSha256": "94d9e3c098e2ce51662525640d53ddfcf8c5be308331496addb0c99a981f33d7",
+      "id": "zod-cycle-extraction",
+      "noun": "ParsePlan",
+      "oracleSha256": "b6e2cd7a3f25b4b55db9663330d3cf1d3b7a58e4497f27039ec74edf1f34e724",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRemove the circular dependency between calculate-parse-plan and parse-plan-discount by extracting the pure pricing policy to the domain layer. Preserve calculateParsePlan(amount, tier): standard returns amount + 5; preferred returns amount * 0.9.\n\nWork only inside z08-task/zod-cycle-extraction.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "663d1b8d80e15bb51d3a81f9024363561aa8c7828b42b9552d55544cea08a0b7",
+      "repositoryId": "zod",
+      "scenario": "cycle-extraction"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "40028cb4cc792da513125a7fbb7f6119730fa09e05005844de725b5c60e000c5",
+      "fixtureSha256": "e6456b37dd583f31e4d752ae87c9e7fbf7be3e805038f7e1efe570c3c1102832",
+      "id": "yocto-queue-clock-boundary",
+      "noun": "Lease",
+      "oracleSha256": "73cc9b6799af1d4af349d9e55cc9a9690dadb132245e7144dc9e5125b49de33a",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRefactor LeaseStatus so its constructor accepts a replaceable Clock with now(): Date. Expiration must be true at the exact deadline. Keep SystemClock as the production adapter, and remove the application layer's dependency on concrete infrastructure.\n\nWork only inside z08-task/yocto-queue-clock-boundary.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "69f99e53f017012f0919ecbfb053c69376c7a53e630c75c57ec880b2d7d4d686",
+      "repositoryId": "yocto-queue",
+      "scenario": "clock-boundary"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "e193bdda4e5eadc3c7ce3eb625a97e919e4c1663eece699ae1abde4e4e4b796b",
+      "fixtureSha256": "726da170abcaa9d998761d4f14ca4f2b4a7221482c158a79c973d4971f42c856",
+      "id": "yocto-queue-repository-port",
+      "noun": "QueueRecord",
+      "oracleSha256": "1cf5eb3c9bd8f23cd8fa5fd4f5e44b4e2c566d88f7ce59f43e5ff3ccfe8dc259",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRefactor FindQueueRecord so its constructor accepts a QueueRecordRepository port and execute(id) remains asynchronous. Keep JsonQueueRecordRepository as an adapter, but remove all application-layer imports of concrete infrastructure.\n\nWork only inside z08-task/yocto-queue-repository-port.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "50afb57293806d63c157eddf4a321d864f20ab8702b1c5f2c00b24726f0acc07",
+      "repositoryId": "yocto-queue",
+      "scenario": "repository-port"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "c11d848e680d71e0c8acde0c4c2e61203ec37009c342e80f5d5e3cfca4d78e8a",
+      "fixtureSha256": "c6e755f74b3533de51555a8a912e1af8704937b06bb7d5193bf9aa225e1331e0",
+      "id": "yocto-queue-presentation-mapper",
+      "noun": "QueueView",
+      "oracleSha256": "aff9084fdc8250bbc13e46fa236541773d9ced9f6cfe46b82d175fcd38a62e33",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRemove the domain model's HTTP response dependency. QueueView must expose snapshot(), and QueueViewPresenter.toResponse(snapshot) must produce { id, displayLabel } with a trimmed label.\n\nWork only inside z08-task/yocto-queue-presentation-mapper.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "198a17ccc568ad0fe721f828e27c230e987f0324fbe713ce689ef7c872e582e7",
+      "repositoryId": "yocto-queue",
+      "scenario": "presentation-mapper"
+    },
+    {
+      "acceptanceSha256": "ad13e19c9b015807613a3a21c540f2977e7cb5757ace01751b865b263f0104dd",
+      "architectureConfigSha256": "53d93452f0b1d5f8c106b606d2fb3cff4cbf7017a17409ead66b17377adbb790",
+      "fixtureSha256": "294f78acaf980227e0ef1d57e2e42c5b8e66ea23324609f15aca601f4597b848",
+      "id": "yocto-queue-cycle-extraction",
+      "noun": "Batch",
+      "oracleSha256": "2d0fa8376901cb1092fd31b109b3c88cc41669cd0ab1472f8421a40804af39cc",
+      "prompt": "Implement the following focused change in this pinned TypeScript repository:\n\nRemove the circular dependency between calculate-batch and batch-discount by extracting the pure pricing policy to the domain layer. Preserve calculateBatch(amount, tier): standard returns amount + 5; preferred returns amount * 0.9.\n\nWork only inside z08-task/yocto-queue-cycle-extraction.\nDo not edit package metadata, tests, TypeScript configuration, architecture configuration, agent instructions, or CI.\nPreserve the existing public behavior and exports unless the requirement below names the replacement API.\nFinish with production code; do not add test-only branches or weaken checks.\n",
+      "promptSha256": "b5823fc76603daae42afa34bec76523c0789fe4cb3818e066ebd8c5e36ce3303",
+      "repositoryId": "yocto-queue",
+      "scenario": "cycle-extraction"
+    }
+  ],
+  "toolchain": {
+    "nodeVersion": "v22.16.0",
+    "os": {
+      "arch": "arm64",
+      "image": "macos-26.5-local-apple-silicon",
+      "platform": "darwin",
+      "release": "25.5.0"
+    },
+    "packageManagers": [
+      {
+        "name": "npm",
+        "version": "10.9.2"
+      },
+      {
+        "name": "pnpm",
+        "version": "7.33.7"
+      },
+      {
+        "name": "pnpm",
+        "version": "10.12.1"
+      }
+    ],
+    "typescriptVersions": [
+      "4.6.4",
+      "4.9.5",
+      "5.5.4",
+      "5.7.3",
+      "5.8.3",
+      "5.9.2",
+      "6.0.3"
+    ]
+  }
+}
