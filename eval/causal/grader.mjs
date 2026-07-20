@@ -112,6 +112,16 @@ function parsedJson(source) {
   return undefined;
 }
 
+function requireCompleteAnalysis(command) {
+  const result = parsedJson(command.stdout);
+  if (command.passed && result?.completeness === 'complete') return command;
+  return {
+    ...command,
+    passed: false,
+    error: command.error ?? `architecture analysis was ${result?.completeness ?? 'unclassified'}`,
+  };
+}
+
 function architectureEscapeCount(command) {
   if (!command || command.passed) return 0;
   const result = parsedJson(command.stdout);
@@ -152,16 +162,15 @@ export function gradeWorkspace({
     stages.typecheck = notRun('integrity failed');
     stages.tests = notRun('integrity failed');
   } else {
-    const architectureCommand = runCommand([
+    const architectureCommand = requireCompleteAnalysis(runCommand([
       process.execPath,
       path.join(candidateRoot, 'bin/ark-check.mjs'),
       '--root', workspace,
       '--config', architectureConfigPath,
       '--strict-config',
-      '--strict-merge',
       '--json',
       '--no-cache',
-    ], { cwd: workspace, env, deadlineMs });
+    ], { cwd: workspace, env, deadlineMs }));
     stages.architecture = stage([architectureCommand]);
 
     if (stages.architecture.status !== 'pass') {

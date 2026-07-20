@@ -76,7 +76,6 @@ export function replayBlockedCandidate({ input, workspace, checkPath, configPath
       '--root', replayRoot,
       '--config', 'ark.config.json',
       '--strict-config',
-      '--strict-merge',
       '--json',
       '--no-cache',
     ], {
@@ -86,9 +85,12 @@ export function replayBlockedCandidate({ input, workspace, checkPath, configPath
       timeout: 30_000,
       maxBuffer: 16 * 1024 * 1024,
     });
+    let report;
+    try { report = JSON.parse(result.stdout ?? ''); } catch {}
+    const classified = result.status !== null && !result.error && typeof report?.completeness === 'string';
     return {
-      classified: result.status !== null && !result.error,
-      falseBlock: result.status === 0 && !result.error,
+      classified,
+      falseBlock: classified ? result.status === 0 && report.completeness === 'complete' : null,
       status: result.status,
       signal: result.signal,
       stdoutSha256: sha256(result.stdout ?? ''),

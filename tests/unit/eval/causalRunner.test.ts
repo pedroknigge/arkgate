@@ -105,7 +105,7 @@ describe('Z08 causal runner evidence', () => {
     write(path.join(workspace, 'ark.config.json'), { include: ['z08-task'] });
     write(path.join(workspace, 'z08-task', 'task', 'file.mts'), 'export const value = 1;\n');
     write(path.join(workspace, 'deny.mjs'), 'process.stdin.resume(); process.stdin.on("end", () => { process.exitCode = 2; });\n');
-    write(path.join(workspace, 'check.mjs'), 'console.log(JSON.stringify({ valid: true }));\n');
+    write(path.join(workspace, 'check.mjs'), 'console.log(JSON.stringify({ valid: true, completeness: "complete" }));\n');
     const payload = JSON.stringify({
       toolName: 'write',
       toolInput: { file_path: path.join(workspace, 'z08-task', 'task', 'file.mts'), content: 'export const value = 2;\n' },

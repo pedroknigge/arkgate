@@ -24,7 +24,7 @@ afterEach(() => {
   for (const directory of temporary.splice(0)) fs.rmSync(directory, { recursive: true, force: true });
 });
 
-function fixture(architectureExitCode: number) {
+function fixture(architectureExitCode: number, complete = true) {
   const root = temp();
   const workspace = path.join(root, 'workspace');
   const evidenceDir = path.join(root, 'evidence');
@@ -39,8 +39,8 @@ function fixture(architectureExitCode: number) {
   fs.writeFileSync(architectureConfigPath, `${JSON.stringify(architectureConfig(task))}\n`);
   fs.writeFileSync(taskPath, `${JSON.stringify(task)}\n`);
   write(path.join(candidateRoot, 'bin', 'ark-check.mjs'), architectureExitCode === 0
-    ? 'console.log(JSON.stringify({ valid: true, violations: [] }));\n'
-    : 'console.log(JSON.stringify({ valid: false, violations: [{ ruleId: "TEST_ESCAPE" }] })); process.exitCode = 1;\n');
+    ? `console.log(JSON.stringify({ valid: true, completeness: ${complete ? '"complete"' : '"partial"'}, violations: [] }));\n`
+    : 'console.log(JSON.stringify({ valid: false, completeness: "complete", violations: [{ ruleId: "TEST_ESCAPE" }] })); process.exitCode = 1;\n');
   const hostTarget = path.join(candidateRoot, 'node_modules', 'typescript-ark-host');
   fs.mkdirSync(path.dirname(hostTarget), { recursive: true });
   fs.symlinkSync(path.resolve('node_modules/typescript-ark-host'), hostTarget, 'dir');
@@ -71,7 +71,8 @@ describe('Z08 common grader', () => {
       tests: { status: 'pass' },
     });
     expect(result.report.classifications.falseBlocks).toBeNull();
-    expect(result.report.stages.architecture.commands[0].argv).toEqual(expect.arrayContaining(['--strict-config', '--strict-merge']));
+    expect(result.report.stages.architecture.commands[0].argv).toContain('--strict-config');
+    expect(result.report.stages.architecture.commands[0].argv).not.toContain('--strict-merge');
     expect(GRADER_BUNDLE_FILES).toEqual(expect.arrayContaining([
       'eval/causal/hook-audit.mjs',
       'eval/causal/run.mjs',
@@ -93,5 +94,22 @@ describe('Z08 common grader', () => {
     });
     expect(result.report.passed).toBe(false);
     expect(result.report.classifications.escapes).toBe(1);
+  });
+
+  it('fails closed on partial analysis without requiring installed gates in the control arm', () => {
+    const value = fixture(0, false);
+    const result = gradeWorkspace({
+      workspace: value.workspace,
+      task: value.task,
+      repository: { id: value.task.repositoryId, commands: { typecheck: [process.execPath, '-e', ''], tests: [process.execPath, '-e', ''] } },
+      candidateRoot: value.candidateRoot,
+      harnessRoot: path.resolve('.'),
+      evidenceDir: value.evidenceDir,
+      architectureConfigPath: value.architectureConfigPath,
+      beforeSnapshot: snapshotTree(value.workspace),
+      env: process.env,
+    });
+    expect(result.report.stages.architecture).toMatchObject({ status: 'fail' });
+    expect(result.report.stages.architecture.commands[0].error).toMatch(/partial/);
   });
 });

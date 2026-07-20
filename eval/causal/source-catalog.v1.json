@@ -64,7 +64,7 @@
       },
       "commonPatch": {
         "path": "eval/causal/patches/nestjs-hexagonal-example.patch",
-        "sha256": "e3129b7b3391c263d2c5aa0ff5d40c04c8ce1e6d48c8a5cc8b8fb4c5b430b24a",
+        "sha256": "92917248bd12ddb6ad447e1df4175564366329db6549e573c5b1f646d351e713",
         "rationale": "The pinned source returns its documented ticket route, but one stale generated starter assertion still expects the pre-route greeting. The same one-line test-only repair is applied to both arms before timing."
       }
     },
