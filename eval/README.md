@@ -66,6 +66,68 @@ comparative oracle. Its live-agent job is optional and best-effort (not part of 
 `npm test`); when enabled it runs the non-skipped `port-proof-inject-binding` case and uploads the
 terminal report even when the agent does not pass the case.
 
+`eval/adoption-run.mjs` is retained as the historical V03 setup harness. It measures setup/apply,
+governed coverage, and a local strict-merge check only. It does not measure first-valid time,
+typecheck/tests, false blocks, or bypasses; those fields are no longer fabricated as zero and its
+output cannot support the Z08 causal claim.
+
+## Z08 preregistered causal evaluation
+
+The causal harness under `eval/causal/` measures the same 24 held-out architecture tasks across six
+pinned TypeScript repositories, three independent Grok sessions per arm, and control/treatment pairs.
+The full denominator is 144 cells. A cell reaches first-valid only after the common architecture
+grader, hidden acceptance, repository typecheck, and repository tests pass. Failures remain
+right-censored at the frozen cap.
+
+The manifest is the experiment contract. Generate it from an exact packed candidate, review it, and
+commit it before running any preregistered cell. Never regenerate its session UUIDs, ordering seed,
+bootstrap seed, endpoints, or exclusions after execution begins.
+
+```bash
+# Run with the exact Node version recorded by the manifest and the same packed candidate throughout.
+npm run prepare:z08-sources -- \
+  --source-cache /validated/tool-owned/z08-sources \
+  --candidate-tarball <arkgate.tgz>
+npm run generate:z08-manifest -- \
+  --grok-binary "$(command -v grok)" \
+  --frozen-at 2026-07-20T12:00:00.000Z \
+  --candidate-source-sha <40-char-sha> \
+  --tarball-url <immutable-artifact-locator> \
+  --tarball-sha256 <sha256> \
+  --output eval/causal/manifest.v1.json
+
+# Commit the manifest before this point. Run mutation on the exact candidate checkout first.
+npm run attest:z08-mutation -- \
+  --manifest eval/causal/manifest.v1.json \
+  --report <mutation.json> \
+  --output <mutation-attestation.json>
+
+npm run eval:z08-causal -- \
+  --manifest eval/causal/manifest.v1.json \
+  --source-cache /validated/tool-owned/z08-sources \
+  --candidate-tarball <arkgate.tgz> \
+  --mutation-report <mutation.json> \
+  --mutation-attestation <mutation-attestation.json> \
+  --auth-home "$HOME/.grok" \
+  --grok-binary "$(command -v grok)" \
+  --out <durable-evidence-directory>
+```
+
+Use `--max-new-cells <n>` for a bounded invocation; it exits only after durably appending each
+completed terminal, and the same manifest/output directory resumes at the next preregistered cell.
+
+`ledger.jsonl` is append-only and resumable. Each terminal binds its manifest cell, transcript,
+grader report, source snapshots, and intervention identity. Hook denials are replayed through the
+final checker before they are classified as false blocks; unreplayable events remain explicit manual
+classification debt rather than becoming zero. The mutation attestation binds the report to the
+candidate SHA, tarball digest, Stryker config, runner version, and exact mutated source-file hashes.
+
+Local deterministic coverage:
+
+```bash
+npm run test:z08:harness
+```
+
 ### Enthusiast cases with `skipHarness`
 
 Cases such as `enthusiast-greenfield-crud` document architect onboarding funnels but

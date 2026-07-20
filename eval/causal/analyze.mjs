@@ -206,11 +206,11 @@ function summarizeArm(outcomes, design) {
   };
 }
 
-export function analyzeExperiment({ manifest, ledgerEntries, bootstrapReplicates = undefined, bootstrapSeed = undefined }) {
+export function analyzeExperiment({ manifest, ledgerEntries }) {
   const evidence = verifyLedger({ manifest, entries: ledgerEntries });
   const design = evidence.manifest.design;
-  const replicates = bootstrapReplicates ?? design.bootstrapReplicates;
-  const seed = bootstrapSeed ?? design.bootstrapSeed;
+  const replicates = design.bootstrapReplicates;
+  const seed = design.bootstrapSeed;
   assertPositiveInteger(replicates, 'bootstrapReplicates');
   if (typeof seed !== 'string' || seed.length === 0) throw new TypeError('bootstrapSeed must be a non-empty string');
 
@@ -234,6 +234,7 @@ export function analyzeExperiment({ manifest, ledgerEntries, bootstrapReplicates
   const completionDelta = arms.treatment.completionRate - arms.control.completionRate;
   const primaryPass = ratio <= design.primaryMaxRatio && interval.upper < design.primaryUpperBoundExclusive;
   const completionPass = completionDelta >= -design.maxCompletionRegression;
+  const mutationGroups = evidence.mutation.groups;
 
   return Object.freeze({
     schemaVersion: 1,
@@ -277,8 +278,8 @@ export function analyzeExperiment({ manifest, ledgerEntries, bootstrapReplicates
     },
     mutation: {
       reportSha256: evidence.mutation.reportSha256,
-      groups: evidence.mutation.groups,
-      zeroNoCoverage: true,
+      groups: mutationGroups,
+      zeroNoCoverage: mutationGroups.every((group) => group.statuses.noCoverage === 0),
     },
     acceptance: {
       primary: primaryPass,

@@ -12,7 +12,7 @@
 **Slug:** `enforcement-truth-at-speed`<br>
 **Kind:** epic / redesign<br>
 **Owners:** product (Pedro) + library maintainers<br>
-**Last updated:** 2026-07-19<br>
+**Last updated:** 2026-07-20<br>
 **Code path (existing):** package/release scripts, TypeScript host, canonical analysis Kernel,
 generated CLI bundle, CLI/MCP/hook/ESLint adapters, onboarding assets, and evaluation harnesses
 
@@ -30,6 +30,9 @@ found that the installed product can tell different truths about the same candid
   journey;
 - adoption, live-agent, and independent-review evidence does not currently measure every outcome
   named by the roadmap;
+- a real Propia.homes field change showed that edge-clean `--strict-merge` can accept newly added
+  UI business-policy helpers while doctor reports the design residual only afterward; a golden
+  pattern and installed MCP/hook files do not make that new-code shape non-bypassable;
 - each hook pays process startup and repeated project discovery, leaving the interaction loop far
   from the latency users experience as immediate.
 
@@ -43,7 +46,8 @@ entry point uses one normalized fact set and returns one verdict. A retained lex
 mode reports incomplete when it lacks facts and never borrows that parity claim. An unavailable or
 partial analysis is never reported as green. The invariant is proven from the packed artifact and
 clean consumer journeys, then served from a measured incremental control plane fast enough to stay
-in the write loop.
+in the write loop. A separate opt-in design-delta verdict closes the enforcement lag for new code
+without turning historical brownfield smells into an all-or-nothing migration gate.
 
 ## Users & success
 
@@ -60,8 +64,11 @@ in the write loop.
   - a preregistered matrix spanning at least 12 pinned repositories, four hosts, and three package
     managers reaches protected green in >=5/6 (83.33%) of every cell, with every Adapt, false block,
     bypass, manual decision, and failed cell in the summary;
-  - first-green time includes strict Ark, typecheck, and tests; unsuccessful cells are right-
+  - first-valid time includes strict Ark, typecheck, and tests; unsuccessful cells are right-
     censored at a preregistered cap rather than removed;
+  - zero newly introduced supported design smells in delta-enforced paths, while unrelated changes
+    remain green beside historical residual;
+  - no host or operation is called hard-blocking without fresh runtime/provider evidence;
   - at least eight consented adopter projects enter follow-up, with >=3/4 of the full cohort
     retaining required Ark enforcement at D30 and >=5/8 at D90; missing follow-up counts not retained.
 - **Non-goals / out of scope:** runtime production hardening, new presets or skill names, polyglot
@@ -79,7 +86,8 @@ in the write loop.
 | `Z06` | Managed-content upgrade identities and observed enforcement-state truth | General project-file synchronization |
 | `Z07` | Warm incremental snapshot pilot and decomposed fast test path | Mandatory background daemon |
 | `Z08` | Live-agent, causal/full-denominator, censored-failure, and mutation evidence | Productivity claims from success-only samples |
-| `Z09` | External matrix, D30/D90 retained cohort, and independently signed close | Self-declared reviewer identity |
+| `Z10` | New-code design-delta enforcement plus runtime-proven host hardness | Blocking all historical smells or treating installed assets as active proof |
+| `Z09` | External matrix, D30/D90 retained cohort, and independently signed close after Z10 | Self-declared reviewer identity |
 
 ## Acceptance criteria
 
@@ -132,7 +140,13 @@ in the write loop.
   manifest records initial digest, repository SHA, required-status evidence, and every forward
   corrective upgrade without resetting the clock; a non-implementing reviewer reproduces the
   initial candidate and signs the longitudinal manifest.
-- [ ] **A13 — Hard lines held:** the runtime stays experimental and separate, parked Y items remain
+- [ ] **A13 — New-code shape is enforced without a brownfield cliff:** an opt-in, versioned
+  base/candidate design delta blocks new or worsened supported smells on touched paths through the
+  same complete-patch write and CI verdict. A Propia-shaped `domain-logic-in-ui` regression is
+  blocked without manual skill invocation; pre-existing residual and unrelated changes remain
+  green. Grok/Claude/Cursor/Codex output distinguishes configured/installed from runtime-observed
+  and keeps every unverified or bypassable operation `hard:false`.
+- [ ] **A14 — Hard lines held:** the runtime stays experimental and separate, parked Y items remain
   parked until their own gates are met, and no release gate is weakened to close the phase.
 
 ## Proposed public surface (hypothesis)
@@ -143,6 +157,7 @@ in the write loop.
 | Analysis input | Versioned resolved candidate facts | Settled by `Z03`/[ADR 0011](../../adr/0011-resolved-candidate-facts-boundary.md): Tooling emits one serializable facts payload, DomainModel owns its schema, and Kernel exposes named synchronous supplied-facts APIs; the lexical compatibility mode is excluded from parity |
 | Existing CLI/MCP | `plan`, `preflight`, `ark_prepare_change`, hook, strict check | Reuse current names; no new command or skill basename |
 | Performance | Warm project snapshot keyed by policy, compiler, and content identities | Opt-in pilot with the current one-shot path retained as fallback |
+| Design delta | Versioned base/candidate smell delta, opt-in CLI/CI failure, and complete-patch hook parity | Stable smell IDs/evidence; historical residual remains advisory unless newly worsened |
 | Evidence | Corrected adoption/live-agent/release reports | Versioned reports; historical reports remain labeled historical rather than rewritten |
 
 ## Approach
@@ -167,13 +182,15 @@ flowchart LR
 6. Make managed upgrade and observed enforcement state independently testable.
 7. Cache the proven fact pipeline; never optimize a divergent path.
 8. Repair causal/live-agent/mutation evidence with every failed cell retained.
-9. Close longitudinal and independent proof without delaying completed corrective patches.
+9. Close the field-observed new-code design enforcement lag without making brownfield residual a
+   global blocker, and require runtime evidence before calling any host operation hard.
+10. Close longitudinal and independent proof without delaying completed corrective patches.
 
 ## Dependencies & risks
 
 - **Depends on:** ArkGate 3.7.0 as the reproduced baseline; accepted ADRs 0002, 0003, 0005, and
   0008; the existing package/adoption/performance harnesses.
-- **Blocked by:** `Z02`–`Z05` are closed; `Z06` is dependency-ready.
+- **Blocked by:** `Z01`–`Z07` are closed; `Z08` is active, then `Z10` precedes `Z09`.
 - **Risk — Kernel impurity:** resolving imports inside Kernel would violate the four-layer contract.
   **Kill switch:** keep TypeScript/filesystem in Tooling and pass only serializable facts.
 - **Risk — cache false green:** stale invalidation is worse than current latency.
@@ -188,6 +205,10 @@ flowchart LR
 - **Risk — benchmark theatre:** an eval can optimize its own fixtures.
   **Mitigation:** held-out tasks, packed artifacts, control arms, all failures in denominators, and
   independent identity evidence.
+- **Risk — name-based design false positives:** `can*`, `calculate*`, or `policy` can describe
+  legitimate presentation helpers as well as domain rules.
+  **Kill switch:** the delta gate must retain stable semantic/path evidence plus negative UI
+  orchestration fixtures; do not ship a bare filename/function-name denylist.
 
 ## Resolved decisions
 
@@ -202,6 +223,9 @@ flowchart LR
    validated oracle stay outside that timer. After four safe designs and three comparable Linux
    distributions, its target is 100 ms, not the unreachable 10 ms endpoint, and it carries no
    order-of-magnitude claim.
+4. `Z10`: prefer a base-relative new/worsened-smell ratchet over global `--strict-design` failure.
+   Keep the edge verdict unchanged, make CI opt-in, and require the write path to use the same
+   deterministic design-delta identity when complete candidate evidence is available.
 
 ## Open decisions
 
@@ -230,20 +254,20 @@ flowchart LR
 - `Z04` may ship adapter parity as a patch when its seam is internal. If `Z03` requires a new stable
   export/API, use an explicitly approved backward-compatible corrective minor (or canary), with no
   unrelated surface. `Z05` + `Z06` establish the clean installed/upgrade baseline.
-- `Z07` gates only the verified 10x hook-latency claim and its named absolute targets. `Z08` +
-  `Z09` gate causal productivity, retained adoption,
+- `Z07` gates only the verified 10x hook-latency claim and its named absolute targets. `Z08` gates
+  causal productivity, `Z10` gates new-code design enforcement, and `Z09` gates retained adoption,
   independent-close, and epic-shipped claims—not already proven correctness fixes.
 
 ## Promotion
 
 The implementation IDs are tracked in [ROADMAP Phase Z](../../../ROADMAP.md#phase-z--enforcement-truth-at-speed).
-`Z01`–`Z05` are complete; subsequent promotion follows the same discipline:
+`Z01`–`Z07` are complete; subsequent promotion follows the same discipline:
 
-1. Move only the next dependency-ready Z item to `doing` (`Z06` next).
+1. Move only the next dependency-ready Z item to `doing` (`Z08` now; then `Z10`; then `Z09`).
 2. Expose its failing acceptance cases before changing behavior.
 3. Close the item-specific evidence and common merge gate on the same commit.
 4. Advance one Z item at a time; do not promote the parked Y candidates as collateral work.
-5. When `Z09` closes, mark this plan `Shipped`, retain it as rationale, and make the corrected
+5. When `Z09` closes after `Z10`, mark this plan `Shipped`, retain it as rationale, and make the corrected
    reports/release notes the implementation evidence.
 
 ## Related

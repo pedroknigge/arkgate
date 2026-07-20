@@ -1,0 +1,10 @@
+diff --git a/src/app.controller.spec.ts b/src/app.controller.spec.ts
+index d22f389..a63840e 100644
+--- a/src/app.controller.spec.ts
++++ b/src/app.controller.spec.ts
+@@ -17,4 +17,4 @@
+   describe('root', () => {
+     it('should return "Hello World!"', () => {
+-      expect(appController.getHello()).toBe('Hello World!');
++      expect(appController.getHello()).toBe('Hello World! Please go to /ticket');
+     });

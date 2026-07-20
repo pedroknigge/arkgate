@@ -1,4 +1,9 @@
 import { createHash } from 'node:crypto';
+import {
+  TASK_ID_PATTERN,
+  TASK_NOUN_PATTERN,
+  TASK_SCENARIOS,
+} from './task-materialize.mjs';
 
 export const LEDGER_GENESIS_HASH = '0'.repeat(64);
 export const REQUIRED_MUTATION_RANGES = Object.freeze({
@@ -207,7 +212,7 @@ function validateDesign(design) {
     'percentiles',
     'exclusions',
   ], [], 'design');
-  assertInteger(design.tauMs, 'design.tauMs', 1);
+  assertInteger(design.tauMs, 'design.tauMs', 32001);
   assertInteger(design.maxTurns, 'design.maxTurns', 1);
   assertInteger(design.sessionsPerArm, 'design.sessionsPerArm', 3);
   assertInteger(design.bootstrapReplicates, 'design.bootstrapReplicates', 50000);
@@ -263,7 +268,11 @@ function validateRepositories(manifest) {
       fail('MANIFEST_DRIFT', `${repository.id} TypeScript version is absent from the pinned toolchain`);
     }
     assertExactKeys(repository.commands, ['install', 'typecheck', 'tests'], [], `${at}.commands`);
-    for (const command of ['install', 'typecheck', 'tests']) assertArgv(repository.commands[command], `${at}.commands.${command}`);
+    assertArray(repository.commands.install, `${at}.commands.install`, 1);
+    repository.commands.install.forEach((command, commandIndex) => {
+      assertArgv(command, `${at}.commands.install[${commandIndex}]`);
+    });
+    for (const command of ['typecheck', 'tests']) assertArgv(repository.commands[command], `${at}.commands.${command}`);
     if (repository.commonPatch !== null) {
       assertExactKeys(repository.commonPatch, ['path', 'sha256', 'rationale'], [], `${at}.commonPatch`);
       assertSafeRelativePath(repository.commonPatch.path, `${at}.commonPatch.path`);
@@ -294,10 +303,10 @@ function validateTasks(manifest, repositories) {
       'architectureConfigSha256',
       'acceptanceSha256',
     ], [], at);
-    assertId(task.id, `${at}.id`);
+    assertString(task.id, `${at}.id`, TASK_ID_PATTERN);
     assertId(task.repositoryId, `${at}.repositoryId`);
-    assertId(task.scenario, `${at}.scenario`);
-    assertString(task.noun, `${at}.noun`);
+    if (!TASK_SCENARIOS.includes(task.scenario)) fail('MANIFEST_INVALID', `${at}.scenario is unsupported`);
+    assertString(task.noun, `${at}.noun`, TASK_NOUN_PATTERN);
     if (!repositories.has(task.repositoryId)) fail('MANIFEST_INVALID', `${task.id} references unknown repository ${task.repositoryId}`);
     assertString(task.prompt, `${at}.prompt`);
     assertSha256(task.promptSha256, `${at}.promptSha256`);
@@ -393,11 +402,12 @@ function validateMutation(mutation) {
   const byFile = new Map();
   mutation.ranges.forEach((range, index) => {
     const at = `mutation.ranges[${index}]`;
-    assertExactKeys(range, ['id', 'file', 'startLine', 'endLine'], [], at);
+    assertExactKeys(range, ['id', 'file', 'startLine', 'endLine', 'sourceSha256'], [], at);
     assertId(range.id, `${at}.id`);
     assertSafeRelativePath(range.file, `${at}.file`);
     assertInteger(range.startLine, `${at}.startLine`, 1);
     assertInteger(range.endLine, `${at}.endLine`, range.startLine);
+    assertSha256(range.sourceSha256, `${at}.sourceSha256`);
     const existing = byFile.get(range.file) ?? [];
     if (existing.some((other) => range.startLine <= other.endLine && other.startLine <= range.endLine)) {
       fail('MANIFEST_INVALID', `${range.id} overlaps another mutation range in ${range.file}`);
@@ -444,9 +454,27 @@ function validateManifestShape(manifest) {
   assertSha256(manifest.candidate.tarballSha256, 'candidate.tarballSha256');
   validateToolchain(manifest.toolchain);
 
-  assertExactKeys(manifest.agent, ['provider', 'name', 'cliVersion', 'model', 'configSha256', 'invocationFlags', 'modelSeed'], [], 'agent');
-  for (const key of ['provider', 'name', 'cliVersion', 'model']) assertString(manifest.agent[key], `agent.${key}`);
+  assertExactKeys(manifest.agent, [
+    'provider',
+    'name',
+    'binary',
+    'binarySha256',
+    'cliVersion',
+    'model',
+    'configSha256',
+    'environment',
+    'invocationFlags',
+    'modelSeed',
+  ], [], 'agent');
+  for (const key of ['provider', 'name', 'binary', 'cliVersion', 'model']) assertString(manifest.agent[key], `agent.${key}`);
+  assertSha256(manifest.agent.binarySha256, 'agent.binarySha256');
   assertSha256(manifest.agent.configSha256, 'agent.configSha256');
+  assertExactKeys(manifest.agent.environment, [
+    'GROK_DISABLE_AUTOUPDATER', 'HOME', 'GROK_HOME', 'LANG', 'NO_COLOR', 'TZ',
+  ], [], 'agent.environment');
+  for (const [name, value] of Object.entries(manifest.agent.environment)) {
+    assertString(value, `agent.environment.${name}`);
+  }
   assertArray(manifest.agent.invocationFlags, 'agent.invocationFlags');
   manifest.agent.invocationFlags.forEach((flag, index) => assertString(flag, `agent.invocationFlags[${index}]`));
   assertUnique(manifest.agent.invocationFlags, 'agent.invocationFlags');
@@ -455,10 +483,14 @@ function validateManifestShape(manifest) {
   }
   if (manifest.agent.modelSeed !== null) fail('MANIFEST_INVALID', 'agent.modelSeed must be null because the selected CLI exposes no model seed');
 
-  assertExactKeys(manifest.grader, ['id', 'version', 'sha256', 'stages'], [], 'grader');
+  assertExactKeys(manifest.grader, ['id', 'version', 'sha256', 'typeScriptHost', 'stages'], [], 'grader');
   assertId(manifest.grader.id, 'grader.id');
   assertString(manifest.grader.version, 'grader.version');
   assertSha256(manifest.grader.sha256, 'grader.sha256');
+  assertExactKeys(manifest.grader.typeScriptHost, ['version', 'entrypoint', 'sha256'], [], 'grader.typeScriptHost');
+  assertString(manifest.grader.typeScriptHost.version, 'grader.typeScriptHost.version');
+  assertSafeRelativePath(manifest.grader.typeScriptHost.entrypoint, 'grader.typeScriptHost.entrypoint');
+  assertSha256(manifest.grader.typeScriptHost.sha256, 'grader.typeScriptHost.sha256');
   if (canonicalJson(manifest.grader.stages) !== canonicalJson(GRADER_STAGES)) {
     fail('MANIFEST_INVALID', `grader.stages must be ${GRADER_STAGES.join(', ')}`);
   }
@@ -521,6 +553,14 @@ export function mutationFingerprint(input) {
   return fingerprintMutation(frozen);
 }
 
+export function validateTerminalForRun(inputManifest, cellId, inputTerminal) {
+  const manifest = validateAndFreezeManifest(inputManifest);
+  const run = findRun(manifest, cellId);
+  const terminal = JSON.parse(canonicalJson(inputTerminal));
+  validateTerminal(terminal, manifest.design, run.arm, `terminal[${cellId}]`);
+  return deepFreeze(terminal);
+}
+
 export function computeLedgerEntryHash(entry) {
   assertObject(entry, 'ledger entry');
   const unsigned = { ...entry };
@@ -567,7 +607,8 @@ function validateUsage(usage, at) {
   }
 }
 
-function validateTerminal(terminal, tauMs, arm, at) {
+function validateTerminal(terminal, design, arm, at) {
+  const { tauMs, maxTurns } = design;
   assertLedgerExactKeys(terminal, [
     'outcome',
     'firstValidMs',
@@ -594,7 +635,7 @@ function validateTerminal(terminal, tauMs, arm, at) {
     'interventionAfterSha256',
   ], at);
   if (!['first_valid', 'censored'].includes(terminal.outcome)) fail('LEDGER_INVALID', `${at}.outcome is invalid`);
-  assertFiniteNumber(terminal.observedElapsedMs, `${at}.observedElapsedMs`, { minimum: 0 });
+  assertFiniteNumber(terminal.observedElapsedMs, `${at}.observedElapsedMs`, { minimum: 0, maximum: tauMs });
   assertFiniteNumber(terminal.restrictedTimeMs, `${at}.restrictedTimeMs`, { minimum: 0, maximum: tauMs });
   assertInteger(terminal.startedAtMs, `${at}.startedAtMs`, 0);
   assertInteger(terminal.finishedAtMs, `${at}.finishedAtMs`, terminal.startedAtMs);
@@ -608,6 +649,7 @@ function validateTerminal(terminal, tauMs, arm, at) {
     if (!['pass', 'fail', 'not_run'].includes(terminal.grader[stage])) fail('LEDGER_INVALID', `${at}.grader.${stage} is invalid`);
   }
   assertInteger(terminal.turns, `${at}.turns`, 0);
+  if (terminal.turns > maxTurns) fail('LEDGER_INVALID', `${at}.turns exceeds the preregistered maximum`);
   validateUsage(terminal.usage, `${at}.usage`);
   for (const key of ['escapes', 'falseBlocks', 'bypasses']) assertInteger(terminal[key], `${at}.${key}`, 0);
   assertArray(terminal.manualDecisions, `${at}.manualDecisions`);
@@ -648,8 +690,13 @@ function validateTerminal(terminal, tauMs, arm, at) {
     ) {
       fail('LEDGER_INVALID', `${at} censored outcome must retain the preregistered cap and reason`);
     }
-    if (allStagesPass || terminal.mergeGateCompleted || terminal.finalCiState === 'green') {
-      fail('LEDGER_INVALID', `${at} censored outcome cannot claim a completed green`);
+    const completedAfterCap = terminal.censorReason === 'cap_reached' && allStagesPass;
+    if (completedAfterCap) {
+      if (!terminal.mergeGateCompleted || terminal.finalCiState !== 'green') {
+        fail('LEDGER_INVALID', `${at} cap-censored green must retain its completed merge-gate state`);
+      }
+    } else if (allStagesPass || terminal.mergeGateCompleted || terminal.finalCiState === 'green') {
+      fail('LEDGER_INVALID', `${at} censored non-green outcome cannot claim a completed green`);
     }
   }
 }
@@ -740,7 +787,7 @@ export function verifyLedger({ manifest: inputManifest, entries: inputEntries })
         fail('LEDGER_DRIFT', `${entry.cellId} fingerprint does not match its pinned inputs`);
       }
       if (terminals.has(entry.cellId)) fail('LEDGER_INCOMPLETE', `duplicate terminal for ${entry.cellId}`);
-      validateTerminal(entry.terminal, manifest.design.tauMs, expectedRun.arm, `${at}.terminal`);
+      validateTerminal(entry.terminal, manifest.design, expectedRun.arm, `${at}.terminal`);
       if (entry.terminal.startedAtMs < previousFinishedAtMs) {
         fail('LEDGER_WORKSPACE_OVERLAP', `${entry.cellId} overlaps the preceding preregistered run`);
       }

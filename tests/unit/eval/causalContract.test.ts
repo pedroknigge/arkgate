@@ -33,7 +33,7 @@ describe('Z08 causal manifest contract', () => {
       type: 'object',
       additionalProperties: false,
       properties: {
-        design: { properties: { bootstrapReplicates: { minimum: 50_000 } } },
+        design: { properties: { tauMs: { minimum: 32_001 }, bootstrapReplicates: { minimum: 50_000 } } },
         repositories: { minItems: 6 },
         tasks: { minItems: 24 },
         runs: { minItems: 144 },
@@ -85,6 +85,10 @@ describe('Z08 causal manifest contract', () => {
     const weakBootstrap = makeManifest();
     weakBootstrap.design.bootstrapReplicates = 49_999;
     expectCode(() => validateAndFreezeManifest(weakBootstrap), 'MANIFEST_INVALID');
+
+    const noGradingReserve = makeManifest();
+    noGradingReserve.design.tauMs = 32_000;
+    expectCode(() => validateAndFreezeManifest(noGradingReserve), 'MANIFEST_INVALID');
 
     const endpoint = makeManifest();
     endpoint.design.primaryMaxRatio = 0.81;
@@ -145,6 +149,7 @@ describe('Z08 causal manifest contract', () => {
       file: overlap.mutation.ranges[0].file,
       startLine: 20,
       endLine: 30,
+      sourceSha256: 'f'.repeat(64),
     });
     expectCode(() => validateAndFreezeManifest(overlap), 'MANIFEST_INVALID');
   });
@@ -157,6 +162,18 @@ describe('Z08 causal manifest contract', () => {
     const missingTaskPin = makeManifest();
     delete (missingTaskPin.tasks[0] as Partial<(typeof missingTaskPin.tasks)[number]>).oracleSha256;
     expectCode(() => validateAndFreezeManifest(missingTaskPin), 'MANIFEST_INVALID');
+
+    const unmaterializable = makeManifest();
+    unmaterializable.tasks[0].scenario = 'unknown-scenario';
+    expectCode(() => validateAndFreezeManifest(unmaterializable), 'MANIFEST_INVALID');
+
+    const unsafeTaskId = makeManifest();
+    unsafeTaskId.tasks[0].id = 'task.with.dot';
+    expectCode(() => validateAndFreezeManifest(unsafeTaskId), 'MANIFEST_INVALID');
+
+    const invalidNoun = makeManifest();
+    invalidNoun.tasks[0].noun = 'lowercase';
+    expectCode(() => validateAndFreezeManifest(invalidNoun), 'MANIFEST_INVALID');
   });
 });
 
@@ -258,6 +275,16 @@ describe('Z08 append-only causal ledger', () => {
     const missingIntervention = clone(makeLedger(manifest));
     (missingIntervention[treatmentIndex].terminal as { interventionAfterSha256: string | null }).interventionAfterSha256 = null;
     expectCode(() => verifyLedger({ manifest, entries: resealEntries(missingIntervention) }), 'LEDGER_INVALID');
+
+    const overtime = clone(makeLedger(manifest));
+    const overtimeTerminal = overtime[0].terminal as { observedElapsedMs: number; finishedAtMs: number; startedAtMs: number };
+    overtimeTerminal.observedElapsedMs = manifest.design.tauMs + 1;
+    overtimeTerminal.finishedAtMs = overtimeTerminal.startedAtMs + overtimeTerminal.observedElapsedMs;
+    expectCode(() => verifyLedger({ manifest, entries: resealEntries(overtime) }), 'MANIFEST_INVALID');
+
+    const excessTurns = clone(makeLedger(manifest));
+    (excessTurns[0].terminal as { turns: number }).turns = manifest.design.maxTurns + 1;
+    expectCode(() => verifyLedger({ manifest, entries: resealEntries(excessTurns) }), 'LEDGER_INVALID');
   });
 
   it('separates actual interrupted runtime from the censored restricted time', () => {
@@ -282,6 +309,30 @@ describe('Z08 append-only causal ledger', () => {
       observedElapsedMs: 125,
       restrictedTimeMs: manifest.design.tauMs,
       censorReason: 'interrupted',
+    });
+  });
+
+  it('retains a merge-gate green that completed only after the preregistered time cap', () => {
+    const manifest = makeManifest();
+    const ledger = clone(makeLedger(manifest));
+    const terminal = ledger[0].terminal as Record<string, unknown>;
+    Object.assign(terminal, {
+      outcome: 'censored',
+      firstValidMs: null,
+      censoredAtMs: manifest.design.tauMs,
+      observedElapsedMs: manifest.design.tauMs,
+      restrictedTimeMs: manifest.design.tauMs,
+      finishedAtMs: (terminal.startedAtMs as number) + manifest.design.tauMs,
+      censorReason: 'cap_reached',
+      mergeGateCompleted: true,
+      finalCiState: 'green',
+      grader: { integrity: 'pass', architecture: 'pass', typecheck: 'pass', tests: 'pass' },
+    });
+    const evidence = verifyLedger({ manifest, entries: resealEntries(ledger) });
+    expect(evidence.terminals[manifest.runs[0].cellId]).toMatchObject({
+      outcome: 'censored',
+      mergeGateCompleted: true,
+      finalCiState: 'green',
     });
   });
 

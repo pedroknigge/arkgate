@@ -66,8 +66,6 @@ describe('Z08 full-denominator causal analysis', () => {
     const report = analyzeExperiment({
       manifest,
       ledgerEntries: ledger,
-      bootstrapReplicates: 1_000,
-      bootstrapSeed: 'small-explicit-test-bootstrap',
     });
 
     expect(report.denominator).toEqual({ repositories: 6, tasks: 24, pairs: 72, cells: 144 });
@@ -77,8 +75,8 @@ describe('Z08 full-denominator causal analysis', () => {
     expect(report.primary.treatmentToControlRatio).toBeLessThanOrEqual(0.55);
     expect(report.primary.confidenceInterval).toMatchObject({
       method: 'hierarchical-paired-bootstrap:repository->task->replicate',
-      replicates: 1_000,
-      seed: 'small-explicit-test-bootstrap',
+      replicates: 50_000,
+      seed: 'z08-bootstrap-fixture-v1',
     });
     expect(report.primary.confidenceInterval.upper).toBeLessThan(1);
     expect(report.completion).toMatchObject({ controlRate: 1, treatmentRate: 1, delta: 0, passed: true });
@@ -100,10 +98,10 @@ describe('Z08 full-denominator causal analysis', () => {
       treatmentSeen += 1;
       return treatmentSeen <= 35 ? firstValidTerminal(1_000) : censoredTerminal(manifest.design.tauMs);
     });
-    const report = analyzeExperiment({ manifest, ledgerEntries: ledger, bootstrapReplicates: 200, bootstrapSeed: 'censor-test' });
+    const report = analyzeExperiment({ manifest, ledgerEntries: ledger });
 
-    expect(report.arms.control.rmstMs).toBe(6_000);
-    expect(report.arms.treatment.rmstMs).toBeCloseTo((35 * 1_000 + 37 * 10_000) / 72);
+    expect(report.arms.control.rmstMs).toBe((36 * 2_000 + 36 * manifest.design.tauMs) / 72);
+    expect(report.arms.treatment.rmstMs).toBeCloseTo((35 * 1_000 + 37 * manifest.design.tauMs) / 72);
     expect(report.arms.control.firstValidPercentiles.p50.status).toBe('reached');
     expect(report.arms.treatment.firstValidPercentiles.p50.status).toBe('not_reached');
     expect(report.arms.treatment.censored).toBe(37);
@@ -116,25 +114,25 @@ describe('Z08 full-denominator causal analysis', () => {
 
     const incomplete = makeLedger(manifest);
     incomplete.pop();
-    expect(() => analyzeExperiment({ manifest, ledgerEntries: incomplete, bootstrapReplicates: 10 })).toThrow(/expected 145/);
+    expect(() => analyzeExperiment({ manifest, ledgerEntries: incomplete })).toThrow(/expected 145/);
 
     const hashBroken = clone(makeLedger(manifest));
     (hashBroken[0].terminal as { turns: number }).turns += 1;
-    expect(() => analyzeExperiment({ manifest, ledgerEntries: hashBroken, bootstrapReplicates: 10 })).toThrow(/hash chain/);
+    expect(() => analyzeExperiment({ manifest, ledgerEntries: hashBroken })).toThrow(/hash chain/);
 
     const drift = clone(makeLedger(manifest));
     drift[0].cellFingerprint = '0'.repeat(64);
-    expect(() => analyzeExperiment({ manifest, ledgerEntries: resealEntries(drift), bootstrapReplicates: 10 })).toThrow(/fingerprint/);
+    expect(() => analyzeExperiment({ manifest, ledgerEntries: resealEntries(drift) })).toThrow(/fingerprint/);
 
     const order = clone(makeLedger(manifest));
     [order[0], order[1]] = [order[1], order[0]];
     order.forEach((entry, index) => { entry.sequence = index + 1; });
-    expect(() => analyzeExperiment({ manifest, ledgerEntries: resealEntries(order), bootstrapReplicates: 10 })).toThrow(/execution order/);
+    expect(() => analyzeExperiment({ manifest, ledgerEntries: resealEntries(order) })).toThrow(/execution order/);
 
     const noCoverage = clone(makeLedger(manifest));
     const statuses = (noCoverage.at(-1)!.groups as Array<{ statuses: Record<string, number> }>)[0].statuses;
     statuses.killed -= 1;
     statuses.noCoverage += 1;
-    expect(() => analyzeExperiment({ manifest, ledgerEntries: resealEntries(noCoverage), bootstrapReplicates: 10 })).toThrow(/NoCoverage/);
+    expect(() => analyzeExperiment({ manifest, ledgerEntries: resealEntries(noCoverage) })).toThrow(/NoCoverage/);
   });
 });

@@ -167,7 +167,7 @@ function runCell(cell, candidate, work, candidateSha, sourceCache) {
   const previewJson = parseJson(preview.stdout);
   const startedAt = Date.now();
   const applied = commandResult(process.execPath, [candidate.bin, 'start', '--root', root, '--tools', cell.host, '--yes', '--no-install', '--apply', '--json'], { cwd: root, env: environment });
-  const firstGreenMs = Date.now() - startedAt;
+  const applyMs = Date.now() - startedAt;
   const checked = commandResult(process.execPath, [candidate.check, '--root', root, '--strict-merge', '--json'], { cwd: root, env: environment });
   const checkJson = parseJson(checked.stdout);
   const actual = snapshot(root);
@@ -207,13 +207,13 @@ function runCell(cell, candidate, work, candidateSha, sourceCache) {
     treeFiles: initial.size,
     candidateInstallMs: candidate.installMs,
     preview: { exitCode: preview.status, changes: previewChanges.length, projectedCoverage: previewJson?.projectedCoverage ?? null },
-    apply: { exitCode: applied.status, filesChanged: changes.length, firstGreenMsExcludingDependencyInstall: firstGreenMs },
+    apply: { exitCode: applied.status, filesChanged: changes.length, durationMsExcludingDependencyInstall: applyMs },
     strictMerge: { exitCode: checked.status },
     governedCoverage: coverage,
     mergeGateState,
     finalCiState: `not-run-external-ci; local-strict-merge-${checked.status === 0 ? 'pass' : 'fail'}`,
-    falseBlocks: 0,
-    bypasses: 0,
+    falseBlocks: null,
+    bypasses: null,
     manualDecisions,
     issues,
     diagnostics: {
@@ -241,7 +241,7 @@ function summary(manifest, results, candidate) {
     cellCount: results.length,
     dimensions,
     medians: {
-      firstGreenMsExcludingDependencyInstall: median(green.map((result) => result.apply.firstGreenMsExcludingDependencyInstall)),
+      setupApplyMsExcludingDependencyInstall: median(results.map((result) => result.apply?.durationMsExcludingDependencyInstall).filter(Number.isFinite)),
       governedCoveragePercent: median(coverage),
     },
     mergeGate: { green: green.length, adapt: results.length - green.length },
@@ -249,14 +249,13 @@ function summary(manifest, results, candidate) {
     acceptance: {
       dimensionsRepresented: Object.values(dimensions).every((entries) => Object.values(entries).every((count) => count > 0)),
       noOpenP0P1: p0p1.length === 0,
-      medianFirstGreenUnderFiveMinutes: median(green.map((result) => result.apply.firstGreenMsExcludingDependencyInstall)) < 300000,
       medianCoverageAtLeast90: median(coverage) >= 90,
     },
   };
 }
 
 function renderReport(result) {
-  return `# External adoption matrix\n\nCandidate: \`${result.candidate.sha}\`\n\n| Metric | Result |\n|---|---:|\n| Cells | ${result.cellCount} |\n| Green merge gates | ${result.mergeGate.green} |\n| Adapt cases | ${result.mergeGate.adapt} |\n| Median first-green | ${result.medians.firstGreenMsExcludingDependencyInstall ?? 'n/a'} ms |\n| Median governed coverage | ${result.medians.governedCoveragePercent ?? 'n/a'}% |\n| Open P0/P1 | ${result.p0p1Open.length} |\n\n## Acceptance\n\n${Object.entries(result.acceptance).map(([key, value]) => `- ${value ? '[x]' : '[ ]'} ${key}`).join('\n')}\n`;
+  return `# External adoption matrix (historical setup harness)\n\nCandidate: \`${result.candidate.sha}\`\n\nThis harness measures setup/apply and local strict-merge only. It does not measure first-valid time, false blocks, bypasses, typecheck, or tests; use the Z08 causal harness for those claims.\n\n| Metric | Result |\n|---|---:|\n| Cells | ${result.cellCount} |\n| Green local strict-merge gates | ${result.mergeGate.green} |\n| Adapt cases | ${result.mergeGate.adapt} |\n| Median setup apply | ${result.medians.setupApplyMsExcludingDependencyInstall ?? 'n/a'} ms |\n| Median governed coverage | ${result.medians.governedCoveragePercent ?? 'n/a'}% |\n| Open P0/P1 | ${result.p0p1Open.length} |\n\n## Acceptance\n\n${Object.entries(result.acceptance).map(([key, value]) => `- ${value ? '[x]' : '[ ]'} ${key}`).join('\n')}\n`;
 }
 
 function environmentFailure(cell, candidateSha, error) {
@@ -280,8 +279,8 @@ function environmentFailure(cell, candidateSha, error) {
     governedCoverage: null,
     mergeGateState: 'adapt',
     finalCiState: 'not-run-external-ci; environment-failure',
-    falseBlocks: 0,
-    bypasses: 0,
+    falseBlocks: null,
+    bypasses: null,
     manualDecisions: ['Retained as Adapt because the external clone did not complete.'],
     issues: [{ severity: 'P2', class: 'environment-failure', message: String(error.message).slice(0, 1200) }],
     diagnostics: { preview: '', apply: '', strictMerge: '' },
@@ -330,7 +329,7 @@ function main() {
     const resultSummary = summary(manifest, results, candidate);
     writeJson(path.join(outputRoot, 'summary.json'), resultSummary);
     fs.writeFileSync(path.join(outputRoot, 'report.md'), renderReport(resultSummary));
-    if (!resultSummary.acceptance.dimensionsRepresented || !resultSummary.acceptance.noOpenP0P1 || !resultSummary.acceptance.medianFirstGreenUnderFiveMinutes || !resultSummary.acceptance.medianCoverageAtLeast90) process.exitCode = 1;
+    if (!resultSummary.acceptance.dimensionsRepresented || !resultSummary.acceptance.noOpenP0P1 || !resultSummary.acceptance.medianCoverageAtLeast90) process.exitCode = 1;
   } finally {
     if (!args.keep) fs.rmSync(work, { recursive: true, force: true });
   }

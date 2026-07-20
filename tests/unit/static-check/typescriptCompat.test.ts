@@ -21,6 +21,7 @@ describe('usableTypescript (TS5/6/7 shape guard)', () => {
       sys: { fileExists: () => true },
       createSourceFile: () => ({}),
       resolveModuleName: () => ({}),
+      isInTypeQuery: () => false,
     };
     expect(usableTypescript(fake)).toBe(fake);
   });
@@ -31,6 +32,7 @@ describe('usableTypescript (TS5/6/7 shape guard)', () => {
       sys: { fileExists: () => true },
       createSourceFile: () => ({}),
       resolveModuleName: () => ({}),
+      isInTypeQuery: () => false,
     };
     const mod = { default: api, __esModule: true };
     expect(usableTypescript(mod)).toBe(api);
@@ -51,6 +53,17 @@ describe('usableTypescript (TS5/6/7 shape guard)', () => {
     };
     expect(usableTypescript(nativeIsh)).toBeNull();
     expect(typescriptUsabilityHint(nativeIsh)).toMatch(/missing ts\.sys/i);
+  });
+
+  it('rejects a pre-5 host missing the AST helper used by the scanner', () => {
+    const ts46 = {
+      version: '4.6.4',
+      sys: { fileExists: () => true },
+      createSourceFile: () => ({}),
+      resolveModuleName: () => ({}),
+    };
+    expect(usableTypescript(ts46)).toBeNull();
+    expect(typescriptUsabilityHint(ts46)).toMatch(/isInTypeQuery|TypeScript 5\/6/i);
   });
 
   it('rejects incomplete sys host', () => {

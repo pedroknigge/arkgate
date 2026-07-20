@@ -68,13 +68,39 @@
     "agent": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["provider", "name", "cliVersion", "model", "configSha256", "invocationFlags", "modelSeed"],
+      "required": [
+        "provider",
+        "name",
+        "binary",
+        "binarySha256",
+        "cliVersion",
+        "model",
+        "configSha256",
+        "environment",
+        "invocationFlags",
+        "modelSeed"
+      ],
       "properties": {
         "provider": { "type": "string", "minLength": 1 },
         "name": { "type": "string", "minLength": 1 },
+        "binary": { "type": "string", "minLength": 1 },
+        "binarySha256": { "$ref": "#/$defs/sha256" },
         "cliVersion": { "type": "string", "minLength": 1 },
         "model": { "type": "string", "minLength": 1 },
         "configSha256": { "$ref": "#/$defs/sha256" },
+        "environment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["GROK_DISABLE_AUTOUPDATER", "HOME", "GROK_HOME", "LANG", "NO_COLOR", "TZ"],
+          "properties": {
+            "GROK_DISABLE_AUTOUPDATER": { "type": "string", "minLength": 1 },
+            "HOME": { "type": "string", "minLength": 1 },
+            "GROK_HOME": { "type": "string", "minLength": 1 },
+            "LANG": { "type": "string", "minLength": 1 },
+            "NO_COLOR": { "type": "string", "minLength": 1 },
+            "TZ": { "type": "string", "minLength": 1 }
+          }
+        },
         "invocationFlags": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 },
@@ -86,11 +112,21 @@
     "grader": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "version", "sha256", "stages"],
+      "required": ["id", "version", "sha256", "typeScriptHost", "stages"],
       "properties": {
         "id": { "$ref": "#/$defs/id" },
         "version": { "type": "string", "minLength": 1 },
         "sha256": { "$ref": "#/$defs/sha256" },
+        "typeScriptHost": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["version", "entrypoint", "sha256"],
+          "properties": {
+            "version": { "type": "string", "minLength": 1 },
+            "entrypoint": { "type": "string", "minLength": 1 },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
         "stages": {
           "const": ["integrity", "architecture", "typecheck", "tests"]
         }
@@ -114,7 +150,7 @@
         "exclusions"
       ],
       "properties": {
-        "tauMs": { "type": "integer", "minimum": 1 },
+        "tauMs": { "type": "integer", "minimum": 32001 },
         "maxTurns": { "type": "integer", "minimum": 1 },
         "sessionsPerArm": { "type": "integer", "minimum": 3 },
         "bootstrapReplicates": { "type": "integer", "minimum": 50000 },
@@ -263,7 +299,11 @@
           "additionalProperties": false,
           "required": ["install", "typecheck", "tests"],
           "properties": {
-            "install": { "$ref": "#/$defs/argv" },
+            "install": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/argv" }
+            },
             "typecheck": { "$ref": "#/$defs/argv" },
             "tests": { "$ref": "#/$defs/argv" }
           }
@@ -301,10 +341,12 @@
         "acceptanceSha256"
       ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]+$" },
         "repositoryId": { "$ref": "#/$defs/id" },
-        "scenario": { "$ref": "#/$defs/id" },
-        "noun": { "type": "string", "minLength": 1 },
+        "scenario": {
+          "enum": ["clock-boundary", "repository-port", "presentation-mapper", "cycle-extraction"]
+        },
+        "noun": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]+$" },
         "prompt": { "type": "string", "minLength": 1 },
         "promptSha256": { "$ref": "#/$defs/sha256" },
         "fixtureSha256": { "$ref": "#/$defs/sha256" },
@@ -342,12 +384,13 @@
     "mutationRange": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "file", "startLine", "endLine"],
+      "required": ["id", "file", "startLine", "endLine", "sourceSha256"],
       "properties": {
         "id": { "$ref": "#/$defs/id" },
         "file": { "type": "string", "minLength": 1 },
         "startLine": { "type": "integer", "minimum": 1 },
-        "endLine": { "type": "integer", "minimum": 1 }
+        "endLine": { "type": "integer", "minimum": 1 },
+        "sourceSha256": { "$ref": "#/$defs/sha256" }
       }
     }
   }

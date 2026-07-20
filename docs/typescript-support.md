@@ -6,6 +6,7 @@ TypeScript package that exposes:
 - `ts.sys` (at least `fileExists`)
 - `createSourceFile` (AST)
 - `resolveModuleName` (module graph)
+- `isInTypeQuery` (runtime-reference classification)
 
 It does **not** require the Go-native `tsc` binary for the gate. Type-checking
 semantics of your app still come from **your** project `typescript` + `tsconfig`.

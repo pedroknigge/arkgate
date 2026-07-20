@@ -468,7 +468,8 @@ export {
 
 /**
  * Normalize a required/imported TypeScript module for ark-check's host.
- * TS 5/6 expose `sys` on the root export. Early TS 7 / some ESM interop shapes
+ * TS 5/6 expose `sys` and the AST helpers used by the scanner on the root export. Early TS 7 /
+ * some ESM interop shapes
  * may nest under `.default` or omit `sys` — those are unusable for resolve/scan
  * and must fall through to a JS-API-compatible TypeScript (Ark's own or 5/6).
  *
@@ -487,7 +488,8 @@ export function usableTypescript(mod) {
       ts.sys &&
       typeof ts.sys.fileExists === 'function' &&
       typeof ts.createSourceFile === 'function' &&
-      typeof ts.resolveModuleName === 'function'
+      typeof ts.resolveModuleName === 'function' &&
+      typeof ts.isInTypeQuery === 'function'
     ) {
       return ts;
     }
@@ -516,6 +518,9 @@ export function typescriptUsabilityHint(mod) {
   if (typeof ts.sys.fileExists !== 'function') return 'ts.sys.fileExists is not a function';
   if (typeof ts.createSourceFile !== 'function') return 'missing createSourceFile (AST API)';
   if (typeof ts.resolveModuleName !== 'function') return 'missing resolveModuleName';
+  if (typeof ts.isInTypeQuery !== 'function') {
+    return 'missing isInTypeQuery (requires a TypeScript 5/6 analysis host)';
+  }
   return 'unknown shape incompatibility';
 }
 

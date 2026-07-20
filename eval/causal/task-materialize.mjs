@@ -2,12 +2,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const SCENARIOS = new Set([
+export const TASK_SCENARIOS = Object.freeze([
   'clock-boundary',
   'repository-port',
   'presentation-mapper',
   'cycle-extraction',
 ]);
+export const TASK_ID_PATTERN = /^[a-z0-9][a-z0-9-]+$/;
+export const TASK_NOUN_PATTERN = /^[A-Z][A-Za-z0-9]+$/;
+const SCENARIOS = new Set(TASK_SCENARIOS);
 
 function slug(value) {
   return value.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
@@ -15,9 +18,9 @@ function slug(value) {
 
 function assertTask(task) {
   if (!task || typeof task !== 'object') throw new Error('task is required');
-  if (!/^[a-z0-9][a-z0-9-]+$/.test(task.id ?? '')) throw new Error('task.id is invalid');
+  if (!TASK_ID_PATTERN.test(task.id ?? '')) throw new Error('task.id is invalid');
   if (!SCENARIOS.has(task.scenario)) throw new Error(`unknown scenario: ${task.scenario}`);
-  if (!/^[A-Z][A-Za-z0-9]+$/.test(task.noun ?? '')) throw new Error('task.noun is invalid');
+  if (!TASK_NOUN_PATTERN.test(task.noun ?? '')) throw new Error('task.noun is invalid');
 }
 
 function fixtureFiles(task) {

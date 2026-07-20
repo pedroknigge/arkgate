@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "repositories": [
+    {
+      "id": "kata-users-ts",
+      "url": "https://github.com/carlosazaustre/kata-users-ts.git",
+      "sha": "3feb2a5e692ee4285f08e30b00bf080b2abafcc3",
+      "treeSha": "20a41b62cb0866665cc0d4f677e2ea7a75ac7f72",
+      "license": "MIT",
+      "lockfile": {
+        "path": "package-lock.json",
+        "sha256": "29e9cfab01613767183df878009cb6fe280a0f91970ad59cfc24bc8e77680501",
+        "synthetic": false,
+        "artifact": null
+      },
+      "packageManager": { "name": "npm", "version": "10.9.2" },
+      "typescriptVersion": "5.8.3",
+      "commands": {
+        "install": [["npm", "ci"]],
+        "typecheck": ["npm", "run", "build"],
+        "tests": ["npm", "test", "--", "--runInBand"]
+      },
+      "commonPatch": null
+    },
+    {
+      "id": "typescript-starter",
+      "url": "https://github.com/nestjs/typescript-starter.git",
+      "sha": "c4d9330f5513eda0fb5df594f6b34a11fde1a934",
+      "treeSha": "a6fbb372699bed49ca8f2e9a697e150239c9cf23",
+      "license": "MIT",
+      "lockfile": {
+        "path": "package-lock.json",
+        "sha256": "f2c5a6753f8b6de69d2387e9b29a47ebe0eac1bb9ee90eb2fb3e64c138423c39",
+        "synthetic": false,
+        "artifact": null
+      },
+      "packageManager": { "name": "npm", "version": "10.9.2" },
+      "typescriptVersion": "5.7.3",
+      "commands": {
+        "install": [["npm", "ci"]],
+        "typecheck": ["npm", "run", "build"],
+        "tests": ["npm", "test", "--", "--runInBand"]
+      },
+      "commonPatch": null
+    },
+    {
+      "id": "nestjs-hexagonal-example",
+      "url": "https://github.com/tim-hub/nestjs-hexagonal-example.git",
+      "sha": "ad1143821e876dd3823fa1f77e21790f808c0a3c",
+      "treeSha": "20abf70e8d5010e63bf2d7e5d454ef44536d614a",
+      "license": "MIT (LICENSE.md; package metadata says UNLICENSED)",
+      "lockfile": {
+        "path": "pnpm-lock.yaml",
+        "sha256": "de90e8e3fde1a450b02d7425b240fd38557294d5fc2e05e6917445c3feb40a37",
+        "synthetic": false,
+        "artifact": null
+      },
+      "packageManager": { "name": "pnpm", "version": "7.33.7" },
+      "typescriptVersion": "4.6.4",
+      "commands": {
+        "install": [["corepack", "pnpm@7.33.7", "install", "--frozen-lockfile"]],
+        "typecheck": ["corepack", "pnpm@7.33.7", "run", "build"],
+        "tests": ["corepack", "pnpm@7.33.7", "test", "--", "--runInBand"]
+      },
+      "commonPatch": {
+        "path": "eval/causal/patches/nestjs-hexagonal-example.patch",
+        "sha256": "e3129b7b3391c263d2c5aa0ff5d40c04c8ce1e6d48c8a5cc8b8fb4c5b430b24a",
+        "rationale": "The pinned source returns its documented ticket route, but one stale generated starter assertion still expects the pre-route greeting. The same one-line test-only repair is applied to both arms before timing."
+      }
+    },
+    {
+      "id": "nestjs-hexagonal-auth",
+      "url": "https://github.com/Kandriws/nestjs-hexagonal-auth.git",
+      "sha": "9ce1c33476610ff4d1a703b8aa37b0a392e23ff4",
+      "treeSha": "b4b67e3d5cb887b3ecfce649a5ca167391a94417",
+      "license": "MIT",
+      "lockfile": {
+        "path": "package-lock.json",
+        "sha256": "fe32efe3e6621658acf6f6d6f501de1b1aa6f47ca78a048b4a76801f3903087c",
+        "synthetic": false,
+        "artifact": null
+      },
+      "packageManager": { "name": "npm", "version": "10.9.2" },
+      "typescriptVersion": "5.9.2",
+      "commands": {
+        "install": [["npm", "ci"], ["npm", "run", "prisma:generate"]],
+        "typecheck": ["npm", "run", "build"],
+        "tests": [
+          "/usr/bin/env",
+          "NODE_ENV=test",
+          "RESET_PASSWORD_FRONTEND_URL=http://localhost/reset",
+          "MAIL_HOST=localhost",
+          "MAIL_PORT=1025",
+          "MAIL_USER=test",
+          "MAIL_PASS=test",
+          "MAIL_FROM_EMAIL=test@example.com",
+          "GOOGLE_CLIENT_ID=test",
+          "GOOGLE_CLIENT_SECRET=test",
+          "GOOGLE_CALLBACK_URL=http://localhost/callback",
+          "ENCRYPTION_KEYS_FILE_PATH=./encryption-keys.json",
+          "JWT_ACCESS_SECRET=test-access",
+          "JWT_REFRESH_SECRET=test-refresh",
+          "JWT_RESET_SECRET=test-reset",
+          "DB_HOST=localhost",
+          "DB_USERNAME=test",
+          "DB_PASSWORD=test",
+          "DB_NAME=test",
+          "CACHE_REDIS_HOST=localhost",
+          "CACHE_REDIS_PASSWORD=test",
+          "npm",
+          "test",
+          "--",
+          "--runInBand"
+        ]
+      },
+      "commonPatch": null
+    },
+    {
+      "id": "zod",
+      "url": "https://github.com/colinhacks/zod.git",
+      "sha": "912f0f51b0ced654d0069741e7160834dca742ee",
+      "treeSha": "aa57882b5c03f77cdfc84ee44a7967f2c9c210b6",
+      "license": "MIT",
+      "lockfile": {
+        "path": "pnpm-lock.yaml",
+        "sha256": "03627f8232469285ad0ae0199f749bf5471f71e4d78f709cb74ad63bbf87bbc3",
+        "synthetic": false,
+        "artifact": null
+      },
+      "packageManager": { "name": "pnpm", "version": "10.12.1" },
+      "typescriptVersion": "5.5.4",
+      "commands": {
+        "install": [["corepack", "pnpm@10.12.1", "install", "--frozen-lockfile"]],
+        "typecheck": ["corepack", "pnpm@10.12.1", "--filter", "zod", "exec", "tsc", "-p", "tsconfig.test.json", "--noEmit", "--noUnusedLocals", "false"],
+        "tests": ["corepack", "pnpm@10.12.1", "exec", "vitest", "run", "--typecheck.enabled=false"]
+      },
+      "commonPatch": null
+    },
+    {
+      "id": "yocto-queue",
+      "url": "https://github.com/sindresorhus/yocto-queue.git",
+      "sha": "b07eac099753833b29d06c614149904445739776",
+      "treeSha": "5a5f01d44bd03ec879cda4bf9591fe7f77598729",
+      "license": "MIT",
+      "lockfile": {
+        "path": "package-lock.json",
+        "sha256": "b49eb26e7c8574561fdcd3028a4931bc549d41ddc19e84f125a2acf954f1a40b",
+        "synthetic": true,
+        "artifact": "eval/causal/locks/yocto-queue.package-lock.json"
+      },
+      "packageManager": { "name": "npm", "version": "10.9.2" },
+      "typescriptVersion": "4.9.5",
+      "commands": {
+        "install": [["npm", "ci"]],
+        "typecheck": ["npm", "exec", "--", "tsd"],
+        "tests": ["npm", "exec", "--", "ava"]
+      },
+      "commonPatch": null
+    }
+  ]
+}

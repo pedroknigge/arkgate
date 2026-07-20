@@ -11,6 +11,15 @@ const manifest = path.join(repo, 'eval/adoption/manifest.v1.json');
 const betaExitManifest = path.join(repo, 'eval/beta-exit/public-matrix.v1.json');
 
 describe('V03 external adoption harness', () => {
+  it('labels its legacy timing honestly and does not fabricate unmeasured classifications', () => {
+    const source = fs.readFileSync(runner, 'utf8');
+    expect(source).toContain('durationMsExcludingDependencyInstall');
+    expect(source).toContain('historical setup harness');
+    expect(source).not.toContain('firstGreenMsExcludingDependencyInstall');
+    expect(source).not.toContain('falseBlocks: 0');
+    expect(source).not.toContain('bypasses: 0');
+  });
+
   it('validates all twelve pinned cells without cloning third-party source', () => {
     const out = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-adoption-dry-'));
     try {

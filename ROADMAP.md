@@ -117,13 +117,15 @@ for current truth.
 | `RB-08` | P1 | `closed` | Z02's distinct exact host and schema 1.2 fail-closed verdict passed all 36 packed cells in PR #81 CI; published 3.7.0 predates the correction |
 | `RB-09` | P1 | `closed` | Z03 selected versioned resolved-candidate facts; Z04 restored one graph/verdict across the parity-capable API, preflight, CLI, MCP, complete-patch write gate, eligible ESLint, and final CI |
 | `RB-10` | P1 journey | `closed` | Z05–Z06 proved the installed starter, managed upgrade, observed enforcement, and packed journey across the clean-room matrices |
-| `RB-11` | P1 claim | `open` | Z07–Z09 must earn the 10x feedback, causal-evidence, retained-adoption, and independent-close claims |
+| `RB-11` | P1 claim | `open` | Z07, Z08, Z10, and Z09 must earn the 10x feedback, causal-evidence, design-delta, retained-adoption, and independent-close claims |
+| `RB-12` | P1 enforcement | `open` | Z10 must stop new design-smell regressions on the write/merge path without blocking unrelated brownfield residual, and must prove active-host hardness at runtime |
 
 `RB-01`–`RB-06` are closed by the corresponding completed items and their recorded evidence.
 V05 passed its then-current binary exit gate in PR #49. The separately authorized stable `3.0.0`
 release completed on 2026-07-13; closing `RB-06` had removed the onboarding release blocker.
 The post-3.7.0 audit below supersedes that evidence as proof of *current* release readiness:
-`RB-11` remains open, so the broad product-claim stop condition still applies.
+`RB-11` and `RB-12` remain open, so the broad product-claim and new-code-enforcement stop
+conditions still apply.
 
 ### Post-3.7.0 audit reset (2026-07-17)
 
@@ -426,7 +428,8 @@ may raise those ceilings merely to fit its own implementation.
 | 69 | `Z06` | `done` | L | `Z05` | Upgrade touches only identity-proven managed assets and doctor reports actual enforcement state |
 | 70 | `Z07` | `done` | L | `Z04`, `Z05` | A measured warm control plane delivers order-of-magnitude hook feedback and bounded canonical reevaluation without semantic drift |
 | 71 | `Z08` | `doing` | L | `Z06`, `Z07` | Live-agent and causal evaluation count every outcome and defend the corrected path with mutation proof |
-| 72 | `Z09` | `todo` | L | `Z08` | Retained field adoption and a verifiably independent review earn the Phase Z product claims |
+| 72 | `Z10` | `todo` | L | `Z08` | New design-smell regressions fail on the write/merge path while historical residual and unverified host enforcement remain honestly labeled |
+| 73 | `Z09` | `todo` | L | `Z10` | Retained field adoption and a verifiably independent review earn the Phase Z product claims |
 
 #### Corrective-release lanes
 
@@ -440,9 +443,10 @@ may raise those ceilings merely to fit its own implementation.
   (or a canary until its compatibility gate passes), never an unrelated feature minor. After `Z06`,
   the clean installed and managed-upgrade journey can become the stable baseline and `RB-10` closes.
 - `Z07` gates only the verified 10x hook-latency claim and its separately named absolute latency
-  targets. `Z08` and `Z09` gate causal productivity, retained
-  adoption, independent-close, and epic-shipped claims. They do not delay a completed safety or
-  correctness patch, but no feature release or broad product claim is allowed while `RB-11` is open.
+  targets. `Z08` gates causal productivity; `Z10` gates new-code design enforcement and closes
+  `RB-12`; `Z09` gates retained adoption, independent-close, and epic-shipped claims. They do not
+  delay a completed safety or correctness patch, but no feature release or broad product claim is
+  allowed while `RB-11` or `RB-12` is open.
 
 ### Z01 — Make release cleanup tool-owned and path-safe
 
@@ -743,12 +747,55 @@ censored at the preregistered cap and remain in the primary and percentile summa
 than half succeed, median first-valid is “not reached,” never success-only. Mutation ranges covering
 the corrected completeness, resolution, managed-upgrade, and snapshot invalidation paths contain
 zero `NoCoverage` survivors. If the primary hypothesis loses, publish the null/negative result and
-remove or reframe the causal-productivity claim before `Z09`; never switch endpoints post hoc.
+remove or reframe the causal-productivity claim before downstream `Z10`/`Z09`; never switch
+endpoints post hoc.
+
+### Z10 — Enforce new-code design fitness on the real write and merge path
+
+- **Status:** `todo`
+- **Depends on:** `Z08`
+
+**Field trigger (2026-07-20):** a real multi-app Propia.homes change could introduce pure
+authorization helpers such as `can*`/policy logic under `apps/web/src/product/**` while every
+declared edge remained legal. Against `arkgate@3.7.0`, the observed
+`--strict-merge --json --no-cache` result was exit 0 / `valid:true` over 245/245 governed files,
+while `--doctor --json --no-cache` separately reported `ENFORCE · design-weak`. The project's golden pattern already sent
+pure shared rules to `packages/shared/src/rules`, but that guidance was advisory. With Grok selected
+as active host, doctor correctly kept `localWrite.active:"unverified"`, `bypassable:true`, and
+`hard:false`; however, static host capability/inventory still described the installed hook as
+hard-capable. The manually repaired tree moved authority rules to the shared rules package, proving
+the placement is feasible but not that ArkGate prevented the original regression.
+
+**Outcome:** the existing edge gate stays strict and unchanged, while an opt-in design-delta gate
+uses the same deterministic candidate evidence in PreToolUse/complete-patch and CI. It blocks only
+new or worsened supported smells on touched paths; historical design debt remains visible and does
+not block unrelated work. MCP remains explicitly advisory when a host can ignore it. Installed hook
+files never become proof that the current process invoked or enforced them.
+
+**Acceptance:** add a versioned design-delta result and an opt-in merge command equivalent to
+`ark-check --doctor --fail-on-new-smells --base-ref <ref>`. The base and candidate identities,
+touched paths, stable smell IDs/evidence, and verdict are recorded; a missing/unresolvable base
+fails closed when the option is requested. A complete-patch write through a runtime-verified hard
+hook evaluates the same delta and returns a repair hint tied to the golden pattern when available.
+At minimum, a new `domain-logic-in-ui` case covering `can*`/`calculate*`/policy-shaped helpers in a
+UI path is blocked either before write or by the optional CI job without human invocation, while a
+pre-existing smell and an unrelated PR remain green. Negative fixtures prevent name-only false
+positives for presentation routing/labels and ordinary UI orchestration.
+
+Doctor human/JSON/schema/type output must distinguish host support, configured/installed assets,
+runtime-observed invocation, operation coverage, bypassability, and hard-blocking state for Grok,
+Claude, Cursor, and Codex. `hard:true` requires fresh runtime/provider evidence for the active host
+and operation; `active:"unverified"` remains `hard:false` with an explicit red flag. MCP presence or
+agent discipline never upgrades that state. Cross-surface tests prove write-gate delta, MCP
+prepare-write, CLI/CI delta, and final candidate agree on smell identity and verdict. Close
+`RB-12` only after the Propia-shaped regression fixture satisfies all three falsifiable outcomes:
+new UI business logic is blocked, unrelated brownfield work is not, and no unverified host is
+reported hard.
 
 ### Z09 — Prove retained field adoption and independent close
 
 - **Status:** `todo`
-- **Depends on:** `Z08`
+- **Depends on:** `Z10`
 
 **Outcome:** reproducible external and longitudinal evidence replaces self-declared release proof.
 Reviewer and exact-candidate identity are verified from signed repository/review evidence rather
@@ -759,14 +806,15 @@ four hosts, and three package managers; >=5/6 (83.33%) of its entire cell denomi
 protected green without weakening the contract, and every Adapt is explained. The preregistered
 cohort has at least eight consented adopter projects; >=3/4 of the full cohort retain required Ark
 enforcement at D30 and >=5/8 at D90, with missing follow-up counted not retained. A reviewer who did
-not implement `Z08`/`Z09` reproduces the initial packed candidate and signs an immutable longitudinal
-manifest containing, per project, initial digest, repository SHA, required-status evidence, every
-upgrade digest/date, and final state. An upgrade does not reset the clock; retention counts only the
-initial candidate or a recorded forward corrective descendant that passed the same relevant gates.
-Missing follow-up, disabled enforcement, downgrade, or unrecorded upgrade counts not retained. Close
-`RB-11`, mark the epic shipped, and authorize only the 10x, causal-productivity, retained-adoption,
-and independent-close claims whose preregistered thresholds passed; ordinary completed corrective
-patches did not wait for this milestone.
+not implement `Z08`/`Z10`/`Z09` reproduces the initial packed candidate and signs an immutable
+longitudinal manifest containing, per project, initial digest, repository SHA, required-status
+evidence, every upgrade digest/date, and final state. An upgrade does not reset the clock; retention
+counts only the initial candidate or a recorded forward corrective descendant that passed the same
+relevant gates. Missing follow-up, disabled enforcement, downgrade, or unrecorded upgrade counts not
+retained. Close `RB-11`, mark the epic shipped, and authorize only the 10x,
+causal-productivity, design-delta-enforcement, retained-adoption, and independent-close claims whose
+preregistered thresholds passed; ordinary completed corrective patches did not wait for this
+milestone.
 
 ### Retained runtime correctness candidate (outside Phase Z)
 
@@ -2564,14 +2612,17 @@ If any condition fails, the product stays beta. Do not convert the result into a
 | 50k cold scan | p95 ≤30 s on `ubuntu-latest`; 5 s deferred to a dedicated engine-optimization milestone |
 | External matrix | ≥12 pinned repos, 4 hosts, 3 package managers |
 | Causal first-valid effect | ≥24 held-out pairs × 3 independent sessions/arm; restricted-mean Ark/control ≤0.80 and paired 95% CI upper bound <1.0; completion regression ≤5 pp |
+| New-code design regressions | 0 introduced supported smells in delta-enforced paths; historical or unrelated residual never blocks |
+| Runtime enforcement truth | 100% of active-host/operation fixtures keep unverified or bypassable paths `hard:false` |
 | Retained adoption | ≥8 consented projects; ≥3/4 active at D30 and ≥5/8 at D90 over the full cohort; missing follow-up counts not retained |
 | Open P0/P1 at beta exit | 0 |
 
 **Phase Z evidence rule:** the V03/V05/B01 records below remain historical attempt evidence. The
 post-3.7.0 audit proved that `firstGreen`, false-block/bypass counts, and reviewer independence did
 not establish the outcomes their acceptance text required. They cannot support a current release
-claim until `Z08` repairs the causal measurement and `Z09` closes `RB-11` with retained and
-independent evidence. This does not delay the corrective-release lanes above.
+claim until `Z08` repairs the causal measurement, `Z10` closes the new-code enforcement lag, and
+`Z09` closes `RB-11` with retained and independent evidence. This does not delay the
+corrective-release lanes above.
 
 **Attempt evidence (2026-07-13):** `scripts/beta-exit-audit.mjs` and
 `eval/beta-exit/audit-schema.v1.json` record a reproducible binary decision. The 12-cell balanced
@@ -2683,9 +2734,9 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: `Z07` (`doing`) — deliver a measured warm incremental control plane without semantic drift
-Next action: record the like-for-like one-shot warm-doctor baseline, then implement the smallest identity-keyed snapshot path and exact invalidation/parity corpus against the frozen targets
-Release lanes: Z01+Z02 may ship a stable corrective patch; Z04 may ship parity; Z06 closes the installed journey; Z07–Z09 gate only 10x/causal/retention/independent-close claims
+Item: `Z08` (`doing`) — freeze and execute the causal/full-denominator agent experiment plus mutation proof
+Next action: complete source prequalification, freeze the exact candidate/manifest, execute the preregistered matrix, and publish its pass or negative result without changing endpoints
+Release lanes: Z01+Z02 may ship a stable corrective patch; Z04 may ship parity; Z06 closes the installed journey; Z07 gates 10x, Z08 gates causal evidence, Z10 gates new-code design enforcement, and Z09 gates retention/independent close
 Parked unchanged: Y06, Y07, Y09, and Y10 retain their named field gates and must not start as collateral Z work
 Runtime parked: K01 retains confirmed experimental intra-process commit gaps outside Phase Z and does not block gate-package corrective releases
 Released baseline: npm arkgate@3.7.0 (Phase Y close from PR #78)
