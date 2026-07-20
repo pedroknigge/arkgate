@@ -161,7 +161,8 @@ export function prepareGrokHome(out, authHome) {
   fs.chmodSync(configHome, 0o700);
   const authTarget = path.join(configHome, 'auth.json');
   fs.rmSync(authTarget, { force: true });
-  fs.symlinkSync(path.resolve(authHome, 'auth.json'), authTarget);
+  fs.copyFileSync(path.resolve(authHome, 'auth.json'), authTarget);
+  fs.chmodSync(authTarget, 0o600);
   fs.copyFileSync(path.join(ROOT, 'eval/causal/grok-config.v1.toml'), path.join(configHome, 'config.toml'));
   return grokHome;
 }
