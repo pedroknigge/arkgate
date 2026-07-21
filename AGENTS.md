@@ -121,6 +121,7 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/configContract.ts` | `bin/lib/config-contract.mjs` + `schemas/ark.config.schema.json` | (same `cli-pure` scripts) |
 | `src/domain/changeMap.ts` | bundled in `bin/lib/analysis-engine.mjs`; schema parity test guards `schemas/ark.change-map.schema.json` | `generate:analysis-engine` / `check:analysis-engine` |
 | `src/domain/changeConvergence.ts` | bundled in `bin/lib/analysis-engine.mjs` | `generate:analysis-engine` / `check:analysis-engine` |
+| Tooling `bin/lib/*.source.mjs` + design-delta schema source | compact shipped `design-delta.mjs`, `enforcement-state.mjs`, `hook-templates.mjs`, and design-delta schema | `generate:packaged-tooling` / `check:packaged-tooling` |
 
 Parity/drift tests + CI enforce generated files stay in sync.
 
@@ -137,7 +138,7 @@ retained shipped rationale live under `docs/plans/`:
 | [change-integrity-loop](docs/plans/change-integrity-loop/README.md) | Shipped in 3.1.0 | Context-independent contract guard, atomic patch preflight, dual-depth remediation, and structural convergence |
 | [understandable-execution](docs/plans/understandable-execution/README.md) | Shipped in 3.4.0 | Explicit effect/state boundaries, cohesive enforcement core, and measured pre-tool flow without style dogma |
 | [reshape-copilot](docs/plans/reshape-copilot/README.md) | Shipped in 3.6.0 | Advisory physical-cohesion evidence and one governed reshape pilot at a time |
-| [enforcement-truth-at-speed](docs/plans/enforcement-truth-at-speed/README.md) | In progress (Phase Z; Z01–Z08 done; Z10 doing) | Restore packed-artifact truth and one adapter verdict, then earn 10× feedback and causal field proof |
+| [enforcement-truth-at-speed](docs/plans/enforcement-truth-at-speed/README.md) | In progress (Phase Z; Z01–Z08 + Z10 done; Z09 doing) | Restore packed-artifact truth and one adapter verdict, then earn 10× feedback and causal field proof |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in
 `ROADMAP.md`.

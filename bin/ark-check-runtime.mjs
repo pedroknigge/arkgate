@@ -95,6 +95,7 @@ import { reportUnavailableAnalysis } from './lib/unavailable-analysis.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import { analyzePolicyTransition } from './lib/policy-delta-io.mjs';
 import { tryResidentDoctor } from './lib/resident-doctor-client.mjs';
+import { createDesignDeltaCheck } from './lib/design-delta.mjs';
 
 function parseArgs(argv) {
   const args = {
@@ -117,7 +118,7 @@ function parseArgs(argv) {
     baseline: undefined,
     policyBase: undefined,
     policyBaseRef: undefined,
-    policyAck: undefined,
+    policyAck: undefined, failOnNewSmells: false, baseRef: undefined,
     updateBaseline: false,
     noCache: false,
     resident: false,
@@ -209,7 +210,7 @@ function parseArgs(argv) {
     }
     else if (arg === '--policy-base') args.policyBase = requireValue(arg, i++);
     else if (arg === '--policy-base-ref') args.policyBaseRef = requireValue(arg, i++);
-    else if (arg === '--policy-ack') args.policyAck = requireValue(arg, i++);
+    else if (arg === '--policy-ack') args.policyAck = requireValue(arg, i++); else if (arg === '--fail-on-new-smells') args.failOnNewSmells = true; else if (arg === '--base-ref') args.baseRef = requireValue(arg, i++);
     else if (arg === '--root') args.root = path.resolve(requireValue(arg, i++));
     else if (arg === '--config') args.config = requireValue(arg, i++);
     else if (arg === '--manifest') args.manifest = requireValue(arg, i++);
@@ -234,8 +235,8 @@ function usage() {
   return [
     'Usage: arkgate-check | ark-check  (identical bins; product name ArkGate)',
     '       ark-check --version',
-    '       ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-merge | --strict | --strict-config] [--policy-base <file> | --policy-base-ref <git-ref>] [--policy-ack <file>] [--require-gates] [--require-write-hook <host>] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
-    '       ark-check --doctor [--json] [--resident]  read-only diagnosis; resident JSON falls back cold',
+    '       ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-merge | --strict | --strict-config] [--policy-base <file> | --policy-base-ref <git-ref>] [--policy-ack <file>] [--fail-on-new-smells --base-ref <git-ref>] [--require-gates] [--require-write-hook <host>] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
+    '       ark-check --doctor [--json] [--resident] [--fail-on-new-smells --base-ref <git-ref>]  read-only diagnosis; resident JSON falls back cold',
     '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
     '       ark-check --plan [--json]              classified remediation plan (mechanical-safe / judgment / deferred) + goal; report only',
     '       ark-check --recommend [--json] [--write-plan]  application-shape plan; --write-plan emits ark-adoption-plan.json',
@@ -1128,14 +1129,17 @@ async function main() {
     args,
   });
 
+  const designCheck = createDesignDeltaCheck({ enabled: args.failOnNewSmells, root, config, configPath: args.config, baseRef: args.baseRef, ts });
+  const designDelta = designCheck.result;
+
   if (args.doctor) {
     runDoctor(root, config, files, rules, violations, args.json, {
       configPath: path.isAbsolute(args.config) ? args.config : path.join(root, args.config),
       configMissing: !fs.existsSync(path.isAbsolute(args.config) ? args.config : path.join(root, args.config)),
-      safety,
+      safety, designDelta,
       ts, parseHealth, completeness,
     });
-    return;
+    if (designDelta) process.exitCode = !designDelta.complete ? 2 : designDelta.valid ? 0 : 1; return;
   }
 
   if (args.ratchetCores) {
@@ -1223,10 +1227,7 @@ async function main() {
 
   // Soft/advisory warnings (failsStrict === false) never fail --strict-config.
   const strictWarnings = warnings.filter((w) => w.failsStrict !== false);
-  const observedOk =
-    activeViolations.length === 0 &&
-    (!args.strictConfig || strictWarnings.length === 0) &&
-    (policyDelta?.valid ?? true);
+  const { edgeValid: edgeOk, observedOk } = designCheck.combineEdges({ activeViolationCount: activeViolations.length, strictConfig: args.strictConfig, strictWarningCount: strictWarnings.length, policyValid: policyDelta?.valid ?? true });
   const analysisComplete = completeness === ANALYSIS_COMPLETENESS.complete;
   const ok = observedOk && analysisComplete;
 
@@ -1406,8 +1407,7 @@ async function main() {
             },
           }
         : {}),
-      ...(codexRepoSkillGap ? { codexRepoSkillGap } : {}),
-      ...(policyDelta ? { policyDelta } : {}),
+      ...(codexRepoSkillGap ? { codexRepoSkillGap } : {}), ...(policyDelta ? { policyDelta } : {}), ...(designDelta ? { edgeValid: edgeOk, designDelta } : {}),
     }, null, 2));
   } else {
     for (const warning of warnings) {
@@ -1441,6 +1441,7 @@ async function main() {
           'Provide --policy-ack with the exact hashes, finding ids, and a non-empty reason.'
       );
     }
+    if (designCheck.failureText()) console.error(designCheck.failureText());
     if (!analysisComplete) {
       console.error(color.yellow(analysisIncompleteStatement(completeness)));
     } else if (activeViolations.length === 0 && (policyDelta?.valid ?? true)) {
@@ -1508,7 +1509,7 @@ async function main() {
     return;
   }
 
-  process.exitCode = observedOk && (!args.strictMerge || analysisComplete) ? 0 : 1;
+  process.exitCode = designCheck.exitCode(observedOk && (!args.strictMerge || analysisComplete) ? 0 : 1);
 }
 
 async function runWatchMode(args) {

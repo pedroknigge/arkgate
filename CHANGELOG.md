@@ -7,6 +7,9 @@ in the immutable pre-2.0 archive linked below.
 
 ### Added
 
+- **Z10:** add the opt-in base/candidate `domain-logic-in-ui` ratchet with hook/MCP/CLI parity and
+  fail-closed bases. Enforcement-state `1.1` adds runtime/operation proof for `hard`; assets and MCP
+  alone remain non-hard.
 - **Analysis completeness (Z02):** CLI, MCP, hook, and public schema/type envelopes now carry
   required `complete | partial | unavailable` evidence. Incomplete analysis cannot satisfy a
   remediation goal; governed parse diagnostics fail `--strict-merge`, and a missing analysis host

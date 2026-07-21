@@ -101,6 +101,7 @@ explore then apply A + propose/apply-with-ok B. `/ark-loop` = plan A only. Empty
 ```bash
 npx ark-check --doctor --json   # designFitness, designSmells[].outcome, postGreenPath, goldenPattern, pilotLoop
 npx ark-check --plan --json     # plan.goal.designWeak + plan.patternBets[] + plan.pilotLoop
+npx ark-check --doctor --fail-on-new-smells --base-ref origin/main --json # opt-in new/worsened design delta
 ```
 
 **Post-green path (Q01):** when design-weak, doctor sets `postGreenPath` / `primaryNextAction`
@@ -377,7 +378,8 @@ Prefer preparing the write before the host commits it to disk:
 | CLI **`ark preflight --changes <file> --json`** | Same atomic verdict and map convergence for hosts/scripts that do not call MCP |
 | Write-gate **`autoPatch`** | Mechanical-safe **import type** rewrites only; post-patch lexical validation must pass or the patch is discarded. It remains `partial`/non-green until complete-candidate preflight. |
 | PreToolUse **`--hook-repair`** | On deny: `ARK_REPAIR_JSON` / `ARK_AUTOPATCH_JSON` on stderr (still exit 2 — never silent write) |
-| Doctor **`writePath`** | Reports schema-backed `enforcementState` (`supported` / `analyzed` / `configured` / `installed` / `active` / `bypassable` / `required`, structured evidence); `enforcementLadder` remains compatible |
+| Opt-in design delta | `--fail-on-new-smells --base-ref <ref>` blocks only new/worsened supported smells; missing base fails closed; schema: `arkgate/schema/design-delta` |
+| Doctor **`writePath`** | Schema-backed support/assets/runtime/operation/bypass/required/`hard` evidence; only fresh covered-operation proof permits `hard:true` |
 | Doctor **`goldenPattern`** | Optional Q03 advisory summary (`present` / `invalid`); never clears design-weak |
 
 **Published 3.7.0 limitation:** its compiler-free atomic graph can miss aliases/workspace edges.

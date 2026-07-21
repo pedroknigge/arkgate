@@ -397,15 +397,17 @@ describe('detectSkillGaps reports missing skills for this package', () => {
   });
 });
 
-describe('W4 install templates include --hook-repair', () => {
-  it('claude and grok PreToolUse commands opt into repair payload', () => {
+describe('W4/Z10 install templates include write-gate diagnostics', () => {
+  it('claude and grok PreToolUse commands opt into repair and new-smell payloads', () => {
     const root = tempRoot('ark-hook-tpl-');
     write(root, 'package-lock.json', '{}\n');
     const claude = claudeSettings(root);
     expect(claude).toContain('--hook-repair');
+    expect(claude).toContain('--fail-on-new-smells');
     expect(claude).toContain('--hook');
     const grok = grokHooks(root);
     expect(grok).toContain('--hook-repair');
+    expect(grok).toContain('--fail-on-new-smells');
     expect(grok).toMatch(/Write\|Edit\|MultiEdit|write\|search_replace/);
   });
 });

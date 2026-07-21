@@ -147,6 +147,9 @@ jobs:
       - name: CLI pure helpers derived artifacts (drift guard)
         run: npm run check:cli-pure
 
+      - name: Design-delta package artifact (drift guard)
+        run: npm run check:packaged-tooling
+
       - name: Analysis engine CLI bundle (drift guard)
         run: npm run check:analysis-engine
 

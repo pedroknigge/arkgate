@@ -721,13 +721,13 @@ describe('active-host write capability model', () => {
       expect(humanRun.status).toBe(0);
       expect(humanRun.stdout).toContain('Active host: cursor');
       expect(humanRun.stdout).toContain(
-        'Local write — supported: no · analyzed: yes · configured: no · installed: no · active: no · bypassable: yes · required: unverified'
+        'Local write — supported: no · analyzed: yes · configured: no · installed: no · runtime observed: no · operation: none · operation covered: unverified · active: no · bypassable: yes · required: unverified · hard: no'
       );
       expect(humanRun.stdout).toContain(
-        'Advisory MCP — supported: yes · analyzed: yes · configured: yes · installed: no · active: no · bypassable: yes · required: unverified'
+        'Advisory MCP — supported: yes · analyzed: yes · configured: yes · installed: no · runtime observed: no · operation: none · operation covered: unverified · active: no · bypassable: yes · required: unverified · hard: no'
       );
       expect(humanRun.stdout).toContain(
-        'CI merge — supported: yes · analyzed: yes · configured: yes · installed: no · active: no · bypassable: unverified · required: unverified'
+        'CI merge — supported: yes · analyzed: yes · configured: yes · installed: no · runtime observed: no · operation: merge · operation covered: unverified · active: no · bypassable: unverified · required: unverified · hard: no'
       );
       expect(humanRun.stdout).toContain('Shared gate files present (AGENTS.md, .mcp.json, CI)');
       expect(humanRun.stdout).not.toContain('Gate files present (AGENTS.md, .mcp.json, CI, write gate)');

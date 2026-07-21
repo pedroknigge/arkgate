@@ -1,5 +1,7 @@
 import {
   ARK_ENFORCEMENT_STATE_SCHEMA_VERSION,
+  ARK_DESIGN_DELTA_SCHEMA_VERSION,
+  type ArkDesignDeltaResult,
   type ArkEnforcementState,
   type EnforcementBoundaryState,
   type EnforcementEvidence,
@@ -12,8 +14,12 @@ const boundary: EnforcementBoundaryState = {
   configured: true,
   installed: true,
   active: 'unverified',
+  runtimeObserved: false,
+  operation: null,
+  operationCoverage: 'unverified',
   bypassable: true,
   required: 'unverified',
+  hard: false,
   evidence: [
     { field: 'installed', source: 'node_modules/arkgate/package.json', value: true },
   ],
@@ -28,6 +34,21 @@ const state: ArkEnforcementState = {
 };
 
 const runtimeState: RuntimeArkEnforcementState = state;
+
+const designDelta: ArkDesignDeltaResult = {
+  schemaVersion: ARK_DESIGN_DELTA_SCHEMA_VERSION,
+  mode: 'write-candidate',
+  complete: true,
+  valid: true,
+  base: { kind: 'candidate-tree', value: 'sha256:base' },
+  candidate: { kind: 'candidate-tree', value: 'sha256:candidate' },
+  supportedSmellIds: ['domain-logic-in-ui'],
+  touchedPaths: ['src/ui/page.tsx'],
+  changes: [],
+  baseFindingCount: 0,
+  candidateFindingCount: 0,
+  historicalResidualCount: 0,
+};
 
 const invalidConfigured: EnforcementBoundaryState = {
   ...boundary,
@@ -49,6 +70,7 @@ const legacyAlias: ArkEnforcementState = {
 };
 
 void runtimeState;
+void designDelta;
 void invalidConfigured;
 void invalidInstalledEvidence;
 void legacyAlias;

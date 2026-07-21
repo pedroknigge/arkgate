@@ -255,6 +255,8 @@ Brownfield phases: **Align** (honest contract) → **Stabilize** (real baseline)
 This table describes the supported profile **after its files are installed and the host loads/trusts them**. A hard local boundary covers only the listed hook operations; alternate tools, direct filesystem writes, and human edits still rely on CI. MCP validation is advisory because the agent must call it. The CI check blocks a merge only when the repository makes that status required. Repair payloads never write code silently: the host must re-inject the candidate and ArkGate revalidates it. Run `arkgate-check --doctor` for the evidence actually detected in the current repository.
 <!-- arkgate-host-support:end -->
 
+Assets stay non-hard without fresh covered-operation evidence; MCP stays advisory.
+
 #### Why the hard guarantee lives at the merge gate
 
 The split above is a deliberate trade-off, not a gap. ArkGate validates at the earliest boundary
@@ -297,10 +299,14 @@ ark.config.json
   reports remain opt-in via `ark-check --report`.
 - **Write protocol (2.10 / Track W):** mechanical-safe **autoPatch** on the write gate (`import type`); MCP **`ark_prepare_write`** (place + validate + patch + judgmentBrief); opt-in hook **`--hook-repair`** (`ARK_REPAIR_JSON`); doctor **`writePath`** (repair vs reject-only); loop-cost eval (`npm run eval:loop-cost`). Port-proof inject is **judgment** (arity change), not silent auto-apply.
 - **Enforcement state:** doctor JSON exposes schema-backed `writePath.enforcementState` with
-  separate analyzed, configured, installed, active, bypassable, and required evidence for local
-  write, advisory MCP, and CI merge boundaries. Provider-unavailable required status remains
-  `unverified`; local workflow text never proves branch protection. The older
+  separate analyzed, configured, installed, runtime-observed, operation-coverage, active,
+  bypassable, required, and hard evidence for local write, advisory MCP, and CI merge boundaries.
+  Provider-unavailable required status remains `unverified`; local workflow text never proves
+  branch protection. The older
   `enforcementLadder` projection remains for compatibility.
+- **Opt-in design delta (Z10):**
+  `--doctor --fail-on-new-smells --base-ref <ref>` blocks only new/worsened semantic
+  `domain-logic-in-ui`; historical/unrelated work stays green and missing bases fail closed.
 - **Fail-closed CI (2.11):** `--strict-merge` combines config coverage, shared gate-file
   presence, and bypass diagnostics for dynamic imports, TypeScript suppressions, explicit `any`
   casts, InMemory runtime defaults, and disabled peer isolation. `--strict` is a compatibility
@@ -348,6 +354,7 @@ npx arkgate start --install --apply       # also add arkgate to package.json (ex
 npx arkgate start --remove-host codex     # preview compact-host removal; add --apply to confirm
 npx arkgate-check --doctor                # health + Adoption gaps (not just fitness)
 npx arkgate-check --doctor --json         # adoption + schema-backed writePath.enforcementState
+npx arkgate-check --doctor --fail-on-new-smells --base-ref origin/main  # opt-in design ratchet
 npx arkgate-check --strict                # fail-closed CI + installed-gate/safety checks
 npx arkgate-check --plan                  # safe-to-auto-fix vs your call
 npx arkgate-check --coverage              # Governed: N%

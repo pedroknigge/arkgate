@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PREFERRED_MCP_BIN } from '../../../bin/lib/hook-templates.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -65,11 +66,10 @@ describe('Q6 module budgets (scripts/check-module-budgets.mjs)', () => {
 
 describe('Q6 surface parity (preferred bins + skills)', () => {
   it('hook templates and package bins agree on arkgate-* product names', () => {
-    const hooks = fs.readFileSync(path.join(REPO, 'bin/lib/hook-templates.mjs'), 'utf8');
     const pkg = JSON.parse(fs.readFileSync(path.join(REPO, 'package.json'), 'utf8'));
     expect(pkg.bin['arkgate-check']).toBe('bin/ark-check.mjs');
     expect(pkg.bin['arkgate-mcp']).toBe('bin/ark-mcp.mjs');
-    expect(hooks).toMatch(/PREFERRED_MCP_BIN\s*=\s*['"]arkgate-mcp['"]/);
+    expect(PREFERRED_MCP_BIN).toBe('arkgate-mcp');
     // Skills template list includes upgrade
     expect(fs.existsSync(path.join(REPO, 'templates/skills/ark-upgrade.md'))).toBe(true);
   });

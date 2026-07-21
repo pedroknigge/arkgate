@@ -47,6 +47,10 @@ import {
 } from './lib/resident-hook.mjs';
 import { resolveArchitectureSnapshot } from './lib/architecture-scan.mjs';
 import { runDoctor } from './lib/doctor-plan.mjs';
+import {
+  evaluateWriteDesignDelta,
+  formatDesignDeltaBlock,
+} from './lib/design-delta.mjs';
 
 const arkCheckBin = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 const arkMcpLauncher = fileURLToPath(new URL('./ark-mcp.mjs', import.meta.url));
@@ -71,6 +75,7 @@ function parseArgs(argv) {
     hook: false,
     /** When true with --hook: emit ARK_REPAIR_JSON / ARK_AUTOPATCH_JSON (never silent write). */
     hookRepair: false,
+    failOnNewSmells: false,
     sessionContext: false,
   };
   for (let i = 2; i < argv.length; i += 1) {
@@ -80,6 +85,7 @@ function parseArgs(argv) {
       args.hook = true;
       args.hookRepair = true;
     } else if (a === '--session-context') args.sessionContext = true;
+    else if (a === '--fail-on-new-smells') args.failOnNewSmells = true;
     else if (a === '--root') args.root = path.resolve(argv[++i]);
     else if (a === '--config') {
       args.config = argv[++i];
@@ -91,6 +97,7 @@ function parseArgs(argv) {
   if (envTruthy('ARK_HOOK_REPAIR')) {
     args.hookRepair = true;
   }
+  if (envTruthy('ARK_FAIL_ON_NEW_SMELLS')) args.failOnNewSmells = true;
   return args;
 }
 
@@ -332,6 +339,19 @@ function hookEnforcement(root, host, operation, completePatch = false) {
   }).enforcementLadder;
 }
 
+function designDeltaViolations(delta) {
+  return (delta?.changes ?? []).map((change) => ({
+    ruleId: 'DESIGN_SMELL_REGRESSION',
+    file: change.evidence.path,
+    line: change.evidence.line,
+    target: change.fingerprint,
+    message:
+      `[${change.smellId}] ${change.evidence.symbol ?? change.evidence.path} is a ` +
+      `${change.classification} supported design smell (${change.evidence.kind}).`,
+    suggestion: change.repairHint,
+  }));
+}
+
 /**
  * Compute the file content a Write/Edit/MultiEdit is about to produce. Edits are applied
  * to the CURRENT on-disk file so the gate judges the real post-edit state, not the edit
@@ -514,13 +534,19 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
       output.status(2);
       return;
     }
-    if (result.valid) return;
+    const designDelta = args.failOnNewSmells
+      ? evaluateWriteDesignDelta({ root: args.root, config, changes, ts })
+      : null;
+    if (result.valid && (designDelta?.valid ?? true)) return;
     const message = [
       `Ark architecture gate blocked this complete ${toolName} (${changes.length} governed file(s)):`,
       ...result.diagnostics.map(
         (diagnostic) =>
           `- [${diagnostic.ruleId}] ${diagnostic.message}\n  Next action: ${diagnostic.nextAction}`
       ),
+      ...(designDelta && !designDelta.valid
+        ? formatDesignDeltaBlock(designDelta).split('\n').slice(1)
+        : []),
       'No project file was written. Fix the complete patch and retry.',
     ].join('\n');
     output.stderr(`${message}\n`);
@@ -528,6 +554,8 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
       output.stderr(
           `ARK_REPAIR_JSON:${JSON.stringify({
             ...result,
+            valid: false,
+            ...(designDelta ? { designDelta } : {}),
             repair: true,
             decision: 'deny',
           enforcement: hookEnforcement(args.root, 'codex', 'apply_patch', true),
@@ -574,7 +602,16 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
           autoPatch: null,
         };
       })();
-  if (result.valid) return;
+  const normalizedRel = rel.split(path.sep).join('/');
+  const designDelta = args.failOnNewSmells && layer
+    ? evaluateWriteDesignDelta({
+        root: args.root,
+        config,
+        changes: [{ path: normalizedRel, content: source }],
+        ts,
+      })
+    : null;
+  if (result.valid && (designDelta?.valid ?? true)) return;
 
   // Ratchet semantics (same philosophy as ark-check --baseline): an edit is blocked only
   // when it ADDS violations relative to the file's current on-disk state. Otherwise a
@@ -602,13 +639,16 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
     existingCounts.set(key, remaining - 1);
     return false;
   });
-  if (newViolations.length === 0) return;
-  const normalizedRel = rel.split(path.sep).join('/');
+  if (newViolations.length === 0 && (designDelta?.valid ?? true)) return;
+  const combinedViolations = [...newViolations, ...designDeltaViolations(designDelta)];
   const adapterResult = createAdapterResult({
     valid: false,
     completeness: result.completeness,
     completenessReasons: result.completenessReasons,
-    violations: newViolations.map((violation) => ({ ...violation, file: normalizedRel })),
+    violations: combinedViolations.map((violation) => ({
+      ...violation,
+      file: violation.file ?? normalizedRel,
+    })),
   });
 
   const lines = adapterResult.diagnostics.map(
@@ -619,7 +659,7 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
   // but the hook was dropping them). Dedupe so two infra violations sharing one
   // hint — e.g. the mayImportInfrastructure escape hatch — print it once.
   const suggestions = [
-    ...new Set(newViolations.map((violation) => violation.suggestion).filter(Boolean)),
+    ...new Set(combinedViolations.map((violation) => violation.suggestion).filter(Boolean)),
   ];
   const autoPatch = result.autoPatch;
   // W4: structured repair payload is opt-in (--hook-repair / ARK_HOOK_REPAIR).
@@ -652,6 +692,7 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
     // Structured envelope for any host that can re-inject. Never writes the file.
     const repairPayload = {
       ...adapterResult,
+      ...(designDelta ? { designDelta } : {}),
       repair: true,
       decision: 'deny',
       filePath: normalizedRel,
@@ -660,7 +701,7 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
         attemptContext?.host ?? (grokStyle ? 'grok' : 'claude'),
         attemptContext?.operation ??
           (grokStyle ? (toolName === 'Edit' ? 'search_replace' : 'write') : toolName),
-        Boolean(attemptContext?.completePatch)
+        toolName === 'Write' || Boolean(attemptContext?.completePatch)
       ),
       ...(layer ? { layer } : {}),
       ...(autoPatch
@@ -685,6 +726,7 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
         decision: 'deny',
         reason: message,
         analysis: adapterResult,
+        ...(designDelta ? { designDelta } : {}),
         ...(repair && autoPatch ? { autoPatch } : {}),
         ...(repair ? { repair: true } : {}),
       }) + '\n'
@@ -766,7 +808,11 @@ function captureResidentHook(payload, gate, config, args, ts, request) {
     payload,
     gate,
     config,
-    { ...args, hookRepair: request.hookRepair === true },
+    {
+      ...args,
+      hookRepair: request.hookRepair === true,
+      failOnNewSmells: request.failOnNewSmells === true,
+    },
     ts,
     { grokHookEvent: request.grokHookEvent === true },
     {
@@ -1315,6 +1361,7 @@ export async function runArkMcp({ hookInput } = {}) {
         'Prepare a write against the architecture contract: place (filePath and/or description) + ' +
         'constrain (layer, mayImport, mustNotImport, forbiddenGlobals) + validate source + optional ' +
         'mechanical-safe autoPatch + judgmentBrief when judgment is needed + contentHash for host commit. ' +
+        'Also returns the versioned new/worsened designDelta for the proposed full file. ' +
         'Composes ark_place + write-gate — call BEFORE Write/Edit when you have the snippet. ' +
         'Returns { filePath, layer, valid, violations?, autoPatch?, judgmentBrief?, contentHash, ... }.',
       inputSchema: {
@@ -1758,11 +1805,27 @@ export async function runArkMcp({ hookInput } = {}) {
         isError: true,
       };
     }
+    const designDelta = ts && placement.governed
+      ? evaluateWriteDesignDelta({
+          root: args.root,
+          config,
+          changes: [{ path: placement.filePath, content: source }],
+          ts,
+        })
+      : null;
+    const prepared = designDelta
+      ? {
+          ...result,
+          edgeValid: result.lexicalValid ?? result.valid,
+          valid: result.valid && designDelta.valid,
+          designDelta,
+        }
+      : result;
     return {
-      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+      content: [{ type: 'text', text: JSON.stringify(prepared, null, 2) }],
       // Align with validate_code / --hook: proposed source still invalid → isError.
       // autoPatch is additive recovery guidance in the body, never soft-success.
-      isError: !result.valid,
+      isError: !prepared.valid,
     };
   }
 

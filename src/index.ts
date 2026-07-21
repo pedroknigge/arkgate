@@ -331,6 +331,16 @@ export {
 } from './domain/enforcementState';
 
 export {
+  ARK_DESIGN_DELTA_SCHEMA_VERSION,
+  type ArkDesignDeltaResult,
+  type DesignDeltaChange,
+  type DesignDeltaIdentity,
+  type DesignSmellEvidence,
+  type DesignSmellFinding,
+  type DesignSmellId,
+} from './domain/designDelta';
+
+export {
   ANALYSIS_IR_SCHEMA_VERSION,
   RESOLVED_CANDIDATE_FACTS_SCHEMA,
   RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION,

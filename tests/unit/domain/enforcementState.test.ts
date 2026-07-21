@@ -25,8 +25,12 @@ describe('Z06 enforcement state contract', () => {
       'configured',
       'installed',
       'active',
+      'runtimeObserved',
+      'operation',
+      'operationCoverage',
       'bypassable',
       'required',
+      'hard',
       'evidence',
     ]);
     expect(schema.$defs.boundary.properties.configured).toEqual({ type: 'boolean' });

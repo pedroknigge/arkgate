@@ -426,6 +426,6 @@ ${nodeSetup}
 ${qualityBlock ? `${qualityBlock}\n` : ''}      - name: Ark architecture check
         env:
           ARK_POLICY_BASE_REF: \${{ github.event.pull_request.base.sha || github.event.before }}
-        run: ${pm.run}
+        run: ${pm.run} --fail-on-new-smells --base-ref "\${{ github.event.pull_request.base.sha || github.event.before }}"
 `;
 }

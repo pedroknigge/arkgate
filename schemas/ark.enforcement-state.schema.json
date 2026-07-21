@@ -12,7 +12,7 @@
     "ciMerge"
   ],
   "properties": {
-    "schemaVersion": { "const": "1.0" },
+    "schemaVersion": { "const": "1.1" },
     "activeHost": {
       "enum": ["claude", "grok", "cursor", "codex", "unknown"]
     },
@@ -30,7 +30,7 @@
       "required": ["field", "source", "value"],
       "properties": {
         "field": {
-          "enum": ["configured", "installed", "active", "bypassable", "required"]
+          "enum": ["configured", "installed", "active", "runtimeObserved", "operationCoverage", "bypassable", "required", "hard"]
         },
         "source": { "type": "string", "minLength": 1 },
         "value": { "$ref": "#/$defs/verification" }
@@ -38,7 +38,7 @@
       "allOf": [
         {
           "if": {
-            "properties": { "field": { "enum": ["configured", "installed"] } },
+            "properties": { "field": { "enum": ["configured", "installed", "runtimeObserved", "hard"] } },
             "required": ["field"]
           },
           "then": { "properties": { "value": { "type": "boolean" } } }
@@ -54,8 +54,12 @@
         "configured",
         "installed",
         "active",
+        "runtimeObserved",
+        "operation",
+        "operationCoverage",
         "bypassable",
         "required",
+        "hard",
         "evidence"
       ],
       "properties": {
@@ -64,8 +68,12 @@
         "configured": { "type": "boolean" },
         "installed": { "type": "boolean" },
         "active": { "$ref": "#/$defs/verification" },
+        "runtimeObserved": { "type": "boolean" },
+        "operation": { "type": ["string", "null"] },
+        "operationCoverage": { "$ref": "#/$defs/verification" },
         "bypassable": { "$ref": "#/$defs/verification" },
         "required": { "$ref": "#/$defs/verification" },
+        "hard": { "type": "boolean" },
         "evidence": {
           "type": "array",
           "items": { "$ref": "#/$defs/evidence" }

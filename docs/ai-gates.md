@@ -44,17 +44,20 @@ you pass `--force`, so review and commit only the templates that match your proj
 (`mode`: `repair` | `reject-only` | `mcp-only` | `none`, plus `prepareWrite` /
 `autoPatch` flags), the supported profile for the active host, and the evidence actually found.
 `writePath.enforcementState` separately reports `supported`, `analyzed`, `configured`, `installed`,
-`active`, `bypassable`, and `required` with structured evidence for local hooks, advisory MCP, and
-CI. Its public schema is `arkgate/schema/enforcement-state`; `enforcementLadder` remains a
-compatibility projection. Doctor leaves hook trust and required-status policy `unverified` without
-runtime/provider evidence; an actual covered PreToolUse denial can report operation-scoped activity. Codex
+`runtimeObserved`, `operation`, `operationCoverage`, `active`, `bypassable`, `required`, and `hard`
+with structured evidence for local hooks, advisory MCP, and CI. Its public schema is
+`arkgate/schema/enforcement-state`; `enforcementLadder` remains a compatibility projection. Doctor
+leaves hook trust and required-status policy `unverified` without runtime/provider evidence and
+prints an explicit red flag for installed-but-unverified local hooks. Only a fresh covered
+PreToolUse/provider observation can set operation-scoped `hard:true`. Codex
 `apply_patch` can expose a complete patch to the shared atomic preflight, but the host remains
 bypassable/advisory because some Code Mode paths do not dispatch the project hook.
 
 **Design fitness (3.0.1+):** the same doctor JSON may include `doctor.designFitness` and
 `doctor.designSmells[]` (path evidence). Edge-clean `operatingMode: enforce` can still set
-`designFitness.designWeak: true` (**ENFORCE · design-weak**). That is Shape residual, not a
-write-path failure. Companion plan JSON: `plan.patternBets[]` with `neverMechanicalSafe: true`
+`designFitness.designWeak: true` (**ENFORCE · design-weak**). That global inventory remains Shape
+residual, not a write-path failure. Separately, Z10's opt-in design delta blocks only new/worsened
+supported smells on touched paths. Companion plan JSON: `plan.patternBets[]` with `neverMechanicalSafe: true`
 — never treat as write-boundary `autoPatch` / mechanical-safe. See
 [package-surface.md](package-surface.md) and [brownfield-adoption.md](brownfield-adoption.md) §6.
 
@@ -493,8 +496,13 @@ for standalone linting where no project contract applies.
 Whatever the agent side does, run the merge profile in CI:
 
 ```yaml
-- run: npx ark-check --root . --config ark.config.json --strict-merge
+- run: npx ark-check --root . --config ark.config.json --strict-merge --fail-on-new-smells --base-ref "${{ github.event.pull_request.base.sha || github.event.before }}"
 ```
+
+This explicit brownfield ratchet records schema `1.0` identities, touched paths, and stable
+evidence; missing base exits `2`. Its first semantic smell is `domain-logic-in-ui`; residual,
+path-only moves, and unrelated work stay green. Generated Claude/Grok hooks share the delta and
+golden-pattern repair hint. MCP exposes the result but stays advisory.
 
 Or use the repository's composite Action at a pinned release or commit:
 

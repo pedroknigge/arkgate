@@ -154,3 +154,13 @@ export {
   type EnforcementEvidenceField,
   type EnforcementVerification,
 } from './domain/enforcementState';
+
+export {
+  ARK_DESIGN_DELTA_SCHEMA_VERSION,
+  type ArkDesignDeltaResult,
+  type DesignDeltaChange,
+  type DesignDeltaIdentity,
+  type DesignSmellEvidence,
+  type DesignSmellFinding,
+  type DesignSmellId,
+} from './domain/designDelta';

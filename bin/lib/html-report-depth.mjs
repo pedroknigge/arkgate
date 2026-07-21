@@ -109,7 +109,7 @@ export function renderWritePathAdoptionBlock(writePath) {
   const state = writePath.enforcementState;
   const value = (entry) => entry === true ? 'yes' : entry === false ? 'no' : String(entry);
   const boundary = (label, entry) => entry
-    ? `<li><b>${esc(label)}</b> — supported ${esc(value(entry.supported))}; analyzed ${esc(value(entry.analyzed))}; configured ${esc(value(entry.configured))}; installed ${esc(value(entry.installed))}; active ${esc(value(entry.active))}; bypassable ${esc(value(entry.bypassable))}; required ${esc(value(entry.required))}</li>`
+    ? `<li><b>${esc(label)}</b> — supported ${esc(value(entry.supported))}; analyzed ${esc(value(entry.analyzed))}; configured ${esc(value(entry.configured))}; installed ${esc(value(entry.installed))}; runtime observed ${esc(value(entry.runtimeObserved))}; operation ${esc(entry.operation ?? 'none')}; operation covered ${esc(value(entry.operationCoverage))}; active ${esc(value(entry.active))}; bypassable ${esc(value(entry.bypassable))}; required ${esc(value(entry.required))}; hard ${esc(value(entry.hard))}</li>`
     : '';
   const stateHtml = state
     ? `<ul class="senior-list" style="margin:.45rem 0 0">${boundary('Local write', state.localWrite)}${boundary('Advisory MCP', state.advisoryMcp)}${boundary('CI merge', state.ciMerge)}</ul>`

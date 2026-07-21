@@ -40,6 +40,8 @@ import { loadGoldenPattern, summarizeGoldenPattern } from './golden-pattern.mjs'
 import { summarizePilotLoop } from './pilot-loop.mjs';
 import { computeDoctorAdvisories, printDoctorAdvisories } from './doctor-advisories.mjs';
 import { ANALYSIS_COMPLETENESS, analysisIncompleteStatement, normalizeAnalysisCompleteness } from './analysis-completeness.mjs';
+import { designDeltaDoctorLines } from './design-delta.mjs';
+import { enforcementDoctorLines } from './enforcement-state.mjs';
 
 const color = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
@@ -430,7 +432,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     (options.writeJson ?? console.log)(
       JSON.stringify(
         {
-          ok: analysisComplete,
+          ok: analysisComplete && (options.designDelta?.valid ?? true),
           doctor: {
             completeness,
             operatingMode: resolveOperatingMode({
@@ -450,6 +452,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             // Path-correct ENFORCE can still be design-weak (P02).
             designFitness,
             designSmells,
+            ...(options.designDelta ? { designDelta: options.designDelta } : {}),
             // Q01: primary next action when Shape residual dominates (null if not design-weak).
             postGreenPath,
             ...(postGreenPath
@@ -626,6 +629,13 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     }
   }
 
+  if (options.designDelta) {
+    console.log('');
+    console.log(color.bold('Design delta (opt-in)'));
+    for (const row of designDeltaDoctorLines(options.designDelta))
+      line(row.level === 'bad' ? bad : row.level === 'ok' ? ok : ' ', row.level === 'dim' ? color.dim(row.text) : row.text);
+  }
+
   // Q03 — optional golden pattern note (advisory for new code only).
   if (goldenPattern.present) {
     console.log('');
@@ -747,20 +757,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   line(' ', `Supported profile: ${writePath.supportSummary}`);
   line(wpMark, `Mode: ${writePath.mode} — ${writePathLabels[writePath.mode] || writePath.mode}`);
   const enforcement = writePath.enforcementState;
-  const state = (value) => value === true ? 'yes' : value === false ? 'no' : String(value);
-  const boundary = (label, value) => `${label} — supported: ${state(value.supported)} · analyzed: ${state(value.analyzed)} · configured: ${state(value.configured)} · installed: ${state(value.installed)} · active: ${state(value.active)} · bypassable: ${state(value.bypassable)} · required: ${state(value.required)}`;
-  line(
-    enforcement.localWrite.active === true ? ok : warn,
-    boundary('Local write', enforcement.localWrite)
-  );
-  line(
-    warn,
-    boundary('Advisory MCP', enforcement.advisoryMcp)
-  );
-  line(
-    enforcement.ciMerge.required === true ? ok : warn,
-    boundary('CI merge', enforcement.ciMerge)
-  );
+  for (const row of enforcementDoctorLines(enforcement)) line(row.level === 'ok' ? ok : row.level === 'bad' ? bad : warn, row.text);
   line(
     capabilities['repair-payload'] ? ok : warn,
     `Repair payload at hard boundary: ${capabilities['repair-payload'] ? 'yes' : 'no'}`

@@ -244,7 +244,8 @@ describe('T05 context-independent enforcement proof', () => {
       hard: true,
       operation: 'Write',
       operationCovered: true,
-      completePatch: false,
+      completePatch: true,
+      coverage: 'complete-patch',
     });
   });
 

@@ -269,6 +269,8 @@ describe('ark-check --install-agent-gates', () => {
 
     const workflow = fs.readFileSync(path.join(root, '.github/workflows/ark-check.yml'), 'utf8');
     expect(workflow).toContain('npx ark-check --root . --config ark.config.json --strict');
+    expect(workflow).toContain('--fail-on-new-smells');
+    expect(workflow).toContain('${{ github.event.pull_request.base.sha || github.event.before }}');
   });
 
   it('skips existing files unless --force is passed', () => {

@@ -1,6 +1,6 @@
 /** Public, evidence-backed enforcement state shared by doctor adapters. */
 
-export const ARK_ENFORCEMENT_STATE_SCHEMA_VERSION = '1.0' as const;
+export const ARK_ENFORCEMENT_STATE_SCHEMA_VERSION = '1.1' as const;
 
 export type EnforcementVerification = boolean | 'unverified';
 
@@ -8,17 +8,20 @@ export type EnforcementEvidenceField =
   | 'configured'
   | 'installed'
   | 'active'
+  | 'runtimeObserved'
+  | 'operationCoverage'
   | 'bypassable'
-  | 'required';
+  | 'required'
+  | 'hard';
 
 export type EnforcementEvidence =
   | {
-      field: 'configured' | 'installed';
+      field: 'configured' | 'installed' | 'runtimeObserved' | 'hard';
       source: string;
       value: boolean;
     }
   | {
-      field: 'active' | 'bypassable' | 'required';
+      field: 'active' | 'operationCoverage' | 'bypassable' | 'required';
       source: string;
       value: EnforcementVerification;
     };
@@ -36,8 +39,12 @@ export type EnforcementBoundaryState = {
   configured: boolean;
   installed: boolean;
   active: EnforcementVerification;
+  runtimeObserved: boolean;
+  operation: string | null;
+  operationCoverage: EnforcementVerification;
   bypassable: EnforcementVerification;
   required: EnforcementVerification;
+  hard: boolean;
   evidence: readonly EnforcementEvidence[];
 };
 

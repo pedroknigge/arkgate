@@ -20,6 +20,9 @@ function launcherArgs(argv) {
     tsconfig: undefined,
     hook: false,
     hookRepair: /^(?:1|true|yes|on)$/i.test(String(process.env.ARK_HOOK_REPAIR ?? '').trim()),
+    failOnNewSmells: /^(?:1|true|yes|on)$/i.test(
+      String(process.env.ARK_FAIL_ON_NEW_SMELLS ?? '').trim()
+    ),
   };
   for (let index = 2; index < argv.length; index += 1) {
     const value = argv[index];
@@ -27,7 +30,8 @@ function launcherArgs(argv) {
     else if (value === '--hook-repair') {
       args.hook = true;
       args.hookRepair = true;
-    } else if (value === '--root' && argv[index + 1]) args.root = path.resolve(argv[++index]);
+    } else if (value === '--fail-on-new-smells') args.failOnNewSmells = true;
+    else if (value === '--root' && argv[index + 1]) args.root = path.resolve(argv[++index]);
     else if (value === '--config' && argv[index + 1]) args.config = argv[++index];
     else if (value === '--manifest' && argv[index + 1]) args.manifest = argv[++index];
     else if (value === '--tsconfig' && argv[index + 1]) args.tsconfig = argv[++index];
@@ -71,6 +75,7 @@ async function tryResidentHook(args, hookInput) {
       manifest: args.manifest ?? null,
       tsconfig: args.tsconfig ?? null,
       hookRepair: args.hookRepair,
+      failOnNewSmells: args.failOnNewSmells,
       grokHookEvent: Boolean(process.env.GROK_HOOK_EVENT),
       payload,
     },
