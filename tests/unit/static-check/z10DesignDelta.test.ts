@@ -7,8 +7,12 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import { describe, expect, it } from 'vitest';
 
 import {
+  analyzeDesignFindings,
+  createDesignDeltaCheck,
+  designDeltaDoctorLines,
   evaluateGitDesignDelta,
   evaluateWriteDesignDelta,
+  formatDesignDeltaBlock,
 } from '../../../bin/lib/design-delta.mjs';
 
 const ARK_CHECK = path.resolve('bin/ark-check.mjs');
@@ -83,6 +87,112 @@ function doctor(root: string, baseRef = 'HEAD') {
 }
 
 describe('Z10 base-relative design delta', () => {
+  it('recognizes semantic function-expression and method rules while excluding UI effects', () => {
+    const findings = analyzeDesignFindings({
+      root: process.cwd(),
+      config,
+      ts,
+      records: [
+        {
+          path: 'apps/web/src/product/rules.tsx',
+          content:
+            'export const canArchive = function (roles: string[]) {\n' +
+            '  return roles.includes("admin");\n' +
+            '};\n' +
+            'export const listingPolicy = {\n' +
+            '  canPublish(grants: Set<string>) { return grants.has("publish"); },\n' +
+            '};\n' +
+            'export const computeTotal = (price: number, fee: number) => price + fee;\n' +
+            'export const canOpenDialog = (allowed: boolean) => allowed === true;\n' +
+            'export const canRenderCard = (allowed: boolean) => {\n' +
+            '  show();\n' +
+            '  return allowed === true;\n' +
+            '};\n' +
+            'export const canReturnMarkup = () => <main />;\n',
+        },
+      ],
+    });
+
+    expect(findings.map((finding) => finding.evidence.symbol)).toEqual([
+      'canArchive',
+      'canPublish',
+      'computeTotal',
+    ]);
+    expect(findings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        evidence: expect.objectContaining({
+          kind: 'authorization-policy-rule',
+          detail: expect.stringContaining('predicates:1'),
+        }),
+      }),
+      expect.objectContaining({
+        evidence: expect.objectContaining({ kind: 'calculation-rule' }),
+      }),
+    ]));
+  });
+
+  it('keeps formatting, doctor, and edge composition honest for every verdict', () => {
+    expect(() => analyzeDesignFindings({
+      root: process.cwd(),
+      config,
+      records: [],
+      ts: undefined,
+    })).toThrow('TypeScript parser is required');
+
+    expect(formatDesignDeltaBlock({ complete: false, error: '' } as any)).toBe(
+      'Design delta unavailable: unknown error'
+    );
+    expect(formatDesignDeltaBlock({ complete: true, valid: true, touchedPaths: ['page.tsx'] } as any)).toBe(
+      'Design delta passed: 0 new/worsened supported smells across 1 touched path(s).'
+    );
+
+    const blocked = {
+      complete: true,
+      valid: false,
+      changes: Array.from({ length: 6 }, (_, index) => ({
+        smellId: 'domain-logic-in-ui',
+        classification: 'new',
+        repairHint: `move rule ${index}`,
+        evidence: { path: `page-${index}.tsx` },
+      })),
+    } as any;
+    expect(formatDesignDeltaBlock(blocked)).toContain('page-0.tsx:1  (new)');
+    expect(designDeltaDoctorLines(undefined)).toEqual([]);
+    expect(designDeltaDoctorLines({ complete: false } as any)).toEqual([
+      { level: 'bad', text: 'Unavailable — base/candidate evidence incomplete' },
+    ]);
+    expect(designDeltaDoctorLines({ complete: true, valid: true, touchedPaths: [] } as any)).toEqual([
+      { level: 'ok', text: '0 new/worsened supported smells across 0 touched path(s)' },
+    ]);
+    expect(designDeltaDoctorLines(blocked)).toHaveLength(11);
+
+    const disabled = createDesignDeltaCheck({ enabled: false } as any);
+    expect(disabled.result).toBeNull();
+    expect(disabled.combineEdges({
+      activeViolationCount: 0,
+      strictConfig: false,
+      strictWarningCount: 1,
+      policyValid: true,
+    })).toEqual({ edgeValid: true, observedOk: true });
+    expect(disabled.combineEdges({
+      activeViolationCount: 0,
+      strictConfig: true,
+      strictWarningCount: 1,
+      policyValid: true,
+    })).toEqual({ edgeValid: false, observedOk: false });
+    expect(disabled.exitCode(7)).toBe(7);
+    expect(disabled.failureText()).toBeNull();
+
+    const unavailable = createDesignDeltaCheck({
+      enabled: true,
+      root: process.cwd(),
+      config,
+      ts,
+    } as any);
+    expect(unavailable.exitCode(1)).toBe(2);
+    expect(unavailable.failureText()).toContain('--base-ref');
+  });
+
   it('blocks a new Propia-shaped authorization helper while retaining stable identity evidence', () => {
     const root = fixture();
     write(
