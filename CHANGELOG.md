@@ -5,6 +5,13 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 3.8.0 — 2026-07-21
+
+This corrective minor makes complete analysis fail closed, restores one resolved architecture
+verdict across parity-capable adapters, hardens clean install and managed upgrade flows, and adds
+an opt-in base-relative design-delta gate. **No required config migration.** Retained adoption and
+independent close remain open under Z09, so this release does not claim Phase Z completion.
+
 ### Added
 
 - **Z10:** add the opt-in base/candidate `domain-logic-in-ui` ratchet with hook/MCP/CLI parity and

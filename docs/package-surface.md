@@ -52,15 +52,13 @@ hardening guide remains repository-hosted rather than duplicated in the gate tar
 
 ### Corrective distribution status and strict boundary
 
-Published `arkgate@3.7.0` predates the non-deduplicable TS6 host, completeness schema, and resolved
-candidate-facts parity path above.
-The current source candidate for the next corrective release installs `typescript-ark-host` at
+`arkgate@3.8.0` includes the non-deduplicable TS6 host, completeness schema, and resolved
+candidate-facts parity path above. It installs `typescript-ark-host` at
 exact `npm:typescript@6.0.3`, prefers a usable project compiler API, and fails closed on `partial`
 or `unavailable` analysis. Its packed compatibility gate is scoped to Node 18/20/22/24,
 npm/pnpm/Yarn, and project TypeScript 5.9.3/6.0.3/7.0.2. All 36 packed cells passed on source
 `228dd893` in CI run `29655190747`. Yarn uses strict PnP for the JS compilers and its
-`node-modules` linker for native TS7; the report names that mode. Do not describe those
-corrections as published in 3.7.0.
+`node-modules` linker for native TS7; the report names that mode.
 
 Z04 closes the separate current-source parity claim under the supplied-facts boundary selected in
 [ADR 0011](adr/0011-resolved-candidate-facts-boundary.md). Complete candidates—including aliases,
@@ -189,5 +187,5 @@ production deployment would need to satisfy; it is not a readiness certification
 ## Release notes (maintainers)
 
 Ship notes for a version live under [releases/](https://github.com/pedroknigge/arkgate/tree/main/docs/releases) (latest:
-[3.7.0.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.7.0.md)).
+[3.8.0.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.8.0.md)).
 Publish path: signed annotated tag → GitHub Release → `publish-npm.yml` (see [CONTRIBUTING.md](https://github.com/pedroknigge/arkgate/blob/main/CONTRIBUTING.md)).

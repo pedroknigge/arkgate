@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '3.7.0';
+const CURRENT = '3.8.0';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -86,9 +86,9 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
   });
 
   it('public latest-release pointers move together', () => {
-    expect(read('README.md')).toMatch(/Latest release \(3\.7\.0\).*3\.7\.0\.md/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.7\.0/s);
-    expect(read('docs/package-surface.md')).toMatch(/latest:\s*\[3\.7\.0\.md\]/s);
+    expect(read('README.md')).toMatch(/Latest release \(3\.8\.0\).*3\.8\.0\.md/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.8\.0/s);
+    expect(read('docs/package-surface.md')).toMatch(/latest:\s*\[3\.8\.0\.md\]/s);
   });
 });
 

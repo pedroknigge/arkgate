@@ -16,14 +16,13 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 3.7.0** is current stable: Phase Y adds explicit reshape decisions, hollow-
-> persistence and parse-health diagnostics, safer mechanical edits, and exact `process` module-
-> dual enforcement. [Release notes](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.7.0.md).
+> **ArkGate 3.8.0** is current stable: complete analysis fails closed, complete candidates share
+> one resolved architecture verdict, managed upgrades are digest-bound, and an opt-in design-delta
+> ratchet blocks new or worsened UI domain logic. [Release notes](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.8.0.md).
 
-> **TypeScript 7 distribution note:** published 3.7.0 predates the correction for a deduplicated
-> analysis host and falsely green unavailable plans. The current source candidate for the next
-> corrective release uses an exact, physically distinct TypeScript 6 analysis host and reports
-> required `complete | partial | unavailable` status. Do not attribute that fix to 3.7.0; see the
+> **TypeScript 7 distribution note:** ArkGate prefers a usable project compiler API, then its
+> exact, physically distinct TypeScript 6 analysis host. Analysis reports required
+> `complete | partial | unavailable` status; incomplete results cannot look green. See the
 > [exact boundary](docs/typescript-support.md).
 
 ---
@@ -213,10 +212,10 @@ project file is written. With `--change-map map.json` (or MCP `changeMap`), the 
 classifies planned structure as satisfied, missing, contradictory, or unplanned. This is structural
 convergence only: behavioral completion is always reported as not evaluated.
 
-> **Published 3.7.0 limitation:** its compiler-free atomic path can miss `tsconfig`
-> aliases/workspace edges. The current source candidate closes that divergence with versioned
-> resolved-candidate facts and a differential adapter corpus. Strict CI remains the final merge
-> boundary; lexical/single-snippet feedback is explicitly partial and non-green.
+ArkGate 3.8.0 closes the former compiler-free atomic-path divergence with versioned
+resolved-candidate facts and a differential adapter corpus, including `tsconfig` aliases and
+workspace edges. Strict CI remains the final merge boundary; lexical/single-snippet feedback is
+explicitly partial and non-green.
 
 Every blocking diagnostic carries stable rule/location/evidence fields plus one deterministic
 `nextAction`; human CLI/hook text prints that same action. A complete Codex `ApplyPatch` payload is
@@ -312,7 +311,7 @@ ark.config.json
   casts, InMemory runtime defaults, and disabled peer isolation. `--strict` is a compatibility
   alias. Neither requires an editor hook; use `--require-write-hook claude|grok` when that local
   guarantee is part of the check.
-- **Resolved analysis + completeness (next corrective line):** schema 1.3 identifies
+- **Resolved analysis + completeness (3.8.0):** schema 1.3 identifies
   `resolved-candidate-facts` versus `lexical-compatibility`, requires structured incompleteness
   reasons, and exposes policy/resolver/facts/tree identities for resolved results. Single-file
   lexical checks are explicitly `partial`/non-green; governed parse diagnostics also make plan
@@ -320,11 +319,11 @@ ark.config.json
   host is `unavailable` and exits `2`.
 - **Release evidence:** independent 3.0 audit baseline plus signed-tag, GitHub Release, and
   provenance-backed npm publication; see the [3.1.0 release notes](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.1.0.md).
-- **TypeScript:** the current source candidate passed all 36 packed compatibility cells for project
+- **TypeScript:** 3.8.0 passed all 36 packed compatibility cells for project
   compilers 5.9.3 / 6.0.3 / 7.0.2 across npm, pnpm, and Yarn. ArkGate prefers a usable project
   API, then its exact `typescript-ark-host@6.0.3`; the project `tsc` remains project-owned.
   Yarn uses strict PnP for TS5/6 and the `node-modules` linker for native TS7; that mode is explicit
-  in the report. Published 3.7.0 predates this correction. See the exact boundary in
+  in the report. See the exact boundary in
   [docs/typescript-support.md](docs/typescript-support.md).
 
 ### Why not only ESLint / dependency-cruiser / Nx?
@@ -337,7 +336,7 @@ ark.config.json
 | Placement tools (`ark_place`, …) | ✅ | ❌ |
 | Honest governed % + adoption path | ✅ | ❌ |
 | Classified plan (`mechanical-safe` / judgment) | ✅ | ❌ |
-| TypeScript 5.9 / 6.0 / 7.0 packed consumers | ✅ (current source; 36/36 packed CI cells; 3.7.0 predates the fix) | varies |
+| TypeScript 5.9 / 6.0 / 7.0 packed consumers | ✅ (3.8.0; 36/36 packed CI cells) | varies |
 | Incomplete analysis can satisfy plan/result/strict merge | ❌ (`partial` / `unavailable` fail closed) | varies |
 | Adoption scorecard (hosts / MCP / origin) | ✅ | ❌ |
 | **Editor ESLint on-disk relative-import parity; resolved CI backstop** | ✅ (`arkgate/eslint`) | varies |
@@ -423,7 +422,7 @@ for real systems. Details: [production-hardening.md](https://github.com/pedrokni
 | Security reporting | [SECURITY.md](SECURITY.md) |
 | Demos | [docs/demos/](https://github.com/pedroknigge/arkgate/tree/main/docs/demos) |
 | Examples | [examples/](https://github.com/pedroknigge/arkgate/blob/main/examples/README.md) |
-| Latest release (3.7.0) | [release notes](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.7.0.md) · [3.0.0 baseline](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.0.0.md) |
+| Latest release (3.8.0) | [release notes](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.8.0.md) · [3.0.0 baseline](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.0.0.md) |
 | Roadmap and decisions | [ROADMAP.md](https://github.com/pedroknigge/arkgate/blob/main/ROADMAP.md) · [ADRs](https://github.com/pedroknigge/arkgate/tree/main/docs/adr) · [Changelog](CHANGELOG.md) |
 
 ---
