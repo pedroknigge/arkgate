@@ -123,7 +123,7 @@ without turning historical brownfield smells into an all-or-nothing migration ga
   targets without a false green, stale snapshot, public-output drift, or mandatory-daemon
   dependency. Cold, one-shot-warm, and resident-warm doctor latencies are reported separately;
   only like-for-like ratios count.
-- [ ] **A11 — Evidence is causal:** preregister >=24 held-out task pairs across >=6 repositories and
+- [x] **A11 — Evidence is causal:** preregister >=24 held-out task pairs across >=6 repositories and
   three independent session UUIDs per arm in an immutable manifest that pins candidate/tarball
   digest, repository SHAs/lockfiles, toolchain, agent/model/config, prompts, grader, caps, exclusions,
   and sessions; the selected Grok CLI exposes no model seed, so deterministic seeds apply only to
@@ -133,6 +133,12 @@ without turning historical brownfield smells into an all-or-nothing migration ga
   no more than five percentage points. Failed cells are right-censored, all outcomes remain, and
   corrected paths have zero `NoCoverage` survivors. A losing hypothesis is published and the claim
   is removed, never re-scored.
+  Completed on 2026-07-20: all 144 cells ran; the treatment/control restricted-mean ratio was
+  0.646526 with paired-bootstrap 95% CI 0.457602–0.895450, completion improved by 29.17 percentage
+  points, and all four critical mutation ranges had zero `NoCoverage`. Four censored control cells
+  lacked provider usage payloads and remain marked usage-incomplete/cost-partial. See the committed
+  [compact evidence](../../../eval/causal/evidence/v1/README.md) and immutable
+  [full evidence release](https://github.com/pedroknigge/arkgate/releases/tag/z08-causal-evidence-v1).
 - [ ] **A12 — Retention and independence are real:** across >=12 pinned repositories, four hosts,
   and three package managers, >=5/6 of every preregistered external cell is protected green; a
   cohort of >=8 retains enforcement at >=3/4 D30 and >=5/8 D90 over the entire denominator, with
@@ -190,7 +196,7 @@ flowchart LR
 
 - **Depends on:** ArkGate 3.7.0 as the reproduced baseline; accepted ADRs 0002, 0003, 0005, and
   0008; the existing package/adoption/performance harnesses.
-- **Blocked by:** `Z01`–`Z07` are closed; `Z08` is active, then `Z10` precedes `Z09`.
+- **Blocked by:** `Z01`–`Z08` are closed; `Z10` is active, then `Z09`.
 - **Risk — Kernel impurity:** resolving imports inside Kernel would violate the four-layer contract.
   **Kill switch:** keep TypeScript/filesystem in Tooling and pass only serializable facts.
 - **Risk — cache false green:** stale invalidation is worse than current latency.
@@ -261,9 +267,9 @@ flowchart LR
 ## Promotion
 
 The implementation IDs are tracked in [ROADMAP Phase Z](../../../ROADMAP.md#phase-z--enforcement-truth-at-speed).
-`Z01`–`Z07` are complete; subsequent promotion follows the same discipline:
+`Z01`–`Z08` are complete; subsequent promotion follows the same discipline:
 
-1. Move only the next dependency-ready Z item to `doing` (`Z08` now; then `Z10`; then `Z09`).
+1. Move only the next dependency-ready Z item to `doing` (`Z10` now; then `Z09`).
 2. Expose its failing acceptance cases before changing behavior.
 3. Close the item-specific evidence and common merge gate on the same commit.
 4. Advance one Z item at a time; do not promote the parked Y candidates as collateral work.

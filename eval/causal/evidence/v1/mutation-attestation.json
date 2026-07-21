@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "candidateSourceSha": "bbc3190bd502c98f14f63675061f590e028fc0ce",
+  "candidateTarballSha256": "59e8cbf9c3a3b3516fcb5ab78493adaf071a4d3e5afd6119854c340b99e70dc2",
+  "configSha256": "163e4b8ced4333a7ae5a5f9f7472e36199749e33fb78e0e963c5aa8d08282d6a",
+  "reportSha256": "bd261fed6962ed24d34e11b316a2f0b4c21dd9354c9c3961d34416687dc090be",
+  "runner": "stryker@9.6.1",
+  "sourceFiles": [
+    {
+      "file": "bin/lib/analysis-completeness.mjs",
+      "sha256": "c670535c251a411d637984cc8fae4a2c435c5e76dc88b67328ba5355bf71e84f"
+    },
+    {
+      "file": "bin/lib/resolved-candidate-facts.mjs",
+      "sha256": "d9f69cc8df3217220c4789c02b4226132149992372e753fe0dbf7af7f99193aa"
+    },
+    {
+      "file": "bin/lib/managed-upgrade.mjs",
+      "sha256": "7fb20f6c1b98de665f21797163163fd2e22534af8dd157f3d5109c500cee826d"
+    },
+    {
+      "file": "bin/lib/resident-hook.mjs",
+      "sha256": "974afd46063f37f23d467c28ae5f3c722ec3e1cc0b6bad3b5afb7e0333b29b96"
+    }
+  ]
+}

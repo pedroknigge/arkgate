@@ -122,6 +122,21 @@ final checker before they are classified as false blocks; unreplayable events re
 classification debt rather than becoming zero. The mutation attestation binds the report to the
 candidate SHA, tarball digest, Stryker config, runner version, and exact mutated source-file hashes.
 
+### Official Z08 result (2026-07-20)
+
+The frozen experiment completed all 144 cells: 6 repositories, 24 tasks, 72 matched pairs, and
+three independent session UUIDs per arm. Treatment/control restricted mean time to common green was
+105,434.986/163,079.236 ms, a 0.646526 ratio with hierarchical paired-bootstrap 95% CI
+0.457602–0.895450. Completion improved from 34/72 to 55/72 (+29.17 percentage points), and the four
+critical mutation ranges had zero `NoCoverage` mutants. The preregistered primary and completion
+gates passed.
+
+Four right-censored control cells had no provider usage payload. They remain in all causal
+denominators; usage and cost are marked incomplete/partial rather than zero. A Grok binary update
+during the run was caught before the next cell started, and execution resumed only with the exact
+preregistered binary. See the [compact committed evidence](causal/evidence/v1/README.md) and the
+[immutable full evidence release](https://github.com/pedroknigge/arkgate/releases/tag/z08-causal-evidence-v1).
+
 Local deterministic coverage:
 
 ```bash

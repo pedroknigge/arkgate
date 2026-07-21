@@ -4,7 +4,7 @@
 > [docs/package-surface.md](../package-surface.md) · Decisions: [docs/adr/](../adr/README.md)
 > **Code and manifests are the source of truth.** Documentation does not override implementation.
 
-**Date:** 2026-07-19<br>
+**Date:** 2026-07-20<br>
 **Scope:** project<br>
 **Intent:** audit → selective documentation update<br>
 **Variant:** ArkGate bridge (`ark.config.json`, local CLIs, `ark://manifest`)<br>
@@ -21,10 +21,10 @@ Internal helpers and individual test files are evidence, not separate product su
 
 | Verdict | Count |
 |---------|------:|
-| OK | 26 |
-| Partial | 0 |
+| OK | 27 |
+| Partial | 1 |
 | Missing | 0 |
-| Contradicted | 2 |
+| Contradicted | 0 |
 | Unverifiable | 0 |
 
 **Surface coverage:** 14/14 bounded rows have a canonical authority in
@@ -32,12 +32,9 @@ Internal helpers and individual test files are evidence, not separate product su
 
 **Top residual risks:**
 
-1. Two product claims remain contradicted by upgrade or field evidence. They are
-   correctness blockers or product-claim gates owned by
-   [Phase Z](../plans/enforcement-truth-at-speed/README.md), not documentation wording to smooth over.
-   Z02's current-source claim is OK after its 36-cell packed CI matrix, Z04's candidate-graph claim
-   is OK after the differential adapter corpus, and Z05's installed journey is OK after its
-   18-cell clean-room matrix; published 3.7.0 predates all three corrections.
+1. No bounded current-source claim remains contradicted. The broad field-proof claim is still
+   partial: Z08 closed causal/full-denominator evidence, while Z09 still owns retained adoption and
+   independently signed review identity. Published 3.7.0 predates the Phase Z corrections.
 2. `@arkgate/runtime` is not currently present in the npm registry. Its first publication remains
    a separate maintainer action; the root publish workflow does not publish it automatically, and
    parked candidate `K01` retains three confirmed intra-process commit gaps. The docs now state
@@ -45,9 +42,9 @@ Internal helpers and individual test files are evidence, not separate product su
 3. The ignored `.ark/reports/latest.json` is an older local sensor snapshot and is not current
    release evidence; the live architecture check is the handoff gate.
 
-**Recommended next Intent:** move only Z06 into implementation and retain the Z06→Z09 sequence plus
-all parked Y/runtime gates. Z04 implements the supplied-facts boundary selected in ADR 0011; Z02,
-Z04, and Z05 may enter the next corrective release, but none is published in 3.7.0.
+**Recommended next Intent:** implement only Z10's base-relative new-design-smell enforcement, then
+retain Z09 plus all parked Y/runtime gates. Completed correctness fixes may enter the next
+corrective release, but none is published in 3.7.0.
 
 ## Code inventory (high level)
 
@@ -94,8 +91,8 @@ There are no product UI routes or database schemas in this library repository.
 | C-024 | Contributor layout distinguishes stable gate code, experimental runtime, and actual payload | [Contributing](../../CONTRIBUTING.md) | `src/gate.ts` · runtime manifest · root `files` | OK | keep |
 | C-025 | Programmatic preflight, CLI, MCP, complete-patch write gate, and final CI evaluate the same candidate graph and governed scope | [ADR 0005](../adr/0005-atomic-change-preflight.md) · [change-integrity plan](../plans/change-integrity-loop/README.md) | versioned resolved-candidate facts · one generated pure verdict · exact policy/resolver/facts/tree identities · Z04 differential corpus across API/bundle/CLI/MCP/hook/final/eligible ESLint | OK | keep the corpus in `test:adapter-parity`; lexical compatibility stays explicitly incomplete/non-green |
 | C-026 | Every gallery starter can be copied, installed, and checked using its documented commands | [Examples](../../examples/README.md) | one frozen catalog · checksum-verified npm/pnpm/Yarn clean-room reports | OK | 18/18 cells and 198/198 stages passed on source `3423758` in CI run `29667803023`; publish in the corrective release |
-| C-027 | `ark upgrade` refreshes existing Ark-managed project skills and gates while preserving user-owned files | Setup CLI help · agent guidance | `bin/ark.mjs` installer arguments · `bin/lib/gate-files.mjs` skip-without-force behavior · installed-template drift | Contradicted | `Z06`: managed-content identities, bounded refresh, stale/conflict report |
-| C-028 | V03/V05/B01 evidence measures time to the real merge gate, observed false blocks/bypasses, and independent review | [Roadmap evidence](../../ROADMAP.md#success-metrics) | `eval/adoption-run.mjs` timing/denominators/constants · beta declaration check · nightly skipped live case | Contradicted | `Z08` causal/full-denominator harness + `Z09` retained adoption and verified reviewer identity |
+| C-027 | `ark upgrade` refreshes existing Ark-managed project skills and gates while preserving user-owned files | Setup CLI help · agent guidance | managed-content identities · preview/apply binding · conflict consent · 11-host packed matrix | OK | keep Z06 adversarial and packed coverage |
+| C-028 | V03/V05/B01 evidence measures time to the real merge gate, observed false blocks/bypasses, and independent review | [Roadmap evidence](../../ROADMAP.md#success-metrics) | Z08 immutable 144-cell causal ledger/report · measured classifications · historical beta declaration check | Partial | Z08 closes causal/full-denominator evidence; `Z09` still owns retained adoption and verified reviewer identity |
 
 ## Post-audit first-principles correction
 
@@ -133,9 +130,20 @@ pnpm, and strict Yarn PnP consumed the same checksum-verified tarball; every cel
 isolation, complete check/doctor/strict behavior, exact start consent, both benign and forbidden
 atomic preflight, and no source or unrelated-file mutation.
 
+Z06 closes the managed-upgrade contradiction in current source. Managed-content identities bind
+preview/apply, customized or conflicted assets require explicit consent, user-owned files remain
+untouched, and doctor separates installed/configured state from observed active/hard evidence.
+
+Z08 closes the causal/full-denominator half of the field-evidence contradiction. Its immutable
+manifest ran 144/144 cells, retained every censored outcome, passed the preregistered RMST and
+completion gates, measured false blocks/bypasses rather than initializing them, and recorded zero
+`NoCoverage` mutants in the critical ranges. Z09 still owns longitudinal retention and verified
+independent identity, so C-028 remains partial rather than OK.
+
 The remaining corrective implementation authority is
-[ROADMAP Phase Z](../../ROADMAP.md#phase-z--enforcement-truth-at-speed). Z06 owns managed upgrade
-and observed enforcement truth; prose is not accepted as implementation evidence.
+[ROADMAP Phase Z](../../ROADMAP.md#phase-z--enforcement-truth-at-speed). Z10 owns new-code design
+enforcement and truthful host hardness before Z09 closes retained adoption and independent review;
+prose is not accepted as implementation evidence.
 
 ## Resolved or narrowed during this audit
 
@@ -171,6 +179,13 @@ and observed enforcement truth; prose is not accepted as implementation evidence
   run `29667803007`; npm 10.8.2, pnpm 9.15.9, and strict Yarn PnP 4.17.1 each passed all six
   starters and 66/66 stages against candidate SHA-256
   `abfeb512665928172c62fb3db478165af92d1ae8d141f9945bd9539a1158f069`.
+- Z06 managed upgrade/enforcement truth: **PASS** — source `7fa131f`, CI run `29698123366`, and
+  Security run `29698123327`; 11/11 hosts and 132/132 managed-upgrade stages passed with
+  provider-evidence fail-closed behavior.
+- Z08 causal evidence: **PASS** — 144/144 cells; treatment/control RMST ratio 0.646526 with
+  paired-bootstrap 95% CI upper 0.895450; completion delta +29.17 points; zero critical
+  `NoCoverage`. Compact evidence is committed under `eval/causal/evidence/v1/` and full evidence is
+  release `z08-causal-evidence-v1`.
 - Surface parity: **PASS** — 124/124 `src/gate.ts` exports, 9/9 MCP tools, 9/9 public
   schema/metadata export aliases, and 6/6 Action inputs are named in their canonical docs.
 - Registry check: **OBSERVED** — `arkgate@latest` is `3.7.0`; querying

@@ -427,8 +427,8 @@ may raise those ceilings merely to fit its own implementation.
 | 68 | `Z05` | `done` | L | `Z02`, `Z04` | Every starter and supported package manager completes the installed tarball journey in a clean consumer |
 | 69 | `Z06` | `done` | L | `Z05` | Upgrade touches only identity-proven managed assets and doctor reports actual enforcement state |
 | 70 | `Z07` | `done` | L | `Z04`, `Z05` | A measured warm control plane delivers order-of-magnitude hook feedback and bounded canonical reevaluation without semantic drift |
-| 71 | `Z08` | `doing` | L | `Z06`, `Z07` | Live-agent and causal evaluation count every outcome and defend the corrected path with mutation proof |
-| 72 | `Z10` | `todo` | L | `Z08` | New design-smell regressions fail on the write/merge path while historical residual and unverified host enforcement remain honestly labeled |
+| 71 | `Z08` | `done` | L | `Z06`, `Z07` | Live-agent and causal evaluation count every outcome and defend the corrected path with mutation proof |
+| 72 | `Z10` | `doing` | L | `Z08` | New design-smell regressions fail on the write/merge path while historical residual and unverified host enforcement remain honestly labeled |
 | 73 | `Z09` | `todo` | L | `Z10` | Retained field adoption and a verifiably independent review earn the Phase Z product claims |
 
 #### Corrective-release lanes
@@ -724,7 +724,7 @@ launcher changes and reproduced packaged modes, fallback bytes, and watch behavi
 
 ### Z08 — Repair live-agent, causal, and mutation evidence
 
-- **Status:** `doing`
+- **Status:** `done`
 - **Depends on:** `Z06`, `Z07`
 
 **Outcome:** the live-agent workflow executes a non-skipped case when enabled; adoption time runs
@@ -750,9 +750,23 @@ zero `NoCoverage` survivors. If the primary hypothesis loses, publish the null/n
 remove or reframe the causal-productivity claim before downstream `Z10`/`Z09`; never switch
 endpoints post hoc.
 
+**Completed (2026-07-20):** the immutable 6-repository, 24-task manifest ran all 72 matched
+pairs/144 cells against candidate source `bbc3190bd502c98f14f63675061f590e028fc0ce` and tarball
+SHA-256 `59e8cbf9c3a3b3516fcb5ab78493adaf071a4d3e5afd6119854c340b99e70dc2`.
+Treatment/control restricted mean time was 105,434.986/163,079.236 ms, a 0.646526 ratio with
+hierarchical paired-bootstrap 95% CI 0.457602–0.895450. Completion improved from 34/72 to 55/72
+(+29.17 percentage points), and all unsuccessful cells remained right-censored in the denominator.
+The four critical mutation ranges contained zero `NoCoverage` mutants. Four censored control cells
+lacked provider usage payloads, so usage/cost remain explicitly incomplete/partial rather than
+zero. The runner also stopped before cell 97 when Grok auto-updated, then resumed only with the
+exact preregistered binary, preventing mixed-toolchain evidence. Compact evidence is committed at
+[`eval/causal/evidence/v1/`](eval/causal/evidence/v1/README.md); full transcripts and grader outputs
+are immutable in release
+[`z08-causal-evidence-v1`](https://github.com/pedroknigge/arkgate/releases/tag/z08-causal-evidence-v1).
+
 ### Z10 — Enforce new-code design fitness on the real write and merge path
 
-- **Status:** `todo`
+- **Status:** `doing`
 - **Depends on:** `Z08`
 
 **Field trigger (2026-07-20):** a real multi-app Propia.homes change could introduce pure
@@ -2734,8 +2748,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: `Z08` (`doing`) — freeze and execute the causal/full-denominator agent experiment plus mutation proof
-Next action: complete source prequalification, freeze the exact candidate/manifest, execute the preregistered matrix, and publish its pass or negative result without changing endpoints
+Item: `Z10` (`doing`) — enforce new/worsened design smells on the real write and merge path
+Next action: implement the Propia-shaped base-relative design delta and runtime-verified hardness semantics without blocking historical residual
 Release lanes: Z01+Z02 may ship a stable corrective patch; Z04 may ship parity; Z06 closes the installed journey; Z07 gates 10x, Z08 gates causal evidence, Z10 gates new-code design enforcement, and Z09 gates retention/independent close
 Parked unchanged: Y06, Y07, Y09, and Y10 retain their named field gates and must not start as collateral Z work
 Runtime parked: K01 retains confirmed experimental intra-process commit gaps outside Phase Z and does not block gate-package corrective releases

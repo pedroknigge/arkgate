@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "candidateTarballSha256": "59e8cbf9c3a3b3516fcb5ab78493adaf071a4d3e5afd6119854c340b99e70dc2",
+  "graderSha256": "3878b29ff648e52de2aa08915b871dfe238f99b3f17969ca515e7faf4012ea97",
+  "sourceCatalogSha256": "0a7dc8f1bda0b607e650b526f44ec739122c2629c9a9bb2d5f721d594c26141f",
+  "taskCatalogSha256": "5bfe36fcef46efe78f3e07ea580425d867e68d32c97b3cc6c8900412f1602f22",
+  "repositories": [
+    {
+      "id": "kata-users-ts",
+      "sha": "3feb2a5e692ee4285f08e30b00bf080b2abafcc3",
+      "treeSha": "20a41b62cb0866665cc0d4f677e2ea7a75ac7f72"
+    },
+    {
+      "id": "typescript-starter",
+      "sha": "c4d9330f5513eda0fb5df594f6b34a11fde1a934",
+      "treeSha": "a6fbb372699bed49ca8f2e9a697e150239c9cf23"
+    },
+    {
+      "id": "nestjs-hexagonal-example",
+      "sha": "ad1143821e876dd3823fa1f77e21790f808c0a3c",
+      "treeSha": "20abf70e8d5010e63bf2d7e5d454ef44536d614a"
+    },
+    {
+      "id": "nestjs-hexagonal-auth",
+      "sha": "9ce1c33476610ff4d1a703b8aa37b0a392e23ff4",
+      "treeSha": "b4b67e3d5cb887b3ecfce649a5ca167391a94417"
+    },
+    {
+      "id": "zod",
+      "sha": "912f0f51b0ced654d0069741e7160834dca742ee",
+      "treeSha": "aa57882b5c03f77cdfc84ee44a7967f2c9c210b6"
+    },
+    {
+      "id": "yocto-queue",
+      "sha": "b07eac099753833b29d06c614149904445739776",
+      "treeSha": "5a5f01d44bd03ec879cda4bf9591fe7f77598729"
+    }
+  ],
+  "tasks": [
+    {
+      "taskId": "kata-users-ts-clock-boundary",
+      "graderReportSha256": "9ee40f5a9f1bddc482ed20d00925d929524a2ad348719129bed3adbfada18e37"
+    },
+    {
+      "taskId": "kata-users-ts-repository-port",
+      "graderReportSha256": "97b2cd94beb4ceb6bfecd8b75fa9020324722e2f50ade0aad7f7f89c4c4b3884"
+    },
+    {
+      "taskId": "kata-users-ts-presentation-mapper",
+      "graderReportSha256": "f69b5449a640edb9e3de66e7f386d5baea7400819fec003463d434761544b076"
+    },
+    {
+      "taskId": "kata-users-ts-cycle-extraction",
+      "graderReportSha256": "448b552bc1ca6c96a69af15098d8219901ece1708462e0ef2c586ed1ca8ab875"
+    },
+    {
+      "taskId": "typescript-starter-clock-boundary",
+      "graderReportSha256": "f2be11f57a88ba002a1ed5ced64377786cefd8957f0bd8891350635b87398dbc"
+    },
+    {
+      "taskId": "typescript-starter-repository-port",
+      "graderReportSha256": "3be4dc666b122fa8a31ba334a67a84616c516f269ddf2b6b6c287bafd4610532"
+    },
+    {
+      "taskId": "typescript-starter-presentation-mapper",
+      "graderReportSha256": "8893a09ef0731efb987ae864210d081019052495a21179c97afc03c4dbd8e7a7"
+    },
+    {
+      "taskId": "typescript-starter-cycle-extraction",
+      "graderReportSha256": "63f88314f8860b34d097789f033b8a8762b7415908004198549633d7f5d9463f"
+    },
+    {
+      "taskId": "nestjs-hexagonal-example-clock-boundary",
+      "graderReportSha256": "4da9223c43a681caead3d3ff689702cab3f778e8845511a9bdd14b62de32ca30"
+    },
+    {
+      "taskId": "nestjs-hexagonal-example-repository-port",
+      "graderReportSha256": "b9074a2329741b4f9ba8b9f37e35d0a742783b37de528bc11ea7de53dc10dcf7"
+    },
+    {
+      "taskId": "nestjs-hexagonal-example-presentation-mapper",
+      "graderReportSha256": "a4c69f66ebc69f144bb6c4bddd7a0d10dfad91aba7052a2a9a2f0ea5ddb48efe"
+    },
+    {
+      "taskId": "nestjs-hexagonal-example-cycle-extraction",
+      "graderReportSha256": "d8d1a5213838e125eba6e9898aecd8560bfbb4d6d5487a0118ee45babacbcaf2"
+    },
+    {
+      "taskId": "nestjs-hexagonal-auth-clock-boundary",
+      "graderReportSha256": "ee98ebaa90d16ca9a8cd1e6bb2d172c9c5c1064acd1996e85ee80633ea038282"
+    },
+    {
+      "taskId": "nestjs-hexagonal-auth-repository-port",
+      "graderReportSha256": "e4f834fce519be2b1b953d12a4434d845cbf797b8c07fca5ad0f3df9d5bf81b7"
+    },
+    {
+      "taskId": "nestjs-hexagonal-auth-presentation-mapper",
+      "graderReportSha256": "aff9820093cad99cb114790eb2c015c25d3b6be7b7ca4144e5cb4ad80008541c"
+    },
+    {
+      "taskId": "nestjs-hexagonal-auth-cycle-extraction",
+      "graderReportSha256": "6a41a2d7646bba7c38d248ee09fb6abe5b9bddda75eb51d42452ce797e5ffa0b"
+    },
+    {
+      "taskId": "zod-clock-boundary",
+      "graderReportSha256": "8d22557218961d09531404e74e1ae99549f359cce501de00b7cb640abc34ec3e"
+    },
+    {
+      "taskId": "zod-repository-port",
+      "graderReportSha256": "c662249f3e2faf25c80b8853474d335be8d958dcfb1bc004c5964d1535509ea7"
+    },
+    {
+      "taskId": "zod-presentation-mapper",
+      "graderReportSha256": "3e34ccffa53609bd6f648658378c564245cec31c31821ecd777624c0d41ed58d"
+    },
+    {
+      "taskId": "zod-cycle-extraction",
+      "graderReportSha256": "c7ddc7bee3a292ef4f9b825644eccfc4149c2aab27541fb981173efc1178ba2c"
+    },
+    {
+      "taskId": "yocto-queue-clock-boundary",
+      "graderReportSha256": "01d88d2c9f09a61215a04c7a637f51eb0fce11fee0dae505649b44869ff0523c"
+    },
+    {
+      "taskId": "yocto-queue-repository-port",
+      "graderReportSha256": "9189aed2427250853c50c38f4982e7d5daaacd9381a0403952f0485aac72f4e9"
+    },
+    {
+      "taskId": "yocto-queue-presentation-mapper",
+      "graderReportSha256": "acdfea472d9cf18d756864eef35009b444f5e0adf15336f517b9e4827aa9b364"
+    },
+    {
+      "taskId": "yocto-queue-cycle-extraction",
+      "graderReportSha256": "eeb26eefb1edd8f69ff453e3d590f90a22de282412d0c4b3582d39f5e59acd45"
+    }
+  ]
+}
