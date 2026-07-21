@@ -20,6 +20,8 @@ function envFor(root: string, host: Host): NodeJS.ProcessEnv {
   return {
     ...process.env,
     ARK_ACTIVE_HOST: host,
+    ARK_POLICY_BASE_REF: '',
+    GITHUB_BASE_REF: '',
     CODEX_HOME: path.join(root, '.codex-home'),
   };
 }

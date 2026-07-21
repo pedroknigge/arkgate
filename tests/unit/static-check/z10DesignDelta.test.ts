@@ -13,6 +13,10 @@ import {
 
 const ARK_CHECK = path.resolve('bin/ark-check.mjs');
 
+function fixtureEnv(): NodeJS.ProcessEnv {
+  return { ...process.env, ARK_POLICY_BASE_REF: '', GITHUB_BASE_REF: '' };
+}
+
 const config = {
   schemaVersion: '1.0',
   include: ['apps', 'packages'],
@@ -73,7 +77,7 @@ function doctor(root: string, baseRef = 'HEAD') {
       '--json',
       '--no-cache',
     ],
-    { cwd: root, encoding: 'utf8' }
+    { cwd: root, encoding: 'utf8', env: fixtureEnv() }
   );
   return { result, json: JSON.parse(result.stdout) };
 }
@@ -201,7 +205,7 @@ describe('Z10 base-relative design delta', () => {
     const missing = spawnSync(
       process.execPath,
       [ARK_CHECK, '--root', root, '--doctor', '--fail-on-new-smells', '--json', '--no-cache'],
-      { cwd: root, encoding: 'utf8' }
+      { cwd: root, encoding: 'utf8', env: fixtureEnv() }
     );
     expect(missing.status).toBe(2);
     expect(JSON.parse(missing.stdout).doctor.designDelta).toMatchObject({
@@ -213,7 +217,7 @@ describe('Z10 base-relative design delta', () => {
     const missingMerge = spawnSync(
       process.execPath,
       [ARK_CHECK, '--root', root, '--strict-merge', '--fail-on-new-smells', '--json', '--no-cache'],
-      { cwd: root, encoding: 'utf8' }
+      { cwd: root, encoding: 'utf8', env: fixtureEnv() }
     );
     expect(missingMerge.status).toBe(2);
     expect(JSON.parse(missingMerge.stdout).designDelta).toMatchObject({

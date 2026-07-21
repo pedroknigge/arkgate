@@ -10,6 +10,10 @@ const repositoryRoot = process.cwd();
 let runtimeRoot: string;
 let mcpBin: string;
 
+function fixtureEnv(): NodeJS.ProcessEnv {
+  return { ...process.env, ARK_POLICY_BASE_REF: '', GITHUB_BASE_REF: '' };
+}
+
 function write(root: string, relativePath: string, content: string) {
   const absolutePath = path.join(root, relativePath);
   fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
@@ -24,6 +28,7 @@ function git(root: string, args: string[]) {
 function client(root: string) {
   const process = spawn('node', [mcpBin, '--root', root], {
     stdio: ['pipe', 'pipe', 'pipe'],
+    env: fixtureEnv(),
   }) as ChildProcessWithoutNullStreams;
   const pending = new Map<number, (message: any) => void>();
   let buffer = '';
@@ -109,6 +114,7 @@ describe('Z10 write/MCP/CLI design-delta parity', () => {
       {
         cwd: root,
         encoding: 'utf8',
+        env: fixtureEnv(),
         input: JSON.stringify({
           tool_name: 'Write',
           tool_input: { file_path: path.join(root, relativePath), content: source },
@@ -156,7 +162,7 @@ describe('Z10 write/MCP/CLI design-delta parity', () => {
         '--json',
         '--no-cache',
       ],
-      { cwd: root, encoding: 'utf8' }
+      { cwd: root, encoding: 'utf8', env: fixtureEnv() }
     );
     expect(final.status, final.stderr || final.stdout).toBe(1);
     const finalResult = JSON.parse(final.stdout);
