@@ -42,8 +42,8 @@ Internal helpers and individual test files are evidence, not separate product su
 3. The ignored `.ark/reports/latest.json` is an older local sensor snapshot and is not current
    release evidence; the live architecture check is the handoff gate.
 
-**Recommended next Intent:** land the implemented Z10 candidate through exact-head CI, then execute
-Z09 while retaining all parked Y/runtime gates. Completed correctness fixes may enter the next
+**Recommended next Intent:** execute Z09 while retaining all parked Y/runtime gates. Z10 and
+`RB-12` are closed on exact-head PR #89 CI/Security evidence. Completed correctness fixes may enter the next
 corrective release, but none is published in 3.7.0.
 
 ## Code inventory (high level)
@@ -141,10 +141,10 @@ completion gates, measured false blocks/bypasses rather than initializing them, 
 `NoCoverage` mutants in the critical ranges. Z09 still owns longitudinal retention and verified
 independent identity, so C-028 remains partial rather than OK.
 
-The current source candidate implements Z10's new-code design enforcement and runtime-proven host
-hardness. [ROADMAP Phase Z](../../ROADMAP.md#phase-z--enforcement-truth-at-speed) keeps Z10 `doing`
-until that candidate lands through exact-head CI; Z09 then owns retained adoption and independent
-review. Prose is not accepted as implementation evidence.
+Current source implements Z10's new-code design enforcement and runtime-proven host hardness.
+[ROADMAP Phase Z](../../ROADMAP.md#phase-z--enforcement-truth-at-speed) closes Z10 and `RB-12` on
+exact-head PR #89 CI/Security evidence; Z09 now owns retained adoption and independent review.
+Prose is not accepted as implementation evidence.
 
 ## Resolved or narrowed during this audit
 
@@ -187,13 +187,12 @@ review. Prose is not accepted as implementation evidence.
   paired-bootstrap 95% CI upper 0.895450; completion delta +29.17 points; zero critical
   `NoCoverage`. Compact evidence is committed under `eval/causal/evidence/v1/` and full evidence is
   release `z08-causal-evidence-v1`.
-- Z10 current-source candidate: **PASS locally** — semantic design ratchet and runtime-hardness
-  corpus 3 files / 10 tests; focused Z10 plus complete-write contract run 4 files / 17 tests;
-  impacted seams 12 files / 225 tests; full suite 188 files / 1,575 tests. Full confidence passed at
-  88.03% statements/lines, 84.52% branches, 92.35% functions, and 93.98% mutation. Build,
-  typecheck, generated-artifact drift, strict Ark, and release artifacts pass. The gate package is
-  515,327 packed bytes / 1,795,900 unpacked bytes / 145 files, below the unchanged Phase Z
-  ceilings. Exact-head CI/Security remains pending until the candidate is committed/pushed.
+- Z10 current-source candidate: **PASS exact head** — PR #89 head `357e282`, CI run
+  `29796255993`, and Security run `29796256067`; full suite 188 files / 1,577 tests at 88.04%
+  statements/lines, 84.61% branches, 92.70% functions, and 93.98% mutation. Build, typecheck,
+  generated-artifact drift, unchanged performance/package budgets, package isolation, release
+  artifacts, strict Ark, packed galleries, TypeScript matrix, CodeQL, Semgrep, and dependency
+  review pass. Z10 and `RB-12` are closed; published 3.7.0 remains unchanged.
 - Surface parity: **PASS** — 124/124 `src/gate.ts` exports, 9/9 MCP tools, 9/9 public
   schema/metadata export aliases, and 6/6 Action inputs are named in their canonical docs.
 - Registry check: **OBSERVED** — `arkgate@latest` is `3.7.0`; querying

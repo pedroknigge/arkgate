@@ -118,14 +118,14 @@ for current truth.
 | `RB-09` | P1 | `closed` | Z03 selected versioned resolved-candidate facts; Z04 restored one graph/verdict across the parity-capable API, preflight, CLI, MCP, complete-patch write gate, eligible ESLint, and final CI |
 | `RB-10` | P1 journey | `closed` | Z05–Z06 proved the installed starter, managed upgrade, observed enforcement, and packed journey across the clean-room matrices |
 | `RB-11` | P1 claim | `open` | Z07, Z08, Z10, and Z09 must earn the 10x feedback, causal-evidence, design-delta, retained-adoption, and independent-close claims |
-| `RB-12` | P1 enforcement | `open` | Z10 must stop new design-smell regressions on the write/merge path without blocking unrelated brownfield residual, and must prove active-host hardness at runtime |
+| `RB-12` | P1 enforcement | `closed` | Z10's semantic base-relative ratchet and runtime-observed hardness passed exact-head PR #89 CI run `29796255993` and Security run `29796256067` on `357e282` |
 
 `RB-01`–`RB-06` are closed by the corresponding completed items and their recorded evidence.
 V05 passed its then-current binary exit gate in PR #49. The separately authorized stable `3.0.0`
 release completed on 2026-07-13; closing `RB-06` had removed the onboarding release blocker.
 The post-3.7.0 audit below supersedes that evidence as proof of *current* release readiness:
-`RB-11` and `RB-12` remain open, so the broad product-claim and new-code-enforcement stop
-conditions still apply.
+`RB-11` remains open, so the broad product-claim stop condition still applies. Z10 closed the
+separate new-code-enforcement stop condition in current source; published 3.7.0 still predates it.
 
 ### Post-3.7.0 audit reset (2026-07-17)
 
@@ -428,8 +428,8 @@ may raise those ceilings merely to fit its own implementation.
 | 69 | `Z06` | `done` | L | `Z05` | Upgrade touches only identity-proven managed assets and doctor reports actual enforcement state |
 | 70 | `Z07` | `done` | L | `Z04`, `Z05` | A measured warm control plane delivers order-of-magnitude hook feedback and bounded canonical reevaluation without semantic drift |
 | 71 | `Z08` | `done` | L | `Z06`, `Z07` | Live-agent and causal evaluation count every outcome and defend the corrected path with mutation proof |
-| 72 | `Z10` | `doing` | L | `Z08` | New design-smell regressions fail on the write/merge path while historical residual and unverified host enforcement remain honestly labeled |
-| 73 | `Z09` | `todo` | L | `Z10` | Retained field adoption and a verifiably independent review earn the Phase Z product claims |
+| 72 | `Z10` | `done` | L | `Z08` | New design-smell regressions fail on the write/merge path while historical residual and unverified host enforcement remain honestly labeled |
+| 73 | `Z09` | `doing` | L | `Z10` | Retained field adoption and a verifiably independent review earn the Phase Z product claims |
 
 #### Corrective-release lanes
 
@@ -766,7 +766,7 @@ are immutable in release
 
 ### Z10 — Enforce new-code design fitness on the real write and merge path
 
-- **Status:** `doing`
+- **Status:** `done`
 - **Depends on:** `Z08`
 
 **Field trigger (2026-07-20):** a real multi-app Propia.homes change could introduce pure
@@ -806,19 +806,18 @@ prepare-write, CLI/CI delta, and final candidate agree on smell identity and ver
 new UI business logic is blocked, unrelated brownfield work is not, and no unverified host is
 reported hard.
 
-**Implementation candidate (2026-07-20):** schema `1.0` design delta, semantic
-`domain-logic-in-ui`, complete write/MCP/CLI parity, generated hook/CI opt-in, golden-pattern repair,
-and enforcement-state `1.1` are implemented locally. Focused Z10 coverage is 3 files / 10 tests;
-the focused Z10 plus complete-write contract run is 4 files / 17 tests, and the broader impacted
-run is 12 files / 225 tests. Historical, unrelated, presentation-only, and path-only-move fixtures
-stay green; missing bases exit `2`; unverified/MCP-only hosts stay `hard:false`. Full confidence
-passes 188 files / 1,575 tests at 88.03% statements/lines, 84.52% branches, 92.35% functions, and
-93.98% mutation. The frozen package budget passes without a ceiling change. Keep Z10 `doing` and
-`RB-12` open until the exact candidate is committed/pushed and the common CI/Security gate is green.
+**Closure evidence (2026-07-20):** schema `1.0` design delta, semantic `domain-logic-in-ui`,
+complete write/MCP/CLI parity, generated hook/CI opt-in, golden-pattern repair, and
+enforcement-state `1.1` are committed in PR #89. Historical, unrelated, presentation-only, and
+path-only-move fixtures stay green; missing bases exit `2`; unverified/MCP-only hosts stay
+`hard:false`. Exact head `357e282` passed CI run `29796255993` and Security run `29796256067`:
+188 files / 1,577 tests, 88.04% statements/lines, 84.61% branches, 92.70% functions, and 93.98%
+mutation, plus the unchanged performance/package budgets, packed galleries, TypeScript matrix,
+release artifacts, and strict Ark. All three falsifiable outcomes passed, so Z10 and `RB-12` close.
 
 ### Z09 — Prove retained field adoption and independent close
 
-- **Status:** `todo`
+- **Status:** `doing`
 - **Depends on:** `Z10`
 
 **Outcome:** reproducible external and longitudinal evidence replaces self-declared release proof.
@@ -2758,8 +2757,8 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: `Z10` (`doing`) — implementation complete locally; exact-head landing evidence remains
-Next action: commit/push the candidate, require green CI/Security on that SHA, then close RB-12 and advance Z09
+Item: `Z09` (`doing`) — Z10 and RB-12 are closed on exact-head PR #89 CI/Security evidence
+Next action: preregister the signed repository/reviewer identity mechanism, external matrix, and D30/D90 retained cohort before collecting Z09 evidence
 Release lanes: Z01+Z02 may ship a stable corrective patch; Z04 may ship parity; Z06 closes the installed journey; Z07 gates 10x, Z08 gates causal evidence, Z10 gates new-code design enforcement, and Z09 gates retention/independent close
 Parked unchanged: Y06, Y07, Y09, and Y10 retain their named field gates and must not start as collateral Z work
 Runtime parked: K01 retains confirmed experimental intra-process commit gaps outside Phase Z and does not block gate-package corrective releases
