@@ -15,6 +15,43 @@ function installToolsForHost(activeHost) {
     : activeHost;
 }
 
+/**
+ * Human/JSON note when doctor runs outside an agent host: inventory on disk vs
+ * this-invocation hardness (Z10 — never claim hard from assets alone).
+ * @param {{ hosts?: Record<string, unknown>, capabilities?: Record<string, boolean> }|null|undefined} inventory
+ * @param {Record<string, boolean>} capabilities active-host projection
+ * @returns {string}
+ */
+export function buildUnknownHostSessionNote(inventory, capabilities = {}) {
+  const hosts = inventory?.hosts && typeof inventory.hosts === 'object' ? inventory.hosts : {};
+  const onDiskHosts = Object.entries(hosts)
+    .filter(([, record]) => {
+      if (!record || typeof record !== 'object') return false;
+      const caps = /** @type {{ [k: string]: boolean }} */ (record).capabilities ?? {};
+      const configured = Boolean(/** @type {{ configured?: boolean }} */ (record).configured);
+      return (
+        configured ||
+        Boolean(caps['hard-write']) ||
+        Boolean(caps['advisory-write']) ||
+        Boolean(caps['repair-payload'])
+      );
+    })
+    .map(([name]) => name)
+    .sort();
+  const parts = [];
+  if (onDiskHosts.length > 0) {
+    parts.push(`On-disk hosts with write-path assets: ${onDiskHosts.join(', ')}`);
+  }
+  if (inventory?.capabilities?.['merge-gate'] || capabilities['merge-gate']) {
+    parts.push('CI merge gate configured on disk');
+  }
+  parts.push(
+    'This invocation has no active hard-write guarantee (activeHost unknown); ' +
+      'required-status remains unverified without provider evidence'
+  );
+  return `${parts.join('. ')}.`;
+}
+
 export function detectWritePathCapabilities(root, explicitHost, attempt) {
   const model = buildWritePathCapabilityModel(root, explicitHost, attempt);
   const { activeHost, support, capabilities, capabilityEvidence, enforcementLadder, enforcementState, inventory } = model;
@@ -93,34 +130,10 @@ export function detectWritePathCapabilities(root, explicitHost, attempt) {
   }
 
   /** @type {string|null} */
-  let sessionNote = null;
-  if (activeHost === 'unknown') {
-    const onDiskHosts = Object.entries(inventory?.hosts ?? {})
-      .filter(([, record]) => {
-        if (!record || typeof record !== 'object') return false;
-        const caps = record.capabilities ?? {};
-        return Boolean(
-          record.configured ||
-            caps['hard-write'] ||
-            caps['advisory-write'] ||
-            caps['repair-payload']
-        );
-      })
-      .map(([name]) => name)
-      .sort();
-    const parts = [];
-    if (onDiskHosts.length > 0) {
-      parts.push(`On-disk hosts with write-path assets: ${onDiskHosts.join(', ')}`);
-    }
-    if (inventory?.capabilities?.['merge-gate'] || capabilities['merge-gate']) {
-      parts.push('CI merge gate configured on disk');
-    }
-    parts.push(
-      'This invocation has no active hard-write guarantee (activeHost unknown); ' +
-        'required-status remains unverified without provider evidence'
-    );
-    sessionNote = `${parts.join('. ')}.`;
-  }
+  const sessionNote =
+    activeHost === 'unknown'
+      ? buildUnknownHostSessionNote(inventory, capabilities)
+      : null;
 
   return {
     activeHost,
