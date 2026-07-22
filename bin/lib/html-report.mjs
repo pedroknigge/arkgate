@@ -809,10 +809,33 @@ export function renderHtmlReport({
     )
     .join('\n');
 
-  const skillsNote =
-    skillGaps.length === 0
-      ? '<div class="pill good">Agent skills current for detected tools</div>'
-      : `<div class="pill warn">${skillGaps.length} skill gap(s) — run ark upgrade / --install-agent-gates</div>`;
+  // Actionable catalog debt only — Codex leftover flat prompts with a complete
+  // .agents/skills catalog (legacyAdvisory) are cleanup advisories, not install gaps.
+  const actionableSkillGaps = skillGaps.filter(
+    (gap) =>
+      (gap?.missing ?? 0) > 0 ||
+      (gap?.stale ?? 0) > 0 ||
+      gap?.legacyPromptsOnly === true
+  );
+  const legacyAdvisoryOnly = skillGaps.some(
+    (gap) => gap?.legacyAdvisory === true && gap?.catalogComplete === true
+  );
+  const skillsParts = [];
+  if (actionableSkillGaps.length === 0) {
+    skillsParts.push(
+      '<div class="pill good">Agent skills current for detected tools</div>'
+    );
+  } else {
+    skillsParts.push(
+      `<div class="pill warn">${actionableSkillGaps.length} skill gap(s) — run ark upgrade / --install-agent-gates</div>`
+    );
+  }
+  if (legacyAdvisoryOnly) {
+    skillsParts.push(
+      '<div class="pill" style="opacity:.85">Codex leftover .codex/prompts are safe to delete (catalog complete; not required)</div>'
+    );
+  }
+  const skillsNote = skillsParts.join('\n');
 
   const meta = [
     version ? `ark-check v${esc(version)}` : '',

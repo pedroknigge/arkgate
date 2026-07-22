@@ -188,16 +188,68 @@ describe('Z06 managed-content upgrade', () => {
       readOnly: boolean;
       applied: boolean;
       assets: Array<{ path: string; state: string }>;
+      summary: {
+        wouldWrite: number;
+        managedAssets: number;
+        customizedPreserved: number;
+        metadataRefresh: number;
+      };
+      nothingToApply?: boolean;
+      nextCommand?: string;
     };
     expect(report.readOnly).toBe(true);
     expect(report.applied).toBe(false);
     expect(report.assets.find((asset) => asset.path.endsWith('ark-upgrade/SKILL.md'))?.state).toBe(
       'current'
     );
+    // Content matches package — stamp lag alone is not a planned content write.
+    expect(report.summary.wouldWrite).toBe(0);
+    expect(report.summary.managedAssets).toBeGreaterThan(0);
+    expect(typeof report.summary.customizedPreserved).toBe('number');
+    expect(report.nothingToApply).toBe(true);
+    // nextCommand remains for digest-bound optional apply; human copy does not urge it.
+    expect(report.nextCommand).toMatch(/--plan-digest /);
     expect(snapshot(root)).toEqual(before);
     expect(fs.readFileSync(path.join(codexHome, 'skills/ark-upgrade/SKILL.md'), 'utf8')).toBe(
       'user-owned Codex home skill\n'
     );
+
+    const human = run(
+      ARK,
+      ['upgrade', '--root', root, '--tools', 'claude', '--no-install', '--no-strict'],
+      { ...process.env, CODEX_HOME: codexHome, ARK_ACTIVE_HOST: 'claude' }
+    );
+    expect(human.status, human.stderr || human.stdout).toBe(0);
+    expect(human.stdout).toMatch(/Nothing to apply — managed content matches arkgate@/);
+    expect(human.stdout).not.toMatch(/Apply the exact preview with:/);
+    // Stamp lag is optional only — still print digest-bound apply when metadataRefresh > 0.
+    if ((report.summary.metadataRefresh ?? 0) > 0) {
+      expect(human.stdout).toMatch(/Optional stamp-only apply \(not required\):/);
+      expect(human.stdout).toMatch(/--plan-digest /);
+    }
+  });
+
+  it('doctor skillGaps.stale is 0 when skill body matches template with lagging arkVersion', () => {
+    const root = fixture();
+    const skill = path.join(root, '.claude/skills/ark-upgrade/SKILL.md');
+    fs.writeFileSync(
+      skill,
+      fs.readFileSync(skill, 'utf8').replace(/^arkVersion:.*$/m, 'arkVersion: 0.0.0-old')
+    );
+    const plan = planManagedUpgrade(root, { tools: 'claude' });
+    expect(plan.assets.find((a) => a.path === '.claude/skills/ark-upgrade/SKILL.md')?.state).toBe(
+      'current'
+    );
+    expect(plan.summary.wouldWrite).toBe(0);
+
+    const doctor = run(ARK_CHECK, [
+      '--root', root, '--config', 'ark.config.json', '--doctor', '--json', '--no-cache',
+    ]);
+    expect(doctor.status, doctor.stderr || doctor.stdout).toBe(0);
+    const gaps = (JSON.parse(doctor.stdout) as {
+      doctor: { skillGaps: Array<{ tool: string; stale: number }> };
+    }).doctor.skillGaps;
+    expect(gaps?.some((gap) => gap.tool === 'claude' && gap.stale > 0) ?? false).toBe(false);
   });
 
   it('refreshes only stale skill metadata and leaves doctor with no version-only gap', () => {

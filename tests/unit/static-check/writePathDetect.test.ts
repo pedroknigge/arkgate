@@ -8,6 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  buildUnknownHostSessionNote,
   detectWritePathCapabilities,
 } from '../../../bin/lib/write-path-detect.mjs';
 // Re-export surface used by doctor / install callers
@@ -19,6 +20,33 @@ const SHIPPED_MCP = path.join(REPO, 'bin', 'ark-mcp.mjs');
 function mk(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'ark-wpd-'));
 }
+
+describe('buildUnknownHostSessionNote', () => {
+  it('covers inventory edges: empty, hosts, merge-gate, and non-object host records', () => {
+    expect(buildUnknownHostSessionNote(null)).toMatch(/activeHost unknown/);
+    expect(buildUnknownHostSessionNote(null)).not.toMatch(/On-disk hosts/);
+    expect(
+      buildUnknownHostSessionNote({
+        hosts: {
+          claude: { configured: true, capabilities: {} },
+          ghost: null,
+          bare: 'skip',
+          cursor: { configured: false, capabilities: { 'advisory-write': true } },
+        },
+        capabilities: {},
+      })
+    ).toMatch(/On-disk hosts with write-path assets: claude, cursor/);
+    expect(
+      buildUnknownHostSessionNote(
+        { hosts: {}, capabilities: { 'merge-gate': true } },
+        { 'merge-gate': false }
+      )
+    ).toMatch(/CI merge gate configured/);
+    expect(
+      buildUnknownHostSessionNote({ hosts: {}, capabilities: {} }, { 'merge-gate': true })
+    ).toMatch(/CI merge gate configured/);
+  });
+});
 
 describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
   it('re-exports the same function from agent-gates', () => {
@@ -38,6 +66,45 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
       expect(cap.gap?.fix).toContain(
         '--install-agent-gates --tools claude,grok,cursor,codex'
       );
+      // Empty inventory still gets a this-invocation note (no on-disk host list).
+      expect(cap.sessionNote).toMatch(/activeHost unknown/i);
+      expect(cap.sessionNote).not.toMatch(/On-disk hosts/i);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('sessionNote mentions CI when merge-gate is on disk with unknown host', () => {
+    const root = mk();
+    try {
+      fs.mkdirSync(path.join(root, '.github', 'workflows'), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, '.github', 'workflows', 'ark-check.yml'),
+        'name: ark\non: [push]\njobs:\n  architecture:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npx ark-check --strict-merge\n'
+      );
+      const cap = detectWritePathCapabilities(root, 'unknown');
+      expect(cap.sessionNote).toMatch(/CI merge gate configured/i);
+      expect(cap.sessionNote).toMatch(/activeHost unknown/i);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('omits sessionNote when an explicit active host is selected', () => {
+    const root = mk();
+    try {
+      fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, '.claude', 'settings.json'),
+        JSON.stringify({
+          hooks: {
+            PreToolUse: [{ hooks: [{ command: 'npx arkgate-mcp --hook' }] }],
+          },
+        })
+      );
+      const cap = detectWritePathCapabilities(root, 'claude');
+      expect(cap.activeHost).toBe('claude');
+      expect(cap.sessionNote).toBeUndefined();
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
@@ -76,6 +143,11 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
       expect(cap.inventory.hosts.grok.configured).toBe(true);
       expect(cap.inventory.capabilities['hard-write']).toBe(true);
       expect(cap.gap).toBeNull();
+      // Inventory vs this-invocation: sessionNote lists on-disk hosts; hard never from assets alone.
+      expect(cap.sessionNote).toMatch(/On-disk hosts with write-path assets: grok/i);
+      expect(cap.sessionNote).toMatch(/activeHost unknown/i);
+      expect(cap.enforcementState.localWrite.hard).toBe(false);
+      expect(cap.enforcementState.localWrite.runtimeObserved).toBe(false);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

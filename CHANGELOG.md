@@ -5,6 +5,34 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 3.8.2 — 2026-07-22
+
+Corrective **patch** over 3.8.1 from PREDIAL WEB field evidence. Aligns doctor skill freshness with
+managed upgrade content identity, hardens upgrade preview honesty, clarifies doctor writePath
+inventory vs this-invocation, ships the Y06 pure-layer opt-in advisory, and treats complete-catalog
+Codex leftover prompts as safe-to-delete. **No required config migration.** Z09 / residual `RB-11`
+remain open.
+
+### Fixed
+
+- **Doctor skill “stale” vs managed upgrade (field DX):** skill gap detection now uses the same
+  content-identity rules as `ark upgrade` (stamp-normalized). A skill whose body matches the
+  package template is not stale when only `arkVersion` lags. Stale copy says content-behind-package.
+- **Upgrade preview phantom apply:** summary reports `managedAssets` / `wouldWrite` /
+  `customizedPreserved`; when `wouldWrite` is 0, prints “Nothing to apply” instead of urging
+  `--apply` as the primary next step (optional stamp-only apply remains digest-bound).
+- **Doctor writePath honesty:** with `activeHost: unknown`, a `sessionNote` separates on-disk
+  inventory from this-invocation hardness; package `installed` is independent of host support.
+  Hard still requires runtime proof (Z10).
+- **Codex legacy prompts:** complete `.agents/skills` with leftover `.codex/prompts` is an
+  advisory safe-to-delete signal (CLI, doctor, HTML), not an install-agent-gates gap.
+
+### Added
+
+- **Y06 pure-layer opt-in nudge:** when a golden pattern names pure modules and no layer sets
+  `pure: true`, doctor emits one advisory line (`doctor.pureLayerOptIn`). Never a blocker; never
+  auto-writes `pure: true`. Promoted from field evidence (PREDIAL WEB).
+
 ## 3.8.1 — 2026-07-22
 
 Corrective **patch** over 3.8.0. Closes silent fail-open on peerIsolation incomplete evidence,
