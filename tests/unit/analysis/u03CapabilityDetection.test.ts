@@ -197,8 +197,45 @@ describe('U03 pure IR engine carries import-based capability evidence', () => {
     expect(irForContent("import type from 'pg';\n").capabilityUses).toHaveLength(1);
     expect(irForContent("import typeFoo from 'pg';\n").capabilityUses).toHaveLength(1);
     expect(irForContent("export { Pool } from 'pg';\n").capabilityUses).toHaveLength(1);
-    // Documented envelope: braced named-binding lists stay value imports here.
-    expect(irForContent("import { type Pool } from 'pg';\n").capabilityUses).toHaveLength(1);
+    // All-type named bindings are type-only (erased) — align with symbol-aware path (S5).
+    expect(irForContent("import { type Pool } from 'pg';\n").capabilityUses).toEqual([]);
+    expect(irForContent("import { type Pool, type Client } from 'pg';\n").capabilityUses).toEqual([]);
+    expect(irForContent("export { type Pool } from 'pg';\n").capabilityUses).toEqual([]);
+    // Residual pure-IR envelope (value capability evidence retained):
+    const residualEnvelope: Array<{ content: string; capability: boolean; label: string }> = [
+      // mixed named list
+      { content: "import { type Pool, Client } from 'pg';\n", capability: true, label: 'mixed named' },
+      { content: "export { type Pool, Client } from 'pg';\n", capability: true, label: 'mixed export' },
+      // binding named `type` is a value import, not a type modifier
+      { content: "import { type as Alias } from 'pg';\n", capability: true, label: 'type as binding' },
+      // default + all-type named still has a runtime default binding (F2)
+      {
+        content: "import Pool, { type Client } from 'pg';\n",
+        capability: true,
+        label: 'default + type named',
+      },
+      {
+        content: "import Def, { type A, type B } from 'pg';\n",
+        capability: true,
+        label: 'default + multi type named',
+      },
+      // comment between tokens stays value (scanner envelope)
+      {
+        content: "import /* type */ { type Pool } from 'pg';\n",
+        capability: true,
+        label: 'comment-interrupted',
+      },
+    ];
+    for (const row of residualEnvelope) {
+      const uses = irForContent(row.content).capabilityUses;
+      if (row.capability) {
+        expect(uses, row.label).toHaveLength(1);
+      } else {
+        expect(uses, row.label).toEqual([]);
+      }
+    }
+    // Pure all-type remains erased next to the residual table.
+    expect(irForContent("import { type Client } from 'pg';\n").capabilityUses).toEqual([]);
     // A value import-equals is one dependency, never a duplicate nested require.
     expect(irForContent("import process = require('node:process');\n").capabilityUses).toHaveLength(1);
   });

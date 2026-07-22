@@ -8,7 +8,7 @@ hard-CI split is a deliberate trade-off, not a gap: local hooks and MCP coach at
 while a required merge status is the one boundary a repository can make every write path share.
 
 CLI names: prefer **`arkgate` / `arkgate-check` / `arkgate-mcp`**; aliases `ark` / `ark-check` /
-`ark-mcp` still work for one major. The current source candidate tests packed project TypeScript
+`ark-mcp` still work for one major. **arkgate@3.8.0+** tests packed project TypeScript
 **5.9.3 / 6.0.3 / 7.0.2** and uses an exact, physically distinct TypeScript 6 analysis host when
 the project API is unusable. Published 3.7.0 predates that correction; see the distribution and
 completeness boundary in [typescript-support.md](typescript-support.md).
@@ -631,10 +631,10 @@ edges are not denied by that rule.
 ```
 
 - **Denied:** `src/features/auth/**` → `src/features/payments/**` (different slice id).
-- **Allowed:** same-slice imports; classic non-peerIsolation denies still apply across layers.
+- **Allowed:** same-slice imports when both paths classify; classic non-peerIsolation denies still apply across layers.
 - **`sliceFolders`:** optional parent segments (default: inferred from layer globs).
-- **Fail-open:** missing paths or unclassifiable slices → do not deny via peerIsolation.
-- Enforced by `ark-check`, `arkgate/eslint`, and `ark-mcp` when paths resolve.
+- **Fail-closed:** missing paths, empty/unresolvable slice folders, or unclassifiable either side → **deny** via peerIsolation (cannot prove same-slice).
+- Enforced by `ark-check`, `arkgate/eslint`, and `ark-mcp` (path-aware edges and path-less intent refs share the same SoT).
 - Fixes are **judgment** (not mechanical-safe).
 
 Agents can generate a config from the project's actual directory layout instead of inventing layer mappings:

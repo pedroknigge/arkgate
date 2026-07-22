@@ -11,6 +11,11 @@ import {
   resolvedFactsEvidenceRequirementsHash,
   type ResolvedCandidateFactsInput,
 } from '../../../src/gate';
+import {
+  RESOLVED_CAPABILITY_IDS,
+  RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION as TYPES_FACTS_SCHEMA_VERSION,
+} from '../../../src/domain/resolvedCandidateFactsTypes';
+import { RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION as SCHEMA_MODULE_VERSION } from '../../../src/domain/resolvedCandidateFactsSchema';
 
 const baseContract = loadContract({
   include: ['src'],
@@ -74,6 +79,18 @@ function factsInput(
 }
 
 describe('Z04 resolved candidate facts contract', () => {
+  it('keeps import-free schema version and capability enum aligned with types', () => {
+    // Schema module stays import-free for generate-cli-pure; guard against dual-literal drift.
+    expect(TYPES_FACTS_SCHEMA_VERSION).toBe(SCHEMA_MODULE_VERSION);
+    expect(RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION).toBe(TYPES_FACTS_SCHEMA_VERSION);
+    expect(RESOLVED_CANDIDATE_FACTS_SCHEMA.properties.schemaVersion.const).toBe(
+      RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION
+    );
+    expect(
+      RESOLVED_CANDIDATE_FACTS_SCHEMA.properties.capabilityUses.items.properties.capability.enum
+    ).toEqual([...RESOLVED_CAPABILITY_IDS]);
+  });
+
   it('publishes the generated schema through stable package subpaths', () => {
     const packaged = JSON.parse(
       fs.readFileSync(path.resolve('schemas/ark.resolved-candidate-facts.schema.json'), 'utf8')

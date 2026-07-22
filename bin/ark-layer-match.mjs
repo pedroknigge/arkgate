@@ -191,7 +191,9 @@ function resolveSliceFolders(rule, layerName, layers) {
  *   Same-layer is always allowed (historical short-circuit).
  * - `peerIsolation: true` + `allowed: false`: deny only when importer and importee
  *   resolve to **different** slice ids (same or cross layer). Same-slice → allow.
- *   Missing paths or unclassifiable slices → fail-open (do not deny).
+ *   Missing paths, no slice folders, or unclassifiable slices → **fail-closed**
+ *   (deny): isolation is configured, so insufficient evidence must not silently
+ *   allow a possible cross-slice edge.
  */
 export function findDeniedEdgeRule(rules, from, to, options) {
     for (const rule of rules ?? []) {
@@ -202,15 +204,18 @@ export function findDeniedEdgeRule(rules, from, to, options) {
         if (rule.peerIsolation) {
             const fromPath = options?.fromPath;
             const toPath = options?.toPath;
+            // Isolation is active: without both paths we cannot prove same-slice.
             if (!fromPath || !toPath)
-                continue;
+                return rule;
             const folders = resolveSliceFolders(rule, from, options?.layers);
+            // Configured isolation without classifiable folders cannot allow.
             if (folders.length === 0)
-                continue;
+                return rule;
             const fromSlice = sliceIdForPath(fromPath, folders);
             const toSlice = sliceIdForPath(toPath, folders);
+            // Unclassifiable either side: cannot prove same-slice → deny.
             if (!fromSlice || !toSlice)
-                continue;
+                return rule;
             if (fromSlice !== toSlice)
                 return rule;
             continue; // same slice: this peerIsolation rule does not deny

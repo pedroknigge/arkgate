@@ -5,6 +5,30 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Changed
+
+- **Plan-B god-module pilot:** split `src/domain/analysis.ts` by concern into a DomainModel pilot
+  cluster — Analysis IR + facade in `analysis.ts`; `stableHash.ts`; `resolvedCandidateFactsTypes.ts`;
+  create/load in `resolvedCandidateFacts.ts`; import-free `resolvedCandidateFactsSchema.ts` for
+  `generate:cli-pure`. Public root/gate import paths unchanged. Judgment-only hygiene; no contract
+  or gate weakening.
+- **peerIsolation fail-closed (S1):** when `peerIsolation: true` is configured, missing paths, no
+  slice folders, or unclassifiable slices **deny** (cannot prove same-slice). No silent fail-open.
+- **Pure IR type-only named bindings (S5):** all-type lists (`import { type A }`,
+  `export { type A } from '…'`) are type-only for capability evidence; mixed lists stay value.
+- **Relative `require` edges (S4):** pure module graph emits dependency edges for relative
+  `require(...)` like relative import; package require remains capability evidence only.
+
+### Documentation
+
+- **Queue hygiene:** Phase Z engineering slices remain closed in 3.8.0; `Z09` is a parked claim
+  gate (residual `RB-11` = retained adoption + independent close only). No engineering `doing`.
+  Y06/Y09 stay parked; Y07 low priority; Y10 archived until field demand + ADR; K01 runtime-only.
+  After the analysis pilot, self-hosted design-weak residual is package barrel `src/index.ts`
+  only (plan-B judgment; never mechanical-safe).
+- **Pin honesty:** migration guide, claims matrix, and TS support pin current stable as
+  **arkgate@3.8.0** (not 3.7.0 / unpublished corrective).
+
 ## 3.8.0 — 2026-07-21
 
 This corrective minor makes complete analysis fail closed, restores one resolved architecture

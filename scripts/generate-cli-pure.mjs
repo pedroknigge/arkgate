@@ -9,7 +9,7 @@
  *                                → schemas/ark.config.schema.json
  *   src/domain/adapterContract.ts → bin/lib/adapter-contract.mjs
  *                                 → schemas/ark.analysis-result.schema.json
- *   src/domain/analysis.ts        → schemas/ark.resolved-candidate-facts.schema.json
+ *   src/domain/resolvedCandidateFactsSchema.ts → schemas/ark.resolved-candidate-facts.schema.json
  *
  * Layer match remains scripts/generate-layer-match.mjs (R1).
  *
@@ -56,7 +56,7 @@ const MODULES = [
     label: 'shared source-policy classification',
   },
   {
-    canonical: 'src/domain/analysis.ts',
+    canonical: 'src/domain/resolvedCandidateFactsSchema.ts',
     schemaDerived: 'schemas/ark.resolved-candidate-facts.schema.json',
     schemaExport: 'RESOLVED_CANDIDATE_FACTS_SCHEMA',
     compactSchema: true,

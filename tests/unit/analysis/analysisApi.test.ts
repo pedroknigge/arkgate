@@ -124,6 +124,44 @@ describe('analysis API contract', () => {
     ]);
   });
 
+  it('emits dependency edges for relative require like relative import (S4)', () => {
+    const result = analyzeProject({
+      contract,
+      files: [
+        { path: 'src/kernel/service.ts', content: 'export const service = 1;\n' },
+        {
+          path: 'src/domain/legacy.ts',
+          content:
+            "const service = require('../kernel/service');\nexport const order = service;\n",
+        },
+      ],
+    });
+
+    expect(result.ir.edges).toEqual([
+      expect.objectContaining({
+        from: 'src/domain/legacy.ts',
+        specifier: '../kernel/service',
+        to: 'src/kernel/service.ts',
+        resolution: 'resolved',
+        fromLayer: 'DomainModel',
+        toLayer: 'Kernel',
+      }),
+    ]);
+    expect(result.ir.violations).toHaveLength(1);
+    // Package require still feeds capability evidence, not a graph edge.
+    const pkg = analyzeProject({
+      contract,
+      files: [
+        {
+          path: 'src/domain/db.ts',
+          content: "const pg = require('pg');\nexport const c = pg;\n",
+        },
+      ],
+    });
+    expect(pkg.ir.edges).toEqual([]);
+    expect(pkg.ir.capabilityUses.some((use) => use.symbol === 'pg')).toBe(true);
+  });
+
   it('preflights creates, updates, and deletes as one read-only hash-bound candidate', () => {
     const files = [
       { path: 'src/domain/order.ts', content: 'export const order = 1;\n' },

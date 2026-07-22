@@ -19,16 +19,15 @@ semantics of your app still come from **your** project `typescript` + `tsconfig`
 | **TypeScript 6.x** | Supported; packed compatibility cell uses **6.0.3** |
 | **TypeScript 7.x** | Supported through the project's own compiler plus ArkGate's physically distinct TypeScript 6 analysis host; packed compatibility cell uses **7.0.2** |
 
-These current-source claims passed the complete 36-cell packed matrix on source `228dd893` in
-[CI run 29655190747](https://github.com/pedroknigge/arkgate/actions/runs/29655190747).
-Published 3.7.0 remains outside this corrected support claim.
+These support claims passed the complete 36-cell packed matrix on source `228dd893` in
+[CI run 29655190747](https://github.com/pedroknigge/arkgate/actions/runs/29655190747) and ship in
+published **arkgate@3.8.0**.
 
-> **Distribution boundary:** published `arkgate@3.7.0` predates this correction. Its compatible
-> analysis dependency can deduplicate to a TS7 version-only export, and its unavailable
-> `--plan --json` result can incorrectly report `goal.met: true`. The current source candidate for
-> the next corrective release fixes both defects with a non-deduplicable host and explicit analysis
-> completeness. Do not attribute that fix to 3.7.0; upgrade once the corrective version is
-> published.
+> **Distribution boundary:** published `arkgate@3.7.0` and earlier predate this correction. Their
+> compatible analysis dependency can deduplicate to a TS7 version-only export, and unavailable
+> `--plan --json` can incorrectly report `goal.met: true`. **arkgate@3.8.0** fixes both with a
+> non-deduplicable host and explicit analysis completeness. Do not attribute that fix to 3.7.0;
+> upgrade to 3.8.0 or later.
 
 Supported consumer range (also declared as an optional peer for compatibility):
 
@@ -102,8 +101,8 @@ TypeScript 7 is the **native (Go) compiler** generation. Important for tools lik
 - **`require('typescript')` on 7.0.x** exports only `{ version, versionMajorMinor }` — not `sys`, `createSourceFile`, or `resolveModuleName`.  
 - Unstable programmatic surfaces live under `typescript/unstable/*` (sync/async API, AST). They are **not** the classic TS 5/6 host ArkGate uses today.
 - Stable **programmatic JS API** maturity continues over the 7.x line (Microsoft: full story into **7.1+**).  
-- When the project’s TypeScript is not API-compatible, the current source line loads the exact,
-  separately named `typescript-ark-host` dependency. Published 3.7.0 does not yet have that fix.
+- When the project’s TypeScript is not API-compatible, **arkgate@3.8.0+** loads the exact,
+  separately named `typescript-ark-host` dependency. Published 3.7.0 does not have that fix.
 - TypeScript 7 syntax that TypeScript 6.0.3 cannot parse is reported as `partial`, never clean.
   ArkGate fails closed until its analysis host can parse every governed file.
 - Your **tsconfig** must follow TS 6/7 defaults (see below) or `tsc` / resolve can fail independently of ArkGate.
@@ -191,7 +190,7 @@ npm run test:ts-compat
 
 | Goal | Status |
 |------|--------|
-| Packed gate runs beside project TS 7 | Yes in current source; verified across the complete packed matrix. Published 3.7.0 predates the distinct host |
+| Packed gate runs beside project TS 7 | Yes in **3.8.0+**; verified across the complete packed matrix. Published 3.7.0 predates the distinct host |
 | Plan/check work with project TS 5/6 | Yes |
 | Plan/check work when project has TS 7 + usable `sys` | Yes (uses project) |
 | Project `tsc` remains the selected project version | Yes; the analysis alias does not replace it |

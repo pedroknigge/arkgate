@@ -21,7 +21,7 @@ export type LayerConfig = {
  *   Same-layer is always allowed without peerIsolation (historical short-circuit).
  * - `peerIsolation: true` + `allowed: false`: deny only when slice ids differ
  *   (same **or** cross layer). Same-slice → allow. Needs fromPath/toPath; missing
- *   paths/slices → fail-open.
+ *   paths/slices → fail-closed (cannot prove same-slice).
  */
 export type EdgeRule = {
   from: string;
@@ -246,7 +246,9 @@ function resolveSliceFolders(
  *   Same-layer is always allowed (historical short-circuit).
  * - `peerIsolation: true` + `allowed: false`: deny only when importer and importee
  *   resolve to **different** slice ids (same or cross layer). Same-slice → allow.
- *   Missing paths or unclassifiable slices → fail-open (do not deny).
+ *   Missing paths, no slice folders, or unclassifiable slices → **fail-closed**
+ *   (deny): isolation is configured, so insufficient evidence must not silently
+ *   allow a possible cross-slice edge.
  */
 export function findDeniedEdgeRule(
   rules: EdgeRule[] | undefined,
@@ -261,14 +263,17 @@ export function findDeniedEdgeRule(
     if (rule.peerIsolation) {
       const fromPath = options?.fromPath;
       const toPath = options?.toPath;
-      if (!fromPath || !toPath) continue;
+      // Isolation is active: without both paths we cannot prove same-slice.
+      if (!fromPath || !toPath) return rule;
 
       const folders = resolveSliceFolders(rule, from, options?.layers);
-      if (folders.length === 0) continue;
+      // Configured isolation without classifiable folders cannot allow.
+      if (folders.length === 0) return rule;
 
       const fromSlice = sliceIdForPath(fromPath, folders);
       const toSlice = sliceIdForPath(toPath, folders);
-      if (!fromSlice || !toSlice) continue;
+      // Unclassifiable either side: cannot prove same-slice → deny.
+      if (!fromSlice || !toSlice) return rule;
       if (fromSlice !== toSlice) return rule;
       continue; // same slice: this peerIsolation rule does not deny
     }

@@ -8,11 +8,11 @@
 > [atomic preflight](../../adr/0005-atomic-change-preflight.md) ·
 > [enforcement evidence ladder](../../adr/0008-enforcement-evidence-ladder.md)
 
-**Status:** In progress<br>
+**Status:** In progress — engineering slices closed; residual claim gate only<br>
 **Slug:** `enforcement-truth-at-speed`<br>
 **Kind:** epic / redesign<br>
 **Owners:** product (Pedro) + library maintainers<br>
-**Last updated:** 2026-07-20<br>
+**Last updated:** 2026-07-22<br>
 **Code path (existing):** package/release scripts, TypeScript host, canonical analysis Kernel,
 generated CLI bundle, CLI/MCP/hook/ESLint adapters, onboarding assets, and evaluation harnesses
 
@@ -87,7 +87,7 @@ without turning historical brownfield smells into an all-or-nothing migration ga
 | `Z07` | Warm incremental snapshot pilot and decomposed fast test path | Mandatory background daemon |
 | `Z08` | Live-agent, causal/full-denominator, censored-failure, and mutation evidence | Productivity claims from success-only samples |
 | `Z10` | New-code design-delta enforcement plus runtime-proven host hardness | Blocking all historical smells or treating installed assets as active proof |
-| `Z09` | External matrix, D30/D90 retained cohort, and independently signed close after Z10 | Self-declared reviewer identity |
+| `Z09` | External matrix, D30/D90 retained cohort, and independently signed close after Z10 — **parked claim gate** (not engineering `doing`) until matrix + ≥8 adopters + reviewer identity are preregistered | Self-declared reviewer identity; Y-queue starts; runtime K01; god-module hygiene |
 
 ## Acceptance criteria
 
@@ -145,15 +145,19 @@ without turning historical brownfield smells into an all-or-nothing migration ga
   missing/disabled/downgraded/unrecorded follow-up counted not retained. Each project's immutable
   manifest records initial digest, repository SHA, required-status evidence, and every forward
   corrective upgrade without resetting the clock; a non-implementing reviewer reproduces the
-  initial candidate and signs the longitudinal manifest.
-- [ ] **A13 — New-code shape is enforced without a brownfield cliff:** an opt-in, versioned
+  initial candidate and signs the longitudinal manifest. (Owned by parked `Z09` / residual `RB-11`;
+  not an engineering implementation slice.)
+- [x] **A13 — New-code shape is enforced without a brownfield cliff:** an opt-in, versioned
   base/candidate design delta blocks new or worsened supported smells on touched paths through the
   same complete-patch write and CI verdict. A Propia-shaped `domain-logic-in-ui` regression is
   blocked without manual skill invocation; pre-existing residual and unrelated changes remain
   green. Grok/Claude/Cursor/Codex output distinguishes configured/installed from runtime-observed
-  and keeps every unverified or bypassable operation `hard:false`.
-- [ ] **A14 — Hard lines held:** the runtime stays experimental and separate, parked Y items remain
-  parked until their own gates are met, and no release gate is weakened to close the phase.
+  and keeps every unverified or bypassable operation `hard:false`. Closed with Z10 / `RB-12` on
+  exact-head PR #89 CI/Security evidence; published in arkgate@3.8.0.
+- [x] **A14 — Hard lines held (as of 3.8.0 shipping):** the runtime stays experimental and separate;
+  parked Y items remain parked until their own gates are met; Y10 stays archived until field
+  demand + ADR; no release gate was weakened to ship Z01–Z08/Z10. Residual claim honesty for A12
+  remains under Z09.
 
 ## Proposed public surface (hypothesis)
 
@@ -196,7 +200,8 @@ flowchart LR
 
 - **Depends on:** ArkGate 3.7.0 as the reproduced baseline; accepted ADRs 0002, 0003, 0005, and
   0008; the existing package/adoption/performance harnesses.
-- **Blocked by:** `Z01`–`Z08` and Z10 are closed; `Z09` retained adoption and independent review remain.
+- **Blocked by:** engineering slices `Z01`–`Z08` and Z10 are closed in 3.8.0. Residual only:
+  `Z09` retained adoption and independent review (parked claim gate; residual `RB-11`).
 - **Risk — Kernel impurity:** resolving imports inside Kernel would violate the four-layer contract.
   **Kill switch:** keep TypeScript/filesystem in Tooling and pass only serializable facts.
 - **Risk — cache false green:** stale invalidation is worse than current latency.
@@ -253,28 +258,30 @@ flowchart LR
 
 ## Corrective release policy
 
-- Repository truth warnings may merge immediately; npm's 3.7.0 readme remains stale until a
-  corrective package is published.
+- Repository truth warnings may merge immediately. Published **3.8.0** carries the corrective
+  package truth; historical 3.7.0 tarballs remain outside those fixes.
 - `Z01` + `Z02` may ship a stable corrective patch for safe release tooling, completeness truth,
   and packed TS compatibility without waiting for performance or D30/D90 evidence.
 - `Z04` may ship adapter parity as a patch when its seam is internal. If `Z03` requires a new stable
   export/API, use an explicitly approved backward-compatible corrective minor (or canary), with no
   unrelated surface. `Z05` + `Z06` establish the clean installed/upgrade baseline.
-- `Z07` gates only the verified 10x hook-latency claim and its named absolute targets. `Z08` gates
-  causal productivity, `Z10` gates new-code design enforcement, and `Z09` gates retained adoption,
-  independent-close, and epic-shipped claims—not already proven correctness fixes.
+- `Z07`/`Z08`/`Z10` claim evidence is already earned in 3.8.0. Residual only: `Z09` gates retained
+  adoption, independent-close, and epic-shipped status (residual `RB-11`)—not already proven
+  correctness fixes.
 
 ## Promotion
 
 The implementation IDs are tracked in [ROADMAP Phase Z](../../../ROADMAP.md#phase-z--enforcement-truth-at-speed).
-`Z01`–`Z08` and Z10 are complete; subsequent promotion follows the same discipline:
+`Z01`–`Z08` and Z10 are complete. Queue hygiene (2026-07-22):
 
-1. Keep only `Z09` doing until its retained-adoption and independent-close evidence passes.
-2. Expose its failing acceptance cases before changing behavior.
-3. Close the item-specific evidence and common merge gate on the same commit.
-4. Advance one Z item at a time; do not promote the parked Y candidates as collateral work.
-5. When `Z09` closes after `Z10`, mark this plan `Shipped`, retain it as rationale, and make the corrected
-   reports/release notes the implementation evidence.
+1. Keep `Z09` **parked** as a claim gate until its preregistration gate is met (signed
+   matrix + ≥8 consented adopters + non-implementing reviewer identity). Promote to `todo`/`doing`
+   only while evidence is actively collected — not as idle engineering occupancy.
+2. Do not invent product implementation work to “finish Phase Z” in code; residual is longitudinal.
+3. Do not promote parked Y candidates (Y06/Y07/Y09) or archived Y10 / runtime K01 as collateral.
+4. Self-hosted god-module / plan-B residual is judgment hygiene, not a ROADMAP item.
+5. When `Z09` closes residual `RB-11`, mark this plan `Shipped`, retain it as rationale, and make the
+   corrected reports/release notes the implementation evidence.
 
 ## Related
 

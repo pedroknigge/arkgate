@@ -31,9 +31,16 @@ type ModuleSpecifier = {
   offset: number;
   excerpt: string;
   typeOnly?: boolean;
-  /** Found via `require(...)`: capability evidence only, never a graph edge (verdict stability). */
+  /**
+   * Found via bare `require(...)` (not import-equals). Package requires feed
+   * capability evidence only; relative requires also emit graph edges (S4).
+   */
   requireCall?: boolean;
 };
+
+function isIdentifierStart(value: string | undefined): boolean {
+  return value !== undefined && /[A-Za-z_$]/.test(value);
+}
 
 function isIdentifierCharacter(value: string | undefined): boolean {
   return value !== undefined && /[A-Za-z0-9_$]/.test(value);
@@ -72,32 +79,83 @@ function isWordAt(source: string, word: string, index: number): boolean {
   );
 }
 
+/**
+ * True when the clause is a pure braced named-binding list and every binding
+ * uses an explicit inline `type` modifier (`import { type A, type B } from '…'`).
+ *
+ * Value forms (stay capability evidence):
+ * - mixed `{ type A, B }`
+ * - default + named: `import Pool, { type Client } from '…'`
+ * - namespace / star prefixes before `{`
+ * - binding named `type` (`{ type }`, `{ type as X }`)
+ * - comment-interrupted forms (scanner envelope — symbol path owns precision)
+ */
+function bracedNamedBindingsAreTypeOnly(source: string, start: number): boolean {
+  // Require the brace list to be the whole clause after optional whitespace.
+  // Any preceding default/namespace/value binding means this is not type-only.
+  let index = skipWhitespace(source, start);
+  if (source[index] !== '{') return false;
+  index += 1;
+  let sawBinding = false;
+  while (index < source.length) {
+    index = skipWhitespace(source, index);
+    if (source[index] === '}') return sawBinding;
+    if (source[index] === ',') {
+      index += 1;
+      continue;
+    }
+    // Inline type modifier requires `type` then a distinct binding identifier.
+    if (!isWordAt(source, 'type', index)) return false;
+    const afterType = skipWhitespace(source, index + 'type'.length);
+    if (
+      afterType >= source.length ||
+      source[afterType] === ',' ||
+      source[afterType] === '}' ||
+      isWordAt(source, 'as', afterType) ||
+      !isIdentifierStart(source[afterType])
+    ) {
+      return false;
+    }
+    index = afterType;
+    while (index < source.length && isIdentifierCharacter(source[index])) index += 1;
+    index = skipWhitespace(source, index);
+    if (isWordAt(source, 'as', index)) {
+      index = skipWhitespace(source, index + 'as'.length);
+      if (!isIdentifierStart(source[index])) return false;
+      while (index < source.length && isIdentifierCharacter(source[index])) index += 1;
+    }
+    sawBinding = true;
+  }
+  return false;
+}
+
 function specifierAfterImport(source: string, index: number): ModuleSpecifier | undefined {
   index = skipWhitespace(source, index + 'import'.length);
   if (source[index] === '(') return readString(source, skipWhitespace(source, index + 1));
-  // Conservative textual `import type …` detection: statements that begin with the
-  // type keyword are erased at runtime and must not count as capability evidence.
-  // Documented envelope (ADR 0009 D3): ANY braced named-binding list — including
-  // all-type `{ type A }` — stays a value import here, as does a comment between
-  // the keywords; the symbol-aware collector owns that precision. Template-literal
-  // bodies are scanned like the rest of the file (pre-existing scanner envelope).
+  // Statement-level `import type …` and all-type named lists (`import { type A }`)
+  // are erased at runtime and must not count as capability evidence. Mixed named
+  // lists and comment-interrupted forms stay value imports (documented envelope).
   let typeOnly = false;
   if (isWordAt(source, 'type', index)) {
     const after = skipWhitespace(source, index + 'type'.length);
     if (source[after] !== ',' && !isWordAt(source, 'from', after)) typeOnly = true;
+  } else if (bracedNamedBindingsAreTypeOnly(source, index)) {
+    typeOnly = true;
   }
   const specifier = specifierInStaticStatement(source, index, true);
   return specifier && typeOnly ? { ...specifier, typeOnly: true } : specifier;
 }
 
 function specifierAfterExport(source: string, index: number): ModuleSpecifier | undefined {
-  // `export type { X } from '…'` is erased at runtime exactly like `import type`.
+  // `export type { X } from '…'` and `export { type X } from '…'` are erased at runtime.
   index = index + 'export'.length;
   const afterKeyword = skipWhitespace(source, index);
   let typeOnly = false;
   if (isWordAt(source, 'type', afterKeyword)) {
     const next = skipWhitespace(source, afterKeyword + 'type'.length);
     if (source[next] === '{' || source[next] === '*') typeOnly = true;
+  } else if (bracedNamedBindingsAreTypeOnly(source, afterKeyword)) {
+    typeOnly = true;
   }
   const specifier = specifierInStaticStatement(source, index, false);
   return specifier && typeOnly ? { ...specifier, typeOnly: true } : specifier;
@@ -214,10 +272,9 @@ export function moduleFactsFor(
   const capabilityUses: AnalysisCapabilityUse[] = [];
   for (const moduleSpecifier of moduleSpecifiers(file.content)) {
     const specifier = moduleSpecifier.value;
-    // require() specifiers feed capability evidence only — a relative require
-    // never becomes a graph edge here, preserving pre-U04 edge verdicts.
-    if (moduleSpecifier.requireCall && specifier.startsWith('.')) continue;
     if (!specifier.startsWith('.')) {
+      // Package require/import: capability evidence only (never a graph edge).
+      // Type-only forms (statement-level or all-type named bindings) are erased.
       if (moduleSpecifier.typeOnly) continue;
       const capability = capabilityForModuleSpecifier(specifier);
       if (!capability) continue;
@@ -230,6 +287,8 @@ export function moduleFactsFor(
       });
       continue;
     }
+    // Relative import, export, or require — coupling edge (S4: relative require
+    // is no longer invisible on the pure path). Package requires stay capability-only above.
     const line = file.content.slice(0, moduleSpecifier.offset).split('\n').length;
     const evidence: AnalysisEvidence = {
       kind: 'import',

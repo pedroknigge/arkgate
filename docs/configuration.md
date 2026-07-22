@@ -96,6 +96,9 @@ process module-capability family must be denied.
 Rule fields:
 
 - `from`, `to`, `allowed`, `message`, `peerIsolation`, `sliceFolders`
+- `peerIsolation: true` + `allowed: false`: deny only when slice ids differ; same-slice allows
+  when both paths classify. Missing paths, empty slice folders, or unclassifiable slices
+  **fail closed** (deny — cannot prove same-slice).
 
 Safety fields:
 

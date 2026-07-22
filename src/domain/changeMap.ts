@@ -1,5 +1,5 @@
 /** Pure, versioned contract for an optional architecture change map. */
-import { deterministicHash, stableSerialize } from './analysis';
+import { deterministicHash, stableSerialize } from './stableHash';
 import type { ArkConfig } from './configContract';
 import { layerForRelativePath } from './layerMatch';
 

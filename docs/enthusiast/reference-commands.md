@@ -1,9 +1,9 @@
 # Reference: commands and artifacts
 
 Product: **ArkGate** (`arkgate`). Prefer `arkgate` / `arkgate-check` / `arkgate-mcp`; aliases
-`ark` / `ark-check` / `ark-mcp` work for one major. The current source candidate supports packed
-project TypeScript 5.9/6.0/7.0 with a physically distinct TypeScript 6 analysis host; published
-3.7.0 predates that correction: [typescript-support.md](../typescript-support.md).
+`ark` / `ark-check` / `ark-mcp` work for one major. **arkgate@3.8.0+** supports packed project
+TypeScript 5.9/6.0/7.0 with a physically distinct TypeScript 6 analysis host; published 3.7.0
+predates that correction: [typescript-support.md](../typescript-support.md).
 
 ## Recommendation
 

@@ -346,6 +346,37 @@ describe('AI Code Gate (basic)', () => {
     expect(res.violations[0].target).toBe('Adapter.Persistence.OrderRepository');
   });
 
+  it('fail-closes peerIsolation on path-less intent references (same-layer)', () => {
+    // Intent strings are not files: isolation cannot prove same-slice → deny.
+    // Use Domain.* so looksLikeArkIntent accepts the literal.
+    const profile = {
+      name: 'peer-intent',
+      layers: [{ name: 'DomainModel', prefixes: ['Domain.'] }],
+      rules: [
+        {
+          from: 'DomainModel',
+          to: 'DomainModel',
+          allowed: false,
+          peerIsolation: true,
+        },
+      ],
+      resolveLayer: (intent: string) =>
+        intent.startsWith('Domain.') ? 'DomainModel' : undefined,
+    };
+    const gate = createAICodeGate({
+      architectureProfile: profile as never,
+      enforceIntentAllowlist: false,
+    });
+
+    const res = gate.validate(`const target = 'Domain.OtherSlice.Command';`, {
+      layer: 'DomainModel',
+    });
+    const refs = res.violations.filter((v) => v.ruleId === 'LAYER_REFERENCE_VIOLATION');
+    expect(refs.length).toBeGreaterThanOrEqual(1);
+    expect(refs[0]?.fromLayer).toBe('DomainModel');
+    expect(refs[0]?.toLayer).toBe('DomainModel');
+  });
+
   it('uses TypeScript AST checks for Ark publish misuse when provided', () => {
     const gate = createAICodeGate({
       typescript: ts,

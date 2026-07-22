@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-07-17
+- **Status date:** 2026-07-22
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -117,15 +117,16 @@ for current truth.
 | `RB-08` | P1 | `closed` | Z02's distinct exact host and schema 1.2 fail-closed verdict passed all 36 packed cells in PR #81 CI; published 3.7.0 predates the correction |
 | `RB-09` | P1 | `closed` | Z03 selected versioned resolved-candidate facts; Z04 restored one graph/verdict across the parity-capable API, preflight, CLI, MCP, complete-patch write gate, eligible ESLint, and final CI |
 | `RB-10` | P1 journey | `closed` | Z05–Z06 proved the installed starter, managed upgrade, observed enforcement, and packed journey across the clean-room matrices |
-| `RB-11` | P1 claim | `open` | Z07, Z08, Z10, and Z09 must earn the 10x feedback, causal-evidence, design-delta, retained-adoption, and independent-close claims |
+| `RB-11` | P1 claim | `open` | Residual only: retained-adoption and independent-close under `Z09`. Z07 (10× feedback), Z08 (causal evidence), and Z10 (design-delta + runtime hardness) already closed with recorded evidence in 3.8.0; do not re-open those claim gates as if unearned |
 | `RB-12` | P1 enforcement | `closed` | Z10's semantic base-relative ratchet and runtime-observed hardness passed exact-head PR #89 CI run `29796255993` and Security run `29796256067` on `357e282` |
 
 `RB-01`–`RB-06` are closed by the corresponding completed items and their recorded evidence.
 V05 passed its then-current binary exit gate in PR #49. The separately authorized stable `3.0.0`
 release completed on 2026-07-13; closing `RB-06` had removed the onboarding release blocker.
-The post-3.7.0 audit below supersedes that evidence as proof of *current* release readiness:
-`RB-11` remains open, so the broad product-claim stop condition still applies. Z10 closed the
-separate new-code-enforcement stop condition in current source; published 3.7.0 still predates it.
+The post-3.7.0 audit below supersedes that evidence as proof of *current* release readiness for
+the pre-3.8.0 distribution. Published **3.8.0** carries Z01–Z08 and Z10; `RB-11` remains open
+only for longitudinal retention and independently signed close (`Z09`). Broad product claims that
+require those two outcomes stay blocked; ordinary corrective patches do not.
 
 ### Post-3.7.0 audit reset (2026-07-17)
 
@@ -394,10 +395,10 @@ Ark's product-policy or governed-scope enforcement.
 | 57 | `Y03` | `done` | S | — | Governed files that fail to parse are surfaced honestly (a file the scanner cannot read is never silently "clean") |
 | 58 | `Y04` | `done` | S | — | Skill mechanical-edit hygiene rules close the three observed codemod defects |
 | 59 | `Y06` | `parked` | S | gate: field case | `pure`-layer opt-in nudge: doctor suggests declaring purity when the golden pattern names pure modules but no layer opts in |
-| 60 | `Y07` | `parked` | L | gate: `Y06` corpus | Strict (blocker-grade) ambient mutable-state diagnostics — only after a real `pure: true` field corpus exists (U05 condition unchanged) |
+| 60 | `Y07` | `parked` | L | gate: `Y06` corpus (low priority) | Strict (blocker-grade) ambient mutable-state diagnostics — only after a real `pure: true` field corpus exists (U05 condition unchanged); not near-term backlog |
 | 61 | `Y08` | `done` | S | gate met: deterministic harness | `node:process` module-import dual of the `process` ambient forbidden global is detected with the same evidence discipline |
 | 62 | `Y09` | `parked` | S | gate: field case | Template-interpolation import specifiers are surfaced as an unresolvable-edge advisory instead of silently unresolved |
-| 63 | `Y10` | `parked` | L | gate: field demand | Transitive capability inference: a wall sees capabilities reached through local call chains, not only direct uses |
+| 63 | `Y10` | `parked` | L | gate: field demand + ADR (archive until then) | Transitive capability inference: a wall sees capabilities reached through local call chains, not only direct uses — not a near-term product queue item |
 
 ### Phase Z — enforcement truth at speed
 
@@ -405,12 +406,17 @@ Origin: the post-3.7.0 audit reset above. This is stabilization work, not a feat
 restores the product invariant from the packed consumer inward, then optimizes only the proven
 path and replaces self-referential evidence with causal field proof.
 
-Phase X has no pending work. Y06, Y07, Y09, and Y10 remain parked behind their existing gates:
-alias resolution is not Y09's dynamic-template case, direct resolution is not Y10's transitive
-inference, and neither supplies the `pure: true` field corpus required by Y06/Y07. The experimental
-runtime remains outside the product phase under ADR 0004 and `docs/production-hardening.md`; its
-confirmed intra-process commit gaps are retained separately as parked candidate `K01` rather than
-silently dropped.
+Phase X has no pending work. After 3.8.0, Phase Z has **no implementation `doing`**: Z01–Z08 and
+Z10 are `done`; Z09 is a longitudinal claim gate, not continuous engineering. Y06 and Y09 remain
+parked behind field cases (still valuable when gates fire). Y07 stays parked at low priority behind
+the Y06 corpus. Y10 is archived until field demand plus an explicit ADR — largest cost in the Y
+queue, out of Phase Z scope, not “next after Z09.” Alias resolution is not Y09's dynamic-template
+case, direct resolution is not Y10's transitive inference, and neither supplies the `pure: true`
+field corpus required by Y06/Y07. The experimental runtime remains outside the product phase under
+ADR 0004 and `docs/production-hardening.md`; its confirmed intra-process commit gaps are retained
+separately as parked candidate `K01` rather than silently dropped. Self-hosted design residual
+(historical domain analysis pilot cluster done; residual smell evidence is the package barrel
+`src/index.ts` only) is plan-B judgment only — never a ROADMAP `todo` or release blocker.
 
 `Z01` starts with a failing destructive-target fixture; do **not** run the unsafe
 `check:release-artifacts` path or make budget measurement a prerequisite to its fix. After `Z01` is
@@ -429,7 +435,7 @@ may raise those ceilings merely to fit its own implementation.
 | 70 | `Z07` | `done` | L | `Z04`, `Z05` | A measured warm control plane delivers order-of-magnitude hook feedback and bounded canonical reevaluation without semantic drift |
 | 71 | `Z08` | `done` | L | `Z06`, `Z07` | Live-agent and causal evaluation count every outcome and defend the corrected path with mutation proof |
 | 72 | `Z10` | `done` | L | `Z08` | New design-smell regressions fail on the write/merge path while historical residual and unverified host enforcement remain honestly labeled |
-| 73 | `Z09` | `doing` | L | `Z10` | Retained field adoption and a verifiably independent review earn the Phase Z product claims |
+| 73 | `Z09` | `parked` | L | gate: signed matrix + ≥8 consented adopters + non-implementing reviewer | Retained field adoption and a verifiably independent review earn the residual Phase Z product claims (not an engineering `doing` slot) |
 
 #### Corrective-release lanes
 
@@ -442,11 +448,12 @@ may raise those ceilings merely to fit its own implementation.
   requires a new stable export/API, use an explicitly approved backward-compatible corrective minor
   (or a canary until its compatibility gate passes), never an unrelated feature minor. After `Z06`,
   the clean installed and managed-upgrade journey can become the stable baseline and `RB-10` closes.
-- `Z07` gates only the verified 10x hook-latency claim and its separately named absolute latency
-  targets. `Z08` gates causal productivity; `Z10` gates new-code design enforcement and closes
-  `RB-12`; `Z09` gates retained adoption, independent-close, and epic-shipped claims. They do not
-  delay a completed safety or correctness patch, but no feature release or broad product claim is
-  allowed while `RB-11` or `RB-12` is open.
+- `Z07` already earned the verified 10x hook-latency claim and its absolute latency targets.
+  `Z08` already earned causal productivity evidence; `Z10` already earned new-code design
+  enforcement and closed `RB-12`. `Z09` alone still gates retained adoption, independent-close,
+  epic-shipped status, and the residual scope of `RB-11`. They do not delay a completed safety or
+  correctness patch. No feature release or broad product claim that requires retention/independence
+  is allowed while `RB-11` is open; `RB-12` is closed.
 
 ### Z01 — Make release cleanup tool-owned and path-safe
 
@@ -817,12 +824,17 @@ release artifacts, and strict Ark. All three falsifiable outcomes passed, so Z10
 
 ### Z09 — Prove retained field adoption and independent close
 
-- **Status:** `doing`
-- **Depends on:** `Z10`
+- **Status:** `parked` (claim gate — not continuous implementation)
+- **Depends on:** `Z10` (done); promotion gate below
+- **Promotion gate:** signed repository/reviewer identity mechanism preregistered; external matrix
+  preregistered; cohort of ≥8 consented adopters enrolled before D30/D90 clocks start. Promote to
+  `todo` only when those prerequisites exist; then `doing` only while evidence is actively collected.
+  Do **not** hold the single engineering `doing` slot when no cohort is in flight.
 
 **Outcome:** reproducible external and longitudinal evidence replaces self-declared release proof.
 Reviewer and exact-candidate identity are verified from signed repository/review evidence rather
-than an `independent: true` field.
+than an `independent: true` field. This item does not authorize product feature work, Y-queue
+starts, runtime hardening, or self-hosted god-module pilots.
 
 **Acceptance:** the preregistered balanced external matrix covers at least 12 pinned repositories,
 four hosts, and three package managers; >=5/6 (83.33%) of its entire cell denominator reaches
@@ -834,10 +846,10 @@ longitudinal manifest containing, per project, initial digest, repository SHA, r
 evidence, every upgrade digest/date, and final state. An upgrade does not reset the clock; retention
 counts only the initial candidate or a recorded forward corrective descendant that passed the same
 relevant gates. Missing follow-up, disabled enforcement, downgrade, or unrecorded upgrade counts not
-retained. Close `RB-11`, mark the epic shipped, and authorize only the 10x,
-causal-productivity, design-delta-enforcement, retained-adoption, and independent-close claims whose
-preregistered thresholds passed; ordinary completed corrective patches did not wait for this
-milestone.
+retained. Close residual `RB-11`, mark the epic shipped, and authorize only the retained-adoption and
+independent-close claims whose preregistered thresholds passed (10×, causal-productivity, and
+design-delta-enforcement claims are already earned by Z07/Z08/Z10 evidence). Ordinary completed
+corrective patches did not and do not wait for this milestone.
 
 ### Retained runtime correctness candidate (outside Phase Z)
 
@@ -849,8 +861,10 @@ milestone.
 recording history can append before a fallible buffer enqueue; subscriber-handler errors throw only
 when `rethrowHandlerErrors` is enabled, while projections are installed as `onPublish` and their
 errors are always reduced to `hook.error`. It is not Phase Z work, a gate-package release blocker,
-or authorization to expand the experimental runtime. If promoted, begin with failing rollback,
-append/enqueue, handler, and projection/hook-policy fault tests and update
+or authorization to expand the experimental runtime. Runtime remains experimental and separately
+versioned; `@arkgate/runtime` is not the product wedge. Deprecated root forwarders
+(`arkgate/runtime`, `arkgate/nestjs`) stay labeled until ArkGate **4.0**. If promoted, begin with
+failing rollback, append/enqueue, handler, and projection/hook-policy fault tests and update
 `docs/production-hardening.md` with the chosen commit semantics.
 
 ### 3.6.0 field validation (field-adopter worktree, 2026-07-17)
@@ -1064,18 +1078,22 @@ allowlist, module budgets, generated parity, `git diff --check`, and strict arch
 
 Y06, Y07, Y09, and Y10 predate this cycle and stay `parked`: a parked item never starts; it
 promotes to `todo` only when its named gate is met, with the field evidence recorded here first.
-Y08 met that discipline below and is the only promoted retained candidate.
+Y08 met that discipline below and is the only promoted retained candidate. After the 2026-07-22
+queue hygiene pass: keep Y06/Y09 parked (valuable when gates fire); keep Y07 parked at **low
+priority** behind Y06; treat Y10 as **archived until field demand + ADR** (not near-term backlog).
 
 **Y06 — `pure`-layer opt-in nudge.** The strict ambient-state candidate still has NO field
 corpus: the flagship adopter finished full adoption with zero `pure: true` layers even though its
 golden pattern names pure Domain modules (`evm-calc`, `vacation-entitlement`). Outcome: when the
 golden pattern (Q03) references pure modules and no layer declares purity, the doctor emits a
 one-line opt-in nudge (advisory, U05 voice). Gate: one more field session confirming the nudge
-would have been actionable rather than noise.
+would have been actionable rather than noise. **Keep parked** — do not implement “by default.”
 
 **Y07 — strict ambient-state diagnostics.** U05's condition is unchanged: strictness requires
 blocker-grade precision proven on a real opted-in corpus. `Y06` exists to create that corpus;
-this item stays parked until the corpus exists and the U05 precision bar is met on it.
+this item stays parked until the corpus exists and the U05 precision bar is met on it. **Low
+priority:** if one to two field cycles still yield no corpus, leave as idea backlog rather than
+implementation pressure.
 
 **Y08 — `node:process` dual.** `forbiddenGlobals: ["process"]` sees the ambient global; the
 `import process from "node:process"` spelling previously bypassed it. Outcome: the module-import dual is
@@ -1113,8 +1131,10 @@ real boundary crossing.
 wall blocks `fetch` in the file, not `fetch` reached through a same-layer helper the file calls.
 Outcome: opt-in inference through local (same-package) call chains with the soundness envelope
 named explicitly, mirroring the C04 discipline. Gate: field demand — a governed adopter showing a
-real wall escape through an intra-layer helper; parked until then because the cost (analysis
-depth, budgets, explainability of evidence chains) is the largest in this queue.
+real wall escape through an intra-layer helper — **plus an explicit ADR** before any analysis-depth
+or budget change. **Archived until that gate:** concept retained; expectation of “next after Z09”
+is deprecated. Cost (analysis depth, budgets, explainability of evidence chains) is the largest in
+this queue and remains Phase Z out-of-scope.
 
 ### 3.5.0 field validation (field-adopter worktree, 2026-07-16)
 
@@ -2642,10 +2662,10 @@ If any condition fails, the product stays beta. Do not convert the result into a
 
 **Phase Z evidence rule:** the V03/V05/B01 records below remain historical attempt evidence. The
 post-3.7.0 audit proved that `firstGreen`, false-block/bypass counts, and reviewer independence did
-not establish the outcomes their acceptance text required. They cannot support a current release
-claim until `Z08` repairs the causal measurement, `Z10` closes the new-code enforcement lag, and
-`Z09` closes `RB-11` with retained and independent evidence. This does not delay the
-corrective-release lanes above.
+not establish the outcomes their acceptance text required. `Z08` and `Z10` have since closed causal
+measurement and new-code enforcement with recorded evidence in 3.8.0. Remaining product-claim stop
+condition: `Z09` must close residual `RB-11` with retained and independent evidence. This does not
+delay ordinary corrective-release lanes.
 
 **Attempt evidence (2026-07-13):** `scripts/beta-exit-audit.mjs` and
 `eval/beta-exit/audit-schema.v1.json` record a reproducible binary decision. The 12-cell balanced
@@ -2757,11 +2777,20 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Item: `Z09` (`doing`) — Z10 and RB-12 are closed on exact-head PR #89 CI/Security evidence
-Next action: preregister the signed repository/reviewer identity mechanism, external matrix, and D30/D90 retained cohort before collecting Z09 evidence
-Release lanes: Z01+Z02 may ship a stable corrective patch; Z04 may ship parity; Z06 closes the installed journey; Z07 gates 10x, Z08 gates causal evidence, Z10 gates new-code design enforcement, and Z09 gates retention/independent close
-Parked unchanged: Y06, Y07, Y09, and Y10 retain their named field gates and must not start as collateral Z work
-Runtime parked: K01 retains confirmed experimental intra-process commit gaps outside Phase Z and does not block gate-package corrective releases
+Engineering doing: none (2026-07-22 queue hygiene)
+Claim gate: `Z09` (`parked`) — residual RB-11 only (retained adoption + independent close)
+  Promote Z09 only when: signed reviewer/repo identity mechanism + external matrix + ≥8 consented adopters are preregistered
+  Do not occupy the single engineering `doing` slot while no cohort is collecting evidence
+Closed in 3.8.0: Z01–Z08, Z10; RB-07–RB-10, RB-12; 10× / causal / design-delta claim evidence earned
+Not product backlog: god-module / plan-B residual (judgment only). Domain analysis pilot cluster
+  done; residual smell evidence is package barrel src/index.ts only — do not big-bang the public surface
+Parked field candidates: Y06 (keep), Y09 (keep), Y07 (low priority behind Y06 corpus)
+Archived until field demand + ADR: Y10 (not “next after Z09”)
+Runtime parked: K01 outside Phase Z; experimental @arkgate/runtime is not the product wedge;
+  deprecated root forwarders arkgate/runtime|nestjs remain until major 4.0
+Release lanes: ordinary corrective patches do not wait for Z09; broad “Phase Z shipped” /
+  retained-adoption / independent-close claims wait for residual RB-11
+Released baseline: npm arkgate@3.8.0 (Phase Z corrective minor; Z09/RB-11 residual open) — PR #90
 Released baseline: npm arkgate@3.7.0 (Phase Y close from PR #78)
 Released baseline: npm arkgate@3.6.0 (Phase X close from PR #76, squash 5d368f5)
 Released baseline: npm arkgate@3.5.0 + MCP registry 3.5.0 isLatest (X01 from PR #71; X02+X03 + release train from PR #72)

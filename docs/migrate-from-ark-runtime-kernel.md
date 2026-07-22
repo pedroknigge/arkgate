@@ -44,13 +44,14 @@ npx arkgate upgrade
 
 ### TypeScript 7
 
-Published ArkGate 3.7.0 predates the TS7 correction: package-manager deduplication can remove its
-intended JS-API fallback, and unavailable `--plan --json` can incorrectly report `goal.met: true`.
-The current source candidate for the next corrective release installs a physically distinct exact
-TypeScript 6 analysis host and reports required `complete | partial | unavailable` state. Do not
-attribute that fix to 3.7.0. Once the corrective version is published, upgrade ArkGate and keep the
-project's TypeScript/`tsc` unchanged; require `completeness: complete` from the final strict check.
-See [typescript-support.md](typescript-support.md).
+**arkgate@3.8.0** (current stable) installs a physically distinct exact TypeScript 6 analysis host
+and reports required `complete | partial | unavailable` state, so project TypeScript 7 cannot
+deduplicate away the JS-API fallback and incomplete analysis cannot satisfy plan or strict merge.
+If you are still on **3.7.0 or earlier**, upgrade: that release predates the correction (package
+managers could remove the fallback; unavailable `--plan --json` could report `goal.met: true`).
+Keep the project's TypeScript/`tsc` unchanged; require `completeness: complete` from the final
+strict check. See [typescript-support.md](typescript-support.md) and
+[3.8.0 release notes](releases/3.8.0.md).
 
 ### MCP args (avoid double binary)
 
@@ -71,10 +72,10 @@ See [typescript-support.md](typescript-support.md).
 
 ```diff
 - "ark-runtime-kernel": "^2.0.1"
-+ "arkgate": "^3.7.0"
++ "arkgate": "^3.8.0"
 ```
 
-`3.7.0` is the current stable version when this guide was updated; prefer `arkgate@latest` for a
+`3.8.0` is the current stable version when this guide was updated; prefer `arkgate@latest` for a
 fresh migration unless your repository intentionally pins an exact version.
 
 Scripts:
@@ -175,8 +176,8 @@ Surface policy: [package-surface.md](package-surface.md).
 | `npm warn deprecated ark-runtime-kernel` | Swap dep to `arkgate` (this guide) |
 | `ark-check: not found` after uninstall | Use `npx arkgate-check` or reinstall `arkgate` |
 | MCP still launches old package | Update `.mcp.json` / Codex / Grok config; restart agent |
-| TS7 plan/check says `partial` or `unavailable` | Do not accept the plan as green; update to the corrective ArkGate release when published, then require `completeness: complete` |
-| pnpm blocks new package age | Wait for cooling-off or prefer `arkgate@latest`; if policy requires an exact pin, check `npm view arkgate version` and pin that version (currently `arkgate@3.7.0`) |
+| TS7 plan/check says `partial` or `unavailable` | Do not accept the plan as green; upgrade to **arkgate@3.8.0** or later, then require `completeness: complete` |
+| pnpm blocks new package age | Wait for cooling-off or prefer `arkgate@latest`; if policy requires an exact pin, check `npm view arkgate version` and pin that version (currently `arkgate@3.8.0`) |
 
 ---
 

@@ -647,7 +647,8 @@ export function createAICodeGate<Context = AICodeGateContext>(
           const targetLayer = options.architectureProfile.resolveLayer(literal.value);
           if (!targetLayer) continue;
 
-          // Intent names are not files — peerIsolation cannot classify slices; classic deny only.
+          // Intent names are not files — peerIsolation cannot prove same-slice
+          // without paths, so isolation rules fail closed (same SoT as observedLayerFlow).
           const blocked = findDeniedEdgeRule(
             options.architectureProfile.rules,
             contextLayer,

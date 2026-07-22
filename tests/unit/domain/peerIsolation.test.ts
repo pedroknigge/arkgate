@@ -117,8 +117,46 @@ describe('peerIsolation edge rules', () => {
     ).toBe(true);
   });
 
-  it('without paths, same-layer peerIsolation does not deny (fail-open)', () => {
-    expect(isEdgeDenied(peerRules, 'Features', 'Features')).toBe(false);
+  it('without paths, same-layer peerIsolation denies (fail-closed)', () => {
+    // Isolation is configured; missing path evidence cannot prove same-slice.
+    expect(isEdgeDenied(peerRules, 'Features', 'Features')).toBe(true);
+    expect(
+      isEdgeDenied(peerRules, 'Features', 'Features', {
+        fromPath: 'src/features/auth/api.ts',
+        // toPath omitted
+        layers: featuresLayers,
+      })
+    ).toBe(true);
+  });
+
+  it('unclassifiable slices under peerIsolation deny (fail-closed)', () => {
+    expect(
+      isEdgeDenied(peerRules, 'Features', 'Features', {
+        fromPath: 'src/elsewhere/a.ts',
+        toPath: 'src/elsewhere/b.ts',
+        layers: featuresLayers,
+      })
+    ).toBe(true);
+  });
+
+  it('peerIsolation with no resolvable slice folders denies (fail-closed)', () => {
+    const rules = [
+      {
+        from: 'Features',
+        to: 'Features',
+        allowed: false as const,
+        peerIsolation: true,
+      },
+    ];
+    // Layer patterns that do not yield slice folder names.
+    const layers = [{ name: 'Features', patterns: ['**/*.ts'] }];
+    expect(
+      isEdgeDenied(rules, 'Features', 'Features', {
+        fromPath: 'src/a.ts',
+        toPath: 'src/b.ts',
+        layers,
+      })
+    ).toBe(true);
   });
 
   it('classic same-layer deny without peerIsolation is ignored (historical allow)', () => {
@@ -178,21 +216,28 @@ describe('peerIsolation edge rules', () => {
         sliceFolders: ['modules'],
       },
     ];
-    // Under features/ — no match for modules → fail-open
+    // Under features/ — no match for modules → unclassifiable → fail-closed deny
     expect(
       isEdgeDenied(rules, 'Features', 'Features', {
         fromPath: 'src/features/a/x.ts',
         toPath: 'src/features/b/y.ts',
         layers: featuresLayers,
       })
-    ).toBe(false);
-    // Under modules/
+    ).toBe(true);
+    // Under modules/ — cross-slice denies
     expect(
       isEdgeDenied(rules, 'Features', 'Features', {
         fromPath: 'src/modules/a/x.ts',
         toPath: 'src/modules/b/y.ts',
       })
     ).toBe(true);
+    // Same modules slice allows
+    expect(
+      isEdgeDenied(rules, 'Features', 'Features', {
+        fromPath: 'src/modules/a/x.ts',
+        toPath: 'src/modules/a/y.ts',
+      })
+    ).toBe(false);
   });
 
   it('findDeniedEdgeRule returns the peer rule with message passthrough', () => {
