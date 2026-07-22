@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '3.8.1';
+const CURRENT = '3.8.2';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -86,9 +86,32 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
   });
 
   it('public latest-release pointers move together', () => {
-    expect(read('README.md')).toMatch(/Latest release \(3\.8\.1\).*3\.8\.1\.md/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.8\.1/s);
-    expect(read('docs/package-surface.md')).toMatch(/latest:\s*\[3\.8\.1\.md\]/s);
+    expect(read('README.md')).toMatch(/Latest release \(3\.8\.2\).*3\.8\.2\.md/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.8\.2/s);
+    expect(read('docs/package-surface.md')).toMatch(/latest:\s*\[3\.8\.2\.md\]/s);
+  });
+});
+
+describe('CHANGELOG + release note cover 3.8.2 field DX', () => {
+  it('CHANGELOG 3.8.2 names skill stale, upgrade preview, Y06, and Codex legacy', () => {
+    const body = read('CHANGELOG.md');
+    expect(body).toMatch(/## 3\.8\.2/);
+    expect(body).toMatch(/content-identity|content identity/i);
+    expect(body).toMatch(/wouldWrite|Nothing to apply/i);
+    expect(body).toMatch(/pureLayerOptIn|pure-layer opt-in/i);
+    expect(body).toMatch(/legacy prompts|Codex legacy/i);
+    expect(body).toMatch(/No required config migration/i);
+  });
+
+  it('docs/releases/3.8.2.md has the upgrade path and field honesty', () => {
+    const body = read('docs/releases/3.8.2.md');
+    expect(body).toMatch(/arkgate@3\.8\.2/);
+    expect(body).toMatch(/npm install -D arkgate@3\.8\.2/);
+    expect(body).toMatch(/content identity/i);
+    expect(body).toMatch(/Nothing to apply|wouldWrite/i);
+    expect(body).toMatch(/Y06|pure/i);
+    expect(body).toMatch(/No required config migration/i);
+    expect(body).toMatch(/mcp-publisher validate server\.json/);
   });
 });
 

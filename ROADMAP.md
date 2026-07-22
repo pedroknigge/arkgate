@@ -394,7 +394,7 @@ Ark's product-policy or governed-scope enforcement.
 | 56 | `Y02` | `done` | M | `P02` | Deterministic hollow-persistence smell: HTTP/route definition living in Persistence-role layers is visible as an advisory |
 | 57 | `Y03` | `done` | S | — | Governed files that fail to parse are surfaced honestly (a file the scanner cannot read is never silently "clean") |
 | 58 | `Y04` | `done` | S | — | Skill mechanical-edit hygiene rules close the three observed codemod defects |
-| 59 | `Y06` | `parked` | S | gate: field case | `pure`-layer opt-in nudge: doctor suggests declaring purity when the golden pattern names pure modules but no layer opts in |
+| 59 | `Y06` | `done` | S | gate met: PREDIAL field case | `pure`-layer opt-in nudge: doctor suggests declaring purity when the golden pattern names pure modules but no layer opts in |
 | 60 | `Y07` | `parked` | L | gate: `Y06` corpus (low priority) | Strict (blocker-grade) ambient mutable-state diagnostics — only after a real `pure: true` field corpus exists (U05 condition unchanged); not near-term backlog |
 | 61 | `Y08` | `done` | S | gate met: deterministic harness | `node:process` module-import dual of the `process` ambient forbidden global is detected with the same evidence discipline |
 | 62 | `Y09` | `parked` | S | gate: field case | Template-interpolation import specifiers are surfaced as an unresolvable-edge advisory instead of silently unresolved |
@@ -407,12 +407,12 @@ restores the product invariant from the packed consumer inward, then optimizes o
 path and replaces self-referential evidence with causal field proof.
 
 Phase X has no pending work. After 3.8.0, Phase Z has **no implementation `doing`**: Z01–Z08 and
-Z10 are `done`; Z09 is a longitudinal claim gate, not continuous engineering. Y06 and Y09 remain
-parked behind field cases (still valuable when gates fire). Y07 stays parked at low priority behind
-the Y06 corpus. Y10 is archived until field demand plus an explicit ADR — largest cost in the Y
-queue, out of Phase Z scope, not “next after Z09.” Alias resolution is not Y09's dynamic-template
-case, direct resolution is not Y10's transitive inference, and neither supplies the `pure: true`
-field corpus required by Y06/Y07. The experimental runtime remains outside the product phase under
+Z10 are `done`; Z09 is a longitudinal claim gate, not continuous engineering. Y06 is `done`
+(PREDIAL field case). Y09 remains parked behind a field case. Y07 stays parked at low priority
+behind a real `pure: true` field corpus (Y06 only creates the opt-in path). Y10 is archived until
+field demand plus an explicit ADR — largest cost in the Y queue, out of Phase Z scope, not
+“next after Z09.” Alias resolution is not Y09's dynamic-template case; direct resolution is not
+Y10's transitive inference. The experimental runtime remains outside the product phase under
 ADR 0004 and `docs/production-hardening.md`; its confirmed intra-process commit gaps are retained
 separately as parked candidate `K01` rather than silently dropped. Self-hosted design residual
 (historical domain analysis pilot cluster done; residual smell evidence is the package barrel
@@ -1076,21 +1076,26 @@ allowlist, module budgets, generated parity, `git diff --check`, and strict arch
 
 ### Y06–Y10 — retained candidates (promotion gates on record)
 
-Y06, Y07, Y09, and Y10 predate this cycle and stay `parked`: a parked item never starts; it
-promotes to `todo` only when its named gate is met, with the field evidence recorded here first.
-Y08 met that discipline below and is the only promoted retained candidate. After the 2026-07-22
-queue hygiene pass: keep Y06/Y09 parked (valuable when gates fire); keep Y07 parked at **low
-priority** behind Y06; treat Y10 as **archived until field demand + ADR** (not near-term backlog).
+Y06–Y10 predate this cycle as retained candidates: a `parked` item never starts; it promotes to
+`todo` only when its named gate is met, with field evidence recorded here first. **Promoted /
+shipped:** Y06 (PREDIAL field case → advisory pure-layer opt-in nudge) and Y08 (`node:process`
+dual). **Still parked:** Y07 (strict ambient, low priority behind a real `pure: true` corpus) and
+Y09 (template-interpolation imports — field case). **Archived until field demand + ADR:** Y10
+(transitive capability inference — not near-term backlog).
 
-**Y06 — `pure`-layer opt-in nudge.** The strict ambient-state candidate still has NO field
-corpus: the flagship adopter finished full adoption with zero `pure: true` layers even though its
-golden pattern names pure Domain modules (`evm-calc`, `vacation-entitlement`). Outcome: when the
-golden pattern (Q03) references pure modules and no layer declares purity, the doctor emits a
-one-line opt-in nudge (advisory, U05 voice). Gate: one more field session confirming the nudge
-would have been actionable rather than noise. **Keep parked** — do not implement “by default.”
+**Y06 — `pure`-layer opt-in nudge (done).** The flagship adopter finished full adoption with zero
+`pure: true` layers even though its golden pattern names pure Domain modules (`evm-calc`,
+`vacation-entitlement`). Outcome: when the golden pattern (Q03) references pure modules and no
+layer declares purity, the doctor emits a one-line opt-in nudge (advisory, U05 voice). Never
+auto-writes `pure: true`; never a blocker. Y07 still waits on a real opted-in pure-layer corpus.
+
+**Y06 promotion evidence (2026-07-22, PREDIAL field adopter):** after `npm i arkgate@3.8.1` the
+adopter golden pattern named pure Domain modules with zero `pure: true` layers and ambient idle.
+Gate met: nudge is actionable (opt-in path only). Implemented as `doctor.pureLayerOptIn` +
+one-line human advisory via `computePureLayerOptInNudge`.
 
 **Y07 — strict ambient-state diagnostics.** U05's condition is unchanged: strictness requires
-blocker-grade precision proven on a real opted-in corpus. `Y06` exists to create that corpus;
+blocker-grade precision proven on a real opted-in corpus. Y06 only creates the opt-in path;
 this item stays parked until the corpus exists and the U05 precision bar is met on it. **Low
 priority:** if one to two field cycles still yield no corpus, leave as idea backlog rather than
 implementation pressure.
@@ -2784,12 +2789,14 @@ Claim gate: `Z09` (`parked`) — residual RB-11 only (retained adoption + indepe
 Closed in 3.8.0: Z01–Z08, Z10; RB-07–RB-10, RB-12; 10× / causal / design-delta claim evidence earned
 Not product backlog: god-module / plan-B residual (judgment only). Domain analysis pilot cluster
   done; residual smell evidence is package barrel src/index.ts only — do not big-bang the public surface
-Parked field candidates: Y06 (keep), Y09 (keep), Y07 (low priority behind Y06 corpus)
+Parked field candidates: Y09 (keep), Y07 (low priority behind Y06 pure-opt-in corpus)
+Y06 done: pure-layer opt-in nudge (PREDIAL field case)
 Archived until field demand + ADR: Y10 (not “next after Z09”)
 Runtime parked: K01 outside Phase Z; experimental @arkgate/runtime is not the product wedge;
   deprecated root forwarders arkgate/runtime|nestjs remain until major 4.0
 Release lanes: ordinary corrective patches do not wait for Z09; broad “Phase Z shipped” /
   retained-adoption / independent-close claims wait for residual RB-11
+Released baseline: npm arkgate@3.8.2 (field DX: skill stale/upgrade/Y06; Z09/RB-11 residual open)
 Released baseline: npm arkgate@3.8.1 (pure-path fail-closed patch; Z09/RB-11 residual open)
 Released baseline: npm arkgate@3.8.0 (Phase Z corrective minor; Z09/RB-11 residual open) — PR #90
 Released baseline: npm arkgate@3.7.0 (Phase Y close from PR #78)

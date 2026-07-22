@@ -96,6 +96,22 @@ describe('Z06 enforcement-state truth', () => {
     );
   });
 
+  it('keeps package installed=true on unknown host when inventory lists hooks (no hard claim)', () => {
+    // Self-host arkgate + multi-host inventory; activeHost unknown must not invert installed.
+    const selfRoot = path.resolve('.');
+    const writePath = detectWritePathCapabilities(selfRoot, 'unknown');
+    expect(writePath.activeHost).toBe('unknown');
+    expect(writePath.sessionNote).toMatch(/activeHost unknown/i);
+    expect(writePath.enforcementState.localWrite.installed).toBe(true);
+    expect(writePath.enforcementState.localWrite.hard).toBe(false);
+    expect(writePath.enforcementState.localWrite.runtimeObserved).toBe(false);
+    // Inventory still shows real host assets separately from session projection.
+    expect(
+      writePath.inventory.capabilities['hard-write'] ||
+        writePath.inventory.capabilities['advisory-write']
+    ).toBe(true);
+  });
+
   it('keeps doctor JSON, human output, HTML, and schema vocabulary aligned', () => {
     const root = fixture();
     const env = { ...process.env, ARK_ACTIVE_HOST: 'claude' };

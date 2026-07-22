@@ -117,6 +117,33 @@ export function loadGoldenPattern(root) {
 }
 
 /**
+ * Y06 — advisory opt-in nudge when the golden pattern names pure modules but no
+ * layer declares `pure: true`. Never a blocker; never auto-writes pure:true.
+ *
+ * @param {{ layers?: Array<{ pure?: boolean }> }|null|undefined} config
+ * @param {GoldenPatternLoadResult|null|undefined} goldenResult
+ * @returns {null | { id: string, advisory: true, message: string }}
+ */
+export function computePureLayerOptInNudge(config, goldenResult) {
+  const layers = Array.isArray(config?.layers) ? config.layers : [];
+  if (layers.some((layer) => layer?.pure === true)) return null;
+  if (!goldenResult?.present || !goldenResult.golden) return null;
+  const g = goldenResult.golden;
+  const text = [g.name, g.norm, g.newCodeHome, g.examplePath]
+    .filter((part) => typeof part === 'string' && part.trim())
+    .join('\n');
+  // Require explicit purity language in the golden pattern (not mere "Domain").
+  if (!/\bpure\b/i.test(text)) return null;
+  return {
+    id: 'pure-layer-opt-in',
+    advisory: true,
+    message:
+      'Golden pattern references pure modules, but no layer sets pure: true. ' +
+      'Opt in on Domain (or equivalent) to enable ambient-state diagnostics — advisory only; never auto-applied.',
+  };
+}
+
+/**
  * One-line guidance for agents / placement notes.
  * @param {GoldenPatternLoadResult} result
  * @returns {string | null}

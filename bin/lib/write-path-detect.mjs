@@ -92,6 +92,36 @@ export function detectWritePathCapabilities(root, explicitHost, attempt) {
     };
   }
 
+  /** @type {string|null} */
+  let sessionNote = null;
+  if (activeHost === 'unknown') {
+    const onDiskHosts = Object.entries(inventory?.hosts ?? {})
+      .filter(([, record]) => {
+        if (!record || typeof record !== 'object') return false;
+        const caps = record.capabilities ?? {};
+        return Boolean(
+          record.configured ||
+            caps['hard-write'] ||
+            caps['advisory-write'] ||
+            caps['repair-payload']
+        );
+      })
+      .map(([name]) => name)
+      .sort();
+    const parts = [];
+    if (onDiskHosts.length > 0) {
+      parts.push(`On-disk hosts with write-path assets: ${onDiskHosts.join(', ')}`);
+    }
+    if (inventory?.capabilities?.['merge-gate'] || capabilities['merge-gate']) {
+      parts.push('CI merge gate configured on disk');
+    }
+    parts.push(
+      'This invocation has no active hard-write guarantee (activeHost unknown); ' +
+        'required-status remains unverified without provider evidence'
+    );
+    sessionNote = `${parts.join('. ')}.`;
+  }
+
   return {
     activeHost,
     support,
@@ -101,6 +131,8 @@ export function detectWritePathCapabilities(root, explicitHost, attempt) {
     enforcementLadder,
     enforcementState,
     inventory,
+    // Configured inventory (on-disk hosts) vs this-invocation projection (activeHost).
+    ...(sessionNote ? { sessionNote } : {}),
     // Compatibility projection for existing doctor/API consumers.
     mode,
     prepareWrite: advisoryWrite,

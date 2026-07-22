@@ -1249,11 +1249,11 @@ describe('ark-check skill-gap advisory', () => {
     expect(skill).toContain(`arkVersion: ${version}`);
   });
 
-  it('flags installed skills left behind by an older Ark (stamp behind current)', () => {
+  it('does not flag skills whose body matches the package template when only the stamp lags', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-skill-stale-'));
     seedProject(root);
     installSkills(root);
-    // Simulate a skill installed by an older Ark: rewrite its stamp to an old version.
+    // Version header alone lags — content identity still matches package template.
     const skillPath = path.join(root, '.claude/skills/ark-coverage/SKILL.md');
     const downgraded = fs
       .readFileSync(skillPath, 'utf8')
@@ -1262,11 +1262,11 @@ describe('ark-check skill-gap advisory', () => {
 
     const result = runRaw(root);
     const claude = result.skillGaps?.find((g) => g.tool === 'claude');
-    expect(claude?.stale).toBeGreaterThanOrEqual(1);
-    expect(claude?.missing).toBe(0);
+    expect(claude?.stale ?? 0).toBe(0);
+    expect(claude?.missing ?? 0).toBe(0);
   });
 
-  it('treats a skill with no version stamp as stale (pre-stamp install)', () => {
+  it('does not flag unstamped skills whose body still matches the package template', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-skill-unstamped-'));
     seedProject(root);
     installSkills(root);
@@ -1275,7 +1275,24 @@ describe('ark-check skill-gap advisory', () => {
     fs.writeFileSync(skillPath, unstamped);
 
     const result = runRaw(root);
-    expect(result.skillGaps?.find((g) => g.tool === 'claude')?.stale).toBeGreaterThanOrEqual(1);
+    expect(result.skillGaps?.find((g) => g.tool === 'claude')?.stale ?? 0).toBe(0);
+  });
+
+  it('flags skills whose body diverged from the package template with an old stamp', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-skill-body-stale-'));
+    seedProject(root);
+    installSkills(root);
+    const skillPath = path.join(root, '.claude/skills/ark-coverage/SKILL.md');
+    const bodyChanged = fs
+      .readFileSync(skillPath, 'utf8')
+      .replace(/^arkVersion:.*$/m, 'arkVersion: 1.0.0')
+      .replace(/\n$/, '\n\n# local drift\n');
+    fs.writeFileSync(skillPath, bodyChanged);
+
+    const result = runRaw(root);
+    const claude = result.skillGaps?.find((g) => g.tool === 'claude');
+    expect(claude?.stale).toBeGreaterThanOrEqual(1);
+    expect(claude?.missing).toBe(0);
   });
 
   it('does not nag a project that never adopted agent gates (no AGENTS.md)', () => {

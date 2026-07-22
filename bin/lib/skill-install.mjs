@@ -1,6 +1,7 @@
 /**
  * Tool detection, skill templates, stamping, and skill freshness gaps.
  */
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { arkCommand } from '../ark-shared.mjs';
@@ -206,7 +207,12 @@ export function installedSkillVersion(filePath) {
   } catch {
     return null;
   }
-  const match = content.match(/^arkVersion:\s*(.+)$/m);
+  return skillVersionFromContent(content);
+}
+
+function skillVersionFromContent(content) {
+  if (content == null) return null;
+  const match = String(content).match(/^arkVersion:\s*(.+)$/m);
   return match ? match[1].trim() : null;
 }
 
@@ -223,6 +229,63 @@ export function isVersionOlder(a, b) {
     if (x !== y) return x < y;
   }
   return false;
+}
+
+/**
+ * Content identity for managed skills — arkVersion stamp is normalized so a lagging
+ * header alone never diverges from the package template (matches managed-upgrade).
+ * @param {string|null|undefined} content
+ * @returns {string|null}
+ */
+export function skillContentIdentity(content) {
+  if (content == null) return null;
+  let text = String(content).replace(/\r\n/g, '\n');
+  const lines = text.split('\n');
+  if (lines[0] === '---') {
+    const end = lines.indexOf('---', 1);
+    if (end >= 0) {
+      for (let index = 1; index < end; index += 1) {
+        if (/^arkVersion:/.test(lines[index])) lines[index] = 'arkVersion:<managed>';
+      }
+      text = lines.join('\n');
+    }
+  }
+  return `sha256:${createHash('sha256').update(text).digest('hex')}`;
+}
+
+/**
+ * True when installed skill body matches the package template for that skill
+ * (version stamp ignored). Used so doctor "stale" aligns with managed upgrade.
+ *
+ * Templates ship without arkVersion; installs are stamped. Identity normalizes
+ * the stamp value, so compare against both the raw template and a stamped copy.
+ * @param {string} installedContent
+ * @param {string|undefined|null} templateContent
+ */
+export function skillContentMatchesTemplate(installedContent, templateContent) {
+  if (templateContent == null || installedContent == null) return false;
+  const installedId = skillContentIdentity(installedContent);
+  if (installedId === skillContentIdentity(templateContent)) return true;
+  // Installed skills are stamped; templates are not — stamp with a dummy version
+  // so arkVersion:<managed> lines align under skillContentIdentity.
+  return installedId === skillContentIdentity(stampSkill(templateContent, '0.0.0'));
+}
+
+/** @returns {Record<string, string>} skill name → template body from package */
+export function skillTemplateBodies() {
+  return Object.fromEntries(skillTemplates());
+}
+
+/**
+ * Count a present skill as stale only when content differs from the package
+ * template AND the arkVersion stamp is missing or older than the package.
+ * Content identity match → never stale (even if header lags).
+ */
+function isInstalledSkillStale(installedContent, templateContent, packageVersion) {
+  if (!packageVersion) return false;
+  if (skillContentMatchesTemplate(installedContent, templateContent)) return false;
+  const installed = skillVersionFromContent(installedContent);
+  return installed === null || isVersionOlder(installed, packageVersion);
 }
 
 export function skillTemplates() {
@@ -263,23 +326,31 @@ export function skillTemplateNames() {
 
 /**
  * Count present / stale / legacy-only skill files for one catalog root.
+ * "stale" means content behind the package template (identity mismatch) with a
+ * missing/older arkVersion stamp — not merely a lagging version header when the
+ * body still matches the template (aligned with managed-upgrade classify).
  * @param {string[]} skillNames
  * @param {(name: string) => string} skillFile path builder
  * @param {string|null} packageVersion
- * @param {{ legacyFile?: (name: string) => string }} [opts]
+ * @param {{ legacyFile?: (name: string) => string, templateBodies?: Record<string, string> }} [opts]
  */
 export function assessSkillCatalogParity(skillNames, skillFile, packageVersion, opts = {}) {
   const expectedCount = skillNames.length;
+  const templates = opts.templateBodies ?? skillTemplateBodies();
   const present = [];
   let stale = 0;
   for (const name of skillNames) {
     const file = skillFile(name);
     if (!fs.existsSync(file)) continue;
-    present.push(name);
-    if (packageVersion) {
-      const installed = installedSkillVersion(file);
-      if (installed === null || isVersionOlder(installed, packageVersion)) stale += 1;
+    let content;
+    try {
+      content = fs.readFileSync(file, 'utf8');
+    } catch {
+      // Unreadable path is not a usable install — count as missing (matches detectSkillGaps).
+      continue;
     }
+    present.push(name);
+    if (isInstalledSkillStale(content, templates[name], packageVersion)) stale += 1;
   }
   let legacyCount = 0;
   if (typeof opts.legacyFile === 'function') {
@@ -291,6 +362,7 @@ export function assessSkillCatalogParity(skillNames, skillFile, packageVersion, 
   const missing = expectedCount - presentCount;
   const legacyPromptsOnly = presentCount === 0 && legacyCount > 0;
   const hasLegacyPrompts = legacyCount > 0;
+  // Legacy prompts beside a complete modern catalog are not catalog debt.
   const ok = missing === 0 && stale === 0 && !legacyPromptsOnly;
   return {
     ok,
@@ -302,6 +374,7 @@ export function assessSkillCatalogParity(skillNames, skillFile, packageVersion, 
     legacyPromptsOnly,
     hasLegacyPrompts,
     legacyCount,
+    catalogComplete: missing === 0 && stale === 0 && presentCount === expectedCount,
   };
 }
 
@@ -490,6 +563,7 @@ export function detectSkillGaps(root) {
   if (fs.existsSync(path.join(root, 'templates', 'skills'))) return [];
   const skillNames = skillTemplateNames();
   if (skillNames.length === 0) return [];
+  const templates = skillTemplateBodies();
   const detected = [];
   if (fs.existsSync(path.join(root, '.claude'))) detected.push('claude');
   if (fs.existsSync(path.join(root, '.cursor'))) detected.push('cursor');
@@ -510,16 +584,21 @@ export function detectSkillGaps(root) {
       const file = path.join(root, target(name));
       if (!fs.existsSync(file)) {
         missing += 1;
-      } else if (version) {
-        // An installed skill with no stamp predates stamping (older Ark), or one
-        // stamped behind the current version is left over from an older install.
-        // Either way the shipped skill has moved on — offer a --force refresh.
-        const installed = installedSkillVersion(file);
-        if (installed === null || isVersionOlder(installed, version)) stale += 1;
+        continue;
       }
+      let content;
+      try {
+        content = fs.readFileSync(file, 'utf8');
+      } catch {
+        missing += 1;
+        continue;
+      }
+      // Content identity match with package template → not stale (version header may lag).
+      if (isInstalledSkillStale(content, templates[name], version)) stale += 1;
     }
     let legacyPromptsOnly = false;
     let hasLegacyPrompts = false;
+    let legacyAdvisory = false;
     if (tool === 'codex') {
       const legacyCount = skillNames.filter((name) =>
         fs.existsSync(path.join(root, '.codex', 'prompts', `${name}.md`))
@@ -527,14 +606,20 @@ export function detectSkillGaps(root) {
       hasLegacyPrompts = legacyCount > 0;
       // Flat prompts without any SKILL.md catalog entries are not loadable.
       legacyPromptsOnly = hasLegacyPrompts && missing === skillNames.length;
+      // Modern catalog complete + leftover flat prompts → advisory only (safe delete).
+      legacyAdvisory =
+        hasLegacyPrompts && !legacyPromptsOnly && missing === 0 && stale === 0;
     }
-    if (missing > 0 || stale > 0 || legacyPromptsOnly) {
+    if (missing > 0 || stale > 0 || legacyPromptsOnly || legacyAdvisory) {
       gaps.push({
         tool,
         missing,
         stale,
         ...(legacyPromptsOnly ? { legacyPromptsOnly: true } : {}),
         ...(hasLegacyPrompts ? { hasLegacyPrompts: true } : {}),
+        ...(legacyAdvisory
+          ? { legacyAdvisory: true, catalogComplete: true }
+          : {}),
       });
     }
   }
@@ -550,8 +635,14 @@ export function printSkillAndCodexGapHints(root, opts) {
   const { skillGaps, codexHomeGap, codexRepoSkillGap, codexSessionActive, color } = opts;
   if (skillGaps?.length > 0) {
     const legacyCodex = skillGaps.some((gap) => gap.tool === 'codex' && gap.legacyPromptsOnly);
+    const legacyAdvisory = skillGaps.some(
+      (gap) => gap.tool === 'codex' && gap.legacyAdvisory && gap.catalogComplete
+    );
     // Report Codex legacy separately; never suppress missing/stale for other hosts.
-    const remaining = skillGaps.filter((gap) => !(gap.tool === 'codex' && gap.legacyPromptsOnly));
+    const remaining = skillGaps.filter(
+      (gap) =>
+        !(gap.tool === 'codex' && (gap.legacyPromptsOnly || gap.legacyAdvisory))
+    );
     const missingTotal = remaining.reduce((sum, gap) => sum + gap.missing, 0);
     const staleTotal = remaining.reduce((sum, gap) => sum + gap.stale, 0);
     const tools = remaining.map((gap) => gap.tool).join(', ');
@@ -560,6 +651,13 @@ export function printSkillAndCodexGapHints(root, opts) {
         color.yellow(
           'Codex has legacy flat .codex/prompts/ark-*.md only — those are not loadable as skills. ' +
             `Install the real catalog: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --tools codex --force')}`
+        )
+      );
+    }
+    if (legacyAdvisory) {
+      console.log(
+        color.dim(
+          'Codex .agents/skills catalog is complete; leftover .codex/prompts/ark-*.md are not loadable and safe to delete (not required).'
         )
       );
     }
@@ -574,7 +672,7 @@ export function printSkillAndCodexGapHints(root, opts) {
     if (staleTotal > 0) {
       console.log(
         color.dim(
-          `${staleTotal} /ark-* skill(s) outdated for ${tools} (this Ark ships newer versions). ` +
+          `${staleTotal} /ark-* skill(s) content behind this Ark package for ${tools}. ` +
             `Refresh: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --force')}`
         )
       );
@@ -584,7 +682,7 @@ export function printSkillAndCodexGapHints(root, opts) {
     const parts = [];
     if (codexHomeGap.legacyPromptsOnly) parts.push('legacy-prompts-only');
     if (codexHomeGap.missing > 0) parts.push(`${codexHomeGap.missing} missing`);
-    if (codexHomeGap.stale > 0) parts.push(`${codexHomeGap.stale} outdated`);
+    if (codexHomeGap.stale > 0) parts.push(`${codexHomeGap.stale} content-behind-package`);
     const deferred = !codexSessionActive;
     const deferredNote = deferred
       ? ' Deferred unless you use Codex — not a blocker for Grok/Claude/Cursor. '
@@ -600,7 +698,7 @@ export function printSkillAndCodexGapHints(root, opts) {
     const parts = [];
     if (codexRepoSkillGap.legacyPromptsOnly) parts.push('legacy-prompts-only');
     if (codexRepoSkillGap.missing > 0) parts.push(`${codexRepoSkillGap.missing} missing`);
-    if (codexRepoSkillGap.stale > 0) parts.push(`${codexRepoSkillGap.stale} outdated`);
+    if (codexRepoSkillGap.stale > 0) parts.push(`${codexRepoSkillGap.stale} content-behind-package`);
     console.log(
       color.yellow(
         `Codex repo skill catalog (.agents/skills) needs refresh (${parts.join(', ')}). ` +

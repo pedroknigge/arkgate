@@ -76,6 +76,11 @@ describe('detectWritePathCapabilities (shipped write-path-detect.mjs)', () => {
       expect(cap.inventory.hosts.grok.configured).toBe(true);
       expect(cap.inventory.capabilities['hard-write']).toBe(true);
       expect(cap.gap).toBeNull();
+      // Inventory vs this-invocation: sessionNote lists on-disk hosts; hard never from assets alone.
+      expect(cap.sessionNote).toMatch(/On-disk hosts with write-path assets: grok/i);
+      expect(cap.sessionNote).toMatch(/activeHost unknown/i);
+      expect(cap.enforcementState.localWrite.hard).toBe(false);
+      expect(cap.enforcementState.localWrite.runtimeObserved).toBe(false);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

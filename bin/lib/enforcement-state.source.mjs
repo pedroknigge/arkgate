@@ -50,11 +50,15 @@ function boundary({
   sources,
 }) {
   const configured = configuredPaths.length > 0;
+  // Package install is independent of host support: an unsupported activeHost
+  // (or unknown) must not report installed:false when arkgate is resolved.
+  // Hardness still requires runtime proof (Z10) — installed alone never implies hard.
+  const packageInstalled = Boolean(installed.installed);
   return {
     supported,
     analyzed: true,
     configured,
-    installed: supported && installed.installed,
+    installed: packageInstalled,
     active,
     runtimeObserved,
     operation,
@@ -66,7 +70,7 @@ function boundary({
       ...configuredEvidence(configuredPaths).map((source) => ({
         field: 'configured', source, value: configured,
       })),
-      { field: 'installed', source: installed.source, value: supported && installed.installed },
+      { field: 'installed', source: installed.source, value: packageInstalled },
       { field: 'active', source: sources.active, value: active },
       { field: 'runtimeObserved', source: sources.runtimeObserved, value: runtimeObserved },
       { field: 'operationCoverage', source: sources.operationCoverage, value: operationCoverage },
@@ -229,5 +233,13 @@ export function enforcementDoctorLines(enforcement) {
   ];
   if (enforcement.localWrite.active === UNVERIFIED && enforcement.localWrite.hard === false)
     rows.push({ level: 'bad', text: 'RED FLAG: local hook assets exist, but this active-host operation was not observed at runtime; hard blocking is unverified.' });
+  if (enforcement.activeHost === 'unknown') {
+    rows.push({
+      level: 'warn',
+      text:
+        'Active host unknown for this invocation — enforcementState is session projection only. ' +
+        'See writePath.inventory for on-disk host hooks; hard write is never claimed without runtime proof.',
+    });
+  }
   return rows;
 }

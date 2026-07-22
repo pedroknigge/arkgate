@@ -6,8 +6,10 @@ import { codexPrimaryTable, upsertCodexMcpTable } from './codex-home.mjs';
 import { buildManagedAssetCatalog } from './install-migrate.mjs';
 import {
   KNOWN_TOOLS,
+  arkPackageVersion,
   detectActiveAgentHost,
   normalizeToolsList,
+  skillContentIdentity,
 } from './skill-install.mjs';
 
 export const MANAGED_MANIFEST_PATH = 'ark.managed.json';
@@ -36,21 +38,17 @@ function hash(content) {
   return `sha256:${createHash('sha256').update(content).digest('hex')}`;
 }
 
-function normalizedIdentityContent(content, kind) {
-  let text = String(content).replace(/\r\n/g, '\n');
-  if (kind !== 'skill') return text;
-  const lines = text.split('\n');
-  if (lines[0] !== '---') return text;
-  const end = lines.indexOf('---', 1);
-  if (end < 0) return text;
-  for (let index = 1; index < end; index += 1) {
-    if (/^arkVersion:/.test(lines[index])) lines[index] = 'arkVersion:<managed>';
-  }
-  return lines.join('\n');
+function normalizedIdentityContent(content) {
+  return String(content).replace(/\r\n/g, '\n');
 }
 
+/**
+ * Content identity for managed assets. Skill kind delegates to skill-install so
+ * doctor stale detection and upgrade classify never drift (single hasher).
+ */
 export function managedContentIdentity(content, kind = 'gate') {
-  return hash(Buffer.from(normalizedIdentityContent(content, kind)));
+  if (kind === 'skill') return skillContentIdentity(content);
+  return hash(Buffer.from(normalizedIdentityContent(content)));
 }
 
 function isSafeRelativePath(relativePath) {
@@ -271,12 +269,22 @@ function serializeManifest(value) {
 function summaryFor(assets, manifestChanged) {
   const states = {};
   for (const asset of assets) states[asset.state] = (states[asset.state] ?? 0) + 1;
-  const fileChanges = assets.filter((asset) => asset.willApply).length;
+  const applying = assets.filter((asset) => asset.willApply);
+  // Content writes (stale/missing/conflicted accepted) — not version-stamp metadata-only.
+  const wouldWrite = applying.filter((asset) => asset.action !== 'refresh-metadata').length;
+  const metadataRefresh = applying.filter((asset) => asset.action === 'refresh-metadata').length;
+  const customizedPreserved = assets.filter((asset) => asset.state === 'customized').length;
+  const fileChanges = applying.length;
   return {
     total: assets.length,
+    managedAssets: assets.length,
     states,
+    wouldWrite,
+    metadataRefresh,
+    customizedPreserved,
     fileChanges,
     manifestChanged,
+    // Full apply count still includes optional stamp refresh + manifest bookkeeping.
     changed: fileChanges + (manifestChanged ? 1 : 0),
     blocked: assets.filter((asset) => asset.blocked).length,
   };
@@ -616,7 +624,41 @@ export function renderManagedUpgrade(plan, options = {}) {
     const consent = asset.requiresConsent ? ' (consent required)' : '';
     console.log(`  ${asset.state.padEnd(10)} ${asset.path}${consent}`);
   }
-  const label = plan.applied ? 'Applied changes' : 'Planned changes';
-  console.log(`${label}: ${plan.summary.changed}; blocked conflicts/deletions: ${plan.summary.blocked}.`);
-  if (!plan.applied) console.log(options.next ?? 'Apply the exact preview with: ark upgrade --apply --no-install');
+  const summary = plan.summary;
+  const managedAssets = summary.managedAssets ?? summary.total ?? plan.assets.length;
+  const wouldWrite = summary.wouldWrite ?? 0;
+  const metadataRefresh = summary.metadataRefresh ?? 0;
+  const customizedPreserved = summary.customizedPreserved ?? summary.states?.customized ?? 0;
+  const blocked = summary.blocked ?? 0;
+  console.log(
+    `Managed assets: ${managedAssets}; would write: ${wouldWrite}; ` +
+      `customized preserved: ${customizedPreserved}; blocked conflicts/deletions: ${blocked}` +
+      (metadataRefresh > 0 ? `; optional stamp refresh: ${metadataRefresh}` : '') +
+      '.'
+  );
+  if (plan.applied) {
+    console.log(`Applied changes: ${summary.changed}.`);
+    return;
+  }
+  // Content already matches package templates — do not urge --apply as the primary next step.
+  if (wouldWrite === 0 && blocked === 0) {
+    const ver = options.packageVersion ?? arkPackageVersion();
+    const verLabel = ver ? `arkgate@${ver}` : 'the installed arkgate package';
+    console.log(
+      `Nothing to apply — managed content matches ${verLabel} (${customizedPreserved} customized preserved).`
+    );
+    if (metadataRefresh > 0) {
+      console.log(
+        `Optional: ${metadataRefresh} skill stamp(s) lag package version while content is already current.`
+      );
+      const stampCmd = options.optionalStampApply ?? options.next;
+      if (stampCmd) {
+        console.log(`Optional stamp-only apply (not required): ${stampCmd}`);
+      }
+    }
+    return;
+  }
+  console.log(`Planned writes: ${wouldWrite}; blocked conflicts/deletions: ${blocked}.`);
+  if (options.next) console.log(options.next);
+  else console.log('Apply the exact preview with: ark upgrade --apply --no-install');
 }

@@ -36,7 +36,11 @@ import {
   mergePostGreenTopActions,
   isDoctorHealthyNothingToDo,
 } from './post-green-path.mjs';
-import { loadGoldenPattern, summarizeGoldenPattern } from './golden-pattern.mjs';
+import {
+  computePureLayerOptInNudge,
+  loadGoldenPattern,
+  summarizeGoldenPattern,
+} from './golden-pattern.mjs';
 import { summarizePilotLoop } from './pilot-loop.mjs';
 import { computeDoctorAdvisories, printDoctorAdvisories } from './doctor-advisories.mjs';
 import { ANALYSIS_COMPLETENESS, analysisIncompleteStatement, normalizeAnalysisCompleteness } from './analysis-completeness.mjs';
@@ -418,7 +422,10 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   // Q01 — single post-green door when design-weak (map → B; no skill shopping).
   const postGreenPath = buildPostGreenNextAction(designFitness);
   // Q03 — optional golden pattern for NEW code (advisory; never clears design-weak).
-  const goldenPattern = summarizeGoldenPattern(loadGoldenPattern(root));
+  const goldenLoad = loadGoldenPattern(root);
+  const goldenPattern = summarizeGoldenPattern(goldenLoad);
+  // Y06 — pure-layer opt-in when golden names pure modules but no pure:true layer.
+  const pureLayerOptIn = computePureLayerOptInNudge(config, goldenLoad);
   // Q04 — one next pilot (extraction card) when design-weak.
   const patternBetsForLoop = buildPatternBetsFromSmells(designSmells);
   const pilotLoop = summarizePilotLoop({
@@ -463,6 +470,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
               : {}),
             // Q03: advisory golden for new-code placement (absent = no claim).
             goldenPattern,
+            // Y06: advisory pure-layer opt-in (null when not applicable).
+            pureLayerOptIn,
             // Q04: one-pilot loop (extraction card → re-doctor).
             pilotLoop,
             // Advisories, never a verdict: W01 contract health, U05 ambient state,
@@ -507,6 +516,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
               hookRepair: writePath.hookRepair,
               mcpPresent: writePath.mcpPresent,
               evidence: writePath.evidence,
+              ...(writePath.sessionNote ? { sessionNote: writePath.sessionNote } : {}),
               ...(writePath.gap
                 ? {
                     gap: {
@@ -655,6 +665,10 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         'Fix or remove it — absence is fine; a bad file is not guidance.'
     );
   }
+  // Y06 — one-line pure-layer opt-in (U05 voice; never blocker).
+  if (pureLayerOptIn) {
+    line(' ', color.dim(pureLayerOptIn.message));
+  }
 
   printDoctorAdvisories(doctorAdvisories, { line, warn, color }); // advisory sections
 
@@ -756,6 +770,9 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   line(' ', `Active host: ${writePath.activeHost}`);
   line(' ', `Supported profile: ${writePath.supportSummary}`);
   line(wpMark, `Mode: ${writePath.mode} — ${writePathLabels[writePath.mode] || writePath.mode}`);
+  if (writePath.sessionNote) {
+    line(warn, writePath.sessionNote);
+  }
   const enforcement = writePath.enforcementState;
   for (const row of enforcementDoctorLines(enforcement)) line(row.level === 'ok' ? ok : row.level === 'bad' ? bad : warn, row.text);
   line(
@@ -779,7 +796,12 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   }
   // Report Codex legacy prompts and other-host missing/stale independently (never exclusive).
   const legacyCodex = skillGaps.some((g) => g.tool === 'codex' && g.legacyPromptsOnly);
-  const remainingGaps = skillGaps.filter((g) => !(g.tool === 'codex' && g.legacyPromptsOnly));
+  const codexLegacySafeDelete = skillGaps.some(
+    (g) => g.tool === 'codex' && g.legacyAdvisory && g.catalogComplete
+  );
+  const remainingGaps = skillGaps.filter(
+    (g) => !(g.tool === 'codex' && (g.legacyPromptsOnly || g.legacyAdvisory))
+  );
   const remMiss = remainingGaps.reduce((s, g) => s + g.missing, 0);
   const remStale = remainingGaps.reduce((s, g) => s + g.stale, 0);
   if (remMiss + remStale === 0 && !legacyCodex) line(ok, '/ark-* skills current for detected tools');
@@ -787,8 +809,19 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     line(warn, 'Codex: legacy flat .codex/prompts only (not a loadable skill catalog)');
     actions.push('install Codex SKILL.md catalog (--install-agent-gates --skills-only --tools codex --force)');
   }
+  if (codexLegacySafeDelete) {
+    line(
+      ' ',
+      color.dim(
+        'Codex catalog complete — leftover .codex/prompts/ark-*.md are safe to delete (not loadable; not required).'
+      )
+    );
+  }
   if (remMiss + remStale > 0) {
-    line(warn, `${remMiss} missing / ${remStale} outdated /ark-* skill(s) for ${remainingGaps.map((g) => g.tool).join(', ')}`);
+    line(
+      warn,
+      `${remMiss} missing / ${remStale} content-behind-package /ark-* skill(s) for ${remainingGaps.map((g) => g.tool).join(', ')}`
+    );
     actions.push('refresh /ark-* skills (--install-agent-gates --skills-only --force)');
   }
   const codexHomeGap = detectCodexHomeGap(root);
@@ -796,7 +829,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     const parts = [
       codexHomeGap.legacyPromptsOnly ? 'legacy-prompts-only' : null,
       codexHomeGap.missing > 0 ? `${codexHomeGap.missing} missing` : null,
-      codexHomeGap.stale > 0 ? `${codexHomeGap.stale} outdated` : null,
+      codexHomeGap.stale > 0 ? `${codexHomeGap.stale} content-behind-package` : null,
     ].filter(Boolean);
     const deferred = !codexConcernIsActive();
     // Deferred home debt is dim/info (not warn) so non-Codex sessions are not "incomplete".
