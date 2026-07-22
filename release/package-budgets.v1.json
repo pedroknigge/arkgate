@@ -3,19 +3,19 @@
   "packages": {
     "gate": {
       "path": ".",
-      "maxPackedBytes": 534000,
-      "maxUnpackedBytes": 1796000,
-      "maxFiles": 149,
+      "maxPackedBytes": 568884,
+      "maxUnpackedBytes": 1981532,
+      "maxFiles": 160,
       "measuredCandidate": {
-        "sha": "6fa507900acde48fd972045e00c67e0bcdd27589",
-        "ciCandidateSha": "b4f25a422de96e004f21c4107aec3b98d2469c61",
-        "ciRun": 29649631288,
-        "version": "3.7.0",
-        "packedBytes": 484608,
-        "unpackedBytes": 1632090,
-        "files": 135
+        "sha": "c06754ab27a73ed29d2fcf27f38a2bb494ef4b00",
+        "ciCandidateSha": "c06754ab27a73ed29d2fcf27f38a2bb494ef4b00",
+        "ciRun": null,
+        "version": "3.8.1",
+        "packedBytes": 517167,
+        "unpackedBytes": 1801392,
+        "files": 145
       },
-      "exception": "The 250 KB/1 MB target is not yet feasible while shipping the documented standalone CLI/MCP tooling, deterministic change-integrity surfaces, schemas, and consumer guidance. Phase Z recalibrates once from clean Linux arkgate@3.7.0 source 6fa5079 / PR candidate b4f25a4 (484,608 packed bytes, 1,632,090 unpacked bytes, 135 files) with at least 10% headroom: 534,000 packed bytes, 1,796,000 unpacked bytes, and 149 files. Legacy migration/demo and experimental-runtime hardening guides remain repository-hosted, source maps were removed in V04, and this exception must be reconsidered before ArkGate 4."
+      "exception": "Phase Z fixed ceilings at 534,000 / 1,796,000 / 149 from clean Linux arkgate@3.7.0 source 6fa5079 / PR candidate b4f25a4 (484,608 / 1,632,090 / 135). The 3.8.1 corrective patch remeasures the clean candidate on source c06754a (517,167 packed, 1,801,392 unpacked, 145 files) after peerIsolation fail-closed, pure-IR accuracy, and the Domain analysis pilot cluster. Owner-authorized recalibration retains at least 10% headroom: 568,884 packed bytes, 1,981,532 unpacked bytes, and 160 files. The 250 KB/1 MB aspirational target remains deferred; reconsider before ArkGate 4."
     },
     "runtime": {
       "path": "packages/runtime",

@@ -9,26 +9,26 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '3.8.0';
+const CURRENT = '3.8.1';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
 }
 
-describe('Phase Z fixed roadmap-cycle package ceilings', () => {
+describe('package budget ceilings retain 10% headroom over the recorded clean candidate', () => {
   it('retains at least 10% headroom over the recorded clean candidate', () => {
     const gate = JSON.parse(read('release/package-budgets.v1.json')).packages.gate;
     expect(gate.measuredCandidate).toEqual({
-      sha: '6fa507900acde48fd972045e00c67e0bcdd27589',
-      ciCandidateSha: 'b4f25a422de96e004f21c4107aec3b98d2469c61',
-      ciRun: 29649631288,
-      version: '3.7.0',
-      packedBytes: 484608,
-      unpackedBytes: 1632090,
-      files: 135,
+      sha: 'c06754ab27a73ed29d2fcf27f38a2bb494ef4b00',
+      ciCandidateSha: 'c06754ab27a73ed29d2fcf27f38a2bb494ef4b00',
+      ciRun: null,
+      version: '3.8.1',
+      packedBytes: 517167,
+      unpackedBytes: 1801392,
+      files: 145,
     });
     expect([gate.maxPackedBytes, gate.maxUnpackedBytes, gate.maxFiles]).toEqual([
-      534000, 1796000, 149,
+      568884, 1981532, 160,
     ]);
     expect(gate.maxPackedBytes).toBeGreaterThanOrEqual(
       Math.ceil(gate.measuredCandidate.packedBytes * 1.1)
@@ -86,9 +86,32 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
   });
 
   it('public latest-release pointers move together', () => {
-    expect(read('README.md')).toMatch(/Latest release \(3\.8\.0\).*3\.8\.0\.md/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.8\.0/s);
-    expect(read('docs/package-surface.md')).toMatch(/latest:\s*\[3\.8\.0\.md\]/s);
+    expect(read('README.md')).toMatch(/Latest release \(3\.8\.1\).*3\.8\.1\.md/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.8\.1/s);
+    expect(read('docs/package-surface.md')).toMatch(/latest:\s*\[3\.8\.1\.md\]/s);
+  });
+});
+
+describe('CHANGELOG + release note cover 3.8.1 pure-path patch', () => {
+  it('CHANGELOG 3.8.1 names peerIsolation fail-closed and pure-IR fixes', () => {
+    const body = read('CHANGELOG.md');
+    expect(body).toMatch(/## 3\.8\.1/);
+    expect(body).toMatch(/peerIsolation fail-closed/);
+    expect(body).toMatch(/type-only named bindings/);
+    expect(body).toMatch(/Relative `require` edges/);
+    expect(body).toMatch(/Plan-B god-module pilot/);
+    expect(body).toMatch(/No required config migration/i);
+  });
+
+  it('docs/releases/3.8.1.md has the upgrade path and safety honesty', () => {
+    const body = read('docs/releases/3.8.1.md');
+    expect(body).toMatch(/arkgate@3\.8\.1/);
+    expect(body).toMatch(/npm install -D arkgate@3\.8\.1/);
+    expect(body).toMatch(/peerIsolation/);
+    expect(body).toMatch(/fail-closed/i);
+    expect(body).toMatch(/No required config migration/i);
+    expect(body).toMatch(/Z09/);
+    expect(body).toMatch(/mcp-publisher validate server\.json/);
   });
 });
 

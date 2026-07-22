@@ -126,7 +126,7 @@ mcp-publisher publish server.json
 # Confirm: registry lists io.github.pedroknigge/arkgate @ X.Y.Z with isLatest
 ```
 
-**Current published release:** [docs/releases/3.8.0.md](docs/releases/3.8.0.md) (`arkgate@3.8.0`).
+**Current published release:** [docs/releases/3.8.1.md](docs/releases/3.8.1.md) (`arkgate@3.8.1`).
 
 ## Not sure where to start?
 
