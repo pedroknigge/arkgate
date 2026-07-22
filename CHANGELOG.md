@@ -5,6 +5,25 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 3.8.1 — 2026-07-22
+
+Corrective **patch** over 3.8.0. Closes silent fail-open on peerIsolation incomplete evidence,
+improves pure-IR type-only and relative-`require` graph accuracy, and splits the Domain analysis
+vocabulary pilot without changing public gate import paths. **No required config migration.**
+Z09 / residual `RB-11` remain open for retained adoption and independent close.
+
+### Fixed
+
+- **peerIsolation fail-closed (S1):** when `peerIsolation: true` is configured, missing paths, no
+  slice folders, or unclassifiable slices **deny** (cannot prove same-slice). No silent fail-open.
+  Incomplete path evidence can surface new denials; that is intentional safety, not a config
+  migration.
+- **Pure IR type-only named bindings (S5):** all-type lists (`import { type A }`,
+  `export { type A } from '…'`) are type-only for capability evidence; mixed lists and
+  default+named imports stay value.
+- **Relative `require` edges (S4):** pure module graph emits dependency edges for relative
+  `require(...)` like relative import; package require remains capability evidence only.
+
 ### Changed
 
 - **Plan-B god-module pilot:** split `src/domain/analysis.ts` by concern into a DomainModel pilot
@@ -12,22 +31,16 @@ in the immutable pre-2.0 archive linked below.
   create/load in `resolvedCandidateFacts.ts`; import-free `resolvedCandidateFactsSchema.ts` for
   `generate:cli-pure`. Public root/gate import paths unchanged. Judgment-only hygiene; no contract
   or gate weakening.
-- **peerIsolation fail-closed (S1):** when `peerIsolation: true` is configured, missing paths, no
-  slice folders, or unclassifiable slices **deny** (cannot prove same-slice). No silent fail-open.
-- **Pure IR type-only named bindings (S5):** all-type lists (`import { type A }`,
-  `export { type A } from '…'`) are type-only for capability evidence; mixed lists stay value.
-- **Relative `require` edges (S4):** pure module graph emits dependency edges for relative
-  `require(...)` like relative import; package require remains capability evidence only.
 
 ### Documentation
 
-- **Queue hygiene:** Phase Z engineering slices remain closed in 3.8.0; `Z09` is a parked claim
+- **Queue hygiene:** Phase Z engineering slices remain closed in 3.8.0+; `Z09` is a parked claim
   gate (residual `RB-11` = retained adoption + independent close only). No engineering `doing`.
   Y06/Y09 stay parked; Y07 low priority; Y10 archived until field demand + ADR; K01 runtime-only.
   After the analysis pilot, self-hosted design-weak residual is package barrel `src/index.ts`
   only (plan-B judgment; never mechanical-safe).
 - **Pin honesty:** migration guide, claims matrix, and TS support pin current stable as
-  **arkgate@3.8.0** (not 3.7.0 / unpublished corrective).
+  **arkgate@3.8.1** (not 3.7.0 / unpublished corrective).
 
 ## 3.8.0 — 2026-07-21
 

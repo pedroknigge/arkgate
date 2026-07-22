@@ -2790,6 +2790,7 @@ Runtime parked: K01 outside Phase Z; experimental @arkgate/runtime is not the pr
   deprecated root forwarders arkgate/runtime|nestjs remain until major 4.0
 Release lanes: ordinary corrective patches do not wait for Z09; broad “Phase Z shipped” /
   retained-adoption / independent-close claims wait for residual RB-11
+Released baseline: npm arkgate@3.8.1 (pure-path fail-closed patch; Z09/RB-11 residual open)
 Released baseline: npm arkgate@3.8.0 (Phase Z corrective minor; Z09/RB-11 residual open) — PR #90
 Released baseline: npm arkgate@3.7.0 (Phase Y close from PR #78)
 Released baseline: npm arkgate@3.6.0 (Phase X close from PR #76, squash 5d368f5)

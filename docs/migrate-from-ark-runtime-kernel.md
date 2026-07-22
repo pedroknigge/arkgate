@@ -44,14 +44,14 @@ npx arkgate upgrade
 
 ### TypeScript 7
 
-**arkgate@3.8.0** (current stable) installs a physically distinct exact TypeScript 6 analysis host
+**arkgate@3.8.1** (current stable) installs a physically distinct exact TypeScript 6 analysis host
 and reports required `complete | partial | unavailable` state, so project TypeScript 7 cannot
 deduplicate away the JS-API fallback and incomplete analysis cannot satisfy plan or strict merge.
 If you are still on **3.7.0 or earlier**, upgrade: that release predates the correction (package
 managers could remove the fallback; unavailable `--plan --json` could report `goal.met: true`).
 Keep the project's TypeScript/`tsc` unchanged; require `completeness: complete` from the final
 strict check. See [typescript-support.md](typescript-support.md) and
-[3.8.0 release notes](releases/3.8.0.md).
+[3.8.1 release notes](releases/3.8.1.md).
 
 ### MCP args (avoid double binary)
 
@@ -72,10 +72,10 @@ strict check. See [typescript-support.md](typescript-support.md) and
 
 ```diff
 - "ark-runtime-kernel": "^2.0.1"
-+ "arkgate": "^3.8.0"
++ "arkgate": "^3.8.1"
 ```
 
-`3.8.0` is the current stable version when this guide was updated; prefer `arkgate@latest` for a
+`3.8.1` is the current stable version when this guide was updated; prefer `arkgate@latest` for a
 fresh migration unless your repository intentionally pins an exact version.
 
 Scripts:
@@ -176,8 +176,8 @@ Surface policy: [package-surface.md](package-surface.md).
 | `npm warn deprecated ark-runtime-kernel` | Swap dep to `arkgate` (this guide) |
 | `ark-check: not found` after uninstall | Use `npx arkgate-check` or reinstall `arkgate` |
 | MCP still launches old package | Update `.mcp.json` / Codex / Grok config; restart agent |
-| TS7 plan/check says `partial` or `unavailable` | Do not accept the plan as green; upgrade to **arkgate@3.8.0** or later, then require `completeness: complete` |
-| pnpm blocks new package age | Wait for cooling-off or prefer `arkgate@latest`; if policy requires an exact pin, check `npm view arkgate version` and pin that version (currently `arkgate@3.8.0`) |
+| TS7 plan/check says `partial` or `unavailable` | Do not accept the plan as green; upgrade to **arkgate@3.8.1** or later, then require `completeness: complete` |
+| pnpm blocks new package age | Wait for cooling-off or prefer `arkgate@latest`; if policy requires an exact pin, check `npm view arkgate version` and pin that version (currently `arkgate@3.8.1`) |
 
 ---
 
