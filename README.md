@@ -16,9 +16,9 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 3.8.2** is current stable: field DX on top of 3.8.1 — skill stale matches upgrade content
-> identity, honest upgrade preview, doctor session notes, Y06 pure opt-in nudge, Codex legacy advisory.
-> [Release notes](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.8.2.md).
+> **ArkGate 3.8.3** is current stable: field journey on top of 3.8.2 — pnpm/yarn workspace install,
+> default `start` package pin, compact `.mcp.json`, upgrade recovery/UX.
+> [Release notes](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.8.3.md).
 
 > **TypeScript 7 distribution note:** ArkGate prefers a usable project compiler API, then its
 > exact, physically distinct TypeScript 6 analysis host. Analysis reports required
@@ -422,7 +422,7 @@ for real systems. Details: [production-hardening.md](https://github.com/pedrokni
 | Security reporting | [SECURITY.md](SECURITY.md) |
 | Demos | [docs/demos/](https://github.com/pedroknigge/arkgate/tree/main/docs/demos) |
 | Examples | [examples/](https://github.com/pedroknigge/arkgate/blob/main/examples/README.md) |
-| Latest release (3.8.2) | [release notes](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.8.2.md) · [3.0.0 baseline](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.0.0.md) |
+| Latest release (3.8.3) | [release notes](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.8.3.md) · [3.0.0 baseline](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.0.0.md) |
 | Roadmap and decisions | [ROADMAP.md](https://github.com/pedroknigge/arkgate/blob/main/ROADMAP.md) · [ADRs](https://github.com/pedroknigge/arkgate/tree/main/docs/adr) · [Changelog](CHANGELOG.md) |
 
 ---

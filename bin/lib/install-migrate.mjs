@@ -149,7 +149,10 @@ export function buildManagedAssetCatalog({ root, tools, compact = false, skillsO
       'AGENTS.md',
       compact ? compactAgentInstructions(root, compactHost) : agentInstructions(root)
     );
-    if (!compact || !compactHost || compactHost === 'claude') add('.mcp.json', mcpJson(root));
+    // Always write project MCP registration — compact hosts other than Claude still need
+    // ark://manifest for agents (field: compact grok start left doctor reporting Missing .mcp.json
+    // when AGENTS lost compact markers or hosts were mixed).
+    add('.mcp.json', mcpJson(root));
     const deploy = detectDeployPathQuality(root);
     add(
       '.github/workflows/ark-check.yml',

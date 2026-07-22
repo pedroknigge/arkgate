@@ -55,14 +55,19 @@ function changedPaths(before: Map<string, Buffer>, after: Map<string, Buffer>) {
 }
 
 function start(root: string, host: string, args: string[] = []) {
-  return execFileSync(process.execPath, [ARK, 'start', '--root', root, '--no-strict', '--json', ...args], {
-    encoding: 'utf8',
-    env: { ...process.env, ARK_ACTIVE_HOST: host, CODEX_HOME: path.join(root, '.codex-home') },
-  });
+  // O03 measures compact gate budget; --no-install isolates package pin (default since 3.8.3).
+  return execFileSync(
+    process.execPath,
+    [ARK, 'start', '--root', root, '--no-strict', '--no-install', '--json', ...args],
+    {
+      encoding: 'utf8',
+      env: { ...process.env, ARK_ACTIVE_HOST: host, CODEX_HOME: path.join(root, '.codex-home') },
+    }
+  );
 }
 
 describe('O03 compact start', () => {
-  it.each(HOSTS)('%s setup stays under the five-file/25 KB budget and is idempotent', (host) => {
+  it.each(HOSTS)('%s setup stays under the eight-file/32 KB budget and is idempotent', (host) => {
     const root = createFixture();
     try {
       const originalPackage = fs.readFileSync(path.join(root, 'package.json'), 'utf8');
@@ -71,17 +76,19 @@ describe('O03 compact start', () => {
         setupBudget: { files: number; bytes: number; ok: boolean };
       };
       expect(preview.setupBudget).toMatchObject({ files: expect.any(Number), bytes: expect.any(Number), ok: true });
-      expect(preview.setupBudget.files).toBeLessThanOrEqual(5);
-      expect(preview.setupBudget.bytes).toBeLessThan(25 * 1024);
+      // 3.8.3: shared .mcp.json is always part of compact (budget ceiling 8 / 32 KB).
+      expect(preview.setupBudget.files).toBeLessThanOrEqual(8);
+      expect(preview.setupBudget.bytes).toBeLessThan(32 * 1024);
       expect(preview.changes.some((change) => change.path === 'package.json')).toBe(false);
       expect(preview.changes.some((change) => /\/(skills|prompts|commands)\//.test(change.path))).toBe(false);
+      expect(preview.changes.some((change) => change.path === '.mcp.json')).toBe(true);
 
       const before = snapshot(root);
       const applied = JSON.parse(start(root, host, ['--apply'])) as typeof preview;
       const after = snapshot(root);
       const changed = changedPaths(before, after);
       expect(changed).toEqual(applied.changes.map((change) => change.path).sort());
-      expect(changed.length).toBeLessThanOrEqual(5);
+      expect(changed.length).toBeLessThanOrEqual(8);
       expect(changed).not.toContain('check.mjs');
       expect(changed).not.toContain('src/domain/value.ts');
       expect(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).toBe(originalPackage);
@@ -111,7 +118,9 @@ describe('O03 compact start', () => {
         path.join(root, 'package.json'),
         '{\n    "name": "o03-fixture",\n    "private": true,\n    "devDependencies": {\n        "vitest": "^3.2.6"\n    }\n}\n'
       );
-      const preview = JSON.parse(start(root, 'codex', ['--install', '--apply'])) as {
+      const preview = JSON.parse(
+        start(root, 'codex', ['--install', '--apply', '--skip-package-manager'])
+      ) as {
         changes: Array<{ path: string }>;
       };
       expect(preview.changes.map((change) => change.path)).toContain('package.json');
@@ -144,6 +153,7 @@ describe('O03 compact start', () => {
     const root = createFixture();
     try {
       start(root, 'codex', ['--apply']);
+      expect(fs.existsSync(path.join(root, '.mcp.json'))).toBe(true);
       const removal = JSON.parse(
         execFileSync(process.execPath, [ARK, 'start', '--root', root, '--remove-host', 'codex', '--apply', '--json'], {
           encoding: 'utf8',
@@ -157,11 +167,13 @@ describe('O03 compact start', () => {
         ])
       );
       expect(fs.existsSync(path.join(root, '.codex', 'hooks.json'))).toBe(false);
+      // Shared MCP registration is kept (or recreated) when a compact host is removed.
       expect(fs.existsSync(path.join(root, '.mcp.json'))).toBe(true);
 
       start(root, 'codex', ['--apply']);
       expect(fs.existsSync(path.join(root, '.codex', 'hooks.json'))).toBe(true);
-      expect(fs.existsSync(path.join(root, '.mcp.json'))).toBe(false);
+      // 3.8.3: compact always installs project .mcp.json for every host.
+      expect(fs.existsSync(path.join(root, '.mcp.json'))).toBe(true);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

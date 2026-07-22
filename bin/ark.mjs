@@ -14,8 +14,10 @@ import {
   INIT_WIZARD_CHOICES,
   isValidArchetypeId,
   mapWizardChoiceToArchetype,
+  packageInstallArgv,
   resolveArchetypePreset,
   resolveOperatingMode,
+  shouldSkipArkgateInstall,
 } from './ark-shared.mjs';
 import { pinArkgateDevDependency, FALSE_GREEN_GAP_ID } from './lib/field-install.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
@@ -155,9 +157,9 @@ Options:
                (Also the implicit default when stdin/stdout are not a TTY — agents never hang on prompts.)
   --force      Allow generated files to overwrite existing files.
   --no-strict  Skip the final strict ark-check run.
-  --install    Add arkgate to package.json explicitly before applying a start plan.
+  --install    Pin and install arkgate as a project devDependency (default for start).
   --no-install Skip adding/installing arkgate as a project devDependency (start/upgrade).
-  --apply       Apply a start plan; for upgrade, update/repreview or apply with --no-install.
+  --apply       Apply a start plan; for upgrade, update/repreview or apply managed bytes.
   --accept-conflicts
                 Allow upgrade to recreate deleted managed assets or replace recorded conflicts.
   --plan-digest Digest emitted by an upgrade preview; required to apply managed bytes.
@@ -189,20 +191,7 @@ function cliVersion() {
   }
 }
 
-// The package-manager command that adds arkgate as a dev dependency.
-// Prefer an explicit version/range when pin already chose one (avoid pin=^2.9.0 then
-// `npm i arkgate@latest` rewriting package.json to a different range).
-function packageInstallArgv(root, versionSpec) {
-  const range =
-    typeof versionSpec === 'string' && versionSpec.trim()
-      ? versionSpec.trim()
-      : 'latest';
-  const spec = range.startsWith('arkgate@') ? range : `arkgate@${range}`;
-  const pm = detectPackageManager(root);
-  if (pm === 'pnpm') return ['pnpm', ['add', '-D', spec]];
-  if (pm === 'yarn') return ['yarn', ['add', '-D', spec]];
-  return ['npm', ['install', '-D', spec]];
-}
+// packageInstallArgv is imported from ark-shared (workspace-aware -w / -W).
 
 function runCommand(command, commandArgs, cwd) {
   const result = spawnSync(command, commandArgs, { cwd, stdio: 'inherit', encoding: 'utf8' });
@@ -438,6 +427,32 @@ async function start(args) {
     if (!args.apply) return 0;
     applyStartPreview(args.root, preview);
     if (!args.json) console.log(`Applied ${preview.changes.length} previewed mutation(s).`);
+    // After applying exact preview bytes, install the pinned package when requested
+    // (preview itself never runs the package manager — field: start left pin without node_modules).
+    if (
+      args.install &&
+      !args.skipPackageManager &&
+      fs.existsSync(path.join(args.root, 'package.json'))
+    ) {
+      const skip = shouldSkipArkgateInstall(args.root, cliVersion());
+      if (!skip.skip) {
+        const [command, commandArgs] = packageInstallArgv(args.root, `^${cliVersion()}`);
+        if (!args.json) console.log(`Installing package: ${command} ${commandArgs.join(' ')}`);
+        // Keep stdout clean for --json consumers (package managers are chatty on stdout).
+        const status = args.json
+          ? (spawnSync(command, commandArgs, {
+              cwd: args.root,
+              stdio: ['ignore', 'pipe', 'pipe'],
+              encoding: 'utf8',
+            }).status ?? 1)
+          : runCommand(command, commandArgs, args.root);
+        if (status !== 0 && !args.json) {
+          console.log(
+            `Package manager exited ${status}. package.json is pinned; run the install command when online.`
+          );
+        }
+      }
+    }
     return 0;
   }
   const root = args.root;
@@ -492,7 +507,8 @@ async function start(args) {
     }
 
     // 2b) Pin arkgate as a project devDependency so CI/npx do not depend on a stale global.
-    if (args.installExplicit && args.install && fs.existsSync(path.join(root, 'package.json'))) {
+    // Default install=true; only --no-install skips. (installExplicit tracks user override for copy.)
+    if (args.install && fs.existsSync(path.join(root, 'package.json'))) {
       const { pinned, installStatus } = ensureProjectArkgateDependency(root, {
         install: true,
         runPackageManager: !args.skipPackageManager,
@@ -507,7 +523,7 @@ async function start(args) {
       } else if (pinned.reason === 'already-present') {
         console.log(`  arkgate already in package.json (${pinned.version}).`);
       }
-    } else if (args.installExplicit && args.install === false) {
+    } else if (!args.install) {
       console.log('  Skipping arkgate package pin (--no-install).');
     }
 
@@ -789,7 +805,13 @@ async function main() {
 
   if (args.command === 'upgrade' || args.command === 'update') {
     try {
-      return runUpgradeCommand(args, { arkCheck, packageInstallArgv, runArkCheck });
+      return runUpgradeCommand(args, {
+        arkCheck,
+        packageInstallArgv,
+        runArkCheck,
+        cliVersion: cliVersion(),
+        shouldSkipArkgateInstall,
+      });
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));
       return 2;

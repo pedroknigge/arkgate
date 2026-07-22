@@ -250,7 +250,7 @@ describe('pinArkgateDevDependency + compact start install policy', () => {
     expect(pkg.devDependencies?.arkgate).toBeUndefined();
   });
 
-  it('start leaves package.json alone by default and pins only with --install', () => {
+  it('start pins arkgate by default; --no-install leaves package.json alone', () => {
     const root = tempRoot('ark-start-pin-');
     write(
       root,
@@ -260,22 +260,50 @@ describe('pinArkgateDevDependency + compact start install policy', () => {
     write(root, 'src/index.ts', 'export {};\n');
     const result = spawnSync(
       process.execPath,
-      [path.resolve('bin/ark.mjs'), 'start', '--apply', '--root', root, '--no-strict'],
+      [
+        path.resolve('bin/ark.mjs'),
+        'start',
+        '--apply',
+        '--root',
+        root,
+        '--no-strict',
+        '--skip-package-manager',
+      ],
       { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
-    expect(result.status).toBe(0);
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
     expect(fs.existsSync(path.join(root, 'ark.config.json')) || fs.existsSync(path.join(root, 'AGENTS.md'))).toBe(
       true
     );
-    expect(JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).devDependencies?.arkgate).toBeUndefined();
+    // 3.8.3: default start pins the package so CI/npx are project-local.
+    expect(JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).devDependencies?.arkgate).toMatch(
+      /^\^/
+    );
 
-    const explicit = spawnSync(
+    const noInstallRoot = tempRoot('ark-start-noinstall-');
+    write(
+      noInstallRoot,
+      'package.json',
+      JSON.stringify({ name: 'start-noinstall', version: '0.0.1', private: true }, null, 2)
+    );
+    write(noInstallRoot, 'src/index.ts', 'export {};\n');
+    const skipped = spawnSync(
       process.execPath,
-      [path.resolve('bin/ark.mjs'), 'start', '--apply', '--install', '--root', root, '--no-strict'],
+      [
+        path.resolve('bin/ark.mjs'),
+        'start',
+        '--apply',
+        '--no-install',
+        '--root',
+        noInstallRoot,
+        '--no-strict',
+      ],
       { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
-    expect(explicit.status, `${explicit.stdout}\n${explicit.stderr}`).toBe(0);
-    expect(JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).devDependencies.arkgate).toMatch(/^\^/);
+    expect(skipped.status, `${skipped.stdout}\n${skipped.stderr}`).toBe(0);
+    expect(
+      JSON.parse(fs.readFileSync(path.join(noInstallRoot, 'package.json'), 'utf8')).devDependencies?.arkgate
+    ).toBeUndefined();
   });
 });
 

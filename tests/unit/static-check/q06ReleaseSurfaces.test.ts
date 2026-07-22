@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '3.8.2';
+const CURRENT = '3.8.3';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -86,9 +86,31 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
   });
 
   it('public latest-release pointers move together', () => {
-    expect(read('README.md')).toMatch(/Latest release \(3\.8\.2\).*3\.8\.2\.md/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.8\.2/s);
-    expect(read('docs/package-surface.md')).toMatch(/latest:\s*\[3\.8\.2\.md\]/s);
+    expect(read('README.md')).toMatch(/Latest release \(3\.8\.3\).*3\.8\.3\.md/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.8\.3/s);
+    expect(read('docs/package-surface.md')).toMatch(/latest:\s*\[3\.8\.3\.md\]/s);
+  });
+});
+
+describe('CHANGELOG + release note cover 3.8.3 field journey', () => {
+  it('CHANGELOG 3.8.3 names workspace install, start pin, and upgrade recovery', () => {
+    const body = read('CHANGELOG.md');
+    expect(body).toMatch(/## 3\.8\.3/);
+    expect(body).toMatch(/pnpm workspace|pnpm add.*-w/i);
+    expect(body).toMatch(/start.*pin|pins `arkgate`/i);
+    expect(body).toMatch(/\.mcp\.json/);
+    expect(body).toMatch(/Nothing to apply|wouldWrite|unbound/i);
+    expect(body).toMatch(/No required config migration/i);
+  });
+
+  it('docs/releases/3.8.3.md has the upgrade path and field journey', () => {
+    const body = read('docs/releases/3.8.3.md');
+    expect(body).toMatch(/arkgate@3\.8\.3/);
+    expect(body).toMatch(/npm install -D arkgate@3\.8\.3/);
+    expect(body).toMatch(/pnpm.*-w|workspace/i);
+    expect(body).toMatch(/\.mcp\.json/);
+    expect(body).toMatch(/No required config migration/i);
+    expect(body).toMatch(/mcp-publisher validate server\.json/);
   });
 });
 

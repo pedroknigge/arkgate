@@ -38,7 +38,7 @@ retained decisions; when they disagree with code, fix or flag the documentation.
 | Security | [SECURITY.md](SECURITY.md) · [docs/threat-model.md](docs/threat-model.md) |
 | Decisions | [docs/adr/](docs/adr/README.md) |
 | Implementation queue | [ROADMAP.md](ROADMAP.md) |
-| Releases | [CHANGELOG.md](CHANGELOG.md) · [3.8.2 notes](docs/releases/3.8.2.md) |
+| Releases | [CHANGELOG.md](CHANGELOG.md) · [3.8.3 notes](docs/releases/3.8.3.md) |
 | Documentation audit | [docs/audit/claims-matrix.md](docs/audit/claims-matrix.md) |
 
 Read this hub and the relevant authority before significant work. After changing a public
