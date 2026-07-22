@@ -5,6 +5,34 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 3.8.3 — 2026-07-22
+
+Corrective **patch** over 3.8.2 from multi-repo field evidence (PROPIA pnpm workspace upgrade;
+Amarilla greenfield `start`). **No required config migration.** Z09 / residual `RB-11` remain open.
+
+### Fixed
+
+- **pnpm workspace upgrade install:** `packageInstallArgv` emits `pnpm add -D arkgate@… -w` on
+  workspace roots (`pnpm-workspace.yaml`). Yarn workspaces get `-W`. npm single-package path
+  unchanged.
+- **Upgrade re-install when already current:** skip package-manager install when
+  `node_modules/arkgate` already matches this CLI version; go straight to managed preview.
+- **Install failure recovery copy:** prints the exact failed install command and a
+  `--no-install` re-run path.
+- **`start` package pin by default:** `start --apply` pins `arkgate` in `devDependencies`
+  unless `--no-install` (was: only with explicit `--install`).
+- **Compact start always writes `.mcp.json`:** every host gets project MCP registration;
+  setup budget raised to 8 files / 32 KB so MCP fits with host hooks.
+- **Unbound upgrade apply when content matches:** `--apply` without `--plan-digest` is a
+  successful no-op when `wouldWrite` is 0 (optional stamp refresh still needs the digest).
+- **Upgrade applied copy:** distinguishes content writes vs stamp/metadata refresh instead of
+  a single “Applied N changes” when only stamps moved.
+
+### Tests
+
+- `tests/unit/static-check/fieldJourney383.test.ts` — workspace argv, skip-when-current, start pin.
+- Z06 / O03 / installFieldFixes expectations updated for default pin and MCP-in-compact.
+
 ## 3.8.2 — 2026-07-22
 
 Corrective **patch** over 3.8.1 from PREDIAL WEB field evidence. Aligns doctor skill freshness with

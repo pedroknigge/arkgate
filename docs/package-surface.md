@@ -187,5 +187,5 @@ production deployment would need to satisfy; it is not a readiness certification
 ## Release notes (maintainers)
 
 Ship notes for a version live under [releases/](https://github.com/pedroknigge/arkgate/tree/main/docs/releases) (latest:
-[3.8.2.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.8.2.md)).
+[3.8.3.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.8.3.md)).
 Publish path: signed annotated tag → GitHub Release → `publish-npm.yml` (see [CONTRIBUTING.md](https://github.com/pedroknigge/arkgate/blob/main/CONTRIBUTING.md)).

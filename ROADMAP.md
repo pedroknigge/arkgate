@@ -418,6 +418,25 @@ separately as parked candidate `K01` rather than silently dropped. Self-hosted d
 (historical domain analysis pilot cluster done; residual smell evidence is the package barrel
 `src/index.ts` only) is plan-B judgment only — never a ROADMAP `todo` or release blocker.
 
+### 3.8.3 — Field journey patch (install/upgrade close-out)
+
+Origin: 2026-07-22 field session — PREDIAL/SUPERLOCK npm upgrade OK; **PROPIA pnpm workspace**
+`pnpm add` without `-w` hard-fails; **Amarilla greenfield** `start --apply` left no package pin and
+compact host without shared `.mcp.json` under the old 5-file budget.
+
+Engineering slices **P01–P06** land in tree for the corrective patch; **P07** is field re-verify +
+publish (npm + MCP registry). One `doing` at a time for any remaining slice.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 74 | `P01` | `done` | S | — | pnpm workspace roots emit `pnpm add -D arkgate@… -w`; skip install when already current |
+| 75 | `P02` | `done` | S | `P01` | yarn workspace `-W`; npm single-package path unchanged; unit matrix |
+| 76 | `P03` | `done` | S | — | `start --apply` pins `arkgate` by default (`--no-install` opt-out) |
+| 77 | `P04` | `done` | S | `P03` | compact always writes `.mcp.json`; setup budget 8 files / 32 KB |
+| 78 | `P05` | `done` | S | — | upgrade human copy: stamp refresh vs content writes; applied counters honest |
+| 79 | `P06` | `done` | S | `P05` | unbound `--apply` no-op when `wouldWrite=0`; install-fail recovery prints exact command |
+| 80 | `P07` | `done` | S | `P01`–`P06` | Field re-verify PROPIA + greenfield start; bump 3.8.3; publish npm + MCP |
+
 `Z01` starts with a failing destructive-target fixture; do **not** run the unsafe
 `check:release-artifacts` path or make budget measurement a prerequisite to its fix. After `Z01` is
 done, run release-artifact verification only against a validated tool-owned temporary directory,
@@ -2796,7 +2815,7 @@ Runtime parked: K01 outside Phase Z; experimental @arkgate/runtime is not the pr
   deprecated root forwarders arkgate/runtime|nestjs remain until major 4.0
 Release lanes: ordinary corrective patches do not wait for Z09; broad “Phase Z shipped” /
   retained-adoption / independent-close claims wait for residual RB-11
-Released baseline: npm arkgate@3.8.2 (field DX: skill stale/upgrade/Y06; Z09/RB-11 residual open)
+Released baseline: npm arkgate@3.8.3 (field journey: pnpm -w, start pin, compact MCP; Z09/RB-11 residual open)
 Released baseline: npm arkgate@3.8.1 (pure-path fail-closed patch; Z09/RB-11 residual open)
 Released baseline: npm arkgate@3.8.0 (Phase Z corrective minor; Z09/RB-11 residual open) — PR #90
 Released baseline: npm arkgate@3.7.0 (Phase Y close from PR #78)

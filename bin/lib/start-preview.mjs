@@ -70,12 +70,14 @@ function setupBudget(changes) {
     (total, item) => total + (item.afterBase64 ? Buffer.from(item.afterBase64, 'base64').length : 0),
     0
   );
+  // Compact start includes shared MCP + one host registration + CI + AGENTS + config.
+  // Budget raised from 5→8 so .mcp.json always fits (field: grok compact hit the old ceiling).
   return {
     files: generatedChanges.length,
     bytes,
-    maxFiles: 5,
-    maxBytes: 25 * 1024,
-    ok: generatedChanges.length <= 5 && bytes < 25 * 1024,
+    maxFiles: 8,
+    maxBytes: 32 * 1024,
+    ok: generatedChanges.length <= 8 && bytes < 32 * 1024,
   };
 }
 
@@ -84,7 +86,8 @@ function commands(root, args, helpers) {
     return [`ark start --root ${root} --tools ${args.removeHost} --apply`];
   }
   const result = [];
-  if (args.installExplicit && args.install && fs.existsSync(path.join(root, 'package.json'))) {
+  // Default install=true: surface the package pin/install command unless --no-install.
+  if (args.install !== false && fs.existsSync(path.join(root, 'package.json'))) {
     const [command, commandArgs] = helpers.packageInstallArgv(root, `^${helpers.cliVersion()}`);
     result.push(`${command} ${commandArgs.join(' ')}`);
   }
@@ -216,8 +219,9 @@ export async function planStart(args, helpers) {
     if (args.yes) childArgs.push('--yes');
     if (args.force) childArgs.push('--force');
     if (!args.strict) childArgs.push('--no-strict');
-    if (args.installExplicit && args.install) childArgs.push('--install');
-    if (args.installExplicit && !args.install) childArgs.push('--no-install');
+    // Propagate install intent into the shadow plan so package.json pin is in the diff by default.
+    if (args.install === false) childArgs.push('--no-install');
+    else childArgs.push('--install');
     if (args.tools) childArgs.push('--tools', args.tools);
     if (args.requireWriteHook) childArgs.push('--require-write-hook', args.requireWriteHook);
     const planned = spawnSync(process.execPath, [helpers.cliPath, ...childArgs], {

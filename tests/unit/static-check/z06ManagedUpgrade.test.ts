@@ -370,14 +370,39 @@ describe('Z06 managed-content upgrade', () => {
     expect(digest(settings)).toBe(before);
   });
 
-  it('refuses an unbound apply even when the candidate has no conflicts', () => {
+  it('treats unbound apply as no-op when content already matches (no digest required)', () => {
     const root = fixture();
+    const before = snapshot(root);
+    const result = run(ARK, [
+      'upgrade', '--root', root, '--tools', 'claude', '--no-install', '--no-strict', '--apply', '--json',
+    ]);
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    const report = JSON.parse(result.stdout) as {
+      nothingToApply?: boolean;
+      applied?: boolean;
+    };
+    expect(report.nothingToApply).toBe(true);
+    expect(report.applied).toBe(false);
+    expect(snapshot(root)).toEqual(before);
+    expect(fs.existsSync(path.join(root, 'ark.managed.json'))).toBe(false);
+  });
+
+  it('still requires plan-digest when content writes are planned', () => {
+    const root = fixture();
+    const skill = path.join(root, '.claude/skills/ark-upgrade/SKILL.md');
+    // Known stale body from a prior published skill (identity-managed, not customized).
+    fs.writeFileSync(skill, LEGACY_UPGRADE_SKILL);
+    const preview = run(ARK, [
+      'upgrade', '--root', root, '--tools', 'claude', '--no-install', '--no-strict', '--json',
+    ]);
+    expect(preview.status, preview.stderr || preview.stdout).toBe(0);
+    const report = JSON.parse(preview.stdout) as { summary: { wouldWrite: number } };
+    expect(report.summary.wouldWrite).toBeGreaterThan(0);
     const result = run(ARK, [
       'upgrade', '--root', root, '--tools', 'claude', '--no-install', '--no-strict', '--apply', '--json',
     ]);
     expect(result.status).toBe(2);
     expect(result.stderr).toMatch(/plan digest mismatch/);
-    expect(fs.existsSync(path.join(root, 'ark.managed.json'))).toBe(false);
   });
 
   it('does not adopt or overwrite an unproven collision', () => {

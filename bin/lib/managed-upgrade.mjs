@@ -513,7 +513,20 @@ export function applyManagedUpgrade(root, plan, expectedPlanDigest) {
   const resolvedRoot = path.resolve(root);
   if (resolvedRoot !== plan.root) throw new Error('managed upgrade plan root mismatch');
   if (plan.summary.blocked > 0) return publicPlan(plan, { blocked: true });
+  const wouldWrite = plan.summary.wouldWrite ?? 0;
+  const metadataRefresh = plan.summary.metadataRefresh ?? 0;
+  // Content already matches: unbound --apply is a no-op (exit success), not a digest error.
+  // Optional stamp-only refresh still requires the preview's exact --plan-digest.
   if (!expectedPlanDigest || expectedPlanDigest !== plan.planDigest) {
+    if (wouldWrite === 0 && (plan.summary.blocked ?? 0) === 0 && !expectedPlanDigest) {
+      return publicPlan(plan, {
+        readOnly: true,
+        applied: false,
+        blocked: false,
+        nothingToApply: true,
+        optionalStampRefresh: metadataRefresh,
+      });
+    }
     throw new Error('managed upgrade plan digest mismatch; run a new preview and use its exact nextCommand');
   }
 
@@ -637,7 +650,21 @@ export function renderManagedUpgrade(plan, options = {}) {
       '.'
   );
   if (plan.applied) {
-    console.log(`Applied changes: ${summary.changed}.`);
+    // Distinguish content writes from optional stamp/metadata bookkeeping.
+    if (wouldWrite === 0 && metadataRefresh > 0) {
+      console.log(
+        `Refreshed ${metadataRefresh} version stamp(s)` +
+          (summary.manifestChanged ? ' and managed manifest' : '') +
+          ' (no content body changes).'
+      );
+    } else {
+      console.log(
+        `Applied ${wouldWrite} content write(s)` +
+          (metadataRefresh > 0 ? `, ${metadataRefresh} stamp refresh(es)` : '') +
+          (summary.manifestChanged ? ', managed manifest' : '') +
+          '.'
+      );
+    }
     return;
   }
   // Content already matches package templates — do not urge --apply as the primary next step.

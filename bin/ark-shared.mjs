@@ -618,11 +618,98 @@ export function execCommandParts(root, bin, binArgs = []) {
   return { command: 'npx', args: [bin, ...binArgs] };
 }
 
+/**
+ * True when this directory is a pnpm workspace root (needs `pnpm add -w` for root deps).
+ * Nested packages under the workspace are not roots.
+ */
+export function isPnpmWorkspaceRoot(root) {
+  return fs.existsSync(path.join(root, 'pnpm-workspace.yaml'));
+}
+
+/**
+ * True when package.json declares npm/yarn workspaces (yarn classic needs `-W` at root).
+ */
+export function isNpmYarnWorkspaceRoot(root) {
+  const pkg = readPackageJson(root);
+  if (!pkg) return false;
+  const ws = pkg.workspaces;
+  return Array.isArray(ws) || (ws && typeof ws === 'object' && Array.isArray(ws.packages));
+}
+
+/**
+ * Normalize a version/range/spec into an installable package argument for arkgate.
+ * Accepts `latest`, `^3.8.2`, `arkgate@latest`, or a full package name.
+ */
+export function normalizeArkgateInstallSpec(versionSpec) {
+  const raw = typeof versionSpec === 'string' && versionSpec.trim() ? versionSpec.trim() : 'latest';
+  if (raw.startsWith('arkgate@') || raw === 'arkgate') return raw === 'arkgate' ? 'arkgate@latest' : raw;
+  if (raw.includes('/') || raw.startsWith('file:') || raw.startsWith('link:')) return raw;
+  return `arkgate@${raw}`;
+}
+
+/**
+ * Package-manager argv to add a dev dependency (e.g. arkgate@latest).
+ * pnpm workspace roots get `-w`; yarn classic workspaces get `-W`.
+ *
+ * @param {string} root
+ * @param {string} [versionSpec]  package name or name@version (default arkgate@latest)
+ * @returns {[string, string[]]}
+ */
+export function packageInstallArgv(root, versionSpec = 'latest') {
+  const pkgSpec = normalizeArkgateInstallSpec(versionSpec);
+  const pm = detectPackageManager(root);
+  if (pm === 'pnpm') {
+    const args = ['add', '-D', pkgSpec];
+    if (isPnpmWorkspaceRoot(root)) args.push('-w');
+    return ['pnpm', args];
+  }
+  if (pm === 'yarn') {
+    const args = ['add', '-D', pkgSpec];
+    if (isNpmYarnWorkspaceRoot(root)) args.push('-W');
+    return ['yarn', args];
+  }
+  return ['npm', ['install', '-D', pkgSpec]];
+}
+
+/**
+ * Whether an install of arkgate@latest can be skipped because node_modules already
+ * resolves the same version as this CLI package.
+ *
+ * @param {string} root
+ * @param {string} [cliVersion]  this binary's package version
+ * @returns {{ skip: boolean, installedVersion: string|null, reason: string }}
+ */
+export function shouldSkipArkgateInstall(root, cliVersion) {
+  const pkgPath = path.join(root, 'node_modules', 'arkgate', 'package.json');
+  if (!fs.existsSync(pkgPath)) {
+    return { skip: false, installedVersion: null, reason: 'not-installed' };
+  }
+  let installedVersion = null;
+  try {
+    installedVersion = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version ?? null;
+  } catch {
+    return { skip: false, installedVersion: null, reason: 'unreadable' };
+  }
+  if (
+    typeof cliVersion === 'string' &&
+    cliVersion &&
+    installedVersion &&
+    installedVersion === cliVersion
+  ) {
+    return { skip: true, installedVersion, reason: 'already-current' };
+  }
+  return { skip: false, installedVersion, reason: 'version-differs' };
+}
+
 /** Package-manager aware "install a dev dependency" hint (e.g. for a missing typescript). */
 export function installDevHint(root, pkg) {
   const pm = detectPackageManager(root);
-  if (pm === 'pnpm') return `pnpm add -D ${pkg}`;
-  if (pm === 'yarn') return `yarn add -D ${pkg}`;
+  if (pm === 'pnpm') {
+    return isPnpmWorkspaceRoot(root) ? `pnpm add -D ${pkg} -w` : `pnpm add -D ${pkg}`;
+  }
+  if (pm === 'yarn') {
+    return isNpmYarnWorkspaceRoot(root) ? `yarn add -D ${pkg} -W` : `yarn add -D ${pkg}`;
+  }
   return `npm install -D ${pkg}`;
 }
 

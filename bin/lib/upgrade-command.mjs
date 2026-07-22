@@ -55,23 +55,50 @@ function verify(root, json, arkCheck, runArkCheck) {
 export function runUpgradeCommand(args, dependencies) {
   const root = args.root;
   if (args.apply && args.install) {
-    const [command, commandArgs] = dependencies.packageInstallArgv(root);
-    if (!args.json) console.log(`Updating ArkGate: ${command} ${commandArgs.join(' ')}`);
-    const install = spawnSync(command, commandArgs, {
-      cwd: root,
-      stdio: args.json ? ['ignore', 'pipe', 'pipe'] : 'inherit',
-      encoding: 'utf8',
-    });
-    const exitCode = install.status ?? 1;
-    if (exitCode !== 0) {
-      if (args.json && install.stderr) console.error(install.stderr.trim());
-      console.error(
-        `Package update failed (exit ${exitCode}). Fix the install and re-run, or use ` +
-          '`ark upgrade --no-install` against the installed version.'
-      );
-      return exitCode;
+    const skip =
+      typeof dependencies.shouldSkipArkgateInstall === 'function'
+        ? dependencies.shouldSkipArkgateInstall(root, dependencies.cliVersion)
+        : { skip: false };
+    if (skip.skip) {
+      if (!args.json) {
+        console.log(
+          `Package already at arkgate@${skip.installedVersion}; skipping install and recomputing managed preview.`
+        );
+      }
+    } else {
+      const [command, commandArgs] = dependencies.packageInstallArgv(root);
+      if (!args.json) console.log(`Updating ArkGate: ${command} ${commandArgs.join(' ')}`);
+      const install = spawnSync(command, commandArgs, {
+        cwd: root,
+        stdio: args.json ? ['ignore', 'pipe', 'pipe'] : 'inherit',
+        encoding: 'utf8',
+      });
+      const exitCode = install.status ?? 1;
+      if (exitCode !== 0) {
+        if (args.json && install.stderr) console.error(install.stderr.trim());
+        const recovery = `${command} ${commandArgs.join(' ')}`;
+        console.error(
+          `Package update failed (exit ${exitCode}). Fix the install and re-run:\n` +
+            `  ${recovery}\n` +
+            `Then: ark upgrade --no-install --root ${JSON.stringify(root)}` +
+            (args.tools ? ` --tools ${args.tools}` : '') +
+            (!args.strict ? ' --no-strict' : '') +
+            (args.json ? ' --json' : '')
+        );
+        return exitCode;
+      }
     }
-    return spawnSync(process.execPath, [installedCli(root), ...previewArgs(args)], {
+    // Re-enter via installed CLI so the managed plan uses the newly installed package bytes.
+    let cli;
+    try {
+      cli = installedCli(root);
+    } catch {
+      console.error(
+        'arkgate is not installed in this project after the package step. Install it, then re-run with --no-install.'
+      );
+      return 1;
+    }
+    return spawnSync(process.execPath, [cli, ...previewArgs(args)], {
       cwd: root,
       stdio: 'inherit',
       encoding: 'utf8',
@@ -111,13 +138,28 @@ export function runUpgradeCommand(args, dependencies) {
     return 0;
   }
 
-  const applied = applyManagedUpgrade(root, plan, args.planDigest);
+  let applied;
+  try {
+    applied = applyManagedUpgrade(root, plan, args.planDigest);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(message);
+    return 2;
+  }
   if (applied.blocked) {
     if (args.json) console.log(JSON.stringify(applied, null, 2));
     else renderManagedUpgrade(applied, {
       next: 'Preview again with --accept-conflicts, then use that preview\'s exact next command.',
     });
     return 1;
+  }
+  if (applied.nothingToApply && !applied.applied) {
+    if (args.json) console.log(JSON.stringify(applied, null, 2));
+    else {
+      renderManagedUpgrade(applied);
+      console.log('No managed content writes pending (optional stamp refresh needs --plan-digest).');
+    }
+    return 0;
   }
   const verification = args.strict
     ? { mode: 'strict-merge', ...verify(root, args.json, dependencies.arkCheck, dependencies.runArkCheck) }
