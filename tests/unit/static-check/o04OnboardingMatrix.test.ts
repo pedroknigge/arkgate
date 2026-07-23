@@ -144,7 +144,16 @@ describe('O04 clean-room onboarding matrix', () => {
 
         const applied = await start(root, host, true);
         const after = snapshot(root);
-        expect(changedPaths(before, after)).toEqual(applied.changes.map((change) => change.path).sort());
+        // --install may run the package manager and rewrite lockfiles outside the
+        // declared Ark mutation set (e.g. npm regenerating package-lock.json when
+        // arkgate is added). Compare product files only.
+        const lockfiles = new Set(['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock']);
+        const productChanged = changedPaths(before, after).filter((file) => !lockfiles.has(file));
+        const productDeclared = applied.changes
+          .map((change) => change.path)
+          .filter((file) => !lockfiles.has(file))
+          .sort();
+        expect(productChanged).toEqual(productDeclared);
         expect(applied.projectedCoverage).toEqual(preview.projectedCoverage);
         assertNoUnrelatedHostFiles(root, host);
 
