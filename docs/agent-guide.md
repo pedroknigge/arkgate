@@ -1,8 +1,13 @@
 # ArkGate — Agent Integration Guide
 
-**ArkGate** (`arkgate`) — architecture co-pilot for AI TypeScript. This guide describes how AI
-agents and codegen tools safely interact with write hooks, advisory MCP tools, CI, and `/ark-*`
-skills. Guarantees differ by host; start with the
+**ArkGate** (`arkgate`) — architecture co-pilot for AI TypeScript. This guide is the **develop**
+reference for agents and codegen: write hooks, advisory MCP tools, CI, and `/ark-*` skills.
+
+- Product path (anyone): [use.md](use.md)  
+- Integration overview: [develop.md](develop.md)  
+- Docs hub: [README.md](README.md)  
+
+Guarantees differ by host; start with the
 [canonical host support matrix](../README.md#host-enforcement-support). The advisory-local /
 hard-CI split is a deliberate trade-off, not a gap: local hooks and MCP coach at write time,
 while a required merge status is the one boundary a repository can make every write path share.

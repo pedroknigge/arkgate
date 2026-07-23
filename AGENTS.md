@@ -23,28 +23,34 @@ If the task is “improve arkgate the product,” you are in the right place. If
 ## Project knowledge map
 
 Code and manifests are the source of truth for implementation details and for whether a
-structural claim is true. These documents capture product intent, operating constraints, and
-retained decisions; when they disagree with code, fix or flag the documentation.
+structural claim is true. Documentation is organized in **three public lanes** — use the map,
+not every historical file:
+
+| Lane | Entry | Audience |
+|------|-------|----------|
+| **Use** | [docs/use.md](docs/use.md) | Anyone shipping with AI |
+| **Develop** | [docs/develop.md](docs/develop.md) | Integrate gates, hosts, CI, brownfield |
+| **Contribute** | [CONTRIBUTING.md](CONTRIBUTING.md) | Improve this library |
+| **Docs hub** | [docs/README.md](docs/README.md) | Full navigation |
 
 | Topic | Canonical authority |
 |-------|---------------------|
-| Public product and first-run flow | [README.md](README.md) |
+| Public product / marketing surface | [README.md](README.md) |
 | Product voice (English UI / copy) | [docs/product-voice.md](docs/product-voice.md) |
 | Stable vs experimental package contract | [docs/package-surface.md](docs/package-surface.md) |
 | Config contract and schema | [docs/configuration.md](docs/configuration.md) |
-| Agent, CLI, MCP, and runtime reference | [docs/agent-guide.md](docs/agent-guide.md) |
+| Agent, CLI, MCP reference | [docs/agent-guide.md](docs/agent-guide.md) |
 | Host enforcement setup | [docs/ai-gates.md](docs/ai-gates.md) |
 | TypeScript compatibility | [docs/typescript-support.md](docs/typescript-support.md) |
-| Brownfield and enthusiast adoption | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) · [docs/enthusiast/](docs/enthusiast/README.md) |
+| Brownfield and enthusiast track | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) · [docs/enthusiast/](docs/enthusiast/README.md) |
 | Security | [SECURITY.md](SECURITY.md) · [docs/threat-model.md](docs/threat-model.md) |
 | Decisions | [docs/adr/](docs/adr/README.md) |
 | Implementation queue | [ROADMAP.md](ROADMAP.md) |
-| Releases | [CHANGELOG.md](CHANGELOG.md) · [3.9.0 notes](docs/releases/3.9.0.md) |
-| Documentation audit | [docs/audit/claims-matrix.md](docs/audit/claims-matrix.md) |
-| Field claim program (Z09 scaffolding — not closed) | [docs/field/](docs/field/README.md) |
+| Releases (current) | [CHANGELOG.md](CHANGELOG.md) · [3.9.0 notes](docs/releases/3.9.0.md) |
+| History / maintainer evidence | [docs/archive/](docs/archive/README.md) · [docs/plans/](docs/plans/) · [docs/field/](docs/field/) · [docs/audit/](docs/audit/claims-matrix.md) |
 
-Read this hub and the relevant authority before significant work. After changing a public
-surface, architecture boundary, decision, or plan, update its authority and the coverage row.
+Read the **lane entry** before significant work. After changing a public surface, architecture
+boundary, decision, or plan, update its authority and the docs hub row if needed.
 
 ### Package index
 

@@ -22,6 +22,10 @@ Not a rewrite of the analysis engine. No plan-B silent codemod. No fake hard wri
   checklist, independent-reviewer manifesto + open signed-identity decision. Explicit **status: not
   closed**; does not invent adopter counts or close `RB-11` / C-028 residual.
 - **Release notes:** `docs/releases/3.9.0.md`.
+- **Docs information architecture:** three public lanes — [docs/use.md](docs/use.md) (anyone),
+  [docs/develop.md](docs/develop.md) (integrate), [CONTRIBUTING.md](CONTRIBUTING.md) (library);
+  hub [docs/README.md](docs/README.md); history under [docs/archive/](docs/archive/README.md).
+  Historical release notes and epic plans remain in-repo but are not the product front door.
 - **Maintainer workflow:** `.grok/workflows/product-beauty-audit.rhai` — read-only parallel audit of
   product surfaces against product-voice criteria (report-only by default).
 - **Host enforcement expansion (prepared, not npm-published as a separate release):**

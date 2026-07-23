@@ -2,6 +2,9 @@
 
 **ArkGate** (`arkgate`) is the architecture co-pilot for AI TypeScript (write gate · CI · plan/loop).
 
+This page is **develop** depth (install hooks/MCP/CI per host). Product path: [use.md](use.md) ·
+overview: [develop.md](develop.md) · hub: [README.md](README.md).
+
 ### Host write honesty (fail-closed)
 
 | Host | Write-time boundary | Hard merge boundary |

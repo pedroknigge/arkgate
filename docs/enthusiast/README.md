@@ -5,6 +5,8 @@ developers. This track follows [Diátaxis](https://diataxis.fr/): tutorial, how-
 reference, and explanation. Package: **`arkgate`** (CLI: `arkgate` / `arkgate-check`;
 aliases `ark` / `ark-check` still work).
 
+**Start shorter?** [docs/use.md](../use.md) · **All docs:** [docs/README.md](../README.md)
+
 ## How ArkGate talks to you
 
 **Entry style** — who is driving: *newbie* (`ark start` / `/ark-autopilot`) vs *expert* (individual commands).

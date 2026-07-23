@@ -1,12 +1,21 @@
 # Contributing to ArkGate
 
-Thanks for your interest! ArkGate is young and contributions of every size are welcome — issues describing real-world adoption friction are as valuable as PRs.
+This guide is for people who **improve the ArkGate library** (this repository), not for product
+teams that only install `arkgate` in an app.
+
+| You want to… | Go here instead |
+|--------------|-----------------|
+| Use ArkGate on a product | [docs/use.md](docs/use.md) |
+| Wire hosts, CI, brownfield | [docs/develop.md](docs/develop.md) |
+| Docs map | [docs/README.md](docs/README.md) |
 
 **Product site:** [arkgate.online](https://www.arkgate.online/) · **Source:** this repository.
 
-**Agents / contributors (git clone only — not in the npm tarball):** this checkout is the
-**canonical mother repository** for developing and releasing the `arkgate` library — not a
-sample app that consumes ArkGate. Read `AGENTS.md` (**Identity**) before large changes.
+**Agents / library authors:** this checkout is the **canonical mother repository** for developing
+and releasing the `arkgate` package — not a sample consumer app. Read `AGENTS.md` (**Identity**)
+before large changes.
+
+---
 
 ## Setup
 
@@ -14,122 +23,106 @@ sample app that consumes ArkGate. Read `AGENTS.md` (**Identity**) before large c
 git clone https://github.com/pedroknigge/arkgate
 cd arkgate
 npm ci
-npm run build        # bin/ark-mcp.mjs loads dist/, so build first
+npm run build                 # bin/ark-mcp.mjs loads dist/
 npm run typecheck
-npm run test:confidence # full coverage + critical-module mutation gates
+npm run test:confidence       # coverage + critical-module mutation gates
 npx arkgate-check --root . --config ark.config.json --strict
-npm run check:architecture   # ArkGate dogfoods itself
-npm run check:layer-match    # derived bin/ark-layer-match.mjs must match domain source
-npm run check:cli-pure       # remediation + baselineKey derived helpers in sync
-npm run test:ts-compat       # packed-consumer TS 5.9 / 6.0 / 7.0 check (optional, slower)
+npm run check:architecture    # dogfood
+npm run check:layer-match
+npm run check:cli-pure
 ```
 
 After editing pure Domain algorithms, regenerate CLI artifacts:
 
 ```bash
-npm run generate:layer-match   # src/domain/layerMatch.ts
-npm run generate:cli-pure      # src/domain/remediation.ts + baselineKey.ts
+npm run generate:layer-match
+npm run generate:cli-pure
+# analysis-engine / packaged-tooling: see package.json scripts
 ```
 
-ArkGate's library and CLIs support Node >= 18. The repository confidence/release gate requires
-Node >= 20 because it runs the current Stryker mutation runner; compatibility CI also exercises
-the packed candidate on Node 18/20/22/24 and publish uses Node 24. **Runtime dependencies stay
-minimal:** only `typescript-ark-host` at exact `npm:typescript@6.0.3`, a physically distinct JS-API
-analysis host used when the project ships TypeScript 7’s version-only main export. It must not
-replace or change the project's selected `tsc`. Do not add other production deps without
-discussion. NestJS and similar stay optional `peerDependencies` + devDependencies.
+Node ≥ 18 for library/CLIs. Confidence/release gates use Node ≥ 20 (Stryker). Runtime deps stay
+minimal (`typescript-ark-host` exact). Do not add production deps without discussion.
 
-The compatibility workflow packs the candidate before testing clean installs: Node 18/20/22/24
-× npm/pnpm/Yarn × project TypeScript 5.9.3/6.0.3/7.0.2 (36 cells). A valid cell keeps the
-project's `tsc` version unchanged and reports ArkGate's fallback as exact 6.0.3 when needed. Yarn
-uses strict PnP for TS5/6 and its `node-modules` linker for native TS7; every JSON report records
-the install mode rather than hiding that compiler boundary.
+---
 
-## Project layout (public GitHub tree)
+## Layout (what you edit)
 
-- `src/domain/` — pure contracts, types, and canonical algorithms shared by the gate surfaces
-- `src/kernel/` — canonical gate analysis and preflight core; `src/kernel/runtime/` feeds only the experimental runtime companion
-- `src/runtime/` · `src/nestjs/` — experimental `@arkgate/runtime` package entries and its optional NestJS adapter
-- `src/eslint/` — stable editor adapter for the same architecture contract
-- `bin/` — dual CLIs: `arkgate` / `arkgate-check` / `arkgate-mcp` + aliases `ark` / `ark-check` / `ark-mcp`
-- `templates/` — playbook, policy packs, agent skills (shipped on npm; install via `--install-agent-gates`)
-- `docs/` — **user-facing** docs only (enthusiast track, ai-gates, TypeScript support, demos, …)
-- `examples/` · `tests/` · `eval/` — examples and quality harnesses
-- `ROADMAP.md` — public product roadmap
+| Path | Role |
+|------|------|
+| `src/domain/` | Pure contracts and algorithms |
+| `src/kernel/` | Gate analysis / preflight core |
+| `src/eslint/` | Editor adapter |
+| `bin/` | CLIs (`arkgate*` + `ark*`) |
+| `templates/` | Skills, hooks, playbooks (shipped on npm) |
+| `docs/` | Product + develop + contribute docs ([map](docs/README.md)) |
+| `tests/` · `eval/` | Quality harnesses |
+| `ROADMAP.md` | Implementation queue — **one `doing` at a time** |
 
-### What is *not* on GitHub / npm
+`packages/runtime` is the experimental companion package (separate publish).
 
-Maintainer-only planning, freeze checklists, marketing funnels, and local field notes live in
-a local **`internal/`** directory (gitignored). Do not commit it. The npm package is further
-restricted by the `"files"` list in `package.json`: the stable payload includes `bin`, `compat`,
-`dist`, `schemas`, `templates`, public docs/assets, the TypeScript consumer fixture, and the
-listed package metadata files. Repository-only plans, tests, examples, and maintainer material do
-not ship unless they are explicitly named there.
+Maintainer-only local notes may live under gitignored `internal/` — never commit field secrets.
+
+---
 
 ## Rules of the road
 
-1. **Every behavior change needs a test.** CLI behavior is tested by executing the real binaries against temp fixtures (see `tests/unit/static-check/arkCheck.test.ts` for the pattern).
-2. **The three gates must agree.** `arkgate-check` / `ark-check`, `arkgate-mcp` / `ark-mcp`, and the ESLint plugin share semantics via `bin/ark-shared.mjs` and the config format — if you change classification or rule semantics in one, change it everywhere and add a test proving they match.
-   Current diagnostic envelopes use schema 1.3 and must report `mode`, required
-   `completeness: complete | partial | unavailable`, and structured `completenessReasons`;
-   incomplete analysis cannot satisfy a plan or strict merge.
-3. **CI must be green**: typecheck, coverage + mutation confidence, build, and
-   `check:architecture` all gate merges.
-4. Keep diffs small and boring. No new abstractions without a second concrete use.
+1. **Behavior change ⇒ test.** Prefer real CLI binaries against temp fixtures.
+2. **Gates agree.** CLI, MCP, ESLint share semantics; change them together.
+3. **Incomplete analysis cannot look green** (`complete | partial | unavailable`).
+4. **CI green:** typecheck, confidence, build, `check:architecture`.
+5. **Small diffs.** No new abstraction without a second concrete use.
+6. **Honest docs.** Do not claim npm-published status before `npm view` succeeds.
+   Product copy follows [docs/product-voice.md](docs/product-voice.md).
+
+---
 
 ## Proposing changes
 
-- **Bug fixes**: open a PR directly. Include a failing test that your fix turns green.
-- **Features / behavior changes**: open an issue first. ArkGate's value is a small, sharp surface — features that don't survive a short design discussion usually shouldn't exist.
+- **Bug fixes:** PR with a failing test that goes green.
+- **Features / behavior:** open an issue first — keep the public surface small.
+
+Good first contributions: adoption friction reports, host-install honesty, docs in the
+**use / develop / contribute** lanes (not unsolicited epic rewrites).
+
+Queue: [ROADMAP.md](ROADMAP.md) · issues labeled `good first issue`.
+
+---
 
 ## Releasing (maintainers)
 
-**Version sources that must stay in sync:** `package.json`, `package-lock.json` (root),
-`src/version.ts`, `server.json` (MCP registry). Smoke test enforces this.
+**Version sources (must match):** `package.json`, root `package-lock.json`, `src/version.ts`,
+`server.json`.
 
 **Docs for a release:**
 
-1. `CHANGELOG.md` — versioned section (not only Unreleased)
-2. `docs/releases/X.Y.Z.md` — human release notes + publish checklist
-3. `README.md` / `ROADMAP.md` if user-facing flow or roadmap status changed
+1. `CHANGELOG.md` — versioned section  
+2. `docs/releases/X.Y.Z.md` — notes + checklist  
+3. README / docs hub only if the product path changed  
 
 ```bash
-# Bump versions (or land a release PR that already bumps them)
 npm version <patch|minor|major> --no-git-tag-version
-# Keep server.json + src/version.ts aligned with package.json
+# align server.json + src/version.ts
 
-# On main, green CI
-npm run release:npm -- --dry          # typecheck + confidence + audit + arch + pack dry-run
+npm run release:npm -- --dry
 git tag -s vX.Y.Z -m "arkgate vX.Y.Z"
 git push origin vX.Y.Z
 gh release create vX.Y.Z --verify-tag --title "arkgate vX.Y.Z" \
-  --notes-file docs/releases/X.Y.Z.md   # or --generate-notes
+  --notes-file docs/releases/X.Y.Z.md
 gh workflow run publish-npm.yml -f tag=vX.Y.Z -f dry_run=false
 ```
 
-Real releases are GitHub-first: the publish workflow requires a signed annotated tag and an
-existing GitHub Release, reruns the release gates, publishes to npm with provenance, and uploads
-the npm tarball checksum. Local `npm publish` is emergency-only and intentionally not the normal
-maintainer path.
+Normal path is GitHub Release + signed tag + provenance publish. Root workflow publishes
+**`arkgate` only** — not `@arkgate/runtime`.
 
-That workflow publishes the root **`arkgate`** package only. The experimental
-**`@arkgate/runtime`** companion has its own manifest, build, and package artifact under
-`packages/runtime`; its publication is a separate maintainer operation and is not automated by
-the root `publish-npm.yml` workflow.
-
-**MCP registry (after npm is on `latest`):** keep `server.json` at the same version, then:
+MCP registry after npm `latest`:
 
 ```bash
-mcp-publisher login github -token "$(gh auth token)"   # if JWT expired
-mcp-publisher validate server.json
-mcp-publisher publish server.json
-# Confirm: registry lists io.github.pedroknigge/arkgate @ X.Y.Z with isLatest
+mcp-publisher login github -token "$(gh auth token)"
+mcp-publisher validate server.json && mcp-publisher publish server.json
 ```
 
 **Current published release:** [docs/releases/3.8.3.md](docs/releases/3.8.3.md) (`arkgate@3.8.3`).  
 **Next prepared (not yet on npm `latest`):** [docs/releases/3.9.0.md](docs/releases/3.9.0.md)
-(`arkgate@3.9.0` — flip this line to “published” only after `npm view arkgate@3.9.0` succeeds).
+(`arkgate@3.9.0` — flip to “published” only after `npm view arkgate@3.9.0` succeeds).
 
-## Not sure where to start?
-
-Check [ROADMAP.md](ROADMAP.md) and issues labeled `good first issue`. Opening an issue that says "I tried to adopt ArkGate on my codebase and got stuck at X" is a first-class contribution.
+3.9.0 publish runbook: [docs/releases/3.9.0-publish-runbook.md](docs/releases/3.9.0-publish-runbook.md).
