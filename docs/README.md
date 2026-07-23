@@ -57,7 +57,8 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
-Current release notes: [releases/3.9.0.md](releases/3.9.0.md) (`arkgate@3.9.0` on npm `latest`).
+Current npm `latest`: [releases/3.9.0.md](releases/3.9.0.md).  
+Next prepared patch: [releases/3.9.1.md](releases/3.9.1.md).
 
 ---
 

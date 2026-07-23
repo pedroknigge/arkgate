@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.pedroknigge/arkgate",
-  "description": "ArkGate \u2014 architecture co-pilot for AI TypeScript (write gate, CI, plan/loop)",
+  "description": "ArkGate — architecture co-pilot for AI TypeScript (write gate, CI, plan/loop)",
   "repository": {
     "url": "https://github.com/pedroknigge/arkgate",
     "source": "github"
   },
-  "version": "3.9.0",
+  "version": "3.9.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "arkgate",
-      "version": "3.9.0",
+      "version": "3.9.1",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"

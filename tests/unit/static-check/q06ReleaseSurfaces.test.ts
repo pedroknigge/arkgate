@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '3.9.0';
+const CURRENT = '3.9.1';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -52,6 +52,25 @@ describe(`version bump ${CURRENT}`, () => {
     expect(server.version).toBe(CURRENT);
     expect(server.packages[0].version).toBe(CURRENT);
   });
+
+  it('supply-chain hygiene pins are on the patched lines', () => {
+    const lock = JSON.parse(read('package-lock.json'));
+    const fastUri = lock.packages['node_modules/fast-uri']?.version as string;
+    expect(fastUri).toBeTruthy();
+    // 3.1.4+ closes GHSA-v2hh-gcrm-f6hx
+    const [maj, min, pat] = fastUri.split('.').map(Number);
+    expect(maj).toBeGreaterThanOrEqual(3);
+    expect(min * 1000 + pat).toBeGreaterThanOrEqual(1 * 1000 + 4);
+
+    for (const rel of [
+      'eval/cases/next-core-imports-db/package.json',
+      'eval/cases/monorepo-frontend-core/frontend/package.json',
+    ]) {
+      const j = JSON.parse(read(rel));
+      const next = (j.dependencies?.next || j.devDependencies?.next) as string;
+      expect(next, rel).toMatch(/^15\.5\.(2[1-9]|[3-9]\d)/);
+    }
+  });
 });
 
 describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
@@ -86,41 +105,46 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
   });
 
   it('public latest-release pointers move together', () => {
-    expect(read('README.md')).toMatch(/Latest release \(3\.9\.0\).*3\.9\.0\.md/s);
-    // After npm publish: CONTRIBUTING + README claim 3.9.0 as published/current stable
+    // While 3.9.1 is prepared, npm latest remains 3.9.0 and docs stay honest.
+    expect(read('README.md')).toMatch(/Latest release \(3\.9\.0 on npm; 3\.9\.1 prepared\)/s);
+    expect(read('README.md')).toMatch(/3\.9\.1\.md/);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.9\.0/s);
-    expect(read('CONTRIBUTING.md')).not.toMatch(/Next prepared.*3\.9\.0/s);
-    expect(read('docs/package-surface.md')).toMatch(/latest:\s*\[3\.9\.0\.md\]/s);
-    expect(read('README.md')).toMatch(/is current stable/i);
-    expect(read('README.md')).not.toMatch(/npm [`']?latest[`']? is still[\s\S]{0,20}3\.8\.3/i);
+    expect(read('CONTRIBUTING.md')).toMatch(/Next prepared.*3\.9\.1/s);
+    expect(read('docs/package-surface.md')).toMatch(/latest on npm:[\s\S]*3\.9\.0\.md/s);
+    expect(read('README.md')).toMatch(/next prepared patch|prepared patch/i);
+    expect(read('README.md')).toMatch(/npm [`']?latest[`']? is still[\s\S]{0,20}3\.9\.0/i);
   });
 });
 
-describe('CHANGELOG + release note cover 3.9.0 Beautiful Path', () => {
-  it('CHANGELOG 3.9.0 names product voice, progressive disclosure, and doctor path', () => {
+describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
+  it('CHANGELOG 3.9.1 names onboarding lockfile, fast-uri, and Next fixture pins', () => {
+    const body = read('CHANGELOG.md');
+    expect(body).toMatch(/## 3\.9\.1/);
+    expect(body).toMatch(/o04|lockfile/i);
+    expect(body).toMatch(/fast-uri/);
+    expect(body).toMatch(/15\.5\.21|Next\.js/i);
+    expect(body).toMatch(/No required config migration/i);
+  });
+
+  it('docs/releases/3.9.1.md has upgrade path and prepared honesty', () => {
+    const body = read('docs/releases/3.9.1.md');
+    expect(body).toMatch(/arkgate@3\.9\.1/);
+    expect(body).toMatch(/npm install -D arkgate@3\.9\.1/);
+    expect(body).toMatch(/fast-uri|15\.5\.21|lockfile/i);
+    expect(body).toMatch(/No required config migration/i);
+    expect(body).toMatch(/\*\*Prepared:\*\*/);
+    expect(body).toMatch(/\*\*Status:\*\*\s*prepared/i);
+  });
+
+  it('CHANGELOG + release note still cover 3.9.0 Beautiful Path', () => {
     const body = read('CHANGELOG.md');
     expect(body).toMatch(/## 3\.9\.0/);
     expect(body).toMatch(/product-voice|Beautiful Path/i);
     expect(body).toMatch(/progressive disclosure|compact router/i);
-    expect(body).toMatch(/Primary next action|doctor/i);
-    expect(body).toMatch(/No required config migration/i);
-    expect(body).toMatch(/write-path honesty|advisory/i);
-    expect(body).toMatch(/docs\/field|field kit|Z09/i);
-  });
-
-  it('docs/releases/3.9.0.md has the upgrade path and first-run path', () => {
-    const body = read('docs/releases/3.9.0.md');
-    expect(body).toMatch(/arkgate@3\.9\.0/);
-    expect(body).toMatch(/npm install -D arkgate@3\.9\.0/);
-    expect(body).toMatch(/product-voice|Beautiful Path/i);
-    expect(body).toMatch(/product-beauty-audit/);
-    expect(body).toMatch(/No required config migration/i);
-    expect(body).toMatch(/mcp-publisher validate server\.json/);
-    expect(body).toMatch(/field kit|docs\/field|Z09/i);
-    // Published front matter after npm latest points at 3.9.0
-    expect(body).toMatch(/\*\*Released:\*\*/);
-    expect(body).toMatch(/\*\*Status:\*\*\s*published/i);
-    expect(body).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
+    const notes = read('docs/releases/3.9.0.md');
+    expect(notes).toMatch(/arkgate@3\.9\.0/);
+    expect(notes).toMatch(/\*\*Released:\*\*/);
+    expect(notes).toMatch(/\*\*Status:\*\*\s*published/i);
   });
 
   it('product-voice has Do table + design-weak/residual lexicon', () => {

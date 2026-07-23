@@ -5,6 +5,26 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 3.9.1 — 2026-07-23
+
+**Patch** over 3.9.0. Repo hygiene and CI honesty only — **no required config migration**, no gate
+weakening, no product API changes.
+
+### Fixed
+
+- **Onboarding matrix (`o04`):** `ark start --install` may rewrite package-manager lockfiles when the
+  published package is installed; tests compare product mutation paths only (lockfile drift allowed).
+- **Docs post-3.9.0 publish:** CONTRIBUTING / README / release notes / migrate guide match npm truth
+  for the published line (updated again for this patch after 3.9.1 lands on `latest`).
+- **Supply-chain hygiene:** `fast-uri` **3.1.4** (transitive via `ajv`) closes host-confusion advisory
+  GHSA-v2hh-gcrm-f6hx. Eval fixtures pin **Next.js 15.5.21** (patched) so Dependabot Next alerts on
+  `eval/cases/**` corpus close without shipping Next in the `arkgate` npm tarball.
+
+### Notes
+
+- Next bumps are **eval fixture hygiene**, not a consumer-runtime CVE in the published package.
+- Z09 / residual `RB-11` remain open.
+
 ## 3.9.0 — 2026-07-23
 
 **Beautiful Path** minor: one primary flow, doctor as control plane, progressive disclosure, and
