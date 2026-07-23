@@ -105,14 +105,13 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
   });
 
   it('public latest-release pointers move together', () => {
-    // While 3.9.1 is prepared, npm latest remains 3.9.0 and docs stay honest.
-    expect(read('README.md')).toMatch(/Latest release \(3\.9\.0 on npm; 3\.9\.1 prepared\)/s);
-    expect(read('README.md')).toMatch(/3\.9\.1\.md/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.9\.0/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Next prepared.*3\.9\.1/s);
-    expect(read('docs/package-surface.md')).toMatch(/latest on npm:[\s\S]*3\.9\.0\.md/s);
-    expect(read('README.md')).toMatch(/next prepared patch|prepared patch/i);
-    expect(read('README.md')).toMatch(/npm [`']?latest[`']? is still[\s\S]{0,20}3\.9\.0/i);
+    // After npm publish: 3.9.1 is current published/stable
+    expect(read('README.md')).toMatch(/Latest release \(3\.9\.1\).*3\.9\.1\.md/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.9\.1/s);
+    expect(read('CONTRIBUTING.md')).not.toMatch(/Next prepared.*3\.9\.1/s);
+    expect(read('docs/package-surface.md')).toMatch(/latest:[\s\S]*3\.9\.1\.md/s);
+    expect(read('README.md')).toMatch(/is current stable/i);
+    expect(read('README.md')).not.toMatch(/npm [`']?latest[`']? is still[\s\S]{0,40}3\.9\.0/i);
   });
 });
 
@@ -126,14 +125,14 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
     expect(body).toMatch(/No required config migration/i);
   });
 
-  it('docs/releases/3.9.1.md has upgrade path and prepared honesty', () => {
+  it('docs/releases/3.9.1.md has upgrade path and published honesty', () => {
     const body = read('docs/releases/3.9.1.md');
     expect(body).toMatch(/arkgate@3\.9\.1/);
     expect(body).toMatch(/npm install -D arkgate@3\.9\.1/);
     expect(body).toMatch(/fast-uri|15\.5\.21|lockfile/i);
     expect(body).toMatch(/No required config migration/i);
-    expect(body).toMatch(/\*\*Prepared:\*\*/);
-    expect(body).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(body).toMatch(/\*\*Released:\*\*/);
+    expect(body).toMatch(/\*\*Status:\*\*\s*published/i);
   });
 
   it('CHANGELOG + release note still cover 3.9.0 Beautiful Path', () => {
