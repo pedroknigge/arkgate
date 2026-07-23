@@ -16,8 +16,8 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 3.9.0** is the next prepared release (**Beautiful Path**). **npm `latest` is still
-> 3.8.3** until publication succeeds.
+> **ArkGate 3.9.0** is current stable (**Beautiful Path** — one primary flow, doctor as control plane,
+> progressive disclosure, multi-host write honesty including Antigravity + OpenCode).
 > [Release notes](docs/releases/3.9.0.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---

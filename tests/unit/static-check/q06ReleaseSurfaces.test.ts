@@ -87,14 +87,12 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
 
   it('public latest-release pointers move together', () => {
     expect(read('README.md')).toMatch(/Latest release \(3\.9\.0\).*3\.9\.0\.md/s);
-    // Until npm publish, CONTRIBUTING keeps 3.8.3 as published and 3.9.0 as prepared
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.8\.3/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Next prepared.*3\.9\.0/s);
+    // After npm publish: CONTRIBUTING + README claim 3.9.0 as published/current stable
+    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.9\.0/s);
+    expect(read('CONTRIBUTING.md')).not.toMatch(/Next prepared.*3\.9\.0/s);
     expect(read('docs/package-surface.md')).toMatch(/latest:\s*\[3\.9\.0\.md\]/s);
-    // Consumer banner must not claim unqualified "current stable" pre-npm
-    expect(read('README.md')).toMatch(/next prepared|prepared release/i);
-    expect(read('README.md')).toMatch(/npm [`']?latest[`']? is still[\s\S]{0,20}3\.8\.3/i);
-    expect(read('README.md')).not.toMatch(/ArkGate 3\.9\.0\*\* is current stable/i);
+    expect(read('README.md')).toMatch(/is current stable/i);
+    expect(read('README.md')).not.toMatch(/npm [`']?latest[`']? is still[\s\S]{0,20}3\.8\.3/i);
   });
 });
 
@@ -119,10 +117,10 @@ describe('CHANGELOG + release note cover 3.9.0 Beautiful Path', () => {
     expect(body).toMatch(/No required config migration/i);
     expect(body).toMatch(/mcp-publisher validate server\.json/);
     expect(body).toMatch(/field kit|docs\/field|Z09/i);
-    // Prepared front matter (not fake "Released" while status is prepared)
-    expect(body).toMatch(/\*\*Prepared:\*\*/);
-    expect(body).toMatch(/\*\*Status:\*\*\s*prepared/i);
-    expect(body).not.toMatch(/\*\*Released:\*\*/);
+    // Published front matter after npm latest points at 3.9.0
+    expect(body).toMatch(/\*\*Released:\*\*/);
+    expect(body).toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(body).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
   it('product-voice has Do table + design-weak/residual lexicon', () => {

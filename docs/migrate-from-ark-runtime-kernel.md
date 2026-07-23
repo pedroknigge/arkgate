@@ -44,16 +44,15 @@ npx arkgate upgrade
 
 ### TypeScript 7
 
-**arkgate@3.8.0+** (and prepared **3.9.0**) installs a physically distinct exact TypeScript 6
+**arkgate@3.8.0+** (including **3.9.0**) installs a physically distinct exact TypeScript 6
 analysis host and reports required `complete | partial | unavailable` state, so project TypeScript 7
 cannot deduplicate away the JS-API fallback and incomplete analysis cannot satisfy plan or strict
-merge. **npm `latest` is 3.8.3** until 3.9.0 publishes; pin `arkgate@3.9.0` only after
-`npm view arkgate@3.9.0` succeeds (or use `@latest` once it points there).
+merge. Prefer **`arkgate@latest`** (currently **3.9.0**) or pin `arkgate@3.9.0`.
 If you are still on **3.7.0 or earlier**, upgrade: that release predates the correction (package
 managers could remove the fallback; unavailable `--plan --json` could report `goal.met: true`).
 Keep the project's TypeScript/`tsc` unchanged; require `completeness: complete` from the final
 strict check. See [typescript-support.md](typescript-support.md) and
-[3.9.0 release notes](releases/3.9.0.md) (prepared).
+[3.9.0 release notes](releases/3.9.0.md).
 
 ### MCP args (avoid double binary)
 
@@ -77,8 +76,7 @@ strict check. See [typescript-support.md](typescript-support.md) and
 + "arkgate": "^3.9.0"
 ```
 
-Prefer `arkgate@latest` for a fresh migration (today **3.8.3** on npm). Pin `arkgate@3.9.0` only
-after it is published (`npm view arkgate@3.9.0`), or pin an exact version intentionally.
+Prefer `arkgate@latest` for a fresh migration (today **3.9.0** on npm), or pin an exact version intentionally.
 
 Scripts:
 
