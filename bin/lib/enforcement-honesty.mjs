@@ -192,7 +192,119 @@ export function buildWritePathHonesty(activeHost, hardWriteActive = false) {
 }
 
 /**
- * One-shot doctor honesty bundle (coverage + baseline + write path).
+ * One coherent anti-false-green product surface (P0-B).
+ * When ENFORCE · design-weak, weak/partial coverage, dirty freeze, package dual-truth,
+ * or residual pilots remain — finished is false and primaryMessage says so.
+ * Never invents a numeric architecture score.
+ *
+ * @param {{
+ *   coverageHonesty?: ReturnType<typeof buildCoverageHonesty>,
+ *   baselineHonesty?: ReturnType<typeof buildBaselineHonesty>,
+ *   writePathHonesty?: ReturnType<typeof buildWritePathHonesty>,
+ *   designWeak?: boolean,
+ *   designWeakLabel?: string | null,
+ *   packageVersionTruth?: { dualTruth?: boolean, note?: string } | null,
+ *   residualPilots?: boolean,
+ *   pilotTarget?: string | null,
+ *   arkRulesMergeHonesty?: Record<string, unknown> | null,
+ *   primaryNextAction?: string | null,
+ * }} input
+ */
+export function buildProductHonesty(input = {}) {
+  const reasons = [];
+  const cov = input.coverageHonesty;
+  const base = input.baselineHonesty;
+  const write = input.writePathHonesty;
+  const designWeak = input.designWeak === true;
+  const dualTruth = input.packageVersionTruth?.dualTruth === true;
+  const residualPilots = input.residualPilots === true;
+
+  if (cov?.status === 'empty-scope' || cov?.worseThanNoGate) {
+    reasons.push({
+      id: 'coverage-weak-or-empty',
+      message: cov.message,
+    });
+  } else if (cov?.greenIsNotEnforcement) {
+    reasons.push({
+      id: 'coverage-partial',
+      message: cov.message,
+    });
+  }
+  if (base?.dirtyBaselineRisk) {
+    reasons.push({
+      id: 'dirty-freeze',
+      message: base.message,
+    });
+  }
+  if (designWeak) {
+    reasons.push({
+      id: 'design-weak',
+      message:
+        input.designWeakLabel ||
+        'ENFORCE · design-weak: edges may be clean, but design residual remains — not elegant, not finished.',
+    });
+  }
+  if (dualTruth) {
+    reasons.push({
+      id: 'package-version-dual-truth',
+      message:
+        input.packageVersionTruth?.note ||
+        'CLI version and package.json pin disagree — upgrade truth is dual until the pin catches up.',
+    });
+  }
+  if (residualPilots) {
+    reasons.push({
+      id: 'residual-pilot',
+      message: input.pilotTarget
+        ? `Residual pilot remains (${input.pilotTarget}) — one Shape/extraction card at a time; not whole-tree done.`
+        : 'Residual pilot pressure remains — one Shape/extraction card at a time; not whole-tree done.',
+    });
+  }
+  if (write?.softWriteHost) {
+    reasons.push({
+      id: 'soft-write-host',
+      message: write.message || 'Local write is advisory; required CI status is the hard merge boundary.',
+    });
+  }
+  if (input.arkRulesMergeHonesty?.active === true && input.arkRulesMergeHonesty?.extraMergeTeeth === false) {
+    // Informational only when no enforced arkrule plane — does not alone make unfinished.
+  }
+
+  const unfinished = reasons.length > 0;
+  const wholeTreeGoverned = cov?.wholeTreeGoverned === true;
+  const primary =
+    reasons.find((r) => r.id === 'design-weak') ||
+    reasons.find((r) => r.id === 'coverage-weak-or-empty') ||
+    reasons.find((r) => r.id === 'dirty-freeze') ||
+    reasons.find((r) => r.id === 'package-version-dual-truth') ||
+    reasons.find((r) => r.id === 'residual-pilot') ||
+    reasons[0];
+
+  const primaryMessage = unfinished
+    ? primary?.message ||
+      'Not finished: residual honesty signals remain (coverage, freeze, design, package pin, or pilots).'
+    : wholeTreeGoverned
+      ? 'No residual honesty blockers on this slice — still not a numeric architecture score; re-doctor after material change.'
+      : 'No residual honesty blockers flagged — green is only as wide as the governed slice.';
+
+  return {
+    finished: !unfinished && wholeTreeGoverned && !designWeak,
+    elegant: !designWeak && !base?.dirtyBaselineRisk,
+    wholeTreeGuarantee: wholeTreeGoverned && !designWeak && !base?.dirtyBaselineRisk && !cov?.greenIsNotEnforcement,
+    unfinished,
+    notAScore: true,
+    reasonIds: reasons.map((r) => r.id),
+    reasons,
+    primaryMessage,
+    primaryNextAction: input.primaryNextAction || null,
+    headline: unfinished
+      ? 'Not finished / not whole-tree guarantee'
+      : 'Honesty clear on residual signals',
+  };
+}
+
+/**
+ * One-shot doctor honesty bundle (coverage + baseline + write path + product surface).
  * Keeps doctor-plan.mjs under its module budget.
  */
 export function computeDoctorEnforcementHonesty({
@@ -206,20 +318,43 @@ export function computeDoctorEnforcementHonesty({
   totalViolations,
   activeHost,
   hardWriteActive,
+  designWeak,
+  designWeakLabel,
+  packageVersionTruth,
+  residualPilots,
+  pilotTarget,
+  arkRulesMergeHonesty,
+  primaryNextAction,
 } = {}) {
+  const coverageHonesty = buildCoverageHonesty({
+    percent: governedPercent,
+    totalFiles,
+    emptyScope,
+  });
+  const baselineHonesty = buildBaselineHonesty({
+    exists: baselineExists,
+    frozenKeys,
+    activeViolations,
+    suppressed,
+    totalViolations,
+  });
+  const writePathHonesty = buildWritePathHonesty(activeHost, hardWriteActive);
+  const productHonesty = buildProductHonesty({
+    coverageHonesty,
+    baselineHonesty,
+    writePathHonesty,
+    designWeak,
+    designWeakLabel,
+    packageVersionTruth,
+    residualPilots,
+    pilotTarget,
+    arkRulesMergeHonesty,
+    primaryNextAction,
+  });
   return {
-    coverageHonesty: buildCoverageHonesty({
-      percent: governedPercent,
-      totalFiles,
-      emptyScope,
-    }),
-    baselineHonesty: buildBaselineHonesty({
-      exists: baselineExists,
-      frozenKeys,
-      activeViolations,
-      suppressed,
-      totalViolations,
-    }),
-    writePathHonesty: buildWritePathHonesty(activeHost, hardWriteActive),
+    coverageHonesty,
+    baselineHonesty,
+    writePathHonesty,
+    productHonesty,
   };
 }

@@ -15,11 +15,18 @@ export function buildRulesInventory(input) {
     const candidates = [];
     let seq = 0;
     for (const [file, content] of Object.entries(input.fileContents).sort(([a], [b]) => a.localeCompare(b))) {
-        const isController = /controller|route|handler|resolver/i.test(file) ||
+        const posix = file.replace(/\\/g, '/');
+        // P2-N — UI / Next surface noise (route labels, theme tokens) is not business inventory.
+        const isUiSurface = /(?:^|\/)(?:components|ui|layouts|styles|hooks|theme|tokens|i18n|locales?)(?:\/|$)/i.test(posix) ||
+            /(?:^|\/)(?:src\/)?(?:app|pages)\/(?!api(?:\/|$))/i.test(posix);
+        const isApiRoute = /(?:^|\/)(?:app|pages)\/api(?:\/|$)/i.test(posix);
+        const isController = /controller|handler|resolver/i.test(file) ||
+            isApiRoute ||
+            (/route/i.test(file) && !isUiSurface) ||
             /@(Controller|Get|Post|Put|Delete|Patch)\b/.test(content);
         const isDomain = /domain|entity|aggregate|model/i.test(file);
-        // validation-in-controller
-        if (isController) {
+        // validation-in-controller (API/Nest handlers — not pure UI pages)
+        if (isController && !isUiSurface) {
             const valRe = /\b(if\s*\([^)]{0,80}(amount|total|price|qty|quantity|balance)[^)]{0,40}\)|throw new (Error|BadRequest|ValidationError)|z\.object\(|yup\.|class-validator|@Is[A-Z])/g;
             let m;
             while ((m = valRe.exec(content)) !== null) {
@@ -40,11 +47,16 @@ export function buildRulesInventory(input) {
                 });
             }
         }
-        // magic business constants (heuristic)
+        // magic business constants (heuristic) — quiet UI/Next labels & infra knobs
         const magicRe = /\b(const|let)\s+([A-Z][A-Z0-9_]{2,})\s*=\s*(\d{2,}|['"][^'"]{8,}['"])/g;
         let magic;
         while ((magic = magicRe.exec(content)) !== null) {
-            if (/TEST|SPEC|TIMEOUT|PORT|VERSION|MAX_RETRY/i.test(magic[2]))
+            const name = magic[2];
+            if (/TEST|SPEC|TIMEOUT|PORT|VERSION|MAX_RETRY|MIN_RETRY|RETRY|DELAY|INTERVAL|TTL|CACHE|HEADER|COOKIE|MIME|CONTENT_TYPE|STATUS|HTTP|URL|URI|PATH|ROUTE|LABEL|TITLE|HEADING|CLASS|STYLE|COLOR|THEME|BREAKPOINT|QUERY|PARAM|ICON|ARIA|MSG|COPY|I18N|LOCALE|PAGE|NAV|MENU|TAB|BTN|BUTTON|PLACEHOLDER|TOOLTIP|Z_INDEX|SHADOW|RADIUS|GAP|PADDING|MARGIN|FONT|SIZE|WIDTH|HEIGHT|OPACITY|DURATION|EASE|ANIM|KEY|ID_PREFIX|FEATURE_FLAG|ENV|NODE_ENV|DEV|PROD|DEBUG|LOG_LEVEL/i.test(name)) {
+                continue;
+            }
+            // P2-N: skip remaining ALL_CAPS noise on pure UI surfaces (constants / route labels).
+            if (isUiSurface && !isDomain)
                 continue;
             seq += 1;
             candidates.push({
@@ -52,9 +64,9 @@ export function buildRulesInventory(input) {
                 kind: 'magic-business-constant',
                 file,
                 line: lineOf(content, magic.index),
-                message: `Magic business constant ${magic[2]} may belong in a Domain policy or invariant catalog.`,
+                message: `Magic business constant ${name} may belong in a Domain policy or invariant catalog.`,
                 confidence: 'heuristic',
-                suggestedArkRule: { layer: 'DomainModel', invariantId: `INV-${magic[2]}` },
+                suggestedArkRule: { layer: 'DomainModel', invariantId: `INV-${name}` },
                 neverMechanicalSafe: true,
             });
         }

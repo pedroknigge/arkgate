@@ -5,6 +5,50 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.1.0 — 2026-07-24 (prepared)
+
+**Minor** over 4.0.1. Field product phases from Next monorepo dogfood + objective review:
+Next API shell classification, anti false-green doctor packaging, ESLint path-alias parity,
+structure-sensor false-positive tuning, ArkRules merge-plane honesty, type-edge placement debt,
+and rules-inventory UI noise reduction.
+**No required config migration.** Does not weaken write gate or CI value edges. Does not close
+Z09 / RB-11 field claims. **Status: prepared** (not on npm until publish).
+
+### Added
+
+- **Next API = Application shell (P0-A):** Framework overlay, `ui-surface`, and `monorepo`
+  presets classify `app/api/**`, `src/app/api/**`, `pages/api/**` as
+  **ApplicationOrchestration** (higher specificity than Presentation `**/app/**`). UI routes
+  stay Presentation. Docs: brownfield + configuration honesty.
+- **Product honesty surface (P0-B):** Doctor JSON `productHonesty` consolidates design-weak,
+  weak/partial coverage, dirty freeze, package dual-truth, residual pilots, and soft write hosts
+  into one unfinished/not-whole-tree message (`notAScore`). Human doctor section + HTML card
+  (`data-product-honesty`). Never a numeric architecture score.
+- **ArkRules mergePlanes (P1-M):** `rulesUnderContract.mergePlanes` states which plane can fail
+  merge (layers vs enforced structure sensors vs invariants) and dual-plane stamp (heuristics vs
+  catalog+coverage; never one score).
+- **Type-edge policy fields (P1-type):** Doctor `violations.typeEdgePolicy` + SharedTypes
+  guidance; type-only denied edges report as placement warnings (`failsStrict: false`), value
+  edges still block merge.
+
+### Improved
+
+- **ESLint path aliases (P0-C):** `ark/no-domain-infra-imports` resolves tsconfig `paths` /
+  `baseUrl` (including simple relative `extends`) so `@/*` forbidden edges match CLI inside the
+  documented envelope. Residual honestly documented in ai-gates (no project refs / multi-target
+  / bare packages claim).
+- **Structure sensors prefer false negatives (P1-L):** `aggregate-private-state` ignores
+  readonly-only public props; `always-valid-factory` requires mutable surface evidence; anemic
+  bar needs ≥2 public fields. Intentional DDD private aggregates stay quiet; true positives
+  retained. Defaults remain advisory for noisy sensors.
+- **Rules inventory UI noise (P2-N):** Magic-constant inventory skips route/theme/UI label noise
+  and pure UI/Next page surfaces; still finds controller validation and domain constants.
+
+### Fixed
+
+- Presentation→Persistence baselining pressure from Next API routes mis-layered as UI (field
+  dogfood on App Router monorepos).
+
 ## 4.0.1 — 2026-07-24
 
 **Patch** over 4.0.0. Field footgun fix for stale global CLI on upgrade, ArkRules HTML/doctor

@@ -560,21 +560,25 @@ export default [
 
 **Exact layer-edge parity envelope:** the linted production source is on disk, inside
 `include`, outside configured/generated exclusions, parse-clean, and uses a static
-`import`/`export` with a relative literal whose target is also on disk. Inside that envelope,
-ESLint uses the same layer glob specificity, rule decision, rule id, severity, and evidence as
-the resolved CLI. It reloads `ark.config.json` when its content changes and never invents a
-not-yet-created target.
+`import`/`export` with a **relative** or **tsconfig `paths` / `baseUrl` alias** (e.g. `@/*`)
+literal whose target is also on disk. Inside that envelope, ESLint uses the same layer glob
+specificity, rule decision, rule id, and evidence as the resolved CLI. It reloads
+`ark.config.json` when its content changes and never invents a not-yet-created target.
 
-Outside that envelope—path aliases, packages/workspaces, symlinks, CommonJS,
-`import = require`, dynamic imports, virtual creates/deletes, unresolved targets, or complete
-cross-file candidates—ESLint emits no layer-parity verdict. Use `ark preflight`,
-`ark_prepare_change`, the complete ApplyPatch hook, or final strict CI; those paths consume the
-canonical resolved facts.
+**Path-alias residual (honest):** simple `paths` + `baseUrl` (including one level of relative
+`extends`) are resolved. Not claimed: TypeScript project references, multi-target path arrays
+beyond the first entry, catch-all `*` mappings, package/workspace bare imports, or symlink
+hops. Those stay CI / preflight / write-gate truth.
+
+Outside that envelope—packages/workspaces, symlinks, CommonJS, `import = require`, dynamic
+imports, virtual creates/deletes, unresolved targets, or complete cross-file candidates—ESLint
+emits no layer-parity verdict. Use `ark preflight`, `ark_prepare_change`, the complete
+ApplyPatch hook, or final strict CI; those paths consume the canonical resolved facts.
 
 Additional rule notes:
 
-- Relative imports are resolved only to existing on-disk TS/JS targets; package bare imports are left to CI/TS.
-- Type-only and value forbidden edges both error (same pass/fail as `arkgate-check`).
+- Relative and tsconfig-aliased imports resolve only to existing on-disk TS/JS targets; package bare imports are left to CI/TS.
+- Value forbidden edges error (same pass/fail as `arkgate-check`). Type-only forbidden edges are **placement debt** (reported with `typeOnly`); merge blocking prefers value edges — align with doctor `typeEdgePolicy`.
 - `no-forbidden-globals` applies from the file layer’s `forbiddenGlobals`; the `globals` option is only a standalone fallback when no project config applies, never an override that weakens the project contract. Layers without either surface are not inventively restricted. `process` also owns exact value imports of `process` / `node:process`; type-only forms, subpaths, and `child_process` stay excluded. If the same layer also denies the `process` capability, this rule is the single `FORBIDDEN_GLOBAL` voice.
 - Without `ark.config.json`, `no-domain-infra-imports` emits no contract verdict.
 

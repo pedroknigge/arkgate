@@ -122,4 +122,5 @@ mcp-publisher validate server.json && mcp-publisher publish server.json
 ```
 
 **Current published release:** [docs/releases/4.0.1.md](docs/releases/4.0.1.md) (`arkgate@4.0.1`).  
+**Next prepared:** [docs/releases/4.1.0.md](docs/releases/4.1.0.md) (`arkgate@4.1.0` — prepared, not published).  
 **Previous:** [docs/releases/4.0.0.md](docs/releases/4.0.0.md) (`arkgate@4.0.0`).

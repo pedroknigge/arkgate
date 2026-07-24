@@ -89,26 +89,41 @@ export function evaluateArchitectureGraph(
     if (!rule) continue;
 
     const peerIsolation = Boolean(rule.peerIsolation);
-    violations.push({
-      ruleId: 'LAYER_IMPORT_VIOLATION',
+    // P1-type: pure type-only edges are placement debt (SharedTypes / owning layer), not
+    // runtime coupling. Report them, but do not fail merge the way value edges do —
+    // except peerIsolation (slice boundary still matters for type coupling).
+    const typePlacementDebt =
+      !peerIsolation &&
+      Boolean(edge.typeOnly || edge.namedBindingsTypeOnly || edge.sourcePureTypeModule);
+    const baseMessage =
+      rule.message ??
+      (peerIsolation
+        ? `${edge.fromLayer} must not ${edge.kind} another slice of ${edge.toLayer} (${edge.from} → ${edge.to}). Extract shared code or use events/ports across slices.`
+        : `${edge.fromLayer} must not ${edge.kind} ${edge.toLayer}.`);
+    const entry = {
+      ruleId: 'LAYER_IMPORT_VIOLATION' as const,
       file: edge.from,
       line: edge.line,
       fromLayer: edge.fromLayer,
       toLayer: edge.toLayer,
       target: edge.to,
-      ...(edge.typeOnly ? { typeOnly: true } : {}),
+      ...(edge.typeOnly || typePlacementDebt ? { typeOnly: true } : {}),
       ...(edge.targetTypeOnlyExports ? { targetTypeOnlyExports: true } : {}),
       ...(edge.sourcePureTypeModule ? { sourcePureTypeModule: true } : {}),
       ...(edge.namedBindingsTypeOnly ? { namedBindingsTypeOnly: true } : {}),
       ...(!peerIsolation && edge.portProofEligible ? { portProofEligible: true } : {}),
       ...(edge.kind ? { edgeKind: edge.kind } : {}),
       ...(peerIsolation ? { peerIsolation: true } : {}),
-      message:
-        rule.message ??
-        (peerIsolation
-          ? `${edge.fromLayer} must not ${edge.kind} another slice of ${edge.toLayer} (${edge.from} → ${edge.to}). Extract shared code or use events/ports across slices.`
-          : `${edge.fromLayer} must not ${edge.kind} ${edge.toLayer}.`),
-    });
+      message: typePlacementDebt
+        ? `${baseMessage} (type-only — type placement debt; prefer SharedTypes / owning layer; not runtime coupling)`
+        : baseMessage,
+      ...(typePlacementDebt ? { failsStrict: false as const } : {}),
+    };
+    if (typePlacementDebt) {
+      warnings.push(entry);
+    } else {
+      violations.push(entry);
+    }
   }
 
   const cyclePolicy = String(input.config.cyclePolicy ?? 'strict').toLowerCase();

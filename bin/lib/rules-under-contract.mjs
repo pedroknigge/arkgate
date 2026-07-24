@@ -112,12 +112,52 @@ export function summarizeRulesUnderContract(root, config, facts) {
     const coveredTruncated = Math.max(0, coveredAll.length - COVERED_SAMPLE_MAX);
     const coveredSample = coveredAll.slice(0, COVERED_SAMPLE_MAX);
 
+    const structureEnforced = structureAll.filter((s) => s.mode === 'enforced').length;
+    const structureAdvisory = structureAll.length - structureEnforced;
+    const invariantEnforced = (loaded.arkRules.invariants ?? []).filter(
+      (inv) => inv.mode === 'enforced'
+    ).length;
+    const invariantAdvisory = invariants - invariantEnforced;
+    const coveredInvariants = coverage.coverage.filter((c) => c.covered).length;
+    const uncoveredInvariants = coverage.coverage.filter((c) => !c.covered).length;
+    // P1-M — which plane can fail merge (layers vs enforced structure vs invariants).
+    const mergePlanes = {
+      layers: {
+        role: 'inter-layer-edges',
+        alwaysOnGate: true,
+        note: 'Import/export layer graph — the default merge plane. Absent arkRules changes nothing here.',
+      },
+      structureSensors: {
+        role: 'intra-layer-heuristics',
+        total: structureRules,
+        enforced: structureEnforced,
+        advisory: structureAdvisory,
+        note: 'Structure sensors are heuristics (prefer false negatives). Only mode:enforced fails merge; noisy sensors stay advisory by default.',
+      },
+      invariants: {
+        role: 'catalog-plus-coverage',
+        total: invariants,
+        enforced: invariantEnforced,
+        advisory: invariantAdvisory,
+        covered: coveredInvariants,
+        uncovered: uncoveredInvariants,
+        note: 'Invariants are catalog + coverage evidence, not a business runtime. Enforced + proven-uncovered fails merge; absence of enforced rules adds no extra teeth.',
+      },
+      dualPlaneStamp:
+        'Structure = heuristics; invariants = catalog+coverage evidence (not business runtime). The two planes never merge into one architecture score.',
+      extraMergeTeeth: structureEnforced > 0 || invariantEnforced > 0,
+      failMergeWhen:
+        structureEnforced > 0 || invariantEnforced > 0
+          ? 'Layer graph failures plus enforced structure/invariant findings (advisory sensors never fail merge alone).'
+          : 'Layer graph only — no enforced ArkRules structure/invariant teeth on this tree.',
+    };
+
     return {
       active: true,
       structureRules,
       invariants,
-      coveredInvariants: coverage.coverage.filter((c) => c.covered).length,
-      uncoveredInvariants: coverage.coverage.filter((c) => !c.covered).length,
+      coveredInvariants,
+      uncoveredInvariants,
       partialCoverage: coverage.partial,
       testFilesScanned: coverageInputs.testFiles.length,
       layers,
@@ -127,8 +167,9 @@ export function summarizeRulesUnderContract(root, config, facts) {
       uncoveredTruncated,
       coveredSample,
       coveredTruncated,
+      mergePlanes,
       notAScore: true,
-      note: 'ArkRules plane (intra-layer) — counts and catalog, never a score. Green with uncovered residual must say so.',
+      note: 'ArkRules plane (intra-layer) — counts and catalog, never a score. Green with uncovered residual must say so. Structure sensors are heuristics; invariants are catalog+coverage evidence, not a business runtime.',
     };
   } catch (error) {
     return {
@@ -155,6 +196,7 @@ export function formatRulesUnderContractHtml(section, esc) {
     <h2>Rules under contract <span class="muted">(ArkRules opt-in)</span></h2>
     <p class="dim" style="margin:.15rem 0 .55rem;font-size:.88rem">
       Intra-layer plane (structure sensors + domain invariants as data). Separate from inter-layer import edges.
+      Absence of arkRules adds no extra merge teeth beyond the layer graph.
     </p>
     ${note}
   </section>`;
@@ -284,6 +326,15 @@ export function formatRulesUnderContractHtml(section, esc) {
           : ''
       }`;
 
+  const mergePlanes = section.mergePlanes;
+  const mergeHtml =
+    mergePlanes && typeof mergePlanes === 'object'
+      ? `<p class="muted" style="margin:.35rem 0 .55rem;font-size:.86rem">
+          <b>Merge planes:</b> ${escape(mergePlanes.failMergeWhen || '')}
+          ${mergePlanes.dualPlaneStamp ? `<br/>${escape(mergePlanes.dualPlaneStamp)}` : ''}
+        </p>`
+      : '';
+
   return `
   <section class="section card" data-advisory="rulesUnderContract">
     <h2>Rules under contract <span class="muted">(ArkRules — not a score)</span></h2>
@@ -293,6 +344,7 @@ export function formatRulesUnderContractHtml(section, esc) {
       <b>Invariants</b> = named policies + coverage evidence (symbol/test), not a business runtime
       and not a fitness score.
     </p>
+    ${mergeHtml}
     <div class="kpis" style="margin-bottom:.55rem">
       <div class="kpi"><b>${Number(section.structureRules) || 0}</b><span>Structure rules</span></div>
       <div class="kpi"><b>${Number(section.invariants) || 0}</b><span>Invariants</span></div>

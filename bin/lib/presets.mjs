@@ -500,18 +500,27 @@ export const ARCHITECTURE_PRESETS = {
           },
           {
             name: 'ApplicationOrchestration',
-            description: 'Use cases and services that coordinate the domain through ports.',
+            description:
+              'Use cases and services that coordinate the domain through ports. Next App Router API (`app/api/**`) and Pages API (`pages/api/**`) are orchestration shells, not UI.',
             patterns: [
               '**/application/**',
               '**/use-cases/**',
               '**/services/**',
+              // Next API route handlers (higher specificity than **/app/** Presentation).
+              '**/app/api/**',
+              '**/pages/api/**',
+              'app/api/**',
+              'pages/api/**',
+              'src/app/api/**',
+              'src/pages/api/**',
               ...applicationSourcePatterns,
             ],
             optional: true,
           },
           {
             name: 'PresentationAdapters',
-            description: 'Entrypoints — HTTP routes, controllers, UI, framework app/pages dirs.',
+            description:
+              'Entrypoints — UI, framework app/pages dirs, controllers. Next `app/api` is Application, not this layer.',
             patterns: [
               '**/app/**',
               '**/pages/**',
@@ -585,7 +594,8 @@ export const ARCHITECTURE_PRESETS = {
           },
           {
             name: 'ApplicationOrchestration',
-            description: 'Server actions, features, and non-UI lib orchestration (when present).',
+            description:
+              'Server actions, features, Next API routes (`app/api/**` / `pages/api/**`), and non-UI lib orchestration (when present).',
             patterns: [
               'src/features/**',
               'src/server/**',
@@ -596,6 +606,13 @@ export const ARCHITECTURE_PRESETS = {
               'src/lib/services/**',
               '**/lib/actions/**',
               '**/lib/services/**',
+              // Next API = Application shell (wins over **/app/** Presentation by specificity).
+              'src/app/api/**',
+              'app/api/**',
+              'src/pages/api/**',
+              'pages/api/**',
+              '**/app/api/**',
+              '**/pages/api/**',
             ],
             exclude: FRAMEWORK_INTERNAL_EXCLUDE,
             optional: true,

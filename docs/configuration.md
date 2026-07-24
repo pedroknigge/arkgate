@@ -107,6 +107,31 @@ Rule fields:
   when both paths classify. Missing paths, empty slice folders, or unclassifiable slices
   **fail closed** (deny — cannot prove same-slice).
 
+### Type-only edges (placement debt)
+
+`import type` / `export type` and pure type-module edges are **type placement debt**, not runtime
+coupling. Doctor reports them under `violations.typeOnly` / `typeEdgePolicy`; they do **not**
+fail merge the way value edges do (except peerIsolation slice boundaries). Prefer placing shared
+types in a **SharedTypes** (or owning) layer both sides may import. Value edges remain hard.
+
+### Next.js API shell (framework overlay / presets)
+
+When Next is detected (or `ui-surface` / monorepo patterns apply), **`app/api/**` and
+`pages/api/**` classify as Application orchestration**, not Presentation. UI routes stay
+Presentation. More-specific Application globs win over broad `**/app/**` Presentation patterns.
+See [brownfield adoption](brownfield-adoption.md#nextjs-honesty-default-overlays--ui-surface--monorepo).
+
+### ArkRules dual plane (when `arkRules` is present)
+
+| Plane | What it is | Merge teeth |
+|-------|------------|-------------|
+| **Layers** | Inter-layer import graph | Always on |
+| **Structure sensors** | Intra-layer heuristics | Only `mode: "enforced"` |
+| **Invariants** | Catalog + coverage evidence (not a business runtime) | Only enforced + proven-uncovered |
+
+Absence of `arkRules` adds **no** extra merge teeth. Structure and invariants **never** merge into
+one architecture score. Doctor exposes `rulesUnderContract.mergePlanes` for which plane can fail.
+
 Safety fields:
 
 - `maxTsSuppressions`, `maxAnyCasts`

@@ -20,6 +20,20 @@ every ungoverned directory** (harvested from the 11-layer profile + presets; unr
 ones are flagged for you to classify, never guessed). Keep an existing config; don't
 regenerate it unasked.
 
+### Next.js honesty (default overlays / ui-surface / monorepo)
+
+**App Router API routes are Application / use-case shell by default**, not Presentation/UI:
+
+| Path | Default layer |
+|------|----------------|
+| `app/api/**`, `src/app/api/**` | **ApplicationOrchestration** (orchestration shell) |
+| `pages/api/**`, `src/pages/api/**` | **ApplicationOrchestration** |
+| UI routes (`app/(…)`, `page.tsx`, `components/**`) | **PresentationAdapters** |
+
+Without this split, broad `**/app/**` Presentation patterns push every API handler into UI and
+create a Presentation→Persistence tsunami. Specificity still wins: more-specific Application
+globs beat Presentation. ArkRules stay **opt-in** (not forced on by start/adopt).
+
 ## 2. Diagnose before you freeze
 
 ```bash

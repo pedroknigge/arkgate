@@ -184,7 +184,9 @@ function evaluateAggregatePrivateState(
 ): ArkRuleSensorViolation[] {
   const out: ArkRuleSensorViolation[] = [];
   for (const shape of shapesForRule(rule, shapes, layerForFile)) {
-    if (shape.hasPublicMutableFields || shape.hasPublicSetters) {
+    // P1-L — require real mutability (setters or non-readonly public fields).
+    // Readonly public props on intentional value/entity shapes are false-positive-prone.
+    if (shape.hasPublicSetters || shape.hasPublicMutableFields) {
       out.push(
         baseViolation(
           rule,
@@ -205,6 +207,14 @@ function evaluateAlwaysValidFactory(
   const out: ArkRuleSensorViolation[] = [];
   for (const shape of shapesForRule(rule, shapes, layerForFile)) {
     if (shape.hasPublicConstructor && !shape.hasStaticFactory) {
+      // P1-L — prefer false negatives on intentional DDD / DI aggregates: a public
+      // constructor alone is weak evidence. Only fire when mutable public surface
+      // exists (needs an always-valid construction story).
+      const needsAlwaysValidStory =
+        shape.hasPublicMutableFields ||
+        shape.hasPublicSetters ||
+        (shape.mutatingMethods?.length ?? 0) > 0;
+      if (!needsAlwaysValidStory) continue;
       out.push(
         baseViolation(
           rule,
@@ -529,20 +539,34 @@ export function extractClassShapesFromSource(
     }
     const body = content.slice(start, i - 1);
 
+    // P1-L — prefer false negatives: readonly public props are not mutable state.
+    // Strip readonly lines before mutable-field heuristics.
+    const bodyNoReadonly = body
+      .split('\n')
+      .filter((line) => !/\breadonly\b/.test(line))
+      .join('\n');
     const hasPublicMutableFields =
-      /(?:^|\n)\s*(?:public\s+)?(?:readonly\s+)?[a-zA-Z_][a-zA-Z0-9_]*\s*[:=]/m.test(
-        body.replace(/(?:public\s+|private\s+|protected\s+|readonly\s+|static\s+|async\s+|get\s+|set\s+)/g, '')
+      /(?:^|\n)\s*(?:public\s+)?[a-zA-Z_][a-zA-Z0-9_]*\s*[:=]/m.test(
+        bodyNoReadonly.replace(
+          /(?:public\s+|private\s+|protected\s+|static\s+|async\s+|get\s+|set\s+)/g,
+          ''
+        )
       ) &&
       /(?:^|\n)\s*(public\s+)?(?!constructor|static|get|set|private|protected|readonly)[a-zA-Z_][a-zA-Z0-9_]*\s*[:=]/m.test(
-        body
+        bodyNoReadonly
       );
-    // Simpler public field detection: "public foo" or unadorned "foo:" at class level
+    // Public mutable field: "public foo" (not readonly) or unadorned assignable field.
     const publicField =
-      /(?:^|\n)\s*public\s+(?!static|async|get|set|constructor)[a-zA-Z_]/.test(body) ||
+      /(?:^|\n)\s*public\s+(?!static|async|get|set|constructor|readonly)[a-zA-Z_]/.test(
+        bodyNoReadonly
+      ) ||
       /(?:^|\n)\s*[a-zA-Z_][a-zA-Z0-9_]*\s*:\s*[^=;\n]+[;=]/m.test(
-        body
+        bodyNoReadonly
           .split('\n')
-          .filter((line) => !/^\s*(private|protected|static|constructor|get |set |async |\/)/.test(line))
+          .filter(
+            (line) =>
+              !/^\s*(private|protected|static|constructor|get |set |async |readonly|\/)/.test(line)
+          )
           .join('\n')
       );
     const hasPublicSetters = /(?:^|[\n;{])\s*(?:public\s+)?set\s+[a-zA-Z_]/.test(body);
@@ -582,7 +606,18 @@ export function extractClassShapesFromSource(
     }
 
     const methodCount = (body.match(/(?:^|\n)\s*(?:public\s+|private\s+|protected\s+)?(?:async\s+)?[a-zA-Z_][a-zA-Z0-9_]*\s*\(/g) ?? []).length;
-    const dataOnly = methodCount <= 1 && (publicField || hasPublicMutableFields);
+    // P1-L — raise anemic bar: need multiple public fields and essentially no behavior.
+    // Single-field bags and intentional property bags with one helper stay quiet.
+    // Count fields after line starts *or* after `;` so one-line class bodies still work.
+    const publicFieldCount = (
+      bodyNoReadonly.match(
+        /(?:^|[\n;])\s*(?:public\s+)?(?!constructor|static|get|set|private|protected|readonly)[a-zA-Z_][a-zA-Z0-9_]*\s*[:=]/g
+      ) ?? []
+    ).length;
+    const dataOnly =
+      methodCount <= 1 &&
+      publicFieldCount >= 2 &&
+      (publicField || hasPublicMutableFields);
 
     shapes.push({
       file,

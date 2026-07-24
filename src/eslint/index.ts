@@ -170,10 +170,8 @@ function sourceIsInAnalysisScope(config: ArkConfig, relativePath: string): boole
   return included && !isScanExcludedRelative(relativePath, config);
 }
 
-/** Resolve relative import specifier to an absolute path candidate (TS-oriented). */
-export function resolveRelativeImport(fromFile: string, specifier: string): string | null {
-  if (!specifier.startsWith('.')) return null;
-  const base = path.resolve(path.dirname(fromFile), specifier);
+/** Probe on-disk TS/JS candidates for a resolved base path (no package resolution). */
+function existingSourceFile(base: string): string | null {
   const candidates = [
     base,
     `${base}.ts`,
@@ -194,6 +192,105 @@ export function resolveRelativeImport(fromFile: string, specifier: string): stri
     }
   }
   return null;
+}
+
+/**
+ * Read tsconfig paths/baseUrl for ESLint alias parity (P0-C).
+ * JSONC-tolerant strip of // and /* comments; supports simple extends of a relative JSON.
+ * Does not claim full TypeScript resolution (project refs, complex multi-target, wildcards beyond trailing *).
+ */
+export function readTsconfigPathAliases(
+  startDir: string
+): { baseUrl: string; aliases: Array<{ from: string; to: string }> } {
+  let dir = path.resolve(startDir);
+  let configPath: string | null = null;
+  for (;;) {
+    const candidate = path.join(dir, 'tsconfig.json');
+    if (fs.existsSync(candidate)) {
+      configPath = candidate;
+      break;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  if (!configPath) return { baseUrl: startDir, aliases: [] };
+
+  const loadJsonc = (file: string): Record<string, unknown> | null => {
+    try {
+      let text = fs.readFileSync(file, 'utf8');
+      // Strip // line comments and /* */ blocks outside strings (best-effort).
+      text = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+      return JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  };
+
+  const mergePaths = (
+    file: string,
+    depth: number
+  ): { baseUrl?: string; paths?: Record<string, string[]> } => {
+    if (depth > 4) return {};
+    const json = loadJsonc(file);
+    if (!json) return {};
+    const compilerOptions = (json.compilerOptions ?? {}) as {
+      baseUrl?: string;
+      paths?: Record<string, string[]>;
+    };
+    let baseUrl = compilerOptions.baseUrl;
+    let paths = compilerOptions.paths;
+    const ext = json.extends;
+    if (typeof ext === 'string' && !ext.startsWith('@')) {
+      const parentPath = path.resolve(path.dirname(file), ext.endsWith('.json') ? ext : `${ext}.json`);
+      if (fs.existsSync(parentPath)) {
+        const parent = mergePaths(parentPath, depth + 1);
+        baseUrl = baseUrl ?? parent.baseUrl;
+        paths = { ...(parent.paths ?? {}), ...(paths ?? {}) };
+      }
+    }
+    return { baseUrl, paths };
+  };
+
+  const merged = mergePaths(configPath, 0);
+  const configDir = path.dirname(configPath);
+  const baseUrl = path.resolve(configDir, merged.baseUrl || '.');
+  const aliases: Array<{ from: string; to: string }> = [];
+  for (const [pattern, targets] of Object.entries(merged.paths || {})) {
+    if (!Array.isArray(targets) || targets.length === 0) continue;
+    const from = pattern.replace(/\*$/, '');
+    if (!from) continue; // skip catch-all `*`
+    aliases.push({ from, to: String(targets[0]).replace(/\*$/, '') });
+  }
+  aliases.sort((a, b) => b.from.length - a.from.length);
+  return { baseUrl, aliases };
+}
+
+/** Resolve relative import specifier to an absolute path candidate (TS-oriented). */
+export function resolveRelativeImport(fromFile: string, specifier: string): string | null {
+  if (!specifier.startsWith('.')) return null;
+  const base = path.resolve(path.dirname(fromFile), specifier);
+  return existingSourceFile(base);
+}
+
+/**
+ * Resolve relative or tsconfig path-alias import to an on-disk file.
+ * Bare packages (no matching alias) return null — CI/TS remain source of truth there.
+ */
+export function resolveImportSpecifier(
+  fromFile: string,
+  specifier: string,
+  projectRoot?: string | null
+): string | null {
+  if (!specifier) return null;
+  if (specifier.startsWith('.')) return resolveRelativeImport(fromFile, specifier);
+
+  const startDir = projectRoot || path.dirname(fromFile);
+  const { baseUrl, aliases } = readTsconfigPathAliases(startDir);
+  const alias = aliases.find((a) => specifier.startsWith(a.from));
+  if (!alias) return null;
+  const mapped = path.resolve(baseUrl, `${alias.to}${specifier.slice(alias.from.length)}`);
+  return existingSourceFile(mapped);
 }
 
 // ── AST helpers ────────────────────────────────────────────────────────────
@@ -367,8 +464,9 @@ export const noDomainInfraImports: ArkRule = {
         const fromLayer = layerForRelativePath(relFile, config.layers);
         if (!fromLayer) return;
 
-        const targetAbs = resolveRelativeImport(absFile, source);
-        if (!targetAbs) return; // package import — CI resolves via TS; editor skips non-relative
+        // P0-C: relative + tsconfig path aliases (`@/*`); bare packages still skip.
+        const targetAbs = resolveImportSpecifier(absFile, source, root);
+        if (!targetAbs) return; // package / unresolved alias — CI resolves via TS
 
         const relTarget = path.relative(root, targetAbs).split(path.sep).join('/');
         // Outside project or up-and-out: skip
@@ -384,6 +482,7 @@ export const noDomainInfraImports: ArkRule = {
           })
         ) {
           const edgeKind = node.type?.startsWith('Export') ? 'export' : 'import';
+          const typeOnlyEdge = declarationIsTypeOnly(node);
           reportAdapterDiagnostic(
             context,
             node,
@@ -395,7 +494,8 @@ export const noDomainInfraImports: ArkRule = {
               toLayer,
               target: relTarget,
               edgeKind,
-              ...(declarationIsTypeOnly(node) ? { typeOnly: true } : {}),
+              // P1-type: type-only edges report as warning (placement debt); value edges error.
+              ...(typeOnlyEdge ? { typeOnly: true, severity: 'warning' as const } : {}),
               ...(sourceProgramExportsOnlyTypes(node)
                 ? { sourcePureTypeModule: true }
                 : {}),

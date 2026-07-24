@@ -58,8 +58,21 @@ export function suggestLayerForDir(name) {
 
 // Suggest a layer for a directory PATH by finding the deepest segment Ark recognizes, so
 // `src/lib/repositories` proposes PersistenceAdapters even though `lib` itself is unknown.
+// Next App Router / Pages API shells (`…/app/api`, `…/pages/api`) are Application, not Presentation.
 export function suggestLayerForPath(relDir) {
-  const segments = relDir.split('/').filter(Boolean);
+  const posix = String(relDir || '')
+    .split(/[/\\]/)
+    .filter(Boolean)
+    .join('/');
+  // Prefer the API orchestration shell over a bare `app` / `pages` Presentation match.
+  if (/(?:^|\/)(?:src\/)?app\/api(?:\/|$)/.test(posix) || /(?:^|\/)(?:src\/)?pages\/api(?:\/|$)/.test(posix)) {
+    return {
+      layer: 'ApplicationOrchestration',
+      alternatives: ['Application'],
+      matchedDir: posix.includes('pages/api') ? 'pages/api' : 'app/api',
+    };
+  }
+  const segments = posix.split('/').filter(Boolean);
   for (let i = segments.length - 1; i >= 0; i -= 1) {
     const hit = suggestLayerForDir(segments[i]);
     if (hit) return { ...hit, matchedDir: segments[i] };

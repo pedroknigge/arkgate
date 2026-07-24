@@ -453,18 +453,40 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     designSmells,
   });
   const doctorAdvisories = computeDoctorAdvisories(root, config, cov, rules, files, options.ts, options.parseHealth);
-  const { coverageHonesty, baselineHonesty, writePathHonesty } = computeDoctorEnforcementHonesty({
-    governedPercent: cov.governed.percent,
-    totalFiles: cov.governed.totalFiles,
-    emptyScope: cov.emptyScope === true || cov.governed.totalFiles === 0,
-    baselineExists: baseline.exists,
-    frozenKeys: baseline.exists ? baseline.keys.size : 0,
-    activeViolations: activeCount,
-    suppressed,
-    totalViolations: violations.length,
-    activeHost: writePath.activeHost,
-    hardWriteActive: writePath.capabilities?.['hard-write'] === true,
-  });
+  // AR12 — compute once for JSON + product honesty + human lines.
+  const rulesUnderContract = summarizeRulesUnderContract(
+    root,
+    config,
+    options.facts ?? options.architectureFacts
+  );
+  const residualPilot =
+    Boolean(pilotLoop?.nextPilot) ||
+    Boolean(pilotLoop?.nextPilot) ||
+    Boolean(pilotLoop?.extractionCard);
+  const { coverageHonesty, baselineHonesty, writePathHonesty, productHonesty } =
+    computeDoctorEnforcementHonesty({
+      governedPercent: cov.governed.percent,
+      totalFiles: cov.governed.totalFiles,
+      emptyScope: cov.emptyScope === true || cov.governed.totalFiles === 0,
+      baselineExists: baseline.exists,
+      frozenKeys: baseline.exists ? baseline.keys.size : 0,
+      activeViolations: activeCount,
+      suppressed,
+      totalViolations: violations.length,
+      activeHost: writePath.activeHost,
+      hardWriteActive: writePath.capabilities?.['hard-write'] === true,
+      designWeak: designFitness.designWeak === true,
+      designWeakLabel: designFitness.label,
+      packageVersionTruth,
+      residualPilots: residualPilot && designFitness.designWeak === true,
+      pilotTarget: pilotLoop?.nextPilot?.pilotTarget ?? pilotLoop?.extractionCard?.pilotTarget ?? null,
+      arkRulesMergeHonesty: rulesUnderContract?.mergePlanes
+        ? { active: rulesUnderContract.active === true, ...rulesUnderContract.mergePlanes }
+        : rulesUnderContract?.active === true
+          ? { active: true, extraMergeTeeth: false }
+          : null,
+      primaryNextAction: postGreenPath?.action ?? null,
+    });
 
   if (asJson) {
     (options.writeJson ?? console.log)(
@@ -502,17 +524,15 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             pureLayerOptIn,
             // Q04: one-pilot loop (extraction card → re-doctor).
             pilotLoop,
-            // AR12 — Rules under contract (honest counts, not a score).
-            // Pass architecture facts when available so coverage can scan real tests.
-            rulesUnderContract: summarizeRulesUnderContract(
-              root,
-              config,
-              options.facts ?? options.architectureFacts
-            ),
             // Dual-truth: managed CLI vs package.json pin (not a gate fail).
             packageVersionTruth,
             // Advisories, never a verdict: W01/U05/X04/Y03 + graph-blind spots.
+            // (rulesUnderContract is also in advisories; re-assert after spread so mergePlanes wins.)
             ...doctorAdvisories,
+            // AR12 + P1-M mergePlanes (authoritative; after advisories spread).
+            rulesUnderContract,
+            // P0-B — single anti-false-green honesty surface (never a score).
+            productHonesty,
             governed: cov.governed,
             coverageHonesty,
             emptyLayers: cov.emptyLayers,
@@ -524,6 +544,13 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
               suppressed,
               value: summary.valueCount,
               typeOnly: summary.typeOnlyCount,
+              // P1-type: type-only is type placement debt (fix after value edges).
+              typeEdgePolicy: {
+                valueBlocksMerge: true,
+                typeOnlyIsPlacementDebt: true,
+                guidance:
+                  'Type-only edges (`import type` / pure type modules) are placement debt — fix value runtime coupling first; place shared types in a SharedTypes / owning layer.',
+              },
               concentrated: summary.concentrated,
               dominant: summary.dominant,
               topEdges: summary.edges.slice(0, 5),
@@ -649,6 +676,27 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       bad,
       'Empty scope: include paths match 0 source files — a green check is meaningless until include/layers match the tree (monorepo → apps/packages, or /ark-adopt).'
     );
+  }
+
+  // P0-B — single honesty surface (never a score; never "all good" when residual remains).
+  if (productHonesty) {
+    console.log('');
+    console.log(color.bold('Product honesty'));
+    line(
+      productHonesty.unfinished ? warn : ok,
+      `${productHonesty.headline} — ${productHonesty.primaryMessage}`
+    );
+    if (productHonesty.unfinished && Array.isArray(productHonesty.reasonIds) && productHonesty.reasonIds.length > 0) {
+      line(' ', color.dim(`signals: ${productHonesty.reasonIds.join(', ')} (notAScore)`));
+    }
+    if (rulesUnderContract?.mergePlanes?.failMergeWhen) {
+      line(
+        ' ',
+        color.dim(
+          `merge planes: ${rulesUnderContract.mergePlanes.failMergeWhen} · ${rulesUnderContract.mergePlanes.dualPlaneStamp}`
+        )
+      );
+    }
   }
 
   console.log('');

@@ -25,7 +25,8 @@ const BUDGETS = [
   // 3.8.2 field DX (sessionNote, pure-layer opt-in, Codex legacy advisory) — was 920.
   // Product mandate honesty (coverage/baseline/writePath + design-weak flags) — was 980.
   // 4.0.0 packageVersionTruth + rulesUnderContract — was 1010 (loc 1014).
-  { path: 'bin/lib/doctor-plan.mjs', max: 1050 },
+  // 4.1.0 productHonesty + mergePlanes wiring — was 1050 (loc 1062).
+  { path: 'bin/lib/doctor-plan.mjs', max: 1120 },
   // 4.0.0 ArkRules start/init templates + dual-plane presets — was 650 (loc 870).
   { path: 'bin/lib/presets.mjs', max: 920 },
   { path: 'bin/lib/config-contract.mjs', max: 500 },
@@ -34,7 +35,8 @@ const BUDGETS = [
   { path: 'bin/lib/write-path-detect.mjs', max: 200 },
   { path: 'bin/lib/html-report.mjs', max: 1550 },
   // Design-depth / write-path / baseline legend for showcase HTML (split from renderer).
-  { path: 'bin/lib/html-report-depth.mjs', max: 320 },
+  // 4.1.0 productHonesty card + mergePlanes — was 320 (loc 370).
+  { path: 'bin/lib/html-report-depth.mjs', max: 400 },
   // X04 grew the advisory renderer a third section (physicalCohesion).
   // 4.0.0 ArkRules advisory section — was 280 (loc 281).
   { path: 'bin/lib/html-report-advisories.mjs', max: 300 },

@@ -16,6 +16,7 @@ import {
   renderBaselineSignalLegend,
   renderDesignCleanNote,
   renderDesignDepthStrip,
+  renderProductHonestyCard,
   renderWritePathAdoptionBlock,
 } from './html-report-depth.mjs';
 import { FIX_HINTS } from './violations.mjs';
@@ -531,6 +532,11 @@ export function renderHtmlReport({
       ok,
       mode,
     });
+  // P0-B product honesty card — prefer payload from buildReportDepthPayload when present.
+  const productHonestyHtml = renderProductHonestyCard(
+    depth.productHonesty ?? null,
+    depth.mergePlanes ?? null
+  );
   const writePathHtml = renderWritePathAdoptionBlock(adoptionView.writePath);
   const baselineLegendHtml = renderBaselineSignalLegend();
 
@@ -1111,6 +1117,7 @@ export function renderHtmlReport({
   </div>
 
   ${designStripHtml}
+  ${productHonestyHtml}
 
   <div class="section card" id="adoption">
     <h2>Adoption</h2>
