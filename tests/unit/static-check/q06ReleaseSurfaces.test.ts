@@ -123,6 +123,7 @@ describe('CHANGELOG + release note cover 4.0.0 ArkRules major', () => {
     expect(body).toMatch(/arkRules|ArkRules/);
     expect(body).toMatch(/classShapes|aggregate-private-state|ARKRULE_SCOPE_EMPTY/i);
     expect(body).toMatch(/Z09|RB-11/i);
+    expect(body).toMatch(/Branch floor.*84\.5%.*83\.0%|84\.5% → 83\.0%/i);
     expect(body).not.toMatch(/do not publish as 3\.9\.x/i);
   });
 
@@ -134,6 +135,7 @@ describe('CHANGELOG + release note cover 4.0.0 ArkRules major', () => {
     expect(body).toMatch(/Status:\*\*\s*prepared/i);
     expect(body).toMatch(/Z09|RB-11/i);
     expect(body).toMatch(/opt-in|arkRules/i);
+    expect(body).toMatch(/84\.5%.*83\.0%|branch floor/i);
   });
 });
 

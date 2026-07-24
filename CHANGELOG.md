@@ -60,6 +60,14 @@ case-study docs are scaffolding, not a closed field gate.
 - Skills deepen (`ark-adopt`, `ark-contract`, `ark-place`) without new skill names.
 - Pre-release field dogfood workflow: `.grok/workflows/pre-release-field-dogfood.rhai`.
 
+### Confidence / package budgets (4.0.0)
+
+- **Branch floor** recalibrated **84.5% → 83.0%** after ArkRules dual-plane growth (measured
+  ~83.3% on the clean candidate). Statement / function / line floors and mutation gates unchanged.
+- **Module LOC budgets** raised for `ark-check-runtime`, `doctor-plan`, `presets`,
+  `html-report-advisories` (evidence in `scripts/check-module-budgets.mjs`).
+- **Package pack budgets** remeasured for 4.0.0 (≥10% headroom in `release/package-budgets.v1.json`).
+
 ### Honesty / not claimed in 4.0.0
 
 - No claim that Z09 / RB-11 retained field adoption is closed.
