@@ -82,12 +82,21 @@ describe('O03 compact start', () => {
           maxFiles: number;
         };
       };
-      expect(preview.setupBudget).toMatchObject({ files: expect.any(Number), bytes: expect.any(Number), ok: true });
+      expect(preview.setupBudget).toMatchObject({
+        files: expect.any(Number),
+        bytes: expect.any(Number),
+        ok: true,
+        gateFiles: expect.any(Number),
+        arkrulesFiles: expect.any(Number),
+        maxFiles: 8,
+      });
       // Gate surface (MCP + host + CI + AGENTS + config) stays ≤8; arkrules/*.json are extra content.
-      const gateFiles =
-        preview.setupBudget.gateFiles ??
-        preview.changes.filter((c) => !c.path.startsWith('arkrules/') && c.path !== 'package.json').length;
-      expect(gateFiles).toBeLessThanOrEqual(8);
+      // Require gateFiles API — no recompute fallback that could mask a dropped field.
+      const nonArkRules = preview.changes.filter(
+        (c) => !c.path.startsWith('arkrules/') && c.path !== 'package.json'
+      ).length;
+      expect(preview.setupBudget.gateFiles).toBe(nonArkRules);
+      expect(preview.setupBudget.gateFiles).toBeLessThanOrEqual(8);
       expect(preview.setupBudget.maxFiles).toBe(8);
       expect(preview.setupBudget.bytes).toBeLessThan(32 * 1024);
       expect(preview.changes.some((change) => change.path === 'package.json')).toBe(false);

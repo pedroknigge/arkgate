@@ -143,7 +143,18 @@ export function buildManagedAssetCatalog({ root, tools, compact = false, skillsO
   // write once then fail the second pre-image assert (field: web-predial-ar).
   const byPath = new Map();
   const add = (relativePath, content, kind = 'gate', scope = 'whole-file') => {
-    if (byPath.has(relativePath)) return;
+    const existing = byPath.get(relativePath);
+    if (existing) {
+      // Shared destinations (codex+antigravity skills, antigravity+gemini GEMINI.md)
+      // must agree on bytes; silent first-wins would hide divergent host templates.
+      if (existing.content !== content || existing.kind !== kind || existing.scope !== scope) {
+        throw new Error(
+          `managed asset catalog conflict at ${JSON.stringify(relativePath)}: ` +
+            `hosts produced different content/kind/scope for the same path`
+        );
+      }
+      return;
+    }
     const asset = {
       relativePath,
       content,

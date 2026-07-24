@@ -7,7 +7,10 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   archetypeTemplateFileForLayer,
+  arkRulesPathForLayer,
   buildArkRulesTemplateForLayer,
+  isSafeArkRulesLayerName,
+  isSafeArkRulesRelativePath,
   resolveLayerSensorRole,
   withDefaultArkRules,
   writeArkRulesTemplates,
@@ -39,10 +42,53 @@ describe('resolveLayerSensorRole', () => {
     expect(resolveLayerSensorRole('PersistenceAdapters')).toBe(ARKRULES_SENSOR_ROLES.ADAPTER_THIN);
   });
 
+  it('prefers adapter cues over broad application (ApplicationAdapters → thin-adapter)', () => {
+    expect(resolveLayerSensorRole('ApplicationAdapters')).toBe(ARKRULES_SENSOR_ROLES.ADAPTER_THIN);
+    expect(resolveLayerSensorRole('ApplicationInfrastructure')).toBe(ARKRULES_SENSOR_ROLES.ADAPTER_THIN);
+    expect(resolveLayerSensorRole('ApplicationPersistence')).toBe(ARKRULES_SENSOR_ROLES.ADAPTER_THIN);
+    // Application without adapter/I/O cues stays orchestration (field: ApplicationPorts).
+    expect(resolveLayerSensorRole('ApplicationPorts')).toBe(ARKRULES_SENSOR_ROLES.ORCHESTRATION);
+    expect(resolveLayerSensorRole('Application')).toBe(ARKRULES_SENSOR_ROLES.ORCHESTRATION);
+  });
+
   it('falls back to generic for unknown layer names', () => {
     expect(resolveLayerSensorRole('SharedKernel')).toBe(ARKRULES_SENSOR_ROLES.GENERIC);
     expect(resolveLayerSensorRole('ArchitectureCore')).toBe(ARKRULES_SENSOR_ROLES.GENERIC);
     expect(resolveLayerSensorRole('BackgroundJobsScheduling')).toBe(ARKRULES_SENSOR_ROLES.GENERIC);
+  });
+});
+
+describe('arkRules path safety', () => {
+  it('accepts single-segment layer names and rejects path escape', () => {
+    expect(isSafeArkRulesLayerName('DomainModel')).toBe(true);
+    expect(isSafeArkRulesLayerName('Application_Ports')).toBe(true);
+    expect(isSafeArkRulesLayerName('../outside')).toBe(false);
+    expect(isSafeArkRulesLayerName('foo/bar')).toBe(false);
+    expect(isSafeArkRulesLayerName('..')).toBe(false);
+    expect(isSafeArkRulesRelativePath('arkrules/DomainModel.json')).toBe(true);
+    expect(isSafeArkRulesRelativePath('arkrules/../outside.json')).toBe(false);
+    expect(isSafeArkRulesRelativePath('arkrules/nested/x.json')).toBe(false);
+    expect(() => arkRulesPathForLayer('../evil')).toThrow(/unsafe arkRules layer name/);
+  });
+
+  it('withDefaultArkRules skips unsafe layer names; write rejects escape paths', () => {
+    const root = makeRoot();
+    const next = withDefaultArkRules({
+      include: ['src'],
+      layers: [
+        { name: 'DomainModel', patterns: ['src/domain/**'] },
+        { name: '../outside', patterns: ['src/x/**'] },
+      ],
+      rules: [],
+    });
+    expect(next.arkRules?.DomainModel).toBe('arkrules/DomainModel.json');
+    expect(next.arkRules?.['../outside']).toBeUndefined();
+
+    expect(() =>
+      writeArkRulesTemplates(root, {
+        arkRules: { Evil: 'arkrules/../outside.json' },
+      })
+    ).toThrow(/unsafe path/);
   });
 });
 

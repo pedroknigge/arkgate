@@ -50,6 +50,20 @@ describe('managed upgrade multi-host skill dedupe', () => {
     expect(skillNames.length).toBe(new Set(skillNames).size);
   });
 
+
+  it('keeps a single asset when two hosts share GEMINI.md with identical content', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-dedupe-gemini-'));
+    tempDirs.push(root);
+    const catalog = buildManagedAssetCatalog({
+      root,
+      tools: ['antigravity', 'gemini'],
+      compact: false,
+    });
+    const paths = catalog.assets.map((a: { relativePath: string }) => a.relativePath);
+    expect(paths.filter((p: string) => p === 'GEMINI.md')).toHaveLength(1);
+    expect(paths.length).toBe(new Set(paths).size);
+  });
+
   it('upgrade apply succeeds when antigravity and codex share .agents/skills', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-dedupe-apply-'));
     tempDirs.push(root);

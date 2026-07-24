@@ -76,7 +76,11 @@ function change(pathname, before, after) {
   };
 }
 
-function setupBudget(changes) {
+/**
+ * Compact start onboarding budget. Exported for pure unit tests.
+ * Gate surface (non-arkrules) ≤ maxFiles; arkrules count toward bytes only.
+ */
+export function setupBudget(changes) {
   const generatedChanges = changes.filter((item) => item.path !== 'package.json');
   // Compact gate surface stays ≤8 files (MCP + one host + CI + AGENTS + config).
   // ArkRules starters (arkrules/*.json) are opt-in contract content and count against
