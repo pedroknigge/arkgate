@@ -47,7 +47,12 @@ ark-check --rules-inventory --json
 Output is **honest counts** (inventoried / under-contract / frozen) — never a score. Route
 extraction through `/ark-fix` or `/ark-loop` (one pilot card at a time) and declaration
 through `/ark-contract` editing `arkrules/<Layer>.json` (ADR 0015 — no new skill names).
-Case study shape: [arkrules-migration-case-study.md](field/arkrules-migration-case-study.md).
+Report residual as **`[Layer]`** (import edges / baseline) vs **`[ArkRules]`** (inventory /
+structure / invariants). Case study shape:
+[arkrules-migration-case-study.md](field/arkrules-migration-case-study.md).
+
+**Upgrade note (4.0):** `ark upgrade --no-install` can refresh skills/gates while leaving
+`package.json` on an older pin—doctor exposes `packageVersionTruth` when the CLI is ahead.
 
 ## 3. Make the contract real (via `/ark-contract`)
 

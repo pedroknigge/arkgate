@@ -19,11 +19,16 @@ passing `arkgate-check` / `ark-check --strict-config`. For deep teaching exercis
 Pick the closest shape, copy the directory, then run:
 
 ```bash
-npm install --save-dev arkgate@latest
+npm install --save-dev arkgate@latest   # or arkgate@4.0.0 when published
 npm pkg set scripts.check="ark-check --root . --config ark.config.json --strict-config"
 npm run check    # inside the starter — must stay green
 npx ark-check --doctor
 ```
+
+**4.0.0 planes:** starters primarily teach **layers** (inter-layer edges). Optional **ArkRules**
+(`arkRules` + `arkrules/*.json`) may be added for intra-layer structure/invariants—start
+**advisory**, promote only with coverage. Label residual **`[Layer]`** vs **`[ArkRules]`**.
+Inventory: `npx ark-check --rules-inventory --json` (counts, never a score).
 
 The six canonical starters use self-contained manifests. CI copies each one outside this checkout,
 installs the same candidate tarball with npm, pnpm, and Yarn, then exercises check, doctor, start,

@@ -19,16 +19,20 @@ the project API is unusable. See the distribution and completeness boundary in
 [typescript-support.md](typescript-support.md). Product English and progressive-disclosure rules:
 [product-voice.md](product-voice.md).
 
-### Default path (3.9.0)
+### Default path (4.0.0)
 
 ```text
 ark start → ark start --apply → ark-check --doctor
   day to day: compact router / MCP place + validate + check
   guided work: install skill pack → /ark-autopilot
+  optional: arkRules map + arkrules/*.json (intra-layer; starts advisory)
 ```
 
-Doctor is the **control plane** (status light + primary next action). The compact router from
-`ark start` is enough for normal feature work. Full `/ark-*` skills are **expert depth**:
+Doctor is the **control plane** (status light + primary next action). From **4.0.0**, doctor may
+also report **`rulesUnderContract`** (ArkRules counts) and **`packageVersionTruth`** when the
+CLI is ahead of the package.json pin. The compact router from `ark start` is enough for normal
+feature work. Full `/ark-*` skills are **expert depth** and label residual **`[Layer]`** vs
+**`[ArkRules]`** (except experimental `/ark-runtime`):
 
 ```bash
 npx ark-check --install-agent-gates --skills-only --force
