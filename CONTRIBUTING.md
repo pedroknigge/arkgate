@@ -122,4 +122,6 @@ mcp-publisher validate server.json && mcp-publisher publish server.json
 ```
 
 **Current published release:** [docs/releases/4.0.0.md](docs/releases/4.0.0.md) (`arkgate@4.0.0`).  
+**Next prepared (not yet on npm `latest`):** [docs/releases/4.0.1.md](docs/releases/4.0.1.md)
+(`arkgate@4.0.1` — flip to “published” only after `npm view arkgate@4.0.1` succeeds).  
 **Previous:** [docs/releases/3.9.2.md](docs/releases/3.9.2.md) (`arkgate@3.9.2`).

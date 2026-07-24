@@ -95,7 +95,9 @@ Examples:
 | “modes you pick” for Suggest/Adapt/Enforce | Those are **status lights**, not settings |
 | Skill-shopping lists as the default curriculum | Progressive disclosure: one door first |
 | “Healthy / done” while design-weak | False done |
-| “ArkRules prove business correctness” | They enforce *declared* structure/coverage evidence, not arbitrary logic |
+| “ArkRules prove business correctness” | They enforce *declared* structure/coverage evidence, not arbitrary logic or full semantic proof |
+| “Structure enforced = Domain extraction done” | Structure sensors are **heuristics**; extraction is judgment (`/ark-fix` / pilot) |
+| “Covered invariant = E2E business tests” | Coverage = symbol/test evidence for a named policy, not a runtime test runner |
 | Blurring import edges with invariants | Always label **`[Layer]`** vs **`[ArkRules]`** |
 
 ---

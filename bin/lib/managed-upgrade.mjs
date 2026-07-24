@@ -689,5 +689,5 @@ export function renderManagedUpgrade(plan, options = {}) {
   }
   console.log(`Planned writes: ${wouldWrite}; blocked conflicts/deletions: ${blocked}.`);
   if (options.next) console.log(options.next);
-  else console.log('Apply the exact preview with: ark upgrade --apply --no-install');
+  else console.log('Apply the exact preview with: npx arkgate upgrade --apply --no-install');
 }

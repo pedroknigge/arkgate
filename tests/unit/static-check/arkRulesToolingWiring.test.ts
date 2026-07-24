@@ -11,7 +11,10 @@ import {
   loadArkRuleFileHints,
   needsArkRuleFileHints,
 } from '../../../bin/lib/arkrule-file-hints.mjs';
-import { summarizeRulesUnderContract } from '../../../bin/lib/rules-under-contract.mjs';
+import {
+  formatRulesUnderContractHtml,
+  summarizeRulesUnderContract,
+} from '../../../bin/lib/rules-under-contract.mjs';
 
 const tempDirs: string[] = [];
 
@@ -160,5 +163,217 @@ export async function save(order: Order) {
     expect(summary.coveredInvariants).toBe(1);
     expect(summary.uncoveredInvariants).toBe(0);
     expect(summary.testFilesScanned).toBeGreaterThan(0);
+    expect(summary.layers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'DomainModel',
+          invariants: 1,
+          coveredInvariants: 1,
+          uncoveredInvariants: 0,
+        }),
+      ])
+    );
+    expect(summary.coveredSample?.some((c: { id: string }) => c.id === 'INV-ORDER-001')).toBe(true);
+  });
+
+  it('rules-under-contract HTML lists layers, structure sensors, and invariants (not counts-only)', () => {
+    const esc = (v: unknown) => String(v);
+    const html = formatRulesUnderContractHtml(
+      {
+        active: true,
+        structureRules: 2,
+        invariants: 3,
+        coveredInvariants: 2,
+        uncoveredInvariants: 1,
+        testFilesScanned: 4,
+        layers: [
+          {
+            name: 'DomainModel',
+            sourceFile: 'arkrules/DomainModel.json',
+            structureRules: 2,
+            invariants: 3,
+            coveredInvariants: 2,
+            uncoveredInvariants: 1,
+          },
+        ],
+        structure: [
+          {
+            id: 'domain-no-anemic-model',
+            sensor: 'no-anemic-model',
+            mode: 'advisory',
+            layer: 'DomainModel',
+            description: 'Prefer rich Domain behavior',
+          },
+        ],
+        uncovered: [
+          {
+            id: 'INV-MISSING',
+            layer: 'DomainModel',
+            description: 'Still needs a test',
+          },
+        ],
+        coveredSample: [
+          {
+            id: 'INV-ORDER-001',
+            layer: 'DomainModel',
+            description: 'Order total never negative',
+          },
+        ],
+        coveredTruncated: 0,
+        structureTruncated: 0,
+        uncoveredTruncated: 0,
+        notAScore: true,
+        note: 'ArkRules plane',
+      },
+      esc
+    );
+    expect(html).toContain('data-advisory="rulesUnderContract"');
+    expect(html).toMatch(/\[ArkRules\]/);
+    expect(html).toContain('DomainModel');
+    expect(html).toContain('domain-no-anemic-model');
+    expect(html).toContain('no-anemic-model');
+    expect(html).toContain('INV-MISSING');
+    expect(html).toContain('INV-ORDER-001');
+    expect(html).toContain('Structure sensors');
+    expect(html).toMatch(/Heuristics of module shape/i);
+    expect(html).toMatch(/not a claim that business semantics/i);
+    expect(html).not.toMatch(/counts — not a score/i);
+  });
+
+  it('formatRulesUnderContractHtml covers inactive, loadErrors, empty structure, and default esc', () => {
+    expect(formatRulesUnderContractHtml(null, (v: unknown) => String(v))).toBe('');
+    expect(formatRulesUnderContractHtml(undefined as never)).toBe('');
+
+    const inactive = formatRulesUnderContractHtml(
+      {
+        active: false,
+        structureRules: 0,
+        invariants: 0,
+        coveredInvariants: 0,
+        uncoveredInvariants: 0,
+        notAScore: true,
+        note: 'No arkRules map — intra-layer ArkRules are opt-in.',
+      },
+      (v: unknown) => String(v)
+    );
+    expect(inactive).toMatch(/ArkRules opt-in/);
+    expect(inactive).toMatch(/No arkRules map/);
+
+    const loadErr = formatRulesUnderContractHtml(
+      {
+        active: true,
+        loadErrors: [{ path: '$.arkRules["DomainModel"]', message: 'missing file' }],
+        notAScore: true,
+        note: 'load failed',
+      },
+      (v: unknown) => String(v)
+    );
+    expect(loadErr).toMatch(/load errors/i);
+    expect(loadErr).toMatch(/missing file/);
+
+    const noStructure = formatRulesUnderContractHtml(
+      {
+        active: true,
+        structureRules: 0,
+        invariants: 0,
+        coveredInvariants: 0,
+        uncoveredInvariants: 0,
+        layers: [{ name: 'DomainModel', structureRules: 0, invariants: 0, coveredInvariants: 0, uncoveredInvariants: 0 }],
+        structure: [],
+        uncovered: [],
+        coveredSample: [],
+        structureTruncated: 0,
+        uncoveredTruncated: 0,
+        coveredTruncated: 0,
+        testFilesScanned: 0,
+        notAScore: true,
+        note: 'ok',
+      },
+      (v: unknown) => String(v)
+    );
+    expect(noStructure).toMatch(/No structure sensors/);
+    expect(noStructure).toMatch(/All catalogued invariants have coverage evidence/);
+
+    // enforced structure mode tag + no-description rows + default esc
+    const enforced = formatRulesUnderContractHtml({
+      active: true,
+      structureRules: 1,
+      invariants: 1,
+      coveredInvariants: 0,
+      uncoveredInvariants: 1,
+      layers: [
+        {
+          name: 'DomainModel',
+          structureRules: 1,
+          invariants: 0,
+          coveredInvariants: 0,
+          uncoveredInvariants: 0,
+        },
+      ],
+      structure: [
+        {
+          id: 'thin',
+          sensor: 'thin-adapter',
+          mode: 'enforced',
+          layer: 'PersistenceAdapters',
+        },
+      ],
+      uncovered: [{ id: 'INV-X', layer: 'DomainModel' }],
+      coveredSample: [],
+      structureTruncated: 0,
+      uncoveredTruncated: 0,
+      coveredTruncated: 0,
+      testFilesScanned: 1,
+      notAScore: true,
+    });
+    expect(enforced).toMatch(/>enforced</);
+    expect(enforced).toContain('INV-X');
+
+    // summarize inactive without arkRules
+    const empty = summarizeRulesUnderContract(path.join(os.tmpdir(), 'ark-no-rules'), {
+      schemaVersion: '1.1',
+      layers: [],
+      rules: [],
+    });
+    expect(empty.active).toBe(false);
+  });
+
+  it('doctor catalog caps structure/uncovered with *Truncated counters (HTML announces overflow)', () => {
+    const esc = (v: unknown) => String(v);
+    const structure = Array.from({ length: 3 }, (_, i) => ({
+      id: `struct-${i}`,
+      sensor: 'thin-adapter',
+      mode: 'advisory',
+      layer: 'FrameworkAdapters',
+      description: `Sensor ${i}`,
+    }));
+    const uncovered = Array.from({ length: 2 }, (_, i) => ({
+      id: `INV-U-${i}`,
+      layer: 'DomainModel',
+      description: `Uncovered ${i}`,
+    }));
+    const html = formatRulesUnderContractHtml(
+      {
+        active: true,
+        structureRules: 45,
+        invariants: 40,
+        coveredInvariants: 10,
+        uncoveredInvariants: 30,
+        testFilesScanned: 1,
+        layers: [],
+        structure,
+        structureTruncated: 42,
+        uncovered,
+        uncoveredTruncated: 28,
+        coveredSample: [],
+        coveredTruncated: 0,
+        notAScore: true,
+      },
+      esc
+    );
+    expect(html).toContain('struct-0');
+    expect(html).toContain('INV-U-0');
+    expect(html).toMatch(/\(\+42 more structure rule/);
+    expect(html).toMatch(/\(\+28 more uncovered\)/);
   });
 });

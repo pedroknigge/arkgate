@@ -9,6 +9,7 @@
  */
 import { effectiveCapabilityDeny } from './analysis-engine.mjs';
 import { graphBlindSpotsHtml } from './graph-blind.mjs';
+import { formatRulesUnderContractHtml } from './rules-under-contract.mjs';
 
 // htmlEscape is injected by the caller (html-report.mjs) — importing it back
 // would be a dependency cycle, and the repo's own gate blocks that. The
@@ -114,7 +115,7 @@ function contractHealthHtml(health) {
         })
         .join('\n');
   return `
-  <section data-advisory="contractHealth">
+  <section class="section card" data-advisory="contractHealth">
     <h2>Contract health <span class="muted">(advisory — meta-lint of the contract itself; never changes the verdict)</span></h2>
     ${invalid}
     ${body}
@@ -128,7 +129,7 @@ function ambientStateHtml(state) {
   if (!state) return '';
   if (state.available === false) {
     return `
-  <section data-advisory="ambientState">
+  <section class="section card" data-advisory="ambientState">
     <h2>Ambient state <span class="muted">(advisory)</span></h2>
     <p class="muted">${esc(state.note ?? 'Sensor unavailable in this run.')}</p>
   </section>`;
@@ -147,7 +148,7 @@ function ambientStateHtml(state) {
         (state.findingCount > 10 ? `<p class="muted">…(+${state.findingCount - 10} more in doctor JSON)</p>` : '') +
         (state.acknowledged > 0 ? `<p class="muted">acknowledged module state: ${state.acknowledged}</p>` : '');
   return `
-  <section data-advisory="ambientState">
+  <section class="section card" data-advisory="ambientState">
     <h2>Ambient state <span class="muted">(advisory — opt-in via pure layers; blocker-grade Y07 parked)</span></h2>
     ${body}
   </section>`;
@@ -211,7 +212,7 @@ function physicalCohesionHtml(pc) {
     ? `<p class="muted">next pilot (proposed, never applied): ${esc(pc.reshapePilot.nextPilot.pilotTarget)} — one pilot at a time via /ark-loop; merges are judgment cards only.</p>`
     : '';
   return `
-  <section data-advisory="physicalCohesion">
+  <section class="section card" data-advisory="physicalCohesion">
     <h2>Physical cohesion <span class="muted">(advisory — facts, not a score; the verdict is unchanged)</span></h2>
     ${body}
     ${reshapeDecisionsHtml(pc.reshapeDecisions)}
@@ -230,7 +231,7 @@ function parseHealthHtml(health) {
       `<ul>${files.map((f) => `<li><code>${esc(f.file)}</code> — ${f.diagnosticCount} parse diagnostic(s)</li>`).join('')}</ul>` +
       (health.truncated > 0 ? `<p class="muted">…(+${health.truncated} more affected file(s); doctor list capped)</p>` : '');
   return `
-  <section data-advisory="parseHealth">
+  <section class="section card" data-advisory="parseHealth">
     <h2>Parse health <span class="muted">(completeness evidence — affected syntax makes analysis partial)</span></h2>
     ${body}
   </section>`;
@@ -242,26 +243,8 @@ function parseHealthHtml(health) {
  * @param escape injected HTML escaper (dependency points html-report → here only)
  */
 function rulesUnderContractHtml(section) {
-  if (!section || typeof section !== 'object') return '';
-  const note = section.note ? `<p class="muted">${esc(section.note)}</p>` : '';
-  if (section.active === false) {
-    return `
-  <section data-advisory="rulesUnderContract">
-    <h2>Rules under contract <span class="muted">(ArkRules opt-in)</span></h2>
-    ${note}
-  </section>`;
-  }
-  return `
-  <section data-advisory="rulesUnderContract">
-    <h2>Rules under contract <span class="muted">(counts — not a score)</span></h2>
-    <ul>
-      <li>Structure rules: <strong>${Number(section.structureRules) || 0}</strong></li>
-      <li>Invariants: <strong>${Number(section.invariants) || 0}</strong></li>
-      <li>Covered invariants: <strong>${Number(section.coveredInvariants) || 0}</strong></li>
-      <li>Uncovered invariants: <strong>${Number(section.uncoveredInvariants) || 0}</strong></li>
-    </ul>
-    ${note}
-  </section>`;
+  // Detail lives in rules-under-contract.mjs so this file stays under LOC budget.
+  return formatRulesUnderContractHtml(section, esc);
 }
 
 export function renderAdvisorySections(advisories, escape) {

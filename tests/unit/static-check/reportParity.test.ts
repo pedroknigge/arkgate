@@ -93,6 +93,21 @@ describe('X01 report parity — the standing rule', () => {
     expect(html).toContain('data-advisory="governanceWeight"');
   });
 
+  it('top-level advisory sections use section card styling (showcase layout)', () => {
+    const root = mk();
+    project(root);
+    const { advisories, html } = renderFor(root);
+    for (const key of Object.keys(advisories)) {
+      // class may appear before or after data-advisory on the opening <section>.
+      const pattern = new RegExp(
+        `<section[^>]*class="[^"]*\\bsection card\\b[^"]*"[^>]*data-advisory="${key}"` +
+          `|` +
+          `<section[^>]*data-advisory="${key}"[^>]*class="[^"]*\\bsection card\\b[^"]*"`
+      );
+      expect(html, `section card styling for doctor advisory "${key}"`).toMatch(pattern);
+    }
+  });
+
   it('renders the real content: smells, acknowledgments honesty, ambient findings', () => {
     const root = mk();
     project(root);

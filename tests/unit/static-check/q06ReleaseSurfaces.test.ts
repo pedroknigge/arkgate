@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '4.0.0';
+const CURRENT = '4.0.1';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -104,12 +104,39 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
     expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
   });
 
-  it('public release pointers cover published 4.0.0', () => {
-    expect(read('README.md')).toMatch(/4\.0\.0/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.0\.0\.md/);
-    expect(read('README.md')).toMatch(/npm `latest`|on npm/);
+  it('public latest-release pointers move together', () => {
+    // While 4.0.1 is prepared, npm latest remains 4.0.0 and docs stay honest.
+    expect(read('README.md')).toMatch(/4\.0\.0 on npm; 4\.0\.1 prepared|npm `latest` is still 4\.0\.0/s);
+    expect(read('README.md')).toMatch(/4\.0\.1\.md/);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.0\.0/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Next prepared.*4\.0\.1/s);
     expect(read('docs/package-surface.md')).toMatch(/4\.0\.0\.md/);
+    expect(read('docs/package-surface.md')).toMatch(/4\.0\.1\.md/);
+    expect(read('README.md')).toMatch(/prepared patch|next prepared/i);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.0.1 Fase 0 field patch', () => {
+  it('CHANGELOG 4.0.1 names stale CLI guard, ArkRules HTML catalog, dual-plane honesty', () => {
+    const body = read('CHANGELOG.md');
+    expect(body).toMatch(/## 4\.0\.1/);
+    expect(body).toMatch(/Stale global CLI|fail closed/i);
+    expect(body).toMatch(/rulesUnderContract|structure sensors/i);
+    expect(body).toMatch(/Dual-plane honesty|never merge into one architecture score/i);
+    expect(body).toMatch(/82\.5/);
+    expect(body).toMatch(/No required config migration|Does not weaken/i);
+  });
+
+  it('docs/releases/4.0.1.md has upgrade path and prepared honesty', () => {
+    const body = read('docs/releases/4.0.1.md');
+    expect(body).toMatch(/arkgate@4\.0\.1/);
+    expect(body).toMatch(/npm install -D arkgate@4\.0\.1/);
+    expect(body).toMatch(/fail closed|stale global CLI/i);
+    expect(body).toMatch(/rulesUnderContract|section card/i);
+    expect(body).toMatch(/No required config migration/i);
+    expect(body).toMatch(/\*\*Prepared:\*\*/);
+    expect(body).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(body).toMatch(/Z09|RB-11/i);
   });
 });
 
