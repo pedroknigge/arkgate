@@ -362,6 +362,54 @@ describe('C01 config contract', () => {
     );
   });
 
+  it('applies field defaults when schemaVersion / include / layers / rules are omitted', () => {
+    const { config, migratedFrom } = loadArkConfigContract({
+      layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+    });
+    expect(migratedFrom).toBe('unversioned');
+    expect(config.schemaVersion).toBe(ARK_CONFIG_SCHEMA_VERSION);
+    expect(config.include).toEqual(['src']);
+    expect(config.$schema).toBe(ARK_CONFIG_SCHEMA_URL);
+    expect(Array.isArray(config.layers)).toBe(true);
+    expect(config.layers).toHaveLength(1);
+    // DEFAULT_ARK_CONFIG_RULES cloned when rules omitted
+    expect(config.rules).toEqual(DEFAULT_ARK_CONFIG_RULES.map((rule) => ({ ...rule })));
+  });
+
+  it('rejects non-string schemaVersion with the null-type unsupported message', () => {
+    // Must hit originalVersion === null branch (not the known-version check).
+    expect(() =>
+      migrateArkConfig(
+        { ...VALID_MINIMAL_CONFIG, schemaVersion: 1 as unknown as string },
+        'num.json'
+      )
+    ).toThrow(
+      `Invalid ArkGate config (num.json):\n- $.schemaVersion: unsupported version 1; expected ${ARK_CONFIG_SCHEMA_VERSION}`
+    );
+    expect(() =>
+      migrateArkConfig(
+        { ...VALID_MINIMAL_CONFIG, schemaVersion: true as unknown as string },
+        'bool.json'
+      )
+    ).toThrow(
+      `Invalid ArkGate config (bool.json):\n- $.schemaVersion: unsupported version true; expected ${ARK_CONFIG_SCHEMA_VERSION}`
+    );
+  });
+
+  it('rejects unknown string schemaVersion via the known-set gate (not the null branch)', () => {
+    expect(() =>
+      migrateArkConfig({ ...VALID_MINIMAL_CONFIG, schemaVersion: '9.9.9' }, 'future.json')
+    ).toThrow(
+      `Invalid ArkGate config (future.json):\n- $.schemaVersion: unsupported version "9.9.9"; expected ${ARK_CONFIG_SCHEMA_VERSION}`
+    );
+  });
+
+  it('uses the default source label when migrateArkConfig omits the source argument', () => {
+    expect(() => migrateArkConfig(null)).toThrow(
+      'Invalid ArkGate config (ark.config.json):\n- $: must be an object; received null'
+    );
+  });
+
   it('keeps migration metadata and config metadata on their exact public contract', () => {
     expect(migrateArkConfig(VALID_MINIMAL_CONFIG)).toMatchObject({ migratedFrom: 'unversioned' });
     expect(

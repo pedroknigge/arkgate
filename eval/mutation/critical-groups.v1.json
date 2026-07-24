@@ -7,8 +7,38 @@
       "targets": [
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 355,
-          "endLine": 431
+          "startLine": 393,
+          "endLine": 406
+        },
+        {
+          "file": "src/domain/configContract.ts",
+          "startLine": 408,
+          "endLine": 410
+        },
+        {
+          "file": "src/domain/configContract.ts",
+          "startLine": 412,
+          "endLine": 419
+        },
+        {
+          "file": "src/domain/configContract.ts",
+          "startLine": 429,
+          "endLine": 433
+        },
+        {
+          "file": "src/domain/configContract.ts",
+          "startLine": 436,
+          "endLine": 436
+        },
+        {
+          "file": "src/domain/configContract.ts",
+          "startLine": 445,
+          "endLine": 448
+        },
+        {
+          "file": "src/domain/configContract.ts",
+          "startLine": 457,
+          "endLine": 466
         }
       ]
     },
