@@ -5,6 +5,18 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Improved
+
+- **HTML / doctor ArkRules showcase:** `rulesUnderContract` is no longer counts-only.
+  When `arkRules` is active, the report lists **per-layer** structure/invariant totals,
+  **structure sensors** (id · sensor · mode · description), **uncovered** invariants,
+  and a **covered sample** — so `/ark-explain` has real [ArkRules] content to walk.
+  Skill text updated to open `arkrules/*` and name real IDs.
+- **HTML advisory cards:** doctor advisory blocks (contract health, ambient, cohesion,
+  parse health, graph blind spots, ArkRules) render with `class="section card"` so they
+  match the white panel styling of Layers / Violations / Enforcement (were bare
+  `<section data-advisory>` on the page background).
+
 ### Fixed
 
 - **Stale global CLI vs project `arkgate` (upgrade footgun):** `ark upgrade` /

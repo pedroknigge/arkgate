@@ -160,5 +160,78 @@ export async function save(order: Order) {
     expect(summary.coveredInvariants).toBe(1);
     expect(summary.uncoveredInvariants).toBe(0);
     expect(summary.testFilesScanned).toBeGreaterThan(0);
+    expect(summary.layers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'DomainModel',
+          invariants: 1,
+          coveredInvariants: 1,
+          uncoveredInvariants: 0,
+        }),
+      ])
+    );
+    expect(summary.coveredSample?.some((c: { id: string }) => c.id === 'INV-ORDER-001')).toBe(true);
+  });
+
+  it('rules-under-contract HTML lists layers, structure sensors, and invariants (not counts-only)', () => {
+    // eslint-disable-next-line -- runtime .mjs under test
+    const { formatRulesUnderContractHtml } = require('../../../bin/lib/rules-under-contract.mjs');
+    const esc = (v: unknown) => String(v);
+    const html = formatRulesUnderContractHtml(
+      {
+        active: true,
+        structureRules: 2,
+        invariants: 3,
+        coveredInvariants: 2,
+        uncoveredInvariants: 1,
+        testFilesScanned: 4,
+        layers: [
+          {
+            name: 'DomainModel',
+            sourceFile: 'arkrules/DomainModel.json',
+            structureRules: 2,
+            invariants: 3,
+            coveredInvariants: 2,
+            uncoveredInvariants: 1,
+          },
+        ],
+        structure: [
+          {
+            id: 'domain-no-anemic-model',
+            sensor: 'no-anemic-model',
+            mode: 'advisory',
+            layer: 'DomainModel',
+            description: 'Prefer rich Domain behavior',
+          },
+        ],
+        uncovered: [
+          {
+            id: 'INV-MISSING',
+            layer: 'DomainModel',
+            description: 'Still needs a test',
+          },
+        ],
+        coveredSample: [
+          {
+            id: 'INV-ORDER-001',
+            layer: 'DomainModel',
+            description: 'Order total never negative',
+          },
+        ],
+        coveredTruncated: 0,
+        notAScore: true,
+        note: 'ArkRules plane',
+      },
+      esc
+    );
+    expect(html).toContain('data-advisory="rulesUnderContract"');
+    expect(html).toMatch(/\[ArkRules\]/);
+    expect(html).toContain('DomainModel');
+    expect(html).toContain('domain-no-anemic-model');
+    expect(html).toContain('no-anemic-model');
+    expect(html).toContain('INV-MISSING');
+    expect(html).toContain('INV-ORDER-001');
+    expect(html).toContain('Structure sensors');
+    expect(html).not.toMatch(/counts — not a score/i);
   });
 });

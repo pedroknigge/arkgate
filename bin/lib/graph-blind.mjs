@@ -247,7 +247,7 @@ export function graphBlindSpotsHtml(state, esc = (v) => String(v)) {
     body = `<p><span class="tag warn">${state.count} unresolvable</span> dynamic edge(s) — graph incomplete (${state.templateInterpolationCount ?? 0} template-interpolation).</p><ul>${list}</ul>${more}<p class="muted">Advisory only — does not change the architecture verdict; edges are blind, not clean.</p>`;
   }
   return `
-  <section data-advisory="graphBlindSpots">
+  <section class="section card" data-advisory="graphBlindSpots">
     <h2>Graph blind spots <span class="muted">(advisory — incomplete graph honesty; never a hard verdict)</span></h2>
     ${body}
   </section>`;

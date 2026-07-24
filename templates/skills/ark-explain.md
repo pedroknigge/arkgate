@@ -45,8 +45,13 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
 
 
 ### Explain + ArkRules
-- HTML/plain tour: section **Layers** and section **ArkRules** (structure + invariants + residual).
-- Never merge them into one “architecture score.”
+- HTML/plain tour: section **Layers** and section **Rules under contract (ArkRules)** —
+  when `arkRules` is active the showcase lists **per-layer counts**, **structure sensors**
+  (id / sensor / mode), **uncovered** invariants (call them out), and a **covered sample**.
+  Inactive map stays a short opt-in note. Counts are never a score.
+- Spoken tour: name 2–4 real invariant IDs and one structure sensor from this repo’s
+  `arkrules/*` (open the files — do not invent). Residual candidates → `--rules-inventory`.
+- Never merge Layers and ArkRules into one “architecture score.”
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -117,9 +122,10 @@ the same files or weaken the gate.
    (SUGGEST / ADAPT / ENFORCE), and the plan's safe-to-auto vs decision counts.
 
 The HTML report is the visual twin of this skill: architecture map, files per layer,
-dependency direction, matrix, violations, enforcement points, Ark fitness score, and a
-**Senior diagnostics** block (coupling fan-in/out, deny density, purity surface, pattern
-forensics, baseline taxonomy) for tech leads.
+dependency direction, matrix, violations, **ArkRules under contract** (when mapped),
+enforcement points, Ark fitness score, and a **Senior diagnostics** block (coupling
+fan-in/out, deny density, purity surface, pattern forensics, baseline taxonomy) for
+tech leads.
 
 When explaining the **plan**, name the four `mechanical-safe` remediation kinds only
 (type-only move, pure-type file relocate, `import type` of pure-type modules,
