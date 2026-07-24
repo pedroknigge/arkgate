@@ -1,7 +1,6 @@
 ---
 name: ark-runtime
 description: Evaluate the experimental Ark runtime kernel against hand-rolled event bus, outbox, audit, saga, projection, policy, or NestJS code. Finds one candidate, wires one, verifies.
-arkVersion: 3.0.0
 ---
 
 # /ark-runtime — Evaluate the runtime kernel (experimental opt-in)
@@ -25,6 +24,10 @@ one feature at a time.
 
 The CLI is a **sensor**, never the whole job. Claiming done without the exploratory bar for this skill is **incomplete**.
 
+
+## Out of scope for ArkRules
+
+This skill is **runtime-kernel only**. Do not mix ArkRules structure/invariants here; hand off to `/ark-contract` / `/ark-adopt` / `/ark-explore` for static contract planes.
 
 ## Subagent fan-out (optional, host-dependent)
 

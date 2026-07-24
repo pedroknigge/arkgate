@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0",
+  "layer": "DomainModel",
+  "structure": [
+    {
+      "id": "always-valid-aggregates",
+      "sensor": "aggregate-private-state",
+      "mode": "enforced",
+      "description": "Order aggregate must not expose public mutable fields"
+    },
+    {
+      "id": "always-valid-factory",
+      "sensor": "always-valid-factory",
+      "mode": "enforced",
+      "description": "Order must use static factory not public ctor alone"
+    },
+    {
+      "id": "events-on-mutation",
+      "sensor": "domain-event-on-mutation",
+      "mode": "enforced",
+      "description": "Mutating methods must guard invariants or publish"
+    }
+  ],
+  "invariants": [
+    {
+      "id": "INV-ORDER-TOTAL-NON-NEGATIVE",
+      "description": "Order total never goes below zero",
+      "aggregate": "Order",
+      "coverage": { "test": true, "symbol": "Order.ensureInvariants" },
+      "mode": "enforced"
+    }
+  ]
+}

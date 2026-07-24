@@ -1,7 +1,6 @@
 ---
 name: ark-place
 description: "Where does new code go? Names the layer, directory, and naming for a new artifact from the contract, and scaffolds it there. Autonomous."
-arkVersion: 3.0.0
 ---
 
 # /ark-place — Where does this code go?
@@ -36,6 +35,28 @@ not a stalling question.
 The CLI is a **sensor**, never the whole job. Claiming done without the exploratory bar for this skill is **incomplete**.
 
 
+
+## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+
+ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+
+| Plane | What it protects | Where it lives | Sensors / tools |
+|-------|------------------|----------------|-----------------|
+| **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
+| **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+
+**Rules for every report / answer:**
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
+3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
+4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+
+
+### Place + ArkRules
+- Choose layer from contract **and** check structure sensors for that layer (private state, factory, thin adapter).
+- Scaffold to satisfy **[ArkRules]** when present; state which sensors apply.
+
 ## Subagent fan-out (optional, host-dependent)
 
 If the host supports **parallel subagents** and the task splits cleanly (e.g. multiple
@@ -48,12 +69,18 @@ the same files or weaken the gate.
 1. **Read the contract, not your intuition.** If the `ark` MCP server is available,
    call the **`ark_place`** tool with the target file path — it returns the layer,
    its forbidden globals, and exactly which layers the file may / must not import,
-   straight from the contract (no guessing). Otherwise load `ark.config.json` and the
+   straight from the contract (no guessing). When present, also honor optional
+   **`goldenPattern`** (from `.ark/golden-pattern.json`) for **NEW code only** —
+   advisory layout norm; never overrides the gate and never clears design-weak.
+   Absent golden is normal. Otherwise load `ark.config.json` and the
    `ark://manifest` MCP resource (it includes `suggestedLayers` with conventional
    directories for layers not yet adopted). The project's `AGENTS.md` placement table,
    if present, is authoritative too.
 2. **Classify the artifact** by what it does, not what it's called:
    - Pure business rules/entities/value objects → domain-model layer.
+   - When Domain ArkRules require private state / factories (`aggregate-private-state`,
+     `always-valid-factory`), scaffold private fields + static factory — do not emit public
+     mutable aggregates.
    - Orchestrates a use case, no I/O of its own → application layer.
    - Talks to a database, queue, API, filesystem → an adapter layer on the side
      that matches the direction (driven/persistence vs driving/http).
@@ -80,6 +107,10 @@ the same files or weaken the gate.
 
 - If the user needs bulk adoption / wrong contract, not a single artifact: **STOP — do not continue this skill as complete.** **STOP — wrong skill: invoke /ark-adopt or /ark-contract** instead of ad-hoc multi-file grinding without a plan.
 - If contract lacks a home for the artifact: **STOP — do not continue this skill as complete.** Adopt the layer via `/ark-contract` first.
+- If doctor is **ENFORCE · design-weak** and the user is asking to reshape existing structure
+  (not place one new artifact): place only the new file under the golden/contract home, then
+  hand off **one** pilot via `pilotLoop.nextPilot` / `/ark-explore` shape-focus — never multi-pilot
+  batch reshape from this skill.
 
 ## Operating rules
 
@@ -112,6 +143,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

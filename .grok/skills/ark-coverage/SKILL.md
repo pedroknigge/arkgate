@@ -1,7 +1,6 @@
 ---
 name: ark-coverage
 description: Ark adoption fitness audit — governed%, gates, baseline honesty, capability gaps. CLI is a sensor; read enough source to prove gaps. Full product recon and pattern dual-plan belong to /ark-explore.
-arkVersion: 3.0.0
 ---
 
 # /ark-coverage — Ark adoption fitness (not full recon)
@@ -43,6 +42,28 @@ Shape ladder by default. If the tree is design-weak under ENFORCE, **handoff** t
 If you did not open source files, the skill is **not complete**.  
 Full recon + pattern planning: `/ark-explore`.
 
+
+## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+
+ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+
+| Plane | What it protects | Where it lives | Sensors / tools |
+|-------|------------------|----------------|-----------------|
+| **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
+| **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+
+**Rules for every report / answer:**
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
+3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
+4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+
+
+### Coverage + ArkRules
+- Fitness report: governed% / gates / baseline = **[Layer]**; `rulesUnderContract` inventoried/under-contract/frozen = **[ArkRules]** (counts, never a score).
+- Capability gap: “no arkRules map” is optional adoption opportunity, not a failed gate.
+
 ## Subagent fan-out (optional, host-dependent)
 
 When the user asks to go faster **or** the work naturally splits (multiple packages,
@@ -71,6 +92,13 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 Never say “your architecture is guarded” while `goal.met` is false, governed% is low,
 or false-green doctor gaps are open. Never say “architecture is healthy finished” solely
 because governed% is 100% and plan is empty.
+
+**Honesty hard lines (doctor JSON):**
+- `coverageHonesty.worseThanNoGate` / weak coverage (~&lt;50%): green is **worse than no gate**.
+- `baseline.honesty.dirtyBaselineRisk`: green-via-freeze may hide false-positive debt.
+- `writePath.honesty.softWriteHost` (Cursor / Codex / OpenCode): write path is **advisory /
+  best-effort**, not hard PreToolUse — required CI status is the hard merge boundary.
+- Do not invent hard write guarantees for soft hosts.
 
 ## Related onboarding
 
@@ -122,6 +150,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

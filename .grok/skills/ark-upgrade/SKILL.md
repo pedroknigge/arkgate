@@ -1,199 +1,163 @@
 ---
 name: ark-upgrade
-description: Update arkgate to the latest published version, then refresh gates and /ark-* skills for the active agent host (defer inactive hosts like Codex when not in use) and re-verify the architecture check. Autonomous.
-arkVersion: 3.0.0
+description: Upgrade ArkGate through a content-identity preview, preserve customized files, and verify the active host and architecture contract.
 ---
 
-# /ark-upgrade — Update ArkGate and refresh its gates
+# /ark-upgrade — managed ArkGate upgrade
 
-Update the `arkgate` dependency to the latest published version and
-bring the repo's generated artifacts and gates in line with it. This skill
-checks the registry itself — don't assume the copy in `node_modules` is current.
+Upgrade the published `arkgate` package and its managed gates without treating a
+filename, package version, or similar-looking file as proof of ownership. The
+preview is the source of truth: inspect it before applying anything.
 
-**Still on `ark-runtime-kernel`?** Migrate first (same product, new package name):
-
-```bash
-npm uninstall ark-runtime-kernel && npm install -D arkgate
-npx arkgate-check --install-agent-gates --force
-```
-
-Guide: `docs/migrate-from-ark-runtime-kernel.md` in the package (or on GitHub).
-
-**TypeScript 7 projects:** the TS7-only packed-consumer support claim is suspended in ArkGate
-3.7.0. Package-manager deduplication can remove the intended compatible JS-API fallback; full
-check then exits unavailable, while `--plan --json` can incorrectly report `goal.met: true`.
-Do not describe the fallback as guaranteed. Keep an API-compatible TypeScript 5/6 package under
-the project `typescript` name, run the full strict gate, and point users at
-`docs/typescript-support.md`. A dual TS6-JS-API / TS7-CLI install is the documented workaround.
-
-**MCP double-bin check (identity cutover):** after upgrade, open `.mcp.json` and
-`.cursor/mcp.json`. `args` must contain **exactly one** of `arkgate-mcp` / `ark-mcp`
-(prefer `arkgate-mcp`), never both. If both appear, run:
-
-```
-npx arkgate-check --install-agent-gates --migrate-commands
-```
-
-`ark upgrade` already runs migrate-commands; re-run it if an older 2.x left dual names.
-
-**Adoption completeness:** run `npx arkgate-check --doctor` (or `--doctor --json`) and
-read the **Adoption** section — host gaps, Codex home temp paths, optional-but-populated
-core layers, missing origin snapshot, baseline policy. Fix commands are printed per gap.
-HTML reports include the same Adoption card (separate from the 0–100 fitness score).
-
-**Active host vs deferred hosts:** green the **session host** (Grok, Claude, Cursor, …)
-and repo gates first. Codex home (`$CODEX_HOME` prompts + `config.toml` MCP multi-project)
-is **deferred** unless this session is Codex or the user asked to fix Codex. Doctor marks
-those gaps `deferred` / info and does not put them in Top actions. A temp/upgrade MCP
-`--root` stays urgent (fail-closed rewrite). Never set **Incomplete?** because of deferred
-Codex debt.
+For greenfield onboarding, start with `/ark-architect` (or
+`ark-check --recommend`); for a brownfield repository, use `/ark-adopt` before
+this upgrade flow.
 
 ## Dual engine (mandatory)
 
-| Engine | Role |
-|--------|------|
-| **Deterministic** | CLI / MCP / contract sensors — exit codes, plan kinds, coverage numbers, install status |
-| **Exploratory** | You open **this** repo's real files and product surface before concluding |
+Use the semantic sensor (`ark-check --doctor --json` plus the strict contract
+check) and direct inspection of every managed file the preview will change.
+Neither signal replaces the other.
 
-The CLI is a **sensor**, never the whole job. Claiming done without the exploratory bar for this skill is **incomplete**.
 
+## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+
+ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+
+| Plane | What it protects | Where it lives | Sensors / tools |
+|-------|------------------|----------------|-----------------|
+| **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
+| **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+
+**Rules for every report / answer:**
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
+3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
+4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+
+
+### Upgrade + ArkRules
+- Refresh skills + note if templates gained ArkRules deepen; do not force consumers to adopt `arkRules`.
+- After upgrade: doctor `rulesUnderContract` if map exists; dual-truth note if `--no-install` left package pin old.
+
+## Safety contract
+
+- `ark upgrade` is read-only. It reports the selected profile and hosts, every
+  managed asset, its content state, and the exact next command.
+- The first `ark upgrade --apply` updates the dependency and lockfile, then runs
+  the newly installed CLI to produce another read-only preview. It does **not**
+  apply that preview's gate or skill changes.
+- The post-update/no-install preview's `nextCommand` includes
+  `--plan-digest <sha256:…>` and applies only that exact candidate. A changed file
+  or selection invalidates the digest instead of being overwritten.
+- Missing or conflicted assets previously recorded as managed require explicit
+  `--accept-conflicts`. Stop and obtain user consent before using it.
+- Customized files are preserved. Unrelated source files and similar filenames
+  are never adopted. The command never writes a Codex home or another global
+  directory implicitly.
+- Do not combine this flow with legacy `--force`, `--migrate-commands`, or
+  `--codex-home` repair commands. Diagnose any older adoption debt separately.
+
+## Read the states
+
+| State | Meaning | Action |
+|---|---|---|
+| `current` | Content identity matches the candidate. | Record/adopt safely; metadata-only stamps may refresh. |
+| `stale` | Recorded managed content still matches its old identity. | Safe candidate replacement. |
+| `missing` | Candidate is absent. | Create if new; require consent if a recorded asset was deleted. |
+| `customized` | User content diverged without a competing managed base. | Preserve it. |
+| `conflicted` | Both managed base and user content diverged. | Preserve and require explicit consent. |
+| `retired` | A recorded asset is no longer selected by the candidate. | Preserve its file and manifest identity; take no action. |
+
+## Procedure
+
+1. **Establish versions and context.** Read the installed
+   `node_modules/arkgate/package.json`, query `npm view arkgate version`, identify
+   the repository package manager, and open the intervening entries in the
+   shipped `CHANGELOG.md` (fall back to registry or release notes and name that
+   source). Do not infer “latest” from `node_modules` alone.
+
+2. **Preview managed content.** Run:
+
+   ```bash
+   ark upgrade --json
+   ```
+
+   Pass `--root <path>` and `--tools <active-host>` when selection would otherwise
+   be ambiguous. Open the reported files that matter to this repository. Confirm
+   that customized files remain non-applying and that any deletion/conflict is
+   blocked.
+
+3. **Update and re-preview.** If the registry is newer, run:
+
+   ```bash
+   ark upgrade --apply
+   ```
+
+   This updates through the detected package manager and hands control to the new
+   package for a fresh preview. Review that new preview; do not assume the old
+   candidate and new candidate are identical. If already on the latest package,
+   retain the current read-only preview.
+
+   For pnpm repositories with `minimumReleaseAge`, use the repository's existing
+   trusted first-party exception mechanism when the new release is still cooling
+   off, and prove `pnpm install --frozen-lockfile` succeeds.
+
+4. **Apply only the reviewed candidate.** When there are no blocked assets, run
+   the preview's exact `nextCommand`, whose shape is:
+
+   ```bash
+   ark upgrade --apply --no-install --plan-digest <preview-digest>
+   ```
+
+   If recorded deletion/conflict recovery is desired, ask first and then add
+   `--accept-conflicts`. Never add it merely to make the run green. Run a second
+   preview and require `summary.changed: 0`.
+
+5. **Verify enforcement and architecture.** Run `ark-check --doctor --json` and
+   the same fail-closed architecture command used by managed apply (normally
+   `ark-check --root . --config ark.config.json --strict-merge --json`). Require
+   `completeness: "complete"` and `ok: true`. Treat provider-unavailable CI
+   required-check evidence as `unverified`, never as proof that merges are
+   blocked. If new violations appear, hand off to `/ark-fix` for a small set or
+   `/ark-loop` / `/ark-autopilot` for residual debt; do not regenerate a baseline
+   without explicit approval.
+
+## Active host vs deferred hosts
+
+**Active host:** its repo-local gate, skills, MCP/advisory surface, doctor evidence,
+and strict check must be coherent before completion.
+
+**Deferred hosts:** inactive hosts may remain untouched and must be named with a
+future repair command when relevant. Deferred hosts never make Incomplete? `yes`
+once the active host and shared repository surfaces are verified. A temporary
+upgrade path or an actively selected host is not deferred.
+
+The managed manifest retains the selected host set, so a later preview does not
+silently switch to a different host. Home-level Codex setup is separate and is
+never an implicit side effect of this skill.
 
 ## Subagent fan-out (optional, host-dependent)
 
-If the host supports **parallel subagents** and the task splits cleanly (e.g. multiple
-dirs to sample), fan out read-only scouts; otherwise **fall back to sequential**.
-Parent merges and still emits the **### Completion** contract. Never parallel-write
-the same files or weaken the gate.
-
-## Fast path
-
-One command does the whole flow — update the package, refresh gates + `/ark-*` skills
-(and best-effort Codex home prompts when `~/.codex` exists), migrate command runners,
-and run the strict check:
-
-```
-arkgate upgrade
-# (alias: ark upgrade)
-```
-
-Use it when the user just wants the update done. Run the detailed steps below instead when
-you need to inspect the changelog first, handle a pnpm cooling-off window, or the one-liner
-reports a problem to triage. Always refresh skills so agents pick up new `mechanical-safe`
-kinds and TS guidance:
-
-```
-npx arkgate-check --install-agent-gates --skills-only --force
-```
-
-## Steps
-
-1. **Check the registry, then update.** Compare the installed version
-   (`node_modules/arkgate/package.json`) against the latest published:
-   `npm view arkgate version`. If a newer version exists, update it —
-   `npm install -D arkgate@latest` (or the project's package manager:
-   `pnpm add -D` / `yarn add -D`) — so the lockfile moves too; a pinned lockfile
-   is exactly why "just re-run install" often stays on the old version. If the
-   installed version already equals the latest, say so and still run steps 3-4
-   (a prior version may have shipped skills/gates this repo never installed).
-   Do NOT report "no update available" from the `node_modules` version alone —
-   that reads stale.
-   **pnpm cooling-off:** if the repo enforces a pnpm `minimumReleaseAge` and the new
-   version was published inside that window (common for a freshly-cut release), a plain
-   `pnpm add` in loose mode can leave a lockfile that `pnpm install --frozen-lockfile` (what
-   CI runs) then REJECTS. Do it cleanly: add the exact `<pkg>@<version>` to
-   `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` FIRST, bump the dependency spec, then
-   run a plain `pnpm install`, and verify with `pnpm install --frozen-lockfile` before moving
-   on. Only exclude a first-party package you trust.
-2. **Changelog triage** — read `node_modules/arkgate/CHANGELOG.md`
-   (shipped in the package) for the versions between old and new, and pick out
-   only entries that affect THIS repo (new flags, changed defaults, new gate
-   templates, new skills). Summarize each in one sentence with what, if
-   anything, the repo must do about it. If the file is absent (older releases
-   didn't ship it), fall back to `npm view arkgate@<version> ...` or
-   the GitHub release notes — say which source you used.
-3. **Refresh templates** — run `ark-check --install-agent-gates`. Without
-   `--force` it only writes missing files (new skills, new tool templates) and
-   skips existing ones. To pick up NEW versions of the `/ark-*` skills that a
-   package update shipped, run `ark-check --install-agent-gates --skills-only
-   --force`: `--skills-only` scopes the overwrite to the canonical skills and
-   leaves the gate files alone. Do NOT run a bare `--install-agent-gates --force`
-   to refresh skills — it also overwrites `AGENTS.md` (often customized with the
-   project's real layer table), `.claude/settings.json` (hooks/permissions), and
-   `.github/workflows/ark-check.yml` (CI) with the generic templates, silently
-   losing customizations. If the changelog says a GATE file changed, report the
-   diff and let the user decide; never rewrite settings/CI/AGENTS.md without
-   explicit approval.
-   **Active host first.** Refresh skills for the host running this skill (e.g.
-   `.grok/skills/`, `.claude/skills/`, `.cursor/commands/`). Repo-local copies for
-   other detected hosts are fine to refresh in the same pass when cheap.
-   **Codex is deferred when you are not on Codex.** Prompts live in
-   `$CODEX_HOME/prompts` (`~/.codex/prompts`), not the repo. `ark upgrade` may
-   best-effort refresh that home when it exists; still list Codex under
-   **Deferred hosts** and do **not** chase MCP multi-project / stale home skills
-   until the user is on Codex (or asks). Fix command when needed:
-   `ark-check --install-agent-gates --skills-only --codex-home --force`
-   (and `--tools codex` / `--force` for primary MCP rebind). Exception: temp or
-   `ark-upgrade` MCP `--root` paths — leave fail-closed rewrite to the CLI; do not
-   block completion on multi-project noise.
-   **Migrate stale command runners.** The package-manager-aware command templates
-   (`pnpm exec` / `yarn` / `npx`) only apply to NEWLY written files, so a repo that adopted
-   Ark before they shipped keeps a stale `npx` in its EXISTING gate files
-   (`.claude/settings.json` hooks, `.mcp.json`, `AGENTS.md`, the `check:architecture` script).
-   In a pnpm/yarn repo that means the write gate runs on a command the repo forbids. Run
-   `ark-check --install-agent-gates --migrate-commands`: it rewrites ONLY the command runner
-   in those files, preserving every customization (no `--force` clobber). A normal `ark-check`
-   also flags this when it detects the mismatch.
-4. **Re-verify** — `ark-check --root . --config ark.config.json
-   --strict-config` (with `--baseline .ark-baseline.json` if present). A new
-   version may detect violations the old one missed: if new violations appear,
-   **STOP — do not continue this skill as complete.** **STOP — bulk residual debt: invoke /ark-loop or /ark-autopilot**
-   (or `/ark-fix` for a small set). If they are too numerous to fix
-   now, freezing them in the baseline (`--update-baseline`) is a valid stopgap
-   but it silences NEW violations, so it requires explicit user approval first
-   — never regenerate the baseline on your own to get a green check.
-
-## Operating rules
-
-- **Must green:** the **active session host** (skills + gates that host uses) and
-  shared repo surfaces (`.mcp.json` dual-bin, command runners, architecture check).
-- **May defer:** other hosts not used in this session. Always list them under
-  **Deferred hosts** with the fix command — do not treat them as Incomplete.
-  Codex home (global `$CODEX_HOME`) is the common case on Grok/Claude.
-- **Optional sync:** if other repo-local tool dirs already exist (`.cursor/`,
-  `.claude/`, …), refreshing their `/ark-*` skills is good hygiene when cheap;
-  it is not a reason to fail the skill when the active host is already current.
-- Never run `--force` blindly; customized files are the user's.
-- Stop only if the changelog documents a breaking config change with two valid
-  migration paths — then present both with a recommendation.
-
-## Related onboarding
-
-- After upgrade, re-run `ark-check --doctor` — `/ark-architect` and `ark-check --recommend` ship
-  with the package for **greenfield** shape adoption.
-- **Brownfield** repos: point users to `/ark-adopt` and `docs/brownfield-adoption.md`, not
-  `/ark-architect`. Demo: `docs/demos/02-brownfield-baseline-adoption.md`.
-- Refresh gates: `ark-check --install-agent-gates --force --skills-only` if skills are stale.
-
-## Verify and report
-
-End with a passing check. Report: latest published version, old → new version
-(or "already latest"), changelog entries that mattered here (plain language),
-files written/refreshed for the **active host**, deferred hosts (if any),
-skipped customized files needing a manual look, and the final check status.
+Parallelize independent preview, changelog, and enforcement checks when the
+host supports isolated subagents; otherwise fall back to sequential execution.
 
 ## Completion contract (skill incomplete if missing)
 
-End with **exactly** these headings (markdown `###`):
+Skill incomplete if missing any required verification or any field below.
+
+End with exactly this structure:
 
 ### Completion
 - **Sensor:** commands/tools run
-- **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
-- **Active host:** e.g. `grok` / `claude` / `cursor` / `codex` (skills/gates OK or note)
-- **Deferred hosts:** `none` | e.g. `codex — home MCP/prompts; fix when using Codex`
-- **Result:** one-line outcome
-- **Handoff:** `/ark-…` / CLI / `none`
-- **Incomplete?** `no` | `yes — <what is missing>`
+- **Opened:** real project and changelog paths read
+- **Active host:** host and verified status
+- **Deferred hosts:** `none` or host plus future action
+- **Result:** old → new version and managed-upgrade outcome
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
+- **Handoff:** `/ark-…`, CLI action, or `none`
+- **Incomplete?** `no` or `yes — <missing work>`
 
-If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
-**Deferred hosts (including Codex when not on Codex) never make Incomplete? yes.**
-**Skill incomplete if missing** any of the bullets above (use `none` for Deferred hosts when empty).
+If a required verification did not run or a conflict remains blocked, report the
+task incomplete. Deferred hosts (including Codex when inactive) never make Incomplete? yes.

@@ -1,15 +1,17 @@
 ---
 name: ark-autopilot
-description: End-to-end co-pilot — explore first, dual plan A remediation + B pattern/Shape bets, mechanical-safe fixes, judgment design. Empty plan A is not healthy if design-weak. CLI is a sensor; you read and remediate files.
-arkVersion: 3.0.2
+description: Guided end-to-end path for layers and opt-in ArkRules — doctor next action when unsure. Explore first; dual plan A (edges) + B (shape); mechanical-safe only by default; B with user OK, one pilot at a time. Empty plan A is not healthy if design-weak. CLI is a sensor; you read and remediate files.
 ---
 
-# /ark-autopilot — Get to a sound architecture, end to end
+# /ark-autopilot — Guided end-to-end architecture path
+
+**This is the full guided co-pilot** after the compact router. Prefer it when the user wants
+architecture cleaned end-to-end, not when they only need a map (`/ark-explore`) or a single
+edge fix (`/ark-fix`). Doctor remains the control plane: re-check status after each major step.
 
 Composes **explore → sensors → dual plan → loop**. Safe default: auto-apply only
-`mechanical-safe`; when the user says full apply / “al mango” / apply everything, also
-execute **judgment** fixes you design from reading source (still validate with ark-check,
-never weaken the gate).
+`mechanical-safe`; when the user says full apply / apply everything, also execute **judgment**
+fixes you design from reading source (still validate with ark-check, never weaken the gate).
 
 **Not a plan grinder.** Empty `--plan` does **not** mean “architecture is healthy” without
 the explore pass and dual-plan section B (pattern / Shape bets).
@@ -33,7 +35,7 @@ to apply B with OK. Prefer that order when `postGreenPath` / design-weak is the 
 - **Brownfield:** `/ark-adopt` — match contract to reality; do not force a starter preset.
 - **Deep map only:** `/ark-explore` — full recon / dual-plan seed without applying.
 - **Adoption fitness only:** `/ark-coverage` — governed% + capability gaps (not pattern dual-plan).
-- **Default path:** `ark start` → `/ark-autopilot` → `ark-check --doctor`.
+- **Default path:** `ark start` → `ark-check --doctor` → **`/ark-autopilot`** (this skill) for guided work.
 
 ## Dual engine (mandatory)
 
@@ -52,7 +54,40 @@ decision-grade explore pass **and** without opening violating files.
 4. **Open every file** in plan A `steps[]` (and `target` if present) before classifying a fix.
 5. **“Así te lo re-soluciono”** for each A cluster and each B pattern bet.
 6. Apply A → re-run ark-check → rollback on regression. **Never auto-apply B** as mechanical-safe.
+7. **Q04 pilot loop for B:** when design-weak, take **`pilotLoop.nextPilot`** (one extraction card)
+   → apply **only** that pilot with user OK → **re-doctor**. Never multi-pilot batch B; residual
+   outside the pilot may remain and must not be called “healthy finished.”
+8. **Y01 reshape verdicts:** read `doctor.physicalCohesion.reshapeDecisions` before acting on
+   mirror facts. Outcome first: a current rejected/deferred verdict means “intentional/deferred
+   layout — no pilot”; never reconstruct that dead card from `findings`. When the user accepts,
+   defers, or rejects a live card, persist its exact `decisionTarget` with a non-empty reason and
+   optional `reviewBy` in `.ark/reshape-decisions.json`; never infer a verdict from golden prose.
 
+
+
+## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+
+ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+
+| Plane | What it protects | Where it lives | Sensors / tools |
+|-------|------------------|----------------|-----------------|
+| **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
+| **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+
+**Rules for every report / answer:**
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
+3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
+4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+
+
+### Autopilot + ArkRules
+- After explore/doctor: if inventory has high-confidence candidates **or** user wants domain rules, include **[ArkRules] plan A/B**:
+  - A: mechanical-safe remains inter-layer only; structure/invariant fixes are **judgment**.
+  - B: one pilot = one rule (declare in `arkrules/<Layer>.json` → implement → test title/symbol → re-doctor).
+- Never promote advisory→enforced without coverage evidence (`canPromoteInvariant` / policy-delta).
+- End report must list what was **layer-edge** work vs **intra-layer rule** work.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -120,9 +155,19 @@ repo so the next agent session continues the same pilot — still never auto-app
 
 ## Operating modes (detected, not picked)
 
-- **Setup (Suggest):** no config → `ark start` / recommend shape (start freezes origin after config, before gates).
+Status lights from doctor — not settings you choose. Rank residual honestly:
+
+| Light | Means | Your move (this skill) |
+|-------|--------|------------------------|
+| **Suggest** | Thin/new tree; contract not control plane | Finish `ark start` → re-doctor; do not skill-shop |
+| **Adapt** | Contract/tree disagree or debt open | Explore + adopt/loop/contract; do not claim guarded |
+| **Enforce** | Honest coverage + clean checked **edges** | Confirm gates + CI; emit dual-plan B only if residual found |
+| **Enforce · design-weak** | Edges clean; design smells remain | **Primary Shape door:** explore shape-focus → dual-plan **B** → apply **one** pilot with user OK. Empty plan A ≠ done. Never mechanical-safe B. False-done forbidden. |
+
+- **Setup (Suggest):** no config → `ark start` (start freezes origin after config, before gates).
 - **Align (Adapt):** open debt, low honesty, or false-green → explore + adopt/loop; do not claim “guarded”.
 - **Guard (Enforce):** `goal.met`, solid governed%, no false-green → confirm gates; still emit dual plan B if explore found residual.
+- **Guard · design-weak:** same as Enforce on edges, **plus** mandatory dual-plan B / pilot card; Incomplete? must not claim healthy finished while residual remains.
 
 ## Flow
 
@@ -144,6 +189,13 @@ repo so the next agent session continues the same pilot — still never auto-app
 13. **Core ratchet (when green)** — if plan `goal.met` and doctor still **ADAPT** only because
     populated cores are `optional: true`, run `ark-check --ratchet-cores` then `--doctor`.
     Never ratchet while active violations remain or false-green gap is open.
+
+## Mechanical-edit hygiene (Y04 — outcome gate)
+
+- Header injection must **merge into the existing doc comment**; the kept result has one `/**`, not stacked headers.
+- Route completion or movement must **preserve the original typed `defineRoute<…>(opts, handler)` call**; reconstruct that call instead of extracting untyped opts/handler constants that drop generics or contextual typing.
+- A convention-only `*-data.ts` stub is not a fix: move the real code or **leave the placeholder file uncreated**; never write `import "server-only"; export {}` as an empty naming token.
+- Keep the edit only when the **previously clean file stays typecheck-clean**. Otherwise roll it back and treat the change as judgment.
 
 ## Never
 
@@ -173,6 +225,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

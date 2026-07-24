@@ -1,10 +1,13 @@
 ---
 name: ark-explore
-description: Decision-grade architecture recon — sensor + tree + field path + coupling + design-correct residual. Dual-plan seed for spaghetti/pattern debt (never multi-week roadmaps). CLI is a sensor; you read the tree. No gate bypass.
-arkVersion: 3.0.2
+description: Specialized map skill — decision-grade recon of layers + ArkRules opportunities + dual-plan seed (no apply). Primary post-green door when design-weak. Not the default day-to-day path (use doctor + place/gate; guided apply is /ark-autopilot). CLI is a sensor; you read the tree. No gate bypass.
 ---
 
-# /ark-explore — Recon the real project
+# /ark-explore — Recon the real project (map only)
+
+**Specialized escape**, not the default curriculum. Use when you need a decision-grade map
+or the post-green Shape door; hand off to `/ark-autopilot` to apply. Day-to-day place + gate
+work does not require this skill.
 
 You are a **staff engineer doing architecture reconnaissance** on *this* repository.
 Ark’s CLI is a **sensor** (coverage, doctor, plan). **You** open source, entry points,
@@ -26,6 +29,15 @@ ranked residual that changes the next command — **not** a celebration of ENFOR
 (shape-focus / dual-plan seed) is the map half of the one door** — then `/ark-autopilot` only
 to apply B with user OK. Do not send the user to coverage or think as equal first choices.
 
+### Status lights (rank residual; not settings)
+
+| Light | Explore role |
+|-------|----------------|
+| **Suggest** | Point at `ark start` → doctor; map only if user insists on recon before setup |
+| **Adapt** | Map false-green / ungoverned / concentrated edge; hand off adopt/contract before Shape vanity |
+| **Enforce** | Confirm edges; if residual smells/patterns appear, auto-upgrade to dual-plan seed / shape-focus |
+| **Enforce · design-weak** | **Primary post-green map door** — shape-focus + dual-plan B + extraction cards. False-done forbidden. Never claim healthy because plan A is empty. |
+
 `/ark-autopilot`, `/ark-adopt`, and `/ark-coverage` embed a **lighter** version of this pass.
 **You** are the full recon + pattern-planning skill.
 
@@ -34,7 +46,7 @@ to apply B with user OK. Do not send the user to coverage or think as equal firs
 - **Greenfield / thin tree:** `/ark-architect` or `ark-check --recommend` / `ark start`.
 - **Brownfield action (write contract/baseline):** `/ark-adopt` after the map.
 - **Execute dual plan:** `/ark-autopilot` (explore seeds; autopilot applies A, proposes B).
-- **Default path:** `ark start` → `/ark-autopilot` → `ark-check --doctor`.
+- **Default path:** `ark start` → `ark-check --doctor` → `/ark-autopilot` for guided apply; use this skill for map-only or post-green Shape residual.
 
 ## Dual engine (mandatory)
 
@@ -55,13 +67,37 @@ that still matters (dogfood gaps, soft starters, identity drift, **semantic fals
 **design-weak under ENFORCE**, coupling that blocks evolution). If residual is truly none,
 say so in one line and hand off `stop`.
 
+
+## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+
+ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+
+| Plane | What it protects | Where it lives | Sensors / tools |
+|-------|------------------|----------------|-----------------|
+| **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
+| **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+
+**Rules for every report / answer:**
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
+3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
+4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+
+
+### Explore + ArkRules
+- Always run sensors for **both** planes when present: coverage/doctor **and** `--rules-inventory` if `arkRules` exists or brownfield may hide spaghetti rules.
+- Ranked table kinds may include `arkrules-opportunity` and `invariant-gap`.
+- Dual-plan **B** may include: place advisory structure rules, extract one inventory candidate to Domain + `arkrules` entry, promote one covered invariant.
+- Field path: note whether starters emit `arkrules/*`.
+
 ## Output mode (pick one — do not invent a fourth)
 
 | Mode | When | Deliverable |
 |------|------|-------------|
 | **Recon (default)** | map / residual / “what next?” / bare `/ark-explore` | Headline → map → ranked table → **Top 3** → residue → Completion |
 | **Dual-plan seed** | user asks for a **plan**, mejora, roadmap, “Ark + patrón”, **or** spaghetti signals fire (§G) | Same recon **plus** **§ Dual-plan seed** (A + B). **Cap 3–5 B bets.** |
-| **Shape-focus** | plan A already empty / ENFORCE, user wants **pattern** depth only | Abbreviated map + **mandatory** concurrent-patterns table + B bets only (A = “goal.met / empty”) |
+| **Shape-focus** | plan A already empty / ENFORCE, `plan.completeness` is `complete`, user wants **pattern** depth only | Abbreviated map + **mandatory** concurrent-patterns table + B bets only (A = “goal.met / empty”) |
 
 **Auto-upgrade:** if §G spaghetti signals fire, you **must** use dual-plan seed or shape-focus
 — never end on recon-only with “layers are clean.”
@@ -76,7 +112,7 @@ say so in one line and hand off `stop`.
 
 | Section | Content |
 |---------|---------|
-| **A. Remediation** | From `--plan` — usually empty when ENFORCE; one line if so |
+| **A. Remediation** | From `--plan` — usually empty when ENFORCE; one line if so. Empty counts only when `plan.completeness === "complete"` |
 | **B. Pattern / evolution** | **3–5** bets max; each: evidence · así te lo re-soluciono · **success signal** · next skill · **pilot** · **kill-switch** if new layer/big move |
 | **Phase ladder** | Name which of Align / Stabilize / **Shape** the repo is in (§G) |
 
@@ -124,6 +160,7 @@ Useful split: **core product tree** | **field path** (`examples/`, starters) | *
 6. **§G spaghetti / design-depth** when signals fire (or always on brownfield).
 7. Ranked rows that **change a decision**; each bet has a **success signal** (not a file count).
 8. Hard lines: never weaken the contract; never invent mechanical-safe kinds; never claim ENFORCE from type-only cleanup while false-green doctor ids are active.
+9. **Parse honesty:** require `plan.completeness === "complete"` before accepting `goal.met`. If `doctor.parseHealth.affectedFiles > 0`, open and name those paths; never describe them as clean or successfully inspected. Doctor alone does not change the gate verdict, but check/plan completeness is `partial`, plan goal is false, and strict merge fails.
 
 ## Reconnaissance pass (do all that apply)
 
@@ -150,6 +187,12 @@ Useful split: **core product tree** | **field path** (`examples/`, starters) | *
 | … | `src/…` | `canonical` / `gate-green design-weak` / `legacy` |
 
 Mark the **golden** pattern to copy. Do not only list layer file counts.
+
+When `doctor.physicalCohesion` includes `reshapeDecisions`, treat current rejected/deferred
+targets as explicit adopter decisions, not residual to re-fight. Keep their mirror facts in the
+map. When the user accepts, defers, or rejects a live `reshapePilot.nextPilot`, record the card's
+exact `decisionTarget` with a reason (and optional `reviewBy`) in
+`.ark/reshape-decisions.json`. Never infer or suppress from free-form golden-pattern prose.
 
 ### C. Coupling & debt (measure, don’t guess)
 Prefer evidence over aesthetics:
@@ -196,7 +239,7 @@ Prefer bets the user can run next (`command` / skill), not vague “improve DX�
 ### G. Spaghetti / design-depth ladder (non-deterministic path — mandatory when signals fire)
 
 **Signals (any one → dual-plan seed or shape-focus):**
-- Plan A empty / `goal.met` **and** you still see design-weak / concurrent patterns / god modules.
+- Plan A empty / `goal.met` with `completeness: complete` **and** you still see design-weak / concurrent patterns / god modules.
 - Brownfield with mixed layouts (flat services + “hex” folders + feature dumps).
 - Semantic false-green (path-correct, design-wrong).
 - User words: spaghetti, monstruo, legacy, “está enforce pero horrible”, pattern, refactor shape.
@@ -216,7 +259,7 @@ ENFORCE without Shape progress is **`ENFORCE · design-weak`** — say that out 
 | Smell id (label) | How you detect it in source |
 |------------------|-----------------------------|
 | `io-under-application` | I/O clients under Application; empty Domain/Persistence (also doctor when present) |
-| `handler-in-persistence` | HTTP/route bodies under repo/db globs |
+| `handler-in-persistence` | Static framework HTTP imports, `defineRoute` calls, or route bodies under Persistence-role repo/db globs (**envelope:** first 800 sorted candidates; absence of smell ≠ full-tree proof above that cap; incomplete/partial analysis is never “no smells”) |
 | `god-module` | High fan-in + wide export surface + mixed concerns |
 | `domain-logic-in-ui` | `can*` / `calculate*` / policy constants in hooks/pages |
 | `mixed-pattern-cluster` | Same feature area uses ≥2 incompatible layouts |
@@ -224,11 +267,18 @@ ENFORCE without Shape progress is **`ENFORCE · design-weak`** — say that out 
 | `facade-sql-in-routes` | Routes import raw ORM/SQL while “repositories exist” elsewhere |
 
 **Extraction card** (for each I/O / god-module B bet — judgment, never mechanical-safe).
-Canonical productized template also in `docs/brownfield-adoption.md` §6:
+Canonical productized template also in `docs/brownfield-adoption.md` §6.
+
+**Q04 pilot loop:** when doctor/plan JSON is available, use **`pilotLoop.nextPilot`** as the
+**single** next extraction card (one pilot at a time → re-doctor). Do not open five B bets
+in parallel. When `pilotLoop.queuedBets > 0`, those bets stay **queued**, not concurrent.
+`multiPilotBatchForbidden` / `autoApplyForbidden` (alias `autoApplyPlanBForbidden`) are hard
+lines — never silent codemod of plan B. After the pilot lands, re-run doctor; success =
+reduced evidence on pilot paths.
 
 ```text
 ### Extraction card
-Pilot: <one dir or feature>
+Pilot: <one dir or feature — or pilotLoop.nextPilot.pilotTarget>
 Smell: <doctor designSmells[].id when present, else agent-detected id>
 Move: <verbatim I/O or rule → port/adapter or Domain file>
 Do not:
@@ -236,12 +286,13 @@ Do not:
   - weaken ark.config.json
   - auto-apply as mechanical-safe or invent new mechanical-safe kinds
   - big-bang the monorepo
-Success: <observable / falsifiable>
+Success: <observable / falsifiable — re-doctor>
 Kill-switch: <stop condition>
-Next: /ark-autopilot (apply with user ok) | /ark-fix (one cluster) | /ark-contract (globs only)
+Next: /ark-autopilot (apply with user ok) | /ark-fix (one cluster) | re-doctor
 ```
 
-When doctor JSON is available, prefer smell `id`s from `designSmells` / `patternBets[].smellId`.
+When doctor JSON is available, prefer smell `id`s from `designSmells` / `patternBets[].smellId`
+and the ranked **`pilotLoop.nextPilot`**.
 
 ## Output format (keep tight)
 
@@ -264,7 +315,7 @@ Kinds: `risk` | `false-green` | `debt` | `opportunity` | `shape` | `manifiesto` 
    On false-green dominant: **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
    On concentrated edge dominant: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
 7. **Dual-plan seed** — required in dual-plan seed / shape-focus (and when §G auto-upgrades); A + B cap 3–5; extraction cards for I/O bets.
-8. **Deterministic residue** — plan steps, violations, doctor top action. Point to `/ark-loop` / `/ark-fix` **only when A steps exist**; never pretend loop is the architecture story when goal is already met.
+8. **Deterministic residue** — plan completeness, steps, violations, doctor top action. Point to `/ark-loop` / `/ark-fix` **only when A steps exist**; never call a `partial`/`unavailable` plan met, and never pretend loop is the architecture story when a complete goal is already met.
 
 Optional: **Diff vs naive sensor-only read** (what reading the tree changed).
 
@@ -289,6 +340,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

@@ -1,7 +1,6 @@
 ---
 name: ark-think
-description: Host-side architectural reasoning — 2–3 enforceable options from real code + contract for ONE decision. Not full recon (use /ark-explore). No gate bypass. No package LLM call.
-arkVersion: 3.0.0
+description: Host-side architectural reasoning — 2–3 enforceable options on layer and/or ArkRules planes for ONE decision. Not full recon (use /ark-explore). No gate bypass. No package LLM call.
 ---
 
 # /ark-think — Architectural reasoning (host LLM only)
@@ -30,6 +29,28 @@ If you lack a product map and the tree is messy: run a **compressed** explore pa
 | **Exploratory** | What *this* decision surface wants — options grounded in files you open |
 
 Never reason only from abstract hexagons. Open real modules before recommending a shape.
+
+
+## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+
+ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+
+| Plane | What it protects | Where it lives | Sensors / tools |
+|-------|------------------|----------------|-----------------|
+| **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
+| **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+
+**Rules for every report / answer:**
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
+3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
+4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+
+
+### Think + ArkRules
+- For ONE decision, consider options on **both** planes when relevant: e.g. new layer wall **vs** structure sensor **vs** invariant catalog entry.
+- Every option must state enforceability: which plane holds it after the change.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -92,6 +113,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

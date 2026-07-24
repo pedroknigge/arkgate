@@ -1,7 +1,6 @@
 ---
 name: ark-architect
 description: Choose the application shape, adopt phase-1 layers, scaffold directories, and verify honestly — for enthusiasts before codegen. Autonomous.
-arkVersion: 3.0.0
 ---
 
 # /ark-architect — Choose your application shape and adopt Ark
@@ -30,6 +29,28 @@ package manager (`pnpm exec`, `yarn`, `npx`) — match the lockfile.
 
 The CLI is a **sensor**, never the whole job. Claiming done without the exploratory bar for this skill is **incomplete**.
 
+
+
+## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+
+ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+
+| Plane | What it protects | Where it lives | Sensors / tools |
+|-------|------------------|----------------|-----------------|
+| **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
+| **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+
+**Rules for every report / answer:**
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
+3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
+4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+
+
+### Architect + ArkRules
+- Preset/init should emit lean `arkRules` + templates for phase-1 layers (exact names).
+- Explain to the user: layers = boundaries; arkrules = habits inside Domain/App/adapters (opt-in, start advisory).
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -113,6 +134,15 @@ the same files or weaken the gate.
 - Default to smallest viable phase 1; unlock phase 2 only when the user describes need.
 - All user-facing copy is **English**.
 
+## Merge cards (X04 reshape — judgment only)
+
+When `doctor.physicalCohesion` reports a mirrored concept and the user asks whether files
+should be **merged**, treat it as domain modeling, never deduplication (field fact: zero
+structural clones among 123 same-concept files). Produce a **merge card** per candidate group:
+which files, the domain concept they express, 2–3 shapes the merged module could take, and what
+each shape costs — **no default action, no auto-merge, never a codemod**. Physical **moves**
+belong to `/ark-loop`'s pilot loop; your job here is the judgment about what the concept IS.
+
 ## Verify and report
 
 End with `ark-check --root . --config ark.config.json --strict-config` when the
@@ -127,6 +157,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 
