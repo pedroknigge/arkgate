@@ -295,6 +295,15 @@ describe('ambient sensor honesty (Y07 advisory only)', () => {
 });
 
 describe('graph-blind template-interpolation (Y09 advisory)', () => {
+
+  it('defers full scan on large trees (doctor resident budget)', () => {
+    const many = Array.from({ length: 2501 }, (_, i) => `/tmp/f${i}.ts`);
+    const result = detectGraphBlindSpots(ts, '/tmp', many);
+    expect(result.deferred).toBe(true);
+    expect(result.count).toBe(0);
+    expect(result.blockerGrade).toBe(false);
+    expect(result.note).toMatch(/deferred/i);
+  });
   it('classifies template expressions vs other non-literals', () => {
     const sf = ts.createSourceFile(
       't.ts',
