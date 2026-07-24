@@ -2,6 +2,7 @@
 import path from 'node:path';
 
 import { tryResidentDoctor } from './lib/resident-doctor-client.mjs';
+import { resolveEffectiveProjectRoot } from './lib/project-root.mjs';
 
 const VALUE_FLAGS = new Map([
   ['--root', 'root'],
@@ -36,7 +37,15 @@ function residentArgs(argv) {
     else if (flag === '--doctor') args.doctor = true;
     else if (flag === '--json') args.json = true;
   }
-  return args.resident && args.doctor && args.json ? args : null;
+  if (!(args.resident && args.doctor && args.json)) return null;
+  // Same monorepo walk-up as full runtime (NEW-MONOREPO-CWD-WALKUP).
+  const effective = resolveEffectiveProjectRoot(args.root, { configName: args.config });
+  args.configRoot = effective.configRoot;
+  if (effective.walkedUp) {
+    args.root = effective.root;
+    args.configWalkedUp = true;
+  }
+  return args;
 }
 
 async function main() {

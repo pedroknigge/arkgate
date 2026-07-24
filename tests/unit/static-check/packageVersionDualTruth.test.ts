@@ -57,4 +57,17 @@ describe('describePackageVersionDualTruth', () => {
     expect(truth.dualTruth).toBe(false);
     expect(truth.code).toBe('PACKAGE_PIN_ABSENT');
   });
+
+  it('reports PACKAGE_PIN_SELF_HOST for arkgate mother tree shape', () => {
+    fs.writeFileSync(
+      path.join(tmp, 'package.json'),
+      JSON.stringify({ name: 'arkgate', version: '4.1.0' }, null, 2)
+    );
+    fs.mkdirSync(path.join(tmp, 'bin'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, 'bin', 'ark-check.mjs'), '// stub\n');
+    const truth = describePackageVersionDualTruth(tmp, { cliVersion: '4.1.0' });
+    expect(truth.code).toBe('PACKAGE_PIN_SELF_HOST');
+    expect(truth.dualTruth).toBe(false);
+    expect(truth.selfHost).toBe(true);
+  });
 });

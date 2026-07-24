@@ -5,7 +5,7 @@ import path from 'node:path';
 
 const UNVERIFIED = 'unverified';
 
-function packageInstallation(root) {
+export function packageInstallation(root) {
   const projectPackage = path.join(root, 'package.json');
   try {
     const own = JSON.parse(fs.readFileSync(projectPackage, 'utf8'));
@@ -13,7 +13,7 @@ function packageInstallation(root) {
       own?.name === 'arkgate' &&
       fs.statSync(path.join(root, 'bin', 'ark-check.mjs'), { throwIfNoEntry: false })?.isFile()
     ) {
-      return { installed: true, source: 'package.json + bin/ark-check.mjs (self-host)' };
+      return { installed: true, source: 'package.json + bin/ark-check.mjs (self-host)', selfHost: true };
     }
   } catch {
     // A missing/malformed project manifest is negative installation evidence.
@@ -24,12 +24,20 @@ function packageInstallation(root) {
     const manifest = JSON.parse(fs.readFileSync(resolved, 'utf8'));
     const binary = path.join(packageRoot, 'bin', 'ark-check.mjs');
     if (manifest?.name === 'arkgate' && fs.statSync(binary, { throwIfNoEntry: false })?.isFile()) {
-      return { installed: true, source: 'arkgate/package.json via project resolver' };
+      return {
+        installed: true,
+        source: 'arkgate/package.json via project resolver',
+        selfHost: false,
+      };
     }
   } catch {
     // Configuration text alone must never become installed=true.
   }
-  return { installed: false, source: 'arkgate/package.json unresolved from project' };
+  return {
+    installed: false,
+    source: 'arkgate/package.json unresolved from project',
+    selfHost: false,
+  };
 }
 
 function configuredEvidence(paths) {
@@ -92,9 +100,15 @@ export function buildEnforcementState(root, model) {
   const runtimeObserved = typeof localLadder.operationCovered === 'boolean';
   const operationCoverage = runtimeObserved ? localLadder.operationCovered : UNVERIFIED;
   const observedActive = runtimeObserved && operationCoverage === true;
-  const hard = Boolean(hardSupported && observedActive && localLadder.hard === true);
+  // FG-WRITEPATH / P0B-PIN-ABSENT: never hard:true without package resolve (pin + node_modules / self-host).
+  const hard = Boolean(
+    hardSupported &&
+      installed.installed &&
+      observedActive &&
+      localLadder.hard === true
+  );
   const localActive = runtimeObserved
-    ? observedActive
+    ? observedActive && installed.installed
     : hardSupported && hardPaths.length > 0 && installed.installed
       ? UNVERIFIED
       : false;

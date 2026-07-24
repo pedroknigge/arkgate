@@ -41,6 +41,8 @@ export function reportUnavailableAnalysis({
     runDoctor(root, config, files, rules, [], args.json, {
       configPath,
       configMissing: !fs.existsSync(configPath),
+      configRoot: args.configRoot ?? root,
+      configWalkedUp: args.configWalkedUp === true,
       parseHealth,
       completeness,
     });

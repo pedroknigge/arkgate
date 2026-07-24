@@ -15,7 +15,8 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BUDGETS = [
   { path: 'bin/ark-check.mjs', max: 100 },
   // 4.0.0 ArkRules write-path + inventory flags — was 1600 (loc 1671).
-  { path: 'bin/ark-check-runtime.mjs', max: 1750 },
+  // 4.1.x monorepo config walk-up (S2 / NEW-MONOREPO-CWD-WALKUP) — was 1750.
+  { path: 'bin/ark-check-runtime.mjs', max: 1900 },
   { path: 'bin/ark.mjs', max: 900 },
   { path: 'bin/lib/agent-gates.mjs', max: 150 },
   { path: 'bin/lib/mcp-adoption.mjs', max: 600 },
@@ -26,7 +27,8 @@ const BUDGETS = [
   // Product mandate honesty (coverage/baseline/writePath + design-weak flags) — was 980.
   // 4.0.0 packageVersionTruth + rulesUnderContract — was 1010 (loc 1014).
   // 4.1.0 productHonesty + mergePlanes wiring — was 1050 (loc 1062).
-  { path: 'bin/lib/doctor-plan.mjs', max: 1120 },
+  // FG01/S1 finished-with-debt + S2 pin nextAction / configRoot — was 1120.
+  { path: 'bin/lib/doctor-plan.mjs', max: 1240 },
   // 4.0.0 ArkRules start/init templates + dual-plane presets — was 650 (loc 870).
   { path: 'bin/lib/presets.mjs', max: 920 },
   { path: 'bin/lib/config-contract.mjs', max: 500 },
@@ -37,7 +39,8 @@ const BUDGETS = [
   // Design-depth / write-path / baseline legend for showcase HTML (split from renderer).
   // 4.1.0 productHonesty card + mergePlanes — was 320 (loc 370).
   // 4.1.0 review: baselineSplit parity inputs — was 400 (loc 427).
-  { path: 'bin/lib/html-report-depth.mjs', max: 460 },
+  // FG01 HTML productHonesty parity (activeBlocking + pin) — was 460.
+  { path: 'bin/lib/html-report-depth.mjs', max: 480 },
   // X04 grew the advisory renderer a third section (physicalCohesion).
   // 4.0.0 ArkRules advisory section — was 280 (loc 281).
   { path: 'bin/lib/html-report-advisories.mjs', max: 300 },

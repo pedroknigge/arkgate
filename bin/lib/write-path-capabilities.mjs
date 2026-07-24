@@ -19,7 +19,7 @@ import {
 } from './host-support-matrix.mjs';
 import { detectActiveAgentHost } from './skill-install.mjs';
 import { detectCiEnforcement } from './weakest-link.mjs';
-import { buildEnforcementState } from './enforcement-state.mjs';
+import { buildEnforcementState, packageInstallation } from './enforcement-state.mjs';
 
 export const WRITE_CAPABILITY_NAMES = [
   'hard-write',
@@ -46,29 +46,47 @@ function operationCovered(profile, operation) {
   return profile.hookOperations.some((candidate) => candidate.toLowerCase() === normalized);
 }
 
-function buildEnforcementLadder(activeHost, support, evidence, attempt) {
-  const localInstalled = evidence['hard-write'].length > 0;
+/**
+ * Local write ladder. Hook assets alone never prove hard without package install.
+ * @param {string} activeHost
+ * @param {object|null} support
+ * @param {Record<string, string[]>} evidence
+ * @param {object|undefined} attempt
+ * @param {{ packageInstalled?: boolean }} [opts]
+ */
+function buildEnforcementLadder(activeHost, support, evidence, attempt, opts = {}) {
+  const hookConfigured = evidence['hard-write'].length > 0;
+  const packageInstalled = opts.packageInstalled !== false;
   const observedPreTool = attempt?.boundary === 'pre-tool';
   const covered = observedPreTool && operationCovered(support, attempt.operation);
+  // P0B-PIN-ABSENT-WRITEPATH: never hard:true without pin+node_modules (packageInstalled).
   const hard = Boolean(
-    support?.capabilities['hard-write'] && (localInstalled || observedPreTool) && covered
+    support?.capabilities['hard-write'] &&
+      packageInstalled &&
+      (hookConfigured || observedPreTool) &&
+      covered
   );
-  const inferredActive = (installed) => (installed ? 'unverified' : false);
+  const inferredActive = (configured) =>
+    configured && packageInstalled ? 'unverified' : false;
   return {
     schemaVersion: '1.0',
     activeHost,
     localWrite: boundaryState({
       supported: Boolean(support?.capabilities['hard-write']),
       evidence: evidence['hard-write'],
-      active: observedPreTool ? covered : inferredActive(localInstalled),
+      active: observedPreTool
+        ? covered && packageInstalled
+        : inferredActive(hookConfigured),
       bypassable: !hard,
       hard,
       extra: {
-        installed: localInstalled || observedPreTool,
+        // Ladder "installed" here means hook assets; package install lives in enforcementState.
+        installed: hookConfigured || observedPreTool,
+        packageInstalled,
         completePatch: Boolean(covered && attempt?.completePatch),
         coverage: covered && attempt?.completePatch ? 'complete-patch' : support?.hookSurface ?? null,
         ...(observedPreTool
-          ? { operation: attempt.operation, operationCovered: covered }
+          ? { operation: attempt.operation, operationCovered: covered && packageInstalled }
           : { operationCovered: 'unverified' }),
       },
     }),
@@ -441,20 +459,31 @@ export function buildWritePathCapabilityModel(root, explicitHost, attempt) {
         'merge-gate': [...inventory.evidence['merge-gate']],
       };
 
+  const pkg = packageInstallation(root);
   const model = {
     activeHost,
     support: getHostSupportProfile(activeHost),
     capabilities: capabilityMap(capabilityEvidence),
     capabilityEvidence,
+    packageInstallation: pkg,
     enforcementLadder: buildEnforcementLadder(
       activeHost,
       getHostSupportProfile(activeHost),
       capabilityEvidence,
-      attempt
+      attempt,
+      { packageInstalled: pkg.installed === true }
     ),
     inventory,
   };
   model.enforcementState = buildEnforcementState(root, { ...model, ci });
   model.enforcementLadder.ciMerge.requiredStatus = model.enforcementState.ciMerge.required;
+  // Ladder/state agreement stamp for pin-absent consumers (configured ≠ installed).
+  if (pkg.installed !== true) {
+    model.packagePinHonesty = {
+      code: 'PACKAGE_PIN_ABSENT',
+      hard: false,
+      note: 'arkgate not resolved from project — ladder and enforcementState hard stay false (configured hooks ≠ installed).',
+    };
+  }
   return model;
 }

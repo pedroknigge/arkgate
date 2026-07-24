@@ -222,6 +222,22 @@ export function readDeclaredArkgatePin(root) {
 }
 
 /**
+ * True when this tree *is* the arkgate package (mother / self-host dogfood).
+ * Consumers never match: they depend on arkgate; they are not named arkgate with bin/.
+ * @param {string} root
+ */
+export function isArkgateSelfHostRoot(root) {
+  try {
+    const pkgPath = path.join(root, 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    if (pkg?.name !== 'arkgate') return false;
+    return fs.statSync(path.join(root, 'bin', 'ark-check.mjs'), { throwIfNoEntry: false })?.isFile() === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Dual-truth: CLI/package-shipped version vs consumer package.json pin.
  * Used by doctor + upgrade so agents never confuse managed-asset CLI with CI pin.
  *
@@ -231,8 +247,9 @@ export function readDeclaredArkgatePin(root) {
  *   dualTruth: boolean,
  *   cliVersion: string|null,
  *   declaredPin: string|null,
- *   code: 'PACKAGE_PIN_BEHIND_CLI' | 'PACKAGE_PIN_MATCHES' | 'PACKAGE_PIN_ABSENT' | 'CLI_VERSION_UNKNOWN',
- *   note: string
+ *   code: 'PACKAGE_PIN_BEHIND_CLI' | 'PACKAGE_PIN_MATCHES' | 'PACKAGE_PIN_ABSENT' | 'PACKAGE_PIN_SELF_HOST' | 'CLI_VERSION_UNKNOWN',
+ *   note: string,
+ *   selfHost?: boolean,
  * }}
  */
 export function describePackageVersionDualTruth(root, opts = {}) {
@@ -241,6 +258,7 @@ export function describePackageVersionDualTruth(root, opts = {}) {
       ? opts.cliVersion
       : arkPackageVersion();
   const declaredPin = readDeclaredArkgatePin(root);
+  const selfHost = isArkgateSelfHostRoot(root);
   if (!cliVersion) {
     return {
       dualTruth: false,
@@ -248,15 +266,28 @@ export function describePackageVersionDualTruth(root, opts = {}) {
       declaredPin,
       code: 'CLI_VERSION_UNKNOWN',
       note: 'Could not read shipped arkgate package version for this CLI.',
+      selfHost,
     };
   }
   if (!declaredPin) {
+    // Mother / library author tree: package IS arkgate — no consumer pin required.
+    if (selfHost || process.env.ARK_MOTHER_CLI === '1' || process.env.ARK_MOTHER_CLI === 'true') {
+      return {
+        dualTruth: false,
+        cliVersion,
+        declaredPin: null,
+        code: 'PACKAGE_PIN_SELF_HOST',
+        note: 'This tree is arkgate itself (self-host); no consumer package.json pin is required.',
+        selfHost: true,
+      };
+    }
     return {
       dualTruth: false,
       cliVersion,
       declaredPin: null,
       code: 'PACKAGE_PIN_ABSENT',
       note: 'No arkgate pin in package.json; CI/npx may not resolve this CLI version.',
+      selfHost: false,
     };
   }
   // Normalize ^x.y.z / ~x.y.z / x.y.z for comparison of leading version token.
@@ -294,6 +325,7 @@ export function describePackageVersionDualTruth(root, opts = {}) {
       declaredPin,
       code: 'PACKAGE_PIN_BEHIND_CLI',
       note: `Managed CLI is arkgate@${cliVersion} but package.json pins ${declaredPin}. Bump the pin or re-run install so CI resolves the same version (common after upgrade --no-install).`,
+      selfHost,
     };
   }
   return {
@@ -302,6 +334,7 @@ export function describePackageVersionDualTruth(root, opts = {}) {
     declaredPin,
     code: 'PACKAGE_PIN_MATCHES',
     note: `package.json pin ${declaredPin} is aligned with CLI arkgate@${cliVersion}.`,
+    selfHost,
   };
 }
 
