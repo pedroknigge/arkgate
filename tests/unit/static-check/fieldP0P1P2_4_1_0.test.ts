@@ -726,3 +726,174 @@ describe('P0-A route-group API shells', () => {
     ).toBe('ApplicationOrchestration');
   });
 });
+
+describe('R-round: type-only non-blocking + honesty parity locks', () => {
+  it('ark-check exit 0 for type-only-only tree; value still fails', () => {
+    const { spawnSync } = require('node:child_process') as typeof import('node:child_process');
+    const check = path.resolve('bin/ark-check.mjs');
+    const typeOnlyRoot = mk();
+    fs.mkdirSync(path.join(typeOnlyRoot, 'src/app'), { recursive: true });
+    fs.mkdirSync(path.join(typeOnlyRoot, 'src/kernel'), { recursive: true });
+    fs.writeFileSync(
+      path.join(typeOnlyRoot, 'src/kernel/api.ts'),
+      'export type Api = number;\nexport const api = 1;\n'
+    );
+    fs.writeFileSync(
+      path.join(typeOnlyRoot, 'src/app/types.ts'),
+      "import type { Api } from '../kernel/api';\nexport const x: Api = 1;\n"
+    );
+    fs.writeFileSync(
+      path.join(typeOnlyRoot, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          { name: 'AppOrchestration', patterns: ['src/app/**'] },
+          { name: 'Kernel', patterns: ['src/kernel/**'] },
+        ],
+        rules: [{ from: 'AppOrchestration', to: 'Kernel', allowed: false }],
+      })
+    );
+    const typeOnlyRun = spawnSync(
+      process.execPath,
+      [check, '--root', typeOnlyRoot, '--config', 'ark.config.json', '--json'],
+      { encoding: 'utf8' }
+    );
+    expect(typeOnlyRun.status, typeOnlyRun.stderr + typeOnlyRun.stdout).toBe(0);
+    const typeJson = JSON.parse(typeOnlyRun.stdout);
+    expect(typeJson.ok).toBe(true);
+    expect(typeJson.violations?.some((v: { typeOnly?: boolean }) => v.typeOnly)).toBe(true);
+    // Banner path uses same blocking filter — human mode should not red-X type-only-only.
+    const human = spawnSync(
+      process.execPath,
+      [check, '--root', typeOnlyRoot, '--config', 'ark.config.json'],
+      { encoding: 'utf8' }
+    );
+    expect(human.status).toBe(0);
+    expect(human.stdout + human.stderr).toMatch(/passed|type-only placement/i);
+    expect(human.stdout + human.stderr).not.toMatch(/✖.*violation/);
+
+    // Value edge still fails.
+    fs.writeFileSync(
+      path.join(typeOnlyRoot, 'src/app/value.ts'),
+      "import { api } from '../kernel/api';\nexport const r = api;\n"
+    );
+    const valueRun = spawnSync(
+      process.execPath,
+      [check, '--root', typeOnlyRoot, '--config', 'ark.config.json', '--json'],
+      { encoding: 'utf8' }
+    );
+    expect(valueRun.status).not.toBe(0);
+  });
+
+  it('library evaluateArchitectureGraph type-only is failsStrict false; adapter severity warning', async () => {
+    const { toAdapterDiagnostic } = await import('../../../src/domain/adapterContract');
+    const result = evaluateArchitectureGraph({
+      config: { layers: [] },
+      rules: [{ from: 'A', to: 'B', allowed: false }],
+      files: ['a.ts', 'b.ts'],
+      contentViolations: [],
+      edges: [
+        {
+          from: 'a.ts',
+          fromLayer: 'A',
+          to: 'b.ts',
+          toLayer: 'B',
+          line: 1,
+          kind: 'import',
+          typeOnly: true,
+        },
+      ],
+    });
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0]?.failsStrict).toBe(false);
+    expect(result.violations[0]?.severity).toBe('warning');
+    const diag = toAdapterDiagnostic(result.violations[0]!);
+    expect(diag.severity).toBe('warning');
+  });
+
+  it('HTML productHonesty dirty-freeze uses caller baselineSplit (not recomputed from active-only)', async () => {
+    const { buildReportDepthPayload } = await import('../../../bin/lib/html-report-depth.mjs');
+    const root = mk();
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/**'] }],
+        rules: [],
+      })
+    );
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/a.ts'), 'export const a = 1;\n');
+    // Mid-range freeze (5–9) needs suppressed > 0 to be dirty.
+    const payload = buildReportDepthPayload(
+      root,
+      JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8')),
+      [path.join(root, 'src/a.ts')],
+      {
+        governed: { percent: 100, totalFiles: 1, classifiedFiles: 1 },
+        emptyScope: false,
+      },
+      [], // active already filtered empty
+      {
+        suppressedCount: 6,
+        totalViolationCount: 6,
+        frozenKeys: 6,
+        activeCount: 0,
+      }
+    );
+    expect(payload.designDepth.productHonesty.reasonIds).toContain('dirty-freeze');
+  });
+
+  it('ESLint peerIsolation + type-only stays error severity (hard)', () => {
+    const root = mk();
+    fs.writeFileSync(
+      path.join(root, 'tsconfig.json'),
+      JSON.stringify({ compilerOptions: { baseUrl: '.', paths: { '@/*': ['src/*'] } } })
+    );
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [{ name: 'Features', patterns: ['src/features/**'] }],
+        rules: [
+          {
+            from: 'Features',
+            to: 'Features',
+            allowed: false,
+            peerIsolation: true,
+            sliceFolders: ['features'],
+          },
+        ],
+      })
+    );
+    fs.mkdirSync(path.join(root, 'src/features/auth'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/features/billing'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/features/billing/types.ts'), 'export type BillId = string;\n');
+    const fromFile = path.join(root, 'src/features/auth/x.ts');
+    fs.writeFileSync(fromFile, "import type { BillId } from '@/features/billing/types';\nexport type T = BillId;\n");
+
+    const reports: Array<Record<string, unknown>> = [];
+    const listener = noDomainInfraImports.create({
+      filename: fromFile,
+      report(desc) {
+        reports.push(desc);
+      },
+      sourceCode: { getScope: () => undefined },
+    });
+    listener.ImportDeclaration?.({
+      type: 'ImportDeclaration',
+      importKind: 'type',
+      source: { value: '@/features/billing/types' },
+      specifiers: [{ type: 'ImportSpecifier', importKind: 'type' }],
+      loc: { start: { line: 1, column: 0 } },
+    });
+    expect(reports.length).toBe(1);
+    const diagnostic = reports[0]?.diagnostic as {
+      severity?: string;
+      evidence?: { peerIsolation?: boolean; typeOnly?: boolean };
+    };
+    expect(diagnostic?.evidence?.peerIsolation).toBe(true);
+    expect(diagnostic?.evidence?.typeOnly).toBe(true);
+    expect(diagnostic?.severity).toBe('error');
+  });
+});

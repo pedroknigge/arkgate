@@ -53,7 +53,12 @@ function nextActionForDiagnostic(ruleId, evidence, violation) {
 }
 export function toAdapterDiagnostic(violation, fallbackSeverity = 'error') {
     const ruleId = text(violation.ruleId) ?? text(violation.code) ?? 'ARK_UNKNOWN';
-    const severity = violation.severity === 'warning' ? 'warning' : fallbackSeverity;
+    // Type-only placement debt (failsStrict:false / typeOnly non-peer) is warning severity.
+    const severity = violation.severity === 'warning' ||
+        violation.failsStrict === false ||
+        (violation.typeOnly === true && violation.peerIsolation !== true)
+        ? 'warning'
+        : fallbackSeverity;
     const evidence = {
         ...(text(violation.target) ? { target: text(violation.target) } : {}),
         ...(text(violation.fromLayer) ? { fromLayer: text(violation.fromLayer) } : {}),
@@ -129,6 +134,7 @@ export function createAdapterResult(input) {
         }
     }
     const diagnostics = [
+        // toAdapterDiagnostic maps failsStrict:false / typeOnly non-peer → warning severity.
         ...(input.violations ?? []).map((item) => toAdapterDiagnostic(item, 'error')),
         ...(input.warnings ?? []).map((item) => toAdapterDiagnostic(item, 'warning')),
     ];

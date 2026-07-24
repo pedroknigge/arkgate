@@ -117,7 +117,9 @@ export function evaluateArchitectureGraph(
       message: typePlacementDebt
         ? `${baseMessage} (type-only — type placement debt; prefer SharedTypes / owning layer; not runtime coupling)`
         : baseMessage,
-      ...(typePlacementDebt ? { failsStrict: false as const } : {}),
+      ...(typePlacementDebt
+        ? { failsStrict: false as const, severity: 'warning' as const }
+        : {}),
     });
   }
 

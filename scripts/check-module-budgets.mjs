@@ -36,7 +36,8 @@ const BUDGETS = [
   { path: 'bin/lib/html-report.mjs', max: 1550 },
   // Design-depth / write-path / baseline legend for showcase HTML (split from renderer).
   // 4.1.0 productHonesty card + mergePlanes — was 320 (loc 370).
-  { path: 'bin/lib/html-report-depth.mjs', max: 400 },
+  // 4.1.0 review: baselineSplit parity inputs — was 400 (loc 427).
+  { path: 'bin/lib/html-report-depth.mjs', max: 460 },
   // X04 grew the advisory renderer a third section (physicalCohesion).
   // 4.0.0 ArkRules advisory section — was 280 (loc 281).
   { path: 'bin/lib/html-report-advisories.mjs', max: 300 },

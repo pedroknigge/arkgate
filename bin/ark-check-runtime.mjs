@@ -1368,12 +1368,20 @@ async function main() {
     const existingOrigin = args.resetOrigin
       ? null
       : readJsonSafe(path.join(reportsDir(root), 'origin.json'));
+    // Pass the same baseline split as doctor so productHonesty dirty-freeze matches.
+    const reportBaseline = readBaseline(root, args.baseline || '.ark-baseline.json');
     const { adoption: adoptionForReport, designDepth } = buildReportDepthPayload(
       root,
       config,
       files,
       coverage,
-      activeViolations
+      activeViolations,
+      {
+        suppressedCount: suppressed.length,
+        totalViolationCount: violations.length,
+        frozenKeys: reportBaseline.exists ? reportBaseline.keys.size : 0,
+        activeCount: activeViolations.length,
+      }
     );
     const reportPayload = {
       root,
@@ -1526,9 +1534,14 @@ async function main() {
     if (designCheck.failureText()) console.error(designCheck.failureText());
     if (!analysisComplete) {
       console.error(color.yellow(analysisIncompleteStatement(completeness)));
-    } else if (activeViolations.length === 0 && (policyDelta?.valid ?? true)) {
+    } else if (blockingViolations.length === 0 && (policyDelta?.valid ?? true)) {
+      const placementDebt = activeViolations.filter((v) => v.failsStrict === false);
       const advisoryOnly = warnings.length > 0 && strictWarnings.length === 0;
-      if (warnings.length === 0) {
+      if (placementDebt.length > 0) {
+        console.log(
+          `${color.green('✔')} Ark check passed with ${placementDebt.length} type-only placement debt (non-blocking; prefer SharedTypes / owning layer).${baselineNote}`
+        );
+      } else if (warnings.length === 0) {
         console.log(`${color.green('✔')} Ark check passed.${baselineNote}`);
       } else if (args.strictConfig && strictWarnings.length > 0) {
         console.error(
@@ -1545,16 +1558,16 @@ async function main() {
       }
     } else {
       console.error(
-        activeViolations.length > 0
-          ? `${color.red('✖')} ${activeViolations.length} violation(s).${baselineNote}`
+        blockingViolations.length > 0
+          ? `${color.red('✖')} ${blockingViolations.length} violation(s).${baselineNote}`
           : `${color.red('✖')} Policy transition rejected.${baselineNote}`
       );
     }
 
     // On a large violation set, print the ranked edge breakdown so the wall of failures reads
     // as an ordered burn-down (and flags a concentrated edge as a likely contract bug).
-    if (activeViolations.length >= CONCENTRATION_MIN_VIOLATIONS) {
-      printViolationBreakdown(summarizeViolations(activeViolations), { toStderr: true });
+    if (blockingViolations.length >= CONCENTRATION_MIN_VIOLATIONS) {
+      printViolationBreakdown(summarizeViolations(blockingViolations), { toStderr: true });
     }
 
     printSkillAndCodexGapHints(root, {

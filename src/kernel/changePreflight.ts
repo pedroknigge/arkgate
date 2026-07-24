@@ -131,6 +131,11 @@ export function preflightChange(input: AnalyzeChangeInput): ChangePreflightResul
         ...(edge.toLayer ? { toLayer: edge.toLayer } : {}),
         line: edge.evidence.line,
         kind: 'import',
+        // Thread type-only when lexical IR carries it (additive optional field).
+        ...((edge as { typeOnly?: boolean }).typeOnly ? { typeOnly: true } : {}),
+        ...((edge as { namedBindingsTypeOnly?: boolean }).namedBindingsTypeOnly
+          ? { namedBindingsTypeOnly: true }
+          : {}),
       })),
   });
 
@@ -151,6 +156,10 @@ export function preflightChange(input: AnalyzeChangeInput): ChangePreflightResul
     ...violation,
     nextAction: deterministicNextAction(violation),
   }));
+  // Match CLI/library merge: failsStrict:false type-only placement debt does not block.
+  const blockingViolations = violations.filter(
+    (violation) => (violation as { failsStrict?: boolean }).failsStrict !== false
+  );
   const convergence = input.changeMap
     ? analyzeArchitectureConvergence({
         changeMap: input.changeMap,
@@ -170,7 +179,7 @@ export function preflightChange(input: AnalyzeChangeInput): ChangePreflightResul
     valid:
       base.completeness === 'complete' &&
       candidate.valid &&
-      violations.length === 0 &&
+      blockingViolations.length === 0 &&
       (convergence?.structurallyConverged ?? true),
     readOnly: true,
     policyHash: input.contract.policyHash,

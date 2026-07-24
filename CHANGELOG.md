@@ -28,8 +28,9 @@ Z09 / RB-11 field claims. **Status: prepared** (not on npm until publish).
   merge (layers vs enforced structure sensors vs invariants) and dual-plane stamp (heuristics vs
   catalog+coverage; never one score).
 - **Type-edge policy fields (P1-type):** Doctor `violations.typeEdgePolicy` + SharedTypes
-  guidance; type-only denied edges report as placement warnings (`failsStrict: false`), value
-  edges still block merge.
+  guidance; type-only denied edges stay on the **violations** list with `failsStrict: false`
+  and diagnostics **severity: warning** (non-blocking for merge/exit/library `valid`). Value
+  edges still block. **Exception:** `peerIsolation` type-only edges stay hard.
 
 ### Improved
 

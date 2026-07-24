@@ -36,9 +36,22 @@ function esc(value) {
  * @param {object} config
  * @param {string[]} files
  * @param {object} coverage
- * @param {object[]} activeViolations
+ * @param {object[]} activeViolations already baseline-filtered active findings
+ * @param {{
+ *   suppressedCount?: number,
+ *   totalViolationCount?: number,
+ *   frozenKeys?: number,
+ *   activeCount?: number,
+ * }} [baselineSplit] same numbers doctor uses (do not recompute from active-only list)
  */
-export function buildReportDepthPayload(root, config, files, coverage, activeViolations = []) {
+export function buildReportDepthPayload(
+  root,
+  config,
+  files,
+  coverage,
+  activeViolations = [],
+  baselineSplit = {}
+) {
   const designSmells = detectDesignSmells(root, config, files, coverage);
   const designFitness = summarizeDesignFitness(designSmells, {
     activeViolations: activeViolations.length,
@@ -55,22 +68,39 @@ export function buildReportDepthPayload(root, config, files, coverage, activeVio
   const goldenPattern = summarizeGoldenPattern(loadGoldenPattern(root));
   const adoption = collectAdoptionGaps(root, config, coverage);
   const baseline = readBaseline(root, '.ark-baseline.json');
-  const occurrenceKeys = baselineOccurrenceKeys(activeViolations);
-  const suppressed = baseline.exists
-    ? occurrenceKeys.filter((key) => baseline.keys.has(key)).length
-    : 0;
-  const activeCount = Math.max(0, activeViolations.length - suppressed);
+  // Prefer caller-supplied baseline split (doctor parity). Recomputing suppressed from an
+  // already-filtered activeViolations list always yields 0 and hides dirty-freeze.
+  const suppressed =
+    typeof baselineSplit.suppressedCount === 'number'
+      ? baselineSplit.suppressedCount
+      : baseline.exists
+        ? baselineOccurrenceKeys(activeViolations).filter((key) => baseline.keys.has(key)).length
+        : 0;
+  const frozenKeys =
+    typeof baselineSplit.frozenKeys === 'number'
+      ? baselineSplit.frozenKeys
+      : baseline.exists
+        ? baseline.keys.size
+        : 0;
+  const activeCount =
+    typeof baselineSplit.activeCount === 'number'
+      ? baselineSplit.activeCount
+      : Math.max(0, activeViolations.length - suppressed);
+  const totalViolations =
+    typeof baselineSplit.totalViolationCount === 'number'
+      ? baselineSplit.totalViolationCount
+      : activeViolations.length + suppressed;
   const coverageHonesty = buildCoverageHonesty({
     percent: coverage?.governed?.percent,
     totalFiles: coverage?.governed?.totalFiles,
     emptyScope: coverage?.emptyScope === true || (coverage?.governed?.totalFiles ?? 0) === 0,
   });
   const baselineHonesty = buildBaselineHonesty({
-    exists: baseline.exists,
-    frozenKeys: baseline.exists ? baseline.keys.size : 0,
+    exists: baseline.exists || frozenKeys > 0,
+    frozenKeys,
     activeViolations: activeCount,
     suppressed,
-    totalViolations: activeViolations.length,
+    totalViolations,
   });
   const writePath = adoption.writePath;
   const writePathHonesty = buildWritePathHonesty(
