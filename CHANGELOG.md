@@ -5,6 +5,20 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Fixed
+
+- **Stale global CLI vs project `arkgate` (upgrade footgun):** `ark upgrade` /
+  `ark update` now **fail closed** when the running CLI package root is outside
+  the project's `node_modules/arkgate` **and** the running version is older than
+  the installed project package. Message points at
+  `npx arkgate upgrade …` / `node node_modules/arkgate/bin/ark.mjs upgrade …`.
+  Does not block project-local CLI, newer globals, or projects with no local
+  install yet. Field context: global Homebrew **2.x** mutative upgrade next to
+  3.8+/4.0 projects (see [4.0.0 release notes](docs/releases/4.0.0.md#field-footgun--global-arkgate-2x-on-path)).
+- **`/ark-upgrade` skill:** procedure step 1 resolves the **project-local** CLI
+  first, probes for managed upgrade (`--plan-digest`), and aborts when only an
+  old PATH binary is available.
+
 ## 4.0.0 — 2026-07-24
 
 **Major** over 3.9.2. **Breaking:** deprecated root subpaths `arkgate/runtime` and `arkgate/nestjs`
@@ -77,6 +91,10 @@ case-study docs are scaffolding, not a closed field gate.
 - **Dual-truth residual:** `ark upgrade --no-install` can refresh managed assets while leaving
   package.json on an older pin — doctor exposes `packageVersionTruth` and upgrade JSON/human notes
   when the pin is behind the CLI.
+- **Field note — global 2.x PATH:** bare `ark upgrade` from a global **arkgate 2.x** install is
+  mutative (pre managed content-identity) and unsafe next to 3.8+/4.0 projects — prefer
+  `npx arkgate upgrade …`. Documented in [4.0.0 release notes](docs/releases/4.0.0.md#field-footgun--global-arkgate-2x-on-path);
+  CLI fail-closed guard ships under Unreleased.
 
 ## 3.9.2 — 2026-07-23
 

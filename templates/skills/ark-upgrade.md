@@ -43,7 +43,10 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
 
 ## Safety contract
 
-- `ark upgrade` is read-only. It reports the selected profile and hosts, every
+- Always invoke the **project-local** CLI (`npx arkgate` /
+  `node node_modules/arkgate/bin/ark.mjs`). Bare PATH `ark` / `arkgate` is unsafe
+  when a global 2.x install shadows the project (mutative legacy upgrade).
+- `ark upgrade` (managed era) is read-only. It reports the selected profile and hosts, every
   managed asset, its content state, and the exact next command.
 - The first `ark upgrade --apply` updates the dependency and lockfile, then runs
   the newly installed CLI to produce another read-only preview. It does **not**
@@ -72,16 +75,51 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
 
 ## Procedure
 
-1. **Establish versions and context.** Read the installed
+1. **Resolve the project CLI (mandatory before any upgrade command).** Prefer the
+   **project-local** binary — never bare `ark` / `arkgate` from PATH unless you
+   prove it is this project's install.
+
+   Resolution order:
+
+   1. `node node_modules/arkgate/bin/ark.mjs` from the repository root (both `arkgate`
+      and `ark` package bins map to this file).
+   2. Package-manager exec from the project: `npx arkgate`, `pnpm exec arkgate`,
+      `yarn arkgate`, etc.
+
+   **Do not** use bare `ark` / `arkgate` from PATH unless `which ark` (or the
+   resolved realpath) is under this project's `node_modules/arkgate`, or the
+   binary reports the **same** version as `node_modules/arkgate/package.json` and
+   supports managed upgrade.
+
+   **Capability probe (abort if missing):** run
+   `node node_modules/arkgate/bin/ark.mjs upgrade --help` (or the resolved local
+   equivalent) and require a **managed upgrade** surface — help text must mention
+   `--plan-digest` (and read-only `upgrade --json` preview). If the only available
+   CLI is old (global Homebrew / npm global 2.x, or any binary whose help lacks
+   `--plan-digest`), **stop**: skill incomplete; do **not** preview or apply.
+   Global 2.x `ark upgrade` is mutative and can rewrite managed skills, forcing a
+   later `--accept-conflicts` recovery.
+
+   **Recovery (preferred → optional):**
+
+   - Preferred: always use the project-local CLI —
+     `npx arkgate upgrade …` or
+     `node node_modules/arkgate/bin/ark.mjs upgrade …`
+   - Optional: refresh a global install with `npm i -g arkgate@latest` only if the
+     user wants a global binary; still prefer project-local for this procedure.
+
+   Record the resolved CLI path/version, read
    `node_modules/arkgate/package.json`, query `npm view arkgate version`, identify
    the repository package manager, and open the intervening entries in the
    shipped `CHANGELOG.md` (fall back to registry or release notes and name that
    source). Do not infer “latest” from `node_modules` alone.
 
-2. **Preview managed content.** Run:
+2. **Preview managed content.** Using the **project-local** CLI from step 1
+   (never a bare PATH `ark` that failed the probe), run:
 
    ```bash
-   ark upgrade --json
+   npx arkgate upgrade --json
+   # or: node node_modules/arkgate/bin/ark.mjs upgrade --json
    ```
 
    Pass `--root <path>` and `--tools <active-host>` when selection would otherwise
@@ -89,10 +127,10 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
    that customized files remain non-applying and that any deletion/conflict is
    blocked.
 
-3. **Update and re-preview.** If the registry is newer, run:
+3. **Update and re-preview.** If the registry is newer, run (project-local CLI):
 
    ```bash
-   ark upgrade --apply
+   npx arkgate upgrade --apply
    ```
 
    This updates through the detected package manager and hands control to the new
@@ -105,20 +143,25 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
    off, and prove `pnpm install --frozen-lockfile` succeeds.
 
 4. **Apply only the reviewed candidate.** When there are no blocked assets, run
-   the preview's exact `nextCommand`, whose shape is:
+   the preview's **exact** `nextCommand` as emitted (JSON field / human “Apply the
+   exact preview with: …”). That command is already **project-local**
+   (`npx arkgate` / `pnpm exec arkgate` / `yarn arkgate` — never bare PATH `ark`).
+   Do **not** rewrite it to bare `ark upgrade`; pasting through a global 2.x PATH
+   reintroduces the mutative footgun. Shape:
 
    ```bash
-   ark upgrade --apply --no-install --plan-digest <preview-digest>
+   npx arkgate upgrade --apply --no-install --plan-digest <preview-digest>
    ```
 
    If recorded deletion/conflict recovery is desired, ask first and then add
    `--accept-conflicts`. Never add it merely to make the run green. Run a second
    preview and require `summary.changed: 0`.
 
-5. **Verify enforcement and architecture.** Run `ark-check --doctor --json` and
+5. **Verify enforcement and architecture.** Run
+   `npx arkgate-check --doctor --json` (or the project-local `ark-check`) and
    the same fail-closed architecture command used by managed apply (normally
-   `ark-check --root . --config ark.config.json --strict-merge --json`). Require
-   `completeness: "complete"` and `ok: true`. Treat provider-unavailable CI
+   `npx arkgate-check --root . --config ark.config.json --strict-merge --json`).
+   Require `completeness: "complete"` and `ok: true`. Treat provider-unavailable CI
    required-check evidence as `unverified`, never as proof that merges are
    blocked. If new violations appear, hand off to `/ark-fix` for a small set or
    `/ark-loop` / `/ark-autopilot` for residual debt; do not regenerate a baseline

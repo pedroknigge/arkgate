@@ -90,6 +90,19 @@ describe('skill surface inventory', () => {
     expect(body).toMatch(/Deferred hosts.*never make Incomplete/i);
   });
 
+  it('ark-upgrade resolves project-local CLI and aborts on pre-managed PATH binary', () => {
+    const body = fs.readFileSync(path.join(SKILLS_DIR, 'ark-upgrade.md'), 'utf8');
+    expect(body).toMatch(/Resolve the project CLI/i);
+    expect(body).toMatch(/node_modules\/arkgate\/bin\/ark\.mjs/);
+    expect(body).not.toMatch(/arkgate\.mjs/);
+    expect(body).toMatch(/npx arkgate/);
+    expect(body).toMatch(/--plan-digest/);
+    expect(body).toMatch(/Do not.*bare `ark`|never bare `ark`/i);
+    expect(body).toMatch(/skill incomplete|stop/i);
+    expect(body).toMatch(/Global\/stale arkgate 2\.x|global 2\.x/i);
+    expect(body).toMatch(/exact.*nextCommand|Do \*\*not\*\* rewrite it to bare/i);
+  });
+
   it('autopilot/explore rank ENFORCE · design-weak Shape door (no false-done)', () => {
     const autopilot = fs.readFileSync(path.join(SKILLS_DIR, 'ark-autopilot.md'), 'utf8');
     const explore = fs.readFileSync(path.join(SKILLS_DIR, 'ark-explore.md'), 'utf8');

@@ -53,6 +53,8 @@ structure / invariants). Case study shape:
 
 **Upgrade note (4.0):** `ark upgrade --no-install` can refresh skills/gates while leaving
 `package.json` on an older pin—doctor exposes `packageVersionTruth` when the CLI is ahead.
+Prefer project-local `npx arkgate upgrade …` over bare PATH `ark` — global **2.x** is mutative
+and unsafe next to 3.8+/4.0 ([field footgun](releases/4.0.0.md#field-footgun--global-arkgate-2x-on-path)).
 
 ## 3. Make the contract real (via `/ark-contract`)
 
