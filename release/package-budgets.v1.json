@@ -3,19 +3,19 @@
   "packages": {
     "gate": {
       "path": ".",
-      "maxPackedBytes": 568884,
-      "maxUnpackedBytes": 1981532,
-      "maxFiles": 160,
+      "maxPackedBytes": 666338,
+      "maxUnpackedBytes": 2354004,
+      "maxFiles": 180,
       "measuredCandidate": {
-        "sha": "c06754ab27a73ed29d2fcf27f38a2bb494ef4b00",
-        "ciCandidateSha": "c06754ab27a73ed29d2fcf27f38a2bb494ef4b00",
+        "sha": "4404c48dc2ab0dfe33056cd417a8d0f492601a99",
+        "ciCandidateSha": "4404c48dc2ab0dfe33056cd417a8d0f492601a99",
         "ciRun": null,
-        "version": "3.8.1",
-        "packedBytes": 517167,
-        "unpackedBytes": 1801392,
-        "files": 145
+        "version": "4.0.0",
+        "packedBytes": 605761,
+        "unpackedBytes": 2140003,
+        "files": 159
       },
-      "exception": "Phase Z fixed ceilings at 534,000 / 1,796,000 / 149 from clean Linux arkgate@3.7.0 source 6fa5079 / PR candidate b4f25a4 (484,608 / 1,632,090 / 135). The 3.8.1 corrective patch remeasures the clean candidate on source c06754a (517,167 packed, 1,801,392 unpacked, 145 files) after peerIsolation fail-closed, pure-IR accuracy, and the Domain analysis pilot cluster. Owner-authorized recalibration retains at least 10% headroom: 568,884 packed bytes, 1,981,532 unpacked bytes, and 160 files. The 250 KB/1 MB aspirational target remains deferred; reconsider before ArkGate 4."
+      "exception": "ArkGate 4.0.0 dual-plane (ArkRules sensors/templates/schemas + dual-plane skills + AR04 removal). Clean candidate remeasure on source 4404c48: 605,761 packed / 2,140,003 unpacked / 159 files. Owner-authorized recalibration retains ≥10% headroom: 666,338 packed, 2,354,004 unpacked, 180 files. Previous 3.8.1 ceilings (568,884 / 1,981,532 / 160) are superseded for the major."
     },
     "runtime": {
       "path": "packages/runtime",

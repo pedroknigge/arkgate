@@ -14,7 +14,8 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 /** Soft product budgets (Q1/Q6). html-report is a deliberate large renderer. */
 const BUDGETS = [
   { path: 'bin/ark-check.mjs', max: 100 },
-  { path: 'bin/ark-check-runtime.mjs', max: 1600 },
+  // 4.0.0 ArkRules write-path + inventory flags — was 1600 (loc 1671).
+  { path: 'bin/ark-check-runtime.mjs', max: 1750 },
   { path: 'bin/ark.mjs', max: 900 },
   { path: 'bin/lib/agent-gates.mjs', max: 150 },
   { path: 'bin/lib/mcp-adoption.mjs', max: 600 },
@@ -23,8 +24,10 @@ const BUDGETS = [
   // Phase P: designFitness / designSmells doctor surface + patternBets plan IR.
   // 3.8.2 field DX (sessionNote, pure-layer opt-in, Codex legacy advisory) — was 920.
   // Product mandate honesty (coverage/baseline/writePath + design-weak flags) — was 980.
-  { path: 'bin/lib/doctor-plan.mjs', max: 1010 },
-  { path: 'bin/lib/presets.mjs', max: 650 },
+  // 4.0.0 packageVersionTruth + rulesUnderContract — was 1010 (loc 1014).
+  { path: 'bin/lib/doctor-plan.mjs', max: 1050 },
+  // 4.0.0 ArkRules start/init templates + dual-plane presets — was 650 (loc 870).
+  { path: 'bin/lib/presets.mjs', max: 920 },
   { path: 'bin/lib/config-contract.mjs', max: 500 },
   { path: 'bin/lib/weakest-link.mjs', max: 500 },
   { path: 'bin/lib/enforcement-profiles.mjs', max: 150 },
@@ -33,7 +36,8 @@ const BUDGETS = [
   // Design-depth / write-path / baseline legend for showcase HTML (split from renderer).
   { path: 'bin/lib/html-report-depth.mjs', max: 320 },
   // X04 grew the advisory renderer a third section (physicalCohesion).
-  { path: 'bin/lib/html-report-advisories.mjs', max: 280 },
+  // 4.0.0 ArkRules advisory section — was 280 (loc 281).
+  { path: 'bin/lib/html-report-advisories.mjs', max: 300 },
   // X04 R1/R2: physicalCohesion sensor + proposed reshape pilot (ADR 0010).
   { path: 'bin/lib/physical-cohesion.mjs', max: 260 },
   // Y01: bounded explicit verdict memory kept out of the X04 sensor/doctor orchestrator.

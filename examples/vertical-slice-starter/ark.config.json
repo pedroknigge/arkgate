@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/arkgate@2/schemas/ark.config.schema.json",
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "include": [
     "src"
   ],
@@ -102,5 +102,11 @@
       "to": "App",
       "allowed": false
     }
-  ]
+  ],
+  "arkRules": {
+    "Features": "arkrules/Features.json",
+    "Shared": "arkrules/Shared.json",
+    "Lib": "arkrules/Lib.json",
+    "App": "arkrules/App.json"
+  }
 }

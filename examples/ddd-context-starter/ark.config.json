@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/arkgate@2/schemas/ark.config.schema.json",
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "include": [
     "src"
   ],
@@ -330,5 +330,12 @@
       ],
       "message": "Bounded contexts must not import each other. Use shared kernel or integration events."
     }
-  ]
+  ],
+  "arkRules": {
+    "DomainModel": "arkrules/DomainModel.json",
+    "ApplicationOrchestration": "arkrules/ApplicationOrchestration.json",
+    "PresentationAdapters": "arkrules/PresentationAdapters.json",
+    "PersistenceAdapters": "arkrules/PersistenceAdapters.json",
+    "SharedKernel": "arkrules/SharedKernel.json"
+  }
 }

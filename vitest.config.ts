@@ -5,7 +5,8 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/**/*.test.ts'],
-    exclude: ['node_modules', 'dist'],
+    // Fixture trees under tests/fixtures are dogfood samples, not the product unit suite.
+    exclude: ['node_modules', 'dist', 'tests/fixtures/**'],
     setupFiles: ['tests/setup/isolateCodexHome.ts'],
     // This is a CLI test suite: most tests spawn `node bin/*.mjs` via synchronous execFileSync.
     // With many parallel worker forks all blocked in a child process at once, the reporter RPC
