@@ -57,8 +57,9 @@ export function peerIsolationEdges(layerNames, sliceFolders, message) {
 // (that carves out legitimate `src/shared/kernel/**` SharedKernel paths).
 export const FRAMEWORK_INTERNAL_EXCLUDE = ['src/kernel/**', '**/src/kernel/**'];
 /**
- * AR08 — attach lean arkRules map for layers that have starter templates.
- * Keeps root config lean; editable files live under arkrules/.
+ * AR08 — attach lean arkRules map. Keys are always exact project layer names.
+ * Sensor roles (domain-structure / orchestration / adapter-thin / generic) are
+ * independent of display names so renamed layers still get the right starter.
  */
 export const DEFAULT_ARKRULES_REFS = {
   DomainModel: 'arkrules/DomainModel.json',
@@ -67,33 +68,172 @@ export const DEFAULT_ARKRULES_REFS = {
   PersistenceAdapters: 'arkrules/PersistenceAdapters.json',
 };
 
-export function withDefaultArkRules(config) {
-  const layerNames = new Set((config.layers ?? []).map((layer) => layer.name));
-  const arkRules = {};
-  for (const [layer, rel] of Object.entries(DEFAULT_ARKRULES_REFS)) {
-    if (layerNames.has(layer)) arkRules[layer] = rel;
+/** Sensor roles used when selecting or synthesizing per-layer templates. */
+export const ARKRULES_SENSOR_ROLES = Object.freeze({
+  DOMAIN_STRUCTURE: 'domain-structure',
+  ORCHESTRATION: 'orchestration',
+  ADAPTER_THIN: 'adapter-thin',
+  GENERIC: 'generic',
+});
+
+/**
+ * Exact-name aliases → sensor role. Prefer this table over heuristics when the
+ * project uses a known vocabulary (hexagonal, monorepo field renames, etc.).
+ */
+export const LAYER_SENSOR_ROLE_ALIASES = Object.freeze({
+  // Domain / pure model
+  DomainModel: ARKRULES_SENSOR_ROLES.DOMAIN_STRUCTURE,
+  Domain: ARKRULES_SENSOR_ROLES.DOMAIN_STRUCTURE,
+  Entities: ARKRULES_SENSOR_ROLES.DOMAIN_STRUCTURE,
+  // Application / use cases
+  ApplicationOrchestration: ARKRULES_SENSOR_ROLES.ORCHESTRATION,
+  Application: ARKRULES_SENSOR_ROLES.ORCHESTRATION,
+  UseCases: ARKRULES_SENSOR_ROLES.ORCHESTRATION,
+  // Presentation / UI adapters
+  PresentationAdapters: ARKRULES_SENSOR_ROLES.ADAPTER_THIN,
+  Presentation: ARKRULES_SENSOR_ROLES.ADAPTER_THIN,
+  UI: ARKRULES_SENSOR_ROLES.ADAPTER_THIN,
+  WebPresentation: ARKRULES_SENSOR_ROLES.ADAPTER_THIN,
+  ApiComposition: ARKRULES_SENSOR_ROLES.ADAPTER_THIN,
+  // Persistence / infrastructure adapters
+  PersistenceAdapters: ARKRULES_SENSOR_ROLES.ADAPTER_THIN,
+  Infrastructure: ARKRULES_SENSOR_ROLES.ADAPTER_THIN,
+  Persistence: ARKRULES_SENSOR_ROLES.ADAPTER_THIN,
+  Data: ARKRULES_SENSOR_ROLES.ADAPTER_THIN,
+});
+
+/**
+ * Resolve a stable sensor role for a project layer name.
+ * Exact alias first, then light name heuristics, else generic.
+ */
+export function resolveLayerSensorRole(layerName) {
+  if (typeof layerName !== 'string' || layerName.length === 0) {
+    return ARKRULES_SENSOR_ROLES.GENERIC;
   }
-  if (Object.keys(arkRules).length === 0) return config;
-  return { ...config, arkRules: { ...(config.arkRules ?? {}), ...arkRules } };
+  if (LAYER_SENSOR_ROLE_ALIASES[layerName]) return LAYER_SENSOR_ROLE_ALIASES[layerName];
+  const n = layerName.toLowerCase();
+  if (/(^|[^a-z])(domain|entit)/.test(n) || n.includes('domainmodel')) {
+    return ARKRULES_SENSOR_ROLES.DOMAIN_STRUCTURE;
+  }
+  if (
+    n.includes('application') ||
+    n.includes('orchestr') ||
+    n.includes('usecase') ||
+    n.includes('use-case') ||
+    n.includes('use_case')
+  ) {
+    return ARKRULES_SENSOR_ROLES.ORCHESTRATION;
+  }
+  if (
+    n.includes('present') ||
+    n.includes('persist') ||
+    n.includes('infra') ||
+    n.includes('adapter') ||
+    n.includes('repository') ||
+    /(^|[^a-z])(ui|web|data)([^a-z]|$)/.test(n)
+  ) {
+    return ARKRULES_SENSOR_ROLES.ADAPTER_THIN;
+  }
+  return ARKRULES_SENSOR_ROLES.GENERIC;
 }
 
 /**
- * Copy starter arkrules/*.json templates into the project (AR08).
- * Skips existing files unless force=true.
+ * Pick the shipped archetype filename for a layer (role + presentation vs persistence cue).
+ * Returns null for generic molds.
+ */
+export function archetypeTemplateFileForLayer(layerName, role = resolveLayerSensorRole(layerName)) {
+  if (role === ARKRULES_SENSOR_ROLES.DOMAIN_STRUCTURE) return 'DomainModel.json';
+  if (role === ARKRULES_SENSOR_ROLES.ORCHESTRATION) return 'ApplicationOrchestration.json';
+  if (role === ARKRULES_SENSOR_ROLES.ADAPTER_THIN) {
+    const n = String(layerName).toLowerCase();
+    if (
+      n.includes('present') ||
+      n.includes('ui') ||
+      n.includes('web') ||
+      n.includes('page') ||
+      n.includes('widget') ||
+      n.includes('api')
+    ) {
+      return 'PresentationAdapters.json';
+    }
+    return 'PersistenceAdapters.json';
+  }
+  return null;
+}
+
+/** Relative path for a layer's arkrules file (always arkrules/<exactLayerName>.json). */
+export function arkRulesPathForLayer(layerName) {
+  return `arkrules/${layerName}.json`;
+}
+
+/**
+ * Build starter ArkRules JSON for a project layer: archetype clone with rewritten
+ * `layer` field, or an empty generic mold the agent can refine.
+ */
+export function buildArkRulesTemplateForLayer(layerName, role = resolveLayerSensorRole(layerName)) {
+  const archetype = archetypeTemplateFileForLayer(layerName, role);
+  if (archetype) {
+    const sourcePath = path.join(ARKRULES_TEMPLATES_DIR, archetype);
+    if (fs.existsSync(sourcePath)) {
+      try {
+        const parsed = JSON.parse(fs.readFileSync(sourcePath, 'utf8'));
+        return {
+          ...parsed,
+          layer: layerName,
+        };
+      } catch {
+        // Fall through to generic mold.
+      }
+    }
+  }
+  // Generic mold: valid empty contract keyed to the exact project layer name.
+  // Structure is empty so agents refine without inheriting the wrong sensors.
+  return {
+    $schema: 'https://unpkg.com/arkgate/schemas/ark.arkrules.schema.json',
+    schemaVersion: '1.0',
+    layer: layerName,
+    structure: [],
+    invariants: [],
+  };
+}
+
+/**
+ * Attach arkRules map for every declared layer. Keys = exact layer names.
+ * Existing map entries are preserved (never overwritten).
+ */
+export function withDefaultArkRules(config) {
+  const layers = config.layers ?? [];
+  if (layers.length === 0) return config;
+  const arkRules = { ...(config.arkRules ?? {}) };
+  let changed = false;
+  for (const layer of layers) {
+    const name = layer?.name;
+    if (typeof name !== 'string' || name.length === 0) continue;
+    if (arkRules[name]) continue;
+    arkRules[name] = arkRulesPathForLayer(name);
+    changed = true;
+  }
+  if (!changed) return config;
+  return { ...config, arkRules };
+}
+
+/**
+ * Write starter arkrules/*.json for each arkRules map entry (AR08).
+ * Uses sensor-role mapping so renamed layers get the right archetype;
+ * unknown layers get a generic empty mold. Skips existing files unless force=true.
  */
 export function writeArkRulesTemplates(root, config, { force = false } = {}) {
   const refs = config?.arkRules;
   if (!refs || typeof refs !== 'object') return [];
   const written = [];
-  for (const rel of Object.values(refs)) {
+  for (const [layerName, rel] of Object.entries(refs)) {
     if (typeof rel !== 'string' || !rel.endsWith('.json')) continue;
     const target = path.join(root, rel);
     if (fs.existsSync(target) && !force) continue;
-    const base = path.basename(rel);
-    const source = path.join(ARKRULES_TEMPLATES_DIR, base);
-    if (!fs.existsSync(source)) continue;
+    const role = resolveLayerSensorRole(layerName);
+    const body = buildArkRulesTemplateForLayer(layerName, role);
     fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.copyFileSync(source, target);
+    fs.writeFileSync(target, `${JSON.stringify(body, null, 2)}\n`);
     written.push(rel);
   }
   return written;

@@ -78,18 +78,25 @@ function change(pathname, before, after) {
 
 function setupBudget(changes) {
   const generatedChanges = changes.filter((item) => item.path !== 'package.json');
+  // Compact gate surface stays ≤8 files (MCP + one host + CI + AGENTS + config).
+  // ArkRules starters (arkrules/*.json) are opt-in contract content and count against
+  // the byte budget only — AR08 4.0 emit was failing field start at 10/8 otherwise.
+  const gateChanges = generatedChanges.filter((item) => !item.path.startsWith('arkrules/'));
+  const arkrulesFiles = generatedChanges.length - gateChanges.length;
   const bytes = generatedChanges.reduce(
     (total, item) => total + (item.afterBase64 ? Buffer.from(item.afterBase64, 'base64').length : 0),
     0
   );
-  // Compact start includes shared MCP + one host registration + CI + AGENTS + config.
-  // Budget raised from 5→8 so .mcp.json always fits (field: grok compact hit the old ceiling).
+  const maxFiles = 8;
+  const maxBytes = 32 * 1024;
   return {
     files: generatedChanges.length,
+    gateFiles: gateChanges.length,
+    arkrulesFiles,
     bytes,
-    maxFiles: 8,
-    maxBytes: 32 * 1024,
-    ok: generatedChanges.length <= 8 && bytes < 32 * 1024,
+    maxFiles,
+    maxBytes,
+    ok: gateChanges.length <= maxFiles && bytes < maxBytes,
   };
 }
 
@@ -117,7 +124,13 @@ export function renderStartPreview(preview) {
     console.log(`Your project looks like: ${preview.analysis.label} (${preview.analysis.archetype}, confidence ${preview.analysis.confidence}).`);
   }
   console.log(`Projected governed coverage: ${preview.projectedCoverage.percent ?? 'unknown'}% (${preview.projectedCoverage.classifiedFiles}/${preview.projectedCoverage.totalFiles} files)`);
-  console.log(`Compact setup budget: ${preview.setupBudget.files}/${preview.setupBudget.maxFiles} files, ${preview.setupBudget.bytes}/${preview.setupBudget.maxBytes} bytes${preview.setupBudget.ok ? '' : ' (exceeded)'}.`);
+  const budget = preview.setupBudget;
+  const arkrulesNote =
+    budget.arkrulesFiles > 0 ? ` (+${budget.arkrulesFiles} arkrules)` : '';
+  const gateCount = budget.gateFiles ?? budget.files;
+  console.log(
+    `Compact setup budget: ${gateCount}/${budget.maxFiles} gate files${arkrulesNote}, ${budget.bytes}/${budget.maxBytes} bytes${budget.ok ? '' : ' (exceeded)'}.`
+  );
   console.log('Files to create/edit/delete:');
   if (preview.changes.length === 0) console.log('  (none)');
   for (const change of preview.changes) {

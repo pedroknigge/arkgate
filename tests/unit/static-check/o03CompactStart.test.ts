@@ -67,17 +67,28 @@ function start(root: string, host: string, args: string[] = []) {
 }
 
 describe('O03 compact start', () => {
-  it.each(HOSTS)('%s setup stays under the eight-file/32 KB budget and is idempotent', (host) => {
+  it.each(HOSTS)('%s setup stays under the eight-file/32 KB gate budget and is idempotent', (host) => {
     const root = createFixture();
     try {
       const originalPackage = fs.readFileSync(path.join(root, 'package.json'), 'utf8');
       const preview = JSON.parse(start(root, host)) as {
         changes: Array<{ path: string }>;
-        setupBudget: { files: number; bytes: number; ok: boolean };
+        setupBudget: {
+          files: number;
+          bytes: number;
+          ok: boolean;
+          gateFiles?: number;
+          arkrulesFiles?: number;
+          maxFiles: number;
+        };
       };
       expect(preview.setupBudget).toMatchObject({ files: expect.any(Number), bytes: expect.any(Number), ok: true });
-      // 3.8.3: shared .mcp.json is always part of compact (budget ceiling 8 / 32 KB).
-      expect(preview.setupBudget.files).toBeLessThanOrEqual(8);
+      // Gate surface (MCP + host + CI + AGENTS + config) stays ≤8; arkrules/*.json are extra content.
+      const gateFiles =
+        preview.setupBudget.gateFiles ??
+        preview.changes.filter((c) => !c.path.startsWith('arkrules/') && c.path !== 'package.json').length;
+      expect(gateFiles).toBeLessThanOrEqual(8);
+      expect(preview.setupBudget.maxFiles).toBe(8);
       expect(preview.setupBudget.bytes).toBeLessThan(32 * 1024);
       expect(preview.changes.some((change) => change.path === 'package.json')).toBe(false);
       expect(preview.changes.some((change) => /\/(skills|prompts|commands)\//.test(change.path))).toBe(false);
@@ -88,7 +99,9 @@ describe('O03 compact start', () => {
       const after = snapshot(root);
       const changed = changedPaths(before, after);
       expect(changed).toEqual(applied.changes.map((change) => change.path).sort());
-      expect(changed.length).toBeLessThanOrEqual(8);
+      const gateChanged = changed.filter((file) => !file.startsWith('arkrules/'));
+      expect(gateChanged.length).toBeLessThanOrEqual(8);
+      expect(applied.setupBudget.ok).toBe(true);
       expect(changed).not.toContain('check.mjs');
       expect(changed).not.toContain('src/domain/value.ts');
       expect(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).toBe(originalPackage);

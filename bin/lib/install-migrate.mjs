@@ -138,14 +138,21 @@ export function warnLockfileConflict(root) {
 export function buildManagedAssetCatalog({ root, tools, compact = false, skillsOnly = false }) {
   const selectedTools = tools instanceof Set ? tools : new Set(tools ?? []);
   const assets = [];
+  // Path-keyed: codex + antigravity both target `.agents/skills/*/SKILL.md` (and
+  // antigravity + gemini share GEMINI.md). Duplicate plan entries caused apply to
+  // write once then fail the second pre-image assert (field: web-predial-ar).
+  const byPath = new Map();
   const add = (relativePath, content, kind = 'gate', scope = 'whole-file') => {
-    assets.push({
+    if (byPath.has(relativePath)) return;
+    const asset = {
       relativePath,
       content,
       kind,
       scope,
       templateId: `${kind}:${relativePath}`,
-    });
+    };
+    byPath.set(relativePath, asset);
+    assets.push(asset);
   };
 
   if (!skillsOnly) {

@@ -121,6 +121,13 @@ export function runUpgradeCommand(args, dependencies) {
         managedUpgradeJson(plan, {
           nextCommand: command,
           ...(needsApply ? {} : { nothingToApply: true }),
+          // Surface dual-truth when managed assets refresh without a package pin bump.
+          ...(args.install === false
+            ? {
+                packageInstallSkipped: true,
+                note: 'Managed assets use this CLI; package.json arkgate pin is unchanged under --no-install. Bump the pin or re-run without --no-install so CI resolves the same version.',
+              }
+            : {}),
         })
       );
     } else {
@@ -134,6 +141,11 @@ export function runUpgradeCommand(args, dependencies) {
         // Human path: optional digest-bound stamp refresh without urging content apply.
         ...( !needsApply && metadataRefresh > 0 ? { optionalStampApply: command } : {}),
       });
+      if (args.install === false) {
+        console.log(
+          'Note: --no-install left package.json arkgate pin unchanged. Managed assets match this CLI; bump the pin (or re-run without --no-install) so CI resolves the same version.'
+        );
+      }
     }
     return 0;
   }
