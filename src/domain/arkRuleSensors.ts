@@ -540,10 +540,24 @@ export function extractClassShapesFromSource(
     const body = content.slice(start, i - 1);
 
     // P1-L — prefer false negatives: readonly public props are not mutable state.
-    // Strip readonly lines before mutable-field heuristics.
+    // Strip only readonly property *declarations*, not whole lines (co-located
+    // `public readonly id; public count = 0` must keep the mutable field).
+    // Also ignore comment lines that merely mention the word "readonly".
     const bodyNoReadonly = body
       .split('\n')
-      .filter((line) => !/\breadonly\b/.test(line))
+      .map((line) => {
+        if (/^\s*\/\//.test(line) || /^\s*\/\*|\*\//.test(line)) return line;
+        // Remove `public readonly foo` / `readonly foo` decls; leave other decls.
+        return line
+          .replace(
+            /(?:public\s+|protected\s+)?readonly\s+[a-zA-Z_][a-zA-Z0-9_]*\s*(?::[^=;]+)?(?:=\s*[^;]+)?[;,]?/g,
+            ''
+          )
+          .replace(
+            /(?:^|[\s;{])readonly\s+[a-zA-Z_][a-zA-Z0-9_]*\s*(?::[^=;]+)?(?:=\s*[^;]+)?[;,]?/g,
+            ' '
+          );
+      })
       .join('\n');
     const hasPublicMutableFields =
       /(?:^|\n)\s*(?:public\s+)?[a-zA-Z_][a-zA-Z0-9_]*\s*[:=]/m.test(
@@ -560,12 +574,12 @@ export function extractClassShapesFromSource(
       /(?:^|\n)\s*public\s+(?!static|async|get|set|constructor|readonly)[a-zA-Z_]/.test(
         bodyNoReadonly
       ) ||
-      /(?:^|\n)\s*[a-zA-Z_][a-zA-Z0-9_]*\s*:\s*[^=;\n]+[;=]/m.test(
+      /(?:^|[\n;])\s*[a-zA-Z_][a-zA-Z0-9_]*\s*:\s*[^=;\n]+[;=]/m.test(
         bodyNoReadonly
           .split('\n')
           .filter(
             (line) =>
-              !/^\s*(private|protected|static|constructor|get |set |async |readonly|\/)/.test(line)
+              !/^\s*(private|protected|static|constructor|get |set |async |\/)/.test(line)
           )
           .join('\n')
       );

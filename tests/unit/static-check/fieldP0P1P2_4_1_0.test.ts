@@ -88,16 +88,83 @@ describe('P0-A Next API shell is Application, not Presentation', () => {
   it('suggestLayerForPath maps Next API dirs to ApplicationOrchestration', () => {
     expect(suggestLayerForPath('src/app/api/orders')).toMatchObject({
       layer: 'ApplicationOrchestration',
-      matchedDir: 'app/api',
     });
     expect(suggestLayerForPath('pages/api/users')).toMatchObject({
       layer: 'ApplicationOrchestration',
-      matchedDir: 'pages/api',
+    });
+    expect(suggestLayerForPath('src/app/(marketing)/api/health')).toMatchObject({
+      layer: 'ApplicationOrchestration',
     });
   });
 });
 
 describe('P0-B product honesty anti false-green', () => {
+  it('table-driven reasonIds matrix', () => {
+    const cases: Array<{
+      name: string;
+      input: Parameters<typeof buildProductHonesty>[0];
+      expectIds: string[];
+      unfinished: boolean;
+    }> = [
+      {
+        name: 'coverage-partial (50–79%)',
+        input: {
+          coverageHonesty: buildCoverageHonesty({ percent: 65, totalFiles: 100 }),
+          baselineHonesty: buildBaselineHonesty({ exists: false }),
+        },
+        expectIds: ['coverage-partial'],
+        unfinished: true,
+      },
+      {
+        name: 'package-version-dual-truth',
+        input: {
+          coverageHonesty: buildCoverageHonesty({ percent: 100, totalFiles: 10 }),
+          baselineHonesty: buildBaselineHonesty({ exists: false }),
+          packageVersionTruth: {
+            dualTruth: true,
+            note: 'CLI ahead of package.json pin',
+          },
+        },
+        expectIds: ['package-version-dual-truth'],
+        unfinished: true,
+      },
+      {
+        name: 'soft-write-host',
+        input: {
+          coverageHonesty: buildCoverageHonesty({ percent: 100, totalFiles: 10 }),
+          baselineHonesty: buildBaselineHonesty({ exists: false }),
+          writePathHonesty: {
+            advisory: true,
+            softWriteHost: true,
+            message: 'Local write is advisory',
+          },
+        },
+        expectIds: ['soft-write-host'],
+        unfinished: true,
+      },
+      {
+        name: 'clear whole-tree path',
+        input: {
+          coverageHonesty: buildCoverageHonesty({ percent: 100, totalFiles: 10 }),
+          baselineHonesty: buildBaselineHonesty({ exists: false }),
+          designWeak: false,
+        },
+        expectIds: [],
+        unfinished: false,
+      },
+    ];
+    for (const c of cases) {
+      const honesty = buildProductHonesty(c.input);
+      expect(honesty.notAScore, c.name).toBe(true);
+      expect(honesty.unfinished, c.name).toBe(c.unfinished);
+      if (c.expectIds.length === 0) {
+        expect(honesty.reasonIds, c.name).toEqual([]);
+      } else {
+        expect(honesty.reasonIds, c.name).toEqual(expect.arrayContaining(c.expectIds));
+      }
+    }
+  });
+
   it('buildProductHonesty flags design-weak + weak coverage as unfinished', () => {
     const honesty = buildProductHonesty({
       coverageHonesty: buildCoverageHonesty({ percent: 40, totalFiles: 100 }),
@@ -148,6 +215,18 @@ describe('P0-B product honesty anti false-green', () => {
     expect(html).toContain('data-product-honesty="1"');
     expect(html).toContain('Weak coverage');
     expect(html).toContain('coverage-weak-or-empty');
+    // Headline-only body is rewritten to a distinct residual line.
+    const same = renderProductHonestyCard({
+      unfinished: true,
+      headline: 'Not finished / not whole-tree guarantee',
+      primaryMessage: 'Not finished / not whole-tree guarantee',
+      reasonIds: ['design-weak'],
+      notAScore: true,
+    });
+    expect(same).toMatch(/Residual honesty signals remain/i);
+    expect(same).not.toMatch(
+      /<p style="margin:\.45rem 0 0">Not finished \/ not whole-tree guarantee<\/p>/
+    );
   });
 });
 
@@ -227,7 +306,62 @@ describe('P0-C ESLint tsconfig path alias resolution', () => {
     };
     listener.ImportDeclaration?.(importNode);
     expect(reports.length).toBeGreaterThanOrEqual(1);
-    expect(String(reports[0]?.messageId || reports[0]?.diagnostic || '')).toBeTruthy();
+    expect(reports[0]?.messageId).toBe('forbiddenImport');
+    const diagnostic = reports[0]?.diagnostic as { evidence?: { fromLayer?: string; toLayer?: string }; severity?: string };
+    expect(diagnostic?.evidence?.fromLayer).toBe('DomainModel');
+    expect(diagnostic?.evidence?.toLayer).toBe('PresentationAdapters');
+    expect(diagnostic?.severity).toBe('error');
+  });
+
+  it('ESLint type-only alias edge is warning severity with SharedTypes hint', () => {
+    const root = mk();
+    fs.writeFileSync(
+      path.join(root, 'tsconfig.json'),
+      JSON.stringify({
+        compilerOptions: { baseUrl: '.', paths: { '@/*': ['src/*'] } },
+      })
+    );
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          { name: 'DomainModel', patterns: ['src/domain/**'] },
+          { name: 'PresentationAdapters', patterns: ['src/app/**'] },
+        ],
+        rules: [{ from: 'DomainModel', to: 'PresentationAdapters', allowed: false }],
+      })
+    );
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/app'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/app/types.ts'), 'export type UiId = string;\n');
+    const domainFile = path.join(root, 'src/domain/order.ts');
+    fs.writeFileSync(domainFile, "import type { UiId } from '@/app/types';\nexport type O = UiId;\n");
+
+    const reports: Array<Record<string, unknown>> = [];
+    const listener = noDomainInfraImports.create({
+      filename: domainFile,
+      report(desc) {
+        reports.push(desc);
+      },
+      sourceCode: { getScope: () => undefined },
+    });
+    listener.ImportDeclaration?.({
+      type: 'ImportDeclaration',
+      importKind: 'type',
+      source: { value: '@/app/types' },
+      specifiers: [{ type: 'ImportSpecifier', importKind: 'type' }],
+      loc: { start: { line: 1, column: 0 } },
+    });
+    expect(reports.length).toBe(1);
+    const diagnostic = reports[0]?.diagnostic as {
+      severity?: string;
+      message?: string;
+      evidence?: { typeOnly?: boolean };
+    };
+    expect(diagnostic?.evidence?.typeOnly).toBe(true);
+    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic?.message).toMatch(/SharedTypes|placement debt/i);
   });
 });
 
@@ -290,10 +424,39 @@ export class Lot {
     expect(findings.filter((f) => f.arkruleId === 'private-state')).toHaveLength(0);
     expect(findings.filter((f) => f.arkruleId === 'factory')).toHaveLength(0);
   });
+
+  it('multi-decl line keeps mutable field next to readonly (no false quiet)', () => {
+    const shapes = extractClassShapesFromSource(
+      'src/domain/bag.ts',
+      `export class Bag { public readonly id: string; public count = 0; constructor() {} setCount(n: number) { this.count = n; } }`
+    );
+    expect(shapes[0]?.hasPublicMutableFields).toBe(true);
+    const findings = evaluateArkRuleSensors({
+      arkRules: effectiveDomain([
+        { id: 'private-state', sensor: 'aggregate-private-state', mode: 'enforced' },
+      ]),
+      classShapes: shapes,
+      files: ['src/domain/bag.ts'],
+    });
+    expect(findings.some((f) => f.arkruleId === 'private-state')).toBe(true);
+  });
+
+  it('anemic bar requires ≥2 public fields', () => {
+    const single = extractClassShapesFromSource(
+      'src/domain/one.ts',
+      `export class One { public id: string; }`
+    );
+    const multi = extractClassShapesFromSource(
+      'src/domain/two.ts',
+      `export class Two { public id: string; public name: string; }`
+    );
+    expect(single[0]?.dataOnly).toBeFalsy();
+    expect(multi[0]?.dataOnly).toBe(true);
+  });
 });
 
 describe('P1-type type-only edges are placement debt, not merge blockers', () => {
-  it('moves type-only denied edges to warnings with failsStrict false', () => {
+  it('type-only denied edges stay on violations with failsStrict false; value still blocks', () => {
     const result = evaluateArchitectureGraph({
       config: {
         layers: [
@@ -325,31 +488,107 @@ describe('P1-type type-only edges are placement debt, not merge blockers', () =>
         },
       ],
     });
-    expect(result.violations.some((v) => v.typeOnly)).toBe(false);
-    expect(result.violations.some((v) => v.target === 'src/app/ui.ts')).toBe(true);
-    expect(result.warnings.some((w) => w.typeOnly && w.failsStrict === false)).toBe(true);
-    expect(result.warnings.find((w) => w.typeOnly)?.message).toMatch(/type placement|SharedTypes/i);
+    const typeV = result.violations.find((v) => v.typeOnly);
+    const valueV = result.violations.find((v) => v.target === 'src/app/ui.ts');
+    expect(typeV?.failsStrict).toBe(false);
+    expect(typeV?.message).toMatch(/type placement|SharedTypes/i);
+    expect(valueV?.typeOnly).toBeUndefined();
+    expect(valueV?.failsStrict).not.toBe(false);
   });
 
-  it('matrix: default type import, named import type, mixed value+type', () => {
-    const mkEdge = (typeOnly: boolean, line: number) => ({
-      from: 'src/domain/a.ts',
-      fromLayer: 'DomainModel',
-      to: 'src/app/b.ts',
-      toLayer: 'PresentationAdapters',
-      line,
-      kind: 'import' as const,
-      typeOnly,
-    });
+  it('sourcePureTypeModule alone does not soft-skip a value edge', () => {
     const result = evaluateArchitectureGraph({
       config: { layers: [] },
       rules: [{ from: 'DomainModel', to: 'PresentationAdapters', allowed: false }],
-      files: ['src/domain/a.ts', 'src/app/b.ts'],
+      files: ['src/domain/a.ts', 'src/app/types-only.ts'],
       contentViolations: [],
-      edges: [mkEdge(true, 1), mkEdge(true, 2), mkEdge(false, 3)],
+      edges: [
+        {
+          from: 'src/domain/a.ts',
+          fromLayer: 'DomainModel',
+          to: 'src/app/types-only.ts',
+          toLayer: 'PresentationAdapters',
+          line: 1,
+          kind: 'import',
+          typeOnly: false,
+          sourcePureTypeModule: true,
+        },
+      ],
     });
-    expect(result.warnings.filter((w) => w.typeOnly)).toHaveLength(2);
-    expect(result.violations.filter((v) => !v.typeOnly)).toHaveLength(1);
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0]?.typeOnly).toBeUndefined();
+    expect(result.violations[0]?.failsStrict).not.toBe(false);
+    expect(result.violations[0]?.sourcePureTypeModule).toBe(true);
+  });
+
+  it('matrix: typeOnly, namedBindingsTypeOnly, value, peerIsolation type-only stays hard', () => {
+    const result = evaluateArchitectureGraph({
+      config: { layers: [] },
+      rules: [
+        { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
+        {
+          from: 'Features',
+          to: 'Features',
+          allowed: false,
+          peerIsolation: true,
+          sliceFolders: ['features'],
+        },
+      ],
+      files: [
+        'src/domain/a.ts',
+        'src/app/b.ts',
+        'src/features/auth/x.ts',
+        'src/features/billing/y.ts',
+      ],
+      contentViolations: [],
+      edges: [
+        {
+          from: 'src/domain/a.ts',
+          fromLayer: 'DomainModel',
+          to: 'src/app/b.ts',
+          toLayer: 'PresentationAdapters',
+          line: 1,
+          kind: 'import',
+          typeOnly: true,
+        },
+        {
+          from: 'src/domain/a.ts',
+          fromLayer: 'DomainModel',
+          to: 'src/app/b.ts',
+          toLayer: 'PresentationAdapters',
+          line: 2,
+          kind: 'import',
+          typeOnly: false,
+          namedBindingsTypeOnly: true,
+        },
+        {
+          from: 'src/domain/a.ts',
+          fromLayer: 'DomainModel',
+          to: 'src/app/b.ts',
+          toLayer: 'PresentationAdapters',
+          line: 3,
+          kind: 'import',
+          typeOnly: false,
+        },
+        {
+          from: 'src/features/auth/x.ts',
+          fromLayer: 'Features',
+          to: 'src/features/billing/y.ts',
+          toLayer: 'Features',
+          line: 4,
+          kind: 'import',
+          typeOnly: true,
+        },
+      ],
+    });
+    const placement = result.violations.filter((v) => v.failsStrict === false);
+    expect(placement.length).toBeGreaterThanOrEqual(2);
+    expect(result.violations.some((v) => !v.typeOnly && v.failsStrict !== false && v.line === 3)).toBe(
+      true
+    );
+    const peerType = result.violations.find((v) => v.line === 4);
+    expect(peerType?.peerIsolation).toBe(true);
+    expect(peerType?.failsStrict).not.toBe(false);
   });
 });
 
@@ -386,11 +625,40 @@ describe('P2-N rules inventory quiets UI/Next noise, keeps spaghetti seeds', () 
         `,
         'src/domain/pricing.ts': `
           export const MINIMUM_INVOICE_BALANCE = 250;
+          export const MAX_CART_SIZE = 50;
+          export const ORDER_STATUS_OPEN = 'open-order-status';
         `,
       },
     });
     expect(inventory.candidates.some((c) => c.kind === 'validation-in-controller')).toBe(true);
     expect(inventory.candidates.some((c) => c.kind === 'magic-business-constant')).toBe(true);
+    expect(
+      inventory.candidates.some((c) => c.message.includes('MAX_CART_SIZE'))
+    ).toBe(true);
+    expect(
+      inventory.candidates.some((c) => c.message.includes('ORDER_STATUS_OPEN'))
+    ).toBe(true);
+  });
+
+  it('finds validation on Next API route and server action paths', () => {
+    const inventory = buildRulesInventory({
+      fileContents: {
+        'src/app/api/orders/route.ts': `
+          export async function POST(req: Request) {
+            const body = await req.json();
+            if (body.amount < 0) throw new Error('bad amount');
+            return Response.json({});
+          }
+        `,
+        'src/app/actions/place-order.ts': `
+          'use server';
+          export async function placeOrder(dto: { amount: number }) {
+            if (dto.amount < 0) throw new BadRequest('bad');
+          }
+        `,
+      },
+    });
+    expect(inventory.candidates.filter((c) => c.kind === 'validation-in-controller').length).toBeGreaterThanOrEqual(2);
   });
 });
 
@@ -401,5 +669,60 @@ describe('P1-M mergePlanes honesty shape', () => {
     const summary = summarizeRulesUnderContract(root, { include: ['src'], layers: [], rules: [] });
     expect(summary.active).toBe(false);
     expect(summary.notAScore).toBe(true);
+  });
+
+  it('active arkRules exposes mergePlanes failMergeWhen + dualPlaneStamp', async () => {
+    const { summarizeRulesUnderContract } = await import('../../../bin/lib/rules-under-contract.mjs');
+    const root = mk();
+    fs.mkdirSync(path.join(root, 'arkrules'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'arkrules/DomainModel.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        layer: 'DomainModel',
+        structure: [
+          { id: 'agg', sensor: 'aggregate-private-state', mode: 'advisory' },
+          { id: 'fac', sensor: 'always-valid-factory', mode: 'enforced' },
+        ],
+        invariants: [
+          {
+            id: 'INV-ORDER-TOTAL',
+            mode: 'advisory',
+            description: 'Order total non-negative',
+            coverage: { symbol: 'ensureOrderTotal' },
+          },
+        ],
+      })
+    );
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+        rules: [],
+        arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+      })
+    );
+    const summary = summarizeRulesUnderContract(root, {
+      include: ['src'],
+      layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+      rules: [],
+      arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+    });
+    expect(summary.active).toBe(true);
+    expect(summary.mergePlanes).toBeTruthy();
+    expect(summary.mergePlanes.structureSensors.enforced).toBe(1);
+    expect(summary.mergePlanes.extraMergeTeeth).toBe(true);
+    expect(summary.mergePlanes.failMergeWhen).toMatch(/enforced/i);
+    expect(summary.mergePlanes.dualPlaneStamp).toMatch(/heuristics|catalog/i);
+  });
+});
+
+describe('P0-A route-group API shells', () => {
+  it('classifies app/(marketing)/api as ApplicationOrchestration', () => {
+    const cfg = ARCHITECTURE_PRESETS['ui-surface']([], undefined);
+    expect(
+      layerForRelativePath('src/app/(marketing)/api/health/route.ts', cfg.layers)
+    ).toBe('ApplicationOrchestration');
   });
 });

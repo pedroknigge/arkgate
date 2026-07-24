@@ -1241,19 +1241,29 @@ async function main() {
   }
 
   // Soft/advisory warnings (failsStrict === false) never fail --strict-config.
+  // P1-type: type-only placement debt on the violations list also has failsStrict:false —
+  // keep reporting them (doctor typeOnly counts) but do not block merge/exit.
   const strictWarnings = warnings.filter((w) => w.failsStrict !== false);
-  const { edgeValid: edgeOk, observedOk } = designCheck.combineEdges({ activeViolationCount: activeViolations.length, strictConfig: args.strictConfig, strictWarningCount: strictWarnings.length, policyValid: policyDelta?.valid ?? true });
+  const blockingViolations = activeViolations.filter((v) => v.failsStrict !== false);
+  const { edgeValid: edgeOk, observedOk } = designCheck.combineEdges({
+    activeViolationCount: blockingViolations.length,
+    strictConfig: args.strictConfig,
+    strictWarningCount: strictWarnings.length,
+    policyValid: policyDelta?.valid ?? true,
+  });
   const analysisComplete = completeness === ANALYSIS_COMPLETENESS.complete;
   const ok = observedOk && analysisComplete;
 
   if (args.plan) {
     const cov = computeCoverage(root, config, files, rules);
+    // Plan goal.met uses blocking (value) edges; type-only placement debt stays in steps via full list.
     const plan = runPlan(root, activeViolations, args.json, cov.governed.percent, cov.governed.totalFiles, {
       config,
       files,
       coverage: cov,
       completeness,
       completenessReasons,
+      blockingViolationCount: blockingViolations.length,
     });
     if (args.strictMerge) process.exitCode = ok && plan.goal.met ? 0 : 1;
     return;

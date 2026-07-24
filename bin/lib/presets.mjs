@@ -507,8 +507,11 @@ export const ARCHITECTURE_PRESETS = {
               '**/use-cases/**',
               '**/services/**',
               // Next API route handlers (higher specificity than **/app/** Presentation).
+              // Route groups: app/(marketing)/api/** also match **/app/**/api/**
               '**/app/api/**',
               '**/pages/api/**',
+              '**/app/**/api/**',
+              '**/pages/**/api/**',
               'app/api/**',
               'pages/api/**',
               'src/app/api/**',
@@ -607,12 +610,17 @@ export const ARCHITECTURE_PRESETS = {
               '**/lib/actions/**',
               '**/lib/services/**',
               // Next API = Application shell (wins over **/app/** Presentation by specificity).
+              // Route groups: app/(group)/api/**
               'src/app/api/**',
               'app/api/**',
               'src/pages/api/**',
               'pages/api/**',
               '**/app/api/**',
               '**/pages/api/**',
+              '**/app/**/api/**',
+              '**/pages/**/api/**',
+              'src/app/**/api/**',
+              'app/**/api/**',
             ],
             exclude: FRAMEWORK_INTERNAL_EXCLUDE,
             optional: true,

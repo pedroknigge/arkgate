@@ -90,18 +90,18 @@ export function evaluateArchitectureGraph(
 
     const peerIsolation = Boolean(rule.peerIsolation);
     // P1-type: pure type-only edges are placement debt (SharedTypes / owning layer), not
-    // runtime coupling. Report them, but do not fail merge the way value edges do —
-    // except peerIsolation (slice boundary still matters for type coupling).
+    // runtime coupling. Report on the violations list (doctor/HTML typeOnly counts) with
+    // failsStrict:false so exit/merge treats them as non-blocking — except peerIsolation.
+    // sourcePureTypeModule alone must NOT soft-skip a value import of a pure-type barrel.
     const typePlacementDebt =
-      !peerIsolation &&
-      Boolean(edge.typeOnly || edge.namedBindingsTypeOnly || edge.sourcePureTypeModule);
+      !peerIsolation && Boolean(edge.typeOnly || edge.namedBindingsTypeOnly);
     const baseMessage =
       rule.message ??
       (peerIsolation
         ? `${edge.fromLayer} must not ${edge.kind} another slice of ${edge.toLayer} (${edge.from} → ${edge.to}). Extract shared code or use events/ports across slices.`
         : `${edge.fromLayer} must not ${edge.kind} ${edge.toLayer}.`);
-    const entry = {
-      ruleId: 'LAYER_IMPORT_VIOLATION' as const,
+    violations.push({
+      ruleId: 'LAYER_IMPORT_VIOLATION',
       file: edge.from,
       line: edge.line,
       fromLayer: edge.fromLayer,
@@ -118,12 +118,7 @@ export function evaluateArchitectureGraph(
         ? `${baseMessage} (type-only — type placement debt; prefer SharedTypes / owning layer; not runtime coupling)`
         : baseMessage,
       ...(typePlacementDebt ? { failsStrict: false as const } : {}),
-    };
-    if (typePlacementDebt) {
-      warnings.push(entry);
-    } else {
-      violations.push(entry);
-    }
+    });
   }
 
   const cyclePolicy = String(input.config.cyclePolicy ?? 'strict').toLowerCase();

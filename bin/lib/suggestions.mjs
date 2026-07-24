@@ -65,11 +65,15 @@ export function suggestLayerForPath(relDir) {
     .filter(Boolean)
     .join('/');
   // Prefer the API orchestration shell over a bare `app` / `pages` Presentation match.
-  if (/(?:^|\/)(?:src\/)?app\/api(?:\/|$)/.test(posix) || /(?:^|\/)(?:src\/)?pages\/api(?:\/|$)/.test(posix)) {
+  // Direct api/ and route-group shells: app/(marketing)/api/**
+  if (
+    /(?:^|\/)(?:src\/)?app(?:\/[^/]+)*\/api(?:\/|$)/.test(posix) ||
+    /(?:^|\/)(?:src\/)?pages(?:\/[^/]+)*\/api(?:\/|$)/.test(posix)
+  ) {
     return {
       layer: 'ApplicationOrchestration',
-      alternatives: ['Application'],
-      matchedDir: posix.includes('pages/api') ? 'pages/api' : 'app/api',
+      alternatives: [],
+      matchedDir: posix.includes('pages') && posix.includes('/api') ? 'pages/…/api' : 'app/…/api',
     };
   }
   const segments = posix.split('/').filter(Boolean);

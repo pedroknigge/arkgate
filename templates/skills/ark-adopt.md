@@ -99,6 +99,8 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    If the tree is `src/features` + `shared`/`lib` **without** FSD `entities`/`widgets`, prefer
    `vertical-slice` (or pack `enthusiast-vertical-slice`) — do **not** force hexagonal.
    If `src/contexts` or `src/bounded-contexts` exists, prefer `ddd-bounded-contexts`.
+   **Next.js:** `app/api/**` / `pages/api/**` (and route-group `app/(…)/api/**`) default to
+   **ApplicationOrchestration**, not Presentation — do not reclassify API shells as UI.
 2. **Check + diagnose** — `summary.concentrated` / dominant edge → fix contract first, don’t freeze.
    Cross-slice / cross-context `peerIsolation` hits are judgment: extract shared or events.
    If one edge dominates residual debt: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).

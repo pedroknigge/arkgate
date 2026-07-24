@@ -139,6 +139,11 @@ When explaining the **plan**, name the four `mechanical-safe` remediation kinds 
 `import-type-of-type-exports` for named type exports from mixed modules; W6 port-proof inject is judgment when proof holds) — everything
 else is judgment/deferred and must not be auto-applied.
 
+**Type-edge honesty:** type-only denied edges are **placement debt** (`typeOnly` +
+`failsStrict: false`) — prefer SharedTypes / owning layer; they do not fail merge like value
+edges. Doctor `productHonesty` and `violations.typeEdgePolicy` must not be sold as “all done”
+when residual signals remain.
+
 ## Spoken / written explanation
 
 1. **Load the real contract**: `ark.config.json`, `ark://manifest` if available, `AGENTS.md`.

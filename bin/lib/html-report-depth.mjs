@@ -15,10 +15,12 @@ import { collectAdoptionGaps } from './mcp-adoption.mjs';
 import {
   buildCoverageHonesty,
   buildBaselineHonesty,
+  buildWritePathHonesty,
   buildProductHonesty,
 } from './enforcement-honesty.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
-import { readBaseline } from './violations.mjs';
+import { readBaseline, baselineOccurrenceKeys } from './violations.mjs';
+import { describePackageVersionDualTruth } from './field-install.mjs';
 
 function esc(value) {
   return String(value)
@@ -53,6 +55,11 @@ export function buildReportDepthPayload(root, config, files, coverage, activeVio
   const goldenPattern = summarizeGoldenPattern(loadGoldenPattern(root));
   const adoption = collectAdoptionGaps(root, config, coverage);
   const baseline = readBaseline(root, '.ark-baseline.json');
+  const occurrenceKeys = baselineOccurrenceKeys(activeViolations);
+  const suppressed = baseline.exists
+    ? occurrenceKeys.filter((key) => baseline.keys.has(key)).length
+    : 0;
+  const activeCount = Math.max(0, activeViolations.length - suppressed);
   const coverageHonesty = buildCoverageHonesty({
     percent: coverage?.governed?.percent,
     totalFiles: coverage?.governed?.totalFiles,
@@ -61,17 +68,29 @@ export function buildReportDepthPayload(root, config, files, coverage, activeVio
   const baselineHonesty = buildBaselineHonesty({
     exists: baseline.exists,
     frozenKeys: baseline.exists ? baseline.keys.size : 0,
-    activeViolations: activeViolations.length,
+    activeViolations: activeCount,
+    suppressed,
     totalViolations: activeViolations.length,
   });
+  const writePath = adoption.writePath;
+  const writePathHonesty = buildWritePathHonesty(
+    writePath?.activeHost,
+    writePath?.capabilities?.['hard-write'] === true
+  );
+  const packageVersionTruth = describePackageVersionDualTruth(root);
   const rulesUnderContract = summarizeRulesUnderContract(root, config);
+  // Single residual expression (parity with doctor): nextPilot || extractionCard.
+  const residualPilot =
+    pilotLoop?.nextPilot || pilotLoop?.extractionCard || null;
   const productHonesty = buildProductHonesty({
     coverageHonesty,
     baselineHonesty,
+    writePathHonesty,
     designWeak: designFitness.designWeak === true,
     designWeakLabel: designFitness.label,
-    residualPilots: Boolean(pilotLoop?.nextPilot) && designFitness.designWeak === true,
-    pilotTarget: pilotLoop?.nextPilot?.pilotTarget ?? null,
+    packageVersionTruth,
+    residualPilots: Boolean(residualPilot) && designFitness.designWeak === true,
+    pilotTarget: residualPilot?.pilotTarget ?? residualPilot?.pilot ?? null,
     arkRulesMergeHonesty: rulesUnderContract?.mergePlanes
       ? { active: rulesUnderContract.active === true, ...rulesUnderContract.mergePlanes }
       : null,
@@ -213,11 +232,19 @@ export function renderProductHonestyCard(productHonesty, mergePlanes = null) {
   const headline = productHonesty.headline || (unfinished ? 'Not finished' : 'Honesty clear');
   const primary = productHonesty.primaryMessage || '';
   // Avoid repeating the same status label in title and body (past-issue pattern).
-  const bodyStartsWithHeadline =
-    primary &&
-    headline &&
-    primary.toLowerCase().startsWith(String(headline).toLowerCase().slice(0, 12));
-  const body = bodyStartsWithHeadline ? primary : primary;
+  let body = primary;
+  if (primary && headline) {
+    const h = String(headline).trim();
+    const p = String(primary).trim();
+    if (p === h) {
+      body = unfinished
+        ? 'Residual honesty signals remain — not a whole-tree guarantee and not a score.'
+        : 'No residual honesty blockers on this slice — still not a numeric architecture score.';
+    } else if (p.toLowerCase().startsWith(h.toLowerCase())) {
+      const stripped = p.slice(h.length).replace(/^[\s—–:-]+/, '').trim();
+      body = stripped || p;
+    }
+  }
   const reasons = Array.isArray(productHonesty.reasonIds) ? productHonesty.reasonIds : [];
   const reasonHtml =
     reasons.length > 0

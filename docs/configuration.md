@@ -109,10 +109,13 @@ Rule fields:
 
 ### Type-only edges (placement debt)
 
-`import type` / `export type` and pure type-module edges are **type placement debt**, not runtime
-coupling. Doctor reports them under `violations.typeOnly` / `typeEdgePolicy`; they do **not**
-fail merge the way value edges do (except peerIsolation slice boundaries). Prefer placing shared
-types in a **SharedTypes** (or owning) layer both sides may import. Value edges remain hard.
+`import type` / `export type` and pure type-only named bindings are **type placement debt**, not
+runtime coupling. They still appear on the violations list with `typeOnly: true` and
+`failsStrict: false` so doctor/HTML keep `violations.typeOnly` / `typeEdgePolicy` honest —
+but they **do not** fail merge/exit the way **value** edges do (except `peerIsolation` slice
+boundaries, which stay hard even for type-only). A value import of a pure-type barrel is still
+a value edge (not soft-skipped). Prefer placing shared types in a **SharedTypes** (or owning)
+layer both sides may import.
 
 ### Next.js API shell (framework overlay / presets)
 

@@ -14,6 +14,7 @@ import {
   patternSpecificity,
   layerForRelativePath,
   isEdgeDenied,
+  findDeniedEdgeRule,
   isScanExcludedRelative,
 } from '../domain/layerMatch';
 import {
@@ -474,15 +475,22 @@ export const noDomainInfraImports: ArkRule = {
 
         const toLayer = layerForRelativePath(relTarget, config.layers);
         if (!toLayer) return;
-        if (
-          isEdgeDenied(config.rules, fromLayer, toLayer, {
-            fromPath: relFile,
-            toPath: relTarget,
-            layers: config.layers,
-          })
-        ) {
+        const edgeOpts = {
+          fromPath: relFile,
+          toPath: relTarget,
+          layers: config.layers,
+        };
+        const deniedRule = findDeniedEdgeRule(config.rules, fromLayer, toLayer, edgeOpts);
+        if (deniedRule || isEdgeDenied(config.rules, fromLayer, toLayer, edgeOpts)) {
           const edgeKind = node.type?.startsWith('Export') ? 'export' : 'import';
           const typeOnlyEdge = declarationIsTypeOnly(node);
+          const peerIsolation = Boolean(deniedRule?.peerIsolation);
+          // Align with graphEvaluate: peerIsolation stays hard even for type-only;
+          // pure type-only (non-peer) is placement debt (warning + SharedTypes hint).
+          // sourcePureTypeModule alone never softens a value import.
+          const typePlacementDebt = typeOnlyEdge && !peerIsolation;
+          const baseMsg =
+            deniedRule?.message ?? `${fromLayer} must not ${edgeKind} ${toLayer}.`;
           reportAdapterDiagnostic(
             context,
             node,
@@ -494,12 +502,15 @@ export const noDomainInfraImports: ArkRule = {
               toLayer,
               target: relTarget,
               edgeKind,
-              // P1-type: type-only edges report as warning (placement debt); value edges error.
-              ...(typeOnlyEdge ? { typeOnly: true, severity: 'warning' as const } : {}),
+              ...(peerIsolation ? { peerIsolation: true } : {}),
+              ...(typeOnlyEdge ? { typeOnly: true } : {}),
+              ...(typePlacementDebt ? { severity: 'warning' as const } : {}),
               ...(sourceProgramExportsOnlyTypes(node)
                 ? { sourcePureTypeModule: true }
                 : {}),
-              message: `${fromLayer} must not ${edgeKind} ${toLayer}.`,
+              message: typePlacementDebt
+                ? `${baseMsg} (type-only — type placement debt; prefer SharedTypes / owning layer; not runtime coupling)`
+                : baseMsg,
             },
             { fromLayer, toLayer, specifier: source }
           );

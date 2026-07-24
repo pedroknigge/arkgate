@@ -245,12 +245,17 @@ export function applyFrameworkLayoutOverlays(config, root) {
       'src/**/actions.tsx',
       // Next API routes are use-case / orchestration shells (not Presentation UI).
       // Higher-specificity than src/app/** / app/** so they win over PresentationAdapters.
+      // Include route-group transparent shells: app/(marketing)/api/**
       'src/app/api/**',
       'app/api/**',
       'src/pages/api/**',
       'pages/api/**',
       '**/app/api/**',
       '**/pages/api/**',
+      '**/app/**/api/**',
+      '**/pages/**/api/**',
+      'src/app/**/api/**',
+      'app/**/api/**',
     ]);
     mergeLayerPatterns(next, 'DomainModel', [
       'src/domain/**',

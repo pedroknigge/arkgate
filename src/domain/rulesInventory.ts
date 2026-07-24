@@ -56,22 +56,29 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
     a.localeCompare(b)
   )) {
     const posix = file.replace(/\\/g, '/');
-    // P2-N — UI / Next surface noise (route labels, theme tokens) is not business inventory.
-    const isUiSurface =
+    // P2-N — clear UI bags only (components/theme/styles). Do NOT blanket-skip all
+    // app/pages (server actions / route handlers live there and stay inventoriable).
+    const isUiChrome =
       /(?:^|\/)(?:components|ui|layouts|styles|hooks|theme|tokens|i18n|locales?)(?:\/|$)/i.test(
         posix
       ) ||
-      /(?:^|\/)(?:src\/)?(?:app|pages)\/(?!api(?:\/|$))/i.test(posix);
-    const isApiRoute = /(?:^|\/)(?:app|pages)\/api(?:\/|$)/i.test(posix);
+      /(?:^|\/)(?:src\/)?(?:app|pages)\/.+\.(?:tsx|jsx)$/i.test(posix) &&
+        /(?:page|layout|loading|error|template|default)\.(?:tsx|jsx)$/i.test(posix);
+    const isApiRoute = /(?:^|\/)(?:app|pages)(?:\/[^/]+)*\/api(?:\/|$)/i.test(posix);
+    const isServerAction =
+      /(?:^|\/)actions?(?:\/|\.|$)/i.test(posix) || /['"]use server['"]/.test(content);
     const isController =
       /controller|handler|resolver/i.test(file) ||
       isApiRoute ||
-      (/route/i.test(file) && !isUiSurface) ||
-      /@(Controller|Get|Post|Put|Delete|Patch)\b/.test(content);
+      isServerAction ||
+      (/route\.(?:ts|js|tsx|jsx)$/i.test(posix) && !isUiChrome) ||
+      /@(Controller|Get|Post|Put|Delete|Patch)\b/.test(content) ||
+      /\bexport\s+(?:async\s+)?function\s+(?:GET|POST|PUT|DELETE|PATCH)\b/.test(content) ||
+      /\bexport\s+const\s+(?:GET|POST|PUT|DELETE|PATCH)\s*=/.test(content);
     const isDomain = /domain|entity|aggregate|model/i.test(file);
 
-    // validation-in-controller (API/Nest handlers — not pure UI pages)
-    if (isController && !isUiSurface) {
+    // validation-in-controller (API/Nest/server-action handlers — not pure UI chrome)
+    if (isController && !isUiChrome) {
       const valRe = /\b(if\s*\([^)]{0,80}(amount|total|price|qty|quantity|balance)[^)]{0,40}\)|throw new (Error|BadRequest|ValidationError)|z\.object\(|yup\.|class-validator|@Is[A-Z])/g;
       let m: RegExpExecArray | null;
       while ((m = valRe.exec(content)) !== null) {
@@ -93,20 +100,28 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
       }
     }
 
-    // magic business constants (heuristic) — quiet UI/Next labels & infra knobs
+    // magic business constants (heuristic) — quiet UI labels via anchored prefixes/tokens
     const magicRe = /\b(const|let)\s+([A-Z][A-Z0-9_]{2,})\s*=\s*(\d{2,}|['"][^'"]{8,}['"])/g;
     let magic: RegExpExecArray | null;
     while ((magic = magicRe.exec(content)) !== null) {
       const name = magic[2]!;
+      // Anchored / prefix-based denylist — avoid unanchored SIZE/STATUS/KEY swallowing
+      // domain names like MAX_CART_SIZE or ORDER_STATUS_OPEN.
       if (
-        /TEST|SPEC|TIMEOUT|PORT|VERSION|MAX_RETRY|MIN_RETRY|RETRY|DELAY|INTERVAL|TTL|CACHE|HEADER|COOKIE|MIME|CONTENT_TYPE|STATUS|HTTP|URL|URI|PATH|ROUTE|LABEL|TITLE|HEADING|CLASS|STYLE|COLOR|THEME|BREAKPOINT|QUERY|PARAM|ICON|ARIA|MSG|COPY|I18N|LOCALE|PAGE|NAV|MENU|TAB|BTN|BUTTON|PLACEHOLDER|TOOLTIP|Z_INDEX|SHADOW|RADIUS|GAP|PADDING|MARGIN|FONT|SIZE|WIDTH|HEIGHT|OPACITY|DURATION|EASE|ANIM|KEY|ID_PREFIX|FEATURE_FLAG|ENV|NODE_ENV|DEV|PROD|DEBUG|LOG_LEVEL/i.test(
+        /^(?:TEST|SPEC|TIMEOUT|PORT|VERSION|MAX_RETRY|MIN_RETRY|TTL|CACHE|HEADER|COOKIE|MIME|CONTENT_TYPE|HTTP_STATUS|NODE_ENV|LOG_LEVEL|FEATURE_FLAG|ID_PREFIX|Z_INDEX)(?:_|$)/i.test(
+          name
+        ) ||
+        /^(?:ROUTE|PATH|LABEL|TITLE|HEADING|CLASS|STYLE|COLOR|THEME|BREAKPOINT|QUERY|PARAM|ICON|ARIA|MSG|COPY|I18N|LOCALE|PAGE|NAV|MENU|TAB|BTN|BUTTON|PLACEHOLDER|TOOLTIP|SHADOW|RADIUS|GAP|PADDING|MARGIN|FONT|WIDTH|HEIGHT|OPACITY|DURATION|EASE|ANIM)_/i.test(
+          name
+        ) ||
+        /_(?:ROUTE|PATH|LABEL|TITLE|COLOR|THEME|CLASS|STYLE|ICON|ARIA|MSG|COPY|TIMEOUT|PORT|VERSION|RETRY|DELAY|INTERVAL|TTL|CACHE)$/i.test(
           name
         )
       ) {
         continue;
       }
-      // P2-N: skip remaining ALL_CAPS noise on pure UI surfaces (constants / route labels).
-      if (isUiSurface && !isDomain) continue;
+      // P2-N: skip remaining ALL_CAPS noise only on clear UI chrome (not all of app/).
+      if (isUiChrome && !isDomain) continue;
       seq += 1;
       candidates.push({
         id: `inv-magic-${seq}`,

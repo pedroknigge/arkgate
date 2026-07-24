@@ -233,9 +233,17 @@ export function buildRemediationPlan(
   designSmells = designSmells ?? [];
   const patternBets =
     options.patternBets ?? buildPatternBetsFromSmells(designSmells);
-  const edgesMet = activeViolations.length === 0 && !notHonestlyEnforced;
+  // P1-type: goal.met uses blocking (value) edges only; type-only placement debt still listed.
+  const blockingCount =
+    typeof options.blockingViolationCount === 'number'
+      ? options.blockingViolationCount
+      : activeViolations.filter((v) => v.failsStrict !== false).length;
+  const typeOnlyCount = activeViolations.filter(
+    (v) => v.typeOnly || v.namedBindingsTypeOnly
+  ).length;
+  const edgesMet = blockingCount === 0 && !notHonestlyEnforced;
   const designWeak = isDesignWeak(designSmells, {
-    activeViolations: activeViolations.length,
+    activeViolations: blockingCount,
     governedPercent,
     totalFiles,
   });
@@ -252,13 +260,18 @@ export function buildRemediationPlan(
   });
 
   let statement =
-    activeViolations.length > 0
-      ? `Resolve ${activeViolations.length} architecture violation(s) without weakening the contract.`
-      : emptyScope
-        ? 'No source files matched the contract include paths — this "clean" result checks nothing. Fix include/layers (monorepo → apps/packages, or /ark-adopt) so Ark has real code to govern.'
-        : governedLow
-          ? `No violations — but Ark governs only ${governedPercent}% of your code, so this "clean" result checks almost nothing. Classify the rest (ark-check --coverage, then /ark-adopt) so it's actually enforced.`
-          : 'No active violations — the architecture already meets its contract.';
+    blockingCount > 0
+      ? `Resolve ${blockingCount} architecture violation(s) without weakening the contract.` +
+        (typeOnlyCount > 0
+          ? ` (${typeOnlyCount} type-only placement debt also reported — SharedTypes / owning layer.)`
+          : '')
+      : typeOnlyCount > 0
+        ? `No blocking value edges — ${typeOnlyCount} type-only placement debt remain (prefer SharedTypes / owning layer; not runtime coupling).`
+        : emptyScope
+          ? 'No source files matched the contract include paths — this "clean" result checks nothing. Fix include/layers (monorepo → apps/packages, or /ark-adopt) so Ark has real code to govern.'
+          : governedLow
+            ? `No violations — but Ark governs only ${governedPercent}% of your code, so this "clean" result checks almost nothing. Classify the rest (ark-check --coverage, then /ark-adopt) so it's actually enforced.`
+            : 'No active violations — the architecture already meets its contract.';
   if (designWeak) {
     statement =
       'No active edge violations — contract edges are clean, but design smells remain (ENFORCE · design-weak). Shape residual is plan B only; not healthy finished.';
@@ -459,10 +472,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     config,
     options.facts ?? options.architectureFacts
   );
-  const residualPilot =
-    Boolean(pilotLoop?.nextPilot) ||
-    Boolean(pilotLoop?.nextPilot) ||
-    Boolean(pilotLoop?.extractionCard);
+  // Single residual expression (nextPilot || extractionCard) — HTML report uses the same.
+  const residualPilot = pilotLoop?.nextPilot || pilotLoop?.extractionCard || null;
   const { coverageHonesty, baselineHonesty, writePathHonesty, productHonesty } =
     computeDoctorEnforcementHonesty({
       governedPercent: cov.governed.percent,
@@ -478,8 +489,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       designWeak: designFitness.designWeak === true,
       designWeakLabel: designFitness.label,
       packageVersionTruth,
-      residualPilots: residualPilot && designFitness.designWeak === true,
-      pilotTarget: pilotLoop?.nextPilot?.pilotTarget ?? pilotLoop?.extractionCard?.pilotTarget ?? null,
+      residualPilots: Boolean(residualPilot) && designFitness.designWeak === true,
+      pilotTarget: residualPilot?.pilotTarget ?? residualPilot?.pilot ?? null,
       arkRulesMergeHonesty: rulesUnderContract?.mergePlanes
         ? { active: rulesUnderContract.active === true, ...rulesUnderContract.mergePlanes }
         : rulesUnderContract?.active === true
