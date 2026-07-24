@@ -146,12 +146,102 @@ export function globToRegExp(pattern: string): RegExp {
   return re;
 }
 
-export function patternSpecificity(pattern: string): number {
+/**
+ * Concrete (non-wildcard) path segments in a glob, left-to-right.
+ * Used for path-anchored ranking so a domain folder glob can beat a broad
+ * Application bag like src/lib when the file actually sits under domain/.
+ */
+export function concreteGlobSegments(pattern: string): string[] {
   const glob = normalizeGlobSeparators(String(pattern));
-  const beforeWildcard = glob.split('*')[0];
-  const literalSegments = beforeWildcard.split('/').filter(Boolean).length;
+  return glob
+    .split('/')
+    .filter(Boolean)
+    .filter(
+      (seg) =>
+        seg !== '**' &&
+        seg !== '*' &&
+        !seg.includes('*') &&
+        !seg.includes('?') &&
+        !seg.includes('{') &&
+        !seg.includes('[')
+    );
+}
+
+/**
+ * Rank competing layer globs.
+ *
+ * Without a path: concrete-segment count + literal length (historical shape).
+ * With a path: last matched concrete segment depth dominates so interior
+ * domain/persistence folders beat Application/Presentation scatter bags
+ * (DL-DOMAIN-SPECIFICITY / NEW-APP-VACUUM-LIB).
+ */
+export function patternSpecificity(pattern: string, relPath?: string): number {
+  const glob = normalizeGlobSeparators(String(pattern));
+  const concrete = concreteGlobSegments(glob);
   const literalLength = glob.replace(/\*/g, '').length;
-  return literalSegments * 10000 + literalLength;
+  const base = concrete.length * 10000 + literalLength;
+  if (relPath === undefined || relPath === null || relPath === '') return base;
+
+  const pathParts = String(relPath)
+    .split(/[/\\]/)
+    .filter(Boolean);
+  if (concrete.length === 0) {
+    // Pure wildcards (`**`, `*`) — weakest possible match.
+    return literalLength;
+  }
+  let searchFrom = 0;
+  let lastIdx = -1;
+  for (const seg of concrete) {
+    let found = -1;
+    for (let i = searchFrom; i < pathParts.length; i += 1) {
+      if (pathParts[i] === seg) {
+        found = i;
+        break;
+      }
+    }
+    if (found < 0) {
+      // Glob matched but segments could not be placed (braces / exotic globs) — base only.
+      return base;
+    }
+    lastIdx = found;
+    searchFrom = found + 1;
+  }
+  // Depth of last concrete segment dominates; then segment count; then length.
+  return (lastIdx + 1) * 1_000_000 + concrete.length * 10000 + literalLength;
+}
+
+export type LayerMatchHit = {
+  layer: string;
+  pattern: string;
+  score: number;
+};
+
+/**
+ * All layers whose patterns match the path (excludes applied), with best score per layer.
+ * Used for dual-membership coverage signals (P0A-DUAL-MATCH).
+ */
+export function matchingLayersForRelativePath(
+  relPath: string,
+  layers: LayerConfig[] | undefined
+): LayerMatchHit[] {
+  const rel = String(relPath).split(/[/\\]/).join('/');
+  const byLayer = new Map<string, LayerMatchHit>();
+  for (const layer of layers ?? []) {
+    if ((layer.exclude ?? []).some((pattern) => globToRegExp(pattern).test(rel))) {
+      continue;
+    }
+    for (const pattern of layer.patterns ?? []) {
+      if (!globToRegExp(pattern).test(rel)) continue;
+      const score = patternSpecificity(pattern, rel);
+      const prev = byLayer.get(layer.name);
+      if (!prev || score > prev.score) {
+        byLayer.set(layer.name, { layer: layer.name, pattern, score });
+      }
+    }
+  }
+  return [...byLayer.values()].sort(
+    (a, b) => b.score - a.score || a.layer.localeCompare(b.layer)
+  );
 }
 
 export function layerForRelativePath(
@@ -168,7 +258,7 @@ export function layerForRelativePath(
     }
     for (const pattern of layer.patterns ?? []) {
       if (globToRegExp(pattern).test(rel)) {
-        const score = patternSpecificity(pattern);
+        const score = patternSpecificity(pattern, rel);
         if (score > bestScore) {
           bestScore = score;
           bestName = layer.name;

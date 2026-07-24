@@ -122,8 +122,21 @@ function commands(root, args, helpers) {
   return result;
 }
 
-export function renderStartPreview(preview) {
-  console.log('Ark start preview — no files were changed.');
+/**
+ * @param {object} preview
+ * @param {{ applying?: boolean }} [options] when applying=true, do not claim “no files were changed”
+ */
+export function renderStartPreview(preview, options = {}) {
+  const applying = options.applying === true;
+  if (applying) {
+    console.log(
+      preview.changes.length === 0
+        ? 'Ark start apply — reviewing plan (no mutations pending).'
+        : `Ark start apply — writing ${preview.changes.length} planned mutation(s).`
+    );
+  } else {
+    console.log('Ark start preview — no files were changed.');
+  }
   if (preview.analysis) {
     console.log(`Your project looks like: ${preview.analysis.label} (${preview.analysis.archetype}, confidence ${preview.analysis.confidence}).`);
   }
@@ -135,20 +148,24 @@ export function renderStartPreview(preview) {
   console.log(
     `Compact setup budget: ${gateCount}/${budget.maxFiles} gate files${arkrulesNote}, ${budget.bytes}/${budget.maxBytes} bytes${budget.ok ? '' : ' (exceeded)'}.`
   );
-  console.log('Files to create/edit/delete:');
+  console.log(applying ? 'Files create/edit/delete:' : 'Files to create/edit/delete:');
   if (preview.changes.length === 0) console.log('  (none)');
   for (const change of preview.changes) {
     console.log(`  ${change.action.padEnd(6)} ${change.path}  ${change.afterHash ?? '(deleted)'}`);
   }
-  console.log('Commands in the approved setup plan:');
-  for (const command of preview.commands) console.log(`  ${command}`);
+  if (!applying) {
+    console.log('Commands in the approved setup plan:');
+    for (const command of preview.commands) console.log(`  ${command}`);
+  }
   console.log('Host guarantees:');
   for (const guarantee of preview.hostGuarantees) console.log(`  ${guarantee}`);
   if (preview.unresolvedDecisions.length > 0) {
     console.log('Unresolved decisions:');
     for (const decision of preview.unresolvedDecisions) console.log(`  ${decision}`);
   }
-  console.log('Review complete file contents with --json. Apply this plan with: ark start --apply');
+  if (!applying) {
+    console.log('Review complete file contents with --json. Apply this plan with: ark start --apply');
+  }
 }
 
 export function applyStartPreview(root, preview) {

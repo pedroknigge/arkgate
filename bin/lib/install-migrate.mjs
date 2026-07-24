@@ -49,7 +49,14 @@ import {
   codexTomlSnippet,
   arkCheckCommand,
   checkArchitectureScriptSnippet,
+  ensureCheckArchitectureScript,
 } from './ci-and-commands.mjs';
+import {
+  MANAGED_MANIFEST_PATH,
+  isManagedAssetCustomizedOnDisk,
+  syncManagedManifestFromDisk,
+  tryReadManagedManifest,
+} from './managed-upgrade.mjs';
 import {
   resolveTools,
   SKILL_TOOL_TARGETS,
@@ -351,6 +358,22 @@ export function runInstallAgentGates(args) {
     return;
   }
   const hasCheckScript = hasCheckArchitectureScript(root);
+  // S4.2: when a managed-upgrade manifest is already present, a bare
+  // --install-agent-gates (no --force / --compact) defaults to skills-only so a
+  // refresh cannot clobber customized gates or invalidate upgrade planDigest.
+  // Missing AGENTS still gets a full install (gates need repair).
+  const managedPresent = Boolean(tryReadManagedManifest(root));
+  let defaultedSkillsOnly = false;
+  if (
+    managedPresent &&
+    !args.skillsOnly &&
+    !args.compact &&
+    !args.force &&
+    fs.existsSync(path.join(root, 'AGENTS.md'))
+  ) {
+    args.skillsOnly = true;
+    defaultedSkillsOnly = true;
+  }
   const { tools, source } = args.compact && args.tools == null
     ? { tools: new Set(), source: 'compact-none' }
     : resolveTools(args);
@@ -373,7 +396,12 @@ export function runInstallAgentGates(args) {
     const host = [...tools][0];
     const later = host ? ` --tools ${host}` : '';
     if (args.compact) console.log(`Profile: compact router. Expert skills later: ${arkCommand(root, 'ark-check', `--install-agent-gates --skills-only${later} --force`)}`);
-    else if (args.skillsOnly) console.log('Profile: expert skill pack only (refreshes /ark-*; leaves customized gates).');
+    else if (defaultedSkillsOnly) {
+      console.log(
+        `Profile: skills-only refresh (default — ${MANAGED_MANIFEST_PATH} present). ` +
+          'Full gate rewrite: re-run with --force (preserves customized content-identity assets and recomputes managed digest).'
+      );
+    } else if (args.skillsOnly) console.log('Profile: expert skill pack only (refreshes /ark-*; leaves customized gates).');
     else console.log('Profile: full agent gates. Compact-only onboarding: ark start.');
   }
   // --skills-only refreshes just the canonical /ark-* skills, which are safe to
@@ -382,6 +410,13 @@ export function runInstallAgentGates(args) {
   // `--force` clobbers them — this is the safe way to pick up new skill versions.
   // Do not mutate package.json under --skills-only (typecheck bootstrap is gates/CI).
   if (!args.skillsOnly) {
+    // S4.4: always write check:architecture on gate install / start (including compact).
+    const checkBootstrap = ensureCheckArchitectureScript(root, { write: true });
+    if (checkBootstrap.changed && !args.json) {
+      console.log(
+        `Added package.json script "check:architecture": "${checkBootstrap.script}" (local/CI parity).`
+      );
+    }
     // Bootstrap typecheck before CI template so generated workflow includes the step.
     const typecheckBootstrap = ensureTypecheckScript(root, { write: !args.compact });
     if (typecheckBootstrap.changed && !args.compact && !args.json) {
@@ -397,6 +432,9 @@ export function runInstallAgentGates(args) {
     skillsOnly: args.skillsOnly,
   });
   const { skills, skillPaths, version } = catalog;
+  const assetKindByPath = new Map(
+    catalog.assets.map((asset) => [asset.relativePath, asset.kind ?? 'gate'])
+  );
   const templates = catalog.assets.map(({ relativePath, content }) => [relativePath, content]);
 
   // A compact router can be moved back from an explicit host removal. Delete the
@@ -412,6 +450,16 @@ export function runInstallAgentGates(args) {
   }
 
   const results = templates.map(([relativePath, content]) => {
+    // S4.1: preserve content-identity customized/conflicted managed assets even under --force.
+    const kind = assetKindByPath.get(relativePath) ?? 'gate';
+    if (
+      args.force &&
+      managedPresent &&
+      kind !== 'skill' &&
+      isManagedAssetCustomizedOnDisk(root, relativePath, content, kind)
+    ) {
+      return { relativePath, status: 'skipped-customized' };
+    }
     if (relativePath === '.codex/config.toml') {
       const fullPath = path.join(root, relativePath);
       let existing = '';
@@ -474,6 +522,7 @@ export function runInstallAgentGates(args) {
 
   console.log('Ark agent gate templates:');
   let staleSkipped = 0;
+  let preservedCustomized = 0;
   for (const result of results) {
     const marker =
       result.status === 'written'
@@ -482,13 +531,18 @@ export function runInstallAgentGates(args) {
           ? 'merged'
           : result.status === 'skipped-non-ark'
             ? 'kept'
-            : result.status === 'failed'
-              ? 'FAILED'
-              : 'skipped';
+            : result.status === 'skipped-customized'
+              ? 'kept'
+              : result.status === 'failed'
+                ? 'FAILED'
+                : 'skipped';
     // A skipped skill reads as "you're fine" — but it may be a version behind.
     // Say which, so the user isn't left guessing (and knows the safe refresh cmd).
     let note = '';
-    if (result.status === 'skipped' && skillPaths.has(result.relativePath) && version) {
+    if (result.status === 'skipped-customized') {
+      preservedCustomized += 1;
+      note = '  (customized — content-identity preserved)';
+    } else if (result.status === 'skipped' && skillPaths.has(result.relativePath) && version) {
       const installed = installedSkillVersion(path.join(root, result.relativePath));
       if (installed === null || isVersionOlder(installed, version)) {
         staleSkipped += 1;
@@ -498,6 +552,11 @@ export function runInstallAgentGates(args) {
       }
     }
     console.log(`  ${marker.padEnd(7)} ${result.relativePath}${note}`);
+  }
+  if (preservedCustomized > 0 && !args.json) {
+    console.log(
+      `  ${preservedCustomized} customized managed asset(s) preserved (use ark upgrade --accept-conflicts to overwrite deliberately).`
+    );
   }
   if (staleSkipped > 0 && !args.skillsOnly) {
     console.log('');
@@ -605,11 +664,48 @@ export function runInstallAgentGates(args) {
     }
     console.log(`\nHard-write hook verified for ${writeRequest.host}.`);
   }
+  // S4.1: after --force, recompute ark.managed.json so a prior upgrade planDigest
+  // is not left silently broken (field: force clobber → digest mismatch).
+  const wroteManaged =
+    results.some((r) => r.status === 'written' || r.status === 'merged') ||
+    homeResults.some((r) => r.status === 'written');
+  if (args.force && managedPresent) {
+    try {
+      const sync = syncManagedManifestFromDisk(root, {
+        tools: [...tools],
+        profile: args.compact ? 'compact' : 'full',
+      });
+      if (!args.json) {
+        console.log('');
+        console.log(
+          sync.wrote
+            ? `Recomputed ${MANAGED_MANIFEST_PATH} after --force (planDigest ${sync.planDigest.slice(0, 18)}…). Run a fresh ark upgrade preview before --apply.`
+            : `${MANAGED_MANIFEST_PATH} already matches on-disk content after --force.`
+        );
+      }
+    } catch (error) {
+      if (!args.json) {
+        console.log('');
+        console.log(
+          `Warning: could not recompute ${MANAGED_MANIFEST_PATH} after --force (${error instanceof Error ? error.message : String(error)}). Run a new ark upgrade preview before --apply.`
+        );
+      }
+    }
+  } else if (args.force && wroteManaged && !args.skillsOnly) {
+    // No prior manifest: still warn that any in-flight upgrade preview is stale.
+    if (!args.json) {
+      console.log('');
+      console.log(
+        'Note: --force rewrote gate files. If you had an ark upgrade preview open, run a new preview (planDigest changed).'
+      );
+    }
+  }
+
   console.log('');
   console.log('Next steps:');
   console.log('  1. Review the generated files and commit the ones that match your tools.');
   console.log(`  2. Run: ${arkCheckCommand(root)}`);
-  if (!hasCheckScript) {
+  if (!hasCheckScript && !hasCheckArchitectureScript(root)) {
     console.log('  3. Add the package.json alias if you want `run check:architecture`:');
     console.log(`     ${checkArchitectureScriptSnippet(root)}`);
   }

@@ -14,7 +14,7 @@ import {
 import { falseGreenAdoptionGap } from './field-install.mjs';
 import { renderHostSupportMatrixMarkdown } from './host-support-matrix.mjs';
 import { PREFERRED_MCP_BIN } from './hook-templates.mjs';
-import { readPackageJson } from './gate-files.mjs';
+import { hasCheckArchitectureScript, readPackageJson } from './gate-files.mjs';
 
 // Field-install helpers re-exported for callers that import from this module.
 export {
@@ -88,6 +88,97 @@ export function checkArchitectureScriptSnippet(root) {
   return `"check:architecture": "${arkCheckCommand(root)}"`;
 }
 
+/**
+ * Insert a package.json scripts entry while preserving indentation / formatting
+ * (same contract as pinArkgateDevDependency format-preserving edits).
+ * @param {string} source
+ * @param {string} scriptName
+ * @param {string} scriptValue
+ */
+function addPackageScriptPreservingFormat(source, scriptName, scriptValue) {
+  const multiline = /\r?\n/.test(source);
+  const eol = source.includes('\r\n') ? '\r\n' : '\n';
+  const rootPropertyIndent = source.match(/\r?\n([ \t]+)"[^"\n]+"\s*:/)?.[1] ?? '  ';
+  const indentUnit = rootPropertyIndent;
+  const encoded = JSON.stringify(scriptValue);
+  const key = JSON.stringify(scriptName);
+  const scriptsMatch = /"scripts"\s*:\s*\{/.exec(source);
+
+  if (scriptsMatch) {
+    const open = source.indexOf('{', scriptsMatch.index);
+    let depth = 0;
+    let quoted = false;
+    let escaped = false;
+    let close = -1;
+    for (let index = open; index < source.length; index += 1) {
+      const char = source[index];
+      if (quoted) {
+        if (escaped) escaped = false;
+        else if (char === '\\') escaped = true;
+        else if (char === '"') quoted = false;
+        continue;
+      }
+      if (char === '"') quoted = true;
+      else if (char === '{') depth += 1;
+      else if (char === '}' && --depth === 0) {
+        close = index;
+        break;
+      }
+    }
+    if (close === -1) throw new Error('Unbalanced package.json scripts object');
+    const body = source.slice(open + 1, close);
+    if (!multiline) {
+      const addition = body.trim() ? `,${key}:${encoded}` : `${key}:${encoded}`;
+      return `${source.slice(0, close)}${addition}${source.slice(close)}`;
+    }
+    const beforeClose = source.slice(0, close);
+    const trailing = beforeClose.match(/\s*$/)?.[0] ?? '';
+    const contentEnd = close - trailing.length;
+    const closingIndent = trailing.slice(trailing.lastIndexOf('\n') + 1);
+    const propertyIndent = `${closingIndent}${indentUnit}`;
+    const addition = body.trim()
+      ? `,${eol}${propertyIndent}${key}: ${encoded}`
+      : `${propertyIndent}${key}: ${encoded}`;
+    return `${source.slice(0, contentEnd)}${addition}${eol}${closingIndent}${source.slice(close)}`;
+  }
+
+  const rootClose = source.lastIndexOf('}');
+  if (rootClose === -1) throw new Error('Unbalanced package.json object');
+  const rootBody = source.slice(0, rootClose);
+  if (!multiline) {
+    const separator = rootBody.trim().endsWith('{') ? '' : ',';
+    return `${rootBody}${separator}"scripts":{${key}:${encoded}}${source.slice(rootClose)}`;
+  }
+  const trailing = rootBody.match(/\s*$/)?.[0] ?? '';
+  const contentEnd = rootClose - trailing.length;
+  const rootClosingIndent = trailing.slice(trailing.lastIndexOf('\n') + 1);
+  const separator = source.slice(0, contentEnd).trimEnd().endsWith('{') ? '' : ',';
+  const addition = `${separator}${eol}${rootPropertyIndent}"scripts": {${eol}${rootPropertyIndent}${indentUnit}${key}: ${encoded}${eol}${rootPropertyIndent}}`;
+  return `${source.slice(0, contentEnd)}${addition}${eol}${rootClosingIndent}${source.slice(rootClose)}`;
+}
+
+/**
+ * Ensure package.json has `check:architecture` so local/CI parity is not a post-start gap.
+ * Never overwrites an existing script (even if stale). Preserves package.json formatting.
+ *
+ * @param {string} root
+ * @param {{ write?: boolean }} [opts]
+ * @returns {{ changed: boolean, reason: 'added'|'already'|'no-package-json', script?: string }}
+ */
+export function ensureCheckArchitectureScript(root, opts = {}) {
+  const write = opts.write !== false;
+  const pkgPath = path.join(root, 'package.json');
+  if (!fs.existsSync(pkgPath)) return { changed: false, reason: 'no-package-json' };
+  if (hasCheckArchitectureScript(root)) return { changed: false, reason: 'already' };
+  const script = arkCheckCommand(root);
+  if (write) {
+    const source = fs.readFileSync(pkgPath, 'utf8');
+    const next = addPackageScriptPreservingFormat(source, 'check:architecture', script);
+    fs.writeFileSync(pkgPath, next.endsWith('\n') ? next : `${next}\n`);
+  }
+  return { changed: true, reason: 'added', script };
+}
+
 // Canonical agent contract. AGENTS.md and the Cursor rule both derive from this single
 // source so the steps can never drift out of sync between the two files. `steps(checkCommand)`
 // is a builder because the check command's runner prefix varies with the package manager.
@@ -105,7 +196,30 @@ const AGENT_CONTRACT = {
   cursorValidateStep: `Validate the full post-edit file content with the \`validate_code\` tool before writing whenever your runtime supports it.`,
 };
 
-export function layerPlacementTable() {
+/**
+ * Placement table for AGENTS.md. Prefer live `ark.config.json` layers when provided
+ * so custom contracts (e.g. 8-layer monorepo) do not get a stock 11-layer table.
+ *
+ * @param {Array<{ name?: string, layer?: string, patterns?: string[], intentPrefixes?: string[], prefixes?: string[] }>|null|undefined} [layers]
+ */
+export function layerPlacementTable(layers) {
+  if (Array.isArray(layers) && layers.length > 0) {
+    const rows = layers
+      .map((layer) => {
+        const name = layer.name ?? layer.layer ?? 'Unknown';
+        const patterns = (layer.patterns ?? [])
+          .map((pattern) => `\`${pattern}\``)
+          .join(', ') || '—';
+        const prefixes = (layer.intentPrefixes ?? layer.prefixes ?? [])
+          .map((prefix) => `\`${prefix}\``)
+          .join(', ') || '—';
+        return `| ${name} | ${patterns} | ${prefixes} |`;
+      })
+      .join('\n');
+    return `| Layer | Patterns (from ark.config.json) | Intent prefixes |
+|-------|----------------------------------|-----------------|
+${rows}`;
+  }
   const rows = DEFAULT_INTENT_PREFIXES.map((entry) => {
     const dirs = (DEFAULT_LAYER_DIRECTORIES[entry.layer] ?? [])
       .map((directory) => `\`${directory}/\``)
@@ -117,6 +231,23 @@ export function layerPlacementTable() {
 ${rows}`;
 }
 
+/**
+ * Load project layers for AGENTS generation. Returns null when config is absent/invalid
+ * so callers fall back to the stock 11-layer table.
+ * @param {string} root
+ */
+export function loadConfigLayersForAgents(root) {
+  try {
+    const cfgPath = path.join(root, 'ark.config.json');
+    if (!fs.existsSync(cfgPath)) return null;
+    const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+    if (!Array.isArray(cfg?.layers) || cfg.layers.length === 0) return null;
+    return cfg.layers;
+  } catch {
+    return null;
+  }
+}
+
 export function agentInstructions(root) {
   const checkCmd = arkCheckCommand(root);
   const startCmd = arkCommand(root, 'ark', 'start');
@@ -124,6 +255,20 @@ export function agentInstructions(root) {
   const steps = AGENT_CONTRACT.steps(checkCmd)
     .map((step, index) => `${index + 1}. ${step}`)
     .join('\n');
+  const liveLayers = loadConfigLayersForAgents(root);
+  const placementTable = layerPlacementTable(liveLayers);
+  const placementBody = liveLayers
+    ? `\`ark.config.json\` is authoritative for this project. Place new code in these **${liveLayers.length}** configured layer(s) — do not invent an ungoverned location or assume the stock 11-layer layout:
+
+${placementTable}
+
+When creating a NEW kind of code that no existing layer covers, add a layer to \`ark.config.json\` first (via \`/ark-contract\`), then place the file.`
+    : `\`ark.config.json\` is authoritative for this project. When creating a NEW kind of code
+that no existing layer covers (a saga, a background job, a read model, ...), use the
+default 11-layer placement below and add the layer to \`ark.config.json\` — do not invent
+an ungoverned location:
+
+${placementTable}`;
   return `# Ark Enforcement
 
 ## Default agent flow (if unsure, do only this)
@@ -181,12 +326,7 @@ ${steps}
 
 ## Where new code belongs
 
-\`ark.config.json\` is authoritative for this project. When creating a NEW kind of code
-that no existing layer covers (a saga, a background job, a read model, ...), use the
-default 11-layer placement below and add the layer to \`ark.config.json\` — do not invent
-an ungoverned location:
-
-${layerPlacementTable()}
+${placementBody}
 
 The project is only considered Ark-enforced when its host-appropriate write path is configured
 and the CI check passes. Only Claude/Grok provide a hard local write boundary; Cursor/Codex use

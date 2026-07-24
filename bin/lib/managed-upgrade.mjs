@@ -180,6 +180,88 @@ function readManifest(root) {
   return { file, content, value };
 }
 
+/**
+ * Best-effort managed manifest load for install-agent-gates force/preserve paths.
+ * Returns null when missing or invalid (never throws).
+ * @param {string} root
+ * @returns {{ schemaVersion: string, profile: string, hosts: string[], assets: object[] } | null}
+ */
+export function tryReadManagedManifest(root) {
+  try {
+    const { value } = readManifest(path.resolve(root));
+    return value;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Recompute `ark.managed.json` identities from on-disk content after a force
+ * gate install (or any out-of-band rewrite of managed assets). Without this,
+ * a prior upgrade planDigest is silently invalidated and apply fails with
+ * "managed upgrade plan digest mismatch".
+ *
+ * @param {string} root
+ * @param {{ tools?: string[]|string|Set<string>, profile?: 'compact'|'full' }} [options]
+ * @returns {{ planDigest: string, profile: string, hosts: string[], assetCount: number, wrote: boolean }}
+ */
+export function syncManagedManifestFromDisk(root, options = {}) {
+  const resolvedRoot = path.resolve(root);
+  const plan = planManagedUpgrade(resolvedRoot, {
+    tools: options.tools,
+    profile: options.profile,
+    acceptConflicts: options.acceptConflicts === true,
+  });
+  const file = assertSafeTarget(resolvedRoot, MANAGED_MANIFEST_PATH);
+  const previous = readFile(file);
+  const next = Buffer.from(plan.manifestContent);
+  if (previous && hash(previous) === hash(next)) {
+    return {
+      planDigest: plan.planDigest,
+      profile: plan.profile,
+      hosts: plan.hosts,
+      assetCount: plan.assets.length,
+      wrote: false,
+    };
+  }
+  ensureParentDirectories(resolvedRoot, MANAGED_MANIFEST_PATH, []);
+  fs.writeFileSync(file, plan.manifestContent);
+  return {
+    planDigest: plan.planDigest,
+    profile: plan.profile,
+    hosts: plan.hosts,
+    assetCount: plan.assets.length,
+    wrote: true,
+  };
+}
+
+/**
+ * True when an existing managed asset is customized/conflicted vs the recorded
+ * identity — install-agent-gates --force must preserve these (same contract as
+ * content-identity upgrade).
+ */
+export function isManagedAssetCustomizedOnDisk(root, relativePath, desiredContent, kind = 'gate') {
+  const manifest = tryReadManagedManifest(root);
+  if (!manifest) return false;
+  const recorded = (manifest.assets ?? []).find((asset) => asset.path === relativePath);
+  if (!recorded) return false;
+  const file = path.join(path.resolve(root), relativePath);
+  const currentFile = readFile(file);
+  if (currentFile == null) return false;
+  // Whole-file gates: compare full file bytes. Toml-section uses primary table only.
+  let currentScoped = currentFile.toString('utf8');
+  if (recorded.scope === 'toml-section') {
+    currentScoped = codexPrimaryTable(currentScoped)?.block ?? currentScoped;
+  }
+  const classified = classifyManagedAsset({
+    recorded,
+    currentContent: currentScoped,
+    targetContent: desiredContent,
+    kind,
+  });
+  return classified.state === 'customized' || classified.state === 'conflicted';
+}
+
 function resolveSelection(root, options, manifest) {
   const explicit = normalizeToolsList(options.tools);
   const compactHost = compactRouterHost(root);

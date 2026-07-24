@@ -9,6 +9,7 @@ import {
   buildArchitectureRecommendation,
   detectPackageManager,
   detectWorkspaces,
+  evaluateStartShapeConfidenceGate,
   resolveIncludeRoots,
   detectTsPackageRoots,
   INIT_WIZARD_CHOICES,
@@ -422,11 +423,51 @@ async function start(args) {
       cliVersion,
       packageInstallArgv,
     });
+    // NEW-START-LOW-CONFIDENCE-SHAPE: refuse silent --yes apply when shape is weak.
+    if (args.apply && args.yes) {
+      const gate = evaluateStartShapeConfidenceGate({
+        confidence: preview.analysis?.confidence,
+        projectedCoveragePercent: preview.projectedCoverage?.percent,
+        explicitShape: Boolean(args.archetype || args.preset),
+        force: Boolean(args.force),
+      });
+      if (!gate.ok) {
+        if (args.json) {
+          console.log(
+            JSON.stringify(
+              {
+                ok: false,
+                error: 'start-shape-confidence-gate',
+                ...gate,
+                preview,
+              },
+              null,
+              2
+            )
+          );
+        } else {
+          console.error('Refusing ark start --apply --yes: shape confidence / coverage gate failed.');
+          for (const reason of gate.reasons ?? []) console.error(`  • ${reason}`);
+          console.error('Choices:');
+          for (const choice of gate.choices ?? []) console.error(`  • ${choice}`);
+          renderStartPreview(preview);
+        }
+        return 2;
+      }
+    }
     if (args.json) console.log(JSON.stringify(preview, null, 2));
-    else renderStartPreview(preview);
+    else if (!args.apply) renderStartPreview(preview);
+    else renderStartPreview(preview, { applying: true });
     if (!args.apply) return 0;
     applyStartPreview(args.root, preview);
-    if (!args.json) console.log(`Applied ${preview.changes.length} previewed mutation(s).`);
+    // DL-START-APPLY-MESSAGE: single honest summary (do not claim preview-no-write after apply).
+    if (!args.json) {
+      if (preview.changes.length === 0) {
+        console.log('Start apply complete — nothing to change (already set up).');
+      } else {
+        console.log(`Applied ${preview.changes.length} start mutation(s).`);
+      }
+    }
     // After applying exact preview bytes, install the pinned package when requested
     // (preview itself never runs the package manager — field: start left pin without node_modules).
     if (
@@ -548,8 +589,12 @@ async function start(args) {
         fs.existsSync(path.join(root, 'lerna.json')) ||
         fs.existsSync(path.join(root, 'apps')) ||
         fs.existsSync(path.join(root, 'packages'));
-      // Mature multi-package / nested-TS trees must NOT get a thin src/** starter (0 files).
-      if (looksLikeMonorepo && (rec?.mature || includeRoots.length > 0 || tsPackages.length > 0)) {
+      // SPA (Vite + root api/lib) wins over monorepo heuristics (NEW-SPA-DEFAULT-LAYOUT).
+      if (rec?.preset === 'vite-vercel-spa' || preset === 'vite-vercel-spa') {
+        initArgs.push('--preset', 'vite-vercel-spa');
+        console.log('  Vite/Vercel SPA layout detected — include src,api,lib; api→Application; db clients→Persistence.');
+      } else if (looksLikeMonorepo && (rec?.mature || includeRoots.length > 0 || tsPackages.length > 0)) {
+        // Mature multi-package / nested-TS trees must NOT get a thin src/** starter (0 files).
         // UI-heavy TS packages (Remotion/Vite) prefer ui-surface patterns when recommend says so.
         const useUi =
           rec?.preset === 'feature-sliced' ||
@@ -562,7 +607,8 @@ async function start(args) {
             ? `  Multi-package / TS package layout detected — profile include: ${shown.join(', ')}.`
             : '  Multi-package layout detected — using monorepo profile.'
         );
-      } else if (!rec?.mature && preset) {
+      } else if (preset) {
+        // Prefer recommended preset even on mature single-package trees (avoid vacuum hexagonal).
         initArgs.push('--preset', preset);
       }
       const status = runArkCheck(initArgs, { cwd: root });
