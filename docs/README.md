@@ -52,7 +52,7 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Area | Path |
 |------|------|
 | Release notes (by version) | [releases/](releases/) · [CHANGELOG.md](../CHANGELOG.md) |
-| Shipped epic plans | [plans/](plans/) |
+| Epic plans (seeded + shipped) | [plans/](plans/) |
 | Claims audit | [audit/claims-matrix.md](audit/claims-matrix.md) |
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |

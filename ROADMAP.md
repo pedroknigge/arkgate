@@ -494,6 +494,62 @@ may raise those ceilings merely to fit its own implementation.
   correctness patch. No feature release or broad product claim that requires retention/independence
   is allowed while `RB-11` is open; `RB-12` is closed.
 
+### Phase AR — ArkRules: intra-layer contract + brownfield rules migration (v4 train)
+
+Origin: owner vision brief (2026-07-23) — extend the contract *inside* each layer (declarative
+structural rules + Domain invariant catalogs) and make the library an active brownfield
+migration partner, on the **same** enforcement plane (MCP, PreToolUse, CI, doctor). Plan
+authority with contrast evidence, schema sketches, sensor plan, and exit criteria:
+[docs/plans/arkrules-evolution/README.md](docs/plans/arkrules-evolution/README.md).
+
+Boundary and discipline (unchanged hard lines):
+
+- Everything is **opt-in and additive**: absence of `arkRules` changes no verdict byte-for-byte
+  (advisory-invariant discipline, test-pinned). Binary gate; no numeric score; no LLM verdict.
+- ADRs gate implementation: `AR01` locks ADR 0012 (contract + modular composition), `AR05`
+  locks ADR 0013 (sensors are resolver facts, closed vocabulary), `AR09` locks ADR 0014
+  (invariant catalog, coverage evidence, rule modes), `AR14` applies ADR 0015 (migration
+  routes through existing skills — **no new skill names**), `AR18` locks ADR 0016 (executable
+  evaluator stays out of core).
+- The frozen list is honored: templates/packs are **deepened** for existing archetypes (no new
+  preset or pack names); no runtime features (the kernel stays experimental under ADR 0004;
+  ArkRules never depends on runtime registration); all remediation of arkrule violations is
+  judgment (`neverMechanicalSafe`) — no codemod.
+- Weakening an ArkRule (demote/delete) is a policy-delta weakening transition, hash-bound like
+  any layer-rule weakening. Promotion advisory→enforced is deterministic and refuses uncovered
+  invariants.
+- `Z09`/`RB-11` remains a parked claim gate and does not block AR engineering; no AR release
+  repeats the retention/independence claims that `RB-11` owns.
+
+Release train: `4.0.0` = `AR01`–`AR08` (foundations + Tier-1 sensors + templates; sole
+breaking change is the already-scheduled removal of the deprecated `arkgate/runtime|nestjs`
+forwarders in `AR04`); `4.1.0` = `AR09`–`AR12` (invariant catalog + coverage + rule modes);
+`4.2.0` = `AR13`–`AR16` (brownfield rules-migration toolkit); `4.3.0` = `AR17`–`AR19`
+(hardening + docs + claims audit). One `doing` at a time; each item's detailed exit criteria
+live in the plan.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 82 | `AR01` | `todo` | M | 3.9.x published | ADR 0012 accepted; `ark.arkrules.schema.json` + config `schemaVersion 1.0→1.1` additive migration; missing/invalid/zero-match references fail closed with file-precise diagnostics |
+| 83 | `AR02` | `todo` | M | `AR01` | Effective Contract loader resolves `arkRules` references with per-rule provenance and feeds `policyHash` (parity across CLI/MCP/ESLint; resident identity invalidates; policy-delta classifies arkrule transitions) |
+| 84 | `AR03` | `todo` | M | `AR02` | Adapter contract `1.3→1.4` carries `evidence.arkruleId` + `evidence.arkruleSource`; an arkrule violation renders with provenance on every surface with no surface-specific code |
+| 85 | `AR04` | `todo` | S | — | v4 breaking hygiene: deprecated `arkgate/runtime|nestjs` forwarders removed; migration note published; clean-checkout pack green |
+| 86 | `AR05` | `todo` | L | `AR03` | ADR 0013 accepted; class-shape facts land in resolved facts `1.0→1.1` additively within PreToolUse latency budgets |
+| 87 | `AR06` | `todo` | M | `AR05` | Tier-1 sensors `aggregate-private-state`, `always-valid-factory`, `domain-event-on-mutation` block in enforced mode and stay invisible in advisory mode (invariants test-pinned) |
+| 88 | `AR07` | `todo` | M | `AR06` | Tier-1 `orchestration-only` + `thin-adapter` and Tier-2 advisory `no-anemic-model` ship silent on healthy fixtures and this repository |
+| 89 | `AR08` | `todo` | M | `AR01`, `AR06` | Existing archetypes/packs generate lean root config + editable `arkrules/*.json` within the compact onboarding budget |
+| 90 | `AR09` | `todo` | M | `AR03` | ADR 0014 accepted; Domain invariant catalog validates with provenance and is exposed via `ark://manifest` |
+| 91 | `AR10` | `todo` | M | `AR09` | Test-title + symbol coverage evidence; `INVARIANT_UNCOVERED` advisory; missing test globs report `partial`, never covered |
+| 92 | `AR11` | `todo` | M | `AR09`, `AR10` | Rule modes with deterministic promotion ladder; demote/delete is hash-acknowledged weakening; uncovered invariants refuse promotion |
+| 93 | `AR12` | `todo` | M | `AR10`, `AR11` | Doctor + HTML "Rules under contract" section (report parity); `ark-contract`/`ark-place` deepened and stamped |
+| 94 | `AR13` | `todo` | L | `AR07`, `AR09` | Deterministic rules inventory (`--rules-inventory` + `ark_rules_inventory`) reproduces seeded spaghetti fixtures and stays silent on healthy ones |
+| 95 | `AR14` | `todo` | M | `AR13` | Extraction cards ride the existing `pilotLoop` (one pilot, preflighted, judgment-only); `ark-adopt`/`ark-fix`/`ark-loop` deepened per ADR 0015 |
+| 96 | `AR15` | `todo` | M | `AR13` | Arkrule freeze/residual reuses `.ark-baseline.json` keys with honest counts and opt-in auto-shrink on green; lopsided freezes still refused |
+| 97 | `AR16` | `todo` | M | `AR14`, `AR15` + gate: consented brownfield corpus | Field pilot: inventory → ≥1 extraction → promotion → green with residual honestly reported (adopter never named publicly) |
+| 98 | `AR17` | `todo` | M | `AR12`, `AR15` | Remediation payload polish + performance pass: hook budget held with arkrules loaded; mutation/coverage gates green |
+| 99 | `AR18` | `todo` | S | `AR17` | ADR 0016 accepted; docs lanes + configuration/agent-guide/brownfield authorities updated; migration case study published |
+| 100 | `AR19` | `todo` | S | `AR18` | Claims audit: every public ArkRules statement reproducible from a clean checkout; 4.x train closed |
+
 ### Z01 — Make release cleanup tool-owned and path-safe
 
 - **Status:** `done`
@@ -2824,7 +2880,11 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: none (2026-07-23 post-P1–P4 residuals + 3.9.0 prepared; publish pending auth)
+Engineering doing: none — next item: `AR01` (Phase AR seeded 2026-07-23; ADR 0012 + arkrules
+  schema + config 1.0→1.1 migration; plan authority docs/plans/arkrules-evolution/README.md)
+Phase AR (v4 train, AR01–AR19 todo): ArkRules intra-layer contract + brownfield rules migration;
+  releases 4.0.0 (AR01–AR08, incl. AR04 forwarder removal), 4.1.0 (AR09–AR12),
+  4.2.0 (AR13–AR16), 4.3.0 (AR17–AR19); all opt-in/additive; no new skill names; no codemod
 Claim gate: `Z09` (`parked`) — residual RB-11 only (retained adoption + independent close)
   Field kit scaffolding: docs/field/ (preregistration, cohort checklist, reviewer manifesto) — NOT closed
   Promote Z09 only when: signed reviewer/repo identity mechanism + external matrix + ≥8 consented adopters are preregistered
@@ -2838,7 +2898,7 @@ Parked field candidates: Y09 (keep), Y07 (low priority behind Y06 pure-opt-in co
 Y06 done: pure-layer opt-in nudge (PREDIAL field case)
 Archived until field demand + ADR: Y10 (not “next after Z09”)
 Runtime parked: K01 outside Phase Z; experimental @arkgate/runtime is not the product wedge;
-  deprecated root forwarders arkgate/runtime|nestjs remain until major 4.0
+  deprecated root forwarders arkgate/runtime|nestjs remain until major 4.0 (removal owned by AR04)
 Release lanes: ordinary corrective patches do not wait for Z09; broad “Phase Z shipped” /
   retained-adoption / independent-close claims wait for residual RB-11
 Released baseline: npm arkgate@3.9.0 prepared (Beautiful Path + P1–P4 residuals; publish pending; Z09/RB-11 residual open)

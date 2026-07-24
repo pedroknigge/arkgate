@@ -148,6 +148,7 @@ retained shipped rationale live under `docs/plans/`:
 | [understandable-execution](docs/plans/understandable-execution/README.md) | Shipped in 3.4.0 | Explicit effect/state boundaries, cohesive enforcement core, and measured pre-tool flow without style dogma |
 | [reshape-copilot](docs/plans/reshape-copilot/README.md) | Shipped in 3.6.0 | Advisory physical-cohesion evidence and one governed reshape pilot at a time |
 | [enforcement-truth-at-speed](docs/plans/enforcement-truth-at-speed/README.md) | In progress (Phase Z; Z01–Z08 + Z10 done; Z09 parked claim gate / residual RB-11) | Restore packed-artifact truth and one adapter verdict; residual retained-adoption + independent close only |
+| [arkrules-evolution](docs/plans/arkrules-evolution/README.md) | Seeded (Phase AR, `AR01`–`AR19` todo; v4 train) | Intra-layer ArkRules contract (structural sensors + invariant catalogs) + brownfield rules-migration toolkit on the same enforcement plane |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in
 `ROADMAP.md`.
