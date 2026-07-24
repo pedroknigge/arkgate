@@ -156,8 +156,26 @@ publish it. Verify with `npm view @arkgate/runtime dist-tags --json`; until a se
 experimental publication exists, migrate runtime imports only when evaluating a built local
 `packages/runtime` source checkout. The `arkgate/eslint` migration is available now.
 
-If you only used the CLI + MCP (most projects), **no import changes**.  
-Surface policy: [package-surface.md](package-surface.md).
+### ArkGate 4 / AR04 — root runtime forwarders removed
+
+If you previously imported:
+
+```ts
+import { … } from 'arkgate/runtime';
+import { … } from 'arkgate/nestjs';
+```
+
+those root subpaths are **gone**. Switch to the experimental companion only:
+
+```ts
+import { … } from '@arkgate/runtime';
+import { … } from '@arkgate/runtime/nestjs';
+```
+
+The stable gate (`arkgate` root, `arkgate/eslint`, CLIs, MCP, schemas) is unchanged. Gates need
+no app runtime. Surface policy: [package-surface.md](package-surface.md).
+
+If you only used the CLI + MCP (most projects), **no import changes**.
 
 ---
 

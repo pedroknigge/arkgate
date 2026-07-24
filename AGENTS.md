@@ -83,7 +83,7 @@ canonical documentation authority.**
 | GitHub Action | `action.yml` | [Action setup and inputs](docs/ai-gates.md#ci-backstop) · [Package surface](docs/package-surface.md) | Real | — |
 | Experimental `@arkgate/runtime` | `packages/runtime/package.json` · `src/index.ts` | [Runtime README](packages/runtime/README.md) · [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Hardening](docs/production-hardening.md) | Partial | — |
 | Experimental runtime NestJS adapter | runtime export `./nestjs` · `src/nestjs/index.ts` | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) | Partial | — |
-| Deprecated `arkgate/runtime` and `arkgate/nestjs` forwarders | root package exports · `compat/` | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Migration guide](docs/migrate-from-ark-runtime-kernel.md) | Deprecated | — |
+| ~~Deprecated `arkgate/runtime` and `arkgate/nestjs` forwarders~~ | removed (AR04) | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Migration guide](docs/migrate-from-ark-runtime-kernel.md) | Removed | Use `@arkgate/runtime` / `@arkgate/runtime/nestjs` |
 | Published payload and compatibility fixture | root `package.json` `files` · `scripts/verify-package-files.mjs` | [Package surface](docs/package-surface.md) · [Contributing](CONTRIBUTING.md) | Real | — |
 | Maintainer verification, evaluation, and release workflows | root scripts · `tests/` · `eval/` · `.github/workflows/` | [Contributing](CONTRIBUTING.md) · [Eval guide](eval/README.md) · [Roadmap](ROADMAP.md) | Real | — |
 

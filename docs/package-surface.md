@@ -42,7 +42,8 @@ hardening guide remains repository-hosted rather than duplicated in the gate tar
 | **Enforcement ladder + fixed journey (T05, 3.1.0)** | `doctor.writePath.enforcementLadder`; hook repair `enforcement`; `npm run eval:change-integrity` | Additive schema `1.0` separates supported/installed/active/bypassable state and evidence. Hard is operation-scoped only for a supported covered hook; MCP is advisory; required CI status stays unverified locally. Fixed no-context fixture proves CLI/MCP/hook/final parity, one casual denial, acceptance behavior, and strict Ark. |
 | **Enforcement state (Z06/Z10)** | `doctor.writePath.enforcementState`; schema/type | Schema `1.1`: runtime observation, operation coverage, and operation-scoped `hard`. Only fresh covered active-host evidence permits `hard:true`; unverified assets and MCP remain non-hard. |
 | **Design delta (Z10)** | `--fail-on-new-smells --base-ref <ref>`; hook/MCP; schema/types | Schema `1.0`: identities, touched paths, stable evidence/verdict. Missing base fails closed; only new/worsened `domain-logic-in-ui` blocks; global doctor smells stay advisory. |
-| **`arkgate/schema/analysis-result`** or **`arkgate/schema/ark.analysis-result.schema.json`** | Public CLI/MCP/hook diagnostic envelope (`schemaVersion`, `mode`, `valid`, `completeness`, `completenessReasons`, `diagnostics`, resolved identities) | Schema `1.3` distinguishes `resolved-candidate-facts` from `lexical-compatibility`; partial/unavailable analysis is always non-green, and resolved complete/partial results require policy/resolver/facts/tree identities. `1.2` added completeness and remains accepted alongside consumer-owned 1.0/1.1 values. |
+| **`arkgate/schema/analysis-result`** or **`arkgate/schema/ark.analysis-result.schema.json`** | Public CLI/MCP/hook diagnostic envelope (`schemaVersion`, `mode`, `valid`, `completeness`, `completenessReasons`, `diagnostics`, resolved identities) | Schema `1.4` adds optional `evidence.arkruleId` / `evidence.arkruleSource` for ArkRules; `1.3` distinguished `resolved-candidate-facts` from `lexical-compatibility`; partial/unavailable analysis is always non-green, and resolved complete/partial results require policy/resolver/facts/tree identities. `1.2` added completeness and remains accepted alongside consumer-owned 1.0/1.1 values. |
+| **`arkgate/schema/arkrules`** or **`arkgate/schema/ark.arkrules.schema.json`** | Per-layer structure sensors + invariant catalog (ADR 0012) | Schema `1.0`. Opt-in via root `arkRules` map (`ark.config` schema `1.1`). |
 | **`arkgate/schema/resolved-candidate-facts`** or **`arkgate/schema/ark.resolved-candidate-facts.schema.json`** | Versioned parity-capable input for `analyzeResolvedProject` / `preflightResolvedChange` | Schema `1.0` is serializable and deterministic. Tooling owns filesystem/compiler resolution; Domain/Kernel validate and evaluate supplied facts without importing those effects. Facts name resolver/compiler inputs, governed files, dependency evidence, completeness reasons, and candidate tree/facts hashes. |
 | **Config JSON Schema** | `arkgate/schema` or `arkgate/schema/ark.config.schema.json` | Stable package resource subpaths for editor completion and contract tooling. |
 | **Agent skills** | `/ark-*` templates; install via `--install-agent-gates` (often `--skills-only` on top of compact) | **Day zero** is the compact router from `ark start` / `start --apply` + doctor control plane — not the full skill pack. Skill *names* and the guided expert path (`/ark-autopilot` after pack install) are stable; internal skill prose may evolve (When/not when, explore Shape dual-plan seed, extraction cards). |
@@ -138,8 +139,7 @@ product claims**. Static architecture enforcement does not depend on them.
 | Surface | Import path | Notes |
 |---------|-------------|--------|
 | **Runtime kernel** | **`@arkgate/runtime`** | Separate 0.x source package configured for the `experimental` tag. It is not currently present in the npm registry, and the root `publish-npm.yml` workflow does not publish it automatically. Event bus, intents, policies, sagas, event buffer, projections, and strict helpers. Built-in stores are **InMemory reference only**. |
-| **Runtime migration shim** | `arkgate/runtime` | Deprecated forwarder to `@arkgate/runtime`; contains no implementation and is removed in ArkGate 4. |
-| **NestJS adapter** | `@arkgate/runtime/nestjs` | Experimental optional peer `@nestjs/common`; the deprecated `arkgate/nestjs` path forwards here. |
+| **NestJS adapter** | `@arkgate/runtime/nestjs` | Experimental optional peer `@nestjs/common`. Root `arkgate/nestjs` and `arkgate/runtime` forwarders were **removed in AR04 / ArkGate 4** — import the companion package directly. |
 
 ---
 
@@ -180,7 +180,7 @@ production deployment would need to satisfy; it is not a readiness certification
 | New optional config field, new CLI flag, additive JSON | **minor** |
 | Bugfix with no contract change | **patch** |
 | Additive experimental runtime API | `@arkgate/runtime` prerelease/minor |
-| Remove deprecated `arkgate/runtime` forwarding shim | ArkGate **4.0** |
+| Remove deprecated `arkgate/runtime` / `arkgate/nestjs` forwarding shims | **Done (AR04)** — use `@arkgate/runtime` / `@arkgate/runtime/nestjs` |
 
 ---
 

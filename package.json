@@ -12,11 +12,6 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./runtime": {
-      "types": "./compat/runtime.d.ts",
-      "import": "./compat/runtime.js",
-      "require": "./compat/runtime.cjs"
-    },
     "./eslint": {
       "types": "./dist/eslint/index.d.ts",
       "import": "./dist/eslint/index.js",
@@ -36,11 +31,6 @@
     "./schema/ark.design-delta.schema.json": "./schemas/ark.design-delta.schema.json",
     "./schema/arkrules": "./schemas/ark.arkrules.schema.json",
     "./schema/ark.arkrules.schema.json": "./schemas/ark.arkrules.schema.json",
-    "./nestjs": {
-      "types": "./compat/nestjs.d.ts",
-      "import": "./compat/nestjs.js",
-      "require": "./compat/nestjs.cjs"
-    },
     "./package.json": "./package.json"
   },
   "bin": {
@@ -62,7 +52,6 @@
     "!bin/lib/graph-cycles.mjs",
     "!bin/lib/safety-diagnostics.mjs",
     "!bin/lib/ts-resolve.mjs",
-    "compat",
     "dist",
     "!dist/**/*.d.cts",
     "schemas",
@@ -157,13 +146,9 @@
     "typescript-ark-host": "npm:typescript@6.0.3"
   },
   "peerDependencies": {
-    "@arkgate/runtime": ">=0.1.0-experimental.0 <1",
     "typescript": ">=5.0.0 <8"
   },
   "peerDependenciesMeta": {
-    "@arkgate/runtime": {
-      "optional": true
-    },
     "typescript": {
       "optional": true
     }

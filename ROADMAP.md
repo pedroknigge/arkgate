@@ -533,8 +533,8 @@ live in the plan.
 | 82 | `AR01` | `done` | M | 3.9.x published | ADR 0012 accepted; `ark.arkrules.schema.json` + config `schemaVersion 1.0→1.1` additive migration; missing/invalid/zero-match references fail closed with file-precise diagnostics |
 | 83 | `AR02` | `done` | M | `AR01` | Effective Contract loader resolves `arkRules` references with per-rule provenance and feeds `policyHash` (parity across CLI/MCP/ESLint; resident identity invalidates; policy-delta classifies arkrule transitions) |
 | 84 | `AR03` | `done` | M | `AR02` | Adapter contract `1.3→1.4` carries `evidence.arkruleId` + `evidence.arkruleSource`; an arkrule violation renders with provenance on every surface with no surface-specific code |
-| 85 | `AR04` | `doing` | S | — | v4 breaking hygiene: deprecated `arkgate/runtime|nestjs` forwarders removed; migration note published; clean-checkout pack green |
-| 86 | `AR05` | `todo` | L | `AR03` | ADR 0013 accepted; class-shape facts land in resolved facts `1.0→1.1` additively within PreToolUse latency budgets |
+| 85 | `AR04` | `done` | S | — | v4 breaking hygiene: deprecated `arkgate/runtime|nestjs` forwarders removed; migration note published; clean-checkout pack green |
+| 86 | `AR05` | `doing` | L | `AR03` | ADR 0013 accepted; class-shape facts land in resolved facts `1.0→1.1` additively within PreToolUse latency budgets |
 | 87 | `AR06` | `todo` | M | `AR05` | Tier-1 sensors `aggregate-private-state`, `always-valid-factory`, `domain-event-on-mutation` block in enforced mode and stay invisible in advisory mode (invariants test-pinned) |
 | 88 | `AR07` | `todo` | M | `AR06` | Tier-1 `orchestration-only` + `thin-adapter` and Tier-2 advisory `no-anemic-model` ship silent on healthy fixtures and this repository |
 | 89 | `AR08` | `todo` | M | `AR01`, `AR06` | Existing archetypes/packs generate lean root config + editable `arkrules/*.json` within the compact onboarding budget |
@@ -2880,9 +2880,9 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: `AR04` — remove deprecated arkgate/runtime|nestjs forwarders
-  (AR01–AR03 done)
-Phase AR (v4 train, AR01–AR03 done; AR04 doing; AR05–AR19 todo): ArkRules intra-layer contract + brownfield rules migration;
+Engineering doing: `AR05` — ADR 0013 class-shape facts (resolved facts 1.1)
+  (AR01–AR04 done)
+Phase AR (v4 train, AR01–AR04 done; AR05 doing; AR06–AR19 todo): ArkRules intra-layer contract + brownfield rules migration;
   releases 4.0.0 (AR01–AR08, incl. AR04 forwarder removal), 4.1.0 (AR09–AR12),
   4.2.0 (AR13–AR16), 4.3.0 (AR17–AR19); all opt-in/additive; no new skill names; no codemod
 Claim gate: `Z09` (`parked`) — residual RB-11 only (retained adoption + independent close)

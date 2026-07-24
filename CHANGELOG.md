@@ -21,6 +21,12 @@ in the immutable pre-2.0 archive linked below.
   `evidence.arkruleSource`; remediation/nextAction for `ARKRULE_*` / `INVARIANT_UNCOVERED`
   is judgment-only with provenance on every surface.
 
+### Breaking (v4 / AR04)
+
+- **Removed** deprecated root package subpaths `arkgate/runtime` and `arkgate/nestjs`
+  (and the `compat/` forwarders). Import `@arkgate/runtime` / `@arkgate/runtime/nestjs`
+  instead. See [migration note](docs/migrate-from-ark-runtime-kernel.md#arkgate-4--ar04--root-runtime-forwarders-removed).
+
 ## 3.9.2 — 2026-07-23
 
 **Patch** over 3.9.1. Product honesty for post-validity coaching, coverage/host write paths, and

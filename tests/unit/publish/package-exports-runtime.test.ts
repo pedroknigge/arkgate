@@ -23,10 +23,12 @@ function buildBoth() {
 describe('isolated runtime distribution', () => {
   beforeAll(buildBoth, 120_000);
 
-  it('keeps the root gate bundle free of runtime and NestJS artifacts', async () => {
+  it('keeps the root gate bundle free of runtime and NestJS artifacts (AR04)', async () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-    expect(pkg.exports['./runtime'].import).toBe('./compat/runtime.js');
-    expect(pkg.exports['./nestjs'].import).toBe('./compat/nestjs.js');
+    // Deprecated root forwarders removed in ArkGate 4 / AR04 — use @arkgate/runtime.
+    expect(pkg.exports['./runtime']).toBeUndefined();
+    expect(pkg.exports['./nestjs']).toBeUndefined();
+    expect(fs.existsSync(path.join(root, 'compat'))).toBe(false);
     expect(fs.existsSync(path.join(root, 'dist/runtime'))).toBe(false);
     expect(fs.existsSync(path.join(root, 'dist/nestjs'))).toBe(false);
     const gate = await import(pathToFileURL(path.join(root, 'dist/index.js')).href);

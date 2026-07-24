@@ -55,26 +55,19 @@ describe('publish manifest', () => {
       fs.readFileSync(path.join(extract, 'package', 'package.json'), 'utf8')
     );
     expect(Object.keys(inner.dependencies ?? {}).sort()).toEqual(['typescript-ark-host']);
-    expect(inner.exports['./nestjs']).toEqual({
-      types: './compat/nestjs.d.ts',
-      import: './compat/nestjs.js',
-      require: './compat/nestjs.cjs',
-    });
+    // AR04: root forwarders removed — experimental runtime is @arkgate/runtime only.
+    expect(inner.exports['./nestjs']).toBeUndefined();
+    expect(inner.exports['./runtime']).toBeUndefined();
     expect(inner.exports['./eslint']).toEqual({
       types: './dist/eslint/index.d.ts',
       import: './dist/eslint/index.js',
       require: './dist/eslint/index.cjs',
     });
-    expect(inner.exports['./runtime']).toEqual({
-      types: './compat/runtime.d.ts',
-      import: './compat/runtime.js',
-      require: './compat/runtime.cjs',
-    });
     expect(inner.bin['arkgate-check']).toBe('bin/ark-check.mjs');
     expect(inner.bin['ark-check']).toBe('bin/ark-check.mjs');
     expect(fs.existsSync(path.join(extract, 'package', 'bin', 'ark-check.mjs'))).toBe(true);
     expect(fs.existsSync(path.join(extract, 'package', 'dist', 'eslint', 'index.js'))).toBe(true);
-    expect(fs.existsSync(path.join(extract, 'package', 'compat', 'runtime.js'))).toBe(true);
+    expect(fs.existsSync(path.join(extract, 'package', 'compat'))).toBe(false);
     expect(fs.existsSync(path.join(extract, 'package', 'dist', 'runtime'))).toBe(false);
     expect(fs.existsSync(path.join(extract, 'package', 'dist', 'nestjs'))).toBe(false);
     expect(fs.existsSync(path.join(extract, 'package', 'docs', 'typescript-support.md'))).toBe(true);
