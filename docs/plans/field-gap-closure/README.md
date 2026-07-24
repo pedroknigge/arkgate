@@ -121,8 +121,8 @@ Work is ordered so **honesty and false-green die first**, then **classification*
 
 | Task | Gap | Acceptance |
 |------|-----|------------|
-| S0.1 Commit ESLint parity test: type-only `ok:true` + `failsStrict:false` + still flags | `DL-PARITY-TEST` | Adapter parity CI green |
-| S0.2 Optional: dry-run release artifacts for prepared 4.1.0 | — | `npm run release:npm -- --dry` on clean SHA |
+| S0.1 Commit ESLint parity test: type-only `ok:true` + `failsStrict:false` + still flags | `DL-PARITY-TEST` | Adapter parity CI green — **done** (`be24601` / `tests/unit/eslint/parity.test.ts`) |
+| S0.2 Optional: dry-run release artifacts for prepared 4.1.0 | — | Not required for code closure; run `npm run release:npm -- --dry` on clean SHA before publish |
 
 ---
 
@@ -219,9 +219,9 @@ Closes `FG-WEAK-COVERAGE-NONSTRICT`, `FG-EMPTY-DOMAIN-IO-UNDER-APP`.
 
 | Task | Gap | Acceptance |
 |------|-----|------------|
-| S6.1 Lab job with `pnpm install` on 1–2 Next clones | `P0C-ESLINT-UNVERIFIED` | ESLint `@/*` forbidden edge matches CLI |
-| S6.2 ark-explore / ark-fix skill: Plan B card → one pilot checklist with killSwitch | `DL-PLANB-SKILL-DEPTH` | skill text + fixture |
-| S6.3 Empty plan A + design-weak: doctor never “goal met finished” | `FG-EMPTY-PLAN-A-DESIGN-WEAK` | propia-like: primary Shape door |
+| S6.1 Lab job with `pnpm install` on 1–2 Next clones | `P0C-ESLINT-UNVERIFIED` | Offline unit dual-driver (`@/*` resolve + ESLint fire + CLI match) in `fieldP0P1P2_4_1_0` — full Next clone still optional field |
+| S6.2 ark-explore / ark-fix skill: Plan B card → one pilot checklist with killSwitch | `DL-PLANB-SKILL-DEPTH` | skill text + `skillsSurface` lock — **done** |
+| S6.3 Empty plan A + design-weak: doctor never “goal met finished” | `FG-EMPTY-PLAN-A-DESIGN-WEAK` | design-weak-enforce: productHonesty unfinished + postGreenPath — **done** |
 
 ---
 
@@ -231,17 +231,16 @@ Promote the temp lab into a **maintainer script** (not product surface):
 
 ```text
 scripts/field-dogfood/
-  clone-manifest.json   # 7 repos (or fixtures)
-  run-matrix.mjs        # doctor/check extracts
-  run-use-cases.mjs     # UC1–UC10
-  assert-gaps-closed.mjs# fails if known FG reappear
+  README.md             # how to run against mother 4.1.0
+  gap-assertions.json   # gap locks + soft-skips
+  smoke.mjs             # offline unit re-run (npm run test:field-dogfood-smoke)
 ```
 
 | Task | Acceptance |
 |------|------------|
-| S7.1 Manifest + runner under `eval/` or `scripts/` | documented in CONTRIBUTING |
-| S7.2 CI optional workflow `field-dogfood.yml` (nightly / manual) | green on mother |
-| S7.3 Golden fixtures for: monorepo cwd, spa layout, empty domain vacuum, productHonesty red graph | unit/integration without network |
+| S7.1 Manifest + runner under `eval/` or `scripts/` | **done** — `scripts/field-dogfood/` + CONTRIBUTING row |
+| S7.2 CI optional workflow `field-dogfood.yml` (nightly / manual) | deferred; smoke is local/CI-cheap via npm script; full clones stay workflow-only |
+| S7.3 Golden fixtures for: monorepo cwd, spa layout, empty domain vacuum, productHonesty red graph | unit suites wired in gap-assertions (monorepo walk-up soft-skip until S2) |
 
 ---
 

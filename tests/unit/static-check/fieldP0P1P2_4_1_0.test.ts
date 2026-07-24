@@ -363,6 +363,76 @@ describe('P0-C ESLint tsconfig path alias resolution', () => {
     expect(diagnostic?.severity).toBe('warning');
     expect(diagnostic?.message).toMatch(/SharedTypes|placement debt/i);
   });
+
+  it('CLI + ESLint both flag the same @/* forbidden value edge (P0C dual-driver)', () => {
+    const { spawnSync } = require('node:child_process') as typeof import('node:child_process');
+    const check = path.resolve('bin/ark-check.mjs');
+    const root = mk();
+    fs.writeFileSync(
+      path.join(root, 'tsconfig.json'),
+      JSON.stringify({
+        compilerOptions: { baseUrl: '.', paths: { '@/*': ['src/*'] } },
+      })
+    );
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          { name: 'DomainModel', patterns: ['src/domain/**'] },
+          { name: 'PresentationAdapters', patterns: ['src/app/**'] },
+        ],
+        rules: [{ from: 'DomainModel', to: 'PresentationAdapters', allowed: false }],
+      })
+    );
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/app'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/app/ui.ts'), 'export const UI = 1;\n');
+    const domainFile = path.join(root, 'src/domain/order.ts');
+    fs.writeFileSync(domainFile, "import { UI } from '@/app/ui';\nexport const o = UI;\n");
+
+    // CLI sees the path-alias edge
+    const cli = spawnSync(
+      process.execPath,
+      [check, '--root', root, '--config', 'ark.config.json', '--json', '--no-cache'],
+      { encoding: 'utf8' }
+    );
+    expect(cli.status, cli.stderr + cli.stdout).not.toBe(0);
+    const cliJson = JSON.parse(cli.stdout || '{}') as {
+      ok: boolean;
+      violations: Array<{ ruleId: string; typeOnly?: boolean; fromLayer?: string; toLayer?: string }>;
+    };
+    expect(cliJson.ok).toBe(false);
+    const cliHits = cliJson.violations.filter((v) => v.ruleId === 'LAYER_IMPORT_VIOLATION');
+    expect(cliHits.length).toBeGreaterThan(0);
+    expect(cliHits.every((v) => v.typeOnly !== true)).toBe(true);
+
+    // ESLint rule fires on the same specifier
+    const reports: Array<Record<string, unknown>> = [];
+    const listener = noDomainInfraImports.create({
+      filename: domainFile,
+      report(desc) {
+        reports.push(desc);
+      },
+      sourceCode: { getScope: () => undefined },
+    });
+    listener.ImportDeclaration?.({
+      type: 'ImportDeclaration',
+      importKind: 'value',
+      source: { value: '@/app/ui' },
+      specifiers: [{ type: 'ImportSpecifier', importKind: 'value' }],
+      loc: { start: { line: 1, column: 0 } },
+    });
+    expect(reports.length).toBeGreaterThanOrEqual(1);
+    expect(reports[0]?.messageId).toBe('forbiddenImport');
+    const diagnostic = reports[0]?.diagnostic as {
+      evidence?: { fromLayer?: string; toLayer?: string };
+      severity?: string;
+    };
+    expect(diagnostic?.evidence?.fromLayer).toBe('DomainModel');
+    expect(diagnostic?.evidence?.toLayer).toBe('PresentationAdapters');
+    expect(diagnostic?.severity).toBe('error');
+  });
 });
 
 describe('P1-L structure sensors prefer false negatives on weak evidence', () => {

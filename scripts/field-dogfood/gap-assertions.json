@@ -1,0 +1,92 @@
+{
+  "schemaVersion": "1.0",
+  "title": "ArkGate field gap assertions (maintainer dogfood)",
+  "against": "mother arkgate 4.1.0+ (local bin/ + dist/), not npm latest unless pinned",
+  "networkClones": false,
+  "description": "Offline-first gap locks. Prefer unit fixtures already in tests/; soft-skip when a feature slice has not landed.",
+  "assertions": [
+    {
+      "id": "DL-PARITY-TEST",
+      "slice": "S0",
+      "severity": "high",
+      "status": "closed",
+      "check": "unit",
+      "evidence": "tests/unit/eslint/parity.test.ts — type-only import still flags, ok:true, failsStrict:false",
+      "vitest": ["tests/unit/eslint/parity.test.ts"]
+    },
+    {
+      "id": "P0B-FINISHED-WITH-OPEN-DEBT",
+      "slice": "S1",
+      "severity": "high",
+      "status": "open",
+      "check": "unit",
+      "evidence": "productHonesty.finished false when active blocking violations or mode adapt with debt",
+      "softSkipIf": "S1 productHonesty redefinition not fully landed",
+      "vitest": ["tests/unit/static-check/fieldP0P1P2_4_1_0.test.ts", "tests/unit/static-check/enforcementHonesty.test.ts"]
+    },
+    {
+      "id": "FG-FINISHED-ADAPT-DEBT",
+      "slice": "S1",
+      "severity": "high",
+      "status": "open",
+      "check": "unit",
+      "evidence": "productHonesty unfinished with red graph / adapt residual",
+      "vitest": ["tests/unit/static-check/enforcementHonesty.test.ts"]
+    },
+    {
+      "id": "NEW-MONOREPO-CWD-WALKUP",
+      "slice": "S2",
+      "severity": "critical",
+      "status": "open",
+      "check": "soft",
+      "evidence": "cd apps/web finds monorepo ark.config via walk-up",
+      "softSkipIf": "S2 config walk-up not present",
+      "featureProbe": "configWalkUp"
+    },
+    {
+      "id": "P0C-ESLINT-UNVERIFIED",
+      "slice": "S6",
+      "severity": "low",
+      "status": "closed",
+      "check": "unit",
+      "evidence": "resolveImportSpecifier @/* + ESLint rule fire + CLI dual-driver on same fixture",
+      "vitest": ["tests/unit/static-check/fieldP0P1P2_4_1_0.test.ts"]
+    },
+    {
+      "id": "DL-PLANB-SKILL-DEPTH",
+      "slice": "S6",
+      "severity": "medium",
+      "status": "closed",
+      "check": "unit",
+      "evidence": "templates/skills ark-explore + ark-fix Plan B one-pilot checklist",
+      "vitest": ["tests/unit/static-check/skillsSurface.test.ts"]
+    },
+    {
+      "id": "FG-EMPTY-PLAN-A-DESIGN-WEAK",
+      "slice": "S6",
+      "severity": "medium",
+      "status": "closed",
+      "check": "unit",
+      "evidence": "design-weak-enforce: empty plan A + productHonesty unfinished + postGreenPath clarify-for-ai",
+      "vitest": [
+        "tests/unit/static-check/designWeakEnforce.test.ts",
+        "tests/unit/static-check/q01PostGreenPath.test.ts"
+      ]
+    },
+    {
+      "id": "productHonesty-unfinished-with-violations",
+      "slice": "S1",
+      "severity": "high",
+      "status": "tracking",
+      "check": "unit",
+      "evidence": "finished false when honesty reasons present (design-weak, coverage, dual-truth, dirty freeze)",
+      "vitest": ["tests/unit/static-check/fieldP0P1P2_4_1_0.test.ts"]
+    }
+  ],
+  "labRerun": {
+    "optional": true,
+    "note": "Full 7-repo network lab is manual / nightly only — not required for CI smoke.",
+    "workflow": ".grok/workflows/pre-release-field-dogfood.rhai",
+    "plan": "docs/plans/field-gap-closure/README.md"
+  }
+}

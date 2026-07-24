@@ -276,6 +276,25 @@ in parallel. When `pilotLoop.queuedBets > 0`, those bets stay **queued**, not co
 lines — never silent codemod of plan B. After the pilot lands, re-run doctor; success =
 reduced evidence on pilot paths.
 
+### Plan B one-pilot checklist (mandatory before any B apply)
+
+Empty plan A + design-weak is **not** architecture finished. Plan B is judgment only.
+
+| Step | Gate | Fail closed if… |
+|------|------|-----------------|
+| 1. Confirm residual | `designFitness.designWeak` **or** non-empty `patternBets` / `designSmells` | You would claim healthy finished because plan A is empty |
+| 2. Pick **one** pilot | `pilotLoop.nextPilot` (preferred) **or** one ranked B bet with a path scope | Multi-pilot batch / “fix all smells this PR” |
+| 3. Write extraction card | Pilot · Smell · Move · Do not · Success · **Kill-switch** · Next | Missing kill-switch or success signal |
+| 4. User OK | Explicit approval before edit (or stay map-only) | Silent auto-apply of plan B |
+| 5. Apply **only** that pilot | Via `/ark-autopilot` (apply B) or `/ark-fix` (one cluster) | Opening a second pilot before re-doctor |
+| 6. Re-doctor | Success = reduced evidence on pilot paths; residual outside pilot may remain | Declaring whole-tree done from one pilot |
+
+**Hard lines (never break):**
+- `killSwitch` / kill-switch is **required** on every B card (stop condition if pilot does not reduce confusion).
+- `multiPilotBatchForbidden` — never multi-batch Shape extractions.
+- `autoApplyPlanBForbidden` / `neverMechanicalSafe: true` — never invent mechanical-safe for B.
+- `healthyFinishedForbidden` while design-weak — empty plan A is baseline, not done.
+
 ```text
 ### Extraction card
 Pilot: <one dir or feature — or pilotLoop.nextPilot.pilotTarget>
@@ -286,8 +305,9 @@ Do not:
   - weaken ark.config.json
   - auto-apply as mechanical-safe or invent new mechanical-safe kinds
   - big-bang the monorepo
+  - open a second pilot before re-doctor
 Success: <observable / falsifiable — re-doctor>
-Kill-switch: <stop condition>
+Kill-switch: <stop condition — e.g. if pilot does not clear smell evidence in 1 PR → stop / re-map>
 Next: /ark-autopilot (apply with user ok) | /ark-fix (one cluster) | re-doctor
 ```
 

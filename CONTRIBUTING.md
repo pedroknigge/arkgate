@@ -56,6 +56,7 @@ minimal (`typescript-ark-host` exact). Do not add production deps without discus
 | `templates/` | Skills, hooks, playbooks (shipped on npm) |
 | `docs/` | Product + develop + contribute docs ([map](docs/README.md)) |
 | `tests/` · `eval/` | Quality harnesses |
+| `scripts/field-dogfood/` | Maintainer offline field gap smoke (`npm run test:field-dogfood-smoke`) |
 | `ROADMAP.md` | Implementation queue — **one `doing` at a time** |
 
 `packages/runtime` is the experimental companion package (separate publish).
