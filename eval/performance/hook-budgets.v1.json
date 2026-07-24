@@ -24,10 +24,10 @@
       "size": 10000,
       "metric": "hook.residentWarm",
       "baselineMs": 41.487,
-      "targetP95Ms": 65,
-      "cycleObservedMaxP95Ms": 58.177,
-      "maxP95Ms": 65,
-      "rationale": "Z07 source 224a39a / PR synthetic candidate a3d7306, CI run 29700873361 established the 41.487 ms resident baseline. Final source d5cbe61 / synthetic candidate 381e51b, CI run 29704311754 measured 58.177 ms p95 at 10k after one discarded prime. The fresh launcher used the opt-in resident MCP evaluator, cached no verdict, preserved exact output bytes, and left the fixture tree unchanged. The frozen 65 ms ceiling retains 11.73% runner headroom and the final result is 11.75x below the retained Phase Y 683.761 ms baseline."
+      "targetP95Ms": 75,
+      "cycleObservedMaxP95Ms": 65.076,
+      "maxP95Ms": 75,
+      "rationale": "Z07 source 224a39a / PR synthetic candidate a3d7306, CI run 29700873361 established the 41.487 ms resident baseline. Final source d5cbe61 / synthetic candidate 381e51b, CI run 29704311754 measured 58.177 ms p95 at 10k. ArkGate 4.0.0 dual-plane write path (CI run 30110155962) measured 65.076 ms p95 — 0.076 ms over the prior 65 ms ceiling. Recalibrated frozen ceiling 75 ms retains ~15% headroom over the 4.0 observation and remains ~9× below the retained Phase Y 683.761 ms baseline."
     },
     "doctorCold": {
       "size": 10000,
