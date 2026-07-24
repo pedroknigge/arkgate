@@ -51,8 +51,11 @@ Examples:
 | **contract** | `ark.config.json` layers, rules, include — the machine-readable architecture file |
 | **Layers plane** | Inter-layer edges: imports, placement, purity, isolation |
 | **ArkRules** (opt-in) | Intra-layer structure sensors + domain invariant catalogs as data (`arkrules/*`) |
+| **advisory ArkRules** | Default sensor mode — **not** merge teeth; does not fail CI/merge alone (FG-ARKRULES-ADVISORY-ONLY) |
+| **extraMergeTeeth** | Only when enforced structure/invariant rules exist **and** classification is honest (≥50% governed, ≥1 populated layer) |
 | **dual-plane residual** | Label findings **`[Layer]`** vs **`[ArkRules]`** — never blur them |
 | **rulesUnderContract** | Doctor/inventory counts for ArkRules — **never a score** |
+| **type-only placement debt** | `import type` edges on the violations list with `failsStrict:false` — prefer SharedTypes / owning layer; not runtime coupling |
 | **gate** / **write gate** | Host boundary that blocks or advises on invalid writes |
 | **edges** | Allowed import graph (plan **A** / remediation) |
 | **baseline** | Frozen known debt; does not make a wrong contract honest |
@@ -83,6 +86,7 @@ Examples:
 | Keep Suggest on start → doctor | New-here primary is finish `start`, not a competing recommend/architect curriculum |
 | Qualify edge-clean under design-weak | “None on checked edges … design residual remains. Not healthy finished.” |
 | Prefer fail-closed over fake hard | Incomplete analysis, unobserved hooks, and soft MCP never paint as hard green |
+| Honesty clear ≠ architecture healthy | `productHonesty.finished` means residual honesty sensors are clear — not a green graph score. Open blocking violations, ADAPT/SUGGEST with debt, dual-truth pin, or design residual keep `unfinished: true`. |
 
 ## Avoid
 
@@ -95,9 +99,12 @@ Examples:
 | “modes you pick” for Suggest/Adapt/Enforce | Those are **status lights**, not settings |
 | Skill-shopping lists as the default curriculum | Progressive disclosure: one door first |
 | “Healthy / done” while design-weak | False done |
+| “Honesty clear” as “architecture finished” | Honesty clear only means residual honesty sensors are quiet; graph/mode debt is separate |
 | “ArkRules prove business correctness” | They enforce *declared* structure/coverage evidence, not arbitrary logic or full semantic proof |
 | “Structure enforced = Domain extraction done” | Structure sensors are **heuristics**; extraction is judgment (`/ark-fix` / pilot) |
 | “Covered invariant = E2E business tests” | Coverage = symbol/test evidence for a named policy, not a runtime test runner |
+| “Max arkRules packs = merge fails structure” | **Advisory ArkRules ≠ merge teeth.** Only `mode: "enforced"` can add teeth, and only after honest classification (FG-ARKRULES-ADVISORY-ONLY) |
+| “Type-only volume means the gate is broken” | High type-only count is placement debt (behavior OK); group under plan A type-only, offer SharedTypes starter |
 | Blurring import edges with invariants | Always label **`[Layer]`** vs **`[ArkRules]`** |
 
 ---

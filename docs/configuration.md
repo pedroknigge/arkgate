@@ -116,7 +116,9 @@ runtime coupling. They still appear on the **violations** list with `typeOnly: t
 `valid`, or preflight the way **value** edges do. **Exception:** `peerIsolation` slice
 boundaries stay hard even for type-only. A value import of a pure-type barrel is still a value
 edge (not soft-skipped). Prefer placing shared types in a **SharedTypes** (or owning) layer
-both sides may import.
+both sides may import. Optional starter: [`templates/layers/shared-types.starter.json`](../templates/layers/shared-types.starter.json)
+(layer globs + allow rules). Doctor always emits `violations.typeEdgePolicy`; plan groups type-only
+steps under `plan.typeOnlyGroup` when volume is high.
 
 ### Next.js API shell (framework overlay / presets)
 
@@ -133,8 +135,13 @@ See [brownfield adoption](brownfield-adoption.md#nextjs-honesty-default-overlays
 | **Structure sensors** | Intra-layer heuristics | Only `mode: "enforced"` |
 | **Invariants** | Catalog + coverage evidence (not a business runtime) | Only enforced + proven-uncovered |
 
-Absence of `arkRules` adds **no** extra merge teeth. Structure and invariants **never** merge into
-one architecture score. Doctor exposes `rulesUnderContract.mergePlanes` for which plane can fail.
+Absence of `arkRules` adds **no** extra merge teeth. **Advisory** structure sensors and advisory
+invariants also add **no** merge teeth (FG-ARKRULES-ADVISORY-ONLY) — packing every starter
+`arkrules/*` file does not make merge fail structure alone. Enforced structure/invariants arm
+`mergePlanes.extraMergeTeeth` only when the layer plane is honestly classified
+(governed ≥ 50% and ≥ 1 populated layer); empty classification never gets structure teeth
+(P1M-EXTRATEETH-EMPTY-GRAPH). Structure and invariants **never** merge into one architecture
+score. Doctor exposes `rulesUnderContract.mergePlanes` for which plane can fail.
 
 Safety fields:
 

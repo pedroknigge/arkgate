@@ -99,12 +99,15 @@ describe('P0-A Next API shell is Application, not Presentation', () => {
 });
 
 describe('P0-B product honesty anti false-green', () => {
-  it('table-driven reasonIds matrix', () => {
+  it('table-driven reasonIds matrix (FG01 / S1)', () => {
     const cases: Array<{
       name: string;
       input: Parameters<typeof buildProductHonesty>[0];
       expectIds: string[];
       unfinished: boolean;
+      headlineIncludes?: string;
+      headlineExcludes?: string;
+      finished?: boolean;
     }> = [
       {
         name: 'coverage-partial (50–79%)',
@@ -114,19 +117,24 @@ describe('P0-B product honesty anti false-green', () => {
         },
         expectIds: ['coverage-partial'],
         unfinished: true,
+        headlineIncludes: 'not whole-tree',
       },
       {
-        name: 'package-version-dual-truth',
+        name: 'package-version-dual-truth (whole-tree governed)',
         input: {
           coverageHonesty: buildCoverageHonesty({ percent: 100, totalFiles: 10 }),
           baselineHonesty: buildBaselineHonesty({ exists: false }),
           packageVersionTruth: {
             dualTruth: true,
             note: 'CLI ahead of package.json pin',
+            cliVersion: '4.1.0',
           },
         },
         expectIds: ['package-version-dual-truth'],
         unfinished: true,
+        // P0B-HEADLINE: dual-truth only must NOT say "not whole-tree"
+        headlineIncludes: 'Not finished',
+        headlineExcludes: 'not whole-tree',
       },
       {
         name: 'soft-write-host',
@@ -143,6 +151,82 @@ describe('P0-B product honesty anti false-green', () => {
         unfinished: true,
       },
       {
+        name: 'amarilla-like: 1000+ blocking + adapt',
+        input: {
+          coverageHonesty: buildCoverageHonesty({ percent: 100, totalFiles: 2000 }),
+          baselineHonesty: buildBaselineHonesty({
+            exists: false,
+            activeViolations: 1057,
+            totalViolations: 1057,
+          }),
+          operatingMode: 'adapt',
+          activeBlockingViolations: 1057,
+        },
+        expectIds: [
+          'active-blocking-violations',
+          'mode-adapt-with-debt',
+          'baseline-missing-with-debt',
+        ],
+        unfinished: true,
+        finished: false,
+      },
+      {
+        name: 'design smells + open edges',
+        input: {
+          coverageHonesty: buildCoverageHonesty({ percent: 100, totalFiles: 50 }),
+          baselineHonesty: buildBaselineHonesty({
+            exists: true,
+            frozenKeys: 0,
+            activeViolations: 5,
+            totalViolations: 5,
+          }),
+          designSmellCount: 5,
+          designSmellsWithOpenEdges: true,
+          activeBlockingViolations: 5,
+          operatingMode: 'adapt',
+        },
+        expectIds: [
+          'active-blocking-violations',
+          'design-smells-open-edges',
+          'mode-adapt-with-debt',
+        ],
+        unfinished: true,
+        finished: false,
+      },
+      {
+        name: 'package-pin-absent',
+        input: {
+          coverageHonesty: buildCoverageHonesty({ percent: 100, totalFiles: 10 }),
+          baselineHonesty: buildBaselineHonesty({ exists: false }),
+          packageVersionTruth: {
+            dualTruth: false,
+            code: 'PACKAGE_PIN_ABSENT',
+            note: 'No arkgate pin in package.json',
+          },
+        },
+        expectIds: ['package-pin-absent'],
+        unfinished: true,
+        headlineExcludes: 'not whole-tree',
+      },
+      {
+        name: 'enforce green finished',
+        input: {
+          coverageHonesty: buildCoverageHonesty({ percent: 100, totalFiles: 10 }),
+          baselineHonesty: buildBaselineHonesty({
+            exists: true,
+            frozenKeys: 0,
+            activeViolations: 0,
+            totalViolations: 0,
+          }),
+          designWeak: false,
+          operatingMode: 'enforce',
+          activeBlockingViolations: 0,
+        },
+        expectIds: [],
+        unfinished: false,
+        finished: true,
+      },
+      {
         name: 'clear whole-tree path',
         input: {
           coverageHonesty: buildCoverageHonesty({ percent: 100, totalFiles: 10 }),
@@ -157,10 +241,21 @@ describe('P0-B product honesty anti false-green', () => {
       const honesty = buildProductHonesty(c.input);
       expect(honesty.notAScore, c.name).toBe(true);
       expect(honesty.unfinished, c.name).toBe(c.unfinished);
+      if (c.finished !== undefined) {
+        expect(honesty.finished, c.name).toBe(c.finished);
+      }
       if (c.expectIds.length === 0) {
         expect(honesty.reasonIds, c.name).toEqual([]);
       } else {
         expect(honesty.reasonIds, c.name).toEqual(expect.arrayContaining(c.expectIds));
+      }
+      if (c.headlineIncludes) {
+        expect(honesty.headline.toLowerCase(), c.name).toContain(c.headlineIncludes.toLowerCase());
+      }
+      if (c.headlineExcludes) {
+        expect(honesty.headline.toLowerCase(), c.name).not.toContain(
+          c.headlineExcludes.toLowerCase()
+        );
       }
     }
   });
@@ -202,6 +297,34 @@ describe('P0-B product honesty anti false-green', () => {
     expect(bundle.productHonesty.reasonIds).toEqual(
       expect.arrayContaining(['design-weak', 'dirty-freeze'])
     );
+  });
+
+  it('computeDoctorEnforcementHonesty: adapt + 1000 viol is unfinished (FG-FINISHED-ADAPT-DEBT)', () => {
+    const bundle = computeDoctorEnforcementHonesty({
+      governedPercent: 92,
+      totalFiles: 2000,
+      emptyScope: false,
+      baselineExists: false,
+      frozenKeys: 0,
+      activeViolations: 1057,
+      suppressed: 0,
+      totalViolations: 1057,
+      operatingMode: 'adapt',
+      designWeak: false,
+      designSmellCount: 3,
+      designSmellsWithOpenEdges: true,
+    });
+    expect(bundle.productHonesty.finished).toBe(false);
+    expect(bundle.productHonesty.unfinished).toBe(true);
+    expect(bundle.productHonesty.reasonIds).toEqual(
+      expect.arrayContaining([
+        'active-blocking-violations',
+        'mode-adapt-with-debt',
+        'baseline-missing-with-debt',
+        'design-smells-open-edges',
+      ])
+    );
+    expect(bundle.productHonesty.notAScore).toBe(true);
   });
 
   it('HTML card renders without repeating headline twice as the only body', () => {
@@ -785,6 +908,207 @@ describe('P1-M mergePlanes honesty shape', () => {
     expect(summary.mergePlanes.extraMergeTeeth).toBe(true);
     expect(summary.mergePlanes.failMergeWhen).toMatch(/enforced/i);
     expect(summary.mergePlanes.dualPlaneStamp).toMatch(/heuristics|catalog/i);
+  });
+
+  it('P1M: empty classification cannot arm extraMergeTeeth', async () => {
+    const { summarizeRulesUnderContract } = await import('../../../bin/lib/rules-under-contract.mjs');
+    const root = mk();
+    fs.mkdirSync(path.join(root, 'arkrules'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'arkrules/DomainModel.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        layer: 'DomainModel',
+        structure: [{ id: 'fac', sensor: 'always-valid-factory', mode: 'enforced' }],
+        invariants: [],
+      })
+    );
+    const config = {
+      include: ['src'],
+      layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+      rules: [],
+      arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+    };
+    const empty = summarizeRulesUnderContract(root, config, undefined, {
+      governedPercent: 0,
+      populatedLayerCount: 0,
+      classifiedFiles: 0,
+    });
+    expect(empty.mergePlanes.structureSensors.enforced).toBe(1);
+    expect(empty.mergePlanes.extraMergeTeeth).toBe(false);
+    expect(empty.mergePlanes.failMergeWhen).toMatch(/classification|teeth floor|governed/i);
+    expect(empty.mergePlanes.classificationGate?.allowsTeeth).toBe(false);
+
+    const ready = summarizeRulesUnderContract(root, config, undefined, {
+      governedPercent: 80,
+      populatedLayerCount: 1,
+      classifiedFiles: 12,
+    });
+    expect(ready.mergePlanes.extraMergeTeeth).toBe(true);
+  });
+
+  it('advisory-only packs never arm extraMergeTeeth (FG-ARKRULES-ADVISORY-ONLY)', async () => {
+    const { summarizeRulesUnderContract } = await import('../../../bin/lib/rules-under-contract.mjs');
+    const root = mk();
+    fs.mkdirSync(path.join(root, 'arkrules'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'arkrules/DomainModel.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        layer: 'DomainModel',
+        structure: [
+          { id: 'agg', sensor: 'aggregate-private-state', mode: 'advisory' },
+          { id: 'fac', sensor: 'always-valid-factory', mode: 'advisory' },
+        ],
+        invariants: [],
+      })
+    );
+    const summary = summarizeRulesUnderContract(
+      root,
+      {
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+        rules: [],
+        arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+      },
+      undefined,
+      { governedPercent: 100, populatedLayerCount: 1 }
+    );
+    expect(summary.mergePlanes.structureSensors.enforced).toBe(0);
+    expect(summary.mergePlanes.extraMergeTeeth).toBe(false);
+    expect(summary.mergePlanes.dualPlaneStamp).toMatch(/Advisory ArkRules|never merge/i);
+  });
+});
+
+describe('S5 dual-plane sensors / inventory residual', () => {
+  it('NEW-ARKRULES-UNCLASSIFIED: structure sensors skip unclassified paths', () => {
+    const shapes = extractClassShapesFromSource(
+      'api/watchdog.js',
+      `export class Watchdog { public total = 0; constructor() {} setTotal(n) { this.total = n; } }`
+    );
+    const classified = extractClassShapesFromSource(
+      'src/domain/order.ts',
+      `export class Order { public total = 0; constructor() {} setTotal(n) { this.total = n; } }`
+    );
+    const layerForFile = (file: string) =>
+      file.startsWith('src/domain/') ? 'DomainModel' : null;
+    const findings = evaluateArkRuleSensors({
+      arkRules: effectiveDomain([
+        { id: 'private-state', sensor: 'aggregate-private-state', mode: 'enforced' },
+        {
+          id: 'orch',
+          sensor: 'orchestration-only',
+          mode: 'enforced',
+          appliesTo: ['api/**'],
+        },
+      ]),
+      classShapes: [...shapes, ...classified],
+      files: ['api/watchdog.js', 'src/domain/order.ts'],
+      layerForFile,
+      fileHints: { 'api/watchdog.js': { orchestrationHeavy: true } },
+    });
+    expect(findings.some((f) => f.file === 'api/watchdog.js')).toBe(false);
+    expect(findings.some((f) => f.file === 'src/domain/order.ts' && f.arkruleId === 'private-state')).toBe(
+      true
+    );
+  });
+
+  it('P1L control-flow: .if / match / when are not mutators; true mutators still fire', () => {
+    const shapes = extractClassShapesFromSource(
+      'src/domain/service-order.ts',
+      `
+export class ServiceOrder {
+  private status = 'open';
+  private constructor() {}
+  static create() { return new ServiceOrder(); }
+  if(cond: boolean) { if (cond) this.status = 'x'; return this; }
+  match(fn: Function) { this.status = 'matched'; return this; }
+  when(flag: boolean) { this.status = 'when'; return this; }
+  cancel() { this.status = 'cancelled'; }
+  complete() { this.status = 'done'; this.ensureInvariants(); }
+  ensureInvariants() {}
+}
+`
+    );
+    const order = shapes.find((s) => s.className === 'ServiceOrder');
+    expect(order?.mutatingMethods.map((m) => m.name).sort()).toEqual(['cancel', 'complete']);
+    const findings = evaluateArkRuleSensors({
+      arkRules: effectiveDomain([
+        { id: 'events', sensor: 'domain-event-on-mutation', mode: 'enforced' },
+      ]),
+      classShapes: shapes,
+      files: ['src/domain/service-order.ts'],
+    });
+    expect(findings.some((f) => f.message.includes('.if'))).toBe(false);
+    expect(findings.some((f) => f.message.includes('.match'))).toBe(false);
+    expect(findings.some((f) => f.message.includes('.when'))).toBe(false);
+    expect(findings.some((f) => f.message.includes('cancel'))).toBe(true);
+    expect(findings.some((f) => f.message.includes('complete'))).toBe(false);
+  });
+
+  it('P2N wave-2: quiets infra magic + error bags, keeps spaghetti seeds', () => {
+    const inventory = buildRulesInventory({
+      fileContents: {
+        'lib/integrations/hubspot.ts': `
+          const DEFAULT_HUBSPOT_TIMEOUT_MS = 15000;
+          const REQUEST_TIMEOUT_MS = 8000;
+          const DEFAULT_BASE_URL = 'https://api.hubspot.example.com/v3';
+          export async function sync() {}
+        `,
+        'lib/domain/favorites.ts': `
+          const FAVORITES_STORAGE_KEY = 'favorites-storage-key-long';
+          export const MAX_FAVORITES_PER_USER = 25;
+        `,
+        'src/domain/pricing.ts': `
+          export const MAX_CART_SIZE = 50;
+          export const ORDER_STATUS_OPEN = 'open-order-status';
+          export const MAX_PROPERTY_LIMIT = 100;
+        `,
+        'src/domain/offer-access.error.ts': `
+          export class OfferAccessError extends Error {
+            constructor(public code: string) { super(code); this.code = code; }
+          }
+        `,
+        'src/domain/offer.entity.ts': `
+          export class Offer {
+            private total = 0;
+            bump() { this.total = this.total + 1; }
+          }
+        `,
+        'src/controllers/order.controller.ts': `
+          @Controller('orders')
+          export class OrderController {
+            create(dto: any) { if (dto.amount < 0) throw new BadRequest('bad'); }
+          }
+        `,
+      },
+    });
+    const magic = inventory.candidates.filter((c) => c.kind === 'magic-business-constant');
+    expect(magic.some((c) => c.message.includes('DEFAULT_HUBSPOT_TIMEOUT_MS'))).toBe(false);
+    expect(magic.some((c) => c.message.includes('REQUEST_TIMEOUT_MS'))).toBe(false);
+    expect(magic.some((c) => c.message.includes('FAVORITES_STORAGE_KEY'))).toBe(false);
+    expect(magic.some((c) => c.message.includes('MAX_CART_SIZE'))).toBe(true);
+    expect(magic.some((c) => c.message.includes('MAX_PROPERTY_LIMIT'))).toBe(true);
+    expect(
+      inventory.candidates.some(
+        (c) => c.kind === 'mutation-without-guard' && c.file.includes('offer-access.error')
+      )
+    ).toBe(false);
+    expect(
+      inventory.candidates.some(
+        (c) => c.kind === 'mutation-without-guard' && c.file.includes('offer.entity')
+      )
+    ).toBe(true);
+    expect(inventory.candidates.some((c) => c.kind === 'validation-in-controller')).toBe(true);
+  });
+
+  it('SharedTypes starter template ships optional layer pack', () => {
+    const starter = path.resolve('templates/layers/shared-types.starter.json');
+    expect(fs.existsSync(starter)).toBe(true);
+    const body = JSON.parse(fs.readFileSync(starter, 'utf8'));
+    expect(body.layer?.name).toBe('SharedTypes');
+    expect(Array.isArray(body.suggestedRules)).toBe(true);
+    expect(body.suggestedRules.length).toBeGreaterThan(0);
   });
 });
 

@@ -1,0 +1,29 @@
+{
+  "$comment": "Optional SharedTypes layer starter (NEW-TYPEONLY-VOLUME). Copy the layer + allow rules into ark.config.json when type-only placement debt volume is high. Both application and presentation may import SharedTypes; SharedTypes must not import adapters or orchestration.",
+  "layer": {
+    "name": "SharedTypes",
+    "patterns": [
+      "src/types/**",
+      "src/shared/types/**",
+      "packages/shared/src/types/**",
+      "lib/types/**"
+    ],
+    "intentPrefixes": ["Shared.Types."]
+  },
+  "suggestedRules": [
+    { "from": "DomainModel", "to": "SharedTypes", "allowed": true },
+    { "from": "ApplicationOrchestration", "to": "SharedTypes", "allowed": true },
+    { "from": "PresentationAdapters", "to": "SharedTypes", "allowed": true },
+    { "from": "PersistenceAdapters", "to": "SharedTypes", "allowed": true },
+    { "from": "SharedTypes", "to": "DomainModel", "allowed": false },
+    { "from": "SharedTypes", "to": "ApplicationOrchestration", "allowed": false },
+    { "from": "SharedTypes", "to": "PresentationAdapters", "allowed": false },
+    { "from": "SharedTypes", "to": "PersistenceAdapters", "allowed": false }
+  ],
+  "guidance": [
+    "Type-only edges (`import type`) are placement debt — failsStrict:false; value edges still block merge.",
+    "Move pure type modules both sides need into SharedTypes (or an owning Domain surface).",
+    "Do not put runtime logic or I/O in SharedTypes.",
+    "Doctor violations.typeEdgePolicy and plan.typeOnlyGroup describe the same policy."
+  ]
+}

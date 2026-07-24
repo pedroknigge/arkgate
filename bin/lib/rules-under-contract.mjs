@@ -16,12 +16,20 @@ const COVERED_SAMPLE_MAX = 24;
 const STRUCTURE_CATALOG_MAX = 40;
 const UNCOVERED_CATALOG_MAX = 30;
 
+/** Minimum governed % before enforced ArkRules may arm extra merge teeth (P1M / FG-EXTRATEETH). */
+export const EXTRA_MERGE_TEETH_GOVERNED_FLOOR = 50;
+
 /**
  * @param {string} root
  * @param {Record<string, unknown>} config
  * @param {{ files?: Array<{ path: string }> }} [facts] optional facts for path set
+ * @param {{
+ *   governedPercent?: number | null,
+ *   populatedLayerCount?: number | null,
+ *   classifiedFiles?: number | null,
+ * }} [classification] layer-plane coverage (when known)
  */
-export function summarizeRulesUnderContract(root, config, facts) {
+export function summarizeRulesUnderContract(root, config, facts, classification) {
   if (!config?.arkRules || Object.keys(config.arkRules).length === 0) {
     return {
       active: false,
@@ -120,6 +128,31 @@ export function summarizeRulesUnderContract(root, config, facts) {
     const invariantAdvisory = invariants - invariantEnforced;
     const coveredInvariants = coverage.coverage.filter((c) => c.covered).length;
     const uncoveredInvariants = coverage.coverage.filter((c) => !c.covered).length;
+    const hasEnforcedTeeth = structureEnforced > 0 || invariantEnforced > 0;
+    // P1M-EXTRATEETH-EMPTY-GRAPH / FG-EXTRATEETH-EMPTY-CLASSIFICATION:
+    // Do not arm structure/invariant merge teeth when the layer plane is empty or
+    // barely classified (e.g. 0% governed). Classification unknown → allow teeth
+    // (contract-only callers / unit tests without coverage).
+    const governedPercent =
+      classification && typeof classification.governedPercent === 'number'
+        ? classification.governedPercent
+        : null;
+    const populatedLayerCount =
+      classification && typeof classification.populatedLayerCount === 'number'
+        ? classification.populatedLayerCount
+        : classification && typeof classification.classifiedFiles === 'number'
+          ? classification.classifiedFiles > 0
+            ? 1
+            : 0
+          : null;
+    const classificationKnown = governedPercent != null || populatedLayerCount != null;
+    const classificationAllowsTeeth = !classificationKnown
+      ? true
+      : (governedPercent ?? 0) >= EXTRA_MERGE_TEETH_GOVERNED_FLOOR &&
+        (populatedLayerCount ?? 0) >= 1;
+    const extraMergeTeeth = hasEnforcedTeeth && classificationAllowsTeeth;
+    const teethDeferredForClassification =
+      hasEnforcedTeeth && classificationKnown && !classificationAllowsTeeth;
     // P1-M — which plane can fail merge (layers vs enforced structure vs invariants).
     const mergePlanes = {
       layers: {
@@ -132,7 +165,7 @@ export function summarizeRulesUnderContract(root, config, facts) {
         total: structureRules,
         enforced: structureEnforced,
         advisory: structureAdvisory,
-        note: 'Structure sensors are heuristics (prefer false negatives). Only mode:enforced fails merge; noisy sensors stay advisory by default.',
+        note: 'Structure sensors are heuristics (prefer false negatives). Only mode:enforced fails merge; noisy sensors stay advisory by default. Advisory-only packs never add merge teeth (FG-ARKRULES-ADVISORY-ONLY).',
       },
       invariants: {
         role: 'catalog-plus-coverage',
@@ -144,12 +177,23 @@ export function summarizeRulesUnderContract(root, config, facts) {
         note: 'Invariants are catalog + coverage evidence, not a business runtime. Enforced + proven-uncovered fails merge; absence of enforced rules adds no extra teeth.',
       },
       dualPlaneStamp:
-        'Structure = heuristics; invariants = catalog+coverage evidence (not business runtime). The two planes never merge into one architecture score.',
-      extraMergeTeeth: structureEnforced > 0 || invariantEnforced > 0,
-      failMergeWhen:
-        structureEnforced > 0 || invariantEnforced > 0
-          ? 'Layer graph failures plus enforced structure/invariant findings (advisory sensors never fail merge alone).'
-          : 'Layer graph only — no enforced ArkRules structure/invariant teeth on this tree.',
+        'Structure = heuristics; invariants = catalog+coverage evidence (not business runtime). The two planes never merge into one architecture score. Advisory ArkRules ≠ merge teeth.',
+      extraMergeTeeth,
+      ...(classificationKnown
+        ? {
+            classificationGate: {
+              governedPercent: governedPercent ?? null,
+              populatedLayerCount: populatedLayerCount ?? null,
+              floorPercent: EXTRA_MERGE_TEETH_GOVERNED_FLOOR,
+              allowsTeeth: classificationAllowsTeeth,
+            },
+          }
+        : {}),
+      failMergeWhen: extraMergeTeeth
+        ? 'Layer graph failures plus enforced structure/invariant findings (advisory sensors never fail merge alone).'
+        : teethDeferredForClassification
+          ? `Layer graph only for now — enforced ArkRules exist but classification is below the teeth floor (need ≥${EXTRA_MERGE_TEETH_GOVERNED_FLOOR}% governed and ≥1 populated layer).`
+          : 'Layer graph only — no enforced ArkRules structure/invariant teeth on this tree. Advisory packs do not arm merge teeth.',
     };
 
     return {

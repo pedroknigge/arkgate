@@ -9,9 +9,16 @@ import {
   resolveOperatingMode,
   shouldShowNewHereNudge,
 } from '../ark-shared.mjs';
+import * as arkShared from '../ark-shared.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { describePackageVersionDualTruth } from './field-install.mjs';
 export { summarizeRulesUnderContract };
+
+/** Optional S3 dual-match classifier when ark-shared exports it (soft dep for S5 landing). */
+const matchingLayersForRelativePath =
+  typeof arkShared.matchingLayersForRelativePath === 'function'
+    ? arkShared.matchingLayersForRelativePath
+    : null;
 import {
   collectAdoptionGaps,
   detectSkillGaps,
@@ -70,12 +77,33 @@ export function computeCoverage(root, config, files, rules) {
   const layers = config.layers ?? [];
   const counts = new Map(layers.map((layer) => [layer.name, 0]));
   const unclassified = [];
+  const dualMembership = [];
   for (const file of files) {
+    const rel = normalize(path.relative(root, file));
     const layer = layerForFile(root, file, layers);
     if (layer && counts.has(layer)) counts.set(layer, counts.get(layer) + 1);
-    else unclassified.push(normalize(path.relative(root, file)));
+    else unclassified.push(rel);
+
+    // P0A-DUAL-MATCH: surface files that match 2+ layers (winner still single-valued).
+    // Soft: classifier is S3; S5 landing must not hard-require it.
+    if (matchingLayersForRelativePath) {
+      try {
+        const hits = matchingLayersForRelativePath(rel, layers);
+        if (hits.length > 1) {
+          dualMembership.push({
+            file: rel,
+            layers: hits.map((h) => h.layer),
+            winner: layer ?? hits[0]?.layer ?? null,
+            scores: Object.fromEntries(hits.map((h) => [h.layer, h.score])),
+          });
+        }
+      } catch {
+        /* pure classifier only — ignore if unavailable */
+      }
+    }
   }
   unclassified.sort();
+  dualMembership.sort((a, b) => a.file.localeCompare(b.file));
   const layerRows = layers.map((layer) => ({
     name: layer.name,
     patterns: layer.patterns ?? [],
@@ -101,6 +129,15 @@ export function computeCoverage(root, config, files, rules) {
     suggestions: buildUnclassifiedSuggestions(unclassified),
     emptyLayers,
     layersWithoutRules,
+    dualMembership: {
+      count: dualMembership.length,
+      // Cap samples so doctor/JSON stay bounded on large trees.
+      samples: dualMembership.slice(0, 25),
+      note:
+        dualMembership.length > 0
+          ? `${dualMembership.length} file(s) match multiple layers; classification uses highest path-anchored specificity (winner listed). Review overlapping globs if the winner looks wrong.`
+          : null,
+    },
   };
 }
 
@@ -162,6 +199,20 @@ export function runCoverage(root, config, files, rules, asJson) {
     console.log('');
     console.log(`Layers with no rule edge (can import anything): ${layersWithoutRules.join(', ')}`);
   }
+  if (cov.dualMembership?.count > 0) {
+    console.log('');
+    console.log(
+      `Dual-match: ${cov.dualMembership.count} file(s) match multiple layers (winner by path-anchored specificity).`
+    );
+    for (const sample of (cov.dualMembership.samples ?? []).slice(0, 5)) {
+      console.log(
+        `  ${sample.file} → ${sample.winner} (also: ${sample.layers.filter((l) => l !== sample.winner).join(', ')})`
+      );
+    }
+    if (cov.dualMembership.count > 5) {
+      console.log(`  … +${cov.dualMembership.count - 5} more (see --coverage --json dualMembership)`);
+    }
+  }
 }
 
 // --doctor: one consolidated health view — coverage, violations, gates, skills, baseline,
@@ -210,9 +261,15 @@ export function buildRemediationPlan(
       ...(verdict.remediationKind ? { remediationKind: verdict.remediationKind } : {}),
     };
   });
-  // Order: auto-applicable first (quick, safe wins), then human decisions, then deferred.
+  // Order: value edges first (runtime coupling), then type-only placement debt as a group,
+  // and within each bucket: mechanical-safe → judgment → deferred (NEW-TYPEONLY-VOLUME).
   const rank = { 'mechanical-safe': 0, judgment: 1, deferred: 2 };
-  steps.sort((a, b) => rank[a.class] - rank[b.class]);
+  steps.sort((a, b) => {
+    const aType = a.typeOnly || a.namedBindingsTypeOnly ? 1 : 0;
+    const bType = b.typeOnly || b.namedBindingsTypeOnly ? 1 : 0;
+    if (aType !== bType) return aType - bType;
+    return rank[a.class] - rank[b.class];
+  });
   const countOf = (cls) => steps.filter((s) => s.class === cls).length;
   const counts = {
     mechanicalSafe: countOf('mechanical-safe'),
@@ -278,6 +335,20 @@ export function buildRemediationPlan(
   }
   if (completeness !== ANALYSIS_COMPLETENESS.complete) statement = analysisIncompleteStatement(completeness);
 
+  // NEW-TYPEONLY-VOLUME: group type-only steps for plan messaging (value first).
+  const typeOnlySteps = steps.filter((s) => s.typeOnly || s.namedBindingsTypeOnly);
+  const valueSteps = steps.filter((s) => !(s.typeOnly || s.namedBindingsTypeOnly));
+  const typeOnlyGroup =
+    typeOnlySteps.length > 0
+      ? {
+          count: typeOnlySteps.length,
+          valueCount: valueSteps.length,
+          guidance:
+            'Type-only placement debt is non-blocking. Prefer a SharedTypes (or owning) layer both sides may import; fix value runtime coupling first. See templates/layers/shared-types.starter.json.',
+          stepIds: typeOnlySteps.map((s) => s.id).slice(0, 40),
+        }
+      : null;
+
   return {
     version: '1',
     completeness,
@@ -302,9 +373,13 @@ export function buildRemediationPlan(
       needsDecision: counts.judgment,
       deferred: counts.deferred,
       patternBetCount: patternBets.length,
+      ...(typeOnlyCount > 0
+        ? { typeOnlyPlacementDebt: typeOnlyCount, typeOnlyNonBlocking: true }
+        : {}),
     },
     counts,
     steps,
+    ...(typeOnlyGroup ? { typeOnlyGroup } : {}),
     // Additive: pattern evolution bets derived from design smells (never auto).
     patternBets,
     designSmells,
@@ -388,13 +463,26 @@ export function runPlan(
       `${color.yellow(`${plan.counts.judgment} need your decision`)} · ` +
       `${color.dim(`${plan.counts.deferred} deferred`)}`
   );
+  if (plan.typeOnlyGroup?.count) {
+    console.log('');
+    console.log(
+      color.dim(
+        `Type-only group: ${plan.typeOnlyGroup.count} placement-debt step(s) after ${plan.typeOnlyGroup.valueCount} value step(s) — non-blocking; SharedTypes starter optional.`
+      )
+    );
+  }
   console.log('');
   const tag = {
     'mechanical-safe': color.green('auto  '),
     judgment: color.yellow('decide'),
     deferred: color.dim('defer '),
   };
+  let typeOnlyHeaderPrinted = false;
   for (const step of plan.steps) {
+    if ((step.typeOnly || step.namedBindingsTypeOnly) && !typeOnlyHeaderPrinted) {
+      console.log(color.dim('  --- type-only placement debt (non-blocking) ---'));
+      typeOnlyHeaderPrinted = true;
+    }
     const where = `${step.file}${step.line ? `:${step.line}` : ''}`;
     console.log(`  [${tag[step.class]}] ${step.edge}  ${color.dim(where)}`);
     console.log(color.dim(`           ${step.rationale}`));
@@ -467,27 +555,61 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   });
   const doctorAdvisories = computeDoctorAdvisories(root, config, cov, rules, files, options.ts, options.parseHealth);
   // AR12 — compute once for JSON + product honesty + human lines.
+  // P1M: classification gate on extraMergeTeeth (no teeth at empty graph).
   const rulesUnderContract = summarizeRulesUnderContract(
     root,
     config,
-    options.facts ?? options.architectureFacts
+    options.facts ?? options.architectureFacts,
+    {
+      governedPercent: cov.governed?.percent ?? null,
+      populatedLayerCount: Array.isArray(cov.layers)
+        ? cov.layers.filter((row) => (row?.files ?? 0) > 0).length
+        : null,
+      classifiedFiles: cov.governed?.classifiedFiles ?? null,
+    }
   );
   // Single residual expression (nextPilot || extractionCard) — HTML report uses the same.
   const residualPilot = pilotLoop?.nextPilot || pilotLoop?.extractionCard || null;
+  const emptyScopeEarly = cov.emptyScope === true || cov.governed.totalFiles === 0;
+  const presentationRowEarly = cov.layers.find((r) => r.name === 'PresentationAdapters');
+  const totalFilesEarly = cov.governed.totalFiles || 0;
+  const operatingMode = resolveOperatingMode({
+    governedPercent: emptyScopeEarly ? 0 : cov.governed.percent,
+    planMet: analysisComplete && activeCount === 0 && !emptyScopeEarly && cov.governed.percent >= 50,
+    mature: cov.governed.totalFiles >= 150,
+    totalFiles: cov.governed.totalFiles,
+    emptyLayers: cov.emptyLayers,
+    coreOptionalWithFiles: adoption.coreOptional?.length ?? 0,
+    presentationShare:
+      totalFilesEarly > 0 && presentationRowEarly
+        ? presentationRowEarly.files / totalFilesEarly
+        : null,
+  });
+  // Evidence-backed hard only (never capabilities-from-hook-files alone).
+  const hardWriteActive = writePath.enforcementState?.localWrite?.hard === true;
+  const packageInstalled = writePath.enforcementState?.localWrite?.installed === true;
+  const dualTruthNext =
+    packageVersionTruth?.dualTruth === true
+      ? `Bump package.json arkgate pin to ${packageVersionTruth.cliVersion || 'this CLI'} (or re-run install without --no-install)`
+      : packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT'
+        ? 'Add arkgate to package.json and install so CI/npx resolve this CLI (PACKAGE_PIN_ABSENT)'
+        : null;
   const { coverageHonesty, baselineHonesty, writePathHonesty, productHonesty } =
     computeDoctorEnforcementHonesty({
       governedPercent: cov.governed.percent,
       totalFiles: cov.governed.totalFiles,
-      emptyScope: cov.emptyScope === true || cov.governed.totalFiles === 0,
+      emptyScope: emptyScopeEarly,
       baselineExists: baseline.exists,
       frozenKeys: baseline.exists ? baseline.keys.size : 0,
       activeViolations: activeCount,
       suppressed,
       totalViolations: violations.length,
       activeHost: writePath.activeHost,
-      hardWriteActive: writePath.capabilities?.['hard-write'] === true,
+      hardWriteActive,
       designWeak: designFitness.designWeak === true,
       designWeakLabel: designFitness.label,
+      designSmellCount: designSmells.length,
+      designSmellsWithOpenEdges: designSmells.length > 0 && activeCount > 0,
       packageVersionTruth,
       residualPilots: Boolean(residualPilot) && designFitness.designWeak === true,
       pilotTarget: residualPilot?.pilotTarget ?? residualPilot?.pilot ?? null,
@@ -496,7 +618,12 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         : rulesUnderContract?.active === true
           ? { active: true, extraMergeTeeth: false }
           : null,
-      primaryNextAction: postGreenPath?.action ?? null,
+      primaryNextAction: postGreenPath?.action ?? dualTruthNext,
+      operatingMode,
+      packageInstalled,
+      selfHost:
+        packageVersionTruth?.selfHost === true ||
+        packageVersionTruth?.code === 'PACKAGE_PIN_SELF_HOST',
     });
 
   if (asJson) {
@@ -506,20 +633,10 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
           ok: analysisComplete && (options.designDelta?.valid ?? true),
           doctor: {
             completeness,
-            operatingMode: resolveOperatingMode({
-              governedPercent: cov.governed.percent,
-              planMet: analysisComplete && activeCount === 0 && cov.governed.percent >= 50,
-              mature: cov.governed.totalFiles >= 150,
-              totalFiles: cov.governed.totalFiles,
-              emptyLayers: cov.emptyLayers,
-              coreOptionalWithFiles: adoption.coreOptional?.length ?? 0,
-              presentationShare: (() => {
-                const total = cov.governed.totalFiles || 0;
-                if (total <= 0) return null;
-                const p = cov.layers.find((r) => r.name === 'PresentationAdapters');
-                return p ? p.files / total : null;
-              })(),
-            }),
+            operatingMode,
+            // Monorepo walk-up (NEW-MONOREPO-CWD-WALKUP): where ark.config.json was resolved.
+            configRoot: options.configRoot ?? root,
+            ...(options.configWalkedUp ? { configWalkedUp: true } : {}),
             // Path-correct ENFORCE can still be design-weak (P02).
             designFitness,
             designSmells,
@@ -528,7 +645,9 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             postGreenPath,
             ...(postGreenPath
               ? { primaryNextAction: postGreenPath.action, ...DESIGN_WEAK_HONESTY_FLAGS }
-              : {}),
+              : productHonesty.primaryNextAction
+                ? { primaryNextAction: productHonesty.primaryNextAction }
+                : {}),
             // Q03: advisory golden for new-code placement (absent = no claim).
             goldenPattern,
             // Y06: advisory pure-layer opt-in (null when not applicable).
@@ -555,10 +674,25 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
               suppressed,
               value: summary.valueCount,
               typeOnly: summary.typeOnlyCount,
-              // P1-type: type-only is type placement debt (fix after value edges).
+              // DL-TYPEEDGE-POLICY-FIELD / P1-type: always emit when type-only findings
+              // exist or the type-edge policy surface is active (default: always on).
               typeEdgePolicy: {
+                active: true,
                 valueBlocksMerge: true,
                 typeOnlyIsPlacementDebt: true,
+                typeOnlyCount: summary.typeOnlyCount,
+                ...(summary.typeOnlyCount > 0
+                  ? {
+                      volume:
+                        summary.typeOnlyCount >= 20
+                          ? 'high'
+                          : summary.typeOnlyCount >= 5
+                            ? 'moderate'
+                            : 'low',
+                      starter:
+                        'templates/layers/shared-types.starter.json — optional SharedTypes layer both sides may import.',
+                    }
+                  : {}),
                 guidance:
                   'Type-only edges (`import type` / pure type modules) are placement debt — fix value runtime coupling first; place shared types in a SharedTypes / owning layer.',
               },
@@ -639,19 +773,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   console.log(color.bold(`Ark doctor — ${path.basename(path.resolve(root)) || '.'}`));
   if (!analysisComplete) line(warn, analysisIncompleteStatement(completeness));
 
-  const emptyScope = cov.governed.totalFiles === 0;
-  const totalFiles = cov.governed.totalFiles || 0;
-  const presentationRow = cov.layers.find((r) => r.name === 'PresentationAdapters');
-  const mode = resolveOperatingMode({
-    governedPercent: emptyScope ? 0 : cov.governed.percent,
-    planMet: analysisComplete && activeCount === 0 && !emptyScope && cov.governed.percent >= 50,
-    mature: cov.governed.totalFiles >= 150,
-    totalFiles: cov.governed.totalFiles,
-    emptyLayers: cov.emptyLayers,
-    coreOptionalWithFiles: adoption.coreOptional?.length ?? 0,
-    presentationShare:
-      totalFiles > 0 && presentationRow ? presentationRow.files / totalFiles : null,
-  });
+  const emptyScope = emptyScopeEarly;
+  const mode = operatingMode;
   console.log('');
   console.log(color.bold('Operating mode'));
   // Modes are detected states, not user-picked settings. Plain-language "what you do next".
@@ -797,13 +920,36 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   }
   if (cov.emptyLayers.length > 0) line(warn, `Empty layers (pattern matches nothing): ${cov.emptyLayers.join(', ')}`);
   if (cov.layersWithoutRules.length > 0) line(warn, `Layers with no rule edge: ${cov.layersWithoutRules.join(', ')}`);
+  if (cov.dualMembership?.count > 0) {
+    line(
+      warn,
+      `Dual-match: ${cov.dualMembership.count} file(s) match multiple layers — ${cov.dualMembership.note ?? 'review overlapping globs'}`
+    );
+  }
   if (cov.suggestions.length === 0 && cov.emptyLayers.length === 0) line(ok, 'Every layer classifies files; no empty layers');
 
   if (packageVersionTruth?.dualTruth) {
     console.log('');
     console.log(color.bold('Package pin (dual-truth)'));
     line(warn, packageVersionTruth.note);
-    actions.push('bump package.json arkgate pin to match this CLI (or install without --no-install)');
+    actions.push(
+      dualTruthNext ||
+        'bump package.json arkgate pin to match this CLI (or install without --no-install)'
+    );
+  } else if (packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT') {
+    console.log('');
+    console.log(color.bold('Package pin'));
+    line(warn, packageVersionTruth.note);
+    actions.push(
+      dualTruthNext ||
+        'Add arkgate to package.json and install so CI/npx resolve this CLI (PACKAGE_PIN_ABSENT)'
+    );
+  }
+  if (options.configWalkedUp && options.configRoot) {
+    line(
+      ok,
+      `Config walk-up: using monorepo root ${options.configRoot} (ark.config.json not in cwd package)`
+    );
   }
 
   if (showNewHere) {

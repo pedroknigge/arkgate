@@ -103,28 +103,49 @@ export function buildReportDepthPayload(
     totalViolations,
   });
   const writePath = adoption.writePath;
-  const writePathHonesty = buildWritePathHonesty(
-    writePath?.activeHost,
-    writePath?.capabilities?.['hard-write'] === true
-  );
   const packageVersionTruth = describePackageVersionDualTruth(root);
-  const rulesUnderContract = summarizeRulesUnderContract(root, config);
+  const hardWriteActive = writePath?.enforcementState?.localWrite?.hard === true;
+  const packageInstalled = writePath?.enforcementState?.localWrite?.installed === true;
+  const writePathHonesty = buildWritePathHonesty(writePath?.activeHost, hardWriteActive, {
+    packageInstalled,
+    packagePinCode: packageVersionTruth?.code,
+    packagePinAbsent: packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT',
+    selfHost:
+      packageVersionTruth?.selfHost === true ||
+      packageVersionTruth?.code === 'PACKAGE_PIN_SELF_HOST',
+  });
+  const rulesUnderContract = summarizeRulesUnderContract(root, config, undefined, {
+    governedPercent: coverage?.governed?.percent ?? null,
+    populatedLayerCount: Array.isArray(coverage?.layers)
+      ? coverage.layers.filter((row) => (row?.files ?? 0) > 0).length
+      : null,
+    classifiedFiles: coverage?.governed?.classifiedFiles ?? null,
+  });
   // Single residual expression (parity with doctor): nextPilot || extractionCard.
   const residualPilot =
     pilotLoop?.nextPilot || pilotLoop?.extractionCard || null;
+  const dualTruthNext =
+    packageVersionTruth?.dualTruth === true
+      ? `Bump package.json arkgate pin to ${packageVersionTruth.cliVersion || 'this CLI'} (or re-run install without --no-install)`
+      : packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT'
+        ? 'Add arkgate to package.json and install so CI/npx resolve this CLI (PACKAGE_PIN_ABSENT)'
+        : null;
   const productHonesty = buildProductHonesty({
     coverageHonesty,
     baselineHonesty,
     writePathHonesty,
     designWeak: designFitness.designWeak === true,
     designWeakLabel: designFitness.label,
+    designSmellCount: designSmells.length,
+    designSmellsWithOpenEdges: designSmells.length > 0 && activeCount > 0,
     packageVersionTruth,
     residualPilots: Boolean(residualPilot) && designFitness.designWeak === true,
     pilotTarget: residualPilot?.pilotTarget ?? residualPilot?.pilot ?? null,
     arkRulesMergeHonesty: rulesUnderContract?.mergePlanes
       ? { active: rulesUnderContract.active === true, ...rulesUnderContract.mergePlanes }
       : null,
-    primaryNextAction: postGreenPath?.action ?? null,
+    primaryNextAction: postGreenPath?.action ?? dualTruthNext,
+    activeBlockingViolations: activeCount,
   });
   return {
     adoption,

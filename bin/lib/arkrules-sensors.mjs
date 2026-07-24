@@ -97,17 +97,28 @@ function baseViolation(rule, file, message, line = 1) {
         failsStrict,
     };
 }
+/**
+ * When layerForFile is provided, structure sensors require the same classification
+ * as the layer plane: unclassified paths are skipped (NEW-ARKRULES-UNCLASSIFIED-ATTRIBUTION).
+ * Without layerForFile, appliesTo globs alone scope the rule (unit tests / pure eval).
+ */
+function isInRuleLayer(file, rule, layerForFile) {
+    if (!layerForFile)
+        return true;
+    const layer = layerForFile(file);
+    // Unclassified (null/undefined/"") must not inherit rule.provenance.layer attribution.
+    if (!layer)
+        return false;
+    return layer === rule.provenance.layer;
+}
 function shapesForRule(rule, shapes, layerForFile) {
     return shapes.filter((shape) => {
         if (!shape.exported)
             return false;
         if (!matchesAppliesTo(shape.file, rule.appliesTo))
             return false;
-        if (layerForFile) {
-            const layer = layerForFile(shape.file);
-            if (layer && layer !== rule.provenance.layer)
-                return false;
-        }
+        if (!isInRuleLayer(shape.file, rule, layerForFile))
+            return false;
         return true;
     });
 }
@@ -155,11 +166,8 @@ function evaluateOrchestrationOnly(rule, input) {
     for (const file of input.files) {
         if (!matchesAppliesTo(file, rule.appliesTo))
             continue;
-        if (input.layerForFile) {
-            const layer = input.layerForFile(file);
-            if (layer && layer !== rule.provenance.layer)
-                continue;
-        }
+        if (!isInRuleLayer(file, rule, input.layerForFile))
+            continue;
         if (input.fileHints?.[file]?.orchestrationHeavy) {
             out.push(baseViolation(rule, file, `File appears to embed domain branching beyond guard-and-delegate orchestration (sensor orchestration-only).`));
         }
@@ -171,11 +179,8 @@ function evaluateThinAdapter(rule, input) {
     for (const file of input.files) {
         if (!matchesAppliesTo(file, rule.appliesTo))
             continue;
-        if (input.layerForFile) {
-            const layer = input.layerForFile(file);
-            if (layer && layer !== rule.provenance.layer)
-                continue;
-        }
+        if (!isInRuleLayer(file, rule, input.layerForFile))
+            continue;
         if (input.fileHints?.[file]?.adapterThick) {
             out.push(baseViolation(rule, file, `Adapter module mixes domain branching, persistence, and mapping beyond a thin adapter (sensor thin-adapter).`));
         }
@@ -397,10 +402,15 @@ export function extractClassShapesFromSource(file, content) {
         const hasStaticFactory = /(?:^|[\n;{])\s*static\s+(?:async\s+)?(?:create|of|from|parse|build|make|new)\s*[<(]/.test(body) ||
             /(?:^|[\n;{])\s*static\s+(?:async\s+)?[A-Za-z_][A-Za-z0-9_]*\s*\([^)]*\)\s*:\s*[A-Za-z_]/.test(body);
         const mutatingMethods = [];
+        // P1-L / P1L-STRUCTURE-NOISE-CONTROL-FLOW: fluent control-flow helpers (Property.if,
+        // .match, .when) often assign this.* for chaining — not domain mutators. Prefer FN.
+        const CONTROL_FLOW_METHOD_NAMES = new Set(['if', 'match', 'when']);
         const methodRe = /(?:^|\n)\s*(?:public\s+|private\s+|protected\s+|async\s+)*(?!constructor|get|set|static)([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*(?::\s*[^{]+)?\{/g;
         let methodMatch;
         while ((methodMatch = methodRe.exec(body)) !== null) {
             const name = methodMatch[1];
+            if (CONTROL_FLOW_METHOD_NAMES.has(name))
+                continue;
             const mStart = methodMatch.index + methodMatch[0].length;
             let mDepth = 1;
             let j = mStart;

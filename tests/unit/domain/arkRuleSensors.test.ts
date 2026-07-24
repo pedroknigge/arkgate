@@ -233,6 +233,52 @@ export async function save(order: Order) {
     expect(hit).toEqual([]);
   });
 
+  it('skips unclassified files when layerForFile is provided (NEW-ARKRULES-UNCLASSIFIED)', () => {
+    const shapes = extractClassShapesFromSource(
+      'loose/x.ts',
+      `export class Loose { public total = 0; constructor() {} }`
+    );
+    const domain = extractClassShapesFromSource(
+      'src/domain/order.ts',
+      `export class Order { public total = 0; constructor() {} setTotal(n: number) { this.total = n; } }`
+    );
+    const findings = evaluateArkRuleSensors({
+      arkRules: effective([
+        { id: 'private-state', sensor: 'aggregate-private-state', mode: 'enforced' },
+      ]),
+      classShapes: [...shapes, ...domain],
+      files: ['loose/x.ts', 'src/domain/order.ts'],
+      layerForFile: (file) => (file.startsWith('src/domain/') ? 'DomainModel' : null),
+    });
+    expect(findings.every((f) => f.file !== 'loose/x.ts')).toBe(true);
+    expect(findings.some((f) => f.file === 'src/domain/order.ts')).toBe(true);
+  });
+
+  it('ignores control-flow method names if/match/when as mutations (P1L)', () => {
+    const shapes = extractClassShapesFromSource(
+      'src/domain/property.ts',
+      `
+export class Property {
+  private v = 0;
+  private constructor() {}
+  static create() { return new Property(); }
+  if(p: boolean) { this.v = p ? 1 : 0; return this; }
+  resize(n: number) { this.v = n; }
+}
+`
+    );
+    expect(shapes[0]?.mutatingMethods.map((m) => m.name)).toEqual(['resize']);
+    const findings = evaluateArkRuleSensors({
+      arkRules: effective([
+        { id: 'events', sensor: 'domain-event-on-mutation', mode: 'enforced' },
+      ]),
+      classShapes: shapes,
+      files: ['src/domain/property.ts'],
+    });
+    expect(findings.some((f) => f.message.includes('Property.if'))).toBe(false);
+    expect(findings.some((f) => f.message.includes('resize'))).toBe(true);
+  });
+
   it('appliesTo globs match layerMatch zero-segment double-star slash', () => {
     // src/domain/**/*.ts must match src/domain/order.ts (no intermediate dir).
     const shapes = extractClassShapesFromSource(
