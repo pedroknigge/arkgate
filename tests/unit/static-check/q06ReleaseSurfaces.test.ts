@@ -105,13 +105,13 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
   });
 
   it('public latest-release pointers move together', () => {
-    // Prepared 3.9.2: npm latest still 3.9.1; next prepared is 3.9.2
-    expect(read('README.md')).toMatch(/Latest release \(3\.9\.1 on npm; 3\.9\.2 prepared\).*3\.9\.2\.md/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.9\.1/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Next prepared.*3\.9\.2/s);
-    expect(read('docs/package-surface.md')).toMatch(/latest:[\s\S]*3\.9\.1\.md/s);
-    expect(read('docs/package-surface.md')).toMatch(/prepared:[\s\S]*3\.9\.2\.md/s);
-    expect(read('README.md')).toMatch(/npm [`']?latest[`']? is still[\s\S]{0,40}3\.9\.1/i);
+    // After npm publish: 3.9.2 is current published/stable
+    expect(read('README.md')).toMatch(/Latest release \(3\.9\.2\).*3\.9\.2\.md/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.9\.2/s);
+    expect(read('CONTRIBUTING.md')).not.toMatch(/Next prepared.*3\.9\.2/s);
+    expect(read('docs/package-surface.md')).toMatch(/latest:[\s\S]*3\.9\.2\.md/s);
+    expect(read('README.md')).toMatch(/is current stable/i);
+    expect(read('README.md')).not.toMatch(/npm [`']?latest[`']? is still[\s\S]{0,40}3\.9\.1/i);
   });
 });
 
@@ -126,14 +126,14 @@ describe('CHANGELOG + release note cover 3.9.2 enforcement honesty', () => {
     expect(body).toMatch(/No required config migration/i);
   });
 
-  it('docs/releases/3.9.2.md has upgrade path and prepared honesty', () => {
+  it('docs/releases/3.9.2.md has upgrade path and published honesty', () => {
     const body = read('docs/releases/3.9.2.md');
     expect(body).toMatch(/arkgate@3\.9\.2/);
     expect(body).toMatch(/npm install -D arkgate@3\.9\.2/);
     expect(body).toMatch(/coverageHonesty|writePath\.honesty|graphBlindSpots/i);
     expect(body).toMatch(/No required config migration/i);
-    expect(body).toMatch(/\*\*Prepared:\*\*/);
-    expect(body).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(body).toMatch(/\*\*Released:\*\*/);
+    expect(body).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(body).toMatch(/Y07|Y09.*parked/i);
   });
 });

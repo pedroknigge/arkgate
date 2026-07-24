@@ -16,6 +16,8 @@ import { normalize } from './scan-files.mjs';
 
 const MAX_LIST = 8;
 const MAX_FILE_BYTES = 256 * 1024;
+/** Full AST scan stays off huge trees so doctor resident warm keeps the 500 ms UX ceiling. */
+const MAX_FULL_SCAN_FILES = 2500;
 const LEXICAL_GATE = /\b(?:import|require)\s*\(|\bimport\s+\w+\s*=\s*require\s*\(/;
 
 /**
@@ -118,6 +120,23 @@ export function detectGraphBlindSpots(ts, root, files = []) {
       truncated: 0,
       edges: [],
       note: 'TypeScript was not available; graph-blind template-interpolation edges were not scanned.',
+    };
+  }
+
+  // Large-tree deferral: re-reading every path for an advisory sensor would blow the
+  // doctorResidentWarm 500 ms absolute UX ceiling at the 10k perf fixture.
+  if (files.length > MAX_FULL_SCAN_FILES) {
+    return {
+      available: true,
+      advisory: true,
+      blockerGrade: false,
+      deferred: true,
+      count: 0,
+      templateInterpolationCount: 0,
+      otherNonLiteralCount: 0,
+      truncated: 0,
+      edges: [],
+      note: `Graph-blind full scan deferred (${files.length} files > ${MAX_FULL_SCAN_FILES}). Non-literal dynamic import/require remain unresolvable in architecture analysis; advisory incomplete-graph honesty is not enumerated at this scale.`,
     };
   }
 
