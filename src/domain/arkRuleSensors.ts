@@ -6,7 +6,9 @@
  */
 
 import type { EffectiveArkRules, EffectiveStructureRule, ArkRuleSensorId } from './arkRulesTypes';
-import { ARK_RULE_TIER2_SENSOR_IDS } from './arkRulesTypes';
+
+/** Keep in lockstep with arkRulesTypes.ARK_RULE_TIER2_SENSOR_IDS (self-contained for CLI gen). */
+const ARK_RULE_TIER2_SENSOR_IDS = ['no-anemic-model'] as const;
 
 export type ClassShapeFact = {
   file: string;

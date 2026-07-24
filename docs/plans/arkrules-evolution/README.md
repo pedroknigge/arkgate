@@ -4,13 +4,13 @@
 > Related: [ROADMAP.md](../../../ROADMAP.md) · [ADR index](../../adr/README.md) ·
 > [Configuration](../../configuration.md) · [Brownfield adoption](../../brownfield-adoption.md)
 
-**Status:** Seeded 2026-07-23 as **Phase AR** (`AR01`–`AR19`, orders 82–100) in
-`ROADMAP.md` for the `arkgate@4.x` release train. One `doing` at a time; `AR01` is next.
-This document holds the contrast evidence, design decisions, and per-item exit criteria.<br>
+**Status:** Implemented on the Phase AR branch 2026-07-24 (`AR01`–`AR19` `done` in
+`ROADMAP.md`). Ships on the `arkgate@4.x` release train. Claims audit:
+[docs/field/arkrules-claims-audit.md](../../field/arkrules-claims-audit.md).<br>
 **Slug:** `arkrules-evolution`<br>
 **Kind:** epic / contract deepening + brownfield migration toolkit<br>
 **Owners:** product (Pedro) + library maintainers<br>
-**Last updated:** 2026-07-23
+**Last updated:** 2026-07-24
 
 ---
 

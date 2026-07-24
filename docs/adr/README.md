@@ -21,6 +21,9 @@ decision; implementation and manifests remain authoritative for current structur
 | [0011](0011-resolved-candidate-facts-boundary.md) | Versioned resolved candidate facts are the parity-capable analysis input | Accepted |
 | [0012](0012-arkrules-contract-composition.md) | ArkRules contract and modular composition (intra-layer rules) | Accepted |
 | [0013](0013-arkrules-structural-sensors.md) | Intra-layer structural sensors are resolver facts, not style lint | Accepted |
+| [0014](0014-arkrules-invariant-catalog.md) | Invariant catalog, coverage evidence, and rule modes | Accepted |
+| [0015](0015-arkrules-migration-skills.md) | Migration workflows route through existing skills | Accepted |
+| [0016](0016-arkrules-no-executable-core.md) | Executable evaluator stays out of core | Accepted |
 
 Do not renumber or delete accepted decisions. Add a superseding ADR when a durable decision
 changes, and link both records.

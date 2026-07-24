@@ -184,6 +184,7 @@ function parseArgs(argv) {
     else if (arg === '--coverage') args.coverage = true;
     else if (arg === '--doctor') args.doctor = true;
     else if (arg === '--plan') args.plan = true;
+    else if (arg === '--rules-inventory') args.rulesInventory = true;
     else if (arg === '--recommend') args.recommend = true;
     else if (arg === '--write-plan') args.writePlan = true;
     else if (arg === '--list-policy-packs') args.listPolicyPacks = true;
@@ -243,6 +244,7 @@ function usage() {
     '       ark-check --doctor [--json] [--resident] [--fail-on-new-smells --base-ref <git-ref>]  read-only diagnosis; resident JSON falls back cold',
     '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
     '       ark-check --plan [--json]              classified remediation plan (mechanical-safe / judgment / deferred) + goal; report only',
+    '       ark-check --rules-inventory [--json]   brownfield rules inventory (AR13; deterministic candidates, not a score)',
     '       ark-check --recommend [--json] [--write-plan]  application-shape plan; --write-plan emits ark-adoption-plan.json',
     '       ark-check --list-policy-packs            enthusiast packs (hexagonal, layered, feature-sliced, monorepo, ui-surface, vertical-slice, ddd-bounded-contexts)',
     '       ark-check --apply-policy-pack <id> [--force]  write ark.config.json from templates/policy-packs/ (uses preset factory)',
@@ -1254,6 +1256,63 @@ async function main() {
       completenessReasons,
     });
     if (args.strictMerge) process.exitCode = ok && plan.goal.met ? 0 : 1;
+    return;
+  }
+
+  if (args.rulesInventory) {
+    const { buildRulesInventory, inventoryToExtractionCard } = await import('./lib/rules-inventory.mjs');
+    const fileContents = {};
+    for (const file of files.slice(0, 400)) {
+      const rel = normalize(path.relative(root, file));
+      try {
+        fileContents[rel] = fs.readFileSync(file, 'utf8');
+      } catch {
+        /* skip unreadable */
+      }
+    }
+    const contracted = [];
+    if (config.arkRules) {
+      try {
+        const { loadEffectiveArkRulesFromDisk } = await import('./lib/effective-contract-load.mjs');
+        const loaded = loadEffectiveArkRulesFromDisk(root, config);
+        for (const rule of loaded.arkRules.structure ?? []) contracted.push(rule.id);
+        for (const inv of loaded.arkRules.invariants ?? []) contracted.push(inv.id);
+      } catch {
+        /* advisory inventory still useful */
+      }
+    }
+    const inventory = buildRulesInventory({
+      fileContents,
+      contractedRuleIds: contracted,
+    });
+    const nextPilot =
+      inventory.candidates[0] != null
+        ? inventoryToExtractionCard(inventory.candidates[0])
+        : null;
+    const payload = {
+      rulesInventory: inventory,
+      rulesMigration: {
+        inventoried: inventory.inventoried,
+        underContract: inventory.underContract,
+        frozen: inventory.frozen,
+        notAScore: true,
+      },
+      nextPilot: nextPilot,
+    };
+    if (args.json) {
+      console.log(JSON.stringify(payload, null, 2));
+    } else {
+      console.log(
+        `Rules inventory: ${inventory.inventoried} inventoried, ${inventory.underContract} under contract, ${inventory.frozen} frozen (not a score).`
+      );
+      for (const c of inventory.candidates.slice(0, 12)) {
+        console.log(`  - [${c.confidence}] ${c.kind} @ ${c.file}:${c.line} — ${c.message}`);
+      }
+      if (nextPilot) {
+        console.log(`Next extraction pilot: ${nextPilot.pilot} → ${nextPilot.pilotTarget}`);
+      }
+    }
+    process.exitCode = 0;
     return;
   }
 

@@ -10,7 +10,7 @@ The CLI, MCP server, and ESLint plugin all use the same parser, migration, defau
 ```json
 {
   "$schema": "https://unpkg.com/arkgate@2/schemas/ark.config.schema.json",
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "include": ["src"],
   "layers": [],
   "rules": []
@@ -18,7 +18,10 @@ The CLI, MCP server, and ESLint plugin all use the same parser, migration, defau
 ```
 
 `$schema` is for editor completion. `schemaVersion` controls ArkGate's runtime contract and is
-independent from the npm package version.
+independent from the npm package version. Schema **`1.1`** is additive over `1.0` and adds the
+optional top-level **`arkRules`** map (ADR 0012). Absence of `arkRules` changes no inter-layer
+verdict. Per-layer structure/invariant files use sibling schema
+`arkgate/schema/arkrules` (`schemas/ark.arkrules.schema.json`).
 
 For offline editor completion, point `$schema` at the installed file instead:
 
@@ -36,8 +39,9 @@ The same schema is exported through the stable package subpaths `arkgate/schema`
 ## Compatibility and migration
 
 Configs without `schemaVersion` are the legacy shape shipped through ArkGate 1.x and early 2.x.
-The loader deterministically projects them to schema `1.0` in memory by adding contract metadata
-and the established defaults. It never rewrites the user's file during a check. Newly generated
+The loader deterministically projects them through `unversioned → 1.0 → 1.1` in memory by adding
+contract metadata and the established defaults. It never rewrites the user's file during a check.
+Newly generated
 configs always contain the metadata, and unsupported future versions fail at
 `$.schemaVersion` instead of being guessed.
 

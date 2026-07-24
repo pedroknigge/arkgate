@@ -51,6 +51,21 @@ const MODULES = [
     label: 'versioned ArkRules (intra-layer) contract + schema',
   },
   {
+    canonical: 'src/domain/invariantCoverage.ts',
+    derived: 'bin/lib/invariant-coverage.mjs',
+    label: 'invariant coverage evidence (ADR 0014)',
+  },
+  {
+    canonical: 'src/domain/rulesInventory.ts',
+    derived: 'bin/lib/rules-inventory.mjs',
+    label: 'brownfield rules inventory (AR13)',
+  },
+  {
+    canonical: 'src/domain/arkRuleSensors.ts',
+    derived: 'bin/lib/arkrules-sensors.mjs',
+    label: 'ArkRules structure sensors (ADR 0013)',
+  },
+  {
     canonical: 'src/domain/adapterContract.ts',
     derived: 'bin/lib/adapter-contract.mjs',
     schemaDerived: 'schemas/ark.analysis-result.schema.json',

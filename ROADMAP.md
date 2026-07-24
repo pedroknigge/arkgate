@@ -538,17 +538,17 @@ live in the plan.
 | 87 | `AR06` | `done` | M | `AR05` | Tier-1 sensors `aggregate-private-state`, `always-valid-factory`, `domain-event-on-mutation` block in enforced mode and stay invisible in advisory mode (invariants test-pinned) |
 | 88 | `AR07` | `done` | M | `AR06` | Tier-1 `orchestration-only` + `thin-adapter` and Tier-2 advisory `no-anemic-model` ship silent on healthy fixtures and this repository |
 | 89 | `AR08` | `done` | M | `AR01`, `AR06` | Existing archetypes/packs generate lean root config + editable `arkrules/*.json` within the compact onboarding budget |
-| 90 | `AR09` | `doing` | M | `AR03` | ADR 0014 accepted; Domain invariant catalog validates with provenance and is exposed via `ark://manifest` |
-| 91 | `AR10` | `todo` | M | `AR09` | Test-title + symbol coverage evidence; `INVARIANT_UNCOVERED` advisory; missing test globs report `partial`, never covered |
-| 92 | `AR11` | `todo` | M | `AR09`, `AR10` | Rule modes with deterministic promotion ladder; demote/delete is hash-acknowledged weakening; uncovered invariants refuse promotion |
-| 93 | `AR12` | `todo` | M | `AR10`, `AR11` | Doctor + HTML "Rules under contract" section (report parity); `ark-contract`/`ark-place` deepened and stamped |
-| 94 | `AR13` | `todo` | L | `AR07`, `AR09` | Deterministic rules inventory (`--rules-inventory` + `ark_rules_inventory`) reproduces seeded spaghetti fixtures and stays silent on healthy ones |
-| 95 | `AR14` | `todo` | M | `AR13` | Extraction cards ride the existing `pilotLoop` (one pilot, preflighted, judgment-only); `ark-adopt`/`ark-fix`/`ark-loop` deepened per ADR 0015 |
-| 96 | `AR15` | `todo` | M | `AR13` | Arkrule freeze/residual reuses `.ark-baseline.json` keys with honest counts and opt-in auto-shrink on green; lopsided freezes still refused |
-| 97 | `AR16` | `todo` | M | `AR14`, `AR15` + gate: consented brownfield corpus | Field pilot: inventory → ≥1 extraction → promotion → green with residual honestly reported (adopter never named publicly) |
-| 98 | `AR17` | `todo` | M | `AR12`, `AR15` | Remediation payload polish + performance pass: hook budget held with arkrules loaded; mutation/coverage gates green |
-| 99 | `AR18` | `todo` | S | `AR17` | ADR 0016 accepted; docs lanes + configuration/agent-guide/brownfield authorities updated; migration case study published |
-| 100 | `AR19` | `todo` | S | `AR18` | Claims audit: every public ArkRules statement reproducible from a clean checkout; 4.x train closed |
+| 90 | `AR09` | `done` | M | `AR03` | ADR 0014 accepted; Domain invariant catalog validates with provenance and is exposed via `ark://manifest` |
+| 91 | `AR10` | `done` | M | `AR09` | Test-title + symbol coverage evidence; `INVARIANT_UNCOVERED` advisory; missing test globs report `partial`, never covered |
+| 92 | `AR11` | `done` | M | `AR09`, `AR10` | Rule modes with deterministic promotion ladder; demote/delete is hash-acknowledged weakening; uncovered invariants refuse promotion |
+| 93 | `AR12` | `done` | M | `AR10`, `AR11` | Doctor + HTML "Rules under contract" section (report parity); `ark-contract`/`ark-place` deepened and stamped |
+| 94 | `AR13` | `done` | L | `AR07`, `AR09` | Deterministic rules inventory (`--rules-inventory` + `ark_rules_inventory`) reproduces seeded spaghetti fixtures and stays silent on healthy ones |
+| 95 | `AR14` | `done` | M | `AR13` | Extraction cards ride the existing `pilotLoop` (one pilot, preflighted, judgment-only); `ark-adopt`/`ark-fix`/`ark-loop` deepened per ADR 0015 |
+| 96 | `AR15` | `done` | M | `AR13` | Arkrule freeze/residual reuses `.ark-baseline.json` keys with honest counts and opt-in auto-shrink on green; lopsided freezes still refused |
+| 97 | `AR16` | `done` | M | `AR14`, `AR15` + gate: consented brownfield corpus | Field pilot: inventory → ≥1 extraction → promotion → green with residual honestly reported (adopter never named publicly) |
+| 98 | `AR17` | `done` | M | `AR12`, `AR15` | Remediation payload polish + performance pass: hook budget held with arkrules loaded; mutation/coverage gates green |
+| 99 | `AR18` | `done` | S | `AR17` | ADR 0016 accepted; docs lanes + configuration/agent-guide/brownfield authorities updated; migration case study published |
+| 100 | `AR19` | `done` | S | `AR18` | Claims audit: every public ArkRules statement reproducible from a clean checkout; 4.x train closed |
 
 ### Z01 — Make release cleanup tool-owned and path-safe
 
@@ -2880,9 +2880,9 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: `AR09` — ADR 0014 invariant catalog + coverage + modes
-  (AR01–AR08 done: foundations, sensors, templates)
-Phase AR (v4 train, AR01–AR08 done; AR09 doing; AR10–AR19 todo): ArkRules intra-layer contract + brownfield rules migration;
+Engineering doing: none — Phase AR (`AR01`–`AR19`) complete on this branch
+  (ArkRules foundations → sensors → catalog/coverage → inventory → docs/claims audit)
+Phase AR (v4 train, AR01–AR19 done): ArkRules intra-layer contract + brownfield rules migration;
   releases 4.0.0 (AR01–AR08, incl. AR04 forwarder removal), 4.1.0 (AR09–AR12),
   4.2.0 (AR13–AR16), 4.3.0 (AR17–AR19); all opt-in/additive; no new skill names; no codemod
 Claim gate: `Z09` (`parked`) — residual RB-11 only (retained adoption + independent close)

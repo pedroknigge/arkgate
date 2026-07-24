@@ -56,6 +56,9 @@ the same files or weaken the gate.
    if present, is authoritative too.
 2. **Classify the artifact** by what it does, not what it's called:
    - Pure business rules/entities/value objects → domain-model layer.
+   - When Domain ArkRules require private state / factories (`aggregate-private-state`,
+     `always-valid-factory`), scaffold private fields + static factory — do not emit public
+     mutable aggregates.
    - Orchestrates a use case, no I/O of its own → application layer.
    - Talks to a database, queue, API, filesystem → an adapter layer on the side
      that matches the direction (driven/persistence vs driving/http).

@@ -9,6 +9,8 @@ import {
   resolveOperatingMode,
   shouldShowNewHereNudge,
 } from '../ark-shared.mjs';
+import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
+export { summarizeRulesUnderContract };
 import {
   collectAdoptionGaps,
   detectSkillGaps,
@@ -497,6 +499,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             pureLayerOptIn,
             // Q04: one-pilot loop (extraction card → re-doctor).
             pilotLoop,
+            // AR12 — Rules under contract (honest counts, not a score).
+            rulesUnderContract: summarizeRulesUnderContract(root, config),
             // Advisories, never a verdict: W01/U05/X04/Y03 + graph-blind spots.
             ...doctorAdvisories,
             governed: cov.governed,

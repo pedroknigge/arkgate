@@ -54,6 +54,8 @@ the same files or weaken the gate.
 - `include` / `exclude`
 - `layers[]` (`name`, `patterns`, `optional`, `forbiddenGlobals`, `intentPrefixes`, layer `exclude`)
 - `rules[]` (from/to/allowed)
+- **`arkRules` map + `arkrules/<Layer>.json`** (ADR 0012/0014) — structure sensors + invariant catalog;
+  promote advisory→enforced only with coverage evidence; demote/delete requires hash-bound policy ack
 - Never: disable the check, delete CI gates, or add blanket `allowed: true` for a bad edge without a facade design
 
 ## Steps

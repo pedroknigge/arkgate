@@ -36,6 +36,18 @@ in the immutable pre-2.0 archive linked below.
 - **Templates:** `templates/arkrules/*.json` + presets/init emit lean `arkRules` refs and
   copy editable starter files.
 
+### Added (AR09–AR19)
+
+- **ADR 0014–0016:** invariant catalog + coverage evidence + promotion ladder; migration
+  routes through existing skills; no executable evaluator in core.
+- **Invariant coverage:** test-title + symbol evidence; `INVARIANT_UNCOVERED`; partial when
+  test globs missing; `canPromoteInvariant` refuses uncovered promotions.
+- **Doctor/HTML** `rulesUnderContract` (counts, not a score); report parity key.
+- **Rules inventory:** `ark-check --rules-inventory` + MCP `ark_rules_inventory`; extraction
+  cards for pilotLoop; freeze residual reuses baseline keys.
+- **Field case study** + **claims audit** under `docs/field/`.
+- Skills deepen (`ark-adopt`, `ark-contract`, `ark-place`) without new skill names.
+
 ## 3.9.2 — 2026-07-23
 
 **Patch** over 3.9.1. Product honesty for post-validity coaching, coverage/host write paths, and

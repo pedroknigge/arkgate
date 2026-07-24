@@ -166,6 +166,26 @@ export {
 } from './domain/effectiveContract';
 
 export {
+  evaluateArkRuleSensors,
+  extractClassShapesFromSource,
+  type ClassShapeFact,
+  type ArkRuleSensorViolation,
+} from './domain/arkRuleSensors';
+
+export {
+  canPromoteInvariant,
+  evaluateInvariantCoverage,
+  type InvariantCoverageEvidence,
+} from './domain/invariantCoverage';
+
+export {
+  buildRulesInventory,
+  inventoryToExtractionCard,
+  type RulesInventoryCandidate,
+  type RulesInventoryResult,
+} from './domain/rulesInventory';
+
+export {
   ARK_ENFORCEMENT_STATE_SCHEMA_VERSION,
   type ArkEnforcementHost,
   type ArkEnforcementState,

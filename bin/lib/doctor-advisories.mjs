@@ -18,6 +18,7 @@ import {
 } from './reshape-decisions.mjs';
 import { printParseHealthSection, summarizeParseHealth } from './parse-health.mjs';
 import { detectGraphBlindSpots, printGraphBlindSection } from './graph-blind.mjs';
+import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 
 export function computeDoctorAdvisories(root, config, cov, rules, files, ts, parseHealth) {
   const physicalCohesion = computePhysicalCohesion(root, files);
@@ -36,6 +37,8 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     parseHealth: parseHealth ?? summarizeParseHealth(),
     // Y09 direction: advisory graph-blind spots (template-interpolation); never hard verdict.
     graphBlindSpots: detectGraphBlindSpots(ts, root, files),
+    // AR12 — Rules under contract (honest counts).
+    rulesUnderContract: summarizeRulesUnderContract(root, config),
   };
 }
 

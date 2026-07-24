@@ -85,7 +85,10 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    add layers/patterns via `/ark-contract`.
 4. **Mine business rules → manifiesto** (model job — this is why the skill exists):
    - Scan for loose domain: validators, pricing/policy functions, `can*`/`calculate*`, magic business constants, publish/intent strings, logic in UI/hooks that belongs in Domain.
-   - Propose: Domain files, `intentPrefixes`, intent names (`Domain.*` / `Application.*`), kernel `defineIntent` stubs if runtime is used.
+   - **ArkRules inventory (AR13):** run `ark-check --rules-inventory --json` for deterministic candidates
+     (validation-in-controller, magic constants, anemic entities). Counts are **not a score**.
+   - Propose: Domain files, `intentPrefixes`, intent names (`Domain.*` / `Application.*`), kernel `defineIntent` stubs if runtime is used;
+     land structure/invariant entries under `arkrules/<Layer>.json` via `/ark-contract` (ADR 0015 routing).
    - Apply config through `/ark-contract` discipline; move pure rules into Domain when safe; validate with ark-check.
    - Deliver section **“Así te lo re-soluciono en el manifiesto”** with before/after contract snippets.
 5. **Freeze only real debt** — `--update-baseline` (zero debt → **no empty baseline file** left behind).
