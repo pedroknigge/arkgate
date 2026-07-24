@@ -22,7 +22,8 @@ const BUDGETS = [
   { path: 'bin/lib/install-migrate.mjs', max: 700 },
   // Phase P: designFitness / designSmells doctor surface + patternBets plan IR.
   // 3.8.2 field DX (sessionNote, pure-layer opt-in, Codex legacy advisory) — was 920.
-  { path: 'bin/lib/doctor-plan.mjs', max: 980 },
+  // Product mandate honesty (coverage/baseline/writePath + design-weak flags) — was 980.
+  { path: 'bin/lib/doctor-plan.mjs', max: 1010 },
   { path: 'bin/lib/presets.mjs', max: 650 },
   { path: 'bin/lib/config-contract.mjs', max: 500 },
   { path: 'bin/lib/weakest-link.mjs', max: 500 },

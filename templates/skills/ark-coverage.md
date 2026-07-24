@@ -71,6 +71,13 @@ Never say “your architecture is guarded” while `goal.met` is false, governed
 or false-green doctor gaps are open. Never say “architecture is healthy finished” solely
 because governed% is 100% and plan is empty.
 
+**Honesty hard lines (doctor JSON):**
+- `coverageHonesty.worseThanNoGate` / weak coverage (~&lt;50%): green is **worse than no gate**.
+- `baseline.honesty.dirtyBaselineRisk`: green-via-freeze may hide false-positive debt.
+- `writePath.honesty.softWriteHost` (Cursor / Codex / OpenCode): write path is **advisory /
+  best-effort**, not hard PreToolUse — required CI status is the hard merge boundary.
+- Do not invent hard write guarantees for soft hosts.
+
 ## Related onboarding
 
 - **Greenfield:** low governed% → `/ark-architect` or `ark-check --recommend`.

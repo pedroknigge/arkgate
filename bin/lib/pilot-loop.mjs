@@ -166,6 +166,13 @@ export function formatExtractionCard(card) {
  */
 export function summarizePilotLoop(opts = {}) {
   const designWeak = opts.designWeak === true;
+  // Same forbid bits as DESIGN_WEAK_HONESTY_FLAGS (both auto-apply aliases).
+  const forbid = {
+    multiPilotBatchForbidden: true,
+    autoApplyForbidden: true,
+    autoApplyPlanBForbidden: true,
+  };
+
   if (!designWeak) {
     return {
       active: false,
@@ -173,6 +180,7 @@ export function summarizePilotLoop(opts = {}) {
       reason: 'not-design-weak',
       oneAtATime: true,
       neverMechanicalSafe: true,
+      ...forbid,
     };
   }
 
@@ -186,21 +194,32 @@ export function summarizePilotLoop(opts = {}) {
       reason: 'no-pattern-bets',
       oneAtATime: true,
       neverMechanicalSafe: true,
+      ...forbid,
     };
   }
 
   const remaining = Array.isArray(opts.patternBets) ? opts.patternBets.length : 0;
+  const queued = Math.max(0, remaining - 1);
 
   return {
     active: true,
     id: PILOT_LOOP_ID,
     oneAtATime: true,
     neverMechanicalSafe: true,
+    ...forbid,
     remainingBets: remaining,
+    // Remaining pattern bets are a queue, never concurrent pilots.
+    queuedBets: queued,
+    ...(queued > 0
+      ? {
+          queueNote: `${queued} additional pattern bet(s) stay queued — run the single nextPilot only, then re-doctor before selecting another.`,
+        }
+      : {}),
     nextPilot,
     instruction:
       'Apply ONE pilot from nextPilot (extraction card), then re-doctor. ' +
       'Do not multi-pilot batch. patternBets never mechanical-safe. ' +
+      'Never silent auto-apply of plan B. ' +
       'Success = reduced smell evidence on pilot paths; residual outside pilot may remain.',
     cardText: formatExtractionCard(nextPilot),
   };

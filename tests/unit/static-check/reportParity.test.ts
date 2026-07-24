@@ -100,7 +100,7 @@ describe('X01 report parity — the standing rule', () => {
     expect(html).toContain('contract-bidirectional-allow');
     expect(html).toMatch(/never changes the verdict/i);
     expect(html).toContain('module-let');
-    expect(html).toMatch(/no strict mode exists/i);
+    expect(html).toMatch(/blocker-grade Y07 parked|parked \(Y07\)/i);
   });
 
   it('layer badges show walls: pure and capability deny lists', () => {
@@ -180,6 +180,45 @@ describe('X01 report parity — the standing rule', () => {
     expect(gw).toContain('heavy');
     expect(gw).toContain('249.7 files/layer');
     expect(gw).toContain('Acknowledged edges applied: <b>3</b>');
+    // Graph-blind shapes: unavailable, clean zero, template-interpolation edges + verdict note.
+    expect(
+      renderAdvisorySections(
+        { graphBlindSpots: { available: false, note: 'no TS for graph-blind', count: 0, edges: [] } },
+        esc
+      )
+    ).toContain('no TS for graph-blind');
+    expect(
+      renderAdvisorySections(
+        {
+          graphBlindSpots: {
+            available: true,
+            count: 0,
+            templateInterpolationCount: 0,
+            edges: [],
+          },
+        },
+        esc
+      )
+    ).toMatch(/No unresolvable dynamic/i);
+    const blindEdges = renderAdvisorySections(
+      {
+        graphBlindSpots: {
+          available: true,
+          count: 2,
+          templateInterpolationCount: 1,
+          truncated: 1,
+          edges: [
+            { file: 'src/a.ts', line: 3, kind: 'import', reason: 'template-interpolation' },
+            { file: 'src/b.ts', line: 1, kind: 'require', reason: 'non-literal' },
+          ],
+        },
+      },
+      esc
+    );
+    expect(blindEdges).toContain('data-advisory="graphBlindSpots"');
+    expect(blindEdges).toContain('template-interpolation');
+    expect(blindEdges).toMatch(/never a hard verdict|does not change the architecture verdict/i);
+    expect(blindEdges).toContain('+1 more in doctor JSON');
   });
 
   it('X07 — a finding with more than six evidence items announces the cut', () => {

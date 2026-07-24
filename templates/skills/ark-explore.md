@@ -247,7 +247,10 @@ Canonical productized template also in `docs/brownfield-adoption.md` §6.
 
 **Q04 pilot loop:** when doctor/plan JSON is available, use **`pilotLoop.nextPilot`** as the
 **single** next extraction card (one pilot at a time → re-doctor). Do not open five B bets
-in parallel. After the pilot lands, re-run doctor; success = reduced evidence on pilot paths.
+in parallel. When `pilotLoop.queuedBets > 0`, those bets stay **queued**, not concurrent.
+`multiPilotBatchForbidden` / `autoApplyForbidden` (alias `autoApplyPlanBForbidden`) are hard
+lines — never silent codemod of plan B. After the pilot lands, re-run doctor; success =
+reduced evidence on pilot paths.
 
 ```text
 ### Extraction card

@@ -5,6 +5,44 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 3.9.2 — 2026-07-23
+
+**Patch** over 3.9.1. Product honesty for post-validity coaching, coverage/host write paths, and
+advisory analysis precision — **no required config migration**, no gate weakening, no hard-write
+claims on soft hosts. Y07 / Y09 remain **parked** (not promoted).
+
+### Added
+
+- **Enforcement honesty helpers** (`bin/lib/enforcement-honesty.mjs`): coverage honesty
+  (empty / weak &lt;50% worse-than-no-gate / partial / strong; `greenIsNotEnforcement` until 100%;
+  `wholeTreeGoverned`), baseline dirty-freeze risk, write-path honesty with soft hosts derived from
+  `HOST_SUPPORT_MATRIX` (fail-closed: soft never `hardWriteActive`).
+- **Graph blind spots** (`bin/lib/graph-blind.mjs`): advisory scan for unresolvable dynamic
+  import/require edges (template-interpolation + non-literals + import-equals). Never a hard
+  architecture verdict; Y09 direction only.
+- Doctor / plan JSON: `coverageHonesty`, `baseline.honesty`, `writePath.honesty`,
+  `graphBlindSpots`, design-weak honesty flags (`healthyFinishedForbidden`,
+  `multiPilotBatchForbidden`, `autoApplyForbidden` / `autoApplyPlanBForbidden`).
+- Focused unit suite `tests/unit/static-check/enforcementHonesty.test.ts`.
+
+### Changed
+
+- **Post-green path:** placement coaching + shared design-weak honesty flags.
+- **Pilot loop:** one-at-a-time queue (`queuedBets` / `queueNote`); multi-pilot batch and silent
+  plan-B auto-apply forbidden on all return paths.
+- **Ambient sensor (Y07 honesty only):** status vocabulary (`idle` / `active-clean` /
+  `active-findings` / `unavailable`), `blockerGrade: false`, `strictDiagnostics: 'parked-Y07'`;
+  idle/clean/unavailable print honesty lines (not silence-as-done).
+- **Skills** (`ark-coverage`, `ark-explore`, `ark-place`): deepen honesty / one-pilot routing
+  without new skill basenames.
+- **HTML advisories:** graphBlindSpots X01 parity; ambient h2 parked-Y07 wording.
+
+### Notes
+
+- Soft write hosts (Cursor / Codex / OpenCode) remain advisory at write; required CI status is the
+  hard merge boundary.
+- Z09 / residual `RB-11` remain open. Y07 / Y09 not marked done.
+
 ## 3.9.1 — 2026-07-23
 
 **Patch** over 3.9.0. Repo hygiene and CI honesty only — **no required config migration**, no gate

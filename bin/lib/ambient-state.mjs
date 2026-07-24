@@ -160,19 +160,37 @@ export function detectAmbientState(ts, root, config, files, ackState = { exists:
   };
 }
 
+/**
+ * Status vocabulary for ambient sensor honesty (Y07 strict stays parked).
+ * @param {{ active?: boolean, findingCount?: number }} result
+ */
+export function ambientSensorStatus(result) {
+  if (!result?.active) return 'idle';
+  return (result.findingCount ?? 0) > 0 ? 'active-findings' : 'active-clean';
+}
+
 /** JSON summary for doctor. Advisory only — never a verdict input. */
 export function summarizeAmbientState(result, ackState = { exists: false, acks: [] }) {
+  const findingCount = result.findings.length;
+  const status = ambientSensorStatus({ active: result.active, findingCount });
   return {
     available: true,
     active: result.active,
+    status,
     advisory: true,
-    findingCount: result.findings.length,
+    // Strict (blocker-grade) ambient diagnostics remain parked (Y07) until a real pure corpus.
+    blockerGrade: false,
+    strictDiagnostics: 'parked-Y07',
+    findingCount,
     acknowledged: ackState?.invalid ? 0 : result.acknowledgedCount,
     ...(result.truncated > 0 ? { truncated: result.truncated } : {}),
     ...(result.skippedFiles > 0 ? { skippedFiles: result.skippedFiles } : {}),
-    note: result.active
-      ? 'Module-scope mutable state in pure layers — advisory only; acknowledge deliberate registries in the sidecar or move the state behind a port.'
-      : 'No pure: true layer opted in; the sensor is idle.',
+    note:
+      status === 'idle'
+        ? 'Idle: no pure: true layer opted in. Sensor stays advisory; blocker-grade ambient diagnostics are parked (Y07) until a real pure-layer field corpus exists. Opt in via layer pure: true when ready.'
+        : status === 'active-findings'
+          ? 'Module-scope mutable state in pure layers — advisory only (never a hard verdict). Acknowledge deliberate registries in the sidecar or move state behind a port. Strict diagnostics remain parked (Y07).'
+          : 'Pure layers opted in; no module-scope let/var findings in the MVP envelope. Advisory sensor only — not a pass for blocker-grade ambient enforcement (Y07 parked).',
     ackFile: {
       path: ackState?.path ?? AMBIENT_STATE_ACKS_PATH,
       present: ackState?.exists === true,
@@ -188,11 +206,14 @@ export function computeAmbientState(ts, root, config, files) {
     return {
       available: false,
       active: false,
+      status: 'unavailable',
       advisory: true,
+      blockerGrade: false,
+      strictDiagnostics: 'parked-Y07',
       findings: [],
       findingCount: 0,
       acknowledged: 0,
-      note: 'TypeScript was not available to the doctor run; the ambient-state sensor did not execute.',
+      note: 'TypeScript was not available to the doctor run; the ambient-state sensor did not execute. Advisory only; Y07 strict remains parked.',
     };
   }
   const ackState = loadAmbientStateAcks(root);
@@ -200,9 +221,41 @@ export function computeAmbientState(ts, root, config, files) {
   return { ...summarizeAmbientState(result, ackState), findings: result.findings };
 }
 
-/** Human doctor section (advisory); silent when idle and healthy. */
+/**
+ * Human doctor section (advisory).
+ * Idle prints a single dim honesty line so silence is not misread as "ambient done."
+ */
 export function printAmbientStateSection(state, io) {
-  if (!state.available || (!state.findingCount && !state.ackFile?.invalid)) return;
+  if (!state) return;
+  if (!state.available) {
+    console.log('');
+    console.log(io.color.bold('Ambient state (advisory)'));
+    io.line(' ', io.color.dim(state.note || 'Ambient sensor unavailable.'));
+    return;
+  }
+  if (state.status === 'idle' && !state.ackFile?.invalid) {
+    console.log('');
+    console.log(io.color.bold('Ambient state (advisory)'));
+    io.line(
+      ' ',
+      io.color.dim(
+        'Idle (no pure: true layer) — advisory sensor only; blocker-grade ambient diagnostics parked (Y07).'
+      )
+    );
+    return;
+  }
+  if (state.status === 'active-clean' && !state.ackFile?.invalid && !state.findingCount) {
+    console.log('');
+    console.log(io.color.bold('Ambient state (advisory)'));
+    io.line(
+      ' ',
+      io.color.dim(
+        'Pure layers clean under MVP envelope — still advisory; not Y07 blocker-grade pass.'
+      )
+    );
+    return;
+  }
+  if (!state.findingCount && !state.ackFile?.invalid) return;
   console.log('');
   console.log(io.color.bold('Ambient state (advisory)'));
   if (state.ackFile?.invalid) {
@@ -217,5 +270,8 @@ export function printAmbientStateSection(state, io) {
   if (state.acknowledged > 0) {
     io.line(' ', io.color.dim(`acknowledged module state: ${state.acknowledged}`));
   }
-  io.line(' ', io.color.dim('advisory only — never blocks; move state behind a port or acknowledge it'));
+  io.line(
+    ' ',
+    io.color.dim('advisory only — never blocks; move state behind a port or acknowledge it (Y07 strict parked)')
+  );
 }

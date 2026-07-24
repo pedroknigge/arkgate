@@ -35,8 +35,12 @@ import {
   buildPostGreenNextAction,
   mergePostGreenTopActions,
   isDoctorHealthyNothingToDo,
+  DESIGN_WEAK_HONESTY_FLAGS,
 } from './post-green-path.mjs';
-import { doctorWritePathHonestyMessage } from './host-support-matrix.mjs';
+import {
+  buildCoverageHonesty,
+  computeDoctorEnforcementHonesty,
+} from './enforcement-honesty.mjs';
 import {
   computePureLayerOptInNudge,
   loadGoldenPattern,
@@ -129,10 +133,12 @@ export function runCoverage(root, config, files, rules, asJson) {
   if (files.length > 0 && governed.percent < 50) {
     console.log('');
     console.log(
-      `⚠ Ark governs a MINORITY of your code (${governed.percent}%). A green check here does NOT`
+      `⚠ Ark governs a MINORITY of your code (${governed.percent}%). A green check on ~${governed.percent}%`
     );
-    console.log('  mean the codebase is checked — the rest is ungoverned. Classify the directories');
-    console.log('  below to actually cover it.');
+    console.log(
+      '  is worse than no gate — it looks safe while most code is ungoverned. Classify the'
+    );
+    console.log('  directories below before treating green as enforcement.');
   }
   if (suggestions.length > 0) {
     console.log('');
@@ -236,6 +242,11 @@ export function buildRemediationPlan(
     patternBets,
     designSmells,
   });
+  const coverageHonesty = buildCoverageHonesty({
+    percent: governedPercent,
+    totalFiles,
+    emptyScope,
+  });
 
   let statement =
     activeViolations.length > 0
@@ -264,6 +275,7 @@ export function buildRemediationPlan(
         ? {
             designWeakLabel:
               'ENFORCE · design-weak — use patternBets / dual-plan B; never auto-apply as mechanical-safe',
+            ...DESIGN_WEAK_HONESTY_FLAGS,
           }
         : {}),
       ...(governedPercent != null ? { governedPercent } : {}),
@@ -282,6 +294,7 @@ export function buildRemediationPlan(
     designSmells,
     // Q04: one-pilot loop step (extraction card); never mechanical-safe.
     pilotLoop,
+    coverageHonesty,
   };
 }
 
@@ -435,6 +448,18 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     designSmells,
   });
   const doctorAdvisories = computeDoctorAdvisories(root, config, cov, rules, files, options.ts, options.parseHealth);
+  const { coverageHonesty, baselineHonesty, writePathHonesty } = computeDoctorEnforcementHonesty({
+    governedPercent: cov.governed.percent,
+    totalFiles: cov.governed.totalFiles,
+    emptyScope: cov.emptyScope === true || cov.governed.totalFiles === 0,
+    baselineExists: baseline.exists,
+    frozenKeys: baseline.exists ? baseline.keys.size : 0,
+    activeViolations: activeCount,
+    suppressed,
+    totalViolations: violations.length,
+    activeHost: writePath.activeHost,
+    hardWriteActive: writePath.capabilities?.['hard-write'] === true,
+  });
 
   if (asJson) {
     (options.writeJson ?? console.log)(
@@ -464,10 +489,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             // Q01: primary next action when Shape residual dominates (null if not design-weak).
             postGreenPath,
             ...(postGreenPath
-              ? {
-                  primaryNextAction: postGreenPath.action,
-                  healthyFinishedForbidden: true,
-                }
+              ? { primaryNextAction: postGreenPath.action, ...DESIGN_WEAK_HONESTY_FLAGS }
               : {}),
             // Q03: advisory golden for new-code placement (absent = no claim).
             goldenPattern,
@@ -475,10 +497,10 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             pureLayerOptIn,
             // Q04: one-pilot loop (extraction card → re-doctor).
             pilotLoop,
-            // Advisories, never a verdict: W01 contract health, U05 ambient state,
-            // X04 physical cohesion/reshape pilot, Y03 parse health.
+            // Advisories, never a verdict: W01/U05/X04/Y03 + graph-blind spots.
             ...doctorAdvisories,
             governed: cov.governed,
+            coverageHonesty,
             emptyLayers: cov.emptyLayers,
             layersWithoutRules: cov.layersWithoutRules,
             ungovernedDirs: cov.suggestions.length,
@@ -497,6 +519,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
               frozen: baseline.exists ? baseline.keys.size : 0,
               stale: analysisComplete ? staleBaseline : null,
               policy: adoption.baseline,
+              honesty: baselineHonesty,
             },
             gatesMissing,
             skillGaps,
@@ -517,6 +540,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
               hookRepair: writePath.hookRepair,
               mcpPresent: writePath.mcpPresent,
               evidence: writePath.evidence,
+              honesty: writePathHonesty,
               ...(writePath.sessionNote ? { sessionNote: writePath.sessionNote } : {}),
               ...(writePath.gap
                 ? {
@@ -688,6 +712,12 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         ? ok
         : warn;
   line(govMark, `Governed: ${cov.governed.percent}% (${cov.governed.classifiedFiles}/${cov.governed.totalFiles} files)`);
+  if (coverageHonesty.greenIsNotEnforcement) {
+    line(coverageHonesty.worseThanNoGate ? bad : warn, coverageHonesty.message);
+    if (coverageHonesty.worseThanNoGate) {
+      actions.push('raise governed coverage above a minority slice before treating green as enforcement');
+    }
+  }
   if (cov.suggestions.length > 0) {
     line(warn, `${cov.suggestions.length} ungoverned director(y/ies) — proposals: ${arkCommand(root, 'ark-check', '--coverage')}`);
     actions.push('classify the ungoverned directories (/ark-contract)');
@@ -770,8 +800,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   line(' ', `Active host: ${writePath.activeHost}`);
   line(' ', `Supported profile: ${writePath.supportSummary}`);
   line(wpMark, `Mode: ${writePath.mode} — ${writePathLabels[writePath.mode] || writePath.mode}`);
-  const honestyLine = doctorWritePathHonestyMessage(writePath.activeHost, capabilities['hard-write']);
-  if (honestyLine) line(warn, honestyLine);
+  if (writePathHonesty.message) line(warn, writePathHonesty.message);
   if (writePath.sessionNote) {
     line(warn, writePath.sessionNote);
   }
@@ -850,7 +879,12 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   } else {
     // Baseline keys are line-agnostic, so N keys can suppress ≥N violations — label as keys
     // to avoid an apparent mismatch with the "frozen" violation count above.
-    line(analysisComplete ? ok : warn, `${baseline.keys.size} frozen key(s)${analysisComplete ? '' : ' — stale comparison not verified'}`);
+    const baseMark = !analysisComplete || baselineHonesty.dirtyBaselineRisk ? warn : ok;
+    line(baseMark, `${baseline.keys.size} frozen key(s)${analysisComplete ? '' : ' — stale comparison not verified'}`);
+    if (analysisComplete && baselineHonesty.dirtyBaselineRisk) {
+      line(warn, baselineHonesty.message);
+      actions.push('review dirty baseline freezes — fix the contract before trusting green-via-freeze');
+    }
     if (analysisComplete && staleBaseline > 0) {
       line(warn, `${staleBaseline} stale entr(y/ies) no longer occur — tighten with --update-baseline`);
       actions.push('tighten the baseline (--update-baseline)');

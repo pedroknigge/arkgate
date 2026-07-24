@@ -23,6 +23,22 @@ export const POST_GREEN_PRIMARY_ACTION =
 export const POST_GREEN_PRIMARY_SHORT =
   '/ark-explore shape-focus → /ark-autopilot (apply B with OK)  # Shape residual';
 
+/** Placement coaching while design residual remains (new code only). */
+export const POST_GREEN_PLACEMENT_COACHING =
+  'New code: /ark-place (contract + optional golden). Design residual: map smells → ONE pilot via pilotLoop.nextPilot → re-doctor. Never multi-pilot batch; never silent auto-apply of plan B.';
+
+/**
+ * Shared design-weak honesty flags for plan/doctor/pilot JSON.
+ * Canonical auto-apply forbid is `autoApplyForbidden`; `autoApplyPlanBForbidden`
+ * is the same bit (alias for plan-B wording) so agents can key either path.
+ */
+export const DESIGN_WEAK_HONESTY_FLAGS = Object.freeze({
+  healthyFinishedForbidden: true,
+  multiPilotBatchForbidden: true,
+  autoApplyForbidden: true,
+  autoApplyPlanBForbidden: true,
+});
+
 /**
  * @param {{ designWeak?: boolean } | null | undefined} designFitness
  * @returns {null | {
@@ -33,7 +49,11 @@ export const POST_GREEN_PRIMARY_SHORT =
  *   flow: string,
  *   action: string,
  *   short: string,
+ *   placementCoaching: string,
  *   neverMechanicalSafe: true,
+ *   multiPilotBatchForbidden: true,
+ *   autoApplyForbidden: true,
+ *   autoApplyPlanBForbidden: true,
  *   healthyFinishedForbidden: true,
  * }}
  */
@@ -47,8 +67,9 @@ export function buildPostGreenNextAction(designFitness) {
     flow: 'shape-focus',
     action: POST_GREEN_PRIMARY_ACTION,
     short: POST_GREEN_PRIMARY_SHORT,
+    placementCoaching: POST_GREEN_PLACEMENT_COACHING,
     neverMechanicalSafe: true,
-    healthyFinishedForbidden: true,
+    ...DESIGN_WEAK_HONESTY_FLAGS,
   };
 }
 

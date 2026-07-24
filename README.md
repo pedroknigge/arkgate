@@ -16,8 +16,10 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 3.9.1** is current stable (patch over Beautiful Path: onboarding/CI lockfile honesty,
-> supply-chain hygiene). [Release notes](docs/releases/3.9.1.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> **ArkGate 3.9.2** is the next prepared patch (enforcement honesty: coverage/host write path,
+> design-weak one-pilot coaching, advisory graph-blind). **npm `latest` is still 3.9.1** until
+> publication succeeds. [3.9.2 notes](docs/releases/3.9.2.md) · [3.9.1](docs/releases/3.9.1.md) ·
+> [Docs hub](docs/README.md)
 
 ---
 
@@ -174,7 +176,7 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Latest release (3.9.1) | [docs/releases/3.9.1.md](docs/releases/3.9.1.md) · [CHANGELOG](CHANGELOG.md) |
+| Latest release (3.9.1 on npm; 3.9.2 prepared) | [3.9.2](docs/releases/3.9.2.md) · [3.9.1](docs/releases/3.9.1.md) · [CHANGELOG](CHANGELOG.md) |
 | History / maintainer evidence | [docs/archive/](docs/archive/README.md) |
 
 ---

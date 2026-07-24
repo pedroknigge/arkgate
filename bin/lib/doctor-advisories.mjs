@@ -1,9 +1,9 @@
 /**
  * Doctor's advisory sensors, aggregated (W01 contract health, U05 ambient
- * state, X04 physical cohesion, Y03 parse health). These sensors do not create
- * architecture violations or designFitness findings; Z02 separately maps
- * parse-health evidence to analysis completeness and fail-closed exits. One
- * seam keeps doctor-plan.mjs inside its module budget as new surfaces land.
+ * state, X04 physical cohesion, Y03 parse health, graph-blind template edges).
+ * These sensors do not create architecture violations or designFitness findings;
+ * Z02 separately maps parse-health evidence to analysis completeness and
+ * fail-closed exits. One seam keeps doctor-plan.mjs inside its module budget.
  */
 import { computeAmbientState, printAmbientStateSection } from './ambient-state.mjs';
 import { computeContractHealth, printContractHealthSection } from './contract-smells.mjs';
@@ -17,6 +17,7 @@ import {
   printReshapeDecisionsSection,
 } from './reshape-decisions.mjs';
 import { printParseHealthSection, summarizeParseHealth } from './parse-health.mjs';
+import { detectGraphBlindSpots, printGraphBlindSection } from './graph-blind.mjs';
 
 export function computeDoctorAdvisories(root, config, cov, rules, files, ts, parseHealth) {
   const physicalCohesion = computePhysicalCohesion(root, files);
@@ -33,6 +34,8 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     ambientState: computeAmbientState(ts, root, config, files),
     physicalCohesion,
     parseHealth: parseHealth ?? summarizeParseHealth(),
+    // Y09 direction: advisory graph-blind spots (template-interpolation); never hard verdict.
+    graphBlindSpots: detectGraphBlindSpots(ts, root, files),
   };
 }
 
@@ -46,4 +49,5 @@ export function printDoctorAdvisories(advisories, io) {
   );
   printReshapeDecisionsSection(advisories.physicalCohesion?.reshapeDecisions, io);
   printParseHealthSection(advisories.parseHealth, io);
+  printGraphBlindSection(advisories.graphBlindSpots, io);
 }

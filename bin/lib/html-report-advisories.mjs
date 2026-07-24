@@ -8,6 +8,7 @@
  * this report from falling behind the product again.
  */
 import { effectiveCapabilityDeny } from './analysis-engine.mjs';
+import { graphBlindSpotsHtml } from './graph-blind.mjs';
 
 // htmlEscape is injected by the caller (html-report.mjs) — importing it back
 // would be a dependency cycle, and the repo's own gate blocks that. The
@@ -134,9 +135,9 @@ function ambientStateHtml(state) {
   }
   const findings = Array.isArray(state.findings) ? state.findings : [];
   const body = !state.active
-    ? '<p class="muted">Idle — no <code>pure: true</code> layer opted in. Declare a pure layer to scan module-scope mutable state.</p>'
+    ? '<p class="muted">Idle — no <code>pure: true</code> layer opted in. Advisory only; blocker-grade ambient diagnostics remain parked (Y07). Declare a pure layer to scan module-scope mutable state.</p>'
     : findings.length === 0
-      ? '<p class="muted">Active and clean — no module-scope <code>let</code>/<code>var</code> in pure layers.</p>'
+      ? '<p class="muted">Active and clean under the MVP envelope — still advisory; not a Y07 blocker-grade pass. No module-scope <code>let</code>/<code>var</code> in pure layers.</p>'
       : `<ul>${findings
           .slice(0, 10)
           .map(
@@ -147,7 +148,7 @@ function ambientStateHtml(state) {
         (state.acknowledged > 0 ? `<p class="muted">acknowledged module state: ${state.acknowledged}</p>` : '');
   return `
   <section data-advisory="ambientState">
-    <h2>Ambient state <span class="muted">(advisory — opt-in via pure layers; no strict mode exists)</span></h2>
+    <h2>Ambient state <span class="muted">(advisory — opt-in via pure layers; blocker-grade Y07 parked)</span></h2>
     ${body}
   </section>`;
 }
@@ -248,6 +249,7 @@ export function renderAdvisorySections(advisories, escape) {
     ambientStateHtml(advisories.ambientState),
     physicalCohesionHtml(advisories.physicalCohesion),
     parseHealthHtml(advisories.parseHealth),
+    graphBlindSpotsHtml(advisories.graphBlindSpots, esc),
   ]
     .filter(Boolean)
     .join('\n');

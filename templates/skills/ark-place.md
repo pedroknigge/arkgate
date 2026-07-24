@@ -82,6 +82,10 @@ the same files or weaken the gate.
 
 - If the user needs bulk adoption / wrong contract, not a single artifact: **STOP — do not continue this skill as complete.** **STOP — wrong skill: invoke /ark-adopt or /ark-contract** instead of ad-hoc multi-file grinding without a plan.
 - If contract lacks a home for the artifact: **STOP — do not continue this skill as complete.** Adopt the layer via `/ark-contract` first.
+- If doctor is **ENFORCE · design-weak** and the user is asking to reshape existing structure
+  (not place one new artifact): place only the new file under the golden/contract home, then
+  hand off **one** pilot via `pilotLoop.nextPilot` / `/ark-explore` shape-focus — never multi-pilot
+  batch reshape from this skill.
 
 ## Operating rules
 
