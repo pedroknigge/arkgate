@@ -4,6 +4,9 @@ import {
   loadArkRulesContract,
 } from '../../../src/domain/arkRulesContract';
 import {
+  buildArkRuleFileHints,
+  collectEmptyAppliesToFindings,
+  deriveArkRuleFileHints,
   evaluateArkRuleSensors,
   extractClassShapesFromSource,
 } from '../../../src/domain/arkRuleSensors';
@@ -131,5 +134,102 @@ export class Order {
     expect(findings.some((f) => f.arkruleId === 'orch')).toBe(true);
     expect(findings.some((f) => f.arkruleId === 'thin')).toBe(true);
     expect(findings.some((f) => f.arkruleId === 'anemic' && f.failsStrict === false)).toBe(true);
+  });
+
+  it('derives conservative fileHints from source (AR07 wiring)', () => {
+    const heavy = `
+export function canPlaceOrder(order: Order) { return order.total > 0; }
+export function calculateDiscount(order: Order) { return order.total * 0.1; }
+export function shouldNotify(order: Order) { return order.status === 'paid'; }
+`;
+    const thick = `
+import { PrismaClient } from '@prisma/client';
+export function canShip(order: Order) { return order.status === 'paid'; }
+export function toDomain(row: Row) { return { id: row.id }; }
+export async function save(order: Order) {
+  if (order.total < 0) throw new Error('bad');
+  if (order.status === 'cancelled') return;
+  const prisma = new PrismaClient();
+  await prisma.order.create({ data: order });
+}
+`;
+    const clean = `export async function placeOrder(deps, cmd) { return deps.orders.save(cmd); }`;
+
+    expect(deriveArkRuleFileHints('src/application/heavy.ts', heavy)?.orchestrationHeavy).toBe(
+      true
+    );
+    expect(deriveArkRuleFileHints('src/adapters/thick.ts', thick)?.adapterThick).toBe(true);
+    expect(deriveArkRuleFileHints('src/application/clean.ts', clean)).toBeNull();
+
+    const hints = buildArkRuleFileHints({
+      'src/application/heavy.ts': heavy,
+      'src/adapters/thick.ts': thick,
+      'src/application/clean.ts': clean,
+    });
+    expect(hints['src/application/heavy.ts']?.orchestrationHeavy).toBe(true);
+    expect(hints['src/adapters/thick.ts']?.adapterThick).toBe(true);
+    expect(hints['src/application/clean.ts']).toBeUndefined();
+
+    // End-to-end: derived hints fire sensors without manual fileHints.
+    const findings = evaluateArkRuleSensors({
+      arkRules: effective([
+        {
+          id: 'orch',
+          sensor: 'orchestration-only',
+          mode: 'advisory',
+          appliesTo: ['src/application/**'],
+        },
+        {
+          id: 'thin',
+          sensor: 'thin-adapter',
+          mode: 'advisory',
+          appliesTo: ['src/adapters/**'],
+        },
+      ]),
+      classShapes: [],
+      files: Object.keys(hints).concat(['src/application/clean.ts']),
+      fileHints: hints,
+    });
+    expect(findings.some((f) => f.arkruleId === 'orch' && f.file.includes('heavy'))).toBe(true);
+    expect(findings.some((f) => f.arkruleId === 'thin' && f.file.includes('thick'))).toBe(true);
+    expect(findings.some((f) => f.file.includes('clean'))).toBe(false);
+  });
+
+  it('warns on zero-match appliesTo (ADR 0012 empty scope)', () => {
+    const arkRules = effective([
+      {
+        id: 'missing-scope',
+        sensor: 'aggregate-private-state',
+        mode: 'advisory',
+        appliesTo: ['src/domain/**/aggregates/**'],
+      },
+      {
+        id: 'enforced-miss',
+        sensor: 'always-valid-factory',
+        mode: 'enforced',
+        appliesTo: ['src/nowhere/**'],
+      },
+    ]);
+    const empty = collectEmptyAppliesToFindings(arkRules, [
+      'src/domain/order.ts',
+      'src/application/place.ts',
+    ]);
+    expect(empty).toHaveLength(2);
+    expect(empty.every((f) => f.ruleId === 'ARKRULE_SCOPE_EMPTY')).toBe(true);
+    expect(empty.find((f) => f.arkruleId === 'missing-scope')?.failsStrict).toBe(false);
+    expect(empty.find((f) => f.arkruleId === 'enforced-miss')?.failsStrict).toBe(true);
+
+    const hit = collectEmptyAppliesToFindings(
+      effective([
+        {
+          id: 'ok',
+          sensor: 'aggregate-private-state',
+          mode: 'enforced',
+          appliesTo: ['src/domain/**'],
+        },
+      ]),
+      ['src/domain/order.ts']
+    );
+    expect(hit).toEqual([]);
   });
 });
