@@ -1,0 +1,7 @@
+{
+  "$schema": "https://unpkg.com/arkgate/schemas/ark.arkrules.schema.json",
+  "schemaVersion": "1.0",
+  "layer": "App",
+  "structure": [],
+  "invariants": []
+}

@@ -21,8 +21,8 @@
     },
     "schemaVersion": {
       "type": "string",
-      "const": "1.0",
-      "default": "1.0"
+      "const": "1.1",
+      "default": "1.1"
     },
     "name": {
       "type": "string",
@@ -624,6 +624,14 @@
         "allowInMemory": false,
         "allowDisabledPeerIsolation": false
       }
+    },
+    "arkRules": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      },
+      "default": {}
     }
   },
   "$defs": {

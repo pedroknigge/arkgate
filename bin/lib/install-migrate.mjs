@@ -138,14 +138,32 @@ export function warnLockfileConflict(root) {
 export function buildManagedAssetCatalog({ root, tools, compact = false, skillsOnly = false }) {
   const selectedTools = tools instanceof Set ? tools : new Set(tools ?? []);
   const assets = [];
+  // Path-keyed: codex + antigravity both target `.agents/skills/*/SKILL.md` (and
+  // antigravity + gemini share GEMINI.md). Duplicate plan entries caused apply to
+  // write once then fail the second pre-image assert (field: web-predial-ar).
+  const byPath = new Map();
   const add = (relativePath, content, kind = 'gate', scope = 'whole-file') => {
-    assets.push({
+    const existing = byPath.get(relativePath);
+    if (existing) {
+      // Shared destinations (codex+antigravity skills, antigravity+gemini GEMINI.md)
+      // must agree on bytes; silent first-wins would hide divergent host templates.
+      if (existing.content !== content || existing.kind !== kind || existing.scope !== scope) {
+        throw new Error(
+          `managed asset catalog conflict at ${JSON.stringify(relativePath)}: ` +
+            `hosts produced different content/kind/scope for the same path`
+        );
+      }
+      return;
+    }
+    const asset = {
       relativePath,
       content,
       kind,
       scope,
       templateId: `${kind}:${relativePath}`,
-    });
+    };
+    byPath.set(relativePath, asset);
+    assets.push(asset);
   };
 
   if (!skillsOnly) {

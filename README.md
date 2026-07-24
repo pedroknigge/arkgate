@@ -16,9 +16,9 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 3.9.2** is current stable (enforcement honesty: coverage/host write path, design-weak
-> one-pilot coaching, advisory graph-blind). [Release notes](docs/releases/3.9.2.md) ·
-> [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> **ArkGate 4.0.0** is prepared on this line (ArkRules opt-in + AR04 breaking forwarder removal).
+> Last npm `latest` remains **3.9.2** until publish. [4.0.0 notes](docs/releases/4.0.0.md) ·
+> [3.9.2](docs/releases/3.9.2.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
 
@@ -64,6 +64,16 @@ A machine-readable architecture file (`ark.config.json`) plus enforcement:
 |------|------|
 | **While the AI writes** | Hard PreToolUse on supported hosts; advisory MCP elsewhere |
 | **Before merge** | `arkgate-check` as a **required** CI status |
+
+### Two planes (4.0)
+
+| Plane | What it guards | Config |
+|-------|----------------|--------|
+| **Layers** (always) | Who may talk to whom — imports, placement, purity, isolation | `ark.config.json` layers + rules |
+| **ArkRules** (opt-in) | Habits *inside* a layer — structure sensors + domain invariants as data | `arkRules` → `arkrules/<Layer>.json` |
+
+Absence of ArkRules changes no inter-layer verdict. Label residual **`[Layer]`** vs **`[ArkRules]`**.  
+Details: [configuration](docs/configuration.md#arkrules-intra-layer-opt-in) · [use path](docs/use.md).
 
 **Not** a web framework, ORM, or job runner. Optional experimental runtime is separate and not required for the gate.
 
@@ -131,6 +141,7 @@ Setup per host: [docs/ai-gates.md](docs/ai-gates.md) · Develop path: [docs/deve
 | Contract agents can read (`ark://manifest`) | ✅ | ❌ |
 | Placement + preflight for multi-file changes | ✅ | ❌ |
 | Honest governed % + dual plan (edges vs shape) | ✅ | ❌ |
+| Opt-in intra-layer ArkRules (structure + invariants) | ✅ | ❌ |
 | Incomplete analysis cannot look green | ✅ | varies |
 
 ---
@@ -175,7 +186,8 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Latest release (3.9.2) | [docs/releases/3.9.2.md](docs/releases/3.9.2.md) · [CHANGELOG](CHANGELOG.md) |
+| Latest prepared (4.0.0) | [docs/releases/4.0.0.md](docs/releases/4.0.0.md) · [CHANGELOG](CHANGELOG.md) |
+| Last published (3.9.2) | [docs/releases/3.9.2.md](docs/releases/3.9.2.md) |
 | History / maintainer evidence | [docs/archive/](docs/archive/README.md) |
 
 ---

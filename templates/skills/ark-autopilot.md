@@ -1,6 +1,6 @@
 ---
 name: ark-autopilot
-description: Guided end-to-end path — doctor next action when unsure. Explore first; dual plan A (edges) + B (shape); mechanical-safe only by default; B with user OK, one pilot at a time. Empty plan A is not healthy if design-weak. CLI is a sensor; you read and remediate files.
+description: Guided end-to-end path for layers and opt-in ArkRules — doctor next action when unsure. Explore first; dual plan A (edges) + B (shape); mechanical-safe only by default; B with user OK, one pilot at a time. Empty plan A is not healthy if design-weak. CLI is a sensor; you read and remediate files.
 ---
 
 # /ark-autopilot — Guided end-to-end architecture path
@@ -63,6 +63,31 @@ decision-grade explore pass **and** without opening violating files.
    defers, or rejects a live card, persist its exact `decisionTarget` with a non-empty reason and
    optional `reviewBy` in `.ark/reshape-decisions.json`; never infer a verdict from golden prose.
 
+
+
+## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+
+ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+
+| Plane | What it protects | Where it lives | Sensors / tools |
+|-------|------------------|----------------|-----------------|
+| **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
+| **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+
+**Rules for every report / answer:**
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
+3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
+4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+
+
+### Autopilot + ArkRules
+- After explore/doctor: if inventory has high-confidence candidates **or** user wants domain rules, include **[ArkRules] plan A/B**:
+  - A: mechanical-safe remains inter-layer only; structure/invariant fixes are **judgment**.
+  - B: one pilot = one rule (declare in `arkrules/<Layer>.json` → implement → test title/symbol → re-doctor).
+- Never promote advisory→enforced without coverage evidence (`canPromoteInvariant` / policy-delta).
+- End report must list what was **layer-edge** work vs **intra-layer rule** work.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -200,6 +225,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

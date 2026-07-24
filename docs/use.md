@@ -38,6 +38,15 @@ Full skill pack is **optional** (expert depth). Day-to-day: compact router + doc
 
 ArkGate is **not** a web framework, ORM, or app runtime. It is architecture enforcement + co-pilot for AI TypeScript.
 
+### Two planes (you choose)
+
+| Plane | Plain English | Config |
+|-------|---------------|--------|
+| **Layers** | Who may talk to whom (imports, purity) | `ark.config.json` layers + rules |
+| **ArkRules** (optional) | Habits *inside* a layer (aggregates, factories, named invariants) | `arkRules` + `arkrules/<Layer>.json` |
+
+Start always gives you **layers**. ArkRules templates may ship with start/init; they begin **advisory** until you promote them. Doctor may show `rulesUnderContract` counts (not a score).
+
 ---
 
 ## Status lights (not settings)

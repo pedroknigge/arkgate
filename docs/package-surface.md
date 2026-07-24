@@ -34,7 +34,9 @@ hardening guide remains repository-hosted rather than duplicated in the gate tar
 | **Governance weight (W02)** | `ark-check --doctor --json` → `doctor.contractHealth.governanceWeight` | Additive, **advisory only** — raw facts (`declaredLayers`, `populatedLayers`, `governedFiles`, `rules`, `deniedEdges`, `allowedEdges`, `filesPerLayer`, `rulesPerLayer`) plus a fixed comparative band `weight: heavy | typical | light | unknown` and its fixed `note`. Fixed deterministic thresholds: **heavy** = fewer than 25 governed files per declared layer AND (6+ layers OR 4+ well-formed rules per layer); **light** = at most 2 layers over 150+ governed files; **unknown** = no layers or no governed files; everything else is **typical** (banding uses raw ratios; the reported ratios are rounded for display). `notAScore: true` is explicit: never a composite score, ranking, or gate input; the heavy note asks to justify NEW layers/rules and never suggests deleting working ones. Human doctor prints a line only for `heavy`/`light`. |
 | **Report parity (X01)** | `ark-check --report` → advisory sections (`data-advisory="contractHealth\|ambientState\|parseHealth"`, nested `governanceWeight`) + layer wall badges | The report is a rendering of doctor truth. **Standing rule:** every doctor advisory ships with its report section — enforced by the `reportParity` guard, which enumerates the doctor's advisory keys and fails on any missing section. |
 | **MCP tools** | `arkgate-mcp` / `ark://…` resources | Tool names and primary argument shapes are stable within a major. |
-| **`ark.config.json`** | Layer globs, rules, include/exclude, forbiddenGlobals, intent prefixes, `peerIsolation`, `dynamicImportAllowlist`, `safety` thresholds | Versioned by `schemaVersion`; unknown fields fail closed and migrations preserve the previous supported major. |
+| **`ark.config.json`** | Layer globs, rules, include/exclude, forbiddenGlobals, intent prefixes, `peerIsolation`, `dynamicImportAllowlist`, `safety` thresholds; optional **`arkRules`** map (schema `1.1+`) | Versioned by `schemaVersion`; unknown fields fail closed and migrations preserve the previous supported major. Absence of `arkRules` is byte-for-byte silent on inter-layer verdicts. |
+| **ArkRules inventory / under-contract (4.0)** | `ark-check --rules-inventory [--json]`; doctor `rulesUnderContract`; MCP `ark_rules_inventory` | Additive. Honest counts (inventoried / under-contract / frozen) — **never a score**. Structure/invariant diagnostics use adapter `1.4` provenance. |
+| **Package pin dual-truth (4.0)** | doctor JSON `packageVersionTruth`; upgrade JSON/human note when pin behind CLI | Additive, advisory. Surfaces after `upgrade --no-install` when managed CLI is ahead of package.json. |
 | **Policy transition analysis (T01, 3.1.0)** | `analyzePolicyDelta(...)`; MCP `ark_policy_delta`; CLI `--policy-base` / `--policy-base-ref` / `--policy-ack`; check JSON `policyDelta` | Additive schema `1.0`. Classifications and finding ids are deterministic. Weakening/judgment requires an acknowledgement bound to both policy hashes and the exact blocking finding set. |
 | **Atomic change preflight (T02, 3.1.0)** | `preflightChange(...)`; CLI `ark preflight --changes <file> --json`; MCP `ark_prepare_change` | Additive schema `1.0`. One complete governed production-source `{path,content}` / `{path,delete:true}` batch; read-only; returns operation, content/tree/policy/compiler fingerprints and stable graph findings. MCP availability alone is advisory. |
 | **Architecture change map (T03, 3.1.0)** | `arkgate/schema/change-map` or `arkgate/schema/ark.change-map.schema.json`; CLI `ark preflight --change-map <file>`; MCP `ark_prepare_change.changeMap` | Optional strict schema `1.0`. Canonical planned paths + operations + resolved Ark layers + dependencies between planned files. Preflight returns `changeMapHash`; absence is normal and adds no project file. Structural intent only, never behavioral completion. |
@@ -42,10 +44,11 @@ hardening guide remains repository-hosted rather than duplicated in the gate tar
 | **Enforcement ladder + fixed journey (T05, 3.1.0)** | `doctor.writePath.enforcementLadder`; hook repair `enforcement`; `npm run eval:change-integrity` | Additive schema `1.0` separates supported/installed/active/bypassable state and evidence. Hard is operation-scoped only for a supported covered hook; MCP is advisory; required CI status stays unverified locally. Fixed no-context fixture proves CLI/MCP/hook/final parity, one casual denial, acceptance behavior, and strict Ark. |
 | **Enforcement state (Z06/Z10)** | `doctor.writePath.enforcementState`; schema/type | Schema `1.1`: runtime observation, operation coverage, and operation-scoped `hard`. Only fresh covered active-host evidence permits `hard:true`; unverified assets and MCP remain non-hard. |
 | **Design delta (Z10)** | `--fail-on-new-smells --base-ref <ref>`; hook/MCP; schema/types | Schema `1.0`: identities, touched paths, stable evidence/verdict. Missing base fails closed; only new/worsened `domain-logic-in-ui` blocks; global doctor smells stay advisory. |
-| **`arkgate/schema/analysis-result`** or **`arkgate/schema/ark.analysis-result.schema.json`** | Public CLI/MCP/hook diagnostic envelope (`schemaVersion`, `mode`, `valid`, `completeness`, `completenessReasons`, `diagnostics`, resolved identities) | Schema `1.3` distinguishes `resolved-candidate-facts` from `lexical-compatibility`; partial/unavailable analysis is always non-green, and resolved complete/partial results require policy/resolver/facts/tree identities. `1.2` added completeness and remains accepted alongside consumer-owned 1.0/1.1 values. |
+| **`arkgate/schema/analysis-result`** or **`arkgate/schema/ark.analysis-result.schema.json`** | Public CLI/MCP/hook diagnostic envelope (`schemaVersion`, `mode`, `valid`, `completeness`, `completenessReasons`, `diagnostics`, resolved identities) | Schema `1.4` adds optional `evidence.arkruleId` / `evidence.arkruleSource` for ArkRules; `1.3` distinguished `resolved-candidate-facts` from `lexical-compatibility`; partial/unavailable analysis is always non-green, and resolved complete/partial results require policy/resolver/facts/tree identities. `1.2` added completeness and remains accepted alongside consumer-owned 1.0/1.1 values. |
+| **`arkgate/schema/arkrules`** or **`arkgate/schema/ark.arkrules.schema.json`** | Per-layer structure sensors + invariant catalog (ADR 0012) | Schema `1.0`. Opt-in via root `arkRules` map (`ark.config` schema `1.1`). |
 | **`arkgate/schema/resolved-candidate-facts`** or **`arkgate/schema/ark.resolved-candidate-facts.schema.json`** | Versioned parity-capable input for `analyzeResolvedProject` / `preflightResolvedChange` | Schema `1.0` is serializable and deterministic. Tooling owns filesystem/compiler resolution; Domain/Kernel validate and evaluate supplied facts without importing those effects. Facts name resolver/compiler inputs, governed files, dependency evidence, completeness reasons, and candidate tree/facts hashes. |
 | **Config JSON Schema** | `arkgate/schema` or `arkgate/schema/ark.config.schema.json` | Stable package resource subpaths for editor completion and contract tooling. |
-| **Agent skills** | `/ark-*` templates; install via `--install-agent-gates` (often `--skills-only` on top of compact) | **Day zero** is the compact router from `ark start` / `start --apply` + doctor control plane — not the full skill pack. Skill *names* and the guided expert path (`/ark-autopilot` after pack install) are stable; internal skill prose may evolve (When/not when, explore Shape dual-plan seed, extraction cards). |
+| **Agent skills** | `/ark-*` templates; install via `--install-agent-gates` (often `--skills-only` on top of compact) | **Day zero** is the compact router from `ark start` / `start --apply` + doctor control plane — not the full skill pack. Skill *names* and the guided expert path (`/ark-autopilot` after pack install) are stable; internal skill prose may evolve. **4.0:** all skills except experimental `/ark-runtime` integrate **layers + ArkRules** and must label residual `[Layer]` vs `[ArkRules]`. |
 | **ESLint subpath** | `arkgate/eslint` | Config-driven layer/import rules; loads consumer `ark.config.json`. |
 | **GitHub Action** | `pedroknigge/arkgate` (see `action.yml`) | The `uses:` tag/SHA selects the checker source; `version` remains an optional exact npm compatibility override. |
 | **Package metadata** | `arkgate/package.json` | Stable resource subpath for tooling that needs the installed manifest. |
@@ -138,8 +141,7 @@ product claims**. Static architecture enforcement does not depend on them.
 | Surface | Import path | Notes |
 |---------|-------------|--------|
 | **Runtime kernel** | **`@arkgate/runtime`** | Separate 0.x source package configured for the `experimental` tag. It is not currently present in the npm registry, and the root `publish-npm.yml` workflow does not publish it automatically. Event bus, intents, policies, sagas, event buffer, projections, and strict helpers. Built-in stores are **InMemory reference only**. |
-| **Runtime migration shim** | `arkgate/runtime` | Deprecated forwarder to `@arkgate/runtime`; contains no implementation and is removed in ArkGate 4. |
-| **NestJS adapter** | `@arkgate/runtime/nestjs` | Experimental optional peer `@nestjs/common`; the deprecated `arkgate/nestjs` path forwards here. |
+| **NestJS adapter** | `@arkgate/runtime/nestjs` | Experimental optional peer `@nestjs/common`. Root `arkgate/nestjs` and `arkgate/runtime` forwarders were **removed in AR04 / ArkGate 4** — import the companion package directly. |
 
 ---
 
@@ -155,8 +157,8 @@ import { ArkModule, InjectArk } from '@arkgate/runtime/nestjs';
 
 These imports describe the intended package boundary. Before an npm evaluation, verify that a
 separate publication exists with `npm view @arkgate/runtime dist-tags --json`. Until it does,
-build `packages/runtime` in an ArkGate source checkout and install that local folder; do not treat
-the deprecated root forwarding shims as an embedded runtime.
+build `packages/runtime` in an ArkGate source checkout and install that local folder. Root
+`arkgate/runtime` / `arkgate/nestjs` forwarders were **removed in 4.0.0** (AR04).
 
 See [production-hardening.md](https://github.com/pedroknigge/arkgate/blob/main/docs/production-hardening.md) for requirements an eventual
 production deployment would need to satisfy; it is not a readiness certification.
@@ -180,12 +182,13 @@ production deployment would need to satisfy; it is not a readiness certification
 | New optional config field, new CLI flag, additive JSON | **minor** |
 | Bugfix with no contract change | **patch** |
 | Additive experimental runtime API | `@arkgate/runtime` prerelease/minor |
-| Remove deprecated `arkgate/runtime` forwarding shim | ArkGate **4.0** |
+| Remove deprecated `arkgate/runtime` / `arkgate/nestjs` forwarding shims | **Done (AR04)** — use `@arkgate/runtime` / `@arkgate/runtime/nestjs` |
 
 ---
 
 ## Release notes (maintainers)
 
-Ship notes for a version live under [releases/](https://github.com/pedroknigge/arkgate/tree/main/docs/releases) (latest:
-[3.9.2.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.9.2.md)).
+Ship notes for a version live under [releases/](https://github.com/pedroknigge/arkgate/tree/main/docs/releases)
+(prepared: [4.0.0.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.0.0.md);
+last published: [3.9.2.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/3.9.2.md)).
 Publish path: signed annotated tag → GitHub Release → `publish-npm.yml` (see [CONTRIBUTING.md](https://github.com/pedroknigge/arkgate/blob/main/CONTRIBUTING.md)).

@@ -31,6 +31,14 @@ packages/
 2. **Classify every new top-level directory** with `/ark-contract` before codegen spreads files.
 3. **Do not weaken `ark.config.json` to pass.** Extend `include` and layer patterns instead.
 
+## Optional ArkRules (4.0)
+
+This starter teaches **layers** (inter-layer edges). You may add opt-in **ArkRules**
+(`arkRules` in `ark.config.json` + `arkrules/<Layer>.json`) for structure sensors and
+domain invariants *inside* a layer. Start advisory; promote only with coverage.
+Label residual `[Layer]` vs `[ArkRules]`. See [examples README](../README.md) and
+[configuration — ArkRules](../../docs/configuration.md#arkrules-intra-layer-opt-in).
+
 ## Verify
 
 ```bash

@@ -9,10 +9,18 @@ A tiny but real order API with a hexagonal architecture, governed by Ark's three
 No application framework: the API uses `node:http`, the `arkgate` gate package, and the separate
 experimental `@arkgate/runtime` companion.
 
-This fixture currently imports the deprecated **`arkgate/runtime`** forwarding shim to exercise
-compatibility. The shim resolves `@arkgate/runtime`; new code should import from
-`@arkgate/runtime` directly. This demo opts into `safety.allowInMemory: true` because the stock
-kernel wires an InMemory outbox for local exercises — **not** a production pattern.
+From **arkgate@4.0**, root forwarders `arkgate/runtime` / `arkgate/nestjs` are **removed**
+(AR04). This fixture imports **`@arkgate/runtime`** directly. It opts into
+`safety.allowInMemory: true` because the stock kernel wires an InMemory outbox for local
+exercises — **not** a production pattern.
+
+
+## Optional ArkRules (4.0)
+
+This exercise emphasizes **layer** edges (domain / application / adapters). From **arkgate@4.0**
+you may also opt into **ArkRules** for intra-layer structure and invariant catalogs on the same
+enforcement plane. Absence of `arkRules` does not change inter-layer verdicts. Residual labels:
+`[Layer]` vs `[ArkRules]`. See [examples README](../README.md).
 
 ## Layout
 

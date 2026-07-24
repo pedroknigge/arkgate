@@ -5,6 +5,79 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.0.0 — 2026-07-24
+
+**Major** over 3.9.2. **Breaking:** deprecated root subpaths `arkgate/runtime` and `arkgate/nestjs`
+are removed (use `@arkgate/runtime`). **ArkRules (opt-in):** intra-layer structural sensors,
+invariant catalogs, coverage evidence, brownfield rules inventory, and modular `arkrules/*.json`
+on the same enforcement plane (CLI, MCP, PreToolUse, CI, doctor). Absence of `arkRules` changes no
+inter-layer verdict. **Not field-cohort proven:** Z09/RB-11 retained adoption remains open; AR16
+case-study docs are scaffolding, not a closed field gate.
+
+### Breaking (AR04)
+
+- **Removed** deprecated root package subpaths `arkgate/runtime` and `arkgate/nestjs`
+  (and the `compat/` forwarders). Import `@arkgate/runtime` / `@arkgate/runtime/nestjs`
+  instead. See [migration note](docs/migrate-from-ark-runtime-kernel.md#arkgate-4--ar04--root-runtime-forwarders-removed).
+
+### Added — ArkRules foundations + sensors (AR01–AR08)
+
+- **AR01 — ArkRules foundations (ADR 0012):** optional `arkRules` map on `ark.config.json`
+  (`schemaVersion` `1.0→1.1` additive migration), sibling schema
+  `schemas/ark.arkrules.schema.json` (`arkgate/schema/arkrules`), pure
+  `loadArkRulesContract` / `resolveEffectiveContract` with per-rule provenance, and fail-closed
+  diagnostics for missing/invalid referenced files. Absence of `arkRules` changes no inter-layer
+  verdict. Zero-match `appliesTo` emits `ARKRULE_SCOPE_EMPTY` (advisory warn / enforced fail).
+- **AR02 — Effective Contract policyHash + policy-delta:** `loadContract` folds non-empty
+  ArkRules into `policyHash` (absent → historical hash preserved); policy-delta classifies
+  arkrule add/remove/promote/demote; CLI loads referenced files via
+  `bin/lib/effective-contract-load.mjs` and observes them for resident invalidation.
+- **AR03 — Adapter contract 1.4:** diagnostics carry optional `evidence.arkruleId` +
+  `evidence.arkruleSource`; remediation/nextAction for `ARKRULE_*` / `INVARIANT_UNCOVERED`
+  is judgment-only with provenance on every surface.
+- **ADR 0013** + resolved facts schema `1.1` optional `classShapes[]` (class-shape evidence)
+  produced on the write/CI path via `extractClassShapesFromSource`.
+- **Tier-1 sensors:** `aggregate-private-state`, `always-valid-factory`,
+  `domain-event-on-mutation`, `orchestration-only`, `thin-adapter`.
+- **Tier-2 advisory:** `no-anemic-model` (never promotable).
+- **fileHints:** Tooling derives conservative `orchestrationHeavy` / `adapterThick` hints
+  (`deriveArkRuleFileHints`) and feeds the write/CI scan path (prefer false negatives;
+  default templates stay advisory).
+- **Templates:** `templates/arkrules/*.json` + presets/init emit lean `arkRules` refs and
+  copy editable starter files.
+
+### Added — invariants, inventory, migration surfaces (shipped in package; progressive opt-in)
+
+- **ADR 0014–0016:** invariant catalog + coverage evidence + promotion ladder; migration
+  routes through existing skills; no executable evaluator in core.
+- **Invariant coverage:** test-title + symbol evidence; `INVARIANT_UNCOVERED`; partial when
+  test globs missing; `canPromoteInvariant` refuses uncovered promotions. Write path loads real
+  test contents via `bin/lib/invariant-coverage-io.mjs`. CLI policy-delta loads Effective ArkRules
+  + coverage so covered promotions can auto-strengthen.
+- **Doctor/HTML** `rulesUnderContract` (counts, not a score); report parity key.
+- **Rules inventory:** `ark-check --rules-inventory` + MCP `ark_rules_inventory`; extraction
+  cards for pilotLoop; freeze residual reuses baseline keys.
+- Skills deepen (`ark-adopt`, `ark-contract`, `ark-place`) without new skill names.
+- Pre-release field dogfood workflow: `.grok/workflows/pre-release-field-dogfood.rhai`.
+
+### Confidence / package budgets (4.0.0)
+
+- **Branch floor** recalibrated **84.5% → 83.0%** after ArkRules dual-plane growth (measured
+  ~83.3% on the clean candidate). Statement / function / line floors and mutation gates unchanged.
+- **Module LOC budgets** raised for `ark-check-runtime`, `doctor-plan`, `presets`,
+  `html-report-advisories` (evidence in `scripts/check-module-budgets.mjs`).
+- **Package pack budgets** remeasured for 4.0.0 (≥10% headroom in `release/package-budgets.v1.json`).
+
+### Honesty / not claimed in 4.0.0
+
+- No claim that Z09 / RB-11 retained field adoption is closed.
+- No claim that a consented multi-adopter field pilot (AR16 gate) is complete — case-study docs
+  are present; cohort evidence is not.
+- No numeric trust score; green with frozen residual still says so.
+- **Dual-truth residual:** `ark upgrade --no-install` can refresh managed assets while leaving
+  package.json on an older pin — doctor exposes `packageVersionTruth` and upgrade JSON/human notes
+  when the pin is behind the CLI.
+
 ## 3.9.2 — 2026-07-23
 
 **Patch** over 3.9.1. Product honesty for post-validity coaching, coverage/host write paths, and

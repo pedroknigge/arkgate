@@ -28,6 +28,20 @@ export function createTrustedResolvedCandidateFacts(
 export function analyzeTrustedResolvedProject(input: {
   contract: AnalysisContract;
   facts: ResolvedCandidateFacts;
+  coverageInputs?: {
+    fileContents: Readonly<Record<string, string>>;
+    testFiles?: readonly string[];
+    testGlobsMissing?: boolean;
+  };
+  fileHints?: Readonly<
+    Record<
+      string,
+      {
+        orchestrationHeavy?: boolean;
+        adapterThick?: boolean;
+      }
+    >
+  >;
 }): ResolvedAnalysisResult {
   if (!trustedResolvedFacts.has(input.facts)) {
     throw new Error('Trusted resolved analysis requires immutable in-process canonical facts.');

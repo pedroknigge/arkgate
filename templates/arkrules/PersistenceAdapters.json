@@ -1,0 +1,14 @@
+{
+  "$schema": "https://unpkg.com/arkgate/schemas/ark.arkrules.schema.json",
+  "schemaVersion": "1.0",
+  "layer": "PersistenceAdapters",
+  "structure": [
+    {
+      "id": "thin-adapter",
+      "sensor": "thin-adapter",
+      "mode": "advisory",
+      "description": "Persistence adapters implement ports without domain branching."
+    }
+  ],
+  "invariants": []
+}

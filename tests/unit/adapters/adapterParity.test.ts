@@ -107,12 +107,12 @@ describe('versioned adapter parity contract', () => {
     const repair = JSON.parse(repairLine!.slice('ARK_REPAIR_JSON:'.length));
 
     expect(cli).toMatchObject({
-      schemaVersion: '1.3',
+      schemaVersion: '1.4',
       mode: 'resolved-candidate-facts',
       completeness: 'complete',
     });
     expect(repair).toMatchObject({
-      schemaVersion: '1.3',
+      schemaVersion: '1.4',
       mode: 'lexical-compatibility',
       valid: false,
       completeness: 'partial',

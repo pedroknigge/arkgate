@@ -19,6 +19,28 @@ Use the semantic sensor (`ark-check --doctor --json` plus the strict contract
 check) and direct inspection of every managed file the preview will change.
 Neither signal replaces the other.
 
+
+## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+
+ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+
+| Plane | What it protects | Where it lives | Sensors / tools |
+|-------|------------------|----------------|-----------------|
+| **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
+| **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+
+**Rules for every report / answer:**
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
+3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
+4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+
+
+### Upgrade + ArkRules
+- Refresh skills + note if templates gained ArkRules deepen; do not force consumers to adopt `arkRules`.
+- After upgrade: doctor `rulesUnderContract` if map exists; dual-truth note if `--no-install` left package pin old.
+
 ## Safety contract
 
 - `ark upgrade` is read-only. It reports the selected profile and hosts, every
@@ -133,6 +155,7 @@ End with exactly this structure:
 - **Active host:** host and verified status
 - **Deferred hosts:** `none` or host plus future action
 - **Result:** old → new version and managed-upgrade outcome
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Handoff:** `/ark-…`, CLI action, or `none`
 - **Incomplete?** `no` or `yes — <missing work>`
 

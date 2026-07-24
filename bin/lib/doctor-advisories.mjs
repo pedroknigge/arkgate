@@ -18,8 +18,9 @@ import {
 } from './reshape-decisions.mjs';
 import { printParseHealthSection, summarizeParseHealth } from './parse-health.mjs';
 import { detectGraphBlindSpots, printGraphBlindSection } from './graph-blind.mjs';
+import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 
-export function computeDoctorAdvisories(root, config, cov, rules, files, ts, parseHealth) {
+export function computeDoctorAdvisories(root, config, cov, rules, files, ts, parseHealth, facts) {
   const physicalCohesion = computePhysicalCohesion(root, files);
   const decisionMemory = computeReshapeDecisionMemory(root, files);
   physicalCohesion.reshapeDecisions = decisionMemory.summary;
@@ -29,6 +30,16 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     root,
     decisionMemory
   );
+  // Prefer architecture facts paths when available; coverage I/O still walks test roots.
+  const factPaths =
+    facts ??
+    (Array.isArray(files)
+      ? {
+          files: files.map((f) => ({
+            path: typeof f === 'string' ? f.replace(/\\/g, '/').replace(/^\.\//, '') : f?.path,
+          })).filter((f) => f.path),
+        }
+      : undefined);
   return {
     contractHealth: computeContractHealth(root, config, cov, rules),
     ambientState: computeAmbientState(ts, root, config, files),
@@ -36,6 +47,8 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     parseHealth: parseHealth ?? summarizeParseHealth(),
     // Y09 direction: advisory graph-blind spots (template-interpolation); never hard verdict.
     graphBlindSpots: detectGraphBlindSpots(ts, root, files),
+    // AR12 — Rules under contract (honest counts; real test I/O, never empty-fileContents stub).
+    rulesUnderContract: summarizeRulesUnderContract(root, config, factPaths),
   };
 }
 

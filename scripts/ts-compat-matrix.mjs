@@ -550,8 +550,13 @@ if (!schema.required.includes('completeness')) throw new Error('schema omits com
 if (!schema.required.includes('mode')) throw new Error('schema omits analysis mode');
 if (!schema.required.includes('completenessReasons')) throw new Error('schema omits completeness reasons');
 if (!schema.properties.completeness.enum.includes('complete')) throw new Error('schema enum drift');
-if (schema.properties.schemaVersion.const !== '1.3') throw new Error('schema version drift');
-if (factsSchema.properties.schemaVersion.const !== '1.0') throw new Error('facts schema drift');
+if (schema.properties.schemaVersion.const !== '1.4') throw new Error('schema version drift');
+const factsVersions = factsSchema.properties.schemaVersion.enum ?? [
+  factsSchema.properties.schemaVersion.const,
+];
+if (!factsVersions.includes('1.1') || !factsVersions.includes('1.0')) {
+  throw new Error('facts schema drift');
+}
 if (schema.allOf?.[0]?.then?.properties?.valid?.const !== false) {
   throw new Error('schema permits an incomplete green verdict');
 }

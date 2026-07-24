@@ -46,7 +46,7 @@ not every historical file:
 | Security | [SECURITY.md](SECURITY.md) · [docs/threat-model.md](docs/threat-model.md) |
 | Decisions | [docs/adr/](docs/adr/README.md) |
 | Implementation queue | [ROADMAP.md](ROADMAP.md) |
-| Releases (current) | [CHANGELOG.md](CHANGELOG.md) · [3.9.0 notes](docs/releases/3.9.0.md) |
+| Releases (prepared / last published) | [CHANGELOG.md](CHANGELOG.md) · [4.0.0 notes](docs/releases/4.0.0.md) · [3.9.2](docs/releases/3.9.2.md) |
 | History / maintainer evidence | [docs/archive/](docs/archive/README.md) · [docs/plans/](docs/plans/) · [docs/field/](docs/field/) · [docs/audit/](docs/audit/claims-matrix.md) |
 
 Read the **lane entry** before significant work. After changing a public surface, architecture
@@ -83,7 +83,7 @@ canonical documentation authority.**
 | GitHub Action | `action.yml` | [Action setup and inputs](docs/ai-gates.md#ci-backstop) · [Package surface](docs/package-surface.md) | Real | — |
 | Experimental `@arkgate/runtime` | `packages/runtime/package.json` · `src/index.ts` | [Runtime README](packages/runtime/README.md) · [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Hardening](docs/production-hardening.md) | Partial | — |
 | Experimental runtime NestJS adapter | runtime export `./nestjs` · `src/nestjs/index.ts` | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) | Partial | — |
-| Deprecated `arkgate/runtime` and `arkgate/nestjs` forwarders | root package exports · `compat/` | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Migration guide](docs/migrate-from-ark-runtime-kernel.md) | Deprecated | — |
+| ~~Deprecated `arkgate/runtime` and `arkgate/nestjs` forwarders~~ | removed (AR04) | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Migration guide](docs/migrate-from-ark-runtime-kernel.md) | Removed | Use `@arkgate/runtime` / `@arkgate/runtime/nestjs` |
 | Published payload and compatibility fixture | root `package.json` `files` · `scripts/verify-package-files.mjs` | [Package surface](docs/package-surface.md) · [Contributing](CONTRIBUTING.md) | Real | — |
 | Maintainer verification, evaluation, and release workflows | root scripts · `tests/` · `eval/` · `.github/workflows/` | [Contributing](CONTRIBUTING.md) · [Eval guide](eval/README.md) · [Roadmap](ROADMAP.md) | Real | — |
 
@@ -148,6 +148,7 @@ retained shipped rationale live under `docs/plans/`:
 | [understandable-execution](docs/plans/understandable-execution/README.md) | Shipped in 3.4.0 | Explicit effect/state boundaries, cohesive enforcement core, and measured pre-tool flow without style dogma |
 | [reshape-copilot](docs/plans/reshape-copilot/README.md) | Shipped in 3.6.0 | Advisory physical-cohesion evidence and one governed reshape pilot at a time |
 | [enforcement-truth-at-speed](docs/plans/enforcement-truth-at-speed/README.md) | In progress (Phase Z; Z01–Z08 + Z10 done; Z09 parked claim gate / residual RB-11) | Restore packed-artifact truth and one adapter verdict; residual retained-adoption + independent close only |
+| [arkrules-evolution](docs/plans/arkrules-evolution/README.md) | Prepared for 4.0.0 (`AR01`–`AR19` implemented; field train progressive) | Intra-layer ArkRules contract (structural sensors + invariant catalogs) + brownfield rules-migration toolkit on the same enforcement plane |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in
 `ROADMAP.md`.

@@ -202,6 +202,110 @@ export function syncBaselineIntoCheckSurfaces(root, opts = {}) {
 }
 
 /**
+ * Read declared arkgate pin from consumer package.json (deps or devDeps).
+ * @param {string} root
+ * @returns {string|null}
+ */
+export function readDeclaredArkgatePin(root) {
+  const pkgPath = path.join(root, 'package.json');
+  if (!fs.existsSync(pkgPath)) return null;
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    const deps = pkg.dependencies && typeof pkg.dependencies === 'object' ? pkg.dependencies : {};
+    const dev = pkg.devDependencies && typeof pkg.devDependencies === 'object' ? pkg.devDependencies : {};
+    if (typeof deps.arkgate === 'string') return deps.arkgate;
+    if (typeof dev.arkgate === 'string') return dev.arkgate;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Dual-truth: CLI/package-shipped version vs consumer package.json pin.
+ * Used by doctor + upgrade so agents never confuse managed-asset CLI with CI pin.
+ *
+ * @param {string} root
+ * @param {{ cliVersion?: string|null }} [opts]
+ * @returns {{
+ *   dualTruth: boolean,
+ *   cliVersion: string|null,
+ *   declaredPin: string|null,
+ *   code: 'PACKAGE_PIN_BEHIND_CLI' | 'PACKAGE_PIN_MATCHES' | 'PACKAGE_PIN_ABSENT' | 'CLI_VERSION_UNKNOWN',
+ *   note: string
+ * }}
+ */
+export function describePackageVersionDualTruth(root, opts = {}) {
+  const cliVersion =
+    typeof opts.cliVersion === 'string' && opts.cliVersion
+      ? opts.cliVersion
+      : arkPackageVersion();
+  const declaredPin = readDeclaredArkgatePin(root);
+  if (!cliVersion) {
+    return {
+      dualTruth: false,
+      cliVersion: null,
+      declaredPin,
+      code: 'CLI_VERSION_UNKNOWN',
+      note: 'Could not read shipped arkgate package version for this CLI.',
+    };
+  }
+  if (!declaredPin) {
+    return {
+      dualTruth: false,
+      cliVersion,
+      declaredPin: null,
+      code: 'PACKAGE_PIN_ABSENT',
+      note: 'No arkgate pin in package.json; CI/npx may not resolve this CLI version.',
+    };
+  }
+  // Normalize ^x.y.z / ~x.y.z / x.y.z for comparison of leading version token.
+  const pinCore = String(declaredPin).replace(/^[\^~>=<\s]+/, '').split(/\s+/)[0];
+  const matches =
+    pinCore === cliVersion ||
+    pinCore.startsWith(`${cliVersion}.`) ||
+    cliVersion.startsWith(pinCore.split('.').slice(0, 3).join('.'));
+  // Dual-truth when declared pin is clearly older major/minor than CLI, or different major.
+  const pinParts = pinCore.split('.').map((p) => Number.parseInt(p, 10));
+  const cliParts = cliVersion.split('.').map((p) => Number.parseInt(p, 10));
+  let behind = false;
+  if (
+    pinParts.length >= 1 &&
+    cliParts.length >= 1 &&
+    pinParts.every((n) => Number.isFinite(n)) &&
+    cliParts.every((n) => Number.isFinite(n))
+  ) {
+    for (let i = 0; i < 3; i += 1) {
+      const p = pinParts[i] ?? 0;
+      const c = cliParts[i] ?? 0;
+      if (p < c) {
+        behind = true;
+        break;
+      }
+      if (p > c) break;
+    }
+  } else if (!matches) {
+    behind = true;
+  }
+  if (behind) {
+    return {
+      dualTruth: true,
+      cliVersion,
+      declaredPin,
+      code: 'PACKAGE_PIN_BEHIND_CLI',
+      note: `Managed CLI is arkgate@${cliVersion} but package.json pins ${declaredPin}. Bump the pin or re-run install so CI resolves the same version (common after upgrade --no-install).`,
+    };
+  }
+  return {
+    dualTruth: false,
+    cliVersion,
+    declaredPin,
+    code: 'PACKAGE_PIN_MATCHES',
+    note: `package.json pin ${declaredPin} is aligned with CLI arkgate@${cliVersion}.`,
+  };
+}
+
+/**
  * Pin `arkgate` in package.json devDependencies (no package manager network call).
  *
  * @returns {{ changed: boolean, reason: string, version?: string }}

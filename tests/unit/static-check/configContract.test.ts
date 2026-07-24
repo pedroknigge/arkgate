@@ -248,10 +248,14 @@ describe('C01 config contract', () => {
     const second = loadArkConfigContract(source, CASES.previousMajor.configFile);
 
     expect(CASES.previousMajor.tag).toBe('v1.19.0');
-    expect(ARK_CONFIG_MIGRATIONS).toEqual([{ from: 'unversioned', to: '1.0' }]);
+    expect(ARK_CONFIG_MIGRATIONS).toEqual([
+      { from: 'unversioned', to: '1.0' },
+      { from: '1.0', to: '1.1' },
+    ]);
     expect(migrateArkConfig(source, CASES.previousMajor.configFile).candidate).toEqual(expected);
     expect(first.migratedFrom).toBe('unversioned');
     expect(first.config).toEqual(expected);
+    expect(first.config.schemaVersion).toBe(ARK_CONFIG_SCHEMA_VERSION);
     expect(second).toEqual(first);
     expect(source).toEqual(before);
   });
@@ -358,13 +362,64 @@ describe('C01 config contract', () => {
     );
   });
 
+  it('applies field defaults when schemaVersion / include / layers / rules are omitted', () => {
+    const { config, migratedFrom } = loadArkConfigContract({
+      layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+    });
+    expect(migratedFrom).toBe('unversioned');
+    expect(config.schemaVersion).toBe(ARK_CONFIG_SCHEMA_VERSION);
+    expect(config.include).toEqual(['src']);
+    expect(config.$schema).toBe(ARK_CONFIG_SCHEMA_URL);
+    expect(Array.isArray(config.layers)).toBe(true);
+    expect(config.layers).toHaveLength(1);
+    // DEFAULT_ARK_CONFIG_RULES cloned when rules omitted
+    expect(config.rules).toEqual(DEFAULT_ARK_CONFIG_RULES.map((rule) => ({ ...rule })));
+  });
+
+  it('rejects non-string schemaVersion with the null-type unsupported message', () => {
+    // Must hit originalVersion === null branch (not the known-version check).
+    expect(() =>
+      migrateArkConfig(
+        { ...VALID_MINIMAL_CONFIG, schemaVersion: 1 as unknown as string },
+        'num.json'
+      )
+    ).toThrow(
+      `Invalid ArkGate config (num.json):\n- $.schemaVersion: unsupported version 1; expected ${ARK_CONFIG_SCHEMA_VERSION}`
+    );
+    expect(() =>
+      migrateArkConfig(
+        { ...VALID_MINIMAL_CONFIG, schemaVersion: true as unknown as string },
+        'bool.json'
+      )
+    ).toThrow(
+      `Invalid ArkGate config (bool.json):\n- $.schemaVersion: unsupported version true; expected ${ARK_CONFIG_SCHEMA_VERSION}`
+    );
+  });
+
+  it('rejects unknown string schemaVersion via the known-set gate (not the null branch)', () => {
+    expect(() =>
+      migrateArkConfig({ ...VALID_MINIMAL_CONFIG, schemaVersion: '9.9.9' }, 'future.json')
+    ).toThrow(
+      `Invalid ArkGate config (future.json):\n- $.schemaVersion: unsupported version "9.9.9"; expected ${ARK_CONFIG_SCHEMA_VERSION}`
+    );
+  });
+
+  it('uses the default source label when migrateArkConfig omits the source argument', () => {
+    expect(() => migrateArkConfig(null)).toThrow(
+      'Invalid ArkGate config (ark.config.json):\n- $: must be an object; received null'
+    );
+  });
+
   it('keeps migration metadata and config metadata on their exact public contract', () => {
     expect(migrateArkConfig(VALID_MINIMAL_CONFIG)).toMatchObject({ migratedFrom: 'unversioned' });
     expect(
       migrateArkConfig({ ...VALID_MINIMAL_CONFIG, schemaVersion: ARK_CONFIG_SCHEMA_VERSION })
     ).toMatchObject({ migratedFrom: null });
+    expect(
+      migrateArkConfig({ ...VALID_MINIMAL_CONFIG, schemaVersion: '1.0' })
+    ).toMatchObject({ migratedFrom: '1.0' });
     expect(() => migrateArkConfig({ ...VALID_MINIMAL_CONFIG, schemaVersion: '2.0' }, 'future.json'))
-      .toThrow('unsupported version "2.0"; expected 1.0');
+      .toThrow(`unsupported version "2.0"; expected ${ARK_CONFIG_SCHEMA_VERSION}`);
     expect(() => parseArkConfigJson('{', 'broken.json')).toThrow('Invalid ArkGate config (broken.json)');
 
     expect(
@@ -381,6 +436,34 @@ describe('C01 config contract', () => {
       schemaVersion: ARK_CONFIG_SCHEMA_VERSION,
       include: ['src'],
     });
+  });
+
+  it('accepts optional arkRules map on schema 1.1 and rejects non-string paths', () => {
+    const loaded = loadArkConfigContract({
+      ...VALID_MINIMAL_CONFIG,
+      schemaVersion: '1.1',
+      arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+    });
+    expect(loaded.config.arkRules).toEqual({ DomainModel: 'arkrules/DomainModel.json' });
+    expect(loaded.migratedFrom).toBe(null);
+
+    expect(() =>
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        schemaVersion: '1.1',
+        arkRules: { DomainModel: 7 },
+      })
+    ).toThrow('$.arkRules.DomainModel');
+
+    // 1.0 configs without arkRules migrate to 1.1 with content otherwise unchanged
+    const from10 = loadArkConfigContract({
+      ...VALID_MINIMAL_CONFIG,
+      $schema: ARK_CONFIG_SCHEMA_URL,
+      schemaVersion: '1.0',
+    });
+    expect(from10.migratedFrom).toBe('1.0');
+    expect(from10.config.schemaVersion).toBe('1.1');
+    expect(from10.config.arkRules).toBeUndefined();
   });
 
   it('accepts a local editor schema path while keeping the current contract version', () => {

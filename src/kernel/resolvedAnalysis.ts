@@ -21,6 +21,13 @@ import {
   classifyPublishFacts,
   resolveIntentLayer,
 } from '../domain/sourcePolicy';
+import { emptyEffectiveArkRules } from '../domain/arkRulesContract';
+import {
+  buildArkRuleFileHints,
+  collectEmptyAppliesToFindings,
+  evaluateArkRuleSensors,
+} from '../domain/arkRuleSensors';
+import { evaluateInvariantCoverage } from '../domain/invariantCoverage';
 import { collectAnalysisConfigWarnings } from './configWarnings';
 import { evaluateArchitectureGraph } from './graphEvaluate';
 import type {
@@ -312,7 +319,12 @@ function contentViolations(
 }
 
 export function analyzeCanonicalResolvedProject(
-  input: { contract: AnalysisContract; facts: ResolvedCandidateFacts }
+  input: {
+    contract: AnalysisContract;
+    facts: ResolvedCandidateFacts;
+    coverageInputs?: AnalyzeResolvedProjectInput['coverageInputs'];
+    fileHints?: AnalyzeResolvedProjectInput['fileHints'];
+  }
 ): ResolvedAnalysisResult {
   const { facts } = input;
   const expectedRequirementsHash = resolvedFactsEvidenceRequirementsHash(input.contract.config);
@@ -374,24 +386,150 @@ export function analyzeCanonicalResolvedProject(
     files: files.map((file) => file.path),
   });
   const safety = evaluateSafety(input, facts);
+  const arkRules = input.contract.arkRules ?? emptyEffectiveArkRules();
+  const filePaths = files.map((file) => file.path);
+  // Prefer explicit Tooling fileHints; fall back to pure derivation from coverage contents.
+  const derivedHints =
+    input.coverageInputs?.fileContents && Object.keys(input.coverageInputs.fileContents).length > 0
+      ? buildArkRuleFileHints(input.coverageInputs.fileContents)
+      : {};
+  const fileHints = { ...derivedHints, ...(input.fileHints ?? {}) };
+  const arkRuleFindings = [
+    ...evaluateArkRuleSensors({
+      arkRules,
+      classShapes: input.contract.classShapes ?? facts.classShapes ?? [],
+      files: filePaths,
+      layerForFile: (path) =>
+        layerByFile.get(path) ?? layerForRelativePath(path, input.contract.config.layers),
+      fileHints,
+    }),
+    ...collectEmptyAppliesToFindings(arkRules, filePaths),
+  ];
+  const arkRuleViolations: ArchitectureEngineViolation[] = arkRuleFindings
+    .filter((finding) => finding.failsStrict)
+    .map((finding) => ({
+      ruleId: finding.ruleId,
+      file: finding.file,
+      line: finding.line,
+      message: finding.message,
+      fromLayer: finding.fromLayer,
+      arkruleId: finding.arkruleId,
+      arkruleSource: finding.arkruleSource,
+      nextAction:
+        finding.ruleId === 'ARKRULE_SCOPE_EMPTY'
+          ? `Fix appliesTo globs for ${finding.arkruleId} in ${finding.arkruleSource} so they match governed files, or remove the rule.`
+          : `Fix the structure or invariant for ${finding.arkruleId} (declared in ${finding.arkruleSource}), then preflight again.`,
+    }));
+  const arkRuleWarnings: ArchitectureEngineViolation[] = arkRuleFindings
+    .filter((finding) => !finding.failsStrict)
+    .map((finding) => ({
+      ruleId: finding.ruleId,
+      file: finding.file,
+      line: finding.line,
+      message: finding.message,
+      fromLayer: finding.fromLayer,
+      arkruleId: finding.arkruleId,
+      arkruleSource: finding.arkruleSource,
+      failsStrict: false,
+      nextAction:
+        finding.ruleId === 'ARKRULE_SCOPE_EMPTY'
+          ? `Review appliesTo for ${finding.arkruleId} in ${finding.arkruleSource} (zero-match scope; advisory).`
+          : `Review ArkRule ${finding.arkruleId} in ${finding.arkruleSource} (advisory).`,
+    }));
+
+  // AR10: invariant coverage. Without Tooling-supplied contents, report partial (never covered).
+  const hasInvariants = (arkRules.invariants?.length ?? 0) > 0;
+  const coverageEval = hasInvariants
+    ? evaluateInvariantCoverage({
+        arkRules,
+        fileContents: input.coverageInputs?.fileContents ?? {},
+        testFiles: input.coverageInputs?.testFiles ?? [],
+        testGlobsMissing:
+          input.coverageInputs?.testGlobsMissing === true ||
+          input.coverageInputs === undefined ||
+          (input.coverageInputs.testFiles?.length ?? 0) === 0,
+      })
+    : { coverage: [], violations: [], partial: false };
+  const invariantViolations: ArchitectureEngineViolation[] = coverageEval.violations
+    .filter((finding) => finding.failsStrict)
+    .map((finding) => ({
+      ruleId: finding.ruleId,
+      file: finding.file,
+      line: finding.line,
+      message: finding.message,
+      fromLayer: finding.fromLayer,
+      arkruleId: finding.arkruleId,
+      arkruleSource: finding.arkruleSource,
+      nextAction: `Add a test title or declared symbol covering ${finding.arkruleId} (declared in ${finding.arkruleSource}), then preflight again.`,
+    }));
+  const invariantWarnings: ArchitectureEngineViolation[] = coverageEval.violations
+    .filter((finding) => !finding.failsStrict)
+    .map((finding) => ({
+      ruleId: finding.ruleId,
+      file: finding.file,
+      line: finding.line,
+      message: finding.message,
+      fromLayer: finding.fromLayer,
+      arkruleId: finding.arkruleId,
+      arkruleSource: finding.arkruleSource,
+      failsStrict: false,
+      nextAction: `Cover invariant ${finding.arkruleId} in ${finding.arkruleSource} (advisory / partial).`,
+    }));
+  // Only enforced + partial coverage degrades analysis completeness (never fake green).
+  // Advisory-only catalogs stay complete with advisory warnings.
+  const enforcedPartial =
+    coverageEval.partial &&
+    coverageEval.coverage.some((entry) => entry.mode === 'enforced' && entry.partial);
+  const coveragePartialReasons: Array<{ code: string; message: string; file?: string }> =
+    enforcedPartial
+      ? [
+          {
+            code: 'INVARIANT_COVERAGE_PARTIAL',
+            message:
+              'Enforced ArkRules invariant coverage cannot be fully proven (missing test globs or empty test set); reporting partial, never covered.',
+          },
+        ]
+      : [];
+
   const evaluated = evaluateArchitectureGraph({
     config: input.contract.config,
     rules: input.contract.config.rules,
     files: files.filter((file) => file.layer).map((file) => file.path),
-    contentViolations: contentViolations(input, facts, layerByFile),
+    contentViolations: [
+      ...contentViolations(input, facts, layerByFile),
+      ...arkRuleViolations,
+      ...invariantViolations,
+    ],
     edges,
-    warnings: [...warnings, ...safety.warnings],
+    warnings: [
+      ...warnings,
+      ...safety.warnings,
+      ...arkRuleWarnings,
+      ...invariantWarnings,
+    ],
     safety: safety.report,
   });
 
-  const valid = completeness === 'complete' && evaluated.violations.length === 0;
+  // Partial coverage must not fake complete green for projects with enforced invariants.
+  const effectiveCompleteness =
+    completeness === 'complete' && coveragePartialReasons.length > 0 ? 'partial' : completeness;
+  const effectiveCompletenessReasons =
+    effectiveCompleteness === 'complete'
+      ? completenessReasons
+      : [...completenessReasons, ...coveragePartialReasons].sort((left, right) => {
+          const leftKey = `${left.code}\0${left.file ?? ''}\0${left.message}`;
+          const rightKey = `${right.code}\0${right.file ?? ''}\0${right.message}`;
+          return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+        });
+
+  const valid = effectiveCompleteness === 'complete' && evaluated.violations.length === 0;
   const strictValid =
     valid && evaluated.warnings.every((warning) => warning.failsStrict === false);
 
   return {
     mode: 'resolved-candidate-facts',
-    completeness,
-    completenessReasons,
+    completeness: effectiveCompleteness,
+    completenessReasons: effectiveCompletenessReasons,
     valid,
     strictValid,
     policyHash: input.contract.policyHash,
@@ -418,5 +556,7 @@ export function analyzeResolvedProject(input: AnalyzeResolvedProjectInput): Reso
   return analyzeCanonicalResolvedProject({
     contract: input.contract,
     facts: loadResolvedCandidateFacts(input.facts),
+    coverageInputs: input.coverageInputs,
+    fileHints: input.fileHints,
   });
 }

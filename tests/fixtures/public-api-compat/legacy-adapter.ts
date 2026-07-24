@@ -28,7 +28,7 @@ const completeResult: AdapterResult = {
 };
 
 const resolvedResult: AdapterResult = {
-  schemaVersion: '1.3',
+  schemaVersion: '1.4',
   mode: 'resolved-candidate-facts',
   completeness: 'complete',
   completenessReasons: [],
@@ -48,9 +48,9 @@ const v12PartialGreenResult: AdapterResult = {
   diagnostics: [],
 };
 
-// @ts-expect-error An incomplete 1.3 analysis can never carry a green verdict.
+// @ts-expect-error An incomplete 1.4 analysis can never carry a green verdict.
 const partialGreenResult: AdapterResult = {
-  schemaVersion: '1.3',
+  schemaVersion: '1.4',
   mode: 'lexical-compatibility',
   completeness: 'partial',
   completenessReasons: [{ code: 'LEXICAL_EVIDENCE_INCOMPLETE', message: 'Incomplete.' }],
@@ -60,7 +60,7 @@ const partialGreenResult: AdapterResult = {
 
 // @ts-expect-error Resolved complete results require inspectable input identities.
 const resolvedWithoutEvidence: AdapterResult = {
-  schemaVersion: '1.3',
+  schemaVersion: '1.4',
   mode: 'resolved-candidate-facts',
   completeness: 'complete',
   completenessReasons: [],

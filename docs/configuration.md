@@ -10,7 +10,7 @@ The CLI, MCP server, and ESLint plugin all use the same parser, migration, defau
 ```json
 {
   "$schema": "https://unpkg.com/arkgate@2/schemas/ark.config.schema.json",
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "include": ["src"],
   "layers": [],
   "rules": []
@@ -18,7 +18,10 @@ The CLI, MCP server, and ESLint plugin all use the same parser, migration, defau
 ```
 
 `$schema` is for editor completion. `schemaVersion` controls ArkGate's runtime contract and is
-independent from the npm package version.
+independent from the npm package version. Schema **`1.1`** is additive over `1.0` and adds the
+optional top-level **`arkRules`** map (ADR 0012). Absence of `arkRules` changes no inter-layer
+verdict. Per-layer structure/invariant files use sibling schema
+`arkgate/schema/arkrules` (`schemas/ark.arkrules.schema.json`).
 
 For offline editor completion, point `$schema` at the installed file instead:
 
@@ -36,8 +39,9 @@ The same schema is exported through the stable package subpaths `arkgate/schema`
 ## Compatibility and migration
 
 Configs without `schemaVersion` are the legacy shape shipped through ArkGate 1.x and early 2.x.
-The loader deterministically projects them to schema `1.0` in memory by adding contract metadata
-and the established defaults. It never rewrites the user's file during a check. Newly generated
+The loader deterministically projects them through `unversioned → 1.0 → 1.1` in memory by adding
+contract metadata and the established defaults. It never rewrites the user's file during a check.
+Newly generated
 configs always contain the metadata, and unsupported future versions fail at
 `$.schemaVersion` instead of being guessed.
 
@@ -78,6 +82,9 @@ Top-level fields:
 - `include`, `exclude`, `excludeGenerated`, `frameworkOverlay`
 - `layers`, `rules`, `cyclePolicy`
 - `dynamicImportAllowlist`, `safety`
+- **`arkRules`** (optional, schema `1.1+`) — map of layer name → project-relative path to an
+  ArkRules file (e.g. `"DomainModel": "arkrules/DomainModel.json"`). Keys must match a declared
+  layer. Missing/invalid referenced files **fail closed**.
 
 Layer fields:
 
@@ -107,6 +114,32 @@ Safety fields:
 
 The packaged JSON Schema is authoritative for types, constraints, defaults, and the unknown-key
 policy.
+
+## ArkRules (intra-layer, opt-in)
+
+Sibling schema export: `arkgate/schema/arkrules` (`schemas/ark.arkrules.schema.json`).
+
+Each `arkrules/<Layer>.json` may declare:
+
+| Section | Purpose | Modes |
+|---------|---------|--------|
+| `structure[]` | Closed sensor ids (e.g. `aggregate-private-state`, `always-valid-factory`, `thin-adapter`) | `advisory` (default) or `enforced` |
+| `invariants[]` | Stable ids + description + optional coverage (`test` / `symbol`) | `advisory` or `enforced` |
+
+**Reporting:** diagnostics carry `evidence.arkruleId` + `evidence.arkruleSource`. Label residual
+**`[Layer]`** (import edges / capabilities) vs **`[ArkRules]`** (structure / invariants) in agent
+output. Doctor JSON: `rulesUnderContract` (counts, never a score).
+
+**Promotion:** advisory→enforced is strengthening when coverage evidence exists; demote/delete is
+a hash-bound policy weakening. Empty `appliesTo: []` fails closed; zero-match globs emit
+`ARKRULE_SCOPE_EMPTY` (advisory warn / enforced fail).
+
+```bash
+# Brownfield candidates (not a score)
+npx arkgate-check --rules-inventory --json
+```
+
+Edit ArkRules through skill `/ark-contract`; extract/implement via `/ark-fix` or `/ark-loop`.
 
 ## Contract transitions
 

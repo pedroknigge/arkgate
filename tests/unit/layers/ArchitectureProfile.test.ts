@@ -81,7 +81,7 @@ describe('Architecture profiles', () => {
     const config = createElevenLayerArkConfig();
 
     expect(config.$schema).toBe('https://unpkg.com/arkgate@2/schemas/ark.config.schema.json');
-    expect(config.schemaVersion).toBe('1.0');
+    expect(config.schemaVersion).toBe('1.1');
     expect(config.include).toEqual(['src']);
     expect(config.layers).toHaveLength(11);
     expect(config.rules).toEqual(elevenLayerProfile.rules);

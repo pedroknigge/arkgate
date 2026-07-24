@@ -44,15 +44,21 @@ npx arkgate upgrade
 
 ### TypeScript 7
 
-**arkgate@3.8.0+** (including **3.9.0**) installs a physically distinct exact TypeScript 6
+**arkgate@3.8.0+** (including **3.9.x** and **4.0.0**) installs a physically distinct exact TypeScript 6
 analysis host and reports required `complete | partial | unavailable` state, so project TypeScript 7
 cannot deduplicate away the JS-API fallback and incomplete analysis cannot satisfy plan or strict
-merge. Prefer **`arkgate@latest`** (currently **3.9.0**) or pin `arkgate@3.9.0`.
+merge. Prefer **`arkgate@latest`** once **4.0.0** is published, or pin the version you intend.
 If you are still on **3.7.0 or earlier**, upgrade: that release predates the correction (package
 managers could remove the fallback; unavailable `--plan --json` could report `goal.met: true`).
 Keep the project's TypeScript/`tsc` unchanged; require `completeness: complete` from the final
 strict check. See [typescript-support.md](typescript-support.md) and
-[3.9.0 release notes](releases/3.9.0.md).
+[4.0.0 release notes](releases/4.0.0.md).
+
+### 4.0.0 — root runtime forwarders removed (breaking)
+
+Subpaths **`arkgate/runtime`** and **`arkgate/nestjs`** are **removed** in 4.0.0. Import from
+`@arkgate/runtime` and `@arkgate/runtime/nestjs` instead. Optional **ArkRules** (`arkRules` map +
+`arkrules/*.json`) are additive and do not change inter-layer verdicts when absent.
 
 ### MCP args (avoid double binary)
 
@@ -73,10 +79,11 @@ strict check. See [typescript-support.md](typescript-support.md) and
 
 ```diff
 - "ark-runtime-kernel": "^2.0.1"
-+ "arkgate": "^3.9.0"
++ "arkgate": "^4.0.0"
 ```
 
-Prefer `arkgate@latest` for a fresh migration (today **3.9.0** on npm), or pin an exact version intentionally.
+Prefer `arkgate@latest` for a fresh migration (after **4.0.0** publish), or pin an exact version intentionally.
+Until 4.0.0 is on npm `latest`, the registry may still serve **3.9.2**.
 
 Scripts:
 
@@ -156,8 +163,26 @@ publish it. Verify with `npm view @arkgate/runtime dist-tags --json`; until a se
 experimental publication exists, migrate runtime imports only when evaluating a built local
 `packages/runtime` source checkout. The `arkgate/eslint` migration is available now.
 
-If you only used the CLI + MCP (most projects), **no import changes**.  
-Surface policy: [package-surface.md](package-surface.md).
+### ArkGate 4 / AR04 — root runtime forwarders removed
+
+If you previously imported:
+
+```ts
+import { … } from 'arkgate/runtime';
+import { … } from 'arkgate/nestjs';
+```
+
+those root subpaths are **gone**. Switch to the experimental companion only:
+
+```ts
+import { … } from '@arkgate/runtime';
+import { … } from '@arkgate/runtime/nestjs';
+```
+
+The stable gate (`arkgate` root, `arkgate/eslint`, CLIs, MCP, schemas) is unchanged. Gates need
+no app runtime. Surface policy: [package-surface.md](package-surface.md).
+
+If you only used the CLI + MCP (most projects), **no import changes**.
 
 ---
 
@@ -177,7 +202,8 @@ Surface policy: [package-surface.md](package-surface.md).
 | `ark-check: not found` after uninstall | Use `npx arkgate-check` or reinstall `arkgate` |
 | MCP still launches old package | Update `.mcp.json` / Codex / Grok config; restart agent |
 | TS7 plan/check says `partial` or `unavailable` | Do not accept the plan as green; upgrade to **arkgate@3.8.0** or later, then require `completeness: complete` |
-| pnpm blocks new package age | Wait for cooling-off or prefer `arkgate@latest`; if policy requires an exact pin, check `npm view arkgate version` and pin that version (currently `arkgate@3.9.0` when published) |
+| `Cannot find module 'arkgate/runtime'` after 4.0 | Import `@arkgate/runtime` (root forwarders removed in AR04) |
+| pnpm blocks new package age | Wait for cooling-off or prefer `arkgate@latest`; if policy requires an exact pin, check `npm view arkgate version` and pin that version |
 
 ---
 

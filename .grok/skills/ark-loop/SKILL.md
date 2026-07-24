@@ -1,7 +1,6 @@
 ---
 name: ark-loop
 description: Drive ark-check --plan to zero active violations. Read real source, auto-apply only mechanical-safe kinds, design judgment from the product tree. CLI validates — you edit code.
-arkVersion: 3.0.0
 ---
 
 # /ark-loop — Apply the plan safely
@@ -41,6 +40,28 @@ Pattern bets always have `neverMechanicalSafe: true` — extraction cards only
 | **Deterministic** | Only the four `mechanical-safe` kinds auto-apply; plan tags; gate re-check |
 | **Exploratory** | Read sources; detect concentrated edges / false-green / wrong layer home before grinding |
 
+
+
+## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+
+ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+
+| Plane | What it protects | Where it lives | Sensors / tools |
+|-------|------------------|----------------|-----------------|
+| **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
+| **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+
+**Rules for every report / answer:**
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
+3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
+4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+
+
+### Loop + ArkRules
+- Drive plan to zero **active** debt on the plane the user cares about; keep **[Layer]** and **[ArkRules]** queues separate.
+- One pilot at a time for ArkRules extraction cards (`pilotLoop` / inventory).
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -83,6 +104,35 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 
 Never auto: free value uses of imports, multi-import files, dynamic import/require, forbidden globals, cycles, port-proof inject, multi-file adapter scaffolding without proof.
 
+## Mechanical-edit hygiene (Y04 — outcome gate)
+
+- Header injection must **merge into the existing doc comment**; the kept result has one `/**`, not stacked headers.
+- Route completion or movement must **preserve the original typed `defineRoute<…>(opts, handler)` call**; reconstruct that call instead of extracting untyped opts/handler constants that drop generics or contextual typing.
+- A convention-only `*-data.ts` stub is not a fix: move the real code or **leave the placeholder file uncreated**; never write `import "server-only"; export {}` as an empty naming token.
+- Keep the edit only when the **previously clean file stays typecheck-clean**. Otherwise roll it back and treat the change as judgment.
+
+## Reshape pilots (X04 — physical cohesion, advisory)
+
+When `ark-check --doctor --json` carries `doctor.physicalCohesion.reshapePilot.nextPilot`,
+you may run **that one pilot** — never more:
+
+1. Read `physicalCohesion.reshapeDecisions` first. A current rejected/deferred target has no live
+   card: respect the explicit record and do not reconstruct it from raw facts. Read a live card's
+   `pilotTarget`, `decisionTarget`, `moveSample`/`movesTotal`, `successSignal`, `killSwitch`, `doNot[]`.
+2. Moves are **proposed only** — enumerate the full move set for the pilot anchor, express it as
+   an architecture change map, and validate through the atomic preflight (`ark_prepare_change` /
+   the write gate) **before** any file moves. A move the preflight rejects is a finding, not a
+   thing to force.
+3. Never move anything under `app/` or `pages/` (fixed by framework convention). Never merge
+   files here — merges are judgment cards for `/ark-architect` / `/ark-fix`.
+4. After the move set: full gate re-run + re-doctor. Success = the concept's cluster count drops
+   and the verdict stays green; otherwise use the kill switch (revert the move set, nothing else).
+5. Re-doctor decides whether a next card exists. One pilot per loop iteration, always.
+6. If the user accepts, defers, or rejects the target, persist that explicit verdict in
+   `.ark/reshape-decisions.json` using the card's exact `decisionTarget`, a reason, and optional
+   `reviewBy`. `accepted` keeps this execution path; `deferred`/`rejected` stop repeat pressure.
+   Never infer a decision from `.ark/golden-pattern.json` prose.
+
 ## Steps
 
 1. **Plan** — `ark-check --plan --json` (+ `--baseline` if used). If `goal.met`: stop **A**;
@@ -113,6 +163,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

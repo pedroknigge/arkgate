@@ -122,7 +122,7 @@ describe('ESLint ↔ ark-check parity', () => {
     expect(reports[0].messageId).toBe('forbiddenImport');
     expect((reports[0].data as { fromLayer: string }).fromLayer).toBe('DomainModel');
     expect((reports[0].data as { toLayer: string }).toLayer).toBe('PersistenceAdapters');
-    expect(check.schemaVersion).toBe('1.3');
+    expect(check.schemaVersion).toBe('1.4');
     expect(check.completeness).toBe('complete');
     expect(reports[0].diagnostic).toEqual(
       check.diagnostics.find((item) => item.ruleId === 'LAYER_IMPORT_VIOLATION')

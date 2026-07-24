@@ -62,7 +62,18 @@ export function deterministicNextAction(violation) {
             return 'Publish through a registered intent creator, then run Ark again.';
         case 'PUBLISH_MISSING_SOURCE':
             return 'Add metadata.source to the publish call, then run Ark again.';
+        case 'ARKRULE_STRUCTURE':
+        case 'ARKRULE_INVARIANT':
+        case 'INVARIANT_UNCOVERED':
+            return `Fix the structure or invariant for ${typeof violation.arkruleId === 'string' && violation.arkruleId.length > 0
+                ? violation.arkruleId
+                : 'the ArkRule'} (declared in ${typeof violation.arkruleSource === 'string' && violation.arkruleSource.length > 0
+                ? violation.arkruleSource
+                : 'arkrules/<Layer>.json'}), then preflight again. Do not demote the rule without a hash-bound policy acknowledgement.`;
         default:
+            if (typeof violation.ruleId === 'string' && violation.ruleId.startsWith('ARKRULE_')) {
+                return `Fix the ArkRule ${typeof violation.arkruleId === 'string' ? violation.arkruleId : violation.ruleId}, then preflight again.`;
+            }
             return `Resolve ${typeof violation.ruleId === 'string' && violation.ruleId.length > 0 ? violation.ruleId : 'ARK_UNKNOWN'} without weakening ark.config.json, then run Ark again.`;
     }
 }
@@ -164,6 +175,16 @@ export function classifyRemediation(violation) {
             rationale: 'Dependency cycle: breaking it means deciding which side owns the shared abstraction.',
         };
     }
+    if (ruleId === 'ARKRULE_STRUCTURE' ||
+        ruleId === 'ARKRULE_INVARIANT' ||
+        ruleId === 'INVARIANT_UNCOVERED' ||
+        (typeof ruleId === 'string' && ruleId.startsWith('ARKRULE_'))) {
+        return {
+            class: 'judgment',
+            confidence: 0.85,
+            rationale: 'ArkRule structure/invariant findings are never mechanical-safe — restore private state, factory shape, event publish, coverage, or redesign the aggregate with judgment.',
+        };
+    }
     if (typeof ruleId === 'string' && ruleId.length > 0) {
         return {
             class: 'judgment',
@@ -238,6 +259,13 @@ export function enrichViolationWithFixClass(violation) {
             enriched.effort = 'small';
             enriched.enthusiastHint =
                 'Reference that intent from a layer allowed to know about it — usually an adapter or application layer, not the domain core.';
+            break;
+        case 'ARKRULE_STRUCTURE':
+        case 'ARKRULE_INVARIANT':
+        case 'INVARIANT_UNCOVERED':
+            enriched.fixClass = 'review-contract';
+            enriched.effort = 'medium';
+            enriched.enthusiastHint = `ArkRule ${typeof violation.arkruleId === 'string' ? violation.arkruleId : 'rule'} failed${typeof violation.arkruleSource === 'string' ? ` (from ${violation.arkruleSource})` : ''}. Restore the declared structure or add a covering test/symbol — do not demote without acknowledgement.`;
             break;
         case 'CIRCULAR_DEPENDENCY':
             enriched.fixClass = 'break-cycle';

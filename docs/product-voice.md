@@ -17,11 +17,12 @@ A track so simple a newcomer enters, so strict a senior trusts — and the AI sh
 because the design space is small and honest.
 
 - **Gate side:** machine-readable contract + write gate + CI. Deterministic. Fail-closed.
-  Green must mean something real.
+  Green must mean something real. Two planes: **Layers** (inter) always; **ArkRules** (intra)
+  opt-in.
 - **Co-pilot side:** where code belongs, who talks to whom, how; dual plan **A** (edges) +
   **B** (shape); one pilot at a time; never silent judgment codemod; never weaken the contract.
 - **False done is forbidden:** Enforce ≠ elegant design. `design-weak` / residual must not
-  read as “healthy finished.”
+  read as “healthy finished.” Empty ArkRules inventory is not a score.
 
 ---
 
@@ -48,6 +49,10 @@ Examples:
 | Term | Use for |
 |------|---------|
 | **contract** | `ark.config.json` layers, rules, include — the machine-readable architecture file |
+| **Layers plane** | Inter-layer edges: imports, placement, purity, isolation |
+| **ArkRules** (opt-in) | Intra-layer structure sensors + domain invariant catalogs as data (`arkrules/*`) |
+| **dual-plane residual** | Label findings **`[Layer]`** vs **`[ArkRules]`** — never blur them |
+| **rulesUnderContract** | Doctor/inventory counts for ArkRules — **never a score** |
 | **gate** / **write gate** | Host boundary that blocks or advises on invalid writes |
 | **edges** | Allowed import graph (plan **A** / remediation) |
 | **baseline** | Frozen known debt; does not make a wrong contract honest |
@@ -90,6 +95,8 @@ Examples:
 | “modes you pick” for Suggest/Adapt/Enforce | Those are **status lights**, not settings |
 | Skill-shopping lists as the default curriculum | Progressive disclosure: one door first |
 | “Healthy / done” while design-weak | False done |
+| “ArkRules prove business correctness” | They enforce *declared* structure/coverage evidence, not arbitrary logic |
+| Blurring import edges with invariants | Always label **`[Layer]`** vs **`[ArkRules]`** |
 
 ---
 

@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '3.9.2';
+const CURRENT = '4.0.0';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -19,16 +19,16 @@ describe('package budget ceilings retain 10% headroom over the recorded clean ca
   it('retains at least 10% headroom over the recorded clean candidate', () => {
     const gate = JSON.parse(read('release/package-budgets.v1.json')).packages.gate;
     expect(gate.measuredCandidate).toEqual({
-      sha: 'c06754ab27a73ed29d2fcf27f38a2bb494ef4b00',
-      ciCandidateSha: 'c06754ab27a73ed29d2fcf27f38a2bb494ef4b00',
+      sha: '4404c48dc2ab0dfe33056cd417a8d0f492601a99',
+      ciCandidateSha: '4404c48dc2ab0dfe33056cd417a8d0f492601a99',
       ciRun: null,
-      version: '3.8.1',
-      packedBytes: 517167,
-      unpackedBytes: 1801392,
-      files: 145,
+      version: '4.0.0',
+      packedBytes: 605761,
+      unpackedBytes: 2140003,
+      files: 159,
     });
     expect([gate.maxPackedBytes, gate.maxUnpackedBytes, gate.maxFiles]).toEqual([
-      568884, 1981532, 160,
+      666338, 2354004, 180,
     ]);
     expect(gate.maxPackedBytes).toBeGreaterThanOrEqual(
       Math.ceil(gate.measuredCandidate.packedBytes * 1.1)
@@ -104,14 +104,38 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
     expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
   });
 
-  it('public latest-release pointers move together', () => {
-    // After npm publish: 3.9.2 is current published/stable
-    expect(read('README.md')).toMatch(/Latest release \(3\.9\.2\).*3\.9\.2\.md/s);
+  it('public release pointers cover prepared 4.0.0 and last published 3.9.2', () => {
+    expect(read('README.md')).toMatch(/4\.0\.0/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.0\.0\.md/);
+    expect(read('README.md')).toMatch(/3\.9\.2/);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.9\.2/s);
-    expect(read('CONTRIBUTING.md')).not.toMatch(/Next prepared.*3\.9\.2/s);
-    expect(read('docs/package-surface.md')).toMatch(/latest:[\s\S]*3\.9\.2\.md/s);
-    expect(read('README.md')).toMatch(/is current stable/i);
-    expect(read('README.md')).not.toMatch(/npm [`']?latest[`']? is still[\s\S]{0,40}3\.9\.1/i);
+    expect(read('CONTRIBUTING.md')).toMatch(/Next prepared release:.*4\.0\.0/s);
+    expect(read('docs/package-surface.md')).toMatch(/4\.0\.0\.md/);
+    expect(read('docs/package-surface.md')).toMatch(/3\.9\.2\.md/);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.0.0 ArkRules major', () => {
+  it('CHANGELOG 4.0.0 names AR04 breaking and ArkRules opt-in foundations', () => {
+    const body = read('CHANGELOG.md');
+    expect(body).toMatch(/## 4\.0\.0/);
+    expect(body).toMatch(/arkgate\/runtime|@arkgate\/runtime/);
+    expect(body).toMatch(/arkRules|ArkRules/);
+    expect(body).toMatch(/classShapes|aggregate-private-state|ARKRULE_SCOPE_EMPTY/i);
+    expect(body).toMatch(/Z09|RB-11/i);
+    expect(body).toMatch(/Branch floor.*84\.5%.*83\.0%|84\.5% → 83\.0%/i);
+    expect(body).not.toMatch(/do not publish as 3\.9\.x/i);
+  });
+
+  it('docs/releases/4.0.0.md has upgrade path and prepare honesty', () => {
+    const body = read('docs/releases/4.0.0.md');
+    expect(body).toMatch(/arkgate@4\.0\.0/);
+    expect(body).toMatch(/npm install -D arkgate@4\.0\.0/);
+    expect(body).toMatch(/@arkgate\/runtime/);
+    expect(body).toMatch(/Status:\*\*\s*prepared/i);
+    expect(body).toMatch(/Z09|RB-11/i);
+    expect(body).toMatch(/opt-in|arkRules/i);
+    expect(body).toMatch(/84\.5%.*83\.0%|branch floor/i);
   });
 });
 

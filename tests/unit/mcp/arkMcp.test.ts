@@ -207,7 +207,7 @@ describe('ark-mcp server (write-path gate)', () => {
     });
     expect(res.result.isError).toBe(true);
     expect(JSON.parse(res.result.content[0].text)).toMatchObject({
-      schemaVersion: '1.3',
+      schemaVersion: '1.4',
       mode: 'lexical-compatibility',
       valid: false,
       completeness: 'partial',
@@ -228,7 +228,7 @@ describe('ark-mcp server (write-path gate)', () => {
     const payload = JSON.parse(res.result.content[0].text);
     expect(res.result.isError).toBe(true);
     expect(res.result.structuredContent).toMatchObject({
-      schemaVersion: '1.3',
+      schemaVersion: '1.4',
       mode: 'lexical-compatibility',
       valid: false,
       completeness: 'partial',
@@ -390,7 +390,7 @@ describe('ark-mcp server (write-path gate)', () => {
       });
       expect(res2.result.isError).toBe(true);
       expect(JSON.parse(res2.result.content[0].text)).toMatchObject({
-        schemaVersion: '1.3',
+        schemaVersion: '1.4',
         mode: 'lexical-compatibility',
         valid: false,
         completeness: 'partial',
@@ -1067,7 +1067,7 @@ describe('ark-mcp --hook (PreToolUse gate)', () => {
       .find((line) => line.startsWith('ARK_REPAIR_JSON:'));
     expect(repairLine).toBeTruthy();
     expect(JSON.parse(repairLine!.slice('ARK_REPAIR_JSON:'.length))).toMatchObject({
-      schemaVersion: '1.3',
+      schemaVersion: '1.4',
       mode: 'lexical-compatibility',
       valid: false,
       completeness: 'partial',
@@ -1351,6 +1351,7 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
       'ark_prepare_change',
       'ark_recommend',
       'ark_suggest_include',
+      'ark_rules_inventory',
     ]);
   });
 
@@ -1648,7 +1649,7 @@ describe('ark-mcp write gate — contract-first layer resolution (Option A)', ()
     );
     expect(res.result.isError).toBe(true);
     expect(JSON.parse(res.result.content[0].text)).toMatchObject({
-      schemaVersion: '1.3',
+      schemaVersion: '1.4',
       mode: 'lexical-compatibility',
       valid: false,
       completeness: 'partial',

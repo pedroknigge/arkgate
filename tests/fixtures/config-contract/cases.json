@@ -13,6 +13,6 @@
   "previousMajor": {
     "tag": "v1.19.0",
     "configFile": "tests/fixtures/config-contract/v1.19.0/ark.config.json",
-    "expectedConfigFile": "tests/fixtures/config-contract/v1.19.0/migrated.1.0.json"
+    "expectedConfigFile": "tests/fixtures/config-contract/v1.19.0/migrated.1.1.json"
   }
 }

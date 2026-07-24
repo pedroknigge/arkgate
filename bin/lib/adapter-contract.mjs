@@ -8,7 +8,8 @@
  * Pure CLI helper (bin/lib/adapter-contract.mjs). Zero Node I/O.
  */
 
-export const ARK_ANALYSIS_RESULT_SCHEMA_VERSION = '1.3';
+/** 1.4 adds optional evidence.arkruleId + evidence.arkruleSource (ADR 0012 / AR03). */
+export const ARK_ANALYSIS_RESULT_SCHEMA_VERSION = '1.4';
 function text(value) {
     return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
@@ -40,6 +41,14 @@ function nextActionForDiagnostic(ruleId, evidence, violation) {
         return 'Publish through a registered intent creator, then run Ark again.';
     if (ruleId === 'PUBLISH_MISSING_SOURCE')
         return 'Add metadata.source to the publish call, then run Ark again.';
+    if (ruleId === 'ARKRULE_STRUCTURE' ||
+        ruleId === 'ARKRULE_INVARIANT' ||
+        ruleId === 'INVARIANT_UNCOVERED' ||
+        ruleId.startsWith('ARKRULE_')) {
+        const source = evidence.arkruleSource ?? 'arkrules/<Layer>.json';
+        const id = evidence.arkruleId ?? 'the ArkRule';
+        return `Fix the structure or invariant for ${id} (declared in ${source}), then preflight again. Do not demote the rule without a hash-bound policy acknowledgement.`;
+    }
     return `Resolve ${ruleId} without weakening ark.config.json, then run Ark again.`;
 }
 export function toAdapterDiagnostic(violation, fallbackSeverity = 'error') {
@@ -67,6 +76,8 @@ export function toAdapterDiagnostic(violation, fallbackSeverity = 'error') {
             : {}),
         ...(text(violation.capability) ? { capability: text(violation.capability) } : {}),
         ...(text(violation.edgeKind) ? { edgeKind: text(violation.edgeKind) } : {}),
+        ...(text(violation.arkruleId) ? { arkruleId: text(violation.arkruleId) } : {}),
+        ...(text(violation.arkruleSource) ? { arkruleSource: text(violation.arkruleSource) } : {}),
     };
     return {
         ruleId,
@@ -264,6 +275,8 @@ export const ARK_ANALYSIS_RESULT_SCHEMA = {
                             peerIsolation: { type: 'boolean' },
                             capability: { type: 'string', minLength: 1 },
                             edgeKind: { type: 'string', minLength: 1 },
+                            arkruleId: { type: 'string', minLength: 1 },
+                            arkruleSource: { type: 'string', minLength: 1 },
                         },
                     },
                     nextAction: { type: 'string', minLength: 1 },

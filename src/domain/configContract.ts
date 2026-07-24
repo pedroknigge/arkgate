@@ -19,17 +19,20 @@ import type {
 
 export type {
   ArkConfig,
+  ArkConfigArkRulesRefs,
   ArkConfigCyclePolicy,
   ArkConfigIssue,
   ArkConfigLayer,
   ArkConfigLoadResult,
+  ArkConfigMigratedFrom,
   ArkConfigMigrationResult,
   ArkConfigRule,
   ArkConfigSafety,
   ArkConfigSchemaVersion,
 } from './configTypes';
 
-export const ARK_CONFIG_SCHEMA_VERSION: ArkConfigSchemaVersion = '1.0';
+/** Current published ark.config.json schema version (ADR 0012: 1.1 adds optional arkRules). */
+export const ARK_CONFIG_SCHEMA_VERSION: ArkConfigSchemaVersion = '1.1';
 export const ARK_CONFIG_SCHEMA_URL =
   'https://unpkg.com/arkgate@2/schemas/ark.config.schema.json';
 
@@ -68,8 +71,13 @@ function createDefaultRules(): ArkConfigRule[] {
 
 export const DEFAULT_ARK_CONFIG_RULES = createDefaultRules();
 
+/**
+ * Ordered migration steps. Loader walks from the input version until
+ * ARK_CONFIG_SCHEMA_VERSION. Additive only — never drops fields.
+ */
 export const ARK_CONFIG_MIGRATIONS = [
-  { from: 'unversioned', to: ARK_CONFIG_SCHEMA_VERSION },
+  { from: 'unversioned', to: '1.0' },
+  { from: '1.0', to: '1.1' },
 ] as const;
 
 const stringArraySchema = {
@@ -127,6 +135,12 @@ export const ARK_CONFIG_SCHEMA = {
         allowInMemory: false,
         allowDisabledPeerIsolation: false,
       },
+    },
+    /** ADR 0012 — layer name → relative path to arkrules/<Layer>.json */
+    arkRules: {
+      type: 'object',
+      additionalProperties: { type: 'string', minLength: 1 },
+      default: {},
     },
   },
   $defs: {
@@ -277,6 +291,17 @@ function validateNode(
           issues.push({ path: propertyPath(path, key), message: 'unknown field' });
         }
       }
+    } else if (
+      schema.additionalProperties !== undefined &&
+      schema.additionalProperties !== true &&
+      typeof schema.additionalProperties === 'object'
+    ) {
+      const additional = schema.additionalProperties;
+      for (const key of Object.keys(value)) {
+        if (!(key in properties)) {
+          validateNode(value[key], additional, propertyPath(path, key), root, issues);
+        }
+      }
     }
     for (const [key, childSchema] of Object.entries(properties)) {
       if (value[key] !== undefined) {
@@ -352,6 +377,19 @@ function defaultedConfig(input: Record<string, unknown>): Record<string, unknown
   };
 }
 
+function knownInputVersions(): Set<string> {
+  const versions = new Set<string>([ARK_CONFIG_SCHEMA_VERSION]);
+  for (const step of ARK_CONFIG_MIGRATIONS) {
+    if (step.from !== 'unversioned') versions.add(step.from);
+    versions.add(step.to);
+  }
+  return versions;
+}
+
+/**
+ * Rewrite schemaVersion through ARK_CONFIG_MIGRATIONS until current.
+ * Additive only: field defaults are applied after the chain, never removed.
+ */
 export function migrateArkConfig(
   input: unknown,
   source = 'ark.config.json'
@@ -362,11 +400,15 @@ export function migrateArkConfig(
     ]);
   }
 
-  const migratedFrom = input.schemaVersion === undefined ? 'unversioned' : null;
-  if (
-    input.schemaVersion !== undefined &&
-    input.schemaVersion !== ARK_CONFIG_SCHEMA_VERSION
-  ) {
+  const known = knownInputVersions();
+  const originalVersion =
+    input.schemaVersion === undefined
+      ? 'unversioned'
+      : typeof input.schemaVersion === 'string'
+        ? input.schemaVersion
+        : null;
+
+  if (originalVersion === null) {
     throw new ArkConfigValidationError(source, [
       {
         path: '$.schemaVersion',
@@ -375,7 +417,52 @@ export function migrateArkConfig(
     ]);
   }
 
-  return { candidate: defaultedConfig(input), migratedFrom };
+  if (originalVersion !== 'unversioned' && !known.has(originalVersion)) {
+    throw new ArkConfigValidationError(source, [
+      {
+        path: '$.schemaVersion',
+        message: `unsupported version ${JSON.stringify(originalVersion)}; expected ${ARK_CONFIG_SCHEMA_VERSION}`,
+      },
+    ]);
+  }
+
+  let version: string = originalVersion;
+  const working: Record<string, unknown> = { ...input };
+  // Walk the migration table. Each step is a pure version stamp for 1.0→1.1
+  // (arkRules is optional; absence needs no field rewrite).
+  let guard = 0;
+  while (version !== ARK_CONFIG_SCHEMA_VERSION && guard < ARK_CONFIG_MIGRATIONS.length + 1) {
+    guard += 1;
+    const step = ARK_CONFIG_MIGRATIONS.find((candidate) => candidate.from === version);
+    if (!step) {
+      throw new ArkConfigValidationError(source, [
+        {
+          path: '$.schemaVersion',
+          message: `unsupported version ${JSON.stringify(version)}; expected ${ARK_CONFIG_SCHEMA_VERSION}`,
+        },
+      ]);
+    }
+    version = step.to;
+    working.schemaVersion = version;
+  }
+
+  if (version !== ARK_CONFIG_SCHEMA_VERSION) {
+    throw new ArkConfigValidationError(source, [
+      {
+        path: '$.schemaVersion',
+        message: `unsupported version ${JSON.stringify(originalVersion)}; expected ${ARK_CONFIG_SCHEMA_VERSION}`,
+      },
+    ]);
+  }
+
+  const migratedFrom =
+    originalVersion === 'unversioned'
+      ? 'unversioned'
+      : originalVersion === '1.0'
+        ? '1.0'
+        : null;
+
+  return { candidate: defaultedConfig(working), migratedFrom };
 }
 
 export function loadArkConfigContract(

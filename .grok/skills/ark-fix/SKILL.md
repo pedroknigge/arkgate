@@ -1,7 +1,6 @@
 ---
 name: ark-fix
 description: Resolve Ark architecture violations at the root cause — read importers and product context, design ports/adapters/moves/intent alignment. Never weaken the contract. CLI only validates.
-arkVersion: 3.0.0
 ---
 
 # /ark-fix — Fix architecture violations at the root
@@ -40,6 +39,28 @@ Next: re-run ark-check; shrink baseline if applicable
 | **Deterministic** | Violation list, plan kinds, post-edit `ark-check` |
 | **Exploratory** | Why this edge exists in *this* product; better home; manifiesto if the rule is business |
 
+
+
+## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+
+ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+
+| Plane | What it protects | Where it lives | Sensors / tools |
+|-------|------------------|----------------|-----------------|
+| **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
+| **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+
+**Rules for every report / answer:**
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
+3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
+4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+
+
+### Fix + ArkRules
+- Classify each violation: `LAYER_*` / capability → **[Layer]**; `ARKRULE_*` / `INVARIANT_*` → **[ArkRules]**.
+- Structure sensor fixes are judgment (ports, factories, private state) — not mechanical-safe.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -106,6 +127,23 @@ If the “fix” is really a missing business intent or Domain home for a rule:
 - Prefer mechanical-safe kinds when the plan tags them; otherwise design judgment carefully.
 - Code only — no DB migrations unless user asked.
 
+## Mechanical-edit hygiene (Y04 — outcome gate)
+
+- Header injection must **merge into the existing doc comment**; the kept result has one `/**`, not stacked headers.
+- Route completion or movement must **preserve the original typed `defineRoute<…>(opts, handler)` call**; reconstruct that call instead of extracting untyped opts/handler constants that drop generics or contextual typing.
+- A convention-only `*-data.ts` stub is not a fix: move the real code or **leave the placeholder file uncreated**; never write `import "server-only"; export {}` as an empty naming token.
+- Keep the edit only when the **previously clean file stays typecheck-clean**. Otherwise roll it back and treat the change as judgment.
+
+## Reshape findings (X04 — never mechanical)
+
+If `doctor.physicalCohesion` fires while you fix: do **not** fold reshape moves into your fix
+batch. Physical moves run only through `/ark-loop`'s one-pilot loop; merge decisions only as
+`/ark-architect` merge cards. A cohesion finding is context for your fix, never a license to
+reorganize. Respect `physicalCohesion.reshapeDecisions`: never revive a current rejected/deferred
+target from the still-visible facts. If the user makes a verdict while reviewing the finding,
+record its exact `decisionTarget` + reason in `.ark/reshape-decisions.json`; never infer one from
+golden-pattern prose.
+
 ## Done
 
 - Targeted violations gone; no new ones.
@@ -119,6 +157,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

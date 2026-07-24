@@ -16,6 +16,14 @@ import {
   forbiddenGlobalForModuleSpecifier,
 } from '../domain/capabilities';
 import { loadArkConfigContract, parseArkConfigJson } from '../domain/configContract';
+import {
+  emptyEffectiveArkRules,
+  type EffectiveArkRules,
+} from '../domain/arkRulesContract';
+import {
+  effectiveContractPolicyPayload,
+  type EffectiveContract,
+} from '../domain/effectiveContract';
 import { layerForRelativePath } from '../domain/layerMatch';
 import {
   classifyArkPolicyDelta,
@@ -37,21 +45,66 @@ const LEXICAL_EVIDENCE_INCOMPLETE = {
     'Lexical compatibility mode cannot prove parse status, TypeScript/package/symlink resolution, or symbol-aware source-policy and safety evidence. Use the resolved candidate facts APIs for an authoritative verdict.',
 } as const;
 
-export function loadContract(input: unknown, source?: string): AnalysisContract {
+export type LoadContractOptions = {
+  /** Pre-resolved Effective ArkRules (from resolveEffectiveContract). */
+  arkRules?: EffectiveArkRules;
+};
+
+function hasActiveArkRules(
+  config: { arkRules?: Record<string, string> },
+  arkRules: EffectiveArkRules
+): boolean {
+  return (
+    (config.arkRules !== undefined && Object.keys(config.arkRules).length > 0) ||
+    arkRules.structure.length > 0 ||
+    arkRules.invariants.length > 0
+  );
+}
+
+function policyHashFor(config: AnalysisContract['config'], arkRules: EffectiveArkRules): string {
+  // Preserve historical hashes for projects that never opt into ArkRules.
+  if (!hasActiveArkRules(config, arkRules)) {
+    return deterministicHash(stableSerialize(config));
+  }
+  const effective: EffectiveContract = {
+    config,
+    arkRules,
+    warnings: [],
+  };
+  return deterministicHash(stableSerialize(effectiveContractPolicyPayload(effective)));
+}
+
+export function loadContract(
+  input: unknown,
+  source?: string,
+  options?: LoadContractOptions
+): AnalysisContract {
   const loaded =
     typeof input === 'string'
       ? parseArkConfigJson(input, source)
       : loadArkConfigContract(input, source);
-  return { ...loaded, policyHash: deterministicHash(stableSerialize(loaded.config)) };
+  const arkRules = options?.arkRules ?? emptyEffectiveArkRules();
+  return {
+    ...loaded,
+    arkRules,
+    policyHash: policyHashFor(loaded.config, arkRules),
+  };
 }
 
 export function analyzePolicyDelta(input: AnalyzePolicyDeltaInput): PolicyDeltaAnalysis {
-  const base = loadContract(input.baseConfig, input.baseSource ?? 'base ark.config.json');
+  const base = loadContract(input.baseConfig, input.baseSource ?? 'base ark.config.json', {
+    arkRules: input.baseArkRules,
+  });
   const candidate = loadContract(
     input.candidateConfig,
-    input.candidateSource ?? 'candidate ark.config.json'
+    input.candidateSource ?? 'candidate ark.config.json',
+    { arkRules: input.candidateArkRules }
   );
-  const delta = classifyArkPolicyDelta(base.config, candidate.config);
+  const delta = classifyArkPolicyDelta(base.config, candidate.config, {
+    baseArkRules: base.arkRules,
+    candidateArkRules: candidate.arkRules,
+    candidateInvariantCoverage: input.candidateInvariantCoverage,
+  });
   const blockingFindingIds = delta.findings
     .filter(
       (finding) =>

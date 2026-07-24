@@ -7,7 +7,7 @@
  * this split never reaches bin/lib/config-contract.mjs.
  */
 
-export type ArkConfigSchemaVersion = '1.0';
+export type ArkConfigSchemaVersion = '1.0' | '1.1';
 
 export type ArkConfigCyclePolicy = 'strict' | 'soft' | 'framework-soft' | 'off';
 
@@ -46,6 +46,12 @@ export type ArkConfigSafety = {
   allowDisabledPeerIsolation?: boolean;
 };
 
+/**
+ * ADR 0012 — optional map of layer name → project-relative ArkRules file path.
+ * Absence changes no inter-layer verdict.
+ */
+export type ArkConfigArkRulesRefs = Record<string, string>;
+
 export type ArkConfig = {
   $schema: string;
   schemaVersion: ArkConfigSchemaVersion;
@@ -59,6 +65,8 @@ export type ArkConfig = {
   cyclePolicy?: ArkConfigCyclePolicy;
   dynamicImportAllowlist?: string[];
   safety?: ArkConfigSafety;
+  /** ADR 0012 — modular ArkRules references (schema 1.1+). */
+  arkRules?: ArkConfigArkRulesRefs;
 };
 
 export type ArkConfigIssue = {
@@ -66,14 +74,17 @@ export type ArkConfigIssue = {
   message: string;
 };
 
+/** Original input version when the loader rewrote schemaVersion toward current. */
+export type ArkConfigMigratedFrom = 'unversioned' | '1.0' | null;
+
 export type ArkConfigLoadResult = {
   config: ArkConfig;
-  migratedFrom: 'unversioned' | null;
+  migratedFrom: ArkConfigMigratedFrom;
 };
 
 export type ArkConfigMigrationResult = {
   candidate: Record<string, unknown>;
-  migratedFrom: 'unversioned' | null;
+  migratedFrom: ArkConfigMigratedFrom;
 };
 
 /** Restricted JSON-Schema subset the contract validator walks (internal shape). */
@@ -84,7 +95,8 @@ export type SchemaNode = {
   enum?: readonly unknown[];
   required?: readonly string[];
   properties?: Readonly<Record<string, SchemaNode>>;
-  additionalProperties?: boolean;
+  /** `false` forbids extras; a nested SchemaNode validates each additional property. */
+  additionalProperties?: boolean | SchemaNode;
   items?: SchemaNode;
   minItems?: number;
   uniqueItems?: boolean;

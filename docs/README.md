@@ -52,12 +52,14 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Area | Path |
 |------|------|
 | Release notes (by version) | [releases/](releases/) · [CHANGELOG.md](../CHANGELOG.md) |
-| Shipped epic plans | [plans/](plans/) |
+| Epic plans (seeded + shipped) | [plans/](plans/) |
 | Claims audit | [audit/claims-matrix.md](audit/claims-matrix.md) |
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
-Current release notes: [releases/3.9.2.md](releases/3.9.2.md) (`arkgate@3.9.2` on npm `latest`).
+Prepared major: [releases/4.0.0.md](releases/4.0.0.md) (`arkgate@4.0.0` — layers + optional **ArkRules**).  
+Last npm `latest` until publish: [releases/3.9.2.md](releases/3.9.2.md) (`arkgate@3.9.2`).  
+Config: [configuration.md](configuration.md) · Agent skills dual-plane: [agent-guide.md](agent-guide.md).
 
 ---
 

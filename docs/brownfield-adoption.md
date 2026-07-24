@@ -34,6 +34,26 @@ case is every route "violating" app→kernel because the framework's own entrypo
 positives, not debt. `--update-baseline` will refuse a lopsided freeze for exactly this
 reason. Fix the contract first (step 3).
 
+## 2b. Rules inventory (ArkRules / AR13)
+
+When inter-layer edges are already green but business rules still live as spaghetti
+(validation in controllers, magic constants, anemic entities):
+
+```bash
+ark-check --rules-inventory --json
+# MCP: ark_rules_inventory
+```
+
+Output is **honest counts** (inventoried / under-contract / frozen) — never a score. Route
+extraction through `/ark-fix` or `/ark-loop` (one pilot card at a time) and declaration
+through `/ark-contract` editing `arkrules/<Layer>.json` (ADR 0015 — no new skill names).
+Report residual as **`[Layer]`** (import edges / baseline) vs **`[ArkRules]`** (inventory /
+structure / invariants). Case study shape:
+[arkrules-migration-case-study.md](field/arkrules-migration-case-study.md).
+
+**Upgrade note (4.0):** `ark upgrade --no-install` can refresh skills/gates while leaving
+`package.json` on an older pin—doctor exposes `packageVersionTruth` when the CLI is ahead.
+
 ## 3. Make the contract real (via `/ark-contract`)
 
 - **Classify the ungoverned tree.** `ark-check --coverage` leads with `Governed: N%` and

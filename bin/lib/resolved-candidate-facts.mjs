@@ -34,6 +34,7 @@ import {
   typeOnlyExportNames,
 } from './ast-scan.mjs';
 import { provePortProofInject } from './port-proof.mjs';
+import { extractClassShapesFromSource } from './arkrules-sensors.mjs';
 import {
   collectGovernedFiles,
   isGovernableSourceFile,
@@ -995,6 +996,8 @@ export function resolveCandidateFacts({
   const publishCalls = [];
   const intentReferences = [];
   const safetyUses = [];
+  /** ADR 0013 class-shape facts for ArkRules structure sensors. */
+  const classShapes = [];
 
   for (const candidate of candidateFiles) {
     const sourceFile = ts.createSourceFile(
@@ -1076,6 +1079,15 @@ export function resolveCandidateFacts({
     safetyUses.push(
       ...collectSafetyUses(ts, sourceFile, candidate.path, candidate.content, semanticDependencies)
     );
+    // Class-shape extraction is text-conservative (false negatives over false positives).
+    // Only TS/TSX candidates; sensors consume the same shape via facts.classShapes.
+    if (/\.(tsx?|mts|cts)$/i.test(candidate.path)) {
+      try {
+        classShapes.push(...extractClassShapesFromSource(candidate.path, candidate.content));
+      } catch {
+        // Never fail the resolver for shape extraction; sensors stay silent on this file.
+      }
+    }
   }
 
   const dependencies = [];
@@ -1140,7 +1152,7 @@ export function resolveCandidateFacts({
 
   const projectPackageName = readPackageName(canonicalRoot, observeInput);
   return createTrustedResolvedCandidateFacts({
-    schemaVersion: '1.0',
+    schemaVersion: '1.1',
     completeness: completenessReasons.length === 0 ? 'complete' : 'partial',
     completenessReasons,
     resolverIdentity: RESOLVED_FACTS_RESOLVER_IDENTITY,
@@ -1156,5 +1168,6 @@ export function resolveCandidateFacts({
     publishCalls,
     intentReferences,
     safetyUses,
+    classShapes,
   });
 }

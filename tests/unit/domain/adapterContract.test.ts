@@ -11,8 +11,8 @@ import {
 import { deterministicNextAction } from '../../../src/domain/remediation';
 import { classifyPublishFacts, looksLikeArkIntent } from '../../../src/domain/sourcePolicy';
 
-describe('cross-adapter result contract v1.3', () => {
-  it('keeps 1.2 as a legacy value and emits resolved evidence in 1.3', () => {
+describe('cross-adapter result contract v1.4', () => {
+  it('keeps 1.2 as a legacy value and emits resolved evidence in 1.4', () => {
     const legacyFixture = JSON.parse(
       fs.readFileSync(
         path.resolve('tests/fixtures/contracts/ark.analysis-result.v1.2.json'),
@@ -43,7 +43,7 @@ describe('cross-adapter result contract v1.3', () => {
       })
     ).toEqual({
       ...legacyFixture,
-      schemaVersion: '1.3',
+      schemaVersion: '1.4',
       mode: 'resolved-candidate-facts',
       completenessReasons: [],
       policyHash: 'fnv1a-policy',
@@ -51,11 +51,11 @@ describe('cross-adapter result contract v1.3', () => {
       factsHash: 'fnv1a-facts',
       candidateTreeHash: 'fnv1a-tree',
     });
-    expect(ARK_ANALYSIS_RESULT_SCHEMA_VERSION).toBe('1.3');
+    expect(ARK_ANALYSIS_RESULT_SCHEMA_VERSION).toBe('1.4');
     expect(ARK_ANALYSIS_RESULT_SCHEMA.$id).toBe(
       'https://unpkg.com/arkgate@3/schemas/ark.analysis-result.schema.json'
     );
-    expect(ARK_ANALYSIS_RESULT_SCHEMA.properties.schemaVersion.const).toBe('1.3');
+    expect(ARK_ANALYSIS_RESULT_SCHEMA.properties.schemaVersion.const).toBe('1.4');
     expect(ARK_ANALYSIS_RESULT_SCHEMA.required).toContain('mode');
     expect(ARK_ANALYSIS_RESULT_SCHEMA.required).toContain('completeness');
     expect(ARK_ANALYSIS_RESULT_SCHEMA.properties.completeness).toEqual({
@@ -67,6 +67,43 @@ describe('cross-adapter result contract v1.3', () => {
       'factsHash',
       'candidateTreeHash',
     ]);
+  });
+
+  it('carries arkrule provenance on every diagnostic (AR03)', () => {
+    const diagnostic = toAdapterDiagnostic({
+      ruleId: 'ARKRULE_STRUCTURE',
+      message: 'Aggregate exposes public mutable state.',
+      file: 'src/domain/order.ts',
+      line: 12,
+      fromLayer: 'DomainModel',
+      arkruleId: 'always-valid-aggregates',
+      arkruleSource: 'arkrules/DomainModel.json',
+    });
+    expect(diagnostic.evidence.arkruleId).toBe('always-valid-aggregates');
+    expect(diagnostic.evidence.arkruleSource).toBe('arkrules/DomainModel.json');
+    expect(diagnostic.nextAction).toContain('always-valid-aggregates');
+    expect(diagnostic.nextAction).toContain('arkrules/DomainModel.json');
+    expect(deterministicNextAction({
+      ruleId: 'ARKRULE_STRUCTURE',
+      arkruleId: 'always-valid-aggregates',
+      arkruleSource: 'arkrules/DomainModel.json',
+    })).toContain('always-valid-aggregates');
+
+    const result = createAdapterResult({
+      valid: false,
+      violations: [
+        {
+          ruleId: 'ARKRULE_STRUCTURE',
+          message: 'Aggregate exposes public mutable state.',
+          file: 'src/domain/order.ts',
+          line: 12,
+          arkruleId: 'always-valid-aggregates',
+          arkruleSource: 'arkrules/DomainModel.json',
+        },
+      ],
+    });
+    expect(result.schemaVersion).toBe('1.4');
+    expect(result.diagnostics[0]?.evidence.arkruleId).toBe('always-valid-aggregates');
   });
 
   it('retains the 1.0 and 1.1 fixtures without the additive completeness field', () => {
@@ -89,7 +126,7 @@ describe('cross-adapter result contract v1.3', () => {
 
   it('preserves legacy factory calls as complete and fails closed explicit incomplete analysis', () => {
     expect(createAdapterResult({ valid: true })).toEqual({
-      schemaVersion: '1.3',
+      schemaVersion: '1.4',
       mode: 'lexical-compatibility',
       completeness: 'complete',
       completenessReasons: [],
@@ -119,7 +156,7 @@ describe('cross-adapter result contract v1.3', () => {
         warnings: [{ code: 'LEGACY_WARNING', severity: 'warning', line: 0, column: -1 }],
       })
     ).toEqual({
-      schemaVersion: '1.3',
+      schemaVersion: '1.4',
       mode: 'lexical-compatibility',
       completeness: 'complete',
       completenessReasons: [],

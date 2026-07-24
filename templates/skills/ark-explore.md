@@ -1,6 +1,6 @@
 ---
 name: ark-explore
-description: Specialized map skill — decision-grade recon + dual-plan seed (no apply). Primary post-green door when design-weak. Not the default day-to-day path (use doctor + place/gate; guided apply is /ark-autopilot). CLI is a sensor; you read the tree. No gate bypass.
+description: Specialized map skill — decision-grade recon of layers + ArkRules opportunities + dual-plan seed (no apply). Primary post-green door when design-weak. Not the default day-to-day path (use doctor + place/gate; guided apply is /ark-autopilot). CLI is a sensor; you read the tree. No gate bypass.
 ---
 
 # /ark-explore — Recon the real project (map only)
@@ -66,6 +66,30 @@ or “healthy” because plan A is empty while design-weak smells remain unliste
 that still matters (dogfood gaps, soft starters, identity drift, **semantic false-green**,
 **design-weak under ENFORCE**, coupling that blocks evolution). If residual is truly none,
 say so in one line and hand off `stop`.
+
+
+## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+
+ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+
+| Plane | What it protects | Where it lives | Sensors / tools |
+|-------|------------------|----------------|-----------------|
+| **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
+| **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+
+**Rules for every report / answer:**
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
+3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
+4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+
+
+### Explore + ArkRules
+- Always run sensors for **both** planes when present: coverage/doctor **and** `--rules-inventory` if `arkRules` exists or brownfield may hide spaghetti rules.
+- Ranked table kinds may include `arkrules-opportunity` and `invariant-gap`.
+- Dual-plan **B** may include: place advisory structure rules, extract one inventory candidate to Domain + `arkrules` entry, promote one covered invariant.
+- Field path: note whether starters emit `arkrules/*`.
 
 ## Output mode (pick one — do not invent a fourth)
 
@@ -316,6 +340,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

@@ -1,0 +1,7 @@
+{
+  "schemaVersion": "1.1",
+  "include": ["src"],
+  "layers": [{ "name": "DomainModel", "patterns": ["src/domain/**"] }],
+  "rules": [],
+  "arkRules": { "DomainModel": "arkrules/DomainModel.json" }
+}

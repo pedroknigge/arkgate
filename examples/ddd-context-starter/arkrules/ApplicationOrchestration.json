@@ -1,0 +1,14 @@
+{
+  "$schema": "https://unpkg.com/arkgate/schemas/ark.arkrules.schema.json",
+  "schemaVersion": "1.0",
+  "layer": "ApplicationOrchestration",
+  "structure": [
+    {
+      "id": "orchestration-only",
+      "sensor": "orchestration-only",
+      "mode": "advisory",
+      "description": "Application use cases orchestrate; keep domain branching in Domain."
+    }
+  ],
+  "invariants": []
+}

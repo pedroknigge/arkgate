@@ -241,6 +241,29 @@ function parseHealthHtml(health) {
  * `computeDoctorAdvisories` returns — the parity guard enforces it.
  * @param escape injected HTML escaper (dependency points html-report → here only)
  */
+function rulesUnderContractHtml(section) {
+  if (!section || typeof section !== 'object') return '';
+  const note = section.note ? `<p class="muted">${esc(section.note)}</p>` : '';
+  if (section.active === false) {
+    return `
+  <section data-advisory="rulesUnderContract">
+    <h2>Rules under contract <span class="muted">(ArkRules opt-in)</span></h2>
+    ${note}
+  </section>`;
+  }
+  return `
+  <section data-advisory="rulesUnderContract">
+    <h2>Rules under contract <span class="muted">(counts — not a score)</span></h2>
+    <ul>
+      <li>Structure rules: <strong>${Number(section.structureRules) || 0}</strong></li>
+      <li>Invariants: <strong>${Number(section.invariants) || 0}</strong></li>
+      <li>Covered invariants: <strong>${Number(section.coveredInvariants) || 0}</strong></li>
+      <li>Uncovered invariants: <strong>${Number(section.uncoveredInvariants) || 0}</strong></li>
+    </ul>
+    ${note}
+  </section>`;
+}
+
 export function renderAdvisorySections(advisories, escape) {
   if (!advisories || typeof advisories !== 'object') return '';
   if (typeof escape === 'function') esc = escape;
@@ -250,6 +273,7 @@ export function renderAdvisorySections(advisories, escape) {
     physicalCohesionHtml(advisories.physicalCohesion),
     parseHealthHtml(advisories.parseHealth),
     graphBlindSpotsHtml(advisories.graphBlindSpots, esc),
+    rulesUnderContractHtml(advisories.rulesUnderContract),
   ]
     .filter(Boolean)
     .join('\n');

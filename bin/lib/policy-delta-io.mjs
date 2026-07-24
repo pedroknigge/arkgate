@@ -2,6 +2,9 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { analyzePolicyDelta } from './analysis-engine.mjs';
+import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
+import { loadInvariantCoverageInputs } from './invariant-coverage-io.mjs';
+import { evaluateInvariantCoverage } from './invariant-coverage.mjs';
 
 function readJsonFile(filePath, label) {
   if (!fs.existsSync(filePath)) throw new Error(`${label} not found: ${filePath}`);
@@ -151,11 +154,41 @@ export function analyzePolicyTransition({
     throw new Error('Policy delta was requested but no policy base could be resolved.');
   }
   if (!base) return undefined;
+
+  // AR02/AR11: load Effective ArkRules so mode edits inside arkrules/*.json classify,
+  // and attach candidate coverage so covered advisory→enforced can auto-allow.
+  const baseLoad = loadEffectiveArkRulesFromDisk(root, base.config);
+  const candidateLoad = loadEffectiveArkRulesFromDisk(root, candidateConfig);
+  if (candidateLoad.errors.length > 0) {
+    const message = candidateLoad.errors
+      .map((issue) => `- ${issue.path}: ${issue.message}`)
+      .join('\n');
+    throw new Error(`Invalid candidate Effective Contract:\n${message}`);
+  }
+  // Base load errors: best-effort empty (base git tree may lack arkrules files on disk).
+  const baseArkRules = baseLoad.errors.length > 0 ? undefined : baseLoad.arkRules;
+  const candidateArkRules = candidateLoad.arkRules;
+
+  let candidateInvariantCoverage;
+  if ((candidateArkRules?.invariants?.length ?? 0) > 0) {
+    const coverageInputs = loadInvariantCoverageInputs(root, { files: [] });
+    const evaluated = evaluateInvariantCoverage({
+      arkRules: candidateArkRules,
+      fileContents: coverageInputs.fileContents,
+      testFiles: coverageInputs.testFiles,
+      testGlobsMissing: coverageInputs.testGlobsMissing,
+    });
+    candidateInvariantCoverage = evaluated.coverage;
+  }
+
   return analyzePolicyDelta({
     baseConfig: base.config,
     candidateConfig,
     acknowledgement: readPolicyAcknowledgement(root, acknowledgementPath),
     baseSource: base.source,
     candidateSource: path.isAbsolute(configPath) ? configPath : path.join(root, configPath),
+    ...(baseArkRules ? { baseArkRules } : {}),
+    candidateArkRules,
+    ...(candidateInvariantCoverage ? { candidateInvariantCoverage } : {}),
   });
 }

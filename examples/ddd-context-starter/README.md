@@ -38,6 +38,14 @@ src/
 2. **Domain must not use fetch/process/Date.now** — inject ports.
 3. **Do not weaken `ark.config.json` to pass.** Integrate via events or shared kernel.
 
+## Optional ArkRules (4.0)
+
+This starter teaches **layers** (inter-layer edges). You may add opt-in **ArkRules**
+(`arkRules` in `ark.config.json` + `arkrules/<Layer>.json`) for structure sensors and
+domain invariants *inside* a layer. Start advisory; promote only with coverage.
+Label residual `[Layer]` vs `[ArkRules]`. See [examples README](../README.md) and
+[configuration — ArkRules](../../docs/configuration.md#arkrules-intra-layer-opt-in).
+
 ## Verify
 
 ```bash

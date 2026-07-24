@@ -21,6 +21,17 @@ aliases `ark` / `ark-check` still work).
 
 `ark start` and `ark-check --plan` will not claim "everything is guarded" while governed coverage is near zero. On Nest/Next/express starters, init also merges **framework filename conventions** into the layer globs so day-one coverage is real.
 
+### Two planes (4.0 — optional second plane)
+
+| Plane | Plain English |
+|-------|---------------|
+| **Layers** | Who may import whom (always on after start) |
+| **ArkRules** (optional) | Habits *inside* a layer — structure and named invariants as data |
+
+You can stay on layers only. When you add ArkRules, start **advisory** and promote only with
+coverage. Residual labels: **`[Layer]`** vs **`[ArkRules]`**. Details:
+[use.md](../use.md) · [configuration](../configuration.md#arkrules-intra-layer-opt-in).
+
 ## Start here
 
 | Type | Document | You will… |

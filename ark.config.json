@@ -19,7 +19,8 @@
         "src/domain/**",
         "bin/ark-layer-match.mjs",
         "bin/lib/remediation.mjs",
-        "bin/lib/baseline-key.mjs"
+        "bin/lib/baseline-key.mjs",
+        "bin/lib/arkrules-contract.mjs"
       ],
       "intentPrefixes": ["Domain."],
       "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"]

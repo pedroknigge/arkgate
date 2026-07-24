@@ -91,7 +91,7 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": "1.3"
+      "const": "1.4"
     },
     "mode": {
       "enum": [
@@ -236,6 +236,14 @@
                 "minLength": 1
               },
               "edgeKind": {
+                "type": "string",
+                "minLength": 1
+              },
+              "arkruleId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "arkruleSource": {
                 "type": "string",
                 "minLength": 1
               }

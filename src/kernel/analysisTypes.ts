@@ -16,6 +16,7 @@ import type {
   ResolvedFileFact,
 } from '../domain/analysis';
 import type { ArkConfig, ArkConfigLoadResult } from '../domain/configTypes';
+import type { EffectiveArkRules } from '../domain/arkRulesTypes';
 import type {
   PolicyDeltaAcknowledgement,
   PolicyDeltaClassification,
@@ -26,6 +27,16 @@ import type { ArchitectureConvergenceResult } from '../domain/changeConvergence'
 
 export type AnalysisContract = ArkConfigLoadResult & {
   policyHash: string;
+  /**
+   * ADR 0012 Effective ArkRules (empty when arkRules is absent).
+   * Included in policyHash when non-empty so arkrules edits invalidate identity.
+   */
+  arkRules?: EffectiveArkRules;
+  /**
+   * ADR 0013 class-shape facts for ArkRules sensors (Tooling-supplied).
+   * Empty / absent when ArkRules are not active.
+   */
+  classShapes?: import('../domain/arkRuleSensors').ClassShapeFact[];
 };
 
 export type AnalyzeProjectInput = {
@@ -50,6 +61,30 @@ export type AnalysisResult = {
 export type AnalyzeResolvedProjectInput = {
   contract: AnalysisContract;
   facts: unknown;
+  /**
+   * AR10 — Tooling-supplied contents for invariant coverage evidence.
+   * When omitted and the Effective Contract has invariants, coverage is partial
+   * (never false green covered).
+   */
+  coverageInputs?: {
+    fileContents: Readonly<Record<string, string>>;
+    testFiles?: readonly string[];
+    testGlobsMissing?: boolean;
+  };
+  /**
+   * AR07 — Tooling-supplied orchestration/thin-adapter heuristics per file.
+   * Prefer deriveArkRuleFileHints / buildArkRuleFileHints (Domain pure).
+   * When omitted, orchestration-only and thin-adapter sensors stay silent.
+   */
+  fileHints?: Readonly<
+    Record<
+      string,
+      {
+        orchestrationHeavy?: boolean;
+        adapterThick?: boolean;
+      }
+    >
+  >;
 };
 
 export type PreflightResolvedChangeInput = {
@@ -135,6 +170,14 @@ export type AnalyzePolicyDeltaInput = {
   acknowledgement?: PolicyDeltaAcknowledgement;
   baseSource?: string;
   candidateSource?: string;
+  /** Optional pre-resolved Effective ArkRules for each side (ADR 0012 / AR02). */
+  baseArkRules?: EffectiveArkRules;
+  candidateArkRules?: EffectiveArkRules;
+  /**
+   * AR11 — optional coverage evidence for candidate invariants.
+   * When omitted, advisory→enforced promotion is judgment-required (refuse auto-allow).
+   */
+  candidateInvariantCoverage?: readonly import('../domain/invariantCoverage').InvariantCoverageEvidence[];
 };
 
 export type PolicyDeltaAnalysis = {

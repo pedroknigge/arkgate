@@ -22,7 +22,40 @@ import { createImportTargetResolver } from './lib/import-resolve.mjs';
 import { validateWithAutoPatch, resolveImportFileAbs } from './lib/auto-patch.mjs';
 import { composePrepareWrite } from './lib/prepare-write.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
+import { loadEffectiveArkRulesFromDisk } from './lib/effective-contract-load.mjs';
+import {
+  buildRulesInventory,
+  inventoryToExtractionCard,
+} from './lib/rules-inventory.mjs';
 import { ARK_ANALYSIS_RESULT_SCHEMA, createAdapterResult } from './lib/adapter-contract.mjs';
+
+function arkRulesCatalogForManifest(root, config) {
+  if (!config?.arkRules || typeof config.arkRules !== 'object') return {};
+  try {
+    const loaded = loadEffectiveArkRulesFromDisk(root, config);
+    if (loaded.errors?.length || !loaded.arkRules) return {};
+    const structure = (loaded.arkRules.structure ?? []).map((r) => ({
+      id: r.id,
+      sensor: r.sensor,
+      mode: r.mode,
+      layer: r.provenance?.layer,
+      sourceFile: r.provenance?.sourceFile,
+    }));
+    const invariants = (loaded.arkRules.invariants ?? []).map((r) => ({
+      id: r.id,
+      description: r.description,
+      aggregate: r.aggregate,
+      mode: r.mode,
+      layer: r.provenance?.layer,
+      sourceFile: r.provenance?.sourceFile,
+      coverage: r.coverage,
+    }));
+    if (structure.length === 0 && invariants.length === 0) return {};
+    return { arkRulesCatalog: { structure, invariants } };
+  } catch {
+    return {};
+  }
+}
 import { loadTypeScript } from './lib/typescript-host.mjs';
 import { validateSnippetAnalysis } from './lib/snippet-analysis.mjs';
 import { loadGoldenPattern, attachGoldenToPlacement } from './lib/golden-pattern.mjs';
@@ -1559,6 +1592,14 @@ export async function runArkMcp({ hookInput } = {}) {
         'or the contract misses package roots.',
       inputSchema: { type: 'object', properties: {} },
     },
+    {
+      name: 'ark_rules_inventory',
+      description:
+        'Deterministic brownfield rules inventory (AR13): validation-in-controller, magic constants, ' +
+        'anemic entities, mutation-without-guard. Returns honest counts (inventoried/under-contract/frozen) ' +
+        '— never a numeric score. Same plane as ark-check --rules-inventory.',
+      inputSchema: { type: 'object', properties: {} },
+    },
   ];
 
   const RESOURCES = [
@@ -1633,6 +1674,11 @@ export async function runArkMcp({ hookInput } = {}) {
         ...(config.safety && typeof config.safety === 'object'
           ? { safety: config.safety }
           : {}),
+        // AR09 — expose ArkRules references + catalog when configured (ADR 0014).
+        ...(config.arkRules && typeof config.arkRules === 'object'
+          ? { arkRules: config.arkRules }
+          : {}),
+        ...arkRulesCatalogForManifest(args.root, config),
         ...(suggestions.length > 0
           ? {
               suggestedLayers: suggestions,
@@ -1981,6 +2027,53 @@ export async function runArkMcp({ hookInput } = {}) {
     }
   }
 
+  function runRulesInventoryTool() {
+    try {
+      const governed = collectGovernedFiles(args.root, config);
+      const fileContents = {};
+      for (const file of governed.slice(0, 400)) {
+        const rel = path.relative(args.root, file).split(path.sep).join('/');
+        try {
+          fileContents[rel] = fs.readFileSync(file, 'utf8');
+        } catch {
+          /* skip */
+        }
+      }
+      const contracted = [];
+      const loaded = loadEffectiveArkRulesFromDisk(args.root, config);
+      for (const rule of loaded.arkRules?.structure ?? []) contracted.push(rule.id);
+      for (const inv of loaded.arkRules?.invariants ?? []) contracted.push(inv.id);
+      const inventory = buildRulesInventory({
+        fileContents,
+        contractedRuleIds: contracted,
+      });
+      const nextPilot =
+        inventory.candidates[0] != null
+          ? inventoryToExtractionCard(inventory.candidates[0])
+          : null;
+      const payload = {
+        ok: true,
+        rulesInventory: inventory,
+        rulesMigration: {
+          inventoried: inventory.inventoried,
+          underContract: inventory.underContract,
+          frozen: inventory.frozen,
+          notAScore: true,
+        },
+        nextPilot,
+      };
+      return {
+        content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }],
+        structuredContent: payload,
+      };
+    } catch (error) {
+      return {
+        content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
+        isError: true,
+      };
+    }
+  }
+
   function runSuggestIncludeTool() {
     try {
       const workspaces = detectWorkspaces(args.root);
@@ -2028,6 +2121,7 @@ export async function runArkMcp({ hookInput } = {}) {
     ark_prepare_change: runPrepareChange,
     ark_recommend: runRecommendTool,
     ark_suggest_include: runSuggestIncludeTool,
+    ark_rules_inventory: runRulesInventoryTool,
   };
 
   const send = (msg) => process.stdout.write(`${JSON.stringify(msg)}\n`);

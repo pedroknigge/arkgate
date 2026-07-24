@@ -146,6 +146,49 @@ export {
 } from './domain/configContract';
 
 export {
+  ARK_RULES_SCHEMA,
+  ARK_RULES_SCHEMA_VERSION,
+  ARK_RULE_SENSORS,
+  buildEffectiveArkRules,
+  emptyEffectiveArkRules,
+  loadArkRulesContract,
+  parseArkRulesJson,
+  type ArkRulesFile,
+  type EffectiveArkRules,
+} from './domain/arkRulesContract';
+
+export {
+  EffectiveContractError,
+  effectiveContractPolicyPayload,
+  resolveEffectiveContract,
+  type EffectiveContract,
+  type EffectiveContractWarning,
+} from './domain/effectiveContract';
+
+export {
+  buildArkRuleFileHints,
+  collectEmptyAppliesToFindings,
+  deriveArkRuleFileHints,
+  evaluateArkRuleSensors,
+  extractClassShapesFromSource,
+  type ClassShapeFact,
+  type ArkRuleSensorViolation,
+} from './domain/arkRuleSensors';
+
+export {
+  canPromoteInvariant,
+  evaluateInvariantCoverage,
+  type InvariantCoverageEvidence,
+} from './domain/invariantCoverage';
+
+export {
+  buildRulesInventory,
+  inventoryToExtractionCard,
+  type RulesInventoryCandidate,
+  type RulesInventoryResult,
+} from './domain/rulesInventory';
+
+export {
   ARK_ENFORCEMENT_STATE_SCHEMA_VERSION,
   type ArkEnforcementHost,
   type ArkEnforcementState,

@@ -10,6 +10,9 @@ import {
 } from './analysis-engine.mjs';
 import { effectiveAnalysisConfig } from './analysis-policy.mjs';
 import { resolveCandidateFacts } from './resolved-candidate-facts.mjs';
+import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
+import { loadInvariantCoverageInputs } from './invariant-coverage-io.mjs';
+import { loadArkRuleFileHints } from './arkrule-file-hints.mjs';
 
 /** Resolve canonical facts and optionally retain filesystem probes for resident invalidation. */
 export function resolveArchitectureSnapshot({
@@ -47,8 +50,38 @@ export function resolveArchitectureSnapshot({
     ...(args?.tsconfig ? { tsconfig: args.tsconfig } : {}),
     observeInput,
   });
-  const loadedContract = loadContract(effectiveConfig, configPath);
-  const analyzed = analyzeTrustedResolvedProject({ contract: loadedContract, facts });
+  const arkRulesLoad = loadEffectiveArkRulesFromDisk(root, effectiveConfig, {
+    observeInput,
+  });
+  if (arkRulesLoad.errors.length > 0) {
+    const message = arkRulesLoad.errors
+      .map((issue) => `- ${issue.path}: ${issue.message}`)
+      .join('\n');
+    const err = new Error(`Invalid Effective Contract (${configPath}):\n${message}`);
+    err.code = 'ARKRULES_LOAD_FAILED';
+    err.issues = arkRulesLoad.errors;
+    throw err;
+  }
+  const loadedContract = loadContract(effectiveConfig, configPath, {
+    arkRules: arkRulesLoad.arkRules,
+  });
+  const hasInvariants = (arkRulesLoad.arkRules?.invariants?.length ?? 0) > 0;
+  const coverageInputs = hasInvariants
+    ? loadInvariantCoverageInputs(root, facts)
+    : undefined;
+  // AR07: Tooling fileHints for orchestration-only / thin-adapter (reuse coverage contents when present).
+  const fileHints = loadArkRuleFileHints(
+    root,
+    facts,
+    arkRulesLoad.arkRules,
+    coverageInputs?.fileContents
+  );
+  const analyzed = analyzeTrustedResolvedProject({
+    contract: loadedContract,
+    facts,
+    ...(coverageInputs ? { coverageInputs } : {}),
+    ...(fileHints ? { fileHints } : {}),
+  });
   const parseHealth = summarizeParseHealth(
     facts.files.map((file) => ({
       relFile: file.path,

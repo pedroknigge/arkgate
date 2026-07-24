@@ -1,7 +1,6 @@
 ---
 name: ark-adopt
 description: Brownfield onboarding — match contract to real product code, classify ungoverned dirs, mine business rules, freeze only real debt, seed Shape dual-plan B for spaghetti residual. Deep source analysis required.
-arkVersion: 3.0.0
 ---
 
 # /ark-adopt — Bring Ark into an existing codebase
@@ -29,6 +28,29 @@ when design smells remain after the contract is honest.
 | **Deterministic** | coverage, doctor, baseline, strict-config after edits |
 | **Exploratory** | walk the real monorepo/app layout; reclassify; mine rules; suggest shape |
 
+
+
+## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+
+ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+
+| Plane | What it protects | Where it lives | Sensors / tools |
+|-------|------------------|----------------|-----------------|
+| **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
+| **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+
+**Rules for every report / answer:**
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
+3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
+4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+
+
+### Adopt + ArkRules
+- After classify: emit or refresh `arkRules` for matched layers (exact names; generic mold for unknowns).
+- Mine rules → inventory + propose invariants/structure; land via `/ark-contract`.
+- Freeze baseline is **[Layer]** debt; inventory residual is **[ArkRules]** — report both.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -86,7 +108,10 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    add layers/patterns via `/ark-contract`.
 4. **Mine business rules → manifiesto** (model job — this is why the skill exists):
    - Scan for loose domain: validators, pricing/policy functions, `can*`/`calculate*`, magic business constants, publish/intent strings, logic in UI/hooks that belongs in Domain.
-   - Propose: Domain files, `intentPrefixes`, intent names (`Domain.*` / `Application.*`), kernel `defineIntent` stubs if runtime is used.
+   - **ArkRules inventory (AR13):** run `ark-check --rules-inventory --json` for deterministic candidates
+     (validation-in-controller, magic constants, anemic entities). Counts are **not a score**.
+   - Propose: Domain files, `intentPrefixes`, intent names (`Domain.*` / `Application.*`), kernel `defineIntent` stubs if runtime is used;
+     land structure/invariant entries under `arkrules/<Layer>.json` via `/ark-contract` (ADR 0015 routing).
    - Apply config through `/ark-contract` discipline; move pure rules into Domain when safe; validate with ark-check.
    - Deliver section **“Así te lo re-soluciono en el manifiesto”** with before/after contract snippets.
 5. **Freeze only real debt** — `--update-baseline` (zero debt → **no empty baseline file** left behind).
@@ -127,6 +152,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 
