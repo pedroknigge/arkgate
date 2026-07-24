@@ -166,6 +166,9 @@ export {
 } from './domain/effectiveContract';
 
 export {
+  buildArkRuleFileHints,
+  collectEmptyAppliesToFindings,
+  deriveArkRuleFileHints,
   evaluateArkRuleSensors,
   extractClassShapesFromSource,
   type ClassShapeFact,

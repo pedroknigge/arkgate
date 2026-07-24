@@ -174,6 +174,112 @@ export function evaluateArkRuleSensors(input) {
         a.message.localeCompare(b.message));
 }
 /**
+ * ADR 0012 D3 — a structure rule whose appliesTo matches zero governed files is
+ * never silent green. Advisory → warning; enforced → failsStrict.
+ * Rules without appliesTo (whole-layer) never emit this signal.
+ */
+export function collectEmptyAppliesToFindings(arkRules, files) {
+    const out = [];
+    const fileList = files.map((f) => f.replace(/\\/g, '/'));
+    for (const rule of arkRules.structure) {
+        if (!rule.appliesTo || rule.appliesTo.length === 0)
+            continue;
+        const matched = fileList.some((file) => matchesAppliesTo(file, rule.appliesTo));
+        if (matched)
+            continue;
+        const { severity, failsStrict } = severityFor(rule);
+        out.push({
+            ruleId: 'ARKRULE_SCOPE_EMPTY',
+            code: 'appliesTo-zero-match',
+            message: `ArkRule structure "${rule.id}" appliesTo matched zero governed files (patterns: ${rule.appliesTo.join(', ')}). A zero-match scope is almost always misconfiguration.`,
+            file: rule.provenance.sourceFile,
+            line: 1,
+            fromLayer: rule.provenance.layer,
+            arkruleId: rule.id,
+            arkruleSource: rule.provenance.sourceFile,
+            severity,
+            sensor: rule.sensor,
+            failsStrict,
+        });
+    }
+    for (const inv of arkRules.invariants ?? []) {
+        if (!inv.appliesTo || inv.appliesTo.length === 0)
+            continue;
+        const matched = fileList.some((file) => matchesAppliesTo(file, inv.appliesTo));
+        if (matched)
+            continue;
+        const failsStrict = inv.mode === 'enforced';
+        out.push({
+            ruleId: 'ARKRULE_SCOPE_EMPTY',
+            code: 'appliesTo-zero-match',
+            message: `ArkRule invariant "${inv.id}" appliesTo matched zero governed files (patterns: ${inv.appliesTo.join(', ')}). A zero-match scope is almost always misconfiguration.`,
+            file: inv.provenance.sourceFile,
+            line: 1,
+            fromLayer: inv.provenance.layer,
+            arkruleId: inv.id,
+            arkruleSource: inv.provenance.sourceFile,
+            severity: failsStrict ? 'error' : 'warning',
+            sensor: 'invariant-coverage',
+            failsStrict,
+        });
+    }
+    return out.sort((a, b) => a.file.localeCompare(b.file) ||
+        a.arkruleId.localeCompare(b.arkruleId) ||
+        a.message.localeCompare(b.message));
+}
+/** IO / ORM import evidence (mirrors design-smells; kept local for Domain purity). */
+const IO_IMPORT_HINT_RE = /\bfrom\s+['"](?:@?prisma\/client|@supabase\/|drizzle-orm|typeorm|knex|mongodb|pg|mysql2|better-sqlite3|ioredis|redis)['"]|require\(\s*['"](?:@?prisma\/client|pg|knex|typeorm)/;
+const HANDLER_SHAPE_HINT_RE = /\b(?:@Controller|@Get|@Post|@Put|@Delete|Router\(\)|createRouter|express\.Router|fastify\.(?:get|post)|export\s+(?:async\s+)?function\s+(?:GET|POST|PUT|DELETE|PATCH)\b|export\s+const\s+(?:GET|POST|PUT|DELETE|PATCH)\s*=)/;
+const FRAMEWORK_HTTP_HINT_RE = /(?:^|[;\n])\s*(?:import\s+(?:type\s+)?(?:[^;]{0,512}?\s+from\s+)?|export\s+(?:type\s+)?[^;]{0,512}?\s+from\s+)['"]next\/server(?:\.js)?['"]/;
+/** Business-predicate / domain branching signals (conservative). */
+const DOMAIN_PREDICATE_HINT_RE = /\b(?:export\s+)?(?:async\s+)?function\s+(?:can|calculate|compute|should|ensure|validate|is|has)[A-Z]\w*|\b(?:export\s+)?const\s+(?:can|calculate|compute|should|ensure|validate|is|has)[A-Z]\w*\s*=/;
+const BUSINESS_BRANCH_HINT_RE = /\bif\s*\(\s*(?:!)?(?:order|invoice|cart|user|account|policy|aggregate|entity|amount|total|balance|status|state)\b/i;
+/**
+ * Pure Tooling/Domain heuristic for orchestration-only / thin-adapter fileHints.
+ * Prefers false negatives over false positives (ADR 0013 discipline).
+ * Returns null when neither flag is set (callers may omit the path).
+ */
+export function deriveArkRuleFileHints(_file, content) {
+    if (!content || content.length < 40)
+        return null;
+    const domainPredicates = content.match(new RegExp(DOMAIN_PREDICATE_HINT_RE.source, 'g')) ?? [];
+    const businessBranches = content.match(new RegExp(BUSINESS_BRANCH_HINT_RE.source, 'g')) ?? [];
+    const ifCount = (content.match(/\bif\s*\(/g) ?? []).length;
+    const switchCount = (content.match(/\bswitch\s*\(/g) ?? []).length;
+    // Orchestration-heavy: strong multi-signal domain logic beyond guard-and-delegate.
+    // Require ≥2 domain-predicate defs, OR one predicate + several domain-shaped branches.
+    const orchestrationHeavy = domainPredicates.length >= 2 ||
+        (domainPredicates.length >= 1 && businessBranches.length >= 2) ||
+        (businessBranches.length >= 3 && ifCount + switchCount >= 6);
+    // Adapter-thick: multi-concern mixing — domain branching + persistence/HTTP in one module.
+    const hasIo = IO_IMPORT_HINT_RE.test(content);
+    const hasHandler = HANDLER_SHAPE_HINT_RE.test(content) || FRAMEWORK_HTTP_HINT_RE.test(content);
+    const hasDomainSignal = domainPredicates.length >= 1 || businessBranches.length >= 2;
+    const hasMapping = /\b(?:mapTo|toDomain|toDto|fromRow|toEntity|fromPrisma|serialize|deserialize)\w*\s*[(=]/.test(content);
+    const adapterThick = (hasIo && hasDomainSignal) ||
+        (hasHandler && hasDomainSignal) ||
+        (hasIo && hasMapping && (ifCount >= 4 || domainPredicates.length >= 1)) ||
+        (hasHandler && hasIo); // hollow-persistence style: HTTP + persistence together
+    if (!orchestrationHeavy && !adapterThick)
+        return null;
+    return {
+        ...(orchestrationHeavy ? { orchestrationHeavy: true } : {}),
+        ...(adapterThick ? { adapterThick: true } : {}),
+    };
+}
+/**
+ * Build fileHints map from path→content. Omits paths with no flags (sparse map).
+ */
+export function buildArkRuleFileHints(fileContents) {
+    const out = {};
+    for (const [file, content] of Object.entries(fileContents)) {
+        const hint = deriveArkRuleFileHints(file, content);
+        if (hint)
+            out[file.replace(/\\/g, '/')] = hint;
+    }
+    return out;
+}
+/**
  * Lightweight class-shape extraction from TypeScript source text (no compiler).
  * Conservative: prefers false negatives over false positives for mutability.
  * Tooling may replace with TypeScript-API facts; sensors consume the same shape.
