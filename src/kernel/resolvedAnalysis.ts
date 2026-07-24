@@ -21,6 +21,8 @@ import {
   classifyPublishFacts,
   resolveIntentLayer,
 } from '../domain/sourcePolicy';
+import { emptyEffectiveArkRules } from '../domain/arkRulesContract';
+import { evaluateArkRuleSensors } from '../domain/arkRuleSensors';
 import { collectAnalysisConfigWarnings } from './configWarnings';
 import { evaluateArchitectureGraph } from './graphEvaluate';
 import type {
@@ -374,13 +376,48 @@ export function analyzeCanonicalResolvedProject(
     files: files.map((file) => file.path),
   });
   const safety = evaluateSafety(input, facts);
+  const arkRuleFindings = evaluateArkRuleSensors({
+    arkRules: input.contract.arkRules ?? emptyEffectiveArkRules(),
+    classShapes: input.contract.classShapes ?? facts.classShapes ?? [],
+    files: files.map((file) => file.path),
+    layerForFile: (path) => layerByFile.get(path) ?? layerForRelativePath(path, input.contract.config.layers),
+  });
+  const arkRuleViolations: ArchitectureEngineViolation[] = arkRuleFindings
+    .filter((finding) => finding.failsStrict)
+    .map((finding) => ({
+      ruleId: finding.ruleId,
+      file: finding.file,
+      line: finding.line,
+      message: finding.message,
+      fromLayer: finding.fromLayer,
+      arkruleId: finding.arkruleId,
+      arkruleSource: finding.arkruleSource,
+      nextAction: `Fix the structure or invariant for ${finding.arkruleId} (declared in ${finding.arkruleSource}), then preflight again.`,
+    }));
+  const arkRuleWarnings: ArchitectureEngineViolation[] = arkRuleFindings
+    .filter((finding) => !finding.failsStrict)
+    .map((finding) => ({
+      ruleId: finding.ruleId,
+      file: finding.file,
+      line: finding.line,
+      message: finding.message,
+      fromLayer: finding.fromLayer,
+      arkruleId: finding.arkruleId,
+      arkruleSource: finding.arkruleSource,
+      failsStrict: false,
+      nextAction: `Review ArkRule ${finding.arkruleId} in ${finding.arkruleSource} (advisory).`,
+    }));
+
   const evaluated = evaluateArchitectureGraph({
     config: input.contract.config,
     rules: input.contract.config.rules,
     files: files.filter((file) => file.layer).map((file) => file.path),
-    contentViolations: contentViolations(input, facts, layerByFile),
+    contentViolations: [
+      ...contentViolations(input, facts, layerByFile),
+      ...arkRuleViolations,
+    ],
     edges,
-    warnings: [...warnings, ...safety.warnings],
+    warnings: [...warnings, ...safety.warnings, ...arkRuleWarnings],
     safety: safety.report,
   });
 

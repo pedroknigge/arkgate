@@ -534,11 +534,11 @@ live in the plan.
 | 83 | `AR02` | `done` | M | `AR01` | Effective Contract loader resolves `arkRules` references with per-rule provenance and feeds `policyHash` (parity across CLI/MCP/ESLint; resident identity invalidates; policy-delta classifies arkrule transitions) |
 | 84 | `AR03` | `done` | M | `AR02` | Adapter contract `1.3→1.4` carries `evidence.arkruleId` + `evidence.arkruleSource`; an arkrule violation renders with provenance on every surface with no surface-specific code |
 | 85 | `AR04` | `done` | S | — | v4 breaking hygiene: deprecated `arkgate/runtime|nestjs` forwarders removed; migration note published; clean-checkout pack green |
-| 86 | `AR05` | `doing` | L | `AR03` | ADR 0013 accepted; class-shape facts land in resolved facts `1.0→1.1` additively within PreToolUse latency budgets |
-| 87 | `AR06` | `todo` | M | `AR05` | Tier-1 sensors `aggregate-private-state`, `always-valid-factory`, `domain-event-on-mutation` block in enforced mode and stay invisible in advisory mode (invariants test-pinned) |
-| 88 | `AR07` | `todo` | M | `AR06` | Tier-1 `orchestration-only` + `thin-adapter` and Tier-2 advisory `no-anemic-model` ship silent on healthy fixtures and this repository |
-| 89 | `AR08` | `todo` | M | `AR01`, `AR06` | Existing archetypes/packs generate lean root config + editable `arkrules/*.json` within the compact onboarding budget |
-| 90 | `AR09` | `todo` | M | `AR03` | ADR 0014 accepted; Domain invariant catalog validates with provenance and is exposed via `ark://manifest` |
+| 86 | `AR05` | `done` | L | `AR03` | ADR 0013 accepted; class-shape facts land in resolved facts `1.0→1.1` additively within PreToolUse latency budgets |
+| 87 | `AR06` | `done` | M | `AR05` | Tier-1 sensors `aggregate-private-state`, `always-valid-factory`, `domain-event-on-mutation` block in enforced mode and stay invisible in advisory mode (invariants test-pinned) |
+| 88 | `AR07` | `done` | M | `AR06` | Tier-1 `orchestration-only` + `thin-adapter` and Tier-2 advisory `no-anemic-model` ship silent on healthy fixtures and this repository |
+| 89 | `AR08` | `done` | M | `AR01`, `AR06` | Existing archetypes/packs generate lean root config + editable `arkrules/*.json` within the compact onboarding budget |
+| 90 | `AR09` | `doing` | M | `AR03` | ADR 0014 accepted; Domain invariant catalog validates with provenance and is exposed via `ark://manifest` |
 | 91 | `AR10` | `todo` | M | `AR09` | Test-title + symbol coverage evidence; `INVARIANT_UNCOVERED` advisory; missing test globs report `partial`, never covered |
 | 92 | `AR11` | `todo` | M | `AR09`, `AR10` | Rule modes with deterministic promotion ladder; demote/delete is hash-acknowledged weakening; uncovered invariants refuse promotion |
 | 93 | `AR12` | `todo` | M | `AR10`, `AR11` | Doctor + HTML "Rules under contract" section (report parity); `ark-contract`/`ark-place` deepened and stamped |
@@ -2880,9 +2880,9 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: `AR05` — ADR 0013 class-shape facts (resolved facts 1.1)
-  (AR01–AR04 done)
-Phase AR (v4 train, AR01–AR04 done; AR05 doing; AR06–AR19 todo): ArkRules intra-layer contract + brownfield rules migration;
+Engineering doing: `AR09` — ADR 0014 invariant catalog + coverage + modes
+  (AR01–AR08 done: foundations, sensors, templates)
+Phase AR (v4 train, AR01–AR08 done; AR09 doing; AR10–AR19 todo): ArkRules intra-layer contract + brownfield rules migration;
   releases 4.0.0 (AR01–AR08, incl. AR04 forwarder removal), 4.1.0 (AR09–AR12),
   4.2.0 (AR13–AR16), 4.3.0 (AR17–AR19); all opt-in/additive; no new skill names; no codemod
 Claim gate: `Z09` (`parked`) — residual RB-11 only (retained adoption + independent close)

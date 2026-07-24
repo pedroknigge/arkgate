@@ -13,6 +13,7 @@ import {
   type ResolvedCandidateFacts,
   type ResolvedCandidateFactsInput,
   type ResolvedCapabilityFact,
+  type ResolvedClassShapeFact,
   type ResolvedDependencyFact,
   type ResolvedFactsReason,
   type ResolvedFileFact,
@@ -101,6 +102,12 @@ function canonicalResolvedFactsInput(
   const safetyUses = input.safetyUses
     .map((fact) => ({ ...fact }))
     .sort(compareCanonical);
+  const classShapes = (input.classShapes ?? [])
+    .map((fact) => ({
+      ...fact,
+      mutatingMethods: [...(fact.mutatingMethods ?? [])].map((method) => ({ ...method })),
+    }))
+    .sort(compareCanonical);
   const candidateTree = input.files
     .map(({ path, contentHash }) => ({ path, contentHash }))
     .sort((left, right) =>
@@ -127,6 +134,7 @@ function canonicalResolvedFactsInput(
     publishCalls,
     intentReferences,
     safetyUses,
+    classShapes,
   };
 }
 
@@ -156,7 +164,11 @@ function asRecord(value: unknown, at: string): Record<string, unknown> {
 function assertOnlyKeys(record: Record<string, unknown>, allowed: readonly string[], at: string): void {
   const known = new Set(allowed);
   const unexpected = Object.keys(record).find((key) => !known.has(key));
-  if (unexpected) throw new Error(`${at}.${unexpected} is not part of schema 1.0.`);
+  if (unexpected) {
+    throw new Error(
+      `${at}.${unexpected} is not part of schema ${RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION}.`
+    );
+  }
 }
 
 function requiredText(record: Record<string, unknown>, key: string, at: string): string {
@@ -279,16 +291,13 @@ function parseResolvedFactsInput(
       'publishCalls',
       'intentReferences',
       'safetyUses',
+      'classShapes',
       ...(withDerivedIdentities ? ['candidateTreeHash', 'factsHash'] : []),
     ],
     '$'
   );
-  const schemaVersion = enumValue(
-    record,
-    'schemaVersion',
-    [RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION],
-    '$'
-  );
+  // Accept 1.0 (pre-classShapes) and current 1.1; normalize on create/load.
+  const schemaVersion = enumValue(record, 'schemaVersion', ['1.0', '1.1'] as const, '$');
   const completeness = enumValue(
     record,
     'completeness',
@@ -568,6 +577,46 @@ function parseResolvedFactsInput(
     }
   }
   const projectPackageName = optionalText(record, 'projectPackageName', '$');
+  const classShapesRaw = record.classShapes === undefined ? [] : requiredArray(record, 'classShapes', '$');
+  const classShapes: ResolvedClassShapeFact[] = classShapesRaw.map((value, index) => {
+    const at = `$.classShapes[${index}]`;
+    const entry = asRecord(value, at);
+    assertOnlyKeys(
+      entry,
+      [
+        'file',
+        'className',
+        'exported',
+        'hasPublicMutableFields',
+        'hasPublicSetters',
+        'hasPublicConstructor',
+        'hasStaticFactory',
+        'mutatingMethods',
+        'dataOnly',
+      ],
+      at
+    );
+    const mutatingMethods = requiredArray(entry, 'mutatingMethods', at).map((method, methodIndex) => {
+      const methodAt = `${at}.mutatingMethods[${methodIndex}]`;
+      const methodRecord = asRecord(method, methodAt);
+      assertOnlyKeys(methodRecord, ['name', 'referencesGuardOrPublish'], methodAt);
+      return {
+        name: requiredText(methodRecord, 'name', methodAt),
+        referencesGuardOrPublish: requiredBoolean(methodRecord, 'referencesGuardOrPublish', methodAt),
+      };
+    });
+    return {
+      file: requiredProjectPath(entry, 'file', at),
+      className: requiredText(entry, 'className', at),
+      exported: requiredBoolean(entry, 'exported', at),
+      hasPublicMutableFields: requiredBoolean(entry, 'hasPublicMutableFields', at),
+      hasPublicSetters: requiredBoolean(entry, 'hasPublicSetters', at),
+      hasPublicConstructor: requiredBoolean(entry, 'hasPublicConstructor', at),
+      hasStaticFactory: requiredBoolean(entry, 'hasStaticFactory', at),
+      mutatingMethods,
+      ...(entry.dataOnly === undefined ? {} : { dataOnly: requiredBoolean(entry, 'dataOnly', at) }),
+    };
+  });
   return {
     schemaVersion,
     completeness,
@@ -585,6 +634,7 @@ function parseResolvedFactsInput(
     publishCalls,
     intentReferences,
     safetyUses,
+    classShapes,
   };
 }
 

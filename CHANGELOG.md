@@ -27,6 +27,15 @@ in the immutable pre-2.0 archive linked below.
   (and the `compat/` forwarders). Import `@arkgate/runtime` / `@arkgate/runtime/nestjs`
   instead. See [migration note](docs/migrate-from-ark-runtime-kernel.md#arkgate-4--ar04--root-runtime-forwarders-removed).
 
+### Added (AR05–AR08)
+
+- **ADR 0013** + resolved facts schema `1.1` optional `classShapes[]` (class-shape evidence).
+- **Tier-1 sensors:** `aggregate-private-state`, `always-valid-factory`,
+  `domain-event-on-mutation`, `orchestration-only`, `thin-adapter`.
+- **Tier-2 advisory:** `no-anemic-model` (never promotable).
+- **Templates:** `templates/arkrules/*.json` + presets/init emit lean `arkRules` refs and
+  copy editable starter files.
+
 ## 3.9.2 — 2026-07-23
 
 **Patch** over 3.9.1. Product honesty for post-validity coaching, coverage/host write paths, and

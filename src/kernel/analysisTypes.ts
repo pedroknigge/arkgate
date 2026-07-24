@@ -32,6 +32,11 @@ export type AnalysisContract = ArkConfigLoadResult & {
    * Included in policyHash when non-empty so arkrules edits invalidate identity.
    */
   arkRules?: EffectiveArkRules;
+  /**
+   * ADR 0013 class-shape facts for ArkRules sensors (Tooling-supplied).
+   * Empty / absent when ArkRules are not active.
+   */
+  classShapes?: import('../domain/arkRuleSensors').ClassShapeFact[];
 };
 
 export type AnalyzeProjectInput = {

@@ -1,6 +1,9 @@
 /**
  * Architecture starter presets for ark-check init/coverage suggestions.
  */
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   applyFrameworkLayoutOverlays,
   createElevenLayerConfig,
@@ -10,6 +13,9 @@ import {
   resolveIncludeRoots,
 } from '../ark-shared.mjs';
 import { withArkConfigMetadata } from './config-contract.mjs';
+
+const PRESETS_DIR = path.dirname(fileURLToPath(import.meta.url));
+const ARKRULES_TEMPLATES_DIR = path.join(PRESETS_DIR, '../../templates/arkrules');
 
 export function denyUpward(names) {
   const rules = [];
@@ -50,9 +56,52 @@ export function peerIsolationEdges(layerNames, sliceFolders, message) {
 // `src/**/domain/**` would otherwise swallow `src/kernel/domain`. Do NOT use `**/kernel/**`
 // (that carves out legitimate `src/shared/kernel/**` SharedKernel paths).
 export const FRAMEWORK_INTERNAL_EXCLUDE = ['src/kernel/**', '**/src/kernel/**'];
+/**
+ * AR08 — attach lean arkRules map for layers that have starter templates.
+ * Keeps root config lean; editable files live under arkrules/.
+ */
+export const DEFAULT_ARKRULES_REFS = {
+  DomainModel: 'arkrules/DomainModel.json',
+  ApplicationOrchestration: 'arkrules/ApplicationOrchestration.json',
+  PresentationAdapters: 'arkrules/PresentationAdapters.json',
+  PersistenceAdapters: 'arkrules/PersistenceAdapters.json',
+};
+
+export function withDefaultArkRules(config) {
+  const layerNames = new Set((config.layers ?? []).map((layer) => layer.name));
+  const arkRules = {};
+  for (const [layer, rel] of Object.entries(DEFAULT_ARKRULES_REFS)) {
+    if (layerNames.has(layer)) arkRules[layer] = rel;
+  }
+  if (Object.keys(arkRules).length === 0) return config;
+  return { ...config, arkRules: { ...(config.arkRules ?? {}), ...arkRules } };
+}
+
+/**
+ * Copy starter arkrules/*.json templates into the project (AR08).
+ * Skips existing files unless force=true.
+ */
+export function writeArkRulesTemplates(root, config, { force = false } = {}) {
+  const refs = config?.arkRules;
+  if (!refs || typeof refs !== 'object') return [];
+  const written = [];
+  for (const rel of Object.values(refs)) {
+    if (typeof rel !== 'string' || !rel.endsWith('.json')) continue;
+    const target = path.join(root, rel);
+    if (fs.existsSync(target) && !force) continue;
+    const base = path.basename(rel);
+    const source = path.join(ARKRULES_TEMPLATES_DIR, base);
+    if (!fs.existsSync(source)) continue;
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(source, target);
+    written.push(rel);
+  }
+  return written;
+}
+
 export function presetWithOverlays(baseConfig, root) {
   const config = root ? applyFrameworkLayoutOverlays(baseConfig, root) : baseConfig;
-  return withArkConfigMetadata(config);
+  return withArkConfigMetadata(withDefaultArkRules(config));
 }
 
 export const ARCHITECTURE_PRESETS = {

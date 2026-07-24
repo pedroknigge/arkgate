@@ -83,9 +83,8 @@ describe('Z04 resolved candidate facts contract', () => {
     // Schema module stays import-free for generate-cli-pure; guard against dual-literal drift.
     expect(TYPES_FACTS_SCHEMA_VERSION).toBe(SCHEMA_MODULE_VERSION);
     expect(RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION).toBe(TYPES_FACTS_SCHEMA_VERSION);
-    expect(RESOLVED_CANDIDATE_FACTS_SCHEMA.properties.schemaVersion.const).toBe(
-      RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION
-    );
+    expect(RESOLVED_CANDIDATE_FACTS_SCHEMA.properties.schemaVersion.enum).toEqual(['1.0', '1.1']);
+    expect(RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION).toBe('1.1');
     expect(
       RESOLVED_CANDIDATE_FACTS_SCHEMA.properties.capabilityUses.items.properties.capability.enum
     ).toEqual([...RESOLVED_CAPABILITY_IDS]);
@@ -117,7 +116,7 @@ describe('Z04 resolved candidate facts contract', () => {
     });
 
     expect(first).toEqual(second);
-    expect(first.schemaVersion).toBe('1.0');
+    expect(first.schemaVersion).toBe('1.1');
     expect(first.factsHash).toMatch(/^fnv1a-/);
     expect(RESOLVED_CANDIDATE_FACTS_SCHEMA.required).toContain('factsHash');
     expect(JSON.stringify(first)).not.toMatch(/fromLayer|toLayer|violations|ruleId/);

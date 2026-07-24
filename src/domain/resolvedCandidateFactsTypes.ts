@@ -5,7 +5,9 @@
  * resolvedCandidateFacts.ts; JSON Schema lives in resolvedCandidateFactsSchema.ts.
  */
 
-export const RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION = '1.0' as const;
+/** 1.1 adds optional classShapes[] (ADR 0013). 1.0 payloads remain loadable. */
+export const RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION = '1.1' as const;
+export const RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSIONS = ['1.0', '1.1'] as const;
 
 export type ResolvedFactsCompleteness = 'complete' | 'partial' | 'unavailable';
 export type ResolvedDependencyKind = 'import' | 'export' | 'dynamic-import' | 'require';
@@ -47,6 +49,22 @@ export type ResolvedFileFact = {
   exportsOnlyTypes: boolean;
   typeOnlyExportNames: string[];
   hasTopLevelSideEffects: boolean;
+};
+
+/** ADR 0013 class-shape evidence for ArkRules structure sensors. */
+export type ResolvedClassShapeFact = {
+  file: string;
+  className: string;
+  exported: boolean;
+  hasPublicMutableFields: boolean;
+  hasPublicSetters: boolean;
+  hasPublicConstructor: boolean;
+  hasStaticFactory: boolean;
+  mutatingMethods: readonly {
+    name: string;
+    referencesGuardOrPublish: boolean;
+  }[];
+  dataOnly?: boolean;
 };
 
 export type ResolvedDependencyFact = {
@@ -110,7 +128,7 @@ export type ResolvedSafetyFact = {
 };
 
 export type ResolvedCandidateFactsInput = {
-  schemaVersion: typeof RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION;
+  schemaVersion: '1.0' | typeof RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION;
   completeness: ResolvedFactsCompleteness;
   completenessReasons: readonly ResolvedFactsReason[];
   resolverIdentity: string;
@@ -126,9 +144,12 @@ export type ResolvedCandidateFactsInput = {
   publishCalls: readonly ResolvedPublishFact[];
   intentReferences: readonly ResolvedIntentReferenceFact[];
   safetyUses: readonly ResolvedSafetyFact[];
+  /** ADR 0013 — optional on 1.0; default [] on load. */
+  classShapes?: readonly ResolvedClassShapeFact[];
 };
 
-export type ResolvedCandidateFacts = Omit<ResolvedCandidateFactsInput, 'candidateTreeHash'> & {
+export type ResolvedCandidateFacts = Omit<ResolvedCandidateFactsInput, 'candidateTreeHash' | 'classShapes'> & {
+  schemaVersion: typeof RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION;
   completenessReasons: ResolvedFactsReason[];
   candidateTreeHash: string;
   files: ResolvedFileFact[];
@@ -138,5 +159,6 @@ export type ResolvedCandidateFacts = Omit<ResolvedCandidateFactsInput, 'candidat
   publishCalls: ResolvedPublishFact[];
   intentReferences: ResolvedIntentReferenceFact[];
   safetyUses: ResolvedSafetyFact[];
+  classShapes: ResolvedClassShapeFact[];
   factsHash: string;
 };

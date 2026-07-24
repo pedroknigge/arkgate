@@ -20,6 +20,7 @@ decision; implementation and manifests remain authoritative for current structur
 | [0010](0010-reshape-copilot-boundary.md) | Physical cohesion is advisory; reshape remains judgment | Accepted |
 | [0011](0011-resolved-candidate-facts-boundary.md) | Versioned resolved candidate facts are the parity-capable analysis input | Accepted |
 | [0012](0012-arkrules-contract-composition.md) | ArkRules contract and modular composition (intra-layer rules) | Accepted |
+| [0013](0013-arkrules-structural-sensors.md) | Intra-layer structural sensors are resolver facts, not style lint | Accepted |
 
 Do not renumber or delete accepted decisions. Add a superseding ADR when a durable decision
 changes, and link both records.

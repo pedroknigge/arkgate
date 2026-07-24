@@ -84,7 +84,11 @@ import {
   detectBestFitModel,
   dirSegmentsFromGlob,
 } from './lib/suggestions.mjs';
-import { ARCHITECTURE_PRESETS } from './lib/presets.mjs';
+import {
+  ARCHITECTURE_PRESETS,
+  withDefaultArkRules,
+  writeArkRulesTemplates,
+} from './lib/presets.mjs';
 import { loadArkConfigContract, parseArkConfigJson } from './lib/config-contract.mjs';
 import { createAdapterResult } from './lib/adapter-contract.mjs';
 import { collectGovernedFiles, normalize, walk } from './lib/scan-files.mjs';
@@ -515,6 +519,7 @@ function runApplyPolicyPack(args) {
   try {
     const { pack, config } = buildConfigFromPolicyPack(args.applyPolicyPack, args.root);
     fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    writeArkRulesTemplates(args.root, config, { force: args.force === true });
     if (args.json) {
       console.log(
         JSON.stringify(
@@ -750,6 +755,12 @@ function runInit(args) {
       args.root
     );
     fs.writeFileSync(configPath, `${JSON.stringify(finalConfig, null, 2)}\n`);
+    const arkrulesWritten = writeArkRulesTemplates(args.root, finalConfig, {
+      force: args.force === true,
+    });
+    if (arkrulesWritten.length > 0) {
+      console.log(`Wrote ArkRules templates: ${arkrulesWritten.join(', ')}`);
+    }
     console.log(`Wrote ${configPath} (${args.preset} preset)`);
     if (finalConfig.frameworkOverlay) {
       console.log(
@@ -788,7 +799,7 @@ function runInit(args) {
   // scaffold under) even when src/ doesn't exist yet — the layers are optional, so the
   // check passes today and governance switches on the moment src/domain/ etc. appear.
   // Detected configs also get framework overlays so Nest/Next flat files are classified.
-  const finalConfig =
+  const finalConfig = withDefaultArkRules(
     mode === 'detected'
       ? applyFrameworkLayoutOverlays(config, args.root)
       : mode === 'monorepo'
@@ -799,9 +810,11 @@ function runInit(args) {
         : createElevenLayerConfig({
             rootDir: srcDir === '.' ? 'src' : srcDir,
             root: args.root,
-          });
+          })
+  );
 
   fs.writeFileSync(configPath, `${JSON.stringify(finalConfig, null, 2)}\n`);
+  writeArkRulesTemplates(args.root, finalConfig, { force: args.force === true });
 
   console.log(`Wrote ${configPath}`);
   console.log('');

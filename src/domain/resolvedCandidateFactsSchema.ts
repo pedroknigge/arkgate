@@ -6,7 +6,7 @@
  * RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION in resolvedCandidateFactsTypes.ts.
  */
 
-export const RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION = '1.0' as const;
+export const RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION = '1.1' as const;
 
 const RESOLVED_CAPABILITY_IDS = [
   'network',
@@ -53,7 +53,7 @@ export const RESOLVED_CANDIDATE_FACTS_SCHEMA = {
     'factsHash',
   ],
   properties: {
-    schemaVersion: { const: RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION },
+    schemaVersion: { enum: ['1.0', '1.1'] },
     completeness: { enum: ['complete', 'partial', 'unavailable'] },
     completenessReasons: {
       type: 'array',
@@ -225,6 +225,45 @@ export const RESOLVED_CANDIDATE_FACTS_SCHEMA = {
             else: { not: { required: ['symbol'] } },
           },
         ],
+      },
+    },
+    classShapes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: [
+          'file',
+          'className',
+          'exported',
+          'hasPublicMutableFields',
+          'hasPublicSetters',
+          'hasPublicConstructor',
+          'hasStaticFactory',
+          'mutatingMethods',
+        ],
+        properties: {
+          file: projectPathSchema,
+          className: textSchema,
+          exported: { type: 'boolean' },
+          hasPublicMutableFields: { type: 'boolean' },
+          hasPublicSetters: { type: 'boolean' },
+          hasPublicConstructor: { type: 'boolean' },
+          hasStaticFactory: { type: 'boolean' },
+          dataOnly: { type: 'boolean' },
+          mutatingMethods: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['name', 'referencesGuardOrPublish'],
+              properties: {
+                name: textSchema,
+                referencesGuardOrPublish: { type: 'boolean' },
+              },
+            },
+          },
+        },
       },
     },
     factsHash: textSchema,
