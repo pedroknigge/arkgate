@@ -5,14 +5,18 @@
  * enter the static edge graph. Surface them as an advisory count + capped list
  * so governed trees know where analysis is incomplete — never a hard verdict
  * change, never false green from silence.
+ *
+ * Performance: lightweight AST walk only (no extractSemanticDependencies /
+ * full semantic binding). Doctor resident warm must stay under the 500 ms UX
+ * ceiling at the 10k fixture.
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { extractSemanticDependencies } from './analysis-engine.mjs';
 import { normalize } from './scan-files.mjs';
 
 const MAX_LIST = 8;
 const MAX_FILE_BYTES = 256 * 1024;
+const LEXICAL_GATE = /\b(?:import|require)\s*\(|\bimport\s+\w+\s*=\s*require\s*\(/;
 
 /**
  * Classify an unresolved dynamic dependency argument.
@@ -37,6 +41,54 @@ export function unresolvedDependencyArg(ts, node) {
   if (modRef && typeof modRef === 'object' && modRef.expression) return modRef.expression;
   if (ts?.isExternalModuleReference?.(modRef) && modRef.expression) return modRef.expression;
   return undefined;
+}
+
+/**
+ * Collect unresolvable dynamic import/require call sites with a shallow walk.
+ * Avoids extractSemanticDependencies (full binding / export walk) on every file.
+ */
+function collectDynamicBlindEdges(ts, sourceFile, rel, edges) {
+  const visit = (node) => {
+    // import('x') / require('x') / import(`./${x}`)
+    if (ts.isCallExpression(node) && node.expression) {
+      const expr = node.expression;
+      const isImport =
+        expr.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(expr) && expr.text === 'import');
+      const isRequire = ts.isIdentifier(expr) && expr.text === 'require';
+      if (isImport || isRequire) {
+        const arg = node.arguments?.[0];
+        const reason = classifyUnresolvedDependencyArg(ts, arg);
+        if (reason) {
+          const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+          edges.push({
+            file: rel,
+            line: line + 1,
+            kind: isRequire ? 'require' : 'import',
+            reason,
+          });
+        }
+      }
+    }
+
+    // import x = require(expr)
+    if (ts.isImportEqualsDeclaration?.(node) && node.moduleReference) {
+      const arg = unresolvedDependencyArg(ts, node);
+      const reason = classifyUnresolvedDependencyArg(ts, arg);
+      if (reason) {
+        const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+        edges.push({
+          file: rel,
+          line: line + 1,
+          kind: 'require',
+          reason,
+        });
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
 }
 
 /**
@@ -81,24 +133,11 @@ export function detectGraphBlindSpots(ts, root, files = []) {
       continue;
     }
     // Cheap lexical gate — dynamic import/require and import-equals require forms.
-    if (!/\b(?:import|require)\s*\(/.test(source) && !/\bimport\s+\w+\s*=\s*require\s*\(/.test(source)) {
-      continue;
-    }
-    const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+    if (!LEXICAL_GATE.test(source)) continue;
+    // setParentNodes=false: we only need positions + node kinds.
+    const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.ESNext, false);
     const rel = normalize(path.relative(resolvedRoot, path.resolve(file)));
-    for (const dependency of extractSemanticDependencies(ts, sourceFile)) {
-      if (!dependency.unresolved) continue;
-      if (dependency.kind !== 'dynamic-import' && dependency.kind !== 'require') continue;
-      const arg = unresolvedDependencyArg(ts, dependency.node);
-      const reason = classifyUnresolvedDependencyArg(ts, arg);
-      if (!reason) continue;
-      edges.push({
-        file: rel,
-        line: dependency.line,
-        kind: dependency.kind === 'require' ? 'require' : 'import',
-        reason,
-      });
-    }
+    collectDynamicBlindEdges(ts, sourceFile, rel, edges);
   }
 
   edges.sort(
