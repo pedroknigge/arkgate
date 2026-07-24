@@ -16,9 +16,8 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 4.0.0** is prepared on this line (ArkRules opt-in + AR04 breaking forwarder removal).
-> Last npm `latest` remains **3.9.2** until publish. [4.0.0 notes](docs/releases/4.0.0.md) ·
-> [3.9.2](docs/releases/3.9.2.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> **ArkGate 4.0.0** is on npm `latest` (ArkRules opt-in + AR04 breaking forwarder removal).
+> [4.0.0 notes](docs/releases/4.0.0.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
 
@@ -186,8 +185,8 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Latest prepared (4.0.0) | [docs/releases/4.0.0.md](docs/releases/4.0.0.md) · [CHANGELOG](CHANGELOG.md) |
-| Last published (3.9.2) | [docs/releases/3.9.2.md](docs/releases/3.9.2.md) |
+| Current published (4.0.0) | [docs/releases/4.0.0.md](docs/releases/4.0.0.md) · [CHANGELOG](CHANGELOG.md) |
+| Previous (3.9.2) | [docs/releases/3.9.2.md](docs/releases/3.9.2.md) |
 | History / maintainer evidence | [docs/archive/](docs/archive/README.md) |
 
 ---

@@ -104,14 +104,12 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
     expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
   });
 
-  it('public release pointers cover prepared 4.0.0 and last published 3.9.2', () => {
+  it('public release pointers cover published 4.0.0', () => {
     expect(read('README.md')).toMatch(/4\.0\.0/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.0\.0\.md/);
-    expect(read('README.md')).toMatch(/3\.9\.2/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*3\.9\.2/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Next prepared release:.*4\.0\.0/s);
+    expect(read('README.md')).toMatch(/npm `latest`|on npm/);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.0\.0/s);
     expect(read('docs/package-surface.md')).toMatch(/4\.0\.0\.md/);
-    expect(read('docs/package-surface.md')).toMatch(/3\.9\.2\.md/);
   });
 });
 
@@ -127,12 +125,12 @@ describe('CHANGELOG + release note cover 4.0.0 ArkRules major', () => {
     expect(body).not.toMatch(/do not publish as 3\.9\.x/i);
   });
 
-  it('docs/releases/4.0.0.md has upgrade path and prepare honesty', () => {
+  it('docs/releases/4.0.0.md has upgrade path and published honesty', () => {
     const body = read('docs/releases/4.0.0.md');
     expect(body).toMatch(/arkgate@4\.0\.0/);
     expect(body).toMatch(/npm install -D arkgate@4\.0\.0/);
     expect(body).toMatch(/@arkgate\/runtime/);
-    expect(body).toMatch(/Status:\*\*\s*prepared/i);
+    expect(body).toMatch(/Status:\*\*\s*published/i);
     expect(body).toMatch(/Z09|RB-11/i);
     expect(body).toMatch(/opt-in|arkRules/i);
     expect(body).toMatch(/84\.5%.*83\.0%|branch floor/i);
