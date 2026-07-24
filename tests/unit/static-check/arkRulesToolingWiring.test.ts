@@ -232,6 +232,8 @@ export async function save(order: Order) {
     expect(html).toContain('INV-MISSING');
     expect(html).toContain('INV-ORDER-001');
     expect(html).toContain('Structure sensors');
+    expect(html).toMatch(/Heuristics of module shape/i);
+    expect(html).toMatch(/not a claim that business semantics/i);
     expect(html).not.toMatch(/counts — not a score/i);
   });
 });

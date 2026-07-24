@@ -51,6 +51,13 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
   Inactive map stays a short opt-in note. Counts are never a score.
 - Spoken tour: name 2–4 real invariant IDs and one structure sensor from this repo’s
   `arkrules/*` (open the files — do not invent). Residual candidates → `--rules-inventory`.
+- **Teach the product model (required when arkRules is active):**
+  - **[Layer]** = dependency direction / purity / capabilities.
+  - **[ArkRules] structure** = module-shape **heuristics** (orchestration-only, thin-adapter, …);
+    enforced is not proof of Domain extraction.
+  - **[ArkRules] invariants** = named business policies as **data + coverage evidence**
+    (symbol/test); not a runtime engine and not a substitute for behavior tests.
+  - Green edges + covered catalog ≠ elegant Shape (design-weak residual stays honest).
 - Never merge Layers and ArkRules into one “architecture score.”
 
 ## Subagent fan-out (optional, host-dependent)

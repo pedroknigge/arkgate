@@ -119,20 +119,36 @@ policy.
 
 Sibling schema export: `arkgate/schema/arkrules` (`schemas/ark.arkrules.schema.json`).
 
+**Two planes (never one score):**
+
+| Plane | Question | Where |
+|-------|----------|--------|
+| **[Layer]** (inter-layer) | Who may import whom? Pure / forbidden globals / capabilities? | `layers[]` + `rules[]` |
+| **[ArkRules]** (intra-layer, opt-in) | How is code shaped *inside* a layer, and which named business policies are catalogued with coverage evidence? | `arkRules` map + `arkrules/<ExactLayerName>.json` |
+
+Absence of `arkRules` is valid: only the Layers plane runs; inter-layer verdict is unchanged.
+
 Each `arkrules/<Layer>.json` may declare:
 
-| Section | Purpose | Modes |
-|---------|---------|--------|
-| `structure[]` | Closed sensor ids (e.g. `aggregate-private-state`, `always-valid-factory`, `thin-adapter`) | `advisory` (default) or `enforced` |
-| `invariants[]` | Stable ids + description + optional coverage (`test` / `symbol`) | `advisory` or `enforced` |
+| Section | Purpose | Modes | What it really enforces |
+|---------|---------|--------|-------------------------|
+| `structure[]` | Closed sensor ids (e.g. `orchestration-only`, `thin-adapter`, `aggregate-private-state`, `always-valid-factory`, `domain-event-on-mutation`, `no-anemic-model`) | `advisory` (default) or `enforced` | **Heuristics of module shape** — not proof that logic was extracted to Domain. Tier-2 sensors (`no-anemic-model`) stay advisory-only (cannot promote to enforced). |
+| `invariants[]` | Stable ids + description + `coverage` (`test` / `symbol`) + optional `appliesTo` globs | `advisory` or `enforced` | **Named policy + evidence** (symbol in source and/or test title/content). Does **not** execute business logic at check time and does **not** replace behavior/property tests. |
 
 **Reporting:** diagnostics carry `evidence.arkruleId` + `evidence.arkruleSource`. Label residual
-**`[Layer]`** (import edges / capabilities) vs **`[ArkRules]`** (structure / invariants) in agent
-output. Doctor JSON: `rulesUnderContract` (counts, never a score).
+**`[Layer]`** vs **`[ArkRules]`** in agent output. Doctor / HTML: `rulesUnderContract` (catalog +
+counts, **never a score**). Showcase HTML lists per-layer totals, structure sensors, uncovered
+invariants, and a covered sample when the map is active.
 
 **Promotion:** advisory→enforced is strengthening when coverage evidence exists; demote/delete is
 a hash-bound policy weakening. Empty `appliesTo: []` fails closed; zero-match globs emit
-`ARKRULE_SCOPE_EMPTY` (advisory warn / enforced fail).
+`ARKRULE_SCOPE_EMPTY` (advisory warn / enforced fail). Enforced + proven uncovered →
+`INVARIANT_UNCOVERED` with `failsStrict` (partial evidence stays honest, never fake-green).
+
+**What they do not do:** prove business semantics end-to-end; replace Layers import edges;
+make “green” mean elegant Shape. Promoting structure to enforced can force rename-to-pass
+heuristics — prefer judgment extraction via `/ark-fix` / `/ark-loop` when the real goal is
+Domain ownership.
 
 ```bash
 # Brownfield candidates (not a score)

@@ -267,8 +267,10 @@ export function formatRulesUnderContractHtml(section, esc) {
   <section class="section card" data-advisory="rulesUnderContract">
     <h2>Rules under contract <span class="muted">(ArkRules — not a score)</span></h2>
     <p class="dim" style="margin:.15rem 0 .55rem;font-size:.88rem">
-      <b>[ArkRules]</b> Intra-layer plane: structure sensors + domain invariants as data.
-      Separate from <b>[Layer]</b> import edges above. Never a fitness score.
+      <b>[ArkRules]</b> Intra-layer plane — separate from <b>[Layer]</b> import edges above.
+      <b>Structure</b> = module-shape heuristics (not proof of Domain extraction).
+      <b>Invariants</b> = named policies + coverage evidence (symbol/test), not a business runtime
+      and not a fitness score.
     </p>
     <div class="kpis" style="margin-bottom:.55rem">
       <div class="kpi"><b>${Number(section.structureRules) || 0}</b><span>Structure rules</span></div>
@@ -281,11 +283,17 @@ export function formatRulesUnderContractHtml(section, esc) {
     ${
       structure.length
         ? `<h3 style="margin-top:.9rem;font-size:.95rem">Structure sensors</h3>
+      <p class="muted" style="margin:.15rem 0 .4rem;font-size:.84rem">Heuristics of module shape. Enforced fails the check; it does not prove extraction to Domain.</p>
       <ul class="senior-list">${structureItems}</ul>${structureMore}`
         : '<p class="muted" style="margin-top:.55rem">No structure sensors in loaded ArkRules files.</p>'
     }
     ${uncoveredBlock}
     ${coveredBlock}
+    ${
+      coveredSample.length || uncovered.length
+        ? `<p class="muted" style="margin-top:.65rem;font-size:.84rem">Covered = catalog evidence found (symbol and/or test title). Not a claim that business semantics are fully proven end-to-end.</p>`
+        : ''
+    }
     ${note}
   </section>`;
 }

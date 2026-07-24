@@ -40,12 +40,14 @@ ArkGate is **not** a web framework, ORM, or app runtime. It is architecture enfo
 
 ### Two planes (you choose)
 
-| Plane | Plain English | Config |
-|-------|---------------|--------|
-| **Layers** | Who may talk to whom (imports, purity) | `ark.config.json` layers + rules |
-| **ArkRules** (optional) | Habits *inside* a layer (aggregates, factories, named invariants) | `arkRules` + `arkrules/<Layer>.json` |
+| Plane | Plain English | Config | Enforces |
+|-------|---------------|--------|----------|
+| **Layers** | Who may talk to whom | `layers[]` + `rules[]` | Import direction, purity, forbidden globals, capabilities, peer isolation |
+| **ArkRules** (optional) | Habits *inside* a layer + named policies | `arkRules` + `arkrules/<Layer>.json` | Structure **heuristics** (module shape); invariant **catalog + coverage evidence** (not full business proof) |
 
-Start always gives you **layers**. ArkRules templates may ship with start/init; they begin **advisory** until you promote them. Doctor may show `rulesUnderContract` counts (not a score).
+Start always gives you **layers**. ArkRules templates may ship with start/init; they begin **advisory** until you promote them. Doctor / HTML show `rulesUnderContract` (catalog, **not a score**). No `arkRules` map is fine — only Layers run.
+
+**Do not confuse:** green Layers ≠ perfect design (Shape residual can remain). Covered invariants ≠ “the business always does the right thing” — they mean the named policy is declared and has symbol/test evidence.
 
 ---
 

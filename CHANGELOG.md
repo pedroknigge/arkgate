@@ -16,6 +16,10 @@ in the immutable pre-2.0 archive linked below.
   parse health, graph blind spots, ArkRules) render with `class="section card"` so they
   match the white panel styling of Layers / Violations / Enforcement (were bare
   `<section data-advisory>` on the page background).
+- **Dual-plane honesty in product surfaces:** configuration / use / product-voice /
+  `/ark-explain` and the ArkRules HTML strip state that structure sensors are heuristics,
+  invariants are catalog + coverage evidence (not a business runtime), and the two planes
+  never merge into one architecture score.
 
 ### Fixed
 
