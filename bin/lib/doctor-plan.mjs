@@ -530,9 +530,15 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     ? [...baseline.keys].filter((key) => !currentKeys.has(key)).length
     : 0;
   const activeCount = violations.length - suppressed;
+  // productHonesty: blocking = failsStrict !== false only (type-only placement debt excluded).
+  const blockingActive = violations.filter((v, index) => {
+    if (v.failsStrict === false) return false;
+    if (!baseline.exists) return true;
+    return !baseline.keys.has(occurrenceKeys[index]);
+  }).length;
   const designSmells = detectDesignSmells(root, config, files, cov);
   const observedDesignFitness = summarizeDesignFitness(designSmells, {
-    activeViolations: activeCount,
+    activeViolations: blockingActive,
     governedPercent: cov.governed.percent,
     totalFiles: cov.governed.totalFiles,
   });
@@ -602,6 +608,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       baselineExists: baseline.exists,
       frozenKeys: baseline.exists ? baseline.keys.size : 0,
       activeViolations: activeCount,
+      activeBlockingViolations: blockingActive,
       suppressed,
       totalViolations: violations.length,
       activeHost: writePath.activeHost,
@@ -609,7 +616,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       designWeak: designFitness.designWeak === true,
       designWeakLabel: designFitness.label,
       designSmellCount: designSmells.length,
-      designSmellsWithOpenEdges: designSmells.length > 0 && activeCount > 0,
+      designSmellsWithOpenEdges: designSmells.length > 0 && blockingActive > 0,
       packageVersionTruth,
       residualPilots: Boolean(residualPilot) && designFitness.designWeak === true,
       pilotTarget: residualPilot?.pilotTarget ?? residualPilot?.pilot ?? null,

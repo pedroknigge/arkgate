@@ -241,16 +241,30 @@ export async function planStart(args, helpers) {
   const root = args.root;
   const before = treeFiles(root);
   let recommendation = null;
-  try {
-    const rec = buildArchitectureRecommendation(root);
+  // Wire --archetype / --preset into the plan so apply locks the chosen shape (not just recommend).
+  if (args.archetype || args.preset) {
     recommendation = {
-      archetype: rec.archetype,
-      label: rec.label,
-      confidence: rec.confidence,
-      mature: rec.mature,
+      archetype: args.archetype || args.preset,
+      label: args.archetype
+        ? `explicit archetype ${args.archetype}`
+        : `explicit preset ${args.preset}`,
+      confidence: 1,
+      mature: false,
+      explicitShape: true,
+      preset: args.preset || null,
     };
-  } catch {
-    recommendation = null;
+  } else {
+    try {
+      const rec = buildArchitectureRecommendation(root);
+      recommendation = {
+        archetype: rec.archetype,
+        label: rec.label,
+        confidence: rec.confidence,
+        mature: rec.mature,
+      };
+    } catch {
+      recommendation = null;
+    }
   }
   const shadowRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-start-preview-'));
   try {
@@ -270,6 +284,9 @@ export async function planStart(args, helpers) {
     else childArgs.push('--install');
     if (args.tools) childArgs.push('--tools', args.tools);
     if (args.requireWriteHook) childArgs.push('--require-write-hook', args.requireWriteHook);
+    // Lock archetype/preset into the shadow apply so the plan matches the gate bypass.
+    if (args.archetype) childArgs.push('--archetype', args.archetype);
+    if (args.preset) childArgs.push('--preset', args.preset);
     const planned = spawnSync(process.execPath, [helpers.cliPath, ...childArgs], {
       cwd: shadowRoot,
       encoding: 'utf8',

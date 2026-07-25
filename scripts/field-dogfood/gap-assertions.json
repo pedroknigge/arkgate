@@ -18,30 +18,47 @@
       "id": "P0B-FINISHED-WITH-OPEN-DEBT",
       "slice": "S1",
       "severity": "high",
-      "status": "open",
+      "status": "closed",
       "check": "unit",
-      "evidence": "productHonesty.finished false when active blocking violations or mode adapt with debt",
-      "softSkipIf": "S1 productHonesty redefinition not fully landed",
+      "evidence": "productHonesty.finished false when active blocking violations or mode adapt with residual; type-only excluded from blocking",
       "vitest": ["tests/unit/static-check/fieldP0P1P2_4_1_0.test.ts", "tests/unit/static-check/enforcementHonesty.test.ts"]
     },
     {
       "id": "FG-FINISHED-ADAPT-DEBT",
       "slice": "S1",
       "severity": "high",
-      "status": "open",
+      "status": "closed",
       "check": "unit",
-      "evidence": "productHonesty unfinished with red graph / adapt residual",
+      "evidence": "productHonesty unfinished with red graph / adapt residual unless whole-tree green + zero smells + zero blocking",
       "vitest": ["tests/unit/static-check/enforcementHonesty.test.ts"]
     },
     {
       "id": "NEW-MONOREPO-CWD-WALKUP",
       "slice": "S2",
       "severity": "critical",
-      "status": "open",
-      "check": "soft",
-      "evidence": "cd apps/web finds monorepo ark.config via walk-up",
-      "softSkipIf": "S2 config walk-up not present",
-      "featureProbe": "configWalkUp"
+      "status": "closed",
+      "check": "unit",
+      "evidence": "cd apps/web finds monorepo ark.config via walk-up; write paths stay on --root unless --follow-config-root",
+      "featureProbe": "configWalkUp",
+      "vitest": ["tests/unit/static-check/projectRootWalkUp.test.ts"]
+    },
+    {
+      "id": "S3-CLASSIFICATION-START-ADOPT",
+      "slice": "S3",
+      "severity": "high",
+      "status": "closed",
+      "check": "unit",
+      "evidence": "SPA preset, adopt heuristics, migrate-contract, start confidence gate",
+      "vitest": ["tests/unit/static-check/fieldGapS3Classification.test.ts"]
+    },
+    {
+      "id": "S4-FORCE-GATES-AGENTS",
+      "slice": "S4",
+      "severity": "high",
+      "status": "closed",
+      "check": "unit",
+      "evidence": "force preserve customized AGENTS content-identity + managed digest recompute",
+      "vitest": ["tests/unit/static-check/fieldGapS4.test.ts"]
     },
     {
       "id": "P0C-ESLINT-UNVERIFIED",
@@ -77,7 +94,7 @@
       "id": "productHonesty-unfinished-with-violations",
       "slice": "S1",
       "severity": "high",
-      "status": "tracking",
+      "status": "closed",
       "check": "unit",
       "evidence": "finished false when honesty reasons present (design-weak, coverage, dual-truth, dirty freeze)",
       "vitest": ["tests/unit/static-check/fieldP0P1P2_4_1_0.test.ts"]

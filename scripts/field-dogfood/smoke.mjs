@@ -25,6 +25,7 @@ function loadManifest() {
 /** Soft feature probes — return true when the tree already has the behavior. */
 function featureProbes() {
   const walkUpCandidates = [
+    path.join(REPO, 'bin/lib/project-root.mjs'),
     path.join(REPO, 'bin/lib/config-discovery.mjs'),
     path.join(REPO, 'bin/lib/find-config.mjs'),
     path.join(REPO, 'bin/lib/config-root.mjs'),
@@ -33,18 +34,22 @@ function featureProbes() {
   for (const p of walkUpCandidates) {
     if (!fs.existsSync(p)) continue;
     const body = fs.readFileSync(p, 'utf8');
-    if (/walk.?up|walkUp|parent.*ark\.config|findConfigRoot/i.test(body)) {
+    if (
+      /walk.?up|walkUp|parent.*ark\.config|findConfigRoot|findNearestArkConfig|resolveEffectiveProjectRoot/i.test(
+        body
+      )
+    ) {
       configWalkUp = true;
       break;
     }
   }
   // Also probe shared CLI config resolution for walk-up language
   if (!configWalkUp) {
-    for (const rel of ['bin/ark-shared.mjs', 'bin/lib/scan-files.mjs', 'bin/ark-check.mjs']) {
+    for (const rel of ['bin/ark-shared.mjs', 'bin/lib/scan-files.mjs', 'bin/ark-check.mjs', 'bin/ark-check-runtime.mjs']) {
       const p = path.join(REPO, rel);
       if (!fs.existsSync(p)) continue;
       const body = fs.readFileSync(p, 'utf8');
-      if (/walkParents|walk.?up.*ark\.config|findNearestArkConfig|configRoot/i.test(body)) {
+      if (/walkParents|walk.?up.*ark\.config|findNearestArkConfig|configRoot|resolveEffectiveProjectRoot/i.test(body)) {
         configWalkUp = true;
         break;
       }

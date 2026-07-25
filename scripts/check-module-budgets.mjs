@@ -16,12 +16,15 @@ const BUDGETS = [
   { path: 'bin/ark-check.mjs', max: 100 },
   // 4.0.0 ArkRules write-path + inventory flags — was 1600 (loc 1671).
   // 4.1.x monorepo config walk-up (S2 / NEW-MONOREPO-CWD-WALKUP) — was 1750.
-  { path: 'bin/ark-check-runtime.mjs', max: 1900 },
-  { path: 'bin/ark.mjs', max: 900 },
+  // S0 security: write-root split + config path contain + teeth demote — was 1900.
+  { path: 'bin/ark-check-runtime.mjs', max: 1920 },
+  // S3 start confidence gate on all apply paths — was 900 (loc ~920).
+  { path: 'bin/ark.mjs', max: 940 },
   { path: 'bin/lib/agent-gates.mjs', max: 150 },
   { path: 'bin/lib/mcp-adoption.mjs', max: 600 },
   // Host expansion (Antigravity hooks merge + OpenCode MCP migrate/merge).
-  { path: 'bin/lib/install-migrate.mjs', max: 700 },
+  // S4 force preserve content-identity path — was 700 (loc ~800).
+  { path: 'bin/lib/install-migrate.mjs', max: 820 },
   // Phase P: designFitness / designSmells doctor surface + patternBets plan IR.
   // 3.8.2 field DX (sessionNote, pure-layer opt-in, Codex legacy advisory) — was 920.
   // Product mandate honesty (coverage/baseline/writePath + design-weak flags) — was 980.
@@ -30,7 +33,8 @@ const BUDGETS = [
   // FG01/S1 finished-with-debt + S2 pin nextAction / configRoot — was 1120.
   { path: 'bin/lib/doctor-plan.mjs', max: 1240 },
   // 4.0.0 ArkRules start/init templates + dual-plane presets — was 650 (loc 870).
-  { path: 'bin/lib/presets.mjs', max: 920 },
+  // S3 SPA + adopt/migrate patterns (vite-vercel-spa, P0A retrofit) — was 920 (loc ~1130).
+  { path: 'bin/lib/presets.mjs', max: 1160 },
   { path: 'bin/lib/config-contract.mjs', max: 500 },
   { path: 'bin/lib/weakest-link.mjs', max: 500 },
   { path: 'bin/lib/enforcement-profiles.mjs', max: 150 },

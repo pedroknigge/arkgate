@@ -8,6 +8,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import {
   findNearestArkConfig,
+  isMutatingCliCommand,
+  resolveConfigPathWithinRoot,
   resolveEffectiveProjectRoot,
 } from '../../../bin/lib/project-root.mjs';
 import { detectWritePathCapabilities } from '../../../bin/lib/write-path-detect.mjs';
@@ -87,6 +89,81 @@ describe('findNearestArkConfig / resolveEffectiveProjectRoot', () => {
     expect(effective.configFound).toBe(false);
     expect(effective.walkedUp).toBe(false);
     expect(effective.root).toBe(root);
+  });
+
+  it('writeMode keeps nested --root (does not rewrite parent monorepo without opt-in)', () => {
+    const mono = mk();
+    fs.writeFileSync(
+      path.join(mono, 'package.json'),
+      JSON.stringify({ name: 'mono', private: true, workspaces: ['apps/*'] })
+    );
+    fs.writeFileSync(
+      path.join(mono, 'ark.config.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        include: ['apps'],
+        layers: [{ name: 'ApplicationOrchestration', patterns: ['apps/**/src/**'] }],
+        rules: [],
+      })
+    );
+    const web = path.join(mono, 'apps', 'web');
+    fs.mkdirSync(web, { recursive: true });
+
+    const writeKeep = resolveEffectiveProjectRoot(web, {
+      configName: 'ark.config.json',
+      writeMode: true,
+      followConfigRoot: false,
+    });
+    expect(writeKeep.configFound).toBe(true);
+    expect(writeKeep.walkedUp).toBe(true);
+    expect(writeKeep.configRoot).toBe(mono);
+    expect(writeKeep.root).toBe(web);
+    expect(writeKeep.writeRoot).toBe(web);
+    expect(writeKeep.writeRootFollowedConfig).toBe(false);
+
+    const writeFollow = resolveEffectiveProjectRoot(web, {
+      configName: 'ark.config.json',
+      writeMode: true,
+      followConfigRoot: true,
+    });
+    expect(writeFollow.root).toBe(mono);
+    expect(writeFollow.writeRootFollowedConfig).toBe(true);
+  });
+
+  it('resolveConfigPathWithinRoot refuses --config outside project root', () => {
+    const root = mk();
+    const outside = path.join(path.dirname(root), 'outside-ark.config.json');
+    const bad = resolveConfigPathWithinRoot(root, outside);
+    expect(bad.ok).toBe(false);
+    expect(bad.error).toMatch(/outside project root/i);
+
+    const ok = resolveConfigPathWithinRoot(root, 'ark.config.json');
+    expect(ok.ok).toBe(true);
+    expect(ok.configPath).toBe(path.join(root, 'ark.config.json'));
+  });
+
+  it('isMutatingCliCommand covers install/init/migrate --write', () => {
+    expect(isMutatingCliCommand({ installAgentGates: true })).toBe(true);
+    expect(isMutatingCliCommand({ init: true })).toBe(true);
+    expect(isMutatingCliCommand({ migrateContract: true, write: true })).toBe(true);
+    expect(isMutatingCliCommand({ migrateContract: true })).toBe(false);
+    expect(isMutatingCliCommand({ doctor: true })).toBe(false);
+  });
+
+  it('does not walk above workspaces root when config is only outside monorepo', () => {
+    const outer = mk();
+    fs.writeFileSync(path.join(outer, 'ark.config.json'), '{}\n');
+    const mono = path.join(outer, 'mono');
+    fs.mkdirSync(mono, { recursive: true });
+    fs.writeFileSync(
+      path.join(mono, 'package.json'),
+      JSON.stringify({ name: 'mono', private: true, workspaces: ['apps/*'] })
+    );
+    const web = path.join(mono, 'apps', 'web');
+    fs.mkdirSync(web, { recursive: true });
+    // Config at outer is above workspaces root — must not latch.
+    const found = findNearestArkConfig(web);
+    expect(found).toBeNull();
   });
 
   it('ark-check --doctor from nested package uses monorepo root (integration)', () => {

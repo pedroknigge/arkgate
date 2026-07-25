@@ -105,7 +105,12 @@ import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import { analyzePolicyTransition } from './lib/policy-delta-io.mjs';
 import { tryResidentDoctor } from './lib/resident-doctor-client.mjs';
 import { createDesignDeltaCheck } from './lib/design-delta.mjs';
-import { resolveEffectiveProjectRoot } from './lib/project-root.mjs';
+import {
+  isMutatingCliCommand,
+  resolveConfigPathWithinRoot,
+  resolveEffectiveProjectRoot,
+} from './lib/project-root.mjs';
+import { demoteArkRuleTeethUnderClassificationFloor } from './lib/rules-under-contract.mjs';
 
 function parseArgs(argv) {
   const args = {
@@ -146,6 +151,7 @@ function parseArgs(argv) {
     noOpenReport: false,
     version: false,
     help: false,
+    followConfigRoot: false,
   };
   const requireValue = (flag, index) => {
     const value = argv[index + 1];
@@ -186,6 +192,7 @@ function parseArgs(argv) {
       }
     }
     else if (arg === '--force') args.force = true;
+    else if (arg === '--follow-config-root') args.followConfigRoot = true;
     else if (arg === '--skills-only') args.skillsOnly = true;
     else if (arg === '--coverage') args.coverage = true;
     else if (arg === '--doctor') args.doctor = true;
@@ -263,7 +270,8 @@ function usage() {
     '       ark-check --report [file.html] [--beginner] [--reset-origin] [--no-archive] [--open|--no-open]',
     '           HTML report + snapshots under .ark/reports/ (origin once, latest each run, history JSON)',
     '           Best-effort open in browser (local TTY). No-op if open fails. --no-open / ARK_NO_OPEN_REPORT=1 to skip; --open forces open.',
-    '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|vite-vercel-spa|clean-architecture|onion-architecture] [--force]',
+    '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|vite-vercel-spa|clean-architecture|onion-architecture] [--force] [--follow-config-root]',
+    '       --follow-config-root  On writes (init/install-agent-gates/migrate --write/…), adopt walked-up monorepo config root (default: keep explicit --root)',
     '       ark-check --install-agent-gates [--tools claude,cursor,codex,grok] [--require-write-hook <host>] [--skills-only] [--codex-home] [--force]',
     '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
     '       ark-check --print-config eleven-layer',
@@ -791,9 +799,14 @@ function runAdoptContract(args) {
  */
 function runMigrateContract(args) {
   const root = args.root;
-  const configPath = path.isAbsolute(args.config)
-    ? args.config
-    : path.join(root, args.config);
+  // Contain --config writes under project root (S0 security).
+  const contained = resolveConfigPathWithinRoot(root, args.config);
+  if (!contained.ok) {
+    console.error(contained.error);
+    process.exitCode = 2;
+    return;
+  }
+  const configPath = contained.configPath;
   if (!fs.existsSync(configPath)) {
     console.error(`No ${args.config} — nothing to migrate. Run ark start / ark-check --init first.`);
     process.exitCode = 2;
@@ -844,9 +857,13 @@ function runMigrateContract(args) {
 
 
 function runInit(args) {
-  const configPath = path.isAbsolute(args.config)
-    ? args.config
-    : path.join(args.root, args.config);
+  const contained = resolveConfigPathWithinRoot(args.root, args.config);
+  if (!contained.ok) {
+    console.error(contained.error);
+    process.exitCode = 2;
+    return;
+  }
+  const configPath = contained.configPath;
 
   if (fs.existsSync(configPath) && !args.force) {
     console.error(`${configPath} already exists. Re-run with --force to overwrite it.`);
@@ -1036,8 +1053,9 @@ const color = {
 };
 
 /**
- * Monorepo honesty: when cwd/--root has no ark.config.json, walk parents.
- * Mutates args.root / stamps configRoot + configWalkedUp.
+ * Monorepo honesty: when cwd/--root has no ark.config.json, walk parents (bounded).
+ * Stamps configRoot / configWalkedUp. Mutates args.root only for read paths, or
+ * when --follow-config-root is set on writes (never rewrite parent monorepo by default).
  * Skip for pure meta commands that never load a project contract.
  */
 function applyConfigRootWalkUp(args) {
@@ -1049,11 +1067,21 @@ function applyConfigRootWalkUp(args) {
   ) {
     return args;
   }
-  const effective = resolveEffectiveProjectRoot(args.root, { configName: args.config });
+  const writeMode = isMutatingCliCommand(args);
+  const effective = resolveEffectiveProjectRoot(args.root, {
+    configName: args.config,
+    writeMode,
+    followConfigRoot: args.followConfigRoot === true,
+  });
   args.configRoot = effective.configRoot;
   args.configFound = effective.configFound;
-  if (effective.walkedUp) {
+  args.writeRoot = effective.writeRoot;
+  if (effective.walkedUp && effective.root !== path.resolve(args.root)) {
+    // Read paths (or write + --follow-config-root): adopt discovered config root.
     args.root = effective.root;
+    args.configWalkedUp = true;
+  } else if (effective.walkedUp) {
+    // Write path without opt-in: keep explicit --root/cwd; surface discovery only.
     args.configWalkedUp = true;
   } else {
     args.configWalkedUp = false;
@@ -1276,7 +1304,7 @@ async function main() {
   }
 
   const {
-    violations, warnings, safety, parseHealth, completeness, completenessReasons,
+    violations: rawViolations, warnings, safety, parseHealth, completeness, completenessReasons,
     mode, policyHash, resolverIdentity, factsHash, candidateTreeHash,
   } = runArchitectureScan({
     root,
@@ -1286,6 +1314,16 @@ async function main() {
     files,
     ts,
     args,
+  });
+
+  // Align merge with extraMergeTeeth stamp: demote enforced ArkRules under classification floor.
+  const preCov = computeCoverage(root, config, files, rules);
+  const populatedLayerCount = Array.isArray(preCov.layers)
+    ? preCov.layers.filter((row) => (row?.files ?? 0) > 0).length
+    : 0;
+  const violations = demoteArkRuleTeethUnderClassificationFloor(rawViolations, {
+    governedPercent: preCov.governed?.percent ?? null,
+    populatedLayerCount,
   });
 
   const designCheck = createDesignDeltaCheck({ enabled: args.failOnNewSmells, root, config, configPath: args.config, baseRef: args.baseRef, ts });

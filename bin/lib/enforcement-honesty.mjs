@@ -232,9 +232,16 @@ export function buildWritePathHonesty(activeHost, hardWriteActive = false, extra
 /**
  * One coherent anti-false-green product surface (P0-B / FG01).
  * finished is true only when residual honesty sensors are clear AND the graph
- * + mode are green — never when blocking violations, adapt/suggest+debt,
+ * + mode are green — never when blocking violations, adapt/suggest residual,
  * missing baseline with debt, design residual, dual-truth, weak coverage,
  * pin-absent, or residual pilots remain.
+ *
+ * activeBlockingViolations must be failsStrict !== false counts only
+ * (type-only placement debt must NOT force active-blocking-violations).
+ *
+ * Adapt/suggest policy (documented): unfinished when mode is adapt/suggest
+ * unless whole-tree green AND zero design smells AND zero blocking — contract
+ * and tree still disagree while operating outside enforce.
  * Never invents a numeric architecture score.
  *
  * @param {{
@@ -273,12 +280,14 @@ export function buildProductHonesty(input = {}) {
   const residualPilots = input.residualPilots === true;
   const operatingMode =
     typeof input.operatingMode === 'string' ? input.operatingMode.trim().toLowerCase() : null;
+  // Prefer explicit blocking count; never treat raw violation totals (incl. type-only) as blocking.
   const activeBlocking = Number.isFinite(Number(input.activeBlockingViolations))
     ? Math.max(0, Number(input.activeBlockingViolations))
     : Number(base?.activeViolations) || 0;
   const smellCount = Number(input.designSmellCount) || 0;
   const designSmellsOpenEdges =
     input.designSmellsWithOpenEdges === true || (smellCount > 0 && activeBlocking > 0);
+  const wholeTreeGovernedEarly = cov?.wholeTreeGoverned === true;
 
   if (cov?.status === 'empty-scope' || cov?.worseThanNoGate) {
     reasons.push({
@@ -365,28 +374,25 @@ export function buildProductHonesty(input = {}) {
     });
   }
 
-  // Mode adapt/suggest with debt (FG-FINISHED-ADAPT-DEBT) — status light is not finished.
-  const debtIds = new Set([
-    'active-blocking-violations',
-    'baseline-missing-with-debt',
-    'dirty-freeze',
-    'design-weak',
-    'design-smells-open-edges',
-    'package-version-dual-truth',
-    'package-pin-absent',
-    'residual-pilot',
-    'coverage-weak-or-empty',
-    'coverage-partial',
-  ]);
-  const hasDebt = reasons.some((r) => debtIds.has(r.id));
-  if ((operatingMode === 'adapt' || operatingMode === 'suggest') && hasDebt) {
-    reasons.push({
-      id: operatingMode === 'adapt' ? 'mode-adapt-with-debt' : 'mode-suggest-with-debt',
-      message:
-        operatingMode === 'adapt'
-          ? 'Operating mode is ADAPT with open debt — not finished (contract and tree still disagree).'
-          : 'Operating mode is SUGGEST with open debt — not finished (contract is not yet the control plane).',
-    });
+  // Mode adapt/suggest (FG-FINISHED-ADAPT-DEBT): prefer unfinished unless the tree is
+  // whole-tree green AND zero design smells AND zero blocking violations.
+  // Type-only placement debt alone must not keep adapt unfinished via active-blocking.
+  if (operatingMode === 'adapt' || operatingMode === 'suggest') {
+    const adaptClear =
+      wholeTreeGovernedEarly &&
+      activeBlocking === 0 &&
+      smellCount === 0 &&
+      !designWeak &&
+      !designSmellsOpenEdges;
+    if (!adaptClear) {
+      reasons.push({
+        id: operatingMode === 'adapt' ? 'mode-adapt-with-debt' : 'mode-suggest-with-debt',
+        message:
+          operatingMode === 'adapt'
+            ? 'Operating mode is ADAPT — not finished until whole-tree green, zero blocking, and zero design smells (contract and tree still disagree).'
+            : 'Operating mode is SUGGEST — not finished until whole-tree green, zero blocking, and zero design smells (contract is not yet the control plane).',
+      });
+    }
   }
 
   if (input.arkRulesMergeHonesty?.active === true && input.arkRulesMergeHonesty?.extraMergeTeeth === false) {
@@ -394,7 +400,7 @@ export function buildProductHonesty(input = {}) {
   }
 
   const unfinished = reasons.length > 0;
-  const wholeTreeGoverned = cov?.wholeTreeGoverned === true;
+  const wholeTreeGoverned = wholeTreeGovernedEarly;
   const coverageIncomplete =
     cov?.status === 'empty-scope' ||
     cov?.worseThanNoGate === true ||
@@ -475,6 +481,8 @@ export function computeDoctorEnforcementHonesty({
   baselineExists,
   frozenKeys,
   activeViolations,
+  /** failsStrict !== false count only — type-only must not force active-blocking. */
+  activeBlockingViolations,
   suppressed,
   totalViolations,
   activeHost,
@@ -512,6 +520,11 @@ export function computeDoctorEnforcementHonesty({
     selfHost,
     motherCli,
   });
+  // Prefer explicit blocking count; fall back to activeViolations only when callers
+  // already pass blocking-only totals (legacy tests). Type-only must not invent debt.
+  const blockingForHonesty = Number.isFinite(Number(activeBlockingViolations))
+    ? Math.max(0, Number(activeBlockingViolations))
+    : Number(activeViolations) || 0;
   const productHonesty = buildProductHonesty({
     coverageHonesty,
     baselineHonesty,
@@ -526,7 +539,7 @@ export function computeDoctorEnforcementHonesty({
     arkRulesMergeHonesty,
     primaryNextAction,
     operatingMode,
-    activeBlockingViolations: activeViolations,
+    activeBlockingViolations: blockingForHonesty,
   });
   return {
     coverageHonesty,

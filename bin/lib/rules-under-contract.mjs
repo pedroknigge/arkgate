@@ -20,6 +20,40 @@ const UNCOVERED_CATALOG_MAX = 30;
 export const EXTRA_MERGE_TEETH_GOVERNED_FLOOR = 50;
 
 /**
+ * P1M / extraMergeTeeth: under the classification floor, demote enforced ArkRules
+ * structure/invariant findings so merge matches doctor stamp (layer graph only).
+ * Unknown classification (null/null) → do not demote (contract-only callers).
+ *
+ * @param {object[]} violations
+ * @param {{ governedPercent?: number|null, populatedLayerCount?: number|null }} classification
+ * @returns {object[]}
+ */
+export function demoteArkRuleTeethUnderClassificationFloor(violations, classification = {}) {
+  if (!Array.isArray(violations)) return violations;
+  const governed =
+    typeof classification.governedPercent === 'number' ? classification.governedPercent : null;
+  const populated =
+    typeof classification.populatedLayerCount === 'number'
+      ? classification.populatedLayerCount
+      : null;
+  if (governed == null && populated == null) return violations;
+  const allowsTeeth =
+    (governed ?? 0) >= EXTRA_MERGE_TEETH_GOVERNED_FLOOR && (populated ?? 0) >= 1;
+  if (allowsTeeth) return violations;
+  for (const v of violations) {
+    const isArkRule =
+      v?.arkruleId != null ||
+      (typeof v?.ruleId === 'string' &&
+        (v.ruleId.startsWith('ARKRULE') || v.ruleId.startsWith('arkrule')));
+    if (isArkRule && v.failsStrict !== false) {
+      v.failsStrict = false;
+      if (v.severity === 'error') v.severity = 'warning';
+    }
+  }
+  return violations;
+}
+
+/**
  * @param {string} root
  * @param {Record<string, unknown>} config
  * @param {{ files?: Array<{ path: string }> }} [facts] optional facts for path set
@@ -192,7 +226,7 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
       failMergeWhen: extraMergeTeeth
         ? 'Layer graph failures plus enforced structure/invariant findings (advisory sensors never fail merge alone).'
         : teethDeferredForClassification
-          ? `Layer graph only for now — enforced ArkRules exist but classification is below the teeth floor (need ≥${EXTRA_MERGE_TEETH_GOVERNED_FLOOR}% governed and ≥1 populated layer).`
+          ? `Layer graph only — enforced ArkRules structure/invariant findings are demoted under the teeth floor (need ≥${EXTRA_MERGE_TEETH_GOVERNED_FLOOR}% governed and ≥1 populated layer); they do not merge-block until classification is honest.`
           : 'Layer graph only — no enforced ArkRules structure/invariant teeth on this tree. Advisory packs do not arm merge teeth.',
     };
 

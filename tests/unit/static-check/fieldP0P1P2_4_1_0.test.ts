@@ -307,6 +307,7 @@ describe('P0-B product honesty anti false-green', () => {
       baselineExists: false,
       frozenKeys: 0,
       activeViolations: 1057,
+      activeBlockingViolations: 1057,
       suppressed: 0,
       totalViolations: 1057,
       operatingMode: 'adapt',
@@ -325,6 +326,43 @@ describe('P0-B product honesty anti false-green', () => {
       ])
     );
     expect(bundle.productHonesty.notAScore).toBe(true);
+  });
+
+  it('type-only debt does not force active-blocking-violations; adapt clear only when whole-tree green', () => {
+    // Type-only only: blocking=0 → no active-blocking reason.
+    const typeOnlyOnly = buildProductHonesty({
+      coverageHonesty: buildCoverageHonesty({ percent: 100, totalFiles: 10 }),
+      baselineHonesty: buildBaselineHonesty({
+        exists: false,
+        activeViolations: 12, // raw list may still list type-only
+        totalViolations: 12,
+      }),
+      activeBlockingViolations: 0,
+      designSmellCount: 0,
+      operatingMode: 'enforce',
+    });
+    expect(typeOnlyOnly.reasonIds).not.toContain('active-blocking-violations');
+
+    // adapt + whole tree + zero smells + zero blocking → no mode-adapt-with-debt
+    const adaptClear = buildProductHonesty({
+      coverageHonesty: buildCoverageHonesty({ percent: 100, totalFiles: 10 }),
+      baselineHonesty: buildBaselineHonesty({ exists: false }),
+      activeBlockingViolations: 0,
+      designSmellCount: 0,
+      operatingMode: 'adapt',
+    });
+    expect(adaptClear.reasonIds).not.toContain('mode-adapt-with-debt');
+
+    // adapt + partial coverage → unfinished via mode-adapt
+    const adaptPartial = buildProductHonesty({
+      coverageHonesty: buildCoverageHonesty({ percent: 70, totalFiles: 10 }),
+      baselineHonesty: buildBaselineHonesty({ exists: false }),
+      activeBlockingViolations: 0,
+      designSmellCount: 0,
+      operatingMode: 'adapt',
+    });
+    expect(adaptPartial.reasonIds).toContain('mode-adapt-with-debt');
+    expect(adaptPartial.unfinished).toBe(true);
   });
 
   it('HTML card renders without repeating headline twice as the only body', () => {
@@ -1050,7 +1088,7 @@ export class ServiceOrder {
     const inventory = buildRulesInventory({
       fileContents: {
         'lib/integrations/hubspot.ts': `
-          const DEFAULT_HUBSPOT_TIMEOUT_MS = 15000;
+          const DEFAULT_TIMEOUT_MS = 15000;
           const REQUEST_TIMEOUT_MS = 8000;
           const DEFAULT_BASE_URL = 'https://api.hubspot.example.com/v3';
           export async function sync() {}
@@ -1063,6 +1101,7 @@ export class ServiceOrder {
           export const MAX_CART_SIZE = 50;
           export const ORDER_STATUS_OPEN = 'open-order-status';
           export const MAX_PROPERTY_LIMIT = 100;
+          export const DEFAULT_ORDER_LIMIT = 25;
         `,
         'src/domain/offer-access.error.ts': `
           export class OfferAccessError extends Error {
@@ -1084,11 +1123,13 @@ export class ServiceOrder {
       },
     });
     const magic = inventory.candidates.filter((c) => c.kind === 'magic-business-constant');
-    expect(magic.some((c) => c.message.includes('DEFAULT_HUBSPOT_TIMEOUT_MS'))).toBe(false);
+    expect(magic.some((c) => c.message.includes('DEFAULT_TIMEOUT_MS'))).toBe(false);
     expect(magic.some((c) => c.message.includes('REQUEST_TIMEOUT_MS'))).toBe(false);
     expect(magic.some((c) => c.message.includes('FAVORITES_STORAGE_KEY'))).toBe(false);
     expect(magic.some((c) => c.message.includes('MAX_CART_SIZE'))).toBe(true);
     expect(magic.some((c) => c.message.includes('MAX_PROPERTY_LIMIT'))).toBe(true);
+    // Narrow DEFAULT_ filter must not swallow domain seeds
+    expect(magic.some((c) => c.message.includes('DEFAULT_ORDER_LIMIT'))).toBe(true);
     expect(
       inventory.candidates.some(
         (c) => c.kind === 'mutation-without-guard' && c.file.includes('offer-access.error')

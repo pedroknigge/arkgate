@@ -1538,10 +1538,12 @@ function resolvePreset(archetypeDef, signals) {
 }
 
 /**
- * Refuse silent start --yes when shape is too uncertain (NEW-START-LOW-CONFIDENCE-SHAPE).
- * Explicit --archetype / --preset / --force bypasses the gate.
+ * Refuse start --apply when shape is too uncertain (NEW-START-LOW-CONFIDENCE-SHAPE).
+ * Applies to **all** apply paths (not only --yes). Explicit --archetype / --preset / --force bypasses.
+ * Fail-closed when confidence or projected coverage metrics are null/unknown.
  *
  * Rules:
+ * - null confidence or null projected coverage → refuse (fail-closed)
  * - projected coverage < 50% → refuse (wrong include / vacuum)
  * - confidence < 0.6 AND projected coverage < 80% → refuse (weak shape + incomplete cover)
  * - confidence < 0.6 with coverage ≥ 80% → allow (thin-library / capped confidence but contract covers)
@@ -1565,16 +1567,25 @@ export function evaluateStartShapeConfidenceGate({
     typeof projectedCoveragePercent === 'number' && Number.isFinite(projectedCoveragePercent)
       ? projectedCoveragePercent
       : null;
-  if (cov !== null && cov < minProjectedCoverage) {
+  // Fail-closed on unknown metrics (null analysis must not silently apply).
+  if (cov === null) {
     reasons.push(
-      `projected governed coverage ${cov}% is below ${minProjectedCoverage}% — refuse silent --yes`
+      'projected governed coverage is unknown — refuse apply without measured coverage (fail-closed)'
+    );
+  } else if (cov < minProjectedCoverage) {
+    reasons.push(
+      `projected governed coverage ${cov}% is below ${minProjectedCoverage}% — refuse apply`
     );
   }
   // Thin packages often cap confidence (e.g. 0.28) while covering 100% — do not block those.
   const coverageStrong = cov !== null && cov >= strongCoverageFloor;
-  if (conf !== null && conf < minConfidence && !coverageStrong) {
+  if (conf === null) {
     reasons.push(
-      `archetype confidence ${conf} is below ${minConfidence} with projected coverage ${cov ?? 'unknown'}% (< ${strongCoverageFloor}%) — refuse silent --yes without an explicit shape`
+      'archetype confidence is unknown — refuse apply without shape analysis (fail-closed); pass --archetype/--preset or --force'
+    );
+  } else if (conf < minConfidence && !coverageStrong) {
+    reasons.push(
+      `archetype confidence ${conf} is below ${minConfidence} with projected coverage ${cov ?? 'unknown'}% (< ${strongCoverageFloor}%) — refuse apply without an explicit shape`
     );
   }
   if (reasons.length === 0) return { ok: true, confidence: conf, projectedCoverage: cov };
@@ -1586,7 +1597,7 @@ export function evaluateStartShapeConfidenceGate({
     choices: [
       'Pass --archetype <id> or --preset <name> to lock the shape deliberately',
       'Pass --force to apply anyway after reviewing the preview',
-      'Run without --yes for an interactive confirmation',
+      'Run without --apply for a read-only preview',
       'Run ark-check --recommend to inspect ranked shapes',
     ],
   };

@@ -423,8 +423,8 @@ async function start(args) {
       cliVersion,
       packageInstallArgv,
     });
-    // NEW-START-LOW-CONFIDENCE-SHAPE: refuse silent --yes apply when shape is weak.
-    if (args.apply && args.yes) {
+    // NEW-START-LOW-CONFIDENCE-SHAPE: refuse apply on all apply paths when shape is weak.
+    if (args.apply) {
       const gate = evaluateStartShapeConfidenceGate({
         confidence: preview.analysis?.confidence,
         projectedCoveragePercent: preview.projectedCoverage?.percent,
@@ -446,7 +446,7 @@ async function start(args) {
             )
           );
         } else {
-          console.error('Refusing ark start --apply --yes: shape confidence / coverage gate failed.');
+          console.error('Refusing ark start --apply: shape confidence / coverage gate failed.');
           for (const reason of gate.reasons ?? []) console.error(`  • ${reason}`);
           console.error('Choices:');
           for (const choice of gate.choices ?? []) console.error(`  • ${choice}`);

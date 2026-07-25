@@ -177,6 +177,19 @@ describe('S3.1 start confidence gate (NEW-START-LOW-CONFIDENCE-SHAPE)', () => {
         explicitShape: true,
       }).ok
     ).toBe(true);
+    // Fail-closed on null metrics
+    expect(
+      evaluateStartShapeConfidenceGate({
+        confidence: null as unknown as number,
+        projectedCoveragePercent: 90,
+      }).ok
+    ).toBe(false);
+    expect(
+      evaluateStartShapeConfidenceGate({
+        confidence: 0.9,
+        projectedCoveragePercent: null as unknown as number,
+      }).ok
+    ).toBe(false);
   });
 });
 

@@ -239,27 +239,44 @@ export function syncManagedManifestFromDisk(root, options = {}) {
  * True when an existing managed asset is customized/conflicted vs the recorded
  * identity — install-agent-gates --force must preserve these (same contract as
  * content-identity upgrade).
+ *
+ * Force preserve also applies by content-identity when the asset is missing from
+ * ark.managed.json (incomplete manifest must not clobber customized AGENTS.md).
  */
 export function isManagedAssetCustomizedOnDisk(root, relativePath, desiredContent, kind = 'gate') {
-  const manifest = tryReadManagedManifest(root);
-  if (!manifest) return false;
-  const recorded = (manifest.assets ?? []).find((asset) => asset.path === relativePath);
-  if (!recorded) return false;
   const file = path.join(path.resolve(root), relativePath);
   const currentFile = readFile(file);
   if (currentFile == null) return false;
-  // Whole-file gates: compare full file bytes. Toml-section uses primary table only.
   let currentScoped = currentFile.toString('utf8');
-  if (recorded.scope === 'toml-section') {
-    currentScoped = codexPrimaryTable(currentScoped)?.block ?? currentScoped;
+
+  const manifest = tryReadManagedManifest(root);
+  const recorded = manifest
+    ? (manifest.assets ?? []).find((asset) => asset.path === relativePath)
+    : null;
+
+  if (recorded) {
+    // Whole-file gates: compare full file bytes. Toml-section uses primary table only.
+    if (recorded.scope === 'toml-section') {
+      currentScoped = codexPrimaryTable(currentScoped)?.block ?? currentScoped;
+    }
+    const classified = classifyManagedAsset({
+      recorded,
+      currentContent: currentScoped,
+      targetContent: desiredContent,
+      kind,
+    });
+    return classified.state === 'customized' || classified.state === 'conflicted';
   }
-  const classified = classifyManagedAsset({
-    recorded,
-    currentContent: currentScoped,
-    targetContent: desiredContent,
-    kind,
-  });
-  return classified.state === 'customized' || classified.state === 'conflicted';
+
+  // Incomplete / missing managed list: still preserve when on-disk content differs
+  // from the desired template (content-identity force preserve, especially AGENTS.md).
+  if (kind === 'skill') return false;
+  const desiredNorm = normalizedIdentityContent(desiredContent ?? '');
+  const currentNorm = normalizedIdentityContent(currentScoped);
+  if (!currentNorm.trim()) return false;
+  if (currentNorm === desiredNorm) return false;
+  // AGENTS.md and other whole-file gates: any divergence from desired template is customized.
+  return managedContentIdentity(currentNorm, kind) !== managedContentIdentity(desiredNorm, kind);
 }
 
 function resolveSelection(root, options, manifest) {

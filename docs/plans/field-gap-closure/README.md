@@ -1,7 +1,8 @@
 # Field gap closure — full improvement plan (post 4.1.0 lab)
 
-**Status:** plan (not authorized until IDs appear as `doing`/`todo` in `ROADMAP.md`)  
+**Status:** partial (S0–S4 + S6 unit locks closed on `feat/4.1.0-field-p0-p1-p2`; S5 residual + full network lab open)  
 **Generated:** 2026-07-24  
+**Updated:** 2026-07-24 — security walk-up split, productHonesty blocking-only, start gate all-apply, force preserve, inventory filters, composition-root docs  
 **Evidence base:** temp field lab `/tmp/ark-field-lab-95358` against mother **arkgate 4.1.0** (`feat/4.1.0-field-p0-p1-p2` @ `fd7e7b0`) — **not** npm `latest` 4.0.1.  
 **Sources:** `FIELD-GAPS.json` (20), `falseGreenRisks` (8), `USE-CASE-BATTERY`, `DEEP-*-rules-planb`, `FEATURE-4.1.0-VALIDATION`.
 
@@ -162,7 +163,7 @@ Work is ordered so **honesty and false-green die first**, then **classification*
 |------|-----|------------|
 | S3.1.1 Never use lone `src/**` as Application catch-all on Next/event archetypes | `NEW-APP-VACUUM-LIB`, `DL-DOMAIN-SPECIFICITY` | amarilla-like: Domain patterns for `**/domain/**`, `**/kernel/domain/**` beat Application scatter; Domain file count > 0 when domain tree exists |
 | S3.1.2 Persistence heuristics for `**/repositories/**`, `**/db/**`, `**/supabase/**`, `**/airtable/**` | same | Persistence file count rises; App→Persist edges become real (honest red) |
-| S3.1.3 Composition-root optional layer or Application-only for factories | meiridan factories | documented pattern in brownfield guide |
+| S3.1.3 Composition-root optional layer or Application-only for factories | meiridan factories | documented pattern in brownfield guide — **done** (`docs/brownfield-adoption.md` composition-root section) |
 | S3.1.4 SPA profile `vite-vercel-spa` | `NEW-SPA-DEFAULT-LAYOUT` | include `src,api,lib`; api→Application; db/crm lib→Persistence; React→Presentation; superinsights start ≥80% governed without manual adopt |
 | S3.1.5 Confidence gate on `--yes` | `NEW-START-LOW-CONFIDENCE-SHAPE` | if archetype confidence < 0.6 **or** projected coverage < 50%: refuse silent --yes; print choices |
 | S3.1.6 Start apply messaging | `DL-START-APPLY-MESSAGE` | single honest summary (applied vs noop) |

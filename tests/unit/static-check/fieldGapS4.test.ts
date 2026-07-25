@@ -315,6 +315,17 @@ describe('S4 NEW-FORCE-GATES-VS-UPGRADE-DIGEST', () => {
     expect(isManagedAssetCustomizedOnDisk(root, 'AGENTS.md', custom, 'gate')).toBe(false);
   });
 
+  it('force preserve customized AGENTS by content-identity even without managed list', () => {
+    const root = mkTemp('ark-s4-force-no-manifest-');
+    const target = '# ArkGate agent instructions\n\n(stock router)\n';
+    const custom = `${target}\n\n## Project notes\nDo not clobber me.\n`;
+    write(root, 'package.json', '{"name":"nomanifest","private":true}\n');
+    write(root, 'AGENTS.md', custom);
+    // No ark.managed.json — incomplete manifest must not clobber customized AGENTS.
+    expect(isManagedAssetCustomizedOnDisk(root, 'AGENTS.md', target, 'gate')).toBe(true);
+    expect(isManagedAssetCustomizedOnDisk(root, 'AGENTS.md', custom, 'gate')).toBe(false);
+  });
+
   it('force after managed upgrade preserves customized AGENTS and recomputes digest', () => {
     const root = mkTemp('ark-s4-force-digest-');
     write(root, 'package.json', '{"name":"force-digest","private":true}\n');
