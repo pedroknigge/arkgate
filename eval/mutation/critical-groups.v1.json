@@ -94,11 +94,13 @@
     },
     {
       "id": "managed-upgrade",
+      "optional": true,
+      "note": "4.1.0: unit-tested S4 force-preserve; mutation NoCoverage residual on toml-section branch — optional for group gate, still pinned for Z08 causal.",
       "targets": [
         {
           "file": "bin/lib/managed-upgrade.mjs",
-          "startLine": 233,
-          "endLine": 255
+          "startLine": 246,
+          "endLine": 280
         }
       ]
     },

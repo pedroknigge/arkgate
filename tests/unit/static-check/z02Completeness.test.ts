@@ -235,8 +235,14 @@ describe('Z02 analysis completeness', () => {
     const workflow = fs.readFileSync(path.join(REPO, '.github/workflows/ci.yml'), 'utf8');
     expect(workflow).toContain('ts-compat-gate:');
     expect(workflow).toContain('name: TypeScript compatibility gate');
-    expect(workflow).toContain('needs: ts-compat');
+    expect(workflow).toContain('ts-compat');
     expect(workflow).toContain('MATRIX_RESULT: ${{ needs.ts-compat.result }}');
-    expect(workflow).toContain('run: test "$MATRIX_RESULT" = success');
+    // Gate still requires success when the packed matrix is scheduled; intentional
+    // docs-only skips use explicit run_packed=false only (empty fails closed).
+    expect(workflow).toContain('test "$MATRIX_RESULT" = success');
+    expect(workflow).toContain('ci-profile:');
+    expect(workflow).toContain('RUN_PACKED" = "false"');
+    expect(workflow).toContain('run_packed missing/invalid');
+    expect(workflow).toContain('ci-profile did not succeed');
   });
 });

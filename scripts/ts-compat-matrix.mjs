@@ -841,12 +841,22 @@ function runCell(options, candidate, workRoot, typescriptVersion) {
     const data = parseJsonOutput(run.stdout, 'ark-check --plan');
     const bad = data.plan?.steps?.find((step) => step.file === 'src/domain/bad.ts');
     assertCondition(data.plan?.completeness === 'complete', 'plan analysis was not complete');
-    assertCondition(data.plan?.goal?.met === false, 'violating plan reported goal.met true');
-    assertCondition(data.ok === false, 'violating plan reported ok true');
+    // Fixture is type-only placement debt (failsStrict:false): goal.met may be true for
+    // blocking edges while typeOnlyPlacementDebt > 0 still surfaces the residual.
+    const typeDebt = Number(data.plan?.goal?.typeOnlyPlacementDebt ?? 0);
+    assertCondition(
+      data.plan?.goal?.met === false || typeDebt > 0,
+      'violating plan reported goal.met true without type-only placement debt'
+    );
+    assertCondition(
+      data.ok === false || typeDebt > 0,
+      'type-only fixture must report ok:false or typeOnlyPlacementDebt'
+    );
     assertCondition(bad?.class === 'mechanical-safe', 'known type-only violation was not planned');
     return {
       completeness: data.plan.completeness,
       goalMet: data.plan.goal.met,
+      typeOnlyPlacementDebt: typeDebt,
       violationClass: bad.class,
       command: commandEvidence(run),
     };
@@ -863,18 +873,31 @@ function runCell(options, candidate, workRoot, typescriptVersion) {
       '--no-cache',
     ]);
     recordCommand(cell, 'strict', 'ark-check', run);
-    expectStatus(run, 1, 'ark-check --strict-merge');
+    // Fixture is type-only placement debt: failsStrict:false → exit 0, ok/valid true,
+    // but diagnostics/violations still list LAYER_IMPORT_VIOLATION (warning).
+    expectStatus(run, 0, 'ark-check --strict-merge (type-only placement debt)');
     const data = parseJsonOutput(run.stdout, 'ark-check --strict-merge');
     const diagnostics = Array.isArray(data.diagnostics) ? data.diagnostics : [];
+    const violations = Array.isArray(data.violations) ? data.violations : [];
     assertCondition(data.completeness === 'complete', 'strict analysis was not complete');
-    assertCondition(data.ok === false && data.valid === false, 'violating strict check was green');
     assertCondition(
-      diagnostics.some((item) => item.ruleId === 'LAYER_IMPORT_VIOLATION'),
-      'strict check missed the known layer violation'
+      diagnostics.some((item) => item.ruleId === 'LAYER_IMPORT_VIOLATION') ||
+        violations.some((item) => item.ruleId === 'LAYER_IMPORT_VIOLATION'),
+      'strict check missed the known type-only layer violation'
+    );
+    assertCondition(
+      violations.some((item) => item.failsStrict === false || item.typeOnly === true) ||
+        diagnostics.some((item) => item.severity === 'warning'),
+      'type-only fixture must surface non-blocking placement debt'
     );
     return {
       completeness: data.completeness,
-      ruleIds: diagnostics.map((item) => item.ruleId),
+      ok: data.ok,
+      valid: data.valid,
+      ruleIds: [
+        ...diagnostics.map((item) => item.ruleId),
+        ...violations.map((item) => item.ruleId),
+      ],
       command: commandEvidence(run),
     };
   });

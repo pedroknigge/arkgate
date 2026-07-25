@@ -99,7 +99,8 @@ describe('O03 compact start', () => {
       expect(preview.setupBudget.gateFiles).toBeLessThanOrEqual(8);
       expect(preview.setupBudget.maxFiles).toBe(8);
       expect(preview.setupBudget.bytes).toBeLessThan(32 * 1024);
-      expect(preview.changes.some((change) => change.path === 'package.json')).toBe(false);
+      // S4: package.json may gain check:architecture (excluded from gate budget).
+      // No arkgate pin without --install.
       expect(preview.changes.some((change) => /\/(skills|prompts|commands)\//.test(change.path))).toBe(false);
       expect(preview.changes.some((change) => change.path === '.mcp.json')).toBe(true);
 
@@ -108,12 +109,21 @@ describe('O03 compact start', () => {
       const after = snapshot(root);
       const changed = changedPaths(before, after);
       expect(changed).toEqual(applied.changes.map((change) => change.path).sort());
-      const gateChanged = changed.filter((file) => !file.startsWith('arkrules/'));
+      const gateChanged = changed.filter(
+        (file) => !file.startsWith('arkrules/') && file !== 'package.json'
+      );
       expect(gateChanged.length).toBeLessThanOrEqual(8);
       expect(applied.setupBudget.ok).toBe(true);
       expect(changed).not.toContain('check.mjs');
       expect(changed).not.toContain('src/domain/value.ts');
-      expect(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).toBe(originalPackage);
+      // package.json may only gain check:architecture (no pin without --install).
+      const pkgAfter = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+      const pkgBefore = JSON.parse(originalPackage);
+      expect(pkgAfter.devDependencies ?? {}).toEqual(pkgBefore.devDependencies ?? {});
+      expect(typeof pkgAfter.scripts?.['check:architecture']).toBe('string');
+      expect(pkgAfter.scripts?.['check:architecture']).toMatch(/ark-check|arkgate-check/);
+      // User scripts preserved
+      expect(pkgAfter.scripts?.verify).toBe(pkgBefore.scripts?.verify);
       const instructions = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
       expect(instructions).toContain('## Compact router');
       expect(instructions).toMatch(/Primary path/i);

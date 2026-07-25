@@ -161,9 +161,12 @@ export function prepareStarterManifest(root, candidateTarball, packageManager, m
     writeText(path.join(root, '.npmrc'), 'node-linker=isolated\nshared-workspace-lockfile=false\n');
   }
   if (packageManager === 'yarn') {
+    // node-modules: arkgate bin/lib relative imports fail under Yarn PnP zip resolution
+    // for packed file: candidates (managed-upgrade → codex-home). Gallery exercises the
+    // published layout, not PnP edge cases.
     writeText(
       path.join(root, '.yarnrc.yml'),
-      'nodeLinker: pnp\npnpMode: strict\nenableGlobalCache: false\nenableScripts: false\n'
+      'nodeLinker: node-modules\nenableGlobalCache: false\nenableScripts: false\n'
     );
   }
   return manifest;
@@ -526,7 +529,13 @@ function runCell(options, candidate, workRoot, starter) {
     const finalSnapshot = snapshotProject(root);
     assertSnapshotEqual(appliedSnapshot, finalSnapshot, 'check/doctor/preflight/strict journey');
     assertAppliedPreview(preparedSnapshot, finalSnapshot, preview.changes);
+    // S4.4 / start: install-agent-gates may add package.json scripts (check:architecture,
+    // typecheck). When the start preview planned package.json, that mutation is intentional.
+    const packageJsonPlanned = (preview?.changes ?? []).some(
+      (change) => change.path === 'package.json' || String(change.path || '').endsWith('/package.json')
+    );
     for (const protectedPath of ['package.json', '.gallery-sentinel']) {
+      if (protectedPath === 'package.json' && packageJsonPlanned) continue;
       assertCondition(
         preparedSnapshot[protectedPath] === finalSnapshot[protectedPath],
         `${protectedPath} changed after installation`

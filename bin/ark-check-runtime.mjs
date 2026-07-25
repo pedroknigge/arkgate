@@ -86,6 +86,11 @@ import {
 } from './lib/suggestions.mjs';
 import {
   ARCHITECTURE_PRESETS,
+  APPLICATION_LIB_ORCHESTRATION_PATTERNS,
+  DOMAIN_PATH_PATTERNS,
+  NEXT_API_APPLICATION_PATTERNS,
+  PERSISTENCE_PATH_PATTERNS,
+  retrofitP0aApiApplicationPatterns,
   withDefaultArkRules,
   writeArkRulesTemplates,
 } from './lib/presets.mjs';
@@ -100,6 +105,12 @@ import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import { analyzePolicyTransition } from './lib/policy-delta-io.mjs';
 import { tryResidentDoctor } from './lib/resident-doctor-client.mjs';
 import { createDesignDeltaCheck } from './lib/design-delta.mjs';
+import {
+  isMutatingCliCommand,
+  resolveConfigPathWithinRoot,
+  resolveEffectiveProjectRoot,
+} from './lib/project-root.mjs';
+import { demoteArkRuleTeethUnderClassificationFloor } from './lib/rules-under-contract.mjs';
 
 function parseArgs(argv) {
   const args = {
@@ -140,6 +151,7 @@ function parseArgs(argv) {
     noOpenReport: false,
     version: false,
     help: false,
+    followConfigRoot: false,
   };
   const requireValue = (flag, index) => {
     const value = argv[index + 1];
@@ -180,6 +192,7 @@ function parseArgs(argv) {
       }
     }
     else if (arg === '--force') args.force = true;
+    else if (arg === '--follow-config-root') args.followConfigRoot = true;
     else if (arg === '--skills-only') args.skillsOnly = true;
     else if (arg === '--coverage') args.coverage = true;
     else if (arg === '--doctor') args.doctor = true;
@@ -191,6 +204,7 @@ function parseArgs(argv) {
     else if (arg === '--apply-policy-pack') args.applyPolicyPack = requireValue(arg, i++);
     else if (arg === '--suggest-include') args.suggestInclude = true;
     else if (arg === '--adopt-contract') args.adoptContract = true;
+    else if (arg === '--migrate-contract') args.migrateContract = true;
     else if (arg === '--ratchet-cores') args.ratchetCores = true;
     else if (arg === '--write') args.write = true;
     else if (arg === '--watch') args.watch = true;
@@ -249,13 +263,15 @@ function usage() {
     '       ark-check --list-policy-packs            enthusiast packs (hexagonal, layered, feature-sliced, monorepo, ui-surface, vertical-slice, ddd-bounded-contexts)',
     '       ark-check --apply-policy-pack <id> [--force]  write ark.config.json from templates/policy-packs/ (uses preset factory)',
     '       ark-check --suggest-include [--json]   propose include roots (TS packages / workspaces)',
-    '       ark-check --adopt-contract [--write]   expand include + UI patterns from ungoverned dirs (contract adopt)',
+    '       ark-check --adopt-contract [--write]   expand include + layer patterns from ungoverned dirs (never bare lib→Presentation)',
+    '       ark-check --migrate-contract [--write] additive P0-A retrofit: inject app/api/** → Application when missing',
     '       ark-check --ratchet-cores              when raw graph is green (0 violations; baseline ignored), set optional:false on populated cores only (writes ark.config.json)',
     '       ark-check --watch                      re-run the check when governed files change (debounced)',
     '       ark-check --report [file.html] [--beginner] [--reset-origin] [--no-archive] [--open|--no-open]',
     '           HTML report + snapshots under .ark/reports/ (origin once, latest each run, history JSON)',
     '           Best-effort open in browser (local TTY). No-op if open fails. --no-open / ARK_NO_OPEN_REPORT=1 to skip; --open forces open.',
-    '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture] [--force]',
+    '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|vite-vercel-spa|clean-architecture|onion-architecture] [--force] [--follow-config-root]',
+    '       --follow-config-root  On writes (init/install-agent-gates/migrate --write/…), adopt walked-up monorepo config root (default: keep explicit --root)',
     '       ark-check --install-agent-gates [--tools claude,cursor,codex,grok] [--require-write-hook <host>] [--skills-only] [--codex-home] [--force]',
     '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
     '       ark-check --print-config eleven-layer',
@@ -506,9 +522,14 @@ function runListPolicyPacks(args) {
 }
 
 function runApplyPolicyPack(args) {
-  const configPath = path.isAbsolute(args.config)
-    ? args.config
-    : path.join(args.root, args.config);
+  // Contain --config writes under project root (S0 security).
+  const contained = resolveConfigPathWithinRoot(args.root, args.config);
+  if (!contained.ok) {
+    console.error(contained.error);
+    process.exitCode = 2;
+    return;
+  }
+  const configPath = contained.configPath;
 
   if (fs.existsSync(configPath) && !args.force) {
     console.error(
@@ -620,14 +641,21 @@ function runSuggestInclude(args) {
 }
 
 /**
- * Contract-adopt: expand include + presentation patterns from ungoverned proposals.
+ * Contract-adopt: expand include + layer patterns from ungoverned proposals.
  * Read-only unless --write. Does not weaken rules or baseline violations.
+ * Never maps bare lib/** solely to Presentation (NEW-ADOPT-LIB-AS-PRESENTATION).
  */
 function runAdoptContract(args) {
   const root = args.root;
-  const configPath = path.isAbsolute(args.config)
-    ? args.config
-    : path.join(root, args.config);
+  // Contain --config writes under project root (S0 security). Refuse escape even
+  // before --write so dry-run + write share one path and cannot probe outside root.
+  const contained = resolveConfigPathWithinRoot(root, args.config);
+  if (!contained.ok) {
+    console.error(contained.error);
+    process.exitCode = 2;
+    return;
+  }
+  const configPath = contained.configPath;
   let config;
   try {
     config = fs.existsSync(configPath)
@@ -644,25 +672,66 @@ function runAdoptContract(args) {
   }
   const suggestedInclude = resolveIncludeRoots(root);
   const tsPackages = detectTsPackageRoots(root);
+  // SPA / Vercel: include root api + lib when present (NEW-SPA-DEFAULT-LAYOUT).
+  const spaExtras = ['api', 'lib'].filter((d) => fs.existsSync(path.join(root, d)));
   const nextInclude = [
     ...new Set([
       ...(config.include || []),
       ...(suggestedInclude.length > 0 ? suggestedInclude : tsPackages),
+      ...spaExtras,
     ]),
   ].filter(Boolean);
   const files = collectGovernedFiles(root, { ...config, include: nextInclude.length ? nextInclude : config.include });
   const cov = computeCoverage(root, { ...config, include: nextInclude.length ? nextInclude : config.include }, files, config.rules || []);
+  // UI-only patterns — never bare **/lib/** (data clients are Persistence).
   const uiPatterns = [
     '**/components/**',
     '**/hooks/**',
-    '**/lib/**',
     '**/routes/**',
     '**/app/**',
     '**/pages/**',
   ];
+  const persistencePatterns = [
+    ...PERSISTENCE_PATH_PATTERNS,
+  ];
+  const applicationPatterns = [
+    ...NEXT_API_APPLICATION_PATTERNS,
+    ...APPLICATION_LIB_ORCHESTRATION_PATTERNS,
+    'api/**',
+  ];
+  const domainPatterns = [...DOMAIN_PATH_PATTERNS];
+
+  // Build pattern additions from unclassified suggestions (path-aware).
+  const byLayer = new Map([
+    ['PresentationAdapters', [...uiPatterns]],
+    ['PersistenceAdapters', [...persistencePatterns]],
+    ['ApplicationOrchestration', [...applicationPatterns]],
+    ['DomainModel', [...domainPatterns]],
+  ]);
+  for (const suggestion of cov.suggestions ?? []) {
+    if (suggestion.unrecognized || !suggestion.layer) continue;
+    // Never treat bare lib as Presentation solely.
+    if (
+      suggestion.layer === 'PresentationAdapters' &&
+      (suggestion.dir === 'lib' || suggestion.dir.endsWith('/lib'))
+    ) {
+      continue;
+    }
+    const list = byLayer.get(suggestion.layer) ?? [];
+    const glob = suggestion.dir === '.' ? null : `${suggestion.dir}/**`;
+    if (glob && !list.includes(glob)) list.push(glob);
+    byLayer.set(suggestion.layer, list);
+  }
+
   const layers = (config.layers || []).map((layer) => {
-    if (layer.name !== 'PresentationAdapters') return layer;
-    const patterns = [...new Set([...(layer.patterns || []), ...uiPatterns])];
+    const extras = byLayer.get(layer.name);
+    if (!extras?.length) return layer;
+    // Strip accidental bare lib/** if a previous adopt wrote it into Presentation.
+    const cleaned = (layer.patterns || []).filter((p) => {
+      if (layer.name !== 'PresentationAdapters') return true;
+      return p !== '**/lib/**' && p !== 'lib/**' && p !== 'src/lib/**';
+    });
+    const patterns = [...new Set([...cleaned, ...extras])];
     return { ...layer, patterns };
   });
   // If no PresentationAdapters layer, leave layers as-is (don't invent full profile).
@@ -676,6 +745,9 @@ function runAdoptContract(args) {
     after: {
       include: nextInclude.length > 0 ? nextInclude : config.include,
       presentationPatterns: uiPatterns,
+      persistencePatterns,
+      applicationPatterns,
+      domainPatterns,
       totalFiles: cov.totalFiles,
       governedPercent: cov.governed.percent,
       unclassified: cov.unclassified.count,
@@ -714,6 +786,8 @@ function runAdoptContract(args) {
     `  after:  include=[${(proposal.after.include || []).join(', ')}] governed=${proposal.after.governedPercent}% files=${proposal.after.totalFiles} unclassified=${proposal.after.unclassified}`
   );
   console.log(`  presentation patterns += ${uiPatterns.join(', ')}`);
+  console.log(`  persistence patterns += (data clients / db / auth — never bare lib→Presentation)`);
+  console.log(`  application patterns += Next/Vercel API shells`);
   if (proposal.wrote) {
     console.log(color.green(`  wrote ${path.relative(root, configPath) || args.config}`));
     console.log(color.dim(`  Next: ${arkCommand(root, 'ark-check', '--coverage')} then --plan`));
@@ -730,10 +804,77 @@ function runAdoptContract(args) {
   }
 }
 
+/**
+ * Additive P0-A contract retrofit: inject high-spec app/api → Application when missing.
+ * Does not remove existing patterns or weaken rules (DL-P0A-RETROFIT).
+ */
+function runMigrateContract(args) {
+  const root = args.root;
+  // Contain --config writes under project root (S0 security).
+  const contained = resolveConfigPathWithinRoot(root, args.config);
+  if (!contained.ok) {
+    console.error(contained.error);
+    process.exitCode = 2;
+    return;
+  }
+  const configPath = contained.configPath;
+  if (!fs.existsSync(configPath)) {
+    console.error(`No ${args.config} — nothing to migrate. Run ark start / ark-check --init first.`);
+    process.exitCode = 2;
+    return;
+  }
+  let config;
+  try {
+    config = readConfig(root, args.config);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 2;
+    return;
+  }
+
+  const result = retrofitP0aApiApplicationPatterns(config);
+  const proposal = {
+    ok: true,
+    changed: result.changed,
+    injected: result.injected,
+    targetLayer: result.targetLayer,
+    wrote: false,
+  };
+
+  if (args.write && result.changed) {
+    fs.writeFileSync(configPath, `${JSON.stringify(result.config, null, 2)}\n`);
+    proposal.wrote = true;
+  }
+
+  if (args.json) {
+    console.log(JSON.stringify(proposal, null, 2));
+    return;
+  }
+  console.log(color.bold('Contract migrate (P0-A API → Application, additive)'));
+  if (!result.changed) {
+    console.log(color.dim('  No changes — Application already has high-spec app/api patterns (or no Application layer).'));
+    return;
+  }
+  console.log(`  target layer: ${result.targetLayer}`);
+  console.log(`  injecting: ${result.injected.join(', ')}`);
+  if (proposal.wrote) {
+    console.log(color.green(`  wrote ${path.relative(root, configPath) || args.config}`));
+    console.log(color.dim(`  Next: ${arkCommand(root, 'ark-check', '--coverage')} — API routes should classify as Application`));
+  } else {
+    console.log(color.dim('  Dry-run only. Re-run with --write to apply.'));
+  }
+}
+
+
+
 function runInit(args) {
-  const configPath = path.isAbsolute(args.config)
-    ? args.config
-    : path.join(args.root, args.config);
+  const contained = resolveConfigPathWithinRoot(args.root, args.config);
+  if (!contained.ok) {
+    console.error(contained.error);
+    process.exitCode = 2;
+    return;
+  }
+  const configPath = contained.configPath;
 
   if (fs.existsSync(configPath) && !args.force) {
     console.error(`${configPath} already exists. Re-run with --force to overwrite it.`);
@@ -922,8 +1063,45 @@ const color = {
   bold: (s) => (useColor ? `\x1b[1m${s}\x1b[0m` : s),
 };
 
+/**
+ * Monorepo honesty: when cwd/--root has no ark.config.json, walk parents (bounded).
+ * Stamps configRoot / configWalkedUp. Mutates args.root only for read paths, or
+ * when --follow-config-root is set on writes (never rewrite parent monorepo by default).
+ * Skip for pure meta commands that never load a project contract.
+ */
+function applyConfigRootWalkUp(args) {
+  if (
+    args.version ||
+    args.help ||
+    args.printConfig ||
+    args.listPolicyPacks
+  ) {
+    return args;
+  }
+  const writeMode = isMutatingCliCommand(args);
+  const effective = resolveEffectiveProjectRoot(args.root, {
+    configName: args.config,
+    writeMode,
+    followConfigRoot: args.followConfigRoot === true,
+  });
+  args.configRoot = effective.configRoot;
+  args.configFound = effective.configFound;
+  args.writeRoot = effective.writeRoot;
+  if (effective.walkedUp && effective.root !== path.resolve(args.root)) {
+    // Read paths (or write + --follow-config-root): adopt discovered config root.
+    args.root = effective.root;
+    args.configWalkedUp = true;
+  } else if (effective.walkedUp) {
+    // Write path without opt-in: keep explicit --root/cwd; surface discovery only.
+    args.configWalkedUp = true;
+  } else {
+    args.configWalkedUp = false;
+  }
+  return args;
+}
+
 async function main() {
-  const args = parseArgs(process.argv);
+  const args = applyConfigRootWalkUp(parseArgs(process.argv));
   if (await tryResidentDoctor(args)) return;
   if (args.version) {
     console.log(arkPackageVersion());
@@ -968,6 +1146,11 @@ async function main() {
 
   if (args.adoptContract) {
     runAdoptContract(args);
+    return;
+  }
+
+  if (args.migrateContract) {
+    runMigrateContract(args);
     return;
   }
 
@@ -1132,7 +1315,7 @@ async function main() {
   }
 
   const {
-    violations, warnings, safety, parseHealth, completeness, completenessReasons,
+    violations: rawViolations, warnings, safety, parseHealth, completeness, completenessReasons,
     mode, policyHash, resolverIdentity, factsHash, candidateTreeHash,
   } = runArchitectureScan({
     root,
@@ -1144,6 +1327,16 @@ async function main() {
     args,
   });
 
+  // Align merge with extraMergeTeeth stamp: demote enforced ArkRules under classification floor.
+  const preCov = computeCoverage(root, config, files, rules);
+  const populatedLayerCount = Array.isArray(preCov.layers)
+    ? preCov.layers.filter((row) => (row?.files ?? 0) > 0).length
+    : 0;
+  const violations = demoteArkRuleTeethUnderClassificationFloor(rawViolations, {
+    governedPercent: preCov.governed?.percent ?? null,
+    populatedLayerCount,
+  });
+
   const designCheck = createDesignDeltaCheck({ enabled: args.failOnNewSmells, root, config, configPath: args.config, baseRef: args.baseRef, ts });
   const designDelta = designCheck.result;
 
@@ -1151,6 +1344,8 @@ async function main() {
     runDoctor(root, config, files, rules, violations, args.json, {
       configPath: path.isAbsolute(args.config) ? args.config : path.join(root, args.config),
       configMissing: !fs.existsSync(path.isAbsolute(args.config) ? args.config : path.join(root, args.config)),
+      configRoot: args.configRoot ?? root,
+      configWalkedUp: args.configWalkedUp === true,
       safety, designDelta,
       ts, parseHealth, completeness,
     });
@@ -1241,19 +1436,29 @@ async function main() {
   }
 
   // Soft/advisory warnings (failsStrict === false) never fail --strict-config.
+  // P1-type: type-only placement debt on the violations list also has failsStrict:false —
+  // keep reporting them (doctor typeOnly counts) but do not block merge/exit.
   const strictWarnings = warnings.filter((w) => w.failsStrict !== false);
-  const { edgeValid: edgeOk, observedOk } = designCheck.combineEdges({ activeViolationCount: activeViolations.length, strictConfig: args.strictConfig, strictWarningCount: strictWarnings.length, policyValid: policyDelta?.valid ?? true });
+  const blockingViolations = activeViolations.filter((v) => v.failsStrict !== false);
+  const { edgeValid: edgeOk, observedOk } = designCheck.combineEdges({
+    activeViolationCount: blockingViolations.length,
+    strictConfig: args.strictConfig,
+    strictWarningCount: strictWarnings.length,
+    policyValid: policyDelta?.valid ?? true,
+  });
   const analysisComplete = completeness === ANALYSIS_COMPLETENESS.complete;
   const ok = observedOk && analysisComplete;
 
   if (args.plan) {
     const cov = computeCoverage(root, config, files, rules);
+    // Plan goal.met uses blocking (value) edges; type-only placement debt stays in steps via full list.
     const plan = runPlan(root, activeViolations, args.json, cov.governed.percent, cov.governed.totalFiles, {
       config,
       files,
       coverage: cov,
       completeness,
       completenessReasons,
+      blockingViolationCount: blockingViolations.length,
     });
     if (args.strictMerge) process.exitCode = ok && plan.goal.met ? 0 : 1;
     return;
@@ -1358,12 +1563,21 @@ async function main() {
     const existingOrigin = args.resetOrigin
       ? null
       : readJsonSafe(path.join(reportsDir(root), 'origin.json'));
+    // Pass the same baseline split as doctor so productHonesty dirty-freeze matches.
+    const reportBaseline = readBaseline(root, args.baseline || '.ark-baseline.json');
     const { adoption: adoptionForReport, designDepth } = buildReportDepthPayload(
       root,
       config,
       files,
       coverage,
-      activeViolations
+      activeViolations,
+      {
+        suppressedCount: suppressed.length,
+        totalViolationCount: violations.length,
+        frozenKeys: reportBaseline.exists ? reportBaseline.keys.size : 0,
+        activeCount: activeViolations.length,
+        activeBlockingCount: blockingViolations.length,
+      }
     );
     const reportPayload = {
       root,
@@ -1516,9 +1730,14 @@ async function main() {
     if (designCheck.failureText()) console.error(designCheck.failureText());
     if (!analysisComplete) {
       console.error(color.yellow(analysisIncompleteStatement(completeness)));
-    } else if (activeViolations.length === 0 && (policyDelta?.valid ?? true)) {
+    } else if (blockingViolations.length === 0 && (policyDelta?.valid ?? true)) {
+      const placementDebt = activeViolations.filter((v) => v.failsStrict === false);
       const advisoryOnly = warnings.length > 0 && strictWarnings.length === 0;
-      if (warnings.length === 0) {
+      if (placementDebt.length > 0) {
+        console.log(
+          `${color.green('✔')} Ark check passed with ${placementDebt.length} type-only placement debt (non-blocking; prefer SharedTypes / owning layer).${baselineNote}`
+        );
+      } else if (warnings.length === 0) {
         console.log(`${color.green('✔')} Ark check passed.${baselineNote}`);
       } else if (args.strictConfig && strictWarnings.length > 0) {
         console.error(
@@ -1535,16 +1754,16 @@ async function main() {
       }
     } else {
       console.error(
-        activeViolations.length > 0
-          ? `${color.red('✖')} ${activeViolations.length} violation(s).${baselineNote}`
+        blockingViolations.length > 0
+          ? `${color.red('✖')} ${blockingViolations.length} violation(s).${baselineNote}`
           : `${color.red('✖')} Policy transition rejected.${baselineNote}`
       );
     }
 
     // On a large violation set, print the ranked edge breakdown so the wall of failures reads
     // as an ordered burn-down (and flags a concentrated edge as a likely contract bug).
-    if (activeViolations.length >= CONCENTRATION_MIN_VIOLATIONS) {
-      printViolationBreakdown(summarizeViolations(activeViolations), { toStderr: true });
+    if (blockingViolations.length >= CONCENTRATION_MIN_VIOLATIONS) {
+      printViolationBreakdown(summarizeViolations(blockingViolations), { toStderr: true });
     }
 
     printSkillAndCodexGapHints(root, {

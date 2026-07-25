@@ -19,16 +19,27 @@ the two files on the violation edge.
 
 When the fix is really a **Shape** extraction (I/O out of routes, god module split), write an
 **extraction card** before editing — same template as `docs/brownfield-adoption.md`
-§6 and explore §G. Fixed fields (never mechanical-safe, never silent B apply):
+§6 and explore §G. Fixed fields (never mechanical-safe, never silent B apply).
+
+### Plan B one-pilot checklist (when Shape residual, not a single edge fix)
+
+Empty plan A + `designWeak` is **not** architecture finished. One pilot only:
+
+1. **Confirm** doctor `designFitness.designWeak` / non-empty `patternBets` (or agent-detected smell).
+2. **One pilot** — prefer `pilotLoop.nextPilot`; never multi-batch concurrent Shape extractions.
+3. **Extraction card** with **Kill-switch** + falsifiable Success (required).
+4. **User OK** before apply — `autoApplyPlanBForbidden` / never mechanical-safe.
+5. **Edit only that pilot scope** — then `ark-check` / re-doctor; residual outside pilot may remain.
+6. **Stop** if kill-switch fires; do not open pilot #2 in the same batch.
 
 ```text
 ### Extraction card
-Pilot: <one directory or feature path>
+Pilot: <one directory or feature path — or pilotLoop.nextPilot.pilotTarget>
 Smell: <doctor designSmells id if present>
 Move: <verbatim relocate / split>
-Do not: rewrite queries; weaken ark.config; invent mechanical-safe kinds; big-bang
-Success: <falsifiable>
-Kill-switch: <stop condition>
+Do not: rewrite queries; weaken ark.config; invent mechanical-safe kinds; big-bang; multi-pilot batch
+Success: <falsifiable — re-doctor on pilot paths>
+Kill-switch: <stop condition — required>
 Next: re-run ark-check; shrink baseline if applicable
 ```
 

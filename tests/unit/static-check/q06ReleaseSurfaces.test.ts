@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '4.0.1';
+const CURRENT = '4.1.0';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -104,12 +104,51 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
     expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
   });
 
-  it('public release pointers cover published 4.0.1', () => {
+  it('public release pointers cover published 4.0.1 and prepared 4.1.0', () => {
     expect(read('README.md')).toMatch(/4\.0\.1/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.0\.1\.md/);
     expect(read('README.md')).toMatch(/npm `latest`|on npm/);
+    expect(read('README.md')).toMatch(/4\.1\.0/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.1\.0\.md/);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.0\.1/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Next prepared.*4\.1\.0|prepared.*4\.1\.0/s);
     expect(read('docs/package-surface.md')).toMatch(/4\.0\.1\.md/);
+    expect(read('docs/package-surface.md')).toMatch(/4\.1\.0\.md/);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.1.0 field product phases', () => {
+  it('CHANGELOG 4.1.0 names Next API shell, product honesty, ESLint aliases, sensors, type edges, inventory', () => {
+    const body = read('CHANGELOG.md');
+    expect(body).toMatch(/## 4\.1\.0/);
+    expect(body).toMatch(/app\/api|ApplicationOrchestration|Next API/i);
+    expect(body).toMatch(/productHonesty|false-green|not finished/i);
+    expect(body).toMatch(/path alias|tsconfig|@\/\*/i);
+    expect(body).toMatch(/type-only|type placement|SharedTypes/i);
+    expect(body).toMatch(/mergePlanes|structure sensors|invariants/i);
+    expect(body).toMatch(/rules inventory|UI\/Next noise|magic-business/i);
+    expect(body).toMatch(/No required config migration|Does not weaken/i);
+    expect(body).toMatch(/ci-profile|PR slim|full matrix/i);
+  });
+
+  it('docs/releases/4.1.0.md is prepared with upgrade path and no Z09 closed claims', () => {
+    const body = read('docs/releases/4.1.0.md');
+    expect(body).toMatch(/arkgate@4\.1\.0/);
+    expect(body).toMatch(/npm install -D arkgate@4\.1\.0/);
+    expect(body).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(body).not.toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(body).toMatch(/Z09|RB-11/i);
+    expect(body).toMatch(/app\/api|Application/i);
+    expect(body).toMatch(/productHonesty/i);
+    expect(body).not.toMatch(/closes Z09|Z09 closed|RB-11 closed/i);
+    // Publication checklist must pair dist-tags.latest with CURRENT (renumber trap).
+    // Escape dots via split/join (not .replace) so CodeQL does not flag incomplete sanitization.
+    const escapedVersion = CURRENT.split('.').join('\\.');
+    expect(body).toMatch(
+      new RegExp(
+        String.raw`npm view arkgate dist-tags\.latest\`?\s*→\s*\`${escapedVersion}\``
+      )
+    );
   });
 });
 

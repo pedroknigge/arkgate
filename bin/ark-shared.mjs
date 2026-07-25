@@ -129,16 +129,19 @@ export function applyFrameworkLayoutOverlays(config, root) {
   // claiming a framework that package.json does not declare.
   if (signals.apiSurface && !signals.nestFramework && !signals.expressLike) {
     ensureInclude('src');
+    // Controllers/routes/http stay Presentation. Do NOT add bare `src/**/api/**` —
+    // that swallows Application bags like `src/core/api/**` and Next `app/api/**`
+    // (P0-A API shell). API shells live on Application via NEXT_API / core patterns.
     mergeLayerPatterns(next, 'PresentationAdapters', [
       'src/**/routes/**',
       'src/**/controllers/**',
       'src/**/http/**',
-      'src/**/api/**',
     ]);
     mergeLayerPatterns(next, 'ApplicationOrchestration', [
       'src/**/services/**',
       'src/**/use-cases/**',
       'src/**/usecases/**',
+      'src/**/api/**',
     ]);
   }
 
@@ -218,8 +221,9 @@ export function applyFrameworkLayoutOverlays(config, root) {
       'src/**/layout.ts',
       'src/**/loading.tsx',
       'src/**/error.tsx',
-      'src/**/route.ts',
-      'src/**/route.tsx',
+      // Do NOT add bare src/**/route.ts here — that outranks app/api Application shells
+      // under path-anchored specificity (P0-A / DL-P0A-RETROFIT). Non-API route handlers
+      // still match via src/app/** Presentation; API route.ts is Application via app/api/**.
       // Next middleware edge entry (classic + Next 16 proxy rename)
       'src/middleware.ts',
       'src/middleware.js',
@@ -235,18 +239,43 @@ export function applyFrameworkLayoutOverlays(config, root) {
       'src/server/**',
       'src/services/**',
       'src/use-cases/**',
-      'src/lib/**',
-      // Common Next "app core" bags (API clients, hooks, auth, stores) — not UI routes.
+      // NEVER bare src/lib/** — that Application vacuum mis-layers Domain/Persistence
+      // (NEW-APP-VACUUM-LIB / DL-DOMAIN-SPECIFICITY). Prefer specific orchestration bags.
+      'src/lib/actions/**',
+      'src/lib/services/**',
+      'src/lib/server/**',
+      'src/lib/use-cases/**',
+      'src/lib/api-handlers/**',
+      'src/lib/handlers/**',
+      // Common Next "app core" bags — not the whole lib tree, not UI routes.
       // Without these, monorepos like */src/core/** stay ungoverned and produce false greens.
       'src/core/**',
       '**/core/**',
       'src/actions/**',
       'src/**/actions.ts',
       'src/**/actions.tsx',
+      // Next API routes are use-case / orchestration shells (not Presentation UI).
+      // Higher-specificity than src/app/** / app/** so they win over PresentationAdapters.
+      // Include route-group transparent shells: app/(marketing)/api/**
+      'src/app/api/**',
+      'app/api/**',
+      'src/pages/api/**',
+      'pages/api/**',
+      '**/app/api/**',
+      '**/pages/api/**',
+      '**/app/**/api/**',
+      '**/pages/**/api/**',
+      'src/app/**/api/**',
+      'app/**/api/**',
     ]);
     mergeLayerPatterns(next, 'DomainModel', [
       'src/domain/**',
       'src/entities/**',
+      '**/domain/**',
+      '**/entities/**',
+      '**/kernel/domain/**',
+      'src/**/domain/**',
+      'src/**/entities/**',
       'src/**/model/**',
       'src/**/models/**',
     ]);
@@ -259,9 +288,10 @@ export function applyFrameworkLayoutOverlays(config, root) {
       'src/lib/db/**',
       'src/lib/prisma/**',
       'src/server/db/**',
-      // Conventional client data bags under lib/ (higher specificity than bare src/lib/**).
+      // Conventional client data bags under lib/ (path-anchored specificity beats vacuum bags).
       'src/lib/supabase/**',
       'src/lib/airtable/**',
+      'src/lib/turso/**',
       'src/lib/firebase/**',
       'src/lib/firestore/**',
       'src/lib/mongodb/**',
@@ -270,10 +300,17 @@ export function applyFrameworkLayoutOverlays(config, root) {
       'src/lib/kysely/**',
       'src/lib/planetscale/**',
       'src/lib/neon/**',
+      'src/lib/auth/**',
       '**/lib/supabase/**',
       '**/lib/airtable/**',
       '**/lib/prisma/**',
+      '**/lib/turso/**',
       '**/lib/db/**',
+      '**/lib/auth/**',
+      '**/repositories/**',
+      '**/db/**',
+      '**/supabase/**',
+      '**/airtable/**',
     ]);
     // Demo assets, generated public output, and tool configs are not architecture surface.
     const nextExcludes = [
@@ -428,6 +465,8 @@ export function collectForbiddenGlobalUses(ts, sourceFile, forbidden) {
 export {
   globToRegExp,
   patternSpecificity,
+  concreteGlobSegments,
+  matchingLayersForRelativePath,
   layerForFile,
   layerForRelativePath,
   isEdgeDenied,
@@ -1272,6 +1311,25 @@ export function collectRepoShapeSignals(root) {
     fs.existsSync(path.join(root, 'src', 'contexts')) ||
     fs.existsSync(path.join(root, 'src', 'bounded-contexts'));
 
+  // Vite SPA + root Vercel api/ + lib/ (NEW-SPA-DEFAULT-LAYOUT / superinsights-class).
+  const viteDependency = Object.keys(deps).some(
+    (name) => name === 'vite' || name.startsWith('vite/') || name === '@vitejs/plugin-react'
+  );
+  const viteConfigPresent = [
+    'vite.config.ts',
+    'vite.config.js',
+    'vite.config.mjs',
+    'vite.config.mts',
+  ].some((name) => fs.existsSync(path.join(root, name)));
+  const rootApiDir = fs.existsSync(path.join(root, 'api'));
+  const rootLibDir = fs.existsSync(path.join(root, 'lib'));
+  const viteVercelSpaLayout =
+    !nextFramework &&
+    !nestFramework &&
+    (viteDependency || viteConfigPresent) &&
+    (rootApiDir || rootLibDir) &&
+    (ui || hasUiFramework || rootApiDir);
+
   const hasBin = Boolean(pkg?.bin);
   const hasExports = Boolean(pkg?.exports);
   const hasMain = Boolean(pkg?.main || pkg?.module);
@@ -1308,6 +1366,7 @@ export function collectRepoShapeSignals(root) {
     toolHints.push('@nestjs/*');
   }
   if (nextFramework && !toolHints.includes('next')) toolHints.push('next');
+  if (viteVercelSpaLayout && !toolHints.includes('vite')) toolHints.push('vite');
 
   // Turborepo / Nx markers (monorepo tooling — maps to monorepo preset, not separate engines).
   const monorepoTooling = [];
@@ -1353,6 +1412,7 @@ export function collectRepoShapeSignals(root) {
     featureSlicedLayout,
     verticalSliceLayout,
     dddBoundedContextsLayout,
+    viteVercelSpaLayout,
     // null when absent so scoreArchetypes `if (signals.x)` is false for empty tooling
     monorepoTooling: monorepoTooling.length > 0 ? monorepoTooling : null,
     fullStackProduct,
@@ -1469,9 +1529,93 @@ export function loadArchitecturePlaybook(playbookPath = defaultPlaybookPath()) {
 }
 
 function resolvePreset(archetypeDef, signals) {
-  const alt = archetypeDef.presetAlternatives?.['feature-sliced'];
-  if (alt?.whenSignal && signals[alt.whenSignal]) return 'feature-sliced';
+  const alts = archetypeDef.presetAlternatives ?? {};
+  // SPA layout first — more specific than feature-sliced / default layered.
+  const spaAlt = alts['vite-vercel-spa'];
+  if (spaAlt?.whenSignal && signals[spaAlt.whenSignal]) return 'vite-vercel-spa';
+  // Also honor signal even when playbook omits the alternative key (older playbooks).
+  if (signals.viteVercelSpaLayout) return 'vite-vercel-spa';
+  const fsdAlt = alts['feature-sliced'];
+  if (fsdAlt?.whenSignal && signals[fsdAlt.whenSignal]) return 'feature-sliced';
   return archetypeDef.preset;
+}
+
+/**
+ * Refuse start --apply when shape is too uncertain (NEW-START-LOW-CONFIDENCE-SHAPE).
+ * Applies to **all** apply paths (not only --yes). Explicit --archetype / --preset / --force bypasses.
+ * Fail-closed when confidence or projected coverage metrics are null/unknown.
+ *
+ * Rules:
+ * - empty greenfield (totalFiles === 0) → allow (scaffold only; nothing to mis-classify yet)
+ * - null confidence or null projected coverage → refuse (fail-closed)
+ * - projected coverage < 50% → refuse (wrong include / vacuum)
+ * - confidence < 0.6 AND projected coverage < 80% → refuse (weak shape + incomplete cover)
+ * - confidence < 0.6 with coverage ≥ 80% → allow (thin-library / capped confidence but contract covers)
+ *
+ * @returns {{ ok: true } | { ok: false, reasons: string[], confidence: number|null, projectedCoverage: number|null }}
+ */
+export function evaluateStartShapeConfidenceGate({
+  confidence,
+  projectedCoveragePercent,
+  totalFiles,
+  explicitShape = false,
+  force = false,
+  minConfidence = 0.6,
+  minProjectedCoverage = 50,
+  strongCoverageFloor = 80,
+} = {}) {
+  if (force || explicitShape) return { ok: true, bypassed: true };
+  // Day-zero empty tree: contract + gates scaffold; coverage is vacuously fine.
+  if (typeof totalFiles === 'number' && totalFiles === 0) {
+    return {
+      ok: true,
+      emptyGreenfield: true,
+      confidence: typeof confidence === 'number' ? confidence : null,
+      projectedCoverage: 100,
+      totalFiles: 0,
+    };
+  }
+  const reasons = [];
+  const conf =
+    typeof confidence === 'number' && Number.isFinite(confidence) ? confidence : null;
+  const cov =
+    typeof projectedCoveragePercent === 'number' && Number.isFinite(projectedCoveragePercent)
+      ? projectedCoveragePercent
+      : null;
+  // Fail-closed on unknown metrics (null analysis must not silently apply).
+  if (cov === null) {
+    reasons.push(
+      'projected governed coverage is unknown — refuse apply without measured coverage (fail-closed)'
+    );
+  } else if (cov < minProjectedCoverage) {
+    reasons.push(
+      `projected governed coverage ${cov}% is below ${minProjectedCoverage}% — refuse apply`
+    );
+  }
+  // Thin packages often cap confidence (e.g. 0.28) while covering 100% — do not block those.
+  const coverageStrong = cov !== null && cov >= strongCoverageFloor;
+  if (conf === null) {
+    reasons.push(
+      'archetype confidence is unknown — refuse apply without shape analysis (fail-closed); pass --archetype/--preset or --force'
+    );
+  } else if (conf < minConfidence && !coverageStrong) {
+    reasons.push(
+      `archetype confidence ${conf} is below ${minConfidence} with projected coverage ${cov ?? 'unknown'}% (< ${strongCoverageFloor}%) — refuse apply without an explicit shape`
+    );
+  }
+  if (reasons.length === 0) return { ok: true, confidence: conf, projectedCoverage: cov };
+  return {
+    ok: false,
+    reasons,
+    confidence: conf,
+    projectedCoverage: cov,
+    choices: [
+      'Pass --archetype <id> or --preset <name> to lock the shape deliberately',
+      'Pass --force to apply anyway after reviewing the preview',
+      'Run without --apply for a read-only preview',
+      'Run ark-check --recommend to inspect ranked shapes',
+    ],
+  };
 }
 
 /**
@@ -1656,6 +1800,7 @@ export function buildArchitectureRecommendation(root, options = {}) {
       expressLike: signals.expressLike,
       verticalSliceLayout: signals.verticalSliceLayout,
       dddBoundedContextsLayout: signals.dddBoundedContextsLayout,
+      viteVercelSpaLayout: signals.viteVercelSpaLayout,
       monorepoTooling: signals.monorepoTooling,
     },
     // A repo past this size is not greenfield: `ark init` would scaffold a starter that governs
@@ -1711,9 +1856,25 @@ export function mapWizardChoiceToArchetype(choiceKey) {
 
 const NEW_HERE_GOVERNED_THRESHOLD = 50;
 
-/** Show onboarding nudge when coverage is low or config is missing. */
+/**
+ * Show onboarding nudge when config is missing or start has not finished.
+ *
+ * After `ark start --apply` (config + AGENTS.md present), low coverage is an
+ * adopt/coverage problem — not “finish ark start”. Field: NEW-DOCTOR-STALE-FINISH-START.
+ */
 export function shouldShowNewHereNudge(root, configPath, governedPercent, configMissing) {
   if (configMissing) return true;
+  // Start already applied: never primary-action “finish start”.
+  try {
+    if (
+      fs.existsSync(configPath) &&
+      fs.existsSync(path.join(root, 'AGENTS.md'))
+    ) {
+      return false;
+    }
+  } catch {
+    /* fall through */
+  }
   if (typeof governedPercent === 'number' && governedPercent < NEW_HERE_GOVERNED_THRESHOLD) {
     return true;
   }

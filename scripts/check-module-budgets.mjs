@@ -15,26 +15,36 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BUDGETS = [
   { path: 'bin/ark-check.mjs', max: 100 },
   // 4.0.0 ArkRules write-path + inventory flags — was 1600 (loc 1671).
-  { path: 'bin/ark-check-runtime.mjs', max: 1750 },
-  { path: 'bin/ark.mjs', max: 900 },
+  // 4.1.x monorepo config walk-up (S2 / NEW-MONOREPO-CWD-WALKUP) — was 1750.
+  // S0 security: write-root split + config path contain + teeth demote — was 1900.
+  { path: 'bin/ark-check-runtime.mjs', max: 1920 },
+  // S3 start confidence gate on all apply paths — was 900 (loc ~920).
+  { path: 'bin/ark.mjs', max: 940 },
   { path: 'bin/lib/agent-gates.mjs', max: 150 },
   { path: 'bin/lib/mcp-adoption.mjs', max: 600 },
   // Host expansion (Antigravity hooks merge + OpenCode MCP migrate/merge).
-  { path: 'bin/lib/install-migrate.mjs', max: 700 },
+  // S4 force preserve content-identity path — was 700 (loc ~800).
+  { path: 'bin/lib/install-migrate.mjs', max: 820 },
   // Phase P: designFitness / designSmells doctor surface + patternBets plan IR.
   // 3.8.2 field DX (sessionNote, pure-layer opt-in, Codex legacy advisory) — was 920.
   // Product mandate honesty (coverage/baseline/writePath + design-weak flags) — was 980.
   // 4.0.0 packageVersionTruth + rulesUnderContract — was 1010 (loc 1014).
-  { path: 'bin/lib/doctor-plan.mjs', max: 1050 },
+  // 4.1.0 productHonesty + mergePlanes wiring — was 1050 (loc 1062).
+  // FG01/S1 finished-with-debt + S2 pin nextAction / configRoot — was 1120.
+  { path: 'bin/lib/doctor-plan.mjs', max: 1240 },
   // 4.0.0 ArkRules start/init templates + dual-plane presets — was 650 (loc 870).
-  { path: 'bin/lib/presets.mjs', max: 920 },
+  // S3 SPA + adopt/migrate patterns (vite-vercel-spa, P0A retrofit) — was 920 (loc ~1130).
+  { path: 'bin/lib/presets.mjs', max: 1160 },
   { path: 'bin/lib/config-contract.mjs', max: 500 },
   { path: 'bin/lib/weakest-link.mjs', max: 500 },
   { path: 'bin/lib/enforcement-profiles.mjs', max: 150 },
   { path: 'bin/lib/write-path-detect.mjs', max: 200 },
   { path: 'bin/lib/html-report.mjs', max: 1550 },
   // Design-depth / write-path / baseline legend for showcase HTML (split from renderer).
-  { path: 'bin/lib/html-report-depth.mjs', max: 320 },
+  // 4.1.0 productHonesty card + mergePlanes — was 320 (loc 370).
+  // 4.1.0 review: baselineSplit parity inputs — was 400 (loc 427).
+  // FG01 HTML productHonesty parity (activeBlocking + pin) — was 460.
+  { path: 'bin/lib/html-report-depth.mjs', max: 480 },
   // X04 grew the advisory renderer a third section (physicalCohesion).
   // 4.0.0 ArkRules advisory section — was 280 (loc 281).
   { path: 'bin/lib/html-report-advisories.mjs', max: 300 },

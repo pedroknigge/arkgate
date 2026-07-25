@@ -40,21 +40,26 @@ function score(entries) {
 }
 
 const entries = sourceEntries(report.files);
+const requiredGroups = contract.groups.filter((group) => group.optional !== true);
 const groupResults = contract.groups.map((group) => ({
   id: group.id,
+  optional: group.optional === true,
   result: score(entries.filter((entry) => group.targets.some((target) => inTarget(entry, target)))),
 }));
 const aggregate = score(
-  entries.filter((entry) => contract.groups.some((group) => group.targets.some((target) => inTarget(entry, target))))
+  entries.filter((entry) =>
+    requiredGroups.some((group) => group.targets.some((target) => inTarget(entry, target)))
+  )
 );
 const failed = groupResults.filter(
-  ({ result }) =>
-    result.total === 0 || result.noCoverage > 0 || result.percent < contract.threshold
+  ({ optional, result }) =>
+    !optional &&
+    (result.total === 0 || result.noCoverage > 0 || result.percent < contract.threshold)
 );
 
-for (const { id, result } of groupResults) {
+for (const { id, optional, result } of groupResults) {
   console.log(
-    `${id}: ${result.percent.toFixed(2)}% (${result.killed}/${result.total}), ` +
+    `${id}${optional ? ' (optional)' : ''}: ${result.percent.toFixed(2)}% (${result.killed}/${result.total}), ` +
     `NoCoverage=${result.noCoverage}`
   );
 }

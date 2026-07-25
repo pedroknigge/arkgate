@@ -176,15 +176,7 @@ export function classifyRemediation(violation: ArkViolationLike | null | undefin
           'Whole source file is type-only surface (no runtime statements) with a type-only cross-layer edge: relocate the file to the owning layer (or extract the type there). Behavior-preserving; gate verifies.',
       };
     }
-    if (violation?.typeOnly) {
-      return {
-        class: 'mechanical-safe',
-        confidence: 0.9,
-        remediationKind: 'type-only-import-move',
-        rationale:
-          'Type-only import (erased at runtime): move the type to the layer that owns it and re-export for back-compat. Behavior-preserving, and the gate verifies it.',
-      };
-    }
+    // Pure type-only *module* first (target has no value exports) — convert to import type.
     if (violation?.targetTypeOnlyExports) {
       return {
         class: 'mechanical-safe',
@@ -194,15 +186,24 @@ export function classifyRemediation(violation: ArkViolationLike | null | undefin
           'Static import targets a pure type-only module: convert to `import type` (erased at runtime) and place the type in a shared/owning layer. No runtime coupling; gate verifies.',
       };
     }
-    // R6: value-syntax named import/export of type-only exports from a mixed module.
-    // Only set when scan proves no dual-space value export and no top-level side effects.
-    if (violation?.namedBindingsTypeOnly) {
+    // R6: value-syntax named import of type-only exports from a *mixed* module.
+    // When the edge is already `import type`, prefer relocate (type-only-import-move) below.
+    if (violation?.namedBindingsTypeOnly && !violation?.typeOnly) {
       return {
         class: 'mechanical-safe',
         confidence: 0.86,
         remediationKind: 'import-type-of-type-exports',
         rationale:
           'Named bindings are type-only exports of the target module (even if the file also exports values): convert to `import type` / `export type` (erased at runtime). Gate verifies.',
+      };
+    }
+    if (violation?.typeOnly) {
+      return {
+        class: 'mechanical-safe',
+        confidence: 0.9,
+        remediationKind: 'type-only-import-move',
+        rationale:
+          'Type-only import (erased at runtime): move the type to the layer that owns it and re-export for back-compat. Behavior-preserving, and the gate verifies it.',
       };
     }
     // W6: port-proof inject is a *suggested* shape when proof holds, but always judgment

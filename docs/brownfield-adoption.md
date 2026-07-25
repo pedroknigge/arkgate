@@ -20,6 +20,42 @@ every ungoverned directory** (harvested from the 11-layer profile + presets; unr
 ones are flagged for you to classify, never guessed). Keep an existing config; don't
 regenerate it unasked.
 
+### Next.js honesty (default overlays / ui-surface / monorepo)
+
+**App Router API routes are Application / use-case shell by default**, not Presentation/UI:
+
+| Path | Default layer |
+|------|----------------|
+| `app/api/**`, `src/app/api/**` | **ApplicationOrchestration** (orchestration shell) |
+| `pages/api/**`, `src/pages/api/**` | **ApplicationOrchestration** |
+| UI routes (`app/(…)`, `page.tsx`, `components/**`) | **PresentationAdapters** |
+
+Without this split, broad `**/app/**` Presentation patterns push every API handler into UI and
+create a Presentation→Persistence tsunami. Specificity still wins: more-specific Application
+globs beat Presentation. ArkRules stay **opt-in** (not forced on by start/adopt).
+
+### Composition-root / factory modules (optional Application-only)
+
+Many brownfield trees park DI composition roots and object factories next to domain code
+(`src/factories/**`, `src/composition/**`, `src/app/container.ts`). Those modules are
+**wiring**, not domain rules:
+
+| Pattern | Recommended layer | Why |
+|---------|-------------------|-----|
+| `**/factories/**`, `**/composition/**`, `**/container.ts`, `**/bootstrap.ts` | **ApplicationOrchestration** (or a dedicated optional CompositionRoot layer if you need it) | Constructs aggregates / wires ports; may import Domain + Persistence adapters |
+| Aggregate `static create` / private ctor factories **inside** domain entities | **DomainModel** | Always-valid factory is a domain rule (ArkRules `always-valid-factory`), not composition |
+| NestJS modules / providers | FrameworkAdapters / Application | Framework shell, not Domain |
+
+Do **not** map composition roots into DomainModel solely because a file constructs entities —
+that turns honest Application→Domain edges into false Domain purity failures. Prefer:
+
+1. Application patterns that match `**/factories/**` / `**/composition/**` (higher specificity than broad Domain globs), or  
+2. An optional **CompositionRoot** layer that may depend on Domain + Persistence and is
+   forbidden as a dependency *from* Domain (mirror Application rules).
+
+Field note (S3.1.3): factory-bag composition roots belong in Application (or CompositionRoot),
+not Domain — document the choice in `ark.config.json` rather than freezing factory noise.
+
 ## 2. Diagnose before you freeze
 
 ```bash

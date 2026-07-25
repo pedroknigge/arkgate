@@ -55,13 +55,30 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
   for (const [file, content] of Object.entries(input.fileContents).sort(([a], [b]) =>
     a.localeCompare(b)
   )) {
+    const posix = file.replace(/\\/g, '/');
+    // P2-N — clear UI bags only (components/theme/styles). Do NOT blanket-skip all
+    // app/pages (server actions / route handlers live there and stay inventoriable).
+    const isUiChrome =
+      /(?:^|\/)(?:components|ui|layouts|styles|hooks|theme|tokens|i18n|locales?)(?:\/|$)/i.test(
+        posix
+      ) ||
+      /(?:^|\/)(?:src\/)?(?:app|pages)\/.+\.(?:tsx|jsx)$/i.test(posix) &&
+        /(?:page|layout|loading|error|template|default)\.(?:tsx|jsx)$/i.test(posix);
+    const isApiRoute = /(?:^|\/)(?:app|pages)(?:\/[^/]+)*\/api(?:\/|$)/i.test(posix);
+    const isServerAction =
+      /(?:^|\/)actions?(?:\/|\.|$)/i.test(posix) || /['"]use server['"]/.test(content);
     const isController =
-      /controller|route|handler|resolver/i.test(file) ||
-      /@(Controller|Get|Post|Put|Delete|Patch)\b/.test(content);
+      /controller|handler|resolver/i.test(file) ||
+      isApiRoute ||
+      isServerAction ||
+      (/route\.(?:ts|js|tsx|jsx)$/i.test(posix) && !isUiChrome) ||
+      /@(Controller|Get|Post|Put|Delete|Patch)\b/.test(content) ||
+      /\bexport\s+(?:async\s+)?function\s+(?:GET|POST|PUT|DELETE|PATCH)\b/.test(content) ||
+      /\bexport\s+const\s+(?:GET|POST|PUT|DELETE|PATCH)\s*=/.test(content);
     const isDomain = /domain|entity|aggregate|model/i.test(file);
 
-    // validation-in-controller
-    if (isController) {
+    // validation-in-controller (API/Nest/server-action handlers — not pure UI chrome)
+    if (isController && !isUiChrome) {
       const valRe = /\b(if\s*\([^)]{0,80}(amount|total|price|qty|quantity|balance)[^)]{0,40}\)|throw new (Error|BadRequest|ValidationError)|z\.object\(|yup\.|class-validator|@Is[A-Z])/g;
       let m: RegExpExecArray | null;
       while ((m = valRe.exec(content)) !== null) {
@@ -83,20 +100,52 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
       }
     }
 
-    // magic business constants (heuristic)
+    // magic business constants (heuristic) — quiet UI labels via anchored prefixes/tokens
     const magicRe = /\b(const|let)\s+([A-Z][A-Z0-9_]{2,})\s*=\s*(\d{2,}|['"][^'"]{8,}['"])/g;
     let magic: RegExpExecArray | null;
+    // Wave-2 (P2N residual): infra / I/O / storage noise without swallowing domain seeds
+    // like MAX_CART_SIZE, ORDER_STATUS_OPEN, MAX_PROPERTY_LIMIT, MAX_MEDIA_PER_PROPERTY,
+    // DEFAULT_ORDER_LIMIT (narrow DEFAULT_/REQUEST_/STORAGE_ — do not drop all DEFAULT_*).
+    const isInfraMagicName = (name: string): boolean =>
+      /^(?:TEST|SPEC|TIMEOUT|PORT|VERSION|MAX_RETRY|MIN_RETRY|TTL|CACHE|HEADER|COOKIE|MIME|CONTENT_TYPE|HTTP_STATUS|NODE_ENV|LOG_LEVEL|FEATURE_FLAG|ID_PREFIX|Z_INDEX)(?:_|$)/i.test(
+        name
+      ) ||
+      /^(?:ROUTE|PATH|LABEL|TITLE|HEADING|CLASS|STYLE|COLOR|THEME|BREAKPOINT|QUERY|PARAM|ICON|ARIA|MSG|COPY|I18N|LOCALE|PAGE|NAV|MENU|TAB|BTN|BUTTON|PLACEHOLDER|TOOLTIP|SHADOW|RADIUS|GAP|PADDING|MARGIN|FONT|WIDTH|HEIGHT|OPACITY|DURATION|EASE|ANIM)_/i.test(
+        name
+      ) ||
+      /_(?:ROUTE|PATH|LABEL|TITLE|COLOR|THEME|CLASS|STYLE|ICON|ARIA|MSG|COPY|TIMEOUT|PORT|VERSION|RETRY|DELAY|INTERVAL|TTL|CACHE)$/i.test(
+        name
+      ) ||
+      // ms/timeout/bytes/storage/bucket/url infra suffixes (predial residual)
+      /_(?:TIMEOUT(?:_MS)?|MS|BYTES|BUCKET|STORAGE_KEY|WINDOW_MS)$/i.test(name) ||
+      // Narrow DEFAULT_/REQUEST_/STORAGE_ — only known infra tokens, not all DEFAULT_* seeds
+      /^(?:DEFAULT_(?:BASE_URL|TIMEOUT(?:_MS)?|RETRY|PORT|HOST|HEADERS?|CACHE|TTL|MS|LOCALE|LANG|TIMEZONE|TZ)|REQUEST_(?:TIMEOUT(?:_MS)?|HEADERS?|RETRY|ID_PREFIX)|STORAGE_(?:KEY|PREFIX|BUCKET)|DAY_MS$|APP_DOMAIN$|BASE_URL$)$/i.test(
+        name
+      ) ||
+      // Known I/O bag prefixes that are never domain seeds in field clones
+      /^(?:FAVORITES_STORAGE|LISTINGS_CACHE|DOCS_PATH|METRICS_INTERVAL)/i.test(name);
+
     while ((magic = magicRe.exec(content)) !== null) {
-      if (/TEST|SPEC|TIMEOUT|PORT|VERSION|MAX_RETRY/i.test(magic[2]!)) continue;
+      const name = magic[2]!;
+      if (isInfraMagicName(name)) continue;
+      // P2-N: skip remaining ALL_CAPS noise only on clear UI chrome (not all of app/).
+      if (isUiChrome && !isDomain) continue;
+      // Wave-2: integrations / repos / clients are usually I/O constants, not Domain seeds.
+      // Keep Domain/controller paths so spaghetti magic limits still surface.
+      const isIoSurface =
+        /(?:^|\/)(?:integrations?|repos?|clients?|infra(?:structure)?|adapters?)(?:\/|$)/i.test(
+          posix
+        ) && !isDomain;
+      if (isIoSurface) continue;
       seq += 1;
       candidates.push({
         id: `inv-magic-${seq}`,
         kind: 'magic-business-constant',
         file,
         line: lineOf(content, magic.index),
-        message: `Magic business constant ${magic[2]} may belong in a Domain policy or invariant catalog.`,
+        message: `Magic business constant ${name} may belong in a Domain policy or invariant catalog.`,
         confidence: 'heuristic',
-        suggestedArkRule: { layer: 'DomainModel', invariantId: `INV-${magic[2]}` },
+        suggestedArkRule: { layer: 'DomainModel', invariantId: `INV-${name}` },
         neverMechanicalSafe: true,
       });
     }
@@ -131,27 +180,36 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
 
     // mutation without guard in domain
     if (isDomain) {
-      const mutRe = /this\.\w+\s*=/g;
-      let mut: RegExpExecArray | null;
-      while ((mut = mutRe.exec(content)) !== null) {
-        const window = content.slice(Math.max(0, mut.index - 200), mut.index + 200);
-        if (!/\b(ensureInvariants|assertInvariants|validate|publish|emit)\b/.test(window)) {
-          seq += 1;
-          candidates.push({
-            id: `inv-mut-${seq}`,
-            kind: 'mutation-without-guard',
-            file,
-            line: lineOf(content, mut.index),
-            message: 'Domain field mutation without nearby guard/publish call.',
-            confidence: 'heuristic',
-            suggestedArkRule: {
-              layer: 'DomainModel',
-              structureId: 'events-on-mutation',
-              sensor: 'domain-event-on-mutation',
-            },
-            neverMechanicalSafe: true,
-          });
-          break; // one per file is enough for inventory ranking
+      // Wave-2: *Error / *access.error bags are not aggregate mutators (propia residual).
+      // Narrow: path-based error modules only — do not skip whole domain files that
+      // merely export an Error class alongside aggregates.
+      const isErrorBag =
+        /\.error\.(?:ts|js|tsx|jsx)$/i.test(posix) ||
+        /(?:^|\/)[^/]*(?:-access)?\.error\./i.test(posix) ||
+        /(?:^|\/)errors?(?:\/|$)/i.test(posix);
+      if (!isErrorBag) {
+        const mutRe = /this\.\w+\s*=/g;
+        let mut: RegExpExecArray | null;
+        while ((mut = mutRe.exec(content)) !== null) {
+          const window = content.slice(Math.max(0, mut.index - 200), mut.index + 200);
+          if (!/\b(ensureInvariants|assertInvariants|validate|publish|emit)\b/.test(window)) {
+            seq += 1;
+            candidates.push({
+              id: `inv-mut-${seq}`,
+              kind: 'mutation-without-guard',
+              file,
+              line: lineOf(content, mut.index),
+              message: 'Domain field mutation without nearby guard/publish call.',
+              confidence: 'heuristic',
+              suggestedArkRule: {
+                layer: 'DomainModel',
+                structureId: 'events-on-mutation',
+                sensor: 'domain-event-on-mutation',
+              },
+              neverMechanicalSafe: true,
+            });
+            break; // one per file is enough for inventory ranking
+          }
         }
       }
     }

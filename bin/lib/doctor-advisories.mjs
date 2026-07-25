@@ -48,7 +48,14 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     // Y09 direction: advisory graph-blind spots (template-interpolation); never hard verdict.
     graphBlindSpots: detectGraphBlindSpots(ts, root, files),
     // AR12 — Rules under contract (honest counts; real test I/O, never empty-fileContents stub).
-    rulesUnderContract: summarizeRulesUnderContract(root, config, factPaths),
+    // P1M: pass classification so extraMergeTeeth cannot arm at 0% governed.
+    rulesUnderContract: summarizeRulesUnderContract(root, config, factPaths, {
+      governedPercent: cov?.governed?.percent ?? null,
+      populatedLayerCount: Array.isArray(cov?.layers)
+        ? cov.layers.filter((row) => (row?.files ?? 0) > 0).length
+        : null,
+      classifiedFiles: cov?.governed?.classifiedFiles ?? null,
+    }),
   };
 }
 

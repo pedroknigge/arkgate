@@ -66,7 +66,19 @@ describe('Z08 held-out task materializer', () => {
       writeTaskFiles(root, task, 'fixture');
       const fixtureOut = compile();
       expect(accept(fixtureOut).status).toBe(1);
-      expect(checkArchitecture().status).toBe(1);
+      const fixtureArch = checkArchitecture();
+      // Type-only placement debt may exit 0 (failsStrict:false) but must still report violations.
+      let fixtureJson: { ok?: boolean; violations?: unknown[] } = {};
+      try {
+        fixtureJson = JSON.parse(fixtureArch.stdout || '{}');
+      } catch {
+        fixtureJson = {};
+      }
+      const fixtureDebt =
+        fixtureArch.status !== 0 ||
+        fixtureJson.ok === false ||
+        (Array.isArray(fixtureJson.violations) && fixtureJson.violations.length > 0);
+      expect(fixtureDebt, fixtureArch.stderr || fixtureArch.stdout).toBe(true);
 
       writeTaskFiles(root, task, 'oracle');
       const oracleOut = compile();

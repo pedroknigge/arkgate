@@ -106,6 +106,7 @@ describe('skill surface inventory', () => {
   it('autopilot/explore rank ENFORCE · design-weak Shape door (no false-done)', () => {
     const autopilot = fs.readFileSync(path.join(SKILLS_DIR, 'ark-autopilot.md'), 'utf8');
     const explore = fs.readFileSync(path.join(SKILLS_DIR, 'ark-explore.md'), 'utf8');
+    const fix = fs.readFileSync(path.join(SKILLS_DIR, 'ark-fix.md'), 'utf8');
     expect(autopilot).toMatch(/Enforce · design-weak/i);
     expect(autopilot).toMatch(/Primary Shape door|shape-focus/i);
     expect(autopilot).toMatch(/False-done forbidden|never claim healthy finished|Empty plan A/i);
@@ -115,6 +116,13 @@ describe('skill surface inventory', () => {
     expect(explore).toMatch(/False-done forbidden|never claim healthy/i);
     // Smell envelope honesty (absence ≠ full-tree proof)
     expect(explore).toMatch(/absence of smell|not full-tree proof|envelope/i);
+    // DL-PLANB-SKILL-DEPTH: Plan B one-pilot checklist with killSwitch / never multi-batch
+    expect(explore).toMatch(/Plan B one-pilot checklist/i);
+    expect(explore).toMatch(/killSwitch|Kill-switch/i);
+    expect(explore).toMatch(/multiPilotBatchForbidden|never multi-batch|never multi-batch/i);
+    expect(fix).toMatch(/Plan B one-pilot checklist/i);
+    expect(fix).toMatch(/Kill-switch/i);
+    expect(fix).toMatch(/multi-pilot batch|never multi-batch|multiPilotBatchForbidden/i);
   });
 
   it('skillTemplates returns non-empty body for each expected skill', () => {

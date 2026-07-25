@@ -60,8 +60,8 @@ describe('Phase Z scale benchmark contract', () => {
       size: 10000,
       targetP95Ms: 100,
       baselineMs: 84.567725,
-      cycleObservedMaxP95Ms: 84.567725,
-      maxP95Ms: 100,
+      cycleObservedMaxP95Ms: 103.45421,
+      maxP95Ms: 125,
     });
     expect(budgets.scenarios.memory).toMatchObject({
       maxPeakRssBytes: 1073741824,

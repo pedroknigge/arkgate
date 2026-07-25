@@ -6,7 +6,8 @@
  *   1. ≥ MIN_CASES directories with case.json
  *   2. Each case has expected labels (expectedFixClass + theme; skipHarness may omit ruleId)
  *   3. Required R5 themes are covered by at least one case
- *   4. Every non-skipHarness fixture fails real ark-check with exit 1 and ≥1 violation
+ *   4. Every non-skipHarness fixture reports ≥1 violation (exit 1, or exit 0 for
+ *      type-only placement debt only — failsStrict:false still prints "violation")
  *   5. When expectedRemediationKind is set, --plan first step matches (mechanical-safe kinds)
  *
  * Exit 0 = corpus green for CI. Does not run the agent harness.
@@ -155,14 +156,18 @@ function main() {
     }
 
     const check = runArkCheck(dir);
-    if (check.code !== 1) {
+    // Type-only placement debt alone exits 0 (failsStrict:false) but still reports violations.
+    if (check.code !== 1 && check.code !== 0) {
       errors.push(
-        `${name}: ark-check exit ${check.code} (want 1 — fixture must violate). Tail:\n${check.output.slice(-400)}`
+        `${name}: ark-check exit ${check.code} (want 0 or 1 with violations). Tail:\n${check.output.slice(-400)}`
       );
       continue;
     }
     if (!/violation/i.test(check.output)) {
-      errors.push(`${name}: ark-check exit 1 but output has no "violation" marker`);
+      errors.push(
+        `${name}: ark-check exit ${check.code} but output has no "violation" marker (fixture must still report debt)`
+      );
+      continue;
     }
 
     // Label alignment for mechanical-safe kinds via --plan
@@ -192,7 +197,9 @@ function main() {
       }
     }
 
-    notes.push(`${name}: violates (exit 1) theme=${def.theme} fixClass=${def.expectedFixClass}`);
+    notes.push(
+      `${name}: violates (exit ${check.code}) theme=${def.theme} fixClass=${def.expectedFixClass}`
+    );
   }
 
   for (const theme of REQUIRED_THEMES) {

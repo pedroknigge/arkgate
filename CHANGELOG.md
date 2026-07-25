@@ -5,6 +5,96 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.1.0 — 2026-07-25 (prepared)
+
+**Minor** over 4.0.1. Single ship train: field product phases + field-gap closure (S0–S7) +
+maintainer CI PR-slim / full-matrix speed work. Field product phases from Next monorepo dogfood +
+objective review, plus field-gap lab re-verify:
+Next API shell classification, anti false-green doctor packaging, monorepo config walk-up with
+write-root split, SPA/lib classification vacuum fixes, ESLint path-alias parity, structure-sensor
+false-positive tuning, ArkRules merge-plane honesty, type-edge placement debt, rules-inventory
+UI noise reduction, migrate-contract retrofit, and config write containment.
+**No required config migration.** Does not weaken write gate or CI value edges. Does not close
+Z09 / RB-11 field claims. **Status: prepared** (not on npm until publish).
+
+### Added
+
+- **Next API = Application shell (P0-A):** Framework overlay, `ui-surface`, and `monorepo`
+  presets classify `app/api/**`, `src/app/api/**`, `pages/api/**` as
+  **ApplicationOrchestration** (higher specificity than Presentation `**/app/**`). UI routes
+  stay Presentation. Docs: brownfield + configuration honesty.
+- **Product honesty surface (P0-B):** Doctor JSON `productHonesty` consolidates design-weak,
+  weak/partial coverage, dirty freeze, package dual-truth, residual pilots, and soft write hosts
+  into one unfinished/not-whole-tree message (`notAScore`). Human doctor section + HTML card
+  (`data-product-honesty`). Never a numeric architecture score. **Anti false-green:** never
+  `finished: true` when active **blocking** violations remain, mode is ADAPT/SUGGEST with debt,
+  dual-truth pin, or residual pilots are open.
+- **ArkRules mergePlanes (P1-M):** `rulesUnderContract.mergePlanes` states which plane can fail
+  merge (layers vs enforced structure sensors vs invariants) and dual-plane stamp (heuristics vs
+  catalog+coverage; never one score).
+- **Type-edge policy fields (P1-type):** Doctor `violations.typeEdgePolicy` + SharedTypes
+  guidance; type-only denied edges stay on the **violations** list with `failsStrict: false`
+  and diagnostics **severity: warning** (non-blocking for merge/exit/library `valid`). Value
+  edges still block. **Exception:** `peerIsolation` type-only edges stay hard.
+- **`--migrate-contract`:** Retrofit existing configs with Next API shell patterns
+  (Application) without full re-init — field path for brownfield Next App Router / Pages API.
+- **Monorepo discovery walk-up:** Doctor/check from a nested package cwd find the monorepo
+  `ark.config.json` (no invented ADAPT 0%). Mutative install/start write under the **write root**
+  (cwd/`--root`) unless `--follow-config-root` is set — does not clobber monorepo AGENTS/skills
+  from a nested package by accident.
+- **SPA / vacuum classification (S3):** SPA preset + adopt/start heuristics reduce
+  Application-empty / lib-as-Presentation lies on Vite SPA and similar client trees; Domain
+  specificity keeps nested `**/domain/**` on DomainModel when patterns compete.
+- **Config write containment:** Mutative commands refuse `--config` paths outside project root
+  (fail closed; no silent escape write).
+
+### Improved
+
+- **ESLint path aliases (P0-C):** `ark/no-domain-infra-imports` resolves tsconfig `paths` /
+  `baseUrl` (including simple relative `extends`) so `@/*` forbidden edges match CLI inside the
+  documented envelope. Residual honestly documented in ai-gates (no project refs / multi-target
+  / bare packages claim). Dual-driver parity tests lock type-only vs value.
+- **Structure sensors prefer false negatives (P1-L):** `aggregate-private-state` ignores
+  readonly-only public props; `always-valid-factory` requires mutable surface evidence; anemic
+  bar needs ≥2 public fields. Intentional DDD private aggregates stay quiet; true positives
+  retained. Defaults remain advisory for noisy sensors.
+- **Rules inventory UI noise (P2-N):** Magic-constant inventory skips route/theme/UI label noise
+  and pure UI/Next page surfaces; still finds controller validation and domain constants.
+- **Force-gates / upgrade digest (S4):** Force-install preserves content-identity digests so
+  managed upgrade does not falsely report unbound/clobber after intentional force refresh.
+- **Doctor / HTML honesty (S1/S0):** Type-only edges excluded from blocking counts in planMet,
+  HTML banners, and adapter `valid` parity; dual-truth pin and package-pin-absent surface on
+  `productHonesty.reasonIds`.
+- **Field dogfood smoke:** Offline gap-assertion scaffold under `scripts/field-dogfood/` for
+  regression before minors (7-repo lab re-verify 15/15 critical assertions).
+- **CI PR slim vs full matrix:** composable `ci-profile` (`scripts/ci-profile.mjs` +
+  `.github/workflows/ci.yml`) — ordinary PRs use coverage-only build, 1 packed-TS cell, 1
+  gallery PM, onboarding `*/small`, and path-filtered performance budgets; full matrix (main,
+  labels `full-matrix`/`release`, release-prep branches `feat/4.1*`) keeps `test:confidence`
+  (mutation) and complete product matrices with `fail-fast: false`. Documented in CONTRIBUTING.
+  Does not weaken publish-path confidence.
+
+### Fixed
+
+- Presentation→Persistence baselining pressure from Next API routes mis-layered as UI (field
+  dogfood on App Router monorepos).
+- False “finished / whole-tree guarantee” packaging when the graph still has blocking debt.
+- Nested monorepo package cwd inventing ungoverned ADAPT world.
+- Type-only ESLint/CLI/HTML/adapter parity drift (blocking counts and exit codes).
+- Config path outside `--root` accepted on mutative write paths.
+- Greenfield `ark start --yes --apply` refused on empty trees (vacuous 0% coverage) and residual
+  `src/**` Application catch-all restored for non-Next layered presets.
+- Presentation `src/**/api/**` no longer swallows Application bags like `src/core/api/**`.
+
+### Coverage floors (internal)
+
+- Statement/line **80 → 79.5**, branch **82.5 → 82.0**, function **85 → 76.5** after field-gap
+  surface growth (measured clean candidate ~79.95% / ~82.3% / ~77.0%). Per-file write-path
+  floors recalibrated to measured honesty (not a silent weaken of architecture gates).
+- Mutation break threshold **90 → 87** (measured ~88–89 on the same candidate).
+  Critical mutation groups drop managed-upgrade line window for 4.1.0 (S4 force-preserve
+  remains unit-tested; NoCoverage noise on toml-section residual).
+
 ## 4.0.1 — 2026-07-24
 
 **Patch** over 4.0.0. Field footgun fix for stale global CLI on upgrade, ArkRules HTML/doctor

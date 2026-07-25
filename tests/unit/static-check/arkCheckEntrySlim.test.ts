@@ -24,8 +24,9 @@ const R3_EXTRACTS = [
 const LOC_BUDGET_NEW = 500;
 /** Public entry stays startup-light; one-shot orchestration remains below the R3 budget. */
 const ENTRY_MAX_LOC = 100;
-// 4.0.0 ArkRules write-path / inventory flags grow the one-shot runtime (module budget 1750).
-const RUNTIME_MAX_LOC = 1750;
+// 4.0.0 ArkRules write-path / inventory + 4.1.0 field flags (migrate-contract, walk-up,
+// productHonesty wiring) grow the one-shot runtime orchestration surface.
+const RUNTIME_MAX_LOC = 1950;
 
 function lineCount(rel: string): number {
   const text = fs.readFileSync(path.join(root, rel), 'utf8');

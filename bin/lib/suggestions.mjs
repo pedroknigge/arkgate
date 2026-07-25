@@ -15,6 +15,68 @@ export function dirSegmentsFromGlob(pattern) {
     .filter((segment) => segment && !segment.includes('*'));
 }
 
+/**
+ * Basename / path tokens that score as Persistence (data clients, auth, CRM).
+ * Used so adopt never maps lib/turso → Presentation (NEW-ADOPT-LIB-AS-PRESENTATION).
+ */
+export const PERSISTENCE_PATH_TOKENS = Object.freeze([
+  'turso',
+  'prisma',
+  'supabase',
+  'airtable',
+  'drizzle',
+  'kysely',
+  'mongoose',
+  'mongodb',
+  'firebase',
+  'firestore',
+  'planetscale',
+  'neon',
+  'pipedrive',
+  'repository',
+  'repositories',
+  'persistence',
+  'infrastructure',
+  'infra',
+  'db',
+  'auth',
+  'session',
+]);
+
+/** True when a path/basename looks like a data or auth client (not UI). */
+export function isPersistenceClientPath(relPath) {
+  const posix = String(relPath || '')
+    .split(/[/\\]/)
+    .filter(Boolean)
+    .join('/');
+  if (!posix) return false;
+  const lower = posix.toLowerCase();
+  const base = path.posix.basename(lower).replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/i, '');
+  for (const token of PERSISTENCE_PATH_TOKENS) {
+    if (base === token || base.startsWith(`${token}.`) || base.startsWith(`${token}-`) || base.startsWith(`${token}_`)) {
+      return true;
+    }
+    if (lower.includes(`/${token}/`) || lower.endsWith(`/${token}`) || lower.startsWith(`${token}/`)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** True when a path looks like pure domain folders. */
+export function isDomainPath(relPath) {
+  const posix = String(relPath || '')
+    .split(/[/\\]/)
+    .filter(Boolean)
+    .join('/')
+    .toLowerCase();
+  return (
+    /(?:^|\/)domain(?:\/|$)/.test(posix) ||
+    /(?:^|\/)entities(?:\/|$)/.test(posix) ||
+    /(?:^|\/)kernel\/domain(?:\/|$)/.test(posix)
+  );
+}
+
 let _layerByDir;
 // Map<dirBasename, string[] layers>. A basename mapping to >1 layer (e.g. `app` — Application
 // orchestration in the 11-layer defaults, but Presentation in the monorepo/Next preset) is
@@ -58,11 +120,64 @@ export function suggestLayerForDir(name) {
 
 // Suggest a layer for a directory PATH by finding the deepest segment Ark recognizes, so
 // `src/lib/repositories` proposes PersistenceAdapters even though `lib` itself is unknown.
+// Next App Router / Pages API shells (`…/app/api`, `…/pages/api`) are Application, not Presentation.
+// Never map bare `lib` alone to Presentation (NEW-ADOPT-LIB-AS-PRESENTATION).
 export function suggestLayerForPath(relDir) {
-  const segments = relDir.split('/').filter(Boolean);
+  const posix = String(relDir || '')
+    .split(/[/\\]/)
+    .filter(Boolean)
+    .join('/');
+  // Prefer the API orchestration shell over a bare `app` / `pages` Presentation match.
+  // Direct api/ and route-group shells: app/(marketing)/api/**
+  if (
+    /(?:^|\/)(?:src\/)?app(?:\/[^/]+)*\/api(?:\/|$)/.test(posix) ||
+    /(?:^|\/)(?:src\/)?pages(?:\/[^/]+)*\/api(?:\/|$)/.test(posix)
+  ) {
+    return {
+      layer: 'ApplicationOrchestration',
+      alternatives: [],
+      matchedDir: posix.includes('pages') && posix.includes('/api') ? 'pages/…/api' : 'app/…/api',
+    };
+  }
+  // Root / Vercel serverless api handlers (SPA layout).
+  if (/(?:^|\/)api(?:\/|$)/.test(posix) && !/(?:^|\/)app(?:\/|$)/.test(posix)) {
+    return {
+      layer: 'ApplicationOrchestration',
+      alternatives: [],
+      matchedDir: 'api',
+    };
+  }
+  if (isDomainPath(posix)) {
+    return { layer: 'DomainModel', alternatives: [], matchedDir: 'domain' };
+  }
+  if (isPersistenceClientPath(posix)) {
+    return {
+      layer: 'PersistenceAdapters',
+      alternatives: [],
+      matchedDir: path.posix.basename(posix) || 'persistence',
+    };
+  }
+  const segments = posix.split('/').filter(Boolean);
   for (let i = segments.length - 1; i >= 0; i -= 1) {
-    const hit = suggestLayerForDir(segments[i]);
-    if (hit) return { ...hit, matchedDir: segments[i] };
+    const seg = segments[i];
+    // Bare `lib` is not Presentation — leave unrecognized so agents classify children.
+    if (seg === 'lib' || seg === 'src') continue;
+    const hit = suggestLayerForDir(seg);
+    if (hit) {
+      // Never promote Presentation solely because a parent was `lib`.
+      if (hit.layer === 'PresentationAdapters' && segments.includes('lib')) {
+        // Prefer Persistence when any sibling token smells like data; else skip.
+        if (isPersistenceClientPath(posix)) {
+          return {
+            layer: 'PersistenceAdapters',
+            alternatives: [],
+            matchedDir: seg,
+          };
+        }
+        continue;
+      }
+      return { ...hit, matchedDir: seg };
+    }
   }
   return null;
 }

@@ -70,12 +70,17 @@ describe('confidence gate wiring', () => {
     }
   });
 
-  it('uses the same confidence gate in CI and before every npm publish path', () => {
+  it('uses the same confidence gate on full-matrix CI and before every npm publish path', () => {
     const ci = read('.github/workflows/ci.yml');
     const releaseScript = read('scripts/release-npm.mjs');
     const publishWorkflow = read('.github/workflows/publish-npm.yml');
 
-    expect(ci).toContain('run: npm run test:confidence');
+    // Single source: ci-profile.confidence_cmd (test:confidence | test:coverage) via allowlisted case.
+    expect(ci).toContain('confidence_cmd:');
+    expect(ci).toContain('CONFIDENCE_CMD: ${{ needs.ci-profile.outputs.confidence_cmd }}');
+    expect(ci).toContain("'npm run test:confidence') npm run test:confidence");
+    expect(ci).toContain("'npm run test:coverage') npm run test:coverage");
+    expect(ci).toContain('unexpected confidence_cmd from ci-profile');
 
     const localConfidence = releaseScript.indexOf("run('npm run test:confidence')");
     const localPublish = releaseScript.indexOf("'npm publish --dry-run'");
@@ -90,6 +95,18 @@ describe('confidence gate wiring', () => {
     expect(tokenConfidence).toBeGreaterThanOrEqual(0);
     expect(tokenPublish).toBeGreaterThan(tokenConfidence);
     expect(publishWorkflow).toContain('npm run release:npm');
+  });
+
+  it('packed matrix gates fail closed unless run_packed is explicit false', () => {
+    const ci = read('.github/workflows/ci.yml');
+    // Three gates: ts-compat, gallery, managed-upgrade — each must require profile success
+    // and treat only run_packed=false as intentional skip (not empty/unset).
+    const intentionalSkip = (ci.match(/RUN_PACKED" = "false"/g) ?? []).length;
+    const missingInvalid = (ci.match(/run_packed missing\/invalid/g) ?? []).length;
+    const profileRequired = (ci.match(/ci-profile did not succeed/g) ?? []).length;
+    expect(intentionalSkip).toBeGreaterThanOrEqual(3);
+    expect(missingInvalid).toBeGreaterThanOrEqual(3);
+    expect(profileRequired).toBeGreaterThanOrEqual(3);
   });
 
   it('can resume checksum and release assets after npm already published the tag', () => {

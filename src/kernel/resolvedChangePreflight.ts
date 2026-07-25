@@ -201,6 +201,10 @@ export function preflightResolvedChange(
     ...violation,
     nextAction: deterministicNextAction(violation),
   }));
+  // Match CLI/library merge: failsStrict:false type-only placement debt does not block.
+  const blockingViolations = violations.filter(
+    (violation) => (violation as { failsStrict?: boolean }).failsStrict !== false
+  );
 
   return {
     schemaVersion: '1.0',
@@ -208,7 +212,7 @@ export function preflightResolvedChange(
     valid:
       base.completeness === 'complete' &&
       candidate.strictValid &&
-      violations.length === 0 &&
+      blockingViolations.length === 0 &&
       (convergence?.structurallyConverged ?? true),
     readOnly: true,
     policyHash: input.contract.policyHash,

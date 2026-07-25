@@ -107,6 +107,42 @@ Rule fields:
   when both paths classify. Missing paths, empty slice folders, or unclassifiable slices
   **fail closed** (deny — cannot prove same-slice).
 
+### Type-only edges (placement debt)
+
+`import type` / `export type` and pure type-only named bindings are **type placement debt**, not
+runtime coupling. They still appear on the **violations** list with `typeOnly: true`,
+`failsStrict: false`, and adapter diagnostic **severity: warning** so doctor/HTML keep
+`violations.typeOnly` / `typeEdgePolicy` honest — but they **do not** fail merge/exit, library
+`valid`, or preflight the way **value** edges do. **Exception:** `peerIsolation` slice
+boundaries stay hard even for type-only. A value import of a pure-type barrel is still a value
+edge (not soft-skipped). Prefer placing shared types in a **SharedTypes** (or owning) layer
+both sides may import. Optional starter: [`templates/layers/shared-types.starter.json`](../templates/layers/shared-types.starter.json)
+(layer globs + allow rules). Doctor always emits `violations.typeEdgePolicy`; plan groups type-only
+steps under `plan.typeOnlyGroup` when volume is high.
+
+### Next.js API shell (framework overlay / presets)
+
+When Next is detected (or `ui-surface` / monorepo patterns apply), **`app/api/**` and
+`pages/api/**` classify as Application orchestration**, not Presentation. UI routes stay
+Presentation. More-specific Application globs win over broad `**/app/**` Presentation patterns.
+See [brownfield adoption](brownfield-adoption.md#nextjs-honesty-default-overlays--ui-surface--monorepo).
+
+### ArkRules dual plane (when `arkRules` is present)
+
+| Plane | What it is | Merge teeth |
+|-------|------------|-------------|
+| **Layers** | Inter-layer import graph | Always on |
+| **Structure sensors** | Intra-layer heuristics | Only `mode: "enforced"` |
+| **Invariants** | Catalog + coverage evidence (not a business runtime) | Only enforced + proven-uncovered |
+
+Absence of `arkRules` adds **no** extra merge teeth. **Advisory** structure sensors and advisory
+invariants also add **no** merge teeth (FG-ARKRULES-ADVISORY-ONLY) — packing every starter
+`arkrules/*` file does not make merge fail structure alone. Enforced structure/invariants arm
+`mergePlanes.extraMergeTeeth` only when the layer plane is honestly classified
+(governed ≥ 50% and ≥ 1 populated layer); empty classification never gets structure teeth
+(P1M-EXTRATEETH-EMPTY-GRAPH). Structure and invariants **never** merge into one architecture
+score. Doctor exposes `rulesUnderContract.mergePlanes` for which plane can fail.
+
 Safety fields:
 
 - `maxTsSuppressions`, `maxAnyCasts`

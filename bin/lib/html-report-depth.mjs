@@ -12,6 +12,15 @@ import { summarizePilotLoop } from './pilot-loop.mjs';
 import { buildPostGreenNextAction } from './post-green-path.mjs';
 import { loadGoldenPattern, summarizeGoldenPattern } from './golden-pattern.mjs';
 import { collectAdoptionGaps } from './mcp-adoption.mjs';
+import {
+  buildCoverageHonesty,
+  buildBaselineHonesty,
+  buildWritePathHonesty,
+  buildProductHonesty,
+} from './enforcement-honesty.mjs';
+import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
+import { readBaseline, baselineOccurrenceKeys } from './violations.mjs';
+import { describePackageVersionDualTruth } from './field-install.mjs';
 
 function esc(value) {
   return String(value)
@@ -27,12 +36,33 @@ function esc(value) {
  * @param {object} config
  * @param {string[]} files
  * @param {object} coverage
- * @param {object[]} activeViolations
+ * @param {object[]} activeViolations already baseline-filtered active findings
+ * @param {{
+ *   suppressedCount?: number,
+ *   totalViolationCount?: number,
+ *   frozenKeys?: number,
+ *   activeCount?: number,
+ *   activeBlockingCount?: number,
+ * }} [baselineSplit] same numbers doctor uses (do not recompute from active-only list)
  */
-export function buildReportDepthPayload(root, config, files, coverage, activeViolations = []) {
+export function buildReportDepthPayload(
+  root,
+  config,
+  files,
+  coverage,
+  activeViolations = [],
+  baselineSplit = {}
+) {
+  // Blocking = failsStrict !== false only (type-only placement debt is non-blocking).
+  // Prefer caller-supplied count for doctor parity; else derive from active list.
+  const activeBlockingCount =
+    typeof baselineSplit.activeBlockingCount === 'number'
+      ? baselineSplit.activeBlockingCount
+      : activeViolations.filter((v) => v?.failsStrict !== false).length;
   const designSmells = detectDesignSmells(root, config, files, coverage);
   const designFitness = summarizeDesignFitness(designSmells, {
-    activeViolations: activeViolations.length,
+    // Doctor parity: fitness uses blocking count, not raw active (incl. type-only).
+    activeViolations: activeBlockingCount,
     governedPercent: coverage?.governed?.percent,
     totalFiles: coverage?.governed?.totalFiles,
   });
@@ -45,6 +75,86 @@ export function buildReportDepthPayload(root, config, files, coverage, activeVio
   });
   const goldenPattern = summarizeGoldenPattern(loadGoldenPattern(root));
   const adoption = collectAdoptionGaps(root, config, coverage);
+  const baseline = readBaseline(root, '.ark-baseline.json');
+  // Prefer caller-supplied baseline split (doctor parity). Recomputing suppressed from an
+  // already-filtered activeViolations list always yields 0 and hides dirty-freeze.
+  const suppressed =
+    typeof baselineSplit.suppressedCount === 'number'
+      ? baselineSplit.suppressedCount
+      : baseline.exists
+        ? baselineOccurrenceKeys(activeViolations).filter((key) => baseline.keys.has(key)).length
+        : 0;
+  const frozenKeys =
+    typeof baselineSplit.frozenKeys === 'number'
+      ? baselineSplit.frozenKeys
+      : baseline.exists
+        ? baseline.keys.size
+        : 0;
+  const activeCount =
+    typeof baselineSplit.activeCount === 'number'
+      ? baselineSplit.activeCount
+      : Math.max(0, activeViolations.length - suppressed);
+  const totalViolations =
+    typeof baselineSplit.totalViolationCount === 'number'
+      ? baselineSplit.totalViolationCount
+      : activeViolations.length + suppressed;
+  const coverageHonesty = buildCoverageHonesty({
+    percent: coverage?.governed?.percent,
+    totalFiles: coverage?.governed?.totalFiles,
+    emptyScope: coverage?.emptyScope === true || (coverage?.governed?.totalFiles ?? 0) === 0,
+  });
+  const baselineHonesty = buildBaselineHonesty({
+    exists: baseline.exists || frozenKeys > 0,
+    frozenKeys,
+    activeViolations: activeCount,
+    suppressed,
+    totalViolations,
+  });
+  const writePath = adoption.writePath;
+  const packageVersionTruth = describePackageVersionDualTruth(root);
+  const hardWriteActive = writePath?.enforcementState?.localWrite?.hard === true;
+  const packageInstalled = writePath?.enforcementState?.localWrite?.installed === true;
+  const writePathHonesty = buildWritePathHonesty(writePath?.activeHost, hardWriteActive, {
+    packageInstalled,
+    packagePinCode: packageVersionTruth?.code,
+    packagePinAbsent: packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT',
+    selfHost:
+      packageVersionTruth?.selfHost === true ||
+      packageVersionTruth?.code === 'PACKAGE_PIN_SELF_HOST',
+  });
+  const rulesUnderContract = summarizeRulesUnderContract(root, config, undefined, {
+    governedPercent: coverage?.governed?.percent ?? null,
+    populatedLayerCount: Array.isArray(coverage?.layers)
+      ? coverage.layers.filter((row) => (row?.files ?? 0) > 0).length
+      : null,
+    classifiedFiles: coverage?.governed?.classifiedFiles ?? null,
+  });
+  // Single residual expression (parity with doctor): nextPilot || extractionCard.
+  const residualPilot =
+    pilotLoop?.nextPilot || pilotLoop?.extractionCard || null;
+  const dualTruthNext =
+    packageVersionTruth?.dualTruth === true
+      ? `Bump package.json arkgate pin to ${packageVersionTruth.cliVersion || 'this CLI'} (or re-run install without --no-install)`
+      : packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT'
+        ? 'Add arkgate to package.json and install so CI/npx resolve this CLI (PACKAGE_PIN_ABSENT)'
+        : null;
+  const productHonesty = buildProductHonesty({
+    coverageHonesty,
+    baselineHonesty,
+    writePathHonesty,
+    designWeak: designFitness.designWeak === true,
+    designWeakLabel: designFitness.label,
+    designSmellCount: designSmells.length,
+    designSmellsWithOpenEdges: designSmells.length > 0 && activeBlockingCount > 0,
+    packageVersionTruth,
+    residualPilots: Boolean(residualPilot) && designFitness.designWeak === true,
+    pilotTarget: residualPilot?.pilotTarget ?? residualPilot?.pilot ?? null,
+    arkRulesMergeHonesty: rulesUnderContract?.mergePlanes
+      ? { active: rulesUnderContract.active === true, ...rulesUnderContract.mergePlanes }
+      : null,
+    primaryNextAction: postGreenPath?.action ?? dualTruthNext,
+    activeBlockingViolations: activeBlockingCount,
+  });
   return {
     adoption,
     designDepth: {
@@ -53,6 +163,9 @@ export function buildReportDepthPayload(root, config, files, coverage, activeVio
       pilotLoop,
       postGreenPath,
       goldenPattern,
+      // P0-B / P1-M — folded into designDepth so --report stays a single payload.
+      productHonesty,
+      mergePlanes: rulesUnderContract?.mergePlanes ?? null,
     },
   };
 }
@@ -167,6 +280,57 @@ function baselineLegendBody(signal) {
  *   mode?: string,
  * }} depth
  */
+/**
+ * P0-B — prominent anti-false-green honesty card (never a score).
+ * @param {object|null|undefined} productHonesty
+ * @param {object|null|undefined} [mergePlanes]
+ */
+export function renderProductHonestyCard(productHonesty, mergePlanes = null) {
+  if (!productHonesty || typeof productHonesty !== 'object') return '';
+  const unfinished = productHonesty.unfinished === true;
+  const headline = productHonesty.headline || (unfinished ? 'Not finished' : 'Honesty clear');
+  const primary = productHonesty.primaryMessage || '';
+  // Avoid repeating the same status label in title and body (past-issue pattern).
+  let body = primary;
+  if (primary && headline) {
+    const h = String(headline).trim();
+    const p = String(primary).trim();
+    if (p === h) {
+      body = unfinished
+        ? 'Residual honesty signals remain — not a whole-tree guarantee and not a score.'
+        : 'No residual honesty blockers on this slice — still not a numeric architecture score.';
+    } else if (p.toLowerCase().startsWith(h.toLowerCase())) {
+      const stripped = p.slice(h.length).replace(/^[\s—–:-]+/, '').trim();
+      body = stripped || p;
+    }
+  }
+  const reasons = Array.isArray(productHonesty.reasonIds) ? productHonesty.reasonIds : [];
+  const reasonHtml =
+    reasons.length > 0
+      ? `<p class="dim" style="margin:.35rem 0 0;font-size:.86rem">signals: ${reasons
+          .map((id) => `<code>${esc(id)}</code>`)
+          .join(' · ')} · <code>notAScore</code></p>`
+      : '';
+  const mergeHtml =
+    mergePlanes?.failMergeWhen
+      ? `<p class="dim" style="margin:.35rem 0 0;font-size:.86rem">merge planes: ${esc(mergePlanes.failMergeWhen)}</p>`
+      : '';
+  const dual =
+    mergePlanes?.dualPlaneStamp
+      ? `<p class="dim" style="margin:.25rem 0 0;font-size:.84rem">${esc(mergePlanes.dualPlaneStamp)}</p>`
+      : '';
+  return `<div class="section card design-strip ${unfinished ? 'is-weak' : 'is-clean'}" id="product-honesty" data-product-honesty="1">
+    <div class="design-head">
+      <span class="badge design" title="Product honesty — not a score">${esc(headline)}</span>
+      <span class="dim" style="font-size:.86rem">${unfinished ? 'residual honesty signals' : 'no residual honesty blockers'}</span>
+    </div>
+    <p style="margin:.45rem 0 0">${esc(body)}</p>
+    ${reasonHtml}
+    ${mergeHtml}
+    ${dual}
+  </div>`;
+}
+
 export function renderDesignDepthStrip(depth = {}) {
   const fitness = depth.designFitness;
   const smells = Array.isArray(depth.designSmells) ? depth.designSmells : [];

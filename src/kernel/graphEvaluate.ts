@@ -89,6 +89,20 @@ export function evaluateArchitectureGraph(
     if (!rule) continue;
 
     const peerIsolation = Boolean(rule.peerIsolation);
+    // P1-type: pure type-only edges are placement debt (SharedTypes / owning layer), not
+    // runtime coupling. Report on the violations list (doctor/HTML typeOnly counts) with
+    // failsStrict:false so exit/merge treats them as non-blocking — except peerIsolation.
+    // sourcePureTypeModule alone must NOT soft-skip a value import of a pure-type barrel.
+    // Type placement debt: import-type syntax OR value-syntax of type-only exports.
+    // Keep `typeOnly` = import-type *syntax* only so remediation can distinguish R6
+    // (convert value → import type) from relocate (already import type).
+    const typePlacementDebt =
+      !peerIsolation && Boolean(edge.typeOnly || edge.namedBindingsTypeOnly);
+    const baseMessage =
+      rule.message ??
+      (peerIsolation
+        ? `${edge.fromLayer} must not ${edge.kind} another slice of ${edge.toLayer} (${edge.from} → ${edge.to}). Extract shared code or use events/ports across slices.`
+        : `${edge.fromLayer} must not ${edge.kind} ${edge.toLayer}.`);
     violations.push({
       ruleId: 'LAYER_IMPORT_VIOLATION',
       file: edge.from,
@@ -103,11 +117,12 @@ export function evaluateArchitectureGraph(
       ...(!peerIsolation && edge.portProofEligible ? { portProofEligible: true } : {}),
       ...(edge.kind ? { edgeKind: edge.kind } : {}),
       ...(peerIsolation ? { peerIsolation: true } : {}),
-      message:
-        rule.message ??
-        (peerIsolation
-          ? `${edge.fromLayer} must not ${edge.kind} another slice of ${edge.toLayer} (${edge.from} → ${edge.to}). Extract shared code or use events/ports across slices.`
-          : `${edge.fromLayer} must not ${edge.kind} ${edge.toLayer}.`),
+      message: typePlacementDebt
+        ? `${baseMessage} (type-only — type placement debt; prefer SharedTypes / owning layer; not runtime coupling)`
+        : baseMessage,
+      ...(typePlacementDebt
+        ? { failsStrict: false as const, severity: 'warning' as const }
+        : {}),
     });
   }
 

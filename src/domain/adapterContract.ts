@@ -31,6 +31,8 @@ export type AdapterViolationInput = {
   peerIsolation?: unknown;
   edgeKind?: unknown;
   severity?: unknown;
+  /** When false, finding is non-blocking (e.g. type-only placement debt). */
+  failsStrict?: unknown;
   nextAction?: unknown;
   /** U04: the denied capability id on CAPABILITY_VIOLATION. */
   capability?: unknown;
@@ -189,7 +191,13 @@ export function toAdapterDiagnostic(
   fallbackSeverity: AdapterSeverity = 'error'
 ): AdapterDiagnostic {
   const ruleId = text(violation.ruleId) ?? text(violation.code) ?? 'ARK_UNKNOWN';
-  const severity = violation.severity === 'warning' ? 'warning' : fallbackSeverity;
+  // Type-only placement debt (failsStrict:false / typeOnly non-peer) is warning severity.
+  const severity =
+    violation.severity === 'warning' ||
+    violation.failsStrict === false ||
+    (violation.typeOnly === true && violation.peerIsolation !== true)
+      ? 'warning'
+      : fallbackSeverity;
   const evidence = {
     ...(text(violation.target) ? { target: text(violation.target) } : {}),
     ...(text(violation.fromLayer) ? { fromLayer: text(violation.fromLayer) } : {}),
@@ -280,6 +288,7 @@ export function createAdapterResult(input: {
     }
   }
   const diagnostics = [
+    // toAdapterDiagnostic maps failsStrict:false / typeOnly non-peer → warning severity.
     ...(input.violations ?? []).map((item) => toAdapterDiagnostic(item, 'error')),
     ...(input.warnings ?? []).map((item) => toAdapterDiagnostic(item, 'warning')),
   ];

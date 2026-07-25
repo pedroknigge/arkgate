@@ -56,6 +56,7 @@ minimal (`typescript-ark-host` exact). Do not add production deps without discus
 | `templates/` | Skills, hooks, playbooks (shipped on npm) |
 | `docs/` | Product + develop + contribute docs ([map](docs/README.md)) |
 | `tests/` · `eval/` | Quality harnesses |
+| `scripts/field-dogfood/` | Maintainer offline field gap smoke (`npm run test:field-dogfood-smoke`) |
 | `ROADMAP.md` | Implementation queue — **one `doing` at a time** |
 
 `packages/runtime` is the experimental companion package (separate publish).
@@ -85,6 +86,32 @@ Good first contributions: adoption friction reports, host-install honesty, docs 
 **use / develop / contribute** lanes (not unsolicited epic rewrites).
 
 Queue: [ROADMAP.md](ROADMAP.md) · issues labeled `good first issue`.
+
+---
+
+## CI profiles (PR slim vs full matrix)
+
+`.github/workflows/ci.yml` selects a **profile** so everyday PRs stay fast while release
+safety stays on the full path.
+
+| Profile | When | What runs |
+|---------|------|-----------|
+| **PR slim** (default) | Ordinary `pull_request` without a full-matrix trigger | `build` with **`npm run test:coverage`** (no mutation), adapter parity, Z07, fuzz, Node smoke, architecture gate; **1** packed-TS cell (Node 20 + npm, still TS 5/6/7 in-process); **1** gallery PM (npm); onboarding **\*/small** only; `fail-fast: true` on product matrices. Performance budgets only when changed paths touch analysis/gate/hook/bench surfaces (or on full matrix). |
+| **Full matrix** | `push` to `main`; PR label **`full-matrix`** or **`release`**; branch name matching `feat/4.1*`, `feat/*release*`, `release/*`, or containing `release-prepare` | Same core jobs plus **`npm run test:confidence`** (coverage + mutation), complete 4×3 packed-TS cells, all three gallery PMs, all 12 onboarding shards, performance budgets, `fail-fast: false`. |
+| **Docs/plans-only** | PR changes only under `docs/**`, `*.md`, license/notice (no code/package surface) **and** no full-matrix trigger | Required **`build`** (coverage path) + architecture; packed/gallery/onboarding/perf skipped. Required **TypeScript compatibility gate** still reports success when the packed matrix is **explicitly** not scheduled (`run_packed=false`). |
+
+**Why slim PR skips mutation:** mutation is slow and remains mandatory on full-matrix / main and
+on every npm publish path (`scripts/release-npm.mjs`, `.github/workflows/publish-npm.yml`). Do
+not treat a green slim PR as a substitute for release confidence.
+
+**Force full matrix on a PR:** add label `full-matrix` or `release` (workflow listens for
+`labeled` / `unlabeled`), or use a release-prep branch name such as `feat/4.1.0-…`.
+
+**Branch-name footgun:** `feat/*release*` is intentionally broad (safety bias). Names like
+`feat/release-notes` or `feat/release-docs-typo` also get the full matrix (including mutation),
+even if the diff is docs-only. Prefer ordinary names for non-release work, or accept the cost.
+
+Security workflow (CodeQL / Semgrep / dependency review) is unchanged and always runs on PRs.
 
 ---
 
@@ -122,4 +149,5 @@ mcp-publisher validate server.json && mcp-publisher publish server.json
 ```
 
 **Current published release:** [docs/releases/4.0.1.md](docs/releases/4.0.1.md) (`arkgate@4.0.1`).  
+**Next prepared:** [docs/releases/4.1.0.md](docs/releases/4.1.0.md) (`arkgate@4.1.0` — prepared, not published).  
 **Previous:** [docs/releases/4.0.0.md](docs/releases/4.0.0.md) (`arkgate@4.0.0`).

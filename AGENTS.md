@@ -46,7 +46,7 @@ not every historical file:
 | Security | [SECURITY.md](SECURITY.md) · [docs/threat-model.md](docs/threat-model.md) |
 | Decisions | [docs/adr/](docs/adr/README.md) |
 | Implementation queue | [ROADMAP.md](ROADMAP.md) |
-| Releases (prepared / last published) | [CHANGELOG.md](CHANGELOG.md) · [4.0.0 notes](docs/releases/4.0.0.md) · [3.9.2](docs/releases/3.9.2.md) |
+| Releases (prepared / last published) | [CHANGELOG.md](CHANGELOG.md) · [4.1.0 notes](docs/releases/4.1.0.md) (prepared) · [4.0.1](docs/releases/4.0.1.md) · [4.0.0](docs/releases/4.0.0.md) |
 | History / maintainer evidence | [docs/archive/](docs/archive/README.md) · [docs/plans/](docs/plans/) · [docs/field/](docs/field/) · [docs/audit/](docs/audit/claims-matrix.md) |
 
 Read the **lane entry** before significant work. After changing a public surface, architecture

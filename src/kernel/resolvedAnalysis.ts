@@ -522,7 +522,12 @@ export function analyzeCanonicalResolvedProject(
           return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
         });
 
-  const valid = effectiveCompleteness === 'complete' && evaluated.violations.length === 0;
+  // P1-type: type-only placement debt stays on violations with failsStrict:false —
+  // library `valid` must match CLI merge (only failsStrict !== false blocks).
+  const blockingViolations = evaluated.violations.filter(
+    (violation) => violation.failsStrict !== false
+  );
+  const valid = effectiveCompleteness === 'complete' && blockingViolations.length === 0;
   const strictValid =
     valid && evaluated.warnings.every((warning) => warning.failsStrict === false);
 

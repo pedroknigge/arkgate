@@ -97,24 +97,37 @@ function baseViolation(rule, file, message, line = 1) {
         failsStrict,
     };
 }
+/**
+ * When layerForFile is provided, structure sensors require the same classification
+ * as the layer plane: unclassified paths are skipped (NEW-ARKRULES-UNCLASSIFIED-ATTRIBUTION).
+ * Without layerForFile, appliesTo globs alone scope the rule (unit tests / pure eval).
+ */
+function isInRuleLayer(file, rule, layerForFile) {
+    if (!layerForFile)
+        return true;
+    const layer = layerForFile(file);
+    // Unclassified (null/undefined/"") must not inherit rule.provenance.layer attribution.
+    if (!layer)
+        return false;
+    return layer === rule.provenance.layer;
+}
 function shapesForRule(rule, shapes, layerForFile) {
     return shapes.filter((shape) => {
         if (!shape.exported)
             return false;
         if (!matchesAppliesTo(shape.file, rule.appliesTo))
             return false;
-        if (layerForFile) {
-            const layer = layerForFile(shape.file);
-            if (layer && layer !== rule.provenance.layer)
-                return false;
-        }
+        if (!isInRuleLayer(shape.file, rule, layerForFile))
+            return false;
         return true;
     });
 }
 function evaluateAggregatePrivateState(rule, shapes, layerForFile) {
     const out = [];
     for (const shape of shapesForRule(rule, shapes, layerForFile)) {
-        if (shape.hasPublicMutableFields || shape.hasPublicSetters) {
+        // P1-L — require real mutability (setters or non-readonly public fields).
+        // Readonly public props on intentional value/entity shapes are false-positive-prone.
+        if (shape.hasPublicSetters || shape.hasPublicMutableFields) {
             out.push(baseViolation(rule, shape.file, `Exported class ${shape.className} exposes public mutable state (sensor aggregate-private-state).`));
         }
     }
@@ -124,6 +137,14 @@ function evaluateAlwaysValidFactory(rule, shapes, layerForFile) {
     const out = [];
     for (const shape of shapesForRule(rule, shapes, layerForFile)) {
         if (shape.hasPublicConstructor && !shape.hasStaticFactory) {
+            // P1-L — prefer false negatives on intentional DDD / DI aggregates: a public
+            // constructor alone is weak evidence. Only fire when mutable public surface
+            // exists (needs an always-valid construction story).
+            const needsAlwaysValidStory = shape.hasPublicMutableFields ||
+                shape.hasPublicSetters ||
+                (shape.mutatingMethods?.length ?? 0) > 0;
+            if (!needsAlwaysValidStory)
+                continue;
             out.push(baseViolation(rule, shape.file, `Exported class ${shape.className} exposes a public constructor without a static factory (sensor always-valid-factory).`));
         }
     }
@@ -145,11 +166,8 @@ function evaluateOrchestrationOnly(rule, input) {
     for (const file of input.files) {
         if (!matchesAppliesTo(file, rule.appliesTo))
             continue;
-        if (input.layerForFile) {
-            const layer = input.layerForFile(file);
-            if (layer && layer !== rule.provenance.layer)
-                continue;
-        }
+        if (!isInRuleLayer(file, rule, input.layerForFile))
+            continue;
         if (input.fileHints?.[file]?.orchestrationHeavy) {
             out.push(baseViolation(rule, file, `File appears to embed domain branching beyond guard-and-delegate orchestration (sensor orchestration-only).`));
         }
@@ -161,11 +179,8 @@ function evaluateThinAdapter(rule, input) {
     for (const file of input.files) {
         if (!matchesAppliesTo(file, rule.appliesTo))
             continue;
-        if (input.layerForFile) {
-            const layer = input.layerForFile(file);
-            if (layer && layer !== rule.provenance.layer)
-                continue;
-        }
+        if (!isInRuleLayer(file, rule, input.layerForFile))
+            continue;
         if (input.fileHints?.[file]?.adapterThick) {
             out.push(baseViolation(rule, file, `Adapter module mixes domain branching, persistence, and mapping beyond a thin adapter (sensor thin-adapter).`));
         }
@@ -358,11 +373,26 @@ export function extractClassShapesFromSource(file, content) {
             i += 1;
         }
         const body = content.slice(start, i - 1);
-        const hasPublicMutableFields = /(?:^|\n)\s*(?:public\s+)?(?:readonly\s+)?[a-zA-Z_][a-zA-Z0-9_]*\s*[:=]/m.test(body.replace(/(?:public\s+|private\s+|protected\s+|readonly\s+|static\s+|async\s+|get\s+|set\s+)/g, '')) &&
-            /(?:^|\n)\s*(public\s+)?(?!constructor|static|get|set|private|protected|readonly)[a-zA-Z_][a-zA-Z0-9_]*\s*[:=]/m.test(body);
-        // Simpler public field detection: "public foo" or unadorned "foo:" at class level
-        const publicField = /(?:^|\n)\s*public\s+(?!static|async|get|set|constructor)[a-zA-Z_]/.test(body) ||
-            /(?:^|\n)\s*[a-zA-Z_][a-zA-Z0-9_]*\s*:\s*[^=;\n]+[;=]/m.test(body
+        // P1-L — prefer false negatives: readonly public props are not mutable state.
+        // Strip only readonly property *declarations*, not whole lines (co-located
+        // `public readonly id; public count = 0` must keep the mutable field).
+        // Also ignore comment lines that merely mention the word "readonly".
+        const bodyNoReadonly = body
+            .split('\n')
+            .map((line) => {
+            if (/^\s*\/\//.test(line) || /^\s*\/\*|\*\//.test(line))
+                return line;
+            // Remove `public readonly foo` / `readonly foo` decls; leave other decls.
+            return line
+                .replace(/(?:public\s+|protected\s+)?readonly\s+[a-zA-Z_][a-zA-Z0-9_]*\s*(?::[^=;]+)?(?:=\s*[^;]+)?[;,]?/g, '')
+                .replace(/(?:^|[\s;{])readonly\s+[a-zA-Z_][a-zA-Z0-9_]*\s*(?::[^=;]+)?(?:=\s*[^;]+)?[;,]?/g, ' ');
+        })
+            .join('\n');
+        const hasPublicMutableFields = /(?:^|\n)\s*(?:public\s+)?[a-zA-Z_][a-zA-Z0-9_]*\s*[:=]/m.test(bodyNoReadonly.replace(/(?:public\s+|private\s+|protected\s+|static\s+|async\s+|get\s+|set\s+)/g, '')) &&
+            /(?:^|\n)\s*(public\s+)?(?!constructor|static|get|set|private|protected|readonly)[a-zA-Z_][a-zA-Z0-9_]*\s*[:=]/m.test(bodyNoReadonly);
+        // Public mutable field: "public foo" (not readonly) or unadorned assignable field.
+        const publicField = /(?:^|\n)\s*public\s+(?!static|async|get|set|constructor|readonly)[a-zA-Z_]/.test(bodyNoReadonly) ||
+            /(?:^|[\n;])\s*[a-zA-Z_][a-zA-Z0-9_]*\s*:\s*[^=;\n]+[;=]/m.test(bodyNoReadonly
                 .split('\n')
                 .filter((line) => !/^\s*(private|protected|static|constructor|get |set |async |\/)/.test(line))
                 .join('\n'));
@@ -372,10 +402,15 @@ export function extractClassShapesFromSource(file, content) {
         const hasStaticFactory = /(?:^|[\n;{])\s*static\s+(?:async\s+)?(?:create|of|from|parse|build|make|new)\s*[<(]/.test(body) ||
             /(?:^|[\n;{])\s*static\s+(?:async\s+)?[A-Za-z_][A-Za-z0-9_]*\s*\([^)]*\)\s*:\s*[A-Za-z_]/.test(body);
         const mutatingMethods = [];
+        // P1-L / P1L-STRUCTURE-NOISE-CONTROL-FLOW: fluent control-flow helpers (Property.if,
+        // .match, .when) often assign this.* for chaining — not domain mutators. Prefer FN.
+        const CONTROL_FLOW_METHOD_NAMES = new Set(['if', 'match', 'when']);
         const methodRe = /(?:^|\n)\s*(?:public\s+|private\s+|protected\s+|async\s+)*(?!constructor|get|set|static)([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*(?::\s*[^{]+)?\{/g;
         let methodMatch;
         while ((methodMatch = methodRe.exec(body)) !== null) {
             const name = methodMatch[1];
+            if (CONTROL_FLOW_METHOD_NAMES.has(name))
+                continue;
             const mStart = methodMatch.index + methodMatch[0].length;
             let mDepth = 1;
             let j = mStart;
@@ -394,7 +429,13 @@ export function extractClassShapesFromSource(file, content) {
             mutatingMethods.push({ name, referencesGuardOrPublish });
         }
         const methodCount = (body.match(/(?:^|\n)\s*(?:public\s+|private\s+|protected\s+)?(?:async\s+)?[a-zA-Z_][a-zA-Z0-9_]*\s*\(/g) ?? []).length;
-        const dataOnly = methodCount <= 1 && (publicField || hasPublicMutableFields);
+        // P1-L — raise anemic bar: need multiple public fields and essentially no behavior.
+        // Single-field bags and intentional property bags with one helper stay quiet.
+        // Count fields after line starts *or* after `;` so one-line class bodies still work.
+        const publicFieldCount = (bodyNoReadonly.match(/(?:^|[\n;])\s*(?:public\s+)?(?!constructor|static|get|set|private|protected|readonly)[a-zA-Z_][a-zA-Z0-9_]*\s*[:=]/g) ?? []).length;
+        const dataOnly = methodCount <= 1 &&
+            publicFieldCount >= 2 &&
+            (publicField || hasPublicMutableFields);
         shapes.push({
             file,
             className,

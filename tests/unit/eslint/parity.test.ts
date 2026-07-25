@@ -129,7 +129,7 @@ describe('ESLint ↔ ark-check parity', () => {
     );
   });
 
-  it('forbidden domain→infra type-only import: both still flag (same pass/fail as CI)', () => {
+  it('forbidden domain→infra type-only import: both still flag (non-blocking merge)', () => {
     const root = fixture();
     const domainFile = path.join(root, 'src/domain/type-bad.ts');
     fs.writeFileSync(
@@ -138,9 +138,16 @@ describe('ESLint ↔ ark-check parity', () => {
     );
 
     const check = runArkCheckJson(root);
-    expect(check.ok).toBe(false);
+    // P1-type: type-only placement debt is reported but does not fail merge (ok true).
+    expect(check.ok).toBe(true);
     const layerHits = check.violations.filter((v) => v.ruleId === 'LAYER_IMPORT_VIOLATION');
     expect(layerHits.length).toBeGreaterThan(0);
+    expect(layerHits.every((v) => v.failsStrict === false)).toBe(true);
+    expect(
+      check.diagnostics
+        .filter((d) => d.ruleId === 'LAYER_IMPORT_VIOLATION')
+        .every((d) => d.severity === 'warning')
+    ).toBe(true);
 
     const { context, reports } = createContext(domainFile);
     noDomainInfraImports.create(context).ImportDeclaration({

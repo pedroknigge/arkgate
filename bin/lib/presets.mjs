@@ -56,6 +56,143 @@ export function peerIsolationEdges(layerNames, sliceFolders, message) {
 // `src/**/domain/**` would otherwise swallow `src/kernel/domain`. Do NOT use `**/kernel/**`
 // (that carves out legitimate `src/shared/kernel/**` SharedKernel paths).
 export const FRAMEWORK_INTERNAL_EXCLUDE = ['src/kernel/**', '**/src/kernel/**'];
+
+/**
+ * Shared high-spec domain globs. Prefer these over Application/Presentation scatter
+ * (path-anchored specificity ranks interior domain above broad src/lib bags).
+ * Include kernel/domain paths for event-kernel trees; framework src/kernel
+ * exclude still applies when set on a layer.
+ */
+export const DOMAIN_PATH_PATTERNS = Object.freeze([
+  '**/domain/**',
+  '**/entities/**',
+  '**/kernel/domain/**',
+  'src/**/domain/**',
+  'src/**/entities/**',
+  'src/domain/**',
+  'src/entities/**',
+]);
+
+/**
+ * Next / App Router API shells — Application orchestration, not Presentation UI.
+ * High-spec patterns win over broad app Presentation globs (P0-A / DL-P0A-RETROFIT).
+ */
+export const NEXT_API_APPLICATION_PATTERNS = Object.freeze([
+  '**/app/api/**',
+  '**/pages/api/**',
+  '**/app/**/api/**',
+  '**/pages/**/api/**',
+  'app/api/**',
+  'pages/api/**',
+  'src/app/api/**',
+  'src/pages/api/**',
+  'src/app/**/api/**',
+  'app/**/api/**',
+  // Explicit route handlers under api/ — beat Presentation src/**/route.ts when present.
+  'src/app/api/**/route.ts',
+  'src/app/api/**/route.tsx',
+  'src/app/api/**/route.js',
+  'app/api/**/route.ts',
+  'app/api/**/route.tsx',
+  '**/app/api/**/route.ts',
+  '**/app/api/**/route.tsx',
+  '**/pages/api/**/*.ts',
+  '**/pages/api/**/*.js',
+]);
+
+/**
+ * Data-client / repository / auth-client bags. Higher path-anchored specificity than
+ * bare `lib/**` or `src/lib/**` Application vacuum (NEW-APP-VACUUM-LIB, NEW-ADOPT-LIB-AS-PRESENTATION).
+ */
+export const PERSISTENCE_PATH_PATTERNS = Object.freeze([
+  '**/repositories/**',
+  '**/repository/**',
+  '**/persistence/**',
+  '**/infrastructure/**',
+  '**/infra/**',
+  '**/db/**',
+  '**/data/**',
+  '**/supabase/**',
+  '**/airtable/**',
+  '**/prisma/**',
+  '**/turso/**',
+  '**/drizzle/**',
+  '**/kysely/**',
+  '**/mongoose/**',
+  '**/mongodb/**',
+  '**/firebase/**',
+  '**/firestore/**',
+  '**/planetscale/**',
+  '**/neon/**',
+  '**/lib/db/**',
+  '**/lib/prisma/**',
+  '**/lib/supabase/**',
+  '**/lib/airtable/**',
+  '**/lib/turso/**',
+  '**/lib/drizzle/**',
+  '**/lib/firebase/**',
+  '**/lib/firestore/**',
+  '**/lib/mongodb/**',
+  '**/lib/mongoose/**',
+  '**/lib/kysely/**',
+  '**/lib/auth/**',
+  'src/db/**',
+  'src/data/**',
+  'src/repositories/**',
+  'src/persistence/**',
+  'src/infrastructure/**',
+  'src/lib/db/**',
+  'src/lib/prisma/**',
+  'src/lib/supabase/**',
+  'src/lib/airtable/**',
+  'src/lib/turso/**',
+  'src/lib/drizzle/**',
+  'src/lib/firebase/**',
+  'src/lib/firestore/**',
+  'src/lib/mongodb/**',
+  'src/lib/mongoose/**',
+  'src/lib/kysely/**',
+  'src/lib/auth/**',
+  'src/server/db/**',
+  'lib/db/**',
+  'lib/prisma/**',
+  'lib/supabase/**',
+  'lib/airtable/**',
+  'lib/turso/**',
+  'lib/auth/**',
+  // Single-file clients at lib root (SPA / Vercel serverless companions)
+  'lib/turso.js',
+  'lib/turso.ts',
+  'lib/prisma.js',
+  'lib/prisma.ts',
+  'lib/supabase.js',
+  'lib/supabase.ts',
+  'lib/airtable.js',
+  'lib/airtable.ts',
+  'lib/auth.js',
+  'lib/auth.ts',
+  'lib/db.js',
+  'lib/db.ts',
+]);
+
+/**
+ * Application orchestration under lib without the whole-src-lib vacuum.
+ * Never use lone `src/**` or bare `src/lib/**` as Application on Next/event trees.
+ */
+export const APPLICATION_LIB_ORCHESTRATION_PATTERNS = Object.freeze([
+  'src/lib/actions/**',
+  'src/lib/services/**',
+  'src/lib/server/**',
+  'src/lib/use-cases/**',
+  'src/lib/usecases/**',
+  'src/lib/api-handlers/**',
+  'src/lib/handlers/**',
+  '**/lib/actions/**',
+  '**/lib/services/**',
+  '**/lib/server/**',
+  '**/lib/api-handlers/**',
+]);
+
 /**
  * AR08 — attach lean arkRules map. Keys are always exact project layer names.
  * Sensor roles (domain-structure / orchestration / adapter-thin / generic) are
@@ -306,7 +443,7 @@ export const ARCHITECTURE_PRESETS = {
           {
             name: 'DomainModel',
             description: 'Pure business rules and entities. No I/O, no framework, no ambient globals.',
-            patterns: ['src/**/domain/**'],
+            patterns: [...DOMAIN_PATH_PATTERNS],
             exclude: FRAMEWORK_INTERNAL_EXCLUDE,
             forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
             optional: true,
@@ -314,7 +451,14 @@ export const ARCHITECTURE_PRESETS = {
           {
             name: 'ApplicationOrchestration',
             description: 'Use cases that coordinate the domain through ports. No I/O of its own.',
-            patterns: ['src/**/application/**'],
+            // Never lone src/** — Application is intentional orchestration folders only.
+            patterns: [
+              'src/**/application/**',
+              'src/**/use-cases/**',
+              'src/**/usecases/**',
+              ...APPLICATION_LIB_ORCHESTRATION_PATTERNS,
+              ...NEXT_API_APPLICATION_PATTERNS,
+            ],
             exclude: FRAMEWORK_INTERNAL_EXCLUDE,
             optional: true,
           },
@@ -336,8 +480,7 @@ export const ARCHITECTURE_PRESETS = {
             patterns: [
               'src/**/infrastructure/**',
               'src/**/adapters/**',
-              'src/**/persistence/**',
-              'src/**/repositories/**',
+              ...PERSISTENCE_PATH_PATTERNS,
             ],
             exclude: FRAMEWORK_INTERNAL_EXCLUDE,
             optional: true,
@@ -376,15 +519,26 @@ export const ARCHITECTURE_PRESETS = {
           },
           {
             name: 'ApplicationOrchestration',
-            description: 'Business services and use-case coordination.',
-            patterns: ['src/**/application/**', 'src/**/services/**'],
+            description:
+              'Business services and use-case coordination. Residual `src/**` is Application on non-Next layered trees only (specific domain/ui/db patterns win by specificity).',
+            patterns: [
+              'src/**/application/**',
+              'src/**/services/**',
+              'src/**/use-cases/**',
+              ...APPLICATION_LIB_ORCHESTRATION_PATTERNS,
+              ...NEXT_API_APPLICATION_PATTERNS,
+              // Greenfield residual: bare src/index.ts etc. Domain/Presentation/Persistence
+              // patterns outrank this by specificity. Next overlay replaces Application bags
+              // and must NOT reintroduce a lone src/** catch-all on App Router trees.
+              'src/**',
+            ],
             exclude: FRAMEWORK_INTERNAL_EXCLUDE,
             optional: true,
           },
           {
             name: 'DomainModel',
             description: 'Pure business rules and entities. No I/O, no framework, no ambient globals.',
-            patterns: ['src/**/domain/**'],
+            patterns: [...DOMAIN_PATH_PATTERNS],
             exclude: FRAMEWORK_INTERNAL_EXCLUDE,
             forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
             optional: true,
@@ -392,12 +546,7 @@ export const ARCHITECTURE_PRESETS = {
           {
             name: 'PersistenceAdapters',
             description: 'Data access and infrastructure.',
-            patterns: [
-              'src/**/persistence/**',
-              'src/**/data/**',
-              'src/**/repositories/**',
-              'src/**/infrastructure/**',
-            ],
+            patterns: [...PERSISTENCE_PATH_PATTERNS],
             exclude: FRAMEWORK_INTERNAL_EXCLUDE,
             optional: true,
           },
@@ -490,8 +639,7 @@ export const ARCHITECTURE_PRESETS = {
             // Domain by intentional folders only — NOT bare **/types.ts (that mis-classifies
             // application bags like frontend/src/core/**/types.ts as Domain and creates false edges).
             patterns: [
-              '**/domain/**',
-              '**/entities/**',
+              ...DOMAIN_PATH_PATTERNS,
               '**/cinematic/types.ts',
               ...librarySourcePatterns,
             ],
@@ -500,18 +648,24 @@ export const ARCHITECTURE_PRESETS = {
           },
           {
             name: 'ApplicationOrchestration',
-            description: 'Use cases and services that coordinate the domain through ports.',
+            description:
+              'Use cases and services that coordinate the domain through ports. Next App Router API (`app/api/**`) and Pages API (`pages/api/**`) are orchestration shells, not UI.',
             patterns: [
               '**/application/**',
               '**/use-cases/**',
               '**/services/**',
+              // Next API route handlers (higher specificity than **/app/** Presentation).
+              // Route groups: app/(marketing)/api/** also match **/app/**/api/**
+              ...NEXT_API_APPLICATION_PATTERNS,
+              ...APPLICATION_LIB_ORCHESTRATION_PATTERNS,
               ...applicationSourcePatterns,
             ],
             optional: true,
           },
           {
             name: 'PresentationAdapters',
-            description: 'Entrypoints — HTTP routes, controllers, UI, framework app/pages dirs.',
+            description:
+              'Entrypoints — UI, framework app/pages dirs, controllers. Next `app/api` is Application, not this layer. Never bare lib/** (data clients are Persistence).',
             patterns: [
               '**/app/**',
               '**/pages/**',
@@ -520,7 +674,7 @@ export const ARCHITECTURE_PRESETS = {
               '**/http/**',
               '**/routes/**',
               '**/hooks/**',
-              '**/lib/**',
+              // No bare **/lib/** — NEW-ADOPT-LIB-AS-PRESENTATION / NEW-APP-VACUUM-LIB.
             ],
             optional: true,
           },
@@ -528,10 +682,8 @@ export const ARCHITECTURE_PRESETS = {
             name: 'PersistenceAdapters',
             description: 'Implements ports with real infrastructure: DB, external APIs, filesystem.',
             patterns: [
-              '**/infrastructure/**',
               '**/adapters/**',
-              '**/persistence/**',
-              '**/repositories/**',
+              ...PERSISTENCE_PATH_PATTERNS,
             ],
             optional: true,
           },
@@ -574,7 +726,7 @@ export const ARCHITECTURE_PRESETS = {
             description: 'Shared types and pure view-models (optional on UI-first trees).',
             // Avoid bare **/types.ts — see monorepo DomainModel note (false Domain on core/**/types.ts).
             patterns: [
-              '**/domain/**',
+              ...DOMAIN_PATH_PATTERNS,
               '**/cinematic/types.ts',
               // Common pure types bag (not **/types.ts — that traps core/**/types.ts).
               'src/lib/types.ts',
@@ -585,17 +737,18 @@ export const ARCHITECTURE_PRESETS = {
           },
           {
             name: 'ApplicationOrchestration',
-            description: 'Server actions, features, and non-UI lib orchestration (when present).',
+            description:
+              'Server actions, features, Next API routes (`app/api/**` / `pages/api/**`), and non-UI lib orchestration (when present).',
             patterns: [
               'src/features/**',
               'src/server/**',
               'src/services/**',
               'src/use-cases/**',
               'src/actions/**',
-              'src/lib/actions/**',
-              'src/lib/services/**',
-              '**/lib/actions/**',
-              '**/lib/services/**',
+              // Specific lib orchestration only — never bare src/lib/** (NEW-APP-VACUUM-LIB).
+              ...APPLICATION_LIB_ORCHESTRATION_PATTERNS,
+              // Next API = Application shell (wins over **/app/** Presentation by specificity).
+              ...NEXT_API_APPLICATION_PATTERNS,
             ],
             exclude: FRAMEWORK_INTERNAL_EXCLUDE,
             optional: true,
@@ -605,26 +758,8 @@ export const ARCHITECTURE_PRESETS = {
             description: 'Client data access and external API adapters (when present).',
             // Prefer specific data-client bags over a presentation catch-all on **/lib/**
             patterns: [
-              '**/infrastructure/**',
               '**/adapters/**',
-              '**/repositories/**',
-              '**/persistence/**',
-              'src/db/**',
-              'src/data/**',
-              'src/lib/db/**',
-              'src/lib/prisma/**',
-              'src/lib/supabase/**',
-              'src/lib/airtable/**',
-              'src/lib/firebase/**',
-              'src/lib/firestore/**',
-              'src/lib/mongodb/**',
-              'src/lib/mongoose/**',
-              'src/lib/drizzle/**',
-              'src/lib/kysely/**',
-              '**/lib/supabase/**',
-              '**/lib/airtable/**',
-              '**/lib/prisma/**',
-              '**/lib/db/**',
+              ...PERSISTENCE_PATH_PATTERNS,
             ],
             exclude: FRAMEWORK_INTERNAL_EXCLUDE,
             optional: true,
@@ -850,6 +985,104 @@ export const ARCHITECTURE_PRESETS = {
       root
     );
   },
+
+  /**
+   * Vite SPA + root Vercel `api/` / `lib/` (NEW-SPA-DEFAULT-LAYOUT).
+   * include covers src + serverless api + shared lib; never hexagonal src-only vacuum.
+   */
+  'vite-vercel-spa': (_workspaces, root) =>
+    presetWithOverlays(
+      {
+        include: (() => {
+          if (!root) return ['src', 'api', 'lib'];
+          const dirs = ['src', 'api', 'lib'];
+          try {
+            return dirs.filter((d) => fs.existsSync(path.join(root, d)));
+          } catch {
+            return dirs;
+          }
+        })(),
+        layers: [
+          {
+            name: 'DomainModel',
+            description: 'Pure domain folders when present (optional on SPA trees).',
+            patterns: [...DOMAIN_PATH_PATTERNS],
+            exclude: FRAMEWORK_INTERNAL_EXCLUDE,
+            forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
+            optional: true,
+          },
+          {
+            name: 'ApplicationOrchestration',
+            description:
+              'Vercel/serverless `api/**` handlers and non-UI orchestration (not Presentation).',
+            patterns: [
+              'api/**',
+              '**/api/**',
+              'src/api/**',
+              'src/server/**',
+              'src/services/**',
+              'src/actions/**',
+              ...APPLICATION_LIB_ORCHESTRATION_PATTERNS,
+              ...NEXT_API_APPLICATION_PATTERNS,
+            ],
+            exclude: FRAMEWORK_INTERNAL_EXCLUDE,
+            optional: true,
+          },
+          {
+            name: 'PersistenceAdapters',
+            description: 'DB / CRM / auth clients under lib/ and data folders.',
+            patterns: [...PERSISTENCE_PATH_PATTERNS, '**/adapters/**'],
+            exclude: FRAMEWORK_INTERNAL_EXCLUDE,
+            optional: true,
+          },
+          {
+            name: 'PresentationAdapters',
+            description:
+              'React/Vite UI surface. Not bare lib/** (data clients stay Persistence).',
+            patterns: [
+              'src/components/**',
+              'src/hooks/**',
+              'src/pages/**',
+              'src/routes/**',
+              'src/ui/**',
+              'src/layouts/**',
+              'src/App.tsx',
+              'src/App.jsx',
+              'src/App.ts',
+              'src/App.js',
+              'src/main.tsx',
+              'src/main.jsx',
+              'src/main.ts',
+              'src/main.js',
+              'src/index.tsx',
+              'src/index.jsx',
+              '**/components/**',
+              '**/hooks/**',
+              '**/pages/**',
+              '**/routes/**',
+            ],
+            exclude: FRAMEWORK_INTERNAL_EXCLUDE,
+            optional: true,
+          },
+        ],
+        rules: [
+          { from: 'DomainModel', to: 'PresentationAdapters', allowed: false },
+          { from: 'DomainModel', to: 'PersistenceAdapters', allowed: false },
+          { from: 'DomainModel', to: 'ApplicationOrchestration', allowed: false },
+          { from: 'ApplicationOrchestration', to: 'PresentationAdapters', allowed: false },
+          {
+            from: 'PresentationAdapters',
+            to: 'PersistenceAdapters',
+            allowed: true,
+            message:
+              'SPA day-one UI may reach data clients; prefer ports as the product grows.',
+          },
+          { from: 'PersistenceAdapters', to: 'PresentationAdapters', allowed: false },
+          { from: 'PersistenceAdapters', to: 'ApplicationOrchestration', allowed: false },
+        ],
+      },
+      root
+    ),
 };
 
 // Aliases: Clean / Onion map to the hexagonal factory (same matrix + globs). Avoid dual maintenance.
@@ -858,6 +1091,41 @@ ARCHITECTURE_PRESETS['onion-architecture'] = ARCHITECTURE_PRESETS.hexagonal;
 
 /** Stable public preset keys (CLI help, score fit, docs). Order is display order. */
 export const ARCHITECTURE_PRESET_NAMES = Object.keys(ARCHITECTURE_PRESETS);
+
+/**
+ * Additive P0-A retrofit: inject high-spec Next API → Application patterns when missing.
+ * Pure — does not write files (DL-P0A-RETROFIT).
+ *
+ * @param {object} config ark.config-shaped object
+ * @returns {{ changed: boolean, injected: string[], targetLayer: string|null, config: object }}
+ */
+export function retrofitP0aApiApplicationPatterns(config) {
+  const layers = Array.isArray(config?.layers) ? config.layers : [];
+  const appLayer =
+    layers.find((l) => l?.name === 'ApplicationOrchestration') ||
+    layers.find((l) => /application|orchestr/i.test(l?.name ?? ''));
+  if (!appLayer) {
+    return { changed: false, injected: [], targetLayer: null, config };
+  }
+  const existing = new Set(appLayer.patterns ?? []);
+  const injected = NEXT_API_APPLICATION_PATTERNS.filter((p) => !existing.has(p));
+  if (injected.length === 0) {
+    return { changed: false, injected: [], targetLayer: appLayer.name, config };
+  }
+  const nextLayers = layers.map((layer) => {
+    if (layer.name !== appLayer.name) return layer;
+    return {
+      ...layer,
+      patterns: [...new Set([...(layer.patterns ?? []), ...injected])],
+    };
+  });
+  return {
+    changed: true,
+    injected: [...injected],
+    targetLayer: appLayer.name,
+    config: { ...config, layers: nextLayers },
+  };
+}
 
 // ── Layer suggestion engine ──────────────────────────────────────────────────
 // Everything here is HARVESTED from Ark's own canonical sources — the 11-layer defaults

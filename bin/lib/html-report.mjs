@@ -16,6 +16,7 @@ import {
   renderBaselineSignalLegend,
   renderDesignCleanNote,
   renderDesignDepthStrip,
+  renderProductHonestyCard,
   renderWritePathAdoptionBlock,
 } from './html-report-depth.mjs';
 import { FIX_HINTS } from './violations.mjs';
@@ -222,13 +223,13 @@ export function computeReportFitness({ coverage, violations, ok, enforcement, co
     const row = (coverage?.layers ?? []).find((r) => r.name === layer.name);
     return (row?.files ?? 0) > 0;
   }).length;
+  // planMet: blocking (failsStrict !== false) only — type-only alone must not force ADAPT.
+  const blockingCount = Array.isArray(violations)
+    ? violations.filter((v) => v?.failsStrict !== false).length
+    : 0;
   const mode = resolveOperatingMode({
     governedPercent: totalFiles === 0 ? 0 : governedPercent,
-    planMet:
-      ok &&
-      (violations?.length ?? 0) === 0 &&
-      totalFiles > 0 &&
-      (governedPercent == null || governedPercent >= 50),
+    planMet: ok && blockingCount === 0 && totalFiles > 0 && (governedPercent == null || governedPercent >= 50),
     mature: totalFiles >= 150,
     totalFiles,
     emptyLayers,
@@ -531,6 +532,11 @@ export function renderHtmlReport({
       ok,
       mode,
     });
+  // P0-B product honesty card — prefer payload from buildReportDepthPayload when present.
+  const productHonestyHtml = renderProductHonestyCard(
+    depth.productHonesty ?? null,
+    depth.mergePlanes ?? null
+  );
   const writePathHtml = renderWritePathAdoptionBlock(adoptionView.writePath);
   const baselineLegendHtml = renderBaselineSignalLegend();
 
@@ -1111,6 +1117,7 @@ export function renderHtmlReport({
   </div>
 
   ${designStripHtml}
+  ${productHonestyHtml}
 
   <div class="section card" id="adoption">
     <h2>Adoption</h2>

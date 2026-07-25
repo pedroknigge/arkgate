@@ -16,12 +16,54 @@ const COVERED_SAMPLE_MAX = 24;
 const STRUCTURE_CATALOG_MAX = 40;
 const UNCOVERED_CATALOG_MAX = 30;
 
+/** Minimum governed % before enforced ArkRules may arm extra merge teeth (P1M / FG-EXTRATEETH). */
+export const EXTRA_MERGE_TEETH_GOVERNED_FLOOR = 50;
+
+/**
+ * P1M / extraMergeTeeth: under the classification floor, demote enforced ArkRules
+ * structure/invariant findings so merge matches doctor stamp (layer graph only).
+ * Unknown classification (null/null) → do not demote (contract-only callers).
+ *
+ * @param {object[]} violations
+ * @param {{ governedPercent?: number|null, populatedLayerCount?: number|null }} classification
+ * @returns {object[]}
+ */
+export function demoteArkRuleTeethUnderClassificationFloor(violations, classification = {}) {
+  if (!Array.isArray(violations)) return violations;
+  const governed =
+    typeof classification.governedPercent === 'number' ? classification.governedPercent : null;
+  const populated =
+    typeof classification.populatedLayerCount === 'number'
+      ? classification.populatedLayerCount
+      : null;
+  if (governed == null && populated == null) return violations;
+  const allowsTeeth =
+    (governed ?? 0) >= EXTRA_MERGE_TEETH_GOVERNED_FLOOR && (populated ?? 0) >= 1;
+  if (allowsTeeth) return violations;
+  for (const v of violations) {
+    const isArkRule =
+      v?.arkruleId != null ||
+      (typeof v?.ruleId === 'string' &&
+        (v.ruleId.startsWith('ARKRULE') || v.ruleId.startsWith('arkrule')));
+    if (isArkRule && v.failsStrict !== false) {
+      v.failsStrict = false;
+      if (v.severity === 'error') v.severity = 'warning';
+    }
+  }
+  return violations;
+}
+
 /**
  * @param {string} root
  * @param {Record<string, unknown>} config
  * @param {{ files?: Array<{ path: string }> }} [facts] optional facts for path set
+ * @param {{
+ *   governedPercent?: number | null,
+ *   populatedLayerCount?: number | null,
+ *   classifiedFiles?: number | null,
+ * }} [classification] layer-plane coverage (when known)
  */
-export function summarizeRulesUnderContract(root, config, facts) {
+export function summarizeRulesUnderContract(root, config, facts, classification) {
   if (!config?.arkRules || Object.keys(config.arkRules).length === 0) {
     return {
       active: false,
@@ -112,12 +154,88 @@ export function summarizeRulesUnderContract(root, config, facts) {
     const coveredTruncated = Math.max(0, coveredAll.length - COVERED_SAMPLE_MAX);
     const coveredSample = coveredAll.slice(0, COVERED_SAMPLE_MAX);
 
+    const structureEnforced = structureAll.filter((s) => s.mode === 'enforced').length;
+    const structureAdvisory = structureAll.length - structureEnforced;
+    const invariantEnforced = (loaded.arkRules.invariants ?? []).filter(
+      (inv) => inv.mode === 'enforced'
+    ).length;
+    const invariantAdvisory = invariants - invariantEnforced;
+    const coveredInvariants = coverage.coverage.filter((c) => c.covered).length;
+    const uncoveredInvariants = coverage.coverage.filter((c) => !c.covered).length;
+    const hasEnforcedTeeth = structureEnforced > 0 || invariantEnforced > 0;
+    // P1M-EXTRATEETH-EMPTY-GRAPH / FG-EXTRATEETH-EMPTY-CLASSIFICATION:
+    // Do not arm structure/invariant merge teeth when the layer plane is empty or
+    // barely classified (e.g. 0% governed). Classification unknown → allow teeth
+    // (contract-only callers / unit tests without coverage).
+    const governedPercent =
+      classification && typeof classification.governedPercent === 'number'
+        ? classification.governedPercent
+        : null;
+    const populatedLayerCount =
+      classification && typeof classification.populatedLayerCount === 'number'
+        ? classification.populatedLayerCount
+        : classification && typeof classification.classifiedFiles === 'number'
+          ? classification.classifiedFiles > 0
+            ? 1
+            : 0
+          : null;
+    const classificationKnown = governedPercent != null || populatedLayerCount != null;
+    const classificationAllowsTeeth = !classificationKnown
+      ? true
+      : (governedPercent ?? 0) >= EXTRA_MERGE_TEETH_GOVERNED_FLOOR &&
+        (populatedLayerCount ?? 0) >= 1;
+    const extraMergeTeeth = hasEnforcedTeeth && classificationAllowsTeeth;
+    const teethDeferredForClassification =
+      hasEnforcedTeeth && classificationKnown && !classificationAllowsTeeth;
+    // P1-M — which plane can fail merge (layers vs enforced structure vs invariants).
+    const mergePlanes = {
+      layers: {
+        role: 'inter-layer-edges',
+        alwaysOnGate: true,
+        note: 'Import/export layer graph — the default merge plane. Absent arkRules changes nothing here.',
+      },
+      structureSensors: {
+        role: 'intra-layer-heuristics',
+        total: structureRules,
+        enforced: structureEnforced,
+        advisory: structureAdvisory,
+        note: 'Structure sensors are heuristics (prefer false negatives). Only mode:enforced fails merge; noisy sensors stay advisory by default. Advisory-only packs never add merge teeth (FG-ARKRULES-ADVISORY-ONLY).',
+      },
+      invariants: {
+        role: 'catalog-plus-coverage',
+        total: invariants,
+        enforced: invariantEnforced,
+        advisory: invariantAdvisory,
+        covered: coveredInvariants,
+        uncovered: uncoveredInvariants,
+        note: 'Invariants are catalog + coverage evidence, not a business runtime. Enforced + proven-uncovered fails merge; absence of enforced rules adds no extra teeth.',
+      },
+      dualPlaneStamp:
+        'Structure = heuristics; invariants = catalog+coverage evidence (not business runtime). The two planes never merge into one architecture score. Advisory ArkRules ≠ merge teeth.',
+      extraMergeTeeth,
+      ...(classificationKnown
+        ? {
+            classificationGate: {
+              governedPercent: governedPercent ?? null,
+              populatedLayerCount: populatedLayerCount ?? null,
+              floorPercent: EXTRA_MERGE_TEETH_GOVERNED_FLOOR,
+              allowsTeeth: classificationAllowsTeeth,
+            },
+          }
+        : {}),
+      failMergeWhen: extraMergeTeeth
+        ? 'Layer graph failures plus enforced structure/invariant findings (advisory sensors never fail merge alone).'
+        : teethDeferredForClassification
+          ? `Layer graph only — enforced ArkRules structure/invariant findings are demoted under the teeth floor (need ≥${EXTRA_MERGE_TEETH_GOVERNED_FLOOR}% governed and ≥1 populated layer); they do not merge-block until classification is honest.`
+          : 'Layer graph only — no enforced ArkRules structure/invariant teeth on this tree. Advisory packs do not arm merge teeth.',
+    };
+
     return {
       active: true,
       structureRules,
       invariants,
-      coveredInvariants: coverage.coverage.filter((c) => c.covered).length,
-      uncoveredInvariants: coverage.coverage.filter((c) => !c.covered).length,
+      coveredInvariants,
+      uncoveredInvariants,
       partialCoverage: coverage.partial,
       testFilesScanned: coverageInputs.testFiles.length,
       layers,
@@ -127,8 +245,9 @@ export function summarizeRulesUnderContract(root, config, facts) {
       uncoveredTruncated,
       coveredSample,
       coveredTruncated,
+      mergePlanes,
       notAScore: true,
-      note: 'ArkRules plane (intra-layer) — counts and catalog, never a score. Green with uncovered residual must say so.',
+      note: 'ArkRules plane (intra-layer) — counts and catalog, never a score. Green with uncovered residual must say so. Structure sensors are heuristics; invariants are catalog+coverage evidence, not a business runtime.',
     };
   } catch (error) {
     return {
@@ -155,6 +274,7 @@ export function formatRulesUnderContractHtml(section, esc) {
     <h2>Rules under contract <span class="muted">(ArkRules opt-in)</span></h2>
     <p class="dim" style="margin:.15rem 0 .55rem;font-size:.88rem">
       Intra-layer plane (structure sensors + domain invariants as data). Separate from inter-layer import edges.
+      Absence of arkRules adds no extra merge teeth beyond the layer graph.
     </p>
     ${note}
   </section>`;
@@ -284,6 +404,15 @@ export function formatRulesUnderContractHtml(section, esc) {
           : ''
       }`;
 
+  const mergePlanes = section.mergePlanes;
+  const mergeHtml =
+    mergePlanes && typeof mergePlanes === 'object'
+      ? `<p class="muted" style="margin:.35rem 0 .55rem;font-size:.86rem">
+          <b>Merge planes:</b> ${escape(mergePlanes.failMergeWhen || '')}
+          ${mergePlanes.dualPlaneStamp ? `<br/>${escape(mergePlanes.dualPlaneStamp)}` : ''}
+        </p>`
+      : '';
+
   return `
   <section class="section card" data-advisory="rulesUnderContract">
     <h2>Rules under contract <span class="muted">(ArkRules — not a score)</span></h2>
@@ -293,6 +422,7 @@ export function formatRulesUnderContractHtml(section, esc) {
       <b>Invariants</b> = named policies + coverage evidence (symbol/test), not a business runtime
       and not a fitness score.
     </p>
+    ${mergeHtml}
     <div class="kpis" style="margin-bottom:.55rem">
       <div class="kpi"><b>${Number(section.structureRules) || 0}</b><span>Structure rules</span></div>
       <div class="kpi"><b>${Number(section.invariants) || 0}</b><span>Invariants</span></div>

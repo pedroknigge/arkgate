@@ -176,11 +176,15 @@ The release compatibility workflow packs the candidate first, then tests clean c
 - **npm / pnpm / Yarn**;
 - project TypeScript **5.9.3 / 6.0.3 / 7.0.2**.
 
-That is 36 installed-artifact cells. Each cell verifies that the project's `tsc` stays on the
-requested project compiler and that ArkGate resolves its fallback as exact 6.0.3 when the project
-API is unusable. Reports record `installMode` so the Yarn TS7 linker boundary cannot disappear
-behind a green job. All 36 cells passed on source `228dd893` in CI run `29655190747`. Locally, the
-repository entry point is:
+That is **36** installed-artifact cells on the **full matrix** path (`push` to `main`, PR labels
+`full-matrix` / `release`, or release-prep branch names such as `feat/4.1*`). Ordinary PRs run a
+**slim** packed smoke: **one** cell (Node 20 + npm) that still exercises TS 5/6/7 in-process.
+See [CONTRIBUTING.md — CI profiles](../CONTRIBUTING.md#ci-profiles-pr-slim-vs-full-matrix).
+
+Each cell verifies that the project's `tsc` stays on the requested project compiler and that
+ArkGate resolves its fallback as exact 6.0.3 when the project API is unusable. Reports record
+`installMode` so the Yarn TS7 linker boundary cannot disappear behind a green job. All 36 cells
+passed on source `228dd893` in CI run `29655190747`. Locally, the repository entry point is:
 
 ```bash
 npm run test:ts-compat

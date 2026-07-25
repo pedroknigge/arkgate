@@ -190,6 +190,18 @@ describe('buildWritePathHonesty', () => {
     expect(bundle.coverageHonesty.worseThanNoGate).toBe(true);
     expect(bundle.baselineHonesty.dirtyBaselineRisk).toBe(true);
     expect(bundle.writePathHonesty.softWriteHost).toBe(true);
+    expect(bundle.productHonesty.unfinished).toBe(true);
+    expect(bundle.productHonesty.notAScore).toBe(true);
+  });
+
+  it('never claims hard write when package pin is absent', () => {
+    const honesty = buildWritePathHonesty('claude', true, {
+      packageInstalled: false,
+      packagePinCode: 'PACKAGE_PIN_ABSENT',
+    });
+    expect(honesty.hardWriteActive).toBe(false);
+    expect(honesty.packagePinAbsent).toBe(true);
+    expect(honesty.message).toMatch(/PACKAGE_PIN_ABSENT|pin absent/i);
   });
 });
 
