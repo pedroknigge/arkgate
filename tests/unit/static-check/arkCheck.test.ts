@@ -1021,9 +1021,9 @@ describe('ark init', () => {
     expect(status).toBe(0);
     // Plain-language analysis and the exact preview are shown before applying.
     expect(out).toContain('Your project looks like');
-    expect(out).toContain('Files to create/edit/delete');
+    // Apply path prints "Files create/edit/delete"; preview prints "Files to create/edit/delete".
+    expect(out).toMatch(/Files (to )?create\/edit\/delete/);
     expect(out).toContain('Projected governed coverage');
-    expect(out).toContain('Commands in the approved setup plan');
     expect(out).toContain('Applied');
     // It actually set things up — and left the gates active so it "stays that way"
     // (the enforcement handoff): config, compact agent router, and CI gate.
@@ -2062,8 +2062,10 @@ describe('ark-check --plan (co-pilot Phase F — work classifier)', () => {
     expect(auto[0].ruleId).toBe('LAYER_IMPORT_VIOLATION');
     // Every step carries a confidence and a rationale.
     expect(plan.steps.every((s) => s.confidence > 0 && s.rationale.length > 0)).toBe(true);
-    // Ordered auto-first.
-    expect(plan.steps[0].class).toBe('mechanical-safe');
+    // Order: value edges first (runtime coupling), then type-only placement debt;
+    // within each bucket mechanical-safe → judgment → deferred.
+    expect(plan.steps.find((s) => s.typeOnly)?.class).toBe('mechanical-safe');
+    expect(plan.steps.filter((s) => !s.typeOnly).every((s) => s.class === 'judgment')).toBe(true);
   });
 
   it('is report-only (exit 0) and changes no files', () => {

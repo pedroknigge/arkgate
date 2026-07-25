@@ -428,6 +428,7 @@ async function start(args) {
       const gate = evaluateStartShapeConfidenceGate({
         confidence: preview.analysis?.confidence,
         projectedCoveragePercent: preview.projectedCoverage?.percent,
+        totalFiles: preview.projectedCoverage?.totalFiles,
         explicitShape: Boolean(args.archetype || args.preset),
         force: Boolean(args.force),
       });

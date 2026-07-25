@@ -673,6 +673,15 @@ describe('active-host write capability model', () => {
   it('keeps observed pre-tool coverage and CI-required evidence fail-closed', () => {
     const root = mk();
     try {
+      // hard:true requires resolved arkgate (P0B-PIN-ABSENT-WRITEPATH).
+      fs.writeFileSync(
+        path.join(root, 'package.json'),
+        JSON.stringify({ name: 'fixture', version: '1.0.0', devDependencies: { arkgate: '4.1.0' } })
+      );
+      const pkgRoot = path.join(root, 'node_modules', 'arkgate');
+      fs.mkdirSync(path.join(pkgRoot, 'bin'), { recursive: true });
+      fs.writeFileSync(path.join(pkgRoot, 'package.json'), JSON.stringify({ name: 'arkgate', version: '4.1.0' }));
+      fs.writeFileSync(path.join(pkgRoot, 'bin', 'ark-check.mjs'), 'export {}\n');
       const complete = detectWritePathCapabilities(root, 'grok', {
         boundary: 'pre-tool',
         operation: 'write',
@@ -687,6 +696,7 @@ describe('active-host write capability model', () => {
         coverage: 'complete-patch',
         operation: 'write',
         operationCovered: true,
+        packageInstalled: true,
       });
       expect(complete.enforcementLadder.ciMerge).toMatchObject({
         bypassable: 'unknown',

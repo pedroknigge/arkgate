@@ -107,11 +107,24 @@ function isProtected(rel) {
 function runArkCheck(root) {
   const res = spawnSync(
     process.execPath,
-    [ARK_CHECK, '--root', root, '--config', 'ark.config.json'],
+    [ARK_CHECK, '--root', root, '--config', 'ark.config.json', '--json'],
     { cwd: root, encoding: 'utf8' }
   );
+  let violations = [];
+  let ok = res.status === 0;
+  try {
+    const j = JSON.parse(res.stdout || '{}');
+    violations = Array.isArray(j.violations) ? j.violations : [];
+    if (typeof j.ok === 'boolean') ok = j.ok;
+  } catch {
+    /* human fallback: exit code only */
+  }
   return {
     code: res.status ?? 1,
+    ok,
+    // Type-only placement debt exits 0 but still reports violations (failsStrict:false).
+    hasViolations: violations.length > 0 || (res.status ?? 1) !== 0,
+    violationCount: violations.length,
     output: `${res.stdout || ''}${res.stderr || ''}`.trim(),
   };
 }
@@ -207,7 +220,7 @@ function runFixtureCase(caseSpec, ts) {
 
     const beforeSnap = snapshotFiles(tmp);
     const initial = runArkCheck(tmp);
-    if (initial.code === 0) {
+    if (!initial.hasViolations) {
       return {
         id,
         kind,
@@ -238,9 +251,9 @@ function runFixtureCase(caseSpec, ts) {
         break;
       }
       const check = runArkCheck(tmp);
-      arkCheckGreen = check.code === 0;
+      // Full CI green: no remaining violations (type-only debt counts).
+      arkCheckGreen = !check.hasViolations;
       // Write-path green: fixture proxy — import-type rewrite applied this turn.
-      // Full CI green is arkCheckGreen (reported separately).
       if (writePathCleared || arkCheckGreen) {
         writePathGreen = true;
         break;

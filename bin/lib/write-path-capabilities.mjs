@@ -60,33 +60,33 @@ function buildEnforcementLadder(activeHost, support, evidence, attempt, opts = {
   const observedPreTool = attempt?.boundary === 'pre-tool';
   const covered = observedPreTool && operationCovered(support, attempt.operation);
   // P0B-PIN-ABSENT-WRITEPATH: never hard:true without pin+node_modules (packageInstalled).
+  // Hook config / observed coverage can still be active or operationCovered without hard.
   const hard = Boolean(
     support?.capabilities['hard-write'] &&
       packageInstalled &&
       (hookConfigured || observedPreTool) &&
       covered
   );
-  const inferredActive = (configured) =>
-    configured && packageInstalled ? 'unverified' : false;
+  // Configured assets → active "unverified" even when package is absent (hard stays false).
+  const inferredActive = (configured) => (configured ? 'unverified' : false);
   return {
     schemaVersion: '1.0',
     activeHost,
     localWrite: boundaryState({
       supported: Boolean(support?.capabilities['hard-write']),
       evidence: evidence['hard-write'],
-      active: observedPreTool
-        ? covered && packageInstalled
-        : inferredActive(hookConfigured),
+      active: observedPreTool ? Boolean(covered) : inferredActive(hookConfigured),
       bypassable: !hard,
       hard,
       extra: {
         // Ladder "installed" here means hook assets; package install lives in enforcementState.
         installed: hookConfigured || observedPreTool,
         packageInstalled,
+        // completePatch describes op scope (coverage), not package install.
         completePatch: Boolean(covered && attempt?.completePatch),
         coverage: covered && attempt?.completePatch ? 'complete-patch' : support?.hookSurface ?? null,
         ...(observedPreTool
-          ? { operation: attempt.operation, operationCovered: covered && packageInstalled }
+          ? { operation: attempt.operation, operationCovered: Boolean(covered) }
           : { operationCovered: 'unverified' }),
       },
     }),

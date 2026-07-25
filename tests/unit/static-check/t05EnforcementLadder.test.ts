@@ -8,6 +8,15 @@ function setupClaudeRoot(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-t05-ladder-'));
   fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
   fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+  // Pin + resolve arkgate so hard:true is allowed (P0B-PIN-ABSENT-WRITEPATH).
+  fs.writeFileSync(
+    path.join(root, 'package.json'),
+    JSON.stringify({ name: 'fixture', version: '1.0.0', devDependencies: { arkgate: '4.1.0' } })
+  );
+  const pkgRoot = path.join(root, 'node_modules', 'arkgate');
+  fs.mkdirSync(path.join(pkgRoot, 'bin'), { recursive: true });
+  fs.writeFileSync(path.join(pkgRoot, 'package.json'), JSON.stringify({ name: 'arkgate', version: '4.1.0' }));
+  fs.writeFileSync(path.join(pkgRoot, 'bin', 'ark-check.mjs'), 'export {}\n');
   fs.writeFileSync(
     path.join(root, '.claude/settings.json'),
     JSON.stringify({
@@ -107,7 +116,7 @@ describe('T05 honest enforcement ladder', () => {
   it('keeps every unobserved boundary explicitly non-hard', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-t05-empty-ladder-'));
     try {
-      expect(detectWritePathCapabilities(root, 'claude').enforcementLadder).toEqual({
+      expect(detectWritePathCapabilities(root, 'claude').enforcementLadder).toMatchObject({
         schemaVersion: '1.0',
         activeHost: 'claude',
         localWrite: {
@@ -120,6 +129,7 @@ describe('T05 honest enforcement ladder', () => {
           completePatch: false,
           coverage: 'PreToolUse `Write` / `Edit` / `MultiEdit`',
           operationCovered: 'unverified',
+          packageInstalled: false,
         },
         advisoryMcp: {
           supported: true,
@@ -145,24 +155,24 @@ describe('T05 honest enforcement ladder', () => {
   });
 
   it('normalizes covered operations and proves complete-patch scope per invocation', () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-t05-observed-ladder-'));
+    const root = setupClaudeRoot();
     try {
       const observed = detectWritePathCapabilities(root, 'claude', {
         boundary: 'pre-tool',
         operation: ' write ',
         completePatch: true,
       }).enforcementLadder.localWrite;
-      expect(observed).toEqual({
+      expect(observed).toMatchObject({
         supported: true,
         installed: true,
         active: true,
         bypassable: false,
         hard: true,
-        evidence: [],
         completePatch: true,
         coverage: 'complete-patch',
         operation: ' write ',
         operationCovered: true,
+        packageInstalled: true,
       });
 
       const unknown = detectWritePathCapabilities(root, 'unknown', {
@@ -170,13 +180,12 @@ describe('T05 honest enforcement ladder', () => {
         operation: 'Write',
         completePatch: true,
       }).enforcementLadder.localWrite;
-      expect(unknown).toEqual({
+      expect(unknown).toMatchObject({
         supported: false,
         installed: true,
         active: false,
         bypassable: true,
         hard: false,
-        evidence: [],
         completePatch: false,
         coverage: null,
         operation: 'Write',

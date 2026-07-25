@@ -519,13 +519,18 @@ export const ARCHITECTURE_PRESETS = {
           },
           {
             name: 'ApplicationOrchestration',
-            description: 'Business services and use-case coordination.',
+            description:
+              'Business services and use-case coordination. Residual `src/**` is Application on non-Next layered trees only (specific domain/ui/db patterns win by specificity).',
             patterns: [
               'src/**/application/**',
               'src/**/services/**',
               'src/**/use-cases/**',
               ...APPLICATION_LIB_ORCHESTRATION_PATTERNS,
               ...NEXT_API_APPLICATION_PATTERNS,
+              // Greenfield residual: bare src/index.ts etc. Domain/Presentation/Persistence
+              // patterns outrank this by specificity. Next overlay replaces Application bags
+              // and must NOT reintroduce a lone src/** catch-all on App Router trees.
+              'src/**',
             ],
             exclude: FRAMEWORK_INTERNAL_EXCLUDE,
             optional: true,

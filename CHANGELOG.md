@@ -42,7 +42,7 @@ Z09 / RB-11 field claims. **Status: prepared** (not on npm until publish).
   (cwd/`--root`) unless `--follow-config-root` is set — does not clobber monorepo AGENTS/skills
   from a nested package by accident.
 - **SPA / vacuum classification (S3):** SPA preset + adopt/start heuristics reduce
-  Application-empty / lib-as-Presentation lies on Vite SPA and dcouplr-style trees; Domain
+  Application-empty / lib-as-Presentation lies on Vite SPA and similar client trees; Domain
   specificity keeps nested `**/domain/**` on DomainModel when patterns compete.
 - **Config write containment:** Mutative commands refuse `--config` paths outside project root
   (fail closed; no silent escape write).

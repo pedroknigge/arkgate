@@ -93,6 +93,9 @@ export function evaluateArchitectureGraph(
     // runtime coupling. Report on the violations list (doctor/HTML typeOnly counts) with
     // failsStrict:false so exit/merge treats them as non-blocking — except peerIsolation.
     // sourcePureTypeModule alone must NOT soft-skip a value import of a pure-type barrel.
+    // Type placement debt: import-type syntax OR value-syntax of type-only exports.
+    // Keep `typeOnly` = import-type *syntax* only so remediation can distinguish R6
+    // (convert value → import type) from relocate (already import type).
     const typePlacementDebt =
       !peerIsolation && Boolean(edge.typeOnly || edge.namedBindingsTypeOnly);
     const baseMessage =
@@ -107,7 +110,7 @@ export function evaluateArchitectureGraph(
       fromLayer: edge.fromLayer,
       toLayer: edge.toLayer,
       target: edge.to,
-      ...(edge.typeOnly || typePlacementDebt ? { typeOnly: true } : {}),
+      ...(edge.typeOnly ? { typeOnly: true } : {}),
       ...(edge.targetTypeOnlyExports ? { targetTypeOnlyExports: true } : {}),
       ...(edge.sourcePureTypeModule ? { sourcePureTypeModule: true } : {}),
       ...(edge.namedBindingsTypeOnly ? { namedBindingsTypeOnly: true } : {}),

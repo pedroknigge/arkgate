@@ -129,16 +129,19 @@ export function applyFrameworkLayoutOverlays(config, root) {
   // claiming a framework that package.json does not declare.
   if (signals.apiSurface && !signals.nestFramework && !signals.expressLike) {
     ensureInclude('src');
+    // Controllers/routes/http stay Presentation. Do NOT add bare `src/**/api/**` —
+    // that swallows Application bags like `src/core/api/**` and Next `app/api/**`
+    // (P0-A API shell). API shells live on Application via NEXT_API / core patterns.
     mergeLayerPatterns(next, 'PresentationAdapters', [
       'src/**/routes/**',
       'src/**/controllers/**',
       'src/**/http/**',
-      'src/**/api/**',
     ]);
     mergeLayerPatterns(next, 'ApplicationOrchestration', [
       'src/**/services/**',
       'src/**/use-cases/**',
       'src/**/usecases/**',
+      'src/**/api/**',
     ]);
   }
 
@@ -1543,6 +1546,7 @@ function resolvePreset(archetypeDef, signals) {
  * Fail-closed when confidence or projected coverage metrics are null/unknown.
  *
  * Rules:
+ * - empty greenfield (totalFiles === 0) → allow (scaffold only; nothing to mis-classify yet)
  * - null confidence or null projected coverage → refuse (fail-closed)
  * - projected coverage < 50% → refuse (wrong include / vacuum)
  * - confidence < 0.6 AND projected coverage < 80% → refuse (weak shape + incomplete cover)
@@ -1553,6 +1557,7 @@ function resolvePreset(archetypeDef, signals) {
 export function evaluateStartShapeConfidenceGate({
   confidence,
   projectedCoveragePercent,
+  totalFiles,
   explicitShape = false,
   force = false,
   minConfidence = 0.6,
@@ -1560,6 +1565,16 @@ export function evaluateStartShapeConfidenceGate({
   strongCoverageFloor = 80,
 } = {}) {
   if (force || explicitShape) return { ok: true, bypassed: true };
+  // Day-zero empty tree: contract + gates scaffold; coverage is vacuously fine.
+  if (typeof totalFiles === 'number' && totalFiles === 0) {
+    return {
+      ok: true,
+      emptyGreenfield: true,
+      confidence: typeof confidence === 'number' ? confidence : null,
+      projectedCoverage: 100,
+      totalFiles: 0,
+    };
+  }
   const reasons = [];
   const conf =
     typeof confidence === 'number' && Number.isFinite(confidence) ? confidence : null;

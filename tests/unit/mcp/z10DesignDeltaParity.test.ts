@@ -79,7 +79,17 @@ describe('Z10 write/MCP/CLI design-delta parity', () => {
       ],
       rules: [{ from: 'DomainModel', to: 'PresentationAdapters', allowed: false }],
     };
-    write(root, 'package.json', '{"name":"z10-write-parity","private":true}\n');
+    write(
+      root,
+      'package.json',
+      JSON.stringify({
+        name: 'z10-write-parity',
+        private: true,
+        devDependencies: { arkgate: '4.1.0' },
+      }) + '\n'
+    );
+    write(root, 'node_modules/arkgate/package.json', JSON.stringify({ name: 'arkgate', version: '4.1.0' }) + '\n');
+    write(root, 'node_modules/arkgate/bin/ark-check.mjs', 'export {}\n');
     write(root, 'ark.config.json', `${JSON.stringify(config, null, 2)}\n`);
     write(root, 'apps/web/src/product/page.tsx', 'export const Page = () => <main />;\n');
     write(root, 'packages/shared/src/rules/listing.ts', 'export const listingKind = "listing";\n');

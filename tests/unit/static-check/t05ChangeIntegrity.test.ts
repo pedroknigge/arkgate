@@ -23,6 +23,14 @@ function writeJson(root: string, relativePath: string, value: unknown): void {
 function setupRoot(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-t05-'));
   roots.push(root);
+  // hard:true requires resolved arkgate (P0B-PIN-ABSENT-WRITEPATH).
+  writeJson(root, 'package.json', {
+    name: 't05-fixture',
+    version: '1.0.0',
+    devDependencies: { arkgate: '4.1.0' },
+  });
+  writeJson(root, 'node_modules/arkgate/package.json', { name: 'arkgate', version: '4.1.0' });
+  write(root, 'node_modules/arkgate/bin/ark-check.mjs', 'export {}\n');
   write(root, 'src/domain/existing.ts', 'export const existing = true;\n');
   writeJson(root, 'ark.config.json', {
     schemaVersion: '1.0',

@@ -53,7 +53,7 @@ that turns honest Application→Domain edges into false Domain purity failures. 
 2. An optional **CompositionRoot** layer that may depend on Domain + Persistence and is
    forbidden as a dependency *from* Domain (mirror Application rules).
 
-Field note (S3.1.3): meiridan-style factory bags belong in Application (or CompositionRoot),
+Field note (S3.1.3): factory-bag composition roots belong in Application (or CompositionRoot),
 not Domain — document the choice in `ark.config.json` rather than freezing factory noise.
 
 ## 2. Diagnose before you freeze
