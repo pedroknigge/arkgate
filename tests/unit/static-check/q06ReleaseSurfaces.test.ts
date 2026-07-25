@@ -142,9 +142,11 @@ describe('CHANGELOG + release note cover 4.1.0 field product phases', () => {
     expect(body).toMatch(/productHonesty/i);
     expect(body).not.toMatch(/closes Z09|Z09 closed|RB-11 closed/i);
     // Publication checklist must pair dist-tags.latest with CURRENT (renumber trap).
+    // Escape dots via split/join (not .replace) so CodeQL does not flag incomplete sanitization.
+    const escapedVersion = CURRENT.split('.').join('\\.');
     expect(body).toMatch(
       new RegExp(
-        String.raw`npm view arkgate dist-tags\.latest\`?\s*→\s*\`${CURRENT.replace(/\./g, '\\.')}\``
+        String.raw`npm view arkgate dist-tags\.latest\`?\s*→\s*\`${escapedVersion}\``
       )
     );
   });
