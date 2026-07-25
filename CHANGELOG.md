@@ -5,13 +5,13 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
-## 4.1.1 — 2026-07-25 (prepared)
+## 4.1.1 — 2026-07-25 (published)
 
 **Patch** over 4.1.0. Phase EH — enforcement evidence modeling + documentation truth (field Codex
 feedback + public-lane claims audit). Honesty and doctor/CI evidence taxonomy; first-push-safe CI
 base-ref; report `.gitignore` coverage without defeating `!` exceptions. **No required config
 migration.** Does not invent hard-write for Codex/Cursor/OpenCode. Does not close Z09 / RB-11.
-**Status: prepared** (not on npm until publish).
+**Status: published** (`arkgate@4.1.1` on npm `latest`).
 
 ### Added
 
@@ -59,7 +59,7 @@ write-root split, SPA/lib classification vacuum fixes, ESLint path-alias parity,
 false-positive tuning, ArkRules merge-plane honesty, type-edge placement debt, rules-inventory
 UI noise reduction, migrate-contract retrofit, and config write containment.
 **No required config migration.** Does not weaken write gate or CI value edges. Does not close
-Z09 / RB-11 field claims. **Status: published** (`arkgate@4.1.0` on npm `latest` at ship time).
+Z09 / RB-11 field claims. **Status: published** (`arkgate@4.1.0`; superseded by 4.1.1 on `latest`).
 
 ### Added
 

@@ -104,17 +104,16 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
     expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
   });
 
-  it('public release pointers cover published 4.1.0, prepared 4.1.1, and retain 4.0.1 notes', () => {
-    expect(read('README.md')).toMatch(/4\.1\.0/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.1\.0\.md/);
+  it('public release pointers cover published 4.1.1 and retain 4.1.0 / 4.0.1 notes', () => {
     expect(read('README.md')).toMatch(/4\.1\.1/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.1\.1\.md/);
-    expect(read('README.md')).toMatch(/prepared/i);
     expect(read('README.md')).toMatch(/npm `latest`|on npm/);
+    expect(read('README.md')).toMatch(/4\.1\.0/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.1\.0\.md/);
     expect(read('README.md')).toMatch(/4\.0\.1/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.0\.1\.md/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.1\.0/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/4\.1\.1/);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.1\.1/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/4\.1\.0/);
     expect(read('docs/package-surface.md')).toMatch(/4\.0\.1\.md/);
     expect(read('docs/package-surface.md')).toMatch(/4\.1\.0\.md/);
     expect(read('docs/package-surface.md')).toMatch(/4\.1\.1\.md/);
@@ -122,10 +121,10 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
 });
 
 describe('CHANGELOG + release note cover 4.1.1 Phase EH + retain 4.1.0 field train', () => {
-  it('CHANGELOG 4.1.1 names EH honesty, gitignore, base-ref, provider plan, prepared status', () => {
+  it('CHANGELOG 4.1.1 names EH honesty, gitignore, base-ref, provider plan, published status', () => {
     const body = read('CHANGELOG.md');
     expect(body).toMatch(/## 4\.1\.1/);
-    expect(body).toMatch(/prepared/i);
+    expect(body).toMatch(/published/i);
     expect(body).toMatch(/soft-write|environment residual|contractReadiness/i);
     expect(body).toMatch(/gitignore|\.ark\/\*/i);
     expect(body).toMatch(/first-push|base-ref|fail-on-new-smells/i);
@@ -136,11 +135,11 @@ describe('CHANGELOG + release note cover 4.1.1 Phase EH + retain 4.1.0 field tra
     expect(body).toMatch(/productHonesty|false-green|not finished/i);
   });
 
-  it('docs/releases/4.1.1.md is prepared (not published) with upgrade path and no Z09 closed claims', () => {
+  it('docs/releases/4.1.1.md is published with upgrade path and no Z09 closed claims', () => {
     const body = read('docs/releases/4.1.1.md');
     expect(body).toMatch(/arkgate@4\.1\.1|4\.1\.1/);
-    expect(body).toMatch(/\*\*Status:\*\*\s*prepared/i);
-    expect(body).not.toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(body).toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(body).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
     expect(body).toMatch(/Z09|RB-11/i);
     expect(body).toMatch(/soft-write|Not finished|contract ready/i);
     expect(body).not.toMatch(/closes Z09|Z09 closed|RB-11 closed/i);
