@@ -141,6 +141,7 @@ describe('P0-B product honesty anti false-green', () => {
         headlineExcludes: 'not whole-tree',
       },
       {
+        // EH05: soft-write alone is environment residual — not architecture unfinished
         name: 'soft-write-host',
         input: {
           coverageHonesty: buildCoverageHonesty({ percent: 100, totalFiles: 10 }),
@@ -148,11 +149,15 @@ describe('P0-B product honesty anti false-green', () => {
           writePathHonesty: {
             advisory: true,
             softWriteHost: true,
+            activeHost: 'codex',
             message: 'Local write is advisory',
           },
         },
         expectIds: ['soft-write-host'],
-        unfinished: true,
+        unfinished: false,
+        finished: true,
+        headlineIncludes: 'Architecture contract ready',
+        headlineExcludes: 'Not finished',
       },
       {
         name: 'amarilla-like: 1000+ blocking + adapt',
