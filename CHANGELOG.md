@@ -5,16 +5,19 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
-## 4.1.0 — 2026-07-24 (prepared)
+## 4.1.1 — 2026-07-25 (prepared)
 
-**Minor** over 4.0.1. Field product phases from Next monorepo dogfood + objective review,
+**Patch** over 4.0.1. Ships the field product train originally prepared as **4.1.0** (never
+published on npm) after full CI went green on the release branch, plus maintainer CI PR-slim /
+full-matrix speed work. Field product phases from Next monorepo dogfood + objective review,
 plus field-gap closure (S0–S7) from the 7-repo lab re-verify:
 Next API shell classification, anti false-green doctor packaging, monorepo config walk-up with
 write-root split, SPA/lib classification vacuum fixes, ESLint path-alias parity, structure-sensor
 false-positive tuning, ArkRules merge-plane honesty, type-edge placement debt, rules-inventory
 UI noise reduction, migrate-contract retrofit, and config write containment.
 **No required config migration.** Does not weaken write gate or CI value edges. Does not close
-Z09 / RB-11 field claims. **Status: prepared** (not on npm until publish).
+Z09 / RB-11 field claims. **Status: prepared** (not on npm until publish). There is no
+`arkgate@4.1.0` on the registry — use **4.1.1**.
 
 ### Added
 
@@ -66,12 +69,12 @@ Z09 / RB-11 field claims. **Status: prepared** (not on npm until publish).
   `productHonesty.reasonIds`.
 - **Field dogfood smoke:** Offline gap-assertion scaffold under `scripts/field-dogfood/` for
   regression before minors (7-repo lab re-verify 15/15 critical assertions).
-- **CI PR slim vs full matrix:** composable `ci-profile` in `.github/workflows/ci.yml` —
-  ordinary PRs use coverage-only build, 1 packed-TS cell, 1 gallery PM, onboarding `*/small`,
-  and path-filtered performance budgets; full matrix (main, labels `full-matrix`/`release`,
-  release-prep branches `feat/4.1*`) keeps `test:confidence` (mutation) and complete product
-  matrices with `fail-fast: false`. Documented in CONTRIBUTING. Does not weaken publish-path
-  confidence.
+- **CI PR slim vs full matrix:** composable `ci-profile` (`scripts/ci-profile.mjs` +
+  `.github/workflows/ci.yml`) — ordinary PRs use coverage-only build, 1 packed-TS cell, 1
+  gallery PM, onboarding `*/small`, and path-filtered performance budgets; full matrix (main,
+  labels `full-matrix`/`release`, release-prep branches `feat/4.1*`) keeps `test:confidence`
+  (mutation) and complete product matrices with `fail-fast: false`. Documented in CONTRIBUTING.
+  Does not weaken publish-path confidence.
 
 ### Fixed
 

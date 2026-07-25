@@ -190,6 +190,6 @@ production deployment would need to satisfy; it is not a readiness certification
 
 Ship notes for a version live under [releases/](https://github.com/pedroknigge/arkgate/tree/main/docs/releases)
 (current published: [4.0.1.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.0.1.md);
-next prepared: [4.1.0.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.1.0.md);
+next prepared: [4.1.1.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.1.1.md);
 previous: [4.0.0.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.0.0.md)).
 Publish path: signed annotated tag → GitHub Release → `publish-npm.yml` (see [CONTRIBUTING.md](https://github.com/pedroknigge/arkgate/blob/main/CONTRIBUTING.md)).
