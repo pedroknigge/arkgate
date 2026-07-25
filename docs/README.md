@@ -57,8 +57,7 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
-Current published: [releases/4.0.1.md](releases/4.0.1.md) (`arkgate@4.0.1` on npm `latest`).  
-Next prepared: [releases/4.1.0.md](releases/4.1.0.md) (`arkgate@4.1.0` — field product phases + CI PR slim; not published until registry).  
+Current published: [releases/4.1.0.md](releases/4.1.0.md) (`arkgate@4.1.0` on npm `latest`).  
 Previous major: [releases/4.0.0.md](releases/4.0.0.md) (`arkgate@4.0.0`).  
 Config: [configuration.md](configuration.md) · Agent skills dual-plane: [agent-guide.md](agent-guide.md).
 
