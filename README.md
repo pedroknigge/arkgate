@@ -16,7 +16,7 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 4.1.0** is on npm `latest` (field product train + CI PR slim).
+> **ArkGate 4.1.0** is on npm `latest`. Tree prepares **4.1.1** (Phase EH honesty + CI/report fixes) — [4.1.1 notes](docs/releases/4.1.1.md) (**prepared**, not on npm until publish).
 > [4.1.0 notes](docs/releases/4.1.0.md) · [4.0.1](docs/releases/4.0.1.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
@@ -98,17 +98,18 @@ Details: [docs/use.md](docs/use.md).
 <!-- arkgate-host-support:start -->
 | Host | Local write boundary | MCP validation | CI / merge path | Repair payload |
 |------|----------------------|----------------|-----------------|----------------|
-| Claude Code | **Hard** block for listed ops (PreToolUse `Write` / `Edit` / `MultiEdit`) when installed + trusted | Advisory; the agent must call it | **Required status** = hard merge boundary (`arkgate-check --strict-merge`) | Emitted on hook deny; host must re-inject |
-| Grok Build | **Hard** block for listed ops (PreToolUse `write` / `search_replace` (plus aliases)) when installed + trusted | Advisory; the agent must call it | **Required status** = hard merge boundary (`arkgate-check --strict-merge`) | Emitted on hook deny; host must re-inject |
-| Google Antigravity | **Hard** block for listed ops (PreToolUse `write_to_file` / `replace_file_content` / `multi_replace_file_content`) when installed + trusted | Advisory; the agent must call it | **Required status** = hard merge boundary (`arkgate-check --strict-merge`) | Emitted on hook deny; host must re-inject |
-| Cursor | **Advisory only** at write (no hard hook) | Advisory; the agent must call it | **Required status** = hard merge boundary (same CI) | No hard-boundary payload |
-| OpenAI Codex | **Advisory / best-effort** at write (not equivalent to Claude/Grok hard block) | Advisory; the agent must call it | **Required status** = hard merge boundary (same CI) | No hard-boundary payload |
-| OpenCode | **Advisory / best-effort** at write (MCP + optional plugin; not a hard boundary) | Advisory; the agent must call it | **Required status** = hard merge boundary (same CI) | No hard-boundary payload |
+| Claude Code | **Hard** block for listed ops (PreToolUse `Write` / `Edit` / `MultiEdit`) when installed + trusted | Advisory; the agent must call it | **Required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) | Emitted on hook deny; host must re-inject (hard path when installed + trusted) |
+| Grok Build | **Hard** block for listed ops (PreToolUse `write` / `search_replace` (plus aliases)) when installed + trusted | Advisory; the agent must call it | **Required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) | Emitted on hook deny; host must re-inject (hard path when installed + trusted) |
+| Google Antigravity | **Hard** block for listed ops (PreToolUse `write_to_file` / `replace_file_content` / `multi_replace_file_content`) when installed + trusted | Advisory; the agent must call it | **Required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) | Emitted on hook deny; host must re-inject (hard path when installed + trusted) |
+| Cursor | **Advisory only** at write (no hard hook) | Advisory; the agent must call it | **Required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) | No hard-boundary payload |
+| OpenAI Codex | **Advisory / best-effort** at write (not equivalent to Claude/Grok hard block) | Advisory; the agent must call it | **Required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) | Envelope may emit (`--hook-repair`); reinjection **not** guaranteed (advisory host) |
+| OpenCode | **Advisory / best-effort** at write (MCP + optional plugin; not a hard boundary) | Advisory; the agent must call it | **Required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) | No hard-boundary payload |
 
 **Read the CI column:** for every host, the repository-wide hard guarantee is a **required**
-merge check — not “CI file present.” Cursor/Codex/OpenCode never get a fake hard write claim.
+GitHub **status context** that runs the CLI — not “CI file present,” and not the CLI binary name alone.
+Cursor/Codex/OpenCode never get a fake hard write claim.
 
-This table describes the supported profile **after its files are installed and the host loads/trusts them**. A hard local boundary covers only the listed hook operations; alternate tools, direct filesystem writes, and human edits still rely on CI. MCP validation is advisory because the agent must call it. The CI check blocks a merge only when the repository makes that status required. Repair payloads never write code silently: the host must re-inject the candidate and ArkGate revalidates it. Run `arkgate-check --doctor` for the evidence actually detected in the current repository.
+This table describes the supported profile **after its files are installed and the host loads/trusts them**. A hard local boundary covers only the listed hook operations; alternate tools, direct filesystem writes, and human edits still rely on CI. MCP validation is advisory because the agent must call it. The CI check blocks a merge only when the repository makes that status required. Repair **envelopes** may be emitted without reinjection being guaranteed; silent auto-apply never happens. Run `arkgate-check --doctor` (or `ark-check --doctor`) for the evidence actually detected in the current repository.
 <!-- arkgate-host-support:end -->
 
 #### Why the hard guarantee lives at the merge gate

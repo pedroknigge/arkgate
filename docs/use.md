@@ -33,8 +33,10 @@ Full skill pack is **optional** (expert depth). Day-to-day: compact router + doc
 | When | What happens |
 |------|----------------|
 | While the AI writes | Host write gate or advisory MCP (depends on host) |
-| Before merge | `arkgate-check` — make it a **required** CI status |
+| Before merge | Make the Ark job a **required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) |
 | Anytime | Doctor: Suggest / Adapt / Enforce (+ design-weak if residual) |
+
+**Codex / Cursor / OpenCode:** local write stays advisory forever — that is not unfinished architecture. Doctor may say **contract ready** while still reminding you that local writes are advisory; **Not finished** is reserved for real project/contract debt.
 
 ArkGate is **not** a web framework, ORM, or app runtime. It is architecture enforcement + co-pilot for AI TypeScript.
 

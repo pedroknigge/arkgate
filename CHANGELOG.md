@@ -5,7 +5,51 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
-## 4.1.0 — 2026-07-25 (prepared)
+## 4.1.1 — 2026-07-25 (prepared)
+
+**Patch** over 4.1.0. Phase EH — enforcement evidence modeling + documentation truth (field Codex
+feedback + public-lane claims audit). Honesty and doctor/CI evidence taxonomy; first-push-safe CI
+base-ref; report `.gitignore` coverage without defeating `!` exceptions. **No required config
+migration.** Does not invent hard-write for Codex/Cursor/OpenCode. Does not close Z09 / RB-11.
+**Status: prepared** (not on npm until publish).
+
+### Added
+
+- **Doctor readiness split (EH05):** `productHonesty` separates contract/project readiness from
+  permanent soft-write host posture. Soft-write alone no longer forces global `Not finished`;
+  evidence keeps `soft-write-host` under `environmentResidualIds` with composite headline
+  (e.g. “Architecture contract ready; Codex local writes are advisory”) and an actionable
+  `primaryNextAction` pointing at the required GitHub status context.
+- **Fields:** `contractReadiness`, `localWriteBoundary`, `architectureReasonIds`,
+  `environmentResidualIds` / `environmentResiduals` on `productHonesty` (additive JSON).
+- **Provider policy reason (EH06):** GitHub Free/private branch-protection HTTP 403 →
+  `provider-policy-unavailable-plan` / `unavailable-plan` (not only generic
+  `provider-enforcement-unverified`).
+- **CI runtime observation (EH06):** successful Actions runs can set `runtimeObserved: true`
+  independent of branch-protection API; `hard: false` when status is not required.
+- **Repair envelope vs reinjection (EH07):** host matrix capabilities
+  `repair-envelope-emitted` / `repair-reinjection-guaranteed`; Codex emits envelope
+  (`--hook-repair`) without reinjection guarantee; minimum ops coverage
+  (`apply_patch` / `shell` / `pre-commit` → hard=false).
+- **Claims matrix refresh (EH01):** `docs/audit/claims-matrix.md` dated 2026-07-25.
+
+### Fixed
+
+- **Report `.gitignore` (EH03):** recognizes `.ark/*`, `/.ark/*`, `.ark/reports/` as coverage;
+  never appends broad `.ark/` after a narrower policy with `!` exceptions
+  (e.g. `!/.ark/golden-pattern.json`).
+- **First-push CI base-ref (EH04):** generated workflow + Action clear all-zero
+  `github.event.before` and only pass `--fail-on-new-smells --base-ref` when
+  `git cat-file -e "${REF}^{commit}"` succeeds; otherwise full `--strict-merge` without delta.
+
+### Improved
+
+- **CLI vs status context copy (EH07):** user-facing text distinguishes `arkgate-check` /
+  `ark-check` CLI from the GitHub **required status context** name.
+- **Public lanes (EH02/EH08):** README host matrix, product-voice, ai-gates CI snippet, use/develop
+  honesty wording aligned with EH behavior; 0 Contradicted on public lanes.
+
+## 4.1.0 — 2026-07-25 (published)
 
 **Minor** over 4.0.1. Single ship train: field product phases + field-gap closure (S0–S7) +
 maintainer CI PR-slim / full-matrix speed work. Field product phases from Next monorepo dogfood +
@@ -15,7 +59,7 @@ write-root split, SPA/lib classification vacuum fixes, ESLint path-alias parity,
 false-positive tuning, ArkRules merge-plane honesty, type-edge placement debt, rules-inventory
 UI noise reduction, migrate-contract retrofit, and config write containment.
 **No required config migration.** Does not weaken write gate or CI value edges. Does not close
-Z09 / RB-11 field claims. **Status: prepared** (not on npm until publish).
+Z09 / RB-11 field claims. **Status: published** (`arkgate@4.1.0` on npm `latest` at ship time).
 
 ### Added
 

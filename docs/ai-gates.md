@@ -307,8 +307,10 @@ required CI status is the hard repository boundary.
 npx ark-check --install-agent-gates --tools codex
 ```
 
-The generated hook includes `--hook-repair`, so a rejected patch carries the same structured
-repair envelope as Claude and Grok. Codex still needs hook trust enabled for the project.
+The generated hook includes `--hook-repair`, so a rejected patch **may emit** a structured
+repair envelope (same JSON shape as Claude/Grok). **Reinjection is not guaranteed** on Codex —
+local write stays advisory/bypassable; the host must re-apply any fix, and required CI remains
+the hard merge boundary. Codex still needs hook trust enabled for the project.
 
 Modern Codex resolves MCP servers from the active project's `.codex/config.toml`. Ark writes
 that file with relative paths, so every repository owns its primary `ark` binding without
@@ -387,7 +389,7 @@ Ark verifies those references against each selected host catalog.
   `--skills-only --tools codex --force` (repo) or `--codex-home --force` (home) fix.
 - Codex **write path is advisory**: MCP + best-effort `.codex/hooks.json` is **not** a hard
   write boundary and is **not** equivalent to Claude/Grok PreToolUse hard-write + repair.
-  The hard merge backstop is CI `--strict-merge` (or `--strict`) plus a required status check.
+  The hard merge backstop is CI `--strict-merge` (or `--strict`) as a **required GitHub status context** (not “workflow file present”).
 - CI workflows that run ark-check without the fail-closed profile (or with only
   `--strict-config`) surface gap `enforcement-ci-not-fail-closed`.
 
@@ -591,13 +593,34 @@ for standalone linting where no project contract applies.
 Whatever the agent side does, run the merge profile in CI:
 
 ```yaml
-- run: npx ark-check --root . --config ark.config.json --strict-merge --fail-on-new-smells --base-ref "${{ github.event.pull_request.base.sha || github.event.before }}"
+# EH04: first push may have all-zero github.event.before — only pass --base-ref when resolvable.
+- name: Ark architecture check
+  env:
+    ARK_POLICY_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+  run: |
+    set -euo pipefail
+    BASE_REF="${ARK_POLICY_BASE_REF:-}"
+    if [[ "$BASE_REF" =~ ^0{40,64}$ ]]; then BASE_REF=""; fi
+    if [ -n "$BASE_REF" ] && git cat-file -e "${BASE_REF}^{commit}" 2>/dev/null; then
+      export ARK_POLICY_BASE_REF="$BASE_REF"
+      npx ark-check --root . --config ark.config.json --strict-merge \
+        --fail-on-new-smells --base-ref "$BASE_REF"
+    else
+      export ARK_POLICY_BASE_REF=""
+      npx ark-check --root . --config ark.config.json --strict-merge
+    fi
 ```
 
 This explicit brownfield ratchet records schema `1.0` identities, touched paths, and stable
-evidence; missing base exits `2`. Its first semantic smell is `domain-logic-in-ui`; residual,
-path-only moves, and unrelated work stay green. Generated Claude/Grok hooks share the delta and
-golden-pattern repair hint. MCP exposes the result but stays advisory.
+evidence; missing base with `--fail-on-new-smells` exits `2`, so the generated workflow skips the
+delta when the SHA is all-zero or unresolvable while keeping the full merge gate. Its first
+semantic smell is `domain-logic-in-ui`; residual, path-only moves, and unrelated work stay green.
+Generated Claude/Grok hooks share the delta and golden-pattern repair hint. MCP exposes the result
+but stays advisory.
+
+**CLI vs required status:** `arkgate-check --strict-merge` / `ark-check --strict-merge` is the
+**command**. The hard merge boundary is making that job a **required GitHub status context** —
+not “workflow file present.”
 
 Or use the repository's composite Action at a pinned release or commit:
 
