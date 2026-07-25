@@ -7,10 +7,12 @@ in the immutable pre-2.0 archive linked below.
 
 ## 4.1.0 — 2026-07-24 (prepared)
 
-**Minor** over 4.0.1. Field product phases from Next monorepo dogfood + objective review:
-Next API shell classification, anti false-green doctor packaging, ESLint path-alias parity,
-structure-sensor false-positive tuning, ArkRules merge-plane honesty, type-edge placement debt,
-and rules-inventory UI noise reduction.
+**Minor** over 4.0.1. Field product phases from Next monorepo dogfood + objective review,
+plus field-gap closure (S0–S7) from the 7-repo lab re-verify:
+Next API shell classification, anti false-green doctor packaging, monorepo config walk-up with
+write-root split, SPA/lib classification vacuum fixes, ESLint path-alias parity, structure-sensor
+false-positive tuning, ArkRules merge-plane honesty, type-edge placement debt, rules-inventory
+UI noise reduction, migrate-contract retrofit, and config write containment.
 **No required config migration.** Does not weaken write gate or CI value edges. Does not close
 Z09 / RB-11 field claims. **Status: prepared** (not on npm until publish).
 
@@ -23,7 +25,9 @@ Z09 / RB-11 field claims. **Status: prepared** (not on npm until publish).
 - **Product honesty surface (P0-B):** Doctor JSON `productHonesty` consolidates design-weak,
   weak/partial coverage, dirty freeze, package dual-truth, residual pilots, and soft write hosts
   into one unfinished/not-whole-tree message (`notAScore`). Human doctor section + HTML card
-  (`data-product-honesty`). Never a numeric architecture score.
+  (`data-product-honesty`). Never a numeric architecture score. **Anti false-green:** never
+  `finished: true` when active **blocking** violations remain, mode is ADAPT/SUGGEST with debt,
+  dual-truth pin, or residual pilots are open.
 - **ArkRules mergePlanes (P1-M):** `rulesUnderContract.mergePlanes` states which plane can fail
   merge (layers vs enforced structure sensors vs invariants) and dual-plane stamp (heuristics vs
   catalog+coverage; never one score).
@@ -31,24 +35,46 @@ Z09 / RB-11 field claims. **Status: prepared** (not on npm until publish).
   guidance; type-only denied edges stay on the **violations** list with `failsStrict: false`
   and diagnostics **severity: warning** (non-blocking for merge/exit/library `valid`). Value
   edges still block. **Exception:** `peerIsolation` type-only edges stay hard.
+- **`--migrate-contract`:** Retrofit existing configs with Next API shell patterns
+  (Application) without full re-init — field path for brownfield Next App Router / Pages API.
+- **Monorepo discovery walk-up:** Doctor/check from a nested package cwd find the monorepo
+  `ark.config.json` (no invented ADAPT 0%). Mutative install/start write under the **write root**
+  (cwd/`--root`) unless `--follow-config-root` is set — does not clobber monorepo AGENTS/skills
+  from a nested package by accident.
+- **SPA / vacuum classification (S3):** SPA preset + adopt/start heuristics reduce
+  Application-empty / lib-as-Presentation lies on Vite SPA and dcouplr-style trees; Domain
+  specificity keeps nested `**/domain/**` on DomainModel when patterns compete.
+- **Config write containment:** Mutative commands refuse `--config` paths outside project root
+  (fail closed; no silent escape write).
 
 ### Improved
 
 - **ESLint path aliases (P0-C):** `ark/no-domain-infra-imports` resolves tsconfig `paths` /
   `baseUrl` (including simple relative `extends`) so `@/*` forbidden edges match CLI inside the
   documented envelope. Residual honestly documented in ai-gates (no project refs / multi-target
-  / bare packages claim).
+  / bare packages claim). Dual-driver parity tests lock type-only vs value.
 - **Structure sensors prefer false negatives (P1-L):** `aggregate-private-state` ignores
   readonly-only public props; `always-valid-factory` requires mutable surface evidence; anemic
   bar needs ≥2 public fields. Intentional DDD private aggregates stay quiet; true positives
   retained. Defaults remain advisory for noisy sensors.
 - **Rules inventory UI noise (P2-N):** Magic-constant inventory skips route/theme/UI label noise
   and pure UI/Next page surfaces; still finds controller validation and domain constants.
+- **Force-gates / upgrade digest (S4):** Force-install preserves content-identity digests so
+  managed upgrade does not falsely report unbound/clobber after intentional force refresh.
+- **Doctor / HTML honesty (S1/S0):** Type-only edges excluded from blocking counts in planMet,
+  HTML banners, and adapter `valid` parity; dual-truth pin and package-pin-absent surface on
+  `productHonesty.reasonIds`.
+- **Field dogfood smoke:** Offline gap-assertion scaffold under `scripts/field-dogfood/` for
+  regression before minors (7-repo lab re-verify 15/15 critical assertions).
 
 ### Fixed
 
 - Presentation→Persistence baselining pressure from Next API routes mis-layered as UI (field
   dogfood on App Router monorepos).
+- False “finished / whole-tree guarantee” packaging when the graph still has blocking debt.
+- Nested monorepo package cwd inventing ungoverned ADAPT world.
+- Type-only ESLint/CLI/HTML/adapter parity drift (blocking counts and exit codes).
+- Config path outside `--root` accepted on mutative write paths.
 
 ## 4.0.1 — 2026-07-24
 

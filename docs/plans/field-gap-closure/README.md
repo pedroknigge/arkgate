@@ -1,10 +1,10 @@
 # Field gap closure — full improvement plan (post 4.1.0 lab)
 
-**Status:** partial (S0–S4 + S6 unit locks closed on `feat/4.1.0-field-p0-p1-p2`; S5 residual + full network lab open)  
+**Status:** closed for 4.1.0 ship window (S0–S7 unit + 7-repo re-verify **15/15** critical assertions)  
 **Generated:** 2026-07-24  
-**Updated:** 2026-07-24 — security walk-up split, productHonesty blocking-only, start gate all-apply, force preserve, inventory filters, composition-root docs  
-**Evidence base:** temp field lab `/tmp/ark-field-lab-95358` against mother **arkgate 4.1.0** (`feat/4.1.0-field-p0-p1-p2` @ `fd7e7b0`) — **not** npm `latest` 4.0.1.  
-**Sources:** `FIELD-GAPS.json` (20), `falseGreenRisks` (8), `USE-CASE-BATTERY`, `DEEP-*-rules-planb`, `FEATURE-4.1.0-VALIDATION`.
+**Updated:** 2026-07-24 — re-lab `/tmp/ark-field-reverify-91957` @ `5bba50c`+; all critical gap IDs pass; residual unfinished states are honest (dual-truth pin, ADAPT no-config, residual pilots)  
+**Evidence base:** field labs `/tmp/ark-field-lab-95358` then re-verify `/tmp/ark-field-reverify-91957` against mother **arkgate 4.1.0** (`feat/4.1.0-field-p0-p1-p2`) — **not** npm `latest` 4.0.1 until publish.  
+**Sources:** `FIELD-GAPS.json` (20), `falseGreenRisks` (8), `USE-CASE-BATTERY`, `DEEP-*-rules-planb`, `FEATURE-4.1.0-VALIDATION`, `REVERIFY-RESULTS.json`.
 
 ## Goal
 
