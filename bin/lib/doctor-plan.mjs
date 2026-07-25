@@ -833,7 +833,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       productHonesty.unfinished ? warn : ok,
       `${productHonesty.headline} — ${productHonesty.primaryMessage}`
     );
-    if (productHonesty.unfinished && Array.isArray(productHonesty.reasonIds) && productHonesty.reasonIds.length > 0) {
+    if (Array.isArray(productHonesty.reasonIds) && productHonesty.reasonIds.length > 0) {
       line(' ', color.dim(`signals: ${productHonesty.reasonIds.join(', ')} (notAScore)`));
     }
     if (rulesUnderContract?.mergePlanes?.failMergeWhen) {
@@ -1045,9 +1045,17 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   }
   const enforcement = writePath.enforcementState;
   for (const row of enforcementDoctorLines(enforcement)) line(row.level === 'ok' ? ok : row.level === 'bad' ? bad : warn, row.text);
+  // EH07 Repair: use support/matrix caps (inventory omits envelope-emitted on Codex).
+  const supportCaps = writePath.support?.capabilities || {};
+  const repairReinjection = supportCaps['repair-reinjection-guaranteed'] === true;
+  const repairEnvelope = supportCaps['repair-envelope-emitted'] === true || supportCaps['repair-payload'] === true;
   line(
-    capabilities['repair-payload'] ? ok : warn,
-    `Repair payload at hard boundary: ${capabilities['repair-payload'] ? 'yes' : 'no'}`
+    repairReinjection ? ok : warn,
+    repairReinjection
+      ? 'Repair: envelope + reinjection guaranteed on hard path when installed + trusted'
+      : repairEnvelope
+        ? 'Repair: envelope may emit (`--hook-repair`); reinjection not guaranteed (advisory host)'
+        : 'Repair: no hard-boundary payload'
   );
   if (writePath.gap) {
     line(writePath.gap.severity === 'warn' ? warn : warn, writePath.gap.message);

@@ -288,6 +288,10 @@ function baselineLegendBody(signal) {
 export function renderProductHonestyCard(productHonesty, mergePlanes = null) {
   if (!productHonesty || typeof productHonesty !== 'object') return '';
   const unfinished = productHonesty.unfinished === true;
+  const envResiduals = Array.isArray(productHonesty.environmentResidualIds)
+    ? productHonesty.environmentResidualIds
+    : [];
+  const envOnly = !unfinished && envResiduals.length > 0;
   const headline = productHonesty.headline || (unfinished ? 'Not finished' : 'Honesty clear');
   const primary = productHonesty.primaryMessage || '';
   // Avoid repeating the same status label in title and body (past-issue pattern).
@@ -298,7 +302,9 @@ export function renderProductHonestyCard(productHonesty, mergePlanes = null) {
     if (p === h) {
       body = unfinished
         ? 'Residual honesty signals remain — not a whole-tree guarantee and not a score.'
-        : 'No residual honesty blockers on this slice — still not a numeric architecture score.';
+        : envOnly
+          ? 'Architecture residual clear; host/environment residual remains (advisory write) — not a score.'
+          : 'No residual honesty blockers on this slice — still not a numeric architecture score.';
     } else if (p.toLowerCase().startsWith(h.toLowerCase())) {
       const stripped = p.slice(h.length).replace(/^[\s—–:-]+/, '').trim();
       body = stripped || p;
@@ -319,10 +325,15 @@ export function renderProductHonestyCard(productHonesty, mergePlanes = null) {
     mergePlanes?.dualPlaneStamp
       ? `<p class="dim" style="margin:.25rem 0 0;font-size:.84rem">${esc(mergePlanes.dualPlaneStamp)}</p>`
       : '';
+  const subtitle = unfinished
+    ? 'architecture residual'
+    : envOnly
+      ? 'environment residual (advisory write)'
+      : 'no residual honesty blockers';
   return `<div class="section card design-strip ${unfinished ? 'is-weak' : 'is-clean'}" id="product-honesty" data-product-honesty="1">
     <div class="design-head">
       <span class="badge design" title="Product honesty — not a score">${esc(headline)}</span>
-      <span class="dim" style="font-size:.86rem">${unfinished ? 'residual honesty signals' : 'no residual honesty blockers'}</span>
+      <span class="dim" style="font-size:.86rem">${esc(subtitle)}</span>
     </div>
     <p style="margin:.45rem 0 0">${esc(body)}</p>
     ${reasonHtml}

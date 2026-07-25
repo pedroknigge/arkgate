@@ -573,6 +573,22 @@ ${nodeSetup}
 ${qualityBlock ? `${qualityBlock}\n` : ''}      - name: Ark architecture check
         env:
           ARK_POLICY_BASE_REF: \${{ github.event.pull_request.base.sha || github.event.before }}
-        run: ${pm.run} --fail-on-new-smells --base-ref "\${{ github.event.pull_request.base.sha || github.event.before }}"
+        run: |
+          set -euo pipefail
+          # EH04: first push uses all-zero github.event.before — skip delta smells, keep full merge gate.
+          BASE_REF="\${ARK_POLICY_BASE_REF:-}"
+          if [[ "\$BASE_REF" =~ ^0{40,64}$ ]]; then
+            BASE_REF=""
+          fi
+          if [ -n "\$BASE_REF" ] && ! git cat-file -e "\${BASE_REF}^{commit}" 2>/dev/null; then
+            git fetch --no-tags --depth=1 origin "\$BASE_REF" 2>/dev/null || true
+          fi
+          if [ -n "\$BASE_REF" ] && git cat-file -e "\${BASE_REF}^{commit}" 2>/dev/null; then
+            export ARK_POLICY_BASE_REF="\$BASE_REF"
+            ${pm.run} --fail-on-new-smells --base-ref "\$BASE_REF"
+          else
+            export ARK_POLICY_BASE_REF=""
+            ${pm.run}
+          fi
 `;
 }

@@ -195,16 +195,58 @@ function replaceEvidence(boundaryState, fields, source, values) {
   };
 }
 
+/**
+ * Attach CI provider + runtime evidence (EH06).
+ * - Branch-protection policy (required status) is independent of CI run observation.
+ * - Successful CI runs can set runtimeObserved:true even when policy API is plan-restricted (403).
+ * - hard stays false when status is not proven required.
+ *
+ * @param {object} writePath
+ * @param {object|null|undefined} github reportGithubBranchProtection (+ optional runtime fields)
+ */
 export function withCiProviderEvidence(writePath, github) {
-  if (!github?.available) return writePath;
-  const required = typeof github.arkCheckRequired === 'boolean'
-    ? github.arkCheckRequired
-    : UNVERIFIED;
+  if (!github) return writePath;
+
+  const planUnavailable =
+    github.reason === 'provider-policy-unavailable-plan' ||
+    github.policyReason === 'unavailable-plan';
+  const policyAvailable = github.available === true;
+  // Generic 403 / token / SSO failures are unverified — never "proven not required".
+  const policyUnverified =
+    !policyAvailable &&
+    !planUnavailable &&
+    (github.reason === 'provider-enforcement-unverified' ||
+      github.reason === 'gh-cli-unavailable' ||
+      github.reason === 'gh-repo-unavailable' ||
+      Boolean(github.reason));
+
+  // No policy query and no runtime signal → leave writePath unchanged.
+  if (!policyAvailable && github.runtimeObserved !== true && !planUnavailable && !policyUnverified) {
+    return writePath;
+  }
+
+  // required: false only when plan language explicitly proves policy unavailable,
+  // or when provider proved absence (available + arkCheckRequired === false).
+  // Generic 403 / incomplete query → UNVERIFIED (hard stays false).
+  const required = policyAvailable
+    ? typeof github.arkCheckRequired === 'boolean'
+      ? github.arkCheckRequired
+      : UNVERIFIED
+    : planUnavailable
+      ? false
+      : UNVERIFIED;
+
   const runnable = Boolean(
     writePath.enforcementState.ciMerge.configured &&
     writePath.enforcementState.ciMerge.installed
   );
-  const active = required === true ? runnable : required === false ? false : runnable ? UNVERIFIED : false;
+  const active = required === true
+    ? runnable
+    : required === false
+      ? false
+      : runnable
+        ? UNVERIFIED
+        : false;
   const bypassable = active === true
     ? github.arkCheckSourceBound === false
       ? true
@@ -214,9 +256,19 @@ export function withCiProviderEvidence(writePath, github) {
       : runnable
         ? UNVERIFIED
         : true;
-  const source = `GitHub branch protection (${github.repo ?? 'repository'}:${github.branch ?? 'default'})`;
-  const runtimeObserved = true;
+
+  // Runtime observation is only true when a CI run was actually observed.
+  // Do not invent true from branch-protection availability alone (legacy conflation).
+  const runtimeObserved = github.runtimeObserved === true;
+
+  const source = policyAvailable
+    ? `GitHub branch protection (${github.repo ?? 'repository'}:${github.branch ?? 'default'})`
+    : planUnavailable
+      ? `GitHub provider policy unavailable (plan) (${github.repo ?? 'repository'}:${github.branch ?? 'default'})`
+      : `GitHub CI runtime (${github.repo ?? 'repository'})`;
+
   const operationCoverage = required;
+  // hard: false remains correct when status is not proven required
   const hard = active === true && bypassable === false && operationCoverage === true;
   const ciMerge = replaceEvidence(
     writePath.enforcementState.ciMerge,
@@ -224,14 +276,31 @@ export function withCiProviderEvidence(writePath, github) {
     source,
     { active, runtimeObserved, operationCoverage, bypassable, required, hard }
   );
-  return {
+
+  const next = {
     ...writePath,
     enforcementState: { ...writePath.enforcementState, ciMerge },
     enforcementLadder: {
       ...writePath.enforcementLadder,
-      ciMerge: { ...writePath.enforcementLadder.ciMerge, requiredStatus: required },
+      ciMerge: {
+        ...writePath.enforcementLadder.ciMerge,
+        requiredStatus: required,
+        ...(github.latestCiRun ? { latestCiRun: github.latestCiRun } : {}),
+        ...(planUnavailable ? { providerPolicy: 'unavailable-plan' } : {}),
+      },
     },
   };
+  if (planUnavailable || github.reason) {
+    next.providerEnforcement = {
+      available: policyAvailable,
+      reason: github.reason || (planUnavailable ? 'provider-policy-unavailable-plan' : 'provider-enforcement-unverified'),
+      policyReason: github.policyReason || (planUnavailable ? 'unavailable-plan' : null),
+      runtimeObserved,
+      latestCiRun: github.latestCiRun ?? null,
+      hard: hard === true,
+    };
+  }
+  return next;
 }
 
 function formatEnforcementBoundary(label, value) {
