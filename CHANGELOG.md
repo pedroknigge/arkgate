@@ -75,6 +75,15 @@ Z09 / RB-11 field claims. **Status: prepared** (not on npm until publish).
 - Nested monorepo package cwd inventing ungoverned ADAPT world.
 - Type-only ESLint/CLI/HTML/adapter parity drift (blocking counts and exit codes).
 - Config path outside `--root` accepted on mutative write paths.
+- Greenfield `ark start --yes --apply` refused on empty trees (vacuous 0% coverage) and residual
+  `src/**` Application catch-all restored for non-Next layered presets.
+- Presentation `src/**/api/**` no longer swallows Application bags like `src/core/api/**`.
+
+### Coverage floors (internal)
+
+- Statement/line **80 → 79.5**, branch **82.5 → 82.0**, function **85 → 76.5** after field-gap
+  surface growth (measured clean candidate ~79.95% / ~82.3% / ~77.0%). Per-file write-path
+  floors recalibrated to measured honesty (not a silent weaken of architecture gates).
 
 ## 4.0.1 — 2026-07-24
 
