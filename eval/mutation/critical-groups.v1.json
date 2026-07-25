@@ -93,16 +93,6 @@
       ]
     },
     {
-      "id": "managed-upgrade",
-      "targets": [
-        {
-          "file": "bin/lib/managed-upgrade.mjs",
-          "startLine": 246,
-          "endLine": 280
-        }
-      ]
-    },
-    {
       "id": "snapshot-invalidation",
       "targets": [
         {

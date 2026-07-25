@@ -326,6 +326,17 @@ describe('S4 NEW-FORCE-GATES-VS-UPGRADE-DIGEST', () => {
     expect(isManagedAssetCustomizedOnDisk(root, 'AGENTS.md', custom, 'gate')).toBe(false);
   });
 
+  it('isManagedAssetCustomizedOnDisk covers missing file, skill kind, and empty body', () => {
+    const root = mkTemp('ark-s4-custom-edges-');
+    write(root, 'package.json', '{"name":"edges","private":true}\n');
+    expect(isManagedAssetCustomizedOnDisk(root, 'missing.md', '# target\n', 'gate')).toBe(false);
+    write(root, 'AGENTS.md', '   \n');
+    expect(isManagedAssetCustomizedOnDisk(root, 'AGENTS.md', '# target\n', 'gate')).toBe(false);
+    write(root, 'skill.md', '# skill customized body\n');
+    // Skills without managed list are not force-preserved by this helper.
+    expect(isManagedAssetCustomizedOnDisk(root, 'skill.md', '# stock skill\n', 'skill')).toBe(false);
+  });
+
   it('force after managed upgrade preserves customized AGENTS and recomputes digest', () => {
     const root = mkTemp('ark-s4-force-digest-');
     write(root, 'package.json', '{"name":"force-digest","private":true}\n');

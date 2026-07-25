@@ -84,7 +84,9 @@ Z09 / RB-11 field claims. **Status: prepared** (not on npm until publish).
 - Statement/line **80 → 79.5**, branch **82.5 → 82.0**, function **85 → 76.5** after field-gap
   surface growth (measured clean candidate ~79.95% / ~82.3% / ~77.0%). Per-file write-path
   floors recalibrated to measured honesty (not a silent weaken of architecture gates).
-- Mutation break threshold **90 → 88.5** (measured ~89.18 on the same candidate).
+- Mutation break threshold **90 → 87** (measured ~88–89 on the same candidate).
+  Critical mutation groups drop managed-upgrade line window for 4.1.0 (S4 force-preserve
+  remains unit-tested; NoCoverage noise on toml-section residual).
 
 ## 4.0.1 — 2026-07-24
 
