@@ -104,14 +104,13 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
     expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
   });
 
-  it('public release pointers cover published 4.0.1 and prepared 4.1.0', () => {
-    expect(read('README.md')).toMatch(/4\.0\.1/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.0\.1\.md/);
-    expect(read('README.md')).toMatch(/npm `latest`|on npm/);
+  it('public release pointers cover published 4.1.0 (and retain 4.0.1 notes link)', () => {
     expect(read('README.md')).toMatch(/4\.1\.0/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.1\.0\.md/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.0\.1/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Next prepared.*4\.1\.0|prepared.*4\.1\.0/s);
+    expect(read('README.md')).toMatch(/npm `latest`|on npm/);
+    expect(read('README.md')).toMatch(/4\.0\.1/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.0\.1\.md/);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.1\.0/s);
     expect(read('docs/package-surface.md')).toMatch(/4\.0\.1\.md/);
     expect(read('docs/package-surface.md')).toMatch(/4\.1\.0\.md/);
   });
@@ -131,12 +130,12 @@ describe('CHANGELOG + release note cover 4.1.0 field product phases', () => {
     expect(body).toMatch(/ci-profile|PR slim|full matrix/i);
   });
 
-  it('docs/releases/4.1.0.md is prepared with upgrade path and no Z09 closed claims', () => {
+  it('docs/releases/4.1.0.md is published with upgrade path and no Z09 closed claims', () => {
     const body = read('docs/releases/4.1.0.md');
     expect(body).toMatch(/arkgate@4\.1\.0/);
     expect(body).toMatch(/npm install -D arkgate@4\.1\.0/);
-    expect(body).toMatch(/\*\*Status:\*\*\s*prepared/i);
-    expect(body).not.toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(body).toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(body).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
     expect(body).toMatch(/Z09|RB-11/i);
     expect(body).toMatch(/app\/api|Application/i);
     expect(body).toMatch(/productHonesty/i);
