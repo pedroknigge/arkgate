@@ -238,8 +238,11 @@ describe('Z02 analysis completeness', () => {
     expect(workflow).toContain('ts-compat');
     expect(workflow).toContain('MATRIX_RESULT: ${{ needs.ts-compat.result }}');
     // Gate still requires success when the packed matrix is scheduled; intentional
-    // docs-only skips are handled above the success assertion in the workflow step.
+    // docs-only skips use explicit run_packed=false only (empty fails closed).
     expect(workflow).toContain('test "$MATRIX_RESULT" = success');
     expect(workflow).toContain('ci-profile:');
+    expect(workflow).toContain('RUN_PACKED" = "false"');
+    expect(workflow).toContain('run_packed missing/invalid');
+    expect(workflow).toContain('ci-profile did not succeed');
   });
 });

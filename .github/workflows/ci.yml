@@ -248,14 +248,22 @@ jobs:
       - name: Z08 prompt corpus (drift guard)
         run: npm run check:z08-prompts
 
-      - name: Test confidence (coverage + mutation)
-        if: needs.ci-profile.outputs.full_matrix == 'true'
-        run: npm run test:confidence
-        # Includes evalCorpus.test.ts (spawns npm run eval:corpus) — no separate step
-
-      - name: Test coverage (PR slim — mutation deferred to full-matrix / publish)
-        if: needs.ci-profile.outputs.full_matrix != 'true'
-        run: npm run test:coverage
+      # Single source: scripts/ci-profile.mjs sets confidence_cmd
+      # (test:confidence on full-matrix; test:coverage on PR slim / docs-only).
+      # Mutation remains mandatory on publish paths (release-npm / publish-npm).
+      - name: Test suite (profile confidence_cmd)
+        env:
+          CONFIDENCE_CMD: ${{ needs.ci-profile.outputs.confidence_cmd }}
+        run: |
+          set -euo pipefail
+          case "$CONFIDENCE_CMD" in
+            'npm run test:confidence') npm run test:confidence ;;
+            'npm run test:coverage') npm run test:coverage ;;
+            *)
+              echo "unexpected confidence_cmd from ci-profile: ${CONFIDENCE_CMD:-<empty>}" >&2
+              exit 1
+              ;;
+          esac
 
       - name: Build
         run: npm run build
@@ -359,12 +367,22 @@ jobs:
         env:
           MATRIX_RESULT: ${{ needs.ts-compat.result }}
           BUILD_RESULT: ${{ needs.build.result }}
+          PROFILE_RESULT: ${{ needs.ci-profile.result }}
           RUN_PACKED: ${{ needs.ci-profile.outputs.run_packed }}
         run: |
           set -euo pipefail
-          if [ "$RUN_PACKED" != "true" ]; then
-            echo "Packed TS matrix not scheduled for this CI profile (docs/plans-only)."
+          if [ "$PROFILE_RESULT" != "success" ]; then
+            echo "ci-profile did not succeed (result=$PROFILE_RESULT)" >&2
+            exit 1
+          fi
+          # Only explicit false is an intentional docs-only skip; empty/unset must fail closed.
+          if [ "$RUN_PACKED" = "false" ]; then
+            echo "Packed TS matrix intentionally not scheduled (docs/plans-only)."
             exit 0
+          fi
+          if [ "$RUN_PACKED" != "true" ]; then
+            echo "run_packed missing/invalid: ${RUN_PACKED:-<empty>}" >&2
+            exit 1
           fi
           if [ "$BUILD_RESULT" != "success" ]; then
             echo "build did not succeed; packed matrix cannot run" >&2
@@ -423,12 +441,21 @@ jobs:
         env:
           MATRIX_RESULT: ${{ needs.gallery-clean-room.result }}
           BUILD_RESULT: ${{ needs.build.result }}
+          PROFILE_RESULT: ${{ needs.ci-profile.result }}
           RUN_PACKED: ${{ needs.ci-profile.outputs.run_packed }}
         run: |
           set -euo pipefail
-          if [ "$RUN_PACKED" != "true" ]; then
-            echo "Gallery matrix not scheduled for this CI profile (docs/plans-only)."
+          if [ "$PROFILE_RESULT" != "success" ]; then
+            echo "ci-profile did not succeed (result=$PROFILE_RESULT)" >&2
+            exit 1
+          fi
+          if [ "$RUN_PACKED" = "false" ]; then
+            echo "Gallery matrix intentionally not scheduled (docs/plans-only)."
             exit 0
+          fi
+          if [ "$RUN_PACKED" != "true" ]; then
+            echo "run_packed missing/invalid: ${RUN_PACKED:-<empty>}" >&2
+            exit 1
           fi
           if [ "$BUILD_RESULT" != "success" ]; then
             echo "build did not succeed; gallery matrix cannot run" >&2
@@ -482,12 +509,21 @@ jobs:
         env:
           MATRIX_RESULT: ${{ needs.managed-upgrade-candidate.result }}
           BUILD_RESULT: ${{ needs.build.result }}
+          PROFILE_RESULT: ${{ needs.ci-profile.result }}
           RUN_PACKED: ${{ needs.ci-profile.outputs.run_packed }}
         run: |
           set -euo pipefail
-          if [ "$RUN_PACKED" != "true" ]; then
-            echo "Managed-upgrade matrix not scheduled for this CI profile (docs/plans-only)."
+          if [ "$PROFILE_RESULT" != "success" ]; then
+            echo "ci-profile did not succeed (result=$PROFILE_RESULT)" >&2
+            exit 1
+          fi
+          if [ "$RUN_PACKED" = "false" ]; then
+            echo "Managed-upgrade matrix intentionally not scheduled (docs/plans-only)."
             exit 0
+          fi
+          if [ "$RUN_PACKED" != "true" ]; then
+            echo "run_packed missing/invalid: ${RUN_PACKED:-<empty>}" >&2
+            exit 1
           fi
           if [ "$BUILD_RESULT" != "success" ]; then
             echo "build did not succeed; managed-upgrade cannot run" >&2

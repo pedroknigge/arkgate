@@ -138,4 +138,51 @@ describe('decideCiProfile', () => {
     expect(testsOnly.run_perf).toBe(false);
     expect(testsOnly.run_packed).toBe(true);
   });
+
+  it('full-matrix / release labels override docs-only path classification', () => {
+    for (const label of ['full-matrix', 'release'] as const) {
+      const profile = decideCiProfile({
+        eventName: 'pull_request',
+        refName: 'docs/typo',
+        headRef: 'docs/typo',
+        labels: [label],
+        changed: ['docs/README.md', 'CONTRIBUTING.md'],
+      });
+      expect(profile.full_matrix, label).toBe(true);
+      expect(profile.docs_only, label).toBe(false);
+      expect(profile.run_packed, label).toBe(true);
+      expect(profile.run_onboarding, label).toBe(true);
+      expect(profile.run_perf, label).toBe(true);
+      expect(profile.confidence_cmd, label).toBe('npm run test:confidence');
+      expect(profile.fail_fast, label).toBe(false);
+    }
+  });
+
+  it('empty changed falls back to conservative code path (not docs-only)', () => {
+    const profile = decideCiProfile({
+      eventName: 'pull_request',
+      refName: 'feat/empty-diff',
+      headRef: 'feat/empty-diff',
+      labels: [],
+      changed: [],
+    });
+    expect(profile.docs_only).toBe(false);
+    expect(profile.code).toBe(true);
+    expect(profile.run_packed).toBe(true);
+    expect(profile.confidence_cmd).toBe('npm run test:coverage');
+  });
+
+  it('release-prepare branch substring forces full matrix', () => {
+    const profile = decideCiProfile({
+      eventName: 'pull_request',
+      refName: 'chore/my-release-prepare-train',
+      headRef: 'chore/my-release-prepare-train',
+      labels: [],
+      changed: ['docs/README.md'],
+    });
+    expect(profile.full_matrix).toBe(true);
+    expect(profile.docs_only).toBe(false);
+    expect(profile.confidence_cmd).toBe('npm run test:confidence');
+    expect(profile.run_packed).toBe(true);
+  });
 });
