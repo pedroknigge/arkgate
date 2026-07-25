@@ -526,7 +526,13 @@ function runCell(options, candidate, workRoot, starter) {
     const finalSnapshot = snapshotProject(root);
     assertSnapshotEqual(appliedSnapshot, finalSnapshot, 'check/doctor/preflight/strict journey');
     assertAppliedPreview(preparedSnapshot, finalSnapshot, preview.changes);
+    // S4.4 / start: install-agent-gates may add package.json scripts (check:architecture,
+    // typecheck). When the start preview planned package.json, that mutation is intentional.
+    const packageJsonPlanned = (preview?.changes ?? []).some(
+      (change) => change.path === 'package.json' || String(change.path || '').endsWith('/package.json')
+    );
     for (const protectedPath of ['package.json', '.gallery-sentinel']) {
+      if (protectedPath === 'package.json' && packageJsonPlanned) continue;
       assertCondition(
         preparedSnapshot[protectedPath] === finalSnapshot[protectedPath],
         `${protectedPath} changed after installation`

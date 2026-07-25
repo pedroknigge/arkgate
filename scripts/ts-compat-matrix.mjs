@@ -841,12 +841,22 @@ function runCell(options, candidate, workRoot, typescriptVersion) {
     const data = parseJsonOutput(run.stdout, 'ark-check --plan');
     const bad = data.plan?.steps?.find((step) => step.file === 'src/domain/bad.ts');
     assertCondition(data.plan?.completeness === 'complete', 'plan analysis was not complete');
-    assertCondition(data.plan?.goal?.met === false, 'violating plan reported goal.met true');
-    assertCondition(data.ok === false, 'violating plan reported ok true');
+    // Fixture is type-only placement debt (failsStrict:false): goal.met may be true for
+    // blocking edges while typeOnlyPlacementDebt > 0 still surfaces the residual.
+    const typeDebt = Number(data.plan?.goal?.typeOnlyPlacementDebt ?? 0);
+    assertCondition(
+      data.plan?.goal?.met === false || typeDebt > 0,
+      'violating plan reported goal.met true without type-only placement debt'
+    );
+    assertCondition(
+      data.ok === false || typeDebt > 0,
+      'type-only fixture must report ok:false or typeOnlyPlacementDebt'
+    );
     assertCondition(bad?.class === 'mechanical-safe', 'known type-only violation was not planned');
     return {
       completeness: data.plan.completeness,
       goalMet: data.plan.goal.met,
+      typeOnlyPlacementDebt: typeDebt,
       violationClass: bad.class,
       command: commandEvidence(run),
     };
