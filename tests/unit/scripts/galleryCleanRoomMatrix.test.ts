@@ -109,7 +109,11 @@ describe('Z05 gallery clean-room matrix', () => {
 
       expect(manifest.devDependencies.arkgate).toBe(pathToFileURL(tarball).href);
       expect(manifest.packageManager).toBe('yarn@4.17.1');
-      expect(fs.readFileSync(path.join(root, '.yarnrc.yml'), 'utf8')).toContain('nodeLinker: pnp');
+      // Packed arkgate bin/lib relative imports fail under Yarn PnP zip resolution;
+      // gallery clean-room uses the node-modules linker for the published layout.
+      expect(fs.readFileSync(path.join(root, '.yarnrc.yml'), 'utf8')).toContain(
+        'nodeLinker: node-modules'
+      );
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

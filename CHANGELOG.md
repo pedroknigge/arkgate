@@ -66,6 +66,12 @@ Z09 / RB-11 field claims. **Status: prepared** (not on npm until publish).
   `productHonesty.reasonIds`.
 - **Field dogfood smoke:** Offline gap-assertion scaffold under `scripts/field-dogfood/` for
   regression before minors (7-repo lab re-verify 15/15 critical assertions).
+- **CI PR slim vs full matrix:** composable `ci-profile` in `.github/workflows/ci.yml` —
+  ordinary PRs use coverage-only build, 1 packed-TS cell, 1 gallery PM, onboarding `*/small`,
+  and path-filtered performance budgets; full matrix (main, labels `full-matrix`/`release`,
+  release-prep branches `feat/4.1*`) keeps `test:confidence` (mutation) and complete product
+  matrices with `fail-fast: false`. Documented in CONTRIBUTING. Does not weaken publish-path
+  confidence.
 
 ### Fixed
 

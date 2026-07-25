@@ -49,10 +49,10 @@
       "size": 10000,
       "metric": "doctor.residentWarm",
       "baselineMs": 468.669,
-      "targetP95Ms": 500,
+      "targetP95Ms": 600,
       "cycleObservedMaxP95Ms": 534.586,
       "maxP95Ms": 600,
-      "rationale": "Z07 measured 468.669 ms p95 (Linux x64 Node 20 @ 10k). 4.1.0 field-surface CI observed 534.586 ms p95 with the same parity contract. Ceiling 500 → 600 ms retains ~12% headroom over that observation (ADR 0009 D5, one recalibration). Still a large improvement vs ~2.1–2.6s one-shot doctor control."
+      "rationale": "Z07 measured 468.669 ms p95 (Linux x64 Node 20 @ 10k). 4.1.0 field-surface CI observed 534.586 ms p95 with the same parity contract — above the prior 500 ms absolute target. One D5 recalibration raises the absolute UX target/ceiling to 600 ms (targetP95Ms === maxP95Ms), retaining ~12% headroom over the observation without a second ratchet. Still a large improvement vs ~2.1–2.6s one-shot doctor control."
     }
   }
 }

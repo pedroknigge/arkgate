@@ -3,14 +3,105 @@ name: CI
 # pull_request (no branch filter) gates EVERY PR regardless of base branch; push is scoped
 # to main so direct commits to main are gated without double-running the job on PR branches
 # (which would fire both push and pull_request for the same commit).
+#
+# CI profile (see job ci-profile):
+# - PR slim (default): coverage-only build, 1 packed-TS cell, 1 gallery PM, onboarding
+#   */small only, fail-fast on product matrices, perf only when gate/hook/analysis paths change.
+# - Full matrix: push to main, PR labels full-matrix|release, or release-prep branch names
+#   (feat/4.1*, feat/*release*, release/*). Full matrix keeps test:confidence (mutation) and
+#   complete packed/gallery/onboarding cells with fail-fast: false.
+# - Docs/plans-only PRs: still run required `build` + TypeScript compatibility gate (branch
+#   protection), but skip heavy matrices; gate jobs treat intentional skips as success.
 on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # Profile: full vs slim, path filters, matrix JSON for composable jobs
+  # ---------------------------------------------------------------------------
+  ci-profile:
+    name: CI profile
+    runs-on: ubuntu-latest
+    outputs:
+      full_matrix: ${{ steps.decide.outputs.full_matrix }}
+      code: ${{ steps.decide.outputs.code }}
+      docs_only: ${{ steps.decide.outputs.docs_only }}
+      run_perf: ${{ steps.decide.outputs.run_perf }}
+      run_packed: ${{ steps.decide.outputs.run_packed }}
+      run_onboarding: ${{ steps.decide.outputs.run_onboarding }}
+      confidence_cmd: ${{ steps.decide.outputs.confidence_cmd }}
+      fail_fast: ${{ steps.decide.outputs.fail_fast }}
+      ts_compat_include: ${{ steps.decide.outputs.ts_compat_include }}
+      gallery_include: ${{ steps.decide.outputs.gallery_include }}
+      onboarding_fixtures: ${{ steps.decide.outputs.onboarding_fixtures }}
+      node_versions: ${{ steps.decide.outputs.node_versions }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Decide CI profile
+        id: decide
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+          PR_LABELS_JSON: ${{ toJSON(github.event.pull_request.labels.*.name) || '[]' }}
+        run: |
+          set -euo pipefail
+
+          # Changed paths (PR base...head; push before..after; first push falls back to all files).
+          CHANGED_FILE="$(mktemp)"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git diff --name-only "${BASE_SHA}...${HEAD_SHA}" >"$CHANGED_FILE" 2>/dev/null || true
+          elif [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            git diff --name-only "${BEFORE_SHA}" "${AFTER_SHA}" >"$CHANGED_FILE" 2>/dev/null || true
+          else
+            git ls-files >"$CHANGED_FILE"
+          fi
+
+          PROFILE_JSON="$(
+            node scripts/ci-profile.mjs --json \
+              --event "$EVENT_NAME" \
+              --ref-name "$REF_NAME" \
+              --head-ref "${HEAD_REF:-}" \
+              --labels "${PR_LABELS_JSON:-[]}" \
+              <"$CHANGED_FILE"
+          )"
+          rm -f "$CHANGED_FILE"
+
+          # Multiline-safe GITHUB_OUTPUT for JSON matrix payloads.
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const profile = JSON.parse(process.argv[1]);
+            const out = process.env.GITHUB_OUTPUT;
+            let body = "";
+            for (const [key, value] of Object.entries(profile)) {
+              const rendered = typeof value === "string" ? value : JSON.stringify(value);
+              if (rendered.includes("\n") || rendered.includes("%")) {
+                const delim = `EOF_${key}_${Date.now()}`;
+                body += `${key}<<${delim}\n${rendered}\n${delim}\n`;
+              } else {
+                body += `${key}=${rendered}\n`;
+              }
+            }
+            fs.appendFileSync(out, body);
+            console.log(
+              `CI profile: full_matrix=${profile.full_matrix} code=${profile.code} docs_only=${profile.docs_only} run_perf=${profile.run_perf} run_packed=${profile.run_packed} confidence=${profile.confidence_cmd} fail_fast=${profile.fail_fast} branch=${profile.branch}`
+            );
+          ' "$PROFILE_JSON"
+
   z07-feedback:
     name: Z07 bounded feedback
+    needs: ci-profile
+    if: needs.ci-profile.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -32,6 +123,8 @@ jobs:
 
   adapter-parity:
     name: Adapter parity
+    needs: ci-profile
+    if: needs.ci-profile.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -45,23 +138,13 @@ jobs:
 
   onboarding-matrix:
     name: Onboarding ${{ matrix.fixture }}
+    needs: ci-profile
+    if: needs.ci-profile.outputs.run_onboarding == 'true'
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: ${{ needs.ci-profile.outputs.fail_fast == 'true' }}
       matrix:
-        fixture:
-          - library/small
-          - library/medium
-          - library/large
-          - api/small
-          - api/medium
-          - api/large
-          - frontend/small
-          - frontend/medium
-          - frontend/large
-          - monorepo/small
-          - monorepo/medium
-          - monorepo/large
+        fixture: ${{ fromJSON(needs.ci-profile.outputs.onboarding_fixtures) }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
@@ -77,6 +160,8 @@ jobs:
 
   performance:
     name: Performance budgets
+    needs: ci-profile
+    if: needs.ci-profile.outputs.run_perf == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -99,6 +184,8 @@ jobs:
 
   fuzz:
     name: Deterministic fuzz
+    needs: ci-profile
+    if: needs.ci-profile.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -116,7 +203,12 @@ jobs:
           path: reports/fuzz
           if-no-files-found: error
 
+  # Required status check name: "build" (branch protection). Always runs.
+  # Full matrix / main: npm run test:confidence (coverage + mutation).
+  # PR slim / docs-only: npm run test:coverage only — mutation stays on full-matrix path
+  # and every npm publish path (scripts/release-npm.mjs, publish-npm.yml).
   build:
+    needs: ci-profile
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -157,19 +249,27 @@ jobs:
         run: npm run check:z08-prompts
 
       - name: Test confidence (coverage + mutation)
+        if: needs.ci-profile.outputs.full_matrix == 'true'
         run: npm run test:confidence
         # Includes evalCorpus.test.ts (spawns npm run eval:corpus) — no separate step
+
+      - name: Test coverage (PR slim — mutation deferred to full-matrix / publish)
+        if: needs.ci-profile.outputs.full_matrix != 'true'
+        run: npm run test:coverage
 
       - name: Build
         run: npm run build
 
       - name: Gate/runtime package isolation smoke
+        if: needs.ci-profile.outputs.docs_only != 'true'
         run: npm run test:package-isolation
 
       - name: Verify V04 release artifacts
+        if: needs.ci-profile.outputs.run_packed == 'true'
         run: npm run check:release-artifacts -- --out release-artifacts
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: needs.ci-profile.outputs.run_packed == 'true'
         with:
           name: release-artifacts-${{ github.sha }}
           path: release-artifacts
@@ -185,11 +285,13 @@ jobs:
 
   node-compat:
     name: Node ${{ matrix.node }}
+    needs: ci-profile
+    if: needs.ci-profile.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: ${{ needs.ci-profile.outputs.fail_fast == 'true' }}
       matrix:
-        node: [18, 20, 22, 24]
+        node: ${{ fromJSON(needs.ci-profile.outputs.node_versions) }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
@@ -201,22 +303,19 @@ jobs:
       - run: npm run check:js
       - run: node bin/ark-check.mjs --version
 
-  # Packed consumer matrix: 4 Node versions × 3 package managers × TS 5/6/7.
+  # Packed consumer matrix: full = 4 Node × 3 PMs × TS 5/6/7; PR slim = Node 20 + npm only.
   # The checkout is orchestration only; every product command resolves from the exact
   # release tarball verified and uploaded by build. See docs/typescript-support.md.
   ts-compat:
     name: Packed TS / Node ${{ matrix.node }} / ${{ matrix.pm.name }}
-    needs: build
+    needs: [ci-profile, build]
+    if: needs.ci-profile.outputs.run_packed == 'true' && needs.build.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
-      fail-fast: false
+      fail-fast: ${{ needs.ci-profile.outputs.fail_fast == 'true' }}
       matrix:
-        node: [18, 20, 22, 24]
-        pm:
-          - { name: npm, version: 10.8.2 }
-          - { name: pnpm, version: 9.15.9 }
-          - { name: yarn, version: 4.17.1 }
+        include: ${{ fromJSON(needs.ci-profile.outputs.ts_compat_include) }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
@@ -248,31 +347,42 @@ jobs:
           path: ${{ runner.temp }}/ts-compat/report.json
           if-no-files-found: error
 
+  # Required status check name: "TypeScript compatibility gate" (branch protection).
+  # Always runs so the check reports success/failure (never silent skip for protection).
   ts-compat-gate:
     name: TypeScript compatibility gate
     if: ${{ always() }}
-    needs: ts-compat
+    needs: [ci-profile, build, ts-compat]
     runs-on: ubuntu-latest
     steps:
-      - name: Require every packed compatibility cell
+      - name: Require every packed compatibility cell when scheduled
         env:
           MATRIX_RESULT: ${{ needs.ts-compat.result }}
-        run: test "$MATRIX_RESULT" = success
+          BUILD_RESULT: ${{ needs.build.result }}
+          RUN_PACKED: ${{ needs.ci-profile.outputs.run_packed }}
+        run: |
+          set -euo pipefail
+          if [ "$RUN_PACKED" != "true" ]; then
+            echo "Packed TS matrix not scheduled for this CI profile (docs/plans-only)."
+            exit 0
+          fi
+          if [ "$BUILD_RESULT" != "success" ]; then
+            echo "build did not succeed; packed matrix cannot run" >&2
+            exit 1
+          fi
+          test "$MATRIX_RESULT" = success
 
-  # Z05 clean-room journey: the six canonical starters each install the exact
-  # build artifact under every supported package manager.
+  # Z05 clean-room journey: full = all PMs; PR slim = npm only.
   gallery-clean-room:
     name: Gallery clean room / ${{ matrix.pm.name }}
-    needs: build
+    needs: [ci-profile, build]
+    if: needs.ci-profile.outputs.run_packed == 'true' && needs.build.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
-      fail-fast: false
+      fail-fast: ${{ needs.ci-profile.outputs.fail_fast == 'true' }}
       matrix:
-        pm:
-          - { name: npm, version: 10.8.2 }
-          - { name: pnpm, version: 9.15.9 }
-          - { name: yarn, version: 4.17.1 }
+        include: ${{ fromJSON(needs.ci-profile.outputs.gallery_include) }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
@@ -306,19 +416,32 @@ jobs:
   gallery-clean-room-gate:
     name: Gallery clean-room gate
     if: ${{ always() }}
-    needs: gallery-clean-room
+    needs: [ci-profile, build, gallery-clean-room]
     runs-on: ubuntu-latest
     steps:
-      - name: Require every packed gallery cell
+      - name: Require every packed gallery cell when scheduled
         env:
           MATRIX_RESULT: ${{ needs.gallery-clean-room.result }}
-        run: test "$MATRIX_RESULT" = success
+          BUILD_RESULT: ${{ needs.build.result }}
+          RUN_PACKED: ${{ needs.ci-profile.outputs.run_packed }}
+        run: |
+          set -euo pipefail
+          if [ "$RUN_PACKED" != "true" ]; then
+            echo "Gallery matrix not scheduled for this CI profile (docs/plans-only)."
+            exit 0
+          fi
+          if [ "$BUILD_RESULT" != "success" ]; then
+            echo "build did not succeed; gallery matrix cannot run" >&2
+            exit 1
+          fi
+          test "$MATRIX_RESULT" = success
 
   # Z06 managed-upgrade truth: every supported host installs and executes the exact
   # checksummed candidate produced by build. Checkout code only orchestrates the run.
   managed-upgrade-candidate:
     name: Managed upgrade packed candidate
-    needs: build
+    needs: [ci-profile, build]
+    if: needs.ci-profile.outputs.run_packed == 'true' && needs.build.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -352,10 +475,22 @@ jobs:
   managed-upgrade-candidate-gate:
     name: Managed upgrade candidate gate
     if: ${{ always() }}
-    needs: managed-upgrade-candidate
+    needs: [ci-profile, build, managed-upgrade-candidate]
     runs-on: ubuntu-latest
     steps:
-      - name: Require the complete packed-host matrix
+      - name: Require the complete packed-host matrix when scheduled
         env:
           MATRIX_RESULT: ${{ needs.managed-upgrade-candidate.result }}
-        run: test "$MATRIX_RESULT" = success
+          BUILD_RESULT: ${{ needs.build.result }}
+          RUN_PACKED: ${{ needs.ci-profile.outputs.run_packed }}
+        run: |
+          set -euo pipefail
+          if [ "$RUN_PACKED" != "true" ]; then
+            echo "Managed-upgrade matrix not scheduled for this CI profile (docs/plans-only)."
+            exit 0
+          fi
+          if [ "$BUILD_RESULT" != "success" ]; then
+            echo "build did not succeed; managed-upgrade cannot run" >&2
+            exit 1
+          fi
+          test "$MATRIX_RESULT" = success

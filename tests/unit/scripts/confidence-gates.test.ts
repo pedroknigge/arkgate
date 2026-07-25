@@ -70,12 +70,16 @@ describe('confidence gate wiring', () => {
     }
   });
 
-  it('uses the same confidence gate in CI and before every npm publish path', () => {
+  it('uses the same confidence gate on full-matrix CI and before every npm publish path', () => {
     const ci = read('.github/workflows/ci.yml');
     const releaseScript = read('scripts/release-npm.mjs');
     const publishWorkflow = read('.github/workflows/publish-npm.yml');
 
+    // Full-matrix / main / release-prep keeps mutation; PR slim may use coverage only.
     expect(ci).toContain('run: npm run test:confidence');
+    expect(ci).toContain('run: npm run test:coverage');
+    expect(ci).toMatch(/full_matrix == 'true'[\s\S]*?npm run test:confidence/);
+    expect(ci).toMatch(/full_matrix != 'true'[\s\S]*?npm run test:coverage/);
 
     const localConfidence = releaseScript.indexOf("run('npm run test:confidence')");
     const localPublish = releaseScript.indexOf("'npm publish --dry-run'");
