@@ -581,7 +581,13 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const totalFilesEarly = cov.governed.totalFiles || 0;
   const operatingMode = resolveOperatingMode({
     governedPercent: emptyScopeEarly ? 0 : cov.governed.percent,
-    planMet: analysisComplete && activeCount === 0 && !emptyScopeEarly && cov.governed.percent >= 50,
+    // planMet uses blocking (failsStrict !== false) only — type-only placement debt alone
+    // must not force adapt via unmet plan (parity with merge/exit and productHonesty).
+    planMet:
+      analysisComplete &&
+      blockingActive === 0 &&
+      !emptyScopeEarly &&
+      cov.governed.percent >= 50,
     mature: cov.governed.totalFiles >= 150,
     totalFiles: cov.governed.totalFiles,
     emptyLayers: cov.emptyLayers,

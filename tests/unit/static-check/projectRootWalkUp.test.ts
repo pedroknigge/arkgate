@@ -148,6 +148,54 @@ describe('findNearestArkConfig / resolveEffectiveProjectRoot', () => {
     expect(isMutatingCliCommand({ migrateContract: true, write: true })).toBe(true);
     expect(isMutatingCliCommand({ migrateContract: true })).toBe(false);
     expect(isMutatingCliCommand({ doctor: true })).toBe(false);
+    expect(isMutatingCliCommand({ adoptContract: true, write: true })).toBe(true);
+    expect(isMutatingCliCommand({ applyPolicyPack: true })).toBe(true);
+    expect(isMutatingCliCommand({ ratchetCores: true })).toBe(true);
+  });
+
+  it('mutative config writes refuse --config outside project root (exit 2)', () => {
+    const root = mk();
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'a.ts'), 'export const a = 1;\n');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          { name: 'DomainModel', patterns: ['src/**'], optional: false },
+          { name: 'ApplicationOrchestration', patterns: [], optional: true },
+          { name: 'PresentationAdapters', patterns: [], optional: true },
+          { name: 'PersistenceAdapters', patterns: [], optional: true },
+        ],
+        rules: [],
+      })
+    );
+    const outside = path.join(path.dirname(root), `outside-escape-${Date.now()}.json`);
+    const outsideExisted = fs.existsSync(outside);
+    const arkCheck = path.resolve('bin/ark-check.mjs');
+    const run = (flags: string[]) =>
+      spawnSync(process.execPath, [arkCheck, '--root', root, '--config', outside, ...flags], {
+        encoding: 'utf8',
+        cwd: root,
+        env: { ...process.env, NO_COLOR: '1' },
+      });
+
+    const adopt = run(['--adopt-contract', '--write', '--json']);
+    expect(adopt.status).toBe(2);
+    expect((adopt.stderr || '') + (adopt.stdout || '')).toMatch(/outside project root/i);
+
+    const pack = run(['--apply-policy-pack', 'enthusiast-ui-surface', '--force', '--json']);
+    expect(pack.status).toBe(2);
+    expect((pack.stderr || '') + (pack.stdout || '')).toMatch(/outside project root/i);
+
+    const ratchet = run(['--ratchet-cores', '--json']);
+    expect(ratchet.status).toBe(2);
+    expect((ratchet.stderr || '') + (ratchet.stdout || '')).toMatch(/outside project root/i);
+
+    // Escape path must never be written.
+    if (!outsideExisted) {
+      expect(fs.existsSync(outside)).toBe(false);
+    }
   });
 
   it('does not walk above workspaces root when config is only outside monorepo', () => {

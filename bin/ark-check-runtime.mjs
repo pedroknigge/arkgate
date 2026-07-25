@@ -522,9 +522,14 @@ function runListPolicyPacks(args) {
 }
 
 function runApplyPolicyPack(args) {
-  const configPath = path.isAbsolute(args.config)
-    ? args.config
-    : path.join(args.root, args.config);
+  // Contain --config writes under project root (S0 security).
+  const contained = resolveConfigPathWithinRoot(args.root, args.config);
+  if (!contained.ok) {
+    console.error(contained.error);
+    process.exitCode = 2;
+    return;
+  }
+  const configPath = contained.configPath;
 
   if (fs.existsSync(configPath) && !args.force) {
     console.error(
@@ -642,9 +647,15 @@ function runSuggestInclude(args) {
  */
 function runAdoptContract(args) {
   const root = args.root;
-  const configPath = path.isAbsolute(args.config)
-    ? args.config
-    : path.join(root, args.config);
+  // Contain --config writes under project root (S0 security). Refuse escape even
+  // before --write so dry-run + write share one path and cannot probe outside root.
+  const contained = resolveConfigPathWithinRoot(root, args.config);
+  if (!contained.ok) {
+    console.error(contained.error);
+    process.exitCode = 2;
+    return;
+  }
+  const configPath = contained.configPath;
   let config;
   try {
     config = fs.existsSync(configPath)
@@ -1565,6 +1576,7 @@ async function main() {
         totalViolationCount: violations.length,
         frozenKeys: reportBaseline.exists ? reportBaseline.keys.size : 0,
         activeCount: activeViolations.length,
+        activeBlockingCount: blockingViolations.length,
       }
     );
     const reportPayload = {

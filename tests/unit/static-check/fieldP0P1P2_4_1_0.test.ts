@@ -29,7 +29,11 @@ import {
   readTsconfigPathAliases,
   noDomainInfraImports,
 } from '../../../src/eslint/index';
-import { renderProductHonestyCard } from '../../../bin/lib/html-report-depth.mjs';
+import {
+  renderProductHonestyCard,
+  buildReportDepthPayload,
+} from '../../../bin/lib/html-report-depth.mjs';
+import { computeReportFitness } from '../../../bin/lib/html-report.mjs';
 
 const temps: string[] = [];
 function mk(): string {
@@ -1330,5 +1334,91 @@ describe('R-round: type-only non-blocking + honesty parity locks', () => {
     expect(diagnostic?.evidence?.peerIsolation).toBe(true);
     expect(diagnostic?.evidence?.typeOnly).toBe(true);
     expect(diagnostic?.severity).toBe('error');
+  });
+});
+
+describe('residual: type-only planMet + HTML activeBlocking (failsStrict)', () => {
+  it('type-only-only tree: doctor planMet blocking-only; HTML has no active-blocking-violations', () => {
+    const { spawnSync } = require('node:child_process') as typeof import('node:child_process');
+    const check = path.resolve('bin/ark-check.mjs');
+    const root = mk();
+    fs.mkdirSync(path.join(root, 'src/app'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/kernel'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'src/kernel/api.ts'),
+      'export type Api = number;\nexport const api = 1;\n'
+    );
+    fs.writeFileSync(
+      path.join(root, 'src/app/types.ts'),
+      "import type { Api } from '../kernel/api';\nexport const x: Api = 1;\n"
+    );
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          { name: 'AppOrchestration', patterns: ['src/app/**'] },
+          { name: 'Kernel', patterns: ['src/kernel/**'] },
+        ],
+        rules: [{ from: 'AppOrchestration', to: 'Kernel', allowed: false }],
+      })
+    );
+
+    const doctor = spawnSync(
+      process.execPath,
+      [check, '--root', root, '--config', 'ark.config.json', '--doctor', '--json', '--no-cache'],
+      { encoding: 'utf8' }
+    );
+    expect(doctor.status, doctor.stderr + doctor.stdout).toBe(0);
+    const doc = JSON.parse(doctor.stdout);
+    // Type-only present but non-blocking — productHonesty must not claim active-blocking.
+    const reasonIds = doc.doctor?.productHonesty?.reasonIds ?? [];
+    expect(reasonIds).not.toContain('active-blocking-violations');
+    // planMet uses blocking only: non-core layers + 100% coverage + zero blocking → enforce
+    // (before fix, type-only activeCount forced planMet false → adapt).
+    expect(doc.doctor?.violations?.typeOnly).toBeGreaterThan(0);
+    expect(doc.doctor?.operatingMode).toBe('enforce');
+
+    // Unit: HTML depth payload with type-only-only active list.
+    const typeOnlyV = {
+      ruleId: 'LAYER_IMPORT_VIOLATION',
+      typeOnly: true,
+      failsStrict: false,
+      from: 'src/app/types.ts',
+      to: 'src/kernel/api.ts',
+    };
+    const payload = buildReportDepthPayload(
+      root,
+      JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8')),
+      ['src/app/types.ts', 'src/kernel/api.ts'],
+      {
+        governed: { percent: 100, totalFiles: 2, classifiedFiles: 2 },
+        layers: [
+          { name: 'AppOrchestration', files: 1 },
+          { name: 'Kernel', files: 1 },
+        ],
+      },
+      [typeOnlyV],
+      { activeCount: 1, activeBlockingCount: 0, totalViolationCount: 1, suppressedCount: 0, frozenKeys: 0 }
+    );
+    expect(payload.designDepth.productHonesty.reasonIds).not.toContain(
+      'active-blocking-violations'
+    );
+
+    // planMet in computeReportFitness ignores type-only (ok + blockingCount 0 → enforce).
+    const fitness = computeReportFitness({
+      coverage: { governed: { percent: 100, totalFiles: 2, classifiedFiles: 2 }, layers: [] },
+      violations: [typeOnlyV],
+      ok: true,
+      enforcement: [],
+      config: {
+        layers: [
+          { name: 'AppOrchestration', patterns: ['src/app/**'] },
+          { name: 'Kernel', patterns: ['src/kernel/**'] },
+        ],
+        rules: [{ from: 'AppOrchestration', to: 'Kernel', allowed: false }],
+      },
+    });
+    expect(fitness.mode).toBe('enforce');
   });
 });

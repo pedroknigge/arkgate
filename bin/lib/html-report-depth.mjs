@@ -42,6 +42,7 @@ function esc(value) {
  *   totalViolationCount?: number,
  *   frozenKeys?: number,
  *   activeCount?: number,
+ *   activeBlockingCount?: number,
  * }} [baselineSplit] same numbers doctor uses (do not recompute from active-only list)
  */
 export function buildReportDepthPayload(
@@ -52,9 +53,16 @@ export function buildReportDepthPayload(
   activeViolations = [],
   baselineSplit = {}
 ) {
+  // Blocking = failsStrict !== false only (type-only placement debt is non-blocking).
+  // Prefer caller-supplied count for doctor parity; else derive from active list.
+  const activeBlockingCount =
+    typeof baselineSplit.activeBlockingCount === 'number'
+      ? baselineSplit.activeBlockingCount
+      : activeViolations.filter((v) => v?.failsStrict !== false).length;
   const designSmells = detectDesignSmells(root, config, files, coverage);
   const designFitness = summarizeDesignFitness(designSmells, {
-    activeViolations: activeViolations.length,
+    // Doctor parity: fitness uses blocking count, not raw active (incl. type-only).
+    activeViolations: activeBlockingCount,
     governedPercent: coverage?.governed?.percent,
     totalFiles: coverage?.governed?.totalFiles,
   });
@@ -137,7 +145,7 @@ export function buildReportDepthPayload(
     designWeak: designFitness.designWeak === true,
     designWeakLabel: designFitness.label,
     designSmellCount: designSmells.length,
-    designSmellsWithOpenEdges: designSmells.length > 0 && activeCount > 0,
+    designSmellsWithOpenEdges: designSmells.length > 0 && activeBlockingCount > 0,
     packageVersionTruth,
     residualPilots: Boolean(residualPilot) && designFitness.designWeak === true,
     pilotTarget: residualPilot?.pilotTarget ?? residualPilot?.pilot ?? null,
@@ -145,7 +153,7 @@ export function buildReportDepthPayload(
       ? { active: rulesUnderContract.active === true, ...rulesUnderContract.mergePlanes }
       : null,
     primaryNextAction: postGreenPath?.action ?? dualTruthNext,
-    activeBlockingViolations: activeCount,
+    activeBlockingViolations: activeBlockingCount,
   });
   return {
     adoption,

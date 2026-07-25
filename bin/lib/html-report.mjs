@@ -223,13 +223,13 @@ export function computeReportFitness({ coverage, violations, ok, enforcement, co
     const row = (coverage?.layers ?? []).find((r) => r.name === layer.name);
     return (row?.files ?? 0) > 0;
   }).length;
+  // planMet: blocking (failsStrict !== false) only — type-only alone must not force ADAPT.
+  const blockingCount = Array.isArray(violations)
+    ? violations.filter((v) => v?.failsStrict !== false).length
+    : 0;
   const mode = resolveOperatingMode({
     governedPercent: totalFiles === 0 ? 0 : governedPercent,
-    planMet:
-      ok &&
-      (violations?.length ?? 0) === 0 &&
-      totalFiles > 0 &&
-      (governedPercent == null || governedPercent >= 50),
+    planMet: ok && blockingCount === 0 && totalFiles > 0 && (governedPercent == null || governedPercent >= 50),
     mature: totalFiles >= 150,
     totalFiles,
     emptyLayers,

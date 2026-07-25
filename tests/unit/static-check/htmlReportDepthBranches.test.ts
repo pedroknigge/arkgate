@@ -193,4 +193,52 @@ describe('html-report-depth branch matrix', () => {
     expect(Array.isArray(payload.designDepth.designSmells)).toBe(true);
     expect(payload.designDepth.pilotLoop).toBeTruthy();
   });
+
+  it('type-only-only active list does not set active-blocking-violations on productHonesty', () => {
+    const root = process.cwd();
+    const typeOnly = {
+      ruleId: 'LAYER_IMPORT_VIOLATION',
+      typeOnly: true,
+      failsStrict: false as const,
+      from: 'src/app/a.ts',
+      to: 'src/kernel/b.ts',
+    };
+    // Derive blocking from list (no baselineSplit.activeBlockingCount).
+    const payload = buildReportDepthPayload(
+      root,
+      {
+        layers: [
+          { name: 'App', patterns: ['src/app/**'] },
+          { name: 'Kernel', patterns: ['src/kernel/**'] },
+        ],
+        rules: [{ from: 'App', to: 'Kernel', allowed: false }],
+      },
+      ['src/app/a.ts', 'src/kernel/b.ts'],
+      { governed: { percent: 100, totalFiles: 2, classifiedFiles: 2 }, layers: [] },
+      [typeOnly],
+      { activeCount: 1, totalViolationCount: 1, suppressedCount: 0, frozenKeys: 0 }
+    );
+    expect(payload.designDepth.productHonesty.reasonIds).not.toContain(
+      'active-blocking-violations'
+    );
+
+    // Explicit blocking count wins over raw active list length.
+    const withExplicit = buildReportDepthPayload(
+      root,
+      { layers: [], rules: [] },
+      [],
+      { governed: { percent: 100, totalFiles: 5, classifiedFiles: 5 }, layers: [] },
+      [typeOnly, { ruleId: 'X', failsStrict: true }],
+      {
+        activeCount: 2,
+        activeBlockingCount: 0,
+        totalViolationCount: 2,
+        suppressedCount: 0,
+        frozenKeys: 0,
+      }
+    );
+    expect(withExplicit.designDepth.productHonesty.reasonIds).not.toContain(
+      'active-blocking-violations'
+    );
+  });
 });

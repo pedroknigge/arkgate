@@ -3,10 +3,10 @@
  * Keeps ark-check.mjs orchestration-only (dispatch only).
  */
 import fs from 'node:fs';
-import path from 'node:path';
 import { arkCommand } from '../ark-shared.mjs';
 import { computeCoverage } from './doctor-plan.mjs';
 import { CORE_LAYER_NAMES } from './core-layers.mjs';
+import { resolveConfigPathWithinRoot } from './project-root.mjs';
 
 export { CORE_LAYER_NAMES } from './core-layers.mjs';
 
@@ -68,9 +68,6 @@ export function runRatchetCores(root, config, files, rules, violations, args, de
   const displayPathFromRoot = deps.displayPathFromRoot;
   const cov = computeCoverage(root, config, files, rules);
   const activeCount = Array.isArray(violations) ? violations.length : 0;
-  const configPath = path.isAbsolute(args.config)
-    ? args.config
-    : path.join(root, args.config || 'ark.config.json');
 
   const refuse = (code, message, extra = {}) => {
     if (args.json) {
@@ -80,6 +77,14 @@ export function runRatchetCores(root, config, files, rules, violations, args, de
     }
     process.exitCode = code;
   };
+
+  // Contain --config writes under project root (S0 security).
+  const contained = resolveConfigPathWithinRoot(root, args.config || 'ark.config.json');
+  if (!contained.ok) {
+    refuse(2, contained.error);
+    return;
+  }
+  const configPath = contained.configPath;
 
   if (activeCount > 0) {
     refuse(
