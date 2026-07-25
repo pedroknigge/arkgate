@@ -86,6 +86,11 @@ import {
 } from './lib/suggestions.mjs';
 import {
   ARCHITECTURE_PRESETS,
+  APPLICATION_LIB_ORCHESTRATION_PATTERNS,
+  DOMAIN_PATH_PATTERNS,
+  NEXT_API_APPLICATION_PATTERNS,
+  PERSISTENCE_PATH_PATTERNS,
+  retrofitP0aApiApplicationPatterns,
   withDefaultArkRules,
   writeArkRulesTemplates,
 } from './lib/presets.mjs';
@@ -192,6 +197,7 @@ function parseArgs(argv) {
     else if (arg === '--apply-policy-pack') args.applyPolicyPack = requireValue(arg, i++);
     else if (arg === '--suggest-include') args.suggestInclude = true;
     else if (arg === '--adopt-contract') args.adoptContract = true;
+    else if (arg === '--migrate-contract') args.migrateContract = true;
     else if (arg === '--ratchet-cores') args.ratchetCores = true;
     else if (arg === '--write') args.write = true;
     else if (arg === '--watch') args.watch = true;
@@ -250,13 +256,14 @@ function usage() {
     '       ark-check --list-policy-packs            enthusiast packs (hexagonal, layered, feature-sliced, monorepo, ui-surface, vertical-slice, ddd-bounded-contexts)',
     '       ark-check --apply-policy-pack <id> [--force]  write ark.config.json from templates/policy-packs/ (uses preset factory)',
     '       ark-check --suggest-include [--json]   propose include roots (TS packages / workspaces)',
-    '       ark-check --adopt-contract [--write]   expand include + UI patterns from ungoverned dirs (contract adopt)',
+    '       ark-check --adopt-contract [--write]   expand include + layer patterns from ungoverned dirs (never bare lib→Presentation)',
+    '       ark-check --migrate-contract [--write] additive P0-A retrofit: inject app/api/** → Application when missing',
     '       ark-check --ratchet-cores              when raw graph is green (0 violations; baseline ignored), set optional:false on populated cores only (writes ark.config.json)',
     '       ark-check --watch                      re-run the check when governed files change (debounced)',
     '       ark-check --report [file.html] [--beginner] [--reset-origin] [--no-archive] [--open|--no-open]',
     '           HTML report + snapshots under .ark/reports/ (origin once, latest each run, history JSON)',
     '           Best-effort open in browser (local TTY). No-op if open fails. --no-open / ARK_NO_OPEN_REPORT=1 to skip; --open forces open.',
-    '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture] [--force]',
+    '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|vite-vercel-spa|clean-architecture|onion-architecture] [--force]',
     '       ark-check --install-agent-gates [--tools claude,cursor,codex,grok] [--require-write-hook <host>] [--skills-only] [--codex-home] [--force]',
     '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
     '       ark-check --print-config eleven-layer',
@@ -621,8 +628,9 @@ function runSuggestInclude(args) {
 }
 
 /**
- * Contract-adopt: expand include + presentation patterns from ungoverned proposals.
+ * Contract-adopt: expand include + layer patterns from ungoverned proposals.
  * Read-only unless --write. Does not weaken rules or baseline violations.
+ * Never maps bare lib/** solely to Presentation (NEW-ADOPT-LIB-AS-PRESENTATION).
  */
 function runAdoptContract(args) {
   const root = args.root;
@@ -645,25 +653,66 @@ function runAdoptContract(args) {
   }
   const suggestedInclude = resolveIncludeRoots(root);
   const tsPackages = detectTsPackageRoots(root);
+  // SPA / Vercel: include root api + lib when present (NEW-SPA-DEFAULT-LAYOUT).
+  const spaExtras = ['api', 'lib'].filter((d) => fs.existsSync(path.join(root, d)));
   const nextInclude = [
     ...new Set([
       ...(config.include || []),
       ...(suggestedInclude.length > 0 ? suggestedInclude : tsPackages),
+      ...spaExtras,
     ]),
   ].filter(Boolean);
   const files = collectGovernedFiles(root, { ...config, include: nextInclude.length ? nextInclude : config.include });
   const cov = computeCoverage(root, { ...config, include: nextInclude.length ? nextInclude : config.include }, files, config.rules || []);
+  // UI-only patterns — never bare **/lib/** (data clients are Persistence).
   const uiPatterns = [
     '**/components/**',
     '**/hooks/**',
-    '**/lib/**',
     '**/routes/**',
     '**/app/**',
     '**/pages/**',
   ];
+  const persistencePatterns = [
+    ...PERSISTENCE_PATH_PATTERNS,
+  ];
+  const applicationPatterns = [
+    ...NEXT_API_APPLICATION_PATTERNS,
+    ...APPLICATION_LIB_ORCHESTRATION_PATTERNS,
+    'api/**',
+  ];
+  const domainPatterns = [...DOMAIN_PATH_PATTERNS];
+
+  // Build pattern additions from unclassified suggestions (path-aware).
+  const byLayer = new Map([
+    ['PresentationAdapters', [...uiPatterns]],
+    ['PersistenceAdapters', [...persistencePatterns]],
+    ['ApplicationOrchestration', [...applicationPatterns]],
+    ['DomainModel', [...domainPatterns]],
+  ]);
+  for (const suggestion of cov.suggestions ?? []) {
+    if (suggestion.unrecognized || !suggestion.layer) continue;
+    // Never treat bare lib as Presentation solely.
+    if (
+      suggestion.layer === 'PresentationAdapters' &&
+      (suggestion.dir === 'lib' || suggestion.dir.endsWith('/lib'))
+    ) {
+      continue;
+    }
+    const list = byLayer.get(suggestion.layer) ?? [];
+    const glob = suggestion.dir === '.' ? null : `${suggestion.dir}/**`;
+    if (glob && !list.includes(glob)) list.push(glob);
+    byLayer.set(suggestion.layer, list);
+  }
+
   const layers = (config.layers || []).map((layer) => {
-    if (layer.name !== 'PresentationAdapters') return layer;
-    const patterns = [...new Set([...(layer.patterns || []), ...uiPatterns])];
+    const extras = byLayer.get(layer.name);
+    if (!extras?.length) return layer;
+    // Strip accidental bare lib/** if a previous adopt wrote it into Presentation.
+    const cleaned = (layer.patterns || []).filter((p) => {
+      if (layer.name !== 'PresentationAdapters') return true;
+      return p !== '**/lib/**' && p !== 'lib/**' && p !== 'src/lib/**';
+    });
+    const patterns = [...new Set([...cleaned, ...extras])];
     return { ...layer, patterns };
   });
   // If no PresentationAdapters layer, leave layers as-is (don't invent full profile).
@@ -677,6 +726,9 @@ function runAdoptContract(args) {
     after: {
       include: nextInclude.length > 0 ? nextInclude : config.include,
       presentationPatterns: uiPatterns,
+      persistencePatterns,
+      applicationPatterns,
+      domainPatterns,
       totalFiles: cov.totalFiles,
       governedPercent: cov.governed.percent,
       unclassified: cov.unclassified.count,
@@ -715,6 +767,8 @@ function runAdoptContract(args) {
     `  after:  include=[${(proposal.after.include || []).join(', ')}] governed=${proposal.after.governedPercent}% files=${proposal.after.totalFiles} unclassified=${proposal.after.unclassified}`
   );
   console.log(`  presentation patterns += ${uiPatterns.join(', ')}`);
+  console.log(`  persistence patterns += (data clients / db / auth — never bare lib→Presentation)`);
+  console.log(`  application patterns += Next/Vercel API shells`);
   if (proposal.wrote) {
     console.log(color.green(`  wrote ${path.relative(root, configPath) || args.config}`));
     console.log(color.dim(`  Next: ${arkCommand(root, 'ark-check', '--coverage')} then --plan`));
@@ -730,6 +784,64 @@ function runAdoptContract(args) {
     process.exitCode = 1;
   }
 }
+
+/**
+ * Additive P0-A contract retrofit: inject high-spec app/api → Application when missing.
+ * Does not remove existing patterns or weaken rules (DL-P0A-RETROFIT).
+ */
+function runMigrateContract(args) {
+  const root = args.root;
+  const configPath = path.isAbsolute(args.config)
+    ? args.config
+    : path.join(root, args.config);
+  if (!fs.existsSync(configPath)) {
+    console.error(`No ${args.config} — nothing to migrate. Run ark start / ark-check --init first.`);
+    process.exitCode = 2;
+    return;
+  }
+  let config;
+  try {
+    config = readConfig(root, args.config);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 2;
+    return;
+  }
+
+  const result = retrofitP0aApiApplicationPatterns(config);
+  const proposal = {
+    ok: true,
+    changed: result.changed,
+    injected: result.injected,
+    targetLayer: result.targetLayer,
+    wrote: false,
+  };
+
+  if (args.write && result.changed) {
+    fs.writeFileSync(configPath, `${JSON.stringify(result.config, null, 2)}\n`);
+    proposal.wrote = true;
+  }
+
+  if (args.json) {
+    console.log(JSON.stringify(proposal, null, 2));
+    return;
+  }
+  console.log(color.bold('Contract migrate (P0-A API → Application, additive)'));
+  if (!result.changed) {
+    console.log(color.dim('  No changes — Application already has high-spec app/api patterns (or no Application layer).'));
+    return;
+  }
+  console.log(`  target layer: ${result.targetLayer}`);
+  console.log(`  injecting: ${result.injected.join(', ')}`);
+  if (proposal.wrote) {
+    console.log(color.green(`  wrote ${path.relative(root, configPath) || args.config}`));
+    console.log(color.dim(`  Next: ${arkCommand(root, 'ark-check', '--coverage')} — API routes should classify as Application`));
+  } else {
+    console.log(color.dim('  Dry-run only. Re-run with --write to apply.'));
+  }
+}
+
+
 
 function runInit(args) {
   const configPath = path.isAbsolute(args.config)
@@ -995,6 +1107,11 @@ async function main() {
 
   if (args.adoptContract) {
     runAdoptContract(args);
+    return;
+  }
+
+  if (args.migrateContract) {
+    runMigrateContract(args);
     return;
   }
 

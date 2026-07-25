@@ -88,6 +88,16 @@ export const NEXT_API_APPLICATION_PATTERNS = Object.freeze([
   'src/pages/api/**',
   'src/app/**/api/**',
   'app/**/api/**',
+  // Explicit route handlers under api/ — beat Presentation src/**/route.ts when present.
+  'src/app/api/**/route.ts',
+  'src/app/api/**/route.tsx',
+  'src/app/api/**/route.js',
+  'app/api/**/route.ts',
+  'app/api/**/route.tsx',
+  '**/app/api/**/route.ts',
+  '**/app/api/**/route.tsx',
+  '**/pages/api/**/*.ts',
+  '**/pages/api/**/*.js',
 ]);
 
 /**

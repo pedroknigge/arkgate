@@ -176,7 +176,7 @@ export function collectAnalysisConfigWarnings(
       for (const layer of layers) {
         for (const pattern of layer.patterns ?? []) {
           if (!globToRegExp(pattern).test(file)) continue;
-          const score = patternSpecificity(pattern);
+          const score = patternSpecificity(pattern, file);
           if (score > topScore) {
             topScore = score;
             topLayers = [layer.name];

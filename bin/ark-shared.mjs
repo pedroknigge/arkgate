@@ -218,8 +218,9 @@ export function applyFrameworkLayoutOverlays(config, root) {
       'src/**/layout.ts',
       'src/**/loading.tsx',
       'src/**/error.tsx',
-      'src/**/route.ts',
-      'src/**/route.tsx',
+      // Do NOT add bare src/**/route.ts here — that outranks app/api Application shells
+      // under path-anchored specificity (P0-A / DL-P0A-RETROFIT). Non-API route handlers
+      // still match via src/app/** Presentation; API route.ts is Application via app/api/**.
       // Next middleware edge entry (classic + Next 16 proxy rename)
       'src/middleware.ts',
       'src/middleware.js',
@@ -1540,6 +1541,11 @@ function resolvePreset(archetypeDef, signals) {
  * Refuse silent start --yes when shape is too uncertain (NEW-START-LOW-CONFIDENCE-SHAPE).
  * Explicit --archetype / --preset / --force bypasses the gate.
  *
+ * Rules:
+ * - projected coverage < 50% → refuse (wrong include / vacuum)
+ * - confidence < 0.6 AND projected coverage < 80% → refuse (weak shape + incomplete cover)
+ * - confidence < 0.6 with coverage ≥ 80% → allow (thin-library / capped confidence but contract covers)
+ *
  * @returns {{ ok: true } | { ok: false, reasons: string[], confidence: number|null, projectedCoverage: number|null }}
  */
 export function evaluateStartShapeConfidenceGate({
@@ -1549,6 +1555,7 @@ export function evaluateStartShapeConfidenceGate({
   force = false,
   minConfidence = 0.6,
   minProjectedCoverage = 50,
+  strongCoverageFloor = 80,
 } = {}) {
   if (force || explicitShape) return { ok: true, bypassed: true };
   const reasons = [];
@@ -1558,14 +1565,16 @@ export function evaluateStartShapeConfidenceGate({
     typeof projectedCoveragePercent === 'number' && Number.isFinite(projectedCoveragePercent)
       ? projectedCoveragePercent
       : null;
-  if (conf !== null && conf < minConfidence) {
-    reasons.push(
-      `archetype confidence ${conf} is below ${minConfidence} — refuse silent --yes without an explicit shape`
-    );
-  }
   if (cov !== null && cov < minProjectedCoverage) {
     reasons.push(
       `projected governed coverage ${cov}% is below ${minProjectedCoverage}% — refuse silent --yes`
+    );
+  }
+  // Thin packages often cap confidence (e.g. 0.28) while covering 100% — do not block those.
+  const coverageStrong = cov !== null && cov >= strongCoverageFloor;
+  if (conf !== null && conf < minConfidence && !coverageStrong) {
+    reasons.push(
+      `archetype confidence ${conf} is below ${minConfidence} with projected coverage ${cov ?? 'unknown'}% (< ${strongCoverageFloor}%) — refuse silent --yes without an explicit shape`
     );
   }
   if (reasons.length === 0) return { ok: true, confidence: conf, projectedCoverage: cov };

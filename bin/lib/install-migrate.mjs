@@ -51,12 +51,13 @@ import {
   checkArchitectureScriptSnippet,
   ensureCheckArchitectureScript,
 } from './ci-and-commands.mjs';
-import {
-  MANAGED_MANIFEST_PATH,
-  isManagedAssetCustomizedOnDisk,
-  syncManagedManifestFromDisk,
-  tryReadManagedManifest,
-} from './managed-upgrade.mjs';
+// Break cycle with managed-upgrade (it imports buildManagedAssetCatalog from here).
+// Static import would form CIRCULAR_DEPENDENCY under mother --strict.
+import { createRequire } from 'node:module';
+const requireFromHere = createRequire(import.meta.url);
+function loadManagedUpgrade() {
+  return requireFromHere('./managed-upgrade.mjs');
+}
 import {
   resolveTools,
   SKILL_TOOL_TARGETS,
@@ -362,6 +363,12 @@ export function runInstallAgentGates(args) {
   // --install-agent-gates (no --force / --compact) defaults to skills-only so a
   // refresh cannot clobber customized gates or invalidate upgrade planDigest.
   // Missing AGENTS still gets a full install (gates need repair).
+  const {
+    MANAGED_MANIFEST_PATH,
+    tryReadManagedManifest,
+    isManagedAssetCustomizedOnDisk,
+    syncManagedManifestFromDisk,
+  } = loadManagedUpgrade();
   const managedPresent = Boolean(tryReadManagedManifest(root));
   let defaultedSkillsOnly = false;
   if (
