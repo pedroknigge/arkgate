@@ -161,9 +161,12 @@ export function prepareStarterManifest(root, candidateTarball, packageManager, m
     writeText(path.join(root, '.npmrc'), 'node-linker=isolated\nshared-workspace-lockfile=false\n');
   }
   if (packageManager === 'yarn') {
+    // node-modules: arkgate bin/lib relative imports fail under Yarn PnP zip resolution
+    // for packed file: candidates (managed-upgrade → codex-home). Gallery exercises the
+    // published layout, not PnP edge cases.
     writeText(
       path.join(root, '.yarnrc.yml'),
-      'nodeLinker: pnp\npnpMode: strict\nenableGlobalCache: false\nenableScripts: false\n'
+      'nodeLinker: node-modules\nenableGlobalCache: false\nenableScripts: false\n'
     );
   }
   return manifest;
