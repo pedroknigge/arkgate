@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '4.1.1';
+const CURRENT = '4.1.0';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -104,23 +104,23 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
     expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
   });
 
-  it('public release pointers cover published 4.0.1 and prepared 4.1.1', () => {
+  it('public release pointers cover published 4.0.1 and prepared 4.1.0', () => {
     expect(read('README.md')).toMatch(/4\.0\.1/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.0\.1\.md/);
     expect(read('README.md')).toMatch(/npm `latest`|on npm/);
-    expect(read('README.md')).toMatch(/4\.1\.1/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.1\.1\.md/);
+    expect(read('README.md')).toMatch(/4\.1\.0/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.1\.0\.md/);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.0\.1/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Next prepared.*4\.1\.1|prepared.*4\.1\.1/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Next prepared.*4\.1\.0|prepared.*4\.1\.0/s);
     expect(read('docs/package-surface.md')).toMatch(/4\.0\.1\.md/);
-    expect(read('docs/package-surface.md')).toMatch(/4\.1\.1\.md/);
+    expect(read('docs/package-surface.md')).toMatch(/4\.1\.0\.md/);
   });
 });
 
-describe('CHANGELOG + release note cover 4.1.1 field product phases', () => {
-  it('CHANGELOG 4.1.1 names Next API shell, product honesty, ESLint aliases, sensors, type edges, inventory', () => {
+describe('CHANGELOG + release note cover 4.1.0 field product phases', () => {
+  it('CHANGELOG 4.1.0 names Next API shell, product honesty, ESLint aliases, sensors, type edges, inventory', () => {
     const body = read('CHANGELOG.md');
-    expect(body).toMatch(/## 4\.1\.1/);
+    expect(body).toMatch(/## 4\.1\.0/);
     expect(body).toMatch(/app\/api|ApplicationOrchestration|Next API/i);
     expect(body).toMatch(/productHonesty|false-green|not finished/i);
     expect(body).toMatch(/path alias|tsconfig|@\/\*/i);
@@ -131,10 +131,10 @@ describe('CHANGELOG + release note cover 4.1.1 field product phases', () => {
     expect(body).toMatch(/ci-profile|PR slim|full matrix/i);
   });
 
-  it('docs/releases/4.1.1.md is prepared with upgrade path and no Z09 closed claims', () => {
-    const body = read('docs/releases/4.1.1.md');
-    expect(body).toMatch(/arkgate@4\.1\.1/);
-    expect(body).toMatch(/npm install -D arkgate@4\.1\.1/);
+  it('docs/releases/4.1.0.md is prepared with upgrade path and no Z09 closed claims', () => {
+    const body = read('docs/releases/4.1.0.md');
+    expect(body).toMatch(/arkgate@4\.1\.0/);
+    expect(body).toMatch(/npm install -D arkgate@4\.1\.0/);
     expect(body).toMatch(/\*\*Status:\*\*\s*prepared/i);
     expect(body).not.toMatch(/\*\*Status:\*\*\s*published/i);
     expect(body).toMatch(/Z09|RB-11/i);
@@ -147,13 +147,6 @@ describe('CHANGELOG + release note cover 4.1.1 field product phases', () => {
         String.raw`npm view arkgate dist-tags\.latest\`?\s*→\s*\`${CURRENT.replace(/\./g, '\\.')}\``
       )
     );
-  });
-
-  it('docs/releases/4.1.0.md records not-published supersession to 4.1.1', () => {
-    const body = read('docs/releases/4.1.0.md');
-    expect(body).toMatch(/not published|superseded/i);
-    expect(body).toMatch(/4\.1\.1/);
-    expect(body).not.toMatch(/\*\*Status:\*\*\s*published/i);
   });
 });
 

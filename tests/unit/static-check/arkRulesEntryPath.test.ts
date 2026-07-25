@@ -21,7 +21,7 @@ function runCheck(rootRel: string) {
 }
 
 describe('ArkRules entry path via ark-check CLI', () => {
-  it('package identity is 4.1.0 for this prepare', () => {
+  it('package identity matches prepared train version', () => {
     expect(version).toBe('4.1.0');
   });
 

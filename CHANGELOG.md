@@ -5,19 +5,17 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
-## 4.1.1 — 2026-07-25 (prepared)
+## 4.1.0 — 2026-07-25 (prepared)
 
-**Patch** over 4.0.1. Ships the field product train originally prepared as **4.1.0** (never
-published on npm) after full CI went green on the release branch, plus maintainer CI PR-slim /
-full-matrix speed work. Field product phases from Next monorepo dogfood + objective review,
-plus field-gap closure (S0–S7) from the 7-repo lab re-verify:
+**Minor** over 4.0.1. Single ship train: field product phases + field-gap closure (S0–S7) +
+maintainer CI PR-slim / full-matrix speed work. Field product phases from Next monorepo dogfood +
+objective review, plus field-gap lab re-verify:
 Next API shell classification, anti false-green doctor packaging, monorepo config walk-up with
 write-root split, SPA/lib classification vacuum fixes, ESLint path-alias parity, structure-sensor
 false-positive tuning, ArkRules merge-plane honesty, type-edge placement debt, rules-inventory
 UI noise reduction, migrate-contract retrofit, and config write containment.
 **No required config migration.** Does not weaken write gate or CI value edges. Does not close
-Z09 / RB-11 field claims. **Status: prepared** (not on npm until publish). There is no
-`arkgate@4.1.0` on the registry — use **4.1.1**.
+Z09 / RB-11 field claims. **Status: prepared** (not on npm until publish).
 
 ### Added
 
