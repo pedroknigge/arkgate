@@ -52,12 +52,13 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Area | Path |
 |------|------|
 | Release notes (by version) | [releases/](releases/) · [CHANGELOG.md](../CHANGELOG.md) |
-| Epic plans (seeded + shipped) | [plans/](plans/) |
+| Epic plans (seeded + shipped) | [plans/](plans/) · latest: [enforcement-evidence-and-docs-truth](plans/enforcement-evidence-and-docs-truth/README.md) (Phase EH shipped; 4.1.1 prepared) |
 | Claims audit | [audit/claims-matrix.md](audit/claims-matrix.md) |
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
 Current published: [releases/4.1.0.md](releases/4.1.0.md) (`arkgate@4.1.0` on npm `latest`).  
+Prepared next: [releases/4.1.1.md](releases/4.1.1.md) (Phase EH — **Status: prepared**, not on npm until publish).  
 Previous major: [releases/4.0.0.md](releases/4.0.0.md) (`arkgate@4.0.0`).  
 Config: [configuration.md](configuration.md) · Agent skills dual-plane: [agent-guide.md](agent-guide.md).
 
@@ -67,5 +68,5 @@ Config: [configuration.md](configuration.md) · Agent skills dual-plane: [agent-
 
 1. **Audience first** — every page should be use, develop, or contribute.
 2. **One primary flow** — `start` → doctor → optional guided work.
-3. **Honest hardness** — host write guarantees differ; CI required status is the shared merge boundary.
+3. **Honest hardness** — host write guarantees differ; a **required GitHub status context** running the merge CLI is the shared hard boundary.
 4. **History is not the product** — version archaeology lives under `releases/` and `plans/`, not the front door.

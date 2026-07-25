@@ -73,7 +73,9 @@ Examples:
 | **compact router** | Default onboarding agent instructions (not the full skill pack) |
 | **hard write** | Non-bypassable PreToolUse block for listed ops (Claude/Grok when installed + trusted) |
 | **advisory write** | MCP/rules coach only (Cursor/Codex at write time) — not a hard block |
-| **required CI** | Merge hard boundary when the repository makes `arkgate-check` a required status |
+| **required CI / status context** | Merge hard boundary when the repository makes the Ark job a **required GitHub status context** (CLI: `arkgate-check --strict-merge` / `ark-check --strict-merge`) |
+| **contract ready** | Project/layers/ArkRules honesty residual clear — not the same as “hard local write” |
+| **environment residual** | Permanent host/provider posture (e.g. soft-write Codex) kept in evidence without forcing global **Not finished** |
 
 ## Do (product copy)
 
@@ -82,11 +84,13 @@ Examples:
 | Name the status light + plain fact + term + next action | “Enforce · design-weak. Checked edges are honest; design smells remain. Next: one Shape door — explore → dual-plan B → autopilot with OK.” |
 | Rank one primary door under residual | Doctor **Primary next action** #1; **Also** only for secondary |
 | Label expert skills as escapes | “Install skill pack only when doctor or a STOP handoff names a skill.” |
-| State host write honesty | “Cursor/Codex: advisory write. Required CI is the hard merge boundary.” |
+| State host write honesty | “Cursor/Codex: advisory write. Required GitHub status context is the hard merge boundary.” |
+| Soft-write ≠ unfinished project | “Architecture contract ready; Codex local writes are advisory.” Keep `soft-write-host` in evidence; reserve **Not finished** for contract/project debt. |
 | Keep Suggest on start → doctor | New-here primary is finish `start`, not a competing recommend/architect curriculum |
 | Qualify edge-clean under design-weak | “None on checked edges … design residual remains. Not healthy finished.” |
 | Prefer fail-closed over fake hard | Incomplete analysis, unobserved hooks, and soft MCP never paint as hard green |
-| Honesty clear ≠ architecture healthy | `productHonesty.finished` means residual honesty sensors are clear — not a green graph score. Open blocking violations, ADAPT/SUGGEST with debt, dual-truth pin, or design residual keep `unfinished: true`. |
+| Honesty clear ≠ architecture healthy | `productHonesty.finished` means residual **architecture** honesty sensors are clear — not a green graph score. Open blocking violations, ADAPT/SUGGEST with debt, dual-truth pin, or design residual keep `unfinished: true`. Permanent soft-write alone does **not**. |
+| Separate CI runtime from provider policy | Successful CI run ≠ required status; GitHub Free plan 403 → `unavailable-plan`, not “CI never ran.” |
 
 ## Avoid
 
@@ -100,6 +104,8 @@ Examples:
 | Skill-shopping lists as the default curriculum | Progressive disclosure: one door first |
 | “Healthy / done” while design-weak | False done |
 | “Honesty clear” as “architecture finished” | Honesty clear only means residual honesty sensors are quiet; graph/mode debt is separate |
+| “Not finished” solely because host is Codex/Cursor | Soft-write is environment residual; do not paint a green whole-tree project as unfinished architecture |
+| Conflating CLI name with required status | `ark-check` is the command; the hard boundary is the GitHub required **status context** |
 | “ArkRules prove business correctness” | They enforce *declared* structure/coverage evidence, not arbitrary logic or full semantic proof |
 | “Structure enforced = Domain extraction done” | Structure sensors are **heuristics**; extraction is judgment (`/ark-fix` / pilot) |
 | “Covered invariant = E2E business tests” | Coverage = symbol/test evidence for a named policy, not a runtime test runner |

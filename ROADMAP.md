@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-07-23
+- **Status date:** 2026-07-25
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -549,6 +549,38 @@ live in the plan.
 | 98 | `AR17` | `done` | M | `AR12`, `AR15` | Remediation payload polish + performance pass: hook budget held with arkrules loaded; mutation/coverage gates green |
 | 99 | `AR18` | `done` | S | `AR17` | ADR 0016 accepted; docs lanes + configuration/agent-guide/brownfield authorities updated; migration case study published |
 | 100 | `AR19` | `done` | S | `AR18` | Claims audit: every public ArkRules statement reproducible from a clean checkout; 4.x train closed |
+
+### Phase EH — Enforcement evidence modeling + documentation truth (post-4.1.0)
+
+Origin: 2026-07-25 Codex × ArkGate field feedback (WAFI private TypeScript consumer) plus maintainer
+observation that the public **README and docs lanes may lag** shipped 4.1.0 behavior. Plan
+authority (problem, docs audit checklist, evidence model, acceptance):
+[docs/plans/enforcement-evidence-and-docs-truth/README.md](docs/plans/enforcement-evidence-and-docs-truth/README.md).
+
+Boundary:
+
+- **Do not** claim hard local write for Codex/Cursor/OpenCode. Keep CI required-status as the shared
+  merge backstop. Reclassify permanent host limitations — do not silence them.
+- **Deep documentation review is in scope**, not a cleanup afterthought: claims-vs-code audit of
+  README + use/develop/agent/CI lanes, refreshed [claims matrix](docs/audit/claims-matrix.md), then
+  apply docs after behavior changes (`EH08`).
+- Mechanical integration bugs (first-push base-ref, report-side `.gitignore`) are P1 field pain and
+  may run early; epic does not close without docs truth.
+- Does not wait for `Z09`/`RB-11`. No new skill names, no numeric score, no runtime productization.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 101 | `EH01` | `done` | M | — | Deep docs audit: inventory + refreshed claims matrix (2026-07-25); README end-to-end checklist; Contradicted/Partial list with owners |
+| 102 | `EH02` | `done` | S | `EH01` | Fix docs-only Contradicted/Partial on public lanes; sync ROADMAP Next session + Agents plan table |
+| 103 | `EH03` | `done` | S | — | Report `.gitignore` recognizes `.ark/*` + exceptions; no dirty compatible worktree; regression test |
+| 104 | `EH04` | `done` | S | — | Generated workflow + `action.yml` + ai-gates: first-push-safe base-ref (skip delta when SHA unresolvable) |
+| 105 | `EH05` | `done` | M | — | Split project readiness vs soft-write/environment posture; headline + `primaryNextAction` rules; tests |
+| 106 | `EH06` | `done` | M | `EH05` | CI runtime observed vs provider policy (`unavailable-plan` for known plan 403); doctor JSON + human copy |
+| 107 | `EH07` | `done` | S | `EH05`, `EH06` | Repair envelope vs reinjection; CLI vs status-context copy; optional minimum ops matrix |
+| 108 | `EH08` | `done` | M | `EH02`–`EH07` | Docs apply for behavior change; claims residual 0 Contradicted; CHANGELOG + 4.1.1 prepared |
+
+**Phase EH closed** in source (2026-07-25). Package train **4.1.1 prepared** — not on npm until
+maintainer publish.
 
 ### Z01 — Make release cleanup tool-owned and path-safe
 
@@ -2880,43 +2912,19 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: none — Phase AR (`AR01`–`AR19`) complete on this branch
-  (ArkRules foundations → sensors → catalog/coverage → inventory → docs/claims audit)
-  Residual write-path wiring closed: classShapes on facts, invariant coverage I/O,
-  fileHints for orchestration-only/thin-adapter, ARKRULE_SCOPE_EMPTY zero-match appliesTo,
-  promotion refuse without coverage, doctor rules-under-contract real test scan
-Phase AR (v4 train, AR01–AR19 done): ArkRules intra-layer contract + brownfield rules migration;
-  releases 4.0.0 (AR01–AR08, incl. AR04 forwarder removal), 4.1.0 (AR09–AR12),
-  4.2.0 (AR13–AR16), 4.3.0 (AR17–AR19); all opt-in/additive; no new skill names; no codemod
-VERSION: package/src/version/server.json = 4.0.0 (prepared). Last npm latest remains 3.9.2 until publish. docs/releases/4.0.0.md Status: prepared
-  (AR04 breaking). Prepare 4.0.0 deliberately before npm/MCP registry; Unreleased = 4.x train
+Engineering doing: none — Phase EH (`EH01`–`EH08`) done in source
+  Plan: docs/plans/enforcement-evidence-and-docs-truth/README.md (Shipped / implemented)
+  Tree version: 4.1.1 prepared (docs/releases/4.1.1.md) — npm latest still 4.1.0 until publish
+  Next: maintainer publish checklist for 4.1.1; do not claim npm latest until verified
+Phase AR (v4 train, AR01–AR19 done): ArkRules + brownfield rules migration on same enforcement plane
 Claim gate: `Z09` (`parked`) — residual RB-11 only (retained adoption + independent close)
-  Field kit scaffolding: docs/field/ (preregistration, cohort checklist, reviewer manifesto) — NOT closed
-  Promote Z09 only when: signed reviewer/repo identity mechanism + external matrix + ≥8 consented adopters are preregistered
-  Do not occupy the single engineering `doing` slot while no cohort is collecting evidence
-Closed in 3.8.0: Z01–Z08, Z10; RB-07–RB-10, RB-12; 10× / causal / design-delta claim evidence earned
-Product surface 3.9.0: Beautiful Path + beauty residuals + write-path honesty + Shape coach depth
-  (no plan-B auto-apply; no false hard on Cursor/Codex)
-Not product backlog: god-module / plan-B residual (judgment only). Domain analysis pilot cluster
-  done; residual smell evidence is package barrel src/index.ts only — do not big-bang the public surface
-Parked field candidates: Y09 (keep), Y07 (low priority behind Y06 pure-opt-in corpus)
-Y06 done: pure-layer opt-in nudge (PREDIAL field case)
-Archived until field demand + ADR: Y10 (not “next after Z09”)
-Runtime parked: K01 outside Phase Z; experimental @arkgate/runtime is not the product wedge;
-  AR04 on this branch removes root forwarders arkgate/runtime|nestjs (4.x only — not 3.9.x)
-Release lanes: ordinary corrective patches do not wait for Z09; broad “Phase Z shipped” /
-  retained-adoption / independent-close claims wait for residual RB-11
-Prepared baseline: arkgate@4.0.0 (docs/releases/4.0.0.md; publish pending)
-Released baseline: npm arkgate@3.9.2 (3.x honesty patch; last 3.x line before 4.x train)
-Released baseline: npm arkgate@3.9.0 prepared (Beautiful Path + P1–P4 residuals; Z09/RB-11 residual open)
-Released baseline: npm arkgate@3.8.3 (field journey: pnpm -w, start pin, compact MCP; Z09/RB-11 residual open)
-Released baseline: npm arkgate@3.8.1 (pure-path fail-closed patch; Z09/RB-11 residual open)
-Released baseline: npm arkgate@3.8.0 (Phase Z corrective minor; Z09/RB-11 residual open) — PR #90
-Released baseline: npm arkgate@3.7.0 (Phase Y close from PR #78)
-Released baseline: npm arkgate@3.6.0 (Phase X close from PR #76, squash 5d368f5)
-Released baseline: npm arkgate@3.5.0 + MCP registry 3.5.0 isLatest (X01 from PR #71; X02+X03 + release train from PR #72)
-Released baseline: npm arkgate@3.4.0; Phase U shipped from PR #69 (slice 1 from #68)
-Released baseline note: MCP registry 3.2.0 published (isLatest) alongside npm/GitHub
-Retained proof: T01–T05 commits, /review autofixes, fixed eval, confidence/release gates, exact-SHA CI/Security
-Released baseline: npm arkgate@3.2.0; Phase W shipped from PR #66 (Phase T from PR #64)
+  Field kit scaffolding: docs/field/ — NOT closed; do not occupy engineering `doing` without cohort
+Closed in 3.8.0: Z01–Z08, Z10; RB-07–RB-10, RB-12
+Product hard line: no false hard write on Cursor/Codex/OpenCode; no plan-B auto-apply
+Not product backlog: god-module / plan-B residual (judgment only)
+Parked: Y09, Y07 (low), Y10 (archive until field demand + ADR), K01 runtime
+Release lanes: ordinary corrective patches do not wait for Z09
+Released baseline: npm arkgate@4.1.0 (field product train + CI PR slim) — confirm vs package.json/npm before claims
+  Prepared next: 4.1.1 (Phase EH honesty + CI/report fixes) — Status: prepared
+  Prior: 4.0.x / 3.9.x / 3.8.x trains as in docs/releases/ and CHANGELOG
 ```

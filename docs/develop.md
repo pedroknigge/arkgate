@@ -14,14 +14,18 @@ npx arkgate start --apply
 npx arkgate-check --doctor
 ```
 
-Make the architecture check a **required** merge status (GitHub/GitLab/etc.):
+Make the architecture check a **required** merge **status context** (GitHub/GitLab/etc.). The CLI
+command is `arkgate-check --strict-merge` / `ark-check --strict-merge` — the hard boundary is
+requiring that job’s status, not merely adding a workflow file:
 
 ```yaml
 - run: npx arkgate-check --root . --config ark.config.json --strict-merge
 # or: uses: pedroknigge/arkgate@<tag-or-SHA>
 ```
 
-`--strict-merge` (or compatibility `--strict`) is the repository-wide hard boundary for every agent host.
+Generated workflows also gate `--fail-on-new-smells --base-ref` so a first push with an all-zero
+`github.event.before` still runs the full merge gate without a broken delta (see
+[ai-gates.md](ai-gates.md#ci-backstop)).
 
 ---
 
@@ -31,9 +35,9 @@ Local write hardness **differs by host**. CI required status is the shared hard 
 
 | Host | Local write | MCP | Merge |
 |------|-------------|-----|-------|
-| Claude · Grok · Antigravity | Hard PreToolUse when installed + trusted | Advisory | Required status |
-| Codex · OpenCode | Best-effort / advisory | Advisory | Required status |
-| Cursor | Advisory only | Advisory | Required status |
+| Claude · Grok · Antigravity | Hard PreToolUse when installed + trusted | Advisory | Required status context |
+| Codex · OpenCode | Best-effort / advisory | Advisory | Required status context |
+| Cursor | Advisory only | Advisory | Required status context |
 
 Full matrix and install commands: [ai-gates.md](ai-gates.md) · canonical table in [README](../README.md#host-enforcement-support).
 
@@ -46,7 +50,13 @@ npx arkgate-check --install-agent-gates --tools opencode
 npx arkgate-check --install-agent-gates --skills-only --force
 ```
 
-Doctor reports what is actually installed and observed (`writePath` / enforcement state). Installed files alone do not imply `hard:true` without runtime evidence where the product requires it.
+Doctor reports what is actually installed and observed (`writePath` / enforcement state). Installed
+files alone do not imply `hard:true` without runtime evidence where the product requires it.
+
+**Evidence split (Phase EH):** soft-write hosts keep `soft-write-host` in evidence without forcing
+global **Not finished** when the contract is ready. With `ARK_DOCTOR_GITHUB=1`, successful CI runs
+can show `runtimeObserved: true` even when branch-protection policy is plan-unavailable
+(`unavailable-plan` on GitHub Free private); `hard: false` until the status is required.
 
 ---
 

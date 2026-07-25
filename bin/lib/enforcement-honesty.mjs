@@ -207,7 +207,8 @@ export function buildWritePathHonesty(activeHost, hardWriteActive = false, extra
     hardWriteSupported: hardCapable,
     hardWriteActive: effectiveHard,
     hardWriteUnverified: hardCapable && !effectiveHard,
-    hardMergeBoundary: 'required-ci-status (arkgate-check --strict-merge)',
+    hardMergeBoundary:
+      'required-github-status-context (CLI: arkgate-check --strict-merge / ark-check --strict-merge)',
     packageInstalled,
     packagePinAbsent: pinAbsentForUser,
     ...(pinCode ? { packagePinCode: pinCode } : {}),
@@ -367,10 +368,15 @@ export function buildProductHonesty(input = {}) {
     });
   }
 
+  // EH05: soft-write-host is a permanent host posture residual — keep in evidence,
+  // do NOT alone force architecture "Not finished". Reclassified out of contract debt.
   if (write?.softWriteHost) {
     reasons.push({
       id: 'soft-write-host',
-      message: write.message || 'Local write is advisory; required CI status is the hard merge boundary.',
+      bucket: 'environment',
+      message:
+        write.message ||
+        'Local write is advisory; hard merge boundary = a required GitHub status context running arkgate-check --strict-merge (alias ark-check --strict-merge).',
     });
   }
 
@@ -399,7 +405,13 @@ export function buildProductHonesty(input = {}) {
     // Informational only when no enforced arkrule plane — does not alone make unfinished.
   }
 
-  const unfinished = reasons.length > 0;
+  // EH05: environment residual deny-list (future reason ids stay architecture debt by default).
+  const ENVIRONMENT_REASON_IDS = new Set(['soft-write-host']);
+
+  const environmentResiduals = reasons.filter((r) => ENVIRONMENT_REASON_IDS.has(r.id));
+  const architectureReasons = reasons.filter((r) => !ENVIRONMENT_REASON_IDS.has(r.id));
+  // unfinished = any non-environment residual (deny-list env, not allowlist architecture)
+  const unfinished = architectureReasons.length > 0;
   const wholeTreeGoverned = wholeTreeGovernedEarly;
   const coverageIncomplete =
     cov?.status === 'empty-scope' ||
@@ -407,31 +419,56 @@ export function buildProductHonesty(input = {}) {
     cov?.greenIsNotEnforcement === true ||
     !wholeTreeGoverned;
 
-  const primary =
-    reasons.find((r) => r.id === 'active-blocking-violations') ||
-    reasons.find((r) => r.id === 'mode-adapt-with-debt') ||
-    reasons.find((r) => r.id === 'mode-suggest-with-debt') ||
-    reasons.find((r) => r.id === 'design-weak') ||
-    reasons.find((r) => r.id === 'design-smells-open-edges') ||
-    reasons.find((r) => r.id === 'coverage-weak-or-empty') ||
-    reasons.find((r) => r.id === 'dirty-freeze') ||
-    reasons.find((r) => r.id === 'package-version-dual-truth') ||
-    reasons.find((r) => r.id === 'package-pin-absent') ||
-    reasons.find((r) => r.id === 'baseline-missing-with-debt') ||
-    reasons.find((r) => r.id === 'residual-pilot') ||
-    reasons[0];
+  const softWriteOnly =
+    !unfinished && environmentResiduals.some((r) => r.id === 'soft-write-host');
+  const hostLabel = (() => {
+    const h = typeof write?.activeHost === 'string' ? write.activeHost.trim().toLowerCase() : '';
+    if (h === 'codex') return 'Codex';
+    if (h === 'cursor') return 'Cursor';
+    if (h === 'opencode') return 'OpenCode';
+    if (h) return h;
+    return 'this host';
+  })();
 
-  const primaryMessage = unfinished
-    ? primary?.message ||
-      'Not finished: residual honesty signals remain (violations, mode, coverage, freeze, design, package pin, or pilots).'
-    : wholeTreeGoverned
-      ? 'No residual honesty blockers on this slice — still not a numeric architecture score; re-doctor after material change.'
-      : 'No residual honesty blockers flagged — green is only as wide as the governed slice.';
+  const primary =
+    architectureReasons.find((r) => r.id === 'active-blocking-violations') ||
+    architectureReasons.find((r) => r.id === 'mode-adapt-with-debt') ||
+    architectureReasons.find((r) => r.id === 'mode-suggest-with-debt') ||
+    architectureReasons.find((r) => r.id === 'design-weak') ||
+    architectureReasons.find((r) => r.id === 'design-smells-open-edges') ||
+    architectureReasons.find((r) => r.id === 'coverage-weak-or-empty') ||
+    architectureReasons.find((r) => r.id === 'dirty-freeze') ||
+    architectureReasons.find((r) => r.id === 'package-version-dual-truth') ||
+    architectureReasons.find((r) => r.id === 'package-pin-absent') ||
+    architectureReasons.find((r) => r.id === 'baseline-missing-with-debt') ||
+    architectureReasons.find((r) => r.id === 'residual-pilot') ||
+    architectureReasons[0] ||
+    environmentResiduals[0];
+
+  let primaryMessage;
+  if (unfinished) {
+    primaryMessage =
+      primary?.message ||
+      'Not finished: residual honesty signals remain (violations, mode, coverage, freeze, design, package pin, or pilots).';
+  } else if (softWriteOnly) {
+    primaryMessage = `${hostLabel} local writes stay advisory/bypassable; architecture contract on this slice is ready. Hard merge boundary is a required GitHub status context running arkgate-check --strict-merge (alias ark-check --strict-merge).`;
+  } else if (wholeTreeGoverned) {
+    primaryMessage =
+      'No residual honesty blockers on this slice — still not a numeric architecture score; re-doctor after material change.';
+  } else {
+    primaryMessage =
+      'No residual honesty blockers flagged — green is only as wide as the governed slice.';
+  }
 
   // P0B-HEADLINE: dual-truth / pin-only unfinished must not claim "not whole-tree"
   // when the governed tree is already 100%.
+  // EH05: soft-write alone → composite readiness headline, never global "Not finished".
   let headline;
-  if (!unfinished) {
+  if (!unfinished && softWriteOnly) {
+    headline = wholeTreeGoverned
+      ? `Architecture contract ready; ${hostLabel} local writes are advisory`
+      : `Contract residual clear; ${hostLabel} local writes are advisory`;
+  } else if (!unfinished) {
     headline = 'Honesty clear on residual signals';
   } else if (coverageIncomplete) {
     headline = 'Not finished / not whole-tree guarantee';
@@ -440,6 +477,7 @@ export function buildProductHonesty(input = {}) {
   }
 
   // Prefer caller next action; dual-truth / pin-absent get install/pin path when empty.
+  // Soft-write-only must not leave a failure headline with null next action (EH05).
   let primaryNextAction = input.primaryNextAction || null;
   if (!primaryNextAction && dualTruth) {
     const ver = input.packageVersionTruth?.cliVersion;
@@ -449,7 +487,19 @@ export function buildProductHonesty(input = {}) {
   } else if (!primaryNextAction && pinAbsent) {
     primaryNextAction =
       'Add arkgate to package.json and install so CI/npx resolve this CLI (PACKAGE_PIN_ABSENT)';
+  } else if (!primaryNextAction && softWriteOnly) {
+    primaryNextAction =
+      'Confirm the GitHub required status context name runs arkgate-check --strict-merge (or ark-check --strict-merge). Soft-write hosts stay advisory at local write; the required status is the hard merge boundary.';
   }
+
+  const contractReadiness = unfinished ? 'not-ready' : wholeTreeGoverned ? 'ready' : 'partial';
+  const localWriteBoundary = write?.softWriteHost
+    ? 'advisory'
+    : write?.hardWriteActive
+      ? 'hard'
+      : write?.hardWriteSupported
+        ? 'unverified'
+        : 'unknown';
 
   return {
     finished: !unfinished && wholeTreeGoverned && !designWeak && activeBlocking === 0,
@@ -462,8 +512,14 @@ export function buildProductHonesty(input = {}) {
       activeBlocking === 0,
     unfinished,
     notAScore: true,
+    // Full evidence including soft-write-host (reclassified, not silenced)
     reasonIds: reasons.map((r) => r.id),
     reasons,
+    architectureReasonIds: architectureReasons.map((r) => r.id),
+    environmentResidualIds: environmentResiduals.map((r) => r.id),
+    environmentResiduals,
+    contractReadiness,
+    localWriteBoundary,
     primaryMessage,
     primaryNextAction,
     headline,

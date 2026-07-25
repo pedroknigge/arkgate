@@ -73,12 +73,32 @@ function generatedMergeArgs(root: string): string[] {
     path.join(root, '.github', 'workflows', 'ark-check.yml'),
     'utf8'
   );
+  // EH04: run: may be a multi-line block; find any line that invokes ark-check with merge flags.
   const command = workflow
     .split('\n')
     .map((line) => line.trim())
-    .find((line) => line.startsWith('run:') && /\bark-check\b/.test(line));
-  expect(command).toBeDefined();
-  const tail = command!.slice(command!.indexOf('ark-check') + 'ark-check'.length).trim();
+    .find(
+      (line) =>
+        /\bark-check\b/.test(line) &&
+        /--strict-merge|--strict(?:\s|$)/.test(line) &&
+        !line.startsWith('#')
+    );
+  expect(command, 'workflow should contain ark-check merge command').toBeDefined();
+  // Prefer the branch without --fail-on-new-smells for fixture (base may be zero SHA).
+  // When both delta and non-delta lines exist, the non-delta is just `${pm.run}` which still
+  // includes --strict-merge via checkArgsForRoot.
+  const preferred =
+    workflow
+      .split('\n')
+      .map((line) => line.trim())
+      .find(
+        (line) =>
+          /\bark-check\b/.test(line) &&
+          /--strict-merge/.test(line) &&
+          !/--fail-on-new-smells/.test(line) &&
+          !line.startsWith('#')
+      ) || command!;
+  const tail = preferred.slice(preferred.indexOf('ark-check') + 'ark-check'.length).trim();
   const args = tail.split(/\s+/).filter(Boolean);
   const baseRef = args.indexOf('--base-ref');
   if (baseRef !== -1) args.splice(baseRef + 1, args.length - baseRef - 1, 'HEAD');

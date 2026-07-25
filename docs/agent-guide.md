@@ -40,9 +40,11 @@ npx ark-check --install-agent-gates --skills-only --force
 
 **Write-path honesty:** Claude/Grok/Antigravity can hard-block listed PreToolUse ops when
 installed and trusted. Cursor/Codex/OpenCode remain **advisory at write**. For every host, the
-repository-wide hard boundary is a **required** CI status (`arkgate-check --strict-merge`) —
-never claim Cursor/Codex/OpenCode hard write. See [ai-gates.md](ai-gates.md) and the README host
-matrix.
+repository-wide hard boundary is a **required GitHub status context** that runs
+`arkgate-check --strict-merge` (alias `ark-check --strict-merge`) — the CLI name is not the
+status context name. Never claim Cursor/Codex/OpenCode hard write. Soft-write alone does not mean
+the project is unfinished; doctor keeps it as an environment residual. See [ai-gates.md](ai-gates.md)
+and the README host matrix.
 
 ## Architecture playbook and `ark-check --recommend`
 

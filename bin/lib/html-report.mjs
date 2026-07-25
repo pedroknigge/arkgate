@@ -21,6 +21,9 @@ import {
 } from './html-report-depth.mjs';
 import { FIX_HINTS } from './violations.mjs';
 import { capabilityBadgesFor, renderAdvisorySections } from './html-report-advisories.mjs';
+import { arkGitignoreAppendDecision } from './ark-gitignore.mjs';
+
+export { arkGitignoreAppendDecision, gitignoreCoversArkState, gitignoreHasArkNegationException } from './ark-gitignore.mjs';
 
 export function detectEnforcement(root) {
   const has = (rel) => fs.existsSync(path.join(root, rel));
@@ -336,20 +339,16 @@ export function archiveReportSnapshots(root, { html, snapshot, resetOrigin = fal
     }
   }
 
-  // Ensure .ark/ is gitignored when a .gitignore exists.
+  // EH03: cover .ark reports in .gitignore without defeating ! exceptions.
   const gitignore = path.join(root, '.gitignore');
   if (fs.existsSync(gitignore)) {
     const text = fs.readFileSync(gitignore, 'utf8');
-    const hasArk =
-      text.split('\n').some((line) => {
-        const t = line.trim();
-        return t === '.ark/' || t === '.ark' || t === '/.ark/' || t === '**/.ark/';
-      });
-    if (!hasArk) {
+    const decision = arkGitignoreAppendDecision(text);
+    if (decision.append && decision.rule) {
       const suffix = text.endsWith('\n') || text.length === 0 ? '' : '\n';
       fs.writeFileSync(
         gitignore,
-        `${text}${suffix}\n# Ark generated reports / local state\n.ark/\n`
+        `${text}${suffix}\n# Ark generated reports / local state\n${decision.rule}\n`
       );
     }
   }
