@@ -97,8 +97,8 @@
       "targets": [
         {
           "file": "bin/lib/managed-upgrade.mjs",
-          "startLine": 233,
-          "endLine": 255
+          "startLine": 246,
+          "endLine": 280
         }
       ]
     },

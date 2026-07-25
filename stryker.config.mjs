@@ -18,7 +18,8 @@ const config = {
     'bin/lib/write-path-detect.mjs:77-96',
     'bin/lib/analysis-completeness.mjs:9-27',
     'bin/lib/resolved-candidate-facts.mjs:684-728',
-    'bin/lib/managed-upgrade.mjs:233-255',
+    // S4 force-preserve content identity (isManagedAssetCustomizedOnDisk).
+    'bin/lib/managed-upgrade.mjs:246-280',
     'bin/lib/resident-hook.mjs:115-162',
     'bin/lib/ast-scan.mjs:11-42',
     'bin/lib/ast-scan.mjs:301-322',
@@ -50,6 +51,8 @@ const config = {
     'tests/unit/static-check/z02Completeness.test.ts',
     'tests/unit/analysis/z04ResolvedFactsResolver.test.ts',
     'tests/unit/static-check/z06ManagedUpgrade.test.ts',
+    'tests/unit/static-check/fieldGapS4.test.ts',
+    'tests/unit/static-check/writePathCapabilitiesCoverage.test.ts',
     'tests/unit/mcp/residentHook.test.ts',
     'tests/unit/analysis/semanticAnalysis.test.ts',
     'tests/property/baselineKey.property.test.ts',
