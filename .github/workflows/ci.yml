@@ -158,8 +158,16 @@ jobs:
         run: >-
           npx vitest run
           tests/unit/mcp/projectIdentityPortability.test.ts
+          tests/unit/static-check/importResolvePortability.test.ts
           tests/unit/static-check/multiRepoSkills.test.ts
           tests/unit/static-check/workspaceIdentityActivation.test.ts
+      - name: Resident and import alias parity
+        run: >-
+          npx vitest run
+          tests/unit/mcp/residentHook.test.ts
+          tests/unit/analysis/z04ResolvedFactsResolver.test.ts
+          --testNamePattern
+          "keeps endpoint identity stable across symlink and junction root aliases|canonicalizes internal symlink aliases independently of include order"
 
   onboarding-matrix:
     name: Onboarding ${{ matrix.fixture }}

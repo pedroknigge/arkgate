@@ -54,6 +54,8 @@ non-authoritative until bound. Codex remains advisory at write time. **Status: p
   identities canonicalize root, config, manifest, tsconfig, launcher, and missing-tail import
   paths. macOS `/var` → `/private/var` aliases and Windows junctions therefore reach the same
   resident endpoint without turning in-project writes into external paths or losing import edges.
+  Windows cross-drive import targets are rejected as external even though `path.relative()`
+  returns an absolute drive-qualified path for them.
 - **ArkRules inventory noise:** actual governed layer, generated/test/fixture context, technical
   constants, and error-constructor metadata suppress false business-rule pilots while preserving
   eligible Domain/controller candidates.

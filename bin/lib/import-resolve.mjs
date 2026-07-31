@@ -71,8 +71,9 @@ export function resolveSpecifierToRel(specifier, fromFilePath, root, tsAliases) 
       path.resolve(tsAliases.baseUrl, `${alias.to}${specifier.slice(alias.from.length)}`)
     );
   }
-  const rel = path.relative(canonicalRoot, abs).split(path.sep).join('/');
-  return rel.startsWith('..') ? undefined : rel;
+  const relative = path.relative(canonicalRoot, abs);
+  if (path.isAbsolute(relative) || relative.startsWith('..')) return undefined;
+  return relative.split(path.sep).join('/');
 }
 
 function filePathToRel(filePath, root) {
@@ -80,11 +81,9 @@ function filePathToRel(filePath, root) {
   const abs = canonicalPathWithMissingTail(
     path.isAbsolute(filePath) ? filePath : path.resolve(root, filePath)
   );
-  const rel = path
-    .relative(canonicalPathWithMissingTail(root), abs)
-    .split(path.sep)
-    .join('/');
-  return rel.startsWith('..') ? undefined : rel;
+  const relative = path.relative(canonicalPathWithMissingTail(root), abs);
+  if (path.isAbsolute(relative) || relative.startsWith('..')) return undefined;
+  return relative.split(path.sep).join('/');
 }
 
 function classifyProbe(root, rel, layers) {

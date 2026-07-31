@@ -318,7 +318,11 @@ describe('Z04 shipped resolved candidate facts resolver', () => {
     fs.mkdirSync(path.join(root, 'src'), { recursive: true });
     fs.mkdirSync(path.join(root, 'shared'), { recursive: true });
     fs.writeFileSync(path.join(root, 'shared/value.ts'), 'export const value = 1;\n');
-    fs.symlinkSync(path.join(root, 'shared'), path.join(root, 'src/shared'));
+    fs.symlinkSync(
+      path.join(root, 'shared'),
+      path.join(root, 'src/shared'),
+      process.platform === 'win32' ? 'junction' : 'dir'
+    );
     fs.writeFileSync(
       path.join(root, 'src/entry.ts'),
       "import { value } from './shared/value';\nexport { value };\n"
