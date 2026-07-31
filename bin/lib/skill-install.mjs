@@ -224,10 +224,12 @@ export function arkPackageVersion() {
 }
 
 // Insert `arkVersion: <v>` into a skill's YAML frontmatter (before its closing
-// `---`). No frontmatter → returned unchanged. Idempotent for a given version.
+// `---`). No frontmatter → returned unchanged. Idempotent for a given version
+// and preserves the checked-out line ending on Windows.
 export function stampSkill(content, version) {
   if (!version) return content;
-  const lines = content.split('\n');
+  const newline = content.includes('\r\n') ? '\r\n' : '\n';
+  const lines = content.split(/\r?\n/);
   if (lines[0] !== '---') return content;
   const closeIdx = lines.indexOf('---', 1);
   if (closeIdx === -1) return content;
@@ -239,7 +241,7 @@ export function stampSkill(content, version) {
   } else {
     lines.splice(closeIdx, 0, `arkVersion: ${version}`);
   }
-  return lines.join('\n');
+  return lines.join(newline);
 }
 
 // Read the `arkVersion:` stamp from an installed skill file. Returns null when

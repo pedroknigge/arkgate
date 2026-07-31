@@ -83,6 +83,13 @@ function installCatalog(
 }
 
 describe('multi-repo skill installation', () => {
+  it('stamps CRLF skill frontmatter without changing its line ending', () => {
+    const crlfSkill = '---\r\nname: ark-test\r\n---\r\nbody\r\n';
+    expect(stampSkill(crlfSkill, '4.2.0')).toBe(
+      '---\r\nname: ark-test\r\narkVersion: 4.2.0\r\n---\r\nbody\r\n'
+    );
+  });
+
   it('uses skill body identity and protects the shared home from downgrade', () => {
     const template = '---\nname: ark-test\n---\nbody\n';
     const currentBodyOldStamp = stampSkill(template, '1.0.0');

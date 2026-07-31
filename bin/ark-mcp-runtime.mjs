@@ -177,8 +177,15 @@ function sha256Hex(value) {
   return createHash('sha256').update(value, 'utf8').digest('hex');
 }
 
+function normalizeWindowsDriveLetter(candidate) {
+  if (process.platform !== 'win32' || !/^[A-Za-z]:[\\/]/.test(candidate)) {
+    return candidate;
+  }
+  return `${candidate[0].toUpperCase()}${candidate.slice(1)}`;
+}
+
 function canonicalPathIncludingMissing(candidate) {
-  const absolute = path.resolve(candidate);
+  const absolute = normalizeWindowsDriveLetter(path.resolve(candidate));
   let existing = absolute;
   const missing = [];
   while (!fs.existsSync(existing)) {
@@ -198,7 +205,7 @@ function canonicalPathIncludingMissing(candidate) {
     missing.unshift(path.basename(existing));
     existing = parent;
   }
-  return path.join(fs.realpathSync(existing), ...missing);
+  return normalizeWindowsDriveLetter(path.join(fs.realpathSync(existing), ...missing));
 }
 
 function pathIsWithin(root, candidate) {
@@ -1333,7 +1340,7 @@ export async function runArkMcp({ hookInput } = {}) {
   const runtimeId = randomUUID();
   const args = parseArgs(process.argv);
   const requestedRoot = args.root;
-  const resolvedRoot = fs.realpathSync(requestedRoot);
+  const resolvedRoot = canonicalPathIncludingMissing(requestedRoot);
   // MCP identity and file containment use the canonical workspace. Hook payloads,
   // however, carry paths in the caller's spelling (macOS commonly aliases /var to
   // /private/var); keep that spelling so same-workspace writes are not mistaken for
