@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -254,6 +255,74 @@ describe('Z07 resident hook transport', () => {
     expect(first.digest).toMatch(/^sha256:[a-f0-9]{64}$/);
     expect(changed.digest).not.toBe(first.digest);
     expect(JSON.stringify(first)).not.toContain('token');
+  });
+
+  it('keeps the environment identity serialization stable across every file state', () => {
+    const file = path.join(process.cwd(), 'arkgate-mutation-file');
+    const directory = path.join(process.cwd(), 'arkgate-mutation-directory');
+    const linkedFile = path.join(process.cwd(), 'arkgate-mutation-linked-file');
+    const linkedOther = path.join(process.cwd(), 'arkgate-mutation-linked-other');
+    const missing = path.join(process.cwd(), 'arkgate-mutation-missing');
+    const paths = [path.relative(process.cwd(), file), file, directory, linkedFile, linkedOther, missing];
+    const tokens = ['zeta', 7 as unknown as string, 'alpha', 'alpha'];
+    const states = new Map([
+      [file, 'file'],
+      [directory, 'directory'],
+      [linkedFile, 'linked-file'],
+      [linkedOther, 'linked-other'],
+      [missing, 'missing'],
+    ]);
+
+    const stat = (kind: string) => ({
+      isSymbolicLink: () => kind.startsWith('linked-'),
+      isFile: () => kind === 'file',
+    }) as unknown as fs.Stats;
+    vi.spyOn(fs, 'lstatSync').mockImplementation(((input: fs.PathLike) => {
+      const kind = states.get(path.resolve(String(input)));
+      if (!kind || kind === 'missing') throw new Error('ENOENT');
+      return stat(kind);
+    }) as typeof fs.lstatSync);
+    vi.spyOn(fs, 'statSync').mockImplementation(((input: fs.PathLike) => {
+      const resolved = path.resolve(String(input));
+      return stat(resolved === linkedFile ? 'file' : 'other');
+    }) as typeof fs.statSync);
+    vi.spyOn(fs, 'readFileSync').mockImplementation(((input: fs.PathOrFileDescriptor) =>
+      Buffer.from(`bytes:${String(input)}`)) as typeof fs.readFileSync);
+    vi.spyOn(fs, 'readlinkSync').mockImplementation(((input: fs.PathLike) =>
+      input.toString().endsWith('linked-file') ? '../target-file' : '../target-other') as typeof fs.readlinkSync);
+    vi.spyOn(fs, 'realpathSync').mockImplementation(((input: fs.PathLike) =>
+      input.toString().endsWith('linked-file') ? file : '/arkgate/target-other') as typeof fs.realpathSync);
+
+    const expected = createHash('sha256');
+    for (const token of [...tokens].map(String).sort()) expected.update('token\0').update(token).update('\0');
+    for (const resolved of [...new Set(paths.map((entry) => path.resolve(entry)))].sort()) {
+      expected.update('path\0').update(resolved).update('\0');
+      switch (states.get(resolved)) {
+        case 'file':
+          expected.update('file\0').update(Buffer.from(`bytes:${resolved}`));
+          break;
+        case 'directory':
+          expected.update('other\0');
+          break;
+        case 'linked-file':
+          expected.update('link\0').update('../target-file').update('\0');
+          expected.update(file).update('\0');
+          expected.update('target-file\0').update(Buffer.from(`bytes:${resolved}`));
+          break;
+        case 'linked-other':
+          expected.update('link\0').update('../target-other').update('\0');
+          expected.update('/arkgate/target-other').update('\0');
+          expected.update('target-other\0');
+          break;
+        default:
+          expected.update('missing\0');
+      }
+      expected.update('\0');
+    }
+    const digest = `sha256:${expected.digest('hex')}`;
+
+    expect(residentEnvironmentIdentity(paths, tokens)).toBe(digest);
+    expect(residentEnvironmentIdentity([...paths].reverse(), [...tokens].reverse())).toBe(digest);
   });
 
   it('invalidates same-size edits, missing probes, directory topology, and symlink targets', () => {
