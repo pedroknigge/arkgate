@@ -10,6 +10,35 @@ import {
   loadArkRulesContract,
 } from './arkrules-contract.mjs';
 
+function normalizeProjectRelativePath(value) {
+  const normalized = value.replace(/\\/g, '/');
+  if (
+    !normalized ||
+    normalized.startsWith('/') ||
+    /^[A-Za-z]:/.test(normalized) ||
+    normalized.includes('\0')
+  ) {
+    return undefined;
+  }
+  const segments = [];
+  for (const segment of normalized.split('/')) {
+    if (!segment || segment === '.') continue;
+    if (segment === '..') return undefined;
+    segments.push(segment);
+  }
+  return segments.length > 0 ? segments.join('/') : undefined;
+}
+
+function isWithinRoot(root, candidate) {
+  const relative = path.relative(root, candidate);
+  return (
+    relative === '' ||
+    (!relative.startsWith(`..${path.sep}`) &&
+      relative !== '..' &&
+      !path.isAbsolute(relative))
+  );
+}
+
 /**
  * @param {string} root
  * @param {Record<string, unknown>} config loaded ark.config.json object
@@ -29,6 +58,7 @@ export function loadEffectiveArkRulesFromDisk(root, config, opts = {}) {
   const warnings = [];
   const parts = [];
   const referenced = new Set();
+  const canonicalRoot = fs.realpathSync(root);
 
   for (const layer of Object.keys(refs).sort()) {
     const relRaw = refs[layer];
@@ -37,10 +67,12 @@ export function loadEffectiveArkRulesFromDisk(root, config, opts = {}) {
       errors.push({ path: pathKey, message: 'must be a non-empty relative path string' });
       continue;
     }
-    if (relRaw.startsWith('/') || /^[A-Za-z]:[\\/]/.test(relRaw)) {
+    const rel = normalizeProjectRelativePath(relRaw);
+    if (!rel) {
       errors.push({
         path: pathKey,
-        message: 'must be a project-relative path (absolute paths are not allowed)',
+        message:
+          'must be a project-relative path without absolute roots or parent-directory traversal',
       });
       continue;
     }
@@ -52,17 +84,42 @@ export function loadEffectiveArkRulesFromDisk(root, config, opts = {}) {
       continue;
     }
 
-    const rel = relRaw.replace(/\\/g, '/').replace(/^\.\//, '');
     referenced.add(rel);
-    const absolute = path.resolve(root, rel);
-    opts.observeInput?.(absolute, 'arkrules');
-    if (!fs.existsSync(absolute)) {
+    const lexicalTarget = path.resolve(canonicalRoot, ...rel.split('/'));
+    if (!isWithinRoot(canonicalRoot, lexicalTarget)) {
+      errors.push({
+        path: pathKey,
+        message: `referenced ArkRules path ${JSON.stringify(rel)} resolves outside the project root`,
+      });
+      continue;
+    }
+    if (!fs.existsSync(lexicalTarget)) {
       errors.push({
         path: pathKey,
         message: `referenced ArkRules file ${JSON.stringify(rel)} is missing`,
       });
       continue;
     }
+    let absolute;
+    try {
+      absolute = fs.realpathSync(lexicalTarget);
+    } catch (error) {
+      errors.push({
+        path: pathKey,
+        message: `referenced ArkRules file ${JSON.stringify(rel)} could not be resolved: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      });
+      continue;
+    }
+    if (!isWithinRoot(canonicalRoot, absolute)) {
+      errors.push({
+        path: pathKey,
+        message: `referenced ArkRules path ${JSON.stringify(rel)} resolves outside the project root`,
+      });
+      continue;
+    }
+    opts.observeInput?.(absolute, 'arkrules');
     let content;
     try {
       content = fs.readFileSync(absolute, 'utf8');
@@ -90,9 +147,16 @@ export function loadEffectiveArkRulesFromDisk(root, config, opts = {}) {
   }
 
   // Drift: unreferenced files under arkrules/
-  const arkrulesDir = path.join(root, 'arkrules');
-  if (fs.existsSync(arkrulesDir) && fs.statSync(arkrulesDir).isDirectory()) {
-    for (const name of fs.readdirSync(arkrulesDir).sort()) {
+  const arkrulesDir = path.join(canonicalRoot, 'arkrules');
+  const resolvedArkRulesDir = fs.existsSync(arkrulesDir)
+    ? fs.realpathSync(arkrulesDir)
+    : undefined;
+  if (
+    resolvedArkRulesDir &&
+    isWithinRoot(canonicalRoot, resolvedArkRulesDir) &&
+    fs.statSync(resolvedArkRulesDir).isDirectory()
+  ) {
+    for (const name of fs.readdirSync(resolvedArkRulesDir).sort()) {
       if (!name.endsWith('.json')) continue;
       const rel = `arkrules/${name}`;
       if (!referenced.has(rel)) {

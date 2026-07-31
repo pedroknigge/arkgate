@@ -5,10 +5,16 @@
 import { describe, it, expect } from 'vitest';
 import {
   classifyRemediation,
+  deterministicNextAction,
   enrichViolationWithFixClass,
   MECHANICAL_SAFE_KINDS,
   REMEDIATION_CLASSES,
 } from '../../../src/domain/remediation';
+import {
+  classifyRemediation as classifyCliRemediation,
+  deterministicNextAction as deterministicCliNextAction,
+  enrichViolationWithFixClass as enrichCliViolationWithFixClass,
+} from '../../../bin/lib/remediation.mjs';
 
 describe('classifyRemediation (src/domain — pure, no CLI spawn)', () => {
   it('exposes the three remediation classes', () => {
@@ -137,5 +143,34 @@ describe('enrichViolationWithFixClass (src/domain — pure, no CLI spawn)', () =
     expect(enrichViolationWithFixClass({ ruleId: 'SOMETHING_ELSE' }).fixClass).toBe(
       'review-contract'
     );
+  });
+
+  it('keeps the generated CLI remediation artifact behaviorally aligned', () => {
+    const cases = [
+      {
+        ruleId: 'LAYER_IMPORT_VIOLATION',
+        typeOnly: true,
+        file: 'src/domain/order.ts',
+      },
+      {
+        ruleId: 'LAYER_IMPORT_VIOLATION',
+        fromLayer: 'DomainModel',
+        toLayer: 'PersistenceAdapters',
+      },
+      { ruleId: 'FORBIDDEN_GLOBAL', target: 'fetch' },
+      { ruleId: 'CAPABILITY_VIOLATION', target: 'filesystem' },
+      { ruleId: 'CIRCULAR_DEPENDENCY' },
+      { ruleId: 'RAW_EVENT_PUBLISH' },
+      { ruleId: 'PUBLISH_MISSING_SOURCE' },
+      { ruleId: 'UNKNOWN_RULE' },
+    ];
+
+    for (const violation of cases) {
+      expect(classifyCliRemediation(violation)).toEqual(classifyRemediation(violation));
+      expect(deterministicCliNextAction(violation)).toBe(deterministicNextAction(violation));
+      expect(enrichCliViolationWithFixClass(violation)).toEqual(
+        enrichViolationWithFixClass(violation)
+      );
+    }
   });
 });

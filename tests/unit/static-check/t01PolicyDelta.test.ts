@@ -5,6 +5,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { githubWorkflow } from '../../../bin/lib/ci-and-commands.mjs';
 import { normalizePolicyBaseRef } from '../../../bin/lib/policy-delta-io.mjs';
+import { writeSemanticGateArtifacts } from '../../helpers/semanticGateArtifacts';
 
 const ARK_CHECK = path.resolve('bin/ark-check.mjs');
 const roots: string[] = [];
@@ -49,13 +50,6 @@ function setupRoot() {
   roots.push(root);
   fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
   fs.writeFileSync(path.join(root, 'src/domain/order.ts'), 'export const order = 1;\n');
-  fs.writeFileSync(path.join(root, 'AGENTS.md'), '# Ark\n');
-  writeJson(root, '.mcp.json', { mcpServers: { ark: {} } });
-  fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
-  fs.writeFileSync(
-    path.join(root, '.github/workflows/ark-check.yml'),
-    'name: Ark\njobs:\n  check:\n    steps:\n      - run: npx ark-check --strict-merge\n'
-  );
   const base = {
     include: ['src'],
     layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
@@ -63,6 +57,7 @@ function setupRoot() {
     dynamicImportAllowlist: [],
   };
   writeJson(root, 'ark.config.json', base);
+  writeSemanticGateArtifacts(root);
   git(root, ['init', '-b', 'main']);
   git(root, ['add', '.']);
   git(root, ['commit', '-m', 'base']);
@@ -182,18 +177,12 @@ describe('T01 strict policy transition guard', () => {
     roots.push(root);
     fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
     fs.writeFileSync(path.join(root, 'src/domain/order.ts'), 'export const order = 1;\n');
-    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# Ark\n');
-    writeJson(root, '.mcp.json', { mcpServers: { ark: {} } });
-    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
-    fs.writeFileSync(
-      path.join(root, '.github/workflows/ark-check.yml'),
-      'name: Ark\njobs:\n  check:\n    steps:\n      - run: npx ark-check --strict-merge\n'
-    );
     writeJson(root, 'ark.config.json', {
       include: ['src'],
       layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
       rules: [],
     });
+    writeSemanticGateArtifacts(root);
 
     const result = run(root, ['--strict-merge'], { GITHUB_BASE_REF: 'main' });
 

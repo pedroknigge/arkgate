@@ -19,6 +19,8 @@ export type RulesInventoryCandidate = {
   line: number;
   message: string;
   confidence: RulesInventoryConfidence;
+  /** Governed layer supplied by the caller, when available. */
+  governedLayer?: string;
   suggestedArkRule?: {
     layer: string;
     structureId?: string;
@@ -36,8 +38,25 @@ export type RulesInventoryResult = {
   notAScore: true;
 };
 
+export type RulesInventoryLayerContext = {
+  name: string;
+  intentPrefixes?: readonly string[];
+};
+
 export type BuildRulesInventoryInput = {
   fileContents: Readonly<Record<string, string>>;
+  /**
+   * Actual governed layer by repository-relative file path.
+   *
+   * When a file has layer evidence, it replaces filename heuristics for deciding
+   * whether the file is a Domain module or a controller-like boundary.
+   */
+  fileLayers?: Readonly<Record<string, string>>;
+  /**
+   * Configured layer intent ownership. This keeps custom names such as `core`
+   * semantically Domain when they own `Domain.` without changing fileLayers.
+   */
+  layerContexts?: readonly RulesInventoryLayerContext[];
   /** Invariant / structure ids already under contract (to compute underContract count). */
   contractedRuleIds?: readonly string[];
   /** Baseline keys currently frozen for arkrule residual. */
@@ -48,14 +67,94 @@ function lineOf(content: string, index: number): number {
   return content.slice(0, index).split('\n').length;
 }
 
+function normalizeInventoryPath(file: string): string {
+  return file.replace(/\\/g, '/').replace(/^\.\//, '');
+}
+
+function ownsIntent(
+  intentPrefixes: readonly string[],
+  intentRoots: readonly string[]
+): boolean {
+  return intentPrefixes.some((prefix) => {
+    const normalized = prefix.trim().replace(/\.+$/, '');
+    return intentRoots.some(
+      (root) => normalized === root || normalized.startsWith(`${root}.`)
+    );
+  });
+}
+
+function isDomainLayer(layer: string, intentPrefixes: readonly string[] = []): boolean {
+  return (
+    /domain|entity|aggregate|model/i.test(layer) ||
+    ownsIntent(intentPrefixes, ['Domain'])
+  );
+}
+
+function isControllerEligibleLayer(
+  layer: string,
+  intentPrefixes: readonly string[] = []
+): boolean {
+  return (
+    /application|orchestration|presentation|adapter|framework|interface|delivery|transport|inbound|controller/i.test(
+      layer
+    ) ||
+    ownsIntent(intentPrefixes, [
+      'Application',
+      'Orchestration',
+      'Presentation',
+      'Adapter',
+      'Interface',
+      'Delivery',
+      'Transport',
+    ])
+  );
+}
+
+function isNonPilotSurface(file: string): boolean {
+  return (
+    /(?:^|\/)(?:tests?|__tests__|fixtures?|testdata|mocks?|stubs?|examples?|samples?|seeds?|seeders?|migrations?|excluded|exclusions?)(?:\/|$)/i.test(
+      file
+    ) ||
+    /(?:^|\/)[^/]*\.(?:test|spec|fixture|mock|stub|seed|seeder)\.[^/]+$/i.test(file) ||
+    /(?:^|\/)(?:seed|seeder|fixture|mock|stub)\.[^/]+$/i.test(file)
+  );
+}
+
 export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInventoryResult {
   const candidates: RulesInventoryCandidate[] = [];
   let seq = 0;
+  const fileLayers = new Map(
+    Object.entries(input.fileLayers ?? {}).map(([file, layer]) => [
+      normalizeInventoryPath(file),
+      layer,
+    ])
+  );
+  const layerIntentPrefixes = new Map(
+    (input.layerContexts ?? []).map((layer) => [
+      layer.name,
+      layer.intentPrefixes ?? [],
+    ])
+  );
+  const domainLayer =
+    (input.layerContexts ?? []).find((layer) =>
+      isDomainLayer(layer.name, layer.intentPrefixes)
+    )?.name ?? 'DomainModel';
 
   for (const [file, content] of Object.entries(input.fileContents).sort(([a], [b]) =>
     a.localeCompare(b)
   )) {
-    const posix = file.replace(/\\/g, '/');
+    const posix = normalizeInventoryPath(file);
+    // Test data, fixtures, seeds, migrations, and explicit exclusions may retain
+    // representative smells, but are not production extraction pilots.
+    if (isNonPilotSurface(posix)) continue;
+    // Generated mirrors are evidence for their canonical source, not a second
+    // extraction candidate.
+    if (/GENERATED FILE\s+[—-]\s+do not edit by hand/i.test(content.slice(0, 320))) continue;
+    const hasGovernedLayer = fileLayers.has(posix);
+    const governedLayer = fileLayers.get(posix);
+    const governedIntentPrefixes = governedLayer
+      ? layerIntentPrefixes.get(governedLayer) ?? []
+      : [];
     // P2-N — clear UI bags only (components/theme/styles). Do NOT blanket-skip all
     // app/pages (server actions / route handlers live there and stay inventoriable).
     const isUiChrome =
@@ -67,7 +166,7 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
     const isApiRoute = /(?:^|\/)(?:app|pages)(?:\/[^/]+)*\/api(?:\/|$)/i.test(posix);
     const isServerAction =
       /(?:^|\/)actions?(?:\/|\.|$)/i.test(posix) || /['"]use server['"]/.test(content);
-    const isController =
+    const controllerShape =
       /controller|handler|resolver/i.test(file) ||
       isApiRoute ||
       isServerAction ||
@@ -75,7 +174,19 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
       /@(Controller|Get|Post|Put|Delete|Patch)\b/.test(content) ||
       /\bexport\s+(?:async\s+)?function\s+(?:GET|POST|PUT|DELETE|PATCH)\b/.test(content) ||
       /\bexport\s+const\s+(?:GET|POST|PUT|DELETE|PATCH)\s*=/.test(content);
-    const isDomain = /domain|entity|aggregate|model/i.test(file);
+    const isController = hasGovernedLayer
+      ? Boolean(
+          governedLayer &&
+            isControllerEligibleLayer(governedLayer, governedIntentPrefixes) &&
+            controllerShape
+        )
+      : controllerShape;
+    const isDomain = hasGovernedLayer
+      ? Boolean(
+          governedLayer && isDomainLayer(governedLayer, governedIntentPrefixes)
+        )
+      : /domain|entity|aggregate|model/i.test(file);
+    const magicConstantEligible = !hasGovernedLayer || isDomain || isController;
 
     // validation-in-controller (API/Nest/server-action handlers — not pure UI chrome)
     if (isController && !isUiChrome) {
@@ -90,8 +201,9 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
           line: lineOf(content, m.index),
           message: 'Business validation appears in a controller/handler — extract an invariant or Domain rule.',
           confidence: 'direct-evidence',
+          governedLayer,
           suggestedArkRule: {
-            layer: 'DomainModel',
+            layer: domainLayer,
             invariantId: `INV-EXTRACT-${seq}`,
             sensor: 'invariant-coverage',
           },
@@ -123,10 +235,25 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
         name
       ) ||
       // Known I/O bag prefixes that are never domain seeds in field clones
-      /^(?:FAVORITES_STORAGE|LISTINGS_CACHE|DOCS_PATH|METRICS_INTERVAL)/i.test(name);
+      /^(?:FAVORITES_STORAGE|LISTINGS_CACHE|DOCS_PATH|METRICS_INTERVAL)/i.test(name) ||
+      // Development identities and PostgreSQL type OIDs are technical wiring, not
+      // business literals. Keep this narrow so Domain limits/status seeds still surface.
+      /^(?:DEV|DEMO|SEED|FIXTURE)_[A-Z0-9_]+$/i.test(name) ||
+      /^(?:PG|POSTGRES|OID)_[A-Z0-9_]+$/i.test(name) ||
+      /_(?:OID|OIDS)$/i.test(name) ||
+      /^(?:INT2|INT4|INT8|FLOAT4|FLOAT8|NUMERIC|DATE|TIME|TIMESTAMP|TIMESTAMPTZ|JSON|JSONB|UUID)OID$/i.test(
+        name
+      ) ||
+      /(?:^|_)(?:SCHEMA|PROTOCOL|RESOLVER|FORMAT)_(?:URL|URI|VERSION|ID|IDENTITY)$/i.test(
+        name
+      );
 
     while ((magic = magicRe.exec(content)) !== null) {
       const name = magic[2]!;
+      // With governed layer evidence, generic Tooling/Kernel constants are not
+      // business-rule candidates. Controller-shaped boundaries stay eligible
+      // because business policy can leak into them.
+      if (!magicConstantEligible) continue;
       if (isInfraMagicName(name)) continue;
       // P2-N: skip remaining ALL_CAPS noise only on clear UI chrome (not all of app/).
       if (isUiChrome && !isDomain) continue;
@@ -145,7 +272,8 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
         line: lineOf(content, magic.index),
         message: `Magic business constant ${name} may belong in a Domain policy or invariant catalog.`,
         confidence: 'heuristic',
-        suggestedArkRule: { layer: 'DomainModel', invariantId: `INV-${name}` },
+        governedLayer,
+        suggestedArkRule: { layer: domainLayer, invariantId: `INV-${name}` },
         neverMechanicalSafe: true,
       });
     }
@@ -167,8 +295,9 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
             line: lineOf(content, c.index),
             message: `Class ${c[1]} looks anemic (data-heavy, few behaviors).`,
             confidence: 'heuristic',
+            governedLayer,
             suggestedArkRule: {
-              layer: 'DomainModel',
+              layer: domainLayer,
               structureId: 'no-anemic-model',
               sensor: 'no-anemic-model',
             },
@@ -191,6 +320,18 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
         const mutRe = /this\.\w+\s*=/g;
         let mut: RegExpExecArray | null;
         while ((mut = mutRe.exec(content)) !== null) {
+          const classStart = content.lastIndexOf('class ', mut.index);
+          const classHeaderEnd =
+            classStart >= 0 ? content.indexOf('{', classStart) : -1;
+          const classHeader =
+            classStart >= 0 && classHeaderEnd >= classStart && classHeaderEnd < mut.index
+              ? content.slice(classStart, classHeaderEnd)
+              : '';
+          // Error metadata assignment is constructor wiring, not aggregate
+          // mutation. Keep the exclusion local to the containing class header.
+          if (/\bextends\s+(?:Error|[A-Za-z_$][A-Za-z0-9_$]*Error)\b/.test(classHeader)) {
+            continue;
+          }
           const window = content.slice(Math.max(0, mut.index - 200), mut.index + 200);
           if (!/\b(ensureInvariants|assertInvariants|validate|publish|emit)\b/.test(window)) {
             seq += 1;
@@ -201,8 +342,9 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
               line: lineOf(content, mut.index),
               message: 'Domain field mutation without nearby guard/publish call.',
               confidence: 'heuristic',
+              governedLayer,
               suggestedArkRule: {
-                layer: 'DomainModel',
+                layer: domainLayer,
                 structureId: 'events-on-mutation',
                 sensor: 'domain-event-on-mutation',
               },
@@ -216,6 +358,15 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
   }
 
   const contracted = new Set(input.contractedRuleIds ?? []);
+  candidates.sort(
+    (a, b) =>
+      Number(b.confidence === 'direct-evidence') -
+        Number(a.confidence === 'direct-evidence') ||
+      a.file.localeCompare(b.file) ||
+      a.line - b.line ||
+      a.kind.localeCompare(b.kind) ||
+      a.id.localeCompare(b.id)
+  );
   const underContract = candidates.filter(
     (c) =>
       (c.suggestedArkRule?.invariantId && contracted.has(c.suggestedArkRule.invariantId)) ||

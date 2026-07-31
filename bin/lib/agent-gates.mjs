@@ -103,6 +103,7 @@ export {
   assessCodexSkillParity,
   assessSkillCatalogParity,
   detectSkillGaps,
+  skillGapsForActiveHost,
   agentsMdSkillRefs,
   verifyHostSkillCatalog,
   printSkillAndCodexGapHints,

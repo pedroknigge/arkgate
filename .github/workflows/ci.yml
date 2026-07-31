@@ -136,6 +136,39 @@ jobs:
       - run: npm run build
       - run: npm run test:adapter-parity
 
+  workspace-portability:
+    name: Workspace portability / ${{ matrix.os }}
+    needs: ci-profile
+    if: needs.ci-profile.outputs.docs_only != 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Project identity, shared skills, and activation
+        run: >-
+          npx vitest run
+          tests/unit/mcp/projectIdentityPortability.test.ts
+          tests/unit/static-check/importResolvePortability.test.ts
+          tests/unit/static-check/multiRepoSkills.test.ts
+          tests/unit/static-check/workspaceIdentityActivation.test.ts
+      - name: Resident and import alias parity
+        run: >-
+          npx vitest run
+          tests/unit/mcp/residentHook.test.ts
+          tests/unit/analysis/z04ResolvedFactsResolver.test.ts
+          --testNamePattern
+          "keeps endpoint identity stable across symlink and junction root aliases|canonicalizes internal symlink aliases independently of include order"
+
   onboarding-matrix:
     name: Onboarding ${{ matrix.fixture }}
     needs: ci-profile

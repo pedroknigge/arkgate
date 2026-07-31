@@ -5,7 +5,10 @@
  * extraction-card payload, and compares residual after re-doctor on pilot paths.
  * Judgment only — never mechanical-safe; never multi-pilot batch apply.
  */
-import { buildPatternBetsFromSmells } from './design-smells.mjs';
+import {
+  buildPatternBetsFromSmells,
+  isNonProductionPilotPath,
+} from './design-smells.mjs';
 
 /** Stable product id for JSON / tests. */
 export const PILOT_LOOP_ID = 'one-pilot-redoctor';
@@ -44,14 +47,28 @@ export function fileEvidencePaths(evidence = []) {
   );
 }
 
+function pilotFilesForBet(bet, preferredFiles) {
+  const rawFiles = preferredFiles?.length
+    ? preferredFiles
+    : fileEvidencePaths(bet?.evidence);
+  if (bet?.smellId !== 'god-module') return rawFiles;
+  const files = rawFiles.filter((file) => !isNonProductionPilotPath(file));
+  const excludedPilot =
+    rawFiles.length === 0 &&
+    typeof bet.pilot === 'string' &&
+    isNonProductionPilotPath(bet.pilot);
+  return (rawFiles.length > 0 && files.length === 0) || excludedPilot
+    ? null
+    : files;
+}
+
 /**
  * Score a pattern bet for "do this pilot first".
  * Prefers concrete src/ files and higher-impact smell ids.
  * @param {object} bet
  * @param {number} index
  */
-function scoreBet(bet, index) {
-  const files = fileEvidencePaths(bet?.evidence);
+function scoreBet(bet, index, files = fileEvidencePaths(bet?.evidence)) {
   const smellPri = SMELL_PRIORITY[bet?.smellId] ?? 50;
   // Higher score wins; concrete files dominate; then smell priority; stable by index.
   return files.length * 100 - smellPri * 10 - index;
@@ -64,9 +81,8 @@ function scoreBet(bet, index) {
  */
 export function extractionCardFromBet(bet, preferredFiles) {
   if (!bet || typeof bet !== 'object') return null;
-  const files = preferredFiles?.length
-    ? preferredFiles
-    : fileEvidencePaths(bet.evidence);
+  const files = pilotFilesForBet(bet, preferredFiles);
+  if (files === null) return null;
   const evidence = files.length ? files : (bet.evidence || []).slice(0, 8);
   const pilotTarget =
     files[0] ||
@@ -123,8 +139,9 @@ export function selectNextPilot(patternBets, options = {}) {
     if (!bet || bet.neverMechanicalSafe === false) continue;
     // Skip anything that claims mechanical-safe (honesty).
     if (bet.class === 'mechanical-safe') continue;
-    const files = fileEvidencePaths(bet.evidence);
-    const sc = scoreBet(bet, i);
+    const files = pilotFilesForBet(bet);
+    if (files === null) continue;
+    const sc = scoreBet(bet, i, files);
     if (sc > bestScore) {
       bestScore = sc;
       best = { bet, files };

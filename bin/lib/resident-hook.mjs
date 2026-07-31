@@ -67,20 +67,44 @@ function residentRuntimeIdentity(launcher) {
   return hash.digest('hex');
 }
 
+function realpathOrResolve(value) {
+  const resolved = path.resolve(value);
+  try { return fs.realpathSync(resolved); } catch { return resolved; }
+}
+
+export function residentInvocationIdentity({ root, config, manifest, tsconfig }) {
+  const lexicalRoot = path.resolve(root);
+  const realRoot = realpathOrResolve(lexicalRoot);
+  const projectPath = (value) => {
+    if (!value) return null;
+    const absolute = path.isAbsolute(value)
+      ? path.resolve(value)
+      : path.resolve(lexicalRoot, value);
+    const relative = path.relative(lexicalRoot, absolute);
+    const contained =
+      relative === '' ||
+      (!path.isAbsolute(relative) && relative !== '..' && !relative.startsWith(`..${path.sep}`));
+    return realpathOrResolve(contained ? path.resolve(realRoot, relative) : absolute);
+  };
+  return {
+    root: realRoot,
+    config: projectPath(config),
+    manifest: projectPath(manifest),
+    tsconfig: projectPath(tsconfig),
+  };
+}
+
 export function residentHookEndpoint({ root, config, manifest, tsconfig, launcher }) {
-  let realRoot;
-  try { realRoot = fs.realpathSync(root); } catch { realRoot = path.resolve(root); }
+  const invocation = residentInvocationIdentity({ root, config, manifest, tsconfig });
+  const realLauncher = realpathOrResolve(launcher);
   const uid = typeof process.getuid === 'function' ? process.getuid() : 'user';
   const directory = path.join(os.tmpdir(), `arkgate-${uid}`);
   const digest = createHash('sha256').update(JSON.stringify({
-    root: realRoot,
-    config: path.resolve(root, config),
-    manifest: manifest ? path.resolve(root, manifest) : null,
-    tsconfig: tsconfig ? path.resolve(root, tsconfig) : null,
-    launcher: path.resolve(launcher),
-    executable: process.execPath,
+    ...invocation,
+    launcher: realLauncher,
+    executable: realpathOrResolve(process.execPath),
     protocolVersion: RESIDENT_HOOK_PROTOCOL_VERSION,
-    runtimeIdentity: residentRuntimeIdentity(path.resolve(launcher)),
+    runtimeIdentity: residentRuntimeIdentity(realLauncher),
   })).digest('hex').slice(0, 24);
   return {
     directory,

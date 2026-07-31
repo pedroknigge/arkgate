@@ -14,6 +14,7 @@ import { resolveCandidateFacts } from '../../../bin/lib/resolved-candidate-facts
 import { prepareChangeFromRoot } from '../../../bin/lib/prepare-change.mjs';
 import { noDomainInfraImports } from '../../../src/eslint/index';
 import { withDistLock } from '../../helpers/distLock';
+import { writeSemanticGateArtifacts } from '../../helpers/semanticGateArtifacts';
 
 const ARK = path.resolve('bin/ark.mjs');
 const ARK_CHECK = path.resolve('bin/ark-check.mjs');
@@ -517,13 +518,7 @@ describe('Z04 resolved adapter differential corpus', () => {
     });
 
     write(root, 'src/domain/syntax.ts', 'export const = ;\n');
-    write(root, 'AGENTS.md', '# ArkGate test fixture\n');
-    write(root, '.mcp.json', '{}\n');
-    write(
-      root,
-      '.github/workflows/ark.yml',
-      'jobs:\n  architecture:\n    steps:\n      - run: ark-check --strict-merge\n',
-    );
+    writeSemanticGateArtifacts(root);
     const cliRun = runJson(
       ARK_CHECK,
       [

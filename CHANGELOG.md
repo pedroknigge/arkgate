@@ -5,6 +5,84 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.2.0 — 2026-07-30 (prepared)
+
+**Minor** over 4.1.1. Phase WI — workspace identity, activation truth, and safe multi-repository
+skill installation. Adds a stable MCP project-identity contract, exact-root `ark_identity`
+handshake, and project-bound `ark_manifest`; cross-project/config paths fail before Layers or
+ArkRules analysis; Codex setup distinguishes files configured on disk from a runtime observed
+after restart. **No required config migration.** Legacy MCP calls remain callable but explicitly
+non-authoritative until bound. Codex remains advisory at write time. **Status: prepared**
+(`arkgate@4.2.0` not published yet).
+
+### Added
+
+- **Project identity contract:** public `ark.project-identity` JSON schema, root API exports,
+  stable `projectId`, independent contract/runtime identities, and package-isolation coverage.
+- **MCP handshake and manifest:** `ark_identity` plus shared `project.expectedRoot` /
+  `expectedProjectId` input on every tool. The initial handshake requires the exact project root;
+  descendants require the matching project id. Project-bound `ark_manifest` is authoritative
+  after binding; compatibility `ark://manifest` reads are always unverified/non-authoritative.
+  Project-bound results and errors carry identity, binding state, and `authoritative`.
+- **Verdict facets:** `ark_check.verdict` separates identity, analysis completeness, graph,
+  coverage, active gates, and overall result without removing legacy `ok`.
+- **Portable evidence:** focused Linux, macOS, and Windows CI for native canonical paths,
+  activation, and multi-repo skill behavior.
+- **Report provenance:** architecture snapshots record the Git `HEAD`, branch when attached, and
+  dirty-worktree state with a shell-free, best-effort probe.
+
+### Fixed
+
+- **Wrong-project MCP reuse:** a process bound to project A rejects project B, config/manifest/
+  tsconfig escapes, nested Ark roots, and external write/change paths before returning placement,
+  golden-pattern, Layers, or ArkRules analysis.
+- **Skill MCP ordering:** every shipped `/ark-*` skill now requires a matched `ark_identity`
+  preflight before consuming any MCP analysis and carries the exact root plus returned project id
+  on each later call; stale/mismatched hosts fall back to the workspace-local CLI.
+- **Codex activation truth:** install/start/doctor say configured + restart required until a live
+  identity match; compact setup reports partial installs and removes only exact ArkGate-owned
+  project TOML.
+- **Gate-presence false green:** `--require-gates` now implies strict config validation and checks
+  semantic Ark content in AGENTS, project-rooted MCP/Codex compact registrations, and fail-closed
+  CI instead of accepting placeholder files. Backgrounded `ark-check ... &` is not accepted as
+  merge enforcement. Native Windows launcher paths are recognized.
+- **Same-machine skill churn:** managed upgrades no longer rewrite an unchanged skill only to
+  refresh `arkVersion`; repo catalogs remain isolated.
+- **Shared Codex downgrade:** ArkGate 4.2.0+ installers cannot replace a newer managed
+  `$CODEX_HOME/skills` entry with an older bundle, including with `--force`; identical installs
+  are idempotent and report why they were skipped. Pre-4.2 binaries do not understand this
+  protocol, so legacy repos must be upgraded before they write the optional home catalog.
+  Versioned catalog metadata + an install lock prevent
+  reintroducing retired skills and serialize concurrent repos. A durable pending-catalog journal
+  preserves that version floor across interrupted writes; same/newer retries recover it, while
+  corrupt metadata fails safe before skill mutation.
+- **Path aliases and junctions:** hook paths retain the caller spelling while MCP/resident
+  identities canonicalize root, config, manifest, tsconfig, launcher, and missing-tail import
+  paths. macOS `/var` → `/private/var` aliases and Windows junctions therefore reach the same
+  resident endpoint without turning in-project writes into external paths or losing import edges.
+  Windows cross-drive import targets are rejected as external even though `path.relative()`
+  returns an absolute drive-qualified path for them.
+- **ArkRules inventory noise:** actual governed layer, generated/test/fixture context, technical
+  constants, and error-constructor metadata suppress false business-rule pilots while preserving
+  eligible Domain/controller candidates.
+- **Design guidance truth:** UI business-rule pilots now route Domain → Application → UI; local
+  permission/UI-state `canEdit` helpers are not flagged by name alone; god-module pilots exclude
+  seed/fixture/demo/migration/generated files; design-weak labels retain the observed
+  SUGGEST/ADAPT/ENFORCE mode.
+- **Cross-version report deltas:** evolution reports no longer present an Ark score delta when the
+  origin and current snapshots were produced by different ArkGate versions. Raw coverage, file,
+  violation, layer, rule, and gate facts remain visible.
+
+### Compatibility
+
+- No required `ark.config.json` migration and no new ArkRules sensor family.
+- Existing MCP clients continue to work with `binding.status = "unverified"` and
+  `authoritative = false`; generated instructions require `ark_identity` followed by
+  `ark_manifest`. Standard `ark://manifest` resource reads remain compatibility-only and
+  non-authoritative.
+- `projectId` is stable for one canonical local checkout across process restarts and contract
+  edits. It is intentionally not a cross-machine or cross-operating-system content id.
+
 ## 4.1.1 — 2026-07-25 (published)
 
 **Patch** over 4.1.0. Phase EH — enforcement evidence modeling + documentation truth (field Codex

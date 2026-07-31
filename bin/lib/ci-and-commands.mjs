@@ -183,9 +183,11 @@ export function ensureCheckArchitectureScript(root, opts = {}) {
 // source so the steps can never drift out of sync between the two files. `steps(checkCommand)`
 // is a builder because the check command's runner prefix varies with the package manager.
 const AGENT_CONTRACT = {
-  manifestResource: 'ark://manifest',
+  manifestTool: 'ark_manifest',
+  compatibilityManifestResource: 'ark://manifest',
   steps: (checkCommand) => [
-    `Read the Ark contract from \`ark://manifest\` when the MCP server is available.`,
+    `Before trusting Ark MCP evidence, call \`ark_identity\` with \`project.expectedRoot\` set to the exact project root's absolute path. Reuse that root plus the returned \`projectIdentity.projectId\` on every Ark MCP call. A descendant path is authoritative only when the matching project id is also supplied. If the tool is missing, the binding is not \`matched\`, or the reported root differs, restart the host and use the local CLI until identity matches.`,
+    `Read the authoritative Ark contract with \`ark_manifest\` using the same project expectation. The \`ark://manifest\` resource is compatibility-only and always unverified/non-authoritative.`,
     `Keep source files inside the layer boundaries declared in \`ark.config.json\`.`,
     `Do not bypass Ark publishers, event contracts, or source metadata for runtime mutations.`,
     `After edits, run \`${checkCommand}\`.`,
@@ -336,7 +338,7 @@ advisory MCP plus CI. The experimental runtime is not required.
 
 /**
  * Compact onboarding uses one project router instead of copied slash-command
- * skills. The package and ark MCP resources remain the canonical capability
+ * skills. The package and ark MCP tools remain the canonical capability
  * source; the marker makes the selected host verifiable by the strict gate.
  */
 export function compactAgentInstructions(root, host = null) {
@@ -358,8 +360,9 @@ export function compactAgentInstructions(root, host = null) {
 **Primary path (do this):**
 
 1. Status anytime: \`${doctorCmd}\` — one status light, one next action (control plane).
-2. Day to day: read \`ark://manifest\` when MCP is available; place new files with \`ark_place\`; validate after edits; run \`${checkCmd}\`. On a gate deny, fix the architecture — do not weaken the contract.
-3. If MCP is unavailable: inspect \`ark.config.json\` and run \`${checkCmd}\`.
+2. Before trusting MCP evidence: call \`ark_identity\` with \`project.expectedRoot\` set to this project's exact absolute root, then reuse that root plus the returned \`projectIdentity.projectId\` on every Ark MCP call. A descendant path is authoritative only with that matching id. Missing tool, non-\`matched\` binding, or wrong root means the process is stale: restart the host and use the local CLI meanwhile.
+3. Day to day: call \`ark_manifest\` with the same project expectation; place new files with \`ark_place\`; validate after edits; run \`${checkCmd}\`. The \`ark://manifest\` resource is compatibility-only and always unverified/non-authoritative. On a gate deny, fix the architecture — do not weaken the contract.
+4. If MCP is unavailable: inspect \`ark.config.json\` and run \`${checkCmd}\`.
 
 The selected host is \`${selectedHost}\`. Host registration and CI are installed with this file.
 This compact router is enough for normal feature work.
@@ -431,8 +434,14 @@ description: Ark architecture contract
 alwaysApply: true
 ---
 
-Before writing or editing TypeScript or JavaScript source files, read the
-\`${AGENT_CONTRACT.manifestResource}\` resource from the \`ark\` MCP server when available.
+Before trusting Ark MCP evidence, call \`ark_identity\` with \`project.expectedRoot\`
+set to the exact project root's absolute path. Reuse that root plus the returned
+\`projectIdentity.projectId\` on every Ark MCP call. A descendant path is authoritative only
+when that matching id is also supplied. If the tool is missing, the binding is not \`matched\`,
+or the root differs, restart the host and use the local CLI until identity matches. Then call
+\`${AGENT_CONTRACT.manifestTool}\` with the same project expectation. The
+\`${AGENT_CONTRACT.compatibilityManifestResource}\` resource is compatibility-only and always
+unverified/non-authoritative.
 
 ${AGENT_CONTRACT.cursorValidateStep} After edits, run:
 

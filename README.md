@@ -16,8 +16,9 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 4.1.1** is on npm `latest` (Phase EH honesty + CI/report fixes).
-> [4.1.1 notes](docs/releases/4.1.1.md) · [4.1.0](docs/releases/4.1.0.md) · [4.0.1](docs/releases/4.0.1.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> **ArkGate 4.2.0** is prepared (workspace identity + safe multi-repo skills);
+> **4.1.1** remains on npm `latest` until publication.
+> [4.2.0 candidate](docs/releases/4.2.0.md) · [4.1.1](docs/releases/4.1.1.md) · [4.1.0](docs/releases/4.1.0.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
 
@@ -110,6 +111,7 @@ GitHub **status context** that runs the CLI — not “CI file present,” and n
 Cursor/Codex/OpenCode never get a fake hard write claim.
 
 This table describes the supported profile **after its files are installed and the host loads/trusts them**. A hard local boundary covers only the listed hook operations; alternate tools, direct filesystem writes, and human edits still rely on CI. MCP validation is advisory because the agent must call it. The CI check blocks a merge only when the repository makes that status required. Repair **envelopes** may be emitted without reinjection being guaranteed; silent auto-apply never happens. Run `arkgate-check --doctor` (or `ark-check --doctor`) for the evidence actually detected in the current repository.
+
 <!-- arkgate-host-support:end -->
 
 #### Why the hard guarantee lives at the merge gate
@@ -130,6 +132,12 @@ the gate.
 
 Setup per host: [docs/ai-gates.md](docs/ai-gates.md) · Develop path: [docs/develop.md](docs/develop.md)
 
+For authoritative MCP contract evidence, call `ark_identity` with the exact project root, then
+call `ark_manifest` with that root plus the returned project id. A contained descendant requires
+the matching id. The legacy `ark://manifest` resource remains compatibility-only and always
+unverified/non-authoritative because standard `resources/read` cannot portably carry that
+expectation.
+
 ---
 
 ## Why not only ESLint / Nx / cruiser?
@@ -138,7 +146,7 @@ Setup per host: [docs/ai-gates.md](docs/ai-gates.md) · Develop path: [docs/deve
 |--|:---:|:---:|
 | CI import rules | ✅ | ✅ |
 | Hard-block AI writes on supported hosts | ✅ | ❌ |
-| Contract agents can read (`ark://manifest`) | ✅ | ❌ |
+| Project-bound contract agents can read (`ark_manifest`) | ✅ | ❌ |
 | Placement + preflight for multi-file changes | ✅ | ❌ |
 | Honest governed % + dual plan (edges vs shape) | ✅ | ❌ |
 | Opt-in intra-layer ArkRules (structure + invariants) | ✅ | ❌ |
@@ -186,8 +194,10 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current published (4.1.1) | [docs/releases/4.1.1.md](docs/releases/4.1.1.md) · [CHANGELOG](CHANGELOG.md) |
+| Prepared candidate (4.2.0) | [docs/releases/4.2.0.md](docs/releases/4.2.0.md) · [CHANGELOG](CHANGELOG.md) |
+| Current published (4.1.1) | [docs/releases/4.1.1.md](docs/releases/4.1.1.md) |
 | Previous (4.1.0) | [docs/releases/4.1.0.md](docs/releases/4.1.0.md) |
+| Previous patch (4.0.1) | [docs/releases/4.0.1.md](docs/releases/4.0.1.md) |
 | Previous (4.0.0) | [docs/releases/4.0.0.md](docs/releases/4.0.0.md) |
 | Previous (3.9.2) | [docs/releases/3.9.2.md](docs/releases/3.9.2.md) |
 | History / maintainer evidence | [docs/archive/](docs/archive/README.md) |

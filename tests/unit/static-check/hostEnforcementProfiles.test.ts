@@ -145,8 +145,9 @@ describe('host-specific enforcement profiles', () => {
       if (host === 'codex') {
         const hooks = fs.readFileSync(path.join(root, '.codex', 'hooks.json'), 'utf8');
         expect(hooks).toContain('ApplyPatch|apply_patch|Write|Edit|MultiEdit');
-        expect(hooks).toContain('${CODEX_PROJECT_DIR:-${PWD:-.}}');
+        expect(hooks).toContain('--root . --root-env CODEX_PROJECT_DIR');
         expect(hooks).not.toContain('CLAUDE_PROJECT_DIR');
+        expect(hooks).not.toContain('$');
       }
 
       const mergeArgs = generatedMergeArgs(root);

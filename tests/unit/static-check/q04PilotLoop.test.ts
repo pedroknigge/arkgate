@@ -172,6 +172,44 @@ describe('selectNextPilot / extraction card (Q04)', () => {
     expect(card).toMatch(/one pilot at a time/i);
   });
 
+  it('never chooses non-production god-module evidence, including Windows paths', () => {
+    const excluded = {
+      id: 'pattern-b:god-module-seed',
+      smellId: 'god-module',
+      pilot: 'src\\seeds\\**',
+      evidence: ['src\\seeds\\catalog.ts'],
+      neverMechanicalSafe: true,
+      class: 'judgment',
+    };
+    const production = {
+      id: 'pattern-b:god-module-production',
+      smellId: 'god-module',
+      pilot: 'src/application/**',
+      evidence: ['src/application/orders.ts'],
+      neverMechanicalSafe: true,
+      class: 'judgment',
+    };
+    expect(selectNextPilot([excluded])).toBeNull();
+    expect(selectNextPilot([excluded, production])?.pilotTarget).toBe(
+      'src/application/orders.ts'
+    );
+  });
+
+  it('keeps domain-logic-in-ui extraction behind the Application boundary', () => {
+    const [bet] = buildPatternBetsFromSmells([
+      {
+        id: 'domain-logic-in-ui',
+        severity: 'warn',
+        message: 'business decision in UI',
+        evidence: ['src/components/OrderEditor.tsx'],
+        fix: 'Move the rule into Domain, expose it through Application, and have UI import Application (never Presentation → Domain directly).',
+      },
+    ]);
+    const card = selectNextPilot([bet]);
+    expect(card?.move).toMatch(/Domain.*Application.*UI/i);
+    expect(card?.move).toMatch(/never Presentation.*Domain/i);
+  });
+
   it('summarizePilotLoop inactive when not design-weak', () => {
     const s = summarizePilotLoop({ designWeak: false, patternBets: [] });
     expect(s.active).toBe(false);

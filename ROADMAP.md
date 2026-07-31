@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-07-25
+- **Status date:** 2026-07-30
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -579,8 +579,40 @@ Boundary:
 | 107 | `EH07` | `done` | S | `EH05`, `EH06` | Repair envelope vs reinjection; CLI vs status-context copy; optional minimum ops matrix |
 | 108 | `EH08` | `done` | M | `EH02`–`EH07` | Docs apply for behavior change; claims residual 0 Contradicted; CHANGELOG + 4.1.1 prepared |
 
-**Phase EH closed** in source (2026-07-25). Package train **4.1.1 prepared** — not on npm until
-maintainer publish.
+**Phase EH closed** in source (2026-07-25). Package train **4.1.1 published** on npm
+`latest` before the 4.2.0 candidate.
+
+### Phase WI — Workspace identity and activation truth (4.2.0 corrective minor)
+
+Origin: 2026-07-30 Codex field feedback reproduced a live MCP process bound to project A while
+the active workspace and project-scoped configuration belonged to project B. The server returned
+project A's contract hashes and golden-pattern guidance, then mislabeled project B paths as
+ungoverned. Plan authority and acceptance:
+[docs/plans/workspace-identity-activation-truth/README.md](docs/plans/workspace-identity-activation-truth/README.md).
+
+Boundary:
+
+- Project identity is a precondition above both Layers and ArkRules. Never auto-retarget a live
+  server from a caller-supplied path.
+- Preserve compatible callers through an explicit `unverified` state, but generated integrations
+  may not claim an authoritative verdict before the workspace handshake.
+- Codex remains advisory at write time. This phase verifies which advisory process answered; it
+  does not invent a hard local write boundary.
+- Repo skill catalogs are independent; unchanged bodies are not rewritten for a package-version
+  stamp alone. The optional shared Codex home catalog is monotonic across ArkGate 4.2.0+
+  installers; pre-4.2 binaries ignore that protocol and must be upgraded before writing it.
+- Focused identity/install evidence must run on Linux, macOS, and Windows; `projectId` is local
+  canonical-workspace identity, not a cross-OS content id.
+- The corrective minor adds no unrelated architecture presets, runtime features, or broad
+  ArkRules sensor vocabulary.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 109 | `WI01` | `doing` | L | `EH08` | Stable project-identity schema + MCP handshake; cross-project/config containment fails closed before Layers/ArkRules; honest verdict and activation states; Codex install/start/remove recovery; isolated/idempotent repo skills + monotonic shared Codex skills; Linux/macOS/Windows smoke; layer-aware rules inventory; packed A/B regression; 4.2.0 release |
+
+Clean signed implementation candidate `2ebb786e` measured **700,336 packed bytes /
+2,484,282 unpacked bytes / 168 files**. The release budget records fixed ≥10% headroom; WI01
+remains `doing` until native CI, signed tag, npm provenance, and MCP registry publication finish.
 
 ### Z01 — Make release cleanup tool-owned and path-safe
 
@@ -2912,10 +2944,10 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: none — Phase EH (`EH01`–`EH08`) done in source
-  Plan: docs/plans/enforcement-evidence-and-docs-truth/README.md (Shipped / implemented)
-  Tree version: 4.1.1 prepared (docs/releases/4.1.1.md) — npm latest still 4.1.0 until publish
-  Next: maintainer publish checklist for 4.1.1; do not claim npm latest until verified
+Engineering doing: WI01 — workspace identity + activation truth + same-machine multi-repo skills
+  Plan: docs/plans/workspace-identity-activation-truth/README.md (In progress)
+  Tree version: 4.2.0 prepared (docs/releases/4.2.0.md) — npm latest remains 4.1.1 until publish
+  Next: full local + Linux/macOS/Windows + packed release proof, then signed 4.2.0 publication
 Phase AR (v4 train, AR01–AR19 done): ArkRules + brownfield rules migration on same enforcement plane
 Claim gate: `Z09` (`parked`) — residual RB-11 only (retained adoption + independent close)
   Field kit scaffolding: docs/field/ — NOT closed; do not occupy engineering `doing` without cohort
@@ -2924,7 +2956,7 @@ Product hard line: no false hard write on Cursor/Codex/OpenCode; no plan-B auto-
 Not product backlog: god-module / plan-B residual (judgment only)
 Parked: Y09, Y07 (low), Y10 (archive until field demand + ADR), K01 runtime
 Release lanes: ordinary corrective patches do not wait for Z09
-Released baseline: npm arkgate@4.1.0 (field product train + CI PR slim) — confirm vs package.json/npm before claims
-  Prepared next: 4.1.1 (Phase EH honesty + CI/report fixes) — Status: prepared
+Released baseline: npm arkgate@4.1.1 (Phase EH honesty + CI/report fixes)
+  Prepared next: 4.2.0 (Phase WI identity/activation/multi-repo safety) — Status: prepared
   Prior: 4.0.x / 3.9.x / 3.8.x trains as in docs/releases/ and CHANGELOG
 ```

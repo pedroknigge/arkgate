@@ -13,7 +13,8 @@ description: Safely edit ark.config.json layers/rules and arkrules/* (structure 
 | Concentrated-edge / false-green STOP from other skills | Full map without config edit → `/ark-explore` |
 
 The **one sanctioned way** to change layers/rules/`intentPrefixes`/includes.
-Also used to **land mined business rules** into the executable manifest (`ark.config.json` + intent naming that `ark://manifest` exposes).
+Also used to **land mined business rules** into the executable manifest (`ark.config.json` +
+intent naming that the project-bound `ark_manifest` tool exposes authoritatively).
 
 
 ## Dual engine (mandatory)
@@ -26,6 +27,15 @@ Also used to **land mined business rules** into the executable manifest (`ark.co
 The CLI is a **sensor**, never the whole job. Claiming done without the exploratory bar for this skill is **incomplete**.
 
 
+
+## MCP workspace binding (mandatory)
+
+Before any `ark_*` MCP tool, call `ark_identity` with `project.expectedRoot` set to the exact
+workspace root. Continue only when `binding.status === "matched"` and `authoritative === true`;
+retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedProjectId` under
+`project` on every later MCP call. If identity is missing, mismatched, unverified, or the root is
+uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
+restart/retargeting is required. `ark://manifest` never satisfies this preflight.
 
 ## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
 

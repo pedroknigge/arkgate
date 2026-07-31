@@ -22,7 +22,8 @@ because the design space is small and honest.
 - **Co-pilot side:** where code belongs, who talks to whom, how; dual plan **A** (edges) +
   **B** (shape); one pilot at a time; never silent judgment codemod; never weaken the contract.
 - **False done is forbidden:** Enforce ≠ elegant design. `design-weak` / residual must not
-  read as “healthy finished.” Empty ArkRules inventory is not a score.
+  read as “healthy finished.” Empty ArkRules inventory is not a score. MCP configuration on
+  disk is not proof that the current process belongs to this project.
 
 ---
 
@@ -73,6 +74,12 @@ Examples:
 | **compact router** | Default onboarding agent instructions (not the full skill pack) |
 | **hard write** | Non-bypassable PreToolUse block for listed ops (Claude/Grok when installed + trusted) |
 | **advisory write** | MCP/rules coach only (Cursor/Codex at write time) — not a hard block |
+| **project identity** | Stable canonical root + config identity returned by `ark_identity`; separate from contract and process identity |
+| **matched binding** | Live MCP answered for the exact project root, or for a contained descendant together with the matching project id; only this binding is authoritative |
+| **authoritative manifest** | Contract returned by `ark_manifest` after a matched identity handshake |
+| **compatibility manifest resource** | `ark://manifest` through standard `resources/read`; always unverified/non-authoritative because the request cannot portably carry a project expectation |
+| **configured on disk** | Host files name an Ark MCP command; says nothing about which process is currently running |
+| **runtime observed** | A live `ark_identity` response matched this workspace; never infer it from `.codex/config.toml` or hook files |
 | **required CI / status context** | Merge hard boundary when the repository makes the Ark job a **required GitHub status context** (CLI: `arkgate-check --strict-merge` / `ark-check --strict-merge`) |
 | **contract ready** | Project/layers/ArkRules honesty residual clear — not the same as “hard local write” |
 | **environment residual** | Permanent host/provider posture (e.g. soft-write Codex) kept in evidence without forcing global **Not finished** |
@@ -89,6 +96,8 @@ Examples:
 | Keep Suggest on start → doctor | New-here primary is finish `start`, not a competing recommend/architect curriculum |
 | Qualify edge-clean under design-weak | “None on checked edges … design residual remains. Not healthy finished.” |
 | Prefer fail-closed over fake hard | Incomplete analysis, unobserved hooks, and soft MCP never paint as hard green |
+| State project binding before verdict | “Ark MCP matched this workspace; `ark_manifest` evidence is authoritative.” Otherwise: “Ark MCP is configured, but runtime identity is unverified. Restart and call `ark_identity` with the exact project root.” |
+| Keep inventory claims evidence-bound | “Possible rule candidate in the configured Application layer.” A filename or technical constant alone is not Domain evidence. |
 | Honesty clear ≠ architecture healthy | `productHonesty.finished` means residual **architecture** honesty sensors are clear — not a green graph score. Open blocking violations, ADAPT/SUGGEST with debt, dual-truth pin, or design residual keep `unfinished: true`. Permanent soft-write alone does **not**. |
 | Separate CI runtime from provider policy | Successful CI run ≠ required status; GitHub Free plan 403 → `unavailable-plan`, not “CI never ran.” |
 
@@ -105,6 +114,9 @@ Examples:
 | “Healthy / done” while design-weak | False done |
 | “Honesty clear” as “architecture finished” | Honesty clear only means residual honesty sensors are quiet; graph/mode debt is separate |
 | “Not finished” solely because host is Codex/Cursor | Soft-write is environment residual; do not paint a green whole-tree project as unfinished architecture |
+| “MCP installed / active” because a config file exists | Say **configured on disk · runtime unverified** until `ark_identity` matches the expected root |
+| Treating an unverified legacy MCP call as authoritative | Compatibility is not proof; require `binding.status: "matched"` and `authoritative: true` |
+| “Handler means controller” / “every constant is a business rule” | ArkRules inventory uses configured layer context and suppresses narrow technical/test evidence; candidates remain prompts for judgment |
 | Conflating CLI name with required status | `ark-check` is the command; the hard boundary is the GitHub required **status context** |
 | “ArkRules prove business correctness” | They enforce *declared* structure/coverage evidence, not arbitrary logic or full semantic proof |
 | “Structure enforced = Domain extraction done” | Structure sensors are **heuristics**; extraction is judgment (`/ark-fix` / pilot) |

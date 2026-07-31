@@ -207,8 +207,9 @@ describe('Z06 managed-content upgrade', () => {
     expect(report.summary.managedAssets).toBeGreaterThan(0);
     expect(typeof report.summary.customizedPreserved).toBe('number');
     expect(report.nothingToApply).toBe(true);
-    // nextCommand remains for digest-bound optional apply; human copy does not urge it.
+    // nextCommand remains available for digest-bound manifest adoption; human copy does not urge it.
     expect(report.nextCommand).toMatch(/--plan-digest /);
+    expect(report.summary.metadataRefresh).toBe(0);
     expect(snapshot(root)).toEqual(before);
     expect(fs.readFileSync(path.join(codexHome, 'skills/ark-upgrade/SKILL.md'), 'utf8')).toBe(
       'user-owned Codex home skill\n'
@@ -222,11 +223,7 @@ describe('Z06 managed-content upgrade', () => {
     expect(human.status, human.stderr || human.stdout).toBe(0);
     expect(human.stdout).toMatch(/Nothing to apply — managed content matches arkgate@/);
     expect(human.stdout).not.toMatch(/Apply the exact preview with:/);
-    // Stamp lag is optional only — still print digest-bound apply when metadataRefresh > 0.
-    if ((report.summary.metadataRefresh ?? 0) > 0) {
-      expect(human.stdout).toMatch(/Optional stamp-only apply \(not required\):/);
-      expect(human.stdout).toMatch(/--plan-digest /);
-    }
+    expect(human.stdout).not.toMatch(/stamp-only apply|optional stamp refresh/i);
   });
 
   it('doctor skillGaps.stale is 0 when skill body matches template with lagging arkVersion', () => {
@@ -252,7 +249,7 @@ describe('Z06 managed-content upgrade', () => {
     expect(gaps?.some((gap) => gap.tool === 'claude' && gap.stale > 0) ?? false).toBe(false);
   });
 
-  it('refreshes only stale skill metadata and leaves doctor with no version-only gap', () => {
+  it('does not rewrite a skill when only arkVersion metadata differs', () => {
     const root = fixture();
     const skill = path.join(root, '.claude/skills/ark-upgrade/SKILL.md');
     fs.writeFileSync(
@@ -263,11 +260,17 @@ describe('Z06 managed-content upgrade', () => {
     expect(applied.status, applied.stderr || applied.stdout).toBe(0);
     const report = JSON.parse(applied.stdout) as {
       assets: Array<{ path: string; state: string; action: string }>;
+      summary: { metadataRefresh: number };
     };
     expect(report.assets).toContainEqual(
-      expect.objectContaining({ path: '.claude/skills/ark-upgrade/SKILL.md', state: 'current', action: 'refresh-metadata' })
+      expect.objectContaining({
+        path: '.claude/skills/ark-upgrade/SKILL.md',
+        state: 'current',
+        action: 'none',
+      })
     );
-    expect(fs.readFileSync(skill, 'utf8')).not.toContain('arkVersion: 0.0.0-old');
+    expect(report.summary.metadataRefresh).toBe(0);
+    expect(fs.readFileSync(skill, 'utf8')).toContain('arkVersion: 0.0.0-old');
 
     const doctor = run(ARK_CHECK, [
       '--root', root, '--config', 'ark.config.json', '--doctor', '--json', '--no-cache',

@@ -204,7 +204,7 @@ describe('q1 coverage top-up (dense, non-overlapping)', () => {
       fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
       fs.writeFileSync(
         path.join(root, '.github/workflows/ci.yml'),
-        'name: c\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npx ark-check\n      - run: npm run lint\n'
+        'name: c\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npx ark-check --strict-merge\n      - run: npm run lint\n'
       );
       syncBaselineIntoCheckSurfaces(root, {});
       expect(ensureBaselineFlagInCheckCommand('npx ark-check --strict').changed).toBe(true);

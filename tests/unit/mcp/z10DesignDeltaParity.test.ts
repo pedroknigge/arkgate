@@ -5,6 +5,7 @@ import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { withDistLock } from '../../helpers/distLock';
+import { writeSemanticGateArtifacts } from '../../helpers/semanticGateArtifacts';
 
 const repositoryRoot = process.cwd();
 let runtimeRoot: string;
@@ -93,9 +94,7 @@ describe('Z10 write/MCP/CLI design-delta parity', () => {
     write(root, 'ark.config.json', `${JSON.stringify(config, null, 2)}\n`);
     write(root, 'apps/web/src/product/page.tsx', 'export const Page = () => <main />;\n');
     write(root, 'packages/shared/src/rules/listing.ts', 'export const listingKind = "listing";\n');
-    write(root, 'AGENTS.md', '# ArkGate Enforcement\n');
-    write(root, '.mcp.json', '{"mcpServers":{"ark":{"command":"arkgate-mcp"}}}\n');
-    write(root, '.github/workflows/ark-check.yml', 'jobs:\n  ark-check:\n    steps:\n      - run: npx ark-check --strict-merge\n');
+    writeSemanticGateArtifacts(root);
     write(
       root,
       '.ark/golden-pattern.json',

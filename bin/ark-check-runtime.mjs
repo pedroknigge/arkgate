@@ -169,7 +169,10 @@ function parseArgs(argv) {
       args.strictMerge = true;
     }
     else if (arg === '--strict-config') args.strictConfig = true;
-    else if (arg === '--require-gates') args.requireGates = true;
+    else if (arg === '--require-gates') {
+      args.requireGates = true;
+      args.strictConfig = true;
+    }
     else if (arg === '--require-write-hook') {
       args.requireWriteHook = requireValue(arg, i++).trim().toLowerCase();
     }
@@ -323,9 +326,9 @@ function usage() {
     'specific host. Cursor and Codex expose advisory MCP tools plus the shared CI check;',
     'merge blocking requires repository policy to make that status required.',
     '',
-    '--require-gates fails the check when AGENTS.md, .mcp.json, or the generated CI',
-    'workflow is missing, so "installed but never configured" is a red CI. Combine it',
-    'with --strict-config to enforce gate presence and architecture in one run.',
+    '--require-gates implies --strict-config and fails when the Ark contract in AGENTS.md,',
+    'the project-rooted Ark server in .mcp.json, or fail-closed CI is missing/invalid.',
+    'Included but unclassified source files therefore stay red instead of false-green.',
     '',
     '--install-agent-gates writes AGENTS.md, .mcp.json, and the CI workflow for every',
     'project, plus tool-specific templates. Known tools: claude, cursor, codex, grok',
@@ -1255,7 +1258,7 @@ async function main() {
       if (args.requireGates) {
         const compactHost = compactRouterHost(args.root);
         console.log(
-          'Ark gates present (merge profile): ' +
+          'Ark gate artifacts found on disk (merge profile; runtime activation not implied): ' +
             (compactHost
               ? `AGENTS.md, compact host registration (${compactHost})`
               : REQUIRED_GATE_FILES.join(', '))
@@ -1467,10 +1470,13 @@ async function main() {
   if (args.rulesInventory) {
     const { buildRulesInventory, inventoryToExtractionCard } = await import('./lib/rules-inventory.mjs');
     const fileContents = {};
+    const fileLayers = {};
     for (const file of files.slice(0, 400)) {
       const rel = normalize(path.relative(root, file));
       try {
         fileContents[rel] = fs.readFileSync(file, 'utf8');
+        const layer = layerForFile(root, file, config.layers);
+        if (layer) fileLayers[rel] = layer;
       } catch {
         /* skip unreadable */
       }
@@ -1488,6 +1494,11 @@ async function main() {
     }
     const inventory = buildRulesInventory({
       fileContents,
+      fileLayers,
+      layerContexts: (config.layers ?? []).map((layer) => ({
+        name: layer.name,
+        intentPrefixes: layer.intentPrefixes ?? [],
+      })),
       contractedRuleIds: contracted,
     });
     const nextPilot =

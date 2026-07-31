@@ -52,6 +52,15 @@ Next: re-run ark-check; shrink baseline if applicable
 
 
 
+## MCP workspace binding (mandatory)
+
+Before any `ark_*` MCP tool, call `ark_identity` with `project.expectedRoot` set to the exact
+workspace root. Continue only when `binding.status === "matched"` and `authoritative === true`;
+retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedProjectId` under
+`project` on every later MCP call. If identity is missing, mismatched, unverified, or the root is
+uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
+restart/retargeting is required. `ark://manifest` never satisfies this preflight.
+
 ## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
 
 ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
@@ -129,7 +138,7 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 If the “fix” is really a missing business intent or Domain home for a rule:
 
 - Propose intent name + layer placement.
-- Register / place code so `ark://manifest` / config can enforce it.
+- Register / place code so `ark_manifest` / config can enforce it.
 - Do not only delete the import.
 
 ## Rules

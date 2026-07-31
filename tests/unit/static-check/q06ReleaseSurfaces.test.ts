@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '4.1.1';
+const CURRENT = '4.2.0';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -19,16 +19,16 @@ describe('package budget ceilings retain 10% headroom over the recorded clean ca
   it('retains at least 10% headroom over the recorded clean candidate', () => {
     const gate = JSON.parse(read('release/package-budgets.v1.json')).packages.gate;
     expect(gate.measuredCandidate).toEqual({
-      sha: '4404c48dc2ab0dfe33056cd417a8d0f492601a99',
-      ciCandidateSha: '4404c48dc2ab0dfe33056cd417a8d0f492601a99',
+      sha: '2ebb786e8bedfa88c1e8e2eb7aadf38b6de44498',
+      ciCandidateSha: '2ebb786e8bedfa88c1e8e2eb7aadf38b6de44498',
       ciRun: null,
-      version: '4.0.0',
-      packedBytes: 605761,
-      unpackedBytes: 2140003,
-      files: 159,
+      version: '4.2.0',
+      packedBytes: 700336,
+      unpackedBytes: 2484282,
+      files: 168,
     });
     expect([gate.maxPackedBytes, gate.maxUnpackedBytes, gate.maxFiles]).toEqual([
-      666338, 2354004, 180,
+      770370, 2732711, 185,
     ]);
     expect(gate.maxPackedBytes).toBeGreaterThanOrEqual(
       Math.ceil(gate.measuredCandidate.packedBytes * 1.1)
@@ -70,6 +70,39 @@ describe(`version bump ${CURRENT}`, () => {
       const next = (j.dependencies?.next || j.devDependencies?.next) as string;
       expect(next, rel).toMatch(/^15\.5\.(2[1-9]|[3-9]\d)/);
     }
+  });
+});
+
+describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => {
+  it('records identity, activation, multi-repo skills, portability, and prepared status', () => {
+    const changelog = read('CHANGELOG.md');
+    expect(changelog).toMatch(/## 4\.2\.0/);
+    expect(changelog).toMatch(/prepared/i);
+    expect(changelog).toMatch(/ark_identity|project identity/i);
+    expect(changelog).toMatch(/ark_manifest/i);
+    expect(changelog).toMatch(/configured.*restart|required.*restart/is);
+    expect(changelog).toMatch(/multi-repo|Same-machine skill/i);
+    expect(changelog).toMatch(/Linux.*macOS.*Windows/is);
+
+    const notes = read('docs/releases/4.2.0.md');
+    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(notes).toMatch(/arkgate@4\.2\.0/);
+    expect(notes).toMatch(/binding\.status.*matched/is);
+    expect(notes).toMatch(/ark_manifest/i);
+    expect(notes).toMatch(/ark:\/\/manifest.*unverified|unverified.*ark:\/\/manifest/is);
+    expect(notes).toMatch(/4\.2\.0\+ installers/i);
+    expect(notes).toMatch(/before 4\.2|pre-4\.2/i);
+    expect(notes).toMatch(/No required config migration/i);
+    expect(notes).toMatch(/Z09|RB-11/i);
+    expect(notes).not.toMatch(/\*\*Status:\*\*\s*published/i);
+  });
+
+  it('exposes the prepared candidate while retaining 4.1.1 as npm latest', () => {
+    expect(read('README.md')).toMatch(/4\.2\.0.*prepared/is);
+    expect(read('README.md')).toMatch(/4\.1\.1.*npm `latest`/is);
+    expect(read('CONTRIBUTING.md')).toMatch(/Prepared release:.*4\.2\.0/s);
+    expect(read('docs/README.md')).toMatch(/Prepared candidate:.*4\.2\.0/s);
+    expect(read('docs/package-surface.md')).toMatch(/prepared:.*4\.2\.0/s);
   });
 });
 
@@ -143,8 +176,8 @@ describe('CHANGELOG + release note cover 4.1.1 Phase EH + retain 4.1.0 field tra
     expect(body).toMatch(/Z09|RB-11/i);
     expect(body).toMatch(/soft-write|Not finished|contract ready/i);
     expect(body).not.toMatch(/closes Z09|Z09 closed|RB-11 closed/i);
-    // Publication checklist pairs dist-tags.latest with CURRENT after publish.
-    const escapedVersion = CURRENT.split('.').join('\\.');
+    // Historical publication truth stays pinned even after CURRENT advances.
+    const escapedVersion = '4\\.1\\.1';
     expect(body).toMatch(
       new RegExp(
         String.raw`npm view arkgate dist-tags\.latest\`?\s*→\s*\`${escapedVersion}\``

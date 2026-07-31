@@ -491,14 +491,25 @@ export function prepareConsumerProject({
 
   writeText(
     path.join(root, 'AGENTS.md'),
-    '# ArkGate Enforcement\n\nRun `ark-check --strict-merge` before merging.\n'
+    [
+      '# ArkGate Enforcement',
+      '',
+      '`ark.config.json` is authoritative for this project.',
+      'Run `ark-check --root . --config ark.config.json --strict-merge` before merging.',
+      '',
+    ].join('\n')
   );
   writeJson(path.join(root, '.mcp.json'), {
-    mcpServers: { ark: { command: 'ark-mcp', args: ['--root', '.'] } },
+    mcpServers: {
+      ark: {
+        command: 'ark-mcp',
+        args: ['--root', '.', '--config', 'ark.config.json'],
+      },
+    },
   });
   writeText(
     path.join(root, '.github/workflows/ark-check.yml'),
-    'name: ArkGate\non: [push]\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - run: ark-check --strict-merge\n'
+    'name: ArkGate\non: [push]\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - run: ark-check --root . --config ark.config.json --strict-merge\n'
   );
 
   writeText(
@@ -542,9 +553,12 @@ const gate = require('arkgate');
 const eslint = require('arkgate/eslint');
 const schemaPath = require.resolve('arkgate/schema/ark.analysis-result.schema.json');
 const factsSchemaPath = require.resolve('arkgate/schema/ark.resolved-candidate-facts.schema.json');
+const identitySchemaPath = require.resolve('arkgate/schema/ark.project-identity.schema.json');
 const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
 const factsSchema = JSON.parse(fs.readFileSync(factsSchemaPath, 'utf8'));
+const identitySchema = JSON.parse(fs.readFileSync(identitySchemaPath, 'utf8'));
 if (typeof gate.createAICodeGate !== 'function') throw new Error('missing CJS gate export');
+if (typeof gate.createProjectIdentity !== 'function') throw new Error('missing CJS identity export');
 if (!eslint.default && !eslint.rules) throw new Error('missing CJS eslint export');
 if (!schema.required.includes('completeness')) throw new Error('schema omits completeness');
 if (!schema.required.includes('mode')) throw new Error('schema omits analysis mode');
@@ -560,7 +574,13 @@ if (!factsVersions.includes('1.1') || !factsVersions.includes('1.0')) {
 if (schema.allOf?.[0]?.then?.properties?.valid?.const !== false) {
   throw new Error('schema permits an incomplete green verdict');
 }
-process.stdout.write(JSON.stringify({ schemaPath, factsSchemaPath, schemaVersion: schema.properties.schemaVersion.const }));
+if (identitySchema.properties.schemaVersion.const !== '1.0') {
+  throw new Error('project identity schema version drift');
+}
+if (!identitySchema.required.includes('contractSource')) {
+  throw new Error('project identity schema omits contract source');
+}
+process.stdout.write(JSON.stringify({ schemaPath, factsSchemaPath, identitySchemaPath, schemaVersion: schema.properties.schemaVersion.const }));
 `
   );
   writeText(
@@ -569,11 +589,15 @@ process.stdout.write(JSON.stringify({ schemaPath, factsSchemaPath, schemaVersion
 import {
   createAdapterResult,
   createAICodeGate,
+  createProjectIdentity,
   analyzeResolvedProject,
   preflightResolvedChange,
   type AdapterResult,
   type AnalysisCompleteness,
   type AnalysisMode,
+  type ProjectBinding,
+  type ProjectExpectation,
+  type ProjectIdentity,
   type ResolvedCandidateFacts,
 } from 'arkgate';
 
@@ -598,6 +622,18 @@ const v11Result: AdapterResult = {
   valid: false,
   diagnostics: [],
 };
+const expectation: ProjectExpectation = { expectedRoot: '/repo' };
+const binding: ProjectBinding = { status: 'matched', authoritative: true };
+const identity: ProjectIdentity = createProjectIdentity({
+  projectId: \`sha256:\${'a'.repeat(64)}\`,
+  resolvedRoot: '/repo',
+  resolvedConfigPath: '/repo/ark.config.json',
+  arkgateVersion: '4.2.0',
+  contractHash: \`sha256:\${'b'.repeat(64)}\`,
+  contractSource: 'project',
+  runtimeId: 'compat-runtime',
+  processStartedAt: '2026-07-30T00:00:00.000Z',
+});
 // @ts-expect-error Partial analysis is fail-closed in the public 1.2 result type.
 const partialGreen: AdapterResult = {
   schemaVersion: '1.2',
@@ -614,6 +650,9 @@ void result;
 void mode;
 void legacyResult;
 void v11Result;
+void expectation;
+void binding;
+void identity;
 void partialGreen;
 `
   );
@@ -960,6 +999,13 @@ function runCell(options, candidate, workRoot, typescriptVersion) {
   });
 
   runRecordedStage(cell, 'mcp', () => {
+    const otherRoot = path.join(path.dirname(root), `${path.basename(root)}-other-project`);
+    fs.mkdirSync(otherRoot, { recursive: true });
+    writeJson(path.join(otherRoot, 'ark.config.json'), {
+      include: ['src'],
+      layers: [{ name: 'OtherDomain', patterns: ['src/**'] }],
+      rules: [],
+    });
     const input = [
       {
         jsonrpc: '2.0',
@@ -983,6 +1029,7 @@ function runCell(options, candidate, workRoot, typescriptVersion) {
             source: "export async function load() { return fetch('https://example.com'); }\n",
             layer: 'DomainModel',
             filePath: 'src/domain/mcp-network.ts',
+            project: { expectedRoot: root },
           },
         },
       },
@@ -997,6 +1044,45 @@ function runCell(options, candidate, workRoot, typescriptVersion) {
             layer: 'DomainModel',
             filePath: 'src/domain/mcp-parse-invalid.ts',
           },
+        },
+      },
+      {
+        jsonrpc: '2.0',
+        id: 5,
+        method: 'tools/call',
+        params: {
+          name: 'ark_identity',
+          arguments: { project: { expectedRoot: root } },
+        },
+      },
+      {
+        jsonrpc: '2.0',
+        id: 6,
+        method: 'tools/call',
+        params: {
+          name: 'ark_place',
+          arguments: {
+            filePath: path.join(otherRoot, 'src/domain/order.ts'),
+            project: { expectedRoot: otherRoot },
+          },
+        },
+      },
+      {
+        jsonrpc: '2.0',
+        id: 7,
+        method: 'tools/call',
+        params: {
+          name: 'ark_manifest',
+          arguments: { project: { expectedRoot: root } },
+        },
+      },
+      {
+        jsonrpc: '2.0',
+        id: 8,
+        method: 'resources/read',
+        params: {
+          uri: 'ark://manifest',
+          project: { expectedRoot: root },
         },
       },
     ]
@@ -1020,12 +1106,32 @@ function runCell(options, candidate, workRoot, typescriptVersion) {
     const tools = messages.find((message) => message.id === 2)?.result?.tools ?? [];
     const validation = messages.find((message) => message.id === 3)?.result;
     const parseValidation = messages.find((message) => message.id === 4)?.result;
+    const identity = messages.find((message) => message.id === 5)?.result;
+    const mismatch = messages.find((message) => message.id === 6)?.result;
+    const manifest = messages.find((message) => message.id === 7)?.result;
+    const compatibilityManifest = messages.find((message) => message.id === 8)?.result;
     assertCondition(initialized?.result?.serverInfo?.name === 'arkgate', 'MCP initialize failed');
     assertCondition(
       tools.some((tool) => tool.name === 'validate_code'),
       'MCP tools/list omitted validate_code'
     );
+    assertCondition(
+      tools.some((tool) => tool.name === 'ark_identity'),
+      'MCP tools/list omitted ark_identity'
+    );
+    assertCondition(
+      tools.some((tool) => tool.name === 'ark_manifest'),
+      'MCP tools/list omitted ark_manifest'
+    );
+    assertCondition(
+      tools.every((tool) => tool.inputSchema?.properties?.project),
+      'MCP tool schema omitted shared project expectation'
+    );
     assertCondition(validation?.isError === true, 'MCP validate_code accepted forbidden fetch');
+    assertCondition(
+      validation?.binding?.status === 'matched' && validation?.authoritative === true,
+      'MCP matched validation omitted authoritative project binding'
+    );
     assertCondition(
       validation?.structuredContent?.mode === 'lexical-compatibility' &&
         validation?.structuredContent?.valid === false &&
@@ -1043,6 +1149,11 @@ function runCell(options, candidate, workRoot, typescriptVersion) {
     );
     assertCondition(parseValidation?.isError === true, 'MCP accepted parse-invalid source');
     assertCondition(
+      parseValidation?.binding?.status === 'unverified' &&
+        parseValidation?.authoritative === false,
+      'legacy MCP call without project expectation was not marked unverified'
+    );
+    assertCondition(
       parseValidation?.structuredContent?.valid === false &&
         parseValidation?.structuredContent?.completeness === 'partial',
       'MCP parse-invalid validation emitted a green or complete verdict'
@@ -1053,11 +1164,46 @@ function runCell(options, candidate, workRoot, typescriptVersion) {
       ),
       'MCP parse-invalid validation omitted its analysis diagnostic'
     );
+    assertCondition(
+      identity?.binding?.status === 'matched' &&
+        identity?.authoritative === true &&
+        identity?.projectIdentity?.resolvedRoot === canonicalPath(root),
+      'ark_identity did not match the packed consumer workspace'
+    );
+    const mismatchText = mismatch?.content?.[0]?.text ?? '';
+    assertCondition(
+      mismatch?.isError === true &&
+        mismatch?.binding?.code === 'PROJECT_ROOT_MISMATCH' &&
+        mismatch?.authoritative === false,
+      'project-B request did not fail closed against project-A MCP'
+    );
+    assertCondition(
+      !/goldenPattern|arkRulesCatalog|suggestedLayers/.test(mismatchText),
+      'cross-project failure leaked project-A architecture guidance'
+    );
+    const manifestBody = JSON.parse(manifest?.content?.[0]?.text ?? '{}');
+    assertCondition(
+      manifest?.binding?.status === 'matched' &&
+        manifest?.authoritative === true &&
+        manifestBody.projectIdentity?.projectId === identity.projectIdentity.projectId,
+      'ark_manifest did not preserve the matched project identity'
+    );
+    const compatibilityBody = JSON.parse(
+      compatibilityManifest?.contents?.[0]?.text ?? '{}'
+    );
+    assertCondition(
+      compatibilityManifest?.binding?.status === 'unverified' &&
+        compatibilityManifest?.authoritative === false &&
+        compatibilityBody.binding?.status === 'unverified',
+      'ark://manifest compatibility resource was treated as authoritative'
+    );
     return {
       server: initialized.result.serverInfo,
       toolCount: tools.length,
       validationCompleteness: validation.structuredContent.completeness,
       parseCompleteness: parseValidation.structuredContent.completeness,
+      projectId: identity.projectIdentity.projectId,
+      crossProjectCode: mismatch.binding.code,
       command: commandEvidence(run),
     };
   });

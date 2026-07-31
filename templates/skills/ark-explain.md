@@ -27,6 +27,15 @@ The CLI is a **sensor**, never the whole job. Claiming done without the explorat
 
 
 
+## MCP workspace binding (mandatory)
+
+Before any `ark_*` MCP tool, call `ark_identity` with `project.expectedRoot` set to the exact
+workspace root. Continue only when `binding.status === "matched"` and `authoritative === true`;
+retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedProjectId` under
+`project` on every later MCP call. If identity is missing, mismatched, unverified, or the root is
+uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
+restart/retargeting is required. `ark://manifest` never satisfies this preflight.
+
 ## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
 
 ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
@@ -146,7 +155,10 @@ when residual signals remain.
 
 ## Spoken / written explanation
 
-1. **Load the real contract**: `ark.config.json`, `ark://manifest` if available, `AGENTS.md`.
+1. **Load the real contract**: `ark.config.json`, `AGENTS.md`, and—when MCP is available—
+   `ark_identity` with the exact project root followed by `ark_manifest` with the same root plus
+   returned project id. `ark://manifest` is compatibility-only and always
+   unverified/non-authoritative.
 2. **If asked generally** ("explain the architecture"), produce a guided tour:
    - Operating mode + governed% (honest: low coverage means green checks almost nothing).
    - Each major layer: name, purpose, one real file from this repo, file count if known.

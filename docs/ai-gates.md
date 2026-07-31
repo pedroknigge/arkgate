@@ -85,9 +85,12 @@ supported smells on touched paths. Companion plan JSON: `plan.patternBets[]` wit
 [package-surface.md](package-surface.md) and [brownfield-adoption.md](brownfield-adoption.md) §6.
 
 If your project uses Codex or Grok, treat MCP registration as part of the default
-setup, not an optional extra. Ark works best when the agent can read `ark://manifest`
+setup, not an optional extra. Ark works best when the agent can call `ark_manifest`
 before it writes code; that is the fast path to avoiding architecture drift during
-generation.
+generation. Registration on disk is not runtime proof: after the host starts the server, call
+`ark_identity` with `project.expectedRoot` set to the exact project's absolute root and require
+a `matched`, authoritative binding. Then call `ark_manifest` with that root plus the returned
+project id before using project evidence.
 
 ## Claude Code — hook (recommended, hard block)
 
@@ -158,7 +161,7 @@ Add to your project's `.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "npx ark-mcp --hook --hook-repair --root \"$CLAUDE_PROJECT_DIR\" --config ark.config.json"
+            "command": "npx ark-mcp --hook --hook-repair --root . --root-env CLAUDE_PROJECT_DIR --config ark.config.json"
           }
         ]
       }
@@ -173,7 +176,7 @@ That's the whole setup. Try asking the agent to import a persistence adapter fro
 Ark architecture gate blocked this write to src/domain/order.ts (layer: DomainModel):
 - [FORBIDDEN_PATTERN] Forbidden pattern matched: /from ['"].*\/(infra|adapters|persistence|db)/i (line 1)
 - [FORBIDDEN_IMPORT] Forbidden import target: "../adapters/persistence/pg-order-repository". (line 1)
-Fix the violations and retry. The architecture contract is available as the ark://manifest MCP resource.
+Fix the violations and retry. After ark_identity matches, call ark_manifest with the same project expectation for the authoritative contract.
 ```
 
 ## Claude Code — SessionStart context injection (know the rules before the first token)
@@ -191,7 +194,7 @@ injects into the agent's context at session start:
         "hooks": [
           {
             "type": "command",
-            "command": "npx ark-mcp --session-context --root \"$CLAUDE_PROJECT_DIR\" --config ark.config.json"
+            "command": "npx ark-mcp --session-context --root . --root-env CLAUDE_PROJECT_DIR --config ark.config.json"
           }
         ]
       }
@@ -207,7 +210,7 @@ Ark architecture contract governs this project (ark.config.json is authoritative
 Layers:
   - DomainModel: src/domain/** — forbidden globals: fetch, process, Date.now, Math.random
   - PersistenceAdapters: src/adapters/persistence/**
-Rules: 10 denied layer edge(s). Full contract: ark://manifest MCP resource.
+Rules: 10 denied layer edge(s). Full authoritative contract: ark_manifest after ark_identity.
 Baseline: 3 frozen violation(s) — only NEW violations fail; do not add to them.
 After edits run: npx ark-check --root . --config ark.config.json --strict
 ```
@@ -219,9 +222,20 @@ prints nothing and exits 0, so non-Ark projects are untouched.
 
 ## Claude Code — MCP server (contract discovery + on-demand validation)
 
-The MCP server exposes a resource and tools agents can use proactively (not an exhaustive list — `tools/list` is authoritative):
+The MCP server exposes tools plus one compatibility resource that agents can use proactively
+(not an exhaustive list — `tools/list` is authoritative):
 
-- **`ark://manifest`** (resource) — the machine-readable architecture contract (layers + rules), so the agent can read the architecture before generating code.
+- **`ark_identity`** (tool) — returns the canonical project/config identity and this live MCP
+  runtime identity. Call it first with
+  `{ "project": { "expectedRoot": "/absolute/exact-project-root" } }`, then reuse the same root
+  and returned `projectIdentity.projectId` as `project.expectedProjectId` on later calls. A
+  descendant path is authoritative only when that matching id is also supplied.
+- **`ark_manifest`** (tool) — returns the authoritative machine-readable architecture contract
+  (layers + rules) after the identity handshake. Call it with the same project expectation before
+  generating code.
+- **`ark://manifest`** (resource) — compatibility-only discovery for standard MCP
+  `resources/read`. Because that request has no portable project-expectation field, this resource
+  is always `unverified` and non-authoritative.
 - **`validate_code`** (tool) — validates a snippet against the architecture on demand (the write-path gate). May return additive **`autoPatch`** (W1) for mechanical-safe import-type rewrites.
 - **`ark_prepare_write`** (tool) — **W2:** place + constrain + validate + optional autoPatch + judgmentBrief + contentHash in one call (composes `ark_place` + write gate).
 - **`ark_prepare_change`** (tool) — **T02–T05:** read-only atomic create/update/delete preflight with cross-file edge/cycle findings and candidate fingerprints. Optional `changeMap` accepts strict schema `1.0` intent and returns its hash plus satisfied/missing/contradictory/unplanned structural convergence; behavioral completion is not evaluated. Omission is supported. MCP registration remains advisory unless the host makes invocation non-bypassable.
@@ -235,7 +249,20 @@ The MCP server exposes a resource and tools agents can use proactively (not an e
 - **`ark_check`** (tool) — runs the full architecture check and returns structured violations (applies the baseline automatically when one exists).
 - **`ark_coverage`** (tool) — per-layer file counts, the full unclassified-file list, and layers whose patterns match nothing.
 
-Tools appear in the agent's tool list automatically — no skill or doc-reading needed — so the agent can query the contract instead of shelling out and parsing.
+Every Ark tool accepts the additive `project` expectation. Project-bound tool successes and
+errors carry `projectIdentity`, `binding`, and `authoritative`. A legacy call with no expectation
+stays callable but returns `binding.status: "unverified"` and `authoritative: false`; a wrong
+root/id returns a mismatch before project evidence. Absolute project paths and
+config/manifest/tsconfig inputs are real-path contained inside the server root. The process never
+switches projects from input. The compatibility resource carries the same identity envelope but
+is always unverified/non-authoritative.
+
+`ark_check.verdict` keeps `identity`, `completeness`, `graph`, `coverage`, and `gates` separate.
+Only `overallOk` combines them; a graph-clean result cannot paint an unverified binding,
+incomplete analysis, empty/partial coverage, or inactive gates green.
+
+Tools appear in the agent's tool list automatically — no skill or doc-reading needed — so the
+agent can query the contract instead of shelling out and parsing.
 
 ```bash
 claude mcp add ark -- npx ark-mcp --root . --config ark.config.json
@@ -283,7 +310,8 @@ alwaysApply: true
 Before writing or editing any TypeScript source file, call the `validate_code`
 tool from the `ark` MCP server with the full post-edit file content and its
 path. If it reports violations, fix them before writing. The architecture
-contract is available as the `ark://manifest` resource.
+contract is available authoritatively from `ark_manifest` after `ark_identity`
+matches. `ark://manifest` is compatibility-only and always unverified.
 ```
 
 Your repository backstop in Cursor is CI: `ark-check` fails its check on anything that slips
@@ -295,8 +323,9 @@ Recommended for Ark projects.
 
 Codex 0.123+ dispatches `PreToolUse` for the native `apply_patch` handler. Ark installs
 `.codex/hooks.json` with `ApplyPatch|apply_patch|Write|Edit|MultiEdit` aliases and reconstructs
-every added or updated file in a multi-file patch before allowing it. The hook root uses
-`${CODEX_PROJECT_DIR:-${PWD:-.}}`; it must not use Claude-only `CLAUDE_PROJECT_DIR`.
+every added or updated file in a multi-file patch before allowing it. The hook passes
+`--root . --root-env CODEX_PROJECT_DIR`: ArkGate reads the environment directly without
+POSIX shell expansion and safely falls back to the hook working directory.
 
 This hook is best-effort in Codex Code Mode: some hosts execute deferred nested `apply_patch`
 calls without dispatching the project `PreToolUse` event. ArkGate therefore does not treat the
@@ -330,8 +359,45 @@ command = "npx"
 args = ["arkgate-mcp", "--root", ".", "--config", "ark.config.json"]
 ```
 
-Then **restart Codex** — it does not hot-load MCP servers. Expect resource `ark://manifest`
-and tools `validate_code`, `ark_check`, `ark_coverage`, `ark_place`.
+This file means **configured on disk**, not active. Install and compact
+`ark start --tools codex --json` therefore report the setup-time state explicitly:
+
+```json
+{
+  "runtimeActivation": {
+    "configuredOnDisk": true,
+    "restartRequired": true,
+    "runtimeObserved": false,
+    "identityMatch": "unverified",
+    "active": false
+  }
+}
+```
+
+Then **restart Codex** — it does not hot-load MCP servers — and call:
+
+```json
+{
+  "tool": "ark_identity",
+  "arguments": {
+    "project": {
+      "expectedRoot": "/absolute/exact-project-root"
+    }
+  }
+}
+```
+
+The live response must say `binding.status: "matched"` and `authoritative: true`. Reuse its
+`projectIdentity.projectId` with the same root on every subsequent Ark call, starting with
+`ark_manifest`. A missing `ark_identity` or `ark_manifest` means the process is from an older
+ArkGate build; restart the host and use the workspace-local CLI until the new server answers. A
+mismatch means Codex is connected to another project's process; do not use its contract,
+placement, Layers, ArkRules, or check evidence.
+
+Setup-time `runtimeActivation` remains intentionally conservative: the installer/doctor cannot
+observe a later MCP conversation from files alone. The matched `ark_identity` response is the
+runtime observation for that caller and live process; it does not mutate the setup JSON.
+`.codex/config.toml` by itself never upgrades `runtimeObserved` or `active`.
 
 Codex uses the best-effort local patch hook plus advisory MCP for discovery/validation and
 `ark-check` as the hard merge backstop. Register all three as soon as the repo is adopted.
@@ -359,9 +425,11 @@ writes a scoped secondary table:
 | Doctor: primary points at another permanent project | gap id `codex-home-multi-project` (warn if no secondary yet and session host is unknown/Codex; **info + `deferred`** when the session host is known and not Codex — e.g. Grok/Claude/Cursor; info if a scoped secondary is already present) |
 | When using Codex: refresh home skills | `ark-check --install-agent-gates --skills-only --codex-home --force` |
 
-When a valid project `.codex/config.toml` exists, doctor treats it as the effective binding and
-does not report an unrelated home primary. Without a project binding, doctor surfaces the
-legacy multi-project state. **Deferred (fix when using Codex):**
+When a valid project `.codex/config.toml` exists, it is the expected binding, but files alone
+cannot prove which already-running process answered. Doctor therefore keeps an unrelated home
+primary as collision evidence until the live `ark_identity` matches; it does not label that home
+entry as the active project. Without a project binding, doctor surfaces the legacy multi-project
+state directly. **Deferred (fix when using Codex):**
 non-temp Codex-home gaps (`codex-home-multi-project`, stale `$CODEX_HOME/skills`) are
 severity **info**, marked `deferred: true`, and omitted from doctor **Primary next action** /
 **Also** list (formerly “Top actions”) when the session host is known and not Codex —
@@ -380,6 +448,23 @@ Codex discovers skills as directories containing `SKILL.md` (Agent Skills standa
 Flat `.codex/prompts/*.md` files are **not** the invocable skill catalog. Install writes the
 repo catalog above so AGENTS.md `/ark-*` references match what Codex can load. After install,
 Ark verifies those references against each selected host catalog.
+
+**Several repos on one machine:** repo catalogs are independent and follow each repository's
+locally installed ArkGate package. A managed upgrade rewrites a repo skill only when its normalized
+body changes; a package-version stamp alone is a no-op. The optional home catalog is shared, so
+ArkGate 4.2.0+ installation is monotonic there: an older bundled source cannot replace a newer
+managed home skill, even with `--force`. A pre-4.2 binary ignores the catalog/lock protocol and
+can still overwrite those files, so upgrade every legacy repo before it runs `--codex-home`
+(especially with `--force`). Identical content is idempotent, and preserved customization still
+follows the explicit force contract. The shared skill only routes the workflow; project evidence remains
+bound to the repo through `ark_identity`. Ark records the shared catalog in
+`$CODEX_HOME/skills/.arkgate-catalog.json`, writes a durable
+`.arkgate-catalog.pending.json` floor before mutations, and serializes concurrent installs.
+Doctor suppresses home refresh gaps only when the maximum valid committed/pending floor is newer
+than the repo package; an equal pending version remains actionable for recovery, and corrupt
+metadata never counts as a floor. When a newer package retires a skill, Ark removes it only if the
+bytes still match the prior managed identity; customized retired content is preserved and
+released from Ark ownership.
 
 **Parity & honesty (doctor / install):**
 

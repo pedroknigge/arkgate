@@ -208,7 +208,7 @@ args = ["ark-mcp", "--root", "/var/folders/xx/ark-upgrade-tmp123", "--config", "
     };
   }
 
-  it('doctor prefers the project Codex MCP over an unrelated home primary', () => {
+  it('doctor keeps a foreign home binding visible until project runtime identity is verified', () => {
     const root = mk();
     const codexHome = mk();
     writeTwoLayerOptional(root);
@@ -232,8 +232,24 @@ args = ["ark-mcp", "--root", "/var/folders/xx/ark-upgrade-tmp123", "--config", "
     expect(result.status).toBe(0);
     const out = JSON.parse(result.stdout);
     const ids = out.doctor.adoption.gaps.map((gap: { id: string }) => gap.id);
-    expect(ids).not.toContain('codex-home-multi-project');
-    expect(out.doctor.adoption.codexHome).toBeNull();
+    expect(ids).toContain('codex-home-multi-project');
+    expect(out.doctor.adoption.codexHome).toMatchObject({
+      wrongRoot: true,
+      projectConfiguredOnDisk: true,
+      runtimeIdentityVerified: false,
+    });
+    expect(out.doctor.adoption.runtimeActivation).toEqual({
+      configuredOnDisk: true,
+      restartRequired: true,
+      runtimeObserved: false,
+      identityMatch: 'unverified',
+      active: false,
+    });
+    expect(
+      out.doctor.adoption.gaps.find(
+        (gap: { id: string }) => gap.id === 'codex-home-multi-project'
+      )?.message
+    ).toMatch(/project config exists on disk.*runtime identity is unverified/i);
     expect(out.doctor.writePath.capabilityEvidence['advisory-write']).toEqual([
       '.codex/config.toml',
     ]);

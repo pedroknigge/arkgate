@@ -3,19 +3,19 @@
   "packages": {
     "gate": {
       "path": ".",
-      "maxPackedBytes": 666338,
-      "maxUnpackedBytes": 2354004,
-      "maxFiles": 180,
+      "maxPackedBytes": 770370,
+      "maxUnpackedBytes": 2732711,
+      "maxFiles": 185,
       "measuredCandidate": {
-        "sha": "4404c48dc2ab0dfe33056cd417a8d0f492601a99",
-        "ciCandidateSha": "4404c48dc2ab0dfe33056cd417a8d0f492601a99",
+        "sha": "2ebb786e8bedfa88c1e8e2eb7aadf38b6de44498",
+        "ciCandidateSha": "2ebb786e8bedfa88c1e8e2eb7aadf38b6de44498",
         "ciRun": null,
-        "version": "4.0.0",
-        "packedBytes": 605761,
-        "unpackedBytes": 2140003,
-        "files": 159
+        "version": "4.2.0",
+        "packedBytes": 700336,
+        "unpackedBytes": 2484282,
+        "files": 168
       },
-      "exception": "ArkGate 4.0.0 dual-plane (ArkRules sensors/templates/schemas + dual-plane skills + AR04 removal). Clean candidate remeasure on source 4404c48: 605,761 packed / 2,140,003 unpacked / 159 files. Owner-authorized recalibration retains ≥10% headroom: 666,338 packed, 2,354,004 unpacked, 180 files. Previous 3.8.1 ceilings (568,884 / 1,981,532 / 160) are superseded for the major."
+      "exception": "ArkGate 4.2.0 workspace identity + activation truth + multi-repo shared-skill safety. Clean archive measurement on signed source 2ebb786e: 700,336 packed / 2,484,282 unpacked / 168 files. Recalibration retains ≥10% fixed headroom: 770,370 packed, 2,732,711 unpacked, 185 files. Previous 4.0.0 ceilings (666,338 / 2,354,004 / 180) are superseded for this feature minor."
     },
     "runtime": {
       "path": "packages/runtime",

@@ -165,22 +165,104 @@ export function codexScopedTableForRoot(tomlText, absRoot) {
   return null;
 }
 
+function extractCodexCommandFromBlock(block) {
+  const matches = [
+    ...String(block || '').matchAll(
+      /^[ \t]*command[ \t]*=[ \t]*("(?:\\.|[^"\\])*"|'[^']*')[ \t]*(?:#.*)?$/gm
+    ),
+  ];
+  if (matches.length !== 1) return null;
+  try {
+    return matches[0][1].startsWith('"')
+      ? JSON.parse(matches[0][1])
+      : matches[0][1].slice(1, -1);
+  } catch {
+    return null;
+  }
+}
+
+function executableName(value) {
+  if (typeof value !== 'string' || value !== value.trim() || value.length === 0) return '';
+  return path.posix
+    .basename(value.replace(/\\/g, '/'))
+    .replace(/\.(?:cmd|exe)$/i, '')
+    .toLowerCase();
+}
+
+function isArkMcpToken(value) {
+  return /^(?:arkgate-mcp|ark-mcp)(?:\.mjs)?$/.test(executableName(value));
+}
+
+function codexArkMcpInvocation(command, args) {
+  if (
+    !command ||
+    !Array.isArray(args) ||
+    [command, ...args].filter(isArkMcpToken).length !== 1
+  ) {
+    return false;
+  }
+  const argv = [command, ...args];
+  if (isArkMcpToken(command)) return { binArgs: argv.slice(1) };
+  const runner = executableName(command);
+  if ((runner === 'npx' || runner === 'yarn') && isArkMcpToken(args[0])) {
+    return { binArgs: argv.slice(2) };
+  }
+  if (runner === 'node') {
+    const script = args[0]?.replace(/\\/g, '/');
+    return isArkMcpToken(script) && /(?:^|\/)bin\/ark-mcp\.mjs$/.test(script)
+      ? { binArgs: argv.slice(2) }
+      : false;
+  }
+  if (runner !== 'pnpm') return false;
+  const binIndex =
+    args[0] === 'exec'
+      ? 1
+      : args[0] === '--config.verify-deps-before-run=false' && args[1] === 'exec'
+        ? 2
+        : -1;
+  return binIndex >= 0 && isArkMcpToken(args[binIndex])
+    ? { binArgs: argv.slice(binIndex + 2) }
+    : false;
+}
+
+function singleOptionValue(args, option) {
+  const indexes = args.flatMap((value, index) => (value === option ? [index] : []));
+  return indexes.length === 1 ? args[indexes[0] + 1] ?? null : null;
+}
+
+function projectPathFlavor(projectRoot) {
+  const windows = /^(?:[A-Za-z]:[\\/]|\\\\)/.test(projectRoot);
+  return {
+    api: windows ? path.win32 : path,
+    comparable: (value) => (windows ? value.toLowerCase() : value),
+  };
+}
+
+function blockHasWorkingDirectoryOverride(block) {
+  return /^[ \t]*(?:cwd|"cwd"|'cwd')[ \t]*=/m.test(String(block || ''));
+}
+
 /** True when project TOML owns the primary Ark MCP binding for that project. */
 export function codexProjectMcpIsValid(tomlText, projectRoot) {
-  const resolvedRoot = path.resolve(projectRoot);
   if (listCodexArkServerTables(tomlText).filter((entry) => entry.table === 'ark').length !== 1) {
     return false;
   }
   const primary = codexPrimaryTable(tomlText);
   const args = extractCodexArgsFromBlock(primary?.block);
-  if (!primary?.root || !args?.some((value) => /^(ark|arkgate)-mcp$/.test(value))) return false;
-  const configIndex = args.indexOf('--config');
-  const config = configIndex >= 0 ? args[configIndex + 1] : null;
-  if (!config) return false;
+  const command = extractCodexCommandFromBlock(primary?.block);
+  const invocation = args && codexArkMcpInvocation(command, args);
+  if (!invocation || blockHasWorkingDirectoryOverride(primary?.block)) return false;
+  const rootArg = singleOptionValue(invocation.binArgs, '--root');
+  const configArg = singleOptionValue(invocation.binArgs, '--config');
+  if (!rootArg || !configArg || invocation.binArgs.length !== 4) return false;
   try {
+    const { api, comparable } = projectPathFlavor(projectRoot);
+    const resolvedRoot = api.resolve(projectRoot);
+    const requestedRoot = api.resolve(resolvedRoot, rootArg);
+    const requestedConfig = api.resolve(resolvedRoot, configArg);
     return (
-      path.resolve(resolvedRoot, primary.root) === resolvedRoot &&
-      path.resolve(resolvedRoot, config) === path.join(resolvedRoot, 'ark.config.json')
+      comparable(requestedRoot) === comparable(resolvedRoot) &&
+      comparable(requestedConfig) === comparable(api.join(resolvedRoot, 'ark.config.json'))
     );
   } catch {
     return false;
@@ -281,7 +363,7 @@ export function assessCodexHomeMcp(tomlText, absRoot) {
       message: scopedTable
         ? `Codex primary [mcp_servers.ark] is bound to another project (${rootArg}); ` +
           `this project is registered as [mcp_servers.${scopedTable}]. ` +
-          `Install the project-scoped binding so this repo owns ark://manifest when active.`
+          `Install the project-scoped binding so ark_identity and ark_manifest match this repo when active.`
         : `Codex home primary MCP --root is another permanent project ` +
           `(${rootArg || 'missing'} ≠ ${resolvedRoot}). ` +
           `Install the project-scoped binding for this repo; the global primary can remain unchanged.`,

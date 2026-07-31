@@ -16,6 +16,19 @@ export {
 } from './domain/adapterContract';
 
 export {
+  ARK_PROJECT_IDENTITY_SCHEMA_VERSION,
+  ARK_PROJECT_IDENTITY_SCHEMA_URL,
+  ARK_PROJECT_IDENTITY_SCHEMA,
+  PROJECT_EXPECTATION_SCHEMA,
+  PROJECT_BINDING_SCHEMA,
+  createProjectId,
+  createProjectIdentity,
+  type ProjectIdentity,
+  type ProjectExpectation,
+  type ProjectBinding,
+} from './domain/projectIdentity';
+
+export {
   createAICodeGate,
   type AICodeGate,
   type AICodeGateResult,

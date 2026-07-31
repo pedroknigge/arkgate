@@ -42,6 +42,15 @@ Pattern bets always have `neverMechanicalSafe: true` — extraction cards only
 
 
 
+## MCP workspace binding (mandatory)
+
+Before any `ark_*` MCP tool, call `ark_identity` with `project.expectedRoot` set to the exact
+workspace root. Continue only when `binding.status === "matched"` and `authoritative === true`;
+retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedProjectId` under
+`project` on every later MCP call. If identity is missing, mismatched, unverified, or the root is
+uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
+restart/retargeting is required. `ark://manifest` never satisfies this preflight.
+
 ## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
 
 ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
@@ -120,8 +129,8 @@ you may run **that one pilot** — never more:
    card: respect the explicit record and do not reconstruct it from raw facts. Read a live card's
    `pilotTarget`, `decisionTarget`, `moveSample`/`movesTotal`, `successSignal`, `killSwitch`, `doNot[]`.
 2. Moves are **proposed only** — enumerate the full move set for the pilot anchor, express it as
-   an architecture change map, and validate through the atomic preflight (`ark_prepare_change` /
-   the write gate) **before** any file moves. A move the preflight rejects is a finding, not a
+   an architecture change map, and validate through the atomic preflight (`ark_prepare_change`
+   with the matched `project` envelope / the write gate) **before** any file moves. A move the preflight rejects is a finding, not a
    thing to force.
 3. Never move anything under `app/` or `pages/` (fixed by framework convention). Never merge
    files here — merges are judgment cards for `/ark-architect` / `/ark-fix`.

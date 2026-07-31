@@ -202,7 +202,7 @@ command = "echo"
         'eslint.config.mjs': 'export default []\n',
         'AGENTS.md': '# Ark Enforcement\nBefore editing\n',
         '.github/workflows/ci.yml':
-          'name: ci\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 22\n      - run: npm run lint\n      - run: npm run typecheck\n      - run: npx ark-check --baseline .ark-baseline.json\n',
+          'name: ci\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 22\n      - run: npm run lint\n      - run: npm run typecheck\n      - run: npx ark-check --strict-merge --baseline .ark-baseline.json\n',
         '.gitlab-ci.yml': 'lint:\n  script: npm run lint\n',
         'apps/web/package.json': JSON.stringify({
           name: 'web',

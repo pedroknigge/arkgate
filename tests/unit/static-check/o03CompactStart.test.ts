@@ -73,6 +73,13 @@ describe('O03 compact start', () => {
       const originalPackage = fs.readFileSync(path.join(root, 'package.json'), 'utf8');
       const preview = JSON.parse(start(root, host)) as {
         changes: Array<{ path: string }>;
+        runtimeActivation?: {
+          configuredOnDisk: boolean;
+          restartRequired: boolean;
+          runtimeObserved: boolean;
+          identityMatch: string;
+          active: boolean;
+        };
         setupBudget: {
           files: number;
           bytes: number;
@@ -103,6 +110,18 @@ describe('O03 compact start', () => {
       // No arkgate pin without --install.
       expect(preview.changes.some((change) => /\/(skills|prompts|commands)\//.test(change.path))).toBe(false);
       expect(preview.changes.some((change) => change.path === '.mcp.json')).toBe(true);
+      if (host === 'codex') {
+        expect(preview.changes.some((change) => change.path === '.codex/config.toml')).toBe(true);
+        expect(preview.runtimeActivation).toEqual({
+          configuredOnDisk: true,
+          restartRequired: true,
+          runtimeObserved: false,
+          identityMatch: 'unverified',
+          active: false,
+        });
+      } else {
+        expect(preview.runtimeActivation).toBeUndefined();
+      }
 
       const before = snapshot(root);
       const applied = JSON.parse(start(root, host, ['--apply'])) as typeof preview;
@@ -129,10 +148,16 @@ describe('O03 compact start', () => {
       expect(instructions).toMatch(/Primary path/i);
       expect(instructions).toMatch(/Expert depth/i);
       expect(instructions).toMatch(/--doctor/);
+      expect(instructions).toContain('ark_identity');
+      expect(instructions).toContain('ark_manifest');
+      expect(instructions).toContain('project.expectedRoot');
       expect(instructions).not.toMatch(/origin is frozen/i);
       // Optional single guided-skill mention under expert depth is allowed; no full skill catalog.
       expect(instructions).not.toMatch(/\/ark-coverage|\/ark-think|\/ark-loop|\/ark-adopt/);
       expect(fs.existsSync(path.join(root, '.codex', 'prompts'))).toBe(false);
+      if (host === 'codex') {
+        expect(fs.existsSync(path.join(root, '.codex', 'config.toml'))).toBe(true);
+      }
 
       const strict = spawnSync(process.execPath, [ARK_CHECK, '--root', root, '--strict-merge'], {
         encoding: 'utf8',
@@ -191,27 +216,129 @@ describe('O03 compact start', () => {
       start(root, 'codex', ['--apply']);
       expect(fs.existsSync(path.join(root, '.mcp.json'))).toBe(true);
       const removal = JSON.parse(
-        execFileSync(process.execPath, [ARK, 'start', '--root', root, '--remove-host', 'codex', '--apply', '--json'], {
-          encoding: 'utf8',
-        })
+        execFileSync(
+          process.execPath,
+          [
+            ARK,
+            'start',
+            '--root',
+            root,
+            '--remove-host',
+            'codex',
+            '--no-install',
+            '--apply',
+            '--json',
+          ],
+          { encoding: 'utf8' }
+        )
       ) as { changes: Array<{ path: string; action: string }>; unresolvedDecisions: string[] };
       expect(removal.unresolvedDecisions).toEqual([]);
       expect(removal.changes).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ path: '.codex/hooks.json', action: 'delete' }),
+          expect.objectContaining({ path: '.codex/config.toml', action: 'delete' }),
           expect.objectContaining({ path: 'AGENTS.md', action: 'edit' }),
         ])
       );
       expect(fs.existsSync(path.join(root, '.codex', 'hooks.json'))).toBe(false);
+      expect(fs.existsSync(path.join(root, '.codex', 'config.toml'))).toBe(false);
       // Shared MCP registration is kept (or recreated) when a compact host is removed.
       expect(fs.existsSync(path.join(root, '.mcp.json'))).toBe(true);
 
       start(root, 'codex', ['--apply']);
       expect(fs.existsSync(path.join(root, '.codex', 'hooks.json'))).toBe(true);
+      expect(fs.existsSync(path.join(root, '.codex', 'config.toml'))).toBe(true);
       // 3.8.3: compact always installs project .mcp.json for every host.
       expect(fs.existsSync(path.join(root, '.mcp.json'))).toBe(true);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
-  });
+  }, 60_000);
+
+  it('removes the exact Ark Codex table while preserving sibling TOML settings', () => {
+    const root = createFixture();
+    try {
+      start(root, 'codex', ['--apply']);
+      const configPath = path.join(root, '.codex', 'config.toml');
+      const customized = `${fs.readFileSync(configPath, 'utf8')}\n[features]\nweb_search = true\n`;
+      fs.writeFileSync(configPath, customized);
+
+      const removal = JSON.parse(
+        execFileSync(
+          process.execPath,
+          [
+            ARK,
+            'start',
+            '--root',
+            root,
+            '--remove-host',
+            'codex',
+            '--no-install',
+            '--apply',
+            '--json',
+          ],
+          { encoding: 'utf8' }
+        )
+      ) as {
+        changes: Array<{ path: string; action: string }>;
+        unresolvedDecisions: string[];
+        runtimeActivation: {
+          configuredOnDisk: boolean;
+          restartRequired: boolean;
+          runtimeObserved: boolean;
+          identityMatch: string;
+          active: boolean;
+        };
+      };
+
+      expect(removal.changes).toContainEqual(
+        expect.objectContaining({ path: '.codex/config.toml', action: 'edit' })
+      );
+      expect(removal.unresolvedDecisions).toEqual([]);
+      expect(removal.runtimeActivation).toEqual({
+        configuredOnDisk: false,
+        restartRequired: true,
+        runtimeObserved: false,
+        identityMatch: 'unverified',
+        active: false,
+      });
+      const retained = fs.readFileSync(configPath, 'utf8');
+      expect(retained).toContain('[features]');
+      expect(retained).toContain('web_search = true');
+      expect(retained).not.toContain('[mcp_servers.ark]');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }, 60_000);
+
+  it('preserves a customized Ark Codex table during compact host removal', () => {
+    const root = createFixture();
+    try {
+      start(root, 'codex', ['--apply']);
+      const configPath = path.join(root, '.codex', 'config.toml');
+      const customized = fs
+        .readFileSync(configPath, 'utf8')
+        .replace('arkgate-mcp', 'custom-ark-mcp');
+      fs.writeFileSync(configPath, customized);
+
+      const removal = JSON.parse(
+        execFileSync(
+          process.execPath,
+          [ARK, 'start', '--root', root, '--remove-host', 'codex', '--json'],
+          { encoding: 'utf8' }
+        )
+      ) as {
+        changes: Array<{ path: string; action: string }>;
+        unresolvedDecisions: string[];
+      };
+
+      expect(removal.changes.some((change) => change.path === '.codex/config.toml')).toBe(false);
+      expect(removal.unresolvedDecisions).toContain(
+        '.codex/config.toml Ark MCP binding was customized and was left untouched.'
+      );
+      expect(fs.readFileSync(configPath, 'utf8')).toBe(customized);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }, 60_000);
 });

@@ -371,9 +371,9 @@ function summaryFor(assets, manifestChanged) {
   const states = {};
   for (const asset of assets) states[asset.state] = (states[asset.state] ?? 0) + 1;
   const applying = assets.filter((asset) => asset.willApply);
-  // Content writes (stale/missing/conflicted accepted) — not version-stamp metadata-only.
-  const wouldWrite = applying.filter((asset) => asset.action !== 'refresh-metadata').length;
-  const metadataRefresh = applying.filter((asset) => asset.action === 'refresh-metadata').length;
+  const wouldWrite = applying.length;
+  // Public-summary compatibility: stamp-only writes are no longer scheduled.
+  const metadataRefresh = 0;
   const customizedPreserved = assets.filter((asset) => asset.state === 'customized').length;
   const fileChanges = applying.length;
   return {
@@ -385,7 +385,6 @@ function summaryFor(assets, manifestChanged) {
     customizedPreserved,
     fileChanges,
     manifestChanged,
-    // Full apply count still includes optional stamp refresh + manifest bookkeeping.
     changed: fileChanges + (manifestChanged ? 1 : 0),
     blocked: assets.filter((asset) => asset.blocked).length,
   };
@@ -447,12 +446,7 @@ export function planManagedUpgrade(root, options = {}) {
           kind: catalogAsset.kind,
         });
     const accepted = options.acceptConflicts === true;
-    const refreshMetadata =
-      classified.state === 'current' &&
-      catalogAsset.kind === 'skill' &&
-      currentScoped !== desiredScoped;
     const canApply =
-      refreshMetadata ||
       classified.state === 'stale' ||
       (classified.state === 'missing' && (!recorded || accepted)) ||
       (classified.state === 'conflicted' && accepted);
@@ -465,7 +459,7 @@ export function planManagedUpgrade(root, options = {}) {
       scope: catalogAsset.scope,
       ...classified,
       ...(unparsedScope ? { reason: 'unparsed managed TOML scope preserved' } : {}),
-      action: refreshMetadata ? 'refresh-metadata' : canApply ? (currentScoped == null ? 'create' : 'update') : 'none',
+      action: canApply ? (currentScoped == null ? 'create' : 'update') : 'none',
       willApply: canApply,
       blocked,
       beforeHash: hash(currentScoped == null ? null : Buffer.from(currentScoped)),
@@ -615,9 +609,7 @@ export function applyManagedUpgrade(root, plan, expectedPlanDigest) {
   if (resolvedRoot !== plan.root) throw new Error('managed upgrade plan root mismatch');
   if (plan.summary.blocked > 0) return publicPlan(plan, { blocked: true });
   const wouldWrite = plan.summary.wouldWrite ?? 0;
-  const metadataRefresh = plan.summary.metadataRefresh ?? 0;
   // Content already matches: unbound --apply is a no-op (exit success), not a digest error.
-  // Optional stamp-only refresh still requires the preview's exact --plan-digest.
   if (!expectedPlanDigest || expectedPlanDigest !== plan.planDigest) {
     if (wouldWrite === 0 && (plan.summary.blocked ?? 0) === 0 && !expectedPlanDigest) {
       return publicPlan(plan, {
@@ -625,7 +617,6 @@ export function applyManagedUpgrade(root, plan, expectedPlanDigest) {
         applied: false,
         blocked: false,
         nothingToApply: true,
-        optionalStampRefresh: metadataRefresh,
       });
     }
     throw new Error('managed upgrade plan digest mismatch; run a new preview and use its exact nextCommand');
@@ -741,31 +732,18 @@ export function renderManagedUpgrade(plan, options = {}) {
   const summary = plan.summary;
   const managedAssets = summary.managedAssets ?? summary.total ?? plan.assets.length;
   const wouldWrite = summary.wouldWrite ?? 0;
-  const metadataRefresh = summary.metadataRefresh ?? 0;
   const customizedPreserved = summary.customizedPreserved ?? summary.states?.customized ?? 0;
   const blocked = summary.blocked ?? 0;
   console.log(
     `Managed assets: ${managedAssets}; would write: ${wouldWrite}; ` +
-      `customized preserved: ${customizedPreserved}; blocked conflicts/deletions: ${blocked}` +
-      (metadataRefresh > 0 ? `; optional stamp refresh: ${metadataRefresh}` : '') +
-      '.'
+      `customized preserved: ${customizedPreserved}; blocked conflicts/deletions: ${blocked}.`
   );
   if (plan.applied) {
-    // Distinguish content writes from optional stamp/metadata bookkeeping.
-    if (wouldWrite === 0 && metadataRefresh > 0) {
-      console.log(
-        `Refreshed ${metadataRefresh} version stamp(s)` +
-          (summary.manifestChanged ? ' and managed manifest' : '') +
-          ' (no content body changes).'
-      );
-    } else {
-      console.log(
-        `Applied ${wouldWrite} content write(s)` +
-          (metadataRefresh > 0 ? `, ${metadataRefresh} stamp refresh(es)` : '') +
-          (summary.manifestChanged ? ', managed manifest' : '') +
-          '.'
-      );
-    }
+    console.log(
+      `Applied ${wouldWrite} content write(s)` +
+        (summary.manifestChanged ? ', managed manifest' : '') +
+        '.'
+    );
     return;
   }
   // Content already matches package templates — do not urge --apply as the primary next step.
@@ -775,15 +753,6 @@ export function renderManagedUpgrade(plan, options = {}) {
     console.log(
       `Nothing to apply — managed content matches ${verLabel} (${customizedPreserved} customized preserved).`
     );
-    if (metadataRefresh > 0) {
-      console.log(
-        `Optional: ${metadataRefresh} skill stamp(s) lag package version while content is already current.`
-      );
-      const stampCmd = options.optionalStampApply ?? options.next;
-      if (stampCmd) {
-        console.log(`Optional stamp-only apply (not required): ${stampCmd}`);
-      }
-    }
     return;
   }
   console.log(`Planned writes: ${wouldWrite}; blocked conflicts/deletions: ${blocked}.`);

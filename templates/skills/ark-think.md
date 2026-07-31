@@ -31,6 +31,15 @@ If you lack a product map and the tree is messy: run a **compressed** explore pa
 Never reason only from abstract hexagons. Open real modules before recommending a shape.
 
 
+## MCP workspace binding (mandatory)
+
+Before any `ark_*` MCP tool, call `ark_identity` with `project.expectedRoot` set to the exact
+workspace root. Continue only when `binding.status === "matched"` and `authoritative === true`;
+retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedProjectId` under
+`project` on every later MCP call. If identity is missing, mismatched, unverified, or the root is
+uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
+restart/retargeting is required. `ark://manifest` never satisfies this preflight.
+
 ## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
 
 ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
@@ -71,8 +80,11 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 
 ## Steps
 
-1. **Load the contract** — `ark.config.json`, MCP `ark://manifest` if available, and
-   `ark-check --coverage --json` / `--doctor` for honesty about governed% and false-green.
+1. **Load the contract** — `ark.config.json`; when MCP is available, call `ark_identity` with
+   the exact project root followed by `ark_manifest` with the same root plus returned project
+   id. The `ark://manifest` resource is compatibility-only and always
+   unverified/non-authoritative. Use `ark-check --coverage --json` / `--doctor` for honesty
+   about governed% and false-green.
 2. **Touch the decision surface** — README skim + **≥5 source files** on the feature/package/boundary
    under discussion. Name paths in the answer.
 3. **Name the active shape** — which preset/archetype fits (hexagonal, vertical-slice,

@@ -114,12 +114,67 @@ describe('detectDesignSmells (shipped)', () => {
     expect(smells.some((s) => s.id === 'domain-logic-in-ui')).toBe(true);
   });
 
+  it('keeps permission and local UI state out of domain-logic-in-ui', () => {
+    const root = mk();
+    const f = write(
+      root,
+      'src/components/Editor.tsx',
+      `export const canEdit = permissions.includes('order:edit');
+export const shouldShowPanel = isOpen && !isLoading;
+`
+    );
+    const smells = detectDesignSmells(root, elevenish, [f], null);
+    expect(smells.some((s) => s.id === 'domain-logic-in-ui')).toBe(false);
+  });
+
+  it('keeps real business decisions and routes the fix through Application', () => {
+    const root = mk();
+    const f = write(
+      root,
+      'src/components/OrderEditor.tsx',
+      `export function canEditOrder(order: { status: string }, actor: { role: string }) {
+  return order.status === 'draft' && actor.role === 'manager';
+}\n`
+    );
+    const smell = detectDesignSmells(root, elevenish, [f], null).find(
+      (item) => item.id === 'domain-logic-in-ui'
+    );
+    expect(smell).toBeTruthy();
+    const [bet] = buildPatternBetsFromSmells([smell!]);
+    expect(bet.fix).toMatch(/Domain.*Application.*UI/i);
+    expect(bet.fix).toMatch(/never Presentation.*Domain/i);
+    expect(bet.successSignal).toMatch(/UI imports Application only/i);
+  });
+
   it('flags god-module by LOC + export surface', () => {
     const root = mk();
     const lines = Array.from({ length: 420 }, (_, i) => `export const v${i} = ${i};`);
     const f = write(root, 'src/application/god.ts', `${lines.join('\n')}\n`);
     const smells = detectDesignSmells(root, elevenish, [f], null);
     expect(smells.some((s) => s.id === 'god-module')).toBe(true);
+  });
+
+  it('does not select seed, fixture, demo, migration, or generated files as god modules', () => {
+    const root = mk();
+    const huge = `${Array.from({ length: 420 }, (_, i) => `export const v${i} = ${i};`).join('\n')}\n`;
+    const files = [
+      'src/seeds/huge.ts',
+      'src/fixtures/huge.ts',
+      'src/demo/huge.ts',
+      'src/migrations/huge.ts',
+      'src/generated/huge.ts',
+      'src/application/huge.generated.ts',
+      'src/application/seed.ts',
+      'src/application/fixture.ts',
+      'src/application/migration.ts',
+      'src/application/demo.ts',
+      'src/application/generated.ts',
+    ].map((rel) => write(root, rel, huge));
+    files.push(
+      write(root, 'src/application/generated-banner.ts', `// @generated — do not edit\n${huge}`)
+    );
+    const smells = detectDesignSmells(root, elevenish, files, null);
+    expect(smells.some((s) => s.id === 'god-module')).toBe(false);
   });
 
   it('flags soft-contract from coverage.layersWithoutRules', () => {
@@ -272,6 +327,20 @@ describe('summarizeDesignFitness', () => {
     const s = summarizeDesignFitness([], { activeViolations: 0, governedPercent: 100, totalFiles: 5 });
     expect(s.status).toBe('ok');
     expect(s.designWeak).toBe(false);
+  });
+
+  it('uses the actual operating mode and stays neutral when mode is unknown', () => {
+    const smells = [
+      { id: 'god-module', severity: 'warn' as const, message: 'x', evidence: [], fix: 'x' },
+    ];
+    const context = { activeViolations: 0, governedPercent: 100, totalFiles: 5 };
+    expect(summarizeDesignFitness(smells, context).label).toMatch(/^design-weak/);
+    expect(summarizeDesignFitness(smells, { ...context, operatingMode: 'adapt' }).label).toMatch(
+      /^ADAPT · design-weak/
+    );
+    expect(summarizeDesignFitness(smells, { ...context, operatingMode: 'enforce' }).label).toMatch(
+      /^ENFORCE · design-weak/
+    );
   });
 });
 

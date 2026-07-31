@@ -35,32 +35,55 @@ export function readTsconfigAliases(ts, root) {
   }
 }
 
+function canonicalPathWithMissingTail(value) {
+  const resolved = path.resolve(value);
+  let current = resolved;
+  const tail = [];
+  while (true) {
+    try {
+      return path.join(fs.realpathSync(current), ...tail.reverse());
+    } catch {
+      const parent = path.dirname(current);
+      if (parent === current) return resolved;
+      tail.push(path.basename(current));
+      current = parent;
+    }
+  }
+}
+
 /**
  * Resolve an import specifier to a repo-relative path.
  * Relative + tsconfig-aliased only; bare packages → undefined.
  */
 export function resolveSpecifierToRel(specifier, fromFilePath, root, tsAliases) {
+  const canonicalRoot = canonicalPathWithMissingTail(root);
   let abs;
   if (specifier.startsWith('./') || specifier.startsWith('../')) {
     if (!fromFilePath) return undefined;
-    const fromAbs = path.isAbsolute(fromFilePath)
-      ? fromFilePath
-      : path.resolve(root, fromFilePath);
-    abs = path.resolve(path.dirname(fromAbs), specifier);
+    const fromAbs = canonicalPathWithMissingTail(
+      path.isAbsolute(fromFilePath) ? fromFilePath : path.resolve(root, fromFilePath)
+    );
+    abs = canonicalPathWithMissingTail(path.resolve(path.dirname(fromAbs), specifier));
   } else {
     const alias = tsAliases.aliases.find((a) => specifier.startsWith(a.from));
     if (!alias) return undefined;
-    abs = path.resolve(tsAliases.baseUrl, `${alias.to}${specifier.slice(alias.from.length)}`);
+    abs = canonicalPathWithMissingTail(
+      path.resolve(tsAliases.baseUrl, `${alias.to}${specifier.slice(alias.from.length)}`)
+    );
   }
-  const rel = path.relative(root, abs).split(path.sep).join('/');
-  return rel.startsWith('..') ? undefined : rel;
+  const relative = path.relative(canonicalRoot, abs);
+  if (path.isAbsolute(relative) || relative.startsWith('..')) return undefined;
+  return relative.split(path.sep).join('/');
 }
 
 function filePathToRel(filePath, root) {
   if (!filePath || typeof filePath !== 'string') return undefined;
-  const abs = path.isAbsolute(filePath) ? filePath : path.resolve(root, filePath);
-  const rel = path.relative(root, abs).split(path.sep).join('/');
-  return rel.startsWith('..') ? undefined : rel;
+  const abs = canonicalPathWithMissingTail(
+    path.isAbsolute(filePath) ? filePath : path.resolve(root, filePath)
+  );
+  const relative = path.relative(canonicalPathWithMissingTail(root), abs);
+  if (path.isAbsolute(relative) || relative.startsWith('..')) return undefined;
+  return relative.split(path.sep).join('/');
 }
 
 function classifyProbe(root, rel, layers) {
@@ -130,4 +153,3 @@ export function createImportTargetResolver(ts, root, config) {
     return undefined;
   };
 }
-
