@@ -482,7 +482,8 @@ This is a path reference, not a guarantee table. Full copy-paste setups:
 [README](../README.md#other-skills-only-when-you-need-them).
 When several repositories share one machine, repo catalogs stay pinned and isolated; unchanged
 skill bodies are not rewritten for a version stamp. The optional `$CODEX_HOME/skills` catalog is
-monotonic, so an older repo cannot downgrade a newer managed home skill. See
+monotonic across ArkGate 4.2.0+ installers. Pre-4.2 binaries ignore its metadata and lock, so
+upgrade legacy repos before they write the optional home catalog. See
 [AI gates — Codex skill catalog](ai-gates.md#codex-skill-catalog-skillmd-not-flat-prompts).
 
 For an optional executable adoption check, copy the shipped template into a Vitest/Jest suite

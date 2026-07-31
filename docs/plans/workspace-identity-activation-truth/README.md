@@ -29,7 +29,8 @@ integrations verify the active workspace before trusting a verdict. A mismatched
 fails before contract, golden-pattern, Layers, or ArkRules evidence can escape. Installer and
 doctor copy distinguish configured files from a verified active runtime. Repository skill
 catalogs stay isolated and content-addressed; the optional shared home catalog advances
-monotonically and cannot be downgraded by an older repository.
+monotonically across ArkGate 4.2.0+ installers. Pre-4.2 binaries cannot honor the new protocol
+and must be upgraded before writing the optional home catalog.
 
 ## Users and success
 
@@ -38,8 +39,8 @@ monotonically and cannot be downgraded by an older repository.
 - **Success:** a stale pre-identity server is detected as unsupported/stale, not silently trusted.
 - **Success:** `graphOk`, coverage, analysis completeness, gate activation, and overall verdict are
   separate facts.
-- **Success:** updating multiple repos on one machine does not rewrite unchanged skills or let an
-  older repo downgrade the shared home catalog.
+- **Success:** updating multiple repos on one machine does not rewrite unchanged skills, and a
+  4.2.0+ installer cannot apply an older bundle over a newer shared home catalog.
 - **Success:** the identity and multi-repo install contracts pass on Linux, macOS, and Windows;
   identity is stable per canonical local checkout, not promised to match across operating systems.
 - **Non-goals:** automatic project switching; hard-write claims for Codex; runtime-kernel changes;
@@ -118,7 +119,7 @@ Generated ArkGate instructions require this identity → manifest sequence.
 - [ ] Report Codex config as configured/restart-required until the live handshake matches.
 - [ ] Make compact install/remove own `.codex/config.toml` safely and report partial installs.
 - [ ] Keep repo skill catalogs isolated, skip stamp-only rewrites, and make the optional Codex
-  home catalog monotonic across repositories and installed ArkGate versions.
+  home catalog monotonic across repositories whose writers use ArkGate 4.2.0+.
 - [ ] Feed actual layer classification into rules inventory eligibility and suppress false
   controller/magic-constant pilots in Domain or technical contexts.
 - [ ] Add source, generated-artifact, packed-consumer, symlink, monorepo, and stale-process tests.
@@ -141,8 +142,10 @@ Generated ArkGate instructions require this identity → manifest sequence.
    customized TOML.
 9. Rules inventory uses the governed layer as evidence; a Domain filename containing `handler`
    is not treated as a controller by name alone.
-10. Installing the same skill body from a newer package leaves repo-local bytes unchanged; an
-    older package cannot downgrade a newer managed `$CODEX_HOME/skills` entry, even with `--force`.
+10. Installing the same skill body from a newer package leaves repo-local bytes unchanged; a
+    4.2.0+ installer cannot apply an older package source over a newer managed
+    `$CODEX_HOME/skills` entry, even with `--force`. Pre-4.2 writers are an explicit compatibility
+    limit and emit an upgrade warning when the new installer owns the operation.
 11. Native separator, canonical-root, and shared-home cases pass on Linux, macOS, and Windows.
 12. The packed npm candidate reproduces all A/B cases under supported TypeScript versions.
 

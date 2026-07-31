@@ -27,8 +27,9 @@ root or architecture contract.
   its locally installed ArkGate version without changing another repo.
 - Managed upgrade compares normalized skill content, not the generated ArkGate version stamp.
   An unchanged body is a no-op; metadata-only version changes do not rewrite the file.
-- `$CODEX_HOME/skills` is one shared catalog. ArkGate installation is monotonic there: an older
-  bundled skill cannot replace a newer managed skill, including when the caller passes `--force`.
+- `$CODEX_HOME/skills` is one shared catalog. ArkGate 4.2.0+ installation is monotonic there: an
+  older bundled skill cannot replace a newer managed skill, including when the caller passes
+  `--force`.
 - `$CODEX_HOME/skills/.arkgate-catalog.json` records the highest installed ArkGate version,
   Ark-managed names, and normalized content identities. The adjacent install lock serializes
   concurrent repositories.
@@ -46,14 +47,18 @@ root or architecture contract.
   `ark_identity` root/project-id handshake from ADR 0017.
 - Version metadata remains diagnostic provenance; it is not, by itself, evidence that skill
   behavior is stale.
+- Compatibility boundary: binaries before 4.2.0 do not read this metadata, lock, or journal and
+  therefore cannot participate in the monotonic protocol. Repo-local installation remains the
+  safe default; legacy repos must be upgraded before writing the optional shared home catalog.
 
 ## Consequences
 
 - Updating several repositories on one computer no longer causes stamp-only churn in every repo.
-- Running an older project cannot downgrade the optional shared Codex skill catalog.
+- Running an older bundled source through a 4.2.0+ installer cannot downgrade the optional
+  shared Codex skill catalog.
 - If a process stops after changing skills but before committing the catalog, the durable journal
-  keeps older repositories blocked. A same-version or newer rerun completes the catalog and
-  removes only the journal token it owns.
+  keeps 4.2.0+ installers carrying older sources blocked. A same-version or newer rerun completes
+  the catalog and removes only the journal token it owns.
 - A newer package can still advance the shared catalog, and each repository can still retain its
   locally pinned catalog.
 - `--force` is not a downgrade switch. A future explicit rollback feature would need a separately

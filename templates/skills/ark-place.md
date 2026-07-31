@@ -36,6 +36,15 @@ The CLI is a **sensor**, never the whole job. Claiming done without the explorat
 
 
 
+## MCP workspace binding (mandatory)
+
+Before any `ark_*` MCP tool, call `ark_identity` with `project.expectedRoot` set to the exact
+workspace root. Continue only when `binding.status === "matched"` and `authoritative === true`;
+retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedProjectId` under
+`project` on every later MCP call. If identity is missing, mismatched, unverified, or the root is
+uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
+restart/retargeting is required. `ark://manifest` never satisfies this preflight.
+
 ## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
 
 ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
@@ -66,16 +75,16 @@ the same files or weaken the gate.
 
 ## Steps
 
-1. **Read the contract, not your intuition.** If the `ark` MCP server is available,
-   call the **`ark_place`** tool with the target file path — it returns the layer,
+1. **Read the contract, not your intuition.** If the `ark` MCP server is available, complete
+   the mandatory `ark_identity` preflight first, then call **`ark_place`** with the target file
+   path and bound `project` envelope — it returns the layer,
    its forbidden globals, and exactly which layers the file may / must not import,
    straight from the contract (no guessing). When present, also honor optional
    **`goldenPattern`** (from `.ark/golden-pattern.json`) for **NEW code only** —
    advisory layout norm; never overrides the gate and never clears design-weak.
-   Absent golden is normal. Otherwise load `ark.config.json`; when MCP is available, call
-   `ark_identity` with the exact project root, then call `ark_manifest` with the same root plus
-   returned project id (it includes `suggestedLayers` with conventional directories for layers
-   not yet adopted). The `ark://manifest` resource is compatibility-only and always
+   Absent golden is normal. Otherwise load `ark.config.json`; after the matched preflight,
+   `ark_manifest` with the same bound envelope includes `suggestedLayers` with conventional
+   directories for layers not yet adopted. The `ark://manifest` resource is compatibility-only and always
    unverified/non-authoritative. The project's `AGENTS.md` placement table, if present, is
    authoritative too.
 2. **Classify the artifact** by what it does, not what it's called:

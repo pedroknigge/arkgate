@@ -90,7 +90,8 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).toMatch(/binding\.status.*matched/is);
     expect(notes).toMatch(/ark_manifest/i);
     expect(notes).toMatch(/ark:\/\/manifest.*unverified|unverified.*ark:\/\/manifest/is);
-    expect(notes).toMatch(/cannot downgrade|cannot replace/i);
+    expect(notes).toMatch(/4\.2\.0\+ installers/i);
+    expect(notes).toMatch(/before 4\.2|pre-4\.2/i);
     expect(notes).toMatch(/No required config migration/i);
     expect(notes).toMatch(/Z09|RB-11/i);
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*published/i);

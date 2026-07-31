@@ -452,9 +452,11 @@ Ark verifies those references against each selected host catalog.
 **Several repos on one machine:** repo catalogs are independent and follow each repository's
 locally installed ArkGate package. A managed upgrade rewrites a repo skill only when its normalized
 body changes; a package-version stamp alone is a no-op. The optional home catalog is shared, so
-installation is monotonic there: an older repo cannot replace a newer managed home skill, even
-with `--force`. Identical content is idempotent, and preserved customization still follows the
-explicit force contract. The shared skill only routes the workflow; project evidence remains
+ArkGate 4.2.0+ installation is monotonic there: an older bundled source cannot replace a newer
+managed home skill, even with `--force`. A pre-4.2 binary ignores the catalog/lock protocol and
+can still overwrite those files, so upgrade every legacy repo before it runs `--codex-home`
+(especially with `--force`). Identical content is idempotent, and preserved customization still
+follows the explicit force contract. The shared skill only routes the workflow; project evidence remains
 bound to the repo through `ark_identity`. Ark records the shared catalog in
 `$CODEX_HOME/skills/.arkgate-catalog.json`, writes a durable
 `.arkgate-catalog.pending.json` floor before mutations, and serializes concurrent installs.

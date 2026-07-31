@@ -302,6 +302,58 @@ description: |
     expect(jobIdsThatRunArkCheck(root).size).toBe(0);
   });
 
+  it('does not treat a backgrounded Ark process as merge enforcement', () => {
+    const root = mk();
+    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.github/workflows/ci.yml'),
+      'jobs:\n  architecture:\n    steps:\n      - run: npx ark-check --strict-merge &\n'
+    );
+    expect(detectCiEnforcement(root)).toMatchObject({
+      hasArkCheckWorkflow: true,
+      failClosed: false,
+    });
+    expect(jobIdsThatRunArkCheck(root).size).toBe(0);
+  });
+
+  it('keeps shell redirection ampersands fail-closed, including through package scripts', () => {
+    for (const command of [
+      'npx ark-check --strict-merge 2>&1',
+      'npx ark-check --strict-merge &> ark.log',
+      'npx ark-check --strict-merge <&0',
+    ]) {
+      const root = mk();
+      fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, '.github/workflows/ci.yml'),
+        `jobs:\n  architecture:\n    steps:\n      - run: ${command}\n`
+      );
+      expect(detectCiEnforcement(root), command).toMatchObject({
+        hasArkCheckWorkflow: true,
+        failClosed: true,
+      });
+      expect(jobIdsThatRunArkCheck(root), command).toEqual(
+        new Set(['architecture'])
+      );
+    }
+
+    const scriptRoot = mk();
+    fs.writeFileSync(
+      path.join(scriptRoot, 'package.json'),
+      '{"scripts":{"check:architecture":"npx ark-check --strict-merge 2>&1"}}\n'
+    );
+    fs.mkdirSync(path.join(scriptRoot, '.github/workflows'), { recursive: true });
+    fs.writeFileSync(
+      path.join(scriptRoot, '.github/workflows/ci.yml'),
+      'jobs:\n  architecture:\n    steps:\n      - run: npm run check:architecture\n'
+    );
+    expect(detectCiEnforcement(scriptRoot)).toMatchObject({
+      hasArkCheckWorkflow: true,
+      failClosed: true,
+    });
+    expect(jobIdsThatRunArkCheck(scriptRoot)).toEqual(new Set(['architecture']));
+  });
+
   it('does not treat comments, step names, or echo output as an Ark-running job', () => {
     const root = mk();
     fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });

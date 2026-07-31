@@ -599,8 +599,8 @@ Boundary:
 - Codex remains advisory at write time. This phase verifies which advisory process answered; it
   does not invent a hard local write boundary.
 - Repo skill catalogs are independent; unchanged bodies are not rewritten for a package-version
-  stamp alone. The optional shared Codex home catalog is monotonic and cannot be downgraded by a
-  repo pinned to an older ArkGate version.
+  stamp alone. The optional shared Codex home catalog is monotonic across ArkGate 4.2.0+
+  installers; pre-4.2 binaries ignore that protocol and must be upgraded before writing it.
 - Focused identity/install evidence must run on Linux, macOS, and Windows; `projectId` is local
   canonical-workspace identity, not a cross-OS content id.
 - The corrective minor adds no unrelated architecture presets, runtime features, or broad

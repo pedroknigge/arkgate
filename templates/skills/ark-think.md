@@ -31,6 +31,15 @@ If you lack a product map and the tree is messy: run a **compressed** explore pa
 Never reason only from abstract hexagons. Open real modules before recommending a shape.
 
 
+## MCP workspace binding (mandatory)
+
+Before any `ark_*` MCP tool, call `ark_identity` with `project.expectedRoot` set to the exact
+workspace root. Continue only when `binding.status === "matched"` and `authoritative === true`;
+retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedProjectId` under
+`project` on every later MCP call. If identity is missing, mismatched, unverified, or the root is
+uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
+restart/retargeting is required. `ark://manifest` never satisfies this preflight.
+
 ## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
 
 ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.

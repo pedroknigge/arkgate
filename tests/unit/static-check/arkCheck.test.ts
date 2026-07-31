@@ -933,6 +933,11 @@ describe('ark-check --require-gates', () => {
     expect(hasArkWorkflow(root)).toBe(false);
     fs.writeFileSync(
       workflowPath,
+      'jobs:\n  ark:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npx ark-check --strict-merge &\n'
+    );
+    expect(hasArkWorkflow(root)).toBe(false);
+    fs.writeFileSync(
+      workflowPath,
       [
         'jobs:',
         '  ark:',
@@ -3340,11 +3345,13 @@ describe('ark-check monorepo tsconfig resolution', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-cxh-'));
     fs.writeFileSync(path.join(root, 'AGENTS.md'), '# AGENTS\n');
     const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-cxhome-'));
-    execFileSync(
+    const output = execFileSync(
       'node',
       [path.resolve('bin/ark-check.mjs'), '--install-agent-gates', '--root', root, '--tools', 'claude', '--codex-home'],
       { encoding: 'utf8', stdio: 'pipe', env: { ...process.env, CODEX_HOME: codexHome } }
     );
+    expect(output).toContain('requires every shared-catalog writer to use ArkGate 4.2.0+');
+    expect(output).toContain('pre-4.2 --codex-home ignores this catalog');
     const fixSkill = path.join(codexHome, 'skills', 'ark-fix', 'SKILL.md');
     expect(fs.existsSync(fixSkill)).toBe(true);
     expect(fs.readFileSync(fixSkill, 'utf8')).toMatch(/^arkVersion:/m);

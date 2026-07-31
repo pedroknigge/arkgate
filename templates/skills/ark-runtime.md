@@ -24,6 +24,14 @@ one feature at a time.
 
 The CLI is a **sensor**, never the whole job. Claiming done without the exploratory bar for this skill is **incomplete**.
 
+## MCP workspace binding (mandatory)
+
+Before any `ark_*` MCP tool, call `ark_identity` with `project.expectedRoot` set to the exact
+workspace root. Continue only when `binding.status === "matched"` and `authoritative === true`;
+retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedProjectId` under
+`project` on every later MCP call. If identity is missing, mismatched, unverified, or the root is
+uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
+restart/retargeting is required. `ark://manifest` never satisfies this preflight.
 
 ## Out of scope for ArkRules
 

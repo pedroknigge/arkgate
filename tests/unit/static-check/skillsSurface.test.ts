@@ -160,6 +160,29 @@ describe('skill dual-engine + completion contract', () => {
     }
   });
 
+  it('every skill binds MCP to the exact workspace before consuming Ark analysis', () => {
+    for (const name of EXPECTED_SKILLS) {
+      const body = fs.readFileSync(path.join(SKILLS_DIR, `${name}.md`), 'utf8');
+      expect(body, name).toContain('## MCP workspace binding (mandatory)');
+      expect(body, name).toContain('binding.status === "matched"');
+      expect(body, name).toContain('authoritative === true');
+      expect(body, name).toContain('expectedRoot');
+      expect(body, name).toContain('expectedProjectId');
+      expect(body, name).toMatch(/do not consume MCP analysis/i);
+      const steps = body.indexOf('## Steps');
+      if (steps >= 0) {
+        expect(body.indexOf('## MCP workspace binding (mandatory)'), name).toBeLessThan(steps);
+      }
+    }
+
+    const architect = fs.readFileSync(path.join(SKILLS_DIR, 'ark-architect.md'), 'utf8');
+    const place = fs.readFileSync(path.join(SKILLS_DIR, 'ark-place.md'), 'utf8');
+    const loop = fs.readFileSync(path.join(SKILLS_DIR, 'ark-loop.md'), 'utf8');
+    expect(architect).toMatch(/ark_identity[\s\S]*then[\s\S]*ark_recommend/i);
+    expect(place).toMatch(/ark_identity[\s\S]*then[\s\S]*ark_place/i);
+    expect(loop).toMatch(/ark_prepare_change[\s\S]*matched `project` envelope/i);
+  });
+
   it('critical skills include hard STOP handoff phrases', () => {
     const needStop = [
       'ark-autopilot',

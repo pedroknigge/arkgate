@@ -51,7 +51,14 @@ function shellSegments(text) {
       index++;
       continue;
     }
-    if (char === ';' || char === '|' || char === '\n') {
+    if (
+      char === '&' &&
+      (input[index - 1] === '>' || input[index - 1] === '<' || input[index + 1] === '>')
+    ) {
+      current += char;
+      continue;
+    }
+    if (char === ';' || char === '|' || char === '&' || char === '\n') {
       push(char);
       continue;
     }
@@ -70,12 +77,18 @@ function analyzeCommands(commands, script = '') {
     .filter((segment) => DIRECT_ARK.test(executableText(segment.text)))
     .map((segment) => ({
       text: segment.text,
-      enforcing: segment.terminator !== '||' && segment.terminator !== '|',
+      enforcing:
+        segment.terminator !== '||' &&
+        segment.terminator !== '|' &&
+        segment.terminator !== '&',
     }));
   const found = [];
   for (const segment of shellSegments(commands)) {
     const executable = executableText(segment.text);
-    const outerEnforcing = segment.terminator !== '||' && segment.terminator !== '|';
+    const outerEnforcing =
+      segment.terminator !== '||' &&
+      segment.terminator !== '|' &&
+      segment.terminator !== '&';
     if (DIRECT_ARK.test(executable)) {
       found.push({ text: segment.text, enforcing: outerEnforcing });
     } else if (CHECK_SCRIPT.test(executable)) {

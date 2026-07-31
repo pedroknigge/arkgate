@@ -31,6 +31,15 @@ The CLI is a **sensor**, never the whole job. Claiming done without the explorat
 
 
 
+## MCP workspace binding (mandatory)
+
+Before any `ark_*` MCP tool, call `ark_identity` with `project.expectedRoot` set to the exact
+workspace root. Continue only when `binding.status === "matched"` and `authoritative === true`;
+retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedProjectId` under
+`project` on every later MCP call. If identity is missing, mismatched, unverified, or the root is
+uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
+restart/retargeting is required. `ark://manifest` never satisfies this preflight.
+
 ## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
 
 ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
@@ -71,8 +80,9 @@ the same files or weaken the gate.
 
 ## Steps
 
-1. **Detect the shape** — call MCP tool **`ark_recommend`** (or run
-   `ark-check --recommend --json`). Read `archetype`, `preset`, `confidence`,
+1. **Bind and detect the shape** — complete the mandatory `ark_identity` preflight first, then
+   call MCP tool **`ark_recommend`** with the bound `project` envelope (or run the workspace-local
+   `ark-check --recommend --json`). Never use an unverified recommendation. Read `archetype`, `preset`, `confidence`,
    `adoptInOrder.phase1`, `analogy`, `why`, `evidence`, and `requiresConfirmation`.
    Ask at most **two** questions only if `requiresConfirmation` is true (or for compatibility
    with older ArkGate output, `confidence < 0.5`):

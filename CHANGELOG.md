@@ -36,17 +36,23 @@ non-authoritative until bound. Codex remains advisory at write time. **Status: p
 - **Wrong-project MCP reuse:** a process bound to project A rejects project B, config/manifest/
   tsconfig escapes, nested Ark roots, and external write/change paths before returning placement,
   golden-pattern, Layers, or ArkRules analysis.
+- **Skill MCP ordering:** every shipped `/ark-*` skill now requires a matched `ark_identity`
+  preflight before consuming any MCP analysis and carries the exact root plus returned project id
+  on each later call; stale/mismatched hosts fall back to the workspace-local CLI.
 - **Codex activation truth:** install/start/doctor say configured + restart required until a live
   identity match; compact setup reports partial installs and removes only exact ArkGate-owned
   project TOML.
 - **Gate-presence false green:** `--require-gates` now implies strict config validation and checks
   semantic Ark content in AGENTS, project-rooted MCP/Codex compact registrations, and fail-closed
-  CI instead of accepting placeholder files. Native Windows launcher paths are recognized.
+  CI instead of accepting placeholder files. Backgrounded `ark-check ... &` is not accepted as
+  merge enforcement. Native Windows launcher paths are recognized.
 - **Same-machine skill churn:** managed upgrades no longer rewrite an unchanged skill only to
   refresh `arkVersion`; repo catalogs remain isolated.
-- **Shared Codex downgrade:** an older repo cannot replace a newer managed
-  `$CODEX_HOME/skills` entry, including with `--force`; identical installs are idempotent and
-  report why they were skipped. Versioned catalog metadata + an install lock prevent
+- **Shared Codex downgrade:** ArkGate 4.2.0+ installers cannot replace a newer managed
+  `$CODEX_HOME/skills` entry with an older bundle, including with `--force`; identical installs
+  are idempotent and report why they were skipped. Pre-4.2 binaries do not understand this
+  protocol, so legacy repos must be upgraded before they write the optional home catalog.
+  Versioned catalog metadata + an install lock prevent
   reintroducing retired skills and serialize concurrent repos. A durable pending-catalog journal
   preserves that version floor across interrupted writes; same/newer retries recover it, while
   corrupt metadata fails safe before skill mutation.

@@ -599,6 +599,10 @@ export function runInstallAgentGates(args) {
     console.log(
       `Codex home skills (scope=home-shared; source=${version ? `arkgate@${version}` : 'arkgate@unknown'}; target=${dir}/<name>/SKILL.md):`
     );
+    console.log(
+      '  Compatibility: monotonic downgrade protection requires every shared-catalog writer ' +
+        'to use ArkGate 4.2.0+; pre-4.2 --codex-home ignores this catalog. Upgrade legacy repos first.'
+    );
     try {
       fs.mkdirSync(dir, { recursive: true });
     } catch (error) {
