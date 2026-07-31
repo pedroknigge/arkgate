@@ -5,6 +5,24 @@ import path from 'node:path';
 
 const UNVERIFIED = 'unverified';
 
+/**
+ * Codex project configuration is disk evidence only. Until a live `ark_identity`
+ * handshake answers for the expected root, runtime identity and activation remain
+ * unverified regardless of how complete the generated files look.
+ */
+export function codexRuntimeActivation({
+  configuredOnDisk = false,
+  restartRequired = configuredOnDisk,
+} = {}) {
+  return {
+    configuredOnDisk: Boolean(configuredOnDisk),
+    restartRequired: Boolean(restartRequired),
+    runtimeObserved: false,
+    identityMatch: UNVERIFIED,
+    active: false,
+  };
+}
+
 export function packageInstallation(root) {
   const projectPackage = path.join(root, 'package.json');
   try {

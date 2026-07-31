@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
 import { mk, rm, loadTypescript } from './helpers/q1Fixtures';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -286,6 +287,12 @@ describe('html-report branch push', () => {
       });
       expect(snap.project).toBe('demo-app');
       expect(snap.typeOnlyViolations).toBe(1);
+      expect(snap.git).toEqual({
+        available: false,
+        headSha: null,
+        branch: null,
+        dirty: null,
+      });
 
       // without Map fileCountByLayer
       const snap2 = buildReportSnapshot({
@@ -318,6 +325,55 @@ describe('html-report branch push', () => {
       });
       expect(html).toMatch(/html/i);
       expect(html.length).toBeGreaterThan(500);
+
+      const crossVersionEvolution = renderHtmlReport({
+        root,
+        config: { layers: coverage.layers, rules: [] },
+        coverage,
+        violations: [],
+        ok: true,
+        version: '4.2.0',
+        configPath: 'ark.config.json',
+        generatedAt: new Date().toISOString(),
+        originSnapshot: {
+          generatedAt: '2026-01-01T00:00:00.000Z',
+          arkVersion: '2.6.0',
+          score: 44,
+          layerFiles: {},
+        },
+        currentSnapshot: {
+          generatedAt: '2026-07-30T00:00:00.000Z',
+          arkVersion: '4.2.0',
+          score: 87,
+          layerFiles: {},
+        },
+      });
+      expect(crossVersionEvolution).toMatch(/not comparable across Ark versions/i);
+      expect(crossVersionEvolution).toMatch(/Ark score[\s\S]*44[\s\S]*87[\s\S]*—/);
+      const sameVersionEvolution = renderHtmlReport({
+        root,
+        config: { layers: coverage.layers, rules: [] },
+        coverage,
+        violations: [],
+        ok: true,
+        version: '4.2.0',
+        configPath: 'ark.config.json',
+        generatedAt: new Date().toISOString(),
+        originSnapshot: {
+          generatedAt: '2026-01-01T00:00:00.000Z',
+          arkVersion: '4.2.0',
+          score: 44,
+          layerFiles: {},
+        },
+        currentSnapshot: {
+          generatedAt: '2026-07-30T00:00:00.000Z',
+          arkVersion: '4.2.0',
+          score: 87,
+          layerFiles: {},
+        },
+      });
+      expect(sameVersionEvolution).not.toMatch(/not comparable across Ark versions/i);
+      expect(sameVersionEvolution).toContain('+43');
 
       const beginner = renderBeginnerHtmlReport({
         root,
@@ -359,6 +415,58 @@ describe('html-report branch push', () => {
       }
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('records portable Git commit and dirty-worktree evidence in snapshots', () => {
+    const root = mk('ark-report-git-');
+    try {
+      fs.writeFileSync(path.join(root, 'package.json'), '{"name":"git-snapshot"}\n');
+      execFileSync('git', ['init', '-q'], { cwd: root });
+      execFileSync('git', ['add', '.'], { cwd: root });
+      execFileSync(
+        'git',
+        [
+          '-c',
+          'user.name=ArkGate Tests',
+          '-c',
+          'user.email=arkgate-tests@example.invalid',
+          'commit',
+          '-qm',
+          'initial',
+        ],
+        { cwd: root }
+      );
+      const clean = buildReportSnapshot({
+        root,
+        config: { layers: [], rules: [] },
+        coverage: null,
+        violations: [],
+        ok: true,
+        version: '4.2.0',
+      });
+      expect(clean.git).toMatchObject({
+        available: true,
+        headSha: expect.stringMatching(/^[a-f0-9]{40,64}$/),
+        dirty: false,
+      });
+
+      fs.appendFileSync(path.join(root, 'package.json'), ' \n');
+      const dirty = buildReportSnapshot({
+        root,
+        config: { layers: [], rules: [] },
+        coverage: null,
+        violations: [],
+        ok: true,
+        version: '4.2.0',
+      });
+      expect(dirty.git).toMatchObject({
+        available: true,
+        headSha: clean.git.headSha,
+        dirty: true,
+      });
+    } finally {
+      rm(root);
     }
   });
 });

@@ -4,6 +4,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import {
+  hasArkAgentsContract,
+  hasArkMcpRegistration,
+  hasArkWorkflow,
+  missingGates,
+} from '../../../bin/lib/gate-files.mjs';
 
 function runArkCheck(root: string, extraArgs: string[] = []) {
   let output = '';
@@ -261,6 +267,7 @@ describe('ark-check --install-agent-gates', () => {
     expect(fs.existsSync(path.join(root, 'docs/ark-codex-config.toml'))).toBe(true);
 
     const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
+    expect(agents).toContain('ark_manifest');
     expect(agents).toContain('ark://manifest');
     // The placement table teaches agents where every default layer's code belongs.
     expect(agents).toContain('Where new code belongs');
@@ -784,13 +791,34 @@ jobs:
     // The canonical command appears in both derived files.
     expect(agents).toContain(command);
     expect(rule).toContain(command);
-    // Both reference the same manifest resource.
+    // Both prefer the bound manifest tool and name the legacy resource as compatibility-only.
+    expect(agents).toContain('ark_manifest');
+    expect(rule).toContain('ark_manifest');
     expect(agents).toContain('ark://manifest');
     expect(rule).toContain('ark://manifest');
+    // Both require a live workspace-identity handshake before MCP evidence is trusted.
+    expect(agents).toContain('ark_identity');
+    expect(rule).toContain('ark_identity');
+    expect(agents).toContain('project.expectedRoot');
+    expect(rule).toContain('project.expectedRoot');
   });
 });
 
 describe('ark-check --require-gates', () => {
+  function writeGovernedFixture(root: string) {
+    fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/domain/value.ts'), 'export const value = 1;\n');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+        rules: [],
+      })
+    );
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+  }
+
   it('fails when required gate files are missing', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-require-missing-'));
 
@@ -819,7 +847,7 @@ describe('ark-check --require-gates', () => {
 
   it('passes once gates are installed', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-require-present-'));
-    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+    writeGovernedFixture(root);
     const install = runInstallAgentGates(root);
     expect(install.status).toBe(0);
 
@@ -829,7 +857,7 @@ describe('ark-check --require-gates', () => {
       [path.resolve('bin/ark-check.mjs'), '--root', root, '--require-gates'],
       { encoding: 'utf8', stdio: 'pipe' }
     );
-    expect(human).toContain('Ark gates present');
+    expect(human).toContain('Ark gate artifacts found on disk');
 
     // JSON mode: require-gates stays quiet on success so the architecture check
     // owns the single JSON payload (no colliding objects).
@@ -842,13 +870,371 @@ describe('ark-check --require-gates', () => {
     expect(payload.ok).toBe(true);
   });
 
+  it('implies strict config and rejects incomplete layer coverage', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-require-coverage-'));
+    writeGovernedFixture(root);
+    fs.mkdirSync(path.join(root, 'src/loose'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/loose/unclassified.ts'), 'export const loose = 1;\n');
+    expect(runInstallAgentGates(root).status).toBe(0);
+
+    const result = spawnSync(
+      'node',
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--require-gates', '--json'],
+      { encoding: 'utf8' }
+    );
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(1);
+    const payload = JSON.parse(result.stdout) as {
+      ok: boolean;
+      error?: string;
+      warnings: Array<{ ruleId: string }>;
+    };
+    expect(payload.ok).toBe(false);
+    expect(payload.error).toBeUndefined();
+    expect(payload.warnings.map(({ ruleId }) => ruleId)).toContain('CONFIG_UNCLASSIFIED_FILES');
+  });
+
+  it('rejects placeholder AGENTS, MCP, and non-fail-closed workflow artifacts', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-require-semantic-'));
+    writeGovernedFixture(root);
+    expect(runInstallAgentGates(root).status).toBe(0);
+    const agentsPath = path.join(root, 'AGENTS.md');
+    const mcpPath = path.join(root, '.mcp.json');
+    const workflowPath = path.join(root, '.github/workflows/ark-check.yml');
+    const realAgents = fs.readFileSync(agentsPath, 'utf8');
+    const realMcp = fs.readFileSync(mcpPath, 'utf8');
+    const realWorkflow = fs.readFileSync(workflowPath, 'utf8');
+    expect(missingGates(root)).toEqual([]);
+
+    fs.writeFileSync(agentsPath, 'Ark instructions\n');
+    fs.writeFileSync(mcpPath, '{"mcpServers":{"ark":{"command":"npx","args":["arkgate-mcp"]}}}\n');
+    fs.writeFileSync(
+      workflowPath,
+      'jobs:\n  ark:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo "ark-check --strict-merge"\n'
+    );
+    expect(hasArkAgentsContract(root)).toBe(false);
+    expect(hasArkMcpRegistration(root)).toBe(false);
+    expect(hasArkWorkflow(root)).toBe(false);
+    expect(missingGates(root)).toEqual([
+      'AGENTS.md',
+      '.mcp.json',
+      '.github/workflows/*.yml running ark-check',
+    ]);
+
+    fs.writeFileSync(agentsPath, realAgents);
+    fs.writeFileSync(
+      workflowPath,
+      'jobs:\n  ark:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npx ark-check\n'
+    );
+    expect(hasArkWorkflow(root)).toBe(false);
+    fs.writeFileSync(
+      workflowPath,
+      'jobs:\n  ark:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npx ark-check --strict-merge || true\n'
+    );
+    expect(hasArkWorkflow(root)).toBe(false);
+    fs.writeFileSync(
+      workflowPath,
+      [
+        'jobs:',
+        '  ark:',
+        '    runs-on: ubuntu-latest',
+        '    steps:',
+        '      - uses: pedroknigge/arkgate@v4.2.0',
+        '        with:',
+        '          version: 4.2.0',
+        '',
+      ].join('\n')
+    );
+    expect(hasArkWorkflow(root)).toBe(true);
+    fs.writeFileSync(
+      workflowPath,
+      [
+        'jobs:',
+        '  ark:',
+        '    runs-on: ubuntu-latest',
+        '    steps:',
+        '      - uses: pedroknigge/arkgate@v4.2.0',
+        '        with:',
+        "          strict-config: 'false'",
+        '',
+      ].join('\n')
+    );
+    expect(hasArkWorkflow(root)).toBe(false);
+    fs.writeFileSync(workflowPath, realWorkflow);
+    fs.writeFileSync(
+      mcpPath,
+      '{"mcpServers":{"ark":{"command":"echo","args":["arkgate-mcp","--root","."]}}}\n'
+    );
+    expect(hasArkMcpRegistration(root)).toBe(false);
+    fs.writeFileSync(
+      mcpPath,
+      '{"mcpServers":{"ark":{"command":"npx","args":["arkgate-mcp","ark-mcp","--root","."]}}}\n'
+    );
+    expect(hasArkMcpRegistration(root)).toBe(false);
+    fs.writeFileSync(
+      mcpPath,
+      JSON.stringify({
+        mcpServers: {
+          ark: {
+            command: 'C:\\Program Files\\nodejs\\npx.cmd',
+            args: [
+              'arkgate-mcp.cmd',
+              '--root',
+              root.replaceAll('/', '\\'),
+              '--config',
+              `${root.replaceAll('/', '\\')}\\ark.config.json`,
+            ],
+          },
+        },
+      })
+    );
+    expect(hasArkMcpRegistration(root)).toBe(true);
+    fs.writeFileSync(mcpPath, realMcp);
+    expect(missingGates(root)).toEqual([]);
+  });
+
+  it('rejects placeholder compact Codex registration files', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-require-compact-codex-'));
+    writeGovernedFixture(root);
+    expect(runInstallAgentGates(root, ['--compact', '--tools', 'codex']).status).toBe(0);
+    expect(missingGates(root)).toEqual([]);
+
+    fs.writeFileSync(path.join(root, '.codex/config.toml'), '# placeholder\n');
+    fs.writeFileSync(path.join(root, '.codex/hooks.json'), '{}\n');
+    expect(missingGates(root)).toContain('compact host registration (codex)');
+  });
+
+  it('requires exact project-bound contracts in both compact Codex hook groups', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-require-codex-hooks-'));
+    writeGovernedFixture(root);
+    expect(runInstallAgentGates(root, ['--compact', '--tools', 'codex']).status).toBe(0);
+    const hooksPath = path.join(root, '.codex/hooks.json');
+    const generated = JSON.parse(fs.readFileSync(hooksPath, 'utf8'));
+    const sessionCommand = generated.hooks.SessionStart[0].hooks[0].command as string;
+    const preToolCommand = generated.hooks.PreToolUse[0].hooks[0].command as string;
+    const writeHooks = (mutate: (hooks: typeof generated) => void) => {
+      const hooks = JSON.parse(JSON.stringify(generated));
+      mutate(hooks);
+      fs.writeFileSync(hooksPath, JSON.stringify(hooks));
+    };
+    const writeCommands = (session: string, preTool: string) => {
+      writeHooks((hooks) => {
+        hooks.hooks.SessionStart[0].hooks[0].command = session;
+        hooks.hooks.PreToolUse[0].hooks[0].command = preTool;
+      });
+    };
+    const expectCompactMissing = () =>
+      expect(missingGates(root)).toContain('compact host registration (codex)');
+
+    expect(missingGates(root)).toEqual([]);
+
+    writeCommands(sessionCommand.replace('--root .', '--root ../other'), preToolCommand);
+    expectCompactMissing();
+
+    writeCommands(
+      sessionCommand.replace(' --config ark.config.json', ''),
+      preToolCommand
+    );
+    expectCompactMissing();
+
+    writeCommands(
+      sessionCommand.replace(' --session-context', ''),
+      preToolCommand
+    );
+    expectCompactMissing();
+
+    writeCommands(preToolCommand, sessionCommand);
+    expectCompactMissing();
+
+    writeCommands(
+      sessionCommand.replace('CODEX_PROJECT_DIR', 'OTHER_PROJECT_DIR'),
+      preToolCommand
+    );
+    expectCompactMissing();
+
+    writeCommands(
+      sessionCommand.replace('ark.config.json', 'other.json'),
+      preToolCommand
+    );
+    expectCompactMissing();
+
+    for (const extra of [
+      '--manifest other.json',
+      '--tsconfig other.json',
+      '--root .',
+      '--session-context',
+    ]) {
+      writeCommands(sessionCommand, `${preToolCommand} ${extra}`);
+      expectCompactMissing();
+    }
+
+    writeHooks((hooks) => {
+      hooks.hooks.PreToolUse[0].matcher = 'Read';
+    });
+    expectCompactMissing();
+
+    writeHooks((hooks) => {
+      hooks.hooks.SessionStart[0].metadata = { command: sessionCommand };
+      hooks.hooks.SessionStart[0].hooks[0].command = 'echo not-an-ark-hook';
+    });
+    expectCompactMissing();
+
+    writeHooks((hooks) => {
+      hooks.hooks.SessionStart[0].hooks[0].type = 'prompt';
+    });
+    expectCompactMissing();
+
+    const windowsRoot = root.replaceAll('/', '\\');
+    const windowsLauncher = '"C:\\Program Files\\nodejs\\npx.cmd" arkgate-mcp.cmd';
+    writeCommands(
+      `${windowsLauncher} --session-context --root "${windowsRoot}" --root-env CODEX_PROJECT_DIR --config "${windowsRoot}\\ark.config.json"`,
+      `${windowsLauncher} --hook --hook-repair --fail-on-new-smells --root "${windowsRoot}" --root-env CODEX_PROJECT_DIR --config "${windowsRoot}\\ark.config.json"`
+    );
+    expect(missingGates(root)).toEqual([]);
+  });
+
+  it('requires MCP root and config arguments to resolve to this exact project', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-require-mcp-binding-'));
+    writeGovernedFixture(root);
+    const mcpPath = path.join(root, '.mcp.json');
+    const writeServer = (command: string, args: string[]) =>
+      fs.writeFileSync(
+        mcpPath,
+        JSON.stringify({
+          mcpServers: { ark: { command, args } },
+        })
+      );
+    const writeMcp = (args: string[]) => writeServer('npx', ['arkgate-mcp', ...args]);
+    const binding = ['--root', '.', '--config', 'ark.config.json'];
+
+    writeMcp(['--root', path.join(root, 'other'), '--config', 'ark.config.json']);
+    expect(hasArkMcpRegistration(root)).toBe(false);
+
+    writeMcp(['--root', '.', '--config', '../ark.config.json']);
+    expect(hasArkMcpRegistration(root)).toBe(false);
+
+    writeMcp(['--root', '.', '--config', 'other.json']);
+    expect(hasArkMcpRegistration(root)).toBe(false);
+
+    writeMcp(['--root', '.']);
+    expect(hasArkMcpRegistration(root)).toBe(false);
+
+    for (const extra of [
+      ['--manifest', 'other.json'],
+      ['--tsconfig', 'other.json'],
+      ['--hook'],
+      ['--hook-repair'],
+      ['--session-context'],
+      ['--root-env', 'PROJECT_ROOT'],
+      ['--root', 'other'],
+      ['--config', 'other.json'],
+      ['unexpected'],
+    ]) {
+      writeMcp([...binding, ...extra]);
+      expect(hasArkMcpRegistration(root)).toBe(false);
+    }
+
+    writeServer('arkgate-mcp', ['--config', 'ark.config.json', '--root', '.']);
+    expect(hasArkMcpRegistration(root)).toBe(true);
+
+    writeServer('npx', ['arkgate-mcp', ...binding]);
+    expect(hasArkMcpRegistration(root)).toBe(true);
+
+    writeServer('pnpm', [
+      '--config.verify-deps-before-run=false',
+      'exec',
+      'arkgate-mcp',
+      ...binding,
+    ]);
+    expect(hasArkMcpRegistration(root)).toBe(true);
+
+    writeServer('node', [path.join('bin', 'ark-mcp.mjs'), ...binding]);
+    expect(hasArkMcpRegistration(root)).toBe(true);
+
+    writeServer('C:\\Program Files\\nodejs\\npx.cmd', [
+      'arkgate-mcp.cmd',
+      '--root',
+      root.replaceAll('/', '\\'),
+      '--config',
+      `${root.replaceAll('/', '\\')}\\ark.config.json`,
+    ]);
+    expect(hasArkMcpRegistration(root)).toBe(true);
+  });
+
+  it('rejects masked package scripts and Ark jobs gated by a statically skipped need', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-require-workflow-binding-'));
+    writeGovernedFixture(root);
+    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+    const workflowPath = path.join(root, '.github/workflows/ark-check.yml');
+    const writeScript = (script: string) =>
+      fs.writeFileSync(
+        path.join(root, 'package.json'),
+        JSON.stringify({ scripts: { 'check:architecture': script } })
+      );
+
+    writeScript('npx ark-check --strict; exit 0');
+    fs.writeFileSync(
+      workflowPath,
+      'jobs:\n  ark:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npm run check:architecture\n'
+    );
+    expect(hasArkWorkflow(root)).toBe(false);
+
+    writeScript('npx ark-check --strict & exit /b 0');
+    expect(hasArkWorkflow(root)).toBe(false);
+
+    writeScript('npx ark-check --strict && exit 0');
+    expect(hasArkWorkflow(root)).toBe(true);
+
+    writeScript('npx ark-check --strict-merge');
+    fs.writeFileSync(
+      workflowPath,
+      [
+        'jobs:',
+        '  prep:',
+        '    if: ${{ false }}',
+        '    runs-on: ubuntu-latest',
+        '    steps:',
+        '      - run: echo skipped',
+        '  ark:',
+        '    needs: prep',
+        '    runs-on: ubuntu-latest',
+        '    steps:',
+        '      - run: npm run check:architecture',
+        '',
+      ].join('\n')
+    );
+    expect(hasArkWorkflow(root)).toBe(false);
+
+    fs.writeFileSync(
+      workflowPath,
+      [
+        'jobs:',
+        '  prep:',
+        '    runs-on: ubuntu-latest',
+        '    steps:',
+        '      - run: echo ready',
+        '  ark:',
+        '    needs: prep',
+        '    runs-on: ubuntu-latest',
+        '    steps:',
+        '      - run: npm run check:architecture',
+        '',
+      ].join('\n')
+    );
+    expect(hasArkWorkflow(root)).toBe(true);
+  });
+
   it('accepts a custom CI workflow that runs the architecture check', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-require-custom-ci-'));
-    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
-    fs.writeFileSync(path.join(root, 'AGENTS.md'), 'Ark instructions\n');
-    fs.writeFileSync(path.join(root, '.mcp.json'), '{"mcpServers":{}}\n');
+    writeGovernedFixture(root);
     fs.writeFileSync(
-      path.join(root, '.github/workflows/ci.yml'),
+      path.join(root, 'package.json'),
+      JSON.stringify({
+        scripts: { 'check:architecture': 'npx ark-check --strict-merge' },
+      })
+    );
+    expect(runInstallAgentGates(root).status).toBe(0);
+    fs.writeFileSync(
+      path.join(root, '.github/workflows/ark-check.yml'),
       [
         'name: CI',
         'on: [pull_request]',
@@ -873,11 +1259,10 @@ describe('ark-check --require-gates', () => {
 
   it('accepts a CI workflow that invokes the ArkGate Action', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-require-action-ci-'));
-    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
-    fs.writeFileSync(path.join(root, 'AGENTS.md'), 'Ark instructions\n');
-    fs.writeFileSync(path.join(root, '.mcp.json'), '{"mcpServers":{}}\n');
+    writeGovernedFixture(root);
+    expect(runInstallAgentGates(root).status).toBe(0);
     fs.writeFileSync(
-      path.join(root, '.github/workflows/ci.yml'),
+      path.join(root, '.github/workflows/ark-check.yml'),
       [
         'name: Ark',
         'on: [pull_request]',
@@ -885,7 +1270,7 @@ describe('ark-check --require-gates', () => {
         '  ark:',
         '    runs-on: ubuntu-latest',
         '    steps:',
-        "      - uses: 'pedroknigge/arkgate@v2'",
+        "      - uses: 'pedroknigge/arkgate@v4.2.0'",
         '',
       ].join('\n')
     );
@@ -1032,7 +1417,9 @@ describe('ark init', () => {
     expect(fs.existsSync(path.join(root, '.github/workflows/ark-check.yml'))).toBe(true);
     expect(fs.existsSync(path.join(root, '.ark/reports/origin.json'))).toBe(false);
     expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('## Compact router');
+    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('ark_manifest');
     expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('ark://manifest');
+    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('ark_identity');
   });
 
   it('`ark start` adopts an established codebase (detection, not a wildcard preset)', () => {
@@ -2635,8 +3022,10 @@ describe('ark-check --install-agent-gates instruction-tier tools', () => {
     const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
     for (const file of Object.values(RULE_FILES)) {
       const rule = fs.readFileSync(path.join(root, file), 'utf8');
-      // Same canonical contract: check command and manifest resource cannot drift.
+      // Same canonical contract: check command and bound/compatibility manifest surfaces cannot drift.
       expect(rule).toContain('npx ark-check --root . --config ark.config.json --strict-config');
+      expect(rule).toContain('ark_manifest');
+      expect(agents).toContain('ark_manifest');
       expect(rule).toContain('ark://manifest');
       expect(agents).toContain('ark://manifest');
     }

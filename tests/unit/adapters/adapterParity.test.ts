@@ -54,7 +54,14 @@ describe('versioned adapter parity contract', () => {
       jsonrpc: '2.0',
       id: 1,
       method: 'tools/call',
-      params: { name: 'ark_check', arguments: { strict: false, baseline: false } },
+      params: {
+        name: 'ark_check',
+        arguments: {
+          strict: false,
+          baseline: false,
+          project: { expectedRoot: fixture.root },
+        },
+      },
     };
     const run = spawnSync(
       process.execPath,
@@ -67,7 +74,19 @@ describe('versioned adapter parity contract', () => {
       .map((line) => JSON.parse(line))
       .find((item) => item.id === 1);
 
-    expect(response.result.structuredContent).toEqual({
+    const structured = response.result.structuredContent;
+    expect({
+      schemaVersion: structured.schemaVersion,
+      mode: structured.mode,
+      valid: structured.valid,
+      completeness: structured.completeness,
+      completenessReasons: structured.completenessReasons,
+      diagnostics: structured.diagnostics,
+      policyHash: structured.policyHash,
+      resolverIdentity: structured.resolverIdentity,
+      factsHash: structured.factsHash,
+      candidateTreeHash: structured.candidateTreeHash,
+    }).toEqual({
       schemaVersion: cli.schemaVersion,
       mode: cli.mode,
       valid: cli.valid,
@@ -78,6 +97,52 @@ describe('versioned adapter parity contract', () => {
       resolverIdentity: cli.resolverIdentity,
       factsHash: cli.factsHash,
       candidateTreeHash: cli.candidateTreeHash,
+    });
+    expect(structured).toMatchObject({
+      projectIdentity: {
+        schemaVersion: '1.0',
+        projectId: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+        resolvedRoot: fs.realpathSync(fixture.root),
+        resolvedConfigPath: fs.realpathSync(path.join(fixture.root, 'ark.config.json')),
+        arkgateVersion: expect.any(String),
+        contractHash: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+        contractSource: 'project',
+        runtimeId: expect.any(String),
+        processStartedAt: expect.any(String),
+      },
+      binding: {
+        status: 'matched',
+        authoritative: true,
+      },
+      authoritative: true,
+      verdict: {
+        identity: {
+          status: 'matched',
+          ok: true,
+        },
+        completeness: {
+          status: cli.completeness,
+          ok: true,
+        },
+        graph: {
+          ok: false,
+          violations: 1,
+        },
+        coverage: {
+          ok: true,
+          governedPercent: 100,
+          unclassified: 0,
+          emptyScope: false,
+        },
+        gates: {
+          advisoryMcpActive: true,
+          advisoryMcpRuntimeObserved: true,
+          ciMergeActive: false,
+          localWriteActive: false,
+          ok: false,
+        },
+        overallOk: false,
+      },
     });
   });
 

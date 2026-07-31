@@ -6,7 +6,7 @@
 > [enforcement-truth-at-speed](../enforcement-truth-at-speed/README.md) ·
 > [field-gap-closure](../field-gap-closure/README.md) · [ai-gates](../../ai-gates.md)
 
-**Status:** Shipped / implemented (Phase EH `EH01`–`EH08` done in source; package **4.1.1 prepared**)<br>
+**Status:** Shipped (Phase EH `EH01`–`EH08`; package **4.1.1 published**)<br>
 **Slug:** `enforcement-evidence-and-docs-truth`<br>
 **Kind:** epic / product-voice + evidence model + documentation audit<br>
 **Owners:** product (Pedro) + library maintainers<br>

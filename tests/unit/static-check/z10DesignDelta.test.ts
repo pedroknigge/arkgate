@@ -14,6 +14,7 @@ import {
   evaluateWriteDesignDelta,
   formatDesignDeltaBlock,
 } from '../../../bin/lib/design-delta.mjs';
+import { writeSemanticGateArtifacts } from '../../helpers/semanticGateArtifacts';
 
 const ARK_CHECK = path.resolve('bin/ark-check.mjs');
 
@@ -48,9 +49,7 @@ function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-z10-design-delta-'));
   write(root, 'package.json', '{"name":"propia-shaped-fixture","private":true}\n');
   write(root, 'ark.config.json', `${JSON.stringify(config, null, 2)}\n`);
-  write(root, 'AGENTS.md', '# ArkGate Enforcement\n');
-  write(root, '.mcp.json', '{"mcpServers":{"ark":{"command":"arkgate-mcp"}}}\n');
-  write(root, '.github/workflows/ark-check.yml', 'jobs:\n  ark-check:\n    steps:\n      - run: npx ark-check --strict-merge\n');
+  writeSemanticGateArtifacts(root);
   write(
     root,
     'apps/web/src/product/legacy-policy.ts',

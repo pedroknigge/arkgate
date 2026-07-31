@@ -427,7 +427,7 @@ export function runUpgradeCommand(args, dependencies) {
     const needsApply = wouldWrite > 0 || blocked > 0;
     const command = buildUpgradeNextCommand(args, plan.planDigest);
     if (args.json) {
-      // Always expose nextCommand for digest-bound apply (metadata/manifest optional);
+      // Always expose nextCommand for digest-bound content/manifest apply;
       // nothingToApply flags when content writes are zero so UIs do not urge apply.
       console.log(
         managedUpgradeJson(plan, {
@@ -443,15 +443,12 @@ export function runUpgradeCommand(args, dependencies) {
         })
       );
     } else {
-      const metadataRefresh = plan.summary?.metadataRefresh ?? 0;
       renderManagedUpgrade(plan, {
         next: needsApply
           ? args.install
             ? `Update the package and recompute this preview with: ${command}`
             : `Apply the exact preview with: ${command}`
           : undefined,
-        // Human path: optional digest-bound stamp refresh without urging content apply.
-        ...( !needsApply && metadataRefresh > 0 ? { optionalStampApply: command } : {}),
       });
       if (args.install === false) {
         console.log(
@@ -481,7 +478,7 @@ export function runUpgradeCommand(args, dependencies) {
     if (args.json) console.log(JSON.stringify(applied, null, 2));
     else {
       renderManagedUpgrade(applied);
-      console.log('No managed content writes pending (optional stamp refresh needs --plan-digest).');
+      console.log('No managed content writes pending.');
     }
     return 0;
   }

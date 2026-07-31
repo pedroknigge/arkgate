@@ -71,8 +71,11 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 
 ## Steps
 
-1. **Load the contract** — `ark.config.json`, MCP `ark://manifest` if available, and
-   `ark-check --coverage --json` / `--doctor` for honesty about governed% and false-green.
+1. **Load the contract** — `ark.config.json`; when MCP is available, call `ark_identity` with
+   the exact project root followed by `ark_manifest` with the same root plus returned project
+   id. The `ark://manifest` resource is compatibility-only and always
+   unverified/non-authoritative. Use `ark-check --coverage --json` / `--doctor` for honesty
+   about governed% and false-green.
 2. **Touch the decision surface** — README skim + **≥5 source files** on the feature/package/boundary
    under discussion. Name paths in the answer.
 3. **Name the active shape** — which preset/archetype fits (hexagonal, vertical-slice,

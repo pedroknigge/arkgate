@@ -129,7 +129,7 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 If the “fix” is really a missing business intent or Domain home for a rule:
 
 - Propose intent name + layer placement.
-- Register / place code so `ark://manifest` / config can enforce it.
+- Register / place code so `ark_manifest` / config can enforce it.
 - Do not only delete the import.
 
 ## Rules

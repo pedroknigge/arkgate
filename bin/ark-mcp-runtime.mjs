@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
+import { createHash, randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
@@ -17,7 +18,7 @@ import {
   detectTsPackageRoots,
   resolveIncludeRoots,
 } from './ark-shared.mjs';
-import { effectiveCapabilityDeny } from './lib/analysis-engine.mjs';
+import { effectiveCapabilityDeny, stableSerialize } from './lib/analysis-engine.mjs';
 import { createImportTargetResolver } from './lib/import-resolve.mjs';
 import { validateWithAutoPatch, resolveImportFileAbs } from './lib/auto-patch.mjs';
 import { composePrepareWrite } from './lib/prepare-write.mjs';
@@ -28,33 +29,34 @@ import {
   inventoryToExtractionCard,
 } from './lib/rules-inventory.mjs';
 import { ARK_ANALYSIS_RESULT_SCHEMA, createAdapterResult } from './lib/adapter-contract.mjs';
+import {
+  ARK_PROJECT_IDENTITY_SCHEMA,
+  PROJECT_BINDING_SCHEMA,
+  PROJECT_EXPECTATION_SCHEMA,
+  createProjectId,
+  createProjectIdentity,
+} from './lib/project-identity.mjs';
 
-function arkRulesCatalogForManifest(root, config) {
-  if (!config?.arkRules || typeof config.arkRules !== 'object') return {};
-  try {
-    const loaded = loadEffectiveArkRulesFromDisk(root, config);
-    if (loaded.errors?.length || !loaded.arkRules) return {};
-    const structure = (loaded.arkRules.structure ?? []).map((r) => ({
-      id: r.id,
-      sensor: r.sensor,
-      mode: r.mode,
-      layer: r.provenance?.layer,
-      sourceFile: r.provenance?.sourceFile,
-    }));
-    const invariants = (loaded.arkRules.invariants ?? []).map((r) => ({
-      id: r.id,
-      description: r.description,
-      aggregate: r.aggregate,
-      mode: r.mode,
-      layer: r.provenance?.layer,
-      sourceFile: r.provenance?.sourceFile,
-      coverage: r.coverage,
-    }));
-    if (structure.length === 0 && invariants.length === 0) return {};
-    return { arkRulesCatalog: { structure, invariants } };
-  } catch {
-    return {};
-  }
+function arkRulesCatalogForManifest(snapshot) {
+  if (snapshot?.errors?.length || !snapshot?.arkRules) return {};
+  const structure = (snapshot.arkRules.structure ?? []).map((r) => ({
+    id: r.id,
+    sensor: r.sensor,
+    mode: r.mode,
+    layer: r.provenance?.layer,
+    sourceFile: r.provenance?.sourceFile,
+  }));
+  const invariants = (snapshot.arkRules.invariants ?? []).map((r) => ({
+    id: r.id,
+    description: r.description,
+    aggregate: r.aggregate,
+    mode: r.mode,
+    layer: r.provenance?.layer,
+    sourceFile: r.provenance?.sourceFile,
+    coverage: r.coverage,
+  }));
+  if (structure.length === 0 && invariants.length === 0) return {};
+  return { arkRulesCatalog: { structure, invariants } };
 }
 import { loadTypeScript } from './lib/typescript-host.mjs';
 import { validateSnippetAnalysis } from './lib/snippet-analysis.mjs';
@@ -76,6 +78,7 @@ import {
   residentDoctorEnvironment,
   residentEnvironmentIdentity,
   residentHookEndpoint,
+  residentInvocationIdentity,
   startResidentHookServer,
 } from './lib/resident-hook.mjs';
 import { resolveArchitectureSnapshot } from './lib/architecture-scan.mjs';
@@ -110,6 +113,7 @@ function parseArgs(argv) {
     hookRepair: false,
     failOnNewSmells: false,
     sessionContext: false,
+    rootEnv: [],
   };
   for (let i = 2; i < argv.length; i += 1) {
     const a = argv[i];
@@ -120,7 +124,13 @@ function parseArgs(argv) {
     } else if (a === '--session-context') args.sessionContext = true;
     else if (a === '--fail-on-new-smells') args.failOnNewSmells = true;
     else if (a === '--root') args.root = path.resolve(argv[++i]);
-    else if (a === '--config') {
+    else if (a === '--root-env') {
+      const names = String(argv[++i] ?? '')
+        .split(',')
+        .map((name) => name.trim())
+        .filter((name) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(name));
+      args.rootEnv.push(...names);
+    } else if (a === '--config') {
       args.config = argv[++i];
       args.configExplicit = true;
     } else if (a === '--manifest') args.manifest = argv[++i];
@@ -131,6 +141,13 @@ function parseArgs(argv) {
     args.hookRepair = true;
   }
   if (envTruthy('ARK_FAIL_ON_NEW_SMELLS')) args.failOnNewSmells = true;
+  for (const name of args.rootEnv) {
+    const value = process.env[name];
+    if (typeof value === 'string' && value.trim() !== '') {
+      args.root = path.resolve(value.trim());
+      break;
+    }
+  }
   return args;
 }
 
@@ -156,9 +173,59 @@ function readArkConfig(file, { required } = {}) {
   return raw === undefined ? undefined : loadArkConfigContract(raw, file).config;
 }
 
-function resolveInRoot(root, maybePath) {
+function sha256Hex(value) {
+  return createHash('sha256').update(value, 'utf8').digest('hex');
+}
+
+function canonicalPathIncludingMissing(candidate) {
+  const absolute = path.resolve(candidate);
+  let existing = absolute;
+  const missing = [];
+  while (!fs.existsSync(existing)) {
+    try {
+      if (fs.lstatSync(existing).isSymbolicLink()) {
+        const error = new Error(
+          `PROJECT_ROOT_MISMATCH: cannot canonicalize dangling symlink ${existing}.`
+        );
+        error.code = 'PROJECT_ROOT_MISMATCH';
+        throw error;
+      }
+    } catch (error) {
+      if (error?.code === 'PROJECT_ROOT_MISMATCH') throw error;
+    }
+    const parent = path.dirname(existing);
+    if (parent === existing) return absolute;
+    missing.unshift(path.basename(existing));
+    existing = parent;
+  }
+  return path.join(fs.realpathSync(existing), ...missing);
+}
+
+function pathIsWithin(root, candidate) {
+  const relative = path.relative(root, candidate);
+  return (
+    relative === '' ||
+    (relative !== '..' &&
+      !relative.startsWith(`..${path.sep}`) &&
+      !path.isAbsolute(relative))
+  );
+}
+
+function resolveContainedProjectPath(root, maybePath, label) {
   if (!maybePath) return undefined;
-  return path.isAbsolute(maybePath) ? maybePath : path.join(root, maybePath);
+  const requested = path.isAbsolute(maybePath)
+    ? maybePath
+    : path.resolve(root, maybePath);
+  const canonical = canonicalPathIncludingMissing(requested);
+  if (!pathIsWithin(root, canonical)) {
+    const error = new Error(
+      `PROJECT_ROOT_MISMATCH: ${label} resolves outside the configured ArkGate root ` +
+        `(${canonical} is not inside ${root}).`
+    );
+    error.code = 'PROJECT_ROOT_MISMATCH';
+    throw error;
+  }
+  return canonical;
 }
 
 function inferLayer(filePath, config, root) {
@@ -831,7 +898,7 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
             'machine-readable source (still hard-blocks; host re-injects).',
         ]
       : []),
-    'Fix the violations and retry. The architecture contract is available as the ark://manifest MCP resource.',
+    'Fix the violations and retry. Call the project-bound ark_manifest MCP tool for the architecture contract.',
   ].join('\n');
   output.stderr(message + '\n');
 
@@ -963,12 +1030,19 @@ function captureResidentHook(payload, gate, config, args, ts, request) {
   let stdout = '';
   let stderr = '';
   let status = 0;
+  const requestArgs = {
+    ...args,
+    root: request.root,
+    config: request.config,
+    manifest: request.manifest ?? undefined,
+    tsconfig: request.tsconfig ?? undefined,
+  };
   runHookPayload(
     payload,
     gate,
     config,
     {
-      ...args,
+      ...requestArgs,
       hookRepair: request.hookRepair === true,
       failOnNewSmells: request.failOnNewSmells === true,
     },
@@ -994,10 +1068,8 @@ function sameResidentInvocation(request, args, kind) {
     request?.protocolVersion === RESIDENT_HOOK_PROTOCOL_VERSION &&
     request?.kind === kind &&
     typeof request.root === 'string' &&
-    path.resolve(request.root) === path.resolve(args.root) &&
-    request.config === args.config &&
-    (request.manifest ?? null) === (args.manifest ?? null) &&
-    (request.tsconfig ?? null) === (args.tsconfig ?? null)
+    JSON.stringify(residentInvocationIdentity(request)) ===
+      JSON.stringify(residentInvocationIdentity(args))
   );
 }
 
@@ -1034,7 +1106,7 @@ function createResidentDoctorSession(args, config, ts) {
   const resolutionInputs = snapshotInputPaths(snapshot.inputs);
   const ledger = createResidentInputLedger([...after.paths, ...resolutionInputs]);
   if (!ledger.matches([...after.paths, ...resolutionInputs])) return null;
-  return { files: after.files, ledger, resolutionInputs, rules, snapshot };
+  return { root: args.root, files: after.files, ledger, resolutionInputs, rules, snapshot };
 }
 
 function verifyResidentDoctorSession(session) {
@@ -1043,7 +1115,10 @@ function verifyResidentDoctorSession(session) {
 
 function renderResidentDoctor(session, args, config, ts) {
   let stdout = '';
-  runDoctor(args.root, config, session.files, session.rules, session.snapshot.result.violations, true, {
+  const files = session.files.map((file) =>
+    path.resolve(args.root, path.relative(session.root, file))
+  );
+  runDoctor(args.root, config, files, session.rules, session.snapshot.result.violations, true, {
     configPath: path.isAbsolute(args.config) ? args.config : path.join(args.root, args.config),
     configMissing: !fs.existsSync(
       path.isAbsolute(args.config) ? args.config : path.join(args.root, args.config)
@@ -1145,7 +1220,18 @@ async function startResidentHookControl({ args, gate, config, ts, loadedTypeScri
       if (!doctorSession || !verified) {
         return { protocolVersion: RESIDENT_HOOK_PROTOCOL_VERSION, fallback: true };
       }
-      const response = renderResidentDoctor(doctorSession, args, config, ts);
+      const response = renderResidentDoctor(
+        doctorSession,
+        {
+          ...args,
+          root: request.root,
+          config: request.config,
+          manifest: request.manifest ?? undefined,
+          tsconfig: request.tsconfig ?? undefined,
+        },
+        config,
+        ts
+      );
       if (!verifyResidentDoctorSession(doctorSession)) {
         doctorSession = undefined;
         return { protocolVersion: RESIDENT_HOOK_PROTOCOL_VERSION, fallback: true };
@@ -1211,7 +1297,7 @@ function printSessionContext(config, profile, forbiddenGlobals, args, configPath
 
   const denied = (profile.rules ?? []).filter((rule) => !rule.allowed).length;
   lines.push(
-    `Rules: ${denied} denied layer edge(s). Full contract: ark://manifest MCP resource.`
+    `Rules: ${denied} denied layer edge(s). Full contract: project-bound ark_manifest MCP tool.`
   );
 
   // Advisory output: a malformed baseline must not abort the summary.
@@ -1243,8 +1329,17 @@ function printSessionContext(config, profile, forbiddenGlobals, args, configPath
 }
 
 export async function runArkMcp({ hookInput } = {}) {
+  const processStartedAt = new Date().toISOString();
+  const runtimeId = randomUUID();
   const args = parseArgs(process.argv);
-  const configPath = resolveInRoot(args.root, args.config);
+  const requestedRoot = args.root;
+  const resolvedRoot = fs.realpathSync(requestedRoot);
+  // MCP identity and file containment use the canonical workspace. Hook payloads,
+  // however, carry paths in the caller's spelling (macOS commonly aliases /var to
+  // /private/var); keep that spelling so same-workspace writes are not mistaken for
+  // out-of-root paths.
+  if (!args.hook && !args.sessionContext) args.root = resolvedRoot;
+  const configPath = resolveContainedProjectPath(resolvedRoot, args.config, 'ark.config.json');
 
   // SessionStart contract injection is only meaningful in Ark-governed projects. Bail
   // out silently (before loading dist) when there is no config, so the hook is safe
@@ -1271,8 +1366,11 @@ export async function runArkMcp({ hookInput } = {}) {
     );
   }
 
-  const manifestPath = resolveInRoot(args.root, args.manifest);
+  const manifestPath = resolveContainedProjectPath(resolvedRoot, args.manifest, 'project manifest');
   const projectManifest = manifestPath ? readJson(manifestPath, { required: true }) : undefined;
+  if (args.tsconfig) {
+    args.tsconfig = resolveContainedProjectPath(resolvedRoot, args.tsconfig, 'TypeScript config');
+  }
   args.projectManifest = projectManifest;
 
   const intents = Array.isArray(projectManifest?.intents)
@@ -1388,6 +1486,23 @@ export async function runArkMcp({ hookInput } = {}) {
     return;
   }
 
+  const effectiveArkRulesSnapshot = (() => {
+    try {
+      const loaded = loadEffectiveArkRulesFromDisk(args.root, config);
+      return {
+        arkRules: loaded.arkRules ?? null,
+        warnings: loaded.warnings ?? [],
+        errors: loaded.errors ?? [],
+      };
+    } catch (error) {
+      return {
+        arkRules: null,
+        warnings: [],
+        errors: [error instanceof Error ? error.message : String(error)],
+      };
+    }
+  })();
+
   const residentHookControl = await startResidentHookControl({
     args,
     gate,
@@ -1400,8 +1515,428 @@ export async function runArkMcp({ hookInput } = {}) {
 
   const SERVER_INFO = { name: 'arkgate', version: ark.version };
   const DEFAULT_PROTOCOL = '2024-11-05';
+  const projectIdentity = createProjectIdentity({
+    projectId: createProjectId(resolvedRoot, configPath, sha256Hex),
+    resolvedRoot,
+    resolvedConfigPath: configPath,
+    arkgateVersion: ark.version,
+    contractHash: `sha256:${sha256Hex(
+      stableSerialize({
+        config,
+        projectManifest: projectManifest ?? null,
+        arkRules: effectiveArkRulesSnapshot,
+      })
+    )}`,
+    contractSource: projectManifest
+      ? 'manifest'
+      : fs.existsSync(configPath)
+        ? 'project'
+        : 'default-profile',
+    runtimeId,
+    processStartedAt,
+  });
+  const projectIdentityOutputSchema = {
+    type: ARK_PROJECT_IDENTITY_SCHEMA.type,
+    additionalProperties: ARK_PROJECT_IDENTITY_SCHEMA.additionalProperties,
+    required: ARK_PROJECT_IDENTITY_SCHEMA.required,
+    properties: ARK_PROJECT_IDENTITY_SCHEMA.properties,
+  };
+  const verificationOutputSchema = {
+    anyOf: [{ type: 'boolean' }, { const: 'unverified' }],
+  };
+  const checkVerdictOutputSchema = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['identity', 'completeness', 'graph', 'coverage', 'gates', 'overallOk'],
+    properties: {
+      identity: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['status', 'ok'],
+        properties: {
+          status: { enum: ['matched', 'unverified', 'mismatch'] },
+          ok: { type: 'boolean' },
+        },
+      },
+      completeness: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['status', 'ok'],
+        properties: {
+          status: { type: 'string', minLength: 1 },
+          ok: { type: 'boolean' },
+        },
+      },
+      graph: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['ok', 'violations'],
+        properties: {
+          ok: { type: 'boolean' },
+          violations: { type: ['integer', 'null'], minimum: 0 },
+        },
+      },
+      coverage: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['ok', 'governedPercent', 'unclassified', 'emptyScope'],
+        properties: {
+          ok: { type: 'boolean' },
+          governedPercent: { type: ['number', 'null'], minimum: 0, maximum: 100 },
+          unclassified: { type: ['integer', 'null'], minimum: 0 },
+          emptyScope: { type: ['boolean', 'null'] },
+        },
+      },
+      gates: {
+        type: 'object',
+        additionalProperties: false,
+        required: [
+          'ok',
+          'localWriteActive',
+          'advisoryMcpActive',
+          'advisoryMcpRuntimeObserved',
+          'ciMergeActive',
+        ],
+        properties: {
+          ok: { type: 'boolean' },
+          localWriteActive: verificationOutputSchema,
+          advisoryMcpActive: { const: true },
+          advisoryMcpRuntimeObserved: { const: true },
+          ciMergeActive: verificationOutputSchema,
+        },
+      },
+      overallOk: { type: 'boolean' },
+    },
+  };
+  const analysisResultWithProjectSchema = {
+    type: ARK_ANALYSIS_RESULT_SCHEMA.type,
+    additionalProperties: ARK_ANALYSIS_RESULT_SCHEMA.additionalProperties,
+    allOf: ARK_ANALYSIS_RESULT_SCHEMA.allOf,
+    required: [
+      ...(ARK_ANALYSIS_RESULT_SCHEMA.required ?? []),
+      'projectIdentity',
+      'binding',
+      'authoritative',
+    ],
+    properties: {
+      ...ARK_ANALYSIS_RESULT_SCHEMA.properties,
+      projectIdentity: projectIdentityOutputSchema,
+      binding: PROJECT_BINDING_SCHEMA,
+      authoritative: { type: 'boolean' },
+      verdict: checkVerdictOutputSchema,
+    },
+  };
+  const projectBindingErrorSchema = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['ok', 'error', 'projectIdentity', 'binding', 'authoritative'],
+    properties: {
+      ok: { const: false },
+      error: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['code', 'message'],
+        properties: {
+          code: { type: 'string', minLength: 1 },
+          message: { type: 'string', minLength: 1 },
+        },
+      },
+      projectIdentity: projectIdentityOutputSchema,
+      binding: PROJECT_BINDING_SCHEMA,
+      authoritative: { type: 'boolean' },
+    },
+  };
+  const projectAwareAnalysisResultSchema = {
+    oneOf: [analysisResultWithProjectSchema, projectBindingErrorSchema],
+  };
+
+  function unverifiedBinding() {
+    return {
+      status: 'unverified',
+      authoritative: false,
+      message:
+        'No project expectation was supplied. Call ark_identity with project.expectedRoot ' +
+        'before treating MCP evidence as authoritative.',
+    };
+  }
+
+  function mismatchBinding(code, message, expectation = {}) {
+    return {
+      status: 'mismatch',
+      authoritative: false,
+      ...(expectation.expectedRoot ? { expectedRoot: expectation.expectedRoot } : {}),
+      ...(expectation.expectedProjectId
+        ? { expectedProjectId: expectation.expectedProjectId }
+        : {}),
+      code,
+      message,
+    };
+  }
+
+  function nestedProjectConfig(expectedRoot) {
+    let current = expectedRoot;
+    while (pathIsWithin(resolvedRoot, current) && current !== resolvedRoot) {
+      const candidate = path.join(current, 'ark.config.json');
+      if (fs.existsSync(candidate)) return fs.realpathSync(candidate);
+      const parent = path.dirname(current);
+      if (parent === current) break;
+      current = parent;
+    }
+    return undefined;
+  }
+
+  function bindingForExpectation(expectation) {
+    if (expectation === undefined) return unverifiedBinding();
+    if (!expectation || typeof expectation !== 'object' || Array.isArray(expectation)) {
+      return mismatchBinding(
+        'INVALID_PROJECT_EXPECTATION',
+        'project must be an object containing expectedRoot and/or expectedProjectId.'
+      );
+    }
+    const rawExpectedRoot = expectation.expectedRoot;
+    const rawExpectedProjectId = expectation.expectedProjectId;
+    if (
+      rawExpectedRoot !== undefined &&
+      (typeof rawExpectedRoot !== 'string' ||
+        rawExpectedRoot.trim() === '' ||
+        !path.isAbsolute(rawExpectedRoot))
+    ) {
+      return mismatchBinding(
+        'INVALID_PROJECT_EXPECTATION',
+        'project.expectedRoot must be a non-empty absolute path.'
+      );
+    }
+    if (
+      rawExpectedProjectId !== undefined &&
+      (typeof rawExpectedProjectId !== 'string' ||
+        !/^sha256:[a-f0-9]{64}$/.test(rawExpectedProjectId))
+    ) {
+      return mismatchBinding(
+        'INVALID_PROJECT_EXPECTATION',
+        'project.expectedProjectId must be a sha256:<64 lowercase hex> identity.'
+      );
+    }
+    if (rawExpectedRoot === undefined && rawExpectedProjectId === undefined) {
+      return unverifiedBinding();
+    }
+    if (rawExpectedRoot === undefined) {
+      if (rawExpectedProjectId !== projectIdentity.projectId) {
+        return mismatchBinding(
+          'PROJECT_ID_MISMATCH',
+          `Expected project id ${rawExpectedProjectId}, but this MCP is bound to ` +
+            `${projectIdentity.projectId}.`,
+          { expectedProjectId: rawExpectedProjectId }
+        );
+      }
+      return {
+        status: 'unverified',
+        authoritative: false,
+        expectedProjectId: rawExpectedProjectId,
+        message:
+          'project.expectedProjectId matched, but expectedRoot is required for an ' +
+          'authoritative workspace binding.',
+      };
+    }
+
+    let expectedRoot;
+    try {
+      expectedRoot = canonicalPathIncludingMissing(rawExpectedRoot);
+    } catch (error) {
+      return mismatchBinding(
+        'PROJECT_ROOT_MISMATCH',
+        error instanceof Error ? error.message : String(error),
+        { expectedRoot: rawExpectedRoot, expectedProjectId: rawExpectedProjectId }
+      );
+    }
+    if (!pathIsWithin(resolvedRoot, expectedRoot)) {
+      return mismatchBinding(
+        'PROJECT_ROOT_MISMATCH',
+        `Expected workspace ${expectedRoot}, but this ArkGate MCP is bound to ${resolvedRoot}.`,
+        { expectedRoot, expectedProjectId: rawExpectedProjectId }
+      );
+    }
+    const nestedConfig = nestedProjectConfig(expectedRoot);
+    if (nestedConfig && nestedConfig !== configPath) {
+      return mismatchBinding(
+        'PROJECT_ROOT_MISMATCH',
+        `Expected workspace ${expectedRoot} belongs to a nested ArkGate project at ` +
+          `${nestedConfig}, but this MCP is bound to ${configPath}.`,
+        { expectedRoot, expectedProjectId: rawExpectedProjectId }
+      );
+    }
+
+    if (
+      rawExpectedProjectId !== undefined &&
+      rawExpectedProjectId !== projectIdentity.projectId
+    ) {
+      return mismatchBinding(
+        'PROJECT_ID_MISMATCH',
+        `Expected project id ${rawExpectedProjectId}, but this MCP is bound to ` +
+          `${projectIdentity.projectId}.`,
+        { expectedRoot, expectedProjectId: rawExpectedProjectId }
+      );
+    }
+    if (expectedRoot !== resolvedRoot && rawExpectedProjectId === undefined) {
+      return {
+        status: 'unverified',
+        authoritative: false,
+        expectedRoot,
+        message:
+          `Expected workspace ${expectedRoot} is inside this MCP project, but an exact project ` +
+          'root is required for the initial authoritative handshake. Call ark_identity at the ' +
+          `project root ${resolvedRoot}, then reuse its projectIdentity.projectId for descendant calls.`,
+      };
+    }
+    return {
+      status: 'matched',
+      authoritative: true,
+      ...(expectedRoot ? { expectedRoot } : {}),
+      ...(rawExpectedProjectId ? { expectedProjectId: rawExpectedProjectId } : {}),
+    };
+  }
+
+  function bindingForToolPaths(toolName, toolArguments, currentBinding) {
+    if (currentBinding.status === 'mismatch') return currentBinding;
+    const candidates = [];
+    if (['validate_code', 'ark_place', 'ark_prepare_write'].includes(toolName)) {
+      candidates.push(toolArguments?.filePath);
+    }
+    if (toolName === 'ark_prepare_change') {
+      for (const change of toolArguments?.changes ?? []) candidates.push(change?.path);
+      for (const file of toolArguments?.changeMap?.files ?? []) candidates.push(file?.path);
+    }
+    for (const candidate of candidates) {
+      if (typeof candidate !== 'string' || candidate === '') continue;
+      const absolute = path.isAbsolute(candidate)
+        ? candidate
+        : path.resolve(resolvedRoot, candidate);
+      let canonical;
+      try {
+        canonical = canonicalPathIncludingMissing(absolute);
+      } catch (error) {
+        return mismatchBinding(
+          'PROJECT_ROOT_MISMATCH',
+          error instanceof Error ? error.message : String(error),
+          {
+            expectedRoot: currentBinding.expectedRoot,
+            expectedProjectId: currentBinding.expectedProjectId,
+          }
+        );
+      }
+      if (!pathIsWithin(resolvedRoot, canonical)) {
+        return mismatchBinding(
+          'PROJECT_ROOT_MISMATCH',
+          `Tool ${toolName} received ${canonical}, which is outside the MCP project root ` +
+            `${resolvedRoot}.`,
+          {
+            expectedRoot: currentBinding.expectedRoot,
+            expectedProjectId: currentBinding.expectedProjectId,
+          }
+        );
+      }
+    }
+    return currentBinding;
+  }
+
+  function contextFor(binding) {
+    return {
+      projectIdentity,
+      binding,
+      authoritative: binding.authoritative,
+    };
+  }
+
+  function withProjectContext(result, binding) {
+    const context = contextFor(binding);
+    const content = Array.isArray(result?.content)
+      ? result.content.map((block) => {
+          if (block?.type !== 'text' || typeof block.text !== 'string') return block;
+          let body;
+          try {
+            body = JSON.parse(block.text);
+          } catch {
+            body = result?.isError
+              ? {
+                  ok: false,
+                  error: {
+                    code: 'ARK_TOOL_ERROR',
+                    message: block.text,
+                  },
+                }
+              : { ok: true, result: block.text };
+          }
+          if (!body || typeof body !== 'object' || Array.isArray(body)) {
+            body = { ok: !result?.isError, result: body };
+          }
+          return {
+            ...block,
+            text: JSON.stringify({ ...body, ...context }, null, 2),
+          };
+        })
+      : [{ type: 'text', text: JSON.stringify(context, null, 2) }];
+    let structuredContent =
+      result?.structuredContent &&
+      typeof result.structuredContent === 'object' &&
+      !Array.isArray(result.structuredContent)
+        ? { ...result.structuredContent, ...context }
+        : undefined;
+    if (!structuredContent && content[0]?.type === 'text') {
+      try {
+        const parsed = JSON.parse(content[0].text);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          structuredContent = parsed;
+        }
+      } catch {
+        /* withProjectContext always renders text blocks as JSON above */
+      }
+    }
+    return {
+      ...result,
+      ...context,
+      content,
+      ...(structuredContent ? { structuredContent } : {}),
+    };
+  }
+
+  function bindingFailureResult(binding) {
+    return withProjectContext(
+      {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              ok: false,
+              error: {
+                code: binding.code,
+                message: binding.message,
+              },
+            }),
+          },
+        ],
+        isError: true,
+      },
+      binding
+    );
+  }
 
   const TOOLS = [
+    {
+      name: 'ark_identity',
+      description:
+        'Return the canonical ArkGate project, config, contract, and live MCP runtime identity. ' +
+        'Pass project.expectedRoot and/or expectedProjectId to verify this process before ' +
+        'trusting any architecture evidence.',
+      inputSchema: { type: 'object', properties: {} },
+    },
+    {
+      name: 'ark_manifest',
+      description:
+        'Return the machine-readable architecture contract with an authoritative project ' +
+        'binding when project.expectedRoot matches this MCP project. Prefer this tool over ' +
+        'the ark://manifest compatibility resource, whose standard MCP read shape cannot ' +
+        'carry a portable project expectation.',
+      inputSchema: { type: 'object', properties: {} },
+    },
     {
       name: 'validate_code',
       description:
@@ -1428,7 +1963,7 @@ export async function runArkMcp({ hookInput } = {}) {
         },
         required: ['source'],
       },
-      outputSchema: ARK_ANALYSIS_RESULT_SCHEMA,
+      outputSchema: projectAwareAnalysisResultSchema,
     },
     {
       name: 'ark_check',
@@ -1436,7 +1971,8 @@ export async function runArkMcp({ hookInput } = {}) {
         'Run the full Ark architecture check on the project and return structured results ' +
         '(layer-import violations, forbidden globals, circular deps, config warnings). Use ' +
         'this to answer "is the architecture currently valid?" instead of shelling out to ' +
-        'ark-check. Applies the baseline automatically when one exists. isError when not ok.',
+        'ark-check. Preserves legacy ok and adds identity/completeness/graph/coverage/gates/' +
+        'overall verdicts. Applies the baseline automatically when one exists. isError when not ok.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -1451,7 +1987,7 @@ export async function runArkMcp({ hookInput } = {}) {
           },
         },
       },
-      outputSchema: ARK_ANALYSIS_RESULT_SCHEMA,
+      outputSchema: projectAwareAnalysisResultSchema,
     },
     {
       name: 'ark_policy_delta',
@@ -1602,13 +2138,24 @@ export async function runArkMcp({ hookInput } = {}) {
     },
   ];
 
+  for (const tool of TOOLS) {
+    tool.inputSchema = {
+      ...tool.inputSchema,
+      properties: {
+        ...(tool.inputSchema.properties ?? {}),
+        project: PROJECT_EXPECTATION_SCHEMA,
+      },
+    };
+  }
+
   const RESOURCES = [
     {
       uri: 'ark://manifest',
       name: 'Ark architectural contract',
       description:
-        'The architecture agents must obey before generating code: layers and layer rules ' +
-        '(plus the full project manifest when --manifest is provided).',
+        'Compatibility-only architecture contract resource. Standard MCP resource reads cannot ' +
+        'portably carry a project expectation, so this surface is always unverified and ' +
+        'non-authoritative. Use the ark_manifest tool for bound contract evidence.',
       mimeType: 'application/json',
     },
   ];
@@ -1641,10 +2188,15 @@ export async function runArkMcp({ hookInput } = {}) {
     }));
   }
 
-  function manifestText() {
+  function manifestText(binding = unverifiedBinding()) {
+    const context = contextFor(binding);
     if (projectManifest) {
       return JSON.stringify(
-        { ...projectManifest, source: projectManifest.source ?? 'manifest' },
+        {
+          ...projectManifest,
+          source: projectManifest.source ?? 'manifest',
+          ...context,
+        },
         null,
         2
       );
@@ -1678,7 +2230,7 @@ export async function runArkMcp({ hookInput } = {}) {
         ...(config.arkRules && typeof config.arkRules === 'object'
           ? { arkRules: config.arkRules }
           : {}),
-        ...arkRulesCatalogForManifest(args.root, config),
+        ...arkRulesCatalogForManifest(effectiveArkRulesSnapshot),
         ...(suggestions.length > 0
           ? {
               suggestedLayers: suggestions,
@@ -1689,10 +2241,34 @@ export async function runArkMcp({ hookInput } = {}) {
                 'inventing an ungoverned location.',
             }
           : {}),
+        ...context,
       },
       null,
       2
     );
+  }
+
+  function runIdentityTool() {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            ok: true,
+            instruction:
+              'Reuse projectIdentity.projectId with project.expectedRoot on subsequent calls.',
+          }),
+        },
+      ],
+      isError: false,
+    };
+  }
+
+  function runManifestTool(_params, binding) {
+    return {
+      content: [{ type: 'text', text: manifestText(binding) }],
+      isError: false,
+    };
   }
 
   function runValidate(params) {
@@ -1755,7 +2331,7 @@ export async function runArkMcp({ hookInput } = {}) {
     );
   }
 
-  function runCheckTool(params) {
+  function runCheckTool(params, binding) {
     const strict = params?.arguments?.strict !== false; // default true
     const baselineArg = params?.arguments?.baseline;
     const baselineExists = fs.existsSync(path.join(args.root, '.ark-baseline.json'));
@@ -1767,8 +2343,61 @@ export async function runArkMcp({ hookInput } = {}) {
     if (!data) {
       return { content: [{ type: 'text', text: `ark-check produced no JSON:\n${raw}` }], isError: true };
     }
+    const { data: coverageData } = runArkCheckJson(['--coverage']);
+    const coverage = coverageData?.coverage;
+    const coverageOk = Boolean(
+      coverage &&
+        coverage.emptyScope === false &&
+        coverage.governed?.percent === 100 &&
+        coverage.unclassified?.count === 0
+    );
+    let writePath;
+    try {
+      writePath = detectWritePathCapabilities(args.root, 'unknown');
+    } catch {
+      writePath = undefined;
+    }
+    const localWriteActive = writePath?.enforcementState?.localWrite?.active ?? 'unverified';
+    const ciMergeActive = writePath?.enforcementState?.ciMerge?.active ?? 'unverified';
+    const gatesOk = localWriteActive === true && ciMergeActive === true;
+    const verdict = {
+      identity: {
+        status: binding.status,
+        ok: binding.status === 'matched',
+      },
+      completeness: {
+        status: data.completeness ?? 'unavailable',
+        ok: data.completeness === 'complete',
+      },
+      graph: {
+        ok: data.valid === true,
+        violations: Array.isArray(data.violations) ? data.violations.length : null,
+      },
+      coverage: {
+        ok: coverageOk,
+        governedPercent: coverage?.governed?.percent ?? null,
+        unclassified: coverage?.unclassified?.count ?? null,
+        emptyScope: coverage?.emptyScope ?? null,
+      },
+      gates: {
+        ok: gatesOk,
+        localWriteActive,
+        advisoryMcpActive: true,
+        advisoryMcpRuntimeObserved: true,
+        ciMergeActive,
+      },
+      overallOk: Boolean(
+        binding.status === 'matched' &&
+          data.ok === true &&
+          data.completeness === 'complete' &&
+          data.valid === true &&
+          coverageOk &&
+          gatesOk
+      ),
+    };
+    const payload = { ...data, verdict };
     return {
-      content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+      content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }],
       structuredContent: {
         schemaVersion: data.schemaVersion,
         mode: data.mode,
@@ -1780,6 +2409,7 @@ export async function runArkMcp({ hookInput } = {}) {
         ...(data.resolverIdentity ? { resolverIdentity: data.resolverIdentity } : {}),
         ...(data.factsHash ? { factsHash: data.factsHash } : {}),
         ...(data.candidateTreeHash ? { candidateTreeHash: data.candidateTreeHash } : {}),
+        verdict,
       },
       isError: data.ok === false,
     };
@@ -1882,7 +2512,7 @@ export async function runArkMcp({ hookInput } = {}) {
         message: noLayers
           ? 'This project declares no path-based layers in ark.config.json, so a ' +
             'layer cannot be inferred from the path. The gate still enforces the ' +
-            'default 11-layer profile by intent-name prefix — read ark://manifest ' +
+            'default 11-layer profile by intent-name prefix — call ark_manifest ' +
             'for the layers and validate the actual snippet with validate_code.'
           : 'No layer pattern matches this path — code here is UNGOVERNED (no import ' +
             'rules enforced). Place it under a directory a layer in ark.config.json ' +
@@ -2031,20 +2661,31 @@ export async function runArkMcp({ hookInput } = {}) {
     try {
       const governed = collectGovernedFiles(args.root, config);
       const fileContents = {};
+      const fileLayers = {};
       for (const file of governed.slice(0, 400)) {
         const rel = path.relative(args.root, file).split(path.sep).join('/');
         try {
           fileContents[rel] = fs.readFileSync(file, 'utf8');
+          const layer = layerForFile(args.root, file, config.layers);
+          if (layer) fileLayers[rel] = layer;
         } catch {
           /* skip */
         }
       }
       const contracted = [];
-      const loaded = loadEffectiveArkRulesFromDisk(args.root, config);
-      for (const rule of loaded.arkRules?.structure ?? []) contracted.push(rule.id);
-      for (const inv of loaded.arkRules?.invariants ?? []) contracted.push(inv.id);
+      for (const rule of effectiveArkRulesSnapshot.arkRules?.structure ?? []) {
+        contracted.push(rule.id);
+      }
+      for (const inv of effectiveArkRulesSnapshot.arkRules?.invariants ?? []) {
+        contracted.push(inv.id);
+      }
       const inventory = buildRulesInventory({
         fileContents,
+        fileLayers,
+        layerContexts: (config.layers ?? []).map((layer) => ({
+          name: layer.name,
+          intentPrefixes: layer.intentPrefixes ?? [],
+        })),
         contractedRuleIds: contracted,
       });
       const nextPilot =
@@ -2112,6 +2753,8 @@ export async function runArkMcp({ hookInput } = {}) {
   }
 
   const TOOL_HANDLERS = {
+    ark_identity: runIdentityTool,
+    ark_manifest: runManifestTool,
     validate_code: runValidate,
     ark_check: runCheckTool,
     ark_policy_delta: runPolicyDeltaTool,
@@ -2126,7 +2769,16 @@ export async function runArkMcp({ hookInput } = {}) {
 
   const send = (msg) => process.stdout.write(`${JSON.stringify(msg)}\n`);
   const reply = (id, result) => send({ jsonrpc: '2.0', id, result });
-  const fail = (id, code, message) => send({ jsonrpc: '2.0', id, error: { code, message } });
+  const fail = (id, code, message, binding = unverifiedBinding()) =>
+    send({
+      jsonrpc: '2.0',
+      id,
+      error: {
+        code,
+        message,
+        data: contextFor(binding),
+      },
+    });
 
   function handle(msg) {
     const { id, method, params } = msg;
@@ -2137,38 +2789,81 @@ export async function runArkMcp({ hookInput } = {}) {
 
     switch (method) {
       case 'initialize':
+        {
+          const binding = bindingForExpectation(params?.project);
         reply(id, {
           protocolVersion: params?.protocolVersion ?? DEFAULT_PROTOCOL,
           capabilities: { tools: {}, resources: {} },
           serverInfo: SERVER_INFO,
+          ...contextFor(binding),
         });
+        }
         return;
       case 'ping':
         reply(id, {});
         return;
       case 'tools/list':
-        reply(id, { tools: TOOLS });
+        reply(id, { tools: TOOLS, ...contextFor(unverifiedBinding()) });
         return;
       case 'tools/call': {
         const handler = TOOL_HANDLERS[params?.name];
         if (!handler) {
-          fail(id, -32602, `Unknown tool: ${params?.name}`);
+          fail(
+            id,
+            -32602,
+            `Unknown tool: ${params?.name}`,
+            bindingForExpectation(params?.arguments?.project)
+          );
           return;
         }
-        reply(id, handler(params));
+        let binding = bindingForExpectation(params?.arguments?.project);
+        binding = bindingForToolPaths(params?.name, params?.arguments, binding);
+        if (binding.status === 'mismatch') {
+          reply(id, bindingFailureResult(binding));
+          return;
+        }
+        try {
+          reply(id, withProjectContext(handler(params, binding), binding));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          reply(
+            id,
+            withProjectContext(
+              {
+                content: [{ type: 'text', text: message }],
+                isError: true,
+              },
+              binding
+            )
+          );
+        }
         return;
       }
       case 'resources/list':
-        reply(id, { resources: RESOURCES });
+        reply(id, { resources: RESOURCES, ...contextFor(unverifiedBinding()) });
         return;
       case 'resources/read':
+        {
+        // MCP resources/read has a standard `{ uri }` request shape. Some clients may
+        // forward extension fields, but treating those as a binding would make project
+        // safety host-dependent. Keep this compatibility resource non-authoritative and
+        // require the project-aware ark_manifest tool for trusted contract evidence.
+        const binding = unverifiedBinding();
         if (params?.uri !== 'ark://manifest') {
-          fail(id, -32602, `Unknown resource: ${params?.uri}`);
+          fail(id, -32602, `Unknown resource: ${params?.uri}`, binding);
           return;
         }
         reply(id, {
-          contents: [{ uri: 'ark://manifest', mimeType: 'application/json', text: manifestText() }],
+          contents: [
+            {
+              uri: 'ark://manifest',
+              mimeType: 'application/json',
+              text: manifestText(binding),
+            },
+          ],
+          ...contextFor(binding),
         });
+        }
         return;
       default:
         fail(id, -32601, `Method not found: ${method}`);

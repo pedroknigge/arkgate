@@ -9,10 +9,13 @@ import {
   antigravityHooks,
   claudeSettings,
   codexHooks,
+  codexProjectConfig,
   grokHooks,
   grokProjectConfig,
   opencodeProjectConfig,
 } from './hook-templates.mjs';
+import { codexPrimaryTable, codexProjectMcpIsValid } from './codex-home.mjs';
+import { codexRuntimeActivation } from './enforcement-state.mjs';
 
 const COMPACT_HOST_TEMPLATES = {
   claude: (root) => [
@@ -28,7 +31,10 @@ const COMPACT_HOST_TEMPLATES = {
     ['.mcp.json', mcpJson(root)],
   ],
   cursor: (root) => [['.cursor/mcp.json', mcpJson(root)]],
-  codex: (root) => [['.codex/hooks.json', codexHooks(root)]],
+  codex: (root) => [
+    ['.codex/hooks.json', codexHooks(root)],
+    ['.codex/config.toml', codexProjectConfig(root)],
+  ],
   opencode: (root) => [['opencode.json', opencodeProjectConfig(root)]],
   windsurf: (root) => [['.windsurf/rules/ark.md', instructionRule(root)]],
   cline: (root) => [['.clinerules/ark.md', instructionRule(root)]],
@@ -159,6 +165,12 @@ export function renderStartPreview(preview, options = {}) {
   }
   console.log('Host guarantees:');
   for (const guarantee of preview.hostGuarantees) console.log(`  ${guarantee}`);
+  if (preview.runtimeActivation) {
+    console.log('Codex MCP CONFIGURED — RUNTIME NOT VERIFIED.');
+    console.log(`  Runtime activation: ${JSON.stringify(preview.runtimeActivation)}`);
+    console.log(`  Restart Codex, then call ark_identity with expectedRoot "${preview.root}".`);
+    console.log('  Do not trust MCP verdicts before the project identity matches.');
+  }
   if (preview.unresolvedDecisions.length > 0) {
     console.log('Unresolved decisions:');
     for (const decision of preview.unresolvedDecisions) console.log(`  ${decision}`);
@@ -198,6 +210,31 @@ function planHostRemoval(args, helpers) {
     const target = path.join(args.root, relativePath);
     if (!fs.existsSync(target)) continue;
     const before = fs.readFileSync(target);
+    if (host === 'codex' && relativePath === '.codex/config.toml') {
+      const currentText = before.toString('utf8');
+      const currentTable = codexPrimaryTable(currentText);
+      const expectedTable = codexPrimaryTable(expected);
+      if (!currentTable) continue;
+      if (
+        !expectedTable ||
+        currentTable.block.trimEnd() !== expectedTable.block.trimEnd()
+      ) {
+        unresolvedDecisions.push(
+          '.codex/config.toml Ark MCP binding was customized and was left untouched.'
+        );
+        continue;
+      }
+      const expectedPrelude = expected.slice(0, expectedTable.start);
+      let prefix = currentText.slice(0, currentTable.start);
+      if (expectedPrelude && prefix.endsWith(expectedPrelude)) {
+        prefix = prefix.slice(0, -expectedPrelude.length);
+      }
+      let next = `${prefix}${currentText.slice(currentTable.end)}`;
+      if (prefix.length === 0) next = next.replace(/^\n+/, '');
+      const after = next.trim().length > 0 ? Buffer.from(next) : null;
+      changes.push(change(relativePath, before, after));
+      continue;
+    }
     if (before.toString('utf8') !== expected) {
       unresolvedDecisions.push(`${relativePath} was customized and was left untouched.`);
       continue;
@@ -220,6 +257,32 @@ function planHostRemoval(args, helpers) {
     changes.push(change('.mcp.json', null, Buffer.from(mcpJson(args.root))));
   }
 
+  const runtimeActivation =
+    host === 'codex'
+      ? codexRuntimeActivation({
+          configuredOnDisk: (() => {
+            const configPath = path.join(args.root, '.codex', 'config.toml');
+            const plannedConfig = changes.find(
+              (item) => item.path === '.codex/config.toml'
+            );
+            if (plannedConfig?.action === 'delete') return false;
+            if (plannedConfig?.afterBase64) {
+              return codexProjectMcpIsValid(
+                Buffer.from(plannedConfig.afterBase64, 'base64').toString('utf8'),
+                args.root
+              );
+            }
+            if (!fs.existsSync(configPath)) return false;
+            try {
+              return codexProjectMcpIsValid(fs.readFileSync(configPath, 'utf8'), args.root);
+            } catch {
+              return false;
+            }
+          })(),
+          restartRequired: true,
+        })
+      : null;
+
   return {
     version: 1,
     root: args.root,
@@ -233,6 +296,7 @@ function planHostRemoval(args, helpers) {
     commands: commands(args.root, args, helpers),
     hostGuarantees: ['host removal is limited to Ark-owned compact artifacts', 'restore with the displayed --tools command'],
     unresolvedDecisions,
+    ...(runtimeActivation ? { runtimeActivation } : {}),
   };
 }
 
@@ -312,6 +376,18 @@ export async function planStart(args, helpers) {
       changes.push(change(file, oldContent, newContent));
     }
     const percent = coverage.governed?.percent ?? null;
+    const codexSelected = args.tools === 'codex';
+    const runtimeActivation = codexSelected
+      ? codexRuntimeActivation({
+          configuredOnDisk: (() => {
+            const config = after.get('.codex/config.toml');
+            return Boolean(
+              config && codexProjectMcpIsValid(config.toString('utf8'), root)
+            );
+          })(),
+          restartRequired: true,
+        })
+      : null;
     return {
       version: 1,
       root,
@@ -329,8 +405,15 @@ export async function planStart(args, helpers) {
         args.requireWriteHook ? `Hard-write hook verified for ${args.requireWriteHook}` : 'shared CI merge gate will be installed',
         'preview phase performs no writes in the target project',
         'apply writes the exact bytes identified by each afterHash',
+        ...(codexSelected
+          ? [
+              'Codex MCP is configured on disk, not runtime-verified',
+              'restart Codex and match ark_identity expectedRoot before trusting MCP verdicts',
+            ]
+          : []),
       ],
       unresolvedDecisions: percent !== null && percent < 90 ? [`Projected governed coverage is ${percent}%; review unclassified files before treating the contract as complete.`] : [],
+      ...(runtimeActivation ? { runtimeActivation } : {}),
     };
   } finally {
     fs.rmSync(shadowRoot, { recursive: true, force: true });

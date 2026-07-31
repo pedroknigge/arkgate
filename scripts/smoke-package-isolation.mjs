@@ -45,8 +45,27 @@ try {
   const gate = await import(
     pathToFileURL(path.join(gateInstall, 'node_modules/arkgate/dist/index.js')).href
   );
-  if (typeof gate.createAICodeGate !== 'function' || gate.createStrictArkKernel !== undefined) {
+  if (
+    typeof gate.createAICodeGate !== 'function' ||
+    typeof gate.createProjectIdentity !== 'function' ||
+    gate.createStrictArkKernel !== undefined
+  ) {
     throw new Error('gate-only install exposes the wrong public surface');
+  }
+  const identitySchema = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        gateInstall,
+        'node_modules/arkgate/schemas/ark.project-identity.schema.json'
+      ),
+      'utf8'
+    )
+  );
+  if (
+    identitySchema.properties?.schemaVersion?.const !== '1.0' ||
+    !identitySchema.required?.includes('contractSource')
+  ) {
+    throw new Error('gate-only install has a stale project-identity schema');
   }
   if (fs.existsSync(path.join(gateInstall, 'node_modules/arkgate/dist/runtime'))) {
     throw new Error('gate-only install contains a runtime bundle');

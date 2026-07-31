@@ -21,7 +21,9 @@ import {
 } from './html-report-depth.mjs';
 import { FIX_HINTS } from './violations.mjs';
 import { capabilityBadgesFor, renderAdvisorySections } from './html-report-advisories.mjs';
+import { renderEvolutionSection } from './html-report-evolution.mjs';
 import { arkGitignoreAppendDecision } from './ark-gitignore.mjs';
+import { captureGitSnapshot } from './report-snapshot-context.mjs';
 
 export { arkGitignoreAppendDecision, gitignoreCoversArkState, gitignoreHasArkNegationException } from './ark-gitignore.mjs';
 
@@ -161,6 +163,7 @@ export function buildReportSnapshot({
         return path.basename(root);
       }
     })(),
+    git: captureGitSnapshot(root),
     ok: Boolean(ok),
     mode: mode ?? null,
     score: score ?? null,
@@ -1228,95 +1231,14 @@ export function renderHtmlReport({
     <div class="gates">${enforcementRows}</div>
   </div>
 
-  ${(() => {
-    if (!currentSnapshot) return '';
-    // First report: originSnapshot is null at render time (written to disk just after).
-    if (originJustCreated || !originSnapshot) {
-      return `<div class="section card evolve">
-        <h2>Origin baseline captured</h2>
-        <p class="dim" style="margin:.2rem 0 0;font-size:.9rem">
-          This is the <b>first</b> architecture snapshot for this project
-          (<code>.ark/reports/origin.json</code> + <code>origin.html</code>).
-          Future reports will show deltas against this starting point so you can prove evolution.
-        </p>
-      </div>`;
-    }
-    const rows = [
-      ['Ark score', originSnapshot.score, currentSnapshot.score, ''],
-      ['Governed %', originSnapshot.governedPercent, currentSnapshot.governedPercent, 'pp'],
-      ['Files in scope', originSnapshot.totalFiles, currentSnapshot.totalFiles, ''],
-      ['Classified files', originSnapshot.classifiedFiles, currentSnapshot.classifiedFiles, ''],
-      ['Active violations', originSnapshot.activeViolations, currentSnapshot.activeViolations, ''],
-      ['Value violations', originSnapshot.valueViolations, currentSnapshot.valueViolations, ''],
-      ['Type-only violations', originSnapshot.typeOnlyViolations, currentSnapshot.typeOnlyViolations, ''],
-      ['Layers', originSnapshot.layerCount, currentSnapshot.layerCount, ''],
-      ['Deny rules', originSnapshot.denyRules, currentSnapshot.denyRules, ''],
-      ['Gates configured', originSnapshot.gatesOn, currentSnapshot.gatesOn, ''],
-    ];
-    const originDate = (originSnapshot.generatedAt || '').slice(0, 10) || 'origin';
-    const nowDate = (currentSnapshot.generatedAt || '').slice(0, 10) || 'now';
-    const tr = rows
-      .map(([label, from, to, unit]) => {
-        const d =
-          typeof from === 'number' && typeof to === 'number' ? to - from : null;
-        const good =
-          label.includes('violation') || label.includes('Violation')
-            ? d != null && d <= 0
-            : label.includes('Governed') || label.includes('score') || label.includes('Classified') || label.includes('Gates')
-              ? d != null && d >= 0
-              : null;
-        const cls =
-          d == null || d === 0 ? 'flat' : good === true ? 'up' : good === false ? 'down' : 'flat';
-        const delta =
-          d == null
-            ? '—'
-            : unit === 'pp'
-              ? formatDelta(Math.round(d * 10) / 10, { suffix: ' pp' })
-              : formatDelta(d);
-        return `<tr>
-          <td>${esc(label)}</td>
-          <td class="num">${from ?? '—'}</td>
-          <td class="num">${to ?? '—'}</td>
-          <td class="num delta ${cls}">${esc(delta)}</td>
-        </tr>`;
-      })
-      .join('\n');
-    // Layer file deltas
-    const originLayers = originSnapshot.layerFiles || {};
-    const currentLayers = currentSnapshot.layerFiles || {};
-    const layerKeys = [...new Set([...Object.keys(originLayers), ...Object.keys(currentLayers)])].sort();
-    const layerTr = layerKeys
-      .map((name) => {
-        const from = originLayers[name] || 0;
-        const to = currentLayers[name] || 0;
-        const d = to - from;
-        const cls = d === 0 ? 'flat' : d > 0 ? 'up' : 'down';
-        return `<tr>
-          <td class="ln">${esc(name)}</td>
-          <td class="num">${from}</td>
-          <td class="num">${to}</td>
-          <td class="num delta ${cls}">${esc(formatDelta(d))}</td>
-        </tr>`;
-      })
-      .join('\n');
-    return `<div class="section card evolve">
-      <h2>Evolution vs origin</h2>
-      <p class="dim" style="margin:.15rem 0 .75rem;font-size:.88rem">
-        Origin snapshot <code>${esc(originDate)}</code> → this report <code>${esc(nowDate)}</code>
-        · frozen at <code>.ark/reports/origin.*</code> · reopen origin HTML anytime for the starting picture.
-      </p>
-      <table class="layers">
-        <tr><th>Metric</th><th>Origin</th><th>Now</th><th>Δ</th></tr>
-        ${tr}
-      </table>
-      <h3>Files per layer</h3>
-      <table class="layers">
-        <tr><th>Layer</th><th>Origin</th><th>Now</th><th>Δ</th></tr>
-        ${layerTr || '<tr><td colspan="4" class="dim">No layer file data in snapshots.</td></tr>'}
-      </table>
-      <p class="legend">Green Δ = improvement for that metric (↑ coverage/score/gates, ↓ violations). History JSON under <code>.ark/reports/history/</code> (last ${ARK_REPORT_HISTORY_MAX}).</p>
-    </div>`;
-  })()}
+  ${renderEvolutionSection({
+    originSnapshot,
+    currentSnapshot,
+    originJustCreated,
+    esc,
+    formatDelta,
+    historyMax: ARK_REPORT_HISTORY_MAX,
+  })}
 
   <div class="section card senior">
     <h2>Senior diagnostics</h2>

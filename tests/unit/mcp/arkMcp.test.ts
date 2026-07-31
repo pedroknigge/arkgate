@@ -234,6 +234,9 @@ describe('ark-mcp server (write-path gate)', () => {
       completeness: 'partial',
       completenessReasons: [{ code: 'ANALYSIS_PARSE_INCOMPLETE' }],
       diagnostics: [{ ruleId: 'ANALYSIS_PARSE_INCOMPLETE' }],
+      binding: { status: 'unverified', authoritative: false },
+      authoritative: false,
+      projectIdentity: { schemaVersion: '1.0', contractSource: 'project' },
     });
     expect(payload).toMatchObject({
       valid: false,
@@ -524,6 +527,7 @@ describe('ark-mcp server (write-path gate)', () => {
       const res = await defaultClient.request('resources/read', { uri: 'ark://manifest' });
       const contract = JSON.parse(res.result.contents[0].text);
       expect(contract.source).toBe('strictDefaultElevenLayerProfile');
+      expect(contract.projectIdentity.contractSource).toBe('default-profile');
       expect(contract.layers).toHaveLength(11);
       // All 11 layers are active — nothing left to suggest.
       expect(contract.suggestedLayers).toBeUndefined();
@@ -554,6 +558,7 @@ describe('ark-mcp server (write-path gate)', () => {
       const res = await manifestClient.request('resources/read', { uri: 'ark://manifest' });
       const contract = JSON.parse(res.result.contents[0].text);
       expect(contract.source).toBe('manifest');
+      expect(contract.projectIdentity.contractSource).toBe('manifest');
       expect(contract.architecture.layers[0].name).toBe('DomainModel');
 
       const validation = await manifestClient.request('tools/call', {
@@ -566,6 +571,583 @@ describe('ark-mcp server (write-path gate)', () => {
       expect(validation.result.isError).toBe(true);
     } finally {
       manifestClient.close();
+    }
+  });
+});
+
+describe('ark-mcp project identity and fail-closed binding (WI01)', () => {
+  function createIdentityProject(label: string) {
+    const project = fs.mkdtempSync(path.join(os.tmpdir(), `ark-mcp-identity-${label}-`));
+    fs.mkdirSync(path.join(project, 'src/domain'), { recursive: true });
+    fs.mkdirSync(path.join(project, '.ark'), { recursive: true });
+    fs.writeFileSync(
+      path.join(project, 'src/domain/entity.ts'),
+      `export const project = ${JSON.stringify(label)};\n`
+    );
+    fs.writeFileSync(
+      path.join(project, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [{ name: `Domain${label}`, patterns: ['src/domain/**'] }],
+        rules: [],
+      })
+    );
+    fs.writeFileSync(
+      path.join(project, '.ark/golden-pattern.json'),
+      JSON.stringify({
+        schemaVersion: '1',
+        name: `golden-${label}`,
+        norm: `Only use the ${label} architecture.`,
+      })
+    );
+    return project;
+  }
+
+  it('publishes one project input contract on every tool and marks legacy calls unverified', async () => {
+    prepareMcpRuntime();
+    const project = createIdentityProject('schema');
+    const c = createClient(project);
+    try {
+      const listed = await c.request('tools/list');
+      expect(listed.result.tools.map((tool: { name: string }) => tool.name)).toEqual(
+        expect.arrayContaining(['ark_identity', 'ark_manifest'])
+      );
+      for (const tool of listed.result.tools) {
+        expect(tool.inputSchema.properties.project).toMatchObject({
+          type: 'object',
+          additionalProperties: false,
+        });
+        expect(tool.inputSchema.properties.project.properties).toHaveProperty('expectedRoot');
+        expect(tool.inputSchema.properties.project.properties).toHaveProperty(
+          'expectedProjectId'
+        );
+      }
+      for (const name of ['validate_code', 'ark_check']) {
+        const tool = listed.result.tools.find((entry: { name: string }) => entry.name === name);
+        expect(tool.outputSchema.oneOf[0].properties).toMatchObject({
+          projectIdentity: { type: 'object' },
+          binding: { type: 'object' },
+          authoritative: { type: 'boolean' },
+        });
+        expect(tool.outputSchema.oneOf[1].properties.error).toMatchObject({
+          type: 'object',
+        });
+      }
+
+      const identity = await c.request('tools/call', {
+        name: 'ark_identity',
+        arguments: {},
+      });
+      const body = JSON.parse(identity.result.content[0].text);
+      expect(identity.result.authoritative).toBe(false);
+      expect(body.binding).toMatchObject({ status: 'unverified', authoritative: false });
+      expect(body.projectIdentity).toMatchObject({
+        schemaVersion: '1.0',
+        contractSource: 'project',
+        resolvedRoot: fs.realpathSync(project),
+        resolvedConfigPath: fs.realpathSync(path.join(project, 'ark.config.json')),
+      });
+      expect(body.projectIdentity.projectId).toMatch(/^sha256:[a-f0-9]{64}$/);
+      expect(body.projectIdentity.contractHash).toMatch(/^sha256:[a-f0-9]{64}$/);
+
+      const idOnly = await c.request('tools/call', {
+        name: 'ark_identity',
+        arguments: {
+          project: { expectedProjectId: body.projectIdentity.projectId },
+        },
+      });
+      expect(JSON.parse(idOnly.result.content[0].text).binding).toMatchObject({
+        status: 'unverified',
+        authoritative: false,
+        expectedProjectId: body.projectIdentity.projectId,
+      });
+    } finally {
+      c.close();
+    }
+  });
+
+  it('keeps projectId stable across contract edits and restarts while runtime evidence changes', async () => {
+    prepareMcpRuntime();
+    const project = createIdentityProject('stable');
+    const firstClient = createClient(project);
+    const first = JSON.parse(
+      (
+        await firstClient.request('tools/call', {
+          name: 'ark_identity',
+          arguments: { project: { expectedRoot: project } },
+        })
+      ).result.content[0].text
+    );
+    firstClient.close();
+
+    const configPath = path.join(project, 'ark.config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.layers[0].description = 'Contract changed without changing project identity.';
+    fs.writeFileSync(configPath, JSON.stringify(config));
+
+    const secondClient = createClient(project);
+    try {
+      const second = JSON.parse(
+        (
+          await secondClient.request('tools/call', {
+            name: 'ark_identity',
+            arguments: {
+              project: {
+                expectedRoot: project,
+                expectedProjectId: first.projectIdentity.projectId,
+              },
+            },
+          })
+        ).result.content[0].text
+      );
+      expect(second.binding).toMatchObject({ status: 'matched', authoritative: true });
+      expect(second.projectIdentity.projectId).toBe(first.projectIdentity.projectId);
+      expect(second.projectIdentity.contractHash).not.toBe(first.projectIdentity.contractHash);
+      expect(second.projectIdentity.runtimeId).not.toBe(first.projectIdentity.runtimeId);
+      expect(second.projectIdentity).toHaveProperty('processStartedAt');
+    } finally {
+      secondClient.close();
+    }
+  });
+
+  it('uses one startup ArkRules snapshot for identity, manifest, and inventory until restart', async () => {
+    prepareMcpRuntime();
+    const project = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-mcp-rules-snapshot-'));
+    const rulesPath = path.join(project, 'arkrules', 'core.json');
+    fs.mkdirSync(path.join(project, 'src/core'), { recursive: true });
+    fs.mkdirSync(path.dirname(rulesPath), { recursive: true });
+    fs.writeFileSync(
+      path.join(project, 'src/core/order.ts'),
+      `export class Order {
+        public id: string;
+        public status: string;
+      }\n`
+    );
+    fs.writeFileSync(
+      path.join(project, 'ark.config.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [
+          {
+            name: 'core',
+            patterns: ['src/core/**'],
+            intentPrefixes: ['Domain.'],
+          },
+        ],
+        rules: [],
+        arkRules: { core: 'arkrules/core.json' },
+      })
+    );
+    const writeRules = (id: string) =>
+      fs.writeFileSync(
+        rulesPath,
+        JSON.stringify({
+          schemaVersion: '1.0',
+          layer: 'core',
+          structure: [
+            {
+              id,
+              sensor: 'no-anemic-model',
+              mode: 'advisory',
+            },
+          ],
+          invariants: [],
+        })
+      );
+    writeRules('no-anemic-model');
+
+    const firstClient = createClient(project);
+    let firstHash = '';
+    try {
+      const identity = JSON.parse(
+        (
+          await firstClient.request('tools/call', {
+            name: 'ark_identity',
+            arguments: { project: { expectedRoot: project } },
+          })
+        ).result.content[0].text
+      );
+      firstHash = identity.projectIdentity.contractHash;
+
+      // A running process remains internally coherent even if the contract changes on disk.
+      writeRules('custom-rule-b');
+
+      const manifest = await firstClient.request('tools/call', {
+        name: 'ark_manifest',
+        arguments: {
+          project: {
+            expectedRoot: project,
+            expectedProjectId: identity.projectIdentity.projectId,
+          },
+        },
+      });
+      const manifestBody = JSON.parse(manifest.result.content[0].text);
+      expect(manifestBody.binding).toMatchObject({ status: 'matched', authoritative: true });
+      expect(manifestBody.projectIdentity.contractHash).toBe(firstHash);
+      expect(manifestBody.arkRulesCatalog.structure.map((rule: { id: string }) => rule.id)).toEqual(
+        ['no-anemic-model']
+      );
+
+      const inventory = await firstClient.request('tools/call', {
+        name: 'ark_rules_inventory',
+        arguments: {
+          project: {
+            expectedRoot: project,
+            expectedProjectId: identity.projectIdentity.projectId,
+          },
+        },
+      });
+      const inventoryBody = JSON.parse(inventory.result.content[0].text);
+      expect(inventoryBody.projectIdentity.contractHash).toBe(firstHash);
+      expect(inventoryBody.rulesInventory).toMatchObject({
+        underContract: 1,
+        candidates: [
+          expect.objectContaining({
+            kind: 'anemic-entity',
+            governedLayer: 'core',
+            suggestedArkRule: expect.objectContaining({
+              layer: 'core',
+              structureId: 'no-anemic-model',
+            }),
+          }),
+        ],
+      });
+    } finally {
+      firstClient.close();
+    }
+
+    const restartedClient = createClient(project);
+    try {
+      const restartedIdentity = JSON.parse(
+        (
+          await restartedClient.request('tools/call', {
+            name: 'ark_identity',
+            arguments: { project: { expectedRoot: project } },
+          })
+        ).result.content[0].text
+      );
+      expect(restartedIdentity.projectIdentity.contractHash).not.toBe(firstHash);
+
+      const restartedManifest = await restartedClient.request('tools/call', {
+        name: 'ark_manifest',
+        arguments: { project: { expectedRoot: project } },
+      });
+      const restartedBody = JSON.parse(restartedManifest.result.content[0].text);
+      expect(
+        restartedBody.arkRulesCatalog.structure.map((rule: { id: string }) => rule.id)
+      ).toEqual(['custom-rule-b']);
+    } finally {
+      restartedClient.close();
+      fs.rmSync(project, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects project B expectations and paths before returning project A placement evidence', async () => {
+    prepareMcpRuntime();
+    const projectA = createIdentityProject('A');
+    const projectB = createIdentityProject('B');
+    const c = createClient(projectA);
+    try {
+      const expectedMismatch = await c.request('tools/call', {
+        name: 'ark_place',
+        arguments: {
+          project: { expectedRoot: projectB },
+          filePath: path.join(projectB, 'src/domain/new.ts'),
+        },
+      });
+      const expectedBody = JSON.parse(expectedMismatch.result.content[0].text);
+      expect(expectedMismatch.result.isError).toBe(true);
+      expect(expectedMismatch.result.structuredContent).toMatchObject({
+        error: { code: 'PROJECT_ROOT_MISMATCH' },
+        binding: { status: 'mismatch', authoritative: false },
+        projectIdentity: { contractSource: 'project' },
+        authoritative: false,
+      });
+      expect(expectedBody.error.code).toBe('PROJECT_ROOT_MISMATCH');
+      expect(expectedBody.binding).toMatchObject({
+        status: 'mismatch',
+        authoritative: false,
+      });
+      expect(expectedBody).not.toHaveProperty('layer');
+      expect(JSON.stringify(expectedBody)).not.toContain('golden-A');
+
+      const pathMismatch = await c.request('tools/call', {
+        name: 'ark_place',
+        arguments: { filePath: path.join(projectB, 'src/domain/new.ts') },
+      });
+      const pathBody = JSON.parse(pathMismatch.result.content[0].text);
+      expect(pathBody.error.code).toBe('PROJECT_ROOT_MISMATCH');
+      expect(pathBody).not.toHaveProperty('governed');
+      expect(JSON.stringify(pathBody)).not.toContain('golden-A');
+
+      const crossRootCalls = [
+        {
+          name: 'validate_code',
+          arguments: {
+            source: 'export const value = 1;\n',
+            filePath: path.join(projectB, 'src/domain/validate.ts'),
+          },
+        },
+        {
+          name: 'ark_prepare_write',
+          arguments: {
+            source: 'export const value = 1;\n',
+            filePath: path.join(projectB, 'src/domain/write.ts'),
+          },
+        },
+        {
+          name: 'ark_prepare_change',
+          arguments: {
+            changes: [
+              {
+                path: path.join(projectB, 'src/domain/change.ts'),
+                content: 'export const value = 1;\n',
+              },
+            ],
+          },
+        },
+      ];
+      for (const call of crossRootCalls) {
+        const response = await c.request('tools/call', call);
+        const body = JSON.parse(response.result.content[0].text);
+        expect(body.error.code).toBe('PROJECT_ROOT_MISMATCH');
+        expect(body).not.toHaveProperty('violations');
+        expect(JSON.stringify(body)).not.toContain('golden-A');
+      }
+
+      const rulesMismatch = await c.request('tools/call', {
+        name: 'ark_rules_inventory',
+        arguments: { project: { expectedRoot: projectB } },
+      });
+      const rulesBody = JSON.parse(rulesMismatch.result.content[0].text);
+      expect(rulesBody.error.code).toBe('PROJECT_ROOT_MISMATCH');
+      expect(rulesBody).not.toHaveProperty('rulesInventory');
+    } finally {
+      c.close();
+    }
+  });
+
+  it('requires exact-root initial binding and a prior id for descendants', async () => {
+    prepareMcpRuntime();
+    const project = createIdentityProject('paths');
+    const aliasParent = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-mcp-alias-'));
+    const alias = path.join(aliasParent, 'project-link');
+    fs.symlinkSync(project, alias, 'dir');
+    const descendant = path.join(project, 'src/domain');
+    const nested = path.join(project, 'packages/nested');
+    fs.mkdirSync(nested, { recursive: true });
+    fs.writeFileSync(
+      path.join(nested, 'ark.config.json'),
+      JSON.stringify({ include: ['src'], layers: [], rules: [] })
+    );
+
+    const c = createClient(project);
+    const aliasClient = createClient(alias);
+    try {
+      const canonicalIdentity = JSON.parse(
+        (
+          await c.request('tools/call', {
+            name: 'ark_identity',
+            arguments: { project: { expectedRoot: project } },
+          })
+        ).result.content[0].text
+      );
+      const aliasIdentity = JSON.parse(
+        (
+          await aliasClient.request('tools/call', {
+            name: 'ark_identity',
+            arguments: { project: { expectedRoot: alias } },
+          })
+        ).result.content[0].text
+      );
+      expect(aliasIdentity.projectIdentity.projectId).toBe(
+        canonicalIdentity.projectIdentity.projectId
+      );
+
+      const aliasResponse = await c.request('tools/call', {
+        name: 'ark_identity',
+        arguments: { project: { expectedRoot: alias } },
+      });
+      expect(JSON.parse(aliasResponse.result.content[0].text).binding).toMatchObject({
+        status: 'matched',
+        authoritative: true,
+      });
+
+      const descendantUnverified = await c.request('tools/call', {
+        name: 'ark_identity',
+        arguments: { project: { expectedRoot: descendant } },
+      });
+      expect(JSON.parse(descendantUnverified.result.content[0].text).binding).toMatchObject({
+        status: 'unverified',
+        authoritative: false,
+      });
+
+      const descendantBound = await c.request('tools/call', {
+        name: 'ark_identity',
+        arguments: {
+          project: {
+            expectedRoot: descendant,
+            expectedProjectId: canonicalIdentity.projectIdentity.projectId,
+          },
+        },
+      });
+      expect(JSON.parse(descendantBound.result.content[0].text).binding).toMatchObject({
+        status: 'matched',
+        authoritative: true,
+      });
+
+      const mismatch = await c.request('tools/call', {
+        name: 'ark_identity',
+        arguments: { project: { expectedRoot: nested } },
+      });
+      expect(JSON.parse(mismatch.result.content[0].text).error.code).toBe(
+        'PROJECT_ROOT_MISMATCH'
+      );
+    } finally {
+      c.close();
+      aliasClient.close();
+    }
+  });
+
+  it('does not authoritatively bind an unknown descendant with a custom config name', async () => {
+    prepareMcpRuntime();
+    const project = createIdentityProject('custom-parent');
+    const nested = path.join(project, 'packages/custom-child');
+    fs.mkdirSync(path.join(nested, 'src/domain'), { recursive: true });
+    fs.writeFileSync(
+      path.join(nested, 'custom.ark.json'),
+      JSON.stringify({
+        include: ['src'],
+        layers: [{ name: 'CustomChild', patterns: ['src/domain/**'] }],
+        rules: [],
+      })
+    );
+
+    const parentClient = createClient(project);
+    const childClient = createClient(nested, ['--config', 'custom.ark.json']);
+    try {
+      const parentAttempt = await parentClient.request('tools/call', {
+        name: 'ark_manifest',
+        arguments: { project: { expectedRoot: nested } },
+      });
+      const parentBody = JSON.parse(parentAttempt.result.content[0].text);
+      expect(parentBody.binding).toMatchObject({
+        status: 'unverified',
+        authoritative: false,
+      });
+
+      const childAttempt = await childClient.request('tools/call', {
+        name: 'ark_manifest',
+        arguments: { project: { expectedRoot: nested } },
+      });
+      const childBody = JSON.parse(childAttempt.result.content[0].text);
+      expect(childBody.binding).toMatchObject({ status: 'matched', authoritative: true });
+      expect(childBody.layers.map((layer: { name: string }) => layer.name)).toContain(
+        'CustomChild'
+      );
+    } finally {
+      parentClient.close();
+      childClient.close();
+    }
+  });
+
+  it('rejects an explicit config outside root before starting the MCP server', () => {
+    prepareMcpRuntime();
+    const projectA = createIdentityProject('config-A');
+    const projectB = createIdentityProject('config-B');
+    const result = spawnSync(
+      'node',
+      [
+        mcpBin,
+        '--root',
+        projectA,
+        '--config',
+        path.join(projectB, 'ark.config.json'),
+      ],
+      {
+        input: `${JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'initialize',
+          params: { protocolVersion: '2024-11-05' },
+        })}\n`,
+        encoding: 'utf8',
+      }
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('PROJECT_ROOT_MISMATCH');
+    expect(result.stdout).toBe('');
+
+    const linkedConfig = path.join(projectA, 'linked-config.json');
+    fs.symlinkSync(path.join(projectB, 'ark.config.json'), linkedConfig);
+    const linkedResult = spawnSync(
+      'node',
+      [mcpBin, '--root', projectA, '--config', linkedConfig],
+      { encoding: 'utf8' }
+    );
+    expect(linkedResult.status).toBe(1);
+    expect(linkedResult.stderr).toContain('PROJECT_ROOT_MISMATCH');
+  });
+
+  it('binds ark_manifest, keeps the compatibility resource unverified, and exposes the split verdict', async () => {
+    prepareMcpRuntime();
+    const project = createIdentityProject('verdict');
+    const c = createClient(project);
+    try {
+      const compatibility = await c.request('resources/read', {
+        uri: 'ark://manifest',
+        project: { expectedRoot: project },
+      });
+      const compatibilityBody = JSON.parse(compatibility.result.contents[0].text);
+      expect(compatibilityBody.binding).toMatchObject({
+        status: 'unverified',
+        authoritative: false,
+      });
+      expect(compatibility.result.authoritative).toBe(false);
+
+      const manifest = await c.request('tools/call', {
+        name: 'ark_manifest',
+        arguments: { project: { expectedRoot: project } },
+      });
+      const manifestBody = JSON.parse(manifest.result.content[0].text);
+      expect(manifestBody.binding).toMatchObject({ status: 'matched', authoritative: true });
+      expect(manifestBody.projectIdentity.contractSource).toBe('project');
+
+      const checked = await c.request('tools/call', {
+        name: 'ark_check',
+        arguments: {
+          strict: false,
+          project: {
+            expectedRoot: project,
+            expectedProjectId: manifestBody.projectIdentity.projectId,
+          },
+        },
+      });
+      const body = JSON.parse(checked.result.content[0].text);
+      expect(body.ok).toBe(true);
+      expect(body.verdict).toMatchObject({
+        identity: { status: 'matched', ok: true },
+        completeness: { ok: true },
+        graph: { ok: true },
+        coverage: { ok: true, governedPercent: 100, unclassified: 0 },
+        gates: {
+          advisoryMcpActive: true,
+          advisoryMcpRuntimeObserved: true,
+        },
+        overallOk: false,
+      });
+      expect(checked.result.structuredContent).toMatchObject({
+        verdict: {
+          identity: { status: 'matched', ok: true },
+          coverage: { ok: true },
+          overallOk: false,
+        },
+        binding: { status: 'matched', authoritative: true },
+        projectIdentity: { projectId: manifestBody.projectIdentity.projectId },
+        authoritative: true,
+      });
+    } finally {
+      c.close();
     }
   });
 });
@@ -1342,6 +1924,8 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
   it('lists all read-side and recommend tools', async () => {
     const res = await client.request('tools/list');
     expect(res.result.tools.map((t: { name: string }) => t.name)).toEqual([
+      'ark_identity',
+      'ark_manifest',
       'validate_code',
       'ark_check',
       'ark_policy_delta',
@@ -1381,6 +1965,15 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
     const loosePayload = JSON.parse(loose.result.content[0].text);
     expect(loosePayload.ok).toBe(true);
     expect(loose.result.isError).toBe(false);
+    expect(loosePayload.binding).toMatchObject({
+      status: 'unverified',
+      authoritative: false,
+    });
+    expect(loosePayload.verdict).toMatchObject({
+      identity: { status: 'unverified', ok: false },
+      coverage: { ok: false, governedPercent: 50, unclassified: 1 },
+      overallOk: false,
+    });
   });
 
   it('ark_policy_delta shares the hash-bound classifier and rejects weakening', async () => {

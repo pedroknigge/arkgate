@@ -13,7 +13,8 @@ description: Safely edit ark.config.json layers/rules and arkrules/* (structure 
 | Concentrated-edge / false-green STOP from other skills | Full map without config edit → `/ark-explore` |
 
 The **one sanctioned way** to change layers/rules/`intentPrefixes`/includes.
-Also used to **land mined business rules** into the executable manifest (`ark.config.json` + intent naming that `ark://manifest` exposes).
+Also used to **land mined business rules** into the executable manifest (`ark.config.json` +
+intent naming that the project-bound `ark_manifest` tool exposes authoritatively).
 
 
 ## Dual engine (mandatory)

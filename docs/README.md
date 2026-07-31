@@ -52,10 +52,12 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Area | Path |
 |------|------|
 | Release notes (by version) | [releases/](releases/) · [CHANGELOG.md](../CHANGELOG.md) |
-| Epic plans (seeded + shipped) | [plans/](plans/) · latest: [enforcement-evidence-and-docs-truth](plans/enforcement-evidence-and-docs-truth/README.md) (Phase EH shipped; 4.1.1 published) |
+| Epic plans (seeded + shipped) | [plans/](plans/) · active: [workspace identity and activation truth](plans/workspace-identity-activation-truth/README.md) (`WI01`, 4.2.0 corrective minor) |
 | Claims audit | [audit/claims-matrix.md](audit/claims-matrix.md) |
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
+
+Prepared candidate: [releases/4.2.0.md](releases/4.2.0.md) (`arkgate@4.2.0`, not published).
 
 Current published: [releases/4.1.1.md](releases/4.1.1.md) (`arkgate@4.1.1` on npm `latest`).  
 Previous: [releases/4.1.0.md](releases/4.1.0.md) (`arkgate@4.1.0`).  

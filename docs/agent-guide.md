@@ -46,6 +46,13 @@ status context name. Never claim Cursor/Codex/OpenCode hard write. Soft-write al
 the project is unfinished; doctor keeps it as an environment residual. See [ai-gates.md](ai-gates.md)
 and the README host matrix.
 
+**MCP project identity (4.2.0):** before trusting project-specific MCP evidence, call
+`ark_identity` with `project.expectedRoot` set to the exact project's absolute root. Reuse that
+root plus the returned `projectIdentity.projectId` on every later Ark tool call. A descendant
+path is authoritative only when that matching project id is also supplied. Only
+`binding.status: "matched"` with `authoritative: true` is authoritative; calls that omit the
+expectation remain compatible but are explicitly `unverified`.
+
 ## Architecture playbook and `ark-check --recommend`
 
 Before generating project structure, agents should read the **tool-agnostic application
@@ -112,6 +119,10 @@ baseline. Do not `--reset-origin` unless the user explicitly wants a new baselin
 `ark-check --report --no-archive` still creates `origin.*` on the first report (or on an explicit
 reset) and refreshes `latest.*`; it skips only the timestamped JSON file under
 `.ark/reports/history/`.
+Snapshots record best-effort, shell-free Git provenance (`HEAD`, attached branch, and dirty
+worktree state). Evolution keeps raw metrics visible across ArkGate upgrades, but an Ark score
+delta is comparable—and therefore rendered—only when origin and current snapshots use the same
+ArkGate version.
 
 Once the **raw** graph has zero violations (the baseline is deliberately ignored) and governed
 coverage is at least 50%, `ark-check --ratchet-cores` changes `optional: true` to
@@ -130,7 +141,9 @@ brownfield Align/Stabilize + seed Shape B. `/ark-loop` = plan A only. Empty plan
 “architecture healthy” if design-weak residual remains. Full routing table: full-install
 `AGENTS.md` / [README expert skills](../README.md#expert-skills-escapes--not-onboarding).
 
-**Design fitness (3.0.1+ / Phase Q 3.0.3):** after edges are clean, doctor can still report **ENFORCE · design-weak**.
+**Design fitness (3.0.1+ / Phase Q 3.0.3):** after checked edges are clean, doctor can still
+report **SUGGEST / ADAPT / ENFORCE · design-weak** using the mode it actually observed; a weak
+design does not imply that enforcement is active.
 
 ```bash
 npx ark-check --doctor --json   # designFitness, designSmells[].outcome, postGreenPath, goldenPattern, pilotLoop
@@ -145,7 +158,10 @@ npx ark-check --doctor --fail-on-new-smells --base-ref origin/main --json # opt-
 **Pilot loop (Q04):** when design-weak, `pilotLoop.nextPilot` is **one** extraction card
 (pilot target, move, success, kill-switch). Apply **that one pilot only**, then re-doctor.
 Success = reduced smell evidence on pilot paths; residual outside the pilot may remain.
-Never multi-pilot batch; never mechanical-safe; never claim healthy finished while design-weak.
+Never select seed/fixture/demo/migration/generated files as god-module pilots. A real UI business
+rule moves Domain → Application → UI; local permission/UI-state helpers are not selected by their
+`canEdit`-style name alone. Never multi-pilot batch; never mechanical-safe; never claim healthy
+finished while design-weak.
 
 **AI-velocity evidence (Q05):** deterministic fixture bench (no live LLM) compares the same
 feature add on design-weak vs golden-path trees. Run `npm run eval:ai-velocity`; metric is
@@ -456,7 +472,7 @@ npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok,antigra
 |------|-----------------|-------------|
 | Claude Code | `.claude/settings.json` hook + `.mcp.json` / `claude mcp add` | `.claude/skills/<name>/SKILL.md` |
 | Cursor | `.cursor/mcp.json` + `.cursor/rules/ark.mdc` | `.cursor/commands/` |
-| OpenAI Codex | `.codex/config.toml` (project primary, relative `--root .`); optional legacy `$CODEX_HOME/config.toml` fallback uses absolute roots and scoped secondaries — see [ai-gates.md](ai-gates.md) | **Repo:** `.agents/skills/<name>/SKILL.md`; **home:** `$CODEX_HOME/skills/<name>/SKILL.md` (`--codex-home`) |
+| OpenAI Codex | `.codex/config.toml` (project primary, relative `--root .`; configured on disk is not runtime-active until restart + `ark_identity` match); optional legacy `$CODEX_HOME/config.toml` fallback uses absolute roots and scoped secondaries — see [ai-gates.md](ai-gates.md) | **Repo:** `.agents/skills/<name>/SKILL.md`; **home:** `$CODEX_HOME/skills/<name>/SKILL.md` (`--codex-home`) |
 | **Grok Build** | `.grok/hooks/ark-write-gate.json` + `.grok/config.toml` / `.mcp.json` | `.grok/skills/<name>/SKILL.md` |
 | Google Antigravity | `.agents/hooks.json` (+ `GEMINI.md` for shared Gemini consumers) | `.agents/skills/<name>/SKILL.md` |
 | OpenCode | `opencode.json` MCP (`type: local`; advisory) | `.opencode/skills/<name>/SKILL.md` |
@@ -464,6 +480,10 @@ npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok,antigra
 This is a path reference, not a guarantee table. Full copy-paste setups:
 [ai-gates.md](ai-gates.md). Skill inventory: main
 [README](../README.md#other-skills-only-when-you-need-them).
+When several repositories share one machine, repo catalogs stay pinned and isolated; unchanged
+skill bodies are not rewritten for a version stamp. The optional `$CODEX_HOME/skills` catalog is
+monotonic, so an older repo cannot downgrade a newer managed home skill. See
+[AI gates — Codex skill catalog](ai-gates.md#codex-skill-catalog-skillmd-not-flat-prompts).
 
 For an optional executable adoption check, copy the shipped template into a Vitest/Jest suite
 after installing ArkGate:
@@ -846,17 +866,41 @@ required, and `behavioralCompletion` remains `not-evaluated` even when structure
 npx ark-mcp --root . --config ark.config.json [--manifest ark.manifest.json]
 ```
 
-- **Resource `ark://manifest`** — contract discovery. Serve an exported
-  `ark.manifest().toJSON()` via `--manifest`. Without that flag, the resource uses every active
-  layer and the effective rules from `ark.config.json`; the strict 11-layer profile is the
-  fallback only when the project config declares no layers.
+- **Identity handshake** — first call `ark_identity` with:
 
-The server exposes these nine tools:
+  ```json
+  {
+    "project": {
+      "expectedRoot": "/absolute/exact-project-root"
+    }
+  }
+  ```
+
+  Then reuse both `expectedRoot` and the returned `projectIdentity.projectId` as
+  `project.expectedProjectId` on every later Ark tool call. `expectedProjectId` without
+  `expectedRoot` can detect the wrong id, but it remains non-authoritative because it does not
+  prove the current workspace root. The first handshake requires the exact project root; a
+  contained descendant becomes authoritative only on later calls that also send the matching
+  project id.
+- **Tool `ark_manifest`** — authoritative contract discovery after the identity handshake.
+  Serve an exported `ark.manifest().toJSON()` via `--manifest`. Without that flag, the tool uses
+  every active layer and the effective rules from `ark.config.json`; the strict 11-layer profile
+  is the fallback only when the project config declares no layers. Call it with the same root +
+  project id expectation.
+- **Resource `ark://manifest`** — compatibility discovery for standard MCP `resources/read`
+  clients. That protocol request has no portable project-expectation field, so Ark always marks
+  this resource `unverified` and non-authoritative. It never substitutes for `ark_manifest` in
+  a project verdict.
+
+The server exposes these twelve tools. Every tool accepts the additive
+`project: { expectedRoot, expectedProjectId? }` input:
 
 | Tool | Primary input and purpose |
 |------|---------------------------|
+| `ark_identity` | `{ project: { expectedRoot, expectedProjectId? } }`: return the canonical root/config, stable project id, contract identity, and live runtime identity; use it before every other project-bound surface. |
+| `ark_manifest` | No non-project args: return the machine-readable architecture contract with an authoritative binding after the identity handshake. |
 | `validate_code` | `{ source, layer?, filePath? }`: validate one snippet; infer the layer from `filePath` when possible; return an error result when invalid. |
-| `ark_check` | `{ strict?, baseline? }`: run the full project architecture check with structured diagnostics. |
+| `ark_check` | `{ strict?, baseline? }`: run the full project architecture check. `verdict` separates `identity`, `completeness`, `graph`, `coverage`, `gates`, and `overallOk`; no individual green fact substitutes for the combined verdict. |
 | `ark_policy_delta` | `{ baseConfig, candidateConfig?, acknowledgement? }`: classify a complete contract transition; never edits the contract. |
 | `ark_coverage` | No args: report per-layer counts, every unclassified file, unmatched layers, and missing rule edges. |
 | `ark_place` | `{ filePath?, description? }`: resolve or propose a governed home and return its import/global constraints. |
@@ -864,8 +908,55 @@ The server exposes these nine tools:
 | `ark_prepare_change` | `{ changes, changeMap? }`: preflight one complete create/update/delete batch in memory; never writes files. |
 | `ark_recommend` | No args: return the deterministic application-shape plan used by `ark-check --recommend --json`. |
 | `ark_suggest_include` | No args: propose TypeScript/JavaScript include roots from workspaces and nested packages. |
+| `ark_rules_inventory` | No args: inventory possible intra-layer rules using configured layer evidence when available; test/fixture/seed/migration surfaces and narrow technical constants are excluded from extraction pilots. Counts are not a score. |
 
-Current diagnostic envelopes use schema `1.3` and require `mode`,
+Every project-bound tool success, tool error, and JSON-RPC error data carries:
+
+```json
+{
+  "projectIdentity": {
+    "schemaVersion": "1.0",
+    "projectId": "sha256:…",
+    "resolvedRoot": "/absolute/project",
+    "resolvedConfigPath": "/absolute/project/ark.config.json",
+    "arkgateVersion": "4.2.0",
+    "contractHash": "sha256:…",
+    "contractSource": "project",
+    "runtimeId": "process-specific",
+    "processStartedAt": "2026-07-30T00:00:00.000Z"
+  },
+  "binding": {
+    "status": "matched",
+    "authoritative": true
+  },
+  "authoritative": true
+}
+```
+
+`projectId` stays stable across process restarts and contract edits; `runtimeId` and
+`processStartedAt` identify this live process. Binding states are:
+
+- `matched` — canonical `expectedRoot` is the exact project root, or it is a contained
+  descendant and the caller also supplied the matching project id; `authoritative` is `true`;
+- `unverified` — no expectation was supplied, or only the id matched; callable for legacy
+  clients, but `authoritative` is `false`;
+- `mismatch` — invalid/wrong root or id; `authoritative` is `false` and Ark returns
+  `PROJECT_ROOT_MISMATCH`, `PROJECT_ID_MISMATCH`, or `INVALID_PROJECT_EXPECTATION`.
+
+Roots, configs, manifests, TypeScript configs, and project-bound tool paths are canonicalized
+through real paths. A config or file path outside the bound project fails before Ark returns
+placement, golden-pattern, Layers, or ArkRules evidence. The MCP process never retargets itself
+from tool input; disjoint projects need disjoint processes. The compatibility `ark://manifest`
+resource also carries the identity envelope, but its binding is always `unverified` and
+non-authoritative.
+
+For `ark_check`, treat `verdict.overallOk` as the combined control-plane fact. It can be true only
+when the binding is matched, analysis is complete, the graph is valid, coverage is complete
+(non-empty, 100% governed, zero unclassified files), and both local-write and CI-merge gate state
+are active. The underlying CLI fields remain present for diagnosis, but are not an authoritative
+whole-project green on their own.
+
+Current diagnostic envelopes use schema `1.4` and require `mode`,
 `completeness: "complete" | "partial" | "unavailable"`, and structured
 `completenessReasons`. Resolved results expose `policyHash`, `resolverIdentity`, `factsHash`, and
 `candidateTreeHash`; MCP `ark_check` mirrors CLI `ok`. Single-file `validate_code`,
@@ -875,7 +966,9 @@ preflight. Consumer-owned 1.0/1.1/1.2 `AdapterResult` values remain accepted by 
 
 For hook-based enforcement, `ark-mcp --hook` runs one-shot: it reads a PreToolUse payload
 from stdin, validates the post-edit file content, and exits `2` with violations on stderr
-to block the write (`0` to allow). Working Claude Code configuration
+to block the write (`0` to allow). `--root-env` accepts a prioritized comma-separated
+environment-variable list; ArkGate uses the first populated value and otherwise keeps
+the explicit `--root` fallback. Working Claude Code configuration
 (`.claude/settings.json`):
 
 ```json
@@ -887,7 +980,7 @@ to block the write (`0` to allow). Working Claude Code configuration
         "hooks": [
           {
             "type": "command",
-            "command": "npx ark-mcp --hook --root \"$CLAUDE_PROJECT_DIR\""
+            "command": "npx ark-mcp --hook --root . --root-env CLAUDE_PROJECT_DIR"
           }
         ]
       }
@@ -896,8 +989,8 @@ to block the write (`0` to allow). Working Claude Code configuration
 }
 ```
 
-Register the server itself in `.mcp.json` so the agent can read `ark://manifest` and call
-`validate_code` on demand:
+Register the server itself in `.mcp.json` so the agent can handshake with `ark_identity`, call
+`ark_manifest`, and use `validate_code` on demand:
 
 ```json
 {
@@ -909,6 +1002,8 @@ Register the server itself in `.mcp.json` so the agent can read `ark://manifest`
 
 On Claude/Grok, the installed PreToolUse hook makes matched writes an enforced checkpoint. MCP
 registration by itself remains advisory on every host because the agent must call the tool.
+
+Decision rationale: [ADR 0017 — MCP verdicts require explicit project identity](adr/0017-mcp-project-identity-binding.md).
 
 ## Experimental runtime kernel workflow (not the default path)
 

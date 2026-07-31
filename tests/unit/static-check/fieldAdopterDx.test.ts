@@ -175,6 +175,7 @@ describe('Codex legacy prompts advisory when catalog is complete', () => {
         codexHomeGap: null,
         codexRepoSkillGap: null,
         codexSessionActive: false,
+        env: {},
         color: { dim: (s: string) => s, yellow: (s: string) => s },
       });
     } finally {
@@ -211,6 +212,7 @@ describe('Codex legacy prompts advisory when catalog is complete', () => {
         codexHomeGap: null,
         codexRepoSkillGap: null,
         codexSessionActive: false,
+        env: {},
         color: { dim: (s: string) => s, yellow: (s: string) => s },
       });
     } finally {

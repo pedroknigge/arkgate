@@ -22,6 +22,7 @@ const matchingLayersForRelativePath =
 import {
   collectAdoptionGaps,
   detectSkillGaps,
+  skillGapsForActiveHost,
   detectCodexHomeGap,
   codexConcernIsActive,
   detectWritePathCapabilities,
@@ -331,7 +332,7 @@ export function buildRemediationPlan(
             : 'No active violations — the architecture already meets its contract.';
   if (designWeak) {
     statement =
-      'No active edge violations — contract edges are clean, but design smells remain (ENFORCE · design-weak). Shape residual is plan B only; not healthy finished.';
+      'No active edge violations — contract edges are clean, but design smells remain (design-weak). Shape residual is plan B only; not healthy finished.';
   }
   if (completeness !== ANALYSIS_COMPLETENESS.complete) statement = analysisIncompleteStatement(completeness);
 
@@ -361,7 +362,7 @@ export function buildRemediationPlan(
       ...(designWeak
         ? {
             designWeakLabel:
-              'ENFORCE · design-weak — use patternBets / dual-plan B; never auto-apply as mechanical-safe',
+              'Design-weak — use patternBets / dual-plan B; never auto-apply as mechanical-safe',
             ...DESIGN_WEAK_HONESTY_FLAGS,
           }
         : {}),
@@ -422,7 +423,7 @@ export function runPlan(
   if (plan.goal.designWeak) {
     console.log(
       color.yellow(
-        `  ENFORCE · design-weak — ${plan.patternBets?.length ?? 0} pattern bet(s) (never auto-apply)`
+        `  Design-weak — ${plan.patternBets?.length ?? 0} pattern bet(s) (never auto-apply)`
       )
     );
   }
@@ -536,11 +537,32 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     if (!baseline.exists) return true;
     return !baseline.keys.has(occurrenceKeys[index]);
   }).length;
+  const emptyScopeEarly = cov.emptyScope === true || cov.governed.totalFiles === 0;
+  const presentationRowEarly = cov.layers.find((r) => r.name === 'PresentationAdapters');
+  const totalFilesEarly = cov.governed.totalFiles || 0;
+  const operatingMode = resolveOperatingMode({
+    governedPercent: emptyScopeEarly ? 0 : cov.governed.percent,
+    // planMet uses blocking only; type-only placement debt alone must not force ADAPT.
+    planMet:
+      analysisComplete &&
+      blockingActive === 0 &&
+      !emptyScopeEarly &&
+      cov.governed.percent >= 50,
+    mature: cov.governed.totalFiles >= 150,
+    totalFiles: cov.governed.totalFiles,
+    emptyLayers: cov.emptyLayers,
+    coreOptionalWithFiles: adoption.coreOptional?.length ?? 0,
+    presentationShare:
+      totalFilesEarly > 0 && presentationRowEarly
+        ? presentationRowEarly.files / totalFilesEarly
+        : null,
+  });
   const designSmells = detectDesignSmells(root, config, files, cov);
   const observedDesignFitness = summarizeDesignFitness(designSmells, {
     activeViolations: blockingActive,
     governedPercent: cov.governed.percent,
     totalFiles: cov.governed.totalFiles,
+    operatingMode,
   });
   const designFitness = analysisComplete ? observedDesignFitness : {
     ...observedDesignFitness, status: 'analysis-incomplete', designWeak: false, label: 'Design fitness not verified — analysis is incomplete; observed smells remain advisory.',
@@ -576,27 +598,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   );
   // Single residual expression (nextPilot || extractionCard) — HTML report uses the same.
   const residualPilot = pilotLoop?.nextPilot || pilotLoop?.extractionCard || null;
-  const emptyScopeEarly = cov.emptyScope === true || cov.governed.totalFiles === 0;
-  const presentationRowEarly = cov.layers.find((r) => r.name === 'PresentationAdapters');
-  const totalFilesEarly = cov.governed.totalFiles || 0;
-  const operatingMode = resolveOperatingMode({
-    governedPercent: emptyScopeEarly ? 0 : cov.governed.percent,
-    // planMet uses blocking (failsStrict !== false) only — type-only placement debt alone
-    // must not force adapt via unmet plan (parity with merge/exit and productHonesty).
-    planMet:
-      analysisComplete &&
-      blockingActive === 0 &&
-      !emptyScopeEarly &&
-      cov.governed.percent >= 50,
-    mature: cov.governed.totalFiles >= 150,
-    totalFiles: cov.governed.totalFiles,
-    emptyLayers: cov.emptyLayers,
-    coreOptionalWithFiles: adoption.coreOptional?.length ?? 0,
-    presentationShare:
-      totalFilesEarly > 0 && presentationRowEarly
-        ? presentationRowEarly.files / totalFilesEarly
-        : null,
-  });
   // Evidence-backed hard only (never capabilities-from-hook-files alone).
   const hardWriteActive = writePath.enforcementState?.localWrite?.hard === true;
   const packageInstalled = writePath.enforcementState?.localWrite?.installed === true;
@@ -796,7 +797,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     mode === 'enforce' && !designFitness.designWeak
       ? ok
       : warn;
-  // Status lights are detected states, not user-picked settings (see docs/product-voice.md).
   // modeTitle alone names the light — bodies must not re-prefix Suggest/Adapt/Enforce.
   const modeHelp = {
     suggest:
@@ -807,8 +807,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       'honest coverage and clean checked edges. You arrived here; you never turn Enforce on. Next: keep the host write path and CI check; only NEW violations should fail.',
   };
   const modeTitle =
-    mode === 'enforce' && designFitness.designWeak
-      ? 'ENFORCE · design-weak'
+    designFitness.designWeak
+      ? `${mode.toUpperCase()} · design-weak`
       : mode.toUpperCase();
   line(
     modeMark,
@@ -999,7 +999,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         'No active violations — coverage is still thin, so green is not yet honest enforcement'
       );
     } else if (designFitness.designWeak) {
-      line(warn, 'None on checked edges — edges match the contract; design residual remains (ENFORCE · design-weak). Not healthy finished.');
+      line(warn, `None on checked edges — edges match the contract; design residual remains (${modeTitle}). Not healthy finished.`);
     } else {
       line(ok, 'None — the code matches the contract on checked edges');
     }
@@ -1067,17 +1067,17 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
 
   console.log('');
   console.log(color.bold('Gates & skills'));
-  if (gatesMissing.length === 0) line(ok, 'Shared gate files present (AGENTS.md, .mcp.json, CI)');
+  if (gatesMissing.length === 0) line(ok, 'Shared gate artifacts found on disk (AGENTS.md, .mcp.json, CI); runtime activation is reported separately');
   else {
     line(bad, `Missing gates: ${gatesMissing.join(', ')}`);
     actions.push(`install gates (${arkCommand(root, 'ark-check', '--install-agent-gates')})`);
   }
-  // Report Codex legacy prompts and other-host missing/stale independently (never exclusive).
-  const legacyCodex = skillGaps.some((g) => g.tool === 'codex' && g.legacyPromptsOnly);
-  const codexLegacySafeDelete = skillGaps.some(
+  const humanSkillGaps = skillGapsForActiveHost(skillGaps);
+  const legacyCodex = humanSkillGaps.some((g) => g.tool === 'codex' && g.legacyPromptsOnly);
+  const codexLegacySafeDelete = humanSkillGaps.some(
     (g) => g.tool === 'codex' && g.legacyAdvisory && g.catalogComplete
   );
-  const remainingGaps = skillGaps.filter(
+  const remainingGaps = humanSkillGaps.filter(
     (g) => !(g.tool === 'codex' && (g.legacyPromptsOnly || g.legacyAdvisory))
   );
   const remMiss = remainingGaps.reduce((s, g) => s + g.missing, 0);
@@ -1107,7 +1107,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     const parts = [
       codexHomeGap.legacyPromptsOnly ? 'legacy-prompts-only' : null,
       codexHomeGap.missing > 0 ? `${codexHomeGap.missing} missing` : null,
-      codexHomeGap.stale > 0 ? `${codexHomeGap.stale} content-behind-package` : null,
+      codexHomeGap.stale > 0 ? `${codexHomeGap.stale} content-behind-package` : null, codexHomeGap.catalogStateReason,
     ].filter(Boolean);
     const deferred = !codexConcernIsActive();
     // Deferred home debt is dim/info (not warn) so non-Codex sessions are not "incomplete".
@@ -1115,7 +1115,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       line(color.dim('·'), color.dim(`Codex home skills ${parts.join(', ')} (deferred — not on Codex session)`));
     } else {
       line(warn, `Codex home skills ${parts.join(', ')}`);
-      actions.push('refresh Codex home skills (--install-agent-gates --skills-only --codex-home --force)');
+      actions.push(codexHomeGap.catalogMetadataInvalid ? 'repair invalid Codex home catalog metadata after verifying the newest installed version' : 'refresh Codex home skills (--install-agent-gates --skills-only --codex-home --force)');
     }
   }
 
@@ -1229,7 +1229,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     if (postGreenPath) {
       console.log(
         color.dim(
-          '  Shape residual is the primary door under ENFORCE · design-weak — do not skill-shop explore vs coverage vs think.'
+          `  Shape residual is the primary door under ${modeTitle} — do not skill-shop explore vs coverage vs think.`
         )
       );
     } else {

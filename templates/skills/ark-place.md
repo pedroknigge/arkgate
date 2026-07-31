@@ -72,10 +72,12 @@ the same files or weaken the gate.
    straight from the contract (no guessing). When present, also honor optional
    **`goldenPattern`** (from `.ark/golden-pattern.json`) for **NEW code only** —
    advisory layout norm; never overrides the gate and never clears design-weak.
-   Absent golden is normal. Otherwise load `ark.config.json` and the
-   `ark://manifest` MCP resource (it includes `suggestedLayers` with conventional
-   directories for layers not yet adopted). The project's `AGENTS.md` placement table,
-   if present, is authoritative too.
+   Absent golden is normal. Otherwise load `ark.config.json`; when MCP is available, call
+   `ark_identity` with the exact project root, then call `ark_manifest` with the same root plus
+   returned project id (it includes `suggestedLayers` with conventional directories for layers
+   not yet adopted). The `ark://manifest` resource is compatibility-only and always
+   unverified/non-authoritative. The project's `AGENTS.md` placement table, if present, is
+   authoritative too.
 2. **Classify the artifact** by what it does, not what it's called:
    - Pure business rules/entities/value objects → domain-model layer.
    - When Domain ArkRules require private state / factories (`aggregate-private-state`,

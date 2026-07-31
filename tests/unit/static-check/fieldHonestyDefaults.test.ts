@@ -502,7 +502,8 @@ describe('doctor CLI — Next-like host false ENFORCE', () => {
         scripts: { lint: 'eslint .', typecheck: 'tsc --noEmit' },
       }),
       'src/app/page.tsx': 'export default function P(){return null}\n',
-      'src/components/A.tsx': 'export const A=1\n',
+      'src/components/A.tsx':
+        'export function canCheckout(total: number) { return total > 0; }\n',
       'src/lib/supabase/client.ts': 'export const c=1\n',
       // Optional presentation-heavy config that still leaves Domain empty
       'ark.config.json': JSON.stringify({
@@ -543,7 +544,20 @@ describe('doctor CLI — Next-like host false ENFORCE', () => {
     expect(res.status).toBe(0);
     const json = JSON.parse(res.stdout || '{}');
     expect(json.doctor.operatingMode).toBe('adapt');
+    expect(json.doctor.designFitness.designWeak).toBe(true);
+    expect(json.doctor.designFitness.label).toMatch(/^ADAPT · design-weak/);
+    expect(json.doctor.designFitness.label).not.toContain('ENFORCE · design-weak');
     const gapIds = (json.doctor.adoption?.gaps ?? []).map((g: { id: string }) => g.id);
     expect(gapIds.some((id: string) => id.startsWith('core-optional-'))).toBe(true);
+
+    const human = spawnSync(process.execPath, [ARK_CHECK, '--doctor', '--config', 'ark.config.json'], {
+      cwd: root,
+      encoding: 'utf8',
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    expect(human.status).toBe(0);
+    const text = human.stdout.replace(/\u001b\[[0-9;]*m/g, '');
+    expect(text).toContain('ADAPT · design-weak');
+    expect(text).not.toContain('ENFORCE · design-weak');
   });
 });

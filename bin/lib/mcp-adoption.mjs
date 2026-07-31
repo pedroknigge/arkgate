@@ -16,7 +16,7 @@ import { detectWritePathCapabilities } from './write-path-detect.mjs';
 import { detectActiveAgentHost, skillTemplateNames } from './skill-install.mjs';
 import { detectDeployPathQuality } from './deploy-path.mjs';
 import { collectWeakestLinkGaps } from './weakest-link.mjs';
-import { withCiProviderEvidence } from './enforcement-state.mjs';
+import { codexRuntimeActivation, withCiProviderEvidence } from './enforcement-state.mjs';
 
 export { detectDeployPathQuality };
 
@@ -120,7 +120,7 @@ export function brokenMcpGateFiles(root) {
 
 /**
  * Adoption completeness (separate from 0–100 fitness). Pure-ish: filesystem + config.
- * @returns {{ gaps: object[], hosts: object[], mcp: object, codexHome: object|null, coreOptional: object[], originReport: object, baseline: object, layerBalance: object|null, deployPath: object|null, writePath: object }}
+ * @returns {{ gaps: object[], hosts: object[], mcp: object, codexHome: object|null, coreOptional: object[], originReport: object, baseline: object, layerBalance: object|null, deployPath: object|null, writePath: object, runtimeActivation: object }}
  */
 export function collectAdoptionGaps(root, config, coverage) {
   const gaps = [];
@@ -259,7 +259,11 @@ export function collectAdoptionGaps(root, config, coverage) {
       return false;
     }
   })();
-  if (adopted && !isProducer && !codexProjectMcp) {
+  const runtimeActivation = codexRuntimeActivation({
+    configuredOnDisk: codexProjectMcp,
+    restartRequired: codexProjectMcp,
+  });
+  if (adopted && !isProducer) {
     const codexFile = codexConfigPath();
     let toml = '';
     try {
@@ -278,6 +282,8 @@ export function collectAdoptionGaps(root, config, coverage) {
         needsRewrite: assessed.needsRewrite,
         multiProject: assessed.multiProject,
         scopedTable: assessed.scopedTable,
+        projectConfiguredOnDisk: codexProjectMcp,
+        runtimeIdentityVerified: false,
       };
       if (assessed.gap) {
         // Temp/upgrade MCP roots stay urgent (fail-closed). Non-temp Codex-home debt
@@ -288,9 +294,12 @@ export function collectAdoptionGaps(root, config, coverage) {
         const deferred =
           !tempUrgent && activeHost != null && activeHost !== 'codex';
         const severity = deferred ? 'info' : assessed.gap.severity;
+        const localRisk = codexProjectMcp
+          ? 'Project config exists on disk, but the active runtime identity is unverified. '
+          : '';
         const message = deferred
-          ? `Deferred (fix when using Codex): ${assessed.gap.message}`
-          : assessed.gap.message;
+          ? `Deferred (fix when using Codex): ${localRisk}${assessed.gap.message}`
+          : `${localRisk}${assessed.gap.message}`;
         gaps.push({
           id: assessed.gap.id,
           severity,
@@ -526,6 +535,7 @@ export function collectAdoptionGaps(root, config, coverage) {
     deployPath,
     contractFalseGreen,
     writePath,
+    runtimeActivation,
     enforcement: {
       ci: weakest.ci,
       preCommit: weakest.preCommit,

@@ -146,7 +146,10 @@ when residual signals remain.
 
 ## Spoken / written explanation
 
-1. **Load the real contract**: `ark.config.json`, `ark://manifest` if available, `AGENTS.md`.
+1. **Load the real contract**: `ark.config.json`, `AGENTS.md`, and—when MCP is available—
+   `ark_identity` with the exact project root followed by `ark_manifest` with the same root plus
+   returned project id. `ark://manifest` is compatibility-only and always
+   unverified/non-authoritative.
 2. **If asked generally** ("explain the architecture"), produce a guided tour:
    - Operating mode + governed% (honest: low coverage means green checks almost nothing).
    - Each major layer: name, purpose, one real file from this repo, file count if known.

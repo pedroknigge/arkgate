@@ -407,7 +407,10 @@ function runHostCell(candidate, workRoot, host) {
     }
     const metadataOnly = findAsset(initialPreview, versionedPath);
     assertCondition(metadataOnly?.state === 'current', `${host} old stamp changed content identity`);
-    assertCondition(metadataOnly?.action === 'refresh-metadata', `${host} old stamp was not scheduled for metadata refresh`);
+    assertCondition(
+      metadataOnly?.action === 'none' && metadataOnly?.willApply === false,
+      `${host} old stamp scheduled a metadata-only rewrite`
+    );
     assertCondition(
       skillIdentity(LEGACY_UPGRADE_SKILL) === LEGACY_UPGRADE_IDENTITY,
       'published 3.7 skill fixture identity drifted'

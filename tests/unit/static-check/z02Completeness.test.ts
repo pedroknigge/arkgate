@@ -10,6 +10,7 @@ import {
   normalizeAnalysisCompleteness,
 } from '../../../bin/lib/analysis-completeness.mjs';
 import { validateSnippetAnalysis } from '../../../bin/lib/snippet-analysis.mjs';
+import { writeSemanticGateArtifacts } from '../../helpers/semanticGateArtifacts';
 
 const REPO = path.resolve('.');
 const CHECK = path.join(REPO, 'bin/ark-check.mjs');
@@ -35,14 +36,8 @@ function temporaryRoot(prefix: string): string {
 function writeProject(root: string, source: string): void {
   fs.mkdirSync(path.join(root, 'src/domain'), { recursive: true });
   fs.mkdirSync(path.join(root, 'src/infra'), { recursive: true });
-  fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
   fs.writeFileSync(path.join(root, 'ark.config.json'), `${JSON.stringify(CONFIG, null, 2)}\n`);
-  fs.writeFileSync(path.join(root, 'AGENTS.md'), '# ArkGate test fixture\n');
-  fs.writeFileSync(path.join(root, '.mcp.json'), '{}\n');
-  fs.writeFileSync(
-    path.join(root, '.github/workflows/ark.yml'),
-    'jobs:\n  architecture:\n    steps:\n      - run: ark-check --strict-merge\n'
-  );
+  writeSemanticGateArtifacts(root);
   fs.writeFileSync(path.join(root, 'src/domain/order.ts'), source);
   fs.writeFileSync(path.join(root, 'src/infra/repository.ts'), 'export const repository = 1;\n');
 }

@@ -789,7 +789,10 @@ describe('active-host write capability model', () => {
       expect(humanRun.stdout).toContain(
         'CI merge — supported: yes · analyzed: yes · configured: yes · installed: no · runtime observed: no · operation: merge · operation covered: unverified · active: no · bypassable: unverified · required: unverified · hard: no'
       );
-      expect(humanRun.stdout).toContain('Shared gate files present (AGENTS.md, .mcp.json, CI)');
+      expect(humanRun.stdout).toContain('Missing gates: AGENTS.md, .mcp.json');
+      expect(humanRun.stdout).not.toContain(
+        'Shared gate artifacts found on disk (AGENTS.md, .mcp.json, CI); runtime activation is reported separately'
+      );
       expect(humanRun.stdout).not.toContain('Gate files present (AGENTS.md, .mcp.json, CI, write gate)');
     } finally {
       fs.rmSync(root, { recursive: true, force: true });

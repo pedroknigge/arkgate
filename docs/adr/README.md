@@ -24,6 +24,8 @@ decision; implementation and manifests remain authoritative for current structur
 | [0014](0014-arkrules-invariant-catalog.md) | Invariant catalog, coverage evidence, and rule modes | Accepted |
 | [0015](0015-arkrules-migration-skills.md) | Migration workflows route through existing skills | Accepted |
 | [0016](0016-arkrules-no-executable-core.md) | Executable evaluator stays out of core | Accepted |
+| [0017](0017-mcp-project-identity-binding.md) | MCP verdicts require explicit project identity | Accepted |
+| [0018](0018-shared-skill-catalogs-are-monotonic.md) | Shared skill catalogs are monotonic | Accepted |
 
 Do not renumber or delete accepted decisions. Add a superseding ADR when a durable decision
 changes, and link both records.

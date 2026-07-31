@@ -379,6 +379,25 @@ describe('Z07 resident hook transport', () => {
     expect(unresolvedRoot.socket).not.toBe(before.socket);
   });
 
+  it('keeps endpoint identity stable across symlink and junction root aliases', () => {
+    const root = writeProject();
+    fs.writeFileSync(path.join(root, 'ark.manifest.json'), '{}\n');
+    const aliasParent = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-resident-alias-'));
+    roots.push(aliasParent);
+    const aliasRoot = path.join(aliasParent, 'project');
+    fs.symlinkSync(root, aliasRoot, process.platform === 'win32' ? 'junction' : 'dir');
+    const input = {
+      config: 'ark.config.json',
+      manifest: 'ark.manifest.json',
+      tsconfig: 'tsconfig.json',
+      launcher,
+    };
+
+    expect(residentHookEndpoint({ root: aliasRoot, ...input })).toEqual(
+      residentHookEndpoint({ root: fs.realpathSync(aliasRoot), ...input })
+    );
+  });
+
   it('reuses the authoritative evaluator with exact one-shot bytes and fail-closed invalidation', async () => {
     const root = writeProject();
     const resident = await startResident(root);

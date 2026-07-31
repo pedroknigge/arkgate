@@ -294,7 +294,7 @@ describe('gate-files + ci-and-commands templates', () => {
       fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
       fs.writeFileSync(
         path.join(root, '.github/workflows/ark.yml'),
-        'name: a\njobs:\n  j:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npx ark-check\n'
+        'name: a\njobs:\n  j:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npx ark-check --strict-merge\n'
       );
       expect(hasArkWorkflow(root)).toBe(true);
       expect(Array.isArray(missingGates(root))).toBe(true);

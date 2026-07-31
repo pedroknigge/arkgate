@@ -260,17 +260,61 @@ function skillVersionFromContent(content) {
   return match ? match[1].trim() : null;
 }
 
-// Numeric-tuple compare of dotted versions; true when `a` is strictly older than
-// `b`. Non-numeric/absent segments compare as 0, so "1.7" < "1.7.5".
+const VERSION_PATTERN =
+  /^(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?(?:\.(0|[1-9]\d*))?(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
+
+function parseVersion(value, strict) {
+  if (typeof value !== 'string') return null;
+  const match = value.match(VERSION_PATTERN);
+  if (!match || (strict && (match[2] === undefined || match[3] === undefined))) {
+    return null;
+  }
+  const prerelease = match[4]?.split('.') ?? [];
+  if (
+    prerelease.some(
+      (identifier) =>
+        /^\d+$/.test(identifier) && identifier.length > 1 && identifier.startsWith('0')
+    )
+  ) {
+    return null;
+  }
+  return {
+    core: [match[1], match[2] ?? '0', match[3] ?? '0'],
+    prerelease,
+  };
+}
+
+/** True only for a complete SemVer 2.0.0 version. */
+export function isValidSemver(value) {
+  return parseVersion(value, true) !== null;
+}
+
+// SemVer precedence compare. A one- or two-component numeric core remains
+// accepted for legacy skill stamps, so "1.7" < "1.7.5"; shared catalog metadata
+// uses isValidSemver and therefore requires the complete x.y.z form.
 export function isVersionOlder(a, b) {
-  const parse = (v) => String(v).split('.').map((n) => Number.parseInt(n, 10) || 0);
-  const av = parse(a);
-  const bv = parse(b);
-  const len = Math.max(av.length, bv.length);
-  for (let i = 0; i < len; i += 1) {
-    const x = av[i] ?? 0;
-    const y = bv[i] ?? 0;
-    if (x !== y) return x < y;
+  const av = parseVersion(a, false);
+  const bv = parseVersion(b, false);
+  if (!av || !bv) return false;
+  for (let index = 0; index < 3; index += 1) {
+    const left = BigInt(av.core[index]);
+    const right = BigInt(bv.core[index]);
+    if (left !== right) return left < right;
+  }
+  if (av.prerelease.length === 0 || bv.prerelease.length === 0) {
+    return av.prerelease.length > 0 && bv.prerelease.length === 0;
+  }
+  const length = Math.max(av.prerelease.length, bv.prerelease.length);
+  for (let index = 0; index < length; index += 1) {
+    const left = av.prerelease[index];
+    const right = bv.prerelease[index];
+    if (left === undefined || right === undefined) return left === undefined;
+    if (left === right) continue;
+    const leftNumeric = /^\d+$/.test(left);
+    const rightNumeric = /^\d+$/.test(right);
+    if (leftNumeric && rightNumeric) return BigInt(left) < BigInt(right);
+    if (leftNumeric !== rightNumeric) return leftNumeric;
+    return left < right;
   }
   return false;
 }
@@ -313,6 +357,74 @@ export function skillContentMatchesTemplate(installedContent, templateContent) {
   // Installed skills are stamped; templates are not — stamp with a dummy version
   // so arkVersion:<managed> lines align under skillContentIdentity.
   return installedId === skillContentIdentity(stampSkill(templateContent, '0.0.0'));
+}
+
+/**
+ * Decide whether one managed skill should be written.
+ *
+ * Repo catalogs belong to that repo's installed package, so an explicit --force
+ * may move them in either direction. Codex home is shared by every repo on the
+ * machine: a package older than the installed home stamp must never win, even
+ * under --force. In both scopes a version-stamp-only difference is a no-op; the
+ * skill body is the capability contract.
+ *
+ * @param {{
+ *   existingContent?: string|null,
+ *   targetContent: string,
+ *   packageVersion?: string|null,
+ *   force?: boolean,
+ *   scope?: 'repo'|'home',
+ * }} input
+ * @returns {{
+ *   action: 'write'|'skip',
+ *   reason: 'missing'|'content-current'|'newer-home-version'|'unknown-source-version'|'existing-preserved'|'content-update',
+ *   scope: 'repo'|'home',
+ *   sourceVersion: string|null,
+ *   installedVersion: string|null,
+ *   conflict: boolean,
+ *   downgradeBlocked: boolean,
+ * }}
+ */
+export function planSkillInstall(input) {
+  const scope = input.scope === 'home' ? 'home' : 'repo';
+  const existingContent = input.existingContent ?? null;
+  const targetContent = String(input.targetContent);
+  const sourceVersion =
+    input.packageVersion ?? skillVersionFromContent(targetContent);
+  const installedVersion = skillVersionFromContent(existingContent);
+  const result = (action, reason, conflict = false, downgradeBlocked = false) => ({
+    action,
+    reason,
+    scope,
+    sourceVersion,
+    installedVersion,
+    conflict,
+    downgradeBlocked,
+  });
+
+  if (existingContent === null) return result('write', 'missing');
+  if (
+    existingContent === targetContent ||
+    skillContentIdentity(existingContent) === skillContentIdentity(targetContent)
+  ) {
+    return result('skip', 'content-current');
+  }
+
+  if (scope === 'home') {
+    if (installedVersion && !sourceVersion) {
+      return result('skip', 'unknown-source-version', true, true);
+    }
+    if (
+      installedVersion &&
+      sourceVersion &&
+      isVersionOlder(sourceVersion, installedVersion)
+    ) {
+      return result('skip', 'newer-home-version', true, true);
+    }
+  }
+
+  if (!input.force) return result('skip', 'existing-preserved', true);
+  return result('write', 'content-update');
 }
 
 /** @returns {Record<string, string>} skill name → template body from package */
@@ -422,6 +534,96 @@ export function assessSkillCatalogParity(skillNames, skillFile, packageVersion, 
   };
 }
 
+const CODEX_HOME_CATALOG = '.arkgate-catalog.json';
+const CODEX_HOME_PENDING_CATALOG = '.arkgate-catalog.pending.json';
+const CATALOG_TOKEN_PATTERN =
+  /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
+
+function readCodexHomeCatalogMetadata(file, kind) {
+  try {
+    const stat = fs.lstatSync(file, { throwIfNoEntry: false });
+    if (!stat) return { exists: false, valid: false, version: null };
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1) {
+      return { exists: true, valid: false, version: null };
+    }
+    const value = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (kind === 'pending') {
+      const keys =
+        value && typeof value === 'object' && !Array.isArray(value)
+          ? Object.keys(value).sort()
+          : [];
+      const valid =
+        keys.join(',') === 'packageVersion,schemaVersion,token' &&
+        value.schemaVersion === '1.0' &&
+        isValidSemver(value.packageVersion) &&
+        typeof value.token === 'string' &&
+        CATALOG_TOKEN_PATTERN.test(value.token);
+      return {
+        exists: true,
+        valid,
+        version: valid ? value.packageVersion : null,
+      };
+    }
+    if (
+      value?.schemaVersion !== '1.0' ||
+      !isValidSemver(value.packageVersion) ||
+      !Array.isArray(value.skills)
+    ) {
+      return { exists: true, valid: false, version: null };
+    }
+    const seen = new Set();
+    for (const skill of value.skills) {
+      if (
+        !skill ||
+        typeof skill.name !== 'string' ||
+        !/^ark-[a-z0-9-]+$/.test(skill.name) ||
+        typeof skill.contentIdentity !== 'string' ||
+        !/^sha256:[a-f0-9]{64}$/.test(skill.contentIdentity) ||
+        seen.has(skill.name)
+      ) {
+        return { exists: true, valid: false, version: null };
+      }
+      seen.add(skill.name);
+    }
+    return { exists: true, valid: true, version: value.packageVersion };
+  } catch {
+    return { exists: true, valid: false, version: null };
+  }
+}
+
+function codexHomeCatalogState(skillsDir) {
+  const catalog = readCodexHomeCatalogMetadata(
+    path.join(skillsDir, CODEX_HOME_CATALOG),
+    'catalog'
+  );
+  const pending = readCodexHomeCatalogMetadata(
+    path.join(skillsDir, CODEX_HOME_PENDING_CATALOG),
+    'pending'
+  );
+  let floorVersion = catalog.version;
+  if (
+    pending.version &&
+    (!floorVersion || isVersionOlder(floorVersion, pending.version))
+  ) {
+    floorVersion = pending.version;
+  }
+  return {
+    floorVersion,
+    pendingVersion: pending.version,
+    hasMetadata: catalog.exists || pending.exists,
+    metadataInvalid:
+      (catalog.exists && !catalog.valid) || (pending.exists && !pending.valid),
+  };
+}
+
+function newerCodexHomeCatalogVersion(skillsDir, packageVersion, state = null) {
+  if (!isValidSemver(packageVersion)) return null;
+  const floorVersion = (state ?? codexHomeCatalogState(skillsDir)).floorVersion;
+  return floorVersion && isVersionOlder(packageVersion, floorVersion)
+    ? floorVersion
+    : null;
+}
+
 /**
  * Repo + home Codex skill parity against the shipping package skill set.
  * Producer trees (templates/skills) and projects without AGENTS.md return null.
@@ -459,6 +661,14 @@ export function assessCodexSkillParity(root) {
   const home = assessSkillCatalogParity(skillNames, homeSkill, packageVersion, {
     legacyFile: homeLegacy,
   });
+  const homeCatalogState = codexHomeCatalogState(skillsDir);
+  const newerHomeCatalog = newerCodexHomeCatalogVersion(
+    skillsDir,
+    packageVersion,
+    homeCatalogState
+  );
+  const pendingRecoveryRequired =
+    homeCatalogState.pendingVersion !== null && newerHomeCatalog === null;
 
   // Repo catalog matters when .codex is present (Codex host adopted) or repo skills/prompts exist.
   const repoInPlay =
@@ -467,14 +677,23 @@ export function assessCodexSkillParity(root) {
     repo.hasLegacyPrompts;
   // Home is "in play" only when ark skills or legacy prompts were actually installed there
   // (empty $CODEX_HOME/skills is optional multi-project — not debt).
-  const homeInPlay = home.presentCount > 0 || home.hasLegacyPrompts;
+  const homeInPlay =
+    home.presentCount > 0 ||
+    home.hasLegacyPrompts ||
+    homeCatalogState.hasMetadata;
 
   if (!repoInPlay && !homeInPlay) return null;
 
   const repoNeedsAttention =
     repoInPlay && (repo.missing > 0 || repo.stale > 0 || repo.legacyPromptsOnly);
   const homeNeedsAttention =
-    homeInPlay && (home.missing > 0 || home.stale > 0 || home.legacyPromptsOnly);
+    newerHomeCatalog === null &&
+    homeInPlay &&
+    (home.missing > 0 ||
+      home.stale > 0 ||
+      home.legacyPromptsOnly ||
+      pendingRecoveryRequired ||
+      homeCatalogState.metadataInvalid);
 
   return {
     packageVersion,
@@ -485,6 +704,11 @@ export function assessCodexSkillParity(root) {
       inPlay: homeInPlay,
       skillsDir,
       promptsDir,
+      catalogVersion: homeCatalogState.floorVersion,
+      catalogNewerThanPackage: newerHomeCatalog !== null,
+      pendingCatalogVersion: homeCatalogState.pendingVersion,
+      pendingRecoveryRequired,
+      catalogMetadataInvalid: homeCatalogState.metadataInvalid,
     },
     skillsDir,
     promptsDir,
@@ -515,6 +739,14 @@ export function detectCodexHomeGap(root) {
     expectedCount,
     packageVersion,
     skillsDir,
+    catalogVersion: home.catalogVersion,
+    pendingRecoveryRequired: Boolean(home.pendingRecoveryRequired),
+    catalogMetadataInvalid: Boolean(home.catalogMetadataInvalid),
+    catalogStateReason: home.catalogMetadataInvalid
+      ? 'invalid catalog metadata'
+      : home.pendingRecoveryRequired
+        ? 'interrupted catalog commit'
+        : null,
   };
 }
 
@@ -671,19 +903,31 @@ export function detectSkillGaps(root) {
 }
 
 /**
+ * Preserve the full detected inventory for JSON/reporting, but keep immediate
+ * human remediation scoped to the host running this process.
+ */
+export function skillGapsForActiveHost(skillGaps, env = process.env) {
+  const activeHost = detectActiveAgentHost(env);
+  if (!activeHost) return skillGaps ?? [];
+  return (skillGaps ?? []).filter((gap) => gap.tool === activeHost);
+}
+
+/**
  * Human-facing skill / Codex catalog gap lines for ark-check (non-JSON).
  * @param {string} root
- * @param {{ skillGaps: object[], codexHomeGap: object|null, codexRepoSkillGap: object|null, codexSessionActive: boolean, color: { dim: Function, yellow: Function } }} opts
+ * @param {{ skillGaps: object[], codexHomeGap: object|null, codexRepoSkillGap: object|null, codexSessionActive: boolean, env?: NodeJS.ProcessEnv, color: { dim: Function, yellow: Function } }} opts
  */
 export function printSkillAndCodexGapHints(root, opts) {
   const { skillGaps, codexHomeGap, codexRepoSkillGap, codexSessionActive, color } = opts;
-  if (skillGaps?.length > 0) {
-    const legacyCodex = skillGaps.some((gap) => gap.tool === 'codex' && gap.legacyPromptsOnly);
-    const legacyAdvisory = skillGaps.some(
+  const activeSkillGaps = skillGapsForActiveHost(skillGaps, opts.env);
+  if (activeSkillGaps.length > 0) {
+    const legacyCodex = activeSkillGaps.some(
+      (gap) => gap.tool === 'codex' && gap.legacyPromptsOnly
+    );
+    const legacyAdvisory = activeSkillGaps.some(
       (gap) => gap.tool === 'codex' && gap.legacyAdvisory && gap.catalogComplete
     );
-    // Report Codex legacy separately; never suppress missing/stale for other hosts.
-    const remaining = skillGaps.filter(
+    const remaining = activeSkillGaps.filter(
       (gap) =>
         !(gap.tool === 'codex' && (gap.legacyPromptsOnly || gap.legacyAdvisory))
     );
@@ -727,6 +971,8 @@ export function printSkillAndCodexGapHints(root, opts) {
     if (codexHomeGap.legacyPromptsOnly) parts.push('legacy-prompts-only');
     if (codexHomeGap.missing > 0) parts.push(`${codexHomeGap.missing} missing`);
     if (codexHomeGap.stale > 0) parts.push(`${codexHomeGap.stale} content-behind-package`);
+    if (codexHomeGap.pendingRecoveryRequired) parts.push('interrupted catalog commit');
+    if (codexHomeGap.catalogMetadataInvalid) parts.push('invalid catalog metadata');
     const deferred = !codexSessionActive;
     const deferredNote = deferred
       ? ' Deferred unless you use Codex — not a blocker for Grok/Claude/Cursor. '
@@ -735,7 +981,9 @@ export function printSkillAndCodexGapHints(root, opts) {
       `Codex home skill catalog (${codexSkillsDir()}) behind this Ark (${parts.join(', ')}).` +
       deferredNote +
       `Catalog is $CODEX_HOME/skills/<name>/SKILL.md (not flat prompts). ` +
-      `When using Codex: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --codex-home --force')}`;
+      (codexHomeGap.catalogMetadataInvalid
+        ? 'Inspect the shared catalog metadata before retrying; invalid metadata fails safe.'
+        : `When using Codex: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --codex-home --force')}`);
     console.log(deferred ? color.dim(msg) : color.yellow(msg));
   }
   if (codexRepoSkillGap && codexSessionActive) {

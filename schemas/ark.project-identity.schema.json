@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://unpkg.com/arkgate@4/schemas/ark.project-identity.schema.json",
+  "title": "ArkGate MCP project identity",
+  "description": "Stable project binding plus separate runtime and architecture-contract evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "projectId",
+    "resolvedRoot",
+    "resolvedConfigPath",
+    "arkgateVersion",
+    "contractHash",
+    "contractSource",
+    "runtimeId",
+    "processStartedAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "projectId": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "resolvedRoot": {
+      "type": "string",
+      "minLength": 1
+    },
+    "resolvedConfigPath": {
+      "type": "string",
+      "minLength": 1
+    },
+    "arkgateVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "contractHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "contractSource": {
+      "enum": [
+        "project",
+        "default-profile",
+        "manifest"
+      ]
+    },
+    "runtimeId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "processStartedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$defs": {
+    "expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "expectedRoot": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Absolute expected workspace/project directory. The initial authoritative handshake requires the exact project root; descendant calls also require expectedProjectId."
+        },
+        "expectedProjectId": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "description": "Project id previously returned by ark_identity or ark_manifest."
+        }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "authoritative"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "matched",
+            "unverified",
+            "mismatch"
+          ]
+        },
+        "authoritative": {
+          "type": "boolean"
+        },
+        "expectedRoot": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedProjectId": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "code": {
+          "enum": [
+            "PROJECT_ROOT_MISMATCH",
+            "PROJECT_ID_MISMATCH",
+            "INVALID_PROJECT_EXPECTATION"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

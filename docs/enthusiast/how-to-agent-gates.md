@@ -42,6 +42,12 @@ npx arkgate-check --doctor
 npx arkgate-check --require-gates
 ```
 
+`--require-gates` implies strict config validation. It verifies content, not filenames alone:
+`AGENTS.md` must contain the Ark contract and strict check, MCP registration must launch one Ark
+server with an explicit project root, compact Codex must contain valid project config plus
+SessionStart/PreToolUse Ark hooks, and CI must execute a fail-closed Ark command. Included but
+unclassified source files therefore remain red.
+
 Doctor JSON includes `writePath.mode` plus `enforcementLadder`: support, installation, observed
 evidence, covered operations, bypassability, and CI honesty. MCP registration stays advisory.
 

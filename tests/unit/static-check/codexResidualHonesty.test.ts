@@ -256,6 +256,7 @@ describe('multi-host skill hints (no exclusive Codex legacy)', () => {
         codexHomeGap: null,
         codexRepoSkillGap: null,
         codexSessionActive: false,
+        env: {},
         color,
       });
     } finally {
@@ -267,7 +268,7 @@ describe('multi-host skill hints (no exclusive Codex legacy)', () => {
     expect(joined).not.toMatch(/not installed for codex, claude/);
   });
 
-  it('runDoctor human: Codex legacy + Claude missing + deferred home (dim, not warn action)', () => {
+  it('runDoctor human: active Claude gap + deferred Codex home, without inactive repo noise', () => {
     const root = mk('ark-doc-multi-');
     writeAgents(root);
     fs.writeFileSync(
@@ -311,7 +312,7 @@ describe('multi-host skill hints (no exclusive Codex legacy)', () => {
       else process.env.CODEX_HOME = prevHome;
     }
     const joined = lines.join('\n');
-    expect(joined).toMatch(/legacy flat \.codex\/prompts only/i);
+    expect(joined).not.toMatch(/legacy flat \.codex\/prompts only/i);
     expect(joined).toMatch(/missing \/ .* content-behind-package \/ark-\* skill\(s\) for claude/i);
     expect(joined).toMatch(/Codex home skills.*deferred/i);
     // Deferred line should not look like a yellow "!" warn mark path that adds primary action.
