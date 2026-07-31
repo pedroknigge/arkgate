@@ -10,6 +10,12 @@ import {
   evaluateArkRuleSensors,
   extractClassShapesFromSource,
 } from '../../../src/domain/arkRuleSensors';
+import {
+  buildArkRuleFileHints as buildCliArkRuleFileHints,
+  collectEmptyAppliesToFindings as collectCliEmptyAppliesToFindings,
+  evaluateArkRuleSensors as evaluateCliArkRuleSensors,
+  extractClassShapesFromSource as extractCliClassShapesFromSource,
+} from '../../../bin/lib/arkrules-sensors.mjs';
 
 function effective(structure: unknown[]) {
   const file = loadArkRulesContract({
@@ -317,5 +323,84 @@ export class Property {
       ['src/domain/order.ts']
     );
     expect(empty).toEqual([]);
+  });
+
+  it('keeps the generated CLI sensor artifact behaviorally aligned', () => {
+    const source = `
+import { PrismaClient } from '@prisma/client';
+export class Order {
+  public total = 0;
+  constructor() {}
+  increase() { this.total = this.total + 1; }
+}
+export function canPlaceOrder(order: Order) { return order.total > 0; }
+export function calculateDiscount(order: Order) { return order.total * 0.1; }
+export async function POST(order: Order) {
+  if (order.total < 0) throw new Error('bad');
+  return new PrismaClient().order.create({ data: order });
+}
+`;
+    const canonicalShapes = extractClassShapesFromSource('src/domain/order.ts', source);
+    const cliShapes = extractCliClassShapesFromSource('src/domain/order.ts', source);
+    const canonicalHints = buildArkRuleFileHints({
+      'src/application/place-order.ts': source,
+      'src/adapters/http.ts': source,
+    });
+    const cliHints = buildCliArkRuleFileHints({
+      'src/application/place-order.ts': source,
+      'src/adapters/http.ts': source,
+    });
+    const arkRules = effective([
+      {
+        id: 'private-state',
+        sensor: 'aggregate-private-state',
+        mode: 'enforced',
+        appliesTo: ['src/domain/**'],
+      },
+      {
+        id: 'factory',
+        sensor: 'always-valid-factory',
+        mode: 'enforced',
+        appliesTo: ['src/domain/**'],
+      },
+      {
+        id: 'events',
+        sensor: 'domain-event-on-mutation',
+        mode: 'enforced',
+        appliesTo: ['src/domain/**'],
+      },
+      {
+        id: 'orch',
+        sensor: 'orchestration-only',
+        mode: 'advisory',
+        appliesTo: ['src/application/**'],
+      },
+      {
+        id: 'thin',
+        sensor: 'thin-adapter',
+        mode: 'advisory',
+        appliesTo: ['src/adapters/**'],
+      },
+      { id: 'anemic', sensor: 'no-anemic-model', mode: 'advisory' },
+    ]);
+    const input = {
+      arkRules,
+      classShapes: canonicalShapes,
+      files: [
+        'src/domain/order.ts',
+        'src/application/place-order.ts',
+        'src/adapters/http.ts',
+      ],
+      fileHints: canonicalHints,
+    };
+
+    expect(cliShapes).toEqual(canonicalShapes);
+    expect(cliHints).toEqual(canonicalHints);
+    expect(evaluateCliArkRuleSensors({ ...input, classShapes: cliShapes, fileHints: cliHints })).toEqual(
+      evaluateArkRuleSensors(input)
+    );
+    expect(collectCliEmptyAppliesToFindings(arkRules, input.files)).toEqual(
+      collectEmptyAppliesToFindings(arkRules, input.files)
+    );
   });
 });

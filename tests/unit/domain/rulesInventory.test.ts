@@ -3,6 +3,10 @@ import {
   buildRulesInventory,
   inventoryToExtractionCard,
 } from '../../../src/domain/rulesInventory';
+import {
+  buildRulesInventory as buildCliRulesInventory,
+  inventoryToExtractionCard as cliInventoryToExtractionCard,
+} from '../../../bin/lib/rules-inventory.mjs';
 
 describe('AR13–AR15 rules inventory + extraction cards', () => {
   it('finds validation-in-controller and magic constants on spaghetti fixtures', () => {
@@ -267,5 +271,40 @@ describe('AR13–AR15 rules inventory + extraction cards', () => {
           candidate.kind === 'validation-in-controller'
       )
     ).toBe(true);
+  });
+
+  it('keeps the generated CLI inventory artifact behaviorally aligned', () => {
+    const input = {
+      fileContents: {
+        'src/core/order.ts': `
+          export const MAX_CART_SIZE = 50;
+          export class Order {
+            public id: string;
+            public status: string;
+          }
+        `,
+        'src/entry/order-handler.ts': `
+          export function handle(input: { amount: number }) {
+            if (input.amount < 0) throw new Error('invalid amount');
+            return input.amount;
+          }
+        `,
+      },
+      fileLayers: {
+        'src/core/order.ts': 'core',
+        'src/entry/order-handler.ts': 'entry',
+      },
+      layerContexts: [
+        { name: 'core', intentPrefixes: ['Domain.'] },
+        { name: 'entry', intentPrefixes: ['Application.'] },
+      ],
+    };
+    const canonical = buildRulesInventory(input);
+    const cli = buildCliRulesInventory(input);
+
+    expect(cli).toEqual(canonical);
+    expect(cliInventoryToExtractionCard(cli.candidates[0]!)).toEqual(
+      inventoryToExtractionCard(canonical.candidates[0]!)
+    );
   });
 });
