@@ -610,6 +610,10 @@ Boundary:
 |---:|---|---|---:|---|---|
 | 109 | `WI01` | `doing` | L | `EH08` | Stable project-identity schema + MCP handshake; cross-project/config containment fails closed before Layers/ArkRules; honest verdict and activation states; Codex install/start/remove recovery; isolated/idempotent repo skills + monotonic shared Codex skills; Linux/macOS/Windows smoke; layer-aware rules inventory; packed A/B regression; 4.2.0 release |
 
+Clean signed implementation candidate `12205d76` measured **699,450 packed bytes /
+2,474,760 unpacked bytes / 168 files**. The release budget records fixed ≥10% headroom; WI01
+remains `doing` until native CI, signed tag, npm provenance, and MCP registry publication finish.
+
 ### Z01 — Make release cleanup tool-owned and path-safe
 
 - **Status:** `done`

@@ -19,16 +19,16 @@ describe('package budget ceilings retain 10% headroom over the recorded clean ca
   it('retains at least 10% headroom over the recorded clean candidate', () => {
     const gate = JSON.parse(read('release/package-budgets.v1.json')).packages.gate;
     expect(gate.measuredCandidate).toEqual({
-      sha: '4404c48dc2ab0dfe33056cd417a8d0f492601a99',
-      ciCandidateSha: '4404c48dc2ab0dfe33056cd417a8d0f492601a99',
+      sha: '12205d76c849eb2b146a79fe85798ae6a4fa6654',
+      ciCandidateSha: '12205d76c849eb2b146a79fe85798ae6a4fa6654',
       ciRun: null,
-      version: '4.0.0',
-      packedBytes: 605761,
-      unpackedBytes: 2140003,
-      files: 159,
+      version: '4.2.0',
+      packedBytes: 699450,
+      unpackedBytes: 2474760,
+      files: 168,
     });
     expect([gate.maxPackedBytes, gate.maxUnpackedBytes, gate.maxFiles]).toEqual([
-      666338, 2354004, 180,
+      769396, 2722236, 185,
     ]);
     expect(gate.maxPackedBytes).toBeGreaterThanOrEqual(
       Math.ceil(gate.measuredCandidate.packedBytes * 1.1)
