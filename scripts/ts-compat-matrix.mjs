@@ -491,14 +491,25 @@ export function prepareConsumerProject({
 
   writeText(
     path.join(root, 'AGENTS.md'),
-    '# ArkGate Enforcement\n\nRun `ark-check --strict-merge` before merging.\n'
+    [
+      '# ArkGate Enforcement',
+      '',
+      '`ark.config.json` is authoritative for this project.',
+      'Run `ark-check --root . --config ark.config.json --strict-merge` before merging.',
+      '',
+    ].join('\n')
   );
   writeJson(path.join(root, '.mcp.json'), {
-    mcpServers: { ark: { command: 'ark-mcp', args: ['--root', '.'] } },
+    mcpServers: {
+      ark: {
+        command: 'ark-mcp',
+        args: ['--root', '.', '--config', 'ark.config.json'],
+      },
+    },
   });
   writeText(
     path.join(root, '.github/workflows/ark-check.yml'),
-    'name: ArkGate\non: [push]\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - run: ark-check --strict-merge\n'
+    'name: ArkGate\non: [push]\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - run: ark-check --root . --config ark.config.json --strict-merge\n'
   );
 
   writeText(

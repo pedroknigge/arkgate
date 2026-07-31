@@ -147,6 +147,20 @@ describe('Z02 packed TypeScript compatibility harness', () => {
       expect(fs.existsSync(path.join(consumer, 'cjs-schema-smoke.cjs'))).toBe(true);
       expect(fs.existsSync(path.join(consumer, 'package-smoke.ts'))).toBe(true);
       expect(fs.existsSync(path.join(consumer, '.github/workflows/ark-check.yml'))).toBe(true);
+      expect(fs.readFileSync(path.join(consumer, 'AGENTS.md'), 'utf8')).toContain(
+        'ark-check --root . --config ark.config.json --strict-merge'
+      );
+      expect(JSON.parse(fs.readFileSync(path.join(consumer, '.mcp.json'), 'utf8'))).toEqual({
+        mcpServers: {
+          ark: {
+            command: 'ark-mcp',
+            args: ['--root', '.', '--config', 'ark.config.json'],
+          },
+        },
+      });
+      expect(
+        fs.readFileSync(path.join(consumer, '.github/workflows/ark-check.yml'), 'utf8')
+      ).toContain('ark-check --root . --config ark.config.json --strict-merge');
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
