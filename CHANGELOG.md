@@ -5,15 +5,22 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
-## 4.2.0 — 2026-07-30 (prepared)
+### Security
+
+- **Supply-chain hygiene:** pin transitive overrides for Dependabot/npm audit highs:
+  - `fast-uri` **3.1.5** — GHSA-7p8r-x3mc-p8w7 / CVE-2026-18446 (via `ajv`)
+  - `brace-expansion` **2.1.4** / **5.0.9** — GHSA-mh99-v99m-4gvg / GHSA-rgw5-rvv9-x895
+  - `nanoid` **3.3.18** — GHSA-2v37-7h3g-55p8 (via `postcss`)
+
+## 4.2.0 — 2026-07-31 (published)
 
 **Minor** over 4.1.1. Phase WI — workspace identity, activation truth, and safe multi-repository
 skill installation. Adds a stable MCP project-identity contract, exact-root `ark_identity`
 handshake, and project-bound `ark_manifest`; cross-project/config paths fail before Layers or
 ArkRules analysis; Codex setup distinguishes files configured on disk from a runtime observed
 after restart. **No required config migration.** Legacy MCP calls remain callable but explicitly
-non-authoritative until bound. Codex remains advisory at write time. **Status: prepared**
-(`arkgate@4.2.0` not published yet).
+non-authoritative until bound. Codex remains advisory at write time. **Status: published**
+(`arkgate@4.2.0` on npm `latest`).
 
 ### Added
 
@@ -89,7 +96,7 @@ non-authoritative until bound. Codex remains advisory at write time. **Status: p
 feedback + public-lane claims audit). Honesty and doctor/CI evidence taxonomy; first-push-safe CI
 base-ref; report `.gitignore` coverage without defeating `!` exceptions. **No required config
 migration.** Does not invent hard-write for Codex/Cursor/OpenCode. Does not close Z09 / RB-11.
-**Status: published** (`arkgate@4.1.1` on npm `latest`).
+**Status: published** (`arkgate@4.1.1`; superseded by 4.2.0 on `latest`).
 
 ### Added
 
