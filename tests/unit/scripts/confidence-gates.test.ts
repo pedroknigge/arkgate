@@ -109,6 +109,30 @@ describe('confidence gate wiring', () => {
     expect(profileRequired).toBeGreaterThanOrEqual(3);
   });
 
+  it('every docs_only skip gate also requires hygiene skip (paired light tiers)', () => {
+    const ci = read('.github/workflows/ci.yml');
+    // Job/step if: conditions that skip on docs_only must also skip on hygiene so
+    // lockfile / supply-chain PRs do not re-fire heavy matrices.
+    const docsOnlySkipRe =
+      /if:\s*needs\.ci-profile\.outputs\.docs_only\s*!=\s*'true'/g;
+    const matches = [...ci.matchAll(docsOnlySkipRe)];
+    expect(matches.length).toBeGreaterThanOrEqual(5);
+
+    for (const match of matches) {
+      const lineStart = ci.lastIndexOf('\n', match.index ?? 0) + 1;
+      const lineEnd = ci.indexOf('\n', match.index ?? 0);
+      const line = ci.slice(lineStart, lineEnd === -1 ? undefined : lineEnd);
+      expect(
+        line,
+        `docs_only skip must also gate hygiene on same if: line:\n${line}`
+      ).toMatch(/needs\.ci-profile\.outputs\.hygiene\s*!=\s*'true'/);
+    }
+
+    // Hygiene is a first-class profile output and appears in skip messaging.
+    expect(ci).toMatch(/^\s+hygiene:\s*\$\{\{\s*steps\.decide\.outputs\.hygiene\s*\}\}/m);
+    expect(ci).toContain('docs_only or hygiene');
+  });
+
   it('can resume checksum and release assets after npm already published the tag', () => {
     const workflow = read('.github/workflows/publish-npm.yml');
     expect(workflow).toContain('id: npm-state');

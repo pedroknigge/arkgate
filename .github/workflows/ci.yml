@@ -4,14 +4,17 @@ name: CI
 # to main so direct commits to main are gated without double-running the job on PR branches
 # (which would fire both push and pull_request for the same commit).
 #
-# CI profile (see job ci-profile):
-# - PR slim (default): coverage-only build, 1 packed-TS cell, 1 gallery PM, onboarding
-#   */small only, fail-fast on product matrices, perf only when gate/hook/analysis paths change.
-# - Full matrix: push to main, PR labels full-matrix|release, or release-prep branch names
-#   (feat/4.1*, feat/*release*, release/*). Full matrix keeps test:confidence (mutation) and
-#   complete packed/gallery/onboarding cells with fail-fast: false.
-# - Docs/plans-only PRs: still run required `build` + TypeScript compatibility gate (branch
-#   protection), but skip heavy matrices; gate jobs treat intentional skips as success.
+# CI profile (see job ci-profile / scripts/ci-profile.mjs):
+# - docs_only: only docs/markdown/license — required build + typecheck/coverage; skip heavy matrices
+# - hygiene: docs + package-lock (± package.json only when lock also changes) + allowlisted
+#   release-surface tests — same required build quality as code slim, but skip onboarding,
+#   gallery, OS portability, packed consumer matrices (package.json alone stays code)
+# - code (PR slim default): coverage-only build, 1 packed-TS cell, 1 gallery PM, onboarding
+#   */small only, fail-fast on product matrices, perf only when gate/hook/analysis paths change
+# - full_matrix: push to main, PR labels full-matrix|release, or release-prep branch names
+#   (feat/4.1*, feat/*release*, release/*). Keeps test:confidence (mutation) and complete
+#   packed/gallery/onboarding cells with fail-fast: false.
+# Docs-only and hygiene intentional skips still report success on required gate jobs.
 on:
   push:
     branches: [main]
@@ -29,6 +32,8 @@ jobs:
       full_matrix: ${{ steps.decide.outputs.full_matrix }}
       code: ${{ steps.decide.outputs.code }}
       docs_only: ${{ steps.decide.outputs.docs_only }}
+      hygiene: ${{ steps.decide.outputs.hygiene }}
+      profile: ${{ steps.decide.outputs.profile }}
       run_perf: ${{ steps.decide.outputs.run_perf }}
       run_packed: ${{ steps.decide.outputs.run_packed }}
       run_onboarding: ${{ steps.decide.outputs.run_onboarding }}
@@ -94,14 +99,14 @@ jobs:
             }
             fs.appendFileSync(out, body);
             console.log(
-              `CI profile: full_matrix=${profile.full_matrix} code=${profile.code} docs_only=${profile.docs_only} run_perf=${profile.run_perf} run_packed=${profile.run_packed} confidence=${profile.confidence_cmd} fail_fast=${profile.fail_fast} branch=${profile.branch}`
+              `CI profile: profile=${profile.profile} full_matrix=${profile.full_matrix} code=${profile.code} docs_only=${profile.docs_only} hygiene=${profile.hygiene} run_perf=${profile.run_perf} run_packed=${profile.run_packed} confidence=${profile.confidence_cmd} fail_fast=${profile.fail_fast} branch=${profile.branch}`
             );
           ' "$PROFILE_JSON"
 
   z07-feedback:
     name: Z07 bounded feedback
     needs: ci-profile
-    if: needs.ci-profile.outputs.docs_only != 'true'
+    if: needs.ci-profile.outputs.docs_only != 'true' && needs.ci-profile.outputs.hygiene != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -124,7 +129,7 @@ jobs:
   adapter-parity:
     name: Adapter parity
     needs: ci-profile
-    if: needs.ci-profile.outputs.docs_only != 'true'
+    if: needs.ci-profile.outputs.docs_only != 'true' && needs.ci-profile.outputs.hygiene != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -139,7 +144,7 @@ jobs:
   workspace-portability:
     name: Workspace portability / ${{ matrix.os }}
     needs: ci-profile
-    if: needs.ci-profile.outputs.docs_only != 'true'
+    if: needs.ci-profile.outputs.docs_only != 'true' && needs.ci-profile.outputs.hygiene != 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
@@ -218,7 +223,7 @@ jobs:
   fuzz:
     name: Deterministic fuzz
     needs: ci-profile
-    if: needs.ci-profile.outputs.docs_only != 'true'
+    if: needs.ci-profile.outputs.docs_only != 'true' && needs.ci-profile.outputs.hygiene != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -238,8 +243,8 @@ jobs:
 
   # Required status check name: "build" (branch protection). Always runs.
   # Full matrix / main: npm run test:confidence (coverage + mutation).
-  # PR slim / docs-only: npm run test:coverage only — mutation stays on full-matrix path
-  # and every npm publish path (scripts/release-npm.mjs, publish-npm.yml).
+  # PR slim / docs-only / hygiene: npm run test:coverage only — mutation stays on
+  # full-matrix path and every npm publish path (scripts/release-npm.mjs, publish-npm.yml).
   build:
     needs: ci-profile
     runs-on: ubuntu-latest
@@ -282,7 +287,7 @@ jobs:
         run: npm run check:z08-prompts
 
       # Single source: scripts/ci-profile.mjs sets confidence_cmd
-      # (test:confidence on full-matrix; test:coverage on PR slim / docs-only).
+      # (test:confidence on full-matrix; test:coverage on PR slim / docs-only / hygiene).
       # Mutation remains mandatory on publish paths (release-npm / publish-npm).
       - name: Test suite (profile confidence_cmd)
         env:
@@ -302,7 +307,7 @@ jobs:
         run: npm run build
 
       - name: Gate/runtime package isolation smoke
-        if: needs.ci-profile.outputs.docs_only != 'true'
+        if: needs.ci-profile.outputs.docs_only != 'true' && needs.ci-profile.outputs.hygiene != 'true'
         run: npm run test:package-isolation
 
       - name: Verify V04 release artifacts
@@ -327,7 +332,7 @@ jobs:
   node-compat:
     name: Node ${{ matrix.node }}
     needs: ci-profile
-    if: needs.ci-profile.outputs.docs_only != 'true'
+    if: needs.ci-profile.outputs.docs_only != 'true' && needs.ci-profile.outputs.hygiene != 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: ${{ needs.ci-profile.outputs.fail_fast == 'true' }}
@@ -408,9 +413,9 @@ jobs:
             echo "ci-profile did not succeed (result=$PROFILE_RESULT)" >&2
             exit 1
           fi
-          # Only explicit false is an intentional docs-only skip; empty/unset must fail closed.
+          # Only explicit false is an intentional docs-only/hygiene skip; empty/unset must fail closed.
           if [ "$RUN_PACKED" = "false" ]; then
-            echo "Packed TS matrix intentionally not scheduled (docs/plans-only)."
+            echo "Packed TS matrix intentionally not scheduled (docs_only or hygiene)."
             exit 0
           fi
           if [ "$RUN_PACKED" != "true" ]; then
@@ -483,7 +488,7 @@ jobs:
             exit 1
           fi
           if [ "$RUN_PACKED" = "false" ]; then
-            echo "Gallery matrix intentionally not scheduled (docs/plans-only)."
+            echo "Gallery matrix intentionally not scheduled (docs_only or hygiene)."
             exit 0
           fi
           if [ "$RUN_PACKED" != "true" ]; then
@@ -551,7 +556,7 @@ jobs:
             exit 1
           fi
           if [ "$RUN_PACKED" = "false" ]; then
-            echo "Managed-upgrade matrix intentionally not scheduled (docs/plans-only)."
+            echo "Managed-upgrade matrix intentionally not scheduled (docs_only or hygiene)."
             exit 0
           fi
           if [ "$RUN_PACKED" != "true" ]; then
