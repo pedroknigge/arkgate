@@ -2,6 +2,16 @@
 /**
  * CI profile decision helper for .github/workflows/ci.yml.
  *
+ * Tiers (mutually exclusive path classes; full_matrix overrides all of them):
+ * - docs_only  — only markdown/docs/license surfaces; skip heavy matrices
+ * - hygiene    — docs + package-lock.json (± package.json only when lock also
+ *                changes) + allowlisted release-surface tests; still runs required
+ *                build (typecheck + test:coverage) but skips onboarding, gallery,
+ *                OS portability, packed consumer matrices. Root package.json alone
+ *                stays on the code path (packaging fields need packed matrices).
+ * - code       — any other product path (src/bin/templates/workflows/…); PR slim
+ * - full_matrix — main push, release/full-matrix labels, or release-prep branches
+ *
  * Usage:
  *   node scripts/ci-profile.mjs --json \
  *     --event pull_request --ref-name feat/x --head-ref feat/x \
@@ -63,6 +73,22 @@ const SLIM_ONBOARDING = ['library/small', 'api/small', 'frontend/small', 'monore
 
 const NODE_VERSIONS = [18, 20, 22, 24];
 
+/**
+ * Supply-chain / release-surface unit tests that may ride with docs+lock PRs
+ * without forcing the full product matrix (onboarding, gallery, OS portability).
+ * Keep this list narrow — anything product-logic must stay on the code path.
+ */
+const HYGIENE_TEST_PATHS = new Set([
+  'tests/unit/static-check/q06ReleaseSurfaces.test.ts',
+]);
+
+/**
+ * Manifest / lock paths allowed on the hygiene tier (with or without docs).
+ * Note: root package.json alone is NOT hygiene — see decideCiProfile (requires
+ * package-lock.json in the same change set so packaging-only edits stay on code).
+ */
+const HYGIENE_MANIFEST_PATHS = new Set(['package.json', 'package-lock.json']);
+
 /** @param {string} f */
 export function isCodePath(f) {
   if (
@@ -89,6 +115,18 @@ export function isDocsPath(f) {
     f.startsWith('.github/ISSUE_TEMPLATE/') ||
     f.startsWith('.github/PULL_REQUEST_TEMPLATE')
   );
+}
+
+/**
+ * Paths that may appear on a hygiene-tier PR (docs + lock/overrides + focused
+ * release-surface tests). Any other path forces the code profile.
+ * @param {string} f
+ */
+export function isHygienePath(f) {
+  if (isDocsPath(f)) return true;
+  if (HYGIENE_MANIFEST_PATHS.has(f)) return true;
+  if (HYGIENE_TEST_PATHS.has(f)) return true;
+  return false;
 }
 
 /** @param {string} f */
@@ -140,26 +178,46 @@ export function decideCiProfile(input) {
   let docsSeen = false;
   let nonDocs = false;
   let perf = false;
+  let allHygiene = true;
+  let hygieneManifestOrTest = false;
   for (const f of changed) {
     if (isCodePath(f)) code = true;
     if (isPerfPath(f)) perf = true;
     if (isDocsPath(f)) docsSeen = true;
     else nonDocs = true;
+    if (!isHygienePath(f)) allHygiene = false;
+    if (HYGIENE_MANIFEST_PATHS.has(f) || HYGIENE_TEST_PATHS.has(f)) {
+      hygieneManifestOrTest = true;
+    }
   }
 
   let docsOnly = false;
   if (!code && docsSeen && !nonDocs) docsOnly = true;
   if (!code && !docsOnly) code = true;
 
+  // Hygiene sits between pure docs-only and full code: only docs + lock
+  // (± package.json when lock also changes) + allowlisted release-surface tests.
+  // Pure docs stay docs_only. Path-only classifier: package.json alone is code
+  // so packaging-sensitive fields (exports/files/bin/engines) still run packed matrices.
+  let hygiene = false;
+  if (!fullMatrix && !docsOnly && allHygiene && hygieneManifestOrTest) {
+    const hasPackageJson = changed.includes('package.json');
+    const hasLock = changed.includes('package-lock.json');
+    if (!(hasPackageJson && !hasLock)) {
+      hygiene = true;
+    }
+  }
+
   if (fullMatrix) {
     code = true;
     docsOnly = false;
+    hygiene = false;
     perf = true;
   }
 
   let runPacked = true;
   let runOnboarding = true;
-  if (docsOnly) {
+  if (docsOnly || hygiene) {
     runPacked = false;
     runOnboarding = false;
     perf = false;
@@ -171,10 +229,20 @@ export function decideCiProfile(input) {
   const galleryInclude = fullMatrix ? FULL_GALLERY : SLIM_GALLERY;
   const onboardingFixtures = fullMatrix ? FULL_ONBOARDING : SLIM_ONBOARDING;
 
+  /** @type {'full_matrix' | 'docs_only' | 'hygiene' | 'code'} */
+  let profile = 'code';
+  if (fullMatrix) profile = 'full_matrix';
+  else if (docsOnly) profile = 'docs_only';
+  else if (hygiene) profile = 'hygiene';
+
   return {
     full_matrix: fullMatrix,
+    // `code` means "touched a code-classified path" (path diagnostic), not the
+    // CI tier. Prefer `profile` / `hygiene` / `docs_only` / `run_*` for scheduling.
     code,
     docs_only: docsOnly,
+    hygiene,
+    profile,
     run_perf: perf,
     run_packed: runPacked,
     run_onboarding: runOnboarding,

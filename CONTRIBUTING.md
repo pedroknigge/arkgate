@@ -91,14 +91,16 @@ Queue: [ROADMAP.md](ROADMAP.md) · issues labeled `good first issue`.
 
 ## CI profiles (PR slim vs full matrix)
 
-`.github/workflows/ci.yml` selects a **profile** so everyday PRs stay fast while release
-safety stays on the full path.
+`.github/workflows/ci.yml` selects a **profile** via `scripts/ci-profile.mjs` so everyday PRs
+stay fast while release safety stays on the full path. Tiers: **docs_only** / **hygiene** /
+**code** (PR slim) / **full_matrix**.
 
 | Profile | When | What runs |
 |---------|------|-----------|
-| **PR slim** (default) | Ordinary `pull_request` without a full-matrix trigger | `build` with **`npm run test:coverage`** (no mutation), adapter parity, Z07, fuzz, Node smoke, architecture gate; **1** packed-TS cell (Node 20 + npm, still TS 5/6/7 in-process); **1** gallery PM (npm); onboarding **\*/small** only; `fail-fast: true` on product matrices. Performance budgets only when changed paths touch analysis/gate/hook/bench surfaces (or on full matrix). |
+| **PR slim** (`code`, default) | Ordinary `pull_request` without a full-matrix trigger and not docs-only/hygiene | `build` with **`npm run test:coverage`** (no mutation), adapter parity, Z07, fuzz, Node smoke, architecture gate; **1** packed-TS cell (Node 20 + npm, still TS 5/6/7 in-process); **1** gallery PM (npm); onboarding **\*/small** only; `fail-fast: true` on product matrices. Performance budgets only when changed paths touch analysis/gate/hook/bench surfaces (or on full matrix). |
 | **Full matrix** | `push` to `main`; PR label **`full-matrix`** or **`release`**; branch name matching `feat/4.1*`, `feat/*release*`, `release/*`, or containing `release-prepare` | Same core jobs plus **`npm run test:confidence`** (coverage + mutation), complete 4×3 packed-TS cells, all three gallery PMs, all 12 onboarding shards, performance budgets, `fail-fast: false`. |
-| **Docs/plans-only** | PR changes only under `docs/**`, `*.md`, license/notice (no code/package surface) **and** no full-matrix trigger | Required **`build`** (coverage path) + architecture; packed/gallery/onboarding/perf skipped. Required **TypeScript compatibility gate** still reports success when the packed matrix is **explicitly** not scheduled (`run_packed=false`). |
+| **Docs/plans-only** (`docs_only`) | PR changes only under `docs/**`, `*.md`, license/notice (no code/package surface) **and** no full-matrix trigger | Required **`build`** (coverage path) + architecture; packed/gallery/onboarding/OS portability/perf and other heavy jobs skipped. Required **TypeScript compatibility gate** still reports success when the packed matrix is **explicitly** not scheduled (`run_packed=false`). |
+| **Hygiene** | PR changes only docs/markdown **plus** root `package-lock.json` (and optionally root `package.json` **when the lock also changes**), and/or allowlisted release-surface tests such as `tests/unit/static-check/q06ReleaseSurfaces.test.ts` — **and** no full-matrix trigger | Same required **`build`** quality as PR slim (`test:coverage`, typecheck, architecture, security audit); skips onboarding, gallery, OS portability, packed consumer matrices, and the other heavy jobs that docs-only skips. Root **`package.json` alone** stays on the **code** path (packaging fields need packed matrices). Label **`full-matrix`** if you need the full path on a hygiene-shaped PR. |
 
 **Why slim PR skips mutation:** mutation is slow and remains mandatory on full-matrix / main and
 on every npm publish path (`scripts/release-npm.mjs`, `.github/workflows/publish-npm.yml`). Do
