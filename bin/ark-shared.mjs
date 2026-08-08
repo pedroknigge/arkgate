@@ -117,10 +117,11 @@ export function applyFrameworkLayoutOverlays(config, root) {
     include: [...(config.include ?? ['src'])],
   };
 
-  // Ensure include covers where framework code actually lives.
-  const ensureInclude = (dir) => {
-    if (!next.include.includes(dir) && fs.existsSync(path.join(root, dir))) {
-      next.include.push(dir);
+  // Ensure include covers where framework code actually lives (dirs or root files).
+  // Single-file entries (e.g. Next 16 root `proxy.ts`) are valid scan roots — see scan-files.mjs.
+  const ensureInclude = (entry) => {
+    if (!next.include.includes(entry) && fs.existsSync(path.join(root, entry))) {
+      next.include.push(entry);
     }
   };
 
@@ -206,6 +207,17 @@ export function applyFrameworkLayoutOverlays(config, root) {
     ensureInclude('src');
     ensureInclude('app');
     ensureInclude('pages');
+    // Next network boundary files live at package root (or under src/). Layer patterns
+    // alone do not scan them unless they appear in `include` — Next 16 ships `proxy.ts`
+    // as the middleware rename; classic `middleware.ts` remains supported.
+    ensureInclude('proxy.ts');
+    ensureInclude('proxy.js');
+    ensureInclude('middleware.ts');
+    ensureInclude('middleware.js');
+    ensureInclude('src/proxy.ts');
+    ensureInclude('src/proxy.js');
+    ensureInclude('src/middleware.ts');
+    ensureInclude('src/middleware.js');
     mergeLayerPatterns(next, 'PresentationAdapters', [
       'src/app/**',
       'src/pages/**',

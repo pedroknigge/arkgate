@@ -47,7 +47,7 @@ section exists from day one because the X01 parity guard fails CI without it.
 
 - Non-framework filenames: the first meaningful basename token (camelCase/kebab tokenization;
   noise tokens `use|api|get|set|app|lib` skipped; minimum length 3).
-- Framework filenames (`route|page|layout|index|loading|error|template|default|not-found|middleware|action(s)|handler`):
+- Framework filenames (`route|page|layout|index|loading|error|template|default|not-found|middleware|proxy|action(s)|handler`):
   the concept is the **topmost** meaningful path segment (skipping scaffold segments
   `src|app(s)|api|lib(s)|pages|packages|modules|components|utils|helpers|hooks|server|client|shared|common|test(s)|e2e|example(s)|dist|build`,
   dynamic segments `[…]`, and route groups `(…)`); the **anchor** is the path above that segment.

@@ -65,7 +65,7 @@ function effectiveDomain(structure: unknown[]) {
 describe('P0-A Next API shell is Application, not Presentation', () => {
   it('framework overlay classifies app/api under ApplicationOrchestration', () => {
     const root = mk();
-    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ dependencies: { next: '15.5.21' } }));
+    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.0' } }));
     fs.mkdirSync(path.join(root, 'src/app/api/orders'), { recursive: true });
     fs.writeFileSync(path.join(root, 'src/app/api/orders/route.ts'), 'export async function GET() {}\n');
     fs.mkdirSync(path.join(root, 'src/app'), { recursive: true });

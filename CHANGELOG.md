@@ -5,12 +5,31 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
-### Security
+## 4.2.1 — 2026-08-08 (prepared)
 
-- **Supply-chain hygiene:** pin transitive overrides for Dependabot/npm audit highs:
-  - `fast-uri` **3.1.5** — GHSA-7p8r-x3mc-p8w7 / CVE-2026-18446 (via `ajv`)
-  - `brace-expansion` **2.1.4** / **5.0.9** — GHSA-mh99-v99m-4gvg / GHSA-rgw5-rvv9-x895
-  - `nanoid` **3.3.18** — GHSA-2v37-7h3g-55p8 (via `postcss`)
+**Patch** over 4.2.0. Next.js **16.3** field compatibility: root `proxy.ts` (Next 16 network-boundary
+rename of middleware) is scanned and classified; eval fixtures and release-surface pins track
+`next@16.3.0`. **No required config migration.** Codex remains advisory at write time.
+**Status: prepared** (`arkgate@4.2.1` not published yet).
+
+### Fixed
+
+- **Next 16 root `proxy.ts` include:** Next overlay adds existing root (and `src/`)
+  `proxy.ts` / `proxy.js` / classic `middleware.ts` / `middleware.js` to `include` so layer
+  patterns actually scan them. Patterns alone left package-root `proxy.ts` outside
+  `include: ['src','app']` and therefore ungoverned on typical App Router trees.
+- **Physical-cohesion framework names:** treat `proxy` like `middleware` / `route` / `page` as
+  framework-owned (Next 16 rename).
+
+### Changed
+
+- **Eval Next pins:** `eval/cases/next-core-imports-db` and monorepo frontend fixture use
+  **next@16.3.0** (was 15.5.21); q06 release-surface pin accepts 16.x or patched 15.5.21+.
+
+### Security (carried from main)
+
+- Transitive overrides remain: `fast-uri` **3.1.5**, `brace-expansion` **2.1.4** / **5.0.9**,
+  `nanoid` **3.3.18**.
 
 ## 4.2.0 — 2026-07-31 (published)
 

@@ -271,13 +271,16 @@ describe('ui-surface / Next data-client classification', () => {
       'package.json': JSON.stringify({
         name: 'next-proxy-host',
         version: '0.1.0',
-        dependencies: { next: '16.1.6', react: '19.0.0' },
+        dependencies: { next: '16.3.0', react: '19.0.0' },
       }),
       'src/app/page.tsx': 'export default function Page() { return null }\n',
       'src/proxy.ts':
         'import type { NextRequest } from "next/server";\nexport default async function middleware(_req: NextRequest) { return null }\n',
       'src/middleware.ts':
         'import type { NextRequest } from "next/server";\nexport function middleware(_req: NextRequest) { return null }\n',
+      // Next 16 convention: network boundary at package root (not under app/)
+      'proxy.ts':
+        'import type { NextRequest } from "next/server";\nexport function proxy(_req: NextRequest) { return null }\n',
     });
 
     const base = ARCHITECTURE_PRESETS['ui-surface']([], root);
@@ -288,6 +291,11 @@ describe('ui-surface / Next data-client classification', () => {
     expect(layerForFile(root, path.join(root, 'src/middleware.ts'), config.layers)).toBe(
       'PresentationAdapters'
     );
+    expect(layerForFile(root, path.join(root, 'proxy.ts'), config.layers)).toBe(
+      'PresentationAdapters'
+    );
+    // Root proxy.ts must be scanned (layer patterns alone do not pull it into include).
+    expect(config.include).toEqual(expect.arrayContaining(['proxy.ts']));
     const presentation = config.layers.find((l: { name: string }) => l.name === 'PresentationAdapters');
     expect(presentation.patterns).toEqual(
       expect.arrayContaining(['src/proxy.ts', 'src/middleware.ts', 'proxy.ts', 'middleware.ts'])
@@ -307,7 +315,7 @@ describe('githubWorkflow quality scripts', () => {
       'package.json': JSON.stringify({
         name: 'app',
         scripts: { lint: 'eslint .', typecheck: 'tsc --noEmit' },
-        dependencies: { next: '16.1.6' },
+        dependencies: { next: '16.3.0' },
       }),
     });
     const deploy = detectDeployPathQuality(root);
