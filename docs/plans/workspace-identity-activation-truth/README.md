@@ -4,11 +4,11 @@
 > true. Hub: [AGENTS.md](../../../AGENTS.md) · [Roadmap](../../../ROADMAP.md) ·
 > [MCP reference](../../agent-guide.md)
 
-**Status:** In progress
+**Status:** Shipped in 4.2.0 (published)
 **Slug:** `workspace-identity-activation-truth`
 **Kind:** epic
 **Owners:** ArkGate maintainers
-**Last updated:** 2026-07-30
+**Last updated:** 2026-08-08
 **Code paths:** `bin/ark-mcp-runtime.mjs`, `src/domain/`, `bin/lib/`, `templates/`, `tests/`
 
 ## Problem

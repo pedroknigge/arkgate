@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-07-30
+- **Status date:** 2026-08-08
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -579,8 +579,8 @@ Boundary:
 | 107 | `EH07` | `done` | S | `EH05`, `EH06` | Repair envelope vs reinjection; CLI vs status-context copy; optional minimum ops matrix |
 | 108 | `EH08` | `done` | M | `EH02`–`EH07` | Docs apply for behavior change; claims residual 0 Contradicted; CHANGELOG + 4.1.1 prepared |
 
-**Phase EH closed** in source (2026-07-25). Package train **4.1.1 published** on npm
-`latest` before the 4.2.0 candidate.
+**Phase EH closed** in source (2026-07-25). Package train **4.1.1 published**, then superseded
+by **4.2.0** (Phase WI) on npm `latest`.
 
 ### Phase WI — Workspace identity and activation truth (4.2.0 corrective minor)
 
@@ -608,11 +608,11 @@ Boundary:
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 109 | `WI01` | `doing` | L | `EH08` | Stable project-identity schema + MCP handshake; cross-project/config containment fails closed before Layers/ArkRules; honest verdict and activation states; Codex install/start/remove recovery; isolated/idempotent repo skills + monotonic shared Codex skills; Linux/macOS/Windows smoke; layer-aware rules inventory; packed A/B regression; 4.2.0 release |
+| 109 | `WI01` | `done` | L | `EH08` | Stable project-identity schema + MCP handshake; cross-project/config containment fails closed before Layers/ArkRules; honest verdict and activation states; Codex install/start/remove recovery; isolated/idempotent repo skills + monotonic shared Codex skills; Linux/macOS/Windows smoke; layer-aware rules inventory; packed A/B regression; 4.2.0 release |
 
-Clean signed implementation candidate `2ebb786e` measured **700,336 packed bytes /
-2,484,282 unpacked bytes / 168 files**. The release budget records fixed ≥10% headroom; WI01
-remains `doing` until native CI, signed tag, npm provenance, and MCP registry publication finish.
+Clean signed release SHA `dad2ac4` published as **arkgate@4.2.0** on npm `latest` (2026-07-31),
+signed tag `v4.2.0`, GitHub Release, and package budget with ≥10% fixed headroom. WI01 is
+`done`; Phase WI closed.
 
 ### Z01 — Make release cleanup tool-owned and path-safe
 
@@ -2944,11 +2944,13 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: WI01 — workspace identity + activation truth + same-machine multi-repo skills
-  Plan: docs/plans/workspace-identity-activation-truth/README.md (In progress)
-  Tree version: 4.2.0 prepared (docs/releases/4.2.0.md) — npm latest remains 4.1.1 until publish
-  Next: full local + Linux/macOS/Windows + packed release proof, then signed 4.2.0 publication
+Engineering doing: (none) — queue empty for implementation work
+  Last closed: WI01 (Phase WI) — workspace identity + activation truth + multi-repo skills
+  Plan: docs/plans/workspace-identity-activation-truth/README.md (Shipped in 4.2.0)
+Released baseline: npm arkgate@4.2.0 on latest (gitHead dad2ac4; tag v4.2.0; 2026-07-31)
+  Notes: docs/releases/4.2.0.md — Status: published
 Phase AR (v4 train, AR01–AR19 done): ArkRules + brownfield rules migration on same enforcement plane
+Phase EH (EH01–EH08 done): 4.1.1 published, superseded by 4.2.0 on latest
 Claim gate: `Z09` (`parked`) — residual RB-11 only (retained adoption + independent close)
   Field kit scaffolding: docs/field/ — NOT closed; do not occupy engineering `doing` without cohort
 Closed in 3.8.0: Z01–Z08, Z10; RB-07–RB-10, RB-12
@@ -2956,7 +2958,5 @@ Product hard line: no false hard write on Cursor/Codex/OpenCode; no plan-B auto-
 Not product backlog: god-module / plan-B residual (judgment only)
 Parked: Y09, Y07 (low), Y10 (archive until field demand + ADR), K01 runtime
 Release lanes: ordinary corrective patches do not wait for Z09
-Released baseline: npm arkgate@4.1.1 (Phase EH honesty + CI/report fixes)
-  Prepared next: 4.2.0 (Phase WI identity/activation/multi-repo safety) — Status: prepared
-  Prior: 4.0.x / 3.9.x / 3.8.x trains as in docs/releases/ and CHANGELOG
+  Prior: 4.1.x / 4.0.x / 3.9.x / 3.8.x trains as in docs/releases/ and CHANGELOG
 ```

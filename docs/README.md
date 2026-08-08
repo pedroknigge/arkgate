@@ -52,15 +52,13 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Area | Path |
 |------|------|
 | Release notes (by version) | [releases/](releases/) · [CHANGELOG.md](../CHANGELOG.md) |
-| Epic plans (seeded + shipped) | [plans/](plans/) · active: [workspace identity and activation truth](plans/workspace-identity-activation-truth/README.md) (`WI01`, 4.2.0 corrective minor) |
+| Epic plans (seeded + shipped) | [plans/](plans/) · latest shipped: [workspace identity and activation truth](plans/workspace-identity-activation-truth/README.md) (Phase WI; **4.2.0 published**) |
 | Claims audit | [audit/claims-matrix.md](audit/claims-matrix.md) |
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
-Prepared candidate: [releases/4.2.0.md](releases/4.2.0.md) (`arkgate@4.2.0`, not published).
-
-Current published: [releases/4.1.1.md](releases/4.1.1.md) (`arkgate@4.1.1` on npm `latest`).  
-Previous: [releases/4.1.0.md](releases/4.1.0.md) (`arkgate@4.1.0`).  
+Current published: [releases/4.2.0.md](releases/4.2.0.md) (`arkgate@4.2.0` on npm `latest`).  
+Previous: [releases/4.1.1.md](releases/4.1.1.md) (`arkgate@4.1.1`) · [releases/4.1.0.md](releases/4.1.0.md) (`arkgate@4.1.0`).  
 Previous major: [releases/4.0.0.md](releases/4.0.0.md) (`arkgate@4.0.0`).  
 Config: [configuration.md](configuration.md) · Agent skills dual-plane: [agent-guide.md](agent-guide.md).
 
