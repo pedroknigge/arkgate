@@ -24,7 +24,8 @@ const MAX_FINDINGS = 5;
 const MAX_ANCHORS = 4;
 const MAX_MOVE_SAMPLE = 5;
 
-const FRAMEWORK_FILES = /^(route|page|layout|index|loading|error|template|default|not-found|middleware|actions?|handler)$/i;
+// `proxy` = Next.js 16 network-boundary rename of middleware (still framework-owned).
+const FRAMEWORK_FILES = /^(route|page|layout|index|loading|error|template|default|not-found|middleware|proxy|actions?|handler)$/i;
 const SKIP_SEGMENT = /^(\[.*\]|\(.*\)|src|app|apps|api|lib|libs|pages|packages|modules|components|utils|helpers|hooks|server|client|shared|common|__tests__|tests?|e2e|examples?|dist|build)$/i;
 const NOISE_TOKEN = /^(use|api|get|set|app|lib|the|new)$/;
 /** ADR 0010 D7 — framework-owned anchors never move. */
