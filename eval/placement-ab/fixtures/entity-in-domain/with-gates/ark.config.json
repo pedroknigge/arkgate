@@ -1,0 +1,16 @@
+{
+  "include": ["src"],
+  "layers": [
+    { "name": "DomainModel", "patterns": ["src/**/domain/**"], "optional": true },
+    { "name": "Presentation", "patterns": ["src/**/presentation/**"], "optional": true },
+    { "name": "ApplicationOrchestration", "patterns": ["src/**/application/**"], "optional": true },
+    { "name": "PersistenceAdapters", "patterns": ["src/**/adapters/**"], "optional": true }
+  ],
+  "rules": [
+    { "from": "DomainModel", "to": "Presentation", "allowed": false },
+    { "from": "DomainModel", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "DomainModel", "to": "ApplicationOrchestration", "allowed": false },
+    { "from": "Presentation", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "ApplicationOrchestration", "to": "PersistenceAdapters", "allowed": false }
+  ]
+}

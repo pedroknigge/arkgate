@@ -1,0 +1,16 @@
+{
+  "include": ["src"],
+  "layers": [
+    { "name": "DomainModel", "patterns": ["src/**/domain/**"], "optional": true },
+    { "name": "ApplicationOrchestration", "patterns": ["src/**/application/**"], "optional": true },
+    { "name": "Jobs", "patterns": ["src/**/jobs/**"], "optional": true },
+    { "name": "PersistenceAdapters", "patterns": ["src/**/adapters/**"], "optional": true }
+  ],
+  "rules": [
+    { "from": "DomainModel", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "DomainModel", "to": "Jobs", "allowed": false },
+    { "from": "DomainModel", "to": "ApplicationOrchestration", "allowed": false },
+    { "from": "ApplicationOrchestration", "to": "PersistenceAdapters", "allowed": false },
+    { "from": "Jobs", "to": "PersistenceAdapters", "allowed": false }
+  ]
+}

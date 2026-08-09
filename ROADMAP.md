@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-08 (Phase ACS — ACS01–ACS06 done; next engineering: ACS07)
+- **Status date:** 2026-08-08 (Phase ACS — ACS01–ACS07 done; next: ACS08)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -654,7 +654,7 @@ Boundary:
 | 113 | `ACS04` | `done` | M | `ACS02` | Version-matched agent contract projection; install/upgrade path; drift tests; labeled non-enforcement |
 | 114 | `ACS05` | `done` | M | `ACS01` | Agent Skills–compatible packaging of existing 13 skills; agent-guide ecosystem install; no new names |
 | 115 | `ACS06` | `done` | M | `ACS02`, `ACS03` | Stable finding refs on CLI JSON / MCP / repair payload; multi-turn fixture |
-| 116 | `ACS07` | `todo` | M | `ACS05` | Maintainer A/B eval (placement with gates vs without) under `eval/`; documented results path |
+| 116 | `ACS07` | `done` | M | `ACS05` | Maintainer A/B eval (placement with gates vs without) under `eval/`; documented results path |
 | 117 | `ACS08` | `todo` | S | `ACS02`–`ACS07` | Claims matrix + public lanes; CHANGELOG; release notes; signed **arkgate@4.3.0** publish |
 
 **ACS01 — Plan lock and product voice**
@@ -806,7 +806,7 @@ Docs: package-surface, agent-guide; CHANGELOG Unreleased ACS06 note. Next engine
 
 **ACS07 — Maintainer A/B eval**
 
-- **Status:** `todo`
+- **Status:** `done` (2026-08-08)
 - **Depends on:** `ACS05`
 
 **Outcome:** under `eval/`, at least one A/B suite compares agent placement/architecture tasks
@@ -815,6 +815,18 @@ product score; not a release blocker if external API keys are absent (dry/smoke 
 
 **Acceptance:** fixtures + harness instructions; CI-safe dry mode; recorded template for results;
 eval README updated.
+
+**Evidence:** suite `eval/placement-ab/` — four fixture pairs
+(`domain-port-not-db`, `use-case-not-route`, `job-not-fetch`, `entity-in-domain`) each with
+`without-gates` (wrong placement, no skills) vs `with-gates` (correct placement +
+`.agents/skills/{ark-place,ark-architect}` markers from ACS05 packaging). Dry harness
+`eval/placement-ab-run.mjs` / `npm run eval:placement-ab` (default `--dry`): real `ark-check`
+on both arms, skills-presence asserts, `placementImproved` gate; report
+`eval/placement-ab-report.json`; template `eval/placement-ab/results/RESULTS.template.json`;
+harness instructions `eval/placement-ab/README.md` + eval README lane. Live `--mode live`
+exits 0 with `skipped-no-agent` when no agent cmd (not a release blocker). Unit test
+`tests/unit/eval/placementAbHarness.test.ts`. Nightly workflow runs dry mode. Not a product
+score (`notAProductScore: true`). Next engineering pick: `ACS08` (claims + release).
 
 **ACS08 — Claims, release, publish**
 
@@ -3157,17 +3169,18 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering next: ACS07 (maintainer A/B eval)
+Engineering next: ACS08 (claims + release + publish 4.3.0)
   Epic: Phase ACS — Agent contract surface → npm 4.3.0
   Plan: docs/plans/agent-contract-surface-4.3/README.md (Accepted / engineering active)
-  Queue: ACS01–ACS06 done → ACS07 (todo) → ACS08 publish
-  Last closed epic item: ACS06 (stable finding refs — analysis-result 1.5 + multi-turn fixture)
-  Prior closed: ACS05 (skills packaging); ACS04 (projection); ACS03 (status); ACS02 (catalog); ACS01; WI01 — 4.2.0; patch 4.2.1
+  Queue: ACS01–ACS07 done → ACS08 publish
+  Last closed epic item: ACS07 (placement A/B eval under eval/placement-ab/; dry CI-safe)
+  Prior closed: ACS06 (finding refs); ACS05 (skills); ACS04 (projection); ACS03 (status);
+    ACS02 (catalog); ACS01; WI01 — 4.2.0; patch 4.2.1
   Later trains on main (not separate ROADMAP rows): CI hygiene profile (#113);
     4.2.1 Next.js 16.3 root proxy.ts include + eval pins (#114) — published
 Released baseline: npm arkgate@4.2.1 on latest (gitHead b2f02c9; tag v4.2.1; 2026-08-08)
   Notes: docs/releases/4.2.1.md — Status: published (OIDC Trusted Publishing)
-  Target next release: 4.3.0 (Phase ACS) — ACS01–ACS06 done; next engineering ACS07
+  Target next release: 4.3.0 (Phase ACS) — ACS01–ACS07 done; next ACS08
 Phase AR (v4 train, AR01–AR19 done): historical plan once mapped AR17–19 to "4.3.0"; those
   items closed without a separate 4.3.0 tag — 4.3.0 is now ACS
 Phase EH (EH01–EH08 done): 4.1.1; Phase WI (WI01 done): 4.2.0; patch 4.2.1

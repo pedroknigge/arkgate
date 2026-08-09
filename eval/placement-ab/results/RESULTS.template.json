@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "1.0",
+  "id": "acs07-placement-ab",
+  "generatedAt": "ISO-8601 timestamp filled by the harness",
+  "mode": "dry",
+  "liveLlmRequired": false,
+  "notAProductScore": true,
+  "notes": [
+    "Informational maintainer A/B only — never a package trust score or release blocker.",
+    "Dry mode verifies fixture pairs with real ark-check and skills-presence markers.",
+    "Live mode (optional, offline) may use an external agent; absent API keys must not fail CI.",
+    "withGates arm: ark.config contract + Agent Skills markers (ark-place, ark-architect).",
+    "withoutGates arm: same contract shape for measurement, but wrong placement and no skills."
+  ],
+  "resultsPath": {
+    "dryReport": "eval/placement-ab-report.json",
+    "template": "eval/placement-ab/results/RESULTS.template.json",
+    "liveOptional": "eval/placement-ab/results/live-report.json (gitignored when present)"
+  },
+  "summary": {
+    "taskCount": 0,
+    "fixtureBacked": 0,
+    "dryVerified": 0,
+    "dryFailed": 0,
+    "withoutGates": {
+      "avgLayerViolations": 0,
+      "avgMisplacedFiles": 0,
+      "skillsPresentCount": 0
+    },
+    "withGates": {
+      "avgLayerViolations": 0,
+      "avgMisplacedFiles": 0,
+      "skillsPresentCount": 0,
+      "avgGovernedPercent": 0
+    },
+    "placementImproved": true
+  },
+  "tasks": [
+    {
+      "id": "task-id",
+      "prompt": "placement task prompt",
+      "placementIntent": "why this placement matters",
+      "source": "fixture-measured|oracle",
+      "withoutGates": {
+        "layerViolations": 0,
+        "misplacedFiles": 0,
+        "contractIntact": true,
+        "cheated": false,
+        "skillsPresent": false
+      },
+      "withGates": {
+        "layerViolations": 0,
+        "misplacedFiles": 0,
+        "contractIntact": true,
+        "cheated": false,
+        "skillsPresent": true,
+        "governedPercent": 100
+      },
+      "dryVerified": true
+    }
+  ]
+}

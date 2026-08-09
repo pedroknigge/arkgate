@@ -129,6 +129,7 @@
     "eval:agent": "node eval/run.mjs",
     "eval:corpus": "node eval/validate-corpus.mjs",
     "eval:comparative": "node eval/comparative-run.mjs",
+    "eval:placement-ab": "node eval/placement-ab-run.mjs --dry",
     "eval:loop-cost": "node eval/loop-cost-run.mjs",
     "eval:ai-velocity": "node eval/ai-velocity-run.mjs",
     "eval:change-integrity": "node eval/change-integrity-run.mjs",

@@ -39,6 +39,12 @@ in the immutable pre-2.0 archive linked below.
   baseline (occurrence) freeze key so multi-turn agent loops never orphan baselined debt.
   Domain helpers on `adapterContract` / `baselineKey`; multi-turn fixture
   `tests/fixtures/finding-refs/multi-turn-stability.json`.
+- **Maintainer placement A/B eval (ACS07):** under `eval/placement-ab/`, fixture pairs compare
+  agent placement **with** Ark gates+skills (`ark-place` / `ark-architect` markers) vs
+  **without**. CI-safe dry mode (`npm run eval:placement-ab`) measures real `ark-check` on both
+  arms; results path `eval/placement-ab-report.json` + template
+  `eval/placement-ab/results/RESULTS.template.json`. Live mode optional and never fails when no
+  agent/API key is present. **Not a product score.**
 
 ## 4.2.1 — 2026-08-08 (published)
 

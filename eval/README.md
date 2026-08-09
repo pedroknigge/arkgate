@@ -61,10 +61,48 @@ node eval/comparative-run.mjs
 - Five fixture-backed prompts are verified with real `ark-check` runs; the rest ship
   curated oracle metrics for reporting.
 
-The nightly workflow `.github/workflows/eval-nightly.yml` always runs the static corpus and
-comparative oracle. Its live-agent job is optional and best-effort (not part of default
-`npm test`); when enabled it runs the non-skipped `port-proof-inject-binding` case and uploads the
-terminal report even when the agent does not pass the case.
+### Placement A/B (ACS07 — with gates+skills vs without)
+
+Maintainer suite for **agent placement** under two arms. Not a product score; not a release
+blocker when live agents/API keys are absent.
+
+| Arm | What is present | Fixture-measured outcome |
+|-----|-----------------|--------------------------|
+| **without-gates** | Contract shape only (for measurement); **no** Agent Skills | Wrong placement → `ark-check` violations |
+| **with-gates** | Same contract + Agent Skills markers (`ark-place`, `ark-architect`) | Correct placement → green check |
+
+**CI-safe dry mode** (default) verifies every fixture pair with real `ark-check` and skills
+presence; no live LLM:
+
+```bash
+npm run eval:placement-ab
+# or: node eval/placement-ab-run.mjs --dry
+# -> eval/placement-ab-report.json
+```
+
+| Path | Role |
+|------|------|
+| `eval/placement-ab/tasks.json` | Task bank + oracle metrics |
+| `eval/placement-ab/fixtures/<id>/{with-gates,without-gates}/` | Placement fixture pairs |
+| `eval/placement-ab/results/RESULTS.template.json` | Recorded results template |
+| `eval/placement-ab-report.json` | Dry-mode report (generated; gitignored) |
+| `eval/placement-ab/results/live-report.json` | Optional live/offline agent record |
+
+Optional **live** mode never fails CI when no agent is configured:
+
+```bash
+node eval/placement-ab-run.mjs --mode live
+# exits 0 with status skipped-no-agent unless ARK_EVAL_AGENT_CMD is set
+```
+
+Harness instructions: [eval/placement-ab/README.md](placement-ab/README.md).  
+Unit test: `tests/unit/eval/placementAbHarness.test.ts`.
+
+The nightly workflow `.github/workflows/eval-nightly.yml` always runs the static corpus,
+comparative oracle, and ACS07 placement A/B dry mode. Its live-agent job is optional and
+best-effort (not part of default `npm test`); when enabled it runs the non-skipped
+`port-proof-inject-binding` case and uploads the terminal report even when the agent does not
+pass the case.
 
 `eval/adoption-run.mjs` is retained as the historical V03 setup harness. It measures setup/apply,
 governed coverage, and a local strict-merge check only. It does not measure first-valid time,

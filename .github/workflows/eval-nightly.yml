@@ -24,11 +24,20 @@ jobs:
       - name: Comparative eval (static oracle)
         run: node eval/comparative-run.mjs
 
+      - name: Placement A/B eval (ACS07 dry)
+        run: npm run eval:placement-ab
+
       - name: Upload comparative report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: comparative-eval-report
           path: eval/comparative-report.json
+
+      - name: Upload placement A/B report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: placement-ab-eval-report
+          path: eval/placement-ab-report.json
 
   agent-eval:
     runs-on: ubuntu-latest
