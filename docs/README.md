@@ -52,7 +52,7 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Area | Path |
 |------|------|
 | Release notes (by version) | [releases/](releases/) · [CHANGELOG.md](../CHANGELOG.md) |
-| Epic plans (seeded + shipped) | [plans/](plans/) · next epic: [agent contract surface 4.3](plans/agent-contract-surface-4.3/README.md) (Phase ACS → **4.3.0**); prior: [workspace identity](plans/workspace-identity-activation-truth/README.md) (WI / **4.2.0**; npm **4.2.1**) |
+| Epic plans (seeded + shipped) | [plans/](plans/) · active epic: [agent contract surface 4.3](plans/agent-contract-surface-4.3/README.md) (Phase ACS plan locked → **4.3.0**; product voice: [guardrail catalog + scan/process](product-voice.md#scan-vs-process-dual-depth)); prior: [workspace identity](plans/workspace-identity-activation-truth/README.md) (WI / **4.2.0**; npm **4.2.1**) |
 | Claims audit | [audit/claims-matrix.md](audit/claims-matrix.md) |
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |

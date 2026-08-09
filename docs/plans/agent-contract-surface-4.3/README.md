@@ -4,12 +4,43 @@
 > true. Work starts only when item IDs appear as `todo`/`doing` in [ROADMAP.md](../../../ROADMAP.md).
 > Hub: [AGENTS.md](../../../AGENTS.md) · [Roadmap](../../../ROADMAP.md) · [Agent guide](../../agent-guide.md)
 
-**Status:** Seeded for **4.3.0** (not started)  
+**Status:** Accepted / engineering active for **4.3.0** (`ACS01` plan lock done; `ACS02`–`ACS08` open)  
 **Slug:** `agent-contract-surface-4.3`  
 **Kind:** epic  
 **Owners:** ArkGate maintainers  
 **Last updated:** 2026-08-08  
 **Code paths (expected):** `src/domain/`, `bin/`, `templates/skills/`, `schemas/`, `eval/`, `docs/`
+
+## Plan lock (ACS01)
+
+Phase ACS is the **sole engineering epic** for npm **4.3.0**. Plan authority matches
+[ROADMAP.md](../../../ROADMAP.md) Phase ACS; no other `todo` engineering epic may take
+`doing` without explicit reprioritization in ROADMAP.
+
+Product voice for this train (see [product-voice.md](../../product-voice.md)):
+
+- **Guardrail catalog** — closed vocabularies for sensors, capabilities, diagnostic codes, and
+  skill roles (json-render analogy). Agents and copy do not invent free-form rule ids or
+  enforcement claims outside the catalog.
+- **Scan / process dual depth** — **scan** is deterministic CLI/MCP/engine evidence; **process**
+  is skill- and agent-side judgment that coaches placement and remediation. Process never
+  decides pass/fail inside the package (deepsec harness shape borrowed; LLM verdict rejected).
+
+### Freeze restated for 4.3.0 (do not start without a new ROADMAP item)
+
+These hold through the **4.3.0** publish train. Inherited hard lines are unchanged.
+
+| Frozen | Why (ACS) |
+|--------|-----------|
+| New skill **names** (beyond the current 13) | Deepen + package + route only; Agent Skills layout is distribution |
+| New architecture presets / policy packs | Field demand + separate promotion; not release filler |
+| New ArkRules sensor vocabulary (e.g. konsistent-class symmetry) | Later train seed; needs ADR + demand |
+| LLM pass/fail or “process” verdict in the package | Binary deterministic gate; eval may use external agents offline only |
+| AGENTS.md / skills / projection as enforcement inputs | Projection is labeled non-authoritative; gate is CLI/hooks/CI |
+| Runtime productization | ADR 0004; optional kernel stays experimental |
+| False hard-write claims for soft hosts (Cursor/Codex/OpenCode) | Honest activation labels only |
+| Numeric trust / health score | Binary gate; inventory counts are not scores |
+| Z09 retained-adoption claim close as ACS scope | Parked residual RB-11; does not block ACS engineering |
 
 ## Problem
 
@@ -182,7 +213,7 @@ Exact schema versions and field names land in Domain + package exports during `A
 
 | ID | Size | Depends | Outcome |
 |----|------|---------|---------|
-| `ACS01` | S | — | Plan accepted; product-voice “catalog/guardrails” + scan/process language; freeze list restated for 4.3.0 |
+| `ACS01` | S | — | **Done** — plan locked; product-voice catalog/guardrails + scan/process; freeze restated for 4.3.0 |
 | `ACS02` | M | `ACS01` | Public diagnostic code catalog (Domain + docs anchors); remediation/`why`/`fix` keyed by stable `ruleId`; parity fixtures |
 | `ACS03` | M | `ACS01` | `ark status --json` (+ MCP parity if required); schema export; identity/activation/last-check/rules counts; CI-safe no-prompt |
 | `ACS04` | M | `ACS02` | Version-matched agent contract projection generator; install/upgrade path; drift tests; non-enforcement labeling |

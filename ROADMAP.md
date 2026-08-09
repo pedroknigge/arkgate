@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-08 (Phase ACS seeded for 4.3.0)
+- **Status date:** 2026-08-08 (Phase ACS plan locked — ACS01 done; engineering queue ACS02+)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -55,13 +55,23 @@ ArkGate is an architecture write firewall plus a coach, not a prompt convention.
 - Reuse the existing analysis engine, CLI/MCP adapters, and current skills; do not add a second
   planner, task tracker, or skill namespace.
 
-**Still frozen (do not start without a new item)**
+**Still frozen through 4.3.0 (do not start without a new ROADMAP item)**
+
+Phase ACS restates these freezes for the **arkgate@4.3.0** train (plan lock `ACS01`). They
+are not lifted by agent-surface work.
 
 - New architecture presets or policy packs.
-- New skill *names* beyond consolidating/clarifying the current 13 (prefer deepen + route).
+- New skill *names* beyond consolidating/clarifying the current 13 (prefer deepen + route +
+  Agent Skills packaging of the same names).
+- New ArkRules sensor vocabulary (e.g. family/export symmetry) without ADR + field demand.
+- LLM-derived pass/fail or package “process verdict” (maintainer offline eval only).
+- Enforcement claims from AGENTS.md, skills, or version-matched agent projection alone.
 - New runtime features (optional kernel stays experimental).
+- False hard-write claims for soft hosts (Cursor/Codex/OpenCode).
+- Numeric trust / architecture health score.
 - New report polish that does not expose required evidence.
 - Org control-plane, polyglot support, or broad codemods.
+- Z09 retained-adoption / independent-close as ACS scope (parked residual `RB-11`).
 
 ### Hard lines
 
@@ -638,7 +648,7 @@ Boundary:
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 110 | `ACS01` | `todo` | S | `WI01` + 4.2.1 published | Plan locked; product-voice guardrail/catalog + scan/process language; freeze restated for 4.3.0 |
+| 110 | `ACS01` | `done` | S | `WI01` + 4.2.1 published | Plan locked; product-voice guardrail/catalog + scan/process language; freeze restated for 4.3.0 |
 | 111 | `ACS02` | `todo` | M | `ACS01` | Public diagnostic code catalog (stable `ruleId` → why/fix/docs anchors); remediation parity; fixtures |
 | 112 | `ACS03` | `todo` | M | `ACS01` | `ark status --json` (+ MCP parity if required); schema export; identity/activation/last-check/rules counts; CI no-prompt |
 | 113 | `ACS04` | `todo` | M | `ACS02` | Version-matched agent contract projection; install/upgrade path; drift tests; labeled non-enforcement |
@@ -649,7 +659,7 @@ Boundary:
 
 **ACS01 — Plan lock and product voice**
 
-- **Status:** `todo`
+- **Status:** `done` (2026-08-08)
 - **Depends on:** WI01 done; npm 4.2.1 on `latest`
 
 **Outcome:** Phase ACS is the sole engineering queue for 4.3.0; product-voice and docs hub point
@@ -659,9 +669,14 @@ at guardrail-catalog messaging (json-render analogy) and scan/process dual-depth
 **Acceptance:** plan file status matches ROADMAP; Agents.md plans table lists ACS; no other
 `todo` engineering epic competes for `doing` without explicit reprioritization.
 
+**Evidence:** plan status **Accepted / engineering active**; freeze table restated for 4.3.0 in
+plan + ROADMAP “Still frozen through 4.3.0”; [product-voice.md](docs/product-voice.md) lexicon
+and scan/process dual-depth; Agents.md plans table + docs hub point at Phase ACS; next `doing`
+is `ACS02` only (no competing engineering epic).
+
 **ACS02 — Diagnostic code catalog**
 
-- **Status:** `todo`
+- **Status:** `todo` (next engineering `doing`)
 - **Depends on:** `ACS01`
 
 **Outcome:** every public `ruleId` emitted by the gate has a stable catalog entry with agent- and
@@ -3074,16 +3089,17 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: (none) — next item ACS01 (todo)
+Engineering doing: (none — pick ACS02 next)
   Epic: Phase ACS — Agent contract surface → npm 4.3.0
-  Plan: docs/plans/agent-contract-surface-4.3/README.md (Seeded)
-  Queue: ACS01 → ACS02/ACS03/ACS05 → ACS04/ACS06/ACS07 → ACS08 publish
-  Last closed epic item: WI01 (Phase WI) — shipped 4.2.0; patch 4.2.1 published
+  Plan: docs/plans/agent-contract-surface-4.3/README.md (Accepted / engineering active)
+  Queue: ACS01 done → ACS02/ACS03/ACS05 → ACS04/ACS06/ACS07 → ACS08 publish
+  Last closed epic item: ACS01 (plan lock + product voice + freeze restated for 4.3.0)
+  Prior closed: WI01 (Phase WI) — shipped 4.2.0; patch 4.2.1 published
   Later trains on main (not separate ROADMAP rows): CI hygiene profile (#113);
     4.2.1 Next.js 16.3 root proxy.ts include + eval pins (#114) — published
 Released baseline: npm arkgate@4.2.1 on latest (gitHead b2f02c9; tag v4.2.1; 2026-08-08)
   Notes: docs/releases/4.2.1.md — Status: published (OIDC Trusted Publishing)
-  Target next release: 4.3.0 (Phase ACS) — not started
+  Target next release: 4.3.0 (Phase ACS) — next item ACS02 (diagnostic code catalog)
 Phase AR (v4 train, AR01–AR19 done): historical plan once mapped AR17–19 to "4.3.0"; those
   items closed without a separate 4.3.0 tag — 4.3.0 is now ACS
 Phase EH (EH01–EH08 done): 4.1.1; Phase WI (WI01 done): 4.2.0; patch 4.2.1
@@ -3091,7 +3107,8 @@ Claim gate: `Z09` (`parked`) — residual RB-11 only (retained adoption + indepe
   Field kit scaffolding: docs/field/ — NOT closed; do not occupy engineering `doing` without cohort
 Closed in 3.8.0: Z01–Z08, Z10; RB-07–RB-10, RB-12
 Product hard line: no false hard write on Cursor/Codex/OpenCode; no plan-B auto-apply
-  ACS hard line: no LLM verdict; no new skill names; projection never enforces
+  ACS hard line: no LLM verdict; no new skill names; projection never enforces;
+  freeze restated ACS01 (catalog/scan-process voice in docs/product-voice.md)
 Not product backlog: god-module / plan-B residual (judgment only)
 Parked: Y09, Y07 (low), Y10 (archive until field demand + ADR), K01 runtime
   Later seeds (not ACS): konsistent-class sensor, adopt disk stages, mechanical one-shot CLI

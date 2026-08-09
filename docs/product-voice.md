@@ -21,6 +21,9 @@ because the design space is small and honest.
   opt-in.
 - **Co-pilot side:** where code belongs, who talks to whom, how; dual plan **A** (edges) +
   **B** (shape); one pilot at a time; never silent judgment codemod; never weaken the contract.
+- **Agent contract surface (4.3.0):** agents read **guardrail catalogs** and **scan** evidence;
+  they **process** (judge / coach) outside the package. Projection and skills never become the
+  pass/fail gate.
 - **False done is forbidden:** Enforce ≠ elegant design. `design-weak` / residual must not
   read as “healthy finished.” Empty ArkRules inventory is not a score. MCP configuration on
   disk is not proof that the current process belongs to this project.
@@ -83,6 +86,31 @@ Examples:
 | **required CI / status context** | Merge hard boundary when the repository makes the Ark job a **required GitHub status context** (CLI: `arkgate-check --strict-merge` / `ark-check --strict-merge`) |
 | **contract ready** | Project/layers/ArkRules honesty residual clear — not the same as “hard local write” |
 | **environment residual** | Permanent host/provider posture (e.g. soft-write Codex) kept in evidence without forcing global **Not finished** |
+| **guardrail catalog** | Closed vocabulary of allowed sensors, capabilities, diagnostic `ruleId`s, and skill roles — agents and copy choose from the catalog; they do not invent free-form enforcement claims |
+| **scan** | Deterministic engine / CLI / MCP evidence pass (layers, ArkRules sensors, status facts, prepare-write). Same inputs → same verdict. No LLM. |
+| **process** (agent judgment) | Skill- or agent-side coaching: placement, dual-plan, pilot choice, remediation order. Improves prevention; **never** package pass/fail |
+| **diagnostic code** / **ruleId** | Stable public violation id (e.g. `LAYER_IMPORT_VIOLATION`) with shared why/fix anchors — catalog-linked, not prose-only |
+| **agent projection** | Version-matched AGENTS/CLAUDE (or equivalent) block generated from package + contract; **non-authoritative** — enforcement is ark-check / hooks / CI |
+| **finding ref** | Stable id for a finding across turns (ruleId + target key), so agents re-address without fuzzy message match |
+| **status snapshot** | One machine-readable project/session manifest (`ark status --json` shape): identity, activation honesty, last check, residual counts — not a numeric score |
+
+## Scan vs process (dual depth)
+
+Borrow the harness *shape* (scan facts, then process with judgment) without shipping an LLM
+verdict in core:
+
+```text
+scan  →  deterministic contract graph + host activation evidence
+process → skills / human / host agent choose pilots and wording
+gate  →  same binary verdict on every parity-capable adapter
+```
+
+| Surface | Language to use | Language to avoid |
+|---------|-----------------|-------------------|
+| CLI / MCP / CI | “Scan found…”, “Checked edges…”, “Verdict: pass/fail/incomplete” | “The model decided…”, “AI validated architecture” |
+| Skills / doctor coach | “Process next: one pilot…”, “Judgment: Shape door…” | “Process mode enforces…”, “Skill pass/fail” |
+| Catalog / codes | “ruleId from the diagnostic catalog”, “closed capability set” | Open-ended “any rule string”, free-generated sensors |
+| Projection / AGENTS.md | “Agent-facing summary; not the gate” | “Follow AGENTS.md to pass CI” |
 
 ## Do (product copy)
 
@@ -100,6 +128,10 @@ Examples:
 | Keep inventory claims evidence-bound | “Possible rule candidate in the configured Application layer.” A filename or technical constant alone is not Domain evidence. |
 | Honesty clear ≠ architecture healthy | `productHonesty.finished` means residual **architecture** honesty sensors are clear — not a green graph score. Open blocking violations, ADAPT/SUGGEST with debt, dual-truth pin, or design residual keep `unfinished: true`. Permanent soft-write alone does **not**. |
 | Separate CI runtime from provider policy | Successful CI run ≠ required status; GitHub Free plan 403 → `unavailable-plan`, not “CI never ran.” |
+| Prefer catalog language for agent DX | “Stable `ruleId` with why/fix anchors.” Not a free-form list of “things that might be wrong.” |
+| Name scan before process | “Scan: two layer import violations. Process: fix the Application→Domain edge first.” |
+| Label projection non-enforcing | “Regenerated agent contract for this package version. Enforcement remains ark-check / hooks / required CI.” |
+| Keep status counts honest | “Inventory and residual counts are evidence — not a health score.” |
 
 ## Avoid
 
@@ -124,6 +156,11 @@ Examples:
 | “Max arkRules packs = merge fails structure” | **Advisory ArkRules ≠ merge teeth.** Only `mode: "enforced"` can add teeth, and only after honest classification (FG-ARKRULES-ADVISORY-ONLY) |
 | “Type-only volume means the gate is broken” | High type-only count is placement debt (behavior OK); group under plan A type-only, offer SharedTypes starter |
 | Blurring import edges with invariants | Always label **`[Layer]`** vs **`[ArkRules]`** |
+| “Ark uses AI to decide pass/fail” / package “process verdict” | Package is zero-LLM; process is agent-side judgment only |
+| Inventing new skill **names** or preset packs as product copy filler | 4.3.0 freeze: deepen + package the 13; no new names/presets without ROADMAP promotion |
+| Treating AGENTS.md / projection / skills as the write gate | Advisory surface; hard path is hooks / MCP prepare / required CI |
+| Free-generated sensor or rule ids outside the catalog | Guardrail catalog is closed; unknown codes are a bug, not creativity |
+| Numeric “architecture health” or trust score in status JSON | Counts and residuals yes; scored trust no |
 
 ---
 
@@ -153,6 +190,9 @@ Skills table in docs = **escapes / expert**, not a second onboarding track.
 - Empty plan A is not “architecture healthy” when design residual remains.
 - One pilot at a time. Pattern bets are never mechanical-safe.
 - Doctor is the control plane: status light + next action.
+- Scan is deterministic. Process is judgment. Only the gate decides pass/fail.
+- Guardrails are a catalog, not free generation.
+- Agent docs project the contract; they never replace the gate.
 
 ## Hero phrases (forbidden)
 
@@ -160,6 +200,8 @@ Skills table in docs = **escapes / expert**, not a second onboarding track.
 - You don’t need to understand architecture.
 - We auto-fix everything safely.
 - Ship it 🚀 / crush the spaghetti with vibes.
+- The AI validated your architecture / model pass/fail.
+- Follow AGENTS.md to pass the architecture gate.
 
 ---
 
@@ -225,4 +267,7 @@ Keep dual-engine rules and **STOP** handoffs. Never claim silent full-tree resha
 - [ ] No false done under design-weak / incomplete analysis.
 - [ ] Technical terms present (contract, gate, edges, pilot) without slang.
 - [ ] Expert skills are labeled expert — not the default curriculum.
+- [ ] Scan vs process is not blurred with package LLM pass/fail.
+- [ ] Codes, sensors, and capabilities stay inside the guardrail catalog.
+- [ ] Projection / AGENTS.md never claimed as enforcement.
 - [ ] Seniors would not be embarrassed to paste the line into a PR.
