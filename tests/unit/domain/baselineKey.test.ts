@@ -13,6 +13,8 @@ import {
   baselineKey as fromCli,
   baselineOccurrenceKeys as occurrencesFromCli,
   findingRefFromTargetKey as findingRefFromCli,
+  findingTargetKey as findingTargetKeyFromCli,
+  findingRefForViolation as findingRefForViolationFromCli,
 } from '../../../bin/lib/baseline-key.mjs';
 
 describe('baselineKey (src/domain — pure, no CLI spawn)', () => {
@@ -68,5 +70,13 @@ describe('baselineKey (src/domain — pure, no CLI spawn)', () => {
     expect(findingTargetKey(v)).toBe(baselineKey(v));
     expect(findingRefForViolation(v)).toBe(findingRefFromTargetKey(baselineKey(v)));
     expect(findingRefForViolation(v)).toMatch(/^fnv1a-[0-9a-f]{8}$/);
+    // Cover generated CLI pure exports (coverage threshold is 100% on baseline-key.mjs).
+    expect(findingTargetKeyFromCli(v)).toBe(fromCli(v));
+    expect(findingRefForViolationFromCli(v)).toBe(findingRefFromCli(fromCli(v)));
+    expect(findingRefFromCli(fromCli(v))).toMatch(/^fnv1a-[0-9a-f]{8}$/);
+    // Empty-string hash path + empty occurrence list (branch coverage on CLI pure).
+    expect(findingRefFromCli('')).toMatch(/^fnv1a-[0-9a-f]{8}$/);
+    expect(occurrencesFromCli([])).toEqual([]);
+    expect(findingRefForViolationFromCli({})).toBe(findingRefFromCli(fromCli({})));
   });
 });
