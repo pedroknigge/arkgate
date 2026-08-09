@@ -403,10 +403,16 @@ ${projectionBlock}
 
 **Primary path (do this):**
 
-1. Status anytime: \`${doctorCmd}\` — one status light, one next action (control plane).
-2. Before trusting MCP evidence: call \`ark_identity\` with \`project.expectedRoot\` set to this project's exact absolute root, then reuse that root plus the returned \`projectIdentity.projectId\` on every Ark MCP call. A descendant path is authoritative only with that matching id. Missing tool, non-\`matched\` binding, or wrong root means the process is stale: restart the host and use the local CLI meanwhile.
-3. Day to day: call \`ark_manifest\` with the same project expectation; place new files with \`ark_place\`; validate after edits; run \`${checkCmd}\`. The \`ark://manifest\` resource is compatibility-only and always unverified/non-authoritative. On a gate deny, fix the architecture — do not weaken the contract.
-4. If MCP is unavailable: inspect \`ark.config.json\` and run \`${checkCmd}\`.
+1. Status anytime: \`${doctorCmd}\` — one status light, one primary next action (control plane).
+2. Read the **Improvement compass** section (not a score). Name residual lenses in plain language when present (SoC, DIP, domain, …). Out-of-scope lenses (performance, app security tooling, full resilience) stay honest — do not invent Ark enforcement for them.
+3. Before trusting MCP evidence: call \`ark_identity\` with \`project.expectedRoot\` set to this project's exact absolute root, then reuse that root plus the returned \`projectIdentity.projectId\` on every Ark MCP call. A descendant path is authoritative only with that matching id. Missing tool, non-\`matched\` binding, or wrong root means the process is stale: restart the host and use the local CLI meanwhile.
+4. Day to day: call \`ark_manifest\` with the same project expectation; place new files with \`ark_place\`; validate after edits; run \`${checkCmd}\`. The \`ark://manifest\` resource is compatibility-only and always unverified/non-authoritative. On a gate deny, fix the architecture — do not weaken the contract.
+5. If MCP is unavailable: inspect \`ark.config.json\` and run \`${checkCmd}\`.
+
+**Single door when residual remains:**
+- **Edges debt** (import/capability violations) → fix with the gate / plan; skill pack only if doctor names a skill.
+- **Design-weak / residual shape lenses** (compass residual while edges may look green) → map first, then guided apply with user OK — never “you’re done” on green edges alone.
+- Empty plan A + residual lenses / design-weak → **not finished**.
 
 The selected host is \`${selectedHost}\`. Host registration and CI are installed with this file.
 This compact router is enough for normal feature work.
@@ -414,7 +420,7 @@ This compact router is enough for normal feature work.
 ## Expert depth (optional)
 
 Full \`/ark-*\` skills (including guided end-to-end \`/ark-autopilot\`) are **not** the default
-curriculum. Install them only when doctor top action #1 or a STOP handoff names a skill:
+curriculum. Install them only when doctor top action #1, residual compass, or a STOP handoff names a skill:
 
 \`${installSkills}\`
 `;

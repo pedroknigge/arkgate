@@ -13,6 +13,25 @@ For greenfield onboarding, start with `/ark-architect` (or
 `ark-check --recommend`); for a brownfield repository, use `/ark-adopt` before
 this upgrade flow.
 
+## Improvement compass (process preflight)
+
+When doctor is available, read `doctor.improvementCompass` (or the human **Improvement compass** section).
+Name 1–3 **residual** lenses in plain language before skill-shopping. Always `notAScore` — never invent
+0–10 scores or Excellent/Good ranks.
+
+**What the user should feel next:** fewer blocked AI writes, clearer folders, safer domain — then jargon.
+
+**Anti false-done:** empty plan A + residual lenses / design-weak → **Incomplete? yes**. Green edges alone
+are not “architecture finished.”
+
+**AI-easy architecture:** ports over concrete I/O in domain; one concern per module; golden pattern for
+new files; place before write (`/ark-place` / prepare-write).
+
+**Out of scope (honest):** scalability/performance, full app-security tooling (SAST), and full resilience
+patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement for them.
+
+**After upgrade:** refresh projection; re-doctor; compass residual still drives process, not scores.
+
 ## Dual engine (mandatory)
 
 Use the semantic sensor (`ark-check --doctor --json` plus the strict contract
@@ -211,6 +230,7 @@ End with exactly this structure:
 - **Deferred hosts:** `none` or host plus future action
 - **Result:** old → new version and managed-upgrade outcome
 - **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
+- **Compass:** top residual lenses | `n/a`
 - **Handoff:** `/ark-…`, CLI action, or `none`
 - **Incomplete?** `no` or `yes — <missing work>`
 

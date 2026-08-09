@@ -7,6 +7,25 @@ description: Explain this project's architecture in plain language and generate 
 
 The user wants to understand the architecture, a specific rule, or why the gate blocked them.
 
+## Improvement compass (process preflight)
+
+When doctor is available, read `doctor.improvementCompass` (or the human **Improvement compass** section).
+Name 1–3 **residual** lenses in plain language before skill-shopping. Always `notAScore` — never invent
+0–10 scores or Excellent/Good ranks.
+
+**What the user should feel next:** fewer blocked AI writes, clearer folders, safer domain — then jargon.
+
+**Anti false-done:** empty plan A + residual lenses / design-weak → **Incomplete? yes**. Green edges alone
+are not “architecture finished.”
+
+**AI-easy architecture:** ports over concrete I/O in domain; one concern per module; golden pattern for
+new files; place before write (`/ark-place` / prepare-write).
+
+**Out of scope (honest):** scalability/performance, full app-security tooling (SAST), and full resilience
+patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement for them.
+
+**Tour by lenses** (teach, not score). Prefer showcase HTML + doctor compass section when explaining residual.
+
 ## When / not when
 
 | Use `/ark-explain` when… | Do **not** use it when… |
@@ -200,6 +219,7 @@ End with **exactly** these headings (markdown `###`):
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome (include `ark-report.html` path; note if browser open was attempted)
 - **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
+- **Compass:** top residual lenses | `n/a`
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 
