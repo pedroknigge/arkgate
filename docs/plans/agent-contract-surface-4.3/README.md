@@ -4,7 +4,7 @@
 > true. Work starts only when item IDs appear as `todo`/`doing` in [ROADMAP.md](../../../ROADMAP.md).
 > Hub: [AGENTS.md](../../../AGENTS.md) · [Roadmap](../../../ROADMAP.md) · [Agent guide](../../agent-guide.md)
 
-**Status:** Shipped / prepared for **4.3.0** (`ACS01`–`ACS08` done; npm publish pending)  
+**Status:** Shipped / published in **4.3.0**
 **Slug:** `agent-contract-surface-4.3`  
 **Kind:** epic  
 **Owners:** ArkGate maintainers  
