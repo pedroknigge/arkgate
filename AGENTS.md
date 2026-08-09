@@ -46,7 +46,7 @@ not every historical file:
 | Security | [SECURITY.md](SECURITY.md) · [docs/threat-model.md](docs/threat-model.md) |
 | Decisions | [docs/adr/](docs/adr/README.md) |
 | Implementation queue | [ROADMAP.md](ROADMAP.md) |
-| Releases (prepared / last published) | [CHANGELOG.md](CHANGELOG.md) · [4.2.1](docs/releases/4.2.1.md) (published) · [4.2.0](docs/releases/4.2.0.md) · [4.1.1](docs/releases/4.1.1.md) · [4.1.0](docs/releases/4.1.0.md) |
+| Releases (prepared / last published) | [CHANGELOG.md](CHANGELOG.md) · [4.3.0](docs/releases/4.3.0.md) (prepared) · [4.2.1](docs/releases/4.2.1.md) (published) · [4.2.0](docs/releases/4.2.0.md) · [4.1.1](docs/releases/4.1.1.md) |
 | History / maintainer evidence | [docs/archive/](docs/archive/README.md) · [docs/plans/](docs/plans/) · [docs/field/](docs/field/) · [docs/audit/](docs/audit/claims-matrix.md) |
 
 Read the **lane entry** before significant work. After changing a public surface, architecture
@@ -162,7 +162,7 @@ retained shipped rationale live under `docs/plans/`:
 | [arkrules-evolution](docs/plans/arkrules-evolution/README.md) | Prepared for 4.0.0 (`AR01`–`AR19` implemented; field train progressive) | Intra-layer ArkRules contract (structural sensors + invariant catalogs) + brownfield rules-migration toolkit on the same enforcement plane |
 | [enforcement-evidence-and-docs-truth](docs/plans/enforcement-evidence-and-docs-truth/README.md) | Shipped / implemented (Phase EH; `EH01`–`EH08` done; **4.1.1 published**) | Soft-host evidence modeling (Codex field) + mechanical CI/report fixes + deep documentation audit; claims matrix 2026-07-25 |
 | [workspace-identity-activation-truth](docs/plans/workspace-identity-activation-truth/README.md) | Shipped in 4.2.0 (`WI01` done; **published**) | Project-bound MCP identity handshake, fail-closed cross-project evidence, honest runtime activation/verdicts, and layer-aware ArkRules inventory |
-| [agent-contract-surface-4.3](docs/plans/agent-contract-surface-4.3/README.md) | Accepted / active for **4.3.0** (`ACS01`–`ACS07` done; `ACS08` open) | Agent Skills packaging, version-matched projection, diagnostic code catalog, unified status JSON, finding refs, maintainer A/B eval — guardrail catalog + scan/process voice; freeze restated; no new skill names, no LLM verdict |
+| [agent-contract-surface-4.3](docs/plans/agent-contract-surface-4.3/README.md) | Shipped / prepared for **4.3.0** (`ACS01`–`ACS08` done; npm publish pending) | Agent Skills packaging, version-matched projection, diagnostic code catalog, unified status JSON, finding refs, maintainer A/B eval — guardrail catalog + scan/process voice; freeze restated; no new skill names, no LLM verdict |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in
 `ROADMAP.md`.

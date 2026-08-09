@@ -69,6 +69,10 @@ can show `runtimeObserved: true` even when branch-protection policy is plan-unav
 | Rules inventory (brownfield) | `arkgate-check --rules-inventory` · MCP `ark_rules_inventory` |
 | Stable package API | [package-surface.md](package-surface.md) |
 | Diagnostic codes (`ruleId` why/fix) | [diagnostics.md](diagnostics.md) · root `DIAGNOSTIC_CATALOG` |
+| Session / project status snapshot | `ark status --json` · MCP `ark_status` · [agent-guide](agent-guide.md) · schema `arkgate/schema/status-manifest` |
+| Version-matched AGENTS projection | `ark agents-md` · [agent-guide](agent-guide.md) · **non-authoritative** (never enforces) |
+| Stable finding refs (`findingRef` / `targetKey`) | analysis-result schema **1.5** · [agent-guide](agent-guide.md) · [package-surface](package-surface.md) |
+| Agent Skills layout (same 13 names) | `templates/agent-skills/` · [agent-guide](agent-guide.md#install-skills-ark-and-ecosystem) · `npx skills add …` |
 | Where new code goes | MCP `ark_place` · skill `/ark-place` (respects layer **and** structure sensors) |
 | Preflight multi-file change | MCP `ark_prepare_change` · `ark preflight --changes …` |
 | Write snippet preflight | MCP `ark_prepare_write` |
@@ -118,6 +122,9 @@ npx arkgate-check --doctor --json
 npx arkgate-check --plan --json
 npx arkgate-check --coverage
 npx arkgate-check --baseline
+npx arkgate status --json           # ACS03 session/project snapshot (not a score)
+npx arkgate agents-md               # ACS04 preview managed AGENTS block
+npx arkgate agents-md --write       # embed/refresh projection markers
 npx arkgate preflight --changes changes.json --json
 npx arkgate upgrade --json          # managed content preview
 npx arkgate upgrade --apply

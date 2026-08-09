@@ -16,8 +16,9 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 4.2.1** is on npm `latest` (Next.js 16.3 root `proxy.ts` scan + fixture pins).
-> [4.2.1 notes](docs/releases/4.2.1.md) · [4.2.0](docs/releases/4.2.0.md) · [4.1.1](docs/releases/4.1.1.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> **ArkGate 4.3.0** is prepared (agent contract surface: catalog, status, projection, skills packaging, finding refs);
+> **4.2.1** remains on npm `latest` until publication.
+> [4.3.0 candidate](docs/releases/4.3.0.md) · [4.2.1](docs/releases/4.2.1.md) · [4.2.0](docs/releases/4.2.0.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
 
@@ -196,7 +197,8 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current published (4.2.1) | [docs/releases/4.2.1.md](docs/releases/4.2.1.md) · [CHANGELOG](CHANGELOG.md) |
+| Prepared candidate (4.3.0) | [docs/releases/4.3.0.md](docs/releases/4.3.0.md) · [CHANGELOG](CHANGELOG.md) |
+| Current published (4.2.1) | [docs/releases/4.2.1.md](docs/releases/4.2.1.md) |
 | Previous (4.2.0) | [docs/releases/4.2.0.md](docs/releases/4.2.0.md) |
 | Previous (4.1.1) | [docs/releases/4.1.1.md](docs/releases/4.1.1.md) |
 | Previous (4.1.0) | [docs/releases/4.1.0.md](docs/releases/4.1.0.md) |

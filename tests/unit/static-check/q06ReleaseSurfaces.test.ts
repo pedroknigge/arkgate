@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '4.2.1';
+const CURRENT = '4.3.0';
+const PUBLISHED_LATEST = '4.2.1';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -98,14 +99,51 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('exposes published 4.2.1 as npm latest and retains prior notes', () => {
-    expect(read('README.md')).toMatch(/4\.2\.1.*npm `latest`|on npm `latest`/is);
+  it('exposes prepared 4.3.0 candidate and retains published 4.2.1 as npm latest', () => {
+    expect(read('README.md')).toMatch(/4\.3\.0.*prepared|prepared.*4\.3\.0/is);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.3\.0\.md/);
+    expect(read('README.md')).toMatch(
+      new RegExp(String.raw`${PUBLISHED_LATEST.replace(/\./g, '\\.')}.*npm \`latest\`|on npm \`latest\``, 'is')
+    );
     expect(read('README.md')).toMatch(/docs\/releases\/4\.2\.1\.md/);
     expect(read('README.md')).toMatch(/4\.2\.0/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.2\.0\.md/);
+    expect(read('CONTRIBUTING.md')).toMatch(/Prepared release:.*4\.3\.0/s);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.2\.1/s);
+    expect(read('docs/README.md')).toMatch(/Prepared candidate:.*4\.3\.0/s);
     expect(read('docs/README.md')).toMatch(/Current published:.*4\.2\.1/s);
+    expect(read('docs/package-surface.md')).toMatch(/prepared candidate:.*4\.3\.0/s);
     expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.2\.1/s);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.3.0 agent contract surface train', () => {
+  it('records ACS surfaces and prepared status (not published)', () => {
+    const changelog = read('CHANGELOG.md');
+    expect(changelog).toMatch(/## 4\.3\.0/);
+    expect(changelog).toMatch(/prepared/i);
+    expect(changelog).toMatch(/Diagnostic code catalog|ACS02/i);
+    expect(changelog).toMatch(/status --json|status manifest|ACS03/i);
+    expect(changelog).toMatch(/agents-md|agent projection|ACS04/i);
+    expect(changelog).toMatch(/Agent Skills|agent-skills|ACS05/i);
+    expect(changelog).toMatch(/findingRef|finding refs|ACS06/i);
+    expect(changelog).toMatch(/placement-ab|placement A\/B|ACS07/i);
+    expect(changelog).toMatch(/No required config migration/i);
+    expect(changelog).not.toMatch(/## 4\.3\.0[^\n]*published/i);
+
+    const notes = read('docs/releases/4.3.0.md');
+    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(notes).toMatch(/arkgate@4\.3\.0/);
+    expect(notes).toMatch(/not published yet/i);
+    expect(notes).toMatch(/No required config migration/i);
+    expect(notes).toMatch(/ACS02|diagnostic/i);
+    expect(notes).toMatch(/ACS03|status/i);
+    expect(notes).toMatch(/ACS04|projection|agents-md/i);
+    expect(notes).toMatch(/ACS05|Agent Skills|13/i);
+    expect(notes).toMatch(/ACS06|findingRef|1\.5/i);
+    expect(notes).toMatch(/ACS07|placement/i);
+    expect(notes).toMatch(/Z09|RB-11/i);
+    expect(notes).not.toMatch(/\*\*Status:\*\*\s*published/i);
   });
 });
 
@@ -158,18 +196,20 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
     expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
   });
 
-  it('public release pointers cover published 4.2.1 and retain 4.2.0 / prior notes', () => {
+  it('public release pointers cover prepared 4.3.0 and retain published 4.2.1 / prior notes', () => {
+    expect(read('README.md')).toMatch(/4\.3\.0/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.3\.0\.md/);
     expect(read('README.md')).toMatch(/4\.2\.1/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.2\.1\.md/);
     expect(read('README.md')).toMatch(/4\.2\.0/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.2\.0\.md/);
     expect(read('README.md')).toMatch(/npm `latest`|on npm/);
-    expect(read('README.md')).toMatch(/4\.1\.1/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.1\.1\.md/);
+    expect(read('CONTRIBUTING.md')).toMatch(/Prepared release:.*4\.3\.0/s);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.2\.1/s);
     expect(read('CONTRIBUTING.md')).toMatch(/4\.2\.0/);
-    expect(read('docs/package-surface.md')).toMatch(/4\.2\.0\.md/);
+    expect(read('docs/package-surface.md')).toMatch(/4\.3\.0\.md/);
     expect(read('docs/package-surface.md')).toMatch(/4\.2\.1\.md/);
+    expect(read('docs/package-surface.md')).toMatch(/4\.2\.0\.md/);
   });
 });
 

@@ -980,7 +980,7 @@ npx ark-mcp --root . --config ark.config.json [--manifest ark.manifest.json]
   this resource `unverified` and non-authoritative. It never substitutes for `ark_manifest` in
   a project verdict.
 
-The server exposes these twelve tools. Every tool accepts the additive
+The server exposes these thirteen tools. Every tool accepts the additive
 `project: { expectedRoot, expectedProjectId? }` input:
 
 | Tool | Primary input and purpose |
@@ -997,6 +997,7 @@ The server exposes these twelve tools. Every tool accepts the additive
 | `ark_recommend` | No args: return the deterministic application-shape plan used by `ark-check --recommend --json`. |
 | `ark_suggest_include` | No args: propose TypeScript/JavaScript include roots from workspaces and nested packages. |
 | `ark_rules_inventory` | No args: inventory possible intra-layer rules using configured layer evidence when available; test/fixture/seed/migration surfaces and narrow technical constants are excluded from extraction pilots. Counts are not a score. |
+| `ark_status` | No non-project args: return the unified status-manifest envelope (identity binding, honest write-path activation, last-check summary, rules residual counts, primary next action). Same shape as `ark status --json`. Prefer after `ark_identity`. Never a score. |
 
 Every project-bound tool success, tool error, and JSON-RPC error data carries:
 
@@ -1044,13 +1045,15 @@ when the binding is matched, analysis is complete, the graph is valid, coverage 
 are active. The underlying CLI fields remain present for diagnosis, but are not an authoritative
 whole-project green on their own.
 
-Current diagnostic envelopes use schema `1.4` and require `mode`,
+Current diagnostic envelopes use schema `1.5` and require `mode`,
 `completeness: "complete" | "partial" | "unavailable"`, and structured
-`completenessReasons`. Resolved results expose `policyHash`, `resolverIdentity`, `factsHash`, and
-`candidateTreeHash`; MCP `ark_check` mirrors CLI `ok`. Single-file `validate_code`,
-`ark_prepare_write`, and `createAICodeGate().validate()` are named lexical compatibility surfaces:
-they may expose `lexicalValid`, but remain partial and `valid:false` until complete-candidate
-preflight. Consumer-owned 1.0/1.1/1.2 `AdapterResult` values remain accepted by the public union.
+`completenessReasons`. Factory-emitted diagnostics carry stable `findingRef`, baseline-compatible
+`targetKey`, and `docsCodePath` (ACS06). Resolved results expose `policyHash`, `resolverIdentity`,
+`factsHash`, and `candidateTreeHash`; MCP `ark_check` mirrors CLI `ok`. Single-file
+`validate_code`, `ark_prepare_write`, and `createAICodeGate().validate()` are named lexical
+compatibility surfaces: they may expose `lexicalValid`, but remain partial and `valid:false` until
+complete-candidate preflight. Consumer-owned 1.0–1.4 `AdapterResult` values remain accepted by the
+public union (refs optional on those older envelopes).
 
 For hook-based enforcement, `ark-mcp --hook` runs one-shot: it reads a PreToolUse payload
 from stdin, validates the post-edit file content, and exits `2` with violations on stderr

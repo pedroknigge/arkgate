@@ -5,6 +5,15 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.3.0 — 2026-08-09 (prepared)
+
+**Minor** over 4.2.1. Phase ACS — agent contract surface: diagnostic code catalog, unified
+status snapshot, version-matched agent projection, Agent Skills packaging of the existing 13
+skills, stable finding refs, and maintainer placement A/B eval. **No required config migration.**
+Codex remains advisory at write time. Skills and AGENTS projection never enforce. Z09 / RB-11
+remain open. **Status: prepared** (`arkgate@4.3.0` not published yet; **4.2.1** remains on npm
+`latest` until publication).
+
 ### Added
 
 - **Diagnostic code catalog (ACS02):** closed public `ruleId` vocabulary with why/fix text and
@@ -45,6 +54,12 @@ in the immutable pre-2.0 archive linked below.
   arms; results path `eval/placement-ab-report.json` + template
   `eval/placement-ab/results/RESULTS.template.json`. Live mode optional and never fails when no
   agent/API key is present. **Not a product score.**
+
+### Docs / claims (ACS08)
+
+- Claims matrix refreshed for 4.3.0 agent-contract statements (**0 Contradicted** on public
+  lanes). Release notes at `docs/releases/4.3.0.md` (**Status: prepared**). Public lanes name
+  the prepared candidate while npm `latest` remains **4.2.1** until Trusted Publishing.
 
 ## 4.2.1 — 2026-08-08 (published)
 

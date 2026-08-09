@@ -4,11 +4,11 @@
 > true. Work starts only when item IDs appear as `todo`/`doing` in [ROADMAP.md](../../../ROADMAP.md).
 > Hub: [AGENTS.md](../../../AGENTS.md) · [Roadmap](../../../ROADMAP.md) · [Agent guide](../../agent-guide.md)
 
-**Status:** Accepted / engineering active for **4.3.0** (`ACS01`–`ACS07` done; `ACS08` open)  
+**Status:** Shipped / prepared for **4.3.0** (`ACS01`–`ACS08` done; npm publish pending)  
 **Slug:** `agent-contract-surface-4.3`  
 **Kind:** epic  
 **Owners:** ArkGate maintainers  
-**Last updated:** 2026-08-08 (ACS07 done)  
+**Last updated:** 2026-08-09 (ACS08 prepare)  
 **Code paths (expected):** `src/domain/`, `bin/`, `templates/skills/`, `schemas/`, `eval/`, `docs/`
 
 ## Plan lock (ACS01)
@@ -220,7 +220,7 @@ Exact schema versions and field names land in Domain + package exports during `A
 | `ACS05` | M | `ACS01` | **Done** — Agent Skills–compatible packaging of existing 13 skills; agent-guide install via skills ecosystem; no new names |
 | `ACS06` | M | `ACS02`, `ACS03` | **Done** — stable finding refs on adapter surfaces (CLI JSON, MCP, repair payload); multi-turn fixture |
 | `ACS07` | M | `ACS05` | **Done** — maintainer A/B eval: agent placement with Ark gates vs without; recorded under `eval/`; README eval lane |
-| `ACS08` | S | `ACS02`–`ACS07` | Claims matrix + public lanes; CHANGELOG; `docs/releases/4.3.0.md`; signed publish **4.3.0** |
+| `ACS08` | S | `ACS02`–`ACS07` | **Done (prepare)** — claims matrix + public lanes; CHANGELOG; `docs/releases/4.3.0.md`; npm publish remaining maintainer step |
 
 One `doing` at a time. Detailed acceptance per item lives in ROADMAP when the item is `todo`/`doing`.
 
