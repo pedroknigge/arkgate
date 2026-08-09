@@ -254,6 +254,7 @@ export {
   resolveStatusNextAction,
   type StatusActivationSlice,
   type StatusCheckVerdict,
+  type StatusImprovementCompassSlice,
   type StatusLastCheckSlice,
   type StatusManifest,
   type StatusManifestFacts,

@@ -62,6 +62,10 @@ import { computeDoctorAdvisories, printDoctorAdvisories } from './doctor-advisor
 import { ANALYSIS_COMPLETENESS, analysisIncompleteStatement, normalizeAnalysisCompleteness } from './analysis-completeness.mjs';
 import { designDeltaDoctorLines } from './design-delta.mjs';
 import { enforcementDoctorLines } from './enforcement-state.mjs';
+import {
+  buildDoctorImprovementCompass,
+  printImprovementCompassSection,
+} from './improvement-compass-doctor.mjs';
 
 const color = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
@@ -640,6 +644,23 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         packageVersionTruth?.code === 'PACKAGE_PIN_SELF_HOST',
     });
 
+  // Improvement compass: projection only — never feeds ok/valid/goal.met.
+  const improvementCompass = buildDoctorImprovementCompass({
+    designSmells,
+    violations,
+    designWeak: designFitness.designWeak === true,
+    physicalCohesion: doctorAdvisories.physicalCohesion,
+    rulesUnderContract,
+    baselineExists: baseline.exists,
+    baselineStale: analysisComplete ? staleBaseline : null,
+    frozenResidual: baseline.exists ? baseline.keys.size : null,
+    dirtyBaselineRisk: productHonesty?.reasonIds?.includes?.('dirty-baseline') === true,
+    ungovernedDirCount: cov.suggestions?.length ?? 0,
+    emptyLayerCount: cov.emptyLayers?.length ?? 0,
+    goldenPatternPresent: goldenPattern.present === true,
+    arkRulesLoaded: rulesUnderContract?.active === true,
+  });
+
   if (asJson) {
     (options.writeJson ?? console.log)(
       JSON.stringify(
@@ -654,6 +675,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             // Path-correct ENFORCE can still be design-weak (P02).
             designFitness,
             designSmells,
+            // Improvement compass (lenses; notAScore; never a gate input).
+            improvementCompass,
             ...(options.designDelta ? { designDelta: options.designDelta } : {}),
             // Q01: primary next action when Shape residual dominates (null if not design-weak).
             postGreenPath,
@@ -845,6 +868,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       );
     }
   }
+
+  printImprovementCompassSection(improvementCompass, { line, warn, ok, color });
 
   console.log('');
   console.log(color.bold('Design fitness'));

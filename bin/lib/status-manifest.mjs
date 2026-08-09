@@ -278,7 +278,7 @@ export function buildStatusManifest(facts) {
         ...(binding.code ? { code: binding.code } : {}),
         ...(binding.message ? { message: binding.message } : {}),
     };
-    return {
+    const status = {
         schemaVersion: ARK_STATUS_MANIFEST_SCHEMA_VERSION,
         arkgateVersion: typeof facts.arkgateVersion === 'string' && facts.arkgateVersion.length > 0
             ? facts.arkgateVersion
@@ -288,6 +288,28 @@ export function buildStatusManifest(facts) {
         lastCheck,
         rules,
         nextAction: resolveStatusNextAction(facts, binding, activation, lastCheck, rules),
+    };
+    const compass = normalizeStatusImprovementCompass(facts.improvementCompass);
+    if (compass)
+        status.improvementCompass = compass;
+    return status;
+}
+function normalizeStatusImprovementCompass(value) {
+    if (value == null || typeof value !== 'object')
+        return null;
+    if (value.notAScore !== true)
+        return null;
+    if (value.schemaVersion !== '1.0')
+        return null;
+    if (!Array.isArray(value.topResidual))
+        return null;
+    const topResidual = value.topResidual
+        .filter((id) => typeof id === 'string' && id.length > 0)
+        .slice(0, 15);
+    return {
+        schemaVersion: '1.0',
+        notAScore: true,
+        topResidual,
     };
 }
 function numberOrNull(value) {
@@ -388,6 +410,21 @@ export const ARK_STATUS_MANIFEST_SCHEMA = {
             properties: {
                 id: { type: 'string', minLength: 1 },
                 summary: { type: 'string', minLength: 1 },
+            },
+        },
+        improvementCompass: {
+            type: 'object',
+            description: 'Optional thin improvement-compass residual ids (notAScore). Never a gate input; full lenses on doctor JSON.',
+            additionalProperties: false,
+            required: ['schemaVersion', 'notAScore', 'topResidual'],
+            properties: {
+                schemaVersion: { const: '1.0' },
+                notAScore: { const: true },
+                topResidual: {
+                    type: 'array',
+                    items: { type: 'string', minLength: 1 },
+                    maxItems: 15,
+                },
             },
         },
     },

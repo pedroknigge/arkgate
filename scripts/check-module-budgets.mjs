@@ -33,7 +33,8 @@ const BUDGETS = [
   // 4.0.0 packageVersionTruth + rulesUnderContract — was 1010 (loc 1014).
   // 4.1.0 productHonesty + mergePlanes wiring — was 1050 (loc 1062).
   // FG01/S1 finished-with-debt + S2 pin nextAction / configRoot — was 1120.
-  { path: 'bin/lib/doctor-plan.mjs', max: 1240 },
+  // Improvement compass doctor JSON + human section wiring — was 1240.
+  { path: 'bin/lib/doctor-plan.mjs', max: 1280 },
   // 4.0.0 ArkRules start/init templates + dual-plane presets — was 650 (loc 870).
   // S3 SPA + adopt/migrate patterns (vite-vercel-spa, P0A retrofit) — was 920 (loc ~1130).
   { path: 'bin/lib/presets.mjs', max: 1160 },
