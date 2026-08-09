@@ -117,8 +117,9 @@ export type AgentProjectionMergeResult = {
 const BEGIN_LINE_RE =
   /<!--\s*arkgate:agent-projection:begin\b([^>]*)-->/i;
 const END_LINE_RE = /<!--\s*arkgate:agent-projection:end\s*-->/i;
-const VERSION_ATTR_RE = /\barkgateVersion=([^\s-->]+)/i;
-const SCHEMA_ATTR_RE = /\bschema=([^\s-->]+)/i;
+// Attribute values: alnum + common version/schema tokens only (avoid open char-class ranges).
+const VERSION_ATTR_RE = /\barkgateVersion=([A-Za-z0-9._+-]+)/i;
+const SCHEMA_ATTR_RE = /\bschema=([A-Za-z0-9._+-]+)/i;
 
 /** FNV-1a identity — portable, no Node crypto (same family as stableHash). */
 export function agentProjectionContentIdentity(body: string): string {
@@ -344,12 +345,14 @@ export function extractAgentProjectionBlock(document: string): {
   }
   const endIndexInRest = endMatch.index;
   const endEndInRest = endIndexInRest + endMatch[0].length;
-  const body = rest.slice(0, endIndexInRest).replace(/^\n/, '').replace(/\n$/, '\n');
+  // Strip a single leading newline after the begin marker; keep body content as-is.
+  let body = rest.slice(0, endIndexInRest);
+  if (body.startsWith('\n')) body = body.slice(1);
   const block = text.slice(beginIndex, beginEnd + endEndInRest);
   const after = rest.slice(endEndInRest);
   return {
     block,
-    body: body.startsWith('\n') ? body.slice(1) : body,
+    body,
     before: text.slice(0, beginIndex),
     after,
     beginAttrs: beginMatch[1] ?? '',

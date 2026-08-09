@@ -102,8 +102,10 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
   it('exposes prepared 4.3.0 candidate and retains published 4.2.1 as npm latest', () => {
     expect(read('README.md')).toMatch(/4\.3\.0.*prepared|prepared.*4\.3\.0/is);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.3\.0\.md/);
+    // Escape all RegExp metacharacters (not only `.`) so CodeQL incomplete-escape stays clean.
+    const publishedEscaped = PUBLISHED_LATEST.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
     expect(read('README.md')).toMatch(
-      new RegExp(String.raw`${PUBLISHED_LATEST.replace(/\./g, '\\.')}.*npm \`latest\`|on npm \`latest\``, 'is')
+      new RegExp(String.raw`${publishedEscaped}.*npm \`latest\`|on npm \`latest\``, 'is')
     );
     expect(read('README.md')).toMatch(/docs\/releases\/4\.2\.1\.md/);
     expect(read('README.md')).toMatch(/4\.2\.0/);
