@@ -46,7 +46,7 @@ not every historical file:
 | Security | [SECURITY.md](SECURITY.md) · [docs/threat-model.md](docs/threat-model.md) |
 | Decisions | [docs/adr/](docs/adr/README.md) |
 | Implementation queue | [ROADMAP.md](ROADMAP.md) |
-| Releases (prepared / last published) | [CHANGELOG.md](CHANGELOG.md) · [4.2.1](docs/releases/4.2.1.md) (published) · [4.2.0](docs/releases/4.2.0.md) · [4.1.1](docs/releases/4.1.1.md) · [4.1.0](docs/releases/4.1.0.md) |
+| Releases (prepared / last published) | [CHANGELOG.md](CHANGELOG.md) · [4.3.0](docs/releases/4.3.0.md) (prepared) · [4.2.1](docs/releases/4.2.1.md) (published) · [4.2.0](docs/releases/4.2.0.md) · [4.1.1](docs/releases/4.1.1.md) |
 | History / maintainer evidence | [docs/archive/](docs/archive/README.md) · [docs/plans/](docs/plans/) · [docs/field/](docs/field/) · [docs/audit/](docs/audit/claims-matrix.md) |
 
 Read the **lane entry** before significant work. After changing a public surface, architecture
@@ -78,7 +78,7 @@ canonical documentation authority.**
 | MCP, `ark_manifest`, compatibility `ark://manifest`, write hooks, and registry descriptor | `bin/ark-mcp.mjs` · `server.json` | [MCP reference](docs/agent-guide.md#write-path-gate-mcp) · [AI gates](docs/ai-gates.md) | Real | — |
 | Config and public schemas | `ark.config.json` · `schemas/` · package schema exports | [Configuration](docs/configuration.md) · [Package surface](docs/package-surface.md) | Real | — |
 | ESLint plugin | package export `./eslint` · `src/eslint/index.ts` | [AI gates](docs/ai-gates.md#eslint-editor-feedback--same-contract-as-ci) | Real | — |
-| Agent integration assets | `templates/skills/` · `templates/hooks/` · `templates/tests/` | [Agent guide](docs/agent-guide.md#supported-agent-hosts) · [AI gates](docs/ai-gates.md) | Real | — |
+| Agent integration assets | `templates/skills/` · `templates/agent-skills/` · `templates/hooks/` · `templates/tests/` | [Agent guide](docs/agent-guide.md#install-skills-ark-and-ecosystem) · [AI gates](docs/ai-gates.md) | Real | — |
 | Shape playbook, policy packs, and gallery starters | `templates/architecture-playbook.json` · `templates/policy-packs/` · `examples/` | [Enthusiast track](docs/enthusiast/README.md) | Demo | — |
 | GitHub Action | `action.yml` | [Action setup and inputs](docs/ai-gates.md#ci-backstop) · [Package surface](docs/package-surface.md) | Real | — |
 | Experimental `@arkgate/runtime` | `packages/runtime/package.json` · `src/index.ts` | [Runtime README](packages/runtime/README.md) · [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Hardening](docs/production-hardening.md) | Partial | — |
@@ -131,9 +131,13 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 |-----------|-----------|----------|
 | `src/domain/layerMatch.ts` | `bin/ark-layer-match.mjs` | `generate:layer-match` / `check:layer-match` |
 | `src/domain/remediation.ts` | `bin/lib/remediation.mjs` | `generate:cli-pure` / `check:cli-pure` |
+| `src/domain/diagnosticCatalog.ts` | `bin/lib/diagnostic-catalog.mjs` | (same `cli-pure` scripts) |
 | `src/domain/baselineKey.ts` | `bin/lib/baseline-key.mjs` | (same `cli-pure` scripts) |
 | `src/domain/configContract.ts` | `bin/lib/config-contract.mjs` + `schemas/ark.config.schema.json` | (same `cli-pure` scripts) |
 | `src/domain/projectIdentity.ts` | `bin/lib/project-identity.mjs` + `schemas/ark.project-identity.schema.json` | (same `cli-pure` scripts) |
+| `src/domain/statusManifest.ts` | `bin/lib/status-manifest.mjs` + `schemas/ark.status-manifest.schema.json` | (same `cli-pure` scripts) |
+| `src/domain/agentProjection.ts` | `bin/lib/agent-projection.mjs` | (same `cli-pure` scripts) |
+| `src/domain/agentSkillsPackage.ts` | `bin/lib/agent-skills-package.mjs` | (same `cli-pure` scripts); layout via `generate:agent-skills` / `check:agent-skills` |
 | `src/domain/resolvedCandidateFactsSchema.ts` | `schemas/ark.resolved-candidate-facts.schema.json` | (same `cli-pure` scripts) |
 | `src/domain/changeMap.ts` | bundled in `bin/lib/analysis-engine.mjs`; schema parity test guards `schemas/ark.change-map.schema.json` | `generate:analysis-engine` / `check:analysis-engine` |
 | `src/domain/changeConvergence.ts` | bundled in `bin/lib/analysis-engine.mjs` | `generate:analysis-engine` / `check:analysis-engine` |
@@ -158,6 +162,7 @@ retained shipped rationale live under `docs/plans/`:
 | [arkrules-evolution](docs/plans/arkrules-evolution/README.md) | Prepared for 4.0.0 (`AR01`–`AR19` implemented; field train progressive) | Intra-layer ArkRules contract (structural sensors + invariant catalogs) + brownfield rules-migration toolkit on the same enforcement plane |
 | [enforcement-evidence-and-docs-truth](docs/plans/enforcement-evidence-and-docs-truth/README.md) | Shipped / implemented (Phase EH; `EH01`–`EH08` done; **4.1.1 published**) | Soft-host evidence modeling (Codex field) + mechanical CI/report fixes + deep documentation audit; claims matrix 2026-07-25 |
 | [workspace-identity-activation-truth](docs/plans/workspace-identity-activation-truth/README.md) | Shipped in 4.2.0 (`WI01` done; **published**) | Project-bound MCP identity handshake, fail-closed cross-project evidence, honest runtime activation/verdicts, and layer-aware ArkRules inventory |
+| [agent-contract-surface-4.3](docs/plans/agent-contract-surface-4.3/README.md) | Shipped / prepared for **4.3.0** (`ACS01`–`ACS08` done; npm publish pending) | Agent Skills packaging, version-matched projection, diagnostic code catalog, unified status JSON, finding refs, maintainer A/B eval — guardrail catalog + scan/process voice; freeze restated; no new skill names, no LLM verdict |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in
 `ROADMAP.md`.

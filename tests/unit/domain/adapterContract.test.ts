@@ -5,14 +5,28 @@ import { spawnSync } from 'node:child_process';
 import {
   ARK_ANALYSIS_RESULT_SCHEMA,
   ARK_ANALYSIS_RESULT_SCHEMA_VERSION,
+  adapterDocsCodePath,
+  adapterFindingOccurrenceTargetKeys,
+  adapterFindingRefFromTargetKey,
+  adapterFindingTargetKey,
   createAdapterResult,
   toAdapterDiagnostic,
 } from '../../../src/domain/adapterContract';
+import {
+  baselineKey,
+  baselineOccurrenceKeys,
+  findingRefFromTargetKey,
+} from '../../../src/domain/baselineKey';
+import {
+  baselineKey as cliBaselineKey,
+  baselineOccurrenceKeys as cliBaselineOccurrenceKeys,
+  findingRefFromTargetKey as cliBaselineFindingRef,
+} from '../../../bin/lib/baseline-key.mjs';
 import { deterministicNextAction } from '../../../src/domain/remediation';
 import { classifyPublishFacts, looksLikeArkIntent } from '../../../src/domain/sourcePolicy';
 
-describe('cross-adapter result contract v1.4', () => {
-  it('keeps 1.2 as a legacy value and emits resolved evidence in 1.4', () => {
+describe('cross-adapter result contract v1.5', () => {
+  it('keeps 1.2 as a legacy value and emits resolved evidence + finding refs in 1.5', () => {
     const legacyFixture = JSON.parse(
       fs.readFileSync(
         path.resolve('tests/fixtures/contracts/ark.analysis-result.v1.2.json'),
@@ -20,6 +34,17 @@ describe('cross-adapter result contract v1.4', () => {
       )
     );
     expect(legacyFixture.schemaVersion).toBe('1.2');
+    const violation = {
+      ruleId: 'LAYER_IMPORT_VIOLATION',
+      message: 'DomainModel must not import PersistenceAdapters.',
+      file: 'src/domain/order.ts',
+      line: 1,
+      target: 'src/infra/db.ts',
+      fromLayer: 'DomainModel',
+      toLayer: 'PersistenceAdapters',
+    };
+    const targetKey = adapterFindingTargetKey(violation);
+    const findingRef = adapterFindingRefFromTargetKey(targetKey);
     expect(
       createAdapterResult({
         completeness: 'complete',
@@ -29,33 +54,31 @@ describe('cross-adapter result contract v1.4', () => {
         factsHash: 'fnv1a-facts',
         candidateTreeHash: 'fnv1a-tree',
         valid: false,
-        violations: [
-          {
-            ruleId: 'LAYER_IMPORT_VIOLATION',
-            message: 'DomainModel must not import PersistenceAdapters.',
-            file: 'src/domain/order.ts',
-            line: 1,
-            target: 'src/infra/db.ts',
-            fromLayer: 'DomainModel',
-            toLayer: 'PersistenceAdapters',
-          },
-        ],
+        violations: [violation],
       })
     ).toEqual({
       ...legacyFixture,
-      schemaVersion: '1.4',
+      schemaVersion: '1.5',
       mode: 'resolved-candidate-facts',
       completenessReasons: [],
       policyHash: 'fnv1a-policy',
       resolverIdentity: 'arkgate-typescript-resolver@1',
       factsHash: 'fnv1a-facts',
       candidateTreeHash: 'fnv1a-tree',
+      diagnostics: [
+        {
+          ...legacyFixture.diagnostics[0],
+          findingRef,
+          targetKey,
+          docsCodePath: adapterDocsCodePath('LAYER_IMPORT_VIOLATION'),
+        },
+      ],
     });
-    expect(ARK_ANALYSIS_RESULT_SCHEMA_VERSION).toBe('1.4');
+    expect(ARK_ANALYSIS_RESULT_SCHEMA_VERSION).toBe('1.5');
     expect(ARK_ANALYSIS_RESULT_SCHEMA.$id).toBe(
       'https://unpkg.com/arkgate@3/schemas/ark.analysis-result.schema.json'
     );
-    expect(ARK_ANALYSIS_RESULT_SCHEMA.properties.schemaVersion.const).toBe('1.4');
+    expect(ARK_ANALYSIS_RESULT_SCHEMA.properties.schemaVersion.const).toBe('1.5');
     expect(ARK_ANALYSIS_RESULT_SCHEMA.required).toContain('mode');
     expect(ARK_ANALYSIS_RESULT_SCHEMA.required).toContain('completeness');
     expect(ARK_ANALYSIS_RESULT_SCHEMA.properties.completeness).toEqual({
@@ -67,6 +90,12 @@ describe('cross-adapter result contract v1.4', () => {
       'factsHash',
       'candidateTreeHash',
     ]);
+    expect(
+      ARK_ANALYSIS_RESULT_SCHEMA.properties.diagnostics.items.properties.findingRef
+    ).toMatchObject({ type: 'string', minLength: 1 });
+    expect(
+      ARK_ANALYSIS_RESULT_SCHEMA.properties.diagnostics.items.properties.targetKey
+    ).toMatchObject({ type: 'string', minLength: 1 });
   });
 
   it('carries arkrule provenance on every diagnostic (AR03)', () => {
@@ -102,8 +131,13 @@ describe('cross-adapter result contract v1.4', () => {
         },
       ],
     });
-    expect(result.schemaVersion).toBe('1.4');
+    expect(result.schemaVersion).toBe('1.5');
     expect(result.diagnostics[0]?.evidence.arkruleId).toBe('always-valid-aggregates');
+    expect(result.diagnostics[0]?.findingRef).toMatch(/^fnv1a-[0-9a-f]{8}$/);
+    // createAdapterResult input omits fromLayer — targetKey stays baseline-compatible.
+    expect(result.diagnostics[0]?.targetKey).toBe(
+      'ARKRULE_STRUCTURE|src/domain/order.ts|||'
+    );
   });
 
   it('retains the 1.0 and 1.1 fixtures without the additive completeness field', () => {
@@ -113,6 +147,7 @@ describe('cross-adapter result contract v1.4', () => {
     expect(fixtures.map((fixture) => fixture.schemaVersion)).toEqual(['1.0', '1.1']);
     expect(fixtures.every((fixture) => !Object.hasOwn(fixture, 'completeness'))).toBe(true);
     expect(fixtures[0].diagnostics[0]).not.toHaveProperty('nextAction');
+    expect(fixtures[0].diagnostics[0]).not.toHaveProperty('findingRef');
   });
 
   it('typechecks consumer-owned 1.0 and 1.1 results without completeness', () => {
@@ -126,7 +161,7 @@ describe('cross-adapter result contract v1.4', () => {
 
   it('preserves legacy factory calls as complete and fails closed explicit incomplete analysis', () => {
     expect(createAdapterResult({ valid: true })).toEqual({
-      schemaVersion: '1.4',
+      schemaVersion: '1.5',
       mode: 'lexical-compatibility',
       completeness: 'complete',
       completenessReasons: [],
@@ -149,14 +184,16 @@ describe('cross-adapter result contract v1.4', () => {
   });
 
   it('normalizes legacy code fields, warnings, and invalid locations deterministically', () => {
+    const warning = { code: 'LEGACY_WARNING', severity: 'warning', line: 0, column: -1 };
+    const targetKey = adapterFindingTargetKey(warning);
     expect(
       createAdapterResult({
         completeness: 'complete',
         valid: true,
-        warnings: [{ code: 'LEGACY_WARNING', severity: 'warning', line: 0, column: -1 }],
+        warnings: [warning],
       })
     ).toEqual({
-      schemaVersion: '1.4',
+      schemaVersion: '1.5',
       mode: 'lexical-compatibility',
       completeness: 'complete',
       completenessReasons: [],
@@ -170,6 +207,9 @@ describe('cross-adapter result contract v1.4', () => {
           evidence: {},
           nextAction:
             'Resolve LEGACY_WARNING without weakening ark.config.json, then run Ark again.',
+          findingRef: adapterFindingRefFromTargetKey(targetKey),
+          targetKey,
+          docsCodePath: 'docs/diagnostics.md#LEGACY_WARNING',
         },
       ],
     });
@@ -177,6 +217,9 @@ describe('cross-adapter result contract v1.4', () => {
       ruleId: 'ARK_UNKNOWN',
       severity: 'error',
       nextAction: 'Resolve ARK_UNKNOWN without weakening ark.config.json, then run Ark again.',
+      findingRef: expect.stringMatching(/^fnv1a-[0-9a-f]{8}$/),
+      targetKey: '||||',
+      docsCodePath: 'docs/diagnostics.md#ARK_UNKNOWN',
     });
     expect(
       ARK_ANALYSIS_RESULT_SCHEMA.properties.diagnostics.items.properties.nextAction
@@ -249,6 +292,119 @@ describe('cross-adapter result contract v1.4', () => {
         deterministicNextAction(violation)
       );
     }
+  });
+});
+
+describe('ACS06 stable finding refs', () => {
+  it('binds findingRef to baseline-compatible targetKey (never orphans freeze identity)', () => {
+    const violation = {
+      ruleId: 'FORBIDDEN_GLOBAL',
+      file: 'src/domain/clock.ts',
+      fromLayer: 'DomainModel',
+      target: 'Date',
+    };
+    expect(adapterFindingTargetKey(violation)).toBe(baselineKey(violation));
+    expect(adapterFindingRefFromTargetKey(adapterFindingTargetKey(violation))).toBe(
+      findingRefFromTargetKey(baselineKey(violation))
+    );
+    const diagnostic = toAdapterDiagnostic(violation);
+    expect(diagnostic.targetKey).toBe(baselineKey(violation));
+    expect(diagnostic.findingRef).toBe(findingRefFromTargetKey(baselineKey(violation)));
+    expect(diagnostic.docsCodePath).toBe('docs/diagnostics.md#FORBIDDEN_GLOBAL');
+  });
+
+  it('uses occurrence suffixes matching baselineOccurrenceKeys so duplicates stay distinct', () => {
+    const first = { ruleId: 'FORBIDDEN_GLOBAL', file: 'a.ts', target: 'fetch' };
+    const second = { ruleId: 'FORBIDDEN_GLOBAL', file: 'b.ts', target: 'fetch' };
+    const list = [first, first, second, first];
+    expect(adapterFindingOccurrenceTargetKeys(list)).toEqual(baselineOccurrenceKeys(list));
+
+    const result = createAdapterResult({ valid: false, violations: list });
+    expect(result.diagnostics.map((d) => d.targetKey)).toEqual(baselineOccurrenceKeys(list));
+    // first×3 (base/#2/#3) + second×1 → four distinct occurrence refs.
+    expect(new Set(result.diagnostics.map((d) => d.findingRef)).size).toBe(4);
+  });
+
+  it('stays stable across multi-turn re-address (line/message drift does not change ref)', () => {
+    const fixture = JSON.parse(
+      fs.readFileSync(
+        path.resolve('tests/fixtures/finding-refs/multi-turn-stability.json'),
+        'utf8'
+      )
+    );
+    expect(fixture.schemaVersion).toBe('1.0');
+
+    const turnResults = fixture.turns.map(
+      (turn: {
+        turn: number;
+        violations: Array<Record<string, unknown>>;
+      }) =>
+        createAdapterResult({
+          valid: false,
+          violations: turn.violations,
+        })
+    );
+
+    // Same identity across turns → same findingRef + targetKey.
+    const refATurn1 = turnResults[0].diagnostics[0];
+    const refATurn2 = turnResults[1].diagnostics[0];
+    expect(refATurn1.findingRef).toBe(refATurn2.findingRef);
+    expect(refATurn1.targetKey).toBe(refATurn2.targetKey);
+    expect(refATurn1.findingRef).toBe(fixture.expectedStableRefs.primary);
+    expect(refATurn1.targetKey).toBe(fixture.expectedStableRefs.primaryTargetKey);
+
+    // Message and line may change between turns without breaking the ref.
+    expect(refATurn1.message).not.toBe(refATurn2.message);
+    expect(refATurn1.location.line).not.toBe(refATurn2.location.line);
+
+    // Second finding (duplicate identity) keeps occurrence suffix across turns.
+    expect(turnResults[0].diagnostics[1].targetKey).toBe(
+      turnResults[1].diagnostics[1].targetKey
+    );
+    expect(turnResults[0].diagnostics[1].findingRef).toBe(
+      turnResults[1].diagnostics[1].findingRef
+    );
+    expect(turnResults[0].diagnostics[1].findingRef).toBe(
+      fixture.expectedStableRefs.duplicateOccurrence
+    );
+    expect(turnResults[0].diagnostics[1].targetKey).toContain('#2');
+
+    // Repair-shaped payload (hook ARK_REPAIR_JSON envelope) carries the same diagnostics.
+    const repairPayload = {
+      ...turnResults[1],
+      repair: true,
+      decision: 'deny',
+      filePath: 'src/domain/order.ts',
+    };
+    expect(repairPayload.diagnostics[0].findingRef).toBe(fixture.expectedStableRefs.primary);
+    expect(repairPayload.schemaVersion).toBe('1.5');
+  });
+
+  it('matches baseline freeze keys and generated CLI pure helpers (never orphans baselines)', () => {
+    const v = {
+      ruleId: 'CIRCULAR_DEPENDENCY',
+      file: 'a.ts',
+      target: 'a.ts → b.ts',
+    };
+    // Adapter targetKey plane === baselineKey plane (CLI + Domain).
+    expect(adapterFindingTargetKey(v)).toBe(baselineKey(v));
+    expect(adapterFindingTargetKey(v)).toBe(cliBaselineKey(v));
+    expect(adapterFindingRefFromTargetKey(adapterFindingTargetKey(v))).toBe(
+      findingRefFromTargetKey(baselineKey(v))
+    );
+    expect(adapterFindingRefFromTargetKey(adapterFindingTargetKey(v))).toBe(
+      cliBaselineFindingRef(cliBaselineKey(v))
+    );
+    expect(adapterFindingOccurrenceTargetKeys([v, v])).toEqual(baselineOccurrenceKeys([v, v]));
+    expect(adapterFindingOccurrenceTargetKeys([v, v])).toEqual(cliBaselineOccurrenceKeys([v, v]));
+
+    // Generated analysis-result schema carries finding-ref fields (string check — no import of path with "adapter" token).
+    const schemaPath = path.resolve('schemas/ark.analysis-result.schema.json');
+    const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+    expect(schema.properties.schemaVersion.const).toBe('1.5');
+    expect(schema.properties.diagnostics.items.properties.findingRef).toBeDefined();
+    expect(schema.properties.diagnostics.items.properties.targetKey).toBeDefined();
+    expect(schema.properties.diagnostics.items.properties.docsCodePath).toBeDefined();
   });
 });
 

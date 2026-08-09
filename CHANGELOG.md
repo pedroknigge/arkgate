@@ -5,6 +5,62 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.3.0 — 2026-08-09 (prepared)
+
+**Minor** over 4.2.1. Phase ACS — agent contract surface: diagnostic code catalog, unified
+status snapshot, version-matched agent projection, Agent Skills packaging of the existing 13
+skills, stable finding refs, and maintainer placement A/B eval. **No required config migration.**
+Codex remains advisory at write time. Skills and AGENTS projection never enforce. Z09 / RB-11
+remain open. **Status: prepared** (`arkgate@4.3.0` not published yet; **4.2.1** remains on npm
+`latest` until publication).
+
+### Added
+
+- **Diagnostic code catalog (ACS02):** closed public `ruleId` vocabulary with why/fix text and
+  docs anchors (`docs/diagnostics.md#RULE_ID`). Domain source `src/domain/diagnosticCatalog.ts`,
+  generated CLI mirror `bin/lib/diagnostic-catalog.mjs`, root exports (`DIAGNOSTIC_CATALOG`,
+  `getDiagnosticCatalogEntry`, `diagnosticDocsPath`, …). Remediation/parity fixtures forbid
+  unknown production codes. No new rule semantics — cataloguing only.
+- **Unified status manifest (ACS03):** `ark status --json` (+ MCP `ark_status`) returns one
+  session/project snapshot — identity binding, honest write-path activation, last-check summary,
+  ArkRules residual counts, primary next action. Domain `src/domain/statusManifest.ts`, generated
+  pure `bin/lib/status-manifest.mjs`, schema `arkgate/schema/status-manifest`, root exports
+  (`buildStatusManifest`, `ARK_STATUS_MANIFEST_SCHEMA`, …). Never prompts; `CI=1` forces JSON.
+  Optional `--expected-root` / `--expected-project-id` for matched vs stale identity. Not a score.
+- **Version-matched agent projection (ACS04):** `ark agents-md` regenerates a managed
+  AGENTS.md projection block stamped with the installed package version + contract summary
+  (layers, diagnostic short list). Install/upgrade templates (`agentInstructions` /
+  `compactAgentInstructions`) embed the same block. Content-identity merge preserves customized
+  regions outside markers. Explicitly **non-authoritative** — enforcement remains ark-check /
+  hooks / CI; projection is never a gate input. Domain `src/domain/agentProjection.ts`, generated
+  pure `bin/lib/agent-projection.mjs`, root exports (`buildAgentProjectionBlock`,
+  `mergeAgentProjectionDocument`, …). Drift: `ark agents-md --check`.
+- **Agent Skills packaging (ACS05):** the existing **13** `/ark-*` skills ship in an Agent
+  Skills–compatible layout at `templates/agent-skills/<name>/SKILL.md` (1:1 with flat
+  `templates/skills/*.md`). Ecosystem install: `npx skills add ./node_modules/arkgate/templates/agent-skills`
+  (or the GitHub tree). Ark install path unchanged (`--install-agent-gates` / `--skills-only`).
+  Domain `src/domain/agentSkillsPackage.ts` (frozen `ARK_SKILL_NAMES`, frontmatter/layout
+  validation), generated pure `bin/lib/agent-skills-package.mjs`, `npm run generate:agent-skills` /
+  `check:agent-skills`. **No new skill names.** Skills remain non-enforcing.
+- **Stable finding refs (ACS06):** analysis-result schema **`1.5`** — every factory-emitted
+  diagnostic (CLI JSON, MCP, opt-in `ARK_REPAIR_JSON` repair payload) includes `findingRef`
+  (`fnv1a-…`), baseline-compatible `targetKey`, and `docsCodePath`. `targetKey` is exactly the
+  baseline (occurrence) freeze key so multi-turn agent loops never orphan baselined debt.
+  Domain helpers on `adapterContract` / `baselineKey`; multi-turn fixture
+  `tests/fixtures/finding-refs/multi-turn-stability.json`.
+- **Maintainer placement A/B eval (ACS07):** under `eval/placement-ab/`, fixture pairs compare
+  agent placement **with** Ark gates+skills (`ark-place` / `ark-architect` markers) vs
+  **without**. CI-safe dry mode (`npm run eval:placement-ab`) measures real `ark-check` on both
+  arms; results path `eval/placement-ab-report.json` + template
+  `eval/placement-ab/results/RESULTS.template.json`. Live mode optional and never fails when no
+  agent/API key is present. **Not a product score.**
+
+### Docs / claims (ACS08)
+
+- Claims matrix refreshed for 4.3.0 agent-contract statements (**0 Contradicted** on public
+  lanes). Release notes at `docs/releases/4.3.0.md` (**Status: prepared**). Public lanes name
+  the prepared candidate while npm `latest` remains **4.2.1** until Trusted Publishing.
+
 ## 4.2.1 — 2026-08-08 (published)
 
 **Patch** over 4.2.0. Next.js **16.3** field compatibility: root `proxy.ts` (Next 16 network-boundary

@@ -28,6 +28,19 @@ Full skill pack is **optional** (expert depth). Day-to-day: compact router + doc
 
 ---
 
+## When not to adopt
+
+Skip ArkGate (or treat it as overkill) when:
+
+- The project has **no AI coding agents** and **no multi-layer integration boundaries** worth pinning.
+- It is a **single-developer hobby CRUD** with no pressure to keep layers honest over time.
+- The team will **not** maintain `ark.config.json` layers or make `arkgate-check --strict-merge` a
+  **required** GitHub status context — without that, local advisory write stays avoidable.
+
+In those cases a boundary linter or editor rules may be enough; see [README — Why not only ESLint / Nx / cruiser?](../README.md#why-not-only-eslint--nx--cruiser). When you *do* adopt, day-to-day honesty is still: advisory write on soft hosts → required merge status. Surface that with `npx arkgate-check --doctor` or `npx arkgate status --json` ([agent guide — Write-path honesty](agent-guide.md#write-path-honesty)).
+
+---
+
 ## What you get
 
 | When | What happens |
@@ -50,6 +63,16 @@ ArkGate is **not** a web framework, ORM, or app runtime. It is architecture enfo
 Start always gives you **layers**. ArkRules templates may ship with start/init; they begin **advisory** until you promote them. Doctor / HTML show `rulesUnderContract` (catalog, **not a score**). No `arkRules` map is fine — only Layers run.
 
 **Do not confuse:** green Layers ≠ perfect design (Shape residual can remain). Covered invariants ≠ “the business always does the right thing” — they mean the named policy is declared and has symbol/test evidence.
+
+### New modules vs config edits
+
+**Happy path:** put a new module under an existing layer directory/glob (`layers[].patterns`). Usually
+**no** `ark.config.json` edit — the file classifies and the existing rules apply.
+
+**Touch the contract only when** you invent a new boundary (new layer or allow/deny edge), leave an
+ungoverned path under `include`, or need a capability / forbidden-global exception. Optional ArkRules
+`appliesTo` globs narrow invariants inside a layer; empty `appliesTo: []` fails closed. Full field
+list: [configuration.md](configuration.md).
 
 ---
 

@@ -207,7 +207,7 @@ describe('ark-mcp server (write-path gate)', () => {
     });
     expect(res.result.isError).toBe(true);
     expect(JSON.parse(res.result.content[0].text)).toMatchObject({
-      schemaVersion: '1.4',
+      schemaVersion: '1.5',
       mode: 'lexical-compatibility',
       valid: false,
       completeness: 'partial',
@@ -228,7 +228,7 @@ describe('ark-mcp server (write-path gate)', () => {
     const payload = JSON.parse(res.result.content[0].text);
     expect(res.result.isError).toBe(true);
     expect(res.result.structuredContent).toMatchObject({
-      schemaVersion: '1.4',
+      schemaVersion: '1.5',
       mode: 'lexical-compatibility',
       valid: false,
       completeness: 'partial',
@@ -393,7 +393,7 @@ describe('ark-mcp server (write-path gate)', () => {
       });
       expect(res2.result.isError).toBe(true);
       expect(JSON.parse(res2.result.content[0].text)).toMatchObject({
-        schemaVersion: '1.4',
+        schemaVersion: '1.5',
         mode: 'lexical-compatibility',
         valid: false,
         completeness: 'partial',
@@ -1649,7 +1649,7 @@ describe('ark-mcp --hook (PreToolUse gate)', () => {
       .find((line) => line.startsWith('ARK_REPAIR_JSON:'));
     expect(repairLine).toBeTruthy();
     expect(JSON.parse(repairLine!.slice('ARK_REPAIR_JSON:'.length))).toMatchObject({
-      schemaVersion: '1.4',
+      schemaVersion: '1.5',
       mode: 'lexical-compatibility',
       valid: false,
       completeness: 'partial',
@@ -1936,7 +1936,55 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
       'ark_recommend',
       'ark_suggest_include',
       'ark_rules_inventory',
+      'ark_status',
     ]);
+  });
+
+  it('ark_status returns the status-manifest envelope with identity binding (ACS03/C-035)', async () => {
+    const identity = await client.request('tools/call', {
+      name: 'ark_identity',
+      arguments: { project: { expectedRoot: projectRoot } },
+    });
+    const identityBody = JSON.parse(identity.result.content[0].text);
+    expect(identityBody.binding).toMatchObject({ status: 'matched', authoritative: true });
+
+    const res = await client.request('tools/call', {
+      name: 'ark_status',
+      arguments: {
+        project: {
+          expectedRoot: projectRoot,
+          expectedProjectId: identityBody.projectIdentity.projectId,
+        },
+      },
+    });
+    expect(res.result.isError).toBe(false);
+    const body = JSON.parse(res.result.content[0].text);
+    expect(body.ok).toBe(true);
+    expect(body.binding).toMatchObject({ status: 'matched', authoritative: true });
+    expect(body.authoritative).toBe(true);
+    expect(body.status).toMatchObject({
+      schemaVersion: '1.0',
+      projectIdentity: expect.objectContaining({
+        projectId: identityBody.projectIdentity.projectId,
+        binding: 'matched',
+        authoritative: true,
+      }),
+      activation: expect.objectContaining({
+        writePath: expect.stringMatching(/hard|advisory|unavailable/),
+      }),
+      nextAction: expect.objectContaining({
+        id: expect.any(String),
+        summary: expect.any(String),
+      }),
+    });
+    expect(body.status.rules).toMatchObject({
+      arkRulesLoaded: expect.any(Boolean),
+    });
+    expect(body.status.rules).toHaveProperty('inventoried');
+    expect(body.status.rules).toHaveProperty('underContract');
+    expect(body.status.rules).toHaveProperty('frozenResidual');
+    // Not a score — residual counts only; no numeric trust/score field on the envelope.
+    expect(body.status).not.toHaveProperty('score');
   });
 
   it('ark_coverage returns per-layer counts and the full unclassified list', async () => {
@@ -2242,7 +2290,7 @@ describe('ark-mcp write gate — contract-first layer resolution (Option A)', ()
     );
     expect(res.result.isError).toBe(true);
     expect(JSON.parse(res.result.content[0].text)).toMatchObject({
-      schemaVersion: '1.4',
+      schemaVersion: '1.5',
       mode: 'lexical-compatibility',
       valid: false,
       completeness: 'partial',

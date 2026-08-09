@@ -20,6 +20,8 @@ reports/
 # Ark agent-eval generated reports (fixtures stay tracked)
 eval/report.json
 eval/comparative-report.json
+eval/placement-ab-report.json
+eval/placement-ab/results/live-report.json
 
 # ---------------------------------------------------------------------------
 # Private product development — NEVER GitHub, NEVER npm

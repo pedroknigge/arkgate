@@ -8,13 +8,71 @@
  * Pure CLI helper (bin/lib/adapter-contract.mjs). Zero Node I/O.
  */
 
-/** 1.4 adds optional evidence.arkruleId + evidence.arkruleSource (ADR 0012 / AR03). */
-export const ARK_ANALYSIS_RESULT_SCHEMA_VERSION = '1.4';
+/**
+ * 1.5 adds stable finding refs on every factory-emitted diagnostic (ACS06):
+ * `findingRef`, `targetKey` (baseline-compatible), `docsCodePath`.
+ * 1.4 added optional evidence.arkruleId + evidence.arkruleSource (ADR 0012 / AR03).
+ */
+export const ARK_ANALYSIS_RESULT_SCHEMA_VERSION = '1.5';
+/** Repo-relative diagnostics docs path (parity with ACS02 diagnostic catalog). */
+export const ADAPTER_DIAGNOSTIC_DOCS_RELATIVE_PATH = 'docs/diagnostics.md';
 function text(value) {
     return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 function positiveInteger(value, fallback) {
     return Number.isInteger(value) && Number(value) > 0 ? Number(value) : fallback;
+}
+/**
+ * Baseline-compatible target key for a violation input.
+ * Field order and empty-string fallbacks **must** match `baselineKey` in
+ * `baselineKey.ts` — parity tests guard this so finding refs never orphan freezes.
+ *
+ * Note: uses raw ruleId/file strings (including empty) the same way baseline does;
+ * display `ruleId` / `location.file` may still normalize to ARK_UNKNOWN / `<unknown>`.
+ */
+export function adapterFindingTargetKey(violation) {
+    const ruleId = typeof violation.ruleId === 'string'
+        ? violation.ruleId
+        : typeof violation.code === 'string'
+            ? violation.code
+            : undefined;
+    const file = typeof violation.file === 'string' ? violation.file : undefined;
+    const fromLayer = typeof violation.fromLayer === 'string' ? violation.fromLayer : undefined;
+    const toLayer = typeof violation.toLayer === 'string' ? violation.toLayer : undefined;
+    const target = typeof violation.target === 'string' ? violation.target : undefined;
+    return [
+        ruleId,
+        file,
+        fromLayer ?? '',
+        toLayer ?? '',
+        target ?? '',
+    ].join('|');
+}
+/**
+ * Occurrence-aware target keys for a violation list (parity with baselineOccurrenceKeys).
+ * First occurrence keeps the historical base key; duplicates get `#N`.
+ */
+export function adapterFindingOccurrenceTargetKeys(violations) {
+    const counts = new Map();
+    return violations.map((violation) => {
+        const base = adapterFindingTargetKey(violation);
+        const occurrence = (counts.get(base) ?? 0) + 1;
+        counts.set(base, occurrence);
+        return occurrence === 1 ? base : `${base}#${occurrence}`;
+    });
+}
+/** FNV-1a finding ref from a baseline-compatible targetKey (not a security hash). */
+export function adapterFindingRefFromTargetKey(targetKey) {
+    let hash = 0x811c9dc5;
+    for (let index = 0; index < targetKey.length; index += 1) {
+        hash ^= targetKey.charCodeAt(index);
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return `fnv1a-${(hash >>> 0).toString(16).padStart(8, '0')}`;
+}
+/** Package-relative docs path with fragment for a public ruleId. */
+export function adapterDocsCodePath(ruleId) {
+    return `${ADAPTER_DIAGNOSTIC_DOCS_RELATIVE_PATH}#${ruleId}`;
 }
 function nextActionForDiagnostic(ruleId, evidence, violation) {
     if (ruleId === 'LAYER_IMPORT_VIOLATION') {
@@ -51,7 +109,12 @@ function nextActionForDiagnostic(ruleId, evidence, violation) {
     }
     return `Resolve ${ruleId} without weakening ark.config.json, then run Ark again.`;
 }
-export function toAdapterDiagnostic(violation, fallbackSeverity = 'error') {
+export function toAdapterDiagnostic(violation, fallbackSeverity = 'error', 
+/**
+ * Optional precomputed baseline-compatible targetKey (e.g. occurrence-aware from
+ * `adapterFindingOccurrenceTargetKeys`). When omitted, uses the first-occurrence key.
+ */
+targetKeyOverride) {
     const ruleId = text(violation.ruleId) ?? text(violation.code) ?? 'ARK_UNKNOWN';
     // Type-only placement debt (failsStrict:false / typeOnly non-peer) is warning severity.
     const severity = violation.severity === 'warning' ||
@@ -84,6 +147,8 @@ export function toAdapterDiagnostic(violation, fallbackSeverity = 'error') {
         ...(text(violation.arkruleId) ? { arkruleId: text(violation.arkruleId) } : {}),
         ...(text(violation.arkruleSource) ? { arkruleSource: text(violation.arkruleSource) } : {}),
     };
+    const targetKey = targetKeyOverride ?? adapterFindingTargetKey(violation);
+    const findingRef = adapterFindingRefFromTargetKey(targetKey);
     return {
         ruleId,
         severity,
@@ -95,6 +160,9 @@ export function toAdapterDiagnostic(violation, fallbackSeverity = 'error') {
         },
         evidence,
         nextAction: text(violation.nextAction) ?? nextActionForDiagnostic(ruleId, evidence, violation),
+        findingRef,
+        targetKey,
+        docsCodePath: adapterDocsCodePath(ruleId),
     };
 }
 export function createAdapterResult(input) {
@@ -133,10 +201,16 @@ export function createAdapterResult(input) {
             }
         }
     }
+    // Occurrence-aware targetKeys (violations and warnings counted separately) so
+    // list identity matches baselineOccurrenceKeys on each stream — ACS06 freeze parity.
+    const violationList = input.violations ?? [];
+    const warningList = input.warnings ?? [];
+    const violationTargetKeys = adapterFindingOccurrenceTargetKeys(violationList);
+    const warningTargetKeys = adapterFindingOccurrenceTargetKeys(warningList);
     const diagnostics = [
         // toAdapterDiagnostic maps failsStrict:false / typeOnly non-peer → warning severity.
-        ...(input.violations ?? []).map((item) => toAdapterDiagnostic(item, 'error')),
-        ...(input.warnings ?? []).map((item) => toAdapterDiagnostic(item, 'warning')),
+        ...violationList.map((item, index) => toAdapterDiagnostic(item, 'error', violationTargetKeys[index])),
+        ...warningList.map((item, index) => toAdapterDiagnostic(item, 'warning', warningTargetKeys[index])),
     ];
     const base = {
         schemaVersion: ARK_ANALYSIS_RESULT_SCHEMA_VERSION,
@@ -286,6 +360,15 @@ export const ARK_ANALYSIS_RESULT_SCHEMA = {
                         },
                     },
                     nextAction: { type: 'string', minLength: 1 },
+                    /** ACS06 — compact multi-turn id; always derived from targetKey when emitted. */
+                    findingRef: { type: 'string', minLength: 1, pattern: '^fnv1a-[0-9a-f]{8}$' },
+                    /**
+                     * ACS06 — baseline-compatible freeze identity
+                     * (`ruleId|file|from|to|target` with optional `#N` occurrence suffix).
+                     */
+                    targetKey: { type: 'string', minLength: 1 },
+                    /** ACS06 — package-relative diagnostics anchor path. */
+                    docsCodePath: { type: 'string', minLength: 1 },
                 },
             },
         },

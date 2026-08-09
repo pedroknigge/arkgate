@@ -11,10 +11,16 @@ import {
   DEFAULT_INTENT_PREFIXES,
   DEFAULT_LAYER_DIRECTORIES,
 } from '../ark-shared.mjs';
+import {
+  DEFAULT_AGENT_PROJECTION_RULE_IDS,
+  buildAgentProjectionBlock,
+} from './agent-projection.mjs';
+import { getDiagnosticCatalogEntry } from './diagnostic-catalog.mjs';
 import { falseGreenAdoptionGap } from './field-install.mjs';
 import { renderHostSupportMatrixMarkdown } from './host-support-matrix.mjs';
 import { PREFERRED_MCP_BIN } from './hook-templates.mjs';
 import { hasCheckArchitectureScript, readPackageJson } from './gate-files.mjs';
+import { arkPackageVersion } from './skill-install.mjs';
 
 // Field-install helpers re-exported for callers that import from this module.
 export {
@@ -250,6 +256,37 @@ export function loadConfigLayersForAgents(root) {
   }
 }
 
+/**
+ * ACS04 — version-matched projection block embedded in install AGENTS templates.
+ * Labeled non-authoritative; never a gate input.
+ * @param {string} root
+ * @param {{ host?: string|null, profile?: 'compact'|'full' }} [opts]
+ */
+export function agentProjectionBlockForRoot(root, opts = {}) {
+  const liveLayers = loadConfigLayersForAgents(root);
+  const layerSummaries = Array.isArray(liveLayers)
+    ? liveLayers.map((layer) => ({
+        name: layer.name ?? layer.layer ?? 'Unknown',
+        patterns: layer.patterns ?? [],
+        intentPrefixes: layer.intentPrefixes ?? layer.prefixes ?? [],
+      }))
+    : [];
+  const catalogShortList = DEFAULT_AGENT_PROJECTION_RULE_IDS.map((ruleId) => {
+    const entry = getDiagnosticCatalogEntry(ruleId);
+    return { ruleId, title: entry?.title ?? ruleId };
+  });
+  const version = arkPackageVersion() || 'unknown';
+  return buildAgentProjectionBlock({
+    arkgateVersion: version,
+    checkCommand: arkCheckCommand(root),
+    layers: layerSummaries,
+    catalogShortList,
+    host: opts.host ?? null,
+    profile: opts.profile === 'compact' ? 'compact' : 'full',
+    diagnosticsDocsPath: 'docs/diagnostics.md',
+  });
+}
+
 export function agentInstructions(root) {
   const checkCmd = arkCheckCommand(root);
   const startCmd = arkCommand(root, 'ark', 'start');
@@ -259,6 +296,7 @@ export function agentInstructions(root) {
     .join('\n');
   const liveLayers = loadConfigLayersForAgents(root);
   const placementTable = layerPlacementTable(liveLayers);
+  const projectionBlock = agentProjectionBlockForRoot(root, { profile: 'full' });
   const placementBody = liveLayers
     ? `\`ark.config.json\` is authoritative for this project. Place new code in these **${liveLayers.length}** configured layer(s) — do not invent an ungoverned location or assume the stock 11-layer layout:
 
@@ -273,6 +311,7 @@ an ungoverned location:
 ${placementTable}`;
   return `# Ark Enforcement
 
+${projectionBlock}
 ## Default agent flow (if unsure, do only this)
 
 1. Status anytime: \`${doctorCmd}\` — **control plane** (one status light, one next action; not a mode picker).
@@ -350,11 +389,16 @@ export function compactAgentInstructions(root, host = null) {
     'ark-check',
     `--install-agent-gates --skills-only --tools ${selectedHost === 'none' ? '<host>' : selectedHost}`
   );
+  const projectionBlock = agentProjectionBlockForRoot(root, {
+    host: selectedHost === 'none' ? null : selectedHost,
+    profile: 'compact',
+  });
   // Progressive disclosure: primary path only. Full /ark-* catalog is expert depth
   // (install via --skills-only). See docs/product-voice.md.
   return `# Ark Enforcement
 
 <!-- arkgate:compact-router host=${selectedHost} -->
+${projectionBlock}
 ## Compact router
 
 **Primary path (do this):**

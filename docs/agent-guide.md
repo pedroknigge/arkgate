@@ -38,13 +38,19 @@ feature work. Full `/ark-*` skills are **expert depth** and label residual **`[L
 npx ark-check --install-agent-gates --skills-only --force
 ```
 
-**Write-path honesty:** Claude/Grok/Antigravity can hard-block listed PreToolUse ops when
-installed and trusted. Cursor/Codex/OpenCode remain **advisory at write**. For every host, the
-repository-wide hard boundary is a **required GitHub status context** that runs
-`arkgate-check --strict-merge` (alias `ark-check --strict-merge`) — the CLI name is not the
-status context name. Never claim Cursor/Codex/OpenCode hard write. Soft-write alone does not mean
-the project is unfinished; doctor keeps it as an environment residual. See [ai-gates.md](ai-gates.md)
-and the README host matrix.
+### Write-path honesty
+
+Claude/Grok/Antigravity can hard-block listed PreToolUse ops when installed and trusted.
+Cursor/Codex/OpenCode remain **advisory at write**. For every host, the repository-wide hard
+boundary is a **required GitHub status context** that runs `arkgate-check --strict-merge` (alias
+`ark-check --strict-merge`) — the CLI name is not the status context name. Never claim
+Cursor/Codex/OpenCode hard write. Soft-write alone does not mean the project is unfinished; doctor
+keeps it as an environment residual. See [ai-gates.md](ai-gates.md) and the README host matrix.
+
+Surface the same plane from the CLI: pair **`ark status --json`** (activation facts) with
+**`ark-check --doctor`** (`doctor.writePath`) — advisory local write on soft hosts → **required**
+merge status as the hard boundary. Product path: [use.md — What you get](use.md#what-you-get) ·
+[README host matrix](../README.md#host-enforcement-support).
 
 **MCP project identity (4.2.0):** before trusting project-specific MCP evidence, call
 `ark_identity` with `project.expectedRoot` set to the exact project's absolute root. Reuse that
@@ -52,6 +58,56 @@ root plus the returned `projectIdentity.projectId` on every later Ark tool call.
 path is authoritative only when that matching project id is also supplied. Only
 `binding.status: "matched"` with `authoritative: true` is authoritative; calls that omit the
 expectation remain compatible but are explicitly `unverified`.
+
+### Unified status snapshot (4.3 / ACS03)
+
+For one machine-readable session/project manifest (identity binding, honest write-path activation,
+last-check summary, rules residual counts, primary next action) use:
+
+```bash
+npx ark status --json
+# optional identity check (matched vs stale):
+npx ark status --json --expected-root /abs/project/root
+```
+
+MCP parity tool: **`ark_status`** (same envelope; pass `project.expectedRoot` after `ark_identity`).
+Schema: `arkgate/schema/status-manifest`. Never prompts; under `CI=1` JSON is forced. **Not a
+score** — counts and verdicts only. Write-path interpretation of activation vs merge teeth is under
+[Write-path honesty](#write-path-honesty).
+
+**Stable finding refs (4.3 / ACS06):** every factory-emitted diagnostic on CLI JSON, MCP analysis
+envelopes, and opt-in hook repair payloads (`ARK_REPAIR_JSON`) carries:
+
+| Field | Meaning |
+|-------|---------|
+| `findingRef` | Compact multi-turn id (`fnv1a-` + 8 hex). Re-address the same finding without fuzzy text match. |
+| `targetKey` | Baseline-compatible freeze identity (`ruleId\|file\|from\|to\|target`, with `#N` for duplicates). **Same plane as `--baseline`** — refs never orphan freezes. |
+| `docsCodePath` | Package-relative catalog anchor (`docs/diagnostics.md#RULE_ID`). |
+
+Line/message drift across agent turns does not change `findingRef` / `targetKey`. Schema:
+`arkgate/schema/analysis-result` **`1.5`**. Multi-turn fixture:
+`tests/fixtures/finding-refs/multi-turn-stability.json`.
+
+**Version-matched agent projection (4.3 / ACS04):** install/upgrade embeds a managed AGENTS.md
+block stamped with the installed `arkgate` version plus a compact contract summary (layers +
+diagnostic short list). Regenerate after package upgrade without clobbering customized regions
+outside the markers:
+
+```bash
+npx ark agents-md              # preview
+npx ark agents-md --write      # merge managed block only
+npx ark agents-md --check      # exit 1 on version/stamp drift
+npx ark agents-md --stdout     # print block only
+```
+
+The projection is **non-authoritative**. Enforcement is `ark-check` / host write hooks / required
+CI (`--strict-merge`) — never AGENTS.md, skills, or this projection. Root API:
+`buildAgentProjectionBlock` / `mergeAgentProjectionDocument`.
+
+**Agent Skills packaging (4.3 / ACS05):** the same frozen **13** skill names are also shipped as
+an Agent Skills–compatible package under `templates/agent-skills/<name>/SKILL.md` for hosts that
+install via `npx skills` (in addition to Ark `--install-agent-gates`). See
+[Install skills — Ark and ecosystem](#install-skills-ark-and-ecosystem). No new skill names.
 
 ## Architecture playbook and `ark-check --recommend`
 
@@ -486,6 +542,40 @@ monotonic across ArkGate 4.2.0+ installers. Pre-4.2 binaries ignore its metadata
 upgrade legacy repos before they write the optional home catalog. See
 [AI gates — Codex skill catalog](ai-gates.md#codex-skill-catalog-skillmd-not-flat-prompts).
 
+### Install skills — Ark and ecosystem {#install-skills-ark-and-ecosystem}
+
+The same **13** skill names ship two ways. **No new skill names** (4.3 freeze): packaging and
+routing only.
+
+| Channel | What it installs | When to use |
+|---------|------------------|-------------|
+| **Ark install** | Host skill catalogs + optional hooks/MCP/CI wiring via `--install-agent-gates` | Default for projects that want write-path gates and version-stamped managed catalogs |
+| **Agent Skills ecosystem** (`npx skills`) | The Agent Skills layout only (`<name>/SKILL.md`) into host skill dirs | Hosts already on the open skills channel; discovery without running Ark install |
+
+**Canonical authoring source:** flat `templates/skills/<name>.md` (Ark install reads these).
+
+**Agent Skills package root** (generated, 1:1 content): `templates/agent-skills/<name>/SKILL.md`
+— ships in the npm tarball under `templates/`. Drift guard: `npm run check:agent-skills`.
+
+```bash
+# Ark — expert skill pack (preferred when you also want gates)
+npx ark-check --install-agent-gates --skills-only --force
+
+# Ecosystem — from installed package or a git checkout
+npx skills add ./node_modules/arkgate/templates/agent-skills
+npx skills add ./templates/agent-skills
+# GitHub tree:
+npx skills add https://github.com/pedroknigge/arkgate/tree/main/templates/agent-skills
+# List without installing:
+npx skills add ./node_modules/arkgate/templates/agent-skills --list
+```
+
+Frozen names: `ark-adopt`, `ark-architect`, `ark-autopilot`, `ark-contract`, `ark-coverage`,
+`ark-explain`, `ark-explore`, `ark-fix`, `ark-loop`, `ark-place`, `ark-runtime`, `ark-think`,
+`ark-upgrade`. Root API: `ARK_SKILL_NAMES` / `validateAgentSkillsPackage` (Domain
+`agentSkillsPackage`). Skills are **process** depth — they never decide pass/fail; enforcement
+remains `ark-check` / hooks / CI.
+
 For an optional executable adoption check, copy the shipped template into a Vitest/Jest suite
 after installing ArkGate:
 
@@ -645,6 +735,11 @@ Relevant violation codes include `LAYER_IMPORT_VIOLATION`, `FORBIDDEN_GLOBAL`,
 `PUBLISH_MISSING_SOURCE`, `PUBLISH_SOURCE_LAYER_MISMATCH`, `FORBIDDEN_PATTERN`,
 `FORBIDDEN_SUBSTRING`, `FORBIDDEN_IMPORT`, `POLICY_VIOLATION`, `UNKNOWN_INTENT`,
 `LAYER_REFERENCE_VIOLATION`, `EXTENSION_ERROR`, and `AST_ANALYZER_ERROR`.
+
+**Full catalog (ACS02):** every public `ruleId` with why/fix anchors lives in
+[diagnostics.md](diagnostics.md) (stable fragment `#RULE_ID`) and the root API
+`DIAGNOSTIC_CATALOG` / `getDiagnosticCatalogEntry` / `diagnosticDocsPath`. Agents must not
+invent free-form rule ids outside that closed vocabulary.
 
 Use `ark-check` in CI for repository-level checks that need real file paths:
 
@@ -893,7 +988,7 @@ npx ark-mcp --root . --config ark.config.json [--manifest ark.manifest.json]
   this resource `unverified` and non-authoritative. It never substitutes for `ark_manifest` in
   a project verdict.
 
-The server exposes these twelve tools. Every tool accepts the additive
+The server exposes these thirteen tools. Every tool accepts the additive
 `project: { expectedRoot, expectedProjectId? }` input:
 
 | Tool | Primary input and purpose |
@@ -910,6 +1005,7 @@ The server exposes these twelve tools. Every tool accepts the additive
 | `ark_recommend` | No args: return the deterministic application-shape plan used by `ark-check --recommend --json`. |
 | `ark_suggest_include` | No args: propose TypeScript/JavaScript include roots from workspaces and nested packages. |
 | `ark_rules_inventory` | No args: inventory possible intra-layer rules using configured layer evidence when available; test/fixture/seed/migration surfaces and narrow technical constants are excluded from extraction pilots. Counts are not a score. |
+| `ark_status` | No non-project args: return the unified status-manifest envelope (identity binding, honest write-path activation, last-check summary, rules residual counts, primary next action). Same shape as `ark status --json`. Prefer after `ark_identity`. Never a score. |
 
 Every project-bound tool success, tool error, and JSON-RPC error data carries:
 
@@ -957,13 +1053,15 @@ when the binding is matched, analysis is complete, the graph is valid, coverage 
 are active. The underlying CLI fields remain present for diagnosis, but are not an authoritative
 whole-project green on their own.
 
-Current diagnostic envelopes use schema `1.4` and require `mode`,
+Current diagnostic envelopes use schema `1.5` and require `mode`,
 `completeness: "complete" | "partial" | "unavailable"`, and structured
-`completenessReasons`. Resolved results expose `policyHash`, `resolverIdentity`, `factsHash`, and
-`candidateTreeHash`; MCP `ark_check` mirrors CLI `ok`. Single-file `validate_code`,
-`ark_prepare_write`, and `createAICodeGate().validate()` are named lexical compatibility surfaces:
-they may expose `lexicalValid`, but remain partial and `valid:false` until complete-candidate
-preflight. Consumer-owned 1.0/1.1/1.2 `AdapterResult` values remain accepted by the public union.
+`completenessReasons`. Factory-emitted diagnostics carry stable `findingRef`, baseline-compatible
+`targetKey`, and `docsCodePath` (ACS06). Resolved results expose `policyHash`, `resolverIdentity`,
+`factsHash`, and `candidateTreeHash`; MCP `ark_check` mirrors CLI `ok`. Single-file
+`validate_code`, `ark_prepare_write`, and `createAICodeGate().validate()` are named lexical
+compatibility surfaces: they may expose `lexicalValid`, but remain partial and `valid:false` until
+complete-candidate preflight. Consumer-owned 1.0–1.4 `AdapterResult` values remain accepted by the
+public union (refs optional on those older envelopes).
 
 For hook-based enforcement, `ark-mcp --hook` runs one-shot: it reads a PreToolUse payload
 from stdin, validates the post-edit file content, and exits `2` with violations on stderr

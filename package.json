@@ -1,6 +1,6 @@
 {
   "name": "arkgate",
-  "version": "4.2.1",
+  "version": "4.3.0",
   "description": "ArkGate — architecture co-pilot for AI TypeScript (write gate, CI gate, plan/loop; optional ArkRules)",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -33,6 +33,8 @@
     "./schema/ark.design-delta.schema.json": "./schemas/ark.design-delta.schema.json",
     "./schema/arkrules": "./schemas/ark.arkrules.schema.json",
     "./schema/ark.arkrules.schema.json": "./schemas/ark.arkrules.schema.json",
+    "./schema/status-manifest": "./schemas/ark.status-manifest.schema.json",
+    "./schema/ark.status-manifest.schema.json": "./schemas/ark.status-manifest.schema.json",
     "./package.json": "./package.json"
   },
   "bin": {
@@ -72,6 +74,7 @@
     "docs/brownfield-adoption.md",
     "docs/configuration.md",
     "docs/package-surface.md",
+    "docs/diagnostics.md",
     "docs/threat-model.md",
     "tests/fixtures/ts-consumer",
     "templates",
@@ -107,6 +110,8 @@
     "check:layer-match": "node scripts/generate-layer-match.mjs --check",
     "generate:cli-pure": "node scripts/generate-cli-pure.mjs",
     "check:cli-pure": "node scripts/generate-cli-pure.mjs --check",
+    "generate:agent-skills": "node scripts/generate-agent-skills.mjs",
+    "check:agent-skills": "node scripts/generate-agent-skills.mjs --check",
     "generate:packaged-tooling": "node scripts/generate-packaged-tooling.mjs",
     "check:packaged-tooling": "node scripts/generate-packaged-tooling.mjs --check",
     "generate:analysis-engine": "node scripts/generate-analysis-engine.mjs",
@@ -124,6 +129,7 @@
     "eval:agent": "node eval/run.mjs",
     "eval:corpus": "node eval/validate-corpus.mjs",
     "eval:comparative": "node eval/comparative-run.mjs",
+    "eval:placement-ab": "node eval/placement-ab-run.mjs --dry",
     "eval:loop-cost": "node eval/loop-cost-run.mjs",
     "eval:ai-velocity": "node eval/ai-velocity-run.mjs",
     "eval:change-integrity": "node eval/change-integrity-run.mjs",

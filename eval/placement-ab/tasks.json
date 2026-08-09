@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "1.0",
+  "id": "acs07-placement-ab",
+  "description": "Maintainer A/B: agent placement with Ark gates+skills available vs without. Dry mode is CI-safe (no live LLM). Not a product score.",
+  "notAProductScore": true,
+  "skillsExpectedOnWithGates": ["ark-place", "ark-architect"],
+  "tasks": [
+    {
+      "id": "domain-port-not-db",
+      "prompt": "Add a pure domain rule that lists todos from storage",
+      "placementIntent": "DomainModel must depend on a port, not a concrete DB adapter",
+      "fixture": "domain-port-not-db",
+      "archetype": "crud-product",
+      "withoutGates": {
+        "layerViolations": 1,
+        "misplacedFiles": 1,
+        "contractIntact": true,
+        "cheated": false,
+        "skillsPresent": false
+      },
+      "withGates": {
+        "layerViolations": 0,
+        "misplacedFiles": 0,
+        "contractIntact": true,
+        "cheated": false,
+        "skillsPresent": true,
+        "governedPercent": 100
+      }
+    },
+    {
+      "id": "use-case-not-route",
+      "prompt": "Add a get-user use case for the REST API",
+      "placementIntent": "Application orchestration owns the use case; HTTP stays thin; persistence is injected",
+      "fixture": "use-case-not-route",
+      "archetype": "api-backend",
+      "withoutGates": {
+        "layerViolations": 1,
+        "misplacedFiles": 1,
+        "contractIntact": true,
+        "cheated": false,
+        "skillsPresent": false
+      },
+      "withGates": {
+        "layerViolations": 0,
+        "misplacedFiles": 0,
+        "contractIntact": true,
+        "cheated": false,
+        "skillsPresent": true,
+        "governedPercent": 100
+      }
+    },
+    {
+      "id": "job-not-fetch",
+      "prompt": "Add a nightly job that syncs orders",
+      "placementIntent": "Jobs orchestrate application services; domain stays pure; adapters implement ports",
+      "fixture": "job-not-fetch",
+      "archetype": "worker-pipeline",
+      "withoutGates": {
+        "layerViolations": 1,
+        "misplacedFiles": 1,
+        "contractIntact": true,
+        "cheated": false,
+        "skillsPresent": false
+      },
+      "withGates": {
+        "layerViolations": 0,
+        "misplacedFiles": 0,
+        "contractIntact": true,
+        "cheated": false,
+        "skillsPresent": true,
+        "governedPercent": 100
+      }
+    },
+    {
+      "id": "entity-in-domain",
+      "prompt": "Add a Team entity used by the dashboard",
+      "placementIntent": "Entities and pure types live in DomainModel; presentation only imports domain",
+      "fixture": "entity-in-domain",
+      "archetype": "crud-product",
+      "withoutGates": {
+        "layerViolations": 1,
+        "misplacedFiles": 1,
+        "contractIntact": true,
+        "cheated": false,
+        "skillsPresent": false
+      },
+      "withGates": {
+        "layerViolations": 0,
+        "misplacedFiles": 0,
+        "contractIntact": true,
+        "cheated": false,
+        "skillsPresent": true,
+        "governedPercent": 100
+      }
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "1.0",
+  "description": "ACS06 multi-turn finding ref stability: same baseline identity keeps findingRef across turns even when line/message drift. targetKey remains baseline-compatible (including #2 occurrence).",
+  "turns": [
+    {
+      "turn": 1,
+      "violations": [
+        {
+          "ruleId": "LAYER_IMPORT_VIOLATION",
+          "message": "DomainModel must not import PersistenceAdapters (turn 1).",
+          "file": "src/domain/order.ts",
+          "line": 4,
+          "target": "src/infra/db.ts",
+          "fromLayer": "DomainModel",
+          "toLayer": "PersistenceAdapters"
+        },
+        {
+          "ruleId": "LAYER_IMPORT_VIOLATION",
+          "message": "Second identical edge (occurrence 2, turn 1).",
+          "file": "src/domain/order.ts",
+          "line": 10,
+          "target": "src/infra/db.ts",
+          "fromLayer": "DomainModel",
+          "toLayer": "PersistenceAdapters"
+        }
+      ]
+    },
+    {
+      "turn": 2,
+      "violations": [
+        {
+          "ruleId": "LAYER_IMPORT_VIOLATION",
+          "message": "DomainModel still imports PersistenceAdapters after agent edit (turn 2).",
+          "file": "src/domain/order.ts",
+          "line": 18,
+          "target": "src/infra/db.ts",
+          "fromLayer": "DomainModel",
+          "toLayer": "PersistenceAdapters"
+        },
+        {
+          "ruleId": "LAYER_IMPORT_VIOLATION",
+          "message": "Second identical edge still present (occurrence 2, turn 2).",
+          "file": "src/domain/order.ts",
+          "line": 42,
+          "target": "src/infra/db.ts",
+          "fromLayer": "DomainModel",
+          "toLayer": "PersistenceAdapters"
+        }
+      ]
+    }
+  ],
+  "expectedStableRefs": {
+    "primary": "fnv1a-aec4000a",
+    "primaryTargetKey": "LAYER_IMPORT_VIOLATION|src/domain/order.ts|DomainModel|PersistenceAdapters|src/infra/db.ts",
+    "duplicateOccurrence": "fnv1a-5ac9e33b",
+    "duplicateTargetKey": "LAYER_IMPORT_VIOLATION|src/domain/order.ts|DomainModel|PersistenceAdapters|src/infra/db.ts#2"
+  }
+}

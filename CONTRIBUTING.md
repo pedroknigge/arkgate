@@ -30,6 +30,7 @@ npx arkgate-check --root . --config ark.config.json --strict
 npm run check:architecture    # dogfood
 npm run check:layer-match
 npm run check:cli-pure
+npm run check:agent-skills    # Agent Skills layout vs flat templates (ACS05)
 ```
 
 After editing pure Domain algorithms, regenerate CLI artifacts:
@@ -37,6 +38,8 @@ After editing pure Domain algorithms, regenerate CLI artifacts:
 ```bash
 npm run generate:layer-match
 npm run generate:cli-pure
+# After editing templates/skills/*.md:
+npm run generate:agent-skills
 # analysis-engine / packaged-tooling: see package.json scripts
 ```
 
@@ -53,7 +56,7 @@ minimal (`typescript-ark-host` exact). Do not add production deps without discus
 | `src/kernel/` | Gate analysis / preflight core |
 | `src/eslint/` | Editor adapter |
 | `bin/` | CLIs (`arkgate*` + `ark*`) |
-| `templates/` | Skills, hooks, playbooks (shipped on npm) |
+| `templates/` | Skills (flat + Agent Skills layout), hooks, playbooks (shipped on npm) |
 | `docs/` | Product + develop + contribute docs ([map](docs/README.md)) |
 | `tests/` · `eval/` | Quality harnesses |
 | `scripts/field-dogfood/` | Maintainer offline field gap smoke (`npm run test:field-dogfood-smoke`) |
@@ -149,6 +152,8 @@ MCP registry after npm `latest`:
 mcp-publisher login github -token "$(gh auth token)"
 mcp-publisher validate server.json && mcp-publisher publish server.json
 ```
+
+**Prepared release:** [docs/releases/4.3.0.md](docs/releases/4.3.0.md) (`arkgate@4.3.0`, not published).
 
 **Current published release:** [docs/releases/4.2.1.md](docs/releases/4.2.1.md) (`arkgate@4.2.1`).  
 **Previous:** [docs/releases/4.2.0.md](docs/releases/4.2.0.md) (`arkgate@4.2.0`) · [docs/releases/4.1.1.md](docs/releases/4.1.1.md) (`arkgate@4.1.1`) · [docs/releases/4.0.0.md](docs/releases/4.0.0.md) (`arkgate@4.0.0`).

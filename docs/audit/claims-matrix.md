@@ -4,15 +4,15 @@
 > [docs/package-surface.md](../package-surface.md) · Decisions: [docs/adr/](../adr/README.md)
 > **Code and manifests are the source of truth.** Documentation does not override implementation.
 
-**Date:** 2026-08-08 (4.2.1 published sync over the 4.2.0 WI audit)<br>
-**Scope:** project (public lanes + bounded package surfaces) — Phase EH audit + WI sync<br>
-**Intent:** audit → selective documentation + honesty evidence (EH01–EH08)<br>
+**Date:** 2026-08-09 (4.3.0 prepared — Phase ACS / ACS08 over the 4.2.1 published baseline)<br>
+**Scope:** project (public lanes + bounded package surfaces) — Phase ACS claims + prior EH/WI<br>
+**Intent:** audit → selective documentation + honesty evidence (ACS08 release prepare)<br>
 **Variant:** ArkGate bridge (`ark.config.json`, local CLIs, project-bound `ark_manifest`,
 compatibility `ark://manifest`)<br>
 **Out:** root<br>
 **Stack:** Node/TypeScript<br>
 **Monorepo:** root `arkgate` + `packages/runtime`<br>
-**Auditor:** documentation-manager + implementer (Phase EH)
+**Auditor:** implementer (Phase ACS / ACS08)
 
 ## Summary
 
@@ -22,7 +22,7 @@ configuration, package-surface, product-voice, ROADMAP Next session, this matrix
 
 | Verdict | Count |
 |---------|------:|
-| OK | 32 |
+| OK | 39 |
 | Partial | 1 |
 | Missing | 0 |
 | Contradicted | 0 |
@@ -33,27 +33,29 @@ configuration, package-surface, product-voice, ROADMAP Next session, this matrix
 
 **Top residual risks:**
 
-1. **C-028 Partial (wontfix for EH):** Z09 / RB-11 retained-adoption + independent close remain a
+1. **C-028 Partial (wontfix for ACS):** Z09 / RB-11 retained-adoption + independent close remain a
    parked claim gate — not an engineering `doing` until preregistration is met.
 2. Soft-write hosts stay advisory forever; doctor must not re-collapse them into unfinished
    architecture debt after EH05.
 3. Repo hygiene: Dependabot may still surface transitive advisories; triage before claiming a
    clean public tree (not a product-roadmap `doing` unless it needs a pin).
+4. **Prepared ≠ published:** tree identity is **4.3.0**; npm `latest` remains **4.2.1** until
+   Trusted Publishing (C-020).
 
-**Recommended next Intent:** no engineering `doing` until a new ROADMAP item is authorized; keep
-Z09 parked; field kit stays scaffolding-only.
+**Recommended next Intent:** maintainer publish train for `arkgate@4.3.0` (signed tag + OIDC);
+keep Z09 parked; field kit stays scaffolding-only.
 
-## EH01 inventory (public lanes)
+## ACS08 inventory (public lanes)
 
 | Lane | Authority paths | Checklist / result |
 |------|-----------------|--------------------|
-| Front door | `README.md` | Host matrix regenerated from `host-support-matrix.mjs`; dual bins; version strip names published 4.2.1 on npm `latest`; required status wording |
-| Use | `docs/use.md`, `docs/product-voice.md` | Doctor control plane; soft-host honesty; product-voice EH vocabulary |
-| Develop | `docs/develop.md`, `docs/ai-gates.md`, `docs/agent-guide.md`, `docs/configuration.md`, `docs/package-surface.md` | CI base-ref snippet EH04; CLI vs status context; Codex advisory |
-| Contribute | `CONTRIBUTING.md`, `ROADMAP.md` Next session, `Agents.md` plans | Queue empty for engineering; WI01 done; Z09 parked claim gate only |
-| Releases | `CHANGELOG.md`, `docs/releases/*` | 4.2.1 **Status: published** on npm `latest`; 4.2.0 superseded |
-| Templates | `action.yml`, generated workflow | First-push-safe base-ref |
-| Audit | this file | 0 Contradicted on public lanes |
+| Front door | `README.md` | Host matrix unchanged; dual bins; version strip names **4.3.0 prepared** while npm `latest` stays **4.2.1** |
+| Use | `docs/use.md`, `docs/product-voice.md` | Doctor control plane; soft-host honesty; product-voice ACS guardrail catalog + scan/process |
+| Develop | `docs/develop.md`, `docs/ai-gates.md`, `docs/agent-guide.md`, `docs/configuration.md`, `docs/package-surface.md` | Status/projection/skills/catalog/finding-refs documented; schema 1.5; soft hosts advisory |
+| Contribute | `CONTRIBUTING.md`, `ROADMAP.md` Next session, `Agents.md` plans | ACS01–ACS08 prepare done; publish checklist open; Z09 parked claim gate only |
+| Releases | `CHANGELOG.md`, `docs/releases/*` | 4.3.0 **Status: prepared**; 4.2.1 **Status: published** on npm `latest` |
+| Templates | `action.yml`, generated workflow, `templates/agent-skills/` | First-push-safe base-ref; Agent Skills layout for same 13 names |
+| Audit | this file | **0 Contradicted** on public lanes; new ACS rows OK |
 
 ### README 0.3 checklist (signed)
 
@@ -61,7 +63,7 @@ Z09 parked; field kit stays scaffolding-only.
 - [x] Host support table matches matrix (Codex/Cursor/OpenCode advisory; repair envelope split)
 - [x] Required merge boundary = **required status context**, not “CI file present”
 - [x] Dual bins consistent
-- [x] Version strip: published 4.2.1 on npm `latest` (matches `npm view arkgate version`)
+- [x] Version strip: **prepared 4.3.0** candidacy named; npm `latest` still **4.2.1** (honest prepared≠published)
 - [x] Links resolve into use/develop/docs hub
 - [x] No hard-write lie for Codex
 
@@ -74,11 +76,11 @@ Z09 parked; field kit stays scaffolding-only.
 | C-003 | Root `arkgate` exports the gate/config/analysis contract, not runtime APIs | [Programmatic API](../package-surface.md#programmatic-root-api) | `src/gate.ts` · `tsup.config.ts` | OK | keep |
 | C-004 | Setup CLI has `arkgate` and `ark` bin names | [README commands](../../README.md#common-commands) | root manifest · `bin/ark.mjs` | OK | keep |
 | C-005 | Check/doctor CLI has `arkgate-check` and `ark-check` bin names | [Agent guide](../agent-guide.md) | root manifest · `bin/ark-check.mjs` | OK | keep |
-| C-006 | MCP has dual bins, twelve documented tools including `ark_identity` + `ark_manifest`, and a compatibility-only `ark://manifest` resource | [MCP reference](../agent-guide.md#write-path-gate-mcp) | `bin/ark-mcp.mjs` · `server.json` | OK | WI identity handshake |
-| C-007 | Config and public schema aliases, including project identity, are documented | [Package surface](../package-surface.md) · [Configuration](../configuration.md) | root `exports` · `schemas/` | OK | keep |
+| C-006 | MCP has dual bins, **thirteen** documented tools including `ark_identity`, `ark_manifest`, and `ark_status`, plus a compatibility-only `ark://manifest` resource | [MCP reference](../agent-guide.md#write-path-gate-mcp) | `bin/ark-mcp.mjs` · `bin/ark-mcp-runtime.mjs` `TOOLS` · `server.json` | OK | ACS03 status tool (13th) |
+| C-007 | Config and public schema aliases, including project identity and status-manifest, are documented | [Package surface](../package-surface.md) · [Configuration](../configuration.md) | root `exports` · `schemas/` | OK | keep |
 | C-008 | Recommended ESLint config enables the documented rule set | [AI gates](../ai-gates.md#eslint-editor-feedback--same-contract-as-ci) | `src/eslint/index.ts` | OK | keep |
 | C-009 | GitHub Action inputs and first-push-safe base-ref behavior are documented | [AI gates](../ai-gates.md#ci-backstop) | `action.yml` · `ci-and-commands.mjs` | OK | EH04 |
-| C-010 | Shipped hooks, isolated repo skills, 4.2.0+ monotonic shared Codex skills, and adoption-test template have discoverable guidance | [Agent guide](../agent-guide.md#supported-agent-hosts) · [AI gates](../ai-gates.md) | `templates/` · installer | OK | WI multi-repo contract; pre-4.2 writer limit documented |
+| C-010 | Shipped hooks, isolated repo skills, Agent Skills layout (4.3), monotonic shared Codex skills, and adoption-test template have discoverable guidance | [Agent guide](../agent-guide.md#install-skills-ark-and-ecosystem) · [AI gates](../ai-gates.md) | `templates/` · installer | OK | ACS05 packaging |
 | C-011 | Playbook, policy packs, and gallery examples map to the enthusiast track | [Enthusiast index](../enthusiast/README.md) | templates · `examples/` | OK | keep |
 | C-012 | Experimental runtime uses `@arkgate/runtime`; Nest uses its `/nestjs` subpath | [Runtime README](../../packages/runtime/README.md) · [Package surface](../package-surface.md#experimental-opt-in-surfaces) | runtime manifest | OK | keep experimental label |
 | C-013 | Deprecated root `arkgate/runtime` and `arkgate/nestjs` forwarders were **removed** (AR04) | [Package surface](../package-surface.md#experimental-opt-in-surfaces) · [Migration](../migrate-from-ark-runtime-kernel.md) | root exports (no forwarders) | OK | use `@arkgate/runtime` only |
@@ -86,43 +88,56 @@ Z09 parked; field kit stays scaffolding-only.
 | C-015 | Published payload is bounded by the root manifest and verified separately | [Contributing](../../CONTRIBUTING.md) | root `files` · package verifier | OK | keep |
 | C-016 | This repository's Ark contract has four declared layers and generated parity seams | [Hub placement](../../AGENTS.md#where-new-code-belongs) | `ark.config.json` · generate scripts | OK | keep |
 | C-017 | Project TS5/6/7 compilers stay project-owned with fail-closed incomplete analysis | [TypeScript support](../typescript-support.md) | typescript host · packed matrix | OK | keep |
-| C-018 | All retained plan seeds are indexed with current shipped status | [Hub plans](../../AGENTS.md#product-plans-library-epic-queue-seeds) | `docs/plans/` · ROADMAP | OK | EH plan → Shipped when EH closes |
+| C-018 | All retained plan seeds are indexed with current shipped status | [Hub plans](../../AGENTS.md#product-plans-library-epic-queue-seeds) | `docs/plans/` · ROADMAP | OK | ACS plan → prepared when ACS08 closes |
 | C-019 | Accepted ADRs are navigable without duplicating their rationale | [ADR index](../adr/README.md) | ADR frontmatter | OK | keep |
-| C-020 | Tree version identity and npm `latest` are **4.2.1** published (`gitHead` `b2f02c9`) | [4.2.1 notes](../releases/4.2.1.md) · [4.2.0 notes](../releases/4.2.0.md) | package/lock/version/server · npm registry | OK | keep prepared≠published discipline for future candidates |
+| C-020 | Tree version identity is **4.3.0 prepared**; npm `latest` remains **4.2.1** published (`gitHead` `b2f02c9`) until Trusted Publishing | [4.3.0 notes](../releases/4.3.0.md) · [4.2.1 notes](../releases/4.2.1.md) | package/lock/version/server · npm registry | OK | prepared≠published discipline |
 | C-021 | Links in shipped Markdown resolve inside the tarball or use repository URLs | Shipped README/docs | root `files` | OK | rerun on release |
-| C-022 | Nightly evaluation claims distinguish deterministic, opt-in live, and skipped cases | [Eval guide](../../eval/README.md) | nightly workflow | OK | keep |
+| C-022 | Nightly evaluation claims distinguish deterministic, opt-in live, and skipped cases | [Eval guide](../../eval/README.md) | nightly workflow · placement-ab | OK | ACS07 dry mode |
 | C-023 | Migration and runtime guidance uses current package boundaries | [Migration guide](../migrate-from-ark-runtime-kernel.md) | manifests | OK | keep |
 | C-024 | Contributor layout distinguishes stable gate code, experimental runtime, payload | [Contributing](../../CONTRIBUTING.md) | layout | OK | keep |
 | C-025 | Preflight, CLI, MCP, write gate, final CI share one candidate graph | [ADR 0005](../adr/0005-atomic-change-preflight.md) | resolved-candidate facts · parity | OK | keep |
 | C-026 | Gallery starters clean-room journey | [Examples](../../examples/README.md) | packed matrix | OK | keep |
 | C-027 | `ark upgrade` managed content honesty | Setup CLI · agent guidance | managed-content identities | OK | keep |
-| C-028 | Field evidence measures real merge gate + retained adoption | [Roadmap](../../ROADMAP.md) · [Field kit](../field/README.md) | Z07–Z10 evidence; Z09 parked | Partial | owner: Z09 / RB-11 (not EH) |
+| C-028 | Field evidence measures real merge gate + retained adoption | [Roadmap](../../ROADMAP.md) · [Field kit](../field/README.md) | Z07–Z10 evidence; Z09 parked | Partial | owner: Z09 / RB-11 (not ACS) |
 | C-029 | Design delta ratchet + host hardness requires runtime/provider proof | [Package surface](../package-surface.md) · [AI gates](../ai-gates.md) | design-delta · enforcement-state | OK | keep |
 | C-030 | Soft-write host does not alone force doctor `Not finished` | [Product voice](../product-voice.md) · plan EH | `enforcement-honesty.mjs` | OK | EH05 |
 | C-031 | CI runtime observation independent of branch-protection plan API | [AI gates](../ai-gates.md) · plan EH | `github-enforcement.mjs` · `withCiProviderEvidence` | OK | EH06 |
 | C-032 | Report does not broaden `.gitignore` over `.ark/*` + `!` exceptions | plan EH | `html-report.mjs` | OK | EH03 |
 | C-033 | First-push all-zero base SHA does not require fail-on-new-smells delta | [AI gates](../ai-gates.md) | `ci-and-commands.mjs` · `action.yml` | OK | EH04 |
+| C-034 | Public diagnostic codes have a closed catalog with why/fix docs anchors | [Diagnostics](../diagnostics.md) · [Package surface](../package-surface.md) | `diagnosticCatalog.ts` · fixtures | OK | ACS02 |
+| C-035 | `ark status --json` / MCP `ark_status` returns one identity/activation/last-check/rules snapshot (not a score) | [Agent guide](../agent-guide.md) · [Package surface](../package-surface.md) | `statusManifest.ts` · schema | OK | ACS03 |
+| C-036 | Version-matched agent projection is regenerable and labeled non-authoritative for enforcement | [Agent guide](../agent-guide.md) · [Package surface](../package-surface.md) | `agentProjection.ts` · CLI | OK | ACS04 |
+| C-037 | The same frozen 13 skill names ship in Agent Skills–compatible layout; no new skill names | [Agent guide](../agent-guide.md#install-skills-ark-and-ecosystem) | `agentSkillsPackage.ts` · `templates/agent-skills/` | OK | ACS05 |
+| C-038 | Factory diagnostics carry stable `findingRef` + baseline-compatible `targetKey` (schema 1.5) | [Package surface](../package-surface.md) · [Agent guide](../agent-guide.md) | `adapterContract.ts` · multi-turn fixture | OK | ACS06 |
+| C-039 | Maintainer placement A/B eval exists under `eval/` with CI-safe dry mode; not a product score | [Eval guide](../../eval/README.md) · [placement-ab README](../../eval/placement-ab/README.md) | harness · fixtures · unit test | OK | ACS07 |
+| C-040 | AGENTS.md / skills / projection never decide pass/fail; gate remains CLI/hooks/CI | [Product voice](../product-voice.md) · plan ACS hard lines | analysis paths do not import projection | OK | ACS hard line |
 
-## Contradicted / Partial owners (EH01 close)
+## Contradicted / Partial owners (ACS08 close)
 
 | Verdict | Claim | Owner |
 |---------|-------|-------|
-| Partial | C-028 field retention / independent close | Z09 / RB-11 (explicit wontfix for Phase EH) |
-| None | — | **0 Contradicted** on public lanes after EH02/EH08 |
+| Partial | C-028 field retention / independent close | Z09 / RB-11 (explicit wontfix for Phase ACS) |
+| None | — | **0 Contradicted** on public lanes after ACS08 prepare |
 
 ## Historical note
 
-Prior matrix (2026-07-22) predated 4.1.0 field train close and Codex WAFI feedback. C-013
-forwarder language and C-020 “3.9.0” version pin were stale relative to 4.x and AR04 removal;
-corrected in the EH pass. The 2026-07-30 WI sync advances C-006/C-007/C-010/C-020 without
-re-performing or overstating the original deep-audit coverage count.
+Prior matrix (2026-08-08) covered 4.2.1 published sync. The ACS08 pass advances C-006/C-007/C-010/C-020
+and adds C-034–C-040 for agent-contract surfaces without re-performing the full EH deep-audit
+measurement methodology; structural OK/Partial verdicts remain evidence-bound to code and
+authorities cited above.
 
-## Verification record (EH)
+## Verification record (ACS08 prepare)
 
-- npm `arkgate@latest` observed **4.2.1** (`gitHead` `b2f02c9`; published 2026-08-08 via OIDC
-  Trusted Publishing); tree matches package/lock/version/server.
-- Host matrix README block matches `renderHostSupportMatrixMarkdown()`.
-- Focused Phase EH unit tests: gitignore, honesty soft-write, provider 403, CI runtime, base-ref template.
-- Post-publish docs flips (2026-08-08): 4.2.0 then 4.2.1; ROADMAP Next session + claims C-020
-  re-synced to 4.2.1; WI01 remains `done` (shipped in 4.2.0).
-- `npm run check:architecture` / `test:confidence` — see implementer summary for final run.
+- Tree identity: package/lock/`src/version.ts`/`server.json` = **4.3.0**.
+- npm `arkgate@latest` remains **4.2.1** until Trusted Publishing (do not claim published).
+- Release notes: [docs/releases/4.3.0.md](../releases/4.3.0.md) **Status: prepared**.
+- CHANGELOG section `## 4.3.0 — 2026-08-09 (prepared)` covers ACS01–ACS07 surfaces.
+- Focused ACS unit suites (catalog, status, projection, skills, finding refs, placement-ab) green
+  under prior ACS item evidence; release-surface tests updated for 4.3.0 prepared train.
+- Public lanes (README, docs hub, package-surface, CONTRIBUTING, Agents.md) name prepared
+  candidate without claiming npm `latest`.
+- MCP parity closed for C-006/C-035: agent-guide documents **thirteen** tools including
+  `ark_status`; tools/list exact expectation + `ark_status` tools/call smoke in
+  `tests/unit/mcp/arkMcp.test.ts`; diagnostic envelope prose uses schema **1.5**.
+- Develop hub indexes status / agents-md / finding refs / agent-skills (ACS03–ACS06 pointers).
+- `npm run check:architecture` / focused release-surface tests — see implementer summary.

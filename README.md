@@ -16,8 +16,9 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 4.2.1** is on npm `latest` (Next.js 16.3 root `proxy.ts` scan + fixture pins).
-> [4.2.1 notes](docs/releases/4.2.1.md) · [4.2.0](docs/releases/4.2.0.md) · [4.1.1](docs/releases/4.1.1.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> **ArkGate 4.3.0** is prepared (agent contract surface: catalog, status, projection, skills packaging, finding refs);
+> **4.2.1** remains on npm `latest` until publication.
+> [4.3.0 candidate](docs/releases/4.3.0.md) · [4.2.1](docs/releases/4.2.1.md) · [4.2.0](docs/releases/4.2.0.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
 
@@ -77,6 +78,15 @@ Details: [configuration](docs/configuration.md#arkrules-intra-layer-opt-in) · [
 **Not** a web framework, ORM, or job runner. Optional experimental runtime is separate and not required for the gate.
 
 **Name note:** npm package `arkgate` — not affiliated with the separate Archgate CLI project.
+
+### When not to adopt
+
+ArkGate is overkill for small trees with **no AI agents** and **no multi-layer boundaries**, for
+single-developer hobby CRUDs under no integration pressure, and for teams that will not maintain
+`ark.config.json` or a **required** CI status running `arkgate-check --strict-merge`. In those
+cases stay with a boundary linter alone (see [Why not only ESLint / Nx / cruiser?](#why-not-only-eslint--nx--cruiser)).
+Anyone path: [docs/use.md — When not to adopt](docs/use.md#when-not-to-adopt). Limits of a green
+check: [4.3.0 — What ArkGate is / isn't](docs/releases/4.3.0.md#what-arkgate-is--isnt).
 
 ---
 
@@ -157,14 +167,17 @@ expectation.
 
 ```bash
 npx arkgate start --apply
+npx arkgate status --json          # session/project snapshot (identity, activation, last check)
 npx arkgate-check --doctor
 npx arkgate-check --plan
 npx arkgate-check --coverage
 npx arkgate-check --strict-merge   # CI / required status
 npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok
+# optional: same 13 skills via Agent Skills ecosystem (no new names)
+# npx skills add ./node_modules/arkgate/templates/agent-skills
 ```
 
-More: [docs/develop.md](docs/develop.md) · enthusiast track: [docs/enthusiast/](docs/enthusiast/README.md)
+More: [docs/develop.md](docs/develop.md) · skills install: [docs/agent-guide.md](docs/agent-guide.md#install-skills-ark-and-ecosystem) · enthusiast track: [docs/enthusiast/](docs/enthusiast/README.md)
 
 ---
 
@@ -193,7 +206,8 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current published (4.2.1) | [docs/releases/4.2.1.md](docs/releases/4.2.1.md) · [CHANGELOG](CHANGELOG.md) |
+| Prepared candidate (4.3.0) | [docs/releases/4.3.0.md](docs/releases/4.3.0.md) · [CHANGELOG](CHANGELOG.md) |
+| Current published (4.2.1) | [docs/releases/4.2.1.md](docs/releases/4.2.1.md) |
 | Previous (4.2.0) | [docs/releases/4.2.0.md](docs/releases/4.2.0.md) |
 | Previous (4.1.1) | [docs/releases/4.1.1.md](docs/releases/4.1.1.md) |
 | Previous (4.1.0) | [docs/releases/4.1.0.md](docs/releases/4.1.0.md) |

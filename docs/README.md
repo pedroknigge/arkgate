@@ -29,7 +29,8 @@ Product site: [arkgate.online](https://www.arkgate.online/) · npm: [`arkgate`](
 |-----|------------|
 | [develop.md](develop.md) | Gates, hosts, config, brownfield, power tools |
 | [ai-gates.md](ai-gates.md) | Install hooks / MCP / CI per host |
-| [agent-guide.md](agent-guide.md) | Agent, CLI, and MCP reference |
+| [agent-guide.md](agent-guide.md) | Agent, CLI, and MCP reference (incl. `ark status --json` / MCP `ark_status`) |
+| [diagnostics.md](diagnostics.md) | Public diagnostic `ruleId` catalog (why / fix anchors) |
 | [configuration.md](configuration.md) | `ark.config.json` contract |
 | [brownfield-adoption.md](brownfield-adoption.md) | Existing messy repos |
 | [package-surface.md](package-surface.md) | Stable vs experimental package surface |
@@ -52,11 +53,12 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Area | Path |
 |------|------|
 | Release notes (by version) | [releases/](releases/) · [CHANGELOG.md](../CHANGELOG.md) |
-| Epic plans (seeded + shipped) | [plans/](plans/) · latest epic: [workspace identity and activation truth](plans/workspace-identity-activation-truth/README.md) (Phase WI in **4.2.0**; current npm **4.2.1**) |
+| Epic plans (seeded + shipped) | [plans/](plans/) · [agent contract surface 4.3](plans/agent-contract-surface-4.3/README.md) (Phase ACS → **4.3.0 prepared**; product voice: [guardrail catalog + scan/process](product-voice.md#scan-vs-process-dual-depth)); prior: [workspace identity](plans/workspace-identity-activation-truth/README.md) (WI / **4.2.0**; npm **4.2.1**) |
 | Claims audit | [audit/claims-matrix.md](audit/claims-matrix.md) |
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
+Prepared candidate: [releases/4.3.0.md](releases/4.3.0.md) (`arkgate@4.3.0`, not published yet).  
 Current published: [releases/4.2.1.md](releases/4.2.1.md) (`arkgate@4.2.1` on npm `latest`).  
 Previous: [releases/4.2.0.md](releases/4.2.0.md) (`arkgate@4.2.0`) · [releases/4.1.1.md](releases/4.1.1.md) (`arkgate@4.1.1`).  
 Previous major: [releases/4.0.0.md](releases/4.0.0.md) (`arkgate@4.0.0`).  

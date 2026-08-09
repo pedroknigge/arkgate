@@ -122,7 +122,7 @@ describe('ESLint ↔ ark-check parity', () => {
     expect(reports[0].messageId).toBe('forbiddenImport');
     expect((reports[0].data as { fromLayer: string }).fromLayer).toBe('DomainModel');
     expect((reports[0].data as { toLayer: string }).toLayer).toBe('PersistenceAdapters');
-    expect(check.schemaVersion).toBe('1.4');
+    expect(check.schemaVersion).toBe('1.5');
     expect(check.completeness).toBe('complete');
     expect(reports[0].diagnostic).toEqual(
       check.diagnostics.find((item) => item.ruleId === 'LAYER_IMPORT_VIOLATION')
@@ -206,9 +206,23 @@ describe('ESLint ↔ ark-check parity', () => {
       [...items].sort((left: any, right: any) =>
         String(left.evidence.edgeKind).localeCompare(String(right.evidence.edgeKind))
       );
-    expect(byEvidence(reports.map((report) => report.diagnostic))).toEqual(
-      byEvidence(cliDiagnostics)
-    );
+    // ACS06 findingRef/targetKey use baseline occurrence order, which is adapter
+    // scan-order dependent when two edges share the same freeze identity. Strip
+    // occurrence suffixes for cross-adapter equality; base freeze keys must match.
+    const stripOccurrenceRefs = (diagnostic: any) => {
+      const { findingRef: _fr, targetKey, ...rest } = diagnostic;
+      const baseTargetKey =
+        typeof targetKey === 'string' ? targetKey.replace(/#\d+$/, '') : targetKey;
+      return { ...rest, targetKey: baseTargetKey };
+    };
+    expect(
+      byEvidence(reports.map((report) => stripOccurrenceRefs(report.diagnostic)))
+    ).toEqual(byEvidence(cliDiagnostics.map(stripOccurrenceRefs)));
+    for (const diagnostic of [...reports.map((r) => r.diagnostic), ...cliDiagnostics]) {
+      expect(diagnostic.findingRef).toMatch(/^fnv1a-[0-9a-f]{8}$/);
+      expect(diagnostic.targetKey).toContain('LAYER_IMPORT_VIOLATION|');
+      expect(diagnostic.docsCodePath).toBe('docs/diagnostics.md#LAYER_IMPORT_VIOLATION');
+    }
   });
 
   it('allowed application→domain import: ESLint and ark-check both pass', () => {

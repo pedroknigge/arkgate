@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://unpkg.com/arkgate@4/schemas/ark.status-manifest.schema.json",
+  "title": "ArkGate status manifest",
+  "description": "Unified session/project status snapshot for agents (identity, activation honesty, last check, rules counts, next action). Not a score.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "arkgateVersion",
+    "projectIdentity",
+    "activation",
+    "lastCheck",
+    "rules",
+    "nextAction"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "arkgateVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "projectIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "projectId",
+        "resolvedRoot",
+        "resolvedConfigPath",
+        "binding",
+        "authoritative"
+      ],
+      "properties": {
+        "projectId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resolvedRoot": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolvedConfigPath": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "binding": {
+          "enum": [
+            "matched",
+            "unverified",
+            "mismatch"
+          ]
+        },
+        "authoritative": {
+          "type": "boolean"
+        },
+        "code": {
+          "enum": [
+            "PROJECT_ROOT_MISMATCH",
+            "PROJECT_ID_MISMATCH",
+            "INVALID_PROJECT_EXPECTATION"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "writePath",
+        "host",
+        "honestLabel"
+      ],
+      "properties": {
+        "writePath": {
+          "enum": [
+            "hard",
+            "advisory",
+            "unavailable"
+          ]
+        },
+        "host": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "honestLabel": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "lastCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "at",
+        "verdict",
+        "activeViolations",
+        "frozenResidual"
+      ],
+      "properties": {
+        "at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "verdict": {
+          "anyOf": [
+            {
+              "enum": [
+                "pass",
+                "fail",
+                "incomplete"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "activeViolations": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "frozenResidual": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "arkRulesLoaded",
+        "inventoried",
+        "underContract",
+        "frozenResidual"
+      ],
+      "properties": {
+        "arkRulesLoaded": {
+          "type": "boolean"
+        },
+        "inventoried": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "underContract": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "frozenResidual": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "nextAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "summary"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

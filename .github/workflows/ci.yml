@@ -277,6 +277,9 @@ jobs:
       - name: CLI pure helpers derived artifacts (drift guard)
         run: npm run check:cli-pure
 
+      - name: Agent Skills package layout (ACS05 drift guard)
+        run: npm run check:agent-skills
+
       - name: Design-delta package artifact (drift guard)
         run: npm run check:packaged-tooling
 
