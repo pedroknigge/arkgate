@@ -100,8 +100,11 @@ Sensors:
 ```bash
 npx arkgate-check --plan
 npx arkgate-check --coverage
-npx arkgate-check --doctor --json
+npx arkgate-check --doctor --json   # improvementCompass (notAScore lenses) + status light
 ```
+
+Doctor residual lenses never flip `valid` / strict-merge alone. Product path:
+[use.md — Improvement compass](use.md#improvement-compass-not-a-score).
 
 Agent reference (tools, skills, dual path): [agent-guide.md](agent-guide.md).
 
@@ -122,8 +125,8 @@ npx arkgate-check --doctor --json
 npx arkgate-check --plan --json
 npx arkgate-check --coverage
 npx arkgate-check --baseline
-npx arkgate status --json           # ACS03 session/project snapshot (not a score)
-npx arkgate agents-md               # ACS04 preview managed AGENTS block
+npx arkgate status --json           # session/project snapshot (not a score)
+npx arkgate agents-md               # preview managed AGENTS block
 npx arkgate agents-md --write       # embed/refresh projection markers
 npx arkgate preflight --changes changes.json --json
 npx arkgate upgrade --json          # managed content preview

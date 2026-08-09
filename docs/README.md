@@ -19,10 +19,10 @@ Product site: [arkgate.online](https://www.arkgate.online/) · npm: [`arkgate`](
 ### Use (product)
 | Doc | What it is |
 |-----|------------|
-| [use.md](use.md) | One flow: install → doctor → day-to-day |
+| [use.md](use.md) | One flow: install → doctor (+ improvement compass) → day-to-day |
 | [enthusiast/](enthusiast/README.md) | Tutorials and plain-language track |
 | [demos/](demos/) | Short end-to-end demos |
-| [product-voice.md](product-voice.md) | How ArkGate should sound in English UI |
+| [product-voice.md](product-voice.md) | How ArkGate should sound in English UI (compass = lenses, not scores) |
 
 ### Develop (integrate)
 | Doc | What it is |
@@ -53,7 +53,7 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Area | Path |
 |------|------|
 | Release notes (by version) | [releases/](releases/) · [CHANGELOG.md](../CHANGELOG.md) |
-| Epic plans (seeded + shipped) | [plans/](plans/) · [agent contract surface 4.3](plans/agent-contract-surface-4.3/README.md) (Phase ACS → **4.3.0 published**; product voice: [guardrail catalog + scan/process](product-voice.md#scan-vs-process-dual-depth)); prior: [workspace identity](plans/workspace-identity-activation-truth/README.md) (WI / **4.2.0**; npm **4.2.1**) |
+| Epic plans (seeded + shipped) | [plans/](plans/) — maintainer seeds (e.g. improvement compass for **4.4.0**, agent contract surface for **4.3.0**). Product how-to stays in use/develop/agent-guide; plans are not required reading to use the package. |
 | Claims audit | [audit/claims-matrix.md](audit/claims-matrix.md) |
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |

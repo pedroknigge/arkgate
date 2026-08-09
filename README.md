@@ -43,10 +43,13 @@ npx arkgate-check --doctor        # control plane: status light + primary next a
 ```
 
 That is the product. Doctor is the control plane — when stuck, do **primary next action #1**.
+Doctor also shows an **improvement compass** (architecture lenses such as separation of concerns and
+dependency inversion — **not a score**). Residual lenses mean Shape work may remain even when edges
+are green. Details: [use.md — Improvement compass](docs/use.md#improvement-compass-not-a-score).
 
 ```text
-start → doctor → day-to-day (place + gate)
-              ↘ optional /ark-autopilot after skill pack
+start → doctor (+ compass) → day-to-day (place + gate)
+                         ↘ optional /ark-autopilot after skill pack
 ```
 
 Aliases `ark` / `ark-check` / `ark-mcp` still work. npm / pnpm / yarn. No install lifecycle scripts.

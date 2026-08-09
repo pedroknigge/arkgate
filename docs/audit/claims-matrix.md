@@ -111,6 +111,8 @@ engineering `doing` — next pick is product residual or a new ROADMAP epic.
 | C-038 | Factory diagnostics carry stable `findingRef` + baseline-compatible `targetKey` (schema 1.5) | [Package surface](../package-surface.md) · [Agent guide](../agent-guide.md) | `adapterContract.ts` · multi-turn fixture | OK | ACS06 |
 | C-039 | Maintainer placement A/B eval exists under `eval/` with CI-safe dry mode; not a product score | [Eval guide](../../eval/README.md) · [placement-ab README](../../eval/placement-ab/README.md) | harness · fixtures · unit test | OK | ACS07 |
 | C-040 | AGENTS.md / skills / projection never decide pass/fail; gate remains CLI/hooks/CI | [Product voice](../product-voice.md) · plan ACS hard lines | analysis paths do not import projection | OK | ACS hard line |
+| C-041 | Doctor exposes improvement compass (`notAScore`) with locked out-of-scope lenses; residual never flips `valid` / strict-merge alone | [Use — compass](../use.md#improvement-compass-not-a-score) · [Package surface](../package-surface.md) | `improvementCompass.ts` · doctor adapter · unit tests | OK | prep for 4.4.0 (tree) |
+| C-042 | Public product lanes describe compass + Align/Stabilize/Shape without roadmap-item narrative | [Use](../use.md) · [Agent guide](../agent-guide.md) · [product-voice](../product-voice.md) | README / use / agent-guide / CHANGELOG Unreleased | OK | product-docs hygiene |
 
 ## Contradicted / Partial owners (ACS08 close)
 

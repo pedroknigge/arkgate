@@ -875,7 +875,7 @@ Boundary:
 | 120 | `IC03` | `done` | M | `IC02` | Doctor human + JSON `improvementCompass`; optional status additive field; no verdict change |
 | 121 | `IC04` | `done` | S | `IC03` | HTML report advisory compass section + reportParity |
 | 122 | `IC05` | `done` | L | `IC01` (finish after `IC03` for JSON-aware prose) | Deepen 13 skills + compact router (vibe-coder path, compass routing, anti false-done); agent-skills 1:1 |
-| 123 | `IC06` | `todo` | M | `IC03`–`IC05` | **Product-docs hygiene:** public lanes product-only (no roadmap codes); use/develop/agent-guide/skills/CLI human; claims prep |
+| 123 | `IC06` | `done` | M | `IC03`–`IC05` | **Product-docs hygiene:** public lanes product-only (no roadmap codes); use/develop/agent-guide/skills/CLI human; claims prep |
 | 124 | `IC07` | `todo` | S | `IC02`–`IC06` | CHANGELOG + release notes in **product voice**, package-surface, version **4.4.0**, publish train |
 
 **IC01 — Plan lock and product voice**
@@ -957,7 +957,7 @@ router still ≤ one primary door for messy residual.
 
 **IC06 — Product documentation hygiene + claims prep**
 
-- **Status:** `todo`
+- **Status:** `done` (2026-08-09)
 - **Depends on:** `IC03`–`IC05`
 
 **Outcome (owner mandate for 4.4.0+):** public product documentation is **about the product and
@@ -991,6 +991,10 @@ product-reproducible.
 
 **Evidence lives in:** plan section
 [IC06 — Product documentation policy](docs/plans/improvement-compass/README.md#ic06--product-documentation-policy-release-440).
+
+**Evidence (implementation):** README + use.md compass/Align–Shape; agent-guide + develop product
+language; CHANGELOG Unreleased product bullets (prepared, not published); claims C-041/C-042;
+skills/router product-only (no roadmap codes).
 
 **IC07 — Release 4.4.0**
 
@@ -3333,11 +3337,11 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: (none) — next pick IC06 (product-docs hygiene)
+Engineering doing: (none) — next pick IC07 (4.4.0 release train — version/CHANGELOG/publish)
   Epic: Phase IC — Improvement Compass → arkgate@4.4.0 (active)
   Plan: docs/plans/improvement-compass/README.md (Accepted / engineering active)
-  Queue: IC01–IC05 done; IC06–IC07 todo; sole engineering epic for 4.4.0
-  Last closed epic item: IC05 (skills + compact router deepen)
+  Queue: IC01–IC06 done; IC07 todo; sole engineering epic for 4.4.0
+  Last closed epic item: IC06 (product-docs hygiene + claims prep)
   Prior closed epic: Phase ACS ACS01–ACS08 → arkgate@4.3.0 published
   Later trains on main (historical): CI hygiene (#113); 4.2.1 Next proxy (#114)
 Released baseline: npm arkgate@4.3.0 on latest (gitHead 65f95a0; tag v4.3.0; 2026-08-09)

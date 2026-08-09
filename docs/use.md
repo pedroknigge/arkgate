@@ -93,7 +93,7 @@ list: [configuration.md](configuration.md).
 
 That is **Shape** work (plan B) — suggested, never auto-applied as silent magic.
 
-1. Doctor confirms design-weak  
+1. Doctor confirms design-weak (and residual lenses on the improvement compass)  
 2. Guided map / dual plan (skill pack: `/ark-explore` then `/ark-autopilot` with your OK)  
 3. One pilot at a time · re-run doctor  
 
@@ -102,6 +102,41 @@ Install skills only when you want that guided path:
 ```bash
 npx arkgate-check --install-agent-gates --skills-only --force
 ```
+
+---
+
+## Improvement compass (not a score)
+
+Doctor shows an **improvement compass**: a closed set of architecture **lenses** (separation of
+concerns, dependency inversion, domain alignment, …) projected from existing sensors.
+
+```text
+Improvement compass (not a score)
+  Residual: Separation of concerns · Dependency inversion · Domain alignment
+  Out of scope (honest): Scalability · App security tooling · Full resilience patterns
+  Next: /ark-explore — one pilot at a time after map
+```
+
+| Fact | Meaning |
+|------|---------|
+| Always `notAScore` | No 0–10, no Excellent/Good ranks, no averages |
+| Residual lenses | What still matters for cleaner, AI-easy code |
+| Out of scope | Performance/APM, SAST, full resilience — use other tools |
+| Never a gate input | Residual alone does **not** fail CI or flip `valid` |
+
+JSON: `ark-check --doctor --json` → `doctor.improvementCompass` (full lenses + `topResidual`).  
+Human doctor prints the short section above.
+
+### Align → Stabilize → Shape
+
+| Phase | Goal | Done when (plain English) |
+|-------|------|---------------------------|
+| **Align** | Contract matches the tree | Include/layers honest; no false-green freeze |
+| **Stabilize** | Edges under Enforce | Real debt only in baseline; write path + CI honest |
+| **Shape** | One golden pattern + pilots | Residual lenses shrink pilot by pilot — never silent multi-pilot |
+
+Green edges under **Enforce · design-weak** mean Align/Stabilize may be fine while Shape remains open.
+Empty plan A is **not** “architecture finished.”
 
 ---
 
@@ -118,6 +153,7 @@ npx arkgate-check --install-agent-gates --skills-only --force
 | Need | Doc |
 |------|-----|
 | Hosts, CI, MCP, brownfield, power CLI | [develop.md](develop.md) |
+| Agent/CLI/MCP reference (status, skills, compass JSON) | [agent-guide.md](agent-guide.md) |
 | Wire a specific agent host | [ai-gates.md](ai-gates.md) |
 | Improve the library | [CONTRIBUTING.md](../CONTRIBUTING.md) |
 
