@@ -12,6 +12,12 @@ in the immutable pre-2.0 archive linked below.
   generated CLI mirror `bin/lib/diagnostic-catalog.mjs`, root exports (`DIAGNOSTIC_CATALOG`,
   `getDiagnosticCatalogEntry`, `diagnosticDocsPath`, …). Remediation/parity fixtures forbid
   unknown production codes. No new rule semantics — cataloguing only.
+- **Unified status manifest (ACS03):** `ark status --json` (+ MCP `ark_status`) returns one
+  session/project snapshot — identity binding, honest write-path activation, last-check summary,
+  ArkRules residual counts, primary next action. Domain `src/domain/statusManifest.ts`, generated
+  pure `bin/lib/status-manifest.mjs`, schema `arkgate/schema/status-manifest`, root exports
+  (`buildStatusManifest`, `ARK_STATUS_MANIFEST_SCHEMA`, …). Never prompts; `CI=1` forces JSON.
+  Optional `--expected-root` / `--expected-project-id` for matched vs stale identity. Not a score.
 
 ## 4.2.1 — 2026-08-08 (published)
 

@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-08 (Phase ACS — ACS01 done; Engineering doing: ACS02)
+- **Status date:** 2026-08-08 (Phase ACS — ACS01–ACS02 done; engineering doing: ACS03)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -649,8 +649,8 @@ Boundary:
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 110 | `ACS01` | `done` | S | `WI01` + 4.2.1 published | Plan locked; product-voice guardrail/catalog + scan/process language; freeze restated for 4.3.0 |
-| 111 | `ACS02` | `doing` | M | `ACS01` | Public diagnostic code catalog (stable `ruleId` → why/fix/docs anchors); remediation parity; fixtures |
-| 112 | `ACS03` | `todo` | M | `ACS01` | `ark status --json` (+ MCP parity if required); schema export; identity/activation/last-check/rules counts; CI no-prompt |
+| 111 | `ACS02` | `done` | M | `ACS01` | Public diagnostic code catalog (stable `ruleId` → why/fix/docs anchors); remediation parity; fixtures |
+| 112 | `ACS03` | `doing` | M | `ACS01` | `ark status --json` (+ MCP parity if required); schema export; identity/activation/last-check/rules counts; CI no-prompt |
 | 113 | `ACS04` | `todo` | M | `ACS02` | Version-matched agent contract projection; install/upgrade path; drift tests; labeled non-enforcement |
 | 114 | `ACS05` | `todo` | M | `ACS01` | Agent Skills–compatible packaging of existing 13 skills; agent-guide ecosystem install; no new names |
 | 115 | `ACS06` | `todo` | M | `ACS02`, `ACS03` | Stable finding refs on CLI JSON / MCP / repair payload; multi-turn fixture |
@@ -676,7 +676,7 @@ is `ACS02` only (no competing engineering epic).
 
 **ACS02 — Diagnostic code catalog**
 
-- **Status:** `doing`
+- **Status:** `done` (2026-08-08)
 - **Depends on:** `ACS01`
 
 **Outcome:** every public `ruleId` emitted by the gate has a stable catalog entry with agent- and
@@ -687,9 +687,21 @@ forbid unknown codes on fixtures.
 remediation and catalog cannot drift (parity test); no new rule semantics beyond cataloguing
 existing codes.
 
+**Evidence:** Domain `src/domain/diagnosticCatalog.ts` (schema `1.0`, closed `DIAGNOSTIC_CATALOG`
+with why/fix/`docsAnchor`); generated pure `bin/lib/diagnostic-catalog.mjs` (`check:cli-pure`
+green); public docs [diagnostics.md](docs/diagnostics.md) (`id="RULE_ID"` anchors); root API
+exports via `src/index.ts` / `src/gate.ts`; package surface + agent-guide + docs hub rows;
+CHANGELOG Unreleased ACS02 note; fixture
+`tests/fixtures/diagnostic-catalog/production-rule-ids.json` +
+`tests/unit/domain/diagnosticCatalog.test.ts` (catalog uniqueness, CLI parity, remediation
+specialized-code coverage, docs anchors, forbid unknown production codes). Commit `eacff4c`.
+Local verify: focused catalog tests 13/13, `check:cli-pure`, `typecheck`, `check:architecture`.
+No new rule semantics — cataloguing only. Next engineering pick: `ACS03` or `ACS05` (both deps
+only `ACS01`).
+
 **ACS03 — Unified status manifest**
 
-- **Status:** `todo`
+- **Status:** `doing`
 - **Depends on:** `ACS01`
 
 **Outcome:** one machine-readable status snapshot for agents: project identity binding, honest
@@ -3089,17 +3101,17 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: ACS02
+Engineering doing: ACS03 (unified status manifest — ark status --json)
   Epic: Phase ACS — Agent contract surface → npm 4.3.0
   Plan: docs/plans/agent-contract-surface-4.3/README.md (Accepted / engineering active)
-  Queue: ACS01 done → ACS02 (doing) → ACS03/ACS05 → ACS04/ACS06/ACS07 → ACS08 publish
-  Last closed epic item: ACS01 (plan lock + product voice + freeze restated for 4.3.0)
-  Prior closed: WI01 (Phase WI) — shipped 4.2.0; patch 4.2.1 published
+  Queue: ACS01–ACS02 done → ACS03 (doing) → ACS05/ACS04/ACS06/ACS07 → ACS08 publish
+  Last closed epic item: ACS02 (public diagnostic code catalog + remediation/docs parity)
+  Prior closed: ACS01 (plan lock + product voice); WI01 (Phase WI) — 4.2.0; patch 4.2.1
   Later trains on main (not separate ROADMAP rows): CI hygiene profile (#113);
     4.2.1 Next.js 16.3 root proxy.ts include + eval pins (#114) — published
 Released baseline: npm arkgate@4.2.1 on latest (gitHead b2f02c9; tag v4.2.1; 2026-08-08)
   Notes: docs/releases/4.2.1.md — Status: published (OIDC Trusted Publishing)
-  Target next release: 4.3.0 (Phase ACS) — active item ACS02 (diagnostic code catalog)
+  Target next release: 4.3.0 (Phase ACS) — sole engineering doing ACS03 (status --json)
 Phase AR (v4 train, AR01–AR19 done): historical plan once mapped AR17–19 to "4.3.0"; those
   items closed without a separate 4.3.0 tag — 4.3.0 is now ACS
 Phase EH (EH01–EH08 done): 4.1.1; Phase WI (WI01 done): 4.2.0; patch 4.2.1
@@ -3108,7 +3120,8 @@ Claim gate: `Z09` (`parked`) — residual RB-11 only (retained adoption + indepe
 Closed in 3.8.0: Z01–Z08, Z10; RB-07–RB-10, RB-12
 Product hard line: no false hard write on Cursor/Codex/OpenCode; no plan-B auto-apply
   ACS hard line: no LLM verdict; no new skill names; projection never enforces;
-  freeze restated ACS01 (catalog/scan-process voice in docs/product-voice.md)
+  freeze restated ACS01 (catalog/scan-process voice in docs/product-voice.md);
+  ACS02 catalog closed at src/domain/diagnosticCatalog.ts + docs/diagnostics.md
 Not product backlog: god-module / plan-B residual (judgment only)
 Parked: Y09, Y07 (low), Y10 (archive until field demand + ADR), K01 runtime
   Later seeds (not ACS): konsistent-class sensor, adopt disk stages, mechanical one-shot CLI

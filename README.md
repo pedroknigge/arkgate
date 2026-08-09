@@ -157,6 +157,7 @@ expectation.
 
 ```bash
 npx arkgate start --apply
+npx arkgate status --json          # session/project snapshot (identity, activation, last check)
 npx arkgate-check --doctor
 npx arkgate-check --plan
 npx arkgate-check --coverage

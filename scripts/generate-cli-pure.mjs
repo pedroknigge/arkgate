@@ -11,6 +11,8 @@
  *                                 → schemas/ark.analysis-result.schema.json
  *   src/domain/projectIdentity.ts → bin/lib/project-identity.mjs
  *                                 → schemas/ark.project-identity.schema.json
+ *   src/domain/statusManifest.ts  → bin/lib/status-manifest.mjs
+ *                                 → schemas/ark.status-manifest.schema.json
  *   src/domain/resolvedCandidateFactsSchema.ts → schemas/ark.resolved-candidate-facts.schema.json
  *
  * Layer match remains scripts/generate-layer-match.mjs (R1).
@@ -85,6 +87,13 @@ const MODULES = [
     schemaDerived: 'schemas/ark.project-identity.schema.json',
     schemaExport: 'ARK_PROJECT_IDENTITY_SCHEMA',
     label: 'versioned MCP project identity + binding contract',
+  },
+  {
+    canonical: 'src/domain/statusManifest.ts',
+    derived: 'bin/lib/status-manifest.mjs',
+    schemaDerived: 'schemas/ark.status-manifest.schema.json',
+    schemaExport: 'ARK_STATUS_MANIFEST_SCHEMA',
+    label: 'unified status manifest (ACS03)',
   },
   {
     canonical: 'src/domain/sourcePolicy.ts',

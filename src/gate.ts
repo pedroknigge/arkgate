@@ -237,3 +237,23 @@ export {
   type DiagnosticCatalogEntry,
   type DiagnosticCategory,
 } from './domain/diagnosticCatalog';
+
+export {
+  ARK_STATUS_MANIFEST_SCHEMA,
+  ARK_STATUS_MANIFEST_SCHEMA_URL,
+  ARK_STATUS_MANIFEST_SCHEMA_VERSION,
+  buildStatusManifest,
+  classifyStatusWritePath,
+  defaultHonestLabel,
+  evaluateStatusBinding,
+  resolveStatusNextAction,
+  type StatusActivationSlice,
+  type StatusCheckVerdict,
+  type StatusLastCheckSlice,
+  type StatusManifest,
+  type StatusManifestFacts,
+  type StatusNextAction,
+  type StatusProjectIdentitySlice,
+  type StatusRulesSlice,
+  type StatusWritePathClass,
+} from './domain/statusManifest';

@@ -33,6 +33,8 @@
     "./schema/ark.design-delta.schema.json": "./schemas/ark.design-delta.schema.json",
     "./schema/arkrules": "./schemas/ark.arkrules.schema.json",
     "./schema/ark.arkrules.schema.json": "./schemas/ark.arkrules.schema.json",
+    "./schema/status-manifest": "./schemas/ark.status-manifest.schema.json",
+    "./schema/ark.status-manifest.schema.json": "./schemas/ark.status-manifest.schema.json",
     "./package.json": "./package.json"
   },
   "bin": {

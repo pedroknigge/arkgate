@@ -53,6 +53,20 @@ path is authoritative only when that matching project id is also supplied. Only
 `binding.status: "matched"` with `authoritative: true` is authoritative; calls that omit the
 expectation remain compatible but are explicitly `unverified`.
 
+**Unified status snapshot (4.3 / ACS03):** for one machine-readable session/project manifest
+(identity binding, honest write-path activation, last-check summary, rules residual counts,
+primary next action) use:
+
+```bash
+npx ark status --json
+# optional identity check (matched vs stale):
+npx ark status --json --expected-root /abs/project/root
+```
+
+MCP parity tool: **`ark_status`** (same envelope; pass `project.expectedRoot` after `ark_identity`).
+Schema: `arkgate/schema/status-manifest`. Never prompts; under `CI=1` JSON is forced. **Not a
+score** — counts and verdicts only.
+
 ## Architecture playbook and `ark-check --recommend`
 
 Before generating project structure, agents should read the **tool-agnostic application

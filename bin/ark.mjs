@@ -33,6 +33,7 @@ import {
   readChangeSetFile,
   renderChangePreflight,
 } from './lib/prepare-change.mjs';
+import { runStatusCommand } from './lib/status-command.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
@@ -81,6 +82,8 @@ function parseArgs(argv) {
     skipPackageManager: false,
     removeHost: undefined,
     requireWriteHook: undefined,
+    expectedRoot: undefined,
+    expectedProjectId: undefined,
     help: false,
     version: false,
   };
@@ -127,6 +130,8 @@ function parseArgs(argv) {
     else if (arg === '--require-write-hook') {
       args.requireWriteHook = requireValue(arg, i++).trim().toLowerCase();
     }
+    else if (arg === '--expected-root') args.expectedRoot = path.resolve(requireValue(arg, i++));
+    else if (arg === '--expected-project-id') args.expectedProjectId = requireValue(arg, i++);
     else if (arg === '--help' || arg === '-h' || arg === 'help') args.help = true;
     else if (arg === '--version' || arg === '-V') args.version = true;
     else if (!arg.startsWith('-') && args.command === undefined) args.command = arg;
@@ -143,6 +148,8 @@ function usage() {
               [--archetype <playbook-id>] [--tools <list>] [--require-write-hook <host>] [--yes] [--force] [--no-strict]
   ark upgrade [--root <project>] [--tools <list>] [--apply] [--plan-digest <sha256>] [--accept-conflicts] [--json] [--no-install] [--no-strict]
   ark preflight --changes <change-set.json> [--change-map <map.json>] [--root <project>] [--config ark.config.json] [--manifest <manifest.json>] [--tsconfig <tsconfig.json>] [--json]
+  ark status  [--root <project>] [--config ark.config.json] [--json]
+              [--expected-root <abs>] [--expected-project-id sha256:…] [--tools <host>]
 
 Commands:
   start     New here? Analyze and preview the complete setup. Read-only unless --apply.
@@ -152,6 +159,8 @@ Commands:
             --apply --no-install applies those exact bytes and verifies them.
             (alias: ark update)
   preflight Validate one atomic create/update/delete set without writing project files.
+  status    Unified session/project manifest (identity, activation, last check, rules).
+            Never prompts. Prefer --json for agents; CI=1 forces JSON.
 
 Options:
   --yes        Non-interactive defaults: create config if needed, install gate templates, run strict check.
@@ -164,7 +173,9 @@ Options:
   --accept-conflicts
                 Allow upgrade to recreate deleted managed assets or replace recorded conflicts.
   --plan-digest Digest emitted by an upgrade preview; required to apply managed bytes.
-  --json        Emit the start/upgrade preview as deterministic machine-readable JSON.
+  --json        Emit the start/upgrade/status preview as deterministic machine-readable JSON.
+  --expected-root / --expected-project-id
+                Optional project expectation for status (MCP-compatible binding check).
   --preset     Start from a named architecture preset instead of detection.
   --archetype  Application shape from templates/architecture-playbook.json (maps to the matching preset).
                Valid ids: crud-product, api-backend, frontend-surface, library-sdk, cli-utility,
@@ -898,6 +909,18 @@ async function main() {
       console.error(error instanceof Error ? error.message : String(error));
       return 2;
     }
+  }
+
+  if (args.command === 'status') {
+    return runStatusCommand({
+      root: args.root,
+      config: args.config,
+      json: args.json,
+      expectedRoot: args.expectedRoot,
+      expectedProjectId: args.expectedProjectId,
+      host: args.tools,
+      arkgateVersion: cliVersion(),
+    });
   }
 
   console.error(`Unknown command: ${args.command}`);

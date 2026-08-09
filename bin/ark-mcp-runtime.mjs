@@ -36,6 +36,8 @@ import {
   createProjectId,
   createProjectIdentity,
 } from './lib/project-identity.mjs';
+import { buildProjectStatusManifest } from './lib/status-command.mjs';
+import { ARK_STATUS_MANIFEST_SCHEMA } from './lib/status-manifest.mjs';
 
 function arkRulesCatalogForManifest(snapshot) {
   if (snapshot?.errors?.length || !snapshot?.arkRules) return {};
@@ -2143,6 +2145,25 @@ export async function runArkMcp({ hookInput } = {}) {
         '— never a numeric score. Same plane as ark-check --rules-inventory.',
       inputSchema: { type: 'object', properties: {} },
     },
+    {
+      name: 'ark_status',
+      description:
+        'Unified session/project status manifest (ACS03): project identity binding, honest write-path ' +
+        'activation, last-check summary, ArkRules residual counts, and primary next action. Same ' +
+        'envelope as `ark status --json`. Never prompts; never a numeric score. Prefer after ' +
+        'ark_identity so project.expectedRoot is bound.',
+      inputSchema: { type: 'object', properties: {} },
+      outputSchema: {
+        type: 'object',
+        additionalProperties: true,
+        properties: {
+          status: ARK_STATUS_MANIFEST_SCHEMA,
+          projectIdentity: projectIdentityOutputSchema,
+          binding: PROJECT_BINDING_SCHEMA,
+          authoritative: { type: 'boolean' },
+        },
+      },
+    },
   ];
 
   for (const tool of TOOLS) {
@@ -2664,6 +2685,48 @@ export async function runArkMcp({ hookInput } = {}) {
     }
   }
 
+  function runStatusTool(_params, binding) {
+    try {
+      const status = buildProjectStatusManifest({
+        root: args.root,
+        config: path.basename(configPath) === 'ark.config.json' ? 'ark.config.json' : configPath,
+        expectedRoot: binding?.expectedRoot ?? _params?.arguments?.project?.expectedRoot,
+        expectedProjectId:
+          binding?.expectedProjectId ?? _params?.arguments?.project?.expectedProjectId,
+        arkgateVersion: ark.version,
+      });
+      // Prefer MCP binding status when the tool framework already evaluated expectation.
+      if (binding && typeof binding.status === 'string') {
+        status.projectIdentity.binding = binding.status;
+        status.projectIdentity.authoritative = binding.authoritative === true;
+        if (binding.code) status.projectIdentity.code = binding.code;
+        if (binding.message) status.projectIdentity.message = binding.message;
+        if (binding.status === 'mismatch') {
+          status.nextAction = {
+            id: 'rebind-project-identity',
+            summary:
+              binding.message ||
+              'Project expectation does not match this MCP process — re-run ark_identity with the correct root.',
+          };
+        }
+      }
+      const payload = {
+        ok: binding?.status !== 'mismatch',
+        status,
+      };
+      return {
+        content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }],
+        structuredContent: payload,
+        isError: binding?.status === 'mismatch',
+      };
+    } catch (error) {
+      return {
+        content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
+        isError: true,
+      };
+    }
+  }
+
   function runRulesInventoryTool() {
     try {
       const governed = collectGovernedFiles(args.root, config);
@@ -2772,6 +2835,7 @@ export async function runArkMcp({ hookInput } = {}) {
     ark_recommend: runRecommendTool,
     ark_suggest_include: runSuggestIncludeTool,
     ark_rules_inventory: runRulesInventoryTool,
+    ark_status: runStatusTool,
   };
 
   const send = (msg) => process.stdout.write(`${JSON.stringify(msg)}\n`);
