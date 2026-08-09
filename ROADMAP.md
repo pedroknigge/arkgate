@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-09 (Phase ACS — ACS01–ACS08 prepare done; 4.3.0 publish pending)
+- **Status date:** 2026-08-09 (Phase ACS — ACS01–ACS08 done; **arkgate@4.3.0 published**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -655,7 +655,7 @@ Boundary:
 | 114 | `ACS05` | `done` | M | `ACS01` | Agent Skills–compatible packaging of existing 13 skills; agent-guide ecosystem install; no new names |
 | 115 | `ACS06` | `done` | M | `ACS02`, `ACS03` | Stable finding refs on CLI JSON / MCP / repair payload; multi-turn fixture |
 | 116 | `ACS07` | `done` | M | `ACS05` | Maintainer A/B eval (placement with gates vs without) under `eval/`; documented results path |
-| 117 | `ACS08` | `done` | S | `ACS02`–`ACS07` | Claims matrix + public lanes; CHANGELOG; release notes; **4.3.0 prepared** (npm publish maintainer follow-up) |
+| 117 | `ACS08` | `done` | S | `ACS02`–`ACS07` | Claims matrix + public lanes; CHANGELOG; release notes; **4.3.0 published** |
 
 **ACS01 — Plan lock and product voice**
 
@@ -841,9 +841,9 @@ published `arkgate@4.3.0` on `latest`.
 
 **Evidence (prepare):** claims matrix 2026-08-09 — **0 Contradicted** for ACS statements
 (C-034–C-040 OK; C-028 Partial remains Z09/RB-11 only). Public lanes (README, docs hub,
-package-surface, CONTRIBUTING, Agents.md) name **4.3.0 prepared** while npm `latest` stays
-**4.2.1**. CHANGELOG `## 4.3.0 — 2026-08-09 (prepared)`; [docs/releases/4.3.0.md](docs/releases/4.3.0.md)
-**Status: prepared** with publication checklist unchecked. Tree version identity bumped to
+package-surface, CONTRIBUTING, Agents.md) name **4.3.0 published** on npm `latest`.
+CHANGELOG `## 4.3.0 — 2026-08-09`; [docs/releases/4.3.0.md](docs/releases/4.3.0.md)
+**Status: published**. Tree version identity is
 `4.3.0` (package/lock/`src/version.ts`/`server.json`). **Does not claim npm-published** until
 Trusted Publishing + status flip (honest prepared≠published). Maintainer follow-up: CI green →
 signed tag `v4.3.0` → `publish-npm.yml` → flip status to published → MCP publisher.
@@ -3179,17 +3179,17 @@ folded into Phase C implementation work.
 
 ```text
 Engineering doing: (none) — Phase ACS prepare complete; maintainer publish 4.3.0 open
-  Epic: Phase ACS — Agent contract surface → arkgate@4.3.0 prepared
-  Plan: docs/plans/agent-contract-surface-4.3/README.md (Shipped / prepared; npm pending)
+  Epic: Phase ACS — Agent contract surface → arkgate@4.3.0 published
+  Plan: docs/plans/agent-contract-surface-4.3/README.md (Shipped / published)
   Queue: ACS01–ACS08 done (prepare); no competing engineering todo for ACS
-  Last closed epic item: ACS08 (claims matrix + CHANGELOG + docs/releases/4.3.0.md prepared)
+  Last closed epic item: ACS08 (claims matrix + CHANGELOG + docs/releases/4.3.0.md published)
   Prior closed: ACS07 (placement A/B); ACS06 (finding refs); ACS05 (skills); ACS04 (projection);
     ACS03 (status); ACS02 (catalog); ACS01; WI01 — 4.2.0; patch 4.2.1
   Later trains on main (not separate ROADMAP rows): CI hygiene profile (#113);
     4.2.1 Next.js 16.3 root proxy.ts include + eval pins (#114) — published
-Released baseline: npm arkgate@4.2.1 on latest (gitHead b2f02c9; tag v4.2.1; 2026-08-08)
-  Notes: docs/releases/4.2.1.md — Status: published (OIDC Trusted Publishing)
-  Prepared candidate: 4.3.0 (Phase ACS) — docs/releases/4.3.0.md Status: prepared
+Released baseline: npm arkgate@4.3.0 on latest (gitHead 65f95a0; tag v4.3.0; 2026-08-09)
+  Notes: docs/releases/4.3.0.md — Status: published (OIDC Trusted Publishing)
+  Prior ship: 4.2.1 (b2f02c9 / v4.2.1) — docs/releases/4.2.1.md (superseded on latest)
   Publish follow-up: signed tag v4.3.0 + publish-npm.yml + status flip (not engineering doing)
 Phase AR (v4 train, AR01–AR19 done): historical plan once mapped AR17–19 to "4.3.0"; those
   items closed without a separate 4.3.0 tag — 4.3.0 is now ACS

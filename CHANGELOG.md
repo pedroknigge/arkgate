@@ -5,14 +5,13 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
-## 4.3.0 — 2026-08-09 (prepared)
+## 4.3.0 — 2026-08-09
 
 **Minor** over 4.2.1. Phase ACS — agent contract surface: diagnostic code catalog, unified
 status snapshot, version-matched agent projection, Agent Skills packaging of the existing 13
 skills, stable finding refs, and maintainer placement A/B eval. **No required config migration.**
 Codex remains advisory at write time. Skills and AGENTS projection never enforce. Z09 / RB-11
-remain open. **Status: prepared** (`arkgate@4.3.0` not published yet; **4.2.1** remains on npm
-`latest` until publication).
+remain open. **Status: published** (`arkgate@4.3.0` on npm `latest`).
 
 ### Added
 
@@ -58,15 +57,14 @@ remain open. **Status: prepared** (`arkgate@4.3.0` not published yet; **4.2.1** 
 ### Docs / claims (ACS08)
 
 - Claims matrix refreshed for 4.3.0 agent-contract statements (**0 Contradicted** on public
-  lanes). Release notes at `docs/releases/4.3.0.md` (**Status: prepared**). Public lanes name
-  the prepared candidate while npm `latest` remains **4.2.1** until Trusted Publishing.
+  lanes). Release notes at `docs/releases/4.3.0.md` (**Status: published**). npm `latest` is **4.3.0**.
 
 ## 4.2.1 — 2026-08-08 (published)
 
 **Patch** over 4.2.0. Next.js **16.3** field compatibility: root `proxy.ts` (Next 16 network-boundary
 rename of middleware) is scanned and classified; eval fixtures and release-surface pins track
 `next@16.3.0`. **No required config migration.** Codex remains advisory at write time.
-**Status: published** (`arkgate@4.2.1` on npm `latest`).
+**Status: published** (`arkgate@4.2.1`; superseded by 4.3.0 on `latest`).
 
 ### Fixed
 

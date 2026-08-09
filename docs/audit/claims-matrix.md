@@ -4,7 +4,7 @@
 > [docs/package-surface.md](../package-surface.md) · Decisions: [docs/adr/](../adr/README.md)
 > **Code and manifests are the source of truth.** Documentation does not override implementation.
 
-**Date:** 2026-08-09 (4.3.0 prepared — Phase ACS / ACS08 over the 4.2.1 published baseline)<br>
+**Date:** 2026-08-09 (4.3.0 published — Phase ACS / ACS08 on npm latest)<br>
 **Scope:** project (public lanes + bounded package surfaces) — Phase ACS claims + prior EH/WI<br>
 **Intent:** audit → selective documentation + honesty evidence (ACS08 release prepare)<br>
 **Variant:** ArkGate bridge (`ark.config.json`, local CLIs, project-bound `ark_manifest`,
@@ -49,11 +49,11 @@ keep Z09 parked; field kit stays scaffolding-only.
 
 | Lane | Authority paths | Checklist / result |
 |------|-----------------|--------------------|
-| Front door | `README.md` | Host matrix unchanged; dual bins; version strip names **4.3.0 prepared** while npm `latest` stays **4.2.1** |
+| Front door | `README.md` | Host matrix unchanged; dual bins; version strip names **4.3.0 published** on npm `latest` |
 | Use | `docs/use.md`, `docs/product-voice.md` | Doctor control plane; soft-host honesty; product-voice ACS guardrail catalog + scan/process |
 | Develop | `docs/develop.md`, `docs/ai-gates.md`, `docs/agent-guide.md`, `docs/configuration.md`, `docs/package-surface.md` | Status/projection/skills/catalog/finding-refs documented; schema 1.5; soft hosts advisory |
 | Contribute | `CONTRIBUTING.md`, `ROADMAP.md` Next session, `Agents.md` plans | ACS01–ACS08 prepare done; publish checklist open; Z09 parked claim gate only |
-| Releases | `CHANGELOG.md`, `docs/releases/*` | 4.3.0 **Status: prepared**; 4.2.1 **Status: published** on npm `latest` |
+| Releases | `CHANGELOG.md`, `docs/releases/*` | 4.3.0 **Status: published** on npm `latest`; 4.2.1 prior |
 | Templates | `action.yml`, generated workflow, `templates/agent-skills/` | First-push-safe base-ref; Agent Skills layout for same 13 names |
 | Audit | this file | **0 Contradicted** on public lanes; new ACS rows OK |
 
@@ -63,7 +63,7 @@ keep Z09 parked; field kit stays scaffolding-only.
 - [x] Host support table matches matrix (Codex/Cursor/OpenCode advisory; repair envelope split)
 - [x] Required merge boundary = **required status context**, not “CI file present”
 - [x] Dual bins consistent
-- [x] Version strip: **prepared 4.3.0** candidacy named; npm `latest` still **4.2.1** (honest prepared≠published)
+- [x] Version strip: **4.3.0 published** on npm `latest` (gitHead 65f95a0 / tag v4.3.0)
 - [x] Links resolve into use/develop/docs hub
 - [x] No hard-write lie for Codex
 
@@ -90,7 +90,7 @@ keep Z09 parked; field kit stays scaffolding-only.
 | C-017 | Project TS5/6/7 compilers stay project-owned with fail-closed incomplete analysis | [TypeScript support](../typescript-support.md) | typescript host · packed matrix | OK | keep |
 | C-018 | All retained plan seeds are indexed with current shipped status | [Hub plans](../../AGENTS.md#product-plans-library-epic-queue-seeds) | `docs/plans/` · ROADMAP | OK | ACS plan → prepared when ACS08 closes |
 | C-019 | Accepted ADRs are navigable without duplicating their rationale | [ADR index](../adr/README.md) | ADR frontmatter | OK | keep |
-| C-020 | Tree version identity is **4.3.0 prepared**; npm `latest` remains **4.2.1** published (`gitHead` `b2f02c9`) until Trusted Publishing | [4.3.0 notes](../releases/4.3.0.md) · [4.2.1 notes](../releases/4.2.1.md) | package/lock/version/server · npm registry | OK | prepared≠published discipline |
+| C-020 | Tree version identity and npm `latest` are **4.3.0** published (`gitHead` `65f95a0`, tag `v4.3.0`) | [4.3.0 notes](../releases/4.3.0.md) | package/lock/version/server · npm registry | OK | published |
 | C-021 | Links in shipped Markdown resolve inside the tarball or use repository URLs | Shipped README/docs | root `files` | OK | rerun on release |
 | C-022 | Nightly evaluation claims distinguish deterministic, opt-in live, and skipped cases | [Eval guide](../../eval/README.md) | nightly workflow · placement-ab | OK | ACS07 dry mode |
 | C-023 | Migration and runtime guidance uses current package boundaries | [Migration guide](../migrate-from-ark-runtime-kernel.md) | manifests | OK | keep |
@@ -130,11 +130,11 @@ authorities cited above.
 
 - Tree identity: package/lock/`src/version.ts`/`server.json` = **4.3.0**.
 - npm `arkgate@latest` remains **4.2.1** until Trusted Publishing (do not claim published).
-- Release notes: [docs/releases/4.3.0.md](../releases/4.3.0.md) **Status: prepared**.
-- CHANGELOG section `## 4.3.0 — 2026-08-09 (prepared)` covers ACS01–ACS07 surfaces.
+- Release notes: [docs/releases/4.3.0.md](../releases/4.3.0.md) **Status: published**.
+- CHANGELOG section `## 4.3.0 — 2026-08-09` covers ACS01–ACS08 surfaces.
 - Focused ACS unit suites (catalog, status, projection, skills, finding refs, placement-ab) green
-  under prior ACS item evidence; release-surface tests updated for 4.3.0 prepared train.
-- Public lanes (README, docs hub, package-surface, CONTRIBUTING, Agents.md) name prepared
+  under prior ACS item evidence; release-surface tests updated for 4.3.0 published train.
+- Public lanes (README, docs hub, package-surface, CONTRIBUTING, Agents.md) name published
   candidate without claiming npm `latest`.
 - MCP parity closed for C-006/C-035: agent-guide documents **thirteen** tools including
   `ark_status`; tools/list exact expectation + `ark_status` tools/call smoke in
