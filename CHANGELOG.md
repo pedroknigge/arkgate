@@ -5,20 +5,25 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
-### Planned — 4.4.0 (not published)
+## 4.4.0 — 2026-08-09
 
-Minor over 4.3.0. **Status: prepared in tree — not published on npm yet.** No required config migration.
+**Minor** over 4.3.0. Improvement compass (architecture lenses as a `notAScore` projection of
+existing sensors), doctor/HTML residual coaching, deeper skills + compact router for vibe-coder
+and full-AI workflows, and product-only public docs. **No required config migration.** Codex remains
+advisory at write time. Skills and AGENTS projection never enforce. **Status: prepared in tree —
+not published on npm until OIDC publish + `npm view` succeed** (see `docs/releases/4.4.0.md`).
 
-### Added (tree; ships with 4.4.0)
+### Added
 
 - **Improvement compass:** doctor human section + `doctor.improvementCompass` JSON — closed set of
   architecture **lenses** (SoC, DIP, domain alignment, …) with status `ok` / `residual` /
   `not-instrumented` / `out-of-scope`, evidence refs, optional next action, capped `topResidual`,
   always **`notAScore: true`**. Projected from existing smells, walls, cohesion, ArkRules, and
   design-weak signals. Residual lenses never flip `valid`, strict-merge, or `goal.met`.
-  Out-of-scope locked for scalability, app security tooling, and full resilience.
-- **Optional status slice:** thin `improvementCompass.topResidual` on the status manifest when
-  Tooling supplies residual ids (full lenses remain on doctor).
+  Out-of-scope locked for scalability, app security tooling, and full resilience. Type-only
+  placement debt (`failsStrict: false`) maps to **modularity** residual only (not coupling).
+- **Optional status slice:** thin `improvementCompass.topResidual` on the status manifest schema for
+  Tooling pass-through — **`ark status` does not compute lenses yet**; agents should read doctor.
 - **HTML report:** advisory section `data-advisory="improvementCompass"` (report parity with doctor).
 - **Skills + compact router:** same **13** skill names deepened for vibe-coder outcomes — compass
   preflight, anti false-done, AI-easy placement cues, out-of-scope honesty, Completion **Compass**

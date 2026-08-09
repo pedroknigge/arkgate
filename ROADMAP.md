@@ -876,7 +876,7 @@ Boundary:
 | 121 | `IC04` | `done` | S | `IC03` | HTML report advisory compass section + reportParity |
 | 122 | `IC05` | `done` | L | `IC01` (finish after `IC03` for JSON-aware prose) | Deepen 13 skills + compact router (vibe-coder path, compass routing, anti false-done); agent-skills 1:1 |
 | 123 | `IC06` | `done` | M | `IC03`–`IC05` | **Product-docs hygiene:** public lanes product-only (no roadmap codes); use/develop/agent-guide/skills/CLI human; claims prep |
-| 124 | `IC07` | `todo` | S | `IC02`–`IC06` | CHANGELOG + release notes in **product voice**, package-surface, version **4.4.0**, publish train |
+| 124 | `IC07` | `doing` | S | `IC02`–`IC06` | CHANGELOG + release notes in **product voice**, package-surface, version **4.4.0**, publish train |
 
 **IC01 — Plan lock and product voice**
 
@@ -998,7 +998,7 @@ skills/router product-only (no roadmap codes).
 
 **IC07 — Release 4.4.0**
 
-- **Status:** `todo`
+- **Status:** `doing` (2026-08-09 prepare train)
 - **Depends on:** `IC02`–`IC06`
 
 **Outcome:** version **4.4.0**, CHANGELOG and `docs/releases/4.4.0.md` in **product voice**
@@ -1006,6 +1006,10 @@ skills/router product-only (no roadmap codes).
 
 **Acceptance:** common merge gate green; no required config migration; public release prose does
 not reintroduce roadmap-code narrative; signed tag + npm when owner publishes.
+
+**Evidence (prepare):** tree identity `4.4.0` (package/lock/`src/version.ts`/`server.json`);
+`docs/releases/4.4.0.md` Status: prepared; CHANGELOG `## 4.4.0`; public lanes keep npm `latest`
+truth as **4.3.0** until post-publish flip.
 
 ### Z01 — Make release cleanup tool-owned and path-safe
 
@@ -3337,28 +3341,15 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: (none) — next pick IC07 (4.4.0 release train — version/CHANGELOG/publish)
-  Epic: Phase IC — Improvement Compass → arkgate@4.4.0 (active)
-  Plan: docs/plans/improvement-compass/README.md (Accepted / engineering active)
-  Queue: IC01–IC06 done; IC07 todo; sole engineering epic for 4.4.0
-  Last closed epic item: IC06 (product-docs hygiene + claims prep)
-  Prior closed epic: Phase ACS ACS01–ACS08 → arkgate@4.3.0 published
-  Later trains on main (historical): CI hygiene (#113); 4.2.1 Next proxy (#114)
-Released baseline: npm arkgate@4.3.0 on latest (gitHead 65f95a0; tag v4.3.0; 2026-08-09)
-  Notes: docs/releases/4.3.0.md — Status: published (OIDC Trusted Publishing run 31295575658)
-  Prior ship: 4.2.1 / 4.2.0 / 4.1.x as in docs/releases/
-Phase IC hard lines: no principle scores/ranks; compass notAScore advisory only;
-  no new skill names (IC05 deepens bodies + compact router for vibe coders);
-  no new ArkRules sensors; no LLM verdict; projection never enforces;
-  out-of-scope honest for scalability / app security / full resilience
-Phase ACS (closed): catalog, status, projection, Agent Skills pack, finding refs, A/B eval
-Claim gate: `Z09` (`parked`) — residual RB-11 only (retained adoption + independent close)
-  Field kit scaffolding: docs/field/ — NOT closed; do not occupy engineering `doing` without cohort
-Closed in 3.8.0: Z01–Z08, Z10; RB-07–RB-10, RB-12
-Product hard line: no false hard write on Cursor/Codex/OpenCode; no plan-B auto-apply
-Not product backlog: god-module / plan-B residual remains judgment (compass surfaces it)
-Parked: Y09, Y07 (low), Y10 (archive until field demand + ADR), K01 runtime
-  Later seeds (not IC): konsistent-class sensor, adopt disk stages, mechanical one-shot CLI
-Release lanes: ordinary corrective patches do not wait for Z09; 4.4.0 is IC train (not published yet)
-  Prior: 4.3.0 / 4.2.1 / 4.2.0 / 4.1.x / 4.0.x / 3.9.x / 3.8.x as in docs/releases/ and CHANGELOG
+Engineering doing: IC07 — arkgate@4.4.0 release train (prepare → tag → OIDC npm → MCP → flip)
+  Epic: Phase IC — Improvement Compass → arkgate@4.4.0
+  Plan: docs/plans/improvement-compass/README.md
+  Queue: IC01–IC06 done; IC07 doing (tree identity 4.4.0 prepared; npm latest still 4.3.0)
+  Last closed epic item: IC06
+  Prior closed epic: Phase ACS → arkgate@4.3.0 published
+Released baseline (npm latest): arkgate@4.3.0 (until publish verify)
+  Prepare notes: docs/releases/4.4.0.md — Status: prepared
+Phase IC hard lines: no principle scores; compass notAScore; no new skill names/sensors;
+  no LLM verdict; no false hard write on soft hosts
+Claim gate: Z09 (parked) — residual RB-11 only
 ```

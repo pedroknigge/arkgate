@@ -28,7 +28,7 @@ function runCheckRoot(root: string) {
 
 describe('ArkRules entry path via ark-check CLI', () => {
   it('package identity matches prepared train version', () => {
-    expect(version).toBe('4.3.0');
+    expect(version).toBe('4.4.0');
   });
 
   it('completes without arkRules (opt-in silence)', () => {
