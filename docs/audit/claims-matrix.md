@@ -39,11 +39,11 @@ configuration, package-surface, product-voice, ROADMAP Next session, this matrix
    architecture debt after EH05.
 3. Repo hygiene: Dependabot may still surface transitive advisories; triage before claiming a
    clean public tree (not a product-roadmap `doing` unless it needs a pin).
-4. **Prepared ≠ published:** tree identity is **4.3.0**; npm `latest` remains **4.2.1** until
-   Trusted Publishing (C-020).
+4. **Published:** tree identity and npm `latest` are both **4.3.0** (C-020; signed tag `v4.3.0`,
+   gitHead `65f95a0`, OIDC Trusted Publishing). Prior 4.2.1 is superseded on `latest`.
 
-**Recommended next Intent:** maintainer publish train for `arkgate@4.3.0` (signed tag + OIDC);
-keep Z09 parked; field kit stays scaffolding-only.
+**Recommended next Intent:** keep Z09 parked; field kit stays scaffolding-only; no competing ACS
+engineering `doing` — next pick is product residual or a new ROADMAP epic.
 
 ## ACS08 inventory (public lanes)
 
@@ -126,16 +126,17 @@ and adds C-034–C-040 for agent-contract surfaces without re-performing the ful
 measurement methodology; structural OK/Partial verdicts remain evidence-bound to code and
 authorities cited above.
 
-## Verification record (ACS08 prepare)
+## Verification record (ACS08 published)
 
 - Tree identity: package/lock/`src/version.ts`/`server.json` = **4.3.0**.
-- npm `arkgate@latest` remains **4.2.1** until Trusted Publishing (do not claim published).
+- npm `arkgate@latest` is **4.3.0** (gitHead `65f95a0`; signed tag `v4.3.0`; OIDC publish run
+  `31295575658`). Claim published honestly (C-020).
 - Release notes: [docs/releases/4.3.0.md](../releases/4.3.0.md) **Status: published**.
 - CHANGELOG section `## 4.3.0 — 2026-08-09` covers ACS01–ACS08 surfaces.
 - Focused ACS unit suites (catalog, status, projection, skills, finding refs, placement-ab) green
   under prior ACS item evidence; release-surface tests updated for 4.3.0 published train.
-- Public lanes (README, docs hub, package-surface, CONTRIBUTING, Agents.md) name published
-  candidate without claiming npm `latest`.
+- Public lanes (README, docs hub, package-surface, CONTRIBUTING, Agents.md) name **4.3.0** as
+  npm `latest` / published.
 - MCP parity closed for C-006/C-035: agent-guide documents **thirteen** tools including
   `ark_status`; tools/list exact expectation + `ark_status` tools/call smoke in
   `tests/unit/mcp/arkMcp.test.ts`; diagnostic envelope prose uses schema **1.5**.
