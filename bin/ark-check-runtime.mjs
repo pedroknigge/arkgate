@@ -1577,6 +1577,8 @@ async function main() {
     // Pass the same baseline split as doctor so productHonesty dirty-freeze matches.
     const reportBaseline = readBaseline(root, args.baseline || '.ark-baseline.json');
     // Doctor parity for improvement compass: stale keys = baseline keys not in current occurrence set.
+    // Only when analysis is complete — partial scans under-count current keys and inflate false stale residual
+    // (same gate as doctor-plan: baselineStale: analysisComplete ? staleBaseline : null).
     const reportOccurrenceKeys = baselineOccurrenceKeys(violations);
     const reportCurrentKeys = new Set(reportOccurrenceKeys);
     const reportBaselineStale = reportBaseline.exists
@@ -1594,7 +1596,7 @@ async function main() {
         frozenKeys: reportBaseline.exists ? reportBaseline.keys.size : 0,
         activeCount: activeViolations.length,
         activeBlockingCount: blockingViolations.length,
-        baselineStale: reportBaselineStale,
+        baselineStale: analysisComplete ? reportBaselineStale : null,
       }
     );
     const reportPayload = {

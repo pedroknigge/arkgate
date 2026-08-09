@@ -147,6 +147,29 @@ describe('IC03 doctor improvementCompass wiring', () => {
     expect(reportSide.lenses.find((l) => l.id === 'maintainability')?.status).toBe('residual');
   });
 
+  it('incomplete analysis omits stale-driven maintainability residual (doctor/report parity)', () => {
+    // Doctor and report both pass baselineStale: null when analysis is not complete.
+    const complete = buildDoctorImprovementCompass({
+      designSmells: [],
+      violations: [],
+      designWeak: false,
+      baselineStale: 3,
+      baselineExists: true,
+      frozenResidual: 3,
+    });
+    const incomplete = buildDoctorImprovementCompass({
+      designSmells: [],
+      violations: [],
+      designWeak: false,
+      baselineStale: null,
+      baselineExists: true,
+      frozenResidual: 3,
+    });
+    expect(complete.lenses.find((l) => l.id === 'maintainability')?.status).toBe('residual');
+    // frozenResidual alone with only 3 freezes (< 10) and null stale → no maintainability residual
+    expect(incomplete.lenses.find((l) => l.id === 'maintainability')?.status).toBe('ok');
+  });
+
   it('status manifest accepts optional thin improvementCompass without affecting nextAction gate', () => {
     const without = buildStatusManifest({
       arkgateVersion: '4.3.0',
