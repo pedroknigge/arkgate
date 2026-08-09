@@ -67,6 +67,29 @@ export function classifyExpectedRootRelation(resolvedRoot, expectedRoot) {
 }
 
 /**
+ * Count baseline keys that belong to the ArkRules plane only.
+ * Full baseline size is used for lastCheck.frozenResidual (all frozen debt);
+ * rules.frozenResidual must not over-count layer/capability freezes as ArkRules residual.
+ * @param {{ exists?: boolean, keys?: Set<string>|Iterable<string> }|null|undefined} baseline
+ * @returns {number|null}
+ */
+export function countArkruleFrozenKeys(baseline) {
+  if (!baseline?.exists || !baseline.keys) return baseline?.exists ? 0 : null;
+  let n = 0;
+  for (const key of baseline.keys) {
+    if (typeof key !== 'string' || key.length === 0) continue;
+    // baselineKey format: ruleId|file|fromLayer|toLayer|target
+    if (
+      key.startsWith('ARKRULE_') ||
+      key.startsWith('INVARIANT_UNCOVERED|')
+    ) {
+      n += 1;
+    }
+  }
+  return n;
+}
+
+/**
  * Map latest report snapshot + baseline into last-check facts.
  * @param {object|null} latest
  * @param {{ exists: boolean, keys: Set<string> }} baseline
@@ -210,12 +233,14 @@ export function collectStatusFacts(options = {}) {
         const covered = Number(summary.coveredInvariants) || 0;
         rulesInventoried = structure + invariants;
         rulesUnderContract = structure + covered;
-        rulesFrozenResidual = baseline.exists ? baseline.keys.size : 0;
+        rulesFrozenResidual = baseline.exists ? countArkruleFrozenKeys(baseline) : 0;
       }
     } catch {
       // Counts stay null when inventory cannot be loaded — honest absence, not zero score.
     }
   }
+
+  const arkruleFrozenFallback = countArkruleFrozenKeys(baseline);
 
   return {
     arkgateVersion: options.arkgateVersion || packageVersion(),
@@ -239,8 +264,8 @@ export function collectStatusFacts(options = {}) {
     rulesFrozenResidual:
       rulesFrozenResidual != null
         ? rulesFrozenResidual
-        : arkRulesLoaded && baseline.exists
-          ? baseline.keys.size
+        : arkRulesLoaded && arkruleFrozenFallback != null
+          ? arkruleFrozenFallback
           : arkRulesLoaded
             ? 0
             : null,

@@ -20,7 +20,8 @@ const BUDGETS = [
   { path: 'bin/ark-check-runtime.mjs', max: 1920 },
   // S3 start confidence gate on all apply paths — was 900 (loc ~920).
   // ACS03 unified status command wiring — was 940 (loc ~943).
-  { path: 'bin/ark.mjs', max: 960 },
+  // ACS04 agents-md / agent-projection command wiring — was 960 (loc ~974).
+  { path: 'bin/ark.mjs', max: 990 },
   { path: 'bin/lib/agent-gates.mjs', max: 150 },
   { path: 'bin/lib/mcp-adoption.mjs', max: 600 },
   // Host expansion (Antigravity hooks merge + OpenCode MCP migrate/merge).

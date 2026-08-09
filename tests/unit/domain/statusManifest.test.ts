@@ -23,6 +23,7 @@ import {
 import {
   buildProjectStatusManifest,
   classifyExpectedRootRelation,
+  countArkruleFrozenKeys,
   lastCheckFactsFromSnapshot,
   runStatusCommand,
 } from '../../../bin/lib/status-command.mjs';
@@ -247,6 +248,21 @@ describe('status-command tooling (ACS03)', () => {
       activeViolations: 2,
       frozenResidual: 3,
     });
+  });
+
+  it('counts only ArkRules-plane keys for rules.frozenResidual (not all baseline debt)', () => {
+    const keys = new Set([
+      'LAYER_IMPORT_VIOLATION|src/a.ts|A|B|',
+      'ARKRULE_STRUCTURE|src/domain/x.ts|||aggregate-private-state',
+      'INVARIANT_UNCOVERED|tests/x.test.ts|||always-valid',
+      'CAPABILITY_VIOLATION|src/b.ts|||fetch',
+      'ARKRULE_INVARIANT|src/domain/y.ts|||inv-1',
+    ]);
+    expect(countArkruleFrozenKeys({ exists: true, keys })).toBe(3);
+    expect(countArkruleFrozenKeys({ exists: true, keys: new Set() })).toBe(0);
+    expect(countArkruleFrozenKeys({ exists: false, keys: new Set(['ARKRULE_STRUCTURE|x']) })).toBe(
+      null
+    );
   });
 
   it('builds project status for this repo with matched identity (no expectation)', () => {
