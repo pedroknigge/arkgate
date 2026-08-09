@@ -47,10 +47,12 @@ const BUDGETS = [
   // 4.1.0 productHonesty card + mergePlanes — was 320 (loc 370).
   // 4.1.0 review: baselineSplit parity inputs — was 400 (loc 427).
   // FG01 HTML productHonesty parity (activeBlocking + pin) — was 460.
-  { path: 'bin/lib/html-report-depth.mjs', max: 480 },
+  // Improvement compass on report depth payload — was 480.
+  { path: 'bin/lib/html-report-depth.mjs', max: 500 },
   // X04 grew the advisory renderer a third section (physicalCohesion).
   // 4.0.0 ArkRules advisory section — was 280 (loc 281).
-  { path: 'bin/lib/html-report-advisories.mjs', max: 300 },
+  // Improvement compass advisory HTML section — was 300.
+  { path: 'bin/lib/html-report-advisories.mjs', max: 320 },
   // X04 R1/R2: physicalCohesion sensor + proposed reshape pilot (ADR 0010).
   { path: 'bin/lib/physical-cohesion.mjs', max: 260 },
   // Y01: bounded explicit verdict memory kept out of the X04 sensor/doctor orchestrator.
