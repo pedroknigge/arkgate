@@ -83,6 +83,11 @@ The projection is **non-authoritative**. Enforcement is `ark-check` / host write
 CI (`--strict-merge`) — never AGENTS.md, skills, or this projection. Root API:
 `buildAgentProjectionBlock` / `mergeAgentProjectionDocument`.
 
+**Agent Skills packaging (4.3 / ACS05):** the same frozen **13** skill names are also shipped as
+an Agent Skills–compatible package under `templates/agent-skills/<name>/SKILL.md` for hosts that
+install via `npx skills` (in addition to Ark `--install-agent-gates`). See
+[Install skills — Ark and ecosystem](#install-skills-ark-and-ecosystem). No new skill names.
+
 ## Architecture playbook and `ark-check --recommend`
 
 Before generating project structure, agents should read the **tool-agnostic application
@@ -515,6 +520,40 @@ skill bodies are not rewritten for a version stamp. The optional `$CODEX_HOME/sk
 monotonic across ArkGate 4.2.0+ installers. Pre-4.2 binaries ignore its metadata and lock, so
 upgrade legacy repos before they write the optional home catalog. See
 [AI gates — Codex skill catalog](ai-gates.md#codex-skill-catalog-skillmd-not-flat-prompts).
+
+### Install skills — Ark and ecosystem {#install-skills-ark-and-ecosystem}
+
+The same **13** skill names ship two ways. **No new skill names** (4.3 freeze): packaging and
+routing only.
+
+| Channel | What it installs | When to use |
+|---------|------------------|-------------|
+| **Ark install** | Host skill catalogs + optional hooks/MCP/CI wiring via `--install-agent-gates` | Default for projects that want write-path gates and version-stamped managed catalogs |
+| **Agent Skills ecosystem** (`npx skills`) | The Agent Skills layout only (`<name>/SKILL.md`) into host skill dirs | Hosts already on the open skills channel; discovery without running Ark install |
+
+**Canonical authoring source:** flat `templates/skills/<name>.md` (Ark install reads these).
+
+**Agent Skills package root** (generated, 1:1 content): `templates/agent-skills/<name>/SKILL.md`
+— ships in the npm tarball under `templates/`. Drift guard: `npm run check:agent-skills`.
+
+```bash
+# Ark — expert skill pack (preferred when you also want gates)
+npx ark-check --install-agent-gates --skills-only --force
+
+# Ecosystem — from installed package or a git checkout
+npx skills add ./node_modules/arkgate/templates/agent-skills
+npx skills add ./templates/agent-skills
+# GitHub tree:
+npx skills add https://github.com/pedroknigge/arkgate/tree/main/templates/agent-skills
+# List without installing:
+npx skills add ./node_modules/arkgate/templates/agent-skills --list
+```
+
+Frozen names: `ark-adopt`, `ark-architect`, `ark-autopilot`, `ark-contract`, `ark-coverage`,
+`ark-explain`, `ark-explore`, `ark-fix`, `ark-loop`, `ark-place`, `ark-runtime`, `ark-think`,
+`ark-upgrade`. Root API: `ARK_SKILL_NAMES` / `validateAgentSkillsPackage` (Domain
+`agentSkillsPackage`). Skills are **process** depth — they never decide pass/fail; enforcement
+remains `ark-check` / hooks / CI.
 
 For an optional executable adoption check, copy the shipped template into a Vitest/Jest suite
 after installing ArkGate:

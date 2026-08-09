@@ -24,7 +24,8 @@
         "bin/lib/arkrules-contract.mjs",
         "bin/lib/project-identity.mjs",
         "bin/lib/status-manifest.mjs",
-        "bin/lib/agent-projection.mjs"
+        "bin/lib/agent-projection.mjs",
+        "bin/lib/agent-skills-package.mjs"
       ],
       "intentPrefixes": ["Domain."],
       "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"]

@@ -285,3 +285,28 @@ export {
   type AgentProjectionMeta,
   type AgentProjectionProfile,
 } from './domain/agentProjection';
+
+export {
+  AGENT_SKILL_ENTRY_FILENAME,
+  AGENT_SKILLS_PACKAGE_RELATIVE_ROOT,
+  ARK_AGENT_SKILLS_PACKAGE_SCHEMA_VERSION,
+  ARK_SKILL_NAMES,
+  ARK_SKILL_NAME_COUNT,
+  FLAT_SKILL_TEMPLATES_RELATIVE_ROOT,
+  agentSkillEntryRelativePath,
+  agentSkillPackageFileRelativePath,
+  flatSkillTemplateFileRelativePath,
+  isArkSkillName,
+  isValidAgentSkillName,
+  normalizeSkillContent,
+  parseSkillDocument,
+  validateAgentSkillDocument,
+  validateAgentSkillsPackage,
+  type AgentSkillPackageEntry,
+  type AgentSkillValidationIssue,
+  type ArkSkillName,
+  type ParseSkillDocumentResult,
+  type ParsedSkillFrontmatter,
+  type ValidateAgentSkillDocumentInput,
+  type ValidateAgentSkillsPackageResult,
+} from './domain/agentSkillsPackage';

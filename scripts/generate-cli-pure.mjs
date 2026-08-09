@@ -14,6 +14,7 @@
  *   src/domain/statusManifest.ts  → bin/lib/status-manifest.mjs
  *                                 → schemas/ark.status-manifest.schema.json
  *   src/domain/agentProjection.ts → bin/lib/agent-projection.mjs
+ *   src/domain/agentSkillsPackage.ts → bin/lib/agent-skills-package.mjs
  *   src/domain/resolvedCandidateFactsSchema.ts → schemas/ark.resolved-candidate-facts.schema.json
  *
  * Layer match remains scripts/generate-layer-match.mjs (R1).
@@ -100,6 +101,11 @@ const MODULES = [
     canonical: 'src/domain/agentProjection.ts',
     derived: 'bin/lib/agent-projection.mjs',
     label: 'version-matched agent contract projection (ACS04)',
+  },
+  {
+    canonical: 'src/domain/agentSkillsPackage.ts',
+    derived: 'bin/lib/agent-skills-package.mjs',
+    label: 'Agent Skills packaging contract (ACS05)',
   },
   {
     canonical: 'src/domain/sourcePolicy.ts',

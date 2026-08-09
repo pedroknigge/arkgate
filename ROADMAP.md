@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-08 (Phase ACS — ACS01–ACS04 done; next engineering: ACS05)
+- **Status date:** 2026-08-08 (Phase ACS — ACS01–ACS05 done; next engineering: ACS06)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -652,7 +652,7 @@ Boundary:
 | 111 | `ACS02` | `done` | M | `ACS01` | Public diagnostic code catalog (stable `ruleId` → why/fix/docs anchors); remediation parity; fixtures |
 | 112 | `ACS03` | `done` | M | `ACS01` | `ark status --json` (+ MCP parity if required); schema export; identity/activation/last-check/rules counts; CI no-prompt |
 | 113 | `ACS04` | `done` | M | `ACS02` | Version-matched agent contract projection; install/upgrade path; drift tests; labeled non-enforcement |
-| 114 | `ACS05` | `todo` | M | `ACS01` | Agent Skills–compatible packaging of existing 13 skills; agent-guide ecosystem install; no new names |
+| 114 | `ACS05` | `done` | M | `ACS01` | Agent Skills–compatible packaging of existing 13 skills; agent-guide ecosystem install; no new names |
 | 115 | `ACS06` | `todo` | M | `ACS02`, `ACS03` | Stable finding refs on CLI JSON / MCP / repair payload; multi-turn fixture |
 | 116 | `ACS07` | `todo` | M | `ACS05` | Maintainer A/B eval (placement with gates vs without) under `eval/`; documented results path |
 | 117 | `ACS08` | `todo` | S | `ACS02`–`ACS07` | Claims matrix + public lanes; CHANGELOG; release notes; signed **arkgate@4.3.0** publish |
@@ -757,7 +757,7 @@ never a gate input. Next engineering pick: `ACS05` (skills packaging) or `ACS06`
 
 **ACS05 — Agent Skills packaging**
 
-- **Status:** `todo`
+- **Status:** `done` (2026-08-08)
 - **Depends on:** `ACS01`
 
 **Outcome:** the existing 13 skills ship in an Agent Skills–compatible layout (or documented
@@ -766,6 +766,19 @@ documents both Ark install and ecosystem install. **No new skill names.**
 
 **Acceptance:** layout validated by fixture or pack test; docs updated; skill bodies may deepen
 routing text only as needed for discovery descriptions.
+
+**Evidence:** Domain `src/domain/agentSkillsPackage.ts` (schema `1.0`, frozen `ARK_SKILL_NAMES`
+count 13, Agent Skills frontmatter/name rules, `validateAgentSkillsPackage`); generated pure
+`bin/lib/agent-skills-package.mjs` (`check:cli-pure` green); layout
+`templates/agent-skills/<name>/SKILL.md` 1:1 with flat `templates/skills/*.md` plus package
+README (`generate:agent-skills` / `check:agent-skills`; CI drift guard); root API exports via
+`src/gate.ts` (`ARK_SKILL_NAMES`, `validateAgentSkillsPackage`, …). Docs:
+[agent-guide.md](docs/agent-guide.md#install-skills-ark-and-ecosystem) (Ark install +
+`npx skills add`), [package-surface.md](docs/package-surface.md); CHANGELOG Unreleased ACS05.
+Tests `tests/unit/domain/agentSkillsPackage.test.ts`: freeze count, name rules, flat↔layout
+parity, README ecosystem markers, CLI/gate parity. **No new skill names.** Skills remain
+non-enforcing. Next engineering pick: `ACS06` (finding refs) or `ACS07` (eval A/B; depends
+ACS05).
 
 **ACS06 — Stable finding refs**
 
@@ -3132,17 +3145,17 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering next pick: ACS05 (Agent Skills packaging) or ACS06 (stable finding refs)
+Engineering: ACS05 done; next ACS06 (finding refs) or ACS07
   Epic: Phase ACS — Agent contract surface → npm 4.3.0
   Plan: docs/plans/agent-contract-surface-4.3/README.md (Accepted / engineering active)
-  Queue: ACS01–ACS04 done → ACS05/ACS06 → ACS07 → ACS08 publish
-  Last closed epic item: ACS04 (version-matched agent projection — ark agents-md)
-  Prior closed: ACS03 (status); ACS02 (diagnostic catalog); ACS01 (plan lock); WI01 — 4.2.0; patch 4.2.1
+  Queue: ACS01–ACS05 done → ACS06 → ACS07 → ACS08 publish
+  Last closed epic item: ACS05 (Agent Skills packaging — templates/agent-skills + npx skills)
+  Prior closed: ACS04 (projection); ACS03 (status); ACS02 (catalog); ACS01 (plan lock); WI01 — 4.2.0; patch 4.2.1
   Later trains on main (not separate ROADMAP rows): CI hygiene profile (#113);
     4.2.1 Next.js 16.3 root proxy.ts include + eval pins (#114) — published
 Released baseline: npm arkgate@4.2.1 on latest (gitHead b2f02c9; tag v4.2.1; 2026-08-08)
   Notes: docs/releases/4.2.1.md — Status: published (OIDC Trusted Publishing)
-  Target next release: 4.3.0 (Phase ACS) — ACS01–ACS04 done; next ACS05/ACS06
+  Target next release: 4.3.0 (Phase ACS) — ACS01–ACS05 done; next ACS06
 Phase AR (v4 train, AR01–AR19 done): historical plan once mapped AR17–19 to "4.3.0"; those
   items closed without a separate 4.3.0 tag — 4.3.0 is now ACS
 Phase EH (EH01–EH08 done): 4.1.1; Phase WI (WI01 done): 4.2.0; patch 4.2.1

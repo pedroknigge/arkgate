@@ -26,6 +26,13 @@ in the immutable pre-2.0 archive linked below.
   hooks / CI; projection is never a gate input. Domain `src/domain/agentProjection.ts`, generated
   pure `bin/lib/agent-projection.mjs`, root exports (`buildAgentProjectionBlock`,
   `mergeAgentProjectionDocument`, …). Drift: `ark agents-md --check`.
+- **Agent Skills packaging (ACS05):** the existing **13** `/ark-*` skills ship in an Agent
+  Skills–compatible layout at `templates/agent-skills/<name>/SKILL.md` (1:1 with flat
+  `templates/skills/*.md`). Ecosystem install: `npx skills add ./node_modules/arkgate/templates/agent-skills`
+  (or the GitHub tree). Ark install path unchanged (`--install-agent-gates` / `--skills-only`).
+  Domain `src/domain/agentSkillsPackage.ts` (frozen `ARK_SKILL_NAMES`, frontmatter/layout
+  validation), generated pure `bin/lib/agent-skills-package.mjs`, `npm run generate:agent-skills` /
+  `check:agent-skills`. **No new skill names.** Skills remain non-enforcing.
 
 ## 4.2.1 — 2026-08-08 (published)
 

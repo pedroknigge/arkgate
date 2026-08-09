@@ -163,9 +163,11 @@ npx arkgate-check --plan
 npx arkgate-check --coverage
 npx arkgate-check --strict-merge   # CI / required status
 npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok
+# optional: same 13 skills via Agent Skills ecosystem (no new names)
+# npx skills add ./node_modules/arkgate/templates/agent-skills
 ```
 
-More: [docs/develop.md](docs/develop.md) · enthusiast track: [docs/enthusiast/](docs/enthusiast/README.md)
+More: [docs/develop.md](docs/develop.md) · skills install: [docs/agent-guide.md](docs/agent-guide.md#install-skills-ark-and-ecosystem) · enthusiast track: [docs/enthusiast/](docs/enthusiast/README.md)
 
 ---
 

@@ -110,6 +110,8 @@
     "check:layer-match": "node scripts/generate-layer-match.mjs --check",
     "generate:cli-pure": "node scripts/generate-cli-pure.mjs",
     "check:cli-pure": "node scripts/generate-cli-pure.mjs --check",
+    "generate:agent-skills": "node scripts/generate-agent-skills.mjs",
+    "check:agent-skills": "node scripts/generate-agent-skills.mjs --check",
     "generate:packaged-tooling": "node scripts/generate-packaged-tooling.mjs",
     "check:packaged-tooling": "node scripts/generate-packaged-tooling.mjs --check",
     "generate:analysis-engine": "node scripts/generate-analysis-engine.mjs",
