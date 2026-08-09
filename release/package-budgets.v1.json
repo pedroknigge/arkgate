@@ -3,25 +3,35 @@
   "packages": {
     "gate": {
       "path": ".",
-      "maxPackedBytes": 770370,
-      "maxUnpackedBytes": 2732711,
-      "maxFiles": 185,
+      "maxPackedBytes": 901225,
+      "maxUnpackedBytes": 3201191,
+      "maxFiles": 210,
       "measuredCandidate": {
-        "sha": "2ebb786e8bedfa88c1e8e2eb7aadf38b6de44498",
-        "ciCandidateSha": "2ebb786e8bedfa88c1e8e2eb7aadf38b6de44498",
-        "ciRun": null,
-        "version": "4.2.0",
-        "packedBytes": 700336,
-        "unpackedBytes": 2484282,
-        "files": 168
+        "sha": "4e9ffdc19b8e86709c4d3a79ad07dcfc29654ea9",
+        "ciCandidateSha": "4e9ffdc19b8e86709c4d3a79ad07dcfc29654ea9",
+        "ciRun": "31293903842",
+        "version": "4.3.0",
+        "packedBytes": 819295,
+        "unpackedBytes": 2910173,
+        "files": 190
       },
-      "exception": "ArkGate 4.2.0 workspace identity + activation truth + multi-repo shared-skill safety. Clean archive measurement on signed source 2ebb786e: 700,336 packed / 2,484,282 unpacked / 168 files. Recalibration retains ≥10% fixed headroom: 770,370 packed, 2,732,711 unpacked, 185 files. Previous 4.0.0 ceilings (666,338 / 2,354,004 / 180) are superseded for this feature minor."
+      "exception": "ArkGate 4.3.0 Phase ACS agent contract surface (diagnostic catalog, status manifest, agent projection, Agent Skills packaging of 13 skills, finding refs, placement A/B eval, honesty docs). Clean measurement on release/4.3.0 tip 4e9ffdc + CI build 31293903842: 819,295 packed / 2,910,173 unpacked / 190 files. Recalibration retains ≥10% fixed headroom: 901,225 packed, 3,201,191 unpacked, 210 files. Previous 4.2.0 ceilings (770,370 / 2,732,711 / 185) are superseded for this feature minor."
     },
     "runtime": {
       "path": "packages/runtime",
-      "maxPackedBytes": 160000,
+      "maxPackedBytes": 181943,
       "maxUnpackedBytes": 700000,
-      "maxFiles": 20
+      "maxFiles": 20,
+      "measuredCandidate": {
+        "sha": "4e9ffdc19b8e86709c4d3a79ad07dcfc29654ea9",
+        "ciCandidateSha": "4e9ffdc19b8e86709c4d3a79ad07dcfc29654ea9",
+        "ciRun": "31293903842",
+        "version": "0.1.0-experimental.0",
+        "packedBytes": 165402,
+        "unpackedBytes": 600619,
+        "files": 9
+      },
+      "exception": "4.3.0 train remeasure of @arkgate/runtime companion: 165,402 packed on CI 31293903842. Ceiling 181,943 retains ≥10% headroom over that candidate (previous 160,000 ceiling superseded)."
     }
   }
 }
