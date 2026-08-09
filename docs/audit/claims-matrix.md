@@ -4,7 +4,7 @@
 > [docs/package-surface.md](../package-surface.md) · Decisions: [docs/adr/](../adr/README.md)
 > **Code and manifests are the source of truth.** Documentation does not override implementation.
 
-**Date:** 2026-08-08 (4.2.0 published sync over the 2026-07-30 WI audit)<br>
+**Date:** 2026-08-08 (4.2.1 published sync over the 4.2.0 WI audit)<br>
 **Scope:** project (public lanes + bounded package surfaces) — Phase EH audit + WI sync<br>
 **Intent:** audit → selective documentation + honesty evidence (EH01–EH08)<br>
 **Variant:** ArkGate bridge (`ark.config.json`, local CLIs, project-bound `ark_manifest`,
@@ -47,11 +47,11 @@ Z09 parked; field kit stays scaffolding-only.
 
 | Lane | Authority paths | Checklist / result |
 |------|-----------------|--------------------|
-| Front door | `README.md` | Host matrix regenerated from `host-support-matrix.mjs`; dual bins; version strip names published 4.2.0 on npm `latest`; required status wording |
+| Front door | `README.md` | Host matrix regenerated from `host-support-matrix.mjs`; dual bins; version strip names published 4.2.1 on npm `latest`; required status wording |
 | Use | `docs/use.md`, `docs/product-voice.md` | Doctor control plane; soft-host honesty; product-voice EH vocabulary |
 | Develop | `docs/develop.md`, `docs/ai-gates.md`, `docs/agent-guide.md`, `docs/configuration.md`, `docs/package-surface.md` | CI base-ref snippet EH04; CLI vs status context; Codex advisory |
 | Contribute | `CONTRIBUTING.md`, `ROADMAP.md` Next session, `Agents.md` plans | Queue empty for engineering; WI01 done; Z09 parked claim gate only |
-| Releases | `CHANGELOG.md`, `docs/releases/*` | 4.2.0 **Status: published** on npm `latest`; 4.1.1 superseded |
+| Releases | `CHANGELOG.md`, `docs/releases/*` | 4.2.1 **Status: published** on npm `latest`; 4.2.0 superseded |
 | Templates | `action.yml`, generated workflow | First-push-safe base-ref |
 | Audit | this file | 0 Contradicted on public lanes |
 
@@ -61,7 +61,7 @@ Z09 parked; field kit stays scaffolding-only.
 - [x] Host support table matches matrix (Codex/Cursor/OpenCode advisory; repair envelope split)
 - [x] Required merge boundary = **required status context**, not “CI file present”
 - [x] Dual bins consistent
-- [x] Version strip: published 4.2.0 on npm `latest` (matches `npm view arkgate version`)
+- [x] Version strip: published 4.2.1 on npm `latest` (matches `npm view arkgate version`)
 - [x] Links resolve into use/develop/docs hub
 - [x] No hard-write lie for Codex
 
@@ -88,7 +88,7 @@ Z09 parked; field kit stays scaffolding-only.
 | C-017 | Project TS5/6/7 compilers stay project-owned with fail-closed incomplete analysis | [TypeScript support](../typescript-support.md) | typescript host · packed matrix | OK | keep |
 | C-018 | All retained plan seeds are indexed with current shipped status | [Hub plans](../../AGENTS.md#product-plans-library-epic-queue-seeds) | `docs/plans/` · ROADMAP | OK | EH plan → Shipped when EH closes |
 | C-019 | Accepted ADRs are navigable without duplicating their rationale | [ADR index](../adr/README.md) | ADR frontmatter | OK | keep |
-| C-020 | Tree version identity and npm `latest` are **4.2.0** published (`gitHead` `dad2ac4`) | [4.2.0 notes](../releases/4.2.0.md) · [4.1.1 notes](../releases/4.1.1.md) | package/lock/version/server · npm registry | OK | keep prepared≠published discipline for future candidates |
+| C-020 | Tree version identity and npm `latest` are **4.2.1** published (`gitHead` `b2f02c9`) | [4.2.1 notes](../releases/4.2.1.md) · [4.2.0 notes](../releases/4.2.0.md) | package/lock/version/server · npm registry | OK | keep prepared≠published discipline for future candidates |
 | C-021 | Links in shipped Markdown resolve inside the tarball or use repository URLs | Shipped README/docs | root `files` | OK | rerun on release |
 | C-022 | Nightly evaluation claims distinguish deterministic, opt-in live, and skipped cases | [Eval guide](../../eval/README.md) | nightly workflow | OK | keep |
 | C-023 | Migration and runtime guidance uses current package boundaries | [Migration guide](../migrate-from-ark-runtime-kernel.md) | manifests | OK | keep |
@@ -119,9 +119,10 @@ re-performing or overstating the original deep-audit coverage count.
 
 ## Verification record (EH)
 
-- npm `arkgate@latest` observed **4.2.0** (`gitHead` `dad2ac4`; published 2026-07-31); tree matches.
+- npm `arkgate@latest` observed **4.2.1** (`gitHead` `b2f02c9`; published 2026-08-08 via OIDC
+  Trusted Publishing); tree matches package/lock/version/server.
 - Host matrix README block matches `renderHostSupportMatrixMarkdown()`.
 - Focused Phase EH unit tests: gitignore, honesty soft-write, provider 403, CI runtime, base-ref template.
-- Post-publish docs flip (2026-08-08): release notes, CHANGELOG, README, CONTRIBUTING, hub,
-  package-surface, ROADMAP WI01 → `done`, q06 surfaces green.
+- Post-publish docs flips (2026-08-08): 4.2.0 then 4.2.1; ROADMAP Next session + claims C-020
+  re-synced to 4.2.1; WI01 remains `done` (shipped in 4.2.0).
 - `npm run check:architecture` / `test:confidence` — see implementer summary for final run.
