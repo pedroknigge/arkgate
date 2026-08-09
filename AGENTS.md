@@ -158,6 +158,7 @@ retained shipped rationale live under `docs/plans/`:
 | [arkrules-evolution](docs/plans/arkrules-evolution/README.md) | Prepared for 4.0.0 (`AR01`–`AR19` implemented; field train progressive) | Intra-layer ArkRules contract (structural sensors + invariant catalogs) + brownfield rules-migration toolkit on the same enforcement plane |
 | [enforcement-evidence-and-docs-truth](docs/plans/enforcement-evidence-and-docs-truth/README.md) | Shipped / implemented (Phase EH; `EH01`–`EH08` done; **4.1.1 published**) | Soft-host evidence modeling (Codex field) + mechanical CI/report fixes + deep documentation audit; claims matrix 2026-07-25 |
 | [workspace-identity-activation-truth](docs/plans/workspace-identity-activation-truth/README.md) | Shipped in 4.2.0 (`WI01` done; **published**) | Project-bound MCP identity handshake, fail-closed cross-project evidence, honest runtime activation/verdicts, and layer-aware ArkRules inventory |
+| [agent-contract-surface-4.3](docs/plans/agent-contract-surface-4.3/README.md) | Seeded for **4.3.0** (`ACS01`–`ACS08` `todo`) | Agent Skills packaging, version-matched projection, diagnostic code catalog, unified status JSON, finding refs, maintainer A/B eval — no new skill names, no LLM verdict |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in
 `ROADMAP.md`.
