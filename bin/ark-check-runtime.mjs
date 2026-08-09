@@ -1576,6 +1576,12 @@ async function main() {
       : readJsonSafe(path.join(reportsDir(root), 'origin.json'));
     // Pass the same baseline split as doctor so productHonesty dirty-freeze matches.
     const reportBaseline = readBaseline(root, args.baseline || '.ark-baseline.json');
+    // Doctor parity for improvement compass: stale keys = baseline keys not in current occurrence set.
+    const reportOccurrenceKeys = baselineOccurrenceKeys(violations);
+    const reportCurrentKeys = new Set(reportOccurrenceKeys);
+    const reportBaselineStale = reportBaseline.exists
+      ? [...reportBaseline.keys].filter((key) => !reportCurrentKeys.has(key)).length
+      : 0;
     const { adoption: adoptionForReport, designDepth } = buildReportDepthPayload(
       root,
       config,
@@ -1588,6 +1594,7 @@ async function main() {
         frozenKeys: reportBaseline.exists ? reportBaseline.keys.size : 0,
         activeCount: activeViolations.length,
         activeBlockingCount: blockingViolations.length,
+        baselineStale: reportBaselineStale,
       }
     );
     const reportPayload = {

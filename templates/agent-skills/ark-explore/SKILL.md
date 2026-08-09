@@ -39,12 +39,12 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 | Use `/ark-explore` when… | Do **not** use it when… |
 |--------------------------|-------------------------|
 | Map / “what next?” / residual after ENFORCE | User wants edits applied → `/ark-autopilot` or `/ark-fix` |
-| **Primary post-green door (Q01):** messy / spaghetti / design-weak / “clarify for AI” | Skill-shopping coverage or think for the same residual |
+| **Primary post-green door:** messy / spaghetti / design-weak / “clarify for AI” | Skill-shopping coverage or think for the same residual |
 | Spaghetti brownfield: patterns concurrent, design-weak under green check | Only “governed% + gates installed?” numbers → `/ark-coverage` |
 | Dual-plan **seed** (A remediation + B pattern bets) without applying | One design trade-off between 2–3 options already mapped → `/ark-think` |
 | Path-correct vs design-correct honesty | Plain-language tour / HTML report → `/ark-explain` |
 
-**Q01 single path:** when doctor `postGreenPath` / ENFORCE · design-weak is active, **this skill
+**Post-green single path:** when doctor `postGreenPath` / ENFORCE · design-weak is active, **this skill
 (shape-focus / dual-plan seed) is the map half of the one door** — then `/ark-autopilot` only
 to apply B with user OK. Do not send the user to coverage or think as equal first choices.
 
@@ -297,7 +297,7 @@ ENFORCE without Shape progress is **`ENFORCE · design-weak`** — say that out 
 **Extraction card** (for each I/O / god-module B bet — judgment, never mechanical-safe).
 Canonical productized template also in `docs/brownfield-adoption.md` §6.
 
-**Q04 pilot loop:** when doctor/plan JSON is available, use **`pilotLoop.nextPilot`** as the
+**One-pilot loop:** when doctor/plan JSON is available, use **`pilotLoop.nextPilot`** as the
 **single** next extraction card (one pilot at a time → re-doctor). Do not open five B bets
 in parallel. When `pilotLoop.queuedBets > 0`, those bets stay **queued**, not concurrent.
 `multiPilotBatchForbidden` / `autoApplyForbidden` (alias `autoApplyPlanBForbidden`) are hard

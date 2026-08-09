@@ -10,6 +10,7 @@
 import { effectiveCapabilityDeny } from './analysis-engine.mjs';
 import { graphBlindSpotsHtml } from './graph-blind.mjs';
 import { formatRulesUnderContractHtml } from './rules-under-contract.mjs';
+import { primaryImprovementCompassNextAction } from './improvement-compass.mjs';
 
 // htmlEscape is injected by the caller (html-report.mjs) — importing it back
 // would be a dependency cycle, and the repo's own gate blocks that. The
@@ -251,7 +252,6 @@ function rulesUnderContractHtml(section) {
 function improvementCompassHtml(compass) {
   if (!compass || compass.notAScore !== true || !Array.isArray(compass.lenses)) return '';
   const residual = Array.isArray(compass.topResidual) ? compass.topResidual : [];
-  const residualLenses = compass.lenses.filter((l) => l && l.status === 'residual');
   const residualLine =
     residual.length === 0
       ? '<p class="muted">Residual: none on instrumented lenses (not a score — green edges ≠ finished design).</p>'
@@ -265,9 +265,8 @@ function improvementCompassHtml(compass) {
     .filter((l) => l && l.status === 'out-of-scope')
     .map((l) => `<code>${esc(l.id)}</code>`)
     .join(' · ');
-  const next =
-    residualLenses.find((l) => l.nextAction)?.nextAction ||
-    compass.lenses.find((l) => l.status === 'residual' && l.nextAction)?.nextAction;
+  // Same primary next as doctor human: severity-ordered topResidual, not lens-id order.
+  const next = primaryImprovementCompassNextAction(compass);
   const nextLine = next
     ? `<p class="muted">Next: <code>${esc(next.ref)}</code> — ${esc(next.summary)}</p>`
     : '';

@@ -42,10 +42,10 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 | “Make architecture sound” end-to-end | Map only, no apply → `/ark-explore` |
 | Brownfield or greenfield with apply | Only fitness numbers → `/ark-coverage` |
 | User wants A + B planned and A executed | Single edge fix → `/ark-fix`; plan A only → `/ark-loop` |
-| **Apply half of Q01 post-green path** (after explore map / when user wants full apply) | Skipping explore when doctor primary is Shape map-first |
+| **Apply half of post-green Shape path** (after explore map / when user wants full apply) | Skipping explore when doctor primary is Shape map-first |
 | Spaghetti under ENFORCE: Shape work with user ok on B | Contract false-green first → `/ark-adopt` / `/ark-contract` STOP paths |
 
-**Q01:** doctor’s single door is `/ark-explore` shape-focus → dual-plan B, **then** this skill only
+**Post-green door:** doctor’s single door is `/ark-explore` shape-focus → dual-plan B, **then** this skill only
 to apply B with OK. Prefer that order when `postGreenPath` / design-weak is the primary residual.
 
 ## Related onboarding
@@ -73,10 +73,10 @@ decision-grade explore pass **and** without opening violating files.
 4. **Open every file** in plan A `steps[]` (and `target` if present) before classifying a fix.
 5. **“Así te lo re-soluciono”** for each A cluster and each B pattern bet.
 6. Apply A → re-run ark-check → rollback on regression. **Never auto-apply B** as mechanical-safe.
-7. **Q04 pilot loop for B:** when design-weak, take **`pilotLoop.nextPilot`** (one extraction card)
+7. **One-pilot loop for B:** when design-weak, take **`pilotLoop.nextPilot`** (one extraction card)
    → apply **only** that pilot with user OK → **re-doctor**. Never multi-pilot batch B; residual
    outside the pilot may remain and must not be called “healthy finished.”
-8. **Y01 reshape verdicts:** read `doctor.physicalCohesion.reshapeDecisions` before acting on
+8. **Reshape decision memory:** read `doctor.physicalCohesion.reshapeDecisions` before acting on
    mirror facts. Outcome first: a current rejected/deferred verdict means “intentional/deferred
    layout — no pilot”; never reconstruct that dead card from `findings`. When the user accepts,
    defers, or rejects a live card, persist its exact `decisionTarget` with a non-empty reason and
@@ -218,7 +218,7 @@ Status lights from doctor — not settings you choose. Rank residual honestly:
     populated cores are `optional: true`, run `ark-check --ratchet-cores` then `--doctor`.
     Never ratchet while active violations remain or false-green gap is open.
 
-## Mechanical-edit hygiene (Y04 — outcome gate)
+## Mechanical-edit hygiene (outcome gate)
 
 - Header injection must **merge into the existing doc comment**; the kept result has one `/**`, not stacked headers.
 - Route completion or movement must **preserve the original typed `defineRoute<…>(opts, handler)` call**; reconstruct that call instead of extracting untyped opts/handler constants that drop generics or contextual typing.

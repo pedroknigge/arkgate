@@ -438,6 +438,18 @@ function mapCountsAndFlags(byId, facts) {
             summary: 'Review baseline freeze honesty; do not freeze new wrong debt.',
         });
     }
+    // Large frozen residual (baseline exists with many freezes) is maintainability debt —
+    // only when there is already a residual signal or a substantial freeze surface.
+    const frozenN = Number(facts.frozenResidual) || 0;
+    if (facts.baselineExists === true && frozenN >= 10 && byId.get('maintainability').status !== 'residual') {
+        const m = byId.get('maintainability');
+        pushEvidence(m, 'baseline', `frozen:${frozenN}`);
+        markResidual(m, 'Substantial frozen residual remains under the baseline — review debt honestly.', {
+            kind: 'command',
+            ref: 'ark-check --doctor',
+            summary: 'Review freezes; do not freeze new wrong debt to clear residual.',
+        });
+    }
     const ungov = Number(facts.ungovernedDirCount) || 0;
     const emptyL = Number(facts.emptyLayerCount) || 0;
     if (ungov > 0 || emptyL > 0) {
@@ -450,6 +462,16 @@ function mapCountsAndFlags(byId, facts) {
             kind: 'skill',
             ref: '/ark-contract',
             summary: 'Classify ungoverned paths; fix empty layer patterns.',
+        });
+    }
+    // Missing golden pattern under design-weak → modularity residual (AI placement cue).
+    if (facts.designWeak === true && facts.goldenPatternPresent === false) {
+        const mod = byId.get('modularity');
+        pushEvidence(mod, 'goldenPattern', 'absent');
+        markResidual(mod, 'Design-weak without a golden pattern — new code lacks a placement norm for the AI.', {
+            kind: 'skill',
+            ref: '/ark-place',
+            summary: 'Record an advisory golden pattern for new code (does not clear design-weak).',
         });
     }
     // Stack: TypeScript host partially instrumented; unknown → not-instrumented.

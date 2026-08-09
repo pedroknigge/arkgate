@@ -163,7 +163,7 @@ the same files or weaken the gate.
 - Default to smallest viable phase 1; unlock phase 2 only when the user describes need.
 - All user-facing copy is **English**.
 
-## Merge cards (X04 reshape — judgment only)
+## Merge cards (physical cohesion reshape — judgment only)
 
 When `doctor.physicalCohesion` reports a mirrored concept and the user asks whether files
 should be **merged**, treat it as domain modeling, never deduplication (field fact: zero

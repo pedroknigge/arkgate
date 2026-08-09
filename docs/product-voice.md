@@ -24,6 +24,11 @@ because the design space is small and honest.
 - **Agent contract surface (4.3.0):** agents read **guardrail catalogs** and **scan** evidence;
   they **process** (judge / coach) outside the package. Projection and skills never become the
   pass/fail gate.
+- **Improvement compass (4.4.0):** residual architecture work is named as **lenses** (SoC, DIP,
+  domain alignment, …) projected from existing sensors — **never** a 0–10 score or Excellent/Good
+  rank. Out-of-scope lenses (perf, app security tooling, full resilience) stay honest.
+- **Vibe-coder dual depth:** human doctor and skills lead with plain outcomes and one next move;
+  experts keep full JSON. Full-AI workflows get the same single door — not a skill menu exam.
 - **False done is forbidden:** Enforce ≠ elegant design. `design-weak` / residual must not
   read as “healthy finished.” Empty ArkRules inventory is not a score. MCP configuration on
   disk is not proof that the current process belongs to this project.
@@ -93,6 +98,27 @@ Examples:
 | **agent projection** | Version-matched AGENTS/CLAUDE (or equivalent) block generated from package + contract; **non-authoritative** — enforcement is ark-check / hooks / CI |
 | **finding ref** | Stable id for a finding across turns (ruleId + target key), so agents re-address without fuzzy message match |
 | **status snapshot** | One machine-readable project/session manifest (`ark status --json` shape): identity, activation honesty, last check, residual counts — not a numeric score |
+| **improvement compass** | Closed projection of residual architecture work across fixed **lenses** (aligned to 15 common principles). Always `notAScore`. Never a gate input. |
+| **lens** | One named principle dimension (`soc`, `dip`, `domain`, …) with status `ok` / `residual` / `not-instrumented` / `out-of-scope` and evidence refs from existing sensors |
+| **topResidual** | Deterministic short list of residual lens ids — what to improve next, not a ranking score |
+| **out-of-scope lens** | Principle Ark does not instrument (e.g. scalability APM, SAST) — say so; do not invent residual |
+| **AI-easy architecture** | Small, pure, placeable modules and a golden pattern so the next agent turn stays ordered under the contract |
+
+## Public docs are product-only (from 4.4.0)
+
+Consumer-facing prose (README, use/develop/agent-guide, skills, compact router, doctor/CLI human
+lines, CHANGELOG user bullets, release notes bodies) explains **what ArkGate does and how to use
+it**. It does **not** explain features by roadmap item codes, phase numbers, or internal queue
+jargon (`IC02`, `ACS08`, `Z09`, `RB-11`, “Phase X shipped…”).
+
+| Put here | Not here (for consumers) |
+|----------|---------------------------|
+| Commands, lenses, gates, skills, honest limits | Roadmap ids as the story |
+| Stable API names (`ruleId`, JSON fields) | Ticket dumps in CHANGELOG |
+| `ROADMAP.md` / `docs/plans/` / archive (maintainers) | Required reading of epic codes to use the product |
+
+Historical maintainer files may keep engineering ids. **Do not regress** public lanes with new
+id-heavy narrative after 4.4.0.
 
 ## Scan vs process (dual depth)
 

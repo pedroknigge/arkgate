@@ -67,6 +67,10 @@ strict-merge exit, or plan `goal.met`. Out-of-scope lenses (scalability, app sec
 full resilience) stay honest. Product path: [use.md — Improvement compass](use.md#improvement-compass-not-a-score).
 Package surface row: [package-surface.md](package-surface.md).
 
+**Status snapshot:** the status schema may carry a thin optional residual-id slice when Tooling
+passes it through, but **`ark status --json` does not compute the compass yet** — use doctor for
+residual lenses. Residual never changes status `nextAction` by itself.
+
 Compact router and skills read residual lenses in plain language; green edges alone are never
 “architecture finished” while residual remains.
 

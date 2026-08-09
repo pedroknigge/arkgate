@@ -308,5 +308,8 @@ describe('X01 report parity — the standing rule', () => {
     expect(html).toContain('data-advisory="contractHealth"');
     expect(html).toContain('data-advisory="ambientState"');
     expect(html).toContain('data-advisory="governanceWeight"');
+    // Doctor always emits improvement compass; CLI --report must render it (not a score).
+    expect(html).toContain('data-advisory="improvementCompass"');
+    expect(html).toMatch(/not a score/i);
   });
 });

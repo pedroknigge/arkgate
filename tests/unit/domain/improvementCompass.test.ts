@@ -213,4 +213,35 @@ describe('improvementCompass (Domain pure)', () => {
     const next = primaryImprovementCompassNextAction(compass);
     expect(next?.ref).toBeTruthy();
   });
+
+  it('primary next action follows topResidual severity order, not lens-id order', () => {
+    // residual cohesion + dip only: dip has higher priority (30) than cohesion (60)
+    const compass = buildImprovementCompass({
+      pureOrCapabilityResidual: 1,
+      physicalCohesionFindingCount: 2,
+    });
+    expect(compass.topResidual[0]).toBe('dip');
+    expect(compass.topResidual).toContain('cohesion');
+    const next = primaryImprovementCompassNextAction(compass);
+    expect(next?.ref).toBe('/ark-fix');
+    // If we naively took first residual in id order, cohesion would win — assert dip wins.
+    const cohesionNext = compass.lenses.find((l) => l.id === 'cohesion')?.nextAction;
+    expect(cohesionNext?.ref).toBe('/ark-explore');
+    expect(next?.ref).not.toBe(cohesionNext?.ref);
+  });
+
+  it('maps frozen residual and missing golden under design-weak', () => {
+    const frozen = buildImprovementCompass({
+      baselineExists: true,
+      frozenResidual: 12,
+    });
+    expect(lens(frozen, 'maintainability').status).toBe('residual');
+
+    const golden = buildImprovementCompass({
+      designWeak: true,
+      goldenPatternPresent: false,
+    });
+    expect(lens(golden, 'modularity').status).toBe('residual');
+    expect(lens(golden, 'maintainability').status).toBe('residual');
+  });
 });
