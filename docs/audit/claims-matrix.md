@@ -52,7 +52,7 @@ engineering `doing` — next pick is product residual or a new ROADMAP epic.
 | Front door | `README.md` | Host matrix unchanged; dual bins; version strip names **4.3.0 published** on npm `latest` |
 | Use | `docs/use.md`, `docs/product-voice.md` | Doctor control plane; soft-host honesty; product-voice ACS guardrail catalog + scan/process |
 | Develop | `docs/develop.md`, `docs/ai-gates.md`, `docs/agent-guide.md`, `docs/configuration.md`, `docs/package-surface.md` | Status/projection/skills/catalog/finding-refs documented; schema 1.5; soft hosts advisory |
-| Contribute | `CONTRIBUTING.md`, `ROADMAP.md` Next session, `Agents.md` plans | ACS01–ACS08 prepare done; publish checklist open; Z09 parked claim gate only |
+| Contribute | `CONTRIBUTING.md`, `ROADMAP.md` Next session, `Agents.md` plans | ACS01–ACS08 **published** (`arkgate@4.3.0` on npm `latest`); publish checklist closed; Z09 parked claim gate only |
 | Releases | `CHANGELOG.md`, `docs/releases/*` | 4.3.0 **Status: published** on npm `latest`; 4.2.1 prior |
 | Templates | `action.yml`, generated workflow, `templates/agent-skills/` | First-push-safe base-ref; Agent Skills layout for same 13 names |
 | Audit | this file | **0 Contradicted** on public lanes; new ACS rows OK |
