@@ -3208,6 +3208,7 @@ Product hard line: no false hard write on Cursor/Codex/OpenCode; no plan-B auto-
 Not product backlog: god-module / plan-B residual (judgment only)
 Parked: Y09, Y07 (low), Y10 (archive until field demand + ADR), K01 runtime
   Later seeds (not ACS): konsistent-class sensor, adopt disk stages, mechanical one-shot CLI
-Release lanes: ordinary corrective patches do not wait for Z09; 4.3.0 publish is maintainer checklist
+Release lanes: ordinary corrective patches do not wait for Z09; 4.3.0 publish checklist closed
+  (npm latest 4.3.0 / gitHead 65f95a0 / tag v4.3.0 / OIDC run 31295575658)
   Prior: 4.2.1 / 4.2.0 / 4.1.x / 4.0.x / 3.9.x / 3.8.x as in docs/releases/ and CHANGELOG
 ```
