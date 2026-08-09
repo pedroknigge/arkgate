@@ -67,6 +67,19 @@ MCP parity tool: **`ark_status`** (same envelope; pass `project.expectedRoot` af
 Schema: `arkgate/schema/status-manifest`. Never prompts; under `CI=1` JSON is forced. **Not a
 score** — counts and verdicts only.
 
+**Stable finding refs (4.3 / ACS06):** every factory-emitted diagnostic on CLI JSON, MCP analysis
+envelopes, and opt-in hook repair payloads (`ARK_REPAIR_JSON`) carries:
+
+| Field | Meaning |
+|-------|---------|
+| `findingRef` | Compact multi-turn id (`fnv1a-` + 8 hex). Re-address the same finding without fuzzy text match. |
+| `targetKey` | Baseline-compatible freeze identity (`ruleId\|file\|from\|to\|target`, with `#N` for duplicates). **Same plane as `--baseline`** — refs never orphan freezes. |
+| `docsCodePath` | Package-relative catalog anchor (`docs/diagnostics.md#RULE_ID`). |
+
+Line/message drift across agent turns does not change `findingRef` / `targetKey`. Schema:
+`arkgate/schema/analysis-result` **`1.5`**. Multi-turn fixture:
+`tests/fixtures/finding-refs/multi-turn-stability.json`.
+
 **Version-matched agent projection (4.3 / ACS04):** install/upgrade embeds a managed AGENTS.md
 block stamped with the installed `arkgate` version plus a compact contract summary (layers +
 diagnostic short list). Regenerate after package upgrade without clobbering customized regions

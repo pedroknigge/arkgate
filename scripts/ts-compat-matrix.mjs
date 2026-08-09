@@ -564,7 +564,7 @@ if (!schema.required.includes('completeness')) throw new Error('schema omits com
 if (!schema.required.includes('mode')) throw new Error('schema omits analysis mode');
 if (!schema.required.includes('completenessReasons')) throw new Error('schema omits completeness reasons');
 if (!schema.properties.completeness.enum.includes('complete')) throw new Error('schema enum drift');
-if (schema.properties.schemaVersion.const !== '1.4') throw new Error('schema version drift');
+if (schema.properties.schemaVersion.const !== '1.5') throw new Error('schema version drift');
 const factsVersions = factsSchema.properties.schemaVersion.enum ?? [
   factsSchema.properties.schemaVersion.const,
 ];

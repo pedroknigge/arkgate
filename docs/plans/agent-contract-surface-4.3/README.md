@@ -4,11 +4,11 @@
 > true. Work starts only when item IDs appear as `todo`/`doing` in [ROADMAP.md](../../../ROADMAP.md).
 > Hub: [AGENTS.md](../../../AGENTS.md) · [Roadmap](../../../ROADMAP.md) · [Agent guide](../../agent-guide.md)
 
-**Status:** Accepted / engineering active for **4.3.0** (`ACS01`–`ACS05` done; `ACS06`–`ACS08` open)  
+**Status:** Accepted / engineering active for **4.3.0** (`ACS01`–`ACS06` done; `ACS07`–`ACS08` open)  
 **Slug:** `agent-contract-surface-4.3`  
 **Kind:** epic  
 **Owners:** ArkGate maintainers  
-**Last updated:** 2026-08-08 (ACS05 done)  
+**Last updated:** 2026-08-08 (ACS06 done)  
 **Code paths (expected):** `src/domain/`, `bin/`, `templates/skills/`, `schemas/`, `eval/`, `docs/`
 
 ## Plan lock (ACS01)
@@ -218,7 +218,7 @@ Exact schema versions and field names land in Domain + package exports during `A
 | `ACS03` | M | `ACS01` | **Done** — `ark status --json` (+ MCP `ark_status`); schema export; identity/activation/last-check/rules counts; CI-safe no-prompt |
 | `ACS04` | M | `ACS02` | **Done** — version-matched agent projection (`ark agents-md`); install/upgrade embed; drift tests; non-enforcement labeling |
 | `ACS05` | M | `ACS01` | **Done** — Agent Skills–compatible packaging of existing 13 skills; agent-guide install via skills ecosystem; no new names |
-| `ACS06` | M | `ACS02`, `ACS03` | Stable finding refs on adapter surfaces (CLI JSON, MCP, repair payload); multi-turn fixture |
+| `ACS06` | M | `ACS02`, `ACS03` | **Done** — stable finding refs on adapter surfaces (CLI JSON, MCP, repair payload); multi-turn fixture |
 | `ACS07` | M | `ACS05` | Maintainer A/B eval: agent placement with Ark gates vs without; recorded under `eval/`; README eval lane |
 | `ACS08` | S | `ACS02`–`ACS07` | Claims matrix + public lanes; CHANGELOG; `docs/releases/4.3.0.md`; signed publish **4.3.0** |
 

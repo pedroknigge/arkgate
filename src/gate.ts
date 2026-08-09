@@ -2,8 +2,13 @@
 export { version } from './version';
 
 export {
+  ADAPTER_DIAGNOSTIC_DOCS_RELATIVE_PATH,
   ARK_ANALYSIS_RESULT_SCHEMA_VERSION,
   ARK_ANALYSIS_RESULT_SCHEMA,
+  adapterDocsCodePath,
+  adapterFindingOccurrenceTargetKeys,
+  adapterFindingRefFromTargetKey,
+  adapterFindingTargetKey,
   createAdapterResult,
   toAdapterDiagnostic,
   type AnalysisCompleteness,

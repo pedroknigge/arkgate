@@ -33,6 +33,12 @@ in the immutable pre-2.0 archive linked below.
   Domain `src/domain/agentSkillsPackage.ts` (frozen `ARK_SKILL_NAMES`, frontmatter/layout
   validation), generated pure `bin/lib/agent-skills-package.mjs`, `npm run generate:agent-skills` /
   `check:agent-skills`. **No new skill names.** Skills remain non-enforcing.
+- **Stable finding refs (ACS06):** analysis-result schema **`1.5`** — every factory-emitted
+  diagnostic (CLI JSON, MCP, opt-in `ARK_REPAIR_JSON` repair payload) includes `findingRef`
+  (`fnv1a-…`), baseline-compatible `targetKey`, and `docsCodePath`. `targetKey` is exactly the
+  baseline (occurrence) freeze key so multi-turn agent loops never orphan baselined debt.
+  Domain helpers on `adapterContract` / `baselineKey`; multi-turn fixture
+  `tests/fixtures/finding-refs/multi-turn-stability.json`.
 
 ## 4.2.1 — 2026-08-08 (published)
 

@@ -91,7 +91,7 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": "1.4"
+      "const": "1.5"
     },
     "mode": {
       "enum": [
@@ -250,6 +250,19 @@
             }
           },
           "nextAction": {
+            "type": "string",
+            "minLength": 1
+          },
+          "findingRef": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^fnv1a-[0-9a-f]{8}$"
+          },
+          "targetKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docsCodePath": {
             "type": "string",
             "minLength": 1
           }

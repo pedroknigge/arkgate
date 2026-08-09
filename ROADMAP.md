@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-08 (Phase ACS — ACS01–ACS05 done; next engineering: ACS06)
+- **Status date:** 2026-08-08 (Phase ACS — ACS01–ACS06 done; next engineering: ACS07)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -653,7 +653,7 @@ Boundary:
 | 112 | `ACS03` | `done` | M | `ACS01` | `ark status --json` (+ MCP parity if required); schema export; identity/activation/last-check/rules counts; CI no-prompt |
 | 113 | `ACS04` | `done` | M | `ACS02` | Version-matched agent contract projection; install/upgrade path; drift tests; labeled non-enforcement |
 | 114 | `ACS05` | `done` | M | `ACS01` | Agent Skills–compatible packaging of existing 13 skills; agent-guide ecosystem install; no new names |
-| 115 | `ACS06` | `todo` | M | `ACS02`, `ACS03` | Stable finding refs on CLI JSON / MCP / repair payload; multi-turn fixture |
+| 115 | `ACS06` | `done` | M | `ACS02`, `ACS03` | Stable finding refs on CLI JSON / MCP / repair payload; multi-turn fixture |
 | 116 | `ACS07` | `todo` | M | `ACS05` | Maintainer A/B eval (placement with gates vs without) under `eval/`; documented results path |
 | 117 | `ACS08` | `todo` | S | `ACS02`–`ACS07` | Claims matrix + public lanes; CHANGELOG; release notes; signed **arkgate@4.3.0** publish |
 
@@ -782,7 +782,7 @@ ACS05).
 
 **ACS06 — Stable finding refs**
 
-- **Status:** `todo`
+- **Status:** `done` (2026-08-08)
 - **Depends on:** `ACS02`, `ACS03`
 
 **Outcome:** adapter JSON (CLI/MCP/repair) includes a stable `findingRef` (or equivalent) bound
@@ -791,6 +791,18 @@ match.
 
 **Acceptance:** schema/adapter contract bump if needed; multi-turn fixture; baseline keys remain
 the freeze identity (refs must not orphan baselines).
+
+**Evidence:** analysis-result schema **`1.5`** (`src/domain/adapterContract.ts` + generated
+`bin/lib/adapter-contract.mjs` / `schemas/ark.analysis-result.schema.json`); every
+`toAdapterDiagnostic` / `createAdapterResult` diagnostic carries `findingRef` (`fnv1a-…`),
+`targetKey` (exactly `baselineKey` / `baselineOccurrenceKeys` so freezes are not orphaned), and
+`docsCodePath` (`docs/diagnostics.md#RULE_ID`). CLI `--json`, MCP analysis envelopes, and opt-in
+`ARK_REPAIR_JSON` all flow through `createAdapterResult`. Baseline helpers extended in
+`src/domain/baselineKey.ts` (`findingTargetKey`, `findingRefFromTargetKey`). Multi-turn fixture
+`tests/fixtures/finding-refs/multi-turn-stability.json` + tests in
+`tests/unit/domain/adapterContract.test.ts` (ACS06 suite). Root API exports via `src/gate.ts`.
+Docs: package-surface, agent-guide; CHANGELOG Unreleased ACS06 note. Next engineering pick:
+`ACS07` (eval A/B).
 
 **ACS07 — Maintainer A/B eval**
 
@@ -3145,17 +3157,17 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering: ACS05 done; next ACS06 (finding refs) or ACS07
+Engineering next: ACS07 (maintainer A/B eval)
   Epic: Phase ACS — Agent contract surface → npm 4.3.0
   Plan: docs/plans/agent-contract-surface-4.3/README.md (Accepted / engineering active)
-  Queue: ACS01–ACS05 done → ACS06 → ACS07 → ACS08 publish
-  Last closed epic item: ACS05 (Agent Skills packaging — templates/agent-skills + npx skills)
-  Prior closed: ACS04 (projection); ACS03 (status); ACS02 (catalog); ACS01 (plan lock); WI01 — 4.2.0; patch 4.2.1
+  Queue: ACS01–ACS06 done → ACS07 (todo) → ACS08 publish
+  Last closed epic item: ACS06 (stable finding refs — analysis-result 1.5 + multi-turn fixture)
+  Prior closed: ACS05 (skills packaging); ACS04 (projection); ACS03 (status); ACS02 (catalog); ACS01; WI01 — 4.2.0; patch 4.2.1
   Later trains on main (not separate ROADMAP rows): CI hygiene profile (#113);
     4.2.1 Next.js 16.3 root proxy.ts include + eval pins (#114) — published
 Released baseline: npm arkgate@4.2.1 on latest (gitHead b2f02c9; tag v4.2.1; 2026-08-08)
   Notes: docs/releases/4.2.1.md — Status: published (OIDC Trusted Publishing)
-  Target next release: 4.3.0 (Phase ACS) — ACS01–ACS05 done; next ACS06
+  Target next release: 4.3.0 (Phase ACS) — ACS01–ACS06 done; next engineering ACS07
 Phase AR (v4 train, AR01–AR19 done): historical plan once mapped AR17–19 to "4.3.0"; those
   items closed without a separate 4.3.0 tag — 4.3.0 is now ACS
 Phase EH (EH01–EH08 done): 4.1.1; Phase WI (WI01 done): 4.2.0; patch 4.2.1
@@ -3166,7 +3178,8 @@ Product hard line: no false hard write on Cursor/Codex/OpenCode; no plan-B auto-
   ACS hard line: no LLM verdict; no new skill names; projection never enforces;
   freeze restated ACS01 (catalog/scan-process voice in docs/product-voice.md);
   ACS02 catalog closed at src/domain/diagnosticCatalog.ts + docs/diagnostics.md;
-  ACS03 status closed at src/domain/statusManifest.ts + ark status --json / ark_status
+  ACS03 status closed at src/domain/statusManifest.ts + ark status --json / ark_status;
+  ACS06 finding refs closed at analysis-result 1.5 (findingRef/targetKey/docsCodePath)
 Not product backlog: god-module / plan-B residual (judgment only)
 Parked: Y09, Y07 (low), Y10 (archive until field demand + ADR), K01 runtime
   Later seeds (not ACS): konsistent-class sensor, adopt disk stages, mechanical one-shot CLI
