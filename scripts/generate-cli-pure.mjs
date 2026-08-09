@@ -34,6 +34,11 @@ const MODULES = [
     label: 'remediation classifier + fix-class enrich',
   },
   {
+    canonical: 'src/domain/diagnosticCatalog.ts',
+    derived: 'bin/lib/diagnostic-catalog.mjs',
+    label: 'public diagnostic code catalog (ACS02)',
+  },
+  {
     canonical: 'src/domain/baselineKey.ts',
     derived: 'bin/lib/baseline-key.mjs',
     label: 'baseline violation key',

@@ -30,6 +30,7 @@ Product site: [arkgate.online](https://www.arkgate.online/) · npm: [`arkgate`](
 | [develop.md](develop.md) | Gates, hosts, config, brownfield, power tools |
 | [ai-gates.md](ai-gates.md) | Install hooks / MCP / CI per host |
 | [agent-guide.md](agent-guide.md) | Agent, CLI, and MCP reference |
+| [diagnostics.md](diagnostics.md) | Public diagnostic `ruleId` catalog (why / fix anchors) |
 | [configuration.md](configuration.md) | `ark.config.json` contract |
 | [brownfield-adoption.md](brownfield-adoption.md) | Existing messy repos |
 | [package-surface.md](package-surface.md) | Stable vs experimental package surface |

@@ -68,6 +68,7 @@ can show `runtimeObserved: true` even when branch-protection policy is plan-unav
 | ArkRules (structure + invariants) | [configuration.md](configuration.md#arkrules-intra-layer-opt-in) · `arkRules` / `arkrules/*` · skill `/ark-contract` |
 | Rules inventory (brownfield) | `arkgate-check --rules-inventory` · MCP `ark_rules_inventory` |
 | Stable package API | [package-surface.md](package-surface.md) |
+| Diagnostic codes (`ruleId` why/fix) | [diagnostics.md](diagnostics.md) · root `DIAGNOSTIC_CATALOG` |
 | Where new code goes | MCP `ark_place` · skill `/ark-place` (respects layer **and** structure sensors) |
 | Preflight multi-file change | MCP `ark_prepare_change` · `ark preflight --changes …` |
 | Write snippet preflight | MCP `ark_prepare_write` |

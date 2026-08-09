@@ -48,6 +48,7 @@ hardening guide remains repository-hosted rather than duplicated in the gate tar
 | **Enforcement state (Z06/Z10)** | `doctor.writePath.enforcementState`; schema/type | Schema `1.1`: runtime observation, operation coverage, and operation-scoped `hard`. Only fresh covered active-host evidence permits `hard:true`; unverified assets and MCP remain non-hard. |
 | **Design delta (Z10)** | `--fail-on-new-smells --base-ref <ref>`; hook/MCP; schema/types | Schema `1.0`: identities, touched paths, stable evidence/verdict. Missing base fails closed; only new/worsened `domain-logic-in-ui` blocks; global doctor smells stay advisory. |
 | **`arkgate/schema/analysis-result`** or **`arkgate/schema/ark.analysis-result.schema.json`** | Public CLI/MCP/hook diagnostic envelope (`schemaVersion`, `mode`, `valid`, `completeness`, `completenessReasons`, `diagnostics`, resolved identities) | Schema `1.4` adds optional `evidence.arkruleId` / `evidence.arkruleSource` for ArkRules; `1.3` distinguished `resolved-candidate-facts` from `lexical-compatibility`; partial/unavailable analysis is always non-green, and resolved complete/partial results require policy/resolver/facts/tree identities. `1.2` added completeness and remains accepted alongside consumer-owned 1.0/1.1 values. |
+| **Diagnostic code catalog (ACS02)** | Root API `DIAGNOSTIC_CATALOG` / `getDiagnosticCatalogEntry` / `diagnosticDocsPath`; docs [diagnostics.md](diagnostics.md) (`#RULE_ID` anchors) | Closed vocabulary of public `ruleId`s with why/fix anchors. Cataloguing only — no new rule semantics. Remediation parity is test-guarded. Docs ship in the npm tarball. |
 | **`arkgate/schema/arkrules`** or **`arkgate/schema/ark.arkrules.schema.json`** | Per-layer structure sensors + invariant catalog (ADR 0012) | Schema `1.0`. Opt-in via root `arkRules` map (`ark.config` schema `1.1`). |
 | **`arkgate/schema/resolved-candidate-facts`** or **`arkgate/schema/ark.resolved-candidate-facts.schema.json`** | Versioned parity-capable input for `analyzeResolvedProject` / `preflightResolvedChange` | Schema `1.0` is serializable and deterministic. Tooling owns filesystem/compiler resolution; Domain/Kernel validate and evaluate supplied facts without importing those effects. Facts name resolver/compiler inputs, governed files, dependency evidence, completeness reasons, and candidate tree/facts hashes. |
 | **Config JSON Schema** | `arkgate/schema` or `arkgate/schema/ark.config.schema.json` | Stable package resource subpaths for editor completion and contract tooling. |
@@ -88,6 +89,7 @@ are grouped below.
 | Group | Exported runtime values |
 |-------|-------------------------|
 | Metadata and adapter diagnostics | `version`, `ARK_ANALYSIS_RESULT_SCHEMA_VERSION`, `ARK_ANALYSIS_RESULT_SCHEMA`, `createAdapterResult`, `toAdapterDiagnostic` |
+| Diagnostic code catalog (ACS02 / 4.3) | `DIAGNOSTIC_CATALOG`, `DIAGNOSTIC_RULE_IDS`, `DIAGNOSTIC_CATALOG_SCHEMA_VERSION`, `DIAGNOSTIC_DOCS_RELATIVE_PATH`, `getDiagnosticCatalogEntry`, `isKnownDiagnosticCode`, `isCataloguedOrArkRuleFamily`, `diagnosticDocsPath`, `diagnosticDocsFragment`, `catalogWhyForRuleId`, `catalogFixForRuleId`, `serializeDiagnosticCatalog` |
 | MCP project identity | `ARK_PROJECT_IDENTITY_SCHEMA_VERSION`, `ARK_PROJECT_IDENTITY_SCHEMA_URL`, `ARK_PROJECT_IDENTITY_SCHEMA`, `PROJECT_EXPECTATION_SCHEMA`, `PROJECT_BINDING_SCHEMA`, `createProjectId`, `createProjectIdentity` |
 | AI snippet gate | `createAICodeGate` |
 | Profiles and config factories | `createArchitectureProfile`, `createArchitectureProfileFromArkConfig`, `createElevenLayerArkConfig`, `elevenLayerProfile` |
@@ -101,6 +103,7 @@ The type-only root exports are also semver-supported:
 
 - Adapter diagnostics: `AdapterDiagnostic`, `AdapterResult`, `AdapterSeverity`,
   `AdapterViolationInput`, `AdapterCompletenessReason`, `AnalysisCompleteness`, `AnalysisMode`.
+- Diagnostic catalog: `DiagnosticCatalogEntry`, `DiagnosticCategory`.
 - MCP project identity: `ProjectIdentity`, `ProjectExpectation`, `ProjectBinding`.
 - Resolved facts: `ResolvedCandidateFacts`, `ResolvedCandidateFactsInput`, and their
   dependency/file/evidence component types.

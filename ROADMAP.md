@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-08 (Phase ACS plan locked — ACS01 done; engineering queue ACS02+)
+- **Status date:** 2026-08-08 (Phase ACS — ACS01 done; Engineering doing: ACS02)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -649,7 +649,7 @@ Boundary:
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 110 | `ACS01` | `done` | S | `WI01` + 4.2.1 published | Plan locked; product-voice guardrail/catalog + scan/process language; freeze restated for 4.3.0 |
-| 111 | `ACS02` | `todo` | M | `ACS01` | Public diagnostic code catalog (stable `ruleId` → why/fix/docs anchors); remediation parity; fixtures |
+| 111 | `ACS02` | `doing` | M | `ACS01` | Public diagnostic code catalog (stable `ruleId` → why/fix/docs anchors); remediation parity; fixtures |
 | 112 | `ACS03` | `todo` | M | `ACS01` | `ark status --json` (+ MCP parity if required); schema export; identity/activation/last-check/rules counts; CI no-prompt |
 | 113 | `ACS04` | `todo` | M | `ACS02` | Version-matched agent contract projection; install/upgrade path; drift tests; labeled non-enforcement |
 | 114 | `ACS05` | `todo` | M | `ACS01` | Agent Skills–compatible packaging of existing 13 skills; agent-guide ecosystem install; no new names |
@@ -676,7 +676,7 @@ is `ACS02` only (no competing engineering epic).
 
 **ACS02 — Diagnostic code catalog**
 
-- **Status:** `todo` (next engineering `doing`)
+- **Status:** `doing`
 - **Depends on:** `ACS01`
 
 **Outcome:** every public `ruleId` emitted by the gate has a stable catalog entry with agent- and
@@ -3089,17 +3089,17 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: (none — pick ACS02 next)
+Engineering doing: ACS02
   Epic: Phase ACS — Agent contract surface → npm 4.3.0
   Plan: docs/plans/agent-contract-surface-4.3/README.md (Accepted / engineering active)
-  Queue: ACS01 done → ACS02/ACS03/ACS05 → ACS04/ACS06/ACS07 → ACS08 publish
+  Queue: ACS01 done → ACS02 (doing) → ACS03/ACS05 → ACS04/ACS06/ACS07 → ACS08 publish
   Last closed epic item: ACS01 (plan lock + product voice + freeze restated for 4.3.0)
   Prior closed: WI01 (Phase WI) — shipped 4.2.0; patch 4.2.1 published
   Later trains on main (not separate ROADMAP rows): CI hygiene profile (#113);
     4.2.1 Next.js 16.3 root proxy.ts include + eval pins (#114) — published
 Released baseline: npm arkgate@4.2.1 on latest (gitHead b2f02c9; tag v4.2.1; 2026-08-08)
   Notes: docs/releases/4.2.1.md — Status: published (OIDC Trusted Publishing)
-  Target next release: 4.3.0 (Phase ACS) — next item ACS02 (diagnostic code catalog)
+  Target next release: 4.3.0 (Phase ACS) — active item ACS02 (diagnostic code catalog)
 Phase AR (v4 train, AR01–AR19 done): historical plan once mapped AR17–19 to "4.3.0"; those
   items closed without a separate 4.3.0 tag — 4.3.0 is now ACS
 Phase EH (EH01–EH08 done): 4.1.1; Phase WI (WI01 done): 4.2.0; patch 4.2.1

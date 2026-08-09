@@ -5,6 +5,14 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Added
+
+- **Diagnostic code catalog (ACS02):** closed public `ruleId` vocabulary with why/fix text and
+  docs anchors (`docs/diagnostics.md#RULE_ID`). Domain source `src/domain/diagnosticCatalog.ts`,
+  generated CLI mirror `bin/lib/diagnostic-catalog.mjs`, root exports (`DIAGNOSTIC_CATALOG`,
+  `getDiagnosticCatalogEntry`, `diagnosticDocsPath`, …). Remediation/parity fixtures forbid
+  unknown production codes. No new rule semantics — cataloguing only.
+
 ## 4.2.1 — 2026-08-08 (published)
 
 **Patch** over 4.2.0. Next.js **16.3** field compatibility: root `proxy.ts` (Next 16 network-boundary

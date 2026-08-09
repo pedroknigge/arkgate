@@ -72,6 +72,7 @@
     "docs/brownfield-adoption.md",
     "docs/configuration.md",
     "docs/package-surface.md",
+    "docs/diagnostics.md",
     "docs/threat-model.md",
     "tests/fixtures/ts-consumer",
     "templates",

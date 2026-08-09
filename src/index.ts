@@ -321,6 +321,23 @@ export {
 } from './domain/policyDelta';
 
 export {
+  DIAGNOSTIC_CATALOG,
+  DIAGNOSTIC_CATALOG_SCHEMA_VERSION,
+  DIAGNOSTIC_DOCS_RELATIVE_PATH,
+  DIAGNOSTIC_RULE_IDS,
+  catalogFixForRuleId,
+  catalogWhyForRuleId,
+  diagnosticDocsFragment,
+  diagnosticDocsPath,
+  getDiagnosticCatalogEntry,
+  isCataloguedOrArkRuleFamily,
+  isKnownDiagnosticCode,
+  serializeDiagnosticCatalog,
+  type DiagnosticCatalogEntry,
+  type DiagnosticCategory,
+} from './domain/diagnosticCatalog';
+
+export {
   ARK_ENFORCEMENT_STATE_SCHEMA_VERSION,
   type ArkEnforcementHost,
   type ArkEnforcementState,

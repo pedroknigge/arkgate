@@ -89,7 +89,7 @@ Examples:
 | **guardrail catalog** | Closed vocabulary of allowed sensors, capabilities, diagnostic `ruleId`s, and skill roles — agents and copy choose from the catalog; they do not invent free-form enforcement claims |
 | **scan** | Deterministic engine / CLI / MCP evidence pass (layers, ArkRules sensors, status facts, prepare-write). Same inputs → same verdict. No LLM. |
 | **process** (agent judgment) | Skill- or agent-side coaching: placement, dual-plan, pilot choice, remediation order. Improves prevention; **never** package pass/fail |
-| **diagnostic code** / **ruleId** | Stable public violation id (e.g. `LAYER_IMPORT_VIOLATION`) with shared why/fix anchors — catalog-linked, not prose-only |
+| **diagnostic code** / **ruleId** | Stable public violation id (e.g. `LAYER_IMPORT_VIOLATION`) with shared why/fix anchors — catalog-linked, not prose-only ([diagnostics.md](diagnostics.md)) |
 | **agent projection** | Version-matched AGENTS/CLAUDE (or equivalent) block generated from package + contract; **non-authoritative** — enforcement is ark-check / hooks / CI |
 | **finding ref** | Stable id for a finding across turns (ruleId + target key), so agents re-address without fuzzy message match |
 | **status snapshot** | One machine-readable project/session manifest (`ark status --json` shape): identity, activation honesty, last check, residual counts — not a numeric score |

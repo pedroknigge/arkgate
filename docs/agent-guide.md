@@ -646,6 +646,11 @@ Relevant violation codes include `LAYER_IMPORT_VIOLATION`, `FORBIDDEN_GLOBAL`,
 `FORBIDDEN_SUBSTRING`, `FORBIDDEN_IMPORT`, `POLICY_VIOLATION`, `UNKNOWN_INTENT`,
 `LAYER_REFERENCE_VIOLATION`, `EXTENSION_ERROR`, and `AST_ANALYZER_ERROR`.
 
+**Full catalog (ACS02):** every public `ruleId` with why/fix anchors lives in
+[diagnostics.md](diagnostics.md) (stable fragment `#RULE_ID`) and the root API
+`DIAGNOSTIC_CATALOG` / `getDiagnosticCatalogEntry` / `diagnosticDocsPath`. Agents must not
+invent free-form rule ids outside that closed vocabulary.
+
 Use `ark-check` in CI for repository-level checks that need real file paths:
 
 ```bash
