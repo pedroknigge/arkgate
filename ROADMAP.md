@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-08 (Phase ACS — ACS01–ACS02 done; engineering doing: ACS03)
+- **Status date:** 2026-08-08 (Phase ACS — ACS01–ACS04 done; next engineering: ACS05)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -650,8 +650,8 @@ Boundary:
 |---:|---|---|---:|---|---|
 | 110 | `ACS01` | `done` | S | `WI01` + 4.2.1 published | Plan locked; product-voice guardrail/catalog + scan/process language; freeze restated for 4.3.0 |
 | 111 | `ACS02` | `done` | M | `ACS01` | Public diagnostic code catalog (stable `ruleId` → why/fix/docs anchors); remediation parity; fixtures |
-| 112 | `ACS03` | `doing` | M | `ACS01` | `ark status --json` (+ MCP parity if required); schema export; identity/activation/last-check/rules counts; CI no-prompt |
-| 113 | `ACS04` | `todo` | M | `ACS02` | Version-matched agent contract projection; install/upgrade path; drift tests; labeled non-enforcement |
+| 112 | `ACS03` | `done` | M | `ACS01` | `ark status --json` (+ MCP parity if required); schema export; identity/activation/last-check/rules counts; CI no-prompt |
+| 113 | `ACS04` | `done` | M | `ACS02` | Version-matched agent contract projection; install/upgrade path; drift tests; labeled non-enforcement |
 | 114 | `ACS05` | `todo` | M | `ACS01` | Agent Skills–compatible packaging of existing 13 skills; agent-guide ecosystem install; no new names |
 | 115 | `ACS06` | `todo` | M | `ACS02`, `ACS03` | Stable finding refs on CLI JSON / MCP / repair payload; multi-turn fixture |
 | 116 | `ACS07` | `todo` | M | `ACS05` | Maintainer A/B eval (placement with gates vs without) under `eval/`; documented results path |
@@ -701,7 +701,7 @@ only `ACS01`).
 
 **ACS03 — Unified status manifest**
 
-- **Status:** `doing`
+- **Status:** `done` (2026-08-08)
 - **Depends on:** `ACS01`
 
 **Outcome:** one machine-readable status snapshot for agents: project identity binding, honest
@@ -712,9 +712,27 @@ action. Fail closed / descriptive in `CI=1` without prompts.
 or documented single surface if MCP already covers the envelope; focused tests for matched vs
 stale identity.
 
+**Evidence:** Domain `src/domain/statusManifest.ts` (schema `1.0`, pure
+`buildStatusManifest` / binding / write-path / nextAction); generated pure
+`bin/lib/status-manifest.mjs` + schema `schemas/ark.status-manifest.schema.json` (`check:cli-pure`
+green); package exports `arkgate/schema/status-manifest` (+ stable `.json` alias); CLI
+`ark status [--json]` via `bin/lib/status-command.mjs` (no readline; `CI=1` forces JSON; exit 1 on
+identity mismatch); MCP `ark_status` in `bin/ark-mcp-runtime.mjs` (same envelope via
+`buildProjectStatusManifest`); root API re-exports from `src/gate.ts`
+(`buildStatusManifest`, `ARK_STATUS_MANIFEST_SCHEMA`, …). Envelope fields present:
+`projectIdentity` (binding matched/mismatch/unverified), `activation.writePath`
+(`hard`|`advisory`|`unavailable` — soft hosts never hard), `lastCheck`, `rules` residual counts,
+`nextAction`. Docs: [package-surface.md](docs/package-surface.md),
+[agent-guide.md](docs/agent-guide.md); CHANGELOG Unreleased ACS03 note. Tests
+`tests/unit/domain/statusManifest.test.ts` (15/15): schema envelope, matched vs stale root/id,
+soft-host advisory, CLI/CI no-prompt, package export paths. Commit `c8567d6`. Local verify:
+focused status tests 15/15, `check:cli-pure`, live `CI=1 node bin/ark.mjs status --json` returns
+schemaVersion `1.0`. Not a score; no new rule semantics. Next engineering pick: `ACS05` (skills
+packaging) or `ACS04` (agent projection) — both deps met; `ACS06` also unblocked by ACS03.
+
 **ACS04 — Version-matched agent projection**
 
-- **Status:** `todo`
+- **Status:** `done` (2026-08-08)
 - **Depends on:** `ACS02`
 
 **Outcome:** install/upgrade/refresh can regenerate a compact agent-facing contract projection
@@ -723,6 +741,19 @@ unchanged customized regions), explicitly non-authoritative for enforcement.
 
 **Acceptance:** generator command or install path documented; drift test vs package version;
 projection never referenced as a gate input in code or claims.
+
+**Evidence:** Domain `src/domain/agentProjection.ts` (schema `1.0`, markers, non-enforcement
+label, content-identity merge, package-version stamp); generated pure
+`bin/lib/agent-projection.mjs` (`check:cli-pure` green); Tooling
+`bin/lib/agent-projection-command.mjs` + CLI `ark agents-md` (`--write` / `--check` / `--stdout` /
+`--json`); install path embeds projection via `agentInstructions` /
+`compactAgentInstructions` / `agentProjectionBlockForRoot` in `bin/lib/ci-and-commands.mjs`;
+root API exports via `src/gate.ts`; DomainModel pattern for pure helper in `ark.config.json`;
+docs [package-surface.md](docs/package-surface.md), [agent-guide.md](docs/agent-guide.md);
+CHANGELOG Unreleased ACS04 note. Tests `tests/unit/domain/agentProjection.test.ts` (11/11):
+stamp + label, merge preserves outside block, install embed, CLI check/write drift, analysis
+paths never import projection. Local verify: focused tests 11/11, `check:cli-pure`. Projection
+never a gate input. Next engineering pick: `ACS05` (skills packaging) or `ACS06` (finding refs).
 
 **ACS05 — Agent Skills packaging**
 
@@ -3101,17 +3132,17 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: ACS03 (unified status manifest — ark status --json)
+Engineering next pick: ACS05 (Agent Skills packaging) or ACS06 (stable finding refs)
   Epic: Phase ACS — Agent contract surface → npm 4.3.0
   Plan: docs/plans/agent-contract-surface-4.3/README.md (Accepted / engineering active)
-  Queue: ACS01–ACS02 done → ACS03 (doing) → ACS05/ACS04/ACS06/ACS07 → ACS08 publish
-  Last closed epic item: ACS02 (public diagnostic code catalog + remediation/docs parity)
-  Prior closed: ACS01 (plan lock + product voice); WI01 (Phase WI) — 4.2.0; patch 4.2.1
+  Queue: ACS01–ACS04 done → ACS05/ACS06 → ACS07 → ACS08 publish
+  Last closed epic item: ACS04 (version-matched agent projection — ark agents-md)
+  Prior closed: ACS03 (status); ACS02 (diagnostic catalog); ACS01 (plan lock); WI01 — 4.2.0; patch 4.2.1
   Later trains on main (not separate ROADMAP rows): CI hygiene profile (#113);
     4.2.1 Next.js 16.3 root proxy.ts include + eval pins (#114) — published
 Released baseline: npm arkgate@4.2.1 on latest (gitHead b2f02c9; tag v4.2.1; 2026-08-08)
   Notes: docs/releases/4.2.1.md — Status: published (OIDC Trusted Publishing)
-  Target next release: 4.3.0 (Phase ACS) — sole engineering doing ACS03 (status --json)
+  Target next release: 4.3.0 (Phase ACS) — ACS01–ACS04 done; next ACS05/ACS06
 Phase AR (v4 train, AR01–AR19 done): historical plan once mapped AR17–19 to "4.3.0"; those
   items closed without a separate 4.3.0 tag — 4.3.0 is now ACS
 Phase EH (EH01–EH08 done): 4.1.1; Phase WI (WI01 done): 4.2.0; patch 4.2.1
@@ -3121,7 +3152,8 @@ Closed in 3.8.0: Z01–Z08, Z10; RB-07–RB-10, RB-12
 Product hard line: no false hard write on Cursor/Codex/OpenCode; no plan-B auto-apply
   ACS hard line: no LLM verdict; no new skill names; projection never enforces;
   freeze restated ACS01 (catalog/scan-process voice in docs/product-voice.md);
-  ACS02 catalog closed at src/domain/diagnosticCatalog.ts + docs/diagnostics.md
+  ACS02 catalog closed at src/domain/diagnosticCatalog.ts + docs/diagnostics.md;
+  ACS03 status closed at src/domain/statusManifest.ts + ark status --json / ark_status
 Not product backlog: god-module / plan-B residual (judgment only)
 Parked: Y09, Y07 (low), Y10 (archive until field demand + ADR), K01 runtime
   Later seeds (not ACS): konsistent-class sensor, adopt disk stages, mechanical one-shot CLI

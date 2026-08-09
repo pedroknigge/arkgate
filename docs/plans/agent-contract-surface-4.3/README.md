@@ -4,7 +4,7 @@
 > true. Work starts only when item IDs appear as `todo`/`doing` in [ROADMAP.md](../../../ROADMAP.md).
 > Hub: [AGENTS.md](../../../AGENTS.md) · [Roadmap](../../../ROADMAP.md) · [Agent guide](../../agent-guide.md)
 
-**Status:** Accepted / engineering active for **4.3.0** (`ACS01`–`ACS02` done; `ACS03`–`ACS08` open)  
+**Status:** Accepted / engineering active for **4.3.0** (`ACS01`–`ACS04` done; `ACS05`–`ACS08` open)  
 **Slug:** `agent-contract-surface-4.3`  
 **Kind:** epic  
 **Owners:** ArkGate maintainers  
@@ -215,8 +215,8 @@ Exact schema versions and field names land in Domain + package exports during `A
 |----|------|---------|---------|
 | `ACS01` | S | — | **Done** — plan locked; product-voice catalog/guardrails + scan/process; freeze restated for 4.3.0 |
 | `ACS02` | M | `ACS01` | **Done** — public diagnostic code catalog (Domain + docs anchors); remediation/`why`/`fix` keyed by stable `ruleId`; parity fixtures |
-| `ACS03` | M | `ACS01` | `ark status --json` (+ MCP parity if required); schema export; identity/activation/last-check/rules counts; CI-safe no-prompt |
-| `ACS04` | M | `ACS02` | Version-matched agent contract projection generator; install/upgrade path; drift tests; non-enforcement labeling |
+| `ACS03` | M | `ACS01` | **Done** — `ark status --json` (+ MCP `ark_status`); schema export; identity/activation/last-check/rules counts; CI-safe no-prompt |
+| `ACS04` | M | `ACS02` | **Done** — version-matched agent projection (`ark agents-md`); install/upgrade embed; drift tests; non-enforcement labeling |
 | `ACS05` | M | `ACS01` | Agent Skills–compatible packaging of existing 13 skills; agent-guide install via skills ecosystem; no new names |
 | `ACS06` | M | `ACS02`, `ACS03` | Stable finding refs on adapter surfaces (CLI JSON, MCP, repair payload); multi-turn fixture |
 | `ACS07` | M | `ACS05` | Maintainer A/B eval: agent placement with Ark gates vs without; recorded under `eval/`; README eval lane |

@@ -67,6 +67,22 @@ MCP parity tool: **`ark_status`** (same envelope; pass `project.expectedRoot` af
 Schema: `arkgate/schema/status-manifest`. Never prompts; under `CI=1` JSON is forced. **Not a
 score** — counts and verdicts only.
 
+**Version-matched agent projection (4.3 / ACS04):** install/upgrade embeds a managed AGENTS.md
+block stamped with the installed `arkgate` version plus a compact contract summary (layers +
+diagnostic short list). Regenerate after package upgrade without clobbering customized regions
+outside the markers:
+
+```bash
+npx ark agents-md              # preview
+npx ark agents-md --write      # merge managed block only
+npx ark agents-md --check      # exit 1 on version/stamp drift
+npx ark agents-md --stdout     # print block only
+```
+
+The projection is **non-authoritative**. Enforcement is `ark-check` / host write hooks / required
+CI (`--strict-merge`) — never AGENTS.md, skills, or this projection. Root API:
+`buildAgentProjectionBlock` / `mergeAgentProjectionDocument`.
+
 ## Architecture playbook and `ark-check --recommend`
 
 Before generating project structure, agents should read the **tool-agnostic application

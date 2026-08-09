@@ -34,6 +34,7 @@ import {
   renderChangePreflight,
 } from './lib/prepare-change.mjs';
 import { runStatusCommand } from './lib/status-command.mjs';
+import { runAgentProjectionCommand } from './lib/agent-projection-command.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
@@ -84,6 +85,9 @@ function parseArgs(argv) {
     requireWriteHook: undefined,
     expectedRoot: undefined,
     expectedProjectId: undefined,
+    write: false,
+    check: false,
+    stdout: false,
     help: false,
     version: false,
   };
@@ -132,6 +136,9 @@ function parseArgs(argv) {
     }
     else if (arg === '--expected-root') args.expectedRoot = path.resolve(requireValue(arg, i++));
     else if (arg === '--expected-project-id') args.expectedProjectId = requireValue(arg, i++);
+    else if (arg === '--write') args.write = true;
+    else if (arg === '--check') args.check = true;
+    else if (arg === '--stdout') args.stdout = true;
     else if (arg === '--help' || arg === '-h' || arg === 'help') args.help = true;
     else if (arg === '--version' || arg === '-V') args.version = true;
     else if (!arg.startsWith('-') && args.command === undefined) args.command = arg;
@@ -150,6 +157,8 @@ function usage() {
   ark preflight --changes <change-set.json> [--change-map <map.json>] [--root <project>] [--config ark.config.json] [--manifest <manifest.json>] [--tsconfig <tsconfig.json>] [--json]
   ark status  [--root <project>] [--config ark.config.json] [--json]
               [--expected-root <abs>] [--expected-project-id sha256:…] [--tools <host>]
+  ark agents-md [--root <project>] [--config ark.config.json] [--write] [--check] [--stdout] [--json]
+                [--tools <host>]
 
 Commands:
   start     New here? Analyze and preview the complete setup. Read-only unless --apply.
@@ -161,6 +170,11 @@ Commands:
   preflight Validate one atomic create/update/delete set without writing project files.
   status    Unified session/project manifest (identity, activation, last check, rules).
             Never prompts. Prefer --json for agents; CI=1 forces JSON.
+  agents-md Version-matched agent contract projection (ACS04). Stamps package version +
+            contract summary into a managed AGENTS.md block. Non-authoritative — not a
+            gate input. Preview by default; --write merges without clobbering outside
+            regions; --check fails on version drift; --stdout prints the block only.
+            (aliases: agents-md, agent-projection)
 
 Options:
   --yes        Non-interactive defaults: create config if needed, install gate templates, run strict check.
@@ -173,7 +187,10 @@ Options:
   --accept-conflicts
                 Allow upgrade to recreate deleted managed assets or replace recorded conflicts.
   --plan-digest Digest emitted by an upgrade preview; required to apply managed bytes.
-  --json        Emit the start/upgrade/status preview as deterministic machine-readable JSON.
+  --json        Emit the start/upgrade/status/agents-md preview as deterministic machine-readable JSON.
+  --write       For agents-md: merge the version-matched projection into AGENTS.md.
+  --check       For agents-md: exit 1 when projection stamp drifts from package version.
+  --stdout      For agents-md: print the projection block only (no file write).
   --expected-root / --expected-project-id
                 Optional project expectation for status (MCP-compatible binding check).
   --preset     Start from a named architecture preset instead of detection.
@@ -918,6 +935,20 @@ async function main() {
       json: args.json,
       expectedRoot: args.expectedRoot,
       expectedProjectId: args.expectedProjectId,
+      host: args.tools,
+      arkgateVersion: cliVersion(),
+    });
+  }
+
+  if (args.command === 'agents-md' || args.command === 'agent-projection') {
+    return runAgentProjectionCommand({
+      root: args.root,
+      config: args.config,
+      json: args.json,
+      write: args.write,
+      apply: args.apply,
+      check: args.check,
+      stdout: args.stdout,
       host: args.tools,
       arkgateVersion: cliVersion(),
     });

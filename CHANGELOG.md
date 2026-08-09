@@ -18,6 +18,14 @@ in the immutable pre-2.0 archive linked below.
   pure `bin/lib/status-manifest.mjs`, schema `arkgate/schema/status-manifest`, root exports
   (`buildStatusManifest`, `ARK_STATUS_MANIFEST_SCHEMA`, …). Never prompts; `CI=1` forces JSON.
   Optional `--expected-root` / `--expected-project-id` for matched vs stale identity. Not a score.
+- **Version-matched agent projection (ACS04):** `ark agents-md` regenerates a managed
+  AGENTS.md projection block stamped with the installed package version + contract summary
+  (layers, diagnostic short list). Install/upgrade templates (`agentInstructions` /
+  `compactAgentInstructions`) embed the same block. Content-identity merge preserves customized
+  regions outside markers. Explicitly **non-authoritative** — enforcement remains ark-check /
+  hooks / CI; projection is never a gate input. Domain `src/domain/agentProjection.ts`, generated
+  pure `bin/lib/agent-projection.mjs`, root exports (`buildAgentProjectionBlock`,
+  `mergeAgentProjectionDocument`, …). Drift: `ark agents-md --check`.
 
 ## 4.2.1 — 2026-08-08 (published)
 
