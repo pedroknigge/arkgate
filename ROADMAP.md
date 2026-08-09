@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-09 (Phase ACS — ACS01–ACS08 done; **arkgate@4.3.0 published**)
+- **Status date:** 2026-08-09 (Phase IC — Improvement Compass for **4.4.0**; IC01 plan lock `done`; baseline **arkgate@4.3.0 published**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -55,23 +55,24 @@ ArkGate is an architecture write firewall plus a coach, not a prompt convention.
 - Reuse the existing analysis engine, CLI/MCP adapters, and current skills; do not add a second
   planner, task tracker, or skill namespace.
 
-**Still frozen through 4.3.0 (do not start without a new ROADMAP item)**
+**Still frozen through 4.4.0 / Phase IC (do not start without a new ROADMAP item)**
 
-Phase ACS restates these freezes for the **arkgate@4.3.0** train (plan lock `ACS01`). They
-are not lifted by agent-surface work.
+Phase IC restates these freezes for the **arkgate@4.4.0** train (plan lock `IC01`). Phase ACS
+freezes remain; IC adds no score surface.
 
 - New architecture presets or policy packs.
 - New skill *names* beyond consolidating/clarifying the current 13 (prefer deepen + route +
-  Agent Skills packaging of the same names).
+  Agent Skills packaging of the same names). **IC05 deepens skill bodies** for vibe coders — same names.
 - New ArkRules sensor vocabulary (e.g. family/export symmetry) without ADR + field demand.
 - LLM-derived pass/fail or package “process verdict” (maintainer offline eval only).
 - Enforcement claims from AGENTS.md, skills, or version-matched agent projection alone.
 - New runtime features (optional kernel stays experimental).
 - False hard-write claims for soft hosts (Cursor/Codex/OpenCode).
-- Numeric trust / architecture health score.
+- Numeric trust / architecture / principle health **score**, average, or Excellent/Good rank band.
+- Improvement compass as a gate input (projection is advisory `notAScore` only).
 - New report polish that does not expose required evidence.
 - Org control-plane, polyglot support, or broad codemods.
-- Z09 retained-adoption / independent-close as ACS scope (parked residual `RB-11`).
+- Z09 retained-adoption / independent-close as IC scope (parked residual `RB-11`).
 
 ### Hard lines
 
@@ -848,6 +849,149 @@ CHANGELOG `## 4.3.0 — 2026-08-09`; [docs/releases/4.3.0.md](docs/releases/4.3.
 (package/lock/`src/version.ts`/`server.json`). npm `arkgate@latest` is **4.3.0**
 (gitHead `65f95a0`; signed tag `v4.3.0`; OIDC `publish-npm.yml` run `31295575658`). MCP registry
 package **4.3.0**.
+
+### Phase IC — Improvement Compass (4.4.0)
+
+Origin: product need to turn residual architecture improvement into a **vibe-coder- and
+agent-legible** path after ACS, using the 15-principle vocabulary of external analyzers
+**without** productizing scores. Expert surfaces already work; process/skills and a closed
+projection of existing sensors are the gap. Plan authority:
+[docs/plans/improvement-compass/README.md](docs/plans/improvement-compass/README.md).
+
+Boundary:
+
+- **Projection only** from existing doctor/coverage/smell/capability/ArkRules/physical-cohesion
+  evidence. No new ArkRules sensors and no architecture score in this phase.
+- **Vibe-coder-first process:** deepen the existing 13 skills + compact router so full-AI
+  workflows get better order and AI-easy structure without skill-shopping expertise.
+- **Scan/process dual depth unchanged:** compass is scan-side evidence; skills process. No LLM
+  verdict in the package.
+- Does not wait for `Z09`/`RB-11`. Does not productize runtime. No new skill names.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 118 | `IC01` | `done` | S | ACS08 + 4.3.0 published | Plan locked; product-voice lexicon (compass/lens); freeze restated for 4.4.0; ROADMAP + Agents + docs hub |
+| 119 | `IC02` | `done` | M | `IC01` | Domain pure `buildImprovementCompass` + fixtures; 15 closed lenses; `notAScore`; out-of-scope locked |
+| 120 | `IC03` | `todo` | M | `IC02` | Doctor human + JSON `improvementCompass`; optional status additive field; no verdict change |
+| 121 | `IC04` | `todo` | S | `IC03` | HTML report advisory compass section + reportParity |
+| 122 | `IC05` | `todo` | L | `IC01` (finish after `IC03` for JSON-aware prose) | Deepen 13 skills + compact router (vibe-coder path, compass routing, anti false-done); agent-skills 1:1 |
+| 123 | `IC06` | `todo` | M | `IC03`–`IC05` | **Product-docs hygiene:** public lanes product-only (no roadmap codes); use/develop/agent-guide/skills/CLI human; claims prep |
+| 124 | `IC07` | `todo` | S | `IC02`–`IC06` | CHANGELOG + release notes in **product voice**, package-surface, version **4.4.0**, publish train |
+
+**IC01 — Plan lock and product voice**
+
+- **Status:** `done` (2026-08-09)
+- **Depends on:** ACS08 done; npm 4.3.0 on `latest`
+
+**Outcome:** Phase IC is the sole engineering queue for 4.4.0; plan file, freezes, and product-voice
+lexicon name improvement compass / lenses without score language; vibe-coder skill mandate is
+first-class (IC05).
+
+**Acceptance:** plan status Accepted; Agents.md plans table lists IC; freeze table restated
+through 4.4.0; next engineering pick is `IC02` only (unless owner explicitly reprioritizes).
+
+**Evidence:** [docs/plans/improvement-compass/README.md](docs/plans/improvement-compass/README.md);
+ROADMAP Phase IC table; product-voice lexicon entries for compass/lens/topResidual;
+Agents.md + docs hub pointers. Next engineering pick: **`IC02`**.
+
+**IC02 — Domain pure improvement compass**
+
+- **Status:** `done` (2026-08-09)
+- **Depends on:** `IC01`
+
+**Outcome:** pure Domain (or Domain + generated pure CLI mirror if required by dogfood) builds a
+deterministic compass from supplied doctor-side facts: 15 closed lens ids, status enum
+`ok | residual | not-instrumented | out-of-scope`, evidence refs, optional nextAction,
+`topResidual` cap, always `notAScore: true`.
+
+**Acceptance:** unit fixtures cover residual SoC/DIP/domain from smells/walls; out-of-scope for
+scalability/security/resilience; no average/rank fields; pure module may not import Kernel I/O.
+
+**Evidence:** `src/domain/improvementCompass.ts` + generated `bin/lib/improvement-compass.mjs`;
+`tests/unit/domain/improvementCompass.test.ts` (matrix: residual mapping, out-of-scope lock,
+empty input, deterministic `topResidual`); root export from `src/gate.ts`.
+
+**IC03 — Doctor and status surfaces**
+
+- **Status:** `todo`
+- **Depends on:** `IC02`
+
+**Outcome:** `ark-check --doctor` human + JSON expose `improvementCompass`; optional additive
+field on `ark status --json` / MCP status when low-cost. Residual lenses never change
+`valid` / strict-merge / `goal.met`.
+
+**Acceptance:** focused tests for projection wiring; human section uses plain residual language;
+package-surface documents additive field.
+
+**IC04 — HTML report parity**
+
+- **Status:** `todo`
+- **Depends on:** `IC03`
+
+**Outcome:** showcase HTML advisory section for improvement compass; reportParity fails if doctor
+emits compass without section.
+
+**Acceptance:** fixture HTML contains `data-advisory` compass; no score UI.
+
+**IC05 — Skills and compact router deepen**
+
+- **Status:** `todo`
+- **Depends on:** `IC01` (prose may start early); must land compass-aware wording after `IC03`
+
+**Outcome:** all 13 `/ark-*` skill bodies + compact agent router teach vibe-coder outcomes,
+compass routing, AI-easy placement, anti false-done, and out-of-scope honesty. Agent Skills
+layout regenerated 1:1. Completion contract gains **Compass** residual bullet.
+
+**Acceptance:** `check:agent-skills` green; skill mandate table in plan covered; no new skill names;
+router still ≤ one primary door for messy residual.
+
+**IC06 — Product documentation hygiene + claims prep**
+
+- **Status:** `todo`
+- **Depends on:** `IC03`–`IC05`
+
+**Outcome (owner mandate for 4.4.0+):** public product documentation is **about the product and
+the code** — features, commands, behavior, honest limits — **not** about the delivery queue.
+Anyone should read README / use / develop / agent-guide / skills / release notes without decoding
+roadmap item codes (`IC*`, `ACS*`, `Z*`, `RB-*`, phase order numbers, epic ticket dumps).
+
+**In scope (public product lanes):** README, `docs/use.md`, `docs/develop.md`, docs hub product
+rows, `docs/agent-guide.md`, `docs/ai-gates.md`, `docs/configuration.md`, `docs/diagnostics.md`,
+brownfield/package-surface consumer text, skill bodies + compact router, doctor/CLI human copy,
+CHANGELOG **user bullets** and `docs/releases/4.4.0.md` main body.
+
+**Out of scope for this rewrite (may keep engineering ids):** `ROADMAP.md`, `docs/plans/**`,
+`docs/archive/**`, `docs/field/**`, `docs/audit/**`, historical release notes before 4.4.0.
+Do not mass-rewrite the past; **do not ship 4.4.0 public lanes that still narrate the queue.**
+
+**Also:** document improvement compass vs scorecard and Align → Stabilize → Shape in dual depth
+**using product language only**; draft claims matrix rows whose *public claim text* is
+product-reproducible.
+
+**Acceptance:**
+
+- Sweep of public lanes: **zero** roadmap item codes / phase-as-feature narrative left as
+  user-facing explanation (stable public `ruleId`s and JSON field names remain — they are API).
+- Stranger test: README + use.md make sense without opening ROADMAP.
+- Skills/router have no “per IC05 / Phase IC” footnotes in user-visible bodies.
+- Release notes / CHANGELOG for 4.4.0 lead with user value; optional maintainer link to plan path
+  only as a footnote, not the story.
+- Standing rule recorded in plan + product-voice: forward public docs stay product-first.
+- Claims prep: 0 Contradicted path ready for product statements.
+
+**Evidence lives in:** plan section
+[IC06 — Product documentation policy](docs/plans/improvement-compass/README.md#ic06--product-documentation-policy-release-440).
+
+**IC07 — Release 4.4.0**
+
+- **Status:** `todo`
+- **Depends on:** `IC02`–`IC06`
+
+**Outcome:** version **4.4.0**, CHANGELOG and `docs/releases/4.4.0.md` in **product voice**
+(IC06 hygiene held), package-surface row, claims 0 Contradicted on product statements, publish train.
+
+**Acceptance:** common merge gate green; no required config migration; public release prose does
+not reintroduce roadmap-code narrative; signed tag + npm when owner publishes.
 
 ### Z01 — Make release cleanup tool-owned and path-safe
 
@@ -3179,36 +3323,28 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: (none) — Phase ACS shipped; arkgate@4.3.0 published on npm latest
-  Epic: Phase ACS — Agent contract surface → arkgate@4.3.0 published (closed)
-  Plan: docs/plans/agent-contract-surface-4.3/README.md (Shipped / published)
-  Queue: ACS01–ACS08 done; no competing engineering todo for ACS
-  Last closed epic item: ACS08 (claims + release notes + npm publish + pointer flip)
-  Prior closed: ACS07 (placement A/B); ACS06 (finding refs); ACS05 (skills); ACS04 (projection);
-    ACS03 (status); ACS02 (catalog); ACS01; WI01 — 4.2.0; patch 4.2.1
-  Later trains on main (not separate ROADMAP rows): CI hygiene profile (#113);
-    4.2.1 Next.js 16.3 root proxy.ts include + eval pins (#114) — published
+Engineering doing: (none) — next pick IC03 (doctor + status improvementCompass)
+  Epic: Phase IC — Improvement Compass → arkgate@4.4.0 (active)
+  Plan: docs/plans/improvement-compass/README.md (Accepted / engineering active)
+  Queue: IC01–IC02 done; IC03–IC07 todo; sole engineering epic for 4.4.0
+  Last closed epic item: IC02 (Domain pure improvement compass)
+  Prior closed epic: Phase ACS ACS01–ACS08 → arkgate@4.3.0 published
+  Later trains on main (historical): CI hygiene (#113); 4.2.1 Next proxy (#114)
 Released baseline: npm arkgate@4.3.0 on latest (gitHead 65f95a0; tag v4.3.0; 2026-08-09)
   Notes: docs/releases/4.3.0.md — Status: published (OIDC Trusted Publishing run 31295575658)
-  Prior ship: 4.2.1 (b2f02c9 / v4.2.1) — docs/releases/4.2.1.md (superseded on latest)
-  Publish follow-up: closed (signed tag v4.3.0 + publish-npm.yml + status flip + MCP 4.3.0)
-Phase AR (v4 train, AR01–AR19 done): historical plan once mapped AR17–19 to "4.3.0"; those
-  items closed without a separate 4.3.0 tag — 4.3.0 is now ACS
-Phase EH (EH01–EH08 done): 4.1.1; Phase WI (WI01 done): 4.2.0; patch 4.2.1; ACS published 4.3.0
+  Prior ship: 4.2.1 / 4.2.0 / 4.1.x as in docs/releases/
+Phase IC hard lines: no principle scores/ranks; compass notAScore advisory only;
+  no new skill names (IC05 deepens bodies + compact router for vibe coders);
+  no new ArkRules sensors; no LLM verdict; projection never enforces;
+  out-of-scope honest for scalability / app security / full resilience
+Phase ACS (closed): catalog, status, projection, Agent Skills pack, finding refs, A/B eval
 Claim gate: `Z09` (`parked`) — residual RB-11 only (retained adoption + independent close)
   Field kit scaffolding: docs/field/ — NOT closed; do not occupy engineering `doing` without cohort
 Closed in 3.8.0: Z01–Z08, Z10; RB-07–RB-10, RB-12
 Product hard line: no false hard write on Cursor/Codex/OpenCode; no plan-B auto-apply
-  ACS hard line: no LLM verdict; no new skill names; projection never enforces;
-  freeze restated ACS01 (catalog/scan-process voice in docs/product-voice.md);
-  ACS02 catalog closed at src/domain/diagnosticCatalog.ts + docs/diagnostics.md;
-  ACS03 status closed at src/domain/statusManifest.ts + ark status --json / ark_status;
-  ACS06 finding refs closed at analysis-result 1.5 (findingRef/targetKey/docsCodePath);
-  ACS08 claims 0 Contradicted (C-034–C-040); 4.3.0 published on npm latest
-Not product backlog: god-module / plan-B residual (judgment only)
+Not product backlog: god-module / plan-B residual remains judgment (compass surfaces it)
 Parked: Y09, Y07 (low), Y10 (archive until field demand + ADR), K01 runtime
-  Later seeds (not ACS): konsistent-class sensor, adopt disk stages, mechanical one-shot CLI
-Release lanes: ordinary corrective patches do not wait for Z09; 4.3.0 publish checklist closed
-  (npm latest 4.3.0 / gitHead 65f95a0 / tag v4.3.0 / OIDC run 31295575658)
-  Prior: 4.2.1 / 4.2.0 / 4.1.x / 4.0.x / 3.9.x / 3.8.x as in docs/releases/ and CHANGELOG
+  Later seeds (not IC): konsistent-class sensor, adopt disk stages, mechanical one-shot CLI
+Release lanes: ordinary corrective patches do not wait for Z09; 4.4.0 is IC train (not published yet)
+  Prior: 4.3.0 / 4.2.1 / 4.2.0 / 4.1.x / 4.0.x / 3.9.x / 3.8.x as in docs/releases/ and CHANGELOG
 ```

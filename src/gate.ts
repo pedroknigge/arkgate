@@ -264,6 +264,26 @@ export {
 } from './domain/statusManifest';
 
 export {
+  ARK_IMPROVEMENT_COMPASS_SCHEMA_VERSION,
+  IMPROVEMENT_COMPASS_OUT_OF_SCOPE_LENSES,
+  IMPROVEMENT_COMPASS_TOP_RESIDUAL_CAP,
+  IMPROVEMENT_LENS_IDS,
+  buildImprovementCompass,
+  formatImprovementCompassDoctorLines,
+  formatImprovementCompassResidualLabels,
+  primaryImprovementCompassNextAction,
+  type ImprovementCompass,
+  type ImprovementCompassEvidence,
+  type ImprovementCompassFacts,
+  type ImprovementCompassNextAction,
+  type ImprovementCompassSmellFact,
+  type ImprovementCompassViolationFact,
+  type ImprovementLens,
+  type ImprovementLensId,
+  type ImprovementLensStatus,
+} from './domain/improvementCompass';
+
+export {
   AGENT_PROJECTION_BEGIN_MARKER,
   AGENT_PROJECTION_END_MARKER,
   AGENT_PROJECTION_ENFORCEMENT_SURFACES,
