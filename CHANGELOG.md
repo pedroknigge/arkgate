@@ -5,12 +5,12 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
-## 4.2.1 — 2026-08-08 (prepared)
+## 4.2.1 — 2026-08-08 (published)
 
 **Patch** over 4.2.0. Next.js **16.3** field compatibility: root `proxy.ts` (Next 16 network-boundary
 rename of middleware) is scanned and classified; eval fixtures and release-surface pins track
 `next@16.3.0`. **No required config migration.** Codex remains advisory at write time.
-**Status: prepared** (`arkgate@4.2.1` not published yet).
+**Status: published** (`arkgate@4.2.1` on npm `latest`).
 
 ### Fixed
 
@@ -39,7 +39,7 @@ handshake, and project-bound `ark_manifest`; cross-project/config paths fail bef
 ArkRules analysis; Codex setup distinguishes files configured on disk from a runtime observed
 after restart. **No required config migration.** Legacy MCP calls remain callable but explicitly
 non-authoritative until bound. Codex remains advisory at write time. **Status: published**
-(`arkgate@4.2.0` on npm `latest`).
+(`arkgate@4.2.0`; superseded by 4.2.1 on `latest`).
 
 ### Added
 
