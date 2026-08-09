@@ -1576,6 +1576,14 @@ async function main() {
       : readJsonSafe(path.join(reportsDir(root), 'origin.json'));
     // Pass the same baseline split as doctor so productHonesty dirty-freeze matches.
     const reportBaseline = readBaseline(root, args.baseline || '.ark-baseline.json');
+    // Doctor parity for improvement compass: stale keys = baseline keys not in current occurrence set.
+    // Only when analysis is complete — partial scans under-count current keys and inflate false stale residual
+    // (same gate as doctor-plan: baselineStale: analysisComplete ? staleBaseline : null).
+    const reportOccurrenceKeys = baselineOccurrenceKeys(violations);
+    const reportCurrentKeys = new Set(reportOccurrenceKeys);
+    const reportBaselineStale = reportBaseline.exists
+      ? [...reportBaseline.keys].filter((key) => !reportCurrentKeys.has(key)).length
+      : 0;
     const { adoption: adoptionForReport, designDepth } = buildReportDepthPayload(
       root,
       config,
@@ -1588,6 +1596,7 @@ async function main() {
         frozenKeys: reportBaseline.exists ? reportBaseline.keys.size : 0,
         activeCount: activeViolations.length,
         activeBlockingCount: blockingViolations.length,
+        baselineStale: analysisComplete ? reportBaselineStale : null,
       }
     );
     const reportPayload = {
@@ -1608,7 +1617,13 @@ async function main() {
       originJustCreated: !existingOrigin,
       adoption: adoptionForReport,
       designDepth,
-      advisories: computeDoctorAdvisories(root, config, coverage, rules, files, ts, parseHealth),
+      advisories: {
+        ...computeDoctorAdvisories(root, config, coverage, rules, files, ts, parseHealth),
+        // Doctor parity: always emit improvement compass when doctor would (reportParity).
+        ...(designDepth?.improvementCompass
+          ? { improvementCompass: designDepth.improvementCompass }
+          : {}),
+      },
     };
     const html = args.beginner
       ? renderBeginnerHtmlReport(reportPayload)

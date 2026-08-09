@@ -154,18 +154,18 @@ describe('skill routing surface (Q01)', () => {
     expect(text).toMatch(/Single path:/i);
     expect(text).toMatch(/\/ark-explore.*shape-focus/i);
     expect(text).toMatch(/\/ark-autopilot/);
-    expect(text).toMatch(/postGreenPath|primaryNextAction|Post-green door \(Q01\)/i);
+    expect(text).toMatch(/postGreenPath|primaryNextAction|Post-green door/i);
     // Competing defaults for the same residual are not co-equal first rows
     expect(text).toMatch(/Not this/);
     expect(text).toMatch(/skill-shopping|coverage, think/i);
   });
 
-  it('explore skill documents Q01 primary post-green door', () => {
+  it('explore skill documents primary post-green door', () => {
     const body = fs.readFileSync(
       path.join(REPO, 'templates/skills/ark-explore.md'),
       'utf8'
     );
-    expect(body).toMatch(/Primary post-green door \(Q01\)/);
+    expect(body).toMatch(/Primary post-green door/);
     expect(body).toMatch(/shape-focus/);
   });
 });

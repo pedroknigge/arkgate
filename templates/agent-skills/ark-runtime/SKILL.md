@@ -15,6 +15,12 @@ and NestJS adapters. The stable `arkgate` package is the architecture gate; it d
 the runtime implementation. This skill migrates hand-rolled versions of those to the kernel,
 one feature at a time.
 
+## Improvement compass note
+
+This skill is **experimental runtime** only. Do **not** treat runtime adoption as residual on the
+resilience lens unless the user explicitly opts into the experimental kernel. Prefer doctor compass
+for static architecture residual; hand static residual to `/ark-explore` / `/ark-fix`.
+
 ## Dual engine (mandatory)
 
 | Engine | Role |
@@ -113,6 +119,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
+- **Compass:** `n/a` (runtime skill; static residual → explore/fix) | top residual if doctor was run
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

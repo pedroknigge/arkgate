@@ -5,13 +5,41 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.4.0 — 2026-08-09
+
+**Minor** over 4.3.0. Improvement compass (architecture lenses as a `notAScore` projection of
+existing sensors), doctor/HTML residual coaching, deeper skills + compact router for vibe-coder
+and full-AI workflows, and product-only public docs. **No required config migration.** Codex remains
+advisory at write time. Skills and AGENTS projection never enforce. **Status: prepared in tree —
+not published on npm until OIDC publish + `npm view` succeed** (see `docs/releases/4.4.0.md`).
+
+### Added
+
+- **Improvement compass:** doctor human section + `doctor.improvementCompass` JSON — closed set of
+  architecture **lenses** (SoC, DIP, domain alignment, …) with status `ok` / `residual` /
+  `not-instrumented` / `out-of-scope`, evidence refs, optional next action, capped `topResidual`,
+  always **`notAScore: true`**. Projected from existing smells, walls, cohesion, ArkRules, and
+  design-weak signals. Residual lenses never flip `valid`, strict-merge, or `goal.met`.
+  Out-of-scope locked for scalability, app security tooling, and full resilience. Type-only
+  placement debt (`failsStrict: false`) maps to **modularity** residual only (not coupling).
+- **Optional status slice:** thin `improvementCompass.topResidual` on the status manifest schema for
+  Tooling pass-through — **`ark status` does not compute lenses yet**; agents should read doctor.
+- **HTML report:** advisory section `data-advisory="improvementCompass"` (report parity with doctor).
+- **Skills + compact router:** same **13** skill names deepened for vibe-coder outcomes — compass
+  preflight, anti false-done, AI-easy placement cues, out-of-scope honesty, Completion **Compass**
+  bullet. Compact start router surfaces residual lenses and forbids “done” on green edges alone.
+- **Docs:** use / develop / agent-guide describe compass + Align/Stabilize/Shape in product language.
+
+**Freezes held:** no principle scores/ranks; no new skill names; no new ArkRules sensors; no LLM
+verdict; projection never enforces.
+
 ## 4.3.0 — 2026-08-09
 
-**Minor** over 4.2.1. Phase ACS — agent contract surface: diagnostic code catalog, unified
-status snapshot, version-matched agent projection, Agent Skills packaging of the existing 13
-skills, stable finding refs, and maintainer placement A/B eval. **No required config migration.**
-Codex remains advisory at write time. Skills and AGENTS projection never enforce. Z09 / RB-11
-remain open. **Status: published** (`arkgate@4.3.0` on npm `latest`).
+**Minor** over 4.2.1. Agent contract surface: diagnostic code catalog, unified status snapshot,
+version-matched agent projection, Agent Skills packaging of the existing 13 skills, stable finding
+refs, and maintainer placement A/B eval. **No required config migration.** Codex remains advisory
+at write time. Skills and AGENTS projection never enforce. **Status: published**
+(`arkgate@4.3.0` on npm `latest`).
 
 ### Added
 

@@ -60,6 +60,17 @@ export type StatusNextAction = {
   summary: string;
 };
 
+/**
+ * Optional thin improvement-compass projection on status (additive).
+ * Full lenses live on doctor JSON; status carries residual ids only when supplied.
+ * Always notAScore; never a gate input.
+ */
+export type StatusImprovementCompassSlice = {
+  schemaVersion: '1.0';
+  notAScore: true;
+  topResidual: string[];
+};
+
 export type StatusManifest = {
   schemaVersion: typeof ARK_STATUS_MANIFEST_SCHEMA_VERSION;
   arkgateVersion: string;
@@ -68,6 +79,8 @@ export type StatusManifest = {
   lastCheck: StatusLastCheckSlice;
   rules: StatusRulesSlice;
   nextAction: StatusNextAction;
+  /** Optional; omit when Tooling did not supply a projection. */
+  improvementCompass?: StatusImprovementCompassSlice;
 };
 
 /**
@@ -112,6 +125,11 @@ export type StatusManifestFacts = {
   rulesFrozenResidual?: number | null;
   /** Optional override when Tooling already computed productHonesty next action. */
   nextActionOverride?: StatusNextAction | null;
+  /**
+   * Optional improvement compass residual ids (notAScore).
+   * Tooling may pass a thin slice from a prior doctor/report snapshot.
+   */
+  improvementCompass?: StatusImprovementCompassSlice | null;
 };
 
 const PROJECT_ID_PATTERN = /^sha256:[a-f0-9]{64}$/;
@@ -433,7 +451,7 @@ export function buildStatusManifest(facts: StatusManifestFacts): StatusManifest 
     ...(binding.message ? { message: binding.message } : {}),
   };
 
-  return {
+  const status: StatusManifest = {
     schemaVersion: ARK_STATUS_MANIFEST_SCHEMA_VERSION,
     arkgateVersion:
       typeof facts.arkgateVersion === 'string' && facts.arkgateVersion.length > 0
@@ -444,6 +462,28 @@ export function buildStatusManifest(facts: StatusManifestFacts): StatusManifest 
     lastCheck,
     rules,
     nextAction: resolveStatusNextAction(facts, binding, activation, lastCheck, rules),
+  };
+
+  const compass = normalizeStatusImprovementCompass(facts.improvementCompass);
+  if (compass) status.improvementCompass = compass;
+
+  return status;
+}
+
+function normalizeStatusImprovementCompass(
+  value: StatusImprovementCompassSlice | null | undefined
+): StatusImprovementCompassSlice | null {
+  if (value == null || typeof value !== 'object') return null;
+  if (value.notAScore !== true) return null;
+  if (value.schemaVersion !== '1.0') return null;
+  if (!Array.isArray(value.topResidual)) return null;
+  const topResidual = value.topResidual
+    .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    .slice(0, 15);
+  return {
+    schemaVersion: '1.0',
+    notAScore: true,
+    topResidual,
   };
 }
 
@@ -545,6 +585,22 @@ export const ARK_STATUS_MANIFEST_SCHEMA = {
       properties: {
         id: { type: 'string', minLength: 1 },
         summary: { type: 'string', minLength: 1 },
+      },
+    },
+    improvementCompass: {
+      type: 'object',
+      description:
+        'Optional thin improvement-compass residual ids (notAScore). Never a gate input; full lenses on doctor JSON.',
+      additionalProperties: false,
+      required: ['schemaVersion', 'notAScore', 'topResidual'],
+      properties: {
+        schemaVersion: { const: '1.0' },
+        notAScore: { const: true },
+        topResidual: {
+          type: 'array',
+          items: { type: 'string', minLength: 1 },
+          maxItems: 15,
+        },
       },
     },
   },

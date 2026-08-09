@@ -16,8 +16,8 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 4.3.0** is on npm `latest` (agent contract surface: catalog, status, projection, skills packaging, finding refs).
-> [4.3.0 candidate](docs/releases/4.3.0.md) · [4.2.1](docs/releases/4.2.1.md) · [4.2.0](docs/releases/4.2.0.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> **ArkGate 4.3.0** is on npm `latest`. Tree is preparing **4.4.0** (improvement compass) — see [4.4.0 notes](docs/releases/4.4.0.md) (Status: prepared until publish).
+> [4.4.0 notes](docs/releases/4.4.0.md) · [4.3.0](docs/releases/4.3.0.md) · [4.2.1](docs/releases/4.2.1.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
 
@@ -43,10 +43,13 @@ npx arkgate-check --doctor        # control plane: status light + primary next a
 ```
 
 That is the product. Doctor is the control plane — when stuck, do **primary next action #1**.
+Doctor also shows an **improvement compass** (architecture lenses such as separation of concerns and
+dependency inversion — **not a score**). Residual lenses mean Shape work may remain even when edges
+are green. Details: [use.md — Improvement compass](docs/use.md#improvement-compass-not-a-score).
 
 ```text
-start → doctor → day-to-day (place + gate)
-              ↘ optional /ark-autopilot after skill pack
+start → doctor (+ compass) → day-to-day (place + gate)
+                         ↘ optional /ark-autopilot after skill pack
 ```
 
 Aliases `ark` / `ark-check` / `ark-mcp` still work. npm / pnpm / yarn. No install lifecycle scripts.
@@ -205,7 +208,8 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current release (4.3.0) | [docs/releases/4.3.0.md](docs/releases/4.3.0.md) · [CHANGELOG](CHANGELOG.md) |
+| Current release (4.3.0 on npm `latest`) | [docs/releases/4.3.0.md](docs/releases/4.3.0.md) · [CHANGELOG](CHANGELOG.md) |
+| Next prepare (4.4.0) | [docs/releases/4.4.0.md](docs/releases/4.4.0.md) (prepared — not published until npm verify) |
 | Prior (4.2.1) | [docs/releases/4.2.1.md](docs/releases/4.2.1.md) |
 | Previous (4.2.0) | [docs/releases/4.2.0.md](docs/releases/4.2.0.md) |
 | Previous (4.1.1) | [docs/releases/4.1.1.md](docs/releases/4.1.1.md) |

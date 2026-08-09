@@ -9,7 +9,9 @@ import { fileURLToPath } from 'node:url';
 import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const CURRENT = '4.3.0';
+/** Tree package identity (prepare or published train). */
+const CURRENT = '4.4.0';
+/** Last version confirmed on npm `latest` until post-publish flip. */
 const PUBLISHED_LATEST = '4.3.0';
 
 function read(rel: string) {
@@ -99,18 +101,40 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('exposes published 4.3.0 as npm latest', () => {
+  it('exposes published 4.3.0 as npm latest while 4.4.0 tree is prepared', () => {
+    expect(PUBLISHED_LATEST).toBe('4.3.0');
     expect(read('README.md')).toMatch(/4\.3\.0/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.3\.0\.md/);
     expect(read('README.md')).toMatch(/on npm `latest`|npm `latest`/i);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.4\.0\.md/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.2\.1\.md/);
-    expect(read('README.md')).toMatch(/4\.2\.0/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.2\.0\.md/);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.3\.0/s);
     expect(read('docs/README.md')).toMatch(/Current published:.*4\.3\.0/s);
     expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.3\.0/is);
     expect(read('docs/releases/4.3.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.3.0.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.4.0 improvement compass train', () => {
+  it('records compass surfaces without false published claim while prepared', () => {
+    const changelog = read('CHANGELOG.md');
+    expect(changelog).toMatch(/## 4\.4\.0/);
+    expect(changelog).toMatch(/Improvement compass|improvement compass/i);
+    expect(changelog).toMatch(/notAScore/);
+    expect(changelog).toMatch(/data-advisory="improvementCompass"|improvementCompass/i);
+    expect(changelog).toMatch(/No required config migration/i);
+    expect(changelog).toMatch(/prepared in tree|not published on npm/i);
+
+    const notes = read('docs/releases/4.4.0.md');
+    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(notes).not.toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(notes).toMatch(/arkgate@4\.4\.0|4\.4\.0/);
+    expect(notes).toMatch(/notAScore/);
+    expect(notes).toMatch(/improvement compass|Improvement compass/i);
+    expect(notes).toMatch(/modularity/i);
+    expect(notes).toMatch(/No required config migration/i);
+    expect(notes).toMatch(/Z09|RB-11/i);
   });
 });
 
@@ -678,22 +702,23 @@ describe('historical Q06 CHANGELOG + release note cover Q01–Q05', () => {
   });
 });
 
-describe('Q06 package-surface + agent-guide parity', () => {
-  it('package-surface documents Q01–Q05 additive fields', () => {
+describe('package-surface + agent-guide parity (post-green / golden / pilot)', () => {
+  it('package-surface documents additive doctor/plan consumer fields', () => {
     const body = read('docs/package-surface.md');
-    expect(body).toMatch(/postGreenPath|Post-green path \(Q01\)/);
-    expect(body).toMatch(/outcome.*Q02|plain-language \*\*`outcome`\*\* \(Q02\)/);
-    expect(body).toMatch(/Golden pattern \(Q03\)|goldenPattern/);
-    expect(body).toMatch(/Pilot loop \(Q04\)|pilotLoop/);
-    expect(body).toMatch(/AI-velocity eval \(Q05\)|eval:ai-velocity/);
+    expect(body).toMatch(/postGreenPath|Post-green Shape door|clarify-for-ai/);
+    expect(body).toMatch(/plain-language \*\*`outcome`\*\*|outcome/);
+    expect(body).toMatch(/Golden pattern|goldenPattern/);
+    expect(body).toMatch(/Pilot loop|pilotLoop/);
+    expect(body).toMatch(/AI-velocity eval|eval:ai-velocity/);
+    expect(body).toMatch(/improvementCompass|Improvement compass/);
   });
 
   it('agent-guide documents the same consumer path', () => {
     const body = read('docs/agent-guide.md');
-    expect(body).toMatch(/Post-green path \(Q01\)|postGreenPath|clarify-for-ai/);
+    expect(body).toMatch(/postGreenPath|clarify-for-ai|Post-green/);
     expect(body).toMatch(/outcome/);
     expect(body).toMatch(/Golden pattern|golden-pattern\.json|goldenPattern/);
-    expect(body).toMatch(/Pilot loop \(Q04\)|pilotLoop/);
+    expect(body).toMatch(/pilotLoop|Pilot loop/);
     expect(body).toMatch(/eval:ai-velocity|AI-velocity/);
   });
 });

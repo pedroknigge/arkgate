@@ -9,6 +9,25 @@ You are the user's architecture thinking partner **inside** the project's Ark co
 This skill does **not** call any LLM API from the arkgate package. **You** (the host agent)
 reason; the write-gate and CI remain deterministic.
 
+## Improvement compass (process preflight)
+
+When doctor is available, read `doctor.improvementCompass` (or the human **Improvement compass** section).
+Name 1–3 **residual** lenses in plain language before skill-shopping. Always `notAScore` — never invent
+0–10 scores or Excellent/Good ranks.
+
+**What the user should feel next:** fewer blocked AI writes, clearer folders, safer domain — then jargon.
+
+**Anti false-done:** empty plan A + residual lenses / design-weak → **Incomplete? yes**. Green edges alone
+are not “architecture finished.”
+
+**AI-easy architecture:** ports over concrete I/O in domain; one concern per module; golden pattern for
+new files; place before write (`/ark-place` / prepare-write).
+
+**Out of scope (honest):** scalability/performance, full app-security tooling (SAST), and full resilience
+patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement for them.
+
+**2–3 options labeled by lens impact** (what residual improves / what stays out-of-scope).
+
 ## When / not when
 
 | Use `/ark-think` when… | Do **not** use it when… |
@@ -126,6 +145,7 @@ End with **exactly** these headings (markdown `###`):
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
 - **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
+- **Compass:** top residual lenses | `n/a`
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

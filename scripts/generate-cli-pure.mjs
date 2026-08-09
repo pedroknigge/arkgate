@@ -13,6 +13,7 @@
  *                                 → schemas/ark.project-identity.schema.json
  *   src/domain/statusManifest.ts  → bin/lib/status-manifest.mjs
  *                                 → schemas/ark.status-manifest.schema.json
+ *   src/domain/improvementCompass.ts → bin/lib/improvement-compass.mjs
  *   src/domain/agentProjection.ts → bin/lib/agent-projection.mjs
  *   src/domain/agentSkillsPackage.ts → bin/lib/agent-skills-package.mjs
  *   src/domain/resolvedCandidateFactsSchema.ts → schemas/ark.resolved-candidate-facts.schema.json
@@ -96,6 +97,11 @@ const MODULES = [
     schemaDerived: 'schemas/ark.status-manifest.schema.json',
     schemaExport: 'ARK_STATUS_MANIFEST_SCHEMA',
     label: 'unified status manifest (ACS03)',
+  },
+  {
+    canonical: 'src/domain/improvementCompass.ts',
+    derived: 'bin/lib/improvement-compass.mjs',
+    label: 'improvement compass lenses (notAScore projection)',
   },
   {
     canonical: 'src/domain/agentProjection.ts',

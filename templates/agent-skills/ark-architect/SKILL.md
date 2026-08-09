@@ -5,6 +5,25 @@ description: Choose the application shape, adopt phase-1 layers, scaffold direct
 
 # /ark-architect — Choose your application shape and adopt Ark
 
+## Improvement compass (process preflight)
+
+When doctor is available, read `doctor.improvementCompass` (or the human **Improvement compass** section).
+Name 1–3 **residual** lenses in plain language before skill-shopping. Always `notAScore` — never invent
+0–10 scores or Excellent/Good ranks.
+
+**What the user should feel next:** fewer blocked AI writes, clearer folders, safer domain — then jargon.
+
+**Anti false-done:** empty plan A + residual lenses / design-weak → **Incomplete? yes**. Green edges alone
+are not “architecture finished.”
+
+**AI-easy architecture:** ports over concrete I/O in domain; one concern per module; golden pattern for
+new files; place before write (`/ark-place` / prepare-write).
+
+**Out of scope (honest):** scalability/performance, full app-security tooling (SAST), and full resilience
+patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement for them.
+
+**Greenfield that is AI-easy day one:** golden norm + thin layers so the next agent turn stays ordered.
+
 ## When / not when
 
 | Use `/ark-architect` when… | Do **not** use it when… |
@@ -144,7 +163,7 @@ the same files or weaken the gate.
 - Default to smallest viable phase 1; unlock phase 2 only when the user describes need.
 - All user-facing copy is **English**.
 
-## Merge cards (X04 reshape — judgment only)
+## Merge cards (physical cohesion reshape — judgment only)
 
 When `doctor.physicalCohesion` reports a mirrored concept and the user asks whether files
 should be **merged**, treat it as domain modeling, never deduplication (field fact: zero
@@ -168,6 +187,7 @@ End with **exactly** these headings (markdown `###`):
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
 - **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
+- **Compass:** top residual lenses | `n/a`
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

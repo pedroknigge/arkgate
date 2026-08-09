@@ -10,6 +10,7 @@
 import { effectiveCapabilityDeny } from './analysis-engine.mjs';
 import { graphBlindSpotsHtml } from './graph-blind.mjs';
 import { formatRulesUnderContractHtml } from './rules-under-contract.mjs';
+import { primaryImprovementCompassNextAction } from './improvement-compass.mjs';
 
 // htmlEscape is injected by the caller (html-report.mjs) — importing it back
 // would be a dependency cycle, and the repo's own gate blocks that. The
@@ -247,10 +248,42 @@ function rulesUnderContractHtml(section) {
   return formatRulesUnderContractHtml(section, esc);
 }
 
+/** Improvement compass — advisory lenses only; never a score bar or gate input. */
+function improvementCompassHtml(compass) {
+  if (!compass || compass.notAScore !== true || !Array.isArray(compass.lenses)) return '';
+  const residual = Array.isArray(compass.topResidual) ? compass.topResidual : [];
+  const residualLine =
+    residual.length === 0
+      ? '<p class="muted">Residual: none on instrumented lenses (not a score — green edges ≠ finished design).</p>'
+      : `<p><span class="tag warn">residual</span> ${residual
+          .map((id) => {
+            const lens = compass.lenses.find((l) => l.id === id);
+            return `<code>${esc(id)}</code>${lens?.summary ? ` — ${esc(lens.summary)}` : ''}`;
+          })
+          .join('<br/>')}</p>`;
+  const oos = compass.lenses
+    .filter((l) => l && l.status === 'out-of-scope')
+    .map((l) => `<code>${esc(l.id)}</code>`)
+    .join(' · ');
+  // Same primary next as doctor human: severity-ordered topResidual, not lens-id order.
+  const next = primaryImprovementCompassNextAction(compass);
+  const nextLine = next
+    ? `<p class="muted">Next: <code>${esc(next.ref)}</code> — ${esc(next.summary)}</p>`
+    : '';
+  return `
+  <section class="section card" data-advisory="improvementCompass">
+    <h2>Improvement compass <span class="muted">(not a score — projection only; never changes the verdict)</span></h2>
+    ${residualLine}
+    <p class="muted">Out of scope (honest): ${oos || 'scalability · resilience · security'}</p>
+    ${nextLine}
+  </section>`;
+}
+
 export function renderAdvisorySections(advisories, escape) {
   if (!advisories || typeof advisories !== 'object') return '';
   if (typeof escape === 'function') esc = escape;
   return [
+    improvementCompassHtml(advisories.improvementCompass),
     contractHealthHtml(advisories.contractHealth),
     ambientStateHtml(advisories.ambientState),
     physicalCohesionHtml(advisories.physicalCohesion),

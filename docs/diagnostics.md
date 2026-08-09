@@ -1,6 +1,6 @@
 # ArkGate diagnostic code catalog
 
-> **Source of truth:** Domain module `src/domain/diagnosticCatalog.ts` (ACS02).
+> **Source of truth:** Domain module `src/domain/diagnosticCatalog.ts` (public diagnostic catalog).
 > Generated CLI mirror: `bin/lib/diagnostic-catalog.mjs`. Catalog schema `1.0`.
 > Enforcement remains CLI / hooks / CI — this page is documentation only.
 

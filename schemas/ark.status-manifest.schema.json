@@ -239,6 +239,32 @@
           "minLength": 1
         }
       }
+    },
+    "improvementCompass": {
+      "type": "object",
+      "description": "Optional thin improvement-compass residual ids (notAScore). Never a gate input; full lenses on doctor JSON.",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "notAScore",
+        "topResidual"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0"
+        },
+        "notAScore": {
+          "const": true
+        },
+        "topResidual": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxItems": 15
+        }
+      }
     }
   }
 }

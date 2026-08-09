@@ -9,6 +9,25 @@ You fix violations Ark reports. Prefer structural fixes over silencing the gate.
 **Read the surrounding product code** (callers, package role, feature ownership) — not only
 the two files on the violation edge.
 
+## Improvement compass (process preflight)
+
+When doctor is available, read `doctor.improvementCompass` (or the human **Improvement compass** section).
+Name 1–3 **residual** lenses in plain language before skill-shopping. Always `notAScore` — never invent
+0–10 scores or Excellent/Good ranks.
+
+**What the user should feel next:** fewer blocked AI writes, clearer folders, safer domain — then jargon.
+
+**Anti false-done:** empty plan A + residual lenses / design-weak → **Incomplete? yes**. Green edges alone
+are not “architecture finished.”
+
+**AI-easy architecture:** ports over concrete I/O in domain; one concern per module; golden pattern for
+new files; place before write (`/ark-place` / prepare-write).
+
+**Out of scope (honest):** scalability/performance, full app-security tooling (SAST), and full resilience
+patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement for them.
+
+**Name residual lenses** on each cluster (SoC, DIP, coupling, …). Still no weaken-gate to clear a lens.
+
 ## When / not when
 
 | Use `/ark-fix` when… | Do **not** use it when… |
@@ -147,14 +166,14 @@ If the “fix” is really a missing business intent or Domain home for a rule:
 - Prefer mechanical-safe kinds when the plan tags them; otherwise design judgment carefully.
 - Code only — no DB migrations unless user asked.
 
-## Mechanical-edit hygiene (Y04 — outcome gate)
+## Mechanical-edit hygiene (outcome gate)
 
 - Header injection must **merge into the existing doc comment**; the kept result has one `/**`, not stacked headers.
 - Route completion or movement must **preserve the original typed `defineRoute<…>(opts, handler)` call**; reconstruct that call instead of extracting untyped opts/handler constants that drop generics or contextual typing.
 - A convention-only `*-data.ts` stub is not a fix: move the real code or **leave the placeholder file uncreated**; never write `import "server-only"; export {}` as an empty naming token.
 - Keep the edit only when the **previously clean file stays typecheck-clean**. Otherwise roll it back and treat the change as judgment.
 
-## Reshape findings (X04 — never mechanical)
+## Reshape findings (physical cohesion — never mechanical)
 
 If `doctor.physicalCohesion` fires while you fix: do **not** fold reshape moves into your fix
 batch. Physical moves run only through `/ark-loop`'s one-pilot loop; merge decisions only as
@@ -178,6 +197,7 @@ End with **exactly** these headings (markdown `###`):
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
 - **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
+- **Compass:** top residual lenses | `n/a`
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

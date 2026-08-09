@@ -59,7 +59,22 @@ path is authoritative only when that matching project id is also supplied. Only
 `binding.status: "matched"` with `authoritative: true` is authoritative; calls that omit the
 expectation remain compatible but are explicitly `unverified`.
 
-### Unified status snapshot (4.3 / ACS03)
+### Improvement compass (doctor)
+
+`ark-check --doctor` (human + `--json`) projects residual architecture work as a closed set of
+**lenses** (`doctor.improvementCompass`). Always `notAScore: true`. Never feeds `valid`,
+strict-merge exit, or plan `goal.met`. Out-of-scope lenses (scalability, app security tooling,
+full resilience) stay honest. Product path: [use.md — Improvement compass](use.md#improvement-compass-not-a-score).
+Package surface row: [package-surface.md](package-surface.md).
+
+**Status snapshot:** the status schema may carry a thin optional residual-id slice when Tooling
+passes it through, but **`ark status --json` does not compute the compass yet** — use doctor for
+residual lenses. Residual never changes status `nextAction` by itself.
+
+Compact router and skills read residual lenses in plain language; green edges alone are never
+“architecture finished” while residual remains.
+
+### Unified status snapshot (4.3)
 
 For one machine-readable session/project manifest (identity binding, honest write-path activation,
 last-check summary, rules residual counts, primary next action) use:
@@ -75,7 +90,7 @@ Schema: `arkgate/schema/status-manifest`. Never prompts; under `CI=1` JSON is fo
 score** — counts and verdicts only. Write-path interpretation of activation vs merge teeth is under
 [Write-path honesty](#write-path-honesty).
 
-**Stable finding refs (4.3 / ACS06):** every factory-emitted diagnostic on CLI JSON, MCP analysis
+**Stable finding refs (4.3):** every factory-emitted diagnostic on CLI JSON, MCP analysis
 envelopes, and opt-in hook repair payloads (`ARK_REPAIR_JSON`) carries:
 
 | Field | Meaning |
@@ -88,7 +103,7 @@ Line/message drift across agent turns does not change `findingRef` / `targetKey`
 `arkgate/schema/analysis-result` **`1.5`**. Multi-turn fixture:
 `tests/fixtures/finding-refs/multi-turn-stability.json`.
 
-**Version-matched agent projection (4.3 / ACS04):** install/upgrade embeds a managed AGENTS.md
+**Version-matched agent projection (4.3):** install/upgrade embeds a managed AGENTS.md
 block stamped with the installed `arkgate` version plus a compact contract summary (layers +
 diagnostic short list). Regenerate after package upgrade without clobbering customized regions
 outside the markers:
@@ -104,10 +119,11 @@ The projection is **non-authoritative**. Enforcement is `ark-check` / host write
 CI (`--strict-merge`) — never AGENTS.md, skills, or this projection. Root API:
 `buildAgentProjectionBlock` / `mergeAgentProjectionDocument`.
 
-**Agent Skills packaging (4.3 / ACS05):** the same frozen **13** skill names are also shipped as
+**Agent Skills packaging (4.3):** the same frozen **13** skill names are also shipped as
 an Agent Skills–compatible package under `templates/agent-skills/<name>/SKILL.md` for hosts that
 install via `npx skills` (in addition to Ark `--install-agent-gates`). See
 [Install skills — Ark and ecosystem](#install-skills-ark-and-ecosystem). No new skill names.
+Skill bodies coach residual lenses and anti false-done; they never enforce.
 
 ## Architecture playbook and `ark-check --recommend`
 

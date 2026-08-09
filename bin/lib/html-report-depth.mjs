@@ -21,6 +21,8 @@ import {
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { readBaseline, baselineOccurrenceKeys } from './violations.mjs';
 import { describePackageVersionDualTruth } from './field-install.mjs';
+import { buildDoctorImprovementCompass } from './improvement-compass-doctor.mjs';
+import { computePhysicalCohesion } from './physical-cohesion.mjs';
 
 function esc(value) {
   return String(value)
@@ -43,6 +45,7 @@ function esc(value) {
  *   frozenKeys?: number,
  *   activeCount?: number,
  *   activeBlockingCount?: number,
+ *   baselineStale?: number | null,
  * }} [baselineSplit] same numbers doctor uses (do not recompute from active-only list)
  */
 export function buildReportDepthPayload(
@@ -155,6 +158,26 @@ export function buildReportDepthPayload(
     primaryNextAction: postGreenPath?.action ?? dualTruthNext,
     activeBlockingViolations: activeBlockingCount,
   });
+  // Doctor parity: same physical-cohesion + baseline stale facts as runDoctor.
+  const physicalCohesion = computePhysicalCohesion(root, files);
+  const baselineStale =
+    typeof baselineSplit.baselineStale === 'number' ? baselineSplit.baselineStale : null;
+  // Improvement compass — same projection as doctor; notAScore; never a gate input.
+  const improvementCompass = buildDoctorImprovementCompass({
+    designSmells,
+    violations: activeViolations,
+    designWeak: designFitness.designWeak === true,
+    physicalCohesion,
+    rulesUnderContract,
+    baselineExists: baseline.exists || frozenKeys > 0,
+    baselineStale,
+    frozenResidual: frozenKeys,
+    dirtyBaselineRisk: productHonesty?.reasonIds?.includes?.('dirty-baseline') === true,
+    ungovernedDirCount: coverage?.suggestions?.length ?? 0,
+    emptyLayerCount: coverage?.emptyLayers?.length ?? 0,
+    goldenPatternPresent: goldenPattern.present === true,
+    arkRulesLoaded: rulesUnderContract?.active === true,
+  });
   return {
     adoption,
     designDepth: {
@@ -166,6 +189,7 @@ export function buildReportDepthPayload(
       // P0-B / P1-M — folded into designDepth so --report stays a single payload.
       productHonesty,
       mergePlanes: rulesUnderContract?.mergePlanes ?? null,
+      improvementCompass,
     },
   };
 }
