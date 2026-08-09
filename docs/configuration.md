@@ -94,6 +94,13 @@ Layer fields:
   (`network`, `filesystem`, `clock`, `randomness`, `environment`, `process`, `persistence`);
   `pure: true` is the shorthand that denies all seven. Absence changes no verdict.
 
+**Day-to-day maintenance:** new modules that land under an existing layer `patterns` glob need **no**
+config edit. Edit `ark.config.json` when you add a layer, change who may import whom, cover an
+ungoverned path under `include`, or adjust capabilities / forbidden globals. Optional ArkRules
+`invariants[].appliesTo` globs only narrow *which files* a named invariant considers inside that
+layer — they do not replace Layers placement. Empty `appliesTo: []` fails closed; zero-match globs
+warn or fail by mode (`ARKRULE_SCOPE_EMPTY`). Product path: [use.md — New modules vs config edits](use.md#new-modules-vs-config-edits).
+
 `forbiddenGlobals: ["process"]` covers the ambient binding plus exact runtime imports from
 `process` and `node:process`. It does not imply the broader `process` capability wall: subpaths
 and `child_process` remain outside this narrow dual, and statement-level `import type` /

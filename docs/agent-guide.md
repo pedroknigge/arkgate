@@ -38,13 +38,19 @@ feature work. Full `/ark-*` skills are **expert depth** and label residual **`[L
 npx ark-check --install-agent-gates --skills-only --force
 ```
 
-**Write-path honesty:** Claude/Grok/Antigravity can hard-block listed PreToolUse ops when
-installed and trusted. Cursor/Codex/OpenCode remain **advisory at write**. For every host, the
-repository-wide hard boundary is a **required GitHub status context** that runs
-`arkgate-check --strict-merge` (alias `ark-check --strict-merge`) — the CLI name is not the
-status context name. Never claim Cursor/Codex/OpenCode hard write. Soft-write alone does not mean
-the project is unfinished; doctor keeps it as an environment residual. See [ai-gates.md](ai-gates.md)
-and the README host matrix.
+### Write-path honesty
+
+Claude/Grok/Antigravity can hard-block listed PreToolUse ops when installed and trusted.
+Cursor/Codex/OpenCode remain **advisory at write**. For every host, the repository-wide hard
+boundary is a **required GitHub status context** that runs `arkgate-check --strict-merge` (alias
+`ark-check --strict-merge`) — the CLI name is not the status context name. Never claim
+Cursor/Codex/OpenCode hard write. Soft-write alone does not mean the project is unfinished; doctor
+keeps it as an environment residual. See [ai-gates.md](ai-gates.md) and the README host matrix.
+
+Surface the same plane from the CLI: pair **`ark status --json`** (activation facts) with
+**`ark-check --doctor`** (`doctor.writePath`) — advisory local write on soft hosts → **required**
+merge status as the hard boundary. Product path: [use.md — What you get](use.md#what-you-get) ·
+[README host matrix](../README.md#host-enforcement-support).
 
 **MCP project identity (4.2.0):** before trusting project-specific MCP evidence, call
 `ark_identity` with `project.expectedRoot` set to the exact project's absolute root. Reuse that
@@ -53,9 +59,10 @@ path is authoritative only when that matching project id is also supplied. Only
 `binding.status: "matched"` with `authoritative: true` is authoritative; calls that omit the
 expectation remain compatible but are explicitly `unverified`.
 
-**Unified status snapshot (4.3 / ACS03):** for one machine-readable session/project manifest
-(identity binding, honest write-path activation, last-check summary, rules residual counts,
-primary next action) use:
+### Unified status snapshot (4.3 / ACS03)
+
+For one machine-readable session/project manifest (identity binding, honest write-path activation,
+last-check summary, rules residual counts, primary next action) use:
 
 ```bash
 npx ark status --json
@@ -65,7 +72,8 @@ npx ark status --json --expected-root /abs/project/root
 
 MCP parity tool: **`ark_status`** (same envelope; pass `project.expectedRoot` after `ark_identity`).
 Schema: `arkgate/schema/status-manifest`. Never prompts; under `CI=1` JSON is forced. **Not a
-score** — counts and verdicts only.
+score** — counts and verdicts only. Write-path interpretation of activation vs merge teeth is under
+[Write-path honesty](#write-path-honesty).
 
 **Stable finding refs (4.3 / ACS06):** every factory-emitted diagnostic on CLI JSON, MCP analysis
 envelopes, and opt-in hook repair payloads (`ARK_REPAIR_JSON`) carries:

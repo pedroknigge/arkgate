@@ -79,6 +79,15 @@ Details: [configuration](docs/configuration.md#arkrules-intra-layer-opt-in) · [
 
 **Name note:** npm package `arkgate` — not affiliated with the separate Archgate CLI project.
 
+### When not to adopt
+
+ArkGate is overkill for small trees with **no AI agents** and **no multi-layer boundaries**, for
+single-developer hobby CRUDs under no integration pressure, and for teams that will not maintain
+`ark.config.json` or a **required** CI status running `arkgate-check --strict-merge`. In those
+cases stay with a boundary linter alone (see [Why not only ESLint / Nx / cruiser?](#why-not-only-eslint--nx--cruiser)).
+Anyone path: [docs/use.md — When not to adopt](docs/use.md#when-not-to-adopt). Limits of a green
+check: [4.3.0 — What ArkGate is / isn't](docs/releases/4.3.0.md#what-arkgate-is--isnt).
+
 ---
 
 ## Status lights (not settings)
