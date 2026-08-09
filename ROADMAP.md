@@ -624,8 +624,9 @@ Boundary:
 
 Clean signed release SHA `dad2ac4` published as **arkgate@4.2.0** (2026-07-31), signed tag
 `v4.2.0`, GitHub Release, and package budget with ≥10% fixed headroom. WI01 is `done`; Phase WI
-closed. **Current npm `latest` is 4.2.1** (Next 16.3 compatibility patch; see
-[docs/releases/4.2.1.md](docs/releases/4.2.1.md)).
+closed. Patch **4.2.1** (Next 16.3 compatibility; see
+[docs/releases/4.2.1.md](docs/releases/4.2.1.md)) was published next and is **superseded** on npm
+`latest` by **4.3.0** (Phase ACS; [docs/releases/4.3.0.md](docs/releases/4.3.0.md)).
 
 ### Phase ACS — Agent contract surface (4.3.0)
 
@@ -830,7 +831,7 @@ score (`notAProductScore: true`). Next engineering pick: `ACS08` (claims + relea
 
 **ACS08 — Claims, release, publish**
 
-- **Status:** `done` (2026-08-09 prepare; npm publish pending maintainer checklist)
+- **Status:** `done` (2026-08-09; **published** `arkgate@4.3.0` on npm `latest`)
 - **Depends on:** `ACS02`–`ACS07`
 
 **Outcome:** public claims for 4.3.0 are reproducible; CHANGELOG + `docs/releases/4.3.0.md`;
@@ -839,14 +840,14 @@ signed tag and npm publish via Trusted Publishing; package budget headroom held.
 **Acceptance:** claims residual 0 Contradicted for new ACS statements; clean-checkout gates green;
 published `arkgate@4.3.0` on `latest`.
 
-**Evidence (prepare):** claims matrix 2026-08-09 — **0 Contradicted** for ACS statements
+**Evidence (published):** claims matrix 2026-08-09 — **0 Contradicted** for ACS statements
 (C-034–C-040 OK; C-028 Partial remains Z09/RB-11 only). Public lanes (README, docs hub,
 package-surface, CONTRIBUTING, Agents.md) name **4.3.0 published** on npm `latest`.
 CHANGELOG `## 4.3.0 — 2026-08-09`; [docs/releases/4.3.0.md](docs/releases/4.3.0.md)
-**Status: published**. Tree version identity is
-`4.3.0` (package/lock/`src/version.ts`/`server.json`). **Does not claim npm-published** until
-Trusted Publishing + status flip (honest prepared≠published). Maintainer follow-up: CI green →
-signed tag `v4.3.0` → `publish-npm.yml` → flip status to published → MCP publisher.
+**Status: published**. Tree version identity is `4.3.0`
+(package/lock/`src/version.ts`/`server.json`). npm `arkgate@latest` is **4.3.0**
+(gitHead `65f95a0`; signed tag `v4.3.0`; OIDC `publish-npm.yml` run `31295575658`). MCP registry
+package **4.3.0**.
 
 ### Z01 — Make release cleanup tool-owned and path-safe
 
@@ -3178,22 +3179,22 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: (none) — Phase ACS prepare complete; maintainer publish 4.3.0 open
-  Epic: Phase ACS — Agent contract surface → arkgate@4.3.0 published
+Engineering doing: (none) — Phase ACS shipped; arkgate@4.3.0 published on npm latest
+  Epic: Phase ACS — Agent contract surface → arkgate@4.3.0 published (closed)
   Plan: docs/plans/agent-contract-surface-4.3/README.md (Shipped / published)
-  Queue: ACS01–ACS08 done (prepare); no competing engineering todo for ACS
-  Last closed epic item: ACS08 (claims matrix + CHANGELOG + docs/releases/4.3.0.md published)
+  Queue: ACS01–ACS08 done; no competing engineering todo for ACS
+  Last closed epic item: ACS08 (claims + release notes + npm publish + pointer flip)
   Prior closed: ACS07 (placement A/B); ACS06 (finding refs); ACS05 (skills); ACS04 (projection);
     ACS03 (status); ACS02 (catalog); ACS01; WI01 — 4.2.0; patch 4.2.1
   Later trains on main (not separate ROADMAP rows): CI hygiene profile (#113);
     4.2.1 Next.js 16.3 root proxy.ts include + eval pins (#114) — published
 Released baseline: npm arkgate@4.3.0 on latest (gitHead 65f95a0; tag v4.3.0; 2026-08-09)
-  Notes: docs/releases/4.3.0.md — Status: published (OIDC Trusted Publishing)
+  Notes: docs/releases/4.3.0.md — Status: published (OIDC Trusted Publishing run 31295575658)
   Prior ship: 4.2.1 (b2f02c9 / v4.2.1) — docs/releases/4.2.1.md (superseded on latest)
-  Publish follow-up: signed tag v4.3.0 + publish-npm.yml + status flip (not engineering doing)
+  Publish follow-up: closed (signed tag v4.3.0 + publish-npm.yml + status flip + MCP 4.3.0)
 Phase AR (v4 train, AR01–AR19 done): historical plan once mapped AR17–19 to "4.3.0"; those
   items closed without a separate 4.3.0 tag — 4.3.0 is now ACS
-Phase EH (EH01–EH08 done): 4.1.1; Phase WI (WI01 done): 4.2.0; patch 4.2.1; ACS prepare 4.3.0
+Phase EH (EH01–EH08 done): 4.1.1; Phase WI (WI01 done): 4.2.0; patch 4.2.1; ACS published 4.3.0
 Claim gate: `Z09` (`parked`) — residual RB-11 only (retained adoption + independent close)
   Field kit scaffolding: docs/field/ — NOT closed; do not occupy engineering `doing` without cohort
 Closed in 3.8.0: Z01–Z08, Z10; RB-07–RB-10, RB-12
@@ -3203,7 +3204,7 @@ Product hard line: no false hard write on Cursor/Codex/OpenCode; no plan-B auto-
   ACS02 catalog closed at src/domain/diagnosticCatalog.ts + docs/diagnostics.md;
   ACS03 status closed at src/domain/statusManifest.ts + ark status --json / ark_status;
   ACS06 finding refs closed at analysis-result 1.5 (findingRef/targetKey/docsCodePath);
-  ACS08 claims 0 Contradicted (C-034–C-040) + prepared≠published honesty
+  ACS08 claims 0 Contradicted (C-034–C-040); 4.3.0 published on npm latest
 Not product backlog: god-module / plan-B residual (judgment only)
 Parked: Y09, Y07 (low), Y10 (archive until field demand + ADR), K01 runtime
   Later seeds (not ACS): konsistent-class sensor, adopt disk stages, mechanical one-shot CLI
