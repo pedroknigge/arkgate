@@ -247,10 +247,44 @@ function rulesUnderContractHtml(section) {
   return formatRulesUnderContractHtml(section, esc);
 }
 
+/** Improvement compass — advisory lenses only; never a score bar or gate input. */
+function improvementCompassHtml(compass) {
+  if (!compass || compass.notAScore !== true || !Array.isArray(compass.lenses)) return '';
+  const residual = Array.isArray(compass.topResidual) ? compass.topResidual : [];
+  const residualLenses = compass.lenses.filter((l) => l && l.status === 'residual');
+  const residualLine =
+    residual.length === 0
+      ? '<p class="muted">Residual: none on instrumented lenses (not a score — green edges ≠ finished design).</p>'
+      : `<p><span class="tag warn">residual</span> ${residual
+          .map((id) => {
+            const lens = compass.lenses.find((l) => l.id === id);
+            return `<code>${esc(id)}</code>${lens?.summary ? ` — ${esc(lens.summary)}` : ''}`;
+          })
+          .join('<br/>')}</p>`;
+  const oos = compass.lenses
+    .filter((l) => l && l.status === 'out-of-scope')
+    .map((l) => `<code>${esc(l.id)}</code>`)
+    .join(' · ');
+  const next =
+    residualLenses.find((l) => l.nextAction)?.nextAction ||
+    compass.lenses.find((l) => l.status === 'residual' && l.nextAction)?.nextAction;
+  const nextLine = next
+    ? `<p class="muted">Next: <code>${esc(next.ref)}</code> — ${esc(next.summary)}</p>`
+    : '';
+  return `
+  <section class="section card" data-advisory="improvementCompass">
+    <h2>Improvement compass <span class="muted">(not a score — projection only; never changes the verdict)</span></h2>
+    ${residualLine}
+    <p class="muted">Out of scope (honest): ${oos || 'scalability · resilience · security'}</p>
+    ${nextLine}
+  </section>`;
+}
+
 export function renderAdvisorySections(advisories, escape) {
   if (!advisories || typeof advisories !== 'object') return '';
   if (typeof escape === 'function') esc = escape;
   return [
+    improvementCompassHtml(advisories.improvementCompass),
     contractHealthHtml(advisories.contractHealth),
     ambientStateHtml(advisories.ambientState),
     physicalCohesionHtml(advisories.physicalCohesion),

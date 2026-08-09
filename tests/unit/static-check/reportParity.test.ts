@@ -15,6 +15,8 @@ import path from 'node:path';
 import ts from 'typescript';
 // eslint-disable-next-line -- runtime .mjs modules under test
 import { computeDoctorAdvisories } from '../../../bin/lib/doctor-advisories.mjs';
+// eslint-disable-next-line
+import { buildDoctorImprovementCompass } from '../../../bin/lib/improvement-compass-doctor.mjs';
 import { renderHtmlReport } from '../../../bin/lib/html-report.mjs';
 import {
   capabilityBadgesFor,
@@ -59,7 +61,15 @@ function project(root: string) {
 function renderFor(root: string) {
   const files = [path.join(root, 'src/domain/state.ts'), path.join(root, 'src/adapters/repo.ts')];
   const coverage = { governed: { classifiedFiles: 2, totalFiles: 2, percent: 100 }, layers: [] };
-  const advisories = computeDoctorAdvisories(root, CONFIG, coverage, CONFIG.rules, files, ts);
+  // Doctor always emits improvementCompass; report must carry the same key for parity.
+  const advisories = {
+    ...computeDoctorAdvisories(root, CONFIG, coverage, CONFIG.rules, files, ts),
+    improvementCompass: buildDoctorImprovementCompass({
+      designSmells: [],
+      violations: [],
+      physicalCohesion: undefined,
+    }),
+  };
   const html = renderHtmlReport({
     root,
     config: CONFIG,
@@ -91,6 +101,10 @@ describe('X01 report parity — the standing rule', () => {
     }
     // Nested surface with its own consumers keeps its own marker.
     expect(html).toContain('data-advisory="governanceWeight"');
+    // Improvement compass is always present when doctor emits it — no score UI.
+    expect(html).toContain('data-advisory="improvementCompass"');
+    expect(html).toMatch(/not a score/i);
+    expect(html).not.toMatch(/Excellent|score bar|\d+\s*\/\s*10/i);
   });
 
   it('top-level advisory sections use section card styling (showcase layout)', () => {

@@ -1608,7 +1608,13 @@ async function main() {
       originJustCreated: !existingOrigin,
       adoption: adoptionForReport,
       designDepth,
-      advisories: computeDoctorAdvisories(root, config, coverage, rules, files, ts, parseHealth),
+      advisories: {
+        ...computeDoctorAdvisories(root, config, coverage, rules, files, ts, parseHealth),
+        // Doctor parity: always emit improvement compass when doctor would (reportParity).
+        ...(designDepth?.improvementCompass
+          ? { improvementCompass: designDepth.improvementCompass }
+          : {}),
+      },
     };
     const html = args.beginner
       ? renderBeginnerHtmlReport(reportPayload)

@@ -873,7 +873,7 @@ Boundary:
 | 118 | `IC01` | `done` | S | ACS08 + 4.3.0 published | Plan locked; product-voice lexicon (compass/lens); freeze restated for 4.4.0; ROADMAP + Agents + docs hub |
 | 119 | `IC02` | `done` | M | `IC01` | Domain pure `buildImprovementCompass` + fixtures; 15 closed lenses; `notAScore`; out-of-scope locked |
 | 120 | `IC03` | `done` | M | `IC02` | Doctor human + JSON `improvementCompass`; optional status additive field; no verdict change |
-| 121 | `IC04` | `todo` | S | `IC03` | HTML report advisory compass section + reportParity |
+| 121 | `IC04` | `done` | S | `IC03` | HTML report advisory compass section + reportParity |
 | 122 | `IC05` | `todo` | L | `IC01` (finish after `IC03` for JSON-aware prose) | Deepen 13 skills + compact router (vibe-coder path, compass routing, anti false-done); agent-skills 1:1 |
 | 123 | `IC06` | `todo` | M | `IC03`–`IC05` | **Product-docs hygiene:** public lanes product-only (no roadmap codes); use/develop/agent-guide/skills/CLI human; claims prep |
 | 124 | `IC07` | `todo` | S | `IC02`–`IC06` | CHANGELOG + release notes in **product voice**, package-surface, version **4.4.0**, publish train |
@@ -929,13 +929,16 @@ package-surface documents additive field.
 
 **IC04 — HTML report parity**
 
-- **Status:** `todo`
+- **Status:** `done` (2026-08-09)
 - **Depends on:** `IC03`
 
 **Outcome:** showcase HTML advisory section for improvement compass; reportParity fails if doctor
 emits compass without section.
 
 **Acceptance:** fixture HTML contains `data-advisory` compass; no score UI.
+
+**Evidence:** `data-advisory="improvementCompass"` in html-report-advisories; designDepth +
+report payload wire; `reportParity.test.ts` asserts section + no score UI.
 
 **IC05 — Skills and compact router deepen**
 
@@ -3327,11 +3330,11 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: (none) — next pick IC04 (HTML report compass parity)
+Engineering doing: (none) — next pick IC05 (skills + compact router deepen)
   Epic: Phase IC — Improvement Compass → arkgate@4.4.0 (active)
   Plan: docs/plans/improvement-compass/README.md (Accepted / engineering active)
-  Queue: IC01–IC03 done; IC04–IC07 todo; sole engineering epic for 4.4.0
-  Last closed epic item: IC03 (doctor + status improvementCompass)
+  Queue: IC01–IC04 done; IC05–IC07 todo; sole engineering epic for 4.4.0
+  Last closed epic item: IC04 (HTML report compass parity)
   Prior closed epic: Phase ACS ACS01–ACS08 → arkgate@4.3.0 published
   Later trains on main (historical): CI hygiene (#113); 4.2.1 Next proxy (#114)
 Released baseline: npm arkgate@4.3.0 on latest (gitHead 65f95a0; tag v4.3.0; 2026-08-09)

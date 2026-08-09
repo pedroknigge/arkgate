@@ -21,6 +21,7 @@ import {
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { readBaseline, baselineOccurrenceKeys } from './violations.mjs';
 import { describePackageVersionDualTruth } from './field-install.mjs';
+import { buildDoctorImprovementCompass } from './improvement-compass-doctor.mjs';
 
 function esc(value) {
   return String(value)
@@ -155,6 +156,20 @@ export function buildReportDepthPayload(
     primaryNextAction: postGreenPath?.action ?? dualTruthNext,
     activeBlockingViolations: activeBlockingCount,
   });
+  // Improvement compass — same projection as doctor; notAScore; never a gate input.
+  const improvementCompass = buildDoctorImprovementCompass({
+    designSmells,
+    violations: activeViolations,
+    designWeak: designFitness.designWeak === true,
+    rulesUnderContract,
+    baselineExists: baseline.exists || frozenKeys > 0,
+    frozenResidual: frozenKeys,
+    dirtyBaselineRisk: productHonesty?.reasonIds?.includes?.('dirty-baseline') === true,
+    ungovernedDirCount: coverage?.suggestions?.length ?? 0,
+    emptyLayerCount: coverage?.emptyLayers?.length ?? 0,
+    goldenPatternPresent: goldenPattern.present === true,
+    arkRulesLoaded: rulesUnderContract?.active === true,
+  });
   return {
     adoption,
     designDepth: {
@@ -166,6 +181,7 @@ export function buildReportDepthPayload(
       // P0-B / P1-M — folded into designDepth so --report stays a single payload.
       productHonesty,
       mergePlanes: rulesUnderContract?.mergePlanes ?? null,
+      improvementCompass,
     },
   };
 }
