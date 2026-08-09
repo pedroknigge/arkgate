@@ -248,6 +248,14 @@ function mapDesignSmells(byId, smells) {
         }
     }
 }
+function isTypeOnlyPlacementDebt(v) {
+    // Product voice: type-only edges are placement debt (failsStrict:false), not runtime coupling.
+    if (v.failsStrict === false)
+        return true;
+    if (v.typeOnly === true)
+        return true;
+    return false;
+}
 function mapViolations(byId, violations) {
     for (const v of violations) {
         const ruleId = violationRuleId(v);
@@ -264,6 +272,15 @@ function mapViolations(byId, violations) {
                 pushEvidence(lens, 'violations', v.file, ruleId);
             markResidual(lens, summary, action);
         };
+        // Type-only / non-blocking placement debt → modularity only (never coupling / DIP residual).
+        if (isTypeOnlyPlacementDebt(v)) {
+            attach('modularity', 'Type-only placement debt remains — prefer SharedTypes / owning layer (not runtime coupling).', {
+                kind: 'skill',
+                ref: '/ark-place',
+                summary: 'Place shared types in a layer both sides may import; type-only debt is not a value edge.',
+            });
+            continue;
+        }
         const edgeAction = {
             kind: 'skill',
             ref: '/ark-fix',

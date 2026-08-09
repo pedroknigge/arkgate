@@ -114,6 +114,39 @@ describe('improvementCompass (Domain pure)', () => {
     expect(lens(compass, 'domain').status).toBe('residual');
   });
 
+  it('type-only placement debt (failsStrict:false) marks modularity only — not coupling', () => {
+    const compass = buildImprovementCompass({
+      violations: [
+        {
+          ruleId: 'LAYER_IMPORT_VIOLATION',
+          file: 'src/ui/types.ts',
+          failsStrict: false,
+          typeOnly: true,
+          message: 'import type across layers',
+        },
+      ],
+    });
+    expect(lens(compass, 'modularity').status).toBe('residual');
+    expect(lens(compass, 'coupling').status).not.toBe('residual');
+    expect(lens(compass, 'dip').status).not.toBe('residual');
+    expect(compass.topResidual).toContain('modularity');
+    expect(compass.topResidual).not.toContain('coupling');
+  });
+
+  it('value LAYER_IMPORT still marks coupling residual', () => {
+    const compass = buildImprovementCompass({
+      violations: [
+        {
+          ruleId: 'LAYER_IMPORT_VIOLATION',
+          file: 'src/ui/use.ts',
+          failsStrict: true,
+          message: 'value import across layers',
+        },
+      ],
+    });
+    expect(lens(compass, 'coupling').status).toBe('residual');
+  });
+
   it('maps physicalCohesion + design-weak → cohesion/srp/maintainability', () => {
     const compass = buildImprovementCompass({
       physicalCohesionFindingCount: 3,

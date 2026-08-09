@@ -147,7 +147,10 @@ export type ImprovementCompassViolationFact = {
   fromLayer?: string;
   toLayer?: string;
   file?: string;
+  /** When false, type-only placement debt — not runtime coupling (product voice). */
   failsStrict?: boolean;
+  /** Alias for non-blocking type-only edges (mirrors doctor violation shape). */
+  typeOnly?: boolean;
 };
 
 /**
@@ -438,6 +441,13 @@ function mapDesignSmells(
   }
 }
 
+function isTypeOnlyPlacementDebt(v: ImprovementCompassViolationFact): boolean {
+  // Product voice: type-only edges are placement debt (failsStrict:false), not runtime coupling.
+  if (v.failsStrict === false) return true;
+  if (v.typeOnly === true) return true;
+  return false;
+}
+
 function mapViolations(
   byId: Map<ImprovementLensId, MutableLens>,
   violations: readonly ImprovementCompassViolationFact[]
@@ -459,6 +469,20 @@ function mapViolations(
       if (v.file) pushEvidence(lens, 'violations', v.file, ruleId);
       markResidual(lens, summary, action);
     };
+
+    // Type-only / non-blocking placement debt → modularity only (never coupling / DIP residual).
+    if (isTypeOnlyPlacementDebt(v)) {
+      attach(
+        'modularity',
+        'Type-only placement debt remains — prefer SharedTypes / owning layer (not runtime coupling).',
+        {
+          kind: 'skill',
+          ref: '/ark-place',
+          summary: 'Place shared types in a layer both sides may import; type-only debt is not a value edge.',
+        }
+      );
+      continue;
+    }
 
     const edgeAction: ImprovementCompassNextAction = {
       kind: 'skill',

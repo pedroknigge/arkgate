@@ -1,6 +1,6 @@
 # ArkGate Agent Skills package
 
-> **Generated layout (ACS05).** Do not edit SKILL.md files here by hand.
+> **Generated layout (Agent Skills packaging).** Do not edit SKILL.md files here by hand.
 > Author skill bodies in `templates/skills/<name>.md`, then run
 > `npm run generate:agent-skills`. Drift: `npm run check:agent-skills`.
 

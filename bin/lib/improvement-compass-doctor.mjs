@@ -63,6 +63,7 @@ export function buildDoctorImprovementCompass(input = {}) {
       fromLayer: v?.fromLayer,
       toLayer: v?.toLayer,
       failsStrict: v?.failsStrict,
+      typeOnly: v?.typeOnly === true || v?.namedBindingsTypeOnly === true || undefined,
     })),
     cycleCount,
     peerIsolationCount,
