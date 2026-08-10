@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-10 (Phase DF; **arkgate@4.5.0**; `DF01`–`DF03` done; **`DF04` doing**; baseline **4.4.0 published**)
+- **Status date:** 2026-08-10 (Phase DF; **arkgate@4.5.0**; `DF01`–`DF04` done; **`DF05` next**; baseline **4.4.0 published**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -1046,7 +1046,7 @@ Boundary:
 | 125 | `DF01` | `done` | S | IC07 + 4.4.0 published | Plan locked; freezes + LEVELS + Scale Stack; sole epic for 4.5.0 |
 | 126 | `DF02` | `done` | M | `DF01` | **P0** Status/MCP compass + honesty modes + residual ⊆ doctor |
 | 127 | `DF03` | `done` | M | `DF01` | **P0** Domain budgets + **mandatory split** when over ceiling |
-| 128 | `DF04` | `doing` | M | `DF01` | **P1** Property/mutation ratchet on critical pure truth paths |
+| 128 | `DF04` | `done` | M | `DF01` | **P1** Property/mutation ratchet on critical pure truth paths |
 | 129 | `DF05` | `todo` | M | `DF01` | **P1** Self-service upgrade/activation honesty residual (one pilot) |
 | 130 | `DF06` | `todo` | S | `DF02`–`DF05` | **P2** Session recipe docs + claims + version **4.5.0** publish train |
 
@@ -1127,7 +1127,7 @@ pure Domain has no Kernel/Tooling I/O. Next engineering pick: **`DF04`**.
 
 **DF04 — Critical pure verification ratchet**
 
-- **Status:** `doing` (implementation ready for review)
+- **Status:** `done` (2026-08-10; commit `448abed`)
 - **Depends on:** `DF01` (prefer after `DF03`)
 - **Priority:** P1
 
@@ -1140,13 +1140,18 @@ No whole-repo mutation claim.
 cost-gated maintainer/CI lane documented in the PR and required for the 4.5.0 release train;
 focused unit fixtures for fail-closed cases; no weakening of strict semantics.
 
-**Evidence (implementation):** pure `peerIsolationMustDeny` + property/unit fail-closed suites;
-`policyDeltaAcknowledgementMatches` property + unit type/set guards; `canPromoteInvariant`
-property + unit partial/uncovered honesty. Stryker mutate islands + critical groups
-`peer-isolation-fail-closed`, `policy-delta-ack-match`, `invariant-promote-honesty` green
-(≥90%, NoCoverage=0). Cost gate: `npm run test:mutation` via full-matrix `test:confidence` +
+**Evidence:** pure `peerIsolationMustDeny` + property/unit fail-closed suites
+(`tests/property/layerMatch.property.test.ts`, `tests/unit/domain/peerIsolation.test.ts`);
+`policyDeltaAcknowledgementMatches` property + unit type/set guards
+(`tests/property/policyDelta.property.test.ts`, `tests/unit/domain/policyDelta.test.ts`);
+`canPromoteInvariant` property + unit partial/uncovered honesty
+(`tests/property/invariantCoverage.property.test.ts`, `tests/unit/domain/invariantCoverage.test.ts`).
+Stryker mutate islands (`stryker.config.mjs`) + critical groups in
+`eval/mutation/critical-groups.v1.json`: `peer-isolation-fail-closed` 95.24% (20/21),
+`policy-delta-ack-match` 93.22% (55/59), `invariant-promote-honesty` 100% (24/24) — all
+NoCoverage=0, ≥90%. Cost gate: `npm run test:mutation` via full-matrix `test:confidence` +
 publish paths only — **not** whole-repo mutation completeness. Property tests also run under
-default vitest / coverage include. Strict semantics unchanged.
+default vitest / coverage include. Strict semantics unchanged. Next engineering pick: **`DF05`**.
 
 **DF05 — Self-service upgrade / activation honesty residual**
 
@@ -3525,18 +3530,17 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: DF04
+Engineering doing: (none — pick DF05)
   Epic: Phase DF — Domain Fitness & Session Truth → arkgate@4.5.0
   Plan: docs/plans/domain-fitness-session-truth/README.md (amended Scale Stack 2026-08-10)
-  Queue: DF01–DF03 done; DF04 doing; DF05–DF06 todo
-  Order: DF04 (P1 pure ratchet) → DF05 (P1 self-service upgrade residual)
-         → DF06 (session recipe + release)
-  Next: DF04 — property/mutation ratchet on critical pure truth paths
-  Closed last: DF03 — domain budgets + mandatory improvementCompass split (7a9ba93)
+  Queue: DF01–DF04 done; DF05–DF06 todo
+  Order: DF05 (P1 self-service upgrade residual) → DF06 (session recipe + release)
+  Next: DF05 — self-service upgrade/activation honesty residual (one named pilot)
+  Closed last: DF04 — critical pure verification ratchet (448abed)
   Workflow: .grok/workflows/df-450-queue.rhai
     /workflow df-450-queue
-    /workflow df-450-queue {"only":"DF04"}
-    /workflow df-450-queue {"from":"DF04","to":"DF06","await_between":true}
+    /workflow df-450-queue {"only":"DF05"}
+    /workflow df-450-queue {"from":"DF05","to":"DF06","await_between":true}
 Released baseline: npm arkgate@4.4.0 on latest (gitHead d4ce0fa; tag v4.4.0; 2026-08-09)
   Notes: docs/releases/4.4.0.md — Status: published
   Prior: 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
