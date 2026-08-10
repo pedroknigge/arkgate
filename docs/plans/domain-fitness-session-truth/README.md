@@ -137,7 +137,7 @@ or domain budget raised without split.
 | `DF03` | M | `DF01` | **P0** | Domain budgets + **mandatory split** when over ceiling (**done**) |
 | `DF04` | M | `DF01` | **P1** | Property/mutation ratchet on critical pure truth paths (cost-gated OK) (**done**) |
 | `DF05` | M | `DF01` | **P1** | Self-service upgrade/activation honesty residual (one named pilot) (**done**) |
-| `DF06` | S | `DF02`–`DF05` | **P2** | Session recipe docs + claims + **4.5.0** publish train (**done** — prepared) |
+| `DF06` | S | `DF02`–`DF05` | **P2** | Session recipe docs + claims + **4.5.0** publish train (**done** — published) |
 
 **Engineering order (one `doing` at a time):**  
 `DF02` → `DF03` → `DF04` → `DF05` → `DF06`  
@@ -234,7 +234,7 @@ activation labels remain honest; common merge gate green.
 
 ### DF06 — Session recipe + product release 4.5.0
 
-**Status:** **done** (2026-08-10; tree prepare — npm publish deferred to owner)
+**Status:** **done** (2026-08-10; **published** `arkgate@4.5.0` on npm `latest`)
 
 **Outcome:**
 
@@ -249,7 +249,8 @@ green; no required config migration.
 
 **Evidence:** [use.md#session-recipe-agent-turn](../../use.md#session-recipe-agent-turn) ·
 [agent-guide](../../agent-guide.md#session-recipe-agent-turn) · tree `4.5.0` ·
-[releases/4.5.0.md](../../releases/4.5.0.md) Status prepared · claims matrix C-043–C-045.
+[releases/4.5.0.md](../../releases/4.5.0.md) **Status: published** · PR #123 / OIDC `31434961289` /
+gitHead `d6f4359` · MCP `io.github.pedroknigge/arkgate@4.5.0` · claims matrix C-043–C-045.
 
 ---
 
