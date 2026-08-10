@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.4.0';
+const CURRENT = '4.5.0';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.4.0';
 
@@ -101,19 +101,64 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('exposes published 4.4.0 as npm latest', () => {
+  it('exposes published 4.4.0 as npm latest while tree prepares 4.5.0', () => {
     expect(PUBLISHED_LATEST).toBe('4.4.0');
+    expect(CURRENT).toBe('4.5.0');
     expect(read('README.md')).toMatch(/4\.4\.0/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.4\.0\.md/);
     expect(read('README.md')).toMatch(/on npm `latest`|npm `latest`/i);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.5\.0\.md/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.3\.0\.md/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.2\.1\.md/);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.4\.0/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/4\.5\.0/);
     expect(read('docs/README.md')).toMatch(/Current published:.*4\.4\.0/s);
+    expect(read('docs/README.md')).toMatch(/4\.5\.0/);
     expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.4\.0/is);
+    expect(read('docs/package-surface.md')).toMatch(/4\.5\.0\.md/i);
     expect(read('docs/releases/4.4.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.4.0.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(read('docs/releases/4.5.0.md')).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(read('docs/releases/4.5.0.md')).not.toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.3.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.5.0 session honesty train', () => {
+  it('records status honesty, self-service upgrade, session recipe, and prepared status', () => {
+    const changelog = read('CHANGELOG.md');
+    expect(changelog).toMatch(/## 4\.5\.0/);
+    expect(changelog).toMatch(/full.*subset.*unavailable|mode `full`/is);
+    expect(changelog).toMatch(/Session recipe|session recipe/i);
+    expect(changelog).toMatch(/selfService|self-service|Self-service/i);
+    expect(changelog).toMatch(/notAScore/);
+    expect(changelog).toMatch(/No required config migration/i);
+    expect(changelog).toMatch(/prepared|not published on npm/i);
+
+    const notes = read('docs/releases/4.5.0.md');
+    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(notes).not.toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(notes).toMatch(/4\.5\.0/);
+    expect(notes).toMatch(/full.*subset.*unavailable|mode `full`/is);
+    expect(notes).toMatch(/Session recipe|session recipe/i);
+    expect(notes).toMatch(/selfService|self-service|Self-service/i);
+    expect(notes).toMatch(/notAScore/);
+    expect(notes).toMatch(/No required config migration/i);
+    expect(notes).toMatch(/Z09|RB-11/i);
+  });
+
+  it('product docs teach session recipe without roadmap-item narrative', () => {
+    const use = read('docs/use.md');
+    const guide = read('docs/agent-guide.md');
+    expect(use).toMatch(/## Session recipe/i);
+    expect(use).toMatch(/Bind identity|bind identity/i);
+    expect(use).toMatch(/ark status/i);
+    expect(use).toMatch(/subset|unavailable|not full/i);
+    expect(guide).toMatch(/### Session recipe/i);
+    expect(guide).toMatch(/ark_identity|expectedRoot/i);
+    expect(guide).toMatch(/improvementCompass\.mode|mode is not full|mode !== full/i);
+    // IC06 hygiene: public lanes must not lead with DF/IC/ACS ticket codes as the story
+    expect(use).not.toMatch(/\bDF0[1-6]\b/);
+    expect(guide).not.toMatch(/\bDF0[1-6]\b/);
   });
 });
 
@@ -217,16 +262,20 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
     expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
   });
 
-  it('public release pointers cover published 4.4.0 and retain prior notes', () => {
+  it('public release pointers cover published 4.4.0, prepare 4.5.0, and retain prior notes', () => {
     expect(read('README.md')).toMatch(/4\.4\.0/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.4\.0\.md/);
+    expect(read('README.md')).toMatch(/4\.5\.0/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.5\.0\.md/);
     expect(read('README.md')).toMatch(/4\.3\.0/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.3\.0\.md/);
     expect(read('README.md')).toMatch(/4\.2\.1/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.2\.1\.md/);
     expect(read('README.md')).toMatch(/npm `latest`|on npm/);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.4\.0/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/4\.5\.0/);
     expect(read('CONTRIBUTING.md')).toMatch(/4\.3\.0/);
+    expect(read('docs/package-surface.md')).toMatch(/4\.5\.0\.md/);
     expect(read('docs/package-surface.md')).toMatch(/4\.4\.0\.md/);
     expect(read('docs/package-surface.md')).toMatch(/4\.3\.0\.md/);
     expect(read('docs/package-surface.md')).toMatch(/4\.2\.1\.md/);

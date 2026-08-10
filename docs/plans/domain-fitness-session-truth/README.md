@@ -4,7 +4,7 @@
 > true. Work starts only when item IDs appear as `doing`/`todo` in [ROADMAP.md](../../../ROADMAP.md).
 > Hub: [AGENTS.md](../../../AGENTS.md) · [Roadmap](../../../ROADMAP.md) · [Product voice](../../product-voice.md)
 
-**Status:** Accepted — **DF01–DF04 done**; next **`DF05`**; amended 2026-08-10 (Scale Stack + LEVELS)  
+**Status:** Accepted — **DF01–DF06 done**; tree prepare for **arkgate@4.5.0** (not published until OIDC); amended 2026-08-10 (Scale Stack + LEVELS)  
 **Slug:** `domain-fitness-session-truth`  
 **Kind:** epic / product minor train  
 **Owners:** product (Pedro) + library maintainers  
@@ -136,8 +136,8 @@ or domain budget raised without split.
 | `DF02` | M | `DF01` | **P0** | Status/MCP compass + **parity/honesty modes** + residual ⊆ doctor (**done**) |
 | `DF03` | M | `DF01` | **P0** | Domain budgets + **mandatory split** when over ceiling (**done**) |
 | `DF04` | M | `DF01` | **P1** | Property/mutation ratchet on critical pure truth paths (cost-gated OK) (**done**) |
-| `DF05` | M | `DF01` | **P1** | Self-service upgrade/activation honesty residual (one named pilot) |
-| `DF06` | S | `DF02`–`DF05` | **P2** | Session recipe docs + claims + **4.5.0** publish train |
+| `DF05` | M | `DF01` | **P1** | Self-service upgrade/activation honesty residual (one named pilot) (**done**) |
+| `DF06` | S | `DF02`–`DF05` | **P2** | Session recipe docs + claims + **4.5.0** publish train (**done** — prepared) |
 
 **Engineering order (one `doing` at a time):**  
 `DF02` → `DF03` → `DF04` → `DF05` → `DF06`  
@@ -217,20 +217,24 @@ baselineKey / configContract slices remain.
 
 ### DF05 — Self-service upgrade / activation honesty (one pilot)
 
+**Status:** **done** (2026-08-10; commit `938c5c4`)
+
 **Outcome:** close **one** residual chosen by this gate question (must be answered in PR):
 
 > After a managed upgrade (or equivalent), can a consumer learn from package surfaces whether
 > the write-path is still honestly labeled active/advisory and whether customized install content
 > was preserved — without asking a maintainer?
 
-**In-scope pilot classes (pick one):** managed-upgrade force-preserve / content-identity;
-activation label post-upgrade; stable upgrade preview/dry-run honesty. **Not in scope:** new hosts,
-host matrix expansion, false hard-write for soft hosts.
+**Pilot closed:** managed-upgrade content-identity preserve + activation labels on
+`ark upgrade` (`selfService` JSON + human “Self-service honesty”). **Not in scope (held):** new
+hosts, host matrix expansion, false hard-write for soft hosts.
 
 **Acceptance:** named residual + self-service criterion in PR; failing-then-passing tests;
 activation labels remain honest; common merge gate green.
 
 ### DF06 — Session recipe + product release 4.5.0
+
+**Status:** **done** (2026-08-10; tree prepare — npm publish deferred to owner)
 
 **Outcome:**
 
@@ -242,6 +246,10 @@ activation labels remain honest; common merge gate green.
 
 **Acceptance:** stranger can follow session recipe without ROADMAP; IC06 hygiene held; merge gate
 green; no required config migration.
+
+**Evidence:** [use.md#session-recipe-agent-turn](../../use.md#session-recipe-agent-turn) ·
+[agent-guide](../../agent-guide.md#session-recipe-agent-turn) · tree `4.5.0` ·
+[releases/4.5.0.md](../../releases/4.5.0.md) Status prepared · claims matrix C-043–C-045.
 
 ---
 

@@ -5,23 +5,40 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.5.0 — 2026-08-10
+
+**Minor** over 4.4.0. Session control-plane honesty (status/MCP improvement compass with explicit
+modes), domain module fitness (split oversized pure modules), selective pure verification ratchet,
+self-service upgrade activation honesty, and a short session recipe in product docs. **No required
+config migration.** Codex remains advisory at write time. Skills and AGENTS projection never
+enforce. **Status: prepared in tree — not published on npm until OIDC publish + `npm view` succeed**
+(see `docs/releases/4.5.0.md`).
+
 ### Added
 
-- **Status / MCP improvement compass honesty (DF02):** `ark status --json` and MCP `ark_status`
-  always project `improvementCompass` with explicit mode `full` \| `subset` \| `unavailable`,
-  residual lens ids, and `notAScore: true`. Incomplete or missing session facts never invent green
-  residual. When mode is `full`, residual ids are a subset of doctor residual for the same facts
-  (report snapshots store the thin slice). Residual never flips `valid` / strict-merge / `goal.met`.
+- **Status / MCP improvement compass honesty:** `ark status --json` and MCP `ark_status` always
+  project `improvementCompass` with explicit mode `full` \| `subset` \| `unavailable`, residual
+  lens ids, and `notAScore: true`. Incomplete or missing session facts never invent green residual.
+  When mode is `full`, residual ids are a subset of doctor residual for the same facts (report
+  snapshots store the thin slice). Residual never flips `valid` / strict-merge / `goal.met`.
   Root helpers: `projectStatusImprovementCompass`, `STATUS_COMPASS_MODES`.
+- **Session recipe (product docs):** identity bind → `ark status` → act on residual / `findingRef`;
+  run doctor when status compass mode is not `full`. Documented in use / agent-guide / develop —
+  no new skill names.
+- **Managed upgrade self-service honesty:** `ark upgrade [--json]` surfaces `selfService` with
+  per-host write-path activation labels (`hard` \| `advisory` \| `unavailable`) and customized
+  content-identity preserve (`customizedPaths` / `customizedContentPreserved`). Soft hosts never
+  hard; upgrade never invents `hardWriteActive` from disk alone. Always `notAScore: true`. Human
+  output: “Self-service honesty” lines.
 
 ### Changed
 
-- **Domain module fitness (DF03):** `improvementCompass` pure Domain monolith (~923 LOC) split into
-  `improvementCompassTypes` + `improvementCompassMap` + facade `improvementCompass` (public re-exports
-  unchanged). All three tracked in `check:module-budgets`; over-ceiling domain modules require a
-  behavior-preserving split — raising max alone is not done. CLI pure mirrors:
+- **Domain module fitness:** pure Domain `improvementCompass` monolith split into
+  `improvementCompassTypes` + `improvementCompassMap` + facade `improvementCompass` (public
+  re-exports unchanged). All three tracked in `check:module-budgets`; over-ceiling domain modules
+  require a behavior-preserving split — raising max alone is not done. CLI pure mirrors:
   `improvement-compass-types.mjs`, `improvement-compass-map.mjs`, `improvement-compass.mjs`.
-- **Critical pure verification ratchet (DF04):** selective L5 islands on
+- **Critical pure verification ratchet:** selective verification islands on
   `layerMatch` peerIsolation fail-closed (missing paths/slices),
   `policyDeltaAcknowledgementMatches` (hash + finding-id set), and
   `canPromoteInvariant` promote honesty. Property suites under `tests/property/` plus unit fixtures;
@@ -29,6 +46,9 @@ in the immutable pre-2.0 archive linked below.
   `policy-delta-ack-match`, `invariant-promote-honesty`. Mutation remains cost-gated to full-matrix
   CI / publish (`npm run test:mutation` via `test:confidence`) — **not** a whole-repo mutation claim.
   Strict semantics unchanged.
+
+**Freezes held:** no principle scores/ranks; no new skill names; no new ArkRules sensors; no LLM
+verdict; projection never enforces; no false hard-write for soft hosts.
 
 ## 4.4.0 — 2026-08-09
 

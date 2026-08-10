@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-10 (Phase DF; **arkgate@4.5.0**; `DF01`–`DF04` done; **`DF05` doing**; baseline **4.4.0 published**)
+- **Status date:** 2026-08-10 (Phase DF; **arkgate@4.5.0** tree prepare; `DF01`–`DF06` done; baseline **4.4.0 published** on npm `latest`)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -1047,8 +1047,8 @@ Boundary:
 | 126 | `DF02` | `done` | M | `DF01` | **P0** Status/MCP compass + honesty modes + residual ⊆ doctor |
 | 127 | `DF03` | `done` | M | `DF01` | **P0** Domain budgets + **mandatory split** when over ceiling |
 | 128 | `DF04` | `done` | M | `DF01` | **P1** Property/mutation ratchet on critical pure truth paths |
-| 129 | `DF05` | `doing` | M | `DF01` | **P1** Self-service upgrade/activation honesty residual (one pilot) |
-| 130 | `DF06` | `todo` | S | `DF02`–`DF05` | **P2** Session recipe docs + claims + version **4.5.0** publish train |
+| 129 | `DF05` | `done` | M | `DF01` | **P1** Self-service upgrade/activation honesty residual (one pilot) |
+| 130 | `DF06` | `done` | S | `DF02`–`DF05` | **P2** Session recipe docs + claims + version **4.5.0** publish train |
 
 **Preferred engineering order:** `DF02` → `DF03` → `DF04` → `DF05` → `DF06`. One `doing` at a
 time. Do not run DF04 before DF03 without owner note (maintenance before mutation load).
@@ -1155,7 +1155,7 @@ default vitest / coverage include. Strict semantics unchanged. Next engineering 
 
 **DF05 — Self-service upgrade / activation honesty residual**
 
-- **Status:** `doing`
+- **Status:** `done` (2026-08-10; commit `938c5c4`)
 - **Depends on:** `DF01`
 - **Priority:** P1
 
@@ -1165,19 +1165,27 @@ default vitest / coverage include. Strict semantics unchanged. Next engineering 
 > write-path is still honestly labeled active/advisory and whether customized install content was
 > preserved — without asking a maintainer?
 
-Pilot classes (pick one): managed-upgrade content-identity / force-preserve; activation label
-post-upgrade; stable upgrade preview/dry-run honesty. No new hosts; no false hard-write claims
-for soft hosts.
+**Pilot (named):** managed-upgrade content-identity preserve + activation label post-upgrade on
+`ark upgrade` (JSON `selfService` + human “Self-service honesty” lines). No new hosts; no false
+hard-write claims for soft hosts.
 
 **Acceptance:** PR names residual + self-service criterion; failing-then-passing tests;
 doctor/activation labels remain honest; common merge gate green.
 
-**Evidence:** tests under `tests/unit/static-check/` (or install suite); package-surface only if a
-stable claim changes.
+**Evidence:** criterion quoted in `bin/lib/managed-upgrade-honesty.mjs` and
+`tests/unit/static-check/df05SelfServiceUpgradeHonesty.test.ts` (`DF05_SELF_SERVICE_CRITERION`);
+public projection via `publicPlan` → `selfService` (`schemaVersion: 1.0`, `notAScore: true`,
+`criterionId: df05-upgrade-activation-preserve`) with per-host
+`writePath` `hard|advisory|unavailable`, `customizedPaths` /
+`customizedContentPreserved`, fail-closed soft-host labels (upgrade never invents
+`hardWriteActive` from disk alone); package-surface row
+**Managed upgrade self-service honesty (4.5 / DF05)**; focused suite 8/8 green
+(`npx vitest run tests/unit/static-check/df05SelfServiceUpgradeHonesty.test.ts`).
+Next engineering pick: **`DF06`**.
 
 **DF06 — Session recipe + release 4.5.0**
 
-- **Status:** `todo`
+- **Status:** `done` (2026-08-10; tree prepare — not published on npm until OIDC + `npm view`)
 - **Depends on:** `DF02`–`DF05`
 - **Priority:** P2
 
@@ -1193,8 +1201,12 @@ stable claim changes.
 required config migration; public release prose does not reintroduce roadmap-code narrative;
 signed tag + npm when owner publishes.
 
-**Evidence:** docs session recipe; tree identity `4.5.0`; release notes Status prepared →
-published; npm/MCP when shipped.
+**Evidence (prepared):** docs session recipe in [use.md](docs/use.md#session-recipe-agent-turn) ·
+[agent-guide](docs/agent-guide.md#session-recipe-agent-turn); tree identity `4.5.0`
+(`package.json` / lock / `src/version.ts` / `server.json`); CHANGELOG `## 4.5.0`; release notes
+[docs/releases/4.5.0.md](docs/releases/4.5.0.md) **Status: prepared**; package-surface next-prepare
+pointer; claims matrix DF rows **0 Contradicted**. npm `latest` remains **4.4.0** until publish
+verify flips pointers.
 
 **Post-4.5 seed (not DF `todo`):** golden upgrade path matrix across hosts; deeper monorepo
 activation playbook on field demand; Z09/RB-11 remains the parked claim gate for retained
@@ -3530,19 +3542,15 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: DF05
-  Epic: Phase DF — Domain Fitness & Session Truth → arkgate@4.5.0
+Engineering doing: (none — Phase DF queue closed at prepare)
+  Epic: Phase DF — Domain Fitness & Session Truth → arkgate@4.5.0 (tree prepare)
   Plan: docs/plans/domain-fitness-session-truth/README.md (amended Scale Stack 2026-08-10)
-  Queue: DF01–DF04 done; DF05 doing; DF06 todo
-  Order: DF05 (P1 self-service upgrade residual) → DF06 (session recipe + release)
-  Next: DF05 — self-service upgrade/activation honesty residual (one named pilot)
-  Closed last: DF04 — critical pure verification ratchet (448abed)
-  Workflow: .grok/workflows/df-450-queue.rhai
-    /workflow df-450-queue
-    /workflow df-450-queue {"only":"DF05"}
-    /workflow df-450-queue {"from":"DF05","to":"DF06","await_between":true}
+  Queue: DF01–DF06 done
+  Closed last: DF06 — session recipe + claims + 4.5.0 prepare train
+  Next owner action: publish train (signed tag v4.5.0 → OIDC publish-npm → flip Status published)
+    Do not start a new engineering epic until owner prioritizes post-4.5 seed or Z09
 Released baseline: npm arkgate@4.4.0 on latest (gitHead d4ce0fa; tag v4.4.0; 2026-08-09)
-  Notes: docs/releases/4.4.0.md — Status: published
+  Tree prepare: arkgate@4.5.0 — docs/releases/4.5.0.md Status: prepared
   Prior: 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
 Phase DF hard lines: TARGET LEVEL 4 hybrid; compass notAScore; honesty modes never invent green;
   domain split required over raise-max-only; no new skill names/sensors; no scores;
