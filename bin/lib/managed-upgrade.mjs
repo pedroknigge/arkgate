@@ -5,12 +5,22 @@ import path from 'node:path';
 import { codexPrimaryTable, upsertCodexMcpTable } from './codex-home.mjs';
 import { buildManagedAssetCatalog } from './install-migrate.mjs';
 import {
+  formatManagedUpgradeSelfServiceHonesty,
+  projectManagedUpgradeSelfServiceHonesty,
+} from './managed-upgrade-honesty.mjs';
+import {
   KNOWN_TOOLS,
   arkPackageVersion,
   detectActiveAgentHost,
   normalizeToolsList,
   skillContentIdentity,
 } from './skill-install.mjs';
+
+export {
+  formatManagedUpgradeSelfServiceHonesty,
+  projectHostWritePathActivation,
+  projectManagedUpgradeSelfServiceHonesty,
+} from './managed-upgrade-honesty.mjs';
 
 export const MANAGED_MANIFEST_PATH = 'ark.managed.json';
 const MANIFEST_VERSION = '1.0';
@@ -534,7 +544,10 @@ export function planManagedUpgrade(root, options = {}) {
 }
 
 function publicPlan(plan, overrides = {}) {
-  return {
+  const assets = plan.assets.map(
+    ({ containerBeforeHash: _container, [AFTER_CONTENT]: _content, ...asset }) => asset
+  );
+  const base = {
     schemaVersion: plan.schemaVersion,
     root: plan.root,
     readOnly: overrides.readOnly ?? plan.readOnly,
@@ -544,11 +557,21 @@ function publicPlan(plan, overrides = {}) {
     profile: plan.profile,
     hosts: plan.hosts,
     acceptConflicts: plan.acceptConflicts,
-    assets: plan.assets.map(
-      ({ containerBeforeHash: _container, [AFTER_CONTENT]: _content, ...asset }) => asset
-    ),
+    assets,
     summary: plan.summary,
+  };
+  // DF05: self-service honesty (write-path labels + customized preserve) on every public plan.
+  // Not part of planDigest — advisory projection only; never invents hard write on soft hosts.
+  const selfService = projectManagedUpgradeSelfServiceHonesty({
+    hosts: base.hosts,
+    assets,
+    summary: base.summary,
+  });
+  return {
+    ...base,
     ...overrides,
+    // DF05 projection always present unless an override supplies a replacement.
+    selfService: overrides.selfService ?? selfService,
   };
 }
 
@@ -738,6 +761,16 @@ export function renderManagedUpgrade(plan, options = {}) {
     `Managed assets: ${managedAssets}; would write: ${wouldWrite}; ` +
       `customized preserved: ${customizedPreserved}; blocked conflicts/deletions: ${blocked}.`
   );
+  const honesty =
+    plan.selfService ??
+    projectManagedUpgradeSelfServiceHonesty({
+      hosts: plan.hosts,
+      assets: plan.assets,
+      summary: plan.summary,
+    });
+  for (const line of formatManagedUpgradeSelfServiceHonesty(honesty)) {
+    console.log(line);
+  }
   if (plan.applied) {
     console.log(
       `Applied ${wouldWrite} content write(s)` +

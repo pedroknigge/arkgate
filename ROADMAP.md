@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-10 (Phase DF; **arkgate@4.5.0**; `DF01`–`DF04` done; **`DF05` next**; baseline **4.4.0 published**)
+- **Status date:** 2026-08-10 (Phase DF; **arkgate@4.5.0**; `DF01`–`DF04` done; **`DF05` doing**; baseline **4.4.0 published**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -1047,7 +1047,7 @@ Boundary:
 | 126 | `DF02` | `done` | M | `DF01` | **P0** Status/MCP compass + honesty modes + residual ⊆ doctor |
 | 127 | `DF03` | `done` | M | `DF01` | **P0** Domain budgets + **mandatory split** when over ceiling |
 | 128 | `DF04` | `done` | M | `DF01` | **P1** Property/mutation ratchet on critical pure truth paths |
-| 129 | `DF05` | `todo` | M | `DF01` | **P1** Self-service upgrade/activation honesty residual (one pilot) |
+| 129 | `DF05` | `doing` | M | `DF01` | **P1** Self-service upgrade/activation honesty residual (one pilot) |
 | 130 | `DF06` | `todo` | S | `DF02`–`DF05` | **P2** Session recipe docs + claims + version **4.5.0** publish train |
 
 **Preferred engineering order:** `DF02` → `DF03` → `DF04` → `DF05` → `DF06`. One `doing` at a
@@ -1155,7 +1155,7 @@ default vitest / coverage include. Strict semantics unchanged. Next engineering 
 
 **DF05 — Self-service upgrade / activation honesty residual**
 
-- **Status:** `todo`
+- **Status:** `doing`
 - **Depends on:** `DF01`
 - **Priority:** P1
 
@@ -3530,10 +3530,10 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: (none — pick DF05)
+Engineering doing: DF05
   Epic: Phase DF — Domain Fitness & Session Truth → arkgate@4.5.0
   Plan: docs/plans/domain-fitness-session-truth/README.md (amended Scale Stack 2026-08-10)
-  Queue: DF01–DF04 done; DF05–DF06 todo
+  Queue: DF01–DF04 done; DF05 doing; DF06 todo
   Order: DF05 (P1 self-service upgrade residual) → DF06 (session recipe + release)
   Next: DF05 — self-service upgrade/activation honesty residual (one named pilot)
   Closed last: DF04 — critical pure verification ratchet (448abed)
