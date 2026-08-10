@@ -125,6 +125,39 @@
       ]
     },
     {
+      "id": "peer-isolation-fail-closed",
+      "note": "DF04: peerIsolationMustDeny pure fail-closed core (missing paths/slices/folders).",
+      "targets": [
+        {
+          "file": "src/domain/layerMatch.ts",
+          "startLine": 337,
+          "endLine": 349
+        }
+      ]
+    },
+    {
+      "id": "policy-delta-ack-match",
+      "note": "DF04: policyDeltaAcknowledgementMatches hash + finding-id set equality.",
+      "targets": [
+        {
+          "file": "src/domain/policyDelta.ts",
+          "startLine": 708,
+          "endLine": 737
+        }
+      ]
+    },
+    {
+      "id": "invariant-promote-honesty",
+      "note": "DF04: canPromoteInvariant refuses partial/uncovered/missing; never invents green promote.",
+      "targets": [
+        {
+          "file": "src/domain/invariantCoverage.ts",
+          "startLine": 165,
+          "endLine": 188
+        }
+      ]
+    },
+    {
       "id": "workflow-failure-boundaries",
       "targets": [
         {

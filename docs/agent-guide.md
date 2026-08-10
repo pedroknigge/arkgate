@@ -59,7 +59,31 @@ path is authoritative only when that matching project id is also supplied. Only
 `binding.status: "matched"` with `authoritative: true` is authoritative; calls that omit the
 expectation remain compatible but are explicitly `unverified`.
 
-### Improvement compass (doctor)
+### Session recipe (agent turn)
+
+Default loop for each agent session (product language — no inventing residual):
+
+1. **Bind identity** — call `ark_identity` with `project.expectedRoot` = exact absolute project
+   root. Reuse root + returned `projectId` on later tools. Only `binding.status: "matched"` with
+   `authoritative: true` is authoritative.
+2. **Read status** — `ark status --json` / MCP `ark_status` for identity, write-path activation,
+   last-check summary, residual lens ids (`improvementCompass`), and primary next action.
+3. **Act** — address residual / next action / stable `findingRef` from diagnostics. Never invent
+   green residual lenses. Projection, skills, and AGENTS.md never enforce.
+4. **Doctor when compass mode is not full** — if `improvementCompass.mode` is `subset` or
+   `unavailable`, run `ark-check --doctor` (and `--json` for the full 15-lens map) before treating
+   residual as complete. When mode is `full`, status residual ids are a subset of doctor residual
+   for the same facts.
+
+```bash
+npx ark status --json --expected-root /abs/project/root
+# mode !== full → full residual map:
+npx ark-check --doctor --json
+```
+
+Product path: [use.md — Session recipe](use.md#session-recipe-agent-turn).
+
+### Improvement compass (doctor + status)
 
 `ark-check --doctor` (human + `--json`) projects residual architecture work as a closed set of
 **lenses** (`doctor.improvementCompass`). Always `notAScore: true`. Never feeds `valid`,
@@ -67,17 +91,20 @@ strict-merge exit, or plan `goal.met`. Out-of-scope lenses (scalability, app sec
 full resilience) stay honest. Product path: [use.md — Improvement compass](use.md#improvement-compass-not-a-score).
 Package surface row: [package-surface.md](package-surface.md).
 
-**Status snapshot:** the status schema may carry a thin optional residual-id slice when Tooling
-passes it through, but **`ark status --json` does not compute the compass yet** — use doctor for
-residual lenses. Residual never changes status `nextAction` by itself.
+**Status snapshot:** `ark status --json` / MCP `ark_status` project a thin `improvementCompass`
+with explicit honesty **`mode`**: `full` \| `subset` \| `unavailable` (always `notAScore: true`).
+Incomplete facts → `subset` / `unavailable` + reason — **never invent green residual**. Residual
+never flips gate verdicts and never alone rewrites status `nextAction` as a score. When mode is
+not `full`, follow the [session recipe](#session-recipe-agent-turn) and run doctor.
 
 Compact router and skills read residual lenses in plain language; green edges alone are never
 “architecture finished” while residual remains.
 
-### Unified status snapshot (4.3)
+### Unified status snapshot (4.3+)
 
 For one machine-readable session/project manifest (identity binding, honest write-path activation,
-last-check summary, rules residual counts, primary next action) use:
+last-check summary, rules residual counts, primary next action, improvement-compass residual map)
+use:
 
 ```bash
 npx ark status --json
@@ -87,8 +114,8 @@ npx ark status --json --expected-root /abs/project/root
 
 MCP parity tool: **`ark_status`** (same envelope; pass `project.expectedRoot` after `ark_identity`).
 Schema: `arkgate/schema/status-manifest`. Never prompts; under `CI=1` JSON is forced. **Not a
-score** — counts and verdicts only. Write-path interpretation of activation vs merge teeth is under
-[Write-path honesty](#write-path-honesty).
+score** — counts, honesty modes, and residual ids only. Write-path interpretation of activation vs
+merge teeth is under [Write-path honesty](#write-path-honesty).
 
 **Stable finding refs (4.3):** every factory-emitted diagnostic on CLI JSON, MCP analysis
 envelopes, and opt-in hook repair payloads (`ARK_REPAIR_JSON`) carries:

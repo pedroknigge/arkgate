@@ -1,14 +1,25 @@
 // @ts-check
 
-/** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
+/**
+ * Selective L5 mutation islands (not whole-repo completeness).
+ *
+ * Cost gate: `npm run test:mutation` is required on full-matrix CI + publish
+ * (`test:confidence` / release-npm / publish-npm), not on PR-slim coverage-only.
+ * DF04 pure truth paths (peerIsolation fail-closed, policyDelta ack match,
+ * invariant promote honesty) are additional named groups — never a claim of
+ * monorepo-wide mutation coverage.
+ *
+ * @type {import('@stryker-mutator/api/core').PartialStrykerOptions}
+ */
 const config = {
   testRunner: 'vitest',
   vitest: {
     configFile: 'vitest.config.ts',
     related: false,
   },
-  // Named enforcement boundaries from ROADMAP S02. Ranges keep the initial gate
-  // focused on product decisions instead of presentation-only strings and entry shells.
+  // Named enforcement boundaries from ROADMAP S02 + DF04 pure truth islands.
+  // Ranges keep the gate focused on product decisions instead of presentation
+  // strings and entry shells.
   mutate: [
     'bin/lib/enforcement-profiles.mjs:10-92',
     'bin/lib/write-path-capabilities.mjs:39-176',
@@ -34,6 +45,11 @@ const config = {
     'src/domain/configContract.ts:436-436',
     'src/domain/configContract.ts:445-448',
     'src/domain/configContract.ts:457-466',
+    // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
+    // peerIsolationMustDeny is the killable fail-closed core; findDeniedEdgeRule wires it.
+    'src/domain/layerMatch.ts:337-349',
+    'src/domain/policyDelta.ts:708-737',
+    'src/domain/invariantCoverage.ts:165-188',
     'src/kernel/semanticAnalysis.ts:18-49',
     'src/kernel/semanticAnalysis.ts:78-258',
     'src/kernel/workflow/Saga.ts:188-238',
@@ -41,6 +57,9 @@ const config = {
   testFiles: [
     'tests/unit/workflow/workflowEngine.test.ts',
     'tests/unit/domain/baselineKey.test.ts',
+    'tests/unit/domain/peerIsolation.test.ts',
+    'tests/unit/domain/policyDelta.test.ts',
+    'tests/unit/domain/invariantCoverage.test.ts',
     'tests/unit/static-check/configContract.test.ts',
     'tests/unit/static-check/writePathDetect.test.ts',
     'tests/unit/static-check/writePathHostCapabilities.test.ts',
@@ -56,11 +75,15 @@ const config = {
     'tests/unit/mcp/residentHook.test.ts',
     'tests/unit/analysis/semanticAnalysis.test.ts',
     'tests/property/baselineKey.property.test.ts',
+    'tests/property/layerMatch.property.test.ts',
+    'tests/property/policyDelta.property.test.ts',
+    'tests/property/invariantCoverage.property.test.ts',
   ],
   reporters: ['clear-text', 'progress', 'json'],
   jsonReporter: { fileName: 'reports/mutation/mutation.json' },
   // 4.1.0 field surface: measured mutation score ~88–89 on clean candidates.
   // Keep high aspirational; break under measured with small headroom.
+  // Selective islands only — not a whole-repo mutation completeness claim.
   thresholds: { high: 90, low: 87, break: 87 },
   concurrency: 2,
   timeoutMS: 10000,

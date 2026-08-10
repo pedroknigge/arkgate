@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest';
 import {
   isEdgeDenied,
   findDeniedEdgeRule,
+  peerIsolationMustDeny,
   sliceIdForPath,
   inferSliceFoldersFromPatterns,
 } from '../../../src/domain/layerMatch';
@@ -59,7 +60,95 @@ describe('sliceIdForPath / inferSliceFoldersFromPatterns', () => {
   });
 });
 
+describe('peerIsolationMustDeny pure decision (DF04)', () => {
+  it('fail-closes on missing path, empty folders, or unclassifiable slices', () => {
+    expect(
+      peerIsolationMustDeny({
+        folderCount: 1,
+        fromSlice: 'features/auth',
+        toSlice: 'features/auth',
+      })
+    ).toBe(true);
+    expect(
+      peerIsolationMustDeny({
+        fromPath: 'src/features/auth/a.ts',
+        folderCount: 1,
+        fromSlice: 'features/auth',
+        toSlice: 'features/auth',
+      })
+    ).toBe(true);
+    expect(
+      peerIsolationMustDeny({
+        fromPath: 'src/features/auth/a.ts',
+        toPath: 'src/features/auth/b.ts',
+        folderCount: 0,
+        fromSlice: 'features/auth',
+        toSlice: 'features/auth',
+      })
+    ).toBe(true);
+    expect(
+      peerIsolationMustDeny({
+        fromPath: 'src/features/auth/a.ts',
+        toPath: 'src/features/auth/b.ts',
+        folderCount: 1,
+        fromSlice: undefined,
+        toSlice: 'features/auth',
+      })
+    ).toBe(true);
+    expect(
+      peerIsolationMustDeny({
+        fromPath: 'src/features/auth/a.ts',
+        toPath: 'src/features/auth/b.ts',
+        folderCount: 1,
+        fromSlice: 'features/auth',
+        toSlice: undefined,
+      })
+    ).toBe(true);
+  });
+
+  it('allows only proven same-slice and denies cross-slice', () => {
+    expect(
+      peerIsolationMustDeny({
+        fromPath: 'src/features/auth/a.ts',
+        toPath: 'src/features/auth/b.ts',
+        folderCount: 1,
+        fromSlice: 'features/auth',
+        toSlice: 'features/auth',
+      })
+    ).toBe(false);
+    expect(
+      peerIsolationMustDeny({
+        fromPath: 'src/features/auth/a.ts',
+        toPath: 'src/features/payments/b.ts',
+        folderCount: 1,
+        fromSlice: 'features/auth',
+        toSlice: 'features/payments',
+      })
+    ).toBe(true);
+  });
+});
+
 describe('peerIsolation edge rules', () => {
+  it('denies when rules array is undefined or empty (no allow path)', () => {
+    expect(isEdgeDenied(undefined, 'Features', 'Features')).toBe(false);
+    expect(isEdgeDenied([], 'Features', 'Features')).toBe(false);
+  });
+
+  it('ignores non-matching layer pairs and non-deny allowed rules', () => {
+    const mixed = [
+      { from: 'Other', to: 'Features', allowed: false as const, peerIsolation: true },
+      { from: 'Features', to: 'Features', allowed: true as const, peerIsolation: true },
+      { from: 'Features', to: 'Features' }, // allowed omitted → not deny
+    ];
+    expect(
+      isEdgeDenied(mixed, 'Features', 'Features', {
+        fromPath: 'src/features/auth/a.ts',
+        toPath: 'src/features/payments/b.ts',
+        layers: featuresLayers,
+      })
+    ).toBe(false);
+  });
+
   it('denies features/auth → features/payments', () => {
     expect(
       isEdgeDenied(peerRules, 'Features', 'Features', {

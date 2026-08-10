@@ -97,12 +97,15 @@ Examples:
 | **diagnostic code** / **ruleId** | Stable public violation id (e.g. `LAYER_IMPORT_VIOLATION`) with shared why/fix anchors — catalog-linked, not prose-only ([diagnostics.md](diagnostics.md)) |
 | **agent projection** | Version-matched AGENTS/CLAUDE (or equivalent) block generated from package + contract; **non-authoritative** — enforcement is ark-check / hooks / CI |
 | **finding ref** | Stable id for a finding across turns (ruleId + target key), so agents re-address without fuzzy message match |
-| **status snapshot** | One machine-readable project/session manifest (`ark status --json` shape): identity, activation honesty, last check, residual counts — not a numeric score |
+| **status snapshot** | One machine-readable project/session manifest (`ark status --json` shape): identity, activation honesty, last check, residual counts, thin compass residual map — not a numeric score |
+| **session recipe** | Agent loop: bind identity → read status → act on residual / findingRef; run doctor when status compass mode is not `full` |
+| **compass mode** | Status honesty label for the projected residual map: `full` \| `subset` \| `unavailable` — never invent green residual |
 | **improvement compass** | Closed projection of residual architecture work across fixed **lenses** (aligned to 15 common principles). Always `notAScore`. Never a gate input. |
 | **lens** | One named principle dimension (`soc`, `dip`, `domain`, …) with status `ok` / `residual` / `not-instrumented` / `out-of-scope` and evidence refs from existing sensors |
 | **topResidual** | Deterministic short list of residual lens ids — what to improve next, not a ranking score |
 | **out-of-scope lens** | Principle Ark does not instrument (e.g. scalability APM, SAST) — say so; do not invent residual |
 | **AI-easy architecture** | Small, pure, placeable modules and a golden pattern so the next agent turn stays ordered under the contract |
+| **self-service upgrade honesty** | After managed upgrade, consumers can see write-path activation labels and customized-content preserve without asking a maintainer |
 
 ## Public docs are product-only (from 4.4.0)
 

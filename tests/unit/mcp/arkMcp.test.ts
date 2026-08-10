@@ -1985,6 +1985,16 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
     expect(body.status.rules).toHaveProperty('frozenResidual');
     // Not a score — residual counts only; no numeric trust/score field on the envelope.
     expect(body.status).not.toHaveProperty('score');
+    // DF02 — honesty-mode compass always projected (never invent green without facts).
+    expect(body.status.improvementCompass).toMatchObject({
+      schemaVersion: '1.0',
+      notAScore: true,
+      mode: expect.stringMatching(/^(full|subset|unavailable)$/),
+    });
+    expect(Array.isArray(body.status.improvementCompass.topResidual)).toBe(true);
+    if (body.status.improvementCompass.mode === 'unavailable') {
+      expect(body.status.improvementCompass.topResidual).toEqual([]);
+    }
   });
 
   it('ark_coverage returns per-layer counts and the full unclassified list', async () => {

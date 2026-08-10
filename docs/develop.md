@@ -69,7 +69,9 @@ can show `runtimeObserved: true` even when branch-protection policy is plan-unav
 | Rules inventory (brownfield) | `arkgate-check --rules-inventory` · MCP `ark_rules_inventory` |
 | Stable package API | [package-surface.md](package-surface.md) |
 | Diagnostic codes (`ruleId` why/fix) | [diagnostics.md](diagnostics.md) · root `DIAGNOSTIC_CATALOG` |
-| Session / project status snapshot | `ark status --json` · MCP `ark_status` · [agent-guide](agent-guide.md) · schema `arkgate/schema/status-manifest` |
+| Session / project status snapshot | `ark status --json` · MCP `ark_status` · [session recipe](agent-guide.md#session-recipe-agent-turn) · schema `arkgate/schema/status-manifest` |
+| Status compass honesty | `improvementCompass.mode`: `full` \| `subset` \| `unavailable` · residual ⊆ doctor when `full` · [package-surface](package-surface.md) |
+| Managed upgrade self-service | `ark upgrade --json` → `selfService` (activation labels + customized preserve) · [package-surface](package-surface.md) |
 | Version-matched AGENTS projection | `ark agents-md` · [agent-guide](agent-guide.md) · **non-authoritative** (never enforces) |
 | Stable finding refs (`findingRef` / `targetKey`) | analysis-result schema **1.5** · [agent-guide](agent-guide.md) · [package-surface](package-surface.md) |
 | Agent Skills layout (same 13 names) | `templates/agent-skills/` · [agent-guide](agent-guide.md#install-skills-ark-and-ecosystem) · `npx skills add …` |

@@ -46,7 +46,7 @@ not every historical file:
 | Security | [SECURITY.md](SECURITY.md) · [docs/threat-model.md](docs/threat-model.md) |
 | Decisions | [docs/adr/](docs/adr/README.md) |
 | Implementation queue | [ROADMAP.md](ROADMAP.md) |
-| Releases (prepared / last published) | [CHANGELOG.md](CHANGELOG.md) · [4.3.0](docs/releases/4.3.0.md) (published) · [4.2.1](docs/releases/4.2.1.md) · [4.2.0](docs/releases/4.2.0.md) · [4.1.1](docs/releases/4.1.1.md) |
+| Releases (prepared / last published) | [CHANGELOG.md](CHANGELOG.md) · [4.5.0](docs/releases/4.5.0.md) (prepared) · [4.4.0](docs/releases/4.4.0.md) (published) · [4.3.0](docs/releases/4.3.0.md) · [4.2.1](docs/releases/4.2.1.md) · [4.2.0](docs/releases/4.2.0.md) · [4.1.1](docs/releases/4.1.1.md) |
 | History / maintainer evidence | [docs/archive/](docs/archive/README.md) · [docs/plans/](docs/plans/) · [docs/field/](docs/field/) · [docs/audit/](docs/audit/claims-matrix.md) |
 
 Read the **lane entry** before significant work. After changing a public surface, architecture
@@ -136,6 +136,9 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/configContract.ts` | `bin/lib/config-contract.mjs` + `schemas/ark.config.schema.json` | (same `cli-pure` scripts) |
 | `src/domain/projectIdentity.ts` | `bin/lib/project-identity.mjs` + `schemas/ark.project-identity.schema.json` | (same `cli-pure` scripts) |
 | `src/domain/statusManifest.ts` | `bin/lib/status-manifest.mjs` + `schemas/ark.status-manifest.schema.json` | (same `cli-pure` scripts) |
+| `src/domain/improvementCompassTypes.ts` | `bin/lib/improvement-compass-types.mjs` | (same `cli-pure` scripts); DF03 split child |
+| `src/domain/improvementCompassMap.ts` | `bin/lib/improvement-compass-map.mjs` | (same `cli-pure` scripts); DF03 split child |
+| `src/domain/improvementCompass.ts` | `bin/lib/improvement-compass.mjs` | (same `cli-pure` scripts); facade re-exports types + mappers |
 | `src/domain/agentProjection.ts` | `bin/lib/agent-projection.mjs` | (same `cli-pure` scripts) |
 | `src/domain/agentSkillsPackage.ts` | `bin/lib/agent-skills-package.mjs` | (same `cli-pure` scripts); layout via `generate:agent-skills` / `check:agent-skills` |
 | `src/domain/resolvedCandidateFactsSchema.ts` | `schemas/ark.resolved-candidate-facts.schema.json` | (same `cli-pure` scripts) |
@@ -164,6 +167,7 @@ retained shipped rationale live under `docs/plans/`:
 | [workspace-identity-activation-truth](docs/plans/workspace-identity-activation-truth/README.md) | Shipped in 4.2.0 (`WI01` done; **published**) | Project-bound MCP identity handshake, fail-closed cross-project evidence, honest runtime activation/verdicts, and layer-aware ArkRules inventory |
 | [agent-contract-surface-4.3](docs/plans/agent-contract-surface-4.3/README.md) | Shipped in **4.3.0** (`ACS01`–`ACS08` done; **published**) | Agent Skills packaging, version-matched projection, diagnostic code catalog, unified status JSON, finding refs, maintainer A/B eval — guardrail catalog + scan/process voice; freeze restated; no new skill names, no LLM verdict |
 | [improvement-compass](docs/plans/improvement-compass/README.md) | Shipped in **4.4.0** (`IC01`–`IC07` done; **published**) | Improvement compass (lenses, not scores) + vibe-coder skill deepen; public docs product-only |
+| [domain-fitness-session-truth](docs/plans/domain-fitness-session-truth/README.md) | Prepared for **4.5.0** (`DF01`–`DF06` done; tree prepare; Scale Stack amended) | Session control-plane honesty (status compass modes + residual ⊆ doctor); domain budget **and** mandatory split; pure verification ratchet; self-service upgrade residual; session recipe at release; LEVELS 4 hybrid + Scale Stack seams |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in
 `ROADMAP.md`.

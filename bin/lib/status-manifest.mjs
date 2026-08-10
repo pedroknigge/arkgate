@@ -10,6 +10,25 @@
 
 export const ARK_STATUS_MANIFEST_SCHEMA_VERSION = '1.0';
 export const ARK_STATUS_MANIFEST_SCHEMA_URL = 'https://unpkg.com/arkgate@4/schemas/ark.status-manifest.schema.json';
+/**
+ * Honesty mode for status improvementCompass (DF02).
+ * - full: residual projected from doctor-equivalent facts (residual ⊆ doctor)
+ * - subset: incomplete facts; residual may omit doctor residual; never invent green
+ * - unavailable: no usable facts; empty residual + reason (never silent ok)
+ */
+export const STATUS_COMPASS_MODES = ['full', 'subset', 'unavailable'];
+/** Provenance for status compass residual (same-tree intent). */
+export const STATUS_COMPASS_FACTS_SOURCES = [
+    'doctor-facts',
+    'report-snapshot',
+    'none',
+];
+/** Stable reason codes when mode is not full. */
+export const STATUS_COMPASS_REASON_CODES = {
+    FACTS_UNAVAILABLE: 'FACTS_UNAVAILABLE',
+    FACTS_PARTIAL: 'FACTS_PARTIAL',
+    NO_SESSION_SNAPSHOT: 'NO_SESSION_SNAPSHOT',
+};
 const PROJECT_ID_PATTERN = /^sha256:[a-f0-9]{64}$/;
 /**
  * Evaluate project binding for status without filesystem.
@@ -294,23 +313,148 @@ export function buildStatusManifest(facts) {
         status.improvementCompass = compass;
     return status;
 }
-function normalizeStatusImprovementCompass(value) {
-    if (value == null || typeof value !== 'object')
-        return null;
-    if (value.notAScore !== true)
-        return null;
-    if (value.schemaVersion !== '1.0')
-        return null;
-    if (!Array.isArray(value.topResidual))
-        return null;
-    const topResidual = value.topResidual
-        .filter((id) => typeof id === 'string' && id.length > 0)
-        .slice(0, 15);
-    return {
+const STATUS_COMPASS_MODE_SET = new Set(STATUS_COMPASS_MODES);
+const STATUS_COMPASS_SOURCE_SET = new Set(STATUS_COMPASS_FACTS_SOURCES);
+/**
+ * Project a thin status improvementCompass with explicit honesty mode (DF02).
+ *
+ * Rules:
+ * - always notAScore: true
+ * - mode full | subset | unavailable (invalid mode → unavailable)
+ * - unavailable: topResidual forced empty (never invent residual or silent green)
+ * - full/subset: residual ids from input only (never fabricate ok lenses)
+ * - never carries valid / goal.met / score fields
+ */
+export function projectStatusImprovementCompass(input) {
+    const mode = STATUS_COMPASS_MODE_SET.has(input.mode)
+        ? input.mode
+        : 'unavailable';
+    const factsSource = input.factsSource != null && STATUS_COMPASS_SOURCE_SET.has(input.factsSource)
+        ? input.factsSource
+        : mode === 'unavailable'
+            ? 'none'
+            : undefined;
+    const contractHash = typeof input.contractHash === 'string' && input.contractHash.length > 0
+        ? input.contractHash
+        : undefined;
+    if (mode === 'unavailable') {
+        const out = {
+            schemaVersion: '1.0',
+            notAScore: true,
+            mode: 'unavailable',
+            topResidual: [],
+            reasonCode: typeof input.reasonCode === 'string' && input.reasonCode.length > 0
+                ? input.reasonCode
+                : STATUS_COMPASS_REASON_CODES.FACTS_UNAVAILABLE,
+            reason: typeof input.reason === 'string' && input.reason.length > 0
+                ? input.reason
+                : 'Improvement compass facts are unavailable — run ark-check --doctor for residual lenses. Status never invents green.',
+            factsSource: factsSource ?? 'none',
+        };
+        if (contractHash)
+            out.contractHash = contractHash;
+        return out;
+    }
+    const topResidual = Array.isArray(input.topResidual)
+        ? input.topResidual
+            .filter((id) => typeof id === 'string' && id.length > 0)
+            .slice(0, 15)
+        : [];
+    const out = {
         schemaVersion: '1.0',
         notAScore: true,
+        mode,
         topResidual,
     };
+    if (mode === 'subset') {
+        out.reasonCode =
+            typeof input.reasonCode === 'string' && input.reasonCode.length > 0
+                ? input.reasonCode
+                : STATUS_COMPASS_REASON_CODES.FACTS_PARTIAL;
+        out.reason =
+            typeof input.reason === 'string' && input.reason.length > 0
+                ? input.reason
+                : 'Status compass is a subset of doctor residual — incomplete session facts; run doctor for full.';
+    }
+    else if (typeof input.reasonCode === 'string' && input.reasonCode.length > 0) {
+        out.reasonCode = input.reasonCode;
+    }
+    if (typeof input.reason === 'string' && input.reason.length > 0 && mode === 'full') {
+        out.reason = input.reason;
+    }
+    if (factsSource)
+        out.factsSource = factsSource;
+    if (contractHash)
+        out.contractHash = contractHash;
+    return out;
+}
+/**
+ * Unavailable compass when Tooling has no doctor/report residual facts.
+ * Empty residual + mode label — never a green / ok claim.
+ */
+export function unavailableStatusImprovementCompass(input = {}) {
+    return projectStatusImprovementCompass({
+        mode: 'unavailable',
+        topResidual: [],
+        reasonCode: input.reasonCode ?? STATUS_COMPASS_REASON_CODES.NO_SESSION_SNAPSHOT,
+        reason: input.reason ??
+            'No session compass facts yet — run ark-check --doctor or --report for residual lenses. Status never invents green.',
+        factsSource: 'none',
+        contractHash: input.contractHash,
+    });
+}
+/**
+ * Normalize an incoming status compass slice (Tooling pass-through / snapshot).
+ * Rejects score-like shapes; coerces missing mode to subset (never silent full).
+ * Unavailable always clears residual.
+ */
+export function normalizeStatusImprovementCompass(value) {
+    if (value == null || typeof value !== 'object')
+        return null;
+    const record = value;
+    if (record.notAScore !== true)
+        return null;
+    if (record.schemaVersion !== '1.0')
+        return null;
+    // Score-like fields never allowed on status compass.
+    if ('score' in record || 'valid' in record || 'goal' in record)
+        return null;
+    let mode;
+    if (typeof record.mode === 'string' && STATUS_COMPASS_MODE_SET.has(record.mode)) {
+        mode = record.mode;
+    }
+    else if (Array.isArray(record.topResidual)) {
+        // Legacy thin slice without mode → subset honesty (never silent full).
+        mode = 'subset';
+    }
+    else {
+        mode = 'unavailable';
+    }
+    return projectStatusImprovementCompass({
+        mode,
+        topResidual: Array.isArray(record.topResidual)
+            ? record.topResidual
+            : [],
+        reasonCode: typeof record.reasonCode === 'string' ? record.reasonCode : null,
+        reason: typeof record.reason === 'string' ? record.reason : null,
+        factsSource: typeof record.factsSource === 'string' ? record.factsSource : null,
+        contractHash: typeof record.contractHash === 'string' ? record.contractHash : null,
+    });
+}
+/**
+ * Residual-id subset check for status ⊆ doctor parity fixtures (DF02).
+ * Returns true when every status residual id appears in doctor residual ids.
+ */
+export function statusCompassResidualIsSubsetOfDoctor(statusResidual, doctorResidual) {
+    const status = Array.isArray(statusResidual) ? statusResidual : [];
+    const doctor = new Set(Array.isArray(doctorResidual) ? doctorResidual : []);
+    for (const id of status) {
+        if (typeof id !== 'string' || id.length === 0)
+            continue;
+        if (!doctor.has(id))
+            return false;
+    }
+    return true;
 }
 function numberOrNull(value) {
     if (value == null)
@@ -414,17 +558,22 @@ export const ARK_STATUS_MANIFEST_SCHEMA = {
         },
         improvementCompass: {
             type: 'object',
-            description: 'Optional thin improvement-compass residual ids (notAScore). Never a gate input; full lenses on doctor JSON.',
+            description: 'Thin improvement-compass residual ids with honesty mode (notAScore). full | subset | unavailable. Never a gate input; full lenses on doctor JSON. When full, residual ids ⊆ doctor residual for the same facts. unavailable never invents green residual.',
             additionalProperties: false,
-            required: ['schemaVersion', 'notAScore', 'topResidual'],
+            required: ['schemaVersion', 'notAScore', 'mode', 'topResidual'],
             properties: {
                 schemaVersion: { const: '1.0' },
                 notAScore: { const: true },
+                mode: { enum: ['full', 'subset', 'unavailable'] },
                 topResidual: {
                     type: 'array',
                     items: { type: 'string', minLength: 1 },
                     maxItems: 15,
                 },
+                reasonCode: { type: 'string', minLength: 1 },
+                reason: { type: 'string', minLength: 1 },
+                factsSource: { enum: ['doctor-facts', 'report-snapshot', 'none'] },
+                contractHash: { type: 'string', minLength: 1 },
             },
         },
     },

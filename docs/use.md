@@ -105,6 +105,34 @@ npx arkgate-check --install-agent-gates --skills-only --force
 
 ---
 
+## Session recipe (agent turn)
+
+Short loop so agents do not invent residual or re-run doctor every message:
+
+1. **Bind identity** — MCP: call `ark_identity` with `project.expectedRoot` set to the project’s
+   exact absolute root; reuse that root plus the returned `projectId` on later Ark tools. CLI:
+   pass `--expected-root /abs/project/root` on `ark status` when you need matched vs stale binding.
+2. **Read status** — `npx ark status --json` (or MCP `ark_status`) for identity, write-path
+   activation honesty, last-check summary, residual lens ids, and primary next action.
+3. **Act** — work the residual / next action / stable `findingRef` from check diagnostics. Do not
+   invent green residual lenses. Green edges alone are never “architecture finished.”
+4. **Doctor when status is incomplete** — if status `improvementCompass.mode` is **`subset`** or
+   **`unavailable`** (or compass facts are missing), run `npx ark-check --doctor` (add `--json` for
+   the full 15-lens map) before treating residual as complete. When mode is **`full`**, status
+   residual ids are a safe subset of doctor residual for the same facts.
+
+```bash
+npx ark status --json --expected-root /abs/project/root
+# when mode is not full:
+npx ark-check --doctor
+npx ark-check --doctor --json   # doctor.improvementCompass
+```
+
+Details: [agent-guide — Session recipe](agent-guide.md#session-recipe-agent-turn) ·
+[package surface — status / compass](package-surface.md).
+
+---
+
 ## Improvement compass (not a score)
 
 Doctor shows an **improvement compass**: a closed set of architecture **lenses** (separation of
@@ -125,6 +153,8 @@ Improvement compass (not a score)
 | Never a gate input | Residual alone does **not** fail CI or flip `valid` |
 
 JSON: `ark-check --doctor --json` → `doctor.improvementCompass` (full lenses + `topResidual`).  
+Status also projects a thin residual map with honesty **`mode`**: `full` \| `subset` \| `unavailable`
+(always `notAScore`) — see [Session recipe](#session-recipe-agent-turn).  
 Human doctor prints the short section above.
 
 ### Align → Stabilize → Shape

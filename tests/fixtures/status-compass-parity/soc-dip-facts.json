@@ -1,0 +1,29 @@
+{
+  "description": "DF02 parity fixture: same doctor-side facts for status residual ⊆ doctor residual when mode=full (SoC/DIP).",
+  "schemaVersion": "1.0",
+  "notAScore": true,
+  "facts": {
+    "designSmells": [
+      { "id": "domain-logic-in-ui", "evidence": ["src/ui/canBuy.ts"] },
+      { "id": "io-under-application", "evidence": ["src/app/fetch.ts"] }
+    ],
+    "violations": [
+      {
+        "ruleId": "LAYER_IMPORT_VIOLATION",
+        "file": "src/a.ts",
+        "fromLayer": "DomainModel",
+        "toLayer": "PresentationAdapters"
+      },
+      { "ruleId": "CAPABILITY_VIOLATION", "file": "src/domain/x.ts" }
+    ],
+    "designWeak": true,
+    "stackKind": "typescript"
+  },
+  "expectedStatusMode": "full",
+  "expectedResidualContains": ["soc", "dip"],
+  "honesty": {
+    "neverInventGreen": true,
+    "residualNeverFlipsGate": true,
+    "modes": ["full", "subset", "unavailable"]
+  }
+}
