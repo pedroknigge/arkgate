@@ -145,7 +145,9 @@ export function projectManagedUpgradeSelfServiceHonesty(plan, options = {}) {
   });
 
   const answers = {
-    writePathActivationLabeled: writePathHonestlyLabeled && writePathActivation.length >= 0,
+    // Empty host list is not "labeled activation" — only claim labeled when hosts were projected.
+    writePathActivationLabeled:
+      writePathActivation.length > 0 && writePathHonestlyLabeled,
     customizedContentPreserved,
   };
 

@@ -149,6 +149,13 @@ describe('DF05 pure host activation labels (fail-closed)', () => {
     expect(hard.writePath).toBe('hard');
     expect(hard.hardWriteActive).toBe(true);
   });
+
+  it('does not claim writePathActivationLabeled when no hosts were projected', () => {
+    const honesty = projectManagedUpgradeSelfServiceHonesty({ hosts: [], assets: [] });
+    expect(honesty.writePathActivation).toEqual([]);
+    expect(honesty.writePathHonestlyLabeled).toBe(true); // vacuously honest
+    expect(honesty.answers.writePathActivationLabeled).toBe(false);
+  });
 });
 
 describe('DF05 managed-upgrade selfService projection', () => {
