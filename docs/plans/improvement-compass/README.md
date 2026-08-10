@@ -4,7 +4,7 @@
 > true. Work starts only when item IDs appear as `doing`/`todo` in [ROADMAP.md](../../../ROADMAP.md).
 > Hub: [AGENTS.md](../../../AGENTS.md) · [Roadmap](../../../ROADMAP.md) · [Product voice](../../product-voice.md)
 
-**Status:** Accepted / engineering active (plan lock **IC01**)  
+**Status:** Shipped / published in **4.4.0**  
 **Slug:** `improvement-compass`  
 **Kind:** epic / product minor train  
 **Owners:** product (Pedro) + library maintainers  
