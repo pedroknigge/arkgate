@@ -1,15 +1,21 @@
 /**
- * ACS03 — gather session/project evidence for `ark status` / MCP `ark_status`.
+ * ACS03 + DF02 — gather session/project evidence for `ark status` / MCP `ark_status`.
  *
  * Fail-closed and CI-safe: never prompts (no readline), never invents hard write,
  * never invents a numeric score. Pure assembly lives in Domain statusManifest.
+ * Improvement compass carries explicit honesty mode (full|subset|unavailable).
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { buildStatusManifest } from './status-manifest.mjs';
+import {
+  buildStatusManifest,
+  normalizeStatusImprovementCompass,
+  projectStatusImprovementCompass,
+  unavailableStatusImprovementCompass,
+} from './status-manifest.mjs';
 import { createProjectId } from './project-identity.mjs';
 import { resolveEffectiveProjectRoot } from './project-root.mjs';
 import { detectWritePathCapabilities } from './write-path-detect.mjs';
@@ -131,6 +137,94 @@ export function lastCheckFactsFromSnapshot(latest, baseline) {
 }
 
 /**
+ * Project status improvementCompass honesty from a report/session snapshot (DF02).
+ * Prefer stored thin slice; never invent green residual when facts are missing.
+ *
+ * @param {object|null|undefined} latest
+ * @param {{ contractHash?: string|null }} [opts]
+ * @returns {import('./status-manifest.mjs').StatusImprovementCompassSlice}
+ */
+export function statusCompassFromSnapshot(latest, opts = {}) {
+  const contractHash =
+    typeof opts.contractHash === 'string' && opts.contractHash.length > 0
+      ? opts.contractHash
+      : null;
+
+  if (!latest || typeof latest !== 'object') {
+    return unavailableStatusImprovementCompass({
+      reasonCode: 'NO_SESSION_SNAPSHOT',
+      reason:
+        'No session report snapshot yet — run ark-check --doctor or --report for residual lenses. Status never invents green.',
+      contractHash,
+    });
+  }
+
+  // Prefer explicit thin status slice on the snapshot (report path stores mode+residual).
+  if (latest.improvementCompass && typeof latest.improvementCompass === 'object') {
+    const normalized = normalizeStatusImprovementCompass({
+      ...latest.improvementCompass,
+      ...(contractHash && !latest.improvementCompass.contractHash
+        ? { contractHash }
+        : {}),
+      factsSource: latest.improvementCompass.factsSource || 'report-snapshot',
+    });
+    if (normalized) return normalized;
+  }
+
+  // Doctor-equivalent residual ids stored without honesty wrapper → full if complete flag set.
+  if (
+    latest.doctorImprovementCompass &&
+    typeof latest.doctorImprovementCompass === 'object' &&
+    latest.doctorImprovementCompass.notAScore === true &&
+    Array.isArray(latest.doctorImprovementCompass.topResidual)
+  ) {
+    const complete = latest.compassFactsComplete === true || latest.completeness === 'complete';
+    return projectStatusImprovementCompass({
+      mode: complete ? 'full' : 'subset',
+      topResidual: latest.doctorImprovementCompass.topResidual,
+      reasonCode: complete ? undefined : 'FACTS_PARTIAL',
+      reason: complete
+        ? undefined
+        : 'Session snapshot residual is partial — re-run doctor/report for full compass.',
+      factsSource: 'report-snapshot',
+      contractHash,
+    });
+  }
+
+  return unavailableStatusImprovementCompass({
+    reasonCode: 'NO_SESSION_SNAPSHOT',
+    reason:
+      'Session snapshot has no improvement compass facts — run ark-check --doctor or --report. Status never invents green.',
+    contractHash,
+  });
+}
+
+/**
+ * Build a storeable thin status compass from a full doctor ImprovementCompass (DF02).
+ * Used by report snapshot so status residual ⊆ doctor residual for the same tree.
+ *
+ * @param {{ notAScore?: boolean, topResidual?: string[] }|null|undefined} doctorCompass
+ * @param {{ mode?: 'full'|'subset', contractHash?: string|null, reasonCode?: string, reason?: string }} [opts]
+ */
+export function thinStatusCompassFromDoctor(doctorCompass, opts = {}) {
+  if (!doctorCompass || doctorCompass.notAScore !== true) {
+    return unavailableStatusImprovementCompass({
+      reasonCode: 'FACTS_UNAVAILABLE',
+      contractHash: opts.contractHash,
+    });
+  }
+  const mode = opts.mode === 'subset' ? 'subset' : 'full';
+  return projectStatusImprovementCompass({
+    mode,
+    topResidual: Array.isArray(doctorCompass.topResidual) ? doctorCompass.topResidual : [],
+    reasonCode: opts.reasonCode,
+    reason: opts.reason,
+    factsSource: 'report-snapshot',
+    contractHash: opts.contractHash,
+  });
+}
+
+/**
  * Collect status facts from disk (no prompts).
  * @param {{
  *   root?: string,
@@ -140,6 +234,8 @@ export function lastCheckFactsFromSnapshot(latest, baseline) {
  *   host?: string,
  *   arkgateVersion?: string,
  *   env?: NodeJS.ProcessEnv,
+ *   improvementCompass?: object | null,
+ *   contractHash?: string | null,
  * }} [options]
  */
 export function collectStatusFacts(options = {}) {
@@ -242,6 +338,22 @@ export function collectStatusFacts(options = {}) {
 
   const arkruleFrozenFallback = countArkruleFrozenKeys(baseline);
 
+  // DF02 — always project compass with honesty mode (never invent green residual).
+  // Prefer explicit override (tests/MCP inject doctor-facts); else report snapshot.
+  let improvementCompass = null;
+  if (options.improvementCompass != null) {
+    improvementCompass = normalizeStatusImprovementCompass(options.improvementCompass);
+  }
+  if (!improvementCompass) {
+    const contractHash =
+      typeof options.contractHash === 'string' && options.contractHash.length > 0
+        ? options.contractHash
+        : configExists && config
+          ? sha256Hex(JSON.stringify(config))
+          : null;
+    improvementCompass = statusCompassFromSnapshot(latest, { contractHash });
+  }
+
   return {
     arkgateVersion: options.arkgateVersion || packageVersion(),
     resolvedRoot: realpathOrResolve(resolvedRoot),
@@ -269,6 +381,7 @@ export function collectStatusFacts(options = {}) {
           : arkRulesLoaded
             ? 0
             : null,
+    improvementCompass,
   };
 }
 
@@ -346,6 +459,18 @@ export function runStatusCommand(args = {}) {
             ? ` · frozen=${manifest.rules.frozenResidual}`
             : '')
       );
+      const ic = manifest.improvementCompass;
+      if (ic) {
+        const residual =
+          Array.isArray(ic.topResidual) && ic.topResidual.length > 0
+            ? ic.topResidual.join(', ')
+            : '(none)';
+        write(
+          `  compass: mode=${ic.mode}` +
+            (ic.mode === 'unavailable' ? '' : ` · residual=${residual}`) +
+            ' · not a score'
+        );
+      }
       write(`  next: [${manifest.nextAction.id}] ${manifest.nextAction.summary}`);
     }
 

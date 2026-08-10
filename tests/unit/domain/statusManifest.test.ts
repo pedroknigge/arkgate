@@ -12,6 +12,7 @@ import {
   buildStatusManifest,
   classifyStatusWritePath,
   evaluateStatusBinding,
+  projectStatusImprovementCompass,
   resolveStatusNextAction,
 } from '../../../src/domain/statusManifest';
 import {
@@ -325,11 +326,59 @@ describe('status-command tooling (ACS03)', () => {
         write: (line) => lines.push(line),
       });
       expect(code).toBe(0);
-      const body = JSON.parse(lines.join('\n')) as { schemaVersion: string };
+      const body = JSON.parse(lines.join('\n')) as {
+        schemaVersion: string;
+        improvementCompass?: { mode: string; notAScore: boolean; topResidual: string[] };
+      };
       expect(body.schemaVersion).toBe('1.0');
+      // DF02 — always project honesty mode; never invent green without facts.
+      expect(body.improvementCompass).toBeDefined();
+      expect(body.improvementCompass?.notAScore).toBe(true);
+      expect(['full', 'subset', 'unavailable']).toContain(body.improvementCompass?.mode);
+      if (body.improvementCompass?.mode === 'unavailable') {
+        expect(body.improvementCompass.topResidual).toEqual([]);
+      }
     } finally {
       if (prev === undefined) delete process.env.CI;
       else process.env.CI = prev;
     }
+  });
+
+  it('project status always includes honest improvementCompass (DF02)', () => {
+    const status = buildProjectStatusManifest({
+      root: path.resolve('.'),
+      arkgateVersion: '4.5.0',
+      host: 'unknown',
+    });
+    expect(status.improvementCompass).toBeDefined();
+    expect(status.improvementCompass?.notAScore).toBe(true);
+    expect(['full', 'subset', 'unavailable']).toContain(status.improvementCompass?.mode);
+  });
+
+  it('injected full compass residual does not flip nextAction vs unavailable', () => {
+    const root = path.resolve('.');
+    const base = buildProjectStatusManifest({
+      root,
+      arkgateVersion: '4.5.0',
+      host: 'unknown',
+      improvementCompass: projectStatusImprovementCompass({
+        mode: 'unavailable',
+        topResidual: [],
+      }),
+    });
+    const withResidual = buildProjectStatusManifest({
+      root,
+      arkgateVersion: '4.5.0',
+      host: 'unknown',
+      improvementCompass: projectStatusImprovementCompass({
+        mode: 'full',
+        topResidual: ['soc', 'dip'],
+        factsSource: 'doctor-facts',
+      }),
+    });
+    expect(withResidual.improvementCompass?.mode).toBe('full');
+    expect(withResidual.improvementCompass?.topResidual).toEqual(['soc', 'dip']);
+    // Gate isolation: residual alone must not rewrite nextAction class for same tree.
+    expect(withResidual.nextAction.id).toBe(base.nextAction.id);
   });
 });

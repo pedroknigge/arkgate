@@ -5,6 +5,15 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Added
+
+- **Status / MCP improvement compass honesty (DF02):** `ark status --json` and MCP `ark_status`
+  always project `improvementCompass` with explicit mode `full` \| `subset` \| `unavailable`,
+  residual lens ids, and `notAScore: true`. Incomplete or missing session facts never invent green
+  residual. When mode is `full`, residual ids are a subset of doctor residual for the same facts
+  (report snapshots store the thin slice). Residual never flips `valid` / strict-merge / `goal.met`.
+  Root helpers: `projectStatusImprovementCompass`, `STATUS_COMPASS_MODES`.
+
 ## 4.4.0 — 2026-08-09
 
 **Minor** over 4.3.0. Improvement compass (architecture lenses as a `notAScore` projection of

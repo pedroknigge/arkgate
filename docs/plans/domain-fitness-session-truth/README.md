@@ -4,7 +4,7 @@
 > true. Work starts only when item IDs appear as `doing`/`todo` in [ROADMAP.md](../../../ROADMAP.md).
 > Hub: [AGENTS.md](../../../AGENTS.md) · [Roadmap](../../../ROADMAP.md) · [Product voice](../../product-voice.md)
 
-**Status:** Accepted — **DF01 done**; engineering queue open at **DF02** for **4.5.0**  
+**Status:** Accepted — **DF01 done**; amended 2026-08-10 (Scale Stack + LEVELS); next **`DF02`**  
 **Slug:** `domain-fitness-session-truth`  
 **Kind:** epic / product minor train  
 **Owners:** product (Pedro) + library maintainers  
@@ -14,7 +14,11 @@
 `bin/lib/status-command.mjs` / doctor wiring, module budgets, property/mutation config,
 install/upgrade honesty residual, `docs/*` product lanes, CHANGELOG, `docs/releases/4.5.0.md`
 
-**LEVELS (v1.1) mandate for this train**
+---
+
+## Mandates for this train
+
+### LEVELS (v1.1)
 
 ```
 TARGET LEVEL: 4 (Robust / Production) — hybrid shell
@@ -27,6 +31,22 @@ Re-evaluate if: field reports status/doctor residual divergence; domain module g
   again; or a blocking sensor needs new vocabulary (then separate ADR epic, not DF).
 ```
 
+### Scale Stack (platform seams — library scale)
+
+ArkGate scales by **repos × agents × monorepo size × upgrade retention**, not multi-region RPS.
+This train treats the package as a **mini enforcement platform**:
+
+| Seam | Meaning for DF |
+|------|----------------|
+| **Edge** | Hooks / prepare-write / CI remain the only hard verdicts |
+| **Control plane view** | `ark status` / MCP must be an honest residual map (DF02) |
+| **Data plane purity** | Domain stays maintainable and fail-closed (DF03, DF04) |
+| **Self-service** | Upgrade/activation honesty without maintainer tickets (DF05) |
+| **Absorb complexity** | Session recipe in product docs so agents do not invent loops (DF06) |
+
+**Maturity:** Growing → Large Product. No org control-plane, no runtime productization, no
+platform-scale cargo-cult in 4.5.0.
+
 ---
 
 ## Plan lock (DF01)
@@ -37,15 +57,15 @@ without explicit reprioritization in ROADMAP.
 
 ### Product voice for this train
 
-- **Session truth** — one agent turn can trust `ark status --json` / MCP `ark_status` for the same
-  residual architecture story doctor already exposes (including improvement compass when
-  computable), without inventing a second scorecard.
-- **Domain fitness** — pure Domain stays Level 4 hybrid: contracts and fail-closed paths stay hard;
-  advisory projections stay thin and budgeted; no silent growth of “lenses as product surface.”
-- **Stewardship, not sprawl** — 4.5.0 prefers closing honesty gaps and protecting critical pure
-  paths over new sensors, skills, or runtime features.
-- **Scan / process dual depth (unchanged):** status/doctor/compass = scan-side evidence; skills
-  process. Process never decides pass/fail in the package.
+- **Session truth** — one agent turn can trust `ark status --json` / MCP `ark_status` for residual
+  architecture (including improvement compass when honest), without inventing a scorecard.
+- **Honest modes** — if status cannot match doctor residual, it labels `subset` / `unavailable`
+  (never invents green lenses).
+- **Domain fitness** — pure Domain stays Level 4 hybrid: contracts hard; projections thin and
+  **split when oversized** (budgets alone that only rise each release are not done).
+- **Self-service residual** — DF05 is chosen by *upgrade/activation ticket reduction*, not random bugs.
+- **Stewardship, not sprawl** — close honesty gaps and protect critical pure paths over new sensors.
+- **Scan / process dual depth (unchanged):** status/doctor/compass = scan; skills = process.
 
 ### Freeze restated for 4.5.0 (do not start without a new ROADMAP item)
 
@@ -58,12 +78,13 @@ without explicit reprioritization in ROADMAP.
 | New ArkRules **sensor vocabulary** | Needs ADR + field demand; DF only deepens tests/docs of existing sensors |
 | LLM pass/fail or package “process verdict” | Deterministic gate only |
 | AGENTS.md / skills / projection as enforcement | Non-authoritative coaching only |
-| Runtime productization | ADR 0004; optional kernel stays experimental (L2 durability honesty) |
+| Runtime productization | ADR 0004; optional kernel stays experimental |
 | False hard-write claims for soft hosts | Honest activation labels only |
 | Z09 retained-adoption claim close as DF scope | Parked residual RB-11 |
 | Broad codemods / multi-pilot batch Shape | One pilot at a time |
-| Presentation-only HTML report expansion | Doctor/status truth first; no new advisory sections without evidence seam |
-| “Level 5 the monorepo” as a goal | Selective L5 islands only (match/key/policy/identity) |
+| Presentation-only HTML report expansion | Doctor/status truth first |
+| “Level 5 the monorepo” as a goal | Selective L5 islands only |
+| Raising domain LOC budgets **without** split when over ceiling | Disguised debt; DF03 forbids it as sole fix |
 
 Inherited hard lines from ROADMAP product mandate remain in force.
 
@@ -71,61 +92,156 @@ Inherited hard lines from ROADMAP product mandate remain in force.
 
 ## Problem
 
-ArkGate **4.4.0** shipped a strong write firewall, agent contract surface (4.3), and improvement
-compass (lenses, not scores). LEVELS assessment of the mother repo (2026-08-10) rated the product
-shell **Level 4** with justified **L5 islands** on enforcement truth — and flagged drift risks that
-hurt the next release if ignored:
+ArkGate **4.4.0** shipped firewall + agent contract (4.3) + improvement compass. LEVELS (2026-08-10)
+rated the shell **Level 4** with L5 islands on truth paths. Scale Stack review refined the gaps:
 
 | Persona / surface | Pain after 4.4.0 |
 |-------------------|------------------|
-| **AI agent** | Doctor exposes full compass; **`ark status` still does not compute lenses** (pass-through only). Multi-surface session loops re-run doctor or invent residual from prose. |
-| **Maintainer** | `src/domain/improvementCompass.ts` (~900+ LOC) is the largest pure module; presentation/`bin/lib` growth pressure continues; LEVELS says **↓ simplify**, not add lenses. |
-| **Enforcement truth** | Critical pure paths (`layerMatch` peerIsolation, `policyDelta` ack, `invariantCoverage`) are L4–5 by design but mutation/property coverage is uneven vs `baselineKey` / `configContract`. |
-| **Install path** | LEVELS install/upgrade cluster is ~3–4; residual edge honesty (preserve/custom/host activation) remains higher risk than domain pure algorithms. |
-| **Product** | Users do not need more vocabulary; they need **one honest session snapshot** and a domain that stays maintainable at Level 4. |
+| **AI agent** | Doctor has full compass; **status is pass-through only**. Loops re-run doctor or invent residual. Risk of **silent subset** if 4.5 projects compass cheaply without mode labels. |
+| **Maintainer** | `improvementCompass` ~900+ LOC; budgets that only ratchet up = maintenance debt. |
+| **Enforcement truth** | peerIsolation / policy-delta ack / invariant promote need selective verification ratchet. |
+| **Install path** | Self-service failure mode: “upgraded and do not know if write-path is still active / custom files preserved.” |
+| **Product** | Need **one honest session snapshot** + domain operable at 2–3 years — not more vocabulary. |
 
-**Why now:** 4.3 closed agent *contract* shape; 4.4 closed residual *legibility*. 4.5 closes
-**session consistency** and **domain stewardship** so the library does not rot into Level 3 sprawl
-while claiming Level 4 enforcement.
-
-**Root gap:** status is a first-class agent surface that still under-delivers vs doctor; pure domain
-growth is not budget-enforced the way CLI orchestration modules are; selective L5 verification is
-not ratcheted on every truth path that LEVELS marked critical.
+**Why now:** 4.3 = contract shape; 4.4 = residual legibility; 4.5 = **session control-plane honesty** +
+**domain stewardship** + **self-service upgrade residual**.
 
 ---
 
 ## Outcome (4.5.0 done when)
 
-1. **`ark status --json` / MCP `ark_status` can project improvement compass** from the same
-   doctor-side facts path (or an explicitly documented cheap subset), still `notAScore`, never
-   changing gate verdicts. Agents no longer need “read doctor only” as the sole residual map.
-2. **Domain fitness is mechanical:** tracked large pure modules have LOC budgets (or an explicit
-   split of `improvementCompass` without behavior change); `check:module-budgets` fails on drift.
-3. **Critical pure verification ratchet:** property and/or mutation slices cover peerIsolation
-   fail-closed, policy-delta acknowledgement matching, and invariant promote honesty (beyond the
-   existing baselineKey/configContract slices).
-4. **Install/upgrade honesty residual** (bounded): at least one field-class edge case from
-   managed-upgrade or activation truth is closed with tests — no new host matrix fantasy.
-5. **Release train:** product-voice CHANGELOG + `docs/releases/4.5.0.md`, package-surface,
-   claims 0 Contradicted on public statements; no required config migration.
+1. **Status/MCP project improvement compass** with explicit honesty:
+   - `mode`: `full` | `subset` | `unavailable` (names may match implementation enums if documented)
+   - residual lens ids on status **⊆** doctor residual for the same fixture facts when `full`
+   - never invent green lenses; never flip gate verdicts; always `notAScore`
+2. **Domain fitness is mechanical and structural:** tracked pure modules have LOC budgets;
+   **oversize modules are split** (behavior-preserving) — not closed by only raising the max.
+3. **Critical pure verification ratchet** (cost-gated if needed): peerIsolation fail-closed,
+   policy-delta ack match, invariant promote honesty.
+4. **Self-service install residual:** one pilot that answers: *after upgrade, can a team see
+   write-path activation honesty and that custom content was not silently rewritten?*
+5. **Release train + session recipe** in product docs (agent loop: identity → status → act;
+   doctor when status mode ≠ full); claims 0 Contradicted; no required config migration.
 
-**Not done when:** new sensors, new skill names, scores, runtime durable stores, or Z09 close.
+**Not done when:** new sensors, new skill names, scores, runtime durable stores, Z09 close,
+or domain budget raised without split.
 
 ---
 
 ## Ordered items (ROADMAP IDs)
 
-| ID | Size | Depends | Outcome |
-|----|-----:|---------|---------|
-| `DF01` | S | 4.4.0 published | Plan lock; freezes; LEVELS TARGET 4 hybrid recorded; sole epic for 4.5.0 |
-| `DF02` | M | `DF01` | Status (+ MCP) projects improvement compass; parity tests vs doctor residual |
-| `DF03` | M | `DF01` | Domain module budgets and/or surgical split of oversize pure projection modules |
-| `DF04` | M | `DF01` | Property/mutation ratchet on critical pure truth paths |
-| `DF05` | M | `DF01` | Bounded install/upgrade or activation honesty residual (one pilot class) |
-| `DF06` | S | `DF02`–`DF05` | Product docs hygiene + claims prep + **4.5.0** publish train |
+| ID | Size | Depends | Priority | Outcome |
+|----|-----:|---------|----------|---------|
+| `DF01` | S | 4.4.0 published | — | Plan lock; freezes; LEVELS + Scale Stack mandates (**done**) |
+| `DF02` | M | `DF01` | **P0** | Status/MCP compass + **parity/honesty modes** + residual ⊆ doctor |
+| `DF03` | M | `DF01` | **P0** | Domain budgets + **mandatory split** when over ceiling |
+| `DF04` | M | `DF01` | **P1** | Property/mutation ratchet on critical pure truth paths (cost-gated OK) |
+| `DF05` | M | `DF01` | **P1** | Self-service upgrade/activation honesty residual (one named pilot) |
+| `DF06` | S | `DF02`–`DF05` | **P2** | Session recipe docs + claims + **4.5.0** publish train |
 
-Parallelism: `DF02`–`DF05` may be sequenced one `doing` at a time; prefer **DF02 first** (user-visible
-session truth), then DF03/DF04 (stewardship), then DF05 (ops residual), then DF06.
+**Engineering order (one `doing` at a time):**  
+`DF02` → `DF03` → `DF04` → `DF05` → `DF06`  
+(Do not reorder DF03 after DF04 without owner note — maintenance before extra mutation load.)
+
+### Automation (Grok workflow)
+
+Serial implement → review → fix → intermediate commit → close → next:
+
+| | |
+|--|--|
+| Script | [`.grok/workflows/df-450-queue.rhai`](../../../.grok/workflows/df-450-queue.rhai) |
+| Default | `DF02`…`DF06` (skips done plan-lock `DF01`) |
+| Launch | `/workflow df-450-queue` or `/workflow df-450-queue {"only":"DF02"}` |
+| Options | `from`/`to`/`only`, `skip_commit`, `stop_on_fail`, `await_between` |
+
+One ROADMAP `doing` at a time; no push/PR by default. Pattern mirrors `acs-430-queue`.
+
+---
+
+## Item detail (authoritative acceptance)
+
+### DF02 — Status control-plane: compass + honesty modes
+
+**Outcome:** `ark status --json` and MCP `ark_status` project `improvementCompass` when facts allow.
+
+**Required honesty contract (implementation names may alias if package-surface documents them):**
+
+| Field / rule | Requirement |
+|--------------|-------------|
+| `notAScore` | Always true when compass present |
+| Projection mode | Explicit `full` \| `subset` \| `unavailable` (or equivalent documented enum) |
+| Provenance | Enough to prove same-tree intent: e.g. `contractHash` and/or facts source ref already on status identity |
+| Parity when `full` | Residual lens **ids** on status ⊆ doctor residual ids for the same fixture tree/facts |
+| Incomplete facts | `unavailable` or `subset` + reason code/message — **never** fabricate `ok` lenses |
+| Gate isolation | Residual never changes `valid` / strict-merge / `goal.met` |
+
+**Acceptance:**
+
+- Focused unit + MCP fixtures cover residual SoC/DIP (or equivalent) parity when `full`.
+- Fixture where facts insufficient → no invented green residual.
+- Adapter-style regression: same tree facts → status residual ids ⊆ doctor residual ids.
+- CI=1 non-interactive; package-surface documents modes and honesty boundary.
+
+**Evidence:** status-command / status-manifest / doctor fact reuse; tests; package-surface.
+
+### DF03 — Domain module fitness (budget + split)
+
+**Outcome:** large pure Domain modules are budgeted **and** structurally maintainable.
+
+**Rules:**
+
+1. Track at least `src/domain/improvementCompass.ts` (and split children if created) in
+   `check:module-budgets`.
+2. If a tracked domain module is **already over** the ceiling at DF03 start, **done requires a
+   behavior-preserving split** into smaller pure modules (optional gen parity for CLI mirrors).
+3. **Forbidden as sole fix:** raising the max LOC without a split or a dated exception with
+   owner + kill date in the budget file comment.
+4. Optional stretch: soft hold (no raise) on presentation modules already near ceiling
+   (`html-report*`, `doctor-plan`) — no presentation rewrite required.
+
+**Acceptance:** `check:module-budgets` fails on drift; pure Domain has no Kernel/Tooling I/O;
+unit behavior parity after split; gen parity if mirrors move.
+
+### DF04 — Critical pure verification ratchet
+
+**Outcome:** selective L5 islands: `layerMatch` peerIsolation fail-closed (missing paths),
+`policyDelta` acknowledgement matching, `invariantCoverage` promote honesty. Existing
+baselineKey / configContract slices remain.
+
+**Acceptance:**
+
+- New property and/or Stryker groups green in CI **or** maintainer script with documented cost gate
+  (must still run in release train or scheduled CI lane named in PR).
+- Focused unit fixtures for fail-closed cases.
+- No weakening of strict semantics; no claim of whole-repo mutation completeness.
+
+### DF05 — Self-service upgrade / activation honesty (one pilot)
+
+**Outcome:** close **one** residual chosen by this gate question (must be answered in PR):
+
+> After a managed upgrade (or equivalent), can a consumer learn from package surfaces whether
+> the write-path is still honestly labeled active/advisory and whether customized install content
+> was preserved — without asking a maintainer?
+
+**In-scope pilot classes (pick one):** managed-upgrade force-preserve / content-identity;
+activation label post-upgrade; stable upgrade preview/dry-run honesty. **Not in scope:** new hosts,
+host matrix expansion, false hard-write for soft hosts.
+
+**Acceptance:** named residual + self-service criterion in PR; failing-then-passing tests;
+activation labels remain honest; common merge gate green.
+
+### DF06 — Session recipe + product release 4.5.0
+
+**Outcome:**
+
+1. Product docs (use / agent-guide or equivalent public lane) teach a short **session recipe**
+   without roadmap codes: identity bind → `ark status` → act on residual / findingRef; run doctor
+   when status compass mode is not full / unavailable. No new skill names.
+2. CHANGELOG + `docs/releases/4.5.0.md` product voice; package-surface; claims 0 Contradicted;
+   version **4.5.0** publish train.
+
+**Acceptance:** stranger can follow session recipe without ROADMAP; IC06 hygiene held; merge gate
+green; no required config migration.
 
 ---
 
@@ -136,6 +252,7 @@ session truth), then DF03/DF04 (stewardship), then DF05 (ops residual), then DF0
 - New improvement lenses / principles beyond the closed 15 without a separate epic.
 - Rewriting HTML report design for polish alone.
 - Closing RB-11 / Z09 as part of 4.5.0.
+- Org multi-tenant control plane / policy-pack ecosystem (post-4.5 field demand).
 
 ---
 
@@ -144,8 +261,9 @@ session truth), then DF03/DF04 (stewardship), then DF05 (ops residual), then DF0
 - Common merge gate green on the release commit.
 - No required `ark.config.json` migration.
 - Public lanes stay product-first (IC06 rule held).
-- LEVELS re-check of `src/domain/`: no new module above budget without split or documented exception;
-  status/compass surfaces remain Level 4 honesty (partial/unavailable never faked).
+- Status/doctor residual honesty modes never invent green.
+- Domain: no oversize pure module closed only by raising budget without split.
+- LEVELS re-check: status/compass Level 4 honesty; domain still hybrid L4.
 
 ---
 
@@ -153,16 +271,28 @@ session truth), then DF03/DF04 (stewardship), then DF05 (ops residual), then DF0
 
 | Item | Evidence homes |
 |------|----------------|
-| DF02 | status-command / status-manifest wiring; unit + MCP fixtures; package-surface |
-| DF03 | `scripts/check-module-budgets.mjs` (+ domain rows); optional module split + gen parity |
-| DF04 | `tests/property/*` and/or `stryker.config.mjs` slices + focused unit |
-| DF05 | install/upgrade or write-path tests under `tests/unit/static-check/` |
-| DF06 | CHANGELOG, `docs/releases/4.5.0.md`, claims matrix rows, publish train |
+| DF02 | status + doctor fact path; unit/MCP; parity fixture residual ⊆; package-surface modes |
+| DF03 | `scripts/check-module-budgets.mjs`; split modules + gen parity if needed |
+| DF04 | `tests/property/*` and/or `stryker.config.mjs` + cost-gate note |
+| DF05 | static-check/install tests; PR names self-service criterion |
+| DF06 | use/agent-guide session recipe; CHANGELOG; `docs/releases/4.5.0.md`; claims; publish |
+
+---
+
+## Post-4.5 (not DF engineering `todo`)
+
+Seed only — promote to ROADMAP when owner prioritizes:
+
+| Horizon | Theme |
+|---------|--------|
+| Next minor after 4.5 | Golden upgrade path matrix (hosts × package managers) as self-service proof |
+| Field demand | Monorepo activation playbook depth; new sensors only with ADR |
+| Claim gate | Z09 / RB-11 retained adoption + independent close (unchanged owner) |
 
 ---
 
 ## Related
 
 - Prior: [improvement-compass](../improvement-compass/README.md) (4.4.0), [agent-contract-surface-4.3](../agent-contract-surface-4.3/README.md)
-- LEVELS skill: maintainer assessment 2026-08-10 (repo + `src/domain` scorecard)
+- LEVELS assessment 2026-08-10 · Scale Stack review 2026-08-10
 - Parked: Z09 / RB-11 (not DF scope)

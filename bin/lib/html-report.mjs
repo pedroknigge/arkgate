@@ -143,6 +143,8 @@ export function buildReportSnapshot({
   enforcement,
   score,
   mode,
+  /** DF02 — thin status compass slice (mode + residual ids, notAScore). */
+  improvementCompass = null,
 }) {
   const layers = Array.isArray(config?.layers) ? config.layers : [];
   const rules = Array.isArray(config?.rules) ? config.rules : [];
@@ -151,7 +153,7 @@ export function buildReportSnapshot({
     for (const [name, n] of fileCountByLayer) counts[name] = n;
   }
   const gatesOn = (enforcement || []).filter((e) => e.on).length;
-  return {
+  const snapshot = {
     version: 1,
     kind: 'ark-architecture-snapshot',
     generatedAt: new Date().toISOString(),
@@ -186,6 +188,11 @@ export function buildReportSnapshot({
     gatesTotal: (enforcement || []).length,
     layerFiles: counts,
   };
+  // DF02 — store thin status compass so `ark status` can project residual honestly.
+  if (improvementCompass && typeof improvementCompass === 'object') {
+    snapshot.improvementCompass = improvementCompass;
+  }
+  return snapshot;
 }
 
 export function readJsonSafe(file) {

@@ -242,11 +242,12 @@
     },
     "improvementCompass": {
       "type": "object",
-      "description": "Optional thin improvement-compass residual ids (notAScore). Never a gate input; full lenses on doctor JSON.",
+      "description": "Thin improvement-compass residual ids with honesty mode (notAScore). full | subset | unavailable. Never a gate input; full lenses on doctor JSON. When full, residual ids ⊆ doctor residual for the same facts. unavailable never invents green residual.",
       "additionalProperties": false,
       "required": [
         "schemaVersion",
         "notAScore",
+        "mode",
         "topResidual"
       ],
       "properties": {
@@ -256,6 +257,13 @@
         "notAScore": {
           "const": true
         },
+        "mode": {
+          "enum": [
+            "full",
+            "subset",
+            "unavailable"
+          ]
+        },
         "topResidual": {
           "type": "array",
           "items": {
@@ -263,6 +271,25 @@
             "minLength": 1
           },
           "maxItems": 15
+        },
+        "reasonCode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "factsSource": {
+          "enum": [
+            "doctor-facts",
+            "report-snapshot",
+            "none"
+          ]
+        },
+        "contractHash": {
+          "type": "string",
+          "minLength": 1
         }
       }
     }

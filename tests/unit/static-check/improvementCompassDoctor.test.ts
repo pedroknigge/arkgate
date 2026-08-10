@@ -170,7 +170,7 @@ describe('IC03 doctor improvementCompass wiring', () => {
     expect(incomplete.lenses.find((l) => l.id === 'maintainability')?.status).toBe('ok');
   });
 
-  it('status manifest accepts optional thin improvementCompass without affecting nextAction gate', () => {
+  it('status manifest accepts thin improvementCompass with honesty mode without affecting nextAction gate', () => {
     const without = buildStatusManifest({
       arkgateVersion: '4.3.0',
       resolvedRoot: '/repo',
@@ -189,13 +189,17 @@ describe('IC03 doctor improvementCompass wiring', () => {
       improvementCompass: {
         schemaVersion: '1.0',
         notAScore: true,
+        mode: 'full',
         topResidual: ['soc', 'dip'],
+        factsSource: 'doctor-facts',
       },
     });
-    expect(withCompass.improvementCompass).toEqual({
+    expect(withCompass.improvementCompass).toMatchObject({
       schemaVersion: '1.0',
       notAScore: true,
+      mode: 'full',
       topResidual: ['soc', 'dip'],
+      factsSource: 'doctor-facts',
     });
     // Same pass verdict residual does not invent fail nextAction from compass alone
     expect(withCompass.nextAction.id).toBe(without.nextAction.id);

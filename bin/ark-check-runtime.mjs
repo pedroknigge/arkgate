@@ -1557,19 +1557,6 @@ async function main() {
       enforcement: enforcementForReport,
       config,
     });
-    const currentSnapshot = buildReportSnapshot({
-      root,
-      config,
-      coverage,
-      violations: activeViolations,
-      ok,
-      suppressed: suppressed.length,
-      version: arkPackageVersion(),
-      fileCountByLayer,
-      enforcement: enforcementForReport,
-      score: fitness.score,
-      mode: fitness.mode,
-    });
     // Origin is read before archive so the HTML can show "just created" vs deltas.
     const existingOrigin = args.resetOrigin
       ? null
@@ -1599,6 +1586,40 @@ async function main() {
         baselineStale: analysisComplete ? reportBaselineStale : null,
       }
     );
+    // DF02 — thin status compass on report snapshot so `ark status` residual ⊆ doctor.
+    const reportCompass =
+      designDepth?.improvementCompass && designDepth.improvementCompass.notAScore === true
+        ? {
+            schemaVersion: '1.0',
+            notAScore: true,
+            mode: analysisComplete ? 'full' : 'subset',
+            topResidual: Array.isArray(designDepth.improvementCompass.topResidual)
+              ? designDepth.improvementCompass.topResidual
+              : [],
+            factsSource: 'report-snapshot',
+            ...(analysisComplete
+              ? {}
+              : {
+                  reasonCode: 'FACTS_PARTIAL',
+                  reason:
+                    'Report analysis was incomplete — status compass is a subset; re-run doctor/report for full residual.',
+                }),
+          }
+        : null;
+    const currentSnapshot = buildReportSnapshot({
+      root,
+      config,
+      coverage,
+      violations: activeViolations,
+      ok,
+      suppressed: suppressed.length,
+      version: arkPackageVersion(),
+      fileCountByLayer,
+      enforcement: enforcementForReport,
+      score: fitness.score,
+      mode: fitness.mode,
+      improvementCompass: reportCompass,
+    });
     const reportPayload = {
       root,
       config,
