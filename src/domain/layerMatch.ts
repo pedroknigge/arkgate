@@ -329,6 +329,25 @@ function resolveSliceFolders(
 }
 
 /**
+ * PeerIsolation deny decision given resolved path/slice evidence (DF04 pure core).
+ *
+ * Fail-closed: missing path, no classifiable folders, or unclassifiable either
+ * side → deny. Same-slice → allow (return false). Cross-slice → deny.
+ */
+export function peerIsolationMustDeny(input: {
+  fromPath?: string;
+  toPath?: string;
+  folderCount: number;
+  fromSlice?: string;
+  toSlice?: string;
+}): boolean {
+  if (!input.fromPath || !input.toPath) return true;
+  if (input.folderCount <= 0) return true;
+  if (!input.fromSlice || !input.toSlice) return true;
+  return input.fromSlice !== input.toSlice;
+}
+
+/**
  * Find the first denying rule for a layer edge.
  *
  * Semantics (locked):
@@ -353,18 +372,22 @@ export function findDeniedEdgeRule(
     if (rule.peerIsolation) {
       const fromPath = options?.fromPath;
       const toPath = options?.toPath;
-      // Isolation is active: without both paths we cannot prove same-slice.
-      if (!fromPath || !toPath) return rule;
-
       const folders = resolveSliceFolders(rule, from, options?.layers);
-      // Configured isolation without classifiable folders cannot allow.
-      if (folders.length === 0) return rule;
-
-      const fromSlice = sliceIdForPath(fromPath, folders);
-      const toSlice = sliceIdForPath(toPath, folders);
-      // Unclassifiable either side: cannot prove same-slice → deny.
-      if (!fromSlice || !toSlice) return rule;
-      if (fromSlice !== toSlice) return rule;
+      const fromSlice =
+        fromPath && toPath ? sliceIdForPath(fromPath, folders) : undefined;
+      const toSlice =
+        fromPath && toPath ? sliceIdForPath(toPath, folders) : undefined;
+      if (
+        peerIsolationMustDeny({
+          fromPath,
+          toPath,
+          folderCount: folders.length,
+          fromSlice,
+          toSlice,
+        })
+      ) {
+        return rule;
+      }
       continue; // same slice: this peerIsolation rule does not deny
     }
 

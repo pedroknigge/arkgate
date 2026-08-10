@@ -4,7 +4,7 @@
 > true. Work starts only when item IDs appear as `doing`/`todo` in [ROADMAP.md](../../../ROADMAP.md).
 > Hub: [AGENTS.md](../../../AGENTS.md) · [Roadmap](../../../ROADMAP.md) · [Product voice](../../product-voice.md)
 
-**Status:** Accepted — **DF01–DF02 done**; amended 2026-08-10 (Scale Stack + LEVELS); next **`DF03`**  
+**Status:** Accepted — **DF01–DF03 done**; **DF04 implemented (review)**; amended 2026-08-10 (Scale Stack + LEVELS); next after close **`DF05`**  
 **Slug:** `domain-fitness-session-truth`  
 **Kind:** epic / product minor train  
 **Owners:** product (Pedro) + library maintainers  
@@ -134,7 +134,7 @@ or domain budget raised without split.
 |----|-----:|---------|----------|---------|
 | `DF01` | S | 4.4.0 published | — | Plan lock; freezes; LEVELS + Scale Stack mandates (**done**) |
 | `DF02` | M | `DF01` | **P0** | Status/MCP compass + **parity/honesty modes** + residual ⊆ doctor (**done**) |
-| `DF03` | M | `DF01` | **P0** | Domain budgets + **mandatory split** when over ceiling |
+| `DF03` | M | `DF01` | **P0** | Domain budgets + **mandatory split** when over ceiling (**done**) |
 | `DF04` | M | `DF01` | **P1** | Property/mutation ratchet on critical pure truth paths (cost-gated OK) |
 | `DF05` | M | `DF01` | **P1** | Self-service upgrade/activation honesty residual (one named pilot) |
 | `DF06` | S | `DF02`–`DF05` | **P2** | Session recipe docs + claims + **4.5.0** publish train |

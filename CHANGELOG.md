@@ -21,6 +21,14 @@ in the immutable pre-2.0 archive linked below.
   unchanged). All three tracked in `check:module-budgets`; over-ceiling domain modules require a
   behavior-preserving split — raising max alone is not done. CLI pure mirrors:
   `improvement-compass-types.mjs`, `improvement-compass-map.mjs`, `improvement-compass.mjs`.
+- **Critical pure verification ratchet (DF04):** selective L5 islands on
+  `layerMatch` peerIsolation fail-closed (missing paths/slices),
+  `policyDeltaAcknowledgementMatches` (hash + finding-id set), and
+  `canPromoteInvariant` promote honesty. Property suites under `tests/property/` plus unit fixtures;
+  Stryker mutate ranges + critical groups `peer-isolation-fail-closed`,
+  `policy-delta-ack-match`, `invariant-promote-honesty`. Mutation remains cost-gated to full-matrix
+  CI / publish (`npm run test:mutation` via `test:confidence`) — **not** a whole-repo mutation claim.
+  Strict semantics unchanged.
 
 ## 4.4.0 — 2026-08-09
 

@@ -108,4 +108,35 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
     expect(gate.reason).toMatch(/No coverage evidence supplied/i);
     expect(gate.reason).not.toMatch(/not present in the Effective Contract catalog/i);
   });
+
+  it('canPromoteInvariant refuses partial even when covered flag is true (DF04 honesty)', () => {
+    const gate = canPromoteInvariant({
+      invariantId: 'INV-ORDER-001',
+      layer: 'DomainModel',
+      sourceFile: 'arkrules/DomainModel.json',
+      mode: 'advisory',
+      covered: true,
+      evidence: ['symbol'],
+      partial: true,
+      description: 'Order total never negative',
+    });
+    expect(gate.ok).toBe(false);
+    expect(gate.reason).toMatch(/partial/i);
+  });
+
+  it('canPromoteInvariant refuses uncovered non-partial evidence', () => {
+    const gate = canPromoteInvariant({
+      invariantId: 'INV-ORDER-001',
+      layer: 'DomainModel',
+      sourceFile: 'arkrules/DomainModel.json',
+      mode: 'advisory',
+      covered: false,
+      evidence: [],
+      partial: false,
+      description: 'Order total never negative',
+    });
+    expect(gate.ok).toBe(false);
+    expect(gate.reason).toMatch(/INV-ORDER-001/);
+    expect(gate.reason).toMatch(/uncovered/i);
+  });
 });
