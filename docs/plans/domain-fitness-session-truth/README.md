@@ -4,7 +4,7 @@
 > true. Work starts only when item IDs appear as `doing`/`todo` in [ROADMAP.md](../../../ROADMAP.md).
 > Hub: [AGENTS.md](../../../AGENTS.md) · [Roadmap](../../../ROADMAP.md) · [Product voice](../../product-voice.md)
 
-**Status:** Accepted — **DF01–DF06 done**; tree prepare for **arkgate@4.5.0** (not published until OIDC); amended 2026-08-10 (Scale Stack + LEVELS)  
+**Status:** Shipped / **published** in **arkgate@4.5.0** (`DF01`–`DF06` done; OIDC publish 31434961289)  
 **Slug:** `domain-fitness-session-truth`  
 **Kind:** epic / product minor train  
 **Owners:** product (Pedro) + library maintainers  
