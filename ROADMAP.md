@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-09 (Phase IC — Improvement Compass for **4.4.0**; IC01 plan lock `done`; baseline **arkgate@4.3.0 published**)
+- **Status date:** 2026-08-09 (Phase IC — IC01–IC07 done; **arkgate@4.4.0 published**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -876,7 +876,7 @@ Boundary:
 | 121 | `IC04` | `done` | S | `IC03` | HTML report advisory compass section + reportParity |
 | 122 | `IC05` | `done` | L | `IC01` (finish after `IC03` for JSON-aware prose) | Deepen 13 skills + compact router (vibe-coder path, compass routing, anti false-done); agent-skills 1:1 |
 | 123 | `IC06` | `done` | M | `IC03`–`IC05` | **Product-docs hygiene:** public lanes product-only (no roadmap codes); use/develop/agent-guide/skills/CLI human; claims prep |
-| 124 | `IC07` | `doing` | S | `IC02`–`IC06` | CHANGELOG + release notes in **product voice**, package-surface, version **4.4.0**, publish train |
+| 124 | `IC07` | `done` | S | `IC02`–`IC06` | CHANGELOG + release notes in **product voice**, package-surface, version **4.4.0**, publish train |
 
 **IC01 — Plan lock and product voice**
 
@@ -998,7 +998,7 @@ skills/router product-only (no roadmap codes).
 
 **IC07 — Release 4.4.0**
 
-- **Status:** `doing` (2026-08-09 prepare train)
+- **Status:** `done` (2026-08-09; **published** `arkgate@4.4.0` on npm `latest`)
 - **Depends on:** `IC02`–`IC06`
 
 **Outcome:** version **4.4.0**, CHANGELOG and `docs/releases/4.4.0.md` in **product voice**
@@ -1007,9 +1007,10 @@ skills/router product-only (no roadmap codes).
 **Acceptance:** common merge gate green; no required config migration; public release prose does
 not reintroduce roadmap-code narrative; signed tag + npm when owner publishes.
 
-**Evidence (prepare):** tree identity `4.4.0` (package/lock/`src/version.ts`/`server.json`);
-`docs/releases/4.4.0.md` Status: prepared; CHANGELOG `## 4.4.0`; public lanes keep npm `latest`
-truth as **4.3.0** until post-publish flip.
+**Evidence (published):** tree identity `4.4.0`; PR #121 squash `d4ce0fa`; signed tag `v4.4.0`;
+GitHub Release; OIDC `publish-npm.yml` run `31342710132`; `npm view` version/latest/gitHead =
+`4.4.0` / `4.4.0` / `d4ce0fa`; MCP registry `io.github.pedroknigge/arkgate@4.4.0`; docs Status:
+**published**.
 
 ### Z01 — Make release cleanup tool-owned and path-safe
 
@@ -3341,15 +3342,15 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: IC07 — arkgate@4.4.0 release train (prepare → tag → OIDC npm → MCP → flip)
-  Epic: Phase IC — Improvement Compass → arkgate@4.4.0
+Engineering doing: (none) — Phase IC closed; arkgate@4.4.0 published on npm latest
+  Epic: Phase IC — Improvement Compass → arkgate@4.4.0 published
   Plan: docs/plans/improvement-compass/README.md
-  Queue: IC01–IC06 done; IC07 doing (tree identity 4.4.0 prepared; npm latest still 4.3.0)
-  Last closed epic item: IC06
-  Prior closed epic: Phase ACS → arkgate@4.3.0 published
-Released baseline (npm latest): arkgate@4.3.0 (until publish verify)
-  Prepare notes: docs/releases/4.4.0.md — Status: prepared
-Phase IC hard lines: no principle scores; compass notAScore; no new skill names/sensors;
+  Queue: IC01–IC07 done
+  Last closed: IC07 (tag v4.4.0, OIDC publish 31342710132, MCP 4.4.0, docs flip)
+Released baseline: npm arkgate@4.4.0 on latest (gitHead d4ce0fa; tag v4.4.0; 2026-08-09)
+  Notes: docs/releases/4.4.0.md — Status: published
+  Prior: 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
+Phase IC hard lines restated: no principle scores; compass notAScore; no new skill names/sensors;
   no LLM verdict; no false hard write on soft hosts
 Claim gate: Z09 (parked) — residual RB-11 only
 ```

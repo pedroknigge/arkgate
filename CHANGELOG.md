@@ -10,8 +10,8 @@ in the immutable pre-2.0 archive linked below.
 **Minor** over 4.3.0. Improvement compass (architecture lenses as a `notAScore` projection of
 existing sensors), doctor/HTML residual coaching, deeper skills + compact router for vibe-coder
 and full-AI workflows, and product-only public docs. **No required config migration.** Codex remains
-advisory at write time. Skills and AGENTS projection never enforce. **Status: prepared in tree —
-not published on npm until OIDC publish + `npm view` succeed** (see `docs/releases/4.4.0.md`).
+advisory at write time. Skills and AGENTS projection never enforce. **Status: published**
+(`arkgate@4.4.0` on npm `latest`; see `docs/releases/4.4.0.md`).
 
 ### Added
 
