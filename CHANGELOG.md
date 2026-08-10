@@ -11,8 +11,7 @@ in the immutable pre-2.0 archive linked below.
 modes), domain module fitness (split oversized pure modules), selective pure verification ratchet,
 self-service upgrade activation honesty, and a short session recipe in product docs. **No required
 config migration.** Codex remains advisory at write time. Skills and AGENTS projection never
-enforce. **Status: prepared in tree — not published on npm until OIDC publish + `npm view` succeed**
-(see `docs/releases/4.5.0.md`).
+enforce. **Status: published** (`arkgate@4.5.0` on npm `latest`; see `docs/releases/4.5.0.md`).
 
 ### Added
 

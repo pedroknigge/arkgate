@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-10 (Phase DF; **arkgate@4.5.0** tree prepare; `DF01`–`DF06` done; baseline **4.4.0 published** on npm `latest`)
+- **Status date:** 2026-08-10 (Phase DF; **arkgate@4.5.0 published** on npm `latest`; `DF01`–`DF06` done)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -1185,7 +1185,7 @@ Next engineering pick: **`DF06`**.
 
 **DF06 — Session recipe + release 4.5.0**
 
-- **Status:** `done` (2026-08-10; tree prepare — not published on npm until OIDC + `npm view`)
+- **Status:** `done` (2026-08-10; **published** `arkgate@4.5.0` on npm `latest`)
 - **Depends on:** `DF02`–`DF05`
 - **Priority:** P2
 
@@ -1201,12 +1201,12 @@ Next engineering pick: **`DF06`**.
 required config migration; public release prose does not reintroduce roadmap-code narrative;
 signed tag + npm when owner publishes.
 
-**Evidence (prepared):** docs session recipe in [use.md](docs/use.md#session-recipe-agent-turn) ·
-[agent-guide](docs/agent-guide.md#session-recipe-agent-turn); tree identity `4.5.0`
-(`package.json` / lock / `src/version.ts` / `server.json`); CHANGELOG `## 4.5.0`; release notes
-[docs/releases/4.5.0.md](docs/releases/4.5.0.md) **Status: prepared**; package-surface next-prepare
-pointer; claims matrix DF rows **0 Contradicted**. npm `latest` remains **4.4.0** until publish
-verify flips pointers.
+**Evidence (published):** docs session recipe in [use.md](docs/use.md#session-recipe-agent-turn) ·
+[agent-guide](docs/agent-guide.md#session-recipe-agent-turn); tree identity `4.5.0`; PR #123
+squash `d6f4359`; signed tag `v4.5.0`; OIDC `publish-npm.yml` run `31434961289`; `npm view`
+version/latest/gitHead = `4.5.0` / `4.5.0` / `d6f4359`; release notes
+[docs/releases/4.5.0.md](docs/releases/4.5.0.md) **Status: published**; claims matrix DF rows
+**0 Contradicted**.
 
 **Post-4.5 seed (not DF `todo`):** golden upgrade path matrix across hosts; deeper monorepo
 activation playbook on field demand; Z09/RB-11 remains the parked claim gate for retained
@@ -3542,18 +3542,17 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: (none — Phase DF queue closed at prepare)
-  Epic: Phase DF — Domain Fitness & Session Truth → arkgate@4.5.0 (tree prepare)
-  Plan: docs/plans/domain-fitness-session-truth/README.md (amended Scale Stack 2026-08-10)
+Engineering doing: (none — Phase DF closed; arkgate@4.5.0 published on npm latest)
+  Epic: Phase DF — Domain Fitness & Session Truth → arkgate@4.5.0 published
+  Plan: docs/plans/domain-fitness-session-truth/README.md
   Queue: DF01–DF06 done
-  Closed last: DF06 — session recipe + claims + 4.5.0 prepare train
-  Next owner action: publish train (signed tag v4.5.0 → OIDC publish-npm → flip Status published)
-    Do not start a new engineering epic until owner prioritizes post-4.5 seed or Z09
-Released baseline: npm arkgate@4.4.0 on latest (gitHead d4ce0fa; tag v4.4.0; 2026-08-09)
-  Tree prepare: arkgate@4.5.0 — docs/releases/4.5.0.md Status: prepared
-  Prior: 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
-Phase DF hard lines: TARGET LEVEL 4 hybrid; compass notAScore; honesty modes never invent green;
+  Closed last: DF06 publish train (tag v4.5.0, OIDC 31434961289, npm 4.5.0, docs flip)
+  Next: owner prioritizes post-4.5 seed or Z09 — no new engineering epic started
+Released baseline: npm arkgate@4.5.0 on latest (gitHead d6f4359; tag v4.5.0; 2026-08-10)
+  Notes: docs/releases/4.5.0.md — Status: published
+  Prior: 4.4.0 / 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
+Phase DF hard lines (held): TARGET LEVEL 4 hybrid; compass notAScore; honesty modes never invent green;
   domain split required over raise-max-only; no new skill names/sensors; no scores;
   no L5 monorepo; no runtime productization; no false hard write on soft hosts
-Claim gate: Z09 (parked) — residual RB-11 only (not DF scope)
+Claim gate: Z09 (parked) — residual RB-11 only
 ```
