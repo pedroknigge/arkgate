@@ -164,6 +164,7 @@ retained shipped rationale live under `docs/plans/`:
 | [workspace-identity-activation-truth](docs/plans/workspace-identity-activation-truth/README.md) | Shipped in 4.2.0 (`WI01` done; **published**) | Project-bound MCP identity handshake, fail-closed cross-project evidence, honest runtime activation/verdicts, and layer-aware ArkRules inventory |
 | [agent-contract-surface-4.3](docs/plans/agent-contract-surface-4.3/README.md) | Shipped in **4.3.0** (`ACS01`–`ACS08` done; **published**) | Agent Skills packaging, version-matched projection, diagnostic code catalog, unified status JSON, finding refs, maintainer A/B eval — guardrail catalog + scan/process voice; freeze restated; no new skill names, no LLM verdict |
 | [improvement-compass](docs/plans/improvement-compass/README.md) | Shipped in **4.4.0** (`IC01`–`IC07` done; **published**) | Improvement compass (lenses, not scores) + vibe-coder skill deepen; public docs product-only |
+| [domain-fitness-session-truth](docs/plans/domain-fitness-session-truth/README.md) | In progress for **4.5.0** (`DF01` done; `DF02`–`DF06` todo) | Session truth (status projects compass) + domain fitness budgets/splits + critical pure verification ratchet; LEVELS TARGET 4 hybrid; no scores/sensors/runtime |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in
 `ROADMAP.md`.

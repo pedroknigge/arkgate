@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-09 (Phase IC — IC01–IC07 done; **arkgate@4.4.0 published**)
+- **Status date:** 2026-08-10 (Phase DF — Domain Fitness & Session Truth for **arkgate@4.5.0**; `DF01` done; next `DF02`; baseline **4.4.0 published**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -55,10 +55,11 @@ ArkGate is an architecture write firewall plus a coach, not a prompt convention.
 - Reuse the existing analysis engine, CLI/MCP adapters, and current skills; do not add a second
   planner, task tracker, or skill namespace.
 
-**Still frozen through 4.4.0 / Phase IC (do not start without a new ROADMAP item)**
+**Still frozen through 4.5.0 / Phase DF (do not start without a new ROADMAP item)**
 
-Phase IC restates these freezes for the **arkgate@4.4.0** train (plan lock `IC01`). Phase ACS
-freezes remain; IC adds no score surface.
+Phase DF restates these freezes for the **arkgate@4.5.0** train (plan lock `DF01`). Phase ACS +
+IC freezes remain; DF adds domain-fitness and session-truth non-goals (no score surface, no
+Level-5 monorepo aspiration).
 
 - New architecture presets or policy packs.
 - New skill *names* beyond consolidating/clarifying the current 13 (prefer deepen + route +
@@ -70,9 +71,11 @@ freezes remain; IC adds no score surface.
 - False hard-write claims for soft hosts (Cursor/Codex/OpenCode).
 - Numeric trust / architecture / principle health **score**, average, or Excellent/Good rank band.
 - Improvement compass as a gate input (projection is advisory `notAScore` only).
-- New report polish that does not expose required evidence.
+- New report polish that does not expose required evidence (presentation-only HTML growth).
 - Org control-plane, polyglot support, or broad codemods.
-- Z09 retained-adoption / independent-close as IC scope (parked residual `RB-11`).
+- “Level 5 the monorepo” (formal verification, 100% mutation) as a product goal — selective L5
+  islands on truth paths only.
+- Z09 retained-adoption / independent-close as DF scope (parked residual `RB-11`).
 
 ### Hard lines
 
@@ -1011,6 +1014,129 @@ not reintroduce roadmap-code narrative; signed tag + npm when owner publishes.
 GitHub Release; OIDC `publish-npm.yml` run `31342710132`; `npm view` version/latest/gitHead =
 `4.4.0` / `4.4.0` / `d4ce0fa`; MCP registry `io.github.pedroknigge/arkgate@4.4.0`; docs Status:
 **published**.
+
+### Phase DF — Domain Fitness & Session Truth (4.5.0)
+
+Origin: LEVELS v1.1 assessment of the mother repo after **4.4.0** (product shell **Level 4**
+hybrid; L5 islands on enforcement truth; oversize pure projection modules; `ark status` still
+pass-through-only for improvement compass). Close **session consistency** for agents and
+**domain stewardship** so Level 4 does not drift into Level 3 sprawl. Plan authority:
+[docs/plans/domain-fitness-session-truth/README.md](docs/plans/domain-fitness-session-truth/README.md).
+
+Boundary:
+
+- **Session truth:** project improvement compass onto status/MCP when facts are available; never
+  as a gate input; still `notAScore`.
+- **Domain fitness:** LOC budgets and/or surgical splits for large pure modules; no new lenses.
+- **Critical pure ratchet:** property/mutation on peerIsolation, policy-delta ack, invariant
+  promote — selective L5 islands only.
+- **Bounded install honesty residual** — one pilot class, not a new host matrix.
+- Does not wait for `Z09`/`RB-11`. Does not productize runtime. No new skill names or sensors.
+- TARGET LEVEL 4 hybrid (explicit non-goal: Level-5 monorepo).
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 125 | `DF01` | `done` | S | IC07 + 4.4.0 published | Plan locked; freezes + LEVELS TARGET 4 hybrid; sole epic for 4.5.0 |
+| 126 | `DF02` | `todo` | M | `DF01` | `ark status` / MCP project improvement compass; parity vs doctor residual |
+| 127 | `DF03` | `todo` | M | `DF01` | Domain module budgets and/or split oversize pure projection modules |
+| 128 | `DF04` | `todo` | M | `DF01` | Property/mutation ratchet on critical pure truth paths |
+| 129 | `DF05` | `todo` | M | `DF01` | Bounded install/upgrade or activation honesty residual (one pilot class) |
+| 130 | `DF06` | `todo` | S | `DF02`–`DF05` | Product docs + claims + version **4.5.0** publish train |
+
+**Preferred engineering order:** `DF01` → `DF02` → (`DF03` or `DF04`) → `DF05` → `DF06`. One
+`doing` at a time.
+
+**DF01 — Plan lock and LEVELS mandate**
+
+- **Status:** `done` (2026-08-10)
+- **Depends on:** IC07 done; npm **4.4.0** on `latest`
+
+**Outcome:** Phase DF is the sole engineering queue for 4.5.0; plan file, freezes, and LEVELS
+TARGET **4 hybrid** (non-goals: scores, new sensors/skills, runtime productization, L5 monorepo)
+are recorded; next pick is `DF02` unless owner reprioritizes.
+
+**Acceptance:** plan status Accepted; Agents.md plans table lists DF; freeze table restated
+through 4.5.0; Next implementation session points at `DF02`.
+
+**Evidence:** [docs/plans/domain-fitness-session-truth/README.md](docs/plans/domain-fitness-session-truth/README.md);
+ROADMAP Phase DF table; Agents.md + docs hub pointers. Next engineering pick: **`DF02`**.
+
+**DF02 — Status projects improvement compass**
+
+- **Status:** `todo`
+- **Depends on:** `DF01`
+
+**Outcome:** `ark status --json` and MCP `ark_status` can include a projected
+`improvementCompass` (same closed lenses / `notAScore` contract as doctor) when doctor-side facts
+are available on the status path. Residual lenses never change `valid` / strict-merge / `goal.met`.
+If a cheap subset is used, package-surface documents the honesty boundary (partial vs full).
+
+**Acceptance:** focused tests: status with residual SoC/DIP (or equivalent) matches doctor
+topResidual identity for the same tree facts; empty/unavailable facts do not invent green lenses;
+no score fields; CI=1 still non-interactive.
+
+**Evidence:** status-command / status-manifest / doctor fact reuse; unit + MCP fixtures;
+`docs/package-surface.md` row; closes the 4.4.0 “status does not compute lenses yet” gap.
+
+**DF03 — Domain module fitness (budgets / split)**
+
+- **Status:** `todo`
+- **Depends on:** `DF01`
+
+**Outcome:** large pure Domain modules that LEVELS flagged as oversize risk (notably
+`improvementCompass` and any peer pure projection > budget) gain mechanical LOC budgets in
+`check:module-budgets`, and/or a behavior-preserving split into smaller pure modules with gen
+parity if a CLI mirror exists. No new lenses or public API shape beyond maintainability.
+
+**Acceptance:** `npm run check:module-budgets` fails if a tracked domain path exceeds its budget;
+unit/gen parity green after any split; pure Domain still has no Kernel/Tooling I/O imports.
+
+**Evidence:** `scripts/check-module-budgets.mjs` domain rows; optional module split +
+`generate:cli-pure` / `check:cli-pure` if mirrors move; unit tests unchanged in behavior.
+
+**DF04 — Critical pure verification ratchet**
+
+- **Status:** `todo`
+- **Depends on:** `DF01`
+
+**Outcome:** selective L5 islands on enforcement-truth pure paths gain property and/or Stryker
+mutation slices for: `layerMatch` peerIsolation fail-closed (missing paths), `policyDelta`
+acknowledgement matching, and `invariantCoverage` promote honesty. Existing baselineKey /
+configContract slices remain. No claim of whole-repo mutation completeness.
+
+**Acceptance:** new property and/or mutation groups green in CI (or documented maintainer script
+if cost-gated); focused unit fixtures for fail-closed cases; no weakening of strict semantics.
+
+**Evidence:** `tests/property/*` and/or `stryker.config.mjs` + critical-groups; unit tests under
+`tests/unit/domain/` / static-check as needed.
+
+**DF05 — Install / activation honesty residual (bounded)**
+
+- **Status:** `todo`
+- **Depends on:** `DF01`
+
+**Outcome:** close **one** field-class residual in managed upgrade, skill/content preserve, or
+write-path activation honesty (LEVELS install cluster gap) with failing-then-passing tests. No new
+hosts; no false hard-write claims for soft hosts.
+
+**Acceptance:** named residual documented in PR; focused tests; doctor/activation labels remain
+honest; common merge gate green.
+
+**Evidence:** tests under `tests/unit/static-check/` (or install suite); package-surface only if a
+stable claim changes.
+
+**DF06 — Release 4.5.0**
+
+- **Status:** `todo`
+- **Depends on:** `DF02`–`DF05`
+
+**Outcome:** version **4.5.0**, CHANGELOG and `docs/releases/4.5.0.md` in **product voice**
+(IC06 hygiene held), package-surface, claims 0 Contradicted on product statements, publish train.
+
+**Acceptance:** common merge gate green; no required config migration; public release prose does
+not reintroduce roadmap-code narrative; signed tag + npm when owner publishes.
+
+**Evidence:** tree identity `4.5.0`; release notes Status prepared → published; npm/MCP when shipped.
 
 ### Z01 — Make release cleanup tool-owned and path-safe
 
@@ -3342,15 +3468,15 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: (none) — Phase IC closed; arkgate@4.4.0 published on npm latest
-  Epic: Phase IC — Improvement Compass → arkgate@4.4.0 published
-  Plan: docs/plans/improvement-compass/README.md
-  Queue: IC01–IC07 done
-  Last closed: IC07 (tag v4.4.0, OIDC publish 31342710132, MCP 4.4.0, docs flip)
+Engineering doing: (none) — next pick DF02
+  Epic: Phase DF — Domain Fitness & Session Truth → arkgate@4.5.0
+  Plan: docs/plans/domain-fitness-session-truth/README.md
+  Queue: DF01 done; DF02–DF06 todo (preferred: DF02 → DF03|DF04 → DF05 → DF06)
+  Next pick: DF02 (status projects improvement compass)
 Released baseline: npm arkgate@4.4.0 on latest (gitHead d4ce0fa; tag v4.4.0; 2026-08-09)
   Notes: docs/releases/4.4.0.md — Status: published
   Prior: 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
-Phase IC hard lines restated: no principle scores; compass notAScore; no new skill names/sensors;
-  no LLM verdict; no false hard write on soft hosts
-Claim gate: Z09 (parked) — residual RB-11 only
+Phase DF hard lines: TARGET LEVEL 4 hybrid; compass notAScore; no new skill names/sensors;
+  no scores; no L5 monorepo; no runtime productization; no false hard write on soft hosts
+Claim gate: Z09 (parked) — residual RB-11 only (not DF scope)
 ```
