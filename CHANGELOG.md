@@ -14,6 +14,14 @@ in the immutable pre-2.0 archive linked below.
   (report snapshots store the thin slice). Residual never flips `valid` / strict-merge / `goal.met`.
   Root helpers: `projectStatusImprovementCompass`, `STATUS_COMPASS_MODES`.
 
+### Changed
+
+- **Domain module fitness (DF03):** `improvementCompass` pure Domain monolith (~923 LOC) split into
+  `improvementCompassTypes` + `improvementCompassMap` + facade `improvementCompass` (public re-exports
+  unchanged). All three tracked in `check:module-budgets`; over-ceiling domain modules require a
+  behavior-preserving split — raising max alone is not done. CLI pure mirrors:
+  `improvement-compass-types.mjs`, `improvement-compass-map.mjs`, `improvement-compass.mjs`.
+
 ## 4.4.0 — 2026-08-09
 
 **Minor** over 4.3.0. Improvement compass (architecture lenses as a `notAScore` projection of

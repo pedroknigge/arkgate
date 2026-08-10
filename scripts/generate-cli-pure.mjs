@@ -13,7 +13,9 @@
  *                                 → schemas/ark.project-identity.schema.json
  *   src/domain/statusManifest.ts  → bin/lib/status-manifest.mjs
  *                                 → schemas/ark.status-manifest.schema.json
- *   src/domain/improvementCompass.ts → bin/lib/improvement-compass.mjs
+ *   src/domain/improvementCompassTypes.ts → bin/lib/improvement-compass-types.mjs
+ *   src/domain/improvementCompassMap.ts   → bin/lib/improvement-compass-map.mjs
+ *   src/domain/improvementCompass.ts      → bin/lib/improvement-compass.mjs
  *   src/domain/agentProjection.ts → bin/lib/agent-projection.mjs
  *   src/domain/agentSkillsPackage.ts → bin/lib/agent-skills-package.mjs
  *   src/domain/resolvedCandidateFactsSchema.ts → schemas/ark.resolved-candidate-facts.schema.json
@@ -98,10 +100,21 @@ const MODULES = [
     schemaExport: 'ARK_STATUS_MANIFEST_SCHEMA',
     label: 'unified status manifest (ACS03)',
   },
+  // DF03: compass split — types + mappers + facade (import rewrite to sibling .mjs).
+  {
+    canonical: 'src/domain/improvementCompassTypes.ts',
+    derived: 'bin/lib/improvement-compass-types.mjs',
+    label: 'improvement compass types/constants (notAScore vocabulary)',
+  },
+  {
+    canonical: 'src/domain/improvementCompassMap.ts',
+    derived: 'bin/lib/improvement-compass-map.mjs',
+    label: 'improvement compass fact→lens mappers',
+  },
   {
     canonical: 'src/domain/improvementCompass.ts',
     derived: 'bin/lib/improvement-compass.mjs',
-    label: 'improvement compass lenses (notAScore projection)',
+    label: 'improvement compass build + doctor formatters (notAScore projection)',
   },
   {
     canonical: 'src/domain/agentProjection.ts',
@@ -148,7 +161,42 @@ function stripLeadingBlockComment(js) {
   return trimmed.slice(end + 2).replace(/^\s*\n/, '');
 }
 
-function transpileCanonicalSource(canonicalRel, canonicalTs) {
+/**
+ * Map Domain TS basenames (no extension) → derived bin/lib basename for
+ * multi-file pure modules (e.g. improvementCompass → improvement-compass.mjs).
+ */
+function buildCanonicalImportRewriteMap() {
+  /** @type {Map<string, string>} */
+  const map = new Map();
+  for (const mod of MODULES) {
+    if (!mod.derived) continue;
+    const base = path.basename(mod.canonical, path.extname(mod.canonical));
+    map.set(base, path.basename(mod.derived));
+  }
+  return map;
+}
+
+/**
+ * Rewrite relative Domain imports to sibling generated .mjs paths so the
+ * zero-build CLI can resolve multi-file pure modules without a bundler.
+ */
+function rewriteRelativeDomainImports(transpiledSource, importRewriteMap) {
+  return transpiledSource.replace(
+    /(from\s+['"])(\.\/[^'"]+)(['"])/g,
+    (full, pre, spec, post) => {
+      const bare = spec
+        .replace(/^\.\//, '')
+        .replace(/\.js$/i, '')
+        .replace(/\.ts$/i, '')
+        .replace(/\.mjs$/i, '');
+      const derivedBase = importRewriteMap.get(bare);
+      if (!derivedBase) return full;
+      return `${pre}./${derivedBase}${post}`;
+    }
+  );
+}
+
+function transpileCanonicalSource(canonicalRel, canonicalTs, importRewriteMap) {
   const { outputText, diagnostics } = ts.transpileModule(canonicalTs, {
     compilerOptions: {
       module: ts.ModuleKind.ESNext,
@@ -166,7 +214,8 @@ function transpileCanonicalSource(canonicalRel, canonicalTs) {
     throw new Error(`transpile ${canonicalRel} failed:\n${msg}`);
   }
 
-  return stripLeadingBlockComment(outputText).trimEnd() + '\n';
+  const stripped = stripLeadingBlockComment(outputText).trimEnd() + '\n';
+  return rewriteRelativeDomainImports(stripped, importRewriteMap);
 }
 
 function buildDerivedSource(canonicalRel, derivedRel, transpiledSource) {
@@ -189,6 +238,7 @@ async function buildSchemaSource(derivedSource, schemaExport, compact = false) {
 async function main() {
   const checkOnly = process.argv.includes('--check');
   let failed = false;
+  const importRewriteMap = buildCanonicalImportRewriteMap();
 
   for (const mod of MODULES) {
     const canonicalPath = path.join(root, mod.canonical);
@@ -197,7 +247,9 @@ async function main() {
       process.exit(2);
     }
     const canonicalTs = fs.readFileSync(canonicalPath, 'utf8');
-    const transpiled = normalizeNewlines(transpileCanonicalSource(mod.canonical, canonicalTs));
+    const transpiled = normalizeNewlines(
+      transpileCanonicalSource(mod.canonical, canonicalTs, importRewriteMap)
+    );
     const expected = mod.derived
       ? normalizeNewlines(buildDerivedSource(mod.canonical, mod.derived, transpiled))
       : undefined;

@@ -11,13 +11,25 @@ import { fileURLToPath } from 'node:url';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-/** Soft product budgets (Q1/Q6). html-report is a deliberate large renderer. */
+/**
+ * Soft product budgets (Q1/Q6). html-report is a deliberate large renderer.
+ *
+ * Domain pure modules (DF03): tracked so oversize maintenance debt cannot hide.
+ * If a domain file is already over its ceiling, done requires a behavior-preserving
+ * split — raising max alone is NOT remediation (exception needs owner + kill date).
+ */
 const BUDGETS = [
+  // DF03 — improvement compass split (was monolith ~923 LOC). Ceiling is structural
+  // fitness, not a ratchet: keep each pure child under these holds after split.
+  { path: 'src/domain/improvementCompassTypes.ts', max: 220 },
+  { path: 'src/domain/improvementCompassMap.ts', max: 720 },
+  { path: 'src/domain/improvementCompass.ts', max: 160 },
   { path: 'bin/ark-check.mjs', max: 100 },
   // 4.0.0 ArkRules write-path + inventory flags — was 1600 (loc 1671).
   // 4.1.x monorepo config walk-up (S2 / NEW-MONOREPO-CWD-WALKUP) — was 1750.
   // S0 security: write-root split + config path contain + teeth demote — was 1900.
-  { path: 'bin/ark-check-runtime.mjs', max: 1920 },
+  // DF02 status/MCP compass honesty residual wiring — was 1920 (loc ~1937).
+  { path: 'bin/ark-check-runtime.mjs', max: 1940 },
   // S3 start confidence gate on all apply paths — was 900 (loc ~920).
   // ACS03 unified status command wiring — was 940 (loc ~943).
   // ACS04 agents-md / agent-projection command wiring — was 960 (loc ~974).

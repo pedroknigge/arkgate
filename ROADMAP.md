@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-10 (Phase DF; **arkgate@4.5.0**; `DF01` done; **`DF02` doing**; baseline **4.4.0 published**)
+- **Status date:** 2026-08-10 (Phase DF; **arkgate@4.5.0**; `DF01`–`DF02` done; **`DF03` doing**; baseline **4.4.0 published**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -1044,8 +1044,8 @@ Boundary:
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 125 | `DF01` | `done` | S | IC07 + 4.4.0 published | Plan locked; freezes + LEVELS + Scale Stack; sole epic for 4.5.0 |
-| 126 | `DF02` | `doing` | M | `DF01` | **P0** Status/MCP compass + honesty modes + residual ⊆ doctor |
-| 127 | `DF03` | `todo` | M | `DF01` | **P0** Domain budgets + **mandatory split** when over ceiling |
+| 126 | `DF02` | `done` | M | `DF01` | **P0** Status/MCP compass + honesty modes + residual ⊆ doctor |
+| 127 | `DF03` | `doing` | M | `DF01` | **P0** Domain budgets + **mandatory split** when over ceiling |
 | 128 | `DF04` | `todo` | M | `DF01` | **P1** Property/mutation ratchet on critical pure truth paths |
 | 129 | `DF05` | `todo` | M | `DF01` | **P1** Self-service upgrade/activation honesty residual (one pilot) |
 | 130 | `DF06` | `todo` | S | `DF02`–`DF05` | **P2** Session recipe docs + claims + version **4.5.0** publish train |
@@ -1071,7 +1071,7 @@ ROADMAP Phase DF table; Agents.md + docs hub pointers. Next engineering pick: **
 
 **DF02 — Status control-plane: compass + honesty modes**
 
-- **Status:** `doing`
+- **Status:** `done` (2026-08-10; commit `1aa1926`)
 - **Depends on:** `DF01`
 - **Priority:** P0
 
@@ -1090,13 +1090,19 @@ fixture tree/facts. Incomplete facts never invent green lenses. Residual never c
 - Adapter-style regression fixture: status residual ids ⊆ doctor residual ids (same facts).
 - CI=1 non-interactive; package-surface documents modes and honesty boundary.
 
-**Evidence:** status-command / status-manifest / doctor fact reuse; unit + MCP + parity fixture;
-`docs/package-surface.md`. Closes the 4.4.0 “status does not compute lenses yet” gap **without**
-reintroducing silent adapter divergence.
+**Evidence:** `src/domain/statusManifest.ts` (`projectStatusImprovementCompass`,
+`STATUS_COMPASS_MODES`); `bin/lib/status-command.mjs` / generated `status-manifest.mjs`;
+report thin slice in `bin/ark-check-runtime.mjs`; schema `schemas/ark.status-manifest.schema.json`;
+unit `tests/unit/domain/statusCompassHonesty.test.ts` + parity fixture
+`tests/fixtures/status-compass-parity/soc-dip-facts.json`; MCP `ark_status` assertion in
+`tests/unit/mcp/arkMcp.test.ts`; `docs/package-surface.md` (modes + honesty boundary);
+CHANGELOG Unreleased DF02. Live smoke: no session snapshot → `mode: unavailable`, empty residual.
+Closes the 4.4.0 “status does not compute lenses yet” gap **without** silent adapter divergence.
+Next engineering pick: **`DF03`**.
 
 **DF03 — Domain module fitness (budget + mandatory split)**
 
-- **Status:** `todo`
+- **Status:** `doing`
 - **Depends on:** `DF01`
 - **Priority:** P0
 
@@ -3508,17 +3514,18 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: DF02
+Engineering doing: DF03
   Epic: Phase DF — Domain Fitness & Session Truth → arkgate@4.5.0
   Plan: docs/plans/domain-fitness-session-truth/README.md (amended Scale Stack 2026-08-10)
-  Queue: DF01 done; DF02 doing; DF03–DF06 todo
-  Order: DF02 (P0 honesty modes) → DF03 (P0 split+budget) → DF04 (P1 pure ratchet)
+  Queue: DF01–DF02 done; DF03 doing; DF04–DF06 todo
+  Order: DF03 (P0 split+budget) → DF04 (P1 pure ratchet)
          → DF05 (P1 self-service upgrade residual) → DF06 (session recipe + release)
-  Active: DF02 — status/MCP compass + full|subset|unavailable + residual ⊆ doctor
+  Focus: DF03 — domain module budgets + mandatory split when over ceiling
+  Closed last: DF02 — status/MCP compass honesty modes (1aa1926)
   Workflow: .grok/workflows/df-450-queue.rhai
     /workflow df-450-queue
-    /workflow df-450-queue {"only":"DF02"}
-    /workflow df-450-queue {"from":"DF02","to":"DF06","await_between":true}
+    /workflow df-450-queue {"only":"DF03"}
+    /workflow df-450-queue {"from":"DF03","to":"DF06","await_between":true}
 Released baseline: npm arkgate@4.4.0 on latest (gitHead d4ce0fa; tag v4.4.0; 2026-08-09)
   Notes: docs/releases/4.4.0.md — Status: published
   Prior: 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
