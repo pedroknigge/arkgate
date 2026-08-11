@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-10 (Phase DC; **arkgate@4.5.0 published** on npm `latest`; DF closed; deep-module coach `DC01`–`DC04` engineering queue)
+- **Status date:** 2026-08-11 (Phase DC; **arkgate@4.5.5 published** on npm `latest`; deep-module coach `DC01`–`DC04` done)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -3629,7 +3629,7 @@ Engineering doing: (none — Phase DC engineering complete; not npm-published)
   Plan: docs/plans/deep-module-coach/README.md (Implemented; DC01–DC04 done)
   Queue: DC01–DC04 done
   Closed last: DC01–DC04 voice/skills, hot-path + deepening advisory, glossary hook, two-axis done
-  Next: owner publish train for deep-module coach (or leave prepared under Unreleased) — or
+  Next: owner prioritizes remaining post-4.5 seeds (upgrade matrix, monorepo activation playbook) or Z09/RB-11 — Phase DC shipped in 4.5.5
     prioritize remaining post-4.5 seeds (golden upgrade matrix, monorepo activation playbook)
     or parked Z09 / RB-11. No competing engineering epic until ROADMAP promotion.
   Other seeds: golden upgrade path matrix · monorepo activation playbook (not yet promoted)

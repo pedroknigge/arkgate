@@ -4,7 +4,7 @@
 > true. Work starts only when item IDs appear as `doing`/`todo` in [ROADMAP.md](../../../ROADMAP.md).
 > Hub: [AGENTS.md](../../../AGENTS.md) · [Roadmap](../../../ROADMAP.md) · [Product voice](../../product-voice.md)
 
-**Status:** Implemented (Phase DC; `DC01`–`DC04` done in ROADMAP; not npm-published)  
+**Status:** Shipped in **4.5.5** (Phase DC; `DC01`–`DC04` done; published on npm `latest`)  
 **Slug:** `deep-module-coach`  
 **Kind:** epic seed / process + advisory product train  
 **Owners:** product (Pedro) + library maintainers  
