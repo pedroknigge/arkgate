@@ -53,13 +53,12 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Area | Path |
 |------|------|
 | Release notes (by version) | [releases/](releases/) · [CHANGELOG.md](../CHANGELOG.md) |
-| Epic plans (seeded + shipped) | [plans/](plans/) — maintainer seeds (e.g. deep-module coach post-4.5 **implemented, not published**; domain fitness & session truth for **4.5.0**; improvement compass for **4.4.0**; agent contract surface for **4.3.0**). Product how-to stays in use/develop/agent-guide; plans are not required reading to use the package. |
+| Epic plans (seeded + shipped) | [plans/](plans/) — maintainer seeds (e.g. deep-module coach **shipped in 4.5.5**; domain fitness & session truth for **4.5.0**; improvement compass for **4.4.0**; agent contract surface for **4.3.0**). Product how-to stays in use/develop/agent-guide; plans are not required reading to use the package. |
 | Claims audit | [audit/claims-matrix.md](audit/claims-matrix.md) |
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
-Current published: [releases/4.5.0.md](releases/4.5.0.md) (`arkgate@4.5.0` on npm `latest`).
-Prepared next: [releases/4.5.5.md](releases/4.5.5.md) (`arkgate@4.5.5` — not on `latest` until publish).  
+Current published: [releases/4.5.5.md](releases/4.5.5.md) (`arkgate@4.5.5` on npm `latest`).  
 Prior: [releases/4.4.0.md](releases/4.4.0.md) (`arkgate@4.4.0`).  
 Previous: [releases/4.3.0.md](releases/4.3.0.md) · [releases/4.2.1.md](releases/4.2.1.md) · [releases/4.2.0.md](releases/4.2.0.md) · [releases/4.1.1.md](releases/4.1.1.md).  
 Previous major: [releases/4.0.0.md](releases/4.0.0.md) (`arkgate@4.0.0`).  
