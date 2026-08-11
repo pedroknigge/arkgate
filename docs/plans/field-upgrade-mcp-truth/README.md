@@ -5,7 +5,7 @@
 > Hub: [AGENTS.md](../../../AGENTS.md) · [Roadmap](../../../ROADMAP.md) ·
 > [Agent guide — MCP](../../agent-guide.md) · [Upgrade skill](../../../templates/skills/ark-upgrade.md)
 
-**Status:** In progress (Phase FX; target **4.5.6**; `FX01`–`FX11` done; `FX12` publish)  
+**Status:** Shipped in **4.5.6** (npm `latest`; site live; MCP registry re-auth may still be needed)  
 **Slug:** `field-upgrade-mcp-truth`  
 **Kind:** epic seed / field-truth + upgrade self-service + multi-project MCP ergonomics  
 **Owners:** product (Pedro) + library maintainers  
