@@ -5,8 +5,11 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { createHash, randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import {
+  buildProcessPackageHonesty,
+  readProjectInstalledArkgateVersion,
+} from './lib/mcp-process-package.mjs';
 import {
   DEFAULT_INTENT_PREFIXES,
   DEFAULT_LAYER_DIRECTORIES,
@@ -1852,47 +1855,13 @@ export async function runArkMcp({ hookInput } = {}) {
    * FX06 — process package vs project install honesty (multi-project field truth).
    * Process arkgateVersion is startup-loaded; after consumer `npm i arkgate@newer`,
    * long-lived MCP can report a stale process version until restart.
+   * Algorithm lives in bin/lib/mcp-process-package.mjs for unit coverage.
    */
-  function readProjectInstalledArkgateVersion() {
-    try {
-      const shallow = path.join(resolvedRoot, 'node_modules', 'arkgate', 'package.json');
-      if (fs.existsSync(shallow)) {
-        const v = JSON.parse(fs.readFileSync(shallow, 'utf8')).version;
-        return typeof v === 'string' && v.trim() ? v.trim() : null;
-      }
-    } catch {
-      /* fall through */
-    }
-    try {
-      const requireFromProject = createRequire(path.join(resolvedRoot, 'package.json'));
-      const pkgJson = requireFromProject.resolve('arkgate/package.json');
-      const v = JSON.parse(fs.readFileSync(pkgJson, 'utf8')).version;
-      return typeof v === 'string' && v.trim() ? v.trim() : null;
-    } catch {
-      return null;
-    }
-  }
-
   function processPackageHonesty() {
-    const processVersion = typeof ark.version === 'string' ? ark.version : null;
-    const projectInstalledVersion = readProjectInstalledArkgateVersion();
-    const mismatch =
-      processVersion != null &&
-      projectInstalledVersion != null &&
-      processVersion !== projectInstalledVersion;
-    return {
-      schemaVersion: '1.0',
-      notAScore: true,
-      processArkgateVersion: processVersion,
-      projectInstalledVersion,
-      processPackageMismatch: mismatch,
-      processStale: mismatch,
-      nextAction: mismatch
-        ? 'Restart or retarget the Ark MCP server so process arkgateVersion matches the project install. Prefer project-local CLI (`npx arkgate` / `npx arkgate-check`) until identity is matched and versions align. Multi-checkout users: one expectedRoot per project; never reuse another checkout’s projectId.'
-        : projectInstalledVersion == null
-          ? 'Project has no resolvable node_modules/arkgate; install the package or use CLI from a project that pins arkgate.'
-          : 'Process package version matches project install for this MCP root.',
-    };
+    return buildProcessPackageHonesty({
+      processVersion: typeof ark.version === 'string' ? ark.version : null,
+      root: resolvedRoot,
+    });
   }
 
   function contextFor(binding) {

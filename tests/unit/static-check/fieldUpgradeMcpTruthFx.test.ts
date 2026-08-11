@@ -28,6 +28,10 @@ import {
   planManagedUpgrade,
 } from '../../../bin/lib/managed-upgrade.mjs';
 import { buildRulesInventory } from '../../../bin/lib/rules-inventory.mjs';
+import {
+  buildProcessPackageHonesty,
+  readProjectInstalledArkgateVersion,
+} from '../../../bin/lib/mcp-process-package.mjs';
 
 const temps: string[] = [];
 
@@ -414,6 +418,60 @@ describe('FX03 planManagedUpgrade skillDrift-ready plan', () => {
     expect(plan.refreshSkills).toBe(true);
     const noRefresh = planManagedUpgrade(root, { tools: 'claude' });
     expect(noRefresh.refreshSkills).toBe(false);
+  });
+});
+
+describe('FX06 MCP processPackage honesty', () => {
+  it('flags processPackageMismatch when process version lags install', () => {
+    const honesty = buildProcessPackageHonesty({
+      processVersion: '4.3.0',
+      projectInstalledVersion: '4.5.6',
+    });
+    expect(honesty).toMatchObject({
+      notAScore: true,
+      processArkgateVersion: '4.3.0',
+      projectInstalledVersion: '4.5.6',
+      processPackageMismatch: true,
+      processStale: true,
+    });
+    expect(honesty.nextAction).toMatch(/Restart|retarget|expectedRoot/i);
+  });
+
+  it('matched versions are not stale', () => {
+    const honesty = buildProcessPackageHonesty({
+      processVersion: '4.5.6',
+      projectInstalledVersion: '4.5.6',
+    });
+    expect(honesty.processPackageMismatch).toBe(false);
+    expect(honesty.processStale).toBe(false);
+    expect(honesty.nextAction).toMatch(/matches project install/i);
+  });
+
+  it('missing install is honest without inventing mismatch', () => {
+    const honesty = buildProcessPackageHonesty({
+      processVersion: '4.5.6',
+      projectInstalledVersion: null,
+    });
+    expect(honesty.processPackageMismatch).toBe(false);
+    expect(honesty.processStale).toBe(false);
+    expect(honesty.nextAction).toMatch(/no resolvable node_modules/i);
+  });
+
+  it('reads project installed version from node_modules', () => {
+    const root = tempRoot('ark-fx06-inst-');
+    write(root, 'package.json', JSON.stringify({ name: 'fx06', private: true }));
+    write(
+      root,
+      'node_modules/arkgate/package.json',
+      JSON.stringify({ name: 'arkgate', version: '4.5.6' })
+    );
+    expect(readProjectInstalledArkgateVersion(root)).toBe('4.5.6');
+    const honesty = buildProcessPackageHonesty({
+      processVersion: '4.5.0',
+      root,
+    });
+    expect(honesty.processPackageMismatch).toBe(true);
+    expect(honesty.projectInstalledVersion).toBe('4.5.6');
   });
 });
 

@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-11 (Phase DC shipped in **arkgate@4.5.5** published; Phase FX seed `field-upgrade-mcp-truth` ready to promote)
+- **Status date:** 2026-08-11 (Phase FX shipped in **arkgate@4.5.6** published; Phase DC shipped in **4.5.5**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -1212,7 +1212,7 @@ version/latest/gitHead = `4.5.0` / `4.5.0` / `d6f4359`; release notes
 
 | Seed | Plan | Notes |
 |------|------|-------|
-| **Field upgrade & multi-project MCP truth** | [docs/plans/field-upgrade-mcp-truth/README.md](docs/plans/field-upgrade-mcp-truth/README.md) | **Primary next epic seed → target npm 4.5.6.** `FX01`–`FX09` product/field fixes; **`FX10` `/review`**; **`FX11` docs/audit prepare 4.5.6**; **`FX12` publish everywhere + arkgate-site**. Origin: Superlock/Predial/WHASHARED field sessions |
+| **Field upgrade & multi-project MCP truth** | [docs/plans/field-upgrade-mcp-truth/README.md](docs/plans/field-upgrade-mcp-truth/README.md) | **Shipped in arkgate@4.5.6.** Registry-aware upgrade, skill drift/refresh, processPackage honesty, publish + site. Residual: MCP registry JWT re-auth if still expired |
 | Golden upgrade path matrix | — | Hosts × package managers self-service proof (after FX01–FX02) |
 | Monorepo activation playbook | — | Field demand; coordinates with FX06/FX07 multi-package |
 | Z09 / RB-11 | parked claim gate | Retained adoption + independent close |
@@ -3653,8 +3653,8 @@ folded into Phase C implementation work.
 ```text
 Engineering doing: (none — promote Phase FX before coding)
   Epic candidate: Phase FX — Field upgrade & multi-project MCP truth
-  Plan: docs/plans/field-upgrade-mcp-truth/README.md (Seeded; FX01–FX12; target 4.5.6)
-  Queue: not in todo until owner promotes; preferred order FX01→FX12
+  Plan: docs/plans/field-upgrade-mcp-truth/README.md (Shipped in 4.5.6)
+  Queue: Phase FX shipped in 4.5.6; residual MCP registry JWT re-auth only
   Closed last: Phase DC shipped in arkgate@4.5.5 (DC01–DC04); deep-module coach + upgrade whatsNew
   Next: promote FX01+FX02 (P0 upgrade), FX06 (MCP multi-project), FX03–FX05, FX07–FX09;
     then FX10 `/review` → FX11 prepare 4.5.6 → FX12 publish + site.
