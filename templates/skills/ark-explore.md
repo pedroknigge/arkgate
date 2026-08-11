@@ -34,6 +34,26 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 
 **Map residual lenses → dual-plan B seeds.** Plain Align / Stabilize / Shape from compass + design-weak — not a scorecard.
 
+## Deep modules (process)
+
+- Prefer **deep modules**: small **interface**, complexity hidden behind it (not a depth score).
+- When proposing a port/adapter or Shape pilot, **name the seam** (callers stay stable; behavior swaps behind it). One adapter → seam still hypothetical; two real adapters → seam justified.
+- Apply the **deletion test** before extracting “just for tests”: if deleting the module makes complexity *vanish*, it was pass-through; if complexity *reappears* across callers, it earned its keep.
+- Prefer verification **at the public interface** of the seam (locality/leverage), not private pass-through layers.
+- When doctor surfaces **hot paths** or **deepening candidates**, treat them as advisory residual only — never as a gate fail; bias dual-plan B pilots toward recent churn when listed.
+
+## Domain glossary (process)
+
+If the consumer tree has a **domain glossary**, prefer its terms for layer/slice folders, pilot names, and next-action prose:
+
+| Common root names (detect, do not require) |
+|--------------------------------------------|
+| `CONTEXT.md`, `docs/glossary.md`, `docs/domain.md`, `docs/ubiquitous-language.md`, `docs/CONTEXT.md` |
+
+- Call out **glossary vs code** conflicts when names disagree with lived folders.
+- **Missing glossary is normal** — do not warn-spam or invent a glossary file.
+- Glossary content never enforces; the gate remains `ark.config.json` + scan.
+
 ## When / not when
 
 | Use `/ark-explore` when… | Do **not** use it when… |
@@ -390,6 +410,7 @@ End with **exactly** these headings (markdown `###`):
 - **Result:** one-line outcome
 - **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
+- **Done axes:** architecture residual (status/doctor/compass) | feature/ticket residual (outside package). Enforce green ≠ feature done
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

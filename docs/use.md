@@ -87,6 +87,9 @@ list: [configuration.md](configuration.md).
 
 **Green edges ≠ elegant design.** Empty remediation plan is not “architecture finished” if design residual remains.
 
+**Two-axis done:** (1) architecture residual via status/doctor/compass; (2) feature/ticket residual
+outside the package. **Enforce green ≠ feature done.**
+
 ---
 
 ## When the gate is green but the code is still messy

@@ -49,15 +49,15 @@ export function deterministicNextAction(violation) {
                 return 'Move the referenced type to a mutually allowed layer, use `import type`, then preflight again.';
             }
             if (violation.peerIsolation) {
-                return 'Extract the shared dependency to a shared layer, then preflight again.';
+                return 'Extract the shared dependency to a shared layer, test at the public interface, then preflight again.';
             }
-            return `Define a port in ${violation.fromLayer ?? 'the source layer'}, inject the ${violation.toLayer ?? 'outer-layer'} implementation, then preflight again.`;
+            return `Define a port in ${violation.fromLayer ?? 'the source layer'}, inject the ${violation.toLayer ?? 'outer-layer'} implementation, test at the public interface, then preflight again.`;
         case 'FORBIDDEN_GLOBAL':
-            return `Inject ${violation.target ?? 'the capability'} through a port, then preflight again.`;
+            return `Inject ${violation.target ?? 'the capability'} through a port, test at the public interface, then preflight again.`;
         case 'CAPABILITY_VIOLATION':
-            return `Define a ${String(violation.capability ?? 'capability')} port in ${violation.fromLayer ?? 'the walled layer'}, bind the implementation outside it, then preflight again.`;
+            return `Define a ${String(violation.capability ?? 'capability')} port in ${violation.fromLayer ?? 'the walled layer'}, bind the implementation outside it, test at the public interface, then preflight again.`;
         case 'CIRCULAR_DEPENDENCY':
-            return 'Extract the shared dependency into a third module, then preflight again.';
+            return 'Extract the shared dependency into a third module, test at the public interface, then preflight again.';
         case 'RAW_EVENT_PUBLISH':
             return 'Publish through a registered intent creator, then run Ark again.';
         case 'PUBLISH_MISSING_SOURCE':

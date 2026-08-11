@@ -22,6 +22,7 @@ import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { readBaseline, baselineOccurrenceKeys } from './violations.mjs';
 import { describePackageVersionDualTruth } from './field-install.mjs';
 import { buildDoctorImprovementCompass } from './improvement-compass-doctor.mjs';
+import { buildDeepModuleCoachAdvisory } from './deep-module-coach.mjs';
 import { computePhysicalCohesion } from './physical-cohesion.mjs';
 
 function esc(value) {
@@ -178,6 +179,13 @@ export function buildReportDepthPayload(
     goldenPatternPresent: goldenPattern.present === true,
     arkRulesLoaded: rulesUnderContract?.active === true,
   });
+  // Deep-module coach — same advisory as doctor; never a gate input.
+  const deepModuleCoach = buildDeepModuleCoachAdvisory(root, {
+    designSmells,
+    physicalCohesion,
+    improvementCompass,
+    pilotLoop,
+  });
   return {
     adoption,
     designDepth: {
@@ -190,6 +198,7 @@ export function buildReportDepthPayload(
       productHonesty,
       mergePlanes: rulesUnderContract?.mergePlanes ?? null,
       improvementCompass,
+      deepModuleCoach,
     },
   };
 }

@@ -131,7 +131,8 @@ describe('diagnosticCatalog ↔ remediation parity', () => {
       },
       {
         ruleId: 'CIRCULAR_DEPENDENCY',
-        nextAction: 'Extract the shared dependency into a third module, then preflight again.',
+        nextAction:
+          'Extract the shared dependency into a third module, test at the public interface, then preflight again.',
       },
     ];
     for (const row of exact) {

@@ -279,11 +279,44 @@ function improvementCompassHtml(compass) {
   </section>`;
 }
 
+/** Deep-module coach — hot paths + deepening candidates; never a gate input. */
+function deepModuleCoachHtml(coach) {
+  if (!coach || coach.notAScore !== true) return '';
+  const hot = coach.hotPaths;
+  const candidates = Array.isArray(coach.deepeningCandidates) ? coach.deepeningCandidates : [];
+  let hotBlock = '';
+  if (hot?.status === 'unavailable') {
+    hotBlock = `<p class="muted">Hot paths: unavailable — ${esc(hot.reason || 'no git history')}; never invented.</p>`;
+  } else if (hot?.available === true && Array.isArray(hot.paths) && hot.paths.length > 0) {
+    hotBlock = `<p><span class="tag warn">hot paths</span> ${hot.paths
+      .slice(0, 8)
+      .map((p) => `<code>${esc(p.path)}</code> (${esc(String(p.changeCount))})`)
+      .join(' · ')}</p>`;
+  } else {
+    hotBlock = '<p class="muted">Hot paths: none above churn threshold (advisory).</p>';
+  }
+  const deepenBlock =
+    candidates.length === 0
+      ? '<p class="muted">Deepening candidates: none from existing evidence (not a score).</p>'
+      : `<p><span class="tag warn">deepening</span> ${candidates
+          .slice(0, 5)
+          .map((c) => `<code>${esc(c.target)}</code> — ${esc(c.friction)}`)
+          .join('<br/>')}</p>`;
+  return `
+  <section class="section card" data-advisory="deepModuleCoach">
+    <h2>Deep-module coach <span class="muted">(advisory — never changes the verdict)</span></h2>
+    ${hotBlock}
+    ${deepenBlock}
+    <p class="muted">Prefer deep modules; name seams; test at the public interface. Always <code>notAScore</code>.</p>
+  </section>`;
+}
+
 export function renderAdvisorySections(advisories, escape) {
   if (!advisories || typeof advisories !== 'object') return '';
   if (typeof escape === 'function') esc = escape;
   return [
     improvementCompassHtml(advisories.improvementCompass),
+    deepModuleCoachHtml(advisories.deepModuleCoach),
     contractHealthHtml(advisories.contractHealth),
     ambientStateHtml(advisories.ambientState),
     physicalCohesionHtml(advisories.physicalCohesion),

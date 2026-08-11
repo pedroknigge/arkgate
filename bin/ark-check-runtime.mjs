@@ -1644,6 +1644,10 @@ async function main() {
         ...(designDepth?.improvementCompass
           ? { improvementCompass: designDepth.improvementCompass }
           : {}),
+        // Doctor parity: deep-module coach advisory (hot paths + deepening; notAScore).
+        ...(designDepth?.deepModuleCoach
+          ? { deepModuleCoach: designDepth.deepModuleCoach }
+          : {}),
       },
     };
     const html = args.beginner

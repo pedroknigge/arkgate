@@ -31,6 +31,12 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 
 **Lens language on each cluster** while looping edges; residual shape lenses hand off to explore/autopilot.
 
+## Deep modules (process)
+
+- Judgment remediations that introduce ports: **name the seam**, prefer deep modules, **test at the public interface**.
+- Do not invent pass-through files that fail the **deletion test** just to clear a plan step.
+- Empty plan A is edge residual only — Shape residual still needs explore/autopilot; green edges ≠ feature done.
+
 ## When / not when
 
 | Use `/ark-loop` when… | Do **not** use it when… |
@@ -193,6 +199,7 @@ End with **exactly** these headings (markdown `###`):
 - **Result:** one-line outcome
 - **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
+- **Done axes:** architecture residual (status/doctor/compass) | feature/ticket residual (outside package). Enforce green ≠ feature done
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

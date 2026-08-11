@@ -9,6 +9,18 @@ The rule underneath all of it: **`ark.config.json` is authoritative.** A green c
 governs 40% of the tree, or a baseline full of false positives, is worse than no gate — it
 looks safe. Report the truth, then fix it.
 
+### Domain glossary (process only)
+
+If the repo already has a product/domain glossary, prefer those terms when naming layers,
+slices, intents, and Shape pilots. Common root names (detect; none required):
+
+- `CONTEXT.md`
+- `docs/glossary.md` · `docs/domain.md` · `docs/ubiquitous-language.md` · `docs/CONTEXT.md`
+
+Call out glossary language vs lived code when they disagree. **Missing glossary is normal** —
+do not spam warnings and do not invent a glossary file. Glossary content never enforces; the
+gate remains the contract + scan. Skills: `/ark-adopt`, `/ark-explore`.
+
 ## 1. Config — reflect what exists, propose the rest
 
 ```bash

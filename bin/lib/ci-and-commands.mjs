@@ -414,6 +414,11 @@ ${projectionBlock}
 - **Design-weak / residual shape lenses** (compass residual while edges may look green) → map first, then guided apply with user OK — never “you’re done” on green edges alone.
 - Empty plan A + residual lenses / design-weak → **not finished**.
 
+**Two-axis done (never collapse):**
+1. **Architecture residual** — status / doctor / compass (scan). Prefer deep modules; name seams; test at the public interface.
+2. **Feature / ticket residual** — does the change match the requested behavior? (process outside the package).
+**Enforce green ≠ feature done.** No package LLM verdict for either axis.
+
 The selected host is \`${selectedHost}\`. Host registration and CI are installed with this file.
 This compact router is enough for normal feature work.
 
