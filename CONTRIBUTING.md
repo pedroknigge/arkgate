@@ -153,7 +153,8 @@ mcp-publisher login github -token "$(gh auth token)"
 mcp-publisher validate server.json && mcp-publisher publish server.json
 ```
 
-**Current published release:** [docs/releases/4.5.0.md](docs/releases/4.5.0.md) (`arkgate@4.5.0`).
+**Current published release:** [docs/releases/4.5.0.md](docs/releases/4.5.0.md) (`arkgate@4.5.0` on npm `latest`).
+**Prepared next:** [docs/releases/4.5.5.md](docs/releases/4.5.5.md) (`arkgate@4.5.5` — not on `latest` until publish).
 
 **Prior published:** [docs/releases/4.4.0.md](docs/releases/4.4.0.md) (`arkgate@4.4.0`).  
 **Previous:** [docs/releases/4.3.0.md](docs/releases/4.3.0.md) · [docs/releases/4.2.1.md](docs/releases/4.2.1.md) · [docs/releases/4.2.0.md](docs/releases/4.2.0.md) · [docs/releases/4.1.1.md](docs/releases/4.1.1.md) · [docs/releases/4.0.0.md](docs/releases/4.0.0.md).

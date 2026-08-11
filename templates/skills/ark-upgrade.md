@@ -32,6 +32,20 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 
 **After upgrade:** refresh projection; re-doctor; compass residual still drives process, not scores.
 
+## Suggested improvements (what to try next)
+
+After `ark upgrade` (preview or apply), read JSON **`whatsNew`** or the human **Suggested improvements**
+block. It lists concrete try/inspect actions for this package line (advisory only — not a score):
+
+1. **Deep-module coach** — `ark-check --doctor` → `doctor.deepModuleCoach` (hot paths + deepening)
+2. **Improvement compass** — residual lenses on doctor/HTML (not a score)
+3. **Session recipe** — `ark status --json` honesty modes; doctor when mode is not full
+4. **Two-axis done** — architecture residual vs feature/ticket residual (Enforce green ≠ feature done)
+5. **Self-service honesty** — upgrade `selfService` write-path labels + customized preserve
+
+Never invent gate verdicts from these suggestions. Missing residual is honest empty, not green.
+
+
 ## Dual engine (mandatory)
 
 Use the semantic sensor (`ark-check --doctor --json` plus the strict contract

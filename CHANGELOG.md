@@ -5,10 +5,14 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
-**Prepared** (implementation only; not published). Deep-module coach train: product vocabulary
-for deep modules / seams / deletion test, doctor+HTML advisory hot paths and deepening
-candidates, consumer glossary process hook, and two-axis done recipe. **No required config
-migration.** No new skill names, sensors, or scores. Freezes held.
+## 4.5.5 — 2026-08-11
+
+**Patch** over **4.5.0**. Deep-module coach train plus upgrade **suggested improvements /
+what’s new** so consumers know what to try after install. **No required config migration.**
+No new skill names, sensors, or scores. Freezes held.
+
+**Status: prepared** (implementation only; not yet on npm `latest` — remains `4.5.0` until
+the publication checklist completes).
 
 ### Added
 
@@ -22,6 +26,9 @@ migration.** No new skill names, sensors, or scores. Freezes held.
   / domain glossary / two-axis done. Existing skills (explore, think, place, fix, loop, adopt)
   deepened; agent-skills 1:1. Compact router + agent-guide **two-axis done** (Enforce green ≠
   feature done). Remediation port/inject `nextAction` prose includes test at the public interface.
+- **Upgrade suggested improvements / what’s new:** `ark upgrade` JSON `whatsNew` + human block
+  lists concrete try/inspect actions (deep-module coach, improvement compass, session/status
+  honesty, two-axis done, self-service honesty). Always `notAScore`; never a gate input.
 
 ## 4.5.0 — 2026-08-10
 

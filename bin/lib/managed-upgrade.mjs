@@ -9,6 +9,10 @@ import {
   projectManagedUpgradeSelfServiceHonesty,
 } from './managed-upgrade-honesty.mjs';
 import {
+  buildUpgradeWhatsNewSuggestions,
+  formatUpgradeWhatsNewSuggestions,
+} from './upgrade-whats-new.mjs';
+import {
   KNOWN_TOOLS,
   arkPackageVersion,
   detectActiveAgentHost,
@@ -21,6 +25,11 @@ export {
   projectHostWritePathActivation,
   projectManagedUpgradeSelfServiceHonesty,
 } from './managed-upgrade-honesty.mjs';
+export {
+  buildUpgradeWhatsNewSuggestions,
+  formatUpgradeWhatsNewSuggestions,
+  UPGRADE_WHATS_NEW_SCHEMA_VERSION,
+} from './upgrade-whats-new.mjs';
 
 export const MANAGED_MANIFEST_PATH = 'ark.managed.json';
 const MANIFEST_VERSION = '1.0';
@@ -567,11 +576,15 @@ function publicPlan(plan, overrides = {}) {
     assets,
     summary: base.summary,
   });
+  // Suggested improvements / what’s new — product capabilities to try after install/upgrade.
+  // Always notAScore; never a gate input; not part of planDigest.
+  const whatsNew = buildUpgradeWhatsNewSuggestions();
   return {
     ...base,
     ...overrides,
     // DF05 projection always present unless an override supplies a replacement.
     selfService: overrides.selfService ?? selfService,
+    whatsNew: overrides.whatsNew ?? whatsNew,
   };
 }
 
@@ -769,6 +782,10 @@ export function renderManagedUpgrade(plan, options = {}) {
       summary: plan.summary,
     });
   for (const line of formatManagedUpgradeSelfServiceHonesty(honesty)) {
+    console.log(line);
+  }
+  const whatsNew = plan.whatsNew ?? buildUpgradeWhatsNewSuggestions();
+  for (const line of formatUpgradeWhatsNewSuggestions(whatsNew)) {
     console.log(line);
   }
   if (plan.applied) {

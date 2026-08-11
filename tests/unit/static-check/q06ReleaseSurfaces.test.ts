@@ -10,8 +10,8 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.5.0';
-/** Version confirmed on npm `latest`. */
+const CURRENT = '4.5.5';
+/** Version confirmed on npm `latest` until 4.5.5 publish flips. */
 const PUBLISHED_LATEST = '4.5.0';
 
 function read(rel: string) {
@@ -101,21 +101,51 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('exposes published 4.5.0 as npm latest', () => {
+  it('exposes published 4.5.0 as npm latest while 4.5.5 is prepared', () => {
     expect(PUBLISHED_LATEST).toBe('4.5.0');
-    expect(CURRENT).toBe('4.5.0');
+    expect(CURRENT).toBe('4.5.5');
+    expect(read('README.md')).toMatch(/4\.5\.5/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.5\.5\.md/);
     expect(read('README.md')).toMatch(/4\.5\.0/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.5\.0\.md/);
     expect(read('README.md')).toMatch(/on npm `latest`|npm `latest`/i);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.4\.0\.md/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.3\.0\.md/);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.5\.0/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/4\.5\.5/);
     expect(read('docs/README.md')).toMatch(/Current published:.*4\.5\.0/s);
+    expect(read('docs/README.md')).toMatch(/4\.5\.5/);
     expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.5\.0/is);
+    expect(read('docs/package-surface.md')).toMatch(/4\.5\.5\.md/);
     expect(read('docs/releases/4.5.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.5.0.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(read('docs/releases/4.5.5.md')).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(read('docs/releases/4.5.5.md')).not.toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.4.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.3.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.5.5 deep-module coach train', () => {
+  it('records deep-module coach, whatsNew, two-axis done, prepared status', () => {
+    const changelog = read('CHANGELOG.md');
+    expect(changelog).toMatch(/## 4\.5\.5/);
+    expect(changelog).toMatch(/Deep-module coach|deepModuleCoach/i);
+    expect(changelog).toMatch(/whatsNew|what.?s new|Suggested improvements/i);
+    expect(changelog).toMatch(/two-axis done|Enforce green/i);
+    expect(changelog).toMatch(/notAScore/);
+    expect(changelog).toMatch(/No required config migration/i);
+    expect(changelog).toMatch(/Status:\s*prepared|prepared/i);
+
+    const notes = read('docs/releases/4.5.5.md');
+    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(notes).not.toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(notes).toMatch(/4\.5\.5/);
+    expect(notes).toMatch(/deepModuleCoach|Deep-module coach/i);
+    expect(notes).toMatch(/whatsNew|what.?s new|Suggested improvements/i);
+    expect(notes).toMatch(/two-axis done|Enforce green/i);
+    expect(notes).toMatch(/notAScore/);
+    expect(notes).toMatch(/No required config migration/i);
+    expect(notes).toMatch(/Z09|RB-11/i);
   });
 });
 
