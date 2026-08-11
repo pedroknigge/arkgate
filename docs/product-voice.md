@@ -106,6 +106,19 @@ Examples:
 | **out-of-scope lens** | Principle Ark does not instrument (e.g. scalability APM, SAST) — say so; do not invent residual |
 | **AI-easy architecture** | Small, pure, placeable modules and a golden pattern so the next agent turn stays ordered under the contract |
 | **self-service upgrade honesty** | After managed upgrade, consumers can see write-path activation labels and customized-content preserve without asking a maintainer |
+| **module** | Anything with a surface callers depend on and an implementation behind it (function, package, slice) — not only a TypeScript `module` keyword |
+| **interface** (product sense) | Everything a caller must know: types, invariants, errors, ordering, config — not only a TypeScript `interface` keyword |
+| **depth** / **deep module** | Much behavior behind a **small interface** (deep) vs interface almost as complex as the body (shallow). Prefer deep modules. **Never** a 0–10 depth score |
+| **seam** | Place where behavior can be swapped or tested without editing callers (port boundary). Name seams when proposing ports/adapters or Shape pilots |
+| **adapter** | Concrete thing that satisfies an interface at a seam |
+| **leverage** | Capability callers get per unit of interface they must learn |
+| **locality** | Change, bugs, and verification concentrate in one place |
+| **deletion test** | Process heuristic before extracting “just for tests”: if you delete the module and complexity *vanishes*, it was mostly pass-through; if complexity *reappears* across many callers, it was earning its keep. One adapter → seam still hypothetical; two real adapters → seam justified |
+| **test at the public interface** | Prefer verifying behavior through the seam’s public surface, not through private pass-through layers or extraction-for-test-only modules |
+| **hot path** (advisory) | Repo-relative path with elevated **recent change volume** (heuristic from git history when available). Advisory residual only — never a gate input; omit or mark unavailable when history is missing |
+| **deepening candidate** (advisory) | Shape residual card projected only from **existing** smells / cohesion / compass evidence — locality/leverage intent; never invents candidates without evidence; never flips the verdict |
+| **domain glossary** | Optional consumer file of product terms (common roots: `CONTEXT.md`, `docs/glossary.md`, `docs/domain.md`, `docs/ubiquitous-language.md`). Prefer terms for layer/slice/pilot naming when present. Missing glossary is normal — no warning spam; never enforces |
+| **two-axis done** | (1) architecture residual via status/doctor/compass (scan); (2) feature/ticket residual outside the package (process). **Enforce green ≠ feature done** |
 
 ## Public docs are product-only (from 4.4.0)
 
@@ -161,6 +174,10 @@ gate  →  same binary verdict on every parity-capable adapter
 | Name scan before process | “Scan: two layer import violations. Process: fix the Application→Domain edge first.” |
 | Label projection non-enforcing | “Regenerated agent contract for this package version. Enforcement remains ark-check / hooks / required CI.” |
 | Keep status counts honest | “Inventory and residual counts are evidence — not a health score.” |
+| Prefer deep modules | “Small interface, hide the complexity. Name the seam; test at the public interface.” |
+| Apply the deletion test | “If deleting this extract would vanish the complexity, skip the pass-through; if callers re-absorb it, keep the module.” |
+| Two-axis done | “Edges green and residual lenses quiet is architecture residual; ticket acceptance is a separate axis — Enforce green ≠ feature done.” |
+| Glossary when present | “Prefer `CONTEXT.md` / product glossary terms for pilot and layer names; missing glossary is fine.” |
 
 ## Avoid
 
@@ -190,6 +207,10 @@ gate  →  same binary verdict on every parity-capable adapter
 | Treating AGENTS.md / projection / skills as the write gate | Advisory surface; hard path is hooks / MCP prepare / required CI |
 | Free-generated sensor or rule ids outside the catalog | Guardrail catalog is closed; unknown codes are a bug, not creativity |
 | Numeric “architecture health” or trust score in status JSON | Counts and residuals yes; scored trust no |
+| Depth score / “deepness rank” / Excellent module bands | Depth is vocabulary for process judgment, not a score surface |
+| Extract “just for tests” without a deletion test | Pass-through modules add interface without locality or leverage |
+| Treat hot paths or deepening candidates as gate failures | Advisory residual only; missing git never invents hot paths |
+| Claim feature done solely because Enforce is green | Two-axis done: architecture residual and ticket residual are separate |
 
 ---
 

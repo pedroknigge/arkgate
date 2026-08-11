@@ -24,6 +24,12 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 
 **Where so the AI doesn’t mess up next time** — golden pattern + layer home before the write.
 
+## Deep modules (process)
+
+- Place so new code stays **deep**: one small public surface per concern; hide implementation details.
+- If the artifact is a port or adapter, **name the seam** and put the interface where callers should depend (usually Domain/Application), implementation on the outer side.
+- Do not scaffold empty pass-through modules that fail the **deletion test** (complexity would vanish if deleted).
+
 ## When / not when
 
 | Use `/ark-place` when… | Do **not** use it when… |
@@ -175,6 +181,7 @@ End with **exactly** these headings (markdown `###`):
 - **Result:** one-line outcome
 - **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
+- **Done axes:** architecture residual (status/doctor/compass) | feature/ticket residual (outside package). Enforce green ≠ feature done
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

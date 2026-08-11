@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-10 (Phase DF; **arkgate@4.5.0 published** on npm `latest`; `DF01`–`DF06` done)
+- **Status date:** 2026-08-10 (Phase DC; **arkgate@4.5.0 published** on npm `latest`; DF closed; deep-module coach `DC01`–`DC04` engineering queue)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -1208,9 +1208,91 @@ version/latest/gitHead = `4.5.0` / `4.5.0` / `d6f4359`; release notes
 [docs/releases/4.5.0.md](docs/releases/4.5.0.md) **Status: published**; claims matrix DF rows
 **0 Contradicted**.
 
-**Post-4.5 seed (not DF `todo`):** golden upgrade path matrix across hosts; deeper monorepo
-activation playbook on field demand; Z09/RB-11 remains the parked claim gate for retained
-adoption.
+**Post-4.5 seeds (not engineering `todo` until promoted):**
+
+| Seed | Plan | Notes |
+|------|------|-------|
+| Golden upgrade path matrix | — | Hosts × package managers self-service proof |
+| Monorepo activation playbook | — | Field demand |
+| Z09 / RB-11 | parked claim gate | Retained adoption + independent close |
+
+### Phase DC — Deep-module coach (post-4.5 process + advisory)
+
+Origin: post-**4.5.0** coach gap — agents need vocabulary for deep modules / seams / deletion
+test, optional hot-path + deepening **advisory** residual, consumer glossary process, and a
+two-axis done recipe (architecture residual vs feature residual). Plan:
+[docs/plans/deep-module-coach/README.md](docs/plans/deep-module-coach/README.md).
+
+Boundary (freezes held):
+
+- No numeric depth / architecture / principle **scores**; compass stays `notAScore`.
+- No new skill **names** (13 only deepen); no new ArkRules sensors; no LLM package verdict.
+- Hot-path / deepening never flip `valid` / strict-merge / `goal.met` / completeness green.
+- Missing git history → omit or `unavailable` honesty for hot paths; never invent.
+- Missing consumer glossary is normal (no warning spam).
+- Process vs scan dual depth: package stays deterministic gate only.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 131 | `DC01` | `done` | S | DF06 + 4.5.0 published | Product voice + skill deepen: seam / depth / deletion-test language |
+| 132 | `DC02` | `done` | M | `DC01` | Doctor + HTML advisory: hot paths + deepening candidates from existing evidence only |
+| 133 | `DC03` | `done` | S | `DC01` | Adopt / explore: consumer domain glossary hook (process only) |
+| 134 | `DC04` | `done` | S | `DC01` | Agent-guide + compact router: two-axis done recipe (gate green ≠ feature done) |
+
+**Preferred engineering order:** `DC01` → `DC02` → `DC03` → `DC04`. One `doing` at a time.
+
+**DC01 — Voice and skill deepen**
+
+- **Status:** `done` (2026-08-10)
+- **Depends on:** DF06 done; npm **4.5.0** on `latest`
+
+**Outcome:** product-voice lexicon (seam / depth / deletion-test) + existing 13 skill bodies
+(explore / think / place / fix / loop and Shape owners) teach deep modules, named seams,
+deletion test, and test-at-public-interface remediation prose. Agent-skills 1:1; no new skill
+names, ruleIds, or score language.
+
+**Evidence:** `docs/product-voice.md` lexicon + Do/Avoid rows; skills under `templates/skills/`
+regenerated 1:1 to agent-skills; remediation + adapter nextAction prose includes test at the
+public interface; `check:agent-skills` green.
+
+**DC02 — Hot-path and deepening advisory**
+
+- **Status:** `done` (2026-08-10)
+- **Depends on:** `DC01`
+
+**Outcome:** doctor JSON/human + HTML advisory residual for optional hot paths (recent churn
+heuristic) and deepening candidates projected only from existing smells / cohesion / compass
+evidence. Never a gate input. Incomplete git → unavailable/omit, never invent. Focused tests:
+no evidence → no fake candidates.
+
+**Evidence:** Domain `deepeningCoach.ts` + gen `deepening-coach.mjs`; Tooling
+`deep-module-coach.mjs`; doctor `deepModuleCoach` + HTML `data-advisory="deepModuleCoach"`;
+package-surface row; tests `deepeningCoach.test.ts` + `deepModuleCoach.test.ts` (no evidence →
+empty candidates; git missing → unavailable). Report parity includes key.
+
+**DC03 — Consumer domain glossary hook**
+
+- **Status:** `done` (2026-08-10)
+- **Depends on:** `DC01`
+
+**Outcome:** adopt/explore (and brownfield/use-develop as needed) instruct agents to detect a
+domain glossary when present, prefer terms for naming, call out conflicts. Missing glossary is
+normal. No enforcement from glossary content.
+
+**Evidence:** `/ark-adopt` + `/ark-explore` domain glossary process sections; brownfield +
+product-voice common paths; missing glossary is normal (no spam).
+
+**DC04 — Two-axis done recipe**
+
+- **Status:** `done` (2026-08-10)
+- **Depends on:** `DC01`
+
+**Outcome:** agent-guide + compact router (optional Completion bullet): (1) architecture residual
+via status/doctor/compass, (2) feature/ticket residual outside package. Enforce green ≠ feature
+done. No package LLM verdict; no second scoreboard.
+
+**Evidence:** agent-guide **Two-axis done recipe**; compact router in `ci-and-commands.mjs`;
+use.md restatement; Completion **Done axes** bullets on deepened skills.
 
 ### Z01 — Make release cleanup tool-owned and path-safe
 
@@ -3542,17 +3624,24 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: (none — Phase DF closed; arkgate@4.5.0 published on npm latest)
-  Epic: Phase DF — Domain Fitness & Session Truth → arkgate@4.5.0 published
-  Plan: docs/plans/domain-fitness-session-truth/README.md
-  Queue: DF01–DF06 done
-  Closed last: DF06 publish train (tag v4.5.0, OIDC 31434961289, npm 4.5.0, docs flip)
-  Next: owner prioritizes post-4.5 seed or Z09 — no new engineering epic started
+Engineering doing: (none — Phase DC engineering complete; not npm-published)
+  Epic: Phase DC — Deep-module coach (post-4.5 process + advisory)
+  Plan: docs/plans/deep-module-coach/README.md (Implemented; DC01–DC04 done)
+  Queue: DC01–DC04 done
+  Closed last: DC01–DC04 voice/skills, hot-path + deepening advisory, glossary hook, two-axis done
+  Next: owner publish train for deep-module coach (or leave prepared under Unreleased) — or
+    prioritize remaining post-4.5 seeds (golden upgrade matrix, monorepo activation playbook)
+    or parked Z09 / RB-11. No competing engineering epic until ROADMAP promotion.
+  Other seeds: golden upgrade path matrix · monorepo activation playbook (not yet promoted)
 Released baseline: npm arkgate@4.5.0 on latest (gitHead d6f4359; tag v4.5.0; 2026-08-10)
   Notes: docs/releases/4.5.0.md — Status: published
   Prior: 4.4.0 / 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
-Phase DF hard lines (held): TARGET LEVEL 4 hybrid; compass notAScore; honesty modes never invent green;
-  domain split required over raise-max-only; no new skill names/sensors; no scores;
-  no L5 monorepo; no runtime productization; no false hard write on soft hosts
+  Deep-module coach: implemented in tree; CHANGELOG Unreleased prepared — not on npm yet
+Phase DC freezes (held): no depth/principle scores; 13 skill names only; no new ArkRules sensors;
+  no LLM package verdict; hot-path/deepening never flip valid/strict-merge/goal.met;
+  missing git → unavailable honesty; missing glossary normal
+Phase DF hard lines (held through 4.5.0): TARGET LEVEL 4 hybrid; compass notAScore;
+  honesty modes never invent green; domain split over raise-max-only; no L5 monorepo;
+  no runtime productization; no false hard write on soft hosts
 Claim gate: Z09 (parked) — residual RB-11 only
 ```

@@ -35,6 +35,8 @@ export default defineConfig({
         'scripts/**',
         // Generated from the canonical Kernel engine; drift and parity tests still execute it.
         'bin/lib/analysis-engine.mjs',
+        // Generated from Domain pure (deepeningCoach.ts); unit tests cover the canonical source.
+        'bin/lib/deepening-coach.mjs',
         'bin/ark-check.mjs',
         'bin/ark-mcp.mjs',
         'bin/ark-mcp-runtime.mjs',

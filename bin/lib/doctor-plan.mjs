@@ -66,6 +66,10 @@ import {
   buildDoctorImprovementCompass,
   printImprovementCompassSection,
 } from './improvement-compass-doctor.mjs';
+import {
+  buildDeepModuleCoachAdvisory,
+  printDeepModuleCoachSection,
+} from './deep-module-coach.mjs';
 
 const color = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
@@ -660,6 +664,13 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     goldenPatternPresent: goldenPattern.present === true,
     arkRulesLoaded: rulesUnderContract?.active === true,
   });
+  // Deep-module coach: hot paths + deepening candidates — advisory only (notAScore).
+  const deepModuleCoach = buildDeepModuleCoachAdvisory(root, {
+    designSmells,
+    physicalCohesion: doctorAdvisories.physicalCohesion,
+    improvementCompass,
+    pilotLoop,
+  });
 
   if (asJson) {
     (options.writeJson ?? console.log)(
@@ -677,6 +688,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             designSmells,
             // Improvement compass (lenses; notAScore; never a gate input).
             improvementCompass,
+            // Deep-module coach (hot paths + deepening; notAScore; never a gate input).
+            deepModuleCoach,
             ...(options.designDelta ? { designDelta: options.designDelta } : {}),
             // Q01: primary next action when Shape residual dominates (null if not design-weak).
             postGreenPath,
@@ -870,6 +883,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   }
 
   printImprovementCompassSection(improvementCompass, { line, warn, ok, color });
+  printDeepModuleCoachSection(deepModuleCoach, { line, warn, ok, color });
 
   console.log('');
   console.log(color.bold('Design fitness'));

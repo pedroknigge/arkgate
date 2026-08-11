@@ -83,6 +83,21 @@ npx ark-check --doctor --json
 
 Product path: [use.md — Session recipe](use.md#session-recipe-agent-turn).
 
+### Two-axis done recipe
+
+Architecture residual and feature residual are **separate axes**. Never collapse them:
+
+| Axis | Where truth lives | Done means |
+|------|-------------------|------------|
+| **1. Architecture residual** | `ark status` / `ark-check --doctor` / improvement compass (scan) | Edges honest under the contract; residual lenses / design-weak addressed or deliberately deferred |
+| **2. Feature / ticket residual** | User brief, PR, tracker (process **outside** the package) | Requested behavior matches acceptance; product QA |
+
+**Enforce green ≠ feature done.** Green edges (or quiet residual lenses) only clear axis 1.
+Axis 2 is never a package LLM verdict or second scoreboard — agents and humans judge the ticket.
+
+Optional Completion bullet for skills: **Done axes** — architecture residual | feature residual.
+Compact router restates the same rule for day-zero installs.
+
 ### Improvement compass (doctor + status)
 
 `ark-check --doctor` (human + `--json`) projects residual architecture work as a closed set of

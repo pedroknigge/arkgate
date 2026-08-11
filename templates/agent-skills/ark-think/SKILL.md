@@ -28,6 +28,12 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 
 **2–3 options labeled by lens impact** (what residual improves / what stays out-of-scope).
 
+## Deep modules (process)
+
+- Prefer **deep modules** (small interface, hidden complexity). Never invent a depth score.
+- Label the **seam** on each option that introduces a port/adapter; apply the **deletion test** before pass-through extracts “for testability.”
+- Recommend tests **at the public interface** of the chosen seam.
+
 ## When / not when
 
 | Use `/ark-think` when… | Do **not** use it when… |
@@ -146,6 +152,7 @@ End with **exactly** these headings (markdown `###`):
 - **Result:** one-line outcome
 - **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
+- **Done axes:** architecture residual (status/doctor/compass) | feature/ticket residual (outside package). Enforce green ≠ feature done
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

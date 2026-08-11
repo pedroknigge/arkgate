@@ -5,6 +5,24 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+**Prepared** (implementation only; not published). Deep-module coach train: product vocabulary
+for deep modules / seams / deletion test, doctor+HTML advisory hot paths and deepening
+candidates, consumer glossary process hook, and two-axis done recipe. **No required config
+migration.** No new skill names, sensors, or scores. Freezes held.
+
+### Added
+
+- **Deep-module coach (advisory):** `ark-check --doctor` JSON `doctor.deepModuleCoach` + human
+  section + HTML `data-advisory="deepModuleCoach"`. Hot paths from bounded git history
+  (`unavailable` + empty when history missing — never invent). Deepening candidates projected
+  only from existing design smells / physical cohesion / pilot / residual compass evidence —
+  empty when no evidence. Always `notAScore: true`; never flips gate verdicts. Pure helper
+  `buildDeepeningCandidates` (+ CLI gen mirror).
+- **Product voice + skills:** lexicon for depth / seam / deletion test / test-at-public-interface
+  / domain glossary / two-axis done. Existing skills (explore, think, place, fix, loop, adopt)
+  deepened; agent-skills 1:1. Compact router + agent-guide **two-axis done** (Enforce green ≠
+  feature done). Remediation port/inject `nextAction` prose includes test at the public interface.
+
 ## 4.5.0 — 2026-08-10
 
 **Minor** over 4.4.0. Session control-plane honesty (status/MCP improvement compass with explicit

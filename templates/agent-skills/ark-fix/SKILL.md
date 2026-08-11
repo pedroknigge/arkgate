@@ -28,6 +28,12 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 
 **Name residual lenses** on each cluster (SoC, DIP, coupling, …). Still no weaken-gate to clear a lens.
 
+## Deep modules (process)
+
+- Prefer fixes that leave a **deep module** at a named **seam** (port in the owning layer; adapter outside).
+- Apply the **deletion test** before extracting a layer “just so tests can mock it.”
+- After a port/inject fix, **test at the public interface** of the seam (match remediation `nextAction` language), not only private internals.
+
 ## When / not when
 
 | Use `/ark-fix` when… | Do **not** use it when… |
@@ -198,6 +204,7 @@ End with **exactly** these headings (markdown `###`):
 - **Result:** one-line outcome
 - **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
+- **Done axes:** architecture residual (status/doctor/compass) | feature/ticket residual (outside package). Enforce green ≠ feature done
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

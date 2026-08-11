@@ -117,6 +117,11 @@ const MODULES = [
     label: 'improvement compass build + doctor formatters (notAScore projection)',
   },
   {
+    canonical: 'src/domain/deepeningCoach.ts',
+    derived: 'bin/lib/deepening-coach.mjs',
+    label: 'deepening candidates pure projection (deep-module coach; notAScore)',
+  },
+  {
     canonical: 'src/domain/agentProjection.ts',
     derived: 'bin/lib/agent-projection.mjs',
     label: 'version-matched agent contract projection (ACS04)',

@@ -242,18 +242,18 @@ function nextActionForDiagnostic(
       return 'Move the referenced type to a mutually allowed layer, use `import type`, then preflight again.';
     }
     if (violation.peerIsolation === true) {
-      return 'Extract the shared dependency to a shared layer, then preflight again.';
+      return 'Extract the shared dependency to a shared layer, test at the public interface, then preflight again.';
     }
-    return `Define a port in ${evidence.fromLayer ?? 'the source layer'}, inject the ${evidence.toLayer ?? 'outer-layer'} implementation, then preflight again.`;
+    return `Define a port in ${evidence.fromLayer ?? 'the source layer'}, inject the ${evidence.toLayer ?? 'outer-layer'} implementation, test at the public interface, then preflight again.`;
   }
   if (ruleId === 'FORBIDDEN_GLOBAL') {
-    return `Inject ${evidence.target ?? 'the capability'} through a port, then preflight again.`;
+    return `Inject ${evidence.target ?? 'the capability'} through a port, test at the public interface, then preflight again.`;
   }
   if (ruleId === 'CAPABILITY_VIOLATION') {
-    return `Define a ${text(violation.capability) ?? 'capability'} port in ${evidence.fromLayer ?? 'the walled layer'}, bind the implementation outside it, then preflight again.`;
+    return `Define a ${text(violation.capability) ?? 'capability'} port in ${evidence.fromLayer ?? 'the walled layer'}, bind the implementation outside it, test at the public interface, then preflight again.`;
   }
   if (ruleId === 'CIRCULAR_DEPENDENCY') {
-    return 'Extract the shared dependency into a third module, then preflight again.';
+    return 'Extract the shared dependency into a third module, test at the public interface, then preflight again.';
   }
   if (ruleId === 'RAW_EVENT_PUBLISH') return 'Publish through a registered intent creator, then run Ark again.';
   if (ruleId === 'PUBLISH_MISSING_SOURCE') return 'Add metadata.source to the publish call, then run Ark again.';

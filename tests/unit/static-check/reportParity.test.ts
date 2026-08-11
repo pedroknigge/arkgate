@@ -17,6 +17,7 @@ import ts from 'typescript';
 import { computeDoctorAdvisories } from '../../../bin/lib/doctor-advisories.mjs';
 // eslint-disable-next-line
 import { buildDoctorImprovementCompass } from '../../../bin/lib/improvement-compass-doctor.mjs';
+import { buildDeepModuleCoachAdvisory } from '../../../bin/lib/deep-module-coach.mjs';
 import { renderHtmlReport } from '../../../bin/lib/html-report.mjs';
 import {
   capabilityBadgesFor,
@@ -61,13 +62,20 @@ function project(root: string) {
 function renderFor(root: string) {
   const files = [path.join(root, 'src/domain/state.ts'), path.join(root, 'src/adapters/repo.ts')];
   const coverage = { governed: { classifiedFiles: 2, totalFiles: 2, percent: 100 }, layers: [] };
-  // Doctor always emits improvementCompass; report must carry the same key for parity.
+  // Doctor always emits improvementCompass + deepModuleCoach; report must match.
+  const improvementCompass = buildDoctorImprovementCompass({
+    designSmells: [],
+    violations: [],
+    physicalCohesion: undefined,
+  });
   const advisories = {
     ...computeDoctorAdvisories(root, CONFIG, coverage, CONFIG.rules, files, ts),
-    improvementCompass: buildDoctorImprovementCompass({
+    improvementCompass,
+    deepModuleCoach: buildDeepModuleCoachAdvisory(root, {
       designSmells: [],
-      violations: [],
-      physicalCohesion: undefined,
+      physicalCohesion: null,
+      improvementCompass,
+      pilotLoop: null,
     }),
   };
   const html = renderHtmlReport({
@@ -103,6 +111,7 @@ describe('X01 report parity — the standing rule', () => {
     expect(html).toContain('data-advisory="governanceWeight"');
     // Improvement compass is always present when doctor emits it — no score UI.
     expect(html).toContain('data-advisory="improvementCompass"');
+    expect(html).toContain('data-advisory="deepModuleCoach"');
     expect(html).toMatch(/not a score/i);
     expect(html).not.toMatch(/Excellent|score bar|\d+\s*\/\s*10/i);
   });
@@ -310,6 +319,9 @@ describe('X01 report parity — the standing rule', () => {
     expect(html).toContain('data-advisory="governanceWeight"');
     // Doctor always emits improvement compass; CLI --report must render it (not a score).
     expect(html).toContain('data-advisory="improvementCompass"');
-    expect(html).toMatch(/not a score/i);
+    // Deep-module coach advisory (hot paths + deepening); never a score / gate input.
+    expect(html).toContain('data-advisory="deepModuleCoach"');
+    expect(html).toMatch(/not a score|notAScore/i);
+    expect(html).toMatch(/Deep-module coach/i);
   });
 });

@@ -31,6 +31,18 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 
 **Spaghetti → honest contract.** SoC/DIP false-green STOP paths in plain language; residual lenses stay Incomplete until mapped.
 
+## Domain glossary (process)
+
+When present, prefer the consumer **domain glossary** for layer names, slice folders, intent names, and pilot wording:
+
+| Detect (no requirement) |
+|-------------------------|
+| `CONTEXT.md`, `docs/glossary.md`, `docs/domain.md`, `docs/ubiquitous-language.md`, `docs/CONTEXT.md` |
+
+- Prefer glossary terms over inventing parallel vocabulary.
+- Call out conflicts between glossary language and code reality (process judgment).
+- **Missing glossary is normal** — continue without warning spam. Never treat glossary prose as enforcement.
+
 ## When / not when
 
 | Use `/ark-adopt` when… | Do **not** use it when… |
@@ -184,6 +196,7 @@ End with **exactly** these headings (markdown `###`):
 - **Result:** one-line outcome
 - **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
+- **Done axes:** architecture residual (status/doctor/compass) | feature/ticket residual (outside package). Enforce green ≠ feature done
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
 

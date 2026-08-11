@@ -17,7 +17,7 @@
         "fromLayer": "DomainModel",
         "toLayer": "PersistenceAdapters"
       },
-      "nextAction": "Define a port in DomainModel, inject the PersistenceAdapters implementation, then preflight again."
+      "nextAction": "Define a port in DomainModel, inject the PersistenceAdapters implementation, test at the public interface, then preflight again."
     }
   ]
 }
