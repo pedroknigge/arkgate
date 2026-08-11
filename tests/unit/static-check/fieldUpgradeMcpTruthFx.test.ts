@@ -9,15 +9,22 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   buildPackageInstallSkipPayload,
+  compareSemverCore,
   formatPackageInstallDecisionHuman,
   packageInstallArgv,
   shouldSkipArkgateInstall,
 } from '../../../bin/ark-shared.mjs';
 import {
+  compareSemverCore as decisionCompare,
+  probeRegistryArkgateLatest,
+} from '../../../bin/lib/upgrade-package-decision.mjs';
+import {
   buildHostSelectionHonesty,
   buildPostUpgradeChecks,
   buildSkillDriftSummary,
   classifyManagedAsset,
+  formatHostSelectionHuman,
+  formatSkillDriftHuman,
   planManagedUpgrade,
 } from '../../../bin/lib/managed-upgrade.mjs';
 import { buildRulesInventory } from '../../../bin/lib/rules-inventory.mjs';
@@ -43,6 +50,88 @@ afterEach(() => {
 });
 
 describe('FX01–FX02 package install decision', () => {
+  it('compareSemverCore orders cores and ignores prerelease', () => {
+    expect(compareSemverCore('4.5.5', '4.5.6')).toBe(-1);
+    expect(compareSemverCore('4.5.6', '4.5.5')).toBe(1);
+    expect(compareSemverCore('4.5.6', '4.5.6')).toBe(0);
+    expect(decisionCompare('v4.5.6-beta.1', '4.5.6')).toBe(0);
+    expect(compareSemverCore('4.5.6+build', '4.5.6')).toBe(0);
+  });
+
+  it('NOT_INSTALLED and UNREADABLE do not skip', () => {
+    const missing = tempRoot('ark-fx01-miss-');
+    write(missing, 'package.json', JSON.stringify({ name: 'm', private: true }));
+    expect(shouldSkipArkgateInstall(missing, '4.5.6', { skipRegistryProbe: true })).toMatchObject({
+      skip: false,
+      reasonCode: 'NOT_INSTALLED',
+    });
+
+    const bad = tempRoot('ark-fx01-bad-');
+    write(bad, 'package.json', JSON.stringify({ name: 'b', private: true }));
+    write(bad, 'node_modules/arkgate/package.json', '{not-json');
+    expect(shouldSkipArkgateInstall(bad, '4.5.6', { skipRegistryProbe: true })).toMatchObject({
+      skip: false,
+      reasonCode: 'UNREADABLE',
+    });
+  });
+
+  it('VERSION_DIFFERS when CLI ≠ installed', () => {
+    const root = tempRoot('ark-fx01-diff-');
+    write(root, 'package.json', JSON.stringify({ name: 'd', private: true }));
+    write(
+      root,
+      'node_modules/arkgate/package.json',
+      JSON.stringify({ name: 'arkgate', version: '4.3.0' })
+    );
+    expect(
+      shouldSkipArkgateInstall(root, '4.5.6', { registryLatest: '4.5.6' })
+    ).toMatchObject({
+      skip: false,
+      reasonCode: 'VERSION_DIFFERS',
+      installedVersion: '4.3.0',
+    });
+  });
+
+  it('getRegistryLatest throw maps to REGISTRY_UNAVAILABLE when versions match', () => {
+    const root = tempRoot('ark-fx01-throw-');
+    write(root, 'package.json', JSON.stringify({ name: 't', private: true }));
+    write(
+      root,
+      'node_modules/arkgate/package.json',
+      JSON.stringify({ name: 'arkgate', version: '4.5.6' })
+    );
+    expect(
+      shouldSkipArkgateInstall(root, '4.5.6', {
+        getRegistryLatest: () => {
+          throw new Error('network');
+        },
+      })
+    ).toMatchObject({
+      skip: true,
+      reasonCode: 'REGISTRY_UNAVAILABLE',
+    });
+  });
+
+  it('probeRegistryArkgateLatest parses stdout and null on failure', () => {
+    expect(
+      probeRegistryArkgateLatest({
+        run: () => ({ status: 0, stdout: '4.5.6\n' }),
+      })
+    ).toBe('4.5.6');
+    expect(
+      probeRegistryArkgateLatest({
+        run: () => ({ status: 1, stdout: '', stderr: 'fail' }),
+      })
+    ).toBe(null);
+    expect(
+      probeRegistryArkgateLatest({
+        run: () => {
+          throw new Error('spawn failed');
+        },
+      })
+    ).toBe(null);
+  });
+
   it('buildPackageInstallSkipPayload exposes recovery command', () => {
     const root = tempRoot('ark-fx02-');
     write(root, 'package.json', JSON.stringify({ name: 'fx02', private: true }));
@@ -63,7 +152,7 @@ describe('FX01–FX02 package install decision', () => {
     expect(lines.some((l) => /behind registry/i.test(l))).toBe(true);
   });
 
-  it('ALREADY_CURRENT human line mentions skip', () => {
+  it('ALREADY_CURRENT and REGISTRY_UNAVAILABLE human lines', () => {
     const root = tempRoot('ark-fx02-cur-');
     write(root, 'package.json', JSON.stringify({ name: 'fx02c', private: true }));
     write(
@@ -78,6 +167,23 @@ describe('FX01–FX02 package install decision', () => {
     expect(payload.packageInstallSkipped).toBe(true);
     expect(payload.reasonCode).toBe('ALREADY_CURRENT');
     expect(formatPackageInstallDecisionHuman(payload).join('\n')).toMatch(/skipping install/i);
+
+    const offline = formatPackageInstallDecisionHuman({
+      packageInstallSkipped: true,
+      reasonCode: 'REGISTRY_UNAVAILABLE',
+      installedVersion: '4.5.5',
+      suggestedInstallCmd: 'npm install -D arkgate@latest',
+    });
+    expect(offline.join('\n')).toMatch(/registry latest unknown/i);
+    expect(offline.join('\n')).toMatch(/npm install -D arkgate@latest/);
+
+    const other = formatPackageInstallDecisionHuman({
+      packageInstallSkipped: false,
+      reasonCode: 'VERSION_DIFFERS',
+      suggestedInstallCmd: 'npm install -D arkgate@latest',
+    });
+    expect(other.join('\n')).toMatch(/Updating ArkGate/);
+    expect(formatPackageInstallDecisionHuman(null)).toEqual([]);
   });
 });
 
@@ -138,6 +244,50 @@ describe('FX05 post-upgrade checks', () => {
     expect(checks.checks.some((c) => c.id === 'package-pin-cli' && c.ok === true)).toBe(true);
     expect(checks.mcpNote).toMatch(/restart|MCP|expectedRoot/i);
   });
+
+  it('reports pin mismatch and verification failure honestly', () => {
+    const root = tempRoot('ark-fx05-bad-');
+    write(root, 'package.json', JSON.stringify({ name: 'fx05b', private: true }));
+    write(
+      root,
+      'node_modules/arkgate/package.json',
+      JSON.stringify({ name: 'arkgate', version: '4.3.0' })
+    );
+    const checks = buildPostUpgradeChecks(root, {
+      cliVersion: '4.5.6',
+      verification: { mode: 'strict-merge', exitCode: 1 },
+      dualTruth: { dualTruth: true, note: 'pin lag' },
+    });
+    expect(checks.checks.find((c) => c.id === 'package-pin-cli')?.ok).toBe(false);
+    expect(checks.checks.find((c) => c.id === 'architecture-verification')?.ok).toBe(false);
+    expect(checks.checks.find((c) => c.id === 'package-version-truth')?.ok).toBe(false);
+  });
+
+  it('handles missing install without inventing pin ok', () => {
+    const root = tempRoot('ark-fx05-none-');
+    write(root, 'package.json', JSON.stringify({ name: 'fx05n', private: true }));
+    const checks = buildPostUpgradeChecks(root, { cliVersion: '4.5.6' });
+    expect(checks.checks.find((c) => c.id === 'package-pin-cli')?.ok).toBe(null);
+  });
+});
+
+describe('FX03 skill drift formatters', () => {
+  it('formats skill drift and host selection human lines', () => {
+    const empty = buildSkillDriftSummary({ assets: [] });
+    expect(empty.skillCount).toBe(0);
+    expect(formatSkillDriftHuman(empty).join('\n')).toMatch(/Skill drift/);
+    expect(formatSkillDriftHuman(null)).toEqual([]);
+
+    const customizedOnly = buildSkillDriftSummary({
+      assets: [{ kind: 'skill', state: 'customized', path: 's', willApply: false }],
+    });
+    expect(customizedOnly.note).toMatch(/refresh-skills|customized/i);
+
+    const host = buildHostSelectionHonesty({ hosts: [] });
+    expect(formatHostSelectionHuman(host).length).toBeGreaterThan(0);
+    expect(formatHostSelectionHuman(null)).toEqual([]);
+    expect(formatHostSelectionHuman({})).toEqual([]);
+  });
 });
 
 describe('FX07 host selection honesty', () => {
@@ -161,6 +311,9 @@ describe('FX09 inventory UX message noise', () => {
           export const ERROR_MESSAGE_CHECKOUT = "Something went wrong with your order.";
           export const EMPTY_STATE_TEXT = "No items yet — add a product to continue.";
           export const TOAST_MSG_SAVED = "Saved successfully!";
+          export const USER_MSG_WELCOME = "Welcome back.";
+          export const HINT_HELP_TEXT = "Tap to continue.";
+          export const ORDER_STATUS_OPEN = "order_open_state_token";
         `,
       },
       governedLayerByFile: {
@@ -169,9 +322,11 @@ describe('FX09 inventory UX message noise', () => {
     });
     const magics = inventory.candidates.filter((c) => c.kind === 'magic-business-constant');
     expect(magics.some((c) => /MAX_CART_SIZE/.test(c.message))).toBe(true);
-    expect(magics.some((c) => /ERROR_MESSAGE|EMPTY_STATE|TOAST_MSG/i.test(c.message))).toBe(
+    expect(magics.some((c) => /ERROR_MESSAGE|EMPTY_STATE|TOAST_MSG|USER_MSG|HINT_HELP/i.test(c.message))).toBe(
       false
     );
+    // Domain status token with long non-sentence string still surfaces as a pilot seed.
+    expect(magics.some((c) => /ORDER_STATUS_OPEN/.test(c.message))).toBe(true);
   });
 });
 
