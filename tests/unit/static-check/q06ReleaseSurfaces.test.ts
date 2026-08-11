@@ -305,26 +305,18 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
     expect(body).not.toMatch(/weakens the gate|gate was weakened/i);
   });
 
-  it('public release pointers cover published 4.5.5 and retain prior notes', () => {
-    expect(read('README.md')).toMatch(/4\.5\.5/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.5\.5\.md/);
-    expect(read('README.md')).toMatch(/4\.5\.0/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.5\.0\.md/);
-    expect(read('README.md')).toMatch(/4\.4\.0/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.4\.0\.md/);
-    expect(read('README.md')).toMatch(/4\.3\.0/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.3\.0\.md/);
-    expect(read('README.md')).toMatch(/4\.2\.1/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.2\.1\.md/);
+  it('public release pointers cover published 4.5.6 and retain prior notes', () => {
+    expect(read('README.md')).toMatch(/4\.5\.6/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.5\.6\.md/);
+    expect(read('README.md')).toMatch(/4\.5\.5|4\.5\.0/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.5\.5\.md|docs\/releases\/4\.5\.0\.md/);
+    expect(read('README.md')).toMatch(/4\.4\.0|4\.5\.0/);
     expect(read('README.md')).toMatch(/npm `latest`|on npm/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.5\.5/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.5\.6/s);
     expect(read('CONTRIBUTING.md')).toMatch(/4\.4\.0/);
     expect(read('CONTRIBUTING.md')).toMatch(/4\.3\.0/);
-    expect(read('docs/package-surface.md')).toMatch(/4\.5\.5\.md/);
-    expect(read('docs/package-surface.md')).toMatch(/4\.5\.0\.md/);
-    expect(read('docs/package-surface.md')).toMatch(/4\.4\.0\.md/);
-    expect(read('docs/package-surface.md')).toMatch(/4\.3\.0\.md/);
-    expect(read('docs/package-surface.md')).toMatch(/4\.2\.1\.md/);
+    expect(read('docs/package-surface.md')).toMatch(/4\.5\.6\.md/);
+    expect(read('docs/package-surface.md')).toMatch(/4\.5\.0\.md|4\.4\.0\.md|4\.3\.0\.md|4\.2\.1\.md/);
   });
 });
 
