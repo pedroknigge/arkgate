@@ -83,6 +83,27 @@ npx ark-check --doctor --json
 
 Product path: [use.md — Session recipe](use.md#session-recipe-agent-turn).
 
+### Multi-project MCP and upgrade honesty (4.5.6)
+
+One human often has **N checkouts** and **N package pins**. Product rules:
+
+| Rule | Why |
+|------|-----|
+| One checkout = one `project.expectedRoot` | Identity (WI01) fail-closes cross-project evidence when used correctly |
+| After `npm install arkgate@…`, restart/retarget Ark MCP | Process `arkgateVersion` is startup-loaded; long-lived MCP can lag install |
+| Read `processPackage` on every tool response | `processPackageMismatch` / `processStale` + `nextAction` when process ≠ project install |
+| Prefer project-local CLI until versions align | CLI always available; MCP analysis is not “fully current” while process is stale |
+| Upgrade each package that pins arkgate | Monorepo “done” is not one package’s pin |
+| Registry-aware `ark upgrade --apply` | Does not false-skip when CLI == pin but registry is ahead; skip JSON has `reasonCode` + `suggestedInstallCmd` |
+| Skills: `skillDrift` + optional `--refresh-skills` | Customized skill bodies stay preserved unless you opt in; never silent overwrite of true edits |
+
+```bash
+npx arkgate upgrade --json          # skillDrift, whatsNew, hostSelection
+npx arkgate upgrade --apply         # registry-aware package step, then re-preview
+# digest-bound apply + optional skill refresh:
+npx arkgate upgrade --apply --no-install --plan-digest sha256:… --refresh-skills
+```
+
 ### Two-axis done recipe
 
 Architecture residual and feature residual are **separate axes**. Never collapse them:

@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-11 (Phase DC; **arkgate@4.5.5 published** on npm `latest`; deep-module coach `DC01`–`DC04` done)
+- **Status date:** 2026-08-11 (Phase DC shipped in **arkgate@4.5.5** published; Phase FX seed `field-upgrade-mcp-truth` ready to promote)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -1208,13 +1208,40 @@ version/latest/gitHead = `4.5.0` / `4.5.0` / `d6f4359`; release notes
 [docs/releases/4.5.0.md](docs/releases/4.5.0.md) **Status: published**; claims matrix DF rows
 **0 Contradicted**.
 
-**Post-4.5 seeds (not engineering `todo` until promoted):**
+**Post-4.5 / post-4.5.5 seeds (not engineering `todo` until promoted):**
 
 | Seed | Plan | Notes |
 |------|------|-------|
-| Golden upgrade path matrix | — | Hosts × package managers self-service proof |
-| Monorepo activation playbook | — | Field demand |
+| **Field upgrade & multi-project MCP truth** | [docs/plans/field-upgrade-mcp-truth/README.md](docs/plans/field-upgrade-mcp-truth/README.md) | **Primary next epic seed → target npm 4.5.6.** `FX01`–`FX09` product/field fixes; **`FX10` `/review`**; **`FX11` docs/audit prepare 4.5.6**; **`FX12` publish everywhere + arkgate-site**. Origin: Superlock/Predial/WHASHARED field sessions |
+| Golden upgrade path matrix | — | Hosts × package managers self-service proof (after FX01–FX02) |
+| Monorepo activation playbook | — | Field demand; coordinates with FX06/FX07 multi-package |
 | Z09 / RB-11 | parked claim gate | Retained adoption + independent close |
+
+
+### Phase FX — Field upgrade & multi-project MCP truth (→ 4.5.6)
+
+Origin: field sessions Superlock/Predial/WHASHARED on `/ark-upgrade` 4.3→4.5.5 and multi-project MCP.
+Plan: [docs/plans/field-upgrade-mcp-truth/README.md](docs/plans/field-upgrade-mcp-truth/README.md).
+
+Boundary (freezes held): no scores; 13 skill names; no silent customized overwrite; no silent
+multi-project MCP retarget without handshake; soft hosts stay advisory; advisory never flips gates.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 135 | `FX01` | `done` | M | 4.5.5 published | Registry-aware package bump (do not skip when behind target/registry) |
+| 136 | `FX02` | `done` | S | `FX01` | Skip install JSON + human suggestedInstallCmd / reasonCode |
+| 137 | `FX03` | `done` | M | `FX02` | Skill content drift honesty on upgrade preview |
+| 138 | `FX04` | `done` | M | `FX03` | Opt-in skill refresh without silent true-edit overwrite |
+| 139 | `FX05` | `done` | S | `FX02` | Post-upgrade verification block (advisory) |
+| 140 | `FX06` | `done` | L | `FX02` | MCP multi-project / process version mismatch honesty |
+| 141 | `FX07` | `done` | S | `FX02` | Active host vs managed tools honesty |
+| 142 | `FX08` | `done` | S | `FX02` | whatsNew early on preview |
+| 143 | `FX09` | `done` | S | `FX02` | Inventory message-string noise downrank |
+| 144 | `FX10` | `done` | M | FX01–FX09 | Pre-landing `/review` clean |
+| 145 | `FX11` | `done` | M | `FX10` | Prepare arkgate@4.5.6 (prepared, not published) |
+| 146 | `FX12` | `doing` | L | `FX11` | Publish npm/MCP + docs flip + arkgate-site 4.5.6 |
+
+**Preferred order:** FX01→FX12. One `doing` at a time.
 
 ### Phase DC — Deep-module coach (post-4.5 process + advisory)
 
@@ -3624,24 +3651,21 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: (none — Phase DC engineering complete; not npm-published)
-  Epic: Phase DC — Deep-module coach (post-4.5 process + advisory)
-  Plan: docs/plans/deep-module-coach/README.md (Implemented; DC01–DC04 done)
-  Queue: DC01–DC04 done
-  Closed last: DC01–DC04 voice/skills, hot-path + deepening advisory, glossary hook, two-axis done
-  Next: owner prioritizes remaining post-4.5 seeds (upgrade matrix, monorepo activation playbook) or Z09/RB-11 — Phase DC shipped in 4.5.5
-    prioritize remaining post-4.5 seeds (golden upgrade matrix, monorepo activation playbook)
-    or parked Z09 / RB-11. No competing engineering epic until ROADMAP promotion.
-  Other seeds: golden upgrade path matrix · monorepo activation playbook (not yet promoted)
-Released baseline: npm arkgate@4.5.0 on latest (gitHead d6f4359; tag v4.5.0; 2026-08-10)
-  Notes: docs/releases/4.5.0.md — Status: published
-  Prior: 4.4.0 / 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
-  Deep-module coach: implemented in tree; CHANGELOG Unreleased prepared — not on npm yet
-Phase DC freezes (held): no depth/principle scores; 13 skill names only; no new ArkRules sensors;
-  no LLM package verdict; hot-path/deepening never flip valid/strict-merge/goal.met;
-  missing git → unavailable honesty; missing glossary normal
-Phase DF hard lines (held through 4.5.0): TARGET LEVEL 4 hybrid; compass notAScore;
-  honesty modes never invent green; domain split over raise-max-only; no L5 monorepo;
+Engineering doing: (none — promote Phase FX before coding)
+  Epic candidate: Phase FX — Field upgrade & multi-project MCP truth
+  Plan: docs/plans/field-upgrade-mcp-truth/README.md (Seeded; FX01–FX12; target 4.5.6)
+  Queue: not in todo until owner promotes; preferred order FX01→FX12
+  Closed last: Phase DC shipped in arkgate@4.5.5 (DC01–DC04); deep-module coach + upgrade whatsNew
+  Next: promote FX01+FX02 (P0 upgrade), FX06 (MCP multi-project), FX03–FX05, FX07–FX09;
+    then FX10 `/review` → FX11 prepare 4.5.6 → FX12 publish + site.
+  Other seeds: golden upgrade path matrix · monorepo activation playbook · Z09/RB-11 parked
+Released baseline: npm arkgate@4.5.5 on latest (gitHead 6c31dbf; tag v4.5.5; 2026-08-11)
+  Notes: docs/releases/4.5.5.md — Status: published
+  Prior: 4.5.0 / 4.4.0 / 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
+Phase FX freezes (when promoted): no scores; 13 skill names; no silent customized overwrite;
+  no silent multi-project MCP retarget without handshake; soft hosts stay advisory
+Phase DC freezes (held): no depth/principle scores; coach/compass notAScore; never flip gates
+Phase DF hard lines (held): TARGET LEVEL 4 hybrid; honesty modes never invent green;
   no runtime productization; no false hard write on soft hosts
 Claim gate: Z09 (parked) — residual RB-11 only
 ```

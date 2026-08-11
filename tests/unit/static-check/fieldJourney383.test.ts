@@ -79,12 +79,53 @@ describe('3.8.3 packageInstallArgv workspace awareness', () => {
       'node_modules/arkgate/package.json',
       JSON.stringify({ name: 'arkgate', version: '3.8.2' }, null, 2)
     );
-    expect(shouldSkipArkgateInstall(root, '3.8.2')).toMatchObject({
+    // FX01: inject registry so CI never depends on live npm view.
+    expect(
+      shouldSkipArkgateInstall(root, '3.8.2', { registryLatest: '3.8.2' })
+    ).toMatchObject({
       skip: true,
       installedVersion: '3.8.2',
       reason: 'already-current',
+      reasonCode: 'ALREADY_CURRENT',
     });
-    expect(shouldSkipArkgateInstall(root, '3.8.3').skip).toBe(false);
+    expect(shouldSkipArkgateInstall(root, '3.8.3', { registryLatest: '3.8.3' }).skip).toBe(
+      false
+    );
+  });
+
+  it('FX01 does not skip when registry is ahead of installed==CLI', () => {
+    const root = tempRoot('ark-fx01-behind-');
+    write(root, 'package.json', JSON.stringify({ name: 'behind', private: true }, null, 2));
+    write(
+      root,
+      'node_modules/arkgate/package.json',
+      JSON.stringify({ name: 'arkgate', version: '4.3.0' }, null, 2)
+    );
+    expect(
+      shouldSkipArkgateInstall(root, '4.3.0', { registryLatest: '4.5.5' })
+    ).toMatchObject({
+      skip: false,
+      reasonCode: 'BEHIND_REGISTRY',
+      installedVersion: '4.3.0',
+      registryLatest: '4.5.5',
+    });
+  });
+
+  it('FX01 skips with REGISTRY_UNAVAILABLE honesty when probe fails and versions match', () => {
+    const root = tempRoot('ark-fx01-offline-');
+    write(root, 'package.json', JSON.stringify({ name: 'offline', private: true }, null, 2));
+    write(
+      root,
+      'node_modules/arkgate/package.json',
+      JSON.stringify({ name: 'arkgate', version: '4.5.5' }, null, 2)
+    );
+    expect(
+      shouldSkipArkgateInstall(root, '4.5.5', { getRegistryLatest: () => null })
+    ).toMatchObject({
+      skip: true,
+      reasonCode: 'REGISTRY_UNAVAILABLE',
+      installedVersion: '4.5.5',
+    });
   });
 });
 

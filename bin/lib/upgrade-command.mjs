@@ -4,7 +4,11 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
-import { arkCommand } from '../ark-shared.mjs';
+import {
+  arkCommand,
+  buildPackageInstallSkipPayload,
+  formatPackageInstallDecisionHuman,
+} from '../ark-shared.mjs';
 import { describePackageVersionDualTruth } from './field-install.mjs';
 import { __packageRoot } from './gate-files.mjs';
 import {
@@ -12,6 +16,9 @@ import {
   managedUpgradeJson,
   planManagedUpgrade,
   renderManagedUpgrade,
+  buildSkillDriftSummary,
+  buildPostUpgradeChecks,
+  buildHostSelectionHonesty,
 } from './managed-upgrade.mjs';
 
 function installedCli(root) {
@@ -277,6 +284,7 @@ function previewArgs(args) {
   const next = ['upgrade', '--root', args.root, '--no-install'];
   if (args.tools) next.push('--tools', args.tools);
   if (args.acceptConflicts) next.push('--accept-conflicts');
+  if (args.refreshSkills) next.push('--refresh-skills');
   if (!args.strict) next.push('--no-strict');
   if (args.json) next.push('--json');
   return next;
@@ -299,6 +307,7 @@ export function buildUpgradeNextCommand(args, planDigest) {
   if (!args.install && planDigest) flagParts.push('--plan-digest', planDigest);
   if (args.tools) flagParts.push('--tools', args.tools);
   if (args.acceptConflicts) flagParts.push('--accept-conflicts');
+  if (args.refreshSkills) flagParts.push('--refresh-skills');
   if (!args.strict) flagParts.push('--no-strict');
   if (args.json) flagParts.push('--json');
   const argsStr = flagParts.map(quote).join(' ');
@@ -357,19 +366,91 @@ export function runUpgradeCommand(args, dependencies) {
   }
 
   if (args.apply && args.install) {
-    const skip =
+    // FX01–FX02: registry-aware skip + structured skip truth (injectable probe for tests).
+    const skipOptions = {
+      ...(dependencies.registryLatest !== undefined
+        ? { registryLatest: dependencies.registryLatest }
+        : {}),
+      ...(typeof dependencies.getRegistryLatest === 'function'
+        ? { getRegistryLatest: dependencies.getRegistryLatest }
+        : {}),
+      ...(dependencies.skipRegistryProbe === true ? { skipRegistryProbe: true } : {}),
+    };
+    const decisionRaw =
       typeof dependencies.shouldSkipArkgateInstall === 'function'
-        ? dependencies.shouldSkipArkgateInstall(root, dependencies.cliVersion)
-        : { skip: false };
-    if (skip.skip) {
+        ? dependencies.shouldSkipArkgateInstall(root, dependencies.cliVersion, skipOptions)
+        : {
+            skip: false,
+            reasonCode: 'NOT_INSTALLED',
+            installedVersion: null,
+            registryLatest: null,
+            cliVersion: dependencies.cliVersion ?? null,
+            reason: 'not-installed',
+          };
+    // Normalize injectable mocks that only return { skip, installedVersion }.
+    const decision = {
+      ...decisionRaw,
+      reasonCode:
+        decisionRaw.reasonCode ||
+        (decisionRaw.skip
+          ? 'ALREADY_CURRENT'
+          : decisionRaw.installedVersion
+            ? 'VERSION_DIFFERS'
+            : 'NOT_INSTALLED'),
+      reason:
+        decisionRaw.reason ||
+        (decisionRaw.skip ? 'already-current' : 'version-differs'),
+      cliVersion: decisionRaw.cliVersion ?? dependencies.cliVersion ?? null,
+      registryLatest: decisionRaw.registryLatest ?? null,
+    };
+    const installArgv =
+      typeof dependencies.packageInstallArgv === 'function'
+        ? dependencies.packageInstallArgv
+        : null;
+    const targetSpec =
+      decision.registryLatest && decision.reasonCode === 'BEHIND_REGISTRY'
+        ? decision.registryLatest
+        : 'latest';
+    function fallbackPayload(spec = targetSpec, skipped = decision.skip === true) {
+      return {
+        schemaVersion: '1.0',
+        notAScore: true,
+        packageInstallSkipped: skipped,
+        reasonCode: decision.reasonCode || 'UNKNOWN',
+        reason: decision.reason || null,
+        installedVersion: decision.installedVersion,
+        cliVersion: decision.cliVersion,
+        registryLatest: decision.registryLatest,
+        suggestedInstallCmd: `npm install -D arkgate@${spec}`,
+      };
+    }
+    if (decision.skip) {
+      // Skip path must not call packageInstallArgv or spawn install (legacy contract).
+      // Recovery command uses a portable default; agents can still read reasonCode.
       if (!args.json) {
-        console.log(
-          `Package already at arkgate@${skip.installedVersion}; skipping install and recomputing managed preview.`
-        );
+        for (const line of formatPackageInstallDecisionHuman(fallbackPayload())) {
+          console.log(line);
+        }
       }
     } else {
-      const [command, commandArgs] = dependencies.packageInstallArgv(root);
-      if (!args.json) console.log(`Updating ArkGate: ${command} ${commandArgs.join(' ')}`);
+      const [command, commandArgs] = installArgv
+        ? installArgv(root, targetSpec)
+        : ['npm', ['install', '-D', `arkgate@${targetSpec}`]];
+      const payload = installArgv
+        ? {
+            ...buildPackageInstallSkipPayload(decision, root, installArgv),
+            packageInstallSkipped: false,
+            suggestedInstallCmd: `${command} ${commandArgs.join(' ')}`,
+          }
+        : {
+            ...fallbackPayload(targetSpec, false),
+            suggestedInstallCmd: `${command} ${commandArgs.join(' ')}`,
+          };
+      if (!args.json) {
+        for (const line of formatPackageInstallDecisionHuman(payload)) {
+          console.log(line);
+        }
+      }
       const install = spawnSync(command, commandArgs, {
         cwd: root,
         stdio: args.json ? ['ignore', 'pipe', 'pipe'] : 'inherit',
@@ -378,6 +459,19 @@ export function runUpgradeCommand(args, dependencies) {
       const exitCode = install.status ?? 1;
       if (exitCode !== 0) {
         if (args.json && install.stderr) console.error(install.stderr.trim());
+        if (args.json) {
+          console.log(
+            JSON.stringify(
+              {
+                packageInstallFailed: true,
+                exitCode,
+                ...payload,
+              },
+              null,
+              2
+            )
+          );
+        }
         const recovery = `${command} ${commandArgs.join(' ')}`;
         const rePreview = arkCommand(
           root,
@@ -420,18 +514,24 @@ export function runUpgradeCommand(args, dependencies) {
   const plan = planManagedUpgrade(root, {
     tools: args.tools,
     acceptConflicts: args.acceptConflicts,
+    refreshSkills: args.refreshSkills === true,
   });
   if (!args.apply) {
     const wouldWrite = plan.summary?.wouldWrite ?? 0;
     const blocked = plan.summary?.blocked ?? 0;
     const needsApply = wouldWrite > 0 || blocked > 0;
     const command = buildUpgradeNextCommand(args, plan.planDigest);
+    const skillDrift = buildSkillDriftSummary(plan);
+    const hostHonesty = buildHostSelectionHonesty(plan);
     if (args.json) {
       // Always expose nextCommand for digest-bound content/manifest apply;
       // nothingToApply flags when content writes are zero so UIs do not urge apply.
+      // FX03 skillDrift + FX07 hostSelection + FX08 whatsNew always on preview.
       console.log(
         managedUpgradeJson(plan, {
           nextCommand: command,
+          skillDrift,
+          hostSelection: hostHonesty,
           ...(needsApply ? {} : { nothingToApply: true }),
           // Surface dual-truth when managed assets refresh without a package pin bump.
           ...(args.install === false
@@ -449,6 +549,8 @@ export function runUpgradeCommand(args, dependencies) {
             ? `Update the package and recompute this preview with: ${command}`
             : `Apply the exact preview with: ${command}`
           : undefined,
+        skillDrift,
+        hostSelection: hostHonesty,
       });
       if (args.install === false) {
         console.log(
@@ -486,12 +588,23 @@ export function runUpgradeCommand(args, dependencies) {
     ? { mode: 'strict-merge', ...verify(root, args.json, dependencies.arkCheck, dependencies.runArkCheck) }
     : { mode: 'skipped', exitCode: 0 };
   const dualTruth = describePackageVersionDualTruth(root);
+  const skillDrift = buildSkillDriftSummary(applied);
+  const hostHonesty = buildHostSelectionHonesty(applied);
+  // FX05: post-upgrade verification block (advisory, notAScore).
+  const postUpgradeChecks = buildPostUpgradeChecks(root, {
+    cliVersion: dependencies.cliVersion,
+    verification,
+    dualTruth,
+  });
   if (args.json) {
     console.log(
       JSON.stringify(
         {
           ...applied,
           verification,
+          skillDrift,
+          hostSelection: hostHonesty,
+          postUpgradeChecks,
           ...(args.install === false || dualTruth.dualTruth
             ? {
                 packageInstallSkipped: args.install === false,
@@ -513,7 +626,7 @@ export function runUpgradeCommand(args, dependencies) {
       )
     );
   } else {
-    renderManagedUpgrade(applied);
+    renderManagedUpgrade(applied, { skillDrift, hostSelection: hostHonesty });
     if (!args.strict) console.log('Architecture verification skipped (--no-strict).');
     if (args.install === false || dualTruth.dualTruth) {
       console.log(
@@ -521,6 +634,14 @@ export function runUpgradeCommand(args, dependencies) {
           ? dualTruth.note
           : 'Note: --no-install left package.json arkgate pin unchanged. Managed assets match this CLI; bump the pin (or re-run without --no-install) so CI resolves the same version.'
       );
+    }
+    console.log('Post-upgrade checks (advisory — not a score; never flips the gate):');
+    for (const check of postUpgradeChecks.checks ?? []) {
+      const mark = check.ok === true ? 'ok' : check.ok === false ? 'attention' : 'note';
+      console.log(`  [${mark}] ${check.id}: ${check.detail}`);
+    }
+    if (postUpgradeChecks.mcpNote) {
+      console.log(`  [note] mcp: ${postUpgradeChecks.mcpNote}`);
     }
   }
   return verification.exitCode;
