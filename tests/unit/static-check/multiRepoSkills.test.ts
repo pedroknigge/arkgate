@@ -876,13 +876,14 @@ describe('multi-repo skill installation', () => {
           "const fs = require('node:fs');",
           'const file = process.argv[1];',
           "fs.writeFileSync(file, `${JSON.stringify({ token: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', pid: process.pid, createdAtMs: Date.now() })}\\n`);",
-          'setTimeout(() => { try { fs.unlinkSync(file); } catch {} }, 250);',
+          // Hold long enough for installCatalog wait/retry on slow CI (macOS runners).
+          'setTimeout(() => { try { fs.unlinkSync(file); } catch {} }, 900);',
         ].join(' '),
         lock,
       ],
       { stdio: 'ignore' }
     );
-    const deadline = Date.now() + 1_000;
+    const deadline = Date.now() + 2_000;
     while (!fs.existsSync(lock) && Date.now() < deadline) {
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
     }
