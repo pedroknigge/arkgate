@@ -5,6 +5,50 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.5.6 — 2026-08-11
+
+**Patch** over **4.5.5**. Field upgrade & multi-project MCP truth (Phase FX): registry-aware
+package install, structured skip recovery, skill drift + opt-in refresh, post-upgrade checks,
+MCP process package honesty, host selection notes, early whatsNew, inventory UX-copy quieting.
+**No required config migration.** No new skill names, sensors, or scores. Freezes held.
+
+**Status: prepared** (not on npm `latest` until publish train completes; see
+`docs/releases/4.5.6.md`).
+
+### Added
+
+- **Registry-aware upgrade (FX01–FX02):** `ark upgrade --apply` no longer skips package install
+  solely because CLI version equals `node_modules/arkgate`. When the registry (injectable for
+  tests) is ahead, install runs. Skip paths emit structured JSON (`reasonCode`,
+  `installedVersion`, `cliVersion`, `registryLatest`, `suggestedInstallCmd`) plus human
+  recovery. Offline / registry-unknown stays honest (`REGISTRY_UNAVAILABLE`) without inventing
+  a bump.
+- **Skill content drift honesty (FX03):** upgrade preview/JSON `skillDrift` counts
+  current/stale/customized/missing skills with sample paths and preserve notes.
+- **Opt-in skill refresh (FX04):** `--refresh-skills` rewrites customized managed *skills* to
+  package templates with explicit consent. Conflicted assets still need `--accept-conflicts`.
+  Never silent overwrite of true user edits by default.
+- **Post-upgrade verification block (FX05):** after apply, advisory `postUpgradeChecks` (pin↔CLI,
+  architecture verification, dual-truth, doctor/status/MCP notes). Always `notAScore`.
+- **MCP multi-project process honesty (FX06):** every MCP tool context includes
+  `processPackage` (`processArkgateVersion`, `projectInstalledVersion`,
+  `processPackageMismatch` / `processStale`, `nextAction`). Prefer project-local CLI until
+  identity matched and versions align; multi-checkout recipe in agent-guide + `/ark-upgrade`.
+- **Host selection honesty (FX07):** upgrade notes when detected active host ∉ managed
+  `--tools`/manifest hosts and suggests `--tools` expansion.
+- **whatsNew early path (FX08):** suggested improvements on preview even when nothing to apply;
+  includes FX field-truth try/inspect items.
+- **Inventory UX message quieting (FX09):** rules inventory downranks pure UX/error-message
+  string constants so they do not crowd business-rule pilots (no new sensors).
+
+### Changed
+
+- `/ark-upgrade` skill + upgrade help document registry-aware install, `--refresh-skills`,
+  skill drift, post-upgrade checks, and multi-project MCP restart guidance.
+
+**Freezes held:** no principle scores/ranks; no new skill names; no silent customized overwrite;
+no silent multi-project MCP retarget; soft hosts stay advisory; no fake published claims.
+
 ## 4.5.5 — 2026-08-11
 
 **Patch** over **4.5.0**. Deep-module coach train plus upgrade **suggested improvements /

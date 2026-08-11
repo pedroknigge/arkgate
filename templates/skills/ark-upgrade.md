@@ -35,15 +35,33 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 ## Suggested improvements (what to try next)
 
 After `ark upgrade` (preview or apply), read JSON **`whatsNew`** or the human **Suggested improvements**
-block. It lists concrete try/inspect actions for this package line (advisory only — not a score):
+block (also on preview when nothing to apply). It lists concrete try/inspect actions for this package
+line (advisory only — not a score):
 
 1. **Deep-module coach** — `ark-check --doctor` → `doctor.deepModuleCoach` (hot paths + deepening)
 2. **Improvement compass** — residual lenses on doctor/HTML (not a score)
 3. **Session recipe** — `ark status --json` honesty modes; doctor when mode is not full
 4. **Two-axis done** — architecture residual vs feature/ticket residual (Enforce green ≠ feature done)
 5. **Self-service honesty** — upgrade `selfService` write-path labels + customized preserve
+6. **Registry-aware upgrade** — `reasonCode` / `suggestedInstallCmd` when package install is skipped or needed
+7. **Skill drift + refresh** — `skillDrift`; opt-in `--refresh-skills` for customized skill rewrite
+8. **Multi-project MCP** — `processPackage` mismatch/stale on every MCP tool; restart after package bump
 
 Never invent gate verdicts from these suggestions. Missing residual is honest empty, not green.
+
+## Field truth (package install + skills + multi-project MCP)
+
+| Situation | Honest product behavior |
+|-----------|-------------------------|
+| CLI version == `node_modules` but npm registry is ahead | `--apply` **installs** (does not false-skip). Inspect `reasonCode: BEHIND_REGISTRY`. |
+| Offline / `npm view` failed | May skip with `REGISTRY_UNAVAILABLE` + `suggestedInstallCmd` — do not invent a version. |
+| Skills customized after install | Preserved by default. Preview `skillDrift` shows counts. **`--refresh-skills`** rewrites customized *skills* only with consent. |
+| Conflicted managed assets | Still need `--accept-conflicts`. Never silent overwrite of true edits. |
+| Multiple checkouts / monorepo packages | One `expectedRoot` per project; upgrade **each** pin; restart MCP after bump; prefer project-local CLI until identity matched **and** process version aligns. |
+| Active host not in `--tools` / manifest | Preview `hostSelection` notes it and suggests `--tools` expansion. |
+
+**Post-apply:** read `postUpgradeChecks` (advisory). Confirm pin↔CLI, run doctor (compass + deepModuleCoach),
+`agents-md --check`, `ark status --json`, and MCP version note if MCP was used.
 
 
 ## Dual engine (mandatory)
@@ -61,6 +79,11 @@ retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedP
 `project` on every later MCP call. If identity is missing, mismatched, unverified, or the root is
 uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
 restart/retargeting is required. `ark://manifest` never satisfies this preflight.
+
+**Process package honesty:** every tool response includes `processPackage` (`processArkgateVersion`,
+`projectInstalledVersion`, `processPackageMismatch` / `processStale`, `nextAction`). After
+`npm install arkgate@…`, **restart/retarget MCP** so process version matches install. Until then,
+prefer project-local CLI and do not treat MCP analysis as fully current.
 
 ## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
 
@@ -111,8 +134,8 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
 | `current` | Content identity matches the candidate. | Record/adopt safely; metadata-only stamps may refresh. |
 | `stale` | Recorded managed content still matches its old identity. | Safe candidate replacement. |
 | `missing` | Candidate is absent. | Create if new; require consent if a recorded asset was deleted. |
-| `customized` | User content diverged without a competing managed base. | Preserve it. |
-| `conflicted` | Both managed base and user content diverged. | Preserve and require explicit consent. |
+| `customized` | User content diverged without a competing managed base. | Preserve it. Opt-in rewrite for **skills only**: `--refresh-skills`. |
+| `conflicted` | Both managed base and user content diverged. | Preserve and require explicit consent (`--accept-conflicts`). |
 | `retired` | A recorded asset is no longer selected by the candidate. | Preserve its file and manifest identity; take no action. |
 
 ## Procedure
@@ -172,16 +195,18 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
    that customized files remain non-applying and that any deletion/conflict is
    blocked.
 
-3. **Update and re-preview.** If the registry is newer, run (project-local CLI):
+3. **Update and re-preview.** If the registry is newer **or** CLI == pin but registry is ahead
+   (field false-skip is fixed), run (project-local CLI):
 
    ```bash
    npx arkgate upgrade --apply
    ```
 
-   This updates through the detected package manager and hands control to the new
-   package for a fresh preview. Review that new preview; do not assume the old
-   candidate and new candidate are identical. If already on the latest package,
-   retain the current read-only preview.
+   This updates through the detected package manager (registry-aware) and hands control to the new
+   package for a fresh preview. On skip, read `reasonCode` / `suggestedInstallCmd` — agents must not
+   invent recovery. Review the new preview; do not assume old and new candidates are identical.
+   If already current (`ALREADY_CURRENT`), retain the read-only preview and still read `whatsNew`
+   + `skillDrift`.
 
    For pnpm repositories with `minimumReleaseAge`, use the repository's existing
    trusted first-party exception mechanism when the new release is still cooling
@@ -199,18 +224,25 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
    ```
 
    If recorded deletion/conflict recovery is desired, ask first and then add
-   `--accept-conflicts`. Never add it merely to make the run green. Run a second
-   preview and require `summary.changed: 0`.
+   `--accept-conflicts`. Never add it merely to make the run green.
 
-5. **Verify enforcement and architecture.** Run
+   If customized **skills** should match package templates after pin bump, ask first and add
+   `--refresh-skills` on the digest-bound apply (or a new preview that includes the flag). Never
+   add it merely to make the run green. Run a second preview and require `summary.changed: 0`
+   (unless more deliberate refreshes remain).
+
+5. **Verify enforcement and architecture (post-upgrade checks).** Read apply JSON
+   `postUpgradeChecks` when present. Also run:
    `npx arkgate-check --doctor --json` (or the project-local `ark-check`) and
    the same fail-closed architecture command used by managed apply (normally
    `npx arkgate-check --root . --config ark.config.json --strict-merge --json`).
-   Require `completeness: "complete"` and `ok: true`. Treat provider-unavailable CI
-   required-check evidence as `unverified`, never as proof that merges are
-   blocked. If new violations appear, hand off to `/ark-fix` for a small set or
-   `/ark-loop` / `/ark-autopilot` for residual debt; do not regenerate a baseline
-   without explicit approval.
+   Require `completeness: "complete"` and `ok: true`. Confirm `doctor.improvementCompass` and
+   `doctor.deepModuleCoach` honesty. Run `npx arkgate agents-md --check` and
+   `npx arkgate status --json`. If MCP was used, restart MCP after package bump and re-bind
+   identity. Treat provider-unavailable CI required-check evidence as `unverified`, never as proof
+   that merges are blocked. If new violations appear, hand off to `/ark-fix` for a small set or
+   `/ark-loop` / `/ark-autopilot` for residual debt; do not regenerate a baseline without explicit
+   approval.
 
 ## Active host vs deferred hosts
 

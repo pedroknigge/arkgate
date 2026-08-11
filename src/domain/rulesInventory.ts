@@ -248,13 +248,46 @@ export function buildRulesInventory(input: BuildRulesInventoryInput): RulesInven
         name
       );
 
+    /**
+     * FX09 — pure UX copy / error-message string constants crowd inventory pilots.
+     * Downrank (skip) sentence-like strings and message-named identifiers; keep
+     * numeric thresholds and domain status tokens for adopt/contract pilots.
+     */
+    const isUxMessageConstant = (name: string, rawValue: string): boolean => {
+      if (
+        /^(?:ERROR|SUCCESS|WARNING|INFO|HINT|HELP|EMPTY|TOAST|SNACK|ALERT|BANNER|DIALOG|MODAL|TOOLTIP|CAPTION|SUBTITLE|HEADLINE|USER|UI|DISPLAY|FEEDBACK)_(?:MSG|MESSAGE|TEXT|COPY|LABEL|TITLE|BODY|DESC|DESCRIPTION|HINT|HELP)?/i.test(
+          name
+        ) ||
+        /_(?:MSG|MESSAGE|TEXT|COPY|TOAST|SNACK|ALERT|BANNER|CAPTION|HINT|HELP_TEXT|ERROR_TEXT|EMPTY_TEXT|PLACEHOLDER_TEXT|USER_MESSAGE|FEEDBACK)$/i.test(
+          name
+        )
+      ) {
+        return true;
+      }
+      const unquoted = rawValue.replace(/^['"]|['"]$/g, '');
+      // Sentence-like string values (spaces or terminal punctuation) are UX copy,
+      // not behavioral business limits — unless the name is a clear domain status seed.
+      if (
+        /^['"]/.test(rawValue) &&
+        (/\s/.test(unquoted) || /[.!?…]$/.test(unquoted)) &&
+        !/^(?:STATUS|STATE|PHASE|ROLE|TYPE|KIND|ORDER|PAYMENT|CART|INVOICE|POLICY)_[A-Z0-9_]+$/i.test(
+          name
+        )
+      ) {
+        return true;
+      }
+      return false;
+    };
+
     while ((magic = magicRe.exec(content)) !== null) {
       const name = magic[2]!;
+      const rawValue = magic[3] ?? '';
       // With governed layer evidence, generic Tooling/Kernel constants are not
       // business-rule candidates. Controller-shaped boundaries stay eligible
       // because business policy can leak into them.
       if (!magicConstantEligible) continue;
       if (isInfraMagicName(name)) continue;
+      if (isUxMessageConstant(name, rawValue)) continue;
       // P2-N: skip remaining ALL_CAPS noise only on clear UI chrome (not all of app/).
       if (isUiChrome && !isDomain) continue;
       // Wave-2: integrations / repos / clients are usually I/O constants, not Domain seeds.

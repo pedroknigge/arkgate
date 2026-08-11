@@ -74,6 +74,31 @@ export function buildUpgradeWhatsNewSuggestions() {
         why:
           'After managed upgrade, learn write-path hard|advisory|unavailable per host and whether customized content was preserved — without a maintainer ticket. Soft hosts never claim hard.',
       },
+      {
+        id: 'registry-aware-upgrade',
+        title: 'Registry-aware package upgrade (FX field truth)',
+        try: 'npx arkgate upgrade --apply',
+        inspect:
+          'packageInstallSkipped / reasonCode / registryLatest / suggestedInstallCmd (JSON)',
+        why:
+          'When CLI version equals node_modules but npm registry is ahead, upgrade no longer false-skips. Offline/registry-unknown stays honest with a copy-paste install command.',
+      },
+      {
+        id: 'skill-drift-refresh',
+        title: 'Skill content drift + opt-in refresh',
+        try: 'npx arkgate upgrade --json',
+        inspect: 'skillDrift (+ --refresh-skills for customized skill rewrite consent)',
+        why:
+          'See stale/customized/missing skill counts. Customized skills stay preserved unless you pass --refresh-skills; never silent overwrite of true edits.',
+      },
+      {
+        id: 'mcp-multi-project',
+        title: 'Multi-project MCP process honesty',
+        try: 'ark_identity with project.expectedRoot; read processPackage on every tool',
+        inspect: 'processPackage.processPackageMismatch / processStale + nextAction',
+        why:
+          'One user, many checkouts: after package bump, restart MCP so process arkgateVersion matches install. Prefer project-local CLI until identity matched and versions align.',
+      },
     ],
   };
 }

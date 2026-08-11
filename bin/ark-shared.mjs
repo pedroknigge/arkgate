@@ -722,35 +722,14 @@ export function packageInstallArgv(root, versionSpec = 'latest') {
   return ['npm', ['install', '-D', pkgSpec]];
 }
 
-/**
- * Whether an install of arkgate@latest can be skipped because node_modules already
- * resolves the same version as this CLI package.
- *
- * @param {string} root
- * @param {string} [cliVersion]  this binary's package version
- * @returns {{ skip: boolean, installedVersion: string|null, reason: string }}
- */
-export function shouldSkipArkgateInstall(root, cliVersion) {
-  const pkgPath = path.join(root, 'node_modules', 'arkgate', 'package.json');
-  if (!fs.existsSync(pkgPath)) {
-    return { skip: false, installedVersion: null, reason: 'not-installed' };
-  }
-  let installedVersion = null;
-  try {
-    installedVersion = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version ?? null;
-  } catch {
-    return { skip: false, installedVersion: null, reason: 'unreadable' };
-  }
-  if (
-    typeof cliVersion === 'string' &&
-    cliVersion &&
-    installedVersion &&
-    installedVersion === cliVersion
-  ) {
-    return { skip: true, installedVersion, reason: 'already-current' };
-  }
-  return { skip: false, installedVersion, reason: 'version-differs' };
-}
+// FX01–FX02: registry-aware skip lives in upgrade-package-decision (injectable probe).
+export {
+  shouldSkipArkgateInstall,
+  buildPackageInstallSkipPayload,
+  formatPackageInstallDecisionHuman,
+  compareSemverCore,
+  probeRegistryArkgateLatest,
+} from './lib/upgrade-package-decision.mjs';
 
 /** Package-manager aware "install a dev dependency" hint (e.g. for a missing typescript). */
 export function installDevHint(root, pkg) {

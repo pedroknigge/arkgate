@@ -77,6 +77,7 @@ function parseArgs(argv) {
     installExplicit: false,
     apply: false,
     acceptConflicts: false,
+    refreshSkills: false,
     planDigest: undefined,
     json: false,
     internalApply: false,
@@ -118,6 +119,7 @@ function parseArgs(argv) {
     }
     else if (arg === '--apply') args.apply = true;
     else if (arg === '--accept-conflicts') args.acceptConflicts = true;
+    else if (arg === '--refresh-skills') args.refreshSkills = true;
     else if (arg === '--plan-digest') args.planDigest = requireValue(arg, i++);
     else if (arg === '--json') args.json = true;
     else if (arg === '--internal-apply') args.internalApply = true;
@@ -153,7 +155,7 @@ function usage() {
   ark start   [--root <project>] [--tools <host>] [--require-write-hook <host>] [--install] [--apply] [--json]
   ark init    [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture]
               [--archetype <playbook-id>] [--tools <list>] [--require-write-hook <host>] [--yes] [--force] [--no-strict]
-  ark upgrade [--root <project>] [--tools <list>] [--apply] [--plan-digest <sha256>] [--accept-conflicts] [--json] [--no-install] [--no-strict]
+  ark upgrade [--root <project>] [--tools <list>] [--apply] [--plan-digest <sha256>] [--accept-conflicts] [--refresh-skills] [--json] [--no-install] [--no-strict]
   ark preflight --changes <change-set.json> [--change-map <map.json>] [--root <project>] [--config ark.config.json] [--manifest <manifest.json>] [--tsconfig <tsconfig.json>] [--json]
   ark status  [--root <project>] [--config ark.config.json] [--json]
               [--expected-root <abs>] [--expected-project-id sha256:…] [--tools <host>]
@@ -164,8 +166,10 @@ Commands:
   start     New here? Analyze and preview the complete setup. Read-only unless --apply.
   init      Configure Ark project enforcement with explicit prompts.
   upgrade   Preview identity-proven Ark-managed asset updates. With package install,
-            --apply bumps to @latest and recomputes the preview; a second explicit
-            --apply --no-install applies those exact bytes and verifies them.
+            --apply bumps toward registry latest when behind (not only when CLI ≠ pin)
+            and recomputes the preview; a second explicit --apply --no-install applies
+            those exact bytes and verifies them. --refresh-skills opts in to rewrite
+            customized managed skills to package templates (never silent default).
             (alias: ark update)
   preflight Validate one atomic create/update/delete set without writing project files.
   status    Unified session/project manifest (identity, activation, last check, rules).

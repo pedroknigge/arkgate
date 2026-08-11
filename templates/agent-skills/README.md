@@ -7,7 +7,7 @@
 This directory is the **Agent Skills–compatible** packaging of the same **13**
 `/ark-*` skills shipped as flat templates for Ark install. **No new skill names.**
 
-Package version when last generated context: **arkgate@4.5.0**
+Package version when last generated context: **arkgate@4.5.6**
 Schema: agent-skills package contract `1.0`
 
 ## Skills (frozen catalog)

@@ -465,11 +465,19 @@ export function planManagedUpgrade(root, options = {}) {
           kind: catalogAsset.kind,
         });
     const accepted = options.acceptConflicts === true;
+    // FX04: --refresh-skills opt-in rewrites customized *skill* assets to package
+    // templates. Conflicted still needs --accept-conflicts. Never silent default.
+    const refreshSkills = options.refreshSkills === true;
+    const skillRefresh =
+      refreshSkills &&
+      catalogAsset.kind === 'skill' &&
+      classified.state === 'customized';
     const canApply =
       classified.state === 'stale' ||
+      skillRefresh ||
       (classified.state === 'missing' && (!recorded || accepted)) ||
       (classified.state === 'conflicted' && accepted);
-    const blocked = classified.requiresConsent && !accepted;
+    const blocked = classified.requiresConsent && !accepted && !skillRefresh;
     const desiredFile = afterFileContent(catalogAsset, currentFile, desiredScoped);
     const asset = {
       path: catalogAsset.relativePath,
@@ -542,6 +550,7 @@ export function planManagedUpgrade(root, options = {}) {
     profile: selection.profile,
     hosts: selection.hosts,
     acceptConflicts: options.acceptConflicts === true,
+    refreshSkills: options.refreshSkills === true,
     assets,
     summary,
     nextManifest,
@@ -550,6 +559,183 @@ export function planManagedUpgrade(root, options = {}) {
   };
   plan.planDigest = managedPlanDigest(plan);
   return plan;
+}
+
+/**
+ * FX03 — skill content drift honesty (counts by state + sample paths).
+ * Skills only; never claims "skills upgraded" when only package pin moved.
+ */
+export function buildSkillDriftSummary(plan) {
+  const assets = Array.isArray(plan?.assets) ? plan.assets : [];
+  const skills = assets.filter((a) => a?.kind === 'skill');
+  const byState = {};
+  for (const skill of skills) {
+    const state = typeof skill.state === 'string' ? skill.state : 'unknown';
+    byState[state] = (byState[state] ?? 0) + 1;
+  }
+  const sample = (state, limit = 5) =>
+    skills
+      .filter((s) => s.state === state)
+      .map((s) => s.path)
+      .sort()
+      .slice(0, limit);
+  const customized = byState.customized ?? 0;
+  const stale = byState.stale ?? 0;
+  const missing = byState.missing ?? 0;
+  const current = byState.current ?? 0;
+  const wouldRefresh = skills.filter((s) => s.willApply === true).length;
+  return {
+    schemaVersion: '1.0',
+    notAScore: true,
+    skillCount: skills.length,
+    byState,
+    stale,
+    customized,
+    missing,
+    current,
+    wouldRefresh,
+    samplePaths: {
+      stale: sample('stale'),
+      customized: sample('customized'),
+      missing: sample('missing'),
+    },
+    note:
+      customized > 0 && wouldRefresh === 0
+        ? 'Skills on disk differ from package templates (customized preserved). Use --refresh-skills to opt in to rewrite customized skills; never silent overwrite.'
+        : stale > 0
+          ? 'Some skills are stale vs package templates and will refresh on apply.'
+          : skills.length === 0
+            ? 'No managed skill assets in this upgrade selection.'
+            : 'Skill content matches package templates or is scheduled for write.',
+  };
+}
+
+/**
+ * FX07 — active host vs managed --tools / manifest hosts.
+ */
+export function buildHostSelectionHonesty(plan) {
+  const hosts = Array.isArray(plan?.hosts) ? plan.hosts.map((h) => String(h).toLowerCase()) : [];
+  let active = null;
+  try {
+    active = detectActiveAgentHost();
+  } catch {
+    active = null;
+  }
+  const activeNorm =
+    typeof active === 'string' && active.trim() ? active.trim().toLowerCase() : null;
+  const known = activeNorm && KNOWN_TOOLS.includes(activeNorm);
+  const inSelection = Boolean(activeNorm && hosts.includes(activeNorm));
+  const note =
+    known && !inSelection
+      ? `Detected host "${activeNorm}" is not in managed tools [${hosts.join(', ') || 'none'}]. Re-run with --tools ${[...new Set([...hosts, activeNorm])].sort().join(',')} so that host's skills/hooks are in the plan.`
+      : known && inSelection
+        ? `Detected host "${activeNorm}" is in the managed selection.`
+        : activeNorm
+          ? `Detected host "${activeNorm}" is outside the known managed tool set.`
+          : 'No active agent host detected for this process.';
+  return {
+    schemaVersion: '1.0',
+    notAScore: true,
+    activeHost: activeNorm,
+    managedHosts: hosts,
+    activeInSelection: inSelection,
+    suggestTools:
+      known && !inSelection
+        ? [...new Set([...hosts, activeNorm])].sort().join(',')
+        : null,
+    note,
+  };
+}
+
+/**
+ * FX05 — post-upgrade verification block (advisory sensors only).
+ */
+export function buildPostUpgradeChecks(root, options = {}) {
+  const resolvedRoot = path.resolve(root);
+  const checks = [];
+  let projectVersion = null;
+  try {
+    const pkgPath = path.join(resolvedRoot, 'node_modules', 'arkgate', 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      projectVersion = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version ?? null;
+    }
+  } catch {
+    projectVersion = null;
+  }
+  const cli = typeof options.cliVersion === 'string' ? options.cliVersion : arkPackageVersion();
+  const pinOk =
+    projectVersion != null && cli != null ? projectVersion === cli : null;
+  checks.push({
+    id: 'package-pin-cli',
+    ok: pinOk,
+    detail:
+      pinOk === true
+        ? `Installed arkgate@${projectVersion} matches CLI ${cli}.`
+        : pinOk === false
+          ? `Installed arkgate@${projectVersion} ≠ CLI ${cli}; re-run install or restart using project-local CLI.`
+          : `Could not compare pin (installed=${projectVersion ?? 'missing'}, cli=${cli ?? 'unknown'}).`,
+  });
+  checks.push({
+    id: 'architecture-verification',
+    ok:
+      options.verification?.mode === 'skipped'
+        ? null
+        : options.verification?.exitCode === 0,
+    detail:
+      options.verification?.mode === 'skipped'
+        ? 'Strict architecture verification was skipped (--no-strict).'
+        : options.verification?.exitCode === 0
+          ? 'Strict-merge architecture verification passed.'
+          : `Architecture verification exit ${options.verification?.exitCode ?? 'unknown'}.`,
+  });
+  checks.push({
+    id: 'package-version-truth',
+    ok: options.dualTruth?.dualTruth === true ? false : options.dualTruth ? true : null,
+    detail:
+      options.dualTruth?.dualTruth === true
+        ? options.dualTruth.note || 'Package pin dual-truth detected.'
+        : options.dualTruth
+          ? 'Package pin truth is consistent for this apply.'
+          : 'Package version truth not evaluated.',
+  });
+  checks.push({
+    id: 'doctor-compass-coach',
+    ok: null,
+    detail:
+      'Run `npx arkgate-check --doctor --json` and confirm doctor.improvementCompass + doctor.deepModuleCoach (notAScore).',
+  });
+  checks.push({
+    id: 'agents-md-projection',
+    ok: null,
+    detail: 'Run `npx arkgate agents-md --check` (or --write) so AGENTS.md matches the package projection.',
+  });
+  checks.push({
+    id: 'status-mode',
+    ok: null,
+    detail: 'Run `npx arkgate status --json` and read honesty mode; incomplete facts never invent green residual.',
+  });
+  return {
+    schemaVersion: '1.0',
+    notAScore: true,
+    neverGateInput: true,
+    checks,
+    mcpNote:
+      'If you used Ark MCP this session: restart/retarget MCP after package bump so process arkgateVersion matches project install; always pass project.expectedRoot + expectedProjectId (WI01). Prefer project-local CLI until identity matched and versions align.',
+  };
+}
+
+export function formatSkillDriftHuman(skillDrift) {
+  if (!skillDrift) return [];
+  const lines = [
+    `Skill drift: ${skillDrift.skillCount} skill(s) — current ${skillDrift.current}, stale ${skillDrift.stale}, customized ${skillDrift.customized}, missing ${skillDrift.missing}, would refresh ${skillDrift.wouldRefresh}.`,
+  ];
+  if (skillDrift.note) lines.push(`  ${skillDrift.note}`);
+  return lines;
+}
+
+export function formatHostSelectionHuman(hostSelection) {
+  if (!hostSelection?.note) return [];
+  return [`Host selection: ${hostSelection.note}`];
 }
 
 function publicPlan(plan, overrides = {}) {
@@ -784,6 +970,17 @@ export function renderManagedUpgrade(plan, options = {}) {
   for (const line of formatManagedUpgradeSelfServiceHonesty(honesty)) {
     console.log(line);
   }
+  const skillDrift =
+    options.skillDrift ?? plan.skillDrift ?? buildSkillDriftSummary(plan);
+  for (const line of formatSkillDriftHuman(skillDrift)) {
+    console.log(line);
+  }
+  const hostSelection =
+    options.hostSelection ?? plan.hostSelection ?? buildHostSelectionHonesty(plan);
+  for (const line of formatHostSelectionHuman(hostSelection)) {
+    console.log(line);
+  }
+  // FX08: whatsNew always on preview/apply human path (including nothing-to-apply).
   const whatsNew = plan.whatsNew ?? buildUpgradeWhatsNewSuggestions();
   for (const line of formatUpgradeWhatsNewSuggestions(whatsNew)) {
     console.log(line);
