@@ -12,7 +12,7 @@ package install, structured skip recovery, skill drift + opt-in refresh, post-up
 MCP process package honesty, host selection notes, early whatsNew, inventory UX-copy quieting.
 **No required config migration.** No new skill names, sensors, or scores. Freezes held.
 
-**Status: prepared** (not on npm `latest` until publish train completes; see
+**Status: published** (on npm `latest`; see
 `docs/releases/4.5.6.md`).
 
 ### Added

@@ -16,8 +16,8 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 4.5.5** is on npm `latest` — deep-module coach, upgrade what’s new, session honesty.
-> [4.5.5 notes](docs/releases/4.5.5.md) · [4.5.0](docs/releases/4.5.0.md) · [4.4.0](docs/releases/4.4.0.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> **ArkGate 4.5.6** is on npm `latest` — field upgrade truth, multi-project MCP honesty, skill drift.
+> [4.5.6 notes](docs/releases/4.5.6.md) · [4.5.5](docs/releases/4.5.5.md) · [4.5.0](docs/releases/4.5.0.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
 
@@ -208,7 +208,7 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current release (4.5.5 on npm `latest`) | [docs/releases/4.5.5.md](docs/releases/4.5.5.md) · [CHANGELOG](CHANGELOG.md) |
+| Current release (4.5.6 on npm `latest`) | [docs/releases/4.5.6.md](docs/releases/4.5.6.md) · [CHANGELOG](CHANGELOG.md) |
 | Prior (4.5.0) | [docs/releases/4.5.0.md](docs/releases/4.5.0.md) |
 | Prior (4.4.0) | [docs/releases/4.4.0.md](docs/releases/4.4.0.md) |
 | Prior (4.3.0) | [docs/releases/4.3.0.md](docs/releases/4.3.0.md) |
