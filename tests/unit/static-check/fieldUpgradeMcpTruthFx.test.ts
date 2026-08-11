@@ -152,6 +152,22 @@ describe('FX01–FX02 package install decision', () => {
     expect(lines.some((l) => /behind registry/i.test(l))).toBe(true);
   });
 
+  it('skipRegistryProbe treats equal versions as ALREADY_CURRENT without registry', () => {
+    const root = tempRoot('ark-fx01-skipprobe-');
+    write(root, 'package.json', JSON.stringify({ name: 'sp', private: true }));
+    write(
+      root,
+      'node_modules/arkgate/package.json',
+      JSON.stringify({ name: 'arkgate', version: '4.5.6' })
+    );
+    expect(
+      shouldSkipArkgateInstall(root, '4.5.6', { skipRegistryProbe: true })
+    ).toMatchObject({
+      skip: true,
+      reasonCode: 'ALREADY_CURRENT',
+    });
+  });
+
   it('ALREADY_CURRENT and REGISTRY_UNAVAILABLE human lines', () => {
     const root = tempRoot('ark-fx02-cur-');
     write(root, 'package.json', JSON.stringify({ name: 'fx02c', private: true }));
@@ -209,6 +225,24 @@ describe('FX03–FX04 skill drift + refresh-skills', () => {
     expect(summary.note).toMatch(/stale|customized|refresh/i);
   });
 
+  it('skillDrift notes when all skills current or missing only', () => {
+    const allCurrent = buildSkillDriftSummary({
+      assets: [
+        { kind: 'skill', state: 'current', path: 'a', willApply: false },
+        { kind: 'skill', state: 'current', path: 'b', willApply: false },
+      ],
+    });
+    expect(allCurrent.customized).toBe(0);
+    expect(allCurrent.stale).toBe(0);
+    expect(allCurrent.note).toMatch(/matches package|scheduled/i);
+
+    const missing = buildSkillDriftSummary({
+      assets: [{ kind: 'skill', state: 'missing', path: 'm', willApply: true }],
+    });
+    expect(missing.missing).toBe(1);
+    expect(missing.wouldRefresh).toBe(1);
+  });
+
   it('classifyManagedAsset keeps true customized without silent apply', () => {
     const recorded = {
       contentIdentity: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
@@ -222,6 +256,23 @@ describe('FX03–FX04 skill drift + refresh-skills', () => {
       kind: 'skill',
     });
     expect(['customized', 'conflicted']).toContain(result.state);
+  });
+
+  it('classifyManagedAsset marks current and missing', () => {
+    const same = classifyManagedAsset({
+      recorded: null,
+      currentContent: 'same body\n',
+      targetContent: 'same body\n',
+      kind: 'skill',
+    });
+    expect(same.state).toBe('current');
+    const missing = classifyManagedAsset({
+      recorded: null,
+      currentContent: null,
+      targetContent: 'template\n',
+      kind: 'skill',
+    });
+    expect(missing.state).toBe('missing');
   });
 });
 
@@ -345,5 +396,46 @@ describe('FX03 planManagedUpgrade skillDrift-ready plan', () => {
     const drift = buildSkillDriftSummary(plan);
     expect(drift.notAScore).toBe(true);
     expect(typeof drift.skillCount).toBe('number');
+  });
+
+  it('refreshSkills option is recorded on the plan object', () => {
+    const root = tempRoot('ark-fx04-plan-');
+    write(
+      root,
+      'package.json',
+      JSON.stringify({ name: 'fx04', private: true, devDependencies: { arkgate: '4.5.6' } })
+    );
+    write(root, 'ark.config.json', JSON.stringify({ version: 1, layers: [] }));
+    const plan = planManagedUpgrade(root, {
+      tools: 'claude',
+      refreshSkills: true,
+      acceptConflicts: false,
+    });
+    expect(plan.refreshSkills).toBe(true);
+    const noRefresh = planManagedUpgrade(root, { tools: 'claude' });
+    expect(noRefresh.refreshSkills).toBe(false);
+  });
+});
+
+describe('FX01 packageInstallArgv + decision payload edges', () => {
+  it('buildPackageInstallSkipPayload uses latest when not behind registry', () => {
+    const root = tempRoot('ark-fx02-latest-');
+    write(root, 'package.json', JSON.stringify({ name: 'fx', private: true }));
+    write(
+      root,
+      'node_modules/arkgate/package.json',
+      JSON.stringify({ name: 'arkgate', version: '4.5.6' })
+    );
+    const decision = shouldSkipArkgateInstall(root, '4.5.6', { registryLatest: '4.5.6' });
+    const payload = buildPackageInstallSkipPayload(decision, root, packageInstallArgv);
+    expect(payload.suggestedInstallCmd).toMatch(/arkgate@latest|arkgate@4\.5\.6/);
+  });
+
+  it('probe with empty stdout returns null', () => {
+    expect(
+      probeRegistryArkgateLatest({
+        run: () => ({ status: 0, stdout: '   \n' }),
+      })
+    ).toBe(null);
   });
 });
