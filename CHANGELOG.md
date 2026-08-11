@@ -11,8 +11,7 @@ in the immutable pre-2.0 archive linked below.
 what’s new** so consumers know what to try after install. **No required config migration.**
 No new skill names, sensors, or scores. Freezes held.
 
-**Status: prepared** (implementation only; not yet on npm `latest` — remains `4.5.0` until
-the publication checklist completes).
+**Status: published** (`arkgate@4.5.5` on npm `latest`; see `docs/releases/4.5.5.md`).
 
 ### Added
 
