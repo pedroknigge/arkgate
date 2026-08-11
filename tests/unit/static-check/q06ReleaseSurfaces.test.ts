@@ -11,8 +11,8 @@ import { version } from '../../../src/version.ts';
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
 const CURRENT = '4.5.6';
-/** Version confirmed on npm `latest` until 4.5.6 publish flips. */
-const PUBLISHED_LATEST = '4.5.5';
+/** Version confirmed on npm `latest`. */
+const PUBLISHED_LATEST = '4.5.6';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -101,21 +101,19 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('exposes published 4.5.5 as npm latest while tree is prepared 4.5.6', () => {
-    expect(PUBLISHED_LATEST).toBe('4.5.5');
+  it('exposes published 4.5.6 as npm latest', () => {
+    expect(PUBLISHED_LATEST).toBe('4.5.6');
     expect(CURRENT).toBe('4.5.6');
-    expect(read('README.md')).toMatch(/4\.5\.5/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.5\.5\.md/);
+    expect(read('README.md')).toMatch(/4\.5\.6/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.5\.6\.md/);
     expect(read('README.md')).toMatch(/on npm `latest`|npm `latest`/i);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.5\.0\.md/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.4\.0\.md/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.5\.5/s);
-    expect(read('docs/README.md')).toMatch(/Current published:.*4\.5\.5/s);
-    expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.5\.5/is);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.5\.5\.md|docs\/releases\/4\.5\.0\.md/);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.5\.6/s);
+    expect(read('docs/README.md')).toMatch(/Current published:.*4\.5\.6/s);
+    expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.5\.6/is);
+    expect(read('docs/releases/4.5.6.md')).toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(read('docs/releases/4.5.6.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
     expect(read('docs/releases/4.5.5.md')).toMatch(/\*\*Status:\*\*\s*published/i);
-    expect(read('docs/releases/4.5.5.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
-    expect(read('docs/releases/4.5.6.md')).toMatch(/\*\*Status:\*\*\s*prepared/i);
-    expect(read('docs/releases/4.5.6.md')).not.toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.5.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.4.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.3.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
@@ -123,19 +121,19 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 });
 
 describe('CHANGELOG + release note cover 4.5.6 field-upgrade MCP truth train', () => {
-  it('records FX surfaces and prepared (not published) status', () => {
+  it('records FX surfaces and published status', () => {
     const changelog = read('CHANGELOG.md');
     expect(changelog).toMatch(/## 4\.5\.6/);
     expect(changelog).toMatch(/Registry-aware|BEHIND_REGISTRY|reasonCode/i);
     expect(changelog).toMatch(/skillDrift|refresh-skills/i);
     expect(changelog).toMatch(/processPackage|processPackageMismatch|processStale/i);
     expect(changelog).toMatch(/postUpgradeChecks/i);
-    expect(changelog).toMatch(/Status:\s*prepared/i);
+    expect(changelog).toMatch(/Status:\s*published|on npm `latest`/i);
     expect(changelog).toMatch(/No required config migration/i);
 
     const notes = read('docs/releases/4.5.6.md');
-    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
-    expect(notes).not.toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(notes).toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
     expect(notes).toMatch(/4\.5\.6/);
     expect(notes).toMatch(/Registry-aware|skillDrift|processPackage|refresh-skills/i);
     expect(notes).toMatch(/notAScore|advisory/i);

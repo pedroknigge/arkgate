@@ -1239,7 +1239,7 @@ multi-project MCP retarget without handshake; soft hosts stay advisory; advisory
 | 143 | `FX09` | `done` | S | `FX02` | Inventory message-string noise downrank |
 | 144 | `FX10` | `done` | M | FX01–FX09 | Pre-landing `/review` clean |
 | 145 | `FX11` | `done` | M | `FX10` | Prepare arkgate@4.5.6 (prepared, not published) |
-| 146 | `FX12` | `doing` | L | `FX11` | Publish npm/MCP + docs flip + arkgate-site 4.5.6 |
+| 146 | `FX12` | `doing` | L | `FX11` | Publish npm/MCP + docs flip + arkgate-site 4.5.6 (npm done; MCP+site closing) |
 
 **Preferred order:** FX01→FX12. One `doing` at a time.
 
