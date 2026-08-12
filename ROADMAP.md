@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-12 (Phase CH shipped in **arkgate@4.5.7** on npm `latest`; Phase FX shipped in **4.5.6**)
+- **Status date:** 2026-08-12 (Phase HS seeded for **arkgate@4.5.8**; Phase CH shipped in **4.5.7** on npm `latest`; Phase FX shipped in **4.5.6**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -1297,6 +1297,84 @@ OIDC publish run `31609693650`; npm `latest` = **4.5.7** (`gitHead` `2ac73a4`).
 **Outcome:** npm `latest` = **4.5.7** (`gitHead` `2ac73a4`, OIDC run `31609693650`);
 MCP registry `io.github.pedroknigge/arkgate@4.5.7`; public pointers + q06 published;
 arkgate-site changelog/4.5.7 + Cursor hard-write host matrix.
+
+### Phase HS — Shared home skills truth (4.5.8)
+
+Origin: after 4.5.7 dogfood, Cursor/Claude still loaded orphan `~/.claude/skills` at
+`arkVersion: 2.6.1` while project catalogs were current. Codex home already has a monotonic
+shared catalog (4.2+); Claude/Grok user-home skills do not. Multi-project machines need
+**repo = pin truth**, **shared home = always-latest additive floor** (never downgrade).
+
+Plan: [docs/plans/shared-home-skills-truth/README.md](docs/plans/shared-home-skills-truth/README.md).
+
+Boundary (freezes held):
+
+- No new skill **names** (13 only deepen `/ark-upgrade` + install/doctor copy).
+- No scores; no LLM package verdict; soft-host hard-write honesty unchanged.
+- Never silent overwrite of customized managed skills; never downgrade any shared home catalog.
+- Absent home trees are normal (no spam); only manage homes that exist or are explicitly flagged.
+- Temp/upgrade scratch roots must not mutate real user homes (Codex temp-root guard parity).
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 150 | `HS01` | `todo` | M | CH03 + 4.5.7 published | Doctor/detect Claude + Grok home catalog gaps |
+| 151 | `HS02` | `todo` | L | `HS01` | Monotonic Claude + Grok home install (Codex ratchet parity) |
+| 152 | `HS03` | `todo` | M | `HS02` | Upgrade / `--install-agent-gates` home advance + temp-root safety |
+| 153 | `HS04` | `todo` | S | `HS02` | Agent-guide + `/ark-upgrade` multi-project home recipe |
+| 154 | `HS05` | `todo` | M | HS01–HS04 | Prepare arkgate@4.5.8 (prepared, not published) |
+| 155 | `HS06` | `todo` | L | `HS05` | Publish npm/MCP + docs flip + site 4.5.8 |
+
+**Preferred order:** HS01→HS06. One `doing` at a time.
+
+**HS01 — Home catalog honesty (doctor / detect)**
+
+- **Status:** `todo`
+- **Depends on:** CH03 done; npm **4.5.7** on `latest`
+
+**Outcome:** when `ark-*` skills exist under `~/.claude/skills` and/or `~/.grok/skills`, doctor
+(and JSON) report missing / content-behind / catalog-floor lag vs package with exact refresh
+commands; absent homes stay quiet; stamp-only body-match is not content-behind (Codex parity).
+
+**HS02 — Monotonic Claude + Grok home install**
+
+- **Status:** `todo`
+- **Depends on:** `HS01`
+
+**Outcome:** `--claude-home` / `--grok-home` and/or `--agent-homes` write home catalogs with the
+same lock + `.arkgate-catalog.json` monotonic floor as Codex; older writers cannot downgrade;
+tests isolate via env homes.
+
+**HS03 — Upgrade / install wiring**
+
+- **Status:** `todo`
+- **Depends on:** `HS02`
+
+**Outcome:** upgrade and install advance present (or flagged) shared homes; structured notes +
+recovery; never mutate default user homes from temp/upgrade scratch `--root`.
+
+**HS04 — Docs and skill deepen**
+
+- **Status:** `todo`
+- **Depends on:** `HS02`
+
+**Outcome:** agent-guide + `/ark-upgrade` teach repo vs shared home; always-latest home floor;
+doctor/orphan recovery. Agent-skills 1:1; no new skill names.
+
+**HS05 — Prepare 4.5.8**
+
+- **Status:** `todo`
+- **Depends on:** HS01–HS04
+
+**Outcome:** version surfaces + CHANGELOG + `docs/releases/4.5.8.md` prepared (not published);
+tests / architecture / `release:npm --dry` green.
+
+**HS06 — Publish npm/MCP + docs flip + site 4.5.8**
+
+- **Status:** `todo`
+- **Depends on:** `HS05`
+
+**Outcome:** npm `latest` = **4.5.8**; MCP registry; docs Status published; arkgate-site
+changelog/4.5.8 tells the shared-home story.
 
 ### Phase DC — Deep-module coach (post-4.5 process + advisory)
 
@@ -3706,19 +3784,20 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: (none — promote Phase FX before coding)
-  Epic candidate: Phase FX — Field upgrade & multi-project MCP truth
-  Plan: docs/plans/field-upgrade-mcp-truth/README.md (Shipped in 4.5.6)
-  Queue: Phase FX shipped in 4.5.6; residual MCP registry JWT re-auth only
-  Closed last: Phase DC shipped in arkgate@4.5.5 (DC01–DC04); deep-module coach + upgrade whatsNew
-  Next: promote FX01+FX02 (P0 upgrade), FX06 (MCP multi-project), FX03–FX05, FX07–FX09;
-    then FX10 `/review` → FX11 prepare 4.5.6 → FX12 publish + site.
+Engineering doing: (none — promote HS01 before coding)
+  Epic: Phase HS — Shared home skills truth (4.5.8)
+  Plan: docs/plans/shared-home-skills-truth/README.md (Seeded; not published)
+  Queue: HS01 → HS02 → HS03 → HS04 → HS05 prepare 4.5.8 → HS06 publish + site
+  Closed last: Phase CH shipped in arkgate@4.5.7 (CH01–CH03); Cursor hard write
+  Next: promote HS01 (doctor/detect Claude+Grok home orphans), then HS02 monotonic install
   Other seeds: golden upgrade path matrix · monorepo activation playbook · Z09/RB-11 parked
-Released baseline: npm arkgate@4.5.5 on latest (gitHead 6c31dbf; tag v4.5.5; 2026-08-11)
-  Notes: docs/releases/4.5.5.md — Status: published
-  Prior: 4.5.0 / 4.4.0 / 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
-Phase FX freezes (when promoted): no scores; 13 skill names; no silent customized overwrite;
-  no silent multi-project MCP retarget without handshake; soft hosts stay advisory
+Released baseline: npm arkgate@4.5.7 on latest (gitHead 2ac73a4; tag v4.5.7; 2026-08-12)
+  Notes: docs/releases/4.5.7.md — Status: published
+  Prior: 4.5.6 / 4.5.5 / 4.5.0 / 4.4.0 / 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
+Phase HS freezes (when coding): no scores; 13 skill names; no silent customized overwrite;
+  no home catalog downgrade; absent homes quiet; temp-root never mutates real user homes
+Phase CH freezes (held): Cursor hard only for Write|StrReplace when hooks trusted; no reinjection claim
+Phase FX freezes (held): no silent multi-project MCP retarget; soft hosts stay advisory
 Phase DC freezes (held): no depth/principle scores; coach/compass notAScore; never flip gates
 Phase DF hard lines (held): TARGET LEVEL 4 hybrid; honesty modes never invent green;
   no runtime productization; no false hard write on soft hosts

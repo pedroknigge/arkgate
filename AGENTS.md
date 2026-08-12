@@ -171,6 +171,7 @@ retained shipped rationale live under `docs/plans/`:
 | [domain-fitness-session-truth](docs/plans/domain-fitness-session-truth/README.md) | Shipped in **4.5.0** (`DF01`–`DF06` done; **published**) | Session control-plane honesty (status compass modes + residual ⊆ doctor); domain budget **and** mandatory split; pure verification ratchet; self-service upgrade residual; session recipe at release; LEVELS 4 hybrid + Scale Stack seams |
 | [deep-module-coach](docs/plans/deep-module-coach/README.md) | Shipped in **4.5.5** (`DC01`–`DC04` done; **published**) | Post-4.5 coach: deep-module vocabulary, hot-path / deepening advisory, consumer glossary hook, two-axis done recipe — process + advisory only |
 | [field-upgrade-mcp-truth](docs/plans/field-upgrade-mcp-truth/README.md) | Shipped in **4.5.6** (`FX01`–`FX12`) | Field upgrade & multi-project MCP truth: registry-aware upgrade, skill drift/refresh, processPackage honesty, publish + site |
+| [shared-home-skills-truth](docs/plans/shared-home-skills-truth/README.md) | Seeded for **4.5.8** (`HS01`–`HS06` `todo`) | Shared agent home skills: Claude/Grok monotonic home catalogs (Codex parity), doctor orphan honesty, always-latest additive floor |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in
 `ROADMAP.md`.
