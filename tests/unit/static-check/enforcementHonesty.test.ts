@@ -149,9 +149,11 @@ describe('buildBaselineHonesty', () => {
 describe('buildWritePathHonesty', () => {
   it('soft hosts never claim hard write; hard hosts stay unverified without proof', () => {
     const cursor = buildWritePathHonesty('cursor', false);
-    expect(cursor.softWriteHost).toBe(true);
+    expect(cursor.softWriteHost).toBe(false);
+    expect(cursor.hardWriteSupported).toBe(true);
     expect(cursor.hardWriteActive).toBe(false);
-    expect(cursor.message).toMatch(/advisory/i);
+    expect(cursor.hardWriteUnverified).toBe(true);
+    expect(cursor.message).toMatch(/unverified|Write\/StrReplace|Required CI/i);
     expect(cursor.hardMergeBoundary).toMatch(/strict-merge/);
 
     const codex = buildWritePathHonesty('codex', true);

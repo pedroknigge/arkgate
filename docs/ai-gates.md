@@ -286,20 +286,30 @@ Use both: the MCP server for discovery, the hook for enforcement.
 
 ## Cursor
 
-Cursor supports MCP servers (`.cursor/mcp.json`):
+Cursor supports MCP servers (`.cursor/mcp.json`) and project hooks (`.cursor/hooks.json`):
 
 ```json
 {
-  "mcpServers": {
-    "ark": {
-      "command": "npx",
-      "args": ["ark-mcp", "--root", ".", "--config", "ark.config.json"]
-    }
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": "npx arkgate-mcp --hook --hook-repair --fail-on-new-smells --root . --root-env CURSOR_PROJECT_DIR --config ark.config.json",
+        "matcher": "Write|StrReplace",
+        "failClosed": true,
+        "timeout": 30
+      }
+    ]
   }
 }
 ```
 
-Cursor has no pre-write hook, so the gate is advisory at write time — pair it with a rules file so the agent actually calls it. `.cursor/rules/ark.mdc`:
+When that hook is installed and trusted, Cursor **hard-blocks** agent `Write` / `StrReplace`
+for governed TypeScript sources (exit 2 or `permission: "deny"`). Repair envelopes may emit;
+Cursor does **not** guarantee Write `updated_input` reinjection — the agent must fix and retry
+from `agent_message`. Shell, Tab, and human edits still rely on CI.
+
+Pair with MCP + a rules file so the agent also calls advisory tools. `.cursor/rules/ark.mdc`:
 
 ```markdown
 ---
@@ -307,15 +317,15 @@ description: Ark architecture contract
 alwaysApply: true
 ---
 
-Before writing or editing any TypeScript source file, call the `validate_code`
-tool from the `ark` MCP server with the full post-edit file content and its
-path. If it reports violations, fix them before writing. The architecture
-contract is available authoritatively from `ark_manifest` after `ark_identity`
-matches. `ark://manifest` is compatibility-only and always unverified.
+Before trusting Ark MCP evidence, call `ark_identity` with `project.expectedRoot`
+set to the exact project root. Then call `ark_manifest`. Before writing TypeScript,
+prefer MCP `ark_prepare_write` / `validate_code` when available; the project
+`.cursor/hooks.json` hard gate still blocks invalid Write/StrReplace.
 ```
 
-Your repository backstop in Cursor is CI: `ark-check` fails its check on anything that slips
-through. It blocks the merge only when that status is required by repository policy.
+Your repository backstop remains CI: `ark-check` fails its check on anything that slips
+through (Shell bypass, Tab, incomplete coverage). It blocks the merge only when that status
+is required by repository policy.
 
 ## OpenAI Codex CLI
 

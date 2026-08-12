@@ -207,8 +207,8 @@ Options:
   --remove-host <host>
                Preview or apply removal of that compact host integration; re-add it with --tools <host>.
   --require-write-hook <host>
-               Require and verify a hard local write hook for Claude or Grok. Cursor/Codex are
-               advisory-write plus hard CI merge only; impossible requests fail before any write.
+               Require and verify a hard local write hook for Claude, Grok, Antigravity, or Cursor.
+               Codex/OpenCode are advisory-write plus hard CI merge only; impossible requests fail before any write.
 
 Interactive mode (TTY, no --yes): asks what application shape you are building and maps it to a preset.
 Non-interactive (no TTY): uses the same defaults as --yes — never calls readline on a null interface.

@@ -370,7 +370,8 @@ ${steps}
 ${placementBody}
 
 The project is only considered Ark-enforced when its host-appropriate write path is configured
-and the CI check passes. Only Claude/Grok provide a hard local write boundary; Cursor/Codex use
+and the CI check passes. Only Claude/Grok/Antigravity/Cursor provide a hard local write boundary
+(Cursor: Write/StrReplace when .cursor/hooks.json is trusted); Codex/OpenCode use
 advisory MCP plus CI. The experimental runtime is not required.
 `;
 }

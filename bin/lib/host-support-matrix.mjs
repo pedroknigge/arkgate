@@ -70,9 +70,27 @@ export const HOST_SUPPORT_MATRIX = Object.freeze({
     true,
     true
   ),
-  cursor: hostProfile('Cursor', null, null, [], false, false, {
-    operationCoverage: { shell: false, 'pre-commit': false },
-  }),
+  // Cursor: official preToolUse deny / exit 2 is a hard block for matched tools when
+  // `.cursor/hooks.json` is installed + trusted. Claim hard only for Write|StrReplace;
+  // Shell/Tab/human edits still rely on CI. Repair envelope may emit; Write updated_input
+  // reinjection is not guaranteed on Cursor (agent_message + retry is the supported path).
+  cursor: hostProfile(
+    'Cursor',
+    '.cursor/hooks.json',
+    'preToolUse `Write` / `StrReplace`',
+    ['Write', 'StrReplace'],
+    true,
+    false,
+    {
+      repairEnvelopeEmitted: true,
+      operationCoverage: {
+        Write: true,
+        StrReplace: true,
+        shell: false,
+        'pre-commit': false,
+      },
+    }
+  ),
   codex: hostProfile(
     'OpenAI Codex',
     '.codex/hooks.json',
@@ -134,14 +152,15 @@ export function renderHostSupportMatrixMarkdown() {
   const rows = HOST_SUPPORT_HOSTS.map((host) => {
     const profile = HOST_SUPPORT_MATRIX[host];
     const capabilities = profile.capabilities;
-    // Fail-closed honesty: Cursor/Codex/OpenCode never claim hard write; CI is required-status.
-    // hookSurface already includes "PreToolUse …" — do not prefix PreToolUse again.
+    // Fail-closed honesty: Codex/OpenCode never claim hard write; CI is required-status.
+    // Cursor claims hard only for listed preToolUse ops when hooks are installed + trusted.
+    // hookSurface already includes "PreToolUse/preToolUse …" — do not prefix again.
     let local;
     if (capabilities['hard-write']) {
       local = `**Hard** block for listed ops (${profile.hookSurface}) when installed + trusted`;
     } else if (host === 'codex') {
       local =
-        '**Advisory / best-effort** at write (not equivalent to Claude/Grok hard block)';
+        '**Advisory / best-effort** at write (not equivalent to Claude/Grok/Cursor hard block)';
     } else if (host === 'opencode') {
       local =
         '**Advisory / best-effort** at write (MCP + optional plugin; not a hard boundary)';
@@ -169,7 +188,8 @@ ${rows}
 
 **Read the CI column:** for every host, the repository-wide hard guarantee is a **required**
 GitHub **status context** that runs the CLI — not “CI file present,” and not the CLI binary name alone.
-Cursor/Codex/OpenCode never get a fake hard write claim.
+Codex/OpenCode never get a fake hard write claim. Cursor hard write covers only listed
+\`preToolUse\` ops when \`.cursor/hooks.json\` is installed and trusted — Shell/Tab/human edits still rely on CI.
 
 This table describes the supported profile **after its files are installed and the host loads/trusts them**. A hard local boundary covers only the listed hook operations; alternate tools, direct filesystem writes, and human edits still rely on CI. MCP validation is advisory because the agent must call it. The CI check blocks a merge only when the repository makes that status required. Repair **envelopes** may be emitted without reinjection being guaranteed; silent auto-apply never happens. Run \`arkgate-check --doctor\` (or \`ark-check --doctor\`) for the evidence actually detected in the current repository.`;
 }
@@ -203,14 +223,14 @@ export function doctorWritePathHonestyMessage(activeHost, hardWriteActive) {
   // EH07: distinguish CLI command (arkgate-check / ark-check) from the GitHub required status context name.
   const mergeBoundary =
     'Required CI hard merge boundary = a required GitHub status context that runs arkgate-check --strict-merge (alias ark-check --strict-merge)';
-  if (host === 'cursor') {
-    return `Cursor: write path is advisory (MCP/rules; no hard PreToolUse). ${mergeBoundary}.`;
+  if (host === 'cursor' && !hardWriteActive) {
+    return `Cursor: hard preToolUse is supported for Write/StrReplace when .cursor/hooks.json is installed + trusted; without runtime-observed hook evidence, hard is unverified. ${mergeBoundary}.`;
   }
   if (host === 'codex') {
-    return `Codex: write path is advisory / best-effort at write (not Claude/Grok hard). ${mergeBoundary}.`;
+    return `Codex: write path is advisory / best-effort at write (not Claude/Grok/Cursor hard). ${mergeBoundary}.`;
   }
   if (host === 'opencode') {
-    return `OpenCode: write path is advisory / best-effort (MCP + optional plugin; not Claude/Grok/Antigravity hard). ${mergeBoundary}.`;
+    return `OpenCode: write path is advisory / best-effort (MCP + optional plugin; not Claude/Grok/Antigravity/Cursor hard). ${mergeBoundary}.`;
   }
   if ((host === 'claude' || host === 'grok' || host === 'antigravity') && !hardWriteActive) {
     const label =

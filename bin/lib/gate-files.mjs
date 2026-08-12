@@ -127,7 +127,7 @@ const FAIL_CLOSED_ARK_FLAG = /(?:^|\s)--(?:strict|strict-merge|require-gates)(?=
 const COMPACT_HOST_FILES = {
   claude: ['.claude/settings.json'],
   grok: ['.grok/config.toml', '.grok/hooks/ark-write-gate.json'],
-  cursor: ['.cursor/mcp.json'],
+  cursor: ['.cursor/mcp.json', '.cursor/hooks.json'],
   codex: ['.codex/hooks.json', '.codex/config.toml'],
   windsurf: ['.windsurf/rules/ark.md'],
   cline: ['.clinerules/ark.md'],

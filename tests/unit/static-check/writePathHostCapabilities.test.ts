@@ -119,6 +119,23 @@ function writeMcp(
   }
   if (host === 'cursor') {
     write(root, '.cursor/mcp.json', '{"mcpServers":{"ark":{"command":"npx","args":["arkgate-mcp"]}}}');
+    write(
+      root,
+      '.cursor/hooks.json',
+      JSON.stringify({
+        version: 1,
+        hooks: {
+          preToolUse: [
+            {
+              command:
+                'npx arkgate-mcp --hook --hook-repair --fail-on-new-smells --root . --root-env CURSOR_PROJECT_DIR --config ark.config.json',
+              matcher: 'Write|StrReplace',
+              failClosed: true,
+            },
+          ],
+        },
+      })
+    );
     return;
   }
   if (host === 'opencode') {
@@ -292,35 +309,39 @@ describe('active-host write capability model', () => {
           "activeInventory": {
             "capabilities": {
               "advisory-write": true,
-              "hard-write": false,
+              "hard-write": true,
               "merge-gate": true,
-              "repair-payload": false,
+              "repair-payload": true,
             },
             "configured": true,
           },
           "capabilities": {
             "advisory-write": true,
-            "hard-write": false,
+            "hard-write": true,
             "merge-gate": true,
-            "repair-payload": false,
+            "repair-payload": true,
           },
           "capabilityEvidence": {
             "advisory-write": [
               ".cursor/mcp.json",
             ],
-            "hard-write": [],
+            "hard-write": [
+              ".cursor/hooks.json",
+            ],
             "merge-gate": [
               ".github/workflows/ark-check.yml",
             ],
-            "repair-payload": [],
+            "repair-payload": [
+              ".cursor/hooks.json",
+            ],
           },
           "inventoryCapabilities": {
             "advisory-write": true,
-            "hard-write": false,
+            "hard-write": true,
             "merge-gate": true,
-            "repair-payload": false,
+            "repair-payload": true,
           },
-          "mode": "mcp-only",
+          "mode": "repair",
         },
         "grok": {
           "activeHost": "grok",
@@ -781,7 +802,7 @@ describe('active-host write capability model', () => {
       expect(humanRun.status).toBe(0);
       expect(humanRun.stdout).toContain('Active host: cursor');
       expect(humanRun.stdout).toContain(
-        'Local write — supported: no · analyzed: yes · configured: no · installed: no · runtime observed: no · operation: none · operation covered: unverified · active: no · bypassable: yes · required: unverified · hard: no'
+        'Local write — supported: yes · analyzed: yes · configured: yes · installed: no · runtime observed: no · operation: none · operation covered: unverified · active: no · bypassable: unverified · required: unverified · hard: no'
       );
       expect(humanRun.stdout).toContain(
         'Advisory MCP — supported: yes · analyzed: yes · configured: yes · installed: no · runtime observed: no · operation: none · operation covered: unverified · active: no · bypassable: yes · required: unverified · hard: no'

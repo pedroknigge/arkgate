@@ -27,7 +27,12 @@ export const COMMAND_GATE_TEXT_FILES = [
   '.grok/hooks/ark-write-gate.json', '.grok/config.toml', '.codex/config.toml',
   '.agents/hooks.json',
 ];
-export const COMMAND_GATE_JSON_FILES = ['.mcp.json', '.cursor/mcp.json', 'opencode.json'];
+export const COMMAND_GATE_JSON_FILES = [
+  '.mcp.json',
+  '.cursor/mcp.json',
+  '.cursor/hooks.json',
+  'opencode.json',
+];
 // Primary CLI names (product) + one-major aliases. migrate-commands must strip ALL of these
 // before re-emitting a single preferred bin — otherwise a partial rename leaves
 // args: ["ark-mcp", "arkgate-mcp", ...] which breaks stdio MCP hosts.

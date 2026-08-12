@@ -10,6 +10,7 @@ import {
   claudeSettings,
   codexHooks,
   codexProjectConfig,
+  cursorHooks,
   grokHooks,
   grokProjectConfig,
   opencodeProjectConfig,
@@ -30,7 +31,10 @@ const COMPACT_HOST_TEMPLATES = {
     ['.agents/hooks.json', antigravityHooks(root)],
     ['.mcp.json', mcpJson(root)],
   ],
-  cursor: (root) => [['.cursor/mcp.json', mcpJson(root)]],
+  cursor: (root) => [
+    ['.cursor/mcp.json', mcpJson(root)],
+    ['.cursor/hooks.json', cursorHooks(root)],
+  ],
   codex: (root) => [
     ['.codex/hooks.json', codexHooks(root)],
     ['.codex/config.toml', codexProjectConfig(root)],

@@ -146,7 +146,7 @@ describe('statusManifest (Domain — ACS03)', () => {
       classifyStatusWritePath({
         hardWriteActive: true,
         softWriteHost: true,
-        activeHost: 'cursor',
+        activeHost: 'codex',
       })
     ).toBe('advisory');
     expect(
@@ -160,7 +160,7 @@ describe('statusManifest (Domain — ACS03)', () => {
       classifyStatusWritePath({
         hardWriteActive: true,
         softWriteHost: false,
-        activeHost: 'claude',
+        activeHost: 'cursor',
       })
     ).toBe('hard');
   });
