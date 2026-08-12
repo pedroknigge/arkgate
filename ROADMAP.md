@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-12 (Phase CH — CH01 done for **arkgate@4.5.7**; CH02/CH03 todo; Phase FX shipped in **4.5.6**)
+- **Status date:** 2026-08-12 (Phase CH shipped in **arkgate@4.5.7** on npm `latest`; Phase FX shipped in **4.5.6**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -1261,8 +1261,8 @@ Boundary (freezes held):
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 147 | `CH01` | `done` | M | FX12 + 4.5.6 published | Cursor hooks install + runtime + matrix/docs honesty |
-| 148 | `CH02` | `doing` | M | `CH01` | Prepare arkgate@4.5.7 (version/CHANGELOG/release notes) |
-| 149 | `CH03` | `todo` | L | `CH02` | Publish npm/MCP + docs flip + site 4.5.7 |
+| 148 | `CH02` | `done` | M | `CH01` | Prepare arkgate@4.5.7 (version/CHANGELOG/release notes) |
+| 149 | `CH03` | `done` | L | `CH02` | Publish npm/MCP + docs flip + site 4.5.7 |
 
 **Preferred order:** CH01→CH03. One `doing` at a time.
 
@@ -1282,12 +1282,21 @@ write-path fixtures; README matrix regenerated; version prepared **4.5.7**.
 
 **CH02 — Prepare 4.5.7**
 
-- **Status:** `doing` (2026-08-12)
+- **Status:** `done` (2026-08-12)
 - **Depends on:** `CH01`
 
-**Outcome:** release notes `docs/releases/4.5.7.md` Status prepared; version sources aligned
-(`package.json` / lock / `server.json` / `src/version.ts`); q06 CURRENT=4.5.7 with
-PUBLISHED_LATEST still 4.5.6; public npm-latest pointers unchanged until CH03.
+**Outcome:** release notes `docs/releases/4.5.7.md` prepared then published; version sources
+aligned (`package.json` / lock / `server.json` / `src/version.ts`); signed tag `v4.5.7`;
+OIDC publish run `31609693650`; npm `latest` = **4.5.7** (`gitHead` `2ac73a4`).
+
+**CH03 — Publish npm/MCP + docs flip + site 4.5.7**
+
+- **Status:** `done` (2026-08-12)
+- **Depends on:** `CH02`
+
+**Outcome:** npm `latest` = **4.5.7** (`gitHead` `2ac73a4`, OIDC run `31609693650`);
+MCP registry `io.github.pedroknigge/arkgate@4.5.7`; public pointers + q06 published;
+arkgate-site changelog/4.5.7 + Cursor hard-write host matrix.
 
 ### Phase DC — Deep-module coach (post-4.5 process + advisory)
 
