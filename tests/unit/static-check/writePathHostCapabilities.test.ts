@@ -311,7 +311,7 @@ describe('active-host write capability model', () => {
               "advisory-write": true,
               "hard-write": true,
               "merge-gate": true,
-              "repair-payload": true,
+              "repair-payload": false,
             },
             "configured": true,
           },
@@ -319,7 +319,7 @@ describe('active-host write capability model', () => {
             "advisory-write": true,
             "hard-write": true,
             "merge-gate": true,
-            "repair-payload": true,
+            "repair-payload": false,
           },
           "capabilityEvidence": {
             "advisory-write": [
@@ -331,17 +331,15 @@ describe('active-host write capability model', () => {
             "merge-gate": [
               ".github/workflows/ark-check.yml",
             ],
-            "repair-payload": [
-              ".cursor/hooks.json",
-            ],
+            "repair-payload": [],
           },
           "inventoryCapabilities": {
             "advisory-write": true,
             "hard-write": true,
             "merge-gate": true,
-            "repair-payload": true,
+            "repair-payload": false,
           },
-          "mode": "repair",
+          "mode": "reject-only",
         },
         "grok": {
           "activeHost": "grok",
