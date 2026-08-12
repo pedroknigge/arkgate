@@ -10,8 +10,8 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.5.6';
-/** Version confirmed on npm `latest`. */
+const CURRENT = '4.5.7';
+/** Version confirmed on npm `latest` (lags CURRENT while Status is prepared). */
 const PUBLISHED_LATEST = '4.5.6';
 
 function read(rel: string) {
@@ -101,9 +101,9 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('exposes published 4.5.6 as npm latest', () => {
+  it('exposes published 4.5.6 as npm latest while 4.5.7 is prepared', () => {
     expect(PUBLISHED_LATEST).toBe('4.5.6');
-    expect(CURRENT).toBe('4.5.6');
+    expect(CURRENT).toBe('4.5.7');
     expect(read('README.md')).toMatch(/4\.5\.6/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.5\.6\.md/);
     expect(read('README.md')).toMatch(/on npm `latest`|npm `latest`/i);
@@ -113,10 +113,34 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.5\.6/is);
     expect(read('docs/releases/4.5.6.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.5.6.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(read('docs/releases/4.5.7.md')).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(read('docs/releases/4.5.7.md')).not.toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.5.5.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.5.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.4.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.3.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.5.7 Cursor hard-write train', () => {
+  it('records Cursor hard write surfaces and prepared status', () => {
+    const changelog = read('CHANGELOG.md');
+    expect(changelog).toMatch(/## 4\.5\.7/);
+    expect(changelog).toMatch(/Cursor hard write|\.cursor\/hooks\.json|preToolUse/i);
+    expect(changelog).toMatch(/Write\|StrReplace|Write \/ StrReplace|Write\/StrReplace/i);
+    expect(changelog).toMatch(/Status:\s*prepared|not published/i);
+    expect(changelog).toMatch(/No required config migration/i);
+
+    const notes = read('docs/releases/4.5.7.md');
+    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(notes).not.toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(notes).toMatch(/4\.5\.7/);
+    expect(notes).toMatch(/\.cursor\/hooks\.json|preToolUse/i);
+    expect(notes).toMatch(/Write|StrReplace/i);
+    expect(notes).toMatch(/reinjection/i);
+    expect(notes).toMatch(/No required config migration/i);
+    expect(notes).toMatch(/Z09|RB-11/i);
+    expect(notes).toMatch(/Codex|OpenCode/i);
   });
 });
 

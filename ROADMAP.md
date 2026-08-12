@@ -1261,7 +1261,7 @@ Boundary (freezes held):
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 147 | `CH01` | `done` | M | FX12 + 4.5.6 published | Cursor hooks install + runtime + matrix/docs honesty |
-| 148 | `CH02` | `todo` | M | `CH01` | Prepare arkgate@4.5.7 (version/CHANGELOG/release notes) |
+| 148 | `CH02` | `doing` | M | `CH01` | Prepare arkgate@4.5.7 (version/CHANGELOG/release notes) |
 | 149 | `CH03` | `todo` | L | `CH02` | Publish npm/MCP + docs flip + site 4.5.7 |
 
 **Preferred order:** CH01→CH03. One `doing` at a time.
@@ -1282,11 +1282,12 @@ write-path fixtures; README matrix regenerated; version prepared **4.5.7**.
 
 **CH02 — Prepare 4.5.7**
 
-- **Status:** `todo`
+- **Status:** `doing` (2026-08-12)
 - **Depends on:** `CH01`
 
-**Outcome:** release notes `docs/releases/4.5.7.md`, claims matrix row if needed, package
-ready to publish (version already bumped on CH01 branch).
+**Outcome:** release notes `docs/releases/4.5.7.md` Status prepared; version sources aligned
+(`package.json` / lock / `server.json` / `src/version.ts`); q06 CURRENT=4.5.7 with
+PUBLISHED_LATEST still 4.5.6; public npm-latest pointers unchanged until CH03.
 
 ### Phase DC — Deep-module coach (post-4.5 process + advisory)
 
