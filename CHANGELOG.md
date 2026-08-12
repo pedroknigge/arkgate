@@ -13,7 +13,7 @@ gate for `Write` / `StrReplace` (failClosed), host matrix + doctor honesty, payl
 emit; Write `updated_input` reinjection is **not** claimed. Codex/OpenCode stay advisory at
 write. Shell/Tab/human edits still rely on required CI. **No required config migration.**
 
-**Status: prepared** (not published).
+**Status: published** (on npm `latest`; see `docs/releases/4.5.7.md`).
 
 ### Added
 
