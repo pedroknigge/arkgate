@@ -13,7 +13,7 @@ software words (import rules, leftover design work, pre-write block) while **Ark
 “always latest” floor Codex already had. **No required config migration.** JSON field names
 and `ruleId`s stay stable. No new skill names, sensors, or scores.
 
-**Status: prepared** (not yet on npm `latest`; see `docs/releases/4.6.0.md`).
+**Status: published** (on npm `latest`; see `docs/releases/4.6.0.md`).
 
 ### Added
 

@@ -5,13 +5,12 @@
 > Hub: [AGENTS.md](../../../AGENTS.md) · [Roadmap](../../../ROADMAP.md) ·
 > [Product voice](../../product-voice.md)
 
-**Status:** In progress for **arkgate@4.6.0** (Phase PL; `PL01`–`PL08` implemented; not published until PL09)  
+**Status:** Shipped in **arkgate@4.6.0** (Phase PL; published)  
 **Slug:** `understandable-ark-4.6`  
 **Kind:** epic seed / product-language + shared home skills (one train)  
 **Owners:** product (Pedro) + library maintainers  
 **Last updated:** 2026-08-12  
-**Target package:** **4.6.0** (minor — visible product language + home-skill honesty; no
-“published” claim until PL09)  
+**Target package:** **4.6.0** (minor — visible product language + home-skill honesty; published)  
 **Absorbs:** former 4.5.8 seed [shared-home-skills-truth](../shared-home-skills-truth/README.md)
 (superseded as a separate patch train; work lives here as PL06–PL07)  
 **Evidence origin:** friend walkthrough — proprietary jargon opaque on first contact; dogfood

@@ -58,10 +58,9 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
-Current published: [releases/4.5.7.md](releases/4.5.7.md) (`arkgate@4.5.7` on npm `latest`).  
-Prepared: [releases/4.6.0.md](releases/4.6.0.md) (`arkgate@4.6.0`).  
-Prior: [releases/4.4.0.md](releases/4.4.0.md) (`arkgate@4.4.0`).  
-Previous: [releases/4.3.0.md](releases/4.3.0.md) · [releases/4.2.1.md](releases/4.2.1.md) · [releases/4.2.0.md](releases/4.2.0.md) · [releases/4.1.1.md](releases/4.1.1.md).  
+Current published: [releases/4.6.0.md](releases/4.6.0.md) (`arkgate@4.6.0` on npm `latest`).  
+Prior: [releases/4.5.7.md](releases/4.5.7.md) (`arkgate@4.5.7`).  
+Previous: [releases/4.5.6.md](releases/4.5.6.md) · [releases/4.5.5.md](releases/4.5.5.md) · [releases/4.5.0.md](releases/4.5.0.md) · [releases/4.4.0.md](releases/4.4.0.md) · [releases/4.3.0.md](releases/4.3.0.md) · [releases/4.2.1.md](releases/4.2.1.md) · [releases/4.2.0.md](releases/4.2.0.md) · [releases/4.1.1.md](releases/4.1.1.md).  
 Previous major: [releases/4.0.0.md](releases/4.0.0.md) (`arkgate@4.0.0`).  
 Config: [configuration.md](configuration.md) · Agent skills dual-plane: [agent-guide.md](agent-guide.md).
 
