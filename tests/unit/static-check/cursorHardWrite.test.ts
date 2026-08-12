@@ -92,6 +92,28 @@ describe('Cursor hard write path (4.5.7)', () => {
     expect(model.capabilities['hard-write']).toBe(true);
     expect(model.capabilityEvidence['hard-write']).toContain('.cursor/hooks.json');
     expect(model.capabilities['advisory-write']).toBe(true);
+    // EH07: inventory repair-payload stays false; envelope honesty is on support.
+    expect(model.capabilities['repair-payload']).toBe(false);
+    expect(model.capabilityEvidence['repair-payload']).toEqual([]);
+    expect(model.mode).toBe('reject-only');
+    expect(model.gap?.id).toBe('write-path-reject-only');
+    expect(model.gap?.message).toMatch(/without a repair payload/i);
+    expect(model.gap?.message).toMatch(/Advisory MCP/i);
+    expect(model.support?.capabilities?.['repair-envelope-emitted']).toBe(true);
+    expect(model.support?.capabilities?.['repair-reinjection-guaranteed']).toBe(false);
+  });
+
+  it('reject-only gap notes missing MCP when Cursor hooks exist without advisory surface', () => {
+    const root = tmpRoot();
+    fs.mkdirSync(path.join(root, '.cursor'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.cursor', 'hooks.json'), cursorHooks(root));
+    const model = detectWritePathCapabilities(root, 'cursor');
+    expect(model.mode).toBe('reject-only');
+    expect(model.capabilities['hard-write']).toBe(true);
+    expect(model.capabilities['advisory-write']).toBe(false);
+    expect(model.capabilities['repair-payload']).toBe(false);
+    expect(model.gap?.id).toBe('write-path-reject-only');
+    expect(model.gap?.message).toMatch(/Install its MCP surface|enable hook repair/i);
   });
 
   it('hook mode denies Cursor Write with contents + permission JSON', () => {
