@@ -6,6 +6,8 @@
  * Plan B stays never mechanical-safe.
  */
 
+import { POST_GREEN_HUMAN } from './product-copy.mjs';
+
 /** Stable product id for JSON / tests. */
 export const POST_GREEN_PATH_ID = 'clarify-for-ai';
 
@@ -16,8 +18,7 @@ export const POST_GREEN_PRIMARY_SKILL = '/ark-explore';
  * Canonical human / agent next-action string (single door).
  * Chained: explore shape-focus then autopilot only to apply B with user OK.
  */
-export const POST_GREEN_PRIMARY_ACTION =
-  'Shape residual (design-weak): edges are clean, design is not finished. Map with /ark-explore shape-focus → dual-plan B; apply B only via /ark-autopilot with your OK. Empty plan A is not done; pattern bets are never mechanical-safe.';
+export const POST_GREEN_PRIMARY_ACTION = POST_GREEN_HUMAN;
 
 /** Short label for tables / metrics. */
 export const POST_GREEN_PRIMARY_SHORT =

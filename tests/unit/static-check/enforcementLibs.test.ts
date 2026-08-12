@@ -213,7 +213,7 @@ describe('html-report pure helpers (shipped)', () => {
       },
       postGreenPath: { short: '/ark-explore shape-focus' },
     });
-    expect(weak).toContain('design-weak');
+    expect(weak).toContain('leftover design work');
     expect(weak).toContain('god-module');
     expect(weak).toContain('lib/db/schema.ts');
     expect(weak).toContain('Next pilot');
@@ -295,7 +295,7 @@ describe('html-report pure helpers (shipped)', () => {
           postGreenPath: { short: '/ark-explore shape-focus' },
         },
       });
-      expect(html).toContain('design-weak');
+      expect(html).toContain('leftover design work');
       expect(html).toContain('id="design-depth"');
       expect(html).toContain('Write path');
       expect(html).toContain('Baseline policy signals');

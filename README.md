@@ -2,7 +2,7 @@
 
 # ArkGate — Architecture Co-pilot for AI TypeScript
 
-**One contract. One gate. One co-pilot.**
+**One architecture config. One check. One coach.**
 
 Your AI writes most of the code. ArkGate keeps that work inside an architecture you can trust —
 and makes sure a “green” check means something real.
@@ -16,8 +16,8 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 4.5.7** is on npm `latest` — Cursor hard write for `Write` / `StrReplace`.
-> [4.5.7 notes](docs/releases/4.5.7.md) · [4.5.6](docs/releases/4.5.6.md) · [4.5.5](docs/releases/4.5.5.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> **ArkGate 4.6.0** is prepared — clearer language + shared agent home skills.
+> [4.6.0 notes](docs/releases/4.6.0.md) · [4.5.7](docs/releases/4.5.7.md) (npm `latest`) · [4.5.6](docs/releases/4.5.6.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
 
@@ -43,9 +43,9 @@ npx arkgate-check --doctor        # control plane: status light + primary next a
 ```
 
 That is the product. Doctor is the control plane — when stuck, do **primary next action #1**.
-Doctor also shows an **improvement compass** (architecture lenses such as separation of concerns and
-dependency inversion — **not a score**). Residual lenses mean Shape work may remain even when edges
-are green. Details: [use.md — Improvement compass](docs/use.md#improvement-compass-not-a-score).
+Doctor also shows **what to improve next** (architecture lenses such as separation of concerns and
+dependency inversion — **not a score**). Leftover lenses mean design work may remain even when
+imports are green. Details: [use.md — Improvement compass](docs/use.md#improvement-compass-not-a-score).
 
 ```text
 start → doctor (+ compass) → day-to-day (place + gate)
@@ -64,15 +64,15 @@ A machine-readable architecture file (`ark.config.json`) plus enforcement:
 
 | When | Tool |
 |------|------|
-| **While the AI writes** | Hard PreToolUse on supported hosts; advisory MCP elsewhere |
+| **While the AI writes** | Pre-write block on supported hosts; warning only elsewhere |
 | **Before merge** | `arkgate-check` as a **required** CI status |
 
 ### Two planes (4.0)
 
 | Plane | What it guards | Config |
 |-------|----------------|--------|
-| **Layers** (always) | Who may talk to whom — imports, placement, purity, isolation | `ark.config.json` layers + rules |
-| **ArkRules** (opt-in) | Habits *inside* a layer — structure sensors + domain invariants as data | `arkRules` → `arkrules/<Layer>.json` |
+| **Layers** (always) | Who may import whom — imports, placement, purity, isolation | `ark.config.json` layers + rules |
+| **ArkRules** (opt-in; structure rules inside a layer) | Habits *inside* a layer — structure sensors + domain invariants as data | `arkRules` → `arkrules/<Layer>.json` |
 
 Absence of ArkRules changes no inter-layer verdict. Label residual **`[Layer]`** vs **`[ArkRules]`**.  
 Details: [configuration](docs/configuration.md#arkrules-intra-layer-opt-in) · [use path](docs/use.md).
@@ -175,6 +175,8 @@ npx arkgate-check --plan
 npx arkgate-check --coverage
 npx arkgate-check --strict-merge   # CI / required status
 npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok
+# optional: refresh shared home skills (Claude/Grok/Codex; never downgrades)
+# npx arkgate-check --install-agent-gates --skills-only --agent-homes --force
 # optional: same 13 skills via Agent Skills ecosystem (no new names)
 # npx skills add ./node_modules/arkgate/templates/agent-skills
 ```

@@ -107,7 +107,7 @@ describe('html-report-depth branch matrix', () => {
         },
       ],
     });
-    expect(openEdges).toContain('Design smells (edges still open)');
+    expect(openEdges).toContain('Design smells (imports still open)');
     expect(openEdges).toContain('soft-contract');
     expect(openEdges).toContain('src/app/x.ts');
     expect(openEdges).not.toContain('layer:DomainModel');
@@ -120,7 +120,7 @@ describe('html-report-depth branch matrix', () => {
       postGreenPath: { action: 'long action text' },
       goldenPattern: { present: true, name: 'crm-cache', norm: 'split by concern', examplePath: 'lib/repos/crm-cache/index.ts' },
     });
-    expect(weakAdapt).toContain('SUGGEST · design-weak');
+    expect(weakAdapt).toContain('SUGGEST · leftover design work');
     expect(weakAdapt).toContain('crm-cache');
     expect(weakAdapt).toContain('long action text');
     expect(weakAdapt).toContain('lib/repos/crm-cache/index.ts');

@@ -446,6 +446,25 @@ severity **info**, marked `deferred: true`, and omitted from doctor **Primary ne
 `/ark-upgrade` on Grok/Claude is not Incomplete because of them. **Temp/upgrade primary roots**
 stay fail-closed urgent (rewritten, not multi-project).
 
+### Shared Claude / Grok home skills {#shared-claude--grok-home-skills}
+
+Project catalogs follow that checkout’s ArkGate pin (they may lag). Shared user-home catalogs
+are the **machine floor**:
+
+| Scope | Path | Flag |
+|-------|------|------|
+| Claude home | `$CLAUDE_HOME/skills` (default `~/.claude/skills`) | `--claude-home` |
+| Grok home | `$GROK_HOME/skills` (default `~/.grok/skills`) | `--grok-home` |
+| All three + Codex | same monotonic protocol | `--agent-homes` |
+
+Doctor reports `agentHomeGaps` only when those catalogs already contain `ark-*` skills and
+lag the installed package. Temp/upgrade `--root` never mutates default user homes. Cursor
+sessions treat a stale Claude home as urgent because Cursor loads `~/.claude/skills`.
+
+```bash
+npx arkgate-check --install-agent-gates --skills-only --agent-homes --force
+```
+
 ### Codex skill catalog (SKILL.md, not flat prompts)
 
 Codex discovers skills as directories containing `SKILL.md` (Agent Skills standard):

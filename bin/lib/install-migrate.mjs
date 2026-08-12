@@ -80,6 +80,7 @@ import {
   RUNNER_BEFORE_ARK,
 } from './mcp-adoption.mjs';
 import { inspectCodexInstallActivation, printCodexActivationHandoff, reportPartialInstall } from './install-activation.mjs';
+import { installRequestedAgentHomes } from './agent-homes.mjs';
 import {
   hasHardWriteHook,
   validateHardWriteRequest,
@@ -646,6 +647,17 @@ export function runInstallAgentGates(args) {
       }
     }
   }
+
+  installRequestedAgentHomes({
+    root,
+    skills,
+    version,
+    force: args.force,
+    claudeHome: args.claudeHome,
+    grokHome: args.grokHome,
+    agentHomes: args.agentHomes,
+    json: args.json,
+  });
 
   // Optional legacy/home fallback. Normal Codex installs use the project-scoped
   // .codex/config.toml above, avoiding cross-project primary binding conflicts.

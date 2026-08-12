@@ -213,6 +213,14 @@ function parseArgs(argv) {
     else if (arg === '--watch') args.watch = true;
     else if (arg === '--beginner') args.beginner = true;
     else if (arg === '--codex-home') args.codexHome = true;
+    else if (arg === '--claude-home') args.claudeHome = true;
+    else if (arg === '--grok-home') args.grokHome = true;
+    else if (arg === '--agent-homes') {
+      args.agentHomes = true;
+      args.codexHome = true;
+      args.claudeHome = true;
+      args.grokHome = true;
+    }
     else if (arg === '--migrate-commands') args.migrateCommands = true;
     else if (arg === '--no-cache') args.noCache = true;
     else if (arg === '--resident') args.resident = true;
@@ -275,7 +283,7 @@ function usage() {
     '           Best-effort open in browser (local TTY). No-op if open fails. --no-open / ARK_NO_OPEN_REPORT=1 to skip; --open forces open.',
     '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|vite-vercel-spa|clean-architecture|onion-architecture] [--force] [--follow-config-root]',
     '       --follow-config-root  On writes (init/install-agent-gates/migrate --write/…), adopt walked-up monorepo config root (default: keep explicit --root)',
-    '       ark-check --install-agent-gates [--tools claude,cursor,codex,grok] [--require-write-hook <host>] [--skills-only] [--codex-home] [--force]',
+    '       ark-check --install-agent-gates [--tools claude,cursor,codex,grok] [--require-write-hook <host>] [--skills-only] [--codex-home] [--claude-home] [--grok-home] [--agent-homes] [--force]',
     '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
     '       ark-check --print-config eleven-layer',
     '',

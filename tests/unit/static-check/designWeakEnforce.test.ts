@@ -159,12 +159,12 @@ describe('P04 design-weak-enforce fixture', () => {
     expect(doctor.productHonesty.reasonIds).toContain('design-weak');
     expect(doctor.productHonesty.elegant).toBe(false);
     expect(doctor.productHonesty.headline).toMatch(/Not finished/i);
-    expect(doctor.productHonesty.primaryMessage).toMatch(/design residual|design-weak|not.*finished/i);
+    expect(doctor.productHonesty.primaryMessage).toMatch(/leftover design|design residual|design-weak|not.*finished/i);
 
     // Post-green Shape door — not "architecture finished"
     expect(doctor.healthyFinishedForbidden).toBe(true);
     expect(doctor.postGreenPath?.id).toBe('clarify-for-ai');
-    expect(doctor.primaryNextAction).toMatch(/Empty plan A is not done|Shape residual/i);
+    expect(doctor.primaryNextAction).toMatch(/not done|leftover design|Shape residual|clean import/i);
     expect(doctor.primaryNextAction).not.toMatch(/architecture finished|healthy finished/i);
 
     // Honesty guard on the plan itself

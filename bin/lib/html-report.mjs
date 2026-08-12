@@ -11,6 +11,7 @@ import {
   resolveOperatingMode,
 } from '../ark-shared.mjs';
 import { collectAdoptionGaps, arkCheckCommand } from './agent-gates.mjs';
+import { LEFTOVER_DESIGN_BADGE } from './product-copy.mjs';
 import { CORE_LAYER_NAMES } from './core-layers.mjs';
 import {
   renderBaselineSignalLegend,
@@ -525,7 +526,7 @@ export function renderHtmlReport({
   const designSmells = Array.isArray(depth.designSmells) ? depth.designSmells : [];
   const designWeakBadge =
     designFitness?.designWeak === true
-      ? ` <span class="badge design" title="Edges can be green while lived design residual remains (Shape). Not a FAIL.">design-weak</span>`
+      ? ` <span class="badge design" title="Import rules can be green while leftover design work remains. Not a FAIL.">${LEFTOVER_DESIGN_BADGE}</span>`
       : '';
   const designStripHtml =
     renderDesignDepthStrip({

@@ -11,6 +11,8 @@ import {
 } from '../../../bin/lib/upgrade-whats-new.mjs';
 
 const REQUIRED_IDS = [
+  'plain-language-doctor',
+  'shared-agent-homes',
   'deep-module-coach',
   'improvement-compass',
   'session-status-honesty',

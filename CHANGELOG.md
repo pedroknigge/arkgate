@@ -5,6 +5,29 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.6.0 — 2026-08-12
+
+**Minor** over **4.5.7**. Understandable Ark: doctor, HTML, skills, and public docs use common
+software words (import rules, leftover design work, pre-write block) while **ArkGate** and
+**ArkRules** stay as product names. Shared Claude/Grok agent homes get the same monotonic
+“always latest” floor Codex already had. **No required config migration.** JSON field names
+and `ruleId`s stay stable. No new skill names, sensors, or scores.
+
+**Status: prepared** (not yet on npm `latest`; see `docs/releases/4.6.0.md`).
+
+### Added
+
+- **Shared Claude/Grok home skills:** `--claude-home`, `--grok-home`, and `--agent-homes`
+  write monotonic home catalogs (Codex-parity lock + floor). Doctor reports stale
+  `~/.claude/skills` / `~/.grok/skills` when those catalogs exist. Temp/upgrade `--root`
+  never mutates default user homes.
+
+### Changed
+
+- **Human language:** doctor, HTML report, compact router, skills, and public lanes prefer
+  common terms. Leftover design work replaces “design-weak” in human copy; JSON `designWeak`
+  is unchanged.
+
 ## 4.5.7 — 2026-08-12
 
 **Patch** over **4.5.6**. Cursor hard write path: project `.cursor/hooks.json` `preToolUse`

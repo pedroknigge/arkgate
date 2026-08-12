@@ -12,6 +12,12 @@ import {
 import * as arkShared from '../ark-shared.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { describePackageVersionDualTruth } from './field-install.mjs';
+import {
+  detectAgentHomeGaps,
+  agentHomeConcernIsActive,
+  agentHomeRefreshCommand,
+} from './agent-homes.mjs';
+import { operatingModeTitle } from './product-copy.mjs';
 export { summarizeRulesUnderContract };
 
 /** Optional S3 dual-match classifier when ark-shared exports it (soft dep for S5 landing). */
@@ -340,7 +346,7 @@ export function buildRemediationPlan(
             : 'No active violations — the architecture already meets its contract.';
   if (designWeak) {
     statement =
-      'No active edge violations — contract edges are clean, but design smells remain (design-weak). Shape residual is plan B only; not healthy finished.';
+      'No active import-rule violations — imports check out, but design smells remain (leftover design work). Shape work is plan B only; not healthy finished.';
   }
   if (completeness !== ANALYSIS_COMPLETENESS.complete) statement = analysisIncompleteStatement(completeness);
 
@@ -523,6 +529,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   }
   const gatesMissing = missingGates(root);
   const skillGaps = detectSkillGaps(root);
+  const agentHomeGaps = detectAgentHomeGaps(root);
   // Dual-truth: CLI version vs package.json pin (field residual after upgrade --no-install).
   const packageVersionTruth = describePackageVersionDualTruth(root);
   const staleRunners = staleRunnerGateFiles(root);
@@ -759,6 +766,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             },
             gatesMissing,
             skillGaps,
+            ...(agentHomeGaps.length > 0 ? { agentHomeGaps } : {}),
             staleRunnerFiles: staleRunners,
             writePath: {
               activeHost: writePath.activeHost,
@@ -836,21 +844,18 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   // modeTitle alone names the light — bodies must not re-prefix Suggest/Adapt/Enforce.
   const modeHelp = {
     suggest:
-      'thin or new tree; the contract is not yet the control plane. You do not pick this light. Next: ark start (preview), then ark start --apply; re-check with --doctor.',
+      'thin or new tree; architecture config is not yet in charge. You do not pick this light. Next: ark start (preview), then ark start --apply; re-check with --doctor.',
     adapt:
-      'contract and tree still disagree, or debt is open. Write path does not fully protect you yet. You do not pick this light. Next: do doctor top action #1 (often /ark-adopt, /ark-contract, or /ark-autopilot).',
+      'config and tree still disagree, or debt is open. The write path does not fully protect you yet. You do not pick this light. Next: do doctor top action #1 (often /ark-adopt, /ark-contract, or /ark-autopilot).',
     enforce:
-      'honest coverage and clean checked edges. You arrived here; you never turn Enforce on. Next: keep the host write path and CI check; only NEW violations should fail.',
+      'honest coverage and clean checked imports. You arrived here; you never turn Enforce on. Next: keep the host write path and CI check; only NEW violations should fail.',
   };
-  const modeTitle =
-    designFitness.designWeak
-      ? `${mode.toUpperCase()} · design-weak`
-      : mode.toUpperCase();
+  const modeTitle = operatingModeTitle(mode, designFitness.designWeak);
   line(
     modeMark,
     `${modeTitle} — ${
       designFitness.designWeak
-        ? 'checked edges are honest; design smells remain. Green is not elegant design. You do not pick this light. Next: one Shape door — /ark-explore shape-focus → dual-plan B; apply B only with /ark-autopilot and your OK. Empty plan A is not done.'
+        ? 'import rules check out; design smells remain. Green is not elegant design. You do not pick this light. Next: one Shape door — /ark-explore shape-focus → plan B; apply B only with /ark-autopilot and your OK. A clean import check is not done.'
         : modeHelp[mode]
     }`
   );
@@ -914,7 +919,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         `Next pilot (one at a time): ${np.pilotTarget || np.pilot} [${np.smellId}] → re-doctor after change`
       );
       line(' ', color.dim(`success: ${np.successSignal}`));
-      line(' ', color.dim('never multi-pilot batch; patternBets never mechanical-safe'));
+      line(' ', color.dim('never multi-pilot batch; pattern bets are never auto-applied'));
     }
   }
 
@@ -933,7 +938,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       ok,
       `"${goldenPattern.name}" — ${goldenPattern.norm}` +
         (goldenPattern.newCodeHome ? ` Prefer: ${goldenPattern.newCodeHome}.` : '') +
-        ' Advisory only — does not clear design-weak or replace the gate.'
+        ' Advisory only — does not clear leftover design work or replace the gate.'
     );
   } else if (goldenPattern.invalid) {
     console.log('');
@@ -1038,7 +1043,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         'No active violations — coverage is still thin, so green is not yet honest enforcement'
       );
     } else if (designFitness.designWeak) {
-      line(warn, `None on checked edges — edges match the contract; design residual remains (${modeTitle}). Not healthy finished.`);
+      line(warn, `None on checked imports — import rules match the config; leftover design work remains (${modeTitle}). Not healthy finished.`);
     } else {
       line(ok, 'None — the code matches the contract on checked edges');
     }
@@ -1155,6 +1160,25 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     } else {
       line(warn, `Codex home skills ${parts.join(', ')}`);
       actions.push(codexHomeGap.catalogMetadataInvalid ? 'repair invalid Codex home catalog metadata after verifying the newest installed version' : 'refresh Codex home skills (--install-agent-gates --skills-only --codex-home --force)');
+    }
+  }
+  for (const gap of agentHomeGaps) {
+    const parts = [
+      gap.missing > 0 ? `${gap.missing} missing` : null,
+      gap.stale > 0 ? `${gap.stale} content-behind-package` : null,
+      gap.catalogStateReason,
+    ].filter(Boolean);
+    const deferred = !agentHomeConcernIsActive(gap.host);
+    const summary = `${gap.label} shared agent skills ${parts.join(', ')}`;
+    if (deferred) {
+      line(color.dim('·'), color.dim(`${summary} (deferred — not this session)`));
+    } else {
+      line(warn, summary);
+      actions.push(
+        gap.catalogMetadataInvalid
+          ? `repair invalid ${gap.label} home catalog metadata after verifying the newest installed version`
+          : `refresh ${gap.label} shared agent skills (${agentHomeRefreshCommand(root, gap)})`
+      );
     }
   }
 

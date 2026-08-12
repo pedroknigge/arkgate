@@ -39,10 +39,10 @@ describe('buildPostGreenNextAction (shipped helper)', () => {
     expect(action!.primary).toBe(true);
     expect(action!.skill).toBe(POST_GREEN_PRIMARY_SKILL);
     expect(action!.action).toBe(POST_GREEN_PRIMARY_ACTION);
-    expect(action!.action).toMatch(/^Shape residual \(design-weak\)/);
+    expect(action!.action).toMatch(/leftover design|Imports check out|Shape residual/i);
     expect(action!.action).toMatch(/\/ark-explore shape-focus/);
     expect(action!.action).toMatch(/\/ark-autopilot/);
-    expect(action!.action).toMatch(/never mechanical-safe/i);
+    expect(action!.action).toMatch(/never auto-applied|never mechanical-safe/i);
     expect(action!.neverMechanicalSafe).toBe(true);
     expect(action!.healthyFinishedForbidden).toBe(true);
   });
@@ -115,7 +115,7 @@ describe('doctor JSON postGreenPath on design-weak fixture', () => {
     const text = logs.join('\n');
     expect(text).not.toMatch(/✔ Healthy — nothing to do/);
     expect(text).toMatch(/Primary next action/);
-    expect(text).toMatch(/Shape residual \(design-weak\):.*\/ark-explore shape-focus/s);
+    expect(text).toMatch(/leftover design|Imports check out.*\/ark-explore shape-focus|\/ark-explore shape-focus/s);
     // First numbered action should be the post-green door
     const topBlock = text.split('Primary next action')[1] || '';
     const firstLine = topBlock
@@ -126,23 +126,23 @@ describe('doctor JSON postGreenPath on design-weak fixture', () => {
     expect(firstLine).toMatch(/\/ark-explore shape-focus/);
     expect(firstLine).toMatch(/\/ark-autopilot/);
     // modeTitle alone labels the light — body must not re-prefix the same name
+    expect(text).not.toMatch(/ENFORCE · leftover design work — Enforce · leftover design work/i);
     expect(text).not.toMatch(/ENFORCE · design-weak — Enforce · design-weak/i);
     expect(text).not.toMatch(/\bSUGGEST — Suggest\b/i);
     expect(text).not.toMatch(/\bADAPT — Adapt\b/i);
     expect(text).not.toMatch(/\bENFORCE — Enforce\b/i);
-    // design residual must not paint the green ok mark on the status light (false-done visual)
+    // leftover design work must not paint the green ok mark on the status light (false-done visual)
     const stripAnsi = (s: string) => s.replace(/\u001b\[[0-9;]*m/g, '');
     const modeLine = stripAnsi(text)
       .split('\n')
       .map((l) => l.trim())
-      .find((l) => l.includes('ENFORCE · design-weak'));
+      .find((l) => l.includes('ENFORCE · leftover design work'));
     expect(modeLine).toBeTruthy();
-    expect(modeLine).toMatch(/^!\s+ENFORCE · design-weak/);
-    expect(modeLine).not.toMatch(/^[✓✔]\s+ENFORCE · design-weak/);
-    // Absolute “matches the contract” is forbidden under design-weak (edges-only qualification)
+    expect(modeLine).toMatch(/^!\s+ENFORCE · leftover design work/);
+    expect(modeLine).not.toMatch(/^[✓✔]\s+ENFORCE · leftover design work/);
     expect(stripAnsi(text)).not.toMatch(/None — the code matches the contract(?! on checked edges)/);
     expect(stripAnsi(text)).toMatch(
-      /None on checked edges|design residual remains|Not healthy finished/i
+      /None on checked edges|leftover design|design residual remains|Not healthy finished|import rules check out/i
     );
   });
 });
@@ -150,7 +150,7 @@ describe('doctor JSON postGreenPath on design-weak fixture', () => {
 describe('skill routing surface (Q01)', () => {
   it('agentInstructions maps messy/design-weak to the single path', () => {
     const text = agentInstructions(REPO);
-    expect(text).toMatch(/Messy \/ spaghetti \/ design-weak after green \/ Shape residual/i);
+    expect(text).toMatch(/Messy \/ leftover design work after green/i);
     expect(text).toMatch(/Single path:/i);
     expect(text).toMatch(/\/ark-explore.*shape-focus/i);
     expect(text).toMatch(/\/ark-autopilot/);

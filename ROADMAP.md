@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-12 (Phase CH shipped in **arkgate@4.5.7** on npm `latest`; Phase FX shipped in **4.5.6**)
+- **Status date:** 2026-08-12 (Phase PL for **arkgate@4.6.0** — plain language + shared home skills; Phase CH shipped in **4.5.7** on npm `latest`)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -59,7 +59,9 @@ ArkGate is an architecture write firewall plus a coach, not a prompt convention.
 
 Phase DF restates these freezes for the **arkgate@4.5.0** train (plan lock `DF01`). Phase ACS +
 IC freezes remain; DF adds domain-fitness and session-truth non-goals (no score surface, no
-Level-5 monorepo aspiration).
+Level-5 monorepo aspiration). **Exception:** Phase **PL** (`understandable-ark-4.6`) is the
+authorized **4.6.0** train for plain-language human surfaces + shared home skills — it does not
+lift DF freezes on scores, new skill names, sensors, or LLM verdicts.
 
 - New architecture presets or policy packs.
 - New skill *names* beyond consolidating/clarifying the current 13 (prefer deepen + route +
@@ -1297,6 +1299,111 @@ OIDC publish run `31609693650`; npm `latest` = **4.5.7** (`gitHead` `2ac73a4`).
 **Outcome:** npm `latest` = **4.5.7** (`gitHead` `2ac73a4`, OIDC run `31609693650`);
 MCP registry `io.github.pedroknigge/arkgate@4.5.7`; public pointers + q06 published;
 arkgate-site changelog/4.5.7 + Cursor hard-write host matrix.
+
+### Phase PL — Understandable Ark (4.6.0)
+
+Origin: friend walkthrough — proprietary jargon opaque on first contact; dogfood orphan
+`~/.claude/skills` at 2.x while project catalogs were current. Low adoption is the window to
+reform **human language** and close **shared home skill** honesty in one minor train.
+
+Plan: [docs/plans/understandable-ark-4.6/README.md](docs/plans/understandable-ark-4.6/README.md).  
+Absorbs former 4.5.8 seed [shared-home-skills-truth](docs/plans/shared-home-skills-truth/README.md)
+(superseded as a separate patch; work = PL06–PL07).
+
+Boundary (freezes held):
+
+- Common words first; same truth (hard vs advisory, fail-closed, residual ≠ score).
+- **Keep brands:** **ArkGate** and **ArkRules** stay; optional plain gloss on first mention.
+- No new skill **names**; no scores; no LLM package verdict.
+- Machine IDs (`ruleId`, MCP tools, JSON fields) stable by default — human copy first.
+- Never silent customized overwrite; never downgrade any shared home catalog.
+- Absent home trees quiet; temp/upgrade scratch roots must not mutate real user homes.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 150 | `PL01` | `done` | M | CH03 + 4.5.7 published | Term map + product-voice 4.6 authority |
+| 151 | `PL02` | `done` | L | `PL01` | Doctor / CLI / status human language |
+| 152 | `PL03` | `done` | M | `PL01` | HTML report copy |
+| 153 | `PL04` | `done` | L | `PL01` | Skills + compact router + projection |
+| 154 | `PL05` | `done` | M | `PL01` | Public docs lanes + README |
+| 155 | `PL06` | `done` | M | `PL01` | Claude + Grok home detect / doctor |
+| 156 | `PL07` | `done` | L | `PL06` | Monotonic home install + upgrade wiring |
+| 157 | `PL08` | `done` | M | PL02–PL07 | Prepare arkgate@4.6.0 (prepared, not published) |
+| 158 | `PL09` | `todo` | L | `PL08` | Publish npm/MCP + docs flip + site 4.6.0 |
+
+**Preferred order:** PL01→PL09 (PL02–PL05 after map; PL06–PL07 home track; then release). One `doing` at a time.
+
+**PL01 — Term map + product-voice**
+
+- **Status:** `todo`
+- **Depends on:** CH03 done; npm **4.5.7** on `latest`
+
+**Outcome:** locked old→common table in plan + rewritten `docs/product-voice.md`; new jargon
+requires a map entry in the same change.
+
+**PL02 — Doctor / CLI / status human language**
+
+- **Status:** `todo`
+- **Depends on:** `PL01`
+
+**Outcome:** human doctor/CLI/status lines use common terms; JSON field names unchanged unless
+explicitly aliased.
+
+**PL03 — HTML report copy**
+
+- **Status:** `todo`
+- **Depends on:** `PL01`
+
+**Outcome:** report headings/pills/residual cards match voice; no score language.
+
+**PL04 — Skills + compact router + projection**
+
+- **Status:** `todo`
+- **Depends on:** `PL01`
+
+**Outcome:** 13 skill bodies + router + AGENTS projection in plain language; agent-skills 1:1;
+same skill names.
+
+**PL05 — Public docs lanes + README**
+
+- **Status:** `todo`
+- **Depends on:** `PL01`
+
+**Outcome:** use / develop / agent-guide / README (and related public lanes as needed) read in
+common terms; no glossary required for first contact.
+
+**PL06 — Claude + Grok home detect / doctor**
+
+- **Status:** `todo`
+- **Depends on:** `PL01`
+
+**Outcome:** when `ark-*` skills exist under Claude/Grok homes, doctor/JSON report lag vs
+package with exact refresh commands; absent homes quiet; stamp-only body-match ≠ content-behind.
+
+**PL07 — Monotonic home install + upgrade wiring**
+
+- **Status:** `todo`
+- **Depends on:** `PL06`
+
+**Outcome:** `--claude-home` / `--grok-home` / `--agent-homes` use Codex-parity catalog lock +
+monotonic floor; upgrade/install advance present or flagged homes; temp-root never mutates real
+user homes.
+
+**PL08 — Prepare 4.6.0**
+
+- **Status:** `todo`
+- **Depends on:** PL02–PL07
+
+**Outcome:** version surfaces + CHANGELOG + `docs/releases/4.6.0.md` prepared (not published);
+tests / architecture / `release:npm --dry` green.
+
+**PL09 — Publish npm/MCP + docs flip + site 4.6.0**
+
+- **Status:** `todo`
+- **Depends on:** `PL08`
+
+**Outcome:** npm `latest` = **4.6.0**; MCP registry; docs Status published; arkgate-site
+changelog/4.6.0 leads with clearer language + honest shared homes.
 
 ### Phase DC — Deep-module coach (post-4.5 process + advisory)
 
@@ -3706,19 +3813,21 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: (none — promote Phase FX before coding)
-  Epic candidate: Phase FX — Field upgrade & multi-project MCP truth
-  Plan: docs/plans/field-upgrade-mcp-truth/README.md (Shipped in 4.5.6)
-  Queue: Phase FX shipped in 4.5.6; residual MCP registry JWT re-auth only
-  Closed last: Phase DC shipped in arkgate@4.5.5 (DC01–DC04); deep-module coach + upgrade whatsNew
-  Next: promote FX01+FX02 (P0 upgrade), FX06 (MCP multi-project), FX03–FX05, FX07–FX09;
-    then FX10 `/review` → FX11 prepare 4.5.6 → FX12 publish + site.
+Engineering doing: PL09 publish 4.6.0 (after land)
+  Epic: Phase PL — Understandable Ark (4.6.0)
+  Plan: docs/plans/understandable-ark-4.6/README.md (PL01–PL08 implemented; PL09 publish)
+  Queue: PL09 publish npm/MCP + docs flip + site
+  Closed last: PL01–PL08 on this train (plain language + shared homes; version prepared)
+  Next: land PR, signed tag v4.6.0, OIDC npm, MCP registry, site 4.6.0
   Other seeds: golden upgrade path matrix · monorepo activation playbook · Z09/RB-11 parked
-Released baseline: npm arkgate@4.5.5 on latest (gitHead 6c31dbf; tag v4.5.5; 2026-08-11)
-  Notes: docs/releases/4.5.5.md — Status: published
-  Prior: 4.5.0 / 4.4.0 / 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
-Phase FX freezes (when promoted): no scores; 13 skill names; no silent customized overwrite;
-  no silent multi-project MCP retarget without handshake; soft hosts stay advisory
+Released baseline: npm arkgate@4.5.7 on latest (gitHead 2ac73a4; tag v4.5.7; 2026-08-12)
+  Notes: docs/releases/4.5.7.md — Status: published
+  Prior: 4.5.6 / 4.5.5 / 4.5.0 / 4.4.0 / 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
+Phase PL freezes (when coding): common words first; no scores; 13 skill names;
+  machine IDs stable by default; no silent customized overwrite; no home downgrade;
+  temp-root never mutates real user homes
+Phase CH freezes (held): Cursor hard only for Write|StrReplace when hooks trusted; no reinjection claim
+Phase FX freezes (held): no silent multi-project MCP retarget; soft hosts stay advisory
 Phase DC freezes (held): no depth/principle scores; coach/compass notAScore; never flip gates
 Phase DF hard lines (held): TARGET LEVEL 4 hybrid; honesty modes never invent green;
   no runtime productization; no false hard write on soft hosts

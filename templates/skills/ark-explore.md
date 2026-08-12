@@ -1,6 +1,6 @@
 ---
 name: ark-explore
-description: Specialized map skill — decision-grade recon of layers + ArkRules opportunities + dual-plan seed (no apply). Primary post-green door when design-weak. Not the default day-to-day path (use doctor + place/gate; guided apply is /ark-autopilot). CLI is a sensor; you read the tree. No gate bypass.
+description: Specialized map skill — decision-grade recon of layers + ArkRules opportunities + dual-plan seed (no apply). Primary post-green door when leftover design work remains. Not the default day-to-day path (use doctor + place/gate; guided apply is /ark-autopilot). CLI is a sensor; you read the tree. No gate bypass.
 ---
 
 # /ark-explore — Recon the real project (map only)
@@ -23,7 +23,7 @@ Name 1–3 **residual** lenses in plain language before skill-shopping. Always `
 
 **What the user should feel next:** fewer blocked AI writes, clearer folders, safer domain — then jargon.
 
-**Anti false-done:** empty plan A + residual lenses / design-weak → **Incomplete? yes**. Green edges alone
+**Anti false-done:** empty plan A + leftover design work → **Incomplete? yes**. Green imports alone
 are not “architecture finished.”
 
 **AI-easy architecture:** ports over concrete I/O in domain; one concern per module; golden pattern for
@@ -59,12 +59,12 @@ If the consumer tree has a **domain glossary**, prefer its terms for layer/slice
 | Use `/ark-explore` when… | Do **not** use it when… |
 |--------------------------|-------------------------|
 | Map / “what next?” / residual after ENFORCE | User wants edits applied → `/ark-autopilot` or `/ark-fix` |
-| **Primary post-green door:** messy / spaghetti / design-weak / “clarify for AI” | Skill-shopping coverage or think for the same residual |
+| **Primary post-green door:** messy / leftover design work / “clarify for AI” | Skill-shopping coverage or think for the same leftover work |
 | Spaghetti brownfield: patterns concurrent, design-weak under green check | Only “governed% + gates installed?” numbers → `/ark-coverage` |
 | Dual-plan **seed** (A remediation + B pattern bets) without applying | One design trade-off between 2–3 options already mapped → `/ark-think` |
 | Path-correct vs design-correct honesty | Plain-language tour / HTML report → `/ark-explain` |
 
-**Post-green single path:** when doctor `postGreenPath` / ENFORCE · design-weak is active, **this skill
+**Post-green single path:** when doctor `postGreenPath` / ENFORCE · leftover design work is active, **this skill
 (shape-focus / dual-plan seed) is the map half of the one door** — then `/ark-autopilot` only
 to apply B with user OK. Do not send the user to coverage or think as equal first choices.
 
@@ -75,7 +75,7 @@ to apply B with user OK. Do not send the user to coverage or think as equal firs
 | **Suggest** | Point at `ark start` → doctor; map only if user insists on recon before setup |
 | **Adapt** | Map false-green / ungoverned / concentrated edge; hand off adopt/contract before Shape vanity |
 | **Enforce** | Confirm edges; if residual smells/patterns appear, auto-upgrade to dual-plan seed / shape-focus |
-| **Enforce · design-weak** | **Primary post-green map door** — shape-focus + dual-plan B + extraction cards. False-done forbidden. Never claim healthy because plan A is empty. |
+| **Enforce · leftover design work** | **Primary post-green map door** — shape-focus + dual-plan B + extraction cards. False-done forbidden. Never claim healthy because plan A is empty. |
 
 `/ark-autopilot`, `/ark-adopt`, and `/ark-coverage` embed a **lighter** version of this pass.
 **You** are the full recon + pattern-planning skill.

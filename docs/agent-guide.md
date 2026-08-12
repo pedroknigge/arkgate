@@ -607,10 +607,10 @@ npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok,antigra
 
 | Host | Installed paths | Skills path |
 |------|-----------------|-------------|
-| Claude Code | `.claude/settings.json` hook + `.mcp.json` / `claude mcp add` | `.claude/skills/<name>/SKILL.md` |
-| Cursor | `.cursor/mcp.json` + `.cursor/rules/ark.mdc` | `.cursor/commands/` |
+| Claude Code | `.claude/settings.json` hook + `.mcp.json` / `claude mcp add` | **Repo:** `.claude/skills/<name>/SKILL.md`; **home:** `$CLAUDE_HOME/skills` (default `~/.claude/skills`, `--claude-home`) |
+| Cursor | `.cursor/mcp.json` + `.cursor/rules/ark.mdc` | `.cursor/commands/` (Cursor also loads Claude **home** skills from `~/.claude/skills`) |
 | OpenAI Codex | `.codex/config.toml` (project primary, relative `--root .`; configured on disk is not runtime-active until restart + `ark_identity` match); optional legacy `$CODEX_HOME/config.toml` fallback uses absolute roots and scoped secondaries — see [ai-gates.md](ai-gates.md) | **Repo:** `.agents/skills/<name>/SKILL.md`; **home:** `$CODEX_HOME/skills/<name>/SKILL.md` (`--codex-home`) |
-| **Grok Build** | `.grok/hooks/ark-write-gate.json` + `.grok/config.toml` / `.mcp.json` | `.grok/skills/<name>/SKILL.md` |
+| **Grok Build** | `.grok/hooks/ark-write-gate.json` + `.grok/config.toml` / `.mcp.json` | **Repo:** `.grok/skills/<name>/SKILL.md`; **home:** `$GROK_HOME/skills` (default `~/.grok/skills`, `--grok-home`) |
 | Google Antigravity | `.agents/hooks.json` (+ `GEMINI.md` for shared Gemini consumers) | `.agents/skills/<name>/SKILL.md` |
 | OpenCode | `opencode.json` MCP (`type: local`; advisory) | `.opencode/skills/<name>/SKILL.md` |
 
@@ -618,10 +618,13 @@ This is a path reference, not a guarantee table. Full copy-paste setups:
 [ai-gates.md](ai-gates.md). Skill inventory: main
 [README](../README.md#other-skills-only-when-you-need-them).
 When several repositories share one machine, repo catalogs stay pinned and isolated; unchanged
-skill bodies are not rewritten for a version stamp. The optional `$CODEX_HOME/skills` catalog is
-monotonic across ArkGate 4.2.0+ installers. Pre-4.2 binaries ignore its metadata and lock, so
-upgrade legacy repos before they write the optional home catalog. See
-[AI gates — Codex skill catalog](ai-gates.md#codex-skill-catalog-skillmd-not-flat-prompts).
+skill bodies are not rewritten for a version stamp. Shared **home** catalogs (Codex since 4.2;
+Claude/Grok since 4.6) are the machine floor: always latest additive, never downgrade. Refresh
+with `--agent-homes` (or `--claude-home` / `--grok-home` / `--codex-home`). Absent home trees
+are normal — doctor stays quiet until `ark-*` skills exist there. Pre-4.2 binaries ignore Codex
+home metadata and lock, so upgrade legacy repos before they write the optional Codex home
+catalog. See [AI gates — Codex skill catalog](ai-gates.md#codex-skill-catalog-skillmd-not-flat-prompts)
+and [shared Claude/Grok homes](ai-gates.md#shared-claude--grok-home-skills).
 
 ### Install skills — Ark and ecosystem {#install-skills-ark-and-ecosystem}
 
