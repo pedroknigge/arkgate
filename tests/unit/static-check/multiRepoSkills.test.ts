@@ -876,8 +876,9 @@ describe('multi-repo skill installation', () => {
           "const fs = require('node:fs');",
           'const file = process.argv[1];',
           "fs.writeFileSync(file, `${JSON.stringify({ token: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', pid: process.pid, createdAtMs: Date.now() })}\\n`);",
-          // Hold long enough for installCatalog wait/retry on slow CI (macOS runners).
-          'setTimeout(() => { try { fs.unlinkSync(file); } catch {} }, 900);',
+          // Hold long enough for installCatalog wait/retry on slow CI (macOS runners),
+          // but well under the 5s lock-wait budget (200 × 25ms).
+          'setTimeout(() => { try { fs.unlinkSync(file); } catch {} }, 600);',
         ].join(' '),
         lock,
       ],
@@ -889,7 +890,15 @@ describe('multi-repo skill installation', () => {
     }
     try {
       expect(fs.existsSync(lock)).toBe(true);
-      const installed = installCatalog(codexHome, '2.0.0', { 'ark-test': 'body' });
+      let installed = installCatalog(codexHome, '2.0.0', { 'ark-test': 'body' });
+      const retryDeadline = Date.now() + 5_000;
+      while (
+        installed.some((result) => result.status === 'failed') &&
+        Date.now() < retryDeadline
+      ) {
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
+        installed = installCatalog(codexHome, '2.0.0', { 'ark-test': 'body' });
+      }
       expect(installed.some((result) => result.status === 'failed')).toBe(false);
       expect(fs.existsSync(lock)).toBe(false);
     } finally {

@@ -16,7 +16,7 @@ export const HOME_SKILL_PENDING_CATALOG = '.arkgate-catalog.pending.json';
 const HOME_SKILL_LOCK = '.arkgate-install.lock';
 const HOME_SKILL_CATALOG_SCHEMA = '1.0';
 const HOME_SKILL_LOCK_STALE_MS = 5 * 60 * 1000;
-const HOME_SKILL_LOCK_ATTEMPTS = 100;
+const HOME_SKILL_LOCK_ATTEMPTS = 200;
 const HOME_SKILL_LOCK_RETRY_MS = 25;
 const UUID_PATTERN =
   /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
