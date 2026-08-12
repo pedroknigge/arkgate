@@ -41,7 +41,7 @@ describe('enforcement profile policy', () => {
         advisoryWrite: true,
         hookPath: '.agents/hooks.json',
       },
-      cursor: { hardWrite: false, advisoryWrite: true, hookPath: null },
+      cursor: { hardWrite: true, advisoryWrite: true, hookPath: '.cursor/hooks.json' },
       codex: { hardWrite: false, advisoryWrite: true, hookPath: '.codex/hooks.json' },
       opencode: { hardWrite: false, advisoryWrite: true, hookPath: null },
     });

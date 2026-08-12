@@ -120,7 +120,7 @@ describe('DF05 self-service criterion (quoted)', () => {
 
 describe('DF05 pure host activation labels (fail-closed)', () => {
   it('labels soft hosts advisory and never hard without evidence', () => {
-    for (const host of ['cursor', 'codex', 'opencode'] as const) {
+    for (const host of ['codex', 'opencode'] as const) {
       const entry = projectHostWritePathActivation(host);
       expect(entry.softWriteHost).toBe(true);
       expect(entry.hardWriteSupported).toBe(false);
@@ -131,7 +131,7 @@ describe('DF05 pure host activation labels (fail-closed)', () => {
   });
 
   it('labels hard-capable hosts advisory when hard is not proven (no false hard)', () => {
-    for (const host of ['claude', 'grok', 'antigravity'] as const) {
+    for (const host of ['claude', 'grok', 'antigravity', 'cursor'] as const) {
       const entry = projectHostWritePathActivation(host);
       expect(entry.softWriteHost).toBe(false);
       expect(entry.hardWriteSupported).toBe(true);

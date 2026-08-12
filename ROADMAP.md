@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-11 (Phase FX shipped in **arkgate@4.5.6** published; Phase DC shipped in **4.5.5**)
+- **Status date:** 2026-08-12 (Phase CH — CH01 done for **arkgate@4.5.7**; CH02/CH03 todo; Phase FX shipped in **4.5.6**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -68,7 +68,8 @@ Level-5 monorepo aspiration).
 - LLM-derived pass/fail or package “process verdict” (maintainer offline eval only).
 - Enforcement claims from AGENTS.md, skills, or version-matched agent projection alone.
 - New runtime features (optional kernel stays experimental).
-- False hard-write claims for soft hosts (Cursor/Codex/OpenCode).
+- False hard-write claims for soft hosts (Codex/OpenCode). Cursor hard write is limited to
+  listed `preToolUse` ops when hooks are installed + trusted.
 - Numeric trust / architecture / principle health **score**, average, or Excellent/Good rank band.
 - Improvement compass as a gate input (projection is advisory `notAScore` only).
 - New report polish that does not expose required evidence (presentation-only HTML growth).
@@ -1242,6 +1243,51 @@ multi-project MCP retarget without handshake; soft hosts stay advisory; advisory
 | 146 | `FX12` | `done` | L | `FX11` | Publish npm/MCP + docs flip + arkgate-site 4.5.6 |
 
 **Preferred order:** FX01→FX12. One `doing` at a time.
+
+### Phase CH — Cursor hard write (4.5.7)
+
+Origin: Cursor platform now supports `preToolUse` deny / exit 2; ArkGate still claimed
+“advisory only / no hard PreToolUse” and installed only MCP + rules. Product honesty requires
+a verified Cursor adapter before claiming `hard-write`.
+
+Boundary (freezes held):
+
+- Claim hard **only** for listed ops (`Write` | `StrReplace`) when `.cursor/hooks.json` is
+  installed + trusted; Shell / Tab / human edits stay CI-backed.
+- Repair envelope may emit; **do not** claim Write `updated_input` reinjection on Cursor.
+- Codex/OpenCode remain soft/advisory at write.
+- No new skill names, sensors, or scores.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 147 | `CH01` | `done` | M | FX12 + 4.5.6 published | Cursor hooks install + runtime + matrix/docs honesty |
+| 148 | `CH02` | `doing` | M | `CH01` | Prepare arkgate@4.5.7 (version/CHANGELOG/release notes) |
+| 149 | `CH03` | `todo` | L | `CH02` | Publish npm/MCP + docs flip + site 4.5.7 |
+
+**Preferred order:** CH01→CH03. One `doing` at a time.
+
+**CH01 — Cursor hard write adapter**
+
+- **Status:** `done` (2026-08-12)
+- **Depends on:** FX12 done; npm **4.5.6** on `latest`
+
+**Outcome:** `.cursor/hooks.json` template + merge; `--hook` maps Cursor payloads and emits
+`permission: deny`; host matrix `hard-write: true` for Write|StrReplace; detection/doctor/
+install/tests updated; docs no longer say Cursor has no pre-write hook.
+
+**Evidence:** `hook-templates.source.mjs` `cursorHooks` / `mergeCursorArkHook`;
+`ark-mcp-runtime.mjs` Cursor normalize + permission deny; `host-support-matrix.mjs`;
+`write-path-capabilities.mjs` `cursorHookEvidence`; tests `cursorHardWrite.test.ts` + matrix/
+write-path fixtures; README matrix regenerated; version prepared **4.5.7**.
+
+**CH02 — Prepare 4.5.7**
+
+- **Status:** `doing` (2026-08-12)
+- **Depends on:** `CH01`
+
+**Outcome:** release notes `docs/releases/4.5.7.md` Status prepared; version sources aligned
+(`package.json` / lock / `server.json` / `src/version.ts`); q06 CURRENT=4.5.7 with
+PUBLISHED_LATEST still 4.5.6; public npm-latest pointers unchanged until CH03.
 
 ### Phase DC — Deep-module coach (post-4.5 process + advisory)
 

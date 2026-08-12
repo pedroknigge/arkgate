@@ -216,6 +216,9 @@ function requiredWriteOperations(relativePath) {
   if (relativePath === '.agents/hooks.json' || relativePath.startsWith('.agents/')) {
     return ['write_to_file', 'replace_file_content', 'multi_replace_file_content'];
   }
+  if (relativePath === '.cursor/hooks.json' || relativePath.startsWith('.cursor/hooks')) {
+    return ['Write', 'StrReplace'];
+  }
   return ['Write', 'Edit', 'MultiEdit'];
 }
 
@@ -282,6 +285,51 @@ function collectPreToolUseGroups(parsed) {
     return groups;
   }
   return [];
+}
+
+/**
+ * Cursor hooks.json (version 1): { hooks: { preToolUse: [{ command, matcher, failClosed }] } }
+ * Flat command entries — not Claude's nested `{ hooks: [{ type, command }] }` groups.
+ */
+function cursorHookEvidence(root) {
+  const relativePath = '.cursor/hooks.json';
+  const text = readText(path.join(root, relativePath));
+  let hooks = [];
+  try {
+    const parsed = JSON.parse(text);
+    const entries = Array.isArray(parsed?.hooks?.preToolUse) ? parsed.hooks.preToolUse : [];
+    hooks = entries
+      .filter((entry) => entry && typeof entry === 'object' && (!entry.type || entry.type === 'command'))
+      .map((entry) => ({
+        hook: entry,
+        invocation: commandArkMcpInvocation(entry?.command),
+        operations: matcherOperations(relativePath, entry?.matcher),
+      }))
+      .filter((entry) => entry.invocation);
+  } catch {
+    hooks = [];
+  }
+  const hardHooks = hooks.filter((entry) => entry.invocation.binArgs.includes('--hook'));
+  const required = requiredWriteOperations(relativePath);
+  const hard = required.every((operation) =>
+    hardHooks.some((entry) => entry.operations.includes(operation))
+  );
+  const repair =
+    hard &&
+    required.every((operation) =>
+      hardHooks.some(
+        ({ hook, invocation, operations }) =>
+          operations.includes(operation) &&
+          (invocation.binArgs.includes('--hook-repair') ||
+            /^(?:1|true|yes|on)$/i.test(
+              String(hook.env?.ARK_HOOK_REPAIR ?? invocation.environment.ARK_HOOK_REPAIR ?? '')
+            ))
+      )
+    );
+  return {
+    hard: hard ? [relativePath] : [],
+    repair: repair ? [relativePath] : [],
+  };
 }
 
 function hookEvidence(root, relativePath) {
@@ -396,6 +444,7 @@ export function detectWritePathInventory(root) {
   const claudeHook = hookEvidence(root, '.claude/settings.json');
   const grokHook = hookEvidence(root, '.grok/hooks/ark-write-gate.json');
   const antigravityHook = hookEvidence(root, '.agents/hooks.json');
+  const cursorHook = cursorHookEvidence(root);
   const hosts = {
     claude: hostRecord(
       claudeHook.hard,
@@ -416,7 +465,19 @@ export function detectWritePathInventory(root) {
       antigravityHook.repair,
       merge
     ),
-    cursor: hostRecord([], mcpEvidence(root, '.cursor/mcp.json'), [], merge),
+    cursor: hostRecord(
+      cursorHook.hard,
+      [
+        ...mcpEvidence(root, '.cursor/mcp.json'),
+        // Shared project MCP is also a valid advisory surface for Cursor sessions.
+        ...mcpEvidence(root, '.mcp.json'),
+      ],
+      // EH07: hooks may emit --hook-repair envelopes, but Cursor Write updated_input
+      // reinjection is not package-guaranteed — keep inventory repair-payload false
+      // (envelope honesty lives on support.repair-envelope-emitted).
+      [],
+      merge
+    ),
     // Codex 0.123+ emits PreToolUse for the native apply_patch handler, but some
     // Code Mode hosts execute deferred nested writes without dispatching that
     // project hook. Keep the installed hook as best-effort protection; do not

@@ -26,9 +26,11 @@ export {
   antigravityHooks,
   claudeSettings,
   codexProjectConfig,
+  cursorHooks,
   grokHooks,
   grokProjectConfig,
   mergeAntigravityArkHook,
+  mergeCursorArkHook,
   mergeOpencodeArkMcp,
   opencodeProjectConfig,
 } from './hook-templates.mjs';

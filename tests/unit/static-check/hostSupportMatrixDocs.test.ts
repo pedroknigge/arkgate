@@ -69,11 +69,11 @@ describe('canonical public host support matrix', () => {
         'repair-reinjection-guaranteed': true,
       },
       cursor: {
-        'hard-write': false,
+        'hard-write': true,
         'advisory-write': true,
         'merge-gate': true,
         'repair-payload': false,
-        'repair-envelope-emitted': false,
+        'repair-envelope-emitted': true,
         'repair-reinjection-guaranteed': false,
       },
       codex: {
@@ -101,7 +101,7 @@ describe('canonical public host support matrix', () => {
       'hard local write boundary'
     );
     expect(formatHostSupportSummary(HOST_SUPPORT_MATRIX.cursor)).toContain(
-      'no hard local write boundary'
+      'hard local write boundary'
     );
     expect(formatHostSupportSummary(HOST_SUPPORT_MATRIX.opencode)).toContain(
       'no hard local write boundary'
@@ -110,7 +110,7 @@ describe('canonical public host support matrix', () => {
 
     const doctorModel = detectWritePathCapabilities(REPO, 'cursor');
     expect(doctorModel.support).toBe(HOST_SUPPORT_MATRIX.cursor);
-    expect(doctorModel.supportSummary).toContain('no hard local write boundary');
+    expect(doctorModel.supportSummary).toContain('hard local write boundary');
   });
 
   it('renders README and generated AGENTS.md from the same matrix', () => {
@@ -124,15 +124,19 @@ describe('canonical public host support matrix', () => {
   });
 
   it('doctorWritePathHonestyMessage covers host × hardWrite combinations', () => {
-    expect(doctorWritePathHonestyMessage('cursor', false)).toMatch(/Cursor:.*advisory/i);
-    expect(doctorWritePathHonestyMessage('cursor', true)).toMatch(/Cursor:.*advisory/i);
+    expect(doctorWritePathHonestyMessage('cursor', false)).toMatch(
+      /Cursor:.*Write\/StrReplace|unverified/i
+    );
+    expect(doctorWritePathHonestyMessage('cursor', true)).toBeNull();
     expect(doctorWritePathHonestyMessage('codex', false)).toMatch(/Codex:.*best-effort/i);
-    expect(doctorWritePathHonestyMessage('codex', false)).toMatch(/not Claude\/Grok hard/i);
+    expect(doctorWritePathHonestyMessage('codex', false)).toMatch(/not Claude\/Grok\/Cursor hard/i);
     expect(doctorWritePathHonestyMessage('codex', false)).not.toEqual(
       doctorWritePathHonestyMessage('cursor', false)
     );
     expect(doctorWritePathHonestyMessage('opencode', false)).toMatch(/OpenCode:.*advisory/i);
-    expect(doctorWritePathHonestyMessage('opencode', true)).toMatch(/not Claude\/Grok\/Antigravity hard/i);
+    expect(doctorWritePathHonestyMessage('opencode', true)).toMatch(
+      /not Claude\/Grok\/Antigravity\/Cursor hard/i
+    );
     expect(doctorWritePathHonestyMessage('claude', true)).toBeNull();
     expect(doctorWritePathHonestyMessage('grok', true)).toBeNull();
     expect(doctorWritePathHonestyMessage('antigravity', true)).toBeNull();

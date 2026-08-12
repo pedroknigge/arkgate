@@ -136,7 +136,9 @@ describe('host-specific enforcement profiles', () => {
   it.each(HOSTS)('%s-only install emits a green CI check and a truthful write verdict', (host) => {
     const root = createFixture();
     try {
-      const hardHost = host === 'claude' || host === 'grok';
+      const hardHost = host === 'claude' || host === 'grok' || host === 'cursor';
+      // Cursor emits repair envelopes but does not guarantee Write updated_input reinjection.
+      const repairPayload = host === 'claude' || host === 'grok';
       const first = install(root, host, host, hardHost);
       expect(first.status, first.stderr).toBe(0);
       if (hardHost) {
@@ -149,6 +151,12 @@ describe('host-specific enforcement profiles', () => {
         expect(hooks).not.toContain('CLAUDE_PROJECT_DIR');
         expect(hooks).not.toContain('$');
       }
+      if (host === 'cursor') {
+        const hooks = fs.readFileSync(path.join(root, '.cursor', 'hooks.json'), 'utf8');
+        expect(hooks).toContain('Write|StrReplace');
+        expect(hooks).toContain('CURSOR_PROJECT_DIR');
+        expect(hooks).toContain('failClosed');
+      }
 
       const mergeArgs = generatedMergeArgs(root);
       expect(mergeArgs).toContain('--strict-merge');
@@ -160,10 +168,10 @@ describe('host-specific enforcement profiles', () => {
       expect(writePath.capabilities['merge-gate']).toBe(true);
       expect(writePath.capabilities['advisory-write']).toBe(true);
       expect(writePath.capabilities['hard-write']).toBe(hardHost);
-      expect(writePath.capabilities['repair-payload']).toBe(hardHost);
+      expect(writePath.capabilities['repair-payload']).toBe(repairPayload);
       if (!hardHost) {
         expect(writePath.gap.fix).toContain(`--tools ${host}`);
-        expect(writePath.gap.fix).not.toMatch(/--tools (claude|grok)/);
+        expect(writePath.gap.fix).not.toMatch(/--tools (claude|grok|cursor)/);
       }
 
       const hard = run(
@@ -234,7 +242,7 @@ describe('host-specific enforcement profiles', () => {
           repairPayload: true,
         },
         cursor: {
-          hardWrite: false,
+          hardWrite: true,
           advisoryWrite: true,
           mergeGate: true,
           repairPayload: false,

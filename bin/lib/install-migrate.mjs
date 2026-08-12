@@ -25,9 +25,11 @@ import {
   claudeSettings,
   codexHooks,
   codexProjectConfig,
+  cursorHooks,
   grokHooks,
   grokProjectConfig,
   mergeAntigravityArkHook,
+  mergeCursorArkHook,
   mergeOpencodeArkMcp,
   opencodeProjectConfig,
 } from './hook-templates.mjs';
@@ -194,6 +196,9 @@ export function buildManagedAssetCatalog({ root, tools, compact = false, skillsO
     );
     if (selectedTools.has('cursor')) {
       add('.cursor/mcp.json', mcpJson(root));
+      // whole-file for managed upgrade/manifest (json-merge is install-time only via
+      // mergeCursorArkHook below — same pattern as Antigravity hooks).
+      add('.cursor/hooks.json', cursorHooks(root));
       if (!compact) add('.cursor/rules/ark.mdc', cursorRule(root));
     }
     if (selectedTools.has('claude')) add('.claude/settings.json', claudeSettings(root));
@@ -514,6 +519,25 @@ export function runInstallAgentGates(args) {
         return { relativePath, status: 'skipped-non-ark' };
       }
       if (merged === existing) return { relativePath, status: 'skipped' };
+      return writeTemplate(root, relativePath, merged, true);
+    }
+    if (relativePath === '.cursor/hooks.json') {
+      const fullPath = path.join(root, relativePath);
+      let existing = '';
+      try {
+        existing = fs.readFileSync(fullPath, 'utf8');
+      } catch {
+        // Missing hooks file → write generated Cursor preToolUse gate.
+      }
+      if (!existing) {
+        return writeTemplate(root, relativePath, content, true);
+      }
+      const merged = mergeCursorArkHook(existing, content);
+      if (merged == null) {
+        return { relativePath, status: 'skipped-non-ark' };
+      }
+      if (merged === existing) return { relativePath, status: 'skipped' };
+      // Upsert Ark preToolUse without requiring --force; never wipe sibling hooks.
       return writeTemplate(root, relativePath, merged, true);
     }
     if (relativePath === '.agents/hooks.json') {

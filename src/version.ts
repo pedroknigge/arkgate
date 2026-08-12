@@ -1,2 +1,2 @@
 /** ArkGate library version — single source of truth. */
-export const version = '4.5.6';
+export const version = '4.5.7';

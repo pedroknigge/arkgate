@@ -8,8 +8,9 @@ npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok
 
 Installs:
 
-- Write-path configuration (Claude/Grok hard PreToolUse; Cursor/Codex advisory MCP)
-  — PreToolUse uses **`--hook-repair`** (W4): on deny, stderr may include
+- Write-path configuration (Claude/Grok/Antigravity/Cursor hard PreToolUse when covered;
+  Codex advisory MCP)
+  — PreToolUse / Cursor `preToolUse` uses **`--hook-repair`** (W4): on deny, stderr may include
   `ARK_REPAIR_JSON` / `ARK_AUTOPATCH_JSON` for hosts that re-inject a patch.
   Still exit 2 / hard block; never silent write. Drop `--hook-repair` for
   reject-only prose, or set `ARK_HOOK_REPAIR=0` and omit the flag.
@@ -20,7 +21,7 @@ Installs:
 | Host | Extra paths |
 |------|-------------|
 | Claude Code | `.claude/settings.json`, `.claude/skills/` |
-| Cursor | `.cursor/mcp.json`, `.cursor/rules/ark.mdc`, `.cursor/commands/` |
+| Cursor | `.cursor/mcp.json`, `.cursor/hooks.json`, `.cursor/rules/ark.mdc`, `.cursor/commands/` |
 | Codex | `.codex/hooks.json`, `.codex/config.toml`, `.agents/skills/` |
 | **Grok Build** | `.grok/config.toml`, `.grok/hooks/`, `.grok/skills/` |
 

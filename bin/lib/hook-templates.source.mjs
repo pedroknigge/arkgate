@@ -1,12 +1,35 @@
 /**
  * Host hook / MCP project templates for agent-gate install
- * (Claude, Grok, Codex, Antigravity, OpenCode).
+ * (Claude, Grok, Codex, Antigravity, Cursor, OpenCode).
  * Kept out of agent-gates.mjs so install orchestration stays scannable (explore gap #5).
  */
 import { execCommandParts, execRunner } from '../ark-shared.mjs';
 
 /** Preferred MCP binary name for generated hooks (package dual-bin). */
 export const PREFERRED_MCP_BIN = 'arkgate-mcp';
+
+/**
+ * Cursor project hooks (`.cursor/hooks.json`, schema version 1).
+ * Hard write boundary for agent `Write` / `StrReplace` when hooks are trusted.
+ * Repair envelope may emit; Cursor Write `updated_input` reinjection is not claimed.
+ * Shell / Tab / human edits remain CI-backed (same residual as other hard hosts).
+ */
+export function cursorHooks(root) {
+  const runner = execRunner(root);
+  return `${JSON.stringify({
+    version: 1,
+    hooks: {
+      preToolUse: [
+        {
+          command: `${runner} ${PREFERRED_MCP_BIN} --hook --hook-repair --fail-on-new-smells --root . --root-env CURSOR_PROJECT_DIR --config ark.config.json`,
+          matcher: 'Write|StrReplace',
+          failClosed: true,
+          timeout: 30,
+        },
+      ],
+    },
+  }, null, 2)}\n`;
+}
 
 export function claudeSettings(root) {
   const runner = execRunner(root);
@@ -195,6 +218,57 @@ export function opencodeProjectConfig(root) {
       },
     },
   }, null, 2)}\n`;
+}
+
+/**
+ * Upsert the ArkGate `preToolUse` Write|StrReplace command into an existing Cursor hooks.json.
+ * Preserves sibling events and non-Ark preToolUse entries. Returns null if unreadable.
+ */
+export function mergeCursorArkHook(existingText, generatedText) {
+  let existing;
+  let generated;
+  try {
+    existing = existingText && existingText.trim() ? JSON.parse(existingText) : {};
+    generated = JSON.parse(generatedText);
+  } catch {
+    return null;
+  }
+  if (!existing || typeof existing !== 'object' || Array.isArray(existing)) return null;
+  if (!generated || typeof generated !== 'object' || Array.isArray(generated)) return null;
+  const generatedHooks = generated.hooks;
+  const generatedPre = Array.isArray(generatedHooks?.preToolUse) ? generatedHooks.preToolUse : [];
+  const arkEntry = generatedPre.find(
+    (entry) =>
+      entry &&
+      typeof entry === 'object' &&
+      typeof entry.command === 'string' &&
+      /arkgate-mcp|ark-mcp/.test(entry.command) &&
+      /\s--hook(?:\s|$)/.test(` ${entry.command} `)
+  );
+  if (!arkEntry) return null;
+
+  const existingHooks =
+    existing.hooks && typeof existing.hooks === 'object' && !Array.isArray(existing.hooks)
+      ? { ...existing.hooks }
+      : {};
+  const currentPre = Array.isArray(existingHooks.preToolUse) ? [...existingHooks.preToolUse] : [];
+  const isArkWriteGate = (entry) =>
+    entry &&
+    typeof entry === 'object' &&
+    typeof entry.command === 'string' &&
+    /arkgate-mcp|ark-mcp/.test(entry.command) &&
+    /\s--hook(?:\s|$)/.test(` ${entry.command} `) &&
+    (typeof entry.matcher !== 'string' ||
+      /Write/.test(entry.matcher) ||
+      /StrReplace/.test(entry.matcher));
+  const kept = currentPre.filter((entry) => !isArkWriteGate(entry));
+  existingHooks.preToolUse = [...kept, arkEntry];
+  const next = {
+    ...existing,
+    version: existing.version ?? generated.version ?? 1,
+    hooks: existingHooks,
+  };
+  return `${JSON.stringify(next, null, 2)}\n`;
 }
 
 /**

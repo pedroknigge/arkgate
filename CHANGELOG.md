@@ -5,6 +5,29 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.5.7 — 2026-08-12
+
+**Patch** over **4.5.6**. Cursor hard write path: project `.cursor/hooks.json` `preToolUse`
+gate for `Write` / `StrReplace` (failClosed), host matrix + doctor honesty, payload mapping
+(`contents` / `StrReplace`), install/merge without wiping sibling hooks. Repair envelope may
+emit; Write `updated_input` reinjection is **not** claimed. Codex/OpenCode stay advisory at
+write. Shell/Tab/human edits still rely on required CI. **No required config migration.**
+
+**Status: prepared** (not published).
+
+### Added
+
+- **Cursor hard write (CH01):** install writes `.cursor/hooks.json` with
+  `preToolUse` matcher `Write|StrReplace`, `failClosed: true`, `--hook --hook-repair`,
+  `--root-env CURSOR_PROJECT_DIR`. Merge preserves sibling Cursor hooks.
+- **Hook runtime:** Cursor payload normalization (`contents` → `content`, `StrReplace` → Edit)
+  and stdout `{ permission: "deny", agent_message, user_message }` on block.
+
+### Changed
+
+- Host support matrix: Cursor `hard-write: true` for listed ops; soft hosts are Codex/OpenCode.
+- Docs: `docs/ai-gates.md`, agent guide, README matrix, CLI help.
+
 ## 4.5.6 — 2026-08-11
 
 **Patch** over **4.5.5**. Field upgrade & multi-project MCP truth (Phase FX): registry-aware

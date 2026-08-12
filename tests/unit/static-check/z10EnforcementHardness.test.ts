@@ -7,6 +7,7 @@ import {
   antigravityHooks,
   claudeSettings,
   codexHooks,
+  cursorHooks,
   grokHooks,
 } from '../../../bin/lib/hook-templates.mjs';
 import { detectWritePathCapabilities } from '../../../bin/lib/write-path-detect.mjs';
@@ -25,6 +26,7 @@ function fixture() {
   write(root, '.claude/settings.json', claudeSettings(root));
   write(root, '.grok/hooks/ark-write-gate.json', grokHooks(root));
   write(root, '.agents/hooks.json', antigravityHooks(root));
+  write(root, '.cursor/hooks.json', cursorHooks(root));
   write(root, '.codex/hooks.json', codexHooks(root));
   write(root, '.mcp.json', '{"mcpServers":{"ark":{"command":"npx","args":["arkgate-mcp"]}}}\n');
   write(
@@ -44,7 +46,7 @@ describe('Z10 runtime-proven enforcement hardness', () => {
       expect(state.operation).toBeNull();
       expect(state.operationCoverage).toBe('unverified');
       expect(state.hard).toBe(false);
-      if (host === 'claude' || host === 'grok' || host === 'antigravity') {
+      if (host === 'claude' || host === 'grok' || host === 'antigravity' || host === 'cursor') {
         expect(state).toMatchObject({
           supported: true,
           configured: true,
@@ -64,6 +66,7 @@ describe('Z10 runtime-proven enforcement hardness', () => {
       ['claude', 'Write'],
       ['grok', 'search_replace'],
       ['antigravity', 'write_to_file'],
+      ['cursor', 'Write'],
     ] as const;
     for (const [host, operation] of cases) {
       const state = detectWritePathCapabilities(root, host, {
