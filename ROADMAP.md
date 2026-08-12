@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-12 (Phase PL for **arkgate@4.6.0** — plain language + shared home skills; Phase CH shipped in **4.5.7** on npm `latest`)
+- **Status date:** 2026-08-12 (Phase PL shipped in **arkgate@4.6.0** on npm `latest`; Phase CH shipped in **4.5.7**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -1329,7 +1329,7 @@ Boundary (freezes held):
 | 155 | `PL06` | `done` | M | `PL01` | Claude + Grok home detect / doctor |
 | 156 | `PL07` | `done` | L | `PL06` | Monotonic home install + upgrade wiring |
 | 157 | `PL08` | `done` | M | PL02–PL07 | Prepare arkgate@4.6.0 (prepared, not published) |
-| 158 | `PL09` | `todo` | L | `PL08` | Publish npm/MCP + docs flip + site 4.6.0 |
+| 158 | `PL09` | `done` | L | `PL08` | Publish npm/MCP + docs flip + site 4.6.0 |
 
 **Preferred order:** PL01→PL09 (PL02–PL05 after map; PL06–PL07 home track; then release). One `doing` at a time.
 
@@ -1399,11 +1399,12 @@ tests / architecture / `release:npm --dry` green.
 
 **PL09 — Publish npm/MCP + docs flip + site 4.6.0**
 
-- **Status:** `todo`
+- **Status:** `done` (2026-08-12)
 - **Depends on:** `PL08`
 
-**Outcome:** npm `latest` = **4.6.0**; MCP registry; docs Status published; arkgate-site
-changelog/4.6.0 leads with clearer language + honest shared homes.
+**Outcome:** npm `latest` = **4.6.0** (`gitHead` `84cd05e`, OIDC run `31623360522`);
+MCP registry `io.github.pedroknigge/arkgate@4.6.0`; public pointers + q06 published;
+arkgate-site changelog/4.6.0 (plain language + shared homes).
 
 ### Phase DC — Deep-module coach (post-4.5 process + advisory)
 
@@ -3813,19 +3814,18 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: PL09 publish 4.6.0 (after land)
-  Epic: Phase PL — Understandable Ark (4.6.0)
-  Plan: docs/plans/understandable-ark-4.6/README.md (PL01–PL08 implemented; PL09 publish)
-  Queue: PL09 publish npm/MCP + docs flip + site
-  Closed last: PL01–PL08 on this train (plain language + shared homes; version prepared)
-  Next: land PR, signed tag v4.6.0, OIDC npm, MCP registry, site 4.6.0
-  Other seeds: golden upgrade path matrix · monorepo activation playbook · Z09/RB-11 parked
-Released baseline: npm arkgate@4.5.7 on latest (gitHead 2ac73a4; tag v4.5.7; 2026-08-12)
-  Notes: docs/releases/4.5.7.md — Status: published
-  Prior: 4.5.6 / 4.5.5 / 4.5.0 / 4.4.0 / 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
-Phase PL freezes (when coding): common words first; no scores; 13 skill names;
+Engineering doing: (none — Phase PL shipped)
+  Epic: Phase PL — Understandable Ark (4.6.0) shipped
+  Plan: docs/plans/understandable-ark-4.6/README.md (PL01–PL09 done; published)
+  Queue: no active ROADMAP `doing`
+  Closed last: PL09 publish npm/MCP + docs flip + site
+  Next: golden upgrade path matrix · monorepo activation playbook · Z09/RB-11 parked
+Released baseline: npm arkgate@4.6.0 on latest (gitHead 84cd05e; tag v4.6.0; 2026-08-12)
+  Notes: docs/releases/4.6.0.md — Status: published
+  Prior: 4.5.7 / 4.5.6 / 4.5.5 / 4.5.0 / 4.4.0 / 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
+Phase PL freezes (held): common words first; no scores; 13 skill names;
   machine IDs stable by default; no silent customized overwrite; no home downgrade;
-  temp-root never mutates real user homes
+  ArkGate / ArkRules stay as brands; temp-root never mutates real user homes
 Phase CH freezes (held): Cursor hard only for Write|StrReplace when hooks trusted; no reinjection claim
 Phase FX freezes (held): no silent multi-project MCP retarget; soft hosts stay advisory
 Phase DC freezes (held): no depth/principle scores; coach/compass notAScore; never flip gates
