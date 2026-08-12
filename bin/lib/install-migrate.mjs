@@ -196,7 +196,9 @@ export function buildManagedAssetCatalog({ root, tools, compact = false, skillsO
     );
     if (selectedTools.has('cursor')) {
       add('.cursor/mcp.json', mcpJson(root));
-      add('.cursor/hooks.json', cursorHooks(root), 'gate', 'json-merge');
+      // whole-file for managed upgrade/manifest (json-merge is install-time only via
+      // mergeCursorArkHook below — same pattern as Antigravity hooks).
+      add('.cursor/hooks.json', cursorHooks(root));
       if (!compact) add('.cursor/rules/ark.mdc', cursorRule(root));
     }
     if (selectedTools.has('claude')) add('.claude/settings.json', claudeSettings(root));

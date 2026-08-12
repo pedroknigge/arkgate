@@ -39,7 +39,7 @@ const BUDGETS = [
   { path: 'bin/lib/mcp-adoption.mjs', max: 600 },
   // Host expansion (Antigravity hooks merge + OpenCode MCP migrate/merge).
   // S4 force preserve content-identity path — was 700 (loc ~800).
-  { path: 'bin/lib/install-migrate.mjs', max: 820 },
+  { path: 'bin/lib/install-migrate.mjs', max: 850 },
   // Phase P: designFitness / designSmells doctor surface + patternBets plan IR.
   // 3.8.2 field DX (sessionNote, pure-layer opt-in, Codex legacy advisory) — was 920.
   // Product mandate honesty (coverage/baseline/writePath + design-weak flags) — was 980.

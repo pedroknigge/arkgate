@@ -472,7 +472,10 @@ export function detectWritePathInventory(root) {
         // Shared project MCP is also a valid advisory surface for Cursor sessions.
         ...mcpEvidence(root, '.mcp.json'),
       ],
-      cursorHook.repair,
+      // EH07: hooks may emit --hook-repair envelopes, but Cursor Write updated_input
+      // reinjection is not package-guaranteed — keep inventory repair-payload false
+      // (envelope honesty lives on support.repair-envelope-emitted).
+      [],
       merge
     ),
     // Codex 0.123+ emits PreToolUse for the native apply_patch handler, but some
