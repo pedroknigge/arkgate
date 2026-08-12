@@ -224,18 +224,18 @@ export function doctorWritePathHonestyMessage(activeHost, hardWriteActive) {
   const mergeBoundary =
     'Required CI hard merge boundary = a required GitHub status context that runs arkgate-check --strict-merge (alias ark-check --strict-merge)';
   if (host === 'cursor' && !hardWriteActive) {
-    return `Cursor: hard preToolUse is supported for Write/StrReplace when .cursor/hooks.json is installed + trusted; without runtime-observed hook evidence, hard is unverified. ${mergeBoundary}.`;
+    return `Cursor: pre-write block is supported for Write/StrReplace when .cursor/hooks.json is installed + trusted; without runtime-observed hook evidence, the block is unverified. ${mergeBoundary}.`;
   }
   if (host === 'codex') {
-    return `Codex: write path is advisory / best-effort at write (not Claude/Grok/Cursor hard). ${mergeBoundary}.`;
+    return `Codex: edits are warning only (not blocked) at write time. ${mergeBoundary}.`;
   }
   if (host === 'opencode') {
-    return `OpenCode: write path is advisory / best-effort (MCP + optional plugin; not Claude/Grok/Antigravity/Cursor hard). ${mergeBoundary}.`;
+    return `OpenCode: edits are warning only (not blocked). ${mergeBoundary}.`;
   }
   if ((host === 'claude' || host === 'grok' || host === 'antigravity') && !hardWriteActive) {
     const label =
       host === 'claude' ? 'Claude' : host === 'grok' ? 'Grok' : 'Antigravity';
-    return `${label}: hard PreToolUse is supported for listed ops when installed + trusted; without runtime-observed hook evidence, hard is unverified. ${mergeBoundary}.`;
+    return `${label}: pre-write block is supported for listed ops when installed + trusted; without runtime-observed hook evidence, the block is unverified. ${mergeBoundary}.`;
   }
   return null;
 }

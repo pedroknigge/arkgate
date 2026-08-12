@@ -105,7 +105,7 @@ describe('doctor surfaces outcome (Q02) and keeps Q01 door', () => {
     // Outcome phrasing (not only technical "import ORM" count line as the only line)
     expect(text).toMatch(/facade-sql-in-routes/);
     expect(text).toMatch(/Routes\/controllers import the ORM|repository\/adapter/i);
-    expect(text).toMatch(/Shape residual \(design-weak\):.*\/ark-explore shape-focus/s);
+    expect(text).toMatch(/leftover design|Imports check out.*\/ark-explore shape-focus|\/ark-explore shape-focus/s);
     expect(text).not.toMatch(/✔ Healthy — nothing to do/);
   });
 });

@@ -334,12 +334,12 @@ describe('summarizeDesignFitness', () => {
       { id: 'god-module', severity: 'warn' as const, message: 'x', evidence: [], fix: 'x' },
     ];
     const context = { activeViolations: 0, governedPercent: 100, totalFiles: 5 };
-    expect(summarizeDesignFitness(smells, context).label).toMatch(/^design-weak/);
+    expect(summarizeDesignFitness(smells, context).label).toMatch(/leftover design work/);
     expect(summarizeDesignFitness(smells, { ...context, operatingMode: 'adapt' }).label).toMatch(
-      /^ADAPT · design-weak/
+      /^ADAPT · leftover design work/
     );
     expect(summarizeDesignFitness(smells, { ...context, operatingMode: 'enforce' }).label).toMatch(
-      /^ENFORCE · design-weak/
+      /^ENFORCE · leftover design work/
     );
   });
 });

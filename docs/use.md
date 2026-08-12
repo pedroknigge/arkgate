@@ -2,7 +2,7 @@
 
 For **anyone** shipping TypeScript with an AI coding agent. You do not need to study clean architecture first.
 
-**One contract. One gate. One co-pilot.**
+**One architecture config. One check. One coach.**
 
 ---
 
@@ -21,7 +21,7 @@ Then keep working with your agent. The doctor is the **control plane**: when stu
 |-----------|---------|
 | Unsure | `npx arkgate-check --doctor` |
 | Agent broke architecture | Fix the edge doctor names (or re-run check) |
-| Code is green but still a mess | Shape residual — see below |
+| Code is green but still a mess | Leftover design work — see below |
 | New ArkGate version | Follow doctor / upgrade guidance |
 
 Full skill pack is **optional** (expert depth). Day-to-day: compact router + doctor is enough.
@@ -47,7 +47,7 @@ In those cases a boundary linter or editor rules may be enough; see [README — 
 |------|----------------|
 | While the AI writes | Host write gate or advisory MCP (depends on host) |
 | Before merge | Make the Ark job a **required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) |
-| Anytime | Doctor: Suggest / Adapt / Enforce (+ design-weak if residual) |
+| Anytime | Doctor: Suggest / Adapt / Enforce (+ leftover design work if the design is still messy) |
 
 **Codex / Cursor / OpenCode:** local write stays advisory forever — that is not unfinished architecture. Doctor may say **contract ready** while still reminding you that local writes are advisory; **Not finished** is reserved for real project/contract debt.
 
@@ -96,14 +96,16 @@ outside the package. **Enforce green ≠ feature done.**
 
 That is **Shape** work (plan B) — suggested, never auto-applied as silent magic.
 
-1. Doctor confirms design-weak (and residual lenses on the improvement compass)  
+1. Doctor confirms leftover design work (and residual lenses on the improvement compass)  
 2. Guided map / dual plan (skill pack: `/ark-explore` then `/ark-autopilot` with your OK)  
-3. One pilot at a time · re-run doctor  
+3. One small refactor at a time · re-run doctor  
 
 Install skills only when you want that guided path:
 
 ```bash
 npx arkgate-check --install-agent-gates --skills-only --force
+# optional: refresh shared Claude/Grok/Codex home skills (never downgrades)
+# npx arkgate-check --install-agent-gates --skills-only --agent-homes --force
 ```
 
 ---

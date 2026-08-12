@@ -343,7 +343,7 @@ Pick **one** primary skill. Prefer doctor top action #1 when unsure.
 |------|--------|----------|
 | Unsure what to do next | **Doctor top action #1** (\`${doctorCmd}\`), then re-run doctor | skill-shopping, defaulting to autopilot |
 | Make architecture sound (guided apply path) | **/ark-autopilot** | explore-only, coverage-only |
-| **Messy / spaghetti / design-weak after green / Shape residual** | **Single path:** \`/ark-explore\` shape-focus → dual-plan B, then \`/ark-autopilot\` only to apply B with OK | coverage, think, loop-as-done, skill-shopping |
+| **Messy / leftover design work after green** | **Single path:** \`/ark-explore\` shape-focus → plan B, then \`/ark-autopilot\` only to apply B with OK | coverage, think, loop-as-done, skill-shopping |
 | Map / residual / dual-plan seed only (no apply, already know you want recon) | \`/ark-explore\` | coverage (fitness only) |
 | Greenfield shape / empty tree | \`/ark-architect\` | adopt |
 | Brownfield / wrong contract / false-green | \`/ark-adopt\` then \`/ark-contract\` if globs wrong | architect |
@@ -351,13 +351,13 @@ Pick **one** primary skill. Prefer doctor top action #1 when unsure.
 | New file “where does this go?” | \`/ark-place\` | architect (unless greenfield shape missing) |
 | Gate violation on a change (small cluster) | \`/ark-fix\` | loop/autopilot unless bulk |
 | Drive plan **A** to goal.met | \`/ark-loop\` | explore (unless A empty + design residual → single Shape path above) |
-| Ark **fitness** only (governed%, gates, baseline, install gaps) | \`/ark-coverage\` | Shape / design-weak (use single path above) |
+| Ark **fitness** only (governed%, gates, baseline, install gaps) | \`/ark-coverage\` | leftover design work (use single path above) |
 | One design decision, 2–3 options | \`/ark-think\` | full Shape residual (use single path) |
 | Explain / HTML report tour | \`/ark-explain\` | explore |
 | Bump arkgate + refresh hosts | \`/ark-upgrade\` | — |
 | Optional runtime kernel evaluate | \`/ark-runtime\` | — |
 
-**Post-green door (Q01):** when doctor reports ENFORCE · design-weak, the **primary** next action is the single Shape path above — not a choice among explore / coverage / think. Doctor JSON: \`postGreenPath\` / \`primaryNextAction\`.
+**Post-green door:** when doctor reports ENFORCE · leftover design work, the **primary** next action is the single Shape path above — not a choice among explore / coverage / think. Doctor JSON: \`postGreenPath\` / \`primaryNextAction\`.
 
 **Phases (brownfield honesty):** Align (contract truth) → Stabilize (real baseline) → Shape (golden pattern + pilot). Empty plan A after Stabilize still leaves Shape work — that is the single post-green path, not “healthy finished.”
 
@@ -406,14 +406,14 @@ ${projectionBlock}
 
 1. Status anytime: \`${doctorCmd}\` — one status light, one primary next action (control plane).
 2. Read the **Improvement compass** section (not a score). Name residual lenses in plain language when present (SoC, DIP, domain, …). Out-of-scope lenses (performance, app security tooling, full resilience) stay honest — do not invent Ark enforcement for them.
-3. Before trusting MCP evidence: call \`ark_identity\` with \`project.expectedRoot\` set to this project's exact absolute root, then reuse that root plus the returned \`projectIdentity.projectId\` on every Ark MCP call. A descendant path is authoritative only with that matching id. Missing tool, non-\`matched\` binding, or wrong root means the process is stale: restart the host and use the local CLI meanwhile.
-4. Day to day: call \`ark_manifest\` with the same project expectation; place new files with \`ark_place\`; validate after edits; run \`${checkCmd}\`. The \`ark://manifest\` resource is compatibility-only and always unverified/non-authoritative. On a gate deny, fix the architecture — do not weaken the contract.
+3. Before trusting MCP evidence: call \`ark_identity\` with \`project.expectedRoot\` set to this project's exact absolute root, then reuse that root plus the returned \`projectIdentity.projectId\` on every Ark MCP call. A descendant path is authoritative only with that matching id. Missing tool, non-\`matched\` binding, or wrong root means this is not proven to be the right project: restart the host and use the local CLI meanwhile.
+4. Day to day: call \`ark_manifest\` with the same project expectation; place new files with \`ark_place\`; validate after edits; run \`${checkCmd}\`. The \`ark://manifest\` resource is compatibility-only and always unverified. On a gate deny, fix the architecture — do not weaken \`ark.config.json\`.
 5. If MCP is unavailable: inspect \`ark.config.json\` and run \`${checkCmd}\`.
 
 **Single door when residual remains:**
 - **Edges debt** (import/capability violations) → fix with the gate / plan; skill pack only if doctor names a skill.
-- **Design-weak / residual shape lenses** (compass residual while edges may look green) → map first, then guided apply with user OK — never “you’re done” on green edges alone.
-- Empty plan A + residual lenses / design-weak → **not finished**.
+- **Design leftover / residual shape lenses** (compass leftover while imports may look green) → map first, then guided apply with user OK — never “you’re done” on green imports alone.
+- Empty plan A + leftover design work → **not finished**.
 
 **Two-axis done (never collapse):**
 1. **Architecture residual** — status / doctor / compass (scan). Prefer deep modules; name seams; test at the public interface.

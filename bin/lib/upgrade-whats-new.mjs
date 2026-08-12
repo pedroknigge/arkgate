@@ -34,6 +34,22 @@ export function buildUpgradeWhatsNewSuggestions() {
     title: 'Suggested improvements — try or inspect after this package',
     items: [
       {
+        id: 'plain-language-doctor',
+        title: 'Doctor in plain language',
+        try: 'npx arkgate-check --doctor',
+        inspect: 'Status light + leftover design work (not a score)',
+        why:
+          'Doctor and the HTML report use common words (import rules, leftover design work, pre-write block). ArkGate and ArkRules stay as product names.',
+      },
+      {
+        id: 'shared-agent-homes',
+        title: 'Shared agent skills (home)',
+        try: 'npx arkgate-check --install-agent-gates --skills-only --agent-homes --force',
+        inspect: 'doctor.agentHomeGaps (Claude/Grok ~/.*/skills when those catalogs exist)',
+        why:
+          'Project skills follow this pin. Shared homes stay on the newest ArkGate on the machine (additive; never downgrade). Orphan 2.x global skills stop coaching the wrong version.',
+      },
+      {
         id: 'deep-module-coach',
         title: 'Deep-module coach (hot paths + deepening)',
         try: 'npx arkgate-check --doctor',

@@ -107,11 +107,11 @@ describe('skill surface inventory', () => {
     const autopilot = fs.readFileSync(path.join(SKILLS_DIR, 'ark-autopilot.md'), 'utf8');
     const explore = fs.readFileSync(path.join(SKILLS_DIR, 'ark-explore.md'), 'utf8');
     const fix = fs.readFileSync(path.join(SKILLS_DIR, 'ark-fix.md'), 'utf8');
-    expect(autopilot).toMatch(/Enforce · design-weak/i);
+    expect(autopilot).toMatch(/Enforce · (design-weak|leftover design work)/i);
     expect(autopilot).toMatch(/Primary Shape door|shape-focus/i);
     expect(autopilot).toMatch(/False-done forbidden|never claim healthy finished|Empty plan A/i);
     expect(autopilot).toMatch(/Never auto-apply B|never mechanical-safe/i);
-    expect(explore).toMatch(/Enforce · design-weak/i);
+    expect(explore).toMatch(/Enforce · (design-weak|leftover design work)/i);
     expect(explore).toMatch(/Primary post-green map door|shape-focus/i);
     expect(explore).toMatch(/False-done forbidden|never claim healthy/i);
     // Smell envelope honesty (absence ≠ full-tree proof)

@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { layerForFile } from '../ark-shared.mjs';
 import { detectContractFalseGreenRisk } from './field-install.mjs';
+import { operatingModeTitle, LEFTOVER_DESIGN_LABEL } from './product-copy.mjs';
 
 /** Stable smell ids (doctor JSON + plan B + skills). */
 export const DESIGN_SMELL_IDS = Object.freeze([
@@ -476,20 +477,15 @@ export function isDesignWeak(smells, ctx = {}) {
  */
 export function summarizeDesignFitness(smells, ctx = {}) {
   const designWeak = isDesignWeak(smells, ctx);
-  const mode =
-    typeof ctx.operatingMode === 'string' &&
-    /^(?:suggest|adapt|enforce)$/.test(ctx.operatingMode)
-      ? ctx.operatingMode.toUpperCase()
-      : null;
   return {
     status: designWeak ? 'design-weak' : smells.length > 0 ? 'smells-with-open-edges' : 'ok',
     designWeak,
     smellCount: Array.isArray(smells) ? smells.length : 0,
     ids: (smells || []).map((s) => s.id),
     label: designWeak
-      ? `${mode ? `${mode} · ` : ''}design-weak — edges clean; Shape residual remains (see designSmells / plan B)`
+      ? `${operatingModeTitle(ctx.operatingMode, true)} — import rules check out; leftover design work remains (see designSmells / plan B)`
       : smells.length > 0
-        ? 'Design smells present alongside open edge debt'
+        ? 'Design smells present alongside open import-rule debt'
         : 'No deterministic design smells detected',
   };
 }

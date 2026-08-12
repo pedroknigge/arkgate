@@ -190,7 +190,7 @@ Status lights from doctor — not settings you choose. Rank residual honestly:
 | **Suggest** | Thin/new tree; contract not control plane | Finish `ark start` → re-doctor; do not skill-shop |
 | **Adapt** | Contract/tree disagree or debt open | Explore + adopt/loop/contract; do not claim guarded |
 | **Enforce** | Honest coverage + clean checked **edges** | Confirm gates + CI; emit dual-plan B only if residual found |
-| **Enforce · design-weak** | Edges clean; design smells remain | **Primary Shape door:** explore shape-focus → dual-plan **B** → apply **one** pilot with user OK. Empty plan A ≠ done. Never mechanical-safe B. False-done forbidden. |
+| **Enforce · leftover design work** | Imports clean; design still messy | **Primary Shape door:** explore shape-focus → dual-plan **B** → apply **one** small refactor with user OK. Empty plan A ≠ done. Never mechanical-safe B. False-done forbidden. |
 
 - **Setup (Suggest):** no config → `ark start` (start freezes origin after config, before gates).
 - **Align (Adapt):** open debt, low honesty, or false-green → explore + adopt/loop; do not claim “guarded”.

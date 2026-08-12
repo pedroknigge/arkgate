@@ -21,7 +21,7 @@ Name 1–3 **residual** lenses in plain language before skill-shopping. Always `
 
 **What the user should feel next:** fewer blocked AI writes, clearer folders, safer domain — then jargon.
 
-**Anti false-done:** empty plan A + residual lenses / design-weak → **Incomplete? yes**. Green edges alone
+**Anti false-done:** empty plan A + leftover design work → **Incomplete? yes**. Green imports alone
 are not “architecture finished.”
 
 **AI-easy architecture:** ports over concrete I/O in domain; one concern per module; golden pattern for
@@ -58,6 +58,7 @@ Never invent gate verdicts from these suggestions. Missing residual is honest em
 | Skills customized after install | Preserved by default. Preview `skillDrift` shows counts. **`--refresh-skills`** rewrites customized *skills* only with consent. |
 | Conflicted managed assets | Still need `--accept-conflicts`. Never silent overwrite of true edits. |
 | Multiple checkouts / monorepo packages | One `expectedRoot` per project; upgrade **each** pin; restart MCP after bump; prefer project-local CLI until identity matched **and** process version aligns. |
+| Stale `~/.claude/skills` or `~/.grok/skills` | Shared homes should be the newest ArkGate on the machine (additive; never downgrade). Refresh: `--install-agent-gates --skills-only --agent-homes --force`. Project skills may lag with the pin. |
 | Active host not in `--tools` / manifest | Preview `hostSelection` notes it and suggests `--tools` expansion. |
 
 **Post-apply:** read `postUpgradeChecks` (advisory). Confirm pin↔CLI, run doctor (compass + deepModuleCoach),

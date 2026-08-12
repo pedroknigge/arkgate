@@ -69,7 +69,7 @@ describe('loadGoldenPattern (Q03)', () => {
 
     const note = formatGoldenPatternNote(r);
     expect(note).toMatch(/Golden pattern \(advisory for NEW code only\)/);
-    expect(note).toMatch(/Does not clear design-weak/);
+    expect(note).toMatch(/Does not clear leftover design work|Does not clear design-weak/);
     expect(note).toMatch(/src\/features\//);
 
     const sum = summarizeGoldenPattern(r);
@@ -292,6 +292,6 @@ describe('doctor surfaces goldenPattern without clearing design-weak (Q03 honest
     const text = logs.join('\n');
     expect(text).toMatch(/Golden pattern \(new code\)/i);
     expect(text).toMatch(/pilot-hex/);
-    expect(text).toMatch(/does not clear design-weak/i);
+    expect(text).toMatch(/does not clear leftover design work|does not clear design-weak/i);
   });
 });

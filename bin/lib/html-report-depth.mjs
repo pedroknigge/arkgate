@@ -24,6 +24,7 @@ import { describePackageVersionDualTruth } from './field-install.mjs';
 import { buildDoctorImprovementCompass } from './improvement-compass-doctor.mjs';
 import { buildDeepModuleCoachAdvisory } from './deep-module-coach.mjs';
 import { computePhysicalCohesion } from './physical-cohesion.mjs';
+import { POST_GREEN_LEDE, operatingModeTitle } from './product-copy.mjs';
 
 function esc(value) {
   return String(value)
@@ -383,13 +384,11 @@ export function renderDesignDepthStrip(depth = {}) {
 
   const mode = String(depth.mode || '').toLowerCase();
   const title = designWeak
-    ? mode === 'enforce'
-      ? 'ENFORCE · design-weak'
-      : `${(mode || 'edges').toUpperCase()} · design-weak`
-    : 'Design smells (edges still open)';
+    ? operatingModeTitle(mode || 'enforce', true)
+    : 'Design smells (imports still open)';
   const lede = designWeak
-    ? 'Contract edges are clean, but lived design residual remains. This does not fail PASS — it blocks “healthy finished” until Shape work lands.'
-    : 'Design smells exist alongside open edge debt. Fix edges first; treat smells as Shape residual after green.';
+    ? POST_GREEN_LEDE
+    : 'Design smells exist alongside open import-rule debt. Fix imports first; treat smells as leftover design work after green.';
 
   const smellItems = smells
     .slice(0, 6)
@@ -411,7 +410,7 @@ export function renderDesignDepthStrip(depth = {}) {
     ? `<div class="pilot-card">
         <h3 style="margin-top:.85rem">Next pilot (one at a time)</h3>
         <p class="dim" style="margin:.15rem 0 .4rem;font-size:.86rem">
-          Judgment only — never mechanical-safe · never multi-pilot batch
+          Judgment only — never auto-applied · never multi-pilot batch
         </p>
         <ul class="senior-list">
           <li><b>Smell</b> · <code>${esc(pilot.smellId || pilot.id || '—')}</code></li>
@@ -489,7 +488,7 @@ export function renderDesignCleanNote(depth = {}) {
   return `<div class="section card design-strip is-clean" id="design-depth">
       <div class="design-head">
         <span class="badge design-ok" title="No deterministic design smells with clean edges">Design depth · OK</span>
-        <span class="dim" style="font-size:.86rem">No design-weak residual detected</span>
+        <span class="dim" style="font-size:.86rem">No leftover design work detected</span>
       </div>
       <p class="dim" style="margin:.45rem 0 0;font-size:.88rem">
         Edges and deterministic design sensors agree. Keep placing new code on the golden path;

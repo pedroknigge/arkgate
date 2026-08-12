@@ -154,7 +154,7 @@ export function formatGoldenPatternNote(result) {
   let s = `Golden pattern (advisory for NEW code only): "${g.name}" — ${g.norm}`;
   if (g.newCodeHome) s += ` Prefer new files under ${g.newCodeHome}.`;
   if (g.examplePath) s += ` Example: ${g.examplePath}.`;
-  s += ' Does not clear design-weak or replace the gate.';
+  s += ' Does not clear leftover design work or replace the gate.';
   return s;
 }
 

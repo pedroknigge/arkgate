@@ -39,7 +39,8 @@ const BUDGETS = [
   { path: 'bin/lib/mcp-adoption.mjs', max: 600 },
   // Host expansion (Antigravity hooks merge + OpenCode MCP migrate/merge).
   // S4 force preserve content-identity path — was 700 (loc ~800).
-  { path: 'bin/lib/install-migrate.mjs', max: 850 },
+  // 4.6.0 shared Claude/Grok home install wiring — was 850 (loc 855).
+  { path: 'bin/lib/install-migrate.mjs', max: 870 },
   // Phase P: designFitness / designSmells doctor surface + patternBets plan IR.
   // 3.8.2 field DX (sessionNote, pure-layer opt-in, Codex legacy advisory) — was 920.
   // Product mandate honesty (coverage/baseline/writePath + design-weak flags) — was 980.
@@ -48,7 +49,8 @@ const BUDGETS = [
   // FG01/S1 finished-with-debt + S2 pin nextAction / configRoot — was 1120.
   // Improvement compass doctor JSON + human section wiring — was 1240.
   // Deep-module coach doctor JSON + human section wiring — was 1280.
-  { path: 'bin/lib/doctor-plan.mjs', max: 1300 },
+  // 4.6.0 Claude/Grok home gap doctor lines — was 1300 (loc 1303).
+  { path: 'bin/lib/doctor-plan.mjs', max: 1320 },
   // 4.0.0 ArkRules start/init templates + dual-plane presets — was 650 (loc 870).
   // S3 SPA + adopt/migrate patterns (vite-vercel-spa, P0A retrofit) — was 920 (loc ~1130).
   { path: 'bin/lib/presets.mjs', max: 1160 },
@@ -79,6 +81,8 @@ const BUDGETS = [
   { path: 'bin/lib/reshape-decisions.mjs', max: 300 },
   // Y03/Z02: count-only completeness evidence from the existing scan, not a second scanner.
   { path: 'bin/lib/parse-health.mjs', max: 80 },
+  { path: 'bin/lib/product-copy.mjs', max: 80 },
+  { path: 'bin/lib/agent-homes.mjs', max: 360 },
 ];
 
 function loc(rel) {

@@ -35,9 +35,9 @@ Local write hardness **differs by host**. CI required status is the shared hard 
 
 | Host | Local write | MCP | Merge |
 |------|-------------|-----|-------|
-| Claude · Grok · Antigravity | Hard PreToolUse when installed + trusted | Advisory | Required status context |
-| Codex · OpenCode | Best-effort / advisory | Advisory | Required status context |
-| Cursor | Advisory only | Advisory | Required status context |
+| Claude · Grok · Antigravity | Pre-write block when installed + trusted | Advisory | Required status context |
+| Codex · OpenCode | Warning only (not blocked) | Advisory | Required status context |
+| Cursor | Pre-write block for Write/StrReplace when `.cursor/hooks.json` is trusted | Advisory | Required status context |
 
 Full matrix and install commands: [ai-gates.md](ai-gates.md) · canonical table in [README](../README.md#host-enforcement-support).
 
