@@ -16,8 +16,8 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 4.6.0** is on npm `latest` — clearer language + shared agent home skills.
-> [4.6.0 notes](docs/releases/4.6.0.md) · [4.5.7](docs/releases/4.5.7.md) · [4.5.6](docs/releases/4.5.6.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> **ArkGate 4.6.1** is on npm `latest` — five doors + a lock on the constitution.
+> [4.6.1 notes](docs/releases/4.6.1.md) · [4.6.0](docs/releases/4.6.0.md) · [4.5.7](docs/releases/4.5.7.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
 
@@ -213,7 +213,7 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current release (4.6.0 on npm `latest`) | [docs/releases/4.6.0.md](docs/releases/4.6.0.md) · [CHANGELOG](CHANGELOG.md) |
+| Current release (4.6.1 on npm `latest`) | [docs/releases/4.6.1.md](docs/releases/4.6.1.md) · [CHANGELOG](CHANGELOG.md) |
 | Prior (4.5.7) | [docs/releases/4.5.7.md](docs/releases/4.5.7.md) |
 | Prior (4.5.0) | [docs/releases/4.5.0.md](docs/releases/4.5.0.md) |
 | Prior (4.4.0) | [docs/releases/4.4.0.md](docs/releases/4.4.0.md) |
