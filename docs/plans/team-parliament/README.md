@@ -5,7 +5,7 @@
 > Hub: [AGENTS.md](../../../AGENTS.md) · [Roadmap](../../../ROADMAP.md) ·
 > [Product voice](../../product-voice.md)
 
-**Status:** Prepared for **arkgate@4.6.1** (Phase TW; TW01–TW08 done; ships with SK06/SK07)  
+**Status:** Shipped in **arkgate@4.6.1** (Phase TW; TW01–TW08 done; published)  
 **Slug:** `team-parliament`  
 **Kind:** epic seed / enforcement (same engine; no org plane)  
 **Owners:** product (Pedro) + library maintainers  

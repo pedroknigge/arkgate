@@ -5,12 +5,12 @@
 > Hub: [AGENTS.md](../../../AGENTS.md) · [Roadmap](../../../ROADMAP.md) ·
 > [Product voice](../../product-voice.md)
 
-**Status:** Prepared for **arkgate@4.6.1** (Phase SK; SK01–SK06; SK07 publish pending)  
+**Status:** Shipped in **arkgate@4.6.1** (Phase SK; SK01–SK07 done; published)  
 **Slug:** `five-door-autonomy`  
 **Kind:** epic seed / skill process (same 13 names)  
 **Owners:** product (Pedro) + library maintainers  
 **Last updated:** 2026-08-14  
-**Target package:** **4.6.1** (patch — five-door process; prepared, not published)
+**Target package:** **4.6.1** (patch — five-door process; published)
 
 ---
 

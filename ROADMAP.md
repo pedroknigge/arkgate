@@ -1428,7 +1428,7 @@ Boundary (freezes held):
 | 162 | `SK04` | `done` | M | `SK02` | Compass nextAction + compact router + MCP onboarding → five doors |
 | 163 | `SK05` | `done` | M | `SK04` | Public docs emphasize the 5 doors |
 | 172 | `SK06` | `done` | M | `TW08` | Prepare arkgate@4.6.1 (five-door + team parliament) |
-| 173 | `SK07` | `doing` | L | `SK06` | Publish npm/MCP + docs flip + site 4.6.1 |
+| 173 | `SK07` | `done` | L | `SK06` | Publish npm/MCP + docs flip + site 4.6.1 |
 
 **Preferred order:** SK01→SK05. One `doing` at a time.
 
@@ -1476,10 +1476,10 @@ Boundary (freezes held):
 
 **SK07 — Publish npm/MCP + docs flip + site 4.6.1**
 
-- **Status:** `doing`
+- **Status:** `done` (2026-08-14)
 - **Depends on:** `SK06`
 
-**Outcome:** npm `latest` = **4.6.1** (`gitHead` `1eadc96`, OIDC run `31826857188`); public pointers + q06 published. MCP registry + site close this item.
+**Outcome:** npm `latest` = **4.6.1** (`gitHead` `1eadc96`, OIDC run `31826857188`); public pointers + q06 published; MCP `io.github.pedroknigge/arkgate@4.6.1`; site `/changelog/4.6.1/`.
 
 ### Phase TW — Team parliament (law vs feature)
 
@@ -3973,15 +3973,14 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: SK07 (publish npm/MCP + site 4.6.1)
-  Epic: Phase SK + TW — five-door autonomy + team parliament
-  Plan: docs/plans/five-door-autonomy/README.md · docs/plans/team-parliament/README.md
-  Queue: SK07 doing (npm latest already 4.6.1)
-  Closed last: SK06 prepare 4.6.1
-  Next: MCP registry + arkgate-site changelog/4.6.1
+Engineering doing: (none — 4.6.1 published)
+  Epic: —
+  Queue: idle
+  Closed last: SK07 publish npm/MCP + docs flip + site 4.6.1
+  Next: (none queued)
 Released baseline: npm arkgate@4.6.1 on latest (gitHead 1eadc96; tag v4.6.1; 2026-08-14)
   Notes: docs/releases/4.6.1.md — Status: published
-  Prior: 4.5.7 / 4.5.6 / 4.5.5 / 4.5.0 / 4.4.0 / 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
+  Prior: 4.6.0 / 4.5.7 / 4.5.6 / 4.5.5 / 4.5.0 / 4.4.0 / 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
 Phase SK freezes (held): 13 skill names; invoke = license; no silent compact-router reshape;
   no scores; no LLM package verdict; no new sensors
 Phase PL freezes (held): common words first; no scores; 13 skill names;
