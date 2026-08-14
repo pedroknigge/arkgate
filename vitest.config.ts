@@ -1,22 +1,12 @@
 import { defineConfig } from 'vitest/config';
 
-const coverageRun = process.argv.includes('--coverage');
-
 export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
     include: ['tests/**/*.test.ts'],
     // Fixture trees under tests/fixtures are dogfood samples, not the product unit suite.
-    // o03CompactStart is spawn-heavy (~60s). Under V8 coverage the worker RPC
-    // dies with "Timeout calling onTaskUpdate" after that file. Run it after
-    // coverage via package.json test:coverage instead.
-    exclude: [
-      'node_modules',
-      'dist',
-      'tests/fixtures/**',
-      ...(coverageRun ? ['tests/unit/static-check/o03CompactStart.test.ts'] : []),
-    ],
+    exclude: ['node_modules', 'dist', 'tests/fixtures/**'],
     setupFiles: ['tests/setup/isolateCodexHome.ts'],
     // This is a CLI test suite: most tests spawn `node bin/*.mjs` via synchronous execFileSync.
     // With many parallel worker forks all blocked in a child process at once, the reporter RPC
@@ -58,11 +48,9 @@ export default defineConfig({
         // Recalibrate floors with modest headroom under measured (same honesty as 4.0.x).
         // 4.5.7 Cursor hard-write honesty (inventory repair-payload false → reject-only):
         // Linux CI measures ~81.97% branches; keep modest headroom under that floor.
-        // 4.6.1: o03 runs after coverage (RPC timeout). Linux CI without that file:
-        // ~80.03% stmts/lines, ~81.63% branches, ~76.18% functions.
         statements: 79.5,
         branches: 81.5,
-        functions: 76.0,
+        functions: 76.5,
         lines: 79.5,
         'bin/lib/write-path-detect.mjs': {
           statements: 75,

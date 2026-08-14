@@ -15,7 +15,7 @@ describe('confidence gate wiring', () => {
     };
 
     expect(pkg.scripts['test:coverage']).toBe(
-      'npm run build && vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=json-summary && vitest run tests/unit/static-check/o03CompactStart.test.ts'
+      'npm run build && vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=json-summary'
     );
     expect(pkg.scripts['test:mutation']).toBe(
       'npm run build && stryker run && npm run check:mutation-groups'
