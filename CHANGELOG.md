@@ -12,7 +12,7 @@ gate) plus team parliament (law vs feature: stewards, mixed-PR deny, ratchet vs 
 base, cheap `--changed` check). Same 13 skill names. Steward identity is a GitHub handle or
 email, not git `user.name`. **No required config migration.**
 
-**Status: prepared** (not yet on npm `latest`; see `docs/releases/4.6.1.md`).
+**Status: published** (on npm `latest`; see `docs/releases/4.6.1.md`).
 
 ### Added
 
