@@ -188,7 +188,7 @@ export function bindTeamBaseRefs(args, root) {
     if (!next.against && (next.changed || next.contractDiff || next.persona)) {
       next.against = teamBase;
     }
-    if (!next.policyBaseRef && (next.contractDiff || next.strictMerge || next.changed || next.against)) {
+    if (!next.policyBaseRef && (next.contractDiff || next.changed || next.against)) {
       next.policyBaseRef = teamBase;
     }
     if (!next.baseRef && next.failOnNewSmells) next.baseRef = teamBase;

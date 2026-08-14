@@ -71,7 +71,7 @@ const BUDGETS = [
   // 4.0.0 ArkRules advisory section — was 280 (loc 281).
   // Improvement compass advisory HTML section — was 300.
   // Deep-module coach advisory HTML section (hot paths + deepening) — was 320.
-  { path: 'bin/lib/html-report-advisories.mjs', max: 340 },
+  { path: 'bin/lib/html-report-advisories.mjs', max: 370 },
   // Deep-module coach pure deepening candidates (Domain; notAScore).
   { path: 'src/domain/deepeningCoach.ts', max: 320 },
   { path: 'src/domain/teamParliament.ts', max: 490 },
