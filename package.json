@@ -90,7 +90,7 @@
     "dev": "tsup --watch",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "npm run build && vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=json-summary",
+    "test:coverage": "npm run build && vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=json-summary && vitest run tests/unit/static-check/o03CompactStart.test.ts",
     "test:mutation": "npm run build && stryker run && npm run check:mutation-groups",
     "check:mutation-groups": "node scripts/check-mutation-groups.mjs",
     "test:property": "vitest run tests/property",

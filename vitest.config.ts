@@ -1,12 +1,22 @@
 import { defineConfig } from 'vitest/config';
 
+const coverageRun = process.argv.includes('--coverage');
+
 export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
     include: ['tests/**/*.test.ts'],
     // Fixture trees under tests/fixtures are dogfood samples, not the product unit suite.
-    exclude: ['node_modules', 'dist', 'tests/fixtures/**'],
+    // o03CompactStart is spawn-heavy (~60s). Under V8 coverage the worker RPC
+    // dies with "Timeout calling onTaskUpdate" after that file. Run it after
+    // coverage via package.json test:coverage instead.
+    exclude: [
+      'node_modules',
+      'dist',
+      'tests/fixtures/**',
+      ...(coverageRun ? ['tests/unit/static-check/o03CompactStart.test.ts'] : []),
+    ],
     setupFiles: ['tests/setup/isolateCodexHome.ts'],
     // This is a CLI test suite: most tests spawn `node bin/*.mjs` via synchronous execFileSync.
     // With many parallel worker forks all blocked in a child process at once, the reporter RPC
