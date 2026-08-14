@@ -73,6 +73,8 @@ import {
 } from './lib/prepare-change.mjs';
 import { detectWritePathCapabilities } from './lib/write-path-detect.mjs';
 import { collectGovernedFiles, isGovernableSourceFile } from './lib/scan-files.mjs';
+import { classifyChangeSet, evaluateTeamGate } from './lib/team-parliament.mjs';
+import { contractSessionFrom } from './lib/team-parliament-io.mjs';
 import {
   canonicalizeCandidateChanges,
   resolvedCompilerInputPaths,
@@ -657,6 +659,20 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
       return;
     }
     const patchWrites = parsedPatch.writes;
+    const patchChangeSet = classifyChangeSet(patchWrites.map((change) => String(change.path)));
+    const patchLawGate = evaluateTeamGate({
+      changeSet: patchChangeSet,
+      contractSession: contractSessionFrom({}),
+    });
+    if (patchLawGate.deny && patchChangeSet.mixed) {
+      const message = patchLawGate.message;
+      output.stderr(`Ark architecture gate: ${message}\n`);
+      if (grokStyle) {
+        output.stdout(`${JSON.stringify({ decision: 'deny', reason: message })}\n`);
+      }
+      output.status(2);
+      return;
+    }
     const sourceWrites = patchWrites.filter((change) =>
       isGovernableSourceFile(path.basename(String(change.path)))
     );
@@ -1387,7 +1403,7 @@ function printSessionContext(config, profile, forbiddenGlobals, args, configPath
   const governedPercent = coverage?.coverage?.governed?.percent ?? coverage?.governed?.percent;
   if (shouldShowNewHereNudge(args.root, configPath, governedPercent, false)) {
     lines.push('');
-    lines.push('New to Ark? Run /ark-architect or: ark-check --recommend');
+    lines.push('New to Ark? Run /ark-adopt (or /ark-architect) or: ark-check --recommend');
   }
 
   process.stdout.write(`${lines.join('\n')}\n`);

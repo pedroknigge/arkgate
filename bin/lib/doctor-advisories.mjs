@@ -19,6 +19,7 @@ import {
 import { printParseHealthSection, summarizeParseHealth } from './parse-health.mjs';
 import { detectGraphBlindSpots, printGraphBlindSection } from './graph-blind.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
+import { collectStewardNudge } from './team-parliament-io.mjs';
 
 export function computeDoctorAdvisories(root, config, cov, rules, files, ts, parseHealth, facts) {
   const physicalCohesion = computePhysicalCohesion(root, files);
@@ -49,6 +50,7 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     graphBlindSpots: detectGraphBlindSpots(ts, root, files),
     // AR12 — Rules under contract (honest counts; real test I/O, never empty-fileContents stub).
     // P1M: pass classification so extraMergeTeeth cannot arm at 0% governed.
+    stewardNudge: collectStewardNudge(root, config),
     rulesUnderContract: summarizeRulesUnderContract(root, config, factPaths, {
       governedPercent: cov?.governed?.percent ?? null,
       populatedLayerCount: Array.isArray(cov?.layers)
@@ -70,4 +72,11 @@ export function printDoctorAdvisories(advisories, io) {
   printReshapeDecisionsSection(advisories.physicalCohesion?.reshapeDecisions, io);
   printParseHealthSection(advisories.parseHealth, io);
   printGraphBlindSection(advisories.graphBlindSpots, io);
+  const nudge = advisories.stewardNudge;
+  if ((nudge?.needsStewards || nudge?.drift) && nudge.ask) {
+    console.log('');
+    console.log(io.color.bold('Stewards (advisory)'));
+    io.line(io.warn, nudge.ask);
+    if (nudge.nextAction) io.line(' ', io.color.dim(`Next: ${nudge.nextAction}`));
+  }
 }

@@ -22,6 +22,13 @@ because the design space is small and honest.
   inside a layer) opt-in.
 - **Coach side:** where code belongs, who talks to whom, how; fix imports first, then leftover
   design work; one small refactor at a time; never silent auto-reshape; never weaken the config.
+- **Five-door autonomy:** invoking `/ark-adopt`, `/ark-place`, `/ark-autopilot`, `/ark-explore`,
+  or `/ark-upgrade` **is** the approval. The agent writes or maps in that turn. CLI/MCP are
+  sensor + gate. Silent reshape from the compact router (unasked) stays forbidden.
+- **Team parliament:** the architecture file is a **constitution**. A product change must not
+  amend it. Stewards own loosen and baseline-grow. The ratchet is **new vs the branch you
+  merge to**, not only the file on this checkout. A small PR pays `--changed --base`, not
+  the whole tree. Humans who never hit the write hook are allowed to ignore Ark.
 - **Agent contract surface (4.3.0):** agents read **guardrail catalogs** and **scan** evidence;
   they **process** (judge / coach) outside the package. Projection and skills never become the
   pass/fail gate.
@@ -83,7 +90,13 @@ stay stable unless a change explicitly adds an alias.
 | **don’t show green if unverified** | fail-closed | Incomplete analysis or unproven enforcement never looks green |
 | **honest coverage** | honest coverage | Governed % and empty scope that cannot false-green |
 | **safe to auto-apply** | mechanical-safe | Deterministic auto-apply class only |
-| **your judgment** | judgment | Human/agent design work; never silent auto-apply |
+| **your judgment** | judgment | Human/agent design work; invoke of an apply door is the approval — not silent compact-router reshape |
+| **five doors** | skill menu of 13 | adopt · place · autopilot · explore · upgrade — other names are shortcuts |
+| **law / constitution** | contract + baseline + ArkRules files | `ark.config.json`, `arkrules/*`, `.ark-baseline.json` — a different change type than product |
+| **steward** | contract owner | GitHub handle or email in `stewards`; only they may loosen the law or grow the baseline |
+| **several hands** | multi-author / CODEOWNERS | Doctor asks for stewards or shows list drift; adopt proposes handles or emails, never invents names |
+| **contract session** | `--contract-session` | Explicit “this diff is a law change”; still never mixed with product files |
+| **vs the base branch** | `--against` / `--changed --base` / `status --vs` | Ratchet and honesty against the ref you merge to |
 | **doctor** | doctor | Status light + next action |
 | **short agent router** | compact router | Default onboarding agent instructions (not the full skill pack) |
 | **right project?** | matched binding / project identity | Live MCP answered for this exact project root (+ id). `ark_identity` |
@@ -271,7 +284,7 @@ Each model line follows the sentence template: **plain fact · term · next acti
 | **Suggest** | Thin or new tree. Architecture config is not yet in charge. Next: `ark start` preview, then `--apply`; re-run doctor. |
 | **Adapt** | Config and tree still disagree, or debt is open. The write path does not fully protect you yet. Next: doctor top action #1. |
 | **Enforce** | Honest coverage and clean checked imports. Keep the host write path + required CI. |
-| **Enforce · leftover design work** | Import rules check out; design smells remain. Green is not elegant design. Next: one Shape door — map (`/ark-explore` shape-focus) → plan B → apply B only with `/ark-autopilot` and OK. |
+| **Enforce · leftover design work** | Import rules check out; design smells remain. Green is not elegant design. Next: map (`/ark-explore` shape-focus) then apply one small refactor with `/ark-autopilot` (invoke = apply). |
 
 ### Primary next action
 
@@ -281,10 +294,17 @@ Each model line follows the sentence template: **plain fact · term · next acti
 ### Deny / gate failure
 
 ```text
-[What failed in plain terms]. [Rule or evidence id]. Next: [one fix path — /ark-fix, prepare-write, or contract edit].
+[What failed in plain terms]. [Rule or evidence id]. Next: [one fix path — /ark-autopilot, /ark-place, or /ark-adopt].
 ```
 
 Never: mock the user, imply the gate is optional, or suggest disabling rules to “finish.”
+Never: tell an agent to edit `ark.config.json` to clear a product-PR red. That is a **contract
+session** for a steward — split the PR.
+
+```text
+This change mixes the constitution with product files. Next: split the PR, or run a steward
+--contract-session that touches only ark.config / arkrules / .ark-baseline.json.
+```
 
 ### Healthy finished
 
@@ -295,11 +315,13 @@ Otherwise name the leftover work.
 
 ## Compact router model
 
-Keep short. Three jobs only:
+Keep short. Five doors only:
 
 1. Point at **doctor** as status.
-2. Day-to-day place / validate / check.
-3. Point at **full skill pack install** as optional expert depth — not a skill catalog dump.
+2. Session 0: **`/ark-adopt`**. Day-to-day new files: **`/ark-place`**.
+3. Apply / leftover design: **`/ark-explore`** then **`/ark-autopilot`** (invoke = apply one refactor).
+4. Bump: **`/ark-upgrade`**.
+5. Full skill pack is optional expert depth — not a 13-name exam.
 
 ---
 
@@ -307,11 +329,27 @@ Keep short. Three jobs only:
 
 | Skill role | Frontmatter tone |
 |------------|------------------|
-| `/ark-autopilot` | Guided **end-to-end** path (explore → dual plan → apply A; B with OK) |
-| `/ark-explore` | Map / dual-plan **seed** only; primary post-green map half |
-| Others | Specialized escape; name when **not** to use them |
+| `/ark-adopt` | Session 0 — write the path (greenfield + brownfield) |
+| `/ark-place` | New feature — place **and write** |
+| `/ark-autopilot` | Apply A + one Shape refactor; invoke = approval |
+| `/ark-explore` | Map / dual-plan **seed** only |
+| `/ark-upgrade` | Preview then apply in-turn |
+| Others | Shortcut to a door above |
 
-Keep dual-engine rules and **STOP** handoffs. Never claim silent full-tree reshape.
+Autonomy contract on every door. Never claim silent full-tree reshape from the compact router.
+
+---
+
+## Autonomy contract (skills)
+
+Invoking a five-door skill **is** the approval. Write or map in the same turn.
+
+**CLI budget:** identity only if using MCP; one doctor / recommend / upgrade preview; then work;
+then check. Forbidden as the deliverable: dumping `--plan` JSON, “approve?”, or
+`STOP — invoke /ark-X` for work that door absorbs.
+
+**Still never:** weaken the architecture config; invent `mechanical-safe` kinds; claim finished
+while leftover design work remains; batch every Shape bet in one turn.
 
 ---
 

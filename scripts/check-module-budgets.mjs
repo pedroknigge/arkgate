@@ -30,7 +30,8 @@ const BUDGETS = [
   // S0 security: write-root split + config path contain + teeth demote — was 1900.
   // DF02 status/MCP compass honesty residual wiring — was 1920 (loc ~1937).
   // Deep-module coach report advisory spread — was 1940.
-  { path: 'bin/ark-check-runtime.mjs', max: 1960 },
+  // TW team flags + preflight hook (law vs feature). Logic lives in team-parliament-io.
+  { path: 'bin/ark-check-runtime.mjs', max: 2060 },
   // S3 start confidence gate on all apply paths — was 900 (loc ~920).
   // ACS03 unified status command wiring — was 940 (loc ~943).
   // ACS04 agents-md / agent-projection command wiring — was 960 (loc ~974).
@@ -70,9 +71,11 @@ const BUDGETS = [
   // 4.0.0 ArkRules advisory section — was 280 (loc 281).
   // Improvement compass advisory HTML section — was 300.
   // Deep-module coach advisory HTML section (hot paths + deepening) — was 320.
-  { path: 'bin/lib/html-report-advisories.mjs', max: 340 },
+  { path: 'bin/lib/html-report-advisories.mjs', max: 370 },
   // Deep-module coach pure deepening candidates (Domain; notAScore).
   { path: 'src/domain/deepeningCoach.ts', max: 320 },
+  { path: 'src/domain/teamParliament.ts', max: 490 },
+  { path: 'bin/lib/team-parliament-io.mjs', max: 360 },
   // Tooling assembler for hot-path git heuristic + doctor print.
   { path: 'bin/lib/deep-module-coach.mjs', max: 220 },
   // X04 R1/R2: physicalCohesion sensor + proposed reshape pilot (ADR 0010).

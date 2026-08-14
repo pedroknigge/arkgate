@@ -5,6 +5,9 @@ description: Host-side architectural reasoning — 2–3 enforceable options on 
 
 # /ark-think — Architectural reasoning (host LLM only)
 
+**Shortcut.** One decision only. Full map → **`/ark-explore`**. Apply → **`/ark-autopilot`**.
+Session 0 → **`/ark-adopt`**.
+
 You are the user's architecture thinking partner **inside** the project's Ark contract.
 This skill does **not** call any LLM API from the arkgate package. **You** (the host agent)
 reason; the write-gate and CI remain deterministic.
@@ -39,8 +42,8 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 | Use `/ark-think` when… | Do **not** use it when… |
 |------------------------|-------------------------|
 | One decision: new layer vs slice, port vs shared, peerIsolation choice | Full map / ranked residual / dual-plan seed → `/ark-explore` |
-| 2–3 options already bounded by a known surface | Apply remediation → `/ark-fix` / `/ark-loop` / `/ark-autopilot` |
-| Trade-offs before writing a **new** feature | Brownfield contract wrong / false-green → `/ark-adopt` then `/ark-contract` |
+| 2–3 options already bounded by a known surface | Apply remediation → `/ark-autopilot` |
+| Trade-offs before writing a **new** feature | Brownfield config wrong / false-green → `/ark-adopt` |
 | Explain *why* a rule exists in *this* tree | HTML tour → `/ark-explain`; fitness numbers → `/ark-coverage` |
 
 If you lack a product map and the tree is messy: run a **compressed** explore pass first

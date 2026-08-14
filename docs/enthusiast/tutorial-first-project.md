@@ -61,7 +61,7 @@ Or copy a [gallery starter](../enthusiast/how-to-gallery-starter.md) and run `np
 npx ark-check --install-agent-gates
 ```
 
-This installs `/ark-architect`, `/ark-place`, `/ark-autopilot`, and the other `/ark-*` skills for Claude, Cursor, Codex, Grok, and other detected hosts.
+This installs the five doors (`/ark-adopt`, `/ark-place`, `/ark-autopilot`, `/ark-explore`, `/ark-upgrade`) and leftover shortcut names for Claude, Cursor, Codex, Grok, and other detected hosts.
 
 ## 6. Verify honestly
 
@@ -75,9 +75,10 @@ Report `governed.percent` truthfully. An empty layer is fine; an ungoverned `lib
 
 ## 7. Build a feature with the agent
 
-Invoke `/ark-architect` once at the start, then `/ark-place` for each new file. The agent
+Invoke `/ark-adopt` once at the start, then `/ark-place` for each new file. The agent
 should place use cases in `application/`, ports in `domain/`, and never import the database
-into `domain/`.
+into `domain/`. Do not edit `ark.config.json` in the same change as a feature — that is a
+steward contract session. Teams: `ark-check --changed --base origin/dev`.
 
 ## Next steps
 

@@ -107,7 +107,7 @@ describe('W01 contract smells — detection', () => {
     expect(bidi.severity).toBe('warn');
     expect(bidi.evidence).toContain('edge:ApplicationOrchestration<->WorkflowSagaEngine');
     expect(bidi.outcome).toBeTruthy();
-    expect(bidi.fix).toContain('/ark-contract');
+    expect(bidi.fix).toContain('/ark-adopt');
   });
 
   it('does not flag a single-direction explicit allow', () => {

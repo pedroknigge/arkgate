@@ -185,8 +185,9 @@ export function resolveEffectiveContract(
  * Absence of arkRules yields the same payload shape with empty structure/invariants.
  */
 export function effectiveContractPolicyPayload(contract: EffectiveContract): unknown {
+  const { stewards: _stewards, ...configForHash } = contract.config;
   return {
-    config: contract.config,
+    config: configForHash,
     arkRules: {
       schemaVersion: contract.arkRules.schemaVersion,
       structure: contract.arkRules.structure.map((rule) => ({

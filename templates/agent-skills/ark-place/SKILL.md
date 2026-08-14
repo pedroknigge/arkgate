@@ -1,9 +1,19 @@
 ---
 name: ark-place
-description: "Where does new code go? Names the layer, directory, and naming for a new artifact from the contract, and scaffolds it there. Autonomous."
+description: "Where does new code go? Names the layer, directory, and naming for a new artifact from the contract, and writes it there. Autonomous."
 ---
 
 # /ark-place — Where does this code go?
+
+## Autonomy contract
+
+Invoking this skill **is** the approval. If the user described an artifact, **write the
+files** in this turn (prepare-write + scaffold). A path table alone is incomplete.
+The CLI is a **sensor and gate**. **CLI budget:** `ark_identity` then `ark_place` (or
+read `ark.config.json`); write; `ark-check`. Do not ask which layer they prefer.
+
+**Still never:** weaken `ark.config.json`; invent `mechanical-safe` kinds; claim leftover
+design work is finished because one file landed.
 
 ## Improvement compass (process preflight)
 
@@ -34,8 +44,8 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 
 | Use `/ark-place` when… | Do **not** use it when… |
 |------------------------|-------------------------|
-| New artifact: where + scaffold under contract | Existing violation fix → `/ark-fix` |
-| Naming / directory for a known kind | Contract layers wrong → `/ark-contract`; full shape choice greenfield → `/ark-architect` |
+| New artifact: where + **write** under the config | Existing violation cluster → `/ark-autopilot` |
+| Naming / directory for a known kind | Session 0 / config missing or lying → `/ark-adopt` (then come back) |
 
 The user describes something they need to build (a saga, a background job, an
 event handler, a repository, an HTTP client, a use case, a projection, …).
@@ -83,7 +93,7 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
 1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
-4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+4. Missing layer home: add it via **`/ark-adopt`** in this session if needed, then write the file; never invent `mechanical-safe`.
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
 
 
@@ -132,17 +142,19 @@ the same files or weaken the gate.
 3. **Answer concretely**: layer name, target directory (from the layer's
    `patterns`), intent-name prefix if the layer declares `intentPrefixes`, and
    which layers it may/may not import (from `rules`).
-4. **If the layer isn't adopted yet** (suggested but no directory): say so,
-   give the conventional directory from `suggestedLayers`, and offer
-   `/ark-contract` to adopt it — don't silently drop the code into a
+4. **If the layer isn't adopted yet** (suggested but no directory): write the
+   layer into `ark.config.json` (session-0 honesty — same as `/ark-adopt` for
+   that glob) **then** write the file. Don't silently drop the code into a
    wrong-but-existing layer.
-5. **If asked to create it**: scaffold the file(s) in place, following the
-   nearest existing sibling's style, and any port/adapter split the rules force.
+5. **Write it.** If the user described the artifact, scaffold the file(s) in
+   place this turn (prepare-write), following the nearest existing sibling's
+   style, and any port/adapter split the rules force. A path table without
+   files is incomplete unless they asked “where only.”
 
 ## Critical handoffs
 
-- If the user needs bulk adoption / wrong contract, not a single artifact: **STOP — do not continue this skill as complete.** **STOP — wrong skill: invoke /ark-adopt or /ark-contract** instead of ad-hoc multi-file grinding without a plan.
-- If contract lacks a home for the artifact: **STOP — do not continue this skill as complete.** Adopt the layer via `/ark-contract` first.
+- If the user needs bulk adoption / wrong config, not a single artifact: **STOP — do not continue this skill as complete.** Switch to **`/ark-adopt`** (write the path) instead of ad-hoc multi-file grinding without a plan.
+- If the config lacks a home for the artifact: add the layer **in this turn**, then write the file.
 - If doctor is **ENFORCE · design-weak** and the user is asking to reshape existing structure
   (not place one new artifact): place only the new file under the golden/contract home, then
   hand off **one** pilot via `pilotLoop.nextPilot` / `/ark-explore` shape-focus — never multi-pilot
@@ -159,8 +171,8 @@ the same files or weaken the gate.
 
 ## Related onboarding
 
-- Run **after** shape adoption: `/ark-architect` or `ark init --archetype` on greenfield;
-  `/ark-adopt` on brownfield.
+- Run **after** session 0: `/ark-adopt` (or `ark init --archetype` / `ark-check --recommend`
+  on greenfield). Brownfield: `/ark-adopt` first if the config is missing or lying.
 - `ark-check --recommend` / MCP `ark_recommend` picks phase-1 dirs; gallery starters in
   `examples/*-starter/` show correct placement per archetype.
 - Related demos: `docs/demos/` (write-gate self-correction, brownfield, autopilot).

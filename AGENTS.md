@@ -46,7 +46,7 @@ not every historical file:
 | Security | [SECURITY.md](SECURITY.md) · [docs/threat-model.md](docs/threat-model.md) |
 | Decisions | [docs/adr/](docs/adr/README.md) |
 | Implementation queue | [ROADMAP.md](ROADMAP.md) |
-| Releases (prepared / last published) | [CHANGELOG.md](CHANGELOG.md) · [4.6.0](docs/releases/4.6.0.md) (published) · [4.5.7](docs/releases/4.5.7.md) · [4.5.6](docs/releases/4.5.6.md) · [4.5.5](docs/releases/4.5.5.md) · [4.5.0](docs/releases/4.5.0.md) · [4.4.0](docs/releases/4.4.0.md) · [4.3.0](docs/releases/4.3.0.md) |
+| Releases (prepared / last published) | [CHANGELOG.md](CHANGELOG.md) · [4.6.1](docs/releases/4.6.1.md) (prepared) · [4.6.0](docs/releases/4.6.0.md) (published) · [4.5.7](docs/releases/4.5.7.md) · [4.5.6](docs/releases/4.5.6.md) · [4.5.5](docs/releases/4.5.5.md) · [4.5.0](docs/releases/4.5.0.md) · [4.4.0](docs/releases/4.4.0.md) · [4.3.0](docs/releases/4.3.0.md) |
 | History / maintainer evidence | [docs/archive/](docs/archive/README.md) · [docs/plans/](docs/plans/) · [docs/field/](docs/field/) · [docs/audit/](docs/audit/claims-matrix.md) |
 
 Read the **lane entry** before significant work. After changing a public surface, architecture
@@ -141,6 +141,7 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/improvementCompass.ts` | `bin/lib/improvement-compass.mjs` | (same `cli-pure` scripts); facade re-exports types + mappers |
 | `src/domain/deepeningCoach.ts` | `bin/lib/deepening-coach.mjs` | (same `cli-pure` scripts); deep-module coach deepening candidates (notAScore) |
 | `src/domain/agentProjection.ts` | `bin/lib/agent-projection.mjs` | (same `cli-pure` scripts) |
+| `src/domain/teamParliament.ts` | `bin/lib/team-parliament.mjs` | (same `cli-pure` scripts); TW team lock |
 | `src/domain/agentSkillsPackage.ts` | `bin/lib/agent-skills-package.mjs` | (same `cli-pure` scripts); layout via `generate:agent-skills` / `check:agent-skills` |
 | `src/domain/resolvedCandidateFactsSchema.ts` | `schemas/ark.resolved-candidate-facts.schema.json` | (same `cli-pure` scripts) |
 | `src/domain/changeMap.ts` | bundled in `bin/lib/analysis-engine.mjs`; schema parity test guards `schemas/ark.change-map.schema.json` | `generate:analysis-engine` / `check:analysis-engine` |
@@ -172,6 +173,8 @@ retained shipped rationale live under `docs/plans/`:
 | [deep-module-coach](docs/plans/deep-module-coach/README.md) | Shipped in **4.5.5** (`DC01`–`DC04` done; **published**) | Post-4.5 coach: deep-module vocabulary, hot-path / deepening advisory, consumer glossary hook, two-axis done recipe — process + advisory only |
 | [field-upgrade-mcp-truth](docs/plans/field-upgrade-mcp-truth/README.md) | Shipped in **4.5.6** (`FX01`–`FX12`) | Field upgrade & multi-project MCP truth: registry-aware upgrade, skill drift/refresh, processPackage honesty, publish + site |
 | [understandable-ark-4.6](docs/plans/understandable-ark-4.6/README.md) | Shipped in **4.6.0** (`PL01`–`PL09` done; **published**) | Plain-language product surfaces + shared Claude/Grok home skills (Codex ratchet); former 4.5.8 HS absorbed |
+| [five-door-autonomy](docs/plans/five-door-autonomy/README.md) | Prepared for **4.6.1** (`SK01`–`SK06`; `SK07` publish) | Five doors (adopt / place / autopilot / explore / upgrade) write or map in-turn; CLI is sensor + gate; other names stay as shortcuts |
+| [team-parliament](docs/plans/team-parliament/README.md) | Prepared for **4.6.1** (`TW01`–`TW08` done) | Law vs feature: stewards, mixed-PR deny, ratchet vs base branch, cheap `--changed` check; doctor asks for stewards or shows list drift; identity is GitHub handle or email |
 | [shared-home-skills-truth](docs/plans/shared-home-skills-truth/README.md) | Superseded (absorbed into 4.6.0 PL06–PL07) | Historical seed only — do not run as a separate 4.5.8 patch train |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in

@@ -25,7 +25,8 @@
         "bin/lib/project-identity.mjs",
         "bin/lib/status-manifest.mjs",
         "bin/lib/agent-projection.mjs",
-        "bin/lib/agent-skills-package.mjs"
+        "bin/lib/agent-skills-package.mjs",
+        "bin/lib/team-parliament.mjs"
       ],
       "intentPrefixes": ["Domain."],
       "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"]

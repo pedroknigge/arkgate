@@ -233,7 +233,7 @@ When the top two shapes are close or projected governed coverage is below 90%, J
 `requiresConfirmation: true` and explains why in `confirmationReasons`.
 
 Human output highlights phase-1 layers and the analogy; JSON is the stable contract for
-MCP `ark_recommend` and the `/ark-architect` skill.
+MCP `ark_recommend` and the `/ark-adopt` skill (leftover name `/ark-architect` is a shortcut).
 
 ### Terminal onboarding (Phase B)
 
@@ -270,13 +270,17 @@ To remove a compact host integration, preview `ark start --remove-host <host>` a
 only after review. Ark removes only its exact compact artifacts, leaves customized files untouched
 as unresolved decisions, and restores the integration with `ark start --tools <host> --apply`.
 
-**Skill roles (expert depth — avoid overlap):** `/ark-autopilot` = **guided end-to-end** default
-when skills are installed (explore → apply A + propose/apply-with-ok B). `/ark-explore` = map +
-dual-plan **seed** + Shape residual (no apply); primary post-green map half. `/ark-coverage` = Ark
-**fitness** only (governed/gates). `/ark-think` = one decision (2–3 options). `/ark-adopt` =
-brownfield Align/Stabilize + seed Shape B. `/ark-loop` = plan A only. Empty plan A is not
-“architecture healthy” if design-weak residual remains. Full routing table: full-install
-`AGENTS.md` / [README expert skills](../README.md#expert-skills-escapes--not-onboarding).
+**Five doors (emphasize):** `/ark-adopt` = session 0 (greenfield scaffold + brownfield honesty —
+write the path). `/ark-place` = new feature (place **and write**). `/ark-autopilot` = apply
+plan A + one Shape refactor (invoke = approval). `/ark-explore` = map + dual-plan seed (no
+apply). `/ark-upgrade` = preview then apply in-turn. Other `/ark-*` names stay installed as
+**shortcuts**. Empty plan A is not “architecture healthy” if leftover design remains.
+
+**Team parliament:** adopt is a **contract session** (law-only). Feature work must not edit
+`ark.config.json` / `arkrules/*` / `.ark-baseline.json`. Prefer
+`ark-check --changed --base <merge-ref>` in local gates. `--contract-diff` + `--author`
+when `stewards` is set (`--author` is a GitHub handle or email, not git `user.name`).
+`ark status --vs <ref>` prints pin / contract / baseline drift.
 
 **Design fitness (3.0.1+ / Phase Q 3.0.3):** after checked edges are clean, doctor can still
 report **SUGGEST / ADAPT / ENFORCE · design-weak** using the mode it actually observed; a weak
@@ -290,7 +294,7 @@ npx ark-check --doctor --fail-on-new-smells --base-ref origin/main --json # opt-
 
 **Post-green path (Q01):** when design-weak, doctor sets `postGreenPath` / `primaryNextAction`
 (`clarify-for-ai`) — **one** Shape door: `/ark-explore` shape-focus → dual-plan B, then
-`/ark-autopilot` only to apply B with your OK. Do not skill-shop coverage/think for the same residual.
+`/ark-autopilot` applies one pilot. Do not skill-shop coverage/think for the same residual.
 
 **Pilot loop (Q04):** when design-weak, `pilotLoop.nextPilot` is **one** extraction card
 (pilot target, move, success, kill-switch). Apply **that one pilot only**, then re-doctor.
@@ -363,7 +367,7 @@ clusters per anchor directory (concentration, not volume — dispersed hooks nev
 fixed corpus-calibrated thresholds; anchors under `app/`/`pages/` are `fixedByConvention` and
 never move. `reshapePilot.nextPilot` is a **proposed** one-at-a-time card (`moveSample`,
 `movesTotal`, `successSignal`, `killSwitch`, `doNot[]`): run it only via `/ark-loop` through the
-write gate + atomic preflight; merges are `/ark-architect` judgment cards. `notAScore`, never a
+write gate + atomic preflight; merges are `/ark-adopt` / `/ark-autopilot` judgment cards. `notAScore`, never a
 verdict/`designFitness` input; there is no apply path.
 
 **Reshape decision memory (Y01):** when the team accepts, defers, or rejects that target, record
@@ -479,21 +483,21 @@ in `ark.config.json`.
 closed solely by `import type` (common with generated route trees) is **not** reported as
 `CIRCULAR_DEPENDENCY`. Value cycles still fail.
 
-### MCP `ark_recommend` and `/ark-architect` (Phase C)
+### MCP `ark_recommend` and `/ark-adopt` (Phase C)
 
 The `ark-mcp` server exposes **`ark_recommend`** — same JSON as
-`ark-check --recommend --json`. Call it (or invoke `/ark-architect`) before
+`ark-check --recommend --json`. Call it (or invoke `/ark-adopt`) before
 generating project structure on greenfield or early-adoption repos.
 
 `ark-mcp --session-context` appends a one-line enthusiast hint when governed
 coverage is low or the config is fresh:
 
 ```
-New to Ark? Run /ark-architect or: ark-check --recommend
+New to Ark? Run /ark-adopt (or /ark-architect) or: ark-check --recommend
 ```
 
-The `/ark-architect` skill ships in `templates/skills/ark-architect.md` and installs
-via `ark-check --install-agent-gates`.
+The `/ark-adopt` skill ships in `templates/skills/ark-adopt.md` (leftover
+`/ark-architect` is a shortcut) and installs via `ark-check --install-agent-gates`.
 
 ### Adoption plan artifact (Phase E)
 
@@ -588,9 +592,9 @@ checks; this improves early feedback without upgrading Codex's bypassable hook t
 boundary. Removing `AGENTS.md`, skills, or session context never changes the contract verdict.
 
 Do not invent layers outside the 11-layer profile or named presets. Unrecognized
-directories (`utils/`, `lib/`) must be classified explicitly via `/ark-contract`.
+directories (`utils/`, `lib/`) must be classified explicitly via `/ark-adopt`.
 
-**Brownfield** (existing messy repo): use `/ark-adopt` and [brownfield-adoption.md](brownfield-adoption.md), not `/ark-architect`.
+**Brownfield** (existing messy repo): use `/ark-adopt` and [brownfield-adoption.md](brownfield-adoption.md). `/ark-architect` is a leftover shortcut to the same door.
 
 ## Supported agent hosts
 

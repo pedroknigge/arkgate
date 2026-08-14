@@ -70,7 +70,7 @@ Deep teaching example (runnable API + break exercises): [hexagonal-order-api](ht
 
 | Situation | Use |
 |-----------|-----|
-| New or empty repo | `/ark-architect`, `ark-check --recommend`, gallery starters |
+| New or empty repo | `/ark-adopt`, `ark-check --recommend`, gallery starters |
 | Existing messy codebase | `/ark-adopt`, [brownfield playbook](../brownfield-adoption.md) |
 
 ## Related

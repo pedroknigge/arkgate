@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.6.0';
+const CURRENT = '4.6.1';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.6.0';
 
@@ -101,9 +101,9 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('exposes published 4.6.0 as npm latest', () => {
+  it('exposes published 4.6.0 as npm latest while 4.6.1 is prepared', () => {
     expect(PUBLISHED_LATEST).toBe('4.6.0');
-    expect(CURRENT).toBe('4.6.0');
+    expect(CURRENT).toBe('4.6.1');
     expect(read('README.md')).toMatch(/4\.6\.0/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.0\.md/);
     expect(read('README.md')).toMatch(/4\.5\.7/);
@@ -113,12 +113,37 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.6\.0/is);
     expect(read('docs/releases/4.6.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.0.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(read('docs/releases/4.6.1.md')).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(read('docs/releases/4.6.1.md')).not.toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.5.7.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.5.6.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.5.5.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.5.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.4.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.3.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.6.1 five-door + team parliament train', () => {
+  it('records five doors, team lock, prepared status', () => {
+    const changelog = read('CHANGELOG.md');
+    expect(changelog).toMatch(/## 4\.6\.1/);
+    expect(changelog).toMatch(/Five-door|five-door|\/ark-adopt/i);
+    expect(changelog).toMatch(/Team parliament|stewards|--contract-session|--changed/i);
+    expect(changelog).toMatch(/GitHub handle|noreply|user\.name/i);
+    expect(changelog).toMatch(/Status:\s*prepared|not yet on npm/i);
+    expect(changelog).toMatch(/No required config migration/i);
+
+    const notes = read('docs/releases/4.6.1.md');
+    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(notes).not.toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(notes).toMatch(/4\.6\.1/);
+    expect(notes).toMatch(/five-door|\/ark-adopt|\/ark-place|\/ark-autopilot/i);
+    expect(notes).toMatch(/stewards|--contract-session|--changed|--against/i);
+    expect(notes).toMatch(/GitHub handle|noreply/i);
+    expect(notes).toMatch(/No required config migration/i);
+    expect(notes).toMatch(/Z09|RB-11/i);
+    expect(notes).toMatch(/mcp-publisher validate server\.json/);
   });
 });
 

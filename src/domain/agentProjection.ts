@@ -268,7 +268,7 @@ export function buildAgentProjectionBody(facts: AgentProjectionFacts): string {
       '',
       formatAgentProjectionLayers(layers),
       '',
-      'When creating a **new** kind of code that no layer covers, update `ark.config.json` first (`/ark-contract`), then place the file.',
+      'When creating a **new** kind of code that no layer covers, update `ark.config.json` first (`/ark-adopt`), then place the file.',
       '',
       '### Diagnostic codes (short list)',
       '',

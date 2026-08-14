@@ -1,81 +1,41 @@
 ---
 name: ark-fix
-description: Resolve Ark architecture violations at the root cause — read importers and product context, design ports/adapters/moves/intent alignment. Never weaken the contract. CLI only validates.
+description: Shortcut to /ark-autopilot for a small violation cluster. Deprecated as a first-class door.
 ---
 
-# /ark-fix — Fix architecture violations at the root
+# /ark-fix — Shortcut to /ark-autopilot
 
-You fix violations Ark reports. Prefer structural fixes over silencing the gate.
-**Read the surrounding product code** (callers, package role, feature ownership) — not only
-the two files on the violation edge.
+**Deprecated as a first-class door.** Gate violations and judgment remediations are
+**`/ark-autopilot`**. Do that job now. CLI only validates.
 
-## Improvement compass (process preflight)
+## Autonomy contract
 
-When doctor is available, read `doctor.improvementCompass` (or the human **Improvement compass** section).
-Name 1–3 **residual** lenses in plain language before skill-shopping. Always `notAScore` — never invent
-0–10 scores or Excellent/Good ranks.
-
-**What the user should feel next:** fewer blocked AI writes, clearer folders, safer domain — then jargon.
-
-**Anti false-done:** empty plan A + residual lenses / design-weak → **Incomplete? yes**. Green edges alone
-are not “architecture finished.”
-
-**AI-easy architecture:** ports over concrete I/O in domain; one concern per module; golden pattern for
-new files; place before write (`/ark-place` / prepare-write).
-
-**Out of scope (honest):** scalability/performance, full app-security tooling (SAST), and full resilience
-patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement for them.
-
-**Name residual lenses** on each cluster (SoC, DIP, coupling, …). Still no weaken-gate to clear a lens.
-
-## Deep modules (process)
-
-- Prefer fixes that leave a **deep module** at a named **seam** (port in the owning layer; adapter outside).
-- Apply the **deletion test** before extracting a layer “just so tests can mock it.”
-- After a port/inject fix, **test at the public interface** of the seam (match remediation `nextAction` language), not only private internals.
+Invoking this leftover name **is** the approval to write the fix. Open importers,
+design the port/move, apply, `ark-check`. Never weaken the config. Never invent
+`mechanical-safe` kinds.
 
 ## When / not when
 
-| Use `/ark-fix` when… | Do **not** use it when… |
-|----------------------|-------------------------|
-| One change / small cluster just failed the gate | Bulk residual / many edges → `/ark-loop` or `/ark-autopilot` |
-| Need a structural fix (port, move, intent rename) | Map residual / pattern Shape plan → `/ark-explore` |
-| Judgment design for a known violation | Contract wrong / false-green → STOP to `/ark-contract` / `/ark-adopt` |
+| Use this leftover name when… | Prefer instead |
+|------------------------------|----------------|
+| One change / small cluster just failed the gate | **`/ark-autopilot`** |
+| Judgment design for a known violation | Session 0 / false-green → **`/ark-adopt`** |
 
-When the fix is really a **Shape** extraction (I/O out of routes, god module split), write an
-**extraction card** before editing — same template as `docs/brownfield-adoption.md`
-§6 and explore §G. Fixed fields (never mechanical-safe, never silent B apply).
+## Plan B one-pilot checklist (when leftover design, not a single edge)
 
-### Plan B one-pilot checklist (when Shape residual, not a single edge fix)
-
-Empty plan A + `designWeak` is **not** architecture finished. One pilot only:
-
-1. **Confirm** doctor `designFitness.designWeak` / non-empty `patternBets` (or agent-detected smell).
-2. **One pilot** — prefer `pilotLoop.nextPilot`; never multi-batch concurrent Shape extractions.
-3. **Extraction card** with **Kill-switch** + falsifiable Success (required).
-4. **User OK** before apply — `autoApplyPlanBForbidden` / never mechanical-safe.
-5. **Edit only that pilot scope** — then `ark-check` / re-doctor; residual outside pilot may remain.
-6. **Stop** if kill-switch fires; do not open pilot #2 in the same batch.
-
-```text
-### Extraction card
-Pilot: <one directory or feature path — or pilotLoop.nextPilot.pilotTarget>
-Smell: <doctor designSmells id if present>
-Move: <verbatim relocate / split>
-Do not: rewrite queries; weaken ark.config; invent mechanical-safe kinds; big-bang; multi-pilot batch
-Success: <falsifiable — re-doctor on pilot paths>
-Kill-switch: <stop condition — required>
-Next: re-run ark-check; shrink baseline if applicable
-```
+Empty plan A + leftover design work is **not** architecture finished. One pilot only.
+Write an **extraction card** (`docs/brownfield-adoption.md` §6) — never mechanical-safe,
+never silent B apply. **Kill-switch** required. `multiPilotBatchForbidden` — never
+multi-pilot batch.
 
 ## Dual engine (mandatory)
 
 | Engine | Role |
 |--------|------|
-| **Deterministic** | Violation list, plan kinds, post-edit `ark-check` |
-| **Exploratory** | Why this edge exists in *this* product; better home; manifiesto if the rule is business |
+| **Deterministic** | CLI / MCP / contract sensors — exit codes, plan kinds, coverage numbers, install status |
+| **Exploratory** | You open **this** repo's real files and product surface before concluding |
 
-
+The CLI is a **sensor**, never the whole job. Claiming done without the exploratory bar for this skill is **incomplete**.
 
 ## MCP workspace binding (mandatory)
 
@@ -88,89 +48,25 @@ restart/retargeting is required. `ark://manifest` never satisfies this preflight
 
 ## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
 
-ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
-
-| Plane | What it protects | Where it lives | Sensors / tools |
-|-------|------------------|----------------|-----------------|
-| **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
-| **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
-
-**Rules for every report / answer:**
-1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
-2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
-3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
-4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
-5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
-
-
-### Fix + ArkRules
-- Classify each violation: `LAYER_*` / capability → **[Layer]**; `ARKRULE_*` / `INVARIANT_*` → **[ArkRules]**.
-- Structure sensor fixes are judgment (ports, factories, private state) — not mechanical-safe.
+Label findings **`[Layer]`** vs **`[ArkRules]`**. Structure sensor fixes are judgment.
 
 ## Subagent fan-out (optional, host-dependent)
 
-When the user asks to go faster **or** the work naturally splits (multiple packages,
-feature dirs, plan clusters), you **may** dispatch **subagents**:
-
-| Host capability | Behavior |
-|-----------------|----------|
-| **Parallel subagents supported** (e.g. multi-agent / `spawn_subagent` / concurrent Agent tools) | Launch **2–N** agents in **one wave** with **disjoint path scopes**. Prefer **read-only** explore agents for mapping; at most **one writer** unless the host gives isolated worktrees. Parent merges findings, then runs `ark-check` once. |
-| **Not supported** (single agent only) | **Fall back to sequential** — same checklist, one cluster/step at a time. Never claim parallel work you did not run. |
-
-**Rules:**
-1. Give each subagent a **tight brief**: paths in scope, sensor commands allowed, deliverable shape (paths opened + findings JSON or bullets).
-2. **No shared mutable files** across parallel writers.
-3. STOP handoffs and dual-engine rules still apply in every agent.
-4. Parent owns the **### Completion** block (union of **Opened**, single **Handoff**).
-5. Do **not** use subagents to weaken the gate or invent `mechanical-safe` kinds.
+If the host supports **parallel subagents**, fan out read-only scouts; otherwise
+**fall back to sequential**. Never weaken the gate.
 
 ## Related onboarding
 
-- **Greenfield:** `/ark-architect` or `ark-check --recommend` / `ark start`.
-- **Brownfield:** `/ark-adopt` — match contract to reality; do not force a starter preset.
-- **Map first:** `/ark-explore` when the violation is one of many structural smells.
-- **peerIsolation / cross-slice:** always **judgment** — extract to shared, events/ports, or redesign ownership. Never auto-apply cross-feature or cross-context moves.
-- **`vertical-slice` ownership:** feature code stays under `src/features/<slice>/…` (no sibling-slice imports); shared primitives in `src/shared/`; infra in `src/lib/`; shell in `src/app/`. Cross-feature edges are peerIsolation — extract shared or use events/ports.
-- **`ddd-bounded-contexts` ownership:** code under `src/contexts/<context>/{domain,application,infrastructure,presentation}/`; shared kernel only under `src/shared/kernel/`. Cross-context imports (same or cross technical layer) are peerIsolation — integrate via application APIs/events, not peer technical layers.
-- **Default path:** `ark start` → `/ark-autopilot` → `ark-check --doctor`.
+- **Greenfield:** `/ark-adopt` or `ark-check --recommend` / `ark start`.
+- **Brownfield:** `/ark-adopt`.
 
-## Anti-wrapper rule (mandatory)
+## Steps
 
-**Forbidden:** only listing violations from JSON without reading importers/targets.
-
-**Required:**
-1. Run `ark-check` as **sensor** (and `--plan --json` if multi-step) — CLI validates; you remediate.
-2. **Read** each violated file and its import target (plus callers that explain product role).
-   If the wall is a concentrated contract smell: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
-   If false-green cores: **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
-   If many residuals: **STOP — do not continue this skill as complete.** **STOP — bulk residual debt: invoke /ark-loop or /ark-autopilot** instead of ad-hoc multi-file grinding without a plan.
-3. **“Así te lo re-soluciono”** — concrete change before editing.
-4. After edits: `ark-check --strict-config` (and baseline if configured).
-
-## Common fix patterns
-
-| Symptom | Fix |
-|---------|-----|
-| App → Presentation type-only | Extract type to application/core; re-export from UI |
-| App → Presentation value (UI in core) | Move component wrappers to presentation |
-| Domain → outer layer | Port/interface in Domain; adapter outside; or relocate false Domain file (`**/types.ts` trap) |
-| Intent prefix mismatch | Rename intent to layer’s `intentPrefixes` or fix prefix in config via `/ark-contract` |
-| Forbidden global in Domain | Inject a port (Clock, Id, Http) — don’t allow `Date.now` in Domain |
-| Concentrated edge wall | Stop grinding; `/ark-contract` facade/surface split |
-
-## Manifiesto
-
-If the “fix” is really a missing business intent or Domain home for a rule:
-
-- Propose intent name + layer placement.
-- Register / place code so `ark_manifest` / config can enforce it.
-- Do not only delete the import.
-
-## Rules
-
-- No `ark-*-disable`, no allowing a bad edge “to finish”, no baselining a **new** violation you introduced.
-- Prefer mechanical-safe kinds when the plan tags them; otherwise design judgment carefully.
-- Code only — no DB migrations unless user asked.
+1. Sensor: `ark-check` / `--plan --json`.
+2. If false-green or concentrated edge: **STOP — do not continue this skill as complete.**
+   **STOP — false-green:** / **STOP — concentrated edge:** execute **`/ark-adopt`** in this turn.
+3. Otherwise execute **`/ark-autopilot`** for the cluster (extraction card if Shape).
+4. Re-check.
 
 ## Mechanical-edit hygiene (outcome gate)
 
@@ -179,24 +75,9 @@ If the “fix” is really a missing business intent or Domain home for a rule:
 - A convention-only `*-data.ts` stub is not a fix: move the real code or **leave the placeholder file uncreated**; never write `import "server-only"; export {}` as an empty naming token.
 - Keep the edit only when the **previously clean file stays typecheck-clean**. Otherwise roll it back and treat the change as judgment.
 
-## Reshape findings (physical cohesion — never mechanical)
-
-If `doctor.physicalCohesion` fires while you fix: do **not** fold reshape moves into your fix
-batch. Physical moves run only through `/ark-loop`'s one-pilot loop; merge decisions only as
-`/ark-architect` merge cards. A cohesion finding is context for your fix, never a license to
-reorganize. Respect `physicalCohesion.reshapeDecisions`: never revive a current rejected/deferred
-target from the still-visible facts. If the user makes a verdict while reviewing the finding,
-record its exact `decisionTarget` + reason in `.ark/reshape-decisions.json`; never infer one from
-golden-pattern prose.
-
-## Done
-
-- Targeted violations gone; no new ones.
-- Report: what moved, what was intentional default, what needs user decision.
-
 ## Completion contract (skill incomplete if missing)
 
-End with **exactly** these headings (markdown `###`):
+Skill incomplete if missing any field below.
 
 ### Completion
 - **Sensor:** commands/tools run
@@ -204,9 +85,5 @@ End with **exactly** these headings (markdown `###`):
 - **Result:** one-line outcome
 - **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
-- **Done axes:** architecture residual (status/doctor/compass) | feature/ticket residual (outside package). Enforce green ≠ feature done
-- **Handoff:** `/ark-…` / CLI / `none`
+- **Handoff:** `/ark-autopilot` / `/ark-adopt` / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
-
-If a **STOP** handoff applies and you continued as if done, set **Incomplete?** to `yes`.
-**Skill incomplete if missing** any of the bullets above.

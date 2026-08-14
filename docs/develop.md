@@ -65,7 +65,7 @@ can show `runtimeObserved: true` even when branch-protection policy is plan-unav
 | Concern | Doc / tool |
 |---------|------------|
 | Layers, rules, globs | [configuration.md](configuration.md) · `ark.config.json` |
-| ArkRules (structure + invariants) | [configuration.md](configuration.md#arkrules-intra-layer-opt-in) · `arkRules` / `arkrules/*` · skill `/ark-contract` |
+| ArkRules (structure + invariants) | [configuration.md](configuration.md#arkrules-intra-layer-opt-in) · `arkRules` / `arkrules/*` · skill `/ark-adopt` (session 0) or `/ark-autopilot` |
 | Rules inventory (brownfield) | `arkgate-check --rules-inventory` · MCP `ark_rules_inventory` |
 | Stable package API | [package-surface.md](package-surface.md) |
 | Diagnostic codes (`ruleId` why/fix) | [diagnostics.md](diagnostics.md) · root `DIAGNOSTIC_CATALOG` |
@@ -133,7 +133,19 @@ npx arkgate agents-md --write       # embed/refresh projection markers
 npx arkgate preflight --changes changes.json --json
 npx arkgate upgrade --json          # managed content preview
 npx arkgate upgrade --apply
+npx arkgate-check --changed --base origin/dev
+npx arkgate-check --against origin/dev
+npx arkgate status --vs origin/dev
 ```
+
+---
+
+## Team parliament (law vs feature)
+
+`ark.config.json`, `arkrules/*`, and `.ark-baseline.json` are a **constitution**. A product PR
+must not amend them. Optional `stewards` (GitHub handle or email) makes loosen / baseline-grow
+steward-only. Doctor `stewardNudge` asks who owns the law or shows list drift — never invents
+names. Details: [configuration.md](configuration.md#team-parliament-law-vs-feature).
 
 ---
 

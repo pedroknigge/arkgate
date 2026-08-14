@@ -25,6 +25,7 @@ import { detectActiveAgentHost } from './skill-install.mjs';
 import { readBaseline } from './violations.mjs';
 import { reportsDir, readJsonSafe } from './html-report.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
+import { collectVsBaseFacts, discoverTeamBaseRef } from './team-parliament-io.mjs';
 
 function sha256Hex(value) {
   return createHash('sha256').update(value, 'utf8').digest('hex');
@@ -382,6 +383,17 @@ export function collectStatusFacts(options = {}) {
             ? 0
             : null,
     improvementCompass,
+    vsBase: (() => {
+      const vsRef = typeof options.vs === 'string' ? options.vs.trim() : '';
+      if (!vsRef) return null;
+      const baseRef = discoverTeamBaseRef(resolvedRoot, vsRef);
+      if (!baseRef) return null;
+      return collectVsBaseFacts({
+        root: resolvedRoot,
+        baseRef,
+        configRel: path.basename(configPath),
+      });
+    })(),
   };
 }
 
@@ -423,6 +435,7 @@ export function runStatusCommand(args = {}) {
       expectedProjectId: args.expectedProjectId,
       host: args.host,
       arkgateVersion: args.arkgateVersion,
+      vs: args.vs,
     });
 
     if (asJson || args.json) {
@@ -471,6 +484,7 @@ export function runStatusCommand(args = {}) {
             ' · not a score'
         );
       }
+      if (manifest.vsBase?.line) write(`  ${manifest.vsBase.line}`);
       write(`  next: [${manifest.nextAction.id}] ${manifest.nextAction.summary}`);
     }
 

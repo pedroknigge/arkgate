@@ -311,12 +311,32 @@ function deepModuleCoachHtml(coach) {
   </section>`;
 }
 
+function stewardNudgeHtml(nudge) {
+  if (!nudge || nudge.notAScore !== true) return '';
+  const ask =
+    (nudge.needsStewards || nudge.drift) && typeof nudge.ask === 'string' && nudge.ask
+      ? `<p>${esc(nudge.ask)}</p>`
+      : '<p class="muted">No steward list gap (advisory).</p>';
+  const next =
+    typeof nudge.nextAction === 'string' && nudge.nextAction
+      ? `<p class="muted">Next: ${esc(nudge.nextAction)}</p>`
+      : '';
+  return `
+  <section class="section card" data-advisory="stewardNudge">
+    <h2>Stewards <span class="muted">(advisory — never changes the verdict)</span></h2>
+    ${ask}
+    ${next}
+    <p class="muted">GitHub handle or email. Never invent names. Always <code>notAScore</code>.</p>
+  </section>`;
+}
+
 export function renderAdvisorySections(advisories, escape) {
   if (!advisories || typeof advisories !== 'object') return '';
   if (typeof escape === 'function') esc = escape;
   return [
     improvementCompassHtml(advisories.improvementCompass),
     deepModuleCoachHtml(advisories.deepModuleCoach),
+    stewardNudgeHtml(advisories.stewardNudge),
     contractHealthHtml(advisories.contractHealth),
     ambientStateHtml(advisories.ambientState),
     physicalCohesionHtml(advisories.physicalCohesion),

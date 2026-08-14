@@ -1,17 +1,27 @@
 ---
 name: ark-autopilot
-description: Guided end-to-end path for layers and opt-in ArkRules — doctor next action when unsure. Explore first; dual plan A (edges) + B (shape); mechanical-safe only by default; B with user OK, one pilot at a time. Empty plan A is not healthy if design-weak. CLI is a sensor; you read and remediate files.
+description: Apply Ark end-to-end — explore first; dual plan A (edges) + B (shape); write mechanical-safe and judgment in this turn; one Shape refactor. Empty plan A is not healthy if leftover design remains. CLI is a sensor; you edit files.
 ---
 
-# /ark-autopilot — Guided end-to-end architecture path
+# /ark-autopilot — Apply the path
 
-**This is the full guided co-pilot** after the compact router. Prefer it when the user wants
-architecture cleaned end-to-end, not when they only need a map (`/ark-explore`) or a single
-edge fix (`/ark-fix`). Doctor remains the control plane: re-check status after each major step.
+**This is the apply door.** Invoking it **is** the approval. Prefer it when the user wants
+architecture cleaned end-to-end, not when they only need a map (`/ark-explore`). Doctor
+remains the control plane: re-check status after each major step.
 
-Composes **explore → sensors → dual plan → loop**. Safe default: auto-apply only
-`mechanical-safe`; when the user says full apply / apply everything, also execute **judgment**
-fixes you design from reading source (still validate with ark-check, never weaken the gate).
+## Autonomy contract
+
+The CLI is a **sensor and gate**. **CLI budget:** one doctor / `--plan`; open files; **write**;
+re-check. Forbidden as the result: “4 safe / 4 judgment — approve?”, dumping `--plan` JSON,
+or `STOP — invoke /ark-fix` / `/ark-loop` / `/ark-contract`. Do that work **here**.
+
+Apply plan A (`mechanical-safe` **and** judgment). If leftover design work remains, apply
+**one** small refactor this turn, then re-doctor. Never batch every Shape bet.
+
+Composes **explore → sensors → dual plan → write**. Validate with ark-check; never weaken the gate.
+**Team lock:** do not edit `ark.config.json`, `arkrules/*`, or `.ark-baseline.json` in this
+turn unless the user invoked a steward contract session. Feature diffs use
+`ark-check --changed --base <merge-ref>`. Growing the baseline is steward-only.
 
 **Not a plan grinder.** Empty `--plan` does **not** mean “architecture is healthy” without
 the explore pass and dual-plan section B (pattern / Shape bets).
@@ -33,25 +43,25 @@ new files; place before write (`/ark-place` / prepare-write).
 **Out of scope (honest):** scalability/performance, full app-security tooling (SAST), and full resilience
 patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement for them.
 
-**Guided vibe path:** phase 0 = doctor + compass residual. Shape only with user OK. Never script “done” while residual lenses remain.
+**Guided vibe path:** phase 0 = doctor + compass residual. Shape: one refactor this turn (invoke = OK). Never script “done” while residual lenses remain.
 
 ## When / not when
 
 | Use `/ark-autopilot` when… | Do **not** use it when… |
 |----------------------------|-------------------------|
 | “Make architecture sound” end-to-end | Map only, no apply → `/ark-explore` |
-| Brownfield or greenfield with apply | Only fitness numbers → `/ark-coverage` |
-| User wants A + B planned and A executed | Single edge fix → `/ark-fix`; plan A only → `/ark-loop` |
-| **Apply half of post-green Shape path** (after explore map / when user wants full apply) | Skipping explore when doctor primary is Shape map-first |
-| Spaghetti under ENFORCE: Shape work with user ok on B | Contract false-green first → `/ark-adopt` / `/ark-contract` STOP paths |
+| Brownfield or greenfield with apply | Session 0 / config lying → `/ark-adopt` first, then return |
+| User wants A + B planned and **applied** | New file only → `/ark-place` |
+| **Apply** leftover design (one Shape refactor) | User said map only |
+| Spaghetti under ENFORCE: Shape work (invoke = apply one pilot) | — |
 
-**Post-green door:** doctor’s single door is `/ark-explore` shape-focus → dual-plan B, **then** this skill only
-to apply B with OK. Prefer that order when `postGreenPath` / design-weak is the primary residual.
+**Post-green door:** `/ark-explore` shape-focus → dual-plan B, **then this skill applies one
+pilot**. Prefer that order when `postGreenPath` / leftover design work is the primary residual.
 
 ## Related onboarding
 
-- **Greenfield:** `/ark-architect` or `ark-check --recommend` / `ark start`.
-- **Brownfield:** `/ark-adopt` — match contract to reality; do not force a starter preset.
+- **Greenfield:** `/ark-adopt` or `ark-check --recommend` / `ark start`.
+- **Brownfield:** `/ark-adopt` — match config to reality; do not force a starter preset.
 - **Deep map only:** `/ark-explore` — full recon / dual-plan seed without applying.
 - **Adoption fitness only:** `/ark-coverage` — governed% + capability gaps (not pattern dual-plan).
 - **Default path:** `ark start` → `ark-check --doctor` → **`/ark-autopilot`** (this skill) for guided work.
@@ -73,8 +83,8 @@ decision-grade explore pass **and** without opening violating files.
 4. **Open every file** in plan A `steps[]` (and `target` if present) before classifying a fix.
 5. **“Así te lo re-soluciono”** for each A cluster and each B pattern bet.
 6. Apply A → re-run ark-check → rollback on regression. **Never auto-apply B** as mechanical-safe.
-7. **One-pilot loop for B:** when design-weak, take **`pilotLoop.nextPilot`** (one extraction card)
-   → apply **only** that pilot with user OK → **re-doctor**. Never multi-pilot batch B; residual
+7. **One-pilot loop for B:** when leftover design / design-weak, take **`pilotLoop.nextPilot`** (one extraction card)
+   → apply **only** that pilot **in this turn** → **re-doctor**. Never multi-pilot batch B; residual
    outside the pilot may remain and must not be called “healthy finished.”
 8. **Reshape decision memory:** read `doctor.physicalCohesion.reshapeDecisions` before acting on
    mirror facts. Outcome first: a current rejected/deferred verdict means “intentional/deferred
@@ -106,7 +116,7 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
 1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
-4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+4. Editing `arkrules/*` or promoting modes and fixing structure sensors is **this skill** (judgment, never invent `mechanical-safe`).
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
 
 
@@ -150,7 +160,7 @@ Include explore **§G** when spaghetti / design-weak signals fire.
 5. **Agent/gate reality** — installed hooks vs install templates (e.g. `--hook` vs `--hook-repair`); MCP; CI gate present.
 6. **Coupling** — fan-in / exports / importers for hotspots (LOC alone is a hint).
 7. **False-green soft block** — doctor/coverage: empty Domain/Persistence while Application owns I/O (`airtable`, `supabase`, `prisma`, `drizzle`, `repositories`, …). Doctor gap id: `contract-false-green-io-under-application`. If so:
-   **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
+   **STOP — do not continue this skill as complete.** **STOP — false-green:** fix the architecture config **in this turn** (same job as `/ark-adopt`) before claiming ENFORCE. Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
 8. **Seed dual plan B** — 2–5 pattern / Shape bets ranked (impact × effort × enforceability). Each B row needs pilot + success signal; I/O bets need an **extraction card** (explore §G).
 
 Min bar: **≥12 source files** across **≥4 meaningful directories** (not only files in `steps[]`).  
@@ -160,16 +170,16 @@ Standalone long report: `/ark-explore`. Adoption fitness only: `/ark-coverage`.
 
 | Section | Source | Question | Auto-apply? |
 |---------|--------|----------|-------------|
-| **A. Remediation** | `--plan --json` + opened step files | What must change so the **gate** is honest? | Only `mechanical-safe` by default |
+| **A. Remediation** | `--plan --json` + opened step files | What must change so the **gate** is honest? | Write `mechanical-safe` **and** judgment |
 | **B. Pattern / Shape** | Explore §B/§G (not coverage alone) | What **design** must improve even if A is empty? | **Never** as mechanical-safe |
 
 **Section A** — group by edge; treat `peerIsolation` / cross-slice as **judgment**.  
 **Section B** examples: choose golden pattern + pilot migrate-on-touch, peerIsolation, move rules out of UI, write-path repair, split god modules, Domain placement / intents, facade SQL → port/adapter (extraction card). Cap **3–5** B rows. Each row: evidence path + **así te lo re-soluciono** + next skill/command + **success signal** + **pilot** (+ kill-switch if new layer).
 
-B does **not** count as “architecture healthy finished.” Report B as `proposed | deferred | applied-with-user-ok`.  
+B does **not** count as “architecture healthy finished.” Report B as `proposed | deferred | applied`.  
 When A is empty and B is non-empty: status is **`goal.met on edges · Shape residual open`** — never “done” without listing B.
-Prefer CLI `patternBets[]` / `designSmells[]` when present; apply B only with explicit user ok using
-**extraction cards** (`docs/brownfield-adoption.md` §6) — never mechanical-safe, never silent.
+Prefer CLI `patternBets[]` / `designSmells[]` when present; apply **one** B pilot this turn using
+**extraction cards** (`docs/brownfield-adoption.md` §6) — never mechanical-safe, never silent, never multi-pilot.
 If B will take multiple PRs, offer (do not require) persisting a short Shape plan under the
 repo so the next agent session continues the same pilot — still never auto-apply B.
 
@@ -190,7 +200,7 @@ Status lights from doctor — not settings you choose. Rank residual honestly:
 | **Suggest** | Thin/new tree; contract not control plane | Finish `ark start` → re-doctor; do not skill-shop |
 | **Adapt** | Contract/tree disagree or debt open | Explore + adopt/loop/contract; do not claim guarded |
 | **Enforce** | Honest coverage + clean checked **edges** | Confirm gates + CI; emit dual-plan B only if residual found |
-| **Enforce · leftover design work** | Imports clean; design still messy | **Primary Shape door:** explore shape-focus → dual-plan **B** → apply **one** small refactor with user OK. Empty plan A ≠ done. Never mechanical-safe B. False-done forbidden. |
+| **Enforce · leftover design work** | Imports clean; design still messy | **Primary Shape door:** explore shape-focus → dual-plan **B** → apply **one** small refactor. Empty plan A ≠ done. Never mechanical-safe B. False-done forbidden. |
 
 - **Setup (Suggest):** no config → `ark start` (start freezes origin after config, before gates).
 - **Align (Adapt):** open debt, low honesty, or false-green → explore + adopt/loop; do not claim “guarded”.
@@ -206,12 +216,12 @@ Status lights from doctor — not settings you choose. Rank residual honestly:
 3. **Sensors** — `--plan --json`, doctor/coverage as needed.
 4. **Emit dual plan** — A from plan steps (files opened); B from explore (3–5 bets).
 5. **Concentrated edge?** — if one edge dominates A:
-   **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
+   **STOP — do not continue this skill as complete.** **STOP — concentrated edge:** rewrite `ark.config.json` **in this turn** with source evidence (do not freeze a wrong config or grind N freezes).
 6. **Worktree preferred** — discardable git worktree when possible.
 7. **Mechanical-safe (A only)** — kinds from `/ark-loop` table; one step, validate, rollback.
-8. **Judgment (A)** — default: propose with full “así te lo re-soluciono”. If user authorized full apply: implement, validate, rollback on fail.
-9. **Pattern bets (B)** — propose; apply only with explicit user go + correct skill (`/ark-contract`, refactor, install gates, etc.). Never weaken the gate to clear B.
-10. **Manifiesto** — loose business rules → Domain placement + `intentPrefixes` / intents via `/ark-contract` discipline.
+8. **Judgment (A)** — implement with full “así te lo re-soluciono”; validate; rollback on fail.
+9. **Pattern bets (B)** — apply **one** extraction-card pilot this turn; leave the rest queued. Never weaken the gate to clear B.
+10. **Manifiesto** — loose business rules → Domain placement + `intentPrefixes` / intents; write config here if the path is still dishonest.
 11. **Final report** — re-`--report`; evolution vs origin; A applied vs open; B proposed/deferred; gates on.
 12. **Strict check** — `ark-check --strict-config` (dead preset globs are advisory; real violations still fail).
 13. **Core ratchet (when green)** — if plan `goal.met` and doctor still **ADAPT** only because

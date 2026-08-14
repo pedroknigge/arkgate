@@ -48,9 +48,12 @@ dependency inversion — **not a score**). Leftover lenses mean design work may 
 imports are green. Details: [use.md — Improvement compass](docs/use.md#improvement-compass-not-a-score).
 
 ```text
-start → doctor (+ compass) → day-to-day (place + gate)
-                         ↘ optional /ark-autopilot after skill pack
+start → doctor (+ compass) → /ark-adopt (session 0) → day-to-day /ark-place
+                         ↘ /ark-explore then /ark-autopilot when leftover design remains
 ```
+
+Teams: keep the constitution out of product PRs. Local gate
+`ark-check --changed --base origin/dev`. Steward law PRs use `--contract-session`.
 
 Aliases `ark` / `ark-check` / `ark-mcp` still work. npm / pnpm / yarn. No install lifecycle scripts.
 

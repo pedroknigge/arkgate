@@ -302,7 +302,7 @@ export function agentInstructions(root) {
 
 ${placementTable}
 
-When creating a NEW kind of code that no existing layer covers, add a layer to \`ark.config.json\` first (via \`/ark-contract\`), then place the file.`
+When creating a NEW kind of code that no existing layer covers, add a layer to \`ark.config.json\` first (via \`/ark-adopt\`), then place the file.`
     : `\`ark.config.json\` is authoritative for this project. When creating a NEW kind of code
 that no existing layer covers (a saga, a background job, a read model, ...), use the
 default 11-layer placement below and add the layer to \`ark.config.json\` — do not invent
@@ -316,8 +316,8 @@ ${projectionBlock}
 
 1. Status anytime: \`${doctorCmd}\` — **control plane** (one status light, one next action; not a mode picker).
 2. If \`ark.config.json\` is missing: run \`${startCmd}\` once (preview), then \`${startCmd} --apply\`.
-3. Guided end-to-end work (“make architecture sound”): **\`/ark-autopilot\`** — explore → dual plan A (edges) + B (shape) → mechanical-safe fixes; B only with user OK. Day-zero origin is frozen by \`ark start\`/\`ark init\` (or autopilot if missing) **before** agent docs.
-4. After ordinary feature edits: run \`${checkCmd}\`. On violations → **\`/ark-fix\`** (or \`/ark-place\` for new files, \`/ark-contract\` only if the contract itself is wrong).
+3. Guided end-to-end work (“make architecture sound”): **\`/ark-autopilot\`** — explore → dual plan A (edges) + B (shape) → write mechanical-safe and judgment; one Shape refactor. Day-zero origin is frozen by \`ark start\`/\`ark init\` (or adopt if missing) **before** agent docs.
+4. After ordinary feature edits: run \`${checkCmd}\` (teams: \`ark-check --changed --base origin/dev\`). On violations → **\`/ark-autopilot\`** (or \`/ark-place\` for new files). **Do not edit** \`ark.config.json\` / \`.ark-baseline.json\` in a product PR — that is a steward \`--contract-session\`. If doctor shows **Stewards (advisory)**, ask who owns the law — do not invent \`stewards[]\`. Leftover names \`/ark-fix\` / \`/ark-loop\` / \`/ark-contract\` are shortcuts to those doors.
 
 Do **not** skill-shop the full table for routine work. When unsure, do doctor top action #1 only
 (re-run doctor after). Do **not** jump to \`/ark-autopilot\` unless #1 or a STOP handoff names it.
@@ -343,14 +343,14 @@ Pick **one** primary skill. Prefer doctor top action #1 when unsure.
 |------|--------|----------|
 | Unsure what to do next | **Doctor top action #1** (\`${doctorCmd}\`), then re-run doctor | skill-shopping, defaulting to autopilot |
 | Make architecture sound (guided apply path) | **/ark-autopilot** | explore-only, coverage-only |
-| **Messy / leftover design work after green** | **Single path:** \`/ark-explore\` shape-focus → plan B, then \`/ark-autopilot\` only to apply B with OK | coverage, think, loop-as-done, skill-shopping |
+| **Messy / leftover design work after green** | **Single path:** \`/ark-explore\` shape-focus → plan B, then \`/ark-autopilot\` applies one pilot | coverage, think, loop-as-done, skill-shopping |
 | Map / residual / dual-plan seed only (no apply, already know you want recon) | \`/ark-explore\` | coverage (fitness only) |
-| Greenfield shape / empty tree | \`/ark-architect\` | adopt |
-| Brownfield / wrong contract / false-green | \`/ark-adopt\` then \`/ark-contract\` if globs wrong | architect |
-| Edit \`ark.config.json\` layers/rules/intents | \`/ark-contract\` | fix/loop for config |
-| New file “where does this go?” | \`/ark-place\` | architect (unless greenfield shape missing) |
-| Gate violation on a change (small cluster) | \`/ark-fix\` | loop/autopilot unless bulk |
-| Drive plan **A** to goal.met | \`/ark-loop\` | explore (unless A empty + design residual → single Shape path above) |
+| Greenfield shape / empty tree | \`/ark-adopt\` | leftover \`/ark-architect\` |
+| Brownfield / wrong config / false-green | \`/ark-adopt\` | leftover architect |
+| Edit \`ark.config.json\` layers/rules/intents | \`/ark-adopt\` (session 0) or \`/ark-autopilot\` | leftover \`/ark-contract\` |
+| New file “where does this go?” | \`/ark-place\` | adopt if the path is missing |
+| Gate violation on a change (small cluster) | \`/ark-autopilot\` | leftover \`/ark-fix\` |
+| Drive plan **A** to goal.met | \`/ark-autopilot\` | leftover \`/ark-loop\` |
 | Ark **fitness** only (governed%, gates, baseline, install gaps) | \`/ark-coverage\` | leftover design work (use single path above) |
 | One design decision, 2–3 options | \`/ark-think\` | full Shape residual (use single path) |
 | Explain / HTML report tour | \`/ark-explain\` | explore |
@@ -412,7 +412,7 @@ ${projectionBlock}
 
 **Single door when residual remains:**
 - **Edges debt** (import/capability violations) → fix with the gate / plan; skill pack only if doctor names a skill.
-- **Design leftover / residual shape lenses** (compass leftover while imports may look green) → map first, then guided apply with user OK — never “you’re done” on green imports alone.
+- **Design leftover / residual shape lenses** (compass leftover while imports may look green) → \`/ark-explore\` then \`/ark-autopilot\` (one refactor) — never “you’re done” on green imports alone.
 - Empty plan A + leftover design work → **not finished**.
 
 **Two-axis done (never collapse):**

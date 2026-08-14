@@ -12,14 +12,18 @@ const color = {
 
 /** Canonical: src/domain/baselineKey.ts → bin/lib/baseline-key.mjs (R4). */
 import { baselineKey, baselineOccurrenceKeys } from './baseline-key.mjs';
+import { baselineKeysFromDocument, baselineRecordsDocument } from './team-parliament.mjs';
 import { toAdapterDiagnostic } from './adapter-contract.mjs';
 export { baselineKey, baselineOccurrenceKeys };
+
+const BASELINE_NOTE =
+  'Frozen ark-check violations (one record per edge). Only NEW keys vs the merge-base fail --against / --baseline. Regenerate with: ark-check --update-baseline';
 
 export function readBaseline(root, baselinePath) {
   const fullPath = path.isAbsolute(baselinePath) ? baselinePath : path.join(root, baselinePath);
   if (!fs.existsSync(fullPath)) return { keys: new Set(), fullPath, exists: false };
   const raw = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
-  return { keys: new Set(raw.violations ?? []), fullPath, exists: true };
+  return { keys: new Set(baselineKeysFromDocument(raw)), fullPath, exists: true };
 }
 
 export function writeBaseline(root, baselinePath, violations) {
@@ -27,7 +31,7 @@ export function writeBaseline(root, baselinePath, violations) {
   const keys = baselineOccurrenceKeys(violations).sort();
   fs.writeFileSync(
     fullPath,
-    `${JSON.stringify({ version: 1, note: 'Frozen ark-check violations. Only NEW violations fail --baseline runs. Regenerate with: ark-check --update-baseline', violations: keys }, null, 2)}\n`
+    `${JSON.stringify(baselineRecordsDocument(keys, BASELINE_NOTE), null, 2)}\n`
   );
   return { fullPath, count: keys.length };
 }
@@ -154,8 +158,8 @@ export function printViolationBreakdown(summary, { toStderr = false } = {}) {
     out('  framework/kernel through a sanctioned entrypoint. Before treating it as debt:');
     out('    • If the edge is intended, allow it — or split the target layer into a public');
     out('      surface app-land may import + internals it may not (see the target dirs above');
-    out('      to find the surface). Do it via /ark-contract.');
-    out('    • Only the minority hitting real internals is genuine debt for /ark-fix.');
+    out('      to find the surface). Do it via /ark-adopt.');
+    out('    • Only the minority hitting real internals is genuine debt for /ark-autopilot.');
     out(`  Fixing the contract clears ~${summary.edges[0].count} of ${summary.total} at once.`);
   }
 }

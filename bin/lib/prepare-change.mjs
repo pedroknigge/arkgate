@@ -13,6 +13,7 @@ import {
 } from './resolved-candidate-facts.mjs';
 import { effectiveAnalysisConfig } from './analysis-policy.mjs';
 import { isScanExcludedRelative } from '../ark-shared.mjs';
+import { classifyChangeSet, evaluateTeamGate } from './team-parliament.mjs';
 
 function candidatePath(value) {
   if (typeof value !== 'string' || value.trim() === '') {
@@ -102,6 +103,14 @@ export function prepareChangeFromRoot({
   const normalizedChanges = normalizeChangeSet(changes);
   const normalizedOverlayChanges =
     overlayChanges === undefined ? normalizedChanges : normalizeChangeSet(overlayChanges);
+  const lawGate = evaluateTeamGate({
+    changeSet: classifyChangeSet(normalizedChanges.map((change) => change.path)),
+    contractSession:
+      process.env.ARK_CONTRACT_SESSION === '1' || process.env.ARK_CONTRACT_SESSION === 'true',
+  });
+  if (lawGate.deny && lawGate.reasonId === 'mixed-law-and-product') {
+    throw new Error(lawGate.message);
+  }
   const effectiveConfig = effectiveAnalysisConfig(config, manifest);
   for (const change of normalizedChanges) {
     assertInsideProject(root, change.path);

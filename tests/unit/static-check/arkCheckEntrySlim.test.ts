@@ -26,7 +26,8 @@ const LOC_BUDGET_NEW = 500;
 const ENTRY_MAX_LOC = 100;
 // 4.0.0 ArkRules write-path / inventory + 4.1.0 field flags (migrate-contract, walk-up,
 // productHonesty wiring) grow the one-shot runtime orchestration surface.
-const RUNTIME_MAX_LOC = 1960;
+// 4.6.1 team parliament flags keep this aligned with check-module-budgets (2060).
+const RUNTIME_MAX_LOC = 2060;
 
 function lineCount(rel: string): number {
   const text = fs.readFileSync(path.join(root, rel), 'utf8');

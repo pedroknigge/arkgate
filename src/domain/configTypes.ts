@@ -67,6 +67,11 @@ export type ArkConfig = {
   safety?: ArkConfigSafety;
   /** ADR 0012 — modular ArkRules references (schema 1.1+). */
   arkRules?: ArkConfigArkRulesRefs;
+  /**
+   * Optional GitHub handles or emails who may loosen the contract or grow the baseline.
+   * Metadata — excluded from policy hash. Absence means no steward lock (policy-ack still applies).
+   */
+  stewards?: string[];
 };
 
 export type ArkConfigIssue = {

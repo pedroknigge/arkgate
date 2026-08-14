@@ -403,15 +403,15 @@ function messageFor(id, entries) {
 function fixFor(id) {
   switch (id) {
     case 'contract-bidirectional-allow':
-      return `Keep one direction (edit via /ark-contract), or record the deliberate loop in ${CONTRACT_SMELL_ACKS_PATH} with a reason.`;
+      return `Keep one direction (edit via /ark-adopt), or record the deliberate loop in ${CONTRACT_SMELL_ACKS_PATH} with a reason.`;
     case 'contract-peripheral-depends-core':
-      return `Invert the edge: core emits events/ports the peripheral layer consumes (/ark-contract), or acknowledge with a reason in ${CONTRACT_SMELL_ACKS_PATH}.`;
+      return `Invert the edge: core emits events/ports the peripheral layer consumes (/ark-adopt), or acknowledge with a reason in ${CONTRACT_SMELL_ACKS_PATH}.`;
     case 'contract-lateral-adapter-allow':
-      return `Move shared shapes into Domain/shared kernel and drop the lateral allow (/ark-contract), or acknowledge with a reason in ${CONTRACT_SMELL_ACKS_PATH}.`;
+      return `Move shared shapes into Domain/shared kernel and drop the lateral allow (/ark-adopt), or acknowledge with a reason in ${CONTRACT_SMELL_ACKS_PATH}.`;
     case 'contract-dead-rule':
-      return 'Fix the layer patterns so the layer matches real files, or delete the stale/self rule via /ark-contract.';
+      return 'Fix the layer patterns so the layer matches real files, or delete the stale/self rule via /ark-adopt.';
     default:
-      return 'Review the contract edge via /ark-contract; never weaken the gate to silence a smell.';
+      return 'Review the contract edge via /ark-adopt; never weaken the gate to silence a smell.';
   }
 }
 

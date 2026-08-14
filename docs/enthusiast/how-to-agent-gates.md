@@ -15,8 +15,8 @@ Installs:
   Still exit 2 / hard block; never silent write. Drop `--hook-repair` for
   reject-only prose, or set `ARK_HOOK_REPAIR=0` and omit the flag.
 - MCP server entry (`.mcp.json`, Cursor/Codex/Grok equivalents)
-- `/ark-*` skills including **`/ark-architect`**, **`/ark-autopilot`**, **`/ark-loop`**
-  (with current `mechanical-safe` remediation kinds)
+- `/ark-*` skills: five doors **`/ark-adopt`**, **`/ark-place`**, **`/ark-autopilot`**,
+  **`/ark-explore`**, **`/ark-upgrade`** (other names are shortcuts)
 
 | Host | Extra paths |
 |------|-------------|
@@ -33,7 +33,7 @@ local, MCP, CI, and repair guarantees. The table above only lists installed path
 `arkgate-mcp --session-context` appends when governed coverage is low:
 
 ```
-New to Ark? Run /ark-architect or: ark-check --recommend
+New to Ark? Run /ark-adopt (or /ark-architect) or: ark-check --recommend
 ```
 
 ## Verify gates

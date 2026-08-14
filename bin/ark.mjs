@@ -138,6 +138,7 @@ function parseArgs(argv) {
     }
     else if (arg === '--expected-root') args.expectedRoot = path.resolve(requireValue(arg, i++));
     else if (arg === '--expected-project-id') args.expectedProjectId = requireValue(arg, i++);
+    else if (arg === '--vs') args.vs = requireValue(arg, i++);
     else if (arg === '--write') args.write = true;
     else if (arg === '--check') args.check = true;
     else if (arg === '--stdout') args.stdout = true;
@@ -157,7 +158,7 @@ function usage() {
               [--archetype <playbook-id>] [--tools <list>] [--require-write-hook <host>] [--yes] [--force] [--no-strict]
   ark upgrade [--root <project>] [--tools <list>] [--apply] [--plan-digest <sha256>] [--accept-conflicts] [--refresh-skills] [--json] [--no-install] [--no-strict]
   ark preflight --changes <change-set.json> [--change-map <map.json>] [--root <project>] [--config ark.config.json] [--manifest <manifest.json>] [--tsconfig <tsconfig.json>] [--json]
-  ark status  [--root <project>] [--config ark.config.json] [--json]
+  ark status  [--root <project>] [--config ark.config.json] [--json] [--vs <git-ref>]
               [--expected-root <abs>] [--expected-project-id sha256:…] [--tools <host>]
   ark agents-md [--root <project>] [--config ark.config.json] [--write] [--check] [--stdout] [--json]
                 [--tools <host>]
@@ -796,7 +797,7 @@ async function start(args) {
     console.log('');
     console.log('Next (the only flow you need):');
     if (falseGreenGap) {
-      console.log('  1. In your agent:  /ark-adopt  (or /ark-contract) — fix the contract first');
+      console.log('  1. In your agent:  /ark-adopt — fix the architecture config first');
       console.log('     → reclassify I/O dirs out of Application; then /ark-autopilot for residual debt.');
     } else {
       console.log('  1. In your agent:  /ark-autopilot');
@@ -811,7 +812,7 @@ async function start(args) {
     }
     console.log('');
     console.log('Optional later: ark-check --report ark-report.html (captures a day-zero/evolution report).');
-    console.log('Optional later: --plan · --coverage · /ark-explore · /ark-fix · /ark-place · ark upgrade');
+    console.log('Optional later: --plan · --coverage · /ark-explore · /ark-autopilot · /ark-place · ark upgrade');
     return 0;
   } finally {
     rl?.close();
@@ -941,6 +942,7 @@ async function main() {
       expectedProjectId: args.expectedProjectId,
       host: args.tools,
       arkgateVersion: cliVersion(),
+      vs: args.vs,
     });
   }
 

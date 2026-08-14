@@ -14,7 +14,7 @@ Call tool **`ark_recommend`** — same JSON as `--recommend --json`.
 
 ## Skill
 
-Run **`/ark-architect`** on a greenfield or early-adoption repo.
+Run **`/ark-adopt`** on a greenfield or early-adoption repo (leftover `/ark-architect` is a shortcut).
 
 ## What to read in the output
 
@@ -37,7 +37,7 @@ If `confidence < 0.5`, ask:
 1. Will this app save data between sessions?
 2. Is this one app or several in one repository?
 
-Then re-run `--recommend` or continue with `/ark-architect`.
+Then re-run `--recommend` or continue with `/ark-adopt`.
 
 ## Reference
 

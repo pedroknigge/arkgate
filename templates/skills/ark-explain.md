@@ -5,6 +5,9 @@ description: Explain this project's architecture in plain language and generate 
 
 # /ark-explain — Understand this project's architecture
 
+**Shortcut.** Teach / HTML tour only. Map → **`/ark-explore`**. Apply → **`/ark-autopilot`**.
+Session 0 → **`/ark-adopt`**.
+
 The user wants to understand the architecture, a specific rule, or why the gate blocked them.
 
 ## Improvement compass (process preflight)
@@ -31,7 +34,7 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 | Use `/ark-explain` when… | Do **not** use it when… |
 |--------------------------|-------------------------|
 | Plain-language tour of layers/rules/report | Decision-grade recon / dual-plan → `/ark-explore` |
-| “Why did the gate block me?” pedagogy | Apply fixes → `/ark-fix` / `/ark-autopilot` |
+| “Why did the gate block me?” pedagogy | Apply fixes → `/ark-autopilot` |
 | Generate / walk HTML showcase report | Fitness numbers only → `/ark-coverage`; brownfield action → `/ark-adopt` |
 Your job is to **teach with this repo's real data** and leave a shareable visual artifact.
 
@@ -68,7 +71,7 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
 1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
-4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+4. Editing `arkrules/*` or applying structure fixes is **`/ark-adopt`** / **`/ark-autopilot`** (never invent `mechanical-safe`).
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
 
 
@@ -186,7 +189,7 @@ when residual signals remain.
    - If a DI/kernel framework border exists, explain public surface vs internals.
 3. **If asked about a specific rule or block**, answer with: the rule, the consequence it
    prevents, and the sanctioned fix (usually a port). If they want it fixed now:
-   **STOP — do not continue this skill as complete.** **STOP — fix requested: invoke /ark-fix.**
+   **STOP — do not continue this skill as complete.** **STOP — fix requested:** invoke `/ark-autopilot`.
    This skill stays read-only.
 4. **If asked "what's a port/adapter/saga…"**, two sentences + this-repo example or conventional path.
 
@@ -206,7 +209,7 @@ when residual signals remain.
 
 ## Related
 
-- Onboarding: `/ark-architect`, `ark-check --recommend`, `docs/enthusiast/README.md`
+- Onboarding: `/ark-adopt` (or leftover `/ark-architect`), `ark-check --recommend`, `docs/enthusiast/README.md`
 - Brownfield: `/ark-adopt`, `docs/brownfield-adoption.md`
 - Autopilot: `/ark-autopilot` after the user understands the contract
 

@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFile, spawnSync } from 'node:child_process';
+import { promisify } from 'node:util';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+const execFileAsync = promisify(execFile);
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const ARK = path.join(REPO, 'bin', 'ark.mjs');
@@ -54,9 +57,11 @@ function changedPaths(before: Map<string, Buffer>, after: Map<string, Buffer>) {
     .sort();
 }
 
-function start(root: string, host: string, args: string[] = []) {
+async function start(root: string, host: string, args: string[] = []) {
   // O03 measures compact gate budget; --no-install isolates package pin (default since 3.8.3).
-  return execFileSync(
+  // Async so the Vitest worker can ACK onTaskUpdate while the child runs — execFileSync
+  // froze the event loop for ~68s and tripped birpc's 60s timeout after 4.6.1 start grew.
+  const { stdout } = await execFileAsync(
     process.execPath,
     [ARK, 'start', '--root', root, '--no-strict', '--no-install', '--json', ...args],
     {
@@ -64,14 +69,23 @@ function start(root: string, host: string, args: string[] = []) {
       env: { ...process.env, ARK_ACTIVE_HOST: host, CODEX_HOME: path.join(root, '.codex-home') },
     }
   );
+  return stdout;
+}
+
+async function arkJson(args: string[], root?: string) {
+  const { stdout } = await execFileAsync(process.execPath, [ARK, ...args], {
+    encoding: 'utf8',
+    cwd: root,
+  });
+  return stdout;
 }
 
 describe('O03 compact start', () => {
-  it.each(HOSTS)('%s setup stays under the eight-file/32 KB gate budget and is idempotent', (host) => {
+  it.each(HOSTS)('%s setup stays under the eight-file/32 KB gate budget and is idempotent', async (host) => {
     const root = createFixture();
     try {
       const originalPackage = fs.readFileSync(path.join(root, 'package.json'), 'utf8');
-      const preview = JSON.parse(start(root, host)) as {
+      const preview = JSON.parse(await start(root, host)) as {
         changes: Array<{ path: string }>;
         runtimeActivation?: {
           configuredOnDisk: boolean;
@@ -124,7 +138,7 @@ describe('O03 compact start', () => {
       }
 
       const before = snapshot(root);
-      const applied = JSON.parse(start(root, host, ['--apply'])) as typeof preview;
+      const applied = JSON.parse(await start(root, host, ['--apply'])) as typeof preview;
       const after = snapshot(root);
       const changed = changedPaths(before, after);
       expect(changed).toEqual(applied.changes.map((change) => change.path).sort());
@@ -165,14 +179,14 @@ describe('O03 compact start', () => {
       expect(strict.status, `${strict.stdout}\n${strict.stderr}`).toBe(0);
       expect(`${strict.stdout}\n${strict.stderr}`).not.toMatch(/skill\(s\) not installed/i);
 
-      const rerun = JSON.parse(start(root, host)) as typeof preview;
+      const rerun = JSON.parse(await start(root, host)) as typeof preview;
       expect(rerun.changes).toEqual([]);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
 
-  it('changes package.json only with explicit --install and preserves its formatting', () => {
+  it('changes package.json only with explicit --install and preserves its formatting', async () => {
     const root = createFixture();
     try {
       fs.writeFileSync(
@@ -180,7 +194,7 @@ describe('O03 compact start', () => {
         '{\n    "name": "o03-fixture",\n    "private": true,\n    "devDependencies": {\n        "vitest": "^3.2.6"\n    }\n}\n'
       );
       const preview = JSON.parse(
-        start(root, 'codex', ['--install', '--apply', '--skip-package-manager'])
+        await start(root, 'codex', ['--install', '--apply', '--skip-package-manager'])
       ) as {
         changes: Array<{ path: string }>;
       };
@@ -210,26 +224,14 @@ describe('O03 compact start', () => {
     }
   });
 
-  it('removes a compact host explicitly and restores it through the selected host path', () => {
+  it('removes a compact host explicitly and restores it through the selected host path', async () => {
     const root = createFixture();
     try {
-      start(root, 'codex', ['--apply']);
+      await start(root, 'codex', ['--apply']);
       expect(fs.existsSync(path.join(root, '.mcp.json'))).toBe(true);
       const removal = JSON.parse(
-        execFileSync(
-          process.execPath,
-          [
-            ARK,
-            'start',
-            '--root',
-            root,
-            '--remove-host',
-            'codex',
-            '--no-install',
-            '--apply',
-            '--json',
-          ],
-          { encoding: 'utf8' }
+        await arkJson(
+          ['start', '--root', root, '--remove-host', 'codex', '--no-install', '--apply', '--json']
         )
       ) as { changes: Array<{ path: string; action: string }>; unresolvedDecisions: string[] };
       expect(removal.unresolvedDecisions).toEqual([]);
@@ -245,7 +247,7 @@ describe('O03 compact start', () => {
       // Shared MCP registration is kept (or recreated) when a compact host is removed.
       expect(fs.existsSync(path.join(root, '.mcp.json'))).toBe(true);
 
-      start(root, 'codex', ['--apply']);
+      await start(root, 'codex', ['--apply']);
       expect(fs.existsSync(path.join(root, '.codex', 'hooks.json'))).toBe(true);
       expect(fs.existsSync(path.join(root, '.codex', 'config.toml'))).toBe(true);
       // 3.8.3: compact always installs project .mcp.json for every host.
@@ -255,29 +257,17 @@ describe('O03 compact start', () => {
     }
   }, 60_000);
 
-  it('removes the exact Ark Codex table while preserving sibling TOML settings', () => {
+  it('removes the exact Ark Codex table while preserving sibling TOML settings', async () => {
     const root = createFixture();
     try {
-      start(root, 'codex', ['--apply']);
+      await start(root, 'codex', ['--apply']);
       const configPath = path.join(root, '.codex', 'config.toml');
       const customized = `${fs.readFileSync(configPath, 'utf8')}\n[features]\nweb_search = true\n`;
       fs.writeFileSync(configPath, customized);
 
       const removal = JSON.parse(
-        execFileSync(
-          process.execPath,
-          [
-            ARK,
-            'start',
-            '--root',
-            root,
-            '--remove-host',
-            'codex',
-            '--no-install',
-            '--apply',
-            '--json',
-          ],
-          { encoding: 'utf8' }
+        await arkJson(
+          ['start', '--root', root, '--remove-host', 'codex', '--no-install', '--apply', '--json']
         )
       ) as {
         changes: Array<{ path: string; action: string }>;
@@ -311,10 +301,10 @@ describe('O03 compact start', () => {
     }
   }, 60_000);
 
-  it('preserves a customized Ark Codex table during compact host removal', () => {
+  it('preserves a customized Ark Codex table during compact host removal', async () => {
     const root = createFixture();
     try {
-      start(root, 'codex', ['--apply']);
+      await start(root, 'codex', ['--apply']);
       const configPath = path.join(root, '.codex', 'config.toml');
       const customized = fs
         .readFileSync(configPath, 'utf8')
@@ -322,11 +312,7 @@ describe('O03 compact start', () => {
       fs.writeFileSync(configPath, customized);
 
       const removal = JSON.parse(
-        execFileSync(
-          process.execPath,
-          [ARK, 'start', '--root', root, '--remove-host', 'codex', '--json'],
-          { encoding: 'utf8' }
-        )
+        await arkJson(['start', '--root', root, '--remove-host', 'codex', '--json'])
       ) as {
         changes: Array<{ path: string; action: string }>;
         unresolvedDecisions: string[];
