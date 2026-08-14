@@ -11,6 +11,8 @@ import {
 } from '../../../bin/lib/upgrade-whats-new.mjs';
 
 const REQUIRED_IDS = [
+  'five-door-autonomy',
+  'team-parliament',
   'plain-language-doctor',
   'shared-agent-homes',
   'deep-module-coach',

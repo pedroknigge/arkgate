@@ -103,6 +103,13 @@ import { ANALYSIS_COMPLETENESS, analysisIncompleteStatement } from './lib/analys
 import { reportUnavailableAnalysis } from './lib/unavailable-analysis.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import { analyzePolicyTransition } from './lib/policy-delta-io.mjs';
+import {
+  applyAgainstRatchet,
+  bindTeamBaseRefs,
+  filterChangedGovernedFiles,
+  runTeamPreflight,
+  ungovernedDumpMessage,
+} from './lib/team-parliament-io.mjs';
 import { tryResidentDoctor } from './lib/resident-doctor-client.mjs';
 import { createDesignDeltaCheck } from './lib/design-delta.mjs';
 import {
@@ -134,6 +141,14 @@ function parseArgs(argv) {
     policyBase: undefined,
     policyBaseRef: undefined,
     policyAck: undefined, failOnNewSmells: false, baseRef: undefined,
+    contractSession: false,
+    contractDiff: false,
+    changed: false,
+    against: undefined,
+    base: undefined,
+    persona: undefined,
+    author: undefined,
+    failUngoverned: false,
     updateBaseline: false,
     noCache: false,
     resident: false,
@@ -241,6 +256,13 @@ function parseArgs(argv) {
     else if (arg === '--policy-base') args.policyBase = requireValue(arg, i++);
     else if (arg === '--policy-base-ref') args.policyBaseRef = requireValue(arg, i++);
     else if (arg === '--policy-ack') args.policyAck = requireValue(arg, i++); else if (arg === '--fail-on-new-smells') args.failOnNewSmells = true; else if (arg === '--base-ref') args.baseRef = requireValue(arg, i++);
+    else if (arg === '--contract-session') args.contractSession = true;
+    else if (arg === '--contract-diff') args.contractDiff = true;
+    else if (arg === '--changed') args.changed = true;
+    else if (arg === '--against') args.against = requireValue(arg, i++);
+    else if (arg === '--base') args.base = requireValue(arg, i++);
+    else if (arg === '--persona') args.persona = requireValue(arg, i++);
+    else if (arg === '--author') args.author = requireValue(arg, i++);
     else if (arg === '--root') args.root = path.resolve(requireValue(arg, i++));
     else if (arg === '--config') args.config = requireValue(arg, i++);
     else if (arg === '--manifest') args.manifest = requireValue(arg, i++);
@@ -265,7 +287,7 @@ function usage() {
   return [
     'Usage: arkgate-check | ark-check  (identical bins; product name ArkGate)',
     '       ark-check --version',
-    '       ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-merge | --strict | --strict-config] [--policy-base <file> | --policy-base-ref <git-ref>] [--policy-ack <file>] [--fail-on-new-smells --base-ref <git-ref>] [--require-gates] [--require-write-hook <host>] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
+    '       ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-merge | --strict | --strict-config] [--policy-base <file> | --policy-base-ref <git-ref>] [--policy-ack <file>] [--fail-on-new-smells --base-ref <git-ref>] [--contract-diff] [--contract-session] [--changed] [--against <git-ref>] [--base <git-ref>] [--persona touch|contributor|agent|steward] [--author <id>] [--require-gates] [--require-write-hook <host>] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
     '       ark-check --doctor [--json] [--resident] [--fail-on-new-smells --base-ref <git-ref>]  read-only diagnosis; resident JSON falls back cold',
     '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
     '       ark-check --plan [--json]              classified remediation plan (mechanical-safe / judgment / deferred) + goal; report only',
@@ -290,6 +312,11 @@ function usage() {
     'Adopting Ark in an existing codebase? Run --update-baseline once to freeze existing',
     'violations, commit the baseline file, and gate CI with --baseline: only NEW violations',
     'fail the check, so the ratchet only moves toward zero.',
+    '',
+    'Team parliament: law files (ark.config / arkrules / .ark-baseline.json) cannot ship in',
+    'the same diff as product source. --changed --base <ref> checks touched files only.',
+    '--against <ref> ratchets new keys vs that ref\'s baseline. --contract-session is a',
+    'steward law-only PR. Loosen / baseline-grow need stewards[] + --author when set.',
     '',
     '--init scans the project for the built-in layer directory conventions (src/domain,',
     'src/application, src/adapters/persistence, ...) and writes an ark.config.json covering',
@@ -546,7 +573,7 @@ function runApplyPolicyPack(args) {
 
   if (fs.existsSync(configPath) && !args.force) {
     console.error(
-      `${configPath} already exists. Re-run with --force to overwrite, or use /ark-contract to evolve it.`
+      `${configPath} already exists. Re-run with --force to overwrite, or use /ark-adopt to evolve it.`
     );
     process.exitCode = 2;
     return;
@@ -1030,7 +1057,7 @@ function runInit(args) {
       console.log('A green check ignores this code; it is not "clean", it is unchecked.');
       if (recognized.length > 0) {
         console.log('');
-        console.log('Proposed layer for each (from the 11-layer profile + presets — apply via /ark-contract):');
+        console.log('Proposed layer for each (from the 11-layer profile + presets — apply via /ark-adopt):');
         for (const p of recognized) {
           const alt = p.alternatives?.length ? ` (or ${p.alternatives.join(' / ')} — confirm)` : '';
           console.log(`  ${p.dir}/ → ${p.layer}${alt}`);
@@ -1281,19 +1308,71 @@ async function main() {
   }
 
   const root = args.root;
+  const bound = bindTeamBaseRefs(args, root);
+  Object.assign(args, bound.args);
   const config = readConfig(root, args.config);
   const policyDelta = analyzePolicyTransition({
     root,
     configPath: args.config,
     candidateConfig: config,
-    strictMerge: args.strictMerge,
+    strictMerge: args.strictMerge || args.contractDiff,
     basePath: args.policyBase,
     baseRef: args.policyBaseRef,
     acknowledgementPath: args.policyAck,
   });
+  const preflight = runTeamPreflight({
+    root,
+    args,
+    config,
+    policyDelta,
+    teamBase: bound.teamBase,
+  });
+  const teamParliament = preflight.teamParliament;
+  const changedPaths = preflight.changedPaths;
+  if (preflight.halt) {
+    if (args.json) {
+      console.log(
+        JSON.stringify(
+          {
+            ok: preflight.halt.exitCode === 0,
+            ...(preflight.halt.cheap ? { cheap: true } : {}),
+            teamParliament: preflight.halt.teamParliament,
+            ...(policyDelta ? { policyDelta } : {}),
+          },
+          null,
+          2
+        )
+      );
+    } else if (preflight.halt.exitCode === 0) {
+      console.log('✔ Ark check passed (no governed source or constitution files in the diff).');
+    } else {
+      console.error(preflight.halt.message);
+    }
+    process.exitCode = preflight.halt.exitCode;
+    return;
+  }
   const manifest = readManifest(root, args.manifest);
   const rules = manifest?.architecture?.rules ?? config.rules;
-  const files = collectGovernedFiles(root, config);
+  const allGovernedFiles = collectGovernedFiles(root, config);
+  if (args.failUngoverned && teamParliament?.changeSet?.productPaths?.length) {
+    const governedRel = new Set(
+      allGovernedFiles.map((abs) => normalize(path.relative(root, abs)))
+    );
+    const dumped = teamParliament.changeSet.productPaths.filter((rel) => !governedRel.has(rel));
+    if (dumped.length > 0) {
+      const message = ungovernedDumpMessage(dumped);
+      if (args.json) {
+        console.log(JSON.stringify({ ok: false, teamParliament: { ...teamParliament, ungoverned: dumped }, message }, null, 2));
+      } else {
+        console.error(message);
+      }
+      process.exitCode = 1;
+      return;
+    }
+  }
+  const files = args.changed
+    ? filterChangedGovernedFiles(allGovernedFiles, root, changedPaths, normalize)
+    : allGovernedFiles;
 
   // --coverage is a pure glob/report view (no TypeScript resolver), so serve it BEFORE the
   // TS import: the report must work — and exit 0 — even when typescript isn't installed.
@@ -1381,7 +1460,7 @@ async function main() {
       printViolationBreakdown(summary, { toStderr: true });
       console.error('');
       console.error('Freezing this would bury a likely CONTRACT bug as "debt". Fix the contract');
-      console.error('first (/ark-contract), then re-run. To freeze anyway: --update-baseline --force.');
+      console.error('first (/ark-adopt), then re-run. To freeze anyway: --update-baseline --force.');
       process.exitCode = 2;
       return;
     }
@@ -1430,7 +1509,18 @@ async function main() {
   let suppressed = [];
   let activeViolations = violations;
   let staleBaselineKeys = 0;
-  if (args.baseline) {
+  if (args.against) {
+    const ratcheted = applyAgainstRatchet({
+      violations,
+      againstRef: args.against,
+      root,
+      changed: args.changed,
+      changedPaths,
+      occurrenceKeys: baselineOccurrenceKeys(violations),
+    });
+    activeViolations = ratcheted.activeViolations;
+    suppressed = ratcheted.suppressed;
+  } else if (args.baseline) {
     const baseline = readBaseline(root, args.baseline);
     if (baseline.exists) {
       const occurrenceKeys = baselineOccurrenceKeys(violations);
@@ -1755,6 +1845,7 @@ async function main() {
           }
         : {}),
       ...(codexRepoSkillGap ? { codexRepoSkillGap } : {}), ...(policyDelta ? { policyDelta } : {}), ...(designDelta ? { edgeValid: edgeOk, designDelta } : {}),
+      ...(teamParliament ? { teamParliament } : {}),
     }, null, 2));
   } else {
     for (const warning of warnings) {

@@ -115,7 +115,7 @@ export function extractionCardFromBet(bet, preferredFiles) {
     reDoctor: 'ark-check --doctor --json',
     rePlan: 'ark-check --plan --json',
     next:
-      '/ark-fix (one cluster) | /ark-autopilot (user ok on B) | re-doctor after pilot',
+      '/ark-autopilot (one cluster / one B pilot) | re-doctor after pilot',
   };
 }
 

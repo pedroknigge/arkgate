@@ -190,7 +190,7 @@ a hash-bound policy weakening. Empty `appliesTo: []` fails closed; zero-match gl
 
 **What they do not do:** prove business semantics end-to-end; replace Layers import edges;
 make “green” mean elegant Shape. Promoting structure to enforced can force rename-to-pass
-heuristics — prefer judgment extraction via `/ark-fix` / `/ark-loop` when the real goal is
+heuristics — prefer judgment extraction via `/ark-autopilot` when the real goal is
 Domain ownership.
 
 ```bash
@@ -198,7 +198,7 @@ Domain ownership.
 npx arkgate-check --rules-inventory --json
 ```
 
-Edit ArkRules through skill `/ark-contract`; extract/implement via `/ark-fix` or `/ark-loop`.
+Edit ArkRules through `/ark-adopt` (session 0) or `/ark-autopilot`; extract/implement via `/ark-autopilot`.
 
 ## Contract transitions
 
@@ -238,6 +238,40 @@ JSON artifact passed with `--policy-ack`:
 
 The acknowledgement must list every blocking finding exactly. It is not a permanent allowlist:
 changing either contract changes its hash and invalidates the acknowledgement.
+
+## Team parliament (law vs feature)
+
+Optional `stewards` lists **GitHub handles or emails** who may **loosen** the contract or
+**grow** the baseline (`pedroknigge` or `pedroknigge@users.noreply.github.com` — not
+`Pedro Knigge`). The field is metadata — it does not change the policy hash. The lock
+matches `--author`, then `GITHUB_ACTOR` / `ARK_STEWARD`, then `GIT_AUTHOR_EMAIL`. A
+noreply GitHub mail and the handle are the same person. Git `user.name` is not identity.
+
+Doctor detects several recent authors or a CODEOWNERS file (`doctor.stewardNudge`).
+When `stewards` is empty it **asks** who owns the law and proposes handles or emails.
+When the list exists but CODEOWNERS is ahead, or you started with one steward and git
+now shows more authors, it shows the **gap** and asks whether to update. `/ark-adopt`
+writes only after you confirm — it does not invent names or remove entries.
+
+```json
+"stewards": ["pedroknigge", "Amarilla-David"]
+```
+
+Law files (`ark.config.json`, `arkrules/*`, `.ark-baseline.json`) are a different change
+type than product source:
+
+| Check | What it does |
+|-------|----------------|
+| `ark-check --changed --base origin/dev` | Layer check on touched sources only. A CSS/i18n PR pays almost nothing. |
+| `ark-check --against origin/dev` | New violation keys vs **that ref's** baseline (not only HEAD). |
+| `ark-check --contract-diff --base origin/dev` | Classifies tighten / loosen / reclassify / baseline-grow. |
+| `--contract-session --author <id>` | Law-only PR. Mixed law+product still fails. Loosen/grow need a listed steward. |
+| `--persona touch\|contributor\|agent\|steward` | Budget presets for the same teeth. |
+| `ark status --vs origin/dev` | One line: pin / contract / baseline drift vs that ref. |
+
+Write-gate ApplyPatch denies a batch that mixes law files with product source. Humans who
+never hit PreToolUse are unchanged. Local `pnpm` gates should call `--changed --base`, not
+only full-tree `--strict-merge`.
 
 MCP clients can call `ark_policy_delta` with the previous `baseConfig`, an optional candidate
 contract (the current project contract is the default), and the same optional acknowledgement.

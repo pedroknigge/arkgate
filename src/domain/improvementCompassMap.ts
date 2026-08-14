@@ -149,11 +149,11 @@ function mapDesignSmells(
     const shapeAction: ImprovementCompassNextAction = {
       kind: 'skill',
       ref: '/ark-explore',
-      summary: 'Map Shape residual (shape-focus), then one extraction pilot with user OK.',
+      summary: 'Map Shape residual (shape-focus), then apply one extraction pilot with /ark-autopilot.',
     };
     const dipAction: ImprovementCompassNextAction = {
       kind: 'skill',
-      ref: '/ark-fix',
+      ref: '/ark-autopilot',
       summary: 'Inject a port/adapter for I/O; keep domain pure.',
     };
 
@@ -218,7 +218,7 @@ function mapDesignSmells(
           {
             kind: 'skill',
             ref: '/ark-autopilot',
-            summary: 'One Shape pilot with user OK — never multi-pilot batch.',
+            summary: 'One Shape pilot this turn — never multi-pilot batch.',
           }
         );
         break;
@@ -244,7 +244,7 @@ function mapDesignSmells(
           'Soft contract walls (layers without deny rules) hide maintainability debt.',
           {
             kind: 'skill',
-            ref: '/ark-contract',
+            ref: '/ark-adopt',
             summary: 'Add real layer rules so the AI has hard walls.',
           }
         );
@@ -253,7 +253,7 @@ function mapDesignSmells(
           'Layers with files but almost no deny rules allow free peer coupling.',
           {
             kind: 'skill',
-            ref: '/ark-contract',
+            ref: '/ark-adopt',
             summary: 'Tighten inter-layer allows/denies without weakening enforcement.',
           }
         );
@@ -317,7 +317,7 @@ function mapViolations(
 
     const edgeAction: ImprovementCompassNextAction = {
       kind: 'skill',
-      ref: '/ark-fix',
+      ref: '/ark-autopilot',
       summary: 'Clear the active edge residual, then re-doctor.',
     };
 
@@ -347,7 +347,7 @@ function mapViolations(
         'Peer isolation residual — slices import each other freely.',
         {
           kind: 'skill',
-          ref: '/ark-loop',
+          ref: '/ark-autopilot',
           summary: 'Peer isolation fixes are judgment-class — one cluster at a time.',
         }
       );
@@ -359,7 +359,7 @@ function mapViolations(
         'Forbidden globals / effect surfaces break dependency inversion.',
         {
           kind: 'skill',
-          ref: '/ark-fix',
+          ref: '/ark-autopilot',
           summary: 'Inject a port instead of the forbidden global.',
         }
       );
@@ -368,7 +368,7 @@ function mapViolations(
         'Forbidden ambient effects reduce pure-domain testability.',
         {
           kind: 'skill',
-          ref: '/ark-fix',
+          ref: '/ark-autopilot',
           summary: 'Replace ambient effects with injectable ports.',
         }
       );
@@ -380,7 +380,7 @@ function mapViolations(
         'Denied capability use — invert through an allowed adapter/port.',
         {
           kind: 'skill',
-          ref: '/ark-fix',
+          ref: '/ark-autopilot',
           summary: 'Capability walls require port injection (judgment, not mechanical-safe).',
         }
       );
@@ -389,7 +389,7 @@ function mapViolations(
         'Capability violations couple domain code to I/O — harder to unit-test.',
         {
           kind: 'skill',
-          ref: '/ark-fix',
+          ref: '/ark-autopilot',
           summary: 'Keep pure layers free of denied capabilities.',
         }
       );
@@ -401,7 +401,7 @@ function mapViolations(
         'ArkRules structure / invariant residual inside a layer.',
         {
           kind: 'skill',
-          ref: '/ark-fix',
+          ref: '/ark-autopilot',
           summary:
             'Label [ArkRules]; structure fixes are judgment — never invent mechanical-safe.',
         }
@@ -430,7 +430,7 @@ function mapCountsAndFlags(
     pushEvidence(lens, 'cycles', `count:${cycleCount}`);
     markResidual(lens, 'Import cycles couple modules tightly.', {
       kind: 'skill',
-      ref: '/ark-fix',
+      ref: '/ark-autopilot',
       summary: 'Break cycles with a judgment extraction — one pilot.',
     });
   }
@@ -446,7 +446,7 @@ function mapCountsAndFlags(
     pushEvidence(lens, 'peerIsolation', `count:${peer}`);
     markResidual(lens, 'Peer isolation residual remains.', {
       kind: 'skill',
-      ref: '/ark-loop',
+      ref: '/ark-autopilot',
       summary: 'Peer isolation is judgment-class residual.',
     });
   }
@@ -472,7 +472,7 @@ function mapCountsAndFlags(
       {
         kind: 'skill',
         ref: '/ark-autopilot',
-        summary: 'One reshape/extraction pilot with user OK.',
+        summary: 'One reshape/extraction pilot this turn.',
       }
     );
   }
@@ -485,7 +485,7 @@ function mapCountsAndFlags(
     if (fgN > 0) pushEvidence(dip, 'forbiddenGlobals', `residual:${fgN}`);
     markResidual(dip, 'Pure / capability / forbidden residual weakens dependency inversion.', {
       kind: 'skill',
-      ref: '/ark-fix',
+      ref: '/ark-autopilot',
       summary: 'Inject ports; keep pure layers free of effects.',
     });
     const test = byId.get('testability')!;
@@ -493,7 +493,7 @@ function mapCountsAndFlags(
     if (fgN > 0) pushEvidence(test, 'forbiddenGlobals', `residual:${fgN}`);
     markResidual(test, 'Impure domain or capability residual reduces testability.', {
       kind: 'skill',
-      ref: '/ark-fix',
+      ref: '/ark-autopilot',
       summary: 'Prefer ports over concrete I/O in pure/domain modules.',
     });
   }
@@ -504,7 +504,7 @@ function mapCountsAndFlags(
     pushEvidence(enc, 'arkRules', `structureResidual:${arkN}`);
     markResidual(enc, 'ArkRules structure residual — encapsulation inside the layer.', {
       kind: 'skill',
-      ref: '/ark-fix',
+      ref: '/ark-autopilot',
       summary: 'Fix structure sensors under [ArkRules] without inventing mechanical-safe.',
     });
     const domain = byId.get('domain')!;
@@ -528,7 +528,7 @@ function mapCountsAndFlags(
       {
         kind: 'skill',
         ref: '/ark-explore',
-        summary: 'Shape door: explore shape-focus → dual-plan B → one pilot with OK.',
+        summary: 'Shape door: explore shape-focus → dual-plan B → one /ark-autopilot pilot.',
       }
     );
   }
@@ -584,7 +584,7 @@ function mapCountsAndFlags(
       'Placement / modularity residual — ungoverned dirs or empty layer globs.',
       {
         kind: 'skill',
-        ref: '/ark-contract',
+        ref: '/ark-adopt',
         summary: 'Classify ungoverned paths; fix empty layer patterns.',
       }
     );

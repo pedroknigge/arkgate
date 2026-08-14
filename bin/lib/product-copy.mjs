@@ -23,7 +23,7 @@ export function operatingModeTitle(mode, leftoverDesign) {
 export const LEFTOVER_DESIGN_BADGE = LEFTOVER_DESIGN_LABEL;
 
 export const POST_GREEN_HUMAN =
-  'Imports check out, but the design is still messy. Map leftover work with /ark-explore shape-focus, then apply one small refactor via /ark-autopilot with your OK. A clean import check is not done; pattern bets are never auto-applied.';
+  'Imports check out, but the design is still messy. Map leftover work with /ark-explore shape-focus, then apply one small refactor via /ark-autopilot. A clean import check is not done; pattern bets are never auto-applied.';
 
 export const POST_GREEN_LEDE =
   'Import rules are clean, but leftover design work remains. That does not fail the check — it only means “done” is still wrong until you tidy shape.';

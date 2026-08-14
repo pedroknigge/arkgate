@@ -19,7 +19,7 @@ one feature at a time.
 
 This skill is **experimental runtime** only. Do **not** treat runtime adoption as residual on the
 resilience lens unless the user explicitly opts into the experimental kernel. Prefer doctor compass
-for static architecture residual; hand static residual to `/ark-explore` / `/ark-fix`.
+for static architecture residual; hand static residual to `/ark-explore` / `/ark-autopilot`.
 
 ## Dual engine (mandatory)
 
@@ -86,7 +86,7 @@ the same files or weaken the gate.
 
 ## Critical handoffs
 
-- No static gates yet: **STOP — do not continue this skill as complete.** Run `/ark-architect` or `/ark-adopt` first.
+- No static gates yet: **STOP — do not continue this skill as complete.** Run `/ark-adopt` first (`ark-check --recommend` / leftover `/ark-architect`).
 - Runtime companion unavailable from npm and no ArkGate source checkout: **STOP** and report the distribution boundary.
 - Inventory finds nothing: stop; do not introduce kernel speculatively.
 
@@ -102,7 +102,7 @@ the same files or weaken the gate.
 
 ## Related onboarding
 
-- Adopt static gates and application shape **first** (`/ark-architect`, `/ark-adopt`).
+- Adopt static gates and application shape **first** (`/ark-adopt`).
 - Runtime kernel is optional and separate from enthusiast onboarding.
 
 ## Verify and report

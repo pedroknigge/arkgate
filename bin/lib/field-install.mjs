@@ -506,7 +506,7 @@ export function detectContractFalseGreenRisk(root, config, coverage) {
       `Contract may be a false green: empty core layer(s) [${emptyCores.join(', ')}] while ` +
       `Application-class globs still cover I/O paths (${ioPaths.slice(0, 5).join(', ')}` +
       `${ioPaths.length > 5 ? ', …' : ''}). A clean check can miss real coupling.`,
-    fix: 'Run /ark-adopt or /ark-contract — reclassify persistence/auth dirs out of Application before claiming ENFORCE.',
+    fix: 'Run /ark-adopt — reclassify persistence/auth dirs out of Application before claiming ENFORCE.',
   };
 }
 

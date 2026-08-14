@@ -466,6 +466,22 @@ describe('C01 config contract', () => {
     expect(from10.config.arkRules).toBeUndefined();
   });
 
+  it('accepts optional stewards list on schema 1.1', () => {
+    const loaded = loadArkConfigContract({
+      ...VALID_MINIMAL_CONFIG,
+      schemaVersion: '1.1',
+      stewards: ['pedroknigge', 'Amarilla-David'],
+    });
+    expect(loaded.config.stewards).toEqual(['pedroknigge', 'Amarilla-David']);
+    expect(() =>
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        schemaVersion: '1.1',
+        stewards: [''],
+      })
+    ).toThrow('$.stewards');
+  });
+
   it('accepts a local editor schema path while keeping the current contract version', () => {
     const result = loadArkConfigContract({
       ...VALID_MINIMAL_CONFIG,

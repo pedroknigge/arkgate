@@ -34,6 +34,22 @@ export function buildUpgradeWhatsNewSuggestions() {
     title: 'Suggested improvements — try or inspect after this package',
     items: [
       {
+        id: 'five-door-autonomy',
+        title: 'Five doors (invoke = write or map)',
+        try: '/ark-adopt · /ark-place · /ark-autopilot · /ark-explore · /ark-upgrade',
+        inspect: 'Skill bodies + doctor next action (other /ark-* names are shortcuts)',
+        why:
+          'Invoking a door is the approval. The CLI is sensor + gate — it does not apply the change. Explore maps only. Same 13 skill names.',
+      },
+      {
+        id: 'team-parliament',
+        title: 'Team parliament (law vs feature)',
+        try: 'npx arkgate-check --changed --base origin/dev',
+        inspect: 'doctor.stewardNudge · ark status --vs · optional stewards[] (GitHub handle or email)',
+        why:
+          'Product PRs must not amend ark.config.json. Law-only PRs use --contract-session. Doctor asks for stewards or shows list drift. Display names are not identity.',
+      },
+      {
         id: 'plain-language-doctor',
         title: 'Doctor in plain language',
         try: 'npx arkgate-check --doctor',

@@ -1,13 +1,21 @@
 ---
 name: ark-explore
-description: Specialized map skill — decision-grade recon of layers + ArkRules opportunities + dual-plan seed (no apply). Primary post-green door when leftover design work remains. Not the default day-to-day path (use doctor + place/gate; guided apply is /ark-autopilot). CLI is a sensor; you read the tree. No gate bypass.
+description: Map skill — decision-grade recon of layers + ArkRules opportunities + dual-plan seed (no apply). Primary post-green door when leftover design work remains. CLI is a sensor; you read the tree. No gate bypass.
 ---
 
 # /ark-explore — Recon the real project (map only)
 
-**Specialized escape**, not the default curriculum. Use when you need a decision-grade map
-or the post-green Shape door; hand off to `/ark-autopilot` to apply. Day-to-day place + gate
-work does not require this skill.
+## Autonomy contract
+
+Invoking this skill **is** the approval to **map**. Open the real tree. CLI JSON alone is
+incomplete. **Do not write** config or product code (that is `/ark-adopt` / `/ark-autopilot`).
+**CLI budget:** one doctor / coverage; then open ≥12 files across ≥4 dirs; then the map.
+
+**Still never:** weaken the config; invent `mechanical-safe` kinds; claim healthy because
+plan A is empty while leftover design work remains.
+
+Use when you need a decision-grade map or the **Primary post-green door**; hand off to
+`/ark-autopilot` to apply. Day-to-day place + gate work does not require this skill.
 
 You are a **staff engineer doing architecture reconnaissance** on *this* repository.
 Ark’s CLI is a **sensor** (coverage, doctor, plan). **You** open source, entry points,
@@ -58,15 +66,15 @@ If the consumer tree has a **domain glossary**, prefer its terms for layer/slice
 
 | Use `/ark-explore` when… | Do **not** use it when… |
 |--------------------------|-------------------------|
-| Map / “what next?” / residual after ENFORCE | User wants edits applied → `/ark-autopilot` or `/ark-fix` |
+| Map / “what next?” / residual after ENFORCE | User wants edits applied → `/ark-autopilot` |
 | **Primary post-green door:** messy / leftover design work / “clarify for AI” | Skill-shopping coverage or think for the same leftover work |
 | Spaghetti brownfield: patterns concurrent, design-weak under green check | Only “governed% + gates installed?” numbers → `/ark-coverage` |
 | Dual-plan **seed** (A remediation + B pattern bets) without applying | One design trade-off between 2–3 options already mapped → `/ark-think` |
 | Path-correct vs design-correct honesty | Plain-language tour / HTML report → `/ark-explain` |
 
 **Post-green single path:** when doctor `postGreenPath` / ENFORCE · leftover design work is active, **this skill
-(shape-focus / dual-plan seed) is the map half of the one door** — then `/ark-autopilot` only
-to apply B with user OK. Do not send the user to coverage or think as equal first choices.
+(shape-focus / dual-plan seed) is the map half of the one door** — then `/ark-autopilot`
+applies one B pilot. Do not send the user to coverage or think as equal first choices.
 
 ### Status lights (rank residual; not settings)
 
@@ -82,8 +90,8 @@ to apply B with user OK. Do not send the user to coverage or think as equal firs
 
 ## Related onboarding
 
-- **Greenfield / thin tree:** `/ark-architect` or `ark-check --recommend` / `ark start`.
-- **Brownfield action (write contract/baseline):** `/ark-adopt` after the map.
+- **Greenfield / thin tree:** `/ark-adopt` or `ark-check --recommend` / `ark start`.
+- **Brownfield action (write config/baseline):** `/ark-adopt` after the map.
 - **Execute dual plan:** `/ark-autopilot` (explore seeds; autopilot applies A, proposes B).
 - **Default path:** `ark start` → `ark-check --doctor` → `/ark-autopilot` for guided apply; use this skill for map-only or post-green Shape residual.
 
@@ -129,7 +137,7 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
 1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
-4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+4. Editing `arkrules/*` or applying structure fixes is **`/ark-adopt`** / **`/ark-autopilot`** — explore does not write (never invent `mechanical-safe`).
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
 
 
@@ -333,8 +341,8 @@ Empty plan A + design-weak is **not** architecture finished. Plan B is judgment 
 | 1. Confirm residual | `designFitness.designWeak` **or** non-empty `patternBets` / `designSmells` | You would claim healthy finished because plan A is empty |
 | 2. Pick **one** pilot | `pilotLoop.nextPilot` (preferred) **or** one ranked B bet with a path scope | Multi-pilot batch / “fix all smells this PR” |
 | 3. Write extraction card | Pilot · Smell · Move · Do not · Success · **Kill-switch** · Next | Missing kill-switch or success signal |
-| 4. User OK | Explicit approval before edit (or stay map-only) | Silent auto-apply of plan B |
-| 5. Apply **only** that pilot | Via `/ark-autopilot` (apply B) or `/ark-fix` (one cluster) | Opening a second pilot before re-doctor |
+| 4. Stay map-only here | Explore does not edit | Silent auto-apply of plan B |
+| 5. Apply **only** that pilot | Via `/ark-autopilot` (one cluster) | Opening a second pilot before re-doctor |
 | 6. Re-doctor | Success = reduced evidence on pilot paths; residual outside pilot may remain | Declaring whole-tree done from one pilot |
 
 **Hard lines (never break):**
@@ -356,7 +364,7 @@ Do not:
   - open a second pilot before re-doctor
 Success: <observable / falsifiable — re-doctor>
 Kill-switch: <stop condition — e.g. if pilot does not clear smell evidence in 1 PR → stop / re-map>
-Next: /ark-autopilot (apply with user ok) | /ark-fix (one cluster) | re-doctor
+Next: /ark-autopilot (apply one pilot) | re-doctor
 ```
 
 When doctor JSON is available, prefer smell `id`s from `designSmells` / `patternBets[].smellId`
@@ -380,10 +388,10 @@ Kinds: `risk` | `false-green` | `debt` | `opportunity` | `shape` | `manifiesto` 
 
 5. **Field path summary**.
 6. **Top 3 bets** — first bet = highest leverage residual, even when plan A is empty (design-correct / agent-dx / field honesty — **not** “run loop on zero steps”).
-   On false-green dominant: **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
-   On concentrated edge dominant: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
+   On false-green dominant: **STOP — do not continue this skill as complete.** **STOP — false-green:** name the honesty gap; next door is `/ark-adopt` (write). Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
+   On concentrated edge dominant: **STOP — do not continue this skill as complete.** **STOP — concentrated edge:** name the config smell with source evidence; next door is `/ark-adopt` (do not freeze a wrong config or grind N freezes).
 7. **Dual-plan seed** — required in dual-plan seed / shape-focus (and when §G auto-upgrades); A + B cap 3–5; extraction cards for I/O bets.
-8. **Deterministic residue** — plan completeness, steps, violations, doctor top action. Point to `/ark-loop` / `/ark-fix` **only when A steps exist**; never call a `partial`/`unavailable` plan met, and never pretend loop is the architecture story when a complete goal is already met.
+8. **Deterministic residue** — plan completeness, steps, violations, doctor top action. Point to `/ark-autopilot` **when A steps exist**; never call a `partial`/`unavailable` plan met, and never pretend an empty plan is the architecture story when leftover design remains.
 
 Optional: **Diff vs naive sensor-only read** (what reading the tree changed).
 
@@ -397,7 +405,7 @@ Optional: **Diff vs naive sensor-only read** (what reading the tree changed).
 - When §G fires: phase named, design smells listed with paths, dual-plan B or shape-focus B present.
 - Every Top-3 / B bet has a **success signal**; new-layer bets have a **kill-switch** + pilot.
 - Mode respected: no multi-week roadmap in recon mode; dual-plan seed capped at 3–5 B bets.
-- Clear handoff: `/ark-adopt` | `/ark-contract` | `/ark-autopilot` | `/ark-loop` | `/ark-fix` | CLI | `stop`.
+- Clear handoff: `/ark-adopt` | `/ark-autopilot` | `/ark-place` | CLI | `stop`.
 - No gate weakening; no false ENFORCE claim; no README echo as primary content.
 
 ## Completion contract (skill incomplete if missing)

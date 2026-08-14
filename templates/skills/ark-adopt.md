@@ -1,12 +1,39 @@
 ---
 name: ark-adopt
-description: Brownfield onboarding — match contract to real product code, classify ungoverned dirs, mine business rules, freeze only real debt, seed Shape dual-plan B for spaghetti residual. Deep source analysis required.
+description: Session 0 — mark the Ark path. Greenfield scaffold or brownfield honesty. Write ark.config, optional advisory ArkRules, baseline, and gates in this turn. CLI validates.
 ---
 
-# /ark-adopt — Bring Ark into an existing codebase
+# /ark-adopt — Mark the path (session 0)
 
-Goal: contract reflects **product reality**, most code governed, only genuine debt frozen
-with a burn-down. A green check over a wrong contract is a **false green**.
+Invoking this skill **is** the approval. Write the architecture config in this turn.
+Greenfield: scaffold like `--recommend` / today’s architect. Brownfield: match **product
+reality**, freeze only genuine debt. A green check over a wrong config is a **false green**.
+
+## Autonomy contract
+
+The CLI is a **sensor and gate**, never the deliverable. **CLI budget:** one
+`ark-check --recommend` or `--coverage` / `--doctor`; then write; then `ark-check`.
+Forbidden as the result: preview-only adopt, “approve?”, or `STOP — invoke /ark-architect`
+/ `/ark-contract`. Do that work **here**.
+
+**Still never:** weaken `ark.config.json`; invent `mechanical-safe` kinds; claim finished
+while leftover design work remains.
+
+**Team lock:** this door **is** a contract session (law-only). Do not mix product source
+into the same diff. After writes, validate with
+`ark-check --contract-diff --contract-session --base <merge-ref> --author <steward>`.
+If `stewards` is set, loosen and baseline-grow require a listed author. Feature work
+uses `/ark-place` / `/ark-autopilot` and must not touch the constitution.
+
+**Several hands → ask for stewards.** Read `doctor.stewardNudge` (or the human
+**Stewards (advisory)** line). Act when `needsStewards` **or** `drift` is true.
+**Ask once** before writing `stewards[]`. Identity is a **GitHub handle or email**
+(`pedroknigge` or the GitHub noreply mail), not git `user.name`. Empty list: use
+`proposed` (CODEOWNERS first, else git handles/emails; bots and display names stripped).
+Drift: CODEOWNERS handles in `missingFromList`, or “team grew” (author count > steward
+count) — ask who else owns the law. If the user says yes or names handles or emails,
+write them in this turn. If they say the list is still right, leave it. Never invent
+or auto-remove stewards.
 
 **Adopt is Align + Stabilize, then seed Shape.** Freezing debt without a pattern plan leaves
 spaghetti “ENFORCE · design-weak”. Always end with dual-plan **B** seeds (or handoff explore)
@@ -47,10 +74,10 @@ When present, prefer the consumer **domain glossary** for layer names, slice fol
 
 | Use `/ark-adopt` when… | Do **not** use it when… |
 |------------------------|-------------------------|
-| Existing messy repo; contract ≠ folders | Empty greenfield shape → `/ark-architect` |
-| False-green / concentrated edge needs contract truth | Map-only without writing config/baseline → `/ark-explore` |
-| Mine loose business rules into Domain / intents | Single violation fix → `/ark-fix` |
-| Freeze **real** debt after contract is honest | Grind plan A only → `/ark-loop`; full apply loop → `/ark-autopilot` |
+| Session 0: empty tree or existing repo needs an honest path | Map-only without writing config → `/ark-explore` |
+| False-green / concentrated edge needs config truth | Feature file only → `/ark-place` |
+| Mine loose business rules into Domain / advisory ArkRules | Apply leftover design after the path is honest → `/ark-autopilot` |
+| Freeze **real** debt after the config is honest | User said map only |
 
 ## Dual engine (mandatory)
 
@@ -83,13 +110,13 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
 1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
-4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+4. Editing `arkrules/*` or promoting modes is **this skill** (session 0) or **`/ark-autopilot`** later; never invent `mechanical-safe`.
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
 
 
 ### Adopt + ArkRules
 - After classify: emit or refresh `arkRules` for matched layers (exact names; generic mold for unknowns).
-- Mine rules → inventory + propose invariants/structure; land via `/ark-contract`.
+- Mine rules → inventory + write advisory invariants/structure into `arkrules/<Layer>.json` **in this turn**.
 - Freeze baseline is **[Layer]** debt; inventory residual is **[ArkRules]** — report both.
 
 ## Subagent fan-out (optional, host-dependent)
@@ -111,10 +138,10 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 
 ## Related onboarding
 
-- **Greenfield:** `/ark-architect` or `ark-check --recommend` / `ark start`.
-- **Brownfield:** `/ark-adopt` — match contract to reality; do not force a starter preset.
+- **Greenfield:** this skill + `ark-check --recommend` / `ark start` — write the scaffold here.
+- **Brownfield:** this skill — match config to reality; do not force a starter preset.
 - **Deep map only:** `/ark-explore`.
-- **Default path:** `ark start` → `/ark-autopilot` → `ark-check --doctor`.
+- **Default path:** `ark start` → **`/ark-adopt`** → `/ark-place` / `/ark-autopilot`.
 
 ## Anti-wrapper rule (mandatory)
 
@@ -143,18 +170,18 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    **ApplicationOrchestration**, not Presentation — do not reclassify API shells as UI.
 2. **Check + diagnose** — `summary.concentrated` / dominant edge → fix contract first, don’t freeze.
    Cross-slice / cross-context `peerIsolation` hits are judgment: extract shared or events.
-   If one edge dominates residual debt: **STOP — do not continue this skill as complete.** **STOP — concentrated edge: invoke /ark-contract with source evidence** (do not freeze a wrong contract or grind N freezes).
+   If one edge dominates residual debt: **STOP — do not continue this skill as complete.** **STOP — concentrated edge:** rewrite `ark.config.json` **in this turn** with source evidence (do not freeze a wrong config or grind N freezes).
    Empty Domain/Persistence + I/O under Application → false-green.
-   **STOP — do not continue this skill as complete.** **STOP — false-green: invoke /ark-adopt or /ark-contract before claiming ENFORCE.** Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
+   **STOP — do not continue this skill as complete.** **STOP — false-green:** fix the config **in this turn** before claiming ENFORCE. Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.
 3. **Classify ungoverned** — use coverage `suggestions` **plus** dirs you discovered by reading;
-   add layers/patterns via `/ark-contract`.
+   add layers/patterns **here** (write `ark.config.json`).
 4. **Mine business rules → manifiesto** (model job — this is why the skill exists):
    - Scan for loose domain: validators, pricing/policy functions, `can*`/`calculate*`, magic business constants, publish/intent strings, logic in UI/hooks that belongs in Domain.
    - **ArkRules inventory (AR13):** run `ark-check --rules-inventory --json` for deterministic candidates
      (validation-in-controller, magic constants, anemic entities). Counts are **not a score**.
    - Propose: Domain files, `intentPrefixes`, intent names (`Domain.*` / `Application.*`), kernel `defineIntent` stubs if runtime is used;
-     land structure/invariant entries under `arkrules/<Layer>.json` via `/ark-contract` (ADR 0015 routing).
-   - Apply config through `/ark-contract` discipline; move pure rules into Domain when safe; validate with ark-check.
+     land structure/invariant entries under `arkrules/<Layer>.json` **in this turn** (ADR 0015 routing).
+   - Write the config; move pure rules into Domain when safe; validate with ark-check.
    - Deliver section **“Así te lo re-soluciono en el manifiesto”** with before/after contract snippets.
 5. **Freeze only real debt** — `--update-baseline` (zero debt → **no empty baseline file** left behind).
 6. **Gates + skills** — `--install-agent-gates` (CI monorepo-aware when `frontend/package.json` exists).
@@ -164,7 +191,7 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
      domain logic in UI, or semantic false-green: emit **dual-plan B** (3–5 bets) with pilot,
      success signal, kill-switch, and extraction cards for I/O moves — same bar as `/ark-explore` §G.
    - Do **not** claim “adopt complete / healthy” solely because the check is green.
-   - Prefer handoff `/ark-autopilot` for B execution with user ok, or `/ark-explore` shape-focus
+   - Prefer handoff `/ark-autopilot` to apply one Shape refactor, or `/ark-explore` shape-focus
      if the user only wanted a plan.
 
 ## Operating modes

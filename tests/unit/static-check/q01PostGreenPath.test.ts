@@ -53,7 +53,7 @@ describe('buildPostGreenNextAction (shipped helper)', () => {
       [
         'install gates (npx ark-check --install-agent-gates)',
         'shape residual: /ark-explore or /ark-autopilot dual-plan B',
-        'classify the ungoverned directories (/ark-contract)',
+        'classify the ungoverned directories (/ark-adopt)',
       ],
       post
     );

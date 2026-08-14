@@ -285,7 +285,7 @@ export function detectDesignSmells(root, config, files = [], coverage = null) {
         severity: 'warn',
         message: `Layers classify files but have no deny/allow rule edges: ${withoutRules.join(', ')}. Soft green — peer leaks may go unchecked.`,
         evidence: withoutRules.map((n) => `layer:${n}`),
-        fix: 'Add rules via /ark-contract (or a policy pack) so every populated layer participates in enforcement.',
+        fix: 'Add rules via /ark-adopt (or a policy pack) so every populated layer participates in enforcement.',
       })
     );
   }

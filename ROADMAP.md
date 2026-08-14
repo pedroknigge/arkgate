@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-12 (Phase PL shipped in **arkgate@4.6.0** on npm `latest`; Phase CH shipped in **4.5.7**)
+- **Status date:** 2026-08-14 (Phase SK + TW prepared as **arkgate@4.6.1**; npm `latest` still **4.6.0**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -1405,6 +1405,165 @@ tests / architecture / `release:npm --dry` green.
 **Outcome:** npm `latest` = **4.6.0** (`gitHead` `84cd05e`, OIDC run `31623360522`);
 MCP registry `io.github.pedroknigge/arkgate@4.6.0`; public pointers + q06 published;
 arkgate-site changelog/4.6.0 (plain language + shared homes).
+
+### Phase SK — Five-door autonomy (skills beyond CLI)
+
+Origin: field — the 13 skills run CLI and ask OK; users type “implement ArkGate full” in
+prose. Same 13 names; five doors do the work; CLI is sensor + gate.
+
+Plan: [docs/plans/five-door-autonomy/README.md](docs/plans/five-door-autonomy/README.md).
+
+Boundary (freezes held):
+
+- No new skill names; no scores; no LLM package verdict; no new sensors.
+- Invoke = license to write/map. Silent reshape from the compact router stays forbidden.
+- Never weaken `ark.config.json`; never invent `mechanical-safe` kinds.
+- Other 8 names stay installed as shortcuts (home catalog never-downgrade).
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 159 | `SK01` | `done` | S | PL09 | ROADMAP + plan seed + product-voice autonomy contract |
+| 160 | `SK02` | `done` | L | `SK01` | Rewrite adopt/place/autopilot/explore/upgrade; generate agent-skills |
+| 161 | `SK03` | `done` | M | `SK02` | Thin architect/contract/fix/loop/think/coverage/explain to shortcuts |
+| 162 | `SK04` | `done` | M | `SK02` | Compass nextAction + compact router + MCP onboarding → five doors |
+| 163 | `SK05` | `done` | M | `SK04` | Public docs emphasize the 5 doors |
+| 172 | `SK06` | `doing` | M | `TW08` | Prepare arkgate@4.6.1 (five-door + team parliament) |
+| 173 | `SK07` | `todo` | L | `SK06` | Publish npm/MCP + docs flip + site 4.6.1 |
+
+**Preferred order:** SK01→SK05. One `doing` at a time.
+
+**SK01 — Queue + autonomy contract**
+
+- **Status:** `done` (2026-08-14)
+- **Depends on:** PL09 done; npm **4.6.0** on `latest`
+
+**Outcome:** plan seed + product-voice: invoke = license; CLI = gate; five doors named.
+
+**SK02 — Five door bodies**
+
+- **Status:** `done` (2026-08-14)
+- **Depends on:** `SK01`
+
+**Outcome:** the 5 skills require in-turn write-or-map; CLI budget; no STOP-invoke for absorbed work.
+
+**SK03 — Shortcut aliases**
+
+- **Status:** `done` (2026-08-14)
+- **Depends on:** `SK02`
+
+**Outcome:** remaining names (except experimental runtime) point at the 5 doors.
+
+**SK04 — Pointers**
+
+- **Status:** `done` (2026-08-14)
+- **Depends on:** `SK02`
+
+**Outcome:** compass / router / post-green / MCP session hint prefer the 5 doors.
+
+**SK05 — Public docs**
+
+- **Status:** `done` (2026-08-14)
+- **Depends on:** `SK04`
+
+**Outcome:** agent-guide, use, enthusiast tutorial, README emphasize the 5; historical changelogs untouched.
+
+**SK06 — Prepare 4.6.1**
+
+- **Status:** `doing`
+- **Depends on:** `TW08`
+
+**Outcome:** version surfaces + CHANGELOG + `docs/releases/4.6.1.md` prepared (not published).
+
+**SK07 — Publish npm/MCP + docs flip + site 4.6.1**
+
+- **Status:** `todo`
+- **Depends on:** `SK06`
+
+**Outcome:** npm `latest` = **4.6.1**; MCP registry; public pointers + q06 published; arkgate-site changelog/4.6.1.
+
+### Phase TW — Team parliament (law vs feature)
+
+Origin: field — many agents, long-lived branches, rationed CI. The contract is a JSON
+anyone can edit in a product PR. Skills autonomy without a team lock rots the law.
+
+Plan: [docs/plans/team-parliament/README.md](docs/plans/team-parliament/README.md).
+
+Boundary (freezes held):
+
+- No org control-plane, dashboard, or IAM product.
+- No new skill names; no scores; no LLM package verdict; no new architecture sensors.
+- Do not harden PreToolUse to “cover humans” who never hit the hook.
+- Reuse policy-delta (tighten/loosen); do not invent a second classifier.
+- Stewards are a string list (CODEOWNERS-shaped), not an org chart.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 164 | `TW01` | `done` | S | SK05 | ROADMAP + plan seed + product-voice team contract |
+| 165 | `TW02` | `done` | L | `TW01` | Mixed law+product deny; stewards; `--contract-session`; `--contract-diff` |
+| 166 | `TW03` | `done` | M | `TW02` | Baseline records + `--against <base>` grow-fail on feature PRs |
+| 167 | `TW04` | `done` | L | `TW02` | `--changed --base` layer delta; personas; `ark status --vs` |
+| 168 | `TW05` | `done` | M | `TW04` | Docs + skill/voice: team limits next to five-door autonomy |
+| 169 | `TW06` | `done` | S | `TW05` | Detect multi-hand repos; doctor/adopt suggest or ask for stewards |
+| 170 | `TW07` | `done` | S | `TW06` | Steward list drift: team grew / CODEOWNERS ahead — doctor asks to update |
+| 171 | `TW08` | `done` | S | `TW07` | Steward identity is GitHub handle or email (not git display name) |
+
+**Preferred order:** TW01→TW05. One `doing` at a time. Ships with Phase SK (unpublished).
+
+**TW01 — Queue + team voice**
+
+- **Status:** `done` (2026-08-14)
+- **Depends on:** SK05 done
+
+**Outcome:** plan seed + product-voice: law is a different change type; check vs the branch you merge to.
+
+**TW02 — Law vs feature**
+
+- **Status:** `done` (2026-08-14)
+- **Depends on:** `TW01`
+
+**Outcome:** write gate denies mixed batches; check denies law files in a feature diff unless `--contract-session`; loosen/grow are steward-only when `stewards` is set.
+
+**TW03 — Baseline vs base branch**
+
+- **Status:** `done` (2026-08-14)
+- **Depends on:** `TW02`
+
+**Outcome:** `--against <base>` ratchets new keys vs the base baseline; grow fails on feature PRs; file writes merge-friendlier records.
+
+**TW04 — Cheap check + personas + vs**
+
+- **Status:** `done` (2026-08-14)
+- **Depends on:** `TW02`
+
+**Outcome:** `--changed --base` scans touched sources; persona presets; `ark status --vs` one-line checkout honesty.
+
+**TW05 — Public docs + skills**
+
+- **Status:** `done` (2026-08-14)
+- **Depends on:** `TW04`
+
+**Outcome:** agent-guide / use / configuration / adopt+autopilot name the team lock; historical changelogs untouched.
+
+**TW06 — Suggest stewards when many hands**
+
+- **Status:** `done` (2026-08-14)
+- **Depends on:** `TW05`
+
+**Outcome:** doctor/adopt detect multi-author or CODEOWNERS and propose `stewards` (ask before writing; never invent owners).
+
+**TW07 — Steward list drift**
+
+- **Status:** `done` (2026-08-14)
+- **Depends on:** `TW06`
+
+**Outcome:** if you started alone and the team grew, or CODEOWNERS has handles not in `stewards[]`, doctor/adopt show the gap and ask — never invent or auto-remove.
+
+**TW08 — GitHub handle or email identity**
+
+- **Status:** `done`
+- **Depends on:** `TW07`
+
+**Outcome:** `stewards[]` and the lock match a GitHub handle or email (noreply mail ≡ handle); never treat `user.name` as identity.
 
 ### Phase DC — Deep-module coach (post-4.5 process + advisory)
 
@@ -3814,15 +3973,17 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: (none — Phase PL shipped)
-  Epic: Phase PL — Understandable Ark (4.6.0) shipped
-  Plan: docs/plans/understandable-ark-4.6/README.md (PL01–PL09 done; published)
-  Queue: no active ROADMAP `doing`
-  Closed last: PL09 publish npm/MCP + docs flip + site
-  Next: golden upgrade path matrix · monorepo activation playbook · Z09/RB-11 parked
+Engineering doing: SK06 (prepare arkgate@4.6.1)
+  Epic: Phase SK + TW — five-door autonomy + team parliament
+  Plan: docs/plans/five-door-autonomy/README.md · docs/plans/team-parliament/README.md
+  Queue: SK06 doing · SK07 publish
+  Closed last: TW08 GitHub handle-or-email identity
+  Next: SK07 npm/MCP/site after SK06 lands
 Released baseline: npm arkgate@4.6.0 on latest (gitHead 84cd05e; tag v4.6.0; 2026-08-12)
-  Notes: docs/releases/4.6.0.md — Status: published
+  Notes: docs/releases/4.6.0.md — Status: published · 4.6.1 prepared
   Prior: 4.5.7 / 4.5.6 / 4.5.5 / 4.5.0 / 4.4.0 / 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
+Phase SK freezes (held): 13 skill names; invoke = license; no silent compact-router reshape;
+  no scores; no LLM package verdict; no new sensors
 Phase PL freezes (held): common words first; no scores; 13 skill names;
   machine IDs stable by default; no silent customized overwrite; no home downgrade;
   ArkGate / ArkRules stay as brands; temp-root never mutates real user homes

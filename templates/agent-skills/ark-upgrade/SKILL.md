@@ -9,9 +9,14 @@ Upgrade the published `arkgate` package and its managed gates without treating a
 filename, package version, or similar-looking file as proof of ownership. The
 preview is the source of truth: inspect it before applying anything.
 
-For greenfield onboarding, start with `/ark-architect` (or
-`ark-check --recommend`); for a brownfield repository, use `/ark-adopt` before
-this upgrade flow.
+## Autonomy contract
+
+Invoking this skill **is** the approval. Preview, then `--apply` **in this turn**.
+Stopping at preview is incomplete unless the probe failed or a conflict needs
+`--accept-conflicts` / `--refresh-skills` consent.
+
+For session 0, start with `/ark-adopt` (or `ark-check --recommend`); brownfield
+honesty is `/ark-adopt` before this upgrade flow.
 
 ## Improvement compass (process preflight)
 
@@ -99,7 +104,7 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
 1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
-4. Editing `arkrules/*` or promoting modes is **`/ark-contract`**; fixing code under a structure sensor is **`/ark-fix`** / **`/ark-loop`** (judgment, never invent mechanical-safe).
+4. After upgrade, leftover architecture work is **`/ark-autopilot`** (never invent `mechanical-safe`).
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
 
 
@@ -241,9 +246,8 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
    `doctor.deepModuleCoach` honesty. Run `npx arkgate agents-md --check` and
    `npx arkgate status --json`. If MCP was used, restart MCP after package bump and re-bind
    identity. Treat provider-unavailable CI required-check evidence as `unverified`, never as proof
-   that merges are blocked. If new violations appear, hand off to `/ark-fix` for a small set or
-   `/ark-loop` / `/ark-autopilot` for residual debt; do not regenerate a baseline without explicit
-   approval.
+   that merges are blocked.    If new violations appear, hand off to `/ark-autopilot`; do not regenerate a baseline without
+   explicit approval.
 
 ## Active host vs deferred hosts
 

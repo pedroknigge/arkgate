@@ -5,6 +5,30 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.6.1 — 2026-08-14
+
+**Patch** over **4.6.0**. Five-door autonomy (skills write or map in-turn; CLI is sensor +
+gate) plus team parliament (law vs feature: stewards, mixed-PR deny, ratchet vs the merge
+base, cheap `--changed` check). Same 13 skill names. Steward identity is a GitHub handle or
+email, not git `user.name`. **No required config migration.**
+
+**Status: prepared** (not yet on npm `latest`; see `docs/releases/4.6.1.md`).
+
+### Added
+
+- **Five-door autonomy (SK01–SK05):** `/ark-adopt`, `/ark-place`, `/ark-autopilot`,
+  `/ark-explore`, `/ark-upgrade` write or map in the same turn. The other eight names stay
+  installed as shortcuts. Invoking a door is the approval; the CLI does not apply the change.
+- **Team parliament (TW01–TW08):** mixed law+product deny; optional `stewards` (GitHub handle
+  or email); `--contract-session` / `--contract-diff` / `--changed --base` / `--against` /
+  `--persona` / `--author`; `ark status --vs`; doctor `stewardNudge` (ask or show list drift).
+  `stewards` is excluded from the policy hash.
+
+### Changed
+
+- Doctor, compact router, and public lanes prefer the five doors. Historical changelogs stay
+  as shipped.
+
 ## 4.6.0 — 2026-08-12
 
 **Minor** over **4.5.7**. Understandable Ark: doctor, HTML, skills, and public docs use common

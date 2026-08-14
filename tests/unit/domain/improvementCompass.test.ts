@@ -256,7 +256,7 @@ describe('improvementCompass (Domain pure)', () => {
     expect(compass.topResidual[0]).toBe('dip');
     expect(compass.topResidual).toContain('cohesion');
     const next = primaryImprovementCompassNextAction(compass);
-    expect(next?.ref).toBe('/ark-fix');
+    expect(next?.ref).toBe('/ark-autopilot');
     // If we naively took first residual in id order, cohesion would win — assert dip wins.
     const cohesionNext = compass.lenses.find((l) => l.id === 'cohesion')?.nextAction;
     expect(cohesionNext?.ref).toBe('/ark-explore');

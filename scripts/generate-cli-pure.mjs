@@ -137,6 +137,11 @@ const MODULES = [
     label: 'shared source-policy classification',
   },
   {
+    canonical: 'src/domain/teamParliament.ts',
+    derived: 'bin/lib/team-parliament.mjs',
+    label: 'team parliament law-vs-feature + baseline records (not a score)',
+  },
+  {
     canonical: 'src/domain/resolvedCandidateFactsSchema.ts',
     schemaDerived: 'schemas/ark.resolved-candidate-facts.schema.json',
     schemaExport: 'RESOLVED_CANDIDATE_FACTS_SCHEMA',

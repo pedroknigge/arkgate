@@ -97,8 +97,13 @@ outside the package. **Enforce green ≠ feature done.**
 That is **Shape** work (plan B) — suggested, never auto-applied as silent magic.
 
 1. Doctor confirms leftover design work (and residual lenses on the improvement compass)  
-2. Guided map / dual plan (skill pack: `/ark-explore` then `/ark-autopilot` with your OK)  
+2. Guided map / dual plan (skill pack: `/ark-explore` then `/ark-autopilot` applies one refactor)  
 3. One small refactor at a time · re-run doctor  
+
+**Teams:** do not amend `ark.config.json` in a product PR. Local gate:
+`npx arkgate-check --changed --base origin/dev`. Law-only PRs use
+`--contract-session` (stewards own loosen / baseline-grow). Checkout honesty:
+`npx arkgate status --vs origin/dev`.
 
 Install skills only when you want that guided path:
 

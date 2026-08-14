@@ -5,6 +5,9 @@ description: Ark adoption fitness audit — governed%, gates, baseline honesty, 
 
 # /ark-coverage — Ark adoption fitness (not full recon)
 
+**Shortcut.** Fitness numbers only. Full map / leftover design → **`/ark-explore`**.
+Apply → **`/ark-autopilot`**. Session 0 → **`/ark-adopt`**. This is not `/ark-explore`.
+
 You audit **how this repo uses ArkGate** (coverage, gates, baseline, host write path) and
 what adoption gaps remain. Work autonomously. End with a ranked fitness report.
 

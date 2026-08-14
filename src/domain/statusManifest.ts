@@ -124,6 +124,17 @@ export type StatusManifest = {
    * Tooling should always supply a projection (including mode=unavailable).
    */
   improvementCompass?: StatusImprovementCompassSlice;
+  /** Optional checkout-vs-base honesty (TW). Never a gate input. */
+  vsBase?: StatusVsBaseSlice;
+};
+
+export type StatusVsBaseSlice = {
+  baseRef: string;
+  line: string;
+  pinLocal: string | null;
+  pinBase: string | null;
+  contractEqual: boolean;
+  baselineGrew: boolean;
 };
 
 /**
@@ -173,6 +184,7 @@ export type StatusManifestFacts = {
    * Prefer projectStatusImprovementCompass() before passing facts.
    */
   improvementCompass?: StatusImprovementCompassSlice | null;
+  vsBase?: StatusVsBaseSlice | null;
 };
 
 const PROJECT_ID_PATTERN = /^sha256:[a-f0-9]{64}$/;
@@ -509,6 +521,9 @@ export function buildStatusManifest(facts: StatusManifestFacts): StatusManifest 
 
   const compass = normalizeStatusImprovementCompass(facts.improvementCompass);
   if (compass) status.improvementCompass = compass;
+  if (facts.vsBase && typeof facts.vsBase.baseRef === 'string' && facts.vsBase.baseRef.length > 0) {
+    status.vsBase = facts.vsBase;
+  }
 
   return status;
 }
@@ -798,6 +813,21 @@ export const ARK_STATUS_MANIFEST_SCHEMA = {
         reason: { type: 'string', minLength: 1 },
         factsSource: { enum: ['doctor-facts', 'report-snapshot', 'none'] },
         contractHash: { type: 'string', minLength: 1 },
+      },
+    },
+    vsBase: {
+      type: 'object',
+      description:
+        'Checkout vs a git base ref: pin, contract identity, baseline grow. Advisory honesty only — never a gate input.',
+      additionalProperties: false,
+      required: ['baseRef', 'line', 'pinLocal', 'pinBase', 'contractEqual', 'baselineGrew'],
+      properties: {
+        baseRef: { type: 'string', minLength: 1 },
+        line: { type: 'string', minLength: 1 },
+        pinLocal: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] },
+        pinBase: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] },
+        contractEqual: { type: 'boolean' },
+        baselineGrew: { type: 'boolean' },
       },
     },
   },

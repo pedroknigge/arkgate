@@ -208,7 +208,7 @@ export function runCoverage(root, config, files, rules, asJson) {
       }
     }
     console.log('');
-    console.log('Apply these via /ark-contract (adds the layer patterns to ark.config.json).');
+    console.log('Apply these via /ark-adopt (adds the layer patterns to ark.config.json).');
   }
   if (layersWithoutRules.length > 0) {
     console.log('');
@@ -846,7 +846,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     suggest:
       'thin or new tree; architecture config is not yet in charge. You do not pick this light. Next: ark start (preview), then ark start --apply; re-check with --doctor.',
     adapt:
-      'config and tree still disagree, or debt is open. The write path does not fully protect you yet. You do not pick this light. Next: do doctor top action #1 (often /ark-adopt, /ark-contract, or /ark-autopilot).',
+      'config and tree still disagree, or debt is open. The write path does not fully protect you yet. You do not pick this light. Next: do doctor top action #1 (often /ark-adopt or /ark-autopilot).',
     enforce:
       'honest coverage and clean checked imports. You arrived here; you never turn Enforce on. Next: keep the host write path and CI check; only NEW violations should fail.',
   };
@@ -973,7 +973,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   }
   if (cov.suggestions.length > 0) {
     line(warn, `${cov.suggestions.length} ungoverned director(y/ies) — proposals: ${arkCommand(root, 'ark-check', '--coverage')}`);
-    actions.push('classify the ungoverned directories (/ark-contract)');
+    actions.push('classify the ungoverned directories (/ark-adopt)');
   }
   if (cov.emptyLayers.length > 0) line(warn, `Empty layers (pattern matches nothing): ${cov.emptyLayers.join(', ')}`);
   if (cov.layersWithoutRules.length > 0) line(warn, `Layers with no rule edge: ${cov.layersWithoutRules.join(', ')}`);
@@ -1060,7 +1060,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     }
     if (activeCount > 0) {
       actions.push(
-        `resolve the non-baselined violations — see the classified plan (${arkCommand(root, 'ark-check', '--plan')}), then /ark-fix`
+        `resolve the non-baselined violations — see the classified plan (${arkCommand(root, 'ark-check', '--plan')}), then /ark-autopilot`
       );
     }
   }

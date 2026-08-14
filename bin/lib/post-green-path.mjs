@@ -16,13 +16,13 @@ export const POST_GREEN_PRIMARY_SKILL = '/ark-explore';
 
 /**
  * Canonical human / agent next-action string (single door).
- * Chained: explore shape-focus then autopilot only to apply B with user OK.
+ * Chained: explore shape-focus then autopilot applies one B pilot.
  */
 export const POST_GREEN_PRIMARY_ACTION = POST_GREEN_HUMAN;
 
 /** Short label for tables / metrics. */
 export const POST_GREEN_PRIMARY_SHORT =
-  '/ark-explore shape-focus → /ark-autopilot (apply B with OK)  # Shape residual';
+  '/ark-explore shape-focus → /ark-autopilot (apply one B pilot)  # Shape residual';
 
 /** Placement coaching while design residual remains (new code only). */
 export const POST_GREEN_PLACEMENT_COACHING =

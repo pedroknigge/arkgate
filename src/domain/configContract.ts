@@ -142,6 +142,8 @@ export const ARK_CONFIG_SCHEMA = {
       additionalProperties: { type: 'string', minLength: 1 },
       default: {},
     },
+    /** Team parliament — GitHub handles or emails who may loosen the law (not part of policy hash). */
+    stewards: { ...stringArraySchema, default: [] },
   },
   $defs: {
     layer: {
