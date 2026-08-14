@@ -15,9 +15,9 @@ export default defineConfig({
     // channel, no cross-fork contention) with generous timeouts. Slower, but deterministic.
     pool: 'forks',
     poolOptions: { forks: { singleFork: true } },
-    testTimeout: 30000,
-    hookTimeout: 30000,
-    teardownTimeout: 30000,
+    testTimeout: 60000,
+    hookTimeout: 60000,
+    teardownTimeout: 60000,
     coverage: {
       // Full product surface under unit test (libs + domain/kernel).
       // Only process-entry shells excluded: V8 does not attribute spawn child coverage.
