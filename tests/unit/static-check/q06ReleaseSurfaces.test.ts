@@ -144,6 +144,12 @@ describe('CHANGELOG + release note cover 4.6.1 five-door + team parliament train
     expect(notes).toMatch(/No required config migration/i);
     expect(notes).toMatch(/Z09|RB-11/i);
     expect(notes).toMatch(/mcp-publisher validate server\.json/);
+    expect(notes).toMatch(/Published-surface residual/i);
+    expect(notes).toMatch(/tarball.*README|README.*tarball/is);
+    expect(notes).toMatch(/still banners \*\*ArkGate 4\.6\.0\*\*|still banners 4\.6\.0/i);
+    expect(notes).toMatch(/No 4\.6\.2/i);
+    expect(changelog).toMatch(/tarball `README\.md` still banners 4\.6\.0/);
+    expect(changelog).toMatch(/No 4\.6\.2 for that banner/);
   });
 });
 

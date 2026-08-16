@@ -28,6 +28,8 @@ email, not git `user.name`. **No required config migration.**
 
 - Doctor, compact router, and public lanes prefer the five doors. Historical changelogs stay
   as shipped.
+- Published 4.6.1 tarball `README.md` still banners 4.6.0 (packed at `1eadc96` before the
+  pointer flip). Tree README on `main` is current. No 4.6.2 for that banner.
 
 ## 4.6.0 — 2026-08-12
 
