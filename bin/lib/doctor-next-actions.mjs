@@ -1,0 +1,92 @@
+/**
+ * Rank doctor next actions from already-computed facts (no I/O).
+ * Lets the human printer show light + #1 before honesty/compass sections.
+ */
+import { arkCommand } from '../ark-shared.mjs';
+import { skillGapsForActiveHost } from './agent-gates.mjs';
+import { agentHomeConcernIsActive, agentHomeRefreshCommand } from './agent-homes.mjs';
+import { mergePostGreenTopActions } from './post-green-path.mjs';
+
+export function collectDoctorNextActions(ctx) {
+  const actions = [];
+  if (!ctx.analysisComplete) actions.push('restore complete analysis, then rerun ark-check --doctor');
+  if (ctx.designSmells.length > 0 && ctx.postGreenPath) actions.push(ctx.postGreenPath.action);
+  if (ctx.coverageHonesty.greenIsNotEnforcement && ctx.coverageHonesty.worseThanNoGate) {
+    actions.push('raise governed coverage above a minority slice before treating green as enforcement');
+  }
+  if (ctx.cov.suggestions.length > 0) actions.push('classify the ungoverned directories (/ark-adopt)');
+  if (ctx.packageVersionTruth?.dualTruth) {
+    actions.push(
+      ctx.dualTruthNext ||
+        'bump package.json arkgate pin to match this CLI (or install without --no-install)'
+    );
+  } else if (ctx.packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT') {
+    actions.push(
+      ctx.dualTruthNext ||
+        'Add arkgate to package.json and install so CI/npx resolve this CLI (PACKAGE_PIN_ABSENT)'
+    );
+  }
+  if (ctx.activeCount > 0) {
+    actions.push(
+      `resolve the non-baselined violations — see the classified plan (${arkCommand(ctx.root, 'ark-check', '--plan')}), then /ark-autopilot`
+    );
+  }
+  if (ctx.writePath?.gap?.fix) actions.push(ctx.writePath.gap.fix);
+  if (ctx.gatesMissing.length > 0) {
+    actions.push(`install gates (${arkCommand(ctx.root, 'ark-check', '--install-agent-gates')})`);
+  }
+  const humanSkillGaps = skillGapsForActiveHost(ctx.skillGaps);
+  const legacyCodex = humanSkillGaps.some((g) => g.tool === 'codex' && g.legacyPromptsOnly);
+  const remainingGaps = humanSkillGaps.filter(
+    (g) => !(g.tool === 'codex' && (g.legacyPromptsOnly || g.legacyAdvisory))
+  );
+  const remMiss = remainingGaps.reduce((s, g) => s + g.missing, 0);
+  const remStale = remainingGaps.reduce((s, g) => s + g.stale, 0);
+  if (legacyCodex) {
+    actions.push('install Codex SKILL.md catalog (--install-agent-gates --skills-only --tools codex --force)');
+  }
+  if (remMiss + remStale > 0) {
+    actions.push('refresh /ark-* skills (--install-agent-gates --skills-only --force)');
+  }
+  if (ctx.codexHomeGap && ctx.codexConcernActive) {
+    actions.push(
+      ctx.codexHomeGap.catalogMetadataInvalid
+        ? 'repair invalid Codex home catalog metadata after verifying the newest installed version'
+        : 'refresh Codex home skills (--install-agent-gates --skills-only --codex-home --force)'
+    );
+  }
+  for (const gap of ctx.agentHomeGaps) {
+    if (agentHomeConcernIsActive(gap.host)) {
+      actions.push(
+        gap.catalogMetadataInvalid
+          ? `repair invalid ${gap.label} home catalog metadata after verifying the newest installed version`
+          : `refresh ${gap.label} shared agent skills (${agentHomeRefreshCommand(ctx.root, gap)})`
+      );
+    }
+  }
+  if (ctx.analysisComplete && ctx.baselineHonesty?.dirtyBaselineRisk) {
+    actions.push('review dirty baseline freezes — fix the contract before trusting green-via-freeze');
+  }
+  if (ctx.analysisComplete && ctx.staleBaseline > 0) {
+    actions.push('tighten the baseline (--update-baseline)');
+  }
+  if (ctx.staleRunners.length > 0) {
+    actions.push(
+      `migrate command runners (${arkCommand(ctx.root, 'ark-check', '--install-agent-gates --migrate-commands')})`
+    );
+  }
+  for (const gap of ctx.adoption.gaps) {
+    if (!gap.deferred) actions.push(gap.fix || gap.message);
+  }
+  if (ctx.safety && ctx.safetyHasEntries) {
+    actions.push('resolve strict safety diagnostics before treating CI as enforcement');
+  }
+  if (ctx.showNewHere) {
+    actions.unshift('finish ark start (preview + --apply), then re-run --doctor');
+  }
+  const unique = mergePostGreenTopActions(actions, ctx.postGreenPath);
+  if (ctx.designFitness.designWeak && unique.length === 0 && ctx.postGreenPath) {
+    unique.push(ctx.postGreenPath.action);
+  }
+  return unique;
+}

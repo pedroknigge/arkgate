@@ -35,6 +35,7 @@ import {
 } from './lib/prepare-change.mjs';
 import { runStatusCommand } from './lib/status-command.mjs';
 import { runAgentProjectionCommand } from './lib/agent-projection-command.mjs';
+import { setupUsage, setupUsageAll, upgradeUsage } from './lib/first-run-help.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
@@ -151,100 +152,6 @@ function parseArgs(argv) {
   }
 
   return args;
-}
-
-function usage() {
-  return `arkgate (alias ark) — One architecture config. One check. One coach.
-
-  arkgate start              preview what will change (no writes)
-  arkgate start --apply      write the compact contract + host router + CI
-  arkgate-check --doctor     status light + primary next action
-
-Then session 0 in your agent: /ark-adopt
-Stuck? Run doctor. Do #1.
-
-More commands and flags: arkgate --help --all
-`;
-}
-
-function upgradeUsage() {
-  return `arkgate upgrade (alias ark upgrade) — preview vs apply.
-
-  arkgate upgrade            preview managed updates (no writes)
-  arkgate upgrade --apply    apply the previewed bytes (needs --plan-digest when applying managed files)
-
-Customized files stay unless you pass --accept-conflicts or --refresh-skills.
-Then: arkgate-check --doctor
-
-Every flag: arkgate --help --all
-`;
-}
-
-function usageAll() {
-  return `arkgate (alias ark) — One architecture config. One check. One coach.
-
-Usage:
-  arkgate start   [--root <project>] [--tools <host>] [--require-write-hook <host>] [--install] [--apply] [--json]
-  arkgate init    [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture]
-              [--archetype <playbook-id>] [--tools <list>] [--require-write-hook <host>] [--yes] [--force] [--no-strict]
-  arkgate upgrade [--root <project>] [--tools <list>] [--apply] [--plan-digest <sha256>] [--accept-conflicts] [--refresh-skills] [--json] [--no-install] [--no-strict]
-  arkgate preflight --changes <change-set.json> [--change-map <map.json>] [--root <project>] [--config ark.config.json] [--manifest <manifest.json>] [--tsconfig <tsconfig.json>] [--json]
-  arkgate status  [--root <project>] [--config ark.config.json] [--json] [--vs <git-ref>]
-              [--expected-root <abs>] [--expected-project-id sha256:…] [--tools <host>]
-  arkgate agents-md [--root <project>] [--config ark.config.json] [--write] [--check] [--stdout] [--json]
-                [--tools <host>]
-
-Commands:
-  start     New here? Analyze and preview the complete setup. Read-only unless --apply.
-  init      Configure Ark project enforcement with explicit prompts.
-  upgrade   Preview identity-proven Ark-managed asset updates. With package install,
-            --apply bumps toward registry latest when behind (not only when CLI ≠ pin)
-            and recomputes the preview; a second explicit --apply --no-install applies
-            those exact bytes and verifies them. --refresh-skills opts in to rewrite
-            customized managed skills to package templates (never silent default).
-            (alias: ark update)
-  preflight Validate one atomic create/update/delete set without writing project files.
-  status    Unified session/project manifest (identity, activation, last check, rules).
-            Never prompts. Prefer --json for agents; CI=1 forces JSON.
-  agents-md Version-matched agent contract projection (ACS04). Stamps package version +
-            contract summary into a managed AGENTS.md block. Non-authoritative — not a
-            gate input. Preview by default; --write merges without clobbering outside
-            regions; --check fails on version drift; --stdout prints the block only.
-            (aliases: agents-md, agent-projection)
-
-Options:
-  --yes        Non-interactive defaults: create config if needed, install gate templates, run strict check.
-               (Also the implicit default when stdin/stdout are not a TTY — agents never hang on prompts.)
-  --force      Allow generated files to overwrite existing files.
-  --no-strict  Skip the final strict ark-check run.
-  --install    Pin and install arkgate as a project devDependency (default for start).
-  --no-install Skip adding/installing arkgate as a project devDependency (start/upgrade).
-  --apply       Apply a start plan; for upgrade, update/repreview or apply managed bytes.
-  --accept-conflicts
-                Allow upgrade to recreate deleted managed assets or replace recorded conflicts.
-  --plan-digest Digest emitted by an upgrade preview; required to apply managed bytes.
-  --json        Emit the start/upgrade/status/agents-md preview as deterministic machine-readable JSON.
-  --write       For agents-md: merge the version-matched projection into AGENTS.md.
-  --check       For agents-md: exit 1 when projection stamp drifts from package version.
-  --stdout      For agents-md: print the projection block only (no file write).
-  --expected-root / --expected-project-id
-                Optional project expectation for status (MCP-compatible binding check).
-  --preset     Start from a named architecture preset instead of detection.
-  --archetype  Application shape from templates/architecture-playbook.json (maps to the matching preset).
-               Valid ids: crud-product, api-backend, frontend-surface, library-sdk, cli-utility,
-               worker-pipeline, event-coordinator, integration-bridge, multi-app-workspace, prototype-spike,
-               vertical-slice-product, ddd-bounded-contexts.
-  --tools      One active agent host for start (claude,cursor,codex,grok,windsurf,cline,copilot,kiro,roo,continue,gemini).
-               Omit to use the active host; an unknown host creates only the shared compact router.
-  --remove-host <host>
-               Preview or apply removal of that compact host integration; re-add it with --tools <host>.
-  --require-write-hook <host>
-               Require and verify a hard local write hook for Claude, Grok, Antigravity, or Cursor.
-               Codex/OpenCode are advisory-write plus hard CI merge only; impossible requests fail before any write.
-
-Interactive mode (TTY, no --yes): asks what application shape you are building and maps it to a preset.
-Non-interactive (no TTY): uses the same defaults as --yes — never calls readline on a null interface.
-`;
 }
 
 function cliVersion() {
@@ -866,7 +773,7 @@ async function main() {
     return 0;
   }
   if (args.help || !args.command) {
-    console.log(args.all ? usageAll() : usage());
+    console.log(args.all ? setupUsageAll() : setupUsage());
     return 0;
   }
 
@@ -995,7 +902,7 @@ async function main() {
   }
 
   console.error(`Unknown command: ${args.command}`);
-  console.error(usage());
+  console.error(setupUsage());
   return 2;
 }
 

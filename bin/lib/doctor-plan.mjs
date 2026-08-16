@@ -15,9 +15,9 @@ import { describePackageVersionDualTruth } from './field-install.mjs';
 import {
   detectAgentHomeGaps,
   agentHomeConcernIsActive,
-  agentHomeRefreshCommand,
 } from './agent-homes.mjs';
 import { operatingModeTitle } from './product-copy.mjs';
+import { collectDoctorNextActions } from './doctor-next-actions.mjs';
 export { summarizeRulesUnderContract };
 
 /** Optional S3 dual-match classifier when ark-shared exports it (soft dep for S5 landing). */
@@ -50,7 +50,6 @@ import {
 } from './design-smells.mjs';
 import {
   buildPostGreenNextAction,
-  mergePostGreenTopActions,
   isDoctorHealthyNothingToDo,
   DESIGN_WEAK_HONESTY_FLAGS,
 } from './post-green-path.mjs';
@@ -511,94 +510,6 @@ export function runPlan(
   return plan;
 }
 
-/**
- * Rank doctor next actions from already-computed facts (no I/O).
- * Used so the human printer can show light + #1 before honesty/compass sections.
- */
-function collectDoctorNextActions(ctx) {
-  const actions = [];
-  if (!ctx.analysisComplete) actions.push('restore complete analysis, then rerun ark-check --doctor');
-  if (ctx.designSmells.length > 0 && ctx.postGreenPath) actions.push(ctx.postGreenPath.action);
-  if (ctx.coverageHonesty.greenIsNotEnforcement && ctx.coverageHonesty.worseThanNoGate) {
-    actions.push('raise governed coverage above a minority slice before treating green as enforcement');
-  }
-  if (ctx.cov.suggestions.length > 0) actions.push('classify the ungoverned directories (/ark-adopt)');
-  if (ctx.packageVersionTruth?.dualTruth) {
-    actions.push(
-      ctx.dualTruthNext ||
-        'bump package.json arkgate pin to match this CLI (or install without --no-install)'
-    );
-  } else if (ctx.packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT') {
-    actions.push(
-      ctx.dualTruthNext ||
-        'Add arkgate to package.json and install so CI/npx resolve this CLI (PACKAGE_PIN_ABSENT)'
-    );
-  }
-  if (ctx.activeCount > 0) {
-    actions.push(
-      `resolve the non-baselined violations — see the classified plan (${arkCommand(ctx.root, 'ark-check', '--plan')}), then /ark-autopilot`
-    );
-  }
-  if (ctx.writePath?.gap?.fix) actions.push(ctx.writePath.gap.fix);
-  if (ctx.gatesMissing.length > 0) {
-    actions.push(`install gates (${arkCommand(ctx.root, 'ark-check', '--install-agent-gates')})`);
-  }
-  const humanSkillGaps = skillGapsForActiveHost(ctx.skillGaps);
-  const legacyCodex = humanSkillGaps.some((g) => g.tool === 'codex' && g.legacyPromptsOnly);
-  const remainingGaps = humanSkillGaps.filter(
-    (g) => !(g.tool === 'codex' && (g.legacyPromptsOnly || g.legacyAdvisory))
-  );
-  const remMiss = remainingGaps.reduce((s, g) => s + g.missing, 0);
-  const remStale = remainingGaps.reduce((s, g) => s + g.stale, 0);
-  if (legacyCodex) {
-    actions.push('install Codex SKILL.md catalog (--install-agent-gates --skills-only --tools codex --force)');
-  }
-  if (remMiss + remStale > 0) {
-    actions.push('refresh /ark-* skills (--install-agent-gates --skills-only --force)');
-  }
-  if (ctx.codexHomeGap && ctx.codexConcernActive) {
-    actions.push(
-      ctx.codexHomeGap.catalogMetadataInvalid
-        ? 'repair invalid Codex home catalog metadata after verifying the newest installed version'
-        : 'refresh Codex home skills (--install-agent-gates --skills-only --codex-home --force)'
-    );
-  }
-  for (const gap of ctx.agentHomeGaps) {
-    if (agentHomeConcernIsActive(gap.host)) {
-      actions.push(
-        gap.catalogMetadataInvalid
-          ? `repair invalid ${gap.label} home catalog metadata after verifying the newest installed version`
-          : `refresh ${gap.label} shared agent skills (${agentHomeRefreshCommand(ctx.root, gap)})`
-      );
-    }
-  }
-  if (ctx.analysisComplete && ctx.baselineHonesty?.dirtyBaselineRisk) {
-    actions.push('review dirty baseline freezes — fix the contract before trusting green-via-freeze');
-  }
-  if (ctx.analysisComplete && ctx.staleBaseline > 0) {
-    actions.push('tighten the baseline (--update-baseline)');
-  }
-  if (ctx.staleRunners.length > 0) {
-    actions.push(
-      `migrate command runners (${arkCommand(ctx.root, 'ark-check', '--install-agent-gates --migrate-commands')})`
-    );
-  }
-  for (const gap of ctx.adoption.gaps) {
-    if (!gap.deferred) actions.push(gap.fix || gap.message);
-  }
-  if (ctx.safety && ctx.safetyHasEntries) {
-    actions.push('resolve strict safety diagnostics before treating CI as enforcement');
-  }
-  if (ctx.showNewHere) {
-    actions.unshift('finish ark start (preview + --apply), then re-run --doctor');
-  }
-  const unique = mergePostGreenTopActions(actions, ctx.postGreenPath);
-  if (ctx.designFitness.designWeak && unique.length === 0 && ctx.postGreenPath) {
-    unique.push(ctx.postGreenPath.action);
-  }
-  return unique;
-}
-
 export function runDoctor(root, config, files, rules, violations, asJson, options = {}) {
   const completeness = normalizeAnalysisCompleteness(options.completeness);
   const analysisComplete = completeness === ANALYSIS_COMPLETENESS.complete;
@@ -913,9 +824,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const ok = color.green('✓');
   const warn = color.yellow('!');
   const bad = color.red('✗');
-  const actions = [];
   const line = (mark, text) => console.log(`  ${mark} ${text}`);
-  if (!analysisComplete) actions.push('restore complete analysis, then rerun ark-check --doctor');
   console.log(color.bold(`Ark doctor — ${path.basename(path.resolve(root)) || '.'}`));
   if (!analysisComplete) line(warn, analysisIncompleteStatement(completeness));
 
@@ -1052,11 +961,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         line(' ', color.dim(`evidence: ${smell.evidence.slice(0, 4).join(', ')}`));
       }
     }
-    if (postGreenPath) {
-      // Rank first via mergePostGreenTopActions at the end (Q01 single door).
-      actions.push(postGreenPath.action);
-    }
-    // Q04 — surface one next pilot under design-weak.
+    // Q04 — surface one next pilot under leftover design work.
     if (pilotLoop?.active && pilotLoop.nextPilot) {
       const np = pilotLoop.nextPilot;
       line(
@@ -1112,13 +1017,9 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   line(govMark, `Governed: ${cov.governed.percent}% (${cov.governed.classifiedFiles}/${cov.governed.totalFiles} files)`);
   if (coverageHonesty.greenIsNotEnforcement) {
     line(coverageHonesty.worseThanNoGate ? bad : warn, coverageHonesty.message);
-    if (coverageHonesty.worseThanNoGate) {
-      actions.push('raise governed coverage above a minority slice before treating green as enforcement');
-    }
   }
   if (cov.suggestions.length > 0) {
     line(warn, `${cov.suggestions.length} ungoverned director(y/ies) — proposals: ${arkCommand(root, 'ark-check', '--coverage')}`);
-    actions.push('classify the ungoverned directories (/ark-adopt)');
   }
   if (cov.emptyLayers.length > 0) line(warn, `Empty layers (pattern matches nothing): ${cov.emptyLayers.join(', ')}`);
   if (cov.layersWithoutRules.length > 0) line(warn, `Layers with no rule edge: ${cov.layersWithoutRules.join(', ')}`);
@@ -1134,18 +1035,10 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     console.log('');
     console.log(color.bold('Package pin (dual-truth)'));
     line(warn, packageVersionTruth.note);
-    actions.push(
-      dualTruthNext ||
-        'bump package.json arkgate pin to match this CLI (or install without --no-install)'
-    );
   } else if (packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT') {
     console.log('');
     console.log(color.bold('Package pin'));
     line(warn, packageVersionTruth.note);
-    actions.push(
-      dualTruthNext ||
-        'Add arkgate to package.json and install so CI/npx resolve this CLI (PACKAGE_PIN_ABSENT)'
-    );
   }
   if (options.configWalkedUp && options.configRoot) {
     line(
@@ -1175,7 +1068,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       line(warn, 'Low governed coverage or fresh config — finish start, then re-run doctor before adding layers of code.');
     }
     line(ok, `Optional sensor detail: ${arkCommand(root, 'ark-check', '--recommend')}`);
-    actions.unshift('finish ark start (preview + --apply), then re-run --doctor');
   }
 
   console.log('');
@@ -1202,11 +1094,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     for (const edge of summary.edges.slice(0, 3)) line(' ', color.dim(`${edge.count}  ${edge.edge}`));
     if (summary.concentrated) {
       line(warn, color.dim(`${Math.round(summary.dominantShare * 100)}% on one edge (${summary.dominant}) — likely a contract fix, not debt`));
-    }
-    if (activeCount > 0) {
-      actions.push(
-        `resolve the non-baselined violations — see the classified plan (${arkCommand(root, 'ark-check', '--plan')}), then /ark-autopilot`
-      );
     }
   }
 
@@ -1250,7 +1137,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     line(writePath.gap.severity === 'warn' ? warn : warn, writePath.gap.message);
     if (writePath.gap.fix) {
       line(' ', color.dim(`Fix: ${writePath.gap.fix}`));
-      actions.push(writePath.gap.fix);
     }
   }
 
@@ -1259,7 +1145,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   if (gatesMissing.length === 0) line(ok, 'Shared gate artifacts found on disk (AGENTS.md, .mcp.json, CI); runtime activation is reported separately');
   else {
     line(bad, `Missing gates: ${gatesMissing.join(', ')}`);
-    actions.push(`install gates (${arkCommand(root, 'ark-check', '--install-agent-gates')})`);
   }
   const humanSkillGaps = skillGapsForActiveHost(skillGaps);
   const legacyCodex = humanSkillGaps.some((g) => g.tool === 'codex' && g.legacyPromptsOnly);
@@ -1274,7 +1159,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   if (remMiss + remStale === 0 && !legacyCodex) line(ok, '/ark-* skills current for detected tools');
   if (legacyCodex) {
     line(warn, 'Codex: legacy flat .codex/prompts only (not a loadable skill catalog)');
-    actions.push('install Codex SKILL.md catalog (--install-agent-gates --skills-only --tools codex --force)');
   }
   if (codexLegacySafeDelete) {
     line(
@@ -1289,7 +1173,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       warn,
       `${remMiss} missing / ${remStale} content-behind-package /ark-* skill(s) for ${remainingGaps.map((g) => g.tool).join(', ')}`
     );
-    actions.push('refresh /ark-* skills (--install-agent-gates --skills-only --force)');
   }
   const codexHomeGap = detectCodexHomeGap(root);
   if (codexHomeGap) {
@@ -1304,7 +1187,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       line(color.dim('·'), color.dim(`Codex home skills ${parts.join(', ')} (deferred — not on Codex session)`));
     } else {
       line(warn, `Codex home skills ${parts.join(', ')}`);
-      actions.push(codexHomeGap.catalogMetadataInvalid ? 'repair invalid Codex home catalog metadata after verifying the newest installed version' : 'refresh Codex home skills (--install-agent-gates --skills-only --codex-home --force)');
     }
   }
   for (const gap of agentHomeGaps) {
@@ -1319,11 +1201,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       line(color.dim('·'), color.dim(`${summary} (deferred — not this session)`));
     } else {
       line(warn, summary);
-      actions.push(
-        gap.catalogMetadataInvalid
-          ? `repair invalid ${gap.label} home catalog metadata after verifying the newest installed version`
-          : `refresh ${gap.label} shared agent skills (${agentHomeRefreshCommand(root, gap)})`
-      );
     }
   }
 
@@ -1338,11 +1215,9 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     line(baseMark, `${baseline.keys.size} frozen key(s)${analysisComplete ? '' : ' — stale comparison not verified'}`);
     if (analysisComplete && baselineHonesty.dirtyBaselineRisk) {
       line(warn, baselineHonesty.message);
-      actions.push('review dirty baseline freezes — fix the contract before trusting green-via-freeze');
     }
     if (analysisComplete && staleBaseline > 0) {
       line(warn, `${staleBaseline} stale entr(y/ies) no longer occur — tighten with --update-baseline`);
-      actions.push('tighten the baseline (--update-baseline)');
     }
   }
 
@@ -1351,7 +1226,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   if (staleRunners.length === 0) line(ok, 'Emitted commands match the package manager');
   else {
     line(warn, `Stale runner in ${staleRunners.join(', ')}`);
-    actions.push(`migrate command runners (${arkCommand(root, 'ark-check', '--install-agent-gates --migrate-commands')})`);
   }
 
   // Adoption completeness (hosts, MCP health, codex home, core optionality, origin, baseline policy)
@@ -1377,7 +1251,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       if (gap.fix) {
         line(' ', color.dim(gap.deferred ? `When using Codex: ${gap.fix}` : `Fix: ${gap.fix}`));
       }
-      if (!gap.deferred) actions.push(gap.fix || gap.message);
     }
     if (adoption.layerBalance) {
       line(warn, color.dim(adoption.layerBalance.educational));
@@ -1413,9 +1286,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     ];
     for (const [label, entries] of rows) {
       line(entries.length === 0 ? ok : warn, `${label}: ${entries.length}`);
-    }
-    if (rows.some(([, entries]) => entries.length > 0)) {
-      actions.push('resolve strict safety diagnostics before treating CI as enforcement');
     }
   }
 

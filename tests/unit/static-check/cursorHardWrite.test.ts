@@ -167,7 +167,12 @@ describe('Cursor hard write path (4.5.7)', () => {
       })
       .find((row) => row && row.permission === 'deny');
     expect(deny).toBeTruthy();
-    expect(String(deny.agent_message)).toMatch(/Ark architecture gate/i);
+    const denyText = String(deny.agent_message);
+    expect(denyText).toMatch(/^blocked /);
+    expect(denyText).toMatch(/^blocked src\/domain\/order\.ts — /);
+    expect(denyText).toMatch(/\nNext: /);
+    expect(denyText).not.toMatch(/ark_manifest/i);
+    expect(denyText).toMatch(/\[LAYER_IMPORT_VIOLATION\]/);
     expect(String(run.stderr)).toMatch(/LAYER_IMPORT_VIOLATION/);
   });
 
