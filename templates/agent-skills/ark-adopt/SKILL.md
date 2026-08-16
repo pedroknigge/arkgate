@@ -5,8 +5,17 @@ description: Session 0 — mark the Ark path. Greenfield scaffold or brownfield 
 
 # /ark-adopt — Mark the path (session 0)
 
+**When:** empty tree, or the architecture config does not match the real folders (session 0).
+**Not when:** a single new file (`/ark-place`) or leftover design after the path is honest (`/ark-explore` then `/ark-autopilot`).
+
+## Steps
+
+1. Read `arkgate-check --doctor` (one light, one next action).
+2. Write `ark.config.json` (and a baseline only for genuine debt) in this turn.
+3. Re-run doctor. Day-to-day new files: `/ark-place`.
+
 Invoking this skill **is** the approval. Write the architecture config in this turn.
-Greenfield: scaffold like `--recommend` / today’s architect. Brownfield: match **product
+Greenfield: scaffold like `--recommend`. Brownfield: match **product
 reality**, freeze only genuine debt. A green check over a wrong config is a **false green**.
 
 ## Autonomy contract
@@ -36,7 +45,7 @@ write them in this turn. If they say the list is still right, leave it. Never in
 or auto-remove stewards.
 
 **Adopt is Align + Stabilize, then seed Shape.** Freezing debt without a pattern plan leaves
-spaghetti “ENFORCE · design-weak”. Always end with dual-plan **B** seeds (or handoff explore)
+spaghetti leftover design work. Always end with dual-plan **B** seeds (or handoff explore)
 when design smells remain after the contract is honest.
 
 ## Improvement compass (process preflight)
@@ -152,7 +161,7 @@ feature dirs, plan clusters), you **may** dispatch **subagents**:
 2. **Product map** — what ships, which apps/packages, entry routes/CLIs.
 3. **Read real source** in largest ungoverned dirs and top import edges (min **12 files**
    across **≥4 dirs**).
-4. **“Así te lo re-soluciono”** — concrete layer globs, file moves, manifest/intent proposals.
+4. **“How to fix”** — concrete layer globs, file moves, manifest/intent proposals.
 5. **Suggestive burn-down** — ranked next steps after adopt (not only “baseline done”).
 6. Never freeze a concentrated edge without investigating contract smell / false-green.
 
@@ -182,7 +191,7 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    - Propose: Domain files, `intentPrefixes`, intent names (`Domain.*` / `Application.*`), kernel `defineIntent` stubs if runtime is used;
      land structure/invariant entries under `arkrules/<Layer>.json` **in this turn** (ADR 0015 routing).
    - Write the config; move pure rules into Domain when safe; validate with ark-check.
-   - Deliver section **“Así te lo re-soluciono en el manifiesto”** with before/after contract snippets.
+   - Deliver section **How to fix the architecture config** with before/after contract snippets.
 5. **Freeze only real debt** — `--update-baseline` (zero debt → **no empty baseline file** left behind).
 6. **Gates + skills** — `--install-agent-gates` (CI monorepo-aware when `frontend/package.json` exists).
 7. **Ratchet + Shape seed (mandatory exploratory close)** — after freeze/gates:
@@ -197,7 +206,7 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
 ## Operating modes
 
 Explain modes as **detected stages** (Setup / Align / Guard), not user settings.
-**Guard on the contract ≠ Shape done.** Say `ENFORCE · design-weak` when B residual remains.
+**Guard on the contract ≠ Shape done.** Say leftover design work remains when B residual remains.
 
 ## Verify
 

@@ -33,7 +33,7 @@ local, MCP, CI, and repair guarantees. The table above only lists installed path
 `arkgate-mcp --session-context` appends when governed coverage is low:
 
 ```
-New to Ark? Run /ark-adopt (or /ark-architect) or: ark-check --recommend
+New to Ark? /ark-adopt or: arkgate-check --doctor
 ```
 
 ## Verify gates

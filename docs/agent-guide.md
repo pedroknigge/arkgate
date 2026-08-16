@@ -493,7 +493,7 @@ generating project structure on greenfield or early-adoption repos.
 coverage is low or the config is fresh:
 
 ```
-New to Ark? Run /ark-adopt (or /ark-architect) or: ark-check --recommend
+New to Ark? /ark-adopt or: arkgate-check --doctor
 ```
 
 The `/ark-adopt` skill ships in `templates/skills/ark-adopt.md` (leftover

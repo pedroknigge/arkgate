@@ -90,13 +90,14 @@ function parseArgs(argv) {
     check: false,
     stdout: false,
     help: false,
+    all: false,
     version: false,
   };
 
   const requireValue = (flag, index) => {
     const value = argv[index + 1];
     if (value === undefined || value.startsWith('-')) {
-      throw new Error(`Missing value for ${flag}. Run ark --help for usage.`);
+      throw new Error(`Missing value for ${flag}. Run arkgate --help for usage.`);
     }
     return value;
   };
@@ -143,24 +144,54 @@ function parseArgs(argv) {
     else if (arg === '--check') args.check = true;
     else if (arg === '--stdout') args.stdout = true;
     else if (arg === '--help' || arg === '-h' || arg === 'help') args.help = true;
+    else if (arg === '--all') args.all = true;
     else if (arg === '--version' || arg === '-V') args.version = true;
     else if (!arg.startsWith('-') && args.command === undefined) args.command = arg;
-    else throw new Error(`Unknown argument: ${arg}. Run ark --help for usage.`);
+    else throw new Error(`Unknown argument: ${arg}. Run arkgate --help for usage.`);
   }
 
   return args;
 }
 
 function usage() {
-  return `Usage:
-  ark start   [--root <project>] [--tools <host>] [--require-write-hook <host>] [--install] [--apply] [--json]
-  ark init    [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture]
+  return `arkgate (alias ark) — One architecture config. One check. One coach.
+
+  arkgate start              preview what will change (no writes)
+  arkgate start --apply      write the compact contract + host router + CI
+  arkgate-check --doctor     status light + primary next action
+
+Then session 0 in your agent: /ark-adopt
+Stuck? Run doctor. Do #1.
+
+More commands and flags: arkgate --help --all
+`;
+}
+
+function upgradeUsage() {
+  return `arkgate upgrade (alias ark upgrade) — preview vs apply.
+
+  arkgate upgrade            preview managed updates (no writes)
+  arkgate upgrade --apply    apply the previewed bytes (needs --plan-digest when applying managed files)
+
+Customized files stay unless you pass --accept-conflicts or --refresh-skills.
+Then: arkgate-check --doctor
+
+Every flag: arkgate --help --all
+`;
+}
+
+function usageAll() {
+  return `arkgate (alias ark) — One architecture config. One check. One coach.
+
+Usage:
+  arkgate start   [--root <project>] [--tools <host>] [--require-write-hook <host>] [--install] [--apply] [--json]
+  arkgate init    [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture]
               [--archetype <playbook-id>] [--tools <list>] [--require-write-hook <host>] [--yes] [--force] [--no-strict]
-  ark upgrade [--root <project>] [--tools <list>] [--apply] [--plan-digest <sha256>] [--accept-conflicts] [--refresh-skills] [--json] [--no-install] [--no-strict]
-  ark preflight --changes <change-set.json> [--change-map <map.json>] [--root <project>] [--config ark.config.json] [--manifest <manifest.json>] [--tsconfig <tsconfig.json>] [--json]
-  ark status  [--root <project>] [--config ark.config.json] [--json] [--vs <git-ref>]
+  arkgate upgrade [--root <project>] [--tools <list>] [--apply] [--plan-digest <sha256>] [--accept-conflicts] [--refresh-skills] [--json] [--no-install] [--no-strict]
+  arkgate preflight --changes <change-set.json> [--change-map <map.json>] [--root <project>] [--config ark.config.json] [--manifest <manifest.json>] [--tsconfig <tsconfig.json>] [--json]
+  arkgate status  [--root <project>] [--config ark.config.json] [--json] [--vs <git-ref>]
               [--expected-root <abs>] [--expected-project-id sha256:…] [--tools <host>]
-  ark agents-md [--root <project>] [--config ark.config.json] [--write] [--check] [--stdout] [--json]
+  arkgate agents-md [--root <project>] [--config ark.config.json] [--write] [--check] [--stdout] [--json]
                 [--tools <host>]
 
 Commands:
@@ -796,23 +827,22 @@ async function start(args) {
     }
     console.log('');
     console.log('Next (the only flow you need):');
+    console.log(`  1. Status: ${arkCommand(root, 'arkgate-check', '--doctor')} — do primary next action #1`);
     if (falseGreenGap) {
-      console.log('  1. In your agent:  /ark-adopt — fix the architecture config first');
-      console.log('     → reclassify I/O dirs out of Application; then /ark-autopilot for residual debt.');
+      console.log('  2. Session 0 in your agent:  /ark-adopt — fix the architecture config first');
+      console.log('     → reclassify I/O dirs out of Application; leftover design later via /ark-explore then /ark-autopilot.');
     } else {
-      console.log('  1. In your agent:  /ark-autopilot');
-      console.log('     → explore first, dual plan (remediation + pattern bets), safe fixes, leave gates on.');
+      console.log('  2. Session 0 in your agent:  /ark-adopt');
+      console.log('     → mark the path (greenfield or brownfield). Day-to-day new files: /ark-place.');
     }
-    console.log(`  2. Status anytime: ${arkCommand(root, 'ark-check', '--doctor')}`);
-    console.log(`  3. After edits:    ${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-merge')}`);
+    console.log(`  3. After edits:    ${arkCommand(root, 'arkgate-check', '--root . --config ark.config.json --strict-merge')}`);
     if (mode === 'adapt' && planOk && !falseGreenGap) {
       console.log(
-        `  4. When green but cores still optional: ${arkCommand(root, 'ark-check', '--ratchet-cores')} → honest ENFORCE`
+        `  4. When green but cores still optional: ${arkCommand(root, 'arkgate-check', '--ratchet-cores')} → honest ENFORCE`
       );
     }
     console.log('');
-    console.log('Optional later: ark-check --report ark-report.html (captures a day-zero/evolution report).');
-    console.log('Optional later: --plan · --coverage · /ark-explore · /ark-autopilot · /ark-place · ark upgrade');
+    console.log('Optional later: leftover design → /ark-explore then /ark-autopilot; bump → arkgate upgrade.');
     return 0;
   } finally {
     rl?.close();
@@ -831,8 +861,12 @@ async function main() {
     console.log(cliVersion());
     return 0;
   }
+  if (args.help && (args.command === 'upgrade' || args.command === 'update')) {
+    console.log(upgradeUsage());
+    return 0;
+  }
   if (args.help || !args.command) {
-    console.log(usage());
+    console.log(args.all ? usageAll() : usage());
     return 0;
   }
 

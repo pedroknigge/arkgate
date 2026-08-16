@@ -5,8 +5,8 @@ description: Shortcut to /ark-adopt for greenfield shape. Deprecated as a first-
 
 # /ark-architect — Shortcut to /ark-adopt
 
-**Deprecated as a first-class door.** Session 0 is **`/ark-adopt`**. Do that job now
-(greenfield scaffold via `ark-check --recommend` / MCP `ark_recommend` after `ark_identity`).
+**Not a first-run door.** This leftover name is a shortcut. Session 0 is **`/ark-adopt`**.
+Do that job now. Do not send the user to `/ark-contract` or `/ark-fix`.
 
 ## Autonomy contract
 

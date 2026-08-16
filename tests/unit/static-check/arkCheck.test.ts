@@ -1381,8 +1381,10 @@ describe('ark init', () => {
     for (const args of [['--help'], ['-h'], ['help']]) {
       const res = run(args);
       expect(res.status, `ark ${args.join(' ')}`).toBe(0);
-      expect(res.stdout).toContain('Usage:');
+      expect(res.stdout).toContain('arkgate (alias ark)');
+      expect(res.stdout).toContain('/ark-adopt');
       expect(res.stdout).not.toContain('Unknown command');
+      expect(res.stdout).not.toMatch(/Team parliament/i);
     }
     // A genuinely unknown command still errors.
     expect(run(['bogus']).status).toBe(2);
@@ -1422,6 +1424,7 @@ describe('ark init', () => {
     expect(fs.existsSync(path.join(root, '.github/workflows/ark-check.yml'))).toBe(true);
     expect(fs.existsSync(path.join(root, '.ark/reports/origin.json'))).toBe(false);
     expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('## Compact router');
+    expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).not.toContain('## Skill routing (expert depth');
     expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('ark_manifest');
     expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('ark://manifest');
     expect(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8')).toContain('ark_identity');

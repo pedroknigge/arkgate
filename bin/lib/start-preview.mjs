@@ -147,21 +147,16 @@ export function renderStartPreview(preview, options = {}) {
   } else {
     console.log('Ark start preview — no files were changed.');
   }
+  if (!applying) {
+    console.log('Apply this plan with: arkgate start --apply');
+  }
   if (preview.analysis) {
     console.log(`Your project looks like: ${preview.analysis.label} (${preview.analysis.archetype}, confidence ${preview.analysis.confidence}).`);
   }
-  console.log(`Projected governed coverage: ${preview.projectedCoverage.percent ?? 'unknown'}% (${preview.projectedCoverage.classifiedFiles}/${preview.projectedCoverage.totalFiles} files)`);
-  const budget = preview.setupBudget;
-  const arkrulesNote =
-    budget.arkrulesFiles > 0 ? ` (+${budget.arkrulesFiles} arkrules)` : '';
-  const gateCount = budget.gateFiles ?? budget.files;
-  console.log(
-    `Compact setup budget: ${gateCount}/${budget.maxFiles} gate files${arkrulesNote}, ${budget.bytes}/${budget.maxBytes} bytes${budget.ok ? '' : ' (exceeded)'}.`
-  );
   console.log(applying ? 'Files create/edit/delete:' : 'Files to create/edit/delete:');
   if (preview.changes.length === 0) console.log('  (none)');
   for (const change of preview.changes) {
-    console.log(`  ${change.action.padEnd(6)} ${change.path}  ${change.afterHash ?? '(deleted)'}`);
+    console.log(`  ${change.action.padEnd(6)} ${change.path}`);
   }
   if (!applying) {
     console.log('Commands in the approved setup plan:');
@@ -170,8 +165,7 @@ export function renderStartPreview(preview, options = {}) {
   console.log('Host guarantees:');
   for (const guarantee of preview.hostGuarantees) console.log(`  ${guarantee}`);
   if (preview.runtimeActivation) {
-    console.log('Codex MCP CONFIGURED — RUNTIME NOT VERIFIED.');
-    console.log(`  Runtime activation: ${JSON.stringify(preview.runtimeActivation)}`);
+    console.log('Codex MCP configured on disk — runtime not verified.');
     console.log(`  Restart Codex, then call ark_identity with expectedRoot "${preview.root}".`);
     console.log('  Do not trust MCP verdicts before the project identity matches.');
   }
@@ -179,8 +173,20 @@ export function renderStartPreview(preview, options = {}) {
     console.log('Unresolved decisions:');
     for (const decision of preview.unresolvedDecisions) console.log(`  ${decision}`);
   }
+  console.log('Details (optional):');
+  console.log(`Projected governed coverage: ${preview.projectedCoverage.percent ?? 'unknown'}% (${preview.projectedCoverage.classifiedFiles}/${preview.projectedCoverage.totalFiles} files)`);
+  const budget = preview.setupBudget;
+  const arkrulesNote =
+    budget.arkrulesFiles > 0 ? ` (+${budget.arkrulesFiles} arkrules)` : '';
+  const gateCount = budget.gateFiles ?? budget.files;
+  console.log(
+    `Compact setup budget: ${gateCount}/${budget.maxFiles} gate files${arkrulesNote}, ${budget.bytes}/${budget.maxBytes} bytes${budget.ok ? '' : ' (exceeded)'}.`
+  );
+  for (const change of preview.changes) {
+    console.log(`  ${change.action.padEnd(6)} ${change.path}  ${change.afterHash ?? '(deleted)'}`);
+  }
   if (!applying) {
-    console.log('Review complete file contents with --json. Apply this plan with: ark start --apply');
+    console.log('Review complete file contents with --json.');
   }
 }
 

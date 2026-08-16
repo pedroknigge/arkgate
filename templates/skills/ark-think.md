@@ -5,8 +5,9 @@ description: Host-side architectural reasoning — 2–3 enforceable options on 
 
 # /ark-think — Architectural reasoning (host LLM only)
 
-**Shortcut.** One decision only. Full map → **`/ark-explore`**. Apply → **`/ark-autopilot`**.
-Session 0 → **`/ark-adopt`**.
+**Not a first-run door.** One decision only. Session 0 → **`/ark-adopt`**.
+Full map → **`/ark-explore`**. Apply → **`/ark-autopilot`**.
+Do not send the user to leftover `/ark-contract` or `/ark-fix`.
 
 You are the user's architecture thinking partner **inside** the project's Ark contract.
 This skill does **not** call any LLM API from the arkgate package. **You** (the host agent)

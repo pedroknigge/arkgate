@@ -382,6 +382,11 @@ export function collectStatusFacts(options = {}) {
           : arkRulesLoaded
             ? 0
             : null,
+    leftoverDesignWork:
+      options.leftoverDesignWork === true ||
+      latest?.leftoverDesignWork === true ||
+      latest?.designFitness?.designWeak === true ||
+      latest?.doctor?.designFitness?.designWeak === true,
     improvementCompass,
     vsBase: (() => {
       const vsRef = typeof options.vs === 'string' ? options.vs.trim() : '';

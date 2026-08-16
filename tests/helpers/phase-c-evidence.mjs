@@ -209,8 +209,9 @@ export function captureSessionContextHint(scratchDir) {
   });
   assertOk(low.status === 0, `session-context low fixture failed (exit ${low.status})`);
   assertOk(low.stdout.includes('New to Ark?'), 'low-coverage session-context missing New to Ark?');
-  assertOk(low.stdout.includes('/ark-architect'), 'low-coverage session-context missing /ark-architect');
-  assertOk(low.stdout.includes('ark-check --recommend'), 'low-coverage session-context missing bare recommend command');
+  assertOk(low.stdout.includes('/ark-adopt'), 'low-coverage session-context missing /ark-adopt');
+  assertOk(low.stdout.includes('arkgate-check --doctor'), 'low-coverage session-context missing doctor command');
+  assertOk(!low.stdout.includes('/ark-architect'), 'low-coverage session-context must not advertise leftover /ark-architect');
 
   lines.push('=== low coverage fixture ===');
   lines.push(low.stdout);

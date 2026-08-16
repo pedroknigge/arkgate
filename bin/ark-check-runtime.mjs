@@ -166,12 +166,13 @@ function parseArgs(argv) {
     noOpenReport: false,
     version: false,
     help: false,
+    all: false,
     followConfigRoot: false,
   };
   const requireValue = (flag, index) => {
     const value = argv[index + 1];
     if (value === undefined || value.startsWith('-')) {
-      throw new Error(`Missing value for ${flag}. Run ark-check --help for usage.`);
+      throw new Error(`Missing value for ${flag}. Run arkgate-check --help for usage.`);
     }
     return value;
   };
@@ -269,8 +270,9 @@ function parseArgs(argv) {
     else if (arg === '--print-config') args.printConfig = requireValue(arg, i++);
     else if (arg === '--tsconfig') args.tsconfig = requireValue(arg, i++);
     else if (arg === '--help' || arg === '-h') args.help = true;
+    else if (arg === '--all') args.all = true;
     else if (arg === '--version' || arg === '-V') args.version = true;
-    else throw new Error(`Unknown argument: ${arg}. Run ark-check --help for usage.`);
+    else throw new Error(`Unknown argument: ${arg}. Run arkgate-check --help for usage.`);
   }
   return args;
 }
@@ -285,9 +287,22 @@ function displayPathFromRoot(root, absPath) {
 }
 function usage() {
   return [
+    'arkgate-check (alias ark-check) — the architecture check.',
+    '',
+    '  arkgate-check --doctor         where you are: one status light, one next action',
+    '  arkgate-check --strict-merge   CI / merge gate (required GitHub status)',
+    '',
+    'Every flag and command: arkgate-check --help --all',
+  ].join('\n');
+}
+
+function usageAll() {
+  return [
+    'arkgate-check (alias ark-check) — the architecture check.',
+    '',
     'Usage: arkgate-check | ark-check  (identical bins; product name ArkGate)',
-    '       ark-check --version',
-    '       ark-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-merge | --strict | --strict-config] [--policy-base <file> | --policy-base-ref <git-ref>] [--policy-ack <file>] [--fail-on-new-smells --base-ref <git-ref>] [--contract-diff] [--contract-session] [--changed] [--against <git-ref>] [--base <git-ref>] [--persona touch|contributor|agent|steward] [--author <id>] [--require-gates] [--require-write-hook <host>] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
+    '       arkgate-check --version',
+    '       arkgate-check --root <project> --config <ark.config.json> [--manifest <ark.manifest.json>] [--tsconfig <tsconfig.json>] [--strict-merge | --strict | --strict-config] [--policy-base <file> | --policy-base-ref <git-ref>] [--policy-ack <file>] [--fail-on-new-smells --base-ref <git-ref>] [--contract-diff] [--contract-session] [--changed] [--against <git-ref>] [--base <git-ref>] [--persona touch|contributor|agent|steward] [--author <id>] [--require-gates] [--require-write-hook <host>] [--json] [--baseline [file]] [--report [file.html]] [--no-cache]',
     '       ark-check --doctor [--json] [--resident] [--fail-on-new-smells --base-ref <git-ref>]  read-only diagnosis; resident JSON falls back cold',
     '       ark-check --coverage [--json]          per-layer file counts + full unclassified list (report only, exit 0)',
     '       ark-check --plan [--json]              classified remediation plan (mechanical-safe / judgment / deferred) + goal; report only',
@@ -1148,7 +1163,7 @@ async function main() {
     process.exit(0);
   }
   if (args.help) {
-    console.log(usage());
+    console.log(args.all ? usageAll() : usage());
     return;
   }
   if (args.init) {
@@ -1706,20 +1721,23 @@ async function main() {
                 }),
           }
         : null;
-    const currentSnapshot = buildReportSnapshot({
-      root,
-      config,
-      coverage,
-      violations: activeViolations,
-      ok,
-      suppressed: suppressed.length,
-      version: arkPackageVersion(),
-      fileCountByLayer,
-      enforcement: enforcementForReport,
-      score: fitness.score,
-      mode: fitness.mode,
-      improvementCompass: reportCompass,
-    });
+    const currentSnapshot = {
+      ...buildReportSnapshot({
+        root,
+        config,
+        coverage,
+        violations: activeViolations,
+        ok,
+        suppressed: suppressed.length,
+        version: arkPackageVersion(),
+        fileCountByLayer,
+        enforcement: enforcementForReport,
+        score: fitness.score,
+        mode: fitness.mode,
+        improvementCompass: reportCompass,
+      }),
+      leftoverDesignWork: designDepth?.designFitness?.designWeak === true,
+    };
     const reportPayload = {
       root,
       config,

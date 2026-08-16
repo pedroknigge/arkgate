@@ -5,8 +5,9 @@ description: Explain this project's architecture in plain language and generate 
 
 # /ark-explain — Understand this project's architecture
 
-**Shortcut.** Teach / HTML tour only. Map → **`/ark-explore`**. Apply → **`/ark-autopilot`**.
-Session 0 → **`/ark-adopt`**.
+**Not a first-run door.** Teach / HTML tour only. Session 0 → **`/ark-adopt`**.
+Map → **`/ark-explore`**. Apply → **`/ark-autopilot`**.
+Do not send the user to leftover `/ark-contract` or `/ark-fix`.
 
 The user wants to understand the architecture, a specific rule, or why the gate blocked them.
 

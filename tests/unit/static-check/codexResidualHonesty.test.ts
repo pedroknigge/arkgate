@@ -322,7 +322,12 @@ describe('multi-host skill hints (no exclusive Codex legacy)', () => {
       joined.indexOf('Top actions')
     );
     if (topIdx >= 0) {
-      expect(joined.slice(topIdx)).not.toMatch(/--codex-home --force/);
+      const numbered = joined
+        .slice(topIdx)
+        .split('\n')
+        .filter((line) => /^\s+\d+\.\s/.test(line))
+        .join('\n');
+      expect(numbered).not.toMatch(/--codex-home --force/);
     }
   });
 

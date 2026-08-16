@@ -5,8 +5,9 @@ description: Ark adoption fitness audit — governed%, gates, baseline honesty, 
 
 # /ark-coverage — Ark adoption fitness (not full recon)
 
-**Shortcut.** Fitness numbers only. Full map / leftover design → **`/ark-explore`**.
-Apply → **`/ark-autopilot`**. Session 0 → **`/ark-adopt`**. This is not `/ark-explore`.
+**Not a first-run door.** Fitness numbers only (governed files, gates, baseline).
+Session 0 → **`/ark-adopt`**. Leftover design → **`/ark-explore`**. Apply → **`/ark-autopilot`**.
+Do not send the user to leftover `/ark-contract` or `/ark-fix`.
 
 You audit **how this repo uses ArkGate** (coverage, gates, baseline, host write path) and
 what adoption gaps remain. Work autonomously. End with a ranked fitness report.
@@ -56,7 +57,7 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 2. **Product surface** — name the app/package(s) in one line (not a full recon).
 3. **Read real source** in the top ungoverned / high-risk clusters (minimum **10 files**
    across at least **4 directories**). Prefer domain, features, adapters, routes — not only config.
-4. **“Así te lo re-soluciono”** for adoption gaps (globs, install, baseline, intents).
+4. **“How to fix”** for adoption gaps (globs, install, baseline, intents).
 5. If plan A is empty but you see design-weak / concurrent patterns / god modules:
    list them briefly and **STOP — do not continue this skill as complete** for pattern work —
    **handoff `/ark-explore` (dual-plan seed or shape-focus)**. Do not invent a second explore report here.
@@ -159,7 +160,7 @@ because governed% is 100% and plan is empty.
 2. **Adoption map** — clusters you read for *fitness* (paths) — keep short.
 3. **Ranked table** (adoption residual + install/capability opportunities)
 
-| # | Kind | Gap / opportunity | Evidence (path or CLI) | Así te lo re-soluciono (concrete) | Next |
+| # | Kind | Gap / opportunity | Evidence (path or CLI) | How to fix (concrete) | Next |
 
 Kinds: `debt` | `false-green` | `shape` | `manifiesto` | `gates` | `opportunity` | `design-weak`
 
@@ -169,7 +170,7 @@ Kinds: `debt` | `false-green` | `shape` | `manifiesto` | `gates` | `opportunity`
 ## Done criteria
 
 - ≥10 source files read and cited; product surface named.
-- At least one **Así te lo re-soluciono** block with real paths or install commands.
+- At least one **How to fix** block with real paths or install commands.
 - CLI numbers used as evidence, not as the whole report.
 - Design residual either absent with evidence or explicitly handed to `/ark-explore`.
 

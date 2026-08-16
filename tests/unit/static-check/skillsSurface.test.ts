@@ -169,9 +169,11 @@ describe('skill dual-engine + completion contract', () => {
       expect(body, name).toContain('expectedRoot');
       expect(body, name).toContain('expectedProjectId');
       expect(body, name).toMatch(/do not consume MCP analysis/i);
+      const doors = new Set(['ark-adopt', 'ark-place', 'ark-autopilot', 'ark-explore', 'ark-upgrade']);
       const steps = body.indexOf('## Steps');
-      if (steps >= 0) {
-        expect(body.indexOf('## MCP workspace binding (mandatory)'), name).toBeLessThan(steps);
+      if (doors.has(name) && steps >= 0) {
+        // First-run When + Steps stay above Dual plane / MCP / compass essays.
+        expect(body.indexOf('## MCP workspace binding (mandatory)'), name).toBeGreaterThan(steps);
       }
     }
 
@@ -283,7 +285,7 @@ describe('skill role clarity + exploratory depth (P01)', () => {
     expect(explore).toContain('## When / not when');
     expect(explore).toMatch(/shape-focus|Dual-plan seed/i);
     expect(explore).toMatch(/Spaghetti \/ design-depth|design-depth ladder/i);
-    expect(explore).toMatch(/ENFORCE · design-weak|ENFORCE·design-weak|design-weak/);
+    expect(explore).toMatch(/leftover design work|design-weak/);
     expect(explore).toContain('Extraction card');
     expect(explore).toMatch(/Align|Stabilize|Shape/);
 

@@ -511,6 +511,94 @@ export function runPlan(
   return plan;
 }
 
+/**
+ * Rank doctor next actions from already-computed facts (no I/O).
+ * Used so the human printer can show light + #1 before honesty/compass sections.
+ */
+function collectDoctorNextActions(ctx) {
+  const actions = [];
+  if (!ctx.analysisComplete) actions.push('restore complete analysis, then rerun ark-check --doctor');
+  if (ctx.designSmells.length > 0 && ctx.postGreenPath) actions.push(ctx.postGreenPath.action);
+  if (ctx.coverageHonesty.greenIsNotEnforcement && ctx.coverageHonesty.worseThanNoGate) {
+    actions.push('raise governed coverage above a minority slice before treating green as enforcement');
+  }
+  if (ctx.cov.suggestions.length > 0) actions.push('classify the ungoverned directories (/ark-adopt)');
+  if (ctx.packageVersionTruth?.dualTruth) {
+    actions.push(
+      ctx.dualTruthNext ||
+        'bump package.json arkgate pin to match this CLI (or install without --no-install)'
+    );
+  } else if (ctx.packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT') {
+    actions.push(
+      ctx.dualTruthNext ||
+        'Add arkgate to package.json and install so CI/npx resolve this CLI (PACKAGE_PIN_ABSENT)'
+    );
+  }
+  if (ctx.activeCount > 0) {
+    actions.push(
+      `resolve the non-baselined violations — see the classified plan (${arkCommand(ctx.root, 'ark-check', '--plan')}), then /ark-autopilot`
+    );
+  }
+  if (ctx.writePath?.gap?.fix) actions.push(ctx.writePath.gap.fix);
+  if (ctx.gatesMissing.length > 0) {
+    actions.push(`install gates (${arkCommand(ctx.root, 'ark-check', '--install-agent-gates')})`);
+  }
+  const humanSkillGaps = skillGapsForActiveHost(ctx.skillGaps);
+  const legacyCodex = humanSkillGaps.some((g) => g.tool === 'codex' && g.legacyPromptsOnly);
+  const remainingGaps = humanSkillGaps.filter(
+    (g) => !(g.tool === 'codex' && (g.legacyPromptsOnly || g.legacyAdvisory))
+  );
+  const remMiss = remainingGaps.reduce((s, g) => s + g.missing, 0);
+  const remStale = remainingGaps.reduce((s, g) => s + g.stale, 0);
+  if (legacyCodex) {
+    actions.push('install Codex SKILL.md catalog (--install-agent-gates --skills-only --tools codex --force)');
+  }
+  if (remMiss + remStale > 0) {
+    actions.push('refresh /ark-* skills (--install-agent-gates --skills-only --force)');
+  }
+  if (ctx.codexHomeGap && ctx.codexConcernActive) {
+    actions.push(
+      ctx.codexHomeGap.catalogMetadataInvalid
+        ? 'repair invalid Codex home catalog metadata after verifying the newest installed version'
+        : 'refresh Codex home skills (--install-agent-gates --skills-only --codex-home --force)'
+    );
+  }
+  for (const gap of ctx.agentHomeGaps) {
+    if (agentHomeConcernIsActive(gap.host)) {
+      actions.push(
+        gap.catalogMetadataInvalid
+          ? `repair invalid ${gap.label} home catalog metadata after verifying the newest installed version`
+          : `refresh ${gap.label} shared agent skills (${agentHomeRefreshCommand(ctx.root, gap)})`
+      );
+    }
+  }
+  if (ctx.analysisComplete && ctx.baselineHonesty?.dirtyBaselineRisk) {
+    actions.push('review dirty baseline freezes — fix the contract before trusting green-via-freeze');
+  }
+  if (ctx.analysisComplete && ctx.staleBaseline > 0) {
+    actions.push('tighten the baseline (--update-baseline)');
+  }
+  if (ctx.staleRunners.length > 0) {
+    actions.push(
+      `migrate command runners (${arkCommand(ctx.root, 'ark-check', '--install-agent-gates --migrate-commands')})`
+    );
+  }
+  for (const gap of ctx.adoption.gaps) {
+    if (!gap.deferred) actions.push(gap.fix || gap.message);
+  }
+  if (ctx.safety && ctx.safetyHasEntries) {
+    actions.push('resolve strict safety diagnostics before treating CI as enforcement');
+  }
+  if (ctx.showNewHere) {
+    actions.unshift('finish ark start (preview + --apply), then re-run --doctor');
+  }
+  const unique = mergePostGreenTopActions(actions, ctx.postGreenPath);
+  if (ctx.designFitness.designWeak && unique.length === 0 && ctx.postGreenPath) {
+    unique.push(ctx.postGreenPath.action);
+  }
+  return unique;
+}
+
 export function runDoctor(root, config, files, rules, violations, asJson, options = {}) {
   const completeness = normalizeAnalysisCompleteness(options.completeness);
   const analysisComplete = completeness === ANALYSIS_COMPLETENESS.complete;
@@ -864,6 +952,63 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       bad,
       'Empty scope: include paths match 0 source files — a green check is meaningless until include/layers match the tree (monorepo → apps/packages, or /ark-adopt).'
     );
+  }
+
+  const safetyHasEntries = Boolean(
+    options.safety &&
+      [
+        options.safety.nonLiteralDynamicImports,
+        options.safety.tsSuppressions,
+        options.safety.anyCasts,
+        options.safety.inMemoryProductionStores,
+        options.safety.disabledPeerIsolationRules,
+      ].some((entries) => Array.isArray(entries) && entries.length > 0)
+  );
+  const uniqueActions = collectDoctorNextActions({
+    root,
+    analysisComplete,
+    designSmells,
+    postGreenPath,
+    coverageHonesty,
+    cov,
+    packageVersionTruth,
+    dualTruthNext,
+    activeCount,
+    writePath,
+    gatesMissing,
+    skillGaps,
+    codexHomeGap: detectCodexHomeGap(root),
+    codexConcernActive: codexConcernIsActive(),
+    agentHomeGaps,
+    baselineHonesty,
+    staleBaseline,
+    staleRunners,
+    adoption,
+    safety: options.safety,
+    safetyHasEntries,
+    showNewHere,
+    designFitness,
+  });
+  console.log('');
+  if (isDoctorHealthyNothingToDo(designFitness, uniqueActions)) {
+    console.log(color.green('✔ Healthy — nothing to do.'));
+    console.log(color.dim('  Contract edges and design residual are clear. Keep write path + CI.'));
+  } else {
+    console.log(color.bold('Primary next action'));
+    console.log(`  1. ${uniqueActions[0]}`);
+    if (uniqueActions.length > 1) {
+      console.log(color.bold(`Also (${uniqueActions.length - 1}):`));
+      uniqueActions.slice(1).forEach((action, index) => console.log(`  ${index + 2}. ${action}`));
+    }
+    if (postGreenPath) {
+      console.log(
+        color.dim(
+          `  Shape residual is the primary door under ${modeTitle} — do not skill-shop explore vs coverage vs think.`
+        )
+      );
+    } else {
+      console.log(color.dim('  Doctor is the control plane: do #1 first, then re-run --doctor.'));
+    }
   }
 
   // P0-B — single honesty surface (never a score; never "all good" when residual remains).
@@ -1274,29 +1419,4 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     }
   }
 
-  console.log('');
-  const uniqueActions = mergePostGreenTopActions(actions, postGreenPath);
-  if (isDoctorHealthyNothingToDo(designFitness, uniqueActions)) {
-    console.log(color.green('✔ Healthy — nothing to do.'));
-    console.log(color.dim('  Contract edges and design residual are clear. Keep write path + CI.'));
-  } else {
-    if (designFitness.designWeak && uniqueActions.length === 0 && postGreenPath) {
-      uniqueActions.push(postGreenPath.action);
-    }
-    console.log(color.bold(`Primary next action`));
-    console.log(`  1. ${uniqueActions[0]}`);
-    if (uniqueActions.length > 1) {
-      console.log(color.bold(`Also (${uniqueActions.length - 1}):`));
-      uniqueActions.slice(1).forEach((action, index) => console.log(`  ${index + 2}. ${action}`));
-    }
-    if (postGreenPath) {
-      console.log(
-        color.dim(
-          `  Shape residual is the primary door under ${modeTitle} — do not skill-shop explore vs coverage vs think.`
-        )
-      );
-    } else {
-      console.log(color.dim('  Doctor is the control plane: do #1 first, then re-run --doctor.'));
-    }
-  }
 }
