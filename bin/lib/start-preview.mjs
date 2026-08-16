@@ -165,7 +165,8 @@ export function renderStartPreview(preview, options = {}) {
   console.log('Host guarantees:');
   for (const guarantee of preview.hostGuarantees) console.log(`  ${guarantee}`);
   if (preview.runtimeActivation) {
-    console.log('Codex MCP configured on disk — runtime not verified.');
+    console.log('Codex MCP CONFIGURED — RUNTIME NOT VERIFIED.');
+    console.log(`  Runtime activation: ${JSON.stringify(preview.runtimeActivation)}`);
     console.log(`  Restart Codex, then call ark_identity with expectedRoot "${preview.root}".`);
     console.log('  Do not trust MCP verdicts before the project identity matches.');
   }
