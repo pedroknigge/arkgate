@@ -35,6 +35,7 @@ import {
 } from './lib/prepare-change.mjs';
 import { runStatusCommand } from './lib/status-command.mjs';
 import { runAgentProjectionCommand } from './lib/agent-projection-command.mjs';
+import { setupUsage, setupUsageAll, upgradeUsage } from './lib/first-run-help.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const arkCheck = path.join(here, 'ark-check.mjs');
@@ -90,13 +91,14 @@ function parseArgs(argv) {
     check: false,
     stdout: false,
     help: false,
+    all: false,
     version: false,
   };
 
   const requireValue = (flag, index) => {
     const value = argv[index + 1];
     if (value === undefined || value.startsWith('-')) {
-      throw new Error(`Missing value for ${flag}. Run ark --help for usage.`);
+      throw new Error(`Missing value for ${flag}. Run arkgate --help for usage.`);
     }
     return value;
   };
@@ -143,77 +145,13 @@ function parseArgs(argv) {
     else if (arg === '--check') args.check = true;
     else if (arg === '--stdout') args.stdout = true;
     else if (arg === '--help' || arg === '-h' || arg === 'help') args.help = true;
+    else if (arg === '--all') args.all = true;
     else if (arg === '--version' || arg === '-V') args.version = true;
     else if (!arg.startsWith('-') && args.command === undefined) args.command = arg;
-    else throw new Error(`Unknown argument: ${arg}. Run ark --help for usage.`);
+    else throw new Error(`Unknown argument: ${arg}. Run arkgate --help for usage.`);
   }
 
   return args;
-}
-
-function usage() {
-  return `Usage:
-  ark start   [--root <project>] [--tools <host>] [--require-write-hook <host>] [--install] [--apply] [--json]
-  ark init    [--root <project>] [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|clean-architecture|onion-architecture]
-              [--archetype <playbook-id>] [--tools <list>] [--require-write-hook <host>] [--yes] [--force] [--no-strict]
-  ark upgrade [--root <project>] [--tools <list>] [--apply] [--plan-digest <sha256>] [--accept-conflicts] [--refresh-skills] [--json] [--no-install] [--no-strict]
-  ark preflight --changes <change-set.json> [--change-map <map.json>] [--root <project>] [--config ark.config.json] [--manifest <manifest.json>] [--tsconfig <tsconfig.json>] [--json]
-  ark status  [--root <project>] [--config ark.config.json] [--json] [--vs <git-ref>]
-              [--expected-root <abs>] [--expected-project-id sha256:…] [--tools <host>]
-  ark agents-md [--root <project>] [--config ark.config.json] [--write] [--check] [--stdout] [--json]
-                [--tools <host>]
-
-Commands:
-  start     New here? Analyze and preview the complete setup. Read-only unless --apply.
-  init      Configure Ark project enforcement with explicit prompts.
-  upgrade   Preview identity-proven Ark-managed asset updates. With package install,
-            --apply bumps toward registry latest when behind (not only when CLI ≠ pin)
-            and recomputes the preview; a second explicit --apply --no-install applies
-            those exact bytes and verifies them. --refresh-skills opts in to rewrite
-            customized managed skills to package templates (never silent default).
-            (alias: ark update)
-  preflight Validate one atomic create/update/delete set without writing project files.
-  status    Unified session/project manifest (identity, activation, last check, rules).
-            Never prompts. Prefer --json for agents; CI=1 forces JSON.
-  agents-md Version-matched agent contract projection (ACS04). Stamps package version +
-            contract summary into a managed AGENTS.md block. Non-authoritative — not a
-            gate input. Preview by default; --write merges without clobbering outside
-            regions; --check fails on version drift; --stdout prints the block only.
-            (aliases: agents-md, agent-projection)
-
-Options:
-  --yes        Non-interactive defaults: create config if needed, install gate templates, run strict check.
-               (Also the implicit default when stdin/stdout are not a TTY — agents never hang on prompts.)
-  --force      Allow generated files to overwrite existing files.
-  --no-strict  Skip the final strict ark-check run.
-  --install    Pin and install arkgate as a project devDependency (default for start).
-  --no-install Skip adding/installing arkgate as a project devDependency (start/upgrade).
-  --apply       Apply a start plan; for upgrade, update/repreview or apply managed bytes.
-  --accept-conflicts
-                Allow upgrade to recreate deleted managed assets or replace recorded conflicts.
-  --plan-digest Digest emitted by an upgrade preview; required to apply managed bytes.
-  --json        Emit the start/upgrade/status/agents-md preview as deterministic machine-readable JSON.
-  --write       For agents-md: merge the version-matched projection into AGENTS.md.
-  --check       For agents-md: exit 1 when projection stamp drifts from package version.
-  --stdout      For agents-md: print the projection block only (no file write).
-  --expected-root / --expected-project-id
-                Optional project expectation for status (MCP-compatible binding check).
-  --preset     Start from a named architecture preset instead of detection.
-  --archetype  Application shape from templates/architecture-playbook.json (maps to the matching preset).
-               Valid ids: crud-product, api-backend, frontend-surface, library-sdk, cli-utility,
-               worker-pipeline, event-coordinator, integration-bridge, multi-app-workspace, prototype-spike,
-               vertical-slice-product, ddd-bounded-contexts.
-  --tools      One active agent host for start (claude,cursor,codex,grok,windsurf,cline,copilot,kiro,roo,continue,gemini).
-               Omit to use the active host; an unknown host creates only the shared compact router.
-  --remove-host <host>
-               Preview or apply removal of that compact host integration; re-add it with --tools <host>.
-  --require-write-hook <host>
-               Require and verify a hard local write hook for Claude, Grok, Antigravity, or Cursor.
-               Codex/OpenCode are advisory-write plus hard CI merge only; impossible requests fail before any write.
-
-Interactive mode (TTY, no --yes): asks what application shape you are building and maps it to a preset.
-Non-interactive (no TTY): uses the same defaults as --yes — never calls readline on a null interface.
-`;
 }
 
 function cliVersion() {
@@ -796,23 +734,22 @@ async function start(args) {
     }
     console.log('');
     console.log('Next (the only flow you need):');
+    console.log(`  1. Status: ${arkCommand(root, 'arkgate-check', '--doctor')} — do primary next action #1`);
     if (falseGreenGap) {
-      console.log('  1. In your agent:  /ark-adopt — fix the architecture config first');
-      console.log('     → reclassify I/O dirs out of Application; then /ark-autopilot for residual debt.');
+      console.log('  2. Session 0 in your agent:  /ark-adopt — fix the architecture config first');
+      console.log('     → reclassify I/O dirs out of Application; leftover design later via /ark-explore then /ark-autopilot.');
     } else {
-      console.log('  1. In your agent:  /ark-autopilot');
-      console.log('     → explore first, dual plan (remediation + pattern bets), safe fixes, leave gates on.');
+      console.log('  2. Session 0 in your agent:  /ark-adopt');
+      console.log('     → mark the path (greenfield or brownfield). Day-to-day new files: /ark-place.');
     }
-    console.log(`  2. Status anytime: ${arkCommand(root, 'ark-check', '--doctor')}`);
-    console.log(`  3. After edits:    ${arkCommand(root, 'ark-check', '--root . --config ark.config.json --strict-merge')}`);
+    console.log(`  3. After edits:    ${arkCommand(root, 'arkgate-check', '--root . --config ark.config.json --strict-merge')}`);
     if (mode === 'adapt' && planOk && !falseGreenGap) {
       console.log(
-        `  4. When green but cores still optional: ${arkCommand(root, 'ark-check', '--ratchet-cores')} → honest ENFORCE`
+        `  4. When green but cores still optional: ${arkCommand(root, 'arkgate-check', '--ratchet-cores')} → honest ENFORCE`
       );
     }
     console.log('');
-    console.log('Optional later: ark-check --report ark-report.html (captures a day-zero/evolution report).');
-    console.log('Optional later: --plan · --coverage · /ark-explore · /ark-autopilot · /ark-place · ark upgrade');
+    console.log('Optional later: leftover design → /ark-explore then /ark-autopilot; bump → arkgate upgrade.');
     return 0;
   } finally {
     rl?.close();
@@ -831,8 +768,12 @@ async function main() {
     console.log(cliVersion());
     return 0;
   }
+  if (args.help && (args.command === 'upgrade' || args.command === 'update')) {
+    console.log(upgradeUsage());
+    return 0;
+  }
   if (args.help || !args.command) {
-    console.log(usage());
+    console.log(args.all ? setupUsageAll() : setupUsage());
     return 0;
   }
 
@@ -961,7 +902,7 @@ async function main() {
   }
 
   console.error(`Unknown command: ${args.command}`);
-  console.error(usage());
+  console.error(setupUsage());
   return 2;
 }
 

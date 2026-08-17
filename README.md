@@ -17,7 +17,8 @@ and makes sure a “green” check means something real.
 </div>
 
 > **ArkGate 4.6.1** is on npm `latest` — five doors + a lock on the constitution.
-> [4.6.1 notes](docs/releases/4.6.1.md) · [4.6.0](docs/releases/4.6.0.md) · [4.5.7](docs/releases/4.5.7.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> **4.6.2** is prepared on this tree (first-contact copy; not yet `latest`).
+> [4.6.2 notes](docs/releases/4.6.2.md) · [4.6.1](docs/releases/4.6.1.md) · [4.6.0](docs/releases/4.6.0.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
 
@@ -214,6 +215,7 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
 | Current release (4.6.1 on npm `latest`) | [docs/releases/4.6.1.md](docs/releases/4.6.1.md) · [CHANGELOG](CHANGELOG.md) |
+| Prepared (4.6.2 — not yet `latest`) | [docs/releases/4.6.2.md](docs/releases/4.6.2.md) |
 | Prior (4.5.7) | [docs/releases/4.5.7.md](docs/releases/4.5.7.md) |
 | Prior (4.5.0) | [docs/releases/4.5.0.md](docs/releases/4.5.0.md) |
 | Prior (4.4.0) | [docs/releases/4.4.0.md](docs/releases/4.4.0.md) |

@@ -5,7 +5,7 @@ description: Shortcut to /ark-autopilot for a small violation cluster. Deprecate
 
 # /ark-fix — Shortcut to /ark-autopilot
 
-**Deprecated as a first-class door.** Gate violations and judgment remediations are
+**Not a first-run door.** This leftover name is a shortcut. Gate violations are
 **`/ark-autopilot`**. Do that job now. CLI only validates.
 
 ## Autonomy contract

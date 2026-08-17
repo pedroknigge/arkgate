@@ -5,6 +5,15 @@ description: "Where does new code go? Names the layer, directory, and naming for
 
 # /ark-place — Where does this code go?
 
+**When:** you are adding a new file or artifact and need the layer, folder, and name.
+**Not when:** session 0 / config is missing or lying (`/ark-adopt`) or an existing violation cluster (`/ark-autopilot`).
+
+## Steps
+
+1. Bind identity if using MCP (`ark_identity` with the exact project root).
+2. Place the file (`ark_place` or read `ark.config.json`).
+3. Write it there. Then `arkgate-check`.
+
 ## Autonomy contract
 
 Invoking this skill **is** the approval. If the user described an artifact, **write the
@@ -155,7 +164,7 @@ the same files or weaken the gate.
 
 - If the user needs bulk adoption / wrong config, not a single artifact: **STOP — do not continue this skill as complete.** Switch to **`/ark-adopt`** (write the path) instead of ad-hoc multi-file grinding without a plan.
 - If the config lacks a home for the artifact: add the layer **in this turn**, then write the file.
-- If doctor is **ENFORCE · design-weak** and the user is asking to reshape existing structure
+- If doctor shows leftover design work and the user is asking to reshape existing structure
   (not place one new artifact): place only the new file under the golden/contract home, then
   hand off **one** pilot via `pilotLoop.nextPilot` / `/ark-explore` shape-focus — never multi-pilot
   batch reshape from this skill.

@@ -180,6 +180,11 @@ export type StatusManifestFacts = {
   /** Optional override when Tooling already computed productHonesty next action. */
   nextActionOverride?: StatusNextAction | null;
   /**
+   * Leftover design work remains (import rules may be clean). Not a score.
+   * When true, nextAction must not be stay-enforced.
+   */
+  leftoverDesignWork?: boolean;
+  /**
    * Improvement compass residual slice (notAScore) with honesty mode.
    * Prefer projectStatusImprovementCompass() before passing facts.
    */
@@ -424,6 +429,13 @@ export function resolveStatusNextAction(
       id: 'keep-ci-merge-hard',
       summary:
         'Local write is advisory for this host — keep a required GitHub status on arkgate-check --strict-merge as the hard merge boundary.',
+    };
+  }
+  if (facts.leftoverDesignWork === true) {
+    return {
+      id: 'map-leftover-design',
+      summary:
+        'Leftover design work remains. Map with /ark-explore, then apply one small refactor with /ark-autopilot. Green imports are not done.',
     };
   }
   if (rules.arkRulesLoaded && (rules.frozenResidual ?? 0) > 0) {

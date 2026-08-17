@@ -56,8 +56,10 @@ describe('renderStartPreview direct output coverage', () => {
     expect(output).toContain('Host guarantees:');
     expect(output).toContain('Unresolved decisions:');
     expect(output).toContain('Classify three remaining files.');
-    expect(output).toContain(
-      'Review complete file contents with --json. Apply this plan with: ark start --apply'
+    expect(output).toContain('Apply this plan with: arkgate start --apply');
+    expect(output).toContain('Review complete file contents with --json.');
+    expect(output.indexOf('Apply this plan with: arkgate start --apply')).toBeLessThan(
+      output.indexOf('Projected governed coverage')
     );
   });
 
@@ -88,6 +90,7 @@ describe('renderStartPreview direct output coverage', () => {
     expect(output).toContain('Files create/edit/delete:\n  (none)');
     expect(output).toContain('Compact setup budget: 0/8 gate files, 0/32768 bytes.');
     expect(output).not.toContain('Commands in the approved setup plan:');
+    expect(output).not.toContain('Apply this plan with: arkgate start --apply');
     expect(output).not.toContain('Apply this plan with: ark start --apply');
   });
 });

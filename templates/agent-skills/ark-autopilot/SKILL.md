@@ -5,9 +5,16 @@ description: Apply Ark end-to-end — explore first; dual plan A (edges) + B (sh
 
 # /ark-autopilot — Apply the path
 
-**This is the apply door.** Invoking it **is** the approval. Prefer it when the user wants
-architecture cleaned end-to-end, not when they only need a map (`/ark-explore`). Doctor
-remains the control plane: re-check status after each major step.
+**When:** the user wants architecture cleaned end-to-end, or leftover design after a map.
+**Not when:** map only (`/ark-explore`), session 0 / config lying (`/ark-adopt`), or one new file (`/ark-place`).
+
+## Steps
+
+1. Read `arkgate-check --doctor` (do #1).
+2. Fix import-rule debt; if leftover design remains, apply **one** small refactor.
+3. Re-run doctor. Never weaken `ark.config.json`.
+
+**This is the apply door.** Invoking it **is** the approval. Doctor remains the control plane.
 
 ## Autonomy contract
 
@@ -81,7 +88,7 @@ decision-grade explore pass **and** without opening violating files.
 2. CLI sensors: `--plan --json`, `--coverage --json` / `--doctor` as needed.
 3. **Dual plan** always emitted (sections A and B).
 4. **Open every file** in plan A `steps[]` (and `target` if present) before classifying a fix.
-5. **“Así te lo re-soluciono”** for each A cluster and each B pattern bet.
+5. **“How to fix”** for each A cluster and each B pattern bet.
 6. Apply A → re-run ark-check → rollback on regression. **Never auto-apply B** as mechanical-safe.
 7. **One-pilot loop for B:** when leftover design / design-weak, take **`pilotLoop.nextPilot`** (one extraction card)
    → apply **only** that pilot **in this turn** → **re-doctor**. Never multi-pilot batch B; residual
@@ -153,7 +160,7 @@ Use the **`/ark-explore` decision-grade bar** (compressed into the autopilot rep
 Include explore **§G** when spaghetti / design-weak signals fire.
 
 1. **Headline** — product one-liner + honesty (mode, governed%, false-green / false-promise /
-   **ENFORCE·design-weak** risk).
+   leftover design work risk).
 2. **Map** — entry points, lived layout vs globs (one screen). **Concurrent patterns** table when ≥2 styles.
 3. **Phase ladder** — name **Align | Stabilize | Shape** (explore §G).
 4. **Field path** — if `examples/` / gallery / starter docs exist: open ≥2, **run** their check when cheap; flag soft-green or broken demos. Else `Field path: n/a` + internal norm.

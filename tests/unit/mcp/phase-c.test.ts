@@ -43,8 +43,9 @@ describe('Phase C — verification evidence helpers', () => {
   it('captureSessionContextHint — low coverage shows hint, high omits it', () => {
     const { low, high } = captureSessionContextHint(scratchDir);
     expect(low).toContain('New to Ark?');
-    expect(low).toContain('/ark-architect');
-    expect(low).toContain('ark-check --recommend');
+    expect(low).toContain('/ark-adopt');
+    expect(low).toContain('arkgate-check --doctor');
+    expect(low).not.toContain('/ark-architect');
     expect(high).not.toContain('New to Ark?');
     expect(fs.existsSync(path.join(scratchDir, 'session-context-hint.txt'))).toBe(true);
   });

@@ -643,6 +643,25 @@ function emitHostAllow(output, { antigravityStyle, cursorStyle }) {
   emitCursorAllow(output, cursorStyle);
 }
 
+/**
+ * Socket-style write-gate deny: two lines first. Pass/fail, no score.
+ * Rule id stays on a following line, not the first sentence.
+ */
+function formatWriteGateDeny({ file, reason, ruleId, nextAction, extraLines = [] }) {
+  const target = file || 'this write';
+  const why = String(reason || 'this change breaks the architecture layers').replace(/\s+/g, ' ').trim();
+  const next =
+    nextAction && /place|move|import|port/i.test(nextAction)
+      ? nextAction
+      : 'Move the import or run /ark-place. Do not weaken ark.config.json.';
+  const lines = [`blocked ${target} — ${why}`, `Next: ${next}`];
+  if (ruleId) lines.push(`[${ruleId}]`);
+  for (const extra of extraLines) {
+    if (extra) lines.push(extra);
+  }
+  return lines.join('\n');
+}
+
 function runHookPayload(payload, gate, config, args, ts, attemptContext, output = processHookOutput()) {
   const { toolName, toolInput, grokStyle, antigravityStyle, cursorStyle, operation } =
     normalizeHookPayload(
@@ -796,17 +815,20 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
       emitHostAllow(output, { antigravityStyle, cursorStyle });
       return;
     }
-    const message = [
-      `Ark architecture gate blocked this complete ${toolName} (${changes.length} governed file(s)):`,
-      ...result.diagnostics.map(
-        (diagnostic) =>
-          `- [${diagnostic.ruleId}] ${diagnostic.message}\n  Next action: ${diagnostic.nextAction}`
-      ),
-      ...(designDelta && !designDelta.valid
-        ? formatDesignDeltaBlock(designDelta).split('\n').slice(1)
-        : []),
-      'No project file was written. Fix the complete patch and retry.',
-    ].join('\n');
+    const first = result.diagnostics[0];
+    const message = formatWriteGateDeny({
+      file: `${changes.length} file(s)`,
+      reason: first?.message || `this ${toolName} breaks the architecture layers`,
+      ruleId: first?.ruleId,
+      nextAction: first?.nextAction,
+      extraLines: [
+        ...result.diagnostics.slice(1).map((d) => `[${d.ruleId}] ${d.message}`),
+        ...(designDelta && !designDelta.valid
+          ? formatDesignDeltaBlock(designDelta).split('\n').slice(1)
+          : []),
+        'No project file was written. Fix the complete patch and retry.',
+      ],
+    });
     output.stderr(`${message}\n`);
     if (args.hookRepair) {
       output.stderr(
@@ -926,13 +948,7 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
     })),
   });
 
-  const lines = adapterResult.diagnostics.map(
-    (diagnostic) =>
-      `- [${diagnostic.ruleId}] ${diagnostic.message}${diagnostic.location.line ? ` (line ${diagnostic.location.line})` : ''}\n  Next action: ${diagnostic.nextAction}`
-  );
-  // Surface the per-violation fix hints (the gate carries them in `suggestion`,
-  // but the hook was dropping them). Dedupe so two infra violations sharing one
-  // hint — e.g. the mayImportInfrastructure escape hatch — print it once.
+  const firstDiagnostic = adapterResult.diagnostics[0];
   const suggestions = [
     ...new Set(combinedViolations.map((violation) => violation.suggestion).filter(Boolean)),
   ];
@@ -940,27 +956,34 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
   // W4: structured repair payload is opt-in (--hook-repair / ARK_HOOK_REPAIR).
   // Default remains hard block with prose only — hosts that cannot re-inject stay clean.
   const repair = Boolean(args.hookRepair);
-  const message = [
-    `Ark architecture gate blocked this write to ${rel}${layer ? ` (layer: ${layer})` : ''}:`,
-    ...lines,
-    ...(suggestions.length > 0 ? ['Fix:', ...suggestions.map((s) => `  ${s}`)] : []),
-    ...(autoPatch && repair
-      ? [
-          `autoPatch available (${autoPatch.remediationKind}, confidence ${autoPatch.confidence}): ` +
-            'apply the patched source from ARK_AUTOPATCH_JSON / ARK_REPAIR_JSON on stderr' +
-            (grokStyle ? ' (or autoPatch in the deny JSON on stdout)' : '') +
-            ' instead of re-drafting. Gate still denies this write (never silent apply).',
-        ]
-      : []),
-    ...(autoPatch && !repair
-      ? [
-          `Mechanical-safe autoPatch is available (${autoPatch.remediationKind}). ` +
-            'Enable repair payload with ARK_HOOK_REPAIR=1 or --hook-repair to receive ' +
-            'machine-readable source (still hard-blocks; host re-injects).',
-        ]
-      : []),
-    'Fix the violations and retry. Call the project-bound ark_manifest MCP tool for the architecture contract.',
-  ].join('\n');
+  const message = formatWriteGateDeny({
+    file: rel,
+    reason: firstDiagnostic?.message || (layer ? `${layer} write breaks the layers` : 'this write breaks the layers'),
+    ruleId: firstDiagnostic?.ruleId,
+    nextAction: firstDiagnostic?.nextAction,
+    extraLines: [
+      ...adapterResult.diagnostics.slice(1).map(
+        (diagnostic) =>
+          `[${diagnostic.ruleId}] ${diagnostic.message}${diagnostic.location.line ? ` (line ${diagnostic.location.line})` : ''}`
+      ),
+      ...(suggestions.length > 0 ? suggestions.map((s) => `Fix: ${s}`) : []),
+      ...(autoPatch && repair
+        ? [
+            `autoPatch available (${autoPatch.remediationKind}, confidence ${autoPatch.confidence}): ` +
+              'apply the patched source from ARK_AUTOPATCH_JSON / ARK_REPAIR_JSON on stderr' +
+              (grokStyle ? ' (or autoPatch in the deny JSON on stdout)' : '') +
+              ' instead of re-drafting. Gate still denies this write (never silent apply).',
+          ]
+        : []),
+      ...(autoPatch && !repair
+        ? [
+            `Mechanical-safe autoPatch is available (${autoPatch.remediationKind}). ` +
+              'Enable repair payload with ARK_HOOK_REPAIR=1 or --hook-repair to receive ' +
+              'machine-readable source (still hard-blocks; host re-injects).',
+          ]
+        : []),
+    ],
+  });
   output.stderr(message + '\n');
 
   if (repair) {
@@ -1403,7 +1426,7 @@ function printSessionContext(config, profile, forbiddenGlobals, args, configPath
   const governedPercent = coverage?.coverage?.governed?.percent ?? coverage?.governed?.percent;
   if (shouldShowNewHereNudge(args.root, configPath, governedPercent, false)) {
     lines.push('');
-    lines.push('New to Ark? Run /ark-adopt (or /ark-architect) or: ark-check --recommend');
+    lines.push('New to Ark? /ark-adopt or: arkgate-check --doctor');
   }
 
   process.stdout.write(`${lines.join('\n')}\n`);
@@ -2018,9 +2041,9 @@ export async function runArkMcp({ hookInput } = {}) {
     {
       name: 'ark_identity',
       description:
-        'Return the canonical ArkGate project, config, contract, and live MCP runtime identity. ' +
-        'Pass project.expectedRoot and/or expectedProjectId to verify this process before ' +
-        'trusting any architecture evidence.',
+        'First call. Prove this MCP process is the right project: pass project.expectedRoot ' +
+        '(exact absolute root) and reuse the returned projectId. Do this before any other Ark tool. ' +
+        'A missing, unmatched, or different root means restart the host and use the local CLI.',
       inputSchema: { type: 'object', properties: {} },
     },
     {
@@ -2063,11 +2086,10 @@ export async function runArkMcp({ hookInput } = {}) {
     {
       name: 'ark_check',
       description:
-        'Run the full Ark architecture check on the project and return structured results ' +
-        '(layer-import violations, forbidden globals, circular deps, config warnings). Use ' +
-        'this to answer "is the architecture currently valid?" instead of shelling out to ' +
-        'ark-check. Preserves legacy ok and adds identity/completeness/graph/coverage/gates/' +
-        'overall verdicts. Applies the baseline automatically when one exists. isError when not ok.',
+        'Scan the project for architecture findings (layer-import violations, forbidden globals, ' +
+        'cycles, config warnings). Returns pass/fail/incomplete plus evidence — not a yes/no ' +
+        'architecture score. Same engine as arkgate-check. Applies the baseline when one exists. ' +
+        'isError when the scan fails. Prefer after ark_identity.',
       inputSchema: {
         type: 'object',
         properties: {

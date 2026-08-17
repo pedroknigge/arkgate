@@ -417,7 +417,11 @@ args = ["arkgate-mcp", "--root", "${absA}", "--config", "${absA}/ark.config.json
     // Match the doctor heading line only (mode-help may say “top action #1” in prose).
     const stripAnsi = (s: string) => s.replace(/\u001b\[[0-9;]*m/g, '');
     const afterPrimary = stripAnsi(human.stdout).split(/^Primary next action\s*$/m)[1] || '';
-    expect(afterPrimary).not.toMatch(/install-agent-gates --tools codex/i);
+    const numbered = afterPrimary
+      .split('\n')
+      .filter((line) => /^\s+\d+\.\s/.test(line))
+      .join('\n');
+    expect(numbered).not.toMatch(/install-agent-gates --tools codex/i);
   });
 
   it('doctor flags missing lint script when Next production build embeds ESLint (universal deploy-path)', () => {

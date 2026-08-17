@@ -5,7 +5,7 @@ description: Shortcut to /ark-autopilot for driving plan A to zero. Deprecated a
 
 # /ark-loop — Shortcut to /ark-autopilot
 
-**Deprecated as a first-class door.** Driving `--plan` to `goal.met` is **`/ark-autopilot`**.
+**Not a first-run door.** This leftover name is a shortcut. Driving `--plan` to `goal.met` is **`/ark-autopilot`**.
 Do that job now. Auto-apply only the four `mechanical-safe` kinds; judgment you write.
 
 ## Autonomy contract

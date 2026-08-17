@@ -5,9 +5,16 @@ description: Upgrade ArkGate through a content-identity preview, preserve custom
 
 # /ark-upgrade — managed ArkGate upgrade
 
-Upgrade the published `arkgate` package and its managed gates without treating a
-filename, package version, or similar-looking file as proof of ownership. The
-preview is the source of truth: inspect it before applying anything.
+**When:** bump the published `arkgate` package and refresh managed gates.
+**Not when:** session 0 (`/ark-adopt`) or leftover design (`/ark-explore`).
+
+## Steps
+
+1. Preview: `arkgate upgrade` (no writes).
+2. Apply in this turn: `arkgate upgrade --apply` (needs `--plan-digest` when applying managed files).
+3. Re-run `arkgate-check --doctor`. Customized files stay unless you pass `--accept-conflicts` / `--refresh-skills`.
+
+The preview is the source of truth. Do not treat a filename or package version as proof of ownership.
 
 ## Autonomy contract
 

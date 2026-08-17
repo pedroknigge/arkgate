@@ -5,7 +5,7 @@ description: Shortcut to /ark-adopt (session 0) or /ark-autopilot (later config 
 
 # /ark-contract — Shortcut to adopt / autopilot
 
-**Deprecated as a first-class door.** Writing `ark.config.json` / `arkrules/*` is
+**Not a first-run door.** This leftover name is a shortcut. Writing `ark.config.json` is
 **`/ark-adopt`** at session 0 and **`/ark-autopilot`** afterward. Do that job now.
 
 ## Autonomy contract

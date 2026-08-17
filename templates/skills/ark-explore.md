@@ -5,6 +5,15 @@ description: Map skill — decision-grade recon of layers + ArkRules opportuniti
 
 # /ark-explore — Recon the real project (map only)
 
+**When:** you need a map, or leftover design work remains after imports look green.
+**Not when:** the user wants edits applied (`/ark-autopilot`) or session 0 (`/ark-adopt`).
+
+## Steps
+
+1. Read `arkgate-check --doctor`.
+2. Open the real tree (≥12 files across ≥4 dirs). CLI JSON alone is incomplete.
+3. Rank leftover work. Hand off to `/ark-autopilot` to apply one refactor. Do not write config or product code here.
+
 ## Autonomy contract
 
 Invoking this skill **is** the approval to **map**. Open the real tree. CLI JSON alone is
@@ -308,7 +317,7 @@ Prefer bets the user can run next (`command` / skill), not vague “improve DX�
 | **Stabilize** | ENFORCE + honest baseline only for real debt | 0 new edges; doctor not lying about write path/CI |
 | **Shape** | One **golden** pattern + pilot cluster | Pilot smells cleared; rest is migrate-on-touch; B bets have success signals |
 
-ENFORCE without Shape progress is **`ENFORCE · design-weak`** — say that out loud. It is **not** “healthy finished.”
+ENFORCE without Shape progress is leftover design work — say that out loud. It is **not** “healthy finished.”
 
 **Agent-detected design smells** (list any that apply; paths required — these may predate doctor IDs):
 
@@ -374,16 +383,16 @@ and the ranked **`pilotLoop.nextPilot`**.
 
 State **Mode: recon | dual-plan seed | shape-focus** and **Phase: Align | Stabilize | Shape** in the first lines.
 
-1. **Headline** — product one sentence + honesty (mode, governed%, false-green / semantic false-green / **ENFORCE·design-weak** / false-promise risk). ENFORCE is context, not the story.
+1. **Headline** — product one sentence + honesty (mode, governed%, false-green / leftover design work / false-promise risk). ENFORCE is context, not the story.
 2. **Map** — entry points, major dirs, shape name (or “no honest shape yet”). One screen. **Patterns concurrent** table when §B/§G requires it.
 3. **What I opened** — paths + sensors (include field/hook/origin when used).
 4. **Ranked table** — **only rows that change a decision**. Prefer **3–6** hard rows.
 
-| # | Kind | Finding | Evidence (path) | Así te lo re-soluciono | Success signal | Next skill / command |
+| # | Kind | Finding | Evidence (path) | How to fix | Success signal | Next skill / command |
 
 Kinds: `risk` | `false-green` | `debt` | `opportunity` | `shape` | `manifiesto` | `agent-dx` | `design-weak`
 
-**Así te lo re-soluciono** must be concrete: files to touch, command to run.  
+**How to fix** must be concrete: files to touch, command to run.  
 **Success signal** must be falsifiable (see §F).
 
 5. **Field path summary**.

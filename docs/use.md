@@ -49,9 +49,9 @@ In those cases a boundary linter or editor rules may be enough; see [README — 
 | Before merge | Make the Ark job a **required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) |
 | Anytime | Doctor: Suggest / Adapt / Enforce (+ leftover design work if the design is still messy) |
 
-**Codex / Cursor / OpenCode:** local write stays advisory forever — that is not unfinished architecture. Doctor may say **contract ready** while still reminding you that local writes are advisory; **Not finished** is reserved for real project/contract debt.
+**Cursor:** pre-write block for Write/StrReplace when `.cursor/hooks.json` is trusted. **Codex / OpenCode:** local write stays advisory (warning only, not blocked) — that is not unfinished architecture. Doctor may say **contract ready** while still reminding you that those hosts do not hard-block writes; **Not finished** is reserved for real project/contract debt.
 
-ArkGate is **not** a web framework, ORM, or app runtime. It is architecture enforcement + co-pilot for AI TypeScript.
+ArkGate is **not** a web framework, ORM, or app runtime. It is architecture enforcement + a coach for AI TypeScript.
 
 ### Two planes (you choose)
 
@@ -83,7 +83,7 @@ list: [configuration.md](configuration.md).
 | **Suggest** | New or thin project | Finish `start`, re-run doctor |
 | **Adapt** | Not fully protected yet | Doctor action #1 until clean |
 | **Enforce** | Edges honest under the contract | Keep write path + CI |
-| **Enforce · design-weak** | Edges clean; design still messy | Shape door — not “done” |
+| **Enforce · leftover design work** | Edges clean; design still messy | Shape door — not “done” |
 
 **Green edges ≠ elegant design.** Empty remediation plan is not “architecture finished” if design residual remains.
 
@@ -175,7 +175,7 @@ Human doctor prints the short section above.
 | **Stabilize** | Edges under Enforce | Real debt only in baseline; write path + CI honest |
 | **Shape** | One golden pattern + pilots | Residual lenses shrink pilot by pilot — never silent multi-pilot |
 
-Green edges under **Enforce · design-weak** mean Align/Stabilize may be fine while Shape remains open.
+Green edges under **Enforce · leftover design work** mean Align/Stabilize may be fine while Shape remains open.
 Empty plan A is **not** “architecture finished.”
 
 ---

@@ -5,6 +5,33 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.6.2 — 2026-08-16
+
+**Patch** over **4.6.1**. First-contact copy: a newcomer (human or coding agent) sees what
+to do in a few lines — `arkgate` / `arkgate-check --help`, start wrap-up, doctor light +
+#1, write-gate deny, SessionStart, MCP tool order, and the five doors. Same 13 skill names.
+**No required config migration.**
+
+**Status: prepared** (not yet on npm `latest`; see `docs/releases/4.6.2.md`).
+
+### Changed
+
+- **First-run help:** `arkgate --help` and `arkgate-check --help` are short; encyclopedia
+  text is `--help --all`. `arkgate upgrade --help` is preview vs apply.
+- **Start wrap-up:** doctor → `/ark-adopt` session 0 (not `/ark-autopilot` as step 1).
+- **Doctor:** operating-mode light + primary next action #1 print first.
+- **Write-gate deny:** `blocked {file} — {reason}` then `Next:` (move the import / `/ark-place`).
+  Rule id on a following line. No “call ark_manifest”.
+- **Agents:** SessionStart points at `/ark-adopt` or `arkgate-check --doctor`. `ark_identity`
+  is first. `ark_check` is a scan (pass/fail/incomplete), not a yes/no architecture score.
+  `server.json` first sentence is the layers definition.
+- **Skills:** five doors open with when + steps. Shortcuts are not the first-run menu.
+- **Status:** `nextAction` is `map-leftover-design` when leftover design work remains
+  (never `stay-enforced`).
+- **npm `description`:** `One architecture config. One check. One coach.` (not “co-pilot”).
+- **`docs/use.md`:** Cursor hard-blocks Write/StrReplace when hooks are trusted;
+  Codex/OpenCode stay advisory.
+
 ## 4.6.1 — 2026-08-14
 
 **Patch** over **4.6.0**. Five-door autonomy (skills write or map in-turn; CLI is sensor +

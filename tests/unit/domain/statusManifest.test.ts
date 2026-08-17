@@ -181,6 +181,50 @@ describe('statusManifest (Domain — ACS03)', () => {
     expect(action).toEqual({ id: 'custom', summary: 'Do the custom thing' });
   });
 
+  it('does not say stay-enforced when leftover design work remains', () => {
+    const binding = { status: 'matched' as const, authoritative: true };
+    const activation = { writePath: 'hard' as const, host: 'claude', honestLabel: 'hard' };
+    const lastCheck = {
+      at: '2026-08-16T00:00:00.000Z',
+      verdict: 'pass' as const,
+      activeViolations: 0,
+      frozenResidual: 0,
+    };
+    const rules = {
+      arkRulesLoaded: false,
+      inventoried: null,
+      underContract: null,
+      frozenResidual: null,
+    };
+    const clean = resolveStatusNextAction(
+      {
+        arkgateVersion: '4.6.1',
+        resolvedRoot: '/repo',
+        resolvedConfigPath: '/repo/ark.config.json',
+      },
+      binding,
+      activation,
+      lastCheck,
+      rules
+    );
+    expect(clean.id).toBe('stay-enforced');
+    const leftover = resolveStatusNextAction(
+      {
+        arkgateVersion: '4.6.1',
+        resolvedRoot: '/repo',
+        resolvedConfigPath: '/repo/ark.config.json',
+        leftoverDesignWork: true,
+      },
+      binding,
+      activation,
+      lastCheck,
+      rules
+    );
+    expect(leftover.id).toBe('map-leftover-design');
+    expect(leftover.summary).toMatch(/leftover design work/i);
+    expect(leftover.id).not.toBe('stay-enforced');
+  });
+
   it('CLI pure artifact matches Domain schema version and binding behavior', () => {
     expect(CLI_VERSION).toBe(ARK_STATUS_MANIFEST_SCHEMA_VERSION);
     expect(CLI_SCHEMA).toEqual(ARK_STATUS_MANIFEST_SCHEMA);
