@@ -12,7 +12,7 @@ to do in a few lines — `arkgate` / `arkgate-check --help`, start wrap-up, doct
 #1, write-gate deny, SessionStart, MCP tool order, and the five doors. Same 13 skill names.
 **No required config migration.**
 
-**Status: prepared** (not yet on npm `latest`; see `docs/releases/4.6.2.md`).
+**Status: published** (on npm `latest`; see `docs/releases/4.6.2.md`).
 
 ### Changed
 

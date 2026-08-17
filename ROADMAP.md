@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-16 (Phase SK + TW shipped as **arkgate@4.6.1** on npm `latest`; **4.6.2** first-contact copy prepared)
+- **Status date:** 2026-08-16 (Phase SK + TW shipped as **arkgate@4.6.1**; **4.6.2** first-contact copy on npm `latest`)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -1429,8 +1429,8 @@ Boundary (freezes held):
 | 163 | `SK05` | `done` | M | `SK04` | Public docs emphasize the 5 doors |
 | 172 | `SK06` | `done` | M | `TW08` | Prepare arkgate@4.6.1 (five-door + team parliament) |
 | 173 | `SK07` | `done` | L | `SK06` | Publish npm/MCP + docs flip + site 4.6.1 |
-| 174 | `FC01` | `doing` | M | `SK07` | Prepare arkgate@4.6.2 (first-contact copy) |
-| 175 | `FC02` | `todo` | L | `FC01` | Publish npm/MCP + docs flip + site 4.6.2 |
+| 174 | `FC01` | `done` | M | `SK07` | Prepare arkgate@4.6.2 (first-contact copy) |
+| 175 | `FC02` | `done` | L | `FC01` | Publish npm/MCP + docs flip + site 4.6.2 |
 
 **Preferred order:** SK01→SK05. One `doing` at a time.
 
@@ -1485,17 +1485,17 @@ Boundary (freezes held):
 
 **FC01 — Prepare 4.6.2**
 
-- **Status:** `doing` (2026-08-16)
+- **Status:** `done` (2026-08-16)
 - **Depends on:** `SK07`
 
-**Outcome:** version surfaces + CHANGELOG + `docs/releases/4.6.2.md` prepared (not published). First-contact CLI/agent copy from PR #140.
+**Outcome:** version surfaces + CHANGELOG + `docs/releases/4.6.2.md` prepared then published from #141.
 
 **FC02 — Publish npm/MCP + docs flip + site 4.6.2**
 
-- **Status:** `todo`
+- **Status:** `done` (2026-08-16)
 - **Depends on:** `FC01`
 
-**Outcome:** npm `latest` = **4.6.2**; public pointers + q06 published; MCP `io.github.pedroknigge/arkgate@4.6.2`; site `/changelog/4.6.2/`.
+**Outcome:** npm `latest` = **4.6.2** (`gitHead` `7aabe4a`, OIDC run `31984939719`); public pointers + q06 published; MCP `io.github.pedroknigge/arkgate@4.6.2`; site `/changelog/4.6.2/`.
 
 ### Phase TW — Team parliament (law vs feature)
 
@@ -3989,14 +3989,14 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: FC01 (prepare arkgate@4.6.2)
-  Epic: First-contact copy
-  Queue: FC01 doing · FC02 publish
-  Closed last: SK07 publish npm/MCP + docs flip + site 4.6.1
-  Next: FC02 npm/MCP/site after FC01 lands
-Released baseline: npm arkgate@4.6.1 on latest (gitHead 1eadc96; tag v4.6.1; 2026-08-14)
-  Notes: docs/releases/4.6.1.md — Status: published · 4.6.2 prepared
-  Prior: 4.6.0 / 4.5.7 / 4.5.6 / 4.5.5 / 4.5.0 / 4.4.0 / 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
+Engineering doing: (none — 4.6.2 published)
+  Epic: —
+  Queue: idle
+  Closed last: FC02 publish npm/MCP + docs flip + site 4.6.2
+  Next: (none queued)
+Released baseline: npm arkgate@4.6.2 on latest (gitHead 7aabe4a; tag v4.6.2; 2026-08-16)
+  Notes: docs/releases/4.6.2.md — Status: published
+  Prior: 4.6.1 / 4.6.0 / 4.5.7 / 4.5.6 / 4.5.5 / 4.5.0 / 4.4.0 / 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
 Phase SK freezes (held): 13 skill names; invoke = license; no silent compact-router reshape;
   no scores; no LLM package verdict; no new sensors
 Phase PL freezes (held): common words first; no scores; 13 skill names;
