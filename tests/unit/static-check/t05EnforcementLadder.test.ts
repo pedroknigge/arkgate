@@ -99,14 +99,16 @@ describe('T05 honest enforcement ladder', () => {
         bypassable: false,
       });
 
-      const unsupported = detectWritePathCapabilities(root, 'codex', {
+      const codex = detectWritePathCapabilities(root, 'codex', {
         boundary: 'pre-tool',
         operation: 'apply_patch',
       }).enforcementLadder.localWrite;
-      expect(unsupported).toMatchObject({
-        supported: false,
-        hard: false,
-        bypassable: true,
+      expect(codex).toMatchObject({
+        supported: true,
+        active: true,
+        operationCovered: true,
+        hard: true,
+        bypassable: false,
       });
     } finally {
       fs.rmSync(root, { recursive: true, force: true });

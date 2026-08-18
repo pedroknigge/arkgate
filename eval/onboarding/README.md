@@ -12,8 +12,8 @@ For every cell it proves that preview leaves the tree byte-identical, apply chan
 previewed paths, strict merge succeeds, projected and measured governed coverage agree at at least
 90%, the active host does not create unrelated-host files, and a second run is a zero diff. The
 four canonical host capability profiles are additionally verified through the installed local gate:
-Claude and Grok have hard write plus repair; Cursor and Codex expose advisory write plus the hard
-CI merge gate, without borrowed hard-hook evidence.
+Claude and Grok have hard write plus repair; Cursor and Codex have operation-scoped hard write
+without claiming repair reinjection; required CI remains the all-path merge gate.
 
 The command is the evidence producer. Its candidate revision is the checkout `HEAD` at execution;
 CI records that revision with the job that ran the matrix.

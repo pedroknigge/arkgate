@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.6.2';
+const CURRENT = '4.6.3';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.6.2';
 
@@ -101,9 +101,9 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('exposes published 4.6.2 as npm latest', () => {
+  it('keeps published 4.6.2 as npm latest while 4.6.3 is prepared', () => {
     expect(PUBLISHED_LATEST).toBe('4.6.2');
-    expect(CURRENT).toBe('4.6.2');
+    expect(CURRENT).toBe('4.6.3');
     expect(read('README.md')).toMatch(/4\.6\.2/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.2\.md/);
     expect(read('README.md')).toMatch(/4\.6\.1/);
@@ -115,6 +115,8 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.1/s);
     expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.6\.2/is);
     expect(read('docs/package-surface.md')).toMatch(/4\.6\.1\.md/);
+    expect(read('docs/releases/4.6.3.md')).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(read('docs/releases/4.6.3.md')).not.toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.2.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.2.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
     expect(read('docs/releases/4.6.1.md')).toMatch(/\*\*Status:\*\*\s*published/i);
@@ -127,6 +129,26 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('docs/releases/4.5.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.4.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.3.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
+  });
+});
+
+describe('CHANGELOG + release note prepare 4.6.3 Codex hard-write truth', () => {
+  it('records the current payload, operation scope, and prepared status', () => {
+    const changelog = read('CHANGELOG.md');
+    expect(changelog).toMatch(/## 4\.6\.3/);
+    expect(changelog).toMatch(/tool_input\.command/);
+    expect(changelog).toMatch(/complete.*apply_patch|apply_patch.*complete/is);
+    expect(changelog).toMatch(/Status:\s*prepared/i);
+    expect(changelog).toMatch(/No required config migration/i);
+
+    const notes = read('docs/releases/4.6.3.md');
+    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(notes).toMatch(/Codex CLI.*Desktop\/App Server/is);
+    expect(notes).toMatch(/tool_input\.command/);
+    expect(notes).toMatch(/hard:true/);
+    expect(notes).toMatch(/hosted|specialized/i);
+    expect(notes).toMatch(/Z09|RB-11/i);
+    expect(notes).toMatch(/mcp-publisher validate server\.json/);
   });
 });
 

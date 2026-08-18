@@ -46,8 +46,9 @@ architecture policy.
 - Generated host instructions must handshake before using project-bound MCP tools, read the
   contract through `ark_manifest`, and treat a missing identity/manifest tool as an old process
   that needs restart or local-CLI fallback.
-- Codex remains advisory at write time. Identity proves which advisor answered, not that every
-  write passed through it.
+- MCP identity proves which advisor answered; it does not prove that every write passed through
+  a hook. The separate Codex operation-scoped write classification is superseded by
+  [ADR 0019](0019-codex-operation-scoped-hard-write.md).
 - Layers and ArkRules share this precondition; neither plane invents a separate identity rule.
 - The new schema/tool and additive result envelope require a backward-compatible corrective minor.
 

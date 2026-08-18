@@ -59,7 +59,9 @@ function fixture() {
   );
   write(root, 'apps/web/src/product/page.tsx', 'export const Page = () => <main>Listings</main>;\n');
   write(root, 'packages/shared/src/rules/listing.ts', 'export const listingKind = "listing";\n');
-  git(root, ['init', '-q']);
+  // Keep the missing-base test deterministic across machines whose Git default
+  // branch is `main` (team-base discovery intentionally probes that name).
+  git(root, ['init', '-q', '--initial-branch=fixture']);
   git(root, ['config', 'user.email', 'arkgate@example.invalid']);
   git(root, ['config', 'user.name', 'ArkGate Test']);
   git(root, ['add', '.']);

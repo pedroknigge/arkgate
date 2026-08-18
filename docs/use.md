@@ -49,7 +49,12 @@ In those cases a boundary linter or editor rules may be enough; see [README — 
 | Before merge | Make the Ark job a **required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) |
 | Anytime | Doctor: Suggest / Adapt / Enforce (+ leftover design work if the design is still messy) |
 
-**Cursor:** pre-write block for Write/StrReplace when `.cursor/hooks.json` is trusted. **Codex / OpenCode:** local write stays advisory (warning only, not blocked) — that is not unfinished architecture. Doctor may say **contract ready** while still reminding you that those hosts do not hard-block writes; **Not finished** is reserved for real project/contract debt.
+**Cursor:** pre-write block for Write/StrReplace when `.cursor/hooks.json` is trusted.
+**Codex CLI / local Desktop:** pre-write block for a complete `apply_patch` when
+`.codex/hooks.json` is trusted and the operation is observed. Hosted/specialized paths,
+shell/direct writes, and incomplete patches still rely on CI. **OpenCode:** local write stays
+advisory (warning only, not blocked). An unverified host hook is environment evidence, not
+unfinished architecture; **Not finished** is reserved for real project/config debt.
 
 ArkGate is **not** a web framework, ORM, or app runtime. It is architecture enforcement + a coach for AI TypeScript.
 

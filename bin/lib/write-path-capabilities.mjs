@@ -219,6 +219,9 @@ function requiredWriteOperations(relativePath) {
   if (relativePath === '.cursor/hooks.json' || relativePath.startsWith('.cursor/hooks')) {
     return ['Write', 'StrReplace'];
   }
+  if (relativePath === '.codex/hooks.json' || relativePath.startsWith('.codex/hooks')) {
+    return ['apply_patch'];
+  }
   return ['Write', 'Edit', 'MultiEdit'];
 }
 
@@ -445,6 +448,7 @@ export function detectWritePathInventory(root) {
   const grokHook = hookEvidence(root, '.grok/hooks/ark-write-gate.json');
   const antigravityHook = hookEvidence(root, '.agents/hooks.json');
   const cursorHook = cursorHookEvidence(root);
+  const codexHook = hookEvidence(root, '.codex/hooks.json');
   const hosts = {
     claude: hostRecord(
       claudeHook.hard,
@@ -478,11 +482,11 @@ export function detectWritePathInventory(root) {
       [],
       merge
     ),
-    // Codex 0.123+ emits PreToolUse for the native apply_patch handler, but some
-    // Code Mode hosts execute deferred nested writes without dispatching that
-    // project hook. Keep the installed hook as best-effort protection; do not
-    // report a hard boundary that cannot be verified for every write surface.
-    codex: hostRecord([], codexMcpEvidence(root), [], merge),
+    // Current Codex CLI and local ChatGPT Desktop/App Server synchronously run
+    // PreToolUse for apply_patch. Disk evidence remains unverified until a fresh
+    // covered invocation; hosted/specialized/direct-write paths stay outside scope.
+    // Repair envelopes may emit, but host reinjection is not guaranteed.
+    codex: hostRecord(codexHook.hard, codexMcpEvidence(root), [], merge),
     // OpenCode: MCP only (plugin hooks are incomplete / subagent-bypassable).
     opencode: hostRecord([], opencodeMcpEvidence(root), [], merge),
   };

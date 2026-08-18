@@ -36,8 +36,9 @@ Local write hardness **differs by host**. CI required status is the shared hard 
 | Host | Local write | MCP | Merge |
 |------|-------------|-----|-------|
 | Claude · Grok · Antigravity | Pre-write block when installed + trusted | Advisory | Required status context |
-| Codex · OpenCode | Warning only (not blocked) | Advisory | Required status context |
 | Cursor | Pre-write block for Write/StrReplace when `.cursor/hooks.json` is trusted | Advisory | Required status context |
+| Codex CLI · local Desktop/App Server | Pre-write block for complete `apply_patch` when `.codex/hooks.json` is trusted | Advisory | Required status context |
+| OpenCode | Warning only (not blocked) | Advisory | Required status context |
 
 Full matrix and install commands: [ai-gates.md](ai-gates.md) · canonical table in [README](../README.md#host-enforcement-support).
 
@@ -52,6 +53,8 @@ npx arkgate-check --install-agent-gates --skills-only --force
 
 Doctor reports what is actually installed and observed (`writePath` / enforcement state). Installed
 files alone do not imply `hard:true` without runtime evidence where the product requires it.
+Codex hosted tools, specialized opt-out paths, shell/direct filesystem writes, and incomplete
+patch reconstruction remain outside the local hard claim and rely on required CI.
 
 **Evidence split (Phase EH):** soft-write hosts keep `soft-write-host` in evidence without forcing
 global **Not finished** when the contract is ready. With `ARK_DOCTOR_GITHUB=1`, successful CI runs

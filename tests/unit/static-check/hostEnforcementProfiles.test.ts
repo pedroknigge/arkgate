@@ -136,8 +136,9 @@ describe('host-specific enforcement profiles', () => {
   it.each(HOSTS)('%s-only install emits a green CI check and a truthful write verdict', (host) => {
     const root = createFixture();
     try {
-      const hardHost = host === 'claude' || host === 'grok' || host === 'cursor';
-      // Cursor emits repair envelopes but does not guarantee Write updated_input reinjection.
+      const hardHost =
+        host === 'claude' || host === 'grok' || host === 'cursor' || host === 'codex';
+      // Cursor/Codex emit repair envelopes but do not guarantee updated-input reinjection.
       const repairPayload = host === 'claude' || host === 'grok';
       const first = install(root, host, host, hardHost);
       expect(first.status, first.stderr).toBe(0);
@@ -248,7 +249,7 @@ describe('host-specific enforcement profiles', () => {
           repairPayload: false,
         },
         codex: {
-          hardWrite: false,
+          hardWrite: true,
           advisoryWrite: true,
           mergeGate: true,
           repairPayload: false,
@@ -259,7 +260,7 @@ describe('host-specific enforcement profiles', () => {
     }
   });
 
-  it('start rejects an impossible hard-write request before touching the project', () => {
+  it('start installs and verifies the Codex apply_patch hard-write profile', () => {
     const root = mk('ark-start-preflight-');
     try {
       const result = run(
@@ -279,11 +280,11 @@ describe('host-specific enforcement profiles', () => {
         root,
         'codex'
       );
-      expect(result.status).toBe(2);
-      expect(`${result.stdout}\n${result.stderr}`).toMatch(
-        /codex.*advisory-write.*shared CI check/i
-      );
-      expect(fs.readdirSync(root)).toEqual([]);
+      expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+      expect(result.stdout).toContain('Hard-write hook verified for codex');
+      expect(
+        fs.readFileSync(path.join(root, '.codex', 'hooks.json'), 'utf8')
+      ).toContain('apply_patch');
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

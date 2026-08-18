@@ -299,7 +299,7 @@ export function collectStatusFacts(options = {}) {
       ? writePath.activeHost.trim().toLowerCase()
       : String(activeHost).trim().toLowerCase();
   const matrix = HOST_SUPPORT_MATRIX[hostKey] ?? null;
-  // Soft only when the host is known and matrix hard-write is false (Cursor/Codex/OpenCode).
+  // Soft only when the host is known and matrix hard-write is false (currently OpenCode).
   const softWriteHost = Boolean(matrix && matrix.capabilities?.['hard-write'] !== true);
   const writePathHonesty = buildWritePathHonesty(hostKey, hardWriteActive, {
     packageInstalled: writePath?.enforcementState?.localWrite?.installed !== false,

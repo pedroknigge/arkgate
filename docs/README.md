@@ -59,6 +59,7 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
 Current published: [releases/4.6.2.md](releases/4.6.2.md) (`arkgate@4.6.2` on npm `latest`).  
+Prepared: [releases/4.6.3.md](releases/4.6.3.md) (Codex operation-scoped hard write; not yet published).
 Prior: [releases/4.6.1.md](releases/4.6.1.md) (`arkgate@4.6.1`).  
 Previous: [releases/4.6.0.md](releases/4.6.0.md) · [releases/4.5.7.md](releases/4.5.7.md) · [releases/4.5.6.md](releases/4.5.6.md) · [releases/4.5.5.md](releases/4.5.5.md) · [releases/4.5.0.md](releases/4.5.0.md) · [releases/4.4.0.md](releases/4.4.0.md) · [releases/4.3.0.md](releases/4.3.0.md) · [releases/4.2.1.md](releases/4.2.1.md) · [releases/4.2.0.md](releases/4.2.0.md) · [releases/4.1.1.md](releases/4.1.1.md).  
 Previous major: [releases/4.0.0.md](releases/4.0.0.md) (`arkgate@4.0.0`).  

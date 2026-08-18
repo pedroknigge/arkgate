@@ -46,7 +46,13 @@ describe('Z10 runtime-proven enforcement hardness', () => {
       expect(state.operation).toBeNull();
       expect(state.operationCoverage).toBe('unverified');
       expect(state.hard).toBe(false);
-      if (host === 'claude' || host === 'grok' || host === 'antigravity' || host === 'cursor') {
+      if (
+        host === 'claude' ||
+        host === 'grok' ||
+        host === 'antigravity' ||
+        host === 'cursor' ||
+        host === 'codex'
+      ) {
         expect(state).toMatchObject({
           supported: true,
           configured: true,
@@ -67,6 +73,7 @@ describe('Z10 runtime-proven enforcement hardness', () => {
       ['grok', 'search_replace'],
       ['antigravity', 'write_to_file'],
       ['cursor', 'Write'],
+      ['codex', 'apply_patch'],
     ] as const;
     for (const [host, operation] of cases) {
       const state = detectWritePathCapabilities(root, host, {
@@ -91,27 +98,27 @@ describe('Z10 runtime-proven enforcement hardness', () => {
 
   it('never upgrades an unsupported or uncovered operation to hard', () => {
     const root = fixture();
-    const codex = detectWritePathCapabilities(root, 'codex', {
+    const opencode = detectWritePathCapabilities(root, 'opencode', {
       boundary: 'pre-tool',
       operation: 'apply_patch',
       completePatch: true,
     }).enforcementState.localWrite;
-    expect(codex).toMatchObject({
+    expect(opencode).toMatchObject({
       runtimeObserved: true,
       operation: 'apply_patch',
-      operationCoverage: true,
-      active: true,
+      operationCoverage: false,
+      active: false,
       bypassable: true,
       hard: false,
     });
 
-    const uncovered = detectWritePathCapabilities(root, 'claude', {
+    const uncovered = detectWritePathCapabilities(root, 'codex', {
       boundary: 'pre-tool',
-      operation: 'Bash',
+      operation: 'exec_command',
     }).enforcementState.localWrite;
     expect(uncovered).toMatchObject({
       runtimeObserved: true,
-      operation: 'Bash',
+      operation: 'exec_command',
       operationCoverage: false,
       active: false,
       bypassable: true,

@@ -17,7 +17,7 @@
  */
 function hostProfile(label, hookPath, hookSurface, hookOperations, hardWrite, repairPayload, extras = {}) {
   // EH07: repair envelope emission ≠ reinjection guarantee.
-  // Codex hooks may emit --hook-repair JSON while reinjection stays host-dependent / not hard.
+  // Cursor/Codex hooks may emit --hook-repair JSON while reinjection stays host-dependent.
   const repairEnvelopeEmitted =
     extras.repairEnvelopeEmitted === true || repairPayload === true;
   const repairReinjectionGuaranteed = hardWrite === true && repairPayload === true;
@@ -94,15 +94,15 @@ export const HOST_SUPPORT_MATRIX = Object.freeze({
   codex: hostProfile(
     'OpenAI Codex',
     '.codex/hooks.json',
-    'Best-effort PreToolUse `apply_patch`; Code Mode hosts may bypass the event',
+    'PreToolUse `apply_patch` in Codex CLI and local ChatGPT Desktop/App Server',
     ['apply_patch'],
-    false,
+    true,
     false,
     {
-      // Install writes --hook-repair; envelope can be emitted; reinjection is not guaranteed.
+      // Install writes --hook-repair; envelope can emit, but host reinjection is not guaranteed.
       repairEnvelopeEmitted: true,
       operationCoverage: {
-        apply_patch: false,
+        apply_patch: true,
         shell: false,
         'pre-commit': false,
       },
@@ -152,15 +152,12 @@ export function renderHostSupportMatrixMarkdown() {
   const rows = HOST_SUPPORT_HOSTS.map((host) => {
     const profile = HOST_SUPPORT_MATRIX[host];
     const capabilities = profile.capabilities;
-    // Fail-closed honesty: Codex/OpenCode never claim hard write; CI is required-status.
-    // Cursor claims hard only for listed preToolUse ops when hooks are installed + trusted.
+    // Fail-closed honesty: hard hosts claim only listed operations when hooks are
+    // installed + trusted. OpenCode remains advisory; CI is required-status.
     // hookSurface already includes "PreToolUse/preToolUse …" — do not prefix again.
     let local;
     if (capabilities['hard-write']) {
       local = `**Hard** block for listed ops (${profile.hookSurface}) when installed + trusted`;
-    } else if (host === 'codex') {
-      local =
-        '**Advisory / best-effort** at write (not equivalent to Claude/Grok/Cursor hard block)';
     } else if (host === 'opencode') {
       local =
         '**Advisory / best-effort** at write (MCP + optional plugin; not a hard boundary)';
@@ -172,7 +169,7 @@ export function renderHostSupportMatrixMarkdown() {
     if (capabilities['repair-reinjection-guaranteed']) {
       repair = 'Emitted on hook deny; host must re-inject (hard path when installed + trusted)';
     } else if (capabilities['repair-envelope-emitted']) {
-      repair = 'Envelope may emit (`--hook-repair`); reinjection **not** guaranteed (advisory host)';
+      repair = 'Envelope may emit (`--hook-repair`); reinjection **not** guaranteed';
     } else {
       repair = 'No hard-boundary payload';
     }
@@ -188,8 +185,9 @@ ${rows}
 
 **Read the CI column:** for every host, the repository-wide hard guarantee is a **required**
 GitHub **status context** that runs the CLI — not “CI file present,” and not the CLI binary name alone.
-Codex/OpenCode never get a fake hard write claim. Cursor hard write covers only listed
-\`preToolUse\` ops when \`.cursor/hooks.json\` is installed and trusted — Shell/Tab/human edits still rely on CI.
+Codex hard write covers only a complete local \`apply_patch\`; Cursor covers only listed
+\`preToolUse\` ops. In both cases the project hook must be installed + trusted, while shell/direct
+filesystem writes, hosted or specialized opt-out paths, and human edits still rely on CI.
 
 This table describes the supported profile **after its files are installed and the host loads/trusts them**. A hard local boundary covers only the listed hook operations; alternate tools, direct filesystem writes, and human edits still rely on CI. MCP validation is advisory because the agent must call it. The CI check blocks a merge only when the repository makes that status required. Repair **envelopes** may be emitted without reinjection being guaranteed; silent auto-apply never happens. Run \`arkgate-check --doctor\` (or \`ark-check --doctor\`) for the evidence actually detected in the current repository.`;
 }
@@ -226,8 +224,8 @@ export function doctorWritePathHonestyMessage(activeHost, hardWriteActive) {
   if (host === 'cursor' && !hardWriteActive) {
     return `Cursor: pre-write block is supported for Write/StrReplace when .cursor/hooks.json is installed + trusted; without runtime-observed hook evidence, the block is unverified. ${mergeBoundary}.`;
   }
-  if (host === 'codex') {
-    return `Codex: edits are warning only (not blocked) at write time. ${mergeBoundary}.`;
+  if (host === 'codex' && !hardWriteActive) {
+    return `Codex: a trusted PreToolUse hook can block complete local apply_patch calls in CLI and Desktop; without fresh runtime-observed apply_patch evidence, the block is unverified. Specialized/hosted paths and direct writes still rely on CI. ${mergeBoundary}.`;
   }
   if (host === 'opencode') {
     return `OpenCode: edits are warning only (not blocked). ${mergeBoundary}.`;

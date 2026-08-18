@@ -30,7 +30,7 @@ const CANONICAL_CAPABILITIES: Record<Host, Record<string, boolean>> = {
   claude: { 'hard-write': true, 'advisory-write': true, 'merge-gate': true, 'repair-payload': true },
   grok: { 'hard-write': true, 'advisory-write': true, 'merge-gate': true, 'repair-payload': true },
   cursor: { 'hard-write': true, 'advisory-write': true, 'merge-gate': true, 'repair-payload': false },
-  codex: { 'hard-write': false, 'advisory-write': true, 'merge-gate': true, 'repair-payload': false },
+  codex: { 'hard-write': true, 'advisory-write': true, 'merge-gate': true, 'repair-payload': false },
 };
 
 function matrix() {

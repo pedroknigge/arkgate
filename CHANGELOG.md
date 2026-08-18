@@ -5,6 +5,26 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.6.3 — 2026-08-18
+
+**Patch** over **4.6.2**. Codex CLI and local ChatGPT Desktop/App Server now get a
+runtime-proven pre-write block for complete `apply_patch` calls. ArkGate accepts the current
+`tool_input.command` payload, while incomplete, hosted, specialized, shell/direct, and human
+write paths remain CI-backed. **No required config migration.**
+
+**Status: prepared** (not yet on npm `latest`; see `docs/releases/4.6.3.md`).
+
+### Changed
+
+- **Codex hook payload:** current `PreToolUse` `apply_patch` bodies are read from
+  `tool_input.command`; historical patch/input/content fields stay compatible.
+- **Operation-scoped hard write:** a complete trusted and runtime-observed local patch can report
+  `hard:true` and exit `2` before disk mutation. Hook files alone stay unverified.
+- **Honesty surfaces:** host matrix, doctor/status, `--require-write-hook codex`, onboarding,
+  upgrade self-service, skills, and public docs now share the same boundary.
+- **All-path backstop:** required `arkgate-check --strict-merge` CI remains mandatory. MCP stays
+  advisory and repair reinjection is not claimed.
+
 ## 4.6.2 — 2026-08-16
 
 **Patch** over **4.6.1**. First-contact copy: a newcomer (human or coding agent) sees what

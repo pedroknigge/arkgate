@@ -9,7 +9,7 @@ npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok
 Installs:
 
 - Write-path configuration (Claude/Grok/Antigravity/Cursor hard PreToolUse when covered;
-  Codex advisory MCP)
+  Codex hard complete local `apply_patch`; OpenCode advisory)
   — PreToolUse / Cursor `preToolUse` uses **`--hook-repair`** (W4): on deny, stderr may include
   `ARK_REPAIR_JSON` / `ARK_AUTOPATCH_JSON` for hosts that re-inject a patch.
   Still exit 2 / hard block; never silent write. Drop `--hook-repair` for

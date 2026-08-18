@@ -111,9 +111,9 @@ export function detectWritePathCapabilities(root, explicitHost, attempt) {
   } else if (mode === 'mcp-only') {
     const honesty =
       activeHost === 'codex'
-        ? 'Codex local write is advisory (MCP + best-effort hooks.json — not a hard boundary; ' +
-          'not equivalent to Claude/Grok PreToolUse hard-write + repair). ' +
-          'The hard merge backstop is CI --strict-merge plus a required status check.'
+        ? 'Codex MCP is advisory because no complete Ark apply_patch hook was detected. ' +
+          'Install and trust .codex/hooks.json for the operation-scoped pre-write block; ' +
+          'CI --strict-merge plus a required status remains the all-path merge boundary.'
         : activeHost === 'opencode'
           ? 'OpenCode local write is advisory (MCP + optional experimental plugin — not a hard boundary; ' +
             'not equivalent to Claude/Grok/Antigravity PreToolUse hard-write). ' +

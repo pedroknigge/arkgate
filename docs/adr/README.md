@@ -26,6 +26,7 @@ decision; implementation and manifests remain authoritative for current structur
 | [0016](0016-arkrules-no-executable-core.md) | Executable evaluator stays out of core | Accepted |
 | [0017](0017-mcp-project-identity-binding.md) | MCP verdicts require explicit project identity | Accepted |
 | [0018](0018-shared-skill-catalogs-are-monotonic.md) | Shared skill catalogs are monotonic | Accepted |
+| [0019](0019-codex-operation-scoped-hard-write.md) | Codex hard write is limited to trusted, complete, runtime-observed local `apply_patch` | Accepted |
 
 Do not renumber or delete accepted decisions. Add a superseding ADR when a durable decision
 changes, and link both records.

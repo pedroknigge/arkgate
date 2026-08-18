@@ -147,7 +147,7 @@ describe('buildBaselineHonesty', () => {
 });
 
 describe('buildWritePathHonesty', () => {
-  it('soft hosts never claim hard write; hard hosts stay unverified without proof', () => {
+  it('soft hosts never claim hard write; hard-capable hosts require proof', () => {
     const cursor = buildWritePathHonesty('cursor', false);
     expect(cursor.softWriteHost).toBe(false);
     expect(cursor.hardWriteSupported).toBe(true);
@@ -157,9 +157,9 @@ describe('buildWritePathHonesty', () => {
     expect(cursor.hardMergeBoundary).toMatch(/strict-merge/);
 
     const codex = buildWritePathHonesty('codex', true);
-    expect(codex.softWriteHost).toBe(true);
-    // Soft hosts never become hard even if a flag is set.
-    expect(codex.hardWriteActive).toBe(false);
+    expect(codex.softWriteHost).toBe(false);
+    expect(codex.hardWriteSupported).toBe(true);
+    expect(codex.hardWriteActive).toBe(true);
 
     const claude = buildWritePathHonesty('claude', false);
     expect(claude.hardWriteSupported).toBe(true);

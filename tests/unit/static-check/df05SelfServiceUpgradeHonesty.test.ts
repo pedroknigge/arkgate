@@ -120,7 +120,7 @@ describe('DF05 self-service criterion (quoted)', () => {
 
 describe('DF05 pure host activation labels (fail-closed)', () => {
   it('labels soft hosts advisory and never hard without evidence', () => {
-    for (const host of ['codex', 'opencode'] as const) {
+    for (const host of ['opencode'] as const) {
       const entry = projectHostWritePathActivation(host);
       expect(entry.softWriteHost).toBe(true);
       expect(entry.hardWriteSupported).toBe(false);
@@ -131,7 +131,7 @@ describe('DF05 pure host activation labels (fail-closed)', () => {
   });
 
   it('labels hard-capable hosts advisory when hard is not proven (no false hard)', () => {
-    for (const host of ['claude', 'grok', 'antigravity', 'cursor'] as const) {
+    for (const host of ['claude', 'grok', 'antigravity', 'cursor', 'codex'] as const) {
       const entry = projectHostWritePathActivation(host);
       expect(entry.softWriteHost).toBe(false);
       expect(entry.hardWriteSupported).toBe(true);
@@ -141,7 +141,7 @@ describe('DF05 pure host activation labels (fail-closed)', () => {
   });
 
   it('only claims hard when hardWriteActive evidence is supplied for hard-capable host', () => {
-    const soft = projectHostWritePathActivation('codex', { hardWriteActive: true });
+    const soft = projectHostWritePathActivation('opencode', { hardWriteActive: true });
     expect(soft.writePath).toBe('advisory');
     expect(soft.hardWriteActive).toBe(false);
 
@@ -236,8 +236,8 @@ describe('DF05 managed-upgrade selfService projection', () => {
     expect(fs.readFileSync(agentsPath, 'utf8')).toContain('DF05 do not clobber');
   });
 
-  it('soft host upgrade JSON never labels write-path hard', () => {
-    const root = fixtureRoot('ark-df05-soft-');
+  it('Codex upgrade JSON stays advisory until hard runtime evidence exists', () => {
+    const root = fixtureRoot('ark-df05-codex-unverified-');
     installAndSeedManaged(root, 'codex');
 
     const preview = run(ARK, [
@@ -255,7 +255,8 @@ describe('DF05 managed-upgrade selfService projection', () => {
     expect(report.selfService).toBeDefined();
     const codex = report.selfService!.writePathActivation.find((e) => e.host === 'codex');
     expect(codex).toBeDefined();
-    expect(codex!.softWriteHost).toBe(true);
+    expect(codex!.softWriteHost).toBe(false);
+    expect(codex!.hardWriteSupported).toBe(true);
     expect(codex!.writePath).toBe('advisory');
     expect(codex!.hardWriteActive).toBe(false);
     expect(report.selfService!.writePathHonestlyLabeled).toBe(true);
