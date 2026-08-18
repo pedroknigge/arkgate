@@ -12,15 +12,17 @@ overview: [develop.md](develop.md) · hub: [README.md](README.md).
 | **Claude Code** | Hard PreToolUse for listed ops when installed + trusted + (for `hard:true`) runtime-observed | Required `arkgate-check --strict-merge` status |
 | **Grok Build** | Hard PreToolUse for listed ops when installed + trusted + (for `hard:true`) runtime-observed | Required `arkgate-check --strict-merge` status |
 | **Google Antigravity** | Hard PreToolUse for listed write tools when installed + trusted + (for `hard:true`) runtime-observed | Required `arkgate-check --strict-merge` status |
-| **Cursor** | **Advisory only** (MCP/rules) — no hard PreToolUse | Required CI status (same check) |
-| **OpenAI Codex** | **Advisory / best-effort** (MCP + optional hooks.json) — **not** equivalent to Claude/Grok hard block | Required CI status (same check) |
+| **Cursor** | Hard preToolUse for Write/StrReplace when installed + trusted + runtime-observed | Required CI status (same check) |
+| **OpenAI Codex** | Hard PreToolUse for complete local `apply_patch` in CLI/Desktop when installed + trusted + runtime-observed | Required CI status (same check) |
 | **OpenCode** | **Advisory / best-effort** (MCP + optional experimental plugin) — **not** a hard boundary | Required CI status (same check) |
 
-On Claude Code, Grok Build, and Google Antigravity, an installed and trusted PreToolUse hook can
-block matched writes before they land on disk. Cursor, OpenAI Codex, and OpenCode use advisory MCP
-validation at write time; CI is their hard repository check. Codex 0.123+ dispatches hooks for its
-native `apply_patch` handler, but Code Mode hosts can execute deferred nested writes without that
-project hook event. OpenCode `tool.execute.before` plugins have known subagent bypass holes. See
+On Claude Code, Grok Build, Google Antigravity, Cursor, and Codex, an installed and trusted
+PreToolUse hook can block the listed local operation before it lands on disk. Codex’s claim is
+intentionally narrow: Ark must reconstruct the complete `apply_patch`, and a fresh hook invocation
+must prove the operation. Current Codex CLI and local ChatGPT Desktop/App Server send the patch in
+`tool_input.command`; hosted tools, specialized opt-out paths, shell/direct writes, and incomplete
+patches remain outside that local claim. OpenCode `tool.execute.before` plugins have known subagent
+bypass holes. See
 the [canonical host support matrix](../README.md#host-enforcement-support) before installing. The
 advisory-local / hard-CI split is a deliberate trade-off: local surfaces optimize feedback speed,
 while a required merge status is the one boundary a repository can make every write path share.
@@ -327,9 +329,14 @@ Your repository backstop remains CI: `ark-check` fails its check on anything tha
 through (Shell bypass, Tab, incomplete coverage). It blocks the merge only when that status
 is required by repository policy.
 
-## OpenAI Codex CLI
+## OpenAI Codex CLI and local Desktop
 
 Recommended for Ark projects.
+
+Platform authority: [Codex Hooks](https://developers.openai.com/codex/hooks) ·
+[Advanced configuration](https://developers.openai.com/codex/config-advanced) ·
+[App Server](https://developers.openai.com/codex/app-server). Project-local hooks run only after
+the project and exact hook definition are trusted.
 
 Codex 0.123+ dispatches `PreToolUse` for the native `apply_patch` handler. Ark installs
 `.codex/hooks.json` with `ApplyPatch|apply_patch|Write|Edit|MultiEdit` aliases and reconstructs
@@ -337,19 +344,19 @@ every added or updated file in a multi-file patch before allowing it. The hook p
 `--root . --root-env CODEX_PROJECT_DIR`: ArkGate reads the environment directly without
 POSIX shell expansion and safely falls back to the hook working directory.
 
-This hook is best-effort in Codex Code Mode: some hosts execute deferred nested `apply_patch`
-calls without dispatching the project `PreToolUse` event. ArkGate therefore does not treat the
-presence of `.codex/hooks.json` as a universal hard-write guarantee; MCP remains advisory and the
-required CI status is the hard repository boundary.
+The trusted hook is a hard boundary for the covered local operation, not a universal Codex
+guarantee. ArkGate claims `hard:true` only while processing a complete runtime-observed
+`apply_patch`; `.codex/hooks.json` on disk is merely configured/unverified. Hosted tools,
+specialized opt-out paths, shell/direct writes, and incomplete reconstruction remain CI-backed.
 
 ```bash
 npx ark-check --install-agent-gates --tools codex
 ```
 
 The generated hook includes `--hook-repair`, so a rejected patch **may emit** a structured
-repair envelope (same JSON shape as Claude/Grok). **Reinjection is not guaranteed** on Codex —
-local write stays advisory/bypassable; the host must re-apply any fix, and required CI remains
-the hard merge boundary. Codex still needs hook trust enabled for the project.
+repair envelope (same JSON shape as Claude/Grok). **Reinjection is not guaranteed** on Codex:
+the host must re-apply any fix. Exit `2` is the supported deny, and required CI remains the
+all-path hard merge boundary. Codex still needs hook trust enabled for the project.
 
 Modern Codex resolves MCP servers from the active project's `.codex/config.toml`. Ark writes
 that file with relative paths, so every repository owns its primary `ark` binding without
@@ -409,8 +416,9 @@ observe a later MCP conversation from files alone. The matched `ark_identity` re
 runtime observation for that caller and live process; it does not mutate the setup JSON.
 `.codex/config.toml` by itself never upgrades `runtimeObserved` or `active`.
 
-Codex uses the best-effort local patch hook plus advisory MCP for discovery/validation and
-`ark-check` as the hard merge backstop. Register all three as soon as the repo is adopted.
+Codex uses an operation-scoped hard local patch hook plus advisory MCP for discovery/validation
+and `ark-check` as the all-path hard merge backstop. Register all three as soon as the repo is
+adopted.
 
 ### Legacy Codex home fallback
 
@@ -501,9 +509,10 @@ released from Ark ownership.
   home (`$CODEX_HOME/skills`). Home debt is **deferred** when the session host is not Codex.
 - Legacy flat prompts alone are reported as non-loadable skill debt with a
   `--skills-only --tools codex --force` (repo) or `--codex-home --force` (home) fix.
-- Codex **write path is advisory**: MCP + best-effort `.codex/hooks.json` is **not** a hard
-  write boundary and is **not** equivalent to Claude/Grok PreToolUse hard-write + repair.
-  The hard merge backstop is CI `--strict-merge` (or `--strict`) as a **required GitHub status context** (not “workflow file present”).
+- Codex **complete local `apply_patch` is hard** when `.codex/hooks.json` is trusted and the
+  invocation is runtime-observed. MCP remains advisory; incomplete, hosted, specialized, shell,
+  and direct-write paths rely on CI `--strict-merge` (or `--strict`) as a **required GitHub status
+  context** (not “workflow file present”).
 - CI workflows that run ark-check without the fail-closed profile (or with only
   `--strict-config`) surface gap `enforcement-ci-not-fail-closed`.
 

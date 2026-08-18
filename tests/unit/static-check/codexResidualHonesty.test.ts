@@ -386,7 +386,7 @@ describe('Codex write-path honesty', () => {
     try {
       const wp = detectWritePathCapabilities(root);
       expect(wp.mode).toBe('mcp-only');
-      expect(wp.gap?.message).toMatch(/not a hard boundary|not equivalent to Claude/i);
+      expect(wp.gap?.message).toMatch(/no complete Ark apply_patch hook|operation-scoped/i);
       expect(wp.gap?.message).toMatch(/strict-merge|CI/i);
       expect(wp.gap?.fix).toMatch(/strict-merge|status/i);
       expect(wp.capabilities['hard-write']).toBe(false);

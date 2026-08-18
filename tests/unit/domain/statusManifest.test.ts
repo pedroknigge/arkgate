@@ -146,7 +146,7 @@ describe('statusManifest (Domain — ACS03)', () => {
       classifyStatusWritePath({
         hardWriteActive: true,
         softWriteHost: true,
-        activeHost: 'codex',
+        activeHost: 'opencode',
       })
     ).toBe('advisory');
     expect(

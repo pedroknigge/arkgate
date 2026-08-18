@@ -88,8 +88,8 @@ Options:
   --remove-host <host>
                Preview or apply removal of that compact host integration; re-add it with --tools <host>.
   --require-write-hook <host>
-               Require and verify a hard local write hook for Claude, Grok, Antigravity, or Cursor.
-               Codex/OpenCode are advisory-write plus hard CI merge only; impossible requests fail before any write.
+               Require and verify a hard local write hook for Claude, Grok, Antigravity, Cursor, or Codex.
+               Codex covers complete local apply_patch only; OpenCode is advisory-write plus hard CI merge.
 
 Interactive mode (TTY, no --yes): asks what application shape you are building and maps it to a preset.
 Non-interactive (no TTY): uses the same defaults as --yes — never calls readline on a null interface.
@@ -183,10 +183,10 @@ export function checkUsageAll() {
     'transition. Weakening or judgment-required findings fail unless --policy-ack names',
     'every finding and is bound to both policy hashes. Use --policy-base/--policy-base-ref',
     'for an explicit comparison; ARK_POLICY_BASE_REF is the CI environment equivalent.',
-    'Add --require-write-hook claude|grok|antigravity|cursor to validate a hard local write',
-    'boundary for that specific host. Codex and OpenCode expose advisory MCP (plus best-effort',
-    'hooks where applicable) and the shared CI check; merge blocking requires repository policy',
-    'to make that status required.',
+    'Add --require-write-hook claude|grok|antigravity|cursor|codex to validate a hard local',
+    'write boundary for that specific host. Codex covers complete local apply_patch only;',
+    'hosted/specialized/direct-write paths and OpenCode remain CI-backed. Merge blocking requires',
+    'repository policy to make the shared CI status required.',
     '',
     '--require-gates implies --strict-config and fails when the Ark contract in AGENTS.md,',
     'the project-rooted Ark server in .mcp.json, or fail-closed CI is missing/invalid.',
@@ -194,7 +194,7 @@ export function checkUsageAll() {
     '',
     '--install-agent-gates writes AGENTS.md, .mcp.json, and the CI workflow for every',
     'project, plus tool-specific templates. Known tools: claude, cursor, codex, grok',
-    '(Claude/Grok/Antigravity/Cursor hard-write hooks when covered; Codex advisory MCP;',
+    '(Claude/Grok/Antigravity/Cursor hard-write hooks when covered; Codex hard local apply_patch;',
     'shared CI check for all) and',
     'windsurf, cline, copilot, kiro, roo, continue, gemini',
     '(instruction-tier rule files derived from the same contract).',

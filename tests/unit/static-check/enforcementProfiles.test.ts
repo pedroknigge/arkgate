@@ -42,7 +42,7 @@ describe('enforcement profile policy', () => {
         hookPath: '.agents/hooks.json',
       },
       cursor: { hardWrite: true, advisoryWrite: true, hookPath: '.cursor/hooks.json' },
-      codex: { hardWrite: false, advisoryWrite: true, hookPath: '.codex/hooks.json' },
+      codex: { hardWrite: true, advisoryWrite: true, hookPath: '.codex/hooks.json' },
       opencode: { hardWrite: false, advisoryWrite: true, hookPath: null },
     });
   });
@@ -86,12 +86,7 @@ describe('enforcement profile policy', () => {
       });
       expect(
         validateHardWriteRequest({ root, host: 'CODEX', tools: 'codex' })
-      ).toEqual({
-        ok: false,
-        error:
-          'codex supports advisory-write plus the shared CI check, not a hard local write hook. ' +
-          'Omit --require-write-hook, keep --strict-merge in CI, and require that status to block merges.',
-      });
+      ).toMatchObject({ ok: true, host: 'codex', tools: ['codex'] });
       expect(
         validateHardWriteRequest({ root, host: 'opencode', tools: 'opencode' })
       ).toEqual({

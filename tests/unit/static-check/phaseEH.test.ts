@@ -128,8 +128,8 @@ describe('EH05 product honesty soft-write reclassification', () => {
       writePathHonesty: {
         advisory: true,
         softWriteHost: true,
-        activeHost: 'codex',
-        message: 'Codex: write path is advisory',
+        activeHost: 'opencode',
+        message: 'OpenCode: write path is advisory',
       },
       operatingMode: 'enforce',
       activeBlockingViolations: 0,
@@ -142,7 +142,7 @@ describe('EH05 product honesty soft-write reclassification', () => {
     expect(honesty.contractReadiness).toBe('ready');
     expect(honesty.localWriteBoundary).toBe('advisory');
     expect(honesty.headline).toMatch(/Architecture contract ready/i);
-    expect(honesty.headline).toMatch(/Codex local writes are advisory/i);
+    expect(honesty.headline).toMatch(/OpenCode local writes are advisory/i);
     expect(honesty.headline).not.toMatch(/^Not finished$/i);
     expect(honesty.primaryNextAction).toMatch(/required GitHub status context|status context/i);
     expect(honesty.primaryNextAction).toMatch(/arkgate-check --strict-merge|ark-check --strict-merge/);
@@ -157,7 +157,7 @@ describe('EH05 product honesty soft-write reclassification', () => {
         activeViolations: 3,
         totalViolations: 3,
       }),
-      writePathHonesty: buildWritePathHonesty('codex', false),
+      writePathHonesty: buildWritePathHonesty('opencode', false),
       activeBlockingViolations: 3,
     });
     expect(honesty.unfinished).toBe(true);
@@ -172,7 +172,7 @@ describe('EH05 product honesty soft-write reclassification', () => {
     const honesty = buildProductHonesty({
       coverageHonesty: buildCoverageHonesty({ percent: 100, totalFiles: 20 }),
       baselineHonesty: buildBaselineHonesty({ exists: false }),
-      writePathHonesty: buildWritePathHonesty('codex', false),
+      writePathHonesty: buildWritePathHonesty('opencode', false),
       designWeak: true,
       designWeakLabel: 'ENFORCE · design-weak residual',
       activeBlockingViolations: 0,
@@ -197,7 +197,7 @@ describe('EH05 product honesty soft-write reclassification', () => {
     expect(honesty.architectureReasonIds).toContain('residual-pilot');
   });
 
-  it('computeDoctorEnforcementHonesty exposes readiness split for codex green tree', () => {
+  it('computeDoctorEnforcementHonesty keeps unobserved Codex hard write unverified', () => {
     const bundle = computeDoctorEnforcementHonesty({
       governedPercent: 100,
       totalFiles: 40,
@@ -214,8 +214,9 @@ describe('EH05 product honesty soft-write reclassification', () => {
     });
     expect(bundle.productHonesty.unfinished).toBe(false);
     expect(bundle.productHonesty.finished).toBe(true);
-    expect(bundle.productHonesty.localWriteBoundary).toBe('advisory');
-    expect(bundle.writePathHonesty.softWriteHost).toBe(true);
+    expect(bundle.productHonesty.localWriteBoundary).toBe('unverified');
+    expect(bundle.writePathHonesty.softWriteHost).toBe(false);
+    expect(bundle.writePathHonesty.hardWriteUnverified).toBe(true);
   });
 });
 
@@ -393,7 +394,7 @@ describe('EH07 repair envelope vs reinjection + ops matrix', () => {
     const caps = hostRepairCapabilities('codex');
     expect(caps.repairEnvelopeEmitted).toBe(true);
     expect(caps.repairReinjectionGuaranteed).toBe(false);
-    expect(caps.operationCoverage.apply_patch).toBe(false);
+    expect(caps.operationCoverage.apply_patch).toBe(true);
     expect(caps.operationCoverage.shell).toBe(false);
     expect(caps.operationCoverage['pre-commit']).toBe(false);
     expect(HOST_SUPPORT_MATRIX.codex.capabilities['repair-payload']).toBe(false);

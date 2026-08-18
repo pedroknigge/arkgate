@@ -118,7 +118,7 @@ describe('T05 context-independent enforcement proof', () => {
     expect(humanRun.stderr).toContain(`Next action: ${diagnostic.nextAction}`);
   });
 
-  it('preflights a complete ApplyPatch atomically without overstating Codex hardness', () => {
+  it('hard-blocks the current Codex apply_patch command payload before disk mutation', () => {
     const root = setupRoot();
     const patch = [
       '*** Begin Patch',
@@ -129,18 +129,22 @@ describe('T05 context-independent enforcement proof', () => {
       '+export const service = 1;',
       '*** End Patch',
     ].join('\n');
-    const run = runHook(root, { tool_name: 'ApplyPatch', tool_input: { patch } });
+    const run = runHook(root, {
+      hook_event_name: 'PreToolUse',
+      tool_name: 'apply_patch',
+      tool_input: { command: patch },
+    });
 
     expect(run.status, run.stderr).toBe(2);
     const repair = repairPayload(run.stderr);
     const cli = JSON.parse(preflight(root, true).stdout);
     expect(repair.diagnostics).toEqual(cli.diagnostics);
     expect(repair.enforcement.localWrite).toMatchObject({
-      supported: false,
+      supported: true,
       installed: true,
       active: true,
-      bypassable: true,
-      hard: false,
+      bypassable: false,
+      hard: true,
       operation: 'apply_patch',
       coverage: 'complete-patch',
     });

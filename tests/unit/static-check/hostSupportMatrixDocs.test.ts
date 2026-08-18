@@ -77,7 +77,7 @@ describe('canonical public host support matrix', () => {
         'repair-reinjection-guaranteed': false,
       },
       codex: {
-        'hard-write': false,
+        'hard-write': true,
         'advisory-write': true,
         'merge-gate': true,
         'repair-payload': false,
@@ -103,6 +103,9 @@ describe('canonical public host support matrix', () => {
     expect(formatHostSupportSummary(HOST_SUPPORT_MATRIX.cursor)).toContain(
       'hard local write boundary'
     );
+    expect(formatHostSupportSummary(HOST_SUPPORT_MATRIX.codex)).toContain(
+      'hard local write boundary'
+    );
     expect(formatHostSupportSummary(HOST_SUPPORT_MATRIX.opencode)).toContain(
       'no hard local write boundary'
     );
@@ -120,7 +123,8 @@ describe('canonical public host support matrix', () => {
     // Hard hosts: no double "PreToolUse PreToolUse"
     expect(rendered).toMatch(/\*\*Hard\*\* block for listed ops \(PreToolUse/);
     expect(rendered).not.toMatch(/PreToolUse for listed ops \(PreToolUse/);
-    expect(rendered).toMatch(/Advisory \/ best-effort/);
+    expect(rendered).toMatch(/OpenAI Codex.*\*\*Hard\*\*/);
+    expect(rendered).toMatch(/OpenCode.*Advisory \/ best-effort/);
   });
 
   it('doctorWritePathHonestyMessage covers host × hardWrite combinations', () => {
@@ -128,11 +132,14 @@ describe('canonical public host support matrix', () => {
       /Cursor:.*Write\/StrReplace|unverified/i
     );
     expect(doctorWritePathHonestyMessage('cursor', true)).toBeNull();
-    expect(doctorWritePathHonestyMessage('codex', false)).toMatch(/Codex:.*(warning only|best-effort|not blocked)/i);
+    expect(doctorWritePathHonestyMessage('codex', false)).toMatch(
+      /Codex:.*apply_patch.*unverified/i
+    );
     expect(doctorWritePathHonestyMessage('codex', false)).toMatch(/Required CI|merge boundary/i);
     expect(doctorWritePathHonestyMessage('codex', false)).not.toEqual(
       doctorWritePathHonestyMessage('cursor', false)
     );
+    expect(doctorWritePathHonestyMessage('codex', true)).toBeNull();
     expect(doctorWritePathHonestyMessage('opencode', false)).toMatch(/OpenCode:.*(warning only|advisory|not blocked)/i);
     expect(doctorWritePathHonestyMessage('opencode', true)).toMatch(
       /OpenCode:.*(warning only|advisory|not blocked)/i

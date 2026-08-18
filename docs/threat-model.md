@@ -44,12 +44,16 @@ infrastructure beyond how this package is published.
 
 ```
 Claude/Grok host --PreToolUse--> arkgate-mcp (hard only for observed covered operation)
-Codex ApplyPatch  --PreToolUse--> arkgate-mcp (atomic feedback; bypassable/non-hard host profile)
+Codex apply_patch --PreToolUse--> arkgate-mcp (hard for complete trusted + observed local operation)
 Any MCP host     --tool call----> arkgate-mcp (advisory validation)
 Human IDE        --disk/git-----> working tree
 working tree     --PR-----------> CI ark-check --strict-merge
 npm publish <-- signed tag ---  GitHub Release + provenance
 ```
+
+Codex hosted tools, specialized hook opt-outs, shell/direct writes, and incomplete patch
+reconstruction do not inherit the local `apply_patch` claim; required CI remains the shared
+all-path merge boundary.
 
 ## Residual risk (accepted)
 

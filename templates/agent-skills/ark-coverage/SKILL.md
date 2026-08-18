@@ -128,9 +128,10 @@ because governed% is 100% and plan is empty.
 **Honesty hard lines (doctor JSON):**
 - `coverageHonesty.worseThanNoGate` / weak coverage (~&lt;50%): green is **worse than no gate**.
 - `baseline.honesty.dirtyBaselineRisk`: green-via-freeze may hide false-positive debt.
-- `writePath.honesty.softWriteHost` (Cursor / Codex / OpenCode): write path is **advisory /
-  best-effort**, not hard PreToolUse — required CI status is the hard merge boundary.
-- Do not invent hard write guarantees for soft hosts.
+- `writePath.honesty.softWriteHost` (OpenCode or another uncovered path): write path is
+  **advisory / best-effort**, not hard PreToolUse — required CI status is the hard merge boundary.
+- Cursor hard evidence is limited to trusted Write/StrReplace; Codex is limited to a complete,
+  trusted, runtime-observed local `apply_patch`. Do not borrow either claim for other paths.
 
 ## Related onboarding
 

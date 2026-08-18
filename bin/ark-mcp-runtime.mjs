@@ -358,6 +358,7 @@ function mapAntigravityToolCall(toolCall) {
  * Antigravity: { toolCall: { name, args: { TargetFile, CodeContent, … } } }
  * Cursor:      { tool_name, tool_input, hook_event_name?, workspace_roots? }
  *              Write uses `contents`; StrReplace maps to Edit (path/old_string/new_string).
+ * Codex:       { tool_name: "apply_patch", tool_input: { command: "*** Begin Patch..." } }
  */
 function normalizeHookPayload(payload, grokHookEvent = Boolean(process.env.GROK_HOOK_EVENT)) {
   const antigravityStyle =
@@ -669,7 +670,10 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
       attemptContext?.grokHookEvent ?? Boolean(process.env.GROK_HOOK_EVENT)
     );
   if (toolName === 'ApplyPatch') {
-    const patch = toolInput.patch ?? toolInput.input ?? toolInput.content;
+    // Current Codex CLI/Desktop hook schema uses tool_input.command. Keep the
+    // historical fields for older clients and existing integration fixtures.
+    const patch =
+      toolInput.command ?? toolInput.patch ?? toolInput.input ?? toolInput.content;
     const parsedPatch = codexPatchWrites(patch, args.root);
     // Codex ApplyPatch is only preflighted when Ark can reconstruct every file operation.
     // An incomplete reconstruction must not be mislabeled as atomic or hard enforcement.

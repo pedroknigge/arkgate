@@ -14,6 +14,9 @@ compatibility `ark://manifest`)<br>
 **Monorepo:** root `arkgate` + `packages/runtime`<br>
 **Auditor:** implementer (Phase DF / DF06)
 
+**2026-08-18 addendum (4.6.3 prepare):** C-046 records current Codex CLI/local Desktop
+operation-scoped hard write. Historical 4.5.0 snapshot language below remains dated evidence.
+
 ## Summary
 
 Bounded set: every externally consumable package/bin/schema/integration family, both product
@@ -22,7 +25,7 @@ configuration, package-surface, product-voice, ROADMAP Next session, this matrix
 
 | Verdict | Count |
 |---------|------:|
-| OK | 45 |
+| OK | 46 |
 | Partial | 1 |
 | Missing | 0 |
 | Contradicted | 0 |
@@ -35,8 +38,8 @@ configuration, package-surface, product-voice, ROADMAP Next session, this matrix
 
 1. **C-028 Partial (wontfix for DF):** Z09 / RB-11 retained-adoption + independent close remain a
    parked claim gate — not an engineering `doing` until preregistration is met.
-2. Soft-write hosts stay advisory forever; doctor must not re-collapse them into unfinished
-   architecture debt after EH05.
+2. OpenCode and uncovered host paths stay advisory. Codex hard evidence is limited to complete,
+   trusted, runtime-observed local `apply_patch`; doctor must not borrow it for other paths.
 3. Repo hygiene: Dependabot may still surface transitive advisories; triage before claiming a
    clean public tree (not a product-roadmap `doing` unless it needs a pin).
 4. **Tree prepare / npm lag:** tree identity is **4.5.0** (Status: prepared); npm `latest` remains
@@ -115,7 +118,8 @@ engineering `doing`.
 | C-042 | Public product lanes describe compass + Align/Stabilize/Shape without roadmap-item narrative | [Use](../use.md) · [Agent guide](../agent-guide.md) · [product-voice](../product-voice.md) | README / use / agent-guide / CHANGELOG | OK | product-docs hygiene (IC06) |
 | C-043 | Status/MCP project improvement compass with honesty modes `full` \| `subset` \| `unavailable`; residual ⊆ doctor when `full`; never invent green residual | [Package surface](../package-surface.md) · [Agent guide](../agent-guide.md) | `projectStatusImprovementCompass` · status fixtures | OK | DF02 / 4.5.0 prepare |
 | C-044 | Public lanes teach session recipe: identity → status → act; doctor when compass mode is not full — without roadmap codes | [Use — session recipe](../use.md#session-recipe-agent-turn) · [Agent guide](../agent-guide.md#session-recipe-agent-turn) | use / agent-guide / develop / release notes | OK | DF06 |
-| C-045 | Managed upgrade surfaces self-service activation labels + customized-content preserve without inventing hard-write for soft hosts | [Package surface](../package-surface.md) · [4.5.0 notes](../releases/4.5.0.md) | `managed-upgrade-honesty.mjs` · DF05 tests | OK | DF05 / 4.5.0 prepare |
+| C-045 | Managed upgrade surfaces self-service activation labels + customized-content preserve without inventing hard-write without runtime evidence | [Package surface](../package-surface.md) · [4.5.0 notes](../releases/4.5.0.md) | `managed-upgrade-honesty.mjs` · DF05 tests | OK | DF05 / 4.5.0 prepare |
+| C-046 | Codex CLI and local Desktop/App Server hard-block only complete trusted, runtime-observed local `apply_patch`; other paths remain CI-backed | [AI gates](../ai-gates.md#openai-codex-cli-and-local-desktop) · [ADR 0019](../adr/0019-codex-operation-scoped-hard-write.md) | `ark-mcp-runtime.mjs` · `host-support-matrix.mjs` · T05/Z10/host matrix tests | OK | CX01 / 4.6.3 |
 
 ## Contradicted / Partial owners (DF06 close)
 

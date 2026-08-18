@@ -17,7 +17,8 @@ and makes sure a “green” check means something real.
 </div>
 
 > **ArkGate 4.6.2** is on npm `latest` — first-contact copy (what to do in a few lines).
-> [4.6.2 notes](docs/releases/4.6.2.md) · [4.6.1](docs/releases/4.6.1.md) · [4.6.0](docs/releases/4.6.0.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> **4.6.3 is prepared** — Codex CLI/local Desktop hard-block complete trusted `apply_patch`.
+> [4.6.3 notes](docs/releases/4.6.3.md) · [4.6.2](docs/releases/4.6.2.md) · [4.6.1](docs/releases/4.6.1.md) · [4.6.0](docs/releases/4.6.0.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
 
@@ -116,14 +117,15 @@ Details: [docs/use.md](docs/use.md).
 | Claude Code | **Hard** block for listed ops (PreToolUse `Write` / `Edit` / `MultiEdit`) when installed + trusted | Advisory; the agent must call it | **Required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) | Emitted on hook deny; host must re-inject (hard path when installed + trusted) |
 | Grok Build | **Hard** block for listed ops (PreToolUse `write` / `search_replace` (plus aliases)) when installed + trusted | Advisory; the agent must call it | **Required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) | Emitted on hook deny; host must re-inject (hard path when installed + trusted) |
 | Google Antigravity | **Hard** block for listed ops (PreToolUse `write_to_file` / `replace_file_content` / `multi_replace_file_content`) when installed + trusted | Advisory; the agent must call it | **Required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) | Emitted on hook deny; host must re-inject (hard path when installed + trusted) |
-| Cursor | **Hard** block for listed ops (preToolUse `Write` / `StrReplace`) when installed + trusted | Advisory; the agent must call it | **Required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) | Envelope may emit (`--hook-repair`); reinjection **not** guaranteed (advisory host) |
-| OpenAI Codex | **Advisory / best-effort** at write (not equivalent to Claude/Grok/Cursor hard block) | Advisory; the agent must call it | **Required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) | Envelope may emit (`--hook-repair`); reinjection **not** guaranteed (advisory host) |
+| Cursor | **Hard** block for listed ops (preToolUse `Write` / `StrReplace`) when installed + trusted | Advisory; the agent must call it | **Required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) | Envelope may emit (`--hook-repair`); reinjection **not** guaranteed |
+| OpenAI Codex | **Hard** block for listed ops (PreToolUse `apply_patch` in Codex CLI and local ChatGPT Desktop/App Server) when installed + trusted | Advisory; the agent must call it | **Required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) | Envelope may emit (`--hook-repair`); reinjection **not** guaranteed |
 | OpenCode | **Advisory / best-effort** at write (MCP + optional plugin; not a hard boundary) | Advisory; the agent must call it | **Required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) | No hard-boundary payload |
 
 **Read the CI column:** for every host, the repository-wide hard guarantee is a **required**
 GitHub **status context** that runs the CLI — not “CI file present,” and not the CLI binary name alone.
-Codex/OpenCode never get a fake hard write claim. Cursor hard write covers only listed
-`preToolUse` ops when `.cursor/hooks.json` is installed and trusted — Shell/Tab/human edits still rely on CI.
+Codex hard write covers only a complete local `apply_patch`; Cursor covers only listed
+`preToolUse` ops. In both cases the project hook must be installed + trusted, while shell/direct
+filesystem writes, hosted or specialized opt-out paths, and human edits still rely on CI.
 
 This table describes the supported profile **after its files are installed and the host loads/trusts them**. A hard local boundary covers only the listed hook operations; alternate tools, direct filesystem writes, and human edits still rely on CI. MCP validation is advisory because the agent must call it. The CI check blocks a merge only when the repository makes that status required. Repair **envelopes** may be emitted without reinjection being guaranteed; silent auto-apply never happens. Run `arkgate-check --doctor` (or `ark-check --doctor`) for the evidence actually detected in the current repository.
 <!-- arkgate-host-support:end -->
@@ -132,10 +134,11 @@ This table describes the supported profile **after its files are installed and t
 
 The split above is a deliberate trade-off, not a gap. ArkGate validates at the earliest boundary
 each host offers and enforces at the earliest boundary a repository can make non-bypassable: the
-required merge status. Hard hooks (Claude Code, Grok Build, Google Antigravity) deny the listed
-write operations at write time; advisory surfaces (MCP, rules, OpenCode plugins) coach the agent
-while it works. But any local boundary can be routed around — another tool, a direct filesystem
-write, a human edit — so the only guarantee ArkGate claims for every path is the
+required merge status. Hard hooks (Claude Code, Grok Build, Google Antigravity, Cursor, and
+Codex’s complete local `apply_patch`) deny their listed write operations at write time; advisory
+surfaces (MCP, rules, OpenCode plugins) coach the agent while it works. But any local boundary can
+be routed around — another tool, a hosted/specialized path, a direct filesystem write, or a human
+edit — so the only guarantee ArkGate claims for every path is the
 `arkgate-check --strict-merge` check, and only when the repository makes that status required.
 Local checks optimize feedback speed; the merge gate owns correctness.
 
@@ -214,7 +217,9 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
 | Current release (4.6.2 on npm `latest`) | [docs/releases/4.6.2.md](docs/releases/4.6.2.md) · [CHANGELOG](CHANGELOG.md) |
+| Prepared patch (4.6.3) | [docs/releases/4.6.3.md](docs/releases/4.6.3.md) |
 | Prior (4.6.1) | [docs/releases/4.6.1.md](docs/releases/4.6.1.md) |
+| Prior (4.6.0) | [docs/releases/4.6.0.md](docs/releases/4.6.0.md) |
 | Prior (4.5.7) | [docs/releases/4.5.7.md](docs/releases/4.5.7.md) |
 | Prior (4.5.0) | [docs/releases/4.5.0.md](docs/releases/4.5.0.md) |
 | Prior (4.4.0) | [docs/releases/4.4.0.md](docs/releases/4.4.0.md) |

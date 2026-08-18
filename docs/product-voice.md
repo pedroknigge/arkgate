@@ -106,7 +106,7 @@ stay stable unless a change explicitly adds an alias.
 | **runtime observed** | runtime observed | A live `ark_identity` matched this workspace |
 | **required CI status** | required CI / status context | Merge hard boundary: required GitHub status running `arkgate-check --strict-merge` |
 | **config ready** | contract ready | Project/import-rules/ArkRules honesty clear — not the same as a local pre-write block |
-| **host limitation** | environment residual | Permanent soft-write host (e.g. Codex) — do not paint the whole project unfinished |
+| **host limitation** | environment residual | Soft-write or uncovered host path (e.g. OpenCode, hosted/specialized tools) — do not paint the whole project unfinished |
 | **allowed rule ids** | guardrail catalog | Closed vocabulary of sensors, capabilities, `ruleId`s, skill roles |
 | **check (tool)** | scan | Deterministic engine / CLI / MCP. Same inputs → same verdict. No LLM. |
 | **coaching / your judgment** | process | Skill- or agent-side. **Never** package pass/fail |
@@ -178,8 +178,8 @@ gate  →  same binary verdict on every parity-capable adapter
 | Name the status light + plain fact + next action | “Enforce · leftover design work. Import rules check out; design smells remain. Next: one Shape door — explore → plan B → autopilot with OK.” |
 | Rank one primary door under residual | Doctor **Primary next action** #1; **Also** only for secondary |
 | Label expert skills as escapes | “Install skill pack only when doctor or a STOP handoff names a skill.” |
-| State host write honesty | “Cursor: pre-write block for Write/StrReplace when hooks are trusted. Codex: warning only (not blocked). Required GitHub status is the merge boundary.” |
-| Soft-write ≠ unfinished project | “Architecture contract ready; Codex local writes are advisory.” Keep `soft-write-host` in evidence; reserve **Not finished** for contract/project debt. |
+| State host write honesty | “Cursor blocks trusted Write/StrReplace. Codex blocks complete trusted local `apply_patch` after runtime observation. Required GitHub status covers every path.” |
+| Soft/unverified write ≠ unfinished project | “Architecture config ready; this host operation is advisory or unverified.” Keep environment residual in evidence; reserve **Not finished** for config/project debt. |
 | Keep Suggest on start → doctor | New-here primary is finish `start`, not a competing recommend/architect curriculum |
 | Qualify import-clean under leftover design | “None on checked imports … leftover design work remains. Not healthy finished.” |
 | Prefer unverified-as-not-green | Incomplete analysis, unobserved hooks, and soft MCP never paint as a hard green pre-write block |
@@ -208,7 +208,7 @@ gate  →  same binary verdict on every parity-capable adapter
 | Skill-shopping lists as the default curriculum | Progressive disclosure: one door first |
 | “Healthy / done” while leftover design work remains | False done |
 | “Honesty clear” as “architecture finished” | Honesty clear only means residual honesty sensors are quiet; graph/mode debt is separate |
-| “Not finished” solely because host is Codex/Cursor | Soft-write is environment residual; do not paint a green whole-tree project as unfinished architecture |
+| “Not finished” solely because a host hook is unverified or one host path is advisory | Environment residual is not architecture debt; do not paint a green whole-tree project as unfinished architecture |
 | “MCP installed / active” because a config file exists | Say **configured on disk · runtime unverified** until `ark_identity` matches the expected root |
 | Treating an unverified legacy MCP call as authoritative | Compatibility is not proof; require `binding.status: "matched"` and `authoritative: true` |
 | “Handler means controller” / “every constant is a business rule” | ArkRules inventory uses configured layer context and suppresses narrow technical/test evidence; candidates remain prompts for judgment |

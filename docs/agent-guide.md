@@ -8,9 +8,9 @@ reference for agents and codegen: write hooks, advisory MCP tools, CI, and `/ark
 - Docs hub: [README.md](README.md)  
 
 Guarantees differ by host; start with the
-[canonical host support matrix](../README.md#host-enforcement-support). The advisory-local /
-hard-CI split is a deliberate trade-off, not a gap: local hooks and MCP coach at write time,
-while a required merge status is the one boundary a repository can make every write path share.
+[canonical host support matrix](../README.md#host-enforcement-support). The operation-scoped
+local / all-path CI split is a deliberate trade-off, not a gap: covered local hooks block early,
+MCP coaches, and a required merge status is the one boundary every write path can share.
 
 CLI names: prefer **`arkgate` / `arkgate-check` / `arkgate-mcp`**; aliases `ark` / `ark-check` /
 `ark-mcp` still work for one major. **arkgate@3.8.0+** tests packed project TypeScript
@@ -41,17 +41,20 @@ npx ark-check --install-agent-gates --skills-only --force
 ### Write-path honesty
 
 Claude/Grok/Antigravity/Cursor can hard-block listed PreToolUse / preToolUse ops when installed
-and trusted (Cursor: `Write` / `StrReplace` via `.cursor/hooks.json`). Codex/OpenCode remain
-**advisory at write**. For every host, the repository-wide hard boundary is a **required GitHub
-status context** that runs `arkgate-check --strict-merge` (alias `ark-check --strict-merge`) —
-the CLI name is not the status context name. Never claim Codex/OpenCode hard write; never claim
-Cursor hard write without the trusted hooks file covering Write|StrReplace. Soft-write alone does
-not mean the project is unfinished; doctor keeps it as an environment residual. See
+and trusted (Cursor: `Write` / `StrReplace` via `.cursor/hooks.json`). Codex CLI and local
+ChatGPT Desktop/App Server can hard-block a complete `apply_patch` through a trusted
+`.codex/hooks.json`; installed files stay unverified until a fresh covered invocation. Hosted
+tools, specialized opt-out paths, shell/direct writes, incomplete patch reconstruction, and
+OpenCode remain CI-backed or advisory. For every host, the repository-wide hard boundary is a
+**required GitHub status context** that runs `arkgate-check --strict-merge` (alias
+`ark-check --strict-merge`) — the CLI name is not the status context name. Soft-write or
+unverified-hook evidence alone does not mean the project is unfinished. See
 [ai-gates.md](ai-gates.md) and the README host matrix.
 
 Surface the same plane from the CLI: pair **`ark status --json`** (activation facts) with
-**`ark-check --doctor`** (`doctor.writePath`) — advisory local write on soft hosts → **required**
-merge status as the hard boundary. Product path: [use.md — What you get](use.md#what-you-get) ·
+**`ark-check --doctor`** (`doctor.writePath`) — operation-scoped local hard evidence where
+observed, then **required** merge status as the all-path boundary. Product path:
+[use.md — What you get](use.md#what-you-get) ·
 [README host matrix](../README.md#host-enforcement-support).
 
 **MCP project identity (4.2.0):** before trusting project-specific MCP evidence, call
@@ -1187,8 +1190,10 @@ Register the server itself in `.mcp.json` so the agent can handshake with `ark_i
 }
 ```
 
-On Claude/Grok, the installed PreToolUse hook makes matched writes an enforced checkpoint. MCP
-registration by itself remains advisory on every host because the agent must call the tool.
+On Claude/Grok, the installed PreToolUse hook makes matched writes an enforced checkpoint. Cursor
+does the same for Write/StrReplace, and Codex CLI/local Desktop does so for complete
+`apply_patch` calls after trust and runtime observation. MCP registration by itself remains
+advisory on every host because the agent must call the tool.
 
 Decision rationale: [ADR 0017 — MCP verdicts require explicit project identity](adr/0017-mcp-project-identity-binding.md).
 

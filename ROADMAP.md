@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-16 (Phase SK + TW shipped as **arkgate@4.6.1**; **4.6.2** first-contact copy on npm `latest`)
+- **Status date:** 2026-08-18 (Phase CX active for **arkgate@4.6.3**; **4.6.2** remains on npm `latest` until publish)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -1496,6 +1496,34 @@ Boundary (freezes held):
 - **Depends on:** `FC01`
 
 **Outcome:** npm `latest` = **4.6.2** (`gitHead` `7aabe4a`, OIDC run `31984939719`); public pointers + q06 published; MCP `io.github.pedroknigge/arkgate@4.6.2`; site `/changelog/4.6.2/`.
+
+### Phase CX — Codex local hard write (4.6.3)
+
+Origin: current OpenAI Codex documentation now defines `PreToolUse` as a synchronous
+pre-execution boundary for local `apply_patch`: a trusted hook can deny with
+`permissionDecision: "deny"`, legacy `decision: "block"`, or exit `2`. ArkGate already installs
+the hook, but still labels Codex warning-only and reads the pre-0.123 `tool_input.patch` shape
+instead of the current canonical `tool_input.command`.
+
+Boundary (freezes held):
+
+- Claim hard **only** for a complete, locally reconstructed `apply_patch` when the project hook
+  is installed/trusted and the invocation is runtime-observed. Hook files on disk remain
+  `unverified`; incomplete patches fail open to CI rather than borrowing a hard claim.
+- Codex CLI and local ChatGPT Desktop/App Server use the same local hook contract. Hosted tools,
+  specialized opt-out paths, shell/direct filesystem writes, and humans remain outside this
+  operation-scoped claim and rely on required CI.
+- Repair envelopes may emit; do not claim host reinjection. MCP remains advisory.
+- No config migration, new skill names, sensors, scores, or runtime-package promotion.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 176 | `CX01` | `doing` | M | FC02 + 4.6.2 published | Accept the official Codex payload, promote covered `apply_patch` to runtime-proven hard write, align doctor/status/install/docs, and publish npm/MCP/site 4.6.3 as one patch train |
+
+**CX01 acceptance:** current official `tool_input.command` fixture denies before disk mutation;
+legacy patch fixture stays compatible; incomplete/specialized paths never claim hard; installed
+but unobserved CLI/Desktop hooks stay `unverified`; host matrix, generated README block,
+product voice, develop/AI-gates/package surface, release notes, and confidence gates agree.
 
 ### Phase TW — Team parliament (law vs feature)
 
