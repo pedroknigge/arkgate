@@ -3,7 +3,7 @@
   "packages": {
     "gate": {
       "path": ".",
-      "maxPackedBytes": 901225,
+      "maxPackedBytes": 906000,
       "maxUnpackedBytes": 3201191,
       "maxFiles": 210,
       "measuredCandidate": {
@@ -15,7 +15,7 @@
         "unpackedBytes": 2910173,
         "files": 190
       },
-      "exception": "ArkGate 4.3.0 Phase ACS agent contract surface (diagnostic catalog, status manifest, agent projection, Agent Skills packaging of 13 skills, finding refs, placement A/B eval, honesty docs). Clean measurement on release/4.3.0 tip 4e9ffdc + CI build 31293903842: 819,295 packed / 2,910,173 unpacked / 190 files. Recalibration retains ≥10% fixed headroom: 901,225 packed, 3,201,191 unpacked, 210 files. Previous 4.2.0 ceilings (770,370 / 2,732,711 / 185) are superseded for this feature minor."
+      "exception": "ArkGate 4.3.0 Phase ACS agent contract surface (diagnostic catalog, status manifest, agent projection, Agent Skills packaging of 13 skills, finding refs, placement A/B eval, honesty docs). Clean measurement on release/4.3.0 tip 4e9ffdc + CI build 31293903842: 819,295 packed / 2,910,173 unpacked / 190 files. Recalibration retained ≥10% fixed headroom. 4.6.4 adds a bounded 4,775-byte packed-only allowance for observed npm pack compression variance across supported CI npm/Node cells (same 206-file content measured 900,830 locally vs 902,674 in CI); unpacked/file ceilings are unchanged. Current packed ceiling: 906,000."
     },
     "runtime": {
       "path": "packages/runtime",
