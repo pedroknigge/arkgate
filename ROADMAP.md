@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-18 (Phase CX active for **arkgate@4.6.3**; **4.6.2** remains on npm `latest` until publish)
+- **Status date:** 2026-08-18 (Phase CX follow-up active for **arkgate@4.6.4**; **4.6.3** is on npm `latest`)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -1518,12 +1518,23 @@ Boundary (freezes held):
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 176 | `CX01` | `doing` | M | FC02 + 4.6.2 published | Accept the official Codex payload, promote covered `apply_patch` to runtime-proven hard write, align doctor/status/install/docs, and publish npm/MCP/site 4.6.3 as one patch train |
+| 176 | `CX01` | `done` | M | FC02 + 4.6.2 published | Accept the official Codex payload, promote covered `apply_patch` to runtime-proven hard write, align doctor/status/install/docs, and publish npm/MCP 4.6.3 |
+| 177 | `CX02` | `doing` | M | CX01 + 4.6.3 published | Make `ark upgrade` explicitly tell Codex users to refresh/trust/restart the hook; fail stale MCP closed; hand stale global upgrade to project-local CLI; publish 4.6.4 + site/pointer close |
 
 **CX01 acceptance:** current official `tool_input.command` fixture denies before disk mutation;
 legacy patch fixture stays compatible; incomplete/specialized paths never claim hard; installed
 but unobserved CLI/Desktop hooks stay `unverified`; host matrix, generated README block,
 product voice, develop/AI-gates/package surface, release notes, and confidence gates agree.
+
+**CX01 evidence:** npm `latest` = **4.6.3** (`gitHead` `17f8c30`, OIDC run
+`32167523804`); signed tag/GitHub Release `v4.6.3`; MCP
+`io.github.pedroknigge/arkgate@4.6.3`.
+
+**CX02 acceptance:** upgrade JSON `whatsNew.items` and human **Suggested improvements** include a
+stable `codex-hard-write` card with the exact refresh command, restart/trust requirement,
+runtime-observed `apply_patch` verification, and CI residual; flat + Agent Skills upgrade guidance
+matches; stale MCP cannot return authoritative project evidence; modern stale global upgrade
+hands off without duplicate JSON; 4.6.4 npm/MCP/site and public pointers publish together.
 
 ### Phase TW — Team parliament (law vs feature)
 

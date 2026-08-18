@@ -298,6 +298,7 @@ describe('FX05 post-upgrade checks', () => {
     expect(checks.neverGateInput).toBe(true);
     expect(checks.checks.some((c) => c.id === 'package-pin-cli' && c.ok === true)).toBe(true);
     expect(checks.mcpNote).toMatch(/restart|MCP|expectedRoot/i);
+    expect(checks.mcpNote).toMatch(/PROCESS_PACKAGE_STALE|non-authoritative/i);
   });
 
   it('reports pin mismatch and verification failure honestly', () => {

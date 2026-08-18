@@ -725,7 +725,7 @@ export function buildPostUpgradeChecks(root, options = {}) {
     neverGateInput: true,
     checks,
     mcpNote:
-      'If you used Ark MCP this session: restart/retarget MCP after package bump so process arkgateVersion matches project install; always pass project.expectedRoot + expectedProjectId (WI01). Prefer project-local CLI until identity matched and versions align.',
+      'If you used Ark MCP this session: restart/retarget after the package bump. A stale process is non-authoritative and project tools return PROCESS_PACKAGE_STALE; always pass project.expectedRoot + expectedProjectId. Prefer project-local CLI until identity and package versions align.',
   };
 }
 

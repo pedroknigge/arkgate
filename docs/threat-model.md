@@ -32,7 +32,7 @@ infrastructure beyond how this package is published.
 | T3 | CI job missing / not required | Merge green without architecture | doctor `enforcement-ci-*` gaps; `--strict-merge`; required-status remains locally `unverified` |
 | T4 | Config weakened (`peerIsolation: false`, empty rules) | False green | semantic policy-delta guard in strict merge; hash-bound explicit acknowledgement; present-state safety diagnostics |
 | T5 | Baseline ratcheted open | Debt reintroduced | baseline unused/stale signals; occurrence keys |
-| T6 | Dual MCP bin / wrong root | Gate points at wrong tree | migrate-commands; Codex fail-closed temp roots |
+| T6 | Stale MCP/global CLI or wrong root | Gate points at old package / wrong tree | project identity binding; stale process non-authoritative + `PROCESS_PACKAGE_STALE`; project-local upgrade handoff |
 | T7 | Malicious dependency in publish | Compromised gate | signed tags, npm provenance, dependency-review, CodeQL, Semgrep, `verify-package-files` |
 | T8 | Path traversal in hooks/check | Read/write outside project | root resolution + under-root import resolve |
 | T9 | Runtime InMemory mistaken for durable | Data loss | durability stance docs + safety InMemory production detector |

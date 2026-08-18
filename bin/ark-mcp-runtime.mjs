@@ -1960,11 +1960,14 @@ export async function runArkMcp({ hookInput } = {}) {
   }
 
   function contextFor(binding) {
+    const processPackage = processPackageHonesty();
     return {
       projectIdentity,
       binding,
-      authoritative: binding.authoritative,
-      processPackage: processPackageHonesty(),
+      // A correctly bound project is still non-authoritative when this long-lived
+      // process loaded a different package version than the project now resolves.
+      authoritative: binding.authoritative && !processPackage.processStale,
+      processPackage,
     };
   }
 
@@ -2041,13 +2044,36 @@ export async function runArkMcp({ hookInput } = {}) {
     );
   }
 
+  function staleProcessFailureResult(binding) {
+    const processPackage = processPackageHonesty();
+    return withProjectContext(
+      {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              ok: false,
+              error: {
+                code: 'PROCESS_PACKAGE_STALE',
+                message: processPackage.nextAction,
+              },
+            }),
+          },
+        ],
+        isError: true,
+      },
+      binding
+    );
+  }
+
   const TOOLS = [
     {
       name: 'ark_identity',
       description:
         'First call. Prove this MCP process is the right project: pass project.expectedRoot ' +
         '(exact absolute root) and reuse the returned projectId. Do this before any other Ark tool. ' +
-        'A missing, unmatched, or different root means restart the host and use the local CLI.',
+        'A missing/unmatched root or processPackage.processStale means restart/retarget the host ' +
+        'and use the project-local CLI until identity and package versions align.',
       inputSchema: { type: 'object', properties: {} },
     },
     {
@@ -3003,6 +3029,13 @@ export async function runArkMcp({ hookInput } = {}) {
         binding = bindingForToolPaths(params?.name, params?.arguments, binding);
         if (binding.status === 'mismatch') {
           reply(id, bindingFailureResult(binding));
+          return;
+        }
+        // Keep ark_identity available so the host can diagnose the stale process,
+        // but fail every project tool closed until the MCP server restarts on the
+        // version installed for this root.
+        if (params?.name !== 'ark_identity' && processPackageHonesty().processStale) {
+          reply(id, staleProcessFailureResult(binding));
           return;
         }
         try {

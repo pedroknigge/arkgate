@@ -213,7 +213,7 @@ describe('evaluateStaleUpgradeCli', () => {
     expect(result.message).not.toMatch(/Global\/stale arkgate 2\.x/);
   });
 
-  it('allows outside-tree CLI newer than project install', () => {
+  it('prefers project-local handoff even when outside CLI is newer', () => {
     write(
       tmp,
       'node_modules/arkgate/package.json',
@@ -224,10 +224,11 @@ describe('evaluateStaleUpgradeCli', () => {
       cliPackageRoot: fakeGlobal,
     });
     expect(result.refuse).toBe(false);
-    expect(result.reason).toBe('outside-cli-ok');
+    expect(result.handoff).toBe(true);
+    expect(result.reason).toBe('outside-cli-project-local-preferred');
   });
 
-  it('allows outside-tree CLI at the same version', () => {
+  it('prefers project-local handoff when outside CLI has the same version', () => {
     write(
       tmp,
       'node_modules/arkgate/package.json',
@@ -238,7 +239,8 @@ describe('evaluateStaleUpgradeCli', () => {
       cliPackageRoot: fakeGlobal,
     });
     expect(result.refuse).toBe(false);
-    expect(result.reason).toBe('outside-cli-ok');
+    expect(result.handoff).toBe(true);
+    expect(result.reason).toBe('outside-cli-project-local-preferred');
   });
 
   it('refuses outside-tree CLI with unknown version when project install exists', () => {
@@ -420,6 +422,37 @@ describe('runUpgradeCommand stale guard integration', () => {
     // Human multi-line refuse stays off stderr when --json (agents parse stdout only).
     const stderr = stderrSpy.mock.calls.map((c) => c.join(' ')).join('\n');
     expect(stderr).not.toMatch(/Refusing ark upgrade/);
+  });
+
+  it('hands a stale global invocation to the project-local CLI when available', () => {
+    write(
+      tmp,
+      'node_modules/arkgate/package.json',
+      JSON.stringify({ name: 'arkgate', version: '4.6.4' }, null, 2)
+    );
+    write(tmp, 'node_modules/arkgate/bin/ark.mjs', '#!/usr/bin/env node\n');
+    const runProjectLocalCli = vi.fn(() => 9);
+    const rawArgv = ['upgrade', '--root', tmp, '--json'];
+    const code = runUpgradeCommand(
+      { root: tmp, apply: false, install: false, json: true, strict: true },
+      {
+        cliVersion: '4.6.3',
+        cliPackageRoot: fakeGlobal,
+        rawArgv,
+        runProjectLocalCli,
+        packageInstallArgv: () => ['false', []],
+        arkCheck: path.join(REPO, 'bin/ark-check.mjs'),
+        runArkCheck: () => 0,
+      }
+    );
+    expect(code).toBe(9);
+    expect(runProjectLocalCli).toHaveBeenCalledWith({
+      root: tmp,
+      script: path.join(fs.realpathSync(tmp), 'node_modules/arkgate/bin/ark.mjs'),
+      argv: rawArgv,
+    });
+    expect(stderrSpy).not.toHaveBeenCalled();
+    expect(stdoutSpy).not.toHaveBeenCalled();
   });
 
   it('does not refuse when no local arkgate (install path may proceed)', () => {

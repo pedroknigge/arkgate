@@ -5,6 +5,30 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.6.4 — 2026-08-18
+
+**Patch** over **4.6.3**. `ark upgrade` now tells Codex users how to activate the local
+`apply_patch` boundary after upgrading: refresh the project hook, restart Codex/local Desktop,
+trust the exact hook definition, and verify `doctor.writePath` after a governed patch.
+**No required config migration.**
+
+**Status: prepared** (not yet on npm `latest`; see `docs/releases/4.6.4.md`).
+
+### Changed
+
+- **Upgrade JSON:** `whatsNew.items` includes stable id `codex-hard-write` with the exact
+  `--install-agent-gates --tools codex --force` command and evidence to inspect.
+- **Upgrade human output:** **Suggested improvements** prints the same refresh/restart/trust/check
+  path on preview and apply, including nothing-to-apply previews.
+- **Upgrade skill:** flat and Agent Skills guidance tells Codex to exercise a governed
+  `apply_patch` and keeps hosted/specialized/shell/direct/incomplete/human paths CI-backed.
+- **Stale MCP fail-closed:** when process version no longer matches the project install,
+  `ark_identity` reports non-authoritative evidence and project tools return
+  `PROCESS_PACKAGE_STALE` until restart/retarget.
+- **Global CLI handoff:** a modern stale global `ark upgrade` delegates the original invocation
+  to the project-local `node_modules/arkgate/bin/ark.mjs` instead of managing from the wrong PATH
+  version. Pre-4.6.4 globals still require one `npx arkgate upgrade` entry.
+
 ## 4.6.3 — 2026-08-18
 
 **Patch** over **4.6.2**. Codex CLI and local ChatGPT Desktop/App Server now get a
@@ -12,7 +36,8 @@ runtime-proven pre-write block for complete `apply_patch` calls. ArkGate accepts
 `tool_input.command` payload, while incomplete, hosted, specialized, shell/direct, and human
 write paths remain CI-backed. **No required config migration.**
 
-**Status: prepared** (not yet on npm `latest`; see `docs/releases/4.6.3.md`).
+**Status: published** (npm `latest` from signed tag `v4.6.3`; OIDC run `32167523804`;
+see `docs/releases/4.6.3.md`).
 
 ### Changed
 

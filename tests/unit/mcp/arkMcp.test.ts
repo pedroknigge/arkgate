@@ -710,6 +710,59 @@ describe('ark-mcp project identity and fail-closed binding (WI01)', () => {
     }
   });
 
+  it('fails project tools closed when the long-lived MCP package becomes stale', async () => {
+    prepareMcpRuntime();
+    const project = createIdentityProject('stale-process');
+    const client = createClient(project);
+    try {
+      const initial = await client.request('tools/call', {
+        name: 'ark_identity',
+        arguments: { project: { expectedRoot: project } },
+      });
+      const initialBody = JSON.parse(initial.result.content[0].text);
+      expect(initialBody.binding).toMatchObject({ status: 'matched', authoritative: true });
+      expect(initialBody.authoritative).toBe(true);
+
+      fs.mkdirSync(path.join(project, 'node_modules/arkgate'), { recursive: true });
+      fs.writeFileSync(
+        path.join(project, 'node_modules/arkgate/package.json'),
+        JSON.stringify({ name: 'arkgate', version: '99.0.0' })
+      );
+
+      const staleIdentity = await client.request('tools/call', {
+        name: 'ark_identity',
+        arguments: { project: { expectedRoot: project } },
+      });
+      const staleIdentityBody = JSON.parse(staleIdentity.result.content[0].text);
+      expect(staleIdentity.result.isError).toBe(false);
+      expect(staleIdentityBody.binding).toMatchObject({ status: 'matched' });
+      expect(staleIdentityBody.processPackage).toMatchObject({
+        projectInstalledVersion: '99.0.0',
+        processPackageMismatch: true,
+        processStale: true,
+      });
+      expect(staleIdentityBody.authoritative).toBe(false);
+
+      const manifest = await client.request('tools/call', {
+        name: 'ark_manifest',
+        arguments: {
+          project: {
+            expectedRoot: project,
+            expectedProjectId: initialBody.projectIdentity.projectId,
+          },
+        },
+      });
+      const manifestBody = JSON.parse(manifest.result.content[0].text);
+      expect(manifest.result.isError).toBe(true);
+      expect(manifestBody.error.code).toBe('PROCESS_PACKAGE_STALE');
+      expect(manifestBody.authoritative).toBe(false);
+      expect(manifestBody.processPackage.processStale).toBe(true);
+      expect(manifestBody).not.toHaveProperty('layers');
+    } finally {
+      client.close();
+    }
+  });
+
   it('uses one startup ArkRules snapshot for identity, manifest, and inventory until restart', async () => {
     prepareMcpRuntime();
     const project = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-mcp-rules-snapshot-'));

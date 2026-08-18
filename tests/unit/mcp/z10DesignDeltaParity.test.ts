@@ -8,6 +8,9 @@ import { withDistLock } from '../../helpers/distLock';
 import { writeSemanticGateArtifacts } from '../../helpers/semanticGateArtifacts';
 
 const repositoryRoot = process.cwd();
+const packageVersion = JSON.parse(
+  fs.readFileSync(path.join(repositoryRoot, 'package.json'), 'utf8')
+).version as string;
 let runtimeRoot: string;
 let mcpBin: string;
 
@@ -86,10 +89,14 @@ describe('Z10 write/MCP/CLI design-delta parity', () => {
       JSON.stringify({
         name: 'z10-write-parity',
         private: true,
-        devDependencies: { arkgate: '4.1.0' },
+        devDependencies: { arkgate: packageVersion },
       }) + '\n'
     );
-    write(root, 'node_modules/arkgate/package.json', JSON.stringify({ name: 'arkgate', version: '4.1.0' }) + '\n');
+    write(
+      root,
+      'node_modules/arkgate/package.json',
+      JSON.stringify({ name: 'arkgate', version: packageVersion }) + '\n'
+    );
     write(root, 'node_modules/arkgate/bin/ark-check.mjs', 'export {}\n');
     write(root, 'ark.config.json', `${JSON.stringify(config, null, 2)}\n`);
     write(root, 'apps/web/src/product/page.tsx', 'export const Page = () => <main />;\n');

@@ -58,6 +58,15 @@ line (advisory only — not a score):
 6. **Registry-aware upgrade** — `reasonCode` / `suggestedInstallCmd` when package install is skipped or needed
 7. **Skill drift + refresh** — `skillDrift`; opt-in `--refresh-skills` for customized skill rewrite
 8. **Multi-project MCP** — `processPackage` mismatch/stale on every MCP tool; restart after package bump
+9. **Codex hard write refresh** — run
+   `npx arkgate-check --install-agent-gates --tools codex --force`, restart Codex/local Desktop,
+   review and trust the exact hook, then inspect `doctor.writePath` after a governed
+   `apply_patch`. Only a complete runtime-observed local patch is hard; every other path still
+   relies on required CI.
+10. **Stale process recovery** — a stale Ark MCP is non-authoritative and project tools return
+    `PROCESS_PACKAGE_STALE` until restart/retarget. If a modern global `ark upgrade` is older than
+    the project install, it hands the same invocation to the project-local CLI instead of managing
+    the project from the stale PATH binary.
 
 Never invent gate verdicts from these suggestions. Missing residual is honest empty, not green.
 
@@ -95,8 +104,10 @@ restart/retargeting is required. `ark://manifest` never satisfies this preflight
 
 **Process package honesty:** every tool response includes `processPackage` (`processArkgateVersion`,
 `projectInstalledVersion`, `processPackageMismatch` / `processStale`, `nextAction`). After
-`npm install arkgate@…`, **restart/retarget MCP** so process version matches install. Until then,
-prefer project-local CLI and do not treat MCP analysis as fully current.
+`npm install arkgate@…`, **restart/retarget MCP** so process version matches install. From 4.6.4,
+a stale MCP is non-authoritative: `ark_identity` diagnoses it and project tools return
+`PROCESS_PACKAGE_STALE` until restart. Prefer project-local CLI meanwhile. A modern stale global
+`ark upgrade` hands off automatically; pre-4.6.4 globals need one `npx arkgate upgrade` entry.
 
 ## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
 

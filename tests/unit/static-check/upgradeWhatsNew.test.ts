@@ -15,6 +15,8 @@ const REQUIRED_IDS = [
   'team-parliament',
   'plain-language-doctor',
   'shared-agent-homes',
+  'codex-hard-write',
+  'process-version-recovery',
   'deep-module-coach',
   'improvement-compass',
   'session-status-honesty',
@@ -51,6 +53,9 @@ describe('buildUpgradeWhatsNewSuggestions (shipped product list)', () => {
     expect(lines.join('\n')).toMatch(/deep-module|Deep-module|hot paths/i);
     expect(lines.join('\n')).toMatch(/compass|residual/i);
     expect(lines.join('\n')).toMatch(/two-axis|feature done|Enforce green/i);
+    expect(lines.join('\n')).toMatch(/Codex.*apply_patch|apply_patch.*Codex/i);
+    expect(lines.join('\n')).toMatch(/install-agent-gates --tools codex --force/);
+    expect(lines.join('\n')).toMatch(/PROCESS_PACKAGE_STALE|project-local CLI handoff/);
     expect(lines.join('\n')).not.toMatch(/Excellent|\d+\s*\/\s*10/);
   });
 });
