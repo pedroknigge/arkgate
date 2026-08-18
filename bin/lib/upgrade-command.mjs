@@ -148,8 +148,9 @@ function staleCliRefuseMessage(detail) {
  * project's installed arkgate. Legacy global 2.x mutates skills; a newer
  * project pin must not be managed by an older outside-tree binary.
  *
- * Allow: no local install; CLI package root inside the project install tree
- * (realpath); running CLI version >= project installed version (including newer globals).
+ * Allow directly: no local install or CLI package root inside the project install tree
+ * (realpath). Any outside-tree modern CLI prefers a project-local handoff, even at the same
+ * or newer version, so one checkout never manages another through PATH state.
  *
  * @param {string} root project root for --root
  * @param {{
@@ -157,7 +158,7 @@ function staleCliRefuseMessage(detail) {
  *   cliPackageRoot?: string|null,
  *   projectPackageJsonPath?: string|null,
  * }} [options]
- * @returns {{ refuse: boolean, reason: string, message?: string, cliVersion?: string|null, projectVersion?: string|null, cliPackageRoot?: string|null, projectPackageRoot?: string|null }}
+ * @returns {{ refuse: boolean, handoff?: boolean, reason: string, message?: string, cliVersion?: string|null, projectVersion?: string|null, cliPackageRoot?: string|null, projectPackageRoot?: string|null }}
  */
 export function evaluateStaleUpgradeCli(root, options = {}) {
   const projectPkgPath =
@@ -272,7 +273,8 @@ export function evaluateStaleUpgradeCli(root, options = {}) {
 
   return {
     refuse: false,
-    reason: 'outside-cli-ok',
+    handoff: true,
+    reason: 'outside-cli-project-local-preferred',
     cliVersion,
     projectVersion,
     cliPackageRoot,
@@ -325,6 +327,15 @@ function verify(root, json, arkCheck, runArkCheck) {
   return { exitCode: result.status ?? 1, stderr: result.stderr?.trim() || undefined };
 }
 
+function runProjectLocalCli({ root, script, argv }) {
+  const result = spawnSync(process.execPath, [script, ...argv], {
+    cwd: root,
+    stdio: 'inherit',
+    env: { ...process.env, ARK_PROJECT_LOCAL_HANDOFF: '1' },
+  });
+  return result.status ?? 1;
+}
+
 export function runUpgradeCommand(args, dependencies) {
   const root = args.root;
   // Fail closed before install/plan when PATH resolves a global/stale CLI older
@@ -339,6 +350,28 @@ export function runUpgradeCommand(args, dependencies) {
           cliVersion: dependencies?.cliVersion,
           cliPackageRoot: dependencies?.cliPackageRoot,
         });
+  if (staleGuard?.refuse || staleGuard?.handoff) {
+    const projectLocalScript =
+      typeof staleGuard.projectPackageRoot === 'string'
+        ? path.join(staleGuard.projectPackageRoot, 'bin', 'ark.mjs')
+        : null;
+    if (
+      process.env.ARK_PROJECT_LOCAL_HANDOFF !== '1' &&
+      Array.isArray(dependencies?.rawArgv) &&
+      projectLocalScript &&
+      fs.existsSync(projectLocalScript)
+    ) {
+      const handoff =
+        typeof dependencies.runProjectLocalCli === 'function'
+          ? dependencies.runProjectLocalCli
+          : runProjectLocalCli;
+      return handoff({
+        root,
+        script: projectLocalScript,
+        argv: dependencies.rawArgv,
+      });
+    }
+  }
   if (staleGuard?.refuse) {
     const message = staleGuard.message || 'Refusing ark upgrade: stale CLI.';
     if (args.json) {

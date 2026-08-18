@@ -66,6 +66,15 @@ export function buildUpgradeWhatsNewSuggestions() {
           'Project skills follow this pin. Shared homes stay on the newest ArkGate on the machine (additive; never downgrade). Orphan 2.x global skills stop coaching the wrong version.',
       },
       {
+        id: 'codex-hard-write',
+        title: 'Codex complete local apply_patch block',
+        try: 'npx arkgate-check --install-agent-gates --tools codex --force',
+        inspect:
+          '.codex/hooks.json trust + doctor.writePath after a runtime-observed apply_patch',
+        why:
+          'After upgrade, refresh the project hook, restart Codex or local Desktop, and trust the exact hook definition. Only a complete observed apply_patch is hard; hosted, specialized, shell/direct, incomplete, and human paths still rely on required CI.',
+      },
+      {
         id: 'deep-module-coach',
         title: 'Deep-module coach (hot paths + deepening)',
         try: 'npx arkgate-check --doctor',
@@ -129,7 +138,16 @@ export function buildUpgradeWhatsNewSuggestions() {
         try: 'ark_identity with project.expectedRoot; read processPackage on every tool',
         inspect: 'processPackage.processPackageMismatch / processStale + nextAction',
         why:
-          'One user, many checkouts: after package bump, restart MCP so process arkgateVersion matches install. Prefer project-local CLI until identity matched and versions align.',
+          'One user, many checkouts: after package bump, restart MCP so process arkgateVersion matches install. A stale process is non-authoritative and project tools fail closed until restart.',
+      },
+      {
+        id: 'process-version-recovery',
+        title: 'Stale MCP / global CLI recovery',
+        try: 'npx arkgate upgrade --json',
+        inspect:
+          'processPackage.processStale + PROCESS_PACKAGE_STALE; project-local CLI handoff for stale global upgrade',
+        why:
+          'A long-lived MCP on an older package can no longer return authoritative project evidence. A newer global ArkGate that is older than this project automatically hands `ark upgrade` to the project-local CLI instead of staying stuck on PATH.',
       },
     ],
   };

@@ -75,6 +75,7 @@ can show `runtimeObserved: true` even when branch-protection policy is plan-unav
 | Session / project status snapshot | `ark status --json` · MCP `ark_status` · [session recipe](agent-guide.md#session-recipe-agent-turn) · schema `arkgate/schema/status-manifest` |
 | Status compass honesty | `improvementCompass.mode`: `full` \| `subset` \| `unavailable` · residual ⊆ doctor when `full` · [package-surface](package-surface.md) |
 | Managed upgrade self-service | `ark upgrade --json` → `selfService` (activation labels + customized preserve) · [package-surface](package-surface.md) |
+| Stale MCP/global CLI recovery | `processPackage.processStale` → non-authoritative + `PROCESS_PACKAGE_STALE`; modern outside-tree `ark upgrade` hands off to project-local CLI |
 | Version-matched AGENTS projection | `ark agents-md` · [agent-guide](agent-guide.md) · **non-authoritative** (never enforces) |
 | Stable finding refs (`findingRef` / `targetKey`) | analysis-result schema **1.5** · [agent-guide](agent-guide.md) · [package-surface](package-surface.md) |
 | Agent Skills layout (same 13 names) | `templates/agent-skills/` · [agent-guide](agent-guide.md#install-skills-ark-and-ecosystem) · `npx skills add …` |

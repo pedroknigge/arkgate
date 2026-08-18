@@ -831,6 +831,7 @@ async function main() {
         packageInstallArgv,
         runArkCheck,
         cliVersion: cliVersion(),
+        rawArgv: process.argv.slice(2),
         shouldSkipArkgateInstall,
       });
     } catch (error) {

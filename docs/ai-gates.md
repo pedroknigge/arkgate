@@ -416,6 +416,11 @@ observe a later MCP conversation from files alone. The matched `ark_identity` re
 runtime observation for that caller and live process; it does not mutate the setup JSON.
 `.codex/config.toml` by itself never upgrades `runtimeObserved` or `active`.
 
+After a package bump, a long-lived Ark MCP whose package version no longer matches the project is
+non-authoritative. `ark_identity` reports `processPackage.processStale`; project tools return
+`PROCESS_PACKAGE_STALE` until Codex/local Desktop restarts or retargets the server. A modern
+outside-tree/global `ark upgrade` hands the original invocation to the project-local CLI.
+
 Codex uses an operation-scoped hard local patch hook plus advisory MCP for discovery/validation
 and `ark-check` as the all-path hard merge backstop. Register all three as soon as the repo is
 adopted.
