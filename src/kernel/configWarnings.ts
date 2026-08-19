@@ -125,12 +125,14 @@ export function collectAnalysisConfigWarnings(
         );
         continue;
       }
-      if (!files.some((file) => expression.test(file)) && !layer.optional) {
+      const reservedEmpty =
+        layer.optional === true || layer.reserved === true || layer.allowEmpty === true;
+      if (!files.some((file) => expression.test(file)) && !reservedEmpty) {
         warnings.push(
           configWarning(
             'CONFIG_LAYER_PATTERN_NO_MATCHES',
-            `Layer "${layer.name}" pattern "${pattern}" matched no included files.`,
-            { layer: layer.name, pattern, failsStrict: false }
+            `Layer "${layer.name}" pattern "${pattern}" matched no included files (possible typo). Mark the layer reserved/allowEmpty if this house is reserved for later.`,
+            { layer: layer.name, pattern, failsStrict: false, reserved: false }
           )
         );
       }

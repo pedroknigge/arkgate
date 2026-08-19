@@ -1,6 +1,26 @@
 /** Fail-closed completeness evidence for one proposed source snippet. */
 import { ANALYSIS_COMPLETENESS } from './analysis-completeness.mjs';
 
+export function flattenTsParseDiagnostics(ts, diagnostics, sourceFile) {
+  if (!Array.isArray(diagnostics) || !ts) return [];
+  return diagnostics.map((diagnostic) => {
+    const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+    let line = 1;
+    let column = 1;
+    if (typeof diagnostic.start === 'number' && sourceFile?.getLineAndCharacterOfPosition) {
+      const pos = sourceFile.getLineAndCharacterOfPosition(diagnostic.start);
+      line = (pos.line ?? 0) + 1;
+      column = (pos.character ?? 0) + 1;
+    }
+    return {
+      line,
+      column,
+      message: String(message || '').trim() || 'parse error',
+      code: diagnostic.code,
+    };
+  });
+}
+
 function finding(ruleId, message, file, nextAction) {
   return {
     ruleId,
@@ -54,6 +74,11 @@ export function validateSnippetAnalysis({ gate, ts, source, context = {} }) {
     if (!Array.isArray(parsed.parseDiagnostics)) throw new Error('parse diagnostics unavailable');
     const diagnosticCount = parsed.parseDiagnostics.length;
     if (diagnosticCount > 0) {
+      const tsDiagnostics = flattenTsParseDiagnostics(ts, parsed.parseDiagnostics, parsed);
+      const first = tsDiagnostics[0];
+      const detail = first
+        ? `line ${first.line}: ${first.message}`
+        : `${diagnosticCount} parse diagnostic(s)`;
       return {
         mode: 'lexical-compatibility',
         valid: false,
@@ -62,18 +87,25 @@ export function validateSnippetAnalysis({ gate, ts, source, context = {} }) {
         completenessReasons: [
           {
             code: 'ANALYSIS_PARSE_INCOMPLETE',
-            message: `The proposed source has ${diagnosticCount} parse diagnostic(s).`,
+            message: `The proposed source has ${diagnosticCount} parse diagnostic(s). ${detail}`,
             ...(file ? { file } : {}),
+            line: first?.line,
+            tsDiagnostics,
           },
         ],
         violations: [
           ...base.violations,
-          finding(
-            'ANALYSIS_PARSE_INCOMPLETE',
-            `Analysis partial: proposed source has ${diagnosticCount} parse diagnostic(s).`,
-            file,
-            'Fix the syntax until the TypeScript parser reports zero diagnostics, then validate again.'
-          ),
+          {
+            ...finding(
+              'ANALYSIS_PARSE_INCOMPLETE',
+              `Analysis partial: ${detail}`,
+              file,
+              'Incremental mid-edit parse errors are normal. Finish the source, then re-run `npx arkgate-check` (or the write hook). Do not call ark_prepare_change from a hook deny.'
+            ),
+            line: first?.line ?? 1,
+            column: first?.column ?? 1,
+            evidence: { tsDiagnostics, diagnosticCount },
+          },
         ],
       };
     }
@@ -87,7 +119,7 @@ export function validateSnippetAnalysis({ gate, ts, source, context = {} }) {
         {
           code: 'LEXICAL_EVIDENCE_INCOMPLETE',
           message:
-            'Single-file validation cannot prove project module resolution or complete candidate evidence; use ark_prepare_change for a parity-capable verdict.',
+            'Single-file validation cannot prove project module resolution. The write hook is already the verdict, or re-run `npx arkgate-check --root . --config ark.config.json`. Do not call ark_prepare_change from a hook deny.',
           ...(file ? { file } : {}),
         },
       ],

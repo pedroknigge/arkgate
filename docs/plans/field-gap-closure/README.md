@@ -133,13 +133,13 @@ Work is ordered so **honesty and false-green die first**, then **classification*
 
 | Task | Gap | Implementation sketch | Acceptance |
 |------|-----|----------------------|------------|
-| S1.1 Redefine `finished` / `unfinished` | `P0B-FINISHED-WITH-OPEN-DEBT`, `FG-FINISHED-ADAPT-DEBT` | `unfinished` if any of: active **blocking** violations > 0; operatingMode ∈ {adapt,suggest}; baseline missing-with-debt; designWeak; dual-truth; weak/partial coverage; residual pilot. Rename internal docs: finished = “no residual honesty sensors” **only if** graph+mode also green — or rename field to `residualHonestyClear` + keep `architectureClear` | amarilla-like tree: finished false while 1000+ viol; reasonId `active-blocking-violations` or `mode-adapt-with-debt` |
+| S1.1 Redefine `finished` / `unfinished` | `P0B-FINISHED-WITH-OPEN-DEBT`, `FG-FINISHED-ADAPT-DEBT` | `unfinished` if any of: active **blocking** violations > 0; operatingMode ∈ {adapt,suggest}; baseline missing-with-debt; designWeak; dual-truth; weak/partial coverage; residual pilot. Rename internal docs: finished = “no residual honesty sensors” **only if** graph+mode also green — or rename field to `residualHonestyClear` + keep `architectureClear` | field-nextjs-like tree: finished false while 1000+ viol; reasonId `active-blocking-violations` or `mode-adapt-with-debt` |
 | S1.2 Headline variants | `P0B-HEADLINE-WHOLETREE-WORDING` | Separate strings for dual-truth vs coverage | dual-truth only → no “not whole-tree” if wholeTreeGuarantee true |
 | S1.3 Design smells with open edges | `DL-DESIGN-SMELLS-VS-WEAK` | If smells fire and active violations > 0, productHonesty unfinished; optional designWeak alignment | doctor not “elegant true” with 5 smells + red check |
 | S1.4 HTML parity | — | same reasonIds as doctor | reportParity + field test |
 | S1.5 Docs product-voice | — | “Honesty clear ≠ architecture healthy” | voice table row |
 
-**Exit:** FG-FINISHED-ADAPT-DEBT closed; UC battery amarilla productHonesty recheck.
+**Exit:** FG-FINISHED-ADAPT-DEBT closed; UC battery field-nextjs productHonesty recheck.
 
 ---
 
@@ -149,8 +149,8 @@ Work is ordered so **honesty and false-green die first**, then **classification*
 |------|-----|----------------------|------------|
 | S2.1 Config walk-up | `NEW-MONOREPO-CWD-WALKUP` | From cwd, walk parents for `ark.config.json` (stop at fs root / workspaces boundary); set effective root; doctor note `configRoot` | `cd apps/web && ark-check --doctor` finds monorepo config, mode enforce, governed ≫ 0 |
 | S2.2 Hard fail option | same | If package.json has workspaces and no config in package and walk-up finds root, never invent 11-layer default silently | default 11-layer only for true greenfield |
-| S2.3 Dual-truth CI action | `P0B-DUAL-TRUTH-PIN`, `FG-CI-PIN-SKEW` | upgrade apply suggests pin bump; doctor primaryNextAction = install path; optional `--strict-merge` flag `failOnDualTruth` (default off) | predial-style pin behind: unfinished + nextCommand install |
-| S2.4 WritePath ladder/state | `P0B-PIN-ABSENT-WRITEPATH`, `FG-WRITEPATH-*` | Single function for installed; configured≠installed always surfaces reason `PACKAGE_PIN_ABSENT`; never hard:true without pin+node_modules | ladder/state agree on superinsights clone --no-install |
+| S2.3 Dual-truth CI action | `P0B-DUAL-TRUTH-PIN`, `FG-CI-PIN-SKEW` | upgrade apply suggests pin bump; doctor primaryNextAction = install path; optional `--strict-merge` flag `failOnDualTruth` (default off) | field-nextjs-style pin behind: unfinished + nextCommand install |
+| S2.4 WritePath ladder/state | `P0B-PIN-ABSENT-WRITEPATH`, `FG-WRITEPATH-*` | Single function for installed; configured≠installed always surfaces reason `PACKAGE_PIN_ABSENT`; never hard:true without pin+node_modules | ladder/state agree on design-heavy-app clone --no-install |
 | S2.5 Mother dogfood flag | — | `ARK_MOTHER_CLI=1` or path-based detection softens pin-absent for library authors | mother tree doctor not yelling pin-absent as user-facing unfinished? (or keep honest) |
 
 ---
@@ -161,10 +161,10 @@ Work is ordered so **honesty and false-green die first**, then **classification*
 
 | Task | Gap | Acceptance |
 |------|-----|------------|
-| S3.1.1 Never use lone `src/**` as Application catch-all on Next/event archetypes | `NEW-APP-VACUUM-LIB`, `DL-DOMAIN-SPECIFICITY` | amarilla-like: Domain patterns for `**/domain/**`, `**/kernel/domain/**` beat Application scatter; Domain file count > 0 when domain tree exists |
+| S3.1.1 Never use lone `src/**` as Application catch-all on Next/event archetypes | `NEW-APP-VACUUM-LIB`, `DL-DOMAIN-SPECIFICITY` | field-nextjs-like: Domain patterns for `**/domain/**`, `**/kernel/domain/**` beat Application scatter; Domain file count > 0 when domain tree exists |
 | S3.1.2 Persistence heuristics for `**/repositories/**`, `**/db/**`, `**/supabase/**`, `**/airtable/**` | same | Persistence file count rises; App→Persist edges become real (honest red) |
 | S3.1.3 Composition-root optional layer or Application-only for factories | factory-bag composition | documented pattern in brownfield guide — **done** (`docs/brownfield-adoption.md` composition-root section) |
-| S3.1.4 SPA profile `vite-vercel-spa` | `NEW-SPA-DEFAULT-LAYOUT` | include `src,api,lib`; api→Application; db/crm lib→Persistence; React→Presentation; superinsights start ≥80% governed without manual adopt |
+| S3.1.4 SPA profile `vite-vercel-spa` | `NEW-SPA-DEFAULT-LAYOUT` | include `src,api,lib`; api→Application; db/crm lib→Persistence; React→Presentation; design-heavy-app start ≥80% governed without manual adopt |
 | S3.1.5 Confidence gate on `--yes` | `NEW-START-LOW-CONFIDENCE-SHAPE` | if archetype confidence < 0.6 **or** projected coverage < 50%: refuse silent --yes; print choices |
 | S3.1.6 Start apply messaging | `DL-START-APPLY-MESSAGE` | single honest summary (applied vs noop) |
 
@@ -172,7 +172,7 @@ Work is ordered so **honesty and false-green die first**, then **classification*
 
 | Task | Gap | Acceptance |
 |------|-----|------------|
-| S3.2.1 Filename/path scores: turso/prisma/supabase/auth client → Persistence | `NEW-ADOPT-LIB-AS-PRESENTATION` | superinsights lib/turso not Presentation |
+| S3.2.1 Filename/path scores: turso/prisma/supabase/auth client → Persistence | `NEW-ADOPT-LIB-AS-PRESENTATION` | design-heavy-app lib/turso not Presentation |
 | S3.2.2 Never map bare `lib/**` solely to Presentation | same | adopt dry-run fixtures |
 | S3.2.3 Domain discovery for kernel/ddd folders | `DL-DOMAIN-SPECIFICITY` | field fixture |
 
@@ -180,9 +180,9 @@ Work is ordered so **honesty and false-green die first**, then **classification*
 
 | Task | Gap | Acceptance |
 |------|-----|------------|
-| S3.3.1 `ark upgrade` / `ark-check --migrate-contract` additive: inject high-spec `app/api/**` → Application if missing | `DL-P0A-RETROFIT`, UC3 fail predial/superlock | after migrate, API routes layer Application; UI pages Presentation |
+| S3.3.1 `ark upgrade` / `ark-check --migrate-contract` additive: inject high-spec `app/api/**` → Application if missing | `DL-P0A-RETROFIT`, UC3 fail field-nextjs/lockfile-app | after migrate, API routes layer Application; UI pages Presentation |
 | S3.3.2 dualMembership in coverage | `P0A-DUAL-MATCH-APP-API-OPACITY` | JSON lists overlapping layers; doctor one line |
-| S3.3.3 Field UC3 regression: predial fixture with old globs → migrate → pass | — | automated |
+| S3.3.3 Field UC3 regression: field-nextjs fixture with old globs → migrate → pass | — | automated |
 
 ### S3.4 False-green exit
 
@@ -195,7 +195,7 @@ Closes `FG-WEAK-COVERAGE-NONSTRICT`, `FG-EMPTY-DOMAIN-IO-UNDER-APP`.
 | Task | Gap | Acceptance |
 |------|-----|------------|
 | S4.1 install-agent-gates --force | `NEW-FORCE-GATES-VS-UPGRADE-DIGEST` | preserve customized content-identity assets; recompute managed digest after force; or block force with “run upgrade preview again” |
-| S4.2 Default refresh = skills-only when managed upgrade present | same | predial-like session |
+| S4.2 Default refresh = skills-only when managed upgrade present | same | field-nextjs-like session |
 | S4.3 AGENTS.md placement table from live layers | `NEW-AGENTS-11-LAYER-TABLE` | 8-layer monorepo gets 8-row table |
 | S4.4 Write `check:architecture` on start apply | `NEW-NO-CHECK-SCRIPT-ON-START` | package.json has script |
 | S4.5 Doctor newHere / primaryNextAction | `NEW-DOCTOR-STALE-FINISH-START` | after start, next = adopt/coverage/fix not “finish start” |
@@ -207,9 +207,9 @@ Closes `FG-WEAK-COVERAGE-NONSTRICT`, `FG-EMPTY-DOMAIN-IO-UNDER-APP`.
 | Task | Gap | Acceptance |
 |------|-----|------------|
 | S5.1 Structure sensors only on classified files | `NEW-ARKRULES-UNCLASSIFIED-ATTRIBUTION` | no ARKRULE_STRUCTURE with unclassified path |
-| S5.2 extraMergeTeeth requires governedPercent ≥ N (e.g. 50) and ≥1 classified layer populated | `P1M-EXTRATEETH-EMPTY-GRAPH`, `FG-EXTRATEETH-*` | superinsights empty classification cannot arm teeth |
-| S5.3 Structure FN: ignore `.if` / match / when methods | `P1L-STRUCTURE-NOISE-CONTROL-FLOW` | propia Property.if silent; true mutators still fire |
-| S5.4 Inventory filters wave-2 | `P2N-INVENTORY-NOISE-RESIDUAL` | predial candidates down without losing spaghetti seeds |
+| S5.2 extraMergeTeeth requires governedPercent ≥ N (e.g. 50) and ≥1 classified layer populated | `P1M-EXTRATEETH-EMPTY-GRAPH`, `FG-EXTRATEETH-*` | design-heavy-app empty classification cannot arm teeth |
+| S5.3 Structure FN: ignore `.if` / match / when methods | `P1L-STRUCTURE-NOISE-CONTROL-FLOW` | pnpm-workspace Property.if silent; true mutators still fire |
+| S5.4 Inventory filters wave-2 | `P2N-INVENTORY-NOISE-RESIDUAL` | field-nextjs candidates down without losing spaghetti seeds |
 | S5.5 SharedTypes starter pack + plan messaging for type-only volume | `NEW-TYPEONLY-VOLUME` | optional layer template; plan groups type-only |
 | S5.6 Always emit doctor `typeEdgePolicy` when any typeOnly finding or policy active | `DL-TYPEEDGE-POLICY-FIELD` | field doctor JSON |
 | S5.7 Docs: advisory ArkRules ≠ merge teeth | `FG-ARKRULES-ADVISORY-ONLY` | product-voice + explain |
@@ -250,7 +250,7 @@ scripts/field-dogfood/
 ```text
 S0 ──► publish-ready 4.1.0 branch
 S1 ──► required before claiming anti false-green
-S2 ──► required for monorepo consumers (propia)
+S2 ──► required for monorepo consumers (pnpm-workspace)
 S3 ──► largest; depends on S1 for messaging; unblocks adopt field
 S4 ──► parallelizable with S2
 S5 ──► after S3 (classification must be true first)
@@ -287,11 +287,11 @@ S7 ──► continuous after S1–S3 land
 
 | Slice | Automated tests | Field re-check |
 |-------|-----------------|----------------|
-| S1 | unit productHonesty matrix (adapt+violations unfinished; dual-truth headline; enforce green finished) | amarilla doctor finished false |
-| S2 | unit walk-up; propia-like fixture | propia apps/web |
-| S3 | unit layerMatch specificity; start projected coverage; spa fixture | amarilla Domain>0; superinsights governed; predial migrate UC3 |
-| S4 | unit content-identity force; AGENTS generator | predial force+upgrade |
-| S5 | unit sensors; mergePlanes teeth; inventory | superinsights teeth; propia .if |
+| S1 | unit productHonesty matrix (adapt+violations unfinished; dual-truth headline; enforce green finished) | field-nextjs doctor finished false |
+| S2 | unit walk-up; pnpm-workspace-like fixture | pnpm-workspace apps/web |
+| S3 | unit layerMatch specificity; start projected coverage; spa fixture | field-nextjs Domain>0; design-heavy-app governed; field-nextjs migrate UC3 |
+| S4 | unit content-identity force; AGENTS generator | field-nextjs force+upgrade |
+| S5 | unit sensors; mergePlanes teeth; inventory | design-heavy-app teeth; pnpm-workspace .if |
 | S6 | eslint parity with install | 1 Next monorepo |
 | S7 | script smoke | nightly |
 
@@ -316,7 +316,7 @@ If only one session after this plan is authorized:
 1. **FG01** productHonesty (S1.1–S1.4) — highest leverage vs marketing claim  
 2. **FG02** monorepo walk-up (S2.1)  
 3. **FG04** Domain specificity / vacuum (S3.1.1–S3.1.2)  
-4. Re-run amarilla + propia + superinsights doctor extracts  
+4. Re-run field-nextjs + pnpm-workspace + design-heavy-app doctor extracts  
 
 That triple kills the worst false-green stories from the lab.
 

@@ -1,3 +1,5 @@
+import { layerImportNextAction } from './remediation';
+
 /** Versioned public result contract shared by every ArkGate enforcement adapter. */
 
 /**
@@ -234,17 +236,17 @@ function nextActionForDiagnostic(
   violation: AdapterViolationInput
 ): string {
   if (ruleId === 'LAYER_IMPORT_VIOLATION') {
-    if (
-      evidence.typeOnly ||
-      violation.targetTypeOnlyExports === true ||
-      violation.namedBindingsTypeOnly === true
-    ) {
-      return 'Move the referenced type to a mutually allowed layer, use `import type`, then preflight again.';
-    }
-    if (violation.peerIsolation === true) {
-      return 'Extract the shared dependency to a shared layer, test at the public interface, then preflight again.';
-    }
-    return `Define a port in ${evidence.fromLayer ?? 'the source layer'}, inject the ${evidence.toLayer ?? 'outer-layer'} implementation, test at the public interface, then preflight again.`;
+    return layerImportNextAction({
+      ruleId,
+      typeOnly: evidence.typeOnly === true,
+      targetTypeOnlyExports: violation.targetTypeOnlyExports === true,
+      namedBindingsTypeOnly: violation.namedBindingsTypeOnly === true,
+      peerIsolation: violation.peerIsolation === true,
+      portProofEligible: violation.portProofEligible === true,
+      fromLayer: text(evidence.fromLayer) ?? undefined,
+      toLayer: text(evidence.toLayer) ?? undefined,
+      target: text(evidence.target) ?? text(violation.target) ?? undefined,
+    });
   }
   if (ruleId === 'FORBIDDEN_GLOBAL') {
     return `Inject ${evidence.target ?? 'the capability'} through a port, test at the public interface, then preflight again.`;

@@ -10,6 +10,7 @@ import {
   prepareReleaseOutput,
   validateReleaseOutput,
 } from './release-output-safety.mjs';
+import { parseNpmPackReport } from './npm-pack-report.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const budgets = JSON.parse(fs.readFileSync(path.join(root, 'release/package-budgets.v1.json'), 'utf8'));
@@ -29,7 +30,7 @@ function cyclonedxSerial(component) {
 }
 function pack(name, policy, work) {
   const cwd = path.join(root, policy.path);
-  const report = JSON.parse(run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', work], cwd))[0];
+  const report = parseNpmPackReport(run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', work], cwd));
   const tarball = path.join(work, report.filename);
   const errors = [];
   if (report.size > policy.maxPackedBytes) errors.push(`packed ${report.size} exceeds ${policy.maxPackedBytes}`);

@@ -16,8 +16,16 @@ import { normalize } from './scan-files.mjs';
 
 const MAX_LIST = 8;
 const MAX_FILE_BYTES = 256 * 1024;
-/** Full AST scan stays off huge trees so doctor resident warm keeps the 500 ms UX ceiling. */
-const MAX_FULL_SCAN_FILES = 2500;
+/** Floor for tiny trees. Large included Next.js trees must still scan. */
+const GRAPH_SCAN_FLOOR = 2500;
+/** Hard cap so a 10k fixture cannot blow the doctor resident warm UX ceiling. */
+const GRAPH_SCAN_HARD_CAP = 8000;
+
+/** Threshold scales with the included tree — never a hard 2500 that defers a 3300-file app. */
+export function graphScanLimit(includedCount) {
+  const count = Number(includedCount) || 0;
+  return Math.min(GRAPH_SCAN_HARD_CAP, Math.max(GRAPH_SCAN_FLOOR, count));
+}
 const LEXICAL_GATE = /\b(?:import|require)\s*\(|\bimport\s+\w+\s*=\s*require\s*\(/;
 
 /**
@@ -123,9 +131,9 @@ export function detectGraphBlindSpots(ts, root, files = []) {
     };
   }
 
-  // Large-tree deferral: re-reading every path for an advisory sensor would blow the
-  // doctorResidentWarm 500 ms absolute UX ceiling at the 10k perf fixture.
-  if (files.length > MAX_FULL_SCAN_FILES) {
+  // Large-tree deferral: only above the proportional cap (included count, floor 2500, cap 8000).
+  const scanLimit = graphScanLimit(files.length);
+  if (files.length > scanLimit) {
     return {
       available: true,
       advisory: true,
@@ -136,7 +144,7 @@ export function detectGraphBlindSpots(ts, root, files = []) {
       otherNonLiteralCount: 0,
       truncated: 0,
       edges: [],
-      note: `Graph-blind full scan deferred (${files.length} files > ${MAX_FULL_SCAN_FILES}). Non-literal dynamic import/require remain unresolvable in architecture analysis; advisory incomplete-graph honesty is not enumerated at this scale.`,
+      note: `Graph-blind full scan deferred (${files.length} files > proportional limit ${scanLimit}). Non-literal dynamic import/require remain unresolvable in architecture analysis; advisory incomplete-graph honesty is not enumerated at this scale.`,
     };
   }
 
@@ -177,6 +185,7 @@ export function detectGraphBlindSpots(ts, root, files = []) {
     available: true,
     advisory: true,
     blockerGrade: false,
+    deferred: false,
     count: edges.length,
     templateInterpolationCount,
     otherNonLiteralCount,

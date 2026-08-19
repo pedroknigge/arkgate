@@ -523,6 +523,8 @@ export function buildProductHonesty(input = {}) {
     primaryMessage,
     primaryNextAction,
     headline,
+    hookGreenIsNotTreeGreen: true,
+    scriptedEditsBypassPreToolUse: true,
   };
 }
 

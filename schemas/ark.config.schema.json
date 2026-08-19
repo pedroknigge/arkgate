@@ -723,6 +723,12 @@
         },
         "optional": {
           "type": "boolean"
+        },
+        "reserved": {
+          "type": "boolean"
+        },
+        "allowEmpty": {
+          "type": "boolean"
         }
       }
     },

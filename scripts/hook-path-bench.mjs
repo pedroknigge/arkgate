@@ -114,6 +114,7 @@ function treeIdentity(root) {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
       const absolute = path.join(directory, entry.name);
       const relative = path.relative(root, absolute).split(path.sep).join('/');
+      if (relative === '.ark/ci-merge-boundary.json') continue;
       if (entry.isDirectory()) visit(absolute);
       else if (entry.isSymbolicLink()) {
         entries.push({ relative, kind: 'link', value: fs.readlinkSync(absolute) });

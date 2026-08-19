@@ -89,7 +89,7 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'layer',
     'Layer import not allowed',
     'A module import (or re-export) crosses a layer edge that ark.config.json does not allow. The architecture contract forbids that dependency direction so outer infrastructure cannot leak into pure or inner layers.',
-    'Define a port in the source layer, inject the outer-layer implementation, or move/share the type with `import type` when the edge is type-only — then preflight again. Do not weaken the layer rule without a hash-bound policy acknowledgement.'
+    'Branch by import kind: constants/types/pure → adopt into DomainModel or SharedKernel (do not invent a port); kernel/events/bootstrap from Persistence → inject a port or move the map to SharedTypes (Persistence must not emit); define a port only when the target is a real use-case. Type-only edges use `import type`. Then preflight again. Do not weaken the layer rule without a hash-bound policy acknowledgement.'
   ),
   entry(
     'LAYER_INTENT_REFERENCE_VIOLATION',
@@ -230,8 +230,8 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'INVARIANT_UNCOVERED',
     'arkrules',
     'Invariant without coverage evidence',
-    'An ArkRules invariant is under contract but no covering test title or declared symbol evidence was found (or coverage is partial).',
-    'Add a test title or declared symbol covering the arkruleId, then preflight again. Missing test globs report partial — never fake green.'
+    'An ArkRules invariant is under contract but no covering test title or declared symbol evidence was found (or coverage is partial). Kind is never-had-tests (adopt residual) vs tests-disappeared (suite exists).',
+    'Add a test title or declared symbol covering the arkruleId, then preflight again. Treat never-had-tests as adopt residual; treat tests-disappeared as a regression. Missing test globs report partial — never fake green.'
   ),
 
   // ── atomic preflight / change set ────────────────────────────────────────
@@ -318,8 +318,15 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'ANALYSIS_PARSE_INCOMPLETE',
     'analysis',
     'Parse incomplete',
-    'Governed source could not be fully parsed; analysis is partial and must not paint green.',
-    'Fix syntax/parse errors in governed files (or restore a usable TypeScript host), then re-run. Partial never means pass.'
+    'Governed source could not be fully parsed; evidence includes the TypeScript diagnostic (line + message). Incremental mid-edit parse is normal for agents. Contract exclude paths skip the write hook.',
+    'Finish the source or fix the reported syntax error, then re-run `npx arkgate-check`. The write hook does not deny solely on mid-edit parse. Partial never means pass.'
+  ),
+  entry(
+    'LEXICAL_EVIDENCE_INCOMPLETE',
+    'analysis',
+    'Lexical evidence incomplete',
+    'Single-file validation cannot prove project module resolution. The write hook is already the verdict.',
+    'Re-run `npx arkgate-check --root . --config ark.config.json`, or treat the hook deny as final. Do not call ark_prepare_change from a hook deny.'
   ),
   entry(
     'ANALYSIS_HOST_UNAVAILABLE',
@@ -449,8 +456,8 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'CONFIG_LAYER_PATTERN_NO_MATCHES',
     'config',
     'Layer pattern matched no files',
-    'A layer pattern matched zero included files (often a typo or include mismatch).',
-    'Adjust the pattern or include roots so governed files match.',
+    'A layer pattern matched zero included files (often a typo or include mismatch). Reserved/allowEmpty houses do not emit this.',
+    'Adjust the pattern or include roots, or mark the layer reserved/allowEmpty if the glob is a future house.',
     { oftenAdvisory: true }
   ),
   entry(

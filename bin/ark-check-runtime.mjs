@@ -87,9 +87,11 @@ import {
 import {
   ARCHITECTURE_PRESETS,
   APPLICATION_LIB_ORCHESTRATION_PATTERNS,
+  COMPOSITION_ROOT_PATH_PATTERNS,
   DOMAIN_PATH_PATTERNS,
   NEXT_API_APPLICATION_PATTERNS,
   PERSISTENCE_PATH_PATTERNS,
+  SHARED_KERNEL_PATH_PATTERNS,
   retrofitP0aApiApplicationPatterns,
   withDefaultArkRules,
   writeArkRulesTemplates,
@@ -573,6 +575,60 @@ function runSuggestInclude(args) {
   console.log(color.dim(payload.note));
 }
 
+const MATURE_LAYER_RULES = Object.freeze([
+  { from: 'SharedKernel', to: 'DomainModel', allowed: false },
+  { from: 'SharedKernel', to: 'ApplicationOrchestration', allowed: false },
+  { from: 'SharedKernel', to: 'PresentationAdapters', allowed: false },
+  { from: 'SharedKernel', to: 'PersistenceAdapters', allowed: false },
+  { from: 'SharedKernel', to: 'CompositionRoot', allowed: false },
+  { from: 'DomainModel', to: 'CompositionRoot', allowed: false },
+  { from: 'PresentationAdapters', to: 'CompositionRoot', allowed: false },
+  { from: 'PersistenceAdapters', to: 'CompositionRoot', allowed: false },
+]);
+
+function ensureMatureAdoptionLayers(layers, byLayer) {
+  const names = new Set(layers.map((layer) => layer.name));
+  const next = [...layers];
+  if (!names.has('SharedKernel')) {
+    next.push({
+      name: 'SharedKernel',
+      patterns: [...(byLayer.get('SharedKernel') ?? SHARED_KERNEL_PATH_PATTERNS)],
+      reserved: true,
+      allowEmpty: true,
+      description: 'Shared types and constants. Persistence and Presentation may import this; it imports nothing else.',
+    });
+  }
+  if (!names.has('CompositionRoot')) {
+    next.push({
+      name: 'CompositionRoot',
+      patterns: [...(byLayer.get('CompositionRoot') ?? COMPOSITION_ROOT_PATH_PATTERNS)],
+      reserved: true,
+      allowEmpty: true,
+      description: 'DI / bootstrap wiring. May import Domain and Persistence; Domain must not import this.',
+    });
+  }
+  return next;
+}
+
+function writeAdoptGoldenPattern(root) {
+  const dir = path.join(root, '.ark');
+  const dest = path.join(dir, 'golden-pattern.json');
+  if (fs.existsSync(dest)) return { wrote: false, path: '.ark/golden-pattern.json' };
+  fs.mkdirSync(dir, { recursive: true });
+  const golden = {
+    schemaVersion: '1',
+    name: 'feature-folders',
+    norm:
+      'New modules live under src/<feature>/{domain,application,composition,infrastructure}. ' +
+      'Types and constants go to SharedKernel. Wiring goes to CompositionRoot. ' +
+      'Presentation never imports Domain. Persistence never imports Application.',
+    newCodeHome: 'src',
+    examplePath: 'src/example/domain/model.ts',
+  };
+  fs.writeFileSync(dest, `${JSON.stringify(golden, null, 2)}\n`);
+  return { wrote: true, path: '.ark/golden-pattern.json' };
+}
+
 /**
  * Contract-adopt: expand include + layer patterns from ungoverned proposals.
  * Read-only unless --write. Does not weaken rules or baseline violations.
@@ -632,7 +688,9 @@ function runAdoptContract(args) {
     ...APPLICATION_LIB_ORCHESTRATION_PATTERNS,
     'api/**',
   ];
-  const domainPatterns = [...DOMAIN_PATH_PATTERNS];
+  const domainPatterns = [...DOMAIN_PATH_PATTERNS, 'src/**/domain/**'];
+  const sharedKernelPatterns = [...SHARED_KERNEL_PATH_PATTERNS];
+  const compositionRootPatterns = [...COMPOSITION_ROOT_PATH_PATTERNS];
 
   // Build pattern additions from unclassified suggestions (path-aware).
   const byLayer = new Map([
@@ -640,33 +698,45 @@ function runAdoptContract(args) {
     ['PersistenceAdapters', [...persistencePatterns]],
     ['ApplicationOrchestration', [...applicationPatterns]],
     ['DomainModel', [...domainPatterns]],
+    ['SharedKernel', [...sharedKernelPatterns]],
+    ['CompositionRoot', [...compositionRootPatterns]],
   ]);
   for (const suggestion of cov.suggestions ?? []) {
     if (suggestion.unrecognized || !suggestion.layer) continue;
-    // Never treat bare lib as Presentation solely.
+    const dir = String(suggestion.dir || '');
+    // Never dump bare lib/ into Presentation or Application.
+    if (dir === 'lib' || dir === 'src/lib' || dir.endsWith('/lib')) {
+      continue;
+    }
     if (
       suggestion.layer === 'PresentationAdapters' &&
-      (suggestion.dir === 'lib' || suggestion.dir.endsWith('/lib'))
+      (dir === 'lib' || dir.endsWith('/lib'))
     ) {
       continue;
     }
-    const list = byLayer.get(suggestion.layer) ?? [];
+    let layerName = suggestion.layer;
+    if (/(^|\/)(types|constants|shared)(\/|$)/i.test(dir)) layerName = 'SharedKernel';
+    else if (/(^|\/)(composition|factories|bootstrap)(\/|$)/i.test(dir)) layerName = 'CompositionRoot';
+    else if (/(^|\/)domain(\/|$)/i.test(dir)) layerName = 'DomainModel';
+    const list = byLayer.get(layerName) ?? [];
     const glob = suggestion.dir === '.' ? null : `${suggestion.dir}/**`;
-    if (glob && !list.includes(glob)) list.push(glob);
-    byLayer.set(suggestion.layer, list);
+    if (glob && !list.includes(glob) && glob !== 'src/lib/**' && glob !== 'lib/**') {
+      list.push(glob);
+    }
+    byLayer.set(layerName, list);
   }
 
-  const layers = (config.layers || []).map((layer) => {
+  const stripLibVacuum = (patterns) =>
+    (patterns || []).filter((p) => p !== '**/lib/**' && p !== 'lib/**' && p !== 'src/lib/**');
+
+  let layers = (config.layers || []).map((layer) => {
     const extras = byLayer.get(layer.name);
-    if (!extras?.length) return layer;
-    // Strip accidental bare lib/** if a previous adopt wrote it into Presentation.
-    const cleaned = (layer.patterns || []).filter((p) => {
-      if (layer.name !== 'PresentationAdapters') return true;
-      return p !== '**/lib/**' && p !== 'lib/**' && p !== 'src/lib/**';
-    });
+    const cleaned = stripLibVacuum(layer.patterns || []);
+    if (!extras?.length) return { ...layer, patterns: cleaned };
     const patterns = [...new Set([...cleaned, ...extras])];
     return { ...layer, patterns };
   });
+  layers = ensureMatureAdoptionLayers(layers, byLayer);
   // If no PresentationAdapters layer, leave layers as-is (don't invent full profile).
   const proposal = {
     ok: true,
@@ -681,6 +751,10 @@ function runAdoptContract(args) {
       persistencePatterns,
       applicationPatterns,
       domainPatterns,
+      sharedKernelPatterns,
+      compositionRootPatterns,
+      proposedLayers: ['SharedKernel', 'CompositionRoot', 'DomainModel'],
+      goldenPattern: '.ark/golden-pattern.json',
       totalFiles: cov.totalFiles,
       governedPercent: cov.governed.percent,
       unclassified: cov.unclassified.count,
@@ -698,12 +772,21 @@ function runAdoptContract(args) {
   }
 
   if (args.write) {
+    const existingRules = Array.isArray(config.rules) ? config.rules : [];
+    const rules = [...existingRules];
+    for (const rule of MATURE_LAYER_RULES) {
+      if (!rules.some((r) => r.from === rule.from && r.to === rule.to && r.allowed === rule.allowed)) {
+        rules.push(rule);
+      }
+    }
     const next = {
       ...config,
       include: proposal.after.include,
       layers,
+      rules,
     };
     fs.writeFileSync(configPath, `${JSON.stringify(next, null, 2)}\n`);
+    proposal.golden = writeAdoptGoldenPattern(root);
     proposal.wrote = true;
   }
 
@@ -720,7 +803,8 @@ function runAdoptContract(args) {
   );
   console.log(`  presentation patterns += ${uiPatterns.join(', ')}`);
   console.log(`  persistence patterns += (data clients / db / auth — never bare lib→Presentation)`);
-  console.log(`  application patterns += Next/Vercel API shells`);
+  console.log(`  application patterns += Next/Vercel API shells (never bare src/lib/**)`);
+  console.log(`  shared kernel += types/constants; composition root += wiring`);
   if (proposal.wrote) {
     console.log(color.green(`  wrote ${path.relative(root, configPath) || args.config}`));
     console.log(color.dim(`  Next: ${arkCommand(root, 'ark-check', '--coverage')} then --plan`));

@@ -5,6 +5,40 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.6.5 — 2026-08-19
+
+**Patch** over **4.6.4**. Adoption, placement, doctor, upgrade, and write-path honesty for
+existing Next.js trees and multi-host teams. **No required config migration.**
+
+**Status: current** (shipping as `arkgate@4.6.5`; see `docs/releases/4.6.5.md`).
+
+### Changed
+
+- **Adopt starter:** existing trees get SharedKernel (types/constants), CompositionRoot (wiring),
+  and `src/**/domain/**`. Flattened `src/lib/**` is not dumped into Application. Adopt writes
+  `.ark/golden-pattern.json` (load-bearing for place).
+- **Place:** `filePath` is required (fail-closed). Never invents `components/*.tsx` or defaults
+  to Presentation.
+- **LAYER_IMPORT nextAction:** branches by import kind — constants/types → Domain/SharedKernel;
+  kernel/events from Persistence → do not emit; port only for a real use-case.
+- **Reserved empty globs:** `reserved` / `allowEmpty` so `--strict-config` does not fail on
+  future houses. Typo warning only if the glob is not reserved.
+- **Parse / lexical:** `ANALYSIS_PARSE_INCOMPLETE` includes the TypeScript line + message.
+  Contract `exclude` paths skip the write hook. Incremental mid-edit parse does not deny.
+  `LEXICAL_EVIDENCE_INCOMPLETE` hook deny does not tell the agent to call `ark_prepare_change`.
+- **WritePath / CI honesty:** `.ark/ci-merge-boundary.json` — hook configured-not-fired,
+  per-host writePath (Claude hard vs Cursor soft), CI present-but-not-required, GitHub Free
+  cannot require. Hook green is not tree green.
+- **Upgrade:** preview default is hosts keep (union `--tools` with existing). Apply installs
+  the bumped package unless `--no-install`. Projection writes AGENTS.md and CLAUDE.md.
+  Prefer project `.agents/skills`; home must not duplicate the catalog.
+- **Doctor JSON:** stable envelope `{ schemaVersion, envelope: "doctor", ok, doctor }`.
+  ENFORCE + empty plan A → Shape, not reinstall gates. Distinguishes installed vs stale skills.
+- **Graph scan:** threshold scales with included file count (floor 2500, cap 8000) so a
+  ~3300-file Next.js tree is not deferred.
+- **INVARIANT_UNCOVERED:** `never-had-tests` (adopt residual) vs `tests-disappeared` (regression).
+- **CLI-first:** identity handshake is optional when the CLI already resolved the root.
+
 ## 4.6.4 — 2026-08-18
 
 **Patch** over **4.6.3**. `ark upgrade` now tells Codex users how to activate the local
@@ -12,7 +46,7 @@ in the immutable pre-2.0 archive linked below.
 trust the exact hook definition, and verify `doctor.writePath` after a governed patch.
 **No required config migration.**
 
-**Status: prepared** (not yet on npm `latest`; see `docs/releases/4.6.4.md`).
+**Status: published** (on npm `latest` until 4.6.5 lands; see `docs/releases/4.6.4.md`).
 
 ### Changed
 
@@ -829,8 +863,8 @@ Not a rewrite of the analysis engine. No plan-B silent codemod. No fake hard wri
 
 ## 3.8.3 — 2026-07-22
 
-Corrective **patch** over 3.8.2 from multi-repo field evidence (PROPIA pnpm workspace upgrade;
-Amarilla greenfield `start`). **No required config migration.** Z09 / residual `RB-11` remain open.
+Corrective **patch** over 3.8.2 from multi-repo field evidence (pnpm workspace upgrade;
+greenfield `start`). **No required config migration.** Z09 / residual `RB-11` remain open.
 
 ### Fixed
 
@@ -857,7 +891,7 @@ Amarilla greenfield `start`). **No required config migration.** Z09 / residual `
 
 ## 3.8.2 — 2026-07-22
 
-Corrective **patch** over 3.8.1 from PREDIAL WEB field evidence. Aligns doctor skill freshness with
+Corrective **patch** over 3.8.1 from field Next.js evidence. Aligns doctor skill freshness with
 managed upgrade content identity, hardens upgrade preview honesty, clarifies doctor writePath
 inventory vs this-invocation, ships the Y06 pure-layer opt-in advisory, and treats complete-catalog
 Codex leftover prompts as safe-to-delete. **No required config migration.** Z09 / residual `RB-11`
@@ -881,7 +915,7 @@ remain open.
 
 - **Y06 pure-layer opt-in nudge:** when a golden pattern names pure modules and no layer sets
   `pure: true`, doctor emits one advisory line (`doctor.pureLayerOptIn`). Never a blocker; never
-  auto-writes `pure: true`. Promoted from field evidence (PREDIAL WEB).
+  auto-writes `pure: true`. Promoted from field evidence (a Next.js app).
 
 ## 3.8.1 — 2026-07-22
 

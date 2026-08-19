@@ -14,6 +14,12 @@ description: Map skill — decision-grade recon of layers + ArkRules opportuniti
 2. Open the real tree (≥12 files across ≥4 dirs). CLI JSON alone is incomplete.
 3. Rank leftover work. Hand off to `/ark-autopilot` to apply one refactor. Do not write config or product code here.
 
+## Checklist
+
+- Doctor #1: if ENFORCE + empty plan A and gates are already installed → **Shape** (`/ark-explore` then `/ark-autopilot`). Do not say install-agent-gates.
+- Distinguish **missing** skills vs **stale** catalog. Installed ≠ stale.
+- Hook green is not tree green (scripted edits bypass PreToolUse).
+
 ## Autonomy contract
 
 Invoking this skill **is** the approval to **map**. Open the real tree. CLI JSON alone is

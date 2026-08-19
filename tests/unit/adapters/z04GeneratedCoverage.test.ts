@@ -67,7 +67,16 @@ describe('Z04 generated adapter branch parity', () => {
         'Move the referenced type',
       ],
       [{ ruleId: 'LAYER_IMPORT_VIOLATION', peerIsolation: true }, 'Extract the shared'],
-      [{ ruleId: 'LAYER_IMPORT_VIOLATION' }, 'Define a port in the source layer'],
+      [{ ruleId: 'LAYER_IMPORT_VIOLATION' }, 'define a port only if the target is a real use-case'],
+      [
+        {
+          ruleId: 'LAYER_IMPORT_VIOLATION',
+          fromLayer: 'DomainModel',
+          toLayer: 'PersistenceAdapters',
+          target: 'src/infra/db.ts',
+        },
+        'Define a port in DomainModel',
+      ],
       [{ ruleId: 'FORBIDDEN_GLOBAL' }, 'Inject the capability'],
       [{ ruleId: 'CAPABILITY_VIOLATION' }, 'Define a capability port'],
       [{ ruleId: 'CIRCULAR_DEPENDENCY' }, 'Extract the shared dependency'],

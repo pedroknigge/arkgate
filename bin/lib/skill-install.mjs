@@ -688,7 +688,9 @@ export function assessCodexSkillParity(root) {
 
   const repoNeedsAttention =
     repoInPlay && (repo.missing > 0 || repo.stale > 0 || repo.legacyPromptsOnly);
+  const repoCatalogComplete = repoInPlay && repo.missing === 0 && !repo.legacyPromptsOnly;
   const homeNeedsAttention =
+    !repoCatalogComplete &&
     newerHomeCatalog === null &&
     homeInPlay &&
     (home.missing > 0 ||

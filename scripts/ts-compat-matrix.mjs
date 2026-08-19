@@ -20,6 +20,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { parseNpmPackReport } from './npm-pack-report.mjs';
 
 const SCRIPT = fileURLToPath(import.meta.url);
 const REPO_ROOT = path.resolve(path.dirname(SCRIPT), '..');
@@ -367,9 +368,8 @@ function createLocalCandidate(workRoot) {
     { cwd: REPO_ROOT, timeout: 240_000 }
   );
   expectStatus(packed, 0, 'npm pack');
-  const report = parseJsonOutput(packed.stdout, 'npm pack');
-  assertCondition(Array.isArray(report) && report.length === 1, 'npm pack returned no candidate');
-  const tarball = path.join(packs, report[0].filename);
+  const report = parseNpmPackReport(packed.stdout);
+  const tarball = path.join(packs, report.filename);
   assertCondition(fs.existsSync(tarball), `packed candidate missing: ${tarball}`);
   return tarball;
 }

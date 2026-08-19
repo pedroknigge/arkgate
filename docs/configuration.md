@@ -90,6 +90,7 @@ Layer fields:
 
 - `name`, `patterns`, `exclude`, `description`
 - `intentPrefixes`, `forbiddenGlobals`, `mayImportInfrastructure`, `optional`
+- `reserved` / `allowEmpty` — future houses whose globs match nothing yet. `--strict-config` does not fail; `CONFIG_LAYER_PATTERN_NO_MATCHES` (typo warning) is skipped. A typo warning fires only when the glob is not reserved.
 - `capabilities: { deny: [...] }` — opt-in effect walls over the seven capability ids
   (`network`, `filesystem`, `clock`, `randomness`, `environment`, `process`, `persistence`);
   `pure: true` is the shorthand that denies all seven. Absence changes no verdict.
@@ -254,7 +255,7 @@ now shows more authors, it shows the **gap** and asks whether to update. `/ark-a
 writes only after you confirm — it does not invent names or remove entries.
 
 ```json
-"stewards": ["pedroknigge", "Amarilla-David"]
+"stewards": ["you", "your-co-steward"]
 ```
 
 Law files (`ark.config.json`, `arkrules/*`, `.ark-baseline.json`) are a different change

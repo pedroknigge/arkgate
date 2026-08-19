@@ -86,6 +86,16 @@ npx ark status --json --expected-root /abs/project/root
 npx ark-check --doctor --json
 ```
 
+`--doctor --json` is a stable envelope (4.6.5+): `{ "schemaVersion": "1.0", "envelope": "doctor", "ok": boolean, "doctor": { … } }`.
+Payload lives only under `doctor`. Do not parse sibling root keys as the doctor object.
+
+Doctor also writes `.ark/ci-merge-boundary.json` (hook configured-not-fired, per-host writePath,
+CI present-but-not-required, GitHub Free cannot require). Read that file — do not grep `node_modules`.
+Hook green is not tree green (scripted edits bypass PreToolUse).
+
+CLI-first: if the local CLI already resolved the project root, identity handshake is optional.
+Do not wait on MCP “still connecting”. The same projection schema is merged into `AGENTS.md` and `CLAUDE.md`.
+
 Product path: [use.md — Session recipe](use.md#session-recipe-agent-turn).
 
 ### Multi-project MCP and upgrade honesty (4.5.6)

@@ -1684,7 +1684,7 @@ describe('ark-mcp --hook (PreToolUse gate)', () => {
     expect(result.status).toBe(0);
   });
 
-  it('blocks parse-invalid source and emits a fail-closed repair envelope', () => {
+  it('does not deny the write hook solely on incremental mid-edit parse', () => {
     const result = spawnSync('node', [mcpBin, '--hook', '--hook-repair', '--root', root], {
       input: JSON.stringify({
         tool_name: 'Write',
@@ -1695,21 +1695,8 @@ describe('ark-mcp --hook (PreToolUse gate)', () => {
       }),
       encoding: 'utf8',
     });
-    expect(result.status).toBe(2);
-    expect(result.stderr).toContain('ANALYSIS_PARSE_INCOMPLETE');
-    const repairLine = result.stderr
-      .split('\n')
-      .find((line) => line.startsWith('ARK_REPAIR_JSON:'));
-    expect(repairLine).toBeTruthy();
-    expect(JSON.parse(repairLine!.slice('ARK_REPAIR_JSON:'.length))).toMatchObject({
-      schemaVersion: '1.5',
-      mode: 'lexical-compatibility',
-      valid: false,
-      completeness: 'partial',
-      completenessReasons: [{ code: 'ANALYSIS_PARSE_INCOMPLETE' }],
-      diagnostics: [{ ruleId: 'ANALYSIS_PARSE_INCOMPLETE' }],
-      decision: 'deny',
-    });
+    expect(result.status).toBe(0);
+    expect(result.stderr).not.toMatch(/blocked /i);
   });
 
   it('validates the post-edit file state for Edit, not the snippet alone', () => {
@@ -2132,6 +2119,17 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
 
     expect(response.result.isError).toBe(false);
     expect(payload).toMatchObject({ classification: 'neutral', valid: true });
+  });
+
+  it('ark_place without filePath fail-closes and does not invent a Presentation path', async () => {
+    const res = await client.request('tools/call', {
+      name: 'ark_place',
+      arguments: { description: 'orders repository' },
+    });
+    expect(res.result.isError).toBe(true);
+    const text = res.result.content[0].text;
+    expect(text).toMatch(/requires filePath|Fail-closed/i);
+    expect(text).not.toMatch(/src\/components\//);
   });
 
   it('ark_place resolves the layer, forbidden globals, and denied import targets', async () => {

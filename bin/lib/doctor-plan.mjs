@@ -75,6 +75,7 @@ import {
   buildDeepModuleCoachAdvisory,
   printDeepModuleCoachSection,
 } from './deep-module-coach.mjs';
+import { writeCiMergeBoundary } from './ci-merge-boundary.mjs';
 
 const color = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
@@ -535,6 +536,15 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const adoption = collectAdoptionGaps(root, config, cov);
   // Prefer writePath from adoption (same detector); recompute only if missing (tests/stubs).
   const writePath = adoption.writePath ?? detectWritePathCapabilities(root);
+  let ciMergeBoundary = null;
+  try {
+    ciMergeBoundary = writeCiMergeBoundary(root, {
+      writePath,
+      github: adoption.deployPath?.github ?? writePath.enforcementState?.ciMerge ?? {},
+    });
+  } catch {
+    ciMergeBoundary = null;
+  }
   const baseline = readBaseline(root, '.ark-baseline.json');
   const occurrenceKeys = baselineOccurrenceKeys(violations);
   const currentKeys = new Set(occurrenceKeys);
@@ -682,6 +692,8 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     (options.writeJson ?? console.log)(
       JSON.stringify(
         {
+          schemaVersion: '1.0',
+          envelope: 'doctor',
           ok: analysisComplete && (options.designDelta?.valid ?? true),
           doctor: {
             completeness,
@@ -767,6 +779,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             skillGaps,
             ...(agentHomeGaps.length > 0 ? { agentHomeGaps } : {}),
             staleRunnerFiles: staleRunners,
+            ciMergeBoundary,
             writePath: {
               activeHost: writePath.activeHost,
               support: writePath.support,
@@ -897,6 +910,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     safetyHasEntries,
     showNewHere,
     designFitness,
+    operatingMode,
   });
   console.log('');
   if (isDoctorHealthyNothingToDo(designFitness, uniqueActions)) {

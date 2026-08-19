@@ -28,6 +28,13 @@ export type ArkConfigLayer = {
   pure?: boolean;
   mayImportInfrastructure?: boolean;
   optional?: boolean;
+  /**
+   * Future house: empty globs are expected. `--strict-config` must not fail.
+   * Typo warning (`CONFIG_LAYER_PATTERN_NO_MATCHES`) is skipped.
+   */
+  reserved?: boolean;
+  /** Alias of reserved — empty pattern matches are allowed. */
+  allowEmpty?: boolean;
 };
 
 export type ArkConfigRule = {

@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { parseNpmPackReport } from './npm-pack-report.mjs';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'arkgate-package-isolation-'));
@@ -24,8 +25,8 @@ function pack(cwd) {
     ['pack', '--json', '--ignore-scripts', '--pack-destination', packs],
     cwd
   );
-  const report = JSON.parse(raw);
-  return path.join(packs, report[0].filename);
+  const report = parseNpmPackReport(raw);
+  return path.join(packs, report.filename);
 }
 
 try {

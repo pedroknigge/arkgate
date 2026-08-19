@@ -14,6 +14,13 @@ description: Session 0 — mark the Ark path. Greenfield scaffold or brownfield 
 2. Write `ark.config.json` (and a baseline only for genuine debt) in this turn.
 3. Re-run doctor. Day-to-day new files: `/ark-place`.
 
+## Checklist
+
+- Existing tree: propose **SharedKernel** (types/constants) + **CompositionRoot** (wiring) + `src/**/domain/**`. Never dump bare `src/lib/**` into Application.
+- Generate `.ark/golden-pattern.json` (load-bearing for `/ark-place`).
+- Future houses: mark unused layer globs `reserved` / `allowEmpty` so `--strict-config` does not fail.
+- CLI-first: if `arkgate-check` already resolved the root, do not wait on MCP.
+
 Invoking this skill **is** the approval. Write the architecture config in this turn.
 Greenfield: scaffold like `--recommend`. Brownfield: match **product
 reality**, freeze only genuine debt. A green check over a wrong config is a **false green**.

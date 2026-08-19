@@ -9,6 +9,16 @@ import { mergePostGreenTopActions } from './post-green-path.mjs';
 
 export function collectDoctorNextActions(ctx) {
   const actions = [];
+  const gatesInstalled = Array.isArray(ctx.gatesMissing) && ctx.gatesMissing.length === 0;
+  const planAEmpty = !ctx.activeCount;
+  const enforceEmptyPlan =
+    ctx.operatingMode === 'enforce' && planAEmpty && gatesInstalled;
+  if (enforceEmptyPlan) {
+    actions.push(
+      ctx.postGreenPath?.action ||
+        '/ark-explore shape-focus → /ark-autopilot (one B pilot)  # ENFORCE + empty plan A → Shape, not reinstall gates'
+    );
+  }
   if (!ctx.analysisComplete) actions.push('restore complete analysis, then rerun ark-check --doctor');
   if (ctx.designSmells.length > 0 && ctx.postGreenPath) actions.push(ctx.postGreenPath.action);
   if (ctx.coverageHonesty.greenIsNotEnforcement && ctx.coverageHonesty.worseThanNoGate) {
@@ -31,8 +41,8 @@ export function collectDoctorNextActions(ctx) {
       `resolve the non-baselined violations — see the classified plan (${arkCommand(ctx.root, 'ark-check', '--plan')}), then /ark-autopilot`
     );
   }
-  if (ctx.writePath?.gap?.fix) actions.push(ctx.writePath.gap.fix);
-  if (ctx.gatesMissing.length > 0) {
+  if (ctx.writePath?.gap?.fix && !gatesInstalled) actions.push(ctx.writePath.gap.fix);
+  if (!gatesInstalled && ctx.gatesMissing.length > 0) {
     actions.push(`install gates (${arkCommand(ctx.root, 'ark-check', '--install-agent-gates')})`);
   }
   const humanSkillGaps = skillGapsForActiveHost(ctx.skillGaps);
@@ -45,10 +55,12 @@ export function collectDoctorNextActions(ctx) {
   if (legacyCodex) {
     actions.push('install Codex SKILL.md catalog (--install-agent-gates --skills-only --tools codex --force)');
   }
-  if (remMiss + remStale > 0) {
-    actions.push('refresh /ark-* skills (--install-agent-gates --skills-only --force)');
+  if (remMiss > 0) {
+    actions.push('install missing /ark-* skills (--install-agent-gates --skills-only --force)');
+  } else if (remStale > 0) {
+    actions.push('refresh stale /ark-* skills (--install-agent-gates --skills-only --force) — gates are installed, catalog is stale');
   }
-  if (ctx.codexHomeGap && ctx.codexConcernActive) {
+  if (ctx.codexHomeGap && ctx.codexConcernActive && ctx.codexHomeGap.preferProject !== true) {
     actions.push(
       ctx.codexHomeGap.catalogMetadataInvalid
         ? 'repair invalid Codex home catalog metadata after verifying the newest installed version'

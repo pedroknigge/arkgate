@@ -307,8 +307,13 @@ function resolveSelection(root, options, manifest) {
   const explicit = normalizeToolsList(options.tools);
   const compactHost = compactRouterHost(root);
   let hosts;
-  if (explicit.length > 0) hosts = normalizeHosts(explicit);
-  else if (manifest) hosts = normalizeHosts(manifest.hosts);
+  if (explicit.length > 0) {
+    const kept = manifest
+      ? normalizeHosts(manifest.hosts)
+      : detectedManagedHosts(root);
+    // Preview/apply default is hosts-keep: --tools unions, never retires other hosts.
+    hosts = normalizeHosts([...kept, ...explicit]);
+  } else if (manifest) hosts = normalizeHosts(manifest.hosts);
   else if (compactHost !== null) hosts = compactHost === 'none' ? [] : normalizeHosts([compactHost]);
   else {
     hosts = detectedManagedHosts(root);
