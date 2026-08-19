@@ -10,16 +10,23 @@ description: "Where does new code go? Names the layer, directory, and naming for
 
 ## Steps
 
-1. Bind identity if using MCP (`ark_identity` with the exact project root).
-2. Place the file (`ark_place` or read `ark.config.json`).
+1. CLI-first: if the local CLI already resolved the root, skip waiting on MCP. Identity is optional then.
+2. Place with **filePath required** (`ark_place` or read `ark.config.json` + `.ark/golden-pattern.json`). Fail-closed without a path — never invent `components/*.tsx` or default to Presentation.
 3. Write it there. Then `arkgate-check`.
+
+## Checklist
+
+- `filePath` is known before the call. Description alone is not a path.
+- Golden pattern is load-bearing when present. Adopt generates it.
+- Do not default a repository to Presentation.
 
 ## Autonomy contract
 
 Invoking this skill **is** the approval. If the user described an artifact, **write the
 files** in this turn (prepare-write + scaffold). A path table alone is incomplete.
-The CLI is a **sensor and gate**. **CLI budget:** `ark_identity` then `ark_place` (or
-read `ark.config.json`); write; `ark-check`. Do not ask which layer they prefer.
+The CLI is a **sensor and gate**. **CLI budget:** `ark_identity` then `ark_place` when using MCP
+(or skip identity if the CLI already resolved the root); otherwise read `ark.config.json`; write;
+`ark-check`. Do not ask which layer they prefer.
 
 **Still never:** weaken `ark.config.json`; invent `mechanical-safe` kinds; claim leftover
 design work is finished because one file landed.

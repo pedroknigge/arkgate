@@ -21,6 +21,7 @@ import {
   detectWorkspaces,
   detectTsPackageRoots,
   resolveIncludeRoots,
+  isScanExcludedRelative,
 } from './ark-shared.mjs';
 import { effectiveCapabilityDeny, stableSerialize } from './lib/analysis-engine.mjs';
 import { createImportTargetResolver } from './lib/import-resolve.mjs';
@@ -866,6 +867,11 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
     emitHostAllow(output, { antigravityStyle, cursorStyle });
     return;
   }
+  const normalizedRel = rel.split(path.sep).join('/');
+  if (isScanExcludedRelative(normalizedRel, config)) {
+    emitHostAllow(output, { antigravityStyle, cursorStyle });
+    return;
+  }
 
   const source = proposedSource(toolName, toolInput);
   if (typeof source !== 'string') {
@@ -897,7 +903,6 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
           autoPatch: null,
         };
       })();
-  const normalizedRel = rel.split(path.sep).join('/');
   const designDelta = args.failOnNewSmells && layer
     ? evaluateWriteDesignDelta({
         root: args.root,
@@ -930,7 +935,10 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
     // New file: nothing pre-exists, every violation is new.
   }
   const newViolations = (result.violations ?? []).filter((violation) => {
-    if (String(violation.ruleId ?? violation.code).startsWith('ANALYSIS_')) return true;
+    const rule = String(violation.ruleId ?? violation.code);
+    // Incremental mid-edit parse errors are normal for agents — do not deny solely on them.
+    if (rule === 'ANALYSIS_PARSE_INCOMPLETE') return false;
+    if (rule.startsWith('ANALYSIS_')) return true;
     const key = violationKey(violation);
     const remaining = existingCounts.get(key) ?? 0;
     if (remaining === 0) return true;
@@ -2176,11 +2184,10 @@ export async function runArkMcp({ hookInput } = {}) {
     {
       name: 'ark_place',
       description:
-        'Place a file in the architecture: pass filePath (preferred) and/or description. ' +
-        'Returns layer, mayImport / mustNotImport, forbiddenGlobals, and optional goldenPattern ' +
-        '(advisory for NEW code when .ark/golden-pattern.json exists — never clears design-weak). ' +
+        'Place a file in the architecture: filePath is required (fail-closed without it — never invents components/*.tsx or defaults to Presentation). ' +
+        'Returns layer, mayImport / mustNotImport, forbiddenGlobals, and goldenPattern ' +
+        '(load-bearing for NEW code when .ark/golden-pattern.json exists — adopt generates it). ' +
         'Call BEFORE writing a new file. ' +
-        'If only description is given, returns a conventional path proposal under a governed layer. ' +
         'Prefer ark_prepare_write when you already have the source snippet (place+validate+autoPatch in one call).',
       inputSchema: {
         type: 'object',
@@ -2192,7 +2199,7 @@ export async function runArkMcp({ hookInput } = {}) {
           description: {
             type: 'string',
             description:
-              'What you are building (e.g. "Remotion caption overlay"). Used when filePath is omitted to propose a path.',
+              'What you are building. Does not invent a path — pass filePath. Without filePath the tool fail-closes.',
           },
         },
       },
@@ -2641,31 +2648,12 @@ export async function runArkMcp({ hookInput } = {}) {
     const golden = loadGoldenPattern(args.root);
     const withGolden = (placement) => attachGoldenToPlacement(placement, golden);
 
-    if ((typeof filePath !== 'string' || !filePath) && typeof description === 'string' && description.trim()) {
-      const slug = description
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 48) || 'component';
-      const proposedPath = `src/components/${slug}.tsx`;
-      const layerName = inferLayer(proposedPath, config, args.root) || 'PresentationAdapters';
-      return withGolden({
-        filePath: proposedPath,
-        proposed: true,
-        description: description.trim(),
-        layer: layerName,
-        governed: Boolean(inferLayer(proposedPath, config, args.root)),
-        note:
-          'filePath was omitted — proposed a conventional path from description. ' +
-          'Pass filePath explicitly for authoritative placement.',
-      });
-    }
-    if (typeof filePath !== 'string' || !filePath) {
+    if (typeof filePath !== 'string' || !filePath.trim()) {
       return {
         error:
-          'Needs filePath and/or description. ' +
-          'Example: { "filePath": "src/components/Foo.tsx" } or { "description": "caption overlay UI component" }.',
+          'ark_place requires filePath. Fail-closed: will not invent a path (never default to Presentation or components/*.tsx). ' +
+          'Example: { "filePath": "src/lib/repositories/orders-repository.ts" }.',
+        failClosed: true,
       };
     }
     const layerName = inferLayer(filePath, config, args.root);

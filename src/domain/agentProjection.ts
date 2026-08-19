@@ -250,10 +250,10 @@ export function buildAgentProjectionBody(facts: AgentProjectionFacts): string {
     lines.push(
       '### Primary path',
       '',
-      '1. Run doctor (`ark-check --doctor`) — status light + primary next action.',
+      '1. Run doctor (`ark-check --doctor`) — status light + primary next action. Prefer the project-local CLI; do not wait on MCP “still connecting”.',
       '2. Read the improvement compass (not a score). Name leftover work in plain language; never “done” on green imports alone while leftover design work remains.',
-      '3. Call `ark_identity` with `project.expectedRoot` at the exact project root; reuse root + `projectId` on Ark MCP calls.',
-      '4. Read architecture config with `ark_manifest` (same expectation). `ark://manifest` is compatibility-only / unverified.',
+      '3. Identity handshake is optional when the CLI already resolved the project root. Call `ark_identity` only when using MCP evidence.',
+      '4. Read architecture config with `ark_manifest` (same expectation) or the local `ark.config.json`. `ark://manifest` is compatibility-only / unverified.',
       '5. Place files inside configured layers; validate; run the check command above on violations — fix architecture, do not weaken the gate.',
       '6. Single door: import-rule debt → fix; leftover design work / residual shape lenses → map then guided apply with user OK.',
       '',
@@ -277,7 +277,8 @@ export function buildAgentProjectionBody(facts: AgentProjectionFacts): string {
       '### Session truth',
       '',
       '- Machine snapshot: `ark status --json` (or MCP `ark_status`) — identity, activation honesty, last check, residual counts. **Not a score.**',
-      '- Authoritative contract: `ark_manifest` after a matched `ark_identity` handshake.',
+      '- Authoritative contract: local `ark.config.json` / CLI, or `ark_manifest` after a matched `ark_identity` handshake. Identity is optional when CLI already resolved the root.',
+      '- Host docs: the same projection schema is merged into `AGENTS.md` and `CLAUDE.md` (`ark agents-md --write`).',
       ''
     );
   }

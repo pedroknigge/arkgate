@@ -10,9 +10,16 @@ description: Upgrade ArkGate through a content-identity preview, preserve custom
 
 ## Steps
 
-1. Preview: `arkgate upgrade` (no writes).
-2. Apply in this turn: `arkgate upgrade --apply` (needs `--plan-digest` when applying managed files).
+1. Preview: `arkgate upgrade` (no writes). Default is **hosts keep** — do not retire other hosts’ skills.
+2. Apply in this turn: `arkgate upgrade --apply` (installs the bumped package unless `--no-install`). Needs `--plan-digest` when applying managed files.
 3. Re-run `arkgate-check --doctor`. Customized files stay unless you pass `--accept-conflicts` / `--refresh-skills`.
+
+## Checklist
+
+- Preview unions `--tools` with hosts already in the repo. Multi-agent trees keep every host.
+- Apply must run the package install of the new pin. Do not skip `npm install` unless `--no-install` is explicit.
+- Refresh AGENTS.md **and** CLAUDE.md (same projection schema).
+- Prefer project `.agents/skills`. Do not duplicate the catalog into `~/.codex/skills`.
 
 The preview is the source of truth. Do not treat a filename or package version as proof of ownership.
 

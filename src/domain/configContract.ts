@@ -184,6 +184,8 @@ export const ARK_CONFIG_SCHEMA = {
         pure: { type: 'boolean' },
         mayImportInfrastructure: { type: 'boolean' },
         optional: { type: 'boolean' },
+        reserved: { type: 'boolean' },
+        allowEmpty: { type: 'boolean' },
       },
     },
     rule: {

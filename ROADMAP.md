@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-18 (Phase CX follow-up active for **arkgate@4.6.4**; **4.6.3** is on npm `latest`)
+- **Status date:** 2026-08-19 (Phase CX follow-up shipped as **arkgate@4.6.5**; **4.6.3** was last npm `latest` before this train)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -413,7 +413,7 @@ Ark's product-policy or governed-scope enforcement.
 | 56 | `Y02` | `done` | M | `P02` | Deterministic hollow-persistence smell: HTTP/route definition living in Persistence-role layers is visible as an advisory |
 | 57 | `Y03` | `done` | S | — | Governed files that fail to parse are surfaced honestly (a file the scanner cannot read is never silently "clean") |
 | 58 | `Y04` | `done` | S | — | Skill mechanical-edit hygiene rules close the three observed codemod defects |
-| 59 | `Y06` | `done` | S | gate met: PREDIAL field case | `pure`-layer opt-in nudge: doctor suggests declaring purity when the golden pattern names pure modules but no layer opts in |
+| 59 | `Y06` | `done` | S | gate met: field Next.js case | `pure`-layer opt-in nudge: doctor suggests declaring purity when the golden pattern names pure modules but no layer opts in |
 | 60 | `Y07` | `parked` | L | gate: `Y06` corpus (low priority) | Strict (blocker-grade) ambient mutable-state diagnostics — only after a real `pure: true` field corpus exists (U05 condition unchanged); not near-term backlog |
 | 61 | `Y08` | `done` | S | gate met: deterministic harness | `node:process` module-import dual of the `process` ambient forbidden global is detected with the same evidence discipline |
 | 62 | `Y09` | `parked` | S | gate: field case | Template-interpolation import specifiers are surfaced as an unresolvable-edge advisory instead of silently unresolved |
@@ -427,7 +427,7 @@ path and replaces self-referential evidence with causal field proof.
 
 Phase X has no pending work. After 3.8.0, Phase Z has **no implementation `doing`**: Z01–Z08 and
 Z10 are `done`; Z09 is a longitudinal claim gate, not continuous engineering. Y06 is `done`
-(PREDIAL field case). Y09 remains parked behind a field case. Y07 stays parked at low priority
+(field Next.js case). Y09 remains parked behind a field case. Y07 stays parked at low priority
 behind a real `pure: true` field corpus (Y06 only creates the opt-in path). Y10 is archived until
 field demand plus an explicit ADR — largest cost in the Y queue, out of Phase Z scope, not
 “next after Z09.” Alias resolution is not Y09's dynamic-template case; direct resolution is not
@@ -459,8 +459,8 @@ Acceptance (met in tree; publish is a separate maintainer step):
 
 ### 3.8.3 — Field journey patch (install/upgrade close-out)
 
-Origin: 2026-07-22 field session — PREDIAL/SUPERLOCK npm upgrade OK; **PROPIA pnpm workspace**
-`pnpm add` without `-w` hard-fails; **Amarilla greenfield** `start --apply` left no package pin and
+Origin: 2026-07-22 field session — npm upgrade OK; a **pnpm workspace**
+`pnpm add` without `-w` hard-fails; a **greenfield** `start --apply` left no package pin and
 compact host without shared `.mcp.json` under the old 5-file budget.
 
 Engineering slices **P01–P06** land in tree for the corrective patch; **P07** is field re-verify +
@@ -474,7 +474,7 @@ publish (npm + MCP registry). One `doing` at a time for any remaining slice.
 | 77 | `P04` | `done` | S | `P03` | compact always writes `.mcp.json`; setup budget 8 files / 32 KB |
 | 78 | `P05` | `done` | S | — | upgrade human copy: stamp refresh vs content writes; applied counters honest |
 | 79 | `P06` | `done` | S | `P05` | unbound `--apply` no-op when `wouldWrite=0`; install-fail recovery prints exact command |
-| 80 | `P07` | `done` | S | `P01`–`P06` | Field re-verify PROPIA + greenfield start; bump 3.8.3; publish npm + MCP |
+| 80 | `P07` | `done` | S | `P01`–`P06` | Field re-verify pnpm workspace + greenfield start; bump 3.8.3; publish npm + MCP |
 
 `Z01` starts with a failing destructive-target fixture; do **not** run the unsafe
 `check:release-artifacts` path or make budget measurement a prerequisite to its fix. After `Z01` is
@@ -1519,7 +1519,8 @@ Boundary (freezes held):
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 176 | `CX01` | `done` | M | FC02 + 4.6.2 published | Accept the official Codex payload, promote covered `apply_patch` to runtime-proven hard write, align doctor/status/install/docs, and publish npm/MCP 4.6.3 |
-| 177 | `CX02` | `doing` | M | CX01 + 4.6.3 published | Make `ark upgrade` explicitly tell Codex users to refresh/trust/restart the hook; fail stale MCP closed; hand stale global upgrade to project-local CLI; publish 4.6.4 + site/pointer close |
+| 177 | `CX02` | `done` | M | CX01 + 4.6.3 published | Make `ark upgrade` explicitly tell Codex users to refresh/trust/restart the hook; fail stale MCP closed; hand stale global upgrade to project-local CLI; 4.6.4 published, then 4.6.5 |
+| 178 | `CX03` | `doing` | M | CX02 | Ship 4.6.5: adopt SharedKernel/CompositionRoot (no `src/lib/**` vacuum), place fail-closed, reserved empty globs, doctor envelope, writePath/CI honesty file, hosts-keep upgrade, CLAUDE.md projection, proportional graph scan |
 
 **CX01 acceptance:** current official `tool_input.command` fixture denies before disk mutation;
 legacy patch fixture stays compatible; incomplete/specialized paths never claim hard; installed
@@ -2324,7 +2325,7 @@ allowlist, module budgets, generated parity, `git diff --check`, and strict arch
 
 Y06–Y10 predate this cycle as retained candidates: a `parked` item never starts; it promotes to
 `todo` only when its named gate is met, with field evidence recorded here first. **Promoted /
-shipped:** Y06 (PREDIAL field case → advisory pure-layer opt-in nudge) and Y08 (`node:process`
+shipped:** Y06 (field Next.js case → advisory pure-layer opt-in nudge) and Y08 (`node:process`
 dual). **Still parked:** Y07 (strict ambient, low priority behind a real `pure: true` corpus) and
 Y09 (template-interpolation imports — field case). **Archived until field demand + ADR:** Y10
 (transitive capability inference — not near-term backlog).
@@ -2335,7 +2336,7 @@ Y09 (template-interpolation imports — field case). **Archived until field dema
 layer declares purity, the doctor emits a one-line opt-in nudge (advisory, U05 voice). Never
 auto-writes `pure: true`; never a blocker. Y07 still waits on a real opted-in pure-layer corpus.
 
-**Y06 promotion evidence (2026-07-22, PREDIAL field adopter):** after `npm i arkgate@3.8.1` the
+**Y06 promotion evidence (2026-07-22, field Next.js adopter):** after `npm i arkgate@3.8.1` the
 adopter golden pattern named pure Domain modules with zero `pure: true` layers and ambient idle.
 Gate met: nudge is actionable (opt-in path only). Implemented as `doctor.pureLayerOptIn` +
 one-line human advisory via `computePureLayerOptInNudge`.

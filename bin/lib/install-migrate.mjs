@@ -635,6 +635,16 @@ export function runInstallAgentGates(args) {
       homeResults.push({ relativePath: dir, status: 'failed' });
     }
     if (homeResults.length === 0) {
+      const skillName = (skill) =>
+        Array.isArray(skill) ? skill[0] : skill?.name || skill;
+      const projectHasCatalog = skills.some((skill) =>
+        fs.existsSync(path.join(root, '.agents', 'skills', skillName(skill), 'SKILL.md'))
+      );
+      if (projectHasCatalog) {
+        console.log(
+          '  Project .agents/skills already has this catalog; home write is optional. Prefer the project copy.'
+        );
+      }
       for (const result of installSkillCatalog({
         directory: dir,
         skills,

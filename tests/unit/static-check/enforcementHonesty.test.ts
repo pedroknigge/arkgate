@@ -310,9 +310,13 @@ describe('ambient sensor honesty (Y07 advisory only)', () => {
 
 describe('graph-blind template-interpolation (Y09 advisory)', () => {
 
-  it('defers full scan on large trees (doctor resident budget)', () => {
-    const many = Array.from({ length: 2501 }, (_, i) => `/tmp/f${i}.ts`);
-    const result = detectGraphBlindSpots(ts, '/tmp', many);
+  it('scans a 3300-file tree and defers only above the hard cap', () => {
+    const nextApp = Array.from({ length: 3300 }, (_, i) => `/tmp/f${i}.ts`);
+    const scanned = detectGraphBlindSpots(ts, '/tmp', nextApp);
+    expect(scanned.deferred).toBe(false);
+
+    const huge = Array.from({ length: 8001 }, (_, i) => `/tmp/f${i}.ts`);
+    const result = detectGraphBlindSpots(ts, '/tmp', huge);
     expect(result.deferred).toBe(true);
     expect(result.count).toBe(0);
     expect(result.blockerGrade).toBe(false);

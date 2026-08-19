@@ -79,11 +79,14 @@ export function evaluateInvariantCoverage(input) {
         if (!covered || partial) {
             // Enforced + proven uncovered → failsStrict; partial always advisory (never fake green).
             const failsStrict = inv.mode === 'enforced' && !partial;
+            const kind = testGlobsMissing || testFiles.length === 0 ? 'never-had-tests' : 'tests-disappeared';
             violations.push({
                 ruleId: 'INVARIANT_UNCOVERED',
                 message: partial
-                    ? `Invariant ${inv.id} coverage cannot be proven (test globs missing or empty); reporting partial, not covered.`
-                    : `Invariant ${inv.id} is not covered by a test title or declared symbol.`,
+                    ? `Invariant ${inv.id} coverage cannot be proven (test globs missing or empty); reporting partial, not covered (never-had-tests).`
+                    : kind === 'tests-disappeared'
+                        ? `Invariant ${inv.id} is not covered by a test title or declared symbol (tests-disappeared — suite exists).`
+                        : `Invariant ${inv.id} is not covered by a test title or declared symbol (never-had-tests).`,
                 file: inv.provenance.sourceFile,
                 line: 1,
                 arkruleId: inv.id,
@@ -91,6 +94,7 @@ export function evaluateInvariantCoverage(input) {
                 fromLayer: inv.provenance.layer,
                 severity: failsStrict ? 'error' : 'warning',
                 failsStrict,
+                kind,
             });
         }
     }

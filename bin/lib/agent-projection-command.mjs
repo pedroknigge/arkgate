@@ -261,6 +261,14 @@ export function runAgentProjectionCommand(args = {}) {
       profile: args.profile,
       arkgateVersion: args.arkgateVersion,
     });
+    const claudePlan = planAgentProjectionRefresh({
+      root: args.root,
+      config: args.config,
+      host: args.host || 'claude',
+      profile: args.profile,
+      arkgateVersion: args.arkgateVersion,
+      targetRelativePath: 'CLAUDE.md',
+    });
 
     if (stdoutOnly) {
       if (asJson) {
@@ -337,8 +345,10 @@ export function runAgentProjectionCommand(args = {}) {
     }
 
     let applyResult = { wrote: false, action: plan.action, path: plan.path };
+    let claudeApply = { wrote: false, action: claudePlan.action, path: claudePlan.path };
     if (doWrite) {
       applyResult = applyAgentProjectionRefresh(plan, { write: true });
+      claudeApply = applyAgentProjectionRefresh(claudePlan, { write: true });
     }
 
     if (asJson) {
@@ -349,6 +359,14 @@ export function runAgentProjectionCommand(args = {}) {
             arkgateVersion: plan.packageVersion,
             nonAuthoritative: true,
             path: plan.relativePath,
+            hosts: {
+              agentsMd: { path: plan.relativePath, wrote: applyResult.wrote, action: applyResult.action },
+              claudeMd: {
+                path: claudePlan.relativePath,
+                wrote: claudeApply.wrote,
+                action: claudeApply.action,
+              },
+            },
             action: applyResult.action,
             wrote: applyResult.wrote,
             wouldWrite: plan.wouldWrite,

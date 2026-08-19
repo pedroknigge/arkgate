@@ -89,6 +89,69 @@ export type ArkViolationLike = {
   [key: string]: unknown;
 };
 
+/**
+ * Import-kind branch for LAYER_IMPORT_VIOLATION nextAction.
+ * Port inversion is only correct when the target is a real use-case.
+ */
+export type LayerImportKind = 'pure-shared' | 'kernel-emit' | 'use-case' | 'unknown';
+
+const PURE_SHARED_RE =
+  /(^|\/)(constants|types|enums|shared-types|shared\/(?:types|constants)|test-projects)(\/|\.|$)|(?:^|\/)[^/]*(?:constants|types)(?:\.[cm]?[jt]sx?)?$/i;
+const KERNEL_EMIT_RE =
+  /(^|\/)(?:kernel(?:\/|$)|events?(?:\/|\.|$)|bootstrap(?:\.[cm]?[jt]sx?)?$|emitter(?:\.[cm]?[jt]sx?)?$)|(?:^|\/)(?:intents?|publish)(?:\/|\.|$)/i;
+const USE_CASE_RE =
+  /(use-?cases?|usecases?|application|orchestrat|services?|handlers?)(\/|\.|$)/i;
+
+export function classifyLayerImportKind(
+  target: string | undefined | null,
+  extra?: { fromLayer?: string; toLayer?: string }
+): LayerImportKind {
+  const value = String(target ?? '')
+    .replace(/\\/g, '/')
+    .trim();
+  const from = String(extra?.fromLayer ?? '');
+  const to = String(extra?.toLayer ?? '');
+  if (PURE_SHARED_RE.test(value)) return 'pure-shared';
+  if (
+    from === 'PersistenceAdapters' &&
+    (KERNEL_EMIT_RE.test(value) || /events?|intents?|kernel|bootstrap/i.test(`${to} ${value}`))
+  ) {
+    return 'kernel-emit';
+  }
+  if (
+    USE_CASE_RE.test(value) ||
+    ((from === 'DomainModel' || from === 'ApplicationOrchestration') &&
+      to === 'PersistenceAdapters')
+  ) {
+    return 'use-case';
+  }
+  if (!value) return 'unknown';
+  return 'unknown';
+}
+
+export function layerImportNextAction(violation: ArkViolationLike): string {
+  if (violation.typeOnly || violation.targetTypeOnlyExports || violation.namedBindingsTypeOnly) {
+    return 'Move the referenced type to a mutually allowed layer, use `import type`, then preflight again.';
+  }
+  if (violation.peerIsolation) {
+    return 'Extract the shared dependency to a shared layer, test at the public interface, then preflight again.';
+  }
+  const kind = classifyLayerImportKind(typeof violation.target === 'string' ? violation.target : '', {
+    fromLayer: typeof violation.fromLayer === 'string' ? violation.fromLayer : undefined,
+    toLayer: typeof violation.toLayer === 'string' ? violation.toLayer : undefined,
+  });
+  if (kind === 'pure-shared') {
+    return 'Adopt the imported constants/types/pure module into DomainModel or SharedKernel (do not inject a port). Then preflight again.';
+  }
+  if (kind === 'kernel-emit') {
+    return 'Persistence must not emit. Inject a port or move the event map to SharedTypes; do not import kernel/events/bootstrap from a repository. Then preflight again.';
+  }
+  if (kind === 'use-case' || violation.portProofEligible) {
+    return `Define a port in ${violation.fromLayer ?? 'the source layer'}, inject the ${violation.toLayer ?? 'outer-layer'} implementation, test at the public interface, then preflight again.`;
+  }
+  return 'Classify the import: if it is constants/types/pure, adopt into DomainModel or SharedKernel; define a port only if the target is a real use-case. Then preflight again.';
+}
+
 export type FixClassEffort = 'small' | 'medium';
 
 export type EnrichedViolation<T extends ArkViolationLike = ArkViolationLike> = T & {
@@ -102,13 +165,7 @@ export type EnrichedViolation<T extends ArkViolationLike = ArkViolationLike> = T
 export function deterministicNextAction(violation: ArkViolationLike): string {
   switch (violation.ruleId) {
     case 'LAYER_IMPORT_VIOLATION':
-      if (violation.typeOnly || violation.targetTypeOnlyExports || violation.namedBindingsTypeOnly) {
-        return 'Move the referenced type to a mutually allowed layer, use `import type`, then preflight again.';
-      }
-      if (violation.peerIsolation) {
-        return 'Extract the shared dependency to a shared layer, test at the public interface, then preflight again.';
-      }
-      return `Define a port in ${violation.fromLayer ?? 'the source layer'}, inject the ${violation.toLayer ?? 'outer-layer'} implementation, test at the public interface, then preflight again.`;
+      return layerImportNextAction(violation);
     case 'FORBIDDEN_GLOBAL':
       return `Inject ${violation.target ?? 'the capability'} through a port, test at the public interface, then preflight again.`;
     case 'CAPABILITY_VIOLATION':
@@ -302,9 +359,30 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
         enriched.enthusiastHint =
           'Cross-slice import blocked (peerIsolation). Do not import another feature/context directly — extract shared code to a shared layer, or coordinate via events/ports. Moving code across slices is a judgment call, not a mechanical auto-fix.';
       } else {
-        enriched.fixClass = 'port-inversion';
-        enriched.effort = 'medium';
-        enriched.enthusiastHint = `${violation.fromLayer ?? 'This layer'} must not import ${violation.toLayer ?? 'that layer'} directly. Define an interface (port) where you need the capability and inject the implementation from the outer layer.`;
+        const kind = classifyLayerImportKind(typeof violation.target === 'string' ? violation.target : '', {
+          fromLayer: typeof violation.fromLayer === 'string' ? violation.fromLayer : undefined,
+          toLayer: typeof violation.toLayer === 'string' ? violation.toLayer : undefined,
+        });
+        if (kind === 'pure-shared') {
+          enriched.fixClass = 'file-move';
+          enriched.effort = 'small';
+          enriched.enthusiastHint =
+            'This import is constants/types/pure — adopt it into DomainModel or SharedKernel. Do not inject a port.';
+        } else if (kind === 'kernel-emit') {
+          enriched.fixClass = 'port-inversion';
+          enriched.effort = 'medium';
+          enriched.enthusiastHint =
+            'A repository must not import kernel/events/bootstrap. Persistence does not emit — inject a port or move the map to SharedTypes.';
+        } else if (kind === 'use-case' || violation.portProofEligible) {
+          enriched.fixClass = 'port-inversion';
+          enriched.effort = 'medium';
+          enriched.enthusiastHint = `${violation.fromLayer ?? 'This layer'} must not import ${violation.toLayer ?? 'that layer'} directly. Define an interface (port) where you need the capability and inject the implementation from the outer layer.`;
+        } else {
+          enriched.fixClass = 'review-contract';
+          enriched.effort = 'medium';
+          enriched.enthusiastHint =
+            'Do not assume a port. If the target is constants/types/pure, adopt it into Domain or SharedKernel; define a port only for a real use-case.';
+        }
       }
       break;
     case 'FORBIDDEN_GLOBAL':

@@ -20,6 +20,8 @@ export type InvariantCoverageEvidence = {
   description: string;
 };
 
+export type InvariantUncoveredKind = 'never-had-tests' | 'tests-disappeared';
+
 export type InvariantCoverageViolation = {
   ruleId: 'INVARIANT_UNCOVERED';
   message: string;
@@ -30,6 +32,8 @@ export type InvariantCoverageViolation = {
   fromLayer: string;
   severity: 'error' | 'warning';
   failsStrict: boolean;
+  /** Adopt residual (no test suite) vs regression (suite exists, coverage gone). */
+  kind: InvariantUncoveredKind;
 };
 
 export type EvaluateInvariantCoverageInput = {
@@ -132,23 +136,28 @@ export function evaluateInvariantCoverage(
       description: inv.description,
     });
 
-    if (!covered || partial) {
-      // Enforced + proven uncovered → failsStrict; partial always advisory (never fake green).
-      const failsStrict = inv.mode === 'enforced' && !partial;
-      violations.push({
-        ruleId: 'INVARIANT_UNCOVERED',
-        message: partial
-          ? `Invariant ${inv.id} coverage cannot be proven (test globs missing or empty); reporting partial, not covered.`
-          : `Invariant ${inv.id} is not covered by a test title or declared symbol.`,
-        file: inv.provenance.sourceFile,
-        line: 1,
-        arkruleId: inv.id,
-        arkruleSource: inv.provenance.sourceFile,
-        fromLayer: inv.provenance.layer,
-        severity: failsStrict ? 'error' : 'warning',
-        failsStrict,
-      });
-    }
+        if (!covered || partial) {
+            // Enforced + proven uncovered → failsStrict; partial always advisory (never fake green).
+            const failsStrict = inv.mode === 'enforced' && !partial;
+            const kind: InvariantUncoveredKind =
+              testGlobsMissing || testFiles.length === 0 ? 'never-had-tests' : 'tests-disappeared';
+            violations.push({
+                ruleId: 'INVARIANT_UNCOVERED',
+                message: partial
+                    ? `Invariant ${inv.id} coverage cannot be proven (test globs missing or empty); reporting partial, not covered (never-had-tests).`
+                    : kind === 'tests-disappeared'
+                      ? `Invariant ${inv.id} is not covered by a test title or declared symbol (tests-disappeared — suite exists).`
+                      : `Invariant ${inv.id} is not covered by a test title or declared symbol (never-had-tests).`,
+                file: inv.provenance.sourceFile,
+                line: 1,
+                arkruleId: inv.id,
+                arkruleSource: inv.provenance.sourceFile,
+                fromLayer: inv.provenance.layer,
+                severity: failsStrict ? 'error' : 'warning',
+                failsStrict,
+                kind,
+            });
+        }
   }
 
   // Top-level partial only from entry flags (symbol-only coverage must not stick partial).

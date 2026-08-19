@@ -407,9 +407,9 @@ ${projectionBlock}
 
 1. Status anytime: \`${doctorCmd}\` — one status light, one primary next action (control plane).
 2. Read the **Improvement compass** section (not a score). Name residual lenses in plain language when present (SoC, DIP, domain, …). Out-of-scope lenses (performance, app security tooling, full resilience) stay honest — do not invent Ark enforcement for them.
-3. Before trusting MCP evidence: call \`ark_identity\` with \`project.expectedRoot\` set to this project's exact absolute root, then reuse that root plus the returned \`projectIdentity.projectId\` on every Ark MCP call. A descendant path is authoritative only with that matching id. Missing tool, non-\`matched\` binding, or wrong root means this is not proven to be the right project: restart the host and use the local CLI meanwhile.
-4. Day to day: call \`ark_manifest\` with the same project expectation; place new files with \`ark_place\`; validate after edits; run \`${checkCmd}\`. The \`ark://manifest\` resource is compatibility-only and always unverified. On a gate deny, fix the architecture — do not weaken \`ark.config.json\`.
-5. If MCP is unavailable: inspect \`ark.config.json\` and run \`${checkCmd}\`.
+3. CLI-first: if the local CLI already resolved this project root, do not wait on MCP “still connecting”. Identity handshake is optional in that case. When you do trust MCP evidence: call \`ark_identity\` with \`project.expectedRoot\` set to this project's exact absolute root, then reuse that root plus the returned \`projectIdentity.projectId\` on every Ark MCP call. A descendant path is authoritative only with that matching id. Missing tool, non-\`matched\` binding, or wrong root means this is not proven to be the right project: restart the host and use the local CLI meanwhile.
+4. Day to day: call \`ark_manifest\` with the same project expectation (or skip if CLI already bound the root); place new files with \`ark_place\` (filePath required — fail-closed); validate after edits; run \`${checkCmd}\`. The \`ark://manifest\` resource is compatibility-only and always unverified. On a gate deny, fix the architecture — do not weaken \`ark.config.json\`.
+5. If MCP is unavailable: inspect \`ark.config.json\` and run \`${checkCmd}\`. The host-readable projection is AGENTS.md and CLAUDE.md (same schema).
 
 **Single door when residual remains:**
 - **Edges debt** (import/capability violations) → fix with the gate / plan; skill pack only if doctor names a skill.

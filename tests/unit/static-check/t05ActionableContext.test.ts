@@ -168,7 +168,9 @@ describe('T05 actionable, context-independent denial', () => {
     );
     expect(machine.status).toBe(1);
     const diagnostic = JSON.parse(machine.stdout).diagnostics[0];
-    expect(diagnostic.nextAction).toContain('Define a port in DomainModel');
+    expect(diagnostic.nextAction).toMatch(
+      /Define a port in DomainModel|Classify the import|SharedKernel|use-case/
+    );
 
     const human = spawnSync(
       process.execPath,

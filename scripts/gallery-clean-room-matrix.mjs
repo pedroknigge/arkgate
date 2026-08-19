@@ -428,6 +428,8 @@ function runCell(options, candidate, workRoot, starter) {
     assertCondition(data.ok === true, 'doctor reported ok false');
     assertCondition(data.doctor?.completeness === 'complete', 'doctor analysis was incomplete');
     assertCondition(data.doctor?.violations?.active === 0, 'doctor found active violations');
+    // Doctor writes `.ark/ci-merge-boundary.json` (4.6.5 writePath/CI honesty); refresh baseline.
+    preparedSnapshot = snapshotProject(root);
     return { completeness: data.doctor.completeness, ...evidence(result) };
   });
 

@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseNpmPackReport } from '../scripts/npm-pack-report.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..');
@@ -121,9 +122,8 @@ function diagnostic(text, root) {
 
 function packCandidate(work) {
   const packOutput = run('npm', ['pack', '--json', '--pack-destination', work], { cwd: REPO });
-  const jsonStart = packOutput.lastIndexOf('\n[');
-  const packed = JSON.parse(jsonStart === -1 ? packOutput : packOutput.slice(jsonStart + 1));
-  const tarball = path.join(work, packed[0].filename);
+  const packed = parseNpmPackReport(packOutput);
+  const tarball = path.join(work, packed.filename);
   const home = path.join(work, 'candidate');
   fs.mkdirSync(home, { recursive: true });
   const startedAt = Date.now();

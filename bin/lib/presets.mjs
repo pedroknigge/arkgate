@@ -179,6 +179,28 @@ export const PERSISTENCE_PATH_PATTERNS = Object.freeze([
  * Application orchestration under lib without the whole-src-lib vacuum.
  * Never use lone `src/**` or bare `src/lib/**` as Application on Next/event trees.
  */
+/** Types and constants — SharedKernel, not Application vacuum. */
+export const SHARED_KERNEL_PATH_PATTERNS = Object.freeze([
+  'src/shared/**',
+  'src/types/**',
+  'src/**/types.ts',
+  'src/**/constants.ts',
+  'src/**/types/**',
+  'src/**/constants/**',
+  '**/shared/kernel/**',
+  'src/shared/kernel/**',
+]);
+
+/** Wiring / DI / bootstrap — CompositionRoot, not Domain. */
+export const COMPOSITION_ROOT_PATH_PATTERNS = Object.freeze([
+  'src/**/composition/**',
+  'src/**/factories/**',
+  'src/**/container.ts',
+  'src/**/bootstrap.ts',
+  '**/composition/**',
+  '**/factories/**',
+]);
+
 export const APPLICATION_LIB_ORCHESTRATION_PATTERNS = Object.freeze([
   'src/lib/actions/**',
   'src/lib/services/**',

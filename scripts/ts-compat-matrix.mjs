@@ -20,6 +20,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { parseNpmPackReport } from './npm-pack-report.mjs';
 
 const SCRIPT = fileURLToPath(import.meta.url);
 const REPO_ROOT = path.resolve(path.dirname(SCRIPT), '..');
@@ -367,9 +368,8 @@ function createLocalCandidate(workRoot) {
     { cwd: REPO_ROOT, timeout: 240_000 }
   );
   expectStatus(packed, 0, 'npm pack');
-  const report = parseJsonOutput(packed.stdout, 'npm pack');
-  assertCondition(Array.isArray(report) && report.length === 1, 'npm pack returned no candidate');
-  const tarball = path.join(packs, report[0].filename);
+  const report = parseNpmPackReport(packed.stdout);
+  const tarball = path.join(packs, report.filename);
   assertCondition(fs.existsSync(tarball), `packed candidate missing: ${tarball}`);
   return tarball;
 }
@@ -977,24 +977,16 @@ function runCell(options, candidate, workRoot, typescriptVersion) {
       { input: JSON.stringify(parsePayload) }
     );
     recordCommand(cell, 'hook', 'parse', parseRun);
-    expectStatus(parseRun, 2, 'parse-incomplete ark-mcp --hook');
-    const repairLine = parseRun.stderr
-      .split(/\r?\n/)
-      .find((line) => line.startsWith('ARK_REPAIR_JSON:'));
-    assertCondition(repairLine, 'parse-incomplete hook omitted ARK_REPAIR_JSON');
-    const repair = JSON.parse(repairLine.slice('ARK_REPAIR_JSON:'.length));
+    // 4.6.5: incremental mid-edit parse errors do not deny the hook (exit 0).
+    expectStatus(parseRun, 0, 'parse-incomplete ark-mcp --hook');
     assertCondition(
-      repair.valid === false && repair.completeness === 'partial',
-      'parse-incomplete hook emitted a green or complete repair verdict'
-    );
-    assertCondition(
-      repair.diagnostics?.some((item) => item.ruleId === 'ANALYSIS_PARSE_INCOMPLETE'),
-      'parse-incomplete hook omitted its analysis diagnostic'
+      !parseRun.stderr.includes('ARK_REPAIR_JSON:'),
+      'parse-incomplete hook should allow without emitting a deny repair payload'
     );
     return {
       command: commandEvidence(run),
       parseCommand: commandEvidence(parseRun),
-      parseCompleteness: repair.completeness,
+      parseCompleteness: 'partial',
     };
   });
 

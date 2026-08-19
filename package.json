@@ -1,6 +1,6 @@
 {
   "name": "arkgate",
-  "version": "4.6.4",
+  "version": "4.6.5",
   "description": "One architecture config. One check. One coach.",
   "type": "module",
   "main": "./dist/index.cjs",

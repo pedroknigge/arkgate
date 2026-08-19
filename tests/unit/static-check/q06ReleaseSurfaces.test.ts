@@ -10,9 +10,9 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.6.4';
-/** Version confirmed on npm `latest`. */
-const PUBLISHED_LATEST = '4.6.3';
+const CURRENT = '4.6.5';
+/** Version confirmed on npm `latest` before this train. */
+const PUBLISHED_LATEST = '4.6.4';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -31,7 +31,7 @@ describe('package budget ceilings retain 10% headroom over the recorded clean ca
       files: 190,
     });
     expect([gate.maxPackedBytes, gate.maxUnpackedBytes, gate.maxFiles]).toEqual([
-      906000, 3201191, 210,
+      918000, 3260000, 210,
     ]);
     expect(gate.maxPackedBytes).toBeGreaterThanOrEqual(
       Math.ceil(gate.measuredCandidate.packedBytes * 1.1)
@@ -101,22 +101,25 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('keeps published 4.6.3 as npm latest while 4.6.4 is prepared', () => {
-    expect(PUBLISHED_LATEST).toBe('4.6.3');
-    expect(CURRENT).toBe('4.6.4');
+  it('keeps 4.6.5 current and 4.6.4 last published', () => {
+    expect(PUBLISHED_LATEST).toBe('4.6.4');
+    expect(CURRENT).toBe('4.6.5');
+    expect(read('README.md')).toMatch(/4\.6\.5/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.5\.md/);
+    expect(read('README.md')).toMatch(/4\.6\.4/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.4\.md/);
     expect(read('README.md')).toMatch(/4\.6\.3/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.3\.md/);
     expect(read('README.md')).toMatch(/4\.6\.2/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.2\.md/);
-    expect(read('README.md')).toMatch(/4\.6\.1/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.1\.md/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.6\.3/s);
-    expect(read('docs/README.md')).toMatch(/Current published:.*4\.6\.3/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.6\.5/s);
+    expect(read('docs/README.md')).toMatch(/Current:.*4\.6\.5/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
-    expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.6\.3/is);
+    expect(read('docs/package-surface.md')).toMatch(/current:.*4\.6\.5/is);
     expect(read('docs/package-surface.md')).toMatch(/4\.6\.2\.md/);
-    expect(read('docs/releases/4.6.4.md')).toMatch(/\*\*Status:\*\*\s*prepared/i);
-    expect(read('docs/releases/4.6.4.md')).not.toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(read('docs/releases/4.6.5.md')).toMatch(/\*\*Status:\*\*\s*current/i);
+    expect(read('docs/releases/4.6.4.md')).toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(read('docs/releases/4.6.4.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
     expect(read('docs/releases/4.6.3.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.3.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
     expect(read('docs/releases/4.6.2.md')).toMatch(/\*\*Status:\*\*\s*published/i);
@@ -134,16 +137,35 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
   });
 });
 
-describe('CHANGELOG + release note prepare 4.6.4 Codex upgrade guidance', () => {
-  it('records the upgrade card, exact refresh command, and prepared status', () => {
+describe('CHANGELOG + release note cover 4.6.5 product honesty', () => {
+  it('records adopt/place/doctor/upgrade surfaces without internal repo names', () => {
+    const changelog = read('CHANGELOG.md');
+    expect(changelog).toMatch(/## 4\.6\.5/);
+    expect(changelog).toMatch(/SharedKernel/);
+    expect(changelog).toMatch(/golden-pattern/);
+    expect(changelog).toMatch(/filePath/);
+    expect(changelog).toMatch(/ci-merge-boundary/);
+    expect(changelog).toMatch(/envelope:\s*"doctor"/);
+    const section = changelog.slice(changelog.indexOf('## 4.6.5'), changelog.indexOf('## 4.6.4'));
+    expect(section).not.toMatch(/amarilla/i);
+    const notes = read('docs/releases/4.6.5.md');
+    expect(notes).toMatch(/arkgate@4\.6\.5/);
+    expect(notes).toMatch(/SharedKernel/);
+    expect(notes).toMatch(/CLAUDE\.md/);
+    expect(notes).not.toMatch(/amarilla/i);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.6.4 Codex upgrade guidance', () => {
+  it('records the upgrade card, exact refresh command, and published status', () => {
     const changelog = read('CHANGELOG.md');
     expect(changelog).toMatch(/## 4\.6\.4/);
     expect(changelog).toMatch(/codex-hard-write/);
     expect(changelog).toMatch(/install-agent-gates --tools codex --force/);
-    expect(changelog).toMatch(/Status:\s*prepared/i);
+    expect(changelog).toMatch(/Status:\s*published/i);
 
     const notes = read('docs/releases/4.6.4.md');
-    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(notes).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(notes).toMatch(/codex-hard-write/);
     expect(notes).toMatch(/install-agent-gates --tools codex --force/);
     expect(notes).toMatch(/restart|trust/i);

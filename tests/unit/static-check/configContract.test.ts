@@ -404,6 +404,43 @@ describe('C01 config contract', () => {
     );
   });
 
+  it('fails closed when the migration table has a gap mid-chain', () => {
+    const saved = [...ARK_CONFIG_MIGRATIONS];
+    ARK_CONFIG_MIGRATIONS.splice(0, ARK_CONFIG_MIGRATIONS.length, {
+      from: 'unversioned',
+      to: '1.0',
+    });
+    try {
+      expect(() =>
+        migrateArkConfig({ ...VALID_MINIMAL_CONFIG, schemaVersion: 'unversioned' }, 'gap.json')
+      ).toThrow(
+        `Invalid ArkGate config (gap.json):\n- $.schemaVersion: unsupported version "1.0"; expected ${ARK_CONFIG_SCHEMA_VERSION}`
+      );
+    } finally {
+      ARK_CONFIG_MIGRATIONS.splice(0, ARK_CONFIG_MIGRATIONS.length, ...saved);
+    }
+  });
+
+  it('fails closed when the migration guard exhausts before reaching the current schema', () => {
+    const saved = [...ARK_CONFIG_MIGRATIONS];
+    ARK_CONFIG_MIGRATIONS.splice(0, ARK_CONFIG_MIGRATIONS.length, {
+      from: 'unversioned',
+      to: '1.0',
+    }, {
+      from: '1.0',
+      to: 'unversioned',
+    });
+    try {
+      expect(() =>
+        migrateArkConfig({ ...VALID_MINIMAL_CONFIG, schemaVersion: 'unversioned' }, 'cycle.json')
+      ).toThrow(
+        `Invalid ArkGate config (cycle.json):\n- $.schemaVersion: unsupported version "unversioned"; expected ${ARK_CONFIG_SCHEMA_VERSION}`
+      );
+    } finally {
+      ARK_CONFIG_MIGRATIONS.splice(0, ARK_CONFIG_MIGRATIONS.length, ...saved);
+    }
+  });
+
   it('uses the default source label when migrateArkConfig omits the source argument', () => {
     expect(() => migrateArkConfig(null)).toThrow(
       'Invalid ArkGate config (ark.config.json):\n- $: must be an object; received null'
@@ -480,6 +517,41 @@ describe('C01 config contract', () => {
         stewards: [''],
       })
     ).toThrow('$.stewards');
+  });
+
+  it('accepts reserved/allowEmpty layer flags and rejects non-boolean values', () => {
+    const loaded = loadArkConfigContract({
+      ...VALID_MINIMAL_CONFIG,
+      schemaVersion: '1.1',
+      layers: [
+        {
+          name: 'SharedKernel',
+          patterns: ['src/shared/**'],
+          reserved: true,
+          allowEmpty: true,
+        },
+      ],
+    });
+    expect(loaded.config.layers[0]).toMatchObject({
+      name: 'SharedKernel',
+      reserved: true,
+      allowEmpty: true,
+    });
+
+    expect(() =>
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        schemaVersion: '1.1',
+        layers: [{ name: 'SharedKernel', patterns: ['src/shared/**'], reserved: 'yes' }],
+      })
+    ).toThrow('$.layers[0].reserved');
+    expect(() =>
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        schemaVersion: '1.1',
+        layers: [{ name: 'SharedKernel', patterns: ['src/shared/**'], allowEmpty: 1 }],
+      })
+    ).toThrow('$.layers[0].allowEmpty');
   });
 
   it('accepts a local editor schema path while keeping the current contract version', () => {

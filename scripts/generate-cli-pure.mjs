@@ -28,7 +28,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import ts from 'typescript';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -236,13 +236,19 @@ function normalizeNewlines(s) {
   return s.replace(/\r\n/g, '\n');
 }
 
-async function buildSchemaSource(derivedSource, schemaExport, compact = false) {
-  const url = `data:text/javascript;base64,${Buffer.from(derivedSource).toString('base64')}`;
-  const module = await import(url);
-  if (!module[schemaExport] || typeof module[schemaExport] !== 'object') {
-    throw new Error(`canonical module must export ${schemaExport}`);
+async function buildSchemaSource(derivedSource, schemaExport, compact = false, evalName = 'schema') {
+  const evalPath = path.join(root, 'bin/lib', `.schema-eval-${evalName}.mjs`);
+  fs.mkdirSync(path.dirname(evalPath), { recursive: true });
+  fs.writeFileSync(evalPath, derivedSource, 'utf8');
+  try {
+    const module = await import(`${pathToFileURL(evalPath).href}?t=${Date.now()}`);
+    if (!module[schemaExport] || typeof module[schemaExport] !== 'object') {
+      throw new Error(`canonical module must export ${schemaExport}`);
+    }
+    return `${JSON.stringify(module[schemaExport], null, compact ? undefined : 2)}\n`;
+  } finally {
+    fs.rmSync(evalPath, { force: true });
   }
-  return `${JSON.stringify(module[schemaExport], null, compact ? undefined : 2)}\n`;
 }
 
 async function main() {
@@ -265,7 +271,12 @@ async function main() {
       : undefined;
     const expectedSchema = mod.schemaDerived
       ? normalizeNewlines(
-          await buildSchemaSource(transpiled, mod.schemaExport, mod.compactSchema)
+          await buildSchemaSource(
+            transpiled,
+            mod.schemaExport,
+            mod.compactSchema,
+            path.basename(mod.canonical, path.extname(mod.canonical))
+          )
         )
       : undefined;
 

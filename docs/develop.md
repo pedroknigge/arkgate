@@ -106,10 +106,12 @@ Sensors:
 ```bash
 npx arkgate-check --plan
 npx arkgate-check --coverage
-npx arkgate-check --doctor --json   # improvementCompass (notAScore lenses) + status light
+npx arkgate-check --doctor --json   # stable envelope { schemaVersion, envelope:"doctor", ok, doctor }
 ```
 
-Doctor residual lenses never flip `valid` / strict-merge alone. Product path:
+`--doctor --json` payload lives only under `doctor`. Doctor also writes `.ark/ci-merge-boundary.json`
+(writePath per host, hook configured-not-fired, CI present-but-not-required, GitHub Free cannot
+require). Hook green is not tree green. Doctor residual lenses never flip `valid` / strict-merge alone. Product path:
 [use.md — Improvement compass](use.md#improvement-compass-not-a-score).
 
 Agent reference (tools, skills, dual path): [agent-guide.md](agent-guide.md).

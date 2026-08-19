@@ -56,6 +56,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`ATOMIC_PREFLIGHT_UNAVAILABLE`](#ATOMIC_PREFLIGHT_UNAVAILABLE) | preflight | Atomic preflight unavailable |
 | [`DESIGN_SMELL_REGRESSION`](#DESIGN_SMELL_REGRESSION) | preflight | Design smell regression on base-relative ratchet |
 | [`ANALYSIS_PARSE_INCOMPLETE`](#ANALYSIS_PARSE_INCOMPLETE) | analysis | Parse incomplete |
+| [`LEXICAL_EVIDENCE_INCOMPLETE`](#LEXICAL_EVIDENCE_INCOMPLETE) | analysis | Lexical evidence incomplete |
 | [`ANALYSIS_HOST_UNAVAILABLE`](#ANALYSIS_HOST_UNAVAILABLE) | analysis | Analysis host unavailable |
 | [`ADAPTER_NOT_ALLOWED_FOR_PORT`](#ADAPTER_NOT_ALLOWED_FOR_PORT) | adapter | Adapter not allowed for port |
 | [`FORBIDDEN_PATTERN`](#FORBIDDEN_PATTERN) | snippet-policy | Forbidden regex pattern |
@@ -89,7 +90,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 **Layer import not allowed**
 
 - **Why:** A module import (or re-export) crosses a layer edge that ark.config.json does not allow. The architecture contract forbids that dependency direction so outer infrastructure cannot leak into pure or inner layers.
-- **Fix:** Define a port in the source layer, inject the outer-layer implementation, or move/share the type with `import type` when the edge is type-only — then preflight again. Do not weaken the layer rule without a hash-bound policy acknowledgement.
+- **Fix:** Branch by import kind: constants/types/pure → adopt into DomainModel or SharedKernel (do not invent a port); kernel/events/bootstrap from Persistence → inject a port or move the map to SharedTypes (Persistence must not emit); define a port only when the target is a real use-case. Type-only edges use `import type`. Then preflight again. Do not weaken the layer rule without a hash-bound policy acknowledgement.
 
 <a id="LAYER_INTENT_REFERENCE_VIOLATION"></a>
 
@@ -267,8 +268,8 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 
 **Invariant without coverage evidence**
 
-- **Why:** An ArkRules invariant is under contract but no covering test title or declared symbol evidence was found (or coverage is partial).
-- **Fix:** Add a test title or declared symbol covering the arkruleId, then preflight again. Missing test globs report partial — never fake green.
+- **Why:** An ArkRules invariant is under contract but no covering test title or declared symbol evidence was found (or coverage is partial). Kind is `never-had-tests` (adopt residual) vs `tests-disappeared` (suite exists).
+- **Fix:** Add a test title or declared symbol covering the arkruleId, then preflight again. Treat never-had-tests as adopt residual; treat tests-disappeared as a regression. Missing test globs report partial — never fake green.
 
 ## Atomic preflight and change sets
 
@@ -379,8 +380,17 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 
 **Parse incomplete**
 
-- **Why:** Governed source could not be fully parsed; analysis is partial and must not paint green.
-- **Fix:** Fix syntax/parse errors in governed files (or restore a usable TypeScript host), then re-run. Partial never means pass.
+- **Why:** Governed source could not be fully parsed; evidence includes the TypeScript diagnostic (line + message). Incremental mid-edit parse is normal for agents. Contract `exclude` paths skip the write hook.
+- **Fix:** Finish the source or fix the reported syntax error, then re-run `npx arkgate-check`. The write hook does not deny solely on mid-edit parse. Partial never means pass.
+
+<a id="LEXICAL_EVIDENCE_INCOMPLETE"></a>
+
+### `LEXICAL_EVIDENCE_INCOMPLETE`
+
+**Lexical evidence incomplete**
+
+- **Why:** Single-file validation cannot prove project module resolution. The write hook is already the verdict.
+- **Fix:** Re-run `npx arkgate-check --root . --config ark.config.json`, or treat the hook deny as final. Do not call `ark_prepare_change` from a hook deny.
 
 <a id="ANALYSIS_HOST_UNAVAILABLE"></a>
 

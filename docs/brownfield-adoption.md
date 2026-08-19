@@ -41,10 +41,16 @@ regenerate it unasked.
 | `app/api/**`, `src/app/api/**` | **ApplicationOrchestration** (orchestration shell) |
 | `pages/api/**`, `src/pages/api/**` | **ApplicationOrchestration** |
 | UI routes (`app/(…)`, `page.tsx`, `components/**`) | **PresentationAdapters** |
+| Types / constants (`src/**/types/**`, `src/**/constants/**`) | **SharedKernel** |
+| Wiring (`src/**/composition/**`, `src/**/factories/**`, `bootstrap.ts`) | **CompositionRoot** |
+| `src/**/domain/**` | **DomainModel** |
+| Flattened `src/lib/**` bag | **Not** Application as a whole — classify interiors (use-cases → Application; types → SharedKernel). Adopt never dumps bare `src/lib/**` into Application. |
 
 Without this split, broad `**/app/**` Presentation patterns push every API handler into UI and
 create a Presentation→Persistence tsunami. Specificity still wins: more-specific Application
-globs beat Presentation. ArkRules stay **opt-in** (not forced on by start/adopt).
+globs beat Presentation. Adopt writes `.ark/golden-pattern.json` (load-bearing for `/ark-place`).
+`ark_place` requires `filePath` (fail-closed — never invents `components/*.tsx` or defaults to Presentation).
+ArkRules stay **opt-in** (not forced on by start/adopt).
 
 ### Composition-root / factory modules (optional Application-only)
 
