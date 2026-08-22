@@ -169,4 +169,82 @@ describe('team parliament — law vs feature', () => {
     });
     expect(fromMail.proposed).toEqual(['pedroknigge', 'david@example.com']);
   });
+
+  it('denies loosen and baseline-grow without --contract-session even when stewards is empty', () => {
+    const empty = classifyChangeSet([]);
+    const loosen = evaluateTeamGate({
+      changeSet: empty,
+      contractSession: false,
+      policyKind: 'loosen',
+      stewards: [],
+    });
+    expect(loosen.deny).toBe(true);
+    expect(loosen.reasonId).toBe('steward-only-loosen');
+    const grow = evaluateTeamGate({
+      changeSet: empty,
+      contractSession: false,
+      baselineGrowCount: 1,
+      stewards: [],
+    });
+    expect(grow.deny).toBe(true);
+    expect(grow.reasonId).toBe('steward-only-baseline-grow');
+  });
+
+  it('allows empty-list loosen in a contract session; listed non-steward still fails', () => {
+    const empty = classifyChangeSet([]);
+    const ok = evaluateTeamGate({
+      changeSet: empty,
+      contractSession: true,
+      policyKind: 'loosen',
+      stewards: [],
+    });
+    expect(ok.deny).toBe(false);
+    const blocked = evaluateTeamGate({
+      changeSet: empty,
+      contractSession: true,
+      policyKind: 'loosen',
+      stewards: ['pedroknigge'],
+      author: 'agent-bot',
+    });
+    expect(blocked.deny).toBe(true);
+    expect(blocked.reasonId).toBe('steward-only-loosen');
+  });
+
+  it('treats empty stewards past grace or unknown age as unfinished; fresh solo stays quiet', () => {
+    const soloFresh = suggestStewards({
+      existingStewards: [],
+      gitAuthors: ['alice'],
+      adoptAgeDays: 5,
+    });
+    expect(soloFresh.needsStewards).toBe(false);
+    expect(soloFresh.emptyStewardsPastGrace).toBe(false);
+    expect(soloFresh.proposed).toEqual([]);
+
+    const soloAged = suggestStewards({
+      existingStewards: [],
+      gitAuthors: ['alice'],
+      adoptAgeDays: 30,
+    });
+    expect(soloAged.needsStewards).toBe(true);
+    expect(soloAged.emptyStewardsPastGrace).toBe(true);
+    expect(soloAged.ask).toMatch(/No stewards listed/);
+    expect(soloAged.proposed).toEqual(['alice']);
+
+    const unknown = suggestStewards({
+      existingStewards: [],
+      gitAuthors: ['alice'],
+      adoptAgeDays: null,
+    });
+    expect(unknown.emptyStewardsPastGrace).toBe(true);
+    expect(unknown.needsStewards).toBe(true);
+    expect(unknown.proposed).toEqual(['alice']);
+
+    const displayNames = suggestStewards({
+      existingStewards: [],
+      gitAuthors: ['Pedro Knigge'],
+      adoptAgeDays: 40,
+    });
+    expect(displayNames.proposed).toEqual([]);
+    expect(displayNames.ask).not.toMatch(/Pedro Knigge/);
+  });
 });

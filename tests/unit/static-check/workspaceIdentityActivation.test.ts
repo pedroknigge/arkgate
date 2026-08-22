@@ -228,9 +228,8 @@ describe('WI01 Codex runtime activation truth', () => {
       log.mockRestore();
     }
     const output = lines.join('\n');
-    expect(output).toContain('Codex MCP CONFIGURED — RUNTIME NOT VERIFIED');
-    expect(output).toContain('ark_identity with expectedRoot "/workspace/current"');
-    expect(output).toMatch(/Do not trust MCP verdicts before the project identity matches/i);
+    expect(output).toContain('Host: Codex is configured but not verified yet');
+    expect(output).not.toMatch(/ark_identity|Runtime activation|MCP CONFIGURED/i);
   });
 
   it('headlines a recoverable partial install and does not roll back successful writes', () => {

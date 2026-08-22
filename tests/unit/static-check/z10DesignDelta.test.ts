@@ -87,6 +87,37 @@ function doctor(root: string, baseRef = 'HEAD') {
   return { result, json: JSON.parse(result.stdout) };
 }
 
+function strictMerge(
+  root: string,
+  extraArgs: string[] = [],
+  env: NodeJS.ProcessEnv = fixtureEnv()
+) {
+  const result = spawnSync(
+    process.execPath,
+    [
+      ARK_CHECK,
+      '--root', root,
+      '--config', 'ark.config.json',
+      '--strict-merge',
+      '--json',
+      '--no-cache',
+      ...extraArgs,
+    ],
+    { cwd: root, encoding: 'utf8', env }
+  );
+  return { result, json: JSON.parse(result.stdout) };
+}
+
+const PROPIA_NEW_FILE =
+  'export function canManageListing(\n' +
+  '  listing: { ownerId: string },\n' +
+  '  actor: { id: string; role: string },\n' +
+  ') {\n' +
+  '  return listing.ownerId === actor.id || actor.role === "admin";\n' +
+  '}\n' +
+  'export const calculateListingFee = (price: number) => price * 0.03;\n' +
+  'export const listingPolicy = (role: string) => role === "admin";\n';
+
 describe('Z10 base-relative design delta', () => {
   it('recognizes semantic function-expression and method rules while excluding UI effects', () => {
     const findings = analyzeDesignFindings({
@@ -192,22 +223,23 @@ describe('Z10 base-relative design delta', () => {
     } as any);
     expect(unavailable.exitCode(1)).toBe(2);
     expect(unavailable.failureText()).toContain('--base-ref');
+
+    const skipped = createDesignDeltaCheck({
+      enabled: true,
+      createdPathsOnly: true,
+      missingBase: 'skip',
+      root: process.cwd(),
+      config,
+      ts,
+    } as any);
+    expect(skipped.result).toBeNull();
+    expect(skipped.exitCode(7)).toBe(7);
+    expect(skipped.failureText()).toBeNull();
   });
 
   it('blocks a new Propia-shaped authorization helper while retaining stable identity evidence', () => {
     const root = fixture();
-    write(
-      root,
-      'apps/web/src/product/listing-permissions.ts',
-      'export function canManageListing(\n' +
-        '  listing: { ownerId: string },\n' +
-      '  actor: { id: string; role: string },\n' +
-      ') {\n' +
-      '  return listing.ownerId === actor.id || actor.role === "admin";\n' +
-      '}\n' +
-      'export const calculateListingFee = (price: number) => price * 0.03;\n' +
-      'export const listingPolicy = (role: string) => role === "admin";\n'
-    );
+    write(root, 'apps/web/src/product/listing-permissions.ts', PROPIA_NEW_FILE);
 
     const { result, json } = doctor(root);
     expect(result.status, result.stderr || result.stdout).toBe(1);
@@ -217,6 +249,7 @@ describe('Z10 base-relative design delta', () => {
       mode: 'git-base',
       complete: true,
       valid: false,
+      enforcementScope: 'touched-new-or-worsened',
       supportedSmellIds: ['domain-logic-in-ui'],
     });
     expect(json.doctor.designDelta.changes).toHaveLength(3);
@@ -339,6 +372,142 @@ describe('Z10 base-relative design delta', () => {
     const unresolved = doctor(root, 'refs/heads/does-not-exist');
     expect(unresolved.result.status).toBe(2);
     expect(unresolved.json.doctor.designDelta).toMatchObject({ complete: false, valid: false });
+  });
+
+  it('blocks a Propia-shaped created file on bare --strict-merge', () => {
+    const root = fixture();
+    write(root, 'apps/web/src/product/listing-permissions.ts', PROPIA_NEW_FILE);
+
+    const { result, json } = strictMerge(root, [], { ...fixtureEnv(), ARK_POLICY_BASE_REF: 'HEAD' });
+    expect(result.status, result.stderr || result.stdout).toBe(1);
+    expect(json.ok).toBe(false);
+    expect(json.designDelta).toMatchObject({
+      schemaVersion: '1.0',
+      mode: 'git-base',
+      complete: true,
+      valid: false,
+      enforcementScope: 'created-paths',
+      supportedSmellIds: ['domain-logic-in-ui'],
+    });
+    expect(json.designDelta.changes).toHaveLength(3);
+    expect(json.designDelta.changes.map((change: any) => change.evidence.symbol).sort()).toEqual([
+      'calculateListingFee',
+      'canManageListing',
+      'listingPolicy',
+    ]);
+    for (const change of json.designDelta.changes) {
+      expect(change).toEqual(expect.objectContaining({
+        smellId: 'domain-logic-in-ui',
+        classification: 'new',
+        fingerprint: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+        evidence: expect.objectContaining({ path: 'apps/web/src/product/listing-permissions.ts' }),
+      }));
+    }
+    const schema = JSON.parse(
+      fs.readFileSync(path.resolve('schemas/ark.design-delta.schema.json'), 'utf8')
+    );
+    const validate = new Ajv2020({ strict: false }).compile(schema);
+    expect(validate(json.designDelta), JSON.stringify(validate.errors)).toBe(true);
+  });
+
+  it('keeps unrelated brownfield and presentation-only names green on --strict-merge', () => {
+    const root = fixture();
+    write(root, 'apps/web/src/product/page.tsx', 'export const Page = () => <main>Homes</main>;\n');
+    write(
+      root,
+      'apps/web/src/product/navigation.ts',
+      'export const canNavigateRoute = (route: { label: string }, current: { label: string }) =>\n' +
+        '  route.label === current.label;\n'
+    );
+
+    const { result, json } = strictMerge(root, ['--base-ref', 'HEAD']);
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(json.ok).toBe(true);
+    expect(json.designDelta).toMatchObject({
+      complete: true,
+      valid: true,
+      enforcementScope: 'created-paths',
+      historicalResidualCount: 1,
+      changes: [],
+    });
+    expect(json.designDelta.changes.map((change: any) => change.evidence?.path)).not.toContain(
+      'apps/web/src/product/legacy-policy.ts'
+    );
+  });
+
+  it('does not fail a worsened existing helper on --strict-merge while Z10 still does', () => {
+    const root = fixture();
+    write(
+      root,
+      'apps/web/src/product/legacy-policy.ts',
+      'export function canDeleteListing(\n' +
+        '  listing: { ownerId: string },\n' +
+        '  actor: { id: string; role: string },\n' +
+        ') {\n' +
+        '  return listing.ownerId === actor.id || actor.role === "admin";\n' +
+        '}\n'
+    );
+
+    const merge = strictMerge(root, ['--base-ref', 'HEAD']);
+    expect(merge.result.status, merge.result.stderr || merge.result.stdout).toBe(0);
+    expect(merge.json.ok).toBe(true);
+    expect(merge.json.designDelta).toMatchObject({
+      complete: true,
+      valid: true,
+      enforcementScope: 'created-paths',
+      changes: [],
+    });
+
+    const ratchet = doctor(root);
+    expect(ratchet.result.status).toBe(1);
+    expect(ratchet.json.doctor.designDelta).toMatchObject({
+      complete: true,
+      valid: false,
+      enforcementScope: 'touched-new-or-worsened',
+    });
+    expect(ratchet.json.doctor.designDelta.changes).toEqual([
+      expect.objectContaining({
+        classification: 'worsened',
+        evidence: expect.objectContaining({ symbol: 'canDeleteListing' }),
+      }),
+    ]);
+  });
+
+  it('does not turn a path-only move into a --strict-merge created-path failure', () => {
+    const root = fixture();
+    fs.renameSync(
+      path.join(root, 'apps/web/src/product/legacy-policy.ts'),
+      path.join(root, 'apps/web/src/product/legacy-permissions.ts')
+    );
+    const { result, json } = strictMerge(root, ['--base-ref', 'HEAD']);
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(json.ok).toBe(true);
+    expect(json.designDelta).toMatchObject({
+      complete: true,
+      valid: true,
+      enforcementScope: 'created-paths',
+      changes: [],
+      historicalResidualCount: 1,
+    });
+  });
+
+  it('skips created-path delta on --strict-merge when the base is missing (no exit 2)', () => {
+    const root = fixture();
+    write(root, 'apps/web/src/product/listing-permissions.ts', PROPIA_NEW_FILE);
+    const { result, json } = strictMerge(root);
+    expect(result.status, result.stderr || result.stdout).not.toBe(2);
+    if (json.designDelta) {
+      expect(json.designDelta.complete).toBe(true);
+    } else {
+      expect(json.ok).toBe(true);
+    }
+  });
+
+  it('lets --strict consume ARK_POLICY_BASE_REF without extra Action flags', () => {
+    const action = fs.readFileSync(path.resolve('action.yml'), 'utf8');
+    expect(action).toContain('ARK_POLICY_BASE_REF:');
+    expect(action).toMatch(/ARGS\+=\(--strict\)/);
+    expect(action).not.toContain('--fail-on-new-smells');
   });
 
   it('uses the same smell fingerprint and verdict for an in-memory write candidate', () => {

@@ -26,6 +26,7 @@ import { readBaseline } from './violations.mjs';
 import { reportsDir, readJsonSafe } from './html-report.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { collectVsBaseFacts, discoverTeamBaseRef } from './team-parliament-io.mjs';
+import { classifyAdopted, readAdoptionStance } from './adoption-stance.mjs';
 
 function sha256Hex(value) {
   return createHash('sha256').update(value, 'utf8').digest('hex');
@@ -387,6 +388,21 @@ export function collectStatusFacts(options = {}) {
       latest?.leftoverDesignWork === true ||
       latest?.designFitness?.designWeak === true ||
       latest?.doctor?.designFitness?.designWeak === true,
+    adopted:
+      options.adopted ??
+      classifyAdopted({
+        stance: readAdoptionStance(resolvedRoot),
+        github: {
+          requiredStatusConfigured: writePath?.enforcementState?.ciMerge?.required === true,
+          arkCheckRequired: writePath?.enforcementState?.ciMerge?.required === true,
+        },
+        ci: {
+          state:
+            writePath?.enforcementState?.ciMerge?.required === true
+              ? 'required'
+              : undefined,
+        },
+      }),
     improvementCompass,
     vsBase: (() => {
       const vsRef = typeof options.vs === 'string' ? options.vs.trim() : '';

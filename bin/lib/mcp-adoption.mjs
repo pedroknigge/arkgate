@@ -17,6 +17,11 @@ import { detectActiveAgentHost, skillTemplateNames } from './skill-install.mjs';
 import { detectDeployPathQuality } from './deploy-path.mjs';
 import { collectWeakestLinkGaps } from './weakest-link.mjs';
 import { codexRuntimeActivation, withCiProviderEvidence } from './enforcement-state.mjs';
+import {
+  classifyAdopted,
+  readAdoptionStance,
+  NOT_ADOPTED_NEXT_ACTION,
+} from './adoption-stance.mjs';
 
 export { detectDeployPathQuality };
 
@@ -526,6 +531,20 @@ export function collectAdoptionGaps(root, config, coverage) {
   writePath = withCiProviderEvidence(writePath, weakest.github);
   for (const g of weakest.gaps) {
     gaps.push(g);
+  }
+
+  const adoptedKind = classifyAdopted({
+    stance: readAdoptionStance(root),
+    github: weakest.github,
+  });
+  if (adoptedKind === 'not-adopted') {
+    gaps.push({
+      id: 'adoption-stance-missing',
+      severity: 'warn',
+      message:
+        'Merge boundary not adopted: require a GitHub status on arkgate-check --strict-merge, or write .ark/adoption-stance.json with stance: "advisory-only".',
+      fix: NOT_ADOPTED_NEXT_ACTION,
+    });
   }
 
   return {

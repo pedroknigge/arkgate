@@ -252,6 +252,8 @@ export type StewardNudge = {
   notAScore: true;
   multiHand: boolean;
   needsStewards: boolean;
+  /** Empty list past 30-day grace, or adopt age unknown — never Healthy ENFORCE. */
+  emptyStewardsPastGrace: boolean;
   /** Existing list is behind CODEOWNERS or the author set grew. */
   drift: boolean;
   authorCount: number;
@@ -261,17 +263,22 @@ export type StewardNudge = {
   source: 'codeowners' | 'git-authors' | 'none';
   ask: string;
   nextAction: string;
+  /** Days since contract first-add, or null when the caller could not date it. Never clocked here. */
+  adoptAgeDays: number | null;
 };
 
 /**
  * Empty list + several hands → propose owners.
+ * Empty list + grace elapsed or unknown age → unfinished residual (not a new operating mode).
  * Existing list + CODEOWNERS ahead or author count grew → show the gap.
- * Never a gate input. Propose GitHub handles or emails — never git display names. Never auto-remove.
+ * Never a layer / `valid` / `goal.met` input. Propose GitHub handles or emails — never git display names.
  */
 export function suggestStewards(input: {
   existingStewards?: readonly string[] | null;
   gitAuthors?: readonly string[] | null;
   codeowners?: readonly string[] | null;
+  /** Injected by Tooling. `null` = unknown; omit to keep legacy solo-empty quiet. */
+  adoptAgeDays?: number | null;
 }): StewardNudge {
   const existing = [
     ...new Set(
@@ -303,7 +310,10 @@ export function suggestStewards(input: {
   ];
   const authorCount = Math.max(uniqueGit.length, fromOwners.length);
   const multiHand = uniqueGit.length >= 2 || fromOwners.length >= 1;
-  const needsStewards = multiHand && existing.length === 0;
+  const age = input.adoptAgeDays;
+  const emptyStewardsPastGrace =
+    existing.length === 0 && (age === null || (typeof age === 'number' && age >= 30));
+  const needsStewards = existing.length === 0 && (multiHand || emptyStewardsPastGrace);
   const missingFromList = fromOwners.filter((id) => !existing.includes(id));
   const teamGrew =
     existing.length > 0 &&
@@ -320,23 +330,27 @@ export function suggestStewards(input: {
   const listed = existing.map((id) => formatStewardMention(id)).join(', ');
 
   let ask = '';
-  if (needsStewards) {
+  if (needsStewards && multiHand) {
     ask =
       proposed.length > 0
         ? `This repo has several people and no stewards. Add ${named} as stewards so only they can loosen the law or grow the baseline? Say yes, or name the GitHub handles or emails.`
         : 'This repo has several people and no stewards. Who owns ark.config.json? Name GitHub handles or emails for the stewards[] list.';
+  } else if (needsStewards) {
+    ask =
+      'No stewards listed. Name GitHub handles or emails for `stewards[]`, or this stays Adapt-or-nudge — not a finished Enforce. `/ark-adopt` asks; it does not invent names.';
   } else if (missingFromList.length > 0) {
     ask = `CODEOWNERS is ahead of stewards[]: add ${missingFromList.map((id) => formatStewardMention(id)).join(', ')}? The current list stays unless you say yes or name the GitHub handles or emails.`;
   } else if (teamGrew) {
     ask = `This repo started with ${existing.length} steward(s) (${listed}) and now has ${uniqueGit.length} recent git authors. Who else owns the law? Name GitHub handles or emails, or say the list is still right.`;
   }
 
-  const shouldAct = needsStewards || drift;
+  const shouldAct = needsStewards || drift || emptyStewardsPastGrace;
   return {
     advisory: true,
     notAScore: true,
     multiHand,
     needsStewards,
+    emptyStewardsPastGrace,
     drift,
     authorCount,
     stewardCount: existing.length,
@@ -347,6 +361,7 @@ export function suggestStewards(input: {
     nextAction: shouldAct
       ? '/ark-adopt (ask, then update stewards[] — do not invent names)'
       : '',
+    adoptAgeDays: typeof age === 'number' ? age : null,
   };
 }
 
@@ -394,7 +409,8 @@ export function isTeamPersona(value: string | null | undefined): value is TeamPe
 /**
  * Gate for a diff vs the merge base.
  * Contract session still forbids mixing law with product source.
- * Loosen / baseline-grow require a steward when the list is non-empty.
+ * Loosen / baseline-grow require --contract-session even when stewards is empty.
+ * A non-empty list additionally requires a matching listed author.
  */
 export function evaluateTeamGate(input: {
   changeSet: ChangeSetClass;
@@ -431,6 +447,16 @@ export function evaluateTeamGate(input: {
   const stewards = input.stewards ?? [];
   const grow = (input.baselineGrowCount ?? 0) > 0;
   const loosen = input.policyKind === 'loosen';
+  if ((loosen || grow) && !input.contractSession) {
+    return {
+      deny: true,
+      reasonId: loosen ? 'steward-only-loosen' : 'steward-only-baseline-grow',
+      message: loosen
+        ? 'Weakening the contract requires --contract-session (and --policy-ack bound to both hashes).'
+        : 'Growing the baseline requires --contract-session. Freeze in a law-only PR.',
+      kinds,
+    };
+  }
   if (stewards.length > 0 && (loosen || grow) && !isSteward(input.author, stewards)) {
     return {
       deny: true,

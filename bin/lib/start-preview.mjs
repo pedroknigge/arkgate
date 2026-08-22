@@ -151,7 +151,7 @@ export function renderStartPreview(preview, options = {}) {
     console.log('Apply this plan with: arkgate start --apply');
   }
   if (preview.analysis) {
-    console.log(`Your project looks like: ${preview.analysis.label} (${preview.analysis.archetype}, confidence ${preview.analysis.confidence}).`);
+    console.log(`Your project looks like: ${preview.analysis.label}.`);
   }
   console.log(applying ? 'Files create/edit/delete:' : 'Files to create/edit/delete:');
   if (preview.changes.length === 0) console.log('  (none)');
@@ -159,34 +159,24 @@ export function renderStartPreview(preview, options = {}) {
     console.log(`  ${change.action.padEnd(6)} ${change.path}`);
   }
   if (!applying) {
-    console.log('Commands in the approved setup plan:');
-    for (const command of preview.commands) console.log(`  ${command}`);
+    console.log('Setup: install package + host gates (see --json).');
+    console.log('Preview does not write. Apply installs CI.');
   }
-  console.log('Host guarantees:');
-  for (const guarantee of preview.hostGuarantees) console.log(`  ${guarantee}`);
   if (preview.runtimeActivation) {
-    console.log('Codex MCP CONFIGURED — RUNTIME NOT VERIFIED.');
-    console.log(`  Runtime activation: ${JSON.stringify(preview.runtimeActivation)}`);
-    console.log(`  Restart Codex, then call ark_identity with expectedRoot "${preview.root}".`);
-    console.log('  Do not trust MCP verdicts before the project identity matches.');
+    console.log('Host: Codex is configured but not verified yet. Restart the host, then confirm this project.');
   }
   if (preview.unresolvedDecisions.length > 0) {
     console.log('Unresolved decisions:');
     for (const decision of preview.unresolvedDecisions) console.log(`  ${decision}`);
   }
-  console.log('Details (optional):');
-  console.log(`Projected governed coverage: ${preview.projectedCoverage.percent ?? 'unknown'}% (${preview.projectedCoverage.classifiedFiles}/${preview.projectedCoverage.totalFiles} files)`);
-  const budget = preview.setupBudget;
-  const arkrulesNote =
-    budget.arkrulesFiles > 0 ? ` (+${budget.arkrulesFiles} arkrules)` : '';
-  const gateCount = budget.gateFiles ?? budget.files;
-  console.log(
-    `Compact setup budget: ${gateCount}/${budget.maxFiles} gate files${arkrulesNote}, ${budget.bytes}/${budget.maxBytes} bytes${budget.ok ? '' : ' (exceeded)'}.`
-  );
-  for (const change of preview.changes) {
-    console.log(`  ${change.action.padEnd(6)} ${change.path}  ${change.afterHash ?? '(deleted)'}`);
-  }
-  if (!applying) {
+  if (applying) {
+    const percent = preview.projectedCoverage?.percent;
+    if (percent != null) console.log(`Projected governed coverage: ${percent}%`);
+    const verified = (preview.hostGuarantees || []).find((line) =>
+      String(line).startsWith('Hard-write hook verified')
+    );
+    if (verified) console.log(verified);
+  } else {
     console.log('Review complete file contents with --json.');
   }
 }

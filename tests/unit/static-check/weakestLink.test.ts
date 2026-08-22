@@ -40,6 +40,15 @@ describe('Q3 weakest-link sensors (shipped weakest-link.mjs)', () => {
     expect(gaps.some((g) => g.id === 'enforcement-ci-missing')).toBe(true);
   });
 
+  it('AGENTS.md is gates-installed, not D0 adopted', () => {
+    const root = mk();
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# a\n');
+    const { gaps } = collectWeakestLinkGaps(root, { adopted: true, isProducer: false });
+    expect(gaps.some((g) => g.id === 'enforcement-ci-missing')).toBe(true);
+    expect(fs.existsSync(path.join(root, 'AGENTS.md'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.ark/adoption-stance.json'))).toBe(false);
+  });
+
   it('flags workflows without ark-check', () => {
     const root = mk();
     fs.writeFileSync(path.join(root, 'AGENTS.md'), '# a\n');

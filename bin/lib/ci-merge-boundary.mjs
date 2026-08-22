@@ -37,9 +37,11 @@ export function buildCiMergeBoundary(input = {}) {
   const hookFired = Object.values(perHost).some((h) => h.fired);
   const github = input.github && typeof input.github === 'object' ? input.github : {};
   const workflowPresent = Boolean(
-    writePath.capabilities?.['merge-gate'] || writePath.inventory?.capabilities?.['merge-gate']
+    github.workflowPresent ||
+      writePath.capabilities?.['merge-gate'] ||
+      writePath.inventory?.capabilities?.['merge-gate']
   );
-  const required = github.requiredStatusConfigured === true;
+  const required = github.requiredStatusConfigured === true || github.arkCheckRequired === true;
   const canRequire = github.canRequire !== false && github.plan !== 'free';
   let ciState = 'absent';
   if (workflowPresent && required) ciState = 'required';

@@ -102,7 +102,7 @@ check: [4.3.0 — What ArkGate is / isn't](docs/releases/4.3.0.md#what-arkgate-i
 |-------|--------|-----------|
 | **Suggest** | Thin / new tree | Finish `start` → doctor |
 | **Adapt** | Not fully protected | Doctor action #1 |
-| **Enforce** | Honest edges under the contract | Keep write path + CI |
+| **Enforce** | Honest import edges, and no new UI business-rule files vs merge-base | Keep write path + CI |
 | **Enforce · design-weak** | Edges clean; design residual remains | Shape residual — not “done” |
 
 Details: [docs/use.md](docs/use.md).

@@ -6,17 +6,30 @@ import { arkCommand } from '../ark-shared.mjs';
 import { skillGapsForActiveHost } from './agent-gates.mjs';
 import { agentHomeConcernIsActive, agentHomeRefreshCommand } from './agent-homes.mjs';
 import { mergePostGreenTopActions } from './post-green-path.mjs';
+import { ADOPTED_NOT, NOT_ADOPTED_NEXT_ACTION } from './adoption-stance.mjs';
 
 export function collectDoctorNextActions(ctx) {
   const actions = [];
   const gatesInstalled = Array.isArray(ctx.gatesMissing) && ctx.gatesMissing.length === 0;
   const planAEmpty = !ctx.activeCount;
+  const notAdopted = ctx.adopted !== 'required-merge' && ctx.adopted !== 'advisory-only-acked';
+  if (notAdopted || ctx.adopted === ADOPTED_NOT || ctx.adopted == null) {
+    actions.push(ctx.notAdoptedNextAction || NOT_ADOPTED_NEXT_ACTION);
+  }
+  const nudge = ctx.stewardNudge;
+  if (
+    nudge &&
+    (nudge.needsStewards || nudge.drift || nudge.emptyStewardsPastGrace) &&
+    nudge.nextAction
+  ) {
+    actions.push(nudge.nextAction);
+  }
   const enforceEmptyPlan =
-    ctx.operatingMode === 'enforce' && planAEmpty && gatesInstalled;
+    ctx.operatingMode === 'enforce' && planAEmpty && gatesInstalled && !notAdopted;
   if (enforceEmptyPlan) {
     actions.push(
       ctx.postGreenPath?.action ||
-        '/ark-explore shape-focus → /ark-autopilot (one B pilot)  # ENFORCE + empty plan A → Shape, not reinstall gates'
+        '/ark-explore, then one small refactor with /ark-autopilot and your OK'
     );
   }
   if (!ctx.analysisComplete) actions.push('restore complete analysis, then rerun ark-check --doctor');
@@ -88,6 +101,7 @@ export function collectDoctorNextActions(ctx) {
     );
   }
   for (const gap of ctx.adoption.gaps) {
+    if (gap.id === 'adoption-stance-missing') continue;
     if (!gap.deferred) actions.push(gap.fix || gap.message);
   }
   if (ctx.safety && ctx.safetyHasEntries) {
@@ -99,6 +113,10 @@ export function collectDoctorNextActions(ctx) {
   const unique = mergePostGreenTopActions(actions, ctx.postGreenPath);
   if (ctx.designFitness.designWeak && unique.length === 0 && ctx.postGreenPath) {
     unique.push(ctx.postGreenPath.action);
+  }
+  if (notAdopted) {
+    const next = ctx.notAdoptedNextAction || NOT_ADOPTED_NEXT_ACTION;
+    return [next, ...unique.filter((a) => a !== next)];
   }
   return unique;
 }

@@ -205,6 +205,14 @@ describe('P1 writePath / CI honesty file', () => {
     expect(payload.scriptedEditsBypassPreToolUse).toBe(true);
     expect(payload.note).toMatch(/Do not reverse-engineer node_modules/);
   });
+
+  it('fail-closed workflow without required status is present-but-not-required', () => {
+    const payload = buildCiMergeBoundary({
+      writePath: { capabilities: { 'merge-gate': true } },
+      github: { requiredStatusConfigured: false },
+    });
+    expect(payload.ci.state).toBe('present-but-not-required');
+  });
 });
 
 describe('P1 host projection writes CLAUDE.md', () => {
@@ -279,9 +287,10 @@ describe('P2 doctor #1: ENFORCE + empty plan A → Shape, not reinstall', () => 
       staleRunners: [],
       adoption: { gaps: [] },
       designFitness: {},
+      adopted: 'required-merge',
       root: '/tmp',
     });
-    expect(actions[0]).toMatch(/Shape/i);
+    expect(actions[0]).toMatch(/\/ark-explore/i);
     expect(actions.join('\n')).not.toMatch(/install-agent-gates/);
   });
 });

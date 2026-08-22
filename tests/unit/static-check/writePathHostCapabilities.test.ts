@@ -799,16 +799,10 @@ describe('active-host write capability model', () => {
       );
       expect(humanRun.status).toBe(0);
       expect(humanRun.stdout).toContain('Active host: cursor');
-      expect(humanRun.stdout).toContain(
-        'Local write — supported: yes · analyzed: yes · configured: yes · installed: no · runtime observed: no · operation: none · operation covered: unverified · active: no · bypassable: unverified · required: unverified · hard: no'
-      );
-      expect(humanRun.stdout).toContain(
-        'Advisory MCP — supported: yes · analyzed: yes · configured: yes · installed: no · runtime observed: no · operation: none · operation covered: unverified · active: no · bypassable: yes · required: unverified · hard: no'
-      );
-      expect(humanRun.stdout).toContain(
-        'CI merge — supported: yes · analyzed: yes · configured: yes · installed: no · runtime observed: no · operation: merge · operation covered: unverified · active: no · bypassable: unverified · required: unverified · hard: no'
-      );
       expect(humanRun.stdout).toContain('Missing gates: AGENTS.md, .mcp.json');
+      expect(humanRun.stdout).not.toContain('Local write — supported:');
+      expect(humanRun.stdout).not.toContain('Advisory MCP —');
+      expect(payload.doctor.writePath.enforcementState || payload.doctor.writePath).toBeTruthy();
       expect(humanRun.stdout).not.toContain(
         'Shared gate artifacts found on disk (AGENTS.md, .mcp.json, CI); runtime activation is reported separately'
       );

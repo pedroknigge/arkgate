@@ -198,8 +198,9 @@ export function parseCodeownersHandles(text) {
 }
 /**
  * Empty list + several hands → propose owners.
+ * Empty list + grace elapsed or unknown age → unfinished residual (not a new operating mode).
  * Existing list + CODEOWNERS ahead or author count grew → show the gap.
- * Never a gate input. Propose GitHub handles or emails — never git display names. Never auto-remove.
+ * Never a layer / `valid` / `goal.met` input. Propose GitHub handles or emails — never git display names.
  */
 export function suggestStewards(input) {
     const existing = [
@@ -224,7 +225,9 @@ export function suggestStewards(input) {
     ];
     const authorCount = Math.max(uniqueGit.length, fromOwners.length);
     const multiHand = uniqueGit.length >= 2 || fromOwners.length >= 1;
-    const needsStewards = multiHand && existing.length === 0;
+    const age = input.adoptAgeDays;
+    const emptyStewardsPastGrace = existing.length === 0 && (age === null || (typeof age === 'number' && age >= 30));
+    const needsStewards = existing.length === 0 && (multiHand || emptyStewardsPastGrace);
     const missingFromList = fromOwners.filter((id) => !existing.includes(id));
     const teamGrew = existing.length > 0 &&
         fromOwners.length === 0 &&
@@ -238,11 +241,15 @@ export function suggestStewards(input) {
     const named = proposed.map((id) => formatStewardMention(id)).join(', ');
     const listed = existing.map((id) => formatStewardMention(id)).join(', ');
     let ask = '';
-    if (needsStewards) {
+    if (needsStewards && multiHand) {
         ask =
             proposed.length > 0
                 ? `This repo has several people and no stewards. Add ${named} as stewards so only they can loosen the law or grow the baseline? Say yes, or name the GitHub handles or emails.`
                 : 'This repo has several people and no stewards. Who owns ark.config.json? Name GitHub handles or emails for the stewards[] list.';
+    }
+    else if (needsStewards) {
+        ask =
+            'No stewards listed. Name GitHub handles or emails for `stewards[]`, or this stays Adapt-or-nudge — not a finished Enforce. `/ark-adopt` asks; it does not invent names.';
     }
     else if (missingFromList.length > 0) {
         ask = `CODEOWNERS is ahead of stewards[]: add ${missingFromList.map((id) => formatStewardMention(id)).join(', ')}? The current list stays unless you say yes or name the GitHub handles or emails.`;
@@ -250,12 +257,13 @@ export function suggestStewards(input) {
     else if (teamGrew) {
         ask = `This repo started with ${existing.length} steward(s) (${listed}) and now has ${uniqueGit.length} recent git authors. Who else owns the law? Name GitHub handles or emails, or say the list is still right.`;
     }
-    const shouldAct = needsStewards || drift;
+    const shouldAct = needsStewards || drift || emptyStewardsPastGrace;
     return {
         advisory: true,
         notAScore: true,
         multiHand,
         needsStewards,
+        emptyStewardsPastGrace,
         drift,
         authorCount,
         stewardCount: existing.length,
@@ -266,6 +274,7 @@ export function suggestStewards(input) {
         nextAction: shouldAct
             ? '/ark-adopt (ask, then update stewards[] — do not invent names)'
             : '',
+        adoptAgeDays: typeof age === 'number' ? age : null,
     };
 }
 export function personaCheckBudget(persona) {
@@ -310,7 +319,8 @@ export function isTeamPersona(value) {
 /**
  * Gate for a diff vs the merge base.
  * Contract session still forbids mixing law with product source.
- * Loosen / baseline-grow require a steward when the list is non-empty.
+ * Loosen / baseline-grow require --contract-session even when stewards is empty.
+ * A non-empty list additionally requires a matching listed author.
  */
 export function evaluateTeamGate(input) {
     const kinds = [];
@@ -338,6 +348,16 @@ export function evaluateTeamGate(input) {
     const stewards = input.stewards ?? [];
     const grow = (input.baselineGrowCount ?? 0) > 0;
     const loosen = input.policyKind === 'loosen';
+    if ((loosen || grow) && !input.contractSession) {
+        return {
+            deny: true,
+            reasonId: loosen ? 'steward-only-loosen' : 'steward-only-baseline-grow',
+            message: loosen
+                ? 'Weakening the contract requires --contract-session (and --policy-ack bound to both hashes).'
+                : 'Growing the baseline requires --contract-session. Freeze in a law-only PR.',
+            kinds,
+        };
+    }
     if (stewards.length > 0 && (loosen || grow) && !isSteward(input.author, stewards)) {
         return {
             deny: true,

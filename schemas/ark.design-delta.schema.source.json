@@ -43,6 +43,7 @@
     "baseFindingCount": { "type": "integer", "minimum": 0 },
     "candidateFindingCount": { "type": "integer", "minimum": 0 },
     "historicalResidualCount": { "type": "integer", "minimum": 0 },
+    "enforcementScope": { "enum": ["created-paths", "touched-new-or-worsened"] },
     "error": { "type": "string", "minLength": 1 }
   },
   "$defs": {

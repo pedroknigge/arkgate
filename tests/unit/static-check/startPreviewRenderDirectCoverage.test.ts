@@ -43,24 +43,21 @@ describe('renderStartPreview direct output coverage', () => {
     });
 
     expect(output).toContain('Ark start preview — no files were changed.');
-    expect(output).toContain(
-      'Your project looks like: explicit layered service (layered-service, confidence 0.91).'
-    );
-    expect(output).toContain('Projected governed coverage: unknown% (0/3 files)');
-    expect(output).toContain(
-      'Compact setup budget: 10/8 gate files (+2 arkrules), 33000/32768 bytes (exceeded).'
-    );
-    expect(output).toContain('delete .legacy-ark  (deleted)');
-    expect(output).toContain('Commands in the approved setup plan:');
-    expect(output).toContain('npm install arkgate');
-    expect(output).toContain('Host guarantees:');
+    expect(output).toContain('Your project looks like: explicit layered service.');
+    expect(output).not.toContain('confidence');
+    expect(output).not.toContain('layered-service');
+    expect(output).not.toContain('Compact setup budget');
+    expect(output).not.toContain('afterHash');
+    expect(output).not.toContain('sha256:create');
+    expect(output).toContain('delete .legacy-ark');
+    expect(output).toContain('Setup: install package + host gates (see --json).');
+    expect(output).toContain('Preview does not write. Apply installs CI.');
+    expect(output).not.toContain('Commands in the approved setup plan:');
+    expect(output).not.toContain('Host guarantees:');
     expect(output).toContain('Unresolved decisions:');
     expect(output).toContain('Classify three remaining files.');
     expect(output).toContain('Apply this plan with: arkgate start --apply');
     expect(output).toContain('Review complete file contents with --json.');
-    expect(output.indexOf('Apply this plan with: arkgate start --apply')).toBeLessThan(
-      output.indexOf('Projected governed coverage')
-    );
   });
 
   it('renders an empty apply without preview-only instructions', () => {
@@ -88,7 +85,7 @@ describe('renderStartPreview direct output coverage', () => {
 
     expect(output).toContain('Ark start apply — reviewing plan (no mutations pending).');
     expect(output).toContain('Files create/edit/delete:\n  (none)');
-    expect(output).toContain('Compact setup budget: 0/8 gate files, 0/32768 bytes.');
+    expect(output).not.toContain('Compact setup budget');
     expect(output).not.toContain('Commands in the approved setup plan:');
     expect(output).not.toContain('Apply this plan with: arkgate start --apply');
     expect(output).not.toContain('Apply this plan with: ark start --apply');

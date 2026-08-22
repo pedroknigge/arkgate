@@ -92,10 +92,14 @@ export function mergePostGreenTopActions(actions, postGreen) {
 
 /**
  * Whether doctor may print “Healthy — nothing to do”.
+ * Empty actions + !designWeak is not Healthy unless the merge boundary is
+ * required-merge (advisory-only ack is adopted but not this Healthy string).
  * @param {{ designWeak?: boolean } | null | undefined} designFitness
  * @param {string[]} topActions
+ * @param {string | null | undefined} adopted
  */
-export function isDoctorHealthyNothingToDo(designFitness, topActions = []) {
+export function isDoctorHealthyNothingToDo(designFitness, topActions = [], adopted = null) {
   if (designFitness?.designWeak) return false;
+  if (adopted !== 'required-merge') return false;
   return !topActions.some(Boolean);
 }

@@ -16,7 +16,11 @@ release blocker `RB-11`, or claims-matrix row `C-028`.
 Do **not** invent adopter counts, D30/D90 rates, or independent signatures in this
 repository without preregistered external evidence. Ordinary corrective patches
 and product-surface minors (for example 3.9.0 Beautiful Path) may ship while Z09
-remains open.
+remains open. Phase AL (`AL01`–`AL04`) is engineering honesty on doctor/merge/stewards/first-run;
+the cohort is still not enrolled (`AL05` is parked and does not close Z09).
+Desktop scan 2026-08-22: [desktop-strict-merge-inventory-20260822.md](desktop-strict-merge-inventory-20260822.md)
+— several private trees have `--strict-merge` CI and local green; GitHub Free
+cannot require the status (403). Not an enrolled cohort.
 
 ## What lives here
 
@@ -25,6 +29,7 @@ remains open.
 | [preregistration-template.md](preregistration-template.md) | External matrix targets (repos × hosts × package managers) before clocks start |
 | [cohort-retention-checklist.md](cohort-retention-checklist.md) | D30 / D90 retention checklist for consented adopters |
 | [independent-reviewer-manifesto.md](independent-reviewer-manifesto.md) | Reviewer independence rules + open decision on signed identity |
+| [desktop-strict-merge-inventory-20260822.md](desktop-strict-merge-inventory-20260822.md) | Desktop scan of trees with `--strict-merge`. Not enrollment. |
 | ROADMAP `Z09` | Authoritative acceptance thresholds and promotion gate |
 
 ## Promotion gate (copy from ROADMAP)

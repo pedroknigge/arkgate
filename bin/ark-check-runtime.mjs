@@ -105,10 +105,15 @@ import { runArchitectureScan } from './lib/architecture-scan.mjs';
 import { ANALYSIS_COMPLETENESS, analysisIncompleteStatement } from './lib/analysis-completeness.mjs';
 import { reportUnavailableAnalysis } from './lib/unavailable-analysis.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
-import { analyzePolicyTransition } from './lib/policy-delta-io.mjs';
+import {
+  analyzePolicyTransition,
+  discoverLocalBaseRef,
+  normalizePolicyBaseRef,
+} from './lib/policy-delta-io.mjs';
 import {
   applyAgainstRatchet,
   bindTeamBaseRefs,
+  contractSessionFrom,
   filterChangedGovernedFiles,
   runTeamPreflight,
   ungovernedDumpMessage,
@@ -121,6 +126,16 @@ import {
   resolveEffectiveProjectRoot,
 } from './lib/project-root.mjs';
 import { demoteArkRuleTeethUnderClassificationFloor } from './lib/rules-under-contract.mjs';
+
+function resolveDesignDeltaBaseRef(root, explicit, env = process.env) {
+  const flag = typeof explicit === 'string' ? explicit.trim() : '';
+  if (flag) return flag;
+  const envRef = normalizePolicyBaseRef(env.ARK_POLICY_BASE_REF);
+  if (envRef) return envRef;
+  const githubBase = typeof env.GITHUB_BASE_REF === 'string' ? env.GITHUB_BASE_REF.trim() : '';
+  if (githubBase) return `origin/${githubBase}`;
+  return discoverLocalBaseRef(root) || undefined;
+}
 
 function parseArgs(argv) {
   const args = {
@@ -1324,6 +1339,11 @@ async function main() {
       console.log('✔ Ark check passed (no governed source or constitution files in the diff).');
     } else {
       console.error(preflight.halt.message);
+      const blocking = policyDelta?.findings?.find(
+        (finding) =>
+          finding.classification === 'weakening' || finding.classification === 'judgment-required'
+      );
+      if (blocking?.nextAction) console.error(`Next: ${blocking.nextAction}`);
     }
     process.exitCode = preflight.halt.exitCode;
     return;
@@ -1406,7 +1426,17 @@ async function main() {
     populatedLayerCount,
   });
 
-  const designCheck = createDesignDeltaCheck({ enabled: args.failOnNewSmells, root, config, configPath: args.config, baseRef: args.baseRef, ts });
+  const createdPathsOnly = Boolean(args.strictMerge && !args.failOnNewSmells);
+  const designCheck = createDesignDeltaCheck({
+    enabled: args.failOnNewSmells || args.strictMerge,
+    createdPathsOnly,
+    missingBase: createdPathsOnly ? 'skip' : 'fail-closed',
+    root,
+    config,
+    configPath: args.config,
+    baseRef: resolveDesignDeltaBaseRef(root, args.baseRef),
+    ts,
+  });
   const designDelta = designCheck.result;
 
   if (args.doctor) {
@@ -1417,6 +1447,7 @@ async function main() {
       configWalkedUp: args.configWalkedUp === true,
       safety, designDelta,
       ts, parseHealth, completeness,
+      all: args.all === true,
     });
     if (designDelta) process.exitCode = !designDelta.complete ? 2 : designDelta.valid ? 0 : 1; return;
   }
@@ -1427,6 +1458,11 @@ async function main() {
   }
 
   if (args.updateBaseline) {
+    if (!contractSessionFrom(args)) {
+      console.error('Growing the baseline requires --contract-session. Freeze in a law-only PR.');
+      process.exitCode = 1;
+      return;
+    }
     const summary = summarizeViolations(violations);
     // Bloquear y avisar: a lopsided freeze buries a likely contract bug as "debt". Refuse it
     // (unless --force), diagnose, and point at the contract fix instead of the baseline.

@@ -214,6 +214,7 @@ describe('ensureBaselineFlagInCheckCommand + syncBaselineIntoCheckSurfaces', () 
         'ark.config.json',
         '--update-baseline',
         '--force',
+        '--contract-session',
       ],
       { encoding: 'utf8' }
     );

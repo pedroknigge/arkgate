@@ -12,10 +12,7 @@ import {
 import * as arkShared from '../ark-shared.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { describePackageVersionDualTruth } from './field-install.mjs';
-import {
-  detectAgentHomeGaps,
-  agentHomeConcernIsActive,
-} from './agent-homes.mjs';
+import { detectAgentHomeGaps, agentHomeConcernIsActive } from './agent-homes.mjs';
 import { operatingModeTitle } from './product-copy.mjs';
 import { collectDoctorNextActions } from './doctor-next-actions.mjs';
 export { summarizeRulesUnderContract };
@@ -28,12 +25,12 @@ const matchingLayersForRelativePath =
 import {
   collectAdoptionGaps,
   detectSkillGaps,
-  skillGapsForActiveHost,
   detectCodexHomeGap,
   codexConcernIsActive,
   detectWritePathCapabilities,
   missingGates,
   staleRunnerGateFiles,
+  skillGapsForActiveHost,
 } from './agent-gates.mjs';
 import {
   baselineOccurrenceKeys,
@@ -64,18 +61,19 @@ import {
 } from './golden-pattern.mjs';
 import { summarizePilotLoop } from './pilot-loop.mjs';
 import { computeDoctorAdvisories, printDoctorAdvisories } from './doctor-advisories.mjs';
-import { ANALYSIS_COMPLETENESS, analysisIncompleteStatement, normalizeAnalysisCompleteness } from './analysis-completeness.mjs';
+import { printParseHealthSection } from './parse-health.mjs';
 import { designDeltaDoctorLines } from './design-delta.mjs';
 import { enforcementDoctorLines } from './enforcement-state.mjs';
-import {
-  buildDoctorImprovementCompass,
-  printImprovementCompassSection,
-} from './improvement-compass-doctor.mjs';
-import {
-  buildDeepModuleCoachAdvisory,
-  printDeepModuleCoachSection,
-} from './deep-module-coach.mjs';
+import { ANALYSIS_COMPLETENESS, analysisIncompleteStatement, normalizeAnalysisCompleteness } from './analysis-completeness.mjs';
+import { buildDoctorImprovementCompass } from './improvement-compass-doctor.mjs';
+import { buildDeepModuleCoachAdvisory } from './deep-module-coach.mjs';
 import { writeCiMergeBoundary } from './ci-merge-boundary.mjs';
+import {
+  classifyAdopted,
+  githubEvidenceForCiMergeBoundary,
+  readAdoptionStance,
+  NOT_ADOPTED_NEXT_ACTION,
+} from './adoption-stance.mjs';
 
 const color = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
@@ -540,7 +538,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   try {
     ciMergeBoundary = writeCiMergeBoundary(root, {
       writePath,
-      github: adoption.deployPath?.github ?? writePath.enforcementState?.ciMerge ?? {},
+      github: githubEvidenceForCiMergeBoundary(adoption, writePath),
     });
   } catch {
     ciMergeBoundary = null;
@@ -631,6 +629,13 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       : packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT'
         ? 'Add arkgate to package.json and install so CI/npx resolve this CLI (PACKAGE_PIN_ABSENT)'
         : null;
+  const stanceFile = readAdoptionStance(root);
+  const githubForBoundary = githubEvidenceForCiMergeBoundary(adoption, writePath);
+  const adopted = classifyAdopted({
+    stance: stanceFile,
+    github: githubForBoundary,
+    ci: ciMergeBoundary?.ci,
+  });
   const { coverageHonesty, baselineHonesty, writePathHonesty, productHonesty } =
     computeDoctorEnforcementHonesty({
       governedPercent: cov.governed.percent,
@@ -656,12 +661,18 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         : rulesUnderContract?.active === true
           ? { active: true, extraMergeTeeth: false }
           : null,
-      primaryNextAction: postGreenPath?.action ?? dualTruthNext,
+      primaryNextAction:
+        adopted === 'not-adopted' ? NOT_ADOPTED_NEXT_ACTION : postGreenPath?.action ?? dualTruthNext,
       operatingMode,
       packageInstalled,
       selfHost:
         packageVersionTruth?.selfHost === true ||
         packageVersionTruth?.code === 'PACKAGE_PIN_SELF_HOST',
+      adopted,
+      ciMergeBoundary,
+      github: githubForBoundary,
+      adoptionStance: stanceFile,
+      stewardNudge: doctorAdvisories.stewardNudge,
     });
 
   // Improvement compass: projection only — never feeds ok/valid/goal.met.
@@ -687,6 +698,11 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     improvementCompass,
     pilotLoop,
   });
+  const stewardUnfinished = Boolean(
+    doctorAdvisories.stewardNudge?.emptyStewardsPastGrace ||
+      (doctorAdvisories.stewardNudge?.needsStewards &&
+        (doctorAdvisories.stewardNudge?.stewardCount ?? 0) === 0)
+  );
 
   if (asJson) {
     (options.writeJson ?? console.log)(
@@ -711,11 +727,20 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             ...(options.designDelta ? { designDelta: options.designDelta } : {}),
             // Q01: primary next action when Shape residual dominates (null if not design-weak).
             postGreenPath,
-            ...(postGreenPath
-              ? { primaryNextAction: postGreenPath.action, ...DESIGN_WEAK_HONESTY_FLAGS }
-              : productHonesty.primaryNextAction
-                ? { primaryNextAction: productHonesty.primaryNextAction }
-                : {}),
+            adoptionStance: adopted,
+            ...(adopted === 'not-adopted'
+              ? {
+                  primaryNextAction: NOT_ADOPTED_NEXT_ACTION,
+                  ...(postGreenPath ? DESIGN_WEAK_HONESTY_FLAGS : {}),
+                }
+              : postGreenPath
+                ? { primaryNextAction: postGreenPath.action, ...DESIGN_WEAK_HONESTY_FLAGS }
+                : productHonesty.primaryNextAction
+                  ? { primaryNextAction: productHonesty.primaryNextAction }
+                  : {}),
+            ...(stewardUnfinished
+              ? { healthyFinishedForbidden: true, stewardsUnfinished: true }
+              : {}),
             // Q03: advisory golden for new-code placement (absent = no claim).
             goldenPattern,
             // Y06: advisory pure-layer opt-in (null when not applicable).
@@ -840,6 +865,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const line = (mark, text) => console.log(`  ${mark} ${text}`);
   console.log(color.bold(`Ark doctor — ${path.basename(path.resolve(root)) || '.'}`));
   if (!analysisComplete) line(warn, analysisIncompleteStatement(completeness));
+  printParseHealthSection(doctorAdvisories.parseHealth, { color, warn, line });
 
   const emptyScope = emptyScopeEarly;
   const mode = operatingMode;
@@ -848,24 +874,27 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   // Modes are detected states, not user-picked settings. Plain-language "what you do next".
   // Never paint green (ok) under design residual — edges clean ≠ design done (product-voice).
   const modeMark =
-    mode === 'enforce' && !designFitness.designWeak
+    mode === 'enforce' &&
+    !designFitness.designWeak &&
+    adopted !== 'not-adopted' &&
+    !stewardUnfinished
       ? ok
       : warn;
   // modeTitle alone names the light — bodies must not re-prefix Suggest/Adapt/Enforce.
   const modeHelp = {
-    suggest:
-      'thin or new tree; architecture config is not yet in charge. You do not pick this light. Next: ark start (preview), then ark start --apply; re-check with --doctor.',
-    adapt:
-      'config and tree still disagree, or debt is open. The write path does not fully protect you yet. You do not pick this light. Next: do doctor top action #1 (often /ark-adopt or /ark-autopilot).',
+    suggest: 'thin or new tree. Next: ark start --apply, then doctor.',
+    adapt: 'config and tree still disagree. Next: do #1.',
     enforce:
-      'honest coverage and clean checked imports. You arrived here; you never turn Enforce on. Next: keep the host write path and CI check; only NEW violations should fail.',
+      adopted === 'not-adopted'
+        ? 'import rules check out; merge boundary not adopted.'
+        : 'import rules check out. Keep host + CI.',
   };
-  const modeTitle = operatingModeTitle(mode, designFitness.designWeak);
+  const modeTitle = operatingModeTitle(mode, designFitness.designWeak, stewardUnfinished);
   line(
     modeMark,
     `${modeTitle} — ${
       designFitness.designWeak
-        ? 'import rules check out; design smells remain. Green is not elegant design. You do not pick this light. Next: one Shape door — /ark-explore shape-focus → plan B; apply B only with /ark-autopilot and your OK. A clean import check is not done.'
+        ? 'import rules check out; leftover design work remains.'
         : modeHelp[mode]
     }`
   );
@@ -911,114 +940,26 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     showNewHere,
     designFitness,
     operatingMode,
+    adopted,
+    stewardNudge: doctorAdvisories.stewardNudge,
   });
   console.log('');
-  if (isDoctorHealthyNothingToDo(designFitness, uniqueActions)) {
+  if (ciMergeBoundary?.ci?.state) {
+    line(
+      ciMergeBoundary.ci.state === 'required' ? ok : warn,
+      `CI merge: ${ciMergeBoundary.ci.state}`
+    );
+  }
+  if (adopted === 'advisory-only-acked') {
+    line(warn, 'Adoption: advisory-only ack — not a required GitHub status.');
+  }
+  if (isDoctorHealthyNothingToDo(designFitness, uniqueActions, adopted)) {
     console.log(color.green('✔ Healthy — nothing to do.'));
-    console.log(color.dim('  Contract edges and design residual are clear. Keep write path + CI.'));
+    console.log(color.dim('  Keep write path + CI.'));
   } else {
     console.log(color.bold('Primary next action'));
     console.log(`  1. ${uniqueActions[0]}`);
-    if (uniqueActions.length > 1) {
-      console.log(color.bold(`Also (${uniqueActions.length - 1}):`));
-      uniqueActions.slice(1).forEach((action, index) => console.log(`  ${index + 2}. ${action}`));
-    }
-    if (postGreenPath) {
-      console.log(
-        color.dim(
-          `  Shape residual is the primary door under ${modeTitle} — do not skill-shop explore vs coverage vs think.`
-        )
-      );
-    } else {
-      console.log(color.dim('  Doctor is the control plane: do #1 first, then re-run --doctor.'));
-    }
   }
-
-  // P0-B — single honesty surface (never a score; never "all good" when residual remains).
-  if (productHonesty) {
-    console.log('');
-    console.log(color.bold('Product honesty'));
-    line(
-      productHonesty.unfinished ? warn : ok,
-      `${productHonesty.headline} — ${productHonesty.primaryMessage}`
-    );
-    if (Array.isArray(productHonesty.reasonIds) && productHonesty.reasonIds.length > 0) {
-      line(' ', color.dim(`signals: ${productHonesty.reasonIds.join(', ')} (notAScore)`));
-    }
-    if (rulesUnderContract?.mergePlanes?.failMergeWhen) {
-      line(
-        ' ',
-        color.dim(
-          `merge planes: ${rulesUnderContract.mergePlanes.failMergeWhen} · ${rulesUnderContract.mergePlanes.dualPlaneStamp}`
-        )
-      );
-    }
-  }
-
-  printImprovementCompassSection(improvementCompass, { line, warn, ok, color });
-  printDeepModuleCoachSection(deepModuleCoach, { line, warn, ok, color });
-
-  console.log('');
-  console.log(color.bold('Design fitness'));
-  if (designSmells.length === 0) {
-    line(analysisComplete ? ok : warn, designFitness.label);
-  } else {
-    line(designFitness.designWeak ? warn : warn, designFitness.label);
-    for (const smell of designSmells.slice(0, 5)) {
-      // Q02: outcome-first (plain language); technical message stays in JSON + dim detail.
-      const outcome = smell.outcome || smell.message;
-      line(' ', `[${smell.id}] ${outcome}`);
-      if (smell.outcome && smell.message && smell.message !== smell.outcome) {
-        line(' ', color.dim(`detail: ${smell.message}`));
-      }
-      if (smell.evidence?.length) {
-        line(' ', color.dim(`evidence: ${smell.evidence.slice(0, 4).join(', ')}`));
-      }
-    }
-    // Q04 — surface one next pilot under leftover design work.
-    if (pilotLoop?.active && pilotLoop.nextPilot) {
-      const np = pilotLoop.nextPilot;
-      line(
-        warn,
-        `Next pilot (one at a time): ${np.pilotTarget || np.pilot} [${np.smellId}] → re-doctor after change`
-      );
-      line(' ', color.dim(`success: ${np.successSignal}`));
-      line(' ', color.dim('never multi-pilot batch; pattern bets are never auto-applied'));
-    }
-  }
-
-  if (options.designDelta) {
-    console.log('');
-    console.log(color.bold('Design delta (opt-in)'));
-    for (const row of designDeltaDoctorLines(options.designDelta))
-      line(row.level === 'bad' ? bad : row.level === 'ok' ? ok : ' ', row.level === 'dim' ? color.dim(row.text) : row.text);
-  }
-
-  // Q03 — optional golden pattern note (advisory for new code only).
-  if (goldenPattern.present) {
-    console.log('');
-    console.log(color.bold('Golden pattern (new code)'));
-    line(
-      ok,
-      `"${goldenPattern.name}" — ${goldenPattern.norm}` +
-        (goldenPattern.newCodeHome ? ` Prefer: ${goldenPattern.newCodeHome}.` : '') +
-        ' Advisory only — does not clear leftover design work or replace the gate.'
-    );
-  } else if (goldenPattern.invalid) {
-    console.log('');
-    console.log(color.bold('Golden pattern (new code)'));
-    line(
-      warn,
-      `${goldenPattern.path} is present but invalid (${goldenPattern.error || 'invalid'}). ` +
-        'Fix or remove it — absence is fine; a bad file is not guidance.'
-    );
-  }
-  // Y06 — one-line pure-layer opt-in (U05 voice; never blocker).
-  if (pureLayerOptIn) {
-    line(' ', color.dim(pureLayerOptIn.message));
-  }
-
-  printDoctorAdvisories(doctorAdvisories, { line, warn, color }); // advisory sections
 
   console.log('');
   console.log(color.bold('Coverage'));
@@ -1029,6 +970,54 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
         ? ok
         : warn;
   line(govMark, `Governed: ${cov.governed.percent}% (${cov.governed.classifiedFiles}/${cov.governed.totalFiles} files)`);
+
+  const hostRed =
+    gatesMissing.length > 0 ||
+    Boolean(writePath.gap) ||
+    writePathHonesty?.softWriteHost === true;
+  if (hostRed) {
+    console.log('');
+    console.log(color.bold('Host / CI'));
+    if (writePath.activeHost) line(' ', `Active host: ${writePath.activeHost}`);
+    if (gatesMissing.length > 0) line(bad, `Missing gates: ${gatesMissing.join(', ')}`);
+    else if (writePath.gap || writePathHonesty?.softWriteHost) {
+      line(warn, 'Local writes are advisory; required CI is the merge boundary.');
+    }
+  }
+
+  const nudge = doctorAdvisories.stewardNudge;
+  if ((nudge?.needsStewards || nudge?.drift || nudge?.emptyStewardsPastGrace) && nudge.ask) {
+    console.log('');
+    console.log(color.bold('Stewards'));
+    line(warn, nudge.ask);
+  }
+
+  if (violations.length === 0) {
+    if (!analysisComplete) {
+      console.log('');
+      line(
+        warn,
+        'No reported violations — contract compliance is not verified until analysis is complete'
+      );
+    } else if (emptyScope || cov.governed.percent < 50) {
+      console.log('');
+      line(
+        warn,
+        'No active violations — coverage is still thin, so green is not yet honest enforcement'
+      );
+    }
+  }
+
+  if (!options.all) {
+    console.log('');
+    console.log(color.dim('More: --doctor --all'));
+    return;
+  }
+
+  console.log('');
+  console.log(color.dim('---'));
+  console.log(color.bold('Details'));
+
   if (coverageHonesty.greenIsNotEnforcement) {
     line(coverageHonesty.worseThanNoGate ? bad : warn, coverageHonesty.message);
   }
@@ -1061,28 +1050,63 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     );
   }
 
-  if (showNewHere) {
-    console.log('');
-    console.log(color.bold('New here?'));
-    // Suggest residual: start → doctor only (not a competing recommend/architect curriculum).
-    line(ok, `Primary path: ${arkCommand(root, 'ark', 'start')} (preview) → ${arkCommand(root, 'ark', 'start --apply')} → re-run --doctor`);
-    if (recommendation) {
-      line(warn, `Sensor shape hint (not a second curriculum): ${recommendation.archetype} — ${recommendation.label} (preset ${recommendation.preset})`);
-      if (recommendation.galleryStarter) line(ok, `Gallery starter (optional): ${recommendation.galleryStarter}`);
-      if (recommendation.policyPack) {
-        line(ok, `Policy pack (optional expert): ${arkCommand(root, 'ark-check', `--apply-policy-pack ${recommendation.policyPack}`)}`);
+  console.log('');
+  console.log(color.bold('Design fitness'));
+  if (designSmells.length === 0) {
+    line(analysisComplete ? ok : warn, designFitness.label);
+  } else {
+    line(designFitness.designWeak ? warn : warn, designFitness.label);
+    for (const smell of designSmells.slice(0, 5)) {
+      const outcome = smell.outcome || smell.message;
+      line(' ', `[${smell.id}] ${outcome}`);
+      if (smell.outcome && smell.message && smell.message !== smell.outcome) {
+        line(' ', color.dim(`detail: ${smell.message}`));
       }
-      if (recommendation.signals?.nestFramework) {
-        line(ok, 'Nest modular monolith → prefer hexagonal (or ddd-bounded-contexts if you have src/contexts/*)');
+      if (smell.evidence?.length) {
+        line(' ', color.dim(`evidence: ${smell.evidence.slice(0, 4).join(', ')}`));
       }
-      if (recommendation.signals?.monorepoTooling?.length) {
-        line(ok, `Monorepo tooling (${recommendation.signals.monorepoTooling.join(', ')}) → preset monorepo (apps/packages/libs)`);
-      }
-    } else {
-      line(warn, 'Low governed coverage or fresh config — finish start, then re-run doctor before adding layers of code.');
     }
-    line(ok, `Optional sensor detail: ${arkCommand(root, 'ark-check', '--recommend')}`);
+    if (pilotLoop?.active && pilotLoop.nextPilot) {
+      const np = pilotLoop.nextPilot;
+      line(
+        warn,
+        `Next pilot (one at a time): ${np.pilotTarget || np.pilot} [${np.smellId}] → re-doctor after change`
+      );
+      line(' ', color.dim(`success: ${np.successSignal}`));
+      line(' ', color.dim('never multi-pilot batch; pattern bets are never auto-applied'));
+    }
   }
+
+  if (options.designDelta) {
+    console.log('');
+    console.log(color.bold('Design delta (opt-in)'));
+    for (const row of designDeltaDoctorLines(options.designDelta))
+      line(row.level === 'bad' ? bad : row.level === 'ok' ? ok : ' ', row.level === 'dim' ? color.dim(row.text) : row.text);
+  }
+
+  if (goldenPattern.present) {
+    console.log('');
+    console.log(color.bold('Golden pattern (new code)'));
+    line(
+      ok,
+      `"${goldenPattern.name}" — ${goldenPattern.norm}` +
+        (goldenPattern.newCodeHome ? ` Prefer: ${goldenPattern.newCodeHome}.` : '') +
+        ' Advisory only — does not clear leftover design work or replace the gate.'
+    );
+  } else if (goldenPattern.invalid) {
+    console.log('');
+    console.log(color.bold('Golden pattern (new code)'));
+    line(
+      warn,
+      `${goldenPattern.path} is present but invalid (${goldenPattern.error || 'invalid'}). ` +
+        'Fix or remove it — absence is fine; a bad file is not guidance.'
+    );
+  }
+  if (pureLayerOptIn) {
+    line(' ', color.dim(pureLayerOptIn.message));
+  }
+
+  printDoctorAdvisories(doctorAdvisories, { line, warn, color });
 
   console.log('');
   console.log(color.bold('Violations'));
@@ -1135,7 +1159,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   }
   const enforcement = writePath.enforcementState;
   for (const row of enforcementDoctorLines(enforcement)) line(row.level === 'ok' ? ok : row.level === 'bad' ? bad : warn, row.text);
-  // EH07 Repair: use support/matrix caps (inventory omits envelope-emitted on Codex).
   const supportCaps = writePath.support?.capabilities || {};
   const repairReinjection = supportCaps['repair-reinjection-guaranteed'] === true;
   const repairEnvelope = supportCaps['repair-envelope-emitted'] === true || supportCaps['repair-payload'] === true;
@@ -1196,7 +1219,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       codexHomeGap.stale > 0 ? `${codexHomeGap.stale} content-behind-package` : null, codexHomeGap.catalogStateReason,
     ].filter(Boolean);
     const deferred = !codexConcernIsActive();
-    // Deferred home debt is dim/info (not warn) so non-Codex sessions are not "incomplete".
     if (deferred) {
       line(color.dim('·'), color.dim(`Codex home skills ${parts.join(', ')} (deferred — not on Codex session)`));
     } else {
@@ -1223,8 +1245,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   if (!baseline.exists) {
     line(!analysisComplete || violations.length > 0 ? warn : ok, !analysisComplete ? 'No baseline — current violations were not fully evaluated' : violations.length > 0 ? 'No baseline — adopting a dirty repo? freeze with --update-baseline' : 'No baseline (nothing to freeze)');
   } else {
-    // Baseline keys are line-agnostic, so N keys can suppress ≥N violations — label as keys
-    // to avoid an apparent mismatch with the "frozen" violation count above.
     const baseMark = !analysisComplete || baselineHonesty.dirtyBaselineRisk ? warn : ok;
     line(baseMark, `${baseline.keys.size} frozen key(s)${analysisComplete ? '' : ' — stale comparison not verified'}`);
     if (analysisComplete && baselineHonesty.dirtyBaselineRisk) {
@@ -1242,7 +1262,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     line(warn, `Stale runner in ${staleRunners.join(', ')}`);
   }
 
-  // Adoption completeness (hosts, MCP health, codex home, core optionality, origin, baseline policy)
   console.log('');
   console.log(color.bold('Adoption (separate from fitness score)'));
   if (adoption.gaps.length === 0 && !adoption.layerBalance) {
@@ -1252,8 +1271,6 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     );
   } else {
     for (const gap of adoption.gaps) {
-      // Deferred Codex-home debt (non-temp) is annotated, not a top action, when the
-      // session host is not Codex — fix when that host is used.
       const mark = gap.deferred
         ? color.dim('·')
         : gap.severity === 'warn'

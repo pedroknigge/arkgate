@@ -483,7 +483,7 @@ export function summarizeDesignFitness(smells, ctx = {}) {
     smellCount: Array.isArray(smells) ? smells.length : 0,
     ids: (smells || []).map((s) => s.id),
     label: designWeak
-      ? `${operatingModeTitle(ctx.operatingMode, true)} — import rules check out; leftover design work remains (see designSmells / plan B)`
+      ? `${operatingModeTitle(ctx.operatingMode, true)} — import rules check out; leftover design work remains`
       : smells.length > 0
         ? 'Design smells present alongside open import-rule debt'
         : 'No deterministic design smells detected',

@@ -454,7 +454,7 @@ describe('W01 contract smells — doctor surface stays advisory', () => {
     return JSON.parse(logs.join('\n'));
   }
 
-  it('human doctor prints the advisory contract-health section', () => {
+  it('human doctor hides contract-health; JSON still exposes it', () => {
     const root = mk();
     for (const rel of richFiles) write(root, rel, 'export const x = 1;\n');
     const files = richFiles.map((rel) => path.join(root, rel));
@@ -469,9 +469,8 @@ describe('W01 contract smells — doctor surface stays advisory', () => {
       console.log = orig;
     }
     const joined = logs.join('\n');
-    expect(joined).toContain('Contract health (advisory)');
-    expect(joined).toContain('contract-bidirectional-allow');
-    expect(joined).toContain('advisory only — the gate verdict and design fitness are unchanged');
+    expect(joined).not.toContain('Contract health (advisory)');
+    expect(joined).not.toContain('contract-bidirectional-allow');
   });
 
   it('doctor JSON exposes contractHealth without touching designFitness or the goal', () => {

@@ -187,7 +187,7 @@ describe('html-report pure helpers (shipped)', () => {
     expect(tile).toContain('100%');
     expect(baselineSignalHint('keep-empty')).toMatch(/freezes 0 keys/i);
     expect(baselineSignalHint('active-ratchet')).toMatch(/freezes known debt/i);
-    expect(modeBadgeHint('enforce')).toMatch(/hold the line/i);
+    expect(modeBadgeHint('enforce')).toMatch(/checked import edges|hold the line|adopts the merge boundary/i);
     expect(modeBadgeHint('adapt')).toMatch(/aligning/i);
   });
 

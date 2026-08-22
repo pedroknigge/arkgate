@@ -203,11 +203,30 @@ export function teamCheckRequested(args, config) {
       args.against ||
       args.persona ||
       args.contractSession ||
+      args.updateBaseline ||
       (args.strictMerge && teamStewardsFromConfig(config).length > 0)
   );
 }
 
 export function runTeamPreflight({ root, args, config, policyDelta, teamBase }) {
+  const weakening =
+    policyDelta?.classification === 'weakening' ||
+    policyDelta?.classification === 'judgment-required';
+  if (weakening && !contractSessionFrom(args)) {
+    const message =
+      'Weakening the contract requires --contract-session (and --policy-ack bound to both hashes).';
+    const teamParliament = {
+      deny: true,
+      reasonId: 'steward-only-loosen',
+      message,
+      kinds: ['loosen'],
+    };
+    return {
+      halt: { exitCode: 1, message, teamParliament, fail: true },
+      teamParliament,
+      changedPaths: [],
+    };
+  }
   if (!teamCheckRequested(args, config)) {
     return { halt: null, teamParliament: null, changedPaths: [] };
   }
@@ -301,7 +320,24 @@ export function applyAgainstRatchet({
   };
 }
 
+/** Cheap doctor-path probe: skip git spawns on non-repos (hook-path bench tmpdirs). */
+function gitDirPresent(root) {
+  let dir = path.resolve(root);
+  for (let i = 0; i < 10; i += 1) {
+    try {
+      if (fs.existsSync(path.join(dir, '.git'))) return true;
+    } catch {
+      return false;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return false;
+}
+
 function gitAuthors(root) {
+  if (!gitDirPresent(root)) return [];
   const log = runGit(root, ['log', '--format=%aN<%aE>', '--max-count=300']);
   if (log.status !== 0) return [];
   const ids = [];
@@ -328,11 +364,35 @@ function readCodeowners(root) {
   return [];
 }
 
-/** Advisory only. Never flips a gate. Missing git is honest empty, not green. */
-export function collectStewardNudge(root, config) {
+function gitFirstAddIso(root, relPath) {
+  if (!gitDirPresent(root)) return null;
+  const log = runGit(root, ['log', '--diff-filter=A', '--follow', '--format=%cI', '--', relPath]);
+  if (log.status !== 0) return null;
+  const lines = log.stdout
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return lines.length > 0 ? lines[lines.length - 1] : null;
+}
+
+/** Tooling clock: git first-add of ark.config.json vs injected `now`. Domain never clocks. */
+export function adoptAgeDaysFromGit(root, relPath, now) {
+  const iso = gitFirstAddIso(root, relPath);
+  if (!iso) return { days: null, source: 'unavailable' };
+  const then = Date.parse(iso);
+  const nowMs = now instanceof Date ? now.getTime() : Number(now);
+  if (!Number.isFinite(then) || !Number.isFinite(nowMs)) return { days: null, source: 'unavailable' };
+  return { days: Math.floor((nowMs - then) / 86_400_000), source: 'git-first-add' };
+}
+
+/** Advisory residual. Never flips `valid` / `goal.met`. Missing git is unknown age, not green. */
+export function collectStewardNudge(root, config, options = {}) {
+  const now = options.now instanceof Date ? options.now : options.now != null ? new Date(options.now) : new Date();
+  const age = adoptAgeDaysFromGit(root, options.configRel || 'ark.config.json', now);
   return suggestStewards({
     existingStewards: teamStewardsFromConfig(config),
     gitAuthors: gitAuthors(root),
     codeowners: readCodeowners(root),
+    adoptAgeDays: age.days,
   });
 }

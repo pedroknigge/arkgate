@@ -303,7 +303,7 @@ describe('multi-host skill hints (no exclusive Codex legacy)', () => {
     process.env.ARK_ACTIVE_HOST = 'claude';
     process.env.CODEX_HOME = codexHome;
     try {
-      runDoctor(root, config, files, [], [], false, {});
+      runDoctor(root, config, files, [], [], false, { all: true });
     } finally {
       console.log = prevLog;
       if (prevHost === undefined) delete process.env.ARK_ACTIVE_HOST;

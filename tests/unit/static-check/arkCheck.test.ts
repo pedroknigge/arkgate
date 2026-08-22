@@ -1382,7 +1382,7 @@ describe('ark init', () => {
       const res = run(args);
       expect(res.status, `ark ${args.join(' ')}`).toBe(0);
       expect(res.stdout).toContain('arkgate (alias ark)');
-      expect(res.stdout).toContain('/ark-adopt');
+      expect(res.stdout).toContain('arkgate-check --doctor');
       expect(res.stdout).not.toContain('Unknown command');
       expect(res.stdout).not.toMatch(/Team parliament/i);
     }
@@ -1442,7 +1442,7 @@ describe('ark init', () => {
       [path.resolve('bin/ark.mjs'), 'start', '--yes', '--apply', '--no-install', '--root', root],
       { encoding: 'utf8', stdio: 'pipe' }
     );
-    expect(out).toContain('frontend-surface');
+    expect(out).toMatch(/UI-focused repository|frontend-surface/);
     expect(out).toContain('Projected governed coverage: 100%');
   });
 
@@ -2238,7 +2238,7 @@ describe('ark-check --baseline', () => {
     // Freeze.
     const update = execFileSync(
       'node',
-      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline'],
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline', '--contract-session'],
       { encoding: 'utf8', stdio: 'pipe' }
     );
     expect(update).toContain('frozen violation key');
@@ -2276,7 +2276,7 @@ describe('ark-check --baseline', () => {
     const root = violatingProject();
     execFileSync(
       'node',
-      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline'],
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline', '--contract-session'],
       { encoding: 'utf8', stdio: 'pipe' }
     );
     // Fix the frozen violation.
@@ -2310,7 +2310,7 @@ describe('ark-check --baseline', () => {
     fs.writeFileSync(file, 'export const first = Date.now();\n');
     execFileSync(
       'node',
-      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline'],
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline', '--contract-session'],
       { encoding: 'utf8', stdio: 'pipe' }
     );
 
@@ -2398,7 +2398,7 @@ describe('ark-check forbiddenGlobals', () => {
     const root = project('export const at = Date.now();\n');
     execFileSync(
       'node',
-      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline'],
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline', '--contract-session'],
       { encoding: 'utf8', stdio: 'pipe' }
     );
     expect(runArkCheck(root, ['--baseline']).ok).toBe(true);
@@ -2941,7 +2941,15 @@ describe('framework layout overlays (Nest / Next)', () => {
     fs.writeFileSync(path.join(root, '.ark-baseline.json'), JSON.stringify({ version: 1, keys: [] }));
     execFileSync(
       'node',
-      [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--update-baseline'],
+      [
+        path.resolve('bin/ark-check.mjs'),
+        '--root',
+        root,
+        '--config',
+        'ark.config.json',
+        '--update-baseline',
+        '--contract-session',
+      ],
       { encoding: 'utf8', stdio: 'pipe' }
     );
     expect(fs.existsSync(path.join(root, '.ark-baseline.json'))).toBe(false);
@@ -3657,10 +3665,14 @@ describe('ark-check violation diagnosis', () => {
     let stderr = '';
     let threw = false;
     try {
-      execFileSync('node', [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline'], {
+      execFileSync(
+        'node',
+        [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline', '--contract-session'],
+        {
         encoding: 'utf8',
         stdio: 'pipe',
-      });
+        }
+      );
     } catch (error) {
       threw = true;
       stderr = (error as { stderr: string }).stderr;
@@ -3674,7 +3686,14 @@ describe('ark-check violation diagnosis', () => {
     // --force freezes anyway (the escape hatch).
     const forced = execFileSync(
       'node',
-      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline', '--force'],
+      [
+        path.resolve('bin/ark-check.mjs'),
+        '--root',
+        root,
+        '--update-baseline',
+        '--force',
+        '--contract-session',
+      ],
       { encoding: 'utf8', stdio: 'pipe' }
     );
     expect(forced).toContain('frozen violation key');

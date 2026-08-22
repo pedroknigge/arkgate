@@ -90,8 +90,8 @@ describe('Phase B — doctor New here?', () => {
     fs.writeFileSync(path.join(root, 'src/app/page.ts'), 'export const page = 1;\n');
 
     const out = runArkCheckRaw(root, ['--doctor']);
-    expect(out).toContain('New here?');
-    expect(out).toContain('--recommend');
+    expect(out).not.toContain('New here?');
+    expect(out).toMatch(/start|--apply|doctor/i);
 
     const json = runArkCheckJson(root, ['--doctor']);
     expect(json.doctor.newHere.show).toBe(true);

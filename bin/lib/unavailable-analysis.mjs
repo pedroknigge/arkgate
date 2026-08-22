@@ -45,6 +45,7 @@ export function reportUnavailableAnalysis({
       configWalkedUp: args.configWalkedUp === true,
       parseHealth,
       completeness,
+      all: args.all === true,
     });
     process.exitCode = 2;
     return;

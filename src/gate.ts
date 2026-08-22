@@ -220,6 +220,7 @@ export {
   ARK_DESIGN_DELTA_SCHEMA_VERSION,
   type ArkDesignDeltaResult,
   type DesignDeltaChange,
+  type DesignDeltaEnforcementScope,
   type DesignDeltaIdentity,
   type DesignSmellEvidence,
   type DesignSmellFinding,

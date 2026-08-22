@@ -369,8 +369,8 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 
 **Design smell regression on base-relative ratchet**
 
-- **Why:** Compared to the base ref, the candidate introduces or worsens a blocking design-smell class (e.g. domain-logic-in-ui) under --fail-on-new-smells.
-- **Fix:** Revert the regression or redesign so the smell does not worsen versus base, then re-run with the same base ref.
+- **Why:** Compared to the base ref, the candidate introduces a created-path `domain-logic-in-ui` file under `--strict-merge`, or introduces or worsens a blocking design-smell class under `--fail-on-new-smells`.
+- **Fix:** Move the new UI business rule out of the created file (or revert a `--fail-on-new-smells` regression), then re-run with the same base ref.
 
 ## Analysis host and completeness
 

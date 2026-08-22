@@ -73,9 +73,9 @@ export function printDoctorAdvisories(advisories, io) {
   printParseHealthSection(advisories.parseHealth, io);
   printGraphBlindSection(advisories.graphBlindSpots, io);
   const nudge = advisories.stewardNudge;
-  if ((nudge?.needsStewards || nudge?.drift) && nudge.ask) {
+  if ((nudge?.needsStewards || nudge?.drift || nudge?.emptyStewardsPastGrace) && nudge.ask) {
     console.log('');
-    console.log(io.color.bold('Stewards (advisory)'));
+    console.log(io.color.bold('Stewards'));
     io.line(io.warn, nudge.ask);
     if (nudge.nextAction) io.line(' ', io.color.dim(`Next: ${nudge.nextAction}`));
   }
