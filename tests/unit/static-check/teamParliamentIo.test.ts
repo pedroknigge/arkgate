@@ -12,6 +12,7 @@ import {
   applyPersonaDefaults,
   arkgatePinFromPackageJson,
   bindTeamBaseRefs,
+  adoptAgeDaysFromGit,
   collectStewardNudge,
   contractSessionFrom,
   filterChangedGovernedFiles,
@@ -105,6 +106,17 @@ describe('team parliament I/O', () => {
       filterChangedGovernedFiles(files, root, ['src/a.ts'], (rel: string) => rel.replace(/\\/g, '/'))
     ).toEqual([files[0]]);
     expect(filterChangedGovernedFiles(files, root, [], (rel: string) => rel)).toEqual(files);
+  });
+
+  it('collectStewardNudge skips git probes when the tree is not a repo', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-tw-nongit-'));
+    temps.push(root);
+    const nudge = collectStewardNudge(root, {});
+    expect(nudge.notAScore).toBe(true);
+    expect(adoptAgeDaysFromGit(root, 'ark.config.json', new Date('2026-08-22T00:00:00Z'))).toEqual({
+      days: null,
+      source: 'unavailable',
+    });
   });
 
   it('collectStewardNudge uses git first-add vs injected now for empty-stewards grace', () => {

@@ -78,7 +78,7 @@ function writeConsumerTree(root: string, extra: Record<string, string> = {}) {
   }
 }
 
-function captureDoctor(root: string, asJson: boolean) {
+function captureDoctor(root: string, asJson: boolean, extra: Record<string, unknown> = {}) {
   const config = JSON.parse(fs.readFileSync(path.join(root, 'ark.config.json'), 'utf8'));
   const files = collectGovernedFiles(root, config);
   const logs: string[] = [];
@@ -87,7 +87,7 @@ function captureDoctor(root: string, asJson: boolean) {
     logs.push(a.map(String).join(' '));
   };
   try {
-    runDoctor(root, config, files, config.rules, [], asJson, { completeness: 'complete' });
+    runDoctor(root, config, files, config.rules, [], asJson, { completeness: 'complete', ...extra });
   } finally {
     console.log = orig;
   }
@@ -571,5 +571,13 @@ describe('AL04 first-run noun cut', () => {
     expect(json.doctor.improvementCompass).toBeDefined();
     expect(json.doctor.deepModuleCoach).toBeDefined();
     expect(firstRunNouns(head).length).toBeLessThanOrEqual(12);
+  });
+
+  it('doctor --all prints Details after the compact first screen', () => {
+    const root = mk();
+    writeConsumerTree(root);
+    const full = captureDoctor(root, false, { all: true });
+    expect(full).toMatch(/Details/);
+    expect(full).toMatch(/Write path \(agent\)/);
   });
 });
