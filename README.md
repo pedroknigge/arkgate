@@ -16,9 +16,10 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 4.6.5** is current (on npm after this release). Adopt/place honesty for existing Next.js
-> trees, stable doctor JSON, writePath/CI honesty file, hosts-keep upgrade, CLAUDE.md projection.
-> [4.6.5 notes](docs/releases/4.6.5.md) · [4.6.4](docs/releases/4.6.4.md) · [4.6.3](docs/releases/4.6.3.md) · [4.6.2](docs/releases/4.6.2.md) · [4.6.1](docs/releases/4.6.1.md) · [4.6.0](docs/releases/4.6.0.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> **ArkGate 4.6.5** is current on npm. A tree is **adopted** only with a required GitHub status
+> running `arkgate-check --strict-merge`, or `.ark/adoption-stance.json` `stance: "advisory-only"`.
+> Doctor is compact (`--doctor --all` for Details). [4.6.5 notes](docs/releases/4.6.5.md) ·
+> [4.6.4](docs/releases/4.6.4.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
 
@@ -41,12 +42,11 @@ npm install -D arkgate typescript
 npx arkgate start                 # preview files + commands
 npx arkgate start --apply         # compact contract + host router + CI plan
 npx arkgate-check --doctor        # control plane: status light + primary next action
+npx arkgate-check --doctor --all  # encyclopedia (Details)
 ```
 
 That is the product. Doctor is the control plane — when stuck, do **primary next action #1**.
-Doctor also shows **what to improve next** (architecture lenses such as separation of concerns and
-dependency inversion — **not a score**). Leftover lenses mean design work may remain even when
-imports are green. Details: [use.md — Improvement compass](docs/use.md#improvement-compass-not-a-score).
+JSON still carries improvement compass and coach (**not a score**). Compact human output does not.
 
 ```text
 start → doctor (+ compass) → /ark-adopt (session 0) → day-to-day /ark-place

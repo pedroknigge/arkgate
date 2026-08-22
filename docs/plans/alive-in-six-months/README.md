@@ -7,7 +7,7 @@
 > [field kit](../../field/README.md) ·
 > [product voice](../../product-voice.md)
 
-**Status:** In progress — engineering honesty queued; field cohort still not enrolled<br>
+**Status:** Engineering `AL01`–`AL04` **done** on `main` (#147). `AL05` parked field. Does not close Z09.<br>
 **Slug:** `alive-in-six-months`<br>
 **Kind:** corrective honesty + field (not a feature train)<br>
 **Owners:** product (Pedro) + library maintainers<br>
