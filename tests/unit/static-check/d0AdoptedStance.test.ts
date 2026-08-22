@@ -565,6 +565,8 @@ describe('AL04 first-run noun cut', () => {
       expect(head, String(banned)).not.toMatch(banned);
     }
     expect(head).not.toMatch(/Improvement compass|Deep-module coach|Product honesty/i);
+    expect(head).not.toMatch(/\bDetails\b/);
+    expect(human).toMatch(/More: --doctor --all/);
     const json = JSON.parse(captureDoctor(root, true));
     expect(json.doctor.improvementCompass).toBeDefined();
     expect(json.doctor.deepModuleCoach).toBeDefined();

@@ -320,7 +320,24 @@ export function applyAgainstRatchet({
   };
 }
 
+/** Cheap doctor-path probe: skip git spawns on non-repos (hook-path bench tmpdirs). */
+function gitDirPresent(root) {
+  let dir = path.resolve(root);
+  for (let i = 0; i < 10; i += 1) {
+    try {
+      if (fs.existsSync(path.join(dir, '.git'))) return true;
+    } catch {
+      return false;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return false;
+}
+
 function gitAuthors(root) {
+  if (!gitDirPresent(root)) return [];
   const log = runGit(root, ['log', '--format=%aN<%aE>', '--max-count=300']);
   if (log.status !== 0) return [];
   const ids = [];
@@ -348,6 +365,7 @@ function readCodeowners(root) {
 }
 
 function gitFirstAddIso(root, relPath) {
+  if (!gitDirPresent(root)) return null;
   const log = runGit(root, ['log', '--diff-filter=A', '--follow', '--format=%cI', '--', relPath]);
   if (log.status !== 0) return null;
   const lines = log.stdout

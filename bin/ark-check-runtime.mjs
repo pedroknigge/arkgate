@@ -1447,6 +1447,7 @@ async function main() {
       configWalkedUp: args.configWalkedUp === true,
       safety, designDelta,
       ts, parseHealth, completeness,
+      all: args.all === true,
     });
     if (designDelta) process.exitCode = !designDelta.complete ? 2 : designDelta.valid ? 0 : 1; return;
   }

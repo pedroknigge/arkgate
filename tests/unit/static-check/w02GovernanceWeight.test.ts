@@ -204,7 +204,9 @@ describe('W02 governance weight — doctor surface stays advisory', () => {
       logs.push(args.map(String).join(' '));
     };
     try {
-      runDoctor(root, config, files, (config as { rules: object[] }).rules ?? [], [], asJson, {});
+      runDoctor(root, config, files, (config as { rules: object[] }).rules ?? [], [], asJson, {
+        all: !asJson,
+      });
     } finally {
       console.log = orig;
     }

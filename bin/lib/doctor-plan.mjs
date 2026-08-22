@@ -992,6 +992,20 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     line(warn, nudge.ask);
   }
 
+  if (!analysisComplete && violations.length === 0) {
+    console.log('');
+    line(
+      warn,
+      'No reported violations — contract compliance is not verified until analysis is complete'
+    );
+  }
+
+  if (!options.all) {
+    console.log('');
+    console.log(color.dim('More: --doctor --all'));
+    return;
+  }
+
   console.log('');
   console.log(color.dim('---'));
   console.log(color.bold('Details'));

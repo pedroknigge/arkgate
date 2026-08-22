@@ -285,7 +285,7 @@ describe('doctor surfaces goldenPattern without clearing design-weak (Q03 honest
       logs.push(a.map(String).join(' '));
     };
     try {
-      runDoctor(tmp, config, files, config.rules, [], false, { completeness: 'complete' });
+      runDoctor(tmp, config, files, config.rules, [], false, { completeness: 'complete', all: true });
     } finally {
       console.log = orig;
     }
