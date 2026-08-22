@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Premortem — ArkGate 4.6.5</title>
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --bg-elev: #12182b;
+      --bg-card: #161d33;
+      --line: #2a3454;
+      --text: #e8edf7;
+      --muted: #9aa6c3;
+      --dim: #6d7894;
+      --red: #ff5d6c;
+      --orange: #ff9f43;
+      --gold: #f6c945;
+      --teal: #3ecfbf;
+      --blue: #5b8cff;
+      --violet: #b07cff;
+      --pink: #ff7ab8;
+      --lime: #9be15d;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+    body {
+      font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+      line-height: 1.55;
+      font-size: 16px;
+    }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 24px 80px; }
+    header.hero {
+      border: 1px solid var(--line);
+      background:
+        radial-gradient(900px 280px at 10% -10%, rgba(255,93,108,.18), transparent 55%),
+        radial-gradient(700px 240px at 90% 0%, rgba(91,140,255,.14), transparent 50%),
+        var(--bg-elev);
+      border-radius: 18px;
+      padding: 36px 36px 28px;
+      margin-bottom: 28px;
+    }
+    .kicker {
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      font-size: 11px;
+      color: var(--red);
+      font-weight: 700;
+    }
+    h1 { font-size: 34px; line-height: 1.15; margin: 10px 0 12px; }
+    .lede { color: var(--muted); max-width: 68ch; margin: 0; }
+    .meta { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      border: 1px solid var(--line);
+      background: #0d1222;
+      color: var(--muted);
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+    h2 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin: 0 0 12px; }
+    h3 { margin: 0 0 8px; font-size: 18px; }
+    p { margin: 0 0 10px; }
+    .synth {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 20px 20px 16px;
+    }
+    .panel.wide { grid-column: 1 / -1; }
+    .panel.danger { border-color: rgba(255,93,108,.45); }
+    .panel.warn { border-color: rgba(255,159,67,.4); }
+    .panel.gold { border-color: rgba(246,201,69,.4); }
+    .panel.teal { border-color: rgba(62,207,191,.35); }
+    .label { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
+    .danger .label { color: var(--red); }
+    .warn .label { color: var(--orange); }
+    .gold .label { color: var(--gold); }
+    .teal .label { color: var(--teal); }
+    ol.plan, ol.check { margin: 8px 0 0 18px; padding: 0; }
+    ol.plan li, ol.check li { margin-bottom: 8px; color: var(--text); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 0 0 28px;
+    }
+    .stat {
+      background: var(--bg-elev);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .stat b { display: block; font-size: 26px; line-height: 1; margin-bottom: 6px; }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    article.card {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px 18px 16px;
+      border-top-width: 4px;
+    }
+    .meters { display: flex; gap: 14px; margin: 8px 0 12px; }
+    .meter { flex: 1; }
+    .meter small { display: block; color: var(--dim); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
+    .bar { height: 6px; background: #0d1222; border-radius: 99px; overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 99px; }
+    .assume {
+      background: #0d1222;
+      border-left: 3px solid currentColor;
+      padding: 8px 10px;
+      margin: 10px 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .signals { color: var(--muted); font-size: 14px; margin: 0; padding-left: 18px; }
+    footer {
+      margin-top: 36px;
+      color: var(--dim);
+      font-size: 13px;
+      border-top: 1px solid var(--line);
+      padding-top: 16px;
+    }
+    @media (max-width: 880px) {
+      .synth, .cards, .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="kicker">Premortem · retrospectiva prospectiva</div>
+      <h1>Han pasado 6 meses. ArkGate 4.6.5 ha fallado.</h1>
+      <p class="lede">
+        El plan era un firewall de escritura de arquitectura más un coach:
+        un config, un check, un doctor. El éxito era adopción retenida con
+        <code>arkgate-check --strict-merge</code> como status GitHub required.
+        Z09 / RB-11 sigue parked. La cohorte no está enrolada. Esto ya está muerto.
+        Lo que sigue es por qué.
+      </p>
+      <div class="meta">
+        <span class="chip">Sujeto: producto ArkGate 4.6.5</span>
+        <span class="chip">Repo: pedroknigge/arkgate @ main</span>
+        <span class="chip">8 agentes de fallo</span>
+        <span class="chip">2026-08-22</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div class="stat"><b>8</b><span>modos de fallo genuinos</span></div>
+      <div class="stat"><b>Z09</b><span>claim gate aún abierto</span></div>
+      <div class="stat"><b>0</b><span>adopters consentidos enrolados</span></div>
+      <div class="stat"><b>36h</b><span>tres latest: 4.6.3 → 4.6.5</span></div>
+    </div>
+
+    <section class="synth">
+      <div class="panel warn">
+        <div class="label">1. El fallo más probable</div>
+        <h3>Teatro de instalación, cero enforcement</h3>
+        <p>Los equipos instalan npm, hooks y skills. GitHub Free no puede exigir el status. Cursor hosted, Codex incompleto y OpenCode bypasean el write path. Doctor ya escribe <code>present-but-not-required</code> y <code>configured-not-fired</code>. Nadie lo trata como no-adopción. A los 90 días no hay reloj Z09 que arrancar: <em>writes observed × enforcement strength → 0</em>.</p>
+      </div>
+      <div class="panel danger">
+        <div class="label">2. El fallo más peligroso</div>
+        <h3>Un false-green público</h3>
+        <p>El único foso declarado es la honestidad. Propia.homes ya mostró merge verde con policy nueva en UI. Un <code>goal.met</code> con análisis parcial, o ENFORCE leído como “el árbol es bueno”, y un senior publica el JSON. Después de eso no hay parche de voz que recupere el claim “false done is forbidden”.</p>
+      </div>
+      <div class="panel gold wide">
+        <div class="label">3. El supuesto oculto</div>
+        <h3>Que doctor honesto + install = adopción retenida</h3>
+        <p>El producto trata “dijimos la verdad en JSON” como si eso convirtiera el status en required, nombrara stewards y mantuviera vivo el contrato. Cerrar Z01–Z08 y Z10 mientras Z09 sigue parked es el síntoma: la ingeniería de honesty sustituye a la prueba de campo. Un humano no puede ser a la vez tren de release, claim gate, matriz de 6 hosts y enrolador de 8 adopters externos.</p>
+      </div>
+      <div class="panel teal wide">
+        <div class="label">4. El plan revisado</div>
+        <ol class="plan">
+          <li><strong>Redefinir “adoptado” esta semana:</strong> D0 = prueba de status GitHub required corriendo <code>--strict-merge</code>, o ack escrito <code>advisory-only</code> en <code>.ark/adoption-stance.json</code>. Sin eso, doctor no puede sonar a éxito. Cubre el fallo 1.</li>
+          <li><strong>Enrolar 3 design partners, no 8 installs de teatro:</strong> usar <code>docs/field/cohort-retention-checklist.md</code>. Si no hay 3 con required-status, el producto no tiene campo. Dejar de shippear parches de honesty como sustituto de Z09. Cubre fallos 1 y 6.</li>
+          <li><strong>Cerrar el agujero Propia para código nuevo:</strong> design-delta (o equivalente) on para archivos creados en el candidato dentro de <code>--strict-merge</code>, o cambiar el copy de ENFORCE para que nunca implique forma de código nuevo. Fixture packed TS7 + aliases: <code>goal.met</code> prohibido si <code>completeness !== complete</code>. Cubre el fallo 2.</li>
+          <li><strong>Congelar el coach 30 días:</strong> cero deepen de explore/compass/skills. ROADMAP <code>doing</code> = salud de adapters o recorte de sustantivos en <code>start</code>+doctor (≤12). Cubre fallos 3 y 8.</li>
+          <li><strong>Cortar hosts o añadir operador:</strong> dejar de perseguir OpenCode/hosted Codex/Cursor untrusted como si fueran hard. Nombrar a una segunda persona que pueda publicar, o cadence quincenal máximo. Cubre fallos 4 y 5.</li>
+          <li><strong>Stewards o Adapt:</strong> <code>stewards[]</code> vacío 30 días post-adopt no puede leerse como ENFORCE sano. T4/T5 y baseline-grow exigen <code>--contract-session</code>. Z09 no cuenta wallpaper. Cubre el fallo 7.</li>
+        </ol>
+      </div>
+      <div class="panel wide">
+        <div class="label">5. Lista de verificación pre-lanzamiento</div>
+        <ol class="check">
+          <li>Inventario de árboles de campo conocidos: status <em>required</em> vs <code>present-but-not-required</code>. Si required = 0, no hay adopción que medir (fallo 1 / 6).</li>
+          <li>Correr un consumidor packed con aliases: afirmar que ningún adapter emite <code>goal.met: true</code> cuando el análisis no es <code>complete</code> (fallo 2).</li>
+          <li>Contar sustantivos de producto en la primera salida humana de <code>ark start</code> + primer <code>doctor</code>. Recortar hasta ≤12 (fallo 3).</li>
+          <li>Doctor: <code>stewards[]</code> vacío post-adopt no se muestra como ENFORCE “healthy finished” (fallo 7).</li>
+          <li>Nombrar un segundo publisher o fijar cadence ≤1 release / 14 días. Prohibir tres <code>latest</code> en 36 h (fallo 5 / 4).</li>
+        </ol>
+      </div>
+    </section>
+
+    <h2>Tarjetas de fallo · 8 agentes en paralelo</h2>
+    <section class="cards">
+      <article class="card" style="border-top-color:#ff9f43">
+        <h3>1. Teatro de instalación</h3>
+        <div class="meters">
+          <div class="meter"><small>Probabilidad</small><div class="bar"><i style="width:92%;background:#ff9f43"></i></div></div>
+          <div class="meter"><small>Daño</small><div class="bar"><i style="width:80%;background:#ff5d6c"></i></div></div>
+        </div>
+        <p>4.6.5 midió adopción por <code>npm i</code> + hooks. Tres “adopters” en GitHub Free: el job corre, branch protection no exige el contexto. Cursor hosted / Codex incompleto / OpenCode / humanos nunca tocan el hook. A los 90 días el checklist Z09 está vacío. Wallpaper.</p>
+        <div class="assume">Supuesto: instalar npm + hooks convertiría, por inercia, el check en status required.</div>
+        <ul class="signals">
+          <li>Crece <code>present-but-not-required</code>; required = 0.</li>
+          <li>Hook <code>configured-not-fired</code> o 0 denegaciones PreToolUse en 14 días.</li>
+        </ul>
+      </article>
+
+      <article class="card" style="border-top-color:#ff5d6c">
+        <h3>2. False-green público</h3>
+        <div class="meters">
+          <div class="meter"><small>Probabilidad</small><div class="bar"><i style="width:58%;background:#ff9f43"></i></div></div>
+          <div class="meter"><small>Daño</small><div class="bar"><i style="width:96%;background:#ff5d6c"></i></div></div>
+        </div>
+        <p>Z09 parked. Un Next packed TS7 pierde el fallback; <code>--plan</code> dice <code>goal.met</code> con análisis parcial. Strict-merge limpia edges; design-delta opt-in no está en CI. Entran <code>can*</code> en UI. Un staff publica: “dijo ENFORCE, el árbol era basura.”</p>
+        <div class="assume">Supuesto: slices de ingeniería + copy de honesty = veredicto de campo, aunque design-delta sea opt-in.</div>
+        <ul class="signals">
+          <li>Strict-merge 0 y, en el mismo SHA, residual de diseño en paths tocados, o <code>goal.met</code> con completeness ≠ complete.</li>
+          <li>Z09 parked y cohort = 0 mientras se vende “false done is forbidden”.</li>
+        </ul>
+      </article>
+
+      <article class="card" style="border-top-color:#5b8cff">
+        <h3>3. Impuesto de complejidad</h3>
+        <div class="meters">
+          <div class="meter"><small>Probabilidad</small><div class="bar"><i style="width:78%;background:#ff9f43"></i></div></div>
+          <div class="meter"><small>Daño</small><div class="bar"><i style="width:72%;background:#ff5d6c"></i></div></div>
+        </div>
+        <p>El “un minuto” de <code>start</code> nombra cinco puertas, dos planos, parlamento y compass. El senior de 4.3 se ahoga en 4.6.x. ROADMAP prohibió nombres nuevos y profundizó los 13. El funnel muere en la puerta. Quien llega a strict-merge ya tenía arquitecto interno.</p>
+        <div class="assume">Supuesto: agrupar 13 skills en cinco puertas reduce carga mental sin borrar superficie.</div>
+        <ul class="signals">
+          <li>% de <code>start --apply</code> que en 14 días no ejecutan la acción #1 del doctor.</li>
+          <li>&gt;12 sustantivos de producto en start + primer doctor.</li>
+        </ul>
+      </article>
+
+      <article class="card" style="border-top-color:#b07cff">
+        <h3>4. Cinta de adapters de host</h3>
+        <div class="meters">
+          <div class="meter"><small>Probabilidad</small><div class="bar"><i style="width:74%;background:#ff9f43"></i></div></div>
+          <div class="meter"><small>Daño</small><div class="bar"><i style="width:78%;background:#ff5d6c"></i></div></div>
+        </div>
+        <p>Claude cambia el matcher; Cursor mueve StrReplace; Codex vuelve a mover <code>apply_patch</code>. Doctor escribe <code>configured-not-fired</code>. Los equipos desinstalan hooks. CI sigue verde. El tren 4.6.3–4.6.4 se vuelve el modelo operativo. <em>Writes observed</em> colapsa.</p>
+        <div class="assume">Supuesto: el schema PreToolUse de seis hosts es estable y un maintainer puede perseguirlo a parches.</div>
+        <ul class="signals">
+          <li>Caída &gt;30% de writes observed / intentos, con CI verde.</li>
+          <li>&gt;15% de doctors de campo con hook configured-not-fired en dos hosts “hard” a la vez.</li>
+        </ul>
+      </article>
+
+      <article class="card" style="border-top-color:#ff7ab8">
+        <h3>5. Cuello del maintainer</h3>
+        <div class="meters">
+          <div class="meter"><small>Probabilidad</small><div class="bar"><i style="width:82%;background:#ff9f43"></i></div></div>
+          <div class="meter"><small>Daño</small><div class="bar"><i style="width:94%;background:#ff5d6c"></i></div></div>
+        </div>
+        <p>Tres <code>latest</code> en 36 horas. Cada nota cierra con “Z09 still open”. El reviewer independiente de Z09 no puede ser quien shippea. En octubre otro payload Codex; domingo de 4.6.6/4.6.7. Una semana sin parche y <code>npm latest</code> se pudre. Museo de honesty.</p>
+        <div class="assume">Supuesto: un humano puede ser release + claim gate + matriz de hosts + enrolador, y que “one doing” lo protege.</div>
+        <ul class="signals">
+          <li>≥2 patches 4.6.x en ≤48 h y “Z09 still open” en N notas consecutivas (ya N≥15).</li>
+          <li>100% de tags con un solo autor; 0 reviewer identity preregistrada.</li>
+        </ul>
+      </article>
+
+      <article class="card" style="border-top-color:#3ecfbf">
+        <h3>6. Sustitutos good-enough</h3>
+        <div class="meters">
+          <div class="meter"><small>Probabilidad</small><div class="bar"><i style="width:88%;background:#ff9f43"></i></div></div>
+          <div class="meter"><small>Daño</small><div class="bar"><i style="width:76%;background:#ff5d6c"></i></div></div>
+        </div>
+        <p>El trial típico elige eslint-plugin-import + AGENTS.md de 40 líneas + tsc required. Cursor Rules y Claude Project instructions ocupan el slot. El wedge solo se siente en PreToolUse hard o merge que bloquea. TypeScript-only, sin org plane. “arkgate / Archgate?” mata el pitch. La categoría no se forma.</p>
+        <div class="assume">Supuesto: el wedge se vuelve visible antes de la quemadura, y hay quemaduras suficientes para pagar el learning cost.</div>
+        <ul class="signals">
+          <li>Conversión D14 de start → Action required &lt;15%.</li>
+          <li>0/8 consentidos a 90 días post-4.6.5, o D30 required-CI &lt;75%.</li>
+        </ul>
+      </article>
+
+      <article class="card" style="border-top-color:#f6c945">
+        <h3>7. Decaimiento del contrato</h3>
+        <div class="meters">
+          <div class="meter"><small>Probabilidad</small><div class="bar"><i style="width:62%;background:#ff9f43"></i></div></div>
+          <div class="meter"><small>Daño</small><div class="bar"><i style="width:80%;background:#ff5d6c"></i></div></div>
+        </div>
+        <p>Adopt congela 47 cortes. <code>stewards[]</code> vacío = sin team lock. Humanos editan fuera del hook. Un PR mezcla config y producto, firma T4, abre baseline (T5). Luz Enforce. A los 6 meses el contrato describe lo que el último agente escribió. Z09 ingenuo cuenta el cadáver.</p>
+        <div class="assume">Supuesto: Enforce + paquete + required-status prueban un contrato vivo, cuando el parlamento es opt-in.</div>
+        <ul class="signals">
+          <li><code>stewards[]</code> vacío ≥30 días post-adopt con stewardNudge emitido.</li>
+          <li>Δ neto &gt;0 de claves de baseline o acks T4 sin <code>--contract-session</code>.</li>
+        </ul>
+      </article>
+
+      <article class="card" style="border-top-color:#9be15d">
+        <h3>8. El coach se comió el gate</h3>
+        <div class="meters">
+          <div class="meter"><small>Probabilidad</small><div class="bar"><i style="width:54%;background:#ff9f43"></i></div></div>
+          <div class="meter"><small>Daño</small><div class="bar"><i style="width:64%;background:#ff5d6c"></i></div></div>
+        </div>
+        <p>IC → DC → PL → SK: el doctor post-green apunta a explore, dual-plan B, extraction cards. El agente mapea 12 archivos. Autopilot aplica A vacío. El senior que vino por dientes ve curriculum. El freeze de nombres se cumplió. El valor primer término —writes observed— no.</p>
+        <div class="assume">Supuesto: se puede inflar el coach sin mover writes observed, porque el contrato sigue decidiendo validez.</div>
+        <ul class="signals">
+          <li>Invocaciones <code>/ark-explore</code> ÷ writes PreToolUse &gt; 1 por sesión.</li>
+          <li>Sesiones post-green que terminan en plan B sin apply; churn de seniors que citan “liturgia”.</li>
+        </ul>
+      </article>
+    </section>
+
+    <footer>
+      Premortem de producto — ArkGate 4.6.5 (npm <code>arkgate</code>), repositorio canónico
+      pedroknigge/arkgate. Método Klein / retrospectiva prospectiva. 8 agentes en paralelo.
+      No cierra Z09, RB-11 ni C-028. Transcripción:
+      <code>docs/field/premortem-transcript-20260822.md</code>.
+      Generado 2026-08-22.
+    </footer>
+  </div>
+</body>
+</html>
