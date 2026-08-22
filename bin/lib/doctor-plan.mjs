@@ -992,12 +992,20 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     line(warn, nudge.ask);
   }
 
-  if (!analysisComplete && violations.length === 0) {
-    console.log('');
-    line(
-      warn,
-      'No reported violations — contract compliance is not verified until analysis is complete'
-    );
+  if (violations.length === 0) {
+    if (!analysisComplete) {
+      console.log('');
+      line(
+        warn,
+        'No reported violations — contract compliance is not verified until analysis is complete'
+      );
+    } else if (emptyScope || cov.governed.percent < 50) {
+      console.log('');
+      line(
+        warn,
+        'No active violations — coverage is still thin, so green is not yet honest enforcement'
+      );
+    }
   }
 
   if (!options.all) {

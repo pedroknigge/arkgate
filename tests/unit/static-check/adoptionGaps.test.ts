@@ -142,7 +142,7 @@ describe('adoption gaps (doctor + codex-home + report)', () => {
         },
       })
     );
-    const r = runCheck(root, ['--config', 'ark.config.json', '--doctor', '--no-cache']);
+    const r = runCheck(root, ['--config', 'ark.config.json', '--doctor', '--all', '--no-cache']);
     expect(r.status).toBe(0);
     expect(r.stdout).toMatch(/Adoption/i);
     expect(r.stdout).toMatch(/ark-mcp\/arkgate-mcp|dual|more than one/i);
@@ -356,7 +356,7 @@ args = ["arkgate-mcp", "--root", "${absA}", "--config", "${absA}/ark.config.json
     // Human doctor mentions multi-project
     const human = runCheck(
       rootB,
-      ['--config', 'ark.config.json', '--doctor', '--no-cache'],
+      ['--config', 'ark.config.json', '--doctor', '--all', '--no-cache'],
       neutralHostEnv({ CODEX_HOME: codexHome })
     );
     expect(human.stdout).toMatch(/Codex primary|multi-project|another project/i);
@@ -408,7 +408,7 @@ args = ["arkgate-mcp", "--root", "${absA}", "--config", "${absA}/ark.config.json
 
     const human = runCheck(
       rootB,
-      ['--config', 'ark.config.json', '--doctor', '--no-cache'],
+      ['--config', 'ark.config.json', '--doctor', '--all', '--no-cache'],
       neutralHostEnv({ CODEX_HOME: codexHome, GROK_BUILD: '1' })
     );
     expect(human.stdout).toMatch(/Deferred \(fix when using Codex\)/i);

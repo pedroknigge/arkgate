@@ -129,7 +129,7 @@ describe('Z06 enforcement-state truth', () => {
 
     const human = spawnSync(
       process.execPath,
-      [ARK_CHECK, '--root', root, '--config', 'ark.config.json', '--doctor', '--no-cache'],
+      [ARK_CHECK, '--root', root, '--config', 'ark.config.json', '--doctor', '--all', '--no-cache'],
       { cwd: root, env, encoding: 'utf8' }
     );
     expect(human.status, human.stderr || human.stdout).toBe(0);
