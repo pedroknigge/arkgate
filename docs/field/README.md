@@ -25,6 +25,7 @@ remains open.
 | [preregistration-template.md](preregistration-template.md) | External matrix targets (repos × hosts × package managers) before clocks start |
 | [cohort-retention-checklist.md](cohort-retention-checklist.md) | D30 / D90 retention checklist for consented adopters |
 | [independent-reviewer-manifesto.md](independent-reviewer-manifesto.md) | Reviewer independence rules + open decision on signed identity |
+| [premortem-report-20260822.html](premortem-report-20260822.html) · [transcript](premortem-transcript-20260822.md) | Product premortem (2026-08-22). Failure modes if retained adoption stays unproven. **Does not close Z09.** |
 | ROADMAP `Z09` | Authoritative acceptance thresholds and promotion gate |
 
 ## Promotion gate (copy from ROADMAP)
