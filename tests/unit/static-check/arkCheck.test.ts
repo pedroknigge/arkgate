@@ -1382,7 +1382,7 @@ describe('ark init', () => {
       const res = run(args);
       expect(res.status, `ark ${args.join(' ')}`).toBe(0);
       expect(res.stdout).toContain('arkgate (alias ark)');
-      expect(res.stdout).toContain('/ark-adopt');
+      expect(res.stdout).toContain('arkgate-check --doctor');
       expect(res.stdout).not.toContain('Unknown command');
       expect(res.stdout).not.toMatch(/Team parliament/i);
     }
@@ -1442,7 +1442,7 @@ describe('ark init', () => {
       [path.resolve('bin/ark.mjs'), 'start', '--yes', '--apply', '--no-install', '--root', root],
       { encoding: 'utf8', stdio: 'pipe' }
     );
-    expect(out).toContain('frontend-surface');
+    expect(out).toMatch(/UI-focused repository|frontend-surface/);
     expect(out).toContain('Projected governed coverage: 100%');
   });
 

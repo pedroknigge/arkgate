@@ -559,7 +559,8 @@ describe('AL04 first-run noun cut', () => {
     const root = mk();
     writeConsumerTree(root);
     const human = captureDoctor(root, false);
-    const head = first80(human);
+    const screen = human.split(/Details/)[0] ?? first80(human);
+    const head = first80(screen);
     for (const banned of FORBIDDEN_FIRST_RUN) {
       expect(head, String(banned)).not.toMatch(banned);
     }

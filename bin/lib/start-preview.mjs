@@ -169,7 +169,14 @@ export function renderStartPreview(preview, options = {}) {
     console.log('Unresolved decisions:');
     for (const decision of preview.unresolvedDecisions) console.log(`  ${decision}`);
   }
-  if (!applying) {
+  if (applying) {
+    const percent = preview.projectedCoverage?.percent;
+    if (percent != null) console.log(`Projected governed coverage: ${percent}%`);
+    const verified = (preview.hostGuarantees || []).find((line) =>
+      String(line).startsWith('Hard-write hook verified')
+    );
+    if (verified) console.log(verified);
+  } else {
     console.log('Review complete file contents with --json.');
   }
 }

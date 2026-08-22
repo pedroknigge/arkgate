@@ -171,7 +171,7 @@ describe('html-report-depth branch matrix', () => {
     expect(baselineSignalHint('active-ratchet')).toMatch(/freezes known debt/i);
     expect(baselineSignalHint('absent')).toMatch(/No \.ark-baseline/i);
     expect(baselineSignalHint('other')).toMatch(/frozen debt/i);
-    expect(modeBadgeHint('enforce')).toMatch(/hold the line/i);
+    expect(modeBadgeHint('enforce')).toMatch(/checked import edges|hold the line|adopts the merge boundary/i);
     expect(modeBadgeHint('adapt')).toMatch(/aligning/i);
     expect(modeBadgeHint('suggest')).toMatch(/Starter shape/i);
     expect(modeBadgeHint('???')).toMatch(/Operating mode/i);

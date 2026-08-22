@@ -12,7 +12,7 @@ import {
 import * as arkShared from '../ark-shared.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { describePackageVersionDualTruth } from './field-install.mjs';
-import { detectAgentHomeGaps } from './agent-homes.mjs';
+import { detectAgentHomeGaps, agentHomeConcernIsActive } from './agent-homes.mjs';
 import { operatingModeTitle } from './product-copy.mjs';
 import { collectDoctorNextActions } from './doctor-next-actions.mjs';
 export { summarizeRulesUnderContract };
@@ -30,6 +30,7 @@ import {
   detectWritePathCapabilities,
   missingGates,
   staleRunnerGateFiles,
+  skillGapsForActiveHost,
 } from './agent-gates.mjs';
 import {
   baselineOccurrenceKeys,
@@ -59,8 +60,10 @@ import {
   summarizeGoldenPattern,
 } from './golden-pattern.mjs';
 import { summarizePilotLoop } from './pilot-loop.mjs';
-import { computeDoctorAdvisories } from './doctor-advisories.mjs';
+import { computeDoctorAdvisories, printDoctorAdvisories } from './doctor-advisories.mjs';
 import { printParseHealthSection } from './parse-health.mjs';
+import { designDeltaDoctorLines } from './design-delta.mjs';
+import { enforcementDoctorLines } from './enforcement-state.mjs';
 import { ANALYSIS_COMPLETENESS, analysisIncompleteStatement, normalizeAnalysisCompleteness } from './analysis-completeness.mjs';
 import { buildDoctorImprovementCompass } from './improvement-compass-doctor.mjs';
 import { buildDeepModuleCoachAdvisory } from './deep-module-coach.mjs';
@@ -987,6 +990,312 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     console.log('');
     console.log(color.bold('Stewards'));
     line(warn, nudge.ask);
+  }
+
+  console.log('');
+  console.log(color.dim('---'));
+  console.log(color.bold('Details'));
+
+  if (coverageHonesty.greenIsNotEnforcement) {
+    line(coverageHonesty.worseThanNoGate ? bad : warn, coverageHonesty.message);
+  }
+  if (cov.suggestions.length > 0) {
+    line(warn, `${cov.suggestions.length} ungoverned director(y/ies) — proposals: ${arkCommand(root, 'ark-check', '--coverage')}`);
+  }
+  if (cov.emptyLayers.length > 0) line(warn, `Empty layers (pattern matches nothing): ${cov.emptyLayers.join(', ')}`);
+  if (cov.layersWithoutRules.length > 0) line(warn, `Layers with no rule edge: ${cov.layersWithoutRules.join(', ')}`);
+  if (cov.dualMembership?.count > 0) {
+    line(
+      warn,
+      `Dual-match: ${cov.dualMembership.count} file(s) match multiple layers — ${cov.dualMembership.note ?? 'review overlapping globs'}`
+    );
+  }
+  if (cov.suggestions.length === 0 && cov.emptyLayers.length === 0) line(ok, 'Every layer classifies files; no empty layers');
+
+  if (packageVersionTruth?.dualTruth) {
+    console.log('');
+    console.log(color.bold('Package pin (dual-truth)'));
+    line(warn, packageVersionTruth.note);
+  } else if (packageVersionTruth?.code === 'PACKAGE_PIN_ABSENT') {
+    console.log('');
+    console.log(color.bold('Package pin'));
+    line(warn, packageVersionTruth.note);
+  }
+  if (options.configWalkedUp && options.configRoot) {
+    line(
+      ok,
+      `Config walk-up: using monorepo root ${options.configRoot} (ark.config.json not in cwd package)`
+    );
+  }
+
+  console.log('');
+  console.log(color.bold('Design fitness'));
+  if (designSmells.length === 0) {
+    line(analysisComplete ? ok : warn, designFitness.label);
+  } else {
+    line(designFitness.designWeak ? warn : warn, designFitness.label);
+    for (const smell of designSmells.slice(0, 5)) {
+      const outcome = smell.outcome || smell.message;
+      line(' ', `[${smell.id}] ${outcome}`);
+      if (smell.outcome && smell.message && smell.message !== smell.outcome) {
+        line(' ', color.dim(`detail: ${smell.message}`));
+      }
+      if (smell.evidence?.length) {
+        line(' ', color.dim(`evidence: ${smell.evidence.slice(0, 4).join(', ')}`));
+      }
+    }
+    if (pilotLoop?.active && pilotLoop.nextPilot) {
+      const np = pilotLoop.nextPilot;
+      line(
+        warn,
+        `Next pilot (one at a time): ${np.pilotTarget || np.pilot} [${np.smellId}] → re-doctor after change`
+      );
+      line(' ', color.dim(`success: ${np.successSignal}`));
+      line(' ', color.dim('never multi-pilot batch; pattern bets are never auto-applied'));
+    }
+  }
+
+  if (options.designDelta) {
+    console.log('');
+    console.log(color.bold('Design delta (opt-in)'));
+    for (const row of designDeltaDoctorLines(options.designDelta))
+      line(row.level === 'bad' ? bad : row.level === 'ok' ? ok : ' ', row.level === 'dim' ? color.dim(row.text) : row.text);
+  }
+
+  if (goldenPattern.present) {
+    console.log('');
+    console.log(color.bold('Golden pattern (new code)'));
+    line(
+      ok,
+      `"${goldenPattern.name}" — ${goldenPattern.norm}` +
+        (goldenPattern.newCodeHome ? ` Prefer: ${goldenPattern.newCodeHome}.` : '') +
+        ' Advisory only — does not clear leftover design work or replace the gate.'
+    );
+  } else if (goldenPattern.invalid) {
+    console.log('');
+    console.log(color.bold('Golden pattern (new code)'));
+    line(
+      warn,
+      `${goldenPattern.path} is present but invalid (${goldenPattern.error || 'invalid'}). ` +
+        'Fix or remove it — absence is fine; a bad file is not guidance.'
+    );
+  }
+  if (pureLayerOptIn) {
+    line(' ', color.dim(pureLayerOptIn.message));
+  }
+
+  printDoctorAdvisories(doctorAdvisories, { line, warn, color });
+
+  console.log('');
+  console.log(color.bold('Violations'));
+  if (violations.length === 0) {
+    if (!analysisComplete) line(warn, 'No reported violations — contract compliance is not verified until analysis is complete');
+    else if (emptyScope || cov.governed.percent < 50) {
+      line(
+        warn,
+        'No active violations — coverage is still thin, so green is not yet honest enforcement'
+      );
+    } else if (designFitness.designWeak) {
+      line(warn, `None on checked imports — import rules match the config; leftover design work remains (${modeTitle}). Not healthy finished.`);
+    } else {
+      line(ok, 'None — the code matches the contract on checked edges');
+    }
+  } else {
+    const typeNote = summary.typeOnlyCount > 0 ? ` (${summary.valueCount} value · ${summary.typeOnlyCount} type-only)` : '';
+    const supNote = suppressed > 0 ? `, ${suppressed} frozen` : '';
+    line(
+      activeCount > 0 ? warn : ok,
+      `${violations.length} total${typeNote}${supNote}${activeCount > 0 ? ` — ${activeCount} NOT baselined` : ''}`
+    );
+    for (const edge of summary.edges.slice(0, 3)) line(' ', color.dim(`${edge.count}  ${edge.edge}`));
+    if (summary.concentrated) {
+      line(warn, color.dim(`${Math.round(summary.dominantShare * 100)}% on one edge (${summary.dominant}) — likely a contract fix, not debt`));
+    }
+  }
+
+  console.log('');
+  console.log(color.bold('Write path (agent)'));
+  const capabilities = writePath.capabilities;
+  const writePathLabels = {
+    repair: 'repair-capable — hard block + machine-readable autoPatch / ARK_REPAIR_JSON',
+    'reject-only': 'reject-only — hard block with prose; no repair payload',
+    'mcp-only': 'MCP tools only — prepare-write/autoPatch available; no PreToolUse hook',
+    none: 'no write gate hook and no Ark MCP',
+  };
+  const wpMark =
+    capabilities['hard-write']
+      ? ok
+      : capabilities['advisory-write'] || capabilities['merge-gate']
+        ? warn
+        : bad;
+  line(' ', `Active host: ${writePath.activeHost}`);
+  line(' ', `Supported profile: ${writePath.supportSummary}`);
+  line(wpMark, `Mode: ${writePath.mode} — ${writePathLabels[writePath.mode] || writePath.mode}`);
+  if (writePathHonesty.message) line(warn, writePathHonesty.message);
+  if (writePath.sessionNote) {
+    line(warn, writePath.sessionNote);
+  }
+  const enforcement = writePath.enforcementState;
+  for (const row of enforcementDoctorLines(enforcement)) line(row.level === 'ok' ? ok : row.level === 'bad' ? bad : warn, row.text);
+  const supportCaps = writePath.support?.capabilities || {};
+  const repairReinjection = supportCaps['repair-reinjection-guaranteed'] === true;
+  const repairEnvelope = supportCaps['repair-envelope-emitted'] === true || supportCaps['repair-payload'] === true;
+  line(
+    repairReinjection ? ok : warn,
+    repairReinjection
+      ? 'Repair: envelope + reinjection guaranteed on hard path when installed + trusted'
+      : repairEnvelope
+        ? 'Repair: envelope may emit (`--hook-repair`); reinjection not guaranteed (advisory host)'
+        : 'Repair: no hard-boundary payload'
+  );
+  if (writePath.gap) {
+    line(writePath.gap.severity === 'warn' ? warn : warn, writePath.gap.message);
+    if (writePath.gap.fix) {
+      line(' ', color.dim(`Fix: ${writePath.gap.fix}`));
+    }
+  }
+
+  console.log('');
+  console.log(color.bold('Gates & skills'));
+  if (gatesMissing.length === 0) line(ok, 'Shared gate artifacts found on disk (AGENTS.md, .mcp.json, CI); runtime activation is reported separately');
+  else {
+    line(bad, `Missing gates: ${gatesMissing.join(', ')}`);
+  }
+  const humanSkillGaps = skillGapsForActiveHost(skillGaps);
+  const legacyCodex = humanSkillGaps.some((g) => g.tool === 'codex' && g.legacyPromptsOnly);
+  const codexLegacySafeDelete = humanSkillGaps.some(
+    (g) => g.tool === 'codex' && g.legacyAdvisory && g.catalogComplete
+  );
+  const remainingGaps = humanSkillGaps.filter(
+    (g) => !(g.tool === 'codex' && (g.legacyPromptsOnly || g.legacyAdvisory))
+  );
+  const remMiss = remainingGaps.reduce((s, g) => s + g.missing, 0);
+  const remStale = remainingGaps.reduce((s, g) => s + g.stale, 0);
+  if (remMiss + remStale === 0 && !legacyCodex) line(ok, '/ark-* skills current for detected tools');
+  if (legacyCodex) {
+    line(warn, 'Codex: legacy flat .codex/prompts only (not a loadable skill catalog)');
+  }
+  if (codexLegacySafeDelete) {
+    line(
+      ' ',
+      color.dim(
+        'Codex catalog complete — leftover .codex/prompts/ark-*.md are safe to delete (not loadable; not required).'
+      )
+    );
+  }
+  if (remMiss + remStale > 0) {
+    line(
+      warn,
+      `${remMiss} missing / ${remStale} content-behind-package /ark-* skill(s) for ${remainingGaps.map((g) => g.tool).join(', ')}`
+    );
+  }
+  const codexHomeGap = detectCodexHomeGap(root);
+  if (codexHomeGap) {
+    const parts = [
+      codexHomeGap.legacyPromptsOnly ? 'legacy-prompts-only' : null,
+      codexHomeGap.missing > 0 ? `${codexHomeGap.missing} missing` : null,
+      codexHomeGap.stale > 0 ? `${codexHomeGap.stale} content-behind-package` : null, codexHomeGap.catalogStateReason,
+    ].filter(Boolean);
+    const deferred = !codexConcernIsActive();
+    if (deferred) {
+      line(color.dim('·'), color.dim(`Codex home skills ${parts.join(', ')} (deferred — not on Codex session)`));
+    } else {
+      line(warn, `Codex home skills ${parts.join(', ')}`);
+    }
+  }
+  for (const gap of agentHomeGaps) {
+    const parts = [
+      gap.missing > 0 ? `${gap.missing} missing` : null,
+      gap.stale > 0 ? `${gap.stale} content-behind-package` : null,
+      gap.catalogStateReason,
+    ].filter(Boolean);
+    const deferred = !agentHomeConcernIsActive(gap.host);
+    const summary = `${gap.label} shared agent skills ${parts.join(', ')}`;
+    if (deferred) {
+      line(color.dim('·'), color.dim(`${summary} (deferred — not this session)`));
+    } else {
+      line(warn, summary);
+    }
+  }
+
+  console.log('');
+  console.log(color.bold('Baseline'));
+  if (!baseline.exists) {
+    line(!analysisComplete || violations.length > 0 ? warn : ok, !analysisComplete ? 'No baseline — current violations were not fully evaluated' : violations.length > 0 ? 'No baseline — adopting a dirty repo? freeze with --update-baseline' : 'No baseline (nothing to freeze)');
+  } else {
+    const baseMark = !analysisComplete || baselineHonesty.dirtyBaselineRisk ? warn : ok;
+    line(baseMark, `${baseline.keys.size} frozen key(s)${analysisComplete ? '' : ' — stale comparison not verified'}`);
+    if (analysisComplete && baselineHonesty.dirtyBaselineRisk) {
+      line(warn, baselineHonesty.message);
+    }
+    if (analysisComplete && staleBaseline > 0) {
+      line(warn, `${staleBaseline} stale entr(y/ies) no longer occur — tighten with --update-baseline`);
+    }
+  }
+
+  console.log('');
+  console.log(color.bold('Command runners'));
+  if (staleRunners.length === 0) line(ok, 'Emitted commands match the package manager');
+  else {
+    line(warn, `Stale runner in ${staleRunners.join(', ')}`);
+  }
+
+  console.log('');
+  console.log(color.bold('Adoption (separate from fitness score)'));
+  if (adoption.gaps.length === 0 && !adoption.layerBalance) {
+    line(
+      ok,
+      'Hosts, MCP argv, core optionality, origin report, baseline policy, and deploy-path lint/types look complete'
+    );
+  } else {
+    for (const gap of adoption.gaps) {
+      const mark = gap.deferred
+        ? color.dim('·')
+        : gap.severity === 'warn'
+          ? warn
+          : gap.severity === 'info'
+            ? warn
+            : bad;
+      line(mark, gap.message);
+      if (gap.fix) {
+        line(' ', color.dim(gap.deferred ? `When using Codex: ${gap.fix}` : `Fix: ${gap.fix}`));
+      }
+    }
+    if (adoption.layerBalance) {
+      line(warn, color.dim(adoption.layerBalance.educational));
+    }
+  }
+  if (adoption.baseline) {
+    line(
+      ' ',
+      color.dim(
+        `Baseline policy: ${adoption.baseline.signal}` +
+          (adoption.baseline.primaryPathUsesBaseline
+            ? ' · primary path uses --baseline'
+            : ' · primary path does not use --baseline')
+      )
+    );
+  }
+  if (adoption.originReport.present) {
+    line(ok, 'Origin architecture snapshot present (.ark/reports/origin.json)');
+  }
+
+  console.log('');
+  console.log(color.bold('Safety / bypass resistance'));
+  const safety = options.safety;
+  if (!safety) {
+    line(warn, 'Safety diagnostics unavailable');
+  } else {
+    const rows = [
+      ['Non-literal dynamic dependencies', safety.nonLiteralDynamicImports],
+      ['@ts-ignore / @ts-nocheck', safety.tsSuppressions],
+      ['Explicit any casts', safety.anyCasts],
+      ['InMemory stores in production source', safety.inMemoryProductionStores],
+      ['Rules with peerIsolation: false', safety.disabledPeerIsolationRules],
+    ];
+    for (const [label, entries] of rows) {
+      line(entries.length === 0 ? ok : warn, `${label}: ${entries.length}`);
+    }
   }
 
 }

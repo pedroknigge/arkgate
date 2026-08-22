@@ -1339,6 +1339,11 @@ async function main() {
       console.log('✔ Ark check passed (no governed source or constitution files in the diff).');
     } else {
       console.error(preflight.halt.message);
+      const blocking = policyDelta?.findings?.find(
+        (finding) =>
+          finding.classification === 'weakening' || finding.classification === 'judgment-required'
+      );
+      if (blocking?.nextAction) console.error(`Next: ${blocking.nextAction}`);
     }
     process.exitCode = preflight.halt.exitCode;
     return;
