@@ -60,6 +60,7 @@ import {
 } from './golden-pattern.mjs';
 import { summarizePilotLoop } from './pilot-loop.mjs';
 import { computeDoctorAdvisories } from './doctor-advisories.mjs';
+import { printParseHealthSection } from './parse-health.mjs';
 import { ANALYSIS_COMPLETENESS, analysisIncompleteStatement, normalizeAnalysisCompleteness } from './analysis-completeness.mjs';
 import { buildDoctorImprovementCompass } from './improvement-compass-doctor.mjs';
 import { buildDeepModuleCoachAdvisory } from './deep-module-coach.mjs';
@@ -861,6 +862,7 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
   const line = (mark, text) => console.log(`  ${mark} ${text}`);
   console.log(color.bold(`Ark doctor — ${path.basename(path.resolve(root)) || '.'}`));
   if (!analysisComplete) line(warn, analysisIncompleteStatement(completeness));
+  printParseHealthSection(doctorAdvisories.parseHealth, { color, warn, line });
 
   const emptyScope = emptyScopeEarly;
   const mode = operatingMode;
