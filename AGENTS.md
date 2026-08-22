@@ -45,7 +45,7 @@ not every historical file:
 | Brownfield and enthusiast track | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) · [docs/enthusiast/](docs/enthusiast/README.md) |
 | Security | [SECURITY.md](SECURITY.md) · [docs/threat-model.md](docs/threat-model.md) |
 | Decisions | [docs/adr/](docs/adr/README.md) |
-| Implementation queue | [ROADMAP.md](ROADMAP.md) |
+| Implementation queue | [ROADMAP.md](ROADMAP.md) (live) · [archive](docs/archive/roadmap-history.md) |
 | Releases (current / last published) | [CHANGELOG.md](CHANGELOG.md) · [4.6.5](docs/releases/4.6.5.md) (current) · [4.6.4](docs/releases/4.6.4.md) (published) · [4.6.3](docs/releases/4.6.3.md) (published) · [4.6.2](docs/releases/4.6.2.md) · [4.6.1](docs/releases/4.6.1.md) · [4.6.0](docs/releases/4.6.0.md) · [4.5.7](docs/releases/4.5.7.md) · [4.5.6](docs/releases/4.5.6.md) · [4.5.5](docs/releases/4.5.5.md) · [4.5.0](docs/releases/4.5.0.md) · [4.4.0](docs/releases/4.4.0.md) · [4.3.0](docs/releases/4.3.0.md) |
 | History / maintainer evidence | [docs/archive/](docs/archive/README.md) · [docs/plans/](docs/plans/) · [docs/field/](docs/field/) · [docs/audit/](docs/audit/claims-matrix.md) |
 
@@ -175,7 +175,7 @@ retained shipped rationale live under `docs/plans/`:
 | [understandable-ark-4.6](docs/plans/understandable-ark-4.6/README.md) | Shipped in **4.6.0** (`PL01`–`PL09` done; **published**) | Plain-language product surfaces + shared Claude/Grok home skills (Codex ratchet); former 4.5.8 HS absorbed |
 | [five-door-autonomy](docs/plans/five-door-autonomy/README.md) | Shipped in **4.6.1** (`SK01`–`SK07` done; **published**) | Five doors (adopt / place / autopilot / explore / upgrade) write or map in-turn; CLI is sensor + gate; other names stay as shortcuts |
 | [team-parliament](docs/plans/team-parliament/README.md) | Shipped in **4.6.1** (`TW01`–`TW08` done) | Law vs feature: stewards, mixed-PR deny, ratchet vs base branch, cheap `--changed` check; doctor asks for stewards or shows list drift; identity is GitHub handle or email |
-| [alive-in-six-months](docs/plans/alive-in-six-months/README.md) | In progress (Phase AL; `AL01`–`AL04` implemented; `AL05` parked field) | Corrective honesty + field: D0 adopted, Propia created-path merge, stewards-or-adapt, first-run noun cut; does not close Z09 |
+| [alive-in-six-months](docs/plans/alive-in-six-months/README.md) | `AL01`–`AL04` done on `main` (#147); `AL05` parked field | Corrective honesty + field: D0 adopted, Propia created-path merge, stewards-or-adapt, first-run noun cut; does not close Z09 |
 | [shared-home-skills-truth](docs/plans/shared-home-skills-truth/README.md) | Superseded (absorbed into 4.6.0 PL06–PL07) | Historical seed only — do not run as a separate 4.5.8 patch train |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in
