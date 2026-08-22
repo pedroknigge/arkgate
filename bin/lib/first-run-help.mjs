@@ -5,14 +5,11 @@
 export function setupUsage() {
   return `arkgate (alias ark) — One architecture config. One check. One coach.
 
-  arkgate start              preview what will change (no writes)
-  arkgate start --apply      write the compact contract + host router + CI
-  arkgate-check --doctor     status light + primary next action
+  arkgate start              preview (no writes)
+  arkgate start --apply      write host + CI setup
+  arkgate-check --doctor     where you are + one next action
 
-Then session 0 in your agent: /ark-adopt
 Stuck? Run doctor. Do #1.
-
-More commands and flags: arkgate --help --all
 `;
 }
 
@@ -183,6 +180,10 @@ export function checkUsageAll() {
     'transition. Weakening or judgment-required findings fail unless --policy-ack names',
     'every finding and is bound to both policy hashes. Use --policy-base/--policy-base-ref',
     'for an explicit comparison; ARK_POLICY_BASE_REF is the CI environment equivalent.',
+    'The same merge profile blocks new UI business-rule files (domain-logic-in-ui) created',
+    'versus that base; leftover design on existing files stays green. Missing base skips',
+    'this check (does not exit 2). --fail-on-new-smells --base-ref remains the full',
+    'new+worsened-on-touched-paths ratchet.',
     'Add --require-write-hook claude|grok|antigravity|cursor|codex to validate a hard local',
     'write boundary for that specific host. Codex covers complete local apply_patch only;',
     'hosted/specialized/direct-write paths and OpenCode remain CI-backed. Merge blocking requires',

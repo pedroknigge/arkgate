@@ -42,7 +42,7 @@ function repositoryRoot(root) {
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
-function discoverLocalBaseRef(root) {
+export function discoverLocalBaseRef(root) {
   const top = repositoryRoot(root);
   if (!top) return null;
   const remoteHead = runGit(top, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']);

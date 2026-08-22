@@ -242,9 +242,15 @@ export function resolveStatusNextAction(facts, binding, activation, lastCheck, r
             summary: 'ArkRules residual remains frozen — review inventory debt without claiming a score.',
         };
     }
+    if (facts.adopted === 'required-merge' || facts.adopted === 'advisory-only-acked') {
+        return {
+            id: 'stay-enforced',
+            summary: 'Contract looks enforceable for this session — keep writing through the gate and re-check after structural edits.',
+        };
+    }
     return {
-        id: 'stay-enforced',
-        summary: 'Contract looks enforceable for this session — keep writing through the gate and re-check after structural edits.',
+        id: 'require-ci-merge-status',
+        summary: 'Make arkgate-check --strict-merge a required GitHub status, or write .ark/adoption-stance.json with stance: "advisory-only".',
     };
 }
 export function buildStatusManifest(facts) {

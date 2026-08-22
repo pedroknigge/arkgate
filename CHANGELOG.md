@@ -5,6 +5,38 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Changed
+
+- **D0 adopted (AL01):** a tree is adopted only when a required GitHub status runs
+  `arkgate-check --strict-merge`, or `.ark/adoption-stance.json` records explicit
+  `stance: "advisory-only"`. Doctor / start / status no longer sound like success from
+  `AGENTS.md` or a workflow file alone. `operatingMode: enforce` stays contract-fit
+  (`ok` / `goal.met` / `--strict-merge` unchanged). Does not close Z09.
+
+- **`--strict-merge` / `--strict` created-path design delta (AL02):** the advertised merge
+  command now evaluates `domain-logic-in-ui` for **created** files versus the Git merge
+  base (`--base-ref`, then `ARK_POLICY_BASE_REF`, then `origin/$GITHUB_BASE_REF`, then
+  local discovery). Historical residual and a stronger rule in an **existing** UI file
+  stay green. Missing base skips the check (does not exit 2), matching Action first-push
+  / EH04. `--fail-on-new-smells --base-ref` remains the full new+worsened-on-touched-paths
+  ratchet (Z10 unchanged). The GitHub Action needs no extra flags: `--strict` inherits
+  `ARK_POLICY_BASE_REF`. **No required config migration.**
+
+- **Stewards or Adapt (AL03):** empty `stewards[]` cannot print Healthy ENFORCE (doctor
+  unfinished residual `empty-stewards`; `operatingMode` stays `enforce`). T4 weakening
+  and T5 `--update-baseline` require `--contract-session` even with an empty list;
+  `--policy-ack` remains the hash tooth. `--force` does not skip the session. Does not
+  flip all `--strict-merge` to team preflight when the list is empty (T4 session-on-weakening
+  plus `evaluateTeamGate` on `--changed` / `--contract-diff`). No IAM. Does not close Z09.
+
+- **First-run noun cut (AL04):** `ark start --help`, `ark start` preview, and the first
+  doctor screen each stay at **≤12** product nouns. Compass and deep-module coach stay in
+  JSON and drop from human output. No new skill names, scores, or LLM verdicts. Does not
+  close Z09.
+
+- **Queued (not shipped):** Phase AL — Alive in six months (corrective honesty + field).
+  AL01–AL04 implemented in this working tree. AL05 parked. Does not close Z09.
+
 ## 4.6.5 — 2026-08-19
 
 **Patch** over **4.6.4**. Adoption, placement, doctor, upgrade, and write-path honesty for

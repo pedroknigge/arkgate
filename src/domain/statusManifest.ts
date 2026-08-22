@@ -180,6 +180,11 @@ export type StatusManifestFacts = {
   /** Optional override when Tooling already computed productHonesty next action. */
   nextActionOverride?: StatusNextAction | null;
   /**
+   * D0 adopted: required-merge | advisory-only-acked | not-adopted.
+   * Tooling classifies; Domain never reads the filesystem.
+   */
+  adopted?: 'required-merge' | 'advisory-only-acked' | 'not-adopted' | null;
+  /**
    * Leftover design work remains (import rules may be clean). Not a score.
    * When true, nextAction must not be stay-enforced.
    */
@@ -444,9 +449,16 @@ export function resolveStatusNextAction(
       summary: 'ArkRules residual remains frozen — review inventory debt without claiming a score.',
     };
   }
+  if (facts.adopted === 'required-merge' || facts.adopted === 'advisory-only-acked') {
+    return {
+      id: 'stay-enforced',
+      summary: 'Contract looks enforceable for this session — keep writing through the gate and re-check after structural edits.',
+    };
+  }
   return {
-    id: 'stay-enforced',
-    summary: 'Contract looks enforceable for this session — keep writing through the gate and re-check after structural edits.',
+    id: 'require-ci-merge-status',
+    summary:
+      'Make arkgate-check --strict-merge a required GitHub status, or write .ark/adoption-stance.json with stance: "advisory-only".',
   };
 }
 

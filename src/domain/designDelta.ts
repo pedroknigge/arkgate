@@ -40,6 +40,9 @@ export type DesignDeltaChange = DesignSmellFinding & {
   candidateMagnitude: number;
 };
 
+/** Created-path merge vs full new+worsened ratchet (Z10). Omitted on older producers. */
+export type DesignDeltaEnforcementScope = 'created-paths' | 'touched-new-or-worsened';
+
 export type ArkDesignDeltaResult = {
   schemaVersion: typeof ARK_DESIGN_DELTA_SCHEMA_VERSION;
   mode: 'git-base' | 'write-candidate';
@@ -53,5 +56,6 @@ export type ArkDesignDeltaResult = {
   baseFindingCount: number;
   candidateFindingCount: number;
   historicalResidualCount: number;
+  enforcementScope?: DesignDeltaEnforcementScope;
   error?: string;
 };

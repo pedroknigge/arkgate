@@ -30,8 +30,8 @@ infrastructure beyond how this package is published.
 | T1 | Agent bypasses hook (direct `fs` / alternate tool) | Ungoverned code lands | CI gate; optional pre-commit (Q3); doctor ladder never upgrades installed files to active/hard proof |
 | T2 | Human commits without agent path | Same as T1 | `templates/hooks/pre-commit-ark`; branch protection + required check (Q3 external) |
 | T3 | CI job missing / not required | Merge green without architecture | doctor `enforcement-ci-*` gaps; `--strict-merge`; required-status remains locally `unverified` |
-| T4 | Config weakened (`peerIsolation: false`, empty rules) | False green | semantic policy-delta guard in strict merge; hash-bound explicit acknowledgement; present-state safety diagnostics |
-| T5 | Baseline ratcheted open | Debt reintroduced | baseline unused/stale signals; occurrence keys |
+| T4 | Config weakened (`peerIsolation: false`, empty rules) | False green | semantic policy-delta guard in strict merge; hash-bound `--policy-ack`; `--contract-session` required even when `stewards[]` is empty; present-state safety diagnostics |
+| T5 | Baseline ratcheted open | Debt reintroduced | `--update-baseline` requires `--contract-session` even with an empty steward list (`--force` is concentration, not parliament); unused/stale signals; occurrence keys |
 | T6 | Stale MCP/global CLI or wrong root | Gate points at old package / wrong tree | project identity binding; stale process non-authoritative + `PROCESS_PACKAGE_STALE`; project-local upgrade handoff |
 | T7 | Malicious dependency in publish | Compromised gate | signed tags, npm provenance, dependency-review, CodeQL, Semgrep, `verify-package-files` |
 | T8 | Path traversal in hooks/check | Read/write outside project | root resolution + under-root import resolve |

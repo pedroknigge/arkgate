@@ -694,11 +694,13 @@ async function start(args) {
     // Modes are detected (Suggest/Adapt/Enforce), not user-picked settings.
     // Soft-block false-green using the same doctor adoption gap (no second detector).
     let falseGreenGap = null;
+    let adopted = null;
     try {
       const doc = JSON.parse(doctorCapture.stdout || '{}');
       falseGreenGap = (doc.doctor?.adoption?.gaps ?? []).find(
         (g) => g?.id === FALSE_GREEN_GAP_ID
       );
+      adopted = doc.doctor?.adoptionStance ?? null;
     } catch {
       falseGreenGap = null;
     }
@@ -714,9 +716,17 @@ async function start(args) {
       console.log(`  • ${falseGreenGap.message}`);
       console.log(`  • Next: ${falseGreenGap.fix}`);
     } else if (mode === 'enforce' && planOk) {
-      console.log('Done — status: ENFORCE (gates can honestly protect you).');
-      console.log('What happens now:');
-      console.log('  • Every edit is checked (in CI and, if wired, at write time).');
+      if (adopted === 'required-merge' || adopted === 'advisory-only-acked') {
+        console.log('Done — status: ENFORCE (gates can honestly protect you).');
+        console.log('What happens now:');
+        console.log('  • Every edit is checked (in CI and, if wired, at write time).');
+      } else {
+        console.log('Done — status: ENFORCE (contract edges clean; merge boundary not adopted).');
+        console.log('What happens now:');
+        console.log(
+          '  • CI workflow written; make the GitHub status required on arkgate-check --strict-merge, or write .ark/adoption-stance.json with stance: "advisory-only".'
+        );
+      }
     } else if (mode === 'suggest') {
       console.log('Done — status: SUGGEST (starting shape installed; expand as you grow).');
       console.log('What happens now:');

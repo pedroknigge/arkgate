@@ -313,17 +313,25 @@ function deepModuleCoachHtml(coach) {
 
 function stewardNudgeHtml(nudge) {
   if (!nudge || nudge.notAScore !== true) return '';
+  const unfinished = Boolean(
+    nudge.emptyStewardsPastGrace || (nudge.needsStewards && (nudge.stewardCount ?? 0) === 0)
+  );
   const ask =
-    (nudge.needsStewards || nudge.drift) && typeof nudge.ask === 'string' && nudge.ask
+    (nudge.needsStewards || nudge.drift || nudge.emptyStewardsPastGrace) &&
+    typeof nudge.ask === 'string' &&
+    nudge.ask
       ? `<p>${esc(nudge.ask)}</p>`
       : '<p class="muted">No steward list gap (advisory).</p>';
   const next =
     typeof nudge.nextAction === 'string' && nudge.nextAction
       ? `<p class="muted">Next: ${esc(nudge.nextAction)}</p>`
       : '';
+  const qualifier = unfinished
+    ? '(unfinished residual — changes finished, not check valid)'
+    : '(advisory — never changes the check valid bit)';
   return `
   <section class="section card" data-advisory="stewardNudge">
-    <h2>Stewards <span class="muted">(advisory — never changes the verdict)</span></h2>
+    <h2>Stewards <span class="muted">${qualifier}</span></h2>
     ${ask}
     ${next}
     <p class="muted">GitHub handle or email. Never invent names. Always <code>notAScore</code>.</p>

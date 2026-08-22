@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-19 (Phase CX follow-up shipped as **arkgate@4.6.5**; **4.6.3** was last npm `latest` before this train)
+- **Status date:** 2026-08-22 (Phase AL queued — **AL01 doing**; CX03 `done` in published **arkgate@4.6.5** from #145; Z09 still parked)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -1520,7 +1520,7 @@ Boundary (freezes held):
 |---:|---|---|---:|---|---|
 | 176 | `CX01` | `done` | M | FC02 + 4.6.2 published | Accept the official Codex payload, promote covered `apply_patch` to runtime-proven hard write, align doctor/status/install/docs, and publish npm/MCP 4.6.3 |
 | 177 | `CX02` | `done` | M | CX01 + 4.6.3 published | Make `ark upgrade` explicitly tell Codex users to refresh/trust/restart the hook; fail stale MCP closed; hand stale global upgrade to project-local CLI; 4.6.4 published, then 4.6.5 |
-| 178 | `CX03` | `doing` | M | CX02 | Ship 4.6.5: adopt SharedKernel/CompositionRoot (no `src/lib/**` vacuum), place fail-closed, reserved empty globs, doctor envelope, writePath/CI honesty file, hosts-keep upgrade, CLAUDE.md projection, proportional graph scan |
+| 178 | `CX03` | `done` | M | CX02 | Ship 4.6.5: adopt SharedKernel/CompositionRoot (no `src/lib/**` vacuum), place fail-closed, reserved empty globs, doctor envelope, writePath/CI honesty file, hosts-keep upgrade, CLAUDE.md projection, proportional graph scan |
 
 **CX01 acceptance:** current official `tool_input.command` fixture denies before disk mutation;
 legacy patch fixture stays compatible; incomplete/specialized paths never claim hard; installed
@@ -1536,6 +1536,70 @@ stable `codex-hard-write` card with the exact refresh command, restart/trust req
 runtime-observed `apply_patch` verification, and CI residual; flat + Agent Skills upgrade guidance
 matches; stale MCP cannot return authoritative project evidence; modern stale global upgrade
 hands off without duplicate JSON; 4.6.4 npm/MCP/site and public pointers publish together.
+
+**CX03 evidence:** `done` — published **arkgate@4.6.5** from PR
+[#145](https://github.com/pedroknigge/arkgate/pull/145) (squash `7166976`, merged 2026-08-19).
+The `doing` row was stale after publish. See [docs/releases/4.6.5.md](docs/releases/4.6.5.md).
+
+### Phase AL — Alive in six months
+
+Origin: 2026-08-22 premortem (PR #146, **not** on `main`) plus four scout briefs — D0 adopted,
+Propia created-path, Stewards or Adapt, first-run noun cut. This is **corrective honesty +
+field**, not a feature train. Narrative scope, acceptance, and kill switches:
+[docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/README.md).
+
+**Does not close `Z09` / residual `RB-11`.** ≥8 consented adopters remains the close threshold.
+Do not invent adopter counts. Do not retcon Z10 to `todo`. Do not reopen CX03.
+
+Boundary (freezes held):
+
+- Keep `operatingMode` as **contract-fit**. Do not flip envelope `ok`, `goal.met`, or `valid`
+  for adoption stance or empty stewards. Do not flip `operatingMode` to `adapt` for empty
+  `stewards[]`.
+- `--strict-merge` created-path delta: new UI `domain-logic-in-ui` vs merge-base only; skip
+  missing base (no exit 2); do not fail historical residual or worsened-in-existing-file.
+- No new skill names; no scores; no LLM package verdict; no org IAM.
+- **30-day freeze (from 2026-08-22):** no explore / compass / skill-body deepen as `doing`.
+  AL04 may hide first-run human compass/coach sections; it may not add lenses or skill names.
+- **Cadence (owner 2026-08-22):** patch `latest` may ship fast; space **4.7 / 4.8 / 5**.
+  Cursor and Codex stay PreToolUse-enforced. OpenCode remains unknown / not claimed hard.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 179 | `AL01` | `doing` | M | CX03 | D0 adopted: required GitHub `--strict-merge` status **or** explicit `.ark/adoption-stance.json` `stance: advisory-only`; doctor must not sound like success without that; fix ci-merge-boundary writer wiring |
+| 180 | `AL02` | `todo` | M | CX03 | Propia created-path: `--strict-merge` evaluates new UI `domain-logic-in-ui` vs merge-base; skip missing base (no exit 2); do not fail historical residual or worsened-in-existing-file; do not reopen Z10 |
+| 181 | `AL03` | `done` | M | CX03 | Stewards or Adapt (TW09-shaped): empty `stewards[]` cannot print Healthy ENFORCE; T4/T5 require `--contract-session` even with empty list; do not flip `operatingMode` to adapt |
+| 182 | `AL04` | `done` | M | CX03 | First-run noun cut: start help/preview and doctor first screen ≤12 product nouns; hide compass/coach human sections (JSON stays); no new skill names |
+| 183 | `AL05` | `parked` | S | gate: required-status possible (GitHub Pro or public) + 3 partners | Desktop inventory 2026-08-22 exists; private Free repos 403 on branch protection. Does **not** close Z09 |
+
+**Preferred order:** AL01 → AL02 → AL03 → AL04. One `doing` at a time. `AL05` stays parked
+until real required-status partners exist.
+
+**AL01 — D0 adopted (required status or advisory-only ack)**
+
+- **Status:** `doing` (implemented in this working tree; not merged — common merge gate still required)
+- **Depends on:** CX03 done (4.6.5 published)
+
+**Outcome:** a tree is adopted iff a required GitHub status runs `arkgate-check --strict-merge`
+or `.ark/adoption-stance.json` records explicit `stance: "advisory-only"`. Without that, doctor
+/ start wrap-up / status must not sound like success. `operatingMode: enforce` remains
+contract-fit. Fix `runDoctor` so `writeCiMergeBoundary` receives real GitHub/ciMerge evidence
+(`adoption.enforcement?.github` or mapped `ciMerge.required`), not `deployPath.github`.
+
+**Acceptance:** see plan A1. Failing-test plan in the D0 scout (`d0AdoptedStance.test.ts` plus
+pinned Healthy / `finished` / `stay-enforced` / wiring cases). Do not auto-write the stance
+file from `ark start`. Do not query GitHub by default in a way that fail-closes to proven-not-required.
+
+**AL03 — Stewards or Adapt (TW09-shaped honesty)**
+
+- **Status:** `done` (implementation in this working tree)
+- **Choice:** do **not** flip `teamCheckRequested` for all `--strict-merge` when `stewards` is empty
+  (keeps tighten-only empty-list CI unlocked). T4 is session-on-weakening after
+  `analyzePolicyTransition`; `evaluateTeamGate` covers `--changed` / `--contract-diff` /
+  `--contract-session`. `--update-baseline` is now a teamCheckRequested bit plus a write-time
+  session tooth. `--force` does not skip session.
+
+**AL02–AL04** are implemented in this working tree (AL02 still `todo` in the table until AL01 lands; AL03/AL04 table `done` is local only until a PR is green). **AL05** is parked field (Pedro). Details in the plan.
 
 ### Phase TW — Team parliament (law vs feature)
 
@@ -4029,14 +4093,16 @@ folded into Phase C implementation work.
 ## Next implementation session
 
 ```text
-Engineering doing: (none — 4.6.2 published)
-  Epic: —
-  Queue: idle
-  Closed last: FC02 publish npm/MCP + docs flip + site 4.6.2
-  Next: (none queued)
-Released baseline: npm arkgate@4.6.2 on latest (gitHead 7aabe4a; tag v4.6.2; 2026-08-16)
-  Notes: docs/releases/4.6.2.md — Status: published
-  Prior: 4.6.1 / 4.6.0 / 4.5.7 / 4.5.6 / 4.5.5 / 4.5.0 / 4.4.0 / 4.3.0 / 4.2.1 / 4.2.0 as in docs/releases/
+Engineering doing: AL04 closed this dispatch (first-run noun cut)
+  Epic: Phase AL — Alive in six months (corrective honesty + field, not a feature train)
+  Queue: AL01 implemented → AL02 implemented → AL03 done → AL04 done; AL05 parked (Pedro field)
+  Closed last: AL04 (start help/preview + doctor first screen ≤12 nouns; compass/coach JSON stay)
+  Next: AL05 parked field (Pedro). Z09 stays parked.
+Released baseline: npm arkgate@4.6.5 on latest (PR #145 squash 7166976; tag v4.6.5; 2026-08-19)
+  Notes: docs/releases/4.6.5.md — Status: current
+  Prior: 4.6.4 / 4.6.3 / 4.6.2 / 4.6.1 / 4.6.0 / 4.5.7 / 4.5.6 / 4.5.5 / 4.5.0 / 4.4.0 / 4.3.0 as in docs/releases/
+Phase AL freeze (30 days from 2026-08-22): no explore / compass / skill-body deepen as doing;
+  patch latest may be fast; space 4.7 / 4.8 / 5; Cursor+Codex stay hard PreToolUse; OpenCode unknown
 Phase SK freezes (held): 13 skill names; invoke = license; no silent compact-router reshape;
   no scores; no LLM package verdict; no new sensors
 Phase PL freezes (held): common words first; no scores; 13 skill names;
@@ -4047,5 +4113,5 @@ Phase FX freezes (held): no silent multi-project MCP retarget; soft hosts stay a
 Phase DC freezes (held): no depth/principle scores; coach/compass notAScore; never flip gates
 Phase DF hard lines (held): TARGET LEVEL 4 hybrid; honesty modes never invent green;
   no runtime productization; no false hard write on soft hosts
-Claim gate: Z09 (parked) — residual RB-11 only
+Claim gate: Z09 (parked) — residual RB-11 only; AL05 (3 design partners) does not close Z09 (≥8 remains)
 ```

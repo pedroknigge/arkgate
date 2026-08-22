@@ -81,7 +81,10 @@ bypassable/advisory because some Code Mode paths do not dispatch the project hoo
 **Design fitness (3.0.1+):** the same doctor JSON may include `doctor.designFitness` and
 `doctor.designSmells[]` (path evidence). Edge-clean `operatingMode: enforce` can still set
 `designFitness.designWeak: true` (**ENFORCE · design-weak**). That global inventory remains Shape
-residual, not a write-path failure. Separately, Z10's opt-in design delta blocks only new/worsened
+residual, not a write-path failure. Required `arkgate-check --strict-merge` also evaluates
+created-path `domain-logic-in-ui` when a merge base exists (Action inherits via `--strict` and
+`ARK_POLICY_BASE_REF`; missing base skips, does not exit 2). Leftover design on existing files
+stays Shape residual. Z10's opt-in `--fail-on-new-smells --base-ref` still blocks new/worsened
 supported smells on touched paths. Companion plan JSON: `plan.patternBets[]` with `neverMechanicalSafe: true`
 — never treat as write-boundary `autoPatch` / mechanical-safe. See
 [package-surface.md](package-surface.md) and [brownfield-adoption.md](brownfield-adoption.md) §6.
@@ -739,10 +742,14 @@ Whatever the agent side does, run the merge profile in CI:
     fi
 ```
 
-This explicit brownfield ratchet records schema `1.0` identities, touched paths, and stable
-evidence; missing base with `--fail-on-new-smells` exits `2`, so the generated workflow skips the
-delta when the SHA is all-zero or unresolvable while keeping the full merge gate. Its first
-semantic smell is `domain-logic-in-ui`; residual, path-only moves, and unrelated work stay green.
+The required status command is `arkgate-check --strict-merge` (alias `--strict`): import edges
+plus created-path `domain-logic-in-ui` when a Git base exists. The composite Action already runs
+`--strict` and exports `ARK_POLICY_BASE_REF`; it needs no extra flags. Generated CI still adds
+`--fail-on-new-smells --base-ref` when the SHA is resolvable (stricter than created-path).
+Missing base with `--fail-on-new-smells` exits `2`, so the generated workflow skips the full
+ratchet on first-push all-zero / unresolvable SHA while keeping `--strict-merge` (created-path
+also skips when the base is missing). Residual, path-only moves, unrelated work, and worsened
+rules in existing files stay green on the merge command.
 Generated Claude/Grok hooks share the delta and golden-pattern repair hint. MCP exposes the result
 but stays advisory.
 

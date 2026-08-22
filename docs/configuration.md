@@ -248,6 +248,14 @@ Optional `stewards` lists **GitHub handles or emails** who may **loosen** the co
 matches `--author`, then `GITHUB_ACTOR` / `ARK_STEWARD`, then `GIT_AUTHOR_EMAIL`. A
 noreply GitHub mail and the handle are the same person. Git `user.name` is not identity.
 
+`--contract-session` is required to loosen the contract (T4) or grow the baseline
+(`--update-baseline`, T5) **even when `stewards` is empty**. `--policy-ack` remains the
+hash tooth on a weakening; session is the change-type tooth. An empty list cannot print
+Healthy ENFORCE: doctor treats it as unfinished residual (`empty-stewards`) after a
+30-day grace from the git first-add of `ark.config.json`, or immediately when that age
+is unknown. `operatingMode` stays `enforce` (contract-fit). `/ark-adopt` asks; it does
+not invent names.
+
 Doctor detects several recent authors or a CODEOWNERS file (`doctor.stewardNudge`).
 When `stewards` is empty it **asks** who owns the law and proposes handles or emails.
 When the list exists but CODEOWNERS is ahead, or you started with one steward and git
@@ -266,7 +274,7 @@ type than product source:
 | `ark-check --changed --base origin/dev` | Layer check on touched sources only. A CSS/i18n PR pays almost nothing. |
 | `ark-check --against origin/dev` | New violation keys vs **that ref's** baseline (not only HEAD). |
 | `ark-check --contract-diff --base origin/dev` | Classifies tighten / loosen / reclassify / baseline-grow. |
-| `--contract-session --author <id>` | Law-only PR. Mixed law+product still fails. Loosen/grow need a listed steward. |
+| `--contract-session --author <id>` | Law-only PR. Mixed law+product still fails. Loosen/grow need a session even with an empty `stewards[]`; a non-empty list also needs a matching listed author. |
 | `--persona touch\|contributor\|agent\|steward` | Budget presets for the same teeth. |
 | `ark status --vs origin/dev` | One line: pin / contract / baseline drift vs that ref. |
 

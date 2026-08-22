@@ -39,10 +39,11 @@ describe('buildPostGreenNextAction (shipped helper)', () => {
     expect(action!.primary).toBe(true);
     expect(action!.skill).toBe(POST_GREEN_PRIMARY_SKILL);
     expect(action!.action).toBe(POST_GREEN_PRIMARY_ACTION);
-    expect(action!.action).toMatch(/leftover design|Imports check out|Shape residual/i);
-    expect(action!.action).toMatch(/\/ark-explore shape-focus/);
+    expect(action!.action).toMatch(/leftover design|Imports check out|messy/i);
+    expect(action!.action).toMatch(/\/ark-explore/);
+    expect(action!.action).not.toMatch(/shape-focus|plan B|pattern bets/i);
     expect(action!.action).toMatch(/\/ark-autopilot/);
-    expect(action!.action).toMatch(/never auto-applied|never mechanical-safe/i);
+    expect(action!.action).toMatch(/your OK/i);
     expect(action!.neverMechanicalSafe).toBe(true);
     expect(action!.healthyFinishedForbidden).toBe(true);
   });
@@ -64,8 +65,12 @@ describe('buildPostGreenNextAction (shipped helper)', () => {
 
   it('isDoctorHealthyNothingToDo is false when design-weak', () => {
     expect(isDoctorHealthyNothingToDo({ designWeak: true }, [])).toBe(false);
-    expect(isDoctorHealthyNothingToDo({ designWeak: false }, [])).toBe(true);
-    expect(isDoctorHealthyNothingToDo({ designWeak: false }, ['do something'])).toBe(false);
+    expect(isDoctorHealthyNothingToDo({ designWeak: false }, [])).toBe(false);
+    expect(isDoctorHealthyNothingToDo({ designWeak: false }, [], 'required-merge')).toBe(true);
+    expect(isDoctorHealthyNothingToDo({ designWeak: false }, [], 'advisory-only-acked')).toBe(false);
+    expect(isDoctorHealthyNothingToDo({ designWeak: false }, ['do something'], 'required-merge')).toBe(
+      false
+    );
   });
 });
 
@@ -88,12 +93,12 @@ describe('doctor JSON postGreenPath on design-weak fixture', () => {
     expect(payload.doctor.violations.active).toBe(0);
     expect(payload.doctor.postGreenPath).toBeTruthy();
     expect(payload.doctor.postGreenPath.id).toBe(POST_GREEN_PATH_ID);
-    expect(payload.doctor.primaryNextAction).toBe(POST_GREEN_PRIMARY_ACTION);
+    expect(payload.doctor.adoptionStance).toBe('not-adopted');
+    expect(payload.doctor.primaryNextAction).toMatch(/required GitHub status|adoption-stance/i);
     expect(payload.doctor.healthyFinishedForbidden).toBe(true);
-    expect(payload.doctor.primaryNextAction).toMatch(/\/ark-explore/);
-    // Single door: primary action is not a pure choice menu of three skills
-    expect(payload.doctor.primaryNextAction).not.toMatch(/\/ark-coverage/);
-    expect(payload.doctor.primaryNextAction).not.toMatch(/\/ark-think/);
+    expect(payload.doctor.postGreenPath.action).toMatch(/\/ark-explore/);
+    expect(payload.doctor.postGreenPath.action).not.toMatch(/\/ark-coverage/);
+    expect(payload.doctor.postGreenPath.action).not.toMatch(/\/ark-think/);
 
     const honesty = assertNotHealthyFinishedIgnoringDesign(payload.doctor);
     expect(honesty.ok).toBe(false);
@@ -115,16 +120,16 @@ describe('doctor JSON postGreenPath on design-weak fixture', () => {
     const text = logs.join('\n');
     expect(text).not.toMatch(/✔ Healthy — nothing to do/);
     expect(text).toMatch(/Primary next action/);
-    expect(text).toMatch(/leftover design|Imports check out.*\/ark-explore shape-focus|\/ark-explore shape-focus/s);
-    // First numbered action should be the post-green door
+    expect(text).toMatch(/leftover design|Imports check out.*\/ark-explore|\/ark-explore/s);
+    expect(text).not.toMatch(/shape-focus|plan B|pattern bets|Shape door|skill-shop/i);
+    // First numbered action is D0 merge-boundary until adopted; Shape residual still listed.
     const topBlock = text.split('Primary next action')[1] || '';
     const firstLine = topBlock
       .split('\n')
       .map((l) => l.trim())
       .find((l) => /^1\./.test(l));
     expect(firstLine).toBeTruthy();
-    expect(firstLine).toMatch(/\/ark-explore shape-focus/);
-    expect(firstLine).toMatch(/\/ark-autopilot/);
+    expect(firstLine).toMatch(/required GitHub status|adoption-stance/i);
     // modeTitle alone labels the light — body must not re-prefix the same name
     expect(text).not.toMatch(/ENFORCE · leftover design work — Enforce · leftover design work/i);
     expect(text).not.toMatch(/ENFORCE · design-weak — Enforce · design-weak/i);

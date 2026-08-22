@@ -110,7 +110,7 @@ export function baselineSignalHint(signal) {
 export function modeBadgeHint(mode) {
   switch (String(mode || '').toLowerCase()) {
     case 'enforce':
-      return 'Contract matches the tree: cores are required where populated, coverage is honest, gates can hold the line.';
+      return 'Contract matches the tree on checked import edges. Required GitHub status (or an advisory-only ack) is what adopts the merge boundary.';
     case 'adapt':
       return 'Contract is live but still aligning (optional cores with files, empty cores, or presentation-bag false green).';
     case 'suggest':
@@ -255,7 +255,7 @@ export function computeReportFitness({ coverage, violations, ok, enforcement, co
   const modeBlurb = {
     suggest: 'Starter shape — expand layers as the codebase grows.',
     adapt: 'Contract is live; raise governed coverage or match real folders.',
-    enforce: 'Contract governs the tree. Gates can honestly hold the line.',
+    enforce: 'Contract matches the tree on checked import edges. Merge is adopted only with a required GitHub status or an advisory-only ack.',
   }[mode];
   const scoreCoverage = governedPercent == null ? 50 : governedPercent;
   const scoreClean =

@@ -208,8 +208,18 @@ export function analyzeDesignFindings({ root, config, records, ts, goldenPattern
   return findings.sort((a, b) => a.identity.localeCompare(b.identity));
 }
 
-function compareFindings({ mode, baseIdentity, candidateIdentity, touchedPaths, baseFindings, candidateFindings }) {
+function compareFindings({
+  mode,
+  baseIdentity,
+  candidateIdentity,
+  touchedPaths,
+  baseFindings,
+  candidateFindings,
+  createdPathsOnly = false,
+  baseTreePaths = [],
+}) {
   const touched = new Set([...touchedPaths].map(normalizePath));
+  const existingBasePaths = new Set([...baseTreePaths].map(normalizePath));
   const baseByIdentity = new Map(baseFindings.map((finding) => [finding.identity, finding]));
   const remainingBase = new Set(baseFindings);
   const changes = [];
@@ -250,19 +260,26 @@ function compareFindings({ mode, baseIdentity, candidateIdentity, touchedPaths, 
       historicalResidualCount += 1;
     }
   }
+  const scopedChanges = createdPathsOnly
+    ? changes.filter(
+        (change) =>
+          change.classification === 'new' && !existingBasePaths.has(normalizePath(change.evidence.path))
+      )
+    : changes;
   return {
     schemaVersion: DESIGN_DELTA_SCHEMA_VERSION,
     mode,
     complete: true,
-    valid: changes.length === 0,
+    valid: scopedChanges.length === 0,
     base: baseIdentity,
     candidate: candidateIdentity,
     supportedSmellIds: [...DESIGN_DELTA_SUPPORTED_SMELLS],
     touchedPaths: [...touched].sort(),
-    changes,
+    changes: scopedChanges,
     baseFindingCount: baseFindings.length,
     candidateFindingCount: candidateFindings.length,
     historicalResidualCount,
+    enforcementScope: createdPathsOnly ? 'created-paths' : 'touched-new-or-worsened',
   };
 }
 
@@ -362,9 +379,23 @@ function incompleteGitResult(baseRef, error) {
 }
 
 /** Compare the working candidate with an explicit, resolvable Git base commit. */
-export function evaluateGitDesignDelta({ root, config, configPath = 'ark.config.json', baseRef, ts }) {
+export function evaluateGitDesignDelta({
+  root,
+  config,
+  configPath = 'ark.config.json',
+  baseRef,
+  ts,
+  createdPathsOnly = false,
+  missingBase = 'fail-closed',
+}) {
+  const skipMissing = missingBase === 'skip';
   if (typeof baseRef !== 'string' || !baseRef.trim()) {
-    return incompleteGitResult(baseRef, '--fail-on-new-smells requires --base-ref <git-ref>.');
+    return incompleteGitResult(
+      baseRef,
+      skipMissing
+        ? 'design-delta skipped: no resolvable Git base ref.'
+        : '--fail-on-new-smells requires --base-ref <git-ref>.'
+    );
   }
   try {
     if (baseRef.startsWith('-')) throw new Error('base ref must not start with "-".');
@@ -397,6 +428,8 @@ export function evaluateGitDesignDelta({ root, config, configPath = 'ark.config.
       touchedPaths,
       baseFindings,
       candidateFindings,
+      createdPathsOnly: Boolean(createdPathsOnly),
+      baseTreePaths: basePaths,
     });
   } catch (error) {
     return incompleteGitResult(baseRef, error instanceof Error ? error.message : String(error));
@@ -418,8 +451,16 @@ export function formatDesignDeltaBlock(delta) {
 }
 
 /** Keep CLI orchestration additive without growing the already-bounded main checker. */
-export function createDesignDeltaCheck({ enabled, ...input }) {
-  const result = enabled ? evaluateGitDesignDelta(input) : null;
+export function createDesignDeltaCheck({ enabled, createdPathsOnly, missingBase, ...input }) {
+  const skipMissing = missingBase === 'skip';
+  const evaluated = enabled
+    ? evaluateGitDesignDelta({
+        ...input,
+        createdPathsOnly: Boolean(createdPathsOnly),
+        missingBase: skipMissing ? 'skip' : 'fail-closed',
+      })
+    : null;
+  const result = evaluated && skipMissing && !evaluated.complete ? null : evaluated;
   return {
     result,
     combineEdges: ({ activeViolationCount, strictConfig, strictWarningCount, policyValid }) => {

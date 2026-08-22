@@ -207,7 +207,20 @@ describe('statusManifest (Domain — ACS03)', () => {
       lastCheck,
       rules
     );
-    expect(clean.id).toBe('stay-enforced');
+    expect(clean.id).toBe('require-ci-merge-status');
+    const adopted = resolveStatusNextAction(
+      {
+        arkgateVersion: '4.6.1',
+        resolvedRoot: '/repo',
+        resolvedConfigPath: '/repo/ark.config.json',
+        adopted: 'required-merge',
+      },
+      binding,
+      activation,
+      lastCheck,
+      rules
+    );
+    expect(adopted.id).toBe('stay-enforced');
     const leftover = resolveStatusNextAction(
       {
         arkgateVersion: '4.6.1',

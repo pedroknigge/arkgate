@@ -175,6 +175,7 @@ retained shipped rationale live under `docs/plans/`:
 | [understandable-ark-4.6](docs/plans/understandable-ark-4.6/README.md) | Shipped in **4.6.0** (`PL01`–`PL09` done; **published**) | Plain-language product surfaces + shared Claude/Grok home skills (Codex ratchet); former 4.5.8 HS absorbed |
 | [five-door-autonomy](docs/plans/five-door-autonomy/README.md) | Shipped in **4.6.1** (`SK01`–`SK07` done; **published**) | Five doors (adopt / place / autopilot / explore / upgrade) write or map in-turn; CLI is sensor + gate; other names stay as shortcuts |
 | [team-parliament](docs/plans/team-parliament/README.md) | Shipped in **4.6.1** (`TW01`–`TW08` done) | Law vs feature: stewards, mixed-PR deny, ratchet vs base branch, cheap `--changed` check; doctor asks for stewards or shows list drift; identity is GitHub handle or email |
+| [alive-in-six-months](docs/plans/alive-in-six-months/README.md) | In progress (Phase AL; `AL01`–`AL04` implemented; `AL05` parked field) | Corrective honesty + field: D0 adopted, Propia created-path merge, stewards-or-adapt, first-run noun cut; does not close Z09 |
 | [shared-home-skills-truth](docs/plans/shared-home-skills-truth/README.md) | Superseded (absorbed into 4.6.0 PL06–PL07) | Historical seed only — do not run as a separate 4.5.8 patch train |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in

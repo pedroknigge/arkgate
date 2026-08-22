@@ -212,8 +212,9 @@ describe('EH05 product honesty soft-write reclassification', () => {
       hardWriteActive: false,
       operatingMode: 'enforce',
     });
-    expect(bundle.productHonesty.unfinished).toBe(false);
-    expect(bundle.productHonesty.finished).toBe(true);
+    expect(bundle.productHonesty.unfinished).toBe(true);
+    expect(bundle.productHonesty.finished).toBe(false);
+    expect(bundle.productHonesty.reasonIds).toContain('merge-boundary-not-required');
     expect(bundle.productHonesty.localWriteBoundary).toBe('unverified');
     expect(bundle.writePathHonesty.softWriteHost).toBe(false);
     expect(bundle.writePathHonesty.hardWriteUnverified).toBe(true);

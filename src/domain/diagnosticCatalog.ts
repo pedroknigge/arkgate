@@ -309,8 +309,8 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'DESIGN_SMELL_REGRESSION',
     'preflight',
     'Design smell regression on base-relative ratchet',
-    'Compared to the base ref, the candidate introduces or worsens a blocking design-smell class (e.g. domain-logic-in-ui) under --fail-on-new-smells.',
-    'Revert the regression or redesign so the smell does not worsen versus base, then re-run with the same base ref.'
+    'Compared to the base ref, the candidate introduces a created-path domain-logic-in-ui file under --strict-merge, or introduces or worsens a blocking design-smell class under --fail-on-new-smells.',
+    'Move the new UI business rule out of the created file (or revert a --fail-on-new-smells regression), then re-run with the same base ref.'
   ),
 
   // ── analysis completeness / host ─────────────────────────────────────────

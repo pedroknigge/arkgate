@@ -46,7 +46,7 @@ In those cases a boundary linter or editor rules may be enough; see [README — 
 | When | What happens |
 |------|----------------|
 | While the AI writes | Host write gate or advisory MCP (depends on host) |
-| Before merge | Make the Ark job a **required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`) |
+| Before merge | Make the Ark job a **required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`). Until that status is required — or you write `.ark/adoption-stance.json` with `stance: "advisory-only"` — doctor will not call the tree adopted. |
 | Anytime | Doctor: Suggest / Adapt / Enforce (+ leftover design work if the design is still messy) |
 
 **Cursor:** pre-write block for Write/StrReplace when `.cursor/hooks.json` is trusted.
@@ -87,8 +87,8 @@ list: [configuration.md](configuration.md).
 |-------|--------|-----------|
 | **Suggest** | New or thin project | Finish `start`, re-run doctor |
 | **Adapt** | Not fully protected yet | Doctor action #1 until clean |
-| **Enforce** | Edges honest under the contract | Keep write path + CI |
-| **Enforce · leftover design work** | Edges clean; design still messy | Shape door — not “done” |
+| **Enforce** | Import edges honest, and no new UI business-rule files vs merge-base | Keep write path + CI |
+| **Enforce · leftover design work** | Edges clean; leftover design on existing files is still messy | Shape door — not “done” |
 
 **Green edges ≠ elegant design.** Empty remediation plan is not “architecture finished” if design residual remains.
 

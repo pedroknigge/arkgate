@@ -2238,7 +2238,7 @@ describe('ark-check --baseline', () => {
     // Freeze.
     const update = execFileSync(
       'node',
-      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline'],
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline', '--contract-session'],
       { encoding: 'utf8', stdio: 'pipe' }
     );
     expect(update).toContain('frozen violation key');
@@ -2276,7 +2276,7 @@ describe('ark-check --baseline', () => {
     const root = violatingProject();
     execFileSync(
       'node',
-      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline'],
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline', '--contract-session'],
       { encoding: 'utf8', stdio: 'pipe' }
     );
     // Fix the frozen violation.
@@ -2310,7 +2310,7 @@ describe('ark-check --baseline', () => {
     fs.writeFileSync(file, 'export const first = Date.now();\n');
     execFileSync(
       'node',
-      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline'],
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline', '--contract-session'],
       { encoding: 'utf8', stdio: 'pipe' }
     );
 
@@ -2398,7 +2398,7 @@ describe('ark-check forbiddenGlobals', () => {
     const root = project('export const at = Date.now();\n');
     execFileSync(
       'node',
-      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline'],
+      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline', '--contract-session'],
       { encoding: 'utf8', stdio: 'pipe' }
     );
     expect(runArkCheck(root, ['--baseline']).ok).toBe(true);
@@ -2941,7 +2941,15 @@ describe('framework layout overlays (Nest / Next)', () => {
     fs.writeFileSync(path.join(root, '.ark-baseline.json'), JSON.stringify({ version: 1, keys: [] }));
     execFileSync(
       'node',
-      [path.resolve('bin/ark-check.mjs'), '--root', root, '--config', 'ark.config.json', '--update-baseline'],
+      [
+        path.resolve('bin/ark-check.mjs'),
+        '--root',
+        root,
+        '--config',
+        'ark.config.json',
+        '--update-baseline',
+        '--contract-session',
+      ],
       { encoding: 'utf8', stdio: 'pipe' }
     );
     expect(fs.existsSync(path.join(root, '.ark-baseline.json'))).toBe(false);
@@ -3657,10 +3665,14 @@ describe('ark-check violation diagnosis', () => {
     let stderr = '';
     let threw = false;
     try {
-      execFileSync('node', [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline'], {
+      execFileSync(
+        'node',
+        [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline', '--contract-session'],
+        {
         encoding: 'utf8',
         stdio: 'pipe',
-      });
+        }
+      );
     } catch (error) {
       threw = true;
       stderr = (error as { stderr: string }).stderr;
@@ -3674,7 +3686,14 @@ describe('ark-check violation diagnosis', () => {
     // --force freezes anyway (the escape hatch).
     const forced = execFileSync(
       'node',
-      [path.resolve('bin/ark-check.mjs'), '--root', root, '--update-baseline', '--force'],
+      [
+        path.resolve('bin/ark-check.mjs'),
+        '--root',
+        root,
+        '--update-baseline',
+        '--force',
+        '--contract-session',
+      ],
       { encoding: 'utf8', stdio: 'pipe' }
     );
     expect(forced).toContain('frozen violation key');

@@ -123,8 +123,17 @@ describe('T01 strict policy transition guard', () => {
 
     const human = runHuman(root, ['--strict-merge', '--policy-base-ref', 'HEAD']);
     expect(human.status).toBe(1);
-    expect(human.stderr).toContain('Policy transition rejected');
+    expect(human.stderr).toContain('--contract-session');
     expect(human.stderr).not.toContain('0 violation(s)');
+
+    const unackedSession = runHuman(root, [
+      '--strict-merge',
+      '--policy-base-ref',
+      'HEAD',
+      '--contract-session',
+    ]);
+    expect(unackedSession.status).toBe(1);
+    expect(unackedSession.stderr).toContain('Policy transition rejected');
 
     writeJson(root, '.ark/policy-delta-ack.json', {
       schemaVersion: '1.0',
@@ -139,6 +148,7 @@ describe('T01 strict policy transition guard', () => {
       'HEAD',
       '--policy-ack',
       '.ark/policy-delta-ack.json',
+      '--contract-session',
     ]);
     expect(accepted.status).toBe(0);
     expect(JSON.parse(accepted.stdout).policyDelta).toMatchObject({
@@ -156,6 +166,7 @@ describe('T01 strict policy transition guard', () => {
       'HEAD',
       '--policy-ack',
       '.ark/policy-delta-ack.json',
+      '--contract-session',
     ]);
     expect(stale.status).toBe(1);
     expect(JSON.parse(stale.stdout).policyDelta).toMatchObject({

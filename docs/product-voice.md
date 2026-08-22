@@ -94,8 +94,8 @@ stay stable unless a change explicitly adds an alias.
 | **five doors** | skill menu of 13 | adopt · place · autopilot · explore · upgrade — other names are shortcuts |
 | **law / constitution** | contract + baseline + ArkRules files | `ark.config.json`, `arkrules/*`, `.ark-baseline.json` — a different change type than product |
 | **steward** | contract owner | GitHub handle or email in `stewards`; only they may loosen the law or grow the baseline |
-| **several hands** | multi-author / CODEOWNERS | Doctor asks for stewards or shows list drift; adopt proposes handles or emails, never invents names |
-| **contract session** | `--contract-session` | Explicit “this diff is a law change”; still never mixed with product files |
+| **several hands** | multi-author / CODEOWNERS | Doctor asks for stewards or shows list drift; empty `stewards[]` is unfinished ENFORCE (not Adapt); adopt proposes handles or emails, never invents names |
+| **contract session** | `--contract-session` | Explicit “this diff is a law change”; required to loosen or grow the baseline even with an empty steward list; still never mixed with product files |
 | **vs the base branch** | `--against` / `--changed --base` / `status --vs` | Ratchet and honesty against the ref you merge to |
 | **doctor** | doctor | Status light + next action |
 | **short agent router** | compact router | Default onboarding agent instructions (not the full skill pack) |
@@ -308,8 +308,10 @@ This change mixes the constitution with product files. Next: split the PR, or ru
 
 ### Healthy finished
 
-Print “Healthy — nothing to do” **only** when there is no leftover design work and no open top actions.
-Otherwise name the leftover work.
+Print “Healthy — nothing to do” **only** when the merge boundary is adopted as a **required**
+GitHub status running `arkgate-check --strict-merge`, there is no leftover design work, and no
+open top actions. An explicit `.ark/adoption-stance.json` `stance: "advisory-only"` ack is
+adopted for honesty, but it is not this Healthy string. Workflow files on disk are not adopted.
 
 ---
 

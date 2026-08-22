@@ -10,6 +10,11 @@ import {
   HOST_SUPPORT_MATRIX,
   HOST_SUPPORT_HOSTS,
 } from './host-support-matrix.mjs';
+import {
+  classifyAdopted,
+  MERGE_BOUNDARY_NOT_REQUIRED,
+  NOT_ADOPTED_NEXT_ACTION,
+} from './adoption-stance.mjs';
 
 /** Soft = matrix hard-write false; hard-capable = matrix hard-write true. Single source of truth. */
 function hostWriteClassSets() {
@@ -380,6 +385,37 @@ export function buildProductHonesty(input = {}) {
     });
   }
 
+  const adopted =
+    typeof input.adopted === 'string'
+      ? input.adopted
+      : input.ciMergeBoundary || input.github || input.adoptionStance || input.considerMergeBoundary
+        ? classifyAdopted({
+            stance: input.adoptionStance,
+            github: input.github,
+            ci: input.ciMergeBoundary?.ci,
+          })
+        : null;
+  if (adopted === 'not-adopted') {
+    reasons.push({
+      id: MERGE_BOUNDARY_NOT_REQUIRED,
+      message:
+        'Merge boundary not adopted — require a GitHub status running arkgate-check --strict-merge, or write .ark/adoption-stance.json with stance: "advisory-only".',
+    });
+  }
+
+  const emptyStewards =
+    input.emptyStewards === true ||
+    input.stewardNudge?.emptyStewardsPastGrace === true ||
+    (input.stewardNudge?.needsStewards === true &&
+      (input.stewardNudge?.stewardCount ?? 0) === 0);
+  if (emptyStewards) {
+    reasons.push({
+      id: 'empty-stewards',
+      message:
+        'No stewards listed — not a finished Enforce. Name GitHub handles or emails for stewards[], or this stays Adapt-or-nudge. /ark-adopt asks; it does not invent names.',
+    });
+  }
+
   // Mode adapt/suggest (FG-FINISHED-ADAPT-DEBT): prefer unfinished unless the tree is
   // whole-tree green AND zero design smells AND zero blocking violations.
   // Type-only placement debt alone must not keep adapt unfinished via active-blocking.
@@ -442,6 +478,8 @@ export function buildProductHonesty(input = {}) {
     architectureReasons.find((r) => r.id === 'package-pin-absent') ||
     architectureReasons.find((r) => r.id === 'baseline-missing-with-debt') ||
     architectureReasons.find((r) => r.id === 'residual-pilot') ||
+    architectureReasons.find((r) => r.id === MERGE_BOUNDARY_NOT_REQUIRED) ||
+    architectureReasons.find((r) => r.id === 'empty-stewards') ||
     architectureReasons[0] ||
     environmentResiduals[0];
 
@@ -450,6 +488,9 @@ export function buildProductHonesty(input = {}) {
     primaryMessage =
       primary?.message ||
       'Not finished: residual honesty signals remain (violations, mode, coverage, freeze, design, package pin, or pilots).';
+  } else if (adopted === 'advisory-only-acked') {
+    primaryMessage =
+      'This tree acked advisory-only in .ark/adoption-stance.json. That is not a required GitHub merge status.';
   } else if (softWriteOnly) {
     primaryMessage = `${hostLabel} local writes stay advisory/bypassable; architecture contract on this slice is ready. Hard merge boundary is a required GitHub status context running arkgate-check --strict-merge (alias ark-check --strict-merge).`;
   } else if (wholeTreeGoverned) {
@@ -468,6 +509,8 @@ export function buildProductHonesty(input = {}) {
     headline = wholeTreeGoverned
       ? `Architecture contract ready; ${hostLabel} local writes are advisory`
       : `Contract residual clear; ${hostLabel} local writes are advisory`;
+  } else if (!unfinished && adopted === 'advisory-only-acked') {
+    headline = 'Advisory-only adoption — merge status is not required';
   } else if (!unfinished) {
     headline = 'Honesty clear on residual signals';
   } else if (coverageIncomplete) {
@@ -487,6 +530,12 @@ export function buildProductHonesty(input = {}) {
   } else if (!primaryNextAction && pinAbsent) {
     primaryNextAction =
       'Add arkgate to package.json and install so CI/npx resolve this CLI (PACKAGE_PIN_ABSENT)';
+  } else if (!primaryNextAction && adopted === 'not-adopted') {
+    primaryNextAction = NOT_ADOPTED_NEXT_ACTION;
+  } else if (!primaryNextAction && emptyStewards) {
+    primaryNextAction =
+      input.stewardNudge?.nextAction ||
+      '/ark-adopt (ask, then update stewards[] — do not invent names)';
   } else if (!primaryNextAction && softWriteOnly) {
     primaryNextAction =
       'Confirm the GitHub required status context name runs arkgate-check --strict-merge (or ark-check --strict-merge). Soft-write hosts stay advisory at local write; the required status is the hard merge boundary.';
@@ -558,6 +607,12 @@ export function computeDoctorEnforcementHonesty({
   packageInstalled,
   selfHost,
   motherCli,
+  adopted: adoptedInput,
+  ciMergeBoundary,
+  github,
+  adoptionStance,
+  emptyStewards,
+  stewardNudge,
 } = {}) {
   const coverageHonesty = buildCoverageHonesty({
     percent: governedPercent,
@@ -583,6 +638,14 @@ export function computeDoctorEnforcementHonesty({
   const blockingForHonesty = Number.isFinite(Number(activeBlockingViolations))
     ? Math.max(0, Number(activeBlockingViolations))
     : Number(activeViolations) || 0;
+  const adopted =
+    typeof adoptedInput === 'string'
+      ? adoptedInput
+      : classifyAdopted({
+          stance: adoptionStance,
+          github,
+          ci: ciMergeBoundary?.ci,
+        });
   const productHonesty = buildProductHonesty({
     coverageHonesty,
     baselineHonesty,
@@ -598,6 +661,13 @@ export function computeDoctorEnforcementHonesty({
     primaryNextAction,
     operatingMode,
     activeBlockingViolations: blockingForHonesty,
+    adopted,
+    ciMergeBoundary,
+    github,
+    adoptionStance,
+    considerMergeBoundary: true,
+    emptyStewards,
+    stewardNudge,
   });
   return {
     coverageHonesty,
