@@ -28,7 +28,10 @@ function runCheckRoot(root: string) {
 
 describe('ArkRules entry path via ark-check CLI', () => {
   it('package identity matches prepared train version', () => {
-    expect(version).toBe('4.6.5');
+    const pkg = JSON.parse(fs.readFileSync(path.join(REPO, 'package.json'), 'utf8')) as {
+      version: string;
+    };
+    expect(version).toBe(pkg.version);
   });
 
   it('completes without arkRules (opt-in silence)', () => {
