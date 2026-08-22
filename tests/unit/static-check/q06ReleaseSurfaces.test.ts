@@ -18,6 +18,11 @@ function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
 }
 
+/** npm CHANGELOG (4.6.x) plus maintainer archive (pre-4.6). */
+function changelogText() {
+  return `${read('CHANGELOG.md')}\n${read('docs/archive/CHANGELOG-pre-4.6.md')}`;
+}
+
 describe('package budget ceilings retain 10% headroom over the recorded clean candidate', () => {
   it('retains at least 10% headroom over the recorded clean candidate', () => {
     const gate = JSON.parse(read('release/package-budgets.v1.json')).packages.gate;
@@ -79,7 +84,7 @@ describe(`version bump ${CURRENT}`, () => {
 
 describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => {
   it('records identity, activation, multi-repo skills, portability, and published status', () => {
-    const changelog = read('CHANGELOG.md');
+    const changelog = changelogText();
     expect(changelog).toMatch(/## 4\.2\.0/);
     expect(changelog).toMatch(/published/i);
     expect(changelog).toMatch(/ark_identity|project identity/i);
@@ -108,10 +113,6 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.5\.md/);
     expect(read('README.md')).toMatch(/4\.6\.4/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.4\.md/);
-    expect(read('README.md')).toMatch(/4\.6\.3/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.3\.md/);
-    expect(read('README.md')).toMatch(/4\.6\.2/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.2\.md/);
     expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.6\.5/s);
     expect(read('docs/README.md')).toMatch(/Current:.*4\.6\.5/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
@@ -139,7 +140,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 
 describe('CHANGELOG + release note cover 4.6.5 product honesty', () => {
   it('records adopt/place/doctor/upgrade surfaces without internal repo names', () => {
-    const changelog = read('CHANGELOG.md');
+    const changelog = changelogText();
     expect(changelog).toMatch(/## 4\.6\.5/);
     expect(changelog).toMatch(/SharedKernel/);
     expect(changelog).toMatch(/golden-pattern/);
@@ -158,7 +159,7 @@ describe('CHANGELOG + release note cover 4.6.5 product honesty', () => {
 
 describe('CHANGELOG + release note cover 4.6.4 Codex upgrade guidance', () => {
   it('records the upgrade card, exact refresh command, and published status', () => {
-    const changelog = read('CHANGELOG.md');
+    const changelog = changelogText();
     expect(changelog).toMatch(/## 4\.6\.4/);
     expect(changelog).toMatch(/codex-hard-write/);
     expect(changelog).toMatch(/install-agent-gates --tools codex --force/);
@@ -177,7 +178,7 @@ describe('CHANGELOG + release note cover 4.6.4 Codex upgrade guidance', () => {
 
 describe('CHANGELOG + release note cover 4.6.3 Codex hard-write truth', () => {
   it('records the current payload, operation scope, and published status', () => {
-    const changelog = read('CHANGELOG.md');
+    const changelog = changelogText();
     expect(changelog).toMatch(/## 4\.6\.3/);
     expect(changelog).toMatch(/tool_input\.command/);
     expect(changelog).toMatch(/complete.*apply_patch|apply_patch.*complete/is);
@@ -197,7 +198,7 @@ describe('CHANGELOG + release note cover 4.6.3 Codex hard-write truth', () => {
 
 describe('CHANGELOG + release note cover 4.6.2 first-contact copy train', () => {
   it('records first-contact surfaces and published status', () => {
-    const changelog = read('CHANGELOG.md');
+    const changelog = changelogText();
     expect(changelog).toMatch(/## 4\.6\.2/);
     expect(changelog).toMatch(/First-contact|first-contact|\/ark-adopt/i);
     expect(changelog).toMatch(/blocked \{file\}|SessionStart|ark_identity/i);
@@ -223,7 +224,7 @@ describe('CHANGELOG + release note cover 4.6.2 first-contact copy train', () => 
 
 describe('CHANGELOG + release note cover 4.6.1 five-door + team parliament train', () => {
   it('records five doors, team lock, published status', () => {
-    const changelog = read('CHANGELOG.md');
+    const changelog = changelogText();
     expect(changelog).toMatch(/## 4\.6\.1/);
     expect(changelog).toMatch(/Five-door|five-door|\/ark-adopt/i);
     expect(changelog).toMatch(/Team parliament|stewards|--contract-session|--changed/i);
@@ -252,7 +253,7 @@ describe('CHANGELOG + release note cover 4.6.1 five-door + team parliament train
 
 describe('CHANGELOG + release note cover 4.6.0 understandable Ark train', () => {
   it('records plain language, shared homes, published status', () => {
-    const changelog = read('CHANGELOG.md');
+    const changelog = changelogText();
     expect(changelog).toMatch(/## 4\.6\.0/);
     expect(changelog).toMatch(/leftover design work|plain language|Understandable Ark/i);
     expect(changelog).toMatch(/--agent-homes|--claude-home|--grok-home/);
@@ -274,7 +275,7 @@ describe('CHANGELOG + release note cover 4.6.0 understandable Ark train', () => 
 
 describe('CHANGELOG + release note cover 4.5.7 Cursor hard-write train', () => {
   it('records Cursor hard write surfaces and published status', () => {
-    const changelog = read('CHANGELOG.md');
+    const changelog = changelogText();
     expect(changelog).toMatch(/## 4\.5\.7/);
     expect(changelog).toMatch(/Cursor hard write|\.cursor\/hooks\.json|preToolUse/i);
     expect(changelog).toMatch(/Write\|StrReplace|Write \/ StrReplace|Write\/StrReplace/i);
@@ -296,7 +297,7 @@ describe('CHANGELOG + release note cover 4.5.7 Cursor hard-write train', () => {
 
 describe('CHANGELOG + release note cover 4.5.6 field-upgrade MCP truth train', () => {
   it('records FX surfaces and published status', () => {
-    const changelog = read('CHANGELOG.md');
+    const changelog = changelogText();
     expect(changelog).toMatch(/## 4\.5\.6/);
     expect(changelog).toMatch(/Registry-aware|BEHIND_REGISTRY|reasonCode/i);
     expect(changelog).toMatch(/skillDrift|refresh-skills/i);
@@ -318,7 +319,7 @@ describe('CHANGELOG + release note cover 4.5.6 field-upgrade MCP truth train', (
 
 describe('CHANGELOG + release note cover 4.5.5 deep-module coach train', () => {
   it('records deep-module coach, whatsNew, two-axis done, published status', () => {
-    const changelog = read('CHANGELOG.md');
+    const changelog = changelogText();
     expect(changelog).toMatch(/## 4\.5\.5/);
     expect(changelog).toMatch(/Deep-module coach|deepModuleCoach/i);
     expect(changelog).toMatch(/whatsNew|what.?s new|Suggested improvements/i);
@@ -342,7 +343,7 @@ describe('CHANGELOG + release note cover 4.5.5 deep-module coach train', () => {
 
 describe('CHANGELOG + release note cover 4.5.0 session honesty train', () => {
   it('records status honesty, self-service upgrade, session recipe, and published status', () => {
-    const changelog = read('CHANGELOG.md');
+    const changelog = changelogText();
     expect(changelog).toMatch(/## 4\.5\.0/);
     expect(changelog).toMatch(/full.*subset.*unavailable|mode `full`/is);
     expect(changelog).toMatch(/Session recipe|session recipe/i);
@@ -381,7 +382,7 @@ describe('CHANGELOG + release note cover 4.5.0 session honesty train', () => {
 
 describe('CHANGELOG + release note cover 4.4.0 improvement compass train', () => {
   it('records compass surfaces and published status', () => {
-    const changelog = read('CHANGELOG.md');
+    const changelog = changelogText();
     expect(changelog).toMatch(/## 4\.4\.0/);
     expect(changelog).toMatch(/Improvement compass|improvement compass/i);
     expect(changelog).toMatch(/notAScore/);
@@ -403,7 +404,7 @@ describe('CHANGELOG + release note cover 4.4.0 improvement compass train', () =>
 
 describe('CHANGELOG + release note cover 4.3.0 agent contract surface train', () => {
   it('records ACS surfaces and published status', () => {
-    const changelog = read('CHANGELOG.md');
+    const changelog = changelogText();
     expect(changelog).toMatch(/## 4\.3\.0/);
     expect(changelog).toMatch(/Diagnostic code catalog|ACS02/i);
     expect(changelog).toMatch(/status --json|status manifest|ACS03/i);
@@ -432,7 +433,7 @@ describe('CHANGELOG + release note cover 4.3.0 agent contract surface train', ()
 
 describe('CHANGELOG + release note cover 4.2.1 Next 16.3 train', () => {
   it('records Next 16 proxy include fix and published status', () => {
-    const changelog = read('CHANGELOG.md');
+    const changelog = changelogText();
     expect(changelog).toMatch(/## 4\.2\.1/);
     expect(changelog).toMatch(/published/i);
     expect(changelog).toMatch(/proxy\.ts|Next 16/i);
@@ -450,7 +451,7 @@ describe('CHANGELOG + release note cover 4.2.1 Next 16.3 train', () => {
 
 describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
   it('CHANGELOG 3.7.0 names every shipped Y surface and both focused fixes', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.7\.0/);
     expect(body).toMatch(/reshape-decisions\.json/);
     expect(body).toMatch(/handler-in-persistence/);
@@ -498,7 +499,7 @@ describe('CHANGELOG + release note cover 3.7.0 Phase Y', () => {
 
 describe('CHANGELOG + release note cover 4.1.1 Phase EH + retain 4.1.0 field train', () => {
   it('CHANGELOG 4.1.1 names EH honesty, gitignore, base-ref, provider plan, published status', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 4\.1\.1/);
     expect(body).toMatch(/published/i);
     expect(body).toMatch(/soft-write|environment residual|contractReadiness/i);
@@ -538,7 +539,7 @@ describe('CHANGELOG + release note cover 4.1.1 Phase EH + retain 4.1.0 field tra
 
 describe('CHANGELOG + release note cover 4.0.1 Fase 0 field patch', () => {
   it('CHANGELOG 4.0.1 names stale CLI guard, ArkRules HTML catalog, dual-plane honesty', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 4\.0\.1/);
     expect(body).toMatch(/Stale global CLI|fail closed/i);
     expect(body).toMatch(/rulesUnderContract|structure sensors/i);
@@ -562,7 +563,7 @@ describe('CHANGELOG + release note cover 4.0.1 Fase 0 field patch', () => {
 
 describe('CHANGELOG + release note cover 4.0.0 ArkRules major', () => {
   it('CHANGELOG 4.0.0 names AR04 breaking and ArkRules opt-in foundations', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 4\.0\.0/);
     expect(body).toMatch(/arkgate\/runtime|@arkgate\/runtime/);
     expect(body).toMatch(/arkRules|ArkRules/);
@@ -586,7 +587,7 @@ describe('CHANGELOG + release note cover 4.0.0 ArkRules major', () => {
 
 describe('CHANGELOG + release note cover 3.9.2 enforcement honesty', () => {
   it('CHANGELOG 3.9.2 names coverage honesty, soft hosts, graph-blind, and design-weak forbids', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.9\.2/);
     expect(body).toMatch(/coverageHonesty|enforcement-honesty|worse-than-no-gate/i);
     expect(body).toMatch(/graph-blind|graphBlindSpots|template-interpolation/i);
@@ -609,7 +610,7 @@ describe('CHANGELOG + release note cover 3.9.2 enforcement honesty', () => {
 
 describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
   it('CHANGELOG 3.9.1 names onboarding lockfile, fast-uri, and Next fixture pins', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.9\.1/);
     expect(body).toMatch(/o04|lockfile/i);
     expect(body).toMatch(/fast-uri/);
@@ -628,7 +629,7 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
   });
 
   it('CHANGELOG + release note still cover 3.9.0 Beautiful Path', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.9\.0/);
     expect(body).toMatch(/product-voice|Beautiful Path/i);
     expect(body).toMatch(/progressive disclosure|compact router/i);
@@ -659,7 +660,7 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
 
 describe('CHANGELOG + release note cover 3.8.3 field journey', () => {
   it('CHANGELOG 3.8.3 names workspace install, start pin, and upgrade recovery', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.8\.3/);
     expect(body).toMatch(/pnpm workspace|pnpm add.*-w/i);
     expect(body).toMatch(/start.*pin|pins `arkgate`/i);
@@ -681,7 +682,7 @@ describe('CHANGELOG + release note cover 3.8.3 field journey', () => {
 
 describe('CHANGELOG + release note cover 3.8.2 field DX', () => {
   it('CHANGELOG 3.8.2 names skill stale, upgrade preview, Y06, and Codex legacy', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.8\.2/);
     expect(body).toMatch(/content-identity|content identity/i);
     expect(body).toMatch(/wouldWrite|Nothing to apply/i);
@@ -704,7 +705,7 @@ describe('CHANGELOG + release note cover 3.8.2 field DX', () => {
 
 describe('CHANGELOG + release note cover 3.8.1 pure-path patch', () => {
   it('CHANGELOG 3.8.1 names peerIsolation fail-closed and pure-IR fixes', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.8\.1/);
     expect(body).toMatch(/peerIsolation fail-closed/);
     expect(body).toMatch(/type-only named bindings/);
@@ -727,7 +728,7 @@ describe('CHANGELOG + release note cover 3.8.1 pure-path patch', () => {
 
 describe('CHANGELOG + release note cover 3.6.1 Codex project MCP fix', () => {
   it('CHANGELOG 3.6.1 names project scope, doctor honesty, and the home fallback', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.6\.1/);
     expect(body).toMatch(/\.codex\/config\.toml/);
     expect(body).toMatch(/codex-home-multi-project/);
@@ -749,7 +750,7 @@ describe('CHANGELOG + release note cover 3.6.1 Codex project MCP fix', () => {
 
 describe('CHANGELOG + release note cover 3.6.0 reshape co-pilot (Phase X close)', () => {
   it('CHANGELOG 3.6.0 section names the X04–X07 surfaces and stays advisory', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.6\.0/);
     expect(body).toMatch(/physicalCohesion/);
     expect(body).toMatch(/reshapePilot/);
@@ -779,7 +780,7 @@ describe('CHANGELOG + release note cover 3.6.0 reshape co-pilot (Phase X close)'
 
 describe('CHANGELOG + release note cover 3.5.0 field feedback (Phase X)', () => {
   it('CHANGELOG 3.5.0 section names the X01–X03 surfaces and stays advisory', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.5\.0/);
     expect(body).toMatch(/Report parity \(X01\)/);
     expect(body).toMatch(/data-advisory/);
@@ -807,7 +808,7 @@ describe('CHANGELOG + release note cover 3.5.0 field feedback (Phase X)', () => 
 
 describe('CHANGELOG + release note cover 3.4.0 understandable execution slice 2', () => {
   it('CHANGELOG 3.4.0 section names the U04-U06 surfaces and stays opt-in', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.4\.0/);
     expect(body).toMatch(/Capability walls \(U04\)/);
     expect(body).toMatch(/pure: true/);
@@ -833,7 +834,7 @@ describe('CHANGELOG + release note cover 3.4.0 understandable execution slice 2'
 
 describe('CHANGELOG + release note cover 3.3.0 understandable execution slice 1', () => {
   it('CHANGELOG 3.3.0 section names the U01-U03 surfaces and stays evidence-only', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.3\.0/);
     expect(body).toMatch(/ADR 0009/);
     expect(body).toMatch(/collectCapabilityUses/);
@@ -855,7 +856,7 @@ describe('CHANGELOG + release note cover 3.3.0 understandable execution slice 1'
 
 describe('CHANGELOG + release note cover 3.2.0 contract health', () => {
   it('CHANGELOG 3.2.0 section names the W01–W03 surfaces and stays advisory', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.2\.0/);
     expect(body).toMatch(/contract smells/i);
     expect(body).toMatch(/contractHealth/);
@@ -881,7 +882,7 @@ describe('CHANGELOG + release note cover 3.2.0 contract health', () => {
 
 describe('CHANGELOG + release note cover 3.1.0 change integrity', () => {
   it('CHANGELOG 3.1.0 section names the T01–T05 surfaces', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.1\.0/);
     expect(body).toMatch(/policy-transition guard/i);
     expect(body).toMatch(/atomic change preflight/i);
@@ -903,7 +904,7 @@ describe('CHANGELOG + release note cover 3.1.0 change integrity', () => {
 
 describe('CHANGELOG + release note cover 3.0.5 Codex honesty', () => {
   it('CHANGELOG 3.0.5 section names Codex skill catalog fixes', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.0\.5/);
     expect(body).toMatch(/\.agents\/skills|SKILL\.md/i);
     expect(body).toMatch(/legacy-prompts|legacy prompts/i);
@@ -922,7 +923,7 @@ describe('CHANGELOG + release note cover 3.0.5 Codex honesty', () => {
 
 describe('CHANGELOG + release note cover 3.0.4 report honesty (historical)', () => {
   it('CHANGELOG 3.0.4 section names report fixes and design strip', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.0\.4/);
     expect(body).toMatch(/false ADAPT|coreOptionalWithFiles|CORE_LAYER_NAMES/i);
     expect(body).toMatch(/write-path-none/i);
@@ -942,7 +943,7 @@ describe('CHANGELOG + release note cover 3.0.4 report honesty (historical)', () 
 
 describe('historical Q06 CHANGELOG + release note cover Q01–Q05', () => {
   it('CHANGELOG 3.0.3 section names Phase Q surfaces', () => {
-    const body = read('CHANGELOG.md');
+    const body = changelogText();
     expect(body).toMatch(/## 3\.0\.3/);
     expect(body).toMatch(/Post-green path \(Q01\)/i);
     expect(body).toMatch(/Smell outcomes \(Q02\)/i);

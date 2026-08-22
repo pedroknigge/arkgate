@@ -13,9 +13,10 @@ npm install -D arkgate typescript
 npx arkgate start                 # preview what will change
 npx arkgate start --apply         # install compact contract + host router + CI plan
 npx arkgate-check --doctor        # where am I? one status light, one next action
+npx arkgate-check --doctor --all  # encyclopedia (Details)
 ```
 
-Then keep working with your agent. The doctor is the **control plane**: when stuck, run doctor and do action **#1**.
+Then keep working with your agent. The doctor is the **control plane**: when stuck, run doctor and do action **#1**. Compact first; `--all` for Details.
 
 | Stuck on… | Do this |
 |-----------|---------|

@@ -40,7 +40,7 @@ Product site: [arkgate.online](https://www.arkgate.online/) · npm: [`arkgate`](
 | Doc | What it is |
 |-----|------------|
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Setup, rules, PR/release |
-| [ROADMAP.md](../ROADMAP.md) | Implementation queue (one `doing` at a time) |
+| [ROADMAP.md](../ROADMAP.md) | Live implementation queue (one `doing` at a time). History: [archive/roadmap-history.md](archive/roadmap-history.md) |
 | [adr/](adr/README.md) | Architecture decisions |
 | [SECURITY.md](../SECURITY.md) · [threat-model.md](threat-model.md) | Security |
 
@@ -52,19 +52,15 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 
 | Area | Path |
 |------|------|
-| Release notes (by version) | [releases/](releases/) · [CHANGELOG.md](../CHANGELOG.md) |
-| Epic plans (seeded + shipped) | [plans/](plans/) — maintainer seeds (e.g. [alive-in-six-months](plans/alive-in-six-months/README.md) **in progress (Phase AL)**; [team-parliament](plans/team-parliament/README.md) **shipped in 4.6.1**; [five-door-autonomy](plans/five-door-autonomy/README.md) **shipped in 4.6.1**; [understandable-ark-4.6](plans/understandable-ark-4.6/README.md) **4.6.0**; [field-upgrade-mcp-truth](plans/field-upgrade-mcp-truth/README.md) **shipped in 4.5.6**; deep-module coach **shipped in 4.5.5**; domain fitness & session truth for **4.5.0**; improvement compass for **4.4.0**; agent contract surface for **4.3.0**). Product how-to stays in use/develop/agent-guide; plans are not required reading to use the package. |
+| Release notes (by version) | [releases/](releases/) · npm [CHANGELOG.md](../CHANGELOG.md) (Unreleased + 4.6.x) · [pre-4.6 archive](archive/CHANGELOG-pre-4.6.md) |
+| Epic plans | [plans/](plans/) — maintainer seeds, not required to use the package. Live: [alive-in-six-months](plans/alive-in-six-months/README.md) (`AL01`–`AL04` done on `main`; `AL05` parked). |
 | Claims audit | [audit/claims-matrix.md](audit/claims-matrix.md) |
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
 Current: [releases/4.6.5.md](releases/4.6.5.md) (`arkgate@4.6.5`).
-Prior published: [releases/4.6.4.md](releases/4.6.4.md) (`arkgate@4.6.4` on npm `latest` until 4.6.5 lands).
-Prior published: [releases/4.6.3.md](releases/4.6.3.md) (`arkgate@4.6.3`).
-Prior: [releases/4.6.2.md](releases/4.6.2.md) (`arkgate@4.6.2`).
-Previous: [releases/4.6.1.md](releases/4.6.1.md) · [releases/4.6.0.md](releases/4.6.0.md) · [releases/4.5.7.md](releases/4.5.7.md) · [releases/4.5.6.md](releases/4.5.6.md) · [releases/4.5.5.md](releases/4.5.5.md) · [releases/4.5.0.md](releases/4.5.0.md) · [releases/4.4.0.md](releases/4.4.0.md) · [releases/4.3.0.md](releases/4.3.0.md) · [releases/4.2.1.md](releases/4.2.1.md) · [releases/4.2.0.md](releases/4.2.0.md) · [releases/4.1.1.md](releases/4.1.1.md).
-Previous major: [releases/4.0.0.md](releases/4.0.0.md) (`arkgate@4.0.0`).  
-Config: [configuration.md](configuration.md) · Agent skills dual-plane: [agent-guide.md](agent-guide.md).
+Prior: [releases/4.6.4.md](releases/4.6.4.md) · [4.6.3](releases/4.6.3.md) · [4.6.2](releases/4.6.2.md) · [4.6.1](releases/4.6.1.md) · [4.6.0](releases/4.6.0.md).
+Older notes: [releases/](releases/). Config: [configuration.md](configuration.md).
 
 ---
 
