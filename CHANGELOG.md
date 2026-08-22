@@ -5,6 +5,13 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.6.6 — 2026-08-22
+
+**Patch** over **4.6.5**. Phase AL corrective honesty plus a slimmer public docs surface.
+**No required config migration.** Does not close Z09. AL05 stays parked.
+
+**Status: current** (shipping as `arkgate@4.6.6`; see `docs/releases/4.6.6.md`).
+
 ### Changed
 
 - **D0 adopted (AL01):** a tree is adopted only when a required GitHub status runs
@@ -20,29 +27,29 @@ in the immutable pre-2.0 archive linked below.
   stay green. Missing base skips the check (does not exit 2), matching Action first-push
   / EH04. `--fail-on-new-smells --base-ref` remains the full new+worsened-on-touched-paths
   ratchet (Z10 unchanged). The GitHub Action needs no extra flags: `--strict` inherits
-  `ARK_POLICY_BASE_REF`. **No required config migration.**
+  `ARK_POLICY_BASE_REF`.
 
 - **Stewards or Adapt (AL03):** empty `stewards[]` cannot print Healthy ENFORCE (doctor
   unfinished residual `empty-stewards`; `operatingMode` stays `enforce`). T4 weakening
   and T5 `--update-baseline` require `--contract-session` even with an empty list;
   `--policy-ack` remains the hash tooth. `--force` does not skip the session. Does not
-  flip all `--strict-merge` to team preflight when the list is empty (T4 session-on-weakening
-  plus `evaluateTeamGate` on `--changed` / `--contract-diff`). No IAM. Does not close Z09.
+  flip all `--strict-merge` to team preflight when the list is empty.
 
 - **First-run noun cut (AL04):** `ark start --help`, `ark start` preview, and the first
   doctor screen each stay at **≤12** product nouns. Default `arkgate-check --doctor` is
   compact; `--doctor --all` prints Details. Compass and deep-module coach stay in JSON and
-  drop from human output. No new skill names, scores, or LLM verdicts. Does not close Z09.
+  drop from human output. No new skill names, scores, or LLM verdicts.
 
-- **Phase AL (merged #147):** AL01–AL04 are on `main`. AL05 stays parked field. Does not
-  close Z09.
+- **Docs surface:** npm `CHANGELOG.md` keeps Unreleased + 4.6.x (pre-4.6 in
+  `docs/archive/CHANGELOG-pre-4.6.md`). Live `ROADMAP.md` is the current queue; full
+  history is archived. README / use lead with adopted = required merge status.
 
 ## 4.6.5 — 2026-08-19
 
 **Patch** over **4.6.4**. Adoption, placement, doctor, upgrade, and write-path honesty for
 existing Next.js trees and multi-host teams. **No required config migration.**
 
-**Status: current** (shipping as `arkgate@4.6.5`; see `docs/releases/4.6.5.md`).
+**Status: published** (on npm `latest` until 4.6.6 lands; see `docs/releases/4.6.5.md`).
 
 ### Changed
 
@@ -78,7 +85,7 @@ existing Next.js trees and multi-host teams. **No required config migration.**
 trust the exact hook definition, and verify `doctor.writePath` after a governed patch.
 **No required config migration.**
 
-**Status: published** (on npm `latest` until 4.6.5 lands; see `docs/releases/4.6.4.md`).
+**Status: published** (see `docs/releases/4.6.4.md`).
 
 ### Changed
 

@@ -10,9 +10,9 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.6.5';
+const CURRENT = '4.6.6';
 /** Version confirmed on npm `latest` before this train. */
-const PUBLISHED_LATEST = '4.6.4';
+const PUBLISHED_LATEST = '4.6.5';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -106,19 +106,20 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('keeps 4.6.5 current and 4.6.4 last published', () => {
-    expect(PUBLISHED_LATEST).toBe('4.6.4');
-    expect(CURRENT).toBe('4.6.5');
+  it('keeps 4.6.6 current and 4.6.5 last published', () => {
+    expect(PUBLISHED_LATEST).toBe('4.6.5');
+    expect(CURRENT).toBe('4.6.6');
+    expect(read('README.md')).toMatch(/4\.6\.6/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.6\.md/);
     expect(read('README.md')).toMatch(/4\.6\.5/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.5\.md/);
-    expect(read('README.md')).toMatch(/4\.6\.4/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.4\.md/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.6\.5/s);
-    expect(read('docs/README.md')).toMatch(/Current:.*4\.6\.5/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.6\.6/s);
+    expect(read('docs/README.md')).toMatch(/Current:.*4\.6\.6/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
-    expect(read('docs/package-surface.md')).toMatch(/current:.*4\.6\.5/is);
+    expect(read('docs/package-surface.md')).toMatch(/current:.*4\.6\.6/is);
     expect(read('docs/package-surface.md')).toMatch(/4\.6\.2\.md/);
-    expect(read('docs/releases/4.6.5.md')).toMatch(/\*\*Status:\*\*\s*current/i);
+    expect(read('docs/releases/4.6.6.md')).toMatch(/\*\*Status:\*\*\s*current/i);
+    expect(read('docs/releases/4.6.5.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.4.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.4.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
     expect(read('docs/releases/4.6.3.md')).toMatch(/\*\*Status:\*\*\s*published/i);
@@ -135,6 +136,25 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('docs/releases/4.5.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.4.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.3.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.6.6 Phase AL honesty', () => {
+  it('records adopted, created-path, stewards, compact doctor, and docs surface', () => {
+    const changelog = changelogText();
+    expect(changelog).toMatch(/## 4\.6\.6/);
+    expect(changelog).toMatch(/adoption-stance/);
+    expect(changelog).toMatch(/domain-logic-in-ui/);
+    expect(changelog).toMatch(/--doctor --all/);
+    expect(changelog).toMatch(/Does not close Z09/);
+    const section = changelog.slice(changelog.indexOf('## 4.6.6'), changelog.indexOf('## 4.6.5'));
+    expect(section).toMatch(/No required config migration/i);
+    const notes = read('docs/releases/4.6.6.md');
+    expect(notes).toMatch(/arkgate@4\.6\.6/);
+    expect(notes).toMatch(/adoption-stance|advisory-only/);
+    expect(notes).toMatch(/--doctor --all/);
+    expect(notes).toMatch(/Z09/);
+    expect(notes).not.toMatch(/amarilla/i);
   });
 });
 
