@@ -52,7 +52,9 @@ const BUDGETS = [
   // Deep-module coach doctor JSON + human section wiring — was 1280.
   // 4.6.0 Claude/Grok home gap doctor lines — was 1300 (loc 1303).
   // AL01 D0 adopted stance + ci-merge-boundary writer — was 1320.
-  { path: 'bin/lib/doctor-plan.mjs', max: 1380 },
+  // AL06 compact vs Details extract — doctor-plan orchestration only.
+  { path: 'bin/lib/doctor-plan.mjs', max: 980 },
+  { path: 'bin/lib/doctor-human.mjs', max: 530 },
   // 4.0.0 ArkRules start/init templates + dual-plane presets — was 650 (loc 870).
   // S3 SPA + adopt/migrate patterns (vite-vercel-spa, P0A retrofit) — was 920 (loc ~1130).
   { path: 'bin/lib/presets.mjs', max: 1160 },

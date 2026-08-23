@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-22 (Phase AL `AL01`–`AL04` **done**; `AL05` parked; Z09 still parked; tree **arkgate@4.6.6**; npm `latest` remains **4.6.5** until publish)
+- **Status date:** 2026-08-23 (Phase AL `AL01`–`AL04` **done**; `AL06` compact-doctor extract **done**; `AL05` parked; Z09 still parked; tree **arkgate@4.6.6**; npm `latest` is **4.6.6**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -256,10 +256,10 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 181 | `AL03` | `done` | M | CX03 | Stewards or Adapt: empty `stewards[]` cannot print Healthy ENFORCE; T4/T5 need `--contract-session` |
 | 182 | `AL04` | `done` | M | CX03 | First-run noun cut; compact doctor; `--doctor --all` prints Details |
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
+| 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-No engineering `doing` right now. 4.6.6 patch is this train. `Z09` stays parked
-(retained adoption + independent close). 30-day freeze from 2026-08-22: no explore /
-compass / skill-body deepen as `doing`.
+No engineering `doing` right now. `Z09` stays parked (retained adoption + independent
+close). 30-day freeze from 2026-08-22: no explore / compass / skill-body deepen as `doing`.
 
 ### Residual Phase Z
 

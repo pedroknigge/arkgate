@@ -119,6 +119,9 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.6\.6/is);
     expect(read('docs/package-surface.md')).toMatch(/4\.6\.2\.md/);
     expect(read('docs/releases/4.6.6.md')).toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(read('docs/releases/4.6.6.md')).toMatch(/6\. \[x\].*arkgate-site 4\.6\.6/s);
+    expect(read('ROADMAP.md')).toMatch(/npm `latest` is \*\*4\.6\.6\*\*/);
+    expect(read('ROADMAP.md')).not.toMatch(/npm `latest` remains \*\*4\.6\.5\*\* until publish/);
     expect(read('docs/releases/4.6.5.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.4.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.4.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
