@@ -16,7 +16,7 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 4.6.6** is current (this train). **4.6.5** remains npm `latest` until publish.
+> **ArkGate 4.6.6** is current on npm `latest`.
 > A tree is **adopted** only with a required GitHub status running `arkgate-check --strict-merge`,
 > or `.ark/adoption-stance.json` `stance: "advisory-only"`. Doctor is compact (`--doctor --all`
 > for Details). [4.6.6 notes](docs/releases/4.6.6.md) · [4.6.5](docs/releases/4.6.5.md) ·
@@ -217,8 +217,8 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current release (4.6.6) | [docs/releases/4.6.6.md](docs/releases/4.6.6.md) · [CHANGELOG](CHANGELOG.md) |
-| Prior published (4.6.5 on npm `latest` until 4.6.6 lands) | [docs/releases/4.6.5.md](docs/releases/4.6.5.md) |
+| Current published (4.6.6 on npm `latest`) | [docs/releases/4.6.6.md](docs/releases/4.6.6.md) · [CHANGELOG](CHANGELOG.md) |
+| Prior published (4.6.5) | [docs/releases/4.6.5.md](docs/releases/4.6.5.md) |
 | Prior published (4.6.3) | [docs/releases/4.6.3.md](docs/releases/4.6.3.md) |
 | Prior (4.6.2) | [docs/releases/4.6.2.md](docs/releases/4.6.2.md) |
 | Prior (4.6.1) | [docs/releases/4.6.1.md](docs/releases/4.6.1.md) |
