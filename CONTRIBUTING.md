@@ -154,7 +154,7 @@ mcp-publisher validate server.json && mcp-publisher publish server.json
 ```
 
 **Current release:** [docs/releases/4.6.6.md](docs/releases/4.6.6.md) (`arkgate@4.6.6`).
-**Current published release:** [docs/releases/4.6.5.md](docs/releases/4.6.5.md) (`arkgate@4.6.5` on npm `latest` until 4.6.6 lands).
+**Current published release:** [docs/releases/4.6.6.md](docs/releases/4.6.6.md) (`arkgate@4.6.6` on npm `latest`).
 
 **Prior published:** [docs/releases/4.6.2.md](docs/releases/4.6.2.md) (`arkgate@4.6.2`).
 **Previous:** [docs/releases/4.6.1.md](docs/releases/4.6.1.md) · [docs/releases/4.6.0.md](docs/releases/4.6.0.md) · [docs/releases/4.5.7.md](docs/releases/4.5.7.md) · [docs/releases/4.5.6.md](docs/releases/4.5.6.md) · [docs/releases/4.5.5.md](docs/releases/4.5.5.md) · [docs/releases/4.5.0.md](docs/releases/4.5.0.md) · [docs/releases/4.4.0.md](docs/releases/4.4.0.md) · [docs/releases/4.3.0.md](docs/releases/4.3.0.md).

@@ -10,7 +10,7 @@ in the immutable pre-2.0 archive linked below.
 **Patch** over **4.6.5**. Phase AL corrective honesty plus a slimmer public docs surface.
 **No required config migration.** Does not close Z09. AL05 stays parked.
 
-**Status: current** (shipping as `arkgate@4.6.6`; see `docs/releases/4.6.6.md`).
+**Status: published** (on npm `latest`; see `docs/releases/4.6.6.md`).
 
 ### Changed
 
@@ -49,7 +49,7 @@ in the immutable pre-2.0 archive linked below.
 **Patch** over **4.6.4**. Adoption, placement, doctor, upgrade, and write-path honesty for
 existing Next.js trees and multi-host teams. **No required config migration.**
 
-**Status: published** (on npm `latest` until 4.6.6 lands; see `docs/releases/4.6.5.md`).
+**Status: published** (see `docs/releases/4.6.5.md`).
 
 ### Changed
 

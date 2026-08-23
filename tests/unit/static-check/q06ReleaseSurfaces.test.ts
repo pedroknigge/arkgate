@@ -11,8 +11,8 @@ import { version } from '../../../src/version.ts';
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
 const CURRENT = '4.6.6';
-/** Version confirmed on npm `latest` before this train. */
-const PUBLISHED_LATEST = '4.6.5';
+/** Version confirmed on npm `latest`. */
+const PUBLISHED_LATEST = '4.6.6';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -106,19 +106,19 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('keeps 4.6.6 current and 4.6.5 last published', () => {
-    expect(PUBLISHED_LATEST).toBe('4.6.5');
+  it('keeps 4.6.6 current and published on npm latest', () => {
+    expect(PUBLISHED_LATEST).toBe('4.6.6');
     expect(CURRENT).toBe('4.6.6');
     expect(read('README.md')).toMatch(/4\.6\.6/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.6\.md/);
     expect(read('README.md')).toMatch(/4\.6\.5/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.5\.md/);
     expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.6\.6/s);
-    expect(read('docs/README.md')).toMatch(/Current:.*4\.6\.6/s);
+    expect(read('docs/README.md')).toMatch(/Current published:.*4\.6\.6/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
-    expect(read('docs/package-surface.md')).toMatch(/current:.*4\.6\.6/is);
+    expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.6\.6/is);
     expect(read('docs/package-surface.md')).toMatch(/4\.6\.2\.md/);
-    expect(read('docs/releases/4.6.6.md')).toMatch(/\*\*Status:\*\*\s*current/i);
+    expect(read('docs/releases/4.6.6.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.5.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.4.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.4.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
