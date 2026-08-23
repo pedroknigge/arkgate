@@ -19,7 +19,11 @@ import {
   MERGE_BOUNDARY_NOT_REQUIRED,
 } from '../../../bin/lib/adoption-stance.mjs';
 import { buildCiMergeBoundary } from '../../../bin/lib/ci-merge-boundary.mjs';
-import { runDoctor } from '../../../bin/lib/doctor-plan.mjs';
+import {
+  runDoctor,
+  printDoctorCompactHuman,
+  printDoctorDetailsHuman,
+} from '../../../bin/lib/doctor-plan.mjs';
 import { collectGovernedFiles } from '../../../bin/lib/scan-files.mjs';
 import { isDoctorHealthyNothingToDo } from '../../../bin/lib/post-green-path.mjs';
 import { collectDoctorNextActions } from '../../../bin/lib/doctor-next-actions.mjs';
@@ -579,5 +583,135 @@ describe('AL04 first-run noun cut', () => {
     const full = captureDoctor(root, false, { all: true });
     expect(full).toMatch(/Details/);
     expect(full).toMatch(/Write path \(agent\)/);
+  });
+
+  it('incomplete analysis honesty stays on the compact first screen', () => {
+    const root = mk();
+    writeConsumerTree(root);
+    const human = captureDoctor(root, false, { completeness: 'unavailable' });
+    expect(human).toMatch(/Analysis unavailable|not verified until analysis is complete/i);
+    expect(human).toMatch(/More: --doctor --all/);
+    expect(human).not.toMatch(/\bDetails\b/);
+  });
+});
+
+const identityColor = {
+  green: (s: string) => s,
+  yellow: (s: string) => s,
+  red: (s: string) => s,
+  dim: (s: string) => s,
+  bold: (s: string) => s,
+};
+
+function capturePrint(fn: (view: Record<string, unknown>) => void, view: Record<string, unknown>) {
+  const logs: string[] = [];
+  const orig = console.log;
+  console.log = (...a: unknown[]) => {
+    logs.push(a.map(String).join(' '));
+  };
+  try {
+    fn(view);
+  } finally {
+    console.log = orig;
+  }
+  return logs.join('\n');
+}
+
+function compactView(over: Record<string, unknown> = {}) {
+  return {
+    root: process.cwd(),
+    analysisComplete: true,
+    completeness: 'complete',
+    doctorAdvisories: { parseHealth: { affectedFiles: 0 }, stewardNudge: null },
+    operatingMode: 'enforce',
+    designFitness: { designWeak: false, label: 'ok' },
+    adopted: 'required-merge',
+    stewardUnfinished: false,
+    emptyScope: false,
+    uniqueActions: ['keep CI'],
+    ciMergeBoundary: { ci: { state: 'required' } },
+    cov: { governed: { percent: 90, classifiedFiles: 9, totalFiles: 10 } },
+    writePath: { gap: null, activeHost: 'grok' },
+    writePathHonesty: {},
+    gatesMissing: [],
+    violations: [],
+    color: identityColor,
+    ...over,
+  };
+}
+
+function detailsView(over: Record<string, unknown> = {}) {
+  return compactView({
+    options: {},
+    coverageHonesty: {},
+    packageVersionTruth: null,
+    designSmells: [],
+    pilotLoop: null,
+    goldenPattern: {},
+    pureLayerOptIn: null,
+    summary: { typeOnlyCount: 0, valueCount: 0, edges: [], concentrated: false },
+    suppressed: 0,
+    activeCount: 0,
+    skillGaps: [],
+    agentHomeGaps: [],
+    baseline: { exists: false },
+    baselineHonesty: {},
+    staleBaseline: 0,
+    staleRunners: [],
+    cov: {
+      governed: { percent: 90, classifiedFiles: 9, totalFiles: 10 },
+      suggestions: [],
+      emptyLayers: [],
+      layersWithoutRules: [],
+    },
+    adoption: { gaps: [], originReport: {} },
+    writePath: {
+      gap: null,
+      activeHost: 'grok',
+      supportSummary: 'local',
+      capabilities: {},
+      mode: 'none',
+      enforcementState: { localWrite: {}, advisoryMcp: {}, ciMerge: {} },
+      support: { capabilities: {} },
+    },
+    ...over,
+  });
+}
+
+describe('AL06 independently invocable human doctor screens', () => {
+  it('printDoctorCompactHuman is callable without Details and keeps thin-coverage honesty', () => {
+    const out = capturePrint(
+      printDoctorCompactHuman,
+      compactView({
+        cov: { governed: { percent: 20, classifiedFiles: 1, totalFiles: 5 } },
+        violations: [],
+        analysisComplete: true,
+      })
+    );
+    expect(out).toMatch(/More: --doctor --all/);
+    expect(out).toMatch(/coverage is still thin|not yet honest enforcement/i);
+    expect(out).not.toMatch(/\bDetails\b/);
+    expect(out).not.toMatch(/Write path \(agent\)/);
+  });
+
+  it('printDoctorCompactHuman keeps incomplete-analysis honesty off the Details encyclopedia', () => {
+    const out = capturePrint(
+      printDoctorCompactHuman,
+      compactView({
+        analysisComplete: false,
+        completeness: 'unavailable',
+        violations: [],
+      })
+    );
+    expect(out).toMatch(/Analysis unavailable|not verified until analysis is complete/i);
+    expect(out).toMatch(/More: --doctor --all/);
+    expect(out).not.toMatch(/\bDetails\b/);
+  });
+
+  it('printDoctorDetailsHuman is callable alone and prints Details', () => {
+    const out = capturePrint(printDoctorDetailsHuman, detailsView());
+    expect(out).toMatch(/\bDetails\b/);
+    expect(out).toMatch(/Write path \(agent\)/);
+    expect(out).not.toMatch(/More: --doctor --all/);
   });
 });
