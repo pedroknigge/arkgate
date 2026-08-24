@@ -3,6 +3,19 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
+/** Kill hung gh instead of stalling CI. */
+export const SPAWN_TIMEOUT_MS = 8000;
+
+function runGh(args, opts = {}) {
+  const { run, ...rest } = opts;
+  const spawn = typeof run === 'function' ? run : spawnSync;
+  return spawn('gh', args, {
+    encoding: 'utf8',
+    ...rest,
+    timeout: SPAWN_TIMEOUT_MS,
+  });
+}
+
 const IF_LINE = /^[ \t]*(?:-\s+)?(?:"if"|'if'|if):\s*(.*?)\s*(?:#.*)?$/i;
 const CONTINUE_LINE = /^[ \t]*(?:-\s+)?(?:"continue-on-error"|'continue-on-error'|continue-on-error):\s*(.*?)\s*(?:#.*)?$/i;
 const SAFE_IF = /^(?:['"]?true['"]?|['"]?\$\{\{\s*(?:true|always\(\))\s*\}\}['"]?)$/i;
@@ -434,7 +447,7 @@ export function reportGithubCiRuntime(opts = {}) {
   const cwd = opts.cwd ?? process.cwd();
   const env = opts.env ?? process.env;
   const limit = Number.isFinite(Number(opts.limit)) ? Math.max(1, Number(opts.limit)) : 30;
-  if (spawnSync('gh', ['--version'], { encoding: 'utf8', env }).status !== 0) {
+  if (runGh(['--version'], { env, run: opts.run }).status !== 0) {
     return { runtimeObserved: false, latestCiRun: null, reason: 'gh-cli-unavailable' };
   }
   const args = [
@@ -443,7 +456,7 @@ export function reportGithubCiRuntime(opts = {}) {
     '--json', 'name,conclusion,status,workflowName,displayTitle,event',
   ];
   if (opts.repo) args.push('--repo', opts.repo);
-  const result = spawnSync('gh', args, { cwd, encoding: 'utf8', env });
+  const result = runGh(args, { cwd, env, run: opts.run });
   if (result.status !== 0) {
     const err = `${result.stderr || ''}${result.stdout || ''}`.slice(0, 400);
     return {
@@ -499,14 +512,14 @@ export function reportGithubCiRuntime(opts = {}) {
 export function reportGithubBranchProtection(opts = {}) {
   const cwd = opts.cwd ?? process.cwd();
   const env = opts.env ?? process.env;
-  if (spawnSync('gh', ['--version'], { encoding: 'utf8', env }).status !== 0) {
+  if (runGh(['--version'], { env, run: opts.run }).status !== 0) {
     return { available: false, reason: 'gh-cli-unavailable', runtimeObserved: false, latestCiRun: null };
   }
   let repo = opts.repo;
   let branch = opts.branch;
   if (!repo || !branch) {
     const args = ['repo', 'view', ...(repo ? [repo] : []), '--json', 'nameWithOwner,defaultBranchRef'];
-    const metadata = parseJson(spawnSync('gh', args, { cwd, encoding: 'utf8', env }));
+    const metadata = parseJson(runGh(args, { cwd, env, run: opts.run }));
     if (!metadata?.nameWithOwner || !metadata?.defaultBranchRef?.name) {
       return { available: false, reason: 'gh-repo-unavailable', runtimeObserved: false, latestCiRun: null };
     }
@@ -514,13 +527,13 @@ export function reportGithubBranchProtection(opts = {}) {
     branch ??= metadata.defaultBranchRef.name;
   }
 
-  const classicResult = spawnSync('gh', [
+  const classicResult = runGh([
     'api', `repos/${repo}/branches/${encodeURIComponent(branch)}/protection`, '--jq',
     '{strict: .required_status_checks.strict, contexts: .required_status_checks.contexts, checks: .required_status_checks.checks, enforcesAdmins: .enforce_admins.enabled}',
-  ], { cwd, encoding: 'utf8', env });
-  const rulesResult = spawnSync(
-    'gh', ['api', `repos/${repo}/rules/branches/${encodeURIComponent(branch)}`],
-    { cwd, encoding: 'utf8', env }
+  ], { cwd, env, run: opts.run });
+  const rulesResult = runGh(
+    ['api', `repos/${repo}/rules/branches/${encodeURIComponent(branch)}`],
+    { cwd, env, run: opts.run }
   );
   const classic = parseJson(classicResult);
   const rules = parseJson(rulesResult);

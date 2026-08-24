@@ -22,6 +22,8 @@ export const HOT_PATH_COMMIT_LIMIT = 200;
 export const HOT_PATH_LIST_CAP = 8;
 /** Minimum change hits before a path is “elevated”. */
 export const HOT_PATH_MIN_HITS = 3;
+/** Kill hung git instead of stalling CI. */
+export const SPAWN_TIMEOUT_MS = 8000;
 
 /**
  * Best-effort recent-churn paths from git history.
@@ -40,6 +42,7 @@ export function computeHotPathAdvisory(root, opts = {}) {
             encoding: 'utf8',
             maxBuffer: 8 * 1024 * 1024,
             stdio: ['ignore', 'pipe', 'pipe'],
+            timeout: SPAWN_TIMEOUT_MS,
           });
 
   const emptyUnavailable = (reason) => ({

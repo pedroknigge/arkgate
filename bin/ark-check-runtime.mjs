@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url';
 const __arkCheckCli = fileURLToPath(new URL('./ark-check.mjs', import.meta.url));
 
 import {
-  DEFAULT_DOMAIN_FORBIDDEN_GLOBALS,
   DEFAULT_INTENT_PREFIXES,
   DEFAULT_LAYER_DIRECTORIES,
   DEFAULT_RULES,
@@ -80,7 +79,6 @@ import {
   CONCENTRATION_MIN_VIOLATIONS,
 } from './lib/violations.mjs';
 import {
-  suggestLayerForDir,
   detectBestFitModel,
   dirSegmentsFromGlob,
 } from './lib/suggestions.mjs';
@@ -126,174 +124,9 @@ import {
   resolveEffectiveProjectRoot,
 } from './lib/project-root.mjs';
 import { demoteArkRuleTeethUnderClassificationFloor } from './lib/rules-under-contract.mjs';
-
-function resolveDesignDeltaBaseRef(root, explicit, env = process.env) {
-  const flag = typeof explicit === 'string' ? explicit.trim() : '';
-  if (flag) return flag;
-  const envRef = normalizePolicyBaseRef(env.ARK_POLICY_BASE_REF);
-  if (envRef) return envRef;
-  const githubBase = typeof env.GITHUB_BASE_REF === 'string' ? env.GITHUB_BASE_REF.trim() : '';
-  if (githubBase) return `origin/${githubBase}`;
-  return discoverLocalBaseRef(root) || undefined;
-}
-
-function parseArgs(argv) {
-  const args = {
-    root: process.cwd(),
-    config: 'ark.config.json',
-    manifest: undefined,
-    printConfig: undefined,
-    tsconfig: undefined,
-    json: false,
-    strictConfig: false,
-    strictMerge: false,
-    requireGates: false,
-    requireWriteHook: undefined,
-    init: false,
-    installAgentGates: false,
-    compact: false,
-    tools: undefined,
-    force: false,
-    skillsOnly: false,
-    baseline: undefined,
-    policyBase: undefined,
-    policyBaseRef: undefined,
-    policyAck: undefined, failOnNewSmells: false, baseRef: undefined,
-    contractSession: false,
-    contractDiff: false,
-    changed: false,
-    against: undefined,
-    base: undefined,
-    persona: undefined,
-    author: undefined,
-    failUngoverned: false,
-    updateBaseline: false,
-    noCache: false,
-    resident: false,
-    coverage: false,
-    migrateCommands: false,
-    doctor: false,
-    plan: false,
-    recommend: false,
-    writePlan: false,
-    listPolicyPacks: false,
-    applyPolicyPack: undefined,
-    watch: false,
-    beginner: false,
-    openReport: false,
-    noOpenReport: false,
-    version: false,
-    help: false,
-    all: false,
-    followConfigRoot: false,
-  };
-  const requireValue = (flag, index) => {
-    const value = argv[index + 1];
-    if (value === undefined || value.startsWith('-')) {
-      throw new Error(`Missing value for ${flag}. Run arkgate-check --help for usage.`);
-    }
-    return value;
-  };
-  for (let i = 2; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === '--json') args.json = true;
-    else if (arg === '--strict' || arg === '--strict-merge') {
-      args.strictConfig = true;
-      args.requireGates = true;
-      args.strictMerge = true;
-    }
-    else if (arg === '--strict-config') args.strictConfig = true;
-    else if (arg === '--require-gates') {
-      args.requireGates = true;
-      args.strictConfig = true;
-    }
-    else if (arg === '--require-write-hook') {
-      args.requireWriteHook = requireValue(arg, i++).trim().toLowerCase();
-    }
-    else if (arg === '--init') args.init = true;
-    else if (arg === '--preset') args.preset = requireValue(arg, i++);
-    else if (arg === '--install-agent-gates') args.installAgentGates = true;
-    else if (arg === '--compact') args.compact = true;
-    else if (arg === '--tools') {
-      // Consume the next arg only when it isn't another flag (same rule as --baseline),
-      // so `--tools --force` can't silently eat --force as a "tool name".
-      const next = argv[i + 1];
-      if (next !== undefined && !next.startsWith('-')) {
-        i += 1;
-        args.tools = next
-          .split(',')
-          .map((tool) => tool.trim().toLowerCase())
-          .filter(Boolean);
-      } else {
-        args.tools = []; // flag without a value — rejected in runInstallAgentGates
-      }
-    }
-    else if (arg === '--force') args.force = true;
-    else if (arg === '--follow-config-root') args.followConfigRoot = true;
-    else if (arg === '--skills-only') args.skillsOnly = true;
-    else if (arg === '--coverage') args.coverage = true;
-    else if (arg === '--doctor') args.doctor = true;
-    else if (arg === '--plan') args.plan = true;
-    else if (arg === '--rules-inventory') args.rulesInventory = true;
-    else if (arg === '--recommend') args.recommend = true;
-    else if (arg === '--write-plan') args.writePlan = true;
-    else if (arg === '--list-policy-packs') args.listPolicyPacks = true;
-    else if (arg === '--apply-policy-pack') args.applyPolicyPack = requireValue(arg, i++);
-    else if (arg === '--suggest-include') args.suggestInclude = true;
-    else if (arg === '--adopt-contract') args.adoptContract = true;
-    else if (arg === '--migrate-contract') args.migrateContract = true;
-    else if (arg === '--ratchet-cores') args.ratchetCores = true;
-    else if (arg === '--write') args.write = true;
-    else if (arg === '--watch') args.watch = true;
-    else if (arg === '--beginner') args.beginner = true;
-    else if (arg === '--codex-home') args.codexHome = true;
-    else if (arg === '--claude-home') args.claudeHome = true;
-    else if (arg === '--grok-home') args.grokHome = true;
-    else if (arg === '--agent-homes') {
-      args.agentHomes = true;
-      args.codexHome = true;
-      args.claudeHome = true;
-      args.grokHome = true;
-    }
-    else if (arg === '--migrate-commands') args.migrateCommands = true;
-    else if (arg === '--no-cache') args.noCache = true;
-    else if (arg === '--resident') args.resident = true;
-    else if (arg === '--report') {
-      const next = argv[i + 1];
-      args.report = next && !next.startsWith('-') ? argv[++i] : 'ark-report.html';
-    }
-    else if (arg === '--reset-origin') args.resetOrigin = true;
-    else if (arg === '--no-archive') args.noArchive = true;
-    else if (arg === '--open') args.openReport = true;
-    else if (arg === '--no-open') args.noOpenReport = true;
-    else if (arg === '--baseline' || arg === '--update-baseline') {
-      if (arg === '--update-baseline') args.updateBaseline = true;
-      // optional path value: consume the next arg only when it isn't another flag
-      const next = argv[i + 1];
-      args.baseline = next && !next.startsWith('-') ? argv[++i] : '.ark-baseline.json';
-    }
-    else if (arg === '--policy-base') args.policyBase = requireValue(arg, i++);
-    else if (arg === '--policy-base-ref') args.policyBaseRef = requireValue(arg, i++);
-    else if (arg === '--policy-ack') args.policyAck = requireValue(arg, i++); else if (arg === '--fail-on-new-smells') args.failOnNewSmells = true; else if (arg === '--base-ref') args.baseRef = requireValue(arg, i++);
-    else if (arg === '--contract-session') args.contractSession = true;
-    else if (arg === '--contract-diff') args.contractDiff = true;
-    else if (arg === '--changed') args.changed = true;
-    else if (arg === '--against') args.against = requireValue(arg, i++);
-    else if (arg === '--base') args.base = requireValue(arg, i++);
-    else if (arg === '--persona') args.persona = requireValue(arg, i++);
-    else if (arg === '--author') args.author = requireValue(arg, i++);
-    else if (arg === '--root') args.root = path.resolve(requireValue(arg, i++));
-    else if (arg === '--config') args.config = requireValue(arg, i++);
-    else if (arg === '--manifest') args.manifest = requireValue(arg, i++);
-    else if (arg === '--print-config') args.printConfig = requireValue(arg, i++);
-    else if (arg === '--tsconfig') args.tsconfig = requireValue(arg, i++);
-    else if (arg === '--help' || arg === '-h') args.help = true;
-    else if (arg === '--all') args.all = true;
-    else if (arg === '--version' || arg === '-V') args.version = true;
-    else throw new Error(`Unknown argument: ${arg}. Run arkgate-check --help for usage.`);
-  }
-  return args;
-}
+import { parseArgs, resolveDesignDeltaBaseRef } from './lib/check-args.mjs';
+import { detectConfig, proposeForUncovered } from './lib/check-config-detect.mjs';
+import { runWatchMode } from './lib/check-watch.mjs';
 
 /** Path shown to humans: project-relative when inside root, absolute otherwise (no `../../..`). */
 function displayPathFromRoot(root, absPath) {
@@ -315,101 +148,6 @@ function readConfig(root, configPath) {
     ).config;
   }
   return parseArkConfigJson(fs.readFileSync(fullPath, 'utf8'), fullPath).config;
-}
-
-/**
- * Infer an ark.config.json from the directories that actually exist in the project,
- * using the same layer→directory conventions as the eleven-layer template. A directory
- * only counts when it contains at least one source file, so an empty scaffold dir can't
- * produce a layer whose pattern matches nothing (which --strict-config would fail).
- */
-function detectConfig(root) {
-  const srcDir = fs.existsSync(path.join(root, 'src')) ? 'src' : '.';
-  const layers = [];
-
-  for (const entry of DEFAULT_INTENT_PREFIXES) {
-    const directories = (DEFAULT_LAYER_DIRECTORIES[entry.layer] ?? []).filter(
-      (directory) => walk(path.join(root, srcDir, directory), [], { root }).length > 0
-    );
-    if (directories.length === 0) continue;
-    layers.push({
-      name: entry.layer,
-      patterns: directories.map((directory) => `${normalize(path.join(srcDir, directory))}/**`),
-      intentPrefixes: entry.prefixes,
-      ...(entry.layer === 'DomainModel'
-        ? { forbiddenGlobals: DEFAULT_DOMAIN_FORBIDDEN_GLOBALS }
-        : {}),
-    });
-  }
-
-  const names = new Set(layers.map((layer) => layer.name));
-  const rules = DEFAULT_RULES.filter((rule) => names.has(rule.from) && names.has(rule.to));
-
-  return { srcDir, config: { include: [srcDir], layers, rules } };
-}
-
-/** Top-level directories under srcDir not covered by any detected layer pattern. */
-function uncoveredDirectories(root, srcDir, layers) {
-  const base = path.join(root, srcDir);
-  if (!fs.existsSync(base)) return [];
-  return fs
-    .readdirSync(base, { withFileTypes: true })
-    .filter(
-      (entry) =>
-        entry.isDirectory() &&
-        entry.name !== 'node_modules' &&
-        entry.name !== 'dist' &&
-        !entry.name.startsWith('.')
-    )
-    .map((entry) => entry.name)
-    .filter((name) => {
-      const prefix = `${normalize(path.join(srcDir, name))}/`;
-      return !layers.some((layer) =>
-        layer.patterns.some((pattern) => pattern.startsWith(prefix))
-      );
-    });
-}
-
-// detectWorkspaces: shared implementation in ark-shared.mjs (npm/pnpm/rush/lerna +
-// conventional multi-package roots).
-
-// Deny every "upward" edge for an ordered layer list (index 0 = outermost/top,
-// which may import everything below it). Inner/lower layers must not import outer
-// ones — the shared shape behind linear layered and feature-sliced layouts.
-
-function proposeForUncovered(root, srcDir, layers) {
-  const proposals = [];
-  for (const top of uncoveredDirectories(root, srcDir, layers)) {
-    const direct = suggestLayerForDir(top);
-    if (direct) {
-      proposals.push({ dir: `${srcDir}/${top}`, ...direct });
-      continue;
-    }
-    let children = [];
-    try {
-      children = fs
-        .readdirSync(path.join(root, srcDir, top), { withFileTypes: true })
-        .filter((e) => e.isDirectory() && e.name !== 'node_modules' && !e.name.startsWith('.'))
-        .map((e) => e.name);
-    } catch {
-      /* not a readable directory — treat as unrecognized below */
-    }
-    if (children.length > 0) {
-      // Descend: propose per child so a mixed `lib/` yields lib/repositories → Persistence
-      // AND flags lib/db as unrecognized, instead of dropping the parts Ark can't place.
-      for (const child of children) {
-        const hit = suggestLayerForDir(child);
-        proposals.push(
-          hit
-            ? { dir: `${srcDir}/${top}/${child}`, ...hit }
-            : { dir: `${srcDir}/${top}/${child}`, unrecognized: true }
-        );
-      }
-    } else {
-      proposals.push({ dir: `${srcDir}/${top}`, unrecognized: true });
-    }
-  }
-  return proposals;
 }
 
 function printInitNextSteps(root) {
@@ -1964,85 +1702,15 @@ async function main() {
   }
 
   if (args.watch) {
-    await runWatchMode(args);
+    await runWatchMode(args, {
+      cliPath: __arkCheckCli,
+      loadConfig: readConfig,
+      dim: color.dim,
+    });
     return;
   }
 
   process.exitCode = designCheck.exitCode(observedOk && (!args.strictMerge || analysisComplete) ? 0 : 1);
-}
-
-async function runWatchMode(args) {
-  const argv = process.argv.slice(2).filter((token) => token !== '--watch');
-  let debounce;
-  const rerun = () => {
-    clearTimeout(debounce);
-    debounce = setTimeout(() => {
-      const result = spawnSync(process.execPath, [__arkCheckCli, ...argv], {
-        cwd: args.root,
-        stdio: 'inherit',
-        env: process.env,
-      });
-      process.exitCode = result.status ?? 1;
-    }, 300);
-  };
-
-  let config;
-  try {
-    config = readConfig(args.root, args.config);
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exitCode = 2;
-    return;
-  }
-
-  for (const entry of config.include ?? []) {
-    const target = path.join(args.root, entry);
-    if (!fs.existsSync(target)) continue;
-    try {
-      const watcher = fs.watch(target, { recursive: true }, rerun);
-      watcher.on('error', () => {
-        watcher.close();
-        watchByPolling(target, rerun);
-      });
-    } catch {
-      watchByPolling(target, rerun);
-    }
-  }
-
-  console.log(color.dim('Watching governed paths for changes… (Ctrl+C to stop)'));
-  await new Promise(() => {});
-}
-
-function watchByPolling(target, onChange) {
-  let previous = watchFingerprint(target);
-  setInterval(() => {
-    const current = watchFingerprint(target);
-    if (current === previous) return;
-    previous = current;
-    onChange();
-  }, 250);
-}
-
-function watchFingerprint(target) {
-  const pending = [target];
-  const entries = [];
-  while (pending.length > 0) {
-    const current = pending.pop();
-    let stat;
-    try {
-      stat = fs.statSync(current);
-    } catch {
-      continue;
-    }
-    entries.push(`${current}:${stat.mtimeMs}:${stat.size}`);
-    if (!stat.isDirectory()) continue;
-    try {
-      for (const name of fs.readdirSync(current)) pending.push(path.join(current, name));
-    } catch {
-      // A concurrent delete is represented by the next fingerprint.
-    }
-  }
-  return entries.sort().join('|');
 }
 
 main().catch((error) => {

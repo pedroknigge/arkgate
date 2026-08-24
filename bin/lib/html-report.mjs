@@ -28,6 +28,9 @@ import { captureGitSnapshot } from './report-snapshot-context.mjs';
 
 export { arkGitignoreAppendDecision, gitignoreCoversArkState, gitignoreHasArkNegationException } from './ark-gitignore.mjs';
 
+/** Cap the rendered violation list so showcase HTML cannot dump unbounded findings. */
+export const HTML_REPORT_VIOLATION_LIST_CAP = 12;
+
 export function detectEnforcement(root) {
   const has = (rel) => fs.existsSync(path.join(root, rel));
   const fileIncludes = (rel, needle) => {
@@ -392,9 +395,13 @@ export function renderBeginnerHtmlReport({ root, config, violations, ok, version
     })
     .join('\n');
 
+  const listedBeginner = violations.slice(0, HTML_REPORT_VIOLATION_LIST_CAP);
+  const hiddenBeginner = Math.max(0, violations.length - listedBeginner.length);
+  const beginnerRemainder = hiddenBeginner
+    ? `<div class="dim">+${hiddenBeginner} more (${violations.length} total)</div>`
+    : '';
   const violationRows = violations.length
-    ? violations
-        .slice(0, 12)
+    ? listedBeginner
         .map((v) => {
           const enriched = enrichViolationWithFixClass(v);
           return `<li><code>${esc(v.file)}:${v.line}</code> — ${esc(enriched.enthusiastHint ?? v.message)}</li>`;
@@ -436,6 +443,7 @@ export function renderBeginnerHtmlReport({ root, config, violations, ok, version
   </table>
   <h2>What to fix first</h2>
   <ul>${violationRows}</ul>
+  ${beginnerRemainder}
   <h2>Next steps</h2>
   <p><code>${arkCheckCommand(root)}</code></p>
   <p><code>${arkCommand(root, 'ark-check', '--recommend')}</code></p>
@@ -781,13 +789,22 @@ export function renderHtmlReport({
     })
     .join('\n');
 
-  const byRule = new Map();
+  const listedViolations = violations.slice(0, HTML_REPORT_VIOLATION_LIST_CAP);
+  const hiddenViolationCount = Math.max(0, violations.length - listedViolations.length);
+  const ruleTotals = new Map();
   for (const v of violations) {
+    ruleTotals.set(v.ruleId, (ruleTotals.get(v.ruleId) || 0) + 1);
+  }
+  const byRule = new Map();
+  for (const v of listedViolations) {
     if (!byRule.has(v.ruleId)) byRule.set(v.ruleId, []);
     byRule.get(v.ruleId).push(v);
   }
-  const violationBlocks = violations.length
-    ? [...byRule.entries()]
+  const remainderNote = hiddenViolationCount
+    ? `<div class="dim">+${hiddenViolationCount} more (${violations.length} total)</div>`
+    : '';
+  const violationBlocks = listedViolations.length
+    ? `${[...byRule.entries()]
         .map(([ruleId, items]) => {
           const hint = FIX_HINTS[ruleId];
           const rows = items
@@ -803,12 +820,12 @@ export function renderHtmlReport({
             })
             .join('\n');
           return `<div class="vgroup">
-            <div class="vghead"><span class="rule">${esc(ruleId)}</span> <span class="dim">${items.length}</span></div>
+            <div class="vghead"><span class="rule">${esc(ruleId)}</span> <span class="dim">${ruleTotals.get(ruleId) ?? items.length}</span></div>
             <ul class="vitems">${rows}</ul>
             ${hint ? `<div class="fix">fix: ${esc(hint)}</div>` : ''}
           </div>`;
         })
-        .join('\n')
+        .join('\n')}${remainderNote}`
     : `<div class="clean hero-clean">
         <div class="clean-title">Architecture matches the contract</div>
         <div class="clean-body">No active violations${suppressed ? ` · ${suppressed} frozen by baseline` : ''}. This is what “honest green” looks like when coverage is real.</div>
