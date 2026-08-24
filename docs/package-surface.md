@@ -212,7 +212,8 @@ production deployment would need to satisfy; it is not a readiness certification
 ## Release notes (maintainers)
 
 Ship notes for a version live under [releases/](https://github.com/pedroknigge/arkgate/tree/main/docs/releases)
-(current published: [4.6.6.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.6.6.md);
+(current published: [4.6.7.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.6.7.md);
+prior published: [4.6.6.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.6.6.md);
 prior published: [4.6.5.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.6.5.md);
 prior published: [4.6.3.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.6.3.md);
 prior published: [4.6.2.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.6.2.md), [4.6.1.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.6.1.md), [4.6.0.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.6.0.md), [4.5.7.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.5.7.md), [4.5.6.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.5.6.md), [4.5.0.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.5.0.md), [4.4.0.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.4.0.md), [4.3.0.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.3.0.md),

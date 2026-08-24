@@ -5,12 +5,40 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.6.7 — 2026-08-24
+
+**Patch** over **4.6.6**. Production-hardening: CODEOWNERS, eval/pack honesty, CLI extracts,
+spawn timeouts, and HTML list cap. **No required config migration.** Does not close Z09.
+
+**Status: published** (on npm `latest`; see `docs/releases/4.6.7.md`).
+
+### Changed
+
+- **CODEOWNERS:** `/src/`, `/bin/`, and `/schemas/` owned by `@pedroknigge`. GitHub still
+  needs `require_code_owner_reviews` (or an approving-review count) for that file to
+  enforce; the in-tree list is the product control.
+
+- **Eval comparative fixture:** `saas-dashboard/without-ark` is a real Presentation→Domain
+  **value** import. Type-only was non-blocking and made the nightly oracle go false-green.
+
+- **npm pack JSON:** `scripts/npm-pack-report.mjs` strips ANSI and parses JSON lines that
+  actually have `filename`. Empty `[]` / `{}` stay empty; missing filename still throws.
+
+- **CLI extracts:** hook payload, package-manager helpers, and check args/config/watch live
+  in `bin/lib/`. Module-budget maxima were not raised.
+
+- **git/gh timeouts:** `SPAWN_TIMEOUT_MS = 8000` on git/gh `spawnSync`. Timeout is
+  fail-closed (`status !== 0`).
+
+- **HTML violation cap:** beginner and full showcase lists share a cap of 12 plus
+  `+N more (T total)`. KPI tiles still use the full array.
+
 ## 4.6.6 — 2026-08-22
 
 **Patch** over **4.6.5**. Phase AL corrective honesty plus a slimmer public docs surface.
 **No required config migration.** Does not close Z09. AL05 stays parked.
 
-**Status: published** (on npm `latest`; see `docs/releases/4.6.6.md`).
+**Status: published** (see `docs/releases/4.6.6.md`).
 
 ### Changed
 

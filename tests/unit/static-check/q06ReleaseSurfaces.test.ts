@@ -10,9 +10,9 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.6.6';
+const CURRENT = '4.6.7';
 /** Version confirmed on npm `latest`. */
-const PUBLISHED_LATEST = '4.6.6';
+const PUBLISHED_LATEST = '4.6.7';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -106,22 +106,24 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('keeps 4.6.6 current and published on npm latest', () => {
-    expect(PUBLISHED_LATEST).toBe('4.6.6');
-    expect(CURRENT).toBe('4.6.6');
+  it('keeps 4.6.7 current and published on npm latest', () => {
+    expect(PUBLISHED_LATEST).toBe('4.6.7');
+    expect(CURRENT).toBe('4.6.7');
+    expect(read('README.md')).toMatch(/4\.6\.7/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.7\.md/);
     expect(read('README.md')).toMatch(/4\.6\.6/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.6\.md/);
-    expect(read('README.md')).toMatch(/4\.6\.5/);
-    expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.5\.md/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.6\.6/s);
-    expect(read('docs/README.md')).toMatch(/Current published:.*4\.6\.6/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.6\.7/s);
+    expect(read('docs/README.md')).toMatch(/Current published:.*4\.6\.7/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
-    expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.6\.6/is);
+    expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.6\.7/is);
     expect(read('docs/package-surface.md')).toMatch(/4\.6\.2\.md/);
+    expect(read('docs/releases/4.6.7.md')).toMatch(/\*\*Status:\*\*\s*published/i);
+    expect(read('docs/releases/4.6.7.md')).not.toMatch(/\*\*Status:\*\*\s*current/i);
     expect(read('docs/releases/4.6.6.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.6.md')).toMatch(/6\. \[x\].*arkgate-site 4\.6\.6/s);
-    expect(read('ROADMAP.md')).toMatch(/npm `latest` is \*\*4\.6\.6\*\*/);
-    expect(read('ROADMAP.md')).not.toMatch(/npm `latest` remains \*\*4\.6\.5\*\* until publish/);
+    expect(read('ROADMAP.md')).toMatch(/npm `latest` is \*\*4\.6\.7\*\*/);
+    expect(read('ROADMAP.md')).not.toMatch(/npm `latest` remains \*\*4\.6\.6\*\* until publish/);
     expect(read('docs/releases/4.6.5.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.4.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.4.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -139,6 +141,31 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('docs/releases/4.5.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.4.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.3.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.6.7 production-hardening patch', () => {
+  it('records CODEOWNERS, eval/pack honesty, CLI extracts, timeouts, and HTML cap', () => {
+    const changelog = changelogText();
+    expect(changelog).toMatch(/## 4\.6\.7/);
+    expect(changelog).toMatch(/CODEOWNERS/);
+    expect(changelog).toMatch(/saas-dashboard/);
+    expect(changelog).toMatch(/npm pack/);
+    expect(changelog).toMatch(/SPAWN_TIMEOUT_MS/);
+    expect(changelog).toMatch(/HTML violation cap|HTML list cap/i);
+    expect(changelog).toMatch(/Does not close Z09/);
+    const section = changelog.slice(changelog.indexOf('## 4.6.7'), changelog.indexOf('## 4.6.6'));
+    expect(section).toMatch(/No required config migration/i);
+    expect(section).toMatch(/Status:\s*published/i);
+    expect(section).not.toMatch(/Status:\s*current/i);
+    const notes = read('docs/releases/4.6.7.md');
+    expect(notes).toMatch(/arkgate@4\.6\.7/);
+    expect(notes).toMatch(/CODEOWNERS/);
+    expect(notes).toMatch(/saas-dashboard/);
+    expect(notes).toMatch(/SPAWN_TIMEOUT_MS|8s timeout/i);
+    expect(notes).toMatch(/Z09/);
+    expect(notes).toMatch(/mcp-publisher validate server\.json/);
+    expect(notes).not.toMatch(/amarilla/i);
   });
 });
 

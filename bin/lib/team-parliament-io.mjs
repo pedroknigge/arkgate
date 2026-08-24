@@ -34,10 +34,14 @@ export {
   suggestStewards,
 };
 
+/** Kill hung git instead of stalling CI. */
+export const SPAWN_TIMEOUT_MS = 8000;
+
 function runGit(cwd, args) {
   return spawnSync('git', ['-C', cwd, ...args], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: SPAWN_TIMEOUT_MS,
   });
 }
 

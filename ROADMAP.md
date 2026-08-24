@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-23 (Phase AL `AL01`–`AL04` **done**; `AL06` compact-doctor extract **done**; `AL05` parked; Z09 still parked; tree **arkgate@4.6.6**; npm `latest` is **4.6.6**)
+- **Status date:** 2026-08-24 (Phase AL `AL01`–`AL04` **done**; `AL06` compact-doctor extract **done**; `AL05` parked; Z09 still parked; tree **arkgate@4.6.7**; npm `latest` is **4.6.7**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 

@@ -1,5 +1,5 @@
-import type { Team } from '../domain/team.js';
+import { teamName } from '../domain/team.js';
 
-export function render(teams: Team[]) {
-  return teams.map((t) => t.name).join(',');
+export function render(teams: { id: string; name: string }[]) {
+  return teams.map(teamName).join(',');
 }
