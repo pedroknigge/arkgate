@@ -27,6 +27,15 @@ describe('mcp-hook-payload (extracted)', () => {
         args: { TargetFile: 'src/a.ts', TargetContent: 'a', ReplacementContent: 'b' },
       })
     ).toMatchObject({ toolName: 'Edit', toolInput: { old_string: 'a', new_string: 'b' } });
+    expect(
+      mapAntigravityToolCall({
+        name: 'multi_replace_file_content',
+        args: {
+          TargetFile: 'src/a.ts',
+          ReplacementChunks: [{ TargetContent: 'a', ReplacementContent: 'b', AllowMultiple: true }],
+        },
+      })
+    ).toMatchObject({ toolName: 'MultiEdit' });
   });
 
   it('normalizes Claude, Grok, and Cursor payloads', () => {
@@ -61,6 +70,10 @@ describe('mcp-hook-payload (extracted)', () => {
     expect(proposedSource('Edit', { file_path: file, old_string: 'world', new_string: 'ark' })).toBe(
       'hello ark\n'
     );
+    expect(proposedSource('Edit', { file_path: file, old_string: '', new_string: 'only' })).toBe('only');
+    expect(
+      proposedSource('Edit', { file_path: file, old_string: 'l', new_string: 'L', replace_all: true })
+    ).toBe('heLLo worLd\n');
     const deny = formatWriteGateDeny({
       file: 'src/a.ts',
       reason: 'Domain imported fetch',
@@ -68,6 +81,14 @@ describe('mcp-hook-payload (extracted)', () => {
     });
     expect(deny).toMatch(/^blocked src\/a\.ts/);
     expect(deny).toContain('[FORBIDDEN_GLOBAL]');
+    expect(
+      formatWriteGateDeny({
+        file: 'src/a.ts',
+        reason: 'x',
+        extraLines: ['hint'],
+        nextAction: 'Move the import to Domain.',
+      })
+    ).toContain('hint');
   });
 
   it('applies a complete Codex update patch inside the project root', () => {
