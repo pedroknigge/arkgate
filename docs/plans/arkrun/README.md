@@ -11,8 +11,9 @@
 **Status:** In progress (Phase RN). `RN01` done — ADRs 0020–0024 accepted in
 [docs/adr](../../adr/README.md); `RN02` done (schema `1.2` `arkRun`); `RN03` done
 (resolver facts); `RN04` done (tier-1 sensors); `RN05` done (catalog dual-depth
-`nextAction`); `RN06` implemented (`arkgate/eslint` import/`new` envelope);
-`RN07`–`RN16` remain `todo` in ROADMAP. Does not close
+`nextAction`); `RN06` done (`arkgate/eslint` import/`new` envelope);
+`RN07` done (CLI / MCP / hook / preflight / CI extra teeth); `RN08`–`RN16`
+remain `todo` in ROADMAP. Does not close
 `Z09` / residual `RB-11`.<br>
 **Slug:** `arkrun`<br>
 **Kind:** epic / gated extra plane + companion kernel<br>
@@ -190,8 +191,8 @@ and docs. One `doing` at a time.
 | `RN03` | L | RN02 | **done** — Resolver facts: kernel API call sites, `new` of managed types, composition-root hits (facts schema additive) |
 | `RN04` | L | RN03 | **done** — tier-1 sensors emit `ARKRUN_*`; advisory does not flip `valid`; enforced blocks |
 | `RN05` | M | RN04 | **done** — Diagnostic catalog entries + dual-depth hints + `nextAction`; remediation parity tests |
-| `RN06` | M | RN04 | **implemented** — `arkgate/eslint` rules for the same sensors (import / `new` envelope) |
-| `RN07` | L | RN05 | Parity: CLI, MCP, hook, preflight, CI extra teeth — one verdict |
+| `RN06` | M | RN04 | **done** — `arkgate/eslint` rules for the same sensors (import / `new` envelope) |
+| `RN07` | L | RN05 | **done** — CLI / MCP / hook / preflight / CI extra teeth share one verdict; enforced only when classified |
 | `RN08` | M | RN07 | Doctor / `ark status` / report section `arkRun` (`notAScore`); mergePlanes honesty |
 
 ### RN1 — Companion kernel

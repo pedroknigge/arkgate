@@ -1,5 +1,7 @@
 /** Fail-closed completeness evidence for one proposed source snippet. */
+import { layerForRelativePath } from '../ark-layer-match.mjs';
 import { ANALYSIS_COMPLETENESS } from './analysis-completeness.mjs';
+import { evaluateArkRunEditorSensorsFromSource } from './ark-run-sensors.mjs';
 
 export function flattenTsParseDiagnostics(ts, diagnostics, sourceFile) {
   if (!Array.isArray(diagnostics) || !ts) return [];
@@ -31,11 +33,50 @@ function finding(ruleId, message, file, nextAction) {
   };
 }
 
+function arkRunSnippetViolations(source, context = {}) {
+  const extra = context.arkRun;
+  const layers = context.layers;
+  const file = context.relFile || context.filePath;
+  if (!extra || !Array.isArray(layers) || typeof file !== 'string' || file.length === 0) {
+    return [];
+  }
+  const layerForFile = (pathValue) => {
+    if (pathValue === file && typeof context.layer === 'string') return context.layer;
+    return layerForRelativePath(pathValue, layers);
+  };
+  const { findings } = evaluateArkRunEditorSensorsFromSource({
+    arkRun: extra,
+    layers,
+    file,
+    source,
+    layerForFile,
+    classification: context.classification,
+  });
+  return findings
+    .filter((finding) => finding.failsStrict)
+    .map((finding) => ({
+      ruleId: finding.ruleId,
+      code: finding.ruleId,
+      message: finding.message,
+      file: finding.file,
+      line: finding.line,
+      fromLayer: finding.fromLayer,
+      target: finding.target,
+      nextAction: finding.nextAction,
+      failsStrict: true,
+      severity: 'error',
+    }));
+}
+
 export function validateSnippetAnalysis({ gate, ts, source, context = {} }) {
   const observed = gate.validate(source, context);
+  const arkRunViolations = arkRunSnippetViolations(source, context);
   const base = {
-    valid: Boolean(observed.lexicalValid ?? observed.valid),
-    violations: Array.isArray(observed.violations) ? observed.violations : [],
+    valid: Boolean(observed.lexicalValid ?? observed.valid) && arkRunViolations.length === 0,
+    violations: [
+      ...(Array.isArray(observed.violations) ? observed.violations : []),
+      ...arkRunViolations,
+    ],
   };
   const file = context.filePath;
 

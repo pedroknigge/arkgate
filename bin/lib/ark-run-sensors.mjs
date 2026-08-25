@@ -8,7 +8,8 @@
  * Pure CLI helper (bin/lib/ark-run-sensors.mjs). Zero Node I/O.
  */
 
-import { isArkRunKernelModuleSpecifier, isArkRunTransportBypassSpecifier, } from './ark-run-facts.mjs';
+import { extractArkRunImportedConstructorNamesFromSource, extractArkRunKernelCallsFromSource, extractArkRunManagedNewsFromSource, extractArkRunValueImportDependenciesFromSource, isArkRunKernelModuleSpecifier, isArkRunTransportBypassSpecifier, } from './ark-run-facts.mjs';
+import { extraMergeTeethAllowed, } from './extra-merge-teeth.mjs';
 import { deterministicNextAction } from './remediation.mjs';
 export const ARKRUN_TIER1_SENSOR_IDS = [
     'arkrun-missing-root',
@@ -60,8 +61,8 @@ function compareFindings(left, right) {
         left.line - right.line ||
         left.message.localeCompare(right.message));
 }
-function finding(extra, sensor, file, line, message, extras) {
-    const failsStrict = extra.mode === 'enforced';
+function finding(extra, sensor, file, line, message, extras, teethAllowed) {
+    const failsStrict = extra.mode === 'enforced' && teethAllowed;
     return {
         ruleId: ARKRUN_RULE_IDS[sensor],
         sensor,
@@ -108,11 +109,11 @@ function handleKinds(kind) {
 function dependKinds(kind) {
     return kind === 'resolve' || kind === 'resolve-singleton';
 }
-function evaluateMissingRoot(extra, hits) {
+function evaluateMissingRoot(extra, hits, teethAllowed) {
     const out = [];
     const roots = extra.compositionRoots;
     if (roots.length === 0) {
-        out.push(finding(extra, 'arkrun-missing-root', 'ark.config.json', 1, 'ArkRun compositionRoots is empty; no createArkKernel factory site is declared.'));
+        out.push(finding(extra, 'arkrun-missing-root', 'ark.config.json', 1, 'ArkRun compositionRoots is empty; no createArkKernel factory site is declared.', undefined, teethAllowed));
         return out;
     }
     const hitsByRoot = new Map();
@@ -124,18 +125,18 @@ function evaluateMissingRoot(extra, hits) {
     for (const pattern of roots) {
         const matched = [...(hitsByRoot.get(pattern) ?? [])].sort((left, right) => left.file.localeCompare(right.file));
         if (matched.length === 0) {
-            out.push(finding(extra, 'arkrun-missing-root', 'ark.config.json', 1, `ArkRun composition root ${JSON.stringify(pattern)} matched no governed files and has no createArkKernel factory.`, { target: pattern }));
+            out.push(finding(extra, 'arkrun-missing-root', 'ark.config.json', 1, `ArkRun composition root ${JSON.stringify(pattern)} matched no governed files and has no createArkKernel factory.`, { target: pattern }, teethAllowed));
             continue;
         }
         // Factory required in the root set, not in every glob hit.
         if (matched.some((hit) => hit.hasKernelFactory))
             continue;
         const first = matched[0];
-        out.push(finding(extra, 'arkrun-missing-root', first.file, 1, `ArkRun composition root ${JSON.stringify(pattern)} has no createArkKernel / createStrictArkKernel factory.`, { target: pattern }));
+        out.push(finding(extra, 'arkrun-missing-root', first.file, 1, `ArkRun composition root ${JSON.stringify(pattern)} has no createArkKernel / createStrictArkKernel factory.`, { target: pattern }, teethAllowed));
     }
     return out;
 }
-function evaluateKernelInDomain(extra, layers, dependencies, layerForFile) {
+function evaluateKernelInDomain(extra, layers, dependencies, layerForFile, teethAllowed) {
     const prefixes = new Map(layers.map((layer) => [layer.name, layer.intentPrefixes ?? []]));
     const out = [];
     for (const dependency of dependencies) {
@@ -147,11 +148,11 @@ function evaluateKernelInDomain(extra, layers, dependencies, layerForFile) {
             continue;
         if (!isDomainRoleLayer(fromLayer, prefixes.get(fromLayer) ?? []))
             continue;
-        out.push(finding(extra, 'arkrun-kernel-in-domain', dependency.from, dependency.line, `${fromLayer} must not import kernel module ${JSON.stringify(specifier)}.`, { fromLayer, target: specifier }));
+        out.push(finding(extra, 'arkrun-kernel-in-domain', dependency.from, dependency.line, `${fromLayer} must not import kernel module ${JSON.stringify(specifier)}.`, { fromLayer, target: specifier }, teethAllowed));
     }
     return out;
 }
-function evaluateDirectNew(extra, layers, managedNews, hits, layerForFile) {
+function evaluateDirectNew(extra, layers, managedNews, hits, layerForFile, teethAllowed) {
     const managed = new Set(extra.managedLayers);
     if (managed.size === 0)
         return [];
@@ -166,11 +167,11 @@ function evaluateDirectNew(extra, layers, managedNews, hits, layerForFile) {
             continue;
         if (isDomainRoleLayer(fromLayer, prefixes.get(fromLayer) ?? []))
             continue;
-        out.push(finding(extra, 'arkrun-direct-new', constructed.file, constructed.line, `${fromLayer} must not construct ${constructed.typeName} with new outside an ArkRun composition-root factory.`, { fromLayer, target: constructed.typeName }));
+        out.push(finding(extra, 'arkrun-direct-new', constructed.file, constructed.line, `${fromLayer} must not construct ${constructed.typeName} with new outside an ArkRun composition-root factory.`, { fromLayer, target: constructed.typeName }, teethAllowed));
     }
     return out;
 }
-function evaluateUndeclared(extra, kernelCalls, declarations, layerForFile) {
+function evaluateUndeclared(extra, kernelCalls, declarations, layerForFile, teethAllowed) {
     const findings = [];
     const completenessReasons = [];
     if (extra.requireDeclarations !== true) {
@@ -199,22 +200,22 @@ function evaluateUndeclared(extra, kernelCalls, declarations, layerForFile) {
         if (emitKinds(call.kind)) {
             if (bag.raises.has(call.nameLiteral) || bag.sends.has(call.nameLiteral))
                 continue;
-            findings.push(finding(extra, 'arkrun-undeclared-emit', call.file, call.line, `Emit ${JSON.stringify(call.nameLiteral)} is not declared in raises or sends.`, { fromLayer, target: call.nameLiteral }));
+            findings.push(finding(extra, 'arkrun-undeclared-emit', call.file, call.line, `Emit ${JSON.stringify(call.nameLiteral)} is not declared in raises or sends.`, { fromLayer, target: call.nameLiteral }, teethAllowed));
             continue;
         }
         if (handleKinds(call.kind)) {
             if (bag.reactsTo.has(call.nameLiteral))
                 continue;
-            findings.push(finding(extra, 'arkrun-undeclared-handle', call.file, call.line, `Handle ${JSON.stringify(call.nameLiteral)} is not declared in reactsTo.`, { fromLayer, target: call.nameLiteral }));
+            findings.push(finding(extra, 'arkrun-undeclared-handle', call.file, call.line, `Handle ${JSON.stringify(call.nameLiteral)} is not declared in reactsTo.`, { fromLayer, target: call.nameLiteral }, teethAllowed));
             continue;
         }
         if (bag.uses.has(call.nameLiteral))
             continue;
-        findings.push(finding(extra, 'arkrun-undeclared-depend', call.file, call.line, `Depend ${JSON.stringify(call.nameLiteral)} is not declared in uses.`, { fromLayer, target: call.nameLiteral }));
+        findings.push(finding(extra, 'arkrun-undeclared-depend', call.file, call.line, `Depend ${JSON.stringify(call.nameLiteral)} is not declared in uses.`, { fromLayer, target: call.nameLiteral }, teethAllowed));
     }
     return { findings, completenessReasons };
 }
-function evaluateTransportBypass(extra, dependencies, layerForFile) {
+function evaluateTransportBypass(extra, dependencies, layerForFile, teethAllowed) {
     const managed = new Set(extra.managedLayers);
     if (managed.size === 0)
         return [];
@@ -228,7 +229,7 @@ function evaluateTransportBypass(extra, dependencies, layerForFile) {
         const fromLayer = layerForFile(dependency.from);
         if (!fromLayer || !managed.has(fromLayer))
             continue;
-        out.push(finding(extra, 'arkrun-transport-bypass', dependency.from, dependency.line, `${fromLayer} must not import broker/queue/emitter ${JSON.stringify(specifier)}; use the ArkRun kernel transport.`, { fromLayer, target: specifier }));
+        out.push(finding(extra, 'arkrun-transport-bypass', dependency.from, dependency.line, `${fromLayer} must not import broker/queue/emitter ${JSON.stringify(specifier)}; use the ArkRun kernel transport.`, { fromLayer, target: specifier }, teethAllowed));
     }
     return out;
 }
@@ -239,13 +240,14 @@ export function evaluateArkRunSensors(input) {
     const extra = input.arkRun;
     if (!extra)
         return { findings: [], completenessReasons: [] };
-    const undeclared = evaluateUndeclared(extra, input.kernelCalls, input.declarations, input.layerForFile);
+    const teethAllowed = extraMergeTeethAllowed(input.classification);
+    const undeclared = evaluateUndeclared(extra, input.kernelCalls, input.declarations, input.layerForFile, teethAllowed);
     const findings = [
-        ...evaluateMissingRoot(extra, input.compositionRootHits),
-        ...evaluateKernelInDomain(extra, input.layers, input.dependencies, input.layerForFile),
-        ...evaluateDirectNew(extra, input.layers, input.managedNews, input.compositionRootHits, input.layerForFile),
+        ...evaluateMissingRoot(extra, input.compositionRootHits, teethAllowed),
+        ...evaluateKernelInDomain(extra, input.layers, input.dependencies, input.layerForFile, teethAllowed),
+        ...evaluateDirectNew(extra, input.layers, input.managedNews, input.compositionRootHits, input.layerForFile, teethAllowed),
         ...undeclared.findings,
-        ...evaluateTransportBypass(extra, input.dependencies, input.layerForFile),
+        ...evaluateTransportBypass(extra, input.dependencies, input.layerForFile, teethAllowed),
     ].sort(compareFindings);
     const completenessReasons = [...undeclared.completenessReasons].sort((left, right) => {
         const leftKey = `${left.code}\0${left.file ?? ''}\0${left.message}`;
@@ -264,4 +266,44 @@ export function evaluateArkRunEditorSensors(input) {
         findings: result.findings.filter((item) => isArkRunEditorSensor(item.sensor)),
         completenessReasons: [],
     };
+}
+function fileMatchesCompositionRoot(pattern, file) {
+    if (pattern === file)
+        return true;
+    const star = pattern.indexOf('*');
+    if (star < 0)
+        return false;
+    const prefix = pattern.slice(0, star).replace(/\/$/, '');
+    return prefix.length > 0 && (file === prefix || file.startsWith(`${prefix}/`));
+}
+function compositionRootHitsForSource(extra, file, source) {
+    const hasFactory = extractArkRunKernelCallsFromSource(file, source).some((call) => call.kind === 'factory');
+    const hits = [];
+    for (const pattern of extra.compositionRoots) {
+        if (!fileMatchesCompositionRoot(pattern, file))
+            continue;
+        hits.push({ file, matchedRoot: pattern, hasKernelFactory: hasFactory });
+    }
+    return hits;
+}
+/**
+ * Import / `new` envelope from one proposed source (hook Write/Edit, snippet MCP).
+ * Missing-root and undeclared-* stay project-wide CLI/MCP/preflight.
+ */
+export function evaluateArkRunEditorSensorsFromSource(input) {
+    const extra = input.arkRun;
+    if (!extra)
+        return { findings: [], completenessReasons: [] };
+    const admitted = new Set(extractArkRunImportedConstructorNamesFromSource(input.source));
+    return evaluateArkRunEditorSensors({
+        arkRun: extra,
+        layers: input.layers,
+        kernelCalls: [],
+        managedNews: extractArkRunManagedNewsFromSource(input.file, input.source, admitted),
+        compositionRootHits: compositionRootHitsForSource(extra, input.file, input.source),
+        declarations: [],
+        dependencies: extractArkRunValueImportDependenciesFromSource(input.file, input.source),
+        layerForFile: input.layerForFile,
+        classification: input.classification,
+    });
 }

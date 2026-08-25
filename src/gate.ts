@@ -204,16 +204,30 @@ export {
   ARKRUN_TRANSPORT_BYPASS_SPECIFIERS,
   arkRunKernelCallKind,
   extractArkRunDeclarationsFromSource,
+  extractArkRunImportedConstructorNamesFromSource,
   extractArkRunKernelCallsFromSource,
   extractArkRunManagedNewsFromSource,
+  extractArkRunValueImportDependenciesFromSource,
   isArkRunKernelModuleSpecifier,
   isArkRunTransportBypassSpecifier,
 } from './domain/arkRunFacts';
 
 export {
+  EXTRA_MERGE_TEETH_GOVERNED_FLOOR,
+  classifyResolvedLayerCoverage,
+  demoteExtraPlaneTeethUnderClassificationFloor,
+  extraMergeTeethAllowed,
+  isArkRunRuleId,
+  isExtraPlaneFinding,
+  type ExtraMergeTeethClassification,
+} from './domain/extraMergeTeeth';
+
+export {
   ARKRUN_INTERACTION_NAME_INCOMPLETE,
   ARKRUN_RULE_IDS,
   ARKRUN_TIER1_SENSOR_IDS,
+  evaluateArkRunEditorSensors,
+  evaluateArkRunEditorSensorsFromSource,
   evaluateArkRunSensors,
   type ArkRunRuleId,
   type ArkRunSensorFinding,

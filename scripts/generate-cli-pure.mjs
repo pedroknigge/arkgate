@@ -20,6 +20,7 @@
  *   src/domain/agentSkillsPackage.ts → bin/lib/agent-skills-package.mjs
  *   src/domain/resolvedCandidateFactsSchema.ts → schemas/ark.resolved-candidate-facts.schema.json
  *   src/domain/arkRunFacts.ts → bin/lib/ark-run-facts.mjs
+ *   src/domain/extraMergeTeeth.ts → bin/lib/extra-merge-teeth.mjs
  *   src/domain/arkRunSensors.ts → bin/lib/ark-run-sensors.mjs
  *
  * Layer match remains scripts/generate-layer-match.mjs (R1).
@@ -85,6 +86,11 @@ const MODULES = [
     canonical: 'src/domain/arkRunFacts.ts',
     derived: 'bin/lib/ark-run-facts.mjs',
     label: 'ArkRun resolver-fact extractors (ADR 0022 / RN03)',
+  },
+  {
+    canonical: 'src/domain/extraMergeTeeth.ts',
+    derived: 'bin/lib/extra-merge-teeth.mjs',
+    label: 'extra-plane merge teeth classification floor (RN07)',
   },
   {
     canonical: 'src/domain/arkRunSensors.ts',

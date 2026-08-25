@@ -93,7 +93,9 @@ Top-level fields:
   `enforced` mode fails closed (`ARKRUN_MISSING_ROOT`); empty `managedLayers` in `enforced`
   mode also fails closed (direct-new / undeclared / transport-bypass would otherwise no-op).
   Compact starters do not enable this extra. Demotion (`enforced` → `advisory`) or deletion
-  is a policy-delta **weakening**.
+  is a policy-delta **weakening**. Enforced extra teeth share the CLI / MCP / hook /
+  preflight / CI verdict and arm only when the layer plane is classified (same ≥50%
+  governed and ≥1 populated-layer floor as ArkRules).
 
 Layer fields:
 

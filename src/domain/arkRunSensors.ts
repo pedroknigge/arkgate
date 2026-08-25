@@ -5,10 +5,18 @@
  * blocks. Heuristic skip-resolve is not evaluated here (tier 2, RN later).
  */
 import {
+  extractArkRunImportedConstructorNamesFromSource,
+  extractArkRunKernelCallsFromSource,
+  extractArkRunManagedNewsFromSource,
+  extractArkRunValueImportDependenciesFromSource,
   isArkRunKernelModuleSpecifier,
   isArkRunTransportBypassSpecifier,
 } from './arkRunFacts';
 import type { ArkConfigArkRun, ArkConfigLayer } from './configTypes';
+import {
+  extraMergeTeethAllowed,
+  type ExtraMergeTeethClassification,
+} from './extraMergeTeeth';
 import { deterministicNextAction } from './remediation';
 import type {
   ResolvedArkRunCompositionRootHitFact,
@@ -86,6 +94,8 @@ export type EvaluateArkRunSensorsInput = {
   declarations: readonly ResolvedArkRunDeclarationFact[];
   dependencies: readonly ResolvedDependencyFact[];
   layerForFile: (path: string) => string | null | undefined;
+  /** Omit for contract-only callers (teeth allowed). Kernel/CLI pass tree coverage. */
+  classification?: ExtraMergeTeethClassification;
 };
 
 export type EvaluateArkRunSensorsResult = {
@@ -119,9 +129,10 @@ function finding(
   file: string,
   line: number,
   message: string,
-  extras?: { fromLayer?: string; target?: string }
+  extras: { fromLayer?: string; target?: string } | undefined,
+  teethAllowed: boolean
 ): ArkRunSensorFinding {
-  const failsStrict = extra.mode === 'enforced';
+  const failsStrict = extra.mode === 'enforced' && teethAllowed;
   return {
     ruleId: ARKRUN_RULE_IDS[sensor],
     sensor,
@@ -184,7 +195,8 @@ function dependKinds(kind: ResolvedArkRunKernelCallKind): boolean {
 
 function evaluateMissingRoot(
   extra: ArkConfigArkRun,
-  hits: readonly ResolvedArkRunCompositionRootHitFact[]
+  hits: readonly ResolvedArkRunCompositionRootHitFact[],
+  teethAllowed: boolean
 ): ArkRunSensorFinding[] {
   const out: ArkRunSensorFinding[] = [];
   const roots = extra.compositionRoots;
@@ -195,7 +207,9 @@ function evaluateMissingRoot(
         'arkrun-missing-root',
         'ark.config.json',
         1,
-        'ArkRun compositionRoots is empty; no createArkKernel factory site is declared.'
+        'ArkRun compositionRoots is empty; no createArkKernel factory site is declared.',
+        undefined,
+        teethAllowed
       )
     );
     return out;
@@ -218,7 +232,8 @@ function evaluateMissingRoot(
           'ark.config.json',
           1,
           `ArkRun composition root ${JSON.stringify(pattern)} matched no governed files and has no createArkKernel factory.`,
-          { target: pattern }
+          { target: pattern },
+          teethAllowed
         )
       );
       continue;
@@ -233,7 +248,8 @@ function evaluateMissingRoot(
         first.file,
         1,
         `ArkRun composition root ${JSON.stringify(pattern)} has no createArkKernel / createStrictArkKernel factory.`,
-        { target: pattern }
+        { target: pattern },
+        teethAllowed
       )
     );
   }
@@ -244,7 +260,8 @@ function evaluateKernelInDomain(
   extra: ArkConfigArkRun,
   layers: readonly ArkConfigLayer[],
   dependencies: readonly ResolvedDependencyFact[],
-  layerForFile: EvaluateArkRunSensorsInput['layerForFile']
+  layerForFile: EvaluateArkRunSensorsInput['layerForFile'],
+  teethAllowed: boolean
 ): ArkRunSensorFinding[] {
   const prefixes = new Map(
     layers.map((layer) => [layer.name, layer.intentPrefixes ?? []] as const)
@@ -263,7 +280,8 @@ function evaluateKernelInDomain(
         dependency.from,
         dependency.line,
         `${fromLayer} must not import kernel module ${JSON.stringify(specifier)}.`,
-        { fromLayer, target: specifier }
+        { fromLayer, target: specifier },
+        teethAllowed
       )
     );
   }
@@ -275,7 +293,8 @@ function evaluateDirectNew(
   layers: readonly ArkConfigLayer[],
   managedNews: readonly ResolvedArkRunManagedNewFact[],
   hits: readonly ResolvedArkRunCompositionRootHitFact[],
-  layerForFile: EvaluateArkRunSensorsInput['layerForFile']
+  layerForFile: EvaluateArkRunSensorsInput['layerForFile'],
+  teethAllowed: boolean
 ): ArkRunSensorFinding[] {
   const managed = new Set(extra.managedLayers);
   if (managed.size === 0) return [];
@@ -298,7 +317,8 @@ function evaluateDirectNew(
         constructed.file,
         constructed.line,
         `${fromLayer} must not construct ${constructed.typeName} with new outside an ArkRun composition-root factory.`,
-        { fromLayer, target: constructed.typeName }
+        { fromLayer, target: constructed.typeName },
+        teethAllowed
       )
     );
   }
@@ -309,7 +329,8 @@ function evaluateUndeclared(
   extra: ArkConfigArkRun,
   kernelCalls: readonly ResolvedArkRunKernelCallFact[],
   declarations: readonly ResolvedArkRunDeclarationFact[],
-  layerForFile: EvaluateArkRunSensorsInput['layerForFile']
+  layerForFile: EvaluateArkRunSensorsInput['layerForFile'],
+  teethAllowed: boolean
 ): { findings: ArkRunSensorFinding[]; completenessReasons: ResolvedFactsReason[] } {
   const findings: ArkRunSensorFinding[] = [];
   const completenessReasons: ResolvedFactsReason[] = [];
@@ -343,7 +364,8 @@ function evaluateUndeclared(
           call.file,
           call.line,
           `Emit ${JSON.stringify(call.nameLiteral)} is not declared in raises or sends.`,
-          { fromLayer, target: call.nameLiteral }
+          { fromLayer, target: call.nameLiteral },
+          teethAllowed
         )
       );
       continue;
@@ -357,7 +379,8 @@ function evaluateUndeclared(
           call.file,
           call.line,
           `Handle ${JSON.stringify(call.nameLiteral)} is not declared in reactsTo.`,
-          { fromLayer, target: call.nameLiteral }
+          { fromLayer, target: call.nameLiteral },
+          teethAllowed
         )
       );
       continue;
@@ -370,7 +393,8 @@ function evaluateUndeclared(
         call.file,
         call.line,
         `Depend ${JSON.stringify(call.nameLiteral)} is not declared in uses.`,
-        { fromLayer, target: call.nameLiteral }
+        { fromLayer, target: call.nameLiteral },
+        teethAllowed
       )
     );
   }
@@ -380,7 +404,8 @@ function evaluateUndeclared(
 function evaluateTransportBypass(
   extra: ArkConfigArkRun,
   dependencies: readonly ResolvedDependencyFact[],
-  layerForFile: EvaluateArkRunSensorsInput['layerForFile']
+  layerForFile: EvaluateArkRunSensorsInput['layerForFile'],
+  teethAllowed: boolean
 ): ArkRunSensorFinding[] {
   const managed = new Set(extra.managedLayers);
   if (managed.size === 0) return [];
@@ -398,7 +423,8 @@ function evaluateTransportBypass(
         dependency.from,
         dependency.line,
         `${fromLayer} must not import broker/queue/emitter ${JSON.stringify(specifier)}; use the ArkRun kernel transport.`,
-        { fromLayer, target: specifier }
+        { fromLayer, target: specifier },
+        teethAllowed
       )
     );
   }
@@ -413,25 +439,34 @@ export function evaluateArkRunSensors(
 ): EvaluateArkRunSensorsResult {
   const extra = input.arkRun;
   if (!extra) return { findings: [], completenessReasons: [] };
+  const teethAllowed = extraMergeTeethAllowed(input.classification);
 
   const undeclared = evaluateUndeclared(
     extra,
     input.kernelCalls,
     input.declarations,
-    input.layerForFile
+    input.layerForFile,
+    teethAllowed
   );
   const findings = [
-    ...evaluateMissingRoot(extra, input.compositionRootHits),
-    ...evaluateKernelInDomain(extra, input.layers, input.dependencies, input.layerForFile),
+    ...evaluateMissingRoot(extra, input.compositionRootHits, teethAllowed),
+    ...evaluateKernelInDomain(
+      extra,
+      input.layers,
+      input.dependencies,
+      input.layerForFile,
+      teethAllowed
+    ),
     ...evaluateDirectNew(
       extra,
       input.layers,
       input.managedNews,
       input.compositionRootHits,
-      input.layerForFile
+      input.layerForFile,
+      teethAllowed
     ),
     ...undeclared.findings,
-    ...evaluateTransportBypass(extra, input.dependencies, input.layerForFile),
+    ...evaluateTransportBypass(extra, input.dependencies, input.layerForFile, teethAllowed),
   ].sort(compareFindings);
 
   const completenessReasons = [...undeclared.completenessReasons].sort((left, right) => {
@@ -455,4 +490,56 @@ export function evaluateArkRunEditorSensors(
     findings: result.findings.filter((item) => isArkRunEditorSensor(item.sensor)),
     completenessReasons: [],
   };
+}
+
+function fileMatchesCompositionRoot(pattern: string, file: string): boolean {
+  if (pattern === file) return true;
+  const star = pattern.indexOf('*');
+  if (star < 0) return false;
+  const prefix = pattern.slice(0, star).replace(/\/$/, '');
+  return prefix.length > 0 && (file === prefix || file.startsWith(`${prefix}/`));
+}
+
+function compositionRootHitsForSource(
+  extra: ArkConfigArkRun,
+  file: string,
+  source: string
+): ResolvedArkRunCompositionRootHitFact[] {
+  const hasFactory = extractArkRunKernelCallsFromSource(file, source).some(
+    (call) => call.kind === 'factory'
+  );
+  const hits: ResolvedArkRunCompositionRootHitFact[] = [];
+  for (const pattern of extra.compositionRoots) {
+    if (!fileMatchesCompositionRoot(pattern, file)) continue;
+    hits.push({ file, matchedRoot: pattern, hasKernelFactory: hasFactory });
+  }
+  return hits;
+}
+
+/**
+ * Import / `new` envelope from one proposed source (hook Write/Edit, snippet MCP).
+ * Missing-root and undeclared-* stay project-wide CLI/MCP/preflight.
+ */
+export function evaluateArkRunEditorSensorsFromSource(input: {
+  arkRun: ArkConfigArkRun | undefined;
+  layers: readonly ArkConfigLayer[];
+  file: string;
+  source: string;
+  layerForFile: EvaluateArkRunSensorsInput['layerForFile'];
+  classification?: ExtraMergeTeethClassification;
+}): EvaluateArkRunSensorsResult {
+  const extra = input.arkRun;
+  if (!extra) return { findings: [], completenessReasons: [] };
+  const admitted = new Set(extractArkRunImportedConstructorNamesFromSource(input.source));
+  return evaluateArkRunEditorSensors({
+    arkRun: extra,
+    layers: input.layers,
+    kernelCalls: [],
+    managedNews: extractArkRunManagedNewsFromSource(input.file, input.source, admitted),
+    compositionRootHits: compositionRootHitsForSource(extra, input.file, input.source),
+    declarations: [],
+    dependencies: extractArkRunValueImportDependenciesFromSource(input.file, input.source),
+    layerForFile: input.layerForFile,
+    classification: input.classification,
+  });
 }

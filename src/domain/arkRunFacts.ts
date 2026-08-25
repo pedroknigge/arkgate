@@ -9,6 +9,7 @@ import type {
   ResolvedArkRunKernelCallFact,
   ResolvedArkRunKernelCallKind,
   ResolvedArkRunManagedNewFact,
+  ResolvedDependencyFact,
 } from './resolvedCandidateFactsTypes';
 
 /** Closed factory names from ADR 0022 `arkrun-missing-root`. */
@@ -223,6 +224,68 @@ export function forEachArkRunValueImportClause(
   onClause: (clause: string, specifier: string) => void
 ): void {
   parseValueImportClause(stripCommentsPreservingLines(content), onClause);
+}
+
+/**
+ * Lexical import/export-from and require/import() specifier edges for the
+ * editor / snippet envelope. Resolution stays unresolved-external — sensors
+ * only need the specifier and from-file.
+ */
+export function extractArkRunValueImportDependenciesFromSource(
+  file: string,
+  content: string
+): ResolvedDependencyFact[] {
+  const source = stripCommentsPreservingLines(content);
+  const out: ResolvedDependencyFact[] = [];
+  const fromRe =
+    /\b(?:import|export)(\s+type)?\s+([\s\S]*?)\s+from\s*['"]([^'"]+)['"]/g;
+  let match: RegExpExecArray | null;
+  while ((match = fromRe.exec(source)) !== null) {
+    const specifier = match[3] ?? '';
+    if (!specifier) continue;
+    const statement = match[0] ?? '';
+    out.push({
+      from: file,
+      specifier,
+      kind: /^\s*export/.test(statement) ? 'export' : 'import',
+      typeOnly: Boolean(match[1]),
+      line: lineAt(content, match.index),
+      resolution: 'resolved-external',
+    });
+  }
+  const callRe = /\b(?:require|import)\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+  while ((match = callRe.exec(source)) !== null) {
+    const specifier = match[1] ?? '';
+    if (!specifier) continue;
+    const kind = match[0]?.startsWith('import') ? 'dynamic-import' : 'require';
+    out.push({
+      from: file,
+      specifier,
+      kind,
+      typeOnly: false,
+      line: lineAt(content, match.index),
+      resolution: 'resolved-external',
+    });
+  }
+  return out;
+}
+
+/** PascalCase named bindings from value import clauses (snippet admitted constructors). */
+export function extractArkRunImportedConstructorNamesFromSource(content: string): string[] {
+  const names: string[] = [];
+  forEachArkRunValueImportClause(content, (clause) => {
+    const braced = /\{([^}]*)\}/.exec(clause);
+    if (!braced?.[1]) return;
+    for (const part of braced[1].split(',')) {
+      const piece = part.trim();
+      if (!piece || piece.startsWith('type ')) continue;
+      const alias = /^([A-Za-z_][A-Za-z0-9_]*)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/.exec(piece);
+      const local = alias?.[2] ?? /^([A-Za-z_][A-Za-z0-9_]*)$/.exec(piece)?.[1];
+      const original = alias?.[1] ?? local;
+      if (local && original && /^[A-Z]/.test(original)) names.push(local, original);
+    }
+  });
+  return uniqueSorted(names);
 }
 
 function collectKernelImportBindings(content: string): KernelImportBindings {

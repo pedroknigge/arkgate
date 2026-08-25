@@ -14,7 +14,7 @@ in the immutable pre-2.0 archive linked below.
   `compositionRoots` in `enforced` mode fail closed (`ARKRUN_MISSING_ROOT`).
   Advisory → enforced is a strengthening policy delta; demotion or deletion is
   weakening and needs the existing hash-bound ack. ESLint envelope is RN06
-  (landed below); CI extra teeth are RN07. Does not close Z09 / K01.
+  (landed below); CI extra teeth landed in RN07. Does not close Z09 / K01.
 
 - **ArkRun resolver facts on resolved-candidate-facts schema `1.2` (RN03):**
   additive optional `arkRunKernelCalls`, `arkRunManagedNews`, and
@@ -44,6 +44,13 @@ in the immutable pre-2.0 archive linked below.
   `ark/no-arkrun-transport-bypass`. Same `ARKRUN_*` sensors as ark-check for
   the import / `new` envelope; silent when `arkRun` is absent. Missing-root and
   undeclared-* stay CLI/MCP/preflight. Does not close Z09 / K01.
+
+- **ArkRun extra-teeth parity (RN07):** CLI `--strict-merge`, MCP `ark_check` /
+  snippet write, PreToolUse hook, atomic preflight, and CI share one ArkRun
+  verdict. Enforced extra teeth arm only when the layer plane is classified
+  (same ≥50% governed / ≥1 populated-layer floor as ArkRules); advisory and
+  absence stay silent on `valid`. Doctor/status `arkRun` section is RN08. Does
+  not close Z09 / K01.
 
 ## 4.6.7 — 2026-08-24
 

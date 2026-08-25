@@ -308,6 +308,42 @@ function hookEnforcement(root, host, operation, completePatch = false) {
   }).enforcementLadder;
 }
 
+function extraMergeTeethClassification(root, config) {
+  const files = collectGovernedFiles(root, config);
+  const layers = config.layers ?? [];
+  let classified = 0;
+  const populated = new Set();
+  for (const abs of files) {
+    const layer = layerForFile(root, abs, layers);
+    if (layer) {
+      classified += 1;
+      populated.add(layer);
+    }
+  }
+  return {
+    governedPercent: files.length > 0 ? Math.round((classified / files.length) * 100) : 0,
+    populatedLayerCount: populated.size,
+  };
+}
+
+function arkRunSnippetContext({ root, config, filePath, layer, relFile, classification }) {
+  const extra = config?.arkRun;
+  if (!extra) return { layer, filePath };
+  const relative =
+    relFile ||
+    (typeof filePath === 'string'
+      ? path.relative(root, path.resolve(root, filePath)).split(path.sep).join('/')
+      : undefined);
+  return {
+    layer,
+    filePath,
+    relFile: relative,
+    arkRun: extra,
+    layers: config.layers ?? [],
+    classification: classification ?? extraMergeTeethClassification(root, config),
+  };
+}
+
 function designDeltaViolations(delta) {
   return (delta?.changes ?? []).map((change) => ({
     ruleId: 'DESIGN_SMELL_REGRESSION',
@@ -565,7 +601,18 @@ function runHookPayload(payload, gate, config, args, ts, attemptContext, output 
 
   const layer = inferLayer(filePath, config, args.root);
   const validateOnce = (src) =>
-    validateSnippetAnalysis({ gate, ts, source: src, context: { layer, filePath } });
+    validateSnippetAnalysis({
+      gate,
+      ts,
+      source: src,
+      context: arkRunSnippetContext({
+        root: args.root,
+        config,
+        filePath,
+        layer,
+        relFile: normalizedRel,
+      }),
+    });
   // W1: one validation pass (+ optional autoPatch). Original write still blocked when
   // invalid; hosts must apply autoPatch explicitly (never silent write).
   const result = ts
@@ -2136,7 +2183,17 @@ export async function runArkMcp({ hookInput } = {}) {
     const filePath = params.arguments.filePath;
     const layer = params.arguments.layer ?? inferLayer(filePath, config, args.root);
     const validateOnce = (src) =>
-      validateSnippetAnalysis({ gate, ts, source: src, context: { layer, filePath } });
+      validateSnippetAnalysis({
+        gate,
+        ts,
+        source: src,
+        context: arkRunSnippetContext({
+          root: args.root,
+          config,
+          filePath,
+          layer,
+        }),
+      });
     // W1: attempt mechanical-safe single-file autoPatch (import type), re-validate or discard.
     const result = validateWithAutoPatch({
       source,
@@ -2429,7 +2486,12 @@ export async function runArkMcp({ hookInput } = {}) {
         gate,
         ts,
         source: src,
-        context: { layer, filePath: placement.filePath },
+        context: arkRunSnippetContext({
+          root: args.root,
+          config,
+          filePath: placement.filePath,
+          layer,
+        }),
       });
     const result = composePrepareWrite({
       source,

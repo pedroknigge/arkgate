@@ -107,6 +107,29 @@ describe('RN04 ArkRun tier-1 sensors', () => {
     expect(enforced.findings[0]).toMatchObject({ failsStrict: true, severity: 'error' });
   });
 
+  it('demotes enforced failsStrict under the extra-teeth classification floor', () => {
+    const result = evaluate('enforced', {
+      compositionRootHits: [
+        { file: 'src/main.ts', matchedRoot: 'src/main.ts', hasKernelFactory: false },
+      ],
+      classification: { governedPercent: 0, populatedLayerCount: 0 },
+    });
+    expect(result.findings[0]).toMatchObject({
+      ruleId: 'ARKRUN_MISSING_ROOT',
+      failsStrict: false,
+      severity: 'warning',
+    });
+  });
+
+  it('keeps enforced failsStrict when classification is omitted (contract-only)', () => {
+    const result = evaluate('enforced', {
+      compositionRootHits: [
+        { file: 'src/main.ts', matchedRoot: 'src/main.ts', hasKernelFactory: false },
+      ],
+    });
+    expect(result.findings[0]).toMatchObject({ failsStrict: true, severity: 'error' });
+  });
+
   it('treats a glob composition root as a set: one factory among many files is enough', () => {
     const result = evaluate('enforced', {
       arkRun: extra('enforced', { compositionRoots: ['src/nestjs/**'] }),

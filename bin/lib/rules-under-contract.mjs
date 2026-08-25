@@ -7,6 +7,11 @@
 import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
 import { evaluateInvariantCoverage } from './invariant-coverage.mjs';
 import { loadInvariantCoverageInputs } from './invariant-coverage-io.mjs';
+import {
+  EXTRA_MERGE_TEETH_GOVERNED_FLOOR,
+  demoteExtraPlaneTeethUnderClassificationFloor,
+  extraMergeTeethAllowed,
+} from './extra-merge-teeth.mjs';
 
 /**
  * Cap long catalogs in doctor JSON (and HTML, which consumes the same summary).
@@ -16,12 +21,11 @@ const COVERED_SAMPLE_MAX = 24;
 const STRUCTURE_CATALOG_MAX = 40;
 const UNCOVERED_CATALOG_MAX = 30;
 
-/** Minimum governed % before enforced ArkRules may arm extra merge teeth (P1M / FG-EXTRATEETH). */
-export const EXTRA_MERGE_TEETH_GOVERNED_FLOOR = 50;
+export { EXTRA_MERGE_TEETH_GOVERNED_FLOOR };
 
 /**
  * P1M / extraMergeTeeth: under the classification floor, demote enforced ArkRules
- * structure/invariant findings so merge matches doctor stamp (layer graph only).
+ * and ArkRun findings so merge matches doctor stamp (layer graph only).
  * Unknown classification (null/null) → do not demote (contract-only callers).
  *
  * @param {object[]} violations
@@ -29,28 +33,7 @@ export const EXTRA_MERGE_TEETH_GOVERNED_FLOOR = 50;
  * @returns {object[]}
  */
 export function demoteArkRuleTeethUnderClassificationFloor(violations, classification = {}) {
-  if (!Array.isArray(violations)) return violations;
-  const governed =
-    typeof classification.governedPercent === 'number' ? classification.governedPercent : null;
-  const populated =
-    typeof classification.populatedLayerCount === 'number'
-      ? classification.populatedLayerCount
-      : null;
-  if (governed == null && populated == null) return violations;
-  const allowsTeeth =
-    (governed ?? 0) >= EXTRA_MERGE_TEETH_GOVERNED_FLOOR && (populated ?? 0) >= 1;
-  if (allowsTeeth) return violations;
-  for (const v of violations) {
-    const isArkRule =
-      v?.arkruleId != null ||
-      (typeof v?.ruleId === 'string' &&
-        (v.ruleId.startsWith('ARKRULE') || v.ruleId.startsWith('arkrule')));
-    if (isArkRule && v.failsStrict !== false) {
-      v.failsStrict = false;
-      if (v.severity === 'error') v.severity = 'warning';
-    }
-  }
-  return violations;
+  return demoteExtraPlaneTeethUnderClassificationFloor(violations, classification);
 }
 
 /**
@@ -180,10 +163,10 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
             : 0
           : null;
     const classificationKnown = governedPercent != null || populatedLayerCount != null;
-    const classificationAllowsTeeth = !classificationKnown
-      ? true
-      : (governedPercent ?? 0) >= EXTRA_MERGE_TEETH_GOVERNED_FLOOR &&
-        (populatedLayerCount ?? 0) >= 1;
+    const classificationAllowsTeeth = extraMergeTeethAllowed({
+      governedPercent,
+      populatedLayerCount,
+    });
     const extraMergeTeeth = hasEnforcedTeeth && classificationAllowsTeeth;
     const teethDeferredForClassification =
       hasEnforcedTeeth && classificationKnown && !classificationAllowsTeeth;

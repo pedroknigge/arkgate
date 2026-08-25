@@ -28,6 +28,7 @@ import {
   evaluateArkRuleSensors,
 } from '../domain/arkRuleSensors';
 import { evaluateInvariantCoverage } from '../domain/invariantCoverage';
+import { classifyResolvedLayerCoverage } from '../domain/extraMergeTeeth';
 import { evaluateArkRunSensors } from '../domain/arkRunSensors';
 import { collectAnalysisConfigWarnings } from './configWarnings';
 import { evaluateArchitectureGraph } from './graphEvaluate';
@@ -476,6 +477,7 @@ export function analyzeCanonicalResolvedProject(
       failsStrict: false,
       nextAction: `Cover invariant ${finding.arkruleId} in ${finding.arkruleSource} (advisory / partial).`,
     }));
+  const arkRunClassification = classifyResolvedLayerCoverage(files);
   const arkRunEval = evaluateArkRunSensors({
     arkRun: input.contract.config.arkRun,
     layers: input.contract.config.layers,
@@ -486,9 +488,11 @@ export function analyzeCanonicalResolvedProject(
     dependencies: facts.dependencies,
     layerForFile: (path) =>
       layerByFile.get(path) ?? layerForRelativePath(path, input.contract.config.layers),
+    classification: arkRunClassification,
   });
+  const arkRunMode = input.contract.config.arkRun?.mode;
   const arkRunViolations: ArchitectureEngineViolation[] = arkRunEval.findings
-    .filter((item) => item.failsStrict)
+    .filter(() => arkRunMode === 'enforced')
     .map((item) => ({
       ruleId: item.ruleId,
       file: item.file,
@@ -498,9 +502,11 @@ export function analyzeCanonicalResolvedProject(
       target: item.target,
       nextAction: item.nextAction,
       sensor: item.sensor,
+      failsStrict: item.failsStrict,
+      ...(item.severity ? { severity: item.severity } : {}),
     }));
   const arkRunWarnings: ArchitectureEngineViolation[] = arkRunEval.findings
-    .filter((item) => !item.failsStrict)
+    .filter(() => arkRunMode !== 'enforced')
     .map((item) => ({
       ruleId: item.ruleId,
       file: item.file,
