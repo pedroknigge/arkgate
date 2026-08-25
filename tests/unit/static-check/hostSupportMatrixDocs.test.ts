@@ -177,7 +177,7 @@ describe('canonical public host support matrix', () => {
     expect(matrixEnd).toBeGreaterThanOrEqual(0);
 
     // The rationale heading sits directly after the matrix block, not somewhere later.
-    const heading = '#### Why the hard guarantee lives at the merge gate';
+    const heading = '#### Why required CI is the hard line';
     const headingAt = readme.indexOf(heading, matrixEnd);
     expect(headingAt).toBeGreaterThanOrEqual(0);
     expect(headingAt - matrixEnd).toBeLessThanOrEqual(200);

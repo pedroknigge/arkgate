@@ -21,7 +21,7 @@ Product site: [arkgate.online](https://www.arkgate.online/) · npm: [`arkgate`](
 ### Use (product)
 | Doc | What it is |
 |-----|------------|
-| [use.md](use.md) | One flow: install → doctor (+ improvement compass) → day-to-day |
+| [use.md](use.md) | One flow: install → doctor → day-to-day |
 | [enthusiast/](enthusiast/README.md) | Tutorials and plain-language track |
 | [demos/](demos/) | Short end-to-end demos |
 | [product-voice.md](product-voice.md) | How ArkGate should sound in English UI (compass = lenses, not scores) |

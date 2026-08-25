@@ -228,7 +228,7 @@ export function buildReportDepthPayload(
 export function writePathModeHint(mode) {
   switch (String(mode || '')) {
     case 'repair':
-      return 'Hard write hook with repair payload — best co-pilot path for the active host.';
+      return 'Hard write hook with repair payload — best write path for the active host.';
     case 'reject-only':
       return 'Hard write boundary without repair payload; edits can be blocked without guided re-entry.';
     case 'mcp-only':

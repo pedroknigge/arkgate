@@ -18,7 +18,7 @@ npx arkgate start --apply
 npx arkgate-check --doctor
 ```
 
-Make the architecture check a **required** merge **status context** (GitHub/GitLab/etc.). The CLI
+Make the import-rules check a **required** merge **status context** (GitHub/GitLab/etc.). The CLI
 command is `arkgate-check --strict-merge` / `ark-check --strict-merge` — the hard boundary is
 requiring that job’s status, not merely adding a workflow file:
 
@@ -28,20 +28,20 @@ requiring that job’s status, not merely adding a workflow file:
 ```
 
 Generated workflows also gate `--fail-on-new-smells --base-ref` so a first push with an all-zero
-`github.event.before` still runs the full merge gate without a broken delta (see
+`github.event.before` still runs the full required CI check without a broken delta (see
 [ai-gates.md](ai-gates.md#ci-backstop)).
 
 ---
 
 ## Host write path (honesty)
 
-Local write hardness **differs by host**. CI required status is the shared hard merge gate.
+Local write hardness **differs by host**. CI required status is the shared hard merge line.
 
 | Host | Local write | MCP | Merge |
 |------|-------------|-----|-------|
-| Claude · Grok · Antigravity | Pre-write block when installed + trusted | Advisory | Required status context |
-| Cursor | Pre-write block for Write/StrReplace when `.cursor/hooks.json` is trusted | Advisory | Required status context |
-| Codex CLI · local Desktop/App Server | Pre-write block for complete `apply_patch` when `.codex/hooks.json` is trusted | Advisory | Required status context |
+| Claude · Grok · Antigravity | Hook rejects the write when installed + trusted | Advisory | Required status context |
+| Cursor | Hook rejects Write/StrReplace when `.cursor/hooks.json` is trusted | Advisory | Required status context |
+| Codex CLI · local Desktop/App Server | Hook rejects complete `apply_patch` when `.codex/hooks.json` is trusted | Advisory | Required status context |
 | OpenCode | Warning only (not blocked) | Advisory | Required status context |
 
 Full matrix and install commands: [ai-gates.md](ai-gates.md) · canonical table in [README](../README.md#host-enforcement-support).

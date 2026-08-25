@@ -1,6 +1,6 @@
 <div align="center">
 
-# ArkGate — Architecture Co-pilot for AI TypeScript
+# ArkGate — illegal imports rejected at write and at merge
 
 **If the AI writes an illegal import, the write is rejected. The same check fails the pull request.**
 
@@ -76,10 +76,10 @@ checks read.
 | **While the AI writes** | The write is rejected on supported hosts; warning only elsewhere |
 | **Before merge** | `arkgate-check` as a **required** CI status |
 
-### Two planes (4.0)
+### Two kinds of rules (4.0)
 
-| Plane | What it guards | Config |
-|-------|----------------|--------|
+| Kind | What it guards | Config |
+|------|----------------|--------|
 | **Layers** (always) | Who may import whom — imports, placement, purity, isolation | `ark.config.json` layers + rules |
 | **ArkRules** (opt-in; structure rules inside a layer) | Habits *inside* a layer — structure sensors + domain invariants as data | `arkRules` → `arkrules/<Layer>.json` |
 | **ArkRun** (opt-in extra) | Kernel usage + complete declarations | `arkRun` on schema `1.2` |
@@ -112,7 +112,7 @@ check: [4.3.0 — What ArkGate is / isn't](docs/releases/4.3.0.md#what-arkgate-i
 | **Suggest** | Thin / new tree | Finish `start` → doctor |
 | **Adapt** | Not fully protected | Doctor action #1 |
 | **Enforce** | Honest import edges, and no new UI business-rule files vs merge-base | Keep write path + CI |
-| **Enforce · design-weak** | Edges clean; design residual remains | Shape residual — not “done” |
+| **Enforce · leftover design work** | Edges clean; leftover design work remains | Shape residual — not “done” |
 
 Details: [docs/use.md](docs/use.md).
 
@@ -139,22 +139,22 @@ filesystem writes, hosted or specialized opt-out paths, and human edits still re
 This table describes the supported profile **after its files are installed and the host loads/trusts them**. A hard local boundary covers only the listed hook operations; alternate tools, direct filesystem writes, and human edits still rely on CI. MCP validation is advisory because the agent must call it. The CI check blocks a merge only when the repository makes that status required. Repair **envelopes** may be emitted without reinjection being guaranteed; silent auto-apply never happens. Run `arkgate-check --doctor` (or `ark-check --doctor`) for the evidence actually detected in the current repository.
 <!-- arkgate-host-support:end -->
 
-#### Why the hard guarantee lives at the merge gate
+#### Why required CI is the hard line
 
 The split above is a deliberate trade-off, not a gap. ArkGate validates at the earliest boundary
 each host offers and enforces at the earliest boundary a repository can make non-bypassable: the
 required merge status. Hard hooks (Claude Code, Grok Build, Google Antigravity, Cursor, and
 Codex’s complete local `apply_patch`) deny their listed write operations at write time; advisory
-surfaces (MCP, rules, OpenCode plugins) coach the agent while it works. But any local boundary can
+surfaces (MCP, rules, OpenCode plugins) warn the agent while it works. But any local boundary can
 be routed around — another tool, a hosted/specialized path, a direct filesystem write, or a human
 edit — so the only guarantee ArkGate claims for every path is the
 `arkgate-check --strict-merge` check, and only when the repository makes that status required.
-Local checks optimize feedback speed; the merge gate owns correctness.
+Local checks optimize feedback speed; required CI owns correctness.
 
-A useful consequence: the contract doubles as a pressure sensor. Recurring violations or baseline
+A useful consequence: the rules file doubles as a pressure sensor. Recurring violations or baseline
 exceptions concentrated on one layer edge are evidence that the current design stopped fitting the
-code — a reason to reshape the contract deliberately (start with `/ark-explore`), never to weaken
-the gate.
+code — a reason to reshape the rules deliberately (start with `/ark-explore`), never to weaken
+the check.
 
 Setup per host: [docs/ai-gates.md](docs/ai-gates.md) · Develop path: [docs/develop.md](docs/develop.md)
 
@@ -172,7 +172,7 @@ expectation.
 |--|:---:|:---:|
 | CI import rules | ✅ | ✅ |
 | Hard-block AI writes on supported hosts | ✅ | ❌ |
-| Project-bound contract agents can read (`ark_manifest`) | ✅ | ❌ |
+| Project-bound rules agents can read (`ark_manifest`) | ✅ | ❌ |
 | Placement + preflight for multi-file changes | ✅ | ❌ |
 | Honest governed % + dual plan (edges vs shape) | ✅ | ❌ |
 | Opt-in intra-layer ArkRules (structure + invariants) | ✅ | ❌ |

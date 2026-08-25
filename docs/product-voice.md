@@ -108,28 +108,28 @@ Where we cannot use a common word — because the thing is ours — **one senten
 A track so simple a newcomer enters, so strict a senior trusts — and the AI ships faster
 because the design space is small and honest.
 
-- **Checkpoint side (write checkpoint — deny / pass; not a Gateway):** architecture
-  config (`ark.config.json`) + pre-write block where the host supports it + required CI.
-  Deterministic. Don’t show green if we could not verify.
-  Two planes: **import rules** (who may import whom) always; **ArkRules** (structure rules
-  inside a layer) opt-in. Third extra: **ArkRun** (kernel usage + declarations) via companion
-  `@arkgate/runtime` — not a durability claim.
-- **Coach side:** where code belongs, who talks to whom, how; fix imports first, then leftover
-  design work; one small refactor at a time; never silent auto-reshape; never weaken the config.
-- **Five-door autonomy:** invoking `/ark-adopt`, `/ark-place`, `/ark-autopilot`, `/ark-explore`,
-  or `/ark-upgrade` **is** the approval. The agent writes or maps in that turn. CLI/MCP are
-  sensor + checkpoint. Silent reshape from the compact router (unasked) stays forbidden.
-- **Team parliament:** the architecture file is a **constitution**. A product change must not
-  amend it. Stewards own loosen and baseline-grow. The ratchet is **new vs the branch you
+- **Reject the write. Fail the PR.** Rules file (`ark.config.json`) + the hook rejects listed
+  writes where the host supports it + required CI. Deterministic. Don’t show green if we could
+  not verify. Two kinds of rules: **import rules** (who may import whom) always; **ArkRules**
+  (extra rules inside a layer) opt-in. Optional extra: **ArkRun** (kernel usage + declarations)
+  via companion `@arkgate/runtime` — not a durability claim. Not a Gateway.
+- **Where code belongs:** who talks to whom, and how; fix illegal imports first, then leftover
+  design work; one small refactor at a time; never silent auto-reshape; never weaken the rules
+  file.
+- **Five doors:** invoking `/ark-adopt`, `/ark-place`, `/ark-autopilot`, `/ark-explore`,
+  or `/ark-upgrade` **is** the approval. The agent writes or maps in that turn. CLI/MCP check;
+  they do not silently rewrite. Silent reshape from the compact router (unasked) stays forbidden.
+- **Team:** the rules file is a different change type than product code. A product change must
+  not amend it. Stewards own loosen and baseline-grow. The ratchet is **new vs the branch you
   merge to**, not only the file on this checkout. A small PR pays `--changed --base`, not
   the whole tree. Humans who never hit the write hook are allowed to ignore Ark.
-- **Agent contract surface (4.3.0):** agents read **guardrail catalogs** and **scan** evidence;
-  they **process** (judge / coach) outside the package. Projection and skills never become the
-  pass/fail gate.
-- **Improvement compass (4.4.0):** residual architecture work is named as **lenses** (SoC, DIP,
+- **Agent surface (4.3.0):** agents read **guardrail catalogs** and **scan** evidence;
+  they **judge** outside the package. Projection and skills never become the
+  pass/fail check.
+- **Improvement compass (4.4.0):** leftover architecture work is named as **lenses** (SoC, DIP,
   domain alignment, …) projected from existing sensors — **never** a 0–10 score or Excellent/Good
   rank. Out-of-scope lenses (perf, app security tooling, full resilience) stay honest.
-- **Vibe-coder dual depth:** human doctor and skills lead with plain outcomes and one next move;
+- **Dual depth:** human doctor and skills lead with plain outcomes and one next move;
   experts keep full JSON. Full-AI workflows get the same single door — not a skill menu exam.
 - **False done is forbidden:** “Rules on” ≠ elegant design. Leftover design work must not
   read as “healthy finished.” Empty ArkRules inventory is not a score. MCP configuration on
@@ -166,31 +166,31 @@ stay stable unless a change explicitly adds an alias.
 
 | Prefer (human) | Was / JSON | Use for |
 |----------------|------------|---------|
-| **architecture config** | contract | `ark.config.json` layers, rules, include. Never the first noun. Without the checkpoint, this reader hears **manifesto** |
-| **manifesto** (honesty only) | advisory-only / no required CI | What the file is until a write checkpoint binds it. Never the product name |
+| **rules file** (`ark.config.json`) | contract / architecture config | Layers, rules, include. Never the first noun. Without required CI, this reader hears **manifesto** |
+| **manifesto** (honesty only) | advisory-only / no required CI | What the file is until the write is rejected and CI is required. Never the product name |
 | **import rules** / **allowed dependencies** | Layers plane / edges | Who may import whom; placement, purity, isolation |
-| **ArkRules** (opt-in; gloss: structure rules inside a layer) | ArkRules | Intra-layer sensors + domain invariant catalogs (`arkrules/*`) |
-| **ArkRun** (opt-in; gloss: kernel usage + complete declarations) | arkRun | Extra plane on the gate; companion kernel is `@arkgate/runtime`; factory `createStrictArkKernel` (per instance, no singleton). Never a score. |
-| **advisory ArkRules** | advisory ArkRules | Default sensor mode — **not** merge teeth; does not fail CI/merge alone |
+| **ArkRules** (opt-in; gloss: extra rules inside a layer) | ArkRules | Structure sensors + domain invariant catalogs (`arkrules/*`). Off unless you turn it on. |
+| **ArkRun** (opt-in; gloss: kernel usage + complete declarations) | arkRun | Optional extra; companion kernel is `@arkgate/runtime`; factory `createStrictArkKernel` (per instance, no singleton). Never a score. |
+| **advisory ArkRules** | advisory ArkRules | Default sensor mode — does not fail CI/merge alone |
 | **extra merge checks** | extraMergeTeeth | Only when enforced structure/invariant rules exist **and** classification is honest |
 | **label `[Layer]` vs `[ArkRules]`** | dual-plane residual | Never blur import-rule findings with ArkRules findings |
 | **ArkRules counts** | rulesUnderContract | Doctor/inventory counts — **never a score** |
 | **type-only import debt** | type-only placement debt | `import type` on the violations list with `failsStrict:false` |
-| **write checkpoint** | gate (as first noun) | Pass/fail boundary: pre-write block + required CI. **Not** Fowler Gateway, not a resource wrapper, not a layer in the app |
-| **pre-write block** | hard write | Host actually blocks listed edit ops (installed + trusted) |
-| **warning only (not blocked)** | advisory write | MCP/rules coach; not a hard block |
+| **the write is rejected** / **required CI check** | write checkpoint / gate (as first noun) | Pass/fail: hook rejects the write + required CI. **Not** Fowler Gateway, not a resource wrapper, not a layer in the app |
+| **the hook rejects the write** | hard write / pre-write block | Host actually blocks listed edit ops (installed + trusted) |
+| **warning only (not blocked)** | advisory write | MCP/rules warn; not a hard block |
 | **import graph** | edges | Allowed imports (fix these first) |
 | **baseline** | baseline | Frozen known debt; does not make a wrong config honest |
 | **fix** | remediation | Fixing violations against the config |
 | **one small refactor** | pilot | One extraction / reshape cluster at a time |
 | **shape / leftover design work** | **design-weak** / residual | Imports clean under Enforce, but design smells remain — not “done” |
-| **coach** | co-pilot | Guidance that proposes order without silent auto-reshape |
+| **doctor** / **next step** | coach / co-pilot | Guidance that proposes order without silent auto-reshape |
 | **don’t show green if unverified** | fail-closed | Incomplete analysis or unproven enforcement never looks green |
 | **honest coverage** | honest coverage | Governed % and empty scope that cannot false-green |
 | **safe to auto-apply** | mechanical-safe | Deterministic auto-apply class only |
 | **your judgment** | judgment | Human/agent design work; invoke of an apply door is the approval — not silent compact-router reshape |
 | **five doors** | skill menu of 13 | adopt · place · autopilot · explore · upgrade — other names are shortcuts |
-| **law / constitution** | contract + baseline + ArkRules files | `ark.config.json`, `arkrules/*`, `.ark-baseline.json` — a different change type than product |
+| **rules file + ArkRules files** (different change type than product) | law / constitution / contract + baseline | `ark.config.json`, `arkrules/*`, `.ark-baseline.json` — a product PR must not amend them |
 | **steward** | contract owner | GitHub handle or email in `stewards`; only they may loosen the law or grow the baseline |
 | **several hands** | multi-author / CODEOWNERS | Doctor asks for stewards or shows list drift; empty `stewards[]` is unfinished ENFORCE (not Adapt); adopt proposes handles or emails, never invents names |
 | **contract session** | `--contract-session` | Explicit “this diff is a law change”; required to loosen or grow the baseline even with an empty steward list; still never mixed with product files |
@@ -207,7 +207,7 @@ stay stable unless a change explicitly adds an alias.
 | **host limitation** | environment residual | Soft-write or uncovered host path (e.g. OpenCode, hosted/specialized tools) — do not paint the whole project unfinished |
 | **allowed rule ids** | guardrail catalog | Closed vocabulary of sensors, capabilities, `ruleId`s, skill roles |
 | **check (tool)** | scan | Deterministic engine / CLI / MCP. Same inputs → same verdict. No LLM. |
-| **coaching / your judgment** | process | Skill- or agent-side. **Never** package pass/fail |
+| **your judgment** | process / coaching | Skill- or agent-side. **Never** package pass/fail |
 | **diagnostic code** / **ruleId** | ruleId | Stable public violation id — catalog-linked ([diagnostics.md](diagnostics.md)) |
 | **agent summary** | agent projection | Version-matched AGENTS/CLAUDE block; **non-authoritative** |
 | **finding id** | finding ref | Stable id (ruleId + target key) across turns |
@@ -265,7 +265,7 @@ gate  →  same binary verdict on every parity-capable adapter
 | Surface | Language to use | Language to avoid |
 |---------|-----------------|-------------------|
 | CLI / MCP / CI | “Scan found…”, “Checked edges…”, “Verdict: pass/fail/incomplete” | “The model decided…”, “AI validated architecture” |
-| Skills / doctor coach | “Process next: one pilot…”, “Judgment: Shape door…” | “Process mode enforces…”, “Skill pass/fail” |
+| Skills / doctor | “Next: one small refactor…”, “Judgment: Shape door…” | “Process mode enforces…”, “Skill pass/fail” |
 | Catalog / codes | “ruleId from the diagnostic catalog”, “closed capability set” | Open-ended “any rule string”, free-generated sensors |
 | Projection / AGENTS.md | “Agent-facing summary; not the gate” | “Follow AGENTS.md to pass CI” |
 
@@ -274,22 +274,22 @@ gate  →  same binary verdict on every parity-capable adapter
 | Do | Example |
 |----|---------|
 | Lead first-contact with the deny, then not-that | “If the AI writes an illegal import, the write is rejected. The same check fails the pull request. Not an API Gateway. Not a folder linter.” |
-| Name manifesto only when teeth are off | “No required merge status — the architecture file is advisory (a manifesto). Next: require `arkgate-check --strict-merge`.” |
+| Name manifesto only when teeth are off | “No required merge status — the rules file is advisory (a manifesto). Next: require `arkgate-check --strict-merge`.” |
 | Name the status light + plain fact + next action | “Enforce · leftover design work. Import rules check out; design smells remain. Next: one Shape door — explore → plan B → autopilot with OK.” |
 | Rank one primary door under residual | Doctor **Primary next action** #1; **Also** only for secondary |
 | Label expert skills as escapes | “Install skill pack only when doctor or a STOP handoff names a skill.” |
 | State host write honesty | “Cursor blocks trusted Write/StrReplace. Codex blocks complete trusted local `apply_patch` after runtime observation. Required GitHub status covers every path.” |
-| Soft/unverified write ≠ unfinished project | “Architecture config ready; this host operation is advisory or unverified.” Keep environment residual in evidence; reserve **Not finished** for config/project debt. |
+| Soft/unverified write ≠ unfinished project | “Rules file ready; this host operation is a warning, not a block, or unverified.” Keep environment residual in evidence; reserve **Not finished** for config/project debt. |
 | Keep Suggest on start → doctor | New-here primary is finish `start`, not a competing recommend/architect curriculum |
 | Qualify import-clean under leftover design | “None on checked imports … leftover design work remains. Not healthy finished.” |
-| Prefer unverified-as-not-green | Incomplete analysis, unobserved hooks, and soft MCP never paint as a hard green pre-write block |
+| Prefer unverified-as-not-green | Incomplete analysis, unobserved hooks, and soft MCP never paint as a hard green “write rejected” |
 | State project binding before verdict | “Ark MCP matched this workspace; `ark_manifest` evidence is for this project.” Otherwise: “Ark MCP is configured, but we have not proven this is the right project. Restart and call `ark_identity` with the exact project root.” |
 | Keep inventory claims evidence-bound | “Possible rule candidate in the configured Application layer.” A filename or technical constant alone is not Domain evidence. |
 | Honesty clear ≠ architecture healthy | `productHonesty.finished` means residual **architecture** honesty sensors are clear — not a green graph score. Open blocking violations, ADAPT/SUGGEST with debt, dual-truth pin, or design residual keep `unfinished: true`. Permanent soft-write alone does **not**. |
 | Separate CI runtime from provider policy | Successful CI run ≠ required status; GitHub Free plan 403 → `unavailable-plan`, not “CI never ran.” |
 | Prefer catalog language for agent DX | “Stable `ruleId` with why/fix anchors.” Not a free-form list of “things that might be wrong.” |
 | Name the check before coaching | “Check: two layer import violations. Next: fix the Application→Domain import first.” |
-| Label projection non-enforcing | “Regenerated agent contract for this package version. Enforcement remains ark-check / hooks / required CI.” |
+| Label projection non-enforcing | “Regenerated agent summary for this package version. The check remains ark-check / hooks / required CI.” |
 | Keep status counts honest | “Inventory and residual counts are evidence — not a health score.” |
 | Prefer deep modules | “Small interface, hide the complexity. Name the seam; test at the public interface.” |
 | Apply the deletion test | “If deleting this extract would vanish the complexity, skip the pass-through; if callers re-absorb it, keep the module.” |
@@ -302,8 +302,8 @@ gate  →  same binary verdict on every parity-capable adapter
 |-------|-----|
 | Leading first-contact with folders, layers, or `ark.config.json` | Old-school SE hears “file structure keeper” |
 | Bare “gate” as the first unexplained noun on README / use / hub / first-run | They load Fowler Gateway / API Gateway / facade |
-| Calling ArkGate a Gateway, facade, adapter, or “abstraction layer” | A Gateway wraps a resource; this checkpoint denies the write |
-| “Access resources”, “extend without touching what it represents” | Wrapper-family verbs. The architecture file is law, not a port |
+| Calling ArkGate a Gateway, facade, adapter, or “abstraction layer” | A Gateway wraps a resource; this check rejects the write |
+| “Access resources”, “extend without touching what it represents” | Wrapper-family verbs. The rules file is not a port |
 | Calling `ark.config.json` a **contract** as the first noun | Old-school SE hears manifesto — intent with no consequence |
 | “Our architecture manifesto” as product copy | Insult when teeth exist; a lie when they do not. Honesty case = advisory-only |
 | vibes, “crush it,” emoji rain | Cheap; seniors dismiss it |
@@ -340,10 +340,10 @@ gate  →  same binary verdict on every parity-capable adapter
 ## Progressive disclosure (product rule)
 
 1. **One primary path** — newcomer does not skill-shop among thirteen `/ark-*` skills.
-2. **Doctor is the control plane** — one status light, one next action (human-grade + technical).
+2. **Doctor shows what's wrong and what to do first** — one status light, one next action (human-grade + technical).
 3. **Compact router / default install first** — full skill pack is **expert depth**, not onboarding UI.
 4. **Post-green shape** is a first-class single door when edges are clean but residual remains.
-5. **Day-to-day** — place + gate protect; guided organize via `/ark-autopilot` when needed.
+5. **Day-to-day** — place + check protect; guided organize via `/ark-autopilot` when needed.
 
 ```text
 npx arkgate start → start --apply → ark-check --doctor
@@ -365,10 +365,10 @@ Skills table in docs = **escapes / expert**, not a second onboarding track.
 - Enforce does not mean the design is elegant — only that checked imports are honest.
 - A clean import check is not “architecture healthy” when leftover design work remains.
 - One small refactor at a time. Pattern bets are never auto-applied.
-- Doctor is the control plane: status light + next action.
-- The check is deterministic. Coaching is judgment. Only the gate decides pass/fail.
+- Doctor shows what's wrong and what to do first: status light + next action.
+- The check is deterministic. Your judgment is not. Only the check decides pass/fail.
 - Guardrails are a catalog, not free generation.
-- Agent docs summarize the config; they never replace the gate.
+- Agent docs summarize the rules file; they never replace the check.
 - **ArkGate** and **ArkRules** are product names — gloss them; don’t invent a second brand.
 
 ## Hero phrases (forbidden)
@@ -463,7 +463,7 @@ Invoking a five-door skill **is** the approval. Write or map in the same turn.
 then check. Forbidden as the deliverable: dumping `--plan` JSON, “approve?”, or
 `STOP — invoke /ark-X` for work that door absorbs.
 
-**Still never:** weaken the architecture config; invent `mechanical-safe` kinds; claim finished
+**Still never:** weaken the rules file; invent `mechanical-safe` kinds; claim finished
 while leftover design work remains; batch every Shape bet in one turn.
 
 ---
@@ -473,7 +473,7 @@ while leftover design work remains; batch every Shape bet in one turn.
 - [ ] One next action is obvious.
 - [ ] Status light is not a mode picker.
 - [ ] No false done under design-weak / incomplete analysis.
-- [ ] Technical terms present (architecture config, import rules, ArkGate, ArkRules) without slang.
+- [ ] Technical terms present (rules file, import rules, ArkGate, ArkRules) without slang.
 - [ ] Leftover design work is never called “done”.
 - [ ] Expert skills are labeled expert — not the default curriculum.
 - [ ] Scan vs process is not blurred with package LLM pass/fail.
@@ -481,5 +481,5 @@ while leftover design work remains; batch every Shape bet in one turn.
 - [ ] Projection / AGENTS.md never claimed as enforcement.
 - [ ] Seniors would not be embarrassed to paste the line into a PR.
 - [ ] First-contact sentence would not read as Fowler Gateway, a folder linter, or a manifesto of intent.
-- [ ] Bare “gate” is glossed as write checkpoint / pre-write block / required CI on first use.
+- [ ] Bare “gate” is glossed as the write is rejected / the hook rejects the write / required CI on first use.
 - [ ] “Contract” never appears as the first noun; without required CI, the file is named a manifesto.
