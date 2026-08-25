@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-24 (Engineering doing: `RN02`; `RN01` **done**; Phase AL `AL01`–`AL04` **done**; `AL06` compact-doctor extract **done**; `AL05` parked; Phase RN ArkRun started; Z09 still parked; tree **arkgate@4.6.7**; npm `latest` is **4.6.7**)
+- **Status date:** 2026-08-25 (Engineering doing: `RN03`; `RN02` **done**; `RN01` **done**; Phase AL `AL01`–`AL04` **done**; `AL06` compact-doctor extract **done**; `AL05` parked; Phase RN ArkRun started; Z09 still parked; tree **arkgate@4.6.7**; npm `latest` is **4.6.7**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -263,7 +263,9 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: `RN02`. `RN01` done (ADRs 0020–0024 accepted). `Z09` stays parked (retained adoption + independent
+Engineering doing: `RN03` (resolver facts for kernel call sites, managed `new`, composition roots).
+`RN02` **done** (schema `1.2` `arkRun` extra; `1.1` migrates; absence silent; invalid extra fails closed).
+`RN01` done (ADRs 0020–0024 accepted). `Z09` stays parked (retained adoption + independent
 close). 30-day freeze from 2026-08-22: no explore / compass / skill-body deepen as `doing`.
 Phase RN started. `RN15` (skill-body deepen) waits until that freeze ends.
 
@@ -277,8 +279,8 @@ Does not ship cloud adapters or a process singleton. Companion kernel stays
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 185 | `RN01` | `done` | M | — | ADRs [0020](docs/adr/0020-arkrun-gated-extra-plane.md)–[0024](docs/adr/0024-arkrun-transport-ports.md) accepted in `docs/adr` (extra plane, companion isolation, anti-skip facts, mandatory declarations, transport ports) |
-| 186 | `RN02` | `doing` | L | RN01 | `arkRun` on `ark.config` schema `1.2`; `1.1` migrates; absence silent; invalid extra fails closed |
-| 187 | `RN03` | `todo` | L | RN02 | Resolver facts for kernel call sites, managed `new`, composition roots |
+| 186 | `RN02` | `done` | L | RN01 | `arkRun` on `ark.config` schema `1.2`; `1.1` migrates; absence silent; invalid extra fails closed |
+| 187 | `RN03` | `doing` | L | RN02 | Resolver facts for kernel call sites, managed `new`, composition roots |
 | 188 | `RN04` | `todo` | L | RN03 | Tier-1 ArkRun sensors; advisory does not flip `valid`; enforced blocks |
 | 189 | `RN05` | `todo` | M | RN04 | Diagnostic catalog `ARKRUN_*` + dual-depth `nextAction` |
 | 190 | `RN06` | `todo` | M | RN04 | `arkgate/eslint` rules for the same sensors |

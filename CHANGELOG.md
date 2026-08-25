@@ -16,6 +16,13 @@ in the immutable pre-2.0 archive linked below.
   weakening and needs the existing hash-bound ack. Sensors, ESLint, and CI extra
   teeth are later RN items. Does not close Z09 / K01.
 
+- **ArkRun resolver facts on resolved-candidate-facts schema `1.2` (RN03):**
+  additive optional `arkRunKernelCalls`, `arkRunManagedNews`, and
+  `arkRunCompositionRootHits`. `1.0`/`1.1` payloads stay loadable (empty
+  arrays). Syntax evidence only — no `ARKRUN_*` diagnostics yet (RN04). Absence
+  of `arkRun` still leaves Layers / ArkRules verdicts unchanged. Does not close
+  Z09 / K01.
+
 ## 4.6.7 — 2026-08-24
 
 **Patch** over **4.6.6**. Production-hardening: CODEOWNERS, eval/pack honesty, CLI extracts,

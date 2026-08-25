@@ -9,12 +9,13 @@
 > [Production hardening](../../production-hardening.md)
 
 **Status:** In progress (Phase RN). `RN01` done — ADRs 0020–0024 accepted in
-[docs/adr](../../adr/README.md); `RN02` doing; `RN03`–`RN16` remain `todo` in ROADMAP. Does not close
+[docs/adr](../../adr/README.md); `RN02` done (schema `1.2` `arkRun`); `RN03` implementing
+(resolver facts); `RN04`–`RN16` remain `todo` in ROADMAP. Does not close
 `Z09` / residual `RB-11`.<br>
 **Slug:** `arkrun`<br>
 **Kind:** epic / gated extra plane + companion kernel<br>
 **Owners:** product (Pedro) + library maintainers<br>
-**Last updated:** 2026-08-24<br>
+**Last updated:** 2026-08-25<br>
 **Target package:** **arkgate@4.7.0** (additive `arkRun` on config schema `1.2`) plus
 `@arkgate/runtime` companion (still 0.x; stores remain in-memory reference)<br>
 **Code path (existing):** `src/kernel/runtime/`, `packages/runtime/`, skill `/ark-runtime`
@@ -183,7 +184,7 @@ and docs. One `doing` at a time.
 | ID | Size | Depends on | Outcome |
 |----|-----:|---|---|
 | `RN01` | M | — | **done** — ADRs 0020–0024 accepted in `docs/adr`; this plan remains the seed |
-| `RN02` | L | RN01 | `ark.config` schema `1.2` + `arkRun` key; `1.1` configs migrate; absence silent; invalid extra fails closed |
+| `RN02` | L | RN01 | **done** — `ark.config` schema `1.2` + `arkRun` key; `1.1` configs migrate; absence silent; invalid extra fails closed |
 | `RN03` | L | RN02 | Resolver facts: kernel API call sites, `new` of managed types, composition-root hits (facts schema additive) |
 | `RN04` | L | RN03 | Tier-1 sensors emit diagnostics; advisory does not flip `valid`; enforced blocks |
 | `RN05` | M | RN04 | Diagnostic catalog entries + dual-depth hints + `nextAction` |

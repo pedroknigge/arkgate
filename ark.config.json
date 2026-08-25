@@ -26,7 +26,8 @@
         "bin/lib/status-manifest.mjs",
         "bin/lib/agent-projection.mjs",
         "bin/lib/agent-skills-package.mjs",
-        "bin/lib/team-parliament.mjs"
+        "bin/lib/team-parliament.mjs",
+        "bin/lib/ark-run-facts.mjs"
       ],
       "intentPrefixes": ["Domain."],
       "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"]

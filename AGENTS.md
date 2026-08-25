@@ -144,6 +144,7 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/teamParliament.ts` | `bin/lib/team-parliament.mjs` | (same `cli-pure` scripts); TW team lock |
 | `src/domain/agentSkillsPackage.ts` | `bin/lib/agent-skills-package.mjs` | (same `cli-pure` scripts); layout via `generate:agent-skills` / `check:agent-skills` |
 | `src/domain/resolvedCandidateFactsSchema.ts` | `schemas/ark.resolved-candidate-facts.schema.json` | (same `cli-pure` scripts) |
+| `src/domain/arkRunFacts.ts` | `bin/lib/ark-run-facts.mjs` | (same `cli-pure` scripts); RN03 kernel call / managed `new` facts |
 | `src/domain/changeMap.ts` | bundled in `bin/lib/analysis-engine.mjs`; schema parity test guards `schemas/ark.change-map.schema.json` | `generate:analysis-engine` / `check:analysis-engine` |
 | `src/domain/changeConvergence.ts` | bundled in `bin/lib/analysis-engine.mjs` | `generate:analysis-engine` / `check:analysis-engine` |
 | Tooling `bin/lib/*.source.mjs` + design-delta schema source | compact shipped `design-delta.mjs`, `enforcement-state.mjs`, `hook-templates.mjs`, and design-delta schema | `generate:packaged-tooling` / `check:packaged-tooling` |
@@ -176,7 +177,7 @@ retained shipped rationale live under `docs/plans/`:
 | [five-door-autonomy](docs/plans/five-door-autonomy/README.md) | Shipped in **4.6.1** (`SK01`–`SK07` done; **published**) | Five doors (adopt / place / autopilot / explore / upgrade) write or map in-turn; CLI is sensor + gate; other names stay as shortcuts |
 | [team-parliament](docs/plans/team-parliament/README.md) | Shipped in **4.6.1** (`TW01`–`TW08` done) | Law vs feature: stewards, mixed-PR deny, ratchet vs base branch, cheap `--changed` check; doctor asks for stewards or shows list drift; identity is GitHub handle or email |
 | [alive-in-six-months](docs/plans/alive-in-six-months/README.md) | `AL01`–`AL04` done on `main` (#147); `AL05` parked field | Corrective honesty + field: D0 adopted, Propia created-path merge, stewards-or-adapt, first-run noun cut; does not close Z09 |
-| [arkrun](docs/plans/arkrun/README.md) | In progress (`RN01` done; ADRs [0020](docs/adr/0020-arkrun-gated-extra-plane.md)–[0024](docs/adr/0024-arkrun-transport-ports.md) accepted; `RN02` doing; `RN03`–`RN16` `todo`; target **4.7.0**) | ArkRun gated extra: opt-in like ArkRules; enforced usage + complete declarations on the write/CI plane; companion `@arkgate/runtime` stays isolated; does not close Z09/K01 |
+| [arkrun](docs/plans/arkrun/README.md) | In progress (`RN01`–`RN02` done; `RN03` doing; ADRs [0020](docs/adr/0020-arkrun-gated-extra-plane.md)–[0024](docs/adr/0024-arkrun-transport-ports.md) accepted; `RN04`–`RN16` `todo`; target **4.7.0**) | ArkRun gated extra: opt-in like ArkRules; enforced usage + complete declarations on the write/CI plane; companion `@arkgate/runtime` stays isolated; does not close Z09/K01 |
 | [shared-home-skills-truth](docs/plans/shared-home-skills-truth/README.md) | Superseded (absorbed into 4.6.0 PL06–PL07) | Historical seed only — do not run as a separate 4.5.8 patch train |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in

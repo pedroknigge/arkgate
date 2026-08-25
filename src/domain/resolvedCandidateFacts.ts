@@ -10,6 +10,9 @@ import {
   RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION,
   RESOLVED_CAPABILITY_IDS,
   type ResolvedAmbientFact,
+  type ResolvedArkRunCompositionRootHitFact,
+  type ResolvedArkRunKernelCallFact,
+  type ResolvedArkRunManagedNewFact,
   type ResolvedCandidateFacts,
   type ResolvedCandidateFactsInput,
   type ResolvedCapabilityFact,
@@ -57,6 +60,16 @@ export function resolvedFactsEvidenceRequirementsHash(config: ArkConfig): string
       allowInMemory: config.safety?.allowInMemory === true,
       allowDisabledPeerIsolation: config.safety?.allowDisabledPeerIsolation === true,
     },
+    ...(config.arkRun
+      ? {
+          arkRun: {
+            mode: config.arkRun.mode,
+            compositionRoots: sortedUnique(config.arkRun.compositionRoots),
+            managedLayers: sortedUnique(config.arkRun.managedLayers),
+            requireDeclarations: config.arkRun.requireDeclarations === true,
+          },
+        }
+      : {}),
   };
   return deterministicHash(stableSerialize(requirements));
 }
@@ -108,6 +121,15 @@ function canonicalResolvedFactsInput(
       mutatingMethods: [...(fact.mutatingMethods ?? [])].map((method) => ({ ...method })),
     }))
     .sort(compareCanonical);
+  const arkRunKernelCalls = (input.arkRunKernelCalls ?? [])
+    .map((fact) => ({ ...fact }))
+    .sort(compareCanonical);
+  const arkRunManagedNews = (input.arkRunManagedNews ?? [])
+    .map((fact) => ({ ...fact }))
+    .sort(compareCanonical);
+  const arkRunCompositionRootHits = (input.arkRunCompositionRootHits ?? [])
+    .map((fact) => ({ ...fact }))
+    .sort(compareCanonical);
   const candidateTree = input.files
     .map(({ path, contentHash }) => ({ path, contentHash }))
     .sort((left, right) =>
@@ -135,6 +157,9 @@ function canonicalResolvedFactsInput(
     intentReferences,
     safetyUses,
     classShapes,
+    arkRunKernelCalls,
+    arkRunManagedNews,
+    arkRunCompositionRootHits,
   };
 }
 
@@ -292,12 +317,15 @@ function parseResolvedFactsInput(
       'intentReferences',
       'safetyUses',
       'classShapes',
+      'arkRunKernelCalls',
+      'arkRunManagedNews',
+      'arkRunCompositionRootHits',
       ...(withDerivedIdentities ? ['candidateTreeHash', 'factsHash'] : []),
     ],
     '$'
   );
-  // Accept 1.0 (pre-classShapes) and current 1.1; normalize on create/load.
-  const schemaVersion = enumValue(record, 'schemaVersion', ['1.0', '1.1'] as const, '$');
+  // Accept 1.0/1.1 (pre-ArkRun facts) and current 1.2; normalize on create/load.
+  const schemaVersion = enumValue(record, 'schemaVersion', ['1.0', '1.1', '1.2'] as const, '$');
   const completeness = enumValue(
     record,
     'completeness',
@@ -563,12 +591,85 @@ function parseResolvedFactsInput(
       throw new Error(`$.dependencies references missing source file ${dependency.from}.`);
     }
   }
+  const arkRunKernelCallsRaw =
+    record.arkRunKernelCalls === undefined ? [] : requiredArray(record, 'arkRunKernelCalls', '$');
+  const arkRunKernelCalls: ResolvedArkRunKernelCallFact[] = arkRunKernelCallsRaw.map(
+    (value, index) => {
+      const at = `$.arkRunKernelCalls[${index}]`;
+      const entry = asRecord(value, at);
+      assertOnlyKeys(
+        entry,
+        ['file', 'line', 'kind', 'callee', 'viaImport', 'receiver', 'nameLiteral'],
+        at
+      );
+      const receiver = optionalText(entry, 'receiver', at);
+      const nameLiteral = optionalText(entry, 'nameLiteral', at);
+      return {
+        file: requiredProjectPath(entry, 'file', at),
+        line: requiredPositiveInteger(entry, 'line', at),
+        kind: enumValue(
+          entry,
+          'kind',
+          [
+            'factory',
+            'publisher',
+            'publish',
+            'raise',
+            'send',
+            'subscribe',
+            'register-handler',
+            'resolve',
+            'resolve-singleton',
+          ] as const,
+          at
+        ),
+        callee: requiredText(entry, 'callee', at),
+        viaImport: requiredBoolean(entry, 'viaImport', at),
+        ...(receiver ? { receiver } : {}),
+        ...(nameLiteral ? { nameLiteral } : {}),
+      };
+    }
+  );
+  const arkRunManagedNewsRaw =
+    record.arkRunManagedNews === undefined ? [] : requiredArray(record, 'arkRunManagedNews', '$');
+  const arkRunManagedNews: ResolvedArkRunManagedNewFact[] = arkRunManagedNewsRaw.map(
+    (value, index) => {
+      const at = `$.arkRunManagedNews[${index}]`;
+      const entry = asRecord(value, at);
+      assertOnlyKeys(entry, ['file', 'line', 'typeName', 'importedFrom'], at);
+      const importedFrom = optionalText(entry, 'importedFrom', at);
+      return {
+        file: requiredProjectPath(entry, 'file', at),
+        line: requiredPositiveInteger(entry, 'line', at),
+        typeName: requiredText(entry, 'typeName', at),
+        ...(importedFrom ? { importedFrom } : {}),
+      };
+    }
+  );
+  const arkRunCompositionRootHitsRaw =
+    record.arkRunCompositionRootHits === undefined
+      ? []
+      : requiredArray(record, 'arkRunCompositionRootHits', '$');
+  const arkRunCompositionRootHits: ResolvedArkRunCompositionRootHitFact[] =
+    arkRunCompositionRootHitsRaw.map((value, index) => {
+      const at = `$.arkRunCompositionRootHits[${index}]`;
+      const entry = asRecord(value, at);
+      assertOnlyKeys(entry, ['file', 'matchedRoot', 'hasKernelFactory'], at);
+      return {
+        file: requiredProjectPath(entry, 'file', at),
+        matchedRoot: requiredText(entry, 'matchedRoot', at),
+        hasKernelFactory: requiredBoolean(entry, 'hasKernelFactory', at),
+      };
+    });
   for (const [at, facts] of [
     ['$.capabilityUses', capabilityUses],
     ['$.ambientUses', ambientUses],
     ['$.publishCalls', publishCalls],
     ['$.intentReferences', intentReferences],
     ['$.safetyUses', safetyUses],
+    ['$.arkRunKernelCalls', arkRunKernelCalls],
+    ['$.arkRunManagedNews', arkRunManagedNews],
+    ['$.arkRunCompositionRootHits', arkRunCompositionRootHits],
   ] as const) {
     for (const fact of facts) {
       if (!filePaths.has(fact.file)) {
@@ -635,6 +736,9 @@ function parseResolvedFactsInput(
     intentReferences,
     safetyUses,
     classShapes,
+    arkRunKernelCalls,
+    arkRunManagedNews,
+    arkRunCompositionRootHits,
   };
 }
 

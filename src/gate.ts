@@ -138,6 +138,10 @@ export {
   type AnalysisViolation,
   type AnalysisIr,
   type ResolvedAmbientFact,
+  type ResolvedArkRunCompositionRootHitFact,
+  type ResolvedArkRunKernelCallFact,
+  type ResolvedArkRunKernelCallKind,
+  type ResolvedArkRunManagedNewFact,
   type ResolvedCandidateFacts,
   type ResolvedCandidateFactsInput,
   type ResolvedCapability,
@@ -192,6 +196,15 @@ export {
   type ClassShapeFact,
   type ArkRuleSensorViolation,
 } from './domain/arkRuleSensors';
+
+export {
+  ARKRUN_KERNEL_FACTORY_CALLEES,
+  ARKRUN_KERNEL_INTERACTION_CALLEES,
+  arkRunKernelCallKind,
+  extractArkRunKernelCallsFromSource,
+  extractArkRunManagedNewsFromSource,
+  isArkRunKernelModuleSpecifier,
+} from './domain/arkRunFacts';
 
 export {
   canPromoteInvariant,

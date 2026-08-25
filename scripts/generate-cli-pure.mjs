@@ -19,6 +19,7 @@
  *   src/domain/agentProjection.ts → bin/lib/agent-projection.mjs
  *   src/domain/agentSkillsPackage.ts → bin/lib/agent-skills-package.mjs
  *   src/domain/resolvedCandidateFactsSchema.ts → schemas/ark.resolved-candidate-facts.schema.json
+ *   src/domain/arkRunFacts.ts → bin/lib/ark-run-facts.mjs
  *
  * Layer match remains scripts/generate-layer-match.mjs (R1).
  *
@@ -78,6 +79,11 @@ const MODULES = [
     canonical: 'src/domain/arkRuleSensors.ts',
     derived: 'bin/lib/arkrules-sensors.mjs',
     label: 'ArkRules structure sensors (ADR 0013)',
+  },
+  {
+    canonical: 'src/domain/arkRunFacts.ts',
+    derived: 'bin/lib/ark-run-facts.mjs',
+    label: 'ArkRun resolver-fact extractors (ADR 0022 / RN03)',
   },
   {
     canonical: 'src/domain/adapterContract.ts',

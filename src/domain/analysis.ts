@@ -20,6 +20,10 @@ export { deterministicHash, stableSerialize } from './stableHash';
 export {
   RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION,
   type ResolvedAmbientFact,
+  type ResolvedArkRunCompositionRootHitFact,
+  type ResolvedArkRunKernelCallFact,
+  type ResolvedArkRunKernelCallKind,
+  type ResolvedArkRunManagedNewFact,
   type ResolvedCandidateFacts,
   type ResolvedCandidateFactsInput,
   type ResolvedCapability,
