@@ -1,7 +1,7 @@
 {
   "name": "arkgate",
-  "version": "4.7.1",
-  "description": "One architecture config. One check. One coach.",
+  "version": "4.7.2",
+  "description": "If the AI writes an illegal import, the write is rejected. The same check fails the pull request.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

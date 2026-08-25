@@ -11,13 +11,106 @@ deliberately in the same change). Voice is product surface, not marketing decora
 
 ---
 
+## Canonical misreader (old-school engineer)
+
+First-contact copy has a **named test reader**: a senior who learned Fowler, ESLint, and CI
+quality gates — and does not live in agent hosts. If they can walk away with any of the
+three documented misreads, the line failed. Rewrite it. Do not argue the config at them.
+
+This reader is not a junior to educate and not a vibe-coder to simplify for. They are why
+“gate”, “contract”, and “architecture config” in the first sentence lose the room.
+
+### Misread A — “file structure keeper for TypeScript”
+
+**Cause:** the first sentence is folders, layers, `ark.config.json`, or “who may import whom.”
+**They hear:** eslint-plugin-boundaries, dependency-cruiser, Nx tags.
+
+The layer plane *is* import rules. That is not the product. The product is **when** those
+rules fire: the host blocks the write; required CI blocks the merge.
+
+### Misread B — “a Gateway”
+
+**Cause:** bare “gate” as the first unexplained noun; or verbs from the wrapper family:
+access, wrap, abstract, “extend without touching what it represents.”
+**They hear:** Fowler Gateway / API Gateway / facade — an intermediate object that talks
+to a resource so callers do not.
+
+A Gateway **lets traffic through and translates**. ArkGate **decides whether the write
+enters**. It is not a layer in the app. It does not wrap Stripe, a database, or HTTP.
+
+### Misread C — “not a contract, a manifesto”
+
+**Cause:** calling `ark.config.json` a **contract** (or leading with the file) before the
+deny is visible.
+**They hear:** Agile Manifesto, a principles doc, AGENTS.md — intent you hope people follow.
+
+They are right whenever the checkpoint is off. A contract in this reader’s dictionary has
+two parties and a consequence. Ours is: the host blocks the write; required CI blocks the
+merge. Without that, the file **is** a manifesto. Do not win the argument by repeating
+“it is a contract.” Show the teeth. Human copy already prefers **architecture config**
+over contract; **law / constitution** only after the checkpoint is named.
+
+Advisory-only adoption (`stance: "advisory-only"`, or no required merge status) is the
+honest manifesto case. Say so. Do not dress it as a binding contract.
+
+### First-contact order (required)
+
+On README, `docs/use.md`, develop, enthusiast, the docs hub, and the product site, use
+**common software English**. Do not invent a synonym and then explain it.
+
+**Locked sentences:**
+
+1. **Deny:** `If the AI writes an illegal import, the write is rejected. The same check fails the pull request.`
+2. **Not-that (one line):** `Not an API Gateway. Not a folder linter. If the check is not required on the PR, the rules file is just documentation.`
+3. **How:** `One rules file. One check. One next step.`
+
+The 4.6.2 line `One architecture config. One check. One coach.` is **historical**. Do not
+lead with it. First-run CLI help stays under the AL04 noun budget.
+
+ADR 0001 keeps the product title **ArkGate — Architecture Co-pilot for AI TypeScript**.
+That identity line is not a substitute for the deny.
+
+---
+
+## Common language (allowlist)
+
+First-contact copy (README hero, use/develop/hub openings, site home / start / how-it-works
+heroes, npm description, `llms.txt` lede) may use **only** these kinds of words:
+
+| Say | Do not say on first contact |
+|-----|-----------------------------|
+| illegal import / import rules / who may import whom | architecture config, contract, constitution, law |
+| the write is rejected / the hook rejects the write | write checkpoint, write gate, write firewall, pre-write block |
+| required CI check / fails the pull request / required GitHub status | merge gate, extra merge teeth |
+| rules file (`ark.config.json`) | the contract, the manifesto (except the one honest “just documentation” line) |
+| `arkgate-check --doctor` — shows what's wrong and what to do first | doctor is the control plane, coach, co-pilot |
+| warning, not blocked | advisory write |
+| extra rules inside a layer | dual plane, intra-layer sensors |
+| optional extra (off unless you turn it on) | third extra, gated complement |
+
+**Categorical brands** (do not hide, do not replace with a synonym): **ArkGate**, **ArkRules**
+(opt-in extra rules inside a layer), **ArkRun** (opt-in; not required). Gloss once. Then the
+common word.
+
+**Command names stay command names:** `arkgate`, `arkgate-check --doctor`, `--strict-merge`.
+Do not nickname them.
+
+If a term is not on this allowlist and is not a brand or a command, **cut it** or move it
+below the fold (develop docs, JSON field names, ADRs).
+
+Where we cannot use a common word — because the thing is ours — **one sentence, no hedging:**
+“ArkRules is optional. It is extra rules inside a layer. It is off unless you turn it on.”
+
+---
+
 ## North star
 
 A track so simple a newcomer enters, so strict a senior trusts — and the AI ships faster
 because the design space is small and honest.
 
-- **Gate side:** architecture config (`ark.config.json`) + pre-write block where the host
-  supports it + required CI. Deterministic. Don’t show green if we could not verify.
+- **Checkpoint side (write checkpoint — deny / pass; not a Gateway):** architecture
+  config (`ark.config.json`) + pre-write block where the host supports it + required CI.
+  Deterministic. Don’t show green if we could not verify.
   Two planes: **import rules** (who may import whom) always; **ArkRules** (structure rules
   inside a layer) opt-in. Third extra: **ArkRun** (kernel usage + declarations) via companion
   `@arkgate/runtime` — not a durability claim.
@@ -25,7 +118,7 @@ because the design space is small and honest.
   design work; one small refactor at a time; never silent auto-reshape; never weaken the config.
 - **Five-door autonomy:** invoking `/ark-adopt`, `/ark-place`, `/ark-autopilot`, `/ark-explore`,
   or `/ark-upgrade` **is** the approval. The agent writes or maps in that turn. CLI/MCP are
-  sensor + gate. Silent reshape from the compact router (unasked) stays forbidden.
+  sensor + checkpoint. Silent reshape from the compact router (unasked) stays forbidden.
 - **Team parliament:** the architecture file is a **constitution**. A product change must not
   amend it. Stewards own loosen and baseline-grow. The ratchet is **new vs the branch you
   merge to**, not only the file on this checkout. A small PR pays `--changed --base`, not
@@ -73,7 +166,8 @@ stay stable unless a change explicitly adds an alias.
 
 | Prefer (human) | Was / JSON | Use for |
 |----------------|------------|---------|
-| **architecture config** | contract | `ark.config.json` layers, rules, include |
+| **architecture config** | contract | `ark.config.json` layers, rules, include. Never the first noun. Without the checkpoint, this reader hears **manifesto** |
+| **manifesto** (honesty only) | advisory-only / no required CI | What the file is until a write checkpoint binds it. Never the product name |
 | **import rules** / **allowed dependencies** | Layers plane / edges | Who may import whom; placement, purity, isolation |
 | **ArkRules** (opt-in; gloss: structure rules inside a layer) | ArkRules | Intra-layer sensors + domain invariant catalogs (`arkrules/*`) |
 | **ArkRun** (opt-in; gloss: kernel usage + complete declarations) | arkRun | Extra plane on the gate; companion kernel is `@arkgate/runtime`; factory `createStrictArkKernel` (per instance, no singleton). Never a score. |
@@ -82,6 +176,7 @@ stay stable unless a change explicitly adds an alias.
 | **label `[Layer]` vs `[ArkRules]`** | dual-plane residual | Never blur import-rule findings with ArkRules findings |
 | **ArkRules counts** | rulesUnderContract | Doctor/inventory counts — **never a score** |
 | **type-only import debt** | type-only placement debt | `import type` on the violations list with `failsStrict:false` |
+| **write checkpoint** | gate (as first noun) | Pass/fail boundary: pre-write block + required CI. **Not** Fowler Gateway, not a resource wrapper, not a layer in the app |
 | **pre-write block** | hard write | Host actually blocks listed edit ops (installed + trusted) |
 | **warning only (not blocked)** | advisory write | MCP/rules coach; not a hard block |
 | **import graph** | edges | Allowed imports (fix these first) |
@@ -178,6 +273,8 @@ gate  →  same binary verdict on every parity-capable adapter
 
 | Do | Example |
 |----|---------|
+| Lead first-contact with the deny, then not-that | “If the AI writes an illegal import, the write is rejected. The same check fails the pull request. Not an API Gateway. Not a folder linter.” |
+| Name manifesto only when teeth are off | “No required merge status — the architecture file is advisory (a manifesto). Next: require `arkgate-check --strict-merge`.” |
 | Name the status light + plain fact + next action | “Enforce · leftover design work. Import rules check out; design smells remain. Next: one Shape door — explore → plan B → autopilot with OK.” |
 | Rank one primary door under residual | Doctor **Primary next action** #1; **Also** only for secondary |
 | Label expert skills as escapes | “Install skill pack only when doctor or a STOP handoff names a skill.” |
@@ -203,6 +300,12 @@ gate  →  same binary verdict on every parity-capable adapter
 
 | Avoid | Why |
 |-------|-----|
+| Leading first-contact with folders, layers, or `ark.config.json` | Old-school SE hears “file structure keeper” |
+| Bare “gate” as the first unexplained noun on README / use / hub / first-run | They load Fowler Gateway / API Gateway / facade |
+| Calling ArkGate a Gateway, facade, adapter, or “abstraction layer” | A Gateway wraps a resource; this checkpoint denies the write |
+| “Access resources”, “extend without touching what it represents” | Wrapper-family verbs. The architecture file is law, not a port |
+| Calling `ark.config.json` a **contract** as the first noun | Old-school SE hears manifesto — intent with no consequence |
+| “Our architecture manifesto” as product copy | Insult when teeth exist; a lie when they do not. Honesty case = advisory-only |
 | vibes, “crush it,” emoji rain | Cheap; seniors dismiss it |
 | “eh amigo,” fake familiarity | Condescension |
 | “you don’t need to understand anything” | Lies about the product |
@@ -253,7 +356,10 @@ Skills table in docs = **escapes / expert**, not a second onboarding track.
 
 ## Hero phrases (approved)
 
-- One architecture config. One check. One coach.
+- If the AI writes an illegal import, the write is rejected. The same check fails the pull request.
+- Not an API Gateway. Not a folder linter. If the check is not required on the PR, the rules file is just documentation.
+- One rules file. One check. One next step.
+- One architecture config. One check. One coach. *(historical 4.6.2 — never the first sentence)*
 - Green must mean something real.
 - You arrive at Enforce; you never turn it on.
 - Enforce does not mean the design is elegant — only that checked imports are honest.
@@ -273,6 +379,10 @@ Skills table in docs = **escapes / expert**, not a second onboarding track.
 - Ship it 🚀 / crush the spaghetti with vibes.
 - The AI validated your architecture / model pass/fail.
 - Follow AGENTS.md to pass the architecture gate.
+- Keep your file structure / folders clean.
+- An abstraction layer over your architecture.
+- A Gateway for your architecture / resources.
+- Our architecture manifesto / the contract file.
 
 ---
 
@@ -370,3 +480,6 @@ while leftover design work remains; batch every Shape bet in one turn.
 - [ ] Codes, sensors, and capabilities stay inside the guardrail catalog.
 - [ ] Projection / AGENTS.md never claimed as enforcement.
 - [ ] Seniors would not be embarrassed to paste the line into a PR.
+- [ ] First-contact sentence would not read as Fowler Gateway, a folder linter, or a manifesto of intent.
+- [ ] Bare “gate” is glossed as write checkpoint / pre-write block / required CI on first use.
+- [ ] “Contract” never appears as the first noun; without required CI, the file is named a manifesto.

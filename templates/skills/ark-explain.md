@@ -1,6 +1,6 @@
 ---
 name: ark-explain
-description: Explain this project's architecture in plain language and generate the showcase HTML report — layers, rules, coverage, gates, and why the contract exists.
+description: Explain the rules file in plain language and generate the HTML report.
 ---
 
 # /ark-explain — Understand this project's architecture

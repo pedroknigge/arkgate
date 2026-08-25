@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-25 (Engineering doing: none; Phase HS `HS01`–`HS05` **done**; `RN16` **done**; Phase RN ArkRun shipped **4.7.0**; Phase HS shipped **4.7.1**; `AL05` parked; Z09 still parked; npm `latest` is **4.7.1**)
+- **Status date:** 2026-08-25 (Engineering doing: none; Phase HS `HS01`–`HS05` **done**; `RN16` **done**; Phase RN ArkRun shipped **4.7.0**; Phase HS shipped **4.7.1**; tree **4.7.2** wording patch prepared; `AL05` parked; Z09 still parked; npm `latest` is **4.7.1**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 

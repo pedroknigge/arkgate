@@ -1,6 +1,6 @@
 ---
 name: ark-place
-description: "Where does new code go? Names the layer, directory, and naming for a new artifact from the contract, and writes it there. Autonomous."
+description: "Where does new code go? Names the folder from the rules file and writes the file there."
 ---
 
 # /ark-place — Where does this code go?

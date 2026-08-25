@@ -2,7 +2,12 @@
 
 For **anyone** shipping TypeScript with an AI coding agent. You do not need to study clean architecture first.
 
-**One architecture config. One check. One coach.**
+**If the AI writes an illegal import, the write is rejected. The same check fails the pull request.**
+
+Not an API Gateway. Not a folder linter. If the check is not required on the PR, the rules
+file is just documentation.
+
+**One rules file. One check. One next step.**
 
 ---
 
@@ -11,12 +16,12 @@ For **anyone** shipping TypeScript with an AI coding agent. You do not need to s
 ```bash
 npm install -D arkgate typescript
 npx arkgate start                 # preview what will change
-npx arkgate start --apply         # install compact contract + host router + CI plan
-npx arkgate-check --doctor        # where am I? one status light, one next action
-npx arkgate-check --doctor --all  # encyclopedia (Details)
+npx arkgate start --apply         # install compact config + host router + CI plan
+npx arkgate-check --doctor        # what's wrong, what to do first
+npx arkgate-check --doctor --all  # full details
 ```
 
-Then keep working with your agent. The doctor is the **control plane**: when stuck, run doctor and do action **#1**. Compact first; `--all` for Details.
+Then keep working with your agent. Stuck? Run `--doctor` and do action **#1**. Compact first; `--all` for details.
 
 | Stuck on… | Do this |
 |-----------|---------|
@@ -36,7 +41,8 @@ Skip ArkGate (or treat it as overkill) when:
 - The project has **no AI coding agents** and **no multi-layer integration boundaries** worth pinning.
 - It is a **single-developer hobby CRUD** with no pressure to keep layers honest over time.
 - The team will **not** maintain `ark.config.json` layers or make `arkgate-check --strict-merge` a
-  **required** GitHub status context — without that, local advisory write stays avoidable.
+  **required** GitHub status context — without that, the rules file is just documentation and a
+  warning at write time can be ignored.
 
 In those cases a boundary linter or editor rules may be enough; see [README — Why not only ESLint / Nx / cruiser?](../README.md#why-not-only-eslint--nx--cruiser). When you *do* adopt, day-to-day honesty is still: advisory write on soft hosts → required merge status. Surface that with `npx arkgate-check --doctor` or `npx arkgate status --json` ([agent guide — Write-path honesty](agent-guide.md#write-path-honesty)).
 
@@ -46,7 +52,7 @@ In those cases a boundary linter or editor rules may be enough; see [README — 
 
 | When | What happens |
 |------|----------------|
-| While the AI writes | Host write gate or advisory MCP (depends on host) |
+| While the AI writes | The write is rejected, or you get a warning (depends on the host) |
 | Before merge | Make the Ark job a **required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`). Until that status is required — or you write `.ark/adoption-stance.json` with `stance: "advisory-only"` — doctor will not call the tree adopted. |
 | Anytime | Doctor: Suggest / Adapt / Enforce (+ leftover design work if the design is still messy) |
 
@@ -57,7 +63,8 @@ shell/direct writes, and incomplete patches still rely on CI. **OpenCode:** loca
 advisory (warning only, not blocked). An unverified host hook is environment evidence, not
 unfinished architecture; **Not finished** is reserved for real project/config debt.
 
-ArkGate is **not** a web framework, ORM, or app runtime. It is architecture enforcement + a coach for AI TypeScript.
+ArkGate is **not** an API Gateway, a folder linter, a web framework, ORM, or app runtime.
+The rules file only binds when the write is rejected and CI is required.
 
 ### Planes (you choose)
 

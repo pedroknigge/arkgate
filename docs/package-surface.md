@@ -1,6 +1,7 @@
 # ArkGate package surface policy
 
-**Product wedge:** write gate · CI gate · co-pilot (plan / loop / skills).  
+**If the AI writes an illegal import, the write is rejected. The same check fails the pull request.**
+That is the product wedge (host hook + required CI). Skills name the next step after that.
 **Not the wedge:** the optional in-process **ArkRun** kernel (`@arkgate/runtime`).
 
 **Public product site:** [arkgate.online](https://www.arkgate.online/) (promise + only flow).
@@ -213,7 +214,8 @@ production deployment would need to satisfy; it is not a readiness certification
 ## Release notes (maintainers)
 
 Ship notes for a version live under [releases/](https://github.com/pedroknigge/arkgate/tree/main/docs/releases)
-(current published: [4.7.1.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.7.1.md);
+(current tree: [4.7.2.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.7.2.md);
+current published: [4.7.1.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.7.1.md);
 prior published: [4.7.0.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.7.0.md);
 prior published: [4.6.7.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.6.7.md);
 prior published: [4.6.6.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.6.6.md);

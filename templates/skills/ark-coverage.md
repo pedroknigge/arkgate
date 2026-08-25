@@ -1,6 +1,6 @@
 ---
 name: ark-coverage
-description: Ark adoption fitness audit — governed%, gates, baseline honesty, capability gaps. CLI is a sensor; read enough source to prove gaps. Full product recon and pattern dual-plan belong to /ark-explore.
+description: How much of the tree the rules file covers. CLI is a sensor; read the source.
 ---
 
 # /ark-coverage — Ark adoption fitness (not full recon)

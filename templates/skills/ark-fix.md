@@ -1,6 +1,6 @@
 ---
 name: ark-fix
-description: Shortcut to /ark-autopilot for a small violation cluster. Deprecated as a first-class door.
+description: Shortcut to /ark-autopilot for a small illegal-import cluster.
 ---
 
 # /ark-fix — Shortcut to /ark-autopilot

@@ -1,5 +1,5 @@
 name: 'ArkGate Architecture Check'
-description: 'Block merges on architecture violations (cross-layer imports, intent references) with arkgate-check'
+description: 'Fail the pull request when TypeScript import rules are broken (arkgate-check)'
 author: 'pedroknigge'
 branding:
   icon: 'shield'

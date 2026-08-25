@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.7.1';
+const CURRENT = '4.7.2';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.7.1';
 
@@ -106,9 +106,11 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('keeps 4.7.1 published on npm latest', () => {
+  it('keeps 4.7.1 published on npm latest while 4.7.2 is the tree identity', () => {
     expect(PUBLISHED_LATEST).toBe('4.7.1');
-    expect(CURRENT).toBe('4.7.1');
+    expect(CURRENT).toBe('4.7.2');
+    expect(read('README.md')).toMatch(/4\.7\.2/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.7\.2\.md/);
     expect(read('README.md')).toMatch(/4\.7\.1/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.7\.1\.md/);
     expect(read('README.md')).toMatch(/4\.7\.0/);
@@ -117,13 +119,14 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.7\.md/);
     expect(read('README.md')).toMatch(/4\.6\.6/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.6\.md/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.7\.1/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.7\.2/s);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.7\.1/s);
     expect(read('CONTRIBUTING.md')).toMatch(/Prior published:.*4\.7\.0/s);
     expect(read('docs/README.md')).toMatch(/Current published:.*4\.7\.1/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
     expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.7\.1/is);
     expect(read('docs/package-surface.md')).toMatch(/4\.6\.2\.md/);
+    expect(read('docs/releases/4.7.2.md')).toMatch(/\*\*Status:\*\*\s*prepared/i);
     expect(read('docs/releases/4.7.1.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.7.1.md')).not.toMatch(/\*\*Status:\*\*\s*unpublished/i);
     expect(read('docs/releases/4.7.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
@@ -150,6 +153,27 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('docs/releases/4.5.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.4.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.3.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.7.2 wording patch', () => {
+  it('records common-language first-contact copy and no required migration', () => {
+    const changelog = changelogText();
+    expect(changelog).toMatch(/## 4\.7\.2/);
+    expect(changelog).toMatch(/illegal import/);
+    expect(changelog).toMatch(/API Gateway/);
+    expect(changelog).toMatch(/Does not close Z09/);
+    const section = changelog.slice(changelog.indexOf('## 4.7.2'), changelog.indexOf('## 4.7.1'));
+    expect(section).toMatch(/No required config migration/i);
+    expect(section).toMatch(/Status:\s*prepared/i);
+    const notes = read('docs/releases/4.7.2.md');
+    expect(notes).toMatch(/arkgate@4\.7\.2/);
+    expect(notes).toMatch(/mcp-publisher validate server\.json/);
+    expect(notes).toMatch(/No required config migration/i);
+    expect(notes).toMatch(/Z09|RB-11/i);
+    expect(notes).toMatch(/K01/);
+    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(notes).not.toMatch(/amarilla/i);
   });
 });
 
@@ -334,7 +358,7 @@ describe('CHANGELOG + release note cover 4.6.2 first-contact copy train', () => 
     expect(notes).toMatch(/mcp-publisher validate server\.json/);
     expect(notes).toMatch(/One architecture config\. One check\. One coach\./);
     expect(JSON.parse(read('package.json')).description).toBe(
-      'One architecture config. One check. One coach.'
+      'If the AI writes an illegal import, the write is rejected. The same check fails the pull request.'
     );
   });
 });
@@ -762,6 +786,64 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
     expect(body).toMatch(/\*\*design-weak\*\*/);
     expect(body).toMatch(/\*\*residual\*\*|\*\*leftover design work\*\*|leftover design work/);
     expect(body).toMatch(/advisory write|required CI/i);
+  });
+
+  it('first-contact copy names the old-school engineer misreads', () => {
+    const voice = read('docs/product-voice.md');
+    expect(voice).toMatch(/Canonical misreader \(old-school engineer\)/);
+    expect(voice).toMatch(/file structure keeper/);
+    expect(voice).toMatch(/Misread B — “a Gateway”/);
+    expect(voice).toMatch(/not a contract, a manifesto/);
+    const readme = read('README.md');
+    const denyAt = readme.indexOf('If the AI writes an illegal import');
+    const howAt = readme.indexOf('One rules file. One check. One next step.');
+    expect(denyAt).toBeGreaterThan(0);
+    expect(howAt).toBeGreaterThan(denyAt);
+    expect(readme).toMatch(/Not an API Gateway/);
+    expect(readme).toMatch(/just documentation/);
+  });
+
+  it('current public openings use the locked deny and skip first-contact dialect', () => {
+    const deny = /If the AI writes an illegal import/;
+    const forbiddenLead = /write checkpoint|write firewall|control plane|co-pilot|One architecture config\. One check\. One coach\./i;
+    const openings = [
+      'README.md',
+      'docs/use.md',
+      'docs/develop.md',
+      'docs/README.md',
+      'docs/enthusiast/README.md',
+      'docs/agent-guide.md',
+      'docs/ai-gates.md',
+      'docs/package-surface.md',
+    ];
+    for (const rel of openings) {
+      const head = read(rel)
+        .split(/\n/)
+        .slice(0, 24)
+        .filter((line) => !/Architecture Co-pilot/.test(line))
+        .join('\n');
+      expect(head, rel).toMatch(deny);
+      expect(head, rel).not.toMatch(forbiddenLead);
+    }
+    expect(JSON.parse(read('package.json')).description).toMatch(deny);
+    expect(JSON.parse(read('server.json')).description).toMatch(deny);
+    expect(read('action.yml')).toMatch(/Fail the pull request when TypeScript import rules are broken/);
+    expect(read('bin/lib/first-run-help.mjs')).toMatch(/Illegal import: write rejected/);
+    expect(read('bin/lib/ci-and-commands.mjs')).toMatch(/what's wrong and what to do first/);
+    expect(read('bin/lib/ci-and-commands.mjs')).not.toMatch(/control plane/);
+    const skillHead = read('templates/skills/ark-adopt.md').split(/\n/).slice(0, 8).join('\n');
+    expect(skillHead).not.toMatch(forbiddenLead);
+    const siteHome = path.resolve(REPO, '../arkgate-site/index.html');
+    if (fs.existsSync(siteHome)) {
+      const html = fs.readFileSync(siteHome, 'utf8');
+      const denyAt = html.indexOf('If the AI writes an illegal import');
+      const howAt = html.indexOf('One rules file. One check. One next step.');
+      expect(denyAt).toBeGreaterThan(0);
+      expect(howAt).toBeGreaterThan(denyAt);
+      expect(html).toMatch(/Not an API Gateway/);
+      expect(html).toMatch(/just documentation/);
+      expect(html).toMatch(/4\.7\.2/);
+    }
   });
 
   it('field kit exists and stays not-closed', () => {

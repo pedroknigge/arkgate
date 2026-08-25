@@ -1,6 +1,6 @@
 ---
 name: ark-think
-description: Host-side architectural reasoning — 2–3 enforceable options on layer and/or ArkRules planes for ONE decision. Not full recon (use /ark-explore). No gate bypass. No package LLM call.
+description: 2–3 options for one import-rule or ArkRules decision. Not a full map (use /ark-explore).
 ---
 
 # /ark-think — Architectural reasoning (host LLM only)
