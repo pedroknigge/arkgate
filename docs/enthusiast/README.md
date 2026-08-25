@@ -27,10 +27,11 @@ aliases `ark` / `ark-check` still work).
 |-------|---------------|
 | **Layers** | Who may import whom (always on after start) |
 | **ArkRules** (optional) | Habits *inside* a layer — structure and named invariants as data |
+| **ArkRun** (optional extra) | Kernel usage + complete declarations (`arkRun` on schema `1.2`) |
 
-You can stay on layers only. When you add ArkRules, start **advisory** and promote only with
-coverage. Residual labels: **`[Layer]`** vs **`[ArkRules]`**. Details:
-[use.md](../use.md) · [configuration](../configuration.md#arkrules-intra-layer-opt-in).
+You can stay on layers only. When you add ArkRules or ArkRun, start **advisory** and promote only with
+coverage. Compact starters leave ArkRun off. Residual labels: **`[Layer]`** vs **`[ArkRules]`**. Details:
+[use.md](../use.md) · [configuration](../configuration.md).
 
 ## Start here
 

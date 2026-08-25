@@ -155,12 +155,18 @@ names. Details: [configuration.md](configuration.md#team-parliament-law-vs-featu
 
 ---
 
-## Optional ArkRun kernel
+## Optional ArkRun extra and kernel
 
-Gates need **no** runtime kernel. **ArkRun** (`@arkgate/runtime`) is experimental, a separate
-package, and not the day-zero product. `createStrictArkKernel` is the factory (per instance; no
-process-wide singleton). The kernel is not bundled in the `arkgate` tarball. See
-[package-surface.md](package-surface.md) and [production-hardening.md](production-hardening.md).
+Gates need **no** runtime kernel. Optional **`arkRun`** on `ark.config.json` (schema `1.2`)
+is a *gate* extra: kernel usage + complete declarations on the same write/CI plane as
+Layers and ArkRules. Absence is silent. Compact starters leave it off.
+
+The companion **ArkRun** kernel (`@arkgate/runtime`) is experimental, a separate package,
+and not the day-zero product. `createStrictArkKernel` is the factory (per instance; no
+process-wide singleton). The kernel is not bundled in the `arkgate` tarball. Built-in
+stores are in-memory **reference only** — not production durability; `K01` stays parked.
+See [configuration.md](configuration.md), [package-surface.md](package-surface.md), and
+[production-hardening.md](production-hardening.md).
 
 ---
 

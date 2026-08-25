@@ -8,21 +8,9 @@
 > [Package surface](../../package-surface.md) ·
 > [Production hardening](../../production-hardening.md)
 
-**Status:** In progress (Phase RN). `RN01` done — ADRs 0020–0024 accepted in
-[docs/adr](../../adr/README.md); `RN02` done (schema `1.2` `arkRun`); `RN03` done
-(resolver facts); `RN04` done (tier-1 sensors); `RN05` done (catalog dual-depth
-`nextAction`); `RN06` done (`arkgate/eslint` import/`new` envelope);
-`RN07` done (CLI / MCP / hook / preflight / CI extra teeth); `RN08` done
-(doctor / status / report `arkRun` `notAScore`; mergePlanes honesty);
-`RN09` done (companion branded; `createStrictArkKernel` stays the factory);
-`RN10` done (declarations + `getDependencyInformationPackage()`);
-`RN11` done (transport ports: local / localBlocking / broker fallback; `ephemeral` default true);
-`RN12` done (inspector: `127.0.0.1`, production veto, SSE + snapshots, lazy HTTP);
-`RN13` done (requestGraph process/technical slices, degrees, include/exclude, Mermaid);
-`RN14` done (skip corpus: extra absent green; enforced fails unmanaged `new` / peer import / homemade bus);
-`RN15` done (deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names);
-`RN16` remains `todo` in ROADMAP. Does not close
-`Z09` / residual `RB-11`.<br>
+**Status:** Preparing **4.7.0** (Phase RN). `RN01`–`RN15` done — ADRs 0020–0024 accepted in
+[docs/adr](../../adr/README.md); `RN16` public docs + version surfaces are in this tree.
+Does not close `Z09` / residual `RB-11`. Does not close `K01`.<br>
 **Slug:** `arkrun`<br>
 **Kind:** epic / gated extra plane + companion kernel<br>
 **Owners:** product (Pedro) + library maintainers<br>
@@ -219,7 +207,7 @@ and docs. One `doing` at a time.
 |----|-----:|---|---|
 | `RN14` | L | RN07 | **done** — Skip corpus at `tests/fixtures/arkrun-skip-corpus/`: missing extra = green; enforced extra = fail on `new` / peer import / homemade bus |
 | `RN15` | M | RN08, freeze end | **done** — Deepen `/ark-runtime` / `/ark-place` / `/ark-adopt`; no new skill names |
-| `RN16` | M | RN08 + RN14 | Docs: complement extra, durable-stores honesty unchanged; prepare **4.7.0** |
+| `RN16` | M | RN08 + RN14 | **doing** — Docs: complement extra, durable-stores honesty unchanged; prepare **4.7.0** |
 
 `K01` (in-process commit gaps) stays **parked**. This train does not authorize production
 durability claims.
@@ -252,10 +240,10 @@ durability claims.
 
 ## 11. Promotion
 
-When RN16 ships: promote this seed to a feature pack only if a consumer-facing
-`docs/features/arkrun/` is warranted; otherwise keep this file as shipped rationale and
-point public docs (`use.md`, `configuration.md`, `package-surface.md`) at the extra.
-Mark **Shipped in 4.7.0**. Update the hub plans table.
+Public lanes (`use.md`, `configuration.md`, `package-surface.md`, `develop.md`) now point at
+the extra. No consumer-facing `docs/features/arkrun/` — this file remains shipped rationale.
+Mark **Shipped in 4.7.0** after npm `latest` flips. Hub plans table tracks the prepare.
+Does not close Z09 / K01.
 
 ## Related
 

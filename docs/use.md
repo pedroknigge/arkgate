@@ -59,16 +59,17 @@ unfinished architecture; **Not finished** is reserved for real project/config de
 
 ArkGate is **not** a web framework, ORM, or app runtime. It is architecture enforcement + a coach for AI TypeScript.
 
-### Two planes (you choose)
+### Planes (you choose)
 
 | Plane | Plain English | Config | Enforces |
 |-------|---------------|--------|----------|
 | **Layers** | Who may talk to whom | `layers[]` + `rules[]` | Import direction, purity, forbidden globals, capabilities, peer isolation |
-| **ArkRules** (optional) | Habits *inside* a layer + named policies | `arkRules` + `arkrules/<Layer>.json` | Structure **heuristics** (module shape); invariant **catalog + coverage evidence** (not full business proof) |
+| **ArkRules** (optional extra) | Habits *inside* a layer + named policies | `arkRules` + `arkrules/<Layer>.json` | Structure **heuristics** (module shape); invariant **catalog + coverage evidence** (not full business proof) |
+| **ArkRun** (optional extra) | Kernel usage + complete declarations | `arkRun` on schema `1.2` | Only `mode: "enforced"` when the tree is classified. Absence is silent. Doctor `arkRun` is **not a score**. |
 
-Start always gives you **layers**. ArkRules templates may ship with start/init; they begin **advisory** until you promote them. Doctor / HTML show `rulesUnderContract` (catalog, **not a score**). No `arkRules` map is fine — only Layers run.
+Start always gives you **layers**. ArkRules templates may ship with start/init; they begin **advisory** until you promote them. Compact starters do **not** turn on ArkRun — add it only if the project uses `@arkgate/runtime`. Doctor / HTML show `rulesUnderContract` (catalog, **not a score**). No `arkRules` / `arkRun` map is fine — only Layers run. In-memory kernel stores are **not** production durability.
 
-**Do not confuse:** green Layers ≠ perfect design (Shape residual can remain). Covered invariants ≠ “the business always does the right thing” — they mean the named policy is declared and has symbol/test evidence.
+**Do not confuse:** green Layers ≠ perfect design (Shape residual can remain). Covered invariants ≠ “the business always does the right thing” — they mean the named policy is declared and has symbol/test evidence. ArkRun branding ≠ durable stores.
 
 ### New modules vs config edits
 

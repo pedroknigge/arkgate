@@ -5,6 +5,16 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.7.0 — 2026-08-25
+
+**Minor** over **4.6.7**. Ships **ArkRun**: an opt-in extra on schema `1.2` for kernel
+usage and complete declarations, plus companion `@arkgate/runtime` DX. Absence is
+silent (Layers / ArkRules verdicts unchanged). In-memory stores remain
+reference-only. **No required config migration.** Does not close Z09 / K01.
+
+**Status: prepared** (see `docs/releases/4.7.0.md`). npm `latest` remains **4.6.7**
+until publish.
+
 ### Added
 
 - **`arkRun` extra on `ark.config.json` schema `1.2` (RN02):** optional inline
@@ -97,6 +107,12 @@ in the immutable pre-2.0 archive linked below.
   `EventEmitter` stay green when `arkRun` is absent (Layers / ArkRules match
   schema `1.1`) and fail write path, CLI, MCP, and `--strict-merge` when the
   extra is enforced. Does not close Z09 / K01.
+
+- **ArkRun skill-body deepen (RN15):** `/ark-runtime`, `/ark-place`, and
+  `/ark-adopt` teach the extra vs companion (advisory adopt, kernel-only
+  scaffold, composition-root wiring). Frozen **13** names — no `/ark-run`.
+  Skills never enforce; doctor `arkRun` stays `notAScore`. Agent Skills layout
+  stays 1:1 with `templates/skills`. Does not close Z09 / K01.
 
 ## 4.6.7 — 2026-08-24
 

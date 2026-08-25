@@ -16,11 +16,11 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 4.6.7** is current on npm `latest`.
+> **ArkGate 4.7.0** is prepared on this tree. **4.6.7** remains npm `latest` until publish.
 > A tree is **adopted** only with a required GitHub status running `arkgate-check --strict-merge`,
 > or `.ark/adoption-stance.json` `stance: "advisory-only"`. Doctor is compact (`--doctor --all`
-> for Details). [4.6.7 notes](docs/releases/4.6.7.md) · [4.6.6](docs/releases/4.6.6.md) ·
-> [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> for Details). [4.7.0 notes](docs/releases/4.7.0.md) · [4.6.7](docs/releases/4.6.7.md) ·
+> [4.6.6](docs/releases/4.6.6.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
 
@@ -78,11 +78,12 @@ A machine-readable architecture file (`ark.config.json`) plus enforcement:
 |-------|----------------|--------|
 | **Layers** (always) | Who may import whom — imports, placement, purity, isolation | `ark.config.json` layers + rules |
 | **ArkRules** (opt-in; structure rules inside a layer) | Habits *inside* a layer — structure sensors + domain invariants as data | `arkRules` → `arkrules/<Layer>.json` |
+| **ArkRun** (opt-in extra) | Kernel usage + complete declarations | `arkRun` on schema `1.2` |
 
-Absence of ArkRules changes no inter-layer verdict. Label residual **`[Layer]`** vs **`[ArkRules]`**.  
-Details: [configuration](docs/configuration.md#arkrules-intra-layer-opt-in) · [use path](docs/use.md).
+Absence of ArkRules or ArkRun changes no inter-layer verdict. Label residual **`[Layer]`** vs **`[ArkRules]`**.  
+Details: [configuration](docs/configuration.md) · [use path](docs/use.md).
 
-**Not** a web framework, ORM, or job runner. Optional **ArkRun** kernel (`@arkgate/runtime`) is separate and not required for the gate.
+**Not** a web framework, ORM, or job runner. Optional **ArkRun** extra and companion kernel (`@arkgate/runtime`) are separate and not required for the gate. In-memory stores are not production durability.
 
 **Name note:** npm package `arkgate` — not affiliated with the separate Archgate CLI project.
 
@@ -226,7 +227,8 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current published (4.6.7 on npm `latest`) | [docs/releases/4.6.7.md](docs/releases/4.6.7.md) · [CHANGELOG](CHANGELOG.md) |
+| Current tree (4.7.0 prepared) | [docs/releases/4.7.0.md](docs/releases/4.7.0.md) · [CHANGELOG](CHANGELOG.md) |
+| Current published (4.6.7 on npm `latest`) | [docs/releases/4.6.7.md](docs/releases/4.6.7.md) |
 | Prior published (4.6.6) | [docs/releases/4.6.6.md](docs/releases/4.6.6.md) |
 | Prior published (4.6.5) | [docs/releases/4.6.5.md](docs/releases/4.6.5.md) |
 | Prior published (4.6.3) | [docs/releases/4.6.3.md](docs/releases/4.6.3.md) |

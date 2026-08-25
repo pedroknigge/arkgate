@@ -1,11 +1,11 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-25 (Engineering doing: none — await `RN16`; `RN15` **done**; `RN14` **done**; `RN13` **done**; `RN12` **done**; `RN11` **done**; `RN10` **done**; `RN09` **done**; `RN08` **done**; `RN07` **done**; `RN06` **done**; `RN05` **done**; `RN04` **done**; `RN03` **done**; `RN02` **done**; `RN01` **done**; Phase AL `AL01`–`AL04` **done**; `AL06` compact-doctor extract **done**; `AL05` parked; Phase RN ArkRun started; Z09 still parked; tree **arkgate@4.6.7**; npm `latest` is **4.6.7**)
+- **Status date:** 2026-08-25 (Engineering doing: `RN16`; `RN15` **done**; `RN14` **done**; `RN13` **done**; `RN12` **done**; `RN11` **done**; `RN10` **done**; `RN09` **done**; `RN08` **done**; `RN07` **done**; `RN06` **done**; `RN05` **done**; `RN04` **done**; `RN03` **done**; `RN02` **done**; `RN01` **done**; Phase AL `AL01`–`AL04` **done**; `AL06` compact-doctor extract **done**; `AL05` parked; Phase RN ArkRun preparing **4.7.0**; Z09 still parked; tree **arkgate@4.7.0**; npm `latest` remains **4.6.7** until publish)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
 This roadmap supersedes the former “Trust 95+” estimate and its active Q-track. Shipped work is
-kept in the [historical appendix](#historical-appendix), but it is not evidence that the current
+kept in the [historical appendix](docs/archive/roadmap-history.md), but it is not evidence that the current
 product is release-ready.
 
 ---
@@ -108,7 +108,7 @@ lift DF freezes on scores, new skill names, sensors, or LLM verdicts.
 
 These are historical starting facts captured before their associated phases. They intentionally
 retain the measurements and gaps that motivated the work; they are **not** the current product
-status. Use the ordered queue, closure evidence, and [Next implementation session](#next-implementation-session)
+status. Use the ordered queue, closure evidence, and [Current queue](#current-queue)
 for current truth.
 
 | Area | Baseline | Consequence |
@@ -263,7 +263,7 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: none (await `RN16` public docs + 4.7.0 prep).
+Engineering doing: `RN16` (public docs + 4.7.0 prep).
 `RN15` **done** (deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names).
 `RN14` **done** (skip corpus: extra absent = green; enforced = fail `new` / peer import / homemade bus).
 `RN13` **done** (graph slices: process/technical, degrees, query + Mermaid helper).
@@ -282,8 +282,8 @@ no process singleton; kernel stays out of the `arkgate` tarball).
 `RN03` **done** (resolver facts for kernel call sites, managed `new`, composition-root hits; facts schema additive).
 `RN02` **done** (schema `1.2` `arkRun` extra; `1.1` migrates; absence silent; invalid extra fails closed).
 `RN01` done (ADRs 0020–0024 accepted). `Z09` stays parked (retained adoption + independent
-close). 30-day freeze from 2026-08-22: no explore / compass as `doing`. Engineering doing: none
-(await `RN16`). Phase RN started.
+close). 30-day freeze from 2026-08-22: no explore / compass as `doing`. Engineering doing: `RN16`.
+Phase RN started.
 
 ### Phase RN — ArkRun gated complement
 
@@ -309,7 +309,7 @@ Does not ship cloud adapters or a process singleton. Companion kernel stays
 | 197 | `RN13` | `done` | M | RN10 | Graph slices: process/technical, degrees, query |
 | 198 | `RN14` | `done` | L | RN07 | Skip corpus: extra absent = green; enforced = fail `new` / peer import / homemade bus |
 | 199 | `RN15` | `done` | M | RN08 + freeze end | Deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names |
-| 200 | `RN16` | `todo` | M | RN08 + RN14 | Public docs + prepare **4.7.0**; durability honesty unchanged |
+| 200 | `RN16` | `doing` | M | RN08 + RN14 | Public docs + prepare **4.7.0**; durability honesty unchanged; npm `latest` remains 4.6.7 until publish |
 
 ### Residual Phase Z
 
