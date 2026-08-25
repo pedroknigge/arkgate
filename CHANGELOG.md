@@ -11,7 +11,7 @@ in the immutable pre-2.0 archive linked below.
 product-voice lexicon, live site pages, and doctor HTML strings. Same deny.
 **No required config migration.** Does not close Z09 / K01.
 
-**Status: prepared** (not on npm `latest` until publish; see `docs/releases/4.7.3.md`).
+**Status: published** (on npm `latest`; see `docs/releases/4.7.3.md`).
 
 ### Changed
 
