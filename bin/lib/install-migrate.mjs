@@ -70,11 +70,9 @@ import {
   verifyHostSkillCatalog,
   canonicalSkillPath,
   usesCanonicalSkillCatalog,
-  linkSkillHostAdapters,
-  pruneHomeArkSkillDuplicates,
-  skillTemplateNames,
 } from './skill-install.mjs';
-import { installRepoSkillFile, installSkillCatalog, skillInstallLine, skillInstallNote } from './skill-write.mjs';
+import { applySkillCatalogFollowup } from './skill-catalog-apply.mjs';
+import { installRepoSkillFile, skillInstallNote } from './skill-write.mjs';
 import { detectDeployPathQuality } from './deploy-path.mjs';
 import {
   stripMcpServerArgs,
@@ -85,7 +83,6 @@ import {
   RUNNER_BEFORE_ARK,
 } from './mcp-adoption.mjs';
 import { inspectCodexInstallActivation, printCodexActivationHandoff, reportPartialInstall } from './install-activation.mjs';
-import { installRequestedAgentHomes } from './agent-homes.mjs';
 import {
   hasHardWriteHook,
   validateHardWriteRequest,
@@ -627,102 +624,13 @@ export function runInstallAgentGates(args) {
     console.log(`    ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --force')}`);
   }
 
-  const skillNames = skills.map((skill) =>
-    Array.isArray(skill) ? skill[0] : skill?.name || skill
-  );
-  if (!args.compact && skillNames.length > 0) {
-    const adapterResults = linkSkillHostAdapters(root, tools, skillNames, Boolean(args.force));
-    for (const row of adapterResults) {
-      if (row.status === 'linked' || row.status === 'copied') {
-        console.log(`  ${row.status.padEnd(7)} ${row.relativePath}  (adapter → .agents/skills/${row.name})`);
-      }
-    }
-  }
-  if (args.pruneHomeDuplicates) {
-    const pruned = pruneHomeArkSkillDuplicates(root, skillNames.length ? skillNames : skillTemplateNames());
-    if (!pruned.ok) {
-      console.log('  skip    --prune-home-duplicates (no project .agents/skills catalog yet)');
-    } else if (pruned.removed.length === 0) {
-      console.log('  skip    --prune-home-duplicates (no home ark-* copies)');
-    } else {
-      console.log(`  pruned  ${pruned.removed.length} home ark-* path(s) (project catalog is enough)`);
-    }
-  }
-
-  // --codex-home writes SKILL.md skills to $CODEX_HOME/skills/<name>/SKILL.md.
-  // Codex's real catalog loads skill directories (not flat $CODEX_HOME/prompts).
-  // Repo installs already write `.agents/skills/<name>/SKILL.md` when `codex` is
-  // selected; home install is for multi-project / non-repo-local refresh.
-  const homeResults = [];
-  if (args.codexHome) {
-    const dir = codexSkillsDir();
-    console.log('');
-    console.log(
-      `Codex home skills (scope=home-shared; source=${version ? `arkgate@${version}` : 'arkgate@unknown'}; target=${dir}/<name>/SKILL.md):`
-    );
-    console.log(
-      '  Compatibility: monotonic downgrade protection requires every shared-catalog writer ' +
-        'to use ArkGate 4.2.0+; pre-4.2 --codex-home ignores this catalog. Upgrade legacy repos first.'
-    );
-    try {
-      fs.mkdirSync(dir, { recursive: true });
-    } catch (error) {
-      console.error(`  FAILED to create ${dir} (${error.message})`);
-      homeResults.push({ relativePath: dir, status: 'failed' });
-    }
-    if (homeResults.length === 0) {
-      const skillName = (skill) =>
-        Array.isArray(skill) ? skill[0] : skill?.name || skill;
-      const projectHasCatalog = skills.some((skill) =>
-        fs.existsSync(path.join(root, '.agents', 'skills', skillName(skill), 'SKILL.md'))
-      );
-      if (projectHasCatalog) {
-        console.log(
-          '  Skip home write — project .agents/skills is the catalog. Codex lists user+repo; a home copy duplicates every /ark-*.'
-        );
-        console.log(
-          `  Remove leftover home copies: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --prune-home-duplicates')}`
-        );
-      } else {
-        for (const result of installSkillCatalog({
-          directory: dir,
-          skills,
-          packageVersion: version,
-          force: args.force,
-          scope: 'home',
-        })) {
-          console.log(skillInstallLine(result));
-          homeResults.push(result);
-        }
-      }
-    }
-  }
-
-  const projectCatalogReady = skillNames.some((name) =>
-    fs.existsSync(path.join(root, canonicalSkillPath(name)))
-  );
-  if ((args.claudeHome || args.grokHome || args.agentHomes) && projectCatalogReady) {
-    if (!args.json) {
-      console.log('');
-      console.log(
-        'Skip Claude/Grok home skill write — project .agents/skills + adapters are the catalog. Home ark-* copies override or duplicate.'
-      );
-      console.log(
-        `  Remove leftover home copies: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --prune-home-duplicates')}`
-      );
-    }
-  } else {
-    installRequestedAgentHomes({
-      root,
-      skills,
-      version,
-      force: args.force,
-      claudeHome: args.claudeHome,
-      grokHome: args.grokHome,
-      agentHomes: args.agentHomes,
-      json: args.json,
-    });
-  }
+  const { skillNames, homeResults } = applySkillCatalogFollowup({
+    root,
+    tools,
+    skills,
+    version,
+    args,
+  });
 
   // Optional legacy/home fallback. Normal Codex installs use the project-scoped
   // .codex/config.toml above, avoiding cross-project primary binding conflicts.
