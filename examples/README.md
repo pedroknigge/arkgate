@@ -38,7 +38,7 @@ preflight, strict-merge, and package import without rewriting source files.
 
 ## hexagonal-order-api/
 
-Clonable order API with a real hexagonal layout (`domain` / `application` / `adapters`) governed by all three Ark gates: `ark-check` in CI, `ark-mcp` for agents, and the strict kernel runtime (intents, event contract, projection) at runtime. The runtime exercise requires the separate experimental `@arkgate/runtime` companion; see its explicit install step in [hexagonal-order-api/README.md](hexagonal-order-api/README.md).
+Clonable order API with a real hexagonal layout (`domain` / `application` / `adapters`) governed by all three Ark gates: `ark-check` in CI, `ark-mcp` for agents, and the **ArkRun** kernel (intents, event contract, projection) at runtime. The runtime exercise requires the separate experimental `@arkgate/runtime` companion (`createStrictArkKernel`; not in the `arkgate` tarball); see its explicit install step in [hexagonal-order-api/README.md](hexagonal-order-api/README.md).
 
 Use this when you need a **runnable** API and intentional “break it on purpose” exercises — not a minimal scaffold.
 

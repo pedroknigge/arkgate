@@ -10,7 +10,7 @@ The CLI, MCP server, and ESLint plugin all use the same parser, migration, defau
 ```json
 {
   "$schema": "https://unpkg.com/arkgate@2/schemas/ark.config.schema.json",
-  "schemaVersion": "1.1",
+  "schemaVersion": "1.2",
   "include": ["src"],
   "layers": [],
   "rules": []
@@ -19,9 +19,11 @@ The CLI, MCP server, and ESLint plugin all use the same parser, migration, defau
 
 `$schema` is for editor completion. `schemaVersion` controls ArkGate's runtime contract and is
 independent from the npm package version. Schema **`1.1`** is additive over `1.0` and adds the
-optional top-level **`arkRules`** map (ADR 0012). Absence of `arkRules` changes no inter-layer
-verdict. Per-layer structure/invariant files use sibling schema
-`arkgate/schema/arkrules` (`schemas/ark.arkrules.schema.json`).
+optional top-level **`arkRules`** map (ADR 0012). Schema **`1.2`** is additive over `1.1` and
+adds the optional top-level **`arkRun`** extra (ADR 0020). Absence of `arkRules` or `arkRun`
+changes no Layers / ArkRules verdict. Per-layer structure/invariant files use sibling schema
+`arkgate/schema/arkrules` (`schemas/ark.arkrules.schema.json`). ArkRun v1 stays **inline**
+(no sibling file).
 
 For offline editor completion, point `$schema` at the installed file instead:
 
@@ -39,7 +41,7 @@ The same schema is exported through the stable package subpaths `arkgate/schema`
 ## Compatibility and migration
 
 Configs without `schemaVersion` are the legacy shape shipped through ArkGate 1.x and early 2.x.
-The loader deterministically projects them through `unversioned → 1.0 → 1.1` in memory by adding
+The loader deterministically projects them through `unversioned → 1.0 → 1.1 → 1.2` in memory by adding
 contract metadata and the established defaults. It never rewrites the user's file during a check.
 Newly generated
 configs always contain the metadata, and unsupported future versions fail at
@@ -85,6 +87,15 @@ Top-level fields:
 - **`arkRules`** (optional, schema `1.1+`) — map of layer name → project-relative path to an
   ArkRules file (e.g. `"DomainModel": "arkrules/DomainModel.json"`). Keys must match a declared
   layer. Missing/invalid referenced files **fail closed**.
+- **`arkRun`** (optional, schema `1.2+`) — inline ArkRun extra (`mode`, `compositionRoots`,
+  `managedLayers`, `requireDeclarations`). Absence is silent. Unknown keys fail closed.
+  `managedLayers` must name existing `layers[].name` values. Empty `compositionRoots` in
+  `enforced` mode fails closed (`ARKRUN_MISSING_ROOT`); empty `managedLayers` in `enforced`
+  mode also fails closed (direct-new / undeclared / transport-bypass would otherwise no-op).
+  Compact starters do not enable this extra. Demotion (`enforced` → `advisory`) or deletion
+  is a policy-delta **weakening**. Enforced extra teeth share the CLI / MCP / hook /
+  preflight / CI verdict and arm only when the layer plane is classified (same ≥50%
+  governed and ≥1 populated-layer floor as ArkRules).
 
 Layer fields:
 
@@ -142,14 +153,16 @@ See [brownfield adoption](brownfield-adoption.md#nextjs-honesty-default-overlays
 | **Layers** | Inter-layer import graph | Always on |
 | **Structure sensors** | Intra-layer heuristics | Only `mode: "enforced"` |
 | **Invariants** | Catalog + coverage evidence (not a business runtime) | Only enforced + proven-uncovered |
+| **ArkRun** (opt-in extra) | Kernel usage + complete declarations | Only `arkRun.mode: "enforced"` when classified |
 
-Absence of `arkRules` adds **no** extra merge teeth. **Advisory** structure sensors and advisory
-invariants also add **no** merge teeth (FG-ARKRULES-ADVISORY-ONLY) — packing every starter
-`arkrules/*` file does not make merge fail structure alone. Enforced structure/invariants arm
+Absence of `arkRules` or `arkRun` adds **no** extra merge teeth. **Advisory** structure sensors, advisory
+invariants, and advisory ArkRun also add **no** merge teeth (FG-ARKRULES-ADVISORY-ONLY / ADR 0020) — packing every starter
+`arkrules/*` file does not make merge fail structure alone. Enforced structure/invariants/ArkRun arm
 `mergePlanes.extraMergeTeeth` only when the layer plane is honestly classified
-(governed ≥ 50% and ≥ 1 populated layer); empty classification never gets structure teeth
-(P1M-EXTRATEETH-EMPTY-GRAPH). Structure and invariants **never** merge into one architecture
-score. Doctor exposes `rulesUnderContract.mergePlanes` for which plane can fail.
+(governed ≥ 50% and ≥ 1 populated layer); empty classification never gets extra-plane teeth
+(P1M-EXTRATEETH-EMPTY-GRAPH). Extra planes **never** merge into one architecture
+score. Doctor exposes `rulesUnderContract.mergePlanes` (including `mergePlanes.arkRun`) for which plane can fail,
+and a dedicated `doctor.arkRun` section that is always `notAScore`.
 
 Safety fields:
 

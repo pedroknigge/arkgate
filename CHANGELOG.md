@@ -5,6 +5,115 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.7.0 — 2026-08-25
+
+**Minor** over **4.6.7**. Ships **ArkRun**: an opt-in extra on schema `1.2` for kernel
+usage and complete declarations, plus companion `@arkgate/runtime` DX. Absence is
+silent (Layers / ArkRules verdicts unchanged). In-memory stores remain
+reference-only. **No required config migration.** Does not close Z09 / K01.
+
+**Status: prepared** (see `docs/releases/4.7.0.md`). npm `latest` remains **4.6.7**
+until publish.
+
+### Added
+
+- **`arkRun` extra on `ark.config.json` schema `1.2` (RN02):** optional inline
+  `{ mode, compositionRoots, managedLayers, requireDeclarations }`. `1.1` and
+  earlier configs migrate in memory; absence is silent (Layers / ArkRules
+  verdicts unchanged). Unknown keys, unknown `managedLayers` names, and empty
+  `compositionRoots` in `enforced` mode fail closed (`ARKRUN_MISSING_ROOT`).
+  Advisory → enforced is a strengthening policy delta; demotion or deletion is
+  weakening and needs the existing hash-bound ack. ESLint envelope is RN06
+  (landed below); CI extra teeth landed in RN07. Does not close Z09 / K01.
+
+- **ArkRun resolver facts on resolved-candidate-facts schema `1.2` (RN03):**
+  additive optional `arkRunKernelCalls`, `arkRunManagedNews`, and
+  `arkRunCompositionRootHits`. `1.0`/`1.1` payloads stay loadable (empty
+  arrays). Syntax evidence only — sensors consume these in RN04. Absence of
+  `arkRun` still leaves Layers / ArkRules verdicts unchanged. Does not close
+  Z09 / K01.
+
+- **ArkRun tier-1 sensors (RN04):** when `arkRun` is present, closed sensors
+  emit `ARKRUN_MISSING_ROOT`, `ARKRUN_KERNEL_IN_DOMAIN`, `ARKRUN_DIRECT_NEW`,
+  `ARKRUN_UNDECLARED_EMIT`, `ARKRUN_UNDECLARED_HANDLE`, `ARKRUN_UNDECLARED_DEPEND`,
+  and `ARKRUN_TRANSPORT_BYPASS`. Advisory findings never flip `valid`; enforced
+  blocks. Absence of the extra is still silent on Layers / ArkRules verdicts.
+  Optional `arkRunDeclarations` facts stay additive on schema `1.2`. Dual-depth
+  catalog nextAction is RN05 (landed below). Does not close Z09 / K01.
+
+- **ArkRun diagnostic catalog dual-depth (RN05):** closed `ARKRUN_*` catalog
+  entries have dual-depth remediation: casual `enthusiastHint` plus engineer
+  `nextAction` (target interpolates the call-site literal or specifier). Adding
+  an existing declaration-list string is `mechanical-safe` (`arkrun-declaration-list`)
+  only when that literal is already present; other ArkRun findings stay
+  `judgment`. Sensors, adapter fallback, and CLI remediation share
+  `deterministicNextAction`. Does not close Z09 / K01.
+
+- **ArkRun ESLint envelope (RN06):** `arkgate/eslint` recommended config adds
+  `ark/no-arkrun-kernel-in-domain`, `ark/no-arkrun-direct-new`, and
+  `ark/no-arkrun-transport-bypass`. Same `ARKRUN_*` sensors as ark-check for
+  the import / `new` envelope; silent when `arkRun` is absent. Missing-root and
+  undeclared-* stay CLI/MCP/preflight. Does not close Z09 / K01.
+
+- **ArkRun extra-teeth parity (RN07):** CLI `--strict-merge`, MCP `ark_check` /
+  snippet write, PreToolUse hook, atomic preflight, and CI share one ArkRun
+  verdict. Enforced extra teeth arm only when the layer plane is classified
+  (same ≥50% governed / ≥1 populated-layer floor as ArkRules); advisory and
+  absence stay silent on `valid`. Doctor/status `arkRun` section landed in
+  RN08 below. Does not close Z09 / K01.
+
+- **ArkRun doctor / status / report (RN08):** `ark-check --doctor`, HTML
+  `--report`, and `ark status` / MCP `ark_status` expose an `arkRun` section
+  that is always `notAScore`. Residual is a finding-id count, never a score or
+  LLM verdict. `mergePlanes.arkRun` states whether the extra can fail merge;
+  advisory and absence never arm extra teeth. Report parity requires
+  `data-advisory="arkRun"`. Does not close Z09 / K01.
+
+- **ArkRun companion branding (RN09):** `@arkgate/runtime` README and public
+  docs brand the kernel **ArkRun**. `createStrictArkKernel` stays the factory
+  (per-instance; no process-wide singleton). Kernel implementation stays out of
+  the `arkgate` tarball. Branding is not a production-durability claim. Does not
+  close Z09 / K01.
+
+- **ArkRun interaction declarations (RN10):** `@arkgate/runtime` `register()`
+  accepts `uses` / `reactsTo` / `raises` / `sends` plus optional tooling-only
+  `extendedInfo`. `getDependencyInformationPackage()` returns a JSON-serializable
+  snapshot of ids, lifetime, and declarations — never factories, live instances,
+  or input DTOs. Companion registrations may omit declarations for local
+  experiments; enforced `arkRun` on the gate still requires them. Does not close
+  Z09 / K01.
+
+- **ArkRun transport ports (RN11):** `@arkgate/runtime` `send()` is one call site
+  for `local` / `localBlocking` / `broker`. `ephemeral` defaults true (await local
+  recording or adapter accept — not a durability claim). Missing broker adapter
+  falls back to in-process local delivery, not cloud portability. No cloud SDKs
+  ship in the package. Does not close Z09 / K01.
+
+- **ArkRun dev inspector (RN12):** `@arkgate/runtime` `startInspector()` /
+  `startArkRunInspector()` is opt-in. Default bind is `127.0.0.1`; `NODE_ENV=production`
+  vetoes start; public hosts (`0.0.0.0`, `::`) are rejected. HTTP is lazy-loaded.
+  `GET /snapshot` and `GET /events` (SSE) serve the information package plus
+  transport facts (no factories, no shipped cloud SDKs). Does not close Z09 / K01.
+
+- **ArkRun graph slices (RN13):** `@arkgate/runtime` `requestGraph()` slices the
+  information package into `process` (raises / reactsTo / sends) or `technical`
+  (`uses`) graphs. Optional `nodeIds`, `degreesOfSeparation`, and include/exclude
+  query keep a neighborhood. `formatArkRunGraphMermaid()` / `graph.mermaid` is a
+  helper string, never a score. Inspector `GET /graph` serves the same slice.
+  Does not close Z09 / K01.
+
+- **ArkRun skip corpus (RN14):** `tests/fixtures/arkrun-skip-corpus/` is the
+  executable proof: Application `new`, same-layer peer import, and homemade
+  `EventEmitter` stay green when `arkRun` is absent (Layers / ArkRules match
+  schema `1.1`) and fail write path, CLI, MCP, and `--strict-merge` when the
+  extra is enforced. Does not close Z09 / K01.
+
+- **ArkRun skill-body deepen (RN15):** `/ark-runtime`, `/ark-place`, and
+  `/ark-adopt` teach the extra vs companion (advisory adopt, kernel-only
+  scaffold, composition-root wiring). Frozen **13** names — no `/ark-run`.
+  Skills never enforce; doctor `arkRun` stays `notAScore`. Agent Skills layout
+  stays 1:1 with `templates/skills`. Does not close Z09 / K01.
+
 ## 4.6.7 — 2026-08-24
 
 **Patch** over **4.6.6**. Production-hardening: CODEOWNERS, eval/pack honesty, CLI extracts,

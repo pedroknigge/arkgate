@@ -115,7 +115,7 @@ export class Order {
     expect(shapes.some((s) => s.className === 'Order' && s.exported)).toBe(true);
 
     const facts = minimalFacts(BASE_CONFIG, { classShapes: shapes });
-    expect(facts.schemaVersion).toBe('1.1');
+    expect(facts.schemaVersion).toBe('1.2');
     expect(facts.classShapes.some((s) => s.className === 'Order')).toBe(true);
   });
 

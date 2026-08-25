@@ -2031,6 +2031,12 @@ describe('ark-mcp read-side tools (ark_check / ark_coverage / ark_place)', () =>
       notAScore: true,
       mode: expect.stringMatching(/^(full|subset|unavailable)$/),
     });
+    expect(body.status.arkRun).toMatchObject({
+      notAScore: true,
+      present: expect.any(Boolean),
+    });
+    expect(body.status.arkRun).toHaveProperty('residual');
+    expect(body.status.arkRun).not.toHaveProperty('score');
     expect(Array.isArray(body.status.improvementCompass.topResidual)).toBe(true);
     if (body.status.improvementCompass.mode === 'unavailable') {
       expect(body.status.improvementCompass.topResidual).toEqual([]);

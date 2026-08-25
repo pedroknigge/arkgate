@@ -26,7 +26,11 @@
         "bin/lib/status-manifest.mjs",
         "bin/lib/agent-projection.mjs",
         "bin/lib/agent-skills-package.mjs",
-        "bin/lib/team-parliament.mjs"
+        "bin/lib/team-parliament.mjs",
+        "bin/lib/ark-run-facts.mjs",
+        "bin/lib/extra-merge-teeth.mjs",
+        "bin/lib/ark-run-sensors.mjs",
+        "bin/lib/ark-run-doctor.mjs"
       ],
       "intentPrefixes": ["Domain."],
       "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"]

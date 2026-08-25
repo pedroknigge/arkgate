@@ -343,6 +343,53 @@
           "type": "boolean"
         }
       }
+    },
+    "arkRun": {
+      "type": "object",
+      "description": "ArkRun extra residual (notAScore). present/mode from config; residual is a finding-id count (null = unknown, not green). extraMergeTeeth is honesty, never a score.",
+      "additionalProperties": false,
+      "required": [
+        "notAScore",
+        "present",
+        "mode",
+        "extraMergeTeeth",
+        "residual"
+      ],
+      "properties": {
+        "notAScore": {
+          "const": true
+        },
+        "present": {
+          "type": "boolean"
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "enum": [
+                "advisory",
+                "enforced"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extraMergeTeeth": {
+          "type": "boolean"
+        },
+        "residual": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
     }
   }
 }

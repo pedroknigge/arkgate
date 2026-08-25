@@ -25,8 +25,18 @@ describe('Ark ESLint plugin', () => {
       'require-publish-source',
       'no-forbidden-globals',
       'no-denied-capabilities',
+      'no-arkrun-kernel-in-domain',
+      'no-arkrun-direct-new',
+      'no-arkrun-transport-bypass',
     ]);
     expect(arkEslint.configs?.recommended).toBeDefined();
+    expect(
+      (arkEslint.configs?.recommended as { rules: Record<string, string> }).rules
+    ).toMatchObject({
+      'ark/no-arkrun-kernel-in-domain': 'error',
+      'ark/no-arkrun-direct-new': 'error',
+      'ark/no-arkrun-transport-bypass': 'error',
+    });
   });
 
   it('does not invent architecture policy without ark.config.json', () => {

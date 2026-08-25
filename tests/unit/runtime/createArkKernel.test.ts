@@ -81,6 +81,11 @@ describe('createArkKernel presets', () => {
     expect(a.profile.layers).toHaveLength(11);
   });
 
+  it('does not expose a process-wide getKernel singleton', async () => {
+    const runtime = await import('../../../src/index');
+    expect((runtime as { getKernel?: unknown }).getKernel).toBeUndefined();
+  });
+
   it('derives runtime layer enforcement from an ark-check config', async () => {
     const ark = createStrictArkKernelFromConfig(
       {

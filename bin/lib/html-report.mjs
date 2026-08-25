@@ -149,6 +149,8 @@ export function buildReportSnapshot({
   mode,
   /** DF02 — thin status compass slice (mode + residual ids, notAScore). */
   improvementCompass = null,
+  /** RN08 — thin status ArkRun slice (notAScore; residual count, never a score). */
+  arkRun = null,
 }) {
   const layers = Array.isArray(config?.layers) ? config.layers : [];
   const rules = Array.isArray(config?.rules) ? config.rules : [];
@@ -195,6 +197,20 @@ export function buildReportSnapshot({
   // DF02 — store thin status compass so `ark status` can project residual honestly.
   if (improvementCompass && typeof improvementCompass === 'object') {
     snapshot.improvementCompass = improvementCompass;
+  }
+  if (arkRun && typeof arkRun === 'object' && arkRun.notAScore === true) {
+    snapshot.arkRun = {
+      notAScore: true,
+      present: arkRun.active === true || arkRun.present === true,
+      mode: arkRun.mode === 'enforced' || arkRun.mode === 'advisory' ? arkRun.mode : null,
+      extraMergeTeeth: arkRun.extraMergeTeeth === true,
+      residual:
+        typeof arkRun.residual === 'number'
+          ? arkRun.residual
+          : typeof arkRun.residual?.count === 'number'
+            ? arkRun.residual.count
+            : null,
+    };
   }
   return snapshot;
 }

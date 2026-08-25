@@ -34,6 +34,7 @@ describe('isolated runtime distribution', () => {
     const gate = await import(pathToFileURL(path.join(root, 'dist/index.js')).href);
     expect(typeof gate.createAICodeGate).toBe('function');
     expect(gate.createStrictArkKernel).toBeUndefined();
+    expect(gate.getKernel).toBeUndefined();
     expect(gate.InMemoryEventBuffer).toBeUndefined();
   });
 
@@ -42,6 +43,7 @@ describe('isolated runtime distribution', () => {
     const cjsPath = path.join(runtimeRoot, 'dist/index.cjs');
     const esm = await import(pathToFileURL(esmPath).href);
     expect(typeof esm.createStrictArkKernel).toBe('function');
+    expect(esm.getKernel).toBeUndefined();
     expect(typeof esm.InMemoryEventBuffer).toBe('function');
     delete require.cache[require.resolve(cjsPath)];
     const cjs = require(cjsPath);

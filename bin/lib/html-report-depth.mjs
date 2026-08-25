@@ -19,6 +19,7 @@ import {
   buildProductHonesty,
 } from './enforcement-honesty.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
+import { summarizeArkRunSection } from './ark-run-doctor.mjs';
 import { readBaseline, baselineOccurrenceKeys } from './violations.mjs';
 import { describePackageVersionDualTruth } from './field-install.mjs';
 import { buildDoctorImprovementCompass } from './improvement-compass-doctor.mjs';
@@ -127,13 +128,31 @@ export function buildReportDepthPayload(
       packageVersionTruth?.selfHost === true ||
       packageVersionTruth?.code === 'PACKAGE_PIN_SELF_HOST',
   });
-  const rulesUnderContract = summarizeRulesUnderContract(root, config, undefined, {
+  const classification = {
     governedPercent: coverage?.governed?.percent ?? null,
     populatedLayerCount: Array.isArray(coverage?.layers)
       ? coverage.layers.filter((row) => (row?.files ?? 0) > 0).length
       : null,
     classifiedFiles: coverage?.governed?.classifiedFiles ?? null,
+  };
+  const rulesUnderContract = summarizeRulesUnderContract(root, config, undefined, classification);
+  const arkRun = summarizeArkRunSection({
+    arkRun: config?.arkRun,
+    findings: activeViolations,
+    classification,
+    arkRules: {
+      active: rulesUnderContract?.active === true,
+      structureEnforced: rulesUnderContract?.mergePlanes?.structureSensors?.enforced,
+      structureTotal: rulesUnderContract?.mergePlanes?.structureSensors?.total,
+      structureAdvisory: rulesUnderContract?.mergePlanes?.structureSensors?.advisory,
+      invariantEnforced: rulesUnderContract?.mergePlanes?.invariants?.enforced,
+      invariantTotal: rulesUnderContract?.mergePlanes?.invariants?.total,
+      invariantAdvisory: rulesUnderContract?.mergePlanes?.invariants?.advisory,
+      covered: rulesUnderContract?.mergePlanes?.invariants?.covered,
+      uncovered: rulesUnderContract?.mergePlanes?.invariants?.uncovered,
+    },
   });
+  if (rulesUnderContract?.mergePlanes) rulesUnderContract.mergePlanes = arkRun.mergePlanes;
   // Single residual expression (parity with doctor): nextPilot || extractionCard.
   const residualPilot =
     pilotLoop?.nextPilot || pilotLoop?.extractionCard || null;
@@ -155,7 +174,7 @@ export function buildReportDepthPayload(
     residualPilots: Boolean(residualPilot) && designFitness.designWeak === true,
     pilotTarget: residualPilot?.pilotTarget ?? residualPilot?.pilot ?? null,
     arkRulesMergeHonesty: rulesUnderContract?.mergePlanes
-      ? { active: rulesUnderContract.active === true, ...rulesUnderContract.mergePlanes }
+      ? { active: rulesUnderContract.active === true || arkRun?.active === true, ...rulesUnderContract.mergePlanes }
       : null,
     primaryNextAction: postGreenPath?.action ?? dualTruthNext,
     activeBlockingViolations: activeBlockingCount,
@@ -198,6 +217,7 @@ export function buildReportDepthPayload(
       // P0-B / P1-M — folded into designDepth so --report stays a single payload.
       productHonesty,
       mergePlanes: rulesUnderContract?.mergePlanes ?? null,
+      arkRun,
       improvementCompass,
       deepModuleCoach,
     },

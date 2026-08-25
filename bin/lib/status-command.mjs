@@ -25,6 +25,7 @@ import { detectActiveAgentHost } from './skill-install.mjs';
 import { readBaseline } from './violations.mjs';
 import { reportsDir, readJsonSafe } from './html-report.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
+import { projectStatusArkRun } from './ark-run-doctor.mjs';
 import { collectVsBaseFacts, discoverTeamBaseRef } from './team-parliament-io.mjs';
 import { classifyAdopted, readAdoptionStance } from './adoption-stance.mjs';
 
@@ -340,6 +341,19 @@ export function collectStatusFacts(options = {}) {
 
   const arkruleFrozenFallback = countArkruleFrozenKeys(baseline);
 
+  const arkRun = (() => {
+    const extra = config?.arkRun;
+    if (!extra || typeof extra !== 'object') {
+      return projectStatusArkRun({ present: false, residual: 0 });
+    }
+    const snap = latest?.arkRun && typeof latest.arkRun === 'object' ? latest.arkRun : null;
+    const mode = extra.mode === 'enforced' || extra.mode === 'advisory' ? extra.mode : null;
+    const extraMergeTeeth =
+      snap && typeof snap.extraMergeTeeth === 'boolean' ? snap.extraMergeTeeth === true : false;
+    const residual = typeof snap?.residual === 'number' ? snap.residual : null;
+    return projectStatusArkRun({ present: true, mode, extraMergeTeeth, residual });
+  })();
+
   // DF02 — always project compass with honesty mode (never invent green residual).
   // Prefer explicit override (tests/MCP inject doctor-facts); else report snapshot.
   let improvementCompass = null;
@@ -388,6 +402,7 @@ export function collectStatusFacts(options = {}) {
       latest?.leftoverDesignWork === true ||
       latest?.designFitness?.designWeak === true ||
       latest?.doctor?.designFitness?.designWeak === true,
+    arkRun: options.arkRun ?? arkRun,
     adopted:
       options.adopted ??
       classifyAdopted({
@@ -506,6 +521,19 @@ export function runStatusCommand(args = {}) {
         );
       }
       if (manifest.vsBase?.line) write(`  ${manifest.vsBase.line}`);
+      const arkRunLine = manifest.arkRun;
+      if (arkRunLine && arkRunLine.notAScore === true) {
+        const residual =
+          arkRunLine.residual == null ? 'unknown' : String(arkRunLine.residual);
+        write(
+          `  arkRun: ${arkRunLine.present ? arkRunLine.mode || 'on' : 'absent'}` +
+            ` · residual=${residual}` +
+            (arkRunLine.present
+              ? ` · extraMergeTeeth=${arkRunLine.extraMergeTeeth === true}`
+              : '') +
+            ' · not a score'
+        );
+      }
       write(`  next: [${manifest.nextAction.id}] ${manifest.nextAction.summary}`);
     }
 

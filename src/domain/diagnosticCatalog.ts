@@ -26,6 +26,7 @@ export type DiagnosticCategory =
   | 'publish'
   | 'safety'
   | 'arkrules'
+  | 'arkrun'
   | 'preflight'
   | 'analysis'
   | 'snippet-policy'
@@ -232,6 +233,57 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Invariant without coverage evidence',
     'An ArkRules invariant is under contract but no covering test title or declared symbol evidence was found (or coverage is partial). Kind is never-had-tests (adopt residual) vs tests-disappeared (suite exists).',
     'Add a test title or declared symbol covering the arkruleId, then preflight again. Treat never-had-tests as adopt residual; treat tests-disappeared as a regression. Missing test globs report partial — never fake green.'
+  ),
+
+  // ── ArkRun (opt-in extra; RN05 dual-depth nextAction) ────────────────────
+  entry(
+    'ARKRUN_MISSING_ROOT',
+    'arkrun',
+    'No kernel factory in composition roots',
+    'The ArkRun extra is on but no createArkKernel / createStrictArkKernel / createArkKernelFromConfig / createStrictArkKernelFromConfig factory was found in arkRun.compositionRoots, so agents can skip the kernel while the write gate stays green.',
+    'Import createStrictArkKernel from @arkgate/runtime (never a removed arkgate/runtime shim) and call it in a composition root listed in arkRun.compositionRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.'
+  ),
+  entry(
+    'ARKRUN_KERNEL_IN_DOMAIN',
+    'arkrun',
+    'Domain-role layer imports the kernel',
+    'A Domain-role layer imports @arkgate/runtime or kernel types. Domain stays kernel-free; composition roots and adapters own the factory.',
+    'Move the kernel import out of the Domain-role layer into a composition root or adapter. Import from @arkgate/runtime, never a removed arkgate/runtime shim, then preflight again. Never mechanical-safe.'
+  ),
+  entry(
+    'ARKRUN_DIRECT_NEW',
+    'arkrun',
+    'Managed type constructed with new',
+    'A managed non-Domain file constructs an admitted type with new outside an ArkRun composition-root factory, skipping kernel resolve/registration.',
+    'Resolve the type from the kernel instead of constructing it with new, then preflight again. Never mechanical-safe — rewiring construction is a design decision.'
+  ),
+  entry(
+    'ARKRUN_UNDECLARED_EMIT',
+    'arkrun',
+    'Emit name not in raises/sends',
+    'A publisher / publish / raise / send call-site literal is not listed in the file’s raises or sends declaration.',
+    'Add the existing call-site name to raises or sends on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new emit stays judgment.'
+  ),
+  entry(
+    'ARKRUN_UNDECLARED_HANDLE',
+    'arkrun',
+    'Handle name not in reactsTo',
+    'A subscribe / registerHandler call-site literal is not listed in the file’s reactsTo declaration.',
+    'Add the existing call-site name to reactsTo on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new handle stays judgment.'
+  ),
+  entry(
+    'ARKRUN_UNDECLARED_DEPEND',
+    'arkrun',
+    'Depend name not in uses',
+    'A resolve / resolveSingleton call-site literal is not listed in the file’s uses declaration.',
+    'Add the existing call-site name to uses on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new depend stays judgment.'
+  ),
+  entry(
+    'ARKRUN_TRANSPORT_BYPASS',
+    'arkrun',
+    'Homemade broker or emitter import',
+    'A managed layer imports a closed broker/queue/emitter specifier (EventEmitter, queue clients, …) instead of the ArkRun kernel transport.',
+    'Send through the ArkRun kernel transport instead of importing that broker or emitter, then preflight again. Never mechanical-safe — homemade buses stay judgment.'
   ),
 
   // ── atomic preflight / change set ────────────────────────────────────────

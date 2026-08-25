@@ -1,0 +1,7 @@
+{
+  "arkRun": {
+    "mode": "enforced",
+    "compositionRoots": ["src/main.ts"],
+    "managedLayers": ["ApplicationOrchestration", "DomainModel"]
+  }
+}

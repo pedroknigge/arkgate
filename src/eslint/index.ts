@@ -31,6 +31,7 @@ import {
 import {
   classifyPublishFacts,
 } from '../domain/sourcePolicy';
+import { createArkRunEslintRules } from './arkRunRules';
 
 export { globToRegExp, patternSpecificity, layerForRelativePath, isEdgeDenied };
 
@@ -976,12 +977,31 @@ export const noDeniedCapabilities: ArkRule = {
   },
 };
 
+const {
+  noArkRunKernelInDomain,
+  noArkRunDirectNew,
+  noArkRunTransportBypass,
+} = createArkRunEslintRules({
+  findConfigPath,
+  loadArkConfig,
+  resolveImportSpecifier,
+  lintedFilename,
+  sourceIsInAnalysisScope,
+  isLocallyBound,
+  reportAdapterDiagnostic,
+});
+
+export { noArkRunKernelInDomain, noArkRunDirectNew, noArkRunTransportBypass };
+
 const rules = {
   'no-domain-infra-imports': noDomainInfraImports,
   'no-raw-event-publish': noRawEventPublish,
   'require-publish-source': requirePublishSource,
   'no-forbidden-globals': noForbiddenGlobals,
   'no-denied-capabilities': noDeniedCapabilities,
+  'no-arkrun-kernel-in-domain': noArkRunKernelInDomain,
+  'no-arkrun-direct-new': noArkRunDirectNew,
+  'no-arkrun-transport-bypass': noArkRunTransportBypass,
 };
 
 const plugin: ArkEslintPlugin = { rules };
@@ -995,6 +1015,9 @@ plugin.configs = {
       'ark/require-publish-source': 'error',
       'ark/no-forbidden-globals': 'error',
       'ark/no-denied-capabilities': 'error',
+      'ark/no-arkrun-kernel-in-domain': 'error',
+      'ark/no-arkrun-direct-new': 'error',
+      'ark/no-arkrun-transport-bypass': 'error',
     },
   },
 };

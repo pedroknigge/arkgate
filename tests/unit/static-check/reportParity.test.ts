@@ -112,6 +112,7 @@ describe('X01 report parity — the standing rule', () => {
     // Improvement compass is always present when doctor emits it — no score UI.
     expect(html).toContain('data-advisory="improvementCompass"');
     expect(html).toContain('data-advisory="deepModuleCoach"');
+    expect(html).toContain('data-advisory="arkRun"');
     expect(html).toMatch(/not a score/i);
     expect(html).not.toMatch(/Excellent|score bar|\d+\s*\/\s*10/i);
   });
@@ -321,6 +322,7 @@ describe('X01 report parity — the standing rule', () => {
     expect(html).toContain('data-advisory="improvementCompass"');
     // Deep-module coach advisory (hot paths + deepening); never a score / gate input.
     expect(html).toContain('data-advisory="deepModuleCoach"');
+    expect(html).toContain('data-advisory="arkRun"');
     expect(html).toMatch(/not a score|notAScore/i);
     expect(html).toMatch(/Deep-module coach/i);
   });

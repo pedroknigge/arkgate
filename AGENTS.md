@@ -46,7 +46,7 @@ not every historical file:
 | Security | [SECURITY.md](SECURITY.md) · [docs/threat-model.md](docs/threat-model.md) |
 | Decisions | [docs/adr/](docs/adr/README.md) |
 | Implementation queue | [ROADMAP.md](ROADMAP.md) (live) · [archive](docs/archive/roadmap-history.md) |
-| Releases (current / last published) | [CHANGELOG.md](CHANGELOG.md) · [4.6.7](docs/releases/4.6.7.md) (published, npm `latest`) · [4.6.6](docs/releases/4.6.6.md) (published) · [4.6.5](docs/releases/4.6.5.md) (published) · [4.6.4](docs/releases/4.6.4.md) (published) · [4.6.3](docs/releases/4.6.3.md) · [4.6.2](docs/releases/4.6.2.md) · [4.6.1](docs/releases/4.6.1.md) · [4.6.0](docs/releases/4.6.0.md) · [4.5.7](docs/releases/4.5.7.md) · [4.5.6](docs/releases/4.5.6.md) · [4.5.5](docs/releases/4.5.5.md) · [4.5.0](docs/releases/4.5.0.md) · [4.4.0](docs/releases/4.4.0.md) · [4.3.0](docs/releases/4.3.0.md) |
+| Releases (current / last published) | [CHANGELOG.md](CHANGELOG.md) · [4.7.0](docs/releases/4.7.0.md) (prepared) · [4.6.7](docs/releases/4.6.7.md) (published, npm `latest`) · [4.6.6](docs/releases/4.6.6.md) (published) · [4.6.5](docs/releases/4.6.5.md) (published) · [4.6.4](docs/releases/4.6.4.md) (published) · [4.6.3](docs/releases/4.6.3.md) · [4.6.2](docs/releases/4.6.2.md) · [4.6.1](docs/releases/4.6.1.md) · [4.6.0](docs/releases/4.6.0.md) · [4.5.7](docs/releases/4.5.7.md) · [4.5.6](docs/releases/4.5.6.md) · [4.5.5](docs/releases/4.5.5.md) · [4.5.0](docs/releases/4.5.0.md) · [4.4.0](docs/releases/4.4.0.md) · [4.3.0](docs/releases/4.3.0.md) |
 | History / maintainer evidence | [docs/archive/](docs/archive/README.md) · [docs/plans/](docs/plans/) · [docs/field/](docs/field/) · [docs/audit/](docs/audit/claims-matrix.md) |
 
 Read the **lane entry** before significant work. After changing a public surface, architecture
@@ -60,7 +60,7 @@ The product tree contains two publishable Node/TypeScript packages. Example mani
 | Package path | Role | Manifest | Canonical docs | Docs status |
 |--------------|------|----------|----------------|-------------|
 | `.` | Stable ArkGate gate, CLIs, MCP, ESLint, schemas, and integration assets | [package.json](package.json) | [README.md](README.md) · [package surface](docs/package-surface.md) | documented |
-| `packages/runtime` | Optional experimental runtime companion and NestJS adapter | [package.json](packages/runtime/package.json) | [package README](packages/runtime/README.md) · [package surface](docs/package-surface.md#experimental-opt-in-surfaces) | documented |
+| `packages/runtime` | Optional experimental **ArkRun** kernel and NestJS adapter | [package.json](packages/runtime/package.json) | [package README](packages/runtime/README.md) · [package surface](docs/package-surface.md#experimental-opt-in-surfaces) | documented |
 
 ### Surface coverage
 
@@ -81,8 +81,8 @@ canonical documentation authority.**
 | Agent integration assets | `templates/skills/` · `templates/agent-skills/` · `templates/hooks/` · `templates/tests/` | [Agent guide](docs/agent-guide.md#install-skills-ark-and-ecosystem) · [AI gates](docs/ai-gates.md) | Real | — |
 | Shape playbook, policy packs, and gallery starters | `templates/architecture-playbook.json` · `templates/policy-packs/` · `examples/` | [Enthusiast track](docs/enthusiast/README.md) | Demo | — |
 | GitHub Action | `action.yml` | [Action setup and inputs](docs/ai-gates.md#ci-backstop) · [Package surface](docs/package-surface.md) | Real | — |
-| Experimental `@arkgate/runtime` | `packages/runtime/package.json` · `src/index.ts` | [Runtime README](packages/runtime/README.md) · [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Hardening](docs/production-hardening.md) | Partial | — |
-| Experimental runtime NestJS adapter | runtime export `./nestjs` · `src/nestjs/index.ts` | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) | Partial | — |
+| Experimental ArkRun kernel (`@arkgate/runtime`) | `packages/runtime/package.json` · `src/index.ts` | [Runtime README](packages/runtime/README.md) · [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Hardening](docs/production-hardening.md) | Partial | — |
+| Experimental ArkRun NestJS adapter | runtime export `./nestjs` · `src/nestjs/index.ts` | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) | Partial | — |
 | ~~Deprecated `arkgate/runtime` and `arkgate/nestjs` forwarders~~ | removed (AR04) | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Migration guide](docs/migrate-from-ark-runtime-kernel.md) | Removed | Use `@arkgate/runtime` / `@arkgate/runtime/nestjs` |
 | Published payload and compatibility fixture | root `package.json` `files` · `scripts/verify-package-files.mjs` | [Package surface](docs/package-surface.md) · [Contributing](CONTRIBUTING.md) | Real | — |
 | Maintainer verification, evaluation, and release workflows | root scripts · `tests/` · `eval/` · `.github/workflows/` | [Contributing](CONTRIBUTING.md) · [Eval guide](eval/README.md) · [Roadmap](ROADMAP.md) | Real | — |
@@ -119,7 +119,7 @@ Before editing TypeScript or JavaScript source files:
 | Layer | Directories | Notes |
 |-------|-------------|-------|
 | DomainModel | `src/domain/` + generated pure CLI artifacts | Pure types and invariants. `fetch`, `process`, `Date.now`, `Math.random` are forbidden globals here — inject a port instead. |
-| Kernel | `src/kernel/`, `src/runtime/`, `src/gate.ts`, `src/index.ts`, `src/version.ts` | The gate API plus experimental runtime sources. May depend on DomainModel only. |
+| Kernel | `src/kernel/`, `src/runtime/`, `src/gate.ts`, `src/index.ts`, `src/version.ts` | The gate API plus experimental ArkRun kernel sources (compiled into `@arkgate/runtime` only). May depend on DomainModel only. |
 | Tooling | `src/eslint/`, `bin/`, `scripts/` | ESLint plugin, standalone CLIs, and repository scripts. May import **DomainModel only** (pure helpers). Not Kernel. |
 | FrameworkAdapters | `src/nestjs/` | Optional NestJS integration. May depend on Kernel only. |
 
@@ -144,6 +144,14 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/teamParliament.ts` | `bin/lib/team-parliament.mjs` | (same `cli-pure` scripts); TW team lock |
 | `src/domain/agentSkillsPackage.ts` | `bin/lib/agent-skills-package.mjs` | (same `cli-pure` scripts); layout via `generate:agent-skills` / `check:agent-skills` |
 | `src/domain/resolvedCandidateFactsSchema.ts` | `schemas/ark.resolved-candidate-facts.schema.json` | (same `cli-pure` scripts) |
+| `src/domain/arkRunFacts.ts` | `bin/lib/ark-run-facts.mjs` | (same `cli-pure` scripts); RN03 kernel call / managed `new` facts |
+| `src/domain/extraMergeTeeth.ts` | `bin/lib/extra-merge-teeth.mjs` | (same `cli-pure` scripts); RN07 extra-plane teeth floor |
+| `src/domain/arkRunSensors.ts` | `bin/lib/ark-run-sensors.mjs` | (same `cli-pure` scripts); RN04 tier-1 ArkRun sensors |
+| `src/domain/arkRunDoctor.ts` | `bin/lib/ark-run-doctor.mjs` | (same `cli-pure` scripts); RN08 doctor/status/report arkRun (notAScore) |
+| `src/domain/arkRunInformationPackage.ts` | kernel-consumed (no `bin/lib` generate) | RN10 snapshot sanitizer; strips factories, live instances, input DTOs |
+| `src/domain/arkRunTransport.ts` | kernel-consumed (no `bin/lib` generate) | RN11 closed send kinds + ephemeral default + broker→local plan |
+| `src/domain/arkRunInspector.ts` | kernel-consumed (no `bin/lib` generate) | RN12 inspector bind policy + snapshot/SSE text; HTTP listen stays Kernel |
+| `src/domain/arkRunGraph.ts` | kernel-consumed (no `bin/lib` generate) | RN13 requestGraph slices (process/technical, degrees, query) + Mermaid helper |
 | `src/domain/changeMap.ts` | bundled in `bin/lib/analysis-engine.mjs`; schema parity test guards `schemas/ark.change-map.schema.json` | `generate:analysis-engine` / `check:analysis-engine` |
 | `src/domain/changeConvergence.ts` | bundled in `bin/lib/analysis-engine.mjs` | `generate:analysis-engine` / `check:analysis-engine` |
 | Tooling `bin/lib/*.source.mjs` + design-delta schema source | compact shipped `design-delta.mjs`, `enforcement-state.mjs`, `hook-templates.mjs`, and design-delta schema | `generate:packaged-tooling` / `check:packaged-tooling` |
@@ -176,6 +184,7 @@ retained shipped rationale live under `docs/plans/`:
 | [five-door-autonomy](docs/plans/five-door-autonomy/README.md) | Shipped in **4.6.1** (`SK01`–`SK07` done; **published**) | Five doors (adopt / place / autopilot / explore / upgrade) write or map in-turn; CLI is sensor + gate; other names stay as shortcuts |
 | [team-parliament](docs/plans/team-parliament/README.md) | Shipped in **4.6.1** (`TW01`–`TW08` done) | Law vs feature: stewards, mixed-PR deny, ratchet vs base branch, cheap `--changed` check; doctor asks for stewards or shows list drift; identity is GitHub handle or email |
 | [alive-in-six-months](docs/plans/alive-in-six-months/README.md) | `AL01`–`AL04` done on `main` (#147); `AL05` parked field | Corrective honesty + field: D0 adopted, Propia created-path merge, stewards-or-adapt, first-run noun cut; does not close Z09 |
+| [arkrun](docs/plans/arkrun/README.md) | Preparing **4.7.0** (`RN01`–`RN15` done; `RN16` `doing`; ADRs [0020](docs/adr/0020-arkrun-gated-extra-plane.md)–[0024](docs/adr/0024-arkrun-transport-ports.md) accepted) | ArkRun gated extra: opt-in like ArkRules; enforced usage + complete declarations on the write/CI plane; companion `@arkgate/runtime` stays isolated; does not close Z09/K01 |
 | [shared-home-skills-truth](docs/plans/shared-home-skills-truth/README.md) | Superseded (absorbed into 4.6.0 PL06–PL07) | Historical seed only — do not run as a separate 4.5.8 patch train |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in

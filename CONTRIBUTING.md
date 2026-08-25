@@ -62,7 +62,8 @@ minimal (`typescript-ark-host` exact). Do not add production deps without discus
 | `scripts/field-dogfood/` | Maintainer offline field gap smoke (`npm run test:field-dogfood-smoke`) |
 | `ROADMAP.md` | Implementation queue — **one `doing` at a time** |
 
-`packages/runtime` is the experimental companion package (separate publish).
+`packages/runtime` is the experimental **ArkRun** kernel (`@arkgate/runtime`; separate publish;
+not in the `arkgate` tarball).
 
 Maintainer-only local notes may live under gitignored `internal/` — never commit field secrets.
 
@@ -153,8 +154,8 @@ mcp-publisher login github -token "$(gh auth token)"
 mcp-publisher validate server.json && mcp-publisher publish server.json
 ```
 
-**Current release:** [docs/releases/4.6.7.md](docs/releases/4.6.7.md) (`arkgate@4.6.7`).
+**Current release:** [docs/releases/4.7.0.md](docs/releases/4.7.0.md) (`arkgate@4.7.0` prepared).
 **Current published release:** [docs/releases/4.6.7.md](docs/releases/4.6.7.md) (`arkgate@4.6.7` on npm `latest`).
 
-**Prior published:** [docs/releases/4.6.2.md](docs/releases/4.6.2.md) (`arkgate@4.6.2`).
-**Previous:** [docs/releases/4.6.1.md](docs/releases/4.6.1.md) · [docs/releases/4.6.0.md](docs/releases/4.6.0.md) · [docs/releases/4.5.7.md](docs/releases/4.5.7.md) · [docs/releases/4.5.6.md](docs/releases/4.5.6.md) · [docs/releases/4.5.5.md](docs/releases/4.5.5.md) · [docs/releases/4.5.0.md](docs/releases/4.5.0.md) · [docs/releases/4.4.0.md](docs/releases/4.4.0.md) · [docs/releases/4.3.0.md](docs/releases/4.3.0.md).
+**Prior published:** [docs/releases/4.6.6.md](docs/releases/4.6.6.md) (`arkgate@4.6.6`).
+**Previous:** [docs/releases/4.6.5.md](docs/releases/4.6.5.md) · [docs/releases/4.6.4.md](docs/releases/4.6.4.md) · [docs/releases/4.6.3.md](docs/releases/4.6.3.md) · [docs/releases/4.6.2.md](docs/releases/4.6.2.md) · [docs/releases/4.6.1.md](docs/releases/4.6.1.md) · [docs/releases/4.6.0.md](docs/releases/4.6.0.md) · [docs/releases/4.5.7.md](docs/releases/4.5.7.md) · [docs/releases/4.5.6.md](docs/releases/4.5.6.md) · [docs/releases/4.5.5.md](docs/releases/4.5.5.md) · [docs/releases/4.5.0.md](docs/releases/4.5.0.md) · [docs/releases/4.4.0.md](docs/releases/4.4.0.md) · [docs/releases/4.3.0.md](docs/releases/4.3.0.md).

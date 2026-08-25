@@ -1,4 +1,88 @@
 export * from './types';
+export type {
+  ArkRunRegisterOptions,
+  ArkRunRegistrationHandle,
+} from './componentRegistry';
+export type {
+  ArkRunBrokerAdapter,
+  ArkRunSendOptions,
+  ArkRunSendResult,
+} from './transport';
+export {
+  ARK_RUN_COMPONENT_LIFETIMES,
+  ARK_RUN_INFORMATION_PACKAGE_SCHEMA_VERSION,
+  buildDependencyInformationPackage,
+  type ArkRunComponentLifetime,
+  type ArkRunExtendedInfo,
+  type ArkRunInformationPackageComponent,
+  type DependencyInformationPackage,
+} from '../../domain/arkRunInformationPackage';
+export {
+  ARK_RUN_GRAPH_DEFAULT_SLICE,
+  ARK_RUN_GRAPH_NODE_KINDS,
+  ARK_RUN_GRAPH_PROCESS_EDGE_KINDS,
+  ARK_RUN_GRAPH_SCHEMA_VERSION,
+  ARK_RUN_GRAPH_SLICES,
+  ARK_RUN_GRAPH_TECHNICAL_EDGE_KINDS,
+  InvalidArkRunGraphQueryError,
+  arkRunGraphQueryFromSearchParams,
+  closeArkRunGraphQuery,
+  formatArkRunGraphMermaid,
+  requestArkRunGraph,
+  type ArkRunGraph,
+  type ArkRunGraphEdge,
+  type ArkRunGraphEdgeKind,
+  type ArkRunGraphMatch,
+  type ArkRunGraphMatchInput,
+  type ArkRunGraphNode,
+  type ArkRunGraphNodeKind,
+  type ArkRunGraphProcessEdgeKind,
+  type ArkRunGraphQuery,
+  type ArkRunGraphResolvedQuery,
+  type ArkRunGraphSlice,
+  type ArkRunGraphTechnicalEdgeKind,
+} from '../../domain/arkRunGraph';
+export {
+  ARK_RUN_EPHEMERAL_DEFAULT,
+  ARK_RUN_TRANSPORT_KINDS,
+  InvalidArkRunSendOptionError,
+  closedArkRunEphemeral,
+  closedArkRunTransportKind,
+  resolveArkRunSendPlan,
+  type ArkRunDeliveredVia,
+  type ArkRunSendPlan,
+  type ArkRunSendPlanInput,
+  type ArkRunTransportKind,
+} from '../../domain/arkRunTransport';
+export {
+  ARK_RUN_INSPECTOR_DEFAULT_HOST,
+  ARK_RUN_INSPECTOR_DEFAULT_PORT,
+  ARK_RUN_INSPECTOR_EVENTS_PATH,
+  ARK_RUN_INSPECTOR_GRAPH_PATH,
+  ARK_RUN_INSPECTOR_SCHEMA_VERSION,
+  ARK_RUN_INSPECTOR_SNAPSHOT_PATH,
+  ARK_RUN_INSPECTOR_SSE_EVENT,
+  ARK_RUN_INSPECTOR_TRANSPORT_FALLBACK,
+  ArkRunInspectorBindError,
+  ArkRunInspectorProductionError,
+  arkRunInspectorUrl,
+  buildArkRunInspectorSnapshot,
+  formatArkRunInspectorSseEvent,
+  isArkRunInspectorLoopbackHost,
+  isArkRunInspectorProductionEnv,
+  resolveArkRunInspectorBind,
+  type ArkRunInspectorBind,
+  type ArkRunInspectorBindInput,
+  type ArkRunInspectorSnapshot,
+  type ArkRunInspectorSnapshotInput,
+  type ArkRunInspectorTransportFacts,
+} from '../../domain/arkRunInspector';
+export {
+  startArkRunInspector,
+  type ArkRunInspectorHandle,
+  type ArkRunInspectorSource,
+  type StartArkRunInspectorOptions,
+} from './inspector';
 export {
   DEFAULT_MAX_HISTORY_SIZE,
   createArkKernel,

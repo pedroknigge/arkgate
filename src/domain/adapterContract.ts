@@ -1,4 +1,4 @@
-import { layerImportNextAction } from './remediation';
+import { deterministicNextAction } from './remediation';
 
 /** Versioned public result contract shared by every ArkGate enforcement adapter. */
 
@@ -235,41 +235,22 @@ function nextActionForDiagnostic(
   evidence: AdapterDiagnostic['evidence'],
   violation: AdapterViolationInput
 ): string {
-  if (ruleId === 'LAYER_IMPORT_VIOLATION') {
-    return layerImportNextAction({
-      ruleId,
-      typeOnly: evidence.typeOnly === true,
-      targetTypeOnlyExports: violation.targetTypeOnlyExports === true,
-      namedBindingsTypeOnly: violation.namedBindingsTypeOnly === true,
-      peerIsolation: violation.peerIsolation === true,
-      portProofEligible: violation.portProofEligible === true,
-      fromLayer: text(evidence.fromLayer) ?? undefined,
-      toLayer: text(evidence.toLayer) ?? undefined,
-      target: text(evidence.target) ?? text(violation.target) ?? undefined,
-    });
-  }
-  if (ruleId === 'FORBIDDEN_GLOBAL') {
-    return `Inject ${evidence.target ?? 'the capability'} through a port, test at the public interface, then preflight again.`;
-  }
-  if (ruleId === 'CAPABILITY_VIOLATION') {
-    return `Define a ${text(violation.capability) ?? 'capability'} port in ${evidence.fromLayer ?? 'the walled layer'}, bind the implementation outside it, test at the public interface, then preflight again.`;
-  }
-  if (ruleId === 'CIRCULAR_DEPENDENCY') {
-    return 'Extract the shared dependency into a third module, test at the public interface, then preflight again.';
-  }
-  if (ruleId === 'RAW_EVENT_PUBLISH') return 'Publish through a registered intent creator, then run Ark again.';
-  if (ruleId === 'PUBLISH_MISSING_SOURCE') return 'Add metadata.source to the publish call, then run Ark again.';
-  if (
-    ruleId === 'ARKRULE_STRUCTURE' ||
-    ruleId === 'ARKRULE_INVARIANT' ||
-    ruleId === 'INVARIANT_UNCOVERED' ||
-    ruleId.startsWith('ARKRULE_')
-  ) {
-    const source = evidence.arkruleSource ?? 'arkrules/<Layer>.json';
-    const id = evidence.arkruleId ?? 'the ArkRule';
-    return `Fix the structure or invariant for ${id} (declared in ${source}), then preflight again. Do not demote the rule without a hash-bound policy acknowledgement.`;
-  }
-  return `Resolve ${ruleId} without weakening ark.config.json, then run Ark again.`;
+  return deterministicNextAction({
+    ruleId,
+    target: text(evidence.target) ?? text(violation.target) ?? undefined,
+    fromLayer: text(evidence.fromLayer) ?? undefined,
+    toLayer: text(evidence.toLayer) ?? undefined,
+    typeOnly: evidence.typeOnly === true,
+    targetTypeOnlyExports: evidence.targetTypeOnlyExports === true,
+    namedBindingsTypeOnly: evidence.namedBindingsTypeOnly === true,
+    portProofEligible: evidence.portProofEligible === true,
+    peerIsolation: evidence.peerIsolation === true,
+    sourcePureTypeModule: evidence.sourcePureTypeModule === true,
+    edgeKind: text(evidence.edgeKind) ?? undefined,
+    capability: text(evidence.capability) ?? text(violation.capability) ?? undefined,
+    arkruleId: text(evidence.arkruleId) ?? undefined,
+    arkruleSource: text(evidence.arkruleSource) ?? undefined,
+  });
 }
 
 export function toAdapterDiagnostic(

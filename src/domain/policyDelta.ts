@@ -397,6 +397,93 @@ function compareSafety(findings: PolicyDeltaFinding[], before: ArkConfig, after:
   }
 }
 
+function arkRunMode(extra: NonNullable<ArkConfig['arkRun']>): 'advisory' | 'enforced' {
+  return extra.mode === 'enforced' ? 'enforced' : 'advisory';
+}
+
+/** ADR 0020 D3 — demotion or deletion of the extra is weakening. */
+function compareArkRun(
+  findings: PolicyDeltaFinding[],
+  base: ArkConfig,
+  candidate: ArkConfig
+): void {
+  const before = base.arkRun;
+  const after = candidate.arkRun;
+  const path = '$.arkRun';
+  if (!before && !after) return;
+  if (!before && after) {
+    addFinding(findings, {
+      kind: 'arkrun-added',
+      path,
+      classification: 'strengthening',
+      message: `ArkRun extra was added (${arkRunMode(after)}).`,
+      after,
+    });
+    return;
+  }
+  if (before && !after) {
+    addFinding(findings, {
+      kind: 'arkrun-removed',
+      path,
+      classification: 'weakening',
+      message: 'ArkRun extra was removed.',
+      before,
+    });
+    return;
+  }
+  if (!before || !after) return;
+
+  const previousMode = arkRunMode(before);
+  const nextMode = arkRunMode(after);
+  if (previousMode !== nextMode) {
+    const promotion = previousMode === 'advisory' && nextMode === 'enforced';
+    addFinding(findings, {
+      kind: promotion ? 'arkrun-promoted' : 'arkrun-demoted',
+      path: `${path}.mode`,
+      classification: promotion ? 'strengthening' : 'weakening',
+      message: promotion
+        ? 'ArkRun extra was promoted to enforced.'
+        : 'ArkRun extra was demoted to advisory.',
+      before: previousMode,
+      after: nextMode,
+    });
+  }
+
+  compareStringSets(
+    findings,
+    `${path}.compositionRoots`,
+    before.compositionRoots,
+    after.compositionRoots,
+    {
+      added: 'strengthening',
+      removed: 'weakening',
+      addedMessage: 'Additional ArkRun composition roots are governed.',
+      removedMessage: 'ArkRun composition roots were removed and may skip the kernel.',
+    }
+  );
+  compareStringSets(
+    findings,
+    `${path}.managedLayers`,
+    before.managedLayers,
+    after.managedLayers,
+    {
+      added: 'strengthening',
+      removed: 'weakening',
+      addedMessage: 'Additional layers are managed by ArkRun.',
+      removedMessage: 'Layers were removed from ArkRun management.',
+    }
+  );
+  compareBoolean(
+    findings,
+    `${path}.requireDeclarations`,
+    before.requireDeclarations !== false,
+    after.requireDeclarations !== false,
+    'strengthening',
+    'ArkRun now requires interaction declarations.',
+    'ArkRun no longer requires interaction declarations.'
+  );
+}
+
 function overallClassification(findings: readonly PolicyDeltaFinding[]): PolicyDeltaClassification {
   if (findings.some((finding) => finding.classification === 'weakening')) return 'weakening';
   if (findings.some((finding) => finding.classification === 'judgment-required')) {
@@ -696,6 +783,7 @@ export function classifyArkPolicyDelta(
     options?.candidateArkRules,
     options?.candidateInvariantCoverage
   );
+  compareArkRun(findings, base, candidate);
   findings.sort((left, right) => left.path.localeCompare(right.path) || left.id.localeCompare(right.id));
 
   return {

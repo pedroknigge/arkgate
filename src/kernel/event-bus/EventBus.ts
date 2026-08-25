@@ -13,6 +13,7 @@ import type {
 import type {
   EventBus,
   EventBusOptions,
+  EventDispatchControl,
   EventHandler,
   EventInterceptor,
   EventInterceptionInfo,
@@ -148,6 +149,18 @@ export class EventBusImpl<Context = unknown> implements EventBus {
     payloadOrMeta?: P | Partial<EventMetadata>,
     metadata?: Partial<EventMetadata>
   ): Promise<void> {
+    await this.dispatch(eventOrCreator, payloadOrMeta, metadata);
+  }
+
+  async dispatch<N extends IntentName, P>(
+    eventOrCreator: DomainEvent<N, P> | IntentCreator<N, P>,
+    payloadOrMeta?: P | Partial<EventMetadata>,
+    metadata?: Partial<EventMetadata>,
+    control: EventDispatchControl = {}
+  ): Promise<DomainEvent<N, P>> {
+    const notifySubscribers = control.notifySubscribers !== false;
+    const awaitHandlers = control.awaitHandlers !== false;
+    const runOnPublish = control.runOnPublish !== false;
     let event: DomainEvent<N, P>;
     const rawPublish = typeof eventOrCreator !== 'function';
 
@@ -245,21 +258,34 @@ export class EventBusImpl<Context = unknown> implements EventBus {
     await recordSuccessfulPublish(
       this.recording,
       event as DomainEvent,
-      matching.length
+      notifySubscribers ? matching.length : 0
     );
 
     // 7. Handlers + onPublish hook
-    await Promise.all(
-      matching.map((sub) => this.invokeHandler(sub, event as DomainEvent))
-    );
+    const handlerWork = (async () => {
+      if (notifySubscribers) {
+        await Promise.all(
+          matching.map((sub) => this.invokeHandler(sub, event as DomainEvent))
+        );
+      }
+      if (runOnPublish && this.onPublish) {
+        await this.safeHook(
+          () => this.onPublish!(event as DomainEvent),
+          'onPublish',
+          event as DomainEvent
+        );
+      }
+    })();
 
-    if (this.onPublish) {
-      await this.safeHook(
-        () => this.onPublish!(event as DomainEvent),
-        'onPublish',
-        event as DomainEvent
-      );
+    if (awaitHandlers) {
+      await handlerWork;
+    } else {
+      void handlerWork.then(undefined, () => {
+        /* Avoid unhandled rejection when handlers are not awaited. */
+      });
     }
+
+    return event;
   }
 
   createPublisher<N extends IntentName, P>(

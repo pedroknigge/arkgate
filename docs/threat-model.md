@@ -1,6 +1,6 @@
 # Threat model — ArkGate
 
-**Scope:** architecture write/CI gates, agent hooks/MCP, and the experimental optional runtime.
+**Scope:** architecture write/CI gates, agent hooks/MCP, and the experimental optional **ArkRun** kernel (`@arkgate/runtime`).
 **Not in scope:** full org identity platforms, browser XSS in consumer apps, or npm registry
 infrastructure beyond how this package is published.
 

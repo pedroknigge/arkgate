@@ -21,12 +21,13 @@ describe('classifyRemediation (src/domain — pure, no CLI spawn)', () => {
     expect([...REMEDIATION_CLASSES]).toEqual(['mechanical-safe', 'judgment', 'deferred']);
   });
 
-  it('exposes four mechanical-safe remediationKinds (R6); W6 port-proof stays judgment', () => {
+  it('exposes mechanical-safe remediationKinds (R6 + RN05 declaration list); W6 port-proof stays judgment', () => {
     expect([...MECHANICAL_SAFE_KINDS]).toEqual([
       'pure-type-file-relocate',
       'type-only-import-move',
       'import-type-from-pure-type-module',
       'import-type-of-type-exports',
+      'arkrun-declaration-list',
     ]);
     expect(MECHANICAL_SAFE_KINDS).not.toContain('port-proof-inject-binding');
   });
@@ -163,6 +164,9 @@ describe('enrichViolationWithFixClass (src/domain — pure, no CLI spawn)', () =
       { ruleId: 'RAW_EVENT_PUBLISH' },
       { ruleId: 'PUBLISH_MISSING_SOURCE' },
       { ruleId: 'UNKNOWN_RULE' },
+      { ruleId: 'ARKRUN_UNDECLARED_EMIT', target: 'Domain.Order.Placed' },
+      { ruleId: 'ARKRUN_DIRECT_NEW', target: 'OrderService' },
+      { ruleId: 'ARKRUN_MISSING_ROOT' },
     ];
 
     for (const violation of cases) {

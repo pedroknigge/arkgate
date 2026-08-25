@@ -8,7 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { isScanExcludedRelative } from '../ark-shared.mjs';
+import { globToRegExp, isScanExcludedRelative } from '../ark-shared.mjs';
 import {
   AMBIENT_CAPABILITY_ENTRIES,
   collectCapabilityUses,
@@ -35,6 +35,11 @@ import {
 } from './ast-scan.mjs';
 import { provePortProofInject } from './port-proof.mjs';
 import { extractClassShapesFromSource } from './arkrules-sensors.mjs';
+import {
+  extractArkRunDeclarationsFromSource,
+  extractArkRunKernelCallsFromSource,
+  extractArkRunManagedNewsFromSource,
+} from './ark-run-facts.mjs';
 import {
   collectGovernedFiles,
   isGovernableSourceFile,
@@ -998,6 +1003,12 @@ export function resolveCandidateFacts({
   const safetyUses = [];
   /** ADR 0013 class-shape facts for ArkRules structure sensors. */
   const classShapes = [];
+  /** ADR 0022 / RN03 — syntax evidence only; sensors emit in RN04. */
+  const arkRunKernelCalls = [];
+  const arkRunManagedNews = [];
+  const arkRunCompositionRootHits = [];
+  const arkRunDeclarations = [];
+  const compositionRootPatterns = [...(config.arkRun?.compositionRoots ?? [])];
 
   for (const candidate of candidateFiles) {
     const sourceFile = ts.createSourceFile(
@@ -1087,6 +1098,56 @@ export function resolveCandidateFacts({
       } catch {
         // Never fail the resolver for shape extraction; sensors stay silent on this file.
       }
+      try {
+        arkRunKernelCalls.push(
+          ...extractArkRunKernelCallsFromSource(candidate.path, candidate.content)
+        );
+      } catch {
+        // Never fail the resolver for ArkRun call extraction.
+      }
+      try {
+        arkRunDeclarations.push(
+          ...extractArkRunDeclarationsFromSource(candidate.path, candidate.content)
+        );
+      } catch {
+        // Never fail the resolver for ArkRun declaration extraction.
+      }
+    }
+  }
+
+  const admittedTypeNames = new Set(classShapes.map((shape) => shape.className));
+  for (const candidate of candidateFiles) {
+    if (!/\.(tsx?|mts|cts)$/i.test(candidate.path)) continue;
+    try {
+      arkRunManagedNews.push(
+        ...extractArkRunManagedNewsFromSource(
+          candidate.path,
+          candidate.content,
+          admittedTypeNames
+        )
+      );
+    } catch {
+      // Never fail the resolver for managed-new extraction.
+    }
+  }
+
+  if (compositionRootPatterns.length > 0) {
+    const factoryFiles = new Set(
+      arkRunKernelCalls.filter((call) => call.kind === 'factory').map((call) => call.file)
+    );
+    for (const candidate of candidateFiles) {
+      for (const pattern of compositionRootPatterns) {
+        try {
+          if (!globToRegExp(pattern).test(candidate.path)) continue;
+        } catch {
+          continue;
+        }
+        arkRunCompositionRootHits.push({
+          file: candidate.path,
+          matchedRoot: pattern,
+          hasKernelFactory: factoryFiles.has(candidate.path),
+        });
+      }
     }
   }
 
@@ -1152,7 +1213,7 @@ export function resolveCandidateFacts({
 
   const projectPackageName = readPackageName(canonicalRoot, observeInput);
   return createTrustedResolvedCandidateFacts({
-    schemaVersion: '1.1',
+    schemaVersion: '1.2',
     completeness: completenessReasons.length === 0 ? 'complete' : 'partial',
     completenessReasons,
     resolverIdentity: RESOLVED_FACTS_RESOLVER_IDENTITY,
@@ -1169,5 +1230,9 @@ export function resolveCandidateFacts({
     intentReferences,
     safetyUses,
     classShapes,
+    arkRunKernelCalls,
+    arkRunManagedNews,
+    arkRunCompositionRootHits,
+    arkRunDeclarations,
   });
 }

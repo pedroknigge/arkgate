@@ -14,6 +14,7 @@
  */
 
 import type { ProjectBinding, ProjectExpectation } from './projectIdentity';
+import { projectStatusArkRun, type ArkRunStatusSlice } from './arkRunDoctor';
 
 export const ARK_STATUS_MANIFEST_SCHEMA_VERSION = '1.0' as const;
 export const ARK_STATUS_MANIFEST_SCHEMA_URL =
@@ -126,6 +127,11 @@ export type StatusManifest = {
   improvementCompass?: StatusImprovementCompassSlice;
   /** Optional checkout-vs-base honesty (TW). Never a gate input. */
   vsBase?: StatusVsBaseSlice;
+  /**
+   * ArkRun extra residual (RN08). Always notAScore; never a gate input.
+   * residual is a finding-id count (null = unknown, not green).
+   */
+  arkRun?: ArkRunStatusSlice;
 };
 
 export type StatusVsBaseSlice = {
@@ -195,6 +201,8 @@ export type StatusManifestFacts = {
    */
   improvementCompass?: StatusImprovementCompassSlice | null;
   vsBase?: StatusVsBaseSlice | null;
+  /** Thin ArkRun extra facts (notAScore). residual null = unknown, not green. */
+  arkRun?: ArkRunStatusSlice | null;
 };
 
 const PROJECT_ID_PATTERN = /^sha256:[a-f0-9]{64}$/;
@@ -449,6 +457,13 @@ export function resolveStatusNextAction(
       summary: 'ArkRules residual remains frozen — review inventory debt without claiming a score.',
     };
   }
+  if (facts.arkRun?.present === true && (facts.arkRun.residual ?? 0) > 0) {
+    return {
+      id: 'review-arkrun-residual',
+      summary:
+        'ArkRun residual remains — wire kernel usage or declarations through @arkgate/runtime. Not a score.',
+    };
+  }
   if (facts.adopted === 'required-merge' || facts.adopted === 'advisory-only-acked') {
     return {
       id: 'stay-enforced',
@@ -547,6 +562,9 @@ export function buildStatusManifest(facts: StatusManifestFacts): StatusManifest 
   if (compass) status.improvementCompass = compass;
   if (facts.vsBase && typeof facts.vsBase.baseRef === 'string' && facts.vsBase.baseRef.length > 0) {
     status.vsBase = facts.vsBase;
+  }
+  if (facts.arkRun && typeof facts.arkRun === 'object') {
+    status.arkRun = projectStatusArkRun(facts.arkRun);
   }
 
   return status;
@@ -852,6 +870,20 @@ export const ARK_STATUS_MANIFEST_SCHEMA = {
         pinBase: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] },
         contractEqual: { type: 'boolean' },
         baselineGrew: { type: 'boolean' },
+      },
+    },
+    arkRun: {
+      type: 'object',
+      description:
+        'ArkRun extra residual (notAScore). present/mode from config; residual is a finding-id count (null = unknown, not green). extraMergeTeeth is honesty, never a score.',
+      additionalProperties: false,
+      required: ['notAScore', 'present', 'mode', 'extraMergeTeeth', 'residual'],
+      properties: {
+        notAScore: { const: true },
+        present: { type: 'boolean' },
+        mode: { anyOf: [{ enum: ['advisory', 'enforced'] }, { type: 'null' }] },
+        extraMergeTeeth: { type: 'boolean' },
+        residual: { anyOf: [{ type: 'integer', minimum: 0 }, { type: 'null' }] },
       },
     },
   },

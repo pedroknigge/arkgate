@@ -1,8 +1,18 @@
 # Production Hardening
 
-The optional runtime kernel is currently **experimental**. This page is a requirements checklist
-for teams evaluating **`@arkgate/runtime`**, not a claim that the runtime is production-ready.
-Static ArkGate adoption does not require it. See [package-surface.md](package-surface.md).
+The optional **ArkRun** kernel (`@arkgate/runtime`) is currently **experimental**. This page is a
+requirements checklist for teams evaluating it, not a claim that the runtime is production-ready.
+Branding ArkRun does not close `K01` or ship durable stores. Static ArkGate adoption does not
+require it. Construct a kernel with `createStrictArkKernel` (per instance; no process-wide
+singleton). See [package-surface.md](package-surface.md).
+
+## Transport ports (RN11 / ADR 0024)
+
+`send()` is local fire-and-forget, local blocking, or broker handoff. Broker adapters are
+consumer-injected ports. **ArkRun does not ship cloud broker SDKs.** When no adapter is
+bound, broker sends fall back to **in-process local** delivery — that fallback is not
+cloud portability. `ephemeral` defaults true (await local recording / adapter accept) and
+is **not** a durability claim. `K01` stays parked.
 
 ## Durability stance (R9)
 

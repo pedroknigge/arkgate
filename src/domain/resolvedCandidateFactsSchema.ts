@@ -6,7 +6,7 @@
  * RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION in resolvedCandidateFactsTypes.ts.
  */
 
-export const RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION = '1.1' as const;
+export const RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION = '1.2' as const;
 
 const RESOLVED_CAPABILITY_IDS = [
   'network',
@@ -53,7 +53,7 @@ export const RESOLVED_CANDIDATE_FACTS_SCHEMA = {
     'factsHash',
   ],
   properties: {
-    schemaVersion: { enum: ['1.0', '1.1'] },
+    schemaVersion: { enum: ['1.0', '1.1', '1.2'] },
     completeness: { enum: ['complete', 'partial', 'unavailable'] },
     completenessReasons: {
       type: 'array',
@@ -263,6 +263,78 @@ export const RESOLVED_CANDIDATE_FACTS_SCHEMA = {
               },
             },
           },
+        },
+      },
+    },
+    arkRunKernelCalls: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['file', 'line', 'kind', 'callee', 'viaImport'],
+        properties: {
+          file: projectPathSchema,
+          line: lineSchema,
+          kind: {
+            enum: [
+              'factory',
+              'publisher',
+              'publish',
+              'raise',
+              'send',
+              'subscribe',
+              'register-handler',
+              'resolve',
+              'resolve-singleton',
+            ],
+          },
+          callee: textSchema,
+          viaImport: { type: 'boolean' },
+          receiver: textSchema,
+          nameLiteral: textSchema,
+        },
+      },
+    },
+    arkRunManagedNews: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['file', 'line', 'typeName'],
+        properties: {
+          file: projectPathSchema,
+          line: lineSchema,
+          typeName: textSchema,
+          importedFrom: textSchema,
+        },
+      },
+    },
+    arkRunCompositionRootHits: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['file', 'matchedRoot', 'hasKernelFactory'],
+        properties: {
+          file: projectPathSchema,
+          matchedRoot: textSchema,
+          hasKernelFactory: { type: 'boolean' },
+        },
+      },
+    },
+    arkRunDeclarations: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['file', 'line', 'uses', 'reactsTo', 'raises', 'sends'],
+        properties: {
+          file: projectPathSchema,
+          line: lineSchema,
+          uses: { type: 'array', items: textSchema },
+          reactsTo: { type: 'array', items: textSchema },
+          raises: { type: 'array', items: textSchema },
+          sends: { type: 'array', items: textSchema },
         },
       },
     },

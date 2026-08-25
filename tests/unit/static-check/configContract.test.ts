@@ -251,6 +251,7 @@ describe('C01 config contract', () => {
     expect(ARK_CONFIG_MIGRATIONS).toEqual([
       { from: 'unversioned', to: '1.0' },
       { from: '1.0', to: '1.1' },
+      { from: '1.1', to: '1.2' },
     ]);
     expect(migrateArkConfig(source, CASES.previousMajor.configFile).candidate).toEqual(expected);
     expect(first.migratedFrom).toBe('unversioned');
@@ -345,6 +346,14 @@ describe('C01 config contract', () => {
       name: 'safety',
       input: { ...VALID_MINIMAL_CONFIG, safety: { maxAnyCasts: 0, unexpected: true } },
       path: '$.safety.unexpected',
+    },
+    {
+      name: 'arkRun',
+      input: {
+        ...VALID_MINIMAL_CONFIG,
+        arkRun: { mode: 'advisory', unexpected: true },
+      },
+      path: '$.arkRun.unexpected',
     },
   ])('rejects an unknown $name field with its JSON path', ({ input, path: issuePath }) => {
     expect(() => loadArkConfigContract(input)).toThrow(issuePath);
@@ -455,6 +464,9 @@ describe('C01 config contract', () => {
     expect(
       migrateArkConfig({ ...VALID_MINIMAL_CONFIG, schemaVersion: '1.0' })
     ).toMatchObject({ migratedFrom: '1.0' });
+    expect(
+      migrateArkConfig({ ...VALID_MINIMAL_CONFIG, schemaVersion: '1.1' })
+    ).toMatchObject({ migratedFrom: '1.1' });
     expect(() => migrateArkConfig({ ...VALID_MINIMAL_CONFIG, schemaVersion: '2.0' }, 'future.json'))
       .toThrow(`unsupported version "2.0"; expected ${ARK_CONFIG_SCHEMA_VERSION}`);
     expect(() => parseArkConfigJson('{', 'broken.json')).toThrow('Invalid ArkGate config (broken.json)');
@@ -482,7 +494,8 @@ describe('C01 config contract', () => {
       arkRules: { DomainModel: 'arkrules/DomainModel.json' },
     });
     expect(loaded.config.arkRules).toEqual({ DomainModel: 'arkrules/DomainModel.json' });
-    expect(loaded.migratedFrom).toBe(null);
+    expect(loaded.migratedFrom).toBe('1.1');
+    expect(loaded.config.schemaVersion).toBe(ARK_CONFIG_SCHEMA_VERSION);
 
     expect(() =>
       loadArkConfigContract({
@@ -492,15 +505,16 @@ describe('C01 config contract', () => {
       })
     ).toThrow('$.arkRules.DomainModel');
 
-    // 1.0 configs without arkRules migrate to 1.1 with content otherwise unchanged
+    // 1.0 configs without arkRules migrate to current with content otherwise unchanged
     const from10 = loadArkConfigContract({
       ...VALID_MINIMAL_CONFIG,
       $schema: ARK_CONFIG_SCHEMA_URL,
       schemaVersion: '1.0',
     });
     expect(from10.migratedFrom).toBe('1.0');
-    expect(from10.config.schemaVersion).toBe('1.1');
+    expect(from10.config.schemaVersion).toBe(ARK_CONFIG_SCHEMA_VERSION);
     expect(from10.config.arkRules).toBeUndefined();
+    expect(from10.config.arkRun).toBeUndefined();
   });
 
   it('accepts optional stewards list on schema 1.1', () => {
@@ -612,5 +626,153 @@ describe('C01 config contract', () => {
 
     expect(result.status, result.stderr).toBe(1);
     expect(result.stderr).toContain('$.unexpectedPolicy');
+  });
+});
+
+describe('RN02 arkRun extra contract', () => {
+  it('migrates 1.1 configs without arkRun to 1.2 with identical remaining fields', () => {
+    const v11 = {
+      ...VALID_MINIMAL_CONFIG,
+      $schema: ARK_CONFIG_SCHEMA_URL,
+      schemaVersion: '1.1',
+    };
+    const v12 = {
+      ...VALID_MINIMAL_CONFIG,
+      $schema: ARK_CONFIG_SCHEMA_URL,
+      schemaVersion: '1.2',
+    };
+    const from11 = loadArkConfigContract(v11);
+    const native = loadArkConfigContract(v12);
+
+    expect(from11.migratedFrom).toBe('1.1');
+    expect(native.migratedFrom).toBe(null);
+    expect(from11.config).toEqual(native.config);
+    expect(from11.config.schemaVersion).toBe('1.2');
+    expect(from11.config.arkRun).toBeUndefined();
+    expect(native.config.arkRun).toBeUndefined();
+  });
+
+  it('defaults a present arkRun extra and keeps omitted extras absent', () => {
+    const loaded = loadArkConfigContract({
+      ...VALID_MINIMAL_CONFIG,
+      schemaVersion: '1.2',
+      arkRun: { mode: 'advisory', compositionRoots: ['src/main.ts'] },
+    });
+    expect(loaded.config.arkRun).toEqual({
+      mode: 'advisory',
+      compositionRoots: ['src/main.ts'],
+      managedLayers: [],
+      requireDeclarations: true,
+    });
+    expect(
+      loadArkConfigContract({ ...VALID_MINIMAL_CONFIG, schemaVersion: '1.2' }).config
+    ).not.toHaveProperty('arkRun');
+  });
+
+  it('fails closed on unknown managedLayers names', () => {
+    expect(() =>
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        schemaVersion: '1.2',
+        arkRun: {
+          mode: 'advisory',
+          managedLayers: ['NotALayer'],
+        },
+      })
+    ).toThrow('$.arkRun.managedLayers[0]');
+    expect(() =>
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        schemaVersion: '1.2',
+        arkRun: {
+          mode: 'advisory',
+          managedLayers: ['NotALayer'],
+        },
+      })
+    ).toThrow('is not declared in layers[]');
+  });
+
+  it('fails closed when enforced mode has empty compositionRoots (ARKRUN_MISSING_ROOT)', () => {
+    expect(() =>
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        schemaVersion: '1.2',
+        arkRun: { mode: 'enforced' },
+      })
+    ).toThrow('ARKRUN_MISSING_ROOT');
+    expect(() =>
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        schemaVersion: '1.2',
+        arkRun: { mode: 'enforced', compositionRoots: [] },
+      })
+    ).toThrow('$.arkRun.compositionRoots');
+  });
+
+  it('fails closed when enforced mode has empty managedLayers', () => {
+    expect(() =>
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        schemaVersion: '1.2',
+        arkRun: { mode: 'enforced', compositionRoots: ['src/main.ts'] },
+      })
+    ).toThrow('$.arkRun.managedLayers');
+    expect(() =>
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        schemaVersion: '1.2',
+        arkRun: { mode: 'enforced', compositionRoots: ['src/main.ts'], managedLayers: [] },
+      })
+    ).toThrow('enforced mode requires at least one managed layer');
+  });
+
+  it('accepts enforced arkRun when compositionRoots and managedLayers are valid', () => {
+    const loaded = loadArkConfigContract({
+      ...VALID_MINIMAL_CONFIG,
+      schemaVersion: '1.2',
+      arkRun: {
+        mode: 'enforced',
+        compositionRoots: ['src/main.ts', 'src/nestjs/**'],
+        managedLayers: ['DomainModel'],
+        requireDeclarations: true,
+      },
+    });
+    expect(loaded.config.arkRun).toEqual({
+      mode: 'enforced',
+      compositionRoots: ['src/main.ts', 'src/nestjs/**'],
+      managedLayers: ['DomainModel'],
+      requireDeclarations: true,
+    });
+  });
+
+  it.each(CONTRACT_LOADERS)(
+    '$surface rejects an invalid arkRun extra at the same JSON path',
+    ({ load }) => {
+      expect(() =>
+        load({
+          ...VALID_MINIMAL_CONFIG,
+          schemaVersion: '1.2',
+          arkRun: { mode: 'enforced', compositionRoots: ['src/main.ts'], broker: true },
+        })
+      ).toThrow('$.arkRun.broker');
+      expect(() =>
+        load({
+          ...VALID_MINIMAL_CONFIG,
+          schemaVersion: '1.2',
+          arkRun: { mode: 'maybe' },
+        })
+      ).toThrow('$.arkRun.mode');
+    }
+  );
+
+  it('keeps canonical and generated CLI loaders equivalent for a valid arkRun extra', () => {
+    const input = {
+      ...VALID_MINIMAL_CONFIG,
+      schemaVersion: '1.2',
+      arkRun: { mode: 'advisory', compositionRoots: ['src/main.ts'] },
+    };
+    expect(loadGeneratedArkConfigContract(input).config).toEqual(
+      loadArkConfigContract(input).config
+    );
   });
 });

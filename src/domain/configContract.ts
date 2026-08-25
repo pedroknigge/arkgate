@@ -10,6 +10,7 @@ import type {
   ArkConfig,
   ArkConfigIssue,
   ArkConfigLoadResult,
+  ArkConfigMigratedFrom,
   ArkConfigMigrationResult,
   ArkConfigRule,
   ArkConfigSchemaVersion,
@@ -20,6 +21,8 @@ import type {
 export type {
   ArkConfig,
   ArkConfigArkRulesRefs,
+  ArkConfigArkRun,
+  ArkConfigArkRunMode,
   ArkConfigCyclePolicy,
   ArkConfigIssue,
   ArkConfigLayer,
@@ -31,8 +34,8 @@ export type {
   ArkConfigSchemaVersion,
 } from './configTypes';
 
-/** Current published ark.config.json schema version (ADR 0012: 1.1 adds optional arkRules). */
-export const ARK_CONFIG_SCHEMA_VERSION: ArkConfigSchemaVersion = '1.1';
+/** Current published ark.config.json schema version (ADR 0020: 1.2 adds optional arkRun). */
+export const ARK_CONFIG_SCHEMA_VERSION: ArkConfigSchemaVersion = '1.2';
 export const ARK_CONFIG_SCHEMA_URL =
   'https://unpkg.com/arkgate@2/schemas/ark.config.schema.json';
 
@@ -78,6 +81,7 @@ export const DEFAULT_ARK_CONFIG_RULES = createDefaultRules();
 export const ARK_CONFIG_MIGRATIONS = [
   { from: 'unversioned', to: '1.0' },
   { from: '1.0', to: '1.1' },
+  { from: '1.1', to: '1.2' },
 ] as const;
 
 const stringArraySchema = {
@@ -142,6 +146,8 @@ export const ARK_CONFIG_SCHEMA = {
       additionalProperties: { type: 'string', minLength: 1 },
       default: {},
     },
+    /** ADR 0020 — optional ArkRun extra. Absence is silent; unknown keys fail closed. */
+    arkRun: { $ref: '#/$defs/arkRun' },
     /** Team parliament — GitHub handles or emails who may loosen the law (not part of policy hash). */
     stewards: { ...stringArraySchema, default: [] },
   },
@@ -209,6 +215,20 @@ export const ARK_CONFIG_SCHEMA = {
         maxAnyCasts: { type: 'integer', minimum: 0, default: 0 },
         allowInMemory: { type: 'boolean', default: false },
         allowDisabledPeerIsolation: { type: 'boolean', default: false },
+      },
+    },
+    arkRun: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        mode: {
+          type: 'string',
+          enum: ['advisory', 'enforced'],
+          default: 'advisory',
+        },
+        compositionRoots: { ...stringArraySchema, default: [] },
+        managedLayers: { ...stringArraySchema, default: [] },
+        requireDeclarations: { type: 'boolean', default: true },
       },
     },
   },
@@ -366,8 +386,19 @@ function validateNode(
   }
 }
 
-function defaultedConfig(input: Record<string, unknown>): Record<string, unknown> {
+function defaultedArkRun(value: unknown): unknown {
+  if (!isObject(value)) return value;
   return {
+    ...value,
+    mode: value.mode === undefined ? 'advisory' : value.mode,
+    compositionRoots: value.compositionRoots === undefined ? [] : value.compositionRoots,
+    managedLayers: value.managedLayers === undefined ? [] : value.managedLayers,
+    requireDeclarations: value.requireDeclarations === undefined ? true : value.requireDeclarations,
+  };
+}
+
+function defaultedConfig(input: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {
     ...input,
     $schema: input.$schema === undefined ? ARK_CONFIG_SCHEMA_URL : input.$schema,
     schemaVersion:
@@ -379,6 +410,57 @@ function defaultedConfig(input: Record<string, unknown>): Record<string, unknown
         ? DEFAULT_ARK_CONFIG_RULES.map((rule) => ({ ...rule }))
         : input.rules,
   };
+  if (input.arkRun !== undefined) result.arkRun = defaultedArkRun(input.arkRun);
+  return result;
+}
+
+function validateArkRunExtra(config: Record<string, unknown>, issues: ArkConfigIssue[]): void {
+  const extra = config.arkRun;
+  if (extra === undefined || !isObject(extra)) return;
+
+  const layerNames = new Set<string>();
+  if (Array.isArray(config.layers)) {
+    for (const layer of config.layers) {
+      if (isObject(layer) && typeof layer.name === 'string' && layer.name.length > 0) {
+        layerNames.add(layer.name);
+      }
+    }
+  }
+
+  const managed = extra.managedLayers;
+  if (Array.isArray(managed)) {
+    managed.forEach((name, index) => {
+      if (typeof name === 'string' && name.length > 0 && !layerNames.has(name)) {
+        issues.push({
+          path: `$.arkRun.managedLayers[${index}]`,
+          message: `layer ${JSON.stringify(name)} is not declared in layers[]`,
+        });
+      }
+    });
+  }
+
+  if (extra.mode === 'enforced') {
+    const roots = extra.compositionRoots;
+    if (!Array.isArray(roots) || roots.length === 0) {
+      issues.push({
+        path: '$.arkRun.compositionRoots',
+        message: 'ARKRUN_MISSING_ROOT: enforced mode requires at least one composition root',
+      });
+    }
+    if (!Array.isArray(managed) || managed.length === 0) {
+      issues.push({
+        path: '$.arkRun.managedLayers',
+        message: 'enforced mode requires at least one managed layer',
+      });
+    }
+  }
+}
+
+function migratedFromOf(originalVersion: string): ArkConfigMigratedFrom {
+  if (originalVersion === ARK_CONFIG_SCHEMA_VERSION) return null;
+  if (originalVersion === 'unversioned') return 'unversioned';
+  if (originalVersion === '1.0' || originalVersion === '1.1') return originalVersion;
+  return null;
 }
 
 function knownInputVersions(): Set<string> {
@@ -432,8 +514,8 @@ export function migrateArkConfig(
 
   let version: string = originalVersion;
   const working: Record<string, unknown> = { ...input };
-  // Walk the migration table. Each step is a pure version stamp for 1.0→1.1
-  // (arkRules is optional; absence needs no field rewrite).
+  // Walk the migration table. Each step is a pure version stamp (optional extras
+  // like arkRules / arkRun need no field rewrite when absent).
   let guard = 0;
   while (version !== ARK_CONFIG_SCHEMA_VERSION && guard < ARK_CONFIG_MIGRATIONS.length + 1) {
     guard += 1;
@@ -459,14 +541,7 @@ export function migrateArkConfig(
     ]);
   }
 
-  const migratedFrom =
-    originalVersion === 'unversioned'
-      ? 'unversioned'
-      : originalVersion === '1.0'
-        ? '1.0'
-        : null;
-
-  return { candidate: defaultedConfig(working), migratedFrom };
+  return { candidate: defaultedConfig(working), migratedFrom: migratedFromOf(originalVersion) };
 }
 
 export function loadArkConfigContract(
@@ -482,6 +557,7 @@ export function loadArkConfigContract(
     ARK_CONFIG_SCHEMA as unknown as SchemaRoot,
     issues
   );
+  validateArkRunExtra(candidate, issues);
   if (issues.length > 0) throw new ArkConfigValidationError(source, issues);
 
   return { config: candidate as ArkConfig, migratedFrom };

@@ -138,6 +138,11 @@ export {
   type AnalysisViolation,
   type AnalysisIr,
   type ResolvedAmbientFact,
+  type ResolvedArkRunCompositionRootHitFact,
+  type ResolvedArkRunDeclarationFact,
+  type ResolvedArkRunKernelCallFact,
+  type ResolvedArkRunKernelCallKind,
+  type ResolvedArkRunManagedNewFact,
   type ResolvedCandidateFacts,
   type ResolvedCandidateFactsInput,
   type ResolvedCapability,
@@ -192,6 +197,57 @@ export {
   type ClassShapeFact,
   type ArkRuleSensorViolation,
 } from './domain/arkRuleSensors';
+
+export {
+  ARKRUN_KERNEL_FACTORY_CALLEES,
+  ARKRUN_KERNEL_INTERACTION_CALLEES,
+  ARKRUN_TRANSPORT_BYPASS_SPECIFIERS,
+  arkRunKernelCallKind,
+  extractArkRunDeclarationsFromSource,
+  extractArkRunImportedConstructorNamesFromSource,
+  extractArkRunKernelCallsFromSource,
+  extractArkRunManagedNewsFromSource,
+  extractArkRunValueImportDependenciesFromSource,
+  isArkRunKernelModuleSpecifier,
+  isArkRunTransportBypassSpecifier,
+} from './domain/arkRunFacts';
+
+export {
+  EXTRA_MERGE_TEETH_GOVERNED_FLOOR,
+  MERGE_PLANES_DUAL_STAMP,
+  classifyResolvedLayerCoverage,
+  composeMergePlanesHonesty,
+  demoteExtraPlaneTeethUnderClassificationFloor,
+  extraMergeTeethAllowed,
+  isArkRunRuleId,
+  isExtraPlaneFinding,
+  normalizeExtraMergeTeethClassification,
+  type ExtraMergeTeethClassification,
+  type MergePlanesHonesty,
+} from './domain/extraMergeTeeth';
+
+export {
+  ARK_RUN_DOCTOR_SCHEMA_VERSION,
+  formatArkRunDoctorLines,
+  projectStatusArkRun,
+  summarizeArkRunSection,
+  type ArkRunDoctorSection,
+  type ArkRunStatusSlice,
+} from './domain/arkRunDoctor';
+
+export {
+  ARKRUN_INTERACTION_NAME_INCOMPLETE,
+  ARKRUN_RULE_IDS,
+  ARKRUN_TIER1_SENSOR_IDS,
+  evaluateArkRunEditorSensors,
+  evaluateArkRunEditorSensorsFromSource,
+  evaluateArkRunSensors,
+  type ArkRunRuleId,
+  type ArkRunSensorFinding,
+  type ArkRunTier1SensorId,
+  type EvaluateArkRunSensorsInput,
+  type EvaluateArkRunSensorsResult,
+} from './domain/arkRunSensors';
 
 export {
   canPromoteInvariant,

@@ -1,11 +1,11 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-24 (Phase AL `AL01`–`AL04` **done**; `AL06` compact-doctor extract **done**; `AL05` parked; Z09 still parked; tree **arkgate@4.6.7**; npm `latest` is **4.6.7**)
+- **Status date:** 2026-08-25 (Engineering doing: `RN16`; `RN15` **done**; `RN14` **done**; `RN13` **done**; `RN12` **done**; `RN11` **done**; `RN10` **done**; `RN09` **done**; `RN08` **done**; `RN07` **done**; `RN06` **done**; `RN05` **done**; `RN04` **done**; `RN03` **done**; `RN02` **done**; `RN01` **done**; Phase AL `AL01`–`AL04` **done**; `AL06` compact-doctor extract **done**; `AL05` parked; Phase RN ArkRun preparing **4.7.0**; Z09 still parked; tree **arkgate@4.7.0**; npm `latest` remains **4.6.7** until publish)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
 This roadmap supersedes the former “Trust 95+” estimate and its active Q-track. Shipped work is
-kept in the [historical appendix](#historical-appendix), but it is not evidence that the current
+kept in the [historical appendix](docs/archive/roadmap-history.md), but it is not evidence that the current
 product is release-ready.
 
 ---
@@ -20,7 +20,9 @@ product value = writes observed × semantic precision × enforcement strength ×
 ```
 
 The product wedge is the architecture contract, semantic analysis engine, agent adapters, and CI
-gate. The optional runtime is not the product and must not determine the package shape.
+gate. The optional runtime **kernel** is not the product and must not determine the package shape.
+**ArkRun** (Phase RN) is an opt-in extra *on that gate* — usage and declarations — not a second
+product. Absence is silent; enforced mode uses the same write/CI plane as Layers and ArkRules.
 
 ### North-star product invariant
 
@@ -69,7 +71,10 @@ lift DF freezes on scores, new skill names, sensors, or LLM verdicts.
 - New ArkRules sensor vocabulary (e.g. family/export symmetry) without ADR + field demand.
 - LLM-derived pass/fail or package “process verdict” (maintainer offline eval only).
 - Enforcement claims from AGENTS.md, skills, or version-matched agent projection alone.
-- New runtime features (optional kernel stays experimental).
+- New runtime **kernel** features outside Phase RN. **Exception:** Phase **RN** (ArkRun gated
+  complement, target `arkgate@4.7.0`) is the authorized extra plane: `arkRun` on the contract,
+  anti-skip sensors, companion `@arkgate/runtime` DX. Store durability and `K01` stay parked;
+  in-memory stores remain reference-only.
 - False hard-write claims for soft hosts (Codex/OpenCode). Cursor hard write is limited to
   listed `preToolUse` ops when hooks are installed + trusted.
 - Numeric trust / architecture / principle health **score**, average, or Excellent/Good rank band.
@@ -103,7 +108,7 @@ lift DF freezes on scores, new skill names, sensors, or LLM verdicts.
 
 These are historical starting facts captured before their associated phases. They intentionally
 retain the measurements and gaps that motivated the work; they are **not** the current product
-status. Use the ordered queue, closure evidence, and [Next implementation session](#next-implementation-session)
+status. Use the ordered queue, closure evidence, and [Current queue](#current-queue)
 for current truth.
 
 | Area | Baseline | Consequence |
@@ -258,8 +263,53 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-No engineering `doing` right now. `Z09` stays parked (retained adoption + independent
-close). 30-day freeze from 2026-08-22: no explore / compass / skill-body deepen as `doing`.
+Engineering doing: `RN16` (public docs + 4.7.0 prep).
+`RN15` **done** (deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names).
+`RN14` **done** (skip corpus: extra absent = green; enforced = fail `new` / peer import / homemade bus).
+`RN13` **done** (graph slices: process/technical, degrees, query + Mermaid helper).
+`RN12` **done** (dev inspector: `127.0.0.1`, production veto, SSE + snapshots, lazy load; no public bind).
+`RN11` **done** (local / blocking / broker-fallback transports; `ephemeral` default true; no cloud SDKs).
+`RN10` **done** (`register()` `uses` / `reactsTo` / `raises` / `sends` +
+`getDependencyInformationPackage()`; factories, live instances, and input DTOs stay off the
+snapshot).
+`RN09` **done** (brand ArkRun on `@arkgate/runtime`; keep `createStrictArkKernel`;
+no process singleton; kernel stays out of the `arkgate` tarball).
+`RN08` **done** (doctor / status / report `arkRun` section, `notAScore`; mergePlanes honesty; report-parity).
+`RN07` **done** (CLI / MCP / hook / preflight / CI extra-teeth parity — one verdict; enforced extra teeth only when classified).
+`RN06` **done** (`arkgate/eslint` import/`new` envelope; editor parity tests).
+`RN05` **done** (diagnostic catalog `ARKRUN_*` + dual-depth `nextAction`; remediation parity tests).
+`RN04` **done** (tier-1 sensors emit `ARKRUN_*`; advisory does not flip `valid`; enforced blocks).
+`RN03` **done** (resolver facts for kernel call sites, managed `new`, composition-root hits; facts schema additive).
+`RN02` **done** (schema `1.2` `arkRun` extra; `1.1` migrates; absence silent; invalid extra fails closed).
+`RN01` done (ADRs 0020–0024 accepted). `Z09` stays parked (retained adoption + independent
+close). 30-day freeze from 2026-08-22: no explore / compass as `doing`. Engineering doing: `RN16`.
+Phase RN started.
+
+### Phase RN — ArkRun gated complement
+
+Plan: [docs/plans/arkrun/README.md](docs/plans/arkrun/README.md).
+Target **arkgate@4.7.0** (additive `arkRun`, schema `1.2`). Does **not** close `Z09` / `K01`.
+Does not ship cloud adapters or a process singleton. Companion kernel stays
+`@arkgate/runtime` (0.x; in-memory stores are reference-only).
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 185 | `RN01` | `done` | M | — | ADRs [0020](docs/adr/0020-arkrun-gated-extra-plane.md)–[0024](docs/adr/0024-arkrun-transport-ports.md) accepted in `docs/adr` (extra plane, companion isolation, anti-skip facts, mandatory declarations, transport ports) |
+| 186 | `RN02` | `done` | L | RN01 | `arkRun` on `ark.config` schema `1.2`; `1.1` migrates; absence silent; invalid extra fails closed |
+| 187 | `RN03` | `done` | L | RN02 | Resolver facts for kernel call sites, managed `new`, composition roots |
+| 188 | `RN04` | `done` | L | RN03 | Tier-1 ArkRun sensors; advisory does not flip `valid`; enforced blocks |
+| 189 | `RN05` | `done` | M | RN04 | Diagnostic catalog `ARKRUN_*` + dual-depth `nextAction` |
+| 190 | `RN06` | `done` | M | RN04 | `arkgate/eslint` rules for the same sensors |
+| 191 | `RN07` | `done` | L | RN05 | CLI / MCP / hook / preflight / CI extra-teeth parity — one verdict; enforced extra teeth only when classified |
+| 192 | `RN08` | `done` | M | RN07 | Doctor / status / report `arkRun` section (`notAScore`); mergePlanes honesty; report-parity |
+| 193 | `RN09` | `done` | M | RN01 | Brand ArkRun on `@arkgate/runtime`; keep `createStrictArkKernel` |
+| 194 | `RN10` | `done` | L | RN09 | Interaction declarations + serializable information package (no factories) |
+| 195 | `RN11` | `done` | L | RN09 | Local / blocking / broker-fallback transports; `ephemeral` default true |
+| 196 | `RN12` | `done` | M | RN10 | Dev inspector: `127.0.0.1`, production veto, lazy load |
+| 197 | `RN13` | `done` | M | RN10 | Graph slices: process/technical, degrees, query |
+| 198 | `RN14` | `done` | L | RN07 | Skip corpus: extra absent = green; enforced = fail `new` / peer import / homemade bus |
+| 199 | `RN15` | `done` | M | RN08 + freeze end | Deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names |
+| 200 | `RN16` | `doing` | M | RN08 + RN14 | Public docs + prepare **4.7.0**; durability honesty unchanged; npm `latest` remains 4.6.7 until publish |
 
 ### Residual Phase Z
 

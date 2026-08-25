@@ -1,5 +1,5 @@
 /**
- * NestJS adapter for ArkGate.
+ * NestJS adapter for the ArkRun kernel (`@arkgate/runtime`).
  *
  * ```ts
  * import { ArkModule, InjectArk } from '@arkgate/runtime/nestjs';

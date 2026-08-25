@@ -1,5 +1,9 @@
+import { requestArkRunGraph } from '../../domain/arkRunGraph';
+import { buildArkRunInspectorSnapshot } from '../../domain/arkRunInspector';
+import { buildDependencyInformationPackage } from '../../domain/arkRunInformationPackage';
+import { ARK_RUN_EPHEMERAL_DEFAULT } from '../../domain/arkRunTransport';
 import { createAuditTrail } from '../audit';
-import { createEventBus } from '../event-bus';
+import { EventBusImpl } from '../event-bus';
 import { createEventContractRegistry } from '../event-contracts';
 import { createDependencyGraph, syncRegistryToGraph } from '../graph';
 import { createIntentRegistry } from '../intent';
@@ -17,6 +21,9 @@ import {
 } from '../policy';
 import { createProjectionRegistry } from '../projections';
 import { createWorkflowEngine } from '../workflow';
+import { createComponentRegistry } from './componentRegistry';
+import { startArkRunInspector } from './inspector';
+import { sendOnArkRunTransport } from './transport';
 import type {
   ArkKernel,
   ArkKernelConfig,
@@ -60,7 +67,9 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
     syncRegistryToGraph(registry, graph, { requireRegisteredTargets: true });
   };
 
-  const eventBus = createEventBus({
+  const defaultEphemeral = options.ephemeral ?? ARK_RUN_EPHEMERAL_DEFAULT;
+  const broker = options.broker;
+  const eventBus = new EventBusImpl({
     intentRegistry: registry,
     dependencyGraph: graph,
     policyEngine,
@@ -89,8 +98,10 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
     eventBus,
     graph,
   });
+  const components = createComponentRegistry();
+  const brokerBound = typeof broker?.send === 'function';
 
-  return {
+  const kernel: ArkKernel = {
     instanceId,
     profile,
     registry,
@@ -106,7 +117,68 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
     workflowEngine,
     observability,
     publisher(source) {
-      return eventBus.createPublisher(source);
+      const inner = eventBus.createPublisher(source);
+      return {
+        source: inner.source,
+        publish: inner.publish,
+        send(intent, payload, sendOptions = {}) {
+          return sendOnArkRunTransport(
+            { eventBus, broker, defaultEphemeral },
+            intent,
+            payload,
+            { ...sendOptions, source: inner.source }
+          );
+        },
+      };
+    },
+    send(intent, payload, sendOptions = {}) {
+      return sendOnArkRunTransport(
+        { eventBus, broker, defaultEphemeral },
+        intent,
+        payload,
+        sendOptions
+      );
+    },
+    register(options) {
+      return components.register(options);
+    },
+    resolve(id) {
+      return components.resolve(id);
+    },
+    resolveSingleton(id) {
+      return components.resolveSingleton(id);
+    },
+    getDependencyInformationPackage() {
+      return buildDependencyInformationPackage({
+        kernelInstanceId: instanceId,
+        components: components.snapshotComponents(),
+      });
+    },
+    requestGraph(query) {
+      return requestArkRunGraph(
+        {
+          kernelInstanceId: instanceId,
+          components: components.snapshotComponents(),
+        },
+        query
+      );
+    },
+    getInspectorSnapshot(bind) {
+      return buildArkRunInspectorSnapshot({
+        kernelInstanceId: instanceId,
+        host: bind?.host,
+        port: bind?.port,
+        package: {
+          kernelInstanceId: instanceId,
+          components: components.snapshotComponents(),
+        },
+        observability: observability.report(),
+        ephemeralDefault: defaultEphemeral,
+        brokerBound,
+      });
+    },
+    startInspector(options) {
+      return startArkRunInspector(kernel, options);
     },
     syncGraph,
     manifest() {
@@ -123,8 +195,13 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
       });
     },
   };
+  return kernel;
 }
 
+/**
+ * Preferred ArkRun factory. Each call is a new isolated instance — there is no
+ * process-wide singleton.
+ */
 export function createStrictArkKernel(
   options: CreateArkKernelOptions = {}
 ): ArkKernel {

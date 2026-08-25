@@ -315,3 +315,77 @@ describe('skill role clarity + exploratory depth (P01)', () => {
     expect(autopilot).toMatch(/never reconstruct/);
   });
 });
+
+describe('ArkRun skill-body deepen (no new skill names)', () => {
+  function readSkill(name: string): string {
+    return fs.readFileSync(path.join(SKILLS_DIR, `${name}.md`), 'utf8');
+  }
+
+  it('keeps the frozen 13 names and does not ship /ark-run', () => {
+    expect(EXPECTED_SKILLS).toHaveLength(13);
+    expect(EXPECTED_SKILLS).not.toContain('ark-run');
+    expect(fs.existsSync(path.join(SKILLS_DIR, 'ark-run.md'))).toBe(false);
+    const onDisk = fs
+      .readdirSync(SKILLS_DIR)
+      .filter((n) => /^[a-z0-9-]+\.md$/.test(n))
+      .map((n) => path.basename(n, '.md'));
+    expect(onDisk).not.toContain('ark-run');
+    for (const name of EXPECTED_SKILLS) {
+      const body = readSkill(name);
+      expect(body, name).not.toMatch(/Invoke `?\/ark-run`/i);
+    }
+  });
+
+  it('ark-runtime evaluates and wires the extra vs companion without enforcing', () => {
+    const body = readSkill('ark-runtime');
+    expect(body).toMatch(/runtime[\s\S]{0,240}experimental|experimental[\s\S]{0,240}runtime/i);
+    expect(body).toMatch(/Extra vs companion/i);
+    expect(body).toContain('createStrictArkKernel');
+    expect(body).toContain('@arkgate/runtime');
+    expect(body).toMatch(/never a removed `arkgate\/runtime`[\s\S]{0,20}shim/i);
+    expect(body).toMatch(/Skills never enforce|never enforces/i);
+    expect(body).toContain('notAScore');
+    expect(body).toMatch(/compositionRoots/);
+    expect(body).toMatch(/uses[\s\S]*reactsTo[\s\S]*raises[\s\S]*sends/);
+    expect(body).toMatch(/no process-wide|no process-wide singleton|never a process-wide/i);
+    expect(body).toMatch(/not.*production durability/i);
+    expect(body).toMatch(/Do \*\*not\*\* invent `\/ark-run`/);
+    expect(body).toContain('ARKRUN_DIRECT_NEW');
+    expect(body).toContain('ARKRUN_TRANSPORT_BYPASS');
+    expect(body).toMatch(/localBlocking|localBlocking/);
+    expect(body).toMatch(/ephemeral/);
+    expect(body).not.toMatch(/LLM pass\/fail|numeric score|0–10 score of the kernel/i);
+  });
+
+  it('ark-place scaffolds through the kernel when the extra is on', () => {
+    const body = readSkill('ark-place');
+    expect(body).toContain('### Place + ArkRun');
+    expect(body).toMatch(/scaffold[\s\S]{0,80}through the kernel/i);
+    expect(body).toContain('createStrictArkKernel');
+    expect(body).toContain('ARKRUN_DIRECT_NEW');
+    expect(body).toContain('ARKRUN_KERNEL_IN_DOMAIN');
+    expect(body).toMatch(/uses[\s\S]*reactsTo[\s\S]*raises[\s\S]*sends/);
+    expect(body).toMatch(/EventEmitter/);
+    expect(body).toMatch(/Skills never enforce/);
+    expect(body).toContain('notAScore');
+    expect(body).toMatch(/Do not invent `\/ark-run`/);
+    expect(body).toMatch(/\*\*\[ArkRun\]\*\*/);
+  });
+
+  it('ark-adopt can enable advisory ArkRun without compact-starter default', () => {
+    const body = readSkill('ark-adopt');
+    expect(body).toContain('### Adopt + ArkRun');
+    expect(body).toMatch(/advisory.*arkRun|advisory \*\*arkRun\*\*|write \*\*advisory\*\* `arkRun`/i);
+    expect(body).toMatch(/schema `1\.2\+`|schemaVersion.*1\.2/);
+    expect(body).toContain('compositionRoots');
+    expect(body).toContain('managedLayers');
+    expect(body).toMatch(/compact starter/);
+    expect(body).toMatch(/Absence is valid|absence is silent/i);
+    expect(body).toMatch(/not.*production durability/i);
+    expect(body).toMatch(/Skills never enforce/);
+    expect(body).toContain('notAScore');
+    expect(body).toMatch(/Do not invent `\/ark-run`|Invent `\/ark-run`/);
+    expect(body).toMatch(/Never force the kernel over existing Nest\/DI|Force runtime kernel over existing Nest\/DI/);
+    expect(body).toMatch(/\*\*\[ArkRun\]\*\*/);
+  });
+});

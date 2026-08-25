@@ -28,6 +28,8 @@ import {
   evaluateArkRuleSensors,
 } from '../domain/arkRuleSensors';
 import { evaluateInvariantCoverage } from '../domain/invariantCoverage';
+import { classifyResolvedLayerCoverage } from '../domain/extraMergeTeeth';
+import { evaluateArkRunSensors } from '../domain/arkRunSensors';
 import { collectAnalysisConfigWarnings } from './configWarnings';
 import { evaluateArchitectureGraph } from './graphEvaluate';
 import type {
@@ -475,13 +477,54 @@ export function analyzeCanonicalResolvedProject(
       failsStrict: false,
       nextAction: `Cover invariant ${finding.arkruleId} in ${finding.arkruleSource} (advisory / partial).`,
     }));
+  const arkRunClassification = classifyResolvedLayerCoverage(files);
+  const arkRunEval = evaluateArkRunSensors({
+    arkRun: input.contract.config.arkRun,
+    layers: input.contract.config.layers,
+    kernelCalls: facts.arkRunKernelCalls,
+    managedNews: facts.arkRunManagedNews,
+    compositionRootHits: facts.arkRunCompositionRootHits,
+    declarations: facts.arkRunDeclarations,
+    dependencies: facts.dependencies,
+    layerForFile: (path) =>
+      layerByFile.get(path) ?? layerForRelativePath(path, input.contract.config.layers),
+    classification: arkRunClassification,
+  });
+  const arkRunMode = input.contract.config.arkRun?.mode;
+  const arkRunViolations: ArchitectureEngineViolation[] = arkRunEval.findings
+    .filter(() => arkRunMode === 'enforced')
+    .map((item) => ({
+      ruleId: item.ruleId,
+      file: item.file,
+      line: item.line,
+      message: item.message,
+      fromLayer: item.fromLayer,
+      target: item.target,
+      nextAction: item.nextAction,
+      sensor: item.sensor,
+      failsStrict: item.failsStrict,
+      ...(item.severity ? { severity: item.severity } : {}),
+    }));
+  const arkRunWarnings: ArchitectureEngineViolation[] = arkRunEval.findings
+    .filter(() => arkRunMode !== 'enforced')
+    .map((item) => ({
+      ruleId: item.ruleId,
+      file: item.file,
+      line: item.line,
+      message: item.message,
+      fromLayer: item.fromLayer,
+      target: item.target,
+      nextAction: item.nextAction,
+      sensor: item.sensor,
+      failsStrict: false,
+    }));
   // Only enforced + partial coverage degrades analysis completeness (never fake green).
   // Advisory-only catalogs stay complete with advisory warnings.
   const enforcedPartial =
     coverageEval.partial &&
     coverageEval.coverage.some((entry) => entry.mode === 'enforced' && entry.partial);
-  const coveragePartialReasons: Array<{ code: string; message: string; file?: string }> =
-    enforcedPartial
+  const coveragePartialReasons: Array<{ code: string; message: string; file?: string }> = [
+    ...(enforcedPartial
       ? [
           {
             code: 'INVARIANT_COVERAGE_PARTIAL',
@@ -489,7 +532,9 @@ export function analyzeCanonicalResolvedProject(
               'Enforced ArkRules invariant coverage cannot be fully proven (missing test globs or empty test set); reporting partial, never covered.',
           },
         ]
-      : [];
+      : []),
+    ...arkRunEval.completenessReasons,
+  ];
 
   const evaluated = evaluateArchitectureGraph({
     config: input.contract.config,
@@ -499,6 +544,7 @@ export function analyzeCanonicalResolvedProject(
       ...contentViolations(input, facts, layerByFile),
       ...arkRuleViolations,
       ...invariantViolations,
+      ...arkRunViolations,
     ],
     edges,
     warnings: [
@@ -506,6 +552,7 @@ export function analyzeCanonicalResolvedProject(
       ...safety.warnings,
       ...arkRuleWarnings,
       ...invariantWarnings,
+      ...arkRunWarnings,
     ],
     safety: safety.report,
   });

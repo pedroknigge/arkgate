@@ -599,21 +599,22 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
     patternBets: patternBetsForLoop,
     designSmells,
   });
-  const doctorAdvisories = computeDoctorAdvisories(root, config, cov, rules, files, options.ts, options.parseHealth);
-  // AR12 — compute once for JSON + product honesty + human lines.
-  // P1M: classification gate on extraMergeTeeth (no teeth at empty graph).
-  const rulesUnderContract = summarizeRulesUnderContract(
+  const activeViolations = baseline.exists
+    ? violations.filter((_, index) => !baseline.keys.has(occurrenceKeys[index]))
+    : violations;
+  const doctorAdvisories = computeDoctorAdvisories(
     root,
     config,
+    cov,
+    rules,
+    files,
+    options.ts,
+    options.parseHealth,
     options.facts ?? options.architectureFacts,
-    {
-      governedPercent: cov.governed?.percent ?? null,
-      populatedLayerCount: Array.isArray(cov.layers)
-        ? cov.layers.filter((row) => (row?.files ?? 0) > 0).length
-        : null,
-      classifiedFiles: cov.governed?.classifiedFiles ?? null,
-    }
+    activeViolations
   );
+  const rulesUnderContract = doctorAdvisories.rulesUnderContract;
+  const arkRun = doctorAdvisories.arkRun;
   // Single residual expression (nextPilot || extractionCard) — HTML report uses the same.
   const residualPilot = pilotLoop?.nextPilot || pilotLoop?.extractionCard || null;
   // Evidence-backed hard only (never capabilities-from-hook-files alone).
@@ -653,9 +654,12 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
       residualPilots: Boolean(residualPilot) && designFitness.designWeak === true,
       pilotTarget: residualPilot?.pilotTarget ?? residualPilot?.pilot ?? null,
       arkRulesMergeHonesty: rulesUnderContract?.mergePlanes
-        ? { active: rulesUnderContract.active === true, ...rulesUnderContract.mergePlanes }
-        : rulesUnderContract?.active === true
-          ? { active: true, extraMergeTeeth: false }
+        ? {
+            active: rulesUnderContract.active === true || arkRun?.active === true,
+            ...rulesUnderContract.mergePlanes,
+          }
+        : rulesUnderContract?.active === true || arkRun?.active === true
+          ? { active: true, extraMergeTeeth: arkRun?.extraMergeTeeth === true }
           : null,
       primaryNextAction:
         adopted === 'not-adopted' ? NOT_ADOPTED_NEXT_ACTION : postGreenPath?.action ?? dualTruthNext,
@@ -746,10 +750,10 @@ export function runDoctor(root, config, files, rules, violations, asJson, option
             // Dual-truth: managed CLI vs package.json pin (not a gate fail).
             packageVersionTruth,
             // Advisories, never a verdict: W01/U05/X04/Y03 + graph-blind spots.
-            // (rulesUnderContract is also in advisories; re-assert after spread so mergePlanes wins.)
+            // Re-assert after spread so mergePlanes from this scan wins.
             ...doctorAdvisories,
-            // AR12 + P1-M mergePlanes (authoritative; after advisories spread).
             rulesUnderContract,
+            arkRun,
             // P0-B — single anti-false-green honesty surface (never a score).
             productHonesty,
             governed: cov.governed,
