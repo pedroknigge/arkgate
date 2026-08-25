@@ -199,7 +199,9 @@ and is not a production-readiness claim. `createStrictArkKernel` is the factory:
 an isolated instance (no process-wide singleton). Managed components declare `uses` / `reactsTo` /
 `raises` / `sends`; `getDependencyInformationPackage()` is a JSON snapshot and never leaks factories.
 `send()` is local / localBlocking / broker (broker falls back to in-process local; `ephemeral`
-defaults true; no cloud SDKs in the package). The kernel is not bundled in the `arkgate` tarball.
+defaults true; no cloud SDKs in the package). Opt-in `startInspector()` binds `127.0.0.1`,
+refuses `NODE_ENV=production`, and lazy-loads HTTP for JSON snapshots + SSE. The kernel is
+not bundled in the `arkgate` tarball.
 
 ### Durability stance
 

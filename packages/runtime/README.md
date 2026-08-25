@@ -64,6 +64,20 @@ Broker adapters are **ports you inject**. This package does **not** ship cloud S
 When no adapter is bound, `transport: 'broker'` falls back to **in-process local**
 delivery — not cloud portability.
 
+## Dev inspector
+
+Opt-in localhost inspector. Default host is `127.0.0.1`. It refuses
+`NODE_ENV=production` and will not bind public addresses (`0.0.0.0`, `::`).
+HTTP is loaded only when you start it. `GET /snapshot` is the information
+package plus transport facts (kinds, broker bound, no shipped cloud SDKs).
+`GET /events` is SSE of the same snapshot.
+
+```ts
+const handle = await ark.startInspector();
+// http://127.0.0.1:<port>/snapshot
+await handle.close();
+```
+
 ```ts
 const ark = createStrictArkKernel({
   broker: {

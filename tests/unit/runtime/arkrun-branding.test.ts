@@ -19,6 +19,9 @@ describe('RN09 ArkRun companion branding', () => {
     expect(readme).toMatch(/ephemeral/);
     expect(readme).toMatch(/does \*\*not\*\* ship cloud SDKs/);
     expect(readme).toMatch(/in-process local/);
+    expect(readme).toMatch(/127\.0\.0\.1/);
+    expect(readme).toMatch(/NODE_ENV=production/);
+    expect(readme).toMatch(/startInspector/);
     expect(readme).toMatch(/does not bundle this kernel/);
     expect(readme).toMatch(/not\*\* production durability/);
   });

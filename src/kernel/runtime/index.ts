@@ -30,6 +30,34 @@ export {
   type ArkRunTransportKind,
 } from '../../domain/arkRunTransport';
 export {
+  ARK_RUN_INSPECTOR_DEFAULT_HOST,
+  ARK_RUN_INSPECTOR_DEFAULT_PORT,
+  ARK_RUN_INSPECTOR_EVENTS_PATH,
+  ARK_RUN_INSPECTOR_SCHEMA_VERSION,
+  ARK_RUN_INSPECTOR_SNAPSHOT_PATH,
+  ARK_RUN_INSPECTOR_SSE_EVENT,
+  ARK_RUN_INSPECTOR_TRANSPORT_FALLBACK,
+  ArkRunInspectorBindError,
+  ArkRunInspectorProductionError,
+  arkRunInspectorUrl,
+  buildArkRunInspectorSnapshot,
+  formatArkRunInspectorSseEvent,
+  isArkRunInspectorLoopbackHost,
+  isArkRunInspectorProductionEnv,
+  resolveArkRunInspectorBind,
+  type ArkRunInspectorBind,
+  type ArkRunInspectorBindInput,
+  type ArkRunInspectorSnapshot,
+  type ArkRunInspectorSnapshotInput,
+  type ArkRunInspectorTransportFacts,
+} from '../../domain/arkRunInspector';
+export {
+  startArkRunInspector,
+  type ArkRunInspectorHandle,
+  type ArkRunInspectorSource,
+  type StartArkRunInspectorOptions,
+} from './inspector';
+export {
   DEFAULT_MAX_HISTORY_SIZE,
   createArkKernel,
   createArkKernelFromConfig,

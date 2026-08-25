@@ -15,9 +15,14 @@ import type { EventBufferStore } from '../outbox';
 import type { WorkflowEngine } from '../workflow';
 import type { DependencyInformationPackage } from '../../domain/arkRunInformationPackage';
 import type {
+  ArkRunInspectorBind,
+  ArkRunInspectorSnapshot,
+} from '../../domain/arkRunInspector';
+import type {
   ArkRunRegisterOptions,
   ArkRunRegistrationHandle,
 } from './componentRegistry';
+import type { ArkRunInspectorHandle, StartArkRunInspectorOptions } from './inspector';
 import type {
   ArkRunBrokerAdapter,
   ArkRunSendOptions,
@@ -58,6 +63,16 @@ export interface ArkKernel {
   resolveSingleton<T = unknown>(id: string): T;
   /** Tooling snapshot of ids, lifetime, and declarations — never construction. */
   getDependencyInformationPackage(): DependencyInformationPackage;
+  /**
+   * Inspector snapshot (package + transport facts + observability). Never
+   * includes factories, live instances, broker adapters, or input DTOs.
+   */
+  getInspectorSnapshot(bind?: ArkRunInspectorBind): ArkRunInspectorSnapshot;
+  /**
+   * Opt-in loopback inspector. Refuses NODE_ENV=production and public binds.
+   * Loads HTTP only when called.
+   */
+  startInspector(options?: StartArkRunInspectorOptions): Promise<ArkRunInspectorHandle>;
   syncGraph(): void;
   manifest(): ArkManifest;
 }

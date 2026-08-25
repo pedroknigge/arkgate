@@ -1,5 +1,6 @@
-import { ARK_RUN_EPHEMERAL_DEFAULT } from '../../domain/arkRunTransport';
+import { buildArkRunInspectorSnapshot } from '../../domain/arkRunInspector';
 import { buildDependencyInformationPackage } from '../../domain/arkRunInformationPackage';
+import { ARK_RUN_EPHEMERAL_DEFAULT } from '../../domain/arkRunTransport';
 import { createAuditTrail } from '../audit';
 import { EventBusImpl } from '../event-bus';
 import { createEventContractRegistry } from '../event-contracts';
@@ -20,6 +21,7 @@ import {
 import { createProjectionRegistry } from '../projections';
 import { createWorkflowEngine } from '../workflow';
 import { createComponentRegistry } from './componentRegistry';
+import { startArkRunInspector } from './inspector';
 import { sendOnArkRunTransport } from './transport';
 import type {
   ArkKernel,
@@ -96,8 +98,9 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
     graph,
   });
   const components = createComponentRegistry();
+  const brokerBound = typeof broker?.send === 'function';
 
-  return {
+  const kernel: ArkKernel = {
     instanceId,
     profile,
     registry,
@@ -150,6 +153,23 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
         components: components.snapshotComponents(),
       });
     },
+    getInspectorSnapshot(bind) {
+      return buildArkRunInspectorSnapshot({
+        kernelInstanceId: instanceId,
+        host: bind?.host,
+        port: bind?.port,
+        package: {
+          kernelInstanceId: instanceId,
+          components: components.snapshotComponents(),
+        },
+        observability: observability.report(),
+        ephemeralDefault: defaultEphemeral,
+        brokerBound,
+      });
+    },
+    startInspector(options) {
+      return startArkRunInspector(kernel, options);
+    },
     syncGraph,
     manifest() {
       syncGraph();
@@ -165,6 +185,7 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
       });
     },
   };
+  return kernel;
 }
 
 /**

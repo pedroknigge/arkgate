@@ -16,8 +16,9 @@
 (doctor / status / report `arkRun` `notAScore`; mergePlanes honesty);
 `RN09` done (companion branded; `createStrictArkKernel` stays the factory);
 `RN10` done (declarations + `getDependencyInformationPackage()`);
-`RN11` transports in tree (`ROADMAP` still `doing` until review);
-`RN12`–`RN16` remain `todo` in ROADMAP. Does not close
+`RN11` done (transport ports: local / localBlocking / broker fallback; `ephemeral` default true);
+`RN12` implemented (inspector: `127.0.0.1`, production veto, SSE + snapshots, lazy HTTP);
+`RN13`–`RN16` remain `todo` in ROADMAP. Does not close
 `Z09` / residual `RB-11`.<br>
 **Slug:** `arkrun`<br>
 **Kind:** epic / gated extra plane + companion kernel<br>
@@ -54,10 +55,10 @@ ArkRun     extra      kernel usage + complete declarations
 | Once enabled, agents cannot skip the kernel | Layer rules block illegal imports; they do not require `createStrictArkKernel`, `publisher()`, or `defineIntent` at call sites | Anti-skip sensors on the gate |
 | Declare every raise / handle / depend / send | Companion `register()` takes `uses` / `reactsTo` / `raises` / `sends`; gate sensors already consume file-scoped lists | RN13 graph slices still pending |
 | Dual API: composition root vs injected kernel | `createArkKernel()` returns a bag of engines; factories are not a required admission path | Composition-root allowlist + no kernel import in Domain |
-| Local / blocking / broker send at one call site | In-process `EventBus` + `EventBufferStore`; no broker port | Transport ports, fallback, `ephemeral` |
-| Tooling snapshot without leaking factories | `getDependencyInformationPackage()` JSON snapshot of ids, lifetime, declarations | Inspector (`RN12`) and graph slices (`RN13`) consume it |
+| Local / blocking / broker send at one call site | `send()` is local / localBlocking / broker; missing adapter falls back in-process; `ephemeral` default true; no cloud SDKs | Inspector shows kinds / brokerBound; no shipped cloud SDK |
+| Tooling snapshot without leaking factories | `getDependencyInformationPackage()` JSON snapshot of ids, lifetime, declarations | Graph slices (`RN13`) consume it |
 | Partial diagrams | Full graph / manifest | `nodeIds`, degrees, process vs technical, query |
-| Dev inspector | Observability reporter in-process | Localhost HTTP + SSE, production veto |
+| Dev inspector | Opt-in `startInspector()`: `127.0.0.1`, production veto, SSE + snapshots, lazy HTTP | Graph slices (`RN13`) |
 | Test doubles without tearing down the app | `createArkKernel()` per test already isolates instances (good — keep; no process singleton) | Test-only replace of one registration |
 | Same CLI / MCP / hook / CI / ESLint plane | ArkRules precedent | New `ruleId`s through existing adapters |
 | Durable production kernel | Explicitly **not** claimed; K01 parked | Out of this train — honesty stays |
@@ -205,8 +206,8 @@ and docs. One `doing` at a time.
 |----|-----:|---|---|
 | `RN09` | M | RN01 | **done** — Public ArkRun kernel API branded in `@arkgate/runtime` README; `createStrictArkKernel` stays the factory |
 | `RN10` | L | RN09 | **done** — `register()` declarations + `getDependencyInformationPackage()`; factories stay off the snapshot |
-| `RN11` | L | RN09 | Transport ports: local / blocking / broker fallback; `ephemeral` default true (in tree; ROADMAP `doing` until review) |
-| `RN12` | M | RN10 | Inspector: localhost, production veto, SSE + snapshots; lazy load |
+| `RN11` | L | RN09 | **done** — Transport ports: local / blocking / broker fallback; `ephemeral` default true; no cloud SDKs |
+| `RN12` | M | RN10 | **done in tree** — Inspector: localhost, production veto, SSE + snapshots; lazy load |
 | `RN13` | M | RN10 | `requestGraph` slices (process/technical, degrees, query) + Mermaid helper |
 
 ### RN2 — Proof and ship

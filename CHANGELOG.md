@@ -79,6 +79,12 @@ in the immutable pre-2.0 archive linked below.
   falls back to in-process local delivery, not cloud portability. No cloud SDKs
   ship in the package. Does not close Z09 / K01.
 
+- **ArkRun dev inspector (RN12):** `@arkgate/runtime` `startInspector()` /
+  `startArkRunInspector()` is opt-in. Default bind is `127.0.0.1`; `NODE_ENV=production`
+  vetoes start; public hosts (`0.0.0.0`, `::`) are rejected. HTTP is lazy-loaded.
+  `GET /snapshot` and `GET /events` (SSE) serve the information package plus
+  transport facts (no factories, no shipped cloud SDKs). Does not close Z09 / K01.
+
 ## 4.6.7 — 2026-08-24
 
 **Patch** over **4.6.6**. Production-hardening: CODEOWNERS, eval/pack honesty, CLI extracts,
