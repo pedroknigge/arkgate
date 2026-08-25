@@ -15,7 +15,8 @@
 `RN07` done (CLI / MCP / hook / preflight / CI extra teeth); `RN08` done
 (doctor / status / report `arkRun` `notAScore`; mergePlanes honesty);
 `RN09` done (companion branded; `createStrictArkKernel` stays the factory);
-`RN10`–`RN16` remain `todo` in ROADMAP. Does not close
+`RN10` doing (declarations + `getDependencyInformationPackage()`);
+`RN11`–`RN16` remain `todo` in ROADMAP. Does not close
 `Z09` / residual `RB-11`.<br>
 **Slug:** `arkrun`<br>
 **Kind:** epic / gated extra plane + companion kernel<br>
@@ -50,10 +51,10 @@ ArkRun     extra      kernel usage + complete declarations
 |---|---|---|
 | Named extra, absence silent | `@arkgate/runtime` exists; docs label it experimental; no `arkRun` config key | Config plane + product name |
 | Once enabled, agents cannot skip the kernel | Layer rules block illegal imports; they do not require `createStrictArkKernel`, `publisher()`, or `defineIntent` at call sites | Anti-skip sensors on the gate |
-| Declare every raise / handle / depend / send | `defineIntent` + `IntentRegistry` + `ObservabilityReporter` drift (declared vs observed) is **runtime-only** | Static declare-what-you-do facts |
+| Declare every raise / handle / depend / send | Companion `register()` takes `uses` / `reactsTo` / `raises` / `sends`; gate sensors already consume file-scoped lists | RN13 graph slices still pending |
 | Dual API: composition root vs injected kernel | `createArkKernel()` returns a bag of engines; factories are not a required admission path | Composition-root allowlist + no kernel import in Domain |
 | Local / blocking / broker send at one call site | In-process `EventBus` + `EventBufferStore`; no broker port | Transport ports, fallback, `ephemeral` |
-| Tooling snapshot without leaking factories | `manifest()` + graph Mermaid; no serializable dependency-information package | Information package |
+| Tooling snapshot without leaking factories | `getDependencyInformationPackage()` JSON snapshot of ids, lifetime, declarations | Inspector (`RN12`) and graph slices (`RN13`) consume it |
 | Partial diagrams | Full graph / manifest | `nodeIds`, degrees, process vs technical, query |
 | Dev inspector | Observability reporter in-process | Localhost HTTP + SSE, production veto |
 | Test doubles without tearing down the app | `createArkKernel()` per test already isolates instances (good — keep; no process singleton) | Test-only replace of one registration |
@@ -202,7 +203,7 @@ and docs. One `doing` at a time.
 | ID | Size | Depends on | Outcome |
 |----|-----:|---|---|
 | `RN09` | M | RN01 | **done** — Public ArkRun kernel API branded in `@arkgate/runtime` README; `createStrictArkKernel` stays the factory |
-| `RN10` | L | RN09 | Declarations + `getDependencyInformationPackage()`; no factory leakage |
+| `RN10` | L | RN09 | **doing** — `register()` declarations + `getDependencyInformationPackage()`; factories stay off the snapshot |
 | `RN11` | L | RN09 | Transport ports: local / blocking / broker fallback; `ephemeral` default true |
 | `RN12` | M | RN10 | Inspector: localhost, production veto, SSE + snapshots; lazy load |
 | `RN13` | M | RN10 | `requestGraph` slices (process/technical, degrees, query) + Mermaid helper |

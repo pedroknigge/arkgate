@@ -458,6 +458,9 @@ export {
 
 export {
   DEFAULT_MAX_HISTORY_SIZE,
+  ARK_RUN_COMPONENT_LIFETIMES,
+  ARK_RUN_INFORMATION_PACKAGE_SCHEMA_VERSION,
+  buildDependencyInformationPackage,
   createArkKernel,
   createArkKernelFromConfig,
   createLenientArkKernel,
@@ -466,6 +469,12 @@ export {
   createStrictArkKernelFromConfig,
   type ArkKernelConfig,
   type ArkKernel,
+  type ArkRunComponentLifetime,
+  type ArkRunExtendedInfo,
+  type ArkRunInformationPackageComponent,
+  type ArkRunRegisterOptions,
+  type ArkRunRegistrationHandle,
   type CreateArkKernelFromConfigOptions,
   type CreateArkKernelOptions,
+  type DependencyInformationPackage,
 } from './kernel/runtime';

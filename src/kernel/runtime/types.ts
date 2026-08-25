@@ -13,6 +13,11 @@ import type { IntentCreator } from '../intent';
 import type { IntentName } from '../../domain/types';
 import type { EventBufferStore } from '../outbox';
 import type { WorkflowEngine } from '../workflow';
+import type { DependencyInformationPackage } from '../../domain/arkRunInformationPackage';
+import type {
+  ArkRunRegisterOptions,
+  ArkRunRegistrationHandle,
+} from './componentRegistry';
 
 export interface ArkKernel {
   instanceId: string;
@@ -33,6 +38,12 @@ export interface ArkKernel {
   publisher<N extends IntentName, P>(
     source: N | IntentCreator<N, P>
   ): EventPublisher;
+  /** Handle is declaration metadata only; the factory never leaves the registry. */
+  register<T>(options: ArkRunRegisterOptions<T>): ArkRunRegistrationHandle;
+  resolve<T = unknown>(id: string): T;
+  resolveSingleton<T = unknown>(id: string): T;
+  /** Tooling snapshot of ids, lifetime, and declarations — never construction. */
+  getDependencyInformationPackage(): DependencyInformationPackage;
   syncGraph(): void;
   manifest(): ArkManifest;
 }

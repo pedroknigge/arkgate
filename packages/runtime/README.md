@@ -26,6 +26,31 @@ const ark = createStrictArkKernel();
 `*FromConfig` siblings remain admission factories). Each call creates an isolated instance.
 There is no process-wide `getKernel()` singleton — the caller owns the instance it created.
 
+## Interaction declarations
+
+Managed components declare `uses`, `reactsTo`, `raises`, and `sends` on the registration
+handle. Optional `extendedInfo` is tooling-only (diagrams / inspector) and is **not** a
+gate verdict input.
+
+```ts
+const handle = ark.register({
+  id: 'Application.PlaceOrder',
+  lifetime: 'singleton',
+  uses: ['Domain.OrderRepository'],
+  reactsTo: ['Domain.Order.Cancelled'],
+  raises: ['Domain.Order.Placed'],
+  sends: ['Adapter.NotifyWarehouse'],
+  factory: () => createPlaceOrder(),
+});
+
+const snapshot = ark.getDependencyInformationPackage();
+```
+
+`getDependencyInformationPackage()` is a JSON-serializable snapshot of ids, lifetime, and
+declarations. It never includes factories, live instances, or input DTOs. Declarations are
+optional on the companion for local experiments; an enforced `arkRun` extra still requires
+them on the write/CI gate.
+
 Nest adapter:
 
 ```ts

@@ -65,6 +65,14 @@ in the immutable pre-2.0 archive linked below.
   the `arkgate` tarball. Branding is not a production-durability claim. Does not
   close Z09 / K01.
 
+- **ArkRun interaction declarations (RN10):** `@arkgate/runtime` `register()`
+  accepts `uses` / `reactsTo` / `raises` / `sends` plus optional tooling-only
+  `extendedInfo`. `getDependencyInformationPackage()` returns a JSON-serializable
+  snapshot of ids, lifetime, and declarations — never factories, live instances,
+  or input DTOs. Companion registrations may omit declarations for local
+  experiments; enforced `arkRun` on the gate still requires them. Does not close
+  Z09 / K01.
+
 ## 4.6.7 — 2026-08-24
 
 **Patch** over **4.6.6**. Production-hardening: CODEOWNERS, eval/pack honesty, CLI extracts,

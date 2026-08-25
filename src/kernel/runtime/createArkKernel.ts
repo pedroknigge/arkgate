@@ -1,3 +1,4 @@
+import { buildDependencyInformationPackage } from '../../domain/arkRunInformationPackage';
 import { createAuditTrail } from '../audit';
 import { createEventBus } from '../event-bus';
 import { createEventContractRegistry } from '../event-contracts';
@@ -17,6 +18,7 @@ import {
 } from '../policy';
 import { createProjectionRegistry } from '../projections';
 import { createWorkflowEngine } from '../workflow';
+import { createComponentRegistry } from './componentRegistry';
 import type {
   ArkKernel,
   ArkKernelConfig,
@@ -89,6 +91,7 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
     eventBus,
     graph,
   });
+  const components = createComponentRegistry();
 
   return {
     instanceId,
@@ -107,6 +110,21 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
     observability,
     publisher(source) {
       return eventBus.createPublisher(source);
+    },
+    register(options) {
+      return components.register(options);
+    },
+    resolve(id) {
+      return components.resolve(id);
+    },
+    resolveSingleton(id) {
+      return components.resolveSingleton(id);
+    },
+    getDependencyInformationPackage() {
+      return buildDependencyInformationPackage({
+        kernelInstanceId: instanceId,
+        components: components.snapshotComponents(),
+      });
     },
     syncGraph,
     manifest() {
