@@ -18,12 +18,12 @@ file is just documentation.
 
 </div>
 
-> **ArkGate 4.7.2** is on npm `latest`.
+> **ArkGate 4.7.3** (tree). npm `latest` remains **4.7.2** until this patch publishes.
 > If the AI writes an illegal import, the write is rejected. Optional **ArkRun** extra on schema `1.2`.
 > A tree is **adopted** only with a required GitHub status running `arkgate-check --strict-merge`,
 > or `.ark/adoption-stance.json` `stance: "advisory-only"`. Doctor is compact (`--doctor --all`
-> for Details). [4.7.2 notes](docs/releases/4.7.2.md) · [4.7.1](docs/releases/4.7.1.md) ·
-> [4.7.0](docs/releases/4.7.0.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> for Details). [4.7.3 notes](docs/releases/4.7.3.md) · [4.7.2](docs/releases/4.7.2.md) ·
+> [4.7.1](docs/releases/4.7.1.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
 
@@ -234,7 +234,8 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current published (4.7.2 on npm `latest`) | [docs/releases/4.7.2.md](docs/releases/4.7.2.md) · [CHANGELOG](CHANGELOG.md) |
+| Current tree (4.7.3) | [docs/releases/4.7.3.md](docs/releases/4.7.3.md) · [CHANGELOG](CHANGELOG.md) |
+| Current published (4.7.2 on npm `latest`) | [docs/releases/4.7.2.md](docs/releases/4.7.2.md) |
 | Prior published (4.7.0) | [docs/releases/4.7.0.md](docs/releases/4.7.0.md) |
 | Prior published (4.6.7) | [docs/releases/4.6.7.md](docs/releases/4.6.7.md) |
 | Prior published (4.6.6) | [docs/releases/4.6.6.md](docs/releases/4.6.6.md) |

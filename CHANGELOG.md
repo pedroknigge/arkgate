@@ -5,6 +5,24 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.7.3 — 2026-08-25
+
+**Patch** over **4.7.2**. Remaining first-contact copy: README H1, below-fold headings,
+product-voice lexicon, live site pages, and doctor HTML strings. Same deny.
+**No required config migration.** Does not close Z09 / K01.
+
+**Status: prepared** (not on npm `latest` until publish; see `docs/releases/4.7.3.md`).
+
+### Changed
+
+- **README H1** is the deny, not “Architecture Co-pilot”. Below the fold: two kinds of
+  rules (not “two planes”); required CI is the hard line (not “merge gate”).
+- **Product voice** North star and lexicon prefer rules file / the write is rejected /
+  doctor. Allowlist wins.
+- **npm keywords** drop `co-pilot` / `write-gate`.
+- **Doctor HTML** strings drop co-pilot. ADR 0001 product title unchanged. Historical
+  4.6.2 three-beat line stays in that release note.
+
 ## 4.7.2 — 2026-08-25
 
 **Patch** over **4.7.1**. Public copy uses ordinary software words: if the AI writes an

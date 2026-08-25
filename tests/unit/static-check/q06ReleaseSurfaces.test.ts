@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.7.2';
+const CURRENT = '4.7.3';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.7.2';
 
@@ -106,9 +106,11 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('keeps 4.7.2 published on npm latest', () => {
+  it('keeps 4.7.3 tree identity while npm latest remains 4.7.2', () => {
     expect(PUBLISHED_LATEST).toBe('4.7.2');
-    expect(CURRENT).toBe('4.7.2');
+    expect(CURRENT).toBe('4.7.3');
+    expect(read('README.md')).toMatch(/4\.7\.3/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.7\.3\.md/);
     expect(read('README.md')).toMatch(/4\.7\.2/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.7\.2\.md/);
     expect(read('README.md')).toMatch(/4\.7\.1/);
@@ -119,13 +121,16 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.7\.md/);
     expect(read('README.md')).toMatch(/4\.6\.6/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.6\.md/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.7\.2/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.7\.3/s);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.7\.2/s);
     expect(read('CONTRIBUTING.md')).toMatch(/Prior published:.*4\.7\.1/s);
+    expect(read('docs/README.md')).toMatch(/Current tree:.*4\.7\.3/s);
     expect(read('docs/README.md')).toMatch(/Current published:.*4\.7\.2/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
+    expect(read('docs/package-surface.md')).toMatch(/current tree:.*4\.7\.3/is);
     expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.7\.2/is);
     expect(read('docs/package-surface.md')).toMatch(/4\.6\.2\.md/);
+    expect(read('docs/releases/4.7.3.md')).toMatch(/\*\*Status:\*\*\s*prepared/i);
     expect(read('docs/releases/4.7.2.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.7.1.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.7.1.md')).not.toMatch(/\*\*Status:\*\*\s*unpublished/i);
@@ -156,10 +161,33 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
   });
 });
 
+describe('CHANGELOG + release note cover 4.7.3 remaining wording patch', () => {
+  it('records remaining first-contact copy and no required migration', () => {
+    const changelog = changelogText();
+    expect(changelog).toMatch(/## 4\.7\.3/);
+    expect(changelog).toMatch(/illegal import/);
+    expect(changelog).toMatch(/API Gateway/);
+    expect(changelog).toMatch(/Does not close Z09/);
+    const section = changelog.slice(changelog.indexOf('## 4.7.3'), changelog.indexOf('## 4.7.2'));
+    expect(section).toMatch(/No required config migration/i);
+    expect(section).toMatch(/Status:\s*prepared/i);
+    expect(section).toMatch(/README H1/);
+    const notes = read('docs/releases/4.7.3.md');
+    expect(notes).toMatch(/arkgate@4\.7\.3/);
+    expect(notes).toMatch(/mcp-publisher validate server\.json/);
+    expect(notes).toMatch(/No required config migration/i);
+    expect(notes).toMatch(/Z09|RB-11/i);
+    expect(notes).toMatch(/K01/);
+    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(notes).not.toMatch(/amarilla/i);
+    expect(read('README.md')).toMatch(/illegal imports rejected at write and at merge/);
+  });
+});
+
 describe('CHANGELOG + release note cover 4.7.2 wording patch', () => {
   it('records common-language first-contact copy and no required migration', () => {
     const changelog = changelogText();
-    expect(changelog).toMatch(/## 4\.7\.2/);
+    expect(changelog).toMatch(/## 4.7\.2/);
     expect(changelog).toMatch(/illegal import/);
     expect(changelog).toMatch(/API Gateway/);
     expect(changelog).toMatch(/Does not close Z09/);
@@ -848,7 +876,7 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
       expect(howAt).toBeGreaterThan(denyAt);
       expect(html).toMatch(/Not an API Gateway/);
       expect(html).toMatch(/just documentation/);
-      expect(html).toMatch(/4\.7\.2/);
+      expect(html).toMatch(/4\.7\.3/);
       expect(html).not.toMatch(/CONTRACT ACTIVE/);
       const livePages = [
         'index.html',
