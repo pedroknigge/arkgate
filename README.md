@@ -16,11 +16,11 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 4.7.0** is on npm `latest`. Optional **ArkRun** extra on schema `1.2`.
+> **ArkGate 4.7.1** is on npm `latest`. One project skill catalog. Optional **ArkRun** extra on schema `1.2`.
 > A tree is **adopted** only with a required GitHub status running `arkgate-check --strict-merge`,
 > or `.ark/adoption-stance.json` `stance: "advisory-only"`. Doctor is compact (`--doctor --all`
-> for Details). [4.7.0 notes](docs/releases/4.7.0.md) · [4.6.7](docs/releases/4.6.7.md) ·
-> [4.6.6](docs/releases/4.6.6.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> for Details). [4.7.1 notes](docs/releases/4.7.1.md) · [4.7.0](docs/releases/4.7.0.md) ·
+> [4.6.7](docs/releases/4.6.7.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
 
@@ -227,7 +227,8 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current published (4.7.0 on npm `latest`) | [docs/releases/4.7.0.md](docs/releases/4.7.0.md) · [CHANGELOG](CHANGELOG.md) |
+| Current published (4.7.1 on npm `latest`) | [docs/releases/4.7.1.md](docs/releases/4.7.1.md) · [CHANGELOG](CHANGELOG.md) |
+| Prior published (4.7.0) | [docs/releases/4.7.0.md](docs/releases/4.7.0.md) |
 | Prior published (4.6.7) | [docs/releases/4.6.7.md](docs/releases/4.6.7.md) |
 | Prior published (4.6.6) | [docs/releases/4.6.6.md](docs/releases/4.6.6.md) |
 | Prior published (4.6.5) | [docs/releases/4.6.5.md](docs/releases/4.6.5.md) |

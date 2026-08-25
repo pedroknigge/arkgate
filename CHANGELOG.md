@@ -11,7 +11,7 @@ in the immutable pre-2.0 archive linked below.
 skill picker, no home duplicates, ArkRun routed through existing skill names.
 **No required config migration.** Does not close Z09 / K01.
 
-**Status: unpublished** (implementation on `main`; npm `latest` remains **4.7.0** until publish).
+**Status: published** (on npm `latest`; see `docs/releases/4.7.1.md`).
 
 ### Added
 
