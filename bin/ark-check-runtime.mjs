@@ -1471,6 +1471,7 @@ async function main() {
         score: fitness.score,
         mode: fitness.mode,
         improvementCompass: reportCompass,
+        arkRun: designDepth?.arkRun ?? null,
       }),
       leftoverDesignWork: designDepth?.designFitness?.designWeak === true,
     };
@@ -1493,7 +1494,17 @@ async function main() {
       adoption: adoptionForReport,
       designDepth,
       advisories: {
-        ...computeDoctorAdvisories(root, config, coverage, rules, files, ts, parseHealth),
+        ...computeDoctorAdvisories(
+          root,
+          config,
+          coverage,
+          rules,
+          files,
+          ts,
+          parseHealth,
+          undefined,
+          activeViolations
+        ),
         // Doctor parity: always emit improvement compass when doctor would (reportParity).
         ...(designDepth?.improvementCompass
           ? { improvementCompass: designDepth.improvementCompass }
@@ -1502,6 +1513,7 @@ async function main() {
         ...(designDepth?.deepModuleCoach
           ? { deepModuleCoach: designDepth.deepModuleCoach }
           : {}),
+        ...(designDepth?.arkRun ? { arkRun: designDepth.arkRun } : {}),
       },
     };
     const html = args.beginner

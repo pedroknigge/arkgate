@@ -140,6 +140,16 @@ export function printDoctorCompactHuman(view) {
     line(warn, nudge.ask);
   }
 
+  const arkRun = doctorAdvisories.arkRun;
+  if (arkRun?.active === true && arkRun.notAScore === true) {
+    console.log('');
+    const residual = Number(arkRun.residual?.count) || 0;
+    line(
+      residual > 0 ? warn : ' ',
+      `ArkRun: ${arkRun.mode || 'on'} · residual=${residual} · not a score`
+    );
+  }
+
   if (violations.length === 0) {
     if (!analysisComplete) {
       console.log('');

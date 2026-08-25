@@ -214,13 +214,26 @@ export {
 
 export {
   EXTRA_MERGE_TEETH_GOVERNED_FLOOR,
+  MERGE_PLANES_DUAL_STAMP,
   classifyResolvedLayerCoverage,
+  composeMergePlanesHonesty,
   demoteExtraPlaneTeethUnderClassificationFloor,
   extraMergeTeethAllowed,
   isArkRunRuleId,
   isExtraPlaneFinding,
+  normalizeExtraMergeTeethClassification,
   type ExtraMergeTeethClassification,
+  type MergePlanesHonesty,
 } from './domain/extraMergeTeeth';
+
+export {
+  ARK_RUN_DOCTOR_SCHEMA_VERSION,
+  formatArkRunDoctorLines,
+  projectStatusArkRun,
+  summarizeArkRunSection,
+  type ArkRunDoctorSection,
+  type ArkRunStatusSlice,
+} from './domain/arkRunDoctor';
 
 export {
   ARKRUN_INTERACTION_NAME_INCOMPLETE,

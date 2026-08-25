@@ -153,14 +153,16 @@ See [brownfield adoption](brownfield-adoption.md#nextjs-honesty-default-overlays
 | **Layers** | Inter-layer import graph | Always on |
 | **Structure sensors** | Intra-layer heuristics | Only `mode: "enforced"` |
 | **Invariants** | Catalog + coverage evidence (not a business runtime) | Only enforced + proven-uncovered |
+| **ArkRun** (opt-in extra) | Kernel usage + complete declarations | Only `arkRun.mode: "enforced"` when classified |
 
-Absence of `arkRules` adds **no** extra merge teeth. **Advisory** structure sensors and advisory
-invariants also add **no** merge teeth (FG-ARKRULES-ADVISORY-ONLY) — packing every starter
-`arkrules/*` file does not make merge fail structure alone. Enforced structure/invariants arm
+Absence of `arkRules` or `arkRun` adds **no** extra merge teeth. **Advisory** structure sensors, advisory
+invariants, and advisory ArkRun also add **no** merge teeth (FG-ARKRULES-ADVISORY-ONLY / ADR 0020) — packing every starter
+`arkrules/*` file does not make merge fail structure alone. Enforced structure/invariants/ArkRun arm
 `mergePlanes.extraMergeTeeth` only when the layer plane is honestly classified
-(governed ≥ 50% and ≥ 1 populated layer); empty classification never gets structure teeth
-(P1M-EXTRATEETH-EMPTY-GRAPH). Structure and invariants **never** merge into one architecture
-score. Doctor exposes `rulesUnderContract.mergePlanes` for which plane can fail.
+(governed ≥ 50% and ≥ 1 populated layer); empty classification never gets extra-plane teeth
+(P1M-EXTRATEETH-EMPTY-GRAPH). Extra planes **never** merge into one architecture
+score. Doctor exposes `rulesUnderContract.mergePlanes` (including `mergePlanes.arkRun`) for which plane can fail,
+and a dedicated `doctor.arkRun` section that is always `notAScore`.
 
 Safety fields:
 

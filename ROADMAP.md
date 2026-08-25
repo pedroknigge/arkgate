@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-25 (Engineering doing: `RN07` **implemented**; `RN06` **done**; `RN05` **done**; `RN04` **done`; `RN03` **done`; `RN02` **done`; `RN01` **done`; Phase AL `AL01`–`AL04` **done`; `AL06` compact-doctor extract **done`; `AL05` parked; Phase RN ArkRun started; Z09 still parked; tree **arkgate@4.6.7**; npm `latest` is **4.6.7**)
+- **Status date:** 2026-08-25 (Engineering doing: `RN08`; `RN07` **done**; `RN06` **done**; `RN05` **done**; `RN04` **done**; `RN03` **done**; `RN02` **done**; `RN01` **done**; Phase AL `AL01`–`AL04` **done**; `AL06` compact-doctor extract **done**; `AL05` parked; Phase RN ArkRun started; Z09 still parked; tree **arkgate@4.6.7**; npm `latest` is **4.6.7**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -263,7 +263,8 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: `RN07` **implemented** (CLI / MCP / hook / preflight / CI extra-teeth parity).
+Engineering doing: `RN08` (doctor / status / report `arkRun` section, `notAScore`).
+`RN07` **done** (CLI / MCP / hook / preflight / CI extra-teeth parity — one verdict; enforced extra teeth only when classified).
 `RN06` **done** (`arkgate/eslint` import/`new` envelope; editor parity tests).
 `RN05` **done** (diagnostic catalog `ARKRUN_*` + dual-depth `nextAction`; remediation parity tests).
 `RN04` **done** (tier-1 sensors emit `ARKRUN_*`; advisory does not flip `valid`; enforced blocks).
@@ -289,7 +290,7 @@ Does not ship cloud adapters or a process singleton. Companion kernel stays
 | 189 | `RN05` | `done` | M | RN04 | Diagnostic catalog `ARKRUN_*` + dual-depth `nextAction` |
 | 190 | `RN06` | `done` | M | RN04 | `arkgate/eslint` rules for the same sensors |
 | 191 | `RN07` | `done` | L | RN05 | CLI / MCP / hook / preflight / CI extra-teeth parity — one verdict; enforced extra teeth only when classified |
-| 192 | `RN08` | `todo` | M | RN07 | Doctor / status / report `arkRun` section (`notAScore`) |
+| 192 | `RN08` | `doing` | M | RN07 | Doctor / status / report `arkRun` section (`notAScore`) |
 | 193 | `RN09` | `todo` | M | RN01 | Brand ArkRun on `@arkgate/runtime`; keep `createStrictArkKernel` |
 | 194 | `RN10` | `todo` | L | RN09 | Interaction declarations + serializable information package (no factories) |
 | 195 | `RN11` | `todo` | L | RN09 | Local / blocking / broker-fallback transports; `ephemeral` default true |

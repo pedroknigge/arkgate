@@ -22,6 +22,7 @@
  *   src/domain/arkRunFacts.ts → bin/lib/ark-run-facts.mjs
  *   src/domain/extraMergeTeeth.ts → bin/lib/extra-merge-teeth.mjs
  *   src/domain/arkRunSensors.ts → bin/lib/ark-run-sensors.mjs
+ *   src/domain/arkRunDoctor.ts → bin/lib/ark-run-doctor.mjs
  *
  * Layer match remains scripts/generate-layer-match.mjs (R1).
  *
@@ -96,6 +97,11 @@ const MODULES = [
     canonical: 'src/domain/arkRunSensors.ts',
     derived: 'bin/lib/ark-run-sensors.mjs',
     label: 'ArkRun tier-1 sensors (ADR 0022 / RN04)',
+  },
+  {
+    canonical: 'src/domain/arkRunDoctor.ts',
+    derived: 'bin/lib/ark-run-doctor.mjs',
+    label: 'ArkRun doctor/status/report section (notAScore; RN08)',
   },
   {
     canonical: 'src/domain/adapterContract.ts',

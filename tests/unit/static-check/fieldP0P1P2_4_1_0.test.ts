@@ -955,6 +955,7 @@ describe('P1-M mergePlanes honesty shape', () => {
     expect(summary.mergePlanes.extraMergeTeeth).toBe(true);
     expect(summary.mergePlanes.failMergeWhen).toMatch(/enforced/i);
     expect(summary.mergePlanes.dualPlaneStamp).toMatch(/heuristics|catalog/i);
+    expect(summary.mergePlanes.arkRun).toMatchObject({ present: false, extraMergeTeeth: false });
   });
 
   it('P1M: empty classification cannot arm extraMergeTeeth', async () => {

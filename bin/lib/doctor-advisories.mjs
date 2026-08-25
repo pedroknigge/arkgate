@@ -20,8 +20,20 @@ import { printParseHealthSection, summarizeParseHealth } from './parse-health.mj
 import { detectGraphBlindSpots, printGraphBlindSection } from './graph-blind.mjs';
 import { summarizeRulesUnderContract } from './rules-under-contract.mjs';
 import { collectStewardNudge } from './team-parliament-io.mjs';
+import { formatArkRunDoctorLines, summarizeArkRunSection } from './ark-run-doctor.mjs';
 
-export function computeDoctorAdvisories(root, config, cov, rules, files, ts, parseHealth, facts) {
+function classificationFromCoverage(cov) {
+  return {
+    governedPercent: cov?.governed?.percent ?? null,
+    populatedLayerCount: Array.isArray(cov?.layers)
+      ? cov.layers.filter((row) => (row?.files ?? 0) > 0).length
+      : null,
+    classifiedFiles: cov?.governed?.classifiedFiles ?? null,
+  };
+}
+
+/** `activeViolations` must already exclude frozen baseline keys (report residual parity). */
+export function computeDoctorAdvisories(root, config, cov, rules, files, ts, parseHealth, facts, activeViolations) {
   const physicalCohesion = computePhysicalCohesion(root, files);
   const decisionMemory = computeReshapeDecisionMemory(root, files);
   physicalCohesion.reshapeDecisions = decisionMemory.summary;
@@ -41,6 +53,27 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
           })).filter((f) => f.path),
         }
       : undefined);
+  const classification = classificationFromCoverage(cov);
+  const rulesUnderContract = summarizeRulesUnderContract(root, config, factPaths, classification);
+  const arkRun = summarizeArkRunSection({
+    arkRun: config?.arkRun,
+    findings: activeViolations,
+    classification,
+    arkRules: {
+      active: rulesUnderContract?.active === true,
+      structureEnforced: rulesUnderContract?.mergePlanes?.structureSensors?.enforced,
+      structureTotal: rulesUnderContract?.mergePlanes?.structureSensors?.total,
+      structureAdvisory: rulesUnderContract?.mergePlanes?.structureSensors?.advisory,
+      invariantEnforced: rulesUnderContract?.mergePlanes?.invariants?.enforced,
+      invariantTotal: rulesUnderContract?.mergePlanes?.invariants?.total,
+      invariantAdvisory: rulesUnderContract?.mergePlanes?.invariants?.advisory,
+      covered: rulesUnderContract?.mergePlanes?.invariants?.covered,
+      uncovered: rulesUnderContract?.mergePlanes?.invariants?.uncovered,
+    },
+  });
+  if (rulesUnderContract?.mergePlanes) {
+    rulesUnderContract.mergePlanes = arkRun.mergePlanes;
+  }
   return {
     contractHealth: computeContractHealth(root, config, cov, rules),
     ambientState: computeAmbientState(ts, root, config, files),
@@ -51,13 +84,8 @@ export function computeDoctorAdvisories(root, config, cov, rules, files, ts, par
     // AR12 — Rules under contract (honest counts; real test I/O, never empty-fileContents stub).
     // P1M: pass classification so extraMergeTeeth cannot arm at 0% governed.
     stewardNudge: collectStewardNudge(root, config),
-    rulesUnderContract: summarizeRulesUnderContract(root, config, factPaths, {
-      governedPercent: cov?.governed?.percent ?? null,
-      populatedLayerCount: Array.isArray(cov?.layers)
-        ? cov.layers.filter((row) => (row?.files ?? 0) > 0).length
-        : null,
-      classifiedFiles: cov?.governed?.classifiedFiles ?? null,
-    }),
+    rulesUnderContract,
+    arkRun,
   };
 }
 
@@ -78,5 +106,14 @@ export function printDoctorAdvisories(advisories, io) {
     console.log(io.color.bold('Stewards'));
     io.line(io.warn, nudge.ask);
     if (nudge.nextAction) io.line(' ', io.color.dim(`Next: ${nudge.nextAction}`));
+  }
+  const arkRun = advisories.arkRun;
+  if (arkRun && arkRun.notAScore === true) {
+    console.log('');
+    console.log(io.color.bold('ArkRun (not a score)'));
+    const mark = arkRun.active && arkRun.residual?.count > 0 ? io.warn : ' ';
+    for (const text of formatArkRunDoctorLines(arkRun)) {
+      io.line(mark, text);
+    }
   }
 }

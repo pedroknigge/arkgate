@@ -9,13 +9,23 @@
  */
 
 export const EXTRA_MERGE_TEETH_GOVERNED_FLOOR = 50;
-export function extraMergeTeethAllowed(classification) {
+export function normalizeExtraMergeTeethClassification(classification) {
     if (!classification)
-        return true;
-    const governed = typeof classification.governedPercent === 'number' ? classification.governedPercent : null;
-    const populated = typeof classification.populatedLayerCount === 'number'
+        return {};
+    const governedPercent = typeof classification.governedPercent === 'number' ? classification.governedPercent : null;
+    let populatedLayerCount = typeof classification.populatedLayerCount === 'number'
         ? classification.populatedLayerCount
         : null;
+    if (populatedLayerCount == null &&
+        typeof classification.classifiedFiles === 'number') {
+        populatedLayerCount = classification.classifiedFiles > 0 ? 1 : 0;
+    }
+    return { governedPercent, populatedLayerCount };
+}
+export function extraMergeTeethAllowed(classification) {
+    const normalized = normalizeExtraMergeTeethClassification(classification);
+    const governed = typeof normalized.governedPercent === 'number' ? normalized.governedPercent : null;
+    const populated = typeof normalized.populatedLayerCount === 'number' ? normalized.populatedLayerCount : null;
     if (governed == null && populated == null)
         return true;
     return ((governed ?? 0) >= EXTRA_MERGE_TEETH_GOVERNED_FLOOR && (populated ?? 0) >= 1);
@@ -62,4 +72,116 @@ export function demoteExtraPlaneTeethUnderClassificationFloor(violations, classi
         }
     }
     return violations;
+}
+/** Stamp for extra-plane honesty: never one architecture score. */
+export const MERGE_PLANES_DUAL_STAMP = 'Structure = heuristics; invariants = catalog+coverage evidence (not business runtime); ArkRun = kernel usage + declarations (not a score). Extra planes never merge into one architecture score. Advisory ArkRules ≠ merge teeth. Advisory ArkRun ≠ merge teeth.';
+function countOrZero(value) {
+    return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+/**
+ * Which extra planes can fail merge. Counts and stamps only — never a score.
+ */
+export function composeMergePlanesHonesty(input = {}) {
+    const normalized = normalizeExtraMergeTeethClassification(input.classification);
+    const governedPercent = typeof normalized.governedPercent === 'number' ? normalized.governedPercent : null;
+    const populatedLayerCount = typeof normalized.populatedLayerCount === 'number' ? normalized.populatedLayerCount : null;
+    const classificationKnown = governedPercent != null || populatedLayerCount != null;
+    const classificationAllowsTeeth = extraMergeTeethAllowed(normalized);
+    const arkRules = input.arkRules;
+    const structureEnforced = countOrZero(arkRules?.structureEnforced);
+    const structureTotal = countOrZero(arkRules?.structureTotal);
+    const structureAdvisory = typeof arkRules?.structureAdvisory === 'number'
+        ? countOrZero(arkRules.structureAdvisory)
+        : Math.max(0, structureTotal - structureEnforced);
+    const invariantEnforced = countOrZero(arkRules?.invariantEnforced);
+    const invariantTotal = countOrZero(arkRules?.invariantTotal);
+    const invariantAdvisory = typeof arkRules?.invariantAdvisory === 'number'
+        ? countOrZero(arkRules.invariantAdvisory)
+        : Math.max(0, invariantTotal - invariantEnforced);
+    const arkRulesHasEnforced = structureEnforced > 0 || invariantEnforced > 0;
+    const arkRunPresent = input.arkRun?.present === true;
+    const arkRunMode = input.arkRun?.mode === 'enforced' || input.arkRun?.mode === 'advisory'
+        ? input.arkRun.mode
+        : null;
+    const arkRunResidual = countOrZero(input.arkRun?.residualCount);
+    const arkRunHasEnforced = arkRunPresent && arkRunMode === 'enforced';
+    const arkRunTeeth = arkRunHasEnforced && classificationAllowsTeeth;
+    const hasEnforcedTeeth = arkRulesHasEnforced || arkRunHasEnforced;
+    const extraMergeTeeth = hasEnforcedTeeth && classificationAllowsTeeth;
+    const teethDeferredForClassification = hasEnforcedTeeth && classificationKnown && !classificationAllowsTeeth;
+    let failMergeWhen;
+    if (extraMergeTeeth) {
+        const extras = [];
+        if (arkRulesHasEnforced)
+            extras.push('enforced structure/invariant findings');
+        if (arkRunHasEnforced)
+            extras.push('enforced ArkRun skip findings');
+        failMergeWhen = `Layer graph failures plus ${extras.join(' and ')} (advisory extras never fail merge alone).`;
+    }
+    else if (teethDeferredForClassification) {
+        const which = [
+            arkRulesHasEnforced ? 'ArkRules structure/invariant' : null,
+            arkRunHasEnforced ? 'ArkRun' : null,
+        ]
+            .filter((part) => Boolean(part))
+            .join(' and ');
+        failMergeWhen = `Layer graph only — enforced ${which} findings are demoted under the teeth floor (need ≥${EXTRA_MERGE_TEETH_GOVERNED_FLOOR}% governed and ≥1 populated layer); they do not merge-block until classification is honest.`;
+    }
+    else {
+        const arkRunBit = !arkRunPresent
+            ? ' Absence of arkRun is silent.'
+            : arkRunMode === 'advisory'
+                ? ' Advisory ArkRun never merge-blocks.'
+                : ' ArkRun extra is present but does not arm merge teeth.';
+        failMergeWhen =
+            'Layer graph only — no enforced ArkRules structure/invariant teeth on this tree. Advisory packs do not arm merge teeth.' +
+                arkRunBit;
+    }
+    const out = {
+        layers: {
+            role: 'inter-layer-edges',
+            alwaysOnGate: true,
+            note: 'Import/export layer graph — the default merge plane. Absent arkRules or arkRun changes nothing here.',
+        },
+        structureSensors: {
+            role: 'intra-layer-heuristics',
+            total: structureTotal,
+            enforced: structureEnforced,
+            advisory: structureAdvisory,
+            note: 'Structure sensors are heuristics (prefer false negatives). Only mode:enforced fails merge; noisy sensors stay advisory by default. Advisory-only packs never add merge teeth (FG-ARKRULES-ADVISORY-ONLY).',
+        },
+        invariants: {
+            role: 'catalog-plus-coverage',
+            total: invariantTotal,
+            enforced: invariantEnforced,
+            advisory: invariantAdvisory,
+            covered: countOrZero(arkRules?.covered),
+            uncovered: countOrZero(arkRules?.uncovered),
+            note: 'Invariants are catalog + coverage evidence, not a business runtime. Enforced + proven-uncovered fails merge; absence of enforced rules adds no extra teeth.',
+        },
+        arkRun: {
+            role: 'kernel-usage-and-declarations',
+            present: arkRunPresent,
+            mode: arkRunMode,
+            residualCount: arkRunResidual,
+            extraMergeTeeth: arkRunTeeth,
+            note: arkRunPresent
+                ? arkRunMode === 'enforced'
+                    ? 'Enforced ArkRun arms extra merge teeth only when the layer plane is classified. Residual is a count, never a score.'
+                    : 'Advisory ArkRun never adds merge teeth and never flips valid. Residual is a count, never a score.'
+                : 'Absence of arkRun is silent — Layers and ArkRules verdicts unchanged. The extra never becomes a score.',
+        },
+        extraMergeTeeth,
+        dualPlaneStamp: MERGE_PLANES_DUAL_STAMP,
+        failMergeWhen,
+    };
+    if (classificationKnown) {
+        out.classificationGate = {
+            governedPercent,
+            populatedLayerCount,
+            floorPercent: EXTRA_MERGE_TEETH_GOVERNED_FLOOR,
+            allowsTeeth: classificationAllowsTeeth,
+        };
+    }
+    return out;
 }

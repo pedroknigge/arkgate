@@ -49,8 +49,15 @@ in the immutable pre-2.0 archive linked below.
   snippet write, PreToolUse hook, atomic preflight, and CI share one ArkRun
   verdict. Enforced extra teeth arm only when the layer plane is classified
   (same ≥50% governed / ≥1 populated-layer floor as ArkRules); advisory and
-  absence stay silent on `valid`. Doctor/status `arkRun` section is RN08. Does
-  not close Z09 / K01.
+  absence stay silent on `valid`. Doctor/status `arkRun` section landed in
+  RN08 below. Does not close Z09 / K01.
+
+- **ArkRun doctor / status / report (RN08):** `ark-check --doctor`, HTML
+  `--report`, and `ark status` / MCP `ark_status` expose an `arkRun` section
+  that is always `notAScore`. Residual is a finding-id count, never a score or
+  LLM verdict. `mergePlanes.arkRun` states whether the extra can fail merge;
+  advisory and absence never arm extra teeth. Report parity requires
+  `data-advisory="arkRun"`. Does not close Z09 / K01.
 
 ## 4.6.7 — 2026-08-24
 

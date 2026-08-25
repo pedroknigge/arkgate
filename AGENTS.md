@@ -147,6 +147,7 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/arkRunFacts.ts` | `bin/lib/ark-run-facts.mjs` | (same `cli-pure` scripts); RN03 kernel call / managed `new` facts |
 | `src/domain/extraMergeTeeth.ts` | `bin/lib/extra-merge-teeth.mjs` | (same `cli-pure` scripts); RN07 extra-plane teeth floor |
 | `src/domain/arkRunSensors.ts` | `bin/lib/ark-run-sensors.mjs` | (same `cli-pure` scripts); RN04 tier-1 ArkRun sensors |
+| `src/domain/arkRunDoctor.ts` | `bin/lib/ark-run-doctor.mjs` | (same `cli-pure` scripts); RN08 doctor/status/report arkRun (notAScore) |
 | `src/domain/changeMap.ts` | bundled in `bin/lib/analysis-engine.mjs`; schema parity test guards `schemas/ark.change-map.schema.json` | `generate:analysis-engine` / `check:analysis-engine` |
 | `src/domain/changeConvergence.ts` | bundled in `bin/lib/analysis-engine.mjs` | `generate:analysis-engine` / `check:analysis-engine` |
 | Tooling `bin/lib/*.source.mjs` + design-delta schema source | compact shipped `design-delta.mjs`, `enforcement-state.mjs`, `hook-templates.mjs`, and design-delta schema | `generate:packaged-tooling` / `check:packaged-tooling` |

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   EXTRA_MERGE_TEETH_GOVERNED_FLOOR,
   classifyResolvedLayerCoverage,
+  composeMergePlanesHonesty,
   demoteExtraPlaneTeethUnderClassificationFloor,
   extraMergeTeethAllowed,
   isArkRunRuleId,
@@ -59,5 +60,46 @@ describe('RN07 extra-plane merge teeth', () => {
     expect(isArkRunRuleId('ARKRUN_DIRECT_NEW')).toBe(true);
     expect(isExtraPlaneFinding({ ruleId: 'ARKRUN_DIRECT_NEW' })).toBe(true);
     expect(isExtraPlaneFinding({ ruleId: 'LAYER_IMPORT_VIOLATION' })).toBe(false);
+  });
+});
+
+describe('RN08 mergePlanes honesty', () => {
+  it('advisory ArkRun never ORs extraMergeTeeth on; enforced does when classified', () => {
+    const advisory = composeMergePlanesHonesty({
+      arkRules: { active: true, structureEnforced: 1, structureTotal: 1 },
+      arkRun: { present: true, mode: 'advisory', residualCount: 4 },
+      classification: { governedPercent: 80, populatedLayerCount: 1 },
+    });
+    expect(advisory.extraMergeTeeth).toBe(true);
+    expect(advisory.arkRun.extraMergeTeeth).toBe(false);
+    expect(advisory.failMergeWhen).toMatch(/structure\/invariant/i);
+
+    const onlyRun = composeMergePlanesHonesty({
+      arkRules: { active: false },
+      arkRun: { present: true, mode: 'enforced', residualCount: 1 },
+      classification: { governedPercent: 80, populatedLayerCount: 1 },
+    });
+    expect(onlyRun.extraMergeTeeth).toBe(true);
+    expect(onlyRun.arkRun.extraMergeTeeth).toBe(true);
+    expect(onlyRun.failMergeWhen).toMatch(/ArkRun/i);
+    expect(onlyRun.dualPlaneStamp).toMatch(/not a score/i);
+  });
+
+  it('else-branch failMergeWhen names ArkRun when the extra is advisory or absent', () => {
+    const advisoryOnly = composeMergePlanesHonesty({
+      arkRules: { active: false },
+      arkRun: { present: true, mode: 'advisory', residualCount: 2 },
+    });
+    expect(advisoryOnly.extraMergeTeeth).toBe(false);
+    expect(advisoryOnly.failMergeWhen).toMatch(/ArkRun/i);
+    expect(advisoryOnly.failMergeWhen).toMatch(/advisory ArkRun never merge-blocks/i);
+
+    const absent = composeMergePlanesHonesty({
+      arkRules: { active: false },
+      arkRun: { present: false },
+    });
+    expect(absent.extraMergeTeeth).toBe(false);
+    expect(absent.failMergeWhen).toMatch(/arkRun/i);
+    expect(absent.failMergeWhen).toMatch(/silent/i);
   });
 });
