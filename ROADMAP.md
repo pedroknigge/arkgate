@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-25 (Engineering doing: none; Phase HS `HS01`–`HS05` **done** on tree **arkgate@4.7.1** unpublished; `RN16` **done**; Phase RN ArkRun shipped **4.7.0**; `AL05` parked; Z09 still parked; npm `latest` is **4.7.0**; tree **4.7.1** unpublished until HS publish)
+- **Status date:** 2026-08-25 (Engineering doing: none; Phase HS `HS01`–`HS05` **done**; `RN16` **done**; Phase RN ArkRun shipped **4.7.0**; Phase HS shipped **4.7.1**; `AL05` parked; Z09 still parked; npm `latest` is **4.7.1**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -263,8 +263,8 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: none. Phase HS (`HS01`–`HS05`) **done** on tree **4.7.1** (unpublished).
-`RN16` **done** (public docs + 4.7.0 published on npm `latest`).
+Engineering doing: none. Phase HS (`HS01`–`HS05`) **done** (4.7.1 published on npm `latest`).
+`RN16` **done** (public docs + 4.7.0 published).
 `RN15` **done** (deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names).
 `RN14` **done** (skip corpus: extra absent = green; enforced = fail `new` / peer import / homemade bus).
 `RN13` **done** (graph slices: process/technical, degrees, query + Mermaid helper).
@@ -297,7 +297,7 @@ Target **arkgate@4.7.1**. Does **not** close `Z09` / `K01`. No new skill names.
 | 202 | `HS02` | `done` | L | HS01 | Canonical `.agents/skills`; Claude/Grok/OpenCode adapters; Cursor shares catalog (no `.cursor/commands` copy) |
 | 203 | `HS03` | `done` | M | HS02 | Skip home skill/MCP write when project catalog exists; `--prune-home-duplicates`; doctor next action prune |
 | 204 | `HS04` | `done` | S | RN15 | `/ark-contract` routes ArkRun extra (adopt / runtime / place); no `/ark-run` |
-| 205 | `HS05` | `done` | M | HS03+HS04 | Docs + tree **4.7.1**; npm publish is a later maintainer step |
+| 205 | `HS05` | `done` | M | HS03+HS04 | Docs + **4.7.1** published on npm `latest` |
 
 ### Phase RN — ArkRun gated complement
 

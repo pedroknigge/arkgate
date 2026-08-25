@@ -3,7 +3,7 @@
 > **Plan, not implementation authority.** Work items live in [ROADMAP.md](../../../ROADMAP.md)
 > Phase HS. ADR: [0025](../../adr/0025-one-project-skill-catalog.md).
 
-**Status:** Implemented on tree **arkgate@4.7.1** (unpublished). Does not close Z09/K01.<br>
+**Status:** Shipped in **4.7.1** (published on npm `latest`). Does not close Z09/K01.<br>
 **Slug:** `one-catalog-one-root`<br>
 **Target:** **arkgate@4.7.1**
 
