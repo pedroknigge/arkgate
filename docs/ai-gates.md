@@ -30,7 +30,7 @@ while a required merge status is the one boundary a repository can make every wr
 Prefer fail-closed honesty over fake hard guarantees on advisory hosts.
 
 Everything below uses the same `ark.config.json` as `arkgate-check` / `ark-check` (CI) — one
-contract shared by every surface. From **4.0**, optional **ArkRules** (`arkRules` map +
+rules file shared by every surface. From **4.0**, optional **ArkRules** (`arkRules` map +
 `arkrules/*.json`) ride the **same** write path, doctor, and CI adapter; absence of ArkRules
 does not change inter-layer verdicts. Label residual **`[Layer]`** vs **`[ArkRules]`**. See
 [configuration — ArkRules](configuration.md#arkrules-intra-layer-opt-in).

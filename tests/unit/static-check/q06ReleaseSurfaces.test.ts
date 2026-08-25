@@ -817,15 +817,20 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
       'docs/package-surface.md',
     ];
     for (const rel of openings) {
-      const head = read(rel)
-        .split(/\n/)
-        .slice(0, 24)
-        .filter((line) => !/Architecture Co-pilot/.test(line))
-        .join('\n');
+      const head = read(rel).split(/\n/).slice(0, 24).join('\n');
       expect(head, rel).toMatch(deny);
       expect(head, rel).not.toMatch(forbiddenLead);
     }
+    const readmeH1 = read('README.md').split(/\n/).find((line) => line.startsWith('# '));
+    expect(readmeH1).toMatch(/illegal import/i);
+    expect(readmeH1).not.toMatch(/co-pilot/i);
+    expect(read('README.md')).toMatch(/Two kinds of rules/);
+    expect(read('README.md')).not.toMatch(/### Two planes/);
+    expect(read('README.md')).toMatch(/Why required CI is the hard line/);
+    expect(read('docs/product-voice.md')).toMatch(/\*\*Reject the write\. Fail the PR\.\*\*/);
+    expect(read('docs/product-voice.md')).toMatch(/\*\*rules file\*\*/);
     expect(JSON.parse(read('package.json')).description).toMatch(deny);
+    expect(JSON.parse(read('package.json')).keywords).not.toContain('co-pilot');
     expect(JSON.parse(read('server.json')).description).toMatch(deny);
     expect(read('action.yml')).toMatch(/Fail the pull request when TypeScript import rules are broken/);
     expect(read('bin/lib/first-run-help.mjs')).toMatch(/Illegal import: write rejected/);
@@ -833,7 +838,8 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
     expect(read('bin/lib/ci-and-commands.mjs')).not.toMatch(/control plane/);
     const skillHead = read('templates/skills/ark-adopt.md').split(/\n/).slice(0, 8).join('\n');
     expect(skillHead).not.toMatch(forbiddenLead);
-    const siteHome = path.resolve(REPO, '../arkgate-site/index.html');
+    const siteRoot = path.resolve(REPO, '../arkgate-site');
+    const siteHome = path.join(siteRoot, 'index.html');
     if (fs.existsSync(siteHome)) {
       const html = fs.readFileSync(siteHome, 'utf8');
       const denyAt = html.indexOf('If the AI writes an illegal import');
@@ -843,6 +849,22 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
       expect(html).toMatch(/Not an API Gateway/);
       expect(html).toMatch(/just documentation/);
       expect(html).toMatch(/4\.7\.2/);
+      expect(html).not.toMatch(/CONTRACT ACTIVE/);
+      const livePages = [
+        'index.html',
+        'how-it-works/index.html',
+        'start/index.html',
+        'docs/use/index.html',
+        'MESSAGING.md',
+        'llms.txt',
+      ];
+      for (const rel of livePages) {
+        const body = fs.readFileSync(path.join(siteRoot, rel), 'utf8');
+        expect(body, rel).not.toMatch(/control plane/i);
+        expect(body, rel).not.toMatch(/Dual plane/);
+        expect(body, rel).not.toMatch(/write gate/i);
+        expect(body, rel).not.toMatch(/co-pilot/i);
+      }
     }
   });
 

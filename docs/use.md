@@ -56,8 +56,8 @@ In those cases a boundary linter or editor rules may be enough; see [README — 
 | Before merge | Make the Ark job a **required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`). Until that status is required — or you write `.ark/adoption-stance.json` with `stance: "advisory-only"` — doctor will not call the tree adopted. |
 | Anytime | Doctor: Suggest / Adapt / Enforce (+ leftover design work if the design is still messy) |
 
-**Cursor:** pre-write block for Write/StrReplace when `.cursor/hooks.json` is trusted.
-**Codex CLI / local Desktop:** pre-write block for a complete `apply_patch` when
+**Cursor:** the hook rejects Write/StrReplace when `.cursor/hooks.json` is trusted.
+**Codex CLI / local Desktop:** the hook rejects a complete `apply_patch` when
 `.codex/hooks.json` is trusted and the operation is observed. Hosted/specialized paths,
 shell/direct writes, and incomplete patches still rely on CI. **OpenCode:** local write stays
 advisory (warning only, not blocked). An unverified host hook is environment evidence, not
@@ -66,10 +66,10 @@ unfinished architecture; **Not finished** is reserved for real project/config de
 ArkGate is **not** an API Gateway, a folder linter, a web framework, ORM, or app runtime.
 The rules file only binds when the write is rejected and CI is required.
 
-### Planes (you choose)
+### Two kinds of rules (you choose)
 
-| Plane | Plain English | Config | Enforces |
-|-------|---------------|--------|----------|
+| Kind | Plain English | Config | Enforces |
+|------|---------------|--------|----------|
 | **Layers** | Who may talk to whom | `layers[]` + `rules[]` | Import direction, purity, forbidden globals, capabilities, peer isolation |
 | **ArkRules** (optional extra) | Habits *inside* a layer + named policies | `arkRules` + `arkrules/<Layer>.json` | Structure **heuristics** (module shape); invariant **catalog + coverage evidence** (not full business proof) |
 | **ArkRun** (optional extra) | Kernel usage + complete declarations | `arkRun` on schema `1.2` | Only `mode: "enforced"` when the tree is classified. Absence is silent. Doctor `arkRun` is **not a score**. |
@@ -83,7 +83,7 @@ Start always gives you **layers**. ArkRules templates may ship with start/init; 
 **Happy path:** put a new module under an existing layer directory/glob (`layers[].patterns`). Usually
 **no** `ark.config.json` edit — the file classifies and the existing rules apply.
 
-**Touch the contract only when** you invent a new boundary (new layer or allow/deny edge), leave an
+**Touch the rules file only when** you invent a new boundary (new layer or allow/deny edge), leave an
 ungoverned path under `include`, or need a capability / forbidden-global exception. Optional ArkRules
 `appliesTo` globs narrow invariants inside a layer; empty `appliesTo: []` fails closed. Full field
 list: [configuration.md](configuration.md).

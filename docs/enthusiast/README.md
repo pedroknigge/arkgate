@@ -1,4 +1,4 @@
-# ArkGate — Architecture Co-pilot (enthusiast track)
+# ArkGate — enthusiast track
 
 If the AI writes an illegal import, the write is rejected. The same check fails the pull
 request. Not an API Gateway. Not a folder linter.
@@ -14,20 +14,20 @@ aliases `ark` / `ark-check` still work).
 
 **Entry style** — who is driving: *newbie* (`ark start` / `/ark-autopilot`) vs *expert* (individual commands).
 
-**Operating mode** — what Ark is doing right now (one contract underneath):
+**Operating mode** — what Ark is doing right now (one rules file underneath):
 
 | Mode | Meaning |
 |------|---------|
-| **Suggest** | Propose an application shape and install a starter contract. |
-| **Adapt** | Match the contract to your real layout / raise governed coverage. |
-| **Enforce** | The contract covers the real code and checked edges are clean; host/CI guarantees remain separate. |
+| **Suggest** | Propose an application shape and install a starter rules file. |
+| **Adapt** | Match the rules file to your real layout / raise governed coverage. |
+| **Enforce** | The rules cover the real code and checked edges are clean; host/CI guarantees remain separate. |
 
 `ark start` and `ark-check --plan` will not claim "everything is guarded" while governed coverage is near zero. On Nest/Next/express starters, init also merges **framework filename conventions** into the layer globs so day-one coverage is real.
 
-### Two planes (4.0 — optional second plane)
+### Two kinds of rules (4.0 — optional extra)
 
-| Plane | Plain English |
-|-------|---------------|
+| Kind | Plain English |
+|------|---------------|
 | **Layers** | Who may import whom (always on after start) |
 | **ArkRules** (optional) | Habits *inside* a layer — structure and named invariants as data |
 | **ArkRun** (optional extra) | Kernel usage + complete declarations (`arkRun` on schema `1.2`) |

@@ -119,7 +119,7 @@ export function modeBadgeHint(mode) {
     case 'suggest':
       return 'Starter shape — expand layers and raise governed coverage as the codebase grows.';
     default:
-      return 'Operating mode for co-pilot surfaces (suggest · adapt · enforce).';
+      return 'Operating mode for doctor surfaces (suggest · adapt · enforce).';
   }
 }
 
@@ -1165,15 +1165,15 @@ export function renderHtmlReport({
   <div class="section card" id="adoption">
     <h2>Adoption</h2>
     <p class="dim" style="margin:.15rem 0 .75rem;font-size:.88rem">
-      Co-pilot completeness — separate from the 0–100 fitness score above. Hosts, MCP health, origin snapshot, core optionality, baseline policy.
+      Host completeness — separate from the 0–100 fitness score above. Hosts, MCP health, origin snapshot, core optionality, baseline policy.
     </p>
     <div class="kpis" style="margin-bottom:.75rem">
       ${metricKpi(
         adoptionView.gaps.length === 0 ? 'OK' : adoptionView.gaps.length,
         adoptionView.gaps.length === 0 ? 'No adoption gaps' : 'Adoption gap(s)',
         adoptionView.gaps.length === 0
-          ? 'Hosts, MCP argv, origin snapshot, and core optionality look complete for co-pilot use.'
-          : 'Install or fix the listed gaps so agents get write gates, MCP, and honest cores.'
+          ? 'Hosts, MCP argv, origin snapshot, and core optionality look complete for agent use.'
+          : 'Install or fix the listed gaps so agents get write hooks, MCP, and honest cores.'
       )}
       ${metricKpi(
         adoptionView.originReport.present ? 'yes' : 'no',

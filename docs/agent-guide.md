@@ -11,7 +11,7 @@ CI, and `/ark-*` skills. Not an API Gateway. Not a folder linter.
 Guarantees differ by host; start with the
 [canonical host support matrix](../README.md#host-enforcement-support). The operation-scoped
 local / all-path CI split is a deliberate trade-off, not a gap: covered local hooks block early,
-MCP coaches, and a required merge status is the one boundary every write path can share.
+MCP warns, and a required merge status is the one boundary every write path can share.
 
 CLI names: prefer **`arkgate` / `arkgate-check` / `arkgate-mcp`**; aliases `ark` / `ark-check` /
 `ark-mcp` still work for one major. **arkgate@3.8.0+** tests packed project TypeScript
