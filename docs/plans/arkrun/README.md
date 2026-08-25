@@ -19,8 +19,9 @@
 `RN11` done (transport ports: local / localBlocking / broker fallback; `ephemeral` default true);
 `RN12` done (inspector: `127.0.0.1`, production veto, SSE + snapshots, lazy HTTP);
 `RN13` done (requestGraph process/technical slices, degrees, include/exclude, Mermaid);
-`RN14` skip corpus landed under `tests/fixtures/arkrun-skip-corpus/` (ROADMAP `doing` until merge);
-`RN15`–`RN16` remain `todo` in ROADMAP. Does not close
+`RN14` done (skip corpus: extra absent green; enforced fails unmanaged `new` / peer import / homemade bus);
+`RN15` done (deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names);
+`RN16` remains `todo` in ROADMAP. Does not close
 `Z09` / residual `RB-11`.<br>
 **Slug:** `arkrun`<br>
 **Kind:** epic / gated extra plane + companion kernel<br>
@@ -72,9 +73,9 @@ ArkRun     extra      kernel usage + complete declarations
 - Kernel implementation stays out of the `arkgate` tarball (ADR 0004).
 - In-memory stores remain reference-only ([production-hardening.md](../../production-hardening.md)).
 - Weakening `arkRun` enforced → advisory / removing the extra is a policy-delta weakening.
-- 30-day freeze from 2026-08-22: no explore / compass / skill-body deepen as `doing`. Contract
-  items (`RN01`–`RN08`) may become `doing` when the user sets one. Skill-body deepen is `RN15`
-  and waits until that freeze ends.
+- 30-day freeze from 2026-08-22: no explore / compass as `doing`. Contract items
+  (`RN01`–`RN08`) may become `doing` when the user sets one. Skill-body deepen is `RN15`
+  and is user-authorized to become `doing` next.
 
 ## 2. Design decisions (locked — RN01)
 
@@ -216,8 +217,8 @@ and docs. One `doing` at a time.
 
 | ID | Size | Depends on | Outcome |
 |----|-----:|---|---|
-| `RN14` | L | RN07 | Skip corpus at `tests/fixtures/arkrun-skip-corpus/`: missing extra = green; enforced extra = fail on `new` / peer import / homemade bus |
-| `RN15` | M | RN08, freeze end | Deepen `/ark-runtime` / `/ark-place` / `/ark-adopt`; no new skill names |
+| `RN14` | L | RN07 | **done** — Skip corpus at `tests/fixtures/arkrun-skip-corpus/`: missing extra = green; enforced extra = fail on `new` / peer import / homemade bus |
+| `RN15` | M | RN08, freeze end | **done** — Deepen `/ark-runtime` / `/ark-place` / `/ark-adopt`; no new skill names |
 | `RN16` | M | RN08 + RN14 | Docs: complement extra, durable-stores honesty unchanged; prepare **4.7.0** |
 
 `K01` (in-process commit gaps) stays **parked**. This train does not authorize production

@@ -20,6 +20,8 @@ description: Session 0 — mark the Ark path. Greenfield scaffold or brownfield 
 - Generate `.ark/golden-pattern.json` (load-bearing for `/ark-place`).
 - Future houses: mark unused layer globs `reserved` / `allowEmpty` so `--strict-config` does not fail.
 - CLI-first: if `arkgate-check` already resolved the root, do not wait on MCP.
+- Do not add `arkRun` unless the user wants the extra. When they do, write **advisory** `arkRun`
+  (schema `1.2+`) in this turn. Absence is silent and valid. Skills never enforce.
 
 Invoking this skill **is** the approval. Write the architecture config in this turn.
 Greenfield: scaffold like `--recommend`. Brownfield: match **product
@@ -94,6 +96,7 @@ When present, prefer the consumer **domain glossary** for layer names, slice fol
 | False-green / concentrated edge needs config truth | Feature file only → `/ark-place` |
 | Mine loose business rules into Domain / advisory ArkRules | Apply leftover design after the path is honest → `/ark-autopilot` |
 | Freeze **real** debt after the config is honest | User said map only |
+| Turn **advisory** ArkRun on (`arkRun` extra, schema `1.2+`) | Evaluate / wire a hand-rolled bus → `/ark-runtime`; new kernel-managed file → `/ark-place` |
 
 ## Dual engine (mandatory)
 
@@ -121,19 +124,31 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
 |-------|------------------|----------------|-----------------|
 | **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
 | **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`) + companion `@arkgate/runtime` | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
 
 **Rules for every report / answer:**
-1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** or **`[ArkRun]`** (or a two-column table with those headers).
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. Editing `arkrules/*` or promoting modes is **this skill** (session 0) or **`/ark-autopilot`** later; never invent `mechanical-safe`.
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+6. Absence of `arkRun` is **valid**. Write it only when the user wants the extra. Skills never enforce.
 
 
 ### Adopt + ArkRules
 - After classify: emit or refresh `arkRules` for matched layers (exact names; generic mold for unknowns).
 - Mine rules → inventory + write advisory invariants/structure into `arkrules/<Layer>.json` **in this turn**.
 - Freeze baseline is **[Layer]** debt; inventory residual is **[ArkRules]** — report both.
+
+### Adopt + ArkRun
+- User asked to turn the extra on: write **advisory** `arkRun` on `ark.config.json` (`schemaVersion` `1.2+`) **in this turn**. Default `"mode": "advisory"`.
+- Required shape: `compositionRoots` (real files; empty + enforced fails closed), `managedLayers` (existing `layers[].name` only), `requireDeclarations` (default true).
+- Do **not** put `arkRun` on the compact starter / `ark start` scaffold. Brownfield stays advisory until the team promotes.
+- Absence is valid and **silent** — never force the extra. Never force the kernel over existing Nest/DI. Do not invent `/ark-run`.
+- Import the companion from `@arkgate/runtime` (factory `createStrictArkKernel`, per instance, no process-wide singleton). Never a removed `arkgate/runtime` shim. No shipped cloud broker SDKs.
+- In-memory stores are **not** production durability. Branding ArkRun is not a durability claim. Doctor / status `arkRun` is `notAScore`.
+- Demoting enforced → advisory or deleting the extra is policy-delta **weakening**.
+- After the extra is honest: handoff `/ark-runtime` to wire one candidate, `/ark-place` for new kernel-managed files. Skills never enforce.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -184,6 +199,9 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    If `src/contexts` or `src/bounded-contexts` exists, prefer `ddd-bounded-contexts`.
    **Next.js:** `app/api/**` / `pages/api/**` (and route-group `app/(…)/api/**`) default to
    **ApplicationOrchestration**, not Presentation — do not reclassify API shells as UI.
+   User wants the ArkRun extra → write **advisory** `arkRun` (schema `1.2+`, real
+   `compositionRoots`, existing `managedLayers`) **in this turn**. Do not add it to a compact
+   starter. Do not promote to enforced as the session-0 default.
 2. **Check + diagnose** — `summary.concentrated` / dominant edge → fix contract first, don’t freeze.
    Cross-slice / cross-context `peerIsolation` hits are judgment: extract shared or events.
    If one edge dominates residual debt: **STOP — do not continue this skill as complete.** **STOP — concentrated edge:** rewrite `ark.config.json` **in this turn** with source evidence (do not freeze a wrong config or grind N freezes).
@@ -226,6 +244,9 @@ proposals applied or deferred, **phase**, **top Shape / design-weak opportunitie
 
 - Freeze false positives to get green.
 - Force runtime kernel over existing Nest/DI.
+- Put `arkRun` on the compact starter / `ark start` scaffold.
+- Claim in-memory kernel stores are production durability.
+- Invent `/ark-run`.
 - Claim Enforce while governed% is low, cores empty with I/O in Application, or core bags ungoverned.
 - End adopt with only “baseline written” when design-weak residual is visible in files you opened.
 
@@ -237,7 +258,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** vs **[ArkRun]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
 - **Done axes:** architecture residual (status/doctor/compass) | feature/ticket residual (outside package). Enforce green ≠ feature done
 - **Handoff:** `/ark-…` / CLI / `none`

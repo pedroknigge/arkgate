@@ -19,6 +19,9 @@ description: "Where does new code go? Names the layer, directory, and naming for
 - `filePath` is known before the call. Description alone is not a path.
 - Golden pattern is load-bearing when present. Adopt generates it.
 - Do not default a repository to Presentation.
+- When `arkRun` is on: scaffold through the kernel (no `new` of managed types; declare
+  `uses` / `reactsTo` / `raises` / `sends`). Extra off → do not introduce the kernel. Enable it
+  via `/ark-adopt`. Skills never enforce.
 
 ## Autonomy contract
 
@@ -62,6 +65,7 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 |------------------------|-------------------------|
 | New artifact: where + **write** under the config | Existing violation cluster → `/ark-autopilot` |
 | Naming / directory for a known kind | Session 0 / config missing or lying → `/ark-adopt` (then come back) |
+| Kernel-managed artifact when `arkRun` is already on | Extra not chosen yet → `/ark-adopt` (advisory `arkRun`); evaluate / migrate a hand-rolled bus → `/ark-runtime` |
 
 The user describes something they need to build (a saga, a background job, an
 event handler, a repository, an HTTP client, a use case, a projection, …).
@@ -104,18 +108,31 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
 |-------|------------------|----------------|-----------------|
 | **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
 | **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`) + companion `@arkgate/runtime` | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
 
 **Rules for every report / answer:**
-1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** or **`[ArkRun]`** (or a two-column table with those headers).
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. Missing layer home: add it via **`/ark-adopt`** in this session if needed, then write the file; never invent `mechanical-safe`.
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+6. Absence of `arkRun` is **valid**. Do not introduce the kernel speculatively. Skills never enforce this extra.
 
 
 ### Place + ArkRules
 - Choose layer from contract **and** check structure sensors for that layer (private state, factory, thin adapter).
 - Scaffold to satisfy **[ArkRules]** when present; state which sensors apply.
+
+### Place + ArkRun
+When `arkRun` is present on the architecture config:
+- Scaffold kernel-managed artifacts **through the kernel**, not `new` of an admitted type (`ARKRUN_DIRECT_NEW`).
+- Call `createStrictArkKernel` (or an admission sibling) only inside `arkRun.compositionRoots`. Each call is a new instance — no process-wide `getKernel()`.
+- Domain-role files stay kernel-free (`ARKRUN_KERNEL_IN_DOMAIN`). Import from `@arkgate/runtime` (or `/nestjs`), never a removed `arkgate/runtime` shim.
+- List `uses` / `reactsTo` / `raises` / `sends` when `requireDeclarations` is on. Adding an existing call-site literal to the declaration list is the only mechanical-safe ArkRun edit; inventing a new emit / handle / depend is judgment.
+- Do not import a homemade bus (`EventEmitter`, queue clients) in `managedLayers` — send on the kernel transport (`local` / `localBlocking` / `broker`; `ephemeral` defaults true). No shipped cloud SDKs.
+- In-memory stores are **not** production durability. Doctor `arkRun` is `notAScore`.
+- Absence of the extra: place with **[Layer]** + **[ArkRules]** only. Enable advisory extra via `/ark-adopt`; evaluate a hand-rolled bus via `/ark-runtime`. Do not invent `/ark-run`.
+- Skills never enforce.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -148,6 +165,10 @@ the same files or weaken the gate.
      that matches the direction (driven/persistence vs driving/http).
    - Reacts to events, long-running coordination (saga/workflow), scheduled
      jobs, projections → the event/workflow layers if the config declares them.
+     When `arkRun` is on, wire those through the kernel (register + declarations),
+     not a homemade emitter.
+   - Kernel-managed application service when `arkRun` is on → composition-root factory
+     + `register({ uses, reactsTo, raises, sends })`; never `new` of the admitted type.
    - **`vertical-slice` contract:** put co-located feature code under
      `src/features/<slice>/…` (never import a sibling slice); shared primitives
      under `src/shared/`; infra under `src/lib/`; shell under `src/app/`.
@@ -175,6 +196,9 @@ the same files or weaken the gate.
   (not place one new artifact): place only the new file under the golden/contract home, then
   hand off **one** pilot via `pilotLoop.nextPilot` / `/ark-explore` shape-focus — never multi-pilot
   batch reshape from this skill.
+- If `arkRun` is on and the user is grinding skip violations (`new` of managed types, homemade
+  bus) across many files: place this artifact through the kernel, then leftover `/ark-fix` /
+  `/ark-autopilot`. Extra not on → `/ark-adopt` (advisory) or `/ark-runtime` (evaluate).
 
 ## Operating rules
 
@@ -207,7 +231,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** vs **[ArkRun]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
 - **Done axes:** architecture residual (status/doctor/compass) | feature/ticket residual (outside package). Enforce green ≠ feature done
 - **Handoff:** `/ark-…` / CLI / `none`
