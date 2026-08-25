@@ -19,7 +19,8 @@ because the design space is small and honest.
 - **Gate side:** architecture config (`ark.config.json`) + pre-write block where the host
   supports it + required CI. Deterministic. Don’t show green if we could not verify.
   Two planes: **import rules** (who may import whom) always; **ArkRules** (structure rules
-  inside a layer) opt-in.
+  inside a layer) opt-in. Third extra: **ArkRun** (kernel usage + declarations) via companion
+  `@arkgate/runtime` — not a durability claim.
 - **Coach side:** where code belongs, who talks to whom, how; fix imports first, then leftover
   design work; one small refactor at a time; never silent auto-reshape; never weaken the config.
 - **Five-door autonomy:** invoking `/ark-adopt`, `/ark-place`, `/ark-autopilot`, `/ark-explore`,
@@ -63,8 +64,9 @@ Examples:
 
 ## Lexicon (prefer) — 4.6 common words
 
-**Brands (keep):** **ArkGate** (product / npm `arkgate`) and **ArkRules** (opt-in structure rules
-inside a layer). Gloss on first mention; do not rebrand.
+**Brands (keep):** **ArkGate** (product / npm `arkgate`), **ArkRules** (opt-in structure rules
+inside a layer), and **ArkRun** (opt-in kernel-usage extra + companion `@arkgate/runtime`). Gloss
+on first mention; do not rebrand. Branding ArkRun is not a durability claim.
 
 Human copy prefers the **common** column. JSON field names (`designWeak`, `ruleId`, MCP tools)
 stay stable unless a change explicitly adds an alias.
@@ -74,6 +76,7 @@ stay stable unless a change explicitly adds an alias.
 | **architecture config** | contract | `ark.config.json` layers, rules, include |
 | **import rules** / **allowed dependencies** | Layers plane / edges | Who may import whom; placement, purity, isolation |
 | **ArkRules** (opt-in; gloss: structure rules inside a layer) | ArkRules | Intra-layer sensors + domain invariant catalogs (`arkrules/*`) |
+| **ArkRun** (opt-in; gloss: kernel usage + complete declarations) | arkRun | Extra plane on the gate; companion kernel is `@arkgate/runtime`; factory `createStrictArkKernel` (per instance, no singleton). Never a score. |
 | **advisory ArkRules** | advisory ArkRules | Default sensor mode — **not** merge teeth; does not fail CI/merge alone |
 | **extra merge checks** | extraMergeTeeth | Only when enforced structure/invariant rules exist **and** classification is honest |
 | **label `[Layer]` vs `[ArkRules]`** | dual-plane residual | Never blur import-rule findings with ArkRules findings |

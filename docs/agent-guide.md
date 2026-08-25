@@ -688,11 +688,12 @@ cp node_modules/arkgate/templates/tests/ark-adoption-gaps.test.ts tests/ark-adop
 
 It checks real on-disk contract, MCP, skill, and report artifacts; it does not mock the gate.
 
-## Experimental runtime: contract discovery
+## ArkRun kernel: contract discovery
 
-The runtime kernel is currently **experimental** and is not required for static gate adoption or
-presented as production-ready. If you are evaluating it, prefer `createStrictArkKernel()`. It
-wires the registry, graph,
+The **ArkRun** kernel (`@arkgate/runtime`) is currently **experimental** and is not required for
+static gate adoption or presented as production-ready. If you are evaluating it, prefer
+`createStrictArkKernel()`. Each call creates an isolated instance — there is no process-wide
+singleton. It wires the registry, graph,
 policies, event bus, audit trail, event contracts, outbox, observability,
 projections, metadata, workflow engine, and 11-layer architecture profile:
 
@@ -709,12 +710,13 @@ const contract = ark.manifest().toJSON();
 // contract.observability, projections
 ```
 
-Use `@arkgate/runtime` only when evaluating the experimental kernel. The stable `arkgate` gate
-package contains no runtime implementation. The companion is not currently present in the npm
-registry and is not published by the root release workflow. Verify availability with
-`npm view @arkgate/runtime dist-tags --json`; until a separate experimental publication exists,
-evaluate it only from a source checkout after `npm run build:runtime` and install the local
-`packages/runtime` folder. Package surface policy: [package-surface.md](package-surface.md).
+Use `@arkgate/runtime` only when evaluating the experimental ArkRun kernel. The stable `arkgate`
+gate package contains no runtime implementation (the kernel is not in the `arkgate` tarball). The
+companion is not currently present in the npm registry and is not published by the root release
+workflow. Verify availability with `npm view @arkgate/runtime dist-tags --json`; until a separate
+experimental publication exists, evaluate it only from a source checkout after
+`npm run build:runtime` and install the local `packages/runtime` folder. Package surface policy:
+[package-surface.md](package-surface.md).
 
 Agents should read `contract` and `ark.observability.report()` before generating or modifying code.
 
@@ -1211,11 +1213,12 @@ advisory on every host because the agent must call the tool.
 
 Decision rationale: [ADR 0017 — MCP verdicts require explicit project identity](adr/0017-mcp-project-identity-binding.md).
 
-## Experimental runtime kernel workflow (not the default path)
+## ArkRun kernel workflow (not the default path)
 
-This section is for adopters who **opt into** the experimental `@arkgate/runtime` / kernel surfaces.
-It is **not** the Beautiful Path day-zero curriculum. Default remains: `ark start` → doctor → compact
-router (and `/ark-autopilot` only after the skill pack).
+This section is for adopters who **opt into** the experimental **ArkRun** kernel
+(`@arkgate/runtime`). Construct it with `createStrictArkKernel` (per instance; no process-wide
+singleton). It is **not** the Beautiful Path day-zero curriculum. Default remains: `ark start` →
+doctor → compact router (and `/ark-autopilot` only after the skill pack).
 
 1. **Read** manifest via `ark.manifest().toJSON()`
 2. **Generate** code using registered intents, profiles, metadata, projections, and workflow definitions

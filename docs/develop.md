@@ -155,9 +155,12 @@ names. Details: [configuration.md](configuration.md#team-parliament-law-vs-featu
 
 ---
 
-## Optional experimental runtime
+## Optional ArkRun kernel
 
-Gates need **no** runtime kernel. `@arkgate/runtime` is experimental, separate package, not the day-zero product. See [package-surface.md](package-surface.md) and [production-hardening.md](production-hardening.md).
+Gates need **no** runtime kernel. **ArkRun** (`@arkgate/runtime`) is experimental, a separate
+package, and not the day-zero product. `createStrictArkKernel` is the factory (per instance; no
+process-wide singleton). The kernel is not bundled in the `arkgate` tarball. See
+[package-surface.md](package-surface.md) and [production-hardening.md](production-hardening.md).
 
 ---
 

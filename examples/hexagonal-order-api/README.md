@@ -4,10 +4,10 @@ A tiny but real order API with a hexagonal architecture, governed by Ark's three
 
 - **ark-check** — CI gate: static import analysis between layers.
 - **ark-mcp** — AI gate: the same rules, exposed to coding agents via MCP.
-- **Ark kernel runtime** — strict event bus, intent registry, event contracts, projections.
+- **ArkRun kernel** — strict event bus, intent registry, event contracts, projections (`createStrictArkKernel` per instance).
 
 No application framework: the API uses `node:http`, the `arkgate` gate package, and the separate
-experimental `@arkgate/runtime` companion.
+experimental **ArkRun** companion (`@arkgate/runtime`).
 
 From **arkgate@4.0**, root forwarders `arkgate/runtime` / `arkgate/nestjs` are **removed**
 (AR04). This fixture imports **`@arkgate/runtime`** directly. It opts into

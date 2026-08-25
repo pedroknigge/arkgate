@@ -59,6 +59,12 @@ in the immutable pre-2.0 archive linked below.
   advisory and absence never arm extra teeth. Report parity requires
   `data-advisory="arkRun"`. Does not close Z09 / K01.
 
+- **ArkRun companion branding (RN09):** `@arkgate/runtime` README and public
+  docs brand the kernel **ArkRun**. `createStrictArkKernel` stays the factory
+  (per-instance; no process-wide singleton). Kernel implementation stays out of
+  the `arkgate` tarball. Branding is not a production-durability claim. Does not
+  close Z09 / K01.
+
 ## 4.6.7 — 2026-08-24
 
 **Patch** over **4.6.6**. Production-hardening: CODEOWNERS, eval/pack honesty, CLI extracts,

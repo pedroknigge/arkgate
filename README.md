@@ -82,7 +82,7 @@ A machine-readable architecture file (`ark.config.json`) plus enforcement:
 Absence of ArkRules changes no inter-layer verdict. Label residual **`[Layer]`** vs **`[ArkRules]`**.  
 Details: [configuration](docs/configuration.md#arkrules-intra-layer-opt-in) · [use path](docs/use.md).
 
-**Not** a web framework, ORM, or job runner. Optional experimental runtime is separate and not required for the gate.
+**Not** a web framework, ORM, or job runner. Optional **ArkRun** kernel (`@arkgate/runtime`) is separate and not required for the gate.
 
 **Name note:** npm package `arkgate` — not affiliated with the separate Archgate CLI project.
 
@@ -192,9 +192,11 @@ More: [docs/develop.md](docs/develop.md) · skills install: [docs/agent-guide.md
 
 ---
 
-## Optional experimental runtime
+## Optional ArkRun kernel
 
-Gates need **no** app runtime. The experimental `@arkgate/runtime` companion is separate and is not a production-readiness claim.
+Gates need **no** app runtime. The experimental **ArkRun** companion (`@arkgate/runtime`) is separate
+and is not a production-readiness claim. `createStrictArkKernel` is the factory: each call creates
+an isolated instance (no process-wide singleton). The kernel is not bundled in the `arkgate` tarball.
 
 ### Durability stance
 

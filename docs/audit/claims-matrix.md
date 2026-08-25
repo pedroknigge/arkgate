@@ -75,7 +75,7 @@ engineering `doing`.
 | ID | Structural claim | Source authority | Code evidence | Verdict | Action |
 |----|------------------|------------------|---------------|---------|--------|
 | C-001 | Product identity is ArkGate; npm package is `arkgate` | [Hub](../../AGENTS.md) · [README](../../README.md) | root manifest · `src/version.ts` | OK | keep |
-| C-002 | The product tree has a stable root package and one experimental runtime package | [Hub package index](../../AGENTS.md#package-index) | both package manifests | OK | keep indexed |
+| C-002 | The product tree has a stable root package and one experimental ArkRun kernel package | [Hub package index](../../AGENTS.md#package-index) | both package manifests | OK | keep indexed |
 | C-003 | Root `arkgate` exports the gate/config/analysis contract, not runtime APIs | [Programmatic API](../package-surface.md#programmatic-root-api) | `src/gate.ts` · `tsup.config.ts` | OK | keep |
 | C-004 | Setup CLI has `arkgate` and `ark` bin names | [README commands](../../README.md#common-commands) | root manifest · `bin/ark.mjs` | OK | keep |
 | C-005 | Check/doctor CLI has `arkgate-check` and `ark-check` bin names | [Agent guide](../agent-guide.md) | root manifest · `bin/ark-check.mjs` | OK | keep |
@@ -85,7 +85,7 @@ engineering `doing`.
 | C-009 | GitHub Action inputs and first-push-safe base-ref behavior are documented | [AI gates](../ai-gates.md#ci-backstop) | `action.yml` · `ci-and-commands.mjs` | OK | EH04 |
 | C-010 | Shipped hooks, isolated repo skills, Agent Skills layout (4.3), monotonic shared Codex skills, and adoption-test template have discoverable guidance | [Agent guide](../agent-guide.md#install-skills-ark-and-ecosystem) · [AI gates](../ai-gates.md) | `templates/` · installer | OK | ACS05 packaging |
 | C-011 | Playbook, policy packs, and gallery examples map to the enthusiast track | [Enthusiast index](../enthusiast/README.md) | templates · `examples/` | OK | keep |
-| C-012 | Experimental runtime uses `@arkgate/runtime`; Nest uses its `/nestjs` subpath | [Runtime README](../../packages/runtime/README.md) · [Package surface](../package-surface.md#experimental-opt-in-surfaces) | runtime manifest | OK | keep experimental label |
+| C-012 | ArkRun kernel uses `@arkgate/runtime` (`createStrictArkKernel` factory, no process singleton); Nest uses its `/nestjs` subpath | [Runtime README](../../packages/runtime/README.md) · [Package surface](../package-surface.md#experimental-opt-in-surfaces) | runtime manifest | OK | keep experimental label; kernel stays out of `arkgate` tarball |
 | C-013 | Deprecated root `arkgate/runtime` and `arkgate/nestjs` forwarders were **removed** (AR04) | [Package surface](../package-surface.md#experimental-opt-in-surfaces) · [Migration](../migrate-from-ark-runtime-kernel.md) | root exports (no forwarders) | OK | use `@arkgate/runtime` only |
 | C-014 | Root package metadata is available at `arkgate/package.json` | [Package surface](../package-surface.md) | root manifest export | OK | keep |
 | C-015 | Published payload is bounded by the root manifest and verified separately | [Contributing](../../CONTRIBUTING.md) | root `files` · package verifier | OK | keep |

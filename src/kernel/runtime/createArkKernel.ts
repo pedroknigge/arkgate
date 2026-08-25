@@ -125,6 +125,10 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
   };
 }
 
+/**
+ * Preferred ArkRun factory. Each call is a new isolated instance — there is no
+ * process-wide singleton.
+ */
 export function createStrictArkKernel(
   options: CreateArkKernelOptions = {}
 ): ArkKernel {

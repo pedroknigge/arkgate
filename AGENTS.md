@@ -60,7 +60,7 @@ The product tree contains two publishable Node/TypeScript packages. Example mani
 | Package path | Role | Manifest | Canonical docs | Docs status |
 |--------------|------|----------|----------------|-------------|
 | `.` | Stable ArkGate gate, CLIs, MCP, ESLint, schemas, and integration assets | [package.json](package.json) | [README.md](README.md) · [package surface](docs/package-surface.md) | documented |
-| `packages/runtime` | Optional experimental runtime companion and NestJS adapter | [package.json](packages/runtime/package.json) | [package README](packages/runtime/README.md) · [package surface](docs/package-surface.md#experimental-opt-in-surfaces) | documented |
+| `packages/runtime` | Optional experimental **ArkRun** kernel and NestJS adapter | [package.json](packages/runtime/package.json) | [package README](packages/runtime/README.md) · [package surface](docs/package-surface.md#experimental-opt-in-surfaces) | documented |
 
 ### Surface coverage
 
@@ -81,8 +81,8 @@ canonical documentation authority.**
 | Agent integration assets | `templates/skills/` · `templates/agent-skills/` · `templates/hooks/` · `templates/tests/` | [Agent guide](docs/agent-guide.md#install-skills-ark-and-ecosystem) · [AI gates](docs/ai-gates.md) | Real | — |
 | Shape playbook, policy packs, and gallery starters | `templates/architecture-playbook.json` · `templates/policy-packs/` · `examples/` | [Enthusiast track](docs/enthusiast/README.md) | Demo | — |
 | GitHub Action | `action.yml` | [Action setup and inputs](docs/ai-gates.md#ci-backstop) · [Package surface](docs/package-surface.md) | Real | — |
-| Experimental `@arkgate/runtime` | `packages/runtime/package.json` · `src/index.ts` | [Runtime README](packages/runtime/README.md) · [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Hardening](docs/production-hardening.md) | Partial | — |
-| Experimental runtime NestJS adapter | runtime export `./nestjs` · `src/nestjs/index.ts` | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) | Partial | — |
+| Experimental ArkRun kernel (`@arkgate/runtime`) | `packages/runtime/package.json` · `src/index.ts` | [Runtime README](packages/runtime/README.md) · [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Hardening](docs/production-hardening.md) | Partial | — |
+| Experimental ArkRun NestJS adapter | runtime export `./nestjs` · `src/nestjs/index.ts` | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) | Partial | — |
 | ~~Deprecated `arkgate/runtime` and `arkgate/nestjs` forwarders~~ | removed (AR04) | [Package surface](docs/package-surface.md#experimental-opt-in-surfaces) · [Migration guide](docs/migrate-from-ark-runtime-kernel.md) | Removed | Use `@arkgate/runtime` / `@arkgate/runtime/nestjs` |
 | Published payload and compatibility fixture | root `package.json` `files` · `scripts/verify-package-files.mjs` | [Package surface](docs/package-surface.md) · [Contributing](CONTRIBUTING.md) | Real | — |
 | Maintainer verification, evaluation, and release workflows | root scripts · `tests/` · `eval/` · `.github/workflows/` | [Contributing](CONTRIBUTING.md) · [Eval guide](eval/README.md) · [Roadmap](ROADMAP.md) | Real | — |
@@ -119,7 +119,7 @@ Before editing TypeScript or JavaScript source files:
 | Layer | Directories | Notes |
 |-------|-------------|-------|
 | DomainModel | `src/domain/` + generated pure CLI artifacts | Pure types and invariants. `fetch`, `process`, `Date.now`, `Math.random` are forbidden globals here — inject a port instead. |
-| Kernel | `src/kernel/`, `src/runtime/`, `src/gate.ts`, `src/index.ts`, `src/version.ts` | The gate API plus experimental runtime sources. May depend on DomainModel only. |
+| Kernel | `src/kernel/`, `src/runtime/`, `src/gate.ts`, `src/index.ts`, `src/version.ts` | The gate API plus experimental ArkRun kernel sources (compiled into `@arkgate/runtime` only). May depend on DomainModel only. |
 | Tooling | `src/eslint/`, `bin/`, `scripts/` | ESLint plugin, standalone CLIs, and repository scripts. May import **DomainModel only** (pure helpers). Not Kernel. |
 | FrameworkAdapters | `src/nestjs/` | Optional NestJS integration. May depend on Kernel only. |
 
@@ -180,7 +180,7 @@ retained shipped rationale live under `docs/plans/`:
 | [five-door-autonomy](docs/plans/five-door-autonomy/README.md) | Shipped in **4.6.1** (`SK01`–`SK07` done; **published**) | Five doors (adopt / place / autopilot / explore / upgrade) write or map in-turn; CLI is sensor + gate; other names stay as shortcuts |
 | [team-parliament](docs/plans/team-parliament/README.md) | Shipped in **4.6.1** (`TW01`–`TW08` done) | Law vs feature: stewards, mixed-PR deny, ratchet vs base branch, cheap `--changed` check; doctor asks for stewards or shows list drift; identity is GitHub handle or email |
 | [alive-in-six-months](docs/plans/alive-in-six-months/README.md) | `AL01`–`AL04` done on `main` (#147); `AL05` parked field | Corrective honesty + field: D0 adopted, Propia created-path merge, stewards-or-adapt, first-run noun cut; does not close Z09 |
-| [arkrun](docs/plans/arkrun/README.md) | In progress (`RN01`–`RN07` done; ADRs [0020](docs/adr/0020-arkrun-gated-extra-plane.md)–[0024](docs/adr/0024-arkrun-transport-ports.md) accepted; `RN08`–`RN16` `todo`; target **4.7.0**) | ArkRun gated extra: opt-in like ArkRules; enforced usage + complete declarations on the write/CI plane; companion `@arkgate/runtime` stays isolated; does not close Z09/K01 |
+| [arkrun](docs/plans/arkrun/README.md) | In progress (`RN01`–`RN09` done; ADRs [0020](docs/adr/0020-arkrun-gated-extra-plane.md)–[0024](docs/adr/0024-arkrun-transport-ports.md) accepted; `RN10`–`RN16` `todo`; target **4.7.0**) | ArkRun gated extra: opt-in like ArkRules; enforced usage + complete declarations on the write/CI plane; companion `@arkgate/runtime` stays isolated; does not close Z09/K01 |
 | [shared-home-skills-truth](docs/plans/shared-home-skills-truth/README.md) | Superseded (absorbed into 4.6.0 PL06–PL07) | Historical seed only — do not run as a separate 4.5.8 patch train |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in

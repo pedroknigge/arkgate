@@ -1,7 +1,7 @@
 # ArkGate package surface policy
 
 **Product wedge:** write gate · CI gate · co-pilot (plan / loop / skills).  
-**Not the wedge:** the optional in-process runtime kernel.
+**Not the wedge:** the optional in-process **ArkRun** kernel (`@arkgate/runtime`).
 
 **Public product site:** [arkgate.online](https://www.arkgate.online/) (promise + only flow).
 In-repo `docs/` remains the package/agent reference. Source: GitHub; distribution: npm.
@@ -153,7 +153,7 @@ The type-only root exports are also semver-supported:
 
 Runtime-kernel factories, `CAPABILITY_IDS`, `collectCapabilityUses`, and Domain capability mapping
 helpers are deliberately absent from this root. Use `@arkgate/runtime` for the experimental
-runtime, and `analyzeProject(...).ir.capabilityUses` for public capability evidence.
+**ArkRun** kernel, and `analyzeProject(...).ir.capabilityUses` for public capability evidence.
 
 ---
 
@@ -164,15 +164,15 @@ product claims**. Static architecture enforcement does not depend on them.
 
 | Surface | Import path | Notes |
 |---------|-------------|--------|
-| **Runtime kernel** | **`@arkgate/runtime`** | Separate 0.x source package configured for the `experimental` tag. It is not currently present in the npm registry, and the root `publish-npm.yml` workflow does not publish it automatically. Event bus, intents, policies, sagas, event buffer, projections, and strict helpers. Built-in stores are **InMemory reference only**. |
-| **NestJS adapter** | `@arkgate/runtime/nestjs` | Experimental optional peer `@nestjs/common`. Root `arkgate/nestjs` and `arkgate/runtime` forwarders were **removed in AR04 / ArkGate 4** — import the companion package directly. |
+| **ArkRun kernel** | **`@arkgate/runtime`** | Public brand **ArkRun**. Separate 0.x companion; `createStrictArkKernel` is the factory (each call is an isolated instance; no process-wide `getKernel()` singleton). Not bundled in the `arkgate` tarball (ADR 0004 / 0021). Not currently in the npm registry; root `publish-npm.yml` does not publish it automatically. Event bus, intents, policies, sagas, event buffer, projections, and strict helpers. Built-in stores are **InMemory reference only**. Branding ArkRun is not a production-durability claim. |
+| **NestJS adapter** | `@arkgate/runtime/nestjs` | Experimental optional peer `@nestjs/common` for the ArkRun kernel. Root `arkgate/nestjs` and `arkgate/runtime` forwarders were **removed in AR04 / ArkGate 4** — import the companion package directly. |
 
 ---
 
 ## Recommended imports
 
 ```ts
-// Preferred path when evaluating the experimental runtime kernel
+// Preferred ArkRun factory — each call is a new isolated instance (no getKernel() singleton)
 import { createStrictArkKernel, createStrictArkKernelFromConfig } from '@arkgate/runtime';
 
 // Nest adapter
@@ -205,7 +205,7 @@ production deployment would need to satisfy; it is not a readiness certification
 | Break CLI JSON field, MCP tool rename, or required `ark.config` field | **major** |
 | New optional config field, new CLI flag, additive JSON | **minor** |
 | Bugfix with no contract change | **patch** |
-| Additive experimental runtime API | `@arkgate/runtime` prerelease/minor |
+| Additive experimental ArkRun kernel API | `@arkgate/runtime` prerelease/minor |
 | Remove deprecated `arkgate/runtime` / `arkgate/nestjs` forwarding shims | **Done (AR04)** — use `@arkgate/runtime` / `@arkgate/runtime/nestjs` |
 
 ---

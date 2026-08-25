@@ -18,7 +18,7 @@ Preferred path: use GitHub's private vulnerability reporting for this repository
 - reproduction steps
 - expected impact
 - whether the issue affects `arkgate-check` / `ark-check`, `arkgate-mcp` / `ark-mcp`,
-  generated agent gates, the GitHub Action, or the optional runtime kernel
+  generated agent gates, the GitHub Action, or the optional ArkRun kernel
 
 If private vulnerability reporting is unavailable, open a minimal public issue asking for
 a private security contact without including exploit details.

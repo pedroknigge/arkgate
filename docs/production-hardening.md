@@ -1,8 +1,10 @@
 # Production Hardening
 
-The optional runtime kernel is currently **experimental**. This page is a requirements checklist
-for teams evaluating **`@arkgate/runtime`**, not a claim that the runtime is production-ready.
-Static ArkGate adoption does not require it. See [package-surface.md](package-surface.md).
+The optional **ArkRun** kernel (`@arkgate/runtime`) is currently **experimental**. This page is a
+requirements checklist for teams evaluating it, not a claim that the runtime is production-ready.
+Branding ArkRun does not close `K01` or ship durable stores. Static ArkGate adoption does not
+require it. Construct a kernel with `createStrictArkKernel` (per instance; no process-wide
+singleton). See [package-surface.md](package-surface.md).
 
 ## Durability stance (R9)
 

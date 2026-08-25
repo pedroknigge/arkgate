@@ -62,7 +62,8 @@ minimal (`typescript-ark-host` exact). Do not add production deps without discus
 | `scripts/field-dogfood/` | Maintainer offline field gap smoke (`npm run test:field-dogfood-smoke`) |
 | `ROADMAP.md` | Implementation queue — **one `doing` at a time** |
 
-`packages/runtime` is the experimental companion package (separate publish).
+`packages/runtime` is the experimental **ArkRun** kernel (`@arkgate/runtime`; separate publish;
+not in the `arkgate` tarball).
 
 Maintainer-only local notes may live under gitignored `internal/` — never commit field secrets.
 

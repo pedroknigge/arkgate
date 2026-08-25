@@ -12,8 +12,10 @@
 [docs/adr](../../adr/README.md); `RN02` done (schema `1.2` `arkRun`); `RN03` done
 (resolver facts); `RN04` done (tier-1 sensors); `RN05` done (catalog dual-depth
 `nextAction`); `RN06` done (`arkgate/eslint` import/`new` envelope);
-`RN07` done (CLI / MCP / hook / preflight / CI extra teeth); `RN08`–`RN16`
-remain `todo` in ROADMAP. Does not close
+`RN07` done (CLI / MCP / hook / preflight / CI extra teeth); `RN08` done
+(doctor / status / report `arkRun` `notAScore`; mergePlanes honesty);
+`RN09` done (companion branded; `createStrictArkKernel` stays the factory);
+`RN10`–`RN16` remain `todo` in ROADMAP. Does not close
 `Z09` / residual `RB-11`.<br>
 **Slug:** `arkrun`<br>
 **Kind:** epic / gated extra plane + companion kernel<br>
@@ -193,13 +195,13 @@ and docs. One `doing` at a time.
 | `RN05` | M | RN04 | **done** — Diagnostic catalog entries + dual-depth hints + `nextAction`; remediation parity tests |
 | `RN06` | M | RN04 | **done** — `arkgate/eslint` rules for the same sensors (import / `new` envelope) |
 | `RN07` | L | RN05 | **done** — CLI / MCP / hook / preflight / CI extra teeth share one verdict; enforced only when classified |
-| `RN08` | M | RN07 | Doctor / `ark status` / report section `arkRun` (`notAScore`); mergePlanes honesty |
+| `RN08` | M | RN07 | **done** — Doctor / `ark status` / report section `arkRun` (`notAScore`); mergePlanes honesty; report-parity |
 
 ### RN1 — Companion kernel
 
 | ID | Size | Depends on | Outcome |
 |----|-----:|---|---|
-| `RN09` | M | RN01 | Public ArkRun kernel API branded in `@arkgate/runtime` README; `createStrictArkKernel` stays the factory |
+| `RN09` | M | RN01 | **done** — Public ArkRun kernel API branded in `@arkgate/runtime` README; `createStrictArkKernel` stays the factory |
 | `RN10` | L | RN09 | Declarations + `getDependencyInformationPackage()`; no factory leakage |
 | `RN11` | L | RN09 | Transport ports: local / blocking / broker fallback; `ephemeral` default true |
 | `RN12` | M | RN10 | Inspector: localhost, production veto, SSE + snapshots; lazy load |

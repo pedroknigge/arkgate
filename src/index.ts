@@ -5,8 +5,8 @@
  * TypeScript repos and agents. Optional runtime kernel is not the product.
  * npm package: `arkgate` (formerly `ark-runtime-kernel`).
  *
- * **Runtime package source:** this barrel is compiled only into `@arkgate/runtime`.
- * The stable `arkgate` root is built from `src/gate.ts`.
+ * **ArkRun kernel source:** this barrel is compiled only into `@arkgate/runtime`.
+ * The stable `arkgate` root is built from `src/gate.ts` and does not bundle the kernel.
  *
  * @packageDocumentation
  */

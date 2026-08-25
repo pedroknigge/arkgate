@@ -88,7 +88,7 @@ try {
   if (typeof runtime.createStrictArkKernel !== 'function') {
     throw new Error('independent runtime install did not expose createStrictArkKernel');
   }
-  console.log('✔ gate-only and experimental runtime packages install independently.');
+  console.log('✔ gate-only and ArkRun kernel packages install independently.');
 } finally {
   fs.rmSync(temp, { recursive: true, force: true });
 }
