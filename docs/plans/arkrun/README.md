@@ -8,8 +8,8 @@
 > [Package surface](../../package-surface.md) ·
 > [Production hardening](../../production-hardening.md)
 
-**Status:** Preparing **4.7.0** (Phase RN). `RN01`–`RN15` done — ADRs 0020–0024 accepted in
-[docs/adr](../../adr/README.md); `RN16` public docs + version surfaces are in this tree.
+**Status:** Shipped in **4.7.0** (Phase RN). `RN01`–`RN16` done — ADRs 0020–0024 accepted in
+[docs/adr](../../adr/README.md); public docs + version surfaces published on npm `latest`.
 Does not close `Z09` / residual `RB-11`. Does not close `K01`.<br>
 **Slug:** `arkrun`<br>
 **Kind:** epic / gated extra plane + companion kernel<br>
@@ -207,7 +207,7 @@ and docs. One `doing` at a time.
 |----|-----:|---|---|
 | `RN14` | L | RN07 | **done** — Skip corpus at `tests/fixtures/arkrun-skip-corpus/`: missing extra = green; enforced extra = fail on `new` / peer import / homemade bus |
 | `RN15` | M | RN08, freeze end | **done** — Deepen `/ark-runtime` / `/ark-place` / `/ark-adopt`; no new skill names |
-| `RN16` | M | RN08 + RN14 | **doing** — Docs: complement extra, durable-stores honesty unchanged; prepare **4.7.0** |
+| `RN16` | M | RN08 + RN14 | **done** — Docs: complement extra, durable-stores honesty unchanged; **4.7.0** published |
 
 `K01` (in-process commit gaps) stays **parked**. This train does not authorize production
 durability claims.
@@ -242,7 +242,7 @@ durability claims.
 
 Public lanes (`use.md`, `configuration.md`, `package-surface.md`, `develop.md`) now point at
 the extra. No consumer-facing `docs/features/arkrun/` — this file remains shipped rationale.
-Mark **Shipped in 4.7.0** after npm `latest` flips. Hub plans table tracks the prepare.
+**Shipped in 4.7.0** (npm `latest`). Hub plans table tracks the published extra.
 Does not close Z09 / K01.
 
 ## Related
