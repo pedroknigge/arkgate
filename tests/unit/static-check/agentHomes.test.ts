@@ -68,7 +68,7 @@ describe('agent home catalogs (Claude / Grok)', () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  it('--claude-home installs SKILL.md under $CLAUDE_HOME/skills', () => {
+  it('--claude-home skips home write when the project catalog exists', () => {
     const root = tempRoot('ark-claude-home-install-');
     fs.writeFileSync(path.join(root, 'AGENTS.md'), '# x\n');
     fs.writeFileSync(
@@ -100,10 +100,12 @@ describe('agent home catalogs (Claude / Grok)', () => {
       }
     );
     expect(result.status, result.stderr + result.stdout).toBe(0);
-    expect(result.stdout).toMatch(/Claude home skills/i);
+    expect(result.stdout).toMatch(/Skip Claude\/Grok home skill write/i);
+    expect(fs.existsSync(path.join(root, '.agents', 'skills', 'ark-upgrade', 'SKILL.md'))).toBe(
+      true
+    );
     const installed = path.join(claudeHome, 'skills', 'ark-upgrade', 'SKILL.md');
-    expect(fs.existsSync(installed)).toBe(true);
-    expect(fs.readFileSync(installed, 'utf8')).toMatch(/arkVersion:\s*4\./);
+    expect(fs.existsSync(installed)).toBe(false);
     fs.rmSync(root, { recursive: true, force: true });
   });
 
