@@ -1,6 +1,6 @@
 ---
 name: ark-contract
-description: Shortcut to /ark-adopt (session 0) or /ark-autopilot (later config tighten). Deprecated as a first-class door.
+description: Shortcut to /ark-adopt (session 0) or /ark-autopilot (later config tighten). Edit layers, ArkRules, or the ArkRun extra. Deprecated as a first-class door.
 ---
 
 # /ark-contract — Shortcut to adopt / autopilot
@@ -17,8 +17,9 @@ preview-only. Never weaken the architecture config.
 
 | Use this leftover name when… | Prefer instead |
 |------------------------------|----------------|
-| Layers / include / ArkRules need an edit | **`/ark-adopt`** (path) or **`/ark-autopilot`** (tighten) |
+| Layers / include / ArkRules / **ArkRun extra** need an edit | **`/ark-adopt`** (path, first `arkRun`) or **`/ark-autopilot`** (tighten) |
 | False-green / concentrated edge | **`/ark-adopt`** — write the honest config |
+| Companion install / one kernel candidate | **`/ark-runtime`** — this leftover name does not wire `@arkgate/runtime` |
 
 ## Dual engine (mandatory)
 
@@ -40,7 +41,7 @@ restart/retargeting is required. `ark://manifest` never satisfies this preflight
 
 ## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
 
-Label findings **`[Layer]`** vs **`[ArkRules]`**. Absence of `arkRules` is valid.
+Label findings **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`**. Absence of `arkRules` or `arkRun` is valid. First-time extra is **`/ark-adopt`** (advisory). Wire one candidate with **`/ark-runtime`**. New kernel-managed file with **`/ark-place`**. Do not invent `/ark-run`.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -54,9 +55,9 @@ If the host supports **parallel subagents**, fan out read-only scouts; otherwise
 
 ## Steps
 
-1. If the path is missing or lying → execute **`/ark-adopt`**.
-2. If the path is honest and you are tightening rules → execute **`/ark-autopilot`**.
-3. `ark-check --strict-config`.
+1. If the path is missing or lying → execute **`/ark-adopt`** (including first advisory `arkRun`).
+2. If the path is honest and you are tightening rules or the ArkRun extra → execute **`/ark-autopilot`**.
+3. Companion / one candidate → **`/ark-runtime`**. `ark-check --strict-config`.
 
 ## Completion contract (skill incomplete if missing)
 
@@ -66,7 +67,7 @@ Skill incomplete if missing any field below.
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** vs **[ArkRun]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
 - **Handoff:** `/ark-adopt` / `/ark-autopilot` / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`

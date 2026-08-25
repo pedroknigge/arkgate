@@ -18,7 +18,11 @@ import {
   isArkSkillName,
   isValidAgentSkillName,
   normalizeSkillContent,
+  parseSkillDescriptionVersion,
   parseSkillDocument,
+  stampSkillDescription,
+  stripSkillDescriptionVersion,
+  skillDescriptionVersionPrefix,
   validateAgentSkillDocument,
   validateAgentSkillsPackage,
 } from '../../../src/domain/agentSkillsPackage';
@@ -96,6 +100,22 @@ description: "Where does new code go?"
     expect(parsed.frontmatter?.name).toBe('ark-place');
     expect(parsed.frontmatter?.description).toBe('Where does new code go?');
     expect(parsed.body.trim().startsWith('# body')).toBe(true);
+  });
+
+  it('stamps a visible arkgate@version prefix on skill descriptions (picker, not YAML-only)', () => {
+    expect(skillDescriptionVersionPrefix('4.7.1')).toBe('arkgate@4.7.1. ');
+    expect(parseSkillDescriptionVersion('arkgate@4.7.1. Session 0 — mark the path.')).toBe(
+      '4.7.1'
+    );
+    expect(parseSkillDescriptionVersion('Session 0 — mark the path.')).toBeNull();
+    const stamped = stampSkillDescription('Session 0 — mark the path.', '4.7.1');
+    expect(stamped).toBe('arkgate@4.7.1. Session 0 — mark the path.');
+    expect(stampSkillDescription(stamped, '4.7.1')).toBe(stamped);
+    expect(stampSkillDescription(stamped, '4.8.0')).toBe(
+      'arkgate@4.8.0. Session 0 — mark the path.'
+    );
+    expect(stripSkillDescriptionVersion(stamped)).toBe('Session 0 — mark the path.');
+    expect(stampSkillDescription(stamped, '')).toBe('Session 0 — mark the path.');
   });
 
   it('validates a single skill document (name matches directory, description required)', () => {

@@ -73,10 +73,10 @@ const HOST_PRIMARY_ASSET = Object.freeze({
 });
 
 const HOST_VERSIONED_ASSET = Object.freeze({
-  claude: '.claude/skills/ark-upgrade/SKILL.md',
-  cursor: '.cursor/commands/ark-upgrade.md',
+  claude: '.agents/skills/ark-upgrade/SKILL.md',
+  cursor: '.agents/skills/ark-upgrade/SKILL.md',
   codex: '.agents/skills/ark-upgrade/SKILL.md',
-  grok: '.grok/skills/ark-upgrade/SKILL.md',
+  grok: '.agents/skills/ark-upgrade/SKILL.md',
   windsurf: '.windsurf/workflows/ark-upgrade.md',
   cline: '.clinerules/workflows/ark-upgrade.md',
   copilot: '.github/prompts/ark-upgrade.prompt.md',

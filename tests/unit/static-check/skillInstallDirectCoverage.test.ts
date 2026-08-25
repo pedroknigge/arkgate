@@ -252,6 +252,22 @@ describe('skill-install direct module contract', () => {
       action: 'skip',
       reason: 'content-current',
     });
+    const olderStamp = stampSkill(base, '1.0.0');
+    const newerStamp = stampSkill(base, '2.0.0');
+    expect(planSkillInstall({ existingContent: olderStamp, targetContent: newerStamp })).toMatchObject({
+      action: 'write',
+      reason: 'stamp-refresh',
+    });
+    const withDesc = '---\nname: ark-test\ndescription: Place new code.\n---\nbody\n';
+    const descStamped = stampSkill(withDesc, '1.2.3');
+    expect(descStamped).toContain('arkgate@1.2.3. Place new code.');
+    expect(stampSkill(descStamped, '2.0.0')).toContain('arkgate@2.0.0. Place new code.');
+    expect(
+      planSkillInstall({
+        existingContent: descStamped,
+        targetContent: stampSkill(withDesc, '2.0.0'),
+      })
+    ).toMatchObject({ action: 'write', reason: 'stamp-refresh' });
     expect(
       planSkillInstall({
         existingContent: stampSkill(base, '1.0.0'),
@@ -259,7 +275,7 @@ describe('skill-install direct module contract', () => {
         packageVersion: '2.0.0',
         scope: 'home',
       })
-    ).toMatchObject({ action: 'skip', reason: 'content-current' });
+    ).toMatchObject({ action: 'write', reason: 'stamp-refresh' });
     expect(
       planSkillInstall({
         existingContent: stampSkill(`${base}local\n`, '2.0.0'),
@@ -538,9 +554,9 @@ describe('skill-install direct module contract', () => {
     );
     expect(detectSkillGaps(root).find((gap) => gap.tool === 'claude')?.stale).toBe(1);
 
-    const unreadableTarget = SKILL_TOOL_TARGETS.cursor(firstTemplate[0]);
+    const unreadableTarget = SKILL_TOOL_TARGETS.windsurf(firstTemplate[0]);
     fs.mkdirSync(path.join(root, unreadableTarget), { recursive: true });
-    expect(detectSkillGaps(root).find((gap) => gap.tool === 'cursor')?.missing).toBe(
+    expect(detectSkillGaps(root).find((gap) => gap.tool === 'windsurf')?.missing).toBe(
       skillTemplateNames().length
     );
 

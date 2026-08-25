@@ -32,6 +32,7 @@ decision; implementation and manifests remain authoritative for current structur
 | [0022](0022-arkrun-anti-skip-facts.md) | Anti-skip facts (direct evidence; closed sensors) | Accepted |
 | [0023](0023-arkrun-mandatory-declarations.md) | Mandatory declarations under enforced ArkRun | Accepted |
 | [0024](0024-arkrun-transport-ports.md) | Transport ports (no shipped cloud SDKs) | Accepted |
+| [0025](0025-one-project-skill-catalog.md) | One project skill catalog; visible description version; no home duplicates | Accepted |
 
 Do not renumber or delete accepted decisions. Add a superseding ADR when a durable decision
 changes, and link both records.

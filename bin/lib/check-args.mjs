@@ -124,6 +124,7 @@ export function parseArgs(argv) {
     else if (arg === '--watch') args.watch = true;
     else if (arg === '--beginner') args.beginner = true;
     else if (arg === '--codex-home') args.codexHome = true;
+    else if (arg === '--prune-home-duplicates') args.pruneHomeDuplicates = true;
     else if (arg === '--claude-home') args.claudeHome = true;
     else if (arg === '--grok-home') args.grokHome = true;
     else if (arg === '--agent-homes') {

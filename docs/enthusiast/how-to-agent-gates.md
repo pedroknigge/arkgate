@@ -21,7 +21,7 @@ Installs:
 | Host | Extra paths |
 |------|-------------|
 | Claude Code | `.claude/settings.json`, `.claude/skills/` |
-| Cursor | `.cursor/mcp.json`, `.cursor/hooks.json`, `.cursor/rules/ark.mdc`, `.cursor/commands/` |
+| Cursor | `.cursor/mcp.json`, `.cursor/hooks.json`, `.cursor/rules/ark.mdc`, `.agents/skills/` |
 | Codex | `.codex/hooks.json`, `.codex/config.toml`, `.agents/skills/` |
 | **Grok Build** | `.grok/config.toml`, `.grok/hooks/`, `.grok/skills/` |
 

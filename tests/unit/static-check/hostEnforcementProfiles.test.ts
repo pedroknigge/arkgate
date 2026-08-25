@@ -121,8 +121,9 @@ function snapshotTree(root: string): Record<string, string> {
   const visit = (dir: string) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const absolute = path.join(dir, entry.name);
-      if (entry.isDirectory()) visit(absolute);
-      else {
+      const st = fs.statSync(absolute);
+      if (st.isDirectory()) visit(absolute);
+      else if (st.isFile()) {
         out[path.relative(root, absolute).split(path.sep).join('/')] =
           fs.readFileSync(absolute, 'utf8');
       }

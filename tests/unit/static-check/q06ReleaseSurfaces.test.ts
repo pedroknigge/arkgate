@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.7.0';
+const CURRENT = '4.7.1';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.7.0';
 
@@ -108,7 +108,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 
   it('keeps 4.7.0 published on npm latest', () => {
     expect(PUBLISHED_LATEST).toBe('4.7.0');
-    expect(CURRENT).toBe('4.7.0');
+    expect(CURRENT).toBe('4.7.1');
     expect(read('README.md')).toMatch(/4\.7\.0/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.7\.0\.md/);
     expect(read('README.md')).toMatch(/4\.6\.7/);
@@ -146,6 +146,27 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('docs/releases/4.5.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.4.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.3.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.7.1 one-catalog patch', () => {
+  it('records picker stamp, canonical catalog, prune, and no new skill names', () => {
+    const changelog = changelogText();
+    expect(changelog).toMatch(/## 4\.7\.1/);
+    expect(changelog).toMatch(/arkgate@<version>|visible skill version|picker/i);
+    expect(changelog).toMatch(/prune-home-duplicates/);
+    expect(changelog).toMatch(/\.agents\/skills/);
+    expect(changelog).toMatch(/Does not close Z09/);
+    const section = changelog.slice(changelog.indexOf('## 4.7.1'), changelog.indexOf('## 4.7.0'));
+    expect(section).toMatch(/No required config migration/i);
+    const notes = read('docs/releases/4.7.1.md');
+    expect(notes).toMatch(/arkgate@4\.7\.1/);
+    expect(notes).toMatch(/prune-home-duplicates/);
+    expect(notes).toMatch(/mcp-publisher validate server\.json/);
+    expect(notes).toMatch(/No required config migration/i);
+    expect(notes).toMatch(/Z09|RB-11/i);
+    expect(notes).toMatch(/K01/);
+    expect(notes).not.toMatch(/amarilla/i);
   });
 });
 
