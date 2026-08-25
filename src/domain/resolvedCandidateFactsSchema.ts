@@ -322,6 +322,22 @@ export const RESOLVED_CANDIDATE_FACTS_SCHEMA = {
         },
       },
     },
+    arkRunDeclarations: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['file', 'line', 'uses', 'reactsTo', 'raises', 'sends'],
+        properties: {
+          file: projectPathSchema,
+          line: lineSchema,
+          uses: { type: 'array', items: textSchema },
+          reactsTo: { type: 'array', items: textSchema },
+          raises: { type: 'array', items: textSchema },
+          sends: { type: 'array', items: textSchema },
+        },
+      },
+    },
     factsHash: textSchema,
   },
   allOf: [

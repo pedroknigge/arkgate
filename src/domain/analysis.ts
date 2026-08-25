@@ -21,6 +21,7 @@ export {
   RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION,
   type ResolvedAmbientFact,
   type ResolvedArkRunCompositionRootHitFact,
+  type ResolvedArkRunDeclarationFact,
   type ResolvedArkRunKernelCallFact,
   type ResolvedArkRunKernelCallKind,
   type ResolvedArkRunManagedNewFact,

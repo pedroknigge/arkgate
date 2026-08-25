@@ -3,8 +3,11 @@ import {
   ARKRUN_KERNEL_FACTORY_CALLEES,
   ARKRUN_KERNEL_INTERACTION_CALLEES,
   arkRunKernelCallKind,
+  extractArkRunDeclarationsFromSource,
   extractArkRunKernelCallsFromSource,
   extractArkRunManagedNewsFromSource,
+  isArkRunKernelModuleSpecifier,
+  isArkRunTransportBypassSpecifier,
 } from '../../../src/domain/arkRunFacts';
 import {
   RESOLVED_CANDIDATE_FACTS_SCHEMA,
@@ -82,6 +85,7 @@ describe('RN03 ArkRun resolver facts', () => {
     expect(facts.arkRunKernelCalls).toEqual([]);
     expect(facts.arkRunManagedNews).toEqual([]);
     expect(facts.arkRunCompositionRootHits).toEqual([]);
+    expect(facts.arkRunDeclarations).toEqual([]);
     expect(loadResolvedCandidateFacts(facts)).toEqual(facts);
   });
 
@@ -102,6 +106,13 @@ describe('RN03 ArkRun resolver facts', () => {
     for (const name of ARKRUN_KERNEL_INTERACTION_CALLEES) {
       expect(arkRunKernelCallKind(name)).toBeTruthy();
     }
+  });
+
+  it('treats the companion package as the kernel, not the gate package', () => {
+    expect(isArkRunKernelModuleSpecifier('@arkgate/runtime')).toBe(true);
+    expect(isArkRunKernelModuleSpecifier('@arkgate/runtime/nestjs')).toBe(true);
+    expect(isArkRunKernelModuleSpecifier('arkgate/runtime')).toBe(true);
+    expect(isArkRunKernelModuleSpecifier('arkgate')).toBe(false);
   });
 
   it('extracts kernel factory call sites, aliases, and composition-root publishers', () => {
@@ -174,6 +185,36 @@ new Error('no');
       ])
     );
     expect(news.some((fact) => fact.typeName === 'Date' || fact.typeName === 'Error')).toBe(false);
+  });
+
+  it('extracts file-scoped uses/reactsTo/raises/sends literals', () => {
+    const source = `
+export const billing = {
+  uses: ['OrderService', 'Clock'],
+  reactsTo: ['Domain.Order.Placed'],
+  raises: ['Application.Billed'],
+  sends: ['Application.Notify'],
+};
+`;
+    expect(extractArkRunDeclarationsFromSource('src/application/billing.ts', source)).toEqual([
+      {
+        file: 'src/application/billing.ts',
+        line: 3,
+        uses: ['Clock', 'OrderService'],
+        reactsTo: ['Domain.Order.Placed'],
+        raises: ['Application.Billed'],
+        sends: ['Application.Notify'],
+      },
+    ]);
+  });
+
+  it('matches closed transport-bypass specifiers by exact or package-root subpath', () => {
+    expect(isArkRunTransportBypassSpecifier('events')).toBe(true);
+    expect(isArkRunTransportBypassSpecifier('node:events')).toBe(true);
+    expect(isArkRunTransportBypassSpecifier('kafkajs/src/index')).toBe(true);
+    expect(isArkRunTransportBypassSpecifier('@aws-sdk/client-sqs')).toBe(true);
+    expect(isArkRunTransportBypassSpecifier('./events')).toBe(false);
+    expect(isArkRunTransportBypassSpecifier('events-plus')).toBe(false);
   });
 
   it('canonicalizes ArkRun facts without changing Layers verdicts', () => {

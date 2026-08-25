@@ -378,6 +378,7 @@ export {
   type AnalysisIr,
   type ResolvedAmbientFact,
   type ResolvedArkRunCompositionRootHitFact,
+  type ResolvedArkRunDeclarationFact,
   type ResolvedArkRunKernelCallFact,
   type ResolvedArkRunKernelCallKind,
   type ResolvedArkRunManagedNewFact,

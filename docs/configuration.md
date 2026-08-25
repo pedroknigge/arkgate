@@ -90,8 +90,10 @@ Top-level fields:
 - **`arkRun`** (optional, schema `1.2+`) — inline ArkRun extra (`mode`, `compositionRoots`,
   `managedLayers`, `requireDeclarations`). Absence is silent. Unknown keys fail closed.
   `managedLayers` must name existing `layers[].name` values. Empty `compositionRoots` in
-  `enforced` mode fails closed (`ARKRUN_MISSING_ROOT`). Compact starters do not enable this
-  extra. Demotion (`enforced` → `advisory`) or deletion is a policy-delta **weakening**.
+  `enforced` mode fails closed (`ARKRUN_MISSING_ROOT`); empty `managedLayers` in `enforced`
+  mode also fails closed (direct-new / undeclared / transport-bypass would otherwise no-op).
+  Compact starters do not enable this extra. Demotion (`enforced` → `advisory`) or deletion
+  is a policy-delta **weakening**.
 
 Layer fields:
 

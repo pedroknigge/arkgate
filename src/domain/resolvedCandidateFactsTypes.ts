@@ -88,6 +88,16 @@ export type ResolvedArkRunCompositionRootHitFact = {
   hasKernelFactory: boolean;
 };
 
+/** File-scoped interaction declaration lists (ADR 0023). Sensors consume this in RN04. */
+export type ResolvedArkRunDeclarationFact = {
+  file: string;
+  line: number;
+  uses: string[];
+  reactsTo: string[];
+  raises: string[];
+  sends: string[];
+};
+
 /** ADR 0013 class-shape evidence for ArkRules structure sensors. */
 export type ResolvedClassShapeFact = {
   file: string;
@@ -187,11 +197,17 @@ export type ResolvedCandidateFactsInput = {
   arkRunKernelCalls?: readonly ResolvedArkRunKernelCallFact[];
   arkRunManagedNews?: readonly ResolvedArkRunManagedNewFact[];
   arkRunCompositionRootHits?: readonly ResolvedArkRunCompositionRootHitFact[];
+  arkRunDeclarations?: readonly ResolvedArkRunDeclarationFact[];
 };
 
 export type ResolvedCandidateFacts = Omit<
   ResolvedCandidateFactsInput,
-  'candidateTreeHash' | 'classShapes' | 'arkRunKernelCalls' | 'arkRunManagedNews' | 'arkRunCompositionRootHits'
+  | 'candidateTreeHash'
+  | 'classShapes'
+  | 'arkRunKernelCalls'
+  | 'arkRunManagedNews'
+  | 'arkRunCompositionRootHits'
+  | 'arkRunDeclarations'
 > & {
   schemaVersion: typeof RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION;
   completenessReasons: ResolvedFactsReason[];
@@ -207,5 +223,6 @@ export type ResolvedCandidateFacts = Omit<
   arkRunKernelCalls: ResolvedArkRunKernelCallFact[];
   arkRunManagedNews: ResolvedArkRunManagedNewFact[];
   arkRunCompositionRootHits: ResolvedArkRunCompositionRootHitFact[];
+  arkRunDeclarations: ResolvedArkRunDeclarationFact[];
   factsHash: string;
 };

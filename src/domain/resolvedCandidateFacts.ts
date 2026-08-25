@@ -11,6 +11,7 @@ import {
   RESOLVED_CAPABILITY_IDS,
   type ResolvedAmbientFact,
   type ResolvedArkRunCompositionRootHitFact,
+  type ResolvedArkRunDeclarationFact,
   type ResolvedArkRunKernelCallFact,
   type ResolvedArkRunManagedNewFact,
   type ResolvedCandidateFacts,
@@ -130,6 +131,15 @@ function canonicalResolvedFactsInput(
   const arkRunCompositionRootHits = (input.arkRunCompositionRootHits ?? [])
     .map((fact) => ({ ...fact }))
     .sort(compareCanonical);
+  const arkRunDeclarations = (input.arkRunDeclarations ?? [])
+    .map((fact) => ({
+      ...fact,
+      uses: sortedUnique(fact.uses),
+      reactsTo: sortedUnique(fact.reactsTo),
+      raises: sortedUnique(fact.raises),
+      sends: sortedUnique(fact.sends),
+    }))
+    .sort(compareCanonical);
   const candidateTree = input.files
     .map(({ path, contentHash }) => ({ path, contentHash }))
     .sort((left, right) =>
@@ -160,6 +170,7 @@ function canonicalResolvedFactsInput(
     arkRunKernelCalls,
     arkRunManagedNews,
     arkRunCompositionRootHits,
+    arkRunDeclarations,
   };
 }
 
@@ -320,6 +331,7 @@ function parseResolvedFactsInput(
       'arkRunKernelCalls',
       'arkRunManagedNews',
       'arkRunCompositionRootHits',
+      'arkRunDeclarations',
       ...(withDerivedIdentities ? ['candidateTreeHash', 'factsHash'] : []),
     ],
     '$'
@@ -661,6 +673,23 @@ function parseResolvedFactsInput(
         hasKernelFactory: requiredBoolean(entry, 'hasKernelFactory', at),
       };
     });
+  const arkRunDeclarationsRaw =
+    record.arkRunDeclarations === undefined ? [] : requiredArray(record, 'arkRunDeclarations', '$');
+  const arkRunDeclarations: ResolvedArkRunDeclarationFact[] = arkRunDeclarationsRaw.map(
+    (value, index) => {
+      const at = `$.arkRunDeclarations[${index}]`;
+      const entry = asRecord(value, at);
+      assertOnlyKeys(entry, ['file', 'line', 'uses', 'reactsTo', 'raises', 'sends'], at);
+      return {
+        file: requiredProjectPath(entry, 'file', at),
+        line: requiredPositiveInteger(entry, 'line', at),
+        uses: parseStringArray(entry.uses, `${at}.uses`),
+        reactsTo: parseStringArray(entry.reactsTo, `${at}.reactsTo`),
+        raises: parseStringArray(entry.raises, `${at}.raises`),
+        sends: parseStringArray(entry.sends, `${at}.sends`),
+      };
+    }
+  );
   for (const [at, facts] of [
     ['$.capabilityUses', capabilityUses],
     ['$.ambientUses', ambientUses],
@@ -670,6 +699,7 @@ function parseResolvedFactsInput(
     ['$.arkRunKernelCalls', arkRunKernelCalls],
     ['$.arkRunManagedNews', arkRunManagedNews],
     ['$.arkRunCompositionRootHits', arkRunCompositionRootHits],
+    ['$.arkRunDeclarations', arkRunDeclarations],
   ] as const) {
     for (const fact of facts) {
       if (!filePaths.has(fact.file)) {
@@ -739,6 +769,7 @@ function parseResolvedFactsInput(
     arkRunKernelCalls,
     arkRunManagedNews,
     arkRunCompositionRootHits,
+    arkRunDeclarations,
   };
 }
 

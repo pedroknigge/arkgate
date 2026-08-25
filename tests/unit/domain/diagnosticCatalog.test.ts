@@ -90,6 +90,8 @@ describe('diagnosticCatalog (Domain — ACS02)', () => {
   it('treats ARKRULE_* family as catalogued-or-family for agent routing', () => {
     expect(isCataloguedOrArkRuleFamily('ARKRULE_STRUCTURE')).toBe(true);
     expect(isCataloguedOrArkRuleFamily('ARKRULE_FUTURE_SENSOR')).toBe(true);
+    expect(isCataloguedOrArkRuleFamily('ARKRUN_MISSING_ROOT')).toBe(true);
+    expect(isCataloguedOrArkRuleFamily('ARKRUN_FUTURE_SENSOR')).toBe(false);
     expect(isCataloguedOrArkRuleFamily('LAYER_IMPORT_VIOLATION')).toBe(true);
     expect(isCataloguedOrArkRuleFamily('MADE_UP')).toBe(false);
   });

@@ -20,6 +20,7 @@
  *   src/domain/agentSkillsPackage.ts → bin/lib/agent-skills-package.mjs
  *   src/domain/resolvedCandidateFactsSchema.ts → schemas/ark.resolved-candidate-facts.schema.json
  *   src/domain/arkRunFacts.ts → bin/lib/ark-run-facts.mjs
+ *   src/domain/arkRunSensors.ts → bin/lib/ark-run-sensors.mjs
  *
  * Layer match remains scripts/generate-layer-match.mjs (R1).
  *
@@ -84,6 +85,11 @@ const MODULES = [
     canonical: 'src/domain/arkRunFacts.ts',
     derived: 'bin/lib/ark-run-facts.mjs',
     label: 'ArkRun resolver-fact extractors (ADR 0022 / RN03)',
+  },
+  {
+    canonical: 'src/domain/arkRunSensors.ts',
+    derived: 'bin/lib/ark-run-sensors.mjs',
+    label: 'ArkRun tier-1 sensors (ADR 0022 / RN04)',
   },
   {
     canonical: 'src/domain/adapterContract.ts',

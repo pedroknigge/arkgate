@@ -388,6 +388,12 @@ function validateArkRunExtra(config, issues) {
                 message: 'ARKRUN_MISSING_ROOT: enforced mode requires at least one composition root',
             });
         }
+        if (!Array.isArray(managed) || managed.length === 0) {
+            issues.push({
+                path: '$.arkRun.managedLayers',
+                message: 'enforced mode requires at least one managed layer',
+            });
+        }
     }
 }
 function migratedFromOf(originalVersion) {

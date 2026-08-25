@@ -36,6 +36,7 @@ import {
 import { provePortProofInject } from './port-proof.mjs';
 import { extractClassShapesFromSource } from './arkrules-sensors.mjs';
 import {
+  extractArkRunDeclarationsFromSource,
   extractArkRunKernelCallsFromSource,
   extractArkRunManagedNewsFromSource,
 } from './ark-run-facts.mjs';
@@ -1006,6 +1007,7 @@ export function resolveCandidateFacts({
   const arkRunKernelCalls = [];
   const arkRunManagedNews = [];
   const arkRunCompositionRootHits = [];
+  const arkRunDeclarations = [];
   const compositionRootPatterns = [...(config.arkRun?.compositionRoots ?? [])];
 
   for (const candidate of candidateFiles) {
@@ -1102,6 +1104,13 @@ export function resolveCandidateFacts({
         );
       } catch {
         // Never fail the resolver for ArkRun call extraction.
+      }
+      try {
+        arkRunDeclarations.push(
+          ...extractArkRunDeclarationsFromSource(candidate.path, candidate.content)
+        );
+      } catch {
+        // Never fail the resolver for ArkRun declaration extraction.
       }
     }
   }
@@ -1224,5 +1233,6 @@ export function resolveCandidateFacts({
     arkRunKernelCalls,
     arkRunManagedNews,
     arkRunCompositionRootHits,
+    arkRunDeclarations,
   });
 }

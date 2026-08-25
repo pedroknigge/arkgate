@@ -709,6 +709,23 @@ describe('RN02 arkRun extra contract', () => {
     ).toThrow('$.arkRun.compositionRoots');
   });
 
+  it('fails closed when enforced mode has empty managedLayers', () => {
+    expect(() =>
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        schemaVersion: '1.2',
+        arkRun: { mode: 'enforced', compositionRoots: ['src/main.ts'] },
+      })
+    ).toThrow('$.arkRun.managedLayers');
+    expect(() =>
+      loadArkConfigContract({
+        ...VALID_MINIMAL_CONFIG,
+        schemaVersion: '1.2',
+        arkRun: { mode: 'enforced', compositionRoots: ['src/main.ts'], managedLayers: [] },
+      })
+    ).toThrow('enforced mode requires at least one managed layer');
+  });
+
   it('accepts enforced arkRun when compositionRoots and managedLayers are valid', () => {
     const loaded = loadArkConfigContract({
       ...VALID_MINIMAL_CONFIG,

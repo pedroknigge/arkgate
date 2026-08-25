@@ -139,6 +139,7 @@ export {
   type AnalysisIr,
   type ResolvedAmbientFact,
   type ResolvedArkRunCompositionRootHitFact,
+  type ResolvedArkRunDeclarationFact,
   type ResolvedArkRunKernelCallFact,
   type ResolvedArkRunKernelCallKind,
   type ResolvedArkRunManagedNewFact,
@@ -200,11 +201,26 @@ export {
 export {
   ARKRUN_KERNEL_FACTORY_CALLEES,
   ARKRUN_KERNEL_INTERACTION_CALLEES,
+  ARKRUN_TRANSPORT_BYPASS_SPECIFIERS,
   arkRunKernelCallKind,
+  extractArkRunDeclarationsFromSource,
   extractArkRunKernelCallsFromSource,
   extractArkRunManagedNewsFromSource,
   isArkRunKernelModuleSpecifier,
+  isArkRunTransportBypassSpecifier,
 } from './domain/arkRunFacts';
+
+export {
+  ARKRUN_INTERACTION_NAME_INCOMPLETE,
+  ARKRUN_RULE_IDS,
+  ARKRUN_TIER1_SENSOR_IDS,
+  evaluateArkRunSensors,
+  type ArkRunRuleId,
+  type ArkRunSensorFinding,
+  type ArkRunTier1SensorId,
+  type EvaluateArkRunSensorsInput,
+  type EvaluateArkRunSensorsResult,
+} from './domain/arkRunSensors';
 
 export {
   canPromoteInvariant,

@@ -19,9 +19,17 @@ in the immutable pre-2.0 archive linked below.
 - **ArkRun resolver facts on resolved-candidate-facts schema `1.2` (RN03):**
   additive optional `arkRunKernelCalls`, `arkRunManagedNews`, and
   `arkRunCompositionRootHits`. `1.0`/`1.1` payloads stay loadable (empty
-  arrays). Syntax evidence only — no `ARKRUN_*` diagnostics yet (RN04). Absence
-  of `arkRun` still leaves Layers / ArkRules verdicts unchanged. Does not close
+  arrays). Syntax evidence only — sensors consume these in RN04. Absence of
+  `arkRun` still leaves Layers / ArkRules verdicts unchanged. Does not close
   Z09 / K01.
+
+- **ArkRun tier-1 sensors (RN04):** when `arkRun` is present, closed sensors
+  emit `ARKRUN_MISSING_ROOT`, `ARKRUN_KERNEL_IN_DOMAIN`, `ARKRUN_DIRECT_NEW`,
+  `ARKRUN_UNDECLARED_EMIT`, `ARKRUN_UNDECLARED_HANDLE`, `ARKRUN_UNDECLARED_DEPEND`,
+  and `ARKRUN_TRANSPORT_BYPASS`. Advisory findings never flip `valid`; enforced
+  blocks. Absence of the extra is still silent on Layers / ArkRules verdicts.
+  Optional `arkRunDeclarations` facts stay additive on schema `1.2`. Dual-depth
+  catalog nextAction is RN05. Does not close Z09 / K01.
 
 ## 4.6.7 — 2026-08-24
 

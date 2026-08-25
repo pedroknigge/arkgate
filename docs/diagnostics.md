@@ -44,6 +44,13 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`ARKRULE_INVARIANT`](#ARKRULE_INVARIANT) | arkrules | ArkRule invariant failed |
 | [`ARKRULE_SCOPE_EMPTY`](#ARKRULE_SCOPE_EMPTY) | arkrules | ArkRule appliesTo matched zero files |
 | [`INVARIANT_UNCOVERED`](#INVARIANT_UNCOVERED) | arkrules | Invariant without coverage evidence |
+| [`ARKRUN_MISSING_ROOT`](#ARKRUN_MISSING_ROOT) | arkrun | No kernel factory in composition roots |
+| [`ARKRUN_KERNEL_IN_DOMAIN`](#ARKRUN_KERNEL_IN_DOMAIN) | arkrun | Domain-role layer imports the kernel |
+| [`ARKRUN_DIRECT_NEW`](#ARKRUN_DIRECT_NEW) | arkrun | Managed type constructed with new |
+| [`ARKRUN_UNDECLARED_EMIT`](#ARKRUN_UNDECLARED_EMIT) | arkrun | Emit name not in raises/sends |
+| [`ARKRUN_UNDECLARED_HANDLE`](#ARKRUN_UNDECLARED_HANDLE) | arkrun | Handle name not in reactsTo |
+| [`ARKRUN_UNDECLARED_DEPEND`](#ARKRUN_UNDECLARED_DEPEND) | arkrun | Depend name not in uses |
+| [`ARKRUN_TRANSPORT_BYPASS`](#ARKRUN_TRANSPORT_BYPASS) | arkrun | Homemade broker or emitter import |
 | [`INVALID_CHANGE_PATH`](#INVALID_CHANGE_PATH) | preflight | Unsafe change path |
 | [`DUPLICATE_CHANGE_PATH`](#DUPLICATE_CHANGE_PATH) | preflight | Duplicate path in change set |
 | [`DELETE_TARGET_MISSING`](#DELETE_TARGET_MISSING) | preflight | Delete target missing |
@@ -270,6 +277,71 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 
 - **Why:** An ArkRules invariant is under contract but no covering test title or declared symbol evidence was found (or coverage is partial). Kind is `never-had-tests` (adopt residual) vs `tests-disappeared` (suite exists).
 - **Fix:** Add a test title or declared symbol covering the arkruleId, then preflight again. Treat never-had-tests as adopt residual; treat tests-disappeared as a regression. Missing test globs report partial — never fake green.
+
+## ArkRun (opt-in extra)
+
+<a id="ARKRUN_MISSING_ROOT"></a>
+
+### `ARKRUN_MISSING_ROOT`
+
+**No kernel factory in composition roots**
+
+- **Why:** The ArkRun extra is on but no createArkKernel / createStrictArkKernel factory was found in arkRun.compositionRoots, so agents can skip the kernel while the write gate stays green.
+- **Fix:** Call createStrictArkKernel (or createArkKernel) in a composition root listed in arkRun.compositionRoots, then preflight again.
+
+<a id="ARKRUN_KERNEL_IN_DOMAIN"></a>
+
+### `ARKRUN_KERNEL_IN_DOMAIN`
+
+**Domain-role layer imports the kernel**
+
+- **Why:** A Domain-role layer imports @arkgate/runtime or kernel types. Domain stays kernel-free; composition roots and adapters own the factory.
+- **Fix:** Move the kernel import out of the Domain-role layer into a composition root or adapter, then preflight again.
+
+<a id="ARKRUN_DIRECT_NEW"></a>
+
+### `ARKRUN_DIRECT_NEW`
+
+**Managed type constructed with new**
+
+- **Why:** A managed non-Domain file constructs an admitted type with new outside an ArkRun composition-root factory, skipping kernel resolve/registration.
+- **Fix:** Resolve the type from the kernel instead of constructing it with new, then preflight again.
+
+<a id="ARKRUN_UNDECLARED_EMIT"></a>
+
+### `ARKRUN_UNDECLARED_EMIT`
+
+**Emit name not in raises/sends**
+
+- **Why:** A publisher / publish / raise / send call-site literal is not listed in the file’s raises or sends declaration.
+- **Fix:** Add the call-site name to raises or sends on the managed component, then preflight again.
+
+<a id="ARKRUN_UNDECLARED_HANDLE"></a>
+
+### `ARKRUN_UNDECLARED_HANDLE`
+
+**Handle name not in reactsTo**
+
+- **Why:** A subscribe / registerHandler call-site literal is not listed in the file’s reactsTo declaration.
+- **Fix:** Add the call-site name to reactsTo on the managed component, then preflight again.
+
+<a id="ARKRUN_UNDECLARED_DEPEND"></a>
+
+### `ARKRUN_UNDECLARED_DEPEND`
+
+**Depend name not in uses**
+
+- **Why:** A resolve / resolveSingleton call-site literal is not listed in the file’s uses declaration.
+- **Fix:** Add the call-site name to uses on the managed component, then preflight again.
+
+<a id="ARKRUN_TRANSPORT_BYPASS"></a>
+
+### `ARKRUN_TRANSPORT_BYPASS`
+
+**Homemade broker or emitter import**
+
+- **Why:** A managed layer imports a closed broker/queue/emitter specifier (EventEmitter, queue clients, …) instead of the ArkRun kernel transport.
+- **Fix:** Send through the ArkRun kernel transport instead of importing that broker or emitter, then preflight again.
 
 ## Atomic preflight and change sets
 
