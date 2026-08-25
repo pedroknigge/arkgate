@@ -12,8 +12,7 @@ illegal import, the write is rejected; the same check fails the pull request. No
 Not a folder linter. If the check is not required on the PR, the rules file is
 just documentation. **No required config migration.** Does not close Z09 / K01.
 
-**Status: prepared** (see `docs/releases/4.7.2.md`). npm `latest` remains **4.7.1** until
-this patch is published.
+**Status: published** (on npm `latest`; see `docs/releases/4.7.2.md`).
 
 ### Changed
 
