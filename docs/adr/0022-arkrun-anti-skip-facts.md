@@ -64,6 +64,7 @@ sites. Resolver-fact extraction is `RN03`; sensors emit in `RN04`.
 
 - A skip corpus (`RN14`) is the proof: Application `new`, peer import, and homemade bus
   fail when the extra is enforced and stay green when `arkRun` is absent.
+  Executable fixtures: `tests/fixtures/arkrun-skip-corpus/`.
 - ESLint (`RN06`) and CLI/MCP/hook/CI (`RN07`) share these sensor ids; they do not add
   a parallel vocabulary.
 - No LLM pass/fail; no numeric score.

@@ -92,6 +92,12 @@ in the immutable pre-2.0 archive linked below.
   helper string, never a score. Inspector `GET /graph` serves the same slice.
   Does not close Z09 / K01.
 
+- **ArkRun skip corpus (RN14):** `tests/fixtures/arkrun-skip-corpus/` is the
+  executable proof: Application `new`, same-layer peer import, and homemade
+  `EventEmitter` stay green when `arkRun` is absent (Layers / ArkRules match
+  schema `1.1`) and fail write path, CLI, MCP, and `--strict-merge` when the
+  extra is enforced. Does not close Z09 / K01.
+
 ## 4.6.7 — 2026-08-24
 
 **Patch** over **4.6.6**. Production-hardening: CODEOWNERS, eval/pack honesty, CLI extracts,

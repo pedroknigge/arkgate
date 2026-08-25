@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "item": "RN14",
+  "adr": "docs/adr/0022-arkrun-anti-skip-facts.md",
+  "notes": "Skip corpus. Same sources stay green when arkRun is absent (Layers/ArkRules unchanged vs schema 1.1). Enforced extra fails unmanaged new, peer import of a same-layer class, and homemade EventEmitter on the write path, CLI, and --strict-merge. Peer-import fail is ARKRUN_DIRECT_NEW of an Application peer (tier-2 skip-resolve stays advisory and is not a corpus cell).",
+  "skipTechniques": ["unmanaged-new", "peer-import", "homemade-bus"],
+  "contracts": {
+    "layers": "contracts/layers.json",
+    "layers11": "contracts/layers-1.1.json",
+    "enforced": "contracts/arkrun-enforced.json",
+    "advisory": "contracts/arkrun-advisory.json"
+  },
+  "cases": [
+    {
+      "id": "combined",
+      "tree": "trees/combined",
+      "kind": "positive",
+      "techniques": ["unmanaged-new", "peer-import", "homemade-bus"],
+      "expectedRuleIds": ["ARKRUN_DIRECT_NEW", "ARKRUN_TRANSPORT_BYPASS"],
+      "writePathFile": "src/application/billing.ts",
+      "evidence": {
+        "newOf": "OrderService",
+        "peerImport": "./order-service",
+        "busSpecifier": "events"
+      }
+    },
+    {
+      "id": "unmanaged-new",
+      "tree": "trees/unmanaged-new",
+      "kind": "positive",
+      "techniques": ["unmanaged-new"],
+      "expectedRuleIds": ["ARKRUN_DIRECT_NEW"],
+      "writePathFile": "src/application/billing.ts",
+      "evidence": {
+        "newOf": "OrderService",
+        "importedFrom": "../domain/order-service"
+      }
+    },
+    {
+      "id": "peer-import",
+      "tree": "trees/peer-import",
+      "kind": "positive",
+      "techniques": ["peer-import"],
+      "expectedRuleIds": ["ARKRUN_DIRECT_NEW"],
+      "writePathFile": "src/application/billing.ts",
+      "evidence": {
+        "newOf": "OrderService",
+        "peerImport": "./order-service"
+      }
+    },
+    {
+      "id": "homemade-bus",
+      "tree": "trees/homemade-bus",
+      "kind": "positive",
+      "techniques": ["homemade-bus"],
+      "expectedRuleIds": ["ARKRUN_TRANSPORT_BYPASS"],
+      "writePathFile": "src/application/bus.ts",
+      "evidence": {
+        "busSpecifier": "events"
+      }
+    }
+  ]
+}
