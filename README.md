@@ -198,7 +198,8 @@ Gates need **no** app runtime. The experimental **ArkRun** companion (`@arkgate/
 and is not a production-readiness claim. `createStrictArkKernel` is the factory: each call creates
 an isolated instance (no process-wide singleton). Managed components declare `uses` / `reactsTo` /
 `raises` / `sends`; `getDependencyInformationPackage()` is a JSON snapshot and never leaks factories.
-The kernel is not bundled in the `arkgate` tarball.
+`send()` is local / localBlocking / broker (broker falls back to in-process local; `ephemeral`
+defaults true; no cloud SDKs in the package). The kernel is not bundled in the `arkgate` tarball.
 
 ### Durability stance
 

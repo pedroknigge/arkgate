@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-25 (Engineering doing: `RN10`; `RN09` **done**; `RN08` **done**; `RN07` **done**; `RN06` **done**; `RN05` **done**; `RN04` **done**; `RN03` **done**; `RN02` **done**; `RN01` **done**; Phase AL `AL01`–`AL04` **done**; `AL06` compact-doctor extract **done**; `AL05` parked; Phase RN ArkRun started; Z09 still parked; tree **arkgate@4.6.7**; npm `latest` is **4.6.7**)
+- **Status date:** 2026-08-25 (Engineering doing: `RN11`; `RN10` **done**; `RN09` **done**; `RN08` **done**; `RN07` **done**; `RN06` **done**; `RN05` **done**; `RN04` **done**; `RN03` **done**; `RN02` **done**; `RN01` **done**; Phase AL `AL01`–`AL04` **done**; `AL06` compact-doctor extract **done**; `AL05` parked; Phase RN ArkRun started; Z09 still parked; tree **arkgate@4.6.7**; npm `latest` is **4.6.7**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -263,7 +263,10 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: `RN10` (interaction declarations + serializable information package; no factories).
+Engineering doing: `RN11` (local / blocking / broker-fallback transports; `ephemeral` default true).
+`RN10` **done** (`register()` `uses` / `reactsTo` / `raises` / `sends` +
+`getDependencyInformationPackage()`; factories, live instances, and input DTOs stay off the
+snapshot).
 `RN09` **done** (brand ArkRun on `@arkgate/runtime`; keep `createStrictArkKernel`;
 no process singleton; kernel stays out of the `arkgate` tarball).
 `RN08` **done** (doctor / status / report `arkRun` section, `notAScore`; mergePlanes honesty; report-parity).
@@ -295,8 +298,8 @@ Does not ship cloud adapters or a process singleton. Companion kernel stays
 | 191 | `RN07` | `done` | L | RN05 | CLI / MCP / hook / preflight / CI extra-teeth parity — one verdict; enforced extra teeth only when classified |
 | 192 | `RN08` | `done` | M | RN07 | Doctor / status / report `arkRun` section (`notAScore`); mergePlanes honesty; report-parity |
 | 193 | `RN09` | `done` | M | RN01 | Brand ArkRun on `@arkgate/runtime`; keep `createStrictArkKernel` |
-| 194 | `RN10` | `doing` | L | RN09 | Interaction declarations + serializable information package (no factories) |
-| 195 | `RN11` | `todo` | L | RN09 | Local / blocking / broker-fallback transports; `ephemeral` default true |
+| 194 | `RN10` | `done` | L | RN09 | Interaction declarations + serializable information package (no factories) |
+| 195 | `RN11` | `doing` | L | RN09 | Local / blocking / broker-fallback transports; `ephemeral` default true |
 | 196 | `RN12` | `todo` | M | RN10 | Dev inspector: `127.0.0.1`, production veto, lazy load |
 | 197 | `RN13` | `todo` | M | RN10 | Graph slices: process/technical, degrees, query |
 | 198 | `RN14` | `todo` | L | RN07 | Skip corpus: extra absent = green; enforced = fail `new` / peer import / homemade bus |

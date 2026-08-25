@@ -203,6 +203,16 @@ export interface EventPublisher {
 }
 
 /**
+ * Internal dispatch control for ArkRun send ports.
+ * `publish()` keeps historical defaults (notify + await handlers).
+ */
+export interface EventDispatchControl {
+  notifySubscribers?: boolean;
+  awaitHandlers?: boolean;
+  runOnPublish?: boolean;
+}
+
+/**
  * The public EventBus interface.
  */
 export interface EventBus {

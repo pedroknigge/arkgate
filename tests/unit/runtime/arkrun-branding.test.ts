@@ -15,6 +15,10 @@ describe('RN09 ArkRun companion branding', () => {
     expect(readme).toMatch(/no process-wide `getKernel\(\)` singleton/);
     expect(readme).toContain('getDependencyInformationPackage()');
     expect(readme).toMatch(/uses.*reactsTo.*raises.*sends/s);
+    expect(readme).toMatch(/localBlocking/);
+    expect(readme).toMatch(/ephemeral/);
+    expect(readme).toMatch(/does \*\*not\*\* ship cloud SDKs/);
+    expect(readme).toMatch(/in-process local/);
     expect(readme).toMatch(/does not bundle this kernel/);
     expect(readme).toMatch(/not\*\* production durability/);
   });

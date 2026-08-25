@@ -15,8 +15,9 @@
 `RN07` done (CLI / MCP / hook / preflight / CI extra teeth); `RN08` done
 (doctor / status / report `arkRun` `notAScore`; mergePlanes honesty);
 `RN09` done (companion branded; `createStrictArkKernel` stays the factory);
-`RN10` doing (declarations + `getDependencyInformationPackage()`);
-`RN11`–`RN16` remain `todo` in ROADMAP. Does not close
+`RN10` done (declarations + `getDependencyInformationPackage()`);
+`RN11` transports in tree (`ROADMAP` still `doing` until review);
+`RN12`–`RN16` remain `todo` in ROADMAP. Does not close
 `Z09` / residual `RB-11`.<br>
 **Slug:** `arkrun`<br>
 **Kind:** epic / gated extra plane + companion kernel<br>
@@ -203,8 +204,8 @@ and docs. One `doing` at a time.
 | ID | Size | Depends on | Outcome |
 |----|-----:|---|---|
 | `RN09` | M | RN01 | **done** — Public ArkRun kernel API branded in `@arkgate/runtime` README; `createStrictArkKernel` stays the factory |
-| `RN10` | L | RN09 | **doing** — `register()` declarations + `getDependencyInformationPackage()`; factories stay off the snapshot |
-| `RN11` | L | RN09 | Transport ports: local / blocking / broker fallback; `ephemeral` default true |
+| `RN10` | L | RN09 | **done** — `register()` declarations + `getDependencyInformationPackage()`; factories stay off the snapshot |
+| `RN11` | L | RN09 | Transport ports: local / blocking / broker fallback; `ephemeral` default true (in tree; ROADMAP `doing` until review) |
 | `RN12` | M | RN10 | Inspector: localhost, production veto, SSE + snapshots; lazy load |
 | `RN13` | M | RN10 | `requestGraph` slices (process/technical, degrees, query) + Mermaid helper |
 

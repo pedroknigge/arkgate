@@ -51,6 +51,33 @@ declarations. It never includes factories, live instances, or input DTOs. Declar
 optional on the companion for local experiments; an enforced `arkRun` extra still requires
 them on the write/CI gate.
 
+## Transport ports
+
+One `send()` site chooses `local` (default), `localBlocking`, or `broker`. `ephemeral` defaults
+**true**: `send()` waits until the local bus has recorded the event, or until a bound
+broker adapter has accepted it (safe for CLI, tests, and short-lived workers). That wait
+is **not** a durability claim. `local` does not wait for subscriber completion;
+`localBlocking` does. `ephemeral: false` is the explicit fire-and-forget-after-handoff
+opt-in (broker adapter accept is not awaited).
+
+Broker adapters are **ports you inject**. This package does **not** ship cloud SDKs.
+When no adapter is bound, `transport: 'broker'` falls back to **in-process local**
+delivery — not cloud portability.
+
+```ts
+const ark = createStrictArkKernel({
+  broker: {
+    send(event) {
+      // Consumer-owned handoff. Accepting is not downstream completion.
+    },
+  },
+});
+
+await ark.publisher('Application.PlaceOrder').send(OrderPlaced, { id: 'o1' }, {
+  transport: 'broker',
+});
+```
+
 Nest adapter:
 
 ```ts

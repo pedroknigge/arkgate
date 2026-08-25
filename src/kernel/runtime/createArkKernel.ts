@@ -1,6 +1,7 @@
+import { ARK_RUN_EPHEMERAL_DEFAULT } from '../../domain/arkRunTransport';
 import { buildDependencyInformationPackage } from '../../domain/arkRunInformationPackage';
 import { createAuditTrail } from '../audit';
-import { createEventBus } from '../event-bus';
+import { EventBusImpl } from '../event-bus';
 import { createEventContractRegistry } from '../event-contracts';
 import { createDependencyGraph, syncRegistryToGraph } from '../graph';
 import { createIntentRegistry } from '../intent';
@@ -19,6 +20,7 @@ import {
 import { createProjectionRegistry } from '../projections';
 import { createWorkflowEngine } from '../workflow';
 import { createComponentRegistry } from './componentRegistry';
+import { sendOnArkRunTransport } from './transport';
 import type {
   ArkKernel,
   ArkKernelConfig,
@@ -62,7 +64,9 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
     syncRegistryToGraph(registry, graph, { requireRegisteredTargets: true });
   };
 
-  const eventBus = createEventBus({
+  const defaultEphemeral = options.ephemeral ?? ARK_RUN_EPHEMERAL_DEFAULT;
+  const broker = options.broker;
+  const eventBus = new EventBusImpl({
     intentRegistry: registry,
     dependencyGraph: graph,
     policyEngine,
@@ -109,7 +113,27 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
     workflowEngine,
     observability,
     publisher(source) {
-      return eventBus.createPublisher(source);
+      const inner = eventBus.createPublisher(source);
+      return {
+        source: inner.source,
+        publish: inner.publish,
+        send(intent, payload, sendOptions = {}) {
+          return sendOnArkRunTransport(
+            { eventBus, broker, defaultEphemeral },
+            intent,
+            payload,
+            { ...sendOptions, source: inner.source }
+          );
+        },
+      };
+    },
+    send(intent, payload, sendOptions = {}) {
+      return sendOnArkRunTransport(
+        { eventBus, broker, defaultEphemeral },
+        intent,
+        payload,
+        sendOptions
+      );
     },
     register(options) {
       return components.register(options);

@@ -73,6 +73,12 @@ in the immutable pre-2.0 archive linked below.
   experiments; enforced `arkRun` on the gate still requires them. Does not close
   Z09 / K01.
 
+- **ArkRun transport ports (RN11):** `@arkgate/runtime` `send()` is one call site
+  for `local` / `localBlocking` / `broker`. `ephemeral` defaults true (await local
+  recording or adapter accept — not a durability claim). Missing broker adapter
+  falls back to in-process local delivery, not cloud portability. No cloud SDKs
+  ship in the package. Does not close Z09 / K01.
+
 ## 4.6.7 — 2026-08-24
 
 **Patch** over **4.6.6**. Production-hardening: CODEOWNERS, eval/pack honesty, CLI extracts,

@@ -6,6 +6,14 @@ Branding ArkRun does not close `K01` or ship durable stores. Static ArkGate adop
 require it. Construct a kernel with `createStrictArkKernel` (per instance; no process-wide
 singleton). See [package-surface.md](package-surface.md).
 
+## Transport ports (RN11 / ADR 0024)
+
+`send()` is local fire-and-forget, local blocking, or broker handoff. Broker adapters are
+consumer-injected ports. **ArkRun does not ship cloud broker SDKs.** When no adapter is
+bound, broker sends fall back to **in-process local** delivery — that fallback is not
+cloud portability. `ephemeral` defaults true (await local recording / adapter accept) and
+is **not** a durability claim. `K01` stays parked.
+
 ## Durability stance (R9)
 
 **ArkGate does not ship production-durable adapters.** Built-in stores are **reference
