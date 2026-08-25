@@ -53,7 +53,7 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Area | Path |
 |------|------|
 | Release notes (by version) | [releases/](releases/) · npm [CHANGELOG.md](../CHANGELOG.md) (Unreleased + 4.6.x) · [pre-4.6 archive](archive/CHANGELOG-pre-4.6.md) |
-| Epic plans | [plans/](plans/) — maintainer seeds, not required to use the package. Live: [alive-in-six-months](plans/alive-in-six-months/README.md) (`AL01`–`AL04` done; `AL05` parked). Next: [arkrun](plans/arkrun/README.md) (Phase RN in progress; `RN01`–`RN11` done; `RN12` inspector implemented pending merge; next `RN13` graph slices; ADRs [0020](adr/0020-arkrun-gated-extra-plane.md)–[0024](adr/0024-arkrun-transport-ports.md) accepted; target 4.7.0). |
+| Epic plans | [plans/](plans/) — maintainer seeds, not required to use the package. Live: [alive-in-six-months](plans/alive-in-six-months/README.md) (`AL01`–`AL04` done; `AL05` parked). Next: [arkrun](plans/arkrun/README.md) (Phase RN in progress; `RN01`–`RN13` done; next `RN14` skip corpus; ADRs [0020](adr/0020-arkrun-gated-extra-plane.md)–[0024](adr/0024-arkrun-transport-ports.md) accepted; target 4.7.0). |
 | Claims audit | [audit/claims-matrix.md](audit/claims-matrix.md) |
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |

@@ -22,6 +22,11 @@ describe('RN09 ArkRun companion branding', () => {
     expect(readme).toMatch(/127\.0\.0\.1/);
     expect(readme).toMatch(/NODE_ENV=production/);
     expect(readme).toMatch(/startInspector/);
+    expect(readme).toMatch(/requestGraph/);
+    expect(readme).toMatch(/process/);
+    expect(readme).toMatch(/technical/);
+    expect(readme).toMatch(/degreesOfSeparation/);
+    expect(readme).toMatch(/[Mm]ermaid/);
     expect(readme).toMatch(/does not bundle this kernel/);
     expect(readme).toMatch(/not\*\* production durability/);
   });

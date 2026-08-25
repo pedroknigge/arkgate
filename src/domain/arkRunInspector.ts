@@ -18,6 +18,7 @@ export const ARK_RUN_INSPECTOR_DEFAULT_HOST = '127.0.0.1';
 export const ARK_RUN_INSPECTOR_DEFAULT_PORT = 0;
 export const ARK_RUN_INSPECTOR_SNAPSHOT_PATH = '/snapshot';
 export const ARK_RUN_INSPECTOR_EVENTS_PATH = '/events';
+export const ARK_RUN_INSPECTOR_GRAPH_PATH = '/graph';
 export const ARK_RUN_INSPECTOR_SSE_EVENT = 'snapshot';
 export const ARK_RUN_INSPECTOR_TRANSPORT_FALLBACK = 'in-process-local' as const;
 

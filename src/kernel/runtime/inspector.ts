@@ -2,6 +2,7 @@
  * Opt-in ArkRun inspector. HTTP is dynamically imported so constructing a
  * kernel does not bind a port or load `node:http`.
  */
+import type { ArkRunGraph, ArkRunGraphQuery } from '../../domain/arkRunGraph';
 import {
   ArkRunInspectorBindError,
   ArkRunInspectorProductionError,
@@ -23,6 +24,7 @@ export type StartArkRunInspectorOptions = {
 
 export type ArkRunInspectorSource = {
   getInspectorSnapshot(bind: ArkRunInspectorBind): ArkRunInspectorSnapshot;
+  requestGraph(query?: ArkRunGraphQuery): ArkRunGraph;
 };
 
 export async function startArkRunInspector(

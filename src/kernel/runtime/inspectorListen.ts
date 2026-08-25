@@ -4,7 +4,14 @@
  */
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import {
+  InvalidArkRunGraphQueryError,
+  arkRunGraphQueryFromSearchParams,
+  type ArkRunGraph,
+  type ArkRunGraphQuery,
+} from '../../domain/arkRunGraph';
+import {
   ARK_RUN_INSPECTOR_EVENTS_PATH,
+  ARK_RUN_INSPECTOR_GRAPH_PATH,
   ARK_RUN_INSPECTOR_SNAPSHOT_PATH,
   ArkRunInspectorBindError,
   arkRunInspectorUrl,
@@ -16,6 +23,7 @@ import {
 
 export type ArkRunInspectorListenSource = {
   getInspectorSnapshot(bind: ArkRunInspectorBind): ArkRunInspectorSnapshot;
+  requestGraph(query?: ArkRunGraphQuery): ArkRunGraph;
 };
 
 export type ArkRunInspectorHandle = {
@@ -24,6 +32,7 @@ export type ArkRunInspectorHandle = {
   url: string;
   snapshotUrl: string;
   eventsUrl: string;
+  graphUrl: string;
   close(): Promise<void>;
 };
 
@@ -48,9 +57,9 @@ function sseHeaders(): Record<string, string> {
   };
 }
 
-function requestPath(url: string | undefined): string {
+function requestUrl(url: string | undefined): URL {
   const raw = url && url.length > 0 ? url : '/';
-  return new URL(raw, 'http://127.0.0.1').pathname;
+  return new URL(raw, 'http://127.0.0.1');
 }
 
 function writeJson(res: ServerResponse, status: number, body: unknown): void {
@@ -85,9 +94,34 @@ export async function listenArkRunInspector(
   const snapshot = () => source.getInspectorSnapshot(bound);
 
   const server = http.createServer((req: IncomingMessage, res: ServerResponse) => {
-    const path = requestPath(req.url);
+    const url = requestUrl(req.url);
+    const path = url.pathname;
     if (req.method === 'GET' && (path === '/' || path === ARK_RUN_INSPECTOR_SNAPSHOT_PATH)) {
       writeJson(res, 200, snapshot());
+      return;
+    }
+    if (req.method === 'GET' && path === ARK_RUN_INSPECTOR_GRAPH_PATH) {
+      try {
+        writeJson(
+          res,
+          200,
+          source.requestGraph(
+            arkRunGraphQueryFromSearchParams({
+              slice: url.searchParams.get('slice'),
+              nodeIds: url.searchParams.get('nodeIds'),
+              degreesOfSeparation: url.searchParams.get('degreesOfSeparation'),
+              include: url.searchParams.get('include'),
+              exclude: url.searchParams.get('exclude'),
+            })
+          )
+        );
+      } catch (error) {
+        if (error instanceof InvalidArkRunGraphQueryError) {
+          writeJson(res, 400, { error: error.message, option: error.option });
+          return;
+        }
+        throw error;
+      }
       return;
     }
     if (req.method === 'GET' && path === ARK_RUN_INSPECTOR_EVENTS_PATH) {
@@ -143,6 +177,7 @@ export async function listenArkRunInspector(
     url: arkRunInspectorUrl(bound.host, bound.port, '/'),
     snapshotUrl: arkRunInspectorUrl(bound.host, bound.port, ARK_RUN_INSPECTOR_SNAPSHOT_PATH),
     eventsUrl: arkRunInspectorUrl(bound.host, bound.port, ARK_RUN_INSPECTOR_EVENTS_PATH),
+    graphUrl: arkRunInspectorUrl(bound.host, bound.port, ARK_RUN_INSPECTOR_GRAPH_PATH),
     close() {
       for (const timer of timers) clearInterval(timer);
       timers.clear();

@@ -1,3 +1,4 @@
+import { requestArkRunGraph } from '../../domain/arkRunGraph';
 import { buildArkRunInspectorSnapshot } from '../../domain/arkRunInspector';
 import { buildDependencyInformationPackage } from '../../domain/arkRunInformationPackage';
 import { ARK_RUN_EPHEMERAL_DEFAULT } from '../../domain/arkRunTransport';
@@ -152,6 +153,15 @@ export function createArkKernel(options: CreateArkKernelOptions = {}): ArkKernel
         kernelInstanceId: instanceId,
         components: components.snapshotComponents(),
       });
+    },
+    requestGraph(query) {
+      return requestArkRunGraph(
+        {
+          kernelInstanceId: instanceId,
+          components: components.snapshotComponents(),
+        },
+        query
+      );
     },
     getInspectorSnapshot(bind) {
       return buildArkRunInspectorSnapshot({

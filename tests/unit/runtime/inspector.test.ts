@@ -66,6 +66,7 @@ describe('RN12 ArkRun inspector HTTP', () => {
     expect(handle.host).toBe(ARK_RUN_INSPECTOR_DEFAULT_HOST);
     expect(handle.port).toBeGreaterThan(0);
     expect(handle.snapshotUrl).toContain('127.0.0.1');
+    expect(handle.graphUrl).toContain('/graph');
 
     const res = await fetch(handle.snapshotUrl);
     expect(res.status).toBe(200);
@@ -86,6 +87,38 @@ describe('RN12 ArkRun inspector HTTP', () => {
     expect(ark.getInspectorSnapshot({ host: handle.host, port: handle.port }).bind.port).toBe(
       handle.port
     );
+  });
+
+  it('serves a process/technical graph slice on /graph', async () => {
+    const { handle } = await started();
+    const processRes = await fetch(handle.graphUrl);
+    expect(processRes.status).toBe(200);
+    const processBody = (await processRes.json()) as {
+      slice: string;
+      mermaid: string;
+      edges: Array<{ kind: string }>;
+    };
+    expect(processBody.slice).toBe('process');
+    expect(processBody.mermaid).toContain('flowchart LR');
+    expect(JSON.stringify(processBody)).not.toMatch(/leaked/);
+
+    const technicalRes = await fetch(
+      `${handle.graphUrl}?slice=technical&nodeIds=Application.PlaceOrder&degreesOfSeparation=1`
+    );
+    const technicalBody = (await technicalRes.json()) as {
+      slice: string;
+      nodes: Array<{ id: string }>;
+      mermaid: string;
+    };
+    expect(technicalBody.slice).toBe('technical');
+    expect(technicalBody.nodes.map((node) => node.id)).toEqual([
+      'Application.PlaceOrder',
+      'Domain.OrderRepository',
+    ]);
+    expect(technicalBody.mermaid).toContain('flowchart TD');
+
+    const bad = await fetch(`${handle.graphUrl}?slice=bus`);
+    expect(bad.status).toBe(400);
   });
 
   it('streams an SSE snapshot event on /events', async () => {

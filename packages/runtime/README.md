@@ -44,12 +44,24 @@ const handle = ark.register({
 });
 
 const snapshot = ark.getDependencyInformationPackage();
+const graph = ark.requestGraph({
+  slice: 'process',
+  nodeIds: ['Application.PlaceOrder'],
+  degreesOfSeparation: 1,
+  include: 'sales',
+});
 ```
 
 `getDependencyInformationPackage()` is a JSON-serializable snapshot of ids, lifetime, and
 declarations. It never includes factories, live instances, or input DTOs. Declarations are
 optional on the companion for local experiments; an enforced `arkRun` extra still requires
 them on the write/CI gate.
+
+`requestGraph()` slices that snapshot into a **process** (raises / reactsTo / sends) or
+**technical** (`uses`) graph. Optional `nodeIds`, `degreesOfSeparation`, and include/exclude
+query keep a neighborhood. The result includes a Mermaid helper string (`graph.mermaid`)
+and is also available as `formatArkRunGraphMermaid(graph)`. Graph slices are tooling, not
+a score or gate verdict.
 
 ## Transport ports
 
@@ -70,7 +82,9 @@ Opt-in localhost inspector. Default host is `127.0.0.1`. It refuses
 `NODE_ENV=production` and will not bind public addresses (`0.0.0.0`, `::`).
 HTTP is loaded only when you start it. `GET /snapshot` is the information
 package plus transport facts (kinds, broker bound, no shipped cloud SDKs).
-`GET /events` is SSE of the same snapshot.
+`GET /events` is SSE of the same snapshot. `GET /graph` is a `requestGraph`
+slice (`slice`, `nodeIds`, `degreesOfSeparation`, `include`, `exclude` query
+params) plus the Mermaid helper.
 
 ```ts
 const handle = await ark.startInspector();

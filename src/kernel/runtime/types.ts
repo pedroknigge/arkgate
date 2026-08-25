@@ -14,6 +14,7 @@ import type { IntentName } from '../../domain/types';
 import type { EventBufferStore } from '../outbox';
 import type { WorkflowEngine } from '../workflow';
 import type { DependencyInformationPackage } from '../../domain/arkRunInformationPackage';
+import type { ArkRunGraph, ArkRunGraphQuery } from '../../domain/arkRunGraph';
 import type {
   ArkRunInspectorBind,
   ArkRunInspectorSnapshot,
@@ -63,6 +64,12 @@ export interface ArkKernel {
   resolveSingleton<T = unknown>(id: string): T;
   /** Tooling snapshot of ids, lifetime, and declarations — never construction. */
   getDependencyInformationPackage(): DependencyInformationPackage;
+  /**
+   * Process or technical graph slice of the information package.
+   * Optional nodeIds, degreesOfSeparation, and include/exclude query.
+   * Mermaid is a helper string on the result — never a score.
+   */
+  requestGraph(query?: ArkRunGraphQuery): ArkRunGraph;
   /**
    * Inspector snapshot (package + transport facts + observability). Never
    * includes factories, live instances, broker adapters, or input DTOs.

@@ -85,6 +85,13 @@ in the immutable pre-2.0 archive linked below.
   `GET /snapshot` and `GET /events` (SSE) serve the information package plus
   transport facts (no factories, no shipped cloud SDKs). Does not close Z09 / K01.
 
+- **ArkRun graph slices (RN13):** `@arkgate/runtime` `requestGraph()` slices the
+  information package into `process` (raises / reactsTo / sends) or `technical`
+  (`uses`) graphs. Optional `nodeIds`, `degreesOfSeparation`, and include/exclude
+  query keep a neighborhood. `formatArkRunGraphMermaid()` / `graph.mermaid` is a
+  helper string, never a score. Inspector `GET /graph` serves the same slice.
+  Does not close Z09 / K01.
+
 ## 4.6.7 — 2026-08-24
 
 **Patch** over **4.6.6**. Production-hardening: CODEOWNERS, eval/pack honesty, CLI extracts,
