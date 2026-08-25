@@ -1,6 +1,6 @@
 ---
 name: ark-upgrade
-description: Upgrade ArkGate through a content-identity preview, preserve customized files, and verify the active host and architecture contract.
+description: Upgrade ArkGate. Preview first, keep customized files, then apply.
 ---
 
 # /ark-upgrade — managed ArkGate upgrade

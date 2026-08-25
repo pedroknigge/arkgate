@@ -1,11 +1,11 @@
 ---
 name: ark-adopt
-description: Session 0 — mark the Ark path. Greenfield scaffold or brownfield honesty. Write ark.config, optional advisory ArkRules, baseline, and gates in this turn. CLI validates.
+description: Session 0 — write the rules file (ark.config.json) to match the real folders. Optional extra rules inside a layer. CLI validates.
 ---
 
 # /ark-adopt — Mark the path (session 0)
 
-**When:** empty tree, or the architecture config does not match the real folders (session 0).
+**When:** empty tree, or the rules file does not match the real folders (session 0).
 **Not when:** a single new file (`/ark-place`) or leftover design after the path is honest (`/ark-explore` then `/ark-autopilot`).
 
 ## Steps

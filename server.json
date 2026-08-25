@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.pedroknigge/arkgate",
-  "description": "When your agent writes TypeScript, ArkGate stops it from breaking the layers.",
+  "description": "If the AI writes an illegal import, the write is rejected. The same check fails the pull request.",
   "repository": {
     "url": "https://github.com/pedroknigge/arkgate",
     "source": "github"
   },
-  "version": "4.7.1",
+  "version": "4.7.2",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "arkgate",
-      "version": "4.7.1",
+      "version": "4.7.2",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"
@@ -31,7 +31,7 @@
           "type": "named",
           "name": "--config",
           "value": "ark.config.json",
-          "description": "Path to the ArkGate architecture config"
+          "description": "Path to the rules file (ark.config.json)"
         }
       ]
     }

@@ -1,6 +1,6 @@
 ---
 name: ark-runtime
-description: Evaluate and wire the experimental ArkRun companion (@arkgate/runtime) against hand-rolled event bus, outbox, saga, projection, policy, or NestJS code. One candidate. Extra on via /ark-adopt; new files via /ark-place. Skills never enforce.
+description: Wire the optional ArkRun extra (@arkgate/runtime). One candidate. Extra on via /ark-adopt.
 ---
 
 # /ark-runtime — Evaluate and wire ArkRun (experimental opt-in)

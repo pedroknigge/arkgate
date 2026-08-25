@@ -1,6 +1,6 @@
 ---
 name: ark-contract
-description: Shortcut to /ark-adopt (session 0) or /ark-autopilot (later config tighten). Edit layers, ArkRules, or the ArkRun extra. Deprecated as a first-class door.
+description: Shortcut — edit the rules file or extra rules. Use /ark-adopt or /ark-autopilot.
 ---
 
 # /ark-contract — Shortcut to adopt / autopilot

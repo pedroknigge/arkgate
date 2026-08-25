@@ -1,5 +1,8 @@
 # ArkGate — Architecture Co-pilot (enthusiast track)
 
+If the AI writes an illegal import, the write is rejected. The same check fails the pull
+request. Not an API Gateway. Not a folder linter.
+
 Plain-language onboarding for builders who use AI agents but are not professional
 developers. This track follows [Diátaxis](https://diataxis.fr/): tutorial, how-to,
 reference, and explanation. Package: **`arkgate`** (CLI: `arkgate` / `arkgate-check`;

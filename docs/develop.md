@@ -2,6 +2,10 @@
 
 For **developers** integrating ArkGate into a product repo: agents, CI, config, brownfield, and power tools.
 
+If the AI writes an illegal import, the write is rejected. The same check fails the pull
+request. Not an API Gateway. Not a folder linter. Without a required CI status,
+`ark.config.json` is just documentation.
+
 If you only want the happy path, start at [use.md](use.md).
 
 ---

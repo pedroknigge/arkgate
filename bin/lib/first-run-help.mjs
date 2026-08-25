@@ -3,11 +3,11 @@
  */
 
 export function setupUsage() {
-  return `arkgate (alias ark) — One architecture config. One check. One coach.
+  return `arkgate (alias ark) — Illegal import: write rejected. Same check fails the PR.
 
   arkgate start              preview (no writes)
   arkgate start --apply      write host + CI setup
-  arkgate-check --doctor     where you are + one next action
+  arkgate-check --doctor     what's wrong, what to do first
 
 Stuck? Run doctor. Do #1.
 `;
@@ -27,7 +27,7 @@ Every flag: arkgate --help --all
 }
 
 export function setupUsageAll() {
-  return `arkgate (alias ark) — One architecture config. One check. One coach.
+  return `arkgate (alias ark) — Illegal import: write rejected. Same check fails the PR.
 
 Usage:
   arkgate start   [--root <project>] [--tools <host>] [--require-write-hook <host>] [--install] [--apply] [--json]

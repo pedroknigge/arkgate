@@ -2,10 +2,12 @@
 
 # ArkGate — Architecture Co-pilot for AI TypeScript
 
-**One architecture config. One check. One coach.**
+**If the AI writes an illegal import, the write is rejected. The same check fails the pull request.**
 
-Your AI writes most of the code. ArkGate keeps that work inside an architecture you can trust —
-and makes sure a “green” check means something real.
+Not an API Gateway. Not a folder linter. If the check is not required on the PR, the rules
+file is just documentation.
+
+**One rules file. One check. One next step.**
 
 [![Website](https://img.shields.io/badge/website-arkgate.online-0a0a0a)](https://www.arkgate.online/)
 [![CI](https://github.com/pedroknigge/arkgate/actions/workflows/ci.yml/badge.svg)](https://github.com/pedroknigge/arkgate/actions/workflows/ci.yml)
@@ -16,11 +18,12 @@ and makes sure a “green” check means something real.
 
 </div>
 
-> **ArkGate 4.7.1** is on npm `latest`. One project skill catalog. Optional **ArkRun** extra on schema `1.2`.
+> **ArkGate 4.7.2** is prepared. npm `latest` remains **4.7.1** until this patch is published.
+> If the AI writes an illegal import, the write is rejected. Optional **ArkRun** extra on schema `1.2`.
 > A tree is **adopted** only with a required GitHub status running `arkgate-check --strict-merge`,
 > or `.ark/adoption-stance.json` `stance: "advisory-only"`. Doctor is compact (`--doctor --all`
-> for Details). [4.7.1 notes](docs/releases/4.7.1.md) · [4.7.0](docs/releases/4.7.0.md) ·
-> [4.6.7](docs/releases/4.6.7.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> for Details). [4.7.2 notes](docs/releases/4.7.2.md) · [4.7.1](docs/releases/4.7.1.md) ·
+> [4.7.0](docs/releases/4.7.0.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
 
 ---
 
@@ -41,21 +44,20 @@ Full map: **[docs/README.md](docs/README.md)**
 ```bash
 npm install -D arkgate typescript
 npx arkgate start                 # preview files + commands
-npx arkgate start --apply         # compact contract + host router + CI plan
-npx arkgate-check --doctor        # control plane: status light + primary next action
-npx arkgate-check --doctor --all  # encyclopedia (Details)
+npx arkgate start --apply         # compact config + host router + CI plan
+npx arkgate-check --doctor        # what's wrong, what to do first
+npx arkgate-check --doctor --all  # full details
 ```
 
-That is the product. Doctor is the control plane — when stuck, do **primary next action #1**.
-JSON still carries improvement compass and coach (**not a score**). Compact human output does not.
+That is the product. Stuck? Run `--doctor` and do action **#1**.
 
 ```text
-start → doctor (+ compass) → /ark-adopt (session 0) → day-to-day /ark-place
-                         ↘ /ark-explore then /ark-autopilot when leftover design remains
+start → doctor → new files in the right folder
+              ↘ leftover mess: map, then one small refactor
 ```
 
-Teams: keep the constitution out of product PRs. Local gate
-`ark-check --changed --base origin/dev`. Steward law PRs use `--contract-session`.
+Keep the rules file out of product PRs. Local check:
+`ark-check --changed --base origin/dev`. Changing the rules themselves uses `--contract-session`.
 
 Aliases `ark` / `ark-check` / `ark-mcp` still work. npm / pnpm / yarn. No install lifecycle scripts.
 
@@ -65,11 +67,13 @@ Aliases `ark` / `ark-check` / `ark-mcp` still work. npm / pnpm / yarn. No instal
 
 ## What it is
 
-A machine-readable architecture file (`ark.config.json`) plus enforcement:
+Import rules for TypeScript, enforced twice: the editor hook rejects the write, and a
+**required** CI check rejects the pull request. `ark.config.json` is the rules file those
+checks read.
 
 | When | Tool |
 |------|------|
-| **While the AI writes** | Pre-write block on supported hosts; warning only elsewhere |
+| **While the AI writes** | The write is rejected on supported hosts; warning only elsewhere |
 | **Before merge** | `arkgate-check` as a **required** CI status |
 
 ### Two planes (4.0)
@@ -83,7 +87,9 @@ A machine-readable architecture file (`ark.config.json`) plus enforcement:
 Absence of ArkRules or ArkRun changes no inter-layer verdict. Label residual **`[Layer]`** vs **`[ArkRules]`**.  
 Details: [configuration](docs/configuration.md) · [use path](docs/use.md).
 
-**Not** a web framework, ORM, or job runner. Optional **ArkRun** extra and companion kernel (`@arkgate/runtime`) are separate and not required for the gate. In-memory stores are not production durability.
+**Not** an API Gateway, a folder linter, a web framework, ORM, or job runner. Optional
+**ArkRules** and **ArkRun** extras are off unless you turn them on. In-memory stores are
+not production durability.
 
 **Name note:** npm package `arkgate` — not affiliated with the separate Archgate CLI project.
 
@@ -91,8 +97,9 @@ Details: [configuration](docs/configuration.md) · [use path](docs/use.md).
 
 ArkGate is overkill for small trees with **no AI agents** and **no multi-layer boundaries**, for
 single-developer hobby CRUDs under no integration pressure, and for teams that will not maintain
-`ark.config.json` or a **required** CI status running `arkgate-check --strict-merge`. In those
-cases stay with a boundary linter alone (see [Why not only ESLint / Nx / cruiser?](#why-not-only-eslint--nx--cruiser)).
+`ark.config.json` or a **required** CI status running `arkgate-check --strict-merge`. Without that
+status the rules file is just documentation — stay with a boundary linter alone (see
+[Why not only ESLint / Nx / cruiser?](#why-not-only-eslint--nx--cruiser)).
 Anyone path: [docs/use.md — When not to adopt](docs/use.md#when-not-to-adopt). Limits of a green
 check: [4.3.0 — What ArkGate is / isn't](docs/releases/4.3.0.md#what-arkgate-is--isnt).
 
@@ -227,7 +234,8 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current published (4.7.1 on npm `latest`) | [docs/releases/4.7.1.md](docs/releases/4.7.1.md) · [CHANGELOG](CHANGELOG.md) |
+| Current tree (4.7.2 prepared) | [docs/releases/4.7.2.md](docs/releases/4.7.2.md) · [CHANGELOG](CHANGELOG.md) |
+| Current published (4.7.1 on npm `latest`) | [docs/releases/4.7.1.md](docs/releases/4.7.1.md) |
 | Prior published (4.7.0) | [docs/releases/4.7.0.md](docs/releases/4.7.0.md) |
 | Prior published (4.6.7) | [docs/releases/4.6.7.md](docs/releases/4.6.7.md) |
 | Prior published (4.6.6) | [docs/releases/4.6.6.md](docs/releases/4.6.6.md) |
@@ -267,4 +275,4 @@ Full guide: [CONTRIBUTING.md](CONTRIBUTING.md) · queue: [ROADMAP.md](ROADMAP.md
 **MCP:** [`io.github.pedroknigge/arkgate`](https://registry.modelcontextprotocol.io/)  
 Node ≥ 18 · **MIT**
 
-**Ark doesn’t invent your product. It keeps AI-generated TypeScript inside an architecture you can trust — and tells you when it isn’t really enforcing anything yet.**
+**Ark doesn’t invent your product. It rejects the illegal write — and tells you when it isn’t really enforcing anything yet.**

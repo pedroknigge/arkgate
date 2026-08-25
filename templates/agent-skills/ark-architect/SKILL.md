@@ -1,6 +1,6 @@
 ---
 name: ark-architect
-description: Shortcut to /ark-adopt for greenfield shape. Deprecated as a first-class door. Do adopt’s job.
+description: Shortcut to /ark-adopt for a new tree. Deprecated as a first-class door.
 ---
 
 # /ark-architect — Shortcut to /ark-adopt

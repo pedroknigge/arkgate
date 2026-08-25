@@ -1,6 +1,6 @@
 ---
 name: ark-autopilot
-description: Apply Ark end-to-end — explore first; dual plan A (edges) + B (shape); write mechanical-safe and judgment in this turn; one Shape refactor. Empty plan A is not healthy if leftover design remains. CLI is a sensor; you edit files.
+description: Fix illegal imports and one leftover-design refactor. CLI is a sensor; you edit files.
 ---
 
 # /ark-autopilot — Apply the path
@@ -14,7 +14,7 @@ description: Apply Ark end-to-end — explore first; dual plan A (edges) + B (sh
 2. Fix import-rule debt; if leftover design remains, apply **one** small refactor.
 3. Re-run doctor. Never weaken `ark.config.json`.
 
-**This is the apply door.** Invoking it **is** the approval. Doctor remains the control plane.
+**This is the apply door.** Invoking it **is** the approval. Run `arkgate-check --doctor` for the next step.
 
 ## Autonomy contract
 

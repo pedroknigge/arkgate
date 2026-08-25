@@ -154,8 +154,8 @@ mcp-publisher login github -token "$(gh auth token)"
 mcp-publisher validate server.json && mcp-publisher publish server.json
 ```
 
-**Current release:** [docs/releases/4.7.1.md](docs/releases/4.7.1.md) (`arkgate@4.7.1`).
+**Current release:** [docs/releases/4.7.2.md](docs/releases/4.7.2.md) (`arkgate@4.7.2`, prepared).
 **Current published release:** [docs/releases/4.7.1.md](docs/releases/4.7.1.md) (`arkgate@4.7.1` on npm `latest`).
 
-**Prior published:** [docs/releases/4.7.0.md](docs/releases/4.7.0.md) (`arkgate@4.7.0`).
+**Prior published:** [docs/releases/4.7.1.md](docs/releases/4.7.1.md) (`arkgate@4.7.1`) · [docs/releases/4.7.0.md](docs/releases/4.7.0.md) (`arkgate@4.7.0`).
 **Previous:** [docs/releases/4.6.7.md](docs/releases/4.6.7.md) · [docs/releases/4.6.6.md](docs/releases/4.6.6.md) · [docs/releases/4.6.5.md](docs/releases/4.6.5.md) · [docs/releases/4.6.4.md](docs/releases/4.6.4.md) · [docs/releases/4.6.3.md](docs/releases/4.6.3.md) · [docs/releases/4.6.2.md](docs/releases/4.6.2.md) · [docs/releases/4.6.1.md](docs/releases/4.6.1.md) · [docs/releases/4.6.0.md](docs/releases/4.6.0.md) · [docs/releases/4.5.7.md](docs/releases/4.5.7.md) · [docs/releases/4.5.6.md](docs/releases/4.5.6.md) · [docs/releases/4.5.5.md](docs/releases/4.5.5.md) · [docs/releases/4.5.0.md](docs/releases/4.5.0.md) · [docs/releases/4.4.0.md](docs/releases/4.4.0.md) · [docs/releases/4.3.0.md](docs/releases/4.3.0.md).

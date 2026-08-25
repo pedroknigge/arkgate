@@ -5,6 +5,26 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.7.2 — 2026-08-25
+
+**Patch** over **4.7.1**. Public copy uses ordinary software words: if the AI writes an
+illegal import, the write is rejected; the same check fails the pull request. Not an API Gateway.
+Not a folder linter. If the check is not required on the PR, the rules file is
+just documentation. **No required config migration.** Does not close Z09 / K01.
+
+**Status: prepared** (see `docs/releases/4.7.2.md`). npm `latest` remains **4.7.1** until
+this patch is published.
+
+### Changed
+
+- **First-contact wording (common language):** README, use/develop/docs hub/enthusiast,
+  agent-guide, ai-gates, package-surface openings, compact agent router, skill picker
+  `description` frontmatter, first-run CLI help, compact doctor strings, Action and MCP
+  descriptions, npm `description`, and the live product site lead with the deny. How:
+  one rules file, one check, one next step. Authority:
+  [product voice](docs/product-voice.md). ADR 0001 product title unchanged. Historical
+  4.6.2 three-beat line stays in that release note.
+
 ## 4.7.1 — 2026-08-25
 
 **Patch** over **4.7.0**. One project skill catalog, visible package version in the

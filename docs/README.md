@@ -1,6 +1,8 @@
 # ArkGate documentation
 
-**ArkGate** keeps AI-written TypeScript inside an architecture you can trust.
+**If the AI writes an illegal import, the write is rejected. The same check fails the pull request.**
+Not an API Gateway. Not a folder linter. If the check is not required on the PR, the rules
+file is just documentation.
 
 Pick your path. Skip everything else.
 
@@ -58,6 +60,7 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
+Current tree: [releases/4.7.2.md](releases/4.7.2.md) (`arkgate@4.7.2`, prepared).
 Current published: [releases/4.7.1.md](releases/4.7.1.md) (`arkgate@4.7.1` on npm `latest`).
 Prior: [releases/4.7.0.md](releases/4.7.0.md) · [4.6.7](releases/4.6.7.md) · [4.6.6](releases/4.6.6.md) · [4.6.5](releases/4.6.5.md) · [4.6.4](releases/4.6.4.md) · [4.6.3](releases/4.6.3.md) · [4.6.2](releases/4.6.2.md) · [4.6.1](releases/4.6.1.md) · [4.6.0](releases/4.6.0.md).
 Older notes: [releases/](releases/). Config: [configuration.md](configuration.md).
@@ -70,3 +73,4 @@ Older notes: [releases/](releases/). Config: [configuration.md](configuration.md
 2. **One primary flow** — `start` → doctor → optional guided work.
 3. **Honest hardness** — host write guarantees differ; a **required GitHub status context** running the merge CLI is the shared hard boundary.
 4. **History is not the product** — version archaeology lives under `releases/` and `plans/`, not the front door.
+5. **Common language** — first-contact copy uses ordinary software words (import rules, rejected write, required CI). Brands are categorical. Voice: [product-voice.md](product-voice.md).

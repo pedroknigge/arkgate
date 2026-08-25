@@ -1,6 +1,6 @@
 ---
 name: ark-loop
-description: Shortcut to /ark-autopilot for driving plan A to zero. Deprecated as a first-class door. CLI validates — you edit code.
+description: Shortcut to /ark-autopilot for illegal-import fixes. CLI validates — you edit code.
 ---
 
 # /ark-loop — Shortcut to /ark-autopilot

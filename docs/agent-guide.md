@@ -1,7 +1,8 @@
 # ArkGate — Agent Integration Guide
 
-**ArkGate** (`arkgate`) — architecture co-pilot for AI TypeScript. This guide is the **develop**
-reference for agents and codegen: write hooks, advisory MCP tools, CI, and `/ark-*` skills.
+**If the AI writes an illegal import, the write is rejected. The same check fails the pull request.**
+This guide is the **develop** reference for agents and codegen: write hooks, advisory MCP tools,
+CI, and `/ark-*` skills. Not an API Gateway. Not a folder linter.
 
 - Product path (anyone): [use.md](use.md)  
 - Integration overview: [develop.md](develop.md)  
@@ -28,7 +29,7 @@ ark start → ark start --apply → ark-check --doctor
   optional: arkRules map + arkrules/*.json (intra-layer; starts advisory)
 ```
 
-Doctor is the **control plane** (status light + primary next action). From **4.0.0**, doctor may
+`arkgate-check --doctor` shows what's wrong and what to do first. From **4.0.0**, doctor may
 also report **`rulesUnderContract`** (ArkRules counts) and **`packageVersionTruth`** when the
 CLI is ahead of the package.json pin. The compact router from `ark start` is enough for normal
 feature work. Full `/ark-*` skills are **expert depth** and label residual **`[Layer]`** vs
@@ -540,7 +541,7 @@ reference, and explanation for the full path (recommend → init → gallery →
 
 ### Agent workflow (before codegen)
 
-**Default path first:** `ark start` → `ark start --apply` → `ark-check --doctor`. Doctor’s primary next action is the control plane; do not skill-shop around it.
+**Default path first:** `ark start` → `ark start --apply` → `ark-check --doctor`. Do action #1; do not skill-shop around it.
 
 Greenfield / empty-tree **depth** (only when doctor or a thin tree points here — not a second day-zero curriculum):
 

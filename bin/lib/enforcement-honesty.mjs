@@ -432,7 +432,7 @@ export function buildProductHonesty(input = {}) {
         message:
           operatingMode === 'adapt'
             ? 'Operating mode is ADAPT — not finished until whole-tree green, zero blocking, and zero design smells (contract and tree still disagree).'
-            : 'Operating mode is SUGGEST — not finished until whole-tree green, zero blocking, and zero design smells (contract is not yet the control plane).',
+            : 'Operating mode is SUGGEST — not finished until whole-tree green, zero blocking, and zero design smells (the rules file is not yet binding).',
       });
     }
   }

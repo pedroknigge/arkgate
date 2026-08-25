@@ -1,6 +1,6 @@
 ---
 name: ark-explore
-description: Map skill — decision-grade recon of layers + ArkRules opportunities + dual-plan seed (no apply). Primary post-green door when leftover design work remains. CLI is a sensor; you read the tree. No gate bypass.
+description: Map import rules and leftover design. No apply. CLI is a sensor; you read the tree.
 ---
 
 # /ark-explore — Recon the real project (map only)

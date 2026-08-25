@@ -524,8 +524,8 @@ describe('AL04 first-run noun cut', () => {
       expect(help, String(banned)).not.toMatch(banned);
     }
     expect(firstRunNouns(help).length).toBeLessThanOrEqual(12);
-    expect(help).toMatch(/architecture config/);
-    expect(help).toMatch(/next action/);
+    expect(help).toMatch(/illegal import/i);
+    expect(help).toMatch(/doctor/);
     expect(help).not.toMatch(/\/ark-adopt/);
   });
 
