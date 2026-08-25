@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-25 (Engineering doing: RN05; `RN04` **done**; `RN03` **done`; `RN02` **done`; `RN01` **done`; Phase AL `AL01`–`AL04` **done`; `AL06` compact-doctor extract **done`; `AL05` parked; Phase RN ArkRun started; Z09 still parked; tree **arkgate@4.6.7**; npm `latest` is **4.6.7**)
+- **Status date:** 2026-08-25 (Engineering next: `RN06`; `RN05` **done**; `RN04` **done**; `RN03` **done`; `RN02` **done`; `RN01` **done`; Phase AL `AL01`–`AL04` **done`; `AL06` compact-doctor extract **done`; `AL05` parked; Phase RN ArkRun started; Z09 still parked; tree **arkgate@4.6.7**; npm `latest` is **4.6.7**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -263,7 +263,8 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: RN05 (diagnostic catalog `ARKRUN_*` + dual-depth `nextAction`).
+Engineering next: `RN06` (`arkgate/eslint` rules for the same sensors).
+`RN05` **done** (diagnostic catalog `ARKRUN_*` + dual-depth `nextAction`; remediation parity tests).
 `RN04` **done** (tier-1 sensors emit `ARKRUN_*`; advisory does not flip `valid`; enforced blocks).
 `RN03` **done** (resolver facts for kernel call sites, managed `new`, composition-root hits; facts schema additive).
 `RN02` **done** (schema `1.2` `arkRun` extra; `1.1` migrates; absence silent; invalid extra fails closed).
@@ -284,7 +285,7 @@ Does not ship cloud adapters or a process singleton. Companion kernel stays
 | 186 | `RN02` | `done` | L | RN01 | `arkRun` on `ark.config` schema `1.2`; `1.1` migrates; absence silent; invalid extra fails closed |
 | 187 | `RN03` | `done` | L | RN02 | Resolver facts for kernel call sites, managed `new`, composition roots |
 | 188 | `RN04` | `done` | L | RN03 | Tier-1 ArkRun sensors; advisory does not flip `valid`; enforced blocks |
-| 189 | `RN05` | `doing` | M | RN04 | Diagnostic catalog `ARKRUN_*` + dual-depth `nextAction` |
+| 189 | `RN05` | `done` | M | RN04 | Diagnostic catalog `ARKRUN_*` + dual-depth `nextAction` |
 | 190 | `RN06` | `todo` | M | RN04 | `arkgate/eslint` rules for the same sensors |
 | 191 | `RN07` | `todo` | L | RN05 | CLI / MCP / hook / preflight / CI extra-teeth parity |
 | 192 | `RN08` | `todo` | M | RN07 | Doctor / status / report `arkRun` section (`notAScore`) |
