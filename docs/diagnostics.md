@@ -280,14 +280,17 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 
 ## ArkRun (opt-in extra)
 
+Live adapters specialize `nextAction` with the call-site name or specifier when present
+(casual `enthusiastHint` + engineer `nextAction`). Catalog **Fix** is the stable no-target form.
+
 <a id="ARKRUN_MISSING_ROOT"></a>
 
 ### `ARKRUN_MISSING_ROOT`
 
 **No kernel factory in composition roots**
 
-- **Why:** The ArkRun extra is on but no createArkKernel / createStrictArkKernel factory was found in arkRun.compositionRoots, so agents can skip the kernel while the write gate stays green.
-- **Fix:** Call createStrictArkKernel (or createArkKernel) in a composition root listed in arkRun.compositionRoots, then preflight again.
+- **Why:** The ArkRun extra is on but no createArkKernel / createStrictArkKernel / createArkKernelFromConfig / createStrictArkKernelFromConfig factory was found in arkRun.compositionRoots, so agents can skip the kernel while the write gate stays green.
+- **Fix:** Import createStrictArkKernel from @arkgate/runtime (never a removed arkgate/runtime shim) and call it in a composition root listed in arkRun.compositionRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.
 
 <a id="ARKRUN_KERNEL_IN_DOMAIN"></a>
 
@@ -296,7 +299,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 **Domain-role layer imports the kernel**
 
 - **Why:** A Domain-role layer imports @arkgate/runtime or kernel types. Domain stays kernel-free; composition roots and adapters own the factory.
-- **Fix:** Move the kernel import out of the Domain-role layer into a composition root or adapter, then preflight again.
+- **Fix:** Move the kernel import out of the Domain-role layer into a composition root or adapter. Import from @arkgate/runtime, never a removed arkgate/runtime shim, then preflight again. Never mechanical-safe.
 
 <a id="ARKRUN_DIRECT_NEW"></a>
 
@@ -305,7 +308,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 **Managed type constructed with new**
 
 - **Why:** A managed non-Domain file constructs an admitted type with new outside an ArkRun composition-root factory, skipping kernel resolve/registration.
-- **Fix:** Resolve the type from the kernel instead of constructing it with new, then preflight again.
+- **Fix:** Resolve the type from the kernel instead of constructing it with new, then preflight again. Never mechanical-safe — rewiring construction is a design decision.
 
 <a id="ARKRUN_UNDECLARED_EMIT"></a>
 
@@ -314,7 +317,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 **Emit name not in raises/sends**
 
 - **Why:** A publisher / publish / raise / send call-site literal is not listed in the file’s raises or sends declaration.
-- **Fix:** Add the call-site name to raises or sends on the managed component, then preflight again.
+- **Fix:** Add the existing call-site name to raises or sends on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new emit stays judgment.
 
 <a id="ARKRUN_UNDECLARED_HANDLE"></a>
 
@@ -323,7 +326,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 **Handle name not in reactsTo**
 
 - **Why:** A subscribe / registerHandler call-site literal is not listed in the file’s reactsTo declaration.
-- **Fix:** Add the call-site name to reactsTo on the managed component, then preflight again.
+- **Fix:** Add the existing call-site name to reactsTo on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new handle stays judgment.
 
 <a id="ARKRUN_UNDECLARED_DEPEND"></a>
 
@@ -332,7 +335,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 **Depend name not in uses**
 
 - **Why:** A resolve / resolveSingleton call-site literal is not listed in the file’s uses declaration.
-- **Fix:** Add the call-site name to uses on the managed component, then preflight again.
+- **Fix:** Add the existing call-site name to uses on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new depend stays judgment.
 
 <a id="ARKRUN_TRANSPORT_BYPASS"></a>
 
@@ -341,7 +344,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 **Homemade broker or emitter import**
 
 - **Why:** A managed layer imports a closed broker/queue/emitter specifier (EventEmitter, queue clients, …) instead of the ArkRun kernel transport.
-- **Fix:** Send through the ArkRun kernel transport instead of importing that broker or emitter, then preflight again.
+- **Fix:** Send through the ArkRun kernel transport instead of importing that broker or emitter, then preflight again. Never mechanical-safe — homemade buses stay judgment.
 
 ## Atomic preflight and change sets
 

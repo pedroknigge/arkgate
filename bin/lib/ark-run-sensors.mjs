@@ -9,6 +9,7 @@
  */
 
 import { isArkRunKernelModuleSpecifier, isArkRunTransportBypassSpecifier, } from './ark-run-facts.mjs';
+import { deterministicNextAction } from './remediation.mjs';
 export const ARKRUN_TIER1_SENSOR_IDS = [
     'arkrun-missing-root',
     'arkrun-kernel-in-domain',
@@ -40,24 +41,6 @@ function isDomainRoleLayer(layer, intentPrefixes = []) {
         return normalized === 'Domain' || normalized.startsWith('Domain.');
     });
 }
-function nextActionFor(sensor) {
-    switch (sensor) {
-        case 'arkrun-missing-root':
-            return 'Call createStrictArkKernel (or createArkKernel) in a composition root listed in arkRun.compositionRoots, then preflight again.';
-        case 'arkrun-kernel-in-domain':
-            return 'Move the kernel import out of the Domain-role layer into a composition root or adapter, then preflight again.';
-        case 'arkrun-direct-new':
-            return 'Resolve the type from the kernel instead of constructing it with new, then preflight again.';
-        case 'arkrun-undeclared-emit':
-            return 'Add the call-site name to raises or sends on the managed component, then preflight again.';
-        case 'arkrun-undeclared-handle':
-            return 'Add the call-site name to reactsTo on the managed component, then preflight again.';
-        case 'arkrun-undeclared-depend':
-            return 'Add the call-site name to uses on the managed component, then preflight again.';
-        case 'arkrun-transport-bypass':
-            return 'Send through the ArkRun kernel transport instead of importing that broker or emitter, then preflight again.';
-    }
-}
 function compareFindings(left, right) {
     return (left.file.localeCompare(right.file) ||
         left.ruleId.localeCompare(right.ruleId) ||
@@ -76,7 +59,11 @@ function finding(extra, sensor, file, line, message, extras) {
         ...(extras?.target ? { target: extras.target } : {}),
         severity: failsStrict ? 'error' : 'warning',
         failsStrict,
-        nextAction: nextActionFor(sensor),
+        nextAction: deterministicNextAction({
+            ruleId: ARKRUN_RULE_IDS[sensor],
+            fromLayer: extras?.fromLayer,
+            target: extras?.target,
+        }),
     };
 }
 function bagForFile(declarations, file) {

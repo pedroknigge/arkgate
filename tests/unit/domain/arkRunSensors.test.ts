@@ -6,6 +6,7 @@ import {
   evaluateArkRunSensors,
 } from '../../../src/domain/arkRunSensors';
 import { evaluateArkRunSensors as evaluateCliArkRunSensors } from '../../../bin/lib/ark-run-sensors.mjs';
+import { deterministicNextAction } from '../../../src/domain/remediation';
 
 const LAYERS: ArkConfigLayer[] = [
   { name: 'DomainModel', patterns: ['src/domain/**'] },
@@ -399,5 +400,44 @@ describe('RN04 ArkRun tier-1 sensors', () => {
       'ARKRUN_UNDECLARED_DEPEND',
       'ARKRUN_TRANSPORT_BYPASS',
     ]);
+  });
+
+  it('sensor nextAction matches dual-depth remediation (RN05)', () => {
+    const result = evaluate('enforced', {
+      compositionRootHits: [
+        { file: 'src/main.ts', matchedRoot: 'src/main.ts', hasKernelFactory: true },
+      ],
+      kernelCalls: [
+        {
+          file: 'src/application/billing.ts',
+          line: 5,
+          kind: 'publisher',
+          callee: 'publisher',
+          viaImport: false,
+          nameLiteral: 'Domain.Order.Placed',
+        },
+      ],
+      managedNews: [{ file: 'src/application/billing.ts', line: 2, typeName: 'OrderService' }],
+      dependencies: [
+        {
+          from: 'src/application/billing.ts',
+          specifier: 'events',
+          kind: 'import',
+          typeOnly: false,
+          line: 1,
+          resolution: 'resolved-external',
+        },
+      ],
+    });
+    expect(result.findings.length).toBeGreaterThan(0);
+    for (const finding of result.findings) {
+      expect(finding.nextAction).toBe(
+        deterministicNextAction({
+          ruleId: finding.ruleId,
+          fromLayer: finding.fromLayer,
+          target: finding.target,
+        })
+      );
+    }
   });
 });

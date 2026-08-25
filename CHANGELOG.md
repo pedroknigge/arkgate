@@ -29,7 +29,15 @@ in the immutable pre-2.0 archive linked below.
   and `ARKRUN_TRANSPORT_BYPASS`. Advisory findings never flip `valid`; enforced
   blocks. Absence of the extra is still silent on Layers / ArkRules verdicts.
   Optional `arkRunDeclarations` facts stay additive on schema `1.2`. Dual-depth
-  catalog nextAction is RN05. Does not close Z09 / K01.
+  catalog nextAction is RN05 (landed below). Does not close Z09 / K01.
+
+- **ArkRun diagnostic catalog dual-depth (RN05):** closed `ARKRUN_*` catalog
+  entries have dual-depth remediation: casual `enthusiastHint` plus engineer
+  `nextAction` (target interpolates the call-site literal or specifier). Adding
+  an existing declaration-list string is `mechanical-safe` (`arkrun-declaration-list`)
+  only when that literal is already present; other ArkRun findings stay
+  `judgment`. Sensors, adapter fallback, and CLI remediation share
+  `deterministicNextAction`. Does not close Z09 / K01.
 
 ## 4.6.7 — 2026-08-24
 

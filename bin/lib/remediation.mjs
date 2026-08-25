@@ -19,6 +19,7 @@ export const MECHANICAL_SAFE_KINDS = [
     'type-only-import-move',
     'import-type-from-pure-type-module',
     'import-type-of-type-exports',
+    'arkrun-declaration-list',
     // port-proof-inject-binding is intentionally NOT mechanical-safe (signature change).
 ];
 /**
@@ -40,6 +41,7 @@ export const KNOWN_FIX_CLASSES = [
     'intent-relocation',
     'break-cycle',
     'review-contract',
+    'arkrun-usage',
 ];
 const PURE_SHARED_RE = /(^|\/)(constants|types|enums|shared-types|shared\/(?:types|constants)|test-projects)(\/|\.|$)|(?:^|\/)[^/]*(?:constants|types)(?:\.[cm]?[jt]sx?)?$/i;
 const KERNEL_EMIT_RE = /(^|\/)(?:kernel(?:\/|$)|events?(?:\/|\.|$)|bootstrap(?:\.[cm]?[jt]sx?)?$|emitter(?:\.[cm]?[jt]sx?)?$)|(?:^|\/)(?:intents?|publish)(?:\/|\.|$)/i;
@@ -87,6 +89,101 @@ export function layerImportNextAction(violation) {
     }
     return 'Classify the import: if it is constants/types/pure, adopt into DomainModel or SharedKernel; define a port only if the target is a real use-case. Then preflight again.';
 }
+const ARKRUN_UNDECLARED_RULE_IDS = new Set([
+    'ARKRUN_UNDECLARED_EMIT',
+    'ARKRUN_UNDECLARED_HANDLE',
+    'ARKRUN_UNDECLARED_DEPEND',
+]);
+const ARKRUN_JUDGMENT_RULE_IDS = new Set([
+    'ARKRUN_MISSING_ROOT',
+    'ARKRUN_KERNEL_IN_DOMAIN',
+    'ARKRUN_DIRECT_NEW',
+    'ARKRUN_TRANSPORT_BYPASS',
+]);
+function arkRunCallSiteName(violation) {
+    return typeof violation.target === 'string' && violation.target.trim().length > 0
+        ? violation.target.trim()
+        : undefined;
+}
+function isArkRunDeclarationListSafe(violation) {
+    return (typeof violation.ruleId === 'string' &&
+        ARKRUN_UNDECLARED_RULE_IDS.has(violation.ruleId) &&
+        arkRunCallSiteName(violation) !== undefined);
+}
+/** Catalog `fix` is the no-target form; a present `target` specializes it. */
+function arkRunNextAction(violation) {
+    const target = arkRunCallSiteName(violation);
+    const fromLayer = typeof violation.fromLayer === 'string' && violation.fromLayer.length > 0
+        ? violation.fromLayer
+        : undefined;
+    switch (violation.ruleId) {
+        case 'ARKRUN_MISSING_ROOT':
+            return target
+                ? `Import createStrictArkKernel from @arkgate/runtime and call it in composition root ${target} listed in arkRun.compositionRoots, then preflight again.`
+                : 'Import createStrictArkKernel from @arkgate/runtime (never a removed arkgate/runtime shim) and call it in a composition root listed in arkRun.compositionRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.';
+        case 'ARKRUN_KERNEL_IN_DOMAIN':
+            return target
+                ? `Move the kernel import of ${target} out of ${fromLayer ?? 'the Domain-role layer'} into a composition root or adapter. Import from @arkgate/runtime, never a removed arkgate/runtime shim, then preflight again.`
+                : 'Move the kernel import out of the Domain-role layer into a composition root or adapter. Import from @arkgate/runtime, never a removed arkgate/runtime shim, then preflight again. Never mechanical-safe.';
+        case 'ARKRUN_DIRECT_NEW':
+            return target
+                ? `Resolve ${target} from the kernel instead of constructing it with new, then preflight again.`
+                : 'Resolve the type from the kernel instead of constructing it with new, then preflight again. Never mechanical-safe — rewiring construction is a design decision.';
+        case 'ARKRUN_UNDECLARED_EMIT':
+            return target
+                ? `Add ${target} to raises or sends on the managed component, then preflight again.`
+                : 'Add the existing call-site name to raises or sends on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new emit stays judgment.';
+        case 'ARKRUN_UNDECLARED_HANDLE':
+            return target
+                ? `Add ${target} to reactsTo on the managed component, then preflight again.`
+                : 'Add the existing call-site name to reactsTo on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new handle stays judgment.';
+        case 'ARKRUN_UNDECLARED_DEPEND':
+            return target
+                ? `Add ${target} to uses on the managed component, then preflight again.`
+                : 'Add the existing call-site name to uses on the managed component, then preflight again. Mechanical-safe only when that literal already exists and the edit is the declaration list; inventing a new depend stays judgment.';
+        case 'ARKRUN_TRANSPORT_BYPASS':
+            return target
+                ? `Send through the ArkRun kernel transport instead of importing ${target}, then preflight again.`
+                : 'Send through the ArkRun kernel transport instead of importing that broker or emitter, then preflight again. Never mechanical-safe — homemade buses stay judgment.';
+        default:
+            return `Resolve ${typeof violation.ruleId === 'string' && violation.ruleId.length > 0 ? violation.ruleId : 'ARK_UNKNOWN'} without weakening ark.config.json, then run Ark again.`;
+    }
+}
+function arkRunEnthusiastHint(violation) {
+    const target = arkRunCallSiteName(violation);
+    switch (violation.ruleId) {
+        case 'ARKRUN_MISSING_ROOT':
+            return target
+                ? `Call createStrictArkKernel from @arkgate/runtime in ${target} so the app actually uses the kernel.`
+                : 'Call createStrictArkKernel from @arkgate/runtime in a listed composition root so the app actually uses the kernel.';
+        case 'ARKRUN_KERNEL_IN_DOMAIN':
+            return target
+                ? `Domain stays kernel-free. Move the ${target} import to a composition root or adapter — never a removed arkgate/runtime shim.`
+                : 'Domain stays kernel-free. Move that @arkgate/runtime import to a composition root or adapter — never a removed arkgate/runtime shim.';
+        case 'ARKRUN_DIRECT_NEW':
+            return target
+                ? `Do not construct ${target} with new. Resolve it from the kernel instead.`
+                : 'Do not construct that managed type with new. Resolve it from the kernel instead.';
+        case 'ARKRUN_UNDECLARED_EMIT':
+            return target
+                ? `Add "${target}" to raises or sends. Do not invent a new emit.`
+                : 'Add the name you already publish to raises or sends. Do not invent a new emit.';
+        case 'ARKRUN_UNDECLARED_HANDLE':
+            return target
+                ? `Add "${target}" to reactsTo. Do not invent a new handle.`
+                : 'Add the name you already subscribe to reactsTo.';
+        case 'ARKRUN_UNDECLARED_DEPEND':
+            return target
+                ? `Add "${target}" to uses. Do not invent a new depend.`
+                : 'Add the name you already resolve to uses.';
+        case 'ARKRUN_TRANSPORT_BYPASS':
+            return target
+                ? `Do not import ${target} here. Send through the ArkRun kernel transport.`
+                : 'Do not import that broker or EventEmitter here. Send through the ArkRun kernel transport.';
+        default:
+            return 'Read the ArkRun finding and use the kernel instead of skipping it.';
+    }
+}
 /** One deterministic re-entry action shared by human and machine denial surfaces. */
 export function deterministicNextAction(violation) {
     switch (violation.ruleId) {
@@ -110,6 +207,14 @@ export function deterministicNextAction(violation) {
                 : 'the ArkRule'} (declared in ${typeof violation.arkruleSource === 'string' && violation.arkruleSource.length > 0
                 ? violation.arkruleSource
                 : 'arkrules/<Layer>.json'}), then preflight again. Do not demote the rule without a hash-bound policy acknowledgement.`;
+        case 'ARKRUN_MISSING_ROOT':
+        case 'ARKRUN_KERNEL_IN_DOMAIN':
+        case 'ARKRUN_DIRECT_NEW':
+        case 'ARKRUN_UNDECLARED_EMIT':
+        case 'ARKRUN_UNDECLARED_HANDLE':
+        case 'ARKRUN_UNDECLARED_DEPEND':
+        case 'ARKRUN_TRANSPORT_BYPASS':
+            return arkRunNextAction(violation);
         default:
             if (typeof violation.ruleId === 'string' && violation.ruleId.startsWith('ARKRULE_')) {
                 return `Fix the ArkRule ${typeof violation.arkruleId === 'string' ? violation.arkruleId : violation.ruleId}, then preflight again.`;
@@ -226,6 +331,22 @@ export function classifyRemediation(violation) {
             rationale: 'ArkRule structure/invariant findings are never mechanical-safe — restore private state, factory shape, event publish, coverage, or redesign the aggregate with judgment.',
         };
     }
+    if (violation && isArkRunDeclarationListSafe(violation)) {
+        return {
+            class: 'mechanical-safe',
+            confidence: 0.9,
+            remediationKind: 'arkrun-declaration-list',
+            rationale: 'Call-site literal already exists; adding it to the declaration list is behavior-preserving. Inventing a new emit/handle/depend stays judgment.',
+        };
+    }
+    if (typeof ruleId === 'string' &&
+        (ARKRUN_JUDGMENT_RULE_IDS.has(ruleId) || ARKRUN_UNDECLARED_RULE_IDS.has(ruleId))) {
+        return {
+            class: 'judgment',
+            confidence: 0.85,
+            rationale: 'ArkRun usage, construction, and homemade-transport findings are never mechanical-safe. Declaration-list edits are mechanical-safe only when the call-site literal is already present as target.',
+        };
+    }
     if (typeof ruleId === 'string' && ruleId.length > 0) {
         return {
             class: 'judgment',
@@ -337,6 +458,17 @@ export function enrichViolationWithFixClass(violation) {
             enriched.effort = 'medium';
             enriched.enthusiastHint =
                 'Two modules import each other in a loop. Extract shared code, invert one dependency behind a port, or merge them if they are really one unit.';
+            break;
+        case 'ARKRUN_MISSING_ROOT':
+        case 'ARKRUN_KERNEL_IN_DOMAIN':
+        case 'ARKRUN_DIRECT_NEW':
+        case 'ARKRUN_UNDECLARED_EMIT':
+        case 'ARKRUN_UNDECLARED_HANDLE':
+        case 'ARKRUN_UNDECLARED_DEPEND':
+        case 'ARKRUN_TRANSPORT_BYPASS':
+            enriched.fixClass = 'arkrun-usage';
+            enriched.effort = ARKRUN_UNDECLARED_RULE_IDS.has(violation.ruleId ?? '') ? 'small' : 'medium';
+            enriched.enthusiastHint = arkRunEnthusiastHint(violation);
             break;
         default:
             enriched.fixClass = 'review-contract';

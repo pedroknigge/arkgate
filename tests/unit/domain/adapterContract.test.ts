@@ -284,6 +284,9 @@ describe('cross-adapter result contract v1.5', () => {
       { ruleId: 'RAW_EVENT_PUBLISH' },
       { ruleId: 'PUBLISH_MISSING_SOURCE' },
       { ruleId: 'CUSTOM_RULE' },
+      { ruleId: 'ARKRUN_UNDECLARED_EMIT', target: 'Domain.Order.Placed' },
+      { ruleId: 'ARKRUN_DIRECT_NEW', target: 'OrderService', fromLayer: 'ApplicationOrchestration' },
+      { ruleId: 'ARKRUN_MISSING_ROOT' },
       {},
     ];
 

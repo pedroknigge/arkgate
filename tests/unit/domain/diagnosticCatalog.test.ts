@@ -24,6 +24,7 @@ import {
   deterministicNextAction,
   enrichViolationWithFixClass,
 } from '../../../src/domain/remediation';
+import { ARKRUN_RULE_IDS } from '../../../src/domain/arkRunSensors';
 import {
   DIAGNOSTIC_CATALOG as cliCatalog,
   DIAGNOSTIC_RULE_IDS as cliRuleIds,
@@ -47,6 +48,23 @@ const REMEDIATION_SPECIALIZED_RULE_IDS = [
   'ARKRULE_STRUCTURE',
   'ARKRULE_INVARIANT',
   'INVARIANT_UNCOVERED',
+  'ARKRUN_MISSING_ROOT',
+  'ARKRUN_KERNEL_IN_DOMAIN',
+  'ARKRUN_DIRECT_NEW',
+  'ARKRUN_UNDECLARED_EMIT',
+  'ARKRUN_UNDECLARED_HANDLE',
+  'ARKRUN_UNDECLARED_DEPEND',
+  'ARKRUN_TRANSPORT_BYPASS',
+] as const;
+
+const ARKRUN_CATALOG_RULE_IDS = [
+  'ARKRUN_MISSING_ROOT',
+  'ARKRUN_KERNEL_IN_DOMAIN',
+  'ARKRUN_DIRECT_NEW',
+  'ARKRUN_UNDECLARED_EMIT',
+  'ARKRUN_UNDECLARED_HANDLE',
+  'ARKRUN_UNDECLARED_DEPEND',
+  'ARKRUN_TRANSPORT_BYPASS',
 ] as const;
 
 describe('diagnosticCatalog (Domain — ACS02)', () => {
@@ -175,6 +193,98 @@ describe('diagnosticCatalog ↔ remediation parity', () => {
     expect(isKnownDiagnosticCode('INVENTED_AGENT_CODE')).toBe(false);
     const next = deterministicNextAction({ ruleId: 'INVENTED_AGENT_CODE' });
     expect(next).toContain('INVENTED_AGENT_CODE');
+  });
+});
+
+describe('RN05 ArkRun catalog ↔ remediation parity', () => {
+  it('catalogues the closed ARKRUN_* set (no prefix family)', () => {
+    expect(Object.values(ARKRUN_RULE_IDS)).toEqual([...ARKRUN_CATALOG_RULE_IDS]);
+    const arkrun = DIAGNOSTIC_CATALOG.filter((entry) => entry.category === 'arkrun');
+    expect(arkrun.map((entry) => entry.ruleId)).toEqual([...ARKRUN_CATALOG_RULE_IDS]);
+    expect(isCataloguedOrArkRuleFamily('ARKRUN_FUTURE_SENSOR')).toBe(false);
+    for (const ruleId of ARKRUN_CATALOG_RULE_IDS) {
+      expect(isKnownDiagnosticCode(ruleId), ruleId).toBe(true);
+      expect(catalogWhyForRuleId(ruleId)?.length ?? 0).toBeGreaterThan(20);
+      expect(catalogFixForRuleId(ruleId)?.length ?? 0).toBeGreaterThan(20);
+    }
+  });
+
+  it('no-target nextAction matches catalog fix exactly', () => {
+    for (const ruleId of ARKRUN_CATALOG_RULE_IDS) {
+      expect(deterministicNextAction({ ruleId }), ruleId).toBe(catalogFixForRuleId(ruleId));
+    }
+  });
+
+  it('live nextAction interpolates target without dropping catalog intent', () => {
+    const cases: Array<{ ruleId: string; target: string; verb: string }> = [
+      { ruleId: 'ARKRUN_MISSING_ROOT', target: 'src/main.ts', verb: 'createStrictArkKernel' },
+      { ruleId: 'ARKRUN_KERNEL_IN_DOMAIN', target: '@arkgate/runtime', verb: '@arkgate/runtime' },
+      { ruleId: 'ARKRUN_DIRECT_NEW', target: 'OrderService', verb: 'Resolve' },
+      { ruleId: 'ARKRUN_UNDECLARED_EMIT', target: 'Domain.Order.Placed', verb: 'raises' },
+      { ruleId: 'ARKRUN_UNDECLARED_HANDLE', target: 'Domain.Order.Placed', verb: 'reactsTo' },
+      { ruleId: 'ARKRUN_UNDECLARED_DEPEND', target: 'OrderService', verb: 'uses' },
+      { ruleId: 'ARKRUN_TRANSPORT_BYPASS', target: 'events', verb: 'kernel transport' },
+    ];
+    for (const row of cases) {
+      const next = deterministicNextAction({ ruleId: row.ruleId, target: row.target });
+      expect(next, row.ruleId).toContain(row.target);
+      expect(next.toLowerCase(), row.ruleId).toContain(row.verb.toLowerCase());
+      expect(next, row.ruleId).not.toBe(catalogFixForRuleId(row.ruleId));
+    }
+  });
+
+  it('undeclared call-site literals are mechanical-safe; missing target and other sensors stay judgment', () => {
+    for (const ruleId of [
+      'ARKRUN_UNDECLARED_EMIT',
+      'ARKRUN_UNDECLARED_HANDLE',
+      'ARKRUN_UNDECLARED_DEPEND',
+    ] as const) {
+      const safe = classifyRemediation({ ruleId, target: 'Domain.Order.Placed' });
+      expect(safe.class, ruleId).toBe('mechanical-safe');
+      expect(safe.remediationKind, ruleId).toBe('arkrun-declaration-list');
+      expect(classifyRemediation({ ruleId }).class, `${ruleId} no target`).toBe('judgment');
+    }
+    for (const ruleId of [
+      'ARKRUN_MISSING_ROOT',
+      'ARKRUN_KERNEL_IN_DOMAIN',
+      'ARKRUN_DIRECT_NEW',
+      'ARKRUN_TRANSPORT_BYPASS',
+    ] as const) {
+      expect(classifyRemediation({ ruleId, target: 'src/main.ts' }).class, ruleId).toBe('judgment');
+      expect(classifyRemediation({ ruleId }).remediationKind, ruleId).toBeUndefined();
+    }
+  });
+
+  it('enrich dual-depth: enthusiastHint (casual) + nextAction (engineer) + arkrun-usage', () => {
+    for (const ruleId of ARKRUN_CATALOG_RULE_IDS) {
+      const enriched = enrichViolationWithFixClass({
+        ruleId,
+        target: 'Domain.Order.Placed',
+        fromLayer: 'ApplicationOrchestration',
+      });
+      expect(enriched.fixClass, ruleId).toBe('arkrun-usage');
+      expect(enriched.enthusiastHint.length, ruleId).toBeGreaterThan(20);
+      expect(enriched.nextAction, ruleId).toBe(
+        deterministicNextAction({
+          ruleId,
+          target: 'Domain.Order.Placed',
+          fromLayer: 'ApplicationOrchestration',
+        })
+      );
+      expect(enriched.enthusiastHint, ruleId).not.toBe(enriched.nextAction);
+      expect(enriched.nextAction.toLowerCase(), ruleId).not.toMatch(/\bscore\b|excellent|good rank/);
+      expect(enriched.enthusiastHint.toLowerCase(), ruleId).not.toMatch(/\bscore\b/);
+    }
+    expect(
+      enrichViolationWithFixClass({ ruleId: 'ARKRUN_UNDECLARED_EMIT', target: 'X' }).effort
+    ).toBe('small');
+    expect(enrichViolationWithFixClass({ ruleId: 'ARKRUN_DIRECT_NEW' }).effort).toBe('medium');
+  });
+
+  it('catalog copy names the companion package and refuses the removed shim', () => {
+    expect(catalogFixForRuleId('ARKRUN_MISSING_ROOT')).toContain('@arkgate/runtime');
+    expect(catalogFixForRuleId('ARKRUN_MISSING_ROOT')).toContain('arkgate/runtime shim');
+    expect(catalogFixForRuleId('ARKRUN_KERNEL_IN_DOMAIN')).toContain('@arkgate/runtime');
   });
 });
 
