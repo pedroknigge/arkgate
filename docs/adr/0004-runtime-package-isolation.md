@@ -2,6 +2,8 @@
 
 - Status: accepted
 - Date: 2026-07-11
+- **Clarified by:** [ADR 0021](0021-arkrun-companion-isolation.md) — ArkRun extra vs companion
+  kernel labels; this isolation decision is **not** superseded
 
 ## Decision
 
