@@ -7,7 +7,7 @@
  * this split never reaches bin/lib/config-contract.mjs.
  */
 
-export type ArkConfigSchemaVersion = '1.0' | '1.1';
+export type ArkConfigSchemaVersion = '1.0' | '1.1' | '1.2';
 
 export type ArkConfigCyclePolicy = 'strict' | 'soft' | 'framework-soft' | 'off';
 
@@ -59,6 +59,20 @@ export type ArkConfigSafety = {
  */
 export type ArkConfigArkRulesRefs = Record<string, string>;
 
+/** ADR 0020 — advisory never adds merge teeth; enforced is the extra's merge plane. */
+export type ArkConfigArkRunMode = 'advisory' | 'enforced';
+
+/**
+ * ADR 0020 — optional inline ArkRun extra (schema 1.2+). Absence is silent.
+ * Present objects are fully defaulted by the loader.
+ */
+export type ArkConfigArkRun = {
+  mode: ArkConfigArkRunMode;
+  compositionRoots: string[];
+  managedLayers: string[];
+  requireDeclarations: boolean;
+};
+
 export type ArkConfig = {
   $schema: string;
   schemaVersion: ArkConfigSchemaVersion;
@@ -74,6 +88,8 @@ export type ArkConfig = {
   safety?: ArkConfigSafety;
   /** ADR 0012 — modular ArkRules references (schema 1.1+). */
   arkRules?: ArkConfigArkRulesRefs;
+  /** ADR 0020 — optional ArkRun extra (schema 1.2+). Absence changes no Layers/ArkRules verdict. */
+  arkRun?: ArkConfigArkRun;
   /**
    * Optional GitHub handles or emails who may loosen the contract or grow the baseline.
    * Metadata — excluded from policy hash. Absence means no steward lock (policy-ack still applies).
@@ -87,7 +103,7 @@ export type ArkConfigIssue = {
 };
 
 /** Original input version when the loader rewrote schemaVersion toward current. */
-export type ArkConfigMigratedFrom = 'unversioned' | '1.0' | null;
+export type ArkConfigMigratedFrom = 'unversioned' | '1.0' | '1.1' | null;
 
 export type ArkConfigLoadResult = {
   config: ArkConfig;

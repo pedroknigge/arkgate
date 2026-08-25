@@ -5,6 +5,17 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Added
+
+- **`arkRun` extra on `ark.config.json` schema `1.2` (RN02):** optional inline
+  `{ mode, compositionRoots, managedLayers, requireDeclarations }`. `1.1` and
+  earlier configs migrate in memory; absence is silent (Layers / ArkRules
+  verdicts unchanged). Unknown keys, unknown `managedLayers` names, and empty
+  `compositionRoots` in `enforced` mode fail closed (`ARKRUN_MISSING_ROOT`).
+  Advisory → enforced is a strengthening policy delta; demotion or deletion is
+  weakening and needs the existing hash-bound ack. Sensors, ESLint, and CI extra
+  teeth are later RN items. Does not close Z09 / K01.
+
 ## 4.6.7 — 2026-08-24
 
 **Patch** over **4.6.6**. Production-hardening: CODEOWNERS, eval/pack honesty, CLI extracts,

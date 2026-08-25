@@ -21,8 +21,8 @@
     },
     "schemaVersion": {
       "type": "string",
-      "const": "1.1",
-      "default": "1.1"
+      "const": "1.2",
+      "default": "1.2"
     },
     "name": {
       "type": "string",
@@ -633,6 +633,9 @@
       },
       "default": {}
     },
+    "arkRun": {
+      "$ref": "#/$defs/arkRun"
+    },
     "stewards": {
       "type": "array",
       "items": {
@@ -791,6 +794,42 @@
         "allowDisabledPeerIsolation": {
           "type": "boolean",
           "default": false
+        }
+      }
+    },
+    "arkRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "advisory",
+            "enforced"
+          ],
+          "default": "advisory"
+        },
+        "compositionRoots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "managedLayers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "requireDeclarations": {
+          "type": "boolean",
+          "default": true
         }
       }
     }

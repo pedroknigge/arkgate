@@ -8,8 +8,8 @@
 > [Package surface](../../package-surface.md) ·
 > [Production hardening](../../production-hardening.md)
 
-**Status:** In progress (Phase RN). `RN01` ADRs 0020–0024 accepted in
-[docs/adr](../../adr/README.md); `RN02`–`RN16` remain `todo` in ROADMAP. Does not close
+**Status:** In progress (Phase RN). `RN01` done — ADRs 0020–0024 accepted in
+[docs/adr](../../adr/README.md); `RN02` doing; `RN03`–`RN16` remain `todo` in ROADMAP. Does not close
 `Z09` / residual `RB-11`.<br>
 **Slug:** `arkrun`<br>
 **Kind:** epic / gated extra plane + companion kernel<br>
@@ -182,7 +182,7 @@ and docs. One `doing` at a time.
 
 | ID | Size | Depends on | Outcome |
 |----|-----:|---|---|
-| `RN01` | M | — | **Accepted:** ADRs 0020–0024 in `docs/adr`; this plan remains the seed |
+| `RN01` | M | — | **done** — ADRs 0020–0024 accepted in `docs/adr`; this plan remains the seed |
 | `RN02` | L | RN01 | `ark.config` schema `1.2` + `arkRun` key; `1.1` configs migrate; absence silent; invalid extra fails closed |
 | `RN03` | L | RN02 | Resolver facts: kernel API call sites, `new` of managed types, composition-root hits (facts schema additive) |
 | `RN04` | L | RN03 | Tier-1 sensors emit diagnostics; advisory does not flip `valid`; enforced blocks |
