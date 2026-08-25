@@ -12,8 +12,7 @@ usage and complete declarations, plus companion `@arkgate/runtime` DX. Absence i
 silent (Layers / ArkRules verdicts unchanged). In-memory stores remain
 reference-only. **No required config migration.** Does not close Z09 / K01.
 
-**Status: prepared** (see `docs/releases/4.7.0.md`). npm `latest` remains **4.6.7**
-until publish.
+**Status: published** (on npm `latest`; see `docs/releases/4.7.0.md`).
 
 ### Added
 
