@@ -19,6 +19,19 @@ export const ARKRUN_TIER1_SENSOR_IDS = [
     'arkrun-undeclared-depend',
     'arkrun-transport-bypass',
 ];
+/**
+ * Import / `new` envelope for `arkgate/eslint`.
+ * Missing-root and undeclared-* stay CLI/MCP/preflight (project-wide or declaration facts).
+ */
+export const ARKRUN_EDITOR_SENSOR_IDS = [
+    'arkrun-kernel-in-domain',
+    'arkrun-direct-new',
+    'arkrun-transport-bypass',
+];
+const EDITOR_SENSOR_SET = new Set(ARKRUN_EDITOR_SENSOR_IDS);
+export function isArkRunEditorSensor(sensor) {
+    return EDITOR_SENSOR_SET.has(sensor);
+}
 export const ARKRUN_RULE_IDS = {
     'arkrun-missing-root': 'ARKRUN_MISSING_ROOT',
     'arkrun-kernel-in-domain': 'ARKRUN_KERNEL_IN_DOMAIN',
@@ -240,4 +253,15 @@ export function evaluateArkRunSensors(input) {
         return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
     });
     return { findings, completenessReasons };
+}
+/**
+ * Same sensors as `evaluateArkRunSensors`, filtered to the ESLint import/`new` envelope.
+ * Does not emit missing-root or undeclared-* (those need project-wide / declaration facts).
+ */
+export function evaluateArkRunEditorSensors(input) {
+    const result = evaluateArkRunSensors(input);
+    return {
+        findings: result.findings.filter((item) => isArkRunEditorSensor(item.sensor)),
+        completenessReasons: [],
+    };
 }

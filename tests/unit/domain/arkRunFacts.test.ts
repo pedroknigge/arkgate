@@ -6,6 +6,7 @@ import {
   extractArkRunDeclarationsFromSource,
   extractArkRunKernelCallsFromSource,
   extractArkRunManagedNewsFromSource,
+  forEachArkRunValueImportClause,
   isArkRunKernelModuleSpecifier,
   isArkRunTransportBypassSpecifier,
 } from '../../../src/domain/arkRunFacts';
@@ -215,6 +216,23 @@ export const billing = {
     expect(isArkRunTransportBypassSpecifier('@aws-sdk/client-sqs')).toBe(true);
     expect(isArkRunTransportBypassSpecifier('./events')).toBe(false);
     expect(isArkRunTransportBypassSpecifier('events-plus')).toBe(false);
+  });
+
+  it('lists value import clauses and skips type-only / commented forms', () => {
+    const clauses: Array<{ clause: string; specifier: string }> = [];
+    forEachArkRunValueImportClause(
+      [
+        "import { OrderService } from '../domain/order-service';",
+        "import type { Kernel } from '@arkgate/runtime';",
+        "// import { EventEmitter } from 'events';",
+        "export { Clock } from '../domain/clock';",
+      ].join('\n'),
+      (clause, specifier) => clauses.push({ clause: clause.trim(), specifier })
+    );
+    expect(clauses).toEqual([
+      { clause: '{ OrderService }', specifier: '../domain/order-service' },
+      { clause: '{ Clock }', specifier: '../domain/clock' },
+    ]);
   });
 
   it('canonicalizes ArkRun facts without changing Layers verdicts', () => {

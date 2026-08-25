@@ -687,6 +687,8 @@ export default [
   // no-domain-infra-imports  → config-driven layer edges (type-only + value)
   // no-forbidden-globals     → layer.forbiddenGlobals from ark.config.json
   // ark/no-denied-capabilities → layer.capabilities.deny / layer.pure
+  // ark/no-arkrun-kernel-in-domain + no-arkrun-direct-new + no-arkrun-transport-bypass
+  //   → arkRun extra (silent when absent; import / `new` envelope only)
   // no-raw-event-publish + require-publish-source → runtime event hygiene
 ];
 ```
@@ -714,6 +716,17 @@ Additional rule notes:
 - Value forbidden edges error (same pass/fail as `arkgate-check`). Type-only forbidden edges are **placement debt** (reported with `typeOnly`); merge blocking prefers value edges — align with doctor `typeEdgePolicy`.
 - `no-forbidden-globals` applies from the file layer’s `forbiddenGlobals`; the `globals` option is only a standalone fallback when no project config applies, never an override that weakens the project contract. Layers without either surface are not inventively restricted. `process` also owns exact value imports of `process` / `node:process`; type-only forms, subpaths, and `child_process` stay excluded. If the same layer also denies the `process` capability, this rule is the single `FORBIDDEN_GLOBAL` voice.
 - Without `ark.config.json`, `no-domain-infra-imports` emits no contract verdict.
+- **ArkRun (RN06):** when `arkRun` is present, `no-arkrun-kernel-in-domain`,
+  `no-arkrun-direct-new`, and `no-arkrun-transport-bypass` reuse the same
+  `ARKRUN_*` sensors as ark-check. Envelope is the current file: package
+  specifiers (kernel / closed broker list), `require` / export / dynamic-literal
+  of those specifiers, and `new` of constructors admitted from this file's
+  exported classes, `@arkgate/runtime` PascalCase imports, or on-disk
+  relative/alias import targets. Absence of the extra is silent. Composition-root
+  factory files skip `direct-new`. Domain-role layers skip `direct-new` and flag
+  kernel imports (including type-only). Type-only broker imports do not flag
+  transport-bypass. Missing-root and undeclared emit/handle/depend are **not**
+  in this adapter — use CLI / preflight / CI.
 
 Rule ids are `ark/<kebab-name>`. Individual rules are also on `ark.rules` if you wire them by hand.
 Prefer keeping editor + CI on the same `ark.config.json`. Use the rule-local `globals` list only

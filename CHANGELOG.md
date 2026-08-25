@@ -13,8 +13,8 @@ in the immutable pre-2.0 archive linked below.
   verdicts unchanged). Unknown keys, unknown `managedLayers` names, and empty
   `compositionRoots` in `enforced` mode fail closed (`ARKRUN_MISSING_ROOT`).
   Advisory → enforced is a strengthening policy delta; demotion or deletion is
-  weakening and needs the existing hash-bound ack. Sensors, ESLint, and CI extra
-  teeth are later RN items. Does not close Z09 / K01.
+  weakening and needs the existing hash-bound ack. ESLint envelope is RN06
+  (landed below); CI extra teeth are RN07. Does not close Z09 / K01.
 
 - **ArkRun resolver facts on resolved-candidate-facts schema `1.2` (RN03):**
   additive optional `arkRunKernelCalls`, `arkRunManagedNews`, and
@@ -38,6 +38,12 @@ in the immutable pre-2.0 archive linked below.
   only when that literal is already present; other ArkRun findings stay
   `judgment`. Sensors, adapter fallback, and CLI remediation share
   `deterministicNextAction`. Does not close Z09 / K01.
+
+- **ArkRun ESLint envelope (RN06):** `arkgate/eslint` recommended config adds
+  `ark/no-arkrun-kernel-in-domain`, `ark/no-arkrun-direct-new`, and
+  `ark/no-arkrun-transport-bypass`. Same `ARKRUN_*` sensors as ark-check for
+  the import / `new` envelope; silent when `arkRun` is absent. Missing-root and
+  undeclared-* stay CLI/MCP/preflight. Does not close Z09 / K01.
 
 ## 4.6.7 — 2026-08-24
 

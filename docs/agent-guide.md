@@ -968,7 +968,10 @@ export default [
 Rules: `ark/no-domain-infra-imports` (exact parity for on-disk, in-scope static relative
 imports/exports; resolved CLI/preflight is authoritative outside that envelope),
 `ark/no-forbidden-globals` (per-layer `forbiddenGlobals`),
-`ark/no-denied-capabilities` (per-layer capability deny sets), `ark/no-raw-event-publish`, and
+`ark/no-denied-capabilities` (per-layer capability deny sets),
+`ark/no-arkrun-kernel-in-domain` / `ark/no-arkrun-direct-new` /
+`ark/no-arkrun-transport-bypass` (ArkRun extra; silent when absent; import / `new`
+envelope only), `ark/no-raw-event-publish`, and
 `ark/require-publish-source`. See [ai-gates.md](ai-gates.md).
 
 ## Runtime Observability

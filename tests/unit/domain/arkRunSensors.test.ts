@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { ArkConfigArkRun, ArkConfigLayer } from '../../../src/domain/configTypes';
 import {
+  ARKRUN_EDITOR_SENSOR_IDS,
   ARKRUN_INTERACTION_NAME_INCOMPLETE,
   ARKRUN_RULE_IDS,
+  evaluateArkRunEditorSensors,
   evaluateArkRunSensors,
 } from '../../../src/domain/arkRunSensors';
-import { evaluateArkRunSensors as evaluateCliArkRunSensors } from '../../../bin/lib/ark-run-sensors.mjs';
+import {
+  evaluateArkRunEditorSensors as evaluateCliArkRunEditorSensors,
+  evaluateArkRunSensors as evaluateCliArkRunSensors,
+} from '../../../bin/lib/ark-run-sensors.mjs';
 import { deterministicNextAction } from '../../../src/domain/remediation';
 
 const LAYERS: ArkConfigLayer[] = [
@@ -375,6 +380,53 @@ describe('RN04 ArkRun tier-1 sensors', () => {
     ]);
   });
 
+  it('editor envelope omits missing-root and undeclared sensors', () => {
+    const result = evaluateArkRunEditorSensors({
+      arkRun: extra('enforced'),
+      layers: LAYERS,
+      kernelCalls: [
+        {
+          file: 'src/application/billing.ts',
+          line: 5,
+          kind: 'publisher',
+          callee: 'publisher',
+          viaImport: false,
+          nameLiteral: 'Domain.Order.Placed',
+        },
+      ],
+      managedNews: [{ file: 'src/application/billing.ts', line: 4, typeName: 'OrderService' }],
+      compositionRootHits: [],
+      declarations: [],
+      dependencies: [
+        {
+          from: 'src/domain/order.ts',
+          specifier: '@arkgate/runtime',
+          kind: 'import',
+          typeOnly: false,
+          line: 1,
+          resolution: 'resolved-external',
+        },
+        {
+          from: 'src/application/bus.ts',
+          specifier: 'events',
+          kind: 'import',
+          typeOnly: false,
+          line: 1,
+          resolution: 'resolved-external',
+        },
+      ],
+      layerForFile,
+    });
+    expect(result.completenessReasons).toEqual([]);
+    expect(result.findings.map((item) => item.sensor).sort()).toEqual([
+      ...ARKRUN_EDITOR_SENSOR_IDS,
+    ].sort());
+    expect(result.findings.some((item) => item.ruleId === 'ARKRUN_MISSING_ROOT')).toBe(false);
+    expect(result.findings.some((item) => item.ruleId.startsWith('ARKRUN_UNDECLARED_'))).toBe(
+      false
+    );
+  });
+
   it('CLI generated sensor matches Domain for the closed rule ids', () => {
     const input = {
       arkRun: extra('enforced'),
@@ -390,6 +442,9 @@ describe('RN04 ArkRun tier-1 sensors', () => {
     };
     expect(evaluateCliArkRunSensors(input).findings.map((item: { ruleId: string }) => item.ruleId)).toEqual(
       evaluateArkRunSensors(input).findings.map((item) => item.ruleId)
+    );
+    expect(evaluateCliArkRunEditorSensors(input).findings.map((item: { ruleId: string }) => item.ruleId)).toEqual(
+      evaluateArkRunEditorSensors(input).findings.map((item) => item.ruleId)
     );
     expect(Object.values(ARKRUN_RULE_IDS)).toEqual([
       'ARKRUN_MISSING_ROOT',

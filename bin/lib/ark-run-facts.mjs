@@ -196,6 +196,10 @@ function parseValueImportClause(content, onClause) {
         onClause(match[2] ?? '', match[3] ?? '');
     }
 }
+/** Value `import`/`export … from` clauses. Strips comments so callers may pass raw source. */
+export function forEachArkRunValueImportClause(content, onClause) {
+    parseValueImportClause(stripCommentsPreservingLines(content), onClause);
+}
 function collectKernelImportBindings(content) {
     const named = new Map();
     const namespaces = new Set();
