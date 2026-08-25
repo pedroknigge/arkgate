@@ -102,7 +102,7 @@ describe('multi-repo skill installation', () => {
         force: true,
         scope: 'home',
       })
-    ).toMatchObject({ action: 'skip', reason: 'content-current' });
+    ).toMatchObject({ action: 'write', reason: 'stamp-refresh' });
 
     const futureHome = stampSkill(`${template}\nfuture capability\n`, '9.0.0');
     expect(
@@ -144,7 +144,7 @@ describe('multi-repo skill installation', () => {
     expect(isValidSemver('2.0.0-beta.01')).toBe(false);
   });
 
-  it('keeps repo catalogs isolated and does not rewrite current shared-home bytes', () => {
+  it('keeps repo catalogs isolated and does not write home when the project catalog exists', () => {
     const repoA = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-multi-repo-a-'));
     const repoB = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-multi-repo-b-'));
     const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-multi-home-'));
@@ -153,30 +153,18 @@ describe('multi-repo skill installation', () => {
     expect(first.status, first.stderr || first.stdout).toBe(0);
     const shared = homeSkill(codexHome);
     const repoAFile = repoSkill(repoA);
-    expect(fs.existsSync(shared)).toBe(true);
+    expect(fs.existsSync(shared)).toBe(false);
     expect(fs.existsSync(repoAFile)).toBe(true);
+    expect(first.stdout).toContain('Skip home write');
 
     const repoACustom = `${fs.readFileSync(repoAFile, 'utf8')}\n# repo A customization\n`;
     fs.writeFileSync(repoAFile, repoACustom);
-    const stableMtime = new Date('2024-01-02T03:04:05.000Z');
-    fs.utimesSync(shared, stableMtime, stableMtime);
-    const catalog = path.join(codexHome, 'skills', HOME_SKILL_CATALOG);
-    fs.utimesSync(catalog, stableMtime, stableMtime);
 
     const second = runInstall(repoB, codexHome, ['--force']);
     expect(second.status, second.stderr || second.stdout).toBe(0);
     expect(fs.readFileSync(repoAFile, 'utf8')).toBe(repoACustom);
     expect(fs.existsSync(repoSkill(repoB))).toBe(true);
-    expect(Math.trunc(fs.statSync(shared).mtimeMs / 1000)).toBe(
-      Math.trunc(stableMtime.getTime() / 1000)
-    );
-    expect(Math.trunc(fs.statSync(catalog).mtimeMs / 1000)).toBe(
-      Math.trunc(stableMtime.getTime() / 1000)
-    );
-    expect(second.stdout).toContain('scope=home-shared');
-    expect(second.stdout).toContain(`source=arkgate@${PACKAGE_VERSION}`);
-    expect(second.stdout).toContain('body current');
-    expect(second.stdout).toContain('no write');
+    expect(second.stdout).toContain('Skip home write');
   });
 
   it('blocks an older repo from downgrading shared home even with --force', () => {
@@ -191,8 +179,7 @@ describe('multi-repo skill installation', () => {
     const result = runInstall(root, codexHome, ['--force']);
     expect(result.status, result.stderr || result.stdout).toBe(0);
     expect(fs.readFileSync(file, 'utf8')).toBe(future);
-    expect(result.stdout).toContain('CONFLICT catalog=99.0.0');
-    expect(result.stdout).toContain('entire home update and retirements blocked');
+    expect(result.stdout).toContain('Skip home write');
   });
 
   it('preserves a customized shared-home skill without --force', () => {
@@ -206,13 +193,12 @@ describe('multi-repo skill installation', () => {
     const result = runInstall(root, codexHome);
     expect(result.status, result.stderr || result.stdout).toBe(0);
     expect(fs.readFileSync(file, 'utf8')).toBe(custom);
-    expect(result.stdout).toContain('CONFLICT body differs');
-    expect(result.stdout).toContain('preserved without --force');
+    expect(result.stdout).toContain('Skip home write');
 
     const forced = runInstall(root, codexHome, ['--force']);
     expect(forced.status, forced.stderr || forced.stdout).toBe(0);
-    expect(fs.readFileSync(file, 'utf8')).not.toBe(custom);
-    expect(fs.readFileSync(file, 'utf8')).toContain('name: ark-fix');
+    expect(fs.readFileSync(file, 'utf8')).toBe(custom);
+    expect(forced.stdout).toContain('Skip home write');
   });
 
   it('blocks the entire catalog in new-to-old order, including reintroductions', () => {
@@ -335,9 +321,9 @@ describe('multi-repo skill installation', () => {
 
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-corrupt-repo-'));
     const cli = runInstall(root, codexHome, ['--force']);
-    expect(cli.status).toBe(1);
-    expect(cli.stdout).toContain('unreadable or invalid JSON');
-    expect(cli.stderr).toContain('INSTALL PARTIAL');
+    expect(cli.status, cli.stderr || cli.stdout).toBe(0);
+    expect(cli.stdout).toContain('Skip home write');
+    expect(fs.existsSync(homeSkill(codexHome, 'ark-current'))).toBe(false);
   });
 
   it('reports every install decision with scope and provenance', () => {

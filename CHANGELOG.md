@@ -5,6 +5,38 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.7.1 — 2026-08-25
+
+**Patch** over **4.7.0**. One project skill catalog, visible package version in the
+skill picker, no home duplicates, ArkRun routed through existing skill names.
+**No required config migration.** Does not close Z09 / K01.
+
+**Status: unpublished** (implementation on `main`; npm `latest` remains **4.7.0** until publish).
+
+### Added
+
+- **Visible skill version (picker):** install stamps `description` with
+  `arkgate@<version>. ` so Codex/Claude/Cursor/Grok show the package pin without
+  opening the file. `arkVersion:` in YAML stays for doctor. Same-body stamp drift
+  refreshes without `--force` (`stamp-refresh`).
+- **`--prune-home-duplicates`:** removes frozen `/ark-*` copies from
+  `$CODEX_HOME/skills`, `~/.claude/skills`, and `~/.grok/skills` when the project
+  already has `.agents/skills`. Never deletes non-Ark skills.
+
+### Changed
+
+- **One project catalog:** `.agents/skills/<name>/SKILL.md` is the byte source.
+  Claude / Grok / OpenCode get relative adapter links. Cursor/Codex/Antigravity
+  already read `.agents/skills` — no second copy. `.cursor/commands/ark-*.md` is
+  no longer written (Cursor listed commands + skills as two copies).
+- **`--codex-home` / `--agent-homes`:** skip home skill write (and home MCP bind)
+  when the project catalog or `.codex/config.toml` already exists. Codex lists
+  user+repo; a home copy is why `/ark-*` appeared twice and stayed old.
+- **Doctor:** when home `ark-*` and project `.agents/skills` both exist, next
+  action is prune, not `--codex-home --force`.
+- **`/ark-contract`:** routes ArkRun extra edits (first extra `/ark-adopt`,
+  companion `/ark-runtime`, new files `/ark-place`). No new skill names.
+
 ## 4.7.0 — 2026-08-25
 
 **Minor** over **4.6.7**. Ships **ArkRun**: an opt-in extra on schema `1.2` for kernel

@@ -340,6 +340,40 @@ export function validateAgentSkillsPackage(
 }
 
 /**
+ * Visible package stamp at the start of Agent Skills `description`.
+ * Hosts show `description` in the picker; `arkVersion:` in YAML is invisible there.
+ * Example: `arkgate@4.7.1. Session 0 — mark the Ark path.`
+ */
+export const ARK_SKILL_DESCRIPTION_VERSION_PATTERN = /^arkgate@(\S+)\.\s/;
+
+/** Prefix written at install time (`arkgate@<version>. `). */
+export function skillDescriptionVersionPrefix(version: string): string {
+  const v = String(version ?? '').trim();
+  return v ? `arkgate@${v}. ` : '';
+}
+
+/** Drop a leading `arkgate@<version>. ` stamp; other text is unchanged. */
+export function stripSkillDescriptionVersion(description: string): string {
+  return String(description ?? '').replace(ARK_SKILL_DESCRIPTION_VERSION_PATTERN, '');
+}
+
+/** Version inside a stamped description, or null when the prefix is absent. */
+export function parseSkillDescriptionVersion(description: string): string | null {
+  const match = String(description ?? '').match(ARK_SKILL_DESCRIPTION_VERSION_PATTERN);
+  return match?.[1] ?? null;
+}
+
+/**
+ * Idempotent: replace an existing `arkgate@…` prefix or add one.
+ * Empty `version` strips the prefix (authoring templates stay unversioned).
+ */
+export function stampSkillDescription(description: string, version: string | null | undefined): string {
+  const rest = stripSkillDescriptionVersion(description);
+  const v = typeof version === 'string' ? version.trim() : '';
+  return v ? `${skillDescriptionVersionPrefix(v)}${rest}` : rest;
+}
+
+/**
  * Normalize skill file content for identity compare (LF newlines, strip BOM).
  * Does not strip or rewrite frontmatter — Agent Skills export is 1:1 with flat templates.
  */

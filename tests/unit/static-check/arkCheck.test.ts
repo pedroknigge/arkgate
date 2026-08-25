@@ -688,8 +688,8 @@ jobs:
 
     for (const name of skillNames) {
       expect(fs.existsSync(path.join(root, `.claude/skills/${name}/SKILL.md`))).toBe(true);
-      expect(fs.existsSync(path.join(root, `.cursor/commands/${name}.md`))).toBe(true);
-      // Codex: Agent Skills REPO catalog — not dead flat .codex/prompts/*.md
+      expect(fs.existsSync(path.join(root, `.cursor/commands/${name}.md`))).toBe(false);
+      // One project catalog. Cursor/Codex/Antigravity read `.agents/skills`.
       expect(fs.existsSync(path.join(root, `.agents/skills/${name}/SKILL.md`))).toBe(true);
       expect(fs.existsSync(path.join(root, `.codex/prompts/${name}.md`))).toBe(false);
       expect(fs.existsSync(path.join(root, `.grok/skills/${name}/SKILL.md`))).toBe(true);
@@ -709,8 +709,9 @@ jobs:
       'utf8'
     );
     expect(claudeSkill).toContain('name: ark-coverage');
-    // Same canonical content for every host.
-    expect(fs.readFileSync(path.join(root, '.cursor/commands/ark-coverage.md'), 'utf8')).toBe(
+    expect(claudeSkill).toMatch(/arkgate@\S+\. /);
+    // Same canonical content for every host (adapter symlink or copy).
+    expect(fs.readFileSync(path.join(root, '.agents/skills/ark-coverage/SKILL.md'), 'utf8')).toBe(
       claudeSkill
     );
   });
@@ -3363,10 +3364,9 @@ describe('ark-check monorepo tsconfig resolution', () => {
     );
     expect(output).toContain('requires every shared-catalog writer to use ArkGate 4.2.0+');
     expect(output).toContain('pre-4.2 --codex-home ignores this catalog');
-    const fixSkill = path.join(codexHome, 'skills', 'ark-fix', 'SKILL.md');
-    expect(fs.existsSync(fixSkill)).toBe(true);
-    expect(fs.readFileSync(fixSkill, 'utf8')).toMatch(/^arkVersion:/m);
-    // Legacy flat prompts are not the invocable catalog
+    expect(output).toContain('Skip home write');
+    expect(fs.existsSync(path.join(root, '.agents', 'skills', 'ark-fix', 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(codexHome, 'skills', 'ark-fix', 'SKILL.md'))).toBe(false);
     expect(fs.existsSync(path.join(codexHome, 'prompts', 'ark-fix.md'))).toBe(false);
   });
 

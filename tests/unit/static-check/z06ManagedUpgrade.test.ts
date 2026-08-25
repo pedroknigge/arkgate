@@ -91,10 +91,10 @@ const HOST_ASSETS = {
 } as const;
 
 const SKILL_PATHS: Partial<Record<keyof typeof HOST_ASSETS, string>> = {
-  claude: '.claude/skills/ark-upgrade/SKILL.md',
-  cursor: '.cursor/commands/ark-upgrade.md',
+  claude: '.agents/skills/ark-upgrade/SKILL.md',
+  cursor: '.agents/skills/ark-upgrade/SKILL.md',
   codex: '.agents/skills/ark-upgrade/SKILL.md',
-  grok: '.grok/skills/ark-upgrade/SKILL.md',
+  grok: '.agents/skills/ark-upgrade/SKILL.md',
   windsurf: '.windsurf/workflows/ark-upgrade.md',
   cline: '.clinerules/workflows/ark-upgrade.md',
   copilot: '.github/prompts/ark-upgrade.prompt.md',
@@ -168,7 +168,7 @@ describe('Z06 managed-content upgrade', () => {
   it('defaults to a non-mutating JSON preview and never refreshes Codex home implicitly', () => {
     const root = fixture();
     const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-z06-codex-home-'));
-    const skill = path.join(root, '.claude/skills/ark-upgrade/SKILL.md');
+    const skill = path.join(root, '.agents/skills/ark-upgrade/SKILL.md');
     fs.writeFileSync(
       skill,
       fs.readFileSync(skill, 'utf8').replace(/^arkVersion:.*$/m, 'arkVersion: 0.0.0-old')
@@ -228,13 +228,13 @@ describe('Z06 managed-content upgrade', () => {
 
   it('doctor skillGaps.stale is 0 when skill body matches template with lagging arkVersion', () => {
     const root = fixture();
-    const skill = path.join(root, '.claude/skills/ark-upgrade/SKILL.md');
+    const skill = path.join(root, '.agents/skills/ark-upgrade/SKILL.md');
     fs.writeFileSync(
       skill,
       fs.readFileSync(skill, 'utf8').replace(/^arkVersion:.*$/m, 'arkVersion: 0.0.0-old')
     );
     const plan = planManagedUpgrade(root, { tools: 'claude' });
-    expect(plan.assets.find((a) => a.path === '.claude/skills/ark-upgrade/SKILL.md')?.state).toBe(
+    expect(plan.assets.find((a) => a.path === '.agents/skills/ark-upgrade/SKILL.md')?.state).toBe(
       'current'
     );
     expect(plan.summary.wouldWrite).toBe(0);
@@ -251,7 +251,7 @@ describe('Z06 managed-content upgrade', () => {
 
   it('does not rewrite a skill when only arkVersion metadata differs', () => {
     const root = fixture();
-    const skill = path.join(root, '.claude/skills/ark-upgrade/SKILL.md');
+    const skill = path.join(root, '.agents/skills/ark-upgrade/SKILL.md');
     fs.writeFileSync(
       skill,
       fs.readFileSync(skill, 'utf8').replace(/^arkVersion:.*$/m, 'arkVersion: 0.0.0-old')
@@ -264,7 +264,7 @@ describe('Z06 managed-content upgrade', () => {
     };
     expect(report.assets).toContainEqual(
       expect.objectContaining({
-        path: '.claude/skills/ark-upgrade/SKILL.md',
+        path: '.agents/skills/ark-upgrade/SKILL.md',
         state: 'current',
         action: 'none',
       })
@@ -284,7 +284,7 @@ describe('Z06 managed-content upgrade', () => {
 
   it('upgrades an exact published 3.7 skill body but preserves any edit to it', () => {
     const root = fixture();
-    const skill = path.join(root, '.claude/skills/ark-upgrade/SKILL.md');
+    const skill = path.join(root, '.agents/skills/ark-upgrade/SKILL.md');
     fs.writeFileSync(skill, LEGACY_UPGRADE_SKILL);
     const preview = run(ARK, [
       'upgrade', '--root', root, '--tools', 'claude', '--no-install', '--no-strict', '--json',
@@ -296,7 +296,7 @@ describe('Z06 managed-content upgrade', () => {
     };
     expect(report.assets).toContainEqual(
       expect.objectContaining({
-        path: '.claude/skills/ark-upgrade/SKILL.md',
+        path: '.agents/skills/ark-upgrade/SKILL.md',
         state: 'stale',
         managed: true,
         willApply: true,
@@ -392,7 +392,7 @@ describe('Z06 managed-content upgrade', () => {
 
   it('still requires plan-digest when content writes are planned', () => {
     const root = fixture();
-    const skill = path.join(root, '.claude/skills/ark-upgrade/SKILL.md');
+    const skill = path.join(root, '.agents/skills/ark-upgrade/SKILL.md');
     // Known stale body from a prior published skill (identity-managed, not customized).
     fs.writeFileSync(skill, LEGACY_UPGRADE_SKILL);
     const preview = run(ARK, [

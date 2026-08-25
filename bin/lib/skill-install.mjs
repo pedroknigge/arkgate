@@ -3,8 +3,14 @@
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { arkCommand } from '../ark-shared.mjs';
+import {
+  parseSkillDescriptionVersion,
+  stampSkillDescription,
+  stripSkillDescriptionVersion,
+} from './agent-skills-package.mjs';
 import { codexPromptsDir, codexSkillsDir } from './codex-home.mjs';
 import { __packageRoot, isCompactRouterAgentsContent, readJson } from './gate-files.mjs';
 
@@ -194,21 +200,60 @@ export const KNOWN_TOOLS = [
 // Codex: discovers Agent Skills directories with SKILL.md — repo path is the
 // official `.agents/skills/<name>/SKILL.md` (not dead `.codex/prompts/*.md`).
 // Home install uses `$CODEX_HOME/skills/<name>/SKILL.md` via --codex-home.
+/** Project-canonical Agent Skills catalog (Codex, Cursor, Antigravity all read this). */
+export const SKILL_CANONICAL_DIR = '.agents/skills';
+
+export function canonicalSkillPath(name) {
+  return `${SKILL_CANONICAL_DIR}/${name}/SKILL.md`;
+}
+
+/**
+ * Hosts that natively load `.agents/skills` — do not also copy bytes there under
+ * a second name. Cursor/Codex list every path they scan; two copies = two picker rows.
+ */
+export const SKILL_NATIVE_AGENTS_HOSTS = Object.freeze(['codex', 'cursor', 'antigravity']);
+
+/**
+ * Hosts that do not scan `.agents/skills`. Adapter is a relative symlink to the
+ * canonical catalog so Grok/Claude/OpenCode see the same bytes.
+ * Cursor also scans `.claude/skills` — doctor warns; still one body + visible version.
+ */
+export const SKILL_ADAPTER_LINKS = Object.freeze({
+  claude: (name) => ({
+    link: `.claude/skills/${name}`,
+    target: `../../${SKILL_CANONICAL_DIR}/${name}`,
+  }),
+  grok: (name) => ({
+    link: `.grok/skills/${name}`,
+    target: `../../${SKILL_CANONICAL_DIR}/${name}`,
+  }),
+  opencode: (name) => ({
+    link: `.opencode/skills/${name}`,
+    target: `../../${SKILL_CANONICAL_DIR}/${name}`,
+  }),
+});
+
 export const SKILL_TOOL_TARGETS = {
   claude: (name) => `.claude/skills/${name}/SKILL.md`,
-  cursor: (name) => `.cursor/commands/${name}.md`,
+  // Cursor 2026 Agent Skills: `.agents/skills` (not a second `.cursor/commands` copy).
+  cursor: (name) => canonicalSkillPath(name),
   // Official Codex REPO skill scope (Agent Skills standard).
-  codex: (name) => `.agents/skills/${name}/SKILL.md`,
-  // Grok Build: project skills at .grok/skills/<name>/SKILL.md (slash-invocable).
+  codex: (name) => canonicalSkillPath(name),
   grok: (name) => `.grok/skills/${name}/SKILL.md`,
-  // Antigravity loads Agent Skills from `.agents/skills` (shared path with Codex).
-  antigravity: (name) => `.agents/skills/${name}/SKILL.md`,
-  // OpenCode project skills under `.opencode/skills`.
+  antigravity: (name) => canonicalSkillPath(name),
   opencode: (name) => `.opencode/skills/${name}/SKILL.md`,
   windsurf: (name) => `.windsurf/workflows/${name}.md`,
   cline: (name) => `.clinerules/workflows/${name}.md`,
   copilot: (name) => `.github/prompts/${name}.prompt.md`,
 };
+
+/** Hosts whose catalog is the project `.agents/skills` tree (write once). */
+export function usesCanonicalSkillCatalog(tool) {
+  return (
+    SKILL_NATIVE_AGENTS_HOSTS.includes(tool) ||
+    Object.prototype.hasOwnProperty.call(SKILL_ADAPTER_LINKS, tool)
+  );
+}
 
 // The version of the arkgate package these bins ship with. Used to
 // stamp installed skills so a normal ark-check can tell "outdated skill from an
@@ -223,8 +268,43 @@ export function arkPackageVersion() {
   }
 }
 
-// Insert `arkVersion: <v>` into a skill's YAML frontmatter (before its closing
-// `---`). No frontmatter → returned unchanged. Idempotent for a given version
+/**
+ * Rewrite a YAML `description:` line with a visible `arkgate@<version>. ` prefix.
+ * Preserves quoting. Hosts show this string in the skill picker (unlike arkVersion).
+ */
+function stampDescriptionYamlLine(line, version) {
+  const match = String(line).match(/^(description:\s*)(.*)$/);
+  if (!match) return line;
+  let raw = match[2] ?? '';
+  const quoted =
+    (raw.startsWith('"') && raw.endsWith('"') && raw.length >= 2) ||
+    (raw.startsWith("'") && raw.endsWith("'") && raw.length >= 2);
+  const quote = quoted ? raw[0] : '';
+  const value = quoted ? raw.slice(1, -1) : raw;
+  const stamped = stampSkillDescription(value, version);
+  if (!quoted) return `${match[1]}${stamped}`;
+  const escaped = stamped.replaceAll('\\', '\\\\').replaceAll(quote, `\\${quote}`);
+  return `${match[1]}${quote}${escaped}${quote}`;
+}
+
+function managedDescriptionYamlLine(line) {
+  const match = String(line).match(/^(description:\s*)(.*)$/);
+  if (!match) return line;
+  let raw = match[2] ?? '';
+  const quoted =
+    (raw.startsWith('"') && raw.endsWith('"') && raw.length >= 2) ||
+    (raw.startsWith("'") && raw.endsWith("'") && raw.length >= 2);
+  const quote = quoted ? raw[0] : '';
+  const value = quoted ? raw.slice(1, -1) : raw;
+  const stripped = stripSkillDescriptionVersion(value);
+  if (stripped === value) return line;
+  if (!quoted) return `${match[1]}${stripped}`;
+  const escaped = stripped.replaceAll('\\', '\\\\').replaceAll(quote, `\\${quote}`);
+  return `${match[1]}${quote}${escaped}${quote}`;
+}
+
+// Insert `arkVersion: <v>` and a visible `arkgate@<v>. ` description prefix.
+// No frontmatter → returned unchanged. Idempotent for a given version
 // and preserves the checked-out line ending on Windows.
 export function stampSkill(content, version) {
   if (!version) return content;
@@ -240,6 +320,12 @@ export function stampSkill(content, version) {
     lines[existing] = `arkVersion: ${version}`;
   } else {
     lines.splice(closeIdx, 0, `arkVersion: ${version}`);
+  }
+  const descIdx = lines.findIndex(
+    (line, i) => i > 0 && i < lines.indexOf('---', 1) && /^description:\s*/.test(line)
+  );
+  if (descIdx !== -1) {
+    lines[descIdx] = stampDescriptionYamlLine(lines[descIdx], version);
   }
   return lines.join(newline);
 }
@@ -336,6 +422,9 @@ export function skillContentIdentity(content) {
     if (end >= 0) {
       for (let index = 1; index < end; index += 1) {
         if (/^arkVersion:/.test(lines[index])) lines[index] = 'arkVersion:<managed>';
+        else if (/^description:\s*/.test(lines[index])) {
+          lines[index] = managedDescriptionYamlLine(lines[index]);
+        }
       }
       text = lines.join('\n');
     }
@@ -379,7 +468,7 @@ export function skillContentMatchesTemplate(installedContent, templateContent) {
  * }} input
  * @returns {{
  *   action: 'write'|'skip',
- *   reason: 'missing'|'content-current'|'newer-home-version'|'unknown-source-version'|'existing-preserved'|'content-update',
+ *   reason: 'missing'|'content-current'|'stamp-refresh'|'newer-home-version'|'unknown-source-version'|'existing-preserved'|'content-update',
  *   scope: 'repo'|'home',
  *   sourceVersion: string|null,
  *   installedVersion: string|null,
@@ -405,13 +494,9 @@ export function planSkillInstall(input) {
   });
 
   if (existingContent === null) return result('write', 'missing');
-  if (
-    existingContent === targetContent ||
-    skillContentIdentity(existingContent) === skillContentIdentity(targetContent)
-  ) {
+  if (existingContent === targetContent) {
     return result('skip', 'content-current');
   }
-
   if (scope === 'home') {
     if (installedVersion && !sourceVersion) {
       return result('skip', 'unknown-source-version', true, true);
@@ -423,6 +508,11 @@ export function planSkillInstall(input) {
     ) {
       return result('skip', 'newer-home-version', true, true);
     }
+  }
+  if (skillContentIdentity(existingContent) === skillContentIdentity(targetContent)) {
+    // Body matches; only arkVersion / visible description prefix drifted.
+    // Refresh the stamp without --force so the picker shows arkgate@this-package.
+    return result('write', 'stamp-refresh');
   }
 
   if (!input.force) return result('skip', 'existing-preserved', true);
@@ -466,6 +556,113 @@ export function skillTemplates() {
     .sort()
     .map((name) => [path.basename(name, '.md'), fs.readFileSync(path.join(dir, name), 'utf8')]);
 }
+
+/**
+ * Point a host-native skills dir at the project canonical catalog.
+ * Relative symlink so clones keep working. Fallback copy when the OS refuses links.
+ * @returns {'linked'|'copied'|'current'|'skipped-customized'|'missing-canonical'}
+ */
+export function ensureSkillAdapterLink(root, name, adapter, force = false) {
+  const canonicalDir = path.join(root, SKILL_CANONICAL_DIR, name);
+  const canonicalFile = path.join(canonicalDir, 'SKILL.md');
+  if (!fs.existsSync(canonicalFile)) return 'missing-canonical';
+  const linkPath = path.join(root, adapter.link);
+  fs.mkdirSync(path.dirname(linkPath), { recursive: true });
+  const existing = fs.lstatSync(linkPath, { throwIfNoEntry: false });
+  if (existing?.isSymbolicLink()) {
+    const current = fs.readlinkSync(linkPath).replaceAll('\\', '/');
+    if (current === adapter.target) return 'current';
+    fs.unlinkSync(linkPath);
+  } else if (existing) {
+    const adapterFile = path.join(linkPath, 'SKILL.md');
+    let adapterContent = null;
+    try {
+      adapterContent = fs.readFileSync(adapterFile, 'utf8');
+    } catch {
+      adapterContent = null;
+    }
+    const canonicalContent = fs.readFileSync(canonicalFile, 'utf8');
+    if (
+      !force &&
+      adapterContent &&
+      skillContentIdentity(adapterContent) !== skillContentIdentity(canonicalContent)
+    ) {
+      return 'skipped-customized';
+    }
+    fs.rmSync(linkPath, { recursive: true, force: true });
+  }
+  try {
+    fs.symlinkSync(adapter.target, linkPath);
+    return 'linked';
+  } catch {
+    fs.cpSync(canonicalDir, linkPath, { recursive: true });
+    return 'copied';
+  }
+}
+
+export function linkSkillHostAdapters(root, tools, skillNames, force = false) {
+  const results = [];
+  for (const tool of tools) {
+    const adapterFor = SKILL_ADAPTER_LINKS[tool];
+    if (!adapterFor) continue;
+    for (const name of skillNames) {
+      const adapter = adapterFor(name);
+      results.push({
+        tool,
+        name,
+        status: ensureSkillAdapterLink(root, name, adapter, force),
+        relativePath: `${adapter.link}/SKILL.md`,
+      });
+    }
+  }
+  return results;
+}
+
+const HOME_ARK_SKILL_ROOTS = [
+  () => path.join(codexSkillsDir()),
+  () => path.join(os.homedir(), '.claude', 'skills'),
+  () => path.join(os.homedir(), '.grok', 'skills'),
+];
+
+function projectHasCanonicalCatalog(root, skillNames) {
+  return skillNames.some((name) =>
+    fs.existsSync(path.join(root, canonicalSkillPath(name)))
+  );
+}
+
+/**
+ * Remove frozen `/ark-*` directories from agent home catalogs when the project
+ * already has `.agents/skills`. Codex/Cursor list user+repo; same name twice.
+ * Never deletes non-Ark skills.
+ */
+export function pruneHomeArkSkillDuplicates(root, skillNames = skillTemplateNames()) {
+  const names = skillNames.length ? skillNames : skillTemplateNames();
+  const removed = [];
+  if (!projectHasCanonicalCatalog(root, names)) {
+    return { ok: false, reason: 'no-project-catalog', removed };
+  }
+  for (const dirFn of HOME_ARK_SKILL_ROOTS) {
+    const dir = dirFn();
+    for (const name of names) {
+      const skillDir = path.join(dir, name);
+      const stat = fs.lstatSync(skillDir, { throwIfNoEntry: false });
+      if (!stat) continue;
+      fs.rmSync(skillDir, { recursive: true, force: true });
+      removed.push(skillDir);
+    }
+    const catalog = path.join(dir, '.arkgate-catalog.json');
+    const pending = path.join(dir, '.arkgate-catalog.pending.json');
+    for (const meta of [catalog, pending]) {
+      if (fs.existsSync(meta)) {
+        fs.rmSync(meta, { force: true });
+        removed.push(meta);
+      }
+    }
+  }
+  return { ok: true, reason: 'pruned', removed };
+}
+
+export { parseSkillDescriptionVersion, stripSkillDescriptionVersion };
 
 // Skill names only, silent on a missing templates dir — for the freshness
 // advisory below, which must not print packaging warnings on every check run.
@@ -732,8 +929,30 @@ export function assessCodexSkillParity(root) {
 // signal, so it is not auto-detected (explicit --tools only), matching resolveTools.
 export function detectCodexHomeGap(root) {
   const parity = assessCodexSkillParity(root);
-  if (!parity || !parity.homeNeedsAttention) return null;
-  const { home, packageVersion, expectedCount, skillsDir } = parity;
+  if (!parity) return null;
+  const { home, packageVersion, expectedCount, skillsDir, repo } = parity;
+  const repoComplete =
+    Boolean(repo?.inPlay) && repo.missing === 0 && !repo.legacyPromptsOnly;
+  const homePresent = Boolean(home?.inPlay) && home.presentCount > 0;
+  if (repoComplete && homePresent) {
+    return {
+      missing: 0,
+      stale: 0,
+      legacyPromptsOnly: false,
+      hasLegacyPrompts: Boolean(home.hasLegacyPrompts),
+      presentCount: home.presentCount,
+      expectedCount,
+      packageVersion,
+      skillsDir,
+      catalogVersion: home.catalogVersion,
+      pendingRecoveryRequired: false,
+      catalogMetadataInvalid: false,
+      catalogStateReason: null,
+      preferProject: true,
+      duplicateHome: true,
+    };
+  }
+  if (!parity.homeNeedsAttention) return null;
   return {
     missing: home.missing,
     stale: home.stale,
@@ -751,6 +970,8 @@ export function detectCodexHomeGap(root) {
       : home.pendingRecoveryRequired
         ? 'interrupted catalog commit'
         : null,
+    preferProject: false,
+    duplicateHome: false,
   };
 }
 
@@ -971,24 +1192,34 @@ export function printSkillAndCodexGapHints(root, opts) {
     }
   }
   if (codexHomeGap) {
-    const parts = [];
-    if (codexHomeGap.legacyPromptsOnly) parts.push('legacy-prompts-only');
-    if (codexHomeGap.missing > 0) parts.push(`${codexHomeGap.missing} missing`);
-    if (codexHomeGap.stale > 0) parts.push(`${codexHomeGap.stale} content-behind-package`);
-    if (codexHomeGap.pendingRecoveryRequired) parts.push('interrupted catalog commit');
-    if (codexHomeGap.catalogMetadataInvalid) parts.push('invalid catalog metadata');
     const deferred = !codexSessionActive;
-    const deferredNote = deferred
-      ? ' Deferred unless you use Codex — not a blocker for Grok/Claude/Cursor. '
-      : ' ';
-    const msg =
-      `Codex home skill catalog (${codexSkillsDir()}) behind this Ark (${parts.join(', ')}).` +
-      deferredNote +
-      `Catalog is $CODEX_HOME/skills/<name>/SKILL.md (not flat prompts). ` +
-      (codexHomeGap.catalogMetadataInvalid
-        ? 'Inspect the shared catalog metadata before retrying; invalid metadata fails safe.'
-        : `When using Codex: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --codex-home --force')}`);
-    console.log(deferred ? color.dim(msg) : color.yellow(msg));
+    if (codexHomeGap.duplicateHome) {
+      const msg =
+        `Codex home $CODEX_HOME/skills/ark-* duplicates project .agents/skills (picker shows two copies). ` +
+        (deferred
+          ? 'Deferred unless you use Codex. '
+          : '') +
+        `Remove home copies: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --prune-home-duplicates')}`;
+      console.log(deferred ? color.dim(msg) : color.yellow(msg));
+    } else {
+      const parts = [];
+      if (codexHomeGap.legacyPromptsOnly) parts.push('legacy-prompts-only');
+      if (codexHomeGap.missing > 0) parts.push(`${codexHomeGap.missing} missing`);
+      if (codexHomeGap.stale > 0) parts.push(`${codexHomeGap.stale} content-behind-package`);
+      if (codexHomeGap.pendingRecoveryRequired) parts.push('interrupted catalog commit');
+      if (codexHomeGap.catalogMetadataInvalid) parts.push('invalid catalog metadata');
+      const deferredNote = deferred
+        ? ' Deferred unless you use Codex — not a blocker for Grok/Claude/Cursor. '
+        : ' ';
+      const msg =
+        `Codex home skill catalog (${codexSkillsDir()}) behind this Ark (${parts.join(', ')}).` +
+        deferredNote +
+        `Catalog is $CODEX_HOME/skills/<name>/SKILL.md (not flat prompts). ` +
+        (codexHomeGap.catalogMetadataInvalid
+          ? 'Inspect the shared catalog metadata before retrying; invalid metadata fails safe.'
+          : `When using Codex: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --codex-home --force')}`);
+      console.log(deferred ? color.dim(msg) : color.yellow(msg));
+    }
   }
   if (codexRepoSkillGap && codexSessionActive) {
     const parts = [];

@@ -68,6 +68,11 @@ import {
   detectSkillGaps,
   arkPackageVersion,
   verifyHostSkillCatalog,
+  canonicalSkillPath,
+  usesCanonicalSkillCatalog,
+  linkSkillHostAdapters,
+  pruneHomeArkSkillDuplicates,
+  skillTemplateNames,
 } from './skill-install.mjs';
 import { installRepoSkillFile, installSkillCatalog, skillInstallLine, skillInstallNote } from './skill-write.mjs';
 import { detectDeployPathQuality } from './deploy-path.mjs';
@@ -235,9 +240,18 @@ export function buildManagedAssetCatalog({ root, tools, compact = false, skillsO
   const skills = skillTemplates().map(([name, content]) => [name, stampSkill(content, version)]);
   const skillPaths = new Set();
   if (!compact) {
-    for (const tool of selectedTools) {
+    const skillTools = [...selectedTools].filter((tool) => SKILL_TOOL_TARGETS[tool]);
+    const writeCanonical = skillTools.some((tool) => usesCanonicalSkillCatalog(tool));
+    if (writeCanonical) {
+      for (const [name, content] of skills) {
+        const relativePath = canonicalSkillPath(name);
+        skillPaths.add(relativePath);
+        add(relativePath, content, 'skill');
+      }
+    }
+    for (const tool of skillTools) {
+      if (usesCanonicalSkillCatalog(tool)) continue;
       const target = SKILL_TOOL_TARGETS[tool];
-      if (!target) continue;
       for (const [name, content] of skills) {
         const relativePath = target(name);
         skillPaths.add(relativePath);
@@ -613,6 +627,28 @@ export function runInstallAgentGates(args) {
     console.log(`    ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --force')}`);
   }
 
+  const skillNames = skills.map((skill) =>
+    Array.isArray(skill) ? skill[0] : skill?.name || skill
+  );
+  if (!args.compact && skillNames.length > 0) {
+    const adapterResults = linkSkillHostAdapters(root, tools, skillNames, Boolean(args.force));
+    for (const row of adapterResults) {
+      if (row.status === 'linked' || row.status === 'copied') {
+        console.log(`  ${row.status.padEnd(7)} ${row.relativePath}  (adapter → .agents/skills/${row.name})`);
+      }
+    }
+  }
+  if (args.pruneHomeDuplicates) {
+    const pruned = pruneHomeArkSkillDuplicates(root, skillNames.length ? skillNames : skillTemplateNames());
+    if (!pruned.ok) {
+      console.log('  skip    --prune-home-duplicates (no project .agents/skills catalog yet)');
+    } else if (pruned.removed.length === 0) {
+      console.log('  skip    --prune-home-duplicates (no home ark-* copies)');
+    } else {
+      console.log(`  pruned  ${pruned.removed.length} home ark-* path(s) (project catalog is enough)`);
+    }
+  }
+
   // --codex-home writes SKILL.md skills to $CODEX_HOME/skills/<name>/SKILL.md.
   // Codex's real catalog loads skill directories (not flat $CODEX_HOME/prompts).
   // Repo installs already write `.agents/skills/<name>/SKILL.md` when `codex` is
@@ -642,32 +678,51 @@ export function runInstallAgentGates(args) {
       );
       if (projectHasCatalog) {
         console.log(
-          '  Project .agents/skills already has this catalog; home write is optional. Prefer the project copy.'
+          '  Skip home write — project .agents/skills is the catalog. Codex lists user+repo; a home copy duplicates every /ark-*.'
         );
-      }
-      for (const result of installSkillCatalog({
-        directory: dir,
-        skills,
-        packageVersion: version,
-        force: args.force,
-        scope: 'home',
-      })) {
-        console.log(skillInstallLine(result));
-        homeResults.push(result);
+        console.log(
+          `  Remove leftover home copies: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --prune-home-duplicates')}`
+        );
+      } else {
+        for (const result of installSkillCatalog({
+          directory: dir,
+          skills,
+          packageVersion: version,
+          force: args.force,
+          scope: 'home',
+        })) {
+          console.log(skillInstallLine(result));
+          homeResults.push(result);
+        }
       }
     }
   }
 
-  installRequestedAgentHomes({
-    root,
-    skills,
-    version,
-    force: args.force,
-    claudeHome: args.claudeHome,
-    grokHome: args.grokHome,
-    agentHomes: args.agentHomes,
-    json: args.json,
-  });
+  const projectCatalogReady = skillNames.some((name) =>
+    fs.existsSync(path.join(root, canonicalSkillPath(name)))
+  );
+  if ((args.claudeHome || args.grokHome || args.agentHomes) && projectCatalogReady) {
+    if (!args.json) {
+      console.log('');
+      console.log(
+        'Skip Claude/Grok home skill write — project .agents/skills + adapters are the catalog. Home ark-* copies override or duplicate.'
+      );
+      console.log(
+        `  Remove leftover home copies: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --prune-home-duplicates')}`
+      );
+    }
+  } else {
+    installRequestedAgentHomes({
+      root,
+      skills,
+      version,
+      force: args.force,
+      claudeHome: args.claudeHome,
+      grokHome: args.grokHome,
+      agentHomes: args.agentHomes,
+      json: args.json,
+    });
+  }
 
   // Optional legacy/home fallback. Normal Codex installs use the project-scoped
   // .codex/config.toml above, avoiding cross-project primary binding conflicts.
@@ -679,8 +734,10 @@ export function runInstallAgentGates(args) {
   // A redirected CODEX_HOME (tests/isolation) may still wire as requested.
   let codexMcp = null;
   const wantCodexWire = !args.compact && !args.skillsOnly && args.codexHome;
+  const projectCodexMcp = fs.existsSync(path.join(root, '.codex', 'config.toml'));
   const skipHomeWire =
-    wantCodexWire && isTempOrUpgradeRoot(root) && usesDefaultCodexHome();
+    wantCodexWire &&
+    ((isTempOrUpgradeRoot(root) && usesDefaultCodexHome()) || projectCodexMcp);
   if (wantCodexWire && !skipHomeWire) {
     codexMcp = wireCodexMcp(root, args.force);
     console.log('');
@@ -702,7 +759,14 @@ export function runInstallAgentGates(args) {
       );
     }
   } else if (skipHomeWire) {
-    codexMcp = { status: 'skipped', file: codexConfigPath(), reason: 'temp-root' };
+    const reason = projectCodexMcp ? 'project-config' : 'temp-root';
+    codexMcp = { status: 'skipped', file: codexConfigPath(), reason };
+    if (projectCodexMcp && !args.json) {
+      console.log('');
+      console.log(
+        'Skip Codex home MCP — project .codex/config.toml is the binding. Home config pointing at another checkout is leftover; do not rebind it from this install.'
+      );
+    }
   }
 
   const { codexProjectConfigured, runtimeActivation } =

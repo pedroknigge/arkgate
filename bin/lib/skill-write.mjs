@@ -393,6 +393,9 @@ export function skillInstallNote(plan) {
   if (plan.reason === 'content-current') {
     return `scope=${scope}; body current; installed=${installed}; source=${source}; no write`;
   }
+  if (plan.reason === 'stamp-refresh') {
+    return `scope=${scope}; stamp refresh; installed=${installed}; source=${source}`;
+  }
   if (plan.reason === 'newer-home-version') {
     return `scope=${scope}; CONFLICT installed=${installed} newer than source=${source}; downgrade blocked`;
   }

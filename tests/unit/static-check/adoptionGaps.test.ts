@@ -149,7 +149,7 @@ describe('adoption gaps (doctor + codex-home + report)', () => {
     expect(r.stdout).toMatch(/migrate-commands/);
   });
 
-  it('codex-home rewrites temp ark-upgrade root to absolute project + arkgate-mcp without --force', () => {
+  it('codex-home does not rebind leftover home MCP when project .codex/config.toml exists', () => {
     const root = mk();
     writeTwoLayerOptional(root);
     fs.writeFileSync(path.join(root, 'AGENTS.md'), '# agent\n');
@@ -158,14 +158,11 @@ describe('adoption gaps (doctor + codex-home + report)', () => {
     const fakeCodex = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-codex-home-'));
     temps.push(fakeCodex);
     const configToml = path.join(fakeCodex, 'config.toml');
-    const absRoot = path.resolve(root);
-    fs.writeFileSync(
-      configToml,
-      `[mcp_servers.ark]
+    const leftover = `[mcp_servers.ark]
 command = "npx"
 args = ["ark-mcp", "--root", "/var/folders/xx/ark-upgrade-tmp123", "--config", "/var/folders/xx/ark-upgrade-tmp123/ark.config.json"]
-`
-    );
+`;
+    fs.writeFileSync(configToml, leftover);
 
     const r = runCheck(
       root,
@@ -173,15 +170,11 @@ args = ["ark-mcp", "--root", "/var/folders/xx/ark-upgrade-tmp123", "--config", "
       { CODEX_HOME: fakeCodex }
     );
     expect(r.status).toBe(0);
-    const toml = fs.readFileSync(configToml, 'utf8');
-    expect(toml).toContain('arkgate-mcp');
-    expect(toml).toContain(absRoot);
-    expect(toml).not.toMatch(/ark-upgrade-tmp/);
-    expect(toml).not.toMatch(/\/var\/folders\/xx/);
-    // single preferred bin
-    const bins = [...toml.matchAll(/"(arkgate-mcp|ark-mcp)"/g)].map((m) => m[1]);
-    expect(bins.filter((b) => b === 'arkgate-mcp' || b === 'ark-mcp').length).toBeGreaterThanOrEqual(1);
-    expect(bins.includes('ark-mcp') && bins.includes('arkgate-mcp')).toBe(false);
+    expect(r.stdout).toContain('Skip Codex home MCP');
+    expect(fs.readFileSync(configToml, 'utf8')).toBe(leftover);
+    const projectToml = fs.readFileSync(path.join(root, '.codex', 'config.toml'), 'utf8');
+    expect(projectToml).toContain('arkgate-mcp');
+    expect(projectToml).toContain('--root');
   });
 
   /** Neutralize host signals so multi-project severity is not auto-deferred by Grok/Claude env. */

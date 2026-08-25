@@ -449,7 +449,7 @@ writes a scoped secondary table:
 | Add B to the legacy home fallback | `ark-check --install-agent-gates --codex-home` |
 | Make B the legacy home primary | `ark-check --install-agent-gates --codex-home --force` |
 | Doctor: primary points at another permanent project | gap id `codex-home-multi-project` (warn if no secondary yet and session host is unknown/Codex; **info + `deferred`** when the session host is known and not Codex — e.g. Grok/Claude/Cursor; info if a scoped secondary is already present) |
-| When using Codex: refresh home skills | `ark-check --install-agent-gates --skills-only --codex-home --force` |
+| When using Codex: refresh home skills | Prefer project `.agents/skills`. If Codex lists `/ark-*` twice, prune home copies: `ark-check --install-agent-gates --skills-only --prune-home-duplicates`. `--codex-home` skips when the project catalog exists. |
 
 When a valid project `.codex/config.toml` exists, it is the expected binding, but files alone
 cannot prove which already-running process answered. Doctor therefore keeps an unrelated home
@@ -488,7 +488,7 @@ Codex discovers skills as directories containing `SKILL.md` (Agent Skills standa
 | Scope | Path |
 |-------|------|
 | **Repo** (written by `--tools codex`) | `.agents/skills/<name>/SKILL.md` |
-| **Home** (optional `--codex-home`) | `$CODEX_HOME/skills/<name>/SKILL.md` |
+| **Home** (optional `--codex-home`) | `$CODEX_HOME/skills/<name>/SKILL.md` — skipped when the project catalog exists; Codex lists both otherwise |
 
 Flat `.codex/prompts/*.md` files are **not** the invocable skill catalog. Install writes the
 repo catalog above so AGENTS.md `/ark-*` references match what Codex can load. After install,

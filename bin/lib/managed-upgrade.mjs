@@ -126,13 +126,8 @@ function hasArkText(root, relativePath) {
 
 const HOST_SIGNALS = {
   claude: ['.claude/settings.json', '.claude/skills/ark-upgrade/SKILL.md'],
-  cursor: [
-    '.cursor/mcp.json',
-    '.cursor/hooks.json',
-    '.cursor/rules/ark.mdc',
-    '.cursor/commands/ark-upgrade.md',
-  ],
-  codex: ['.codex/hooks.json', '.codex/config.toml', '.agents/skills/ark-upgrade/SKILL.md'],
+  cursor: ['.cursor/mcp.json', '.cursor/hooks.json', '.cursor/rules/ark.mdc'],
+  codex: ['.codex/hooks.json', '.codex/config.toml'],
   grok: ['.grok/config.toml', '.grok/hooks/ark-write-gate.json', '.grok/skills/ark-upgrade/SKILL.md'],
   antigravity: ['.agents/hooks.json'],
   opencode: ['opencode.json', '.opencode/skills/ark-upgrade/SKILL.md'],

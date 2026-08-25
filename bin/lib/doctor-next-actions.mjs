@@ -73,7 +73,11 @@ export function collectDoctorNextActions(ctx) {
   } else if (remStale > 0) {
     actions.push('refresh stale /ark-* skills (--install-agent-gates --skills-only --force) — gates are installed, catalog is stale');
   }
-  if (ctx.codexHomeGap && ctx.codexConcernActive && ctx.codexHomeGap.preferProject !== true) {
+  if (ctx.codexHomeGap && ctx.codexConcernActive && ctx.codexHomeGap.duplicateHome) {
+    actions.push(
+      'remove duplicate Codex home /ark-* skills (project .agents/skills is enough): --install-agent-gates --skills-only --prune-home-duplicates'
+    );
+  } else if (ctx.codexHomeGap && ctx.codexConcernActive && ctx.codexHomeGap.preferProject !== true) {
     actions.push(
       ctx.codexHomeGap.catalogMetadataInvalid
         ? 'repair invalid Codex home catalog metadata after verifying the newest installed version'

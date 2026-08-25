@@ -455,7 +455,8 @@ describe('install --tools codex honesty + SKILL.md catalog', () => {
         stdio: ['ignore', 'pipe', 'pipe'],
       }
     );
-    expect(fs.existsSync(path.join(codexHome, 'skills', 'ark-explore', 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.agents', 'skills', 'ark-explore', 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(codexHome, 'skills', 'ark-explore', 'SKILL.md'))).toBe(false);
     expect(fs.existsSync(path.join(codexHome, 'prompts', 'ark-explore.md'))).toBe(false);
   });
 });
