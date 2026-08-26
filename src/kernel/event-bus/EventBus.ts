@@ -147,9 +147,10 @@ export class EventBusImpl<Context = unknown> implements EventBus {
   async publish<N extends IntentName, P>(
     eventOrCreator: DomainEvent<N, P> | IntentCreator<N, P>,
     payloadOrMeta?: P | Partial<EventMetadata>,
-    metadata?: Partial<EventMetadata>
+    metadata?: Partial<EventMetadata>,
+    control?: EventDispatchControl
   ): Promise<void> {
-    await this.dispatch(eventOrCreator, payloadOrMeta, metadata);
+    await this.dispatch(eventOrCreator, payloadOrMeta, metadata, control);
   }
 
   async dispatch<N extends IntentName, P>(
@@ -258,7 +259,8 @@ export class EventBusImpl<Context = unknown> implements EventBus {
     await recordSuccessfulPublish(
       this.recording,
       event as DomainEvent,
-      notifySubscribers ? matching.length : 0
+      notifySubscribers ? matching.length : 0,
+      control.tx
     );
 
     // 7. Handlers + onPublish hook
@@ -305,15 +307,21 @@ export class EventBusImpl<Context = unknown> implements EventBus {
       publish: async <EventName extends IntentName, Payload>(
         intent: IntentCreator<EventName, Payload>,
         payload: Payload,
-        metadata: Partial<EventMetadata> = {}
+        metadata: Partial<EventMetadata> = {},
+        control?: EventDispatchControl
       ) => {
         if (metadata.source && metadata.source !== sourceName) {
           throw new SourceMetadataOverrideError(sourceName, metadata.source);
         }
-        await this.publish(intent, payload, {
-          ...metadata,
-          source: sourceName,
-        });
+        await this.publish(
+          intent,
+          payload,
+          {
+            ...metadata,
+            source: sourceName,
+          },
+          control
+        );
       },
     };
   }

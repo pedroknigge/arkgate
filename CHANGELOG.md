@@ -5,6 +5,17 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.7.6 — 2026-08-26
+
+**Patch** over **4.7.5**. Production durability primitives for ArkRun (K01). Adds OCC, leases, DB tx handoff, and resume capabilities to the workflow engine. **No required config migration.** Companion `@arkgate/runtime` is republished as `0.1.0-experimental.1`.
+
+**Status: prepared** (see `docs/releases/4.7.6.md`).
+
+### Changed
+- **ArkRun (Workflow Engine):** added `tx` argument to `EventBus` and Sagas for database transactions.
+- **ArkRun (Workflow Engine):** added optimistic concurrency control (`version` increments) and worker lease (`claim()`, `ownerId`, `expiresAt`) primitives.
+- **ArkRun (Workflow Engine):** added `engine.resume()` to rehydrate interrupted sagas without repeating completed steps.
+
 ## 4.7.5 — 2026-08-26
 
 **Patch** over **4.7.4**. First-contact is **Write. Check. Ship.** README H1, ASCII

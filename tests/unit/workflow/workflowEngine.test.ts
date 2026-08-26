@@ -454,4 +454,135 @@ describe('WorkflowEngine', () => {
       currentStep: undefined,
     });
   });
+
+  it('K01: supports optimistic concurrency and throws on version conflict', async () => {
+    const engine = createWorkflowEngine(createEventBus());
+    engine.register({
+      name: 'OccWorkflow',
+      steps: [{ name: 'step', execute: () => undefined }],
+    });
+    
+    // We hack the underlying store to force an OCC conflict for coverage.
+    // The engine's save calls increment version. We'll start, manually get, manually mutate version, and save.
+    const snapshot = await engine.start('OccWorkflow', {});
+    expect(snapshot.version).toBeGreaterThan(0);
+    
+    const store = (engine as any).store;
+    const directSnapshot = await store.get(snapshot.id);
+    directSnapshot.version = directSnapshot.version - 1; // force mismatch
+    
+    expect(() => store.save(directSnapshot)).toThrow(/Optimistic concurrency conflict/);
+  });
+
+  it('K01: supports worker leases via claim and respects timeouts', async () => {
+    const store = new InMemoryWorkflowStore();
+    store.save({
+      id: 'w-1',
+      version: 0,
+      workflowName: 'TestWorker',
+      status: 'running',
+      context: {},
+      completedSteps: [],
+      attempts: {},
+      startedAt: 'now',
+      updatedAt: 'now',
+    });
+
+    const claimed = await store.claim('worker-A', 50);
+    expect(claimed?.ownerId).toBe('worker-A');
+    expect(claimed?.version).toBe(2); // save made it 1, claim makes it 2
+
+    const reClaim = await store.claim('worker-B', 50);
+    expect(reClaim).toBeUndefined(); // already claimed and not expired
+
+    // wait for expiration
+    await new Promise(r => setTimeout(r, 60));
+
+    const expiredClaim = await store.claim('worker-B', 50);
+    expect(expiredClaim?.ownerId).toBe('worker-B');
+    expect(expiredClaim?.version).toBe(3); // claim makes it 3
+  });
+
+  it('K01: resumes a running workflow from its last snapshot and respects tx', async () => {
+    const audit = createAuditTrail();
+    const engine = createWorkflowEngine(createEventBus(), { auditTrail: audit });
+    const executions: string[] = [];
+    
+    engine.register({
+      name: 'ResumeWorkflow',
+      steps: [
+        { name: 'step1', execute: () => { executions.push('step1'); } },
+        { name: 'step2', execute: (payload: any) => { executions.push('step2'); payload.foo = 'bar'; } },
+      ],
+    });
+
+    // Seed the store with a partially completed workflow
+    const store = (engine as any).store;
+    store.save({
+      id: 'w-resume',
+      version: 0,
+      workflowName: 'ResumeWorkflow',
+      status: 'running',
+      context: { base: 'val' },
+      completedSteps: ['step1'], // step1 is already done
+      attempts: {},
+      startedAt: 'now',
+      updatedAt: 'now',
+    });
+
+    const dummyTx = { test: true };
+    const result = await engine.resume('w-resume', { tx: dummyTx });
+    
+    expect(result?.status).toBe('completed');
+    expect(result?.completedSteps).toEqual(['step1', 'step2']);
+    // step1 should NOT execute because it was in completedSteps
+    expect(executions).toEqual(['step2']);
+    expect(result?.context).toEqual({ base: 'val', foo: 'bar' });
+    
+    const audits = await audit.query({ type: 'workflow.completed' });
+    expect(audits[0].details).toEqual({ workflowName: 'ResumeWorkflow' });
+    
+    // Attempting to resume a completed workflow returns it unchanged
+    const again = await engine.resume('w-resume', { tx: dummyTx });
+    expect(again?.status).toBe('completed');
+  });
+
+  it('K01: handles resume of unknown ID or non-registered workflow', async () => {
+    const engine = createWorkflowEngine(createEventBus());
+    expect(await engine.resume('missing')).toBeUndefined();
+    
+    const store = (engine as any).store;
+    store.save({
+      id: 'w-unreg',
+      version: 0,
+      workflowName: 'Unregistered',
+      status: 'running',
+      context: {},
+      completedSteps: [],
+      attempts: {},
+      startedAt: 'now',
+      updatedAt: 'now',
+    });
+    
+    await expect(engine.resume('w-unreg')).rejects.toThrow('not registered');
+  });
+
+  it('K01: audits workflow failure with correct details', async () => {
+    const audit = createAuditTrail();
+    const engine = createWorkflowEngine(createEventBus(), { auditTrail: audit });
+    engine.register({
+      name: 'FailAudit',
+      steps: [
+        { name: 'boom', execute: () => { throw new Error('Terminal'); } }
+      ],
+    });
+
+    await expect(engine.start('FailAudit', {})).rejects.toThrow('Terminal');
+    const audits = await audit.query({ type: 'workflow.failed' });
+    expect(audits[0].details).toEqual({
+      workflowName: 'FailAudit',
+      error: 'Terminal',
+      failedStep: 'boom'
+    });
+  });
 });

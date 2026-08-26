@@ -63,11 +63,17 @@ async function withTimeout<T>(
 export class InMemoryWorkflowStore implements WorkflowStore {
   private readonly snapshots = new Map<string, WorkflowSnapshot>();
 
-  save<P extends SagaContext>(snapshot: WorkflowSnapshot<P>): void {
-    this.snapshots.set(snapshot.id, { ...snapshot, context: { ...snapshot.context } });
+  save<P extends SagaContext>(snapshot: WorkflowSnapshot<P>, _tx?: unknown): void {
+    const existing = this.snapshots.get(snapshot.id);
+    if (existing && existing.version !== snapshot.version) {
+      throw new Error(`Optimistic concurrency conflict for workflow ${snapshot.id}`);
+    }
+    const version = (snapshot.version ?? 0) + 1;
+    this.snapshots.set(snapshot.id, { ...snapshot, version, context: { ...snapshot.context } });
+    snapshot.version = version; // Mutate input to match saved state
   }
 
-  get<P extends SagaContext = SagaContext>(id: string): WorkflowSnapshot<P> | undefined {
+  get<P extends SagaContext = SagaContext>(id: string, _tx?: unknown): WorkflowSnapshot<P> | undefined {
     const snapshot = this.snapshots.get(id) as WorkflowSnapshot<P> | undefined;
     return snapshot ? { ...snapshot, context: { ...snapshot.context } } : undefined;
   }
@@ -76,6 +82,24 @@ export class InMemoryWorkflowStore implements WorkflowStore {
     return Array.from(this.snapshots.values())
       .filter((snapshot) => !workflowName || snapshot.workflowName === workflowName)
       .map((snapshot) => ({ ...snapshot, context: { ...snapshot.context } }));
+  }
+
+  claim(workerId: string, timeoutMs: number, workflowName?: string): WorkflowSnapshot | undefined {
+    const now = Date.now();
+    for (const snapshot of this.snapshots.values()) {
+      if (workflowName && snapshot.workflowName !== workflowName) continue;
+      if (snapshot.status !== 'running' && snapshot.status !== 'compensating') continue;
+      const isExpired = snapshot.expiresAt ? new Date(snapshot.expiresAt).getTime() < now : true;
+      if (!snapshot.ownerId || isExpired) {
+        snapshot.ownerId = workerId;
+        snapshot.expiresAt = new Date(now + timeoutMs).toISOString();
+        const version = (snapshot.version ?? 0) + 1;
+        snapshot.version = version;
+        this.snapshots.set(snapshot.id, { ...snapshot, context: { ...snapshot.context } });
+        return { ...snapshot, context: { ...snapshot.context } };
+      }
+    }
+    return undefined;
   }
 
   clear(): void {
@@ -122,7 +146,7 @@ class WorkflowEngineImpl implements WorkflowEngine {
   async start<P extends SagaContext>(
     workflowName: string,
     initialPayload: P,
-    options: { id?: string } = {}
+    options: { id?: string; tx?: unknown } = {}
   ): Promise<WorkflowSnapshot<P>> {
     const definition = this.definitions.get(workflowName) as
       | WorkflowDefinition<P>
@@ -135,6 +159,7 @@ class WorkflowEngineImpl implements WorkflowEngine {
     const now = new Date().toISOString();
     const snapshot: WorkflowSnapshot<P> = {
       id: options.id ?? createWorkflowId(workflowName),
+      version: 0,
       workflowName,
       status: 'running',
       context: { ...initialPayload },
@@ -144,30 +169,63 @@ class WorkflowEngineImpl implements WorkflowEngine {
       updatedAt: now,
     };
 
-    await this.store.save(snapshot);
+    await this.store.save(snapshot, options.tx);
     await this.audit('workflow.started', snapshot, { workflowName });
 
+    return this.executeSnapshot(snapshot, definition, options.tx);
+  }
+
+  async resume<P extends SagaContext>(
+    id: string,
+    options: { tx?: unknown } = {}
+  ): Promise<WorkflowSnapshot<P> | undefined> {
+    const snapshot = await this.get<P>(id, options.tx);
+    if (!snapshot) return undefined;
+    
+    if (snapshot.status !== 'running' && snapshot.status !== 'compensating') {
+      return snapshot; // already finished
+    }
+
+    const definition = this.definitions.get(snapshot.workflowName) as
+      | WorkflowDefinition<P>
+      | undefined;
+      
+    if (!definition) {
+      throw new Error(`Workflow "${snapshot.workflowName}" is not registered.`);
+    }
+
+    return this.executeSnapshot(snapshot, definition, options.tx);
+  }
+
+  private async executeSnapshot<P extends SagaContext>(
+    snapshot: WorkflowSnapshot<P>,
+    definition: WorkflowDefinition<P>,
+    tx?: unknown
+  ): Promise<WorkflowSnapshot<P>> {
     try {
-      for (const step of definition.steps) {
-        await this.runStep(snapshot, step);
+      // Resume from where it left off
+      const remainingSteps = definition.steps.filter(s => !snapshot.completedSteps.includes(s.name));
+      
+      for (const step of remainingSteps) {
+        await this.runStep(snapshot, step, tx);
       }
 
       snapshot.status = 'completed';
       snapshot.currentStep = undefined;
       snapshot.completedAt = new Date().toISOString();
       snapshot.updatedAt = snapshot.completedAt;
-      await this.store.save(snapshot);
-      await this.audit('workflow.completed', snapshot, { workflowName });
+      await this.store.save(snapshot, tx);
+      await this.audit('workflow.completed', snapshot, { workflowName: snapshot.workflowName });
       return { ...snapshot, context: { ...snapshot.context } };
     } catch (err) {
-      await this.compensate(snapshot, definition.steps, err);
+      await this.compensate(snapshot, definition.steps, err, tx);
       snapshot.status = 'failed';
       snapshot.currentStep = undefined;
       snapshot.error = errorMessage(err);
       snapshot.updatedAt = new Date().toISOString();
-      await this.store.save(snapshot);
+      await this.store.save(snapshot, tx);
       await this.audit('workflow.failed', snapshot, {
-        workflowName,
+        workflowName: snapshot.workflowName,
         error: snapshot.error,
         failedStep: snapshot.failedStep,
       });
@@ -176,9 +234,10 @@ class WorkflowEngineImpl implements WorkflowEngine {
   }
 
   async get<P extends SagaContext = SagaContext>(
-    id: string
+    id: string,
+    tx?: unknown
   ): Promise<WorkflowSnapshot<P> | undefined> {
-    return this.store.get<P>(id);
+    return this.store.get<P>(id, tx);
   }
 
   async list(workflowName?: string): Promise<WorkflowSnapshot[]> {
@@ -187,18 +246,19 @@ class WorkflowEngineImpl implements WorkflowEngine {
 
   private async runStep<P extends SagaContext>(
     snapshot: WorkflowSnapshot<P>,
-    step: WorkflowStep<P>
+    step: WorkflowStep<P>,
+    tx?: unknown
   ): Promise<void> {
     const retry = step.retry ?? this.options.defaultRetry ?? { attempts: 1 };
     const maxAttempts = Math.max(1, retry.attempts);
 
     snapshot.currentStep = step.name;
     snapshot.updatedAt = new Date().toISOString();
-    await this.store.save(snapshot);
+    await this.store.save(snapshot, tx);
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       snapshot.attempts[step.name] = attempt;
-      await this.store.save(snapshot);
+      await this.store.save(snapshot, tx);
 
       let result: Partial<P> | void;
       try {
@@ -215,7 +275,7 @@ class WorkflowEngineImpl implements WorkflowEngine {
 
         snapshot.failedStep = step.name;
         snapshot.updatedAt = new Date().toISOString();
-        await this.store.save(snapshot);
+        await this.store.save(snapshot, tx);
         await this.audit('workflow.step.failed', snapshot, {
           step: step.name,
           attempt,
@@ -230,7 +290,7 @@ class WorkflowEngineImpl implements WorkflowEngine {
       snapshot.completedSteps.push(step.name);
       snapshot.currentStep = undefined;
       snapshot.updatedAt = new Date().toISOString();
-      await this.store.save(snapshot);
+      await this.store.save(snapshot, tx);
       await this.audit('workflow.step.completed', snapshot, {
         step: step.name,
         attempt,
@@ -244,11 +304,12 @@ class WorkflowEngineImpl implements WorkflowEngine {
   private async compensate<P extends SagaContext>(
     snapshot: WorkflowSnapshot<P>,
     steps: WorkflowStep<P>[],
-    error: unknown
+    error: unknown,
+    tx?: unknown
   ): Promise<void> {
     snapshot.status = 'compensating';
     snapshot.updatedAt = new Date().toISOString();
-    await this.store.save(snapshot);
+    await this.store.save(snapshot, tx);
 
     const completed = steps.filter((step) =>
       snapshot.completedSteps.includes(step.name)

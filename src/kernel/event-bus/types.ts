@@ -198,7 +198,8 @@ export interface EventPublisher {
   publish<N extends IntentName, P>(
     intent: IntentCreator<N, P>,
     payload: P,
-    metadata?: Partial<EventMetadata>
+    metadata?: Partial<EventMetadata>,
+    control?: EventDispatchControl
   ): Promise<void>;
 }
 
@@ -210,6 +211,7 @@ export interface EventDispatchControl {
   notifySubscribers?: boolean;
   awaitHandlers?: boolean;
   runOnPublish?: boolean;
+  tx?: unknown;
 }
 
 /**
@@ -223,7 +225,8 @@ export interface EventBus {
   publish<N extends IntentName, P>(
     eventOrCreator: DomainEvent<N, P> | IntentCreator<N, P>,
     payloadOrMeta?: P | Partial<EventMetadata>,
-    metadata?: Partial<EventMetadata>
+    metadata?: Partial<EventMetadata>,
+    control?: EventDispatchControl
   ): Promise<void>;
 
   /**
