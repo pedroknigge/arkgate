@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-25 (Engineering doing: none; Phase HS `HS01`–`HS05` **done**; `RN16` **done**; Phase RN ArkRun shipped **4.7.0**; Phase HS shipped **4.7.1**; wording patch **4.7.2** published; remaining first-contact copy **4.7.3** published; `AL05` parked; Z09 still parked; npm `latest` is **4.7.3**)
+- **Status date:** 2026-08-26 (Engineering doing: none; Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Phase HS shipped **4.7.1**; wording patch **4.7.2** published; remaining first-contact copy **4.7.3** published; companion registry **4.7.4** published; `AL05` parked; Z09 still parked; npm `latest` is **4.7.4**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -263,8 +263,8 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: none. Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published on npm `latest`.
-`RN16` **done** (public docs + 4.7.0 published).
+Engineering doing: none. Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published on npm `latest`. Companion registry **4.7.4** published.
+`RN16` **done** (public docs + 4.7.0 published). `RN17` **done** (first experimental npm publish of `@arkgate/runtime`).
 `RN15` **done** (deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names).
 `RN14` **done** (skip corpus: extra absent = green; enforced = fail `new` / peer import / homemade bus).
 `RN13` **done** (graph slices: process/technical, degrees, query + Mermaid helper).
@@ -284,7 +284,7 @@ no process singleton; kernel stays out of the `arkgate` tarball).
 `RN02` **done** (schema `1.2` `arkRun` extra; `1.1` migrates; absence silent; invalid extra fails closed).
 `RN01` done (ADRs 0020–0024 accepted). `Z09` stays parked (retained adoption + independent
 close). 30-day freeze from 2026-08-22: no explore / compass as `doing`. Engineering doing: none.
-Phase RN shipped in **4.7.0**. Phase HS is the **4.7.1** host-catalog patch.
+Phase RN shipped in **4.7.0** (gate extra). Companion registry publish is `RN17` / **4.7.4**. Phase HS is the **4.7.1** host-catalog patch.
 
 ### Phase HS — One catalog, one root (4.7.1)
 
@@ -324,6 +324,7 @@ Does not ship cloud adapters or a process singleton. Companion kernel stays
 | 198 | `RN14` | `done` | L | RN07 | Skip corpus: extra absent = green; enforced = fail `new` / peer import / homemade bus |
 | 199 | `RN15` | `done` | M | RN08 + freeze end | Deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names |
 | 200 | `RN16` | `done` | M | RN08 + RN14 | Public docs + **4.7.0** published on npm `latest`; durability honesty unchanged |
+| 206 | `RN17` | `done` | M | RN16 | First experimental npm publish of `@arkgate/runtime` (`experimental` dist-tag, never `latest`); `/ark-runtime` can install from the registry. Does not close Z09/K01 |
 
 ### Residual Phase Z
 

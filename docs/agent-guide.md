@@ -712,12 +712,10 @@ const contract = ark.manifest().toJSON();
 ```
 
 Use `@arkgate/runtime` only when evaluating the experimental ArkRun kernel. The stable `arkgate`
-gate package contains no runtime implementation (the kernel is not in the `arkgate` tarball). The
-companion is not currently present in the npm registry and is not published by the root release
-workflow. Verify availability with `npm view @arkgate/runtime dist-tags --json`; until a separate
-experimental publication exists, evaluate it only from a source checkout after
-`npm run build:runtime` and install the local `packages/runtime` folder. Package surface policy:
-[package-surface.md](package-surface.md).
+gate package contains no runtime implementation (the kernel is not in the `arkgate` tarball).
+Install `@arkgate/runtime@experimental`. Verify with `npm view @arkgate/runtime dist-tags --json`.
+The root release workflow publishes the companion under `experimental` (never `latest`).
+Package surface policy: [package-surface.md](package-surface.md).
 
 Agents should read `contract` and `ark.observability.report()` before generating or modifying code.
 

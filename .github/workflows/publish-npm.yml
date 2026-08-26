@@ -62,6 +62,8 @@ jobs:
           set -euo pipefail
           package="$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).name")"
           version="$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version")"
+          runtime_package="$(node -p "JSON.parse(require('fs').readFileSync('packages/runtime/package.json', 'utf8')).name")"
+          runtime_version="$(node -p "JSON.parse(require('fs').readFileSync('packages/runtime/package.json', 'utf8')).version")"
           if npm view "$package@$version" version >/dev/null 2>&1; then
             published_git_head="$(npm view "$package@$version" gitHead 2>/dev/null)"
             tag_commit="$(git rev-list -n 1 "$RELEASE_TAG")"
@@ -74,6 +76,12 @@ jobs:
           else
             echo "published=false" >> "$GITHUB_OUTPUT"
           fi
+          if npm view "$runtime_package@$runtime_version" version >/dev/null 2>&1; then
+            echo "$runtime_package@$runtime_version already in the registry."
+            echo "runtime_published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "runtime_published=false" >> "$GITHUB_OUTPUT"
+          fi
         env:
           RELEASE_TAG: ${{ inputs.tag }}
 
@@ -85,7 +93,7 @@ jobs:
       # Prefer NPM_TOKEN when set (first publish of a new package name, or emergency).
       # Otherwise use Trusted Publishing via OIDC (npm run release:npm).
       - name: Publish to npm
-        if: ${{ !inputs.dry_run && steps.npm-state.outputs.published != 'true' }}
+        if: ${{ !inputs.dry_run && (steps.npm-state.outputs.published != 'true' || steps.npm-state.outputs.runtime_published != 'true') }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
@@ -93,16 +101,11 @@ jobs:
           if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
             echo "Publishing with NPM_TOKEN (Automation token)…"
             echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> "$GITHUB_WORKSPACE/.npmrc"
-            # Still run full verify suite, then publish with token.
-            npm run typecheck
-            npm run test:confidence
-            npm run security:audit
-            npm run check:architecture
-            npm publish --access public --provenance
           else
             echo "No NPM_TOKEN secret — publishing with OIDC trusted publishing…"
-            npm run release:npm
           fi
+          # Gate (`latest`) + companion (`experimental`). Already-published packages are skipped.
+          npm run release:npm
 
       - name: Upload npm tarball checksum
         if: ${{ !inputs.dry_run }}
@@ -126,6 +129,24 @@ jobs:
           curl -fsSL "$tarball_url" -o "$tarball"
           shasum -a 256 "$tarball" > "$tarball.sha256"
           gh release upload "$RELEASE_TAG" "$tarball.sha256" --clobber
+          runtime_package="$(node -p "JSON.parse(require('fs').readFileSync('packages/runtime/package.json', 'utf8')).name")"
+          runtime_version="$(node -p "JSON.parse(require('fs').readFileSync('packages/runtime/package.json', 'utf8')).version")"
+          runtime_tarball_url=""
+          for attempt in $(seq 1 30); do
+            if runtime_tarball_url="$(npm view "$runtime_package@$runtime_version" dist.tarball 2>/dev/null)" && [ -n "$runtime_tarball_url" ]; then
+              break
+            fi
+            echo "npm has not surfaced $runtime_package@$runtime_version yet (attempt $attempt); retrying in 5s..."
+            sleep 5
+          done
+          if [ -z "$runtime_tarball_url" ]; then
+            echo "::error::npm never surfaced $runtime_package@$runtime_version tarball; publish likely succeeded — upload the checksum manually."
+            exit 1
+          fi
+          runtime_tarball="$(echo "$runtime_package" | tr '/' '-')-$runtime_version.tgz"
+          curl -fsSL "$runtime_tarball_url" -o "$runtime_tarball"
+          shasum -a 256 "$runtime_tarball" > "$runtime_tarball.sha256"
+          gh release upload "$RELEASE_TAG" "$runtime_tarball.sha256" --clobber
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}

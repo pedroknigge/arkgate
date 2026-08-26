@@ -83,18 +83,13 @@ describe('confidence gate wiring', () => {
     expect(ci).toContain('unexpected confidence_cmd from ci-profile');
 
     const localConfidence = releaseScript.indexOf("run('npm run test:confidence')");
-    const localPublish = releaseScript.indexOf("'npm publish --dry-run'");
+    const localPublish = releaseScript.indexOf('publishPackage({ label:');
     expect(localConfidence).toBeGreaterThanOrEqual(0);
     expect(localPublish).toBeGreaterThan(localConfidence);
+    expect(releaseScript.indexOf("run('npm run build:runtime')")).toBeGreaterThan(localConfidence);
 
-    const tokenBranch = publishWorkflow.slice(
-      publishWorkflow.indexOf('# Still run full verify suite')
-    );
-    const tokenConfidence = tokenBranch.indexOf('npm run test:confidence');
-    const tokenPublish = tokenBranch.indexOf('npm publish --access public --provenance');
-    expect(tokenConfidence).toBeGreaterThanOrEqual(0);
-    expect(tokenPublish).toBeGreaterThan(tokenConfidence);
     expect(publishWorkflow).toContain('npm run release:npm');
+    expect(publishWorkflow).not.toMatch(/npm publish --access public --provenance/);
   });
 
   it('packed matrix gates fail closed unless run_packed is explicit false', () => {
