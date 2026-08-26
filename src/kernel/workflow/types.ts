@@ -45,6 +45,7 @@ export interface WorkflowDefinition<P extends SagaContext = SagaContext> {
 
 export interface WorkflowSnapshot<P extends SagaContext = SagaContext> {
   id: string;
+  version?: number;
   workflowName: string;
   status: WorkflowStatus;
   context: P;
@@ -56,19 +57,22 @@ export interface WorkflowSnapshot<P extends SagaContext = SagaContext> {
   updatedAt: string;
   completedAt?: string;
   error?: string;
+  ownerId?: string;
+  expiresAt?: string;
 }
 
 /**
- * Pluggable saga/workflow snapshot store.
+ * Pluggable saga/workflow snapshot store with OCC and leases.
  *
  * **Durability stance (R9):** Default `InMemoryWorkflowStore` is reference-only (not
  * production durability). Inject a durable store for production. See
  * `docs/production-hardening.md`.
  */
 export interface WorkflowStore {
-  save<P extends SagaContext>(snapshot: WorkflowSnapshot<P>): MaybePromise<void>;
-  get<P extends SagaContext = SagaContext>(id: string): MaybePromise<WorkflowSnapshot<P> | undefined>;
+  save<P extends SagaContext>(snapshot: WorkflowSnapshot<P>, tx?: unknown): MaybePromise<void>;
+  get<P extends SagaContext = SagaContext>(id: string, tx?: unknown): MaybePromise<WorkflowSnapshot<P> | undefined>;
   list(workflowName?: string): MaybePromise<WorkflowSnapshot[]>;
+  claim?(workerId: string, timeoutMs: number, workflowName?: string): MaybePromise<WorkflowSnapshot | undefined>;
   clear(): MaybePromise<void>;
 }
 
@@ -77,9 +81,13 @@ export interface WorkflowEngine {
   start<P extends SagaContext>(
     workflowName: string,
     initialPayload: P,
-    options?: { id?: string }
+    options?: { id?: string; tx?: unknown }
   ): Promise<WorkflowSnapshot<P>>;
-  get<P extends SagaContext = SagaContext>(id: string): Promise<WorkflowSnapshot<P> | undefined>;
+  resume<P extends SagaContext>(
+    id: string,
+    options?: { tx?: unknown }
+  ): Promise<WorkflowSnapshot<P> | undefined>;
+  get<P extends SagaContext = SagaContext>(id: string, tx?: unknown): Promise<WorkflowSnapshot<P> | undefined>;
   list(workflowName?: string): Promise<WorkflowSnapshot[]>;
 }
 

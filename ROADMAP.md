@@ -324,3 +324,8 @@ Does not ship cloud adapters or a process singleton. Companion kernel stays
 |---:|---|---|---:|---|---|
 | 73 | `Z09` | `parked` | L | ≥8 consented adopters + independent review | Residual RB-11 close. Not an engineering `doing` slot |
 
+### Phase PR — Production Runtime
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 207 | `K01` | `doing` | L | RN17 | In-process commit gaps, atomic handoff, outbox durability, and OCC leases. |
