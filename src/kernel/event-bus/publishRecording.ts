@@ -108,7 +108,8 @@ export async function recordRawPublishDiagnostic(
 export async function recordSuccessfulPublish(
   buffers: RecordingBuffers,
   event: DomainEvent,
-  subscribersNotified: number
+  subscribersNotified: number,
+  tx?: unknown
 ): Promise<PublishedEventRecord> {
   const record: PublishedEventRecord = {
     event,
@@ -116,7 +117,7 @@ export async function recordSuccessfulPublish(
     subscribersNotified,
   };
   appendHistory(buffers, record);
-  await buffers.eventBuffer?.enqueue(event);
+  await buffers.eventBuffer?.enqueue(event, tx);
 
   appendTrace(buffers, {
     type: 'event.published',
