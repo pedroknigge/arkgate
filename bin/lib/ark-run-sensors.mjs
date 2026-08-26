@@ -111,9 +111,9 @@ function dependKinds(kind) {
 }
 function evaluateMissingRoot(extra, hits, teethAllowed) {
     const out = [];
-    const roots = extra.compositionRoots;
+    const roots = extra.kernelRoots ?? extra.compositionRoots;
     if (roots.length === 0) {
-        out.push(finding(extra, 'arkrun-missing-root', 'ark.config.json', 1, 'ArkRun compositionRoots is empty; no createArkKernel factory site is declared.', undefined, teethAllowed));
+        out.push(finding(extra, 'arkrun-missing-root', 'ark.config.json', 1, 'ArkRun kernelRoots is empty; no createArkKernel factory site is declared.', undefined, teethAllowed));
         return out;
     }
     const hitsByRoot = new Map();
@@ -125,14 +125,14 @@ function evaluateMissingRoot(extra, hits, teethAllowed) {
     for (const pattern of roots) {
         const matched = [...(hitsByRoot.get(pattern) ?? [])].sort((left, right) => left.file.localeCompare(right.file));
         if (matched.length === 0) {
-            out.push(finding(extra, 'arkrun-missing-root', 'ark.config.json', 1, `ArkRun composition root ${JSON.stringify(pattern)} matched no governed files and has no createArkKernel factory.`, { target: pattern }, teethAllowed));
+            out.push(finding(extra, 'arkrun-missing-root', 'ark.config.json', 1, `ArkRun kernel root ${JSON.stringify(pattern)} matched no governed files and has no createArkKernel factory.`, { target: pattern }, teethAllowed));
             continue;
         }
         // Factory required in the root set, not in every glob hit.
         if (matched.some((hit) => hit.hasKernelFactory))
             continue;
         const first = matched[0];
-        out.push(finding(extra, 'arkrun-missing-root', first.file, 1, `ArkRun composition root ${JSON.stringify(pattern)} has no createArkKernel / createStrictArkKernel factory.`, { target: pattern }, teethAllowed));
+        out.push(finding(extra, 'arkrun-missing-root', first.file, 1, `ArkRun kernel root ${JSON.stringify(pattern)} has no createArkKernel / createStrictArkKernel factory.`, { target: pattern }, teethAllowed));
     }
     return out;
 }
@@ -162,6 +162,13 @@ function evaluateDirectNew(extra, layers, managedNews, hits, layerForFile, teeth
     for (const constructed of managedNews) {
         if (admittedFactories.has(constructed.file))
             continue;
+        const name = constructed.typeName;
+        if (extra.ignoreDirectNewForErrors !== false && (name.endsWith('Error') || name === 'Error')) {
+            continue;
+        }
+        if (name.endsWith('DTO') || name.endsWith('VO')) {
+            continue;
+        }
         const fromLayer = layerForFile(constructed.file);
         if (!fromLayer || !managed.has(fromLayer))
             continue;
@@ -279,7 +286,8 @@ function fileMatchesCompositionRoot(pattern, file) {
 function compositionRootHitsForSource(extra, file, source) {
     const hasFactory = extractArkRunKernelCallsFromSource(file, source).some((call) => call.kind === 'factory');
     const hits = [];
-    for (const pattern of extra.compositionRoots) {
+    const roots = extra.kernelRoots ?? extra.compositionRoots;
+    for (const pattern of roots) {
         if (!fileMatchesCompositionRoot(pattern, file))
             continue;
         hits.push({ file, matchedRoot: pattern, hasKernelFactory: hasFactory });

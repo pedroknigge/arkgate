@@ -69,8 +69,10 @@ export type ArkConfigArkRunMode = 'advisory' | 'enforced';
 export type ArkConfigArkRun = {
   mode: ArkConfigArkRunMode;
   compositionRoots: string[];
+  kernelRoots?: string[];
   managedLayers: string[];
   requireDeclarations: boolean;
+  ignoreDirectNewForErrors?: boolean;
 };
 
 export type ArkConfig = {

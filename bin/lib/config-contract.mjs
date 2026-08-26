@@ -82,11 +82,7 @@ export const ARK_CONFIG_SCHEMA = {
         exclude: { ...stringArraySchema, default: [] },
         excludeGenerated: { type: 'boolean', default: true },
         frameworkOverlay: { type: 'string', minLength: 1 },
-        layers: {
-            type: 'array',
-            default: [],
-            items: { $ref: '#/$defs/layer' },
-        },
+        layers: { type: 'array', default: [], items: { $ref: '#/$defs/layer' } },
         rules: {
             type: 'array',
             default: DEFAULT_ARK_CONFIG_RULES,
@@ -194,8 +190,10 @@ export const ARK_CONFIG_SCHEMA = {
                     default: 'advisory',
                 },
                 compositionRoots: { ...stringArraySchema, default: [] },
+                kernelRoots: { ...stringArraySchema },
                 managedLayers: { ...stringArraySchema, default: [] },
                 requireDeclarations: { type: 'boolean', default: true },
+                ignoreDirectNewForErrors: { type: 'boolean', default: true },
             },
         },
     },
@@ -334,13 +332,17 @@ function validateNode(value, schema, path, root, issues) {
 function defaultedArkRun(value) {
     if (!isObject(value))
         return value;
-    return {
-        ...value,
+    const out = {
         mode: value.mode === undefined ? 'advisory' : value.mode,
         compositionRoots: value.compositionRoots === undefined ? [] : value.compositionRoots,
         managedLayers: value.managedLayers === undefined ? [] : value.managedLayers,
         requireDeclarations: value.requireDeclarations === undefined ? true : value.requireDeclarations,
     };
+    if (value.kernelRoots !== undefined)
+        out.kernelRoots = value.kernelRoots;
+    if (value.ignoreDirectNewForErrors !== undefined)
+        out.ignoreDirectNewForErrors = value.ignoreDirectNewForErrors;
+    return { ...value, ...out };
 }
 function defaultedConfig(input) {
     const result = {
@@ -381,11 +383,11 @@ function validateArkRunExtra(config, issues) {
         });
     }
     if (extra.mode === 'enforced') {
-        const roots = extra.compositionRoots;
+        const roots = extra.kernelRoots ?? extra.compositionRoots;
         if (!Array.isArray(roots) || roots.length === 0) {
             issues.push({
-                path: '$.arkRun.compositionRoots',
-                message: 'ARKRUN_MISSING_ROOT: enforced mode requires at least one composition root',
+                path: extra.kernelRoots !== undefined ? '$.arkRun.kernelRoots' : '$.arkRun.compositionRoots',
+                message: 'ARKRUN_MISSING_ROOT: enforced mode requires at least one kernel root',
             });
         }
         if (!Array.isArray(managed) || managed.length === 0) {
