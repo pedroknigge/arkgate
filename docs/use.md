@@ -1,13 +1,13 @@
 # Use ArkGate
 
-For **anyone** shipping TypeScript with an AI coding agent. You do not need to study clean architecture first.
+**Write. Check. Ship.**
 
-**If the AI writes an illegal import, the write is rejected. The same check fails the pull request.**
+For **anyone** shipping TypeScript with an AI coding agent.
 
-Not an API Gateway. Not a folder linter. If the check is not required on the PR, the rules
-file is just documentation.
+**When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.**
 
-**One rules file. One check. One next step.**
+Not an API Gateway. Not a folder linter. If the check is not required on the PR, the config
+is just documentation.
 
 ---
 
@@ -17,7 +17,7 @@ file is just documentation.
 npm install -D arkgate typescript
 npx arkgate start                 # preview what will change
 npx arkgate start --apply         # install compact config + host router + CI plan
-npx arkgate-check --doctor        # what's wrong, what to do first
+npx arkgate-check --doctor        # status — one next step
 npx arkgate-check --doctor --all  # full details
 ```
 
@@ -52,9 +52,9 @@ In those cases a boundary linter or editor rules may be enough; see [README — 
 
 | When | What happens |
 |------|----------------|
-| While the AI writes | The write is rejected, or you get a warning (depends on the host) |
-| Before merge | Make the Ark job a **required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`). Until that status is required — or you write `.ark/adoption-stance.json` with `stance: "advisory-only"` — doctor will not call the tree adopted. |
-| Anytime | Doctor: Suggest / Adapt / Enforce (+ leftover design work if the design is still messy) |
+| While the agent writes | The write doesn’t land, or you get a warning (depends on the host) |
+| Before merge | Make the Ark job a **required GitHub status context** running `arkgate-check --strict-merge` (alias `ark-check`). Until that status is required — or you write `.ark/adoption-stance.json` with `stance: "advisory-only"` — status will not call the tree adopted. |
+| Anytime | Status: Setup / In progress / Ready (+ needs a refactor if leftover design work remains) |
 
 **Cursor:** the hook rejects Write/StrReplace when `.cursor/hooks.json` is trusted.
 **Codex CLI / local Desktop:** the hook rejects a complete `apply_patch` when
@@ -64,19 +64,19 @@ advisory (warning only, not blocked). An unverified host hook is environment evi
 unfinished architecture; **Not finished** is reserved for real project/config debt.
 
 ArkGate is **not** an API Gateway, a folder linter, a web framework, ORM, or app runtime.
-The rules file only binds when the write is rejected and CI is required.
+The config only binds when the write doesn’t land and CI is required.
 
-### Two kinds of rules (you choose)
+### The product (you choose the extras)
 
-| Kind | Plain English | Config | Enforces |
-|------|---------------|--------|----------|
-| **Layers** | Who may talk to whom | `layers[]` + `rules[]` | Import direction, purity, forbidden globals, capabilities, peer isolation |
-| **ArkRules** (optional extra) | Habits *inside* a layer + named policies | `arkRules` + `arkrules/<Layer>.json` | Structure **heuristics** (module shape); invariant **catalog + coverage evidence** (not full business proof) |
-| **ArkRun** (optional extra) | Kernel usage + complete declarations | `arkRun` on schema `1.2` | Only `mode: "enforced"` when the tree is classified. Absence is silent. Doctor `arkRun` is **not a score**. |
+| | Plain English | Default |
+|--|---------------|---------|
+| **ArkGate** (layers) | Import rules. The write doesn’t land. The PR fails. | Always — this is the product |
+| **ArkRules** | Optional policies *inside* a layer. | Off until you turn it on (start may ship advisory templates) |
+| **ArkRun** | Optional experimental runtime | Off. In-memory. Not Postgres. |
 
-Start always gives you **layers**. ArkRules templates may ship with start/init; they begin **advisory** until you promote them. Compact starters do **not** turn on ArkRun — add it only if the project uses `@arkgate/runtime`. Doctor / HTML show `rulesUnderContract` (catalog, **not a score**). No `arkRules` / `arkRun` map is fine — only Layers run. In-memory kernel stores are **not** production durability.
-
-**Do not confuse:** green Layers ≠ perfect design (Shape residual can remain). Covered invariants ≠ “the business always does the right thing” — they mean the named policy is declared and has symbol/test evidence. ArkRun branding ≠ durable stores.
+Start always gives you **layers**. Compact starters do **not** turn on ArkRun.
+No ArkRules / ArkRun is fine — only ArkGate runs. Leftovers are labeled
+**`[Layer]`** vs **`[ArkRules]`**. Green imports ≠ elegant design. ArkRun ≠ durable stores.
 
 ### New modules vs config edits
 

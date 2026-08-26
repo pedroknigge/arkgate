@@ -5,6 +5,25 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.7.5 — 2026-08-26
+
+**Patch** over **4.7.4**. First-contact is **Write. Check. Ship.** README H1, ASCII
+pipeline, product-voice lock, and npm/MCP description use the deny: when the agent
+writes a bad import, the write doesn’t land. **No required config migration.** Does
+not close Z09 / K01. Companion `@arkgate/runtime` is not republished.
+
+**Status: prepared** (not on npm `latest` until publish; see `docs/releases/4.7.5.md`).
+
+### Changed
+
+- **README H1** is `ArkGate — Write. Check. Ship.` Deny: when the agent writes a bad
+  import, the write doesn’t land. ASCII: WRITE → CHECK → SHIP, Domain ─✕─▶
+  Infrastructure, Setup / In progress / Ready.
+- **Product voice** locks verbs, deny, and human status lights (Setup / In progress /
+  Ready / Ready · needs a refactor). `--doctor` flag stays.
+- **npm and MCP description** are the deny. ADR 0001 product title is Write. Check.
+  Ship. Historical 4.6.2 three-beat line stays in that release note.
+
 ## 4.7.4 — 2026-08-26
 
 **Patch** over **4.7.3**. First experimental npm publication of `@arkgate/runtime`

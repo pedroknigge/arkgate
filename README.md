@@ -1,13 +1,13 @@
 <div align="center">
 
-# ArkGate — illegal imports rejected at write and at merge
+# ArkGate — Write. Check. Ship.
 
-**If the AI writes an illegal import, the write is rejected. The same check fails the pull request.**
+**When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.**
 
-Not an API Gateway. Not a folder linter. If the check is not required on the PR, the rules
-file is just documentation.
+Not an API Gateway. Not a folder linter. If the check is not required on the PR, the config
+is just documentation.
 
-**One rules file. One check. One next step.**
+Works with Cursor, Claude, Codex, and Grok.
 
 [![Website](https://img.shields.io/badge/website-arkgate.online-0a0a0a)](https://www.arkgate.online/)
 [![CI](https://github.com/pedroknigge/arkgate/actions/workflows/ci.yml/badge.svg)](https://github.com/pedroknigge/arkgate/actions/workflows/ci.yml)
@@ -16,14 +16,25 @@ file is just documentation.
 ![Node](https://img.shields.io/badge/node-%3E%3D18-339933?logo=node.js)
 ![TS 5–7](https://img.shields.io/badge/TypeScript-5%20%7C%206%20%7C%207-3178c6?logo=typescript)
 
+```text
+  ┌─────────┐     ┌─────────┐     ┌─────────┐
+  │  WRITE  │────▶│  CHECK  │────▶│  SHIP   │
+  │  agent  │     │  block  │     │  merge  │
+  └─────────┘     └────┬────┘     └─────────┘
+                       │
+                       ▼
+                 bad import
+                 doesn't land
+```
+
 </div>
 
-> **ArkGate 4.7.4** is on npm `latest`. Companion `@arkgate/runtime` is on `experimental`.
-> If the AI writes an illegal import, the write is rejected. Optional **ArkRun** extra on schema `1.2`.
-> A tree is **adopted** only with a required GitHub status running `arkgate-check --strict-merge`,
-> or `.ark/adoption-stance.json` `stance: "advisory-only"`. Doctor is compact (`--doctor --all`
-> for Details). [4.7.4 notes](docs/releases/4.7.4.md) · [4.7.3](docs/releases/4.7.3.md) ·
-> [4.7.2](docs/releases/4.7.2.md) · [4.7.1](docs/releases/4.7.1.md) · [Docs hub](docs/README.md) · [Product voice](docs/product-voice.md)
+> **ArkGate 4.7.5** (tree). npm `latest` remains **4.7.4** until this patch publishes.
+> Write. Check. Ship. Adopted = required GitHub status running
+> `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
+> Status is compact (`arkgate-check --doctor`; `--all` for Details). Optional **ArkRun**
+> (`@arkgate/runtime`, `experimental`) is an in-memory runtime — not Postgres.
+> [4.7.5](docs/releases/4.7.5.md) · [4.7.4](docs/releases/4.7.4.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
 
 ---
 
@@ -45,11 +56,11 @@ Full map: **[docs/README.md](docs/README.md)**
 npm install -D arkgate typescript
 npx arkgate start                 # preview files + commands
 npx arkgate start --apply         # compact config + host router + CI plan
-npx arkgate-check --doctor        # what's wrong, what to do first
+npx arkgate-check --doctor        # status — one next step
 npx arkgate-check --doctor --all  # full details
 ```
 
-That is the product. Stuck? Run `--doctor` and do action **#1**.
+That is the product. Stuck? Run status (`--doctor`) and do action **#1**.
 
 ```text
 start → doctor → new files in the right folder
@@ -67,29 +78,34 @@ Aliases `ark` / `ark-check` / `ark-mcp` still work. npm / pnpm / yarn. No instal
 
 ## What it is
 
-Import rules for TypeScript, enforced twice: the editor hook rejects the write, and a
-**required** CI check rejects the pull request. `ark.config.json` is the rules file those
-checks read.
+```text
+  src/domain/order.ts
+       │  import { db } from "../infra/postgres"
+       ▼
+  ┌──────────────────────────────────────────┐
+  │  CHECK                                   │
+  │  Domain ─✕─▶ Infrastructure              │
+  │  write doesn't land · PR check fails     │
+  └──────────────────────────────────────────┘
+```
 
-| When | Tool |
-|------|------|
-| **While the AI writes** | The write is rejected on supported hosts; warning only elsewhere |
-| **Before merge** | `arkgate-check` as a **required** CI status |
+When the agent writes a bad import, the write doesn’t land.
+The same check fails the pull request. That is **ArkGate** — import rules, always on
+once you adopt. The other two are optional.
 
-### Two kinds of rules (4.0)
+| | Role | When |
+|--|------|------|
+| **While the agent writes** | The write doesn’t land on supported hosts; warning only elsewhere | Always (ArkGate) |
+| **Before merge** | `arkgate-check` as a **required** CI status | Always (ArkGate) |
+| **ArkRules** | Optional policies *inside* a layer | When you ask |
+| **ArkRun** | Optional experimental runtime (`@arkgate/runtime`) | Off unless you turn it on |
 
-| Kind | What it guards | Config |
-|------|----------------|--------|
-| **Layers** (always) | Who may import whom — imports, placement, purity, isolation | `ark.config.json` layers + rules |
-| **ArkRules** (opt-in; structure rules inside a layer) | Habits *inside* a layer — structure sensors + domain invariants as data | `arkRules` → `arkrules/<Layer>.json` |
-| **ArkRun** (opt-in extra) | Kernel usage + complete declarations | `arkRun` on schema `1.2` |
+Layers (who may import whom) always run. ArkRules and ArkRun change no inter-layer
+verdict when absent. Label leftovers **`[Layer]`** vs **`[ArkRules]`**.
+Details: [configuration](docs/configuration.md) · [use](docs/use.md).
 
-Absence of ArkRules or ArkRun changes no inter-layer verdict. Label residual **`[Layer]`** vs **`[ArkRules]`**.  
-Details: [configuration](docs/configuration.md) · [use path](docs/use.md).
-
-**Not** an API Gateway, a folder linter, a web framework, ORM, or job runner. Optional
-**ArkRules** and **ArkRun** extras are off unless you turn them on. In-memory stores are
-not production durability.
+**Not** an API Gateway, a folder linter, a web framework, ORM, or job runner.
+ArkRun is in-memory — local and tests, not Postgres.
 
 **Name note:** npm package `arkgate` — not affiliated with the separate Archgate CLI project.
 
@@ -107,12 +123,18 @@ check: [4.3.0 — What ArkGate is / isn't](docs/releases/4.3.0.md#what-arkgate-i
 
 ## Status lights (not settings)
 
+```text
+  [ Setup ] ──▶ [ In progress ] ──▶ [ Ready ]
+                                      │
+                                      └── Ready · needs a refactor
+```
+
 | Light | Means | Your move |
 |-------|--------|-----------|
-| **Suggest** | Thin / new tree | Finish `start` → doctor |
-| **Adapt** | Not fully protected | Doctor action #1 |
-| **Enforce** | Honest import edges, and no new UI business-rule files vs merge-base | Keep write path + CI |
-| **Enforce · leftover design work** | Edges clean; leftover design work remains | Shape residual — not “done” |
+| **Setup** | Thin / new tree | Finish `start` → status |
+| **In progress** | Not fully protected | Status action #1 |
+| **Ready** | Honest import edges, and no new UI business-rule files vs merge-base | Keep write path + CI |
+| **Ready · needs a refactor** | Edges clean; leftover design work remains | One small change — not “done” |
 
 Details: [docs/use.md](docs/use.md).
 
@@ -200,25 +222,24 @@ More: [docs/develop.md](docs/develop.md) · skills install: [docs/agent-guide.md
 
 ---
 
-## Optional ArkRun kernel
+## Optional ArkRun
 
-Gates need **no** app runtime. The experimental **ArkRun** companion (`@arkgate/runtime`) is separate
-and is not a production-readiness claim. `createStrictArkKernel` is the factory: each call creates
-an isolated instance (no process-wide singleton). Managed components declare `uses` / `reactsTo` /
-`raises` / `sends`; `getDependencyInformationPackage()` is a JSON snapshot and never leaks factories.
-`requestGraph()` slices that snapshot into process or technical graphs (`nodeIds`,
-`degreesOfSeparation`, include/exclude query) with a Mermaid helper. `send()` is local /
-localBlocking / broker (broker falls back to in-process local; `ephemeral`
-defaults true; no cloud SDKs in the package). Opt-in `startInspector()` binds `127.0.0.1`,
-refuses `NODE_ENV=production`, and lazy-loads HTTP for JSON snapshots, SSE, and `/graph`. The kernel is
-not bundled in the `arkgate` tarball.
+Gates need **no** app runtime. Skip this unless you want an optional runtime
+for decoupling.
+
+**ArkRun** (`@arkgate/runtime`, npm tag `experimental`) is that runtime. Each
+`createStrictArkKernel()` call is a new instance — no process singleton. Data
+lives in memory and **dies on restart**. Fine for local. Not Postgres, not an
+outbox, not Temporal.
+
+The `arkgate` tarball does not bundle it.
 
 ### Durability stance
 
 Default stores (`InMemoryEventBuffer`, `InMemoryAuditStore`, `InMemoryReadModelStore`,
-`InMemoryWorkflowStore`) are **reference in-memory only** — fine for tests and demos; they
-**do not** survive restarts and are **not** production durability. Implement the store interfaces
-for real systems. Details: [docs/production-hardening.md](docs/production-hardening.md).
+`InMemoryWorkflowStore`) are **reference in-memory only**. Fine for tests. They
+**do not** survive restarts and are **not** production durability. Wire real store
+interfaces for production. Details: [docs/production-hardening.md](docs/production-hardening.md).
 
 ---
 
@@ -234,9 +255,11 @@ for real systems. Details: [docs/production-hardening.md](docs/production-harden
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current published (4.7.4 on npm `latest`) | [docs/releases/4.7.4.md](docs/releases/4.7.4.md) · [CHANGELOG](CHANGELOG.md) |
+| Current tree (4.7.5) | [docs/releases/4.7.5.md](docs/releases/4.7.5.md) · [CHANGELOG](CHANGELOG.md) |
+| Current published (4.7.4 on npm `latest`) | [docs/releases/4.7.4.md](docs/releases/4.7.4.md) |
 | Prior published (4.7.3) | [docs/releases/4.7.3.md](docs/releases/4.7.3.md) |
 | Prior published (4.7.2) | [docs/releases/4.7.2.md](docs/releases/4.7.2.md) |
+| Prior published (4.7.1) | [docs/releases/4.7.1.md](docs/releases/4.7.1.md) |
 | Prior published (4.7.0) | [docs/releases/4.7.0.md](docs/releases/4.7.0.md) |
 | Prior published (4.6.7) | [docs/releases/4.6.7.md](docs/releases/4.6.7.md) |
 | Prior published (4.6.6) | [docs/releases/4.6.6.md](docs/releases/4.6.6.md) |

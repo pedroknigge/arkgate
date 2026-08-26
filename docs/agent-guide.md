@@ -1,6 +1,7 @@
 # ArkGate — Agent Integration Guide
 
-**If the AI writes an illegal import, the write is rejected. The same check fails the pull request.**
+**Write. Check. Ship.**
+**When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.**
 This guide is the **develop** reference for agents and codegen: write hooks, advisory MCP tools,
 CI, and `/ark-*` skills. Not an API Gateway. Not a folder linter.
 

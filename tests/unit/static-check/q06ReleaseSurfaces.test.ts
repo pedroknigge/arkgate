@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.7.4';
+const CURRENT = '4.7.5';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.7.4';
 
@@ -106,9 +106,11 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('keeps 4.7.4 published on npm latest', () => {
+  it('keeps 4.7.5 tree identity while npm latest remains 4.7.4', () => {
     expect(PUBLISHED_LATEST).toBe('4.7.4');
-    expect(CURRENT).toBe('4.7.4');
+    expect(CURRENT).toBe('4.7.5');
+    expect(read('README.md')).toMatch(/4\.7\.5/);
+    expect(read('README.md')).toMatch(/docs\/releases\/4\.7\.5\.md/);
     expect(read('README.md')).toMatch(/4\.7\.4/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.7\.4\.md/);
     expect(read('README.md')).toMatch(/4\.7\.3/);
@@ -123,13 +125,16 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.7\.md/);
     expect(read('README.md')).toMatch(/4\.6\.6/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.6\.md/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.7\.4/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.7\.5/s);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.7\.4/s);
     expect(read('CONTRIBUTING.md')).toMatch(/Prior published:.*4\.7\.3/s);
+    expect(read('docs/README.md')).toMatch(/Current tree:.*4\.7\.5/s);
     expect(read('docs/README.md')).toMatch(/Current published:.*4\.7\.4/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
+    expect(read('docs/package-surface.md')).toMatch(/current tree:.*4\.7\.5/is);
     expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.7\.4/is);
     expect(read('docs/package-surface.md')).toMatch(/4\.6\.2\.md/);
+    expect(read('docs/releases/4.7.5.md')).toMatch(/\*\*Status:\*\*\s*prepared/i);
     expect(read('docs/releases/4.7.4.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.7.3.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.7.2.md')).toMatch(/\*\*Status:\*\*\s*published/i);
@@ -159,6 +164,32 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('docs/releases/4.5.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.4.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.3.0.md')).toMatch(/\*\*Status:\*\*\s*published/i);
+  });
+});
+
+describe('CHANGELOG + release note cover 4.7.5 Write. Check. Ship. patch', () => {
+  it('records Write. Check. Ship. first-contact copy and no required migration', () => {
+    const changelog = changelogText();
+    expect(changelog).toMatch(/## 4\.7\.5/);
+    expect(changelog).toMatch(/Write\. Check\. Ship\./);
+    expect(changelog).toMatch(/bad import/);
+    expect(changelog).toMatch(/Does not close Z09/);
+    const section = changelog.slice(changelog.indexOf('## 4.7.5'), changelog.indexOf('## 4.7.4'));
+    expect(section).toMatch(/No required config migration/i);
+    expect(section).toMatch(/Status:\s*prepared/i);
+    expect(section).toMatch(/README H1/);
+    expect(section).toMatch(/ASCII/);
+    const notes = read('docs/releases/4.7.5.md');
+    expect(notes).toMatch(/arkgate@4\.7\.5/);
+    expect(notes).toMatch(/mcp-publisher validate server\.json/);
+    expect(notes).toMatch(/No required config migration/i);
+    expect(notes).toMatch(/Z09|RB-11/i);
+    expect(notes).toMatch(/K01/);
+    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(notes).not.toMatch(/amarilla/i);
+    expect(notes).toMatch(/not republished/i);
+    expect(read('README.md')).toMatch(/Write\. Check\. Ship\./);
+    expect(read('README.md')).toMatch(/When the agent writes a bad import/);
   });
 });
 
@@ -204,7 +235,8 @@ describe('CHANGELOG + release note cover 4.7.3 remaining wording patch', () => {
     expect(notes).toMatch(/K01/);
     expect(notes).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(notes).not.toMatch(/amarilla/i);
-    expect(read('README.md')).toMatch(/illegal imports rejected at write and at merge/);
+    expect(read('README.md')).toMatch(/Write\. Check\. Ship\./);
+    expect(read('README.md')).toMatch(/When the agent writes a bad import/);
   });
 });
 
@@ -410,7 +442,7 @@ describe('CHANGELOG + release note cover 4.6.2 first-contact copy train', () => 
     expect(notes).toMatch(/mcp-publisher validate server\.json/);
     expect(notes).toMatch(/One architecture config\. One check\. One coach\./);
     expect(JSON.parse(read('package.json')).description).toBe(
-      'If the AI writes an illegal import, the write is rejected. The same check fails the pull request.'
+      'When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.'
     );
   });
 });
@@ -832,32 +864,32 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
     expect(notes).toMatch(/\*\*Status:\*\*\s*published/i);
   });
 
-  it('product-voice has Do table + design-weak/residual lexicon', () => {
+  it('product-voice has leftover-design honesty and required CI', () => {
     const body = read('docs/product-voice.md');
-    expect(body).toMatch(/## Do \(product copy\)/);
-    expect(body).toMatch(/\*\*design-weak\*\*/);
-    expect(body).toMatch(/\*\*residual\*\*|\*\*leftover design work\*\*|leftover design work/);
-    expect(body).toMatch(/advisory write|required CI/i);
+    expect(body).toMatch(/## Mission/);
+    expect(body).toMatch(/leftover design work/);
+    expect(body).toMatch(/required CI/i);
   });
 
-  it('first-contact copy names the old-school engineer misreads', () => {
+  it('first-contact copy keeps the deny and names the Gateway trap', () => {
     const voice = read('docs/product-voice.md');
-    expect(voice).toMatch(/Canonical misreader \(old-school engineer\)/);
-    expect(voice).toMatch(/file structure keeper/);
-    expect(voice).toMatch(/Misread B — “a Gateway”/);
-    expect(voice).toMatch(/not a contract, a manifesto/);
+    expect(voice).toMatch(/## Mission/);
+    expect(voice).toMatch(/Write\. Check\. Ship\./);
+    expect(voice).toMatch(/experimental runtime/);
+    expect(voice).toMatch(/Fowler Gateway|API Gateway/);
     const readme = read('README.md');
-    const denyAt = readme.indexOf('If the AI writes an illegal import');
-    const howAt = readme.indexOf('One rules file. One check. One next step.');
-    expect(denyAt).toBeGreaterThan(0);
-    expect(howAt).toBeGreaterThan(denyAt);
+    const verbsAt = readme.indexOf('Write. Check. Ship.');
+    const denyAt = readme.indexOf('When the agent writes a bad import');
+    expect(verbsAt).toBeGreaterThan(0);
+    expect(denyAt).toBeGreaterThan(verbsAt);
     expect(readme).toMatch(/Not an API Gateway/);
     expect(readme).toMatch(/just documentation/);
   });
 
   it('current public openings use the locked deny and skip first-contact dialect', () => {
-    const deny = /If the AI writes an illegal import/;
-    const forbiddenLead = /write checkpoint|write firewall|control plane|co-pilot|One architecture config\. One check\. One coach\./i;
+    const deny = /When the agent writes a bad import/;
+    const verbs = /Write\. Check\. Ship\./;
+    const forbiddenLead = /write checkpoint|write firewall|control plane|co-pilot|One architecture config\. One check\. One coach\.|the house stays up/i;
     const openings = [
       'README.md',
       'docs/use.md',
@@ -871,21 +903,22 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
     for (const rel of openings) {
       const head = read(rel).split(/\n/).slice(0, 24).join('\n');
       expect(head, rel).toMatch(deny);
+      expect(head, rel).toMatch(verbs);
       expect(head, rel).not.toMatch(forbiddenLead);
     }
     const readmeH1 = read('README.md').split(/\n/).find((line) => line.startsWith('# '));
-    expect(readmeH1).toMatch(/illegal import/i);
+    expect(readmeH1).toMatch(/Write\. Check\. Ship\./);
     expect(readmeH1).not.toMatch(/co-pilot/i);
-    expect(read('README.md')).toMatch(/Two kinds of rules/);
+    expect(read('README.md')).toMatch(/experimental runtime/);
     expect(read('README.md')).not.toMatch(/### Two planes/);
     expect(read('README.md')).toMatch(/Why required CI is the hard line/);
-    expect(read('docs/product-voice.md')).toMatch(/\*\*Reject the write\. Fail the PR\.\*\*/);
+    expect(read('docs/product-voice.md')).toMatch(/\*\*Write\. Check\. Ship\.\*\*/);
     expect(read('docs/product-voice.md')).toMatch(/\*\*rules file\*\*/);
     expect(JSON.parse(read('package.json')).description).toMatch(deny);
     expect(JSON.parse(read('package.json')).keywords).not.toContain('co-pilot');
     expect(JSON.parse(read('server.json')).description).toMatch(deny);
     expect(read('action.yml')).toMatch(/Fail the pull request when TypeScript import rules are broken/);
-    expect(read('bin/lib/first-run-help.mjs')).toMatch(/Illegal import: write rejected/);
+    expect(read('bin/lib/first-run-help.mjs')).toMatch(/write doesn.t land/);
     expect(read('bin/lib/ci-and-commands.mjs')).toMatch(/what's wrong and what to do first/);
     expect(read('bin/lib/ci-and-commands.mjs')).not.toMatch(/control plane/);
     const skillHead = read('templates/skills/ark-adopt.md').split(/\n/).slice(0, 8).join('\n');
@@ -894,13 +927,13 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
     const siteHome = path.join(siteRoot, 'index.html');
     if (fs.existsSync(siteHome)) {
       const html = fs.readFileSync(siteHome, 'utf8');
-      const denyAt = html.indexOf('If the AI writes an illegal import');
-      const howAt = html.indexOf('One rules file. One check. One next step.');
+      const denyAt = html.indexOf('When the agent writes a bad import');
+      const verbsAt = html.indexOf('Write. Check. Ship.');
       expect(denyAt).toBeGreaterThan(0);
-      expect(howAt).toBeGreaterThan(denyAt);
+      expect(verbsAt).toBeGreaterThan(0);
       expect(html).toMatch(/Not an API Gateway/);
       expect(html).toMatch(/just documentation/);
-      expect(html).toMatch(/4\.7\.3/);
+      expect(html).toMatch(/4\.7\.5/);
       expect(html).not.toMatch(/CONTRACT ACTIVE/);
       const livePages = [
         'index.html',

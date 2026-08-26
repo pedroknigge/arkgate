@@ -1,7 +1,7 @@
 {
   "name": "arkgate",
-  "version": "4.7.4",
-  "description": "If the AI writes an illegal import, the write is rejected. The same check fails the pull request.",
+  "version": "4.7.5",
+  "description": "When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

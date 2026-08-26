@@ -1,6 +1,7 @@
 # Gating AI Agents with ArkGate
 
-**If the AI writes an illegal import, the write is rejected. The same check fails the pull request.**
+**Write. Check. Ship.**
+**When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.**
 This page is host install depth (hooks / MCP / CI). Not an API Gateway. Not a folder linter.
 
 This page is **develop** depth (install hooks/MCP/CI per host). Product path: [use.md](use.md) ·
