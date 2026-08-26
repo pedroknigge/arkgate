@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-26 (Engineering doing: none; Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Phase HS shipped **4.7.1**; wording patch **4.7.2** published; remaining first-contact copy **4.7.3** published; companion `@arkgate/runtime@0.1.0-experimental.0` on npm `experimental`; `arkgate@4.7.4` on npm `latest`; Write. Check. Ship. patch **4.7.5** prepared; `AL05` parked; Z09 still parked; npm `latest` is **4.7.4**)
+- **Status date:** 2026-08-26 (Engineering doing: none; Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Phase HS shipped **4.7.1**; wording patch **4.7.2** published; remaining first-contact copy **4.7.3** published; companion `@arkgate/runtime@0.1.0-experimental.0` on npm `experimental`; Write. Check. Ship. patch **4.7.5** published; `AL05` parked; Z09 still parked; npm `latest` is **4.7.5**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -255,7 +255,7 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: none. Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. `arkgate@4.7.4` on npm `latest`. Write. Check. Ship. patch **4.7.5** prepared.
+Engineering doing: none. Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published on npm `latest`.
 `RN16` **done** (public docs + 4.7.0 published). `RN17` **done** (`@arkgate/runtime@0.1.0-experimental.0` on npm `experimental`).
 `RN15` **done** (deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names).
 `RN14` **done** (skip corpus: extra absent = green; enforced = fail `new` / peer import / homemade bus).

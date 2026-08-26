@@ -12,7 +12,7 @@ pipeline, product-voice lock, and npm/MCP description use the deny: when the age
 writes a bad import, the write doesn’t land. **No required config migration.** Does
 not close Z09 / K01. Companion `@arkgate/runtime` is not republished.
 
-**Status: prepared** (not on npm `latest` until publish; see `docs/releases/4.7.5.md`).
+**Status: published** (on npm `latest`; see `docs/releases/4.7.5.md`).
 
 ### Changed
 
@@ -31,7 +31,7 @@ not close Z09 / K01. Companion `@arkgate/runtime` is not republished.
 install the companion from the registry. **No required config migration.** Does not
 close Z09 / K01.
 
-**Status: published** (on npm `latest`; see `docs/releases/4.7.4.md`). Companion:
+**Status: published** (see `docs/releases/4.7.4.md`). Companion:
 `npm view @arkgate/runtime dist-tags --json`.
 
 ### Added

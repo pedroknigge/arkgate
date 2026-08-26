@@ -29,12 +29,11 @@ Works with Cursor, Claude, Codex, and Grok.
 
 </div>
 
-> **ArkGate 4.7.5** (tree). npm `latest` remains **4.7.4** until this patch publishes.
-> Write. Check. Ship. Adopted = required GitHub status running
-> `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
+> **ArkGate 4.7.5** is on npm `latest`. Write. Check. Ship. Adopted = required GitHub
+> status running `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
 > Status is compact (`arkgate-check --doctor`; `--all` for Details). Optional **ArkRun**
 > (`@arkgate/runtime`, `experimental`) is an in-memory runtime — not Postgres.
-> [4.7.5](docs/releases/4.7.5.md) · [4.7.4](docs/releases/4.7.4.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
+> [4.7.5](docs/releases/4.7.5.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
 
 ---
 
@@ -255,8 +254,8 @@ interfaces for production. Details: [docs/production-hardening.md](docs/producti
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current tree (4.7.5) | [docs/releases/4.7.5.md](docs/releases/4.7.5.md) · [CHANGELOG](CHANGELOG.md) |
-| Current published (4.7.4 on npm `latest`) | [docs/releases/4.7.4.md](docs/releases/4.7.4.md) |
+| Current published (4.7.5 on npm `latest`) | [docs/releases/4.7.5.md](docs/releases/4.7.5.md) · [CHANGELOG](CHANGELOG.md) |
+| Prior published (4.7.4) | [docs/releases/4.7.4.md](docs/releases/4.7.4.md) |
 | Prior published (4.7.3) | [docs/releases/4.7.3.md](docs/releases/4.7.3.md) |
 | Prior published (4.7.2) | [docs/releases/4.7.2.md](docs/releases/4.7.2.md) |
 | Prior published (4.7.1) | [docs/releases/4.7.1.md](docs/releases/4.7.1.md) |
