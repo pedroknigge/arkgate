@@ -32,7 +32,7 @@ Retain **ArkGate**. The canonical public identity is:
 
 | Surface | Canonical value |
 |---|---|
-| Product | ArkGate — Architecture Co-pilot for AI TypeScript |
+| Product | ArkGate — Write. Check. Ship. |
 | npm | [`arkgate`](https://www.npmjs.com/package/arkgate) |
 | Repository | [`pedroknigge/arkgate`](https://github.com/pedroknigge/arkgate) |
 | Website | [`arkgate.online`](https://www.arkgate.online/) |
@@ -43,10 +43,21 @@ Retain **ArkGate**. The canonical public identity is:
 | Skills | `/ark-*` |
 | Public code | Existing `Ark*` types and values |
 
-The product description must identify ArkGate as TypeScript architecture enforcement for AI-assisted
-development. It must not imply affiliation with the separate
-[`archgate/cli`](https://github.com/archgate/cli) project. This ADR records a product decision, not
-trademark clearance or legal advice.
+Public title: **ArkGate — Write. Check. Ship.** First-contact deny:
+when the agent writes a bad import, the write doesn’t land.
+
+The named pieces:
+
+| Piece | Role |
+|-------|------|
+| **ArkGate** | Import rules. Untouchable. Write + required CI. |
+| **ArkRules** | Optional policies *inside* a layer. |
+| **ArkRun** | Optional experimental runtime (`@arkgate/runtime`, in-memory, not Postgres). |
+
+The product description must identify ArkGate as TypeScript architecture enforcement for
+AI-assisted development. It must not imply affiliation with the separate
+[`archgate/cli`](https://github.com/archgate/cli) project. This ADR records a product
+decision, not trademark clearance or legal advice.
 
 ## Consequences
 

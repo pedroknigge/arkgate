@@ -1,485 +1,175 @@
 # ArkGate product voice
 
-Canonical English for public product surfaces: README, doctor/CLI human output, compact
-router, skill frontmatter, release notes, and agent-facing first-run copy.
+Canonical English for README, CLI first-run copy, skills, and release notes.
+When this file disagrees with shipped strings, **fix the strings**.
 
-**Who this is for:** anyone writing or reviewing user-visible ArkGate text.  
-**Who this is not for:** internal ADR drafts, ROADMAP engineering notes, or pure code comments.
-
-When this document disagrees with shipped UI strings, **fix the strings** (or update this doc
-deliberately in the same change). Voice is product surface, not marketing decoration.
+Internal ADRs, the implementation queue, and code comments are not this file.
 
 ---
 
-## Canonical misreader (old-school engineer)
+## Mission
 
-First-contact copy has a **named test reader**: a senior who learned Fowler, ESLint, and CI
-quality gates — and does not live in agent hosts. If they can walk away with any of the
-three documented misreads, the line failed. Rewrite it. Do not argue the config at them.
+**Write. Check. Ship.**
 
-This reader is not a junior to educate and not a vibe-coder to simplify for. They are why
-“gate”, “contract”, and “architecture config” in the first sentence lose the room.
+When the agent writes a bad import, the write doesn’t land.
+The same check fails the pull request.
 
-### Misread A — “file structure keeper for TypeScript”
+**ArkGate** is import rules for AI-written TypeScript. Always on once you adopt it.
 
-**Cause:** the first sentence is folders, layers, `ark.config.json`, or “who may import whom.”
-**They hear:** eslint-plugin-boundaries, dependency-cruiser, Nx tags.
+**ArkRules** is optional policies inside a layer.
 
-The layer plane *is* import rules. That is not the product. The product is **when** those
-rules fire: the host blocks the write; required CI blocks the merge.
+**ArkRun** is an optional runtime (`@arkgate/runtime`). Experimental. In-memory.
+Not Postgres.
 
-### Misread B — “a Gateway”
+```text
+Write.   the agent writes
+Check.   bad imports don’t land — same check on the PR
+Ship.    required GitHub check, then merge
+```
 
-**Cause:** bare “gate” as the first unexplained noun; or verbs from the wrapper family:
-access, wrap, abstract, “extend without touching what it represents.”
-**They hear:** Fowler Gateway / API Gateway / facade — an intermediate object that talks
-to a resource so callers do not.
+```text
+ArkGate   always     import rules (write + required CI)
+ArkRules  optional   policies inside a layer
+ArkRun    optional   experimental runtime — in-memory, not Postgres
+```
 
-A Gateway **lets traffic through and translates**. ArkGate **decides whether the write
-enters**. It is not a layer in the app. It does not wrap Stripe, a database, or HTTP.
-
-### Misread C — “not a contract, a manifesto”
-
-**Cause:** calling `ark.config.json` a **contract** (or leading with the file) before the
-deny is visible.
-**They hear:** Agile Manifesto, a principles doc, AGENTS.md — intent you hope people follow.
-
-They are right whenever the checkpoint is off. A contract in this reader’s dictionary has
-two parties and a consequence. Ours is: the host blocks the write; required CI blocks the
-merge. Without that, the file **is** a manifesto. Do not win the argument by repeating
-“it is a contract.” Show the teeth. Human copy already prefers **architecture config**
-over contract; **law / constitution** only after the checkpoint is named.
-
-Advisory-only adoption (`stance: "advisory-only"`, or no required merge status) is the
-honest manifesto case. Say so. Do not dress it as a binding contract.
-
-### First-contact order (required)
-
-On README, `docs/use.md`, develop, enthusiast, the docs hub, and the product site, use
-**common software English**. Do not invent a synonym and then explain it.
-
-**Locked sentences:**
-
-1. **Deny:** `If the AI writes an illegal import, the write is rejected. The same check fails the pull request.`
-2. **Not-that (one line):** `Not an API Gateway. Not a folder linter. If the check is not required on the PR, the rules file is just documentation.`
-3. **How:** `One rules file. One check. One next step.`
-
-The 4.6.2 line `One architecture config. One check. One coach.` is **historical**. Do not
-lead with it. First-run CLI help stays under the AL04 noun budget.
-
-ADR 0001 keeps the product title **ArkGate — Architecture Co-pilot for AI TypeScript**.
-That identity line is not a substitute for the deny.
+Status first (`arkgate-check --doctor`). One next step. CLI flag `--doctor` stays;
+human copy says **status**.
 
 ---
 
-## Common language (allowlist)
+## Locked first-contact
 
-First-contact copy (README hero, use/develop/hub openings, site home / start / how-it-works
-heroes, npm description, `llms.txt` lede) may use **only** these kinds of words:
+On README, use, develop, the docs hub, and the product site:
+
+1. **Verbs:** `Write. Check. Ship.`
+2. **Deny:** `When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.`
+3. **Not-that (below the fold, one line):** `Not an API Gateway. Not a folder linter. If the check is not required on the PR, the config is just documentation.`
+4. **Nouns (once, below the deny):** ArkGate is import rules. ArkRules is optional policies. ArkRun is an optional experimental runtime.
+
+Do not lead with folders, `ark.config.json`, “contract”, “gate”, “house”, or “doctor”
+as the first noun. Historical: `If the AI writes an illegal import, the write is rejected`
+and `One architecture config. One check. One coach.` — never first.
+
+H1 may be **ArkGate — Write. Check. Ship.** npm description stays the deny.
+ADR 0001 keeps the public name **ArkGate**.
+
+---
+
+## How it sounds
+
+Short. Product nouns. Scene English (Vercel / Supabase / GitHub Checks).
+The check is the product — not a metaphor.
+
+Three beats when a line teaches:
+
+```text
+[plain fact]. [what it means]. [one next action].
+```
+
+| Yes | No |
+|-----|----|
+| The agent imported Infrastructure from Domain. The write didn’t land. Next: `/ark-place`. | Ship it 🚀 crush the spaghetti |
+| Import rules pass. The tree still needs a refactor. Next: one small change. | You don’t need to understand anything |
+| ArkRun is experimental. In-memory. Data is gone on restart. | The kernel is production-ready |
+| Status: one light, one next step. | Become an architect in 60 seconds |
+
+**Brands, then the common word:** ArkGate, ArkRules, ArkRun. Gloss once.
 
 | Say | Do not say on first contact |
 |-----|-----------------------------|
-| illegal import / import rules / who may import whom | architecture config, contract, constitution, law |
-| the write is rejected / the hook rejects the write | write checkpoint, write gate, write firewall, pre-write block |
-| required CI check / fails the pull request / required GitHub status | merge gate, extra merge teeth |
-| rules file (`ark.config.json`) | the contract, the manifesto (except the one honest “just documentation” line) |
-| `arkgate-check --doctor` — shows what's wrong and what to do first | doctor is the control plane, coach, co-pilot |
-| warning, not blocked | advisory write |
-| extra rules inside a layer | dual plane, intra-layer sensors |
-| optional extra (off unless you turn it on) | third extra, gated complement |
+| the write doesn’t land / blocked | write firewall, write checkpoint, co-pilot, the house stays up |
+| required CI check / fails the pull request | merge teeth, extra plane |
+| **config** (`ark.config.json`; alias: **rules file**) | the contract, the constitution, the manifesto (except the honest “just documentation” line) |
+| `arkgate-check --doctor` — **status**, one next step | control plane, coach, doctor as the product name |
+| optional policies inside a layer | dual plane, intra-layer sensors, Saturday tidy |
+| experimental runtime / in-memory / not Postgres | production kernel, durable runtime, training wheels |
 
-**Categorical brands** (do not hide, do not replace with a synonym): **ArkGate**, **ArkRules**
-(opt-in extra rules inside a layer), **ArkRun** (opt-in; not required). Gloss once. Then the
-common word.
-
-**Command names stay command names:** `arkgate`, `arkgate-check --doctor`, `--strict-merge`.
-Do not nickname them.
-
-If a term is not on this allowlist and is not a brand or a command, **cut it** or move it
-below the fold (develop docs, JSON field names, ADRs).
-
-Where we cannot use a common word — because the thing is ours — **one sentence, no hedging:**
-“ArkRules is optional. It is extra rules inside a layer. It is off unless you turn it on.”
+Command names stay command names (`--doctor` is a flag). If a word is not here,
+cut it or put it below the fold (develop, JSON, ADRs).
 
 ---
 
-## North star
+## Still true (do not dilute)
 
-A track so simple a newcomer enters, so strict a senior trusts — and the AI ships faster
-because the design space is small and honest.
+These are product law, not vibe:
 
-- **Reject the write. Fail the PR.** Rules file (`ark.config.json`) + the hook rejects listed
-  writes where the host supports it + required CI. Deterministic. Don’t show green if we could
-  not verify. Two kinds of rules: **import rules** (who may import whom) always; **ArkRules**
-  (extra rules inside a layer) opt-in. Optional extra: **ArkRun** (kernel usage + declarations)
-  via companion `@arkgate/runtime` — not a durability claim. Not a Gateway.
-- **Where code belongs:** who talks to whom, and how; fix illegal imports first, then leftover
-  design work; one small refactor at a time; never silent auto-reshape; never weaken the rules
-  file.
-- **Five doors:** invoking `/ark-adopt`, `/ark-place`, `/ark-autopilot`, `/ark-explore`,
-  or `/ark-upgrade` **is** the approval. The agent writes or maps in that turn. CLI/MCP check;
-  they do not silently rewrite. Silent reshape from the compact router (unasked) stays forbidden.
-- **Team:** the rules file is a different change type than product code. A product change must
-  not amend it. Stewards own loosen and baseline-grow. The ratchet is **new vs the branch you
-  merge to**, not only the file on this checkout. A small PR pays `--changed --base`, not
-  the whole tree. Humans who never hit the write hook are allowed to ignore Ark.
-- **Agent surface (4.3.0):** agents read **guardrail catalogs** and **scan** evidence;
-  they **judge** outside the package. Projection and skills never become the
-  pass/fail check.
-- **Improvement compass (4.4.0):** leftover architecture work is named as **lenses** (SoC, DIP,
-  domain alignment, …) projected from existing sensors — **never** a 0–10 score or Excellent/Good
-  rank. Out-of-scope lenses (perf, app security tooling, full resilience) stay honest.
-- **Dual depth:** human doctor and skills lead with plain outcomes and one next move;
-  experts keep full JSON. Full-AI workflows get the same single door — not a skill menu exam.
-- **False done is forbidden:** “Rules on” ≠ elegant design. Leftover design work must not
-  read as “healthy finished.” Empty ArkRules inventory is not a score. MCP configuration on
-  disk is not proof that the current process belongs to this project.
+- **Write. Check. Ship.** ArkGate is the wedge. ArkRules and ArkRun never determine the `arkgate` package shape.
+- The check is deterministic. No LLM pass/fail. Skills and `AGENTS.md` never replace the check.
+- No numeric architecture / trust / depth score. Lights and counts, never Excellent/Good.
+- Green imports ≠ elegant design. Leftover design work is **needs a refactor**, not “done”.
+- No silent auto-reshape. Invoke of a command is the approval.
+- A weaker config needs an explicit, hash-bound yes.
+- Host write hardness differs. Required CI is the shared hard line.
+- ArkRun stores are **in-memory**. Not production durability. Do not imply otherwise.
+- Absence of ArkRules or ArkRun is silent. Label leftovers **`[Layer]`** vs **`[ArkRules]`**.
+
+Full engineering queue: [ROADMAP.md](../ROADMAP.md). Do not narrate phase ids in consumer copy.
 
 ---
 
-## Sentence template
+## Status (CLI: `--doctor`)
 
-Prefer three beats when a line teaches:
+| Light (JSON) | Human | Line |
+|--------------|-------|------|
+| **Suggest** | **Setup** | New or thin tree. Finish `start`, then status again. |
+| **Adapt** | **In progress** | Not fully protected yet. Do action **#1**. |
+| **Enforce** | **Ready** | Import rules pass. Keep the write path and required CI. |
+| **Enforce · leftover design work** | **Ready · needs a refactor** | Import rules pass; leftover design work remains. Next: one small change. |
+
+Print **All checks passed** only when merge is a **required** status running
+`arkgate-check --strict-merge`, there is no leftover design work, and no open
+top action. Advisory-only is honest. It is not that string.
+
+Deny:
 
 ```text
-[plain fact]. [precise term + implication]. [one next action].
+[What failed in plain terms]. [ruleId]. Next: [one fix].
 ```
 
-Examples:
-
-| Bad | Good |
-|-----|------|
-| Ship it 🚀 your architecture is crushed! | Import rules check out. Leftover design smells mean the tree is still messy. Next: `/ark-explore` shape-focus. |
-| You don’t need to understand anything. | Doctor reports one status light and one primary next action. Run `ark-check --doctor`. |
-| Become an architect in 60 seconds. | Install pins `ark.config.json` and a short agent router. Full guided cleanup is `/ark-autopilot` after skills install. |
+Never mock. Never “disable the rules to finish.” Never mix the config into
+a product PR — that is an owner `--contract-session` (config change).
 
 ---
 
-## Lexicon (prefer) — 4.6 common words
+## Avoid (short)
 
-**Brands (keep):** **ArkGate** (product / npm `arkgate`), **ArkRules** (opt-in structure rules
-inside a layer), and **ArkRun** (opt-in kernel-usage extra + companion `@arkgate/runtime`). Gloss
-on first mention; do not rebrand. Branding ArkRun is not a durability claim.
+- Fowler Gateway / API Gateway / facade / “abstraction layer” as the first sentence
+- Leading with folders or the config before Write. Check. Ship. / the deny
+- “Contract” as the first noun (without required CI the file is documentation — say so)
+- Emoji rain, crush-it, fake amigo, “you don’t need to understand”
+- Auto-fix-everything / magic codemod
+- Suggest / Adapt / Enforce as settings you pick — they are lights (Setup / In progress / Ready)
+- Skill-shopping thirteen names as onboarding
+- “Healthy / done” while leftover design work remains
+- “MCP is active” because a file exists
+- Package AI decided pass/fail
+- Depth scores, trust scores, Excellent module bands
+- ArkRun as Postgres, an outbox, or Temporal
+- New skill *names* without a live queue item
+- “the house stays up” / “training wheels” / “mimo” on first contact
 
-Human copy prefers the **common** column. JSON field names (`designWeak`, `ruleId`, MCP tools)
-stay stable unless a change explicitly adds an alias.
+---
 
-| Prefer (human) | Was / JSON | Use for |
-|----------------|------------|---------|
-| **rules file** (`ark.config.json`) | contract / architecture config | Layers, rules, include. Never the first noun. Without required CI, this reader hears **manifesto** |
-| **manifesto** (honesty only) | advisory-only / no required CI | What the file is until the write is rejected and CI is required. Never the product name |
-| **import rules** / **allowed dependencies** | Layers plane / edges | Who may import whom; placement, purity, isolation |
-| **ArkRules** (opt-in; gloss: extra rules inside a layer) | ArkRules | Structure sensors + domain invariant catalogs (`arkrules/*`). Off unless you turn it on. |
-| **ArkRun** (opt-in; gloss: kernel usage + complete declarations) | arkRun | Optional extra; companion kernel is `@arkgate/runtime`; factory `createStrictArkKernel` (per instance, no singleton). Never a score. |
-| **advisory ArkRules** | advisory ArkRules | Default sensor mode — does not fail CI/merge alone |
-| **extra merge checks** | extraMergeTeeth | Only when enforced structure/invariant rules exist **and** classification is honest |
-| **label `[Layer]` vs `[ArkRules]`** | dual-plane residual | Never blur import-rule findings with ArkRules findings |
-| **ArkRules counts** | rulesUnderContract | Doctor/inventory counts — **never a score** |
-| **type-only import debt** | type-only placement debt | `import type` on the violations list with `failsStrict:false` |
-| **the write is rejected** / **required CI check** | write checkpoint / gate (as first noun) | Pass/fail: hook rejects the write + required CI. **Not** Fowler Gateway, not a resource wrapper, not a layer in the app |
-| **the hook rejects the write** | hard write / pre-write block | Host actually blocks listed edit ops (installed + trusted) |
-| **warning only (not blocked)** | advisory write | MCP/rules warn; not a hard block |
-| **import graph** | edges | Allowed imports (fix these first) |
-| **baseline** | baseline | Frozen known debt; does not make a wrong config honest |
-| **fix** | remediation | Fixing violations against the config |
-| **one small refactor** | pilot | One extraction / reshape cluster at a time |
-| **shape / leftover design work** | **design-weak** / residual | Imports clean under Enforce, but design smells remain — not “done” |
-| **doctor** / **next step** | coach / co-pilot | Guidance that proposes order without silent auto-reshape |
-| **don’t show green if unverified** | fail-closed | Incomplete analysis or unproven enforcement never looks green |
-| **honest coverage** | honest coverage | Governed % and empty scope that cannot false-green |
-| **safe to auto-apply** | mechanical-safe | Deterministic auto-apply class only |
-| **your judgment** | judgment | Human/agent design work; invoke of an apply door is the approval — not silent compact-router reshape |
-| **five doors** | skill menu of 13 | adopt · place · autopilot · explore · upgrade — other names are shortcuts |
-| **rules file + ArkRules files** (different change type than product) | law / constitution / contract + baseline | `ark.config.json`, `arkrules/*`, `.ark-baseline.json` — a product PR must not amend them |
-| **steward** | contract owner | GitHub handle or email in `stewards`; only they may loosen the law or grow the baseline |
-| **several hands** | multi-author / CODEOWNERS | Doctor asks for stewards or shows list drift; empty `stewards[]` is unfinished ENFORCE (not Adapt); adopt proposes handles or emails, never invents names |
-| **contract session** | `--contract-session` | Explicit “this diff is a law change”; required to loosen or grow the baseline even with an empty steward list; still never mixed with product files |
-| **vs the base branch** | `--against` / `--changed --base` / `status --vs` | Ratchet and honesty against the ref you merge to |
-| **doctor** | doctor | Status light + next action |
-| **short agent router** | compact router | Default onboarding agent instructions (not the full skill pack) |
-| **right project?** | matched binding / project identity | Live MCP answered for this exact project root (+ id). `ark_identity` |
-| **authoritative config read** | authoritative manifest | `ark_manifest` after a matched identity handshake |
-| **compatibility manifest** | `ark://manifest` | Always unverified — request cannot carry a project expectation |
-| **configured on disk** | configured on disk | Host files name an Ark MCP command; not proof of the live process |
-| **runtime observed** | runtime observed | A live `ark_identity` matched this workspace |
-| **required CI status** | required CI / status context | Merge hard boundary: required GitHub status running `arkgate-check --strict-merge` |
-| **config ready** | contract ready | Project/import-rules/ArkRules honesty clear — not the same as a local pre-write block |
-| **host limitation** | environment residual | Soft-write or uncovered host path (e.g. OpenCode, hosted/specialized tools) — do not paint the whole project unfinished |
-| **allowed rule ids** | guardrail catalog | Closed vocabulary of sensors, capabilities, `ruleId`s, skill roles |
-| **check (tool)** | scan | Deterministic engine / CLI / MCP. Same inputs → same verdict. No LLM. |
-| **your judgment** | process / coaching | Skill- or agent-side. **Never** package pass/fail |
-| **diagnostic code** / **ruleId** | ruleId | Stable public violation id — catalog-linked ([diagnostics.md](diagnostics.md)) |
-| **agent summary** | agent projection | Version-matched AGENTS/CLAUDE block; **non-authoritative** |
-| **finding id** | finding ref | Stable id (ruleId + target key) across turns |
-| **status snapshot** | status snapshot | `ark status --json`: identity, activation, last check, leftover counts — not a score |
-| **shared agent skills (home)** | Codex/Claude/Grok home catalog | Machine floor: always latest additive; never downgrade |
-| **session recipe** | Agent loop: bind identity → read status → act on residual / findingRef; run doctor when status compass mode is not `full` |
-| **compass mode** | Status honesty label for the projected residual map: `full` \| `subset` \| `unavailable` — never invent green residual |
-| **improvement compass** | Closed projection of residual architecture work across fixed **lenses** (aligned to 15 common principles). Always `notAScore`. Never a gate input. |
-| **lens** | One named principle dimension (`soc`, `dip`, `domain`, …) with status `ok` / `residual` / `not-instrumented` / `out-of-scope` and evidence refs from existing sensors |
-| **topResidual** | Deterministic short list of residual lens ids — what to improve next, not a ranking score |
-| **out-of-scope lens** | Principle Ark does not instrument (e.g. scalability APM, SAST) — say so; do not invent residual |
-| **AI-easy architecture** | Small, pure, placeable modules and a golden pattern so the next agent turn stays ordered under the contract |
-| **self-service upgrade honesty** | After managed upgrade, consumers can see write-path activation labels and customized-content preserve without asking a maintainer |
-| **module** | Anything with a surface callers depend on and an implementation behind it (function, package, slice) — not only a TypeScript `module` keyword |
-| **interface** (product sense) | Everything a caller must know: types, invariants, errors, ordering, config — not only a TypeScript `interface` keyword |
-| **depth** / **deep module** | Much behavior behind a **small interface** (deep) vs interface almost as complex as the body (shallow). Prefer deep modules. **Never** a 0–10 depth score |
-| **seam** | Place where behavior can be swapped or tested without editing callers (port boundary). Name seams when proposing ports/adapters or Shape pilots |
-| **adapter** | Concrete thing that satisfies an interface at a seam |
-| **leverage** | Capability callers get per unit of interface they must learn |
-| **locality** | Change, bugs, and verification concentrate in one place |
-| **deletion test** | Process heuristic before extracting “just for tests”: if you delete the module and complexity *vanishes*, it was mostly pass-through; if complexity *reappears* across many callers, it was earning its keep. One adapter → seam still hypothetical; two real adapters → seam justified |
-| **test at the public interface** | Prefer verifying behavior through the seam’s public surface, not through private pass-through layers or extraction-for-test-only modules |
-| **hot path** (advisory) | Repo-relative path with elevated **recent change volume** (heuristic from git history when available). Advisory residual only — never a gate input; omit or mark unavailable when history is missing |
-| **deepening candidate** (advisory) | Shape residual card projected only from **existing** smells / cohesion / compass evidence — locality/leverage intent; never invents candidates without evidence; never flips the verdict |
-| **domain glossary** | Optional consumer file of product terms (common roots: `CONTEXT.md`, `docs/glossary.md`, `docs/domain.md`, `docs/ubiquitous-language.md`). Prefer terms for layer/slice/pilot naming when present. Missing glossary is normal — no warning spam; never enforces |
-| **two-axis done** | (1) architecture residual via status/doctor/compass (scan); (2) feature/ticket residual outside the package (process). **Enforce green ≠ feature done** |
-
-## Public docs are product-only (from 4.4.0)
-
-Consumer-facing prose (README, use/develop/agent-guide, skills, compact router, doctor/CLI human
-lines, CHANGELOG user bullets, release notes bodies) explains **what ArkGate does and how to use
-it**. It does **not** explain features by roadmap item codes, phase numbers, or internal queue
-jargon (`IC02`, `ACS08`, `Z09`, `RB-11`, “Phase X shipped…”).
-
-| Put here | Not here (for consumers) |
-|----------|---------------------------|
-| Commands, lenses, gates, skills, honest limits | Roadmap ids as the story |
-| Stable API names (`ruleId`, JSON fields) | Ticket dumps in CHANGELOG |
-| `ROADMAP.md` / `docs/plans/` / archive (maintainers) | Required reading of epic codes to use the product |
-
-Historical maintainer files may keep engineering ids. **Do not regress** public lanes with new
-id-heavy narrative after 4.4.0.
-
-## Scan vs process (dual depth)
-
-Borrow the harness *shape* (scan facts, then process with judgment) without shipping an LLM
-verdict in core:
+## Progressive disclosure
 
 ```text
-scan  →  deterministic contract graph + host activation evidence
-process → skills / human / host agent choose pilots and wording
-gate  →  same binary verdict on every parity-capable adapter
+npx arkgate start → start --apply → arkgate-check
+                 → (optional) skill pack → one command
 ```
 
-| Surface | Language to use | Language to avoid |
-|---------|-----------------|-------------------|
-| CLI / MCP / CI | “Scan found…”, “Checked edges…”, “Verdict: pass/fail/incomplete” | “The model decided…”, “AI validated architecture” |
-| Skills / doctor | “Next: one small refactor…”, “Judgment: Shape door…” | “Process mode enforces…”, “Skill pass/fail” |
-| Catalog / codes | “ruleId from the diagnostic catalog”, “closed capability set” | Open-ended “any rule string”, free-generated sensors |
-| Projection / AGENTS.md | “Agent-facing summary; not the gate” | “Follow AGENTS.md to pass CI” |
-
-## Do (product copy)
-
-| Do | Example |
-|----|---------|
-| Lead first-contact with the deny, then not-that | “If the AI writes an illegal import, the write is rejected. The same check fails the pull request. Not an API Gateway. Not a folder linter.” |
-| Name manifesto only when teeth are off | “No required merge status — the rules file is advisory (a manifesto). Next: require `arkgate-check --strict-merge`.” |
-| Name the status light + plain fact + next action | “Enforce · leftover design work. Import rules check out; design smells remain. Next: one Shape door — explore → plan B → autopilot with OK.” |
-| Rank one primary door under residual | Doctor **Primary next action** #1; **Also** only for secondary |
-| Label expert skills as escapes | “Install skill pack only when doctor or a STOP handoff names a skill.” |
-| State host write honesty | “Cursor blocks trusted Write/StrReplace. Codex blocks complete trusted local `apply_patch` after runtime observation. Required GitHub status covers every path.” |
-| Soft/unverified write ≠ unfinished project | “Rules file ready; this host operation is a warning, not a block, or unverified.” Keep environment residual in evidence; reserve **Not finished** for config/project debt. |
-| Keep Suggest on start → doctor | New-here primary is finish `start`, not a competing recommend/architect curriculum |
-| Qualify import-clean under leftover design | “None on checked imports … leftover design work remains. Not healthy finished.” |
-| Prefer unverified-as-not-green | Incomplete analysis, unobserved hooks, and soft MCP never paint as a hard green “write rejected” |
-| State project binding before verdict | “Ark MCP matched this workspace; `ark_manifest` evidence is for this project.” Otherwise: “Ark MCP is configured, but we have not proven this is the right project. Restart and call `ark_identity` with the exact project root.” |
-| Keep inventory claims evidence-bound | “Possible rule candidate in the configured Application layer.” A filename or technical constant alone is not Domain evidence. |
-| Honesty clear ≠ architecture healthy | `productHonesty.finished` means residual **architecture** honesty sensors are clear — not a green graph score. Open blocking violations, ADAPT/SUGGEST with debt, dual-truth pin, or design residual keep `unfinished: true`. Permanent soft-write alone does **not**. |
-| Separate CI runtime from provider policy | Successful CI run ≠ required status; GitHub Free plan 403 → `unavailable-plan`, not “CI never ran.” |
-| Prefer catalog language for agent DX | “Stable `ruleId` with why/fix anchors.” Not a free-form list of “things that might be wrong.” |
-| Name the check before coaching | “Check: two layer import violations. Next: fix the Application→Domain import first.” |
-| Label projection non-enforcing | “Regenerated agent summary for this package version. The check remains ark-check / hooks / required CI.” |
-| Keep status counts honest | “Inventory and residual counts are evidence — not a health score.” |
-| Prefer deep modules | “Small interface, hide the complexity. Name the seam; test at the public interface.” |
-| Apply the deletion test | “If deleting this extract would vanish the complexity, skip the pass-through; if callers re-absorb it, keep the module.” |
-| Two-axis done | “Edges green and residual lenses quiet is architecture residual; ticket acceptance is a separate axis — Enforce green ≠ feature done.” |
-| Glossary when present | “Prefer `CONTEXT.md` / product glossary terms for pilot and layer names; missing glossary is fine.” |
-
-## Avoid
-
-| Avoid | Why |
-|-------|-----|
-| Leading first-contact with folders, layers, or `ark.config.json` | Old-school SE hears “file structure keeper” |
-| Bare “gate” as the first unexplained noun on README / use / hub / first-run | They load Fowler Gateway / API Gateway / facade |
-| Calling ArkGate a Gateway, facade, adapter, or “abstraction layer” | A Gateway wraps a resource; this check rejects the write |
-| “Access resources”, “extend without touching what it represents” | Wrapper-family verbs. The rules file is not a port |
-| Calling `ark.config.json` a **contract** as the first noun | Old-school SE hears manifesto — intent with no consequence |
-| “Our architecture manifesto” as product copy | Insult when teeth exist; a lie when they do not. Honesty case = advisory-only |
-| vibes, “crush it,” emoji rain | Cheap; seniors dismiss it |
-| “eh amigo,” fake familiarity | Condescension |
-| “you don’t need to understand anything” | Lies about the product |
-| “auto-refactor your whole app” / magic codemod claims | We never silent-apply plan B |
-| “modes you pick” for Suggest/Adapt/Enforce | Those are **status lights**, not settings |
-| Skill-shopping lists as the default curriculum | Progressive disclosure: one door first |
-| “Healthy / done” while leftover design work remains | False done |
-| “Honesty clear” as “architecture finished” | Honesty clear only means residual honesty sensors are quiet; graph/mode debt is separate |
-| “Not finished” solely because a host hook is unverified or one host path is advisory | Environment residual is not architecture debt; do not paint a green whole-tree project as unfinished architecture |
-| “MCP installed / active” because a config file exists | Say **configured on disk · runtime unverified** until `ark_identity` matches the expected root |
-| Treating an unverified legacy MCP call as authoritative | Compatibility is not proof; require `binding.status: "matched"` and `authoritative: true` |
-| “Handler means controller” / “every constant is a business rule” | ArkRules inventory uses configured layer context and suppresses narrow technical/test evidence; candidates remain prompts for judgment |
-| Conflating CLI name with required status | `ark-check` is the command; the hard boundary is the GitHub required **status context** |
-| “ArkRules prove business correctness” | They enforce *declared* structure/coverage evidence, not arbitrary logic or full semantic proof |
-| “Structure enforced = Domain extraction done” | Structure sensors are **heuristics**; extraction is judgment (`/ark-fix` / pilot) |
-| “Covered invariant = E2E business tests” | Coverage = symbol/test evidence for a named policy, not a runtime test runner |
-| “Max arkRules packs = merge fails structure” | **Advisory ArkRules ≠ merge teeth.** Only `mode: "enforced"` can add teeth, and only after honest classification (FG-ARKRULES-ADVISORY-ONLY) |
-| “Type-only volume means the gate is broken” | High type-only count is placement debt (behavior OK); group under plan A type-only, offer SharedTypes starter |
-| Blurring import edges with invariants | Always label **`[Layer]`** vs **`[ArkRules]`** |
-| “Ark uses AI to decide pass/fail” / package “process verdict” | Package is zero-LLM; process is agent-side judgment only |
-| Inventing new skill **names** or preset packs as product copy filler | 4.3.0 freeze: deepen + package the 13; no new names/presets without ROADMAP promotion |
-| Treating AGENTS.md / projection / skills as the write gate | Advisory surface; hard path is hooks / MCP prepare / required CI |
-| Free-generated sensor or rule ids outside the catalog | Guardrail catalog is closed; unknown codes are a bug, not creativity |
-| Numeric “architecture health” or trust score in status JSON | Counts and residuals yes; scored trust no |
-| Depth score / “deepness rank” / Excellent module bands | Depth is vocabulary for process judgment, not a score surface |
-| Extract “just for tests” without a deletion test | Pass-through modules add interface without locality or leverage |
-| Treat hot paths or deepening candidates as gate failures | Advisory residual only; missing git never invents hot paths |
-| Claim feature done solely because Enforce is green | Two-axis done: architecture residual and ticket residual are separate |
-
----
-
-## Progressive disclosure (product rule)
-
-1. **One primary path** — newcomer does not skill-shop among thirteen `/ark-*` skills.
-2. **Doctor shows what's wrong and what to do first** — one status light, one next action (human-grade + technical).
-3. **Compact router / default install first** — full skill pack is **expert depth**, not onboarding UI.
-4. **Post-green shape** is a first-class single door when edges are clean but residual remains.
-5. **Day-to-day** — place + check protect; guided organize via `/ark-autopilot` when needed.
-
-```text
-npx arkgate start → start --apply → ark-check --doctor
-                 → (optional) install skill pack → /ark-autopilot
-```
-
-Skills table in docs = **escapes / expert**, not a second onboarding track.
-
----
-
-## Hero phrases (approved)
-
-- If the AI writes an illegal import, the write is rejected. The same check fails the pull request.
-- Not an API Gateway. Not a folder linter. If the check is not required on the PR, the rules file is just documentation.
-- One rules file. One check. One next step.
-- One architecture config. One check. One coach. *(historical 4.6.2 — never the first sentence)*
-- Green must mean something real.
-- You arrive at Enforce; you never turn it on.
-- Enforce does not mean the design is elegant — only that checked imports are honest.
-- A clean import check is not “architecture healthy” when leftover design work remains.
-- One small refactor at a time. Pattern bets are never auto-applied.
-- Doctor shows what's wrong and what to do first: status light + next action.
-- The check is deterministic. Your judgment is not. Only the check decides pass/fail.
-- Guardrails are a catalog, not free generation.
-- Agent docs summarize the rules file; they never replace the check.
-- **ArkGate** and **ArkRules** are product names — gloss them; don’t invent a second brand.
-
-## Hero phrases (forbidden)
-
-- Become an architect in 60 seconds.
-- You don’t need to understand architecture.
-- We auto-fix everything safely.
-- Ship it 🚀 / crush the spaghetti with vibes.
-- The AI validated your architecture / model pass/fail.
-- Follow AGENTS.md to pass the architecture gate.
-- Keep your file structure / folders clean.
-- An abstraction layer over your architecture.
-- A Gateway for your architecture / resources.
-- Our architecture manifesto / the contract file.
-
----
-
-## Doctor / deny microcopy models
-
-### Status light (operating mode)
-
-Each model line follows the sentence template: **plain fact · term · next action**.
-
-| Light | Model line |
-|-------|------------|
-| **Suggest** | Thin or new tree. Architecture config is not yet in charge. Next: `ark start` preview, then `--apply`; re-run doctor. |
-| **Adapt** | Config and tree still disagree, or debt is open. The write path does not fully protect you yet. Next: doctor top action #1. |
-| **Enforce** | Honest coverage and clean checked imports. Keep the host write path + required CI. |
-| **Enforce · leftover design work** | Import rules check out; design smells remain. Green is not elegant design. Next: map (`/ark-explore` shape-focus) then apply one small refactor with `/ark-autopilot` (invoke = apply). |
-
-### Primary next action
-
-- Lead with the **outcome**, then the **skill or command**, then the **constraint** (never mechanical-safe / never skill-shop).
-- When leftover design work remains, rank the single Shape path first; do not list explore / coverage / think as equal first choices.
-
-### Deny / gate failure
-
-```text
-[What failed in plain terms]. [Rule or evidence id]. Next: [one fix path — /ark-autopilot, /ark-place, or /ark-adopt].
-```
-
-Never: mock the user, imply the gate is optional, or suggest disabling rules to “finish.”
-Never: tell an agent to edit `ark.config.json` to clear a product-PR red. That is a **contract
-session** for a steward — split the PR.
-
-```text
-This change mixes the constitution with product files. Next: split the PR, or run a steward
---contract-session that touches only ark.config / arkrules / .ark-baseline.json.
-```
-
-### Healthy finished
-
-Print “Healthy — nothing to do” **only** when the merge boundary is adopted as a **required**
-GitHub status running `arkgate-check --strict-merge`, there is no leftover design work, and no
-open top actions. An explicit `.ark/adoption-stance.json` `stance: "advisory-only"` ack is
-adopted for honesty, but it is not this Healthy string. Workflow files on disk are not adopted.
-
----
-
-## Compact router model
-
-Keep short. Five doors only:
-
-1. Point at **doctor** as status.
-2. Session 0: **`/ark-adopt`**. Day-to-day new files: **`/ark-place`**.
-3. Apply / leftover design: **`/ark-explore`** then **`/ark-autopilot`** (invoke = apply one refactor).
-4. Bump: **`/ark-upgrade`**.
-5. Full skill pack is optional expert depth — not a 13-name exam.
-
----
-
-## Skill description model
-
-| Skill role | Frontmatter tone |
-|------------|------------------|
-| `/ark-adopt` | Session 0 — write the path (greenfield + brownfield) |
-| `/ark-place` | New feature — place **and write** |
-| `/ark-autopilot` | Apply A + one Shape refactor; invoke = approval |
-| `/ark-explore` | Map / dual-plan **seed** only |
-| `/ark-upgrade` | Preview then apply in-turn |
-| Others | Shortcut to a door above |
-
-Autonomy contract on every door. Never claim silent full-tree reshape from the compact router.
-
----
-
-## Autonomy contract (skills)
-
-Invoking a five-door skill **is** the approval. Write or map in the same turn.
-
-**CLI budget:** identity only if using MCP; one doctor / recommend / upgrade preview; then work;
-then check. Forbidden as the deliverable: dumping `--plan` JSON, “approve?”, or
-`STOP — invoke /ark-X` for work that door absorbs.
-
-**Still never:** weaken the rules file; invent `mechanical-safe` kinds; claim finished
-while leftover design work remains; batch every Shape bet in one turn.
+Five commands, not a menu exam: adopt · place · autopilot · explore · upgrade.
+Invoking a command **is** the approval. CLI checks; it does not silently rewrite.
 
 ---
 
 ## Checklist before shipping copy
 
+- [ ] **Write. Check. Ship.** is on first-contact.
+- [ ] Deny is `When the agent writes a bad import, the write doesn’t land.`
 - [ ] One next action is obvious.
-- [ ] Status light is not a mode picker.
-- [ ] No false done under design-weak / incomplete analysis.
-- [ ] Technical terms present (rules file, import rules, ArkGate, ArkRules) without slang.
-- [ ] Leftover design work is never called “done”.
-- [ ] Expert skills are labeled expert — not the default curriculum.
-- [ ] Scan vs process is not blurred with package LLM pass/fail.
-- [ ] Codes, sensors, and capabilities stay inside the guardrail catalog.
-- [ ] Projection / AGENTS.md never claimed as enforcement.
-- [ ] Seniors would not be embarrassed to paste the line into a PR.
-- [ ] First-contact sentence would not read as Fowler Gateway, a folder linter, or a manifesto of intent.
-- [ ] Bare “gate” is glossed as the write is rejected / the hook rejects the write / required CI on first use.
-- [ ] “Contract” never appears as the first noun; without required CI, the file is named a manifesto.
+- [ ] ArkGate / ArkRules / ArkRun are import rules / policies / experimental runtime.
+- [ ] ArkRun is never implied durable / Postgres.
+- [ ] Status lights read Setup / In progress / Ready to humans.
+- [ ] No score, no false done, no Gateway as the first sentence, no “disable the rules”.
+- [ ] A senior would paste the line into a PR without cringing.

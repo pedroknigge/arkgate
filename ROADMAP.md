@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-26 (Engineering doing: none; Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Phase HS shipped **4.7.1**; wording patch **4.7.2** published; remaining first-contact copy **4.7.3** published; companion `@arkgate/runtime@0.1.0-experimental.0` on npm `experimental`; `arkgate@4.7.4` on npm `latest`; `AL05` parked; Z09 still parked; npm `latest` is **4.7.4**)
+- **Status date:** 2026-08-26 (Engineering doing: none; Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Phase HS shipped **4.7.1**; wording patch **4.7.2** published; remaining first-contact copy **4.7.3** published; companion `@arkgate/runtime@0.1.0-experimental.0` on npm `experimental`; `arkgate@4.7.4` on npm `latest`; Write. Check. Ship. patch **4.7.5** prepared; `AL05` parked; Z09 still parked; npm `latest` is **4.7.4**)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -12,37 +12,29 @@ product is release-ready.
 
 ## Product mandate
 
-ArkGate exists to prevent architecture-invalid TypeScript changes with low friction and
-verifiable coverage.
+**Write. Check. Ship.** When the agent writes a bad import, the write doesn’t land.
+
+**ArkGate is the product. Untouchable.** Import rules. Deterministic. No LLM pass/fail.
+Skills and `AGENTS.md` never replace the check.
 
 ```text
-product value = writes observed × semantic precision × enforcement strength × retained adoption
+ArkGate   always     import rules (write + required CI)
+ArkRules  optional   policies inside a layer
+ArkRun    optional   experimental runtime — in-memory, not Postgres
 ```
 
-The product wedge is the architecture contract, semantic analysis engine, agent adapters, and CI
-gate. The optional runtime **kernel** is not the product and must not determine the package shape.
-**ArkRun** (Phase RN) is an opt-in extra *on that gate* — usage and declarations — not a second
-product. Absence is silent; enforced mode uses the same write/CI plane as Layers and ArkRules.
+ArkRules and ArkRun must not determine the `arkgate` package shape. Absence is silent.
+Same write/CI plane when they are on. Voice: [docs/product-voice.md](docs/product-voice.md).
 
 ### North-star product invariant
 
-ArkGate is an architecture write firewall plus a coach, not a prompt convention. The
-`ark.config.json` contract and deterministic engine decide whether a change is valid; agent memory,
-`AGENTS.md`, skills, and prose improve prevention but are never trusted enforcement inputs.
-
-- Validate at the earliest available boundary and enforce at the earliest non-bypassable one: hard
-  PreToolUse when covered, transactional MCP preparation for proactive feedback, and a required
-  CI/merge check as the final boundary.
-- Given the same base tree, candidate change, compiler inputs, and policy, every parity-capable
-  adapter returns the same verdict and evidence without an LLM deciding pass/fail. A retained
-  lexical compatibility mode that lacks required facts reports incomplete and never borrows the
-  parity claim.
-- Every rejection teaches: concise human cause and next action for a casual user, plus stable JSON,
-  hashes, and exact evidence for an experienced engineer.
-- After structural validity, help improve architecture and code organization: suggest where new
-  code belongs, surface design smells, recommend a consistent pattern, and propose one small
-  extraction pilot at a time. These evidence-backed judgment aids never masquerade as deterministic
-  pass/fail enforcement.
+- Earliest useful deny: hard PreToolUse when covered, MCP prepare when the agent calls it,
+  required CI as the non-bypassable merge line.
+- Same tree + same candidate + same policy → same verdict on every parity-capable adapter.
+  Incomplete analysis never looks green.
+- Every rejection teaches: one human next step, plus JSON/evidence for people who want it.
+- After import rules pass, help tidy: where code belongs, leftover design work, one small
+  refactor at a time. Judgment aids never masquerade as the check.
 
 ### Product boundary
 
@@ -263,7 +255,7 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: none. Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published on npm `latest`. `arkgate@4.7.4` on npm `latest`.
+Engineering doing: none. Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. `arkgate@4.7.4` on npm `latest`. Write. Check. Ship. patch **4.7.5** prepared.
 `RN16` **done** (public docs + 4.7.0 published). `RN17` **done** (`@arkgate/runtime@0.1.0-experimental.0` on npm `experimental`).
 `RN15` **done** (deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names).
 `RN14` **done** (skip corpus: extra absent = green; enforced = fail `new` / peer import / homemade bus).

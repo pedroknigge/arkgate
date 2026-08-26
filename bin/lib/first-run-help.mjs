@@ -3,13 +3,14 @@
  */
 
 export function setupUsage() {
-  return `arkgate (alias ark) — Illegal import: write rejected. Same check fails the PR.
+  return `arkgate (alias ark) — Write. Check. Ship.
+When the agent writes a bad import, the write doesn’t land. Same check fails the PR.
 
   arkgate start              preview (no writes)
   arkgate start --apply      write host + CI setup
-  arkgate-check --doctor     what's wrong, what to do first
+  arkgate-check --doctor     status — one next step
 
-Stuck? Run doctor. Do #1.
+Stuck? Run status (--doctor). Do #1.
 `;
 }
 
@@ -27,7 +28,8 @@ Every flag: arkgate --help --all
 }
 
 export function setupUsageAll() {
-  return `arkgate (alias ark) — Illegal import: write rejected. Same check fails the PR.
+  return `arkgate (alias ark) — Write. Check. Ship.
+When the agent writes a bad import, the write doesn’t land. Same check fails the PR.
 
 Usage:
   arkgate start   [--root <project>] [--tools <host>] [--require-write-hook <host>] [--install] [--apply] [--json]

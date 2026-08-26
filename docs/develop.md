@@ -1,10 +1,13 @@
 # Develop with ArkGate
 
+**Write. Check. Ship.**
+
 For **developers** integrating ArkGate into a product repo: agents, CI, config, brownfield, and power tools.
 
-If the AI writes an illegal import, the write is rejected. The same check fails the pull
+When the agent writes a bad import, the write doesn’t land. The same check fails the pull
 request. Not an API Gateway. Not a folder linter. Without a required CI status,
-`ark.config.json` is just documentation.
+`ark.config.json` is just documentation. ArkGate is import rules. ArkRules and ArkRun
+are optional — policies and an experimental runtime, not a second install.
 
 If you only want the happy path, start at [use.md](use.md).
 

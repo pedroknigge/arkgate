@@ -1,6 +1,7 @@
 # ArkGate — enthusiast track
 
-If the AI writes an illegal import, the write is rejected. The same check fails the pull
+**Write. Check. Ship.**
+When the agent writes a bad import, the write doesn’t land. The same check fails the pull
 request. Not an API Gateway. Not a folder linter.
 
 Plain-language onboarding for builders who use AI agents but are not professional
@@ -18,9 +19,9 @@ aliases `ark` / `ark-check` still work).
 
 | Mode | Meaning |
 |------|---------|
-| **Suggest** | Propose an application shape and install a starter rules file. |
-| **Adapt** | Match the rules file to your real layout / raise governed coverage. |
-| **Enforce** | The rules cover the real code and checked edges are clean; host/CI guarantees remain separate. |
+| **Setup** | Propose an application shape and install a starter config. |
+| **In progress** | Match the config to your real layout / raise governed coverage. |
+| **Ready** | The rules cover the real code and checked edges are clean; host/CI guarantees remain separate. |
 
 `ark start` and `ark-check --plan` will not claim "everything is guarded" while governed coverage is near zero. On Nest/Next/express starters, init also merges **framework filename conventions** into the layer globs so day-one coverage is real.
 

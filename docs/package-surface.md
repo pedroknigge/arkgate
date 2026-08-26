@@ -1,8 +1,9 @@
 # ArkGate package surface policy
 
-**If the AI writes an illegal import, the write is rejected. The same check fails the pull request.**
+**Write. Check. Ship.**
+**When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.**
 That is the product wedge (host hook + required CI). Skills name the next step after that.
-**Not the wedge:** the optional in-process **ArkRun** kernel (`@arkgate/runtime`).
+**Not the wedge:** the optional in-process **ArkRun** runtime (`@arkgate/runtime`).
 
 **Public product site:** [arkgate.online](https://www.arkgate.online/) (promise + only flow).
 In-repo `docs/` remains the package/agent reference. Source: GitHub; distribution: npm.
@@ -214,7 +215,8 @@ production deployment would need to satisfy; it is not a readiness certification
 ## Release notes (maintainers)
 
 Ship notes for a version live under [releases/](https://github.com/pedroknigge/arkgate/tree/main/docs/releases)
-(current published: [4.7.4.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.7.4.md);
+(current tree: [4.7.5.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.7.5.md);
+current published: [4.7.4.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.7.4.md);
 prior published: [4.7.3.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.7.3.md);
 prior published: [4.7.2.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.7.2.md);
 prior published: [4.7.0.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.7.0.md);
