@@ -27,6 +27,7 @@ describe('RN17 companion experimental publish', () => {
     expect(script).toContain("const RUNTIME_DIST_TAG = 'experimental'");
     expect(script).toContain('--runtime-only');
     expect(script).toContain('build:runtime');
+    expect(script).toContain('./${path.relative(root, cwd)}');
     expect(script).toContain('packages/runtime');
     expect(script).toContain(' --tag ${distTag}');
     expect(script).toContain('distTag: RUNTIME_DIST_TAG');

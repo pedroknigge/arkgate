@@ -65,7 +65,8 @@ function publishPackage({ label, cwd, distTag }) {
   const tagArgs = distTag ? ` --tag ${distTag}` : '';
   // Always publish from the repo root so GitHub OIDC / `.npmrc` apply.
   // `npm publish <folder>` from a subdirectory loses trusted-publishing auth (ENEEDAUTH).
-  const folderArg = cwd === root ? '' : `${path.relative(root, cwd)} `;
+  // `./` is required: `npm publish packages/runtime` is parsed as a git spec.
+  const folderArg = cwd === root ? '' : `./${path.relative(root, cwd)} `;
   const cmd = dry
     ? `npm publish ${folderArg}--dry-run --access public${tagArgs}`
     : runningInGitHubActions
