@@ -120,6 +120,20 @@ check: [4.3.0 — What ArkGate is / isn't](docs/releases/4.3.0.md#what-arkgate-i
 
 ---
 
+## Why it exists
+
+AI coding agents generate code at unprecedented speeds. However, they tend to take the shortest path to solve a problem. If an agent needs data in a Domain layer, it might directly import a database adapter. Left unchecked, this creates spaghetti code and technical debt at light speed.
+
+Traditional linters catch these architectural violations in CI *after* the agent has finished its work, breaking the flow.
+
+ArkGate solves this by shifting the check to the exact moment of writing:
+
+1. **Fail fast at the write boundary.** Through IDE hooks and MCP, ArkGate intercepts the file write. If the agent writes a bad import, the write doesn't land. The agent gets immediate feedback and can self-correct before saving to disk.
+2. **The check is the single source of truth.** A simple `ark.config.json` defines your layers and allowed edges.
+3. **Honest reporting.** Green imports do not equal elegant design. ArkGate separates structural correctness from design smells, providing an improvement compass to guide leftover design work without blocking the PR.
+
+---
+
 ## Status lights (not settings)
 
 ```text

@@ -11,6 +11,14 @@ are optional — policies and an experimental runtime, not a second install.
 
 If you only want the happy path, start at [use.md](use.md).
 
+### Why it exists
+
+AI coding agents generate code at unprecedented speeds, but they tend to take the shortest path. If an agent needs data in a Domain layer, it might directly import a database adapter. Left unchecked, this creates spaghetti code and technical debt at light speed.
+
+Traditional linters catch these architectural violations in CI *after* the agent has finished its work, breaking the flow.
+
+ArkGate solves this by shifting the check to the exact moment of writing. By intercepting file writes through IDE hooks or MCP, it ensures that if the agent writes a bad import, the write doesn't land. The agent gets immediate feedback and can self-correct before saving to disk.
+
 ---
 
 ## Default integration

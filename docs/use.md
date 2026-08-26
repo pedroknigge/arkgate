@@ -46,6 +46,14 @@ Skip ArkGate (or treat it as overkill) when:
 
 In those cases a boundary linter or editor rules may be enough; see [README — Why not only ESLint / Nx / cruiser?](../README.md#why-not-only-eslint--nx--cruiser). When you *do* adopt, day-to-day honesty is still: advisory write on soft hosts → required merge status. Surface that with `npx arkgate-check --doctor` or `npx arkgate status --json` ([agent guide — Write-path honesty](agent-guide.md#write-path-honesty)).
 
+### Why it exists
+
+AI coding agents write code at unprecedented speeds, but they tend to take the shortest path to solve a problem. If an agent needs data in a Domain layer, it might directly import a database adapter. Left unchecked, this creates spaghetti code and technical debt at light speed.
+
+Traditional linters catch these architectural violations in CI *after* the agent has finished its work, breaking the flow and requiring manual intervention.
+
+ArkGate solves this by shifting the check to the exact moment of writing. By intercepting file writes, it ensures that if the agent writes a bad import, the write doesn't land. The agent gets immediate feedback and can self-correct before the code even touches your disk.
+
 ---
 
 ## What you get
