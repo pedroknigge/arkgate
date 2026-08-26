@@ -329,3 +329,13 @@ Does not ship cloud adapters or a process singleton. Companion kernel stays
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 207 | `K01` | `doing` | L | RN17 | In-process commit gaps, atomic handoff, outbox durability, and OCC leases. |
+
+### Phase DX — ArkRun DX Relaxations
+
+Targeting next `arkgate` release to reduce `ARKRUN_DIRECT_NEW` friction for transient objects.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 208 | `DX01` | `done` | S | K01 | Auto-exempt `Error` subclasses (or classes ending in `Error`) from `ARKRUN_DIRECT_NEW` sensor, or add `ignoreDirectNewForErrors` config. |
+| 209 | `DX02` | `done` | M | K01 | Establish naming convention (`*DTO`, `*VO`) or config pattern to exempt pure Value Objects / DTOs from strict instantiation rules. |
+| 210 | `DX03` | `done` | S | K01 | Rename `arkRun.compositionRoots` to `arkRun.kernelRoots` (or `kernelFactories`) and/or relax `ARKRUN_MISSING_ROOT` to only require at least one kernel instantiation per glob, avoiding false positives on layer-wide globs. |

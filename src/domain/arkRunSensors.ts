@@ -199,7 +199,7 @@ function evaluateMissingRoot(
   teethAllowed: boolean
 ): ArkRunSensorFinding[] {
   const out: ArkRunSensorFinding[] = [];
-  const roots = extra.compositionRoots;
+  const roots = extra.kernelRoots ?? extra.compositionRoots;
   if (roots.length === 0) {
     out.push(
       finding(
@@ -207,7 +207,7 @@ function evaluateMissingRoot(
         'arkrun-missing-root',
         'ark.config.json',
         1,
-        'ArkRun compositionRoots is empty; no createArkKernel factory site is declared.',
+        'ArkRun kernelRoots is empty; no createArkKernel factory site is declared.',
         undefined,
         teethAllowed
       )
@@ -231,7 +231,7 @@ function evaluateMissingRoot(
           'arkrun-missing-root',
           'ark.config.json',
           1,
-          `ArkRun composition root ${JSON.stringify(pattern)} matched no governed files and has no createArkKernel factory.`,
+          `ArkRun kernel root ${JSON.stringify(pattern)} matched no governed files and has no createArkKernel factory.`,
           { target: pattern },
           teethAllowed
         )
@@ -247,7 +247,7 @@ function evaluateMissingRoot(
         'arkrun-missing-root',
         first.file,
         1,
-        `ArkRun composition root ${JSON.stringify(pattern)} has no createArkKernel / createStrictArkKernel factory.`,
+        `ArkRun kernel root ${JSON.stringify(pattern)} has no createArkKernel / createStrictArkKernel factory.`,
         { target: pattern },
         teethAllowed
       )
@@ -307,6 +307,15 @@ function evaluateDirectNew(
   const out: ArkRunSensorFinding[] = [];
   for (const constructed of managedNews) {
     if (admittedFactories.has(constructed.file)) continue;
+
+    const name = constructed.typeName;
+    if (extra.ignoreDirectNewForErrors !== false && (name.endsWith('Error') || name === 'Error')) {
+      continue;
+    }
+    if (name.endsWith('DTO') || name.endsWith('VO')) {
+      continue;
+    }
+
     const fromLayer = layerForFile(constructed.file);
     if (!fromLayer || !managed.has(fromLayer)) continue;
     if (isDomainRoleLayer(fromLayer, prefixes.get(fromLayer) ?? [])) continue;
@@ -509,7 +518,8 @@ function compositionRootHitsForSource(
     (call) => call.kind === 'factory'
   );
   const hits: ResolvedArkRunCompositionRootHitFact[] = [];
-  for (const pattern of extra.compositionRoots) {
+  const roots = extra.kernelRoots ?? extra.compositionRoots;
+  for (const pattern of roots) {
     if (!fileMatchesCompositionRoot(pattern, file)) continue;
     hits.push({ file, matchedRoot: pattern, hasKernelFactory: hasFactory });
   }

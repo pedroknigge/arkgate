@@ -818,6 +818,14 @@
           "uniqueItems": true,
           "default": []
         },
+        "kernelRoots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
         "managedLayers": {
           "type": "array",
           "items": {
@@ -828,6 +836,10 @@
           "default": []
         },
         "requireDeclarations": {
+          "type": "boolean",
+          "default": true
+        },
+        "ignoreDirectNewForErrors": {
           "type": "boolean",
           "default": true
         }
