@@ -232,8 +232,14 @@ for decoupling.
 lives in memory and **dies on restart**. Fine for local. Not Postgres, not an
 outbox, not Temporal.
 
-The `arkgate` tarball does not bundle it. Details for people wiring stores
-anyway: [production-hardening](docs/production-hardening.md).
+The `arkgate` tarball does not bundle it.
+
+### Durability stance
+
+Default stores (`InMemoryEventBuffer`, `InMemoryAuditStore`, `InMemoryReadModelStore`,
+`InMemoryWorkflowStore`) are **reference in-memory only**. Fine for tests. They
+**do not** survive restarts and are **not** production durability. Wire real store
+interfaces for production. Details: [docs/production-hardening.md](docs/production-hardening.md).
 
 ---
 
