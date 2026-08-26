@@ -17,10 +17,12 @@ close Z09 / K01.
 
 ### Added
 
-- **`@arkgate/runtime` on npm `experimental` (RN17):** root `publish-npm.yml` publishes
-  the companion when that version is unpublished. Companion-only: `publish-runtime.yml`.
-  Install `@arkgate/runtime@experimental`. In-memory stores are still not production
-  durability.
+- **`@arkgate/runtime` publish path (RN17):** root `publish-npm.yml` publishes the
+  companion under `experimental` (never `latest`) when that version is unpublished.
+  Companion-only: `publish-runtime.yml`. First registry copy still needs the npm org
+  `@arkgate` plus GitHub `NPM_TOKEN` (OIDC is registered only for unscoped `arkgate`).
+  Verify with `npm view @arkgate/runtime dist-tags --json`. In-memory stores are still
+  not production durability.
 
 ## 4.7.3 — 2026-08-25
 
