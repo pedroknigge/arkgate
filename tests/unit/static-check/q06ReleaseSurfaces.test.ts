@@ -12,7 +12,7 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.
 /** Tree package identity. */
 const CURRENT = '4.7.5';
 /** Version confirmed on npm `latest`. */
-const PUBLISHED_LATEST = '4.7.4';
+const PUBLISHED_LATEST = '4.7.5';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -106,8 +106,8 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('keeps 4.7.5 tree identity while npm latest remains 4.7.4', () => {
-    expect(PUBLISHED_LATEST).toBe('4.7.4');
+  it('keeps 4.7.5 published on npm latest', () => {
+    expect(PUBLISHED_LATEST).toBe('4.7.5');
     expect(CURRENT).toBe('4.7.5');
     expect(read('README.md')).toMatch(/4\.7\.5/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.7\.5\.md/);
@@ -126,15 +126,13 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('README.md')).toMatch(/4\.6\.6/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.6\.md/);
     expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.7\.5/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.7\.4/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Prior published:.*4\.7\.3/s);
-    expect(read('docs/README.md')).toMatch(/Current tree:.*4\.7\.5/s);
-    expect(read('docs/README.md')).toMatch(/Current published:.*4\.7\.4/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.7\.5/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Prior published:.*4\.7\.4/s);
+    expect(read('docs/README.md')).toMatch(/Current published:.*4\.7\.5/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
-    expect(read('docs/package-surface.md')).toMatch(/current tree:.*4\.7\.5/is);
-    expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.7\.4/is);
+    expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.7\.5/is);
     expect(read('docs/package-surface.md')).toMatch(/4\.6\.2\.md/);
-    expect(read('docs/releases/4.7.5.md')).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(read('docs/releases/4.7.5.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.7.4.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.7.3.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.7.2.md')).toMatch(/\*\*Status:\*\*\s*published/i);
@@ -146,7 +144,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('docs/releases/4.6.7.md')).not.toMatch(/\*\*Status:\*\*\s*current/i);
     expect(read('docs/releases/4.6.6.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.6.md')).toMatch(/6\. \[x\].*arkgate-site 4\.6\.6/s);
-    expect(read('ROADMAP.md')).toMatch(/npm `latest` is \*\*4\.7\.4\*\*/);
+    expect(read('ROADMAP.md')).toMatch(/npm `latest` is \*\*4\.7\.5\*\*/);
     expect(read('docs/releases/4.6.5.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.4.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.4.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -176,7 +174,7 @@ describe('CHANGELOG + release note cover 4.7.5 Write. Check. Ship. patch', () =>
     expect(changelog).toMatch(/Does not close Z09/);
     const section = changelog.slice(changelog.indexOf('## 4.7.5'), changelog.indexOf('## 4.7.4'));
     expect(section).toMatch(/No required config migration/i);
-    expect(section).toMatch(/Status:\s*prepared/i);
+    expect(section).toMatch(/Status:\s*published/i);
     expect(section).toMatch(/README H1/);
     expect(section).toMatch(/ASCII/);
     const notes = read('docs/releases/4.7.5.md');
@@ -185,7 +183,7 @@ describe('CHANGELOG + release note cover 4.7.5 Write. Check. Ship. patch', () =>
     expect(notes).toMatch(/No required config migration/i);
     expect(notes).toMatch(/Z09|RB-11/i);
     expect(notes).toMatch(/K01/);
-    expect(notes).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(notes).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(notes).not.toMatch(/amarilla/i);
     expect(notes).toMatch(/not republished/i);
     expect(read('README.md')).toMatch(/Write\. Check\. Ship\./);
