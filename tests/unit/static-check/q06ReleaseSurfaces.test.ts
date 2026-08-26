@@ -933,7 +933,7 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
       expect(verbsAt).toBeGreaterThan(0);
       expect(html).toMatch(/Not an API Gateway/);
       expect(html).toMatch(/just documentation/);
-      expect(html).toMatch(/4\.7\.3/);
+      expect(html).toMatch(/4\.7\.5/);
       expect(html).not.toMatch(/CONTRACT ACTIVE/);
       const livePages = [
         'index.html',
