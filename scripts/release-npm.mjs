@@ -63,13 +63,16 @@ function alreadyPublished(name, version) {
 
 function publishPackage({ label, cwd, distTag }) {
   const tagArgs = distTag ? ` --tag ${distTag}` : '';
+  // Always publish from the repo root so GitHub OIDC / `.npmrc` apply.
+  // `npm publish <folder>` from a subdirectory loses trusted-publishing auth (ENEEDAUTH).
+  const folderArg = cwd === root ? '' : `${path.relative(root, cwd)} `;
   const cmd = dry
-    ? `npm publish --dry-run --access public${tagArgs}`
+    ? `npm publish ${folderArg}--dry-run --access public${tagArgs}`
     : runningInGitHubActions
-      ? `npm publish --provenance --access public${tagArgs}`
-      : `npm publish --access public${tagArgs}`;
+      ? `npm publish ${folderArg}--provenance --access public${tagArgs}`
+      : `npm publish ${folderArg}--access public${tagArgs}`;
   console.log(`[release-npm] ${label}`);
-  run(cmd, cwd);
+  run(cmd, root);
 }
 
 if (!dry && !runningInGitHubActions) {
