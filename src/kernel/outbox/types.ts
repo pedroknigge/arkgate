@@ -19,6 +19,11 @@ export interface EventBufferRecord {
  *
  * Provides agnostic primitives (tx parameter, claim leases) to allow production implementations
  * to safely handle concurrency, atomic handoffs, and background processing.
+ *
+ * **Durability stance (R9):** ArkGate ships only a reference in-process store
+ * (`InMemoryEventBuffer`) for tests, demos, and single-process development — it does
+ * not survive process restarts and is **not production durability**. Inject your own
+ * for a transactional outbox. See `docs/production-hardening.md`.
  */
 export interface EventBufferStore {
   enqueue(event: DomainEvent, tx?: unknown): Promise<EventBufferRecord>;

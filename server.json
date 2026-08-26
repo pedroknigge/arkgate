@@ -6,12 +6,12 @@
     "url": "https://github.com/pedroknigge/arkgate",
     "source": "github"
   },
-  "version": "4.7.5",
+  "version": "4.7.6",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "arkgate",
-      "version": "4.7.5",
+      "version": "4.7.6",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"
