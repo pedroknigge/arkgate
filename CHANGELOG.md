@@ -5,6 +5,23 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+## 4.7.4 — 2026-08-26
+
+**Patch** over **4.7.3**. First experimental npm publication of `@arkgate/runtime`
+(`0.1.0-experimental.0`, dist-tag `experimental`, never `latest`). `/ark-runtime` can
+install the companion from the registry. **No required config migration.** Does not
+close Z09 / K01.
+
+**Status: published** (on npm `latest`; see `docs/releases/4.7.4.md`). Companion:
+`npm view @arkgate/runtime dist-tags --json`.
+
+### Added
+
+- **`@arkgate/runtime` on npm `experimental` (RN17):** root `publish-npm.yml` publishes
+  the companion when that version is unpublished. Companion-only: `publish-runtime.yml`.
+  Install `@arkgate/runtime@experimental`. In-memory stores are still not production
+  durability.
+
 ## 4.7.3 — 2026-08-25
 
 **Patch** over **4.7.2**. Remaining first-contact copy: README H1, below-fold headings,

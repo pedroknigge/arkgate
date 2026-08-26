@@ -145,7 +145,10 @@ gh workflow run publish-npm.yml -f tag=vX.Y.Z -f dry_run=false
 ```
 
 Normal path is GitHub Release + signed tag + provenance publish. Root workflow publishes
-**`arkgate` only** — not `@arkgate/runtime`.
+**`arkgate`** on `latest` and **`@arkgate/runtime`** on the `experimental` dist-tag when that
+companion version is not already in the registry (ADR 0004). Companion-only first publish:
+`gh workflow run publish-runtime.yml -f ref=main -f dry_run=false`. Do not claim the companion
+is on npm until `npm view @arkgate/runtime dist-tags --json` succeeds.
 
 MCP registry after npm `latest`:
 
@@ -154,8 +157,8 @@ mcp-publisher login github -token "$(gh auth token)"
 mcp-publisher validate server.json && mcp-publisher publish server.json
 ```
 
-**Current release:** [docs/releases/4.7.3.md](docs/releases/4.7.3.md) (`arkgate@4.7.3`).
-**Current published release:** [docs/releases/4.7.3.md](docs/releases/4.7.3.md) (`arkgate@4.7.3` on npm `latest`).
+**Current release:** [docs/releases/4.7.4.md](docs/releases/4.7.4.md) (`arkgate@4.7.4`).
+**Current published release:** [docs/releases/4.7.4.md](docs/releases/4.7.4.md) (`arkgate@4.7.4` on npm `latest`).
 
-**Prior published:** [docs/releases/4.7.2.md](docs/releases/4.7.2.md) (`arkgate@4.7.2`) · [docs/releases/4.7.1.md](docs/releases/4.7.1.md) (`arkgate@4.7.1`) · [docs/releases/4.7.0.md](docs/releases/4.7.0.md) (`arkgate@4.7.0`).
+**Prior published:** [docs/releases/4.7.3.md](docs/releases/4.7.3.md) (`arkgate@4.7.3`) · [docs/releases/4.7.2.md](docs/releases/4.7.2.md) (`arkgate@4.7.2`) · [docs/releases/4.7.1.md](docs/releases/4.7.1.md) (`arkgate@4.7.1`) · [docs/releases/4.7.0.md](docs/releases/4.7.0.md) (`arkgate@4.7.0`).
 **Previous:** [docs/releases/4.6.7.md](docs/releases/4.6.7.md) · [docs/releases/4.6.6.md](docs/releases/4.6.6.md) · [docs/releases/4.6.5.md](docs/releases/4.6.5.md) · [docs/releases/4.6.4.md](docs/releases/4.6.4.md) · [docs/releases/4.6.3.md](docs/releases/4.6.3.md) · [docs/releases/4.6.2.md](docs/releases/4.6.2.md) · [docs/releases/4.6.1.md](docs/releases/4.6.1.md) · [docs/releases/4.6.0.md](docs/releases/4.6.0.md) · [docs/releases/4.5.7.md](docs/releases/4.5.7.md) · [docs/releases/4.5.6.md](docs/releases/4.5.6.md) · [docs/releases/4.5.5.md](docs/releases/4.5.5.md) · [docs/releases/4.5.0.md](docs/releases/4.5.0.md) · [docs/releases/4.4.0.md](docs/releases/4.4.0.md) · [docs/releases/4.3.0.md](docs/releases/4.3.0.md).

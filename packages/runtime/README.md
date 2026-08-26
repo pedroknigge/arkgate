@@ -117,11 +117,12 @@ Never import those shims.
 
 ## Experimental — not production durability
 
-This package is configured for publication under the `experimental` npm tag, but it is not
-currently present in the npm registry. The stable root release workflow publishes `arkgate`;
-it does not publish this companion automatically. Built-in stores are **in-memory reference
-only** — they lose state on restart and are **not** production durability. `K01` (in-process
-commit gaps) stays parked.
+This package publishes under the `experimental` npm tag (never `latest`).
+Install `@arkgate/runtime@experimental`. Verify with
+`npm view @arkgate/runtime dist-tags --json`. The root release workflow publishes this
+companion when that version is unpublished; companion-only first publish is
+`publish-runtime.yml`. Built-in stores are **in-memory reference only** — they lose state
+on restart and are **not** production durability. `K01` (in-process commit gaps) stays parked.
 
 Before use, read the canonical
 [experimental surface policy](https://github.com/pedroknigge/arkgate/blob/main/docs/package-surface.md#experimental-opt-in-surfaces)

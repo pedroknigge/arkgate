@@ -165,7 +165,7 @@ product claims**. Static architecture enforcement does not depend on them.
 
 | Surface | Import path | Notes |
 |---------|-------------|--------|
-| **ArkRun kernel** | **`@arkgate/runtime`** | Public brand **ArkRun**. Separate 0.x companion; `createStrictArkKernel` is the factory (each call is an isolated instance; no process-wide `getKernel()` singleton). Not bundled in the `arkgate` tarball (ADR 0004 / 0021). Not currently in the npm registry; root `publish-npm.yml` does not publish it automatically. Event bus, intents, policies, sagas, event buffer, projections, and strict helpers. Managed components declare `uses` / `reactsTo` / `raises` / `sends` on `register()`; `getDependencyInformationPackage()` is a JSON snapshot of ids, lifetime, and declarations and never includes factories, live instances, or input DTOs (ADR 0023). `requestGraph()` slices that snapshot into **process** or **technical** graphs with optional `nodeIds`, `degreesOfSeparation`, and include/exclude query; `formatArkRunGraphMermaid()` (also `graph.mermaid`) is a helper string, never a score. `send()` is the transport port (local / localBlocking / broker); missing broker falls back to in-process local delivery, `ephemeral` defaults true, and **no cloud SDKs ship** in the package (ADR 0024). Opt-in `startInspector()` / `startArkRunInspector()` binds **`127.0.0.1` only**, refuses `NODE_ENV=production`, lazy-loads HTTP, and serves JSON snapshots, SSE, and `/graph` slices of the information package (no public / authless bind). Built-in stores are **InMemory reference only**. Branding ArkRun is not a production-durability claim. |
+| **ArkRun kernel** | **`@arkgate/runtime`** | Public brand **ArkRun**. Separate 0.x companion; `createStrictArkKernel` is the factory (each call is an isolated instance; no process-wide `getKernel()` singleton). Not bundled in the `arkgate` tarball (ADR 0004 / 0021). Published under the `experimental` dist-tag (never `latest`) as of 4.7.4. Install `@arkgate/runtime@experimental`. Verify with `npm view @arkgate/runtime dist-tags --json`. Root `publish-npm.yml` publishes it when that companion version is unpublished; companion-only: `publish-runtime.yml`. Event bus, intents, policies, sagas, event buffer, projections, and strict helpers. Managed components declare `uses` / `reactsTo` / `raises` / `sends` on `register()`; `getDependencyInformationPackage()` is a JSON snapshot of ids, lifetime, and declarations and never includes factories, live instances, or input DTOs (ADR 0023). `requestGraph()` slices that snapshot into **process** or **technical** graphs with optional `nodeIds`, `degreesOfSeparation`, and include/exclude query; `formatArkRunGraphMermaid()` (also `graph.mermaid`) is a helper string, never a score. `send()` is the transport port (local / localBlocking / broker); missing broker falls back to in-process local delivery, `ephemeral` defaults true, and **no cloud SDKs ship** in the package (ADR 0024). Opt-in `startInspector()` / `startArkRunInspector()` binds **`127.0.0.1` only**, refuses `NODE_ENV=production`, lazy-loads HTTP, and serves JSON snapshots, SSE, and `/graph` slices of the information package (no public / authless bind). Built-in stores are **InMemory reference only**. Branding ArkRun is not a production-durability claim. |
 | **NestJS adapter** | `@arkgate/runtime/nestjs` | Experimental optional peer `@nestjs/common` for the ArkRun kernel. Root `arkgate/nestjs` and `arkgate/runtime` forwarders were **removed in AR04 / ArkGate 4** — import the companion package directly. |
 
 ---
@@ -180,10 +180,10 @@ import { createStrictArkKernel, createStrictArkKernelFromConfig } from '@arkgate
 import { ArkModule, InjectArk } from '@arkgate/runtime/nestjs';
 ```
 
-These imports describe the intended package boundary. Before an npm evaluation, verify that a
-separate publication exists with `npm view @arkgate/runtime dist-tags --json`. Until it does,
-build `packages/runtime` in an ArkGate source checkout and install that local folder. Root
-`arkgate/runtime` / `arkgate/nestjs` forwarders were **removed in 4.0.0** (AR04).
+These imports describe the intended package boundary. Install with
+`npm install @arkgate/runtime@experimental` and verify
+`npm view @arkgate/runtime dist-tags --json`. Root `arkgate/runtime` / `arkgate/nestjs`
+forwarders were **removed in 4.0.0** (AR04).
 
 See [production-hardening.md](https://github.com/pedroknigge/arkgate/blob/main/docs/production-hardening.md) for requirements an eventual
 production deployment would need to satisfy; it is not a readiness certification.
@@ -214,7 +214,8 @@ production deployment would need to satisfy; it is not a readiness certification
 ## Release notes (maintainers)
 
 Ship notes for a version live under [releases/](https://github.com/pedroknigge/arkgate/tree/main/docs/releases)
-(current published: [4.7.3.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.7.3.md);
+(current published: [4.7.4.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.7.4.md);
+prior published: [4.7.3.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.7.3.md);
 prior published: [4.7.2.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.7.2.md);
 prior published: [4.7.0.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.7.0.md);
 prior published: [4.6.7.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.6.7.md);

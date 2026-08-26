@@ -55,13 +55,13 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Area | Path |
 |------|------|
 | Release notes (by version) | [releases/](releases/) · npm [CHANGELOG.md](../CHANGELOG.md) (Unreleased + 4.6.x) · [pre-4.6 archive](archive/CHANGELOG-pre-4.6.md) |
-| Epic plans | [plans/](plans/) — maintainer seeds, not required to use the package. Live: [alive-in-six-months](plans/alive-in-six-months/README.md) (`AL01`–`AL04` done; `AL05` parked). [arkrun](plans/arkrun/README.md) (Phase RN; `RN01`–`RN16` done; shipped **4.7.0**; ADRs [0020](adr/0020-arkrun-gated-extra-plane.md)–[0024](adr/0024-arkrun-transport-ports.md) accepted). [one-catalog-one-root](plans/one-catalog-one-root/README.md) (Phase HS; `HS01`–`HS05` done; shipped **4.7.1**). |
+| Epic plans | [plans/](plans/) — maintainer seeds, not required to use the package. Live: [alive-in-six-months](plans/alive-in-six-months/README.md) (`AL01`–`AL04` done; `AL05` parked). [arkrun](plans/arkrun/README.md) (Phase RN; `RN01`–`RN17` done; shipped **4.7.0** + companion **4.7.4**; ADRs [0020](adr/0020-arkrun-gated-extra-plane.md)–[0024](adr/0024-arkrun-transport-ports.md) accepted). [one-catalog-one-root](plans/one-catalog-one-root/README.md) (Phase HS; `HS01`–`HS05` done; shipped **4.7.1**). |
 | Claims audit | [audit/claims-matrix.md](audit/claims-matrix.md) |
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
-Current published: [releases/4.7.3.md](releases/4.7.3.md) (`arkgate@4.7.3` on npm `latest`).
-Prior: [releases/4.7.2.md](releases/4.7.2.md) · [4.7.1](releases/4.7.1.md) · [4.7.0](releases/4.7.0.md) · [4.6.7](releases/4.6.7.md) · [4.6.6](releases/4.6.6.md) · [4.6.5](releases/4.6.5.md) · [4.6.4](releases/4.6.4.md) · [4.6.3](releases/4.6.3.md) · [4.6.2](releases/4.6.2.md) · [4.6.1](releases/4.6.1.md) · [4.6.0](releases/4.6.0.md).
+Current published: [releases/4.7.4.md](releases/4.7.4.md) (`arkgate@4.7.4` on npm `latest`).
+Prior: [releases/4.7.3.md](releases/4.7.3.md) · [4.7.2](releases/4.7.2.md) · [4.7.1](releases/4.7.1.md) · [4.7.0](releases/4.7.0.md) · [4.6.7](releases/4.6.7.md) · [4.6.6](releases/4.6.6.md) · [4.6.5](releases/4.6.5.md) · [4.6.4](releases/4.6.4.md) · [4.6.3](releases/4.6.3.md) · [4.6.2](releases/4.6.2.md) · [4.6.1](releases/4.6.1.md) · [4.6.0](releases/4.6.0.md).
 Older notes: [releases/](releases/). Config: [configuration.md](configuration.md).
 
 ---

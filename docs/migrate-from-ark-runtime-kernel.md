@@ -158,11 +158,10 @@ instance; no process-wide singleton). Static CLI/MCP enforcement remains the sup
 + import ark from 'arkgate/eslint';
 ```
 
-The `@arkgate/runtime` lines show the intended package boundary, not a currently available npm
-install: the companion is not yet present in the registry and the root release workflow does not
-publish it. Verify with `npm view @arkgate/runtime dist-tags --json`; until a separate
-experimental publication exists, migrate runtime imports only when evaluating a built local
-`packages/runtime` source checkout. The `arkgate/eslint` migration is available now.
+The `@arkgate/runtime` lines show the intended package boundary. As of 4.7.4, install
+`@arkgate/runtime@experimental` and verify with `npm view @arkgate/runtime dist-tags --json`.
+The root release workflow publishes the companion under `experimental` (never `latest`).
+The `arkgate/eslint` migration is available now.
 
 ### ArkGate 4 / AR04 — root runtime forwarders removed
 

@@ -10,7 +10,8 @@
 
 **Status:** Shipped in **4.7.0** (Phase RN). `RN01`–`RN16` done — ADRs 0020–0024 accepted in
 [docs/adr](../../adr/README.md); public docs + version surfaces published on npm `latest`.
-Does not close `Z09` / residual `RB-11`. Does not close `K01`.<br>
+`RN17` **done** in **4.7.4** — `@arkgate/runtime` on npm `experimental`. Does not close `Z09` /
+residual `RB-11`. Does not close `K01`.<br>
 **Slug:** `arkrun`<br>
 **Kind:** epic / gated extra plane + companion kernel<br>
 **Owners:** product (Pedro) + library maintainers<br>
@@ -208,6 +209,7 @@ and docs. One `doing` at a time.
 | `RN14` | L | RN07 | **done** — Skip corpus at `tests/fixtures/arkrun-skip-corpus/`: missing extra = green; enforced extra = fail on `new` / peer import / homemade bus |
 | `RN15` | M | RN08, freeze end | **done** — Deepen `/ark-runtime` / `/ark-place` / `/ark-adopt`; no new skill names |
 | `RN16` | M | RN08 + RN14 | **done** — Docs: complement extra, durable-stores honesty unchanged; **4.7.0** published |
+| `RN17` | M | RN16 | **done** — First experimental npm publish of `@arkgate/runtime` (`experimental` dist-tag, never `latest`); `/ark-runtime` can install from the registry |
 
 `K01` (in-process commit gaps) stays **parked**. This train does not authorize production
 durability claims.

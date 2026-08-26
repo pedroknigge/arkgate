@@ -1,0 +1,55 @@
+name: Publish @arkgate/runtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to publish the ArkRun companion from (branch, tag, or SHA).
+        required: true
+        default: main
+        type: string
+      dry_run:
+        description: Verify and pack without publishing to npm.
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish-runtime:
+    name: Publish @arkgate/runtime (experimental)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - run: npm ci
+
+      - name: Publish companion
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "Publishing with NPM_TOKEN (Automation token)…"
+            echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> "$GITHUB_WORKSPACE/.npmrc"
+          else
+            echo "No NPM_TOKEN secret — publishing with OIDC trusted publishing…"
+          fi
+          if [ "${DRY_RUN}" = "true" ]; then
+            npm run release:npm -- --runtime-only --dry
+          else
+            npm run release:npm -- --runtime-only
+          fi
