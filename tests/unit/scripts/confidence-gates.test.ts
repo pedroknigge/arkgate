@@ -82,11 +82,13 @@ describe('confidence gate wiring', () => {
     expect(ci).toContain("'npm run test:coverage') npm run test:coverage");
     expect(ci).toContain('unexpected confidence_cmd from ci-profile');
 
-    const localConfidence = releaseScript.indexOf("run('npm run test:confidence')");
+    const localConfidence = releaseScript.indexOf("run('npm', ['run', 'test:confidence']");
     const localPublish = releaseScript.indexOf('publishPackage({ label:');
     expect(localConfidence).toBeGreaterThanOrEqual(0);
     expect(localPublish).toBeGreaterThan(localConfidence);
-    expect(releaseScript.indexOf("run('npm run build:runtime')")).toBeGreaterThan(localConfidence);
+    expect(releaseScript.indexOf("run('npm', ['run', 'build:runtime']")).toBeGreaterThan(
+      localConfidence
+    );
 
     expect(publishWorkflow).toContain('npm run release:npm');
     expect(publishWorkflow).not.toMatch(/npm publish --access public --provenance/);
