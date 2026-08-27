@@ -19,7 +19,7 @@
  *   npm run release:npm -- --runtime-only    # companion only (skip gate tarball)
  *   npm run release:npm -- --allow-local     # emergency local publish, no provenance
  */
-import { execFileSync, execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -40,10 +40,10 @@ if (!dry && !runningInGitHubActions && !allowLocalPublish) {
   process.exit(1);
 }
 
-function run(cmd, cwd = root) {
+function run(file, args, cwd = root) {
   const where = cwd === root ? '' : `(${path.relative(root, cwd)}) `;
-  console.log(`[release-npm] ${where}${cmd}`);
-  execSync(cmd, { cwd, stdio: 'inherit' });
+  console.log(`[release-npm] ${where}${[file, ...args].join(' ')}`);
+  execFileSync(file, args, { cwd, stdio: 'inherit' });
 }
 
 function alreadyPublished(name, version) {
@@ -62,23 +62,22 @@ function alreadyPublished(name, version) {
 }
 
 function publishPackage({ label, cwd, distTag }) {
-  const tagArgs = distTag ? ` --tag ${distTag}` : '';
   // Always publish from the repo root so GitHub OIDC / `.npmrc` apply.
   // `npm publish <folder>` from a subdirectory loses trusted-publishing auth (ENEEDAUTH).
   // `./` is required: `npm publish packages/runtime` is parsed as a git spec.
-  const folderArg = cwd === root ? '' : `./${path.relative(root, cwd)} `;
-  const cmd = dry
-    ? `npm publish ${folderArg}--dry-run --access public${tagArgs}`
-    : runningInGitHubActions
-      ? `npm publish ${folderArg}--provenance --access public${tagArgs}`
-      : `npm publish ${folderArg}--access public${tagArgs}`;
+  const args = ['publish'];
+  if (cwd !== root) args.push(`./${path.relative(root, cwd)}`);
+  if (dry) args.push('--dry-run');
+  else if (runningInGitHubActions) args.push('--provenance');
+  args.push('--access', 'public');
+  if (distTag) args.push('--tag', distTag);
   console.log(`[release-npm] ${label}`);
-  run(cmd, root);
+  run('npm', args, root);
 }
 
 if (!dry && !runningInGitHubActions) {
   try {
-    execSync('npm whoami', { cwd: root, stdio: 'pipe' });
+    execFileSync('npm', ['whoami'], { cwd: root, stdio: 'pipe' });
   } catch {
     console.error('[release-npm] not logged in to npm. Run "npm login" first.');
     process.exit(1);
@@ -117,13 +116,13 @@ if (!dry && runtimeOnly && runtimePublished) {
 }
 
 if (runtimeOnly) {
-  run('npm run typecheck');
-  run('npm run check:architecture');
+  run('npm', ['run', 'typecheck']);
+  run('npm', ['run', 'check:architecture']);
 } else {
-  run('npm run typecheck');
-  run('npm run test:confidence');
-  run('npm run security:audit');
-  run('npm run check:architecture');
+  run('npm', ['run', 'typecheck']);
+  run('npm', ['run', 'test:confidence']);
+  run('npm', ['run', 'security:audit']);
+  run('npm', ['run', 'check:architecture']);
   const releaseArtifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'arkgate-release-'));
   try {
     console.log('[release-npm] npm run check:release-artifacts');
@@ -137,7 +136,7 @@ if (runtimeOnly) {
   }
 }
 
-run('npm run build:runtime');
+run('npm', ['run', 'build:runtime']);
 
 if (!dry && allowLocalPublish) {
   console.warn('[release-npm] local publish is not provenance-backed.');

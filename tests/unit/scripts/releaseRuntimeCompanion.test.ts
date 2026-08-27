@@ -29,14 +29,15 @@ describe('RN17 companion experimental publish', () => {
     expect(script).toContain('build:runtime');
     expect(script).toContain('./${path.relative(root, cwd)}');
     expect(script).toContain('packages/runtime');
-    expect(script).toContain(' --tag ${distTag}');
+    expect(script).toContain("args.push('--tag', distTag)");
     expect(script).toContain('distTag: RUNTIME_DIST_TAG');
-    expect(script).toContain('npm publish ${folderArg}');
-    expect(script).toMatch(/run\(cmd, root\)/);
+    expect(script).toMatch(/run\('npm', args, root\)/);
     expect(script).toMatch(/publishConfig\?\.tag !== RUNTIME_DIST_TAG/);
     expect(script).toContain('@arkgate/runtime');
     expect(script).not.toMatch(/RUNTIME_DIST_TAG = 'latest'/);
     expect(script).not.toMatch(/--tag latest/);
+    expect(script).toContain('execFileSync');
+    expect(script).not.toMatch(/\bexecSync\b/);
   });
 
   it('publish-npm.yml still publishes the companion when arkgate is already on npm', () => {
