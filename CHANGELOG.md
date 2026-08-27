@@ -10,6 +10,7 @@ in the immutable pre-2.0 archive linked below.
 
 ### Fixed
 - **`K01` honesty:** 4.7.6 shipped workflow OCC / lease / `tx` / `resume` primitives. It does not close in-process bus commit gaps or durable outbox. `K01` stays parked.
+- **Release-surface pin:** ROADMAP / CONTRIBUTING / `q06ReleaseSurfaces` name npm `latest` as **4.7.6** (the #173 merge left the 4.7.5 pin).
 
 ## 4.7.6 — 2026-08-26
 
