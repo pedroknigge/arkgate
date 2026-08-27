@@ -5,6 +5,12 @@
 That is the product wedge (host hook + required CI). Skills name the next step after that.
 **Not the wedge:** the optional in-process **ArkRun** runtime (`@arkgate/runtime`).
 
+The check that must agree everywhere is small ([ADR 0026](adr/0026-gate-waist-facts-in-verdict-out.md)):
+`ark.config.json` + resolved-candidate-facts → one analysis-result (`valid`).
+CLI, MCP, hook, ESLint, and CI are adapters around that waist. Doctor advisory
+sections project those facts; they are not a second check and never flip `valid`.
+Skills name the next step after the check.
+
 **Public product site:** [arkgate.online](https://www.arkgate.online/) (promise + only flow).
 In-repo `docs/` remains the package/agent reference. Source: GitHub; distribution: npm.
 
