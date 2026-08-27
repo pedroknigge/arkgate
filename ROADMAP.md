@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-26 (Engineering doing: none; Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Phase HS shipped **4.7.1**; wording patch **4.7.2** published; remaining first-contact copy **4.7.3** published; companion `@arkgate/runtime@0.1.0-experimental.0` on npm `experimental`; Write. Check. Ship. patch **4.7.5** published; `AL05` parked; Z09 still parked; npm `latest` is **4.7.5**)
+- **Status date:** 2026-08-27 (Engineering doing: none; `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** on `main` (not in published `arkgate@4.7.6`); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; companion `@arkgate/runtime` on npm `experimental`; Write. Check. Ship. patch **4.7.5** published; **4.7.6** on npm `latest`; `AL05` parked; Z09 still parked)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -78,6 +78,9 @@ lift DF freezes on scores, new skill names, sensors, or LLM verdicts.
 - Raising pure-domain LOC budgets **without** a behavior-preserving split when already over
   ceiling (disguised maintenance debt; DF03 forbids as sole fix).
 - Z09 retained-adoption / independent-close as DF scope (parked residual `RB-11`).
+- New doctor/advisory planes that invent residual or a second verdict. Advisory must
+  project existing facts ([ADR 0026](docs/adr/0026-gate-waist-facts-in-verdict-out.md)).
+  Skills/doors stay the intelligent edge. Do not add a second analysis engine.
 
 ### Hard lines
 
@@ -255,7 +258,9 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: none. Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published on npm `latest`.
+Engineering doing: none. `WH01` **done** (ADR 0026). `K01` **parked** (4.7.6 primitives only).
+Phase DX (`DX01`–`DX03`) **done** on `main`, not in published `arkgate@4.7.6`.
+Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.7.6** is on npm `latest`.
 `RN16` **done** (public docs + 4.7.0 published). `RN17` **done** (`@arkgate/runtime@0.1.0-experimental.0` on npm `experimental`).
 `RN15` **done** (deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names).
 `RN14` **done** (skip corpus: extra absent = green; enforced = fail `new` / peer import / homemade bus).
@@ -328,7 +333,7 @@ Does not ship cloud adapters or a process singleton. Companion kernel stays
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 207 | `K01` | `doing` | L | RN17 | In-process commit gaps, atomic handoff, outbox durability, and OCC leases. |
+| 207 | `K01` | `parked` | L | RN17 | Residual: in-process bus commit gaps, atomic outbox handoff, durable stores. 4.7.6 shipped workflow OCC / lease / `tx` / `resume` primitives only. Not an engineering `doing` slot. |
 
 ### Phase DX — ArkRun DX Relaxations
 
@@ -339,3 +344,11 @@ Targeting next `arkgate` release to reduce `ARKRUN_DIRECT_NEW` friction for tran
 | 208 | `DX01` | `done` | S | K01 | Auto-exempt `Error` subclasses (or classes ending in `Error`) from `ARKRUN_DIRECT_NEW` sensor, or add `ignoreDirectNewForErrors` config. |
 | 209 | `DX02` | `done` | M | K01 | Establish naming convention (`*DTO`, `*VO`) or config pattern to exempt pure Value Objects / DTOs from strict instantiation rules. |
 | 210 | `DX03` | `done` | S | K01 | Rename `arkRun.compositionRoots` to `arkRun.kernelRoots` (or `kernelFactories`) and/or relax `ARKRUN_MISSING_ROOT` to only require at least one kernel instantiation per glob, avoiding false positives on layer-wide globs. |
+
+### Phase WH — Gate waist lock
+
+Decision only. Does **not** close `Z09` / `K01`. No new skill names, sensors, or doctor planes.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 211 | `WH01` | `done` | S | — | [ADR 0026](docs/adr/0026-gate-waist-facts-in-verdict-out.md) accepted: waist is config + resolved facts → one analysis-result; new advisory must project existing facts; intelligence stays in skills/doors |

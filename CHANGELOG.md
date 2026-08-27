@@ -5,11 +5,18 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+### Changed
+- **Gate waist (WH01 / ADR 0026):** the parity-capable check is config + resolved-candidate-facts → one analysis-result. New doctor advisory surfaces must project existing facts and must not become a second verdict. Does not move shipped compass/coach. Does not close `K01` / `Z09`.
+
+### Fixed
+- **`K01` honesty:** 4.7.6 shipped workflow OCC / lease / `tx` / `resume` primitives. It does not close in-process bus commit gaps or durable outbox. `K01` stays parked.
+
 ## 4.7.6 — 2026-08-26
 
-**Patch** over **4.7.5**. Production durability primitives for ArkRun (K01). Adds OCC, leases, DB tx handoff, and resume capabilities to the workflow engine. **No required config migration.** Companion `@arkgate/runtime` is republished as `0.1.0-experimental.1`.
+**Patch** over **4.7.5**. Production durability *primitives* for ArkRun (`tx`, OCC, leases, `resume`). Adds those hooks to the workflow engine. **No required config migration.** Companion `@arkgate/runtime` is republished as `0.1.0-experimental.1`.
+Does **not** close `K01` (in-process bus commit gaps and durable outbox remain).
 
-**Status: prepared** (see `docs/releases/4.7.6.md`).
+**Status: published** (on npm `latest`; see `docs/releases/4.7.6.md`).
 
 ### Changed
 - **ArkRun (Workflow Engine):** added `tx` argument to `EventBus` and Sagas for database transactions.

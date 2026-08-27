@@ -67,6 +67,10 @@ operational dependencies rather than best-effort telemetry.
 
 ### Known intra-process commit gaps (`K01`, parked)
 
+4.7.6 added workflow `tx` / OCC `version` / `claim()` leases / `resume()` primitives.
+Those do **not** close the three bus gaps below or turn InMemory stores into a durable
+outbox. `K01` remains parked.
+
 The experimental event bus does not yet define one atomic commit boundary for every in-process
 mutation and callback. A first-principles audit confirmed three gaps:
 

@@ -96,6 +96,7 @@ These are product law, not vibe:
 
 - **Write. Check. Ship.** ArkGate is the wedge. ArkRules and ArkRun never determine the `arkgate` package shape.
 - The check is deterministic. No LLM pass/fail. Skills and `AGENTS.md` never replace the check.
+- Doctor and status advisory surfaces project existing facts. They are not a second check and never flip the deny.
 - No numeric architecture / trust / depth score. Lights and counts, never Excellent/Good.
 - Green imports ≠ elegant design. Leftover design work is **needs a refactor**, not “done”.
 - No silent auto-reshape. Invoke of a command is the approval.
