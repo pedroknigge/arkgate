@@ -464,8 +464,8 @@ export function detectWritePathInventory(root) {
     ),
     antigravity: hostRecord(
       antigravityHook.hard,
-      // Shared project MCP (.mcp.json) is the common advisory surface; hooks own hard write.
-      mcpEvidence(root, '.mcp.json'),
+      // Official workspace MCP. Shared `.mcp.json` is not loaded by Antigravity.
+      mcpEvidence(root, '.agents/mcp_config.json'),
       antigravityHook.repair,
       merge
     ),

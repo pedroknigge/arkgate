@@ -216,6 +216,8 @@ export function buildManagedAssetCatalog({ root, tools, compact = false, skillsO
     }
     if (selectedTools.has('antigravity')) {
       add('.agents/hooks.json', antigravityHooks(root));
+      // Official workspace MCP. Antigravity does not load repo-root `.mcp.json`.
+      add('.agents/mcp_config.json', mcpJson(root));
       // Still useful for Gemini CLI / legacy Gemini consumers sharing the tree.
       add('GEMINI.md', instructionRule(root));
     }
@@ -747,8 +749,8 @@ export function runInstallAgentGates(args) {
   if (tools.has('antigravity') && !args.compact) {
     console.log('');
     console.log('  Antigravity: PreToolUse deny is hard for listed write tools when hooks are trusted.');
-    console.log('    - Install path: `.agents/hooks.json` (+ GEMINI.md for legacy Gemini consumers).');
-    console.log('    - Trust project hooks in the host; pair with required CI --strict-merge.');
+    console.log('    - Install path: `.agents/hooks.json` + `.agents/mcp_config.json` (+ GEMINI.md for legacy Gemini consumers).');
+    console.log('    - Trust project hooks; refresh MCP (`/mcp` or restart); pair with required CI --strict-merge.');
   }
   if (tools.has('opencode') && !args.compact) {
     console.log('');

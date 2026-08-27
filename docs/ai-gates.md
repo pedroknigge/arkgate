@@ -63,7 +63,8 @@ npx arkgate-check --install-agent-gates
 
 The command writes templates for `.mcp.json`, Claude hooks, Cursor MCP/rules,
 GitHub Actions, `AGENTS.md`, Codex `.codex/hooks.json` plus a TOML snippet under `docs/`, and (when
-selected) Grok Build project files under `.grok/`, Antigravity `.agents/hooks.json`, and OpenCode
+selected) Grok Build project files under `.grok/`, Antigravity `.agents/hooks.json` plus
+`.agents/mcp_config.json`, and OpenCode
 `opencode.json` MCP registration. It skips existing files unless
 you pass `--force`, so review and commit only the templates that match your project.
 
@@ -577,6 +578,11 @@ Antigravity loads project hooks from **`.agents/hooks.json`** (also
 `~/.gemini/config/hooks.json` for user-global). Official PreToolUse **`decision: "deny"`** is a
 hard block for matched tools.
 
+Workspace MCP is **`.agents/mcp_config.json`** (also `~/.gemini/config/mcp_config.json` /
+`~/.gemini/antigravity/mcp_config.json` for user-global). Antigravity does **not** load
+repo-root `.mcp.json`. Opening a repo does not write these files — run the installer, trust
+project hooks, then refresh MCP (`/mcp`) or restart.
+
 Install:
 
 ```bash
@@ -588,9 +594,10 @@ npx ark-check --install-agent-gates --tools agy
 | File | Role |
 |------|------|
 | `.agents/hooks.json` | Named hook `ark-write-gate` with PreToolUse on write tools |
+| `.agents/mcp_config.json` | Official workspace MCP (`mcpServers.ark` stdio) |
 | `GEMINI.md` | Instruction rule for Gemini CLI / legacy consumers sharing the tree |
 | `.agents/skills/*/SKILL.md` | Agent Skills catalog (shared path with Codex) |
-| `AGENTS.md` + `.mcp.json` + CI | Shared with other hosts |
+| `AGENTS.md` + `.mcp.json` + CI | Shared with other hosts (`.mcp.json` is not the Antigravity MCP path) |
 
 **Write tools covered:** `write_to_file`, `replace_file_content`, `multi_replace_file_content`.
 `ark-mcp --hook` accepts the Antigravity stdin shape (`toolCall.name` / `toolCall.args` with

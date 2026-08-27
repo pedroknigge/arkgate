@@ -136,8 +136,13 @@ export function resolveTools(args) {
   if (fs.existsSync(path.join(root, '.cursor'))) detected.add('cursor');
   if (fs.existsSync(path.join(root, '.codex'))) detected.add('codex');
   if (fs.existsSync(path.join(root, '.grok'))) detected.add('grok');
-  // Antigravity project hooks (distinct from Codex-only `.agents/skills`).
-  if (fs.existsSync(path.join(root, '.agents', 'hooks.json'))) detected.add('antigravity');
+  // Antigravity project hooks or official workspace MCP (distinct from Codex-only `.agents/skills`).
+  if (
+    fs.existsSync(path.join(root, '.agents', 'hooks.json')) ||
+    fs.existsSync(path.join(root, '.agents', 'mcp_config.json'))
+  ) {
+    detected.add('antigravity');
+  }
   if (
     fs.existsSync(path.join(root, 'opencode.json')) ||
     fs.existsSync(path.join(root, 'opencode.jsonc')) ||
@@ -166,6 +171,16 @@ export function resolveTools(args) {
     process.env.XAI_GROK === 'true'
   ) {
     detected.add('grok');
+  }
+  // Same idea as Grok env markers: opening Antigravity has no `.agents/hooks.json` yet.
+  if (
+    envTruthy(process.env.ANTIGRAVITY) ||
+    envTruthy(process.env.AGY) ||
+    process.env.ANTIGRAVITY_WORKSPACE ||
+    process.env.AGY_WORKSPACE ||
+    /antigravity/i.test(String(process.env.TERM_PROGRAM ?? ''))
+  ) {
+    detected.add('antigravity');
   }
   // No signal at all: fall back to a complete starter set including Grok (field
   // log: default claude+cursor+codex silently omitted Grok skills for Grok hosts).

@@ -631,7 +631,7 @@ npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok,antigra
 | Cursor | `.cursor/mcp.json` + `.cursor/rules/ark.mdc` | **Repo:** `.agents/skills/<name>/SKILL.md` (same catalog as Codex). Do not also copy into `.cursor/commands/` or `$CODEX_HOME/skills` — Cursor lists every path it scans. |
 | OpenAI Codex | `.codex/config.toml` (project primary, relative `--root .`; configured on disk is not runtime-active until restart + `ark_identity` match); optional legacy `$CODEX_HOME/config.toml` fallback uses absolute roots and scoped secondaries — see [ai-gates.md](ai-gates.md) | **Repo:** `.agents/skills/<name>/SKILL.md`; **home:** `$CODEX_HOME/skills/<name>/SKILL.md` (`--codex-home`) |
 | **Grok Build** | `.grok/hooks/ark-write-gate.json` + `.grok/config.toml` / `.mcp.json` | **Repo:** `.grok/skills/<name>/SKILL.md`; **home:** `$GROK_HOME/skills` (default `~/.grok/skills`, `--grok-home`) |
-| Google Antigravity | `.agents/hooks.json` (+ `GEMINI.md` for shared Gemini consumers) | `.agents/skills/<name>/SKILL.md` |
+| Google Antigravity | `.agents/hooks.json` + `.agents/mcp_config.json` (+ `GEMINI.md` for shared Gemini consumers) | `.agents/skills/<name>/SKILL.md` |
 | OpenCode | `opencode.json` MCP (`type: local`; advisory) | `.opencode/skills/<name>/SKILL.md` |
 
 This is a path reference, not a guarantee table. Full copy-paste setups:

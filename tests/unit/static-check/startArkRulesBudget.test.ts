@@ -161,4 +161,25 @@ describe('ark start ArkRules budget (AR08 / field P0-1)', () => {
       expect(body.layer).toBe(expectedLayer);
     }
   });
+
+  it('compact start for antigravity writes official workspace MCP within the gate budget', () => {
+    const root = createFixture();
+    const stdout = execFileSync(
+      process.execPath,
+      [ARK, 'start', '--root', root, '--no-strict', '--no-install', '--json'],
+      {
+        encoding: 'utf8',
+        env: { ...process.env, ARK_ACTIVE_HOST: 'antigravity', CODEX_HOME: path.join(root, '.codex-home') },
+      }
+    );
+    const preview = JSON.parse(stdout) as {
+      changes: Array<{ path: string }>;
+      setupBudget: { ok: boolean; gateFiles: number; maxFiles: number };
+    };
+    const paths = preview.changes.map((change) => change.path);
+    expect(paths).toContain('.agents/hooks.json');
+    expect(paths).toContain('.agents/mcp_config.json');
+    expect(preview.setupBudget.ok).toBe(true);
+    expect(preview.setupBudget.gateFiles).toBeLessThanOrEqual(preview.setupBudget.maxFiles);
+  });
 });

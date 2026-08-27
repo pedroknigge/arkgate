@@ -280,6 +280,24 @@ describe('ark-check --install-agent-gates', () => {
     expect(workflow).toContain('${{ github.event.pull_request.base.sha || github.event.before }}');
   });
 
+  it('writes official Antigravity workspace MCP at .agents/mcp_config.json', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-agy-'));
+    fs.writeFileSync(path.join(root, 'package-lock.json'), '{}\n');
+
+    const result = runInstallAgentGates(root, ['--tools', 'antigravity']);
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+    expect(fs.existsSync(path.join(root, '.agents/hooks.json'))).toBe(true);
+    const mcpPath = path.join(root, '.agents/mcp_config.json');
+    expect(fs.existsSync(mcpPath)).toBe(true);
+    const mcp = JSON.parse(fs.readFileSync(mcpPath, 'utf8')) as {
+      mcpServers?: { ark?: { command?: string; args?: string[] } };
+    };
+    expect(mcp.mcpServers?.ark?.command).toBeTruthy();
+    expect(mcp.mcpServers?.ark?.args).toEqual(expect.arrayContaining(['--root', '.']));
+    expect(fs.existsSync(path.join(root, '.mcp.json'))).toBe(true);
+    expect(result.stdout).toMatch(/\.agents\/mcp_config\.json/);
+  });
+
   it('skips existing files unless --force is passed', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-agent-gates-force-'));
     fs.writeFileSync(path.join(root, 'AGENTS.md'), 'custom instructions\n');

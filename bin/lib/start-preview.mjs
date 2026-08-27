@@ -29,6 +29,7 @@ const COMPACT_HOST_TEMPLATES = {
   ],
   antigravity: (root) => [
     ['.agents/hooks.json', antigravityHooks(root)],
+    ['.agents/mcp_config.json', mcpJson(root)],
     ['.mcp.json', mcpJson(root)],
   ],
   cursor: (root) => [

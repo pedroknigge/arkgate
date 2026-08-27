@@ -119,6 +119,27 @@ describe('skill-install direct module contract', () => {
     expect(explicit.source).toBe('explicit');
     expect([...explicit.tools]).toEqual(['antigravity', 'codex']);
 
+    const previousAntigravity = process.env.ANTIGRAVITY;
+    process.env.ANTIGRAVITY = 'true';
+    try {
+      const fromEnv = resolveTools({ root: temporaryRoot() });
+      expect(fromEnv.source).toBe('detected');
+      expect([...fromEnv.tools]).toContain('antigravity');
+    } finally {
+      if (previousAntigravity === undefined) delete process.env.ANTIGRAVITY;
+      else process.env.ANTIGRAVITY = previousAntigravity;
+    }
+
+    const mcpRoot = temporaryRoot();
+    write(
+      mcpRoot,
+      path.join('.agents', 'mcp_config.json'),
+      '{"mcpServers":{"ark":{"command":"npx","args":["arkgate-mcp"]}}}'
+    );
+    const fromDisk = resolveTools({ root: mcpRoot });
+    expect(fromDisk.source).toBe('detected');
+    expect([...fromDisk.tools]).toContain('antigravity');
+
     const detectedRoot = temporaryRoot();
     for (const directory of [
       '.claude',
