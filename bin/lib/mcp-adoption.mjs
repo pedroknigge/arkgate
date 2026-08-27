@@ -36,6 +36,7 @@ export const COMMAND_GATE_JSON_FILES = [
   '.mcp.json',
   '.cursor/mcp.json',
   '.cursor/hooks.json',
+  '.agents/mcp_config.json',
   'opencode.json',
 ];
 // Primary CLI names (product) + one-major aliases. migrate-commands must strip ALL of these
@@ -208,10 +209,15 @@ export function collectAdoptionGaps(root, config, coverage) {
         host: 'antigravity',
         dir: '.agents',
         skill: (n) => path.join(root, '.agents', 'skills', n, 'SKILL.md'),
-        extras: [['.agents/hooks.json', 'write-gate hook']],
+        extras: [
+          ['.agents/hooks.json', 'write-gate hook'],
+          ['.agents/mcp_config.json', 'workspace MCP'],
+        ],
         toolsFlag: 'antigravity',
-        // Only when hooks.json is present — `.agents/skills` alone is Codex scope.
-        presentIf: () => fs.existsSync(path.join(root, '.agents', 'hooks.json')),
+        // Hooks or official workspace MCP — `.agents/skills` alone is Codex scope.
+        presentIf: () =>
+          fs.existsSync(path.join(root, '.agents', 'hooks.json')) ||
+          fs.existsSync(path.join(root, '.agents', 'mcp_config.json')),
       },
       {
         host: 'opencode',

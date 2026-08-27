@@ -109,8 +109,16 @@ function writeMcp(
   root: string,
   host: 'claude' | 'grok' | 'cursor' | 'codex' | 'antigravity' | 'opencode'
 ): void {
-  if (host === 'claude' || host === 'antigravity') {
+  if (host === 'claude') {
     write(root, '.mcp.json', '{"mcpServers":{"ark":{"command":"npx","args":["arkgate-mcp"]}}}');
+    return;
+  }
+  if (host === 'antigravity') {
+    write(
+      root,
+      '.agents/mcp_config.json',
+      '{"mcpServers":{"ark":{"command":"npx","args":["arkgate-mcp"]}}}'
+    );
     return;
   }
   if (host === 'grok') {
@@ -830,10 +838,28 @@ describe('active-host write capability model', () => {
         },
         capabilityEvidence: {
           'hard-write': ['.agents/hooks.json'],
-          'advisory-write': ['.mcp.json'],
+          'advisory-write': ['.agents/mcp_config.json'],
           'repair-payload': ['.agents/hooks.json'],
         },
       });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not treat shared .mcp.json as Antigravity MCP evidence', () => {
+    const root = mk();
+    try {
+      writeMergeGate(root);
+      writeHook(root, 'antigravity', true);
+      write(
+        root,
+        '.mcp.json',
+        '{"mcpServers":{"ark":{"command":"npx","args":["arkgate-mcp"]}}}'
+      );
+      const result = project(detectWritePathCapabilities(root, 'antigravity'));
+      expect(result.capabilities['advisory-write']).toBe(false);
+      expect(result.capabilityEvidence['advisory-write']).toEqual([]);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
