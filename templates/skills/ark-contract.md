@@ -19,7 +19,7 @@ preview-only. Never weaken the architecture config.
 |------------------------------|----------------|
 | Layers / include / ArkRules / **ArkRun extra** need an edit | **`/ark-adopt`** (path, first `arkRun`) or **`/ark-autopilot`** (tighten) |
 | False-green / concentrated edge | **`/ark-adopt`** — write the honest config |
-| Companion install / one kernel candidate | **`/ark-runtime`** — this leftover name does not wire `@arkgate/runtime` |
+| Kernel extra / one kernel candidate | **`/ark-runtime`** — leftover name; wires `arkgate/runtime`, not a second package |
 
 ## Dual engine (mandatory)
 

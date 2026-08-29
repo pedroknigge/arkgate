@@ -214,12 +214,12 @@ function arkRunNextAction(violation: ArkViolationLike): string {
   switch (violation.ruleId) {
     case 'ARKRUN_MISSING_ROOT':
       return target
-        ? `Import createStrictArkKernel from @arkgate/runtime and call it in composition root ${target} listed in arkRun.compositionRoots, then preflight again.`
-        : 'Import createStrictArkKernel from @arkgate/runtime (never a removed arkgate/runtime shim) and call it in a composition root listed in arkRun.compositionRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.';
+        ? `Import createStrictArkKernel from arkgate/runtime and call it in composition root ${target} listed in arkRun.compositionRoots, then preflight again.`
+        : 'Import createStrictArkKernel from arkgate/runtime (same npm package; @arkgate/runtime is deprecated) and call it in a composition root listed in arkRun.compositionRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.';
     case 'ARKRUN_KERNEL_IN_DOMAIN':
       return target
-        ? `Move the kernel import of ${target} out of ${fromLayer ?? 'the Domain-role layer'} into a composition root or adapter. Import from @arkgate/runtime, never a removed arkgate/runtime shim, then preflight again.`
-        : 'Move the kernel import out of the Domain-role layer into a composition root or adapter. Import from @arkgate/runtime, never a removed arkgate/runtime shim, then preflight again. Never mechanical-safe.';
+        ? `Move the kernel import of ${target} out of ${fromLayer ?? 'the Domain-role layer'} into a composition root or adapter. Import from arkgate/runtime, then preflight again.`
+        : 'Move the kernel import out of the Domain-role layer into a composition root or adapter. Import from arkgate/runtime (same npm package; @arkgate/runtime is deprecated), then preflight again. Never mechanical-safe.';
     case 'ARKRUN_DIRECT_NEW':
       return target
         ? `Resolve ${target} from the kernel instead of constructing it with new, then preflight again.`
@@ -250,12 +250,12 @@ function arkRunEnthusiastHint(violation: ArkViolationLike): string {
   switch (violation.ruleId) {
     case 'ARKRUN_MISSING_ROOT':
       return target
-        ? `Call createStrictArkKernel from @arkgate/runtime in ${target} so the app actually uses the kernel.`
-        : 'Call createStrictArkKernel from @arkgate/runtime in a listed composition root so the app actually uses the kernel.';
+        ? `Call createStrictArkKernel from arkgate/runtime in ${target} so the app actually uses the kernel.`
+        : 'Call createStrictArkKernel from arkgate/runtime in a listed composition root so the app actually uses the kernel.';
     case 'ARKRUN_KERNEL_IN_DOMAIN':
       return target
-        ? `Domain stays kernel-free. Move the ${target} import to a composition root or adapter — never a removed arkgate/runtime shim.`
-        : 'Domain stays kernel-free. Move that @arkgate/runtime import to a composition root or adapter — never a removed arkgate/runtime shim.';
+        ? `Domain stays kernel-free. Move the ${target} import to a composition root or adapter. Prefer arkgate/runtime.`
+        : 'Domain stays kernel-free. Move that kernel import to a composition root or adapter. Prefer arkgate/runtime; @arkgate/runtime is deprecated.';
     case 'ARKRUN_DIRECT_NEW':
       return target
         ? `Do not construct ${target} with new. Resolve it from the kernel instead.`

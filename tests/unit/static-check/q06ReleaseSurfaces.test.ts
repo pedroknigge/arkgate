@@ -36,7 +36,7 @@ describe('package budget ceilings retain 10% headroom over the recorded clean ca
       files: 190,
     });
     expect([gate.maxPackedBytes, gate.maxUnpackedBytes, gate.maxFiles]).toEqual([
-      1040000, 3730000, 242,
+      1320000, 4700000, 270,
     ]);
     expect(gate.maxPackedBytes).toBeGreaterThanOrEqual(
       Math.ceil(gate.measuredCandidate.packedBytes * 1.1)

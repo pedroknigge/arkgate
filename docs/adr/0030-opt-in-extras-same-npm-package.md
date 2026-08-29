@@ -60,21 +60,17 @@ Tarball size may grow. That is accepted. Opt-in is not “don’t download the e
 `OR02` compiles `src/kernel/order/` into `dist/order` of **this** package and adds
 `exports["./order"]`. There is no `packages/order` publishable workspace.
 
-### D5 — ArkRun packaging is a correction, not Order’s train
+### D5 — ArkRun packaging is a correction, shipped in 4.8.0
 
-Today `@arkgate/runtime` is already on npm `experimental`. Restoring `arkgate/runtime`
-as a **real** subpath of `arkgate` (and stopping the second install as the documented
-path) is a dedicated queue item. Until that item ships, existing docs that say
-`npm i @arkgate/runtime@experimental` are residual, not the target.
-
-Durability honesty stays: in-memory stores/planes are not Postgres. Experimental
-labels the **surface**, not a second package.
+[ADR 0031](0031-one-package-extras-deprecate-companion.md) restores `arkgate/runtime`
+and `arkgate/nestjs` as **real** subpaths of package `arkgate`. `@arkgate/runtime` is
+deprecated. Durability honesty stays: in-memory stores/planes are not Postgres.
+Experimental labels the **surface**, not a second package.
 
 ## Consequences
 
-- Sensors match specifiers `arkgate/order` and (after the Run correction)
-  `arkgate/runtime`. Scoped `@arkgate/*` specifiers are compatibility or residual,
-  not the taught import.
+- Sensors match specifiers `arkgate/order` and `arkgate/runtime`. Scoped `@arkgate/*`
+  specifiers are compatibility or residual, not the taught import.
 - Product voice: “optional extra of ArkGate,” not “install the ArkGate org package.”
 - ADR 0004’s restart/fault matrix still blocks a production-durability claim.
 

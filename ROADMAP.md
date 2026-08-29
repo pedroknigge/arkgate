@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-29 (Engineering doing: none; Phase OR `OR01`–`OR07` **done** on tree, unpublished `arkgate@4.8.0`; `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **todo** (fold ArkRun into the same npm package); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** on `main` (not in published `arkgate@4.7.6`); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; companion `@arkgate/runtime` on npm `experimental`; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.7.6**; `AL05` parked; Z09 still parked)
+- **Status date:** 2026-08-29 (Engineering doing: none; Phase OR `OR01`–`OR07` **done** on tree, unpublished `arkgate@4.8.0`; `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **done** (ADR 0031: `arkgate/runtime` + `arkgate/nestjs` real subpaths; `@arkgate/runtime` deprecated); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** on `main` (not in published `arkgate@4.7.6`); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.7.6**; `AL05` parked; Z09 still parked)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -382,10 +382,11 @@ ArkOrder is the fourth extra, named when the consumer opts in.
 
 ### Phase PK — One npm package
 
-Plan lock: [ADR 0030](docs/adr/0030-opt-in-extras-same-npm-package.md). Order never
-publishes `@arkgate/order`. ArkRun today still publishes `@arkgate/runtime` (residual).
-Does **not** close `Z09` / `K01`. No new skill names.
+Plan lock: [ADR 0030](docs/adr/0030-opt-in-extras-same-npm-package.md) /
+[ADR 0031](docs/adr/0031-one-package-extras-deprecate-companion.md). Order never
+publishes `@arkgate/order`. ArkRun ships as `arkgate/runtime` in package `arkgate`;
+`@arkgate/runtime` is deprecated leftover. Does **not** close `Z09` / `K01`. No new skill names.
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
-| 219 | `PK01` | `todo` | L | — | Restore `arkgate/runtime` and `arkgate/nestjs` as **real** subpaths of package `arkgate`; stop documenting `npm i @arkgate/runtime`; keep root export gate-only; sensors teach `arkgate/runtime`; experimental = durability, not a second package |
+| 219 | `PK01` | `done` | L | — | Restore `arkgate/runtime` and `arkgate/nestjs` as **real** subpaths of package `arkgate`; deprecate `@arkgate/runtime`; keep root export gate-only; sensors teach `arkgate/runtime`; experimental = durability, not a second package ([ADR 0031](docs/adr/0031-one-package-extras-deprecate-companion.md)) |

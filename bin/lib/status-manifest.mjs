@@ -246,7 +246,7 @@ export function resolveStatusNextAction(facts, binding, activation, lastCheck, r
     if (facts.arkRun?.present === true && (facts.arkRun.residual ?? 0) > 0) {
         return {
             id: 'review-arkrun-residual',
-            summary: 'ArkRun residual remains — wire kernel usage or declarations through @arkgate/runtime. Not a score.',
+            summary: 'ArkRun residual remains — wire kernel usage or declarations through arkgate/runtime. Not a score.',
         };
     }
     if (facts.adopted === 'required-merge' || facts.adopted === 'advisory-only-acked') {

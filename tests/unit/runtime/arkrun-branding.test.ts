@@ -7,10 +7,11 @@ import * as gate from '../../../src/gate';
 const root = process.cwd();
 
 describe('RN09 ArkRun companion branding', () => {
-  it('brands ArkRun on @arkgate/runtime README and keeps createStrictArkKernel as the factory', () => {
+  it('brands ArkRun and deprecates the companion in favor of arkgate/runtime', () => {
     const readme = fs.readFileSync(path.join(root, 'packages/runtime/README.md'), 'utf8');
     expect(readme).toMatch(/\*\*ArkRun\*\*/);
-    expect(readme).toContain("import { createStrictArkKernel } from '@arkgate/runtime'");
+    expect(readme).toMatch(/DEPRECATED/);
+    expect(readme).toContain("import { createStrictArkKernel } from 'arkgate/runtime'");
     expect(readme).toMatch(/isolated instance/);
     expect(readme).toMatch(/no process-wide `getKernel\(\)` singleton/);
     expect(readme).toContain('getDependencyInformationPackage()');
@@ -27,15 +28,16 @@ describe('RN09 ArkRun companion branding', () => {
     expect(readme).toMatch(/technical/);
     expect(readme).toMatch(/degreesOfSeparation/);
     expect(readme).toMatch(/[Mm]ermaid/);
-    expect(readme).toMatch(/does not bundle this kernel/);
-    expect(readme).toMatch(/not\*\* production durability/);
+    expect(readme).toMatch(/same `arkgate` tarball|arkgate\/runtime/);
+    expect(readme).toMatch(/production durability/);
   });
 
-  it('labels the companion package as the ArkRun kernel', () => {
+  it('labels the companion package as deprecated leftover ArkRun', () => {
     const pkg = JSON.parse(
       fs.readFileSync(path.join(root, 'packages/runtime/package.json'), 'utf8')
     ) as { name: string; description: string; version: string; publishConfig: { tag: string } };
     expect(pkg.name).toBe('@arkgate/runtime');
+    expect(pkg.description).toMatch(/DEPRECATED/);
     expect(pkg.description).toMatch(/ArkRun/);
     expect(pkg.version).toMatch(/^0\./);
     expect(pkg.publishConfig.tag).toBe('experimental');

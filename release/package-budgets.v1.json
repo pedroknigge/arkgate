@@ -3,9 +3,9 @@
   "packages": {
     "gate": {
       "path": ".",
-      "maxPackedBytes": 1040000,
-      "maxUnpackedBytes": 3730000,
-      "maxFiles": 242,
+      "maxPackedBytes": 1320000,
+      "maxUnpackedBytes": 4700000,
+      "maxFiles": 270,
       "measuredCandidate": {
         "sha": "4e9ffdc19b8e86709c4d3a79ad07dcfc29654ea9",
         "ciCandidateSha": "4e9ffdc19b8e86709c4d3a79ad07dcfc29654ea9",
@@ -15,7 +15,7 @@
         "unpackedBytes": 2910173,
         "files": 190
       },
-      "exception": "ArkGate 4.3.0 Phase ACS agent contract surface (diagnostic catalog, status manifest, agent projection, Agent Skills packaging of 13 skills, finding refs, placement A/B eval, honesty docs). Clean measurement on release/4.3.0 tip 4e9ffdc + CI build 31293903842: 819,295 packed / 2,910,173 unpacked / 190 files. Recalibration retained ≥10% fixed headroom. 4.6.5 raises packed/unpacked ceilings for adopt/doctor/honesty docs and generated skills. AL01–AL04 honesty adds adoption-stance + doctor/start copy (CI pack 919,438 / 3,247,311 / 208 files). 4.6.7 CLI extracts add shipped bin/lib modules (CI pack 873,367 / 3,122,604 / 214 files). 4.7.0 ArkRun extra + companion DX (schema 1.2, sensors, doctor/status, generated bin/lib, skills) pack 945,377 / unpacked 3,388,347 / 219 files. Current packed ceiling: 1,040,000. Unpacked ceiling: 3,730,000. File ceiling: 242 (≥10% over 219)."
+      "exception": "ArkGate 4.3.0 Phase ACS agent contract surface (diagnostic catalog, status manifest, agent projection, Agent Skills packaging of 13 skills, finding refs, placement A/B eval, honesty docs). Clean measurement on release/4.3.0 tip 4e9ffdc + CI build 31293903842: 819,295 packed / 2,910,173 unpacked / 190 files. Recalibration retained ≥10% fixed headroom. 4.6.5 raises packed/unpacked ceilings for adopt/doctor/honesty docs and generated skills. AL01–AL04 honesty adds adoption-stance + doctor/start copy (CI pack 919,438 / 3,247,311 / 208 files). 4.6.7 CLI extracts add shipped bin/lib modules (CI pack 873,367 / 3,122,604 / 214 files). 4.7.0 ArkRun extra + companion DX (schema 1.2, sensors, doctor/status, generated bin/lib, skills) pack 945,377 / unpacked 3,388,347 / 219 files. 4.8.0 PK01 folds ArkRun kernel + Nest adapter into the same arkgate tarball as real subpaths (ADR 0031): local pack 1,185,915 / unpacked 4,235,115 / 238 files. Current packed ceiling: 1,320,000. Unpacked ceiling: 4,700,000. File ceiling: 270 (≥10% over 238)."
     },
     "runtime": {
       "path": "packages/runtime",

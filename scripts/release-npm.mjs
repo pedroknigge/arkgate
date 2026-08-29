@@ -4,7 +4,7 @@
  *
  * One-command npm release: verify (typecheck + coverage/mutation confidence +
  * security audit + architecture gate) → publish `arkgate` (latest) and
- * `@arkgate/runtime` (`experimental` dist-tag only; ADR 0004).
+ * Deprecated leftover `@arkgate/runtime` (`experimental` dist-tag only; ADR 0031).
  * `prepack` runs the gate build, so `npm publish` at root always ships a fresh dist.
  * Companion has no prepack — `npm run build:runtime` runs before that publish.
  *

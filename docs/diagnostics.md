@@ -295,7 +295,7 @@ Live adapters specialize `nextAction` with the call-site name or specifier when 
 **No kernel factory in composition roots**
 
 - **Why:** The ArkRun extra is on but no createArkKernel / createStrictArkKernel / createArkKernelFromConfig / createStrictArkKernelFromConfig factory was found in arkRun.compositionRoots, so agents can skip the kernel while the write gate stays green.
-- **Fix:** Import createStrictArkKernel from @arkgate/runtime (never a removed arkgate/runtime shim) and call it in a composition root listed in arkRun.compositionRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.
+- **Fix:** Import createStrictArkKernel from arkgate/runtime (same npm package; @arkgate/runtime is deprecated) and call it in a composition root listed in arkRun.compositionRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.
 
 <a id="ARKRUN_KERNEL_IN_DOMAIN"></a>
 
@@ -303,8 +303,8 @@ Live adapters specialize `nextAction` with the call-site name or specifier when 
 
 **Domain-role layer imports the kernel**
 
-- **Why:** A Domain-role layer imports @arkgate/runtime or kernel types. Domain stays kernel-free; composition roots and adapters own the factory.
-- **Fix:** Move the kernel import out of the Domain-role layer into a composition root or adapter. Import from @arkgate/runtime, never a removed arkgate/runtime shim, then preflight again. Never mechanical-safe.
+- **Why:** A Domain-role layer imports arkgate/runtime, @arkgate/runtime, or kernel types. Domain stays kernel-free; composition roots and adapters own the factory.
+- **Fix:** Move the kernel import out of the Domain-role layer into a composition root or adapter. Import from arkgate/runtime (same npm package; @arkgate/runtime is deprecated), then preflight again. Never mechanical-safe.
 
 <a id="ARKRUN_DIRECT_NEW"></a>
 

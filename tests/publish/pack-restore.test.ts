@@ -55,9 +55,22 @@ describe('publish manifest', () => {
       fs.readFileSync(path.join(extract, 'package', 'package.json'), 'utf8')
     );
     expect(Object.keys(inner.dependencies ?? {}).sort()).toEqual(['typescript-ark-host']);
-    // AR04: root forwarders removed — experimental runtime is @arkgate/runtime only.
-    expect(inner.exports['./nestjs']).toBeUndefined();
-    expect(inner.exports['./runtime']).toBeUndefined();
+    // ADR 0031: extras are real subpaths of package arkgate.
+    expect(inner.exports['./runtime']).toEqual({
+      types: './dist/runtime/index.d.ts',
+      import: './dist/runtime/index.js',
+      require: './dist/runtime/index.cjs',
+    });
+    expect(inner.exports['./nestjs']).toEqual({
+      types: './dist/nestjs/index.d.ts',
+      import: './dist/nestjs/index.js',
+      require: './dist/nestjs/index.cjs',
+    });
+    expect(inner.exports['./order']).toEqual({
+      types: './dist/order/index.d.ts',
+      import: './dist/order/index.js',
+      require: './dist/order/index.cjs',
+    });
     expect(inner.exports['./eslint']).toEqual({
       types: './dist/eslint/index.d.ts',
       import: './dist/eslint/index.js',
@@ -68,8 +81,9 @@ describe('publish manifest', () => {
     expect(fs.existsSync(path.join(extract, 'package', 'bin', 'ark-check.mjs'))).toBe(true);
     expect(fs.existsSync(path.join(extract, 'package', 'dist', 'eslint', 'index.js'))).toBe(true);
     expect(fs.existsSync(path.join(extract, 'package', 'compat'))).toBe(false);
-    expect(fs.existsSync(path.join(extract, 'package', 'dist', 'runtime'))).toBe(false);
-    expect(fs.existsSync(path.join(extract, 'package', 'dist', 'nestjs'))).toBe(false);
+    expect(fs.existsSync(path.join(extract, 'package', 'dist', 'runtime', 'index.js'))).toBe(true);
+    expect(fs.existsSync(path.join(extract, 'package', 'dist', 'nestjs', 'index.js'))).toBe(true);
+    expect(fs.existsSync(path.join(extract, 'package', 'dist', 'order', 'index.js'))).toBe(true);
     expect(fs.existsSync(path.join(extract, 'package', 'docs', 'typescript-support.md'))).toBe(true);
     expect(fs.existsSync(path.join(extract, 'package', 'docs', 'package-surface.md'))).toBe(true);
   }, 30_000);

@@ -242,14 +242,14 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'arkrun',
     'No kernel factory in composition roots',
     'The ArkRun extra is on but no createArkKernel / createStrictArkKernel / createArkKernelFromConfig / createStrictArkKernelFromConfig factory was found in arkRun.compositionRoots, so agents can skip the kernel while the write gate stays green.',
-    'Import createStrictArkKernel from @arkgate/runtime (never a removed arkgate/runtime shim) and call it in a composition root listed in arkRun.compositionRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.'
+    'Import createStrictArkKernel from arkgate/runtime (same npm package; @arkgate/runtime is deprecated) and call it in a composition root listed in arkRun.compositionRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.'
   ),
   entry(
     'ARKRUN_KERNEL_IN_DOMAIN',
     'arkrun',
     'Domain-role layer imports the kernel',
-    'A Domain-role layer imports @arkgate/runtime or kernel types. Domain stays kernel-free; composition roots and adapters own the factory.',
-    'Move the kernel import out of the Domain-role layer into a composition root or adapter. Import from @arkgate/runtime, never a removed arkgate/runtime shim, then preflight again. Never mechanical-safe.'
+    'A Domain-role layer imports arkgate/runtime, @arkgate/runtime, or kernel types. Domain stays kernel-free; composition roots and adapters own the factory.',
+    'Move the kernel import out of the Domain-role layer into a composition root or adapter. Import from arkgate/runtime (same npm package; @arkgate/runtime is deprecated), then preflight again. Never mechanical-safe.'
   ),
   entry(
     'ARKRUN_DIRECT_NEW',

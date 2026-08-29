@@ -461,7 +461,7 @@ export function resolveStatusNextAction(
     return {
       id: 'review-arkrun-residual',
       summary:
-        'ArkRun residual remains — wire kernel usage or declarations through @arkgate/runtime. Not a score.',
+        'ArkRun residual remains — wire kernel usage or declarations through arkgate/runtime. Not a score.',
     };
   }
   if (facts.adopted === 'required-merge' || facts.adopted === 'advisory-only-acked') {

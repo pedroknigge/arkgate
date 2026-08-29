@@ -1,23 +1,29 @@
-# @arkgate/runtime
+# @arkgate/runtime (deprecated)
 
-**ArkRun** kernel — optional companion for **ArkGate**.
+**DEPRECATED.** Use **`arkgate/runtime`** from package **`arkgate`** ([ADR 0031](https://github.com/pedroknigge/arkgate/blob/main/docs/adr/0031-one-package-extras-deprecate-companion.md)).
+This leftover 0.x companion is **ArkRun** for existing pins only. It is **not**
+production durability.
 
-This package is the ArkRun implementation: an in-process kernel you construct with
-`createStrictArkKernel`. It is **not** the `arkgate` write/CI gate. The stable `arkgate`
-tarball does not bundle this kernel ([ADR 0004](https://github.com/pedroknigge/arkgate/blob/main/docs/adr/0004-runtime-package-isolation.md),
-clarified by [ADR 0021](https://github.com/pedroknigge/arkgate/blob/main/docs/adr/0021-arkrun-companion-isolation.md)).
+New work:
 
-The `arkRun` extra on `ark.config.json` is a *gate* contract (kernel usage + declarations).
-This package is the *kernel* that extra talks about. Installing the companion is optional;
-an `enforced` extra requires it. Branding ArkRun is **not** a production-durability claim.
+```ts
+import { createStrictArkKernel } from 'arkgate/runtime';
 
-This package is not required by the `arkgate` CLI, MCP server, ESLint plugin, hooks, or
+const ark = createStrictArkKernel();
+```
+
+`createStrictArkKernel` is the factory: each call is a new isolated instance.
+There is no process-wide `getKernel()` singleton. Branding ArkRun is **not** a
+production-durability claim. The `arkRun` extra on `ark.config.json` is the gate
+contract; the kernel lives in the same `arkgate` tarball.
+
+This companion is not required by the `arkgate` CLI, MCP server, ESLint plugin, hooks, or
 GitHub Action.
 
 ## Factory (per instance — no process-wide singleton)
 
 ```ts
-import { createStrictArkKernel } from '@arkgate/runtime';
+import { createStrictArkKernel } from 'arkgate/runtime';
 
 const ark = createStrictArkKernel();
 ```
@@ -109,20 +115,17 @@ await ark.publisher('Application.PlaceOrder').send(OrderPlaced, { id: 'o1' }, {
 Nest adapter:
 
 ```ts
-import { ArkModule, InjectArk } from '@arkgate/runtime/nestjs';
+import { ArkModule, InjectArk } from 'arkgate/nestjs';
 ```
 
-Root `arkgate/runtime` and `arkgate/nestjs` forwarders were removed in ArkGate 4 (AR04).
-Never import those shims.
+`@arkgate/runtime/nestjs` remains a compatibility alias of this deprecated companion.
 
 ## Experimental — not production durability
 
-This package publishes under the `experimental` npm tag (never `latest`).
-Install `@arkgate/runtime@experimental`. Verify with
-`npm view @arkgate/runtime dist-tags --json`. The root release workflow publishes this
-companion when that version is unpublished; companion-only first publish is
-`publish-runtime.yml`. Built-in stores are **in-memory reference only** — they lose state
-on restart and are **not** production durability. `K01` (in-process commit gaps) stays parked.
+This leftover package publishes under the `experimental` npm tag (never `latest`).
+Prefer `npm install arkgate` and `import from 'arkgate/runtime'`. Built-in stores are
+**in-memory reference only** — they lose state on restart and are **not** production
+durability. `K01` (in-process commit gaps) stays parked.
 
 Before use, read the canonical
 [experimental surface policy](https://github.com/pedroknigge/arkgate/blob/main/docs/package-surface.md#experimental-opt-in-surfaces)

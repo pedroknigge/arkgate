@@ -25,7 +25,7 @@ honesty. Npm identity is one package ([ADR 0030](0030-opt-in-extras-same-npm-pac
 Target import is `arkgate/runtime` inside package `arkgate` ([ADR 0030](0030-opt-in-extras-same-npm-package.md)).
 The extra does **not** nextAction `npm i @arkgate/runtime`. Root `import from 'arkgate'`
 still must not export kernel factories. `@arkgate/runtime` as a second published package
-is residual until the packaging-correction item ships.
+is **deprecated** ([ADR 0031](0031-one-package-extras-deprecate-companion.md)).
 
 ### D2 — Public brand ArkRun; import path and skill name unchanged
 
@@ -50,15 +50,17 @@ honesty.
 
 - ADR 0004 isolation continues: extra = stable contract (ADR 0020); stores = still not
   production-durable.
-- Companion branding and public kernel DX are `RN09`+; they must not pull kernel code
-  into the gate tarball.
+- Companion branding and public kernel DX are `RN09`+. Kernel code ships in the
+  `arkgate` tarball at `./runtime` ([ADR 0031](0031-one-package-extras-deprecate-companion.md)),
+  never on the gate root export.
 - Docs must not treat “ArkRun shipped” as “durable kernel shipped.”
 
 ## Alternatives considered
 
 | Option | Why not |
 |--------|---------|
-| Bundle the kernel into `arkgate` | Violates ADR 0004; inflates the gate tarball |
+| Bundle the kernel onto the `arkgate` **root** export | Hides opt-in (ADR 0004 still forbids this) |
+| Keep `@arkgate/runtime` as the taught install | Second package — superseded by ADR 0031 |
 | New npm name (`arkrun`) this train | Splits identity; import and skill freeze |
 | Process-wide kernel singleton | Breaks test isolation; hides ownership |
 

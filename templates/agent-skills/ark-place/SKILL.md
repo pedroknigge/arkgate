@@ -108,7 +108,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 |-------|------------------|----------------|-----------------|
 | **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
 | **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
-| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`) + companion `@arkgate/runtime` | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
+| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime` | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
 | **ArkOrder** (extra) | Operational pattern (ξ vs s) | `arkOrder` on `ark.config.json` (schema `1.3+`); factory `arkgate/order` | `ARKORDER_*` |
 
 **Rules for every report / answer:**
@@ -129,7 +129,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 When `arkRun` is present on the architecture config:
 - Scaffold kernel-managed artifacts **through the kernel**, not `new` of an admitted type (`ARKRUN_DIRECT_NEW`).
 - Call `createStrictArkKernel` (or an admission sibling) only inside `arkRun.compositionRoots`. Each call is a new instance — no process-wide `getKernel()`.
-- Domain-role files stay kernel-free (`ARKRUN_KERNEL_IN_DOMAIN`). Import from `@arkgate/runtime` (or `/nestjs`), never a removed `arkgate/runtime` shim.
+- Domain-role files stay kernel-free (`ARKRUN_KERNEL_IN_DOMAIN`). Import from `arkgate/runtime` (or `arkgate/nestjs`). `@arkgate/runtime` is deprecated.
 - List `uses` / `reactsTo` / `raises` / `sends` when `requireDeclarations` is on. Adding an existing call-site literal to the declaration list is the only mechanical-safe ArkRun edit; inventing a new emit / handle / depend is judgment.
 - Do not import a homemade bus (`EventEmitter`, queue clients) in `managedLayers` — send on the kernel transport (`local` / `localBlocking` / `broker`; `ephemeral` defaults true). No shipped cloud SDKs.
 - In-memory stores are **not** production durability. Doctor `arkRun` is `notAScore`.

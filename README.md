@@ -32,7 +32,7 @@ Works with Cursor, Claude, Codex, and Grok.
 > **ArkGate 4.7.6** is on npm `latest`. Write. Check. Ship. Adopted = required GitHub
 > status running `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
 > Status is compact (`arkgate-check --doctor`; `--all` for Details). Optional **ArkRun**
-> (`@arkgate/runtime`, `experimental`) is an in-memory runtime — not Postgres.
+> (`arkgate/runtime`) is an in-memory runtime — not Postgres. `@arkgate/runtime` is deprecated.
 > [4.7.6](docs/releases/4.7.6.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
 
 ---
@@ -97,7 +97,7 @@ once you adopt. The other two are optional.
 | **While the agent writes** | The write doesn’t land on supported hosts; warning only elsewhere | Always (ArkGate) |
 | **Before merge** | `arkgate-check` as a **required** CI status | Always (ArkGate) |
 | **ArkRules** | Optional policies *inside* a layer | When you ask |
-| **ArkRun** | Optional experimental runtime (`@arkgate/runtime`) | Off unless you turn it on |
+| **ArkRun** | Optional experimental runtime (`arkgate/runtime`) | Off unless you turn it on |
 
 Layers (who may import whom) always run. ArkRules and ArkRun change no inter-layer
 verdict when absent. Label leftovers **`[Layer]`** vs **`[ArkRules]`**.
@@ -240,12 +240,10 @@ More: [docs/develop.md](docs/develop.md) · skills install: [docs/agent-guide.md
 Gates need **no** app runtime. Skip this unless you want an optional runtime
 for decoupling.
 
-**ArkRun** (`@arkgate/runtime`, npm tag `experimental`) is that runtime. Each
+**ArkRun** (`arkgate/runtime`, same npm package) is that runtime. Each
 `createStrictArkKernel()` call is a new instance — no process singleton. Data
 lives in memory and **dies on restart**. Fine for local. Not Postgres, not an
-outbox, not Temporal.
-
-The `arkgate` tarball does not bundle it.
+outbox, not Temporal. `@arkgate/runtime` is deprecated.
 
 ### Durability stance
 

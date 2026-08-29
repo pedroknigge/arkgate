@@ -3,7 +3,7 @@
 **Write. Check. Ship.**
 **When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.**
 That is the product wedge (host hook + required CI). Skills name the next step after that.
-**Not the wedge:** the optional in-process **ArkRun** runtime (`@arkgate/runtime`).
+**Not the wedge:** the optional in-process **ArkRun** runtime (`arkgate/runtime`).
 
 The check that must agree everywhere is small ([ADR 0026](adr/0026-gate-waist-facts-in-verdict-out.md)):
 `ark.config.json` + resolved-candidate-facts → one analysis-result (`valid`).
@@ -172,8 +172,8 @@ product claims**. Static architecture enforcement does not depend on them.
 
 | Surface | Import path | Notes |
 |---------|-------------|--------|
-| **ArkRun kernel** | **`@arkgate/runtime`** | Public brand **ArkRun**. Separate 0.x companion; `createStrictArkKernel` is the factory (each call is an isolated instance; no process-wide `getKernel()` singleton). Not bundled in the `arkgate` tarball (ADR 0004 / 0021). Published under the `experimental` dist-tag as `@arkgate/runtime@0.1.0-experimental.0`. Install `@arkgate/runtime@experimental`. Verify with `npm view @arkgate/runtime dist-tags --json`. Root `publish-npm.yml` publishes it when that companion version is unpublished; companion-only: `publish-runtime.yml`. The first npm copy also received a `latest` dist-tag pointing at the same 0.x (npm default); that is not a production-durability claim. Event bus, intents, policies, sagas, event buffer, projections, and strict helpers. Managed components declare `uses` / `reactsTo` / `raises` / `sends` on `register()`; `getDependencyInformationPackage()` is a JSON snapshot of ids, lifetime, and declarations and never includes factories, live instances, or input DTOs (ADR 0023). `requestGraph()` slices that snapshot into **process** or **technical** graphs with optional `nodeIds`, `degreesOfSeparation`, and include/exclude query; `formatArkRunGraphMermaid()` (also `graph.mermaid`) is a helper string, never a score. `send()` is the transport port (local / localBlocking / broker); missing broker falls back to in-process local delivery, `ephemeral` defaults true, and **no cloud SDKs ship** in the package (ADR 0024). Opt-in `startInspector()` / `startArkRunInspector()` binds **`127.0.0.1` only**, refuses `NODE_ENV=production`, lazy-loads HTTP, and serves JSON snapshots, SSE, and `/graph` slices of the information package (no public / authless bind). Built-in stores are **InMemory reference only**. Branding ArkRun is not a production-durability claim. |
-| **NestJS adapter** | `@arkgate/runtime/nestjs` | Experimental optional peer `@nestjs/common` for the ArkRun kernel. Root `arkgate/nestjs` and `arkgate/runtime` forwarders were **removed in AR04 / ArkGate 4** — import the companion package directly. |
+| **ArkRun kernel** | **`arkgate/runtime`** | Public brand **ArkRun**. Same npm package `arkgate` (ADR 0031). Factory `createStrictArkKernel` (each call is an isolated instance; no process-wide `getKernel()` singleton). Root export does **not** include the factory. Optional extra `arkRun` on schema `1.2+`. Event bus, intents, policies, sagas, event buffer, projections, and strict helpers. Managed components declare `uses` / `reactsTo` / `raises` / `sends` on `register()`; `getDependencyInformationPackage()` is a JSON snapshot of ids, lifetime, and declarations and never includes factories, live instances, or input DTOs (ADR 0023). `requestGraph()` slices that snapshot into **process** or **technical** graphs with optional `nodeIds`, `degreesOfSeparation`, and include/exclude query; `formatArkRunGraphMermaid()` (also `graph.mermaid`) is a helper string, never a score. `send()` is the transport port (local / localBlocking / broker); missing broker falls back to in-process local delivery, `ephemeral` defaults true, and **no cloud SDKs ship** in the package (ADR 0024). Opt-in `startInspector()` / `startArkRunInspector()` binds **`127.0.0.1` only**, refuses `NODE_ENV=production`, lazy-loads HTTP, and serves JSON snapshots, SSE, and `/graph` slices of the information package (no public / authless bind). Built-in stores are **InMemory reference only**. Branding ArkRun is not a production-durability claim. **`@arkgate/runtime` is deprecated** leftover 0.x (`experimental` dist-tag). |
+| **NestJS adapter** | **`arkgate/nestjs`** | Experimental optional peer `@nestjs/common` for the ArkRun kernel. Same npm package. `@arkgate/runtime/nestjs` is deprecated. |
 | **ArkOrder plane** | **`arkgate/order`** | Public brand **ArkOrder**. Same npm package `arkgate` (ADR 0030) — not `@arkgate/order`. Factory `createOrderPlane`. Four verbs: `release` / `project` / `ingest` / `proposeRelease`. No `update`. Haken: few slow keys; ingest never mints a pattern; empty blast fails closed. Root `arkgate` export does **not** include the factory. Optional extra `arkOrder` on schema `1.3`. In-memory; not durable. Does not replace ArkRun. |
 
 ---
@@ -181,20 +181,13 @@ product claims**. Static architecture enforcement does not depend on them.
 ## Recommended imports
 
 ```ts
-// Preferred ArkRun factory — each call is a new isolated instance (no getKernel() singleton)
-import { createStrictArkKernel, createStrictArkKernelFromConfig } from '@arkgate/runtime';
-
-// Nest adapter
-import { ArkModule, InjectArk } from '@arkgate/runtime/nestjs';
-
-// ArkOrder extra — same npm package as the gate (not @arkgate/order)
+import { createAICodeGate } from 'arkgate';
+import { createStrictArkKernel, createStrictArkKernelFromConfig } from 'arkgate/runtime';
+import { ArkModule, InjectArk } from 'arkgate/nestjs';
 import { createOrderPlane } from 'arkgate/order';
 ```
 
-These imports describe the intended package boundary. Install with
-`npm install @arkgate/runtime@experimental` and verify
-`npm view @arkgate/runtime dist-tags --json`. Root `arkgate/runtime` / `arkgate/nestjs`
-forwarders were **removed in 4.0.0** (AR04).
+One install: `npm install arkgate`. `@arkgate/runtime` is deprecated.
 
 See [production-hardening.md](https://github.com/pedroknigge/arkgate/blob/main/docs/production-hardening.md) for requirements an eventual
 production deployment would need to satisfy; it is not a readiness certification.

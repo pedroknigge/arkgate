@@ -22,6 +22,16 @@
       "import": "./dist/order/index.js",
       "require": "./dist/order/index.cjs"
     },
+    "./runtime": {
+      "types": "./dist/runtime/index.d.ts",
+      "import": "./dist/runtime/index.js",
+      "require": "./dist/runtime/index.cjs"
+    },
+    "./nestjs": {
+      "types": "./dist/nestjs/index.d.ts",
+      "import": "./dist/nestjs/index.js",
+      "require": "./dist/nestjs/index.cjs"
+    },
     "./schema": "./schemas/ark.config.schema.json",
     "./schema/ark.config.schema.json": "./schemas/ark.config.schema.json",
     "./schema/analysis-result": "./schemas/ark.analysis-result.schema.json",
@@ -160,10 +170,14 @@
     "typescript-ark-host": "npm:typescript@6.0.3"
   },
   "peerDependencies": {
-    "typescript": ">=5.0.0 <8"
+    "typescript": ">=5.0.0 <8",
+    "@nestjs/common": ">=9"
   },
   "peerDependenciesMeta": {
     "typescript": {
+      "optional": true
+    },
+    "@nestjs/common": {
       "optional": true
     }
   },

@@ -176,10 +176,11 @@ Gates need **no** runtime kernel. Optional **`arkRun`** on `ark.config.json` (sc
 is a *gate* extra: kernel usage + complete declarations on the same write/CI plane as
 Layers and ArkRules. Absence is silent. Compact starters leave it off.
 
-The companion **ArkRun** kernel (`@arkgate/runtime`) is experimental, a separate package,
+The **ArkRun** kernel (`arkgate/runtime`) is experimental, an opt-in extra of package `arkgate`,
 and not the day-zero product. `createStrictArkKernel` is the factory (per instance; no
-process-wide singleton). The kernel is not bundled in the `arkgate` tarball. Built-in
-stores are in-memory **reference only** — not production durability; `K01` stays parked.
+process-wide singleton). The kernel ships as `arkgate/runtime` in the same tarball.
+`@arkgate/runtime` is deprecated. Built-in stores are in-memory **reference only** —
+not production durability; `K01` stays parked.
 See [configuration.md](configuration.md), [package-surface.md](package-surface.md), and
 [production-hardening.md](production-hardening.md).
 

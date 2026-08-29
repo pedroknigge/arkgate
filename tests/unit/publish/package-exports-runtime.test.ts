@@ -23,19 +23,29 @@ function buildBoth() {
 describe('isolated runtime distribution', () => {
   beforeAll(buildBoth, 120_000);
 
-  it('keeps the root gate bundle free of runtime and NestJS artifacts (AR04)', async () => {
+  it('keeps extra factories off the gate root and ships them as real subpaths (ADR 0031)', async () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-    // Deprecated root forwarders removed in ArkGate 4 / AR04 — use @arkgate/runtime.
-    expect(pkg.exports['./runtime']).toBeUndefined();
-    expect(pkg.exports['./nestjs']).toBeUndefined();
+    expect(pkg.exports['./runtime']).toEqual({
+      types: './dist/runtime/index.d.ts',
+      import: './dist/runtime/index.js',
+      require: './dist/runtime/index.cjs',
+    });
+    expect(pkg.exports['./nestjs']).toEqual({
+      types: './dist/nestjs/index.d.ts',
+      import: './dist/nestjs/index.js',
+      require: './dist/nestjs/index.cjs',
+    });
     expect(fs.existsSync(path.join(root, 'compat'))).toBe(false);
-    expect(fs.existsSync(path.join(root, 'dist/runtime'))).toBe(false);
-    expect(fs.existsSync(path.join(root, 'dist/nestjs'))).toBe(false);
+    expect(fs.existsSync(path.join(root, 'dist/runtime/index.js'))).toBe(true);
+    expect(fs.existsSync(path.join(root, 'dist/nestjs/index.js'))).toBe(true);
     const gate = await import(pathToFileURL(path.join(root, 'dist/index.js')).href);
     expect(typeof gate.createAICodeGate).toBe('function');
     expect(gate.createStrictArkKernel).toBeUndefined();
+    expect(gate.createOrderPlane).toBeUndefined();
     expect(gate.getKernel).toBeUndefined();
     expect(gate.InMemoryEventBuffer).toBeUndefined();
+    const runtime = await import(pathToFileURL(path.join(root, 'dist/runtime/index.js')).href);
+    expect(typeof runtime.createStrictArkKernel).toBe('function');
   });
 
   it('builds the experimental package independently for ESM and CJS', async () => {
