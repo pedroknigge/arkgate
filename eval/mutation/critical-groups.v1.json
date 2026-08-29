@@ -87,8 +87,8 @@
       "targets": [
         {
           "file": "bin/lib/resolved-candidate-facts.mjs",
-          "startLine": 684,
-          "endLine": 728
+          "startLine": 688,
+          "endLine": 732
         }
       ]
     },
@@ -141,8 +141,8 @@
       "targets": [
         {
           "file": "src/domain/policyDelta.ts",
-          "startLine": 796,
-          "endLine": 825
+          "startLine": 869,
+          "endLine": 898
         }
       ]
     },

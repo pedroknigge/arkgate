@@ -26,6 +26,35 @@ describe('confidence gate wiring', () => {
     );
   });
 
+  it('keeps mutation group line ranges on the named fail-closed functions', () => {
+    const contract = JSON.parse(read('eval/mutation/critical-groups.v1.json')) as {
+      groups: Array<{
+        id: string;
+        targets: Array<{ file: string; startLine: number; endLine: number }>;
+      }>;
+    };
+    const slice = (file: string, startLine: number, endLine: number) =>
+      read(file).split('\n').slice(startLine - 1, endLine).join('\n');
+    const group = (id: string) => {
+      const found = contract.groups.find((entry) => entry.id === id);
+      expect(found, id).toBeTruthy();
+      return found!.targets[0];
+    };
+
+    const ack = group('policy-delta-ack-match');
+    expect(ack.file).toBe('src/domain/policyDelta.ts');
+    expect(slice(ack.file, ack.startLine, ack.endLine)).toContain(
+      'export function policyDeltaAcknowledgementMatches'
+    );
+
+    const facts = group('resolved-candidate-facts');
+    expect(facts.file).toBe('bin/lib/resolved-candidate-facts.mjs');
+    const factsSlice = slice(facts.file, facts.startLine, facts.endLine);
+    expect(factsSlice).toContain('const canonicalRoot = fs.realpathSync(root)');
+    expect(factsSlice).toContain("resolution: 'unresolved'");
+    expect(factsSlice).not.toContain('if (!ts?.readConfigFile');
+  });
+
   it('rejects NoCoverage even when every critical group remains above threshold', () => {
     const contract = JSON.parse(read('eval/mutation/critical-groups.v1.json')) as {
       groups: Array<{
