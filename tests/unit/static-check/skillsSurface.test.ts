@@ -336,13 +336,13 @@ describe('ArkRun skill-body deepen (no new skill names)', () => {
     }
   });
 
-  it('ark-runtime evaluates and wires the extra vs companion without enforcing', () => {
+  it('ark-runtime evaluates and wires the extra vs kernel without enforcing', () => {
     const body = readSkill('ark-runtime');
     expect(body).toMatch(/runtime[\s\S]{0,240}experimental|experimental[\s\S]{0,240}runtime/i);
-    expect(body).toMatch(/Extra vs companion/i);
+    expect(body).toMatch(/Extra vs kernel/i);
     expect(body).toContain('createStrictArkKernel');
-    expect(body).toContain('@arkgate/runtime');
-    expect(body).toMatch(/never a removed `arkgate\/runtime`[\s\S]{0,20}shim/i);
+    expect(body).toContain('arkgate/runtime');
+    expect(body).toMatch(/deprecated/i);
     expect(body).toMatch(/Skills never enforce|never enforces/i);
     expect(body).toContain('notAScore');
     expect(body).toMatch(/compositionRoots/);
