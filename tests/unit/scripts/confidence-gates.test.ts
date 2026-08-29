@@ -53,6 +53,10 @@ describe('confidence gate wiring', () => {
     expect(factsSlice).toContain('const canonicalRoot = fs.realpathSync(root)');
     expect(factsSlice).toContain("resolution: 'unresolved'");
     expect(factsSlice).not.toContain('if (!ts?.readConfigFile');
+
+    const stryker = read('stryker.config.mjs');
+    expect(stryker).toContain(`${ack.file}:${ack.startLine}-${ack.endLine}`);
+    expect(stryker).toContain(`${facts.file}:${facts.startLine}-${facts.endLine}`);
   });
 
   it('rejects NoCoverage even when every critical group remains above threshold', () => {
