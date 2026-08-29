@@ -57,7 +57,7 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Area | Path |
 |------|------|
 | Release notes (by version) | [releases/](releases/) · npm [CHANGELOG.md](../CHANGELOG.md) (Unreleased + 4.6.x) · [pre-4.6 archive](archive/CHANGELOG-pre-4.6.md) |
-| Epic plans | [plans/](plans/) — maintainer seeds, not required to use the package. Live: [alive-in-six-months](plans/alive-in-six-months/README.md) (`AL01`–`AL04` done; `AL05` parked). [arkrun](plans/arkrun/README.md) (Phase RN; `RN01`–`RN17` done; shipped **4.7.0** + companion **4.7.4**; ADRs [0020](adr/0020-arkrun-gated-extra-plane.md)–[0024](adr/0024-arkrun-transport-ports.md) accepted). [one-catalog-one-root](plans/one-catalog-one-root/README.md) (Phase HS; `HS01`–`HS05` done; shipped **4.7.1**). |
+| Epic plans | [plans/](plans/) — maintainer seeds, not required to use the package. Live: [alive-in-six-months](plans/alive-in-six-months/README.md) (`AL01`–`AL04` done; `AL05` parked). [arkrun](plans/arkrun/README.md) (Phase RN; `RN01`–`RN17` done; shipped **4.7.0** + companion **4.7.4**; ADRs [0020](adr/0020-arkrun-gated-extra-plane.md)–[0024](adr/0024-arkrun-transport-ports.md) accepted). [one-catalog-one-root](plans/one-catalog-one-root/README.md) (Phase HS; `HS01`–`HS05` done; shipped **4.7.1**). [arkorder](plans/arkorder/README.md) (Phase OR; `OR01`–`OR07` done on tree; unpublished `arkgate@4.8.0`; extra **inside** package `arkgate` as `arkgate/order`; ADRs [0027](adr/0027-arkorder-gated-extra-plane.md)–[0030](adr/0030-opt-in-extras-same-npm-package.md)). |
 | Claims audit | [audit/claims-matrix.md](audit/claims-matrix.md) |
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
@@ -74,4 +74,4 @@ Older notes: [releases/](releases/). Config: [configuration.md](configuration.md
 2. **One primary flow** — `start` → doctor → optional guided work.
 3. **Honest hardness** — host write guarantees differ; a **required GitHub status context** running the merge CLI is the shared hard boundary.
 4. **History is not the product** — version archaeology lives under `releases/` and `plans/`, not the front door.
-5. **Common language** — first-contact copy uses ordinary software words (import rules, the write doesn’t land, required CI). ArkGate is import rules; ArkRules is policies; ArkRun is an experimental runtime. Voice: [product-voice.md](product-voice.md).
+5. **Common language** — first-contact copy uses ordinary software words (import rules, the write doesn’t land, required CI). ArkGate is import rules; ArkRules is policies; ArkRun is an experimental runtime; ArkOrder is an optional pattern extra in the same npm package. Voice: [product-voice.md](product-voice.md).

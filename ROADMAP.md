@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-27 (Engineering doing: none; `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** on `main` (not in published `arkgate@4.7.6`); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; companion `@arkgate/runtime` on npm `experimental`; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.7.6**; `AL05` parked; Z09 still parked)
+- **Status date:** 2026-08-29 (Engineering doing: none; Phase OR `OR01`–`OR07` **done** on tree, unpublished `arkgate@4.8.0`; `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **todo** (fold ArkRun into the same npm package); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** on `main` (not in published `arkgate@4.7.6`); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; companion `@arkgate/runtime` on npm `experimental`; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.7.6**; `AL05` parked; Z09 still parked)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -21,9 +21,10 @@ Skills and `AGENTS.md` never replace the check.
 ArkGate   always     import rules (write + required CI)
 ArkRules  optional   policies inside a layer
 ArkRun    optional   experimental runtime — in-memory, not Postgres
+ArkOrder  optional   pattern plane (ξ vs s) — same npm package, not durable
 ```
 
-ArkRules and ArkRun must not determine the `arkgate` package shape. Absence is silent.
+ArkRules, ArkRun, and ArkOrder must not determine the `arkgate` package shape. Absence is silent.
 Same write/CI plane when they are on. Voice: [docs/product-voice.md](docs/product-voice.md).
 
 ### North-star product invariant
@@ -63,10 +64,13 @@ lift DF freezes on scores, new skill names, sensors, or LLM verdicts.
 - New ArkRules sensor vocabulary (e.g. family/export symmetry) without ADR + field demand.
 - LLM-derived pass/fail or package “process verdict” (maintainer offline eval only).
 - Enforcement claims from AGENTS.md, skills, or version-matched agent projection alone.
-- New runtime **kernel** features outside Phase RN. **Exception:** Phase **RN** (ArkRun gated
-  complement, target `arkgate@4.7.0`) is the authorized extra plane: `arkRun` on the contract,
-  anti-skip sensors, companion `@arkgate/runtime` DX. Store durability and `K01` stay parked;
-  in-memory stores remain reference-only.
+- New runtime **kernel** features outside Phase RN or Phase OR. **Exception:** Phase **RN**
+  (ArkRun gated complement, target `arkgate@4.7.0`) is the authorized extra plane: `arkRun`
+  on the contract, anti-skip sensors, companion `@arkgate/runtime` DX. Store durability and
+  `K01` stay parked; in-memory stores remain reference-only. **Exception:** Phase **OR**
+  (ArkOrder gated extra; [plan](docs/plans/arkorder/README.md)) is the authorized order
+  plane: `arkOrder` on schema `1.3`, anti-skip sensors, subpath `arkgate/order` (4 verbs;
+  no bus; same npm package — ADR 0030). Does not close `Z09` / `K01`. No new skill names.
 - False hard-write claims for soft hosts (Codex/OpenCode). Cursor hard write is limited to
   listed `preToolUse` ops when hooks are installed + trusted.
 - Numeric trust / architecture / principle health **score**, average, or Excellent/Good rank band.
@@ -258,7 +262,8 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: none. `WH01` **done** (ADR 0026). `K01` **parked** (4.7.6 primitives only).
+Engineering doing: none. `OR01` **done** (ADRs 0027–0029). `WH01` **done** (ADR 0026). Phase OR seeded.
+`K01` **parked** (4.7.6 primitives only).
 Phase DX (`DX01`–`DX03`) **done** on `main`, not in published `arkgate@4.7.6`.
 Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.7.6** is on npm `latest`.
 `RN16` **done** (public docs + 4.7.0 published). `RN17` **done** (`@arkgate/runtime@0.1.0-experimental.0` on npm `experimental`).
@@ -280,8 +285,9 @@ no process singleton; kernel stays out of the `arkgate` tarball).
 `RN03` **done** (resolver facts for kernel call sites, managed `new`, composition-root hits; facts schema additive).
 `RN02` **done** (schema `1.2` `arkRun` extra; `1.1` migrates; absence silent; invalid extra fails closed).
 `RN01` done (ADRs 0020–0024 accepted). `Z09` stays parked (retained adoption + independent
-close). 30-day freeze from 2026-08-22: no explore / compass as `doing`. Engineering doing: none.
-Phase RN shipped in **4.7.0** (gate extra). Companion registry publish is `RN17` / **4.7.4**. Phase HS is the **4.7.1** host-catalog patch.
+close). 30-day freeze from 2026-08-22: no explore / compass as `doing`. Engineering doing:
+none (`OR01` paper done; `OR02` is next `todo`). Phase RN shipped in **4.7.0** (gate extra). Companion registry
+publish is `RN17` / **4.7.4**. Phase HS is the **4.7.1** host-catalog patch.
 
 ### Phase HS — One catalog, one root (4.7.1)
 
@@ -352,3 +358,34 @@ Decision only. Does **not** close `Z09` / `K01`. No new skill names, sensors, or
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 211 | `WH01` | `done` | S | — | [ADR 0026](docs/adr/0026-gate-waist-facts-in-verdict-out.md) accepted: waist is config + resolved facts → one analysis-result; new advisory must project existing facts; intelligence stays in skills/doors |
+
+### Phase OR — ArkOrder gated extra
+
+Plan: [docs/plans/arkorder/README.md](docs/plans/arkorder/README.md).
+ADRs [0027](docs/adr/0027-arkorder-gated-extra-plane.md)–[0030](docs/adr/0030-opt-in-extras-same-npm-package.md).
+Fourth extra: operational pattern (ξ vs s). Subpath `arkgate/order` in package `arkgate`
+(not `@arkgate/order`; not durable).
+Does **not** close `Z09` / `K01`. Does **not** replace ArkRun. No new skill names.
+v0 physics: `examples/arkorder-billing/` (`plan` / `cycle` / `tenancy`). This mother repo
+does not turn `arkOrder` on against its 4 layers. First-contact voice stays Gate / Rules / Run;
+ArkOrder is the fourth extra, named when the consumer opts in.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 212 | `OR01` | `done` | M | — | ADRs [0027](docs/adr/0027-arkorder-gated-extra-plane.md)–[0030](docs/adr/0030-opt-in-extras-same-npm-package.md) accepted; plan seed; ROADMAP Phase OR. No plane code. |
+| 213 | `OR02` | `done` | L | OR01 | `arkgate/order` subpath: `createOrderPlane`, four verbs, clock injection, isolation smoke (root `arkgate` must not export the factory) |
+| 214 | `OR03` | `done` | M | OR02 | Gallery `examples/arkorder-billing/` — 3-key SaaS physics; write-path split tests; do not touch `hexagonal-order-api` |
+| 215 | `OR04` | `done` | L | OR01 | `arkOrder` on `ark.config` schema `1.3`; `1.2` migrates; absence silent; invalid extra fails closed; weakening ack |
+| 216 | `OR05` | `done` | L | OR02+OR04 | Domain-pure `ARKORDER_*` facts/sensors; extraMergeTeeth; catalog + nextAction |
+| 217 | `OR06` | `done` | M | OR05 | Skip corpus + `arkgate/eslint` envelope; extra absent = green; enforced fails missing plane / Domain import / generic update |
+| 218 | `OR07` | `done` | M | OR03+OR05 | Deepen `/ark-place`; public docs; no `/ark-order` skill; durability honesty unchanged |
+
+### Phase PK — One npm package
+
+Plan lock: [ADR 0030](docs/adr/0030-opt-in-extras-same-npm-package.md). Order never
+publishes `@arkgate/order`. ArkRun today still publishes `@arkgate/runtime` (residual).
+Does **not** close `Z09` / `K01`. No new skill names.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 219 | `PK01` | `todo` | L | — | Restore `arkgate/runtime` and `arkgate/nestjs` as **real** subpaths of package `arkgate`; stop documenting `npm i @arkgate/runtime`; keep root export gate-only; sensors teach `arkgate/runtime`; experimental = durability, not a second package |

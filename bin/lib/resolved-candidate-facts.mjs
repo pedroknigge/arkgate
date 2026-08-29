@@ -41,6 +41,10 @@ import {
   extractArkRunManagedNewsFromSource,
 } from './ark-run-facts.mjs';
 import {
+  extractArkOrderGenericUpdatesFromSource,
+  extractArkOrderPlaneCallsFromSource,
+} from './ark-order-facts.mjs';
+import {
   collectGovernedFiles,
   isGovernableSourceFile,
   normalize,
@@ -1008,7 +1012,11 @@ export function resolveCandidateFacts({
   const arkRunManagedNews = [];
   const arkRunCompositionRootHits = [];
   const arkRunDeclarations = [];
+  const arkOrderPlaneCalls = [];
+  const arkOrderGenericUpdates = [];
+  const arkOrderRootHits = [];
   const compositionRootPatterns = [...(config.arkRun?.compositionRoots ?? [])];
+  const planeRootPatterns = [...(config.arkOrder?.planeRoots ?? [])];
 
   for (const candidate of candidateFiles) {
     const sourceFile = ts.createSourceFile(
@@ -1112,6 +1120,20 @@ export function resolveCandidateFacts({
       } catch {
         // Never fail the resolver for ArkRun declaration extraction.
       }
+      try {
+        arkOrderPlaneCalls.push(
+          ...extractArkOrderPlaneCallsFromSource(candidate.path, candidate.content)
+        );
+      } catch {
+        // Never fail the resolver for ArkOrder factory extraction.
+      }
+      try {
+        arkOrderGenericUpdates.push(
+          ...extractArkOrderGenericUpdatesFromSource(candidate.path, candidate.content)
+        );
+      } catch {
+        // Never fail the resolver for ArkOrder generic-update extraction.
+      }
     }
   }
 
@@ -1128,6 +1150,24 @@ export function resolveCandidateFacts({
       );
     } catch {
       // Never fail the resolver for managed-new extraction.
+    }
+  }
+
+  if (planeRootPatterns.length > 0) {
+    const factoryFiles = new Set(arkOrderPlaneCalls.map((call) => call.file));
+    for (const candidate of candidateFiles) {
+      for (const pattern of planeRootPatterns) {
+        try {
+          if (!globToRegExp(pattern).test(candidate.path)) continue;
+        } catch {
+          continue;
+        }
+        arkOrderRootHits.push({
+          file: candidate.path,
+          matchedRoot: pattern,
+          hasPlaneFactory: factoryFiles.has(candidate.path),
+        });
+      }
     }
   }
 
@@ -1234,5 +1274,8 @@ export function resolveCandidateFacts({
     arkRunManagedNews,
     arkRunCompositionRootHits,
     arkRunDeclarations,
+    arkOrderPlaneCalls,
+    arkOrderGenericUpdates,
+    arkOrderRootHits,
   });
 }

@@ -219,6 +219,7 @@ export {
   composeMergePlanesHonesty,
   demoteExtraPlaneTeethUnderClassificationFloor,
   extraMergeTeethAllowed,
+  isArkOrderRuleId,
   isArkRunRuleId,
   isExtraPlaneFinding,
   normalizeExtraMergeTeethClassification,
@@ -248,6 +249,14 @@ export {
   type EvaluateArkRunSensorsInput,
   type EvaluateArkRunSensorsResult,
 } from './domain/arkRunSensors';
+
+export {
+  ARKORDER_RULE_IDS,
+  ARKORDER_TIER1_SENSOR_IDS,
+  evaluateArkOrderSensors,
+  type ArkOrderRuleId,
+  type ArkOrderSensorFinding,
+} from './domain/arkOrderSensors';
 
 export {
   canPromoteInvariant,

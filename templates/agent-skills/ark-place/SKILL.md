@@ -100,23 +100,25 @@ retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedP
 uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
 restart/retargeting is required. `ark://manifest` never satisfies this preflight.
 
-## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+## Dual plane — layers + extras (mandatory, except /ark-runtime)
 
-ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; you **always label** findings so they never blur. ArkOrder is an extra **inside** the `arkgate` package (`arkgate/order`), not a second install.
 
 | Plane | What it protects | Where it lives | Sensors / tools |
 |-------|------------------|----------------|-----------------|
 | **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
 | **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
 | **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`) + companion `@arkgate/runtime` | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
+| **ArkOrder** (extra) | Operational pattern (ξ vs s) | `arkOrder` on `ark.config.json` (schema `1.3+`); factory `arkgate/order` | `ARKORDER_*` |
 
 **Rules for every report / answer:**
-1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** or **`[ArkRun]`** (or a two-column table with those headers).
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** or **`[ArkRun]`** or **`[ArkOrder]`** (or a table with those headers).
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. Missing layer home: add it via **`/ark-adopt`** in this session if needed, then write the file; never invent `mechanical-safe`.
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
 6. Absence of `arkRun` is **valid**. Do not introduce the kernel speculatively. Skills never enforce this extra.
+7. Absence of `arkOrder` is **valid**. When on: Domain stays plane-free; freeze ξ with `release()`; never `update`/`patch`/`set` the pattern. Import `createOrderPlane` from `arkgate/order` (same npm package). No `/ark-order` skill.
 
 
 ### Place + ArkRules
@@ -133,6 +135,13 @@ When `arkRun` is present on the architecture config:
 - In-memory stores are **not** production durability. Doctor `arkRun` is `notAScore`.
 - Absence of the extra: place with **[Layer]** + **[ArkRules]** only. Enable advisory extra via `/ark-adopt`; evaluate a hand-rolled bus via `/ark-runtime`. Do not invent `/ark-run`.
 - Skills never enforce.
+
+### Place + ArkOrder
+When `arkOrder` is present on the architecture config:
+- Import `createOrderPlane` from `arkgate/order` (same npm package). Domain-role files stay plane-free.
+- Freeze ξ with `release()`; derive s with `project()`; field `ingest()` never mints a pattern; `proposeRelease()` needs a non-empty blast. There is no `update`/`patch`/`set`.
+- Call the factory only inside `arkOrder.planeRoots`. Empty roots in `enforced` mode is `ARKORDER_MISSING_PLANE`.
+- Absence of the extra is valid. Do not invent `/ark-order`. Skills never enforce.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -231,7 +240,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** vs **[ArkRun]** (or `n/a` if unused)
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** vs **[ArkRun]** vs **[ArkOrder]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
 - **Done axes:** architecture residual (status/doctor/compass) | feature/ticket residual (outside package). Enforce green ≠ feature done
 - **Handoff:** `/ark-…` / CLI / `none`

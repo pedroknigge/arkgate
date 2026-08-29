@@ -5,8 +5,19 @@ in the immutable pre-2.0 archive linked below.
 
 ## Unreleased
 
+**Minor** over **4.7.6**. Opt-in **ArkOrder** plane (`arkgate/order`) on schema `1.3`.
+Haken slaving: freeze ξ, derive s, ingest never mints a pattern, empty blast fails closed.
+Same npm package — not `@arkgate/order`. **Not published yet.** Does not close `K01` / `Z09`.
+Does not replace ArkRun. ArkRules unchanged.
+
+### Added
+- **ArkOrder extra (`arkOrder`):** optional, silent when absent. Enforced skip: missing plane, Domain import of `arkgate/order`, generic `update` of ξ.
+- **`arkgate/order`:** `createOrderPlane` with `release` / `project` / `ingest` / `proposeRelease`. Root `arkgate` export stays the gate.
+- **Billing gallery:** `examples/arkorder-billing/` consumer projector (`plan` / `cycle` / `tenancy`).
+
 ### Changed
 - **Gate waist (WH01 / ADR 0026):** the parity-capable check is config + resolved-candidate-facts → one analysis-result. New doctor advisory surfaces must project existing facts and must not become a second verdict. Does not move shipped compass/coach. Does not close `K01` / `Z09`.
+- **Config schema `1.3`:** additive `arkOrder`. `1.2` configs migrate. Absence is silent.
 
 ### Fixed
 - **`K01` honesty:** 4.7.6 shipped workflow OCC / lease / `tx` / `resume` primitives. It does not close in-process bus commit gaps or durable outbox. `K01` stays parked.

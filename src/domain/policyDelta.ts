@@ -401,6 +401,78 @@ function arkRunMode(extra: NonNullable<ArkConfig['arkRun']>): 'advisory' | 'enfo
   return extra.mode === 'enforced' ? 'enforced' : 'advisory';
 }
 
+function arkOrderMode(extra: NonNullable<ArkConfig['arkOrder']>): 'advisory' | 'enforced' {
+  return extra.mode === 'enforced' ? 'enforced' : 'advisory';
+}
+
+/** ADR 0027 D3 — demotion or deletion of the extra is weakening. */
+function compareArkOrder(
+  findings: PolicyDeltaFinding[],
+  base: ArkConfig,
+  candidate: ArkConfig
+): void {
+  const before = base.arkOrder;
+  const after = candidate.arkOrder;
+  const path = '$.arkOrder';
+  if (!before && !after) return;
+  if (!before && after) {
+    addFinding(findings, {
+      kind: 'arkorder-added',
+      path,
+      classification: 'strengthening',
+      message: `ArkOrder extra was added (${arkOrderMode(after)}).`,
+      after,
+    });
+    return;
+  }
+  if (before && !after) {
+    addFinding(findings, {
+      kind: 'arkorder-removed',
+      path,
+      classification: 'weakening',
+      message: 'ArkOrder extra was removed.',
+      before,
+    });
+    return;
+  }
+  if (!before || !after) return;
+
+  const previousMode = arkOrderMode(before);
+  const nextMode = arkOrderMode(after);
+  if (previousMode !== nextMode) {
+    const promotion = previousMode === 'advisory' && nextMode === 'enforced';
+    addFinding(findings, {
+      kind: promotion ? 'arkorder-promoted' : 'arkorder-demoted',
+      path: `${path}.mode`,
+      classification: promotion ? 'strengthening' : 'weakening',
+      message: promotion
+        ? 'ArkOrder extra was promoted to enforced.'
+        : 'ArkOrder extra was demoted to advisory.',
+      before: previousMode,
+      after: nextMode,
+    });
+  }
+
+  compareStringSets(findings, `${path}.planeRoots`, before.planeRoots, after.planeRoots, {
+    added: 'strengthening',
+    removed: 'weakening',
+    addedMessage: 'Additional ArkOrder plane roots are governed.',
+    removedMessage: 'ArkOrder plane roots were removed and may skip the plane.',
+  });
+  compareStringSets(
+    findings,
+    `${path}.managedLayers`,
+    before.managedLayers,
+    after.managedLayers,
+    {
+      added: 'strengthening',
+      removed: 'weakening',
+      addedMessage: 'Additional layers are managed by ArkOrder.',
+      removedMessage: 'Layers were removed from ArkOrder management.',
+    }
+  );
+}
+
 /** ADR 0020 D3 — demotion or deletion of the extra is weakening. */
 function compareArkRun(
   findings: PolicyDeltaFinding[],
@@ -784,6 +856,7 @@ export function classifyArkPolicyDelta(
     options?.candidateInvariantCoverage
   );
   compareArkRun(findings, base, candidate);
+  compareArkOrder(findings, base, candidate);
   findings.sort((left, right) => left.path.localeCompare(right.path) || left.id.localeCompare(right.id));
 
   return {

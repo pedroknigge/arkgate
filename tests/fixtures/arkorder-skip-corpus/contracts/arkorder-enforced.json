@@ -1,0 +1,8 @@
+{
+  "arkOrder": {
+    "mode": "enforced",
+    "planeRoots": ["src/main.ts"],
+    "managedLayers": ["ApplicationOrchestration"],
+    "maxXiKeys": 7
+  }
+}

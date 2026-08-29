@@ -49,9 +49,16 @@ try {
   if (
     typeof gate.createAICodeGate !== 'function' ||
     typeof gate.createProjectIdentity !== 'function' ||
-    gate.createStrictArkKernel !== undefined
+    gate.createStrictArkKernel !== undefined ||
+    gate.createOrderPlane !== undefined
   ) {
     throw new Error('gate-only install exposes the wrong public surface');
+  }
+  const order = await import(
+    pathToFileURL(path.join(gateInstall, 'node_modules/arkgate/dist/order/index.js')).href
+  );
+  if (typeof order.createOrderPlane !== 'function') {
+    throw new Error('arkgate/order subpath did not expose createOrderPlane');
   }
   const identitySchema = JSON.parse(
     fs.readFileSync(

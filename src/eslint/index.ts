@@ -32,6 +32,7 @@ import {
   classifyPublishFacts,
 } from '../domain/sourcePolicy';
 import { createArkRunEslintRules } from './arkRunRules';
+import { createArkOrderEslintRules } from './arkOrderRules';
 
 export { globToRegExp, patternSpecificity, layerForRelativePath, isEdgeDenied };
 
@@ -993,6 +994,25 @@ const {
 
 export { noArkRunKernelInDomain, noArkRunDirectNew, noArkRunTransportBypass };
 
+function toProjectRelative(configPath: string, filename: string): string {
+  const root = path.dirname(path.resolve(configPath));
+  return path.relative(root, path.resolve(filename)).split(path.sep).join('/');
+}
+
+const {
+  noArkOrderKernelInDomain,
+  noArkOrderGenericUpdate,
+} = createArkOrderEslintRules({
+  findConfigPath,
+  loadArkConfig,
+  lintedFilename,
+  sourceIsInAnalysisScope,
+  reportAdapterDiagnostic,
+  toProjectRelative,
+});
+
+export { noArkOrderKernelInDomain, noArkOrderGenericUpdate };
+
 const rules = {
   'no-domain-infra-imports': noDomainInfraImports,
   'no-raw-event-publish': noRawEventPublish,
@@ -1002,6 +1022,8 @@ const rules = {
   'no-arkrun-kernel-in-domain': noArkRunKernelInDomain,
   'no-arkrun-direct-new': noArkRunDirectNew,
   'no-arkrun-transport-bypass': noArkRunTransportBypass,
+  'no-arkorder-kernel-in-domain': noArkOrderKernelInDomain,
+  'no-arkorder-generic-update': noArkOrderGenericUpdate,
 };
 
 const plugin: ArkEslintPlugin = { rules };
@@ -1018,6 +1040,8 @@ plugin.configs = {
       'ark/no-arkrun-kernel-in-domain': 'error',
       'ark/no-arkrun-direct-new': 'error',
       'ark/no-arkrun-transport-bypass': 'error',
+      'ark/no-arkorder-kernel-in-domain': 'error',
+      'ark/no-arkorder-generic-update': 'error',
     },
   },
 };

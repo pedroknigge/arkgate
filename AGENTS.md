@@ -134,6 +134,7 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/diagnosticCatalog.ts` | `bin/lib/diagnostic-catalog.mjs` | (same `cli-pure` scripts) |
 | `src/domain/baselineKey.ts` | `bin/lib/baseline-key.mjs` | (same `cli-pure` scripts) |
 | `src/domain/configContract.ts` | `bin/lib/config-contract.mjs` + `schemas/ark.config.schema.json` | (same `cli-pure` scripts) |
+| `src/domain/configExtras.ts` | `bin/lib/config-extras.mjs` | (same `cli-pure` scripts); arkRun / arkOrder extra defaults |
 | `src/domain/projectIdentity.ts` | `bin/lib/project-identity.mjs` + `schemas/ark.project-identity.schema.json` | (same `cli-pure` scripts) |
 | `src/domain/statusManifest.ts` | `bin/lib/status-manifest.mjs` + `schemas/ark.status-manifest.schema.json` | (same `cli-pure` scripts) |
 | `src/domain/improvementCompassTypes.ts` | `bin/lib/improvement-compass-types.mjs` | (same `cli-pure` scripts); DF03 split child |
@@ -148,6 +149,11 @@ or `dist/` except `ark-mcp` loading the built library. Shared CLI logic lives in
 | `src/domain/extraMergeTeeth.ts` | `bin/lib/extra-merge-teeth.mjs` | (same `cli-pure` scripts); RN07 extra-plane teeth floor |
 | `src/domain/arkRunSensors.ts` | `bin/lib/ark-run-sensors.mjs` | (same `cli-pure` scripts); RN04 tier-1 ArkRun sensors |
 | `src/domain/arkRunDoctor.ts` | `bin/lib/ark-run-doctor.mjs` | (same `cli-pure` scripts); RN08 doctor/status/report arkRun (notAScore) |
+| `src/domain/arkOrderTypes.ts` | `bin/lib/ark-order-types.mjs` | (same `cli-pure` scripts); ArkOrder vocabulary |
+| `src/domain/arkOrderError.ts` | `bin/lib/ark-order-error.mjs` | (same `cli-pure` scripts) |
+| `src/domain/arkOrderInvariants.ts` | `bin/lib/ark-order-invariants.mjs` | (same `cli-pure` scripts); Haken freeze/ingest/blast |
+| `src/domain/arkOrderFacts.ts` | `bin/lib/ark-order-facts.mjs` | (same `cli-pure` scripts); ADR 0029 |
+| `src/domain/arkOrderSensors.ts` | `bin/lib/ark-order-sensors.mjs` | (same `cli-pure` scripts); ADR 0029 |
 | `src/domain/arkRunInformationPackage.ts` | kernel-consumed (no `bin/lib` generate) | RN10 snapshot sanitizer; strips factories, live instances, input DTOs |
 | `src/domain/arkRunTransport.ts` | kernel-consumed (no `bin/lib` generate) | RN11 closed send kinds + ephemeral default + broker→local plan |
 | `src/domain/arkRunInspector.ts` | kernel-consumed (no `bin/lib` generate) | RN12 inspector bind policy + snapshot/SSE text; HTTP listen stays Kernel |
@@ -186,6 +192,7 @@ retained shipped rationale live under `docs/plans/`:
 | [alive-in-six-months](docs/plans/alive-in-six-months/README.md) | `AL01`–`AL04` done on `main` (#147); `AL05` parked field | Corrective honesty + field: D0 adopted, Propia created-path merge, stewards-or-adapt, first-run noun cut; does not close Z09 |
 | [arkrun](docs/plans/arkrun/README.md) | Shipped in **4.7.0** (`RN01`–`RN16` done; **published**); `RN17` done (**4.7.4**, `@arkgate/runtime@0.1.0-experimental.0` on `experimental`) | ArkRun gated extra: opt-in like ArkRules; enforced usage + complete declarations on the write/CI plane; companion `@arkgate/runtime` stays isolated; first experimental registry publish is `RN17`; does not close Z09/K01 |
 | [one-catalog-one-root](docs/plans/one-catalog-one-root/README.md) | Shipped in **4.7.1** (`HS01`–`HS05` done; **published**) | One project `.agents/skills` catalog, visible `arkgate@version` in skill descriptions, no home duplicates, ArkRun routed through existing names |
+| [arkorder](docs/plans/arkorder/README.md) | Implemented on tree (`OR01`–`OR07` done). Unpublished `arkgate@4.8.0`. Not npm `latest` | Fourth extra: operational pattern (ξ vs s); opt-in `arkgate/order` **in the same npm package**; four verbs; v0 physics is SaaS billing fixture; does not replace ArkRun; does not close Z09/K01 |
 | [shared-home-skills-truth](docs/plans/shared-home-skills-truth/README.md) | Superseded (absorbed into 4.6.0 PL06–PL07) | Historical seed only — do not run as a separate 4.5.8 patch train |
 
 Do not treat a plan as authorization to start work until its IDs appear as `doing`/`todo` in

@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.7.6';
+const CURRENT = '4.8.0';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.7.6';
 
@@ -108,7 +108,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 
   it('keeps 4.7.6 published on npm latest', () => {
     expect(PUBLISHED_LATEST).toBe('4.7.6');
-    expect(CURRENT).toBe('4.7.6');
+    expect(CURRENT).toBe('4.8.0');
     expect(read('README.md')).toMatch(/4\.7\.6/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.7\.6\.md/);
     expect(read('README.md')).toMatch(/4\.7\.5/);

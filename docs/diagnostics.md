@@ -51,6 +51,11 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`ARKRUN_UNDECLARED_HANDLE`](#ARKRUN_UNDECLARED_HANDLE) | arkrun | Handle name not in reactsTo |
 | [`ARKRUN_UNDECLARED_DEPEND`](#ARKRUN_UNDECLARED_DEPEND) | arkrun | Depend name not in uses |
 | [`ARKRUN_TRANSPORT_BYPASS`](#ARKRUN_TRANSPORT_BYPASS) | arkrun | Homemade broker or emitter import |
+| [`ARKORDER_MISSING_PLANE`](#ARKORDER_MISSING_PLANE) | arkorder | No createOrderPlane in plane roots |
+| [`ARKORDER_KERNEL_IN_DOMAIN`](#ARKORDER_KERNEL_IN_DOMAIN) | arkorder | Domain-role layer imports the order plane |
+| [`ARKORDER_GENERIC_UPDATE`](#ARKORDER_GENERIC_UPDATE) | arkorder | Generic update of ξ |
+| [`ARKORDER_TOO_MANY_PARAMS`](#ARKORDER_TOO_MANY_PARAMS) | arkorder | Too many slow keys |
+| [`ARKORDER_INGEST_WRITES_XI`](#ARKORDER_INGEST_WRITES_XI) | arkorder | ingest assigned into ξ |
 | [`INVALID_CHANGE_PATH`](#INVALID_CHANGE_PATH) | preflight | Unsafe change path |
 | [`DUPLICATE_CHANGE_PATH`](#DUPLICATE_CHANGE_PATH) | preflight | Duplicate path in change set |
 | [`DELETE_TARGET_MISSING`](#DELETE_TARGET_MISSING) | preflight | Delete target missing |
@@ -345,6 +350,55 @@ Live adapters specialize `nextAction` with the call-site name or specifier when 
 
 - **Why:** A managed layer imports a closed broker/queue/emitter specifier (EventEmitter, queue clients, …) instead of the ArkRun kernel transport.
 - **Fix:** Send through the ArkRun kernel transport instead of importing that broker or emitter, then preflight again. Never mechanical-safe — homemade buses stay judgment.
+
+## ArkOrder (opt-in extra)
+
+Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest never mints a pattern.
+
+<a id="ARKORDER_MISSING_PLANE"></a>
+
+### `ARKORDER_MISSING_PLANE`
+
+**No createOrderPlane in plane roots**
+
+- **Why:** The ArkOrder extra is on but no createOrderPlane factory was found in arkOrder.planeRoots, so agents can skip the pattern plane while the write gate stays green.
+- **Fix:** Import createOrderPlane from arkgate/order and call it in a plane root listed in arkOrder.planeRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.
+
+<a id="ARKORDER_KERNEL_IN_DOMAIN"></a>
+
+### `ARKORDER_KERNEL_IN_DOMAIN`
+
+**Domain-role layer imports the order plane**
+
+- **Why:** A Domain-role layer imports arkgate/order. Domain stays plane-free; planeRoots own the factory.
+- **Fix:** Move the arkgate/order import out of the Domain-role layer into a plane root or adapter, then preflight again. Never mechanical-safe.
+
+<a id="ARKORDER_GENERIC_UPDATE"></a>
+
+### `ARKORDER_GENERIC_UPDATE`
+
+**Generic update of ξ**
+
+- **Why:** A call to update/patch/set on the order plane rewrites the slow pattern. Haken slaving forbids generic ξ mutation.
+- **Fix:** Use release() to freeze ξ or proposeRelease() for a pattern change with blast radius, then preflight again. Never mechanical-safe.
+
+<a id="ARKORDER_TOO_MANY_PARAMS"></a>
+
+### `ARKORDER_TOO_MANY_PARAMS`
+
+**Too many slow keys**
+
+- **Why:** ξ has more keys than arkOrder.maxXiKeys. Haken requires a few slow modes, not a dump of microstate.
+- **Fix:** Cut ξ to the slow keys that actually slave the rest, then preflight again. Never mechanical-safe.
+
+<a id="ARKORDER_INGEST_WRITES_XI"></a>
+
+### `ARKORDER_INGEST_WRITES_XI`
+
+**ingest assigned into ξ**
+
+- **Why:** An ingest() result is written into a Release or ξ store. ingest may absorb or escalate; it never mints a pattern.
+- **Fix:** Keep ingest results as absorb/escalate only. Change ξ with proposeRelease + release. Never mechanical-safe.
 
 ## Atomic preflight and change sets
 

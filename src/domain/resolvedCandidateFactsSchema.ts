@@ -338,6 +338,45 @@ export const RESOLVED_CANDIDATE_FACTS_SCHEMA = {
         },
       },
     },
+    arkOrderPlaneCalls: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['file', 'line', 'callee'],
+        properties: {
+          file: projectPathSchema,
+          line: lineSchema,
+          callee: textSchema,
+        },
+      },
+    },
+    arkOrderGenericUpdates: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['file', 'line', 'method'],
+        properties: {
+          file: projectPathSchema,
+          line: lineSchema,
+          method: textSchema,
+        },
+      },
+    },
+    arkOrderRootHits: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['file', 'matchedRoot', 'hasPlaneFactory'],
+        properties: {
+          file: projectPathSchema,
+          matchedRoot: textSchema,
+          hasPlaneFactory: { type: 'boolean' },
+        },
+      },
+    },
     factsHash: textSchema,
   },
   allOf: [

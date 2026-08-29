@@ -5,31 +5,32 @@
 - **Owner:** product (Pedro) + ArkGate maintainers
 - **Decision scope:** Phase RN / RN01 — kernel package home vs gate extra
   ([plan](../plans/arkrun/README.md))
-- **Clarifies:** [ADR 0004](0004-runtime-package-isolation.md) — isolation is **not**
-  superseded
+- **Clarifies:** [ADR 0004](0004-runtime-package-isolation.md) — factory, brand, no
+  singleton; durability honesty
+- **Npm identity:** D1 import/`@arkgate/runtime` **package** is superseded by
+  [ADR 0030](0030-opt-in-extras-same-npm-package.md). Target import is `arkgate/runtime`.
 
 ## Context
 
-ADR 0004 keeps the optional runtime out of the stable `arkgate` tarball. Phase RN adds a
-**gate extra** (`arkRun`) that talks about kernel usage. Those two labels must not collapse:
-shipping buses, inspectors, or stores inside `arkgate` would invert the package wedge;
+ADR 0004 keeps kernel **factories off the gate root export**. Phase RN adds a
+**gate extra** (`arkRun`) that talks about kernel usage. Those two labels must not
+collapse: putting `createStrictArkKernel` on `import from 'arkgate'` would hide opt-in;
 calling the extra “experimental” would hide a stable contract behind store-durability
-honesty.
+honesty. Npm identity is one package ([ADR 0030](0030-opt-in-extras-same-npm-package.md)).
 
 ## Decisions
 
-### D1 — Kernel implementation stays in `@arkgate/runtime`
+### D1 — Kernel implementation stays off the gate **root** export
 
-`@arkgate/runtime` remains the only implementation home. `arkgate` does not bundle buses,
-inspectors, stores, or kernel factories. Root `arkgate/runtime` / `arkgate/nestjs`
-forwarders stay removed (AR04). The extra **requires** the companion when `mode` is
-`enforced` (fail closed with `nextAction` to install / import from `@arkgate/runtime` —
-never from a removed shim).
+Target import is `arkgate/runtime` inside package `arkgate` ([ADR 0030](0030-opt-in-extras-same-npm-package.md)).
+The extra does **not** nextAction `npm i @arkgate/runtime`. Root `import from 'arkgate'`
+still must not export kernel factories. `@arkgate/runtime` as a second published package
+is residual until the packaging-correction item ships.
 
 ### D2 — Public brand ArkRun; import path and skill name unchanged
 
-Public brand: **ArkRun**. Import path stays `@arkgate/runtime` (no new npm name in this
-train). Skill name stays `/ark-runtime`. No new skill names (`/ark-run` is not a skill).
+Public brand: **ArkRun**. Target import path is `arkgate/runtime` ([ADR 0030](0030-opt-in-extras-same-npm-package.md)).
+Skill name stays `/ark-runtime`. No new skill names (`/ark-run` is not a skill).
 `/ark-place` and `/ark-adopt` may be deepened later (`RN15`); they still do not enforce.
 
 ### D3 — Per-instance factory; no process-wide singleton

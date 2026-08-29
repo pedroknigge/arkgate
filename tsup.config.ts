@@ -1,7 +1,11 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: { index: 'src/gate.ts', 'eslint/index': 'src/eslint/index.ts' },
+  entry: {
+    index: 'src/gate.ts',
+    'eslint/index': 'src/eslint/index.ts',
+    'order/index': 'src/kernel/order/index.ts',
+  },
   format: ['esm', 'cjs'],
   external: ['@nestjs/common'],
   dts: true,

@@ -30,6 +30,7 @@ import {
 import { evaluateInvariantCoverage } from '../domain/invariantCoverage';
 import { classifyResolvedLayerCoverage } from '../domain/extraMergeTeeth';
 import { evaluateArkRunSensors } from '../domain/arkRunSensors';
+import { evaluateArkOrderSensors } from '../domain/arkOrderSensors';
 import { collectAnalysisConfigWarnings } from './configWarnings';
 import { evaluateArchitectureGraph } from './graphEvaluate';
 import type {
@@ -518,6 +519,45 @@ export function analyzeCanonicalResolvedProject(
       sensor: item.sensor,
       failsStrict: false,
     }));
+  const arkOrderEval = evaluateArkOrderSensors({
+    arkOrder: input.contract.config.arkOrder,
+    layers: input.contract.config.layers,
+    planeCalls: facts.arkOrderPlaneCalls,
+    genericUpdates: facts.arkOrderGenericUpdates,
+    planeRootHits: facts.arkOrderRootHits,
+    dependencies: facts.dependencies,
+    layerForFile: (path) =>
+      layerByFile.get(path) ?? layerForRelativePath(path, input.contract.config.layers),
+    classification: arkRunClassification,
+  });
+  const arkOrderMode = input.contract.config.arkOrder?.mode;
+  const arkOrderViolations: ArchitectureEngineViolation[] = arkOrderEval.findings
+    .filter(() => arkOrderMode === 'enforced')
+    .map((item) => ({
+      ruleId: item.ruleId,
+      file: item.file,
+      line: item.line,
+      message: item.message,
+      fromLayer: item.fromLayer,
+      target: item.target,
+      nextAction: item.nextAction,
+      sensor: item.sensor,
+      failsStrict: item.failsStrict,
+      ...(item.severity ? { severity: item.severity } : {}),
+    }));
+  const arkOrderWarnings: ArchitectureEngineViolation[] = arkOrderEval.findings
+    .filter(() => arkOrderMode !== 'enforced')
+    .map((item) => ({
+      ruleId: item.ruleId,
+      file: item.file,
+      line: item.line,
+      message: item.message,
+      fromLayer: item.fromLayer,
+      target: item.target,
+      nextAction: item.nextAction,
+      sensor: item.sensor,
+      failsStrict: false,
+    }));
   // Only enforced + partial coverage degrades analysis completeness (never fake green).
   // Advisory-only catalogs stay complete with advisory warnings.
   const enforcedPartial =
@@ -534,6 +574,7 @@ export function analyzeCanonicalResolvedProject(
         ]
       : []),
     ...arkRunEval.completenessReasons,
+    ...arkOrderEval.completenessReasons,
   ];
 
   const evaluated = evaluateArchitectureGraph({
@@ -545,6 +586,7 @@ export function analyzeCanonicalResolvedProject(
       ...arkRuleViolations,
       ...invariantViolations,
       ...arkRunViolations,
+      ...arkOrderViolations,
     ],
     edges,
     warnings: [
@@ -553,6 +595,7 @@ export function analyzeCanonicalResolvedProject(
       ...arkRuleWarnings,
       ...invariantWarnings,
       ...arkRunWarnings,
+      ...arkOrderWarnings,
     ],
     safety: safety.report,
   });
