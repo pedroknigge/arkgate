@@ -3,12 +3,14 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
-## Unreleased
+## 4.8.0 — 2026-08-29
 
 **Minor** over **4.7.6**. One npm package **`arkgate`**: extras opt-in by config + subpath.
 **ArkOrder** (`arkgate/order`) on schema `1.3`. **ArkRun** kernel is `arkgate/runtime` in
-the same tarball. `@arkgate/runtime` is **deprecated**. **Not published yet.** Does not
-close `K01` / `Z09`. ArkRules unchanged.
+the same tarball. `@arkgate/runtime` is **deprecated**. Does not close `K01` / `Z09`.
+ArkRules unchanged.
+
+**Status: published** (on npm `latest`; see `docs/releases/4.8.0.md`).
 
 ### Added
 - **ArkOrder extra (`arkOrder`):** optional, silent when absent. Enforced skip: missing plane, Domain import of `arkgate/order`, generic `update` of ξ.

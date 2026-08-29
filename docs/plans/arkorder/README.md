@@ -6,7 +6,7 @@
 > [ADR index](../../adr/README.md) ([0027](../../adr/0027-arkorder-gated-extra-plane.md)–[0030](../../adr/0030-opt-in-extras-same-npm-package.md)) ·
 > [Package surface](../../package-surface.md) · [Product voice](../../product-voice.md)
 
-**Status:** Implemented on tree (`OR01`–`OR07` done). Unpublished `arkgate@4.8.0`. Not npm `latest`.<br>
+**Status:** Shipped in unpublished-train then **4.8.0** (`OR01`–`OR07` + `PK01`). Same npm package.<br>
 **Slug:** `arkorder`<br>
 **Kind:** epic / gated extra plane (same npm package)<br>
 **Owners:** product (Pedro) + library maintainers<br>
