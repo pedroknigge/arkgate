@@ -5,8 +5,7 @@
   "dynamicImportAllowlist": [
     "bin/ark-mcp.mjs",
     "scripts/generate-cli-pure.mjs",
-    "scripts/smoke-package-isolation.mjs",
-    "tests/unit/publish/package-exports-runtime.test.ts"
+    "scripts/smoke-package-isolation.mjs"
   ],
   "safety": {
     "maxTsSuppressions": 0,
