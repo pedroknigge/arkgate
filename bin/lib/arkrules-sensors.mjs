@@ -187,6 +187,19 @@ function evaluateThinAdapter(rule, input) {
     }
     return out;
 }
+function evaluateWritesViaAggregate(rule, input) {
+    const out = [];
+    for (const file of input.files) {
+        if (!matchesAppliesTo(file, rule.appliesTo))
+            continue;
+        if (!isInRuleLayer(file, rule, input.layerForFile))
+            continue;
+        if (input.fileHints?.[file]?.persistenceWrite) {
+            out.push(baseViolation(rule, file, `File imports a persistence driver and issues a write; route the write through a Domain aggregate and a persistence adapter (sensor writes-via-aggregate).`));
+        }
+    }
+    return out;
+}
 function evaluateNoAnemicModel(rule, shapes, layerForFile) {
     // Tier-2: always advisory.
     const out = [];
@@ -222,6 +235,9 @@ export function evaluateArkRuleSensors(input) {
                 break;
             case 'thin-adapter':
                 violations.push(...evaluateThinAdapter(rule, input));
+                break;
+            case 'writes-via-aggregate':
+                violations.push(...evaluateWritesViaAggregate(rule, input));
                 break;
             case 'no-anemic-model':
                 violations.push(...evaluateNoAnemicModel(rule, input.classShapes, input.layerForFile));
@@ -292,7 +308,9 @@ export function collectEmptyAppliesToFindings(arkRules, files) {
         a.message.localeCompare(b.message));
 }
 /** IO / ORM import evidence (mirrors design-smells; kept local for Domain purity). */
-const IO_IMPORT_HINT_RE = /\bfrom\s+['"](?:@?prisma\/client|@supabase\/|drizzle-orm|typeorm|knex|mongodb|pg|mysql2|better-sqlite3|ioredis|redis)['"]|require\(\s*['"](?:@?prisma\/client|pg|knex|typeorm)/;
+const IO_IMPORT_HINT_RE = /\bfrom\s+['"](?:@?prisma\/client|@supabase\/|drizzle-orm|typeorm|knex|mongodb|pg|mysql2|mongoose|better-sqlite3|ioredis|redis|kysely|sequelize)['"]|require\(\s*['"](?:@?prisma\/client|pg|knex|typeorm|mongoose)/;
+/** Write tokens that skip the aggregate when paired with a persistence driver import. */
+const PERSISTENCE_WRITE_HINT_RE = /\.(?:insert(?:One|Many)?|update(?:One|Many)?|upsert|delete(?:One|Many)?|createMany|create|replaceOne|findOneAnd(?:Update|Delete|Replace))\s*\(|\bINSERT\s+INTO\b|\bUPDATE\s+[A-Za-z_][\w.]*\s+SET\b|\bDELETE\s+FROM\b/i;
 const HANDLER_SHAPE_HINT_RE = /\b(?:@Controller|@Get|@Post|@Put|@Delete|Router\(\)|createRouter|express\.Router|fastify\.(?:get|post)|export\s+(?:async\s+)?function\s+(?:GET|POST|PUT|DELETE|PATCH)\b|export\s+const\s+(?:GET|POST|PUT|DELETE|PATCH)\s*=)/;
 const FRAMEWORK_HTTP_HINT_RE = /(?:^|[;\n])\s*(?:import\s+(?:type\s+)?(?:[^;]{0,512}?\s+from\s+)?|export\s+(?:type\s+)?[^;]{0,512}?\s+from\s+)['"]next\/server(?:\.js)?['"]/;
 /** Business-predicate / domain branching signals (conservative). */
@@ -324,11 +342,13 @@ export function deriveArkRuleFileHints(_file, content) {
         (hasHandler && hasDomainSignal) ||
         (hasIo && hasMapping && (ifCount >= 4 || domainPredicates.length >= 1)) ||
         (hasHandler && hasIo); // hollow-persistence style: HTTP + persistence together
-    if (!orchestrationHeavy && !adapterThick)
+    const persistenceWrite = hasIo && PERSISTENCE_WRITE_HINT_RE.test(content);
+    if (!orchestrationHeavy && !adapterThick && !persistenceWrite)
         return null;
     return {
         ...(orchestrationHeavy ? { orchestrationHeavy: true } : {}),
         ...(adapterThick ? { adapterThick: true } : {}),
+        ...(persistenceWrite ? { persistenceWrite: true } : {}),
     };
 }
 /**

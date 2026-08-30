@@ -29,11 +29,13 @@ Works with Cursor, Claude, Codex, and Grok.
 
 </div>
 
-> **ArkGate 4.8.2** is on npm `latest`. Write. Check. Ship. Adopted = required GitHub
+> **ArkGate 4.8.3** is on npm `latest`. Write. Check. Ship. Adopted = required GitHub
 > status running `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
 > Status is compact (`arkgate-check --doctor`; `--all` for Details). Optional **ArkRun**
-> (`arkgate/runtime`) is an in-memory runtime — not Postgres. `@arkgate/runtime` is deprecated.
-> [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
+> (`arkgate/runtime`) is an in-memory runtime — not Postgres. Optional **ArkOrder**
+> (`arkgate/order`) stops the agent rewriting the few slow product decisions as CRUD.
+> `@arkgate/runtime` is deprecated.
+> [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
 
 ---
 
@@ -90,7 +92,7 @@ Aliases `ark` / `ark-check` / `ark-mcp` still work. npm / pnpm / yarn. No instal
 
 When the agent writes a bad import, the write doesn’t land.
 The same check fails the pull request. That is **ArkGate** — import rules, always on
-once you adopt. The other two are optional.
+once you adopt. The other three are optional.
 
 | | Role | When |
 |--|------|------|
@@ -98,13 +100,17 @@ once you adopt. The other two are optional.
 | **Before merge** | `arkgate-check` as a **required** CI status | Always (ArkGate) |
 | **ArkRules** | Optional policies *inside* a layer | When you ask |
 | **ArkRun** | Optional experimental runtime (`arkgate/runtime`) | Off unless you turn it on |
+| **ArkOrder** | Stops the agent rewriting the few slow product decisions as CRUD (`arkgate/order`) | Off unless you turn it on |
 
-Layers (who may import whom) always run. ArkRules and ArkRun change no inter-layer
-verdict when absent. Label leftovers **`[Layer]`** vs **`[ArkRules]`**.
+Layers (who may import whom) always run. ArkRules, ArkRun, and ArkOrder change no
+inter-layer verdict when absent. Label leftovers **`[Layer]`** vs **`[ArkRules]`** vs
+**`[ArkRun]`** vs **`[ArkOrder]`**.
 Details: [configuration](docs/configuration.md) · [use](docs/use.md).
 
 **Not** an API Gateway, a folder linter, a web framework, ORM, or job runner.
-ArkRun is in-memory — local and tests, not Postgres.
+ArkRun is in-memory — local and tests, not Postgres. ArkOrder does not replace
+import rules: layers can be green while the agent still PATCHes the billing plan
+like a seat count.
 
 **Name note:** npm package `arkgate` — not affiliated with the separate Archgate CLI project.
 
@@ -211,6 +217,7 @@ expectation.
 | Placement + preflight for multi-file changes | ✅ | ❌ |
 | Honest governed % + dual plan (edges vs shape) | ✅ | ❌ |
 | Opt-in intra-layer ArkRules (structure + invariants) | ✅ | ❌ |
+| Stops agents rewriting slow product decisions as CRUD (ArkOrder) | ✅ | ❌ |
 | Incomplete analysis cannot look green | ✅ | varies |
 
 ---
@@ -254,6 +261,29 @@ interfaces for production. Details: [docs/production-hardening.md](docs/producti
 
 ---
 
+## Optional ArkOrder
+
+Layers stop a bad import. They do not stop a *legal* import that overwrites the
+billing plan.
+
+If the product can name a few slow decisions in an afternoon — plan, cycle,
+tenancy; a clinical protocol; match rules — an agent will still ship one PUT
+that changes them together with seats and invoices. The write gate stays green
+because “what may be the plan” was never a rule.
+
+**ArkOrder** (`arkgate/order`) is that rule. Off unless you add `arkOrder`.
+Name the slow keys (`xiKeys`: plan, protocol, cost-code bound — not `projectId`).
+Posting an invoice is absorbed. Changing plan is a new release, with a blast
+radius. A generic `update` of the plan does not land. A use-case that PATCHes
+those keys through Prisma is named. Same npm package.
+In-memory. Not durable. Does not replace ArkRun.
+
+Copy [examples/arkorder-billing/](examples/arkorder-billing/) and rename the
+three keys. Compact starters leave it off. Details:
+[configuration](docs/configuration.md) · [package surface](docs/package-surface.md).
+
+---
+
 ## Documentation
 
 | Audience | Link |
@@ -266,7 +296,8 @@ interfaces for production. Details: [docs/production-hardening.md](docs/producti
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current published (4.8.2 on npm `latest`) | [docs/releases/4.8.2.md](docs/releases/4.8.2.md) · [CHANGELOG](CHANGELOG.md) |
+| Current published (4.8.3 on npm `latest`) | [docs/releases/4.8.3.md](docs/releases/4.8.3.md) · [CHANGELOG](CHANGELOG.md) |
+| Prior published (4.8.2) | [docs/releases/4.8.2.md](docs/releases/4.8.2.md) |
 | Prior published (4.8.1) | [docs/releases/4.8.1.md](docs/releases/4.8.1.md) |
 | Prior published (4.8.0) | [docs/releases/4.8.0.md](docs/releases/4.8.0.md) |
 | Prior published (4.7.6) | [docs/releases/4.7.6.md](docs/releases/4.7.6.md) |

@@ -75,7 +75,8 @@ export type AnalyzeResolvedProjectInput = {
   /**
    * AR07 — Tooling-supplied orchestration/thin-adapter heuristics per file.
    * Prefer deriveArkRuleFileHints / buildArkRuleFileHints (Domain pure).
-   * When omitted, orchestration-only and thin-adapter sensors stay silent.
+   * When omitted, orchestration-only, thin-adapter, and writes-via-aggregate
+   * sensors stay silent.
    */
   fileHints?: Readonly<
     Record<
@@ -83,6 +84,7 @@ export type AnalyzeResolvedProjectInput = {
       {
         orchestrationHeavy?: boolean;
         adapterThick?: boolean;
+        persistenceWrite?: boolean;
       }
     >
   >;

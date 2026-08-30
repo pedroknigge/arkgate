@@ -25,6 +25,21 @@ const CASES = [
     tree: 'trees/generic-update',
     expected: ['ARKORDER_GENERIC_UPDATE'],
   },
+  {
+    id: 'xi-field-write',
+    tree: 'trees/xi-field-write',
+    expected: ['ARKORDER_XI_FIELD_WRITE'],
+  },
+  {
+    id: 'ingest-writes-xi',
+    tree: 'trees/ingest-writes-xi',
+    expected: ['ARKORDER_INGEST_WRITES_XI'],
+  },
+  {
+    id: 'too-many-params',
+    tree: 'trees/too-many-params',
+    expected: ['ARKORDER_TOO_MANY_PARAMS'],
+  },
 ] as const;
 
 function readJson(relativePath: string): Record<string, unknown> {

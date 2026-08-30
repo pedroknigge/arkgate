@@ -2,6 +2,13 @@
   "$schema": "https://unpkg.com/arkgate/schemas/ark.arkrules.schema.json",
   "schemaVersion": "1.0",
   "layer": "Features",
-  "structure": [],
+  "structure": [
+    {
+      "id": "writes-via-aggregate",
+      "sensor": "writes-via-aggregate",
+      "mode": "advisory",
+      "description": "Feature persistence writes go through a Domain aggregate and a persistence adapter; the slice does not call the driver."
+    }
+  ],
   "invariants": []
 }

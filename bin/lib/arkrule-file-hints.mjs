@@ -10,7 +10,11 @@ import { buildArkRuleFileHints } from './arkrules-sensors.mjs';
 const MAX_HINT_FILES = 400;
 const MAX_FILE_BYTES = 256 * 1024;
 
-const HINT_SENSORS = new Set(['orchestration-only', 'thin-adapter']);
+const HINT_SENSORS = new Set([
+  'orchestration-only',
+  'thin-adapter',
+  'writes-via-aggregate',
+]);
 
 /**
  * @param {{ structure?: Array<{ sensor?: string }> } | null | undefined} arkRules
@@ -26,7 +30,7 @@ export function needsArkRuleFileHints(arkRules) {
  * @param {{ files?: Array<{ path: string }> }} facts
  * @param {{ structure?: Array<{ sensor?: string }> } | null | undefined} arkRules
  * @param {Readonly<Record<string, string>>} [preloadedContents] optional reuse from coverage I/O
- * @returns {Record<string, { orchestrationHeavy?: boolean, adapterThick?: boolean }> | undefined}
+ * @returns {Record<string, { orchestrationHeavy?: boolean, adapterThick?: boolean, persistenceWrite?: boolean }> | undefined}
  */
 export function loadArkRuleFileHints(root, facts, arkRules, preloadedContents) {
   if (!needsArkRuleFileHints(arkRules)) return undefined;

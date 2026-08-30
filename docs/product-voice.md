@@ -21,6 +21,10 @@ The same check fails the pull request.
 **ArkRun** is an optional runtime (`arkgate/runtime`). Experimental. In-memory.
 Not Postgres.
 
+**ArkOrder** is the extra that stops the agent from rewriting the few slow
+product decisions as CRUD (`arkgate/order`). Off unless you turn it on. Same
+npm package. In-memory. Not durable. Does not replace ArkRun.
+
 ```text
 Write.   the agent writes
 Check.   bad imports don’t land — same check on the PR
@@ -31,6 +35,7 @@ Ship.    required GitHub check, then merge
 ArkGate   always     import rules (write + required CI)
 ArkRules  optional   policies inside a layer
 ArkRun    optional   experimental runtime — in-memory, not Postgres
+ArkOrder  optional   the few slow product decisions the agent must not CRUD
 ```
 
 Status first (`arkgate-check --doctor`). One next step. CLI flag `--doctor` stays;
@@ -45,7 +50,7 @@ On README, use, develop, the docs hub, and the product site:
 1. **Verbs:** `Write. Check. Ship.`
 2. **Deny:** `When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.`
 3. **Not-that (below the fold, one line):** `Not an API Gateway. Not a folder linter. If the check is not required on the PR, the config is just documentation.`
-4. **Nouns (once, below the deny):** ArkGate is import rules. ArkRules is optional policies. ArkRun is an optional experimental runtime.
+4. **Nouns (once, below the deny):** ArkGate is import rules. ArkRules is optional policies. ArkRun is an optional experimental runtime. ArkOrder is the extra that stops the agent from rewriting the few slow product decisions (plan, protocol) as CRUD — named when the consumer opts in, never as the first noun.
 
 Do not lead with folders, `ark.config.json`, “contract”, “gate”, “house”, or “doctor”
 as the first noun. Historical: `If the AI writes an illegal import, the write is rejected`
@@ -72,9 +77,10 @@ Three beats when a line teaches:
 | The agent imported Infrastructure from Domain. The write didn’t land. Next: `/ark-place`. | Ship it 🚀 crush the spaghetti |
 | Import rules pass. The tree still needs a refactor. Next: one small change. | You don’t need to understand anything |
 | ArkRun is experimental. In-memory. Data is gone on restart. | The kernel is production-ready |
+| The agent PATCHed the billing plan as if it were a seat count. The write didn’t land. Next: a new release, not `update`. | Freeze ξ. Four verbs. Haken slaving. |
 | Status: one light, one next step. | Become an architect in 60 seconds |
 
-**Brands, then the common word:** ArkGate, ArkRules, ArkRun. Gloss once.
+**Brands, then the common word:** ArkGate, ArkRules, ArkRun, ArkOrder. Gloss once.
 
 | Say | Do not say on first contact |
 |-----|-----------------------------|
@@ -84,6 +90,7 @@ Three beats when a line teaches:
 | `arkgate-check --doctor` — **status**, one next step | control plane, coach, doctor as the product name |
 | optional policies inside a layer | dual plane, intra-layer sensors, Saturday tidy |
 | experimental runtime / in-memory / not Postgres | production kernel, durable runtime, training wheels |
+| the few slow product decisions / billing plan vs seats / that PUT doesn’t land | four verbs, freeze a pattern, Haken, slaving, ξ vs s, extra plane, construction OS |
 
 Command names stay command names (`--doctor` is a flag). If a word is not here,
 cut it or put it below the fold (develop, JSON, ADRs).
@@ -94,7 +101,7 @@ cut it or put it below the fold (develop, JSON, ADRs).
 
 These are product law, not vibe:
 
-- **Write. Check. Ship.** ArkGate is the wedge. ArkRules and ArkRun never determine the `arkgate` package shape.
+- **Write. Check. Ship.** ArkGate is the wedge. ArkRules, ArkRun, and ArkOrder never determine the `arkgate` package shape.
 - The check is deterministic. No LLM pass/fail. Skills and `AGENTS.md` never replace the check.
 - Doctor and status advisory surfaces project existing facts. They are not a second check and never flip the deny.
 - No numeric architecture / trust / depth score. Lights and counts, never Excellent/Good.
@@ -103,7 +110,8 @@ These are product law, not vibe:
 - A weaker config needs an explicit, hash-bound yes.
 - Host write hardness differs. Required CI is the shared hard line.
 - ArkRun stores are **in-memory**. Not production durability. Do not imply otherwise.
-- Absence of ArkRules or ArkRun is silent. Label leftovers **`[Layer]`** vs **`[ArkRules]`**.
+- Absence of ArkRules, ArkRun, or ArkOrder is silent. Label leftovers **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**.
+- ArkOrder is in-memory and not durable. It does not replace ArkRun. Do not imply a second npm package.
 
 Full engineering queue: [ROADMAP.md](../ROADMAP.md). Do not narrate phase ids in consumer copy.
 
@@ -147,6 +155,7 @@ a product PR — that is an owner `--contract-session` (config change).
 - Package AI decided pass/fail
 - Depth scores, trust scores, Excellent module bands
 - ArkRun as Postgres, an outbox, or Temporal
+- ArkOrder as durable storage, a second npm package, or a replacement for ArkRun
 - New skill *names* without a live queue item
 - “the house stays up” / “training wheels” / “mimo” on first contact
 
@@ -169,8 +178,9 @@ Invoking a command **is** the approval. CLI checks; it does not silently rewrite
 - [ ] **Write. Check. Ship.** is on first-contact.
 - [ ] Deny is `When the agent writes a bad import, the write doesn’t land.`
 - [ ] One next action is obvious.
-- [ ] ArkGate / ArkRules / ArkRun are import rules / policies / experimental runtime.
+- [ ] ArkGate / ArkRules / ArkRun / ArkOrder are import rules / policies / experimental runtime / the extra that stops slow product decisions being CRUD.
 - [ ] ArkRun is never implied durable / Postgres.
+- [ ] ArkOrder is never implied durable, a second install, or a replacement for ArkRun.
 - [ ] Status lights read Setup / In progress / Ready to humans.
 - [ ] No score, no false done, no Gateway as the first sentence, no “disable the rules”.
 - [ ] A senior would paste the line into a PR without cringing.

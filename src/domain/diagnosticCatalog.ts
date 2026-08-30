@@ -210,7 +210,7 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'ARKRULE_STRUCTURE',
     'arkrules',
     'ArkRule structure sensor failed',
-    'An opt-in ArkRules structure sensor (private state, factory shape, event publish, …) failed on a governed file for a declared arkruleId.',
+    'An opt-in ArkRules structure sensor (private state, factory shape, event publish, persistence write outside an aggregate, …) failed on a governed file for a declared arkruleId.',
     'Restore the declared structure for the ArkRule (see arkruleSource), then preflight again. Do not demote the rule without a hash-bound policy acknowledgement.'
   ),
   entry(
@@ -321,6 +321,13 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'ingest assigned into ξ',
     'An ingest() result is written into a Release or ξ store. ingest may absorb or escalate; it never mints a pattern.',
     'Keep ingest results as absorb/escalate only. Change ξ with proposeRelease + release. Never mechanical-safe.'
+  ),
+  entry(
+    'ARKORDER_XI_FIELD_WRITE',
+    'arkorder',
+    'Slow key written around the order plane',
+    'A managed-layer file imports a persistence driver and writes a declared arkOrder.xiKeys name. Field events absorb or escalate; they do not PATCH the slow pattern.',
+    'Keep invoices, seats, hours, and logs on ingest. Change the slow key with proposeRelease + release, then preflight again. Never mechanical-safe.'
   ),
 
   // ── atomic preflight / change set ────────────────────────────────────────

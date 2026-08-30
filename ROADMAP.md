@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-30 (Engineering doing: none; Phase OR `OR01`–`OR07` **done**; published `arkgate@4.8.2` (skills four-plane honesty over **4.8.1**); `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **done** (ADR 0031: `arkgate/runtime` + `arkgate/nestjs` real subpaths; `@arkgate/runtime` deprecated); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** and shipped in published `arkgate@4.8.0+` (4.7.6 predates them); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.8.2**; `AL05` parked; Z09 still parked)
+- **Status date:** 2026-08-30 (Engineering doing: none; Patch **4.8.3** `AW01`+`OR08` **done** — `writes-via-aggregate` + ArkOrder `xiKeys`; Phase OR `OR01`–`OR08` **done**; published `arkgate@4.8.2` (skills four-plane honesty over **4.8.1**); `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **done** (ADR 0031: `arkgate/runtime` + `arkgate/nestjs` real subpaths; `@arkgate/runtime` deprecated); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** and shipped in published `arkgate@4.8.0+` (4.7.6 predates them); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.8.3**; `AL05` parked; Z09 still parked)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -62,6 +62,7 @@ lift DF freezes on scores, new skill names, sensors, or LLM verdicts.
 - New skill *names* beyond consolidating/clarifying the current 13 (prefer deepen + route +
   Agent Skills packaging of the same names). **IC05 deepens skill bodies** for vibe coders — same names.
 - New ArkRules sensor vocabulary (e.g. family/export symmetry) without ADR + field demand.
+  **Exception:** `AW01` / ADR 0032 adds closed `writes-via-aggregate` (advisory default).
 - LLM-derived pass/fail or package “process verdict” (maintainer offline eval only).
 - Enforcement claims from AGENTS.md, skills, or version-matched agent projection alone.
 - New runtime **kernel** features outside Phase RN or Phase OR. **Exception:** Phase **RN**
@@ -265,7 +266,7 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 Engineering doing: none. `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
 `K01` **parked** (4.7.6 primitives only).
 Phase DX (`DX01`–`DX03`) **done** and present in published `arkgate@4.8.0+` (4.7.6 predates them).
-Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.8.2** is on npm `latest`.
+Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.8.3** is on npm `latest`.
 `RN16` **done** (public docs + 4.7.0 published). `RN17` **done** (`@arkgate/runtime@0.1.0-experimental.0` on npm `experimental`).
 `RN15` **done** (deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names).
 `RN14` **done** (skip corpus: extra absent = green; enforced = fail `new` / peer import / homemade bus).
@@ -390,3 +391,13 @@ publishes `@arkgate/order`. ArkRun ships as `arkgate/runtime` in package `arkgat
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 219 | `PK01` | `done` | L | — | Restore `arkgate/runtime` and `arkgate/nestjs` as **real** subpaths of package `arkgate`; deprecate `@arkgate/runtime`; keep root export gate-only; sensors teach `arkgate/runtime`; experimental = durability, not a second package ([ADR 0031](docs/adr/0031-one-package-extras-deprecate-companion.md)) |
+
+### Patch 4.8.3 — writes through an aggregate
+
+[ADR 0032](docs/adr/0032-writes-via-aggregate-sensor.md). Application/Feature files that import a persistence driver and issue a write skip the aggregate. Advisory default.
+[ADR 0029](docs/adr/0029-arkorder-anti-skip-facts.md) `xiKeys` + live sensors. No new skill names. Does **not** close `Z09` / `K01`. Does **not** copy consumer folder names.
+
+| Order | ID | Status | Size | Depends on | Outcome |
+|---:|---|---|---:|---|---|
+| 220 | `AW01` | `done` | M | — | Closed sensor `writes-via-aggregate`; Application + vertical-slice Features templates advisory; deepen place/adopt/contract |
+| 221 | `OR08` | `done` | M | OR06 | `arkOrder.xiKeys`; `ARKORDER_XI_FIELD_WRITE`; `too-many-params` / `ingest-writes-xi` emit; billing rename recipe |

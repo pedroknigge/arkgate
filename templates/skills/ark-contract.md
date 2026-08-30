@@ -43,6 +43,10 @@ restart/retargeting is required. `ark://manifest` never satisfies this preflight
 
 Label findings **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. Absence of extras is valid and silent. First-time extra is **`/ark-adopt`** (advisory). Wire one kernel candidate with **`/ark-runtime`**. New kernel-managed / plane-root file with **`/ark-place`**. Grind skip clusters with **`/ark-autopilot`**. Do not invent `/ark-run` or `/ark-order`. Skills never enforce.
 
+Application / Features may declare advisory **`writes-via-aggregate`**: a use-case that imports a persistence driver and calls `.insert` / `.create` / `INSERT INTO` is the skip. Persistence adapters stay the write edge. Do not add `Externals/` or `admission.ts` as contract law.
+
+When `arkOrder` is on, name **`xiKeys`** (3–5 slow product decisions). Membership ids are not keys. A use-case that persists those keys is `ARKORDER_XI_FIELD_WRITE`. Copy [examples/arkorder-billing/](../../../examples/arkorder-billing/) and rename the three keys.
+
 ## Subagent fan-out (optional, host-dependent)
 
 If the host supports **parallel subagents**, fan out read-only scouts; otherwise

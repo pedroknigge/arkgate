@@ -37,13 +37,16 @@ No LLM pass/fail.
 | `arkorder-missing-plane` | 1 | No `createOrderPlane` in `planeRoots` | advisory, promotable |
 | `arkorder-kernel-in-domain` | 1 | Domain-role layer imports `arkgate/order` | advisory, promotable |
 | `arkorder-generic-update` | 1 | Call to a forbidden plane method (`update` / `patch` / `set`) | advisory, promotable |
-| `arkorder-too-many-params` | 1 | ξ schema/object keys > configured `maxXiKeys` at plane create | advisory, promotable |
+| `arkorder-too-many-params` | 1 | `xiKeys.length` or `.release({…})` key count > `maxXiKeys` | advisory, promotable |
 | `arkorder-ingest-writes-xi` | 1 | `ingest` result assigned into a release/ξ store (lexical, closed) | advisory, promotable |
-| `arkorder-skip-god-put` | 2 | Heuristic: a wide HTTP handler mutates both pattern-shaped and field-shaped names | advisory only |
+| `arkorder-xi-field-write` | 1 | Managed-layer file: persistence driver import **and** write token **and** a declared `xiKeys` name | advisory, promotable |
 
-Diagnostic `ruleId`s (`OR05`): `ARKORDER_MISSING_PLANE`, `ARKORDER_KERNEL_IN_DOMAIN`,
-`ARKORDER_GENERIC_UPDATE`, `ARKORDER_TOO_MANY_PARAMS`, `ARKORDER_INGEST_WRITES_XI`.
-All `judgment` / `neverMechanicalSafe`.
+`arkorder-skip-god-put` (heuristic God PUT) is **withdrawn**. Direct evidence is
+`xiKeys` + a persistence write. Inference without named keys stays silent.
+
+Diagnostic `ruleId`s: `ARKORDER_MISSING_PLANE`, `ARKORDER_KERNEL_IN_DOMAIN`,
+`ARKORDER_GENERIC_UPDATE`, `ARKORDER_TOO_MANY_PARAMS`, `ARKORDER_INGEST_WRITES_XI`,
+`ARKORDER_XI_FIELD_WRITE`. All `judgment` / `neverMechanicalSafe`.
 
 ### D3 — `planeRoots` are an explicit allowlist; Domain stays plane-free
 
@@ -55,7 +58,15 @@ Domain-role layers must not import `arkgate/order`. `createOrderPlane` belongs i
 `baselineKey` reuses `ruleId` + file + target name so brownfield can freeze residual
 skip sites. Resolver-fact extraction is `OR05`; this ADR locks the vocabulary.
 
-### D5 — No executable user predicates in the gate
+### D5 — `xiKeys` are consumer-named slow keys
+
+Optional `arkOrder.xiKeys` (schema `1.3`, default `[]`). The gate does not invent
+slow keys and does not treat membership ids (`project_id`) as ξ. Empty `xiKeys`
+leaves `ARKORDER_XI_FIELD_WRITE` silent. A key that does not change `h(ξ)` blast
+fails at `proposeRelease` (`ARKORDER_EMPTY_BLAST`) — that key is not an order
+parameter.
+
+### D6 — No executable user predicates in the gate
 
 ξ membership is not a user-supplied function inside `arkgate`. Consumer `projector`
 and `xiSchema` live in the companion call. The gate sees call sites and import

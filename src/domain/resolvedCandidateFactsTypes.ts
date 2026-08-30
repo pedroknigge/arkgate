@@ -7,8 +7,11 @@
 
 import type {
   ResolvedArkOrderGenericUpdateFact,
+  ResolvedArkOrderIngestWriteFact,
   ResolvedArkOrderPlaneCallFact,
+  ResolvedArkOrderReleaseKeyCountFact,
   ResolvedArkOrderRootHitFact,
+  ResolvedArkOrderXiFieldWriteFact,
 } from './arkOrderFacts';
 
 /** 1.1 adds optional classShapes[] (ADR 0013). 1.2 adds optional ArkRun facts (ADR 0022). 1.0/1.1 remain loadable. */
@@ -207,6 +210,9 @@ export type ResolvedCandidateFactsInput = {
   arkOrderPlaneCalls?: readonly ResolvedArkOrderPlaneCallFact[];
   arkOrderGenericUpdates?: readonly ResolvedArkOrderGenericUpdateFact[];
   arkOrderRootHits?: readonly ResolvedArkOrderRootHitFact[];
+  arkOrderXiFieldWrites?: readonly ResolvedArkOrderXiFieldWriteFact[];
+  arkOrderIngestWritesXi?: readonly ResolvedArkOrderIngestWriteFact[];
+  arkOrderReleaseKeyCounts?: readonly ResolvedArkOrderReleaseKeyCountFact[];
 };
 
 export type ResolvedCandidateFacts = Omit<
@@ -216,6 +222,9 @@ export type ResolvedCandidateFacts = Omit<
   | 'arkRunKernelCalls'
   | 'arkOrderPlaneCalls'
   | 'arkOrderGenericUpdates'
+  | 'arkOrderXiFieldWrites'
+  | 'arkOrderIngestWritesXi'
+  | 'arkOrderReleaseKeyCounts'
   | 'arkOrderRootHits'
   | 'arkRunManagedNews'
   | 'arkRunCompositionRootHits'
@@ -239,5 +248,8 @@ export type ResolvedCandidateFacts = Omit<
   arkOrderPlaneCalls: ResolvedArkOrderPlaneCallFact[];
   arkOrderGenericUpdates: ResolvedArkOrderGenericUpdateFact[];
   arkOrderRootHits: ResolvedArkOrderRootHitFact[];
+  arkOrderXiFieldWrites: ResolvedArkOrderXiFieldWriteFact[];
+  arkOrderIngestWritesXi: ResolvedArkOrderIngestWriteFact[];
+  arkOrderReleaseKeyCounts: ResolvedArkOrderReleaseKeyCountFact[];
   factsHash: string;
 };

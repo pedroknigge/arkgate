@@ -3,13 +3,25 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
+## 4.8.3 — 2026-08-30
+
+**Patch** over **4.8.2**. Persistence writes in a use-case skip the aggregate (`writes-via-aggregate`). ArkOrder **`xiKeys`** names the slow product decisions; a managed-layer Prisma/pg write of those keys is `ARKORDER_XI_FIELD_WRITE`. Dead sensors (`too-many-params`, `ingest-writes-xi`) now emit. No new skill names. Does not close `K01` / `Z09`. **No required config migration.**
+
+**Status: published** (on npm `latest`; see `docs/releases/4.8.3.md`).
+
+### Added
+- **`writes-via-aggregate`:** tier-1 structure sensor (ADR 0032). Direct evidence = persistence driver import **and** a write token (`.insert` / `.create` / `INSERT INTO` / …). Default advisory; promotable. Absence of the rule is silent.
+- Application + vertical-slice Features starter rules ship the sensor advisory. `/ark-place` `/ark-adopt` `/ark-contract` name the skip. No `Externals/` / `admission.ts` folder religion.
+- **`arkOrder.xiKeys`:** optional 3–5 slow names. Empty stays silent. A use-case that persists a named key is `ARKORDER_XI_FIELD_WRITE`. Copy billing, rename the keys. Membership ids are not keys.
+- ArkOrder sensors `ARKORDER_TOO_MANY_PARAMS` and `ARKORDER_INGEST_WRITES_XI` now emit (they were catalog-only).
+
 ## 4.8.2 — 2026-08-30
 
 **Patch** over **4.8.1**. Frozen 13 skills match four-plane honesty: ArkOrder on
 adopt / place / autopilot; ArkRun `kernelRoots`; kernel import `arkgate/runtime`.
 No `/ark-order` / `/ark-run`. Does not close `K01` / `Z09`. **No required config migration.**
 
-**Status: published** (on npm `latest`; see `docs/releases/4.8.2.md`).
+**Status: published** (see `docs/releases/4.8.2.md`).
 
 ### Changed
 - **Skills four-plane honesty:** existing 13 names teach Layers, ArkRules, ArkRun, and ArkOrder. Adopt (session-0: schema `1.3+`, `planeRoots`, `maxXiKeys`) and Autopilot (grind) name ArkOrder; Place hands ArkOrder grind to Autopilot. ArkRun `kernelRoots` is preferred (`compositionRoots` alias). Kernel import is `arkgate/runtime` (companion deprecated). Skills never enforce.
@@ -18,7 +30,7 @@ No `/ark-order` / `/ark-run`. Does not close `K01` / `Z09`. **No required config
 
 **Patch** over **4.8.0**. ArkRules invariant coverage reads tests first and retains only files that mention a declared invariant id, so large repos no longer report `INVARIANT_UNCOVERED` / `never-had-tests` while covering tests sit on disk. Does not close `K01` / `Z09`. **No required config migration.**
 
-**Status: published** (on npm `latest`; see `docs/releases/4.8.1.md`).
+**Status: published** (see `docs/releases/4.8.1.md`).
 
 ### Fixed
 - **INVARIANT_UNCOVERED on large trees:** `loadInvariantCoverageInputs` spent `MAX_COVERAGE_FILES` (400) on production facts before walking tests. Any repo with more than 400 governed files got `testGlobsMissing: true` and a false *never-had-tests* claim. Tests walk first; with `invariantIds`, a test is retained only if it mentions a catalog id. Doctor and policy-delta use the same ids. When the file budget is exhausted, the diagnostic says so instead of claiming the suite never existed.
@@ -30,7 +42,7 @@ No `/ark-order` / `/ark-run`. Does not close `K01` / `Z09`. **No required config
 the same tarball. `@arkgate/runtime` is **deprecated**. Does not close `K01` / `Z09`.
 ArkRules unchanged.
 
-**Status: published** (on npm `latest`; see `docs/releases/4.8.0.md`).
+**Status: published** (see `docs/releases/4.8.0.md`).
 
 ### Added
 - **ArkOrder extra (`arkOrder`):** optional, silent when absent. Enforced skip: missing plane, Domain import of `arkgate/order`, generic `update` of ξ.

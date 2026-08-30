@@ -17,6 +17,7 @@ export const ARK_RULE_SENSORS = [
     'domain-event-on-mutation',
     'orchestration-only',
     'thin-adapter',
+    'writes-via-aggregate',
     'no-anemic-model',
     'invariant-coverage',
 ];

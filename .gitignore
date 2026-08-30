@@ -41,6 +41,7 @@ release/artifacts/
 
 # Ark generated reports / local state
 .ark/
+.orderfield/
 .tmp-*
 .ark-mcp-runtime-*/
 eval/loop-cost-report.json

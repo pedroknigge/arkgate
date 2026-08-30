@@ -25,16 +25,18 @@ aliases `ark` / `ark-check` still work).
 
 `ark start` and `ark-check --plan` will not claim "everything is guarded" while governed coverage is near zero. On Nest/Next/express starters, init also merges **framework filename conventions** into the layer globs so day-one coverage is real.
 
-### Two kinds of rules (4.0 — optional extra)
+### Layers always. Extras when you ask.
 
 | Kind | Plain English |
 |------|---------------|
 | **Layers** | Who may import whom (always on after start) |
 | **ArkRules** (optional) | Habits *inside* a layer — structure and named invariants as data |
-| **ArkRun** (optional extra) | Kernel usage + complete declarations (`arkRun` on schema `1.2`) |
+| **ArkRun** (optional extra) | How the app talks (`arkgate/runtime`; `arkRun` on schema `1.2`) |
+| **ArkOrder** (optional extra) | Stops the agent rewriting the few slow product decisions as CRUD (`arkgate/order`; `arkOrder` on schema `1.3`) |
 
-You can stay on layers only. When you add ArkRules or ArkRun, start **advisory** and promote only with
-coverage. Compact starters leave ArkRun off. Residual labels: **`[Layer]`** vs **`[ArkRules]`**. Details:
+You can stay on layers only. When you add an extra, start **advisory** and promote only with
+coverage. Compact starters leave ArkRun and ArkOrder off. Residual labels: **`[Layer]`** vs
+**`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. Details:
 [use.md](../use.md) · [configuration](../configuration.md).
 
 ## Start here

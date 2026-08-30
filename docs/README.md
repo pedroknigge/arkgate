@@ -45,7 +45,7 @@ Product site: [arkgate.online](https://www.arkgate.online/) · npm: [`arkgate`](
 |-----|------------|
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Setup, rules, PR/release |
 | [ROADMAP.md](../ROADMAP.md) | Live implementation queue (one `doing` at a time). History: [archive/roadmap-history.md](archive/roadmap-history.md) |
-| [adr/](adr/README.md) | Architecture decisions |
+| [adr/](adr/README.md) | Architecture decisions ([0032](adr/0032-writes-via-aggregate-sensor.md) writes-via-aggregate) |
 | [SECURITY.md](../SECURITY.md) · [threat-model.md](threat-model.md) | Security |
 
 ---
@@ -62,8 +62,8 @@ These are **not** the day-to-day product path. They stay in the repo for evidenc
 | Field adoption kit (scaffolding, not closed) | [field/](field/) |
 | Runtime hardening (experimental) | [production-hardening.md](production-hardening.md) |
 
-Current published: [releases/4.8.2.md](releases/4.8.2.md) (`arkgate@4.8.2` on npm `latest`; does not close `K01`).
-Prior: [releases/4.8.1.md](releases/4.8.1.md) · [4.8.0](releases/4.8.0.md) · [4.7.6](releases/4.7.6.md) · [4.7.5](releases/4.7.5.md) · [4.7.4](releases/4.7.4.md) · [4.7.3](releases/4.7.3.md) · [4.7.2](releases/4.7.2.md) · [4.7.1](releases/4.7.1.md) · [4.7.0](releases/4.7.0.md) · [4.6.7](releases/4.6.7.md) · [4.6.6](releases/4.6.6.md) · [4.6.5](releases/4.6.5.md) · [4.6.4](releases/4.6.4.md) · [4.6.3](releases/4.6.3.md) · [4.6.2](releases/4.6.2.md) · [4.6.1](releases/4.6.1.md) · [4.6.0](releases/4.6.0.md).
+Current published: [releases/4.8.3.md](releases/4.8.3.md) (`arkgate@4.8.3` on npm `latest`; does not close `K01`).
+Prior: [releases/4.8.2.md](releases/4.8.2.md) · [releases/4.8.1.md](releases/4.8.1.md) · [4.8.0](releases/4.8.0.md) · [4.7.6](releases/4.7.6.md) · [4.7.5](releases/4.7.5.md) · [4.7.4](releases/4.7.4.md) · [4.7.3](releases/4.7.3.md) · [4.7.2](releases/4.7.2.md) · [4.7.1](releases/4.7.1.md) · [4.7.0](releases/4.7.0.md) · [4.6.7](releases/4.6.7.md) · [4.6.6](releases/4.6.6.md) · [4.6.5](releases/4.6.5.md) · [4.6.4](releases/4.6.4.md) · [4.6.3](releases/4.6.3.md) · [4.6.2](releases/4.6.2.md) · [4.6.1](releases/4.6.1.md) · [4.6.0](releases/4.6.0.md).
 Older notes: [releases/](releases/). Config: [configuration.md](configuration.md).
 
 ---
@@ -74,4 +74,4 @@ Older notes: [releases/](releases/). Config: [configuration.md](configuration.md
 2. **One primary flow** — `start` → doctor → optional guided work.
 3. **Honest hardness** — host write guarantees differ; a **required GitHub status context** running the merge CLI is the shared hard boundary.
 4. **History is not the product** — version archaeology lives under `releases/` and `plans/`, not the front door.
-5. **Common language** — first-contact copy uses ordinary software words (import rules, the write doesn’t land, required CI). ArkGate is import rules; ArkRules is policies; ArkRun is an experimental runtime; ArkOrder is an optional pattern extra in the same npm package. Voice: [product-voice.md](product-voice.md).
+5. **Common language** — first-contact copy uses ordinary software words (import rules, the write doesn’t land, required CI). ArkGate is import rules; ArkRules is policies; ArkRun is an experimental runtime; ArkOrder stops the agent rewriting the few slow product decisions as CRUD. Voice: [product-voice.md](product-voice.md).

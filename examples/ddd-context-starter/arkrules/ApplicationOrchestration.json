@@ -8,6 +8,12 @@
       "sensor": "orchestration-only",
       "mode": "advisory",
       "description": "Application use cases orchestrate; keep domain branching in Domain."
+    },
+    {
+      "id": "writes-via-aggregate",
+      "sensor": "writes-via-aggregate",
+      "mode": "advisory",
+      "description": "Persistence writes go through a Domain aggregate and a persistence adapter; use cases do not call the driver."
     }
   ],
   "invariants": []

@@ -149,6 +149,15 @@ function canonicalResolvedFactsInput(
   const arkOrderRootHits = (input.arkOrderRootHits ?? [])
     .map((fact) => ({ ...fact }))
     .sort(compareCanonical);
+  const arkOrderXiFieldWrites = (input.arkOrderXiFieldWrites ?? [])
+    .map((fact) => ({ ...fact }))
+    .sort(compareCanonical);
+  const arkOrderIngestWritesXi = (input.arkOrderIngestWritesXi ?? [])
+    .map((fact) => ({ ...fact }))
+    .sort(compareCanonical);
+  const arkOrderReleaseKeyCounts = (input.arkOrderReleaseKeyCounts ?? [])
+    .map((fact) => ({ ...fact }))
+    .sort(compareCanonical);
   const candidateTree = input.files
     .map(({ path, contentHash }) => ({ path, contentHash }))
     .sort((left, right) =>
@@ -183,6 +192,9 @@ function canonicalResolvedFactsInput(
     arkOrderPlaneCalls,
     arkOrderGenericUpdates,
     arkOrderRootHits,
+    arkOrderXiFieldWrites,
+    arkOrderIngestWritesXi,
+    arkOrderReleaseKeyCounts,
   };
 }
 
@@ -347,6 +359,9 @@ function parseResolvedFactsInput(
       'arkOrderPlaneCalls',
       'arkOrderGenericUpdates',
       'arkOrderRootHits',
+      'arkOrderXiFieldWrites',
+      'arkOrderIngestWritesXi',
+      'arkOrderReleaseKeyCounts',
       ...(withDerivedIdentities ? ['candidateTreeHash', 'factsHash'] : []),
     ],
     '$'
@@ -728,6 +743,47 @@ function parseResolvedFactsInput(
       hasPlaneFactory: requiredBoolean(entry, 'hasPlaneFactory', at),
     };
   });
+  const arkOrderXiFieldWritesRaw =
+    record.arkOrderXiFieldWrites === undefined
+      ? []
+      : requiredArray(record, 'arkOrderXiFieldWrites', '$');
+  const arkOrderXiFieldWrites = arkOrderXiFieldWritesRaw.map((value, index) => {
+    const at = `$.arkOrderXiFieldWrites[${index}]`;
+    const entry = asRecord(value, at);
+    assertOnlyKeys(entry, ['file', 'line', 'key'], at);
+    return {
+      file: requiredProjectPath(entry, 'file', at),
+      line: requiredPositiveInteger(entry, 'line', at),
+      key: requiredText(entry, 'key', at),
+    };
+  });
+  const arkOrderIngestWritesXiRaw =
+    record.arkOrderIngestWritesXi === undefined
+      ? []
+      : requiredArray(record, 'arkOrderIngestWritesXi', '$');
+  const arkOrderIngestWritesXi = arkOrderIngestWritesXiRaw.map((value, index) => {
+    const at = `$.arkOrderIngestWritesXi[${index}]`;
+    const entry = asRecord(value, at);
+    assertOnlyKeys(entry, ['file', 'line'], at);
+    return {
+      file: requiredProjectPath(entry, 'file', at),
+      line: requiredPositiveInteger(entry, 'line', at),
+    };
+  });
+  const arkOrderReleaseKeyCountsRaw =
+    record.arkOrderReleaseKeyCounts === undefined
+      ? []
+      : requiredArray(record, 'arkOrderReleaseKeyCounts', '$');
+  const arkOrderReleaseKeyCounts = arkOrderReleaseKeyCountsRaw.map((value, index) => {
+    const at = `$.arkOrderReleaseKeyCounts[${index}]`;
+    const entry = asRecord(value, at);
+    assertOnlyKeys(entry, ['file', 'line', 'keyCount'], at);
+    return {
+      file: requiredProjectPath(entry, 'file', at),
+      line: requiredPositiveInteger(entry, 'line', at),
+      keyCount: requiredPositiveInteger(entry, 'keyCount', at),
+    };
+  });
   const arkRunDeclarations: ResolvedArkRunDeclarationFact[] = arkRunDeclarationsRaw.map(
     (value, index) => {
       const at = `$.arkRunDeclarations[${index}]`;
@@ -756,6 +812,9 @@ function parseResolvedFactsInput(
     ['$.arkOrderPlaneCalls', arkOrderPlaneCalls],
     ['$.arkOrderGenericUpdates', arkOrderGenericUpdates],
     ['$.arkOrderRootHits', arkOrderRootHits],
+    ['$.arkOrderXiFieldWrites', arkOrderXiFieldWrites],
+    ['$.arkOrderIngestWritesXi', arkOrderIngestWritesXi],
+    ['$.arkOrderReleaseKeyCounts', arkOrderReleaseKeyCounts],
   ] as const) {
     for (const fact of facts) {
       if (!filePaths.has(fact.file)) {
@@ -829,6 +888,9 @@ function parseResolvedFactsInput(
     arkOrderPlaneCalls,
     arkOrderGenericUpdates,
     arkOrderRootHits,
+    arkOrderXiFieldWrites,
+    arkOrderIngestWritesXi,
+    arkOrderReleaseKeyCounts,
   };
 }
 

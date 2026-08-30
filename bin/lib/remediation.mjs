@@ -106,6 +106,7 @@ const ARKORDER_JUDGMENT_RULE_IDS = new Set([
     'ARKORDER_GENERIC_UPDATE',
     'ARKORDER_TOO_MANY_PARAMS',
     'ARKORDER_INGEST_WRITES_XI',
+    'ARKORDER_XI_FIELD_WRITE',
 ]);
 function arkRunCallSiteName(violation) {
     return typeof violation.target === 'string' && violation.target.trim().length > 0
@@ -234,6 +235,10 @@ export function deterministicNextAction(violation) {
             return 'Cut ξ to the slow keys that actually slave the rest, then preflight again. Never mechanical-safe.';
         case 'ARKORDER_INGEST_WRITES_XI':
             return 'Keep ingest results as absorb/escalate only. Change ξ with proposeRelease + release. Never mechanical-safe.';
+        case 'ARKORDER_XI_FIELD_WRITE':
+            return typeof violation.target === 'string' && violation.target.length > 0
+                ? `Do not persist slow key ${violation.target} from a use-case. Absorb the field with ingest() or change the pattern with proposeRelease(), then preflight again.`
+                : 'Do not persist a declared slow key from a use-case. Absorb the field with ingest() or change the pattern with proposeRelease(), then preflight again. Never mechanical-safe.';
         default:
             if (typeof violation.ruleId === 'string' && violation.ruleId.startsWith('ARKRULE_')) {
                 return `Fix the ArkRule ${typeof violation.arkruleId === 'string' ? violation.arkruleId : violation.ruleId}, then preflight again.`;
@@ -496,6 +501,7 @@ export function enrichViolationWithFixClass(violation) {
         case 'ARKORDER_GENERIC_UPDATE':
         case 'ARKORDER_TOO_MANY_PARAMS':
         case 'ARKORDER_INGEST_WRITES_XI':
+        case 'ARKORDER_XI_FIELD_WRITE':
             enriched.fixClass = 'arkorder-usage';
             enriched.effort = 'medium';
             enriched.enthusiastHint =
@@ -507,7 +513,9 @@ export function enrichViolationWithFixClass(violation) {
                             ? 'Too many slow keys. Keep ξ small — the rest is derived noise.'
                             : violation.ruleId === 'ARKORDER_INGEST_WRITES_XI'
                                 ? 'ingest can absorb or escalate. It never writes a new house.'
-                                : 'Call createOrderPlane from arkgate/order in a listed plane root so the app actually freezes a pattern.';
+                                : violation.ruleId === 'ARKORDER_XI_FIELD_WRITE'
+                                    ? 'Name the slow keys in arkOrder.xiKeys. Invoices and seats still flow; changing the plan is a new release, not prisma.update.'
+                                    : 'Call createOrderPlane from arkgate/order in a listed plane root so the app actually freezes a pattern.';
             break;
         default:
             enriched.fixClass = 'review-contract';

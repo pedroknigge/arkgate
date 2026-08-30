@@ -19,6 +19,7 @@ describe('configExtras (opt-in arkRun / arkOrder)', () => {
     expect(order.mode).toBe('advisory');
     expect(order.planeRoots).toEqual([]);
     expect(order.maxXiKeys).toBe(7);
+    expect(order.xiKeys).toEqual([]);
   });
 
   it('keeps explicit kernelRoots and maxXiKeys', () => {
