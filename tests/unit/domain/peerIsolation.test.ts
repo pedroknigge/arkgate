@@ -631,3 +631,101 @@ describe('peerIsolation violation message names the reason that fired', () => {
     expect(evaluate('src/features/auth/a.ts', 'src/ui/button.tsx').violations).toHaveLength(0);
   });
 });
+
+describe('peerIsolation laundering invariant (4.8.4)', () => {
+  it('two real, different slices are allowed ONLY by an explicit declaration', () => {
+    const bools = [true, false, undefined];
+    const slices = [undefined, '', 'features/a', 'features/b'];
+    const paths = [undefined, '', 'x.ts'];
+    for (const fromPath of paths)
+      for (const toPath of paths)
+        for (const folderCount of [-1, 0, 1, 3])
+          for (const fromSlice of slices)
+            for (const toSlice of slices)
+              for (const fromShared of bools)
+                for (const toShared of bools)
+                  for (const crossSliceAllowed of bools) {
+                    const decision = peerIsolationDecision({
+                      fromPath,
+                      toPath,
+                      folderCount,
+                      fromSlice,
+                      toSlice,
+                      fromShared,
+                      toShared,
+                      crossSliceAllowed,
+                    });
+                    if (
+                      fromPath &&
+                      toPath &&
+                      folderCount > 0 &&
+                      fromSlice &&
+                      toSlice &&
+                      fromSlice !== toSlice
+                    ) {
+                      expect(decision.denied).toBe(crossSliceAllowed !== true);
+                      if (decision.denied) expect(decision.reason).toBe('cross-slice');
+                    }
+                    if (decision.denied) expect(typeof decision.reason).toBe('string');
+                    else expect(decision.reason).toBeUndefined();
+                  }
+  });
+
+  it('hostile sharedRoots cannot exempt an edge where both sides carry a slice id', () => {
+    const layers = [{ name: 'F', patterns: ['src/features/**'] }];
+    for (const sharedRoots of [['features', 'src', 'a', 'b'], ['**'], ['**/*'], ['*']]) {
+      const rules = [
+        {
+          from: 'F',
+          to: 'F',
+          allowed: false as const,
+          peerIsolation: true,
+          sliceFolders: ['features'],
+          sharedRoots,
+        },
+      ];
+      expect(
+        findDeniedEdgeDecision(rules, 'F', 'F', {
+          fromPath: 'src/features/a/x.ts',
+          toPath: 'src/features/b/y.ts',
+          layers,
+        })?.peerIsolationReason
+      ).toBe('cross-slice');
+    }
+  });
+
+  it('malformed allowedCrossSlice entries never allow anything', () => {
+    const layers = [{ name: 'F', patterns: ['src/features/**'] }];
+    const malformed: unknown[] = [
+      null,
+      undefined,
+      {},
+      { from: 'a' },
+      { to: 'b' },
+      { from: '', to: '' },
+      { from: 1, to: 2 },
+      { from: '*', to: '*' },
+      { from: '/', to: '/' },
+      { from: 'a', to: 'a' },
+    ];
+    for (const entry of malformed) {
+      const rules = [
+        {
+          from: 'F',
+          to: 'F',
+          allowed: false as const,
+          peerIsolation: true,
+          sliceFolders: ['features'],
+          allowedCrossSlice: [entry] as never,
+        },
+      ];
+      expect(
+        findDeniedEdgeDecision(rules, 'F', 'F', {
+          fromPath: 'src/features/a/x.ts',
+          toPath: 'src/features/b/y.ts',
+          layers,
+        })?.peerIsolationReason
+      ).toBe('cross-slice');
+    }
+  });
+});
