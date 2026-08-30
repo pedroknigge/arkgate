@@ -31,7 +31,9 @@ const BUDGETS = [
   // DF02 status/MCP compass honesty residual wiring — was 1920 (loc ~1937).
   // Deep-module coach report advisory spread — was 1940.
   // TW team flags + preflight hook (law vs feature). Logic lives in team-parliament-io.
-  { path: 'bin/ark-check-runtime.mjs', max: 2060 },
+  // Green-run `--plan` pointer wiring — was 2060 (loc 2059). The scan itself
+  // lives in bin/lib/design-smells.mjs; only the call site is here.
+  { path: 'bin/ark-check-runtime.mjs', max: 2078 },
   // S3 start confidence gate on all apply paths — was 900 (loc ~920).
   // ACS03 unified status command wiring — was 940 (loc ~943).
   // ACS04 agents-md / agent-projection command wiring — was 960 (loc ~974).

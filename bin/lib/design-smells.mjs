@@ -490,6 +490,91 @@ export function summarizeDesignFitness(smells, ctx = {}) {
   };
 }
 
+/** How many smell ids the green-run pointer names before it counts the rest. */
+export const GREEN_PLAN_POINTER_MAX_IDS = 4;
+
+/**
+ * Name `--plan` on a run that passed.
+ *
+ * `--plan` is where the design bets live, and a green run never pointed at it:
+ * a whole adopter session went by without opening it, because `✔ Ark check
+ * passed` reads as *finished*. Clean import edges are not a settled design, and
+ * the summary was saying only the first half of what the run already knows.
+ *
+ * Report only, and deliberately quiet. Its weakness test is `isDesignWeak` with
+ * the **blocking** violation count, the same input doctor uses, so the two
+ * surfaces can never disagree about `designWeak`. It never changes the exit
+ * code, and it stays silent when there is nothing behind the pass — a line that
+ * always prints is a line nobody reads. The caller passes the runner-correct
+ * command so this stays pure.
+ *
+ * A baselined run is not a clean run: violations suppressed by the ratchet are
+ * still violations, and the summary line directly above says so. The opening
+ * clause reports which of the two it is.
+ *
+ * @param {DesignSmell[]} smells
+ * @param {{ blockingViolations?: number, governedPercent?: number|null, totalFiles?: number|null, suppressedCount?: number }} ctx
+ * @param {string} planCommand
+ * @returns {string | null}
+ */
+export function formatGreenPlanPointer(smells, ctx = {}, planCommand = 'ark-check --plan') {
+  const weak = isDesignWeak(smells, {
+    activeViolations: ctx.blockingViolations ?? 0,
+    governedPercent: ctx.governedPercent ?? null,
+    totalFiles: ctx.totalFiles ?? null,
+  });
+  if (!weak) return null;
+  const ids = [...new Set((smells || []).map((smell) => smell?.id).filter(Boolean))].sort();
+  if (ids.length === 0) return null;
+  const shown = ids.slice(0, GREEN_PLAN_POINTER_MAX_IDS);
+  const hidden = ids.length - shown.length;
+  const named = hidden > 0 ? `${shown.join(', ')}, +${hidden} more` : shown.join(', ');
+  const plural = ids.length === 1 ? '' : 's';
+  const suppressed = ctx.suppressedCount ?? 0;
+  const opening =
+    suppressed > 0
+      ? `No blocking import-rule violations (${suppressed} suppressed by baseline)`
+      : 'Import rules are clean';
+  return (
+    `${opening}; the design bets are not settled — ${ids.length} design smell${plural} ` +
+    `(${named}). They never fail this check: ${planCommand}`
+  );
+}
+
+/**
+ * The same pointer, composed against the tree the run just analyzed.
+ *
+ * Kept here rather than in the CLI entry: the smell scan is filesystem work and
+ * `bin/ark-check-runtime.mjs` is orchestration under a line budget. A failure
+ * is swallowed on purpose — a discoverability hint must never change the
+ * outcome of a green run — but it is not silent under `ARK_DEBUG`, or a
+ * refactor could leave this permanently dead with no signal anywhere.
+ *
+ * @param {{ root: string, config: object, files: string[], coverage: object|null,
+ *           blockingViolations: number, suppressedCount?: number, planCommand: string }} options
+ * @returns {string | null}
+ */
+export function greenPlanPointer(options) {
+  try {
+    const { root, config, files, coverage } = options;
+    return formatGreenPlanPointer(
+      detectDesignSmells(root, config, files, coverage),
+      {
+        blockingViolations: options.blockingViolations,
+        governedPercent: coverage?.governed?.percent ?? null,
+        totalFiles: coverage?.totalFiles ?? null,
+        suppressedCount: options.suppressedCount ?? 0,
+      },
+      options.planCommand
+    );
+  } catch (error) {
+    if (process.env.ARK_DEBUG === '1') {
+      console.error(`[ark-check] green --plan pointer skipped: ${error?.message ?? error}`);
+    }
+    return null;
+  }
+}
+
 /**
  * Build plan-B pattern bets from smells (P03). Never mechanical-safe.
  *

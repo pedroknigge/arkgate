@@ -1991,6 +1991,20 @@ async function main() {
           `${color.green('✔')} Ark check passed with ${warnings.length} config warning(s).${baselineNote}`
         );
       }
+      // `--plan` is where the design bets live and a green run never named it.
+      // Not on the strict-config branch above (it printed a failure), not on
+      // `--changed` (a partial scan would print one slice's count as the tree's),
+      // not on `--watch` (a line that repeats every save is a line nobody reads).
+      if (!(args.strictConfig && strictWarnings.length > 0) && !args.changed && !args.watch) {
+        const { greenPlanPointer } = await import('./lib/design-smells.mjs');
+        const pointer = greenPlanPointer({
+          root, config, files, coverage: preCov,
+          blockingViolations: blockingViolations.length,
+          suppressedCount: suppressed.length,
+          planCommand: arkCommand(root, 'ark-check', '--plan'),
+        });
+        if (pointer) console.log(color.dim(pointer));
+      }
     } else {
       console.error(
         blockingViolations.length > 0

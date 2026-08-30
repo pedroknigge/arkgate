@@ -134,6 +134,23 @@ repo paths living in strings, comments and docstrings that a rename left behind.
   the link resolves inside the project root. A link pointing outside is refused and counted: a file
   that is not in this repo must never prove an invariant covered.
 
+- **A green run names `--plan` when the design bets are still open.** `--plan` is built, it is
+  good, and it was invisible: a whole adopter session went by without opening it, because
+  `✔ Ark check passed` reads as *finished*. Clean import edges are not a settled design, and the
+  closing line was saying only the first half of what the run already knows. A passing human run
+  now prints one dim line underneath it — the smell count, the ids, and the command — whenever
+  deterministic design smells remain. It is report-only in the strictest sense: it can fire only on
+  a run that already passed, it adds no warning and never touches the exit code, and it stays silent
+  when the pass has nothing behind it (a line that always prints is a line nobody reads), on
+  `--changed`, where a partial scan would print one slice's count as if it were the tree's, and on
+  `--watch`, where it would reappear on every save. Its weakness test is `isDesignWeak` over the
+  **blocking** violation count, the same input doctor already uses, so the line and
+  `doctor.designFitness.designWeak` cannot disagree — non-blocking type-only placement debt is a
+  green run and still gets the pointer. And a baselined run is not called clean: with suppressions
+  in force the clause reads *"No blocking import-rule violations (N suppressed by baseline)"*,
+  because the summary line directly above already says a violation was frozen. `--json` is
+  unchanged.
+
 ### Fixed
 - **The Tier-2 rejection names the rule you wrote.** `sensor "no-anemic-model" is Tier-2
   advisory-only and cannot be enforced` now reads `rule "types-only" uses sensor "no-anemic-model",
