@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-30 (Engineering doing: none; Phase OR `OR01`–`OR07` **done**; published `arkgate@4.8.1` (invariant-coverage honesty over **4.8.0**); `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **done** (ADR 0031: `arkgate/runtime` + `arkgate/nestjs` real subpaths; `@arkgate/runtime` deprecated); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** on `main` (not in published `arkgate@4.7.6`); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.8.1**; `AL05` parked; Z09 still parked)
+- **Status date:** 2026-08-30 (Engineering doing: none; Phase OR `OR01`–`OR07` **done**; published `arkgate@4.8.1` (invariant-coverage honesty over **4.8.0**); `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **done** (ADR 0031: `arkgate/runtime` + `arkgate/nestjs` real subpaths; `@arkgate/runtime` deprecated); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** and shipped in published `arkgate@4.8.0+` (4.7.6 predates them); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.8.1**; `AL05` parked; Z09 still parked)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -262,9 +262,9 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: none. `OR01` **done** (ADRs 0027–0029). `WH01` **done** (ADR 0026). Phase OR seeded.
+Engineering doing: none. `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
 `K01` **parked** (4.7.6 primitives only).
-Phase DX (`DX01`–`DX03`) **done** on `main`, not in published `arkgate@4.7.6`.
+Phase DX (`DX01`–`DX03`) **done** and present in published `arkgate@4.8.0+` (4.7.6 predates them).
 Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.8.1** is on npm `latest`.
 `RN16` **done** (public docs + 4.7.0 published). `RN17` **done** (`@arkgate/runtime@0.1.0-experimental.0` on npm `experimental`).
 `RN15` **done** (deepen `/ark-runtime` `/ark-place` `/ark-adopt`; no new skill names).
@@ -286,7 +286,7 @@ no process singleton; kernel stays out of the `arkgate` tarball).
 `RN02` **done** (schema `1.2` `arkRun` extra; `1.1` migrates; absence silent; invalid extra fails closed).
 `RN01` done (ADRs 0020–0024 accepted). `Z09` stays parked (retained adoption + independent
 close). 30-day freeze from 2026-08-22: no explore / compass as `doing`. Engineering doing:
-none (`OR01` paper done; `OR02` is next `todo`). Phase RN shipped in **4.7.0** (gate extra). Companion registry
+none. Phase OR shipped in **4.8.0**. Phase RN shipped in **4.7.0** (gate extra). Companion registry
 publish is `RN17` / **4.7.4**. Phase HS is the **4.7.1** host-catalog patch.
 
 ### Phase HS — One catalog, one root (4.7.1)
@@ -343,7 +343,7 @@ Does not ship cloud adapters or a process singleton. Companion kernel stays
 
 ### Phase DX — ArkRun DX Relaxations
 
-Targeting next `arkgate` release to reduce `ARKRUN_DIRECT_NEW` friction for transient objects.
+Shipped in published `arkgate@4.8.0+` (`ignoreDirectNewForErrors`, DTO/VO exemptions, `kernelRoots`). 4.7.6 predates them.
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
