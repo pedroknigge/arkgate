@@ -55,6 +55,13 @@ implying it knows a test runs. **No required config migration.**
   genuinely greenfield repo, where `--init` is designed to land a contract before the code. The
   report modes are untouched: `--plan`, `--coverage` and `--doctor` still describe an empty scope
   (`empty-scope`) rather than refusing, because they are how the refusal gets fixed.
+- **The production diagnostic-id fixture is pinned in both directions.**
+  `tests/fixtures/diagnostic-catalog/production-rule-ids.json` had two tests over it and both
+  asserted fixture ⊆ catalog, so a production-emitted id added to the catalog and forgotten in the
+  fixture could not fail anything. `ARKORDER_XI_FIELD_WRITE` (emitted since 4.8.3) sat in exactly
+  that hole, and `ARKRULE_INVARIANT` with it. Two assertions added — every catalogued id must be
+  listed, and every `ARKORDER_RULE_IDS` / `ARKRUN_RULE_IDS` sensor id must be listed — and both
+  missing ids are now in the fixture.
 - **`npm test` no longer dirties the tree.** `tests/unit/static-check/q05AiVelocity.test.ts`
   spawned `eval/ai-velocity-run.mjs` with `cwd: REPO`, which rewrote the **tracked**
   `eval/ai-velocity-report.json` on every run — its `generatedAt` is fresh each time, and that

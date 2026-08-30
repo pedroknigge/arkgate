@@ -25,6 +25,7 @@ import {
   enrichViolationWithFixClass,
 } from '../../../src/domain/remediation';
 import { ARKRUN_RULE_IDS } from '../../../src/domain/arkRunSensors';
+import { ARKORDER_RULE_IDS } from '../../../src/domain/arkOrderSensors';
 import {
   DIAGNOSTIC_CATALOG as cliCatalog,
   DIAGNOSTIC_RULE_IDS as cliRuleIds,
@@ -318,6 +319,38 @@ describe('diagnosticCatalog ↔ production ruleId fixture', () => {
       if (!isKnownDiagnosticCode(ruleId)) missing.push(ruleId);
     }
     expect(missing, `unknown production ruleIds: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  it('fixture does not silently drop catalog codes (every catalogued id listed)', () => {
+    // Both existing assertions run fixture → catalog, so a production-emitted id
+    // added to the catalog and forgotten in the fixture could not fail anything.
+    // ARKORDER_XI_FIELD_WRITE sat in exactly that hole. This closes the direction.
+    const fixture = JSON.parse(
+      readFileSync(
+        join(repoRoot, 'tests/fixtures/diagnostic-catalog/production-rule-ids.json'),
+        'utf8'
+      )
+    ) as { ruleIds: string[] };
+    const listed = new Set(fixture.ruleIds);
+    const unlisted = DIAGNOSTIC_RULE_IDS.filter((ruleId) => !listed.has(ruleId));
+    expect(
+      unlisted,
+      `catalogued ruleIds missing from the production fixture: ${unlisted.join(', ')}`
+    ).toEqual([]);
+  });
+
+  it('every sensor-mapped ruleId is on the production fixture list', () => {
+    const fixture = JSON.parse(
+      readFileSync(
+        join(repoRoot, 'tests/fixtures/diagnostic-catalog/production-rule-ids.json'),
+        'utf8'
+      )
+    ) as { ruleIds: string[] };
+    const listed = new Set(fixture.ruleIds);
+    const emitted = [...Object.values(ARKORDER_RULE_IDS), ...Object.values(ARKRUN_RULE_IDS)];
+    expect(emitted.length).toBeGreaterThan(10);
+    const missing = emitted.filter((ruleId) => !listed.has(ruleId));
+    expect(missing, `sensor ruleIds missing from the fixture: ${missing.join(', ')}`).toEqual([]);
   });
 
   it('catalog does not silently drop fixture codes (every fixture id present)', () => {

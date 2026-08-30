@@ -1,5 +1,5 @@
 {
-  "description": "ACS02 — production-emitted public ruleIds that must resolve in DIAGNOSTIC_CATALOG. Test fixtures (SOMETHING_ELSE, etc.) are intentionally excluded.",
+  "description": "ACS02 — production-emitted public ruleIds. Pinned in BOTH directions: every id here must resolve in DIAGNOSTIC_CATALOG, and every catalogued id must be listed here, so a new production id cannot be added to the catalog and forgotten in this fixture. Test fixtures (SOMETHING_ELSE, etc.) are intentionally excluded and must never be catalogued.",
   "ruleIds": [
     "ADAPTER_NOT_ALLOWED_FOR_PORT",
     "ANALYSIS_COVERS_NO_FILES",
@@ -11,6 +11,8 @@
     "ARKORDER_KERNEL_IN_DOMAIN",
     "ARKORDER_MISSING_PLANE",
     "ARKORDER_TOO_MANY_PARAMS",
+    "ARKORDER_XI_FIELD_WRITE",
+    "ARKRULE_INVARIANT",
     "ARKRULE_SCOPE_EMPTY",
     "ARKRULE_STRUCTURE",
     "ARKRUN_DIRECT_NEW",
