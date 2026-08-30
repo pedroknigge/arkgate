@@ -3,6 +3,15 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
+## 4.8.1 — 2026-08-30
+
+**Patch** over **4.8.0**. ArkRules invariant coverage reads tests first and retains only files that mention a declared invariant id, so large repos no longer report `INVARIANT_UNCOVERED` / `never-had-tests` while covering tests sit on disk. Does not close `K01` / `Z09`. **No required config migration.**
+
+**Status: published** (on npm `latest`; see `docs/releases/4.8.1.md`).
+
+### Fixed
+- **INVARIANT_UNCOVERED on large trees:** `loadInvariantCoverageInputs` spent `MAX_COVERAGE_FILES` (400) on production facts before walking tests. Any repo with more than 400 governed files got `testGlobsMissing: true` and a false *never-had-tests* claim. Tests walk first; with `invariantIds`, a test is retained only if it mentions a catalog id. Doctor and policy-delta use the same ids. When the file budget is exhausted, the diagnostic says so instead of claiming the suite never existed.
+
 ## 4.8.0 — 2026-08-29
 
 **Minor** over **4.7.6**. One npm package **`arkgate`**: extras opt-in by config + subpath.

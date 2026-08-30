@@ -6,12 +6,12 @@
 > [ADR index](../../adr/README.md) ([0027](../../adr/0027-arkorder-gated-extra-plane.md)–[0030](../../adr/0030-opt-in-extras-same-npm-package.md)) ·
 > [Package surface](../../package-surface.md) · [Product voice](../../product-voice.md)
 
-**Status:** Shipped in unpublished-train then **4.8.0** (`OR01`–`OR07` + `PK01`). Same npm package.<br>
+**Status:** Shipped in **4.8.0** (`OR01`–`OR07` + `PK01`). Same npm package.<br>
 **Slug:** `arkorder`<br>
 **Kind:** epic / gated extra plane (same npm package)<br>
 **Owners:** product (Pedro) + library maintainers<br>
 **Last updated:** 2026-08-29<br>
-**Target package:** unpublished `arkgate@4.8.0` (additive `arkOrder` on config schema `1.3`;
+**Target package:** `arkgate@4.8.0`+ (additive `arkOrder` on config schema `1.3`;
 subpath `arkgate/order` in the **same** npm tarball — [ADR 0030](../../adr/0030-opt-in-extras-same-npm-package.md))<br>
 **Code path:** `src/domain/arkOrder*.ts`, `src/kernel/order/` → `dist/order`,
 gallery `examples/arkorder-billing/`
