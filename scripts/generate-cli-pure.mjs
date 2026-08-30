@@ -86,6 +86,11 @@ const MODULES = [
     label: 'literal path drift detector (LPD)',
   },
   {
+    canonical: 'src/domain/sensorPromotion.ts',
+    derived: 'bin/lib/sensor-promotion.mjs',
+    label: 'sensor promotability map + promotion preview',
+  },
+  {
     canonical: 'src/domain/rulesInventory.ts',
     derived: 'bin/lib/rules-inventory.mjs',
     label: 'brownfield rules inventory (AR13)',

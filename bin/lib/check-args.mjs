@@ -52,6 +52,9 @@ export function parseArgs(argv) {
     doctor: false,
     plan: false,
     pathDrift: false,
+    sensors: false,
+    promote: undefined,
+    apply: false,
     recommend: false,
     writePlan: false,
     listPolicyPacks: false,
@@ -114,6 +117,23 @@ export function parseArgs(argv) {
     else if (arg === '--plan') args.plan = true;
     else if (arg === '--rules-inventory') args.rulesInventory = true;
     else if (arg === '--path-drift') args.pathDrift = true;
+    else if (arg === '--sensors') args.sensors = true;
+    else if (arg === '--promote' || arg.startsWith('--promote=')) {
+      // Optional value, same shape as --report / --baseline: bare --promote
+      // previews every declared rule from ONE run, which is the point (the loop
+      // it replaces was one full run per attempted promotion); a value narrows
+      // to that rule id.
+      // `--promote=<id>` too: a rule id may legally begin with '-', and the
+      // lookahead form can never pass one.
+      const eq = arg.indexOf('=');
+      if (eq > 0) {
+        args.promote = arg.slice(eq + 1);
+      } else {
+        const next = argv[i + 1];
+        args.promote = next && !next.startsWith('-') ? argv[++i] : true;
+      }
+    }
+    else if (arg === '--apply') args.apply = true;
     else if (arg === '--recommend') args.recommend = true;
     else if (arg === '--write-plan') args.writePlan = true;
     else if (arg === '--list-policy-packs') args.listPolicyPacks = true;
@@ -171,6 +191,50 @@ export function parseArgs(argv) {
     else if (arg === '--all') args.all = true;
     else if (arg === '--version' || arg === '-V') args.version = true;
     else throw new Error(`Unknown argument: ${arg}. Run arkgate-check --help for usage.`);
+  }
+  // A write flag that silently does nothing is how a caller comes to believe a
+  // change landed. --apply belongs to --promote; the other write surfaces use
+  // --write.
+  if (args.apply && !args.promote) {
+    throw new Error(
+      '--apply applies to --promote. Run `arkgate-check --promote <ruleId> --apply`; the other write surfaces use --write.'
+    );
+  }
+  // Every report mode below returns from main() BEFORE --promote is reached, so
+  // pairing one with --promote --apply printed that report and exited 0 having
+  // written nothing. Same defect the guard above exists for, one level up.
+  if (args.promote) {
+    const shadowing = [
+      args.sensors && '--sensors',
+      args.pathDrift && '--path-drift',
+      args.coverage && '--coverage',
+      args.recommend && '--recommend',
+      args.doctor && '--doctor',
+      args.plan && '--plan',
+      args.rulesInventory && '--rules-inventory',
+      args.suggestInclude && '--suggest-include',
+      args.adoptContract && '--adopt-contract',
+      args.migrateContract && '--migrate-contract',
+    ].filter(Boolean);
+    if (shadowing.length > 0) {
+      throw new Error(
+        `--promote cannot be combined with ${shadowing.join(', ')}: that mode answers first and --promote would silently do nothing. Run them separately.`
+      );
+    }
+    // A narrowed scope cannot price a promotion. --changed counts findings over
+    // the changed files only and --baseline suppresses findings AFTER --promote
+    // has already returned, so either one turns the cost into an undercount
+    // printed as a fact.
+    const narrowing = [
+      args.changed && '--changed',
+      args.against && '--against',
+      args.baseline && '--baseline',
+    ].filter(Boolean);
+    if (narrowing.length > 0) {
+      throw new Error(
+        `--promote cannot be combined with ${narrowing.join(', ')}: the promotion cost must be measured over the whole governed tree, and a narrowed or baselined scope would report an undercount as the price.`
+      );
+    }
   }
   return args;
 }

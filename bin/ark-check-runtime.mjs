@@ -1137,6 +1137,12 @@ async function main() {
     return;
   }
 
+  if (args.sensors) {
+    const { runSensors } = await import('./lib/sensor-promote-cli.mjs');
+    await runSensors(args, readConfig);
+    return;
+  }
+
   if (args.recommend) {
     try {
       const recommendation = buildArchitectureRecommendation(args.root);
@@ -1453,6 +1459,31 @@ async function main() {
     governedPercent: preCov.governed?.percent ?? null,
     populatedLayerCount,
   });
+
+  // --promote reuses the analysis that just ran rather than running its own:
+  // the advisory findings it counts are already in `violations` + `warnings`,
+  // stamped with the rule that produced them. Placed before the design-delta
+  // check so a preview does not pay for a base-ref diff it never reads.
+  if (args.promote) {
+    // The floor the merge gate itself applies: below it every enforced
+    // extra-plane finding is demoted to a warning, so a promotion made here
+    // buys a label and not a tooth. `violations` above was already demoted by
+    // it; the preview has to know, or it sells teeth the gate then removes.
+    const { extraMergeTeethAllowed } = await import('./lib/extra-merge-teeth.mjs');
+    const teethDemotedByFloor = !extraMergeTeethAllowed({
+      governedPercent: preCov.governed?.percent ?? null,
+      populatedLayerCount,
+    });
+    const { runPromote } = await import('./lib/sensor-promote-cli.mjs');
+    await runPromote(root, config, args, {
+      files,
+      all: [...violations, ...(warnings ?? [])],
+      completeness,
+      completenessReasons,
+      teethDemotedByFloor,
+    });
+    return;
+  }
 
   const createdPathsOnly = Boolean(args.strictMerge && !args.failOnNewSmells);
   const designCheck = createDesignDeltaCheck({

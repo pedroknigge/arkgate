@@ -12,6 +12,57 @@ repo paths living in strings, comments and docstrings that a rename left behind.
 **No required config migration.**
 
 ### Added
+- **`arkgate-check --sensors` and `arkgate-check --promote` — promotability, before you pay for a run.**
+  Moving a rule from `advisory` to `enforced` was discovered by trial: edit the ArkRules JSON, wait
+  ~160s for a full run on a real repository, read the result, `git checkout` it back. Four attempts
+  before the map was clear, and one ended in a rejection naming a sensor id the author had never
+  typed — a rule called `types-only` refused with *"sensor `no-anemic-model` is Tier-2
+  advisory-only"*. On the field repository almost every declared rule turned out to be promotable
+  and nobody knew. Both surfaces are read-only by default and neither invents a second opinion: they
+  project the declarations the gate already reads.
+  **`--sensors [--json]`** lists all 22 sensors ArkGate ships across the three planes (ArkRules,
+  ArkRun, ArkOrder) with plane, tier and whether each can *ever* be enforced — 19 can, 3 never —
+  and it says **how**: only ArkRules is promoted per rule, ArkRun and ArkOrder are switched by the
+  plane-level `arkRun.mode` / `arkOrder.mode`, so a bare "can be enforced" would answer in a
+  currency this surface cannot spend. Tier-2 therefore shows up **before** the rule is written, not
+  after the run. Underneath it lists every rule the contract declares, each with its local id, its
+  sensor, its layer, the file it was declared in, its mode, and the reason it can or cannot be
+  promoted. Three blockers, each named: `tier-2-advisory-only` (`no-anemic-model`,
+  `arkrun-skip-resolve` — heuristics, advisory forever), `no-structure-teeth` (`invariant-coverage`
+  as a *structure* entry emits no coverage findings; only a zero-match `appliesTo` would still
+  fail), and `no-coverage-evidence`, whose wording is `canPromoteInvariant`'s own so this surface
+  can never promise a promotion the gate then refuses. No TypeScript, no analysis — the contract,
+  the ArkRules documents and the coverage evidence walk, which is a filesystem walk plus a text
+  match and never executes a test. Exit 0 on a report, **2** when the contract or its ArkRules
+  references will not load, or when the governed-file scan itself fails: reporting every invariant
+  as uncovered because ArkGate could not collect the inputs would be our limitation printed as a
+  fact about your tests.
+  **`--promote [<ruleId>] [--json] [--apply]`** adds the price. Advisory rules are already evaluated
+  on every run, so the findings each one produces are in the analysis that just happened, stamped
+  with the rule that produced them: **one** run prices **every** declared rule, which is the whole
+  difference from one run per attempt. Findings are keyed on `<sourceFile>#<ruleId>`, not the bare
+  id — ids are unique per ArkRules *document*, not across them, and the bare id pooled two rules'
+  findings and reported each one's as the other's. **A price the run could not measure is not
+  printed as a price:** an incomplete analysis, or a classification floor that demotes every
+  enforced ArkRules finding to a warning, is named above the numbers and drops `wouldBlock` to zero,
+  because promoting under the floor buys a label and not a tooth — the gate would still pass, which
+  is the exact false green this patch set exists to remove. Plan by default — there is no
+  `--dry-run` in `bin/` and this does not introduce one. `--apply` needs one named rule id
+  (`--promote <ruleId> --apply`, or `--promote=<ruleId>` for an id starting with `-`); it refuses a
+  bare `--promote --apply` rather than rewriting the contract in bulk, refuses an id declared in two
+  documents rather than silently writing the first, and refuses to make a contract change on a cost
+  this run did not measure. `--promote` cannot be combined with a mode that answers first
+  (`--sensors`, `--coverage`, `--plan`, `--doctor`, …), which used to print that report and exit 0
+  having written nothing, nor with a narrowed or baselined scope (`--changed`, `--against`,
+  `--baseline`), which would report an undercount as the price. The write binds to the rule that was
+  priced (a concurrent edit that changed its sensor is refused), writes every byte before it
+  truncates so a failed write cannot leave the project without a loadable contract, goes through one
+  `O_NOFOLLOW` descriptor with an nlink check and a realpath containment test, and names its
+  refusals: `symlink`, `hard-link`, `not-utf8`, `outside-root`, `short-write`. A document that was
+  already indented keeps its indentation and its trailing newline; a minified one comes back
+  pretty-printed, because the write is a JSON round-trip rather than a targeted text edit. Exits:
+  `0` preview or write succeeded, `1` unknown rule id or refused write, `2` bad arguments or the
+  ArkRules references would not load.
 - **`arkgate-check --path-drift` — literal path drift (`LITERAL_PATH_DRIFT`, `LITERAL_PATH_UNRESOLVED`).**
   A repo path written inside a string, a comment or a docstring is invisible to every tool in the
   gate: `tsc` resolves imports, not strings, and ESLint does not either, so a rename compiles green
@@ -84,6 +135,11 @@ repo paths living in strings, comments and docstrings that a rename left behind.
   that is not in this repo must never prove an invariant covered.
 
 ### Fixed
+- **The Tier-2 rejection names the rule you wrote.** `sensor "no-anemic-model" is Tier-2
+  advisory-only and cannot be enforced` now reads `rule "types-only" uses sensor "no-anemic-model",
+  which is Tier-2 advisory-only and cannot be enforced (arkgate-check --sensors lists which sensors
+  can)`. Naming only the vocabulary id left the author hunting for which of their rules it meant,
+  at one full run per guess.
 - **An analysis that covers zero files refuses instead of passing** (new
   `ANALYSIS_COVERS_NO_FILES`). Every rule is vacuously satisfied on an empty set, so a green over
   zero governed files certifies nothing while reading exactly like a green over a governed tree —

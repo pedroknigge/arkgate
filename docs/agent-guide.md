@@ -486,6 +486,95 @@ npx ark-check --coverage
 
 Polyglot repos: Ark only governs TypeScript/JS. Point include at package roots that have sources.
 
+### Which rules can be enforced (`--sensors`, `--promote`)
+
+Promotion — moving a rule from `advisory` to `enforced` — used to be discovered
+by trial. Edit the ArkRules JSON, wait for a full run (~160s on a real
+repository), read the result, `git checkout` it back. Four attempts before the
+map was clear, and one of them ended in a rejection naming a sensor id the
+author had never typed: a rule called `types-only` refused with *"sensor
+`no-anemic-model` is Tier-2 advisory-only"*.
+
+Both surfaces are read-only by default and neither invents a second opinion:
+they project the same declarations the gate reads.
+
+```bash
+npx ark-check --sensors [--json]              # the map: what can ever be enforced
+npx ark-check --promote [--json]              # the price: what enforcing would cost, one run
+npx ark-check --promote <ruleId> --apply      # write mode "enforced" into that rule's own file
+```
+
+**`--sensors`** lists every sensor ArkGate ships — ArkRules, ArkRun and
+ArkOrder — with its plane, its tier and whether it can *ever* be enforced, so
+Tier-2 shows up before you write the rule rather than after you wait for a run.
+It also says *how*: only the ArkRules plane is promoted per rule; ArkRun and
+ArkOrder are switched by the plane-level `arkRun.mode` / `arkOrder.mode`, and
+`--promote --apply` writes ArkRules documents only.
+Underneath it lists every rule the contract actually declares, each with its
+local id, the sensor it delegates to, the layer, the file it was declared in,
+its current mode, and the reason it can or cannot be promoted. Three things
+block a promotion, and the surface names which one fired:
+
+- **`tier-2-advisory-only`** — the sensor is a heuristic (`no-anemic-model`,
+  `arkrun-skip-resolve`). Advisory forever; the contract rejects `enforced`.
+- **`no-structure-teeth`** — `invariant-coverage` as a *structure* entry emits
+  nothing (coverage is judged per entry in `invariants`), so enforcing it would
+  change nothing. Promote the invariant instead.
+- **`no-coverage-evidence`** — an invariant whose evidence does not support
+  promotion. The text is `canPromoteInvariant`'s own, so this surface can never
+  promise a promotion the gate then refuses.
+
+It needs no TypeScript and runs no analysis: the contract, the ArkRules
+documents it points at, and the coverage evidence walk (a filesystem walk plus a
+text match — ArkGate never executes a test). Exit 0 on a report, **2** when the
+contract or its ArkRules references will not load, or when the governed-file
+scan itself fails — reporting every invariant as uncovered because ArkGate could
+not collect the inputs would be our limitation printed as a fact about your
+tests.
+
+**`--promote`** adds the price. Advisory rules are already evaluated on every
+run, so the findings each one produces are sitting in the analysis that just
+happened, stamped with the rule that produced them: **one** run prices **every**
+declared rule, which is the whole difference from the loop it replaces. A
+promotable advisory rule with zero findings today is a free promotion; one with
+seven is seven findings that stop being warnings and start failing the gate.
+
+Findings are counted per `<sourceFile>#<ruleId>`, not per bare id. Rule ids are
+unique inside one ArkRules document, not across them, so two layer files may
+both declare `shared-id` — keyed on the id alone their findings pool and each
+row reports the other's as its own.
+
+**A price the run could not measure is never printed as a price.** Two things
+qualify the numbers, and both are named above them rather than left implied:
+
+- **Incomplete analysis.** Parse failures suppress findings, so the count is a
+  floor, not the cost.
+- **The classification floor.** Below it every enforced ArkRules finding is
+  demoted to a warning, so promoting buys a label and not a tooth — the gate
+  would still pass. `wouldBlock` drops to zero and the run says so. Classify
+  more of the tree (`--coverage`) before promoting.
+
+Plan by default — there is no `--dry-run` anywhere in `bin/`. `--apply` needs
+one named rule id: `--promote <ruleId> --apply`, or `--promote=<ruleId>` when
+the id starts with `-`. It refuses a bare `--promote --apply` rather than
+rewriting the contract in bulk behind a single flag, refuses an id declared in
+two documents rather than silently writing the first, and refuses to make a
+contract change on a cost this run did not measure. `--promote` cannot be
+combined with a mode that answers first (`--sensors`, `--coverage`, `--plan`,
+`--doctor`, …) — that printed the report and exited 0 having written nothing —
+nor with `--changed` / `--against` / `--baseline`, which narrow or suppress the
+findings the price is made of.
+
+The write binds to the rule that was priced (an edit that changed its sensor in
+between is refused), writes every byte before it truncates so a failed write
+cannot leave the project without a loadable contract, and names its refusals:
+`symlink`, `hard-link`, `not-utf8`, `outside-root`, `short-write`. A document
+that was already indented keeps its indentation and trailing newline; a minified
+one comes back pretty-printed, because the write is a JSON round-trip rather
+than a targeted text edit. Exit 0 for a preview or a successful write, 1 for an
+unknown rule id or a refused write, 2 for bad arguments or ArkRules references
+that will not load.
+
 ### Literal path drift after a rename (`--path-drift`)
 
 A repo path written inside a **string, a comment or a docstring** is invisible to
