@@ -95,7 +95,7 @@
     {
       "id": "managed-upgrade",
       "optional": true,
-      "note": "4.1.0: unit-tested S4 force-preserve; mutation NoCoverage residual on toml-section branch \u2014 optional for group gate, still pinned for Z08 causal.",
+      "note": "4.1.0: unit-tested S4 force-preserve; mutation NoCoverage residual on toml-section branch — optional for group gate, still pinned for Z08 causal.",
       "targets": [
         {
           "file": "bin/lib/managed-upgrade.mjs",
@@ -152,8 +152,24 @@
       "targets": [
         {
           "file": "src/domain/invariantCoverage.ts",
-          "startLine": 338,
-          "endLine": 371
+          "startLine": 347,
+          "endLine": 380
+        }
+      ]
+    },
+    {
+      "id": "invariant-coverage-message-honesty",
+      "note": "The coverage verdict is only as good as its sentence: formatCoverageDiscards and budgetDetail carry every discard reason and the knob that raises the cap. Unpinned, a mutant could silence a discard clause and no gate would notice.",
+      "targets": [
+        {
+          "file": "src/domain/invariantCoverage.ts",
+          "startLine": 127,
+          "endLine": 146
+        },
+        {
+          "file": "src/domain/invariantCoverage.ts",
+          "startLine": 213,
+          "endLine": 217
         }
       ]
     },

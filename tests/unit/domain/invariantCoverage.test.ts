@@ -113,7 +113,15 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
     // Repeating "307" in the tail would read as two separate discard counts.
     expect(message).not.toMatch(/307 past the 400-file budget/);
     expect(message.match(/307/g)).toHaveLength(1);
-    expect(message).not.toMatch(/loaded 400 files, kept 12 tests/);
+    // The tail that follows the budget sentence carries the OTHER reasons and
+    // no totals — asserted whole, so a clause cannot quietly stop being written.
+    expect(message).toBe(
+      'Invariant INV-ORDER-001 coverage cannot be proven (coverage file budget exhausted: ' +
+        '400 files loaded at the 400-file cap, 12 tests retained, 307 files discarded at ' +
+        'the cap; raise "coverage.maxFiles" in ark.config.json (the cap bounds files ' +
+        'RETAINED as evidence)); reporting partial, not covered.' +
+        ' Scan discarded 42 naming no catalogued invariant.'
+    );
   });
 
   it('states the budget clause and the load totals when nothing else already did', () => {
@@ -214,6 +222,103 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
     expect(message).toMatch(/1 unreadable \(files or directories\)/);
     expect(message).toMatch(/3 directories past the walk depth limit/);
     expect(message).toMatch(/4 symlinked outside the project root/);
+  });
+
+  it('renders the whole uncovered sentence, with no tail when nothing was discarded', () => {
+    // Exact text, not a fragment: every clause of a coverage verdict is a claim
+    // about the user's repo, and a fragment match cannot notice a clause that
+    // quietly stopped being written.
+    const result = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: { 'tests/a.test.ts': "it('unrelated', () => {})" },
+      testFiles: ['tests/a.test.ts'],
+    });
+    expect(result.violations[0]?.message).toBe(
+      'Invariant INV-ORDER-001: no scanned test names it in a describe/it title and ' +
+        'no declared symbol was found (tests-disappeared — a suite exists). ' +
+        'ArkGate matches declared text; it never executes tests.'
+    );
+  });
+
+  it('renders the whole discard tail, reason by reason', () => {
+    const result = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: { 'tests/a.test.ts': "it('unrelated', () => {})" },
+      testFiles: ['tests/a.test.ts'],
+      coverageStats: {
+        filesRead: 19,
+        filesLoaded: 8,
+        testFilesRetained: 3,
+        maxFiles: 400,
+        discarded: {
+          budget: 5,
+          noInvariantMention: 6,
+          oversize: 2,
+          unreadable: 1,
+          depthLimited: 3,
+          outOfRoot: 4,
+        },
+      },
+    });
+    expect(result.violations[0]?.message).toBe(
+      'Invariant INV-ORDER-001: no scanned test names it in a describe/it title and ' +
+        'no declared symbol was found (tests-disappeared — a suite exists). ' +
+        'ArkGate matches declared text; it never executes tests.' +
+        ' Scan discarded 5 past the 400-file budget, 6 naming no catalogued invariant, ' +
+        '2 over the per-file byte cap, 1 unreadable (files or directories), ' +
+        '3 directories past the walk depth limit, 4 symlinked outside the project root ' +
+        '(loaded 8 files, kept 3 tests).'
+    );
+  });
+
+  it('says how many files were read, and that the cap bounds what is kept', () => {
+    // The cap bounds RETENTION. Naming coverage.maxFiles without that clause
+    // read as a knob on how much the scan opens, which it is not.
+    const stats = {
+      filesRead: 812,
+      filesLoaded: 400,
+      testFilesRetained: 12,
+      maxFiles: 400,
+      discarded: {
+        budget: 307,
+        noInvariantMention: 0,
+        oversize: 0,
+        unreadable: 0,
+        depthLimited: 0,
+        outOfRoot: 0,
+      },
+    };
+    const withReads = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: {},
+      testFiles: [],
+      testGlobsMissing: true,
+      coverageBudgetExhausted: true,
+      coverageStats: stats,
+    });
+    expect(withReads.violations[0]?.message).toBe(
+      'Invariant INV-ORDER-001 coverage cannot be proven (coverage file budget exhausted: ' +
+        '400 files loaded at the 400-file cap, 12 tests retained, 307 files discarded at ' +
+        'the cap; raise "coverage.maxFiles" in ark.config.json (the cap bounds files ' +
+        'RETAINED as evidence; 812 were read)); reporting partial, not covered.'
+    );
+
+    // A scan that reported no read count says nothing about reads.
+    const { filesRead: _dropped, ...withoutReads } = stats;
+    const silent = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: {},
+      testFiles: [],
+      testGlobsMissing: true,
+      coverageBudgetExhausted: true,
+      coverageStats: withoutReads,
+    });
+    expect(silent.violations[0]?.message).toBe(
+      'Invariant INV-ORDER-001 coverage cannot be proven (coverage file budget exhausted: ' +
+        '400 files loaded at the 400-file cap, 12 tests retained, 307 files discarded at ' +
+        'the cap; raise "coverage.maxFiles" in ark.config.json (the cap bounds files ' +
+        'RETAINED as evidence)); reporting partial, not covered.'
+    );
   });
 
   it('says what it actually verified, not that no test exists', () => {

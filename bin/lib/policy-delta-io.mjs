@@ -188,8 +188,10 @@ export function analyzePolicyTransition({
       fileContents: coverageInputs.fileContents,
       testFiles: coverageInputs.testFiles,
       testGlobsMissing: coverageInputs.testGlobsMissing,
+      // No coverageStats / coverageRoots: this caller reads coverage ROWS and
+      // drops the violations, and both only shape violation messages. Passing
+      // them would look like wiring while changing nothing observable here.
       coverageBudgetExhausted: coverageInputs.coverageBudgetExhausted === true,
-      ...(coverageInputs.stats ? { coverageStats: coverageInputs.stats } : {}),
     });
     candidateInvariantCoverage = evaluated.coverage;
   }

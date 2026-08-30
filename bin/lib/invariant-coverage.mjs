@@ -89,7 +89,7 @@ export function evaluateInvariantCoverage(input) {
     // Numbers, not adjectives: a budget-exhausted verdict must say how big the
     // budget was, what it bought, and which knob raises it.
     const budgetDetail = stats
-        ? `coverage file budget exhausted: ${stats.filesLoaded} files loaded at the ${stats.maxFiles}-file cap, ${stats.testFilesRetained} tests retained, ${stats.discarded.budget} files discarded at the cap; raise "coverage.maxFiles" in ark.config.json`
+        ? `coverage file budget exhausted: ${stats.filesLoaded} files loaded at the ${stats.maxFiles}-file cap, ${stats.testFilesRetained} tests retained, ${stats.discarded.budget} files discarded at the cap; raise "coverage.maxFiles" in ark.config.json (the cap bounds files RETAINED as evidence${typeof stats.filesRead === 'number' ? `; ${stats.filesRead} were read` : ''})`
         : 'coverage file budget exhausted';
     const coverageRoots = (input.coverageRoots ?? []).filter((root) => typeof root === 'string' && root.length > 0);
     const rootsDeclared = coverageRoots.length > 0;

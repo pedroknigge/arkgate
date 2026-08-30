@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  MAX_COVERAGE_FILES_CAP,
   coverageOptionsFromConfig,
   loadInvariantCoverageInputs,
 } from '../../../bin/lib/invariant-coverage-io.mjs';
@@ -240,6 +241,53 @@ describe('ArkRules tooling wiring', () => {
     expect(inputs.stats.discarded.oversize).toBe(1);
     expect(inputs.stats.discarded.unreadable).toBe(1);
     expect(inputs.stats.discarded.depthLimited).toBeGreaterThan(0);
+  });
+
+  it('counts a depth-limited directory once across overlapping walk roots', () => {
+    // '.' and 'tests' both reach the same deep subtree, and the same directory
+    // dropped twice reports two subtrees where one exists. Only a directory no
+    // walk ever entered is depth-limited.
+    const root = makeRoot();
+    const deep = path.join(root, 'tests', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i');
+    fs.mkdirSync(deep, { recursive: true });
+    fs.writeFileSync(path.join(deep, 'deep.checks.ts'), "it('INV-ORDER-001 deep', () => {})\n");
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'], testGlobs: ['**/*.checks.ts'] }
+    );
+    expect(inputs.stats.discarded.depthLimited).toBe(1);
+  });
+
+  it('reports files read, not only files retained', () => {
+    // The budget bounds RETENTION: a test scanned and dropped for naming no
+    // invariant still cost a read. Reporting only the retained count made the
+    // scan look cheaper than it was and made maxFiles look like an I/O knob.
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'tests', 'relevant.test.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+    for (let i = 0; i < 3; i += 1) {
+      fs.writeFileSync(path.join(root, 'tests', `noise${i}.test.ts`), `it('noise ${i}', () => {})\n`);
+    }
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'] }
+    );
+    expect(inputs.stats.filesRead).toBe(4);
+    expect(inputs.stats.filesLoaded).toBe(1);
+  });
+
+  it('clamps coverage.maxFiles to the hard cap instead of trusting any integer', () => {
+    // The config validator implements no `maximum` keyword for integers, so a
+    // schema bound would be silently ignored. The clamp is the enforcement.
+    expect(
+      coverageOptionsFromConfig({ coverage: { maxFiles: 10_000_000 } })
+    ).toEqual({ maxFiles: MAX_COVERAGE_FILES_CAP });
+    expect(coverageOptionsFromConfig({ coverage: { maxFiles: 900 } })).toEqual({ maxFiles: 900 });
   });
 
   it('coverageOptionsFromConfig reads coverage.testGlobs / coverage.maxFiles (absence is silent)', () => {

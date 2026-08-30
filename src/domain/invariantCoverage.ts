@@ -83,6 +83,13 @@ export type EvaluateInvariantCoverageInput = {
  * a silent drop would make an uncovered verdict unexplainable.
  */
 export type InvariantCoverageStats = {
+  /**
+   * Files actually opened and read. Always >= filesLoaded: a test is read
+   * before it can be judged for naming an invariant, so the file budget bounds
+   * RETENTION, not I/O. Reporting only the retained count made
+   * `coverage.maxFiles` read as a knob on how much the scan opens.
+   */
+  filesRead?: number;
   /** Files retained as coverage evidence (tests + production). */
   filesLoaded: number;
   /** Test files retained (subset of filesLoaded). */
@@ -204,7 +211,9 @@ export function evaluateInvariantCoverage(
   // Numbers, not adjectives: a budget-exhausted verdict must say how big the
   // budget was, what it bought, and which knob raises it.
   const budgetDetail = stats
-    ? `coverage file budget exhausted: ${stats.filesLoaded} files loaded at the ${stats.maxFiles}-file cap, ${stats.testFilesRetained} tests retained, ${stats.discarded.budget} files discarded at the cap; raise "coverage.maxFiles" in ark.config.json`
+    ? `coverage file budget exhausted: ${stats.filesLoaded} files loaded at the ${stats.maxFiles}-file cap, ${stats.testFilesRetained} tests retained, ${stats.discarded.budget} files discarded at the cap; raise "coverage.maxFiles" in ark.config.json (the cap bounds files RETAINED as evidence${
+        typeof stats.filesRead === 'number' ? `; ${stats.filesRead} were read` : ''
+      })`
     : 'coverage file budget exhausted';
   const coverageRoots = (input.coverageRoots ?? []).filter(
     (root) => typeof root === 'string' && root.length > 0

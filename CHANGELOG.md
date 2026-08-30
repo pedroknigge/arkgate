@@ -41,6 +41,17 @@ implying it knows a test runs. **No required config migration.**
   that is not in this repo must never prove an invariant covered.
 
 ### Fixed
+- **`coverage.maxFiles` is bounded.** It had no upper limit, and a schema `maximum` would
+  have been silently ignored (the config validator implements no such keyword), so any
+  integer became a memory budget. Clamped to 20000.
+- **Files read vs files retained.** `stats.filesLoaded` counted retained files only, while
+  the budget diagnostic named `coverage.maxFiles` as the knob — implying it bounds I/O. It
+  bounds retention: a test is read before it can be judged for naming an invariant. The
+  scan now counts `filesRead` and the diagnostic says which of the two the cap bounds.
+- **Depth-limited directories are counted once.** `'.'` overlaps `tests/` and `src/` in the
+  walk, so one deep subtree was reported once per overlapping root — and a directory
+  refused at depth from the far root was counted even when a nearer root walked it fine.
+  Only directories no walk ever entered are counted now.
 - **Discards are counted per file, not per visit:** `coverage.testGlobs` widens the test walk to the
   repo root, which overlaps the other walk roots. Each discarded file was counted — and read — once
   per overlapping root, inflating every number in the diagnostic 2–3x for exactly the users who

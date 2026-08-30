@@ -93,6 +93,11 @@ Top-level fields:
   Unknown keys fail closed. When the budget is hit, `INVARIANT_UNCOVERED` reports the numbers
   (files loaded, tests retained, files discarded at the cap) and names `coverage.maxFiles` as
   the knob that raises it — coverage never claims "never had tests" because of our own cap.
+  `maxFiles` is clamped to a hard ceiling of 20000 (the config validator has no
+  `maximum` keyword, so a schema bound would be accepted and then ignored). The cap
+  bounds files **retained as evidence**, not files opened: a test is read before it can
+  be judged for naming an invariant, so the diagnostic reports files read alongside
+  files retained.
   Nothing is dropped in silence: files past the budget, files over the 256KB per-file cap,
   unreadable files or directories (permissions, broken symlinks), directories past the walk depth
   limit (8), symlinks whose target resolves outside the project root, and tests naming no

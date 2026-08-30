@@ -103,8 +103,10 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
       fileContents: coverageInputs.fileContents,
       testFiles: coverageInputs.testFiles,
       testGlobsMissing: coverageInputs.testGlobsMissing,
+      // No coverageStats / coverageRoots: this caller reads coverage ROWS and
+      // drops the violations, and both only shape violation messages. Passing
+      // them would look like wiring while changing nothing observable here.
       coverageBudgetExhausted: coverageInputs.coverageBudgetExhausted === true,
-      ...(coverageInputs.stats ? { coverageStats: coverageInputs.stats } : {}),
     });
     const covById = new Map(
       (coverage.coverage ?? []).map((row) => [row.invariantId, row])

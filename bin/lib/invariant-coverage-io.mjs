@@ -11,6 +11,14 @@ const DEFAULT_TEST_NAME_RE =
 
 /** Default max files to load for coverage evidence (budget). Config: `coverage.maxFiles`. */
 export const DEFAULT_MAX_COVERAGE_FILES = 400;
+/**
+ * Hard ceiling on `coverage.maxFiles`. The config validator implements no
+ * `maximum` keyword for integers, so a schema bound would be accepted and then
+ * silently ignored — the clamp here is the only real enforcement. Retained
+ * files are held in memory at up to MAX_FILE_BYTES each, so an unbounded cap is
+ * an unbounded heap.
+ */
+export const MAX_COVERAGE_FILES_CAP = 20_000;
 /** Max bytes per file when reading for title/symbol mining. */
 const MAX_FILE_BYTES = 256 * 1024;
 /** Max directory depth for the test walk. Deeper directories are counted, not silent. */
@@ -79,7 +87,7 @@ export function coverageOptionsFromConfig(config) {
     if (globs.length > 0) options.testGlobs = globs;
   }
   if (Number.isInteger(coverage.maxFiles) && coverage.maxFiles > 0) {
-    options.maxFiles = coverage.maxFiles;
+    options.maxFiles = Math.min(coverage.maxFiles, MAX_COVERAGE_FILES_CAP);
   }
   if (Array.isArray(coverage.coverageRoots)) {
     const roots = coverage.coverageRoots.filter((r) => typeof r === 'string' && r.length > 0);
@@ -110,6 +118,7 @@ export function invariantIdsFromCatalog(arkRules) {
  *   coverageBudgetExhausted: boolean,
  *   coverageRoots?: string[],
  *   stats: {
+ *     filesRead: number,
  *     filesLoaded: number,
  *     testFilesRetained: number,
  *     maxFiles: number,
@@ -135,8 +144,12 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
   const offered = new Set();
   const maxFiles =
     Number.isInteger(opts.maxFiles) && opts.maxFiles > 0
-      ? opts.maxFiles
+      ? Math.min(opts.maxFiles, MAX_COVERAGE_FILES_CAP)
       : DEFAULT_MAX_COVERAGE_FILES;
+  // Reads, not retentions. A test is read before it can be judged for naming an
+  // invariant, so the budget bounds what we KEEP, not what we open. Reporting
+  // only the retained count made maxFiles look like an I/O knob it is not.
+  let filesRead = 0;
   // Every discard is counted. A file dropped without a number is a coverage
   // verdict the user cannot explain.
   const discarded = {
@@ -211,6 +224,7 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
         return;
       }
       const content = fs.readFileSync(absolute, 'utf8');
+      filesRead += 1;
       const asTest = forceAsTest || isTestPath(rel);
       // A test that names no invariant is evidence of nothing: scan it, drop
       // it, and let it cost no budget.
@@ -242,6 +256,12 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
   const testWalkRoots = useCustomGlobs
     ? ['.', 'tests', 'test', 'src', '__tests__', 'spec']
     : ['tests', 'test', 'src', '__tests__'];
+  // Directories, deduplicated across overlapping walk roots. '.' contains
+  // 'tests' and 'src', so the same directory is offered to the walk more than
+  // once: counting each visit would report N subtrees where one exists. And a
+  // directory refused at depth under one root may be entered from a nearer
+  // root, so 'depth-limited' is only the ones NO walk ever entered.
+  const dirs = { walked: new Set(), depthLimited: new Set(), unreadable: new Set() };
   for (const dir of testWalkRoots) {
     const absDir = path.join(root, dir === '.' ? '' : dir);
     if (!fs.existsSync(absDir)) continue;
@@ -252,8 +272,14 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
         if (isTestPath(rel)) pushFile(rel, true);
       },
       0,
-      discarded
+      dirs
     );
+  }
+  for (const dir of dirs.depthLimited) {
+    if (!dirs.walked.has(dir)) discarded.depthLimited += 1;
+  }
+  for (const dir of dirs.unreadable) {
+    if (!dirs.walked.has(dir)) discarded.unreadable += 1;
   }
 
   for (const file of facts?.files ?? []) {
@@ -277,6 +303,7 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
     // reporting it would tell the user to raise a cap that discarded nothing.
     coverageBudgetExhausted: discarded.budget > 0,
     stats: {
+      filesRead,
       filesLoaded: seen.size,
       testFilesRetained: testFiles.length,
       maxFiles,
@@ -290,26 +317,28 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
  * @param {string} root
  * @param {(rel: string) => void} onFile
  * @param {number} [depth]
- * @param {{ unreadable: number, depthLimited: number }} [discarded]
+ * @param {{ walked: Set<string>, depthLimited: Set<string>, unreadable: Set<string> }} [dirs]
  */
-function walkTestFiles(dir, root, onFile, depth = 0, discarded) {
+function walkTestFiles(dir, root, onFile, depth = 0, dirs) {
   if (depth > MAX_WALK_DEPTH) {
-    // The whole subtree is dropped here — say so with a number.
-    if (discarded) discarded.depthLimited += 1;
+    // The whole subtree is dropped here. Recorded by path, not counted: a
+    // nearer walk root may still reach it within the depth limit.
+    if (dirs) dirs.depthLimited.add(dir);
     return;
   }
   let entries;
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
   } catch {
-    if (discarded) discarded.unreadable += 1;
+    if (dirs) dirs.unreadable.add(dir);
     return;
   }
+  if (dirs) dirs.walked.add(dir);
   for (const entry of entries) {
     if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git') continue;
     const absolute = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      walkTestFiles(absolute, root, onFile, depth + 1, discarded);
+      walkTestFiles(absolute, root, onFile, depth + 1, dirs);
       continue;
     }
     // Symlinks are candidates too: pushFile stats through them, so a broken one
