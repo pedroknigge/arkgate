@@ -71,7 +71,11 @@ start → doctor → new files in the right folder
 Keep the rules file out of product PRs. Local check:
 `ark-check --changed --base origin/dev`. Changing the rules themselves uses `--contract-session`.
 
-Aliases `ark` / `ark-check` / `ark-mcp` still work. npm / pnpm / yarn. No install lifecycle scripts.
+Aliases `ark` / `ark-check` / `ark-mcp` still work. npm / pnpm / yarn. No install lifecycle scripts
+— and none on pack or prepare either, so `pnpm add git+https://github.com/pedroknigge/arkgate`
+installs at a pinned commit with no `allowBuilds` entry. A git install gives you the CLIs and the
+schemas; the library, MCP and ESLint entry points live in the built `dist/` and come from npm.
+See [docs/package-surface.md](docs/package-surface.md#installing-from-git).
 
 ![Write gate: agent blocked, then self-corrects](docs/assets/ark-write-gate.svg)
 

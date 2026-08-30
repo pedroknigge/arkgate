@@ -199,6 +199,30 @@ repo paths living in strings, comments and docstrings that a rename left behind.
   nothing dropped no longer tells the user to raise a cap that discarded nothing, and files past the
   cap are no longer read before being discarded. Paths that were never coverage candidates
   (directories, out-of-root paths) are no longer counted against the budget.
+- **A git install no longer needs a build-allowlist entry — and no longer fails outright.**
+  `pnpm add git+https://github.com/pedroknigge/arkgate` did not install this package: it stopped
+  with `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`, because `prepack: npm run build` is a build script
+  and pnpm refuses to run one for a git-hosted package that is not in `allowBuilds`. Reproduced on
+  4.8.3 verbatim. The only way through was adding `arkgate` to `allowBuilds` — an allowlist a real
+  adopter reserves for native binaries with written justification, for a script that shells out to
+  `npm` in a repo whose first rule forbids it. They shipped a `pnpm patch` instead, which is a fair
+  reading of the situation and the wrong thing to have to do. Adding the "obvious" `prepare` hook
+  makes it strictly worse (measured: same hard error). So the package now declares **no `prepack`,
+  no `prepare`, and no install script at all**; the publish path builds explicitly in
+  `scripts/release-npm.mjs`, with `prepublishOnly` as the backstop for a bare `npm publish` — pnpm
+  does not run `prepublishOnly` when it prepares a git dependency, so the backstop costs the
+  consumer nothing. `npm pack` no longer builds as a side effect; the three callers that relied on
+  that now build first, and `check:package-files` turns a missing `dist/` from a warning
+  into an error, because that is the failure this change makes reachable.
+  What a git install then gives you is stated rather than implied, in the new
+  [Installing from git](docs/package-surface.md#installing-from-git) section and in the README:
+  the `arkgate` / `arkgate-check` CLIs and the `arkgate/schema*` exports work, because `bin/` and
+  `schemas/` are committed — that is what the zero-build CLI is for. The library exports
+  (`arkgate`, `/eslint`, `/order`, `/runtime`, `/nestjs`) and `ark-mcp` do **not**, because they
+  resolve into `dist/`, which is a build output and is not committed. `ark-mcp` now says exactly
+  that instead of `Run "npm run build" first`, which is not advice a consumer inside `node_modules`
+  can act on. Shipping the library over the git path too would mean committing build output; that
+  is a separate decision and is not made here.
 
 ## 4.8.3 — 2026-08-30
 

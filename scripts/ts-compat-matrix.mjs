@@ -5,7 +5,7 @@
  * The checkout only orchestrates this harness. Product commands always resolve from
  * the candidate tarball installed into an os.tmpdir() project.
  *
- * Convenient local form (packs the current candidate through npm prepack):
+ * Convenient local form (builds, then packs the current candidate):
  *   node scripts/ts-compat-matrix.mjs 7.0.2
  *
  * CI form:
@@ -362,9 +362,13 @@ export function verifyChecksumIfPresent(tarball, required = false) {
 function createLocalCandidate(workRoot) {
   const packs = path.join(workRoot, 'local-pack');
   fs.mkdirSync(packs);
+  // The package carries no `prepack` (it would make a pnpm git install fail
+  // closed), so the local candidate is built here before it is packed.
+  const built = runCommand('npm', ['run', 'build'], { cwd: REPO_ROOT, timeout: 240_000 });
+  expectStatus(built, 0, 'npm run build');
   const packed = runCommand(
     'npm',
-    ['pack', '--json', '--pack-destination', packs],
+    ['pack', '--json', '--ignore-scripts', '--pack-destination', packs],
     { cwd: REPO_ROOT, timeout: 240_000 }
   );
   expectStatus(packed, 0, 'npm pack');

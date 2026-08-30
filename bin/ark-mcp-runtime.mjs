@@ -260,14 +260,21 @@ async function loadArk() {
   const url = new URL('../dist/index.js', import.meta.url);
   if (!fs.existsSync(url)) {
     throw new Error(
-      'ark-mcp requires the built library at dist/index.js. Run "npm run build" first.'
+      'ark-mcp requires the built library at dist/index.js, and this install does not have it. ' +
+        'The npm tarball ships dist/; a git install (git+https://…/arkgate) ships only the ' +
+        'committed sources, so arkgate/arkgate-check work but ark-mcp and every "import arkgate*" ' +
+        'do not. Install from npm (npm i arkgate); building is only possible in a clone of the ' +
+        'repository, not in this node_modules copy, which ships no devDependencies. ' +
+        'See docs/package-surface.md, "Installing from git".'
     );
   }
   try {
     return await import('../dist/index.js');
   } catch (err) {
     throw new Error(
-      `ark-mcp failed to load dist/index.js (rebuild with "npm run build"): ${
+      `ark-mcp failed to load dist/index.js — it exists but will not import, so this is a ` +
+        `broken or partial build rather than a git install (rebuild with "npm run build" in a ` +
+        `clone of the repository): ${
         err instanceof Error ? err.message : String(err)
       }`
     );

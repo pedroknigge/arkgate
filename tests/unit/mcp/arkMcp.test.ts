@@ -12,7 +12,7 @@ let mcpBin = path.join(root, 'bin', 'ark-mcp.mjs');
 function prepareMcpRuntime() {
   if (mcpRuntimeDir) return;
 
-  // Build AND copy under the lock so a concurrent `npm pack` prepack rebuild
+  // Build AND copy under the lock so a concurrent `npm pack` test rebuild
   // can't clobber dist/ mid-copy.
   withDistLock(() => {
     execSync('npm run build', { stdio: 'ignore' });

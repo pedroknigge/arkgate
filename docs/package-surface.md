@@ -190,6 +190,36 @@ import { createOrderPlane } from 'arkgate/order';
 
 One install: `npm install arkgate`. `@arkgate/runtime` is deprecated.
 
+---
+
+## Installing from git
+
+`npm install github:pedroknigge/arkgate` and `pnpm add git+https://github.com/pedroknigge/arkgate`
+are supported for pinning an unreleased commit, and they need **no build-allowlist entry**:
+this package declares no `prepack`, no `prepare`, and no install script. Through 4.8.3 the
+`prepack` hook made a pnpm git install fail closed with
+`ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED` — the whole install, not just the build — and the only
+way through was adding `arkgate` to `allowBuilds` for a script that shells out to `npm`.
+The publish path builds explicitly instead (`scripts/release-npm.mjs`, plus `prepublishOnly`
+as a backstop, which pnpm does not run when it prepares a git dependency).
+
+A git install is **not** the same package as the npm tarball, because `dist/` is a build
+output and is not committed:
+
+| From a git install | Works | Why |
+|---|---|---|
+| `arkgate` / `arkgate-check` (and `ark` / `ark-check`) | **yes** | `bin/` and `bin/lib/*.mjs` are committed sources — the deliberate zero-build CLI |
+| `arkgate/schema*` subpath exports | **yes** | `schemas/*.json` are committed |
+| `import … from 'arkgate'`, `arkgate/eslint`, `arkgate/order`, `arkgate/runtime`, `arkgate/nestjs` | **no** | all resolve into `dist/` |
+| `ark-mcp` / `arkgate-mcp` | **no** | loads `dist/index.js`; it says so and names this section |
+
+So: install from git when you want the **CLI or the CI check** at a specific commit, install
+from npm (`npm i arkgate`) when you want the **library, the MCP server, or the ESLint plugin**.
+To get everything from a checkout, clone and run `npm install && npm run build` — that is the
+maintainer path in [develop.md](https://github.com/pedroknigge/arkgate/blob/main/docs/develop.md),
+and the build stays *your* explicit command, never a script your package manager has to be
+allowed to run.
+
 See [production-hardening.md](https://github.com/pedroknigge/arkgate/blob/main/docs/production-hardening.md) for requirements an eventual
 production deployment would need to satisfy; it is not a readiness certification.
 

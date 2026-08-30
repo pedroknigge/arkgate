@@ -5,8 +5,12 @@
  * One-command npm release: verify (typecheck + coverage/mutation confidence +
  * security audit + architecture gate) → publish `arkgate` (latest) and
  * Deprecated leftover `@arkgate/runtime` (`experimental` dist-tag only; ADR 0031).
- * `prepack` runs the gate build, so `npm publish` at root always ships a fresh dist.
- * Companion has no prepack — `npm run build:runtime` runs before that publish.
+ * This script runs the gate build itself before publishing, so `npm publish` at
+ * root always ships a fresh dist. There is deliberately no `prepack`/`prepare`:
+ * a build lifecycle script makes a pnpm git install of this package fail closed
+ * (ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED). `prepublishOnly` — which pnpm does not
+ * run when it prepares a git dependency — backstops a bare `npm publish`.
+ * Companion: `npm run build:runtime` runs before that publish.
  *
  * Real releases should run through .github/workflows/publish-npm.yml so npm
  * receives GitHub Actions provenance. Companion-only first publish uses
@@ -136,6 +140,11 @@ if (runtimeOnly) {
   }
 }
 
+// The gate tarball is built here, explicitly. There is no `prepack`: any build
+// lifecycle script on this package makes `pnpm add git+https://…` fail closed
+// with ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED (see docs/package-surface.md).
+// `prepublishOnly` still guards a bare `npm publish`; this line guards the rest.
+if (!runtimeOnly) run('npm', ['run', 'build']);
 run('npm', ['run', 'build:runtime']);
 
 if (!dry && allowLocalPublish) {

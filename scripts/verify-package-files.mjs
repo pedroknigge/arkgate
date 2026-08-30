@@ -63,7 +63,17 @@ function main() {
     if (entry.startsWith('!')) continue; // npm files[] exclusion pattern, not an on-disk path
     const abs = path.join(REPO, entry);
     if (!fs.existsSync(abs)) {
-      warnings.push(`listed path missing on disk: ${entry}`);
+      // A required entry missing on disk is the failure mode this package made
+      // reachable when it dropped `prepack` (a build lifecycle script makes a
+      // pnpm git install fail closed): nothing builds `dist/` on pack any more,
+      // so "dist is absent" must not read as a warning about a stale list.
+      if (REQUIRE_LISTED.includes(entry)) {
+        errors.push(
+          `required publish path missing on disk: ${entry} — run "npm run build" before verifying the package surface`
+        );
+      } else {
+        warnings.push(`listed path missing on disk: ${entry}`);
+      }
       continue;
     }
     const st = fs.statSync(abs);

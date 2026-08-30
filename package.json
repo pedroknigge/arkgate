@@ -163,7 +163,7 @@
     "audit:beta-exit": "node scripts/beta-exit-audit.mjs",
     "clean": "rm -rf dist",
     "release:npm": "node scripts/release-npm.mjs",
-    "prepack": "npm run build",
+    "prepublishOnly": "npm run build",
     "bench:hook-path": "node scripts/hook-path-bench.mjs"
   },
   "dependencies": {

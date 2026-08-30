@@ -36,12 +36,26 @@ describe('publish manifest', () => {
     expect(Object.keys(p.dependencies ?? {}).sort()).toEqual(['typescript-ark-host']);
     expect(p.scripts.test).toBe('vitest');
     expect(p.scripts.typecheck).toBe('tsc --noEmit');
-    expect(p.scripts.prepack).toBe('npm run build');
+    // No build lifecycle script: `prepack` / `prepare` / an install script would
+    // make `pnpm add git+https://…/arkgate` fail closed with
+    // ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED. The publish path builds explicitly
+    // (scripts/release-npm.mjs) and `prepublishOnly` backstops a bare publish —
+    // pnpm does not run prepublishOnly when it prepares a git dependency.
+    for (const hook of ['prepack', 'prepare', 'preinstall', 'install', 'postinstall']) {
+      expect(p.scripts[hook], `package.json scripts.${hook} blocks pnpm git installs`).toBe(
+        undefined
+      );
+    }
+    expect(p.scripts.prepublishOnly).toBe('npm run build');
   });
 
   it('npm pack ships bin + dist + dual CLIs and typescript host dep', () => {
-    // prepack rebuilds dist/, which races with the MCP suite's build — serialize.
-    withDistLock(() => run('npm', ['pack', '--pack-destination', tmp, '--silent']));
+    // Nothing rebuilds dist/ on pack any more, so build first; that races with
+    // the MCP suite's build — serialize.
+    withDistLock(() => {
+      run('npm', ['run', 'build']);
+      run('npm', ['pack', '--pack-destination', tmp, '--silent', '--ignore-scripts']);
+    });
 
     const files = fs.readdirSync(tmp).filter((f) => f.endsWith('.tgz'));
     expect(files.length).toBe(1);
@@ -86,5 +100,5 @@ describe('publish manifest', () => {
     expect(fs.existsSync(path.join(extract, 'package', 'dist', 'order', 'index.js'))).toBe(true);
     expect(fs.existsSync(path.join(extract, 'package', 'docs', 'typescript-support.md'))).toBe(true);
     expect(fs.existsSync(path.join(extract, 'package', 'docs', 'package-surface.md'))).toBe(true);
-  }, 30_000);
+  }, 240_000);
 });
