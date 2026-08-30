@@ -54,4 +54,4 @@ is the skip.
   `Features.json` ship the rule advisory.
 - Skills `/ark-place` `/ark-adopt` `/ark-contract` name the skip; they never
   enforce. No `/ark-aggregate`.
-- Does not close `Z09` / `K01`. Does not copy dcouplr layout.
+- Does not close `Z09` / `K01`. Does not copy consumer folder names.

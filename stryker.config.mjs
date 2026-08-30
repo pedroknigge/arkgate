@@ -28,7 +28,7 @@ const config = {
     'bin/lib/write-path-detect.mjs:62-62',
     'bin/lib/write-path-detect.mjs:77-96',
     'bin/lib/analysis-completeness.mjs:9-27',
-    'bin/lib/resolved-candidate-facts.mjs:688-732',
+    'bin/lib/resolved-candidate-facts.mjs:691-741',
     // managed-upgrade force-preserve covered by fieldGapS4 unit tests; not in critical
     // mutation groups for 4.1.0 (NoCoverage noise on toml-section branch residual).
     'bin/lib/resident-hook.mjs:115-162',
