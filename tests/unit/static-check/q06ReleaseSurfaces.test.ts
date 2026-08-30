@@ -1016,7 +1016,7 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
       expect(verbsAt).toBeGreaterThan(0);
       expect(html).toMatch(/Not an API Gateway/);
       expect(html).toMatch(/just documentation/);
-      expect(html).toMatch(/4\.8\.2/);
+      expect(html).toMatch(/4\.8\.3/);
       expect(html).toMatch(/ArkOrder/);
       expect(html).toMatch(/arkgate\/order/);
       expect(html).not.toMatch(/CONTRACT ACTIVE/);
