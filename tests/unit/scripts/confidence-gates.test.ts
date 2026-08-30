@@ -54,9 +54,16 @@ describe('confidence gate wiring', () => {
     expect(factsSlice).toContain("resolution: 'unresolved'");
     expect(factsSlice).not.toContain('if (!ts?.readConfigFile');
 
+    const promote = group('invariant-promote-honesty');
+    expect(promote.file).toBe('src/domain/invariantCoverage.ts');
+    expect(slice(promote.file, promote.startLine, promote.endLine)).toContain(
+      'export function canPromoteInvariant'
+    );
+
     const stryker = read('stryker.config.mjs');
     expect(stryker).toContain(`${ack.file}:${ack.startLine}-${ack.endLine}`);
     expect(stryker).toContain(`${facts.file}:${facts.startLine}-${facts.endLine}`);
+    expect(stryker).toContain(`${promote.file}:${promote.startLine}-${promote.endLine}`);
   });
 
   it('rejects NoCoverage even when every critical group remains above threshold', () => {
