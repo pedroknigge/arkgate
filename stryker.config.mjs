@@ -49,7 +49,7 @@ const config = {
     // peerIsolationMustDeny is the killable fail-closed core; findDeniedEdgeRule wires it.
     'src/domain/layerMatch.ts:337-349',
     'src/domain/policyDelta.ts:869-898',
-    'src/domain/invariantCoverage.ts:232-255',
+    'src/domain/invariantCoverage.ts:256-279',
     'src/kernel/semanticAnalysis.ts:18-49',
     'src/kernel/semanticAnalysis.ts:78-258',
     'src/kernel/workflow/Saga.ts:188-238',

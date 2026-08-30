@@ -93,8 +93,11 @@ Top-level fields:
   (files loaded, tests retained, files discarded at the cap) and names `coverage.maxFiles` as
   the knob that raises it — coverage never claims "never had tests" because of our own cap.
   Nothing is dropped in silence: files past the budget, files over the 256KB per-file cap,
-  unreadable files (permissions, broken symlinks), directories past the walk depth limit (8), and
-  tests naming no catalogued invariant are each counted and named in the diagnostic.
+  unreadable files or directories (permissions, broken symlinks), directories past the walk depth
+  limit (8), symlinks whose target resolves outside the project root, and tests naming no
+  catalogued invariant are each counted and named in the diagnostic. A symlinked test is read only
+  when its target is inside the root: a file that is not in this repo never proves an invariant
+  covered.
 - **`arkRules`** (optional, schema `1.1+`) — map of layer name → project-relative path to an
   ArkRules file (e.g. `"DomainModel": "arkrules/DomainModel.json"`). Keys must match a declared
   layer. Missing/invalid referenced files **fail closed**.

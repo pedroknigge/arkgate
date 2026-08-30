@@ -71,25 +71,46 @@ export type InvariantCoverageStats = {
     noInvariantMention: number;
     /** Larger than the per-file byte cap. */
     oversize: number;
-    /** stat/read failed: permissions, broken symlink, or a file that moved mid-scan. */
+    /**
+     * stat/read failed on a file or a directory: permissions, a broken symlink,
+     * or something that moved mid-scan. Files and directories share one counter.
+     */
     unreadable: number;
     /** Directory deeper than the walk depth limit — its files were never seen. */
     depthLimited: number;
+    /**
+     * Symlink inside the tree whose target resolves outside the project root.
+     * Refused as evidence: a file that is not in this repo must not prove an
+     * invariant covered.
+     */
+    outOfRoot: number;
   };
 };
 
-/** Human-readable discard tail. Empty when the scan discarded nothing. */
-function formatCoverageDiscards(stats: InvariantCoverageStats | undefined): string {
+/**
+ * Human-readable discard tail. Empty when the scan discarded nothing.
+ * `omitBudget` drops the budget clause and the load totals for messages whose
+ * own text already carries them — the same number twice reads as two facts.
+ */
+function formatCoverageDiscards(
+  stats: InvariantCoverageStats | undefined,
+  omitBudget = false
+): string {
   if (!stats) return '';
   const d = stats.discarded;
   const parts: string[] = [];
-  if (d.budget > 0) parts.push(`${d.budget} past the ${stats.maxFiles}-file budget`);
+  if (d.budget > 0 && !omitBudget)
+    parts.push(`${d.budget} past the ${stats.maxFiles}-file budget`);
   if (d.noInvariantMention > 0) parts.push(`${d.noInvariantMention} naming no catalogued invariant`);
   if (d.oversize > 0) parts.push(`${d.oversize} over the per-file byte cap`);
-  if (d.unreadable > 0) parts.push(`${d.unreadable} unreadable`);
+  if (d.unreadable > 0) parts.push(`${d.unreadable} unreadable (files or directories)`);
   if (d.depthLimited > 0) parts.push(`${d.depthLimited} directories past the walk depth limit`);
+  if (d.outOfRoot > 0) parts.push(`${d.outOfRoot} symlinked outside the project root`);
   if (parts.length === 0) return '';
-  return ` Scan discarded ${parts.join(', ')} (loaded ${stats.filesLoaded} files, kept ${stats.testFilesRetained} tests).`;
+  const totals = omitBudget
+    ? ''
+    : ` (loaded ${stats.filesLoaded} files, kept ${stats.testFilesRetained} tests)`;
+  return ` Scan discarded ${parts.join(', ')}${totals}.`;
 }
 
 function titleMatchesInvariant(content: string, id: string): boolean {
@@ -139,6 +160,9 @@ export function evaluateInvariantCoverage(
   const coverageBudgetExhausted = input.coverageBudgetExhausted === true;
   const stats = input.coverageStats;
   const discardTail = formatCoverageDiscards(stats);
+  // The budget-exhausted sentence already carries the cap, the load and the
+  // discards at the cap, so its tail reports only the other discard reasons.
+  const budgetExhaustedTail = formatCoverageDiscards(stats, true);
   // Numbers, not adjectives: a budget-exhausted verdict must say how big the
   // budget was, what it bought, and which knob raises it.
   const budgetDetail = stats
@@ -205,7 +229,7 @@ export function evaluateInvariantCoverage(
                     : kind === 'tests-disappeared'
                       ? `Invariant ${inv.id} is not covered by a test title or declared symbol (tests-disappeared — suite exists).`
                       : `Invariant ${inv.id} is not covered by a test title or declared symbol (never-had-tests).`) +
-                  discardTail,
+                  (partial && coverageBudgetExhausted ? budgetExhaustedTail : discardTail),
                 file: inv.provenance.sourceFile,
                 line: 1,
                 arkruleId: inv.id,

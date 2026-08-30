@@ -98,6 +98,7 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
           oversize: 0,
           unreadable: 0,
           depthLimited: 0,
+          outOfRoot: 0,
         },
       },
     });
@@ -108,6 +109,38 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
     expect(message).toMatch(/coverage\.maxFiles/);
     // Nothing is discarded silently: the no-mention drops are counted too.
     expect(message).toMatch(/42 naming no catalogued invariant/);
+    // The cap discards are stated once, by the sentence that owns the cap.
+    // Repeating "307" in the tail would read as two separate discard counts.
+    expect(message).not.toMatch(/307 past the 400-file budget/);
+    expect(message.match(/307/g)).toHaveLength(1);
+    expect(message).not.toMatch(/loaded 400 files, kept 12 tests/);
+  });
+
+  it('states the budget clause and the load totals when nothing else already did', () => {
+    const result = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: { 'tests/a.test.ts': "it('unrelated', () => {})" },
+      testFiles: ['tests/a.test.ts'],
+      // Budget hit, but the verdict is plain uncovered, not partial: no
+      // budget-exhausted sentence runs, so the tail must carry the numbers.
+      coverageBudgetExhausted: true,
+      coverageStats: {
+        filesLoaded: 400,
+        testFilesRetained: 12,
+        maxFiles: 400,
+        discarded: {
+          budget: 307,
+          noInvariantMention: 0,
+          oversize: 0,
+          unreadable: 0,
+          depthLimited: 0,
+          outOfRoot: 0,
+        },
+      },
+    });
+    const message = result.violations[0]?.message ?? '';
+    expect(message).toMatch(/307 past the 400-file budget/);
+    expect(message).toMatch(/loaded 400 files, kept 12 tests/);
   });
 
   it('reports discards even when the verdict is plain uncovered (not partial)', () => {
@@ -125,6 +158,7 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
           oversize: 0,
           unreadable: 0,
           depthLimited: 0,
+          outOfRoot: 0,
         },
       },
     });
@@ -147,13 +181,14 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
           oversize: 0,
           unreadable: 0,
           depthLimited: 0,
+          outOfRoot: 0,
         },
       },
     });
     expect(result.violations[0]?.message).not.toMatch(/Scan discarded/);
   });
 
-  it('names every discard reason: oversize, unreadable, depth-limited', () => {
+  it('names every discard reason: oversize, unreadable, depth-limited, out-of-root', () => {
     const result = evaluateInvariantCoverage({
       arkRules: catalog(),
       fileContents: {},
@@ -163,13 +198,22 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
         filesLoaded: 8,
         testFilesRetained: 0,
         maxFiles: 400,
-        discarded: { budget: 0, noInvariantMention: 0, oversize: 2, unreadable: 1, depthLimited: 3 },
+        discarded: {
+          budget: 0,
+          noInvariantMention: 0,
+          oversize: 2,
+          unreadable: 1,
+          depthLimited: 3,
+          outOfRoot: 4,
+        },
       },
     });
     const message = result.violations[0]?.message ?? '';
     expect(message).toMatch(/2 over the per-file byte cap/);
-    expect(message).toMatch(/1 unreadable/);
+    // One counter covers both units, so the message says which units it mixes.
+    expect(message).toMatch(/1 unreadable \(files or directories\)/);
     expect(message).toMatch(/3 directories past the walk depth limit/);
+    expect(message).toMatch(/4 symlinked outside the project root/);
   });
 
   it('refuses promotion of uncovered invariants (AR11)', () => {

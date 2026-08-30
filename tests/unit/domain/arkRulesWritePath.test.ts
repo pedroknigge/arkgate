@@ -192,6 +192,34 @@ export class Order {
     expect(withCoverage.ir.violations.some((v) => v.ruleId === 'INVARIANT_UNCOVERED')).toBe(
       false
     );
+
+    // The scan numbers must survive the gate path, not just the doctor path:
+    // without the coverageStats passthrough the diagnostic loses every number
+    // while the suite stays green.
+    const withStats = analyzeCanonicalResolvedProject({
+      contract,
+      facts,
+      coverageInputs: {
+        fileContents: { 'tests/other.test.ts': "it('unrelated', () => {})" },
+        testFiles: ['tests/other.test.ts'],
+        testGlobsMissing: false,
+        stats: {
+          filesLoaded: 1,
+          testFilesRetained: 1,
+          maxFiles: 400,
+          discarded: {
+            budget: 0,
+            noInvariantMention: 5,
+            oversize: 0,
+            unreadable: 0,
+            depthLimited: 0,
+            outOfRoot: 0,
+          },
+        },
+      },
+    });
+    const uncovered = withStats.ir.violations.find((v) => v.ruleId === 'INVARIANT_UNCOVERED');
+    expect(uncovered?.message).toMatch(/Scan discarded 5 naming no catalogued invariant/);
   });
 
   it('fires orchestration-only / thin-adapter when fileHints are supplied on the gate path', () => {

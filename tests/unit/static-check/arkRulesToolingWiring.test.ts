@@ -153,6 +153,63 @@ describe('ArkRules tooling wiring', () => {
     expect(inputs.stats.maxFiles).toBe(400);
   });
 
+  it('counts a discarded file once even when the walk roots overlap', () => {
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'tests', 'a.checks.ts'), "it('unrelated', () => {})\n");
+    // Custom globs add '.' to the walk roots, so 'tests' is reached twice.
+    // A file discarded twice would report two files where one exists.
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'], testGlobs: ['tests/**/*.checks.ts'] }
+    );
+    expect(inputs.stats.discarded.noInvariantMention).toBe(1);
+  });
+
+  it('refuses a symlink whose target escapes the project root', () => {
+    const root = makeRoot();
+    const outside = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'ark-outside-')));
+    tempDirs.push(outside);
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    fs.writeFileSync(
+      path.join(outside, 'secret.test.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+    // A test that is not in this repo must not prove an invariant covered.
+    fs.symlinkSync(path.join(outside, 'secret.test.ts'), path.join(root, 'tests', 'leak.test.ts'));
+
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'] }
+    );
+    expect(inputs.testFiles).toEqual([]);
+    expect(Object.keys(inputs.fileContents)).toEqual([]);
+    expect(inputs.stats.discarded.outOfRoot).toBe(1);
+  });
+
+  it('keeps in-root symlinked tests as evidence', () => {
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'packages'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'packages', 'order.test.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+    fs.symlinkSync(
+      path.join(root, 'packages', 'order.test.ts'),
+      path.join(root, 'tests', 'linked.test.ts')
+    );
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'] }
+    );
+    expect(inputs.testFiles).toEqual(['tests/linked.test.ts']);
+    expect(inputs.stats.discarded.outOfRoot).toBe(0);
+  });
+
   it('counts every silent discard: oversize, unreadable, and depth-limited', () => {
     const root = makeRoot();
     // One directory past the walk depth limit: the whole subtree is dropped.

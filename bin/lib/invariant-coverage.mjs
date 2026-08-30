@@ -8,25 +8,34 @@
  * Pure CLI helper (bin/lib/invariant-coverage.mjs). Zero Node I/O.
  */
 
-/** Human-readable discard tail. Empty when the scan discarded nothing. */
-function formatCoverageDiscards(stats) {
+/**
+ * Human-readable discard tail. Empty when the scan discarded nothing.
+ * `omitBudget` drops the budget clause and the load totals for messages whose
+ * own text already carries them — the same number twice reads as two facts.
+ */
+function formatCoverageDiscards(stats, omitBudget = false) {
     if (!stats)
         return '';
     const d = stats.discarded;
     const parts = [];
-    if (d.budget > 0)
+    if (d.budget > 0 && !omitBudget)
         parts.push(`${d.budget} past the ${stats.maxFiles}-file budget`);
     if (d.noInvariantMention > 0)
         parts.push(`${d.noInvariantMention} naming no catalogued invariant`);
     if (d.oversize > 0)
         parts.push(`${d.oversize} over the per-file byte cap`);
     if (d.unreadable > 0)
-        parts.push(`${d.unreadable} unreadable`);
+        parts.push(`${d.unreadable} unreadable (files or directories)`);
     if (d.depthLimited > 0)
         parts.push(`${d.depthLimited} directories past the walk depth limit`);
+    if (d.outOfRoot > 0)
+        parts.push(`${d.outOfRoot} symlinked outside the project root`);
     if (parts.length === 0)
         return '';
-    return ` Scan discarded ${parts.join(', ')} (loaded ${stats.filesLoaded} files, kept ${stats.testFilesRetained} tests).`;
+    const totals = omitBudget
+        ? ''
+        : ` (loaded ${stats.filesLoaded} files, kept ${stats.testFilesRetained} tests)`;
+    return ` Scan discarded ${parts.join(', ')}${totals}.`;
 }
 function titleMatchesInvariant(content, id) {
     // Match describe/it/test string titles containing the invariant id.
@@ -61,6 +70,9 @@ export function evaluateInvariantCoverage(input) {
     const coverageBudgetExhausted = input.coverageBudgetExhausted === true;
     const stats = input.coverageStats;
     const discardTail = formatCoverageDiscards(stats);
+    // The budget-exhausted sentence already carries the cap, the load and the
+    // discards at the cap, so its tail reports only the other discard reasons.
+    const budgetExhaustedTail = formatCoverageDiscards(stats, true);
     // Numbers, not adjectives: a budget-exhausted verdict must say how big the
     // budget was, what it bought, and which knob raises it.
     const budgetDetail = stats
@@ -117,7 +129,7 @@ export function evaluateInvariantCoverage(input) {
                     : kind === 'tests-disappeared'
                         ? `Invariant ${inv.id} is not covered by a test title or declared symbol (tests-disappeared — suite exists).`
                         : `Invariant ${inv.id} is not covered by a test title or declared symbol (never-had-tests).`) +
-                    discardTail,
+                    (partial && coverageBudgetExhausted ? budgetExhaustedTail : discardTail),
                 file: inv.provenance.sourceFile,
                 line: 1,
                 arkruleId: inv.id,

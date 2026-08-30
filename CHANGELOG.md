@@ -23,7 +23,19 @@ migration.**
 - **No silent discards in the coverage scan:** oversize files (256KB cap), unreadable files
   (permissions, broken symlinks) and directories past the walk depth limit (8) are counted by
   reason and reported in `INVARIANT_UNCOVERED` alongside budget and no-mention drops. Symlinked
-  test files are now scanned instead of being skipped by the walk without a trace.
+  test files are now scanned instead of being skipped by the walk without a trace — but only when
+  the link resolves inside the project root. A link pointing outside is refused and counted: a file
+  that is not in this repo must never prove an invariant covered.
+
+### Fixed
+- **Discards are counted per file, not per visit:** `coverage.testGlobs` widens the test walk to the
+  repo root, which overlaps the other walk roots. Each discarded file was counted — and read — once
+  per overlapping root, inflating every number in the diagnostic 2–3x for exactly the users who
+  opted into the new config.
+- **The budget is reported exhausted only when it cost a file.** Landing exactly on the cap with
+  nothing dropped no longer tells the user to raise a cap that discarded nothing, and files past the
+  cap are no longer read before being discarded. Paths that were never coverage candidates
+  (directories, out-of-root paths) are no longer counted against the budget.
 
 ## 4.8.3 — 2026-08-30
 

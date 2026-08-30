@@ -114,6 +114,7 @@ export function invariantIdsFromCatalog(arkRules) {
  *       oversize: number,
  *       unreadable: number,
  *       depthLimited: number,
+ *       outOfRoot: number,
  *     },
  *   },
  * }}
@@ -122,6 +123,11 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
   const fileContents = {};
   const testFiles = [];
   const seen = new Set();
+  // Every path pushFile has already judged, retained or not. `seen` holds only
+  // what was retained, so without this the walk roots overlap ('.' contains
+  // 'tests' and 'src') and one discarded file is counted — and read — once per
+  // overlapping root. The numbers we print must count files, not visits.
+  const offered = new Set();
   const maxFiles =
     Number.isInteger(opts.maxFiles) && opts.maxFiles > 0
       ? opts.maxFiles
@@ -134,7 +140,17 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
     oversize: 0,
     unreadable: 0,
     depthLimited: 0,
+    outOfRoot: 0,
   };
+  // Root with every symlink resolved, computed once: the containment test for
+  // symlinked candidates compares resolved path to resolved root.
+  let realRoot = root;
+  try {
+    realRoot = fs.realpathSync.native(root);
+  } catch {
+    // Unresolvable root: fall back to the literal path rather than failing the
+    // whole scan. Containment is then as strict as it was before.
+  }
   // Declared invariant ids. When present, a test file is RETAINED only if it
   // mentions one: scanning is cheap (hundreds of small files), retaining is
   // what costs memory. Without this the budget goes to whichever N tests the
@@ -159,11 +175,8 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
     const rel = String(relPath || '')
       .replace(/\\/g, '/')
       .replace(/^\.\//, '');
-    if (!rel || seen.has(rel)) return;
-    if (seen.size >= maxFiles) {
-      discarded.budget += 1;
-      return;
-    }
+    if (!rel || offered.has(rel)) return;
+    offered.add(rel);
     const absolute = path.resolve(root, rel);
     if (!isPathInsideRoot(root, absolute)) return;
     try {
@@ -171,8 +184,25 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
       // Not a file (directory, socket, symlink to a directory): never a
       // coverage candidate, so it is not a discard either.
       if (!stat.isFile()) return;
+      // statSync followed the link. A symlink that leaves the root must not
+      // become evidence: an out-of-root file naming an invariant would forge
+      // coverage for a test that is not in this repo. Compared against the
+      // resolved root so a repo living under a symlinked prefix (macOS /tmp)
+      // is not mistaken for an escape. Counted, never silent.
+      if (!isPathInsideRoot(realRoot, fs.realpathSync.native(absolute))) {
+        discarded.outOfRoot += 1;
+        return;
+      }
       if (stat.size > MAX_FILE_BYTES) {
         discarded.oversize += 1;
+        return;
+      }
+      // The budget bounds candidates, not visits: a directory or an
+      // out-of-root path was never going to be evidence, so counting it as a
+      // budget casualty would send the user to raise a cap that was not the
+      // reason. Checked here so a file past the cap is never read either.
+      if (seen.size >= maxFiles) {
+        discarded.budget += 1;
         return;
       }
       const content = fs.readFileSync(absolute, 'utf8');
@@ -230,7 +260,10 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
     fileContents,
     testFiles,
     testGlobsMissing,
-    coverageBudgetExhausted: seen.size >= maxFiles,
+    // Exhausted means the cap actually cost the user a file. Landing exactly
+    // on the cap with nothing dropped is a full budget, not an exhausted one:
+    // reporting it would tell the user to raise a cap that discarded nothing.
+    coverageBudgetExhausted: discarded.budget > 0,
     stats: {
       filesLoaded: seen.size,
       testFilesRetained: testFiles.length,
