@@ -29,13 +29,13 @@ Works with Cursor, Claude, Codex, and Grok.
 
 </div>
 
-> **ArkGate 4.8.3** is on npm `latest`. Write. Check. Ship. Adopted = required GitHub
+> **ArkGate 4.8.4** is the current tree; **4.8.3** is on npm `latest`. Write. Check. Ship. Adopted = required GitHub
 > status running `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
 > Status is compact (`arkgate-check --doctor`; `--all` for Details). Optional **ArkRun**
 > (`arkgate/runtime`) is an in-memory runtime — not Postgres. Optional **ArkOrder**
 > (`arkgate/order`) stops the agent rewriting the few slow product decisions as CRUD.
 > `@arkgate/runtime` is deprecated.
-> [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
+> [4.8.4](docs/releases/4.8.4.md) · [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
 
 ---
 
