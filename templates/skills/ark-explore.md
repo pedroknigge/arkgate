@@ -139,21 +139,24 @@ retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedP
 uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
 restart/retargeting is required. `ark://manifest` never satisfies this preflight.
 
-## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+## Dual plane — layers + extras (mandatory, except /ark-runtime)
 
-ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; you **always label** findings so they never blur. Absence of an extra is silent and valid. Skills never enforce. ArkOrder is an extra **inside** the `arkgate` package (`arkgate/order`), not a second install.
 
 | Plane | What it protects | Where it lives | Sensors / tools |
 |-------|------------------|----------------|-----------------|
 | **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
 | **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime`; **`kernelRoots` preferred**, `compositionRoots` alias | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
+| **ArkOrder** (extra) | Operational pattern (ξ vs s) | `arkOrder` on `ark.config.json` (schema `1.3+`); factory `arkgate/order` | `ARKORDER_*` |
 
 **Rules for every report / answer:**
-1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** or **`[ArkRun]`** or **`[ArkOrder]`** (or a table with those headers).
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. Editing `arkrules/*` or applying structure fixes is **`/ark-adopt`** / **`/ark-autopilot`** — explore does not write (never invent `mechanical-safe`).
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+6. Never write `arkRun` or `arkOrder` from this skill. When extras are present, label residual **`[ArkRun]`** / **`[ArkOrder]`**. Do not invent `/ark-run` or `/ark-order`.
 
 
 ### Explore + ArkRules
@@ -161,6 +164,10 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
 - Ranked table kinds may include `arkrules-opportunity` and `invariant-gap`.
 - Dual-plan **B** may include: place advisory structure rules, extract one inventory candidate to Domain + `arkrules` entry, promote one covered invariant.
 - Field path: note whether starters emit `arkrules/*`.
+
+### Explore + extras
+- Map extras when present; never write `arkRun` / `arkOrder`. Extra off → residual `n/a` / silent.
+- Field path may name `examples/arkorder-billing/` (ArkOrder fixture — map only). First extra write is `/ark-adopt`; grind is `/ark-autopilot`.
 
 ## Output mode (pick one — do not invent a fourth)
 
@@ -289,6 +296,7 @@ When `examples/`, `templates/`, gallery starters, eval fixtures, or docs claim �
 3. Diff **rule strength** across archetypes (missing denies = soft false-green for consumers).
 4. Note import style vs package surface docs (`arkgate` root barrel vs preferred subpath).
 5. Flag **false promises**: demo fails under its own check, or green with a hollow contract.
+6. When extras are on, label residual `[ArkRun]` / `[ArkOrder]`. Field path may name `examples/arkorder-billing/`. Never write extras from this skill.
 
 If the repo is a **pure app** (no examples): state **Field path: internal** and do one of:
 - Name the **norm for new code** that the residual implies (e.g. “no new `platform/db` in routes”), or
@@ -431,7 +439,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** vs **[ArkRun]** vs **[ArkOrder]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
 - **Done axes:** architecture residual (status/doctor/compass) | feature/ticket residual (outside package). Enforce green ≠ feature done
 - **Handoff:** `/ark-…` / CLI / `none`

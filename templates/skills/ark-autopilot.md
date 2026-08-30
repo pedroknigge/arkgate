@@ -60,6 +60,7 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 | Brownfield or greenfield with apply | Session 0 / config lying → `/ark-adopt` first, then return |
 | User wants A + B planned and **applied** | New file only → `/ark-place` |
 | **Apply** leftover design (one Shape refactor) | User said map only |
+| Extra skip cluster (`ARKRUN_*` / `ARKORDER_*`) after extra is on | Extra off → `/ark-adopt` (advisory); evaluate one bus → `/ark-runtime` |
 | Spaghetti under ENFORCE: Shape work (invoke = apply one pilot) | — |
 
 **Post-green door:** `/ark-explore` shape-focus → dual-plan B, **then this skill applies one
@@ -110,21 +111,24 @@ retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedP
 uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
 restart/retargeting is required. `ark://manifest` never satisfies this preflight.
 
-## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+## Dual plane — layers + extras (mandatory, except /ark-runtime)
 
-ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; you **always label** findings so they never blur. Absence of an extra is silent and valid. Skills never enforce. ArkOrder is an extra **inside** the `arkgate` package (`arkgate/order`), not a second install.
 
 | Plane | What it protects | Where it lives | Sensors / tools |
 |-------|------------------|----------------|-----------------|
 | **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
 | **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime`; **`kernelRoots` preferred**, `compositionRoots` alias | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
+| **ArkOrder** (extra) | Operational pattern (ξ vs s) | `arkOrder` on `ark.config.json` (schema `1.3+`); factory `arkgate/order` | `ARKORDER_*` |
 
 **Rules for every report / answer:**
-1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** or **`[ArkRun]`** or **`[ArkOrder]`** (or a table with those headers).
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. Editing `arkrules/*` or promoting modes and fixing structure sensors is **this skill** (judgment, never invent `mechanical-safe`).
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+6. Absence of extras is **valid**. Extra skip clusters grind **here** after the extra is on. Do not invent `/ark-run` or `/ark-order`. Skills never enforce.
 
 
 ### Autopilot + ArkRules
@@ -133,6 +137,19 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
   - B: one pilot = one rule (declare in `arkrules/<Layer>.json` → implement → test title/symbol → re-doctor).
 - Never promote advisory→enforced without coverage evidence (`canPromoteInvariant` / policy-delta).
 - End report must list what was **layer-edge** work vs **intra-layer rule** work.
+
+### Autopilot + ArkRun
+When `arkRun` is present:
+- Grind skip clusters with judgment: `ARKRUN_DIRECT_NEW` / `ARKRUN_TRANSPORT_BYPASS` / `ARKRUN_KERNEL_IN_DOMAIN` / `ARKRUN_MISSING_ROOT`. Never invent `mechanical-safe` for new emits / homemade buses.
+- Factory only inside `arkRun.kernelRoots` (`compositionRoots` alias). Import `arkgate/runtime`. Doctor `arkRun` is `notAScore`.
+- Extra off → `/ark-adopt` (advisory) or `/ark-runtime` (evaluate one candidate). Do not invent `/ark-run`.
+- Skills never enforce.
+
+### Autopilot + ArkOrder
+When `arkOrder` is present:
+- Grind skip clusters with judgment: `ARKORDER_MISSING_PLANE` / `ARKORDER_KERNEL_IN_DOMAIN` / `ARKORDER_GENERIC_UPDATE` / `ARKORDER_TOO_MANY_PARAMS` / `ARKORDER_INGEST_WRITES_XI`. Freeze ξ with `release()`; never `update`/`patch`/`set`.
+- Extra off → `/ark-adopt` (advisory). Do not invent `/ark-order`.
+- Skills never enforce.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -249,6 +266,7 @@ Status lights from doctor — not settings you choose. Rank residual honestly:
 - Claim ENFORCE / “done” when doctor reports `contract-false-green-io-under-application` (adopt first).
 - Claim “done” solely because plan A is empty while explore/B residual remains unlisted.
 - Replace host Nest/DI with the runtime kernel unasked.
+- Invent `/ark-run` or `/ark-order`.
 - Auto-apply pattern (B) bets as if they were mechanical-safe.
 - Create origin only after a long cleanup (freezes a polished “before” that never was).
 
@@ -270,7 +288,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** vs **[ArkRun]** vs **[ArkOrder]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`

@@ -3,6 +3,17 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
+## 4.8.2 — 2026-08-30
+
+**Patch** over **4.8.1**. Frozen 13 skills match four-plane honesty: ArkOrder on
+adopt / place / autopilot; ArkRun `kernelRoots`; kernel import `arkgate/runtime`.
+No `/ark-order` / `/ark-run`. Does not close `K01` / `Z09`. **No required config migration.**
+
+**Status: published** (on npm `latest`; see `docs/releases/4.8.2.md`).
+
+### Changed
+- **Skills four-plane honesty:** existing 13 names teach Layers, ArkRules, ArkRun, and ArkOrder. Adopt (session-0: schema `1.3+`, `planeRoots`, `maxXiKeys`) and Autopilot (grind) name ArkOrder; Place hands ArkOrder grind to Autopilot. ArkRun `kernelRoots` is preferred (`compositionRoots` alias). Kernel import is `arkgate/runtime` (companion deprecated). Skills never enforce.
+
 ## 4.8.1 — 2026-08-30
 
 **Patch** over **4.8.0**. ArkRules invariant coverage reads tests first and retains only files that mention a declared invariant id, so large repos no longer report `INVARIANT_UNCOVERED` / `never-had-tests` while covering tests sit on disk. Does not close `K01` / `Z09`. **No required config migration.**

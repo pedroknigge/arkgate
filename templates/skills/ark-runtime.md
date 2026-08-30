@@ -11,7 +11,7 @@ to evaluate or wire the kernel. **This skill never enforces** — the write / CI
 does when the `arkRun` extra is on. Do **not** invent `/ark-run`. `@arkgate/runtime` is deprecated.
 
 **When:** evaluate a hand-rolled bus / outbox / saga / projection / policy / Nest adapter against
-the kernel, or wire an extra that is already on (composition root, declarations, transport).
+the kernel, or wire an extra that is already on (kernel root, declarations, transport).
 **Not when:** session 0 / extra not chosen (`/ark-adopt`); one new file (`/ark-place`); skip-violation
 grind (`/ark-autopilot` / leftover `/ark-fix`).
 
@@ -50,9 +50,9 @@ retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedP
 uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
 restart/retargeting is required. `ark://manifest` never satisfies this preflight.
 
-## Out of scope for ArkRules
+## Out of scope for ArkRules and ArkOrder
 
-This skill is **runtime-kernel only**. Do not mix ArkRules structure/invariants here; hand off to `/ark-contract` / `/ark-adopt` / `/ark-explore` for static contract planes. Label kernel-usage residual **`[ArkRun]`** so it never blurs with **`[Layer]`** or **`[ArkRules]`**.
+This skill is **runtime-kernel only**. Do not mix ArkRules structure/invariants here; do **not** turn this skill into an ArkOrder skill. Hand off first extras to `/ark-adopt`, new files to `/ark-place`, skip clusters to `/ark-autopilot`. Label kernel-usage residual **`[ArkRun]`** so it never blurs with **`[Layer]`**, **`[ArkRules]`**, or **`[ArkOrder]`**.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -75,20 +75,22 @@ the same files or weaken the gate.
    adapters apply.
 2. **Read the extra** — open `ark.config.json`. If `arkRun` is absent and the user wants the extra,
    **STOP — do not continue this skill as complete.** Handoff **`/ark-adopt`** to write **advisory**
-   `arkRun` (schema `1.2+`; `compositionRoots`, `managedLayers`, `requireDeclarations`). Do not
-   invent the extra here. If the extra is present, note `mode`, roots, managed layers, and
-   `requireDeclarations`; doctor `arkRun` is `notAScore`.
+   `arkRun` (schema `1.2+`; **`kernelRoots` preferred**, `compositionRoots` alias, `managedLayers`,
+   `requireDeclarations`). Do not invent the extra here. If the extra is present, note `mode`,
+   `kernelRoots` (or alias `compositionRoots`), managed layers, and `requireDeclarations`; doctor
+   `arkRun` is `notAScore`.
 3. **Pick ONE target** — the smallest, most self-contained candidate (fewest
    call sites). Migrating everything at once is how adoptions die. List the
    rest as follow-ups in the report. New files after the extra is on go through **`/ark-place`**.
 4. **Resolve availability** — `npm install arkgate` already ships `arkgate/runtime`.
    Import from `arkgate/runtime` (or `arkgate/nestjs`). `@arkgate/runtime` is deprecated.
 5. **Wire through the kernel** — read the
-   [runtime package guide](https://github.com/pedroknigge/arkgate/blob/main/packages/runtime/README.md)
-   plus the [experimental surface policy](https://github.com/pedroknigge/arkgate/blob/main/docs/package-surface.md#experimental-opt-in-surfaces) before
-   writing code.
+   [experimental opt-in surfaces](https://github.com/pedroknigge/arkgate/blob/main/docs/package-surface.md#experimental-opt-in-surfaces)
+   (primary kernel guide; import `arkgate/runtime` from the same `arkgate` tarball). Optional
+   durability non-claim: [production-hardening.md](https://github.com/pedroknigge/arkgate/blob/main/docs/production-hardening.md).
+   Do **not** treat `packages/runtime/README.md` (deprecated companion leftover) as the kernel guide.
    - Call `createStrictArkKernel` (or an admission sibling: `createArkKernel`, `*FromConfig`) **only**
-     inside `arkRun.compositionRoots`. Each call is a new instance — no process-wide singleton.
+     inside `arkRun.kernelRoots` (`compositionRoots` is a legacy alias — still valid). Each call is a new instance — no process-wide singleton.
    - Keep Domain-role layers kernel-free (`ARKRUN_KERNEL_IN_DOMAIN`).
    - Resolve managed types from the kernel; do not construct admitted types with `new`
      (`ARKRUN_DIRECT_NEW`).
@@ -155,7 +157,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Planes:** **`[ArkRun]`** residual (or `n/a` if extra absent) — do not mix with `[Layer]` / `[ArkRules]`
+- **Planes:** **`[ArkRun]`** residual (or `n/a` if extra absent) — do not mix with `[Layer]` / `[ArkRules]` / `[ArkOrder]`
 - **Compass:** `n/a` (runtime skill; static residual → explore/fix) | top residual if doctor was run
 - **Handoff:** `/ark-…` / CLI / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`

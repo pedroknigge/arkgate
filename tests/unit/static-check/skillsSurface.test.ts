@@ -345,11 +345,15 @@ describe('ArkRun skill-body deepen (no new skill names)', () => {
     expect(body).toMatch(/deprecated/i);
     expect(body).toMatch(/Skills never enforce|never enforces/i);
     expect(body).toContain('notAScore');
+    expect(body).toMatch(/kernelRoots/);
     expect(body).toMatch(/compositionRoots/);
     expect(body).toMatch(/uses[\s\S]*reactsTo[\s\S]*raises[\s\S]*sends/);
     expect(body).toMatch(/no process-wide|no process-wide singleton|never a process-wide/i);
     expect(body).toMatch(/not.*production durability/i);
     expect(body).toMatch(/Do \*\*not\*\* invent `\/ark-run`/);
+    expect(body).toMatch(/package-surface\.md#experimental-opt-in-surfaces/);
+    expect(body).not.toMatch(/\[runtime package guide\]\([^)]*packages\/runtime\/README\.md\)/);
+    expect(body).toMatch(/Out of scope for ArkRules and ArkOrder/);
     expect(body).toContain('ARKRUN_DIRECT_NEW');
     expect(body).toContain('ARKRUN_TRANSPORT_BYPASS');
     expect(body).toMatch(/localBlocking|localBlocking/);
@@ -362,6 +366,8 @@ describe('ArkRun skill-body deepen (no new skill names)', () => {
     expect(body).toContain('### Place + ArkRun');
     expect(body).toMatch(/scaffold[\s\S]{0,80}through the kernel/i);
     expect(body).toContain('createStrictArkKernel');
+    expect(body).toMatch(/arkRun\.kernelRoots/);
+    expect(body).toMatch(/compositionRoots/);
     expect(body).toContain('ARKRUN_DIRECT_NEW');
     expect(body).toContain('ARKRUN_KERNEL_IN_DOMAIN');
     expect(body).toMatch(/uses[\s\S]*reactsTo[\s\S]*raises[\s\S]*sends/);
@@ -377,6 +383,7 @@ describe('ArkRun skill-body deepen (no new skill names)', () => {
     expect(body).toContain('### Adopt + ArkRun');
     expect(body).toMatch(/advisory.*arkRun|advisory \*\*arkRun\*\*|write \*\*advisory\*\* `arkRun`/i);
     expect(body).toMatch(/schema `1\.2\+`|schemaVersion.*1\.2/);
+    expect(body).toMatch(/kernelRoots/);
     expect(body).toContain('compositionRoots');
     expect(body).toContain('managedLayers');
     expect(body).toMatch(/compact starter/);
@@ -387,5 +394,80 @@ describe('ArkRun skill-body deepen (no new skill names)', () => {
     expect(body).toMatch(/Do not invent `\/ark-run`|Invent `\/ark-run`/);
     expect(body).toMatch(/Never force the kernel over existing Nest\/DI|Force runtime kernel over existing Nest\/DI/);
     expect(body).toMatch(/\*\*\[ArkRun\]\*\*/);
+  });
+});
+
+describe('ArkOrder + four-plane skill deepen (no new skill names)', () => {
+  function readSkill(name: string): string {
+    return fs.readFileSync(path.join(SKILLS_DIR, `${name}.md`), 'utf8');
+  }
+
+  it('keeps the frozen 13 names and does not ship /ark-order', () => {
+    expect(EXPECTED_SKILLS).toHaveLength(13);
+    expect(EXPECTED_SKILLS).not.toContain('ark-order');
+    expect(fs.existsSync(path.join(SKILLS_DIR, 'ark-order.md'))).toBe(false);
+    const onDisk = fs
+      .readdirSync(SKILLS_DIR)
+      .filter((n) => /^[a-z0-9-]+\.md$/.test(n))
+      .map((n) => path.basename(n, '.md'));
+    expect(onDisk).not.toContain('ark-order');
+    for (const name of EXPECTED_SKILLS) {
+      const body = readSkill(name);
+      expect(body, name).not.toMatch(/Invoke `?\/ark-order`/i);
+      expect(body, name).not.toMatch(/switch to \*\*`\/ark-order`/i);
+    }
+  });
+
+  it('ark-adopt writes advisory ArkOrder at session 0 without compact default', () => {
+    const body = readSkill('ark-adopt');
+    expect(body).toContain('### Adopt + ArkOrder');
+    expect(body).toMatch(/always-on Layers/);
+    expect(body).toMatch(/schema `1\.3\+`|schemaVersion.*1\.3/);
+    expect(body).toContain('planeRoots');
+    expect(body).toContain('maxXiKeys');
+    expect(body).toMatch(/compact starter/);
+    expect(body).toMatch(/Do not invent `\/ark-order`|Invent `\/ark-order`/);
+    expect(body).toMatch(/\*\*\[ArkOrder\]\*\*/);
+    expect(body).toMatch(/createOrderPlane/);
+    expect(body).toMatch(/arkgate\/order/);
+  });
+
+  it('ark-autopilot grinds ArkRun and ArkOrder skip clusters', () => {
+    const body = readSkill('ark-autopilot');
+    expect(body).toContain('### Autopilot + ArkRun');
+    expect(body).toContain('### Autopilot + ArkOrder');
+    expect(body).toContain('ARKRUN_DIRECT_NEW');
+    expect(body).toContain('ARKORDER_MISSING_PLANE');
+    expect(body).toContain('ARKORDER_GENERIC_UPDATE');
+    expect(body).toMatch(/Do not invent `\/ark-order`|Invent `\/ark-order`/);
+    expect(body).toMatch(/\*\*\[ArkOrder\]\*\*/);
+    expect(body).toMatch(/always-on Layers/);
+  });
+
+  it('ark-contract routes first arkOrder to adopt and grind to autopilot', () => {
+    const body = readSkill('ark-contract');
+    expect(body).toMatch(/first advisory `arkOrder`|first `arkOrder`/);
+    expect(body).toMatch(/\/ark-autopilot/);
+    expect(body).not.toMatch(/Companion/);
+    expect(body).toMatch(/Do not invent `\/ark-run` or `\/ark-order`/);
+    expect(body).toMatch(/\*\*\[ArkOrder\]\*\*/);
+  });
+
+  it('ark-runtime prefers kernelRoots and does not treat companion README as the kernel guide', () => {
+    const body = readSkill('ark-runtime');
+    expect(body).toMatch(/kernelRoots/);
+    expect(body).toMatch(/compositionRoots/);
+    expect(body).toMatch(/package-surface\.md#experimental-opt-in-surfaces/);
+    expect(body).not.toMatch(/\[runtime package guide\]\([^)]*packages\/runtime\/README\.md\)/);
+    expect(body).toMatch(/do \*\*not\*\* turn this skill into an ArkOrder skill/i);
+  });
+
+  it('ark-place prefers kernelRoots and hands ArkOrder grind to autopilot', () => {
+    const body = readSkill('ark-place');
+    expect(body).toMatch(/arkRun\.kernelRoots/);
+    expect(body).toMatch(/compositionRoots/);
+    expect(body).toContain('### Place + ArkOrder');
+    expect(body).toMatch(/grind via `\/ark-autopilot`|\/ark-autopilot/);
+    expect(body).toMatch(/Do not invent `\/ark-order`/);
   });
 });

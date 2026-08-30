@@ -46,9 +46,9 @@ retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedP
 uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
 restart/retargeting is required. `ark://manifest` never satisfies this preflight.
 
-## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+## Dual plane — layers + extras (mandatory, except /ark-runtime)
 
-Label findings **`[Layer]`** vs **`[ArkRules]`**. Structure sensor fixes are judgment.
+Label findings **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. Absence of extras is valid and silent. Extra skip clusters (`ARKRUN_*` / `ARKORDER_*`) are **`/ark-autopilot`**. Do not invent `/ark-run` or `/ark-order`. Skills never enforce.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -83,7 +83,7 @@ Skill incomplete if missing any field below.
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** vs **[ArkRun]** vs **[ArkOrder]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
 - **Handoff:** `/ark-autopilot` / `/ark-adopt` / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`
