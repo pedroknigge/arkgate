@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.8.3';
+const CURRENT = '4.8.4';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.8.3';
 
@@ -108,7 +108,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 
   it('keeps 4.8.3 published on npm latest', () => {
     expect(PUBLISHED_LATEST).toBe('4.8.3');
-    expect(CURRENT).toBe('4.8.3');
+    expect(CURRENT).toBe('4.8.4');
     expect(read('README.md')).toMatch(/4\.8\.3/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.8\.3\.md/);
     expect(read('docs/releases/4.8.3.md')).toMatch(/\*\*Status:\*\*\s*published/i);
@@ -1016,7 +1016,7 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
       expect(verbsAt).toBeGreaterThan(0);
       expect(html).toMatch(/Not an API Gateway/);
       expect(html).toMatch(/just documentation/);
-      expect(html).toMatch(/4\.8\.2/);
+      expect(html).toMatch(/4\.8\.3/);
       expect(html).toMatch(/ArkOrder/);
       expect(html).toMatch(/arkgate\/order/);
       expect(html).not.toMatch(/CONTRACT ACTIVE/);

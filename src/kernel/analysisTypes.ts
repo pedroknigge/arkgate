@@ -71,6 +71,10 @@ export type AnalyzeResolvedProjectInput = {
     testFiles?: readonly string[];
     testGlobsMissing?: boolean;
     coverageBudgetExhausted?: boolean;
+    /** Declared `coverage.coverageRoots`: where the project says its runner runs. */
+    coverageRoots?: readonly string[];
+    /** Counted scan facts: files loaded, tests retained, discards by reason. */
+    stats?: import('../domain/invariantCoverage').InvariantCoverageStats;
   };
   /**
    * AR07 — Tooling-supplied orchestration/thin-adapter heuristics per file.

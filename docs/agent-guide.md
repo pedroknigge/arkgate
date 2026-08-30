@@ -461,6 +461,23 @@ order (universal): `lint` → `typecheck` → `arkgate-check` / `check:architect
 When `include` matches **zero** TS/JS files, plan/doctor treat that as **not done**
 (`goal.emptyScope`, adoption gap `empty-scope`) — never “clean architecture.”
 
+The **verdict path refuses** in that state rather than passing: a plain or `--strict`
+`ark-check` over zero governed files exits 1 with `ANALYSIS_COVERS_NO_FILES`, because
+every rule is vacuously satisfied on an empty set. It fires when source exists under the
+analyzed root and the contract governs none of it, or when the analyzed root is not the
+root you asked for (a contract found outside `--root` makes ArkGate adopt the contract's
+directory). A genuinely greenfield repo — no governable source anywhere under the root
+you asked for — still passes, so `ark init` can land a contract before the code.
+
+"Source exists" is answered by a probe the contract cannot steer: it ignores `exclude`
+(otherwise `exclude: ["**"]` would buy a green), skips dot-directories, never follows a
+symlink, skips `*.config.*` (a repo whose only TS is `vite.config.ts` is greenfield, not
+a mismatch), and stops at 200 files — the message says *at least N* when it did.
+
+The commands below are exempt on purpose: they are how the refusal gets diagnosed and
+fixed, so `--plan`, `--coverage` and `--doctor` still exit 0 on an empty scope and report
+`empty-scope`. **Do not gate CI on a report mode** — gate on `ark-check` / `--strict`.
+
 ```bash
 npx ark-check --suggest-include --json    # workspaces + nested package.json+TS roots
 npx ark-check --adopt-contract --write  # expand include + UI patterns (no rule weakening)
@@ -468,6 +485,167 @@ npx ark-check --coverage
 ```
 
 Polyglot repos: Ark only governs TypeScript/JS. Point include at package roots that have sources.
+
+### Which rules can be enforced (`--sensors`, `--promote`)
+
+Promotion — moving a rule from `advisory` to `enforced` — used to be discovered
+by trial. Edit the ArkRules JSON, wait for a full run (~160s on a real
+repository), read the result, `git checkout` it back. Four attempts before the
+map was clear, and one of them ended in a rejection naming a sensor id the
+author had never typed: a rule called `types-only` refused with *"sensor
+`no-anemic-model` is Tier-2 advisory-only"*.
+
+Both surfaces are read-only by default and neither invents a second opinion:
+they project the same declarations the gate reads.
+
+```bash
+npx ark-check --sensors [--json]              # the map: what can ever be enforced
+npx ark-check --promote [--json]              # the price: what enforcing would cost, one run
+npx ark-check --promote <ruleId> --apply      # write mode "enforced" into that rule's own file
+```
+
+**`--sensors`** lists every sensor ArkGate ships — ArkRules, ArkRun and
+ArkOrder — with its plane, its tier and whether it can *ever* be enforced, so
+Tier-2 shows up before you write the rule rather than after you wait for a run.
+It also says *how*: only the ArkRules plane is promoted per rule; ArkRun and
+ArkOrder are switched by the plane-level `arkRun.mode` / `arkOrder.mode`, and
+`--promote --apply` writes ArkRules documents only.
+Underneath it lists every rule the contract actually declares, each with its
+local id, the sensor it delegates to, the layer, the file it was declared in,
+its current mode, and the reason it can or cannot be promoted. Three things
+block a promotion, and the surface names which one fired:
+
+- **`tier-2-advisory-only`** — the sensor is a heuristic (`no-anemic-model`,
+  `arkrun-skip-resolve`). Advisory forever; the contract rejects `enforced`.
+- **`no-structure-teeth`** — `invariant-coverage` as a *structure* entry emits
+  nothing (coverage is judged per entry in `invariants`), so enforcing it would
+  change nothing. Promote the invariant instead.
+- **`no-coverage-evidence`** — an invariant whose evidence does not support
+  promotion. The text is `canPromoteInvariant`'s own, so this surface can never
+  promise a promotion the gate then refuses.
+
+It needs no TypeScript and runs no analysis: the contract, the ArkRules
+documents it points at, and the coverage evidence walk (a filesystem walk plus a
+text match — ArkGate never executes a test). Exit 0 on a report, **2** when the
+contract or its ArkRules references will not load, or when the governed-file
+scan itself fails — reporting every invariant as uncovered because ArkGate could
+not collect the inputs would be our limitation printed as a fact about your
+tests.
+
+**`--promote`** adds the price. Advisory rules are already evaluated on every
+run, so the findings each one produces are sitting in the analysis that just
+happened, stamped with the rule that produced them: **one** run prices **every**
+declared rule, which is the whole difference from the loop it replaces. A
+promotable advisory rule with zero findings today is a free promotion; one with
+seven is seven findings that stop being warnings and start failing the gate.
+
+Findings are counted per `<sourceFile>#<ruleId>`, not per bare id. Rule ids are
+unique inside one ArkRules document, not across them, so two layer files may
+both declare `shared-id` — keyed on the id alone their findings pool and each
+row reports the other's as its own.
+
+**A price the run could not measure is never printed as a price.** Two things
+qualify the numbers, and both are named above them rather than left implied:
+
+- **Incomplete analysis.** Parse failures suppress findings, so the count is a
+  floor, not the cost.
+- **The classification floor.** Below it every enforced ArkRules finding is
+  demoted to a warning, so promoting buys a label and not a tooth — the gate
+  would still pass. `wouldBlock` drops to zero and the run says so. Classify
+  more of the tree (`--coverage`) before promoting.
+
+Plan by default — there is no `--dry-run` anywhere in `bin/`. `--apply` needs
+one named rule id: `--promote <ruleId> --apply`, or `--promote=<ruleId>` when
+the id starts with `-`. It refuses a bare `--promote --apply` rather than
+rewriting the contract in bulk behind a single flag, refuses an id declared in
+two documents rather than silently writing the first, and refuses to make a
+contract change on a cost this run did not measure. `--promote` cannot be
+combined with a mode that answers first (`--sensors`, `--coverage`, `--plan`,
+`--doctor`, …) — that printed the report and exited 0 having written nothing —
+nor with `--changed` / `--against` / `--baseline`, which narrow or suppress the
+findings the price is made of.
+
+The write binds to the rule that was priced (an edit that changed its sensor in
+between is refused), writes every byte before it truncates so a failed write
+cannot leave the project without a loadable contract, and names its refusals:
+`symlink`, `hard-link`, `not-utf8`, `outside-root`, `short-write`. A document
+that was already indented keeps its indentation and trailing newline; a minified
+one comes back pretty-printed, because the write is a JSON round-trip rather
+than a targeted text edit. Exit 0 for a preview or a successful write, 1 for an
+unknown rule id or a refused write, 2 for bad arguments or ArkRules references
+that will not load.
+
+### Literal path drift after a rename (`--path-drift`)
+
+A repo path written inside a **string, a comment or a docstring** is invisible to
+the rest of the gate: `tsc` resolves imports, not strings, and ESLint does not
+either. A rename therefore compiles green and the reference lies afterwards.
+
+```bash
+npx ark-check --path-drift --base-ref origin/main          # preview
+npx ark-check --path-drift --base-ref origin/main --write  # apply the anchored fixes
+npx ark-check --path-drift --base-ref origin/main --all    # + the unanchored sweep
+```
+
+Two modes, because they make different claims:
+
+- **Anchored** (default) — the referenced path is gone and exactly one rename in
+  `git diff --find-renames <base-ref>` says where it went. A finding
+  (`LITERAL_PATH_DRIFT`) normally carries a replacement written in the author's
+  own form (alias stays alias, relative is recomputed relative, a path with no
+  include-root prefix keeps its coordinate space); the fix is one-directional
+  and `--write` applies it. Exit 1 while anchored drift remains. Three things
+  must hold before a replacement is offered at all: a rename explains the
+  reference, the destination itself resolves (otherwise the "fix" only moves the
+  drift), and the destination is path-shaped — a git path is raw bytes, and a
+  destination containing a quote or a newline would edit the program rather than
+  repair a reference. A finding that clears the first two but whose destination
+  leaves its own alias root is reported with the target only and marked *rewrite
+  by hand*; `--write` never touches it, so the summary counts writable
+  replacements separately.
+- **Unanchored** (`--all`) — a literal that looks like a repo path and does not
+  resolve, with nothing to say where it went (`LITERAL_PATH_UNRESOLVED`).
+  Advisory: never written, never fails a run. It is opt-in because ArkGate
+  cannot tell a dead reference from an illustrative one, and reporting the
+  difference as if it could would be our limitation stated as a fact about your
+  code. The **count is always printed**, listed or not.
+
+Three exit codes, so a pipeline can tell the three outcomes apart from the
+status alone:
+
+| exit | meaning |
+| --- | --- |
+| `0` | anchored mode ran and nothing is left |
+| `1` | anchored drift remains |
+| `2` | anchored mode could not run (no usable base ref) — this run proved nothing |
+
+A green tick is printed only for `0`. With no usable base ref the run prints
+`○ Anchored mode did not run` and exits `2`: a tick, or a zero status, over a
+check that never happened is the false green this pass exists to remove.
+
+`--write` refuses rather than risks the file, and every refusal is named in the
+output: a symlinked leaf or parent (`symlink`), a hard link to a file the repo
+does not own (`hard-link`), content that is not valid UTF-8 (`not-utf8` — a
+whole-file rewrite would replace the offending byte with U+FFFD), a token that
+has moved since the scan (`token-moved`), and anything resolving outside the
+root (`outside-root`). The read-modify-write goes through a single
+`O_NOFOLLOW` descriptor, so the path is never resolved twice.
+
+The rename set is taken against the working tree, so a rename that is staged
+but not yet committed is covered — the moment the drift is cheapest to fix. (A
+bare `mv` without `git add` is invisible to rename detection: its destination is
+untracked.) Without a usable base ref the
+run says so instead of printing a green.
+
+The pass reads the contract for one thing only — `include`, to learn which
+prefixes a path may be written under — and ignores `exclude`: a contract must not
+be able to hide drift from the pass that reports it, and a contract too broken to
+parse is no reason to stop looking either. Scope: every text format where a repo
+path is written by hand (`.ts .tsx .mts
+.cts .js .jsx .mjs .cjs .css .scss .json .md`) — deliberately wider than the
+TS/TSX gate the type-aware passes use, because a comment is not code and the
+class was first found in a `.css` file. Generated files are skipped, and every
+file the walk refuses is counted by reason in the output.
 
 ### Presets
 
@@ -899,6 +1077,10 @@ edges are not denied by that rule.
 - **Allowed:** same-slice imports when both paths classify; classic non-peerIsolation denies still apply across layers.
 - **`sliceFolders`:** optional parent segments (default: inferred from layer globs).
 - **Fail-closed:** missing paths, empty/unresolvable slice folders, or unclassifiable either side → **deny** via peerIsolation (cannot prove same-slice).
+- **`sharedRoots`** (4.8.4): roots the repo declares shared on purpose (`["ui", "hooks", "lib/permissions"]`). A file under a declared shared root is evidence, not an unclassifiable path, so fail-closed stops firing on every shared file. **Anchored** — the root starts the path, optionally after one `src/` or `app/`; write deeper or monorepo roots out (`packages/web/src/ui`) or glob them, and a bare `*` / `**` is refused. A path that still resolves to a slice keeps its slice.
+- **`allowedCrossSlice`** (4.8.4): `[{ "from": "features/checkout", "to": "features/catalog" }]` — one directed slice→slice edge the repo declares on purpose. The reverse still denies.
+- **The denial names its reason:** `cross-slice edge a → b` (a fact about the code) vs `unclassifiable path (…)`, `no slice folders`, `no path evidence` (facts about the evidence ArkGate had).
+- Promoting a genuinely shared slice to its own layer remains the recommended model; the two declarations exist so ArkGate can enforce a repo that deliberately chose otherwise.
 - Enforced by `ark-check`, `arkgate/eslint`, and `ark-mcp` (path-aware edges and path-less intent refs share the same SoT).
 - Fixes are **judgment** (not mechanical-safe).
 

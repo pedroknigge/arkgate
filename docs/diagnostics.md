@@ -44,6 +44,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`ARKRULE_INVARIANT`](#ARKRULE_INVARIANT) | arkrules | ArkRule invariant failed |
 | [`ARKRULE_SCOPE_EMPTY`](#ARKRULE_SCOPE_EMPTY) | arkrules | ArkRule appliesTo matched zero files |
 | [`INVARIANT_UNCOVERED`](#INVARIANT_UNCOVERED) | arkrules | Invariant without coverage evidence |
+| [`INVARIANT_COVERAGE_OUTSIDE_ROOTS`](#INVARIANT_COVERAGE_OUTSIDE_ROOTS) | arkrules | Covering test outside the declared coverage roots |
 | [`ARKRUN_MISSING_ROOT`](#ARKRUN_MISSING_ROOT) | arkrun | No kernel factory in composition roots |
 | [`ARKRUN_KERNEL_IN_DOMAIN`](#ARKRUN_KERNEL_IN_DOMAIN) | arkrun | Domain-role layer imports the kernel |
 | [`ARKRUN_DIRECT_NEW`](#ARKRUN_DIRECT_NEW) | arkrun | Managed type constructed with new |
@@ -69,7 +70,10 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`DESIGN_SMELL_REGRESSION`](#DESIGN_SMELL_REGRESSION) | preflight | Design smell regression on base-relative ratchet |
 | [`ANALYSIS_PARSE_INCOMPLETE`](#ANALYSIS_PARSE_INCOMPLETE) | analysis | Parse incomplete |
 | [`LEXICAL_EVIDENCE_INCOMPLETE`](#LEXICAL_EVIDENCE_INCOMPLETE) | analysis | Lexical evidence incomplete |
+| [`ANALYSIS_COVERS_NO_FILES`](#ANALYSIS_COVERS_NO_FILES) | analysis | Analysis covered no files |
 | [`ANALYSIS_HOST_UNAVAILABLE`](#ANALYSIS_HOST_UNAVAILABLE) | analysis | Analysis host unavailable |
+| [`LITERAL_PATH_DRIFT`](#LITERAL_PATH_DRIFT) | drift | Literal path moved by a rename |
+| [`LITERAL_PATH_UNRESOLVED`](#LITERAL_PATH_UNRESOLVED) | drift | Literal path does not resolve |
 | [`ADAPTER_NOT_ALLOWED_FOR_PORT`](#ADAPTER_NOT_ALLOWED_FOR_PORT) | adapter | Adapter not allowed for port |
 | [`FORBIDDEN_PATTERN`](#FORBIDDEN_PATTERN) | snippet-policy | Forbidden regex pattern |
 | [`FORBIDDEN_SUBSTRING`](#FORBIDDEN_SUBSTRING) | snippet-policy | Forbidden substring |
@@ -281,7 +285,18 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 **Invariant without coverage evidence**
 
 - **Why:** An ArkRules invariant is under contract but no covering test title or declared symbol evidence was found (or coverage is partial). Kind is `never-had-tests` (adopt residual) vs `tests-disappeared` (suite exists).
-- **Fix:** Add a test title or declared symbol covering the arkruleId, then preflight again. Treat never-had-tests as adopt residual; treat tests-disappeared as a regression. Missing test globs report partial — never fake green.
+- **Fix:** Add a test title or declared symbol covering the arkruleId, then preflight again. Treat never-had-tests as adopt residual; treat tests-disappeared as a regression. Missing test globs report partial — never fake green. When the message reports an exhausted file budget, raise `coverage.maxFiles` (or narrow `coverage.testGlobs`) in ark.config.json. The message also names every file the scan discarded and why (budget, per-file byte cap, unreadable, walk depth limit, symlink resolving outside the project root, no catalogued invariant named) — nothing is dropped in silence.
+
+<a id="INVARIANT_COVERAGE_OUTSIDE_ROOTS"></a>
+
+### `INVARIANT_COVERAGE_OUTSIDE_ROOTS`
+
+**Covering test outside the declared coverage roots** · often advisory
+
+- **Why:** The only test naming this invariant sits outside `coverage.coverageRoots` — the places the project declares its runner executes. ArkGate matches declared text and never executes tests, so it cannot tell whether that file is ever run: coverage there is a test that *exists*, not a test that *runs*.
+- **Fix:** Move the test under a declared coverage root, or add its root to `coverage.coverageRoots` in ark.config.json. Advisory: it never fails strict, but promotion to enforced refuses on it.
+
+Declaring nothing is silent — without `coverage.coverageRoots` there is no second declaration to compare against, and ArkGate makes no claim about where tests run.
 
 ## ArkRun (opt-in extra)
 
@@ -530,6 +545,15 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 - **Why:** Single-file validation cannot prove project module resolution. The write hook is already the verdict.
 - **Fix:** Re-run `npx arkgate-check --root . --config ark.config.json`, or treat the hook deny as final. Do not call `ark_prepare_change` from a hook deny.
 
+<a id="ANALYSIS_COVERS_NO_FILES"></a>
+
+### `ANALYSIS_COVERS_NO_FILES`
+
+**Analysis covered no files**
+
+- **Why:** No file matched the contract `include` and layer patterns under the analyzed root, so the run had nothing to check. Every rule is vacuously satisfied on an empty set: a green here would read exactly like a green over a governed tree while certifying nothing. Usual causes are a `--root` that is not the tree the contract describes (including a contract found outside the requested root, whose directory is then adopted as the project root), `include` / `exclude` patterns that match nothing, or layer patterns written for a different layout.
+- **Fix:** Point `--root` at the tree the contract describes, or keep the contract inside that tree, or fix the `include` / `exclude` / layer patterns so they match real files — then re-run `npx arkgate-check --root . --config ark.config.json`. `--plan` and `--coverage` report the empty scope without refusing, and `--adopt-contract --write` proposes an `include` that matches the tree. This is a refusal about ArkGate's own inputs, not a finding about your code; no baseline or policy acknowledgement can suppress it, and `exclude` cannot silence it — the "is there source here" probe deliberately ignores the contract's own `exclude`, skips dot-directories, never follows a symlink, and skips `*.config.*` tooling files so a polyglot repo is not mistaken for a mismatch.
+
 <a id="ANALYSIS_HOST_UNAVAILABLE"></a>
 
 ### `ANALYSIS_HOST_UNAVAILABLE`
@@ -538,6 +562,51 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 - **Why:** No usable TypeScript / analysis host was available for this invocation.
 - **Fix:** Install a supported TypeScript version visible to the project, then re-run. Unavailable analysis is fail-closed.
+
+## Literal path drift
+
+Reported by `arkgate-check --path-drift` only — this pass is not part of the
+architecture verdict. A path written inside a string, a comment or a docstring
+is invisible to the rest of the gate: `tsc` resolves imports, not strings, and
+ESLint does not either, so a rename compiles green and the reference lies
+afterwards. Field data from a 783-rename migration found the drift in four
+forms — the tsconfig alias, a relative literal, a path written without the
+include-root prefix, and prose (the largest class, and the only one with no
+detector anywhere; it turned up in `.ts`, `.tsx` and `.css`).
+
+The pass reads every text format where a repo path is written by hand
+(`.ts .tsx .mts .cts .js .jsx .mjs .cjs .css .scss .json .md`), skips generated
+files, and reports every file it refused to read, by reason.
+
+<a id="LITERAL_PATH_DRIFT"></a>
+
+### `LITERAL_PATH_DRIFT`
+
+**Literal path moved by a rename**
+
+- **Why:** A repo path written inside a string, a comment or a docstring no longer resolves, and the rename set says where it went. Nothing in the gate sees this class: `tsc` resolves imports, not strings, and ESLint does not either, so the rename compiles green and the reference lies afterwards. It appears in four forms — the tsconfig alias, a relative literal, a path written without the include-root prefix, and prose — and a hand sweep reliably covers one of them.
+- **Fix:** Apply the suggested replacement, or re-run `npx arkgate-check --path-drift --base-ref <ref> --write` to apply every writable anchored replacement at once. The rewrite is mechanical and one-directional: the destination comes from the rename, it must itself resolve and be path-shaped, and the token is rewritten in the form the author wrote it in. A destination that leaves the alias root of the literal is reported with the target only and must be rewritten by hand.
+
+Only a rename whose source really is gone and that has exactly one destination
+may anchor a finding. A source that maps to two destinations is not a
+one-directional fix, so it anchors nothing and its references fall through to
+the advisory list below; the count is printed.
+
+<a id="LITERAL_PATH_UNRESOLVED"></a>
+
+### `LITERAL_PATH_UNRESOLVED`
+
+**Literal path does not resolve** · often advisory
+
+- **Why:** A literal that looks like a repo path does not resolve under this root, and no rename explains where it went. Unlike `LITERAL_PATH_DRIFT` this is a candidate, not a verdict: with nothing to anchor it, ArkGate cannot tell a dead reference from an illustrative path in a comment, an example in documentation, or a path belonging to another tree.
+- **Fix:** Read the candidate and decide: fix the path, or leave it. Advisory only — it never fails a run and is never rewritten by `--write`, because there is no destination to propose. Run `--path-drift --all` to list the sweep.
+
+The sweep is opt-in for exactly the reason the coverage budget is reported
+rather than hidden: on a repository that *writes about* paths it produced 4085
+candidates out of 9536 literals, nearly all of them illustrative. Listing that
+by default would be ArkGate's inability to resolve a string presented as a fact
+about your code. The count is always printed, so opting out of the list is
+never opting out of knowing.
 
 ## Port adapters
 

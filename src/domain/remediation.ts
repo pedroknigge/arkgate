@@ -295,8 +295,16 @@ export function deterministicNextAction(violation: ArkViolationLike): string {
       return 'Extract the shared dependency into a third module, test at the public interface, then preflight again.';
     case 'RAW_EVENT_PUBLISH':
       return 'Publish through a registered intent creator, then run Ark again.';
+    case 'LITERAL_PATH_DRIFT':
+      return typeof violation.target === 'string' && violation.target.length > 0
+        ? `Rewrite the literal to ${violation.target}, or run \`arkgate-check --path-drift --base-ref <ref> --write\` to apply every anchored replacement.`
+        : 'Rewrite the literal to the rename destination, or run `arkgate-check --path-drift --base-ref <ref> --write` to apply every anchored replacement.';
+    case 'LITERAL_PATH_UNRESOLVED':
+      return 'Read the candidate and decide: fix the path, or leave it. Advisory — with no rename to anchor it there is no destination to propose, so --write never touches it.';
     case 'PUBLISH_MISSING_SOURCE':
       return 'Add metadata.source to the publish call, then run Ark again.';
+    case 'INVARIANT_COVERAGE_OUTSIDE_ROOTS':
+      return `Move the covering test under a declared coverage root, or add its root to coverage.coverageRoots in ark.config.json, then run Ark again.`;
     case 'ARKRULE_STRUCTURE':
     case 'ARKRULE_INVARIANT':
     case 'INVARIANT_UNCOVERED':
@@ -458,6 +466,7 @@ export function classifyRemediation(violation: ArkViolationLike | null | undefin
     ruleId === 'ARKRULE_STRUCTURE' ||
     ruleId === 'ARKRULE_INVARIANT' ||
     ruleId === 'INVARIANT_UNCOVERED' ||
+    ruleId === 'INVARIANT_COVERAGE_OUTSIDE_ROOTS' ||
     (typeof ruleId === 'string' && ruleId.startsWith('ARKRULE_'))
   ) {
     return {
@@ -585,6 +594,12 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
       enriched.effort = 'small';
       enriched.enthusiastHint =
         'Reference that intent from a layer allowed to know about it — usually an adapter or application layer, not the domain core.';
+      break;
+    case 'INVARIANT_COVERAGE_OUTSIDE_ROOTS':
+      enriched.fixClass = 'review-contract';
+      enriched.effort = 'small';
+      enriched.enthusiastHint =
+        'The covering test lives where the project says its runner does not go. Move it, or declare that root in coverage.coverageRoots.';
       break;
     case 'ARKRULE_STRUCTURE':
     case 'ARKRULE_INVARIANT':

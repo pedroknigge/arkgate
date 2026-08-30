@@ -625,6 +625,9 @@
         "allowDisabledPeerIsolation": false
       }
     },
+    "coverage": {
+      "$ref": "#/$defs/coverage"
+    },
     "arkRules": {
       "type": "object",
       "additionalProperties": {
@@ -773,6 +776,37 @@
           },
           "uniqueItems": true,
           "minItems": 1
+        },
+        "sharedRoots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "allowedCrossSlice": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "from",
+              "to"
+            ],
+            "properties": {
+              "from": {
+                "type": "string",
+                "minLength": 1
+              },
+              "to": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
         }
       }
     },
@@ -797,6 +831,35 @@
         "allowDisabledPeerIsolation": {
           "type": "boolean",
           "default": false
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Invariant coverage scan controls. testGlobs replaces the built-in test-name heuristic; maxFiles raises or lowers the evidence file budget; coverageRoots declares where the project runs its tests, so a covering test found outside them is reported instead of silently certifying an invariant.",
+      "properties": {
+        "testGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "maxFiles": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "coverageRoots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "minItems": 1
         }
       }
     },

@@ -86,6 +86,33 @@ Top-level fields:
 - `include`, `exclude`, `excludeGenerated`, `frameworkOverlay`
 - `layers`, `rules`, `cyclePolicy`
 - `dynamicImportAllowlist`, `safety`
+- **`coverage`** (optional) — invariant-coverage scan controls: `testGlobs` (globs that decide
+  which files count as tests, replacing the built-in `*.test.*` / `tests/` name heuristic),
+  `maxFiles` (evidence file budget, default `400`) and `coverageRoots` (path prefixes where the
+  project declares its runner actually executes tests). Absence is silent and changes no verdict.
+  Unknown keys fail closed. When the budget is hit, `INVARIANT_UNCOVERED` reports the numbers
+  (files loaded, tests retained, files discarded at the cap) and names `coverage.maxFiles` as
+  the knob that raises it — coverage never claims "never had tests" because of our own cap.
+  `maxFiles` is clamped to a hard ceiling of 20000 (the config validator has no
+  `maximum` keyword, so a schema bound would be accepted and then ignored). The cap
+  bounds files **retained as evidence**, not files opened: a test is read before it can
+  be judged for naming an invariant, so the diagnostic reports files read alongside
+  files retained.
+  Nothing is dropped in silence: files past the budget, files over the 256KB per-file cap,
+  unreadable files or directories (permissions, broken symlinks), directories past the walk depth
+  limit (8), symlinks whose target resolves outside the project root, and tests naming no
+  catalogued invariant are each counted and named in the diagnostic. A symlinked test is read only
+  when its target is inside the root: a file that is not in this repo never proves an invariant
+  covered.
+
+  `coverageRoots` closes a false green ArkGate could otherwise produce. Coverage is proven by
+  matching an invariant id in a test title — a filesystem walk plus a text match. **ArkGate never
+  executes tests and never reads a runner config**, so a test in a folder no runner runs certifies
+  the invariant just as well as one that runs. Declaring `coverageRoots` gives ArkGate a second
+  declaration to compare the first against: when the only covering test falls outside them, it
+  reports `INVARIANT_COVERAGE_OUTSIDE_ROOTS` (advisory) and refuses to promote that invariant to
+  `enforced`. Declaring nothing keeps the old silence — without a declaration there is nothing to
+  compare, and ArkGate makes no claim about where tests run.
 - **`arkRules`** (optional, schema `1.1+`) — map of layer name → project-relative path to an
   ArkRules file (e.g. `"DomainModel": "arkrules/DomainModel.json"`). Keys must match a declared
   layer. Missing/invalid referenced files **fail closed**.
@@ -130,10 +157,59 @@ process module-capability family must be denied.
 
 Rule fields:
 
-- `from`, `to`, `allowed`, `message`, `peerIsolation`, `sliceFolders`
+- `from`, `to`, `allowed`, `message`, `peerIsolation`, `sliceFolders`, `sharedRoots`,
+  `allowedCrossSlice`
 - `peerIsolation: true` + `allowed: false`: deny only when slice ids differ; same-slice allows
   when both paths classify. Missing paths, empty slice folders, or unclassifiable slices
   **fail closed** (deny — cannot prove same-slice).
+
+#### Declared peerIsolation exceptions (4.8.4)
+
+Fail-closed denies on **absence of evidence**, so in a repo that legitimately keeps shared code
+outside `features/<slice>/` (a `ui/`, `hooks/`, `lib/permissions/` tree) every shared file reads as
+a violation — thousands of them, none a real cross-slice import. That is ArkGate reporting *our*
+inability to place a file as a fact about *your* code. Two declarations fix it, and a declaration
+is evidence:
+
+```jsonc
+{
+  "from": "Features", "to": "Features", "allowed": false, "peerIsolation": true,
+  "sliceFolders": ["features"],
+  // Roots this repo keeps shared on purpose — no longer "unclassifiable".
+  "sharedRoots": ["ui", "layout", "providers", "hooks", "lib/permissions"],
+  // Directed slice→slice edges this repo wants. One entry = one direction.
+  "allowedCrossSlice": [{ "from": "features/checkout", "to": "features/catalog" }]
+}
+```
+
+- `sharedRoots` is **anchored**: the root must start the repo-relative path, optionally after a
+  single conventional source folder (`src/`, `app/`). So `ui` covers `ui/button.tsx` and
+  `src/ui/button.tsx` but **not** `modules/a/ui/x.tsx` — an unanchored root would exempt a whole
+  tree you never declared. Write a deeper or monorepo root out (`packages/web/src/ui`) or glob it
+  (`packages/*/src/ui`). Matching is case-insensitive; a bare `*` or `**` is refused, because one
+  character must not disable fail-closed. A path that still resolves to a slice keeps its slice —
+  `features/auth/ui/form.tsx` stays `features/auth` — so a shared root can never launder a real
+  cross-slice edge.
+- `allowedCrossSlice` entries match a full slice id (`features/catalog`) or a bare slice name
+  (`catalog`), and only in the direction written. The reverse edge still denies. A bare name
+  matches that name under **any** slice folder, so in a repo with several slice parents
+  (`features/auth` and `modules/auth`) write the full id — `features/auth` — or the
+  declaration allows more edges than you meant.
+- Everything else is unchanged: two different slices with nothing declared still deny, and a file
+  that is neither in a slice nor under a declared shared root still **fails closed**.
+- The denial now names which reason fired — `cross-slice edge features/a → features/b` (a fact
+  about your code) versus `unclassifiable path (src/widgets/x.tsx)` (a fact about our evidence).
+  `no slice folders` and `no path evidence` are the two remaining evidence reasons. A rule-level
+  `message` override no longer hides it: the reason is appended to your text, not replaced by it.
+- Both declarations are **weakening** changes in `ark policy-delta`
+  (`shared-roots-added`, `cross-slice-allowance-added`), so a policy review sees them. Both are
+  inert on a rule without `peerIsolation: true`, and policy-delta stays silent about them until
+  the wall exists.
+
+**The recommended model is still to promote a genuinely shared slice to its own layer** and let
+the layer edges carry it: a one-way peer import between slices is a DAG the layer graph cannot
+see. `sharedRoots` and `allowedCrossSlice` exist so ArkGate can enforce a design that made the
+other choice deliberately, not so slices can drift into a mesh.
 
 ### Type-only edges (placement debt)
 

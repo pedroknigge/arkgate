@@ -30,6 +30,7 @@ export type DiagnosticCategory =
   | 'arkorder'
   | 'preflight'
   | 'analysis'
+  | 'drift'
   | 'snippet-policy'
   | 'config'
   | 'adapter'
@@ -233,7 +234,15 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'arkrules',
     'Invariant without coverage evidence',
     'An ArkRules invariant is under contract but no covering test title or declared symbol evidence was found (or coverage is partial). Kind is never-had-tests (adopt residual) vs tests-disappeared (suite exists).',
-    'Add a test title or declared symbol covering the arkruleId, then preflight again. Treat never-had-tests as adopt residual; treat tests-disappeared as a regression. Missing test globs report partial — never fake green.'
+    'Add a test title or declared symbol covering the arkruleId, then preflight again. Treat never-had-tests as adopt residual; treat tests-disappeared as a regression. Missing test globs report partial — never fake green. When the message reports an exhausted file budget, raise coverage.maxFiles (or narrow coverage.testGlobs) in ark.config.json.'
+  ),
+  entry(
+    'INVARIANT_COVERAGE_OUTSIDE_ROOTS',
+    'arkrules',
+    'Covering test outside the declared coverage roots',
+    'The only test naming this invariant sits outside coverage.coverageRoots — the places the project declares its runner executes. ArkGate matches declared text and never executes tests, so it cannot tell whether that file is ever run: coverage there is a test that exists, not a test that runs.',
+    'Move the test under a declared coverage root, or add its root to coverage.coverageRoots in ark.config.json. Advisory: it never fails strict, but promotion to enforced refuses on it.',
+    { oftenAdvisory: true }
   ),
 
   // ── ArkRun (opt-in extra; RN05 dual-depth nextAction) ────────────────────
@@ -425,6 +434,13 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Re-run `npx arkgate-check --root . --config ark.config.json`, or treat the hook deny as final. Do not call ark_prepare_change from a hook deny.'
   ),
   entry(
+    'ANALYSIS_COVERS_NO_FILES',
+    'analysis',
+    'Analysis covered no files',
+    'No file matched the contract include and layer patterns under the analyzed root, so the run had nothing to check. Every rule is vacuously satisfied on an empty set: a green here would read exactly like a green over a governed tree while certifying nothing. Usual causes are a --root that is not the tree the contract describes (including a contract found outside the requested root, whose directory is then adopted as the project root), include / exclude patterns that match nothing, or layer patterns written for a different layout.',
+    'Point --root at the tree the contract describes, or keep the contract inside that tree, or fix the include / exclude / layer patterns so they match real files — then re-run `npx arkgate-check --root . --config ark.config.json`. This is a refusal about ArkGate\u2019s own inputs, not a finding about your code; no baseline or policy acknowledgement can suppress it.'
+  ),
+  entry(
     'ANALYSIS_HOST_UNAVAILABLE',
     'analysis',
     'Analysis host unavailable',
@@ -594,6 +610,23 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Unclassified included files',
     'Included source files match no layer pattern; import rules will not enforce on them.',
     'Extend layer patterns or narrow include so every governed file is classified.',
+    { oftenAdvisory: true }
+  ),
+
+  // ── literal path drift ───────────────────────────────────────────────────
+  entry(
+    'LITERAL_PATH_DRIFT',
+    'drift',
+    'Literal path moved by a rename',
+    'A repo path written inside a string, a comment or a docstring no longer resolves, and the rename set says where it went. Nothing in the gate sees this class: `tsc` resolves imports, not strings, and ESLint does not either, so the rename compiles green and the reference lies afterwards. It appears in four forms — the tsconfig alias, a relative literal, a path written without the include-root prefix, and prose — and a hand sweep reliably covers one of them.',
+    'Apply the suggested replacement, or re-run `npx arkgate-check --path-drift --base-ref <ref> --write` to apply every writable anchored replacement at once. The rewrite is mechanical and one-directional: the destination comes from the rename, it must itself resolve and be path-shaped, and the token is rewritten in the form the author wrote it in. A destination that leaves the alias root of the literal is reported with the target only and must be rewritten by hand.'
+  ),
+  entry(
+    'LITERAL_PATH_UNRESOLVED',
+    'drift',
+    'Literal path does not resolve',
+    'A literal that looks like a repo path does not resolve under this root, and no rename explains where it went. Unlike LITERAL_PATH_DRIFT this is a candidate, not a verdict: with nothing to anchor it, ArkGate cannot tell a dead reference from an illustrative path in a comment, an example in documentation, or a path belonging to another tree.',
+    'Read the candidate and decide: fix the path, or leave it. Advisory only — it never fails a run and is never rewritten by --write, because there is no destination to propose. Run `--path-drift --all` to list the sweep.',
     { oftenAdvisory: true }
   ),
 

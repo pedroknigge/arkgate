@@ -534,6 +534,28 @@ describe('C01 config contract', () => {
     ).toThrow('$.stewards');
   });
 
+  it('accepts optional coverage controls and fails closed on junk', () => {
+    const loaded = loadArkConfigContract({
+      ...VALID_MINIMAL_CONFIG,
+      coverage: { testGlobs: ['qa/**/*.checks.ts'], maxFiles: 900 },
+    });
+    expect(loaded.config.coverage).toEqual({
+      testGlobs: ['qa/**/*.checks.ts'],
+      maxFiles: 900,
+    });
+    // Absence is silent — no default is injected.
+    expect(loadArkConfigContract({ ...VALID_MINIMAL_CONFIG }).config.coverage).toBeUndefined();
+    expect(() =>
+      loadArkConfigContract({ ...VALID_MINIMAL_CONFIG, coverage: { maxFiles: 0 } })
+    ).toThrow('$.coverage.maxFiles');
+    expect(() =>
+      loadArkConfigContract({ ...VALID_MINIMAL_CONFIG, coverage: { testGlobs: [] } })
+    ).toThrow('$.coverage.testGlobs');
+    expect(() =>
+      loadArkConfigContract({ ...VALID_MINIMAL_CONFIG, coverage: { maxCoverageFiles: 900 } })
+    ).toThrow('$.coverage.maxCoverageFiles');
+  });
+
   it('accepts reserved/allowEmpty layer flags and rejects non-boolean values', () => {
     const loaded = loadArkConfigContract({
       ...VALID_MINIMAL_CONFIG,

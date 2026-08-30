@@ -7,6 +7,7 @@
 import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
 import { evaluateInvariantCoverage } from './invariant-coverage.mjs';
 import {
+  coverageOptionsFromConfig,
   invariantIdsFromCatalog,
   loadInvariantCoverageInputs,
 } from './invariant-coverage-io.mjs';
@@ -94,6 +95,7 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
       invariants > 0
         ? loadInvariantCoverageInputs(root, facts ?? { files: [] }, {
             invariantIds: invariantIdsFromCatalog(loaded.arkRules),
+            ...coverageOptionsFromConfig(config),
           })
         : { fileContents: {}, testFiles: [], testGlobsMissing: false };
     const coverage = evaluateInvariantCoverage({
@@ -101,6 +103,9 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
       fileContents: coverageInputs.fileContents,
       testFiles: coverageInputs.testFiles,
       testGlobsMissing: coverageInputs.testGlobsMissing,
+      // No coverageStats / coverageRoots: this caller reads coverage ROWS and
+      // drops the violations, and both only shape violation messages. Passing
+      // them would look like wiring while changing nothing observable here.
       coverageBudgetExhausted: coverageInputs.coverageBudgetExhausted === true,
     });
     const covById = new Map(

@@ -28,6 +28,7 @@ const config = {
     'bin/lib/write-path-detect.mjs:62-62',
     'bin/lib/write-path-detect.mjs:77-96',
     'bin/lib/analysis-completeness.mjs:9-27',
+    'bin/lib/analysis-completeness.mjs:74-114',
     'bin/lib/resolved-candidate-facts.mjs:691-741',
     // managed-upgrade force-preserve covered by fieldGapS4 unit tests; not in critical
     // mutation groups for 4.1.0 (NoCoverage noise on toml-section branch residual).
@@ -38,18 +39,24 @@ const config = {
     'bin/ark-shared.mjs:450-475',
     'src/domain/baselineKey.ts:20-48',
     // 4.0: migrateArkConfig critical slices (excludes redundant throw-only / guard noise).
-    'src/domain/configContract.ts:469-482',
-    'src/domain/configContract.ts:484-486',
-    'src/domain/configContract.ts:488-495',
-    'src/domain/configContract.ts:505-509',
-    'src/domain/configContract.ts:512-512',
-    'src/domain/configContract.ts:521-524',
-    'src/domain/configContract.ts:533-538',
+    // 471 is an equivalent mutant: forcing the typeof guard true routes a
+    // non-string schemaVersion to the unknown-version throw, same message.
+    'src/domain/configContract.ts:467-470',
+    'src/domain/configContract.ts:472-473',
+    'src/domain/configContract.ts:493-494',
+    'src/domain/configContract.ts:499-500',
+    'src/domain/configContract.ts:509-511',
+    'src/domain/configContract.ts:522-522',
+    'src/domain/configContract.ts:529-529',
+    'src/domain/configContract.ts:538-540',
+    'src/domain/configContract.ts:551-551',
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
-    // peerIsolationMustDeny is the killable fail-closed core; findDeniedEdgeRule wires it.
-    'src/domain/layerMatch.ts:337-349',
-    'src/domain/policyDelta.ts:869-898',
-    'src/domain/invariantCoverage.ts:182-205',
+    // peerIsolationDecision is the killable fail-closed core; findDeniedEdgeDecision wires it.
+    'src/domain/layerMatch.ts:510-522',
+    'src/domain/policyDelta.ts:934-963',
+    'src/domain/invariantCoverage.ts:127-146',
+    'src/domain/invariantCoverage.ts:213-217',
+    'src/domain/invariantCoverage.ts:347-380',
     'src/kernel/semanticAnalysis.ts:18-49',
     'src/kernel/semanticAnalysis.ts:78-258',
     'src/kernel/workflow/Saga.ts:188-238',
@@ -68,6 +75,7 @@ const config = {
     'tests/unit/static-check/criticalBranchCoverage.test.ts',
     'tests/unit/static-check/mutationCritical.test.ts',
     'tests/unit/static-check/z02Completeness.test.ts',
+    'tests/unit/static-check/emptyAnalysisRefusal.test.ts',
     'tests/unit/analysis/z04ResolvedFactsResolver.test.ts',
     'tests/unit/static-check/z06ManagedUpgrade.test.ts',
     'tests/unit/static-check/fieldGapS4.test.ts',

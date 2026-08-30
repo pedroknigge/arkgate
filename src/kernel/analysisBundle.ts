@@ -33,6 +33,9 @@ export function analyzeTrustedResolvedProject(input: {
     testFiles?: readonly string[];
     testGlobsMissing?: boolean;
     coverageBudgetExhausted?: boolean;
+    /** Declared `coverage.coverageRoots`: where the project says its runner runs. */
+    coverageRoots?: readonly string[];
+    stats?: import('../domain/invariantCoverage').InvariantCoverageStats;
   };
   fileHints?: Readonly<
     Record<

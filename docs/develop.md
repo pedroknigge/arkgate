@@ -86,6 +86,7 @@ can show `runtimeObserved: true` even when branch-protection policy is plan-unav
 | Layers, rules, globs | [configuration.md](configuration.md) · `ark.config.json` |
 | ArkRules (structure + invariants) | [configuration.md](configuration.md#arkrules-intra-layer-opt-in) · `arkRules` / `arkrules/*` · skill `/ark-adopt` (session 0) or `/ark-autopilot` |
 | Rules inventory (brownfield) | `arkgate-check --rules-inventory` · MCP `ark_rules_inventory` |
+| Which rules can be enforced | `arkgate-check --sensors` (the map) · `arkgate-check --promote [<ruleId>] [--apply]` (the price) · [agent-guide](agent-guide.md#which-rules-can-be-enforced---sensors---promote) |
 | Stable package API | [package-surface.md](package-surface.md) |
 | Diagnostic codes (`ruleId` why/fix) | [diagnostics.md](diagnostics.md) · root `DIAGNOSTIC_CATALOG` |
 | Session / project status snapshot | `ark status --json` · MCP `ark_status` · [session recipe](agent-guide.md#session-recipe-agent-turn) · schema `arkgate/schema/status-manifest` |

@@ -79,11 +79,25 @@ describe('AR01 ArkRules contract (ADR 0012)', () => {
         {
           schemaVersion: '1.0',
           layer: 'DomainModel',
-          structure: [{ id: 'anemic', sensor: 'no-anemic-model', mode: 'enforced' }],
+          structure: [{ id: 'types-only', sensor: 'no-anemic-model', mode: 'enforced' }],
         },
         'tier2.json'
       )
     ).toThrow('Tier-2 advisory-only');
+
+    // The rejection must name the id the AUTHOR wrote. Naming only the sensor
+    // left them hunting for which of their rules it meant, at a full run per
+    // guess; `--sensors` reports the same fact before the attempt.
+    expect(() =>
+      loadArkRulesContract(
+        {
+          schemaVersion: '1.0',
+          layer: 'DomainModel',
+          structure: [{ id: 'types-only', sensor: 'no-anemic-model', mode: 'enforced' }],
+        },
+        'tier2.json'
+      )
+    ).toThrow('"types-only"');
   });
 
   it('fails closed on empty appliesTo and duplicate ids', () => {

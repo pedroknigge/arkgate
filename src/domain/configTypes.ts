@@ -44,6 +44,15 @@ export type ArkConfigRule = {
   message?: string;
   peerIsolation?: boolean;
   sliceFolders?: string[];
+  /** Roots the repo declares shared on purpose — evidence, not unclassifiable. */
+  sharedRoots?: string[];
+  /** Directed slice→slice edges the repo declares on purpose. */
+  allowedCrossSlice?: ArkConfigCrossSliceEdge[];
+};
+
+export type ArkConfigCrossSliceEdge = {
+  from: string;
+  to: string;
 };
 
 export type ArkConfigSafety = {
@@ -51,6 +60,25 @@ export type ArkConfigSafety = {
   maxAnyCasts?: number;
   allowInMemory?: boolean;
   allowDisabledPeerIsolation?: boolean;
+};
+
+/**
+ * Optional invariant-coverage scan controls. Absence keeps the built-in
+ * defaults (test-name heuristic, 400-file budget) and changes no verdict.
+ */
+export type ArkConfigCoverage = {
+  /** Globs that decide which files count as tests (replaces the name heuristic). */
+  testGlobs?: string[];
+  /** Max files loaded as coverage evidence before the budget is exhausted. */
+  maxFiles?: number;
+  /**
+   * Path prefixes where this project declares its test runner actually executes
+   * tests. ArkGate never runs anything: this is a second declaration to compare
+   * the coverage scan against, so a covering test found outside them is reported
+   * (INVARIANT_COVERAGE_OUTSIDE_ROOTS) instead of silently certifying the
+   * invariant. Absence means no declaration and no such claim.
+   */
+  coverageRoots?: string[];
 };
 
 /**
@@ -107,6 +135,11 @@ export type ArkConfig = {
   cyclePolicy?: ArkConfigCyclePolicy;
   dynamicImportAllowlist?: string[];
   safety?: ArkConfigSafety;
+  /**
+   * Invariant-coverage scan controls (test globs + file budget).
+   * Absence keeps the defaults; it never turns coverage on by itself.
+   */
+  coverage?: ArkConfigCoverage;
   /** ADR 0012 — modular ArkRules references (schema 1.1+). */
   arkRules?: ArkConfigArkRulesRefs;
   /** ADR 0020 — optional ArkRun extra (schema 1.2+). Absence changes no Layers/ArkRules verdict. */

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { analyzePolicyDelta } from './analysis-engine.mjs';
 import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
 import {
+  coverageOptionsFromConfig,
   invariantIdsFromCatalog,
   loadInvariantCoverageInputs,
 } from './invariant-coverage-io.mjs';
@@ -180,12 +181,16 @@ export function analyzePolicyTransition({
   if ((candidateArkRules?.invariants?.length ?? 0) > 0) {
     const coverageInputs = loadInvariantCoverageInputs(root, { files: [] }, {
       invariantIds: invariantIdsFromCatalog(candidateArkRules),
+      ...coverageOptionsFromConfig(candidateConfig),
     });
     const evaluated = evaluateInvariantCoverage({
       arkRules: candidateArkRules,
       fileContents: coverageInputs.fileContents,
       testFiles: coverageInputs.testFiles,
       testGlobsMissing: coverageInputs.testGlobsMissing,
+      // No coverageStats / coverageRoots: this caller reads coverage ROWS and
+      // drops the violations, and both only shape violation messages. Passing
+      // them would look like wiring while changing nothing observable here.
       coverageBudgetExhausted: coverageInputs.coverageBudgetExhausted === true,
     });
     candidateInvariantCoverage = evaluated.coverage;

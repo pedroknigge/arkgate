@@ -29,13 +29,13 @@ Works with Cursor, Claude, Codex, and Grok.
 
 </div>
 
-> **ArkGate 4.8.3** is on npm `latest`. Write. Check. Ship. Adopted = required GitHub
+> **ArkGate 4.8.4** is the current tree; **4.8.3** is on npm `latest`. Write. Check. Ship. Adopted = required GitHub
 > status running `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
 > Status is compact (`arkgate-check --doctor`; `--all` for Details). Optional **ArkRun**
 > (`arkgate/runtime`) is an in-memory runtime — not Postgres. Optional **ArkOrder**
 > (`arkgate/order`) stops the agent rewriting the few slow product decisions as CRUD.
 > `@arkgate/runtime` is deprecated.
-> [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
+> [4.8.4](docs/releases/4.8.4.md) · [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
 
 ---
 
@@ -71,7 +71,11 @@ start → doctor → new files in the right folder
 Keep the rules file out of product PRs. Local check:
 `ark-check --changed --base origin/dev`. Changing the rules themselves uses `--contract-session`.
 
-Aliases `ark` / `ark-check` / `ark-mcp` still work. npm / pnpm / yarn. No install lifecycle scripts.
+Aliases `ark` / `ark-check` / `ark-mcp` still work. npm / pnpm / yarn. No install lifecycle scripts
+— and none on pack or prepare either, so `pnpm add git+https://github.com/pedroknigge/arkgate`
+installs at a pinned commit with no `allowBuilds` entry. A git install gives you the CLIs and the
+schemas; the library, MCP and ESLint entry points live in the built `dist/` and come from npm.
+See [docs/package-surface.md](docs/package-surface.md#installing-from-git).
 
 ![Write gate: agent blocked, then self-corrects](docs/assets/ark-write-gate.svg)
 
@@ -230,6 +234,9 @@ npx arkgate status --json          # session/project snapshot (identity, activat
 npx arkgate-check --doctor
 npx arkgate-check --plan
 npx arkgate-check --coverage
+npx arkgate-check --path-drift --base-ref origin/main   # stale paths in strings/comments after a rename
+npx arkgate-check --sensors        # which sensors can EVER be enforced, and which of your rules can be promoted
+npx arkgate-check --promote        # what enforcing each advisory rule would cost, from one run
 npx arkgate-check --strict-merge   # CI / required status
 npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok
 # optional: refresh shared home skills (Claude/Grok/Codex; never downgrades)

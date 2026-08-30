@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-30 (Engineering doing: none; Patch **4.8.3** `AW01`+`OR08` **done** — `writes-via-aggregate` + ArkOrder `xiKeys`; Phase OR `OR01`–`OR08` **done**; published `arkgate@4.8.2` (skills four-plane honesty over **4.8.1**); `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **done** (ADR 0031: `arkgate/runtime` + `arkgate/nestjs` real subpaths; `@arkgate/runtime` deprecated); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** and shipped in published `arkgate@4.8.0+` (4.7.6 predates them); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.8.3**; `AL05` parked; Z09 still parked)
+- **Status date:** 2026-08-30 (Engineering doing: none; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing, a symlink-forgeable coverage gate), `--path-drift`, `--sensors`/`--promote`, peerIsolation `sharedRoots`+`allowedCrossSlice`, git install without a build allowlist entry, `--plan` surfaced on a green run; pending publish; Patch **4.8.3** `AW01`+`OR08` **done** — `writes-via-aggregate` + ArkOrder `xiKeys`; Phase OR `OR01`–`OR08` **done**; published `arkgate@4.8.2` (skills four-plane honesty over **4.8.1**); `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **done** (ADR 0031: `arkgate/runtime` + `arkgate/nestjs` real subpaths; `@arkgate/runtime` deprecated); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** and shipped in published `arkgate@4.8.0+` (4.7.6 predates them); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.8.3**; `AL05` parked; Z09 still parked)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -391,6 +391,28 @@ publishes `@arkgate/order`. ArkRun ships as `arkgate/runtime` in package `arkgat
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 219 | `PK01` | `done` | L | — | Restore `arkgate/runtime` and `arkgate/nestjs` as **real** subpaths of package `arkgate`; deprecate `@arkgate/runtime`; keep root export gate-only; sensors teach `arkgate/runtime`; experimental = durability, not a second package ([ADR 0031](docs/adr/0031-one-package-extras-deprecate-companion.md)) |
+
+### Patch 4.8.4 — the gate stops saying green over nothing
+
+Field test on a 4511-file repository. Several ArkGate answers described its own limits as
+facts about the user's code, and three said **green** over nothing.
+
+| # | item | status |
+|---|---|---|
+| 1 | `coverage.testGlobs` / `coverage.maxFiles` config + numeric budget diagnostics | done |
+| 2 | every discarded file counted and named, no silent drops | done |
+| 3 | `--path-drift` — repo paths in strings, comments and docstrings | done |
+| 4 | `--sensors` / `--promote` — promotability without paying for a run | done |
+| 5 | git install without a build allowlist entry (`prepack` → `prepublishOnly`) | done |
+| 6 | `ANALYSIS_COVERS_NO_FILES` — an empty analysis refuses instead of passing | done |
+| 7 | peerIsolation `sharedRoots` + `allowedCrossSlice` — enforce the design, do not demand one | done |
+| 8 | `coverage.coverageRoots` + `INVARIANT_COVERAGE_OUTSIDE_ROOTS` — coverage stops certifying tests no runner runs | done |
+| 9 | a green run names the design bets it is not checking (`--plan`) | done |
+
+Parked for the next patch: an `include` that classifies no file still passes green;
+`docs/arkorder.md` does not exist; ArkRules cannot express a configuration invariant
+(a value pinned in a file), which is why four rules live as vitest ratchets; the local
+gate is not a superset of the required CI job.
 
 ### Patch 4.8.3 — writes through an aggregate
 

@@ -24,6 +24,7 @@
  *   src/domain/extraMergeTeeth.ts → bin/lib/extra-merge-teeth.mjs
  *   src/domain/arkRunSensors.ts → bin/lib/ark-run-sensors.mjs
  *   src/domain/arkRunDoctor.ts → bin/lib/ark-run-doctor.mjs
+ *   src/domain/literalPathDrift.ts → bin/lib/literal-path-drift.mjs
  *
  * Layer match remains scripts/generate-layer-match.mjs (R1).
  *
@@ -78,6 +79,16 @@ const MODULES = [
     canonical: 'src/domain/invariantCoverage.ts',
     derived: 'bin/lib/invariant-coverage.mjs',
     label: 'invariant coverage evidence (ADR 0014)',
+  },
+  {
+    canonical: 'src/domain/literalPathDrift.ts',
+    derived: 'bin/lib/literal-path-drift.mjs',
+    label: 'literal path drift detector (LPD)',
+  },
+  {
+    canonical: 'src/domain/sensorPromotion.ts',
+    derived: 'bin/lib/sensor-promotion.mjs',
+    label: 'sensor promotability map + promotion preview',
   },
   {
     canonical: 'src/domain/rulesInventory.ts',

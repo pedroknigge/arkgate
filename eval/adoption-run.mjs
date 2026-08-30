@@ -121,7 +121,16 @@ function diagnostic(text, root) {
 }
 
 function packCandidate(work) {
-  const packOutput = run('npm', ['pack', '--json', '--pack-destination', work], { cwd: REPO });
+  // Nothing builds on pack (no `prepack` — it would make a pnpm git install
+  // fail closed), so the candidate is built here. Without this the harness
+  // measures a dist-less tarball and still passes, because it only drives
+  // bin/ark.mjs and bin/ark-check.mjs: a silent false green, not a crash.
+  run('npm', ['run', 'build'], { cwd: REPO });
+  const packOutput = run(
+    'npm',
+    ['pack', '--json', '--ignore-scripts', '--pack-destination', work],
+    { cwd: REPO }
+  );
   const packed = parseNpmPackReport(packOutput);
   const tarball = path.join(work, packed.filename);
   const home = path.join(work, 'candidate');

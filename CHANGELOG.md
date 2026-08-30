@@ -3,6 +3,248 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
+## 4.8.4 — 2026-08-30
+
+**Status: pending publish** (see `docs/releases/4.8.4.md`).
+
+**Patch** over **4.8.3**. Invariant coverage stops hiding its own limits: the scan budget and the
+test globs are config, every discarded file is counted in the diagnostic, and coverage stops
+implying it knows a test runs. New `--path-drift` sees the class the gate is structurally blind to:
+repo paths living in strings, comments and docstrings that a rename left behind.
+**No required config migration.**
+
+### Added
+- **peerIsolation declared exceptions — `sharedRoots` and `allowedCrossSlice` on a rule.** Fail-closed denies on absence of evidence, so a repo that keeps shared code outside `features/<slice>/` (`ui/`, `hooks/`, `lib/permissions/`) got hundreds to thousands of violations, essentially none of them a real cross-slice import. `sharedRoots` declares those roots shared on purpose — a declaration is evidence, so they stop reading as unclassifiable. It is **anchored** (the root starts the path, optionally after one `src/` or `app/`) and a bare `*` / `**` is refused, so a root can never exempt a tree the author did not declare; `allowedCrossSlice: [{ from, to }]` declares one directed slice→slice edge, same shape as the layer edges in `rules[]`. Two different slices with nothing declared still deny, a file that is neither in a slice nor under a declared shared root still fails closed, and a shared root never shadows a real slice id. Both are `weakening` findings in `ark policy-delta`. The layer route stays the recommended model; this enforces the design of a repo that chose otherwise on purpose.
+- The peerIsolation denial now **names which reason fired**: `cross-slice edge features/a → features/b` (a fact about your code) vs `unclassifiable path (src/widgets/x.tsx)`, `no slice folders`, `no path evidence` (facts about our evidence). Both the engine and the ESLint adapter emit it.
+- **`arkgate-check --sensors` and `arkgate-check --promote` — promotability, before you pay for a run.**
+  Moving a rule from `advisory` to `enforced` was discovered by trial: edit the ArkRules JSON, wait
+  ~160s for a full run on a real repository, read the result, `git checkout` it back. Four attempts
+  before the map was clear, and one ended in a rejection naming a sensor id the author had never
+  typed — a rule called `types-only` refused with *"sensor `no-anemic-model` is Tier-2
+  advisory-only"*. On the field repository almost every declared rule turned out to be promotable
+  and nobody knew. Both surfaces are read-only by default and neither invents a second opinion: they
+  project the declarations the gate already reads.
+  **`--sensors [--json]`** lists all 22 sensors ArkGate ships across the three planes (ArkRules,
+  ArkRun, ArkOrder) with plane, tier and whether each can *ever* be enforced — 19 can, 3 never —
+  and it says **how**: only ArkRules is promoted per rule, ArkRun and ArkOrder are switched by the
+  plane-level `arkRun.mode` / `arkOrder.mode`, so a bare "can be enforced" would answer in a
+  currency this surface cannot spend. Tier-2 therefore shows up **before** the rule is written, not
+  after the run. Underneath it lists every rule the contract declares, each with its local id, its
+  sensor, its layer, the file it was declared in, its mode, and the reason it can or cannot be
+  promoted. Three blockers, each named: `tier-2-advisory-only` (`no-anemic-model`,
+  `arkrun-skip-resolve` — heuristics, advisory forever), `no-structure-teeth` (`invariant-coverage`
+  as a *structure* entry emits no coverage findings; only a zero-match `appliesTo` would still
+  fail), and `no-coverage-evidence`, whose wording is `canPromoteInvariant`'s own so this surface
+  can never promise a promotion the gate then refuses. No TypeScript, no analysis — the contract,
+  the ArkRules documents and the coverage evidence walk, which is a filesystem walk plus a text
+  match and never executes a test. Exit 0 on a report, **2** when the contract or its ArkRules
+  references will not load, or when the governed-file scan itself fails: reporting every invariant
+  as uncovered because ArkGate could not collect the inputs would be our limitation printed as a
+  fact about your tests.
+  **`--promote [<ruleId>] [--json] [--apply]`** adds the price. Advisory rules are already evaluated
+  on every run, so the findings each one produces are in the analysis that just happened, stamped
+  with the rule that produced them: **one** run prices **every** declared rule, which is the whole
+  difference from one run per attempt. Findings are keyed on `<sourceFile>#<ruleId>`, not the bare
+  id — ids are unique per ArkRules *document*, not across them, and the bare id pooled two rules'
+  findings and reported each one's as the other's. **A price the run could not measure is not
+  printed as a price:** an incomplete analysis, or a classification floor that demotes every
+  enforced ArkRules finding to a warning, is named above the numbers and drops `wouldBlock` to zero,
+  because promoting under the floor buys a label and not a tooth — the gate would still pass, which
+  is the exact false green this patch set exists to remove. Plan by default — there is no
+  `--dry-run` in `bin/` and this does not introduce one. `--apply` needs one named rule id
+  (`--promote <ruleId> --apply`, or `--promote=<ruleId>` for an id starting with `-`); it refuses a
+  bare `--promote --apply` rather than rewriting the contract in bulk, refuses an id declared in two
+  documents rather than silently writing the first, and refuses to make a contract change on a cost
+  this run did not measure. `--promote` cannot be combined with a mode that answers first
+  (`--sensors`, `--coverage`, `--plan`, `--doctor`, …), which used to print that report and exit 0
+  having written nothing, nor with a narrowed or baselined scope (`--changed`, `--against`,
+  `--baseline`), which would report an undercount as the price. The write binds to the rule that was
+  priced (a concurrent edit that changed its sensor is refused), writes every byte before it
+  truncates so a failed write cannot leave the project without a loadable contract, goes through one
+  `O_NOFOLLOW` descriptor with an nlink check and a realpath containment test, and names its
+  refusals: `symlink`, `hard-link`, `not-utf8`, `outside-root`, `short-write`. A document that was
+  already indented keeps its indentation and its trailing newline; a minified one comes back
+  pretty-printed, because the write is a JSON round-trip rather than a targeted text edit. Exits:
+  `0` preview or write succeeded, `1` unknown rule id or refused write, `2` bad arguments or the
+  ArkRules references would not load.
+- **`arkgate-check --path-drift` — literal path drift (`LITERAL_PATH_DRIFT`, `LITERAL_PATH_UNRESOLVED`).**
+  A repo path written inside a string, a comment or a docstring is invisible to every tool in the
+  gate: `tsc` resolves imports, not strings, and ESLint does not either, so a rename compiles green
+  and the reference lies afterwards. Field data from a real 783-rename migration (49 source
+  directories gone) found the drift in **four** forms and every hand sweep covered one and let the
+  others through: the tsconfig alias, a relative literal, a path written without the `src/` prefix,
+  and prose — the largest class (24 references in 21 files) and the only one with no detector
+  anywhere, found in `.ts`, `.tsx` and a `.css`. Two modes, because they make different claims.
+  **Anchored** (default) matches against the rename set from `git diff --find-renames <base-ref>`
+  taken *against the working tree*, so a staged-but-uncommitted rename counts too; a finding carries a
+  replacement written in the author's own form — alias stays alias, relative is recomputed relative,
+  a prefix-less path keeps its coordinate space — the rewrite is mechanical and one-directional, so
+  `--write` applies it under the house plan-by-default convention, and a run exits 1 while anchored
+  drift remains. **Unanchored** (`--all`) lists literals that look like a repo path and do not
+  resolve; advisory, never written, never fails a run. It is opt-in on purpose: on a repository that
+  *writes about* paths it produced 4085 candidates out of 9536 literals, nearly all illustrative —
+  listing that by default would be ArkGate's inability to resolve a string presented as a fact about
+  your code, the same defect class as the coverage budget. The count is printed either way, so
+  opting out of the list is never opting out of knowing. Anchoring is conservative: only a rename
+  whose source really is gone and that has exactly one destination may anchor, ambiguous sources are
+  counted and reported, and a candidate is drift only when the **full** extracted token fails to
+  resolve — through the bare path, the usual source extensions and `index.*`, so an extensionless
+  reference is not mistaken for a dead one. Prose punctuation is trimmed off the token and generated
+  files are never read. The scan reads every text format where a path is written by hand
+  (`.ts .tsx .mts .cts .js .jsx .mjs .cjs .css .scss .json .md`) — deliberately wider than the
+  TS/TSX gate the type-aware extractors use — and counts every file it refused, by reason. Three things must hold before a replacement is proposed: a rename explains the reference, the
+  destination itself resolves (otherwise the fix only moves the drift), and the destination is
+  path-shaped — a git path is raw bytes, and one carrying a quote or a newline would edit the program
+  instead of repairing a reference. With no usable base ref the run prints *anchored mode did not
+  run*, no tick at all, and **exit 2** — a green mark over a check that never happened is the same
+  false green this patch is about, and a pipeline reads the status, not the tick. The three exits are
+  `0` ran and clean, `1` drift remains, `2` could not run.
+  `--write` refuses rather than risk a file and names every refusal: a symlinked leaf or parent, a
+  hard link, content that is not valid UTF-8 (a whole-file rewrite would replace the byte with
+  U+FFFD), a token that moved since the scan, a path outside the root. It goes through one
+  `O_NOFOLLOW` descriptor so the name is never resolved twice. A replacement must still be a path:
+  a rename whose destination is the literal's own directory would otherwise render as the bare `./`
+  and turn `require("./c")` into `require("./")`. The walk is bounded by a total byte budget as well as a file count (a per-file cap
+  times a file count is not a bound), it refuses symlinks, and `--write` re-checks containment
+  against the real path immediately before writing, so a link swapped in after the scan cannot carry
+  a write out of the tree.
+- **`coverage.coverageRoots` (optional):** the project declares where its test runner actually
+  executes. Coverage evidence is a filesystem walk plus a text match — ArkGate never executes a
+  test and never reads a runner config — so a covering test in a folder no runner runs used to
+  certify an invariant exactly like one that runs, and `INVARIANT_UNCOVERED: 0` could be a false
+  green. With `coverageRoots` declared, a covering test found outside them raises the new advisory
+  `INVARIANT_COVERAGE_OUTSIDE_ROOTS` and blocks promotion of that invariant to `enforced`. Two
+  declarations compared against each other; nothing is executed. Absence stays silent: without a
+  declaration there is nothing to compare.
+- **`coverage` config (optional):** `coverage.testGlobs` replaces the built-in test-name heuristic
+  and `coverage.maxFiles` sets the evidence file budget (default `400`). Both were already
+  implemented inside the loader but unreachable from `ark.config.json`; `ark-check`, doctor
+  (`rulesUnderContract`), and policy-delta now all pass them. Absence is silent.
+
+### Changed
+- **`INVARIANT_UNCOVERED` says what it verified:** the old text ("not covered by a test title or
+  declared symbol") reads as *there is no test*, and its absence reads as *there is a test and it
+  runs* — neither is something a text match knows. The message now states the check it performed:
+  no scanned test names the invariant in a `describe`/`it` title and no declared symbol was found,
+  and ArkGate never executes tests.
+- **`INVARIANT_UNCOVERED` carries numbers:** a budget-exhausted verdict reports files loaded, the
+  cap in force, tests retained, files discarded at the cap, and names `coverage.maxFiles` as the
+  knob that raises it. Tests dropped for naming no catalogued invariant are counted in the message
+  instead of vanishing.
+- **No silent discards in the coverage scan:** oversize files (256KB cap), unreadable files
+  (permissions, broken symlinks) and directories past the walk depth limit (8) are counted by
+  reason and reported in `INVARIANT_UNCOVERED` alongside budget and no-mention drops. Symlinked
+  test files are now scanned instead of being skipped by the walk without a trace — but only when
+  the link resolves inside the project root. A link pointing outside is refused and counted: a file
+  that is not in this repo must never prove an invariant covered.
+
+- **A green run names `--plan` when the design bets are still open.** `--plan` is built, it is
+  good, and it was invisible: a whole adopter session went by without opening it, because
+  `✔ Ark check passed` reads as *finished*. Clean import edges are not a settled design, and the
+  closing line was saying only the first half of what the run already knows. A passing human run
+  now prints one dim line underneath it — the smell count, the ids, and the command — whenever
+  deterministic design smells remain. It is report-only in the strictest sense: it can fire only on
+  a run that already passed, it adds no warning and never touches the exit code, and it stays silent
+  when the pass has nothing behind it (a line that always prints is a line nobody reads), on
+  `--changed`, where a partial scan would print one slice's count as if it were the tree's, and on
+  `--watch`, where it would reappear on every save. Its weakness test is `isDesignWeak` over the
+  **blocking** violation count, the same input doctor already uses, so the line and
+  `doctor.designFitness.designWeak` cannot disagree — non-blocking type-only placement debt is a
+  green run and still gets the pointer. And a baselined run is not called clean: with suppressions
+  in force the clause reads *"No blocking import-rule violations (N suppressed by baseline)"*,
+  because the summary line directly above already says a violation was frozen. `--json` is
+  unchanged.
+
+### Fixed
+- **The Tier-2 rejection names the rule you wrote.** `sensor "no-anemic-model" is Tier-2
+  advisory-only and cannot be enforced` now reads `rule "types-only" uses sensor "no-anemic-model",
+  which is Tier-2 advisory-only and cannot be enforced (arkgate-check --sensors lists which sensors
+  can)`. Naming only the vocabulary id left the author hunting for which of their rules it meant,
+  at one full run per guess.
+- **An analysis that covers zero files refuses instead of passing** (new
+  `ANALYSIS_COVERS_NO_FILES`). Every rule is vacuously satisfied on an empty set, so a green over
+  zero governed files certifies nothing while reading exactly like a green over a governed tree —
+  the one false green CI trusts. Measured: pointing `--config` at a copy of the contract outside
+  the tree moved the effective root to the copy's directory, every layer pattern matched nothing,
+  and `ark-check` printed 30 advisory warnings, a closing `✔ Ark check passed`, and exit 0; under
+  `--strict` it exited 1 for an unrelated reason (*"Ark gates are not installed"*) that sent the
+  user to `ark init` and never mentioned the empty analysis. The refusal is checked before
+  `--require-gates`, so the real reason wins. It separates ArkGate's limitation from a fact about
+  the repo: it fires when source exists under the analyzed root and the contract governs none of
+  it, or when the analyzed root is not the root that was asked for — and stays silent on a
+  genuinely greenfield repo, where `--init` is designed to land a contract before the code. The
+  report modes are untouched: `--plan`, `--coverage` and `--doctor` still describe an empty scope
+  (`empty-scope`) rather than refusing, because they are how the refusal gets fixed — so do not
+  gate CI on a report mode. "Is there source here" is answered by a probe the contract cannot
+  steer: it ignores the contract's own `exclude` (otherwise `exclude: ["**"]` buys the green back),
+  skips dot-directories, never follows a symlink (an unrelated out-of-root link must not turn a
+  diagnostic into a crash), skips `*.config.*` so a polyglot repo whose only TS is `vite.config.ts`
+  is greenfield rather than a mismatch, and stops at 200 files — the message says *at least N* when
+  it did. The whole check is evaluated lazily, so the cheap exits (a `--changed` run whose diff
+  touches no product path, `--require-gates` with the gates present) still pay nothing for a walk
+  they never needed.
+- **The production diagnostic-id fixture is pinned in both directions.**
+  `tests/fixtures/diagnostic-catalog/production-rule-ids.json` had two tests over it and both
+  asserted fixture ⊆ catalog, so a production-emitted id added to the catalog and forgotten in the
+  fixture could not fail anything. `ARKORDER_XI_FIELD_WRITE` (emitted since 4.8.3) sat in exactly
+  that hole, and `ARKRULE_INVARIANT` with it. Two assertions added — every catalogued id must be
+  listed, and every `ARKORDER_RULE_IDS` / `ARKRUN_RULE_IDS` sensor id must be listed — and both
+  missing ids are now in the fixture.
+- **`npm test` no longer dirties the tree.** `tests/unit/static-check/q05AiVelocity.test.ts`
+  spawned `eval/ai-velocity-run.mjs` with `cwd: REPO`, which rewrote the **tracked**
+  `eval/ai-velocity-report.json` on every run — its `generatedAt` is fresh each time, and that
+  pure-timestamp diff has already ridden into two commits. The harness now takes `--report` (and
+  `--baseline`) so the test writes into a temp dir and removes it in a `finally`, matching the
+  sibling test in the same file, and it now asserts both the tracked report **and** the tracked
+  baseline are byte-identical after the run. Seeding the baseline is now `--write-baseline` only:
+  it used to be written on any run where the file was missing, which is the same class of surprise
+  one level down. `--report` and `--baseline` must differ (aliased, the report was read back as its
+  own baseline and the run printed PASS without producing one) and neither may name a directory.
+  Default paths are unchanged for `npm run eval:ai-velocity`.
+- **`coverage.maxFiles` is bounded.** It had no upper limit, and a schema `maximum` would
+  have been silently ignored (the config validator implements no such keyword), so any
+  integer became a memory budget. Clamped to 20000.
+- **Files read vs files retained.** `stats.filesLoaded` counted retained files only, while
+  the budget diagnostic named `coverage.maxFiles` as the knob — implying it bounds I/O. It
+  bounds retention: a test is read before it can be judged for naming an invariant. The
+  scan now counts `filesRead` and the diagnostic says which of the two the cap bounds.
+- **Depth-limited directories are counted once.** `'.'` overlaps `tests/` and `src/` in the
+  walk, so one deep subtree was reported once per overlapping root — and a directory
+  refused at depth from the far root was counted even when a nearer root walked it fine.
+  Only directories no walk ever entered are counted now.
+- **Discards are counted per file, not per visit:** `coverage.testGlobs` widens the test walk to the
+  repo root, which overlaps the other walk roots. Each discarded file was counted — and read — once
+  per overlapping root, inflating every number in the diagnostic 2–3x for exactly the users who
+  opted into the new config.
+- **The budget is reported exhausted only when it cost a file.** Landing exactly on the cap with
+  nothing dropped no longer tells the user to raise a cap that discarded nothing, and files past the
+  cap are no longer read before being discarded. Paths that were never coverage candidates
+  (directories, out-of-root paths) are no longer counted against the budget.
+- **A git install no longer needs a build-allowlist entry — and no longer fails outright.**
+  `pnpm add git+https://github.com/pedroknigge/arkgate` did not install this package: it stopped
+  with `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`, because `prepack: npm run build` is a build script
+  and pnpm refuses to run one for a git-hosted package that is not in `allowBuilds`. Reproduced on
+  4.8.3 verbatim. The only way through was adding `arkgate` to `allowBuilds` — an allowlist a real
+  adopter reserves for native binaries with written justification, for a script that shells out to
+  `npm` in a repo whose first rule forbids it. They shipped a `pnpm patch` instead, which is a fair
+  reading of the situation and the wrong thing to have to do. Adding the "obvious" `prepare` hook
+  makes it strictly worse (measured: same hard error). So the package now declares **no `prepack`,
+  no `prepare`, and no install script at all**; the publish path builds explicitly in
+  `scripts/release-npm.mjs`, with `prepublishOnly` as the backstop for a bare `npm publish` — pnpm
+  does not run `prepublishOnly` when it prepares a git dependency, so the backstop costs the
+  consumer nothing. `npm pack` no longer builds as a side effect; the three callers that relied on
+  that now build first, and `check:package-files` turns a missing `dist/` from a warning
+  into an error, because that is the failure this change makes reachable.
+  What a git install then gives you is stated rather than implied, in the new
+  [Installing from git](docs/package-surface.md#installing-from-git) section and in the README:
+  the `arkgate` / `arkgate-check` CLIs and the `arkgate/schema*` exports work, because `bin/` and
+  `schemas/` are committed — that is what the zero-build CLI is for. The library exports
+  (`arkgate`, `/eslint`, `/order`, `/runtime`, `/nestjs`) and `ark-mcp` do **not**, because they
+  resolve into `dist/`, which is a build output and is not committed. `ark-mcp` now says exactly
+  that instead of `Run "npm run build" first`, which is not advice a consumer inside `node_modules`
+  can act on. Shipping the library over the git path too would mean committing build output; that
+  is a separate decision and is not made here.
+
 ## 4.8.3 — 2026-08-30
 
 **Patch** over **4.8.2**. Persistence writes in a use-case skip the aggregate (`writes-via-aggregate`). ArkOrder **`xiKeys`** names the slow product decisions; a managed-layer Prisma/pg write of those keys is `ARKORDER_XI_FIELD_WRITE`. Dead sensors (`too-many-params`, `ingest-writes-xi`) now emit. No new skill names. Does not close `K01` / `Z09`. **No required config migration.**

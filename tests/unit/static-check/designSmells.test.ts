@@ -8,6 +8,8 @@ import path from 'node:path';
 import {
   detectDesignSmells,
   buildPatternBetsFromSmells,
+  formatGreenPlanPointer,
+  GREEN_PLAN_POINTER_MAX_IDS,
   isDesignWeak,
   summarizeDesignFitness,
   DESIGN_SMELL_IDS,
@@ -376,5 +378,76 @@ describe('patternBets non-auto contract (P03)', () => {
       designSmells: [],
     });
     expect(good.ok).toBe(true);
+  });
+});
+
+describe('green-run --plan pointer', () => {
+  const smell = (id: string) => ({
+    id,
+    severity: 'warn' as const,
+    message: id,
+    evidence: [`src/${id}.ts`],
+    fix: 'x',
+  });
+  const green = { blockingViolations: 0, governedPercent: 90, totalFiles: 40 };
+
+  it('names --plan, the smell count and the ids when a passing run still carries design residual', () => {
+    const line = formatGreenPlanPointer(
+      [smell('god-module'), smell('soft-contract')],
+      green,
+      'npx ark-check --plan'
+    );
+    expect(line).toBe(
+      'Import rules are clean; the design bets are not settled — 2 design smells ' +
+        '(god-module, soft-contract). They never fail this check: npx ark-check --plan'
+    );
+  });
+
+  it('agrees exactly with isDesignWeak — it can never fire on a run that is not already green', () => {
+    const smells = [smell('god-module')];
+    const asWeakCtx = (ctx: typeof green) => ({
+      activeViolations: ctx.blockingViolations,
+      governedPercent: ctx.governedPercent,
+      totalFiles: ctx.totalFiles,
+    });
+    for (const ctx of [
+      { ...green, blockingViolations: 1 },
+      { ...green, totalFiles: 0 },
+      { ...green, governedPercent: 49 },
+    ]) {
+      expect(isDesignWeak(smells, asWeakCtx(ctx))).toBe(false);
+      expect(formatGreenPlanPointer(smells, ctx, 'npx ark-check --plan')).toBeNull();
+    }
+    expect(isDesignWeak(smells, asWeakCtx(green))).toBe(true);
+    expect(formatGreenPlanPointer(smells, green, 'npx ark-check --plan')).not.toBeNull();
+  });
+
+  it('stays silent when the pass has nothing behind it', () => {
+    expect(formatGreenPlanPointer([], green, 'npx ark-check --plan')).toBeNull();
+  });
+
+  it('caps the named ids and counts the rest instead of printing a wall', () => {
+    const ids = DESIGN_SMELL_IDS.slice(0, GREEN_PLAN_POINTER_MAX_IDS + 2);
+    const line = formatGreenPlanPointer(ids.map(smell), green, 'npx ark-check --plan') as string;
+    expect(line).toContain(`${ids.length} design smells`);
+    expect(line).toContain('+2 more');
+    const sorted = [...ids].sort();
+    for (const id of sorted.slice(0, GREEN_PLAN_POINTER_MAX_IDS)) expect(line).toContain(id);
+    for (const id of sorted.slice(GREEN_PLAN_POINTER_MAX_IDS)) expect(line).not.toContain(id);
+  });
+
+  it('names the suppression instead of calling a baselined run clean', () => {
+    const line = formatGreenPlanPointer(
+      [smell('god-module')],
+      { ...green, suppressedCount: 3 },
+      'npx ark-check --plan'
+    ) as string;
+    expect(line).toContain('No blocking import-rule violations (3 suppressed by baseline)');
+    expect(line).not.toContain('Import rules are clean');
+  });
+
+  it('says "1 design smell", not "1 design smells"', () => {
+    const line = formatGreenPlanPointer([smell('god-module')], green, 'x') as string;
+    expect(line).toContain('1 design smell (');
   });
 });

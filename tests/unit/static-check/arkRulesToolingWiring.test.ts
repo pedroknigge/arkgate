@@ -6,7 +6,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { loadInvariantCoverageInputs } from '../../../bin/lib/invariant-coverage-io.mjs';
+import {
+  MAX_COVERAGE_FILES_CAP,
+  coverageOptionsFromConfig,
+  loadInvariantCoverageInputs,
+} from '../../../bin/lib/invariant-coverage-io.mjs';
 import {
   loadArkRuleFileHints,
   needsArkRuleFileHints,
@@ -105,6 +109,270 @@ describe('ArkRules tooling wiring', () => {
     );
     expect(inputs.testGlobsMissing).toBe(false);
     expect(inputs.testFiles).toEqual(['tests/zzz-relevant.test.ts']);
+  });
+
+  it('honors coverage.maxFiles from config and reports the budget numbers', () => {
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    for (let i = 0; i < 6; i += 1) {
+      fs.writeFileSync(
+        path.join(root, 'tests', `inv${i}.test.ts`),
+        `it('INV-ORDER-001 case ${i}', () => {})\n`
+      );
+    }
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'], maxFiles: 2 }
+    );
+    expect(inputs.testFiles).toHaveLength(2);
+    expect(inputs.coverageBudgetExhausted).toBe(true);
+    expect(inputs.stats.maxFiles).toBe(2);
+    expect(inputs.stats.filesLoaded).toBe(2);
+    expect(inputs.stats.testFilesRetained).toBe(2);
+    // Four files hit the cap — counted, not dropped in silence.
+    expect(inputs.stats.discarded.budget).toBe(4);
+  });
+
+  it('counts tests discarded for naming no catalogued invariant', () => {
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'tests', 'relevant.test.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+    for (let i = 0; i < 3; i += 1) {
+      fs.writeFileSync(path.join(root, 'tests', `noise${i}.test.ts`), `it('noise ${i}', () => {})\n`);
+    }
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'] }
+    );
+    expect(inputs.stats.discarded.noInvariantMention).toBe(3);
+    expect(inputs.stats.discarded.budget).toBe(0);
+    expect(inputs.stats.maxFiles).toBe(400);
+  });
+
+  it('counts a discarded file once even when the walk roots overlap', () => {
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'tests', 'a.checks.ts'), "it('unrelated', () => {})\n");
+    // Custom globs add '.' to the walk roots, so 'tests' is reached twice.
+    // A file discarded twice would report two files where one exists.
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'], testGlobs: ['tests/**/*.checks.ts'] }
+    );
+    expect(inputs.stats.discarded.noInvariantMention).toBe(1);
+  });
+
+  it('refuses a symlink whose target escapes the project root', () => {
+    const root = makeRoot();
+    const outside = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'ark-outside-')));
+    tempDirs.push(outside);
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    fs.writeFileSync(
+      path.join(outside, 'secret.test.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+    // A test that is not in this repo must not prove an invariant covered.
+    fs.symlinkSync(path.join(outside, 'secret.test.ts'), path.join(root, 'tests', 'leak.test.ts'));
+
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'] }
+    );
+    expect(inputs.testFiles).toEqual([]);
+    expect(Object.keys(inputs.fileContents)).toEqual([]);
+    expect(inputs.stats.discarded.outOfRoot).toBe(1);
+  });
+
+  it('keeps in-root symlinked tests as evidence', () => {
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'packages'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'packages', 'order.test.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+    fs.symlinkSync(
+      path.join(root, 'packages', 'order.test.ts'),
+      path.join(root, 'tests', 'linked.test.ts')
+    );
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'] }
+    );
+    expect(inputs.testFiles).toEqual(['tests/linked.test.ts']);
+    expect(inputs.stats.discarded.outOfRoot).toBe(0);
+  });
+
+  it('counts every silent discard: oversize, unreadable, and depth-limited', () => {
+    const root = makeRoot();
+    // One directory past the walk depth limit: the whole subtree is dropped.
+    const deep = path.join(root, 'tests', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i');
+    fs.mkdirSync(deep, { recursive: true });
+    fs.writeFileSync(path.join(deep, 'deep.test.ts'), "it('INV-ORDER-001 deep', () => {})\n");
+
+    // Oversize: past the 256KB per-file cap.
+    fs.writeFileSync(
+      path.join(root, 'tests', 'huge.test.ts'),
+      `it('INV-ORDER-001 huge', () => {})\n${'/*'.repeat(1)}${'x'.repeat(300 * 1024)}\n`
+    );
+
+    // Unreadable: a broken symlink still stats as a coverage candidate.
+    fs.symlinkSync(path.join(root, 'tests', 'gone.test.ts'), path.join(root, 'tests', 'dangling.test.ts'));
+
+    fs.writeFileSync(
+      path.join(root, 'tests', 'ok.test.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'] }
+    );
+    expect(inputs.testFiles).toEqual(['tests/ok.test.ts']);
+    expect(inputs.stats.discarded.oversize).toBe(1);
+    expect(inputs.stats.discarded.unreadable).toBe(1);
+    expect(inputs.stats.discarded.depthLimited).toBeGreaterThan(0);
+  });
+
+  it('counts a depth-limited directory once across overlapping walk roots', () => {
+    // '.' and 'tests' both reach the same deep subtree, and the same directory
+    // dropped twice reports two subtrees where one exists. Only a directory no
+    // walk ever entered is depth-limited.
+    const root = makeRoot();
+    const deep = path.join(root, 'tests', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i');
+    fs.mkdirSync(deep, { recursive: true });
+    fs.writeFileSync(path.join(deep, 'deep.checks.ts'), "it('INV-ORDER-001 deep', () => {})\n");
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'], testGlobs: ['**/*.checks.ts'] }
+    );
+    expect(inputs.stats.discarded.depthLimited).toBe(1);
+  });
+
+  it('reports files read, not only files retained', () => {
+    // The budget bounds RETENTION: a test scanned and dropped for naming no
+    // invariant still cost a read. Reporting only the retained count made the
+    // scan look cheaper than it was and made maxFiles look like an I/O knob.
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'tests', 'relevant.test.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+    for (let i = 0; i < 3; i += 1) {
+      fs.writeFileSync(path.join(root, 'tests', `noise${i}.test.ts`), `it('noise ${i}', () => {})\n`);
+    }
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'] }
+    );
+    expect(inputs.stats.filesRead).toBe(4);
+    expect(inputs.stats.filesLoaded).toBe(1);
+  });
+
+  it('clamps coverage.maxFiles to the hard cap instead of trusting any integer', () => {
+    // The config validator implements no `maximum` keyword for integers, so a
+    // schema bound would be silently ignored. The clamp is the enforcement.
+    expect(
+      coverageOptionsFromConfig({ coverage: { maxFiles: 10_000_000 } })
+    ).toEqual({ maxFiles: MAX_COVERAGE_FILES_CAP });
+    expect(coverageOptionsFromConfig({ coverage: { maxFiles: 900 } })).toEqual({ maxFiles: 900 });
+  });
+
+  it('coverageOptionsFromConfig reads coverage.testGlobs / coverage.maxFiles (absence is silent)', () => {
+    expect(coverageOptionsFromConfig(undefined)).toEqual({});
+    expect(coverageOptionsFromConfig({ layers: [] })).toEqual({});
+    expect(coverageOptionsFromConfig({ coverage: {} })).toEqual({});
+    expect(
+      coverageOptionsFromConfig({ coverage: { testGlobs: ['qa/**/*.checks.ts'], maxFiles: 900 } })
+    ).toEqual({ testGlobs: ['qa/**/*.checks.ts'], maxFiles: 900 });
+    // Junk is ignored rather than silently narrowing the scan.
+    expect(coverageOptionsFromConfig({ coverage: { testGlobs: [''], maxFiles: 0 } })).toEqual({});
+  });
+
+  it('coverageOptionsFromConfig reads coverage.coverageRoots (absence is silent)', () => {
+    expect(
+      coverageOptionsFromConfig({ coverage: { coverageRoots: ['tests', 'src'] } })
+    ).toEqual({ coverageRoots: ['tests', 'src'] });
+    expect(coverageOptionsFromConfig({ coverage: { coverageRoots: [] } })).toEqual({});
+    expect(coverageOptionsFromConfig({ coverage: { coverageRoots: ['', 3] } })).toEqual({});
+  });
+
+  it('loadInvariantCoverageInputs echoes coverageRoots without filtering the scan', () => {
+    // The declaration is evidence for Domain to compare against. Filtering the
+    // walk by it here would hide the very disagreement it exists to report.
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'tests', 'order.test.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'], coverageRoots: ['qa'] }
+    );
+    expect(inputs.coverageRoots).toEqual(['qa']);
+    expect(inputs.testFiles).toEqual(['tests/order.test.ts']);
+
+    const silent = loadInvariantCoverageInputs(root, { files: [] }, {});
+    expect(silent.coverageRoots).toBeUndefined();
+  });
+
+  it('rules-under-contract passes config coverage.testGlobs through to the scan', () => {
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'arkrules'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'qa'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src', 'domain'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'arkrules', 'DomainModel.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        layer: 'DomainModel',
+        structure: [],
+        invariants: [
+          {
+            id: 'INV-ORDER-001',
+            description: 'Order total never negative',
+            coverage: { test: true },
+            mode: 'advisory',
+          },
+        ],
+      })
+    );
+    // Only a non-standard test layout proves the globs were threaded through.
+    fs.writeFileSync(
+      path.join(root, 'qa', 'order.checks.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+    const config = {
+      schemaVersion: '1.3',
+      arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+      coverage: { testGlobs: ['qa/**/*.checks.ts'] },
+      layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+      rules: [],
+    };
+    const summary = summarizeRulesUnderContract(root, config, { files: [] });
+    expect(summary.coveredInvariants).toBe(1);
+    expect(summary.uncoveredInvariants).toBe(0);
+
+    const withoutGlobs = summarizeRulesUnderContract(
+      root,
+      { ...config, coverage: undefined },
+      { files: [] }
+    );
+    expect(withoutGlobs.coveredInvariants).toBe(0);
   });
 
   it('loadArkRuleFileHints derives orchestrationHeavy / adapterThick from disk', () => {

@@ -309,9 +309,17 @@ function validateSemantics(
       isTier2Sensor(entry.sensor) &&
       entry.mode === 'enforced'
     ) {
+      // Name the rule the AUTHOR wrote, not only the sensor it delegates to.
+      // A rule called "types-only" on `no-anemic-model` used to be refused with
+      // an error naming an id that appears nowhere in the author's file, and
+      // finding the connection cost a full run each time. `--sensors` reports
+      // the same fact before the attempt.
       issues.push({
         path: `$.structure[${index}].mode`,
-        message: `sensor ${JSON.stringify(entry.sensor)} is Tier-2 advisory-only and cannot be enforced`,
+        message:
+          `${id ? `rule ${JSON.stringify(id)} uses sensor ` : 'sensor '}` +
+          `${JSON.stringify(entry.sensor)}, which is Tier-2 advisory-only and cannot be enforced` +
+          `${id ? ' (arkgate-check --sensors lists which sensors can)' : ''}`,
       });
     }
     if (Array.isArray(entry.appliesTo) && entry.appliesTo.length === 0) {

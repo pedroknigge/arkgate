@@ -4,7 +4,10 @@
  * Shared by library, CLI, and MCP adapters through the src/kernel/analysis.ts
  * facade; consumer import paths never change.
  */
-import { findDeniedEdgeRule } from '../domain/layerMatch';
+import {
+  findDeniedEdgeDecision,
+  peerIsolationDenyExplanation,
+} from '../domain/layerMatch';
 import type {
   ArchitectureEngineResult,
   ArchitectureEngineViolation,
@@ -81,12 +84,13 @@ export function evaluateArchitectureGraph(
       graph.get(edge.from)?.add(edge.to);
     }
     if (!edge.to || !edge.fromLayer || !edge.toLayer) continue;
-    const rule = findDeniedEdgeRule(input.rules, edge.fromLayer, edge.toLayer, {
+    const decision = findDeniedEdgeDecision(input.rules, edge.fromLayer, edge.toLayer, {
       fromPath: edge.from,
       toPath: edge.to,
       layers: input.config.layers,
     });
-    if (!rule) continue;
+    if (!decision) continue;
+    const rule = decision.rule;
 
     const peerIsolation = Boolean(rule.peerIsolation);
     // P1-type: pure type-only edges are placement debt (SharedTypes / owning layer), not
@@ -98,11 +102,24 @@ export function evaluateArchitectureGraph(
     // (convert value → import type) from relocate (already import type).
     const typePlacementDebt =
       !peerIsolation && Boolean(edge.typeOnly || edge.namedBindingsTypeOnly);
-    const baseMessage =
-      rule.message ??
-      (peerIsolation
-        ? `${edge.fromLayer} must not ${edge.kind} another slice of ${edge.toLayer} (${edge.from} → ${edge.to}). Extract shared code or use events/ports across slices.`
-        : `${edge.fromLayer} must not ${edge.kind} ${edge.toLayer}.`);
+    // The reason is appended to a rule-level `message` override rather than
+    // replaced by it: an override must not make an unclassifiable-path denial
+    // and a real cross-slice denial read identically again.
+    const peerReason = peerIsolation
+      ? peerIsolationDenyExplanation(decision.peerIsolationReason ?? 'cross-slice', {
+          fromPath: edge.from,
+          toPath: edge.to,
+          fromSlice: decision.fromSlice,
+          toSlice: decision.toSlice,
+        })
+      : undefined;
+    const baseMessage = rule.message
+      ? peerReason
+        ? `${rule.message} (${peerReason})`
+        : rule.message
+      : peerReason
+        ? `${edge.fromLayer} must not ${edge.kind} another slice of ${edge.toLayer} (${edge.from} → ${edge.to}): ${peerReason}`
+        : `${edge.fromLayer} must not ${edge.kind} ${edge.toLayer}.`;
     violations.push({
       ruleId: 'LAYER_IMPORT_VIOLATION',
       file: edge.from,

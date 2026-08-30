@@ -97,10 +97,20 @@ import {
 import { loadArkConfigContract, parseArkConfigJson } from './lib/config-contract.mjs';
 import { checkUsage, checkUsageAll } from './lib/first-run-help.mjs';
 import { createAdapterResult } from './lib/adapter-contract.mjs';
-import { collectGovernedFiles, normalize, walk } from './lib/scan-files.mjs';
+import {
+  UNGOVERNED_PROBE_CAP,
+  collectGovernedFiles,
+  countUngovernedSourceFiles,
+  normalize,
+  walk,
+} from './lib/scan-files.mjs';
 import { configWarning } from './lib/config-warnings.mjs';
 import { runArchitectureScan } from './lib/architecture-scan.mjs';
-import { ANALYSIS_COMPLETENESS, analysisIncompleteStatement } from './lib/analysis-completeness.mjs';
+import {
+  ANALYSIS_COMPLETENESS,
+  analysisIncompleteStatement,
+  emptyAnalysisRefusal,
+} from './lib/analysis-completeness.mjs';
 import { reportUnavailableAnalysis } from './lib/unavailable-analysis.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import {
@@ -575,6 +585,201 @@ function runAdoptContract(args) {
 }
 
 /**
+ * Literal path drift (LPD) — repo paths that live inside strings, comments and
+ * docstrings, and no longer resolve.
+ *
+ * `tsc` resolves imports, not strings, and ESLint does not either, so this
+ * whole class compiles green. Report only by default (house convention:
+ * plan-by-default, `--write` to mutate) and only the ANCHORED findings are ever
+ * written — an unanchored one has no destination to propose.
+ */
+async function runPathDrift(args) {
+  const root = args.root;
+  const { scanLiteralPathDrift, writeLiteralPathDrift } = await import(
+    './lib/literal-path-drift-io.mjs'
+  );
+  let config;
+  try {
+    config = readConfig(root, args.config);
+  } catch {
+    // The scan reads text, not the contract's rules: a contract too broken to
+    // parse must not hide the drift. `include` only widens the roots.
+    config = { include: ['src'] };
+  }
+  const baseRef = resolveDesignDeltaBaseRef(root, args.baseRef);
+  const report = scanLiteralPathDrift(root, config, { baseRef, tsconfig: args.tsconfig });
+  const written = args.write ? writeLiteralPathDrift(root, report.anchored) : null;
+  // After a write the findings that were applied no longer exist on disk, so
+  // reporting them as findings would describe a tree that is already gone.
+  const remainingAnchored = written
+    ? report.anchored.filter((finding) => !wasApplied(finding, written))
+    : report.anchored;
+  // Both sinks describe the tree as it now stands: after a write the applied
+  // findings are gone from disk, and printing them as findings would contradict
+  // the "wrote ..." lines directly underneath.
+  const shown = { ...report, anchored: remainingAnchored };
+
+  // The unanchored sweep is opt-in (`--all`). On a repo that WRITES about paths
+  // it produced 4085 candidates out of 9536 literals, almost all of them
+  // illustrative paths in prose and help text — that is ArkGate's inability to
+  // resolve a string reported as a fact about the user's code, the same defect
+  // class as the coverage budget. The count is always printed, so opting out of
+  // the list is never opting out of knowing.
+  const payload = {
+    ...report,
+    anchored: remainingAnchored,
+    unanchoredCount: report.unanchoredCount,
+    unanchored: args.all ? report.unanchored : [],
+    unanchoredListed: args.all,
+  };
+  if (args.json) {
+    console.log(JSON.stringify({ pathDrift: payload, ...(written ? { written } : {}) }, null, 2));
+  } else {
+    printPathDrift(root, args, shown, written);
+  }
+  // Anchored drift is a fact about the tree: the source is gone and a rename
+  // says where it went. Unanchored drift is advisory — ArkGate cannot tell a
+  // dead reference from one it simply cannot resolve.
+  // Three outcomes, and CI must be able to tell them apart from the exit code
+  // alone — a tick the terminal withholds is no use to a pipeline that only
+  // reads the status:
+  //   0  anchored mode ran and found nothing left
+  //   1  anchored drift remains
+  //   2  anchored mode could not run (no usable base ref) — this run proved
+  //      nothing, and exiting 0 here would be the false green one level down.
+  if (!report.renameSet.available) process.exitCode = 2;
+  else process.exitCode = remainingAnchored.length > 0 ? 1 : 0;
+}
+
+/**
+ * True when THIS finding was one of the replacements written.
+ *
+ * Matched by identity, not by file: a file holding two findings where only one
+ * still matched its token must keep the other one in the remaining set.
+ */
+function wasApplied(finding, written) {
+  const entry = written.written.find((row) => row.file === finding.file);
+  if (!entry) return false;
+  return (entry.appliedFindings ?? []).some(
+    (applied) =>
+      applied.line === finding.line &&
+      applied.column === finding.column &&
+      applied.token === finding.token
+  );
+}
+
+/**
+ * A path from git or from the filesystem is raw bytes, and it is about to be
+ * printed to a terminal. A control character there can repaint or erase the
+ * findings above it.
+ */
+function renderPath(value) {
+  return String(value).replace(/[\u0000-\u001f\u007f]/g, (ch) =>
+    `\\u${ch.charCodeAt(0).toString(16).padStart(4, '0')}`
+  );
+}
+
+function printPathDrift(root, args, report, written) {
+  console.log(color.bold('Literal path drift'));
+  console.log(
+    color.dim(
+      `  scanned ${report.scannedFiles} text file(s), ${report.candidates} path-shaped literal(s)`
+    )
+  );
+  if (!report.renameSet.available) {
+    console.log(
+      color.yellow(
+        `  No rename set (${report.renameSet.reason}) — anchored mode is OFF, so nothing below carries a suggested replacement. Pass --base-ref <git-ref> to enable it.`
+      )
+    );
+  } else {
+    console.log(
+      color.dim(
+        `  rename set vs ${report.baseRef}: ${report.renameSet.renames} rename(s), ${report.anchorsConsidered} usable anchor(s)`
+      )
+    );
+  }
+  if (report.ambiguousAnchors.length > 0) {
+    console.log(
+      color.dim(
+        `  ${report.ambiguousAnchors.length} rename source(s) map to more than one destination and anchor nothing (e.g. ${renderPath(report.ambiguousAnchors[0])})`
+      )
+    );
+  }
+  const discarded = report.scan.discarded;
+  const dropped = Object.values(discarded).reduce((sum, n) => sum + n, 0);
+  if (dropped > 0) {
+    console.log(
+      color.dim(
+        `  not read: ${discarded.generated} generated, ${discarded.oversize} oversize, ${discarded.budget} past the ${report.scan.maxFiles}-file budget, ${discarded.byteBudget} past the ${Math.round(report.scan.maxTotalBytes / (1024 * 1024))}MB total budget, ${discarded.unreadable} unreadable, ${discarded.depthLimited} past the depth limit, ${discarded.symlink} symlinked file(s), ${discarded.symlinkDir} symlinked director(ies)`
+      )
+    );
+  }
+
+  for (const finding of report.anchored) {
+    console.log(
+      `${color.red('\u2716')} ${finding.ruleId} ${renderPath(finding.file)}:${finding.line} [${finding.form}]`
+    );
+    console.log(
+      finding.suggestedToken === null
+        ? `  ${renderPath(finding.token)} -> ${renderPath(finding.suggestedTarget)} (outside the alias root of this literal — rewrite by hand)`
+        : `  ${renderPath(finding.token)} -> ${renderPath(finding.suggestedToken)}`
+    );
+  }
+  if (report.unanchoredCount > 0) {
+    if (args.all) {
+      for (const finding of report.unanchored) {
+        console.log(
+          `${color.yellow('warning')} ${finding.ruleId} ${renderPath(finding.file)}:${finding.line} [${finding.form}] ${renderPath(finding.token)}`
+        );
+      }
+    }
+    console.log(
+      color.yellow(
+        `  ${report.unanchoredCount} unanchored candidate(s)${args.all ? ` listed above${report.truncated.unanchored ? ` (first ${report.unanchored.length}; the list is capped at ${report.findingCap}, the count is not)` : ''}` : ' not listed (--all)'} — literals that look like a repo path and do not resolve. Advisory only: with no rename to anchor them ArkGate cannot tell a dead reference from an illustrative one, so read them, do not gate on them.`
+      )
+    );
+  }
+
+  if (written) {
+    for (const entry of written.written) {
+      console.log(color.green(`  wrote ${renderPath(entry.file)} (${entry.applied})`));
+    }
+    for (const entry of written.skipped) {
+      console.log(color.yellow(`  skipped ${renderPath(entry.file)}: ${entry.reason} (${entry.count})`));
+    }
+  }
+
+  if (report.anchored.length === 0) {
+    if (!report.renameSet.available) {
+      // No tick. A green mark over a check that never ran is the false green
+      // this whole patch exists to remove.
+      console.log(
+        color.yellow(
+          '\u25CB Anchored mode did not run — no rename set. This says nothing about drift.'
+        )
+      );
+    } else {
+      console.log(color.green('\u2714 No anchored literal path drift.'));
+      console.log(
+        color.dim(
+          '  Every literal explained by the rename set resolves. This is a text match over strings and comments: it proves no scanned literal is stale against those renames, not that every path in the repo is live.'
+        )
+      );
+    }
+  }
+  if (!written && report.anchored.length > 0) {
+    const writable = report.anchored.filter((finding) => finding.suggestedToken !== null).length;
+    const byHand = report.anchored.length - writable;
+    console.log(
+      color.dim(
+        `  Report only. Re-run with --write to apply ${writable} of the ${report.anchored.length} anchored replacement(s)${byHand > 0 ? `; ${byHand} must be rewritten by hand` : ''}. Unanchored findings are never written.`
+      )
+    );
+  }
+}
+
+/**
  * Additive P0-A contract retrofit: inject high-spec app/api → Application when missing.
  * Does not remove existing patterns or weaken rules (DL-P0A-RETROFIT).
  */
@@ -849,6 +1054,9 @@ function applyConfigRootWalkUp(args) {
     return args;
   }
   const writeMode = isMutatingCliCommand(args);
+  // The root the caller asked for, before any walk-up adopts the config's directory.
+  // An empty analysis must be able to say which of the two it actually walked.
+  args.requestedRoot = path.resolve(args.root);
   const effective = resolveEffectiveProjectRoot(args.root, {
     configName: args.config,
     writeMode,
@@ -924,6 +1132,17 @@ async function main() {
     return;
   }
 
+  if (args.pathDrift) {
+    await runPathDrift(args);
+    return;
+  }
+
+  if (args.sensors) {
+    const { runSensors } = await import('./lib/sensor-promote-cli.mjs');
+    await runSensors(args, readConfig);
+    return;
+  }
+
   if (args.recommend) {
     try {
       const recommendation = buildArchitectureRecommendation(args.root);
@@ -964,6 +1183,59 @@ async function main() {
     return;
   }
 
+  // Empty analysis is a refusal: on zero governed files every later gate reports on
+  // nothing. It outranks --require-gates, so the caller hears the real reason instead
+  // of "Ark gates are not installed" in whatever directory the contract happened to
+  // live in — but it is evaluated LAZILY, so the cheap exits (a --changed run whose
+  // diff touches no product path, --require-gates with the gates present) still pay
+  // nothing for a filesystem walk they never needed.
+  //
+  // Report modes are exempt: --plan, --coverage and --doctor are how a user sees and
+  // fixes an empty scope (they already carry the `empty-scope` adoption gap), so
+  // refusing there would remove the only surface that explains the refusal.
+  const root = args.root;
+  const verdictPath = !args.plan && !args.coverage && !args.doctor;
+  let configCache = null;
+  const loadConfig = () => (configCache ??= readConfig(root, args.config));
+  let governedCache = null;
+  const loadGovernedFiles = () => (governedCache ??= collectGovernedFiles(root, loadConfig()));
+  const emptyAnalysisRefusalNow = () => {
+    const governedCount = loadGovernedFiles().length;
+    return emptyAnalysisRefusal({
+      governedFileCount: governedCount,
+      // Probed only when nothing is governed, and never through the contract's own
+      // exclude: the config under suspicion must not get to answer the question about
+      // itself (`exclude: ["**"]` would otherwise read as greenfield and pass).
+      ungovernedSourceCount: governedCount === 0 ? countUngovernedSourceFiles(root) : 0,
+      ungovernedSourceCap: UNGOVERNED_PROBE_CAP,
+      root,
+      requestedRoot: args.requestedRoot,
+      configPath: path.isAbsolute(args.config) ? args.config : path.join(root, args.config),
+      configWalkedUp: args.configWalkedUp === true,
+    });
+  };
+  const reportEmptyAnalysis = (refusal) => {
+    if (args.json) {
+      console.log(
+        JSON.stringify(
+          {
+            ok: false,
+            error: refusal.ruleId,
+            completeness: ANALYSIS_COMPLETENESS.unavailable,
+            message: refusal.message,
+            nextAction: refusal.nextAction,
+          },
+          null,
+          2
+        )
+      );
+    } else {
+      console.error(`${color.red('\u2716')} ${refusal.ruleId} ${refusal.message}`);
+      console.error(`Next: ${refusal.nextAction}`);
+    }
+    process.exitCode = 1;
+  };
+
   if (args.requireGates || args.requireWriteHook) {
     let writeRequest = null;
     if (args.requireWriteHook) {
@@ -994,6 +1266,24 @@ async function main() {
       missing.push(`${writeRequest.host} hard-write hook`);
     }
     if (missing.length > 0) {
+      // "Gates not installed" is the wrong reason for a run that would have analyzed
+      // nothing: it sends the user to `ark init` for a problem they do not have. Only
+      // here do we pay for the walk — with the gates present we fall through and the
+      // verdict path below checks at its usual point. A contract that cannot even be
+      // read is not evidence of an empty analysis, so that throw falls back to the
+      // gate report instead of masking it.
+      let refusal = null;
+      if (verdictPath) {
+        try {
+          refusal = emptyAnalysisRefusalNow();
+        } catch {
+          refusal = null;
+        }
+      }
+      if (refusal) {
+        reportEmptyAnalysis(refusal);
+        return;
+      }
       const payload = {
         ok: false,
         error: 'missing-gates',
@@ -1037,10 +1327,9 @@ async function main() {
     }
   }
 
-  const root = args.root;
   const bound = bindTeamBaseRefs(args, root);
   Object.assign(args, bound.args);
-  const config = readConfig(root, args.config);
+  const config = loadConfig();
   const policyDelta = analyzePolicyTransition({
     root,
     configPath: args.config,
@@ -1088,7 +1377,14 @@ async function main() {
   }
   const manifest = readManifest(root, args.manifest);
   const rules = manifest?.architecture?.rules ?? config.rules;
-  const allGovernedFiles = collectGovernedFiles(root, config);
+  const allGovernedFiles = loadGovernedFiles();
+  if (verdictPath) {
+    const refusal = emptyAnalysisRefusalNow();
+    if (refusal) {
+      reportEmptyAnalysis(refusal);
+      return;
+    }
+  }
   if (args.failUngoverned && teamParliament?.changeSet?.productPaths?.length) {
     const governedRel = new Set(
       allGovernedFiles.map((abs) => normalize(path.relative(root, abs)))
@@ -1163,6 +1459,31 @@ async function main() {
     governedPercent: preCov.governed?.percent ?? null,
     populatedLayerCount,
   });
+
+  // --promote reuses the analysis that just ran rather than running its own:
+  // the advisory findings it counts are already in `violations` + `warnings`,
+  // stamped with the rule that produced them. Placed before the design-delta
+  // check so a preview does not pay for a base-ref diff it never reads.
+  if (args.promote) {
+    // The floor the merge gate itself applies: below it every enforced
+    // extra-plane finding is demoted to a warning, so a promotion made here
+    // buys a label and not a tooth. `violations` above was already demoted by
+    // it; the preview has to know, or it sells teeth the gate then removes.
+    const { extraMergeTeethAllowed } = await import('./lib/extra-merge-teeth.mjs');
+    const teethDemotedByFloor = !extraMergeTeethAllowed({
+      governedPercent: preCov.governed?.percent ?? null,
+      populatedLayerCount,
+    });
+    const { runPromote } = await import('./lib/sensor-promote-cli.mjs');
+    await runPromote(root, config, args, {
+      files,
+      all: [...violations, ...(warnings ?? [])],
+      completeness,
+      completenessReasons,
+      teethDemotedByFloor,
+    });
+    return;
+  }
 
   const createdPathsOnly = Boolean(args.strictMerge && !args.failOnNewSmells);
   const designCheck = createDesignDeltaCheck({
@@ -1669,6 +1990,20 @@ async function main() {
         console.log(
           `${color.green('✔')} Ark check passed with ${warnings.length} config warning(s).${baselineNote}`
         );
+      }
+      // `--plan` is where the design bets live and a green run never named it.
+      // Not on the strict-config branch above (it printed a failure), not on
+      // `--changed` (a partial scan would print one slice's count as the tree's),
+      // not on `--watch` (a line that repeats every save is a line nobody reads).
+      if (!(args.strictConfig && strictWarnings.length > 0) && !args.changed && !args.watch) {
+        const { greenPlanPointer } = await import('./lib/design-smells.mjs');
+        const pointer = greenPlanPointer({
+          root, config, files, coverage: preCov,
+          blockingViolations: blockingViolations.length,
+          suppressedCount: suppressed.length,
+          planCommand: arkCommand(root, 'ark-check', '--plan'),
+        });
+        if (pointer) console.log(color.dim(pointer));
       }
     } else {
       console.error(
