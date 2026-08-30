@@ -451,6 +451,7 @@ export function analyzeCanonicalResolvedProject(
           input.coverageInputs?.testGlobsMissing === true ||
           input.coverageInputs === undefined ||
           (input.coverageInputs.testFiles?.length ?? 0) === 0,
+        coverageBudgetExhausted: input.coverageInputs?.coverageBudgetExhausted === true,
       })
     : { coverage: [], violations: [], partial: false };
   const invariantViolations: ArchitectureEngineViolation[] = coverageEval.violations

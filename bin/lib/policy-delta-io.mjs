@@ -3,7 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { analyzePolicyDelta } from './analysis-engine.mjs';
 import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
-import { loadInvariantCoverageInputs } from './invariant-coverage-io.mjs';
+import {
+  invariantIdsFromCatalog,
+  loadInvariantCoverageInputs,
+} from './invariant-coverage-io.mjs';
 import { evaluateInvariantCoverage } from './invariant-coverage.mjs';
 
 function readJsonFile(filePath, label) {
@@ -175,12 +178,15 @@ export function analyzePolicyTransition({
 
   let candidateInvariantCoverage;
   if ((candidateArkRules?.invariants?.length ?? 0) > 0) {
-    const coverageInputs = loadInvariantCoverageInputs(root, { files: [] });
+    const coverageInputs = loadInvariantCoverageInputs(root, { files: [] }, {
+      invariantIds: invariantIdsFromCatalog(candidateArkRules),
+    });
     const evaluated = evaluateInvariantCoverage({
       arkRules: candidateArkRules,
       fileContents: coverageInputs.fileContents,
       testFiles: coverageInputs.testFiles,
       testGlobsMissing: coverageInputs.testGlobsMissing,
+      coverageBudgetExhausted: coverageInputs.coverageBudgetExhausted === true,
     });
     candidateInvariantCoverage = evaluated.coverage;
   }

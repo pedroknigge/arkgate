@@ -229,6 +229,48 @@ export async function save(order: Order) {
     expect(summary.coveredSample?.some((c: { id: string }) => c.id === 'INV-ORDER-001')).toBe(true);
   });
 
+  it('rules-under-contract still finds covering tests when production files exceed the budget', () => {
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'arkrules'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src', 'domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'arkrules', 'DomainModel.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        layer: 'DomainModel',
+        structure: [],
+        invariants: [
+          {
+            id: 'INV-ORDER-001',
+            description: 'Order total never negative',
+            coverage: { test: true },
+            mode: 'advisory',
+          },
+        ],
+      })
+    );
+    const files: Array<{ path: string }> = [];
+    for (let i = 0; i < 500; i += 1) {
+      const rel = `src/domain/mod${i}.ts`;
+      fs.writeFileSync(path.join(root, rel), `export const v${i} = ${i};\n`);
+      files.push({ path: rel });
+    }
+    fs.writeFileSync(
+      path.join(root, 'tests', 'order.test.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+    const config = {
+      schemaVersion: '1.1',
+      arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+      layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+      rules: [],
+    };
+    const summary = summarizeRulesUnderContract(root, config, { files });
+    expect(summary.coveredInvariants).toBe(1);
+    expect(summary.uncoveredInvariants).toBe(0);
+  });
+
   it('rules-under-contract HTML lists layers, structure sensors, and invariants (not counts-only)', () => {
     const esc = (v: unknown) => String(v);
     const html = formatRulesUnderContractHtml(

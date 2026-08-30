@@ -65,6 +65,20 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
     expect(result.partial).toBe(true);
     expect(result.coverage[0]?.covered).toBe(false);
     expect(result.violations[0]?.failsStrict).toBe(false);
+    expect(result.violations[0]?.message).toMatch(/never-had-tests/);
+  });
+
+  it('does not claim never-had-tests when the coverage file budget was exhausted', () => {
+    const result = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: {},
+      testFiles: [],
+      testGlobsMissing: true,
+      coverageBudgetExhausted: true,
+    });
+    expect(result.partial).toBe(true);
+    expect(result.violations[0]?.message).toMatch(/coverage file budget exhausted/);
+    expect(result.violations[0]?.message).not.toMatch(/never-had-tests/);
   });
 
   it('refuses promotion of uncovered invariants (AR11)', () => {

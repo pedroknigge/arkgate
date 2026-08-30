@@ -44,6 +44,11 @@ export type EvaluateInvariantCoverageInput = {
   testFiles?: readonly string[];
   /** When true, missing test files make coverage partial (never green covered). */
   testGlobsMissing?: boolean;
+  /**
+   * Tooling hit MAX_COVERAGE_FILES. Partial must not claim the repo never had tests —
+   * the suite may exist outside the scan budget.
+   */
+  coverageBudgetExhausted?: boolean;
 };
 
 function titleMatchesInvariant(content: string, id: string): boolean {
@@ -90,6 +95,7 @@ export function evaluateInvariantCoverage(
 
   const testFiles = input.testFiles ?? [];
   const testGlobsMissing = input.testGlobsMissing === true || testFiles.length === 0;
+  const coverageBudgetExhausted = input.coverageBudgetExhausted === true;
   const coverage: InvariantCoverageEvidence[] = [];
   const violations: InvariantCoverageViolation[] = [];
 
@@ -144,7 +150,9 @@ export function evaluateInvariantCoverage(
             violations.push({
                 ruleId: 'INVARIANT_UNCOVERED',
                 message: partial
-                    ? `Invariant ${inv.id} coverage cannot be proven (test globs missing or empty); reporting partial, not covered (never-had-tests).`
+                    ? coverageBudgetExhausted
+                      ? `Invariant ${inv.id} coverage cannot be proven (coverage file budget exhausted); reporting partial, not covered.`
+                      : `Invariant ${inv.id} coverage cannot be proven (test globs missing or empty); reporting partial, not covered (never-had-tests).`
                     : kind === 'tests-disappeared'
                       ? `Invariant ${inv.id} is not covered by a test title or declared symbol (tests-disappeared — suite exists).`
                       : `Invariant ${inv.id} is not covered by a test title or declared symbol (never-had-tests).`,

@@ -63,10 +63,26 @@ function matchSimpleGlob(glob, file) {
 }
 
 /**
+ * Declared invariant ids from an Effective catalog. Empty when the extra is off.
+ * @param {{ invariants?: Array<{ id?: unknown }> } | null | undefined} arkRules
+ * @returns {string[]}
+ */
+export function invariantIdsFromCatalog(arkRules) {
+  return (arkRules?.invariants ?? [])
+    .map((inv) => inv?.id)
+    .filter((id) => typeof id === 'string' && id.length > 0);
+}
+
+/**
  * @param {string} root
  * @param {{ files?: Array<{ path: string }> }} facts
- * @param {{ testGlobs?: string[] }} [opts]
- * @returns {{ fileContents: Record<string, string>, testFiles: string[], testGlobsMissing: boolean }}
+ * @param {{ testGlobs?: string[], invariantIds?: string[] }} [opts]
+ * @returns {{
+ *   fileContents: Record<string, string>,
+ *   testFiles: string[],
+ *   testGlobsMissing: boolean,
+ *   coverageBudgetExhausted: boolean,
+ * }}
  */
 export function loadInvariantCoverageInputs(root, facts, opts = {}) {
   const fileContents = {};
@@ -142,7 +158,12 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
   }
 
   const testGlobsMissing = testFiles.length === 0;
-  return { fileContents, testFiles, testGlobsMissing };
+  return {
+    fileContents,
+    testFiles,
+    testGlobsMissing,
+    coverageBudgetExhausted: seen.size >= MAX_COVERAGE_FILES,
+  };
 }
 
 /**

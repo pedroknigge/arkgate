@@ -38,6 +38,7 @@ export function evaluateInvariantCoverage(input) {
     }
     const testFiles = input.testFiles ?? [];
     const testGlobsMissing = input.testGlobsMissing === true || testFiles.length === 0;
+    const coverageBudgetExhausted = input.coverageBudgetExhausted === true;
     const coverage = [];
     const violations = [];
     for (const inv of invariants) {
@@ -83,7 +84,9 @@ export function evaluateInvariantCoverage(input) {
             violations.push({
                 ruleId: 'INVARIANT_UNCOVERED',
                 message: partial
-                    ? `Invariant ${inv.id} coverage cannot be proven (test globs missing or empty); reporting partial, not covered (never-had-tests).`
+                    ? coverageBudgetExhausted
+                        ? `Invariant ${inv.id} coverage cannot be proven (coverage file budget exhausted); reporting partial, not covered.`
+                        : `Invariant ${inv.id} coverage cannot be proven (test globs missing or empty); reporting partial, not covered (never-had-tests).`
                     : kind === 'tests-disappeared'
                         ? `Invariant ${inv.id} is not covered by a test title or declared symbol (tests-disappeared — suite exists).`
                         : `Invariant ${inv.id} is not covered by a test title or declared symbol (never-had-tests).`,

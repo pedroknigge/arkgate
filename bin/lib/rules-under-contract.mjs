@@ -6,7 +6,10 @@
  */
 import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
 import { evaluateInvariantCoverage } from './invariant-coverage.mjs';
-import { loadInvariantCoverageInputs } from './invariant-coverage-io.mjs';
+import {
+  invariantIdsFromCatalog,
+  loadInvariantCoverageInputs,
+} from './invariant-coverage-io.mjs';
 import {
   EXTRA_MERGE_TEETH_GOVERNED_FLOOR,
   composeMergePlanesHonesty,
@@ -89,13 +92,16 @@ export function summarizeRulesUnderContract(root, config, facts, classification)
     const invariants = loaded.arkRules.invariants?.length ?? 0;
     const coverageInputs =
       invariants > 0
-        ? loadInvariantCoverageInputs(root, facts ?? { files: [] })
+        ? loadInvariantCoverageInputs(root, facts ?? { files: [] }, {
+            invariantIds: invariantIdsFromCatalog(loaded.arkRules),
+          })
         : { fileContents: {}, testFiles: [], testGlobsMissing: false };
     const coverage = evaluateInvariantCoverage({
       arkRules: loaded.arkRules,
       fileContents: coverageInputs.fileContents,
       testFiles: coverageInputs.testFiles,
       testGlobsMissing: coverageInputs.testGlobsMissing,
+      coverageBudgetExhausted: coverageInputs.coverageBudgetExhausted === true,
     });
     const covById = new Map(
       (coverage.coverage ?? []).map((row) => [row.invariantId, row])
