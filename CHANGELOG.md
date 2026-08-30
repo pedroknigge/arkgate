@@ -20,6 +20,10 @@ migration.**
   cap in force, tests retained, files discarded at the cap, and names `coverage.maxFiles` as the
   knob that raises it. Tests dropped for naming no catalogued invariant are counted in the message
   instead of vanishing.
+- **No silent discards in the coverage scan:** oversize files (256KB cap), unreadable files
+  (permissions, broken symlinks) and directories past the walk depth limit (8) are counted by
+  reason and reported in `INVARIANT_UNCOVERED` alongside budget and no-mention drops. Symlinked
+  test files are now scanned instead of being skipped by the walk without a trace.
 
 ## 4.8.3 — 2026-08-30
 

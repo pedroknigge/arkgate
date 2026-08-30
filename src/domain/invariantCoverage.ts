@@ -69,6 +69,12 @@ export type InvariantCoverageStats = {
     budget: number;
     /** Test file naming no catalogued invariant (scanned, then dropped). */
     noInvariantMention: number;
+    /** Larger than the per-file byte cap. */
+    oversize: number;
+    /** stat/read failed: permissions, broken symlink, or a file that moved mid-scan. */
+    unreadable: number;
+    /** Directory deeper than the walk depth limit — its files were never seen. */
+    depthLimited: number;
   };
 };
 
@@ -79,6 +85,9 @@ function formatCoverageDiscards(stats: InvariantCoverageStats | undefined): stri
   const parts: string[] = [];
   if (d.budget > 0) parts.push(`${d.budget} past the ${stats.maxFiles}-file budget`);
   if (d.noInvariantMention > 0) parts.push(`${d.noInvariantMention} naming no catalogued invariant`);
+  if (d.oversize > 0) parts.push(`${d.oversize} over the per-file byte cap`);
+  if (d.unreadable > 0) parts.push(`${d.unreadable} unreadable`);
+  if (d.depthLimited > 0) parts.push(`${d.depthLimited} directories past the walk depth limit`);
   if (parts.length === 0) return '';
   return ` Scan discarded ${parts.join(', ')} (loaded ${stats.filesLoaded} files, kept ${stats.testFilesRetained} tests).`;
 }

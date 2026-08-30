@@ -92,7 +92,13 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
         filesLoaded: 400,
         testFilesRetained: 12,
         maxFiles: 400,
-        discarded: { budget: 307, noInvariantMention: 42 },
+        discarded: {
+          budget: 307,
+          noInvariantMention: 42,
+          oversize: 0,
+          unreadable: 0,
+          depthLimited: 0,
+        },
       },
     });
     const message = result.violations[0]?.message ?? '';
@@ -113,7 +119,13 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
         filesLoaded: 1,
         testFilesRetained: 1,
         maxFiles: 400,
-        discarded: { budget: 0, noInvariantMention: 3 },
+        discarded: {
+          budget: 0,
+          noInvariantMention: 3,
+          oversize: 0,
+          unreadable: 0,
+          depthLimited: 0,
+        },
       },
     });
     expect(result.violations[0]?.message).toMatch(/Scan discarded 3 naming no catalogued invariant/);
@@ -129,10 +141,35 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
         filesLoaded: 0,
         testFilesRetained: 0,
         maxFiles: 400,
-        discarded: { budget: 0, noInvariantMention: 0 },
+        discarded: {
+          budget: 0,
+          noInvariantMention: 0,
+          oversize: 0,
+          unreadable: 0,
+          depthLimited: 0,
+        },
       },
     });
     expect(result.violations[0]?.message).not.toMatch(/Scan discarded/);
+  });
+
+  it('names every discard reason: oversize, unreadable, depth-limited', () => {
+    const result = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: {},
+      testFiles: [],
+      testGlobsMissing: true,
+      coverageStats: {
+        filesLoaded: 8,
+        testFilesRetained: 0,
+        maxFiles: 400,
+        discarded: { budget: 0, noInvariantMention: 0, oversize: 2, unreadable: 1, depthLimited: 3 },
+      },
+    });
+    const message = result.violations[0]?.message ?? '';
+    expect(message).toMatch(/2 over the per-file byte cap/);
+    expect(message).toMatch(/1 unreadable/);
+    expect(message).toMatch(/3 directories past the walk depth limit/);
   });
 
   it('refuses promotion of uncovered invariants (AR11)', () => {

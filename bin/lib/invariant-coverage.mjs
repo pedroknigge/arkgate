@@ -18,6 +18,12 @@ function formatCoverageDiscards(stats) {
         parts.push(`${d.budget} past the ${stats.maxFiles}-file budget`);
     if (d.noInvariantMention > 0)
         parts.push(`${d.noInvariantMention} naming no catalogued invariant`);
+    if (d.oversize > 0)
+        parts.push(`${d.oversize} over the per-file byte cap`);
+    if (d.unreadable > 0)
+        parts.push(`${d.unreadable} unreadable`);
+    if (d.depthLimited > 0)
+        parts.push(`${d.depthLimited} directories past the walk depth limit`);
     if (parts.length === 0)
         return '';
     return ` Scan discarded ${parts.join(', ')} (loaded ${stats.filesLoaded} files, kept ${stats.testFilesRetained} tests).`;

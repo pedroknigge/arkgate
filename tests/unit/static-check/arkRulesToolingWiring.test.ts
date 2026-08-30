@@ -153,6 +153,38 @@ describe('ArkRules tooling wiring', () => {
     expect(inputs.stats.maxFiles).toBe(400);
   });
 
+  it('counts every silent discard: oversize, unreadable, and depth-limited', () => {
+    const root = makeRoot();
+    // One directory past the walk depth limit: the whole subtree is dropped.
+    const deep = path.join(root, 'tests', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i');
+    fs.mkdirSync(deep, { recursive: true });
+    fs.writeFileSync(path.join(deep, 'deep.test.ts'), "it('INV-ORDER-001 deep', () => {})\n");
+
+    // Oversize: past the 256KB per-file cap.
+    fs.writeFileSync(
+      path.join(root, 'tests', 'huge.test.ts'),
+      `it('INV-ORDER-001 huge', () => {})\n${'/*'.repeat(1)}${'x'.repeat(300 * 1024)}\n`
+    );
+
+    // Unreadable: a broken symlink still stats as a coverage candidate.
+    fs.symlinkSync(path.join(root, 'tests', 'gone.test.ts'), path.join(root, 'tests', 'dangling.test.ts'));
+
+    fs.writeFileSync(
+      path.join(root, 'tests', 'ok.test.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'] }
+    );
+    expect(inputs.testFiles).toEqual(['tests/ok.test.ts']);
+    expect(inputs.stats.discarded.oversize).toBe(1);
+    expect(inputs.stats.discarded.unreadable).toBe(1);
+    expect(inputs.stats.discarded.depthLimited).toBeGreaterThan(0);
+  });
+
   it('coverageOptionsFromConfig reads coverage.testGlobs / coverage.maxFiles (absence is silent)', () => {
     expect(coverageOptionsFromConfig(undefined)).toEqual({});
     expect(coverageOptionsFromConfig({ layers: [] })).toEqual({});

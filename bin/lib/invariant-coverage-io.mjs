@@ -13,6 +13,8 @@ const DEFAULT_TEST_NAME_RE =
 export const DEFAULT_MAX_COVERAGE_FILES = 400;
 /** Max bytes per file when reading for title/symbol mining. */
 const MAX_FILE_BYTES = 256 * 1024;
+/** Max directory depth for the test walk. Deeper directories are counted, not silent. */
+const MAX_WALK_DEPTH = 8;
 
 /**
  * True when absolute is root or a file under root (separator-safe).
@@ -106,7 +108,13 @@ export function invariantIdsFromCatalog(arkRules) {
  *     filesLoaded: number,
  *     testFilesRetained: number,
  *     maxFiles: number,
- *     discarded: { budget: number, noInvariantMention: number },
+ *     discarded: {
+ *       budget: number,
+ *       noInvariantMention: number,
+ *       oversize: number,
+ *       unreadable: number,
+ *       depthLimited: number,
+ *     },
  *   },
  * }}
  */
@@ -120,7 +128,13 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
       : DEFAULT_MAX_COVERAGE_FILES;
   // Every discard is counted. A file dropped without a number is a coverage
   // verdict the user cannot explain.
-  const discarded = { budget: 0, noInvariantMention: 0 };
+  const discarded = {
+    budget: 0,
+    noInvariantMention: 0,
+    oversize: 0,
+    unreadable: 0,
+    depthLimited: 0,
+  };
   // Declared invariant ids. When present, a test file is RETAINED only if it
   // mentions one: scanning is cheap (hundreds of small files), retaining is
   // what costs memory. Without this the budget goes to whichever N tests the
@@ -154,7 +168,13 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
     if (!isPathInsideRoot(root, absolute)) return;
     try {
       const stat = fs.statSync(absolute);
-      if (!stat.isFile() || stat.size > MAX_FILE_BYTES) return;
+      // Not a file (directory, socket, symlink to a directory): never a
+      // coverage candidate, so it is not a discard either.
+      if (!stat.isFile()) return;
+      if (stat.size > MAX_FILE_BYTES) {
+        discarded.oversize += 1;
+        return;
+      }
       const content = fs.readFileSync(absolute, 'utf8');
       const asTest = forceAsTest || isTestPath(rel);
       // A test that names no invariant is evidence of nothing: scan it, drop
@@ -167,7 +187,9 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
       fileContents[rel] = content;
       if (asTest) testFiles.push(rel);
     } catch {
-      // skip unreadable
+      // Unreadable (permissions, broken symlink, file moved mid-scan): counted,
+      // never dropped in silence.
+      discarded.unreadable += 1;
     }
   };
 
@@ -175,8 +197,8 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
   //
   // The order is load-bearing, not stylistic. `pushFile` stops at the file
   // budget (`coverage.maxFiles`, default 400), and a real repo has far more
-  // production files than the budget — so walking facts first consumed the whole budget and the test walk
-  // pushed nothing. Coverage then reported `testGlobsMissing: true`, which the
+  // production files than the budget — so walking facts first consumed the
+  // whole budget and the test walk pushed nothing. Coverage then reported `testGlobsMissing: true`, which the
   // caller renders as "never-had-tests": a claim about the USER's repo that was
   // actually about our own budget. Measured on a 4511-file project: every
   // invariant reported uncovered while its test sat on disk with the invariant
@@ -188,9 +210,15 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
   for (const dir of testWalkRoots) {
     const absDir = path.join(root, dir === '.' ? '' : dir);
     if (!fs.existsSync(absDir)) continue;
-    walkTestFiles(absDir, root, (rel) => {
-      if (isTestPath(rel)) pushFile(rel, true);
-    });
+    walkTestFiles(
+      absDir,
+      root,
+      (rel) => {
+        if (isTestPath(rel)) pushFile(rel, true);
+      },
+      0,
+      discarded
+    );
   }
 
   for (const file of facts?.files ?? []) {
@@ -217,23 +245,31 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
  * @param {string} root
  * @param {(rel: string) => void} onFile
  * @param {number} [depth]
+ * @param {{ unreadable: number, depthLimited: number }} [discarded]
  */
-function walkTestFiles(dir, root, onFile, depth = 0) {
-  if (depth > 8) return;
+function walkTestFiles(dir, root, onFile, depth = 0, discarded) {
+  if (depth > MAX_WALK_DEPTH) {
+    // The whole subtree is dropped here — say so with a number.
+    if (discarded) discarded.depthLimited += 1;
+    return;
+  }
   let entries;
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
   } catch {
+    if (discarded) discarded.unreadable += 1;
     return;
   }
   for (const entry of entries) {
     if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git') continue;
     const absolute = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      walkTestFiles(absolute, root, onFile, depth + 1);
+      walkTestFiles(absolute, root, onFile, depth + 1, discarded);
       continue;
     }
-    if (!entry.isFile()) continue;
+    // Symlinks are candidates too: pushFile stats through them, so a broken one
+    // is counted as unreadable instead of vanishing from the walk.
+    if (!entry.isFile() && !entry.isSymbolicLink()) continue;
     const rel = path.relative(root, absolute).replace(/\\/g, '/');
     onFile(rel);
   }

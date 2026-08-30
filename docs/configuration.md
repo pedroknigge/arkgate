@@ -92,6 +92,9 @@ Top-level fields:
   Unknown keys fail closed. When the budget is hit, `INVARIANT_UNCOVERED` reports the numbers
   (files loaded, tests retained, files discarded at the cap) and names `coverage.maxFiles` as
   the knob that raises it — coverage never claims "never had tests" because of our own cap.
+  Nothing is dropped in silence: files past the budget, files over the 256KB per-file cap,
+  unreadable files (permissions, broken symlinks), directories past the walk depth limit (8), and
+  tests naming no catalogued invariant are each counted and named in the diagnostic.
 - **`arkRules`** (optional, schema `1.1+`) — map of layer name → project-relative path to an
   ArkRules file (e.g. `"DomainModel": "arkrules/DomainModel.json"`). Keys must match a declared
   layer. Missing/invalid referenced files **fail closed**.
