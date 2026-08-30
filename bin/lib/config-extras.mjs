@@ -41,6 +41,7 @@ export const ARK_ORDER_SCHEMA_DEF = {
         planeRoots: { ...stringArraySchema, default: [] },
         managedLayers: { ...stringArraySchema, default: [] },
         maxXiKeys: { type: 'integer', minimum: 1, default: 7 },
+        xiKeys: { ...stringArraySchema, default: [] },
     },
 };
 function isObject(value) {
@@ -83,6 +84,7 @@ export function defaultedArkOrder(value) {
         planeRoots: value.planeRoots === undefined ? [] : value.planeRoots,
         managedLayers: value.managedLayers === undefined ? [] : value.managedLayers,
         maxXiKeys: max,
+        xiKeys: value.xiKeys === undefined ? [] : value.xiKeys,
     };
 }
 export function validateArkRunExtra(config, issues) {

@@ -3,6 +3,7 @@
     "mode": "enforced",
     "planeRoots": ["src/main.ts"],
     "managedLayers": ["ApplicationOrchestration"],
-    "maxXiKeys": 7
+    "maxXiKeys": 7,
+    "xiKeys": ["plan", "cycle", "tenancy"]
   }
 }

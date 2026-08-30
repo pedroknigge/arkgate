@@ -39,12 +39,13 @@ ArkRun     extra      how the app talks (intents, bus)
 ArkOrder   extra      what may be considered pattern (ξ vs s)
 ```
 
-Public sentence (docs, when the extra exists — **not** a shipped claim today):
+Public sentence (README, use, develop, product site):
 
-> ArkRun slaves how the app talks. ArkOrder slaves what the app may treat as pattern.
+> ArkRun is how the app talks. ArkOrder is what the app may treat as pattern.
 
-Haken / slaving stays in this plan and the README later. The product name is **ArkOrder**.
-The import is `arkgate/order`. Not a second npm package. Not `slaving`. Not `arkorderplane`.
+Haken / slaving stays in this plan. First-contact copy uses freeze / four verbs / no `update`.
+The product name is **ArkOrder**. The import is `arkgate/order`. Not a second npm package.
+Not `slaving`. Not `arkorderplane`.
 
 ---
 
@@ -145,7 +146,7 @@ Authority: [ADR 0029](../../adr/0029-arkorder-anti-skip-facts.md).
 | `arkorder-generic-update` | 1 | Forbidden plane method (`update` / `patch` / `set` on the plane) | advisory, promotable |
 | `arkorder-too-many-params` | 1 | ξ schema/object keys > `maxXiKeys` at plane create | advisory, promotable |
 | `arkorder-ingest-writes-xi` | 1 | `ingest` result assigned into release/ξ store (direct lexical) | advisory, promotable |
-| `arkorder-skip-god-put` | 2 | Heuristic: a wide HTTP PUT looks like it mutates pattern | advisory only |
+| `arkorder-xi-field-write` | 1 | Managed-layer persistence write of a declared `xiKeys` name | advisory, promotable |
 
 Diagnostic `ruleId`s (`OR05`): `ARKORDER_MISSING_PLANE`, `ARKORDER_KERNEL_IN_DOMAIN`,
 `ARKORDER_GENERIC_UPDATE`, `ARKORDER_TOO_MANY_PARAMS`, `ARKORDER_INGEST_WRITES_XI`.

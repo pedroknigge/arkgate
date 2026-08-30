@@ -400,6 +400,15 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 - **Why:** An ingest() result is written into a Release or ξ store. ingest may absorb or escalate; it never mints a pattern.
 - **Fix:** Keep ingest results as absorb/escalate only. Change ξ with proposeRelease + release. Never mechanical-safe.
 
+<a id="ARKORDER_XI_FIELD_WRITE"></a>
+
+### `ARKORDER_XI_FIELD_WRITE`
+
+**Slow key written around the order plane**
+
+- **Why:** A managed-layer file imports a persistence driver and writes a declared arkOrder.xiKeys name. Field events absorb or escalate; they do not PATCH the slow pattern.
+- **Fix:** Keep invoices, seats, hours, and logs on ingest. Change the slow key with proposeRelease + release, then preflight again. Never mechanical-safe.
+
 ## Atomic preflight and change sets
 
 <a id="INVALID_CHANGE_PATH"></a>

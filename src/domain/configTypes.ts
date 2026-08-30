@@ -87,6 +87,11 @@ export type ArkConfigArkOrder = {
   planeRoots: string[];
   managedLayers: string[];
   maxXiKeys: number;
+  /**
+   * Slow product keys the team can already name (plan, cost code, protocol).
+   * Optional. Empty → `ARKORDER_XI_FIELD_WRITE` stays silent.
+   */
+  xiKeys: string[];
 };
 
 export type ArkConfig = {

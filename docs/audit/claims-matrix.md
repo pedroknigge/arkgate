@@ -4,7 +4,7 @@
 > [docs/package-surface.md](../package-surface.md) · Decisions: [docs/adr/](../adr/README.md)
 > **Code and manifests are the source of truth.** Documentation does not override implementation.
 
-**Date:** 2026-08-25 (4.7.1 published — Phase HS / HS05; npm `latest` **4.7.1**)<br>
+**Date:** 2026-08-30 (4.8.3 prepared/published — writes-via-aggregate + ArkOrder xiKeys; npm `latest` **4.8.3**)<br>
 **Scope:** project (public lanes + bounded package surfaces) — Phase HS catalog + Phase RN ArkRun extra + prior DF/ACS/IC<br>
 **Intent:** audit → selective documentation + honesty evidence (HS05 published)<br>
 **Variant:** ArkGate bridge (`ark.config.json`, local CLIs, project-bound `ark_manifest`,
@@ -17,9 +17,16 @@ compatibility `ark://manifest`)<br>
 **2026-08-18 addendum (4.6.3 prepare):** C-046 records current Codex CLI/local Desktop
 operation-scoped hard write. Historical 4.5.0 snapshot language below remains dated evidence.
 
-**2026-08-25 addendum (4.7.1 published):** C-020 tree identity is **4.7.1**
-(published on npm `latest`). C-047 records the optional `arkRun` extra (4.7.0).
-Does not close Z09 / K01.
+**2026-08-25 addendum (4.7.1 published):** C-020 tree identity was **4.7.1**.
+C-047 records the optional `arkRun` extra (4.7.0). Does not close Z09 / K01.
+
+**2026-08-30 addendum (4.8.2 published):** C-020 tree identity was **4.8.2**.
+C-048 records the optional `arkOrder` extra (4.8.0; `arkgate/order`). Skills
+four-plane honesty is 4.8.2.
+
+**2026-08-30 addendum (4.8.3):** C-020 tree identity is **4.8.3**. C-049 records
+`writes-via-aggregate`. C-048 gains `xiKeys` + `ARKORDER_XI_FIELD_WRITE`. Does
+not close Z09 / K01.
 
 ## Summary
 
@@ -29,7 +36,7 @@ configuration, package-surface, product-voice, ROADMAP Next session, this matrix
 
 | Verdict | Count |
 |---------|------:|
-| OK | 47 |
+| OK | 49 |
 | Partial | 1 |
 | Missing | 0 |
 | Contradicted | 0 |
@@ -46,7 +53,7 @@ configuration, package-surface, product-voice, ROADMAP Next session, this matrix
    trusted, runtime-observed local `apply_patch`; doctor must not borrow it for other paths.
 3. Repo hygiene: Dependabot may still surface transitive advisories; triage before claiming a
    clean public tree (not a product-roadmap `doing` unless it needs a pin).
-4. **Published 4.7.1:** tree identity and npm `latest` are **4.7.1** (C-020). Z09 / K01 stay parked.
+4. **Published 4.8.3:** tree identity and npm `latest` are **4.8.3** (C-020). Z09 / K01 stay parked.
 
 **Recommended next Intent:** keep Z09 / K01 parked; no competing RN `doing`.
 
@@ -54,7 +61,7 @@ configuration, package-surface, product-voice, ROADMAP Next session, this matrix
 
 The table and README 0.3 checklist below are the **DF06 / 4.5.0 prepare** inventory.
 They are **not** current version identity. Current tree and npm `latest` are
-**4.7.1** (C-020 / 2026-08-25 addendum). Do not read 4.4.0 / 4.5.0
+**4.8.3** (C-020 / 2026-08-30 addendum). Do not read 4.4.0 / 4.5.0 / 4.7.1 / 4.8.2
 here as live `latest`.
 
 | Lane | Authority paths | Checklist / result |
@@ -73,7 +80,7 @@ here as live `latest`.
 - [x] Host support table matches matrix (Codex/Cursor/OpenCode advisory; repair envelope split)
 - [x] Required merge boundary = **required status context**, not “CI file present”
 - [x] Dual bins consistent
-- [x] Version strip: **4.4.0 published** on npm `latest`; tree preparing **4.5.0** *(historical DF06; current strip is 4.7.1 published / latest)*
+- [x] Version strip: **4.4.0 published** on npm `latest`; tree preparing **4.5.0** *(historical DF06; current strip is 4.8.2 published / latest)*
 - [x] Links resolve into use/develop/docs hub
 - [x] No hard-write lie for Codex
 
@@ -100,7 +107,7 @@ here as live `latest`.
 | C-017 | Project TS5/6/7 compilers stay project-owned with fail-closed incomplete analysis | [TypeScript support](../typescript-support.md) | typescript host · packed matrix | OK | keep |
 | C-018 | All retained plan seeds are indexed with current shipped status | [Hub plans](../../AGENTS.md#product-plans-library-epic-queue-seeds) | `docs/plans/` · ROADMAP | OK | DF plan prepare |
 | C-019 | Accepted ADRs are navigable without duplicating their rationale | [ADR index](../adr/README.md) | ADR frontmatter | OK | keep |
-| C-020 | Tree version identity is **4.7.1** (published); npm `latest` is **4.7.1** | [4.7.1 notes](../releases/4.7.1.md) · [4.7.0 notes](../releases/4.7.0.md) | package/lock/version/server · npm registry (4.7.1) | OK | published |
+| C-020 | Tree version identity is **4.8.3** (published); npm `latest` is **4.8.3** | [4.8.3 notes](../releases/4.8.3.md) · [4.8.2 notes](../releases/4.8.2.md) | package/lock/version/server · npm registry (4.8.3) | OK | published |
 | C-021 | Links in shipped Markdown resolve inside the tarball or use repository URLs | Shipped README/docs | root `files` | OK | rerun on release |
 | C-022 | Nightly evaluation claims distinguish deterministic, opt-in live, and skipped cases | [Eval guide](../../eval/README.md) | nightly workflow · placement-ab | OK | ACS07 dry mode |
 | C-023 | Migration and runtime guidance uses current package boundaries | [Migration guide](../migrate-from-ark-runtime-kernel.md) | manifests | OK | keep |
@@ -127,7 +134,9 @@ here as live `latest`.
 | C-044 | Public lanes teach session recipe: identity → status → act; doctor when compass mode is not full — without roadmap codes | [Use — session recipe](../use.md#session-recipe-agent-turn) · [Agent guide](../agent-guide.md#session-recipe-agent-turn) | use / agent-guide / develop / release notes | OK | DF06 |
 | C-045 | Managed upgrade surfaces self-service activation labels + customized-content preserve without inventing hard-write without runtime evidence | [Package surface](../package-surface.md) · [4.5.0 notes](../releases/4.5.0.md) | `managed-upgrade-honesty.mjs` · DF05 tests | OK | DF05 / 4.5.0 prepare |
 | C-046 | Codex CLI and local Desktop/App Server hard-block only complete trusted, runtime-observed local `apply_patch`; other paths remain CI-backed | [AI gates](../ai-gates.md#openai-codex-cli-and-local-desktop) · [ADR 0019](../adr/0019-codex-operation-scoped-hard-write.md) | `ark-mcp-runtime.mjs` · `host-support-matrix.mjs` · T05/Z10/host matrix tests | OK | CX01 / 4.6.3 |
-| C-047 | Optional `arkRun` extra is silent when absent; enforced extra teeth share write/CI; `@arkgate/runtime` stays out of the `arkgate` tarball; in-memory stores are not production durability; doctor `arkRun` is `notAScore`; no new skill names | [Use — planes](../use.md#planes-you-choose) · [Configuration](../configuration.md) · [Package surface](../package-surface.md#experimental-opt-in-surfaces) · [Hardening](../production-hardening.md) | `arkRun` schema · skip corpus · `createStrictArkKernel` | OK | RN16 / 4.7.0 published |
+| C-047 | Optional `arkRun` extra is silent when absent; enforced extra teeth share write/CI; kernel import is `arkgate/runtime`; in-memory stores are not production durability; doctor `arkRun` is `notAScore`; no new skill names | [Use — extras](../use.md#the-product-you-choose-the-extras) · [Configuration](../configuration.md) · [Package surface](../package-surface.md#experimental-opt-in-surfaces) · [Hardening](../production-hardening.md) | `arkRun` schema · skip corpus · `createStrictArkKernel` | OK | RN16 / 4.7.0 published; PK01 / 4.8.0 kernel in-package |
+| C-048 | Optional `arkOrder` extra is silent when absent; `arkgate/order` in the same npm package; field events cannot overwrite the few slow product decisions; no `update`; `xiKeys` names those decisions; a managed-layer persistence write of a named key is `ARKORDER_XI_FIELD_WRITE`; in-memory; does not replace ArkRun; no `/ark-order` skill | [Use — extras](../use.md#the-product-you-choose-the-extras) · [README ArkOrder](../../README.md#optional-arkorder) · [Package surface](../package-surface.md#experimental-opt-in-surfaces) | `arkOrder` schema · `createOrderPlane` · skip corpus `ARKORDER_*` | OK | OR07 / 4.8.0; OR08 / 4.8.3 xiKeys |
+| C-049 | Closed ArkRules sensor `writes-via-aggregate`: Application/Feature persistence writes go through a Domain aggregate + adapter; advisory default; absence silent; no folder religion | [Configuration](../configuration.md) · [ADR 0032](../adr/0032-writes-via-aggregate-sensor.md) | `arkRuleSensors.ts` · Application templates | OK | AW01 / 4.8.3 |
 
 ## Contradicted / Partial owners (DF06 close)
 
@@ -140,8 +149,10 @@ here as live `latest`.
 
 Prior matrix (2026-08-09) covered 4.3.0 / ACS08 and prep rows for IC. The DF06 pass (2026-08-10)
 advanced C-020 for tree **4.5.0** prepare (npm still 4.4.0) and added C-043–C-045. That
-version strip is **historical**. The 2026-08-25 HS05 addendum restates C-020 for tree
-**4.7.1** published (npm `latest` **4.7.1**); C-047 remains the 4.7.0 `arkRun` extra.
+version strip is **historical**. The 2026-08-25 HS05 addendum restated C-020 for tree
+**4.7.1**. The 2026-08-30 addendum restates C-020 for tree **4.8.3** published
+(npm `latest` **4.8.3**); C-047 remains the `arkRun` extra; C-048 is the `arkOrder` extra;
+C-049 is `writes-via-aggregate`.
 Structural OK/Partial verdicts remain evidence-bound to code and authorities cited above.
 
 ## Verification record (DF06 prepare — historical 2026-08-10)
@@ -155,4 +166,4 @@ Structural OK/Partial verdicts remain evidence-bound to code and authorities cit
 - Focused DF unit suites (status honesty, module budgets/split, pure ratchet, upgrade self-service)
   remain green under prior DF item evidence.
 
-Current (2026-08-25 HS05) identity is C-020: tree **4.7.1** published; npm `latest` **4.7.1**.
+Current (2026-08-30) identity is C-020: tree **4.8.3** published; npm `latest` **4.8.3**.

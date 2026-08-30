@@ -40,6 +40,7 @@ export function analyzeTrustedResolvedProject(input: {
       {
         orchestrationHeavy?: boolean;
         adapterThick?: boolean;
+        persistenceWrite?: boolean;
       }
     >
   >;

@@ -139,6 +139,7 @@ export async function save(order: Order) {
       ],
     };
     expect(needsArkRuleFileHints(arkRules)).toBe(true);
+    expect(needsArkRuleFileHints({ structure: [{ sensor: 'writes-via-aggregate' }] })).toBe(true);
     expect(needsArkRuleFileHints({ structure: [{ sensor: 'aggregate-private-state' }] })).toBe(
       false
     );

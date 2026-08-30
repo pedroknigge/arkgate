@@ -377,6 +377,44 @@ export const RESOLVED_CANDIDATE_FACTS_SCHEMA = {
         },
       },
     },
+    arkOrderXiFieldWrites: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['file', 'line', 'key'],
+        properties: {
+          file: projectPathSchema,
+          line: lineSchema,
+          key: textSchema,
+        },
+      },
+    },
+    arkOrderIngestWritesXi: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['file', 'line'],
+        properties: {
+          file: projectPathSchema,
+          line: lineSchema,
+        },
+      },
+    },
+    arkOrderReleaseKeyCounts: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['file', 'line', 'keyCount'],
+        properties: {
+          file: projectPathSchema,
+          line: lineSchema,
+          keyCount: { type: 'integer', minimum: 1 },
+        },
+      },
+    },
     factsHash: textSchema,
   },
   allOf: [

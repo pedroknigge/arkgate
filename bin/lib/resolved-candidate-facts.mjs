@@ -42,7 +42,10 @@ import {
 } from './ark-run-facts.mjs';
 import {
   extractArkOrderGenericUpdatesFromSource,
+  extractArkOrderIngestWritesXiFromSource,
   extractArkOrderPlaneCallsFromSource,
+  extractArkOrderReleaseKeyCountsFromSource,
+  extractArkOrderXiFieldWritesFromSource,
 } from './ark-order-facts.mjs';
 import {
   collectGovernedFiles,
@@ -1015,6 +1018,10 @@ export function resolveCandidateFacts({
   const arkOrderPlaneCalls = [];
   const arkOrderGenericUpdates = [];
   const arkOrderRootHits = [];
+  const arkOrderXiFieldWrites = [];
+  const arkOrderIngestWritesXi = [];
+  const arkOrderReleaseKeyCounts = [];
+  const xiKeys = [...(config.arkOrder?.xiKeys ?? [])];
   const compositionRootPatterns = [...(config.arkRun?.compositionRoots ?? [])];
   const planeRootPatterns = [...(config.arkOrder?.planeRoots ?? [])];
 
@@ -1133,6 +1140,27 @@ export function resolveCandidateFacts({
         );
       } catch {
         // Never fail the resolver for ArkOrder generic-update extraction.
+      }
+      try {
+        arkOrderXiFieldWrites.push(
+          ...extractArkOrderXiFieldWritesFromSource(candidate.path, candidate.content, xiKeys)
+        );
+      } catch {
+        // Never fail the resolver for ArkOrder xi-field-write extraction.
+      }
+      try {
+        arkOrderIngestWritesXi.push(
+          ...extractArkOrderIngestWritesXiFromSource(candidate.path, candidate.content)
+        );
+      } catch {
+        // Never fail the resolver for ArkOrder ingest-writes-ξ extraction.
+      }
+      try {
+        arkOrderReleaseKeyCounts.push(
+          ...extractArkOrderReleaseKeyCountsFromSource(candidate.path, candidate.content)
+        );
+      } catch {
+        // Never fail the resolver for ArkOrder release key-count extraction.
       }
     }
   }
@@ -1277,5 +1305,8 @@ export function resolveCandidateFacts({
     arkOrderPlaneCalls,
     arkOrderGenericUpdates,
     arkOrderRootHits,
+    arkOrderXiFieldWrites,
+    arkOrderIngestWritesXi,
+    arkOrderReleaseKeyCounts,
   });
 }

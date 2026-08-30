@@ -99,10 +99,12 @@ Top-level fields:
   preflight / CI verdict and arm only when the layer plane is classified (same ≥50%
   governed and ≥1 populated-layer floor as ArkRules).
 - **`arkOrder`** (optional, schema `1.3+`) — inline ArkOrder extra (`mode`, `planeRoots`,
-  `managedLayers`, `maxXiKeys`). Absence is silent. Unknown keys fail closed.
+  `managedLayers`, `maxXiKeys`, **`xiKeys`**). Absence is silent. Unknown keys fail closed.
   Import `createOrderPlane` from `arkgate/order` (same package). Empty `planeRoots` in
-  `enforced` mode fails closed (`ARKORDER_MISSING_PLANE`). Demotion or deletion is a
-  policy-delta **weakening**. Haken: few slow keys (ξ); field ingest never mints a pattern.
+  `enforced` mode fails closed (`ARKORDER_MISSING_PLANE`). `xiKeys` are the 3–5 slow
+  names the product already knows (plan, protocol, cost-code bound). Empty `xiKeys`
+  leaves `ARKORDER_XI_FIELD_WRITE` silent. Membership ids are not keys. Demotion or
+  deletion is a policy-delta **weakening**. Field ingest never mints a pattern.
 
 Layer fields:
 
@@ -161,15 +163,17 @@ See [brownfield adoption](brownfield-adoption.md#nextjs-honesty-default-overlays
 | **Structure sensors** | Intra-layer heuristics | Only `mode: "enforced"` |
 | **Invariants** | Catalog + coverage evidence (not a business runtime) | Only enforced + proven-uncovered |
 | **ArkRun** (opt-in extra) | Kernel usage + complete declarations | Only `arkRun.mode: "enforced"` when classified |
+| **ArkOrder** (opt-in extra) | Frozen pattern + four verbs (no `update`) | Only `arkOrder.mode: "enforced"` when classified |
 
-Absence of `arkRules` or `arkRun` adds **no** extra merge teeth. **Advisory** structure sensors, advisory
-invariants, and advisory ArkRun also add **no** merge teeth (FG-ARKRULES-ADVISORY-ONLY / ADR 0020) — packing every starter
-`arkrules/*` file does not make merge fail structure alone. Enforced structure/invariants/ArkRun arm
+Absence of `arkRules`, `arkRun`, or `arkOrder` adds **no** extra merge teeth. **Advisory** structure sensors, advisory
+invariants, advisory ArkRun, and advisory ArkOrder also add **no** merge teeth (FG-ARKRULES-ADVISORY-ONLY / ADR 0020 / ADR 0027) — packing every starter
+`arkrules/*` file does not make merge fail structure alone. Enforced structure/invariants/ArkRun/ArkOrder arm
 `mergePlanes.extraMergeTeeth` only when the layer plane is honestly classified
 (governed ≥ 50% and ≥ 1 populated layer); empty classification never gets extra-plane teeth
 (P1M-EXTRATEETH-EMPTY-GRAPH). Extra planes **never** merge into one architecture
 score. Doctor exposes `rulesUnderContract.mergePlanes` (including `mergePlanes.arkRun`) for which plane can fail,
-and a dedicated `doctor.arkRun` section that is always `notAScore`.
+and a dedicated `doctor.arkRun` section that is always `notAScore`. ArkOrder skip findings are
+`ARKORDER_*` diagnostics on that same extra-teeth floor.
 
 Safety fields:
 
@@ -196,7 +200,7 @@ Each `arkrules/<Layer>.json` may declare:
 
 | Section | Purpose | Modes | What it really enforces |
 |---------|---------|--------|-------------------------|
-| `structure[]` | Closed sensor ids (e.g. `orchestration-only`, `thin-adapter`, `aggregate-private-state`, `always-valid-factory`, `domain-event-on-mutation`, `no-anemic-model`) | `advisory` (default) or `enforced` | **Heuristics of module shape** — not proof that logic was extracted to Domain. Tier-2 sensors (`no-anemic-model`) stay advisory-only (cannot promote to enforced). |
+| `structure[]` | Closed sensor ids (e.g. `orchestration-only`, `thin-adapter`, `writes-via-aggregate`, `aggregate-private-state`, `always-valid-factory`, `domain-event-on-mutation`, `no-anemic-model`) | `advisory` (default) or `enforced` | **Heuristics of module shape** — not proof that logic was extracted to Domain. `writes-via-aggregate` is driver-import + write-token in the declaring layer (ADR 0032). Tier-2 sensors (`no-anemic-model`) stay advisory-only (cannot promote to enforced). |
 | `invariants[]` | Stable ids + description + `coverage` (`test` / `symbol`) + optional `appliesTo` globs | `advisory` or `enforced` | **Named policy + evidence** (symbol in source and/or test title/content). Does **not** execute business logic at check time and does **not** replace behavior/property tests. |
 
 **Reporting:** diagnostics carry `evidence.arkruleId` + `evidence.arkruleSource`. Label residual

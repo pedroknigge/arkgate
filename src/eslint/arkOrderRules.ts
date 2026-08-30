@@ -75,7 +75,7 @@ export function createArkOrderEslintRules(helpers: ArkOrderEslintHelpers) {
               file: relative,
               source,
               fromLayer,
-            }).filter((item) => item.ruleId === 'ARKORDER_GENERIC_UPDATE');
+            }).filter((item) => item.ruleId !== 'ARKORDER_KERNEL_IN_DOMAIN');
             for (const finding of findings) {
               helpers.reportAdapterDiagnostic(context, { loc: { start: { line: finding.line } } }, 'denied', {
                 ruleId: finding.ruleId,

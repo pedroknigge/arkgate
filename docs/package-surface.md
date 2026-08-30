@@ -3,7 +3,8 @@
 **Write. Check. Ship.**
 **When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.**
 That is the product wedge (host hook + required CI). Skills name the next step after that.
-**Not the wedge:** the optional in-process **ArkRun** runtime (`arkgate/runtime`).
+**Not the wedge:** the optional in-process **ArkRun** runtime (`arkgate/runtime`) and the
+optional **ArkOrder** pattern extra (`arkgate/order`).
 
 The check that must agree everywhere is small ([ADR 0026](adr/0026-gate-waist-facts-in-verdict-out.md)):
 `ark.config.json` + resolved-candidate-facts → one analysis-result (`valid`).
@@ -218,7 +219,8 @@ production deployment would need to satisfy; it is not a readiness certification
 ## Release notes (maintainers)
 
 Ship notes for a version live under [releases/](https://github.com/pedroknigge/arkgate/tree/main/docs/releases)
-(current published: [4.8.2.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.8.2.md);
+(current published: [4.8.3.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.8.3.md);
+prior published: [4.8.2.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.8.2.md);
 prior published: [4.8.1.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.8.1.md);
 prior published: [4.8.0.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.8.0.md);
 prior published: [4.7.6.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.7.6.md);

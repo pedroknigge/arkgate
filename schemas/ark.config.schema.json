@@ -882,6 +882,15 @@
           "type": "integer",
           "minimum": 1,
           "default": 7
+        },
+        "xiKeys": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "default": []
         }
       }
     }

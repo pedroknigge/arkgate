@@ -6,8 +6,9 @@ For **developers** integrating ArkGate into a product repo: agents, CI, config, 
 
 When the agent writes a bad import, the write doesn’t land. The same check fails the pull
 request. Not an API Gateway. Not a folder linter. Without a required CI status,
-`ark.config.json` is just documentation. ArkGate is import rules. ArkRules and ArkRun
-are optional — policies and an experimental runtime, not a second install.
+`ark.config.json` is just documentation. ArkGate is import rules. ArkRules, ArkRun,
+and ArkOrder are optional — policies, an experimental runtime, and the extra that
+stops slow product decisions being CRUD. Not a second install.
 
 If you only want the happy path, start at [use.md](use.md).
 
@@ -183,6 +184,26 @@ process-wide singleton). The kernel ships as `arkgate/runtime` in the same tarba
 not production durability; `K01` stays parked.
 See [configuration.md](configuration.md), [package-surface.md](package-surface.md), and
 [production-hardening.md](production-hardening.md).
+
+---
+
+## Optional ArkOrder extra and plane
+
+Layers can be green while the agent still PATCHes `plan` as if it were `seatCount`.
+Optional **`arkOrder`** on `ark.config.json` (schema `1.3`) is the extra that makes
+those few slow product decisions a write rule: field events absorb or escalate;
+a generic `update` of the plan does not land. Absence is silent. Compact starters
+leave it off.
+
+The plane is `arkgate/order` in package `arkgate`, not a second install.
+`createOrderPlane` is the factory. Call it only in `arkOrder.planeRoots`. Domain
+stays plane-free. Empty `planeRoots` in `enforced` mode fails closed
+(`ARKORDER_MISSING_PLANE`). In-memory. Not durable. Does not replace ArkRun.
+
+Copy [examples/arkorder-billing/](../examples/arkorder-billing/) (`plan` / `cycle` /
+`tenancy`) and rename the keys. Posting an invoice is absorbed; changing plan is a
+new release. See [configuration.md](configuration.md) and
+[package-surface.md](package-surface.md).
 
 ---
 

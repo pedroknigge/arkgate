@@ -12,6 +12,7 @@ export const ARK_RULE_SENSOR_IDS = [
   'domain-event-on-mutation',
   'orchestration-only',
   'thin-adapter',
+  'writes-via-aggregate',
   'no-anemic-model',
   'invariant-coverage',
 ] as const;

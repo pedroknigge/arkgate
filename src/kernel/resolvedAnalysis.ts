@@ -526,6 +526,9 @@ export function analyzeCanonicalResolvedProject(
     planeCalls: facts.arkOrderPlaneCalls,
     genericUpdates: facts.arkOrderGenericUpdates,
     planeRootHits: facts.arkOrderRootHits,
+    xiFieldWrites: facts.arkOrderXiFieldWrites,
+    ingestWritesXi: facts.arkOrderIngestWritesXi,
+    releaseKeyCounts: facts.arkOrderReleaseKeyCounts,
     dependencies: facts.dependencies,
     layerForFile: (path) =>
       layerByFile.get(path) ?? layerForRelativePath(path, input.contract.config.layers),

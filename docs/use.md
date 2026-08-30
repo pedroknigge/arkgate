@@ -80,11 +80,14 @@ The config only binds when the write doesn’t land and CI is required.
 |--|---------------|---------|
 | **ArkGate** (layers) | Import rules. The write doesn’t land. The PR fails. | Always — this is the product |
 | **ArkRules** | Optional policies *inside* a layer. | Off until you turn it on (start may ship advisory templates) |
-| **ArkRun** | Optional experimental runtime | Off. In-memory. Not Postgres. |
+| **ArkRun** | Optional experimental runtime (`arkgate/runtime`) | Off. In-memory. Not Postgres. |
+| **ArkOrder** | Stops the agent rewriting the few slow product decisions as CRUD (`arkgate/order`) | Off. Name `xiKeys` (plan / protocol, not `projectId`). Invoices and seats still flow. In-memory. Not durable. |
 
-Start always gives you **layers**. Compact starters do **not** turn on ArkRun.
-No ArkRules / ArkRun is fine — only ArkGate runs. Leftovers are labeled
-**`[Layer]`** vs **`[ArkRules]`**. Green imports ≠ elegant design. ArkRun ≠ durable stores.
+Start always gives you **layers**. Compact starters do **not** turn on ArkRun or
+ArkOrder. No extras is fine — only ArkGate runs. Leftovers are labeled
+**`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. Green
+imports ≠ elegant design. Green imports also ≠ a frozen billing plan. ArkRun ≠
+durable stores. ArkOrder does not replace ArkRun.
 
 ### New modules vs config edits
 

@@ -60,6 +60,7 @@ export type EvaluateArkRuleSensorsInput = {
       {
         orchestrationHeavy?: boolean;
         adapterThick?: boolean;
+        persistenceWrite?: boolean;
       }
     >
   >;
@@ -305,6 +306,27 @@ function evaluateThinAdapter(
   return out;
 }
 
+function evaluateWritesViaAggregate(
+  rule: EffectiveStructureRule,
+  input: EvaluateArkRuleSensorsInput
+): ArkRuleSensorViolation[] {
+  const out: ArkRuleSensorViolation[] = [];
+  for (const file of input.files) {
+    if (!matchesAppliesTo(file, rule.appliesTo)) continue;
+    if (!isInRuleLayer(file, rule, input.layerForFile)) continue;
+    if (input.fileHints?.[file]?.persistenceWrite) {
+      out.push(
+        baseViolation(
+          rule,
+          file,
+          `File imports a persistence driver and issues a write; route the write through a Domain aggregate and a persistence adapter (sensor writes-via-aggregate).`
+        )
+      );
+    }
+  }
+  return out;
+}
+
 function evaluateNoAnemicModel(
   rule: EffectiveStructureRule,
   shapes: readonly ClassShapeFact[],
@@ -357,6 +379,9 @@ export function evaluateArkRuleSensors(
         break;
       case 'thin-adapter':
         violations.push(...evaluateThinAdapter(rule, input));
+        break;
+      case 'writes-via-aggregate':
+        violations.push(...evaluateWritesViaAggregate(rule, input));
         break;
       case 'no-anemic-model':
         violations.push(...evaluateNoAnemicModel(rule, input.classShapes, input.layerForFile));
@@ -439,7 +464,11 @@ export function collectEmptyAppliesToFindings(
 
 /** IO / ORM import evidence (mirrors design-smells; kept local for Domain purity). */
 const IO_IMPORT_HINT_RE =
-  /\bfrom\s+['"](?:@?prisma\/client|@supabase\/|drizzle-orm|typeorm|knex|mongodb|pg|mysql2|better-sqlite3|ioredis|redis)['"]|require\(\s*['"](?:@?prisma\/client|pg|knex|typeorm)/;
+  /\bfrom\s+['"](?:@?prisma\/client|@supabase\/|drizzle-orm|typeorm|knex|mongodb|pg|mysql2|mongoose|better-sqlite3|ioredis|redis|kysely|sequelize)['"]|require\(\s*['"](?:@?prisma\/client|pg|knex|typeorm|mongoose)/;
+
+/** Write tokens that skip the aggregate when paired with a persistence driver import. */
+const PERSISTENCE_WRITE_HINT_RE =
+  /\.(?:insert(?:One|Many)?|update(?:One|Many)?|upsert|delete(?:One|Many)?|createMany|create|replaceOne|findOneAnd(?:Update|Delete|Replace))\s*\(|\bINSERT\s+INTO\b|\bUPDATE\s+[A-Za-z_][\w.]*\s+SET\b|\bDELETE\s+FROM\b/i;
 
 const HANDLER_SHAPE_HINT_RE =
   /\b(?:@Controller|@Get|@Post|@Put|@Delete|Router\(\)|createRouter|express\.Router|fastify\.(?:get|post)|export\s+(?:async\s+)?function\s+(?:GET|POST|PUT|DELETE|PATCH)\b|export\s+const\s+(?:GET|POST|PUT|DELETE|PATCH)\s*=)/;
@@ -462,7 +491,11 @@ const BUSINESS_BRANCH_HINT_RE =
 export function deriveArkRuleFileHints(
   _file: string,
   content: string
-): { orchestrationHeavy?: boolean; adapterThick?: boolean } | null {
+): {
+  orchestrationHeavy?: boolean;
+  adapterThick?: boolean;
+  persistenceWrite?: boolean;
+} | null {
   if (!content || content.length < 40) return null;
 
   const domainPredicates = content.match(new RegExp(DOMAIN_PREDICATE_HINT_RE.source, 'g')) ?? [];
@@ -493,10 +526,13 @@ export function deriveArkRuleFileHints(
     (hasIo && hasMapping && (ifCount >= 4 || domainPredicates.length >= 1)) ||
     (hasHandler && hasIo); // hollow-persistence style: HTTP + persistence together
 
-  if (!orchestrationHeavy && !adapterThick) return null;
+  const persistenceWrite = hasIo && PERSISTENCE_WRITE_HINT_RE.test(content);
+
+  if (!orchestrationHeavy && !adapterThick && !persistenceWrite) return null;
   return {
     ...(orchestrationHeavy ? { orchestrationHeavy: true } : {}),
     ...(adapterThick ? { adapterThick: true } : {}),
+    ...(persistenceWrite ? { persistenceWrite: true } : {}),
   };
 }
 
@@ -505,8 +541,14 @@ export function deriveArkRuleFileHints(
  */
 export function buildArkRuleFileHints(
   fileContents: Readonly<Record<string, string>>
-): Record<string, { orchestrationHeavy?: boolean; adapterThick?: boolean }> {
-  const out: Record<string, { orchestrationHeavy?: boolean; adapterThick?: boolean }> = {};
+): Record<
+  string,
+  { orchestrationHeavy?: boolean; adapterThick?: boolean; persistenceWrite?: boolean }
+> {
+  const out: Record<
+    string,
+    { orchestrationHeavy?: boolean; adapterThick?: boolean; persistenceWrite?: boolean }
+  > = {};
   for (const [file, content] of Object.entries(fileContents)) {
     const hint = deriveArkRuleFileHints(file, content);
     if (hint) out[file.replace(/\\/g, '/')] = hint;

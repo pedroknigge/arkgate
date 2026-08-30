@@ -29,6 +29,7 @@ guard/publish symbol. Tooling extracts; Kernel classifies against the Effective 
 | `domain-event-on-mutation` | 1 | Mutating method without guard/publish reference |
 | `orchestration-only` | 1 | Application-layer domain branching (conservative) |
 | `thin-adapter` | 1 | Adapter exceeds thin shape |
+| `writes-via-aggregate` | 1 | Persistence driver import + write token in the declaring layer (ADR 0032) |
 | `no-anemic-model` | 2 | Advisory only, never promotable |
 | `invariant-coverage` | 1 | Catalog entry lacks coverage evidence |
 

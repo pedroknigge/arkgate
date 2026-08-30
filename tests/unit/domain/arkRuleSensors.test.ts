@@ -201,6 +201,49 @@ export async function save(order: Order) {
     expect(findings.some((f) => f.file.includes('clean'))).toBe(false);
   });
 
+  it('flags persistence driver writes in the declaring layer (ADR 0032)', () => {
+    const skip = `
+import { PrismaClient } from '@prisma/client';
+export async function saveOrder(cmd) {
+  const prisma = new PrismaClient();
+  await prisma.order.create({ data: cmd });
+}
+`;
+    const readOnly = `
+import { PrismaClient } from '@prisma/client';
+export async function listOrders() {
+  const prisma = new PrismaClient();
+  return prisma.order.findMany();
+}
+`;
+    expect(deriveArkRuleFileHints('src/application/save-order.ts', skip)?.persistenceWrite).toBe(
+      true
+    );
+    expect(deriveArkRuleFileHints('src/application/list-orders.ts', readOnly)?.persistenceWrite).toBeUndefined();
+
+    const findings = evaluateArkRuleSensors({
+      arkRules: effective([
+        {
+          id: 'writes',
+          sensor: 'writes-via-aggregate',
+          mode: 'advisory',
+          appliesTo: ['src/application/**'],
+        },
+      ]),
+      classShapes: [],
+      files: ['src/application/save-order.ts', 'src/application/list-orders.ts'],
+      fileHints: buildArkRuleFileHints({
+        'src/application/save-order.ts': skip,
+        'src/application/list-orders.ts': readOnly,
+      }),
+    });
+    expect(findings.some((f) => f.arkruleId === 'writes' && f.file.includes('save-order'))).toBe(
+      true
+    );
+    expect(findings.some((f) => f.file.includes('list-orders'))).toBe(false);
+    expect(findings.every((f) => f.failsStrict === false)).toBe(true);
+  });
+
   it('warns on zero-match appliesTo (ADR 0012 empty scope)', () => {
     const arkRules = effective([
       {

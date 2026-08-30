@@ -51,6 +51,7 @@ Optional extra rules *inside* a layer. Off unless you turn them on.
 |-----|------------|
 | [0012](0012-arkrules-contract-composition.md) | `arkRules` points at sibling files. Empty scope is not silent green. |
 | [0013](0013-arkrules-structural-sensors.md) | Closed sensor list. Direct facts block; inference advises. |
+| [0032](0032-writes-via-aggregate-sensor.md) | Application/Feature persistence **writes** belong behind an aggregate + adapter. Advisory default. |
 | [0014](0014-arkrules-invariant-catalog.md) | Invariants are data, not executable code. Advisory until promoted. |
 | [0015](0015-arkrules-migration-skills.md) | No new skill names. Route through adopt / fix / contract / architect. |
 | [0016](0016-arkrules-no-executable-core.md) | No user predicates in the gate. No LLM pass/fail. |

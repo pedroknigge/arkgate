@@ -147,7 +147,7 @@ When `arkRun` is present:
 
 ### Autopilot + ArkOrder
 When `arkOrder` is present:
-- Grind skip clusters with judgment: `ARKORDER_MISSING_PLANE` / `ARKORDER_KERNEL_IN_DOMAIN` / `ARKORDER_GENERIC_UPDATE` / `ARKORDER_TOO_MANY_PARAMS` / `ARKORDER_INGEST_WRITES_XI`. Freeze ξ with `release()`; never `update`/`patch`/`set`.
+- Grind skip clusters with judgment: `ARKORDER_MISSING_PLANE` / `ARKORDER_KERNEL_IN_DOMAIN` / `ARKORDER_GENERIC_UPDATE` / `ARKORDER_TOO_MANY_PARAMS` / `ARKORDER_INGEST_WRITES_XI` / `ARKORDER_XI_FIELD_WRITE`. Freeze ξ with `release()`; never `update`/`patch`/`set`. Name `xiKeys`; do not persist those keys from a use-case.
 - Extra off → `/ark-adopt` (advisory). Do not invent `/ark-order`.
 - Skills never enforce.
 

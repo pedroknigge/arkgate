@@ -142,6 +142,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 ### Adopt + ArkRules
 - After classify: emit or refresh `arkRules` for matched layers (exact names; generic mold for unknowns).
 - Mine rules → inventory + write advisory invariants/structure into `arkrules/<Layer>.json` **in this turn**.
+- Application / Features templates include advisory `writes-via-aggregate`: driver import + write token in a use case is the skip. Do not copy `Externals/` / `admission.ts` folder religion.
 - Freeze baseline is **[Layer]** debt; inventory residual is **[ArkRules]** — report both.
 
 ### Adopt + ArkRun
@@ -156,8 +157,8 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 
 ### Adopt + ArkOrder
 - User asked to turn the extra on: write **advisory** `arkOrder` on `ark.config.json` (`schemaVersion` `1.3+`) **in this turn**. Default `"mode": "advisory"` — never session-0 default `enforced`.
-- Required shape: `planeRoots` (real files; empty + enforced = `ARKORDER_MISSING_PLANE`), `managedLayers` (existing `layers[].name` only), `maxXiKeys` (default 7).
-- Example (consumer trees — not this library's 4-layer compact):
+- Required shape: `planeRoots` (real files; empty + enforced = `ARKORDER_MISSING_PLANE`), `managedLayers` (existing `layers[].name` only), `maxXiKeys` (default 7), **`xiKeys`** (the 3–5 slow names; empty = field-write sensor silent).
+- Example (consumer trees — not this library's 4-layer compact). Copy billing, **rename the three keys**:
 
 ```json
 {
@@ -166,10 +167,14 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
     "mode": "advisory",
     "planeRoots": ["src/main.ts"],
     "managedLayers": ["Application"],
-    "maxXiKeys": 7
+    "maxXiKeys": 7,
+    "xiKeys": ["plan", "cycle", "tenancy"]
   }
 }
 ```
+
+- `xiKeys` are meaning, not membership. `projectId` / `orgId` do not belong. If `proposeRelease` throws empty blast, that key does not order anything.
+- A use-case that `prisma.*.update({ plan })` while `plan` is in `xiKeys` is **[ArkOrder]** `ARKORDER_XI_FIELD_WRITE`. Invoices and seats still flow through `ingest`.
 
 - Do **not** put `arkOrder` on the compact starter / `ark start` scaffold. Domain stays plane-free. Import `createOrderPlane` from `arkgate/order` (same npm package).
 - Absence is valid and **silent** — never force the extra. Do not invent `/ark-order`.

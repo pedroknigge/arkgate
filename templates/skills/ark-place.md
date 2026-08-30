@@ -127,8 +127,9 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 
 
 ### Place + ArkRules
-- Choose layer from contract **and** check structure sensors for that layer (private state, factory, thin adapter).
+- Choose layer from contract **and** check structure sensors for that layer (private state, factory, thin adapter, writes-via-aggregate).
 - Scaffold to satisfy **[ArkRules]** when present; state which sensors apply.
+- Persistence **writes** (insert/update/delete against a driver) go through a Domain aggregate + persistence adapter. Application/Feature files that import Prisma/pg/Supabase and call `.insert` / `.create` are **[ArkRules]** `writes-via-aggregate`. Do not invent `Externals/` or `admission.ts`.
 
 ### Place + ArkRun
 When `arkRun` is present on the architecture config:
@@ -146,7 +147,8 @@ When `arkOrder` is present on the architecture config:
 - Import `createOrderPlane` from `arkgate/order` (same npm package). Domain-role files stay plane-free.
 - Freeze ξ with `release()`; derive s with `project()`; field `ingest()` never mints a pattern; `proposeRelease()` needs a non-empty blast. There is no `update`/`patch`/`set`.
 - Call the factory only inside `arkOrder.planeRoots`. Empty roots in `enforced` mode is `ARKORDER_MISSING_PLANE`.
-- Skip clusters (`ARKORDER_MISSING_PLANE` / `ARKORDER_KERNEL_IN_DOMAIN` / `ARKORDER_GENERIC_UPDATE` / `ARKORDER_TOO_MANY_PARAMS` / `ARKORDER_INGEST_WRITES_XI`): place this artifact, then grind via `/ark-autopilot`. Extra not on → `/ark-adopt`. Do not invent `/ark-order`.
+- Named slow keys live in `arkOrder.xiKeys`. A managed-layer Prisma/pg write of those keys is `ARKORDER_XI_FIELD_WRITE` — absorb with `ingest` or change the pattern with `proposeRelease`.
+- Skip clusters (`ARKORDER_MISSING_PLANE` / `ARKORDER_KERNEL_IN_DOMAIN` / `ARKORDER_GENERIC_UPDATE` / `ARKORDER_TOO_MANY_PARAMS` / `ARKORDER_INGEST_WRITES_XI` / `ARKORDER_XI_FIELD_WRITE`): place this artifact, then grind via `/ark-autopilot`. Extra not on → `/ark-adopt`. Do not invent `/ark-order`.
 - Absence of the extra is valid. Do not invent `/ark-order`. Skills never enforce.
 
 ## Subagent fan-out (optional, host-dependent)
@@ -178,6 +180,8 @@ the same files or weaken the gate.
    - Orchestrates a use case, no I/O of its own → application layer.
    - Talks to a database, queue, API, filesystem → an adapter layer on the side
      that matches the direction (driven/persistence vs driving/http).
+     **Writes** go through a Domain aggregate that uses a persistence port; the
+     adapter implements the port. Do not put `prisma.order.create` in a use case.
    - Reacts to events, long-running coordination (saga/workflow), scheduled
      jobs, projections → the event/workflow layers if the config declares them.
      When `arkRun` is on, wire those through the kernel (register + declarations),
