@@ -32,6 +32,7 @@ export function analyzeTrustedResolvedProject(input: {
     fileContents: Readonly<Record<string, string>>;
     testFiles?: readonly string[];
     testGlobsMissing?: boolean;
+    coverageBudgetExhausted?: boolean;
   };
   fileHints?: Readonly<
     Record<

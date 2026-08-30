@@ -63,15 +63,41 @@ function matchSimpleGlob(glob, file) {
 }
 
 /**
+ * Declared invariant ids from an Effective catalog. Empty when the extra is off.
+ * @param {{ invariants?: Array<{ id?: unknown }> } | null | undefined} arkRules
+ * @returns {string[]}
+ */
+export function invariantIdsFromCatalog(arkRules) {
+  return (arkRules?.invariants ?? [])
+    .map((inv) => inv?.id)
+    .filter((id) => typeof id === 'string' && id.length > 0);
+}
+
+/**
  * @param {string} root
  * @param {{ files?: Array<{ path: string }> }} facts
- * @param {{ testGlobs?: string[] }} [opts]
- * @returns {{ fileContents: Record<string, string>, testFiles: string[], testGlobsMissing: boolean }}
+ * @param {{ testGlobs?: string[], invariantIds?: string[] }} [opts]
+ * @returns {{
+ *   fileContents: Record<string, string>,
+ *   testFiles: string[],
+ *   testGlobsMissing: boolean,
+ *   coverageBudgetExhausted: boolean,
+ * }}
  */
 export function loadInvariantCoverageInputs(root, facts, opts = {}) {
   const fileContents = {};
   const testFiles = [];
   const seen = new Set();
+  // Declared invariant ids. When present, a test file is RETAINED only if it
+  // mentions one: scanning is cheap (hundreds of small files), retaining is
+  // what costs memory. Without this the budget goes to whichever N tests the
+  // walk reaches first — an arbitrary order — so coverage is wrong on any repo
+  // with more test files than budget. Measured: 707 tests against a cap of 400.
+  const invariantIds = Array.isArray(opts.invariantIds)
+    ? opts.invariantIds.filter((id) => typeof id === 'string' && id.length > 0)
+    : [];
+  const mentionsInvariant = (content) =>
+    invariantIds.length === 0 || invariantIds.some((id) => content.includes(id));
   const testGlobs = Array.isArray(opts.testGlobs)
     ? opts.testGlobs.filter((g) => typeof g === 'string' && g.length > 0)
     : [];
@@ -93,40 +119,51 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
       const stat = fs.statSync(absolute);
       if (!stat.isFile() || stat.size > MAX_FILE_BYTES) return;
       const content = fs.readFileSync(absolute, 'utf8');
+      const asTest = forceAsTest || isTestPath(rel);
+      // A test that names no invariant is evidence of nothing: scan it, drop
+      // it, and let it cost no budget.
+      if (asTest && !mentionsInvariant(content)) return;
       seen.add(rel);
       fileContents[rel] = content;
-      if (forceAsTest || isTestPath(rel)) testFiles.push(rel);
+      if (asTest) testFiles.push(rel);
     } catch {
       // skip unreadable
     }
   };
 
+  // Tests FIRST, then production files.
+  //
+  // The order is load-bearing, not stylistic. `pushFile` stops at
+  // MAX_COVERAGE_FILES, and a real repo has far more production files than the
+  // budget — so walking facts first consumed the whole budget and the test walk
+  // pushed nothing. Coverage then reported `testGlobsMissing: true`, which the
+  // caller renders as "never-had-tests": a claim about the USER's repo that was
+  // actually about our own budget. Measured on a 4511-file project: every
+  // invariant reported uncovered while its test sat on disk with the invariant
+  // id in the describe title. Tests are tens of files, not thousands, so giving
+  // them the head of the budget costs the production scan nothing in practice.
+  const testWalkRoots = useCustomGlobs
+    ? ['.', 'tests', 'test', 'src', '__tests__', 'spec']
+    : ['tests', 'test', 'src', '__tests__'];
+  for (const dir of testWalkRoots) {
+    const absDir = path.join(root, dir === '.' ? '' : dir);
+    if (!fs.existsSync(absDir)) continue;
+    walkTestFiles(absDir, root, (rel) => {
+      if (isTestPath(rel)) pushFile(rel, true);
+    });
+  }
+
   for (const file of facts?.files ?? []) {
     if (file?.path) pushFile(file.path);
   }
 
-  if (useCustomGlobs) {
-    // Walk project roots and keep files matching custom globs.
-    for (const dir of ['.', 'tests', 'test', 'src', '__tests__', 'spec']) {
-      const absDir = path.join(root, dir === '.' ? '' : dir);
-      if (!fs.existsSync(absDir)) continue;
-      walkTestFiles(absDir, root, (rel) => {
-        if (isTestPath(rel)) pushFile(rel, true);
-      });
-    }
-  } else {
-    // Walk common test roots when facts only cover production include globs.
-    for (const dir of ['tests', 'test', 'src', '__tests__']) {
-      const absDir = path.join(root, dir);
-      if (!fs.existsSync(absDir)) continue;
-      walkTestFiles(absDir, root, (rel) => {
-        if (isTestPath(rel)) pushFile(rel, true);
-      });
-    }
-  }
-
   const testGlobsMissing = testFiles.length === 0;
-  return { fileContents, testFiles, testGlobsMissing };
+  return {
+    fileContents,
+    testFiles,
+    testGlobsMissing,
+    coverageBudgetExhausted: seen.size >= MAX_COVERAGE_FILES,
+  };
 }
 
 /**

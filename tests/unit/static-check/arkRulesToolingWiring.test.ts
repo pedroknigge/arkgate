@@ -54,6 +54,59 @@ describe('ArkRules tooling wiring', () => {
     );
   });
 
+  it('finds tests even when production files exceed the coverage budget', () => {
+    // Regression: the file budget (MAX_COVERAGE_FILES) was consumed by the
+    // facts loop BEFORE the test walk ran, so any repo with more production
+    // files than the budget reported testGlobsMissing=true — i.e. "this repo
+    // never had tests" — no matter how many tests it actually had.
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'src', 'domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+
+    const files: Array<{ path: string }> = [];
+    for (let i = 0; i < 500; i += 1) {
+      const rel = `src/domain/mod${i}.ts`;
+      fs.writeFileSync(path.join(root, rel), `export const v${i} = ${i};\n`);
+      files.push({ path: rel });
+    }
+    fs.writeFileSync(
+      path.join(root, 'tests', 'order.test.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+
+    const inputs = loadInvariantCoverageInputs(root, { files });
+    expect(inputs.testGlobsMissing).toBe(false);
+    expect(inputs.testFiles.some((t: string) => t.includes('order.test.ts'))).toBe(true);
+  });
+
+  it('spends the file budget on tests that mention an invariant, not on walk order', () => {
+    // With more test files than MAX_COVERAGE_FILES, walk order decided which
+    // ones got read — so the test that actually named the invariant could be
+    // dropped while 400 unrelated ones filled the budget. Passing invariantIds
+    // makes the budget selective: scan is cheap, retention is what costs.
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    for (let i = 0; i < 500; i += 1) {
+      fs.writeFileSync(
+        path.join(root, 'tests', `noise${i}.test.ts`),
+        `it('unrelated ${i}', () => {})\n`
+      );
+    }
+    // The one that matters is written LAST: by walk order it would be dropped.
+    fs.writeFileSync(
+      path.join(root, 'tests', 'zzz-relevant.test.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'] }
+    );
+    expect(inputs.testGlobsMissing).toBe(false);
+    expect(inputs.testFiles).toEqual(['tests/zzz-relevant.test.ts']);
+  });
+
   it('loadArkRuleFileHints derives orchestrationHeavy / adapterThick from disk', () => {
     const root = makeRoot();
     fs.mkdirSync(path.join(root, 'src', 'application'), { recursive: true });
@@ -174,6 +227,48 @@ export async function save(order: Order) {
       ])
     );
     expect(summary.coveredSample?.some((c: { id: string }) => c.id === 'INV-ORDER-001')).toBe(true);
+  });
+
+  it('rules-under-contract still finds covering tests when production files exceed the budget', () => {
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'arkrules'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src', 'domain'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'arkrules', 'DomainModel.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        layer: 'DomainModel',
+        structure: [],
+        invariants: [
+          {
+            id: 'INV-ORDER-001',
+            description: 'Order total never negative',
+            coverage: { test: true },
+            mode: 'advisory',
+          },
+        ],
+      })
+    );
+    const files: Array<{ path: string }> = [];
+    for (let i = 0; i < 500; i += 1) {
+      const rel = `src/domain/mod${i}.ts`;
+      fs.writeFileSync(path.join(root, rel), `export const v${i} = ${i};\n`);
+      files.push({ path: rel });
+    }
+    fs.writeFileSync(
+      path.join(root, 'tests', 'order.test.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+    const config = {
+      schemaVersion: '1.1',
+      arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+      layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+      rules: [],
+    };
+    const summary = summarizeRulesUnderContract(root, config, { files });
+    expect(summary.coveredInvariants).toBe(1);
+    expect(summary.uncoveredInvariants).toBe(0);
   });
 
   it('rules-under-contract HTML lists layers, structure sensors, and invariants (not counts-only)', () => {

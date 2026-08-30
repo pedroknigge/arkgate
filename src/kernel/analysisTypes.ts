@@ -70,6 +70,7 @@ export type AnalyzeResolvedProjectInput = {
     fileContents: Readonly<Record<string, string>>;
     testFiles?: readonly string[];
     testGlobsMissing?: boolean;
+    coverageBudgetExhausted?: boolean;
   };
   /**
    * AR07 — Tooling-supplied orchestration/thin-adapter heuristics per file.

@@ -11,7 +11,10 @@ import {
 import { effectiveAnalysisConfig } from './analysis-policy.mjs';
 import { resolveCandidateFacts } from './resolved-candidate-facts.mjs';
 import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
-import { loadInvariantCoverageInputs } from './invariant-coverage-io.mjs';
+import {
+  invariantIdsFromCatalog,
+  loadInvariantCoverageInputs,
+} from './invariant-coverage-io.mjs';
 import { loadArkRuleFileHints } from './arkrule-file-hints.mjs';
 
 /** Resolve canonical facts and optionally retain filesystem probes for resident invalidation. */
@@ -67,7 +70,9 @@ export function resolveArchitectureSnapshot({
   });
   const hasInvariants = (arkRulesLoad.arkRules?.invariants?.length ?? 0) > 0;
   const coverageInputs = hasInvariants
-    ? loadInvariantCoverageInputs(root, facts)
+    ? loadInvariantCoverageInputs(root, facts, {
+        invariantIds: invariantIdsFromCatalog(arkRulesLoad.arkRules),
+      })
     : undefined;
   // AR07: Tooling fileHints for orchestration-only / thin-adapter (reuse coverage contents when present).
   const fileHints = loadArkRuleFileHints(
