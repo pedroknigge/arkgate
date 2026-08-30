@@ -15,23 +15,22 @@
         "unpackedBytes": 2910173,
         "files": 190
       },
-      "exception": "ArkGate 4.3.0 Phase ACS agent contract surface (diagnostic catalog, status manifest, agent projection, Agent Skills packaging of 13 skills, finding refs, placement A/B eval, honesty docs). Clean measurement on release/4.3.0 tip 4e9ffdc + CI build 31293903842: 819,295 packed / 2,910,173 unpacked / 190 files. Recalibration retained ≥10% fixed headroom. 4.6.5 raises packed/unpacked ceilings for adopt/doctor/honesty docs and generated skills. AL01–AL04 honesty adds adoption-stance + doctor/start copy (CI pack 919,438 / 3,247,311 / 208 files). 4.6.7 CLI extracts add shipped bin/lib modules (CI pack 873,367 / 3,122,604 / 214 files). 4.7.0 ArkRun extra + companion DX (schema 1.2, sensors, doctor/status, generated bin/lib, skills) pack 945,377 / unpacked 3,388,347 / 219 files. 4.8.0 PK01 folds ArkRun kernel + Nest adapter into the same arkgate tarball as real subpaths (ADR 0031): local pack 1,185,915 / unpacked 4,235,115 / 238 files. Current packed ceiling: 1,320,000. Unpacked ceiling: 4,700,000. File ceiling: 270 (≥10% over 238)."
+      "exception": "ArkGate 4.3.0 Phase ACS agent contract surface (diagnostic catalog, status manifest, agent projection, Agent Skills packaging of 13 skills, finding refs, placement A/B eval, honesty docs). Clean measurement on release/4.3.0 tip 4e9ffdc + CI build 31293903842: 819,295 packed / 2,910,173 unpacked / 190 files. Recalibration retained \u226510% fixed headroom. 4.6.5 raises packed/unpacked ceilings for adopt/doctor/honesty docs and generated skills. AL01\u2013AL04 honesty adds adoption-stance + doctor/start copy (CI pack 919,438 / 3,247,311 / 208 files). 4.6.7 CLI extracts add shipped bin/lib modules (CI pack 873,367 / 3,122,604 / 214 files). 4.7.0 ArkRun extra + companion DX (schema 1.2, sensors, doctor/status, generated bin/lib, skills) pack 945,377 / unpacked 3,388,347 / 219 files. 4.8.0 PK01 folds ArkRun kernel + Nest adapter into the same arkgate tarball as real subpaths (ADR 0031): local pack 1,185,915 / unpacked 4,235,115 / 238 files. Current packed ceiling: 1,320,000. Unpacked ceiling: 4,700,000. File ceiling: 270 (\u226510% over 238)."
     },
     "runtime": {
       "path": "packages/runtime",
-      "maxPackedBytes": 236000,
-      "maxUnpackedBytes": 837000,
+      "maxPackedBytes": 259000,
+      "maxUnpackedBytes": 924000,
       "maxFiles": 20,
       "measuredCandidate": {
-        "sha": "4e9ffdc19b8e86709c4d3a79ad07dcfc29654ea9",
-        "ciCandidateSha": "4e9ffdc19b8e86709c4d3a79ad07dcfc29654ea9",
-        "ciRun": "31293903842",
-        "version": "0.1.0-experimental.0",
-        "packedBytes": 165402,
-        "unpackedBytes": 600619,
+        "sha": "0782aa5066f8b42cc70c2b9691c243ff33d6dd10",
+        "local": true,
+        "version": "0.1.0-experimental.2",
+        "packedBytes": 235185,
+        "unpackedBytes": 839751,
         "files": 9
       },
-      "exception": "4.3.0 train remeasure of @arkgate/runtime companion: 165,402 packed on CI 31293903842. 4.7.0 ArkRun companion DX (declarations, information package, transport, inspector, graph slices) pack 214,093 / unpacked 760,875 / 9 files. Ceiling 236,000 packed / 837,000 unpacked retains ≥10% headroom over that 4.7.0 pack (previous 181,943 packed ceiling superseded)."
+      "exception": "4.3.0 train remeasure of @arkgate/runtime companion: 165,402 packed on CI 31293903842. 4.7.0 ArkRun companion DX (declarations, information package, transport, inspector, graph slices) pack 214,093 / unpacked 760,875 / 9 files. Ceiling 236,000 packed / 837,000 unpacked retains \u226510% headroom over that 4.7.0 pack (previous 181,943 packed ceiling superseded). 4.8.4 remeasure: the runtime bundle carries src/runtime + src/nestjs, which pull the domain, so this patch's additions ship inside it (coverageRoots, sharedRoots, allowedCrossSlice, filesRead are all present in packages/runtime/dist). Local pack on 0782aa5: 235,185 packed / 839,751 unpacked / 9 files \u2014 the unpacked figure crossed the previous 837,000 ceiling by 2,751 bytes (0.33%). Note the previous ceiling was exactly 10% over the 4.7.0 pack and was never remeasured across 4.8.0-4.8.3, so part of this growth predates 4.8.4. New ceilings retain >=10% headroom over the 4.8.4 measurement: 259,000 packed / 924,000 unpacked. Measured locally, not on CI, unlike the earlier entries."
     }
   }
 }
