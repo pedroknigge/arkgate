@@ -692,8 +692,10 @@ It checks real on-disk contract, MCP, skill, and report artifacts; it does not m
 
 ## ArkRun kernel: contract discovery
 
-The **ArkRun** kernel (`@arkgate/runtime`) is currently **experimental** and is not required for
-static gate adoption or presented as production-ready. If you are evaluating it, prefer
+The **ArkRun** kernel (`arkgate/runtime`) is currently **experimental** and is not required for
+static gate adoption or presented as production-ready. From **4.8.0** it lives in the same
+`arkgate` tarball (ADR 0031). `@arkgate/runtime` is **deprecated leftover** — do not
+`npm i @arkgate/runtime` for new work. If you are evaluating it, prefer
 `createStrictArkKernel()`. Each call creates an isolated instance — there is no process-wide
 singleton. It wires the registry, graph,
 policies, event bus, audit trail, event contracts, outbox, observability,
@@ -702,7 +704,7 @@ projections, metadata, workflow engine, and 11-layer architecture profile:
 ```ts
 import {
   createStrictArkKernel,
-} from '@arkgate/runtime';
+} from 'arkgate/runtime';
 
 const ark = createStrictArkKernel();
 // ... define intents, event contracts, metadata, projections, and workflows through ark.*
@@ -712,11 +714,10 @@ const contract = ark.manifest().toJSON();
 // contract.observability, projections
 ```
 
-Use `@arkgate/runtime` only when evaluating the experimental ArkRun kernel. The stable `arkgate`
-gate package contains no runtime implementation (the kernel is not in the `arkgate` tarball).
-Install `@arkgate/runtime@experimental`. Verify with `npm view @arkgate/runtime dist-tags --json`.
-The root release workflow publishes the companion under `experimental` (never `latest`).
-Package surface policy: [package-surface.md](package-surface.md).
+Use `arkgate/runtime` only when evaluating the experimental ArkRun kernel. One install:
+`npm install arkgate`. The stable `arkgate` **root** export remains the gate (no kernel factory).
+`@arkgate/runtime` is a deprecated leftover 0.x companion (`experimental` dist-tag) for existing
+pins. Package surface policy: [package-surface.md](package-surface.md).
 
 Agents should read `contract` and `ark.observability.report()` before generating or modifying code.
 
@@ -1216,7 +1217,7 @@ Decision rationale: [ADR 0017 — MCP verdicts require explicit project identity
 ## ArkRun kernel workflow (not the default path)
 
 This section is for adopters who **opt into** the experimental **ArkRun** kernel
-(`@arkgate/runtime`). Construct it with `createStrictArkKernel` (per instance; no process-wide
+(`arkgate/runtime`; `@arkgate/runtime` is deprecated leftover). Construct it with `createStrictArkKernel` (per instance; no process-wide
 singleton). It is **not** the Beautiful Path day-zero curriculum. Default remains: `ark start` →
 doctor → compact router (and `/ark-autopilot` only after the skill pack).
 
