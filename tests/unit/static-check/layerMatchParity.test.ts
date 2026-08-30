@@ -11,6 +11,7 @@ import {
   layerForRelativePath as layerTs,
   isEdgeDenied as edgeTs,
   findDeniedEdgeRule as findTs,
+  findDeniedEdgeDecision as decisionTs,
   sliceIdForPath as sliceTs,
   inferSliceFoldersFromPatterns as inferTs,
   scanExcludePatterns as scanTs,
@@ -99,6 +100,39 @@ describe('layer-match parity (domain TS ↔ generated bin ESM)', async () => {
     expect(inferTs(['src/features/**'])).toEqual(bin.inferSliceFoldersFromPatterns(['src/features/**']));
     expect(findTs(rules, 'Features', 'Features', opts)?.peerIsolation).toBe(true);
     expect(bin.findDeniedEdgeRule(rules, 'Features', 'Features', opts)?.peerIsolation).toBe(true);
+  });
+
+  it('sharedRoots / allowedCrossSlice declarations agree', () => {
+    const rules = [
+      {
+        from: 'Features',
+        to: 'Features',
+        allowed: false,
+        peerIsolation: true,
+        sharedRoots: ['ui'],
+        allowedCrossSlice: [{ from: 'checkout', to: 'catalog' }],
+      },
+    ];
+    const featLayers = [{ name: 'Features', patterns: ['src/features/**'] }];
+    const cases2 = [
+      ['src/features/auth/a.ts', 'src/ui/button.tsx'],
+      ['src/features/auth/a.ts', 'src/widgets/spinner.tsx'],
+      ['src/features/checkout/a.ts', 'src/features/catalog/b.ts'],
+      ['src/features/catalog/b.ts', 'src/features/checkout/a.ts'],
+    ];
+    for (const [fromPath, toPath] of cases2) {
+      const opts = { fromPath, toPath, layers: featLayers };
+      expect(edgeTs(rules, 'Features', 'Features', opts)).toBe(
+        bin.isEdgeDenied(rules, 'Features', 'Features', opts)
+      );
+      expect(decisionTs(rules, 'Features', 'Features', opts)?.peerIsolationReason).toBe(
+        bin.findDeniedEdgeDecision(rules, 'Features', 'Features', opts)?.peerIsolationReason
+      );
+    }
+    expect(bin.pathUnderSharedRoot('src/ui/x.ts', ['ui'])).toBe(true);
+    expect(bin.crossSliceEdgeAllowed([{ from: 'a', to: 'b' }], 'features/a', 'features/b')).toBe(
+      true
+    );
   });
 
   it('layerForFile (bin) matches relative classification', () => {

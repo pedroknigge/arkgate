@@ -263,6 +263,29 @@ describe('T01 semantic policy delta', () => {
       path: '$.rules[DomainModel->DomainModel].sliceFolders',
     },
     {
+      name: 'declares shared roots exempt from the peerIsolation unclassifiable denial',
+      candidate: {
+        ...structuredClone(BASE_CONFIG),
+        rules: [{ ...structuredClone(BASE_CONFIG.rules[0]), sharedRoots: ['ui'] }],
+      },
+      classification: 'weakening',
+      path: '$.rules[DomainModel->DomainModel].sharedRoots',
+    },
+    {
+      name: 'declares a directed cross-slice edge',
+      candidate: {
+        ...structuredClone(BASE_CONFIG),
+        rules: [
+          {
+            ...structuredClone(BASE_CONFIG.rules[0]),
+            allowedCrossSlice: [{ from: 'checkout', to: 'catalog' }],
+          },
+        ],
+      },
+      classification: 'weakening',
+      path: '$.rules[DomainModel->DomainModel].allowedCrossSlice',
+    },
+    {
       name: 'raises the TypeScript suppression threshold',
       candidate: {
         ...structuredClone(BASE_CONFIG),

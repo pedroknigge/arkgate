@@ -106,7 +106,7 @@
     {
       "id": "managed-upgrade",
       "optional": true,
-      "note": "4.1.0: unit-tested S4 force-preserve; mutation NoCoverage residual on toml-section branch — optional for group gate, still pinned for Z08 causal.",
+      "note": "4.1.0: unit-tested S4 force-preserve; mutation NoCoverage residual on toml-section branch \u2014 optional for group gate, still pinned for Z08 causal.",
       "targets": [
         {
           "file": "bin/lib/managed-upgrade.mjs",
@@ -137,12 +137,12 @@
     },
     {
       "id": "peer-isolation-fail-closed",
-      "note": "DF04: peerIsolationMustDeny pure fail-closed core (missing paths/slices/folders).",
+      "note": "DF04: peerIsolationDecision pure fail-closed core (missing paths/slices/folders, declared shared roots, declared cross-slice edges). peerIsolationMustDeny is its boolean face.",
       "targets": [
         {
           "file": "src/domain/layerMatch.ts",
-          "startLine": 337,
-          "endLine": 349
+          "startLine": 497,
+          "endLine": 509
         }
       ]
     },
@@ -152,8 +152,8 @@
       "targets": [
         {
           "file": "src/domain/policyDelta.ts",
-          "startLine": 869,
-          "endLine": 898
+          "startLine": 934,
+          "endLine": 963
         }
       ]
     },

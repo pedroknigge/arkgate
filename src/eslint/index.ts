@@ -14,7 +14,8 @@ import {
   patternSpecificity,
   layerForRelativePath,
   isEdgeDenied,
-  findDeniedEdgeRule,
+  findDeniedEdgeDecision,
+  peerIsolationDenyExplanation,
   isScanExcludedRelative,
 } from '../domain/layerMatch';
 import {
@@ -482,8 +483,9 @@ export const noDomainInfraImports: ArkRule = {
           toPath: relTarget,
           layers: config.layers,
         };
-        const deniedRule = findDeniedEdgeRule(config.rules, fromLayer, toLayer, edgeOpts);
-        if (deniedRule || isEdgeDenied(config.rules, fromLayer, toLayer, edgeOpts)) {
+        const decision = findDeniedEdgeDecision(config.rules, fromLayer, toLayer, edgeOpts);
+        const deniedRule = decision?.rule;
+        if (deniedRule) {
           const edgeKind = node.type?.startsWith('Export') ? 'export' : 'import';
           const typeOnlyEdge = declarationIsTypeOnly(node);
           const peerIsolation = Boolean(deniedRule?.peerIsolation);
@@ -491,8 +493,24 @@ export const noDomainInfraImports: ArkRule = {
           // pure type-only (non-peer) is placement debt (warning + SharedTypes hint).
           // sourcePureTypeModule alone never softens a value import.
           const typePlacementDebt = typeOnlyEdge && !peerIsolation;
-          const baseMsg =
-            deniedRule?.message ?? `${fromLayer} must not ${edgeKind} ${toLayer}.`;
+          // Same shape as graphEvaluate: a rule-level `message` override gets the
+          // reason appended, never replaced by it.
+          const peerReason =
+            peerIsolation && decision
+              ? peerIsolationDenyExplanation(decision.peerIsolationReason ?? 'cross-slice', {
+                  fromPath: relFile,
+                  toPath: relTarget,
+                  fromSlice: decision.fromSlice,
+                  toSlice: decision.toSlice,
+                })
+              : undefined;
+          const baseMsg = deniedRule?.message
+            ? peerReason
+              ? `${deniedRule.message} (${peerReason})`
+              : deniedRule.message
+            : peerReason
+              ? `${fromLayer} must not ${edgeKind} another slice of ${toLayer} (${relFile} → ${relTarget}): ${peerReason}`
+              : `${fromLayer} must not ${edgeKind} ${toLayer}.`;
           reportAdapterDiagnostic(
             context,
             node,

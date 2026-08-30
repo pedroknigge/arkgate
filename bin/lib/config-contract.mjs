@@ -174,6 +174,20 @@ export const ARK_CONFIG_SCHEMA = {
                 message: { type: 'string', minLength: 1 },
                 peerIsolation: { type: 'boolean' },
                 sliceFolders: { ...stringArraySchema, minItems: 1 },
+                sharedRoots: { ...stringArraySchema, minItems: 1 },
+                allowedCrossSlice: {
+                    type: 'array',
+                    minItems: 1,
+                    items: {
+                        type: 'object',
+                        additionalProperties: false,
+                        required: ['from', 'to'],
+                        properties: {
+                            from: { type: 'string', minLength: 1 },
+                            to: { type: 'string', minLength: 1 },
+                        },
+                    },
+                },
             },
         },
         safety: {
