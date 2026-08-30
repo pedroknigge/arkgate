@@ -41,9 +41,9 @@ restart/retargeting is required. `ark://manifest` never satisfies this preflight
 
 Atomic multi-file work uses **`ark_prepare_change`** with the same matched `project` envelope.
 
-## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+## Dual plane — layers + extras (mandatory, except /ark-runtime)
 
-Label findings **`[Layer]`** vs **`[ArkRules]`**. Never invent `mechanical-safe` kinds.
+Label findings **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. Absence of extras is valid and silent. Extra skip clusters (`ARKRUN_*` / `ARKORDER_*`) are **`/ark-autopilot`**. Never invent `mechanical-safe` kinds. Do not invent `/ark-run` or `/ark-order`. Skills never enforce.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -79,7 +79,7 @@ Skill incomplete if missing any field below.
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** vs **[ArkRun]** vs **[ArkOrder]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
 - **Handoff:** `/ark-autopilot` / `/ark-explore` / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`

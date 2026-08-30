@@ -17,7 +17,7 @@ preview-only. Never weaken the architecture config.
 
 | Use this leftover name when… | Prefer instead |
 |------------------------------|----------------|
-| Layers / include / ArkRules / **ArkRun extra** need an edit | **`/ark-adopt`** (path, first `arkRun`) or **`/ark-autopilot`** (tighten) |
+| Layers / include / ArkRules / **ArkRun extra** / **ArkOrder extra** need an edit | **`/ark-adopt`** (path, first `arkRun` / first `arkOrder`) or **`/ark-autopilot`** (tighten) |
 | False-green / concentrated edge | **`/ark-adopt`** — write the honest config |
 | Kernel extra / one kernel candidate | **`/ark-runtime`** — leftover name; wires `arkgate/runtime`, not a second package |
 
@@ -39,9 +39,9 @@ retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedP
 uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
 restart/retargeting is required. `ark://manifest` never satisfies this preflight.
 
-## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+## Dual plane — layers + extras (mandatory, except /ark-runtime)
 
-Label findings **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`**. Absence of `arkRules` or `arkRun` is valid. First-time extra is **`/ark-adopt`** (advisory). Wire one candidate with **`/ark-runtime`**. New kernel-managed file with **`/ark-place`**. Do not invent `/ark-run`.
+Label findings **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. Absence of extras is valid and silent. First-time extra is **`/ark-adopt`** (advisory). Wire one kernel candidate with **`/ark-runtime`**. New kernel-managed / plane-root file with **`/ark-place`**. Grind skip clusters with **`/ark-autopilot`**. Do not invent `/ark-run` or `/ark-order`. Skills never enforce.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -55,9 +55,9 @@ If the host supports **parallel subagents**, fan out read-only scouts; otherwise
 
 ## Steps
 
-1. If the path is missing or lying → execute **`/ark-adopt`** (including first advisory `arkRun`).
-2. If the path is honest and you are tightening rules or the ArkRun extra → execute **`/ark-autopilot`**.
-3. Companion / one candidate → **`/ark-runtime`**. `ark-check --strict-config`.
+1. If the path is missing or lying → execute **`/ark-adopt`** (including first advisory `arkRun` / first advisory `arkOrder`).
+2. If the path is honest and you are tightening rules or extras (`arkRun` / `arkOrder`) → execute **`/ark-autopilot`**.
+3. One kernel candidate (extra already on) → **`/ark-runtime`**. `ark-check --strict-config`.
 
 ## Completion contract (skill incomplete if missing)
 
@@ -67,7 +67,7 @@ Skill incomplete if missing any field below.
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** vs **[ArkRun]** (or `n/a` if unused)
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** vs **[ArkRun]** vs **[ArkOrder]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
 - **Handoff:** `/ark-adopt` / `/ark-autopilot` / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`

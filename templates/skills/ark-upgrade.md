@@ -116,26 +116,34 @@ a stale MCP is non-authoritative: `ark_identity` diagnoses it and project tools 
 `PROCESS_PACKAGE_STALE` until restart. Prefer project-local CLI meanwhile. A modern stale global
 `ark upgrade` hands off automatically; pre-4.6.4 globals need one `npx arkgate upgrade` entry.
 
-## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+## Dual plane — layers + extras (mandatory, except /ark-runtime)
 
-ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; you **always label** findings so they never blur. Absence of an extra is silent and valid. Skills never enforce. ArkOrder is an extra **inside** the `arkgate` package (`arkgate/order`), not a second install.
 
 | Plane | What it protects | Where it lives | Sensors / tools |
 |-------|------------------|----------------|-----------------|
 | **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
 | **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
+| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime`; **`kernelRoots` preferred**, `compositionRoots` alias | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
+| **ArkOrder** (extra) | Operational pattern (ξ vs s) | `arkOrder` on `ark.config.json` (schema `1.3+`); factory `arkgate/order` | `ARKORDER_*` |
 
 **Rules for every report / answer:**
-1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** (or a two-column table with those headers).
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** or **`[ArkRun]`** or **`[ArkOrder]`** (or a table with those headers).
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. After upgrade, leftover architecture work is **`/ark-autopilot`** (never invent `mechanical-safe`).
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+6. Schema `1.3` extras stay off unless already on. Pin teaches `arkgate/runtime` (same tarball), not the deprecated companion. Do not invent `/ark-run` or `/ark-order`.
 
 
 ### Upgrade + ArkRules
 - Refresh skills + note if templates gained ArkRules deepen; do not force consumers to adopt `arkRules`.
 - After upgrade: doctor `rulesUnderContract` if map exists; dual-truth note if `--no-install` left package pin old.
+
+### Upgrade + extras
+- Schema `1.3` extras (`arkRun` / `arkOrder`) stay off unless already on. Do not turn extras on during upgrade.
+- Pin teaches `arkgate/runtime` (same tarball). `@arkgate/runtime` is deprecated. Do not send agents to `packages/runtime/README.md` as the kernel guide.
+- After 4.8.2, customized skills may lag — opt-in `--refresh-skills` with consent so the frozen 13 names pick up four-plane deepen. No new skill names.
 
 ## Safety contract
 
@@ -305,7 +313,7 @@ End with exactly this structure:
 - **Active host:** host and verified status
 - **Deferred hosts:** `none` or host plus future action
 - **Result:** old → new version and managed-upgrade outcome
-- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** vs **[ArkRun]** vs **[ArkOrder]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
 - **Handoff:** `/ark-…`, CLI action, or `none`
 - **Incomplete?** `no` or `yes — <missing work>`

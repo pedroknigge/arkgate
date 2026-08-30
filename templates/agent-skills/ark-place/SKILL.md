@@ -20,8 +20,12 @@ description: "Where does new code go? Names the folder from the rules file and w
 - Golden pattern is load-bearing when present. Adopt generates it.
 - Do not default a repository to Presentation.
 - When `arkRun` is on: scaffold through the kernel (no `new` of managed types; declare
-  `uses` / `reactsTo` / `raises` / `sends`). Extra off → do not introduce the kernel. Enable it
+  `uses` / `reactsTo` / `raises` / `sends`; factory only in `arkRun.kernelRoots`,
+  `compositionRoots` alias). Extra off → do not introduce the kernel. Enable it
   via `/ark-adopt`. Skills never enforce.
+- When `arkOrder` is on: factory only in `arkOrder.planeRoots`; Domain stays plane-free;
+  freeze ξ with `release()`. Extra off → do not introduce the plane. Enable it via
+  `/ark-adopt`. Skills never enforce.
 
 ## Autonomy contract
 
@@ -66,6 +70,7 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 | New artifact: where + **write** under the config | Existing violation cluster → `/ark-autopilot` |
 | Naming / directory for a known kind | Session 0 / config missing or lying → `/ark-adopt` (then come back) |
 | Kernel-managed artifact when `arkRun` is already on | Extra not chosen yet → `/ark-adopt` (advisory `arkRun`); evaluate / migrate a hand-rolled bus → `/ark-runtime` |
+| Plane-root artifact when `arkOrder` is already on | Extra not chosen yet → `/ark-adopt` (advisory `arkOrder`); skip cluster grind → `/ark-autopilot` |
 
 The user describes something they need to build (a saga, a background job, an
 event handler, a repository, an HTTP client, a use case, a projection, …).
@@ -108,7 +113,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 |-------|------------------|----------------|-----------------|
 | **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
 | **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
-| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime` | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
+| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime`; **`kernelRoots` preferred**, `compositionRoots` alias | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
 | **ArkOrder** (extra) | Operational pattern (ξ vs s) | `arkOrder` on `ark.config.json` (schema `1.3+`); factory `arkgate/order` | `ARKORDER_*` |
 
 **Rules for every report / answer:**
@@ -128,7 +133,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 ### Place + ArkRun
 When `arkRun` is present on the architecture config:
 - Scaffold kernel-managed artifacts **through the kernel**, not `new` of an admitted type (`ARKRUN_DIRECT_NEW`).
-- Call `createStrictArkKernel` (or an admission sibling) only inside `arkRun.compositionRoots`. Each call is a new instance — no process-wide `getKernel()`.
+- Call `createStrictArkKernel` (or an admission sibling) only inside `arkRun.kernelRoots` (`compositionRoots` is a legacy alias — still valid). Each call is a new instance — no process-wide `getKernel()`.
 - Domain-role files stay kernel-free (`ARKRUN_KERNEL_IN_DOMAIN`). Import from `arkgate/runtime` (or `arkgate/nestjs`). `@arkgate/runtime` is deprecated.
 - List `uses` / `reactsTo` / `raises` / `sends` when `requireDeclarations` is on. Adding an existing call-site literal to the declaration list is the only mechanical-safe ArkRun edit; inventing a new emit / handle / depend is judgment.
 - Do not import a homemade bus (`EventEmitter`, queue clients) in `managedLayers` — send on the kernel transport (`local` / `localBlocking` / `broker`; `ephemeral` defaults true). No shipped cloud SDKs.
@@ -141,6 +146,7 @@ When `arkOrder` is present on the architecture config:
 - Import `createOrderPlane` from `arkgate/order` (same npm package). Domain-role files stay plane-free.
 - Freeze ξ with `release()`; derive s with `project()`; field `ingest()` never mints a pattern; `proposeRelease()` needs a non-empty blast. There is no `update`/`patch`/`set`.
 - Call the factory only inside `arkOrder.planeRoots`. Empty roots in `enforced` mode is `ARKORDER_MISSING_PLANE`.
+- Skip clusters (`ARKORDER_MISSING_PLANE` / `ARKORDER_KERNEL_IN_DOMAIN` / `ARKORDER_GENERIC_UPDATE` / `ARKORDER_TOO_MANY_PARAMS` / `ARKORDER_INGEST_WRITES_XI`): place this artifact, then grind via `/ark-autopilot`. Extra not on → `/ark-adopt`. Do not invent `/ark-order`.
 - Absence of the extra is valid. Do not invent `/ark-order`. Skills never enforce.
 
 ## Subagent fan-out (optional, host-dependent)
@@ -208,6 +214,9 @@ the same files or weaken the gate.
 - If `arkRun` is on and the user is grinding skip violations (`new` of managed types, homemade
   bus) across many files: place this artifact through the kernel, then leftover `/ark-fix` /
   `/ark-autopilot`. Extra not on → `/ark-adopt` (advisory) or `/ark-runtime` (evaluate).
+- If `arkOrder` is on and the user is grinding skip violations (`ARKORDER_*`) across many files:
+  place this artifact on a plane root, then leftover `/ark-fix` / `/ark-autopilot`. Extra not on
+  → `/ark-adopt` (advisory). Do not invent `/ark-order`.
 
 ## Operating rules
 

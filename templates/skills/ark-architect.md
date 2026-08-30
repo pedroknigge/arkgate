@@ -40,9 +40,9 @@ restart/retargeting is required. `ark://manifest` never satisfies this preflight
 
 Then call **`ark_recommend`** with the same bound `project` envelope (or `ark-check --recommend`).
 
-## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+## Dual plane — layers + extras (mandatory, except /ark-runtime)
 
-Label findings **`[Layer]`** vs **`[ArkRules]`**. Absence of `arkRules` is valid.
+Label findings **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. Absence of extras is valid and silent. Session-0 extras (advisory `arkRun` / advisory `arkOrder`) live on **`/ark-adopt`**. Do not invent `/ark-run` or `/ark-order`. Skills never enforce.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -57,7 +57,7 @@ If the host supports **parallel subagents**, fan out read-only scouts; otherwise
 ## Steps
 
 1. Bind MCP (`ark_identity` then `ark_recommend`) or run `ark-check --recommend`.
-2. Execute **`/ark-adopt`** autonomy: write the config, dirs, optional advisory ArkRules, gates.
+2. Execute **`/ark-adopt`** autonomy: write the config, dirs, optional advisory ArkRules, optional advisory ArkRun / ArkOrder when asked, gates.
 3. `ark-check --strict-config`. Handoff `/ark-place` for new files.
 
 ## Completion contract (skill incomplete if missing)
@@ -68,7 +68,7 @@ Skill incomplete if missing any field below.
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** (or `n/a` if unused)
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** vs **[ArkRun]** vs **[ArkOrder]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
 - **Handoff:** `/ark-adopt` / `/ark-place` / `none`
 - **Incomplete?** `no` | `yes — <what is missing>`

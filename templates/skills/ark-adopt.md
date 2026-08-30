@@ -20,8 +20,9 @@ description: Session 0 — write the rules file (ark.config.json) to match the r
 - Generate `.ark/golden-pattern.json` (load-bearing for `/ark-place`).
 - Future houses: mark unused layer globs `reserved` / `allowEmpty` so `--strict-config` does not fail.
 - CLI-first: if `arkgate-check` already resolved the root, do not wait on MCP.
-- Do not add `arkRun` unless the user wants the extra. When they do, write **advisory** `arkRun`
-  (schema `1.2+`) in this turn. Absence is silent and valid. Skills never enforce.
+- Do not add `arkRun` or `arkOrder` unless the user wants that extra. When they do, write
+  **advisory** extra in this turn (`arkRun` schema `1.2+`; `arkOrder` schema `1.3+`).
+  Absence is silent and valid. Compact starter stays extras-off. Skills never enforce.
 
 Invoking this skill **is** the approval. Write the architecture config in this turn.
 Greenfield: scaffold like `--recommend`. Brownfield: match **product
@@ -96,7 +97,8 @@ When present, prefer the consumer **domain glossary** for layer names, slice fol
 | False-green / concentrated edge needs config truth | Feature file only → `/ark-place` |
 | Mine loose business rules into Domain / advisory ArkRules | Apply leftover design after the path is honest → `/ark-autopilot` |
 | Freeze **real** debt after the config is honest | User said map only |
-| Turn **advisory** ArkRun on (`arkRun` extra, schema `1.2+`) | Evaluate / wire a hand-rolled bus → `/ark-runtime`; new kernel-managed file → `/ark-place` |
+| Turn **advisory** ArkRun on (`arkRun` extra, schema `1.2+`; **`kernelRoots` preferred**) | Evaluate / wire a hand-rolled bus → `/ark-runtime`; new kernel-managed file → `/ark-place` |
+| Turn **advisory** ArkOrder on (`arkOrder` extra, schema `1.3+`, `planeRoots`) | New plane-root file after extra is on → `/ark-place`; grind skip clusters → `/ark-autopilot` |
 
 ## Dual engine (mandatory)
 
@@ -116,23 +118,25 @@ retain `projectIdentity.projectId`, then pass both `expectedRoot` and `expectedP
 uncertain, do not consume MCP analysis: use the workspace-local CLI and report that MCP
 restart/retargeting is required. `ark://manifest` never satisfies this preflight.
 
-## Dual plane — layers + ArkRules (mandatory, except /ark-runtime)
+## Dual plane — layers + extras (mandatory, except /ark-runtime)
 
-ArkGate has **two opt-in planes**. The user chooses which to use; you **always label** findings so they never blur.
+ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; you **always label** findings so they never blur. Absence of an extra is silent and valid. Skills never enforce. ArkOrder is an extra **inside** the `arkgate` package (`arkgate/order`), not a second install.
 
 | Plane | What it protects | Where it lives | Sensors / tools |
 |-------|------------------|----------------|-----------------|
 | **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
 | **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
-| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime` | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
+| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime`; **`kernelRoots` preferred**, `compositionRoots` alias | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
+| **ArkOrder** (extra) | Operational pattern (ξ vs s) | `arkOrder` on `ark.config.json` (schema `1.3+`); factory `arkgate/order` | `ARKORDER_*` |
 
 **Rules for every report / answer:**
-1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** or **`[ArkRun]`** (or a two-column table with those headers).
+1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** or **`[ArkRun]`** or **`[ArkOrder]`** (or a table with those headers).
 2. Never call an import-edge violation an “invariant” or an aggregate sensor a “layer deny.”
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. Editing `arkrules/*` or promoting modes is **this skill** (session 0) or **`/ark-autopilot`** later; never invent `mechanical-safe`.
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
 6. Absence of `arkRun` is **valid**. Write it only when the user wants the extra. Skills never enforce.
+7. Absence of `arkOrder` is **valid**. Write it only when the user wants the extra. Do not invent `/ark-order`. Skills never enforce.
 
 
 ### Adopt + ArkRules
@@ -142,13 +146,35 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
 
 ### Adopt + ArkRun
 - User asked to turn the extra on: write **advisory** `arkRun` on `ark.config.json` (`schemaVersion` `1.2+`) **in this turn**. Default `"mode": "advisory"`.
-- Required shape: `compositionRoots` (real files; empty + enforced fails closed), `managedLayers` (existing `layers[].name` only), `requireDeclarations` (default true).
+- Required shape: **`kernelRoots` preferred** (real files; empty + enforced fails closed). `compositionRoots` is a legacy alias — still valid. `managedLayers` (existing `layers[].name` only), `requireDeclarations` (default true).
 - Do **not** put `arkRun` on the compact starter / `ark start` scaffold. Brownfield stays advisory until the team promotes.
 - Absence is valid and **silent** — never force the extra. Never force the kernel over existing Nest/DI. Do not invent `/ark-run`.
 - Import from `arkgate/runtime` (factory `createStrictArkKernel`, per instance, no process-wide singleton). `@arkgate/runtime` is deprecated. No shipped cloud broker SDKs.
 - In-memory stores are **not** production durability. Branding ArkRun is not a durability claim. Doctor / status `arkRun` is `notAScore`.
 - Demoting enforced → advisory or deleting the extra is policy-delta **weakening**.
 - After the extra is honest: handoff `/ark-runtime` to wire one candidate, `/ark-place` for new kernel-managed files. Skills never enforce.
+
+### Adopt + ArkOrder
+- User asked to turn the extra on: write **advisory** `arkOrder` on `ark.config.json` (`schemaVersion` `1.3+`) **in this turn**. Default `"mode": "advisory"` — never session-0 default `enforced`.
+- Required shape: `planeRoots` (real files; empty + enforced = `ARKORDER_MISSING_PLANE`), `managedLayers` (existing `layers[].name` only), `maxXiKeys` (default 7).
+- Example (consumer trees — not this library's 4-layer compact):
+
+```json
+{
+  "schemaVersion": "1.3",
+  "arkOrder": {
+    "mode": "advisory",
+    "planeRoots": ["src/main.ts"],
+    "managedLayers": ["Application"],
+    "maxXiKeys": 7
+  }
+}
+```
+
+- Do **not** put `arkOrder` on the compact starter / `ark start` scaffold. Domain stays plane-free. Import `createOrderPlane` from `arkgate/order` (same npm package).
+- Absence is valid and **silent** — never force the extra. Do not invent `/ark-order`.
+- Demoting enforced → advisory or deleting the extra is policy-delta **weakening**.
+- After the extra is honest: handoff `/ark-place` for new plane-root files; grind skip via `/ark-autopilot`. Skills never enforce.
 
 ## Subagent fan-out (optional, host-dependent)
 
@@ -200,8 +226,10 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    **Next.js:** `app/api/**` / `pages/api/**` (and route-group `app/(…)/api/**`) default to
    **ApplicationOrchestration**, not Presentation — do not reclassify API shells as UI.
    User wants the ArkRun extra → write **advisory** `arkRun` (schema `1.2+`, real
-   `compositionRoots`, existing `managedLayers`) **in this turn**. Do not add it to a compact
-   starter. Do not promote to enforced as the session-0 default.
+   `kernelRoots` preferred — `compositionRoots` alias, existing `managedLayers`) **in this turn**.
+   User wants the ArkOrder extra → write **advisory** `arkOrder` (schema `1.3+`, real
+   `planeRoots`, existing `managedLayers`, `maxXiKeys` 7) **in this turn**. Do not add extras
+   to a compact starter. Do not promote to enforced as the session-0 default.
 2. **Check + diagnose** — `summary.concentrated` / dominant edge → fix contract first, don’t freeze.
    Cross-slice / cross-context `peerIsolation` hits are judgment: extract shared or events.
    If one edge dominates residual debt: **STOP — do not continue this skill as complete.** **STOP — concentrated edge:** rewrite `ark.config.json` **in this turn** with source evidence (do not freeze a wrong config or grind N freezes).
@@ -244,9 +272,9 @@ proposals applied or deferred, **phase**, **top Shape / design-weak opportunitie
 
 - Freeze false positives to get green.
 - Force runtime kernel over existing Nest/DI.
-- Put `arkRun` on the compact starter / `ark start` scaffold.
+- Put `arkRun` or `arkOrder` on the compact starter / `ark start` scaffold.
 - Claim in-memory kernel stores are production durability.
-- Invent `/ark-run`.
+- Invent `/ark-run` or `/ark-order`.
 - Claim Enforce while governed% is low, cores empty with I/O in Application, or core bags ungoverned.
 - End adopt with only “baseline written” when design-weak residual is visible in files you opened.
 
@@ -258,7 +286,7 @@ End with **exactly** these headings (markdown `###`):
 - **Sensor:** commands/tools run
 - **Opened:** real paths read (or `n/a` only if pure install/upgrade with no source analysis)
 - **Result:** one-line outcome
-- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** vs **[ArkRun]** (or `n/a` if unused)
+- **Planes:** one-line split of residual **[Layer]** vs **[ArkRules]** vs **[ArkRun]** vs **[ArkOrder]** (or `n/a` if unused)
 - **Compass:** top residual lenses | `n/a`
 - **Done axes:** architecture residual (status/doctor/compass) | feature/ticket residual (outside package). Enforce green ≠ feature done
 - **Handoff:** `/ark-…` / CLI / `none`
