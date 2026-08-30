@@ -235,6 +235,14 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'An ArkRules invariant is under contract but no covering test title or declared symbol evidence was found (or coverage is partial). Kind is never-had-tests (adopt residual) vs tests-disappeared (suite exists).',
     'Add a test title or declared symbol covering the arkruleId, then preflight again. Treat never-had-tests as adopt residual; treat tests-disappeared as a regression. Missing test globs report partial — never fake green. When the message reports an exhausted file budget, raise coverage.maxFiles (or narrow coverage.testGlobs) in ark.config.json.'
   ),
+  entry(
+    'INVARIANT_COVERAGE_OUTSIDE_ROOTS',
+    'arkrules',
+    'Covering test outside the declared coverage roots',
+    'The only test naming this invariant sits outside coverage.coverageRoots — the places the project declares its runner executes. ArkGate matches declared text and never executes tests, so it cannot tell whether that file is ever run: coverage there is a test that exists, not a test that runs.',
+    'Move the test under a declared coverage root, or add its root to coverage.coverageRoots in ark.config.json. Advisory: it never fails strict, but promotion to enforced refuses on it.',
+    { oftenAdvisory: true }
+  ),
 
   // ── ArkRun (opt-in extra; RN05 dual-depth nextAction) ────────────────────
   entry(

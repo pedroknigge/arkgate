@@ -44,6 +44,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`ARKRULE_INVARIANT`](#ARKRULE_INVARIANT) | arkrules | ArkRule invariant failed |
 | [`ARKRULE_SCOPE_EMPTY`](#ARKRULE_SCOPE_EMPTY) | arkrules | ArkRule appliesTo matched zero files |
 | [`INVARIANT_UNCOVERED`](#INVARIANT_UNCOVERED) | arkrules | Invariant without coverage evidence |
+| [`INVARIANT_COVERAGE_OUTSIDE_ROOTS`](#INVARIANT_COVERAGE_OUTSIDE_ROOTS) | arkrules | Covering test outside the declared coverage roots |
 | [`ARKRUN_MISSING_ROOT`](#ARKRUN_MISSING_ROOT) | arkrun | No kernel factory in composition roots |
 | [`ARKRUN_KERNEL_IN_DOMAIN`](#ARKRUN_KERNEL_IN_DOMAIN) | arkrun | Domain-role layer imports the kernel |
 | [`ARKRUN_DIRECT_NEW`](#ARKRUN_DIRECT_NEW) | arkrun | Managed type constructed with new |
@@ -282,6 +283,17 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 
 - **Why:** An ArkRules invariant is under contract but no covering test title or declared symbol evidence was found (or coverage is partial). Kind is `never-had-tests` (adopt residual) vs `tests-disappeared` (suite exists).
 - **Fix:** Add a test title or declared symbol covering the arkruleId, then preflight again. Treat never-had-tests as adopt residual; treat tests-disappeared as a regression. Missing test globs report partial — never fake green. When the message reports an exhausted file budget, raise `coverage.maxFiles` (or narrow `coverage.testGlobs`) in ark.config.json. The message also names every file the scan discarded and why (budget, per-file byte cap, unreadable, walk depth limit, symlink resolving outside the project root, no catalogued invariant named) — nothing is dropped in silence.
+
+<a id="INVARIANT_COVERAGE_OUTSIDE_ROOTS"></a>
+
+### `INVARIANT_COVERAGE_OUTSIDE_ROOTS`
+
+**Covering test outside the declared coverage roots** · often advisory
+
+- **Why:** The only test naming this invariant sits outside `coverage.coverageRoots` — the places the project declares its runner executes. ArkGate matches declared text and never executes tests, so it cannot tell whether that file is ever run: coverage there is a test that *exists*, not a test that *runs*.
+- **Fix:** Move the test under a declared coverage root, or add its root to `coverage.coverageRoots` in ark.config.json. Advisory: it never fails strict, but promotion to enforced refuses on it.
+
+Declaring nothing is silent — without `coverage.coverageRoots` there is no second declaration to compare against, and ArkGate makes no claim about where tests run.
 
 ## ArkRun (opt-in extra)
 

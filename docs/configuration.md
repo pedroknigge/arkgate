@@ -87,8 +87,9 @@ Top-level fields:
 - `layers`, `rules`, `cyclePolicy`
 - `dynamicImportAllowlist`, `safety`
 - **`coverage`** (optional) — invariant-coverage scan controls: `testGlobs` (globs that decide
-  which files count as tests, replacing the built-in `*.test.*` / `tests/` name heuristic) and
-  `maxFiles` (evidence file budget, default `400`). Absence is silent and changes no verdict.
+  which files count as tests, replacing the built-in `*.test.*` / `tests/` name heuristic),
+  `maxFiles` (evidence file budget, default `400`) and `coverageRoots` (path prefixes where the
+  project declares its runner actually executes tests). Absence is silent and changes no verdict.
   Unknown keys fail closed. When the budget is hit, `INVARIANT_UNCOVERED` reports the numbers
   (files loaded, tests retained, files discarded at the cap) and names `coverage.maxFiles` as
   the knob that raises it — coverage never claims "never had tests" because of our own cap.
@@ -98,6 +99,15 @@ Top-level fields:
   catalogued invariant are each counted and named in the diagnostic. A symlinked test is read only
   when its target is inside the root: a file that is not in this repo never proves an invariant
   covered.
+
+  `coverageRoots` closes a false green ArkGate could otherwise produce. Coverage is proven by
+  matching an invariant id in a test title — a filesystem walk plus a text match. **ArkGate never
+  executes tests and never reads a runner config**, so a test in a folder no runner runs certifies
+  the invariant just as well as one that runs. Declaring `coverageRoots` gives ArkGate a second
+  declaration to compare the first against: when the only covering test falls outside them, it
+  reports `INVARIANT_COVERAGE_OUTSIDE_ROOTS` (advisory) and refuses to promote that invariant to
+  `enforced`. Declaring nothing keeps the old silence — without a declaration there is nothing to
+  compare, and ArkGate makes no claim about where tests run.
 - **`arkRules`** (optional, schema `1.1+`) — map of layer name → project-relative path to an
   ArkRules file (e.g. `"DomainModel": "arkrules/DomainModel.json"`). Keys must match a declared
   layer. Missing/invalid referenced files **fail closed**.

@@ -233,10 +233,11 @@ export const ARK_CONFIG_SCHEMA = {
       type: 'object',
       additionalProperties: false,
       description:
-        'Invariant coverage scan controls. testGlobs replaces the built-in test-name heuristic; maxFiles raises or lowers the evidence file budget.',
+        'Invariant coverage scan controls. testGlobs replaces the built-in test-name heuristic; maxFiles raises or lowers the evidence file budget; coverageRoots declares where the project runs its tests, so a covering test found outside them is reported instead of silently certifying an invariant.',
       properties: {
         testGlobs: { ...stringArraySchema, minItems: 1 },
         maxFiles: { type: 'integer', minimum: 1 },
+        coverageRoots: { ...stringArraySchema, minItems: 1 },
       },
     },
     arkRun: ARK_RUN_SCHEMA_DEF,

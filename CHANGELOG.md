@@ -6,16 +6,29 @@ in the immutable pre-2.0 archive linked below.
 ## Unreleased
 
 **Patch** over **4.8.3**. Invariant coverage stops hiding its own limits: the scan budget and the
-test globs are config, and every discarded file is counted in the diagnostic. **No required config
-migration.**
+test globs are config, every discarded file is counted in the diagnostic, and coverage stops
+implying it knows a test runs. **No required config migration.**
 
 ### Added
+- **`coverage.coverageRoots` (optional):** the project declares where its test runner actually
+  executes. Coverage evidence is a filesystem walk plus a text match — ArkGate never executes a
+  test and never reads a runner config — so a covering test in a folder no runner runs used to
+  certify an invariant exactly like one that runs, and `INVARIANT_UNCOVERED: 0` could be a false
+  green. With `coverageRoots` declared, a covering test found outside them raises the new advisory
+  `INVARIANT_COVERAGE_OUTSIDE_ROOTS` and blocks promotion of that invariant to `enforced`. Two
+  declarations compared against each other; nothing is executed. Absence stays silent: without a
+  declaration there is nothing to compare.
 - **`coverage` config (optional):** `coverage.testGlobs` replaces the built-in test-name heuristic
   and `coverage.maxFiles` sets the evidence file budget (default `400`). Both were already
   implemented inside the loader but unreachable from `ark.config.json`; `ark-check`, doctor
   (`rulesUnderContract`), and policy-delta now all pass them. Absence is silent.
 
 ### Changed
+- **`INVARIANT_UNCOVERED` says what it verified:** the old text ("not covered by a test title or
+  declared symbol") reads as *there is no test*, and its absence reads as *there is a test and it
+  runs* — neither is something a text match knows. The message now states the check it performed:
+  no scanned test names the invariant in a `describe`/`it` title and no declared symbol was found,
+  and ArkGate never executes tests.
 - **`INVARIANT_UNCOVERED` carries numbers:** a budget-exhausted verdict reports files loaded, the
   cap in force, tests retained, files discarded at the cap, and names `coverage.maxFiles` as the
   knob that raises it. Tests dropped for naming no catalogued invariant are counted in the message

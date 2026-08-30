@@ -806,7 +806,7 @@
     "coverage": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Invariant coverage scan controls. testGlobs replaces the built-in test-name heuristic; maxFiles raises or lowers the evidence file budget.",
+      "description": "Invariant coverage scan controls. testGlobs replaces the built-in test-name heuristic; maxFiles raises or lowers the evidence file budget; coverageRoots declares where the project runs its tests, so a covering test found outside them is reported instead of silently certifying an invariant.",
       "properties": {
         "testGlobs": {
           "type": "array",
@@ -820,6 +820,15 @@
         "maxFiles": {
           "type": "integer",
           "minimum": 1
+        },
+        "coverageRoots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "minItems": 1
         }
       }
     },

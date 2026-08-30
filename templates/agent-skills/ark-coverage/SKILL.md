@@ -92,6 +92,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 3. Absence of `arkRules` is **valid** — do not force ArkRules unless the user wants them or residual inventory clearly wants a pilot.
 4. Editing `arkrules/*` or promoting modes is **`/ark-adopt`** / leftover **`/ark-contract`**; fixing code under a structure sensor is leftover **`/ark-fix`** / **`/ark-loop`** or **`/ark-autopilot`** (judgment, never invent mechanical-safe).
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
+5b. Invariant coverage is a **text match, never an execution**: a file walk plus the invariant id in a `describe`/`it` title. Never report `INVARIANT_UNCOVERED: 0` as “the tests pass” or “the tests run” — ArkGate does not run tests and reads no runner config. When the project declares `coverage.coverageRoots`, a covering test found outside them raises the advisory `INVARIANT_COVERAGE_OUTSIDE_ROOTS`; without that declaration ArkGate makes no claim about where tests run.
 6. Extras silent when off. Doctor `arkRun` is `notAScore`. Do not force extras. Do not invent `/ark-run` or `/ark-order`.
 
 

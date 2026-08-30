@@ -67,8 +67,8 @@ function matchSimpleGlob(glob, file) {
 /**
  * Coverage scan options carried by ark.config.json (`coverage`).
  * Absent config → `{}`: the built-in heuristic and default budget stay in force.
- * @param {{ coverage?: { testGlobs?: unknown, maxFiles?: unknown } } | null | undefined} config
- * @returns {{ testGlobs?: string[], maxFiles?: number }}
+ * @param {{ coverage?: { testGlobs?: unknown, maxFiles?: unknown, coverageRoots?: unknown } } | null | undefined} config
+ * @returns {{ testGlobs?: string[], maxFiles?: number, coverageRoots?: string[] }}
  */
 export function coverageOptionsFromConfig(config) {
   const coverage = config?.coverage;
@@ -80,6 +80,10 @@ export function coverageOptionsFromConfig(config) {
   }
   if (Number.isInteger(coverage.maxFiles) && coverage.maxFiles > 0) {
     options.maxFiles = coverage.maxFiles;
+  }
+  if (Array.isArray(coverage.coverageRoots)) {
+    const roots = coverage.coverageRoots.filter((r) => typeof r === 'string' && r.length > 0);
+    if (roots.length > 0) options.coverageRoots = roots;
   }
   return options;
 }
@@ -98,12 +102,13 @@ export function invariantIdsFromCatalog(arkRules) {
 /**
  * @param {string} root
  * @param {{ files?: Array<{ path: string }> }} facts
- * @param {{ testGlobs?: string[], invariantIds?: string[], maxFiles?: number }} [opts]
+ * @param {{ testGlobs?: string[], invariantIds?: string[], maxFiles?: number, coverageRoots?: string[] }} [opts]
  * @returns {{
  *   fileContents: Record<string, string>,
  *   testFiles: string[],
  *   testGlobsMissing: boolean,
  *   coverageBudgetExhausted: boolean,
+ *   coverageRoots?: string[],
  *   stats: {
  *     filesLoaded: number,
  *     testFilesRetained: number,
@@ -255,11 +260,18 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
     if (file?.path) pushFile(file.path);
   }
 
+  // Echoed, not applied here: the roots are a declaration Domain compares the
+  // scan against. Tooling filtering by them would hide the disagreement that is
+  // the whole point of the declaration.
+  const coverageRoots = Array.isArray(opts.coverageRoots)
+    ? opts.coverageRoots.filter((r) => typeof r === 'string' && r.length > 0)
+    : [];
   const testGlobsMissing = testFiles.length === 0;
   return {
     fileContents,
     testFiles,
     testGlobsMissing,
+    ...(coverageRoots.length > 0 ? { coverageRoots } : {}),
     // Exhausted means the cap actually cost the user a file. Landing exactly
     // on the cap with nothing dropped is a full budget, not an exhausted one:
     // reporting it would tell the user to raise a cap that discarded nothing.

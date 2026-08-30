@@ -216,6 +216,106 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
     expect(message).toMatch(/4 symlinked outside the project root/);
   });
 
+  it('says what it actually verified, not that no test exists', () => {
+    // "not covered by a test title" reads as "there is no test", and its
+    // inverse reads as "there is a test and it runs". A text match knows
+    // neither. The message must name the check it performed.
+    const result = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: { 'tests/a.test.ts': "it('unrelated', () => {})" },
+      testFiles: ['tests/a.test.ts'],
+    });
+    const message = result.violations[0]?.message ?? '';
+    expect(message).toMatch(/no scanned test names it in a describe\/it title/);
+    expect(message).toMatch(/never executes tests/);
+  });
+
+  it('warns when the only covering test lives outside the declared coverage roots', () => {
+    const result = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: {
+        'scratch/order.test.ts': "describe('INV-ORDER-001', () => {})",
+      },
+      testFiles: ['scratch/order.test.ts'],
+      coverageRoots: ['tests', 'src'],
+    });
+    const outside = result.violations.find(
+      (v) => v.ruleId === 'INVARIANT_COVERAGE_OUTSIDE_ROOTS'
+    );
+    expect(outside?.file).toBe('scratch/order.test.ts');
+    expect(outside?.failsStrict).toBe(false);
+    expect(outside?.severity).toBe('warning');
+    expect(outside?.message).toMatch(/tests, src/);
+    expect(outside?.message).toMatch(/never executes tests/);
+    expect(result.coverage[0]?.outsideDeclaredRoots).toBe(true);
+    expect(result.coverage[0]?.testEvidenceFile).toBe('scratch/order.test.ts');
+  });
+
+  it('prefers a covering test inside a declared root over one outside it', () => {
+    const result = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: {
+        'scratch/order.test.ts': "describe('INV-ORDER-001', () => {})",
+        'tests/order.test.ts': "describe('INV-ORDER-001', () => {})",
+      },
+      testFiles: ['scratch/order.test.ts', 'tests/order.test.ts'],
+      coverageRoots: ['tests'],
+    });
+    expect(result.coverage[0]?.testEvidenceFile).toBe('tests/order.test.ts');
+    expect(result.coverage[0]?.outsideDeclaredRoots).toBe(false);
+    expect(
+      result.violations.some((v) => v.ruleId === 'INVARIANT_COVERAGE_OUTSIDE_ROOTS')
+    ).toBe(false);
+  });
+
+  it('makes no outside-roots claim when the project declared no roots', () => {
+    // Silence is the honest answer without a declaration to compare against.
+    const result = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: { 'scratch/order.test.ts': "describe('INV-ORDER-001', () => {})" },
+      testFiles: ['scratch/order.test.ts'],
+    });
+    expect(result.violations).toHaveLength(0);
+    expect(result.coverage[0]?.outsideDeclaredRoots).toBeUndefined();
+    expect(result.coverage[0]?.covered).toBe(true);
+  });
+
+  it('canPromoteInvariant refuses evidence that sits outside the declared roots', () => {
+    const gate = canPromoteInvariant({
+      invariantId: 'INV-ORDER-001',
+      layer: 'DomainModel',
+      sourceFile: 'arkrules/DomainModel.json',
+      mode: 'advisory',
+      covered: true,
+      evidence: ['test-title'],
+      partial: false,
+      description: 'Order total never negative',
+      testEvidenceFile: 'scratch/order.test.ts',
+      outsideDeclaredRoots: true,
+    });
+    expect(gate.ok).toBe(false);
+    expect(gate.reason).toMatch(/scratch\/order\.test\.ts/);
+    expect(gate.reason).toMatch(/outside the declared coverage roots/);
+  });
+
+  it('canPromoteInvariant still refuses outside-roots evidence with no file named', () => {
+    // The row carries the flag without the file (older evidence, hand-built
+    // input): refuse anyway — the missing filename is not a reason to promote.
+    const gate = canPromoteInvariant({
+      invariantId: 'INV-ORDER-001',
+      layer: 'DomainModel',
+      sourceFile: 'arkrules/DomainModel.json',
+      mode: 'advisory',
+      covered: true,
+      evidence: ['test-title'],
+      partial: false,
+      description: 'Order total never negative',
+      outsideDeclaredRoots: true,
+    });
+    expect(gate.ok).toBe(false);
+    expect(gate.reason).toMatch(/covered only by a test, outside the declared coverage roots/);
+  });
+
   it('refuses promotion of uncovered invariants (AR11)', () => {
     const uncovered = evaluateInvariantCoverage({
       arkRules: catalog(),

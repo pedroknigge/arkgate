@@ -62,6 +62,14 @@ export type ArkConfigCoverage = {
   testGlobs?: string[];
   /** Max files loaded as coverage evidence before the budget is exhausted. */
   maxFiles?: number;
+  /**
+   * Path prefixes where this project declares its test runner actually executes
+   * tests. ArkGate never runs anything: this is a second declaration to compare
+   * the coverage scan against, so a covering test found outside them is reported
+   * (INVARIANT_COVERAGE_OUTSIDE_ROOTS) instead of silently certifying the
+   * invariant. Absence means no declaration and no such claim.
+   */
+  coverageRoots?: string[];
 };
 
 /**

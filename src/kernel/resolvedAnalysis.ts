@@ -453,6 +453,9 @@ export function analyzeCanonicalResolvedProject(
           (input.coverageInputs.testFiles?.length ?? 0) === 0,
         coverageBudgetExhausted: input.coverageInputs?.coverageBudgetExhausted === true,
         ...(input.coverageInputs?.stats ? { coverageStats: input.coverageInputs.stats } : {}),
+        ...(input.coverageInputs?.coverageRoots
+          ? { coverageRoots: input.coverageInputs.coverageRoots }
+          : {}),
       })
     : { coverage: [], violations: [], partial: false };
   const invariantViolations: ArchitectureEngineViolation[] = coverageEval.violations
@@ -478,7 +481,10 @@ export function analyzeCanonicalResolvedProject(
       arkruleId: finding.arkruleId,
       arkruleSource: finding.arkruleSource,
       failsStrict: false,
-      nextAction: `Cover invariant ${finding.arkruleId} in ${finding.arkruleSource} (advisory / partial).`,
+      nextAction:
+        finding.ruleId === 'INVARIANT_COVERAGE_OUTSIDE_ROOTS'
+          ? `Move ${finding.file} under a declared coverage root, or add its root to coverage.coverageRoots in ark.config.json.`
+          : `Cover invariant ${finding.arkruleId} in ${finding.arkruleSource} (advisory / partial).`,
     }));
   const arkRunClassification = classifyResolvedLayerCoverage(files);
   const arkRunEval = evaluateArkRunSensors({

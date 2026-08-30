@@ -253,6 +253,35 @@ describe('ArkRules tooling wiring', () => {
     expect(coverageOptionsFromConfig({ coverage: { testGlobs: [''], maxFiles: 0 } })).toEqual({});
   });
 
+  it('coverageOptionsFromConfig reads coverage.coverageRoots (absence is silent)', () => {
+    expect(
+      coverageOptionsFromConfig({ coverage: { coverageRoots: ['tests', 'src'] } })
+    ).toEqual({ coverageRoots: ['tests', 'src'] });
+    expect(coverageOptionsFromConfig({ coverage: { coverageRoots: [] } })).toEqual({});
+    expect(coverageOptionsFromConfig({ coverage: { coverageRoots: ['', 3] } })).toEqual({});
+  });
+
+  it('loadInvariantCoverageInputs echoes coverageRoots without filtering the scan', () => {
+    // The declaration is evidence for Domain to compare against. Filtering the
+    // walk by it here would hide the very disagreement it exists to report.
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'tests', 'order.test.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'], coverageRoots: ['qa'] }
+    );
+    expect(inputs.coverageRoots).toEqual(['qa']);
+    expect(inputs.testFiles).toEqual(['tests/order.test.ts']);
+
+    const silent = loadInvariantCoverageInputs(root, { files: [] }, {});
+    expect(silent.coverageRoots).toBeUndefined();
+  });
+
   it('rules-under-contract passes config coverage.testGlobs through to the scan', () => {
     const root = makeRoot();
     fs.mkdirSync(path.join(root, 'arkrules'), { recursive: true });

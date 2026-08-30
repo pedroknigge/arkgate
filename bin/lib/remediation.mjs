@@ -207,6 +207,8 @@ export function deterministicNextAction(violation) {
             return 'Publish through a registered intent creator, then run Ark again.';
         case 'PUBLISH_MISSING_SOURCE':
             return 'Add metadata.source to the publish call, then run Ark again.';
+        case 'INVARIANT_COVERAGE_OUTSIDE_ROOTS':
+            return `Move the covering test under a declared coverage root, or add its root to coverage.coverageRoots in ark.config.json, then run Ark again.`;
         case 'ARKRULE_STRUCTURE':
         case 'ARKRULE_INVARIANT':
         case 'INVARIANT_UNCOVERED':
@@ -348,6 +350,7 @@ export function classifyRemediation(violation) {
     if (ruleId === 'ARKRULE_STRUCTURE' ||
         ruleId === 'ARKRULE_INVARIANT' ||
         ruleId === 'INVARIANT_UNCOVERED' ||
+        ruleId === 'INVARIANT_COVERAGE_OUTSIDE_ROOTS' ||
         (typeof ruleId === 'string' && ruleId.startsWith('ARKRULE_'))) {
         return {
             class: 'judgment',
@@ -471,6 +474,12 @@ export function enrichViolationWithFixClass(violation) {
             enriched.effort = 'small';
             enriched.enthusiastHint =
                 'Reference that intent from a layer allowed to know about it — usually an adapter or application layer, not the domain core.';
+            break;
+        case 'INVARIANT_COVERAGE_OUTSIDE_ROOTS':
+            enriched.fixClass = 'review-contract';
+            enriched.effort = 'small';
+            enriched.enthusiastHint =
+                'The covering test lives where the project says its runner does not go. Move it, or declare that root in coverage.coverageRoots.';
             break;
         case 'ARKRULE_STRUCTURE':
         case 'ARKRULE_INVARIANT':

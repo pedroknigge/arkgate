@@ -37,6 +37,19 @@ function formatCoverageDiscards(stats, omitBudget = false) {
         : ` (loaded ${stats.filesLoaded} files, kept ${stats.testFilesRetained} tests)`;
     return ` Scan discarded ${parts.join(', ')}${totals}.`;
 }
+/**
+ * True when `file` sits inside one of the declared coverage roots.
+ * A root is a path prefix, `.` (or `''`) meaning the whole project.
+ */
+function isUnderCoverageRoot(file, roots) {
+    const target = file.replace(/\\/g, '/').replace(/^\.\//, '');
+    return roots.some((rawRoot) => {
+        const root = rawRoot.replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+$/, '');
+        if (root === '' || root === '.')
+            return true;
+        return target === root || target.startsWith(`${root}/`);
+    });
+}
 function titleMatchesInvariant(content, id) {
     // Match describe/it/test string titles containing the invariant id.
     const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -78,20 +91,39 @@ export function evaluateInvariantCoverage(input) {
     const budgetDetail = stats
         ? `coverage file budget exhausted: ${stats.filesLoaded} files loaded at the ${stats.maxFiles}-file cap, ${stats.testFilesRetained} tests retained, ${stats.discarded.budget} files discarded at the cap; raise "coverage.maxFiles" in ark.config.json`
         : 'coverage file budget exhausted';
+    const coverageRoots = (input.coverageRoots ?? []).filter((root) => typeof root === 'string' && root.length > 0);
+    const rootsDeclared = coverageRoots.length > 0;
+    const declaredRootsList = coverageRoots.join(', ');
     const coverage = [];
     const violations = [];
     for (const inv of invariants) {
         const evidence = [];
         const wantsTest = inv.coverage?.test !== false; // default: prefer test evidence when catalogued
         const symbol = inv.coverage?.symbol;
+        let testEvidenceFile;
+        let outsideDeclaredRoots;
         if (!testGlobsMissing && wantsTest) {
+            // A covering test INSIDE a declared root wins over one outside it: the
+            // finding is "the only proof lives where the runner does not go", not
+            // "some proof lives there".
+            let fallbackOutside;
             for (const file of testFiles) {
                 const content = input.fileContents[file];
-                if (content && titleMatchesInvariant(content, inv.id)) {
-                    evidence.push('test-title');
+                if (!content || !titleMatchesInvariant(content, inv.id))
+                    continue;
+                if (!rootsDeclared || isUnderCoverageRoot(file, coverageRoots)) {
+                    testEvidenceFile = file;
+                    outsideDeclaredRoots = rootsDeclared ? false : undefined;
                     break;
                 }
+                fallbackOutside ??= file;
             }
+            if (testEvidenceFile === undefined && fallbackOutside !== undefined) {
+                testEvidenceFile = fallbackOutside;
+                outsideDeclaredRoots = true;
+            }
+            if (testEvidenceFile !== undefined)
+                evidence.push('test-title');
         }
         if (symbol && symbolPresent(input.fileContents, symbol)) {
             evidence.push('symbol');
@@ -115,7 +147,26 @@ export function evaluateInvariantCoverage(input) {
             evidence,
             partial,
             description: inv.description,
+            ...(testEvidenceFile !== undefined ? { testEvidenceFile } : {}),
+            ...(outsideDeclaredRoots !== undefined ? { outsideDeclaredRoots } : {}),
         });
+        // The covering test exists but sits outside the roots the project declared
+        // its runner walks. ArkGate does not execute tests, so it cannot tell the
+        // difference — it can only report that the two declarations disagree.
+        if (outsideDeclaredRoots === true && testEvidenceFile !== undefined) {
+            violations.push({
+                ruleId: 'INVARIANT_COVERAGE_OUTSIDE_ROOTS',
+                message: `Invariant ${inv.id} is covered only by ${testEvidenceFile}, which is outside the declared coverage roots (${declaredRootsList}). ` +
+                    'ArkGate matches declared text and never executes tests, so it cannot tell whether that file is run: move the test under a declared root, or add its root to "coverage.coverageRoots" in ark.config.json.',
+                file: testEvidenceFile,
+                line: 1,
+                arkruleId: inv.id,
+                arkruleSource: inv.provenance.sourceFile,
+                fromLayer: inv.provenance.layer,
+                severity: 'warning',
+                failsStrict: false,
+            });
+        }
         if (!covered || partial) {
             // Enforced + proven uncovered → failsStrict; partial always advisory (never fake green).
             const failsStrict = inv.mode === 'enforced' && !partial;
@@ -126,9 +177,13 @@ export function evaluateInvariantCoverage(input) {
                     ? coverageBudgetExhausted
                         ? `Invariant ${inv.id} coverage cannot be proven (${budgetDetail}); reporting partial, not covered.`
                         : `Invariant ${inv.id} coverage cannot be proven (test globs missing or empty); reporting partial, not covered (never-had-tests).`
-                    : kind === 'tests-disappeared'
-                        ? `Invariant ${inv.id} is not covered by a test title or declared symbol (tests-disappeared — suite exists).`
-                        : `Invariant ${inv.id} is not covered by a test title or declared symbol (never-had-tests).`) +
+                    : // Say what was actually checked. "Not covered by a test
+                        // title" reads as "there is no test", and its inverse
+                        // reads as "there is a test and it runs" — neither is
+                        // something a text match can know.
+                        kind === 'tests-disappeared'
+                            ? `Invariant ${inv.id}: no scanned test names it in a describe/it title and no declared symbol was found (tests-disappeared — a suite exists). ArkGate matches declared text; it never executes tests.`
+                            : `Invariant ${inv.id}: no scanned test names it in a describe/it title and no declared symbol was found (never-had-tests — the scan found no tests at all). ArkGate matches declared text; it never executes tests.`) +
                     (partial && coverageBudgetExhausted ? budgetExhaustedTail : discardTail),
                 file: inv.provenance.sourceFile,
                 line: 1,
@@ -168,6 +223,14 @@ export function canPromoteInvariant(coverage) {
         return {
             ok: false,
             reason: `Invariant ${coverage.invariantId} is uncovered; add a test title or symbol before promoting to enforced.`,
+        };
+    }
+    // Promotion is the moment coverage stops being advice, so an evidence file
+    // the project itself says its runner does not walk cannot carry it.
+    if (coverage.outsideDeclaredRoots === true) {
+        return {
+            ok: false,
+            reason: `Invariant ${coverage.invariantId} is covered only by ${coverage.testEvidenceFile ?? 'a test'}, outside the declared coverage roots; ArkGate cannot tell whether that test runs, so it will not promote on it.`,
         };
     }
     return { ok: true, reason: `Invariant ${coverage.invariantId} has coverage evidence.` };
