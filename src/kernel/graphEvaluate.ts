@@ -102,19 +102,24 @@ export function evaluateArchitectureGraph(
     // (convert value → import type) from relocate (already import type).
     const typePlacementDebt =
       !peerIsolation && Boolean(edge.typeOnly || edge.namedBindingsTypeOnly);
-    const baseMessage =
-      rule.message ??
-      (peerIsolation
-        ? `${edge.fromLayer} must not ${edge.kind} another slice of ${edge.toLayer} (${edge.from} → ${edge.to}): ${peerIsolationDenyExplanation(
-            decision.peerIsolationReason ?? 'cross-slice',
-            {
-              fromPath: edge.from,
-              toPath: edge.to,
-              fromSlice: decision.fromSlice,
-              toSlice: decision.toSlice,
-            }
-          )}`
-        : `${edge.fromLayer} must not ${edge.kind} ${edge.toLayer}.`);
+    // The reason is appended to a rule-level `message` override rather than
+    // replaced by it: an override must not make an unclassifiable-path denial
+    // and a real cross-slice denial read identically again.
+    const peerReason = peerIsolation
+      ? peerIsolationDenyExplanation(decision.peerIsolationReason ?? 'cross-slice', {
+          fromPath: edge.from,
+          toPath: edge.to,
+          fromSlice: decision.fromSlice,
+          toSlice: decision.toSlice,
+        })
+      : undefined;
+    const baseMessage = rule.message
+      ? peerReason
+        ? `${rule.message} (${peerReason})`
+        : rule.message
+      : peerReason
+        ? `${edge.fromLayer} must not ${edge.kind} another slice of ${edge.toLayer} (${edge.from} → ${edge.to}): ${peerReason}`
+        : `${edge.fromLayer} must not ${edge.kind} ${edge.toLayer}.`;
     violations.push({
       ruleId: 'LAYER_IMPORT_VIOLATION',
       file: edge.from,

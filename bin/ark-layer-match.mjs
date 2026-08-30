@@ -264,23 +264,39 @@ function normalizeSegments(value) {
         .filter((part) => Boolean(part) && part !== '.')
         .map((part) => part.toLowerCase());
 }
+/** Source folders a declared shared root may sit under without being named. */
+const SHARED_ROOT_SOURCE_PREFIXES = ['src', 'app'];
+/** A root that would disable the wall wholesale is not a root. */
+function isBlanketRoot(raw) {
+    const trimmed = raw.replace(/^[./]+/, '').replace(/\/+$/, '');
+    return trimmed === '*' || trimmed === '**';
+}
 /**
  * Is `relPath` under one of the roots the rule declares shared on purpose?
  *
- * Segment-run match anywhere in the path (`ui` covers `src/ui/button.tsx`),
- * mirroring how `sliceIdForPath` finds a slice folder at any depth. A root
- * containing `*` is matched as a glob against the whole path.
+ * **Anchored**, unlike `sliceIdForPath`: the root must start the repo-relative
+ * path, optionally after a single conventional source folder, so `ui` covers
+ * `ui/button.tsx` and `src/ui/button.tsx` but NOT `modules/a/ui/x.tsx` — an
+ * unanchored root would exempt a whole tree the author never declared. Deeper
+ * or monorepo roots are written out (`packages/web/src/ui`) or globbed
+ * (`packages/*​/src/ui`). Matching is case-insensitive; a root containing `*`
+ * is matched as a glob (also case-insensitively) against the whole path, and a
+ * bare `*` / `**` is refused because it would disable fail-closed wholesale.
  */
 export function pathUnderSharedRoot(relPath, sharedRoots) {
     if (!relPath || !sharedRoots?.length)
         return false;
     const rel = String(relPath).split(/[/\\]/).join('/');
+    const lowerRel = rel.toLowerCase();
     const parts = normalizeSegments(rel);
     for (const raw of sharedRoots) {
         if (typeof raw !== 'string' || raw.length === 0)
             continue;
+        if (isBlanketRoot(raw))
+            continue;
         if (raw.includes('*')) {
-            if (globToRegExp(raw).test(rel) || globToRegExp(`${raw.replace(/\/+$/, '')}/**`).test(rel)) {
+            const glob = raw.toLowerCase().replace(/\/+$/, '');
+            if (globToRegExp(glob).test(lowerRel) || globToRegExp(`${glob}/**`).test(lowerRel)) {
                 return true;
             }
             continue;
@@ -288,10 +304,15 @@ export function pathUnderSharedRoot(relPath, sharedRoots) {
         const root = normalizeSegments(raw);
         if (root.length === 0)
             continue;
-        for (let i = 0; i + root.length <= parts.length; i += 1) {
+        // Anchor at segment 0, or at segment 1 when the path opens with a source
+        // folder the root does not itself name.
+        const offsets = SHARED_ROOT_SOURCE_PREFIXES.includes(parts[0]) && root[0] !== parts[0] ? [0, 1] : [0];
+        for (const offset of offsets) {
+            if (offset + root.length > parts.length)
+                continue;
             let hit = true;
             for (let j = 0; j < root.length; j += 1) {
-                if (parts[i + j] !== root[j]) {
+                if (parts[offset + j] !== root[j]) {
                     hit = false;
                     break;
                 }

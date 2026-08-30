@@ -363,6 +363,10 @@ function compareRules(
       });
     }
 
+    // sharedRoots / allowedCrossSlice are inert on a rule without peerIsolation;
+    // a change there is not a policy change until the wall exists.
+    if (!previousPeer && !candidatePeer) continue;
+
     compareDeclaredExceptions(
       findings,
       `${path}.sharedRoots`,
@@ -386,7 +390,8 @@ function compareRules(
 }
 
 function crossSliceKey(edge: { from: string; to: string }): string {
-  return `${edge.from}->${edge.to}`;
+  // JSON, not `from->to`: a slice id containing the separator would collide.
+  return JSON.stringify([edge.from, edge.to]);
 }
 
 /**
@@ -403,7 +408,7 @@ function compareDeclaredExceptions(
   addedMessage: string,
   removedMessage: string
 ): void {
-  if (previous.join('\0') === candidate.join('\0')) return;
+  if (JSON.stringify(previous) === JSON.stringify(candidate)) return;
   const added = candidate.filter((value) => !previous.includes(value));
   const removed = previous.filter((value) => !candidate.includes(value));
   const bothWays = added.length > 0 && removed.length > 0;

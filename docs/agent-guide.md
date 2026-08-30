@@ -899,7 +899,7 @@ edges are not denied by that rule.
 - **Allowed:** same-slice imports when both paths classify; classic non-peerIsolation denies still apply across layers.
 - **`sliceFolders`:** optional parent segments (default: inferred from layer globs).
 - **Fail-closed:** missing paths, empty/unresolvable slice folders, or unclassifiable either side → **deny** via peerIsolation (cannot prove same-slice).
-- **`sharedRoots`** (4.8.4): roots the repo declares shared on purpose (`["ui", "hooks", "lib/permissions"]`). A file under a declared shared root is evidence, not an unclassifiable path, so fail-closed stops firing on every shared file. A path that still resolves to a slice keeps its slice.
+- **`sharedRoots`** (4.8.4): roots the repo declares shared on purpose (`["ui", "hooks", "lib/permissions"]`). A file under a declared shared root is evidence, not an unclassifiable path, so fail-closed stops firing on every shared file. **Anchored** — the root starts the path, optionally after one `src/` or `app/`; write deeper or monorepo roots out (`packages/web/src/ui`) or glob them, and a bare `*` / `**` is refused. A path that still resolves to a slice keeps its slice.
 - **`allowedCrossSlice`** (4.8.4): `[{ "from": "features/checkout", "to": "features/catalog" }]` — one directed slice→slice edge the repo declares on purpose. The reverse still denies.
 - **The denial names its reason:** `cross-slice edge a → b` (a fact about the code) vs `unclassifiable path (…)`, `no slice folders`, `no path evidence` (facts about the evidence ArkGate had).
 - Promoting a genuinely shared slice to its own layer remains the recommended model; the two declarations exist so ArkGate can enforce a repo that deliberately chose otherwise.

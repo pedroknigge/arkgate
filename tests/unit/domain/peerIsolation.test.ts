@@ -398,6 +398,48 @@ describe('peerIsolation declared exceptions (4.8.4 — enforce the design, do no
     expect(pathUnderSharedRoot('src/ui/button.tsx', undefined)).toBe(false);
     expect(pathUnderSharedRoot(undefined, ['ui'])).toBe(false);
     expect(pathUnderSharedRoot('src/design/ui/x.ts', ['src/*/ui'])).toBe(true);
+    expect(pathUnderSharedRoot('src/DESIGN/UI/x.ts', ['src/*/ui'])).toBe(true);
+  });
+
+  it('a shared root is ANCHORED — it cannot exempt a tree it does not start', () => {
+    // `ui` means the ui root, not "any folder called ui at any depth".
+    expect(pathUnderSharedRoot('modules/a/ui/x.tsx', ['ui'])).toBe(false);
+    expect(pathUnderSharedRoot('packages/web/src/ui/x.tsx', ['ui'])).toBe(false);
+    expect(pathUnderSharedRoot('packages/web/src/ui/x.tsx', ['packages/web/src/ui'])).toBe(true);
+    expect(pathUnderSharedRoot('packages/web/src/ui/x.tsx', ['packages/*/src/ui'])).toBe(true);
+    // one conventional source folder may sit in front of the root
+    expect(pathUnderSharedRoot('app/ui/x.tsx', ['ui'])).toBe(true);
+    expect(pathUnderSharedRoot('src/app/ui/x.tsx', ['ui'])).toBe(false);
+  });
+
+  it('a blanket root is refused — fail-closed cannot be disabled with one character', () => {
+    for (const blanket of ['*', '**', './**', '**/', '/*']) {
+      expect(pathUnderSharedRoot('src/anything/x.ts', [blanket])).toBe(false);
+    }
+    expect(pathUnderSharedRoot('src/anything/x.ts', ['**/*'])).toBe(true);
+  });
+
+  it('an unanchored shared root no longer exempts a cross-tree edge (review finding)', () => {
+    // Both sides sit outside the configured slice folders, so neither carries a
+    // slice id. An unanchored `ui` would have allowed this edge; anchored, the
+    // rule still reports that it cannot place the files.
+    const rules = [
+      {
+        from: 'F',
+        to: 'F',
+        allowed: false as const,
+        peerIsolation: true,
+        sliceFolders: ['features'],
+        sharedRoots: ['ui'],
+      },
+    ];
+    expect(
+      findDeniedEdgeDecision(rules, 'F', 'F', {
+        fromPath: 'modules/a/ui/x.ts',
+        toPath: 'modules/b/ui/y.ts',
+        layers: [{ name: 'F', patterns: ['src/**'] }],
+      })?.peerIsolationReason
+    ).toBe('unclassifiable-path');
   });
 
   it('crossSliceEdgeAllowed matches full ids and bare slice names, directed', () => {
@@ -629,6 +671,29 @@ describe('peerIsolation violation message names the reason that fired', () => {
 
   it('a declared shared root produces no violation at all', () => {
     expect(evaluate('src/features/auth/a.ts', 'src/ui/button.tsx').violations).toHaveLength(0);
+  });
+
+  it('a rule.message override gets the reason appended, never replaced by it', () => {
+    const overridden = [{ ...rules[0], message: 'No cross-feature imports' }];
+    const result = evaluateArchitectureGraph({
+      config,
+      rules: overridden,
+      files: ['src/features/auth/a.ts', 'src/features/billing/b.ts'],
+      contentViolations: [],
+      edges: [
+        {
+          from: 'src/features/auth/a.ts',
+          fromLayer: 'Features',
+          to: 'src/features/billing/b.ts',
+          toLayer: 'Features',
+          line: 1,
+          kind: 'import',
+        },
+      ],
+    });
+    const message = result.violations[0]?.message ?? '';
+    expect(message).toContain('No cross-feature imports');
+    expect(message).toContain('cross-slice edge features/auth → features/billing');
   });
 });
 

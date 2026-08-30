@@ -41,6 +41,13 @@ describe('confidence gate wiring', () => {
       return found!.targets[0];
     };
 
+    const peer = group('peer-isolation-fail-closed');
+    expect(peer.file).toBe('src/domain/layerMatch.ts');
+    const peerSlice = slice(peer.file, peer.startLine, peer.endLine);
+    expect(peerSlice).toContain('export function peerIsolationDecision');
+    expect(peerSlice).toContain("reason: 'unclassifiable-path'");
+    expect(peerSlice).toContain("reason: 'cross-slice'");
+
     const ack = group('policy-delta-ack-match');
     expect(ack.file).toBe('src/domain/policyDelta.ts');
     expect(slice(ack.file, ack.startLine, ack.endLine)).toContain(

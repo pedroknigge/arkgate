@@ -155,10 +155,14 @@ is evidence:
 }
 ```
 
-- `sharedRoots` matches a contiguous run of path segments **anywhere** in the repo-relative path
-  (`ui` covers `src/ui/button.tsx`), case-insensitively; a root containing `*` is matched as a
-  glob. A path that still resolves to a slice keeps its slice — `features/auth/ui/form.tsx`
-  stays `features/auth`, so a shared root can never launder a real cross-slice edge.
+- `sharedRoots` is **anchored**: the root must start the repo-relative path, optionally after a
+  single conventional source folder (`src/`, `app/`). So `ui` covers `ui/button.tsx` and
+  `src/ui/button.tsx` but **not** `modules/a/ui/x.tsx` — an unanchored root would exempt a whole
+  tree you never declared. Write a deeper or monorepo root out (`packages/web/src/ui`) or glob it
+  (`packages/*/src/ui`). Matching is case-insensitive; a bare `*` or `**` is refused, because one
+  character must not disable fail-closed. A path that still resolves to a slice keeps its slice —
+  `features/auth/ui/form.tsx` stays `features/auth` — so a shared root can never launder a real
+  cross-slice edge.
 - `allowedCrossSlice` entries match a full slice id (`features/catalog`) or a bare slice name
   (`catalog`), and only in the direction written. The reverse edge still denies. A bare name
   matches that name under **any** slice folder, so in a repo with several slice parents
@@ -168,9 +172,12 @@ is evidence:
   that is neither in a slice nor under a declared shared root still **fails closed**.
 - The denial now names which reason fired — `cross-slice edge features/a → features/b` (a fact
   about your code) versus `unclassifiable path (src/widgets/x.tsx)` (a fact about our evidence).
-  `no slice folders` and `no path evidence` are the two remaining evidence reasons.
+  `no slice folders` and `no path evidence` are the two remaining evidence reasons. A rule-level
+  `message` override no longer hides it: the reason is appended to your text, not replaced by it.
 - Both declarations are **weakening** changes in `ark policy-delta`
-  (`shared-roots-added`, `cross-slice-allowance-added`), so a policy review sees them.
+  (`shared-roots-added`, `cross-slice-allowance-added`), so a policy review sees them. Both are
+  inert on a rule without `peerIsolation: true`, and policy-delta stays silent about them until
+  the wall exists.
 
 **The recommended model is still to promote a genuinely shared slice to its own layer** and let
 the layer edges carry it: a one-way peer import between slices is a DAG the layer graph cannot
