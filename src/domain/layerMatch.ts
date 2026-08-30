@@ -60,8 +60,9 @@ export type EdgeRule = {
    * `[{ from: "features/checkout", to: "features/catalog" }]`.
    *
    * Each entry allows exactly one direction. Slice ids match either fully
-   * (`features/auth`) or by bare slice name (`auth`), case-insensitively.
-   * Everything not declared still denies.
+   * (`features/auth`) or by bare slice name (`auth`), case-insensitively — a bare
+   * name matches that name under *any* slice folder, so write the full id in a repo
+   * with several slice parents. Everything not declared still denies.
    */
   allowedCrossSlice?: CrossSliceEdge[];
   /** Optional override message for scanners / write-gate. */

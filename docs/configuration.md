@@ -160,7 +160,10 @@ is evidence:
   glob. A path that still resolves to a slice keeps its slice — `features/auth/ui/form.tsx`
   stays `features/auth`, so a shared root can never launder a real cross-slice edge.
 - `allowedCrossSlice` entries match a full slice id (`features/catalog`) or a bare slice name
-  (`catalog`), and only in the direction written. The reverse edge still denies.
+  (`catalog`), and only in the direction written. The reverse edge still denies. A bare name
+  matches that name under **any** slice folder, so in a repo with several slice parents
+  (`features/auth` and `modules/auth`) write the full id — `features/auth` — or the
+  declaration allows more edges than you meant.
 - Everything else is unchanged: two different slices with nothing declared still deny, and a file
   that is neither in a slice nor under a declared shared root still **fails closed**.
 - The denial now names which reason fired — `cross-slice edge features/a → features/b` (a fact
