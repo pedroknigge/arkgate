@@ -51,13 +51,19 @@ export const EMPTY_ANALYSIS_RULE_ID = 'ANALYSIS_COVERS_NO_FILES';
  * before the code arrives, that is not a mismatch to refuse, and `--plan` /
  * `--doctor` already carry the `empty-scope` adoption gap for it.
  *
- * Report modes (`--plan`, `--doctor`, `--coverage`, `--adopt-contract`,
- * `--suggest-include`) are how a user diagnoses and fixes an empty scope, so
- * callers must not apply this refusal to them. It belongs to the verdict path.
+ * Report modes (`--plan`, `--doctor`, `--coverage`) are how a user diagnoses and
+ * fixes an empty scope, so callers must not apply this refusal to them. It
+ * belongs to the verdict path. (`--adopt-contract` and `--suggest-include` never
+ * reach it: their handlers return earlier.)
+ *
+ * `ungovernedSourceCount` must come from a probe the contract cannot steer — see
+ * `countUngovernedSourceFiles` in scan-files.mjs. Feeding it a count that honours
+ * `config.exclude` reopens the false green through `exclude: ["**"]`.
  *
  * @param {{
  *   governedFileCount?: number,
  *   ungovernedSourceCount?: number,
+ *   ungovernedSourceCap?: number,
  *   root?: string,
  *   requestedRoot?: string,
  *   configPath?: string,
@@ -70,6 +76,7 @@ export function emptyAnalysisRefusal(input = {}) {
   if (!Number.isFinite(count) || count !== 0) return null;
 
   const ungoverned = Math.max(0, Number(input.ungovernedSourceCount) || 0);
+  const cap = Math.max(0, Number(input.ungovernedSourceCap) || 0);
   const root = String(input.root ?? '');
   const configPath = String(input.configPath ?? '');
   const requestedRoot = String(input.requestedRoot ?? '');
@@ -79,10 +86,13 @@ export function emptyAnalysisRefusal(input = {}) {
   // Greenfield on the root the caller asked for: nothing to govern, nothing to mistake.
   if (ungoverned === 0 && !movedRoot) return null;
 
+  // The probe stops at a cap, so say "at least N" rather than claim a census it never took.
+  const counted = cap > 0 && ungoverned >= cap ? `at least ${ungoverned}` : `${ungoverned}`;
+
   const evidence = movedRoot
-    ? `${ungoverned} source file(s) exist under ${root}, which is not the ${requestedRoot} this ` +
+    ? `${counted} source file(s) exist under ${root}, which is not the ${requestedRoot} this ` +
       `run was asked for — the contract at ${configPath} lives outside it`
-    : `${ungoverned} source file(s) exist under ${root} and none of them matched the include and ` +
+    : `${counted} source file(s) exist under ${root} and none of them matched the include and ` +
       `layer patterns in ${configPath}`;
 
   const message =

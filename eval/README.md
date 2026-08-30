@@ -250,7 +250,7 @@ patternBets stay never mechanical-safe; gate is not weakened.
 ```bash
 npm run eval:ai-velocity
 # or: node eval/ai-velocity-run.mjs
-# -> eval/ai-velocity-report.json (+ baseline)
+# -> eval/ai-velocity-report.json (baseline is only written with --write-baseline)
 
 # Redirect the writes (the q05 unit test uses this so `npm test` never rewrites
 # the tracked report with a fresh generatedAt):

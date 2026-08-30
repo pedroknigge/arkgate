@@ -54,7 +54,15 @@ implying it knows a test runs. **No required config migration.**
   it, or when the analyzed root is not the root that was asked for — and stays silent on a
   genuinely greenfield repo, where `--init` is designed to land a contract before the code. The
   report modes are untouched: `--plan`, `--coverage` and `--doctor` still describe an empty scope
-  (`empty-scope`) rather than refusing, because they are how the refusal gets fixed.
+  (`empty-scope`) rather than refusing, because they are how the refusal gets fixed — so do not
+  gate CI on a report mode. "Is there source here" is answered by a probe the contract cannot
+  steer: it ignores the contract's own `exclude` (otherwise `exclude: ["**"]` buys the green back),
+  skips dot-directories, never follows a symlink (an unrelated out-of-root link must not turn a
+  diagnostic into a crash), skips `*.config.*` so a polyglot repo whose only TS is `vite.config.ts`
+  is greenfield rather than a mismatch, and stops at 200 files — the message says *at least N* when
+  it did. The whole check is evaluated lazily, so the cheap exits (a `--changed` run whose diff
+  touches no product path, `--require-gates` with the gates present) still pay nothing for a walk
+  they never needed.
 - **The production diagnostic-id fixture is pinned in both directions.**
   `tests/fixtures/diagnostic-catalog/production-rule-ids.json` had two tests over it and both
   asserted fixture ⊆ catalog, so a production-emitted id added to the catalog and forgotten in the
@@ -67,8 +75,12 @@ implying it knows a test runs. **No required config migration.**
   `eval/ai-velocity-report.json` on every run — its `generatedAt` is fresh each time, and that
   pure-timestamp diff has already ridden into two commits. The harness now takes `--report` (and
   `--baseline`) so the test writes into a temp dir and removes it in a `finally`, matching the
-  sibling test in the same file, and it now asserts the tracked report is byte-identical after the
-  run. Default paths are unchanged for `npm run eval:ai-velocity`.
+  sibling test in the same file, and it now asserts both the tracked report **and** the tracked
+  baseline are byte-identical after the run. Seeding the baseline is now `--write-baseline` only:
+  it used to be written on any run where the file was missing, which is the same class of surprise
+  one level down. `--report` and `--baseline` must differ (aliased, the report was read back as its
+  own baseline and the run printed PASS without producing one) and neither may name a directory.
+  Default paths are unchanged for `npm run eval:ai-velocity`.
 - **`coverage.maxFiles` is bounded.** It had no upper limit, and a schema `maximum` would
   have been silently ignored (the config validator implements no such keyword), so any
   integer became a memory budget. Clamped to 20000.

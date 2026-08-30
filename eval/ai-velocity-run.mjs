@@ -17,7 +17,7 @@
  *
  * Outputs (default):
  *   eval/ai-velocity-report.json
- *   eval/ai-velocity-baseline.json (when --write-baseline or missing)
+ *   eval/ai-velocity-baseline.json (only with --write-baseline)
  *
  * `--report` / `--baseline` redirect those writes. Callers that only want to
  * prove the harness runs — the q05 unit test — point --report at a temp dir so
@@ -39,7 +39,7 @@ const FIXTURE = path.join(REPO, 'tests/fixtures/design-weak-enforce');
 const DEFAULT_REPORT_PATH = path.join(HERE, 'ai-velocity-report.json');
 const DEFAULT_BASELINE_PATH = path.join(HERE, 'ai-velocity-baseline.json');
 
-/** Read `--flag <path>` from argv; absent flag → fallback. */
+/** Read `--flag <path>` from argv; absent flag → fallback. Refuses a directory (writeFileSync would EISDIR mid-run). */
 function pathArg(flag, fallback) {
   const at = process.argv.indexOf(flag);
   if (at === -1) return fallback;
@@ -48,7 +48,12 @@ function pathArg(flag, fallback) {
     console.error(`[ai-velocity] ${flag} needs a path`);
     process.exit(2);
   }
-  return path.resolve(value);
+  const resolved = path.resolve(value);
+  if (fs.statSync(resolved, { throwIfNoEntry: false })?.isDirectory()) {
+    console.error(`[ai-velocity] ${flag} must be a file path, not a directory: ${resolved}`);
+    process.exit(2);
+  }
+  return resolved;
 }
 
 function copyTree(src, dst) {
@@ -64,8 +69,14 @@ function copyTree(src, dst) {
 
 function main() {
   const writeBaseline = process.argv.includes('--write-baseline');
-  const REPORT_PATH = pathArg('--report', DEFAULT_REPORT_PATH);
-  const BASELINE_PATH = pathArg('--baseline', DEFAULT_BASELINE_PATH);
+  const reportPath = pathArg('--report', DEFAULT_REPORT_PATH);
+  const baselinePath = pathArg('--baseline', DEFAULT_BASELINE_PATH);
+  if (reportPath === baselinePath) {
+    // Aliased, the report is written first and then read back as its own baseline:
+    // the run prints PASS while never producing the baseline that was asked for.
+    console.error(`[ai-velocity] --report and --baseline must differ: ${reportPath}`);
+    process.exit(2);
+  }
   if (!fs.existsSync(path.join(FIXTURE, 'ark.config.json'))) {
     console.error(`[ai-velocity] missing fixture: ${FIXTURE}`);
     process.exit(2);
@@ -93,8 +104,8 @@ function main() {
     report.fixture = 'tests/fixtures/design-weak-enforce';
     report.command = 'npm run eval:ai-velocity';
 
-    fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
-    fs.writeFileSync(REPORT_PATH, JSON.stringify(report, null, 2) + '\n');
+    fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+    fs.writeFileSync(reportPath, JSON.stringify(report, null, 2) + '\n');
 
     const baselineBody = {
       schemaVersion: '1',
@@ -110,9 +121,17 @@ function main() {
       method: report.comparison.method,
     };
 
-    if (writeBaseline || !fs.existsSync(BASELINE_PATH)) {
-      fs.mkdirSync(path.dirname(BASELINE_PATH), { recursive: true });
-      fs.writeFileSync(BASELINE_PATH, JSON.stringify(baselineBody, null, 2) + '\n');
+    // Seeding the baseline is an explicit act. It used to happen on any run where the
+    // file was missing, which meant a harness run could write a TRACKED file as a side
+    // effect of merely running — the same class of surprise as rewriting the report.
+    if (writeBaseline) {
+      fs.mkdirSync(path.dirname(baselinePath), { recursive: true });
+      fs.writeFileSync(baselinePath, JSON.stringify(baselineBody, null, 2) + '\n');
+    } else if (!fs.existsSync(baselinePath)) {
+      console.error(
+        `[ai-velocity] no baseline at ${path.relative(REPO, baselinePath)} — regression check skipped. ` +
+          'Seed it with --write-baseline.'
+      );
     }
 
     // Console summary (method next to the number).
@@ -126,9 +145,9 @@ function main() {
       `  delta:     ${report.comparison.deltaTurns} (golden strictly better: ${report.comparison.goldenStrictlyBetter})`
     );
     console.log(`  method:   ${report.comparison.method}`);
-    console.log(`  report:   ${path.relative(REPO, REPORT_PATH)}`);
-    if (REPORT_PATH !== DEFAULT_REPORT_PATH) {
-      console.log(`  (--report: ${DEFAULT_REPORT_PATH} left untouched)`);
+    console.log(`  report:   ${path.relative(REPO, reportPath)}`);
+    if (reportPath !== DEFAULT_REPORT_PATH) {
+      console.log(`  (--report: ${path.relative(REPO, DEFAULT_REPORT_PATH)} left untouched)`);
     }
 
     if (!report.ok) {
@@ -145,8 +164,8 @@ function main() {
     }
 
     // Baseline regression: golden must remain better than recorded design-weak floor.
-    if (fs.existsSync(BASELINE_PATH)) {
-      const baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf8'));
+    if (fs.existsSync(baselinePath)) {
+      const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
       if (baseline.summary?.goldenPathTurns != null) {
         if (report.comparison.goldenPathTurns > baseline.summary.goldenPathTurns) {
           console.error(

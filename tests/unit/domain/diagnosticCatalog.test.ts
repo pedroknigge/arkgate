@@ -305,33 +305,30 @@ describe('diagnosticCatalog ↔ docs anchors', () => {
   });
 });
 
+const PRODUCTION_FIXTURE_PATH = 'tests/fixtures/diagnostic-catalog/production-rule-ids.json';
+
+/** ruleIds the fixture claims are production-emitted. */
+function productionFixtureRuleIds(): string[] {
+  const fixture = JSON.parse(readFileSync(join(repoRoot, PRODUCTION_FIXTURE_PATH), 'utf8')) as {
+    ruleIds: string[];
+  };
+  return fixture.ruleIds;
+}
+
 describe('diagnosticCatalog ↔ production ruleId fixture', () => {
   it('forbids unknown codes on the production fixture list', () => {
-    const fixturePath = join(
-      repoRoot,
-      'tests/fixtures/diagnostic-catalog/production-rule-ids.json'
-    );
-    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as { ruleIds: string[] };
-    expect(fixture.ruleIds.length).toBeGreaterThan(30);
+    const ruleIds = productionFixtureRuleIds();
+    expect(ruleIds.length).toBeGreaterThan(30);
 
-    const missing: string[] = [];
-    for (const ruleId of fixture.ruleIds) {
-      if (!isKnownDiagnosticCode(ruleId)) missing.push(ruleId);
-    }
+    const missing = ruleIds.filter((ruleId) => !isKnownDiagnosticCode(ruleId));
     expect(missing, `unknown production ruleIds: ${missing.join(', ')}`).toEqual([]);
   });
 
   it('fixture does not silently drop catalog codes (every catalogued id listed)', () => {
-    // Both existing assertions run fixture → catalog, so a production-emitted id
+    // Both pre-existing assertions run fixture → catalog, so a production-emitted id
     // added to the catalog and forgotten in the fixture could not fail anything.
     // ARKORDER_XI_FIELD_WRITE sat in exactly that hole. This closes the direction.
-    const fixture = JSON.parse(
-      readFileSync(
-        join(repoRoot, 'tests/fixtures/diagnostic-catalog/production-rule-ids.json'),
-        'utf8'
-      )
-    ) as { ruleIds: string[] };
-    const listed = new Set(fixture.ruleIds);
+    const listed = new Set(productionFixtureRuleIds());
     const unlisted = DIAGNOSTIC_RULE_IDS.filter((ruleId) => !listed.has(ruleId));
     expect(
       unlisted,
@@ -340,28 +337,19 @@ describe('diagnosticCatalog ↔ production ruleId fixture', () => {
   });
 
   it('every sensor-mapped ruleId is on the production fixture list', () => {
-    const fixture = JSON.parse(
-      readFileSync(
-        join(repoRoot, 'tests/fixtures/diagnostic-catalog/production-rule-ids.json'),
-        'utf8'
-      )
-    ) as { ruleIds: string[] };
-    const listed = new Set(fixture.ruleIds);
+    // This is the direction that speaks about EMISSION rather than about the catalog
+    // mirroring itself: a sensor that maps to a ruleId is a production emitter.
+    const listed = new Set(productionFixtureRuleIds());
     const emitted = [...Object.values(ARKORDER_RULE_IDS), ...Object.values(ARKRUN_RULE_IDS)];
+    // Floor guards against Object.values() going empty after a refactor of either map.
     expect(emitted.length).toBeGreaterThan(10);
     const missing = emitted.filter((ruleId) => !listed.has(ruleId));
     expect(missing, `sensor ruleIds missing from the fixture: ${missing.join(', ')}`).toEqual([]);
   });
 
   it('catalog does not silently drop fixture codes (every fixture id present)', () => {
-    const fixture = JSON.parse(
-      readFileSync(
-        join(repoRoot, 'tests/fixtures/diagnostic-catalog/production-rule-ids.json'),
-        'utf8'
-      )
-    ) as { ruleIds: string[] };
     const catalogSet = new Set(DIAGNOSTIC_RULE_IDS);
-    for (const id of fixture.ruleIds) {
+    for (const id of productionFixtureRuleIds()) {
       expect(catalogSet.has(id), id).toBe(true);
     }
   });

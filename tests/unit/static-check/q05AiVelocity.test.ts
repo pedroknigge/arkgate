@@ -147,6 +147,7 @@ describe('Q05 runAiVelocityComparison + shipped harness', () => {
     // `generatedAt` on every run, and that pure-timestamp diff has already ridden
     // into two commits. Prove the same thing against a report in a temp dir.
     const trackedBefore = fs.existsSync(REPORT) ? fs.readFileSync(REPORT, 'utf8') : null;
+    const trackedBaselineBefore = fs.existsSync(BASELINE) ? fs.readFileSync(BASELINE, 'utf8') : null;
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-q05-harness-'));
     const reportPath = path.join(tmp, 'ai-velocity-report.json');
     try {
@@ -163,6 +164,12 @@ describe('Q05 runAiVelocityComparison + shipped harness', () => {
         fs.existsSync(REPORT) ? fs.readFileSync(REPORT, 'utf8') : null,
         'the harness rewrote the tracked eval/ai-velocity-report.json'
       ).toBe(trackedBefore);
+      // The baseline is deliberately NOT redirected: the run must still compare against
+      // the tracked floor. It must also not write it — seeding is --write-baseline only.
+      expect(
+        fs.existsSync(BASELINE) ? fs.readFileSync(BASELINE, 'utf8') : null,
+        'the harness rewrote the tracked eval/ai-velocity-baseline.json'
+      ).toBe(trackedBaselineBefore);
 
       const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
       expect(report.id).toBe('q05-ai-velocity');

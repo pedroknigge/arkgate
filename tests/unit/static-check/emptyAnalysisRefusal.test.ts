@@ -149,6 +149,26 @@ describe('emptyAnalysisRefusal (pure)', () => {
     expect(refusal?.nextAction).toBe(MOVED_NEXT_ACTION);
   });
 
+  it('says "at least N" only when the probe stopped at its cap', () => {
+    const base = {
+      governedFileCount: 0,
+      root: '/repo',
+      requestedRoot: '/repo',
+      configPath: '/repo/ark.config.json',
+    };
+    const under = emptyAnalysisRefusal({ ...base, ungovernedSourceCount: 199, ungovernedSourceCap: 200 });
+    expect(under?.message).toContain('199 source file(s) exist');
+    expect(under?.message).not.toContain('at least');
+
+    const atCap = emptyAnalysisRefusal({ ...base, ungovernedSourceCount: 200, ungovernedSourceCap: 200 });
+    expect(atCap?.message).toContain('at least 200 source file(s) exist');
+
+    // No cap declared: the count is a census, never hedged.
+    const noCap = emptyAnalysisRefusal({ ...base, ungovernedSourceCount: 200 });
+    expect(noCap?.message).toContain('200 source file(s) exist');
+    expect(noCap?.message).not.toContain('at least');
+  });
+
   it('renders empty paths rather than "undefined" when the caller omits them', () => {
     const refusal = emptyAnalysisRefusal({ governedFileCount: 0, ungovernedSourceCount: 3 });
     expect(refusal?.message).toBe(
@@ -174,10 +194,10 @@ describe('emptyAnalysisRefusal (pure)', () => {
 });
 
 describe('ark-check refuses an empty analysis', () => {
-  it('exits 1 instead of printing a closing green when no file is governed', () => {
+  /** Contract governs src/ (empty); the tree's real source lives in app/. */
+  function scopeMismatchRepo(extra: Record<string, unknown> = {}): string {
     const root = mk();
     fs.mkdirSync(path.join(root, 'src'), { recursive: true });
-    // Source exists in the tree — the contract simply does not describe it.
     fs.mkdirSync(path.join(root, 'app'), { recursive: true });
     fs.writeFileSync(path.join(root, 'app', 'thing.ts'), 'export const thing = 1;\n');
     fs.writeFileSync(
@@ -187,9 +207,14 @@ describe('ark-check refuses an empty analysis', () => {
         include: ['src'],
         layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
         rules: [],
+        ...extra,
       })
     );
+    return root;
+  }
 
+  it('exits 1 instead of printing a closing green when no file is governed', () => {
+    const root = scopeMismatchRepo();
     const res = run(['--root', root, '--config', 'ark.config.json'], root);
     const out = `${res.stdout || ''}${res.stderr || ''}`;
     expect(res.status, out).toBe(1);
@@ -197,12 +222,58 @@ describe('ark-check refuses an empty analysis', () => {
     expect(out).not.toMatch(/Ark check passed/);
   });
 
-  it('--json reports ok:false with the empty-analysis ruleId', () => {
+  it('--json reports ok:false with the empty-analysis ruleId and its next action', () => {
+    const root = scopeMismatchRepo();
+    const res = run(['--root', root, '--config', 'ark.config.json', '--json'], root);
+    const stdout = res.stdout || '';
+    const start = stdout.indexOf('{');
+    expect(start, stdout.slice(0, 400)).toBeGreaterThanOrEqual(0);
+    const payload = JSON.parse(stdout.slice(start));
+    expect(payload.ok).toBe(false);
+    expect(payload.error).toBe(EMPTY_ANALYSIS_RULE_ID);
+    expect(payload.completeness).toBe('unavailable');
+    expect(String(payload.message)).toContain('Analysis covered 0 files');
+    expect(String(payload.nextAction)).toContain('--plan');
+  });
+
+  it('an exclude that swallows the tree cannot buy a green (the probe ignores exclude)', () => {
+    // The contract under suspicion must not get to answer the question about itself:
+    // `exclude: ["**"]` used to make the tree read as greenfield and pass.
     const root = mk();
     fs.mkdirSync(path.join(root, 'src'), { recursive: true });
-    // Source exists in the tree — the contract simply does not describe it.
-    fs.mkdirSync(path.join(root, 'app'), { recursive: true });
-    fs.writeFileSync(path.join(root, 'app', 'thing.ts'), 'export const thing = 1;\n');
+    fs.writeFileSync(path.join(root, 'src', 'a.ts'), 'export const a = 1;\n');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        include: ['src'],
+        exclude: ['**'],
+        layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+        rules: [],
+      })
+    );
+    const res = run(['--root', root, '--config', 'ark.config.json'], root);
+    const out = `${res.stdout || ''}${res.stderr || ''}`;
+    expect(res.status, out.slice(-600)).toBe(1);
+    expect(out).toContain(EMPTY_ANALYSIS_RULE_ID);
+  });
+
+  it.each(['--plan', '--coverage', '--doctor'])(
+    'report mode %s diagnoses an empty scope instead of refusing',
+    (mode) => {
+      const root = scopeMismatchRepo();
+      const res = run(['--root', root, '--config', 'ark.config.json', mode], root);
+      const out = `${res.stdout || ''}${res.stderr || ''}`;
+      expect(res.status, out.slice(-600)).toBe(0);
+      expect(out).not.toContain(EMPTY_ANALYSIS_RULE_ID);
+    }
+  );
+
+  it('a greenfield root is not refused: --init lands a contract before the code', () => {
+    const root = mk();
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'package.json'), '{"name":"x"}\n');
+    fs.writeFileSync(path.join(root, 'README.md'), '# x\n');
     fs.writeFileSync(
       path.join(root, 'ark.config.json'),
       JSON.stringify({
@@ -212,14 +283,31 @@ describe('ark-check refuses an empty analysis', () => {
         rules: [],
       })
     );
-
-    const res = run(['--root', root, '--config', 'ark.config.json', '--json'], root);
+    const res = run(['--root', root, '--config', 'ark.config.json'], root);
     const out = `${res.stdout || ''}${res.stderr || ''}`;
-    const start = out.indexOf('{');
-    expect(start, out.slice(0, 400)).toBeGreaterThanOrEqual(0);
-    const payload = JSON.parse(out.slice(start));
-    expect(payload.ok).toBe(false);
-    expect(payload.error ?? payload.violations?.[0]?.ruleId).toContain(EMPTY_ANALYSIS_RULE_ID);
+    expect(out).not.toContain(EMPTY_ANALYSIS_RULE_ID);
+    expect(res.status, out.slice(-600)).toBe(0);
+  });
+
+  it('a repo whose only TS is tooling config is greenfield, not a mismatch', () => {
+    // Polyglot / TS-less repos: vite.config.ts is not the product source a contract governs.
+    const root = mk();
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'vite.config.ts'), 'export default {};\n');
+    fs.writeFileSync(path.join(root, 'eslint.config.js'), 'module.exports = {};\n');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+        rules: [],
+      })
+    );
+    const res = run(['--root', root, '--config', 'ark.config.json'], root);
+    const out = `${res.stdout || ''}${res.stderr || ''}`;
+    expect(out).not.toContain(EMPTY_ANALYSIS_RULE_ID);
+    expect(res.status, out.slice(-600)).toBe(0);
   });
 
   it('field repro: --config copied outside the tree refuses with the real reason', () => {
@@ -241,10 +329,24 @@ describe('ark-check refuses an empty analysis', () => {
     expect(strictOut).not.toMatch(/Ark gates are not installed/);
   });
 
-  it('the real contract still passes over a non-empty file set', () => {
-    const res = run(['--root', repoRoot, '--config', 'ark.config.json'], repoRoot);
+  it('a governed contract does not trip the refusal', () => {
+    // Deliberately a self-contained fixture: asserting exit 0 on the whole repo would
+    // couple this file to the repo's own architecture health.
+    const root = mk();
+    fs.mkdirSync(path.join(root, 'src', 'domain'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'domain', 'order.ts'), 'export const order = 1;\n');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        include: ['src'],
+        layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+        rules: [],
+      })
+    );
+    const res = run(['--root', root, '--config', 'ark.config.json'], root);
     const out = `${res.stdout || ''}${res.stderr || ''}`;
     expect(out).not.toContain(EMPTY_ANALYSIS_RULE_ID);
-    expect(res.status, out.slice(-800)).toBe(0);
+    expect(res.status, out.slice(-600)).toBe(0);
   });
 });

@@ -467,8 +467,16 @@ every rule is vacuously satisfied on an empty set. It fires when source exists u
 analyzed root and the contract governs none of it, or when the analyzed root is not the
 root you asked for (a contract found outside `--root` makes ArkGate adopt the contract's
 directory). A genuinely greenfield repo — no governable source anywhere under the root
-you asked for — still passes, so `ark init` can land a contract before the code. The
-commands below are exempt on purpose: they are how the refusal gets diagnosed and fixed.
+you asked for — still passes, so `ark init` can land a contract before the code.
+
+"Source exists" is answered by a probe the contract cannot steer: it ignores `exclude`
+(otherwise `exclude: ["**"]` would buy a green), skips dot-directories, never follows a
+symlink, skips `*.config.*` (a repo whose only TS is `vite.config.ts` is greenfield, not
+a mismatch), and stops at 200 files — the message says *at least N* when it did.
+
+The commands below are exempt on purpose: they are how the refusal gets diagnosed and
+fixed, so `--plan`, `--coverage` and `--doctor` still exit 0 on an empty scope and report
+`empty-scope`. **Do not gate CI on a report mode** — gate on `ark-check` / `--strict`.
 
 ```bash
 npx ark-check --suggest-include --json    # workspaces + nested package.json+TS roots

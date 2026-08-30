@@ -88,8 +88,8 @@
       "targets": [
         {
           "file": "bin/lib/analysis-completeness.mjs",
-          "startLine": 68,
-          "endLine": 105
+          "startLine": 74,
+          "endLine": 114
         }
       ]
     },

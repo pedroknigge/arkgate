@@ -97,7 +97,13 @@ import {
 import { loadArkConfigContract, parseArkConfigJson } from './lib/config-contract.mjs';
 import { checkUsage, checkUsageAll } from './lib/first-run-help.mjs';
 import { createAdapterResult } from './lib/adapter-contract.mjs';
-import { collectGovernedFiles, normalize, walk } from './lib/scan-files.mjs';
+import {
+  UNGOVERNED_PROBE_CAP,
+  collectGovernedFiles,
+  countUngovernedSourceFiles,
+  normalize,
+  walk,
+} from './lib/scan-files.mjs';
 import { configWarning } from './lib/config-warnings.mjs';
 import { runArchitectureScan } from './lib/architecture-scan.mjs';
 import {
@@ -971,55 +977,58 @@ async function main() {
     return;
   }
 
-  // Empty analysis is a refusal, and it outranks every later gate: on zero governed
-  // files each of them reports on nothing. Checked before --require-gates so the
-  // caller hears the real reason instead of "Ark gates are not installed" in whatever
-  // directory the contract happened to live in.
+  // Empty analysis is a refusal: on zero governed files every later gate reports on
+  // nothing. It outranks --require-gates, so the caller hears the real reason instead
+  // of "Ark gates are not installed" in whatever directory the contract happened to
+  // live in — but it is evaluated LAZILY, so the cheap exits (a --changed run whose
+  // diff touches no product path, --require-gates with the gates present) still pay
+  // nothing for a filesystem walk they never needed.
   //
   // Report modes are exempt: --plan, --coverage and --doctor are how a user sees and
   // fixes an empty scope (they already carry the `empty-scope` adoption gap), so
   // refusing there would remove the only surface that explains the refusal.
   const root = args.root;
-  const config = readConfig(root, args.config);
-  const allGovernedFiles = collectGovernedFiles(root, config);
   const verdictPath = !args.plan && !args.coverage && !args.doctor;
-  const emptyAnalysis = verdictPath
-    ? emptyAnalysisRefusal({
-        governedFileCount: allGovernedFiles.length,
-        // Only walked when nothing is governed: separates "the contract does not
-        // describe this tree" from a genuinely greenfield repo with no source yet.
-        ungovernedSourceCount:
-          allGovernedFiles.length === 0
-            ? collectGovernedFiles(root, { ...config, include: ['.'] }).length
-            : 0,
-        root,
-        requestedRoot: args.requestedRoot,
-        configPath: path.isAbsolute(args.config) ? args.config : path.join(root, args.config),
-        configWalkedUp: args.configWalkedUp === true,
-      })
-    : null;
-  if (emptyAnalysis) {
+  let configCache = null;
+  const loadConfig = () => (configCache ??= readConfig(root, args.config));
+  let governedCache = null;
+  const loadGovernedFiles = () => (governedCache ??= collectGovernedFiles(root, loadConfig()));
+  const emptyAnalysisRefusalNow = () => {
+    const governedCount = loadGovernedFiles().length;
+    return emptyAnalysisRefusal({
+      governedFileCount: governedCount,
+      // Probed only when nothing is governed, and never through the contract's own
+      // exclude: the config under suspicion must not get to answer the question about
+      // itself (`exclude: ["**"]` would otherwise read as greenfield and pass).
+      ungovernedSourceCount: governedCount === 0 ? countUngovernedSourceFiles(root) : 0,
+      ungovernedSourceCap: UNGOVERNED_PROBE_CAP,
+      root,
+      requestedRoot: args.requestedRoot,
+      configPath: path.isAbsolute(args.config) ? args.config : path.join(root, args.config),
+      configWalkedUp: args.configWalkedUp === true,
+    });
+  };
+  const reportEmptyAnalysis = (refusal) => {
     if (args.json) {
       console.log(
         JSON.stringify(
           {
             ok: false,
-            error: emptyAnalysis.ruleId,
+            error: refusal.ruleId,
             completeness: ANALYSIS_COMPLETENESS.unavailable,
-            message: emptyAnalysis.message,
-            nextAction: emptyAnalysis.nextAction,
+            message: refusal.message,
+            nextAction: refusal.nextAction,
           },
           null,
           2
         )
       );
     } else {
-      console.error(`${color.red('✖')} ${emptyAnalysis.ruleId} ${emptyAnalysis.message}`);
-      console.error(`Next: ${emptyAnalysis.nextAction}`);
+      console.error(`${color.red('\u2716')} ${refusal.ruleId} ${refusal.message}`);
+      console.error(`Next: ${refusal.nextAction}`);
     }
     process.exitCode = 1;
-    return;
-  }
+  };
 
   if (args.requireGates || args.requireWriteHook) {
     let writeRequest = null;
@@ -1051,6 +1060,24 @@ async function main() {
       missing.push(`${writeRequest.host} hard-write hook`);
     }
     if (missing.length > 0) {
+      // "Gates not installed" is the wrong reason for a run that would have analyzed
+      // nothing: it sends the user to `ark init` for a problem they do not have. Only
+      // here do we pay for the walk — with the gates present we fall through and the
+      // verdict path below checks at its usual point. A contract that cannot even be
+      // read is not evidence of an empty analysis, so that throw falls back to the
+      // gate report instead of masking it.
+      let refusal = null;
+      if (verdictPath) {
+        try {
+          refusal = emptyAnalysisRefusalNow();
+        } catch {
+          refusal = null;
+        }
+      }
+      if (refusal) {
+        reportEmptyAnalysis(refusal);
+        return;
+      }
       const payload = {
         ok: false,
         error: 'missing-gates',
@@ -1096,6 +1123,7 @@ async function main() {
 
   const bound = bindTeamBaseRefs(args, root);
   Object.assign(args, bound.args);
+  const config = loadConfig();
   const policyDelta = analyzePolicyTransition({
     root,
     configPath: args.config,
@@ -1143,6 +1171,14 @@ async function main() {
   }
   const manifest = readManifest(root, args.manifest);
   const rules = manifest?.architecture?.rules ?? config.rules;
+  const allGovernedFiles = loadGovernedFiles();
+  if (verdictPath) {
+    const refusal = emptyAnalysisRefusalNow();
+    if (refusal) {
+      reportEmptyAnalysis(refusal);
+      return;
+    }
+  }
   if (args.failUngoverned && teamParliament?.changeSet?.productPaths?.length) {
     const governedRel = new Set(
       allGovernedFiles.map((abs) => normalize(path.relative(root, abs)))

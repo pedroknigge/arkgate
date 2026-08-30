@@ -136,3 +136,57 @@ export function collectGovernedFiles(root, config, options = {}) {
 export function normalize(value) {
   return value.split(path.sep).join('/');
 }
+
+/**
+ * Default ceiling for `countUngovernedSourceFiles`. The caller needs "does this tree
+ * hold source at all", not a census, so stopping early keeps the probe off the hot path.
+ */
+export const UNGOVERNED_PROBE_CAP = 200;
+
+/** Tooling configs (vite.config.ts, eslint.config.js …) are not the product source a contract governs. */
+export const TOOLING_CONFIG_FILE_NAME = /\.config\.[cm]?[jt]sx?$/i;
+
+/**
+ * Count governable source files under `root` that the contract's own scope cannot hide.
+ *
+ * Deliberately NOT `collectGovernedFiles(root, { ...config, include: ['.'] })`. That
+ * variant keeps `config.exclude`, so `exclude: ["**"]` makes the tree look empty — the
+ * contract under suspicion would get to answer the question about itself, and a green
+ * over zero governed files comes back through the side door.
+ *
+ * Also deliberately narrow, so the count is evidence and not noise:
+ * - dot-directories are skipped (`.git` fan-out is not source, and walking it is expensive);
+ * - `isSkippedSourceDir` names are skipped, matching the governed walk;
+ * - symlinks are never followed — a link is not proof this tree holds source, and following
+ *   one can escape the root and turn a diagnostic into a crash;
+ * - `*.config.*` files are skipped: a polyglot or TS-less repo whose only TS/JS is
+ *   `vite.config.ts` has no product source here, and must not be told otherwise;
+ * - unreadable directories are skipped rather than thrown: this is a probe, not a gate.
+ *
+ * @param {string} root
+ * @param {number} [cap]
+ * @returns {number} source files found, capped at `cap`
+ */
+export function countUngovernedSourceFiles(root, cap = UNGOVERNED_PROBE_CAP) {
+  let count = 0;
+  const stack = [root];
+  while (stack.length > 0 && count < cap) {
+    const dir = stack.pop();
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (count >= cap) break;
+      if (entry.name.startsWith('.')) continue;
+      if (entry.isDirectory()) {
+        if (!isSkippedSourceDir(entry.name)) stack.push(path.join(dir, entry.name));
+      } else if (entry.isFile() && isGovernableSourceFile(entry.name)) {
+        if (!TOOLING_CONFIG_FILE_NAME.test(entry.name)) count += 1;
+      }
+    }
+  }
+  return count;
+}
