@@ -28,9 +28,15 @@
         "bin/lib/agent-skills-package.mjs",
         "bin/lib/team-parliament.mjs",
         "bin/lib/ark-run-facts.mjs",
+        "bin/lib/config-extras.mjs",
         "bin/lib/extra-merge-teeth.mjs",
         "bin/lib/ark-run-sensors.mjs",
-        "bin/lib/ark-run-doctor.mjs"
+        "bin/lib/ark-run-doctor.mjs",
+        "bin/lib/ark-order-facts.mjs",
+        "bin/lib/ark-order-sensors.mjs",
+        "bin/lib/ark-order-invariants.mjs",
+        "bin/lib/ark-order-error.mjs",
+        "bin/lib/ark-order-types.mjs"
       ],
       "intentPrefixes": ["Domain."],
       "forbiddenGlobals": ["fetch", "process", "Date.now", "Math.random"]

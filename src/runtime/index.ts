@@ -1,16 +1,16 @@
 /**
- * Preferred package entry for the **ArkRun** kernel (`@arkgate/runtime`).
+ * Preferred package entry for the **ArkRun** kernel (`arkgate/runtime`).
  *
  * ```ts
- * import { createStrictArkKernel } from '@arkgate/runtime';
+ * import { createStrictArkKernel } from 'arkgate/runtime';
  *
  * const ark = createStrictArkKernel();
  * ```
  *
  * `createStrictArkKernel` is the factory: each call is a new isolated instance.
  * There is no process-wide singleton. Architecture gates (CLI / MCP / eslint) do
- * **not** require this entry. The stable `arkgate` tarball does not bundle this
- * experimental implementation.
+ * **not** require this entry. Opt-in extra of package `arkgate` (ADR 0031).
+ * `@arkgate/runtime` is deprecated.
  *
  * @packageDocumentation
  */

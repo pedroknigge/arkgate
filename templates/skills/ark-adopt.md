@@ -124,7 +124,7 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
 |-------|------------------|----------------|-----------------|
 | **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
 | **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
-| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`) + companion `@arkgate/runtime` | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
+| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime` | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
 
 **Rules for every report / answer:**
 1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** or **`[ArkRun]`** (or a two-column table with those headers).
@@ -145,7 +145,7 @@ ArkGate has **two opt-in planes**. The user chooses which to use; you **always l
 - Required shape: `compositionRoots` (real files; empty + enforced fails closed), `managedLayers` (existing `layers[].name` only), `requireDeclarations` (default true).
 - Do **not** put `arkRun` on the compact starter / `ark start` scaffold. Brownfield stays advisory until the team promotes.
 - Absence is valid and **silent** — never force the extra. Never force the kernel over existing Nest/DI. Do not invent `/ark-run`.
-- Import the companion from `@arkgate/runtime` (factory `createStrictArkKernel`, per instance, no process-wide singleton). Never a removed `arkgate/runtime` shim. No shipped cloud broker SDKs.
+- Import from `arkgate/runtime` (factory `createStrictArkKernel`, per instance, no process-wide singleton). `@arkgate/runtime` is deprecated. No shipped cloud broker SDKs.
 - In-memory stores are **not** production durability. Branding ArkRun is not a durability claim. Doctor / status `arkRun` is `notAScore`.
 - Demoting enforced → advisory or deleting the extra is policy-delta **weakening**.
 - After the extra is honest: handoff `/ark-runtime` to wire one candidate, `/ark-place` for new kernel-managed files. Skills never enforce.

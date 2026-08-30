@@ -1,6 +1,6 @@
 {
   "name": "arkgate",
-  "version": "4.7.6",
+  "version": "4.8.0",
   "description": "When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -16,6 +16,21 @@
       "types": "./dist/eslint/index.d.ts",
       "import": "./dist/eslint/index.js",
       "require": "./dist/eslint/index.cjs"
+    },
+    "./order": {
+      "types": "./dist/order/index.d.ts",
+      "import": "./dist/order/index.js",
+      "require": "./dist/order/index.cjs"
+    },
+    "./runtime": {
+      "types": "./dist/runtime/index.d.ts",
+      "import": "./dist/runtime/index.js",
+      "require": "./dist/runtime/index.cjs"
+    },
+    "./nestjs": {
+      "types": "./dist/nestjs/index.d.ts",
+      "import": "./dist/nestjs/index.js",
+      "require": "./dist/nestjs/index.cjs"
     },
     "./schema": "./schemas/ark.config.schema.json",
     "./schema/ark.config.schema.json": "./schemas/ark.config.schema.json",
@@ -155,10 +170,14 @@
     "typescript-ark-host": "npm:typescript@6.0.3"
   },
   "peerDependencies": {
-    "typescript": ">=5.0.0 <8"
+    "typescript": ">=5.0.0 <8",
+    "@nestjs/common": ">=9"
   },
   "peerDependenciesMeta": {
     "typescript": {
+      "optional": true
+    },
+    "@nestjs/common": {
       "optional": true
     }
   },

@@ -3,7 +3,7 @@
 Code and manifests win when they disagree with these files. This index is the map,
 not a second rationale.
 
-The product is three named pieces. Decisions sit in one of those, or in the
+The product is named extras on one npm package. Decisions sit in one of those, or in the
 engine that makes the check real.
 
 ```text
@@ -11,6 +11,7 @@ Write. Check. Ship.
 ArkGate   always     import rules (write + required CI)
 ArkRules  optional   policies inside a layer
 ArkRun    optional   experimental runtime — in-memory, not Postgres
+ArkOrder  optional   pattern plane (ξ vs s) — same package, not durable
 ```
 
 Do not renumber. To change a decision, add a superseding ADR and link both.
@@ -56,23 +57,41 @@ Optional extra rules *inside* a layer. Off unless you turn them on.
 
 ## ArkRun — experimental runtime
 
-Experimental companion. In-memory. Not a database. If you turn the extra on,
-the gate is still real (do not skip the kernel).
+Optional extra of package `arkgate` (`arkgate/runtime`). In-memory. Not a database.
+If you turn the extra on, the gate is still real (do not skip the kernel).
+`@arkgate/runtime` is deprecated ([ADR 0031](0031-one-package-extras-deprecate-companion.md)).
 
 | ADR | Still true |
 |-----|------------|
-| [0004](0004-runtime-package-isolation.md) | Kernel is `@arkgate/runtime`. Not in the `arkgate` tarball. Stores die on restart. |
+| [0004](0004-runtime-package-isolation.md) | Root export is the gate. Runtime is experimental and not durable. Npm identity: [0030](0030-opt-in-extras-same-npm-package.md) / [0031](0031-one-package-extras-deprecate-companion.md). |
 | [0020](0020-arkrun-gated-extra-plane.md) | Optional `arkRun` on the config. Absence is silent. Weakening needs an ack. |
-| [0021](0021-arkrun-companion-isolation.md) | Clarifies 0004: no process singleton; brand ArkRun; import stays `@arkgate/runtime`. |
+| [0021](0021-arkrun-companion-isolation.md) | No process singleton; brand ArkRun. Target import `arkgate/runtime`. |
+| [0031](0031-one-package-extras-deprecate-companion.md) | One npm package. `@arkgate/runtime` deprecated. |
 | [0022](0022-arkrun-anti-skip-facts.md) | Closed anti-skip sensors. Inference never blocks. |
 | [0023](0023-arkrun-mandatory-declarations.md) | `uses` / `reactsTo` / `raises` / `sends` when enforced. |
 | [0024](0024-arkrun-transport-ports.md) | local / blocking / broker. No cloud SDKs. Missing broker = in-process. |
+
+## ArkOrder — operational pattern (extra inside `arkgate`)
+
+Fourth extra. Silent when absent. Plane is `arkgate/order` **inside package `arkgate`**,
+not a second npm package and not a bus. Does not replace ArkRun. Implemented on tree
+as unpublished `arkgate@4.8.0`. Plan: [arkorder](../plans/arkorder/README.md).
+
+| ADR | Still true |
+|-----|------------|
+| [0027](0027-arkorder-gated-extra-plane.md) | Optional `arkOrder` on schema `1.3`. Absence is silent. Weakening needs an ack. |
+| [0028](0028-arkorder-companion-isolation.md) | Plane is `arkgate/order`. `createOrderPlane`. Four verbs. No singleton. No bus in v0. |
+| [0029](0029-arkorder-anti-skip-facts.md) | Closed anti-skip sensors. Inference never blocks. No LLM ξ classifier. |
+| [0030](0030-opt-in-extras-same-npm-package.md) | One npm package `arkgate`. Extras are subpaths. No `@arkgate/*` install. |
+| [0031](0031-one-package-extras-deprecate-companion.md) | 4.8.0: Run + Order + Nest are real subpaths. Companion deprecated. |
 
 ## Do not fold
 
 0006 and 0007 look similar: one is the map schema, one is how preflight uses it.
 0004 and 0021 look similar: one isolates the package, one names the brand and factory.
-Keep the pairs.
+0020 and 0027 look similar: two extras, two silences — Run is the bus extra, Order is the
+pattern extra. 0021 and 0028 are the matching factory isolations. 0030 is npm identity
+for **both**. 0031 closes the Run companion. Keep the pairs.
 
 ## Not here
 

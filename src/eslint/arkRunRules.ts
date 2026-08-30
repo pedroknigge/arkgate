@@ -411,7 +411,7 @@ export function createArkRunEslintRules(helpers: ArkRunEslintHelpers): {
   return {
     noArkRunKernelInDomain: createImportRule(
       'arkrun-kernel-in-domain',
-      'Disallow Domain-role imports of @arkgate/runtime when arkRun is on (same sensor as ark-check).',
+      'Disallow Domain-role imports of arkgate/runtime when arkRun is on (same sensor as ark-check).',
       'kernelInDomain',
       '{{fromLayer}} must not import kernel module "{{specifier}}".'
     ),

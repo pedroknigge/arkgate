@@ -10,7 +10,7 @@ The CLI, MCP server, and ESLint plugin all use the same parser, migration, defau
 ```json
 {
   "$schema": "https://unpkg.com/arkgate@2/schemas/ark.config.schema.json",
-  "schemaVersion": "1.2",
+  "schemaVersion": "1.3",
   "include": ["src"],
   "layers": [],
   "rules": []
@@ -20,10 +20,12 @@ The CLI, MCP server, and ESLint plugin all use the same parser, migration, defau
 `$schema` is for editor completion. `schemaVersion` controls ArkGate's runtime contract and is
 independent from the npm package version. Schema **`1.1`** is additive over `1.0` and adds the
 optional top-level **`arkRules`** map (ADR 0012). Schema **`1.2`** is additive over `1.1` and
-adds the optional top-level **`arkRun`** extra (ADR 0020). Absence of `arkRules` or `arkRun`
-changes no Layers / ArkRules verdict. Per-layer structure/invariant files use sibling schema
-`arkgate/schema/arkrules` (`schemas/ark.arkrules.schema.json`). ArkRun v1 stays **inline**
-(no sibling file).
+adds the optional top-level **`arkRun`** extra (ADR 0020). Schema **`1.3`** is additive over
+`1.2` and adds the optional top-level **`arkOrder`** extra (ADR 0027). Absence of `arkRules`,
+`arkRun`, or `arkOrder` changes no Layers / ArkRules verdict. Per-layer structure/invariant
+files use sibling schema `arkgate/schema/arkrules` (`schemas/ark.arkrules.schema.json`).
+ArkRun and ArkOrder v1 stay **inline** (no sibling file). The plane factory is
+`arkgate/order` in the same npm package — not a second install.
 
 For offline editor completion, point `$schema` at the installed file instead:
 
@@ -41,7 +43,7 @@ The same schema is exported through the stable package subpaths `arkgate/schema`
 ## Compatibility and migration
 
 Configs without `schemaVersion` are the legacy shape shipped through ArkGate 1.x and early 2.x.
-The loader deterministically projects them through `unversioned → 1.0 → 1.1 → 1.2` in memory by adding
+The loader deterministically projects them through `unversioned → 1.0 → 1.1 → 1.2 → 1.3` in memory by adding
 contract metadata and the established defaults. It never rewrites the user's file during a check.
 Newly generated
 configs always contain the metadata, and unsupported future versions fail at
@@ -96,6 +98,11 @@ Top-level fields:
   is a policy-delta **weakening**. Enforced extra teeth share the CLI / MCP / hook /
   preflight / CI verdict and arm only when the layer plane is classified (same ≥50%
   governed and ≥1 populated-layer floor as ArkRules).
+- **`arkOrder`** (optional, schema `1.3+`) — inline ArkOrder extra (`mode`, `planeRoots`,
+  `managedLayers`, `maxXiKeys`). Absence is silent. Unknown keys fail closed.
+  Import `createOrderPlane` from `arkgate/order` (same package). Empty `planeRoots` in
+  `enforced` mode fails closed (`ARKORDER_MISSING_PLANE`). Demotion or deletion is a
+  policy-delta **weakening**. Haken: few slow keys (ξ); field ingest never mints a pattern.
 
 Layer fields:
 

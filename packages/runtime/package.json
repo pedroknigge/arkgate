@@ -1,7 +1,7 @@
 {
   "name": "@arkgate/runtime",
   "version": "0.1.0-experimental.2",
-  "description": "ArkRun kernel — experimental optional runtime companion for ArkGate",
+  "description": "DEPRECATED. Use arkgate/runtime from package arkgate. Leftover experimental ArkRun companion.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

@@ -182,6 +182,14 @@ const ARKRUN_JUDGMENT_RULE_IDS = new Set([
   'ARKRUN_TRANSPORT_BYPASS',
 ]);
 
+const ARKORDER_JUDGMENT_RULE_IDS = new Set([
+  'ARKORDER_MISSING_PLANE',
+  'ARKORDER_KERNEL_IN_DOMAIN',
+  'ARKORDER_GENERIC_UPDATE',
+  'ARKORDER_TOO_MANY_PARAMS',
+  'ARKORDER_INGEST_WRITES_XI',
+]);
+
 function arkRunCallSiteName(violation: ArkViolationLike): string | undefined {
   return typeof violation.target === 'string' && violation.target.trim().length > 0
     ? violation.target.trim()
@@ -206,12 +214,12 @@ function arkRunNextAction(violation: ArkViolationLike): string {
   switch (violation.ruleId) {
     case 'ARKRUN_MISSING_ROOT':
       return target
-        ? `Import createStrictArkKernel from @arkgate/runtime and call it in composition root ${target} listed in arkRun.compositionRoots, then preflight again.`
-        : 'Import createStrictArkKernel from @arkgate/runtime (never a removed arkgate/runtime shim) and call it in a composition root listed in arkRun.compositionRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.';
+        ? `Import createStrictArkKernel from arkgate/runtime and call it in composition root ${target} listed in arkRun.compositionRoots, then preflight again.`
+        : 'Import createStrictArkKernel from arkgate/runtime (same npm package; @arkgate/runtime is deprecated) and call it in a composition root listed in arkRun.compositionRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.';
     case 'ARKRUN_KERNEL_IN_DOMAIN':
       return target
-        ? `Move the kernel import of ${target} out of ${fromLayer ?? 'the Domain-role layer'} into a composition root or adapter. Import from @arkgate/runtime, never a removed arkgate/runtime shim, then preflight again.`
-        : 'Move the kernel import out of the Domain-role layer into a composition root or adapter. Import from @arkgate/runtime, never a removed arkgate/runtime shim, then preflight again. Never mechanical-safe.';
+        ? `Move the kernel import of ${target} out of ${fromLayer ?? 'the Domain-role layer'} into a composition root or adapter. Import from arkgate/runtime, then preflight again.`
+        : 'Move the kernel import out of the Domain-role layer into a composition root or adapter. Import from arkgate/runtime (same npm package; @arkgate/runtime is deprecated), then preflight again. Never mechanical-safe.';
     case 'ARKRUN_DIRECT_NEW':
       return target
         ? `Resolve ${target} from the kernel instead of constructing it with new, then preflight again.`
@@ -242,12 +250,12 @@ function arkRunEnthusiastHint(violation: ArkViolationLike): string {
   switch (violation.ruleId) {
     case 'ARKRUN_MISSING_ROOT':
       return target
-        ? `Call createStrictArkKernel from @arkgate/runtime in ${target} so the app actually uses the kernel.`
-        : 'Call createStrictArkKernel from @arkgate/runtime in a listed composition root so the app actually uses the kernel.';
+        ? `Call createStrictArkKernel from arkgate/runtime in ${target} so the app actually uses the kernel.`
+        : 'Call createStrictArkKernel from arkgate/runtime in a listed composition root so the app actually uses the kernel.';
     case 'ARKRUN_KERNEL_IN_DOMAIN':
       return target
-        ? `Domain stays kernel-free. Move the ${target} import to a composition root or adapter — never a removed arkgate/runtime shim.`
-        : 'Domain stays kernel-free. Move that @arkgate/runtime import to a composition root or adapter — never a removed arkgate/runtime shim.';
+        ? `Domain stays kernel-free. Move the ${target} import to a composition root or adapter. Prefer arkgate/runtime.`
+        : 'Domain stays kernel-free. Move that kernel import to a composition root or adapter. Prefer arkgate/runtime; @arkgate/runtime is deprecated.';
     case 'ARKRUN_DIRECT_NEW':
       return target
         ? `Do not construct ${target} with new. Resolve it from the kernel instead.`
@@ -308,6 +316,18 @@ export function deterministicNextAction(violation: ArkViolationLike): string {
     case 'ARKRUN_UNDECLARED_DEPEND':
     case 'ARKRUN_TRANSPORT_BYPASS':
       return arkRunNextAction(violation);
+    case 'ARKORDER_MISSING_PLANE':
+      return typeof violation.target === 'string' && violation.target.length > 0
+        ? `Import createOrderPlane from arkgate/order and call it in plane root ${violation.target} listed in arkOrder.planeRoots, then preflight again.`
+        : 'Import createOrderPlane from arkgate/order and call it in a plane root listed in arkOrder.planeRoots, then preflight again. Never mechanical-safe — factory placement is a design decision.';
+    case 'ARKORDER_KERNEL_IN_DOMAIN':
+      return 'Move the arkgate/order import out of the Domain-role layer into a plane root or adapter, then preflight again. Never mechanical-safe.';
+    case 'ARKORDER_GENERIC_UPDATE':
+      return 'Use release() to freeze ξ or proposeRelease() for a pattern change with blast radius, then preflight again. Never mechanical-safe.';
+    case 'ARKORDER_TOO_MANY_PARAMS':
+      return 'Cut ξ to the slow keys that actually slave the rest, then preflight again. Never mechanical-safe.';
+    case 'ARKORDER_INGEST_WRITES_XI':
+      return 'Keep ingest results as absorb/escalate only. Change ξ with proposeRelease + release. Never mechanical-safe.';
     default:
       if (typeof violation.ruleId === 'string' && violation.ruleId.startsWith('ARKRULE_')) {
         return `Fix the ArkRule ${
@@ -453,7 +473,9 @@ export function classifyRemediation(violation: ArkViolationLike | null | undefin
   }
   if (
     typeof ruleId === 'string' &&
-    (ARKRUN_JUDGMENT_RULE_IDS.has(ruleId) || ARKRUN_UNDECLARED_RULE_IDS.has(ruleId))
+    (ARKRUN_JUDGMENT_RULE_IDS.has(ruleId) ||
+      ARKRUN_UNDECLARED_RULE_IDS.has(ruleId) ||
+      ARKORDER_JUDGMENT_RULE_IDS.has(ruleId))
   ) {
     return {
       class: 'judgment',
@@ -586,6 +608,24 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
       enriched.fixClass = 'arkrun-usage';
       enriched.effort = ARKRUN_UNDECLARED_RULE_IDS.has(violation.ruleId ?? '') ? 'small' : 'medium';
       enriched.enthusiastHint = arkRunEnthusiastHint(violation);
+      break;
+    case 'ARKORDER_MISSING_PLANE':
+    case 'ARKORDER_KERNEL_IN_DOMAIN':
+    case 'ARKORDER_GENERIC_UPDATE':
+    case 'ARKORDER_TOO_MANY_PARAMS':
+    case 'ARKORDER_INGEST_WRITES_XI':
+      enriched.fixClass = 'arkorder-usage';
+      enriched.effort = 'medium';
+      enriched.enthusiastHint =
+        violation.ruleId === 'ARKORDER_GENERIC_UPDATE'
+          ? 'Do not PATCH the slow pattern. Freeze ξ with release() or propose a pattern change that lists what dies.'
+          : violation.ruleId === 'ARKORDER_KERNEL_IN_DOMAIN'
+            ? 'Domain stays plane-free. Import arkgate/order only from a listed plane root.'
+            : violation.ruleId === 'ARKORDER_TOO_MANY_PARAMS'
+              ? 'Too many slow keys. Keep ξ small — the rest is derived noise.'
+              : violation.ruleId === 'ARKORDER_INGEST_WRITES_XI'
+                ? 'ingest can absorb or escalate. It never writes a new house.'
+                : 'Call createOrderPlane from arkgate/order in a listed plane root so the app actually freezes a pattern.';
       break;
     default:
       enriched.fixClass = 'review-contract';

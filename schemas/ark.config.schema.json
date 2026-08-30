@@ -21,8 +21,8 @@
     },
     "schemaVersion": {
       "type": "string",
-      "const": "1.2",
-      "default": "1.2"
+      "const": "1.3",
+      "default": "1.3"
     },
     "name": {
       "type": "string",
@@ -636,6 +636,9 @@
     "arkRun": {
       "$ref": "#/$defs/arkRun"
     },
+    "arkOrder": {
+      "$ref": "#/$defs/arkOrder"
+    },
     "stewards": {
       "type": "array",
       "items": {
@@ -842,6 +845,43 @@
         "ignoreDirectNewForErrors": {
           "type": "boolean",
           "default": true
+        }
+      }
+    },
+    "arkOrder": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "advisory",
+            "enforced"
+          ],
+          "default": "advisory"
+        },
+        "planeRoots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "managedLayers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "maxXiKeys": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 7
         }
       }
     }

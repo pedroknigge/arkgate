@@ -1,7 +1,13 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: { index: 'src/gate.ts', 'eslint/index': 'src/eslint/index.ts' },
+  entry: {
+    index: 'src/gate.ts',
+    'eslint/index': 'src/eslint/index.ts',
+    'order/index': 'src/kernel/order/index.ts',
+    'runtime/index': 'src/runtime/index.ts',
+    'nestjs/index': 'src/nestjs/index.ts',
+  },
   format: ['esm', 'cjs'],
   external: ['@nestjs/common'],
   dts: true,
@@ -10,8 +16,9 @@ export default defineConfig({
   clean: true,
   // npm ships this output alongside readable TypeScript sources in the repository.
   // Compact the duplicate ESM/CJS distribution so stable analysis features stay
-  // inside the release artifact budget.
+  // inside the release artifact budget. keepNames: Nest/kernel reflection.
   minify: true,
+  keepNames: true,
   treeshake: false,
   cjsInterop: true,
   target: 'es2022',

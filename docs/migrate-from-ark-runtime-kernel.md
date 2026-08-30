@@ -56,9 +56,10 @@ strict check. See [typescript-support.md](typescript-support.md) and
 
 ### 4.0.0 — root runtime forwarders removed (breaking)
 
-Subpaths **`arkgate/runtime`** and **`arkgate/nestjs`** are **removed** in 4.0.0. Import from
-`@arkgate/runtime` and `@arkgate/runtime/nestjs` instead. Optional **ArkRules** (`arkRules` map +
-`arkrules/*.json`) are additive and do not change inter-layer verdicts when absent.
+Subpaths **`arkgate/runtime`** and **`arkgate/nestjs`** were **removed** in 4.0.0 (AR04).
+**4.8.0 restores them as real extras** of package `arkgate` ([ADR 0031](adr/0031-one-package-extras-deprecate-companion.md)).
+`@arkgate/runtime` is deprecated. Optional **ArkRules** (`arkRules` map + `arkrules/*.json`)
+are additive and do not change inter-layer verdicts when absent.
 
 ### MCP args (avoid double binary)
 
@@ -143,25 +144,23 @@ Or edit `.grok/config.toml` → `args` use `arkgate-mcp`.
 
 ### TypeScript imports (runtime / Nest / ESLint only)
 
-The **ArkRun** kernel (`@arkgate/runtime`) and Nest surfaces are currently **experimental**;
+The **ArkRun** kernel (`arkgate/runtime`) and Nest surfaces are currently **experimental**;
 migrating the package name does not require adopting them. Prefer `createStrictArkKernel` (per
 instance; no process-wide singleton). Static CLI/MCP enforcement remains the supported product path.
 
 ```diff
 - import { createStrictArkKernelFromConfig } from 'ark-runtime-kernel';
-+ import { createStrictArkKernelFromConfig } from '@arkgate/runtime';
++ import { createStrictArkKernelFromConfig } from 'arkgate/runtime';
 
 - import { ArkModule } from 'ark-runtime-kernel/nestjs';
-+ import { ArkModule } from '@arkgate/runtime/nestjs';
++ import { ArkModule } from 'arkgate/nestjs';
 
 - import ark from 'ark-runtime-kernel/eslint';
 + import ark from 'arkgate/eslint';
 ```
 
-The `@arkgate/runtime` lines show the intended package boundary. As of 4.7.4, install
-`@arkgate/runtime@experimental` and verify with `npm view @arkgate/runtime dist-tags --json`.
-The root release workflow publishes the companion under `experimental` (never `latest`).
-The `arkgate/eslint` migration is available now.
+From **4.8.0**, install `arkgate` and import `arkgate/runtime`. `@arkgate/runtime` is
+deprecated. The `arkgate/eslint` migration is available now.
 
 ### ArkGate 4 / AR04 — root runtime forwarders removed
 
@@ -172,11 +171,13 @@ import { … } from 'arkgate/runtime';
 import { … } from 'arkgate/nestjs';
 ```
 
-those root subpaths are **gone**. Switch to the experimental ArkRun companion only:
+those root subpaths were **gone in 4.0–4.7**. From **4.8.0** they are **real** extras of
+package `arkgate` again ([ADR 0031](adr/0031-one-package-extras-deprecate-companion.md)).
+`@arkgate/runtime` is deprecated:
 
 ```ts
-import { … } from '@arkgate/runtime';
-import { … } from '@arkgate/runtime/nestjs';
+import { … } from 'arkgate/runtime';
+import { … } from 'arkgate/nestjs';
 ```
 
 The stable gate (`arkgate` root, `arkgate/eslint`, CLIs, MCP, schemas) is unchanged. Gates need
@@ -202,7 +203,7 @@ If you only used the CLI + MCP (most projects), **no import changes**.
 | `ark-check: not found` after uninstall | Use `npx arkgate-check` or reinstall `arkgate` |
 | MCP still launches old package | Update `.mcp.json` / Codex / Grok config; restart agent |
 | TS7 plan/check says `partial` or `unavailable` | Do not accept the plan as green; upgrade to **arkgate@3.8.0** or later, then require `completeness: complete` |
-| `Cannot find module 'arkgate/runtime'` after 4.0 | Import `@arkgate/runtime` (root forwarders removed in AR04) |
+| `Cannot find module 'arkgate/runtime'` after 4.0 and before 4.8 | That window used `@arkgate/runtime`. From **4.8.0** import `arkgate/runtime` again (real subpath, ADR 0031). |
 | pnpm blocks new package age | Wait for cooling-off or prefer `arkgate@latest`; if policy requires an exact pin, check `npm view arkgate version` and pin that version |
 
 ---

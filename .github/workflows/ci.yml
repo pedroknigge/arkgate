@@ -118,7 +118,7 @@ jobs:
       - run: npm run build
       - name: PR-relevant feedback under 10 seconds
         run: npm run test:z07:pr -- --json --out z07-feedback.pr.json
-      - name: Full Z07 non-mutation corpus under 30 seconds
+      - name: Full Z07 non-mutation corpus under 40 seconds
         run: npm run test:z07:nonmutation -- --json --out z07-feedback.full.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: always()

@@ -28,6 +28,8 @@ describe('Ark ESLint plugin', () => {
       'no-arkrun-kernel-in-domain',
       'no-arkrun-direct-new',
       'no-arkrun-transport-bypass',
+      'no-arkorder-kernel-in-domain',
+      'no-arkorder-generic-update',
     ]);
     expect(arkEslint.configs?.recommended).toBeDefined();
     expect(
@@ -36,6 +38,8 @@ describe('Ark ESLint plugin', () => {
       'ark/no-arkrun-kernel-in-domain': 'error',
       'ark/no-arkrun-direct-new': 'error',
       'ark/no-arkrun-transport-bypass': 'error',
+      'ark/no-arkorder-kernel-in-domain': 'error',
+      'ark/no-arkorder-generic-update': 'error',
     });
   });
 

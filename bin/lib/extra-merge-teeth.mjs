@@ -49,11 +49,17 @@ export function classifyResolvedLayerCoverage(files) {
 export function isArkRunRuleId(ruleId) {
     return typeof ruleId === 'string' && ruleId.startsWith('ARKRUN_');
 }
+export function isArkOrderRuleId(ruleId) {
+    return typeof ruleId === 'string' && ruleId.startsWith('ARKORDER_');
+}
 export function isExtraPlaneFinding(violation) {
     if (violation?.arkruleId != null)
         return true;
     const id = typeof violation?.ruleId === 'string' ? violation.ruleId : '';
-    return id.startsWith('ARKRULE') || id.startsWith('arkrule') || id.startsWith('ARKRUN_');
+    return (id.startsWith('ARKRULE') ||
+        id.startsWith('arkrule') ||
+        id.startsWith('ARKRUN_') ||
+        id.startsWith('ARKORDER_'));
 }
 /**
  * Under the classification floor, demote enforced extra-plane findings in place
@@ -74,7 +80,7 @@ export function demoteExtraPlaneTeethUnderClassificationFloor(violations, classi
     return violations;
 }
 /** Stamp for extra-plane honesty: never one architecture score. */
-export const MERGE_PLANES_DUAL_STAMP = 'Structure = heuristics; invariants = catalog+coverage evidence (not business runtime); ArkRun = kernel usage + declarations (not a score). Extra planes never merge into one architecture score. Advisory ArkRules ≠ merge teeth. Advisory ArkRun ≠ merge teeth.';
+export const MERGE_PLANES_DUAL_STAMP = 'Structure = heuristics; invariants = catalog+coverage evidence (not business runtime); ArkRun = kernel usage + declarations (not a score); ArkOrder = pattern slaving (not a score). Extra planes never merge into one architecture score. Advisory ArkRules ≠ merge teeth. Advisory ArkRun ≠ merge teeth. Advisory ArkOrder ≠ merge teeth.';
 function countOrZero(value) {
     return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
 }

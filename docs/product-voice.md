@@ -18,7 +18,7 @@ The same check fails the pull request.
 
 **ArkRules** is optional policies inside a layer.
 
-**ArkRun** is an optional runtime (`@arkgate/runtime`). Experimental. In-memory.
+**ArkRun** is an optional runtime (`arkgate/runtime`). Experimental. In-memory.
 Not Postgres.
 
 ```text

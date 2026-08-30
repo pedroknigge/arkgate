@@ -7,6 +7,7 @@
  *   src/domain/baselineKey.ts  → bin/lib/baseline-key.mjs
  *   src/domain/configContract.ts → bin/lib/config-contract.mjs
  *                                → schemas/ark.config.schema.json
+ *   src/domain/configExtras.ts   → bin/lib/config-extras.mjs
  *   src/domain/adapterContract.ts → bin/lib/adapter-contract.mjs
  *                                 → schemas/ark.analysis-result.schema.json
  *   src/domain/projectIdentity.ts → bin/lib/project-identity.mjs
@@ -53,6 +54,11 @@ const MODULES = [
     canonical: 'src/domain/baselineKey.ts',
     derived: 'bin/lib/baseline-key.mjs',
     label: 'baseline violation key',
+  },
+  {
+    canonical: 'src/domain/configExtras.ts',
+    derived: 'bin/lib/config-extras.mjs',
+    label: 'opt-in arkRun / arkOrder extra defaults + schema $defs',
   },
   {
     canonical: 'src/domain/configContract.ts',
@@ -102,6 +108,31 @@ const MODULES = [
     canonical: 'src/domain/arkRunDoctor.ts',
     derived: 'bin/lib/ark-run-doctor.mjs',
     label: 'ArkRun doctor/status/report section (notAScore; RN08)',
+  },
+  {
+    canonical: 'src/domain/arkOrderFacts.ts',
+    derived: 'bin/lib/ark-order-facts.mjs',
+    label: 'ArkOrder resolver-fact extractors (ADR 0029)',
+  },
+  {
+    canonical: 'src/domain/arkOrderSensors.ts',
+    derived: 'bin/lib/ark-order-sensors.mjs',
+    label: 'ArkOrder tier-1 sensors (ADR 0029)',
+  },
+  {
+    canonical: 'src/domain/arkOrderInvariants.ts',
+    derived: 'bin/lib/ark-order-invariants.mjs',
+    label: 'ArkOrder Haken invariants (freeze / ingest / blast)',
+  },
+  {
+    canonical: 'src/domain/arkOrderError.ts',
+    derived: 'bin/lib/ark-order-error.mjs',
+    label: 'ArkOrder domain error',
+  },
+  {
+    canonical: 'src/domain/arkOrderTypes.ts',
+    derived: 'bin/lib/ark-order-types.mjs',
+    label: 'ArkOrder type vocabulary (erased where type-only)',
   },
   {
     canonical: 'src/domain/adapterContract.ts',

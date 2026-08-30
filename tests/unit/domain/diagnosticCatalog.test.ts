@@ -55,6 +55,11 @@ const REMEDIATION_SPECIALIZED_RULE_IDS = [
   'ARKRUN_UNDECLARED_HANDLE',
   'ARKRUN_UNDECLARED_DEPEND',
   'ARKRUN_TRANSPORT_BYPASS',
+  'ARKORDER_MISSING_PLANE',
+  'ARKORDER_KERNEL_IN_DOMAIN',
+  'ARKORDER_GENERIC_UPDATE',
+  'ARKORDER_TOO_MANY_PARAMS',
+  'ARKORDER_INGEST_WRITES_XI',
 ] as const;
 
 const ARKRUN_CATALOG_RULE_IDS = [
@@ -281,10 +286,10 @@ describe('RN05 ArkRun catalog ↔ remediation parity', () => {
     expect(enrichViolationWithFixClass({ ruleId: 'ARKRUN_DIRECT_NEW' }).effort).toBe('medium');
   });
 
-  it('catalog copy names the companion package and refuses the removed shim', () => {
-    expect(catalogFixForRuleId('ARKRUN_MISSING_ROOT')).toContain('@arkgate/runtime');
-    expect(catalogFixForRuleId('ARKRUN_MISSING_ROOT')).toContain('arkgate/runtime shim');
-    expect(catalogFixForRuleId('ARKRUN_KERNEL_IN_DOMAIN')).toContain('@arkgate/runtime');
+  it('catalog copy teaches arkgate/runtime and deprecates the companion', () => {
+    expect(catalogFixForRuleId('ARKRUN_MISSING_ROOT')).toContain('arkgate/runtime');
+    expect(catalogFixForRuleId('ARKRUN_MISSING_ROOT')).toContain('@arkgate/runtime is deprecated');
+    expect(catalogFixForRuleId('ARKRUN_KERNEL_IN_DOMAIN')).toContain('arkgate/runtime');
   });
 });
 

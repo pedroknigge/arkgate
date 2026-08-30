@@ -1,26 +1,26 @@
 ---
 name: ark-runtime
-description: Wire the optional ArkRun extra (@arkgate/runtime). One candidate. Extra on via /ark-adopt.
+description: Wire the optional ArkRun extra (arkgate/runtime). One candidate. Extra on via /ark-adopt.
 ---
 
 # /ark-runtime — Evaluate and wire ArkRun (experimental opt-in)
 
-The ArkRun companion (`@arkgate/runtime`) is currently **experimental**. It is **not** required
+The ArkRun kernel (`arkgate/runtime`) is currently **experimental**. It is **not** required
 for ArkGate enforcement and is **not** production durability. Use this skill when the user wants
 to evaluate or wire the kernel. **This skill never enforces** — the write / CI / ESLint plane
-does when the `arkRun` extra is on. Do **not** invent `/ark-run`.
+does when the `arkRun` extra is on. Do **not** invent `/ark-run`. `@arkgate/runtime` is deprecated.
 
 **When:** evaluate a hand-rolled bus / outbox / saga / projection / policy / Nest adapter against
-the companion, or wire an extra that is already on (composition root, declarations, transport).
+the kernel, or wire an extra that is already on (composition root, declarations, transport).
 **Not when:** session 0 / extra not chosen (`/ark-adopt`); one new file (`/ark-place`); skip-violation
 grind (`/ark-autopilot` / leftover `/ark-fix`).
 
-## Extra vs companion (mandatory)
+## Extra vs kernel (mandatory)
 
 | Piece | What it is | What it is not |
 |-------|------------|----------------|
 | **ArkRun extra** (`arkRun` on `ark.config.json`, schema `1.2+`) | Gate contract: kernel usage + complete declarations | A score; Layers / ArkRules replacement; merge teeth while `advisory` |
-| **Companion** `@arkgate/runtime` | Kernel you construct with `createStrictArkKernel` (one instance per call) | Bundled in the `arkgate` tarball; a process-wide `getKernel()`; shipped cloud broker SDKs |
+| **Kernel** `arkgate/runtime` | Kernel you construct with `createStrictArkKernel` (one instance per call) | A process-wide `getKernel()`; shipped cloud broker SDKs; production durability |
 
 Absence of the extra is **silent** — Layers and ArkRules verdicts stay identical. Doctor / status
 `arkRun` is always `notAScore`. Never invent 0–10 scores or pass/fail from this skill.
@@ -71,7 +71,7 @@ the same files or weaken the gate.
    - saga/workflow orchestration (multi-step processes with compensation)
    - read-model/projection builders
    - policy/authorization checks scattered across use cases
-   Also check whether `@nestjs/common` is present → the `@arkgate/runtime/nestjs`
+   Also check whether `@nestjs/common` is present → the `arkgate/nestjs`
    adapters apply.
 2. **Read the extra** — open `ark.config.json`. If `arkRun` is absent and the user wants the extra,
    **STOP — do not continue this skill as complete.** Handoff **`/ark-adopt`** to write **advisory**
@@ -81,13 +81,8 @@ the same files or weaken the gate.
 3. **Pick ONE target** — the smallest, most self-contained candidate (fewest
    call sites). Migrating everything at once is how adoptions die. List the
    rest as follow-ups in the report. New files after the extra is on go through **`/ark-place`**.
-4. **Resolve availability** — run `npm view @arkgate/runtime dist-tags --json`. If an
-   `experimental` tag exists, install that exact companion. Otherwise continue only from an
-   ArkGate source checkout: run `npm run build:runtime` at its root and install its local
-   `packages/runtime` folder into the target. Outside a source checkout, stop and report that the
-   runtime is unavailable; never fall back to the deprecated root shims as if they contained it.
-   Import from `@arkgate/runtime` (or `@arkgate/runtime/nestjs`) — never a removed `arkgate/runtime`
-   shim.
+4. **Resolve availability** — `npm install arkgate` already ships `arkgate/runtime`.
+   Import from `arkgate/runtime` (or `arkgate/nestjs`). `@arkgate/runtime` is deprecated.
 5. **Wire through the kernel** — read the
    [runtime package guide](https://github.com/pedroknigge/arkgate/blob/main/packages/runtime/README.md)
    plus the [experimental surface policy](https://github.com/pedroknigge/arkgate/blob/main/docs/package-surface.md#experimental-opt-in-surfaces) before
@@ -122,7 +117,7 @@ the same files or weaken the gate.
 - No static gates yet: **STOP — do not continue this skill as complete.** Run `/ark-adopt` first (`ark-check --recommend` / leftover `/ark-architect`).
 - Extra absent and the user wants it: **STOP — do not continue this skill as complete.** **`/ark-adopt`** writes advisory `arkRun`.
 - Skip cluster (`new` of managed types, homemade bus, kernel in Domain) after the extra is on: leftover **`/ark-fix`** / **`/ark-loop`** or **`/ark-autopilot`** — this skill still wires one candidate.
-- Runtime companion unavailable from npm and no ArkGate source checkout: **STOP** and report the distribution boundary.
+- `arkgate` not installed and no local checkout: **STOP** and report the distribution boundary.
 - Inventory finds nothing: stop; do not introduce kernel speculatively.
 
 ## Operating rules

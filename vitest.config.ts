@@ -37,6 +37,13 @@ export default defineConfig({
         'bin/lib/analysis-engine.mjs',
         // Generated from Domain pure (deepeningCoach.ts); unit tests cover the canonical source.
         'bin/lib/deepening-coach.mjs',
+        // Generated from Domain arkOrder* / configExtras; unit tests cover the canonical TS.
+        'bin/lib/config-extras.mjs',
+        'bin/lib/ark-order-error.mjs',
+        'bin/lib/ark-order-facts.mjs',
+        'bin/lib/ark-order-invariants.mjs',
+        'bin/lib/ark-order-sensors.mjs',
+        'bin/lib/ark-order-types.mjs',
         'bin/ark-check.mjs',
         'bin/ark-mcp.mjs',
         'bin/ark-mcp-runtime.mjs',

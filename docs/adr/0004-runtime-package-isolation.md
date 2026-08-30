@@ -1,20 +1,26 @@
 # ADR 0004 — isolate the experimental runtime from ArkGate
 
-- Status: accepted
+- Status: accepted (npm identity **superseded** by [ADR 0030](0030-opt-in-extras-same-npm-package.md) and [ADR 0031](0031-one-package-extras-deprecate-companion.md); durability contract below is **not** superseded)
 - Date: 2026-07-11
-- **Clarified by:** [ADR 0021](0021-arkrun-companion-isolation.md) — ArkRun extra vs companion
-  kernel labels; this isolation decision is **not** superseded
+- **Clarified by:** [ADR 0021](0021-arkrun-companion-isolation.md) — ArkRun extra vs kernel
+  labels; no process singleton
+- **Npm identity:** [ADR 0030](0030-opt-in-extras-same-npm-package.md) — extras are
+  subpaths of `arkgate`, not a second `@arkgate/*` package. Durability contract below
+  is **not** superseded. Root `import from 'arkgate'` stays gate-only.
 
 ## Decision
 
-`arkgate` remains the stable gate product and npm package. The optional runtime and NestJS adapter
-ship independently as `@arkgate/runtime`, versioned below 1.0 and published only under the
-`experimental` dist-tag until restart/fault matrices prove its durability contracts.
+`arkgate` remains the stable gate product and the **only** npm package consumers install
+for extras. The optional runtime and NestJS adapter are opt-in **subpaths**
+(`arkgate/runtime`, `arkgate/nestjs`), not a second npm scope. They stay experimental
+until restart/fault matrices prove durability contracts.
 
-The main `arkgate` build contains only the importable gate API and ESLint adapter.
-Root `arkgate/runtime` and `arkgate/nestjs` forwarders are **gone** (ArkGate 4 / AR04).
-Import `@arkgate/runtime` and `@arkgate/runtime/nestjs`. ADR [0021](0021-arkrun-companion-isolation.md)
-clarifies brand, factory, and no process singleton.
+The root `arkgate` export is the gate API and ESLint adapter only — not kernel factories.
+AR04 removed *forwarders* to a companion package. [ADR 0031](0031-one-package-extras-deprecate-companion.md)
+restores **real** subpaths `arkgate/runtime` and `arkgate/nestjs` in the same tarball.
+`@arkgate/runtime` is deprecated. Order never ships as `@arkgate/order`. ADR
+[0021](0021-arkrun-companion-isolation.md) still clarifies brand, factory, and no
+process singleton.
 
 The existing in-memory “outbox” is not a transactional outbox. Its preferred public name becomes
 `InMemoryEventBuffer`; the old symbols remain deprecated aliases during the experimental window.

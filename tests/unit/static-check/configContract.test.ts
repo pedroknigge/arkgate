@@ -252,6 +252,7 @@ describe('C01 config contract', () => {
       { from: 'unversioned', to: '1.0' },
       { from: '1.0', to: '1.1' },
       { from: '1.1', to: '1.2' },
+      { from: '1.2', to: '1.3' },
     ]);
     expect(migrateArkConfig(source, CASES.previousMajor.configFile).candidate).toEqual(expected);
     expect(first.migratedFrom).toBe('unversioned');
@@ -630,24 +631,24 @@ describe('C01 config contract', () => {
 });
 
 describe('RN02 arkRun extra contract', () => {
-  it('migrates 1.1 configs without arkRun to 1.2 with identical remaining fields', () => {
+  it('migrates 1.1 configs without arkRun to current with identical remaining fields', () => {
     const v11 = {
       ...VALID_MINIMAL_CONFIG,
       $schema: ARK_CONFIG_SCHEMA_URL,
       schemaVersion: '1.1',
     };
-    const v12 = {
+    const current = {
       ...VALID_MINIMAL_CONFIG,
       $schema: ARK_CONFIG_SCHEMA_URL,
-      schemaVersion: '1.2',
+      schemaVersion: ARK_CONFIG_SCHEMA_VERSION,
     };
     const from11 = loadArkConfigContract(v11);
-    const native = loadArkConfigContract(v12);
+    const native = loadArkConfigContract(current);
 
     expect(from11.migratedFrom).toBe('1.1');
     expect(native.migratedFrom).toBe(null);
     expect(from11.config).toEqual(native.config);
-    expect(from11.config.schemaVersion).toBe('1.2');
+    expect(from11.config.schemaVersion).toBe(ARK_CONFIG_SCHEMA_VERSION);
     expect(from11.config.arkRun).toBeUndefined();
     expect(native.config.arkRun).toBeUndefined();
   });

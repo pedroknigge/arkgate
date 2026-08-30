@@ -5,6 +5,12 @@
  * resolvedCandidateFacts.ts; JSON Schema lives in resolvedCandidateFactsSchema.ts.
  */
 
+import type {
+  ResolvedArkOrderGenericUpdateFact,
+  ResolvedArkOrderPlaneCallFact,
+  ResolvedArkOrderRootHitFact,
+} from './arkOrderFacts';
+
 /** 1.1 adds optional classShapes[] (ADR 0013). 1.2 adds optional ArkRun facts (ADR 0022). 1.0/1.1 remain loadable. */
 export const RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSION = '1.2' as const;
 export const RESOLVED_CANDIDATE_FACTS_SCHEMA_VERSIONS = ['1.0', '1.1', '1.2'] as const;
@@ -198,6 +204,9 @@ export type ResolvedCandidateFactsInput = {
   arkRunManagedNews?: readonly ResolvedArkRunManagedNewFact[];
   arkRunCompositionRootHits?: readonly ResolvedArkRunCompositionRootHitFact[];
   arkRunDeclarations?: readonly ResolvedArkRunDeclarationFact[];
+  arkOrderPlaneCalls?: readonly ResolvedArkOrderPlaneCallFact[];
+  arkOrderGenericUpdates?: readonly ResolvedArkOrderGenericUpdateFact[];
+  arkOrderRootHits?: readonly ResolvedArkOrderRootHitFact[];
 };
 
 export type ResolvedCandidateFacts = Omit<
@@ -205,6 +214,9 @@ export type ResolvedCandidateFacts = Omit<
   | 'candidateTreeHash'
   | 'classShapes'
   | 'arkRunKernelCalls'
+  | 'arkOrderPlaneCalls'
+  | 'arkOrderGenericUpdates'
+  | 'arkOrderRootHits'
   | 'arkRunManagedNews'
   | 'arkRunCompositionRootHits'
   | 'arkRunDeclarations'
@@ -224,5 +236,8 @@ export type ResolvedCandidateFacts = Omit<
   arkRunManagedNews: ResolvedArkRunManagedNewFact[];
   arkRunCompositionRootHits: ResolvedArkRunCompositionRootHitFact[];
   arkRunDeclarations: ResolvedArkRunDeclarationFact[];
+  arkOrderPlaneCalls: ResolvedArkOrderPlaneCallFact[];
+  arkOrderGenericUpdates: ResolvedArkOrderGenericUpdateFact[];
+  arkOrderRootHits: ResolvedArkOrderRootHitFact[];
   factsHash: string;
 };

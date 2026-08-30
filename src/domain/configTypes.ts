@@ -2,12 +2,12 @@
  * Type vocabulary for the ark.config.json contract (U02 pilot 1).
  *
  * Pure declarations only — no runtime values. The loader/validator logic and the
- * published JSON Schema live in ./configContract.ts, whose generated CLI artifact
- * must stay self-contained: type-only imports/exports are erased on transpile, so
- * this split never reaches bin/lib/config-contract.mjs.
+ * published JSON Schema live in ./configContract.ts. Extra defaulting lives in
+ * ./configExtras.ts (generated sibling `config-extras.mjs`). Type-only imports
+ * from this file are erased on transpile.
  */
 
-export type ArkConfigSchemaVersion = '1.0' | '1.1' | '1.2';
+export type ArkConfigSchemaVersion = '1.0' | '1.1' | '1.2' | '1.3';
 
 export type ArkConfigCyclePolicy = 'strict' | 'soft' | 'framework-soft' | 'off';
 
@@ -75,6 +75,20 @@ export type ArkConfigArkRun = {
   ignoreDirectNewForErrors?: boolean;
 };
 
+/** ADR 0027 — advisory never adds merge teeth; enforced is the extra's merge plane. */
+export type ArkConfigArkOrderMode = 'advisory' | 'enforced';
+
+/**
+ * ADR 0027 — optional inline ArkOrder extra (schema 1.3+). Absence is silent.
+ * Present objects are fully defaulted by the loader.
+ */
+export type ArkConfigArkOrder = {
+  mode: ArkConfigArkOrderMode;
+  planeRoots: string[];
+  managedLayers: string[];
+  maxXiKeys: number;
+};
+
 export type ArkConfig = {
   $schema: string;
   schemaVersion: ArkConfigSchemaVersion;
@@ -92,6 +106,8 @@ export type ArkConfig = {
   arkRules?: ArkConfigArkRulesRefs;
   /** ADR 0020 — optional ArkRun extra (schema 1.2+). Absence changes no Layers/ArkRules verdict. */
   arkRun?: ArkConfigArkRun;
+  /** ADR 0027 — optional ArkOrder extra (schema 1.3+). Absence changes no Layers/ArkRules/ArkRun verdict. */
+  arkOrder?: ArkConfigArkOrder;
   /**
    * Optional GitHub handles or emails who may loosen the contract or grow the baseline.
    * Metadata — excluded from policy hash. Absence means no steward lock (policy-ack still applies).
@@ -105,7 +121,7 @@ export type ArkConfigIssue = {
 };
 
 /** Original input version when the loader rewrote schemaVersion toward current. */
-export type ArkConfigMigratedFrom = 'unversioned' | '1.0' | '1.1' | null;
+export type ArkConfigMigratedFrom = 'unversioned' | '1.0' | '1.1' | '1.2' | null;
 
 export type ArkConfigLoadResult = {
   config: ArkConfig;

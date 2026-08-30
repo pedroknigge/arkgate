@@ -28,7 +28,7 @@ const config = {
     'bin/lib/write-path-detect.mjs:62-62',
     'bin/lib/write-path-detect.mjs:77-96',
     'bin/lib/analysis-completeness.mjs:9-27',
-    'bin/lib/resolved-candidate-facts.mjs:684-728',
+    'bin/lib/resolved-candidate-facts.mjs:688-732',
     // managed-upgrade force-preserve covered by fieldGapS4 unit tests; not in critical
     // mutation groups for 4.1.0 (NoCoverage noise on toml-section branch residual).
     'bin/lib/resident-hook.mjs:115-162',
@@ -48,7 +48,7 @@ const config = {
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
     // peerIsolationMustDeny is the killable fail-closed core; findDeniedEdgeRule wires it.
     'src/domain/layerMatch.ts:337-349',
-    'src/domain/policyDelta.ts:796-825',
+    'src/domain/policyDelta.ts:869-898',
     'src/domain/invariantCoverage.ts:165-188',
     'src/kernel/semanticAnalysis.ts:18-49',
     'src/kernel/semanticAnalysis.ts:78-258',

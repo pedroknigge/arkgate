@@ -49,9 +49,22 @@ try {
   if (
     typeof gate.createAICodeGate !== 'function' ||
     typeof gate.createProjectIdentity !== 'function' ||
-    gate.createStrictArkKernel !== undefined
+    gate.createStrictArkKernel !== undefined ||
+    gate.createOrderPlane !== undefined
   ) {
     throw new Error('gate-only install exposes the wrong public surface');
+  }
+  const order = await import(
+    pathToFileURL(path.join(gateInstall, 'node_modules/arkgate/dist/order/index.js')).href
+  );
+  if (typeof order.createOrderPlane !== 'function') {
+    throw new Error('arkgate/order subpath did not expose createOrderPlane');
+  }
+  const runtimeFromGate = await import(
+    pathToFileURL(path.join(gateInstall, 'node_modules/arkgate/dist/runtime/index.js')).href
+  );
+  if (typeof runtimeFromGate.createStrictArkKernel !== 'function') {
+    throw new Error('arkgate/runtime subpath did not expose createStrictArkKernel');
   }
   const identitySchema = JSON.parse(
     fs.readFileSync(
@@ -68,8 +81,8 @@ try {
   ) {
     throw new Error('gate-only install has a stale project-identity schema');
   }
-  if (fs.existsSync(path.join(gateInstall, 'node_modules/arkgate/dist/runtime'))) {
-    throw new Error('gate-only install contains a runtime bundle');
+  if (!fs.existsSync(path.join(gateInstall, 'node_modules/arkgate/dist/runtime/index.js'))) {
+    throw new Error('arkgate tarball is missing the runtime subpath');
   }
 
   const runtimeInstall = path.join(temp, 'runtime');
@@ -88,7 +101,7 @@ try {
   if (typeof runtime.createStrictArkKernel !== 'function') {
     throw new Error('independent runtime install did not expose createStrictArkKernel');
   }
-  console.log('✔ gate-only and ArkRun kernel packages install independently.');
+  console.log('✔ arkgate tarball is gate-root plus opt-in runtime/order subpaths; deprecated companion still installs.');
 } finally {
   fs.rmSync(temp, { recursive: true, force: true });
 }

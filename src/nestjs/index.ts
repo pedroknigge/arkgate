@@ -1,9 +1,9 @@
 /**
- * NestJS adapter for the ArkRun kernel (`@arkgate/runtime`).
+ * NestJS adapter for the ArkRun kernel (`arkgate/nestjs`).
  *
  * ```ts
- * import { ArkModule, InjectArk } from '@arkgate/runtime/nestjs';
- * import type { ArkKernel } from '@arkgate/runtime';
+ * import { ArkModule, InjectArk } from 'arkgate/nestjs';
+ * import type { ArkKernel } from 'arkgate/runtime';
  *
  * @Module({ imports: [ArkModule.forRoot()] })
  * export class AppModule {}
@@ -15,7 +15,7 @@
  * ```
  *
  * `@nestjs/common` is an optional peer dependency: this entry point is only
- * loaded when you import `@arkgate/runtime/nestjs`.
+ * loaded when you import `arkgate/nestjs`. `@arkgate/runtime/nestjs` is deprecated.
  */
 import { Inject, Module } from '@nestjs/common';
 import type {

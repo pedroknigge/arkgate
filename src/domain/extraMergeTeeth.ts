@@ -1,5 +1,5 @@
 /**
- * Extra-plane merge teeth (ArkRules + ArkRun). Same classification floor.
+ * Extra-plane merge teeth (ArkRules + ArkRun + ArkOrder). Same classification floor.
  *
  * Unknown classification (contract-only callers) allows teeth. Known empty or
  * under-floor trees demote extra-plane findings so they never merge-block.
@@ -70,13 +70,22 @@ export function isArkRunRuleId(ruleId: unknown): boolean {
   return typeof ruleId === 'string' && ruleId.startsWith('ARKRUN_');
 }
 
+export function isArkOrderRuleId(ruleId: unknown): boolean {
+  return typeof ruleId === 'string' && ruleId.startsWith('ARKORDER_');
+}
+
 export function isExtraPlaneFinding(violation: {
   ruleId?: unknown;
   arkruleId?: unknown;
 }): boolean {
   if (violation?.arkruleId != null) return true;
   const id = typeof violation?.ruleId === 'string' ? violation.ruleId : '';
-  return id.startsWith('ARKRULE') || id.startsWith('arkrule') || id.startsWith('ARKRUN_');
+  return (
+    id.startsWith('ARKRULE') ||
+    id.startsWith('arkrule') ||
+    id.startsWith('ARKRUN_') ||
+    id.startsWith('ARKORDER_')
+  );
 }
 
 /**
@@ -99,7 +108,7 @@ export function demoteExtraPlaneTeethUnderClassificationFloor<
 
 /** Stamp for extra-plane honesty: never one architecture score. */
 export const MERGE_PLANES_DUAL_STAMP =
-  'Structure = heuristics; invariants = catalog+coverage evidence (not business runtime); ArkRun = kernel usage + declarations (not a score). Extra planes never merge into one architecture score. Advisory ArkRules ≠ merge teeth. Advisory ArkRun ≠ merge teeth.';
+  'Structure = heuristics; invariants = catalog+coverage evidence (not business runtime); ArkRun = kernel usage + declarations (not a score); ArkOrder = pattern slaving (not a score). Extra planes never merge into one architecture score. Advisory ArkRules ≠ merge teeth. Advisory ArkRun ≠ merge teeth. Advisory ArkOrder ≠ merge teeth.';
 
 export type MergePlanesArkRulesInput = {
   active: boolean;

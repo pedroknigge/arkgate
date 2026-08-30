@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "1.2",
+  "include": ["src"],
+  "layers": [
+    { "name": "DomainModel", "patterns": ["src/domain/**"], "intentPrefixes": ["Domain."] },
+    { "name": "ApplicationOrchestration", "patterns": ["src/application/**", "src/main.ts"] }
+  ],
+  "rules": [{ "from": "ApplicationOrchestration", "to": "DomainModel", "allowed": true }]
+}
