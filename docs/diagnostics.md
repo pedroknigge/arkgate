@@ -281,7 +281,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 **Invariant without coverage evidence**
 
 - **Why:** An ArkRules invariant is under contract but no covering test title or declared symbol evidence was found (or coverage is partial). Kind is `never-had-tests` (adopt residual) vs `tests-disappeared` (suite exists).
-- **Fix:** Add a test title or declared symbol covering the arkruleId, then preflight again. Treat never-had-tests as adopt residual; treat tests-disappeared as a regression. Missing test globs report partial — never fake green.
+- **Fix:** Add a test title or declared symbol covering the arkruleId, then preflight again. Treat never-had-tests as adopt residual; treat tests-disappeared as a regression. Missing test globs report partial — never fake green. When the message reports an exhausted file budget, raise `coverage.maxFiles` (or narrow `coverage.testGlobs`) in ark.config.json.
 
 ## ArkRun (opt-in extra)
 

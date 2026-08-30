@@ -625,6 +625,9 @@
         "allowDisabledPeerIsolation": false
       }
     },
+    "coverage": {
+      "$ref": "#/$defs/coverage"
+    },
     "arkRules": {
       "type": "object",
       "additionalProperties": {
@@ -797,6 +800,26 @@
         "allowDisabledPeerIsolation": {
           "type": "boolean",
           "default": false
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Invariant coverage scan controls. testGlobs replaces the built-in test-name heuristic; maxFiles raises or lowers the evidence file budget.",
+      "properties": {
+        "testGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "maxFiles": {
+          "type": "integer",
+          "minimum": 1
         }
       }
     },

@@ -105,6 +105,8 @@ export const ARK_CONFIG_SCHEMA = {
                 allowDisabledPeerIsolation: false,
             },
         },
+        /** Invariant-coverage scan controls (test globs + file budget). Absence keeps defaults. */
+        coverage: { $ref: '#/$defs/coverage' },
         /** ADR 0012 — layer name → relative path to arkrules/<Layer>.json */
         arkRules: {
             type: 'object',
@@ -182,6 +184,15 @@ export const ARK_CONFIG_SCHEMA = {
                 maxAnyCasts: { type: 'integer', minimum: 0, default: 0 },
                 allowInMemory: { type: 'boolean', default: false },
                 allowDisabledPeerIsolation: { type: 'boolean', default: false },
+            },
+        },
+        coverage: {
+            type: 'object',
+            additionalProperties: false,
+            description: 'Invariant coverage scan controls. testGlobs replaces the built-in test-name heuristic; maxFiles raises or lowers the evidence file budget.',
+            properties: {
+                testGlobs: { ...stringArraySchema, minItems: 1 },
+                maxFiles: { type: 'integer', minimum: 1 },
             },
         },
         arkRun: ARK_RUN_SCHEMA_DEF,

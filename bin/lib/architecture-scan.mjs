@@ -12,6 +12,7 @@ import { effectiveAnalysisConfig } from './analysis-policy.mjs';
 import { resolveCandidateFacts } from './resolved-candidate-facts.mjs';
 import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
 import {
+  coverageOptionsFromConfig,
   invariantIdsFromCatalog,
   loadInvariantCoverageInputs,
 } from './invariant-coverage-io.mjs';
@@ -72,6 +73,7 @@ export function resolveArchitectureSnapshot({
   const coverageInputs = hasInvariants
     ? loadInvariantCoverageInputs(root, facts, {
         invariantIds: invariantIdsFromCatalog(arkRulesLoad.arkRules),
+        ...coverageOptionsFromConfig(effectiveConfig),
       })
     : undefined;
   // AR07: Tooling fileHints for orchestration-only / thin-adapter (reuse coverage contents when present).

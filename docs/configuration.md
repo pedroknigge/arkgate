@@ -86,6 +86,12 @@ Top-level fields:
 - `include`, `exclude`, `excludeGenerated`, `frameworkOverlay`
 - `layers`, `rules`, `cyclePolicy`
 - `dynamicImportAllowlist`, `safety`
+- **`coverage`** (optional) — invariant-coverage scan controls: `testGlobs` (globs that decide
+  which files count as tests, replacing the built-in `*.test.*` / `tests/` name heuristic) and
+  `maxFiles` (evidence file budget, default `400`). Absence is silent and changes no verdict.
+  Unknown keys fail closed. When the budget is hit, `INVARIANT_UNCOVERED` reports the numbers
+  (files loaded, tests retained, files discarded at the cap) and names `coverage.maxFiles` as
+  the knob that raises it — coverage never claims "never had tests" because of our own cap.
 - **`arkRules`** (optional, schema `1.1+`) — map of layer name → project-relative path to an
   ArkRules file (e.g. `"DomainModel": "arkrules/DomainModel.json"`). Keys must match a declared
   layer. Missing/invalid referenced files **fail closed**.

@@ -3,6 +3,24 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
+## Unreleased
+
+**Patch** over **4.8.3**. Invariant coverage stops hiding its own limits: the scan budget and the
+test globs are config, and every discarded file is counted in the diagnostic. **No required config
+migration.**
+
+### Added
+- **`coverage` config (optional):** `coverage.testGlobs` replaces the built-in test-name heuristic
+  and `coverage.maxFiles` sets the evidence file budget (default `400`). Both were already
+  implemented inside the loader but unreachable from `ark.config.json`; `ark-check`, doctor
+  (`rulesUnderContract`), and policy-delta now all pass them. Absence is silent.
+
+### Changed
+- **`INVARIANT_UNCOVERED` carries numbers:** a budget-exhausted verdict reports files loaded, the
+  cap in force, tests retained, files discarded at the cap, and names `coverage.maxFiles` as the
+  knob that raises it. Tests dropped for naming no catalogued invariant are counted in the message
+  instead of vanishing.
+
 ## 4.8.3 — 2026-08-30
 
 **Patch** over **4.8.2**. Persistence writes in a use-case skip the aggregate (`writes-via-aggregate`). ArkOrder **`xiKeys`** names the slow product decisions; a managed-layer Prisma/pg write of those keys is `ARKORDER_XI_FIELD_WRITE`. Dead sensors (`too-many-params`, `ingest-writes-xi`) now emit. No new skill names. Does not close `K01` / `Z09`. **No required config migration.**

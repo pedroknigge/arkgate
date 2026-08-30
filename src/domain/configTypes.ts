@@ -54,6 +54,17 @@ export type ArkConfigSafety = {
 };
 
 /**
+ * Optional invariant-coverage scan controls. Absence keeps the built-in
+ * defaults (test-name heuristic, 400-file budget) and changes no verdict.
+ */
+export type ArkConfigCoverage = {
+  /** Globs that decide which files count as tests (replaces the name heuristic). */
+  testGlobs?: string[];
+  /** Max files loaded as coverage evidence before the budget is exhausted. */
+  maxFiles?: number;
+};
+
+/**
  * ADR 0012 — optional map of layer name → project-relative ArkRules file path.
  * Absence changes no inter-layer verdict.
  */
@@ -107,6 +118,11 @@ export type ArkConfig = {
   cyclePolicy?: ArkConfigCyclePolicy;
   dynamicImportAllowlist?: string[];
   safety?: ArkConfigSafety;
+  /**
+   * Invariant-coverage scan controls (test globs + file budget).
+   * Absence keeps the defaults; it never turns coverage on by itself.
+   */
+  coverage?: ArkConfigCoverage;
   /** ADR 0012 — modular ArkRules references (schema 1.1+). */
   arkRules?: ArkConfigArkRulesRefs;
   /** ADR 0020 — optional ArkRun extra (schema 1.2+). Absence changes no Layers/ArkRules verdict. */

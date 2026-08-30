@@ -81,6 +81,60 @@ describe('AR09–AR11 invariant coverage + promotion', () => {
     expect(result.violations[0]?.message).not.toMatch(/never-had-tests/);
   });
 
+  it('budget-exhausted diagnostic carries the numbers and the knob that raises it', () => {
+    const result = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: {},
+      testFiles: [],
+      testGlobsMissing: true,
+      coverageBudgetExhausted: true,
+      coverageStats: {
+        filesLoaded: 400,
+        testFilesRetained: 12,
+        maxFiles: 400,
+        discarded: { budget: 307, noInvariantMention: 42 },
+      },
+    });
+    const message = result.violations[0]?.message ?? '';
+    expect(message).toMatch(/400 files loaded at the 400-file cap/);
+    expect(message).toMatch(/12 tests retained/);
+    expect(message).toMatch(/307 files discarded at the cap/);
+    expect(message).toMatch(/coverage\.maxFiles/);
+    // Nothing is discarded silently: the no-mention drops are counted too.
+    expect(message).toMatch(/42 naming no catalogued invariant/);
+  });
+
+  it('reports discards even when the verdict is plain uncovered (not partial)', () => {
+    const result = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: { 'tests/a.test.ts': "it('unrelated', () => {})" },
+      testFiles: ['tests/a.test.ts'],
+      coverageStats: {
+        filesLoaded: 1,
+        testFilesRetained: 1,
+        maxFiles: 400,
+        discarded: { budget: 0, noInvariantMention: 3 },
+      },
+    });
+    expect(result.violations[0]?.message).toMatch(/Scan discarded 3 naming no catalogued invariant/);
+  });
+
+  it('says nothing about discards when the scan discarded nothing', () => {
+    const result = evaluateInvariantCoverage({
+      arkRules: catalog(),
+      fileContents: {},
+      testFiles: [],
+      testGlobsMissing: true,
+      coverageStats: {
+        filesLoaded: 0,
+        testFilesRetained: 0,
+        maxFiles: 400,
+        discarded: { budget: 0, noInvariantMention: 0 },
+      },
+    });
+    expect(result.violations[0]?.message).not.toMatch(/Scan discarded/);
+  });
+
   it('refuses promotion of uncovered invariants (AR11)', () => {
     const uncovered = evaluateInvariantCoverage({
       arkRules: catalog(),

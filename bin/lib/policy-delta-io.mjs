@@ -4,6 +4,7 @@ import path from 'node:path';
 import { analyzePolicyDelta } from './analysis-engine.mjs';
 import { loadEffectiveArkRulesFromDisk } from './effective-contract-load.mjs';
 import {
+  coverageOptionsFromConfig,
   invariantIdsFromCatalog,
   loadInvariantCoverageInputs,
 } from './invariant-coverage-io.mjs';
@@ -180,6 +181,7 @@ export function analyzePolicyTransition({
   if ((candidateArkRules?.invariants?.length ?? 0) > 0) {
     const coverageInputs = loadInvariantCoverageInputs(root, { files: [] }, {
       invariantIds: invariantIdsFromCatalog(candidateArkRules),
+      ...coverageOptionsFromConfig(candidateConfig),
     });
     const evaluated = evaluateInvariantCoverage({
       arkRules: candidateArkRules,
@@ -187,6 +189,7 @@ export function analyzePolicyTransition({
       testFiles: coverageInputs.testFiles,
       testGlobsMissing: coverageInputs.testGlobsMissing,
       coverageBudgetExhausted: coverageInputs.coverageBudgetExhausted === true,
+      ...(coverageInputs.stats ? { coverageStats: coverageInputs.stats } : {}),
     });
     candidateInvariantCoverage = evaluated.coverage;
   }

@@ -6,7 +6,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { loadInvariantCoverageInputs } from '../../../bin/lib/invariant-coverage-io.mjs';
+import {
+  coverageOptionsFromConfig,
+  loadInvariantCoverageInputs,
+} from '../../../bin/lib/invariant-coverage-io.mjs';
 import {
   loadArkRuleFileHints,
   needsArkRuleFileHints,
@@ -105,6 +108,105 @@ describe('ArkRules tooling wiring', () => {
     );
     expect(inputs.testGlobsMissing).toBe(false);
     expect(inputs.testFiles).toEqual(['tests/zzz-relevant.test.ts']);
+  });
+
+  it('honors coverage.maxFiles from config and reports the budget numbers', () => {
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    for (let i = 0; i < 6; i += 1) {
+      fs.writeFileSync(
+        path.join(root, 'tests', `inv${i}.test.ts`),
+        `it('INV-ORDER-001 case ${i}', () => {})\n`
+      );
+    }
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'], maxFiles: 2 }
+    );
+    expect(inputs.testFiles).toHaveLength(2);
+    expect(inputs.coverageBudgetExhausted).toBe(true);
+    expect(inputs.stats.maxFiles).toBe(2);
+    expect(inputs.stats.filesLoaded).toBe(2);
+    expect(inputs.stats.testFilesRetained).toBe(2);
+    // Four files hit the cap — counted, not dropped in silence.
+    expect(inputs.stats.discarded.budget).toBe(4);
+  });
+
+  it('counts tests discarded for naming no catalogued invariant', () => {
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'tests'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'tests', 'relevant.test.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+    for (let i = 0; i < 3; i += 1) {
+      fs.writeFileSync(path.join(root, 'tests', `noise${i}.test.ts`), `it('noise ${i}', () => {})\n`);
+    }
+    const inputs = loadInvariantCoverageInputs(
+      root,
+      { files: [] },
+      { invariantIds: ['INV-ORDER-001'] }
+    );
+    expect(inputs.stats.discarded.noInvariantMention).toBe(3);
+    expect(inputs.stats.discarded.budget).toBe(0);
+    expect(inputs.stats.maxFiles).toBe(400);
+  });
+
+  it('coverageOptionsFromConfig reads coverage.testGlobs / coverage.maxFiles (absence is silent)', () => {
+    expect(coverageOptionsFromConfig(undefined)).toEqual({});
+    expect(coverageOptionsFromConfig({ layers: [] })).toEqual({});
+    expect(coverageOptionsFromConfig({ coverage: {} })).toEqual({});
+    expect(
+      coverageOptionsFromConfig({ coverage: { testGlobs: ['qa/**/*.checks.ts'], maxFiles: 900 } })
+    ).toEqual({ testGlobs: ['qa/**/*.checks.ts'], maxFiles: 900 });
+    // Junk is ignored rather than silently narrowing the scan.
+    expect(coverageOptionsFromConfig({ coverage: { testGlobs: [''], maxFiles: 0 } })).toEqual({});
+  });
+
+  it('rules-under-contract passes config coverage.testGlobs through to the scan', () => {
+    const root = makeRoot();
+    fs.mkdirSync(path.join(root, 'arkrules'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'qa'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src', 'domain'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'arkrules', 'DomainModel.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        layer: 'DomainModel',
+        structure: [],
+        invariants: [
+          {
+            id: 'INV-ORDER-001',
+            description: 'Order total never negative',
+            coverage: { test: true },
+            mode: 'advisory',
+          },
+        ],
+      })
+    );
+    // Only a non-standard test layout proves the globs were threaded through.
+    fs.writeFileSync(
+      path.join(root, 'qa', 'order.checks.ts'),
+      "it('INV-ORDER-001 keeps total non-negative', () => {})\n"
+    );
+    const config = {
+      schemaVersion: '1.3',
+      arkRules: { DomainModel: 'arkrules/DomainModel.json' },
+      coverage: { testGlobs: ['qa/**/*.checks.ts'] },
+      layers: [{ name: 'DomainModel', patterns: ['src/domain/**'] }],
+      rules: [],
+    };
+    const summary = summarizeRulesUnderContract(root, config, { files: [] });
+    expect(summary.coveredInvariants).toBe(1);
+    expect(summary.uncoveredInvariants).toBe(0);
+
+    const withoutGlobs = summarizeRulesUnderContract(
+      root,
+      { ...config, coverage: undefined },
+      { files: [] }
+    );
+    expect(withoutGlobs.coveredInvariants).toBe(0);
   });
 
   it('loadArkRuleFileHints derives orchestrationHeavy / adapterThick from disk', () => {

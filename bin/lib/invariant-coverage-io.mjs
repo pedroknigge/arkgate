@@ -9,8 +9,8 @@ import path from 'node:path';
 const DEFAULT_TEST_NAME_RE =
   /\.(test|spec)\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$|\/__tests__\/|\/tests?\//i;
 
-/** Max files to load for coverage evidence (budget). */
-const MAX_COVERAGE_FILES = 400;
+/** Default max files to load for coverage evidence (budget). Config: `coverage.maxFiles`. */
+export const DEFAULT_MAX_COVERAGE_FILES = 400;
 /** Max bytes per file when reading for title/symbol mining. */
 const MAX_FILE_BYTES = 256 * 1024;
 
@@ -63,6 +63,26 @@ function matchSimpleGlob(glob, file) {
 }
 
 /**
+ * Coverage scan options carried by ark.config.json (`coverage`).
+ * Absent config → `{}`: the built-in heuristic and default budget stay in force.
+ * @param {{ coverage?: { testGlobs?: unknown, maxFiles?: unknown } } | null | undefined} config
+ * @returns {{ testGlobs?: string[], maxFiles?: number }}
+ */
+export function coverageOptionsFromConfig(config) {
+  const coverage = config?.coverage;
+  if (!coverage || typeof coverage !== 'object') return {};
+  const options = {};
+  if (Array.isArray(coverage.testGlobs)) {
+    const globs = coverage.testGlobs.filter((g) => typeof g === 'string' && g.length > 0);
+    if (globs.length > 0) options.testGlobs = globs;
+  }
+  if (Number.isInteger(coverage.maxFiles) && coverage.maxFiles > 0) {
+    options.maxFiles = coverage.maxFiles;
+  }
+  return options;
+}
+
+/**
  * Declared invariant ids from an Effective catalog. Empty when the extra is off.
  * @param {{ invariants?: Array<{ id?: unknown }> } | null | undefined} arkRules
  * @returns {string[]}
@@ -76,18 +96,31 @@ export function invariantIdsFromCatalog(arkRules) {
 /**
  * @param {string} root
  * @param {{ files?: Array<{ path: string }> }} facts
- * @param {{ testGlobs?: string[], invariantIds?: string[] }} [opts]
+ * @param {{ testGlobs?: string[], invariantIds?: string[], maxFiles?: number }} [opts]
  * @returns {{
  *   fileContents: Record<string, string>,
  *   testFiles: string[],
  *   testGlobsMissing: boolean,
  *   coverageBudgetExhausted: boolean,
+ *   stats: {
+ *     filesLoaded: number,
+ *     testFilesRetained: number,
+ *     maxFiles: number,
+ *     discarded: { budget: number, noInvariantMention: number },
+ *   },
  * }}
  */
 export function loadInvariantCoverageInputs(root, facts, opts = {}) {
   const fileContents = {};
   const testFiles = [];
   const seen = new Set();
+  const maxFiles =
+    Number.isInteger(opts.maxFiles) && opts.maxFiles > 0
+      ? opts.maxFiles
+      : DEFAULT_MAX_COVERAGE_FILES;
+  // Every discard is counted. A file dropped without a number is a coverage
+  // verdict the user cannot explain.
+  const discarded = { budget: 0, noInvariantMention: 0 };
   // Declared invariant ids. When present, a test file is RETAINED only if it
   // mentions one: scanning is cheap (hundreds of small files), retaining is
   // what costs memory. Without this the budget goes to whichever N tests the
@@ -112,7 +145,11 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
     const rel = String(relPath || '')
       .replace(/\\/g, '/')
       .replace(/^\.\//, '');
-    if (!rel || seen.has(rel) || seen.size >= MAX_COVERAGE_FILES) return;
+    if (!rel || seen.has(rel)) return;
+    if (seen.size >= maxFiles) {
+      discarded.budget += 1;
+      return;
+    }
     const absolute = path.resolve(root, rel);
     if (!isPathInsideRoot(root, absolute)) return;
     try {
@@ -122,7 +159,10 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
       const asTest = forceAsTest || isTestPath(rel);
       // A test that names no invariant is evidence of nothing: scan it, drop
       // it, and let it cost no budget.
-      if (asTest && !mentionsInvariant(content)) return;
+      if (asTest && !mentionsInvariant(content)) {
+        discarded.noInvariantMention += 1;
+        return;
+      }
       seen.add(rel);
       fileContents[rel] = content;
       if (asTest) testFiles.push(rel);
@@ -133,9 +173,9 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
 
   // Tests FIRST, then production files.
   //
-  // The order is load-bearing, not stylistic. `pushFile` stops at
-  // MAX_COVERAGE_FILES, and a real repo has far more production files than the
-  // budget — so walking facts first consumed the whole budget and the test walk
+  // The order is load-bearing, not stylistic. `pushFile` stops at the file
+  // budget (`coverage.maxFiles`, default 400), and a real repo has far more
+  // production files than the budget — so walking facts first consumed the whole budget and the test walk
   // pushed nothing. Coverage then reported `testGlobsMissing: true`, which the
   // caller renders as "never-had-tests": a claim about the USER's repo that was
   // actually about our own budget. Measured on a 4511-file project: every
@@ -162,7 +202,13 @@ export function loadInvariantCoverageInputs(root, facts, opts = {}) {
     fileContents,
     testFiles,
     testGlobsMissing,
-    coverageBudgetExhausted: seen.size >= MAX_COVERAGE_FILES,
+    coverageBudgetExhausted: seen.size >= maxFiles,
+    stats: {
+      filesLoaded: seen.size,
+      testFilesRetained: testFiles.length,
+      maxFiles,
+      discarded,
+    },
   };
 }
 

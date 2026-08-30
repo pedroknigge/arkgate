@@ -33,6 +33,7 @@ export function analyzeTrustedResolvedProject(input: {
     testFiles?: readonly string[];
     testGlobsMissing?: boolean;
     coverageBudgetExhausted?: boolean;
+    stats?: import('../domain/invariantCoverage').InvariantCoverageStats;
   };
   fileHints?: Readonly<
     Record<

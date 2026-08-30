@@ -8,6 +8,20 @@
  * Pure CLI helper (bin/lib/invariant-coverage.mjs). Zero Node I/O.
  */
 
+/** Human-readable discard tail. Empty when the scan discarded nothing. */
+function formatCoverageDiscards(stats) {
+    if (!stats)
+        return '';
+    const d = stats.discarded;
+    const parts = [];
+    if (d.budget > 0)
+        parts.push(`${d.budget} past the ${stats.maxFiles}-file budget`);
+    if (d.noInvariantMention > 0)
+        parts.push(`${d.noInvariantMention} naming no catalogued invariant`);
+    if (parts.length === 0)
+        return '';
+    return ` Scan discarded ${parts.join(', ')} (loaded ${stats.filesLoaded} files, kept ${stats.testFilesRetained} tests).`;
+}
 function titleMatchesInvariant(content, id) {
     // Match describe/it/test string titles containing the invariant id.
     const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -39,6 +53,13 @@ export function evaluateInvariantCoverage(input) {
     const testFiles = input.testFiles ?? [];
     const testGlobsMissing = input.testGlobsMissing === true || testFiles.length === 0;
     const coverageBudgetExhausted = input.coverageBudgetExhausted === true;
+    const stats = input.coverageStats;
+    const discardTail = formatCoverageDiscards(stats);
+    // Numbers, not adjectives: a budget-exhausted verdict must say how big the
+    // budget was, what it bought, and which knob raises it.
+    const budgetDetail = stats
+        ? `coverage file budget exhausted: ${stats.filesLoaded} files loaded at the ${stats.maxFiles}-file cap, ${stats.testFilesRetained} tests retained, ${stats.discarded.budget} files discarded at the cap; raise "coverage.maxFiles" in ark.config.json`
+        : 'coverage file budget exhausted';
     const coverage = [];
     const violations = [];
     for (const inv of invariants) {
@@ -83,13 +104,14 @@ export function evaluateInvariantCoverage(input) {
             const kind = testGlobsMissing || testFiles.length === 0 ? 'never-had-tests' : 'tests-disappeared';
             violations.push({
                 ruleId: 'INVARIANT_UNCOVERED',
-                message: partial
+                message: (partial
                     ? coverageBudgetExhausted
-                        ? `Invariant ${inv.id} coverage cannot be proven (coverage file budget exhausted); reporting partial, not covered.`
+                        ? `Invariant ${inv.id} coverage cannot be proven (${budgetDetail}); reporting partial, not covered.`
                         : `Invariant ${inv.id} coverage cannot be proven (test globs missing or empty); reporting partial, not covered (never-had-tests).`
                     : kind === 'tests-disappeared'
                         ? `Invariant ${inv.id} is not covered by a test title or declared symbol (tests-disappeared — suite exists).`
-                        : `Invariant ${inv.id} is not covered by a test title or declared symbol (never-had-tests).`,
+                        : `Invariant ${inv.id} is not covered by a test title or declared symbol (never-had-tests).`) +
+                    discardTail,
                 file: inv.provenance.sourceFile,
                 line: 1,
                 arkruleId: inv.id,

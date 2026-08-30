@@ -452,6 +452,7 @@ export function analyzeCanonicalResolvedProject(
           input.coverageInputs === undefined ||
           (input.coverageInputs.testFiles?.length ?? 0) === 0,
         coverageBudgetExhausted: input.coverageInputs?.coverageBudgetExhausted === true,
+        ...(input.coverageInputs?.stats ? { coverageStats: input.coverageInputs.stats } : {}),
       })
     : { coverage: [], violations: [], partial: false };
   const invariantViolations: ArchitectureEngineViolation[] = coverageEval.violations
