@@ -369,12 +369,25 @@ function normalizeSegments(value: string): string[] {
     .map((part) => part.toLowerCase());
 }
 
+/**
+ * Trim trailing slashes without a regex.
+ *
+ * `/\/+$/` is a polynomial ReDoS on a value that comes from the repo's own
+ * contract but is still library input: a root of many slashes makes the engine
+ * retry from every start position. A scan is linear and says the same thing.
+ */
+function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
+}
+
 /** Source folders a declared shared root may sit under without being named. */
 const SHARED_ROOT_SOURCE_PREFIXES = ['src', 'app'];
 
 /** A root that would disable the wall wholesale is not a root. */
 function isBlanketRoot(raw: string): boolean {
-  const trimmed = raw.replace(/^[./]+/, '').replace(/\/+$/, '');
+  const trimmed = trimTrailingSlashes(raw.replace(/^[./]+/, ''));
   return trimmed === '*' || trimmed === '**';
 }
 
@@ -402,7 +415,7 @@ export function pathUnderSharedRoot(
     if (typeof raw !== 'string' || raw.length === 0) continue;
     if (isBlanketRoot(raw)) continue;
     if (raw.includes('*')) {
-      const glob = raw.toLowerCase().replace(/\/+$/, '');
+      const glob = trimTrailingSlashes(raw.toLowerCase());
       if (globToRegExp(glob).test(lowerRel) || globToRegExp(`${glob}/**`).test(lowerRel)) {
         return true;
       }
