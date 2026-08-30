@@ -230,6 +230,7 @@ npx arkgate status --json          # session/project snapshot (identity, activat
 npx arkgate-check --doctor
 npx arkgate-check --plan
 npx arkgate-check --coverage
+npx arkgate-check --path-drift --base-ref origin/main   # stale paths in strings/comments after a rename
 npx arkgate-check --strict-merge   # CI / required status
 npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok
 # optional: refresh shared home skills (Claude/Grok/Codex; never downgrades)

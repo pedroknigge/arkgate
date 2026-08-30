@@ -72,6 +72,8 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`LEXICAL_EVIDENCE_INCOMPLETE`](#LEXICAL_EVIDENCE_INCOMPLETE) | analysis | Lexical evidence incomplete |
 | [`ANALYSIS_COVERS_NO_FILES`](#ANALYSIS_COVERS_NO_FILES) | analysis | Analysis covered no files |
 | [`ANALYSIS_HOST_UNAVAILABLE`](#ANALYSIS_HOST_UNAVAILABLE) | analysis | Analysis host unavailable |
+| [`LITERAL_PATH_DRIFT`](#LITERAL_PATH_DRIFT) | drift | Literal path moved by a rename |
+| [`LITERAL_PATH_UNRESOLVED`](#LITERAL_PATH_UNRESOLVED) | drift | Literal path does not resolve |
 | [`ADAPTER_NOT_ALLOWED_FOR_PORT`](#ADAPTER_NOT_ALLOWED_FOR_PORT) | adapter | Adapter not allowed for port |
 | [`FORBIDDEN_PATTERN`](#FORBIDDEN_PATTERN) | snippet-policy | Forbidden regex pattern |
 | [`FORBIDDEN_SUBSTRING`](#FORBIDDEN_SUBSTRING) | snippet-policy | Forbidden substring |
@@ -560,6 +562,51 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 - **Why:** No usable TypeScript / analysis host was available for this invocation.
 - **Fix:** Install a supported TypeScript version visible to the project, then re-run. Unavailable analysis is fail-closed.
+
+## Literal path drift
+
+Reported by `arkgate-check --path-drift` only — this pass is not part of the
+architecture verdict. A path written inside a string, a comment or a docstring
+is invisible to the rest of the gate: `tsc` resolves imports, not strings, and
+ESLint does not either, so a rename compiles green and the reference lies
+afterwards. Field data from a 783-rename migration found the drift in four
+forms — the tsconfig alias, a relative literal, a path written without the
+include-root prefix, and prose (the largest class, and the only one with no
+detector anywhere; it turned up in `.ts`, `.tsx` and `.css`).
+
+The pass reads every text format where a repo path is written by hand
+(`.ts .tsx .mts .cts .js .jsx .mjs .cjs .css .scss .json .md`), skips generated
+files, and reports every file it refused to read, by reason.
+
+<a id="LITERAL_PATH_DRIFT"></a>
+
+### `LITERAL_PATH_DRIFT`
+
+**Literal path moved by a rename**
+
+- **Why:** A repo path written inside a string, a comment or a docstring no longer resolves, and the rename set says where it went. Nothing in the gate sees this class: `tsc` resolves imports, not strings, and ESLint does not either, so the rename compiles green and the reference lies afterwards. It appears in four forms — the tsconfig alias, a relative literal, a path written without the include-root prefix, and prose — and a hand sweep reliably covers one of them.
+- **Fix:** Apply the suggested replacement, or re-run `npx arkgate-check --path-drift --base-ref <ref> --write` to apply every writable anchored replacement at once. The rewrite is mechanical and one-directional: the destination comes from the rename, it must itself resolve and be path-shaped, and the token is rewritten in the form the author wrote it in. A destination that leaves the alias root of the literal is reported with the target only and must be rewritten by hand.
+
+Only a rename whose source really is gone and that has exactly one destination
+may anchor a finding. A source that maps to two destinations is not a
+one-directional fix, so it anchors nothing and its references fall through to
+the advisory list below; the count is printed.
+
+<a id="LITERAL_PATH_UNRESOLVED"></a>
+
+### `LITERAL_PATH_UNRESOLVED`
+
+**Literal path does not resolve** · often advisory
+
+- **Why:** A literal that looks like a repo path does not resolve under this root, and no rename explains where it went. Unlike `LITERAL_PATH_DRIFT` this is a candidate, not a verdict: with nothing to anchor it, ArkGate cannot tell a dead reference from an illustrative path in a comment, an example in documentation, or a path belonging to another tree.
+- **Fix:** Read the candidate and decide: fix the path, or leave it. Advisory only — it never fails a run and is never rewritten by `--write`, because there is no destination to propose. Run `--path-drift --all` to list the sweep.
+
+The sweep is opt-in for exactly the reason the coverage budget is reported
+rather than hidden: on a repository that *writes about* paths it produced 4085
+candidates out of 9536 literals, nearly all of them illustrative. Listing that
+by default would be ArkGate's inability to resolve a string presented as a fact
+about your code. The count is always printed, so opting out of the list is
+never opting out of knowing.
 
 ## Port adapters
 

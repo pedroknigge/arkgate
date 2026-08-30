@@ -486,6 +486,78 @@ npx ark-check --coverage
 
 Polyglot repos: Ark only governs TypeScript/JS. Point include at package roots that have sources.
 
+### Literal path drift after a rename (`--path-drift`)
+
+A repo path written inside a **string, a comment or a docstring** is invisible to
+the rest of the gate: `tsc` resolves imports, not strings, and ESLint does not
+either. A rename therefore compiles green and the reference lies afterwards.
+
+```bash
+npx ark-check --path-drift --base-ref origin/main          # preview
+npx ark-check --path-drift --base-ref origin/main --write  # apply the anchored fixes
+npx ark-check --path-drift --base-ref origin/main --all    # + the unanchored sweep
+```
+
+Two modes, because they make different claims:
+
+- **Anchored** (default) — the referenced path is gone and exactly one rename in
+  `git diff --find-renames <base-ref>` says where it went. A finding
+  (`LITERAL_PATH_DRIFT`) normally carries a replacement written in the author's
+  own form (alias stays alias, relative is recomputed relative, a path with no
+  include-root prefix keeps its coordinate space); the fix is one-directional
+  and `--write` applies it. Exit 1 while anchored drift remains. Three things
+  must hold before a replacement is offered at all: a rename explains the
+  reference, the destination itself resolves (otherwise the "fix" only moves the
+  drift), and the destination is path-shaped — a git path is raw bytes, and a
+  destination containing a quote or a newline would edit the program rather than
+  repair a reference. A finding that clears the first two but whose destination
+  leaves its own alias root is reported with the target only and marked *rewrite
+  by hand*; `--write` never touches it, so the summary counts writable
+  replacements separately.
+- **Unanchored** (`--all`) — a literal that looks like a repo path and does not
+  resolve, with nothing to say where it went (`LITERAL_PATH_UNRESOLVED`).
+  Advisory: never written, never fails a run. It is opt-in because ArkGate
+  cannot tell a dead reference from an illustrative one, and reporting the
+  difference as if it could would be our limitation stated as a fact about your
+  code. The **count is always printed**, listed or not.
+
+Three exit codes, so a pipeline can tell the three outcomes apart from the
+status alone:
+
+| exit | meaning |
+| --- | --- |
+| `0` | anchored mode ran and nothing is left |
+| `1` | anchored drift remains |
+| `2` | anchored mode could not run (no usable base ref) — this run proved nothing |
+
+A green tick is printed only for `0`. With no usable base ref the run prints
+`○ Anchored mode did not run` and exits `2`: a tick, or a zero status, over a
+check that never happened is the false green this pass exists to remove.
+
+`--write` refuses rather than risks the file, and every refusal is named in the
+output: a symlinked leaf or parent (`symlink`), a hard link to a file the repo
+does not own (`hard-link`), content that is not valid UTF-8 (`not-utf8` — a
+whole-file rewrite would replace the offending byte with U+FFFD), a token that
+has moved since the scan (`token-moved`), and anything resolving outside the
+root (`outside-root`). The read-modify-write goes through a single
+`O_NOFOLLOW` descriptor, so the path is never resolved twice.
+
+The rename set is taken against the working tree, so a rename that is staged
+but not yet committed is covered — the moment the drift is cheapest to fix. (A
+bare `mv` without `git add` is invisible to rename detection: its destination is
+untracked.) Without a usable base ref the
+run says so instead of printing a green.
+
+The pass reads the contract for one thing only — `include`, to learn which
+prefixes a path may be written under — and ignores `exclude`: a contract must not
+be able to hide drift from the pass that reports it, and a contract too broken to
+parse is no reason to stop looking either. Scope: every text format where a repo
+path is written by hand (`.ts .tsx .mts
+.cts .js .jsx .mjs .cjs .css .scss .json .md`) — deliberately wider than the
+TS/TSX gate the type-aware passes use, because a comment is not code and the
+class was first found in a `.css` file. Generated files are skipped, and every
+file the walk refuses is counted by reason in the output.
+
 ### Presets
 
 - `hexagonal` / `layered` / `feature-sliced` / `monorepo` / **`ui-surface`** (UI/Vite/Remotion-style) / **`vertical-slice`** (features/* + peerIsolation) / **`ddd-bounded-contexts`** (contexts/*/domain|application|infra + shared kernel)

@@ -585,6 +585,201 @@ function runAdoptContract(args) {
 }
 
 /**
+ * Literal path drift (LPD) — repo paths that live inside strings, comments and
+ * docstrings, and no longer resolve.
+ *
+ * `tsc` resolves imports, not strings, and ESLint does not either, so this
+ * whole class compiles green. Report only by default (house convention:
+ * plan-by-default, `--write` to mutate) and only the ANCHORED findings are ever
+ * written — an unanchored one has no destination to propose.
+ */
+async function runPathDrift(args) {
+  const root = args.root;
+  const { scanLiteralPathDrift, writeLiteralPathDrift } = await import(
+    './lib/literal-path-drift-io.mjs'
+  );
+  let config;
+  try {
+    config = readConfig(root, args.config);
+  } catch {
+    // The scan reads text, not the contract's rules: a contract too broken to
+    // parse must not hide the drift. `include` only widens the roots.
+    config = { include: ['src'] };
+  }
+  const baseRef = resolveDesignDeltaBaseRef(root, args.baseRef);
+  const report = scanLiteralPathDrift(root, config, { baseRef, tsconfig: args.tsconfig });
+  const written = args.write ? writeLiteralPathDrift(root, report.anchored) : null;
+  // After a write the findings that were applied no longer exist on disk, so
+  // reporting them as findings would describe a tree that is already gone.
+  const remainingAnchored = written
+    ? report.anchored.filter((finding) => !wasApplied(finding, written))
+    : report.anchored;
+  // Both sinks describe the tree as it now stands: after a write the applied
+  // findings are gone from disk, and printing them as findings would contradict
+  // the "wrote ..." lines directly underneath.
+  const shown = { ...report, anchored: remainingAnchored };
+
+  // The unanchored sweep is opt-in (`--all`). On a repo that WRITES about paths
+  // it produced 4085 candidates out of 9536 literals, almost all of them
+  // illustrative paths in prose and help text — that is ArkGate's inability to
+  // resolve a string reported as a fact about the user's code, the same defect
+  // class as the coverage budget. The count is always printed, so opting out of
+  // the list is never opting out of knowing.
+  const payload = {
+    ...report,
+    anchored: remainingAnchored,
+    unanchoredCount: report.unanchoredCount,
+    unanchored: args.all ? report.unanchored : [],
+    unanchoredListed: args.all,
+  };
+  if (args.json) {
+    console.log(JSON.stringify({ pathDrift: payload, ...(written ? { written } : {}) }, null, 2));
+  } else {
+    printPathDrift(root, args, shown, written);
+  }
+  // Anchored drift is a fact about the tree: the source is gone and a rename
+  // says where it went. Unanchored drift is advisory — ArkGate cannot tell a
+  // dead reference from one it simply cannot resolve.
+  // Three outcomes, and CI must be able to tell them apart from the exit code
+  // alone — a tick the terminal withholds is no use to a pipeline that only
+  // reads the status:
+  //   0  anchored mode ran and found nothing left
+  //   1  anchored drift remains
+  //   2  anchored mode could not run (no usable base ref) — this run proved
+  //      nothing, and exiting 0 here would be the false green one level down.
+  if (!report.renameSet.available) process.exitCode = 2;
+  else process.exitCode = remainingAnchored.length > 0 ? 1 : 0;
+}
+
+/**
+ * True when THIS finding was one of the replacements written.
+ *
+ * Matched by identity, not by file: a file holding two findings where only one
+ * still matched its token must keep the other one in the remaining set.
+ */
+function wasApplied(finding, written) {
+  const entry = written.written.find((row) => row.file === finding.file);
+  if (!entry) return false;
+  return (entry.appliedFindings ?? []).some(
+    (applied) =>
+      applied.line === finding.line &&
+      applied.column === finding.column &&
+      applied.token === finding.token
+  );
+}
+
+/**
+ * A path from git or from the filesystem is raw bytes, and it is about to be
+ * printed to a terminal. A control character there can repaint or erase the
+ * findings above it.
+ */
+function renderPath(value) {
+  return String(value).replace(/[\u0000-\u001f\u007f]/g, (ch) =>
+    `\\u${ch.charCodeAt(0).toString(16).padStart(4, '0')}`
+  );
+}
+
+function printPathDrift(root, args, report, written) {
+  console.log(color.bold('Literal path drift'));
+  console.log(
+    color.dim(
+      `  scanned ${report.scannedFiles} text file(s), ${report.candidates} path-shaped literal(s)`
+    )
+  );
+  if (!report.renameSet.available) {
+    console.log(
+      color.yellow(
+        `  No rename set (${report.renameSet.reason}) — anchored mode is OFF, so nothing below carries a suggested replacement. Pass --base-ref <git-ref> to enable it.`
+      )
+    );
+  } else {
+    console.log(
+      color.dim(
+        `  rename set vs ${report.baseRef}: ${report.renameSet.renames} rename(s), ${report.anchorsConsidered} usable anchor(s)`
+      )
+    );
+  }
+  if (report.ambiguousAnchors.length > 0) {
+    console.log(
+      color.dim(
+        `  ${report.ambiguousAnchors.length} rename source(s) map to more than one destination and anchor nothing (e.g. ${renderPath(report.ambiguousAnchors[0])})`
+      )
+    );
+  }
+  const discarded = report.scan.discarded;
+  const dropped = Object.values(discarded).reduce((sum, n) => sum + n, 0);
+  if (dropped > 0) {
+    console.log(
+      color.dim(
+        `  not read: ${discarded.generated} generated, ${discarded.oversize} oversize, ${discarded.budget} past the ${report.scan.maxFiles}-file budget, ${discarded.byteBudget} past the ${Math.round(report.scan.maxTotalBytes / (1024 * 1024))}MB total budget, ${discarded.unreadable} unreadable, ${discarded.depthLimited} past the depth limit, ${discarded.symlink} symlinked file(s), ${discarded.symlinkDir} symlinked director(ies)`
+      )
+    );
+  }
+
+  for (const finding of report.anchored) {
+    console.log(
+      `${color.red('\u2716')} ${finding.ruleId} ${renderPath(finding.file)}:${finding.line} [${finding.form}]`
+    );
+    console.log(
+      finding.suggestedToken === null
+        ? `  ${renderPath(finding.token)} -> ${renderPath(finding.suggestedTarget)} (outside the alias root of this literal — rewrite by hand)`
+        : `  ${renderPath(finding.token)} -> ${renderPath(finding.suggestedToken)}`
+    );
+  }
+  if (report.unanchoredCount > 0) {
+    if (args.all) {
+      for (const finding of report.unanchored) {
+        console.log(
+          `${color.yellow('warning')} ${finding.ruleId} ${renderPath(finding.file)}:${finding.line} [${finding.form}] ${renderPath(finding.token)}`
+        );
+      }
+    }
+    console.log(
+      color.yellow(
+        `  ${report.unanchoredCount} unanchored candidate(s)${args.all ? ` listed above${report.truncated.unanchored ? ` (first ${report.unanchored.length}; the list is capped at ${report.findingCap}, the count is not)` : ''}` : ' not listed (--all)'} — literals that look like a repo path and do not resolve. Advisory only: with no rename to anchor them ArkGate cannot tell a dead reference from an illustrative one, so read them, do not gate on them.`
+      )
+    );
+  }
+
+  if (written) {
+    for (const entry of written.written) {
+      console.log(color.green(`  wrote ${renderPath(entry.file)} (${entry.applied})`));
+    }
+    for (const entry of written.skipped) {
+      console.log(color.yellow(`  skipped ${renderPath(entry.file)}: ${entry.reason} (${entry.count})`));
+    }
+  }
+
+  if (report.anchored.length === 0) {
+    if (!report.renameSet.available) {
+      // No tick. A green mark over a check that never ran is the false green
+      // this whole patch exists to remove.
+      console.log(
+        color.yellow(
+          '\u25CB Anchored mode did not run — no rename set. This says nothing about drift.'
+        )
+      );
+    } else {
+      console.log(color.green('\u2714 No anchored literal path drift.'));
+      console.log(
+        color.dim(
+          '  Every literal explained by the rename set resolves. This is a text match over strings and comments: it proves no scanned literal is stale against those renames, not that every path in the repo is live.'
+        )
+      );
+    }
+  }
+  if (!written && report.anchored.length > 0) {
+    const writable = report.anchored.filter((finding) => finding.suggestedToken !== null).length;
+    const byHand = report.anchored.length - writable;
+    console.log(
+      color.dim(
+        `  Report only. Re-run with --write to apply ${writable} of the ${report.anchored.length} anchored replacement(s)${byHand > 0 ? `; ${byHand} must be rewritten by hand` : ''}. Unanchored findings are never written.`
+      )
+    );
+  }
+}
+
+/**
  * Additive P0-A contract retrofit: inject high-spec app/api → Application when missing.
  * Does not remove existing patterns or weaken rules (DL-P0A-RETROFIT).
  */
@@ -934,6 +1129,11 @@ async function main() {
 
   if (args.migrateContract) {
     runMigrateContract(args);
+    return;
+  }
+
+  if (args.pathDrift) {
+    await runPathDrift(args);
     return;
   }
 

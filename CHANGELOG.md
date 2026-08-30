@@ -7,9 +7,52 @@ in the immutable pre-2.0 archive linked below.
 
 **Patch** over **4.8.3**. Invariant coverage stops hiding its own limits: the scan budget and the
 test globs are config, every discarded file is counted in the diagnostic, and coverage stops
-implying it knows a test runs. **No required config migration.**
+implying it knows a test runs. New `--path-drift` sees the class the gate is structurally blind to:
+repo paths living in strings, comments and docstrings that a rename left behind.
+**No required config migration.**
 
 ### Added
+- **`arkgate-check --path-drift` — literal path drift (`LITERAL_PATH_DRIFT`, `LITERAL_PATH_UNRESOLVED`).**
+  A repo path written inside a string, a comment or a docstring is invisible to every tool in the
+  gate: `tsc` resolves imports, not strings, and ESLint does not either, so a rename compiles green
+  and the reference lies afterwards. Field data from a real 783-rename migration (49 source
+  directories gone) found the drift in **four** forms and every hand sweep covered one and let the
+  others through: the tsconfig alias, a relative literal, a path written without the `src/` prefix,
+  and prose — the largest class (24 references in 21 files) and the only one with no detector
+  anywhere, found in `.ts`, `.tsx` and a `.css`. Two modes, because they make different claims.
+  **Anchored** (default) matches against the rename set from `git diff --find-renames <base-ref>`
+  taken *against the working tree*, so a staged-but-uncommitted rename counts too; a finding carries a
+  replacement written in the author's own form — alias stays alias, relative is recomputed relative,
+  a prefix-less path keeps its coordinate space — the rewrite is mechanical and one-directional, so
+  `--write` applies it under the house plan-by-default convention, and a run exits 1 while anchored
+  drift remains. **Unanchored** (`--all`) lists literals that look like a repo path and do not
+  resolve; advisory, never written, never fails a run. It is opt-in on purpose: on a repository that
+  *writes about* paths it produced 4085 candidates out of 9536 literals, nearly all illustrative —
+  listing that by default would be ArkGate's inability to resolve a string presented as a fact about
+  your code, the same defect class as the coverage budget. The count is printed either way, so
+  opting out of the list is never opting out of knowing. Anchoring is conservative: only a rename
+  whose source really is gone and that has exactly one destination may anchor, ambiguous sources are
+  counted and reported, and a candidate is drift only when the **full** extracted token fails to
+  resolve — through the bare path, the usual source extensions and `index.*`, so an extensionless
+  reference is not mistaken for a dead one. Prose punctuation is trimmed off the token and generated
+  files are never read. The scan reads every text format where a path is written by hand
+  (`.ts .tsx .mts .cts .js .jsx .mjs .cjs .css .scss .json .md`) — deliberately wider than the
+  TS/TSX gate the type-aware extractors use — and counts every file it refused, by reason. Three things must hold before a replacement is proposed: a rename explains the reference, the
+  destination itself resolves (otherwise the fix only moves the drift), and the destination is
+  path-shaped — a git path is raw bytes, and one carrying a quote or a newline would edit the program
+  instead of repairing a reference. With no usable base ref the run prints *anchored mode did not
+  run*, no tick at all, and **exit 2** — a green mark over a check that never happened is the same
+  false green this patch is about, and a pipeline reads the status, not the tick. The three exits are
+  `0` ran and clean, `1` drift remains, `2` could not run.
+  `--write` refuses rather than risk a file and names every refusal: a symlinked leaf or parent, a
+  hard link, content that is not valid UTF-8 (a whole-file rewrite would replace the byte with
+  U+FFFD), a token that moved since the scan, a path outside the root. It goes through one
+  `O_NOFOLLOW` descriptor so the name is never resolved twice. A replacement must still be a path:
+  a rename whose destination is the literal's own directory would otherwise render as the bare `./`
+  and turn `require("./c")` into `require("./")`. The walk is bounded by a total byte budget as well as a file count (a per-file cap
+  times a file count is not a bound), it refuses symlinks, and `--write` re-checks containment
+  against the real path immediately before writing, so a link swapped in after the scan cannot carry
+  a write out of the tree.
 - **`coverage.coverageRoots` (optional):** the project declares where its test runner actually
   executes. Coverage evidence is a filesystem walk plus a text match — ArkGate never executes a
   test and never reads a runner config — so a covering test in a folder no runner runs used to

@@ -51,6 +51,7 @@ export function parseArgs(argv) {
     migrateCommands: false,
     doctor: false,
     plan: false,
+    pathDrift: false,
     recommend: false,
     writePlan: false,
     listPolicyPacks: false,
@@ -112,6 +113,7 @@ export function parseArgs(argv) {
     else if (arg === '--doctor') args.doctor = true;
     else if (arg === '--plan') args.plan = true;
     else if (arg === '--rules-inventory') args.rulesInventory = true;
+    else if (arg === '--path-drift') args.pathDrift = true;
     else if (arg === '--recommend') args.recommend = true;
     else if (arg === '--write-plan') args.writePlan = true;
     else if (arg === '--list-policy-packs') args.listPolicyPacks = true;

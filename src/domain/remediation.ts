@@ -295,6 +295,12 @@ export function deterministicNextAction(violation: ArkViolationLike): string {
       return 'Extract the shared dependency into a third module, test at the public interface, then preflight again.';
     case 'RAW_EVENT_PUBLISH':
       return 'Publish through a registered intent creator, then run Ark again.';
+    case 'LITERAL_PATH_DRIFT':
+      return typeof violation.target === 'string' && violation.target.length > 0
+        ? `Rewrite the literal to ${violation.target}, or run \`arkgate-check --path-drift --base-ref <ref> --write\` to apply every anchored replacement.`
+        : 'Rewrite the literal to the rename destination, or run `arkgate-check --path-drift --base-ref <ref> --write` to apply every anchored replacement.';
+    case 'LITERAL_PATH_UNRESOLVED':
+      return 'Read the candidate and decide: fix the path, or leave it. Advisory — with no rename to anchor it there is no destination to propose, so --write never touches it.';
     case 'PUBLISH_MISSING_SOURCE':
       return 'Add metadata.source to the publish call, then run Ark again.';
     case 'INVARIANT_COVERAGE_OUTSIDE_ROOTS':

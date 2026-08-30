@@ -30,6 +30,7 @@ export type DiagnosticCategory =
   | 'arkorder'
   | 'preflight'
   | 'analysis'
+  | 'drift'
   | 'snippet-policy'
   | 'config'
   | 'adapter'
@@ -609,6 +610,23 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Unclassified included files',
     'Included source files match no layer pattern; import rules will not enforce on them.',
     'Extend layer patterns or narrow include so every governed file is classified.',
+    { oftenAdvisory: true }
+  ),
+
+  // ── literal path drift ───────────────────────────────────────────────────
+  entry(
+    'LITERAL_PATH_DRIFT',
+    'drift',
+    'Literal path moved by a rename',
+    'A repo path written inside a string, a comment or a docstring no longer resolves, and the rename set says where it went. Nothing in the gate sees this class: `tsc` resolves imports, not strings, and ESLint does not either, so the rename compiles green and the reference lies afterwards. It appears in four forms — the tsconfig alias, a relative literal, a path written without the include-root prefix, and prose — and a hand sweep reliably covers one of them.',
+    'Apply the suggested replacement, or re-run `npx arkgate-check --path-drift --base-ref <ref> --write` to apply every writable anchored replacement at once. The rewrite is mechanical and one-directional: the destination comes from the rename, it must itself resolve and be path-shaped, and the token is rewritten in the form the author wrote it in. A destination that leaves the alias root of the literal is reported with the target only and must be rewritten by hand.'
+  ),
+  entry(
+    'LITERAL_PATH_UNRESOLVED',
+    'drift',
+    'Literal path does not resolve',
+    'A literal that looks like a repo path does not resolve under this root, and no rename explains where it went. Unlike LITERAL_PATH_DRIFT this is a candidate, not a verdict: with nothing to anchor it, ArkGate cannot tell a dead reference from an illustrative path in a comment, an example in documentation, or a path belonging to another tree.',
+    'Read the candidate and decide: fix the path, or leave it. Advisory only — it never fails a run and is never rewritten by --write, because there is no destination to propose. Run `--path-drift --all` to list the sweep.',
     { oftenAdvisory: true }
   ),
 
