@@ -39,13 +39,17 @@ const config = {
     'bin/ark-shared.mjs:450-475',
     'src/domain/baselineKey.ts:20-48',
     // 4.0: migrateArkConfig critical slices (excludes redundant throw-only / guard noise).
-    'src/domain/configContract.ts:482-495',
-    'src/domain/configContract.ts:497-499',
-    'src/domain/configContract.ts:501-508',
-    'src/domain/configContract.ts:518-522',
-    'src/domain/configContract.ts:525-525',
-    'src/domain/configContract.ts:534-537',
-    'src/domain/configContract.ts:546-551',
+    // 471 is an equivalent mutant: forcing the typeof guard true routes a
+    // non-string schemaVersion to the unknown-version throw, same message.
+    'src/domain/configContract.ts:467-470',
+    'src/domain/configContract.ts:472-473',
+    'src/domain/configContract.ts:493-494',
+    'src/domain/configContract.ts:499-500',
+    'src/domain/configContract.ts:509-511',
+    'src/domain/configContract.ts:522-522',
+    'src/domain/configContract.ts:529-529',
+    'src/domain/configContract.ts:538-540',
+    'src/domain/configContract.ts:551-551',
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
     // peerIsolationDecision is the killable fail-closed core; findDeniedEdgeDecision wires it.
     'src/domain/layerMatch.ts:497-509',

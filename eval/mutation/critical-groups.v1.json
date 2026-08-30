@@ -7,38 +7,48 @@
       "targets": [
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 492,
-          "endLine": 495
+          "startLine": 493,
+          "endLine": 494
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 497,
-          "endLine": 499
+          "startLine": 499,
+          "endLine": 500
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 501,
-          "endLine": 508
+          "startLine": 509,
+          "endLine": 511
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 518,
+          "startLine": 522,
           "endLine": 522
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 525,
-          "endLine": 525
+          "startLine": 529,
+          "endLine": 529
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 534,
-          "endLine": 537
+          "startLine": 538,
+          "endLine": 540
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 546,
+          "startLine": 551,
           "endLine": 551
+        },
+        {
+          "file": "src/domain/configContract.ts",
+          "startLine": 467,
+          "endLine": 470
+        },
+        {
+          "file": "src/domain/configContract.ts",
+          "startLine": 472,
+          "endLine": 473
         }
       ]
     },
