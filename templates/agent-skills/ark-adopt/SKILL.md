@@ -237,6 +237,11 @@ Ark protects the **boundary around** a framework, not its internals. Nest/DI pub
    to a compact starter. Do not promote to enforced as the session-0 default.
 2. **Check + diagnose** — `summary.concentrated` / dominant edge → fix contract first, don’t freeze.
    Cross-slice / cross-context `peerIsolation` hits are judgment: extract shared or events.
+   The denial names its reason. `unclassifiable path` in bulk means shared code lives outside
+   the slice folders — declare those roots (`sharedRoots`) on the rule instead of treating
+   thousands of shared files as violations; `cross-slice edge a → b` is the real one, and a
+   deliberate directed edge goes in `allowedCrossSlice`. Promoting the shared slice to its own
+   layer is still the preferred fix.
    If one edge dominates residual debt: **STOP — do not continue this skill as complete.** **STOP — concentrated edge:** rewrite `ark.config.json` **in this turn** with source evidence (do not freeze a wrong config or grind N freezes).
    Empty Domain/Persistence + I/O under Application → false-green.
    **STOP — do not continue this skill as complete.** **STOP — false-green:** fix the config **in this turn** before claiming ENFORCE. Do not claim goal.met / ENFORCE from type-only cleanup while doctor reports `contract-false-green-io-under-application`.

@@ -258,20 +258,131 @@ function resolveSliceFolders(rule, layerName, layers) {
     const layer = (layers ?? []).find((l) => l.name === layerName);
     return inferSliceFoldersFromPatterns(layer?.patterns);
 }
+function normalizeSegments(value) {
+    return String(value)
+        .split(/[/\\]/)
+        .filter((part) => Boolean(part) && part !== '.')
+        .map((part) => part.toLowerCase());
+}
 /**
- * PeerIsolation deny decision given resolved path/slice evidence (DF04 pure core).
+ * Is `relPath` under one of the roots the rule declares shared on purpose?
+ *
+ * Segment-run match anywhere in the path (`ui` covers `src/ui/button.tsx`),
+ * mirroring how `sliceIdForPath` finds a slice folder at any depth. A root
+ * containing `*` is matched as a glob against the whole path.
+ */
+export function pathUnderSharedRoot(relPath, sharedRoots) {
+    if (!relPath || !sharedRoots?.length)
+        return false;
+    const rel = String(relPath).split(/[/\\]/).join('/');
+    const parts = normalizeSegments(rel);
+    for (const raw of sharedRoots) {
+        if (typeof raw !== 'string' || raw.length === 0)
+            continue;
+        if (raw.includes('*')) {
+            if (globToRegExp(raw).test(rel) || globToRegExp(`${raw.replace(/\/+$/, '')}/**`).test(rel)) {
+                return true;
+            }
+            continue;
+        }
+        const root = normalizeSegments(raw);
+        if (root.length === 0)
+            continue;
+        for (let i = 0; i + root.length <= parts.length; i += 1) {
+            let hit = true;
+            for (let j = 0; j < root.length; j += 1) {
+                if (parts[i + j] !== root[j]) {
+                    hit = false;
+                    break;
+                }
+            }
+            if (hit)
+                return true;
+        }
+    }
+    return false;
+}
+function sliceMatchesDeclaration(declared, sliceId) {
+    const want = String(declared).split(/[/\\]/).filter(Boolean).join('/').toLowerCase();
+    if (!want)
+        return false;
+    const have = sliceId.toLowerCase();
+    if (want === have)
+        return true;
+    // Bare slice name: `auth` matches `features/auth`.
+    return !want.includes('/') && have.endsWith(`/${want}`);
+}
+/** Has the rule declared this directed slice→slice edge? */
+export function crossSliceEdgeAllowed(allowedCrossSlice, fromSlice, toSlice) {
+    if (!allowedCrossSlice?.length || !fromSlice || !toSlice)
+        return false;
+    return allowedCrossSlice.some((edge) => edge &&
+        typeof edge.from === 'string' &&
+        typeof edge.to === 'string' &&
+        sliceMatchesDeclaration(edge.from, fromSlice) &&
+        sliceMatchesDeclaration(edge.to, toSlice));
+}
+/**
+ * PeerIsolation deny decision with the reason that fired (DF04 pure core).
+ *
+ * Fail-closed stays fail-closed: absent evidence denies. What changed in 4.8.4
+ * is what counts as evidence — a declared shared root, or a declared directed
+ * cross-slice edge, is the repo telling us its design, so it is no longer
+ * "unclassifiable". Order: no paths → no slice folders → a side that is neither
+ * in a slice nor declared shared → same slice → declared cross edge → deny.
+ */
+export function peerIsolationDecision(input) {
+    if (!input.fromPath || !input.toPath)
+        return { denied: true, reason: 'missing-path' };
+    if (input.folderCount <= 0)
+        return { denied: true, reason: 'no-slice-folders' };
+    const fromClassified = Boolean(input.fromSlice) || input.fromShared === true;
+    const toClassified = Boolean(input.toSlice) || input.toShared === true;
+    if (!fromClassified || !toClassified)
+        return { denied: true, reason: 'unclassifiable-path' };
+    // At least one side is declared shared (and carries no slice id): the repo
+    // said this code belongs to no slice, so there is no cross-slice edge here.
+    if (!input.fromSlice || !input.toSlice)
+        return { denied: false };
+    if (input.fromSlice === input.toSlice)
+        return { denied: false };
+    if (input.crossSliceAllowed)
+        return { denied: false };
+    return { denied: true, reason: 'cross-slice' };
+}
+/**
+ * Boolean face of {@link peerIsolationDecision}, kept for parity consumers.
  *
  * Fail-closed: missing path, no classifiable folders, or unclassifiable either
- * side → deny. Same-slice → allow (return false). Cross-slice → deny.
+ * side → deny. Same-slice → allow (return false). Cross-slice → deny unless the
+ * rule declared that directed edge.
  */
 export function peerIsolationMustDeny(input) {
-    if (!input.fromPath || !input.toPath)
-        return true;
-    if (input.folderCount <= 0)
-        return true;
-    if (!input.fromSlice || !input.toSlice)
-        return true;
-    return input.fromSlice !== input.toSlice;
+    return peerIsolationDecision(input).denied;
+}
+/**
+ * One human sentence naming which peerIsolation reason fired — so the denial
+ * reports a fact about their code (`cross-slice`) or a fact about our evidence
+ * (everything else), never one dressed as the other.
+ */
+export function peerIsolationDenyExplanation(reason, context) {
+    switch (reason) {
+        case 'cross-slice':
+            return `cross-slice edge ${context.fromSlice ?? '?'} → ${context.toSlice ?? '?'}. Extract the shared code, use events/ports across slices, or declare the edge in the rule's allowedCrossSlice.`;
+        case 'unclassifiable-path': {
+            const unplaced = [
+                context.fromSlice ? undefined : context.fromPath,
+                context.toSlice ? undefined : context.toPath,
+            ].filter((path) => Boolean(path));
+            const which = unplaced.length > 0 ? ` (${unplaced.join(', ')})` : '';
+            return `unclassifiable path${which} — ArkGate cannot place it in a slice, so it cannot prove this is not a cross-slice edge. Move it into a slice, or declare its root in the rule's sharedRoots.`;
+        }
+        case 'no-slice-folders':
+            return 'no slice folders — peerIsolation is on but no slice folder resolves from the rule or the layer patterns. Set sliceFolders on the rule.';
+        case 'missing-path':
+        default:
+            return 'no path evidence for this edge — peerIsolation needs the importer and importee paths.';
+    }
 }
 /**
  * Find the first denying rule for a layer edge.
@@ -286,6 +397,14 @@ export function peerIsolationMustDeny(input) {
  *   allow a possible cross-slice edge.
  */
 export function findDeniedEdgeRule(rules, from, to, options) {
+    return findDeniedEdgeDecision(rules, from, to, options)?.rule;
+}
+/**
+ * {@link findDeniedEdgeRule} with the denial reason attached, so adapters can
+ * say *why* a peerIsolation rule fired instead of emitting one opaque message
+ * for a real cross-slice import and for a file we simply could not place.
+ */
+export function findDeniedEdgeDecision(rules, from, to, options) {
     for (const rule of rules ?? []) {
         if (rule.from !== from || rule.to !== to)
             continue;
@@ -297,21 +416,25 @@ export function findDeniedEdgeRule(rules, from, to, options) {
             const folders = resolveSliceFolders(rule, from, options?.layers);
             const fromSlice = fromPath && toPath ? sliceIdForPath(fromPath, folders) : undefined;
             const toSlice = fromPath && toPath ? sliceIdForPath(toPath, folders) : undefined;
-            if (peerIsolationMustDeny({
+            const decision = peerIsolationDecision({
                 fromPath,
                 toPath,
                 folderCount: folders.length,
                 fromSlice,
                 toSlice,
-            })) {
-                return rule;
+                fromShared: !fromSlice && pathUnderSharedRoot(fromPath, rule.sharedRoots),
+                toShared: !toSlice && pathUnderSharedRoot(toPath, rule.sharedRoots),
+                crossSliceAllowed: crossSliceEdgeAllowed(rule.allowedCrossSlice, fromSlice, toSlice),
+            });
+            if (decision.denied) {
+                return { rule, peerIsolationReason: decision.reason, fromSlice, toSlice };
             }
-            continue; // same slice: this peerIsolation rule does not deny
+            continue; // same slice, declared shared, or declared cross edge: no denial
         }
         // Classic deny — same-layer always allowed without peerIsolation
         if (from === to)
             continue;
-        return rule;
+        return { rule };
     }
     return undefined;
 }

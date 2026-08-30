@@ -4,7 +4,10 @@
  * Shared by library, CLI, and MCP adapters through the src/kernel/analysis.ts
  * facade; consumer import paths never change.
  */
-import { findDeniedEdgeRule } from '../domain/layerMatch';
+import {
+  findDeniedEdgeDecision,
+  peerIsolationDenyExplanation,
+} from '../domain/layerMatch';
 import type {
   ArchitectureEngineResult,
   ArchitectureEngineViolation,
@@ -81,12 +84,13 @@ export function evaluateArchitectureGraph(
       graph.get(edge.from)?.add(edge.to);
     }
     if (!edge.to || !edge.fromLayer || !edge.toLayer) continue;
-    const rule = findDeniedEdgeRule(input.rules, edge.fromLayer, edge.toLayer, {
+    const decision = findDeniedEdgeDecision(input.rules, edge.fromLayer, edge.toLayer, {
       fromPath: edge.from,
       toPath: edge.to,
       layers: input.config.layers,
     });
-    if (!rule) continue;
+    if (!decision) continue;
+    const rule = decision.rule;
 
     const peerIsolation = Boolean(rule.peerIsolation);
     // P1-type: pure type-only edges are placement debt (SharedTypes / owning layer), not
@@ -101,7 +105,15 @@ export function evaluateArchitectureGraph(
     const baseMessage =
       rule.message ??
       (peerIsolation
-        ? `${edge.fromLayer} must not ${edge.kind} another slice of ${edge.toLayer} (${edge.from} → ${edge.to}). Extract shared code or use events/ports across slices.`
+        ? `${edge.fromLayer} must not ${edge.kind} another slice of ${edge.toLayer} (${edge.from} → ${edge.to}): ${peerIsolationDenyExplanation(
+            decision.peerIsolationReason ?? 'cross-slice',
+            {
+              fromPath: edge.from,
+              toPath: edge.to,
+              fromSlice: decision.fromSlice,
+              toSlice: decision.toSlice,
+            }
+          )}`
         : `${edge.fromLayer} must not ${edge.kind} ${edge.toLayer}.`);
     violations.push({
       ruleId: 'LAYER_IMPORT_VIOLATION',

@@ -5,10 +5,16 @@ import { describe, it, expect } from 'vitest';
 import {
   isEdgeDenied,
   findDeniedEdgeRule,
+  findDeniedEdgeDecision,
   peerIsolationMustDeny,
+  peerIsolationDecision,
+  peerIsolationDenyExplanation,
+  pathUnderSharedRoot,
+  crossSliceEdgeAllowed,
   sliceIdForPath,
   inferSliceFoldersFromPatterns,
 } from '../../../src/domain/layerMatch';
+import { evaluateArchitectureGraph } from '../../../src/kernel/graphEvaluate';
 import {
   classifyRemediation,
   enrichViolationWithFixClass,
@@ -369,6 +375,209 @@ describe('peerIsolation edge rules', () => {
   });
 });
 
+describe('peerIsolation declared exceptions (4.8.4 — enforce the design, do not demand a redesign)', () => {
+  const layers = [{ name: 'Features', patterns: ['src/features/**'] }];
+  const rule = {
+    from: 'Features',
+    to: 'Features',
+    allowed: false as const,
+    peerIsolation: true,
+    sliceFolders: ['features'],
+    sharedRoots: ['ui', 'hooks', 'lib/permissions'],
+    allowedCrossSlice: [{ from: 'features/checkout', to: 'catalog' }],
+  };
+  const rules = [rule];
+
+  it('pathUnderSharedRoot matches a declared root at any depth, case-insensitively', () => {
+    expect(pathUnderSharedRoot('src/ui/button.tsx', ['ui'])).toBe(true);
+    expect(pathUnderSharedRoot('src/UI/Button.tsx', ['ui'])).toBe(true);
+    expect(pathUnderSharedRoot('src\\ui\\button.tsx', ['ui'])).toBe(true);
+    expect(pathUnderSharedRoot('src/lib/permissions/can.ts', ['lib/permissions'])).toBe(true);
+    expect(pathUnderSharedRoot('src/lib/other.ts', ['lib/permissions'])).toBe(false);
+    expect(pathUnderSharedRoot('src/uikit/button.tsx', ['ui'])).toBe(false);
+    expect(pathUnderSharedRoot('src/ui/button.tsx', undefined)).toBe(false);
+    expect(pathUnderSharedRoot(undefined, ['ui'])).toBe(false);
+    expect(pathUnderSharedRoot('src/design/ui/x.ts', ['src/*/ui'])).toBe(true);
+  });
+
+  it('crossSliceEdgeAllowed matches full ids and bare slice names, directed', () => {
+    const declared = [{ from: 'features/checkout', to: 'catalog' }];
+    expect(crossSliceEdgeAllowed(declared, 'features/checkout', 'features/catalog')).toBe(true);
+    expect(crossSliceEdgeAllowed(declared, 'features/catalog', 'features/checkout')).toBe(false);
+    expect(crossSliceEdgeAllowed(declared, 'features/checkout', 'features/billing')).toBe(false);
+    expect(crossSliceEdgeAllowed(undefined, 'features/a', 'features/b')).toBe(false);
+    expect(crossSliceEdgeAllowed(declared, undefined, 'features/catalog')).toBe(false);
+  });
+
+  it('a declared shared root is evidence: no denial in either direction', () => {
+    expect(
+      isEdgeDenied(rules, 'Features', 'Features', {
+        fromPath: 'src/features/auth/login.tsx',
+        toPath: 'src/ui/button.tsx',
+        layers,
+      })
+    ).toBe(false);
+    expect(
+      isEdgeDenied(rules, 'Features', 'Features', {
+        fromPath: 'src/hooks/useUser.ts',
+        toPath: 'src/features/auth/api.ts',
+        layers,
+      })
+    ).toBe(false);
+    // shared → shared is still not a cross-slice edge
+    expect(
+      isEdgeDenied(rules, 'Features', 'Features', {
+        fromPath: 'src/ui/button.tsx',
+        toPath: 'src/hooks/useUser.ts',
+        layers,
+      })
+    ).toBe(false);
+  });
+
+  it('an undeclared shared file still denies — fail-closed survives', () => {
+    const decision = findDeniedEdgeDecision(rules, 'Features', 'Features', {
+      fromPath: 'src/features/auth/login.tsx',
+      toPath: 'src/widgets/spinner.tsx',
+      layers,
+    });
+    expect(decision?.peerIsolationReason).toBe('unclassifiable-path');
+  });
+
+  it('a real cross-slice edge still denies and names itself', () => {
+    const decision = findDeniedEdgeDecision(rules, 'Features', 'Features', {
+      fromPath: 'src/features/auth/api.ts',
+      toPath: 'src/features/billing/api.ts',
+      layers,
+    });
+    expect(decision?.peerIsolationReason).toBe('cross-slice');
+    expect(decision?.fromSlice).toBe('features/auth');
+    expect(decision?.toSlice).toBe('features/billing');
+  });
+
+  it('the declared directed cross-slice edge is allowed, its reverse is not', () => {
+    expect(
+      isEdgeDenied(rules, 'Features', 'Features', {
+        fromPath: 'src/features/checkout/pay.ts',
+        toPath: 'src/features/catalog/item.ts',
+        layers,
+      })
+    ).toBe(false);
+    expect(
+      isEdgeDenied(rules, 'Features', 'Features', {
+        fromPath: 'src/features/catalog/item.ts',
+        toPath: 'src/features/checkout/pay.ts',
+        layers,
+      })
+    ).toBe(true);
+  });
+
+  it('a shared root never shadows a real slice id', () => {
+    // `ui` is declared shared, but features/auth/ui/form.tsx still belongs to auth.
+    const decision = findDeniedEdgeDecision(rules, 'Features', 'Features', {
+      fromPath: 'src/features/auth/ui/form.tsx',
+      toPath: 'src/features/billing/ui/form.tsx',
+      layers,
+    });
+    expect(decision?.peerIsolationReason).toBe('cross-slice');
+  });
+
+  it('peerIsolationDecision names every reason', () => {
+    expect(peerIsolationDecision({ folderCount: 1, toPath: 'b.ts' })).toEqual({
+      denied: true,
+      reason: 'missing-path',
+    });
+    expect(
+      peerIsolationDecision({ fromPath: 'a.ts', toPath: 'b.ts', folderCount: 0 })
+    ).toEqual({ denied: true, reason: 'no-slice-folders' });
+    expect(
+      peerIsolationDecision({
+        fromPath: 'a.ts',
+        toPath: 'b.ts',
+        folderCount: 1,
+        fromSlice: 'features/a',
+      })
+    ).toEqual({ denied: true, reason: 'unclassifiable-path' });
+    expect(
+      peerIsolationDecision({
+        fromPath: 'a.ts',
+        toPath: 'b.ts',
+        folderCount: 1,
+        fromSlice: 'features/a',
+        toSlice: 'features/b',
+      })
+    ).toEqual({ denied: true, reason: 'cross-slice' });
+    expect(
+      peerIsolationDecision({
+        fromPath: 'a.ts',
+        toPath: 'b.ts',
+        folderCount: 1,
+        fromSlice: 'features/a',
+        toSlice: 'features/b',
+        crossSliceAllowed: true,
+      })
+    ).toEqual({ denied: false });
+    expect(
+      peerIsolationDecision({
+        fromPath: 'a.ts',
+        toPath: 'b.ts',
+        folderCount: 1,
+        fromSlice: 'features/a',
+        toShared: true,
+      })
+    ).toEqual({ denied: false });
+  });
+
+  it('peerIsolationMustDeny keeps its pre-4.8.4 answers when nothing is declared', () => {
+    expect(
+      peerIsolationMustDeny({
+        fromPath: 'a.ts',
+        toPath: 'b.ts',
+        folderCount: 1,
+        fromSlice: 'features/a',
+        toSlice: 'features/a',
+      })
+    ).toBe(false);
+    expect(
+      peerIsolationMustDeny({
+        fromPath: 'a.ts',
+        toPath: 'b.ts',
+        folderCount: 1,
+        fromSlice: 'features/a',
+        toSlice: 'features/b',
+      })
+    ).toBe(true);
+  });
+
+  it('the explanation separates a fact about their code from a fact about our evidence', () => {
+    const cross = peerIsolationDenyExplanation('cross-slice', {
+      fromSlice: 'features/a',
+      toSlice: 'features/b',
+    });
+    expect(cross).toContain('cross-slice edge features/a → features/b');
+    expect(cross).toContain('allowedCrossSlice');
+    const unplaced = peerIsolationDenyExplanation('unclassifiable-path', {
+      fromPath: 'src/features/a/x.ts',
+      toPath: 'src/widgets/y.ts',
+      fromSlice: 'features/a',
+    });
+    expect(unplaced).toContain('src/widgets/y.ts');
+    expect(unplaced).not.toContain('src/features/a/x.ts');
+    expect(unplaced).toContain('sharedRoots');
+    expect(peerIsolationDenyExplanation('no-slice-folders', {})).toContain('sliceFolders');
+    expect(peerIsolationDenyExplanation('missing-path', {})).toContain('path evidence');
+  });
+
+  it('findDeniedEdgeRule still returns the rule itself', () => {
+    expect(
+      findDeniedEdgeRule(rules, 'Features', 'Features', {
+        fromPath: 'src/features/a/x.ts',
+        toPath: 'src/features/b/y.ts',
+        layers,
+      })
+    ).toBe(rule);
+  });
+});
+
 describe('peerIsolation remediation', () => {
   it('classifies as judgment, never mechanical-safe', () => {
     const v = {
@@ -380,5 +589,45 @@ describe('peerIsolation remediation', () => {
     expect(classifyRemediation(v).class).toBe('judgment');
     const enriched = enrichViolationWithFixClass(v);
     expect(enriched.fixClass).toBe('cross-slice-boundary');
+  });
+});
+
+describe('peerIsolation violation message names the reason that fired', () => {
+  const config = { layers: [{ name: 'Features', patterns: ['src/features/**'] }] };
+  const rules = [
+    {
+      from: 'Features',
+      to: 'Features',
+      allowed: false,
+      peerIsolation: true,
+      sliceFolders: ['features'],
+      sharedRoots: ['ui'],
+    },
+  ];
+  const evaluate = (from: string, to: string) =>
+    evaluateArchitectureGraph({
+      config,
+      rules,
+      files: [from, to],
+      contentViolations: [],
+      edges: [{ from, fromLayer: 'Features', to, toLayer: 'Features', line: 1, kind: 'import' }],
+    });
+
+  it('reports a real cross-slice edge as a fact about the code', () => {
+    const violation = evaluate('src/features/auth/a.ts', 'src/features/billing/b.ts')
+      .violations[0];
+    expect(violation?.peerIsolation).toBe(true);
+    expect(violation?.message).toContain('cross-slice edge features/auth → features/billing');
+  });
+
+  it('reports an unplaceable file as a fact about the evidence, not about the code', () => {
+    const violation = evaluate('src/features/auth/a.ts', 'src/widgets/spinner.tsx').violations[0];
+    expect(violation?.message).toContain('unclassifiable path');
+    expect(violation?.message).toContain('src/widgets/spinner.tsx');
+    expect(violation?.message).toContain('sharedRoots');
+  });
+
+  it('a declared shared root produces no violation at all', () => {
+    expect(evaluate('src/features/auth/a.ts', 'src/ui/button.tsx').violations).toHaveLength(0);
   });
 });

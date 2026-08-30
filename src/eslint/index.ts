@@ -14,7 +14,8 @@ import {
   patternSpecificity,
   layerForRelativePath,
   isEdgeDenied,
-  findDeniedEdgeRule,
+  findDeniedEdgeDecision,
+  peerIsolationDenyExplanation,
   isScanExcludedRelative,
 } from '../domain/layerMatch';
 import {
@@ -482,7 +483,8 @@ export const noDomainInfraImports: ArkRule = {
           toPath: relTarget,
           layers: config.layers,
         };
-        const deniedRule = findDeniedEdgeRule(config.rules, fromLayer, toLayer, edgeOpts);
+        const decision = findDeniedEdgeDecision(config.rules, fromLayer, toLayer, edgeOpts);
+        const deniedRule = decision?.rule;
         if (deniedRule || isEdgeDenied(config.rules, fromLayer, toLayer, edgeOpts)) {
           const edgeKind = node.type?.startsWith('Export') ? 'export' : 'import';
           const typeOnlyEdge = declarationIsTypeOnly(node);
@@ -492,7 +494,18 @@ export const noDomainInfraImports: ArkRule = {
           // sourcePureTypeModule alone never softens a value import.
           const typePlacementDebt = typeOnlyEdge && !peerIsolation;
           const baseMsg =
-            deniedRule?.message ?? `${fromLayer} must not ${edgeKind} ${toLayer}.`;
+            deniedRule?.message ??
+            (peerIsolation && decision
+              ? `${fromLayer} must not ${edgeKind} another slice of ${toLayer} (${relFile} → ${relTarget}): ${peerIsolationDenyExplanation(
+                  decision.peerIsolationReason ?? 'cross-slice',
+                  {
+                    fromPath: relFile,
+                    toPath: relTarget,
+                    fromSlice: decision.fromSlice,
+                    toSlice: decision.toSlice,
+                  }
+                )}`
+              : `${fromLayer} must not ${edgeKind} ${toLayer}.`);
           reportAdapterDiagnostic(
             context,
             node,

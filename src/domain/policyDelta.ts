@@ -362,7 +362,67 @@ function compareRules(
         after: sortedUnique(candidate.sliceFolders),
       });
     }
+
+    compareDeclaredExceptions(
+      findings,
+      `${path}.sharedRoots`,
+      'shared-roots',
+      sortedUnique(previous.sharedRoots),
+      sortedUnique(candidate.sharedRoots),
+      'Roots declared shared are exempt from the peerIsolation unclassifiable denial.',
+      'Roots are no longer declared shared and fall back to the peerIsolation denial.'
+    );
+
+    compareDeclaredExceptions(
+      findings,
+      `${path}.allowedCrossSlice`,
+      'cross-slice-allowance',
+      sortedUnique((previous.allowedCrossSlice ?? []).map(crossSliceKey)),
+      sortedUnique((candidate.allowedCrossSlice ?? []).map(crossSliceKey)),
+      'Directed cross-slice edges are now allowed by declaration.',
+      'Directed cross-slice edges are no longer declared and deny again.'
+    );
   }
+}
+
+function crossSliceKey(edge: { from: string; to: string }): string {
+  return `${edge.from}->${edge.to}`;
+}
+
+/**
+ * A declared peerIsolation exception (sharedRoots / allowedCrossSlice): entries
+ * added weaken the wall, entries only removed strengthen it, both at once needs
+ * a human.
+ */
+function compareDeclaredExceptions(
+  findings: PolicyDeltaFinding[],
+  path: string,
+  kindPrefix: string,
+  previous: string[],
+  candidate: string[],
+  addedMessage: string,
+  removedMessage: string
+): void {
+  if (previous.join('\0') === candidate.join('\0')) return;
+  const added = candidate.filter((value) => !previous.includes(value));
+  const removed = previous.filter((value) => !candidate.includes(value));
+  const bothWays = added.length > 0 && removed.length > 0;
+  addFinding(findings, {
+    kind: bothWays
+      ? `${kindPrefix}-changed`
+      : added.length > 0
+        ? `${kindPrefix}-added`
+        : `${kindPrefix}-removed`,
+    path,
+    classification: bothWays ? 'judgment-required' : added.length > 0 ? 'weakening' : 'strengthening',
+    message: bothWays
+      ? `${addedMessage} Entries were added and removed in the same change.`
+      : added.length > 0
+        ? addedMessage
+        : removedMessage,
+    before: previous,
+    after: candidate,
+  });
 }
 
 function compareSafety(findings: PolicyDeltaFinding[], before: ArkConfig, after: ArkConfig): void {

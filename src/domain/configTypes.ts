@@ -44,6 +44,15 @@ export type ArkConfigRule = {
   message?: string;
   peerIsolation?: boolean;
   sliceFolders?: string[];
+  /** Roots the repo declares shared on purpose — evidence, not unclassifiable. */
+  sharedRoots?: string[];
+  /** Directed slice→slice edges the repo declares on purpose. */
+  allowedCrossSlice?: ArkConfigCrossSliceEdge[];
+};
+
+export type ArkConfigCrossSliceEdge = {
+  from: string;
+  to: string;
 };
 
 export type ArkConfigSafety = {

@@ -3,6 +3,12 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
+## Unreleased (4.8.4)
+
+### Added
+- **peerIsolation declared exceptions — `sharedRoots` and `allowedCrossSlice` on a rule.** Fail-closed denies on absence of evidence, so a repo that keeps shared code outside `features/<slice>/` (`ui/`, `hooks/`, `lib/permissions/`) got hundreds to thousands of violations, essentially none of them a real cross-slice import. `sharedRoots` declares those roots shared on purpose — a declaration is evidence, so they stop reading as unclassifiable; `allowedCrossSlice: [{ from, to }]` declares one directed slice→slice edge, same shape as the layer edges in `rules[]`. Two different slices with nothing declared still deny, a file that is neither in a slice nor under a declared shared root still fails closed, and a shared root never shadows a real slice id. Both are `weakening` findings in `ark policy-delta`. The layer route stays the recommended model; this enforces the design of a repo that chose otherwise on purpose.
+- The peerIsolation denial now **names which reason fired**: `cross-slice edge features/a → features/b` (a fact about your code) vs `unclassifiable path (src/widgets/x.tsx)`, `no slice folders`, `no path evidence` (facts about our evidence). Both the engine and the ESLint adapter emit it.
+
 ## 4.8.3 — 2026-08-30
 
 **Patch** over **4.8.2**. Persistence writes in a use-case skip the aggregate (`writes-via-aggregate`). ArkOrder **`xiKeys`** names the slow product decisions; a managed-layer Prisma/pg write of those keys is `ARKORDER_XI_FIELD_WRITE`. Dead sensors (`too-many-params`, `ingest-writes-xi`) now emit. No new skill names. Does not close `K01` / `Z09`. **No required config migration.**

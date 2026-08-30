@@ -130,10 +130,49 @@ process module-capability family must be denied.
 
 Rule fields:
 
-- `from`, `to`, `allowed`, `message`, `peerIsolation`, `sliceFolders`
+- `from`, `to`, `allowed`, `message`, `peerIsolation`, `sliceFolders`, `sharedRoots`,
+  `allowedCrossSlice`
 - `peerIsolation: true` + `allowed: false`: deny only when slice ids differ; same-slice allows
   when both paths classify. Missing paths, empty slice folders, or unclassifiable slices
   **fail closed** (deny — cannot prove same-slice).
+
+#### Declared peerIsolation exceptions (4.8.4)
+
+Fail-closed denies on **absence of evidence**, so in a repo that legitimately keeps shared code
+outside `features/<slice>/` (a `ui/`, `hooks/`, `lib/permissions/` tree) every shared file reads as
+a violation — thousands of them, none a real cross-slice import. That is ArkGate reporting *our*
+inability to place a file as a fact about *your* code. Two declarations fix it, and a declaration
+is evidence:
+
+```jsonc
+{
+  "from": "Features", "to": "Features", "allowed": false, "peerIsolation": true,
+  "sliceFolders": ["features"],
+  // Roots this repo keeps shared on purpose — no longer "unclassifiable".
+  "sharedRoots": ["ui", "layout", "providers", "hooks", "lib/permissions"],
+  // Directed slice→slice edges this repo wants. One entry = one direction.
+  "allowedCrossSlice": [{ "from": "features/checkout", "to": "features/catalog" }]
+}
+```
+
+- `sharedRoots` matches a contiguous run of path segments **anywhere** in the repo-relative path
+  (`ui` covers `src/ui/button.tsx`), case-insensitively; a root containing `*` is matched as a
+  glob. A path that still resolves to a slice keeps its slice — `features/auth/ui/form.tsx`
+  stays `features/auth`, so a shared root can never launder a real cross-slice edge.
+- `allowedCrossSlice` entries match a full slice id (`features/catalog`) or a bare slice name
+  (`catalog`), and only in the direction written. The reverse edge still denies.
+- Everything else is unchanged: two different slices with nothing declared still deny, and a file
+  that is neither in a slice nor under a declared shared root still **fails closed**.
+- The denial now names which reason fired — `cross-slice edge features/a → features/b` (a fact
+  about your code) versus `unclassifiable path (src/widgets/x.tsx)` (a fact about our evidence).
+  `no slice folders` and `no path evidence` are the two remaining evidence reasons.
+- Both declarations are **weakening** changes in `ark policy-delta`
+  (`shared-roots-added`, `cross-slice-allowance-added`), so a policy review sees them.
+
+**The recommended model is still to promote a genuinely shared slice to its own layer** and let
+the layer edges carry it: a one-way peer import between slices is a DAG the layer graph cannot
+see. `sharedRoots` and `allowedCrossSlice` exist so ArkGate can enforce a design that made the
+other choice deliberately, not so slices can drift into a mesh.
 
 ### Type-only edges (placement debt)
 
