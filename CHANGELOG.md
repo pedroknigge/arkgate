@@ -55,6 +55,13 @@ implying it knows a test runs. **No required config migration.**
   genuinely greenfield repo, where `--init` is designed to land a contract before the code. The
   report modes are untouched: `--plan`, `--coverage` and `--doctor` still describe an empty scope
   (`empty-scope`) rather than refusing, because they are how the refusal gets fixed.
+- **`npm test` no longer dirties the tree.** `tests/unit/static-check/q05AiVelocity.test.ts`
+  spawned `eval/ai-velocity-run.mjs` with `cwd: REPO`, which rewrote the **tracked**
+  `eval/ai-velocity-report.json` on every run — its `generatedAt` is fresh each time, and that
+  pure-timestamp diff has already ridden into two commits. The harness now takes `--report` (and
+  `--baseline`) so the test writes into a temp dir and removes it in a `finally`, matching the
+  sibling test in the same file, and it now asserts the tracked report is byte-identical after the
+  run. Default paths are unchanged for `npm run eval:ai-velocity`.
 - **`coverage.maxFiles` is bounded.** It had no upper limit, and a schema `maximum` would
   have been silently ignored (the config validator implements no such keyword), so any
   integer became a memory budget. Clamped to 20000.

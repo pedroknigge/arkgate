@@ -12,11 +12,16 @@
  * Usage:
  *   node eval/ai-velocity-run.mjs
  *   node eval/ai-velocity-run.mjs --write-baseline
+ *   node eval/ai-velocity-run.mjs --report <path> [--baseline <path>]
  *   npm run eval:ai-velocity
  *
- * Outputs:
+ * Outputs (default):
  *   eval/ai-velocity-report.json
  *   eval/ai-velocity-baseline.json (when --write-baseline or missing)
+ *
+ * `--report` / `--baseline` redirect those writes. Callers that only want to
+ * prove the harness runs — the q05 unit test — point --report at a temp dir so
+ * a run never rewrites the tracked report with a fresh `generatedAt`.
  */
 import fs from 'node:fs';
 import os from 'node:os';
@@ -31,8 +36,20 @@ import {
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..');
 const FIXTURE = path.join(REPO, 'tests/fixtures/design-weak-enforce');
-const REPORT_PATH = path.join(HERE, 'ai-velocity-report.json');
-const BASELINE_PATH = path.join(HERE, 'ai-velocity-baseline.json');
+const DEFAULT_REPORT_PATH = path.join(HERE, 'ai-velocity-report.json');
+const DEFAULT_BASELINE_PATH = path.join(HERE, 'ai-velocity-baseline.json');
+
+/** Read `--flag <path>` from argv; absent flag → fallback. */
+function pathArg(flag, fallback) {
+  const at = process.argv.indexOf(flag);
+  if (at === -1) return fallback;
+  const value = process.argv[at + 1];
+  if (!value || value.startsWith('-')) {
+    console.error(`[ai-velocity] ${flag} needs a path`);
+    process.exit(2);
+  }
+  return path.resolve(value);
+}
 
 function copyTree(src, dst) {
   fs.mkdirSync(dst, { recursive: true });
@@ -47,6 +64,8 @@ function copyTree(src, dst) {
 
 function main() {
   const writeBaseline = process.argv.includes('--write-baseline');
+  const REPORT_PATH = pathArg('--report', DEFAULT_REPORT_PATH);
+  const BASELINE_PATH = pathArg('--baseline', DEFAULT_BASELINE_PATH);
   if (!fs.existsSync(path.join(FIXTURE, 'ark.config.json'))) {
     console.error(`[ai-velocity] missing fixture: ${FIXTURE}`);
     process.exit(2);
@@ -74,6 +93,7 @@ function main() {
     report.fixture = 'tests/fixtures/design-weak-enforce';
     report.command = 'npm run eval:ai-velocity';
 
+    fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
     fs.writeFileSync(REPORT_PATH, JSON.stringify(report, null, 2) + '\n');
 
     const baselineBody = {
@@ -91,6 +111,7 @@ function main() {
     };
 
     if (writeBaseline || !fs.existsSync(BASELINE_PATH)) {
+      fs.mkdirSync(path.dirname(BASELINE_PATH), { recursive: true });
       fs.writeFileSync(BASELINE_PATH, JSON.stringify(baselineBody, null, 2) + '\n');
     }
 
@@ -106,6 +127,9 @@ function main() {
     );
     console.log(`  method:   ${report.comparison.method}`);
     console.log(`  report:   ${path.relative(REPO, REPORT_PATH)}`);
+    if (REPORT_PATH !== DEFAULT_REPORT_PATH) {
+      console.log(`  (--report: ${DEFAULT_REPORT_PATH} left untouched)`);
+    }
 
     if (!report.ok) {
       console.error('[ai-velocity] FAIL: golden-path is not strictly better on placementTurns');

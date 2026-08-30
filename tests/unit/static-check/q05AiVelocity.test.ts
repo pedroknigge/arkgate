@@ -143,27 +143,41 @@ describe('Q05 runAiVelocityComparison + shipped harness', () => {
 
   it('eval/ai-velocity-run.mjs exits 0 and writes report with golden better', () => {
     expect(fs.existsSync(HARNESS)).toBe(true);
-    const res = spawnSync(process.execPath, [HARNESS], {
-      cwd: REPO,
-      encoding: 'utf8',
-    });
-    expect(res.status, res.stderr || res.stdout).toBe(0);
-    expect(res.stdout).toMatch(/PASS/);
-    expect(res.stdout).toMatch(/placementTurns/);
-    expect(fs.existsSync(REPORT)).toBe(true);
-    expect(fs.existsSync(BASELINE)).toBe(true);
+    // The tracked report must not be rewritten by `npm test`: it carries a fresh
+    // `generatedAt` on every run, and that pure-timestamp diff has already ridden
+    // into two commits. Prove the same thing against a report in a temp dir.
+    const trackedBefore = fs.existsSync(REPORT) ? fs.readFileSync(REPORT, 'utf8') : null;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-q05-harness-'));
+    const reportPath = path.join(tmp, 'ai-velocity-report.json');
+    try {
+      const res = spawnSync(process.execPath, [HARNESS, '--report', reportPath], {
+        cwd: REPO,
+        encoding: 'utf8',
+      });
+      expect(res.status, res.stderr || res.stdout).toBe(0);
+      expect(res.stdout).toMatch(/PASS/);
+      expect(res.stdout).toMatch(/placementTurns/);
+      expect(fs.existsSync(reportPath)).toBe(true);
+      expect(fs.existsSync(BASELINE)).toBe(true);
+      expect(
+        fs.existsSync(REPORT) ? fs.readFileSync(REPORT, 'utf8') : null,
+        'the harness rewrote the tracked eval/ai-velocity-report.json'
+      ).toBe(trackedBefore);
 
-    const report = JSON.parse(fs.readFileSync(REPORT, 'utf8'));
-    expect(report.id).toBe('q05-ai-velocity');
-    expect(report.ok).toBe(true);
-    expect(report.comparison.goldenStrictlyBetter).toBe(true);
-    expect(report.comparison.goldenPathTurns).toBeLessThan(report.comparison.designWeakTurns);
-    expect(report.honesty.designWeakArmStillDesignWeak).toBe(true);
-    expect(report.honesty.patternBetsNeverMechanicalSafe).toBe(true);
-    expect(report.comparison.method).toMatch(/golden-pattern\.json/);
+      const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+      expect(report.id).toBe('q05-ai-velocity');
+      expect(report.ok).toBe(true);
+      expect(report.comparison.goldenStrictlyBetter).toBe(true);
+      expect(report.comparison.goldenPathTurns).toBeLessThan(report.comparison.designWeakTurns);
+      expect(report.honesty.designWeakArmStillDesignWeak).toBe(true);
+      expect(report.honesty.patternBetsNeverMechanicalSafe).toBe(true);
+      expect(report.comparison.method).toMatch(/golden-pattern\.json/);
 
-    const baseline = JSON.parse(fs.readFileSync(BASELINE, 'utf8'));
-    expect(baseline.summary.goldenStrictlyBetter).toBe(true);
-    expect(baseline.method).toBeTruthy();
+      const baseline = JSON.parse(fs.readFileSync(BASELINE, 'utf8'));
+      expect(baseline.summary.goldenStrictlyBetter).toBe(true);
+      expect(baseline.method).toBeTruthy();
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
   });
 });
