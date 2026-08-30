@@ -38,13 +38,13 @@ const config = {
     'bin/ark-shared.mjs:450-475',
     'src/domain/baselineKey.ts:20-48',
     // 4.0: migrateArkConfig critical slices (excludes redundant throw-only / guard noise).
-    'src/domain/configContract.ts:469-482',
-    'src/domain/configContract.ts:484-486',
-    'src/domain/configContract.ts:488-495',
-    'src/domain/configContract.ts:505-509',
-    'src/domain/configContract.ts:512-512',
-    'src/domain/configContract.ts:521-524',
-    'src/domain/configContract.ts:533-538',
+    'src/domain/configContract.ts:482-495',
+    'src/domain/configContract.ts:497-499',
+    'src/domain/configContract.ts:501-508',
+    'src/domain/configContract.ts:518-522',
+    'src/domain/configContract.ts:525-525',
+    'src/domain/configContract.ts:534-537',
+    'src/domain/configContract.ts:546-551',
     // DF04 — selective pure truth islands (fail-closed / ack / promote honesty).
     // peerIsolationMustDeny is the killable fail-closed core; findDeniedEdgeRule wires it.
     'src/domain/layerMatch.ts:337-349',

@@ -7,38 +7,38 @@
       "targets": [
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 479,
-          "endLine": 482
-        },
-        {
-          "file": "src/domain/configContract.ts",
-          "startLine": 484,
-          "endLine": 486
-        },
-        {
-          "file": "src/domain/configContract.ts",
-          "startLine": 488,
+          "startLine": 492,
           "endLine": 495
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 505,
-          "endLine": 509
+          "startLine": 497,
+          "endLine": 499
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 512,
-          "endLine": 512
+          "startLine": 501,
+          "endLine": 508
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 521,
-          "endLine": 524
+          "startLine": 518,
+          "endLine": 522
         },
         {
           "file": "src/domain/configContract.ts",
-          "startLine": 533,
-          "endLine": 538
+          "startLine": 525,
+          "endLine": 525
+        },
+        {
+          "file": "src/domain/configContract.ts",
+          "startLine": 534,
+          "endLine": 537
+        },
+        {
+          "file": "src/domain/configContract.ts",
+          "startLine": 546,
+          "endLine": 551
         }
       ]
     },
@@ -95,7 +95,7 @@
     {
       "id": "managed-upgrade",
       "optional": true,
-      "note": "4.1.0: unit-tested S4 force-preserve; mutation NoCoverage residual on toml-section branch — optional for group gate, still pinned for Z08 causal.",
+      "note": "4.1.0: unit-tested S4 force-preserve; mutation NoCoverage residual on toml-section branch \u2014 optional for group gate, still pinned for Z08 causal.",
       "targets": [
         {
           "file": "bin/lib/managed-upgrade.mjs",
