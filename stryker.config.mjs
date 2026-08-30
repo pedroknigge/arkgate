@@ -28,6 +28,7 @@ const config = {
     'bin/lib/write-path-detect.mjs:62-62',
     'bin/lib/write-path-detect.mjs:77-96',
     'bin/lib/analysis-completeness.mjs:9-27',
+    'bin/lib/analysis-completeness.mjs:68-105',
     'bin/lib/resolved-candidate-facts.mjs:691-741',
     // managed-upgrade force-preserve covered by fieldGapS4 unit tests; not in critical
     // mutation groups for 4.1.0 (NoCoverage noise on toml-section branch residual).
@@ -70,6 +71,7 @@ const config = {
     'tests/unit/static-check/criticalBranchCoverage.test.ts',
     'tests/unit/static-check/mutationCritical.test.ts',
     'tests/unit/static-check/z02Completeness.test.ts',
+    'tests/unit/static-check/emptyAnalysisRefusal.test.ts',
     'tests/unit/analysis/z04ResolvedFactsResolver.test.ts',
     'tests/unit/static-check/z06ManagedUpgrade.test.ts',
     'tests/unit/static-check/fieldGapS4.test.ts',

@@ -2,6 +2,7 @@
   "description": "ACS02 — production-emitted public ruleIds that must resolve in DIAGNOSTIC_CATALOG. Test fixtures (SOMETHING_ELSE, etc.) are intentionally excluded.",
   "ruleIds": [
     "ADAPTER_NOT_ALLOWED_FOR_PORT",
+    "ANALYSIS_COVERS_NO_FILES",
     "ANALYSIS_HOST_UNAVAILABLE",
     "ANALYSIS_PARSE_INCOMPLETE",
     "ANY_CAST_THRESHOLD_EXCEEDED",

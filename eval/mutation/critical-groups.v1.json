@@ -83,6 +83,17 @@
       ]
     },
     {
+      "id": "empty-analysis-refusal",
+      "note": "A verdict over zero governed files is a false green, and the refusal is one condition plus one sentence. Unpinned, a mutant could flip the greenfield exemption or the moved-root branch and ark-check would silently pass an empty analysis again.",
+      "targets": [
+        {
+          "file": "bin/lib/analysis-completeness.mjs",
+          "startLine": 68,
+          "endLine": 105
+        }
+      ]
+    },
+    {
       "id": "resolved-candidate-facts",
       "targets": [
         {

@@ -461,6 +461,15 @@ order (universal): `lint` → `typecheck` → `arkgate-check` / `check:architect
 When `include` matches **zero** TS/JS files, plan/doctor treat that as **not done**
 (`goal.emptyScope`, adoption gap `empty-scope`) — never “clean architecture.”
 
+The **verdict path refuses** in that state rather than passing: a plain or `--strict`
+`ark-check` over zero governed files exits 1 with `ANALYSIS_COVERS_NO_FILES`, because
+every rule is vacuously satisfied on an empty set. It fires when source exists under the
+analyzed root and the contract governs none of it, or when the analyzed root is not the
+root you asked for (a contract found outside `--root` makes ArkGate adopt the contract's
+directory). A genuinely greenfield repo — no governable source anywhere under the root
+you asked for — still passes, so `ark init` can land a contract before the code. The
+commands below are exempt on purpose: they are how the refusal gets diagnosed and fixed.
+
 ```bash
 npx ark-check --suggest-include --json    # workspaces + nested package.json+TS roots
 npx ark-check --adopt-contract --write  # expand include + UI patterns (no rule weakening)

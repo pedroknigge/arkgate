@@ -41,6 +41,20 @@ implying it knows a test runs. **No required config migration.**
   that is not in this repo must never prove an invariant covered.
 
 ### Fixed
+- **An analysis that covers zero files refuses instead of passing** (new
+  `ANALYSIS_COVERS_NO_FILES`). Every rule is vacuously satisfied on an empty set, so a green over
+  zero governed files certifies nothing while reading exactly like a green over a governed tree —
+  the one false green CI trusts. Measured: pointing `--config` at a copy of the contract outside
+  the tree moved the effective root to the copy's directory, every layer pattern matched nothing,
+  and `ark-check` printed 30 advisory warnings, a closing `✔ Ark check passed`, and exit 0; under
+  `--strict` it exited 1 for an unrelated reason (*"Ark gates are not installed"*) that sent the
+  user to `ark init` and never mentioned the empty analysis. The refusal is checked before
+  `--require-gates`, so the real reason wins. It separates ArkGate's limitation from a fact about
+  the repo: it fires when source exists under the analyzed root and the contract governs none of
+  it, or when the analyzed root is not the root that was asked for — and stays silent on a
+  genuinely greenfield repo, where `--init` is designed to land a contract before the code. The
+  report modes are untouched: `--plan`, `--coverage` and `--doctor` still describe an empty scope
+  (`empty-scope`) rather than refusing, because they are how the refusal gets fixed.
 - **`coverage.maxFiles` is bounded.** It had no upper limit, and a schema `maximum` would
   have been silently ignored (the config validator implements no such keyword), so any
   integer became a memory budget. Clamped to 20000.

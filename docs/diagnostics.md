@@ -70,6 +70,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`DESIGN_SMELL_REGRESSION`](#DESIGN_SMELL_REGRESSION) | preflight | Design smell regression on base-relative ratchet |
 | [`ANALYSIS_PARSE_INCOMPLETE`](#ANALYSIS_PARSE_INCOMPLETE) | analysis | Parse incomplete |
 | [`LEXICAL_EVIDENCE_INCOMPLETE`](#LEXICAL_EVIDENCE_INCOMPLETE) | analysis | Lexical evidence incomplete |
+| [`ANALYSIS_COVERS_NO_FILES`](#ANALYSIS_COVERS_NO_FILES) | analysis | Analysis covered no files |
 | [`ANALYSIS_HOST_UNAVAILABLE`](#ANALYSIS_HOST_UNAVAILABLE) | analysis | Analysis host unavailable |
 | [`ADAPTER_NOT_ALLOWED_FOR_PORT`](#ADAPTER_NOT_ALLOWED_FOR_PORT) | adapter | Adapter not allowed for port |
 | [`FORBIDDEN_PATTERN`](#FORBIDDEN_PATTERN) | snippet-policy | Forbidden regex pattern |
@@ -541,6 +542,15 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 - **Why:** Single-file validation cannot prove project module resolution. The write hook is already the verdict.
 - **Fix:** Re-run `npx arkgate-check --root . --config ark.config.json`, or treat the hook deny as final. Do not call `ark_prepare_change` from a hook deny.
+
+<a id="ANALYSIS_COVERS_NO_FILES"></a>
+
+### `ANALYSIS_COVERS_NO_FILES`
+
+**Analysis covered no files**
+
+- **Why:** No file matched the contract `include` and layer patterns under the analyzed root, so the run had nothing to check. Every rule is vacuously satisfied on an empty set: a green here would read exactly like a green over a governed tree while certifying nothing. Usual causes are a `--root` that is not the tree the contract describes (including a contract found outside the requested root, whose directory is then adopted as the project root), `include` / `exclude` patterns that match nothing, or layer patterns written for a different layout.
+- **Fix:** Point `--root` at the tree the contract describes, or keep the contract inside that tree, or fix the `include` / `exclude` / layer patterns so they match real files — then re-run `npx arkgate-check --root . --config ark.config.json`. This is a refusal about ArkGate's own inputs, not a finding about your code; no baseline or policy acknowledgement can suppress it.
 
 <a id="ANALYSIS_HOST_UNAVAILABLE"></a>
 

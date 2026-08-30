@@ -100,7 +100,11 @@ import { createAdapterResult } from './lib/adapter-contract.mjs';
 import { collectGovernedFiles, normalize, walk } from './lib/scan-files.mjs';
 import { configWarning } from './lib/config-warnings.mjs';
 import { runArchitectureScan } from './lib/architecture-scan.mjs';
-import { ANALYSIS_COMPLETENESS, analysisIncompleteStatement } from './lib/analysis-completeness.mjs';
+import {
+  ANALYSIS_COMPLETENESS,
+  analysisIncompleteStatement,
+  emptyAnalysisRefusal,
+} from './lib/analysis-completeness.mjs';
 import { reportUnavailableAnalysis } from './lib/unavailable-analysis.mjs';
 import { validateHardWriteRequest } from './lib/enforcement-profiles.mjs';
 import {
@@ -849,6 +853,9 @@ function applyConfigRootWalkUp(args) {
     return args;
   }
   const writeMode = isMutatingCliCommand(args);
+  // The root the caller asked for, before any walk-up adopts the config's directory.
+  // An empty analysis must be able to say which of the two it actually walked.
+  args.requestedRoot = path.resolve(args.root);
   const effective = resolveEffectiveProjectRoot(args.root, {
     configName: args.config,
     writeMode,
@@ -964,6 +971,56 @@ async function main() {
     return;
   }
 
+  // Empty analysis is a refusal, and it outranks every later gate: on zero governed
+  // files each of them reports on nothing. Checked before --require-gates so the
+  // caller hears the real reason instead of "Ark gates are not installed" in whatever
+  // directory the contract happened to live in.
+  //
+  // Report modes are exempt: --plan, --coverage and --doctor are how a user sees and
+  // fixes an empty scope (they already carry the `empty-scope` adoption gap), so
+  // refusing there would remove the only surface that explains the refusal.
+  const root = args.root;
+  const config = readConfig(root, args.config);
+  const allGovernedFiles = collectGovernedFiles(root, config);
+  const verdictPath = !args.plan && !args.coverage && !args.doctor;
+  const emptyAnalysis = verdictPath
+    ? emptyAnalysisRefusal({
+        governedFileCount: allGovernedFiles.length,
+        // Only walked when nothing is governed: separates "the contract does not
+        // describe this tree" from a genuinely greenfield repo with no source yet.
+        ungovernedSourceCount:
+          allGovernedFiles.length === 0
+            ? collectGovernedFiles(root, { ...config, include: ['.'] }).length
+            : 0,
+        root,
+        requestedRoot: args.requestedRoot,
+        configPath: path.isAbsolute(args.config) ? args.config : path.join(root, args.config),
+        configWalkedUp: args.configWalkedUp === true,
+      })
+    : null;
+  if (emptyAnalysis) {
+    if (args.json) {
+      console.log(
+        JSON.stringify(
+          {
+            ok: false,
+            error: emptyAnalysis.ruleId,
+            completeness: ANALYSIS_COMPLETENESS.unavailable,
+            message: emptyAnalysis.message,
+            nextAction: emptyAnalysis.nextAction,
+          },
+          null,
+          2
+        )
+      );
+    } else {
+      console.error(`${color.red('✖')} ${emptyAnalysis.ruleId} ${emptyAnalysis.message}`);
+      console.error(`Next: ${emptyAnalysis.nextAction}`);
+    }
+    process.exitCode = 1;
+    return;
+  }
+
   if (args.requireGates || args.requireWriteHook) {
     let writeRequest = null;
     if (args.requireWriteHook) {
@@ -1037,10 +1094,8 @@ async function main() {
     }
   }
 
-  const root = args.root;
   const bound = bindTeamBaseRefs(args, root);
   Object.assign(args, bound.args);
-  const config = readConfig(root, args.config);
   const policyDelta = analyzePolicyTransition({
     root,
     configPath: args.config,
@@ -1088,7 +1143,6 @@ async function main() {
   }
   const manifest = readManifest(root, args.manifest);
   const rules = manifest?.architecture?.rules ?? config.rules;
-  const allGovernedFiles = collectGovernedFiles(root, config);
   if (args.failUngoverned && teamParliament?.changeSet?.productPaths?.length) {
     const governedRel = new Set(
       allGovernedFiles.map((abs) => normalize(path.relative(root, abs)))

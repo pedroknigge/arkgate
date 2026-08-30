@@ -433,6 +433,13 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'Re-run `npx arkgate-check --root . --config ark.config.json`, or treat the hook deny as final. Do not call ark_prepare_change from a hook deny.'
   ),
   entry(
+    'ANALYSIS_COVERS_NO_FILES',
+    'analysis',
+    'Analysis covered no files',
+    'No file matched the contract include and layer patterns under the analyzed root, so the run had nothing to check. Every rule is vacuously satisfied on an empty set: a green here would read exactly like a green over a governed tree while certifying nothing. Usual causes are a --root that is not the tree the contract describes (including a contract found outside the requested root, whose directory is then adopted as the project root), include / exclude patterns that match nothing, or layer patterns written for a different layout.',
+    'Point --root at the tree the contract describes, or keep the contract inside that tree, or fix the include / exclude / layer patterns so they match real files — then re-run `npx arkgate-check --root . --config ark.config.json`. This is a refusal about ArkGate\u2019s own inputs, not a finding about your code; no baseline or policy acknowledgement can suppress it.'
+  ),
+  entry(
     'ANALYSIS_HOST_UNAVAILABLE',
     'analysis',
     'Analysis host unavailable',
