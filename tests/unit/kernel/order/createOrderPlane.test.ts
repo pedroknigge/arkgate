@@ -142,6 +142,22 @@ describe('createOrderPlane (Haken slaving)', () => {
       expect(error).toBeInstanceOf(ArkOrderError);
       expect((error as ArkOrderError).code).toBe('ARKORDER_STALE_SIGMA');
     }
+
+    let now = 1;
+    const fromReleaseClock = createOrderPlane({
+      projector: billingProjector,
+      sigmaMaxAgeMs: 10,
+      clocks: { now: () => now },
+    });
+    fromReleaseClock.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    now = 20;
+    try {
+      fromReleaseClock.ingest({ kind: 'InvoicePosted' });
+      throw new Error('expected stale sigma from release.releasedAt');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ArkOrderError);
+      expect((error as ArkOrderError).code).toBe('ARKORDER_STALE_SIGMA');
+    }
   });
 
   it('escalate names a human target by default (XP06)', () => {

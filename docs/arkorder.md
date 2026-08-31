@@ -169,7 +169,7 @@ except withdrawn heuristics.
 | `ARKORDER_XI_FIELD_WRITE` | Managed-layer driver import **and** write token **and** a declared `xiKeys` name |
 | `ARKORDER_INFORMATION_BUDGET` | `h(ξ)` allows a kind in `informationBudget.cannotObserve` |
 | `ARKORDER_XI_TTL` | ξ named ttl/freshUntil/maxAge — freshness is σ |
-| `ARKORDER_STALE_SIGMA` | ingest after σ.freshUntil / sigmaMaxAgeMs |
+| `ARKORDER_STALE_SIGMA` | ingest after σ.freshUntil, or after `release.releasedAt` + `sigmaMaxAgeMs` |
 
 Why / fix: [diagnostics.md](diagnostics.md#ARKORDER_MISSING_PLANE).
 `ark-check --sensors` lists every extra sensor with plane, tier, and whether

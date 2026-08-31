@@ -22,7 +22,8 @@ ArkRun and in-memory. **No required config migration.** Does not close `K01` /
   config key) — a scale may not observe a denied kind
   (`ARKORDER_INFORMATION_BUDGET`).
 - **σ freshness, never ξ** — `createOrderPlane({ sigmaMaxAgeMs })` /
-  `σ.freshUntil`; ξ keys named ttl/freshUntil/maxAge fail
+  `σ.freshUntil`; age falls back to `release.releasedAt` when σ has no
+  timestamp. ξ keys named ttl/freshUntil/maxAge fail
   (`ARKORDER_XI_TTL`, `ARKORDER_STALE_SIGMA`).
 - **`IngestEscalate.target`** including `human`.
 - **ArkRun** `shadowInformationPackage` / `compareInformationPackages` /

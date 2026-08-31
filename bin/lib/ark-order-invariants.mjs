@@ -116,8 +116,8 @@ export function assertSigmaFresh(input) {
         }
         return;
     }
-    const releasedAt = input.sigma.releasedAt;
-    if (typeof releasedAt === 'number' && input.now - releasedAt > input.maxAgeMs) {
+    const origin = typeof input.sigma.releasedAt === 'number' ? input.sigma.releasedAt : input.releasedAt;
+    if (typeof origin === 'number' && input.now - origin > input.maxAgeMs) {
         throw new ArkOrderError('ARKORDER_STALE_SIGMA', 'σ is older than sigmaMaxAgeMs; ξ does not TTL');
     }
 }

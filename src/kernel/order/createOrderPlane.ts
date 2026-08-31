@@ -93,6 +93,7 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
         sigma: release.sigma,
         now: clock.now(),
         maxAgeMs: options.sigmaMaxAgeMs,
+        releasedAt: release.releasedAt,
       });
       const projection = options.projector(release, release.sigma);
       assertInformationBudget(projection, options.informationBudget);
