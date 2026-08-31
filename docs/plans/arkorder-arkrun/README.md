@@ -5,7 +5,7 @@
 > Hub: [AGENTS.md](../../../AGENTS.md) · [ArkOrder plan](../arkorder/README.md) ·
 > [ADR index](../../adr/README.md)
 
-**Status:** shipped on tree in **4.8.5** (`XP01`–`XP08` done; prepared, not published).<br>
+**Status:** shipped in **4.8.5** (`XP01`–`XP08` done; published).<br>
 **Slug:** `arkorder-arkrun`<br>
 **Kind:** epic / cross-plane convergence<br>
 **Prefix:** `XP` (cross-plane)<br>
