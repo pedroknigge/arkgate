@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-31 (Engineering doing: none; Phase **LD** `LD01` **done** (ADR 0035 accepted), `LD02` **done** (policyHash omits layer descriptions), `LD03`–`LD06` **todo**; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing, a symlink-forgeable coverage gate), `--path-drift`, `--sensors`/`--promote`, peerIsolation `sharedRoots`+`allowedCrossSlice`, git install without a build allowlist entry, `--plan` surfaced on a green run; published; Patch **4.8.3** `AW01`+`OR08` **done** — `writes-via-aggregate` + ArkOrder `xiKeys`; Phase OR `OR01`–`OR08` **done**; published `arkgate@4.8.2` (skills four-plane honesty over **4.8.1**); `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **done** (ADR 0031: `arkgate/runtime` + `arkgate/nestjs` real subpaths; `@arkgate/runtime` deprecated); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** and shipped in published `arkgate@4.8.0+` (4.7.6 predates them); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.8.6**; `AL05` parked; Z09 still parked)
+- **Status date:** 2026-08-31 (Engineering doing: none; Phase **LD** `LD01` **done** (ADR 0035 accepted), `LD02` **done** (policyHash omits layer descriptions), `LD03` **done** (place / prepare-write / MCP JSON project `description`), `LD04`–`LD06` **todo**; Phase **LV** ArkOrder valved loop `LV01`–`LV09` **done** (4.8.6 published); Phase **XP** ArkOrder x ArkRun convergence **done** (`XP01`-`XP08`); Patch **4.8.5** `AGY01`+XP **done** — published; Patch **4.8.5** `AGY01` **done** — Antigravity skill refresh (`--antigravity-home` + default tools + dogfood `.agents/skills`); published; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing, a symlink-forgeable coverage gate), `--path-drift`, `--sensors`/`--promote`, peerIsolation `sharedRoots`+`allowedCrossSlice`, git install without a build allowlist entry, `--plan` surfaced on a green run; published; Patch **4.8.3** `AW01`+`OR08` **done** — `writes-via-aggregate` + ArkOrder `xiKeys`; Phase OR `OR01`–`OR08` **done**; published `arkgate@4.8.2` (skills four-plane honesty over **4.8.1**); `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **done** (ADR 0031: `arkgate/runtime` + `arkgate/nestjs` real subpaths; `@arkgate/runtime` deprecated); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** and shipped in published `arkgate@4.8.0+` (4.7.6 predates them); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.8.6**; `AL05` parked; Z09 still parked)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -258,16 +258,16 @@ correctness fix is not serialized behind unrelated performance or longitudinal e
 Plan: [docs/plans/layer-description-projection/README.md](docs/plans/layer-description-projection/README.md).
 Target additive **`arkgate@4.8.7`** over published **4.8.6**.
 **No schema bump** — `layers[].description` already exists. Does **not** close `Z09` /
-`K01`. No new skill names. Absence never invents residual. Engineering doing: none — `LD01`–`LD02` done (policyHash omits layer descriptions). Next is `LD03`.
+`K01`. No new skill names. Absence never invents residual. Engineering doing: none — `LD01`–`LD03` done (place JSON projects layer descriptions). Next is `LD04`.
 
-The caption is already on the contract. Place / doctor / coverage do not show it.
+The caption is already on the contract. Place / prepare-write / MCP JSON include it when present. Doctor / coverage do not show it yet.
 `policyHash` omits `layers[].description` (caption-only is neutral). Grain is the layer, not each file.
 
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 232 | `LD01` | `done` | M | — | ADR 0035: reuse `layers[].description`; strip from policyHash; project; absence silent |
 | 233 | `LD02` | `done` | M | LD01 | `policyHash` omits layer descriptions; caption-only delta is neutral |
-| 234 | `LD03` | `todo` | M | LD01 | `ark_place` / prepare-write / MCP placement JSON include `description` when present |
+| 234 | `LD03` | `done` | M | LD01 | `ark_place` / prepare-write / MCP placement JSON include `description` when present |
 | 235 | `LD04` | `todo` | M | LD01 | Doctor JSON + human, coverage JSON, HTML report parity; no residual from absence |
 | 236 | `LD05` | `todo` | M | LD03 | Deepen adopt (write) + place (read); `generate:agent-skills`. No `/ark-describe` |
 | 237 | `LD06` | `todo` | S | LD02+LD04+LD05 | configuration.md + package-surface; app-context caption example; projection tests |
@@ -323,7 +323,7 @@ Plan: [docs/plans/alive-in-six-months/README.md](docs/plans/alive-in-six-months/
 | 183 | `AL05` | `parked` | S | required-status possible + 3 partners | Field enrollment. Does **not** close Z09 |
 | 184 | `AL06` | `done` | S | AL04 | Compact first-screen vs Details independently invocable; first-screen honesty stays |
 
-Engineering doing: none. Phase **LD** `LD01` **done** (ADR 0035); `LD02` **done** (policyHash omits layer descriptions); `LD03`–`LD06` **todo**. Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
+Engineering doing: none. Phase **LD** `LD01` **done** (ADR 0035); `LD02` **done** (policyHash omits layer descriptions); `LD03` **done** (place JSON projects `description`); `LD04`–`LD06` **todo**. Phase **LV** `LV01`–`LV09` **done** (4.8.6 published). `AGY01` **done** (4.8.5 published). `OR01`–`OR07` **done**. `WH01` **done** (ADR 0026). `PK01` **done**.
 `K01` **parked** (4.7.6 primitives only).
 Phase DX (`DX01`–`DX03`) **done** and present in published `arkgate@4.8.0+` (4.7.6 predates them).
 Phase HS (`HS01`–`HS05`) **done**. Remaining first-contact copy **4.7.3** published. Write. Check. Ship. patch **4.7.5** published. **4.8.6** is on npm `latest`.

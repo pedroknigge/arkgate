@@ -26,7 +26,7 @@ import {
 import { effectiveCapabilityDeny, stableSerialize } from './lib/analysis-engine.mjs';
 import { createImportTargetResolver } from './lib/import-resolve.mjs';
 import { validateWithAutoPatch, resolveImportFileAbs } from './lib/auto-patch.mjs';
-import { composePrepareWrite } from './lib/prepare-write.mjs';
+import { composePrepareWrite, placementDescriptionFields } from './lib/prepare-write.mjs';
 import { loadArkConfigContract } from './lib/config-contract.mjs';
 import { loadEffectiveArkRulesFromDisk } from './lib/effective-contract-load.mjs';
 import {
@@ -1925,6 +1925,7 @@ export async function runArkMcp({ hookInput } = {}) {
         'Place a file in the architecture: filePath is required (fail-closed without it — never invents components/*.tsx or defaults to Presentation). ' +
         'Returns layer, mayImport / mustNotImport, forbiddenGlobals, and goldenPattern ' +
         '(load-bearing for NEW code when .ark/golden-pattern.json exists — adopt generates it). ' +
+        'When the matched layer has layers[].description, the JSON includes description; the field is omitted when absent. ' +
         'Call BEFORE writing a new file. ' +
         'Prefer ark_prepare_write when you already have the source snippet (place+validate+autoPatch in one call).',
       inputSchema: {
@@ -1950,7 +1951,8 @@ export async function runArkMcp({ hookInput } = {}) {
         'mechanical-safe autoPatch + judgmentBrief when judgment is needed + contentHash for host commit. ' +
         'Also returns the versioned new/worsened designDelta for the proposed full file. ' +
         'Composes ark_place + write-gate — call BEFORE Write/Edit when you have the snippet. ' +
-        'Returns { filePath, layer, valid, violations?, autoPatch?, judgmentBrief?, contentHash, ... }.',
+        'When the matched layer has layers[].description, the JSON includes description; the field is omitted when absent. ' +
+        'Returns { filePath, layer, description?, valid, violations?, autoPatch?, judgmentBrief?, contentHash, ... }.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -2433,7 +2435,7 @@ export async function runArkMcp({ hookInput } = {}) {
       filePath,
       layer: layerName,
       governed: true,
-      description: layerMeta?.description,
+      ...placementDescriptionFields(layerMeta),
       forbiddenGlobals: layerMeta?.forbiddenGlobals ?? [],
       ...(layerMeta?.mayImportInfrastructure ? { mayImportInfrastructure: true } : {}),
       mayImport,

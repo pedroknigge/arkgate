@@ -9,6 +9,21 @@ import { validateWithAutoPatch } from './auto-patch.mjs';
 import { classifyRemediation, enrichViolationWithFixClass } from './remediation.mjs';
 
 /**
+ * Project `layers[].description` onto place / prepare-write JSON (ADR 0035 D5).
+ * Present non-empty caption is copied; absence omits the field (never empty string).
+ *
+ * @param {{ description?: unknown } | null | undefined} layerOrPlacement
+ * @returns {{ description: string } | {}}
+ */
+export function placementDescriptionFields(layerOrPlacement) {
+  const caption =
+    layerOrPlacement && typeof layerOrPlacement === 'object'
+      ? layerOrPlacement.description
+      : undefined;
+  return typeof caption === 'string' && caption.length > 0 ? { description: caption } : {};
+}
+
+/**
  * Stable content identity for host commit / cache keys.
  * @param {string} source
  * @returns {{ contentHash: string, byteLength: number }}
@@ -114,7 +129,7 @@ export function composePrepareWrite(opts) {
     ...(placement?.suggestedLayers ? { suggestedLayers: placement.suggestedLayers } : {}),
     ...(placement?.message ? { placementMessage: placement.message } : {}),
     ...(placement?.note ? { placementNote: placement.note } : {}),
-    ...(placement?.description ? { description: placement.description } : {}),
+    ...placementDescriptionFields(placement),
     // Q03: pass through golden pattern from ark_place (advisory; absent is normal).
     ...(placement?.goldenPattern ? { goldenPattern: placement.goldenPattern } : {}),
     mode: gate.mode,

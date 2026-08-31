@@ -10,6 +10,7 @@ import {
   buildJudgmentBrief,
   composePrepareWrite,
   contentIdentity,
+  placementDescriptionFields,
 } from '../../../bin/lib/prepare-write.mjs';
 
 const require = createRequire(import.meta.url);
@@ -173,6 +174,7 @@ describe('prepare-write (W2)', () => {
     expect(ok.lexicalValid).toBe(true);
     expect(ok.mayImportInfrastructure).toBe(true);
     expect(ok.placementMessage).toBe('placed');
+    expect(ok.description).toBe('desc');
     expect(buildJudgmentBrief([])).toBeNull();
     expect(
       buildJudgmentBrief([
@@ -185,5 +187,13 @@ describe('prepare-write (W2)', () => {
         },
       ])?.remediationClass
     ).toMatch(/mechanical-safe|judgment|deferred/);
+  });
+
+  it('LD03: placementDescriptionFields copies a present caption and omits absence', () => {
+    expect(placementDescriptionFields({ description: 'Purchase requests — from asked to received.' })).toEqual({
+      description: 'Purchase requests — from asked to received.',
+    });
+    expect(placementDescriptionFields({ description: '' })).toEqual({});
+    expect(placementDescriptionFields({})).not.toHaveProperty('description');
   });
 });
