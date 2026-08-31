@@ -4,6 +4,7 @@ import {
   createOrderPlane,
   type Projector,
 } from '../../../../src/kernel/order/createOrderPlane';
+import { createMemoryReleaseStore } from '../../../../src/kernel/order/releaseStore';
 import type { Release } from '../../../../src/domain/arkOrderTypes';
 
 /** Consumer physics — not in the core. */
@@ -277,6 +278,60 @@ describe('createOrderPlane (Haken slaving)', () => {
     const result = p.ingest({ kind: 'SeatAdded', payload: { seats: 1 } });
     expect(result.kind).toBe('hold');
     if (result.kind === 'hold') expect(result.reasonCode).toBe('pack');
+  });
+
+  it('injects ReleaseStore; in-memory default is not durable (LV08)', () => {
+    const store = createMemoryReleaseStore();
+    const first = createOrderPlane({
+      projector: billingProjector,
+      store,
+      clocks: { now: () => 1 },
+    });
+    first.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    const second = createOrderPlane({
+      projector: billingProjector,
+      store,
+      clocks: { now: () => 2 },
+    });
+    expect(second.current()?.xi.plan).toBe('free');
+    expect(second.current()?.hash).toBe(store.load()?.hash);
+  });
+
+  it('catalog digest keyed by catalogReleaseId enters xiHash; SKU set does not (LV08)', () => {
+    const without = plane();
+    const a = without.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    const ignored = createOrderPlane({
+      projector: billingProjector,
+      catalogDigest: 'digest-sku-set-must-not-enter',
+      clocks: { now: () => 1 },
+    });
+    const b = ignored.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    expect(b.hash).toBe(a.hash);
+    expect(b.xiHash).toBe(a.xiHash);
+    const keyed = createOrderPlane({
+      projector: billingProjector,
+      catalogDigest: 'digest-of-catalog-id',
+      clocks: { now: () => 1 },
+    });
+    const c = keyed.release({
+      plan: 'free',
+      cycle: 'monthly',
+      tenancy: 'single',
+      catalogReleaseId: 'cat-1',
+    });
+    const other = createOrderPlane({
+      projector: billingProjector,
+      catalogDigest: 'other-digest',
+      clocks: { now: () => 1 },
+    });
+    const d = other.release({
+      plan: 'free',
+      cycle: 'monthly',
+      tenancy: 'single',
+      catalogReleaseId: 'cat-1',
+    });
+    expect(c.xiHash).not.toBe(d.xiHash);
+    expect(c.hash).not.toBe(d.hash);
   });
 
   it('has no update/patch/set on the plane', () => {

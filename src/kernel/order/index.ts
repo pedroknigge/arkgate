@@ -3,6 +3,7 @@
  * Not re-exported from `src/gate.ts`.
  */
 export { createOrderPlane, type CreateOrderPlaneOptions, type OrderPlane } from './createOrderPlane';
+export { createMemoryReleaseStore, type ReleaseStore } from './releaseStore';
 export { ArkOrderError } from '../../domain/arkOrderError';
 export { ingestTravelAction } from '../../domain/arkOrderInvariants';
 export { CAPACITY_OPS, DEFAULT_MAX_XI_KEYS } from '../../domain/arkOrderTypes';

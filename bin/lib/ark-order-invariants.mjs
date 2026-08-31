@@ -78,10 +78,23 @@ export function assertXiSchema(xi, schema) {
         }
     }
 }
-export function hashReleasePayload(xi, sigma) {
+function catalogDigestFor(xi, catalogDigest) {
+    if (typeof catalogDigest !== 'string')
+        return undefined;
+    if (!Object.prototype.hasOwnProperty.call(xi, 'catalogReleaseId'))
+        return undefined;
+    return catalogDigest;
+}
+export function hashReleasePayload(xi, sigma, catalogDigest) {
+    const digest = catalogDigestFor(xi, catalogDigest);
+    if (digest !== undefined)
+        return deterministicHash(stableSerialize({ xi, sigma, catalogDigest: digest }));
     return deterministicHash(stableSerialize({ xi, sigma }));
 }
-export function hashXiIdentity(xi) {
+export function hashXiIdentity(xi, catalogDigest) {
+    const digest = catalogDigestFor(xi, catalogDigest);
+    if (digest !== undefined)
+        return deterministicHash(stableSerialize({ xi, catalogDigest: digest }));
     return deterministicHash(stableSerialize({ xi }));
 }
 export function hashSigmaIdentity(sigma) {
@@ -106,8 +119,8 @@ export function createFrozenRelease(input) {
     const sigma = freezeRecord(input.sigma ?? {}, 'σ');
     const release = Object.freeze({
         version: input.version,
-        hash: hashReleasePayload(xi, sigma),
-        xiHash: hashXiIdentity(xi),
+        hash: hashReleasePayload(xi, sigma, input.catalogDigest),
+        xiHash: hashXiIdentity(xi, input.catalogDigest),
         sigmaHash: hashSigmaIdentity(sigma),
         xi,
         sigma,
@@ -120,7 +133,7 @@ export function refreshSigmaRecord(input) {
     const sigma = freezeRecord(input.sigma, 'σ');
     return Object.freeze({
         version: input.current.version,
-        hash: hashReleasePayload(input.current.xi, sigma),
+        hash: hashReleasePayload(input.current.xi, sigma, input.catalogDigest),
         xiHash: input.current.xiHash,
         sigmaHash: hashSigmaIdentity(sigma),
         xi: input.current.xi,
@@ -292,6 +305,7 @@ export function proposePatternChange(input) {
         now: input.now,
         maxXiKeys: input.maxXiKeys,
         xiSchema: input.xiSchema,
+        catalogDigest: input.catalogDigest,
     });
     if (candidate.hash === input.current.hash) {
         throw new ArkOrderError('ARKORDER_EMPTY_BLAST', 'delta does not change ξ; that is not a pattern change');
@@ -317,6 +331,7 @@ export function applyProposedRelease(input) {
         now: input.now,
         maxXiKeys: input.maxXiKeys,
         xiSchema: input.xiSchema,
+        catalogDigest: input.catalogDigest,
     });
     if (xiRecordsEqual(candidate.xi, input.current.xi)) {
         throw new ArkOrderError('ARKORDER_EMPTY_BLAST', 'delta does not change ξ; that is not a pattern change');

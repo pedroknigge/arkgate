@@ -30,6 +30,7 @@ import type {
   Release,
   XiSchema,
 } from '../../domain/arkOrderTypes';
+import type { ReleaseStore } from './releaseStore';
 
 export type CreateOrderPlaneOptions = {
   projector: Projector;
@@ -39,6 +40,10 @@ export type CreateOrderPlaneOptions = {
   packs?: readonly ConstraintPack[];
   informationBudget?: InformationBudget;
   sigmaMaxAgeMs?: number;
+  /** Injected. Default is process-local memory — not durable, not K01. */
+  store?: ReleaseStore;
+  /** Optional catalog digest keyed by ξ.catalogReleaseId. SKU set does not enter the hash. */
+  catalogDigest?: string;
 };
 
 export type OrderPlane = {
@@ -65,8 +70,17 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
       return 0;
     },
   };
-  let current: Release | null = null;
-  let version = 0;
+  const store = options.store;
+  let current: Release | null = store?.load() ?? null;
+  let version = current?.version ?? 0;
+  const catalogDigest = options.catalogDigest;
+
+  function persist(next: Release): Release {
+    current = next;
+    version = next.version;
+    store?.save(next);
+    return next;
+  }
 
   function requireCurrent(): Release {
     if (!current) {
@@ -80,17 +94,17 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
       if (current) {
         assertUnvalvedRelease(current, freezeRecord(xi, 'ξ'));
       }
-      const next = createFrozenRelease({
-        xi,
-        sigma,
-        version: version + 1,
-        now: clock.now(),
-        maxXiKeys,
-        xiSchema: options.xiSchema,
-      });
-      version = next.version;
-      current = next;
-      return current;
+      return persist(
+        createFrozenRelease({
+          xi,
+          sigma,
+          version: version + 1,
+          now: clock.now(),
+          maxXiKeys,
+          xiSchema: options.xiSchema,
+          catalogDigest,
+        })
+      );
     },
     project() {
       const release = requireCurrent();
@@ -132,28 +146,31 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
         maxXiKeys,
         xiSchema: options.xiSchema,
         now: clock.now(),
+        catalogDigest,
       });
     },
     apply(proposal) {
-      const next = applyProposedRelease({
-        current: requireCurrent(),
-        proposal,
-        projector: options.projector,
-        maxXiKeys,
-        xiSchema: options.xiSchema,
-        now: clock.now(),
-      });
-      version = next.version;
-      current = next;
-      return current;
+      return persist(
+        applyProposedRelease({
+          current: requireCurrent(),
+          proposal,
+          projector: options.projector,
+          maxXiKeys,
+          xiSchema: options.xiSchema,
+          now: clock.now(),
+          catalogDigest,
+        })
+      );
     },
     refreshSigma(sigma) {
-      current = refreshSigmaRecord({
-        current: requireCurrent(),
-        sigma,
-        now: clock.now(),
-      });
-      return current;
+      return persist(
+        refreshSigmaRecord({
+          current: requireCurrent(),
+          sigma,
+          now: clock.now(),
+          catalogDigest,
+        })
+      );
     },
     current() {
       return current;

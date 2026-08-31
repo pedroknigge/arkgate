@@ -113,11 +113,25 @@ export function assertXiSchema(xi: XiRecord, schema: XiSchema | undefined): void
   }
 }
 
-export function hashReleasePayload(xi: XiRecord, sigma: SigmaRecord): string {
+function catalogDigestFor(xi: XiRecord, catalogDigest?: string): string | undefined {
+  if (typeof catalogDigest !== 'string') return undefined;
+  if (!Object.prototype.hasOwnProperty.call(xi, 'catalogReleaseId')) return undefined;
+  return catalogDigest;
+}
+
+export function hashReleasePayload(
+  xi: XiRecord,
+  sigma: SigmaRecord,
+  catalogDigest?: string
+): string {
+  const digest = catalogDigestFor(xi, catalogDigest);
+  if (digest !== undefined) return deterministicHash(stableSerialize({ xi, sigma, catalogDigest: digest }));
   return deterministicHash(stableSerialize({ xi, sigma }));
 }
 
-export function hashXiIdentity(xi: XiRecord): string {
+export function hashXiIdentity(xi: XiRecord, catalogDigest?: string): string {
+  const digest = catalogDigestFor(xi, catalogDigest);
+  if (digest !== undefined) return deterministicHash(stableSerialize({ xi, catalogDigest: digest }));
   return deterministicHash(stableSerialize({ xi }));
 }
 
@@ -146,6 +160,7 @@ export function createFrozenRelease(input: {
   now: number;
   maxXiKeys: number;
   xiSchema?: XiSchema;
+  catalogDigest?: string;
 }): Release {
   assertXiKeyCap(input.xi, input.maxXiKeys);
   const xi = freezeRecord(input.xi, 'ξ');
@@ -154,8 +169,8 @@ export function createFrozenRelease(input: {
   const sigma = freezeRecord(input.sigma ?? {}, 'σ');
   const release: Release = Object.freeze({
     version: input.version,
-    hash: hashReleasePayload(xi, sigma),
-    xiHash: hashXiIdentity(xi),
+    hash: hashReleasePayload(xi, sigma, input.catalogDigest),
+    xiHash: hashXiIdentity(xi, input.catalogDigest),
     sigmaHash: hashSigmaIdentity(sigma),
     xi,
     sigma,
@@ -169,11 +184,12 @@ export function refreshSigmaRecord(input: {
   current: Release;
   sigma: Record<string, unknown>;
   now: number;
+  catalogDigest?: string;
 }): Release {
   const sigma = freezeRecord(input.sigma, 'σ');
   return Object.freeze({
     version: input.current.version,
-    hash: hashReleasePayload(input.current.xi, sigma),
+    hash: hashReleasePayload(input.current.xi, sigma, input.catalogDigest),
     xiHash: input.current.xiHash,
     sigmaHash: hashSigmaIdentity(sigma),
     xi: input.current.xi,
@@ -366,6 +382,7 @@ export function proposePatternChange(input: {
   maxXiKeys: number;
   xiSchema?: XiSchema;
   now: number;
+  catalogDigest?: string;
 }): ProposeResult {
   const merged: Record<string, unknown> = { ...input.current.xi };
   for (const [key, value] of Object.entries(input.delta)) {
@@ -382,6 +399,7 @@ export function proposePatternChange(input: {
     now: input.now,
     maxXiKeys: input.maxXiKeys,
     xiSchema: input.xiSchema,
+    catalogDigest: input.catalogDigest,
   });
   if (candidate.hash === input.current.hash) {
     throw new ArkOrderError(
@@ -413,6 +431,7 @@ export function applyProposedRelease(input: {
   maxXiKeys: number;
   xiSchema?: XiSchema;
   now: number;
+  catalogDigest?: string;
 }): Release {
   const candidate = createFrozenRelease({
     xi: { ...input.proposal.nextXi },
@@ -421,6 +440,7 @@ export function applyProposedRelease(input: {
     now: input.now,
     maxXiKeys: input.maxXiKeys,
     xiSchema: input.xiSchema,
+    catalogDigest: input.catalogDigest,
   });
   if (xiRecordsEqual(candidate.xi, input.current.xi)) {
     throw new ArkOrderError(
