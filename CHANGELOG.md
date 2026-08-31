@@ -9,10 +9,9 @@ in the immutable pre-2.0 archive linked below.
 freezes ξ; later pattern change is `proposeRelease` then `apply`. σ identity is
 not ξ identity. ingest returns a closed residual. Capacity is data. ArkRun
 carries the decision tape. **No required config migration.** Does not close
-`K01` / `Z09`. No `/ark-order` skill. Do not npm-publish from this item until
-the maintainer tag.
+`K01` / `Z09`. No `/ark-order` skill.
 
-**Status: prepared** (tree ready; npm `latest` remains **4.8.5** until publish).
+**Status: published** (on npm `latest`; see `docs/releases/4.8.6.md`).
 
 ### Added
 - **`apply(ProposeResult)`** on `createOrderPlane`. Unvalved second freeze of a
@@ -42,7 +41,7 @@ now has a canonical page. The runtime half (shadow / replay / compare) is
 ArkRun and in-memory. **No required config migration.** Does not close `K01` /
 `Z09`.
 
-**Status: published** (on npm `latest`; see `docs/releases/4.8.5.md`).
+**Status: published** (see `docs/releases/4.8.5.md`).
 
 ### Added
 - **`docs/arkorder.md`:** named APIs adopters were redesigning (`createOrderPlane`,
