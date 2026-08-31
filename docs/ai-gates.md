@@ -465,7 +465,7 @@ severity **info**, marked `deferred: true`, and omitted from doctor **Primary ne
 `/ark-upgrade` on Grok/Claude is not Incomplete because of them. **Temp/upgrade primary roots**
 stay fail-closed urgent (rewritten, not multi-project).
 
-### Shared Claude / Grok home skills {#shared-claude--grok-home-skills}
+### Shared Claude / Grok / Antigravity home skills {#shared-claude--grok-home-skills}
 
 Project catalogs follow that checkout’s ArkGate pin (they may lag). Shared user-home catalogs
 are the **machine floor**:
@@ -474,11 +474,19 @@ are the **machine floor**:
 |-------|------|------|
 | Claude home | `$CLAUDE_HOME/skills` (default `~/.claude/skills`) | `--claude-home` |
 | Grok home | `$GROK_HOME/skills` (default `~/.grok/skills`) | `--grok-home` |
-| All three + Codex | same monotonic protocol | `--agent-homes` |
+| Antigravity home | `$ANTIGRAVITY_HOME/skills` (default `~/.gemini/config/skills`) | `--antigravity-home` |
+| All four + Codex | same monotonic protocol | `--agent-homes` |
+
+Antigravity’s official global catalog is `~/.gemini/config/skills` (workspace catalog remains
+`.agents/skills`). Claude/Grok home copies override or duplicate the project catalog in the same
+session, so `--agent-homes` skips those homes when `.agents/skills` already exists. The Antigravity
+global catalog is the machine floor for **every** workspace, so `--antigravity-home` still writes
+it. `--prune-home-duplicates` does **not** delete `~/.gemini/config/skills/ark-*`.
 
 Doctor reports `agentHomeGaps` only when those catalogs already contain `ark-*` skills and
 lag the installed package. Temp/upgrade `--root` never mutates default user homes. Cursor
 sessions treat a stale Claude home as urgent because Cursor loads `~/.claude/skills`.
+Antigravity sessions treat a stale `~/.gemini/config/skills` catalog as urgent.
 
 ```bash
 npx arkgate-check --install-agent-gates --skills-only --agent-homes --force
@@ -589,6 +597,8 @@ Install:
 npx ark-check --install-agent-gates --tools antigravity
 # alias:
 npx ark-check --install-agent-gates --tools agy
+# refresh the official global catalog (all workspaces):
+npx ark-check --install-agent-gates --skills-only --antigravity-home --force
 ```
 
 | File | Role |
@@ -597,6 +607,7 @@ npx ark-check --install-agent-gates --tools agy
 | `.agents/mcp_config.json` | Official workspace MCP (`mcpServers.ark` stdio) |
 | `GEMINI.md` | Instruction rule for Gemini CLI / legacy consumers sharing the tree |
 | `.agents/skills/*/SKILL.md` | Agent Skills catalog (shared path with Codex) |
+| `~/.gemini/config/skills/*/SKILL.md` | Official Antigravity **global** catalog (`--antigravity-home` / `--agent-homes`) |
 | `AGENTS.md` + `.mcp.json` + CI | Shared with other hosts (`.mcp.json` is not the Antigravity MCP path) |
 
 **Write tools covered:** `write_to_file`, `replace_file_content`, `multi_replace_file_content`.

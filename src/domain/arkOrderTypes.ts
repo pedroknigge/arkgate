@@ -31,10 +31,13 @@ export type IngestAbsorb = {
   readonly event: FieldEvent;
 };
 
+export type EscalationTarget = 'human' | 'scale' | 'hold';
+
 export type IngestEscalate = {
   readonly kind: 'escalate';
   readonly event: FieldEvent;
   readonly reason: string;
+  readonly target: EscalationTarget;
 };
 
 export type IngestResult = IngestAbsorb | IngestEscalate;
@@ -50,6 +53,12 @@ export type Projector = (release: Release, sigma: SigmaRecord) => Projection;
 export type ConstraintPack = {
   readonly id: string;
   readonly escalateKinds?: readonly string[];
+  readonly escalateTarget?: EscalationTarget;
+};
+
+/** What a scale may not observe (XP04). Denied kinds never appear in allowedKinds. */
+export type InformationBudget = {
+  readonly cannotObserve: readonly string[];
 };
 
 export type XiPropertySchema = {
@@ -74,4 +83,7 @@ export type ArkOrderErrorCode =
   | 'ARKORDER_NO_RELEASE'
   | 'ARKORDER_EMPTY_BLAST'
   | 'ARKORDER_FORBIDDEN_METHOD'
-  | 'ARKORDER_UNKNOWN_KEY';
+  | 'ARKORDER_UNKNOWN_KEY'
+  | 'ARKORDER_INFORMATION_BUDGET'
+  | 'ARKORDER_XI_TTL'
+  | 'ARKORDER_STALE_SIGMA';

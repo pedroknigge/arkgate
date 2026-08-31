@@ -809,7 +809,7 @@ npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok,antigra
 | Cursor | `.cursor/mcp.json` + `.cursor/rules/ark.mdc` | **Repo:** `.agents/skills/<name>/SKILL.md` (same catalog as Codex). Do not also copy into `.cursor/commands/` or `$CODEX_HOME/skills` — Cursor lists every path it scans. |
 | OpenAI Codex | `.codex/config.toml` (project primary, relative `--root .`; configured on disk is not runtime-active until restart + `ark_identity` match); optional legacy `$CODEX_HOME/config.toml` fallback uses absolute roots and scoped secondaries — see [ai-gates.md](ai-gates.md) | **Repo:** `.agents/skills/<name>/SKILL.md`; **home:** `$CODEX_HOME/skills/<name>/SKILL.md` (`--codex-home`) |
 | **Grok Build** | `.grok/hooks/ark-write-gate.json` + `.grok/config.toml` / `.mcp.json` | **Repo:** `.grok/skills/<name>/SKILL.md`; **home:** `$GROK_HOME/skills` (default `~/.grok/skills`, `--grok-home`) |
-| Google Antigravity | `.agents/hooks.json` + `.agents/mcp_config.json` (+ `GEMINI.md` for shared Gemini consumers) | `.agents/skills/<name>/SKILL.md` |
+| Google Antigravity | `.agents/hooks.json` + `.agents/mcp_config.json` (+ `GEMINI.md` for shared Gemini consumers) | **Repo:** `.agents/skills/<name>/SKILL.md`; **home:** `$ANTIGRAVITY_HOME/skills` (default `~/.gemini/config/skills`, `--antigravity-home`) |
 | OpenCode | `opencode.json` MCP (`type: local`; advisory) | `.opencode/skills/<name>/SKILL.md` |
 
 This is a path reference, not a guarantee table. Full copy-paste setups:
@@ -817,12 +817,12 @@ This is a path reference, not a guarantee table. Full copy-paste setups:
 [README](../README.md#other-skills-only-when-you-need-them).
 When several repositories share one machine, repo catalogs stay pinned and isolated; unchanged
 skill bodies are not rewritten for a version stamp. Shared **home** catalogs (Codex since 4.2;
-Claude/Grok since 4.6) are the machine floor: always latest additive, never downgrade. Refresh
-with `--agent-homes` (or `--claude-home` / `--grok-home` / `--codex-home`). Absent home trees
+Claude/Grok since 4.6; Antigravity since 4.8.5) are the machine floor: always latest additive, never downgrade. Refresh
+with `--agent-homes` (or `--claude-home` / `--grok-home` / `--antigravity-home` / `--codex-home`). Absent home trees
 are normal — doctor stays quiet until `ark-*` skills exist there. Pre-4.2 binaries ignore Codex
 home metadata and lock, so upgrade legacy repos before they write the optional Codex home
 catalog. See [AI gates — Codex skill catalog](ai-gates.md#codex-skill-catalog-skillmd-not-flat-prompts)
-and [shared Claude/Grok homes](ai-gates.md#shared-claude--grok-home-skills).
+and [shared Claude/Grok/Antigravity homes](ai-gates.md#shared-claude--grok-home-skills).
 
 ### Install skills — Ark and ecosystem {#install-skills-ark-and-ecosystem}
 

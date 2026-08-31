@@ -7,7 +7,9 @@ export { ArkOrderError } from '../../domain/arkOrderError';
 export { DEFAULT_MAX_XI_KEYS } from '../../domain/arkOrderTypes';
 export type {
   ConstraintPack,
+  EscalationTarget,
   FieldEvent,
+  InformationBudget,
   IngestResult,
   InjectedClock,
   Projection,

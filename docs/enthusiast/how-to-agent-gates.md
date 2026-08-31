@@ -2,7 +2,7 @@
 
 ```bash
 npx arkgate-check --install-agent-gates
-npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok
+npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok,antigravity
 # aliases: ark-check …
 ```
 

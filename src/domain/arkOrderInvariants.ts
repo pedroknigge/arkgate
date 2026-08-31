@@ -9,7 +9,9 @@ import { ArkOrderError } from './arkOrderError';
 import { DEFAULT_MAX_XI_KEYS } from './arkOrderTypes';
 import type {
   ConstraintPack,
+  EscalationTarget,
   FieldEvent,
+  InformationBudget,
   IngestResult,
   Projection,
   ProposeResult,
@@ -117,6 +119,7 @@ export function createFrozenRelease(input: {
 }): Release {
   assertXiKeyCap(input.xi, input.maxXiKeys);
   const xi = freezeRecord(input.xi, 'ξ');
+  assertXiHasNoTtl(xi);
   assertXiSchema(xi, input.xiSchema);
   const sigma = freezeRecord(input.sigma ?? {}, 'σ');
   const release: Release = Object.freeze({
@@ -129,6 +132,57 @@ export function createFrozenRelease(input: {
   return release;
 }
 
+const XI_TTL_KEY_RE = /^(ttl|freshUntil|fresh_until|maxAge|max_age)$/i;
+
+export function assertXiHasNoTtl(xi: XiRecord): void {
+  for (const key of Object.keys(xi)) {
+    if (XI_TTL_KEY_RE.test(key)) {
+      throw new ArkOrderError(
+        'ARKORDER_XI_TTL',
+        `ξ key ${JSON.stringify(key)} is a freshness field; TTL belongs on σ, never on ξ`
+      );
+    }
+  }
+}
+
+export function assertInformationBudget(
+  projection: Projection,
+  budget: InformationBudget | undefined
+): void {
+  if (!budget || budget.cannotObserve.length === 0) return;
+  const denied = new Set(budget.cannotObserve);
+  for (const kind of projection.allowedKinds) {
+    if (denied.has(kind)) {
+      throw new ArkOrderError(
+        'ARKORDER_INFORMATION_BUDGET',
+        `projection allows ${JSON.stringify(kind)}; informationBudget.cannotObserve forbids it`
+      );
+    }
+  }
+}
+
+export function assertSigmaFresh(input: {
+  sigma: SigmaRecord;
+  now: number;
+  maxAgeMs?: number;
+  /** Freeze time on the Release. Used when σ has no freshUntil / releasedAt. */
+  releasedAt?: number;
+}): void {
+  if (input.maxAgeMs === undefined) return;
+  const until = input.sigma.freshUntil;
+  if (typeof until === 'number') {
+    if (input.now > until) {
+      throw new ArkOrderError('ARKORDER_STALE_SIGMA', 'σ freshUntil has elapsed; ξ does not TTL');
+    }
+    return;
+  }
+  const origin =
+    typeof input.sigma.releasedAt === 'number' ? input.sigma.releasedAt : input.releasedAt;
+  if (typeof origin === 'number' && input.now - origin > input.maxAgeMs) {
+    throw new ArkOrderError('ARKORDER_STALE_SIGMA', 'σ is older than sigmaMaxAgeMs; ξ does not TTL');
+  }
+}
+
 export function classifyIngest(
   projection: Projection,
   event: FieldEvent,
@@ -137,10 +191,12 @@ export function classifyIngest(
   const kind = event.kind;
   for (const pack of packs) {
     if (pack.escalateKinds?.includes(kind)) {
+      const target: EscalationTarget = pack.escalateTarget ?? 'human';
       return {
         kind: 'escalate',
         event,
         reason: `pack ${pack.id} slaves kind ${JSON.stringify(kind)} to a pattern change`,
+        target,
       };
     }
   }
@@ -151,6 +207,7 @@ export function classifyIngest(
     kind: 'escalate',
     event,
     reason: `kind ${JSON.stringify(kind)} is not allowed by h(ξ); field cannot rewrite the pattern`,
+    target: 'human',
   };
 }
 

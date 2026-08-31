@@ -5,11 +5,11 @@
 > Hub: [AGENTS.md](../../../AGENTS.md) · [ArkOrder plan](../arkorder/README.md) ·
 > [ADR index](../../adr/README.md)
 
-**Status:** proposed — opened for discussion, nothing `doing`.<br>
+**Status:** shipped on tree in **4.8.5** (`XP01`–`XP08` done; prepared, not published).<br>
 **Slug:** `arkorder-arkrun`<br>
 **Kind:** epic / cross-plane convergence<br>
 **Prefix:** `XP` (cross-plane)<br>
-**Last updated:** 2026-08-30<br>
+**Last updated:** 2026-08-31<br>
 **Does not** close `K01` / `Z09`. **Does not** merge the two planes.
 
 ---
@@ -58,32 +58,29 @@ and not tested as one.** A user adopting the second plane re-learns a vocabulary
 
 ---
 
-## 2. What is genuinely missing — and which plane owns it
+## 2. What was missing — and which plane owns it
 
-Verified absent: `maxAge`, `freshness`, `ttl`, `degraded`, `shadow`, `replay`, `informationBudget`,
-`provenance`, `human` appear **nowhere** in `src/domain/arkOrder*.ts`.
+Shipped in **4.8.5**. Degraded mode stays rejected.
 
-| ask | owner | why |
+| ask | owner | 4.8.5 |
 |---|---|---|
-| **Information budget** — declare what a cell may **not** observe | **ArkOrder** | the negative half of `Projector`. Today ArkOrder bounds *how many* slow parameters exist (7); it does not bound *what* each scale may look at. This is the one ask that answers "each part looks at what it must" from the deny side. |
-| **Signal freshness** | **ArkOrder**, on `sigma` only | never on ξ. A slow parameter with a TTL is not slow. The adopter mixed the two; the distinction is the product. |
-| **Shadow / replay / compare** | **ArkRun**, probably | ArkRun already owns runtime evidence: transport, delivery, the information package, doctor, inspector. Replay is a runtime-evidence problem wearing an ArkOrder hat. `InjectedClock` already gives the determinism half. |
-| **Decision provenance / audit** | **ArkRun**, probably | same argument: it already models how a message travelled. |
-| **Human as an escalation target** | **ArkOrder** | `IngestEscalate` carries a `reason` and no target. Cheap, and it makes "escalate" mean *"a variable or an authority is missing"* instead of *"ask a superior"*. |
-| **Degraded mode** (`continue-safe`, `pause-ambiguous`, `fail-closed`) | **nobody — reject** | it defends against a risk that does not exist. ArkOrder is a library and a set of static sensors, not a service. Nothing can be "down". The adopter's own falsifier — *"its outage blocks operations the domain could safely run"* — is already guaranteed by construction, and we should say so in the docs rather than build against it. |
+| **Information budget** — declare what a cell may **not** observe | **ArkOrder** | `informationBudget.cannotObserve`; `ARKORDER_INFORMATION_BUDGET` |
+| **Signal freshness** | **ArkOrder**, on `sigma` only | `sigmaMaxAgeMs` / `σ.freshUntil`; `ARKORDER_XI_TTL` / `ARKORDER_STALE_SIGMA` |
+| **Shadow / replay / compare** | **ArkRun** ([ADR 0033](../../adr/0033-arkorder-runtime-half-is-arkrun.md)) | `shadowInformationPackage` / `compareInformationPackages` / `replayInformationPackages` |
+| **Decision provenance / audit** | **ArkRun** | in-memory compare of information packages; not a durable audit log |
+| **Human as an escalation target** | **ArkOrder** | `IngestEscalate.target` including `human` |
+| **Degraded mode** (`continue-safe`, `pause-ambiguous`, `fail-closed`) | **nobody — reject** | it defends against a risk that does not exist. ArkOrder is a library and a set of static sensors, not a service. Nothing can be "down". |
 
 ---
 
-## 3. The discussion this plan exists to force
+## 3. The discussion this plan existed to force
 
 **Is ArkOrder's runtime half actually ArkRun's?**
 
-If yes, ArkOrder stays what it is today — declarative, static, prescindible for local correctness —
-and every runtime ask lands in ArkRun, which already has the vocabulary. If no, ArkOrder grows a
-runtime story and we accept two of them.
-
-Answering this before building is the whole point. Both adopters designed a runtime for ArkOrder
-because they could not see ArkRun; that is evidence about our documentation, not about the design.
+**Yes.** [ADR 0033](../../adr/0033-arkorder-runtime-half-is-arkrun.md) is accepted.
+ArkOrder stays a library plus static sensors. Shadow / replay / provenance / compare
+live on ArkRun information packages, in-memory. Both adopters designed a runtime for
+ArkOrder because they could not see ArkRun; that was documentation, not design.
 
 ---
 
@@ -91,14 +88,14 @@ because they could not see ArkRun; that is evidence about our documentation, not
 
 | id | item | depends on | status |
 |---|---|---|---|
-| `XP01` | `docs/arkorder.md` — what ArkOrder is, what it already answers, and that it is a library plus sensors, not a service. Every row of §0 gets a named API. | — | todo |
-| `XP02` | Measure and document the shared activation model: one page covering `mode` + `managedLayers` for both planes, and a decision on the roots naming split (`planeRoots` vs `compositionRoots`/`kernelRoots`). Rename or alias, or write down why they must differ. | XP01 | todo |
-| `XP03` | Decide §3 with evidence: does the runtime half belong to ArkRun? Produce an ADR, not an opinion. | XP01, XP02 | todo |
-| `XP04` | Information budget on ArkOrder — declare what a scale may not observe; a sensor when a projection exceeds it. | XP03 | todo |
-| `XP05` | `sigma` freshness, explicitly not on ξ, with a sensor for a "slow" parameter that changes per transaction. | XP03 | todo |
-| `XP06` | Escalation target, including `human`, on `IngestEscalate`. | XP03 | todo |
-| `XP07` | Shadow / replay / compare — in whichever plane XP03 chooses. Nothing near money until this exists. | XP03 | todo |
-| `XP08` | One activation surface in `ark-check --sensors`: both planes, same table, same tier vocabulary (4.8.4 already lists all 22 sensors across the three planes — this finishes the job in config). | XP02 | todo |
+| `XP01` | `docs/arkorder.md` — what ArkOrder is, what it already answers, and that it is a library plus sensors, not a service. Every row of §0 gets a named API. | — | done |
+| `XP02` | Measure and document the shared activation model: one page covering `mode` + `managedLayers` for both planes, and a decision on the roots naming split (`planeRoots` vs `compositionRoots`/`kernelRoots`). Rename or alias, or write down why they must differ. | XP01 | done |
+| `XP03` | Decide §3 with evidence: does the runtime half belong to ArkRun? Produce an ADR, not an opinion. | XP01, XP02 | done |
+| `XP04` | Information budget on ArkOrder — declare what a scale may not observe; a sensor when a projection exceeds it. | XP03 | done |
+| `XP05` | `sigma` freshness, explicitly not on ξ, with a sensor for a "slow" parameter that changes per transaction. | XP03 | done |
+| `XP06` | Escalation target, including `human`, on `IngestEscalate`. | XP03 | done |
+| `XP07` | Shadow / replay / compare — in whichever plane XP03 chooses. Nothing near money until this exists. | XP03 | done |
+| `XP08` | One activation surface in `ark-check --sensors`: both planes, same table, same tier vocabulary (4.8.4 already lists all 22 sensors across the three planes — this finishes the job in config). | XP02 | done |
 
 ---
 

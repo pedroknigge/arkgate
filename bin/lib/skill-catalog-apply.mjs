@@ -99,7 +99,12 @@ export function applySkillCatalogFollowup({
   }
 
   const catalogReady = projectCatalogReady(root, skillNames);
-  if ((args.claudeHome || args.grokHome || args.agentHomes) && catalogReady) {
+  const wantAntigravityHome = Boolean(args.antigravityHome || args.agentHomes);
+  const wantClaudeGrokHome = Boolean(args.claudeHome || args.grokHome || args.agentHomes);
+  // Claude/Grok home copies override or duplicate the project catalog in the
+  // same session. Antigravity's official global catalog (~/.gemini/config/skills)
+  // is the machine floor for every workspace — still write it when asked.
+  if (wantClaudeGrokHome && catalogReady) {
     if (!args.json) {
       console.log('');
       console.log(
@@ -109,6 +114,17 @@ export function applySkillCatalogFollowup({
         `  Remove leftover home copies: ${arkCommand(root, 'ark-check', '--install-agent-gates --skills-only --prune-home-duplicates')}`
       );
     }
+    installRequestedAgentHomes({
+      root,
+      skills,
+      version,
+      force: args.force,
+      claudeHome: false,
+      grokHome: false,
+      antigravityHome: wantAntigravityHome,
+      agentHomes: false,
+      json: args.json,
+    });
   } else {
     installRequestedAgentHomes({
       root,
@@ -117,6 +133,7 @@ export function applySkillCatalogFollowup({
       force: args.force,
       claudeHome: args.claudeHome,
       grokHome: args.grokHome,
+      antigravityHome: args.antigravityHome,
       agentHomes: args.agentHomes,
       json: args.json,
     });

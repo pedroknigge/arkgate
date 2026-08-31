@@ -116,8 +116,8 @@ Top-level fields:
 - **`arkRules`** (optional, schema `1.1+`) — map of layer name → project-relative path to an
   ArkRules file (e.g. `"DomainModel": "arkrules/DomainModel.json"`). Keys must match a declared
   layer. Missing/invalid referenced files **fail closed**.
-- **`arkRun`** (optional, schema `1.2+`) — inline ArkRun extra (`mode`, `compositionRoots`,
-  `managedLayers`, `requireDeclarations`). Absence is silent. Unknown keys fail closed.
+- **`arkRun`** (optional, schema `1.2+`) — inline ArkRun extra (`mode`, `kernelRoots`
+  (`compositionRoots` alias), `managedLayers`, `requireDeclarations`). Absence is silent. Unknown keys fail closed.
   `managedLayers` must name existing `layers[].name` values. Empty `compositionRoots` in
   `enforced` mode fails closed (`ARKRUN_MISSING_ROOT`); empty `managedLayers` in `enforced`
   mode also fails closed (direct-new / undeclared / transport-bypass would otherwise no-op).
@@ -130,8 +130,15 @@ Top-level fields:
   Import `createOrderPlane` from `arkgate/order` (same package). Empty `planeRoots` in
   `enforced` mode fails closed (`ARKORDER_MISSING_PLANE`). `xiKeys` are the 3–5 slow
   names the product already knows (plan, protocol, cost-code bound). Empty `xiKeys`
-  leaves `ARKORDER_XI_FIELD_WRITE` silent. Membership ids are not keys. Demotion or
-  deletion is a policy-delta **weakening**. Field ingest never mints a pattern.
+  leaves `ARKORDER_XI_FIELD_WRITE` silent. Membership ids are not keys. Factory options
+  `informationBudget` and `sigmaMaxAgeMs` belong on `createOrderPlane`, not this extra
+  object. Demotion or deletion is a policy-delta **weakening**. Field ingest never mints
+  a pattern.
+
+**Activation is one shape.** ArkRun and ArkOrder both use `mode` + `managedLayers`.
+Absence of either extra is silent. They keep different *root* names because they
+name different factories: `arkRun.kernelRoots` (`compositionRoots` alias) vs
+`arkOrder.planeRoots`. Do not fold them. Canonical: [arkorder.md](arkorder.md#activation-same-shape-as-arkrun).
 
 Layer fields:
 

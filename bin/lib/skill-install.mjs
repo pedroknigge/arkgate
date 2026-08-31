@@ -182,10 +182,11 @@ export function resolveTools(args) {
   ) {
     detected.add('antigravity');
   }
-  // No signal at all: fall back to a complete starter set including Grok (field
-  // log: default claude+cursor+codex silently omitted Grok skills for Grok hosts).
+  // No signal at all: fall back to a complete starter set including Grok and
+  // Antigravity (field log: default claude+cursor+codex silently omitted Grok;
+  // the same hole left Antigravity without `.agents/skills`).
   if (detected.size === 0) {
-    return { tools: new Set(['claude', 'cursor', 'codex', 'grok']), source: 'default' };
+    return { tools: new Set(['claude', 'cursor', 'codex', 'grok', 'antigravity']), source: 'default' };
   }
   return { tools: detected, source: 'detected' };
 }

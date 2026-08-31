@@ -3,6 +3,42 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
+## 4.8.5 — 2026-08-31
+
+**Patch** over **4.8.4**. Phase **XP** (ArkOrder × ArkRun) plus Antigravity skill
+refresh. ArkOrder is a **library plus sensors, not a service** — that sentence
+now has a canonical page. The runtime half (shadow / replay / compare) is
+ArkRun and in-memory. **No required config migration.** Does not close `K01` /
+`Z09`.
+
+**Status: prepared** (not yet on npm `latest`).
+
+### Added
+- **`docs/arkorder.md`:** named APIs adopters were redesigning (`createOrderPlane`,
+  `IngestEscalate`, `Projector`, `maxXiKeys`, `ProposeResult`, `XiSchema`,
+  `xiKeys`, four verbs). Ships in the npm tarball. [ADR 0033](docs/adr/0033-arkorder-runtime-half-is-arkrun.md):
+  shadow/replay/provenance belong to ArkRun.
+- **Information budget** (`createOrderPlane({ informationBudget })`, not a
+  config key) — a scale may not observe a denied kind
+  (`ARKORDER_INFORMATION_BUDGET`).
+- **σ freshness, never ξ** — `createOrderPlane({ sigmaMaxAgeMs })` /
+  `σ.freshUntil`; age falls back to `release.releasedAt` when σ has no
+  timestamp. ξ keys named ttl/freshUntil/maxAge fail
+  (`ARKORDER_XI_TTL`, `ARKORDER_STALE_SIGMA`).
+- **`IngestEscalate.target`** including `human`.
+- **ArkRun** `shadowInformationPackage` / `compareInformationPackages` /
+  `replayInformationPackages` — in-memory, not a bus, not durable.
+- **`--antigravity-home`:** monotonic install into `$ANTIGRAVITY_HOME/skills`
+  (default `~/.gemini/config/skills`). `--agent-homes` includes it. Unlike
+  Claude/Grok homes, this catalog is the machine floor for every workspace.
+
+### Changed
+- Extra activation is one shape (`mode` + `managedLayers`). Roots stay distinct:
+  `arkOrder.planeRoots` vs `arkRun.kernelRoots` (`compositionRoots` alias).
+  `ark-check --sensors` lists both extras in one table.
+- Default `--install-agent-gates` host set includes `antigravity` when nothing
+  is detected.
+
 ## 4.8.4 — 2026-08-30
 
 **Status: published** (on npm `latest`; see `docs/releases/4.8.4.md`).
@@ -249,7 +285,7 @@ repo paths living in strings, comments and docstrings that a rename left behind.
 
 **Patch** over **4.8.2**. Persistence writes in a use-case skip the aggregate (`writes-via-aggregate`). ArkOrder **`xiKeys`** names the slow product decisions; a managed-layer Prisma/pg write of those keys is `ARKORDER_XI_FIELD_WRITE`. Dead sensors (`too-many-params`, `ingest-writes-xi`) now emit. No new skill names. Does not close `K01` / `Z09`. **No required config migration.**
 
-**Status: published** (on npm `latest`; see `docs/releases/4.8.3.md`).
+**Status: published** (see `docs/releases/4.8.3.md`).
 
 ### Added
 - **`writes-via-aggregate`:** tier-1 structure sensor (ADR 0032). Direct evidence = persistence driver import **and** a write token (`.insert` / `.create` / `INSERT INTO` / …). Default advisory; promotable. Absence of the rule is silent.

@@ -238,8 +238,8 @@ npx arkgate-check --path-drift --base-ref origin/main   # stale paths in strings
 npx arkgate-check --sensors        # which sensors can EVER be enforced, and which of your rules can be promoted
 npx arkgate-check --promote        # what enforcing each advisory rule would cost, from one run
 npx arkgate-check --strict-merge   # CI / required status
-npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok
-# optional: refresh shared home skills (Claude/Grok/Codex; never downgrades)
+npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok,antigravity
+# optional: refresh shared home skills (Claude/Grok/Antigravity/Codex; never downgrades)
 # npx arkgate-check --install-agent-gates --skills-only --agent-homes --force
 # optional: same 13 skills via Agent Skills ecosystem (no new names)
 # npx skills add ./node_modules/arkgate/templates/agent-skills
@@ -287,7 +287,8 @@ In-memory. Not durable. Does not replace ArkRun.
 
 Copy [examples/arkorder-billing/](examples/arkorder-billing/) and rename the
 three keys. Compact starters leave it off. Details:
-[configuration](docs/configuration.md) · [package surface](docs/package-surface.md).
+[ArkOrder](docs/arkorder.md) · [configuration](docs/configuration.md) ·
+[package surface](docs/package-surface.md).
 
 ---
 
@@ -303,7 +304,9 @@ three keys. Compact starters leave it off. Details:
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current published (4.8.4 on npm `latest`) | [docs/releases/4.8.4.md](docs/releases/4.8.4.md) · [CHANGELOG](CHANGELOG.md) |
+| Current tree (4.8.5 prepared) | [docs/releases/4.8.5.md](docs/releases/4.8.5.md) · [CHANGELOG](CHANGELOG.md) |
+| Current published (4.8.4 on npm `latest`) | [docs/releases/4.8.4.md](docs/releases/4.8.4.md) |
+| Prior published (4.8.3) | [docs/releases/4.8.3.md](docs/releases/4.8.3.md) |
 | Prior published (4.8.2) | [docs/releases/4.8.2.md](docs/releases/4.8.2.md) |
 | Prior published (4.8.1) | [docs/releases/4.8.1.md](docs/releases/4.8.1.md) |
 | Prior published (4.8.0) | [docs/releases/4.8.0.md](docs/releases/4.8.0.md) |

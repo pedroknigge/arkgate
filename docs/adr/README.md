@@ -75,8 +75,8 @@ If you turn the extra on, the gate is still real (do not skip the kernel).
 ## ArkOrder — operational pattern (extra inside `arkgate`)
 
 Fourth extra. Silent when absent. Plane is `arkgate/order` **inside package `arkgate`**,
-not a second npm package and not a bus. Does not replace ArkRun. Implemented on tree
-as unpublished `arkgate@4.8.0`. Plan: [arkorder](../plans/arkorder/README.md).
+not a second npm package and not a bus. Does not replace ArkRun. Shipped in
+**4.8.0**; Phase XP on tree in **4.8.5** (prepared). Canonical: [arkorder.md](../arkorder.md). Plan: [arkorder](../plans/arkorder/README.md) · [arkorder-arkrun](../plans/arkorder-arkrun/README.md).
 
 | ADR | Still true |
 |-----|------------|
@@ -85,6 +85,7 @@ as unpublished `arkgate@4.8.0`. Plan: [arkorder](../plans/arkorder/README.md).
 | [0029](0029-arkorder-anti-skip-facts.md) | Closed anti-skip sensors. Inference never blocks. No LLM ξ classifier. |
 | [0030](0030-opt-in-extras-same-npm-package.md) | One npm package `arkgate`. Extras are subpaths. No `@arkgate/*` install. |
 | [0031](0031-one-package-extras-deprecate-companion.md) | 4.8.0: Run + Order + Nest are real subpaths. Companion deprecated. |
+| [0033](0033-arkorder-runtime-half-is-arkrun.md) | Shadow / replay / provenance / compare are ArkRun. ArkOrder stays library + sensors. |
 
 ## Do not fold
 

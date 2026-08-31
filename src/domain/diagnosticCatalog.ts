@@ -338,6 +338,27 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'A managed-layer file imports a persistence driver and writes a declared arkOrder.xiKeys name. Field events absorb or escalate; they do not PATCH the slow pattern.',
     'Keep invoices, seats, hours, and logs on ingest. Change the slow key with proposeRelease + release, then preflight again. Never mechanical-safe.'
   ),
+  entry(
+    'ARKORDER_INFORMATION_BUDGET',
+    'arkorder',
+    'Projection observes a forbidden kind',
+    'h(ξ) allowedKinds includes a kind listed in informationBudget.cannotObserve. A scale may not look at what it was told not to see.',
+    'Cut that kind from the projector or from cannotObserve, then preflight again. Never mechanical-safe.'
+  ),
+  entry(
+    'ARKORDER_XI_TTL',
+    'arkorder',
+    'Slow key carries a freshness field',
+    'ξ named ttl/freshUntil/maxAge. Freshness belongs on σ. A slow parameter that expires per transaction is not slow.',
+    'Move freshness onto σ (freshUntil) and keep ξ stable, then preflight again. Never mechanical-safe.'
+  ),
+  entry(
+    'ARKORDER_STALE_SIGMA',
+    'arkorder',
+    'σ is stale',
+    'ingest ran after σ.freshUntil (or sigmaMaxAgeMs). ξ does not TTL.',
+    'Refresh σ and ingest again, or freeze a new release if the pattern changed. Never mechanical-safe.'
+  ),
 
   // ── atomic preflight / change set ────────────────────────────────────────
   entry(

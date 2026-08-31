@@ -104,6 +104,70 @@ describe('createOrderPlane (Haken slaving)', () => {
     ).toThrow(/microstate/);
   });
 
+  it('informationBudget denies a kind the projector tried to allow (XP04)', () => {
+    const p = createOrderPlane({
+      projector: billingProjector,
+      informationBudget: { cannotObserve: ['InvoicePosted'] },
+      clocks: { now: () => 1 },
+    });
+    p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    try {
+      p.project();
+      throw new Error('expected budget deny');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ArkOrderError);
+      expect((error as ArkOrderError).code).toBe('ARKORDER_INFORMATION_BUDGET');
+    }
+  });
+
+  it('rejects ttl on ξ and freshness on σ (XP05)', () => {
+    const p = plane();
+    try {
+      p.release({ plan: 'free', ttl: 1 });
+      throw new Error('expected xi ttl deny');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ArkOrderError);
+      expect((error as ArkOrderError).code).toBe('ARKORDER_XI_TTL');
+    }
+    const aged = createOrderPlane({
+      projector: billingProjector,
+      sigmaMaxAgeMs: 10,
+      clocks: { now: () => 100 },
+    });
+    aged.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' }, { freshUntil: 50 });
+    try {
+      aged.ingest({ kind: 'InvoicePosted' });
+      throw new Error('expected stale sigma');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ArkOrderError);
+      expect((error as ArkOrderError).code).toBe('ARKORDER_STALE_SIGMA');
+    }
+
+    let now = 1;
+    const fromReleaseClock = createOrderPlane({
+      projector: billingProjector,
+      sigmaMaxAgeMs: 10,
+      clocks: { now: () => now },
+    });
+    fromReleaseClock.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    now = 20;
+    try {
+      fromReleaseClock.ingest({ kind: 'InvoicePosted' });
+      throw new Error('expected stale sigma from release.releasedAt');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ArkOrderError);
+      expect((error as ArkOrderError).code).toBe('ARKORDER_STALE_SIGMA');
+    }
+  });
+
+  it('escalate names a human target by default (XP06)', () => {
+    const p = plane();
+    p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    const result = p.ingest({ kind: 'SeatAdded' });
+    expect(result.kind).toBe('escalate');
+    if (result.kind === 'escalate') expect(result.target).toBe('human');
+  });
+
   it('has no update/patch/set on the plane', () => {
     const p = plane();
     p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });

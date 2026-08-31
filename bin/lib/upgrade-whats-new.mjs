@@ -61,7 +61,7 @@ export function buildUpgradeWhatsNewSuggestions() {
         id: 'shared-agent-homes',
         title: 'Shared agent skills (home)',
         try: 'npx arkgate-check --install-agent-gates --skills-only --agent-homes --force',
-        inspect: 'doctor.agentHomeGaps (Claude/Grok ~/.*/skills when those catalogs exist)',
+        inspect: 'doctor.agentHomeGaps (Claude/Grok ~/.*/skills and Antigravity ~/.gemini/config/skills when those catalogs exist)',
         why:
           'Project skills follow this pin. Shared homes stay on the newest ArkGate on the machine (additive; never downgrade). Orphan 2.x global skills stop coaching the wrong version.',
       },

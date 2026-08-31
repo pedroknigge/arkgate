@@ -5,6 +5,8 @@
  */
 import { ArkOrderError } from '../../domain/arkOrderError';
 import {
+  assertInformationBudget,
+  assertSigmaFresh,
   classifyIngest,
   createFrozenRelease,
   DEFAULT_MAX_XI_KEYS,
@@ -14,6 +16,7 @@ import {
 import type {
   ConstraintPack,
   FieldEvent,
+  InformationBudget,
   IngestResult,
   InjectedClock,
   Projection,
@@ -29,6 +32,8 @@ export type CreateOrderPlaneOptions = {
   maxXiKeys?: number;
   clocks?: InjectedClock;
   packs?: readonly ConstraintPack[];
+  informationBudget?: InformationBudget;
+  sigmaMaxAgeMs?: number;
 };
 
 export type OrderPlane = {
@@ -78,11 +83,20 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
     },
     project() {
       const release = requireCurrent();
-      return options.projector(release, release.sigma);
+      const projection = options.projector(release, release.sigma);
+      assertInformationBudget(projection, options.informationBudget);
+      return projection;
     },
     ingest(event) {
       const release = requireCurrent();
+      assertSigmaFresh({
+        sigma: release.sigma,
+        now: clock.now(),
+        maxAgeMs: options.sigmaMaxAgeMs,
+        releasedAt: release.releasedAt,
+      });
       const projection = options.projector(release, release.sigma);
+      assertInformationBudget(projection, options.informationBudget);
       return classifyIngest(projection, event, packs);
     },
     proposeRelease(delta) {

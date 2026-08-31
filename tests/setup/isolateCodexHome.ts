@@ -31,3 +31,12 @@ if (!isolatedGrok) {
   process.once('exit', () => fs.rmSync(isolatedGrok, { recursive: true, force: true }));
 }
 process.env.GROK_HOME = isolatedGrok;
+
+const TEST_ANTIGRAVITY_HOME_ENV = 'ARK_VITEST_ANTIGRAVITY_HOME';
+let isolatedAntigravity = process.env[TEST_ANTIGRAVITY_HOME_ENV];
+if (!isolatedAntigravity) {
+  isolatedAntigravity = fs.mkdtempSync(path.join(os.tmpdir(), 'ark-vitest-antigravity-home-'));
+  process.env[TEST_ANTIGRAVITY_HOME_ENV] = isolatedAntigravity;
+  process.once('exit', () => fs.rmSync(isolatedAntigravity, { recursive: true, force: true }));
+}
+process.env.ANTIGRAVITY_HOME = isolatedAntigravity;

@@ -82,7 +82,7 @@ Options:
                Valid ids: crud-product, api-backend, frontend-surface, library-sdk, cli-utility,
                worker-pipeline, event-coordinator, integration-bridge, multi-app-workspace, prototype-spike,
                vertical-slice-product, ddd-bounded-contexts.
-  --tools      One active agent host for start (claude,cursor,codex,grok,windsurf,cline,copilot,kiro,roo,continue,gemini).
+  --tools      One active agent host for start (claude,cursor,codex,grok,antigravity,windsurf,cline,copilot,kiro,roo,continue,gemini).
                Omit to use the active host; an unknown host creates only the shared compact router.
   --remove-host <host>
                Preview or apply removal of that compact host integration; re-add it with --tools <host>.
@@ -142,7 +142,7 @@ export function checkUsageAll() {
     '           Best-effort open in browser (local TTY). No-op if open fails. --no-open / ARK_NO_OPEN_REPORT=1 to skip; --open forces open.',
     '       ark-check --init [--preset hexagonal|layered|feature-sliced|monorepo|ui-surface|vertical-slice|ddd-bounded-contexts|vite-vercel-spa|clean-architecture|onion-architecture] [--force] [--follow-config-root]',
     '       --follow-config-root  On writes (init/install-agent-gates/migrate --write/…), adopt walked-up monorepo config root (default: keep explicit --root)',
-    '       ark-check --install-agent-gates [--tools claude,cursor,codex,grok] [--require-write-hook <host>] [--skills-only] [--codex-home] [--claude-home] [--grok-home] [--agent-homes] [--force]',
+    '       ark-check --install-agent-gates [--tools claude,cursor,codex,grok,antigravity] [--require-write-hook <host>] [--skills-only] [--codex-home] [--claude-home] [--grok-home] [--antigravity-home] [--agent-homes] [--force]',
     '       ark-check --update-baseline [file]     freeze current violations (default .ark-baseline.json)',
     '       ark-check --print-config eleven-layer',
     '',
@@ -208,7 +208,7 @@ export function checkUsageAll() {
     'Included but unclassified source files therefore stay red instead of false-green.',
     '',
     '--install-agent-gates writes AGENTS.md, .mcp.json, and the CI workflow for every',
-    'project, plus tool-specific templates. Known tools: claude, cursor, codex, grok',
+    'project, plus tool-specific templates. Known tools: claude, cursor, codex, grok, antigravity',
     '(Claude/Grok/Antigravity/Cursor hard-write hooks when covered; Codex hard local apply_patch;',
     'shared CI check for all) and',
     'windsurf, cline, copilot, kiro, roo, continue, gemini',
@@ -225,7 +225,7 @@ export function checkUsageAll() {
     'Pass --tools to pick which tool configs to write; otherwise they are auto-detected',
     'from their config directories (.claude/, .cursor/, .codex/, .grok/, .windsurf/,',
     '.clinerules/, .kiro/, .roo/, .continue/, .gemini/; copilot is explicit-only).',
-    'claude+cursor+codex+grok are written when nothing is detected.',
+    'claude+cursor+codex+grok+antigravity are written when nothing is detected.',
     '',
     'Generate a starter 11-layer config:',
     '  ark-check --print-config eleven-layer > ark.config.json',

@@ -10,7 +10,8 @@ request. Not an API Gateway. Not a folder linter. Without a required CI status,
 and ArkOrder are optional — policies, an experimental runtime, and the extra that
 stops slow product decisions being CRUD. Not a second install.
 
-If you only want the happy path, start at [use.md](use.md).
+If you only want the happy path, start at [use.md](use.md). Optional ArkOrder
+(library + sensors, not a service): [arkorder.md](arkorder.md).
 
 ### Why it exists
 
@@ -60,7 +61,7 @@ Full matrix and install commands: [ai-gates.md](ai-gates.md) · canonical table 
 
 ```bash
 # All common hosts (examples)
-npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok
+npx arkgate-check --install-agent-gates --tools claude,cursor,codex,grok,antigravity
 npx arkgate-check --install-agent-gates --tools antigravity   # alias: agy
 npx arkgate-check --install-agent-gates --tools opencode
 # Full /ark-* skill pack (optional expert depth)
