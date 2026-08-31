@@ -6,7 +6,7 @@
 > [ArkOrder](../arkorder/README.md) · [ArkOrder × ArkRun](../arkorder-arkrun/README.md) ·
 > [ADR index](../../adr/README.md) · canonical surface [arkorder.md](../../arkorder.md)
 
-**Status:** In progress (`LV01`–`LV03` done; `LV04`–`LV09` `todo`; engineering `doing`: none).<br>
+**Status:** In progress (`LV01`–`LV04` done; `LV05`–`LV09` `todo`; engineering `doing`: none).<br>
 **Slug:** `arkorder-valve-loop`<br>
 **Kind:** epic / Haken control loop on the existing extras<br>
 **Prefix:** `LV` (valved loop)<br>

@@ -31,29 +31,42 @@ export type Projection = {
   readonly invalidated: readonly string[];
 };
 
-export type IngestAbsorb = {
-  readonly kind: 'absorb';
-  readonly event: FieldEvent;
-};
-
 export type EscalationTarget = 'human' | 'scale' | 'hold';
 
-export type IngestEscalate = {
-  readonly kind: 'escalate';
-  readonly event: FieldEvent;
-  readonly reason: string;
-  readonly target: EscalationTarget;
-};
+export const INGEST_RESIDUAL_KINDS = ['absorb', 'escalate_up', 'hold'] as const;
+export type IngestResidualKind = (typeof INGEST_RESIDUAL_KINDS)[number];
 
-export type IngestHold = {
-  readonly kind: 'hold';
+export const INGEST_REASON_CODES = ['not-in-pattern', 'stale-sigma', 'pack', 'capacity'] as const;
+export type IngestReasonCode = (typeof INGEST_REASON_CODES)[number];
+
+export type IngestResidualBind = {
   readonly event: FieldEvent;
   readonly xiHash: string;
-  readonly reasonCode: 'stale-sigma';
+  readonly eventId: string;
+};
+
+export type IngestAbsorb = IngestResidualBind & {
+  readonly kind: 'absorb';
+};
+
+export type IngestHold = IngestResidualBind & {
+  readonly kind: 'hold';
+  readonly reasonCode: IngestReasonCode;
   readonly reason?: string;
 };
 
-export type IngestResult = IngestAbsorb | IngestEscalate | IngestHold;
+export type IngestEscalateUp = IngestResidualBind & {
+  readonly kind: 'escalate_up';
+  readonly reasonCode: IngestReasonCode;
+  readonly reason?: string;
+  readonly target: EscalationTarget;
+  readonly proposed_patch?: { readonly nextXi: XiRecord };
+};
+
+/** Compatibility name — target remains on escalate_up (ADR 0033 D4 / 0034 D4). */
+export type IngestEscalate = IngestEscalateUp;
+
+export type IngestResult = IngestAbsorb | IngestHold | IngestEscalateUp;
 
 export type ProposeResult = {
   readonly nextXi: XiRecord;

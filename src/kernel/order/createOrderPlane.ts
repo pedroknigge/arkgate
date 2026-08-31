@@ -12,6 +12,7 @@ import {
   classifyIngest,
   createFrozenRelease,
   DEFAULT_MAX_XI_KEYS,
+  fieldEventIdentity,
   freezeRecord,
   isForbiddenPlaneMethod,
   proposePatternChange,
@@ -112,6 +113,7 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
             kind: 'hold' as const,
             event,
             xiHash: release.xiHash,
+            eventId: fieldEventIdentity(event),
             reasonCode: 'stale-sigma' as const,
             reason: error.message,
           };
@@ -120,7 +122,7 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
       }
       const projection = options.projector(release, release.sigma);
       assertInformationBudget(projection, options.informationBudget);
-      return classifyIngest(projection, event, packs);
+      return classifyIngest(projection, event, packs, release.xiHash);
     },
     proposeRelease(delta) {
       return proposePatternChange({

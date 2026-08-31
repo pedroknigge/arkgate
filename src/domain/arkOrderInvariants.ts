@@ -225,29 +225,41 @@ export function assertSigmaFresh(input: {
   }
 }
 
+export function fieldEventIdentity(event: FieldEvent): string {
+  return deterministicHash(stableSerialize({ kind: event.kind, payload: event.payload ?? null }));
+}
+
+function bindResidual(event: FieldEvent, xiHash: string) {
+  return { event, xiHash, eventId: fieldEventIdentity(event) };
+}
+
 export function classifyIngest(
   projection: Projection,
   event: FieldEvent,
-  packs: readonly ConstraintPack[] = []
+  packs: readonly ConstraintPack[] = [],
+  xiHash = ''
 ): IngestResult {
   const kind = event.kind;
+  const bound = bindResidual(event, xiHash);
   for (const pack of packs) {
     if (pack.escalateKinds?.includes(kind)) {
       const target: EscalationTarget = pack.escalateTarget ?? 'human';
       return {
-        kind: 'escalate',
-        event,
+        ...bound,
+        kind: 'escalate_up',
+        reasonCode: 'pack',
         reason: `pack ${pack.id} slaves kind ${JSON.stringify(kind)} to a pattern change`,
         target,
       };
     }
   }
   if (projection.allowedKinds.includes(kind)) {
-    return { kind: 'absorb', event };
+    return { ...bound, kind: 'absorb' };
   }
   return {
-    kind: 'escalate',
-    event,
+    ...bound,
+    kind: 'escalate_up',
+    reasonCode: 'not-in-pattern',
     reason: `kind ${JSON.stringify(kind)} is not allowed by h(ξ); field cannot rewrite the pattern`,
     target: 'human',
   };

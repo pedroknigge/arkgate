@@ -153,25 +153,34 @@ export function assertSigmaFresh(input) {
         throw new ArkOrderError('ARKORDER_STALE_SIGMA', 'σ is older than sigmaMaxAgeMs; ξ does not TTL');
     }
 }
-export function classifyIngest(projection, event, packs = []) {
+export function fieldEventIdentity(event) {
+    return deterministicHash(stableSerialize({ kind: event.kind, payload: event.payload ?? null }));
+}
+function bindResidual(event, xiHash) {
+    return { event, xiHash, eventId: fieldEventIdentity(event) };
+}
+export function classifyIngest(projection, event, packs = [], xiHash = '') {
     const kind = event.kind;
+    const bound = bindResidual(event, xiHash);
     for (const pack of packs) {
         if (pack.escalateKinds?.includes(kind)) {
             const target = pack.escalateTarget ?? 'human';
             return {
-                kind: 'escalate',
-                event,
+                ...bound,
+                kind: 'escalate_up',
+                reasonCode: 'pack',
                 reason: `pack ${pack.id} slaves kind ${JSON.stringify(kind)} to a pattern change`,
                 target,
             };
         }
     }
     if (projection.allowedKinds.includes(kind)) {
-        return { kind: 'absorb', event };
+        return { ...bound, kind: 'absorb' };
     }
     return {
-        kind: 'escalate',
-        event,
+        ...bound,
+        kind: 'escalate_up',
+        reasonCode: 'not-in-pattern',
         reason: `kind ${JSON.stringify(kind)} is not allowed by h(ξ); field cannot rewrite the pattern`,
         target: 'human',
     };

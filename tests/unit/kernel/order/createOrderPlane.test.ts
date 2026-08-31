@@ -45,7 +45,11 @@ describe('createOrderPlane (Haken slaving)', () => {
     expect(release.xi.plan).toBe('free');
     expect(Object.isFrozen(release.xi)).toBe(true);
     expect(p.project().allowedKinds).toEqual(['InvoicePosted']);
-    expect(p.ingest({ kind: 'InvoicePosted' }).kind).toBe('absorb');
+    const absorbed = p.ingest({ kind: 'InvoicePosted' });
+    expect(absorbed.kind).toBe('absorb');
+    expect(absorbed.xiHash).toBe(release.xiHash);
+    expect(absorbed.eventId.length).toBeGreaterThan(0);
+    expect('proposed_patch' in absorbed).toBe(false);
   });
 
   it('ingest never returns a new Release', () => {
@@ -62,7 +66,13 @@ describe('createOrderPlane (Haken slaving)', () => {
     const p = plane();
     p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
     const result = p.ingest({ kind: 'SeatAdded' });
-    expect(result.kind).toBe('escalate');
+    expect(result.kind).toBe('escalate_up');
+    if (result.kind === 'escalate_up') {
+      expect(result.reasonCode).toBe('not-in-pattern');
+      expect(result.target).toBe('human');
+      expect(result.xiHash).toBe(p.current()?.xiHash);
+      expect(result.proposed_patch).toBeUndefined();
+    }
   });
 
   it('proposeRelease with empty blast fails closed', () => {
@@ -222,8 +232,8 @@ describe('createOrderPlane (Haken slaving)', () => {
     const p = plane();
     p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
     const result = p.ingest({ kind: 'SeatAdded' });
-    expect(result.kind).toBe('escalate');
-    if (result.kind === 'escalate') expect(result.target).toBe('human');
+    expect(result.kind).toBe('escalate_up');
+    if (result.kind === 'escalate_up') expect(result.target).toBe('human');
   });
 
   it('has no update/patch/set on the plane', () => {
