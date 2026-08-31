@@ -1,6 +1,6 @@
 # ArkGate internal roadmap — truth, focus, proof
 
-- **Status date:** 2026-08-30 (Engineering doing: none; Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing, a symlink-forgeable coverage gate), `--path-drift`, `--sensors`/`--promote`, peerIsolation `sharedRoots`+`allowedCrossSlice`, git install without a build allowlist entry, `--plan` surfaced on a green run; pending publish; Patch **4.8.3** `AW01`+`OR08` **done** — `writes-via-aggregate` + ArkOrder `xiKeys`; Phase OR `OR01`–`OR08` **done**; published `arkgate@4.8.2` (skills four-plane honesty over **4.8.1**); `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **done** (ADR 0031: `arkgate/runtime` + `arkgate/nestjs` real subpaths; `@arkgate/runtime` deprecated); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** and shipped in published `arkgate@4.8.0+` (4.7.6 predates them); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.8.3**; `AL05` parked; Z09 still parked)
+- **Status date:** 2026-08-30 (Engineering doing: none; Phase **XP** ArkOrder x ArkRun convergence **proposed** (`XP01`-`XP08` todo, nothing doing); Patch **4.8.4** **done** — three false greens closed (coverage certifying tests no runner runs, an empty analysis passing, a symlink-forgeable coverage gate), `--path-drift`, `--sensors`/`--promote`, peerIsolation `sharedRoots`+`allowedCrossSlice`, git install without a build allowlist entry, `--plan` surfaced on a green run; pending publish; Patch **4.8.3** `AW01`+`OR08` **done** — `writes-via-aggregate` + ArkOrder `xiKeys`; Phase OR `OR01`–`OR08` **done**; published `arkgate@4.8.2` (skills four-plane honesty over **4.8.1**); `arkgate/order` is an extra **inside** package `arkgate` (ADR 0030), not `@arkgate/order`; `PK01` **done** (ADR 0031: `arkgate/runtime` + `arkgate/nestjs` real subpaths; `@arkgate/runtime` deprecated); `WH01` **done** (ADR 0026); `K01` **parked** — 4.7.6 shipped workflow primitives, bus commit gaps and durable outbox remain; Phase DX `DX01`–`DX03` **done** and shipped in published `arkgate@4.8.0+` (4.7.6 predates them); Phase HS `HS01`–`HS05` **done**; `RN16` **done**; `RN17` **done**; Phase RN ArkRun shipped **4.7.0**; Write. Check. Ship. patch **4.7.5** published; npm `latest` is **4.8.3**; `AL05` parked; Z09 still parked)
 - **Scope:** canonical implementation queue for the ArkGate library repository
 - **Rule:** one active item at a time; do not start an item until all dependencies are `done`
 
@@ -391,6 +391,33 @@ publishes `@arkgate/order`. ArkRun ships as `arkgate/runtime` in package `arkgat
 | Order | ID | Status | Size | Depends on | Outcome |
 |---:|---|---|---:|---|---|
 | 219 | `PK01` | `done` | L | — | Restore `arkgate/runtime` and `arkgate/nestjs` as **real** subpaths of package `arkgate`; deprecate `@arkgate/runtime`; keep root export gate-only; sensors teach `arkgate/runtime`; experimental = durability, not a second package ([ADR 0031](docs/adr/0031-one-package-extras-deprecate-companion.md)) |
+
+### Phase XP — ArkOrder x ArkRun convergence (proposed, nothing doing)
+
+Plan: [docs/plans/arkorder-arkrun/README.md](docs/plans/arkorder-arkrun/README.md).
+
+Opened because two adopters, in separate sessions with no contact, both concluded "ArkOrder, no
+documentation" and then requested features that already ship (`IngestEscalate`, `Projector`,
+`maxXiKeys` + its sensors, `ProposeResult`, `XiSchema`). A surface nobody can find does not exist.
+`XP01` outranks every feature here.
+
+Measured, and it makes the convergence cheap: both extras already share `mode` and `managedLayers`
+and diverge only on roots naming (`planeRoots` vs `compositionRoots`/`kernelRoots`). The activation
+model is already one shape; it is not named, documented or tested as one.
+
+| id | item | status |
+|---|---|---|
+| `XP01` | `docs/arkorder.md` — and that ArkOrder is a library plus sensors, not a service | todo |
+| `XP02` | one documented activation model across both planes; settle the roots naming split | todo |
+| `XP03` | ADR: does the runtime half (shadow/replay, provenance) belong to ArkRun? | todo |
+| `XP04` | information budget — declare what a scale may **not** observe | todo |
+| `XP05` | `sigma` freshness, explicitly not on xi | todo |
+| `XP06` | escalation target, including `human` | todo |
+| `XP07` | shadow / replay / compare, in whichever plane `XP03` picks | todo |
+| `XP08` | one activation surface in `ark-check --sensors` for both planes | todo |
+
+Rejected on purpose: a degraded-mode contract. It defends against an outage that cannot happen —
+ArkOrder is a library and static sensors, not a service. Say so in the docs instead of building it.
 
 ### Patch 4.8.4 — the gate stops saying green over nothing
 
