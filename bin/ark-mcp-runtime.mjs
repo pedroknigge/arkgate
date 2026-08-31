@@ -2395,6 +2395,9 @@ export async function runArkMcp({ hookInput } = {}) {
   // `allowed:false` denies) — which layers it may and must not import.
   // Q03: when present, attach optional `.ark/golden-pattern.json` (advisory for NEW code only).
   function placeResult(filePath, description) {
+    // Input `description` is the pre-existing "what you are building" hint — not
+    // layers[].description — and must not be copied onto the caption key (ADR 0035 D5).
+    void description;
     const golden = loadGoldenPattern(args.root);
     const withGolden = (placement) => attachGoldenToPlacement(placement, golden);
 

@@ -53,11 +53,11 @@ What is **missing** is the *use*:
 | doctor / coverage / status | **Not** a folder caption |
 | Skills adopt / place | Glossary is process; they do not write or read the field with teeth |
 | `docs/configuration.md` | **Does not name** `layers[].description` |
-| `policyHash` | **Includes** the string. `stewards` is the only strip (`effectiveContractPolicyPayload`) |
+| `policyHash` | Omits the string (`LD02`); same strip as `stewards` (`effectiveContractPolicyPayload`) |
 
 A consumer can write the caption and an agent still locates files as if the
-folder were only a glob. Changing “pedidos In Contract” to a typo fix is a
-**policy-hash change**. That is caption wearing import-rule teeth.
+folder were only a glob. Before LD02, changing “pedidos In Contract” to a typo
+fix was a **policy-hash change** — caption wearing import-rule teeth.
 
 The grain is the **layer** (one slow phrase per house), not each file.
 

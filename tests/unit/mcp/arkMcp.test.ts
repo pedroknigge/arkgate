@@ -2232,22 +2232,26 @@ describe('LD03 ark_place / ark_prepare_write layer description (ADR 0035 D5)', (
       arguments: {
         source: 'export type Id = string;\n',
         filePath: 'src/domain/id.ts',
+        description: 'orders repository',
       },
     });
     const presentPayload = JSON.parse(present.result.content[0].text);
     expect(presentPayload.layer).toBe('DomainModel');
     expect(presentPayload.description).toBe(CAPTION);
+    expect(JSON.stringify(presentPayload)).not.toContain('orders repository');
 
     const absent = await client.request('tools/call', {
       name: 'ark_prepare_write',
       arguments: {
         source: 'export type Gate = string;\n',
         filePath: 'src/kernel/id.ts',
+        description: 'kernel helper',
       },
     });
     const absentPayload = JSON.parse(absent.result.content[0].text);
     expect(absentPayload.layer).toBe('Kernel');
     expect(absentPayload).not.toHaveProperty('description');
+    expect(JSON.stringify(absentPayload)).not.toContain('kernel helper');
   });
 });
 
