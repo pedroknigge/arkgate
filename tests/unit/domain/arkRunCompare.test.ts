@@ -50,4 +50,36 @@ describe('arkRunCompare (XP07)', () => {
     expect(steps[0]?.equal).toBe(false);
     expect(steps[1]?.equal).toBe(true);
   });
+
+  it('shadow/compare/replay the decision tape in-process (LV06)', () => {
+    const withTape: DependencyInformationPackage = {
+      ...pack('billing'),
+      decisionTape: [
+        {
+          xiHash: 'fnv1a-xi',
+          event: { kind: 'SeatAdded' },
+          residual: { kind: 'hold', reasonCode: 'capacity' },
+        },
+      ],
+    };
+    const shot = shadowInformationPackage(withTape);
+    expect(shot.decisionTape).toEqual(withTape.decisionTape);
+    expect(shot.decisionTape).not.toBe(withTape.decisionTape);
+    const drifted: DependencyInformationPackage = {
+      ...withTape,
+      decisionTape: [
+        {
+          xiHash: 'fnv1a-xi',
+          event: { kind: 'SeatAdded' },
+          residual: { kind: 'absorb' },
+        },
+      ],
+    };
+    const compared = compareInformationPackages(withTape, drifted);
+    expect(compared.equal).toBe(false);
+    expect(compared.diffs.some((diff) => diff.path.includes('decisionTape'))).toBe(true);
+    const replayed = replayInformationPackages([withTape, withTape]);
+    expect(replayed).toHaveLength(1);
+    expect(replayed[0]?.equal).toBe(true);
+  });
 });
