@@ -280,10 +280,11 @@ because “what may be the plan” was never a rule.
 
 **ArkOrder** (`arkgate/order`) is that rule. Off unless you add `arkOrder`.
 Name the slow keys (`xiKeys`: plan, protocol, cost-code bound — not `projectId`).
-Posting an invoice is absorbed. Changing plan is a new release, with a blast
-radius. A generic `update` of the plan does not land. A use-case that PATCHes
+Posting an invoice is absorbed. Changing plan is `proposeRelease` then `apply`.
+A generic `update` of the plan does not land. A use-case that PATCHes
 those keys through Prisma is named. Same npm package.
 In-memory. Not durable. Does not replace ArkRun.
+**ArkOrder freezes the pattern through a valve. ArkRun is how the residual travels.**
 
 Copy [examples/arkorder-billing/](examples/arkorder-billing/) and rename the
 three keys. Compact starters leave it off. Details:

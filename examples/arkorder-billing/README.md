@@ -24,16 +24,28 @@ Rename the three keys to *your* slow decisions. Construction: catalog-bound / sp
 ```
 
 ```ts
-import { createOrderPlane } from 'arkgate/order';
+import { appendDecisionTape, buildDependencyInformationPackage } from 'arkgate/runtime';
+import { createOrderPlane, createMemoryReleaseStore } from 'arkgate/order';
 import { billingProjector, billingXi } from './projector';
+import { travelBillingResidual } from './bridge';
 
 const plane = createOrderPlane({
   projector: billingProjector,
   xiSchema: { additionalProperties: false, properties: billingXi },
+  packs: [
+    { id: 'seats', capacity: [{ kind: 'SeatAdded', sigmaKey: 'seatCap', payloadKey: 'seats', op: 'lte' }] },
+  ],
+  store: createMemoryReleaseStore(), // process-local; not durable; not K01
 });
-plane.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
-plane.ingest({ kind: 'InvoicePosted' }); // absorb
-plane.proposeRelease({ plan: 'pro' }); // blast radius
+plane.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' }, { seatCap: 3 });
+const absorbed = plane.ingest({ kind: 'InvoicePosted' }); // residual names xiHash
+await travelBillingResidual(absorbed, { send, raiseHuman }); // absorb → send
+const proposal = plane.proposeRelease({ plan: 'pro' });
+plane.apply(proposal); // valve — a raw second release() of different ξ fails
+plane.refreshSigma({ seatCap: 10 }); // xiHash unchanged
+const over = plane.ingest({ kind: 'SeatAdded', payload: { seats: 11 } }); // hold capacity
+let tape = buildDependencyInformationPackage({ kernelInstanceId: 'billing' });
+tape = appendDecisionTape(tape, { xiHash: over.xiHash, event: over.event, residual: over });
 ```
 
-Domain files must not import `arkgate/order`.
+Domain files must not import `arkgate/order`. No `/ark-order` skill.

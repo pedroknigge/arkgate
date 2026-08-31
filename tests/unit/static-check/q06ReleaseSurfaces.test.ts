@@ -10,7 +10,7 @@ import { version } from '../../../src/version.ts';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 /** Tree package identity. */
-const CURRENT = '4.8.5';
+const CURRENT = '4.9.0';
 /** Version confirmed on npm `latest`. */
 const PUBLISHED_LATEST = '4.8.5';
 
@@ -108,7 +108,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
 
   it('keeps 4.8.5 published on npm latest', () => {
     expect(PUBLISHED_LATEST).toBe('4.8.5');
-    expect(CURRENT).toBe('4.8.5');
+    expect(CURRENT).toBe('4.9.0');
     expect(read('docs/releases/4.8.5.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.5.md')).toMatch(/arkgate@4\.8\.5/);
     expect(read('docs/releases/4.8.5.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -148,7 +148,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.7\.md/);
     expect(read('README.md')).toMatch(/4\.6\.6/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.6\.md/);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.8\.5/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.9\.0/s);
     expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.8\.5/s);
     expect(read('CONTRIBUTING.md')).toMatch(/Prior published:.*4\.8\.4/s);
     expect(read('docs/README.md')).toMatch(/Current published:.*4\.8\.5/s);

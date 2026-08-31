@@ -173,7 +173,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 }
 ```
 
-- `xiKeys` are meaning, not membership. `projectId` / `orgId` do not belong. If `proposeRelease` throws empty blast, that key does not order anything.
+- `xiKeys` are meaning, not membership. `projectId` / `orgId` do not belong. If `proposeRelease` throws empty blast, that key does not order anything. After the first `release()`, change ξ with `proposeRelease` then `apply` — not a second `release()`.
 - A use-case that `prisma.*.update({ plan })` while `plan` is in `xiKeys` is **[ArkOrder]** `ARKORDER_XI_FIELD_WRITE`. Invoices and seats still flow through `ingest`.
 
 - Do **not** put `arkOrder` on the compact starter / `ark start` scaffold. Domain stays plane-free. Import `createOrderPlane` from `arkgate/order` (same npm package).

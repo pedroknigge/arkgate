@@ -484,6 +484,7 @@ export {
   arkRunGraphQueryFromSearchParams,
   arkRunInspectorUrl,
   buildArkRunInspectorSnapshot,
+  appendDecisionTape,
   buildDependencyInformationPackage,
   compareInformationPackages,
   replayInformationPackages,
