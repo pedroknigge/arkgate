@@ -39,8 +39,8 @@ describe('LD06 public docs name layers[].description (ADR 0035 D2)', () => {
     expect(body).toMatch(/no `schemaVersion` bump/);
     expect(body).toMatch(/Never a residual, never a score|never a score/i);
     expect(body).toMatch(/Stripped from `policyHash`/);
-    expect(body).toMatch(/current tree prepared:.*4\.8\.7/is);
-    expect(body).toMatch(/current published:.*4\.8\.6/is);
+    expect(body).toMatch(/current published:.*4\.8\.7/is);
+    expect(body).toMatch(/prior published:.*4\.8\.6/is);
   });
 
   it('keeps schemaVersion 1.3 and the frozen 13 skill names', () => {

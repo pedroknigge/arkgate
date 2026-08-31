@@ -5,7 +5,7 @@
 > [ROADMAP.md](../../../ROADMAP.md). Hub: [AGENTS.md](../../../AGENTS.md) ·
 > [Configuration](../../configuration.md) · [ADR index](../../adr/README.md)
 
-**Status:** Shipped on tree in **4.8.7** (`LD01`–`LD06` done; not npm-published from this item).<br>
+**Status:** Shipped in **4.8.7** (`LD01`–`LD06` done; **published**).<br>
 **Slug:** `layer-description-projection`<br>
 **Kind:** epic / contract caption projection<br>
 **Prefix:** `LD`<br>
