@@ -1,6 +1,8 @@
 /**
- * Shared agent home skill catalogs (Claude / Grok), Codex-parity monotonic install.
- * Repo catalogs stay per-project; these homes are the machine floor (never downgrade).
+ * Shared agent home skill catalogs (Claude / Grok / Antigravity), Codex-parity
+ * monotonic install. Repo catalogs stay per-project; these homes are the
+ * machine floor (never downgrade). Antigravity's official global catalog is
+ * `~/.gemini/config/skills` — not pruned when a project `.agents/skills` exists.
  */
 import fs from 'node:fs';
 import os from 'node:os';
@@ -23,7 +25,7 @@ import {
   skillInstallLine,
 } from './skill-write.mjs';
 
-/** @typedef {'claude'|'grok'} AgentHomeHost */
+/** @typedef {'claude'|'grok'|'antigravity'} AgentHomeHost */
 
 const HOSTS = {
   claude: {
@@ -39,6 +41,14 @@ const HOSTS = {
     envKey: 'GROK_HOME',
     defaultDirName: '.grok',
     flag: '--grok-home',
+  },
+  antigravity: {
+    id: 'antigravity',
+    label: 'Antigravity',
+    envKey: 'ANTIGRAVITY_HOME',
+    // Official global catalog is ~/.gemini/config/skills (docs/skills).
+    defaultDirName: path.join('.gemini', 'config'),
+    flag: '--antigravity-home',
   },
 };
 
@@ -60,6 +70,18 @@ export function claudeSkillsDir(env = process.env, homeDir = os.homedir()) {
 
 export function grokSkillsDir(env = process.env, homeDir = os.homedir()) {
   return path.join(grokHomeDir(env, homeDir), 'skills');
+}
+
+export function antigravityHomeDir(env = process.env, homeDir = os.homedir()) {
+  return resolveHomeDir(HOSTS.antigravity, env, homeDir);
+}
+
+export function antigravitySkillsDir(env = process.env, homeDir = os.homedir()) {
+  return path.join(antigravityHomeDir(env, homeDir), 'skills');
+}
+
+export function usesDefaultAntigravityHome(env = process.env, homeDir = os.homedir()) {
+  return usesDefaultHome(HOSTS.antigravity, env, homeDir);
 }
 
 export function usesDefaultClaudeHome(env = process.env, homeDir = os.homedir()) {
@@ -85,7 +107,8 @@ function usesDefaultHome(spec, env, homeDir) {
 }
 
 function skillsDirFor(host, env = process.env) {
-  return host === 'grok' ? grokSkillsDir(env) : claudeSkillsDir(env);
+  const spec = HOSTS[host];
+  return path.join(resolveHomeDir(spec, env), 'skills');
 }
 
 function readHomeCatalogFloor(skillsDir) {
@@ -124,7 +147,7 @@ function homeInPlay(parity, catalogState) {
 }
 
 /**
- * Detect Claude/Grok user-home ark-* catalogs that lag this package.
+ * Detect Claude/Grok/Antigravity user-home ark-* catalogs that lag this package.
  * Absent homes are not debt. Stamp-only body-match is not content-behind
  * (assessSkillCatalogParity already treats identity match as current).
  *
@@ -199,11 +222,13 @@ export function detectAgentHomeGaps(root, env = process.env) {
 /**
  * Claude home is loaded by Claude Code and often by Cursor. Treat both as in-session.
  * Grok home is urgent only on a Grok session (or when ARK_ACTIVE_HOST=grok).
+ * Antigravity global catalog is urgent on an Antigravity session (agy / ANTIGRAVITY).
  */
 export function agentHomeConcernIsActive(host, env = process.env) {
   const active = detectActiveAgentHost(env);
   if (host === 'claude') return active === 'claude' || active === 'cursor' || !active;
   if (host === 'grok') return active === 'grok' || !active;
+  if (host === 'antigravity') return active === 'antigravity' || !active;
   return true;
 }
 
@@ -223,6 +248,7 @@ export function agentHomeRefreshCommand(root, gap) {
  *   force?: boolean,
  *   claudeHome?: boolean,
  *   grokHome?: boolean,
+ *   antigravityHome?: boolean,
  *   agentHomes?: boolean,
  *   json?: boolean,
  *   env?: NodeJS.ProcessEnv,
@@ -233,13 +259,22 @@ export function installRequestedAgentHomes(args) {
   const env = args.env ?? process.env;
   const wantClaude = Boolean(args.claudeHome || args.agentHomes);
   const wantGrok = Boolean(args.grokHome || args.agentHomes);
-  if (!wantClaude && !wantGrok) return [];
+  const wantAntigravity = Boolean(args.antigravityHome || args.agentHomes);
+  if (!wantClaude && !wantGrok && !wantAntigravity) return [];
   const skills = args.skills ?? skillTemplates();
   const version = args.version ?? arkPackageVersion();
   const installed = [];
   const targets = [
     wantClaude ? { host: 'claude', spec: HOSTS.claude, dir: claudeSkillsDir(env), usesDefault: usesDefaultClaudeHome(env) } : null,
     wantGrok ? { host: 'grok', spec: HOSTS.grok, dir: grokSkillsDir(env), usesDefault: usesDefaultGrokHome(env) } : null,
+    wantAntigravity
+      ? {
+          host: 'antigravity',
+          spec: HOSTS.antigravity,
+          dir: antigravitySkillsDir(env),
+          usesDefault: usesDefaultAntigravityHome(env),
+        }
+      : null,
   ].filter(Boolean);
 
   for (const target of targets) {

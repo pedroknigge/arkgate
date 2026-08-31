@@ -130,8 +130,10 @@ Top-level fields:
   Import `createOrderPlane` from `arkgate/order` (same package). Empty `planeRoots` in
   `enforced` mode fails closed (`ARKORDER_MISSING_PLANE`). `xiKeys` are the 3–5 slow
   names the product already knows (plan, protocol, cost-code bound). Empty `xiKeys`
-  leaves `ARKORDER_XI_FIELD_WRITE` silent. Membership ids are not keys. Demotion or
-  deletion is a policy-delta **weakening**. Field ingest never mints a pattern.
+  leaves `ARKORDER_XI_FIELD_WRITE` silent. Membership ids are not keys. Factory options
+  `informationBudget` and `sigmaMaxAgeMs` belong on `createOrderPlane`, not this extra
+  object. Demotion or deletion is a policy-delta **weakening**. Field ingest never mints
+  a pattern.
 
 **Activation is one shape.** ArkRun and ArkOrder both use `mode` + `managedLayers`.
 Absence of either extra is silent. They keep different *root* names because they

@@ -149,11 +149,13 @@ export function parseArgs(argv) {
     else if (arg === '--prune-home-duplicates') args.pruneHomeDuplicates = true;
     else if (arg === '--claude-home') args.claudeHome = true;
     else if (arg === '--grok-home') args.grokHome = true;
+    else if (arg === '--antigravity-home') args.antigravityHome = true;
     else if (arg === '--agent-homes') {
       args.agentHomes = true;
       args.codexHome = true;
       args.claudeHome = true;
       args.grokHome = true;
+      args.antigravityHome = true;
     }
     else if (arg === '--migrate-commands') args.migrateCommands = true;
     else if (arg === '--no-cache') args.noCache = true;

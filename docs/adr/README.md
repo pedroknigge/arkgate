@@ -75,8 +75,8 @@ If you turn the extra on, the gate is still real (do not skip the kernel).
 ## ArkOrder — operational pattern (extra inside `arkgate`)
 
 Fourth extra. Silent when absent. Plane is `arkgate/order` **inside package `arkgate`**,
-not a second npm package and not a bus. Does not replace ArkRun. Implemented on tree
-as unpublished `arkgate@4.8.0`. Canonical: [arkorder.md](../arkorder.md). Plan: [arkorder](../plans/arkorder/README.md).
+not a second npm package and not a bus. Does not replace ArkRun. Shipped in
+**4.8.0**; Phase XP on tree in **4.8.5** (prepared). Canonical: [arkorder.md](../arkorder.md). Plan: [arkorder](../plans/arkorder/README.md) · [arkorder-arkrun](../plans/arkorder-arkrun/README.md).
 
 | ADR | Still true |
 |-----|------------|

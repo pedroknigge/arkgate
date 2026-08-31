@@ -254,7 +254,8 @@ function main() {
     }
   }
 
-  if (check && drift) {
+  const linkDrift = ensureDogfoodSkillLinks(check);
+  if (check && (drift || linkDrift)) {
     process.exitCode = 1;
     return;
   }
@@ -268,6 +269,70 @@ function main() {
       `Generated Agent Skills package (${ARK_SKILL_NAMES.length} skills) at ${AGENT_SKILLS_PACKAGE_RELATIVE_ROOT}/.`
     );
   }
+}
+
+/**
+ * This library git tree dogfoods the same catalog Antigravity/Codex/Cursor read
+ * (`.agents/skills`) and the Grok adapter (`.grok/skills`). Relative symlinks so
+ * `templates/skills` remains the authoring source; generate after a body edit.
+ */
+const DOGFOOD_SKILL_LINKS = [
+  {
+    dir: '.agents/skills',
+    targetFor: (name) => `../../${AGENT_SKILLS_PACKAGE_RELATIVE_ROOT}/${name}`,
+  },
+  {
+    dir: '.grok/skills',
+    targetFor: (name) => `../../.agents/skills/${name}`,
+  },
+];
+
+function readRelativeLink(linkPath) {
+  try {
+    const stat = fs.lstatSync(linkPath);
+    if (!stat.isSymbolicLink()) return null;
+    return fs.readlinkSync(linkPath).replaceAll('\\', '/');
+  } catch {
+    return null;
+  }
+}
+
+function ensureDogfoodSkillLinks(check) {
+  let drift = false;
+  for (const { dir, targetFor } of DOGFOOD_SKILL_LINKS) {
+    const absDir = path.join(root, dir);
+    if (!check) fs.mkdirSync(absDir, { recursive: true });
+    for (const name of ARK_SKILL_NAMES) {
+      const linkPath = path.join(absDir, name);
+      const expected = targetFor(name);
+      const relative = path.relative(root, linkPath);
+      if (check) {
+        const current = readRelativeLink(linkPath);
+        if (current !== expected) {
+          console.error(
+            `✖ ${relative} should be a relative symlink to ${expected}. Run npm run generate:agent-skills.`
+          );
+          drift = true;
+        } else {
+          console.log(`✔ ${relative} → ${expected}`);
+        }
+        continue;
+      }
+      const existing = fs.lstatSync(linkPath, { throwIfNoEntry: false });
+      if (existing) {
+        if (
+          existing.isSymbolicLink() &&
+          fs.readlinkSync(linkPath).replaceAll('\\', '/') === expected
+        ) {
+          continue;
+        }
+        fs.rmSync(linkPath, { recursive: true, force: true });
+      }
+      fs.symlinkSync(expected, linkPath);
+      console.log(`Linked ${relative} → ${expected}`);
+    }
+  }
+  return drift;
 }
 
 try {

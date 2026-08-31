@@ -35,6 +35,13 @@ describe('docs/arkorder.md (XP01)', () => {
   it('is linked from the docs hub and README', () => {
     expect(read('docs/README.md')).toMatch(/arkorder\.md/);
     expect(read('README.md')).toMatch(/docs\/arkorder\.md/);
+    expect(read('docs/use.md')).toMatch(/arkorder\.md/);
+    expect(read('docs/develop.md')).toMatch(/arkorder\.md/);
+  });
+
+  it('ships in the npm tarball (XP01 findability)', () => {
+    const pkg = JSON.parse(read('package.json'));
+    expect(pkg.files).toContain('docs/arkorder.md');
   });
 
   it('documents one extra activation shape and keeps distinct factory roots (XP02)', () => {

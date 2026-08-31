@@ -12,7 +12,8 @@ First-contact copy: freeze / four verbs / no `update`. Haken (ξ vs s) lives
 below.
 
 Canonical plan seed: [plans/arkorder/README.md](plans/arkorder/README.md).
-ADRs: [0027](adr/0027-arkorder-gated-extra-plane.md)–[0030](adr/0030-opt-in-extras-same-npm-package.md).
+ADRs: [0027](adr/0027-arkorder-gated-extra-plane.md)–[0030](adr/0030-opt-in-extras-same-npm-package.md),
+[0033](adr/0033-arkorder-runtime-half-is-arkrun.md) (runtime half is ArkRun).
 Config: [configuration.md](configuration.md). Surface:
 [package-surface.md](package-surface.md#experimental-opt-in-surfaces).
 
@@ -55,6 +56,10 @@ They already exist:
 | Typed cell schema | `XiSchema` / `XiPropertySchema` | 4.8.0 |
 | Named slow keys on the write path | `arkOrder.xiKeys`; `ARKORDER_XI_FIELD_WRITE` | 4.8.3 |
 | Factory isolation | `createOrderPlane` from `arkgate/order` only | 4.8.0 |
+| Information budget | `informationBudget.cannotObserve`; `ARKORDER_INFORMATION_BUDGET` | 4.8.5 |
+| σ freshness, never ξ | `sigmaMaxAgeMs` / `σ.freshUntil`; `ARKORDER_XI_TTL`, `ARKORDER_STALE_SIGMA` | 4.8.5 |
+| Escalate to a person | `IngestEscalate.target` including `human` | 4.8.5 |
+| Shadow / replay / compare | ArkRun `shadowInformationPackage` / `compareInformationPackages` / `replayInformationPackages` | 4.8.5 |
 
 Nothing here is a hosted runtime. Nothing here can be “down”. A degraded-mode
 contract would defend against an outage that cannot happen.
@@ -67,11 +72,13 @@ contract would defend against an outage that cannot happen.
 import { createOrderPlane } from 'arkgate/order';
 
 const plane = createOrderPlane({
-  projector,       // consumer: (release, sigma) => { allowedKinds, invalidated }
-  xiSchema,        // JSON Schema object; additionalProperties false
-  maxXiKeys,       // default 7
-  clocks,          // injected; Domain must not call Date.now
-  packs,           // data, not user predicates
+  projector,          // consumer: (release, sigma) => { allowedKinds, invalidated }
+  xiSchema,           // JSON Schema object; additionalProperties false
+  maxXiKeys,          // default 7
+  clocks,             // injected; Domain must not call Date.now
+  packs,              // data, not user predicates
+  informationBudget,  // optional { cannotObserve: ['ledger'] } — not a config key
+  sigmaMaxAgeMs,      // optional σ freshness; never on ξ — not a config key
 });
 
 plane.release(xi, sigma);      // freeze, version, hash. No in-place mutate

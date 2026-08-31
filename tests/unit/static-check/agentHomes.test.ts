@@ -1,5 +1,5 @@
 /**
- * Shared Claude/Grok home skill catalogs (4.6 PL06–PL07).
+ * Shared Claude/Grok/Antigravity home skill catalogs (4.6 PL06–PL07; Antigravity 4.8.5).
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -44,6 +44,7 @@ describe('agent home catalogs (Claude / Grok)', () => {
       ...process.env,
       CLAUDE_HOME: isolated,
       GROK_HOME: tempRoot('ark-empty-grok-'),
+      ANTIGRAVITY_HOME: tempRoot('ark-empty-agy-'),
     });
     expect(gaps).toEqual([]);
     fs.rmSync(root, { recursive: true, force: true });
@@ -63,6 +64,7 @@ describe('agent home catalogs (Claude / Grok)', () => {
       ...process.env,
       CLAUDE_HOME: claudeHome,
       GROK_HOME: tempRoot('ark-stale-grok-empty-'),
+      ANTIGRAVITY_HOME: tempRoot('ark-stale-agy-empty-'),
     });
     expect(gaps.some((g) => g.host === 'claude' && g.stale > 0)).toBe(true);
     fs.rmSync(root, { recursive: true, force: true });
@@ -123,6 +125,71 @@ describe('agent home catalogs (Claude / Grok)', () => {
     expect(results).toEqual([
       expect.objectContaining({ host: 'claude', skipped: true, reason: 'temp-root-default-home' }),
     ]);
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it('detectAgentHomeGaps reports stale Antigravity home skills', () => {
+    const root = tempRoot('ark-stale-agy-proj-');
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# x\n');
+    const agyHome = tempRoot('ark-stale-agy-');
+    const skillDir = path.join(agyHome, 'skills', 'ark-fix');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(skillDir, 'SKILL.md'),
+      '---\nname: ark-fix\narkVersion: 2.6.1\n---\n# ancient body that will not match the template\n'
+    );
+    const gaps = detectAgentHomeGaps(root, {
+      ...process.env,
+      CLAUDE_HOME: tempRoot('ark-stale-agy-claude-empty-'),
+      GROK_HOME: tempRoot('ark-stale-agy-grok-empty-'),
+      ANTIGRAVITY_HOME: agyHome,
+    });
+    expect(gaps.some((g) => g.host === 'antigravity' && g.stale > 0)).toBe(true);
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it('--antigravity-home writes ~/.gemini/config/skills even when the project catalog exists', () => {
+    const root = tempRoot('ark-agy-home-install-');
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), '# x\n');
+    fs.writeFileSync(
+      path.join(root, 'ark.config.json'),
+      JSON.stringify({
+        schemaVersion: '1.0',
+        layers: { DomainModel: { files: ['src/**'] } },
+        rules: [],
+      })
+    );
+    const agyHome = tempRoot('ark-agy-home-dest-');
+    const result = spawnSync(
+      process.execPath,
+      [
+        CLI,
+        '--install-agent-gates',
+        '--skills-only',
+        '--tools',
+        'antigravity',
+        '--antigravity-home',
+        '--force',
+        '--root',
+        root,
+      ],
+      {
+        encoding: 'utf8',
+        cwd: REPO,
+        env: {
+          ...process.env,
+          ANTIGRAVITY_HOME: agyHome,
+          CLAUDE_HOME: tempRoot('ark-agy-claude-unused-'),
+          GROK_HOME: tempRoot('ark-agy-grok-unused-'),
+        },
+      }
+    );
+    expect(result.status, result.stderr + result.stdout).toBe(0);
+    expect(fs.existsSync(path.join(root, '.agents', 'skills', 'ark-upgrade', 'SKILL.md'))).toBe(
+      true
+    );
+    const installed = path.join(agyHome, 'skills', 'ark-upgrade', 'SKILL.md');
+    expect(fs.existsSync(installed)).toBe(true);
     fs.rmSync(root, { recursive: true, force: true });
   });
 });

@@ -113,7 +113,7 @@ describe('skill-install direct module contract', () => {
     const defaultRoot = temporaryRoot();
     const fallback = resolveTools({ root: defaultRoot });
     expect(fallback.source).toBe('default');
-    expect([...fallback.tools]).toEqual(['claude', 'cursor', 'codex', 'grok']);
+    expect([...fallback.tools]).toEqual(['claude', 'cursor', 'codex', 'grok', 'antigravity']);
 
     const explicit = resolveTools({ root: defaultRoot, tools: 'agy,codex' });
     expect(explicit.source).toBe('explicit');

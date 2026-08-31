@@ -265,6 +265,8 @@ describe('ark-check --install-agent-gates', () => {
     expect(fs.existsSync(path.join(root, '.cursor/rules/ark.mdc'))).toBe(true);
     expect(fs.existsSync(path.join(root, '.github/workflows/ark-check.yml'))).toBe(true);
     expect(fs.existsSync(path.join(root, 'docs/ark-codex-config.toml'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.agents/hooks.json'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.agents/mcp_config.json'))).toBe(true);
 
     const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
     expect(agents).toContain('ark_manifest');

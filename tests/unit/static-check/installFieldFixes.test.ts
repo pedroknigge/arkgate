@@ -314,7 +314,7 @@ describe('resolveTools Grok default / env detection', () => {
     // empty project — no agent dirs
     const { tools, source } = resolveTools({ root });
     expect(source).toBe('default');
-    expect([...tools].sort()).toEqual(['claude', 'codex', 'cursor', 'grok']);
+    expect([...tools].sort()).toEqual(['antigravity', 'claude', 'codex', 'cursor', 'grok']);
   });
 
   it('adds grok when GROK_BUILD env is set even if only other hosts detected', () => {

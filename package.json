@@ -1,6 +1,6 @@
 {
   "name": "arkgate",
-  "version": "4.8.4",
+  "version": "4.8.5",
   "description": "When the agent writes a bad import, the write doesn’t land. The same check fails the pull request.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -88,6 +88,7 @@
     "docs/assets",
     "docs/brownfield-adoption.md",
     "docs/configuration.md",
+    "docs/arkorder.md",
     "docs/package-surface.md",
     "docs/diagnostics.md",
     "docs/threat-model.md",
