@@ -99,7 +99,16 @@ const config = {
   // values are unit-tested; mutate executable decisions without false static survivors.
   ignoreStatic: true,
   cleanTempDir: 'always',
-  ignorePatterns: ['coverage', 'internal', '.gstack', '.grok', '.agents', '.orderfield'],
+  ignorePatterns: [
+    'coverage',
+    'internal',
+    '.gstack',
+    '.orderfield',
+    // Directory symlinks (AGY01 catalog). Stryker copyfile dies EISDIR on them.
+    // Keep .grok/hooks so the mutation dry-run still dogfoods repair-capable write.
+    '.grok/skills',
+    '.agents/skills',
+  ],
 };
 
 export default config;
