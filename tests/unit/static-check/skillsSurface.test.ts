@@ -471,3 +471,45 @@ describe('ArkOrder + four-plane skill deepen (no new skill names)', () => {
     expect(body).toMatch(/Do not invent `\/ark-order`/);
   });
 });
+
+describe('LD05 layer description skill deepen (no new skill names)', () => {
+  function readSkill(name: string): string {
+    return fs.readFileSync(path.join(SKILLS_DIR, `${name}.md`), 'utf8');
+  }
+
+  it('keeps the frozen 13 names and does not ship /ark-describe', () => {
+    expect(EXPECTED_SKILLS).toHaveLength(13);
+    expect(EXPECTED_SKILLS).not.toContain('ark-describe');
+    expect(fs.existsSync(path.join(SKILLS_DIR, 'ark-describe.md'))).toBe(false);
+    const onDisk = fs
+      .readdirSync(SKILLS_DIR)
+      .filter((n) => /^[a-z0-9-]+\.md$/.test(n))
+      .map((n) => path.basename(n, '.md'));
+    expect(onDisk).not.toContain('ark-describe');
+    for (const name of EXPECTED_SKILLS) {
+      const body = readSkill(name);
+      expect(body, name).not.toMatch(/Invoke `?\/ark-describe`/i);
+    }
+  });
+
+  it('ark-adopt writes layers[].description from product map or glossary without inventing captions', () => {
+    const body = readSkill('ark-adopt');
+    expect(body).toContain('## Layer captions (process)');
+    expect(body).toContain('layers[].description');
+    expect(body).toMatch(/product map/);
+    expect(body).toMatch(/glossary/);
+    expect(body).toMatch(/app context|app-context/);
+    expect(body).toMatch(/compact starter/i);
+    expect(body).toMatch(/Do \*\*not\*\* invent captions|Do not invent captions/);
+    expect(body).toMatch(/Do not invent `\/ark-describe`|Invent `\/ark-describe`/);
+  });
+
+  it('ark-place prints the caption next to layer name and globs when present', () => {
+    const body = readSkill('ark-place');
+    expect(body).toContain('## Layer captions (process)');
+    expect(body).toContain('layers[].description');
+    expect(body).toMatch(/next to the layer name and globs/);
+    expect(body).toMatch(/omit.{0,40}absent|when.{0,20}absent/i);
+    expect(body).toMatch(/Do \*\*not\*\* invent[\s\S]{0,40}`\/ark-describe`|do not invent a caption or `\/ark-describe`/);
+  });
+});
