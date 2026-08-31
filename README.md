@@ -29,7 +29,7 @@ Works with Cursor, Claude, Codex, and Grok.
 
 </div>
 
-> **ArkGate 4.8.5** is on npm `latest`. This tree is **4.8.6** (prepared patch; not published).
+> **ArkGate 4.8.6** is on npm `latest`.
 > Write. Check. Ship. Adopted = required GitHub
 > status running `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
 > Status is compact (`arkgate-check --doctor`; `--all` for Details). Optional **ArkRun**
@@ -309,8 +309,8 @@ three keys. Compact starters leave it off. Details:
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Tree prepared (4.8.6, not published) | [docs/releases/4.8.6.md](docs/releases/4.8.6.md) · [CHANGELOG](CHANGELOG.md) |
-| Current published (4.8.5 on npm `latest`) | [docs/releases/4.8.5.md](docs/releases/4.8.5.md) · [CHANGELOG](CHANGELOG.md) |
+| Current published (4.8.6 on npm `latest`) | [docs/releases/4.8.6.md](docs/releases/4.8.6.md) · [CHANGELOG](CHANGELOG.md) |
+| Prior published (4.8.5) | [docs/releases/4.8.5.md](docs/releases/4.8.5.md) |
 | Prior published (4.8.4) | [docs/releases/4.8.4.md](docs/releases/4.8.4.md) |
 | Prior published (4.8.3) | [docs/releases/4.8.3.md](docs/releases/4.8.3.md) |
 | Prior published (4.8.2) | [docs/releases/4.8.2.md](docs/releases/4.8.2.md) |

@@ -6,7 +6,7 @@
 > [ArkOrder](../arkorder/README.md) · [ArkOrder × ArkRun](../arkorder-arkrun/README.md) ·
 > [ADR index](../../adr/README.md) · canonical surface [arkorder.md](../../arkorder.md)
 
-**Status:** Implemented on tree (`LV01`–`LV09` done; **4.8.6** prepared, not npm-published).<br>
+**Status:** Shipped in **4.8.6** (`LV01`–`LV09` done; **published**).<br>
 **Slug:** `arkorder-valve-loop`<br>
 **Kind:** epic / Haken control loop on the existing extras<br>
 **Prefix:** `LV` (valved loop)<br>
