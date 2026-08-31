@@ -4,6 +4,7 @@
  */
 export { createOrderPlane, type CreateOrderPlaneOptions, type OrderPlane } from './createOrderPlane';
 export { ArkOrderError } from '../../domain/arkOrderError';
+export { ingestTravelAction } from '../../domain/arkOrderInvariants';
 export { CAPACITY_OPS, DEFAULT_MAX_XI_KEYS } from '../../domain/arkOrderTypes';
 export type {
   CapacityConstraint,

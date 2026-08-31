@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { createOrderPlane } from '../../../src/kernel/order';
+import { travelBillingResidual } from '../../../examples/arkorder-billing/bridge';
 import { billingProjector, billingXi } from '../../../examples/arkorder-billing/projector';
 
 describe('arkorder-billing consumer physics', () => {
-  it('does not teach the core billing keys — projector lives in the example', () => {
+  it('does not teach the core billing keys — projector lives in the example', async () => {
     const plane = createOrderPlane({
       projector: billingProjector,
       xiSchema: { additionalProperties: false, properties: billingXi },
@@ -33,6 +34,31 @@ describe('arkorder-billing consumer physics', () => {
     const over = capped.ingest({ kind: 'SeatAdded', payload: { seats: 4 } });
     expect(over.kind).toBe('hold');
     if (over.kind === 'hold') expect(over.reasonCode).toBe('capacity');
+
+    const sent: string[] = [];
+    const raised: string[] = [];
+    expect(
+      await travelBillingResidual(absorbed, {
+        send: (kind) => {
+          sent.push(kind);
+        },
+        raiseHuman: (residual) => {
+          raised.push(residual.event.kind);
+        },
+      })
+    ).toBe('send');
+    expect(
+      await travelBillingResidual(unknown, {
+        send: (kind) => {
+          sent.push(kind);
+        },
+        raiseHuman: (residual) => {
+          raised.push(residual.event.kind);
+        },
+      })
+    ).toBe('raises');
+    expect(sent).toEqual(['InvoicePosted']);
+    expect(raised).toEqual(['SeatAdded']);
     const next = plane.proposeRelease({ plan: 'enterprise', tenancy: 'org' });
     expect(next.blastRadius.length).toBeGreaterThan(0);
     expect(next.nextXi.plan).toBe('enterprise');

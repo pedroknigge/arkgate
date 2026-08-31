@@ -26,6 +26,13 @@ import { deterministicHash, stableSerialize } from './stableHash';
 
 export { DEFAULT_MAX_XI_KEYS };
 
+/** D7: consumer still owns handlers — this only names the travel verb. */
+export function ingestTravelAction(residual: IngestResult): 'send' | 'raises' | 'none' {
+  if (residual.kind === 'absorb') return 'send';
+  if (residual.kind === 'escalate_up' && residual.target === 'human') return 'raises';
+  return 'none';
+}
+
 const FORBIDDEN_PLANE_METHODS = ['update', 'patch', 'set', 'mutate'] as const;
 
 export function isForbiddenPlaneMethod(name: string): boolean {

@@ -12,6 +12,14 @@ import { ArkOrderError } from './ark-order-error.mjs';
 import { CAPACITY_OPS, DEFAULT_MAX_XI_KEYS } from './ark-order-types.mjs';
 import { deterministicHash, stableSerialize } from './stableHash';
 export { DEFAULT_MAX_XI_KEYS };
+/** D7: consumer still owns handlers — this only names the travel verb. */
+export function ingestTravelAction(residual) {
+    if (residual.kind === 'absorb')
+        return 'send';
+    if (residual.kind === 'escalate_up' && residual.target === 'human')
+        return 'raises';
+    return 'none';
+}
 const FORBIDDEN_PLANE_METHODS = ['update', 'patch', 'set', 'mutate'];
 export function isForbiddenPlaneMethod(name) {
     return FORBIDDEN_PLANE_METHODS.includes(name);
