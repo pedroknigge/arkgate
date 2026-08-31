@@ -253,8 +253,8 @@ production deployment would need to satisfy; it is not a readiness certification
 ## Release notes (maintainers)
 
 Ship notes for a version live under [releases/](https://github.com/pedroknigge/arkgate/tree/main/docs/releases)
-(current tree prepared: [4.8.7.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.8.7.md);
-current published: [4.8.6.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.8.6.md);
+(current published: [4.8.7.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.8.7.md);
+prior published: [4.8.6.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.8.6.md);
 prior published: [4.8.5.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.8.5.md);
 prior published: [4.8.4.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.8.4.md);
 prior published: [4.8.3.md](https://github.com/pedroknigge/arkgate/blob/main/docs/releases/4.8.3.md);

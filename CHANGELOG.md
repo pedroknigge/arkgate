@@ -10,9 +10,9 @@ in the immutable pre-2.0 archive linked below.
 product), not architecture jargon. Place, doctor, coverage, and the HTML report
 show it when present. Caption-only edits do not change `policyHash`.
 **No required config migration.** No `schemaVersion` bump. Does not close `K01` / `Z09`.
-No new skill names. Do not npm-publish from this item until the maintainer tag.
+No new skill names.
 
-**Status: prepared** (tree ready; npm `latest` remains **4.8.6** until publish).
+**Status: published** (on npm `latest`; see `docs/releases/4.8.7.md`).
 
 ### Added
 - Public name for existing `layers[].description`. Example:
@@ -35,7 +35,7 @@ not ξ identity. ingest returns a closed residual. Capacity is data. ArkRun
 carries the decision tape. **No required config migration.** Does not close
 `K01` / `Z09`. No `/ark-order` skill.
 
-**Status: published** (on npm `latest`; see `docs/releases/4.8.6.md`).
+**Status: published** (see `docs/releases/4.8.6.md`).
 
 ### Added
 - **`apply(ProposeResult)`** on `createOrderPlane`. Unvalved second freeze of a
