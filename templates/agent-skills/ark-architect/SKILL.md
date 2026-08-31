@@ -42,7 +42,7 @@ Then call **`ark_recommend`** with the same bound `project` envelope (or `ark-ch
 
 ## Dual plane — layers + extras (mandatory, except /ark-runtime)
 
-Label findings **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. Absence of extras is valid and silent. Session-0 extras (advisory `arkRun` / advisory `arkOrder`) live on **`/ark-adopt`**. Do not invent `/ark-run` or `/ark-order`. Skills never enforce.
+Label findings **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. Absence of extras is valid and silent. Session-0 extras (advisory `arkRun` / advisory `arkOrder`) live on **`/ark-adopt`**. When ArkOrder is on: first freeze `release()`, later ξ is `proposeRelease` then `apply`; `refreshSigma`; ingest residual `absorb | escalate_up | hold`; capacity pack as data; in-memory `ReleaseStore`; ArkRun `decisionTape`. Do not invent `/ark-run` or `/ark-order`. Skills never enforce.
 
 ## Subagent fan-out (optional, host-dependent)
 

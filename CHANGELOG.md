@@ -3,9 +3,9 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
-## 4.9.0 — 2026-08-31
+## 4.8.6 — 2026-08-31
 
-**Minor** over **4.8.5**. Phase **LV** — ArkOrder valved loop. First `release()`
+**Patch** over **4.8.5**. Phase **LV** — ArkOrder valved loop. First `release()`
 freezes ξ; later pattern change is `proposeRelease` then `apply`. σ identity is
 not ξ identity. ingest returns a closed residual. Capacity is data. ArkRun
 carries the decision tape. **No required config migration.** Does not close

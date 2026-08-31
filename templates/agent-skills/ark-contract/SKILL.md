@@ -45,7 +45,7 @@ Label findings **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrd
 
 Application / Features may declare advisory **`writes-via-aggregate`**: a use-case that imports a persistence driver and calls `.insert` / `.create` / `INSERT INTO` is the skip. Persistence adapters stay the write edge. Do not add `Externals/` or `admission.ts` as contract law.
 
-When `arkOrder` is on, name **`xiKeys`** (3–5 slow product decisions). Membership ids are not keys. A use-case that persists those keys is `ARKORDER_XI_FIELD_WRITE`. Copy [examples/arkorder-billing/](../../../examples/arkorder-billing/) and rename the three keys.
+When `arkOrder` is on, name **`xiKeys`** (3–5 slow product decisions). Membership ids are not keys. A use-case that persists those keys is `ARKORDER_XI_FIELD_WRITE`. First freeze is `release()`; later ξ is `proposeRelease` then `apply`; `refreshSigma`; ingest residual `absorb | escalate_up | hold` + `reasonCode`; capacity pack as data; in-memory `ReleaseStore`; ArkRun `decisionTape`. Copy [examples/arkorder-billing/](../../../examples/arkorder-billing/) and rename the three keys.
 
 ## Subagent fan-out (optional, host-dependent)
 

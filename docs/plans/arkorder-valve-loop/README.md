@@ -6,13 +6,13 @@
 > [ArkOrder](../arkorder/README.md) · [ArkOrder × ArkRun](../arkorder-arkrun/README.md) ·
 > [ADR index](../../adr/README.md) · canonical surface [arkorder.md](../../arkorder.md)
 
-**Status:** Implemented on tree (`LV01`–`LV09` done; **4.9.0** prepared, not npm-published).<br>
+**Status:** Implemented on tree (`LV01`–`LV09` done; **4.8.6** prepared, not npm-published).<br>
 **Slug:** `arkorder-valve-loop`<br>
 **Kind:** epic / Haken control loop on the existing extras<br>
 **Prefix:** `LV` (valved loop)<br>
 **Owners:** product (Pedro) + library maintainers<br>
 **Last updated:** 2026-08-31<br>
-**Target package:** additive **`arkgate@4.9.0`** when `apply` / `refreshSigma` / ingest
+**Target package:** additive **`arkgate@4.8.6`** when `apply` / `refreshSigma` / ingest
 residual ship on `arkgate/order` (public verbs). No `ark.config` schema bump unless a
 later item proves a new config key. In-memory default unchanged.<br>
 **Code path (when doing):** `src/domain/arkOrder*.ts`, `src/kernel/order/`,
@@ -133,7 +133,7 @@ Live statuses live in [ROADMAP.md](../../../ROADMAP.md). Seed:
 | `LV06` | LV04 | L | Decision tape on ArkRun information package; shadow/replay/compare the tape. Component snapshot API unchanged. |
 | `LV07` | LV06 | M | Thin bridge in gallery (+ types/helpers if needed): absorb → `send`; escalate_up human → `raises`. No new skill. |
 | `LV08` | LV02+LV03 | M | `ReleaseStore` port, in-memory default. Optional catalog digest keyed by ξ id. Durability honesty: not K01. |
-| `LV09` | LV05+LV07+LV08 | M | `docs/arkorder.md` loop section; skills deepen; doctor/status remain `notAScore`; billing example uses valve + residual + tape. Publish **4.9.0**. No `/ark-order`. |
+| `LV09` | LV05+LV07+LV08 | M | `docs/arkorder.md` loop section; skills deepen; doctor/status remain `notAScore`; billing example uses valve + residual + tape. Publish **4.8.6**. No `/ark-order`. |
 
 One `doing` at a time. Do not start an ID until its dependencies are `done`.
 

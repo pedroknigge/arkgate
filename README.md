@@ -29,13 +29,15 @@ Works with Cursor, Claude, Codex, and Grok.
 
 </div>
 
-> **ArkGate 4.8.5** is on npm `latest`. Write. Check. Ship. Adopted = required GitHub
+> **ArkGate 4.8.5** is on npm `latest`. This tree is **4.8.6** (prepared patch; not published).
+> Write. Check. Ship. Adopted = required GitHub
 > status running `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
 > Status is compact (`arkgate-check --doctor`; `--all` for Details). Optional **ArkRun**
 > (`arkgate/runtime`) is an in-memory runtime — not Postgres. Optional **ArkOrder**
-> (`arkgate/order`) stops the agent rewriting the few slow product decisions as CRUD.
+> (`arkgate/order`) stops the agent rewriting the few slow product decisions as CRUD;
+> later pattern change is `proposeRelease` then `apply`.
 > `@arkgate/runtime` is deprecated.
-> [4.8.5](docs/releases/4.8.5.md) · [4.8.4](docs/releases/4.8.4.md) · [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
+> [4.8.6](docs/releases/4.8.6.md) · [4.8.5](docs/releases/4.8.5.md) · [4.8.4](docs/releases/4.8.4.md) · [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
 
 ---
 
@@ -104,7 +106,7 @@ once you adopt. The other three are optional.
 | **Before merge** | `arkgate-check` as a **required** CI status | Always (ArkGate) |
 | **ArkRules** | Optional policies *inside* a layer | When you ask |
 | **ArkRun** | Optional experimental runtime (`arkgate/runtime`) | Off unless you turn it on |
-| **ArkOrder** | Stops the agent rewriting the few slow product decisions as CRUD (`arkgate/order`) | Off unless you turn it on |
+| **ArkOrder** | Stops the agent rewriting the few slow product decisions as CRUD (`arkgate/order`). Valve: first `release()`, later ξ is `proposeRelease` then `apply` | Off unless you turn it on |
 
 Layers (who may import whom) always run. ArkRules, ArkRun, and ArkOrder change no
 inter-layer verdict when absent. Label leftovers **`[Layer]`** vs **`[ArkRules]`** vs
@@ -281,8 +283,10 @@ because “what may be the plan” was never a rule.
 **ArkOrder** (`arkgate/order`) is that rule. Off unless you add `arkOrder`.
 Name the slow keys (`xiKeys`: plan, protocol, cost-code bound — not `projectId`).
 Posting an invoice is absorbed. Changing plan is `proposeRelease` then `apply`.
-A generic `update` of the plan does not land. A use-case that PATCHes
-those keys through Prisma is named. Same npm package.
+`refreshSigma`; ingest residual `absorb | escalate_up | hold` + `reasonCode`;
+capacity pack as data; in-memory `ReleaseStore`; `ingestTravelAction`; ArkRun
+`decisionTape`. A generic `update` of the plan does not land. A use-case that
+PATCHes those keys through Prisma is named. Same npm package.
 In-memory. Not durable. Does not replace ArkRun.
 **ArkOrder freezes the pattern through a valve. ArkRun is how the residual travels.**
 
@@ -305,6 +309,7 @@ three keys. Compact starters leave it off. Details:
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
+| Tree prepared (4.8.6, not published) | [docs/releases/4.8.6.md](docs/releases/4.8.6.md) · [CHANGELOG](CHANGELOG.md) |
 | Current published (4.8.5 on npm `latest`) | [docs/releases/4.8.5.md](docs/releases/4.8.5.md) · [CHANGELOG](CHANGELOG.md) |
 | Prior published (4.8.4) | [docs/releases/4.8.4.md](docs/releases/4.8.4.md) |
 | Prior published (4.8.3) | [docs/releases/4.8.3.md](docs/releases/4.8.3.md) |

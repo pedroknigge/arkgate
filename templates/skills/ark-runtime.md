@@ -106,6 +106,9 @@ the same files or weaken the gate.
      public bind. Snapshots / `requestGraph` (process or technical + Mermaid) are tooling, not a
      score. `getDependencyInformationPackage()` never includes factories, live instances, or
      input DTOs.
+   - Information package may carry `decisionTape` `{ xiHash, event, residual }` via
+     `appendDecisionTape`. Shadow / compare / replay that snapshot in-memory (not a bus, not
+     durable). This is still **[ArkRun]** — do not turn the tape into an ArkOrder skill.
    - In-memory stores lose state on restart — **not** production durability. Note bounded history
      (`maxHistorySize` 1000) if the hand-rolled version retained everything.
 6. **Delete the hand-rolled version** once call sites are moved — the point is

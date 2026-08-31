@@ -239,15 +239,15 @@ export function deterministicNextAction(violation) {
         case 'ARKORDER_KERNEL_IN_DOMAIN':
             return 'Move the arkgate/order import out of the Domain-role layer into a plane root or adapter, then preflight again. Never mechanical-safe.';
         case 'ARKORDER_GENERIC_UPDATE':
-            return 'Use release() to freeze ξ or proposeRelease() for a pattern change with blast radius, then preflight again. Never mechanical-safe.';
+            return 'Use release() for the first freeze of ξ. Later pattern change is proposeRelease then apply(ProposeResult). Never update/patch/set. Never mechanical-safe.';
         case 'ARKORDER_TOO_MANY_PARAMS':
             return 'Cut ξ to the slow keys that actually slave the rest, then preflight again. Never mechanical-safe.';
         case 'ARKORDER_INGEST_WRITES_XI':
-            return 'Keep ingest results as absorb/escalate only. Change ξ with proposeRelease + release. Never mechanical-safe.';
+            return 'Keep ingest results as absorb/escalate_up/hold only. Change ξ with proposeRelease then apply(ProposeResult). Never mechanical-safe.';
         case 'ARKORDER_XI_FIELD_WRITE':
             return typeof violation.target === 'string' && violation.target.length > 0
-                ? `Do not persist slow key ${violation.target} from a use-case. Absorb the field with ingest() or change the pattern with proposeRelease(), then preflight again.`
-                : 'Do not persist a declared slow key from a use-case. Absorb the field with ingest() or change the pattern with proposeRelease(), then preflight again. Never mechanical-safe.';
+                ? `Do not persist slow key ${violation.target} from a use-case. Absorb the field with ingest() or change the pattern with proposeRelease then apply, then preflight again.`
+                : 'Do not persist a declared slow key from a use-case. Absorb the field with ingest() or change the pattern with proposeRelease then apply, then preflight again. Never mechanical-safe.';
         case 'ARKORDER_UNVALVED_RELEASE':
             return 'Change ξ with proposeRelease then apply(ProposeResult). release() is only the first freeze. Never mechanical-safe.';
         default:

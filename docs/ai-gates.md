@@ -33,8 +33,11 @@ Prefer fail-closed honesty over fake hard guarantees on advisory hosts.
 Everything below uses the same `ark.config.json` as `arkgate-check` / `ark-check` (CI) — one
 rules file shared by every surface. From **4.0**, optional **ArkRules** (`arkRules` map +
 `arkrules/*.json`) ride the **same** write path, doctor, and CI adapter; absence of ArkRules
-does not change inter-layer verdicts. Label residual **`[Layer]`** vs **`[ArkRules]`**. See
-[configuration — ArkRules](configuration.md#arkrules-intra-layer-opt-in).
+does not change inter-layer verdicts. Optional ArkRun / ArkOrder extras ride that envelope
+when on (`proposeRelease` then `apply`). Absence is silent. Label residual **`[Layer]`** vs
+**`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. See
+[configuration — ArkRules](configuration.md#arkrules-intra-layer-opt-in) ·
+[ArkOrder](arkorder.md).
 
 Generate the layer contract once:
 

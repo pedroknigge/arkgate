@@ -39,7 +39,7 @@ const plane = createOrderPlane({
 });
 plane.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' }, { seatCap: 3 });
 const absorbed = plane.ingest({ kind: 'InvoicePosted' }); // residual names xiHash
-await travelBillingResidual(absorbed, { send, raiseHuman }); // absorb → send
+await travelBillingResidual(absorbed, { send, raiseHuman }); // ingestTravelAction: absorb → send
 const proposal = plane.proposeRelease({ plan: 'pro' });
 plane.apply(proposal); // valve — a raw second release() of different ξ fails
 plane.refreshSigma({ seatCap: 10 }); // xiHash unchanged

@@ -24,8 +24,8 @@ description: "Where does new code go? Names the folder from the rules file and w
   `compositionRoots` alias). Extra off → do not introduce the kernel. Enable it
   via `/ark-adopt`. Skills never enforce.
 - When `arkOrder` is on: factory only in `arkOrder.planeRoots`; Domain stays plane-free;
-  freeze ξ with `release()`. Extra off → do not introduce the plane. Enable it via
-  `/ark-adopt`. Skills never enforce.
+  first freeze ξ with `release()`; later ξ is `proposeRelease` then `apply`. Extra off
+  → do not introduce the plane. Enable it via `/ark-adopt`. Skills never enforce.
 
 ## Autonomy contract
 
@@ -113,8 +113,8 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 |-------|------------------|----------------|-----------------|
 | **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
 | **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
-| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime`; **`kernelRoots` preferred**, `compositionRoots` alias | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
-| **ArkOrder** (extra) | Operational pattern (ξ vs s) | `arkOrder` on `ark.config.json` (schema `1.3+`); factory `arkgate/order` | `ARKORDER_*` |
+| **ArkRun** (extra) | Kernel usage + complete declarations; information package `decisionTape` `{ xiHash, event, residual }` | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime`; **`kernelRoots` preferred**, `compositionRoots` alias | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
+| **ArkOrder** (extra) | Operational pattern (ξ vs s). Valve: first `release()`, later ξ is `proposeRelease` then `apply`; `refreshSigma`; ingest residual `absorb \| escalate_up \| hold` + `reasonCode`; capacity pack as data; in-memory `ReleaseStore` | `arkOrder` on `ark.config.json` (schema `1.3+`); factory `arkgate/order` | `ARKORDER_*` |
 
 **Rules for every report / answer:**
 1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** or **`[ArkRun]`** or **`[ArkOrder]`** (or a table with those headers).
@@ -123,7 +123,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 4. Missing layer home: add it via **`/ark-adopt`** in this session if needed, then write the file; never invent `mechanical-safe`.
 5. CLI helpers: `ark-check --rules-inventory --json`, doctor JSON `rulesUnderContract`, sensors emit `ARKRULE_*` / `INVARIANT_UNCOVERED` with `evidence.arkruleId`.
 6. Absence of `arkRun` is **valid**. Do not introduce the kernel speculatively. Skills never enforce this extra.
-7. Absence of `arkOrder` is **valid**. When on: Domain stays plane-free; freeze ξ with `release()`; never `update`/`patch`/`set` the pattern. Import `createOrderPlane` from `arkgate/order` (same npm package). No `/ark-order` skill.
+7. Absence of `arkOrder` is **valid**. When on: Domain stays plane-free; first freeze ξ with `release()`; later ξ is `proposeRelease` then `apply`; never `update`/`patch`/`set` the pattern. Import `createOrderPlane` from `arkgate/order` (same npm package). No `/ark-order` skill.
 
 
 ### Place + ArkRules
@@ -138,14 +138,14 @@ When `arkRun` is present on the architecture config:
 - Domain-role files stay kernel-free (`ARKRUN_KERNEL_IN_DOMAIN`). Import from `arkgate/runtime` (or `arkgate/nestjs`). `@arkgate/runtime` is deprecated.
 - List `uses` / `reactsTo` / `raises` / `sends` when `requireDeclarations` is on. Adding an existing call-site literal to the declaration list is the only mechanical-safe ArkRun edit; inventing a new emit / handle / depend is judgment.
 - Do not import a homemade bus (`EventEmitter`, queue clients) in `managedLayers` — send on the kernel transport (`local` / `localBlocking` / `broker`; `ephemeral` defaults true). No shipped cloud SDKs.
-- In-memory stores are **not** production durability. Doctor `arkRun` is `notAScore`.
+- In-memory stores are **not** production durability. Doctor `arkRun` is `notAScore`. Information package may carry `decisionTape` `{ xiHash, event, residual }` (`appendDecisionTape`). Not a bus. Not durable.
 - Absence of the extra: place with **[Layer]** + **[ArkRules]** only. Enable advisory extra via `/ark-adopt`; evaluate a hand-rolled bus via `/ark-runtime`. Do not invent `/ark-run`.
 - Skills never enforce.
 
 ### Place + ArkOrder
 When `arkOrder` is present on the architecture config:
 - Import `createOrderPlane` from `arkgate/order` (same npm package). Domain-role files stay plane-free.
-- First freeze ξ with `release()`; later ξ change is `proposeRelease` then `apply` (`ARKORDER_UNVALVED_RELEASE`). `refreshSigma` for saldo. Field `ingest()` returns absorb | escalate_up | hold bound to `xiHash`; never a Release. There is no `update`/`patch`/`set`.
+- First freeze ξ with `release()`; later ξ change is `proposeRelease` then `apply` (`ARKORDER_UNVALVED_RELEASE`). `refreshSigma` for saldo. Field `ingest()` returns `absorb | escalate_up | hold` bound to `xiHash` + `reasonCode`; never a Release. Capacity pack as data; `createMemoryReleaseStore`; `ingestTravelAction`; ArkRun `decisionTape`. No `update`/`patch`/`set`.
 - Call the factory only inside `arkOrder.planeRoots`. Empty roots in `enforced` mode is `ARKORDER_MISSING_PLANE`.
 - Named slow keys live in `arkOrder.xiKeys`. A managed-layer Prisma/pg write of those keys is `ARKORDER_XI_FIELD_WRITE` — absorb with `ingest` or change the pattern with `proposeRelease` then `apply`.
 - Skip clusters (`ARKORDER_MISSING_PLANE` / `ARKORDER_KERNEL_IN_DOMAIN` / `ARKORDER_GENERIC_UPDATE` / `ARKORDER_TOO_MANY_PARAMS` / `ARKORDER_INGEST_WRITES_XI` / `ARKORDER_XI_FIELD_WRITE`): place this artifact, then grind via `/ark-autopilot`. Extra not on → `/ark-adopt`. Do not invent `/ark-order`.

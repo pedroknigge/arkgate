@@ -43,7 +43,7 @@ Atomic multi-file work uses **`ark_prepare_change`** with the same matched `proj
 
 ## Dual plane — layers + extras (mandatory, except /ark-runtime)
 
-Label findings **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. Absence of extras is valid and silent. Extra skip clusters (`ARKRUN_*` / `ARKORDER_*`) are **`/ark-autopilot`**. Never invent `mechanical-safe` kinds. Do not invent `/ark-run` or `/ark-order`. Skills never enforce.
+Label findings **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**. Absence of extras is valid and silent. Extra skip clusters (`ARKRUN_*` / `ARKORDER_*`) are **`/ark-autopilot`**. When ArkOrder is on: later ξ is `proposeRelease` then `apply`; `refreshSigma`; ingest residual `absorb | escalate_up | hold`; capacity pack as data; in-memory `ReleaseStore`; ArkRun `decisionTape`. Never invent `mechanical-safe` kinds. Do not invent `/ark-run` or `/ark-order`. Skills never enforce.
 
 ## Subagent fan-out (optional, host-dependent)
 

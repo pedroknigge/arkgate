@@ -83,7 +83,7 @@ accepted). Canonical: [arkorder.md](../arkorder.md). Plan: [arkorder](../plans/a
 | ADR | Still true |
 |-----|------------|
 | [0027](0027-arkorder-gated-extra-plane.md) | Optional `arkOrder` on schema `1.3`. Absence is silent. Weakening needs an ack. |
-| [0028](0028-arkorder-companion-isolation.md) | Plane is `arkgate/order`. `createOrderPlane`. Four verbs. No singleton. No bus in v0. |
+| [0028](0028-arkorder-companion-isolation.md) | Plane is `arkgate/order`. `createOrderPlane`. Four verbs (D3). Amended by [0034](0034-arkorder-valved-loop.md) (`apply` / `refreshSigma`). No singleton. No bus in v0. |
 | [0029](0029-arkorder-anti-skip-facts.md) | Closed anti-skip sensors. Inference never blocks. No LLM ξ classifier. |
 | [0030](0030-opt-in-extras-same-npm-package.md) | One npm package `arkgate`. Extras are subpaths. No `@arkgate/*` install. |
 | [0031](0031-one-package-extras-deprecate-companion.md) | 4.8.0: Run + Order + Nest are real subpaths. Companion deprecated. |

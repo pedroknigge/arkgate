@@ -77,7 +77,7 @@ Three beats when a line teaches:
 | The agent imported Infrastructure from Domain. The write didn’t land. Next: `/ark-place`. | Ship it 🚀 crush the spaghetti |
 | Import rules pass. The tree still needs a refactor. Next: one small change. | You don’t need to understand anything |
 | ArkRun is experimental. In-memory. Data is gone on restart. | The kernel is production-ready |
-| The agent PATCHed the billing plan as if it were a seat count. The write didn’t land. Next: a new release, not `update`. | Freeze ξ. Four verbs. Haken slaving. |
+| The agent PATCHed the billing plan as if it were a seat count. The write didn’t land. Next: `proposeRelease` then `apply`, not `update`. | Freeze ξ. Four verbs. Haken slaving. |
 | Status: one light, one next step. | Become an architect in 60 seconds |
 
 **Brands, then the common word:** ArkGate, ArkRules, ArkRun, ArkOrder. Gloss once.
@@ -90,7 +90,7 @@ Three beats when a line teaches:
 | `arkgate-check --doctor` — **status**, one next step | control plane, coach, doctor as the product name |
 | optional policies inside a layer | dual plane, intra-layer sensors, Saturday tidy |
 | experimental runtime / in-memory / not Postgres | production kernel, durable runtime, training wheels |
-| the few slow product decisions / billing plan vs seats / that PUT doesn’t land | four verbs, freeze a pattern, Haken, slaving, ξ vs s, extra plane, construction OS |
+| the few slow product decisions / billing plan vs seats / that PUT doesn’t land / `proposeRelease` then `apply` | four verbs, freeze a pattern, Haken, slaving, ξ vs s, extra plane, construction OS |
 
 Command names stay command names (`--doctor` is a flag). If a word is not here,
 cut it or put it below the fold (develop, JSON, ADRs).
@@ -111,7 +111,7 @@ These are product law, not vibe:
 - Host write hardness differs. Required CI is the shared hard line.
 - ArkRun stores are **in-memory**. Not production durability. Do not imply otherwise.
 - Absence of ArkRules, ArkRun, or ArkOrder is silent. Label leftovers **`[Layer]`** vs **`[ArkRules]`** vs **`[ArkRun]`** vs **`[ArkOrder]`**.
-- ArkOrder is in-memory and not durable. It does not replace ArkRun. Do not imply a second npm package.
+- ArkOrder is in-memory and not durable. It does not replace ArkRun. Do not imply a second npm package. Later pattern change is `proposeRelease` then `apply`.
 
 Full engineering queue: [ROADMAP.md](../ROADMAP.md). Do not narrate phase ids in consumer copy.
 

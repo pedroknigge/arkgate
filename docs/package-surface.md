@@ -161,21 +161,24 @@ The type-only root exports are also semver-supported:
 - Config contract: `ArkConfig`, `ArkConfigLoadResult`.
 
 Runtime-kernel factories, `CAPABILITY_IDS`, `collectCapabilityUses`, and Domain capability mapping
-helpers are deliberately absent from this root. Use `@arkgate/runtime` for the experimental
-**ArkRun** kernel, and `analyzeProject(...).ir.capabilityUses` for public capability evidence.
+helpers are deliberately absent from this root. Use `arkgate/runtime` for the
+**ArkRun** kernel (experimental here means **durability**: in-memory stores, not
+Postgres), and `analyzeProject(...).ir.capabilityUses` for public capability evidence.
 
 ---
 
 ## Experimental opt-in surfaces
 
-These APIs are implemented for evaluation and compatibility, but they are **not production-ready
-product claims**. Static architecture enforcement does not depend on them.
+**Experimental** names **durability** (in-memory stores, not Postgres) — not the extras
+themselves. ArkRun and ArkOrder are opt-in extras of package `arkgate`. These APIs are
+implemented for evaluation and compatibility; they are **not** production durability
+claims. Static architecture enforcement does not depend on them.
 
 | Surface | Import path | Notes |
 |---------|-------------|--------|
-| **ArkRun kernel** | **`arkgate/runtime`** | Public brand **ArkRun**. Same npm package `arkgate` (ADR 0031). Factory `createStrictArkKernel` (each call is an isolated instance; no process-wide `getKernel()` singleton). Root export does **not** include the factory. Optional extra `arkRun` on schema `1.2+`. Event bus, intents, policies, sagas, event buffer, projections, and strict helpers. Managed components declare `uses` / `reactsTo` / `raises` / `sends` on `register()`; `getDependencyInformationPackage()` is a JSON snapshot of ids, lifetime, and declarations and never includes factories, live instances, or input DTOs (ADR 0023). `requestGraph()` slices that snapshot into **process** or **technical** graphs with optional `nodeIds`, `degreesOfSeparation`, and include/exclude query; `formatArkRunGraphMermaid()` (also `graph.mermaid`) is a helper string, never a score. `send()` is the transport port (local / localBlocking / broker); missing broker falls back to in-process local delivery, `ephemeral` defaults true, and **no cloud SDKs ship** in the package (ADR 0024). Opt-in `startInspector()` / `startArkRunInspector()` binds **`127.0.0.1` only**, refuses `NODE_ENV=production`, lazy-loads HTTP, and serves JSON snapshots, SSE, and `/graph` slices of the information package (no public / authless bind). **Shadow / replay / compare** (`shadowInformationPackage`, `compareInformationPackages`, `replayInformationPackages`) are in-memory helpers on that snapshot — not durable, not a second bus (ADR 0033). Built-in stores are **InMemory reference only**. Branding ArkRun is not a production-durability claim. **`@arkgate/runtime` is deprecated** leftover 0.x (`experimental` dist-tag). |
+| **ArkRun kernel** | **`arkgate/runtime`** | Public brand **ArkRun**. Same npm package `arkgate` (ADR 0031). Factory `createStrictArkKernel` (each call is an isolated instance; no process-wide `getKernel()` singleton). Root export does **not** include the factory. Optional extra `arkRun` on schema `1.2+`. Event bus, intents, policies, sagas, event buffer, projections, and strict helpers. Managed components declare `uses` / `reactsTo` / `raises` / `sends` on `register()`; `getDependencyInformationPackage()` is a JSON snapshot of ids, lifetime, and declarations and never includes factories, live instances, or input DTOs (ADR 0023). `requestGraph()` slices that snapshot into **process** or **technical** graphs with optional `nodeIds`, `degreesOfSeparation`, and include/exclude query; `formatArkRunGraphMermaid()` (also `graph.mermaid`) is a helper string, never a score. `send()` is the transport port (local / localBlocking / broker); missing broker falls back to in-process local delivery, `ephemeral` defaults true, and **no cloud SDKs ship** in the package (ADR 0024). Opt-in `startInspector()` / `startArkRunInspector()` binds **`127.0.0.1` only**, refuses `NODE_ENV=production`, lazy-loads HTTP, and serves JSON snapshots, SSE, and `/graph` slices of the information package (no public / authless bind). **Shadow / replay / compare** (`shadowInformationPackage`, `compareInformationPackages`, `replayInformationPackages`) are in-memory helpers on that snapshot — not durable, not a second bus (ADR 0033). **Decision tape** `decisionTape` `{ xiHash, event, residual }` via `appendDecisionTape` (ADR 0034). Built-in stores are **InMemory reference only**. Branding ArkRun is not a production-durability claim. **`@arkgate/runtime` is deprecated** leftover 0.x (`experimental` dist-tag). |
 | **NestJS adapter** | **`arkgate/nestjs`** | Experimental optional peer `@nestjs/common` for the ArkRun kernel. Same npm package. `@arkgate/runtime/nestjs` is deprecated. |
-| **ArkOrder plane** | **`arkgate/order`** | Public brand **ArkOrder**. Same npm package `arkgate` (ADR 0030) — not `@arkgate/order`. Factory `createOrderPlane`. Valved verbs: `release` / `project` / `ingest` / `proposeRelease` / `apply` / `refreshSigma`. No `update`. First freeze is `release()`; later ξ change is `apply` (`ARKORDER_UNVALVED_RELEASE`). Haken: few slow keys; ingest residual `absorb | escalate_up | hold`; empty blast fails closed. Factory options (not config keys): `informationBudget.cannotObserve`, `sigmaMaxAgeMs`, `store`, `catalogDigest`. `IngestEscalate.target` includes `human`. Root `arkgate` export does **not** include the factory. Optional extra `arkOrder` on schema `1.3`. In-memory; not durable; does not close K01. Does not replace ArkRun. Runtime half (shadow/replay/compare + decision tape) is ArkRun (ADR 0033 / 0034). Canonical: [ArkOrder](arkorder.md). |
+| **ArkOrder plane** | **`arkgate/order`** | Public brand **ArkOrder**. Same npm package `arkgate` (ADR 0030) — not `@arkgate/order`. Factory `createOrderPlane`. Valved verbs: `release` / `project` / `ingest` / `proposeRelease` / `apply` / `refreshSigma`. No `update`. First freeze is `release()`; later ξ change is `apply` (`ARKORDER_UNVALVED_RELEASE`). Haken: few slow keys; ingest residual `absorb | escalate_up | hold` + closed `reasonCode`; empty blast fails closed. Capacity pack as data (`kind` / `sigmaKey` / `payloadKey` / `op`). Factory options (not config keys): `informationBudget.cannotObserve`, `sigmaMaxAgeMs`, `store` (`ReleaseStore` / `createMemoryReleaseStore`), `catalogDigest`. Thin travel: `ingestTravelAction` absorb→`send` / escalate_up human→`raises`. `IngestEscalate.target` includes `human`. Root `arkgate` export does **not** include the factory. Optional extra `arkOrder` on schema `1.3`. In-memory; not durable; does not close K01. Does not replace ArkRun. Runtime half (shadow/replay/compare + `decisionTape` / `appendDecisionTape`) is ArkRun (ADR 0033 / 0034). Canonical: [ArkOrder](arkorder.md). |
 
 ---
 
@@ -241,8 +244,8 @@ production deployment would need to satisfy; it is not a readiness certification
 | Break CLI JSON field, MCP tool rename, or required `ark.config` field | **major** |
 | New optional config field, new CLI flag, additive JSON | **minor** |
 | Bugfix with no contract change | **patch** |
-| Additive experimental ArkRun kernel API | `@arkgate/runtime` prerelease/minor |
-| Remove deprecated `arkgate/runtime` / `arkgate/nestjs` forwarding shims | **Done (AR04)** — use `@arkgate/runtime` / `@arkgate/runtime/nestjs` |
+| Additive experimental ArkRun kernel API | `arkgate/runtime` patch/minor (`@arkgate/runtime` is deprecated) |
+| Remove deprecated `arkgate/runtime` / `arkgate/nestjs` forwarding shims | **Done (AR04)** — use `arkgate/runtime` / `arkgate/nestjs` |
 
 ---
 
