@@ -5,7 +5,7 @@
 > [ROADMAP.md](../../../ROADMAP.md). Hub: [AGENTS.md](../../../AGENTS.md) ·
 > [Configuration](../../configuration.md) · [ADR index](../../adr/README.md)
 
-**Status:** Prepared (queue `todo`; engineering `doing`: none).<br>
+**Status:** In progress (`LD01` done — [ADR 0035](../../adr/0035-layer-description-projection.md) accepted; `LD02`–`LD06` `todo`; target **4.8.7**).<br>
 **Slug:** `layer-description-projection`<br>
 **Kind:** epic / contract caption projection<br>
 **Prefix:** `LD`<br>
@@ -65,7 +65,7 @@ The grain is the **layer** (one slow phrase per house), not each file.
 
 ## 1. Locked decisions (LD01 produces the ADR)
 
-Authority will be the accepted ADR (`0035` reserved). This section is the index.
+Authority is the accepted ADR ([0035](../../adr/0035-layer-description-projection.md)). This section is the index.
 
 | D | Decision |
 |---|----------|
@@ -146,5 +146,5 @@ is byte-for-byte as silent as today on Layers verdicts.
 ## Related
 
 - Roadmap: Phase **LD** `LD01`–`LD06` (orders 232–237)
-- ADR: **0035** reserved until `LD01`
+- ADR: [0035](../../adr/0035-layer-description-projection.md) accepted (`LD01`)
 - Does not close: `Z09` / `K01`
