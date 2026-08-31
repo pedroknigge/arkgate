@@ -353,7 +353,7 @@ changing either contract changes its hash and invalidates the acknowledgement.
 
 Optional `stewards` lists **GitHub handles or emails** who may **loosen** the contract or
 **grow** the baseline (`pedroknigge` or `pedroknigge@users.noreply.github.com` — not
-`Pedro Knigge`). The field is metadata — it does not change the policy hash. The lock
+`Pedro Knigge`). The field is metadata — it does not change the policy hash. `layers[].description` is stripped the same way (caption-only edits are not a contract change). The lock
 matches `--author`, then `GITHUB_ACTOR` / `ARK_STEWARD`, then `GIT_AUTHOR_EMAIL`. A
 noreply GitHub mail and the handle are the same person. Git `user.name` is not identity.
 

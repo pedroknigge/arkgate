@@ -180,12 +180,24 @@ export function resolveEffectiveContract(
   };
 }
 
+/** Layer captions are metadata and must not change policy identity. */
+export function omitLayerDescriptions(config: ArkConfig): ArkConfig {
+  return {
+    ...config,
+    layers: config.layers.map((layer) => {
+      const { description: _description, ...rest } = layer;
+      return rest;
+    }),
+  };
+}
+
 /**
  * Canonical payload for policyHash: root config + sorted effective ArkRules.
  * Absence of arkRules yields the same payload shape with empty structure/invariants.
+ * `stewards` and `layers[].description` are metadata — not import-rule teeth.
  */
 export function effectiveContractPolicyPayload(contract: EffectiveContract): unknown {
-  const { stewards: _stewards, ...configForHash } = contract.config;
+  const { stewards: _stewards, ...configForHash } = omitLayerDescriptions(contract.config);
   return {
     config: configForHash,
     arkRules: {

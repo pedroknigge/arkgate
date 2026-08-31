@@ -5,7 +5,7 @@
 > [ROADMAP.md](../../../ROADMAP.md). Hub: [AGENTS.md](../../../AGENTS.md) ·
 > [Configuration](../../configuration.md) · [ADR index](../../adr/README.md)
 
-**Status:** In progress (`LD01` done — [ADR 0035](../../adr/0035-layer-description-projection.md) accepted; `LD02`–`LD06` `todo`; target **4.8.7**).<br>
+**Status:** In progress (`LD01` done — [ADR 0035](../../adr/0035-layer-description-projection.md) accepted; `LD02` done — policyHash omits `layers[].description`; `LD03`–`LD06` `todo`; target **4.8.7**).<br>
 **Slug:** `layer-description-projection`<br>
 **Kind:** epic / contract caption projection<br>
 **Prefix:** `LD`<br>
