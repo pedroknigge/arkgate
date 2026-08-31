@@ -12,7 +12,7 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.
 /** Tree package identity. */
 const CURRENT = '4.8.5';
 /** Version confirmed on npm `latest`. */
-const PUBLISHED_LATEST = '4.8.4';
+const PUBLISHED_LATEST = '4.8.5';
 
 function read(rel: string) {
   return fs.readFileSync(path.join(REPO, rel), 'utf8');
@@ -106,11 +106,12 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(notes).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
   });
 
-  it('keeps 4.8.4 published on npm latest', () => {
-    expect(PUBLISHED_LATEST).toBe('4.8.4');
+  it('keeps 4.8.5 published on npm latest', () => {
+    expect(PUBLISHED_LATEST).toBe('4.8.5');
     expect(CURRENT).toBe('4.8.5');
-    expect(read('docs/releases/4.8.5.md')).toMatch(/\*\*Status:\*\*\s*prepared/i);
+    expect(read('docs/releases/4.8.5.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.8.5.md')).toMatch(/arkgate@4\.8\.5/);
+    expect(read('docs/releases/4.8.5.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
     expect(read('README.md')).toMatch(/4\.8\.4/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.8\.4\.md/);
     expect(read('docs/releases/4.8.4.md')).toMatch(/\*\*Status:\*\*\s*published/i);
@@ -148,11 +149,11 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('README.md')).toMatch(/4\.6\.6/);
     expect(read('README.md')).toMatch(/docs\/releases\/4\.6\.6\.md/);
     expect(read('CONTRIBUTING.md')).toMatch(/Current release:.*4\.8\.5/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.8\.4/s);
-    expect(read('CONTRIBUTING.md')).toMatch(/Prior published:.*4\.8\.3/s);
-    expect(read('docs/README.md')).toMatch(/Current published:.*4\.8\.4/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Current published release:.*4\.8\.5/s);
+    expect(read('CONTRIBUTING.md')).toMatch(/Prior published:.*4\.8\.4/s);
+    expect(read('docs/README.md')).toMatch(/Current published:.*4\.8\.5/s);
     expect(read('docs/README.md')).toMatch(/Prior:.*4\.6\.2/s);
-    expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.8\.4/is);
+    expect(read('docs/package-surface.md')).toMatch(/current published:.*4\.8\.5/is);
     expect(read('docs/package-surface.md')).toMatch(/4\.6\.2\.md/);
     expect(read('docs/releases/4.7.5.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.7.4.md')).toMatch(/\*\*Status:\*\*\s*published/i);
@@ -166,7 +167,7 @@ describe('CHANGELOG + release note cover 4.2.0 workspace identity train', () => 
     expect(read('docs/releases/4.6.7.md')).not.toMatch(/\*\*Status:\*\*\s*current/i);
     expect(read('docs/releases/4.6.6.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.6.md')).toMatch(/6\. \[x\].*arkgate-site 4\.6\.6/s);
-    expect(read('ROADMAP.md')).toMatch(/npm `latest` is \*\*4\.8\.4\*\*/);
+    expect(read('ROADMAP.md')).toMatch(/npm `latest` is \*\*4\.8\.5\*\*/);
     expect(read('docs/releases/4.6.5.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.4.md')).toMatch(/\*\*Status:\*\*\s*published/i);
     expect(read('docs/releases/4.6.4.md')).not.toMatch(/\*\*Status:\*\*\s*prepared/i);
@@ -1022,7 +1023,7 @@ describe('CHANGELOG + release note cover 3.9.1 patch hygiene', () => {
       expect(verbsAt).toBeGreaterThan(0);
       expect(html).toMatch(/Not an API Gateway/);
       expect(html).toMatch(/just documentation/);
-      expect(html).toMatch(/4\.8\.4/);
+      expect(html).toMatch(/4\.8\.5/);
       expect(html).toMatch(/ArkOrder/);
       expect(html).toMatch(/arkgate\/order/);
       expect(html).not.toMatch(/CONTRACT ACTIVE/);

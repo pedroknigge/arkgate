@@ -29,13 +29,13 @@ Works with Cursor, Claude, Codex, and Grok.
 
 </div>
 
-> **ArkGate 4.8.4** is on npm `latest`. Write. Check. Ship. Adopted = required GitHub
+> **ArkGate 4.8.5** is on npm `latest`. Write. Check. Ship. Adopted = required GitHub
 > status running `arkgate-check --strict-merge`, or an explicit `advisory-only` stance.
 > Status is compact (`arkgate-check --doctor`; `--all` for Details). Optional **ArkRun**
 > (`arkgate/runtime`) is an in-memory runtime — not Postgres. Optional **ArkOrder**
 > (`arkgate/order`) stops the agent rewriting the few slow product decisions as CRUD.
 > `@arkgate/runtime` is deprecated.
-> [4.8.4](docs/releases/4.8.4.md) · [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
+> [4.8.5](docs/releases/4.8.5.md) · [4.8.4](docs/releases/4.8.4.md) · [4.8.3](docs/releases/4.8.3.md) · [4.8.2](docs/releases/4.8.2.md) · [4.8.1](docs/releases/4.8.1.md) · [4.8.0](docs/releases/4.8.0.md) · [Docs hub](docs/README.md) · [Voice](docs/product-voice.md)
 
 ---
 
@@ -304,8 +304,8 @@ three keys. Compact starters leave it off. Details:
 | Config · package surface · TS | [configuration](docs/configuration.md) · [package-surface](docs/package-surface.md) · [typescript-support](docs/typescript-support.md) |
 | Brownfield | [docs/brownfield-adoption.md](docs/brownfield-adoption.md) |
 | Security | [SECURITY.md](SECURITY.md) |
-| Current tree (4.8.5 prepared) | [docs/releases/4.8.5.md](docs/releases/4.8.5.md) · [CHANGELOG](CHANGELOG.md) |
-| Current published (4.8.4 on npm `latest`) | [docs/releases/4.8.4.md](docs/releases/4.8.4.md) |
+| Current published (4.8.5 on npm `latest`) | [docs/releases/4.8.5.md](docs/releases/4.8.5.md) · [CHANGELOG](CHANGELOG.md) |
+| Prior published (4.8.4) | [docs/releases/4.8.4.md](docs/releases/4.8.4.md) |
 | Prior published (4.8.3) | [docs/releases/4.8.3.md](docs/releases/4.8.3.md) |
 | Prior published (4.8.2) | [docs/releases/4.8.2.md](docs/releases/4.8.2.md) |
 | Prior published (4.8.1) | [docs/releases/4.8.1.md](docs/releases/4.8.1.md) |

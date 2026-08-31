@@ -11,7 +11,7 @@ now has a canonical page. The runtime half (shadow / replay / compare) is
 ArkRun and in-memory. **No required config migration.** Does not close `K01` /
 `Z09`.
 
-**Status: prepared** (not yet on npm `latest`).
+**Status: published** (on npm `latest`; see `docs/releases/4.8.5.md`).
 
 ### Added
 - **`docs/arkorder.md`:** named APIs adopters were redesigning (`createOrderPlane`,
@@ -41,7 +41,7 @@ ArkRun and in-memory. **No required config migration.** Does not close `K01` /
 
 ## 4.8.4 — 2026-08-30
 
-**Status: published** (on npm `latest`; see `docs/releases/4.8.4.md`).
+**Status: published** (see `docs/releases/4.8.4.md`).
 
 **Patch** over **4.8.3**. Invariant coverage stops hiding its own limits: the scan budget and the
 test globs are config, every discarded file is counted in the diagnostic, and coverage stops
