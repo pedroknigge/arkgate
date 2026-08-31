@@ -359,6 +359,13 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'ingest ran after σ.freshUntil (or sigmaMaxAgeMs). ξ does not TTL.',
     'Refresh σ and ingest again, or freeze a new release if the pattern changed. Never mechanical-safe.'
   ),
+  entry(
+    'ARKORDER_UNVALVED_RELEASE',
+    'arkorder',
+    'Unvalved second freeze of ξ',
+    'release() ran after a pattern was already frozen and the new ξ differs. First freeze is release(); later pattern change is proposeRelease then apply.',
+    'Change ξ with proposeRelease then apply(ProposeResult). release() is only the first freeze. Never mechanical-safe.'
+  ),
 
   // ── atomic preflight / change set ────────────────────────────────────────
   entry(

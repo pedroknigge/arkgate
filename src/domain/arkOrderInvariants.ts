@@ -109,6 +109,20 @@ export function hashReleasePayload(xi: XiRecord, sigma: SigmaRecord): string {
   return deterministicHash(stableSerialize({ xi, sigma }));
 }
 
+export function xiRecordsEqual(left: XiRecord, right: XiRecord): boolean {
+  return stableSerialize(left) === stableSerialize(right);
+}
+
+/** D1: after the first freeze, a later release() may not change ξ. */
+export function assertUnvalvedRelease(current: Release | null, nextXi: XiRecord): void {
+  if (!current) return;
+  if (xiRecordsEqual(current.xi, nextXi)) return;
+  throw new ArkOrderError(
+    'ARKORDER_UNVALVED_RELEASE',
+    'ξ is frozen; change the pattern with proposeRelease then apply(ProposeResult)'
+  );
+}
+
 export function createFrozenRelease(input: {
   xi: Record<string, unknown>;
   sigma?: Record<string, unknown>;
@@ -275,4 +289,39 @@ export function proposePatternChange(input: {
     blastRadius,
     invalidations,
   };
+}
+
+/** D1 valve: freeze ProposeResult.nextXi. Empty blast still fails. */
+export function applyProposedRelease(input: {
+  current: Release;
+  proposal: ProposeResult;
+  projector: (release: Release, sigma: SigmaRecord) => Projection;
+  maxXiKeys: number;
+  xiSchema?: XiSchema;
+  now: number;
+}): Release {
+  const candidate = createFrozenRelease({
+    xi: { ...input.proposal.nextXi },
+    sigma: { ...input.current.sigma },
+    version: input.current.version + 1,
+    now: input.now,
+    maxXiKeys: input.maxXiKeys,
+    xiSchema: input.xiSchema,
+  });
+  if (xiRecordsEqual(candidate.xi, input.current.xi)) {
+    throw new ArkOrderError(
+      'ARKORDER_EMPTY_BLAST',
+      'delta does not change ξ; that is not a pattern change'
+    );
+  }
+  const previous = input.projector(input.current, input.current.sigma);
+  const next = input.projector(candidate, candidate.sigma);
+  const { blastRadius } = blastRadiusOf(previous, next);
+  if (blastRadius.length === 0) {
+    throw new ArkOrderError(
+      'ARKORDER_EMPTY_BLAST',
+      'pattern change has empty blast radius; that key is not an order parameter'
+    );
+  }
+  return candidate;
 }

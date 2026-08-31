@@ -1,15 +1,18 @@
 /**
- * ArkOrder plane factory (ADR 0028 / 0030). Haken slaving at the call site:
- * release freezes ξ; project derives s; ingest never returns a Release;
- * proposeRelease requires a non-empty blast.
+ * ArkOrder plane factory (ADR 0028 / 0030 / 0034). Haken slaving at the call site:
+ * first release freezes ξ; later ξ change is proposeRelease then apply;
+ * project derives s; ingest never returns a Release; empty blast fails.
  */
 import { ArkOrderError } from '../../domain/arkOrderError';
 import {
+  applyProposedRelease,
   assertInformationBudget,
   assertSigmaFresh,
+  assertUnvalvedRelease,
   classifyIngest,
   createFrozenRelease,
   DEFAULT_MAX_XI_KEYS,
+  freezeRecord,
   isForbiddenPlaneMethod,
   proposePatternChange,
 } from '../../domain/arkOrderInvariants';
@@ -41,6 +44,7 @@ export type OrderPlane = {
   project(): Projection;
   ingest(event: FieldEvent): IngestResult;
   proposeRelease(delta: Record<string, unknown>): ProposeResult;
+  apply(proposal: ProposeResult): Release;
   current(): Release | null;
 };
 
@@ -70,15 +74,19 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
 
   const plane: OrderPlane = {
     release(xi, sigma) {
-      version += 1;
-      current = createFrozenRelease({
+      if (current) {
+        assertUnvalvedRelease(current, freezeRecord(xi, 'ξ'));
+      }
+      const next = createFrozenRelease({
         xi,
         sigma,
-        version,
+        version: version + 1,
         now: clock.now(),
         maxXiKeys,
         xiSchema: options.xiSchema,
       });
+      version = next.version;
+      current = next;
       return current;
     },
     project() {
@@ -108,6 +116,19 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
         xiSchema: options.xiSchema,
         now: clock.now(),
       });
+    },
+    apply(proposal) {
+      const next = applyProposedRelease({
+        current: requireCurrent(),
+        proposal,
+        projector: options.projector,
+        maxXiKeys,
+        xiSchema: options.xiSchema,
+        now: clock.now(),
+      });
+      version = next.version;
+      current = next;
+      return current;
     },
     current() {
       return current;

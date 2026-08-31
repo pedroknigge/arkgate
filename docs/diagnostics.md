@@ -57,6 +57,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`ARKORDER_GENERIC_UPDATE`](#ARKORDER_GENERIC_UPDATE) | arkorder | Generic update of ξ |
 | [`ARKORDER_TOO_MANY_PARAMS`](#ARKORDER_TOO_MANY_PARAMS) | arkorder | Too many slow keys |
 | [`ARKORDER_INGEST_WRITES_XI`](#ARKORDER_INGEST_WRITES_XI) | arkorder | ingest assigned into ξ |
+| [`ARKORDER_UNVALVED_RELEASE`](#ARKORDER_UNVALVED_RELEASE) | arkorder | Unvalved second freeze of ξ |
 | [`INVALID_CHANGE_PATH`](#INVALID_CHANGE_PATH) | preflight | Unsafe change path |
 | [`DUPLICATE_CHANGE_PATH`](#DUPLICATE_CHANGE_PATH) | preflight | Duplicate path in change set |
 | [`DELETE_TARGET_MISSING`](#DELETE_TARGET_MISSING) | preflight | Delete target missing |
@@ -450,6 +451,15 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 - **Why:** ingest ran after σ.freshUntil (or sigmaMaxAgeMs). ξ does not TTL.
 - **Fix:** Refresh σ and ingest again, or freeze a new release if the pattern changed. Never mechanical-safe.
+
+<a id="ARKORDER_UNVALVED_RELEASE"></a>
+
+### `ARKORDER_UNVALVED_RELEASE`
+
+**Unvalved second freeze of ξ**
+
+- **Why:** release() ran after a pattern was already frozen and the new ξ differs. First freeze is release(); later pattern change is proposeRelease then apply.
+- **Fix:** Change ξ with proposeRelease then apply(ProposeResult). release() is only the first freeze. Never mechanical-safe.
 
 ## Atomic preflight and change sets
 

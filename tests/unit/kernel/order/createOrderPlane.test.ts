@@ -86,6 +86,52 @@ describe('createOrderPlane (Haken slaving)', () => {
     expect(p.current()?.xi.plan).toBe('free');
   });
 
+  it('apply freezes ProposeResult; unvalved second release of different ξ fails (LV02)', () => {
+    const p = plane();
+    const first = p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    expect(first.version).toBe(1);
+    const proposal = p.proposeRelease({ plan: 'pro', tenancy: 'team' });
+    const applied = p.apply(proposal);
+    expect(applied.xi.plan).toBe('pro');
+    expect(applied.version).toBe(2);
+    expect(p.current()?.xi.plan).toBe('pro');
+    try {
+      p.release({ plan: 'enterprise', cycle: 'monthly', tenancy: 'org' });
+      throw new Error('expected unvalved deny');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ArkOrderError);
+      expect((error as ArkOrderError).code).toBe('ARKORDER_UNVALVED_RELEASE');
+    }
+    expect(p.current()?.xi.plan).toBe('pro');
+  });
+
+  it('first release remains the freeze; same-ξ release is not unvalved (LV02)', () => {
+    const p = plane();
+    p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' }, { graceDays: 0 });
+    const again = p.release(
+      { plan: 'free', cycle: 'monthly', tenancy: 'single' },
+      { graceDays: 1 }
+    );
+    expect(again.xi.plan).toBe('free');
+    expect(again.sigma.graceDays).toBe(1);
+  });
+
+  it('apply of a no-op proposal fails empty blast (LV02)', () => {
+    const p = plane();
+    p.release({ plan: 'pro', cycle: 'monthly', tenancy: 'team' });
+    try {
+      p.apply({
+        nextXi: { plan: 'pro', cycle: 'monthly', tenancy: 'team' },
+        blastRadius: ['SeatAdded'],
+        invalidations: [],
+      });
+      throw new Error('expected empty blast');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ArkOrderError);
+      expect((error as ArkOrderError).code).toBe('ARKORDER_EMPTY_BLAST');
+    }
+  });
+
   it('ξ key cap fails closed', () => {
     const p = createOrderPlane({
       projector: billingProjector,
