@@ -18,6 +18,8 @@ export const ARKORDER_TIER1_SENSOR_IDS = [
     'arkorder-too-many-params',
     'arkorder-ingest-writes-xi',
     'arkorder-xi-field-write',
+    'arkorder-information-budget',
+    'arkorder-xi-ttl',
 ];
 export const ARKORDER_RULE_IDS = {
     'arkorder-missing-plane': 'ARKORDER_MISSING_PLANE',
@@ -26,6 +28,8 @@ export const ARKORDER_RULE_IDS = {
     'arkorder-too-many-params': 'ARKORDER_TOO_MANY_PARAMS',
     'arkorder-ingest-writes-xi': 'ARKORDER_INGEST_WRITES_XI',
     'arkorder-xi-field-write': 'ARKORDER_XI_FIELD_WRITE',
+    'arkorder-information-budget': 'ARKORDER_INFORMATION_BUDGET',
+    'arkorder-xi-ttl': 'ARKORDER_XI_TTL',
 };
 function isDomainRoleLayer(layer, intentPrefixes = []) {
     const name = layer.trim();

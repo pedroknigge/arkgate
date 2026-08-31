@@ -517,6 +517,9 @@ export function enrichViolationWithFixClass(violation) {
         case 'ARKORDER_TOO_MANY_PARAMS':
         case 'ARKORDER_INGEST_WRITES_XI':
         case 'ARKORDER_XI_FIELD_WRITE':
+        case 'ARKORDER_INFORMATION_BUDGET':
+        case 'ARKORDER_XI_TTL':
+        case 'ARKORDER_STALE_SIGMA':
             enriched.fixClass = 'arkorder-usage';
             enriched.effort = 'medium';
             enriched.enthusiastHint =
@@ -530,7 +533,13 @@ export function enrichViolationWithFixClass(violation) {
                                 ? 'ingest can absorb or escalate. It never writes a new house.'
                                 : violation.ruleId === 'ARKORDER_XI_FIELD_WRITE'
                                     ? 'Name the slow keys in arkOrder.xiKeys. Invoices and seats still flow; changing the plan is a new release, not prisma.update.'
-                                    : 'Call createOrderPlane from arkgate/order in a listed plane root so the app actually freezes a pattern.';
+                                    : violation.ruleId === 'ARKORDER_INFORMATION_BUDGET'
+                                        ? 'A scale may not observe a denied kind. Cut it from the projector or from cannotObserve.'
+                                        : violation.ruleId === 'ARKORDER_XI_TTL'
+                                            ? 'TTL is σ, never ξ. A slow key that expires is not an order parameter.'
+                                            : violation.ruleId === 'ARKORDER_STALE_SIGMA'
+                                                ? 'Refresh σ. ξ does not expire.'
+                                                : 'Call createOrderPlane from arkgate/order in a listed plane root so the app actually freezes a pattern.';
             break;
         default:
             enriched.fixClass = 'review-contract';

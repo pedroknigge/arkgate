@@ -485,6 +485,9 @@ export {
   arkRunInspectorUrl,
   buildArkRunInspectorSnapshot,
   buildDependencyInformationPackage,
+  compareInformationPackages,
+  replayInformationPackages,
+  shadowInformationPackage,
   closeArkRunGraphQuery,
   closedArkRunEphemeral,
   closedArkRunTransportKind,
@@ -539,5 +542,7 @@ export {
   type CreateArkKernelFromConfigOptions,
   type CreateArkKernelOptions,
   type DependencyInformationPackage,
+  type InformationPackageCompare,
+  type InformationPackageDiff,
   type StartArkRunInspectorOptions,
 } from './kernel/runtime';

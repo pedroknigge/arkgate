@@ -86,6 +86,8 @@ describe('sensorPromotion vocabulary', () => {
     expect(describeSensor('thin-adapter').reason).toContain('set mode "enforced" on a rule');
     expect(describeSensor('arkrun-direct-new').reason).toContain('arkrun.mode');
     expect(describeSensor('arkorder-generic-update').reason).toContain('arkorder.mode');
+    expect(describeSensor('arkorder-information-budget').reason).toContain('arkorder.mode');
+    expect(describeSensor('arkorder-xi-ttl').reason).toContain('arkorder.mode');
   });
 
   it('does not file an unknown sensor under a real plane', () => {

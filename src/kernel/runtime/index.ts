@@ -18,6 +18,13 @@ export {
   type DependencyInformationPackage,
 } from '../../domain/arkRunInformationPackage';
 export {
+  compareInformationPackages,
+  replayInformationPackages,
+  shadowInformationPackage,
+  type InformationPackageCompare,
+  type InformationPackageDiff,
+} from '../../domain/arkRunCompare';
+export {
   ARK_RUN_GRAPH_DEFAULT_SLICE,
   ARK_RUN_GRAPH_NODE_KINDS,
   ARK_RUN_GRAPH_PROCESS_EDGE_KINDS,
