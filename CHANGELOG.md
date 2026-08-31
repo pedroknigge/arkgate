@@ -5,7 +5,7 @@ in the immutable pre-2.0 archive linked below.
 
 ## 4.8.4 — 2026-08-30
 
-**Status: pending publish** (see `docs/releases/4.8.4.md`).
+**Status: published** (on npm `latest`; see `docs/releases/4.8.4.md`).
 
 **Patch** over **4.8.3**. Invariant coverage stops hiding its own limits: the scan budget and the
 test globs are config, every discarded file is counted in the diagnostic, and coverage stops
