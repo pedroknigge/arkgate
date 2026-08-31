@@ -118,6 +118,9 @@ export function printDoctorCompactHuman(view) {
         ? ok
         : warn;
   line(govMark, `Governed: ${cov.governed.percent}% (${cov.governed.classifiedFiles}/${cov.governed.totalFiles} files)`);
+  for (const row of cov.layers ?? []) {
+    if (row.description) line(' ', `${row.name} — ${row.description}`);
+  }
 
   const hostRed =
     gatesMissing.length > 0 ||
@@ -230,6 +233,12 @@ export function printDoctorDetailsHuman(view) {
     );
   }
   if (cov.suggestions.length === 0 && cov.emptyLayers.length === 0) line(ok, 'Every layer classifies files; no empty layers');
+  const captioned = (cov.layers ?? []).filter((row) => row.description);
+  if (captioned.length > 0) {
+    console.log('');
+    console.log(color.bold('Layers'));
+    for (const row of captioned) line(' ', `${row.name} — ${row.description}`);
+  }
 
   if (packageVersionTruth?.dualTruth) {
     console.log('');

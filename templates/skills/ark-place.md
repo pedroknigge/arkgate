@@ -19,6 +19,8 @@ description: "Where does new code go? Names the folder from the rules file and w
 - `filePath` is known before the call. Description alone is not a path.
 - Golden pattern is load-bearing when present. Adopt generates it.
 - Do not default a repository to Presentation.
+- When the matched layer has `layers[].description`, print that caption next to the
+  layer name and globs. Omit when absent — do not invent a caption or `/ark-describe`.
 - When `arkRun` is on: scaffold through the kernel (no `new` of managed types; declare
   `uses` / `reactsTo` / `raises` / `sends`; factory only in `arkRun.kernelRoots`,
   `compositionRoots` alias). Extra off → do not introduce the kernel. Enable it
@@ -57,6 +59,12 @@ patterns are **out-of-scope** lenses — say so; do not invent Ark enforcement f
 
 **Where so the AI doesn’t mess up next time** — golden pattern + layer home before the write.
 
+## Layer captions (process)
+
+When `ark_place` / the contract includes `layers[].description`, print that caption
+next to the layer name and globs. Omit it when the field is absent. Do **not** invent
+a caption or `/ark-describe`.
+
 ## Deep modules (process)
 
 - Place so new code stays **deep**: one small public surface per concern; hide implementation details.
@@ -80,7 +88,8 @@ and — if they asked to build it — scaffold it there correctly.
 **No artifact given?** If the skill is invoked with nothing to place, don't error
 and don't guess — the artifact is the one thing only the user knows. Read the
 contract (step 1) and print the placement map from it: one row per declared layer
-with what belongs there, its directory, and which layers it may/may not import,
+with layer name, globs, and `layers[].description` when present (omit when absent),
+what belongs there, its directory, and which layers it may/may not import,
 plus the not-yet-adopted `suggestedLayers` as a footnote. Then ask what they want
 to place. That map is derived entirely from the repo, so producing it is real work,
 not a stalling question.
@@ -164,7 +173,9 @@ the same files or weaken the gate.
    the mandatory `ark_identity` preflight first, then call **`ark_place`** with the target file
    path and bound `project` envelope — it returns the layer,
    its forbidden globals, and exactly which layers the file may / must not import,
-   straight from the contract (no guessing). When present, also honor optional
+   straight from the contract (no guessing). When the matched layer has
+   `layers[].description`, print that caption next to the layer name and globs;
+   omit it when absent. When present, also honor optional
    **`goldenPattern`** (from `.ark/golden-pattern.json`) for **NEW code only** —
    advisory layout norm; never overrides the gate and never clears design-weak.
    Absent golden is normal. Otherwise load `ark.config.json`; after the matched preflight,
@@ -197,7 +208,8 @@ the same files or weaken the gate.
      same technical layer are peerIsolation violations.
 3. **Answer concretely**: layer name, target directory (from the layer's
    `patterns`), intent-name prefix if the layer declares `intentPrefixes`, and
-   which layers it may/may not import (from `rules`).
+   which layers it may/may not import (from `rules`). When present, print
+   `layers[].description` next to the layer name and globs; omit when absent.
 4. **If the layer isn't adopted yet** (suggested but no directory): write the
    layer into `ark.config.json` (session-0 honesty — same as `/ark-adopt` for
    that glob) **then** write the file. Don't silently drop the code into a
@@ -242,7 +254,8 @@ the same files or weaken the gate.
 ## Verify and report
 
 If you created files, run `ark-check --root . --config ark.config.json
---strict-config` and make it pass. Report: placement + why, files created (if
+--strict-config` and make it pass. Report: placement + why (include the caption
+next to layer name and globs when present; omit when absent), files created (if
 any), and the import rules the new code must respect going forward.
 
 ## Completion contract (skill incomplete if missing)

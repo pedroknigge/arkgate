@@ -7,6 +7,12 @@
 import crypto from 'node:crypto';
 import { validateWithAutoPatch } from './auto-patch.mjs';
 import { classifyRemediation, enrichViolationWithFixClass } from './remediation.mjs';
+import {
+  layerDescriptionCaption,
+  placementDescriptionFields,
+} from './layer-description.mjs';
+
+export { layerDescriptionCaption, placementDescriptionFields };
 
 /**
  * Stable content identity for host commit / cache keys.
@@ -114,7 +120,7 @@ export function composePrepareWrite(opts) {
     ...(placement?.suggestedLayers ? { suggestedLayers: placement.suggestedLayers } : {}),
     ...(placement?.message ? { placementMessage: placement.message } : {}),
     ...(placement?.note ? { placementNote: placement.note } : {}),
-    ...(placement?.description ? { description: placement.description } : {}),
+    ...placementDescriptionFields(placement),
     // Q03: pass through golden pattern from ark_place (advisory; absent is normal).
     ...(placement?.goldenPattern ? { goldenPattern: placement.goldenPattern } : {}),
     mode: gate.mode,
