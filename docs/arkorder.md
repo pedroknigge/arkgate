@@ -13,7 +13,8 @@ below.
 
 Canonical plan seed: [plans/arkorder/README.md](plans/arkorder/README.md).
 ADRs: [0027](adr/0027-arkorder-gated-extra-plane.md)–[0030](adr/0030-opt-in-extras-same-npm-package.md),
-[0033](adr/0033-arkorder-runtime-half-is-arkrun.md) (runtime half is ArkRun).
+[0033](adr/0033-arkorder-runtime-half-is-arkrun.md) (runtime half is ArkRun),
+[0034](adr/0034-arkorder-valved-loop.md) (valved loop; public verbs in 4.9.0).
 Config: [configuration.md](configuration.md). Surface:
 [package-surface.md](package-surface.md#experimental-opt-in-surfaces).
 
@@ -198,6 +199,14 @@ Durability (`K01`) stays parked. In-memory is the honesty line.
 - a degraded-mode contract (nothing can be down)
 
 If a “slow parameter” changes with every click, it is not an order parameter.
+
+The **valved loop** (second freeze only via `proposeRelease` → `apply`, σ
+outside ξ identity, ingest residual, capacity-as-data, ArkRun decision tape,
+`ReleaseStore` port) is **not shipped**. [ADR 0034](adr/0034-arkorder-valved-loop.md)
+is accepted. Maintainer queue: Phase **LV** (`LV01` done; `LV02`–`LV09`) in
+[ROADMAP.md](../ROADMAP.md) · [plan](plans/arkorder-valve-loop/README.md). Until
+those IDs are `done`, `release()` can freeze again, ingest ignores payload, and
+absorb does not travel.
 
 ---
 

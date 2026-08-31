@@ -59,4 +59,16 @@ describe('docs/arkorder.md (XP01)', () => {
     expect(read('docs/adr/0033-arkorder-runtime-half-is-arkrun.md')).toMatch(/belongs to ArkRun/);
     expect(read('docs/adr/README.md')).toMatch(/0033-arkorder-runtime-half-is-arkrun/);
   });
+
+  it('indexes accepted ADR 0034 for the valved loop (LV01)', () => {
+    const adr = read('docs/adr/0034-arkorder-valved-loop.md');
+    expect(adr).toMatch(/Accepted/);
+    expect(adr).toMatch(/ARKORDER_UNVALVED_RELEASE/);
+    expect(adr).toMatch(/refreshSigma/);
+    expect(adr).toMatch(/xiHash/);
+    expect(adr).toMatch(/escalate_up/);
+    expect(adr).toMatch(/ReleaseStore/);
+    expect(adr).toMatch(/does \*\*not\*\* close `K01`/i);
+    expect(read('docs/adr/README.md')).toMatch(/0034-arkorder-valved-loop/);
+  });
 });
