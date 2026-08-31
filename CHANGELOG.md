@@ -3,6 +3,30 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
+## 4.8.7 — 2026-08-31
+
+**Patch** over **4.8.6**. Phase **LD** — layer description projection. Optional
+`layers[].description` is an **app-context caption** (what this folder is in the
+product), not architecture jargon. Place, doctor, coverage, and the HTML report
+show it when present. Caption-only edits do not change `policyHash`.
+**No required config migration.** No `schemaVersion` bump. Does not close `K01` / `Z09`.
+No new skill names. Do not npm-publish from this item until the maintainer tag.
+
+**Status: prepared** (tree ready; npm `latest` remains **4.8.6** until publish).
+
+### Added
+- Public name for existing `layers[].description`. Example:
+  `"Purchase requests — from asked to received."`
+- Place / prepare-write / MCP JSON, doctor JSON + human, coverage JSON, and the
+  HTML Purpose column project the caption when present.
+- `/ark-adopt` writes the caption from the product map or glossary; `/ark-place`
+  prints it next to layer name + globs.
+
+### Changed
+- `policyHash` omits `layers[].description` the same way it omits `stewards`.
+  Caption-only is neutral. Absence stays silent: never a residual, never a
+  score, never `--strict-config` fail.
+
 ## 4.8.6 — 2026-08-31
 
 **Patch** over **4.8.5**. Phase **LV** — ArkOrder valved loop. First `release()`

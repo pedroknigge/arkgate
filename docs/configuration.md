@@ -144,7 +144,28 @@ name different factories: `arkRun.kernelRoots` (`compositionRoots` alias) vs
 
 Layer fields:
 
-- `name`, `patterns`, `exclude`, `description`
+- `name`, `patterns`, `exclude`
+- **`layers[].description`** (optional) — **app-context caption**: one product sentence for what
+  this folder is *in the app*, not architecture jargon. `/ark-place` prints it next to
+  the layer name and globs; doctor, coverage, and the HTML report show the same text.
+  Changing the sentence does **not** change `policyHash` (same strip as `stewards`) and
+  does **not** need a weakening ack. Absence is silent: never fails `--strict-config`,
+  never invents a doctor residual, never flips `valid`. Empty string is invalid JSON for
+  the field (`minLength: 1`). Compact starters may omit it. `/ark-adopt` writes it when
+  the product map or glossary names the house; it does not invent captions. No
+  `/ark-describe`.
+
+```json
+"layers": [
+  {
+    "name": "Application",
+    "patterns": ["src/application/**"],
+    "description": "Purchase requests — from asked to received."
+  }
+]
+```
+
+That sentence is product copy. Not “Rich domain model, business rules, and domain events.”
 - `intentPrefixes`, `forbiddenGlobals`, `mayImportInfrastructure`, `optional`
 - `reserved` / `allowEmpty` — future houses whose globs match nothing yet. `--strict-config` does not fail; `CONFIG_LAYER_PATTERN_NO_MATCHES` (typo warning) is skipped. A typo warning fires only when the glob is not reserved.
 - `capabilities: { deny: [...] }` — opt-in effect walls over the seven capability ids
