@@ -36,4 +36,20 @@ describe('docs/arkorder.md (XP01)', () => {
     expect(read('docs/README.md')).toMatch(/arkorder\.md/);
     expect(read('README.md')).toMatch(/docs\/arkorder\.md/);
   });
+
+  it('documents one extra activation shape and keeps distinct factory roots (XP02)', () => {
+    const body = read('docs/arkorder.md');
+    expect(body).toMatch(/mode/);
+    expect(body).toMatch(/managedLayers/);
+    expect(body).toMatch(/planeRoots/);
+    expect(body).toMatch(/kernelRoots/);
+    expect(body).toMatch(/compositionRoots/);
+    expect(read('docs/configuration.md')).toMatch(/Activation is one shape/);
+  });
+
+  it('points at ADR 0033 for the runtime-half decision (XP03)', () => {
+    expect(read('docs/adr/0033-arkorder-runtime-half-is-arkrun.md')).toMatch(/Accepted/);
+    expect(read('docs/adr/0033-arkorder-runtime-half-is-arkrun.md')).toMatch(/belongs to ArkRun/);
+    expect(read('docs/adr/README.md')).toMatch(/0033-arkorder-runtime-half-is-arkrun/);
+  });
 });

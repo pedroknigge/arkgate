@@ -85,6 +85,7 @@ as unpublished `arkgate@4.8.0`. Canonical: [arkorder.md](../arkorder.md). Plan: 
 | [0029](0029-arkorder-anti-skip-facts.md) | Closed anti-skip sensors. Inference never blocks. No LLM ξ classifier. |
 | [0030](0030-opt-in-extras-same-npm-package.md) | One npm package `arkgate`. Extras are subpaths. No `@arkgate/*` install. |
 | [0031](0031-one-package-extras-deprecate-companion.md) | 4.8.0: Run + Order + Nest are real subpaths. Companion deprecated. |
+| [0033](0033-arkorder-runtime-half-is-arkrun.md) | Shadow / replay / provenance / compare are ArkRun. ArkOrder stays library + sensors. |
 
 ## Do not fold
 
