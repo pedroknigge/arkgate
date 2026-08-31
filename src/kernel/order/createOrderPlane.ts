@@ -122,7 +122,7 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
       }
       const projection = options.projector(release, release.sigma);
       assertInformationBudget(projection, options.informationBudget);
-      return classifyIngest(projection, event, packs, release.xiHash);
+      return classifyIngest(projection, event, packs, release.xiHash, release.sigma);
     },
     proposeRelease(delta) {
       return proposePatternChange({

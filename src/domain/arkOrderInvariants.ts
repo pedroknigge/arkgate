@@ -6,8 +6,9 @@
  * A pattern change with empty blast radius is not an order parameter.
  */
 import { ArkOrderError } from './arkOrderError';
-import { DEFAULT_MAX_XI_KEYS } from './arkOrderTypes';
+import { CAPACITY_OPS, DEFAULT_MAX_XI_KEYS } from './arkOrderTypes';
 import type {
+  CapacityOp,
   ConstraintPack,
   EscalationTarget,
   FieldEvent,
@@ -233,15 +234,68 @@ function bindResidual(event: FieldEvent, xiHash: string) {
   return { event, xiHash, eventId: fieldEventIdentity(event) };
 }
 
+const CAPACITY_OP_SET = new Set<string>(CAPACITY_OPS);
+
+function isCapacityOp(value: unknown): value is CapacityOp {
+  return typeof value === 'string' && CAPACITY_OP_SET.has(value);
+}
+
+function numericLeaf(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function compareCapacity(left: number, op: CapacityOp, right: number): boolean {
+  if (op === 'lte') return left <= right;
+  if (op === 'lt') return left < right;
+  if (op === 'gte') return left >= right;
+  return left > right;
+}
+
+function packHasFunction(value: unknown): boolean {
+  if (typeof value === 'function') return true;
+  if (value === null || typeof value !== 'object') return false;
+  if (Array.isArray(value)) return value.some(packHasFunction);
+  return Object.values(value as Record<string, unknown>).some(packHasFunction);
+}
+
+function evaluateCapacity(
+  event: FieldEvent,
+  sigma: SigmaRecord,
+  pack: ConstraintPack
+): 'ok' | 'capacity' | 'pack' {
+  const rows = pack.capacity ?? [];
+  for (const row of rows) {
+    if (packHasFunction(row) || !isCapacityOp(row.op)) return 'pack';
+    if (row.kind !== event.kind) continue;
+    const payload =
+      event.payload && typeof event.payload === 'object' && !Array.isArray(event.payload)
+        ? numericLeaf((event.payload as Record<string, unknown>)[row.payloadKey])
+        : undefined;
+    const limit = numericLeaf(sigma[row.sigmaKey]);
+    if (payload === undefined || limit === undefined) return 'pack';
+    if (!compareCapacity(payload, row.op, limit)) return 'capacity';
+  }
+  return 'ok';
+}
+
 export function classifyIngest(
   projection: Projection,
   event: FieldEvent,
   packs: readonly ConstraintPack[] = [],
-  xiHash = ''
+  xiHash = '',
+  sigma: SigmaRecord = Object.freeze({})
 ): IngestResult {
   const kind = event.kind;
   const bound = bindResidual(event, xiHash);
   for (const pack of packs) {
+    if (packHasFunction(pack.capacity) || packHasFunction(pack.escalateKinds)) {
+      return {
+        ...bound,
+        kind: 'hold',
+        reasonCode: 'pack',
+        reason: `pack ${pack.id} is not data-only; user predicates are forbidden`,
+      };
+    }
     if (pack.escalateKinds?.includes(kind)) {
       const target: EscalationTarget = pack.escalateTarget ?? 'human';
       return {
@@ -253,16 +307,29 @@ export function classifyIngest(
       };
     }
   }
-  if (projection.allowedKinds.includes(kind)) {
-    return { ...bound, kind: 'absorb' };
+  if (!projection.allowedKinds.includes(kind)) {
+    return {
+      ...bound,
+      kind: 'escalate_up',
+      reasonCode: 'not-in-pattern',
+      reason: `kind ${JSON.stringify(kind)} is not allowed by h(ξ); field cannot rewrite the pattern`,
+      target: 'human',
+    };
   }
-  return {
-    ...bound,
-    kind: 'escalate_up',
-    reasonCode: 'not-in-pattern',
-    reason: `kind ${JSON.stringify(kind)} is not allowed by h(ξ); field cannot rewrite the pattern`,
-    target: 'human',
-  };
+  for (const pack of packs) {
+    const cap = evaluateCapacity(event, sigma, pack);
+    if (cap === 'ok') continue;
+    return {
+      ...bound,
+      kind: 'hold',
+      reasonCode: cap,
+      reason:
+        cap === 'capacity'
+          ? `pack ${pack.id} capacity ${JSON.stringify(event.kind)} does not hold`
+          : `pack ${pack.id} capacity is not numeric data`,
+    };
+  }
+  return { ...bound, kind: 'absorb' };
 }
 
 export function blastRadiusOf(

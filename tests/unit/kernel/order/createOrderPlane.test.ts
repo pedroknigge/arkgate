@@ -236,6 +236,49 @@ describe('createOrderPlane (Haken slaving)', () => {
     if (result.kind === 'escalate_up') expect(result.target).toBe('human');
   });
 
+  it('capacity pack holds over-cap SeatAdded without a homemade kind (LV05)', () => {
+    const p = createOrderPlane({
+      projector: billingProjector,
+      packs: [
+        {
+          id: 'seats',
+          capacity: [{ kind: 'SeatAdded', sigmaKey: 'seatCap', payloadKey: 'seats', op: 'lte' }],
+        },
+      ],
+      clocks: { now: () => 1 },
+    });
+    p.release({ plan: 'pro', cycle: 'monthly', tenancy: 'team' }, { seatCap: 5 });
+    expect(p.ingest({ kind: 'SeatAdded', payload: { seats: 5 } }).kind).toBe('absorb');
+    const over = p.ingest({ kind: 'SeatAdded', payload: { seats: 6 } });
+    expect(over.kind).toBe('hold');
+    if (over.kind === 'hold') expect(over.reasonCode).toBe('capacity');
+  });
+
+  it('capacity pack with a function is pack residual, not a predicate (LV05)', () => {
+    const p = createOrderPlane({
+      projector: billingProjector,
+      packs: [
+        {
+          id: 'bad',
+          capacity: [
+            {
+              kind: 'SeatAdded',
+              sigmaKey: 'seatCap',
+              payloadKey: 'seats',
+              op: 'lte',
+              pred: () => true,
+            } as never,
+          ],
+        },
+      ],
+      clocks: { now: () => 1 },
+    });
+    p.release({ plan: 'pro', cycle: 'monthly', tenancy: 'team' }, { seatCap: 5 });
+    const result = p.ingest({ kind: 'SeatAdded', payload: { seats: 1 } });
+    expect(result.kind).toBe('hold');
+    if (result.kind === 'hold') expect(result.reasonCode).toBe('pack');
+  });
+
   it('has no update/patch/set on the plane', () => {
     const p = plane();
     p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });

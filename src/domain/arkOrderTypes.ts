@@ -76,10 +76,22 @@ export type ProposeResult = {
 
 export type Projector = (release: Release, sigma: SigmaRecord) => Projection;
 
+export const CAPACITY_OPS = ['lte', 'lt', 'gte', 'gt'] as const;
+export type CapacityOp = (typeof CAPACITY_OPS)[number];
+
+/** Data-only cap. No user predicates (ADR 0016 / 0034 D5). */
+export type CapacityConstraint = {
+  readonly kind: string;
+  readonly sigmaKey: string;
+  readonly payloadKey: string;
+  readonly op: CapacityOp;
+};
+
 export type ConstraintPack = {
   readonly id: string;
   readonly escalateKinds?: readonly string[];
   readonly escalateTarget?: EscalationTarget;
+  readonly capacity?: readonly CapacityConstraint[];
 };
 
 /** What a scale may not observe (XP04). Denied kinds never appear in allowedKinds. */
