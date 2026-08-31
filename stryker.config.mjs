@@ -99,7 +99,7 @@ const config = {
   // values are unit-tested; mutate executable decisions without false static survivors.
   ignoreStatic: true,
   cleanTempDir: 'always',
-  ignorePatterns: ['coverage', 'internal', '.gstack'],
+  ignorePatterns: ['coverage', 'internal', '.gstack', '.grok', '.agents', '.orderfield'],
 };
 
 export default config;
