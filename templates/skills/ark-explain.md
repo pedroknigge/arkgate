@@ -67,8 +67,8 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 |-------|------------------|----------------|-----------------|
 | **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
 | **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
-| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime`; **`kernelRoots` preferred**, `compositionRoots` alias | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
-| **ArkOrder** (extra) | Operational pattern (ξ vs s) | `arkOrder` on `ark.config.json` (schema `1.3+`); factory `arkgate/order` | `ARKORDER_*` |
+| **ArkRun** (extra) | Kernel usage + complete declarations; information package `decisionTape` `{ xiHash, event, residual }` | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime`; **`kernelRoots` preferred**, `compositionRoots` alias | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
+| **ArkOrder** (extra) | Operational pattern (ξ vs s). Valve: first `release()`, later ξ is `proposeRelease` then `apply`; `refreshSigma`; ingest residual `absorb \| escalate_up \| hold` + `reasonCode`; capacity pack as data; in-memory `ReleaseStore` | `arkOrder` on `ark.config.json` (schema `1.3+`); factory `arkgate/order` | `ARKORDER_*` |
 
 **Rules for every report / answer:**
 1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** or **`[ArkRun]`** or **`[ArkOrder]`** (or a table with those headers).
@@ -97,6 +97,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 
 ### Explain + extras
 - Extras silent when off. If `arkRun` is on, doctor `arkRun` is `notAScore` — never a tour score. Do not force extras.
+- If `arkOrder` is on, teach the valve in plain language: first freeze is `release()`; later pattern change is `proposeRelease` then `apply`; `refreshSigma` refreshes saldo; ingest returns `absorb | escalate_up | hold` plus `reasonCode`; capacity is a data pack; `ReleaseStore` is in-memory; ArkRun may carry `decisionTape`. Never `update`.
 
 ## Subagent fan-out (optional, host-dependent)
 

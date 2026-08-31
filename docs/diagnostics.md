@@ -57,6 +57,7 @@ Link form for agents: `docs/diagnostics.md#RULE_ID` (exact-case HTML anchors bel
 | [`ARKORDER_GENERIC_UPDATE`](#ARKORDER_GENERIC_UPDATE) | arkorder | Generic update of ξ |
 | [`ARKORDER_TOO_MANY_PARAMS`](#ARKORDER_TOO_MANY_PARAMS) | arkorder | Too many slow keys |
 | [`ARKORDER_INGEST_WRITES_XI`](#ARKORDER_INGEST_WRITES_XI) | arkorder | ingest assigned into ξ |
+| [`ARKORDER_UNVALVED_RELEASE`](#ARKORDER_UNVALVED_RELEASE) | arkorder | Unvalved second freeze of ξ |
 | [`INVALID_CHANGE_PATH`](#INVALID_CHANGE_PATH) | preflight | Unsafe change path |
 | [`DUPLICATE_CHANGE_PATH`](#DUPLICATE_CHANGE_PATH) | preflight | Duplicate path in change set |
 | [`DELETE_TARGET_MISSING`](#DELETE_TARGET_MISSING) | preflight | Delete target missing |
@@ -395,7 +396,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 **Generic update of ξ**
 
 - **Why:** A call to update/patch/set on the order plane rewrites the slow pattern. Haken slaving forbids generic ξ mutation.
-- **Fix:** Use release() to freeze ξ or proposeRelease() for a pattern change with blast radius, then preflight again. Never mechanical-safe.
+- **Fix:** Use release() for the first freeze of ξ. Later pattern change is proposeRelease then apply(ProposeResult). Never update/patch/set. Never mechanical-safe.
 
 <a id="ARKORDER_TOO_MANY_PARAMS"></a>
 
@@ -412,8 +413,8 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 
 **ingest assigned into ξ**
 
-- **Why:** An ingest() result is written into a Release or ξ store. ingest may absorb or escalate; it never mints a pattern.
-- **Fix:** Keep ingest results as absorb/escalate only. Change ξ with proposeRelease + release. Never mechanical-safe.
+- **Why:** An ingest() result is written into a Release or ξ store. ingest may absorb, escalate_up, or hold; it never mints a pattern.
+- **Fix:** Keep ingest results as absorb/escalate_up/hold only. Change ξ with proposeRelease then apply(ProposeResult). Never mechanical-safe.
 
 <a id="ARKORDER_XI_FIELD_WRITE"></a>
 
@@ -422,7 +423,7 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 **Slow key written around the order plane**
 
 - **Why:** A managed-layer file imports a persistence driver and writes a declared arkOrder.xiKeys name. Field events absorb or escalate; they do not PATCH the slow pattern.
-- **Fix:** Keep invoices, seats, hours, and logs on ingest. Change the slow key with proposeRelease + release, then preflight again. Never mechanical-safe.
+- **Fix:** Keep invoices, seats, hours, and logs on ingest. Change the slow key with proposeRelease then apply(ProposeResult), then preflight again. Never mechanical-safe.
 
 <a id="ARKORDER_INFORMATION_BUDGET"></a>
 
@@ -449,7 +450,16 @@ Haken slaving: few slow keys (ξ) determine derived fast state. Field ingest nev
 **σ is stale**
 
 - **Why:** ingest ran after σ.freshUntil (or sigmaMaxAgeMs). ξ does not TTL.
-- **Fix:** Refresh σ and ingest again, or freeze a new release if the pattern changed. Never mechanical-safe.
+- **Fix:** Call refreshSigma and ingest again, or proposeRelease then apply(ProposeResult) if the pattern changed. Never mechanical-safe.
+
+<a id="ARKORDER_UNVALVED_RELEASE"></a>
+
+### `ARKORDER_UNVALVED_RELEASE`
+
+**Unvalved second freeze of ξ**
+
+- **Why:** release() ran after a pattern was already frozen and the new ξ differs. First freeze is release(); later pattern change is proposeRelease then apply.
+- **Fix:** Change ξ with proposeRelease then apply(ProposeResult). release() is only the first freeze. Never mechanical-safe.
 
 ## Atomic preflight and change sets
 

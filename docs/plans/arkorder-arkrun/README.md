@@ -117,6 +117,10 @@ Recorded because both adopters explicitly warned against it, and they are right:
 
 ## 6. Adjacent, not part of this epic
 
+**Valved Haken loop** — `release()` can still change ξ; ingest ignores payload;
+absorb does not travel. That train is [arkorder-valve-loop](../arkorder-valve-loop/README.md)
+(Phase LV). This epic does not own it.
+
 **ArkRules cannot express a configuration invariant** — "this value, in this file, must be this".
 A disabled `package.json` script, a pinned `search_path`, a non-empty baseline: none are expressible
 today, so they survive as test ratchets outside the contract. It is the same shape of answer

@@ -3,6 +3,37 @@
 All notable changes to ArkGate (`arkgate`; formerly `ark-runtime-kernel`) are documented here or
 in the immutable pre-2.0 archive linked below.
 
+## 4.8.6 — 2026-08-31
+
+**Patch** over **4.8.5**. Phase **LV** — ArkOrder valved loop. First `release()`
+freezes ξ; later pattern change is `proposeRelease` then `apply`. σ identity is
+not ξ identity. ingest returns a closed residual. Capacity is data. ArkRun
+carries the decision tape. **No required config migration.** Does not close
+`K01` / `Z09`. No `/ark-order` skill. Do not npm-publish from this item until
+the maintainer tag.
+
+**Status: prepared** (tree ready; npm `latest` remains **4.8.5** until publish).
+
+### Added
+- **`apply(ProposeResult)`** on `createOrderPlane`. Unvalved second freeze of a
+  different ξ fails `ARKORDER_UNVALVED_RELEASE` at runtime (not a lexical sensor).
+- **`xiHash` / `sigmaHash` / `refreshSigma`** — saldo refresh does not mint a pattern.
+- **Ingest residual** `absorb | escalate_up | hold` bound to `xiHash` + event
+  identity. Closed `reasonCode`: `not-in-pattern` | `stale-sigma` | `pack` |
+  `capacity`. `proposed_patch` only on `escalate_up`. `IngestEscalate.target` remains.
+- **Capacity pack as data** (`kind` / `sigmaKey` / `payloadKey` / `op`). No user
+  predicates. Over-cap is residual, not a homemade kind.
+- **ArkRun decision tape** on the information package (`{ xiHash, event, residual }`).
+  Component snapshot API unchanged. `shadow` / `compare` / `replay` in-process.
+- **`ReleaseStore` port** with in-memory default. Optional catalog digest keyed by
+  `catalogReleaseId`. Not durable. Not K01.
+- Thin gallery bridge: absorb may `send`; `escalate_up` human may `raises`.
+
+### Changed
+- Public sentence: **ArkOrder freezes the pattern through a valve. ArkRun is how
+  the residual travels.** Skills `/ark-adopt` `/ark-place` `/ark-autopilot` deepen.
+  Doctor / status remain `notAScore`.
+
 ## 4.8.5 — 2026-08-31
 
 **Patch** over **4.8.4**. Phase **XP** (ArkOrder × ArkRun) plus Antigravity skill

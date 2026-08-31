@@ -119,8 +119,8 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 |-------|------------------|----------------|-----------------|
 | **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
 | **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
-| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime`; **`kernelRoots` preferred**, `compositionRoots` alias | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
-| **ArkOrder** (extra) | Operational pattern (ξ vs s) | `arkOrder` on `ark.config.json` (schema `1.3+`); factory `arkgate/order` | `ARKORDER_*` |
+| **ArkRun** (extra) | Kernel usage + complete declarations; information package `decisionTape` `{ xiHash, event, residual }` | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime`; **`kernelRoots` preferred**, `compositionRoots` alias | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
+| **ArkOrder** (extra) | Operational pattern (ξ vs s). Valve: first `release()`, later ξ is `proposeRelease` then `apply`; `refreshSigma`; ingest residual `absorb \| escalate_up \| hold` + `reasonCode`; capacity pack as data; in-memory `ReleaseStore` | `arkOrder` on `ark.config.json` (schema `1.3+`); factory `arkgate/order` | `ARKORDER_*` |
 
 **Rules for every report / answer:**
 1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** or **`[ArkRun]`** or **`[ArkOrder]`** (or a table with those headers).
@@ -141,13 +141,13 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 ### Autopilot + ArkRun
 When `arkRun` is present:
 - Grind skip clusters with judgment: `ARKRUN_DIRECT_NEW` / `ARKRUN_TRANSPORT_BYPASS` / `ARKRUN_KERNEL_IN_DOMAIN` / `ARKRUN_MISSING_ROOT`. Never invent `mechanical-safe` for new emits / homemade buses.
-- Factory only inside `arkRun.kernelRoots` (`compositionRoots` alias). Import `arkgate/runtime`. Doctor `arkRun` is `notAScore`.
+- Factory only inside `arkRun.kernelRoots` (`compositionRoots` alias). Import `arkgate/runtime`. Doctor `arkRun` is `notAScore`. Information package may carry `decisionTape` `{ xiHash, event, residual }` (`appendDecisionTape`). Shadow / compare / replay stay in-memory.
 - Extra off → `/ark-adopt` (advisory) or `/ark-runtime` (evaluate one candidate). Do not invent `/ark-run`.
 - Skills never enforce.
 
 ### Autopilot + ArkOrder
 When `arkOrder` is present:
-- Grind skip clusters with judgment: `ARKORDER_MISSING_PLANE` / `ARKORDER_KERNEL_IN_DOMAIN` / `ARKORDER_GENERIC_UPDATE` / `ARKORDER_TOO_MANY_PARAMS` / `ARKORDER_INGEST_WRITES_XI` / `ARKORDER_XI_FIELD_WRITE`. Freeze ξ with `release()`; never `update`/`patch`/`set`. Name `xiKeys`; do not persist those keys from a use-case.
+- Grind skip clusters with judgment: `ARKORDER_MISSING_PLANE` / `ARKORDER_KERNEL_IN_DOMAIN` / `ARKORDER_GENERIC_UPDATE` / `ARKORDER_TOO_MANY_PARAMS` / `ARKORDER_INGEST_WRITES_XI` / `ARKORDER_XI_FIELD_WRITE` / `ARKORDER_UNVALVED_RELEASE`. First freeze with `release()`; later ξ change is `proposeRelease` then `apply`. `refreshSigma`; ingest residual `absorb | escalate_up | hold` + `reasonCode`; capacity pack; `createMemoryReleaseStore`; `ingestTravelAction`; ArkRun `decisionTape`. Never `update`/`patch`/`set`. Name `xiKeys`; do not persist those keys from a use-case. Doctor / status `arkOrder` is `notAScore`.
 - Extra off → `/ark-adopt` (advisory). Do not invent `/ark-order`.
 - Skills never enforce.
 

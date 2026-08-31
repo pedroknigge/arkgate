@@ -189,6 +189,7 @@ const ARKORDER_JUDGMENT_RULE_IDS = new Set([
   'ARKORDER_TOO_MANY_PARAMS',
   'ARKORDER_INGEST_WRITES_XI',
   'ARKORDER_XI_FIELD_WRITE',
+  'ARKORDER_UNVALVED_RELEASE',
 ]);
 
 function arkRunCallSiteName(violation: ArkViolationLike): string | undefined {
@@ -332,15 +333,17 @@ export function deterministicNextAction(violation: ArkViolationLike): string {
     case 'ARKORDER_KERNEL_IN_DOMAIN':
       return 'Move the arkgate/order import out of the Domain-role layer into a plane root or adapter, then preflight again. Never mechanical-safe.';
     case 'ARKORDER_GENERIC_UPDATE':
-      return 'Use release() to freeze ξ or proposeRelease() for a pattern change with blast radius, then preflight again. Never mechanical-safe.';
+      return 'Use release() for the first freeze of ξ. Later pattern change is proposeRelease then apply(ProposeResult). Never update/patch/set. Never mechanical-safe.';
     case 'ARKORDER_TOO_MANY_PARAMS':
       return 'Cut ξ to the slow keys that actually slave the rest, then preflight again. Never mechanical-safe.';
     case 'ARKORDER_INGEST_WRITES_XI':
-      return 'Keep ingest results as absorb/escalate only. Change ξ with proposeRelease + release. Never mechanical-safe.';
+      return 'Keep ingest results as absorb/escalate_up/hold only. Change ξ with proposeRelease then apply(ProposeResult). Never mechanical-safe.';
     case 'ARKORDER_XI_FIELD_WRITE':
       return typeof violation.target === 'string' && violation.target.length > 0
-        ? `Do not persist slow key ${violation.target} from a use-case. Absorb the field with ingest() or change the pattern with proposeRelease(), then preflight again.`
-        : 'Do not persist a declared slow key from a use-case. Absorb the field with ingest() or change the pattern with proposeRelease(), then preflight again. Never mechanical-safe.';
+        ? `Do not persist slow key ${violation.target} from a use-case. Absorb the field with ingest() or change the pattern with proposeRelease then apply, then preflight again.`
+        : 'Do not persist a declared slow key from a use-case. Absorb the field with ingest() or change the pattern with proposeRelease then apply, then preflight again. Never mechanical-safe.';
+    case 'ARKORDER_UNVALVED_RELEASE':
+      return 'Change ξ with proposeRelease then apply(ProposeResult). release() is only the first freeze. Never mechanical-safe.';
     default:
       if (typeof violation.ruleId === 'string' && violation.ruleId.startsWith('ARKRULE_')) {
         return `Fix the ArkRule ${
@@ -638,6 +641,7 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
     case 'ARKORDER_INFORMATION_BUDGET':
     case 'ARKORDER_XI_TTL':
     case 'ARKORDER_STALE_SIGMA':
+    case 'ARKORDER_UNVALVED_RELEASE':
       enriched.fixClass = 'arkorder-usage';
       enriched.effort = 'medium';
       enriched.enthusiastHint =
@@ -657,6 +661,8 @@ export function enrichViolationWithFixClass<T extends ArkViolationLike>(
                       ? 'TTL is σ, never ξ. A slow key that expires is not an order parameter.'
                       : violation.ruleId === 'ARKORDER_STALE_SIGMA'
                         ? 'Refresh σ. ξ does not expire.'
+                        : violation.ruleId === 'ARKORDER_UNVALVED_RELEASE'
+                          ? 'The pattern is frozen. proposeRelease then apply — do not call release() again with a different ξ.'
                   : 'Call createOrderPlane from arkgate/order in a listed plane root so the app actually freezes a pattern.';
       break;
     default:

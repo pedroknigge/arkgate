@@ -4,6 +4,7 @@ import {
   createOrderPlane,
   type Projector,
 } from '../../../../src/kernel/order/createOrderPlane';
+import { createMemoryReleaseStore } from '../../../../src/kernel/order/releaseStore';
 import type { Release } from '../../../../src/domain/arkOrderTypes';
 
 /** Consumer physics — not in the core. */
@@ -45,7 +46,11 @@ describe('createOrderPlane (Haken slaving)', () => {
     expect(release.xi.plan).toBe('free');
     expect(Object.isFrozen(release.xi)).toBe(true);
     expect(p.project().allowedKinds).toEqual(['InvoicePosted']);
-    expect(p.ingest({ kind: 'InvoicePosted' }).kind).toBe('absorb');
+    const absorbed = p.ingest({ kind: 'InvoicePosted' });
+    expect(absorbed.kind).toBe('absorb');
+    expect(absorbed.xiHash).toBe(release.xiHash);
+    expect(absorbed.eventId.length).toBeGreaterThan(0);
+    expect('proposed_patch' in absorbed).toBe(false);
   });
 
   it('ingest never returns a new Release', () => {
@@ -62,7 +67,13 @@ describe('createOrderPlane (Haken slaving)', () => {
     const p = plane();
     p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
     const result = p.ingest({ kind: 'SeatAdded' });
-    expect(result.kind).toBe('escalate');
+    expect(result.kind).toBe('escalate_up');
+    if (result.kind === 'escalate_up') {
+      expect(result.reasonCode).toBe('not-in-pattern');
+      expect(result.target).toBe('human');
+      expect(result.xiHash).toBe(p.current()?.xiHash);
+      expect(result.proposed_patch).toBeUndefined();
+    }
   });
 
   it('proposeRelease with empty blast fails closed', () => {
@@ -84,6 +95,52 @@ describe('createOrderPlane (Haken slaving)', () => {
     expect(proposal.blastRadius.length).toBeGreaterThan(0);
     expect(proposal.nextXi.plan).toBe('pro');
     expect(p.current()?.xi.plan).toBe('free');
+  });
+
+  it('apply freezes ProposeResult; unvalved second release of different ξ fails (LV02)', () => {
+    const p = plane();
+    const first = p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    expect(first.version).toBe(1);
+    const proposal = p.proposeRelease({ plan: 'pro', tenancy: 'team' });
+    const applied = p.apply(proposal);
+    expect(applied.xi.plan).toBe('pro');
+    expect(applied.version).toBe(2);
+    expect(p.current()?.xi.plan).toBe('pro');
+    try {
+      p.release({ plan: 'enterprise', cycle: 'monthly', tenancy: 'org' });
+      throw new Error('expected unvalved deny');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ArkOrderError);
+      expect((error as ArkOrderError).code).toBe('ARKORDER_UNVALVED_RELEASE');
+    }
+    expect(p.current()?.xi.plan).toBe('pro');
+  });
+
+  it('first release remains the freeze; same-ξ release is not unvalved (LV02)', () => {
+    const p = plane();
+    p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' }, { graceDays: 0 });
+    const again = p.release(
+      { plan: 'free', cycle: 'monthly', tenancy: 'single' },
+      { graceDays: 1 }
+    );
+    expect(again.xi.plan).toBe('free');
+    expect(again.sigma.graceDays).toBe(1);
+  });
+
+  it('apply of a no-op proposal fails empty blast (LV02)', () => {
+    const p = plane();
+    p.release({ plan: 'pro', cycle: 'monthly', tenancy: 'team' });
+    try {
+      p.apply({
+        nextXi: { plan: 'pro', cycle: 'monthly', tenancy: 'team' },
+        blastRadius: ['SeatAdded'],
+        invalidations: [],
+      });
+      throw new Error('expected empty blast');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ArkOrderError);
+      expect((error as ArkOrderError).code).toBe('ARKORDER_EMPTY_BLAST');
+    }
   });
 
   it('ξ key cap fails closed', () => {
@@ -135,12 +192,11 @@ describe('createOrderPlane (Haken slaving)', () => {
       clocks: { now: () => 100 },
     });
     aged.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' }, { freshUntil: 50 });
-    try {
-      aged.ingest({ kind: 'InvoicePosted' });
-      throw new Error('expected stale sigma');
-    } catch (error) {
-      expect(error).toBeInstanceOf(ArkOrderError);
-      expect((error as ArkOrderError).code).toBe('ARKORDER_STALE_SIGMA');
+    const stale = aged.ingest({ kind: 'InvoicePosted' });
+    expect(stale.kind).toBe('hold');
+    if (stale.kind === 'hold') {
+      expect(stale.reasonCode).toBe('stale-sigma');
+      expect(stale.xiHash).toBe(aged.current()?.xiHash);
     }
 
     let now = 1;
@@ -151,21 +207,131 @@ describe('createOrderPlane (Haken slaving)', () => {
     });
     fromReleaseClock.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
     now = 20;
-    try {
-      fromReleaseClock.ingest({ kind: 'InvoicePosted' });
-      throw new Error('expected stale sigma from release.releasedAt');
-    } catch (error) {
-      expect(error).toBeInstanceOf(ArkOrderError);
-      expect((error as ArkOrderError).code).toBe('ARKORDER_STALE_SIGMA');
-    }
+    const staleFromClock = fromReleaseClock.ingest({ kind: 'InvoicePosted' });
+    expect(staleFromClock.kind).toBe('hold');
+    if (staleFromClock.kind === 'hold') expect(staleFromClock.reasonCode).toBe('stale-sigma');
+  });
+
+  it('refreshSigma does not change xiHash (LV03)', () => {
+    const p = plane();
+    const first = p.release(
+      { plan: 'free', cycle: 'monthly', tenancy: 'single' },
+      { graceDays: 0, seatCap: 5 }
+    );
+    expect(first.xiHash).not.toBe(first.sigmaHash);
+    expect(first.hash).not.toBe(first.xiHash);
+    const refreshed = p.refreshSigma({ graceDays: 14, seatCap: 5 });
+    expect(refreshed.xiHash).toBe(first.xiHash);
+    expect(refreshed.sigmaHash).not.toBe(first.sigmaHash);
+    expect(refreshed.hash).not.toBe(first.hash);
+    expect(refreshed.version).toBe(first.version);
+    expect(refreshed.xi.plan).toBe('free');
+    expect(refreshed.sigma.graceDays).toBe(14);
   });
 
   it('escalate names a human target by default (XP06)', () => {
     const p = plane();
     p.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
     const result = p.ingest({ kind: 'SeatAdded' });
-    expect(result.kind).toBe('escalate');
-    if (result.kind === 'escalate') expect(result.target).toBe('human');
+    expect(result.kind).toBe('escalate_up');
+    if (result.kind === 'escalate_up') expect(result.target).toBe('human');
+  });
+
+  it('capacity pack holds over-cap SeatAdded without a homemade kind (LV05)', () => {
+    const p = createOrderPlane({
+      projector: billingProjector,
+      packs: [
+        {
+          id: 'seats',
+          capacity: [{ kind: 'SeatAdded', sigmaKey: 'seatCap', payloadKey: 'seats', op: 'lte' }],
+        },
+      ],
+      clocks: { now: () => 1 },
+    });
+    p.release({ plan: 'pro', cycle: 'monthly', tenancy: 'team' }, { seatCap: 5 });
+    expect(p.ingest({ kind: 'SeatAdded', payload: { seats: 5 } }).kind).toBe('absorb');
+    const over = p.ingest({ kind: 'SeatAdded', payload: { seats: 6 } });
+    expect(over.kind).toBe('hold');
+    if (over.kind === 'hold') expect(over.reasonCode).toBe('capacity');
+  });
+
+  it('capacity pack with a function is pack residual, not a predicate (LV05)', () => {
+    const p = createOrderPlane({
+      projector: billingProjector,
+      packs: [
+        {
+          id: 'bad',
+          capacity: [
+            {
+              kind: 'SeatAdded',
+              sigmaKey: 'seatCap',
+              payloadKey: 'seats',
+              op: 'lte',
+              pred: () => true,
+            } as never,
+          ],
+        },
+      ],
+      clocks: { now: () => 1 },
+    });
+    p.release({ plan: 'pro', cycle: 'monthly', tenancy: 'team' }, { seatCap: 5 });
+    const result = p.ingest({ kind: 'SeatAdded', payload: { seats: 1 } });
+    expect(result.kind).toBe('hold');
+    if (result.kind === 'hold') expect(result.reasonCode).toBe('pack');
+  });
+
+  it('injects ReleaseStore; in-memory default is not durable (LV08)', () => {
+    const store = createMemoryReleaseStore();
+    const first = createOrderPlane({
+      projector: billingProjector,
+      store,
+      clocks: { now: () => 1 },
+    });
+    first.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    const second = createOrderPlane({
+      projector: billingProjector,
+      store,
+      clocks: { now: () => 2 },
+    });
+    expect(second.current()?.xi.plan).toBe('free');
+    expect(second.current()?.hash).toBe(store.load()?.hash);
+  });
+
+  it('catalog digest keyed by catalogReleaseId enters xiHash; SKU set does not (LV08)', () => {
+    const without = plane();
+    const a = without.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    const ignored = createOrderPlane({
+      projector: billingProjector,
+      catalogDigest: 'digest-sku-set-must-not-enter',
+      clocks: { now: () => 1 },
+    });
+    const b = ignored.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    expect(b.hash).toBe(a.hash);
+    expect(b.xiHash).toBe(a.xiHash);
+    const keyed = createOrderPlane({
+      projector: billingProjector,
+      catalogDigest: 'digest-of-catalog-id',
+      clocks: { now: () => 1 },
+    });
+    const c = keyed.release({
+      plan: 'free',
+      cycle: 'monthly',
+      tenancy: 'single',
+      catalogReleaseId: 'cat-1',
+    });
+    const other = createOrderPlane({
+      projector: billingProjector,
+      catalogDigest: 'other-digest',
+      clocks: { now: () => 1 },
+    });
+    const d = other.release({
+      plan: 'free',
+      cycle: 'monthly',
+      tenancy: 'single',
+      catalogReleaseId: 'cat-1',
+    });
+    expect(c.xiHash).not.toBe(d.xiHash);
+    expect(c.hash).not.toBe(d.hash);
   });
 
   it('has no update/patch/set on the plane', () => {

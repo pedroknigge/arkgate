@@ -17,6 +17,8 @@ subpath `arkgate/order` in the **same** npm tarball — [ADR 0030](../../adr/003
 gallery `examples/arkorder-billing/`
 
 Does **not** close `Z09` / residual `RB-11` or `K01`. Does **not** replace ArkRun.
+The valved control loop (apply / residual / tape / store port) is a later epic:
+[arkorder-valve-loop](../arkorder-valve-loop/README.md) (Phase LV).
 
 ---
 

@@ -6,8 +6,9 @@
  * A pattern change with empty blast radius is not an order parameter.
  */
 import { ArkOrderError } from './arkOrderError';
-import { DEFAULT_MAX_XI_KEYS } from './arkOrderTypes';
+import { CAPACITY_OPS, DEFAULT_MAX_XI_KEYS } from './arkOrderTypes';
 import type {
+  CapacityOp,
   ConstraintPack,
   EscalationTarget,
   FieldEvent,
@@ -24,6 +25,13 @@ import type {
 import { deterministicHash, stableSerialize } from './stableHash';
 
 export { DEFAULT_MAX_XI_KEYS };
+
+/** D7: consumer still owns handlers — this only names the travel verb. */
+export function ingestTravelAction(residual: IngestResult): 'send' | 'raises' | 'none' {
+  if (residual.kind === 'absorb') return 'send';
+  if (residual.kind === 'escalate_up' && residual.target === 'human') return 'raises';
+  return 'none';
+}
 
 const FORBIDDEN_PLANE_METHODS = ['update', 'patch', 'set', 'mutate'] as const;
 
@@ -105,8 +113,44 @@ export function assertXiSchema(xi: XiRecord, schema: XiSchema | undefined): void
   }
 }
 
-export function hashReleasePayload(xi: XiRecord, sigma: SigmaRecord): string {
+function catalogDigestFor(xi: XiRecord, catalogDigest?: string): string | undefined {
+  if (typeof catalogDigest !== 'string') return undefined;
+  if (!Object.prototype.hasOwnProperty.call(xi, 'catalogReleaseId')) return undefined;
+  return catalogDigest;
+}
+
+export function hashReleasePayload(
+  xi: XiRecord,
+  sigma: SigmaRecord,
+  catalogDigest?: string
+): string {
+  const digest = catalogDigestFor(xi, catalogDigest);
+  if (digest !== undefined) return deterministicHash(stableSerialize({ xi, sigma, catalogDigest: digest }));
   return deterministicHash(stableSerialize({ xi, sigma }));
+}
+
+export function hashXiIdentity(xi: XiRecord, catalogDigest?: string): string {
+  const digest = catalogDigestFor(xi, catalogDigest);
+  if (digest !== undefined) return deterministicHash(stableSerialize({ xi, catalogDigest: digest }));
+  return deterministicHash(stableSerialize({ xi }));
+}
+
+export function hashSigmaIdentity(sigma: SigmaRecord): string {
+  return deterministicHash(stableSerialize({ sigma }));
+}
+
+export function xiRecordsEqual(left: XiRecord, right: XiRecord): boolean {
+  return stableSerialize(left) === stableSerialize(right);
+}
+
+/** D1: after the first freeze, a later release() may not change ξ. */
+export function assertUnvalvedRelease(current: Release | null, nextXi: XiRecord): void {
+  if (!current) return;
+  if (xiRecordsEqual(current.xi, nextXi)) return;
+  throw new ArkOrderError(
+    'ARKORDER_UNVALVED_RELEASE',
+    'ξ is frozen; change the pattern with proposeRelease then apply(ProposeResult)'
+  );
 }
 
 export function createFrozenRelease(input: {
@@ -116,6 +160,7 @@ export function createFrozenRelease(input: {
   now: number;
   maxXiKeys: number;
   xiSchema?: XiSchema;
+  catalogDigest?: string;
 }): Release {
   assertXiKeyCap(input.xi, input.maxXiKeys);
   const xi = freezeRecord(input.xi, 'ξ');
@@ -124,12 +169,33 @@ export function createFrozenRelease(input: {
   const sigma = freezeRecord(input.sigma ?? {}, 'σ');
   const release: Release = Object.freeze({
     version: input.version,
-    hash: hashReleasePayload(xi, sigma),
+    hash: hashReleasePayload(xi, sigma, input.catalogDigest),
+    xiHash: hashXiIdentity(xi, input.catalogDigest),
+    sigmaHash: hashSigmaIdentity(sigma),
     xi,
     sigma,
     releasedAt: input.now,
   });
   return release;
+}
+
+/** D2: refresh σ without minting a pattern. xiHash must not change. */
+export function refreshSigmaRecord(input: {
+  current: Release;
+  sigma: Record<string, unknown>;
+  now: number;
+  catalogDigest?: string;
+}): Release {
+  const sigma = freezeRecord(input.sigma, 'σ');
+  return Object.freeze({
+    version: input.current.version,
+    hash: hashReleasePayload(input.current.xi, sigma, input.catalogDigest),
+    xiHash: input.current.xiHash,
+    sigmaHash: hashSigmaIdentity(sigma),
+    xi: input.current.xi,
+    sigma,
+    releasedAt: input.now,
+  });
 }
 
 const XI_TTL_KEY_RE = /^(ttl|freshUntil|fresh_until|maxAge|max_age)$/i;
@@ -183,32 +249,110 @@ export function assertSigmaFresh(input: {
   }
 }
 
+export function fieldEventIdentity(event: FieldEvent): string {
+  return deterministicHash(stableSerialize({ kind: event.kind, payload: event.payload ?? null }));
+}
+
+function bindResidual(event: FieldEvent, xiHash: string) {
+  return { event, xiHash, eventId: fieldEventIdentity(event) };
+}
+
+const CAPACITY_OP_SET = new Set<string>(CAPACITY_OPS);
+
+function isCapacityOp(value: unknown): value is CapacityOp {
+  return typeof value === 'string' && CAPACITY_OP_SET.has(value);
+}
+
+function numericLeaf(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function compareCapacity(left: number, op: CapacityOp, right: number): boolean {
+  if (op === 'lte') return left <= right;
+  if (op === 'lt') return left < right;
+  if (op === 'gte') return left >= right;
+  return left > right;
+}
+
+function packHasFunction(value: unknown): boolean {
+  if (typeof value === 'function') return true;
+  if (value === null || typeof value !== 'object') return false;
+  if (Array.isArray(value)) return value.some(packHasFunction);
+  return Object.values(value as Record<string, unknown>).some(packHasFunction);
+}
+
+function evaluateCapacity(
+  event: FieldEvent,
+  sigma: SigmaRecord,
+  pack: ConstraintPack
+): 'ok' | 'capacity' | 'pack' {
+  const rows = pack.capacity ?? [];
+  for (const row of rows) {
+    if (packHasFunction(row) || !isCapacityOp(row.op)) return 'pack';
+    if (row.kind !== event.kind) continue;
+    const payload =
+      event.payload && typeof event.payload === 'object' && !Array.isArray(event.payload)
+        ? numericLeaf((event.payload as Record<string, unknown>)[row.payloadKey])
+        : undefined;
+    const limit = numericLeaf(sigma[row.sigmaKey]);
+    if (payload === undefined || limit === undefined) return 'pack';
+    if (!compareCapacity(payload, row.op, limit)) return 'capacity';
+  }
+  return 'ok';
+}
+
 export function classifyIngest(
   projection: Projection,
   event: FieldEvent,
-  packs: readonly ConstraintPack[] = []
+  packs: readonly ConstraintPack[] = [],
+  xiHash = '',
+  sigma: SigmaRecord = Object.freeze({})
 ): IngestResult {
   const kind = event.kind;
+  const bound = bindResidual(event, xiHash);
   for (const pack of packs) {
+    if (packHasFunction(pack.capacity) || packHasFunction(pack.escalateKinds)) {
+      return {
+        ...bound,
+        kind: 'hold',
+        reasonCode: 'pack',
+        reason: `pack ${pack.id} is not data-only; user predicates are forbidden`,
+      };
+    }
     if (pack.escalateKinds?.includes(kind)) {
       const target: EscalationTarget = pack.escalateTarget ?? 'human';
       return {
-        kind: 'escalate',
-        event,
+        ...bound,
+        kind: 'escalate_up',
+        reasonCode: 'pack',
         reason: `pack ${pack.id} slaves kind ${JSON.stringify(kind)} to a pattern change`,
         target,
       };
     }
   }
-  if (projection.allowedKinds.includes(kind)) {
-    return { kind: 'absorb', event };
+  if (!projection.allowedKinds.includes(kind)) {
+    return {
+      ...bound,
+      kind: 'escalate_up',
+      reasonCode: 'not-in-pattern',
+      reason: `kind ${JSON.stringify(kind)} is not allowed by h(ξ); field cannot rewrite the pattern`,
+      target: 'human',
+    };
   }
-  return {
-    kind: 'escalate',
-    event,
-    reason: `kind ${JSON.stringify(kind)} is not allowed by h(ξ); field cannot rewrite the pattern`,
-    target: 'human',
-  };
+  for (const pack of packs) {
+    const cap = evaluateCapacity(event, sigma, pack);
+    if (cap === 'ok') continue;
+    return {
+      ...bound,
+      kind: 'hold',
+      reasonCode: cap,
+      reason:
+        cap === 'capacity'
+          ? `pack ${pack.id} capacity ${JSON.stringify(event.kind)} does not hold`
+          : `pack ${pack.id} capacity is not numeric data`,
+    };
+  }
+  return { ...bound, kind: 'absorb' };
 }
 
 export function blastRadiusOf(
@@ -238,6 +382,7 @@ export function proposePatternChange(input: {
   maxXiKeys: number;
   xiSchema?: XiSchema;
   now: number;
+  catalogDigest?: string;
 }): ProposeResult {
   const merged: Record<string, unknown> = { ...input.current.xi };
   for (const [key, value] of Object.entries(input.delta)) {
@@ -254,6 +399,7 @@ export function proposePatternChange(input: {
     now: input.now,
     maxXiKeys: input.maxXiKeys,
     xiSchema: input.xiSchema,
+    catalogDigest: input.catalogDigest,
   });
   if (candidate.hash === input.current.hash) {
     throw new ArkOrderError(
@@ -275,4 +421,41 @@ export function proposePatternChange(input: {
     blastRadius,
     invalidations,
   };
+}
+
+/** D1 valve: freeze ProposeResult.nextXi. Empty blast still fails. */
+export function applyProposedRelease(input: {
+  current: Release;
+  proposal: ProposeResult;
+  projector: (release: Release, sigma: SigmaRecord) => Projection;
+  maxXiKeys: number;
+  xiSchema?: XiSchema;
+  now: number;
+  catalogDigest?: string;
+}): Release {
+  const candidate = createFrozenRelease({
+    xi: { ...input.proposal.nextXi },
+    sigma: { ...input.current.sigma },
+    version: input.current.version + 1,
+    now: input.now,
+    maxXiKeys: input.maxXiKeys,
+    xiSchema: input.xiSchema,
+    catalogDigest: input.catalogDigest,
+  });
+  if (xiRecordsEqual(candidate.xi, input.current.xi)) {
+    throw new ArkOrderError(
+      'ARKORDER_EMPTY_BLAST',
+      'delta does not change ξ; that is not a pattern change'
+    );
+  }
+  const previous = input.projector(input.current, input.current.sigma);
+  const next = input.projector(candidate, candidate.sigma);
+  const { blastRadius } = blastRadiusOf(previous, next);
+  if (blastRadius.length === 0) {
+    throw new ArkOrderError(
+      'ARKORDER_EMPTY_BLAST',
+      'pattern change has empty blast radius; that key is not an order parameter'
+    );
+  }
+  return candidate;
 }

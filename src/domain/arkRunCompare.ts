@@ -60,6 +60,18 @@ export function shadowInformationPackage(
       sends: [...component.sends],
       ...(component.extendedInfo ? { extendedInfo: { ...component.extendedInfo } } : {}),
     })),
+    ...(pack.decisionTape
+      ? {
+          decisionTape: pack.decisionTape.map((entry) => ({
+            xiHash: entry.xiHash,
+            event: {
+              kind: entry.event.kind,
+              ...(entry.event.payload ? { payload: { ...entry.event.payload } } : {}),
+            },
+            residual: { ...entry.residual },
+          })),
+        }
+      : {}),
   };
 }
 

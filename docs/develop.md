@@ -202,9 +202,14 @@ The plane is `arkgate/order` in package `arkgate`, not a second install.
 stays plane-free. Empty `planeRoots` in `enforced` mode fails closed
 (`ARKORDER_MISSING_PLANE`). In-memory. Not durable. Does not replace ArkRun.
 
+First freeze is `release()`. Later pattern change is `proposeRelease` then
+`apply` (`ARKORDER_UNVALVED_RELEASE`). `refreshSigma`; ingest residual
+`absorb | escalate_up | hold` + `reasonCode`; capacity pack as data;
+`createMemoryReleaseStore`; `ingestTravelAction`; ArkRun `decisionTape`.
+
 Copy [examples/arkorder-billing/](../examples/arkorder-billing/) (`plan` / `cycle` /
-`tenancy`) and rename the keys. Posting an invoice is absorbed; changing plan is a
-new release. See [configuration.md](configuration.md) and
+`tenancy`) and rename the keys. Posting an invoice is absorbed; changing plan is
+`proposeRelease` then `apply`. See [configuration.md](configuration.md) and
 [package-surface.md](package-surface.md).
 
 ---

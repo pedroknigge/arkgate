@@ -8,12 +8,13 @@ Import: `arkgate/order` (same npm package `arkgate`). Off until you add
 `arkOrder` on schema `1.3`. Absence is silent. In-memory. Not durable. It is
 a library plus sensors, not a service. Does **not** replace ArkRun.
 
-First-contact copy: freeze / four verbs / no `update`. Haken (ξ vs s) lives
-below.
+First-contact copy: freeze through a valve / no `update`. Haken (ξ vs s) lives
+below. **ArkOrder freezes the pattern through a valve. ArkRun is how the residual travels.**
 
 Canonical plan seed: [plans/arkorder/README.md](plans/arkorder/README.md).
 ADRs: [0027](adr/0027-arkorder-gated-extra-plane.md)–[0030](adr/0030-opt-in-extras-same-npm-package.md),
-[0033](adr/0033-arkorder-runtime-half-is-arkrun.md) (runtime half is ArkRun).
+[0033](adr/0033-arkorder-runtime-half-is-arkrun.md) (runtime half is ArkRun),
+[0034](adr/0034-arkorder-valved-loop.md) (valved loop; public verbs in 4.8.6).
 Config: [configuration.md](configuration.md). Surface:
 [package-surface.md](package-surface.md#experimental-opt-in-surfaces).
 
@@ -24,7 +25,7 @@ Config: [configuration.md](configuration.md). Surface:
 | Is | Is not |
 |----|--------|
 | A **library** (`createOrderPlane`) plus **static sensors** | A running service, daemon, or hosted plane |
-| Four verbs: `release` / `project` / `ingest` / `proposeRelease` | A generic `update` / `patch` / `set` |
+| Valved verbs: `release` / `project` / `ingest` / `proposeRelease` / `apply` / `refreshSigma` | A generic `update` / `patch` / `set` |
 | Opt-in extra on `ark.config.json` | Always-on; compact starters leave it off |
 | Consumer-named slow keys (`xiKeys`) | A construction OS, BIM, or FirmPack |
 | Same npm tarball | not `@arkgate/order` |
@@ -49,10 +50,10 @@ They already exist:
 
 | Ask | API | Since |
 |-----|-----|-------|
-| Escalation as a first-class concept | `IngestResult = IngestAbsorb \| IngestEscalate` (`kind`, `reason`) | 4.8.0 |
+| Escalation as a first-class concept | `IngestResult` residual `absorb \| escalate_up \| hold` (`reasonCode`, `IngestEscalate.target`) | 4.8.0 / 4.8.6 |
 | Projection at the boundary | `Projector = (release, sigma) => Projection` | 4.8.0 |
 | Cap on badly designed slow parameters | `DEFAULT_MAX_XI_KEYS = 7`, `maxXiKeys`, `ARKORDER_TOO_MANY_PARAMS`, `ARKORDER_EMPTY_XI`, `ARKORDER_NESTED_XI` | 4.8.0 |
-| Valved proposals, never direct mutation | `ProposeResult { nextXi, blastRadius, invalidations }` | 4.8.0 |
+| Valved proposals, never direct mutation | `ProposeResult` then `apply` (`ARKORDER_UNVALVED_RELEASE`) | 4.8.0 / 4.8.6 |
 | Typed cell schema | `XiSchema` / `XiPropertySchema` | 4.8.0 |
 | Named slow keys on the write path | `arkOrder.xiKeys`; `ARKORDER_XI_FIELD_WRITE` | 4.8.3 |
 | Factory isolation | `createOrderPlane` from `arkgate/order` only | 4.8.0 |
@@ -60,13 +61,20 @@ They already exist:
 | σ freshness, never ξ | `sigmaMaxAgeMs` / `σ.freshUntil`; `ARKORDER_XI_TTL`, `ARKORDER_STALE_SIGMA` | 4.8.5 |
 | Escalate to a person | `IngestEscalate.target` including `human` | 4.8.5 |
 | Shadow / replay / compare | ArkRun `shadowInformationPackage` / `compareInformationPackages` / `replayInformationPackages` | 4.8.5 |
+| Decision tape | ArkRun information package `decisionTape` `{ xiHash, event, residual }` | 4.8.6 |
+| σ vs ξ identity | `xiHash` / `sigmaHash` / `refreshSigma` | 4.8.6 |
+| Capacity as data | `ConstraintPack.capacity` (`kind` / `sigmaKey` / `payloadKey` / `op`) | 4.8.6 |
+| Store port | `ReleaseStore` / `createMemoryReleaseStore` in-memory default — not durable, not K01 | 4.8.6 |
+| Thin travel helper | `ingestTravelAction` absorb→`send` / escalate_up human→`raises` | 4.8.6 |
 
 Nothing here is a hosted runtime. Nothing here can be “down”. A degraded-mode
 contract would defend against an outage that cannot happen.
 
 ---
 
-## Four verbs
+## Valved loop
+
+**ArkOrder freezes the pattern through a valve. ArkRun is how the residual travels.**
 
 ```ts
 import { createOrderPlane } from 'arkgate/order';
@@ -76,26 +84,32 @@ const plane = createOrderPlane({
   xiSchema,           // JSON Schema object; additionalProperties false
   maxXiKeys,          // default 7
   clocks,             // injected; Domain must not call Date.now
-  packs,              // data, not user predicates
+  packs,              // data, not user predicates (capacity is kind/sigmaKey/payloadKey/op)
   informationBudget,  // optional { cannotObserve: ['ledger'] } — not a config key
   sigmaMaxAgeMs,      // optional σ freshness; never on ξ — not a config key
+  store,              // optional ReleaseStore; default in-memory is not durable
+  catalogDigest,      // optional; keyed by ξ.catalogReleaseId — SKU set does not enter the hash
 });
 
-plane.release(xi, sigma);      // freeze, version, hash. No in-place mutate
+plane.release(xi, sigma);      // first freeze only
 plane.project();               // derive allowed s + invalidations
-plane.ingest(event);           // absorb or escalate. Never returns a Release
+plane.ingest(event);           // residual absorb | escalate_up | hold. Never a Release
 plane.proposeRelease(delta);   // blast radius. Empty blast = domain error
+plane.apply(proposal);         // valve: later ξ change
+plane.refreshSigma(sigma);     // saldo / clocks; xiHash unchanged
 ```
 
 There is no `update()`. Calling `update` / `patch` / `set` on the plane throws
 `ARKORDER_FORBIDDEN_METHOD` and, on the write path, emits
-`ARKORDER_GENERIC_UPDATE`.
+`ARKORDER_GENERIC_UPDATE`. A second `release()` whose ξ differs fails
+`ARKORDER_UNVALVED_RELEASE`.
 
 | Field write | Verb |
 |-------------|------|
-| Invoice, seat within cap, timesheet, daily log | `ingest` → absorb |
-| Over cap / invariant pressure | `ingest` → escalate |
-| Change plan / protocol / cost-code bound | `proposeRelease` then `release` |
+| Invoice, seat within cap, timesheet, daily log | `ingest` → absorb (`ingestTravelAction` may `send`) |
+| Over cap (capacity pack) / stale σ | `ingest` → hold |
+| Kind not in h(ξ) | `ingest` → escalate_up (`target: human`; `ingestTravelAction` may `raises`) |
+| Change plan / protocol / cost-code bound | `proposeRelease` then `apply` |
 | PATCH the slow key through Prisma/Drizzle | `ARKORDER_XI_FIELD_WRITE` |
 
 Copy [examples/arkorder-billing/](../examples/arkorder-billing/) and rename the
@@ -198,6 +212,10 @@ Durability (`K01`) stays parked. In-memory is the honesty line.
 - a degraded-mode contract (nothing can be down)
 
 If a “slow parameter” changes with every click, it is not an order parameter.
+
+The valved loop ships in **4.8.6** ([ADR 0034](adr/0034-arkorder-valved-loop.md)).
+In-memory `ReleaseStore` is **not** durable. Doctor / status `arkOrder` stays
+`notAScore`. This does **not** close `K01` / `Z09`. No `/ark-order` skill.
 
 ---
 

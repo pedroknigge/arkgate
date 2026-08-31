@@ -315,7 +315,7 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'arkorder',
     'Generic update of ξ',
     'A call to update/patch/set on the order plane rewrites the slow pattern. Haken slaving forbids generic ξ mutation.',
-    'Use release() to freeze ξ or proposeRelease() for a pattern change with blast radius, then preflight again. Never mechanical-safe.'
+    'Use release() for the first freeze of ξ. Later pattern change is proposeRelease then apply(ProposeResult). Never update/patch/set. Never mechanical-safe.'
   ),
   entry(
     'ARKORDER_TOO_MANY_PARAMS',
@@ -328,15 +328,15 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'ARKORDER_INGEST_WRITES_XI',
     'arkorder',
     'ingest assigned into ξ',
-    'An ingest() result is written into a Release or ξ store. ingest may absorb or escalate; it never mints a pattern.',
-    'Keep ingest results as absorb/escalate only. Change ξ with proposeRelease + release. Never mechanical-safe.'
+    'An ingest() result is written into a Release or ξ store. ingest may absorb, escalate_up, or hold; it never mints a pattern.',
+    'Keep ingest results as absorb/escalate_up/hold only. Change ξ with proposeRelease then apply(ProposeResult). Never mechanical-safe.'
   ),
   entry(
     'ARKORDER_XI_FIELD_WRITE',
     'arkorder',
     'Slow key written around the order plane',
     'A managed-layer file imports a persistence driver and writes a declared arkOrder.xiKeys name. Field events absorb or escalate; they do not PATCH the slow pattern.',
-    'Keep invoices, seats, hours, and logs on ingest. Change the slow key with proposeRelease + release, then preflight again. Never mechanical-safe.'
+    'Keep invoices, seats, hours, and logs on ingest. Change the slow key with proposeRelease then apply(ProposeResult), then preflight again. Never mechanical-safe.'
   ),
   entry(
     'ARKORDER_INFORMATION_BUDGET',
@@ -357,7 +357,14 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticCatalogEntry[] = Object.free
     'arkorder',
     'σ is stale',
     'ingest ran after σ.freshUntil (or sigmaMaxAgeMs). ξ does not TTL.',
-    'Refresh σ and ingest again, or freeze a new release if the pattern changed. Never mechanical-safe.'
+    'Call refreshSigma and ingest again, or proposeRelease then apply(ProposeResult) if the pattern changed. Never mechanical-safe.'
+  ),
+  entry(
+    'ARKORDER_UNVALVED_RELEASE',
+    'arkorder',
+    'Unvalved second freeze of ξ',
+    'release() ran after a pattern was already frozen and the new ξ differs. First freeze is release(); later pattern change is proposeRelease then apply.',
+    'Change ξ with proposeRelease then apply(ProposeResult). release() is only the first freeze. Never mechanical-safe.'
   ),
 
   // ── atomic preflight / change set ────────────────────────────────────────

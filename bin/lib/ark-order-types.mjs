@@ -9,3 +9,6 @@
  */
 
 export const DEFAULT_MAX_XI_KEYS = 7;
+export const INGEST_RESIDUAL_KINDS = ['absorb', 'escalate_up', 'hold'];
+export const INGEST_REASON_CODES = ['not-in-pattern', 'stale-sigma', 'pack', 'capacity'];
+export const CAPACITY_OPS = ['lte', 'lt', 'gte', 'gt'];

@@ -126,8 +126,8 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 |-------|------------------|----------------|-----------------|
 | **Layers** (inter-layer) | Who may import whom, capabilities, pure/forbiddenGlobals, peerIsolation | `ark.config.json` → `layers[]`, `rules[]` | graph check, baseline edges, doctor coverage % |
 | **ArkRules** (intra-layer) | Structure inside a layer + domain invariants as data | `arkRules` map + `arkrules/<ExactLayerName>.json` | structure sensors, invariant coverage, `--rules-inventory`, doctor `rulesUnderContract` |
-| **ArkRun** (extra) | Kernel usage + complete declarations | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime`; **`kernelRoots` preferred**, `compositionRoots` alias | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
-| **ArkOrder** (extra) | Operational pattern (ξ vs s) | `arkOrder` on `ark.config.json` (schema `1.3+`); factory `arkgate/order` | `ARKORDER_*` |
+| **ArkRun** (extra) | Kernel usage + complete declarations; information package `decisionTape` `{ xiHash, event, residual }` | `arkRun` on `ark.config.json` (schema `1.2+`); factory `arkgate/runtime`; **`kernelRoots` preferred**, `compositionRoots` alias | `ARKRUN_*`, doctor `arkRun` (`notAScore`) |
+| **ArkOrder** (extra) | Operational pattern (ξ vs s). Valve: first `release()`, later ξ is `proposeRelease` then `apply`; `refreshSigma`; ingest residual `absorb \| escalate_up \| hold` + `reasonCode`; capacity pack as data; in-memory `ReleaseStore` | `arkOrder` on `ark.config.json` (schema `1.3+`); factory `arkgate/order` | `ARKORDER_*` |
 
 **Rules for every report / answer:**
 1. Prefix each finding or next step with **`[Layer]`** or **`[ArkRules]`** or **`[ArkRun]`** or **`[ArkOrder]`** (or a table with those headers).
@@ -151,7 +151,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 - Do **not** put `arkRun` on the compact starter / `ark start` scaffold. Brownfield stays advisory until the team promotes.
 - Absence is valid and **silent** — never force the extra. Never force the kernel over existing Nest/DI. Do not invent `/ark-run`.
 - Import from `arkgate/runtime` (factory `createStrictArkKernel`, per instance, no process-wide singleton). `@arkgate/runtime` is deprecated. No shipped cloud broker SDKs.
-- In-memory stores are **not** production durability. Branding ArkRun is not a durability claim. Doctor / status `arkRun` is `notAScore`.
+- In-memory stores are **not** production durability. Branding ArkRun is not a durability claim. Doctor / status `arkRun` is `notAScore`. Information package `decisionTape` / `appendDecisionTape` is in-memory, not a bus.
 - Demoting enforced → advisory or deleting the extra is policy-delta **weakening**.
 - After the extra is honest: handoff `/ark-runtime` to wire one candidate, `/ark-place` for new kernel-managed files. Skills never enforce.
 
@@ -173,7 +173,7 @@ ArkGate has **always-on Layers** plus opt-in extras. The user chooses extras; yo
 }
 ```
 
-- `xiKeys` are meaning, not membership. `projectId` / `orgId` do not belong. If `proposeRelease` throws empty blast, that key does not order anything.
+- `xiKeys` are meaning, not membership. `projectId` / `orgId` do not belong. If `proposeRelease` throws empty blast, that key does not order anything. After the first `release()`, change ξ with `proposeRelease` then `apply` — not a second `release()` (`ARKORDER_UNVALVED_RELEASE`). `refreshSigma`; ingest residual `absorb | escalate_up | hold` + `reasonCode`; capacity pack as data; `createMemoryReleaseStore`; `ingestTravelAction`; ArkRun `decisionTape`.
 - A use-case that `prisma.*.update({ plan })` while `plan` is in `xiKeys` is **[ArkOrder]** `ARKORDER_XI_FIELD_WRITE`. Invoices and seats still flow through `ingest`.
 
 - Do **not** put `arkOrder` on the compact starter / `ark start` scaffold. Domain stays plane-free. Import `createOrderPlane` from `arkgate/order` (same npm package).

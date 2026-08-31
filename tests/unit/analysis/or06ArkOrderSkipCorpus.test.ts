@@ -119,4 +119,18 @@ describe('OR06 ArkOrder skip corpus', () => {
       expect(advisory.valid).toBe(true);
     }
   );
+
+  it('unvalved second freeze is runtime fail-closed, not a lexical skip (LV02)', async () => {
+    const tree = 'trees/unvalved-release';
+    const absentRoot = copyTree(tree);
+    const absent = await analyzeRoot(absentRoot, configFor('absent'));
+    expect(orderIds(absent.ir.violations)).toEqual([]);
+    expect(orderIds(absent.ir.warnings)).toEqual([]);
+    expect(absent.valid).toBe(true);
+
+    const enforcedRoot = copyTree(tree);
+    const enforced = await analyzeRoot(enforcedRoot, configFor('enforced'));
+    expect(orderIds(enforced.ir.violations)).not.toContain('ARKORDER_UNVALVED_RELEASE');
+    expect(orderIds(enforced.ir.warnings)).not.toContain('ARKORDER_UNVALVED_RELEASE');
+  });
 });

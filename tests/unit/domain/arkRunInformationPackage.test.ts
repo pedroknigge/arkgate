@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ARK_RUN_COMPONENT_LIFETIMES,
   ARK_RUN_INFORMATION_PACKAGE_SCHEMA_VERSION,
+  appendDecisionTape,
   buildDependencyInformationPackage,
   sanitizeArkRunComponent,
 } from '../../../src/domain/arkRunInformationPackage';
@@ -127,6 +128,28 @@ describe('RN10 information package sanitizer', () => {
     expect(pkg.components[0]?.extendedInfo).toBeUndefined();
     expect(pkg.components[0]?.raises).toEqual(['E']);
     expect(pkg.components[1]?.uses).toEqual(['Z']);
+  });
+
+  it('appends a sanitized decision tape without changing component keys (LV06)', () => {
+    const base = buildDependencyInformationPackage({
+      kernelInstanceId: 'k1',
+      components: [{ id: 'Application.Billing' }],
+    });
+    expect(Object.keys(base).sort()).toEqual([...ROOT_KEYS].sort());
+    const withTape = appendDecisionTape(base, {
+      xiHash: 'fnv1a-xi',
+      event: { kind: 'SeatAdded', payload: { seats: 6, nested: { skip: true } } },
+      residual: { kind: 'hold', reasonCode: 'capacity', eventId: 'e1' },
+      factory: () => 'nope',
+    });
+    expect(withTape.components).toEqual(base.components);
+    expect(withTape.decisionTape).toEqual([
+      {
+        xiHash: 'fnv1a-xi',
+        event: { kind: 'SeatAdded', payload: { seats: 6 } },
+        residual: { kind: 'hold', reasonCode: 'capacity', eventId: 'e1' },
+      },
+    ]);
   });
 
   it('rejects non-object component records', () => {

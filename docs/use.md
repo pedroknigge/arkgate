@@ -81,7 +81,7 @@ The config only binds when the write doesn’t land and CI is required.
 | **ArkGate** (layers) | Import rules. The write doesn’t land. The PR fails. | Always — this is the product |
 | **ArkRules** | Optional policies *inside* a layer. | Off until you turn it on (start may ship advisory templates) |
 | **ArkRun** | Optional experimental runtime (`arkgate/runtime`) | Off. In-memory. Not Postgres. |
-| **ArkOrder** | Stops the agent rewriting the few slow product decisions as CRUD (`arkgate/order`). Library + sensors, [not a service](arkorder.md). | Off. Name `xiKeys` (plan / protocol, not `projectId`). Invoices and seats still flow. In-memory. Not durable. |
+| **ArkOrder** | Stops the agent rewriting the few slow product decisions as CRUD (`arkgate/order`). Library + sensors, [not a service](arkorder.md). Valve: `proposeRelease` then `apply`; `refreshSigma`; ingest residual; capacity pack; `ReleaseStore`; ArkRun `decisionTape`. ArkOrder freezes the pattern through a valve. ArkRun is how the residual travels. | Off. Name `xiKeys` (plan / protocol, not `projectId`). Invoices and seats still flow. In-memory. Not durable. |
 
 Start always gives you **layers**. Compact starters do **not** turn on ArkRun or
 ArkOrder. No extras is fine — only ArkGate runs. Leftovers are labeled

@@ -1,17 +1,64 @@
 import { describe, expect, it } from 'vitest';
 import { createOrderPlane } from '../../../src/kernel/order';
+import { travelBillingResidual } from '../../../examples/arkorder-billing/bridge';
 import { billingProjector, billingXi } from '../../../examples/arkorder-billing/projector';
 
 describe('arkorder-billing consumer physics', () => {
-  it('does not teach the core billing keys — projector lives in the example', () => {
+  it('does not teach the core billing keys — projector lives in the example', async () => {
     const plane = createOrderPlane({
       projector: billingProjector,
       xiSchema: { additionalProperties: false, properties: billingXi },
       clocks: { now: () => 0 },
     });
-    plane.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
-    expect(plane.ingest({ kind: 'InvoicePosted' }).kind).toBe('absorb');
-    expect(plane.ingest({ kind: 'SeatAdded' }).kind).toBe('escalate');
+    const frozen = plane.release({ plan: 'free', cycle: 'monthly', tenancy: 'single' });
+    const absorbed = plane.ingest({ kind: 'InvoicePosted' });
+    expect(absorbed.kind).toBe('absorb');
+    expect(absorbed.xiHash).toBe(frozen.xiHash);
+    const unknown = plane.ingest({ kind: 'SeatAdded' });
+    expect(unknown.kind).toBe('escalate_up');
+    if (unknown.kind === 'escalate_up') expect(unknown.reasonCode).toBe('not-in-pattern');
+
+    const capped = createOrderPlane({
+      projector: billingProjector,
+      xiSchema: { additionalProperties: false, properties: billingXi },
+      packs: [
+        {
+          id: 'seats',
+          capacity: [{ kind: 'SeatAdded', sigmaKey: 'seatCap', payloadKey: 'seats', op: 'lte' }],
+        },
+      ],
+      clocks: { now: () => 0 },
+    });
+    capped.release({ plan: 'pro', cycle: 'monthly', tenancy: 'team' }, { seatCap: 3 });
+    expect(capped.ingest({ kind: 'SeatAdded', payload: { seats: 3 } }).kind).toBe('absorb');
+    const over = capped.ingest({ kind: 'SeatAdded', payload: { seats: 4 } });
+    expect(over.kind).toBe('hold');
+    if (over.kind === 'hold') expect(over.reasonCode).toBe('capacity');
+
+    const sent: string[] = [];
+    const raised: string[] = [];
+    expect(
+      await travelBillingResidual(absorbed, {
+        send: (kind) => {
+          sent.push(kind);
+        },
+        raiseHuman: (residual) => {
+          raised.push(residual.event.kind);
+        },
+      })
+    ).toBe('send');
+    expect(
+      await travelBillingResidual(unknown, {
+        send: (kind) => {
+          sent.push(kind);
+        },
+        raiseHuman: (residual) => {
+          raised.push(residual.event.kind);
+        },
+      })
+    ).toBe('raises');
+    expect(sent).toEqual(['InvoicePosted']);
+    expect(raised).toEqual(['SeatAdded']);
     const next = plane.proposeRelease({ plan: 'enterprise', tenancy: 'org' });
     expect(next.blastRadius.length).toBeGreaterThan(0);
     expect(next.nextXi.plan).toBe('enterprise');

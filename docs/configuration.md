@@ -131,8 +131,10 @@ Top-level fields:
   `enforced` mode fails closed (`ARKORDER_MISSING_PLANE`). `xiKeys` are the 3–5 slow
   names the product already knows (plan, protocol, cost-code bound). Empty `xiKeys`
   leaves `ARKORDER_XI_FIELD_WRITE` silent. Membership ids are not keys. Factory options
-  `informationBudget` and `sigmaMaxAgeMs` belong on `createOrderPlane`, not this extra
-  object. Demotion or deletion is a policy-delta **weakening**. Field ingest never mints
+  `informationBudget`, `sigmaMaxAgeMs`, `store` (`ReleaseStore`), and capacity packs
+  belong on `createOrderPlane`, not this extra object. Later ξ is `proposeRelease`
+  then `apply`; `refreshSigma`; ingest residual `absorb | escalate_up | hold`.
+  Demotion or deletion is a policy-delta **weakening**. Field ingest never mints
   a pattern.
 
 **Activation is one shape.** ArkRun and ArkOrder both use `mode` + `managedLayers`.
@@ -246,7 +248,7 @@ See [brownfield adoption](brownfield-adoption.md#nextjs-honesty-default-overlays
 | **Structure sensors** | Intra-layer heuristics | Only `mode: "enforced"` |
 | **Invariants** | Catalog + coverage evidence (not a business runtime) | Only enforced + proven-uncovered |
 | **ArkRun** (opt-in extra) | Kernel usage + complete declarations | Only `arkRun.mode: "enforced"` when classified |
-| **ArkOrder** (opt-in extra) | Frozen pattern + four verbs (no `update`) | Only `arkOrder.mode: "enforced"` when classified |
+| **ArkOrder** (opt-in extra) | Frozen pattern; first freeze `release()`, later ξ is `proposeRelease` then `apply` (no `update`) | Only `arkOrder.mode: "enforced"` when classified |
 
 Absence of `arkRules`, `arkRun`, or `arkOrder` adds **no** extra merge teeth. **Advisory** structure sensors, advisory
 invariants, advisory ArkRun, and advisory ArkOrder also add **no** merge teeth (FG-ARKRULES-ADVISORY-ONLY / ADR 0020 / ADR 0027) — packing every starter

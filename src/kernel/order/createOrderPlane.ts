@@ -1,17 +1,22 @@
 /**
- * ArkOrder plane factory (ADR 0028 / 0030). Haken slaving at the call site:
- * release freezes ξ; project derives s; ingest never returns a Release;
- * proposeRelease requires a non-empty blast.
+ * ArkOrder plane factory (ADR 0028 / 0030 / 0034). Haken slaving at the call site:
+ * first release freezes ξ; later ξ change is proposeRelease then apply;
+ * project derives s; ingest never returns a Release; empty blast fails.
  */
 import { ArkOrderError } from '../../domain/arkOrderError';
 import {
+  applyProposedRelease,
   assertInformationBudget,
   assertSigmaFresh,
+  assertUnvalvedRelease,
   classifyIngest,
   createFrozenRelease,
   DEFAULT_MAX_XI_KEYS,
+  fieldEventIdentity,
+  freezeRecord,
   isForbiddenPlaneMethod,
   proposePatternChange,
+  refreshSigmaRecord,
 } from '../../domain/arkOrderInvariants';
 import type {
   ConstraintPack,
@@ -25,6 +30,7 @@ import type {
   Release,
   XiSchema,
 } from '../../domain/arkOrderTypes';
+import type { ReleaseStore } from './releaseStore';
 
 export type CreateOrderPlaneOptions = {
   projector: Projector;
@@ -34,6 +40,10 @@ export type CreateOrderPlaneOptions = {
   packs?: readonly ConstraintPack[];
   informationBudget?: InformationBudget;
   sigmaMaxAgeMs?: number;
+  /** Injected. Default is process-local memory — not durable, not K01. */
+  store?: ReleaseStore;
+  /** Optional catalog digest keyed by ξ.catalogReleaseId. SKU set does not enter the hash. */
+  catalogDigest?: string;
 };
 
 export type OrderPlane = {
@@ -41,6 +51,8 @@ export type OrderPlane = {
   project(): Projection;
   ingest(event: FieldEvent): IngestResult;
   proposeRelease(delta: Record<string, unknown>): ProposeResult;
+  apply(proposal: ProposeResult): Release;
+  refreshSigma(sigma: Record<string, unknown>): Release;
   current(): Release | null;
 };
 
@@ -58,8 +70,17 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
       return 0;
     },
   };
-  let current: Release | null = null;
-  let version = 0;
+  const store = options.store;
+  let current: Release | null = store?.load() ?? null;
+  let version = current?.version ?? 0;
+  const catalogDigest = options.catalogDigest;
+
+  function persist(next: Release): Release {
+    current = next;
+    version = next.version;
+    store?.save(next);
+    return next;
+  }
 
   function requireCurrent(): Release {
     if (!current) {
@@ -70,16 +91,20 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
 
   const plane: OrderPlane = {
     release(xi, sigma) {
-      version += 1;
-      current = createFrozenRelease({
-        xi,
-        sigma,
-        version,
-        now: clock.now(),
-        maxXiKeys,
-        xiSchema: options.xiSchema,
-      });
-      return current;
+      if (current) {
+        assertUnvalvedRelease(current, freezeRecord(xi, 'ξ'));
+      }
+      return persist(
+        createFrozenRelease({
+          xi,
+          sigma,
+          version: version + 1,
+          now: clock.now(),
+          maxXiKeys,
+          xiSchema: options.xiSchema,
+          catalogDigest,
+        })
+      );
     },
     project() {
       const release = requireCurrent();
@@ -89,15 +114,29 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
     },
     ingest(event) {
       const release = requireCurrent();
-      assertSigmaFresh({
-        sigma: release.sigma,
-        now: clock.now(),
-        maxAgeMs: options.sigmaMaxAgeMs,
-        releasedAt: release.releasedAt,
-      });
+      try {
+        assertSigmaFresh({
+          sigma: release.sigma,
+          now: clock.now(),
+          maxAgeMs: options.sigmaMaxAgeMs,
+          releasedAt: release.releasedAt,
+        });
+      } catch (error) {
+        if (error instanceof ArkOrderError && error.code === 'ARKORDER_STALE_SIGMA') {
+          return {
+            kind: 'hold' as const,
+            event,
+            xiHash: release.xiHash,
+            eventId: fieldEventIdentity(event),
+            reasonCode: 'stale-sigma' as const,
+            reason: error.message,
+          };
+        }
+        throw error;
+      }
       const projection = options.projector(release, release.sigma);
       assertInformationBudget(projection, options.informationBudget);
-      return classifyIngest(projection, event, packs);
+      return classifyIngest(projection, event, packs, release.xiHash, release.sigma);
     },
     proposeRelease(delta) {
       return proposePatternChange({
@@ -107,7 +146,31 @@ export function createOrderPlane(options: CreateOrderPlaneOptions): OrderPlane {
         maxXiKeys,
         xiSchema: options.xiSchema,
         now: clock.now(),
+        catalogDigest,
       });
+    },
+    apply(proposal) {
+      return persist(
+        applyProposedRelease({
+          current: requireCurrent(),
+          proposal,
+          projector: options.projector,
+          maxXiKeys,
+          xiSchema: options.xiSchema,
+          now: clock.now(),
+          catalogDigest,
+        })
+      );
+    },
+    refreshSigma(sigma) {
+      return persist(
+        refreshSigmaRecord({
+          current: requireCurrent(),
+          sigma,
+          now: clock.now(),
+          catalogDigest,
+        })
+      );
     },
     current() {
       return current;

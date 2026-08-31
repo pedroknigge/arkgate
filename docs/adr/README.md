@@ -76,16 +76,19 @@ If you turn the extra on, the gate is still real (do not skip the kernel).
 
 Fourth extra. Silent when absent. Plane is `arkgate/order` **inside package `arkgate`**,
 not a second npm package and not a bus. Does not replace ArkRun. Shipped in
-**4.8.0**; Phase XP on tree in **4.8.5** (prepared). Canonical: [arkorder.md](../arkorder.md). Plan: [arkorder](../plans/arkorder/README.md) · [arkorder-arkrun](../plans/arkorder-arkrun/README.md).
+**4.8.0**; Phase XP on tree in **4.8.5**. Next train: Phase LV valved loop
+([plan](../plans/arkorder-valve-loop/README.md); [ADR 0034](0034-arkorder-valved-loop.md)
+accepted). Canonical: [arkorder.md](../arkorder.md). Plan: [arkorder](../plans/arkorder/README.md) · [arkorder-arkrun](../plans/arkorder-arkrun/README.md) · [arkorder-valve-loop](../plans/arkorder-valve-loop/README.md).
 
 | ADR | Still true |
 |-----|------------|
 | [0027](0027-arkorder-gated-extra-plane.md) | Optional `arkOrder` on schema `1.3`. Absence is silent. Weakening needs an ack. |
-| [0028](0028-arkorder-companion-isolation.md) | Plane is `arkgate/order`. `createOrderPlane`. Four verbs. No singleton. No bus in v0. |
+| [0028](0028-arkorder-companion-isolation.md) | Plane is `arkgate/order`. `createOrderPlane`. Four verbs (D3). Amended by [0034](0034-arkorder-valved-loop.md) (`apply` / `refreshSigma`). No singleton. No bus in v0. |
 | [0029](0029-arkorder-anti-skip-facts.md) | Closed anti-skip sensors. Inference never blocks. No LLM ξ classifier. |
 | [0030](0030-opt-in-extras-same-npm-package.md) | One npm package `arkgate`. Extras are subpaths. No `@arkgate/*` install. |
 | [0031](0031-one-package-extras-deprecate-companion.md) | 4.8.0: Run + Order + Nest are real subpaths. Companion deprecated. |
 | [0033](0033-arkorder-runtime-half-is-arkrun.md) | Shadow / replay / provenance / compare are ArkRun. ArkOrder stays library + sensors. |
+| [0034](0034-arkorder-valved-loop.md) | Valve (`apply`), ξ vs σ identity, closed ingest residual, capacity-as-data, ArkRun tape, `ReleaseStore` port. Not K01. |
 
 ## Do not fold
 
